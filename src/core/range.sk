@@ -1,0 +1,147 @@
+class Source {
+  string name;
+  string contents;
+
+  // This maps line numbers to indices within contents
+  List<int> lineOffsets = null;
+
+  void computeLineOffsets() {
+    if (lineOffsets != null) return;
+    lineOffsets = { 0 };
+    int i;
+    for (i = 0; i < contents.length; i++) {
+      if (contents.codeUnitAt(i) == '\n') {
+        lineOffsets.push(i + 1);
+      }
+    }
+  }
+
+  int lineCount() {
+    computeLineOffsets();
+    return lineOffsets.length - 1; // Ignore the line offset at 0
+  }
+
+  string contentsOfLine(int line) {
+    computeLineOffsets();
+    if (line < 0 || line >= lineOffsets.length) {
+      return "";
+    }
+    int start = lineOffsets.get(line);
+    int end = line + 1 < lineOffsets.length ? lineOffsets.get(line + 1) - 1 : contents.length;
+    return contents.slice(start, end);
+  }
+
+  LineColumn indexToLineColumn(int index) {
+    computeLineOffsets();
+
+    // Binary search to find the line
+    int count = lineOffsets.length;
+    int line = 0;
+    while (count > 0) {
+      int step = count / 2;
+      int i = line + step;
+      if (lineOffsets.get(i) <= index) {
+        line = i + 1;
+        count = count - step - 1;
+      } else {
+        count = step;
+      }
+    }
+
+    // Use the line to compute the column
+    int column = line > 0 ? index - lineOffsets.get(line - 1) : index;
+    return new LineColumn(line - 1, column);
+  }
+}
+
+struct LineColumn {
+  final int line; // 0-based index
+  final int column; // 0-based index
+}
+
+struct FormattedRange {
+  final string line;
+  final string range;
+}
+
+struct Range {
+  static Range EMPTY;
+
+  final Source source;
+  final int start;
+  final int end;
+
+  bool isEmpty() {
+    return source == null;
+  }
+
+  string toString() {
+    return source == null ? "" : source.contents.slice(start, end);
+  }
+
+  string locationString() {
+    if (isEmpty()) return "";
+    LineColumn location = source.indexToLineColumn(start);
+    return source.name.append(":").append((location.line + 1).toString()).append(":").append((location.column + 1).toString());
+  }
+
+  // Return the length from the start to the end of the range or the end of the
+  // first line, whichever comes first
+  int singleLineLength() {
+    LineColumn start = source.indexToLineColumn(this.start);
+    LineColumn end = source.indexToLineColumn(this.end);
+    return (start.line == end.line ? end.column : source.contentsOfLine(start.line).length) - start.column;
+  }
+
+  FormattedRange format(int maxLength) {
+    LineColumn start = source.indexToLineColumn(this.start);
+    LineColumn end = source.indexToLineColumn(this.end);
+    string line = source.contentsOfLine(start.line);
+    int length = line.length;
+    int a = start.column;
+    int b = end.line == start.line ? end.column : length;
+
+    // Ensure the line length doesn't exceed maxLength
+    if (maxLength > 0 && length > maxLength) {
+      int centeredWidth = b - a < maxLength / 2 ? b - a : maxLength / 2;
+      int centeredStart = (maxLength - centeredWidth) / 2;
+
+      // Left aligned
+      if (a < centeredStart) {
+        line = line.slice(0, maxLength - 3).append("...");
+        if (b > maxLength - 3) b = maxLength - 3;
+      }
+
+      // Right aligned
+      else if (length - a < maxLength - centeredStart) {
+        int offset = length - maxLength;
+        line = "...".append(line.slice(offset + 3, length));
+        a = a - offset;
+        b = b - offset;
+      }
+
+      // Center aligned
+      else {
+        int offset = a - centeredStart;
+        line = "...".append(line.slice(offset + 3, offset + maxLength - 3)).append("...");
+        a = a - offset;
+        b = b - offset;
+        if (b > maxLength - 3) b = maxLength - 3;
+      }
+    }
+
+    return new FormattedRange(line, repeat(" ", a).append(b - a < 2 ? "^" : repeat("~", b - a)));
+  }
+
+  static Range span(Range start, Range end) {
+    assert start.source == end.source;
+    assert start.start <= end.end;
+    return new Range(start.source, start.start, end.end);
+  }
+
+  static Range inner(Range start, Range end) {
+    assert start.source == end.source;
+    assert start.end <= end.start;
+    return new Range(start.source, start.end, end.start);
+  }
+}

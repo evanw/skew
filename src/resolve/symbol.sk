@@ -1,0 +1,70 @@
+enum SymbolKind {
+  OTHER,
+
+  // Namespace kinds
+  GLOBAL_NAMESPACE,
+  NAMESPACE,
+
+  // Enum kinds
+  ENUM,
+  ENUM_FLAGS,
+
+  // Object kinds
+  CLASS,
+  STRUCT,
+  INTERFACE,
+
+  // Function kinds
+  GLOBAL_FUNCTION,
+  INSTANCE_FUNCTION,
+  CONSTRUCTOR_FUNCTION,
+
+  // Variable kinds
+  LOCAL_VARIABLE,
+  GLOBAL_VARIABLE,
+  INSTANCE_VARIABLE,
+}
+
+enum flags SymbolFlags {
+  // Access flags
+  PUBLIC,
+  PRIVATE,
+  PROTECTED,
+
+  // Structural flags
+  ABSTRACT,
+  OVERRIDE,
+  STATIC,
+  VIRTUAL,
+
+  // Optimization flags
+  FINAL,
+  INLINE,
+}
+
+class Symbol {
+  string name;
+  SymbolKind kind;
+  Node node = null;
+  Type type = null;
+
+  bool isNamespace() {
+    return kind == SymbolKind.GLOBAL_NAMESPACE || kind == SymbolKind.NAMESPACE;
+  }
+
+  bool isEnum() {
+    return kind == SymbolKind.ENUM || kind == SymbolKind.ENUM_FLAGS;
+  }
+
+  bool isObject() {
+    return kind >= SymbolKind.CLASS && kind <= SymbolKind.INTERFACE;
+  }
+
+  bool isFunction() {
+    return kind >= SymbolKind.GLOBAL_FUNCTION && kind <= SymbolKind.CONSTRUCTOR_FUNCTION;
+  }
+
+  bool isVariable() {
+    return kind >= SymbolKind.LOCAL_VARIABLE && kind <= SymbolKind.INSTANCE_VARIABLE;
+  }
+}

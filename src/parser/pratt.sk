@@ -1,0 +1,195 @@
+class ParserContext {
+  Log log;
+  List<Token> tokens;
+  int index = 0;
+
+  // Keep track of the previous syntax error so only one syntax error is emitted
+  // per token when recovering from a parse error. For example:
+  //
+  //   int x = (1 + (2 + ;
+  //
+  // In the code above, the only syntax error should be about an unexpected
+  // semicolon and not also about the two missing right parentheses.
+  Token previousSyntaxError = null;
+
+  Token current() {
+    return tokens.get(index);
+  }
+
+  Token next() {
+    Token token = current();
+    if (index + 1 < tokens.length) {
+      index++;
+    }
+    return token;
+  }
+
+  Range spanSince(Range range) {
+    Token previous = tokens.get(index > 0 ? index - 1 : 0);
+    return previous.range.end < range.start ? range : Range.span(range, previous.range);
+  }
+
+  bool peek(TokenKind kind) {
+    return current().kind == kind;
+  }
+
+  bool eat(TokenKind kind) {
+    if (peek(kind)) {
+      next();
+      return true;
+    }
+    return false;
+  }
+
+  bool expect(TokenKind kind) {
+    if (!eat(kind)) {
+      Token token = current();
+      if (previousSyntaxError != token) {
+        syntaxErrorExpectedToken(log, token, kind);
+        previousSyntaxError = token;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  void unexpectedToken() {
+    Token token = current();
+    if (previousSyntaxError != token) {
+      syntaxErrorUnexpectedToken(log, token);
+      previousSyntaxError = token;
+    }
+  }
+}
+
+interface IPrefixParselet {
+  virtual Node run(ParserContext context);
+}
+
+interface IInfixParselet {
+  virtual Node run(ParserContext context, Node left);
+}
+
+interface ILiteralCallback {
+  virtual Node run(ParserContext context, Token token);
+}
+
+class LiteralParselet : IPrefixParselet {
+  ILiteralCallback callback;
+
+  override Node run(ParserContext context) {
+    return callback.run(context, context.next());
+  }
+}
+
+interface IPrefixCallback {
+  virtual Node run(ParserContext context, Token token, Node value);
+}
+
+class PrefixParselet : IPrefixParselet {
+  IPrefixCallback callback;
+  Pratt pratt;
+  int precedence;
+
+  override Node run(ParserContext context) {
+    Token token = context.next();
+    Node value = pratt.parse(context, precedence);
+    return value != null ? callback.run(context, token, value) : null;
+  }
+}
+
+interface IPostfixCallback {
+  virtual Node run(ParserContext context, Node value, Token token);
+}
+
+class PostfixParselet : IInfixParselet {
+  IPostfixCallback callback;
+
+  override Node run(ParserContext context, Node left) {
+    return callback.run(context, left, context.next());
+  }
+}
+
+interface IInfixCallback {
+  virtual Node run(ParserContext context, Node left, Token token, Node right);
+}
+
+class InfixParselet : IInfixParselet {
+  IInfixCallback callback;
+  Pratt pratt;
+  int precedence;
+
+  override Node run(ParserContext context, Node left) {
+    Token token = context.next();
+    Node right = pratt.parse(context, precedence);
+    return right != null ? callback.run(context, left, token, right) : null;
+  }
+}
+
+class Parselet {
+  int precedence;
+  IPrefixParselet prefix = null;
+  IInfixParselet infix = null;
+}
+
+// A Pratt parser is a parser that associates up to two operations per token,
+// each with its own precedence. Pratt parsers excel at parsing expression
+// trees with deeply nested precedence levels. For an excellent writeup, see:
+//
+//   http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
+//
+class Pratt {
+  IntMap<Parselet> table = new IntMap<Parselet>();
+
+  Parselet parselet(TokenKind kind, int precedence) {
+    Parselet parselet = table.getOrDefault(kind, null);
+    if (parselet == null) {
+      Parselet created = new Parselet(precedence);
+      parselet = created;
+      table.set(kind, created);
+    } else if (precedence > parselet.precedence) {
+      parselet.precedence = precedence;
+    }
+    return parselet;
+  }
+
+  Node parse(ParserContext context, int precedence) {
+    Token token = context.current();
+    Parselet parselet = table.getOrDefault(token.kind, null);
+    if (parselet == null || parselet.prefix == null) {
+      context.unexpectedToken();
+      return Node.createError().withRange(context.spanSince(token.range));
+    }
+    return resume(context, precedence, parselet.prefix.run(context));
+  }
+
+  Node resume(ParserContext context, int precedence, Node left) {
+    while (left != null) {
+      TokenKind kind = context.current().kind;
+      Parselet parselet = table.getOrDefault(kind, null);
+      if (parselet == null || parselet.infix == null || parselet.precedence <= precedence) break;
+      left = parselet.infix.run(context, left);
+    }
+    return left;
+  }
+
+  void literal(TokenKind kind, ILiteralCallback callback) {
+    parselet(kind, 0).prefix = new LiteralParselet(callback);
+  }
+
+  void prefix(TokenKind kind, int precedence, IPrefixCallback callback) {
+    parselet(kind, 0).prefix = new PrefixParselet(callback, this, precedence);
+  }
+
+  void postfix(TokenKind kind, int precedence, IPostfixCallback callback) {
+    parselet(kind, precedence).infix = new PostfixParselet(callback);
+  }
+
+  void infix(TokenKind kind, int precedence, IInfixCallback callback) {
+    parselet(kind, precedence).infix = new InfixParselet(callback, this, precedence);
+  }
+
+  void infixRight(TokenKind kind, int precedence, IInfixCallback callback) {
+    parselet(kind, precedence).infix = new InfixParselet(callback, this, precedence - 1); // Subtract 1 for right-associativity
+  }
+}

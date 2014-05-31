@@ -1,0 +1,335 @@
+in Node {
+  static Node createProgram(Node block) {
+    assert block.kind == NodeKind.BLOCK;
+    return new Node(NodeKind.PROGRAM).withChildren({ block });
+  }
+
+  static Node createBlock(List<Node> statements) {
+    return new Node(NodeKind.BLOCK).withChildren(statements);
+  }
+
+  static Node createParameterList(List<Node> parameters) {
+    assert checkAllNodeKinds(parameters, new NodeKindIsParameter());
+    return new Node(NodeKind.PARAMETER_LIST).withChildren(parameters);
+  }
+
+  static Node createBaseList(List<Node> bases) {
+    assert checkAllNodeKinds(bases, new NodeKindIsExpression());
+    return new Node(NodeKind.BASE_LIST).withChildren(bases);
+  }
+
+  static Node createNamespace(Node name, Node block) {
+    assert name.kind == NodeKind.NAME;
+    assert block.kind == NodeKind.BLOCK;
+    return new Node(NodeKind.NAMESPACE).withChildren({ name, block });
+  }
+
+  static Node createEnum(Node name, Node block) {
+    assert name.kind == NodeKind.NAME;
+    assert block.kind == NodeKind.BLOCK;
+    return new Node(NodeKind.ENUM).withChildren({ name, block });
+  }
+
+  static Node createEnumFlags(Node name, Node block) {
+    assert name.kind == NodeKind.NAME;
+    assert block.kind == NodeKind.BLOCK;
+    return new Node(NodeKind.ENUM_FLAGS).withChildren({ name, block });
+  }
+
+  static Node createObject(NodeKind kind, Node name, Node parameters, Node bases, Node block) {
+    assert kind == NodeKind.CLASS || kind == NodeKind.STRUCT || kind == NodeKind.INTERFACE;
+    assert name.kind == NodeKind.NAME;
+    assert parameters.kind == NodeKind.PARAMETER_LIST;
+    assert bases.kind == NodeKind.BASE_LIST;
+    assert block.kind == NodeKind.BLOCK;
+    return new Node(kind).withChildren({ name, parameters, bases, block });
+  }
+
+  static Node createClass(Node name, Node parameters, Node bases, Node block) {
+    return createObject(NodeKind.CLASS, name, parameters, bases, block);
+  }
+
+  static Node createStruct(Node name, Node parameters, Node bases, Node block) {
+    return createObject(NodeKind.STRUCT, name, parameters, bases, block);
+  }
+
+  static Node createInterface(Node name, Node parameters, Node bases, Node block) {
+    return createObject(NodeKind.INTERFACE, name, parameters, bases, block);
+  }
+
+  static Node createExtension(Node name, Node block) {
+    assert name.kind == NodeKind.NAME;
+    assert block.kind == NodeKind.BLOCK;
+    return new Node(NodeKind.EXTENSION).withChildren({ name, block });
+  }
+
+  static Node createConstructor(Node name, List<Node> variables, Node block) {
+    assert name.kind == NodeKind.NAME;
+    assert checkAllNodeKinds(variables, new NodeKindIsVariable());
+    assert block.kind == NodeKind.BLOCK;
+    variables.unshift(name);
+    variables.push(block);
+    return new Node(NodeKind.CONSTRUCTOR).withChildren(variables);
+  }
+
+  static Node createFunction(Node name, Node result, List<Node> variables, Node block) {
+    assert name.kind == NodeKind.NAME;
+    assert result.kind.isExpression();
+    assert checkAllNodeKinds(variables, new NodeKindIsVariable());
+    assert block.kind == NodeKind.BLOCK;
+    variables.unshift(name);
+    variables.unshift(result);
+    variables.push(block);
+    return new Node(NodeKind.FUNCTION).withChildren(variables);
+  }
+
+  static Node createVariable(Node name, Node type, Node value) {
+    assert name.kind == NodeKind.NAME;
+    assert type == null || type.kind.isExpression();
+    assert value == null || value.kind.isExpression();
+    return new Node(NodeKind.VARIABLE).withChildren({ name, type, value });
+  }
+
+  static Node createVariableList(Node type, List<Node> variables) {
+    assert type.kind.isExpression();
+    assert checkAllNodeKinds(variables, new NodeKindIsVariable());
+    variables.unshift(type);
+    return new Node(NodeKind.VARIABLE_LIST).withChildren(variables);
+  }
+
+  static Node createParameter(Node name) {
+    assert name.kind == NodeKind.NAME;
+    return new Node(NodeKind.PARAMETER).withChildren({ name });
+  }
+
+  static Node createIf(Node test, Node trueNode, Node falseNode) {
+    assert test.kind.isExpression();
+    assert trueNode.kind == NodeKind.BLOCK;
+    assert falseNode.kind == NodeKind.BLOCK;
+    return new Node(NodeKind.IF).withChildren({ test, trueNode, falseNode });
+  }
+
+  static Node createFor(Node setup, Node test, Node update, Node block) {
+    assert setup == null || setup.kind.isExpression();
+    assert test == null || test.kind.isExpression();
+    assert update == null || update.kind.isExpression();
+    assert block.kind == NodeKind.BLOCK;
+    return new Node(NodeKind.FOR).withChildren({ setup, test, update, block });
+  }
+
+  static Node createWhile(Node test, Node block) {
+    assert test.kind.isExpression();
+    assert block.kind == NodeKind.BLOCK;
+    return new Node(NodeKind.WHILE).withChildren({ test, block });
+  }
+
+  static Node createDoWhile(Node block, Node test) {
+    assert block.kind == NodeKind.BLOCK;
+    assert test.kind.isExpression();
+    return new Node(NodeKind.DO_WHILE).withChildren({ block, test });
+  }
+
+  static Node createReturn(Node value) {
+    assert value == null || value.kind.isExpression();
+    return new Node(NodeKind.RETURN).withChildren({ value });
+  }
+
+  static Node createBreak() {
+    return new Node(NodeKind.BREAK);
+  }
+
+  static Node createContinue() {
+    return new Node(NodeKind.CONTINUE);
+  }
+
+  static Node createAssert(Node value) {
+    assert value.kind.isExpression();
+    return new Node(NodeKind.ASSERT).withChildren({ value });
+  }
+
+  static Node createUsing(Node value) {
+    assert value.kind.isExpression();
+    return new Node(NodeKind.USING).withChildren({ value });
+  }
+
+  static Node createExpression(Node value) {
+    assert value.kind.isExpression();
+    return new Node(NodeKind.EXPRESSION).withChildren({ value });
+  }
+
+  static Node createModifier(Node name, List<Node> statements) {
+    assert name.kind == NodeKind.NAME;
+    assert checkAllNodeKinds(statements, new NodeKindIsStatement());
+    statements.unshift(name);
+    return new Node(NodeKind.MODIFIER).withChildren(statements);
+  }
+
+  static Node createSwitch(Node value, List<Node> cases) {
+    assert value.kind.isExpression();
+    assert checkAllNodeKinds(cases, new NodeKindIsCaseOrDefault());
+    cases.unshift(value);
+    return new Node(NodeKind.SWITCH).withChildren(cases);
+  }
+
+  static Node createCase(List<Node> values, Node block) {
+    assert values.length > 0;
+    assert checkAllNodeKinds(values, new NodeKindIsExpression());
+    assert block.kind == NodeKind.BLOCK;
+    values.push(block);
+    return new Node(NodeKind.CASE).withChildren(values);
+  }
+
+  static Node createDefault(Node block) {
+    assert block.kind == NodeKind.BLOCK;
+    return new Node(NodeKind.DEFAULT).withChildren({ block });
+  }
+
+  static Node createName(string name) {
+    return new Node(NodeKind.NAME).withContent(new StringContent(name));
+  }
+
+  static Node createType(Type type) {
+    return new Node(NodeKind.TYPE).withType(type);
+  }
+
+  static Node createNull() {
+    return new Node(NodeKind.NULL);
+  }
+
+  static Node createThis() {
+    return new Node(NodeKind.THIS);
+  }
+
+  static Node createTrue() {
+    return new Node(NodeKind.TRUE);
+  }
+
+  static Node createFalse() {
+    return new Node(NodeKind.FALSE);
+  }
+
+  static Node createHook(Node test, Node trueNode, Node falseNode) {
+    assert test.kind.isExpression();
+    assert trueNode.kind.isExpression();
+    assert falseNode.kind.isExpression();
+    return new Node(NodeKind.HOOK).withChildren({ test, trueNode, falseNode });
+  }
+
+  static Node createInt(int value) {
+    return new Node(NodeKind.INT).withContent(new IntContent(value));
+  }
+
+  static Node createFloat(float value) {
+    return new Node(NodeKind.FLOAT).withContent(new DoubleContent(value));
+  }
+
+  static Node createDouble(double value) {
+    return new Node(NodeKind.DOUBLE).withContent(new DoubleContent(value));
+  }
+
+  static Node createString(string value) {
+    return new Node(NodeKind.STRING).withContent(new StringContent(value));
+  }
+
+  static Node createInitializer(List<Node> values) {
+    assert checkAllNodeKinds(values, new NodeKindIsExpression());
+    return new Node(NodeKind.INITIALIZER).withChildren(values);
+  }
+
+  static Node createDot(Node value, Node name) {
+    assert value.kind.isExpression();
+    assert name.kind == NodeKind.NAME;
+    return new Node(NodeKind.DOT).withChildren({ value, name });
+  }
+
+  static Node createDotCall(Node value, Node name, List<Node> arguments) {
+    assert value.kind.isExpression();
+    assert name.kind == NodeKind.NAME;
+    assert checkAllNodeKinds(arguments, new NodeKindIsExpression());
+    arguments.unshift(name);
+    arguments.unshift(value);
+    return new Node(NodeKind.DOT_CALL).withChildren(arguments);
+  }
+
+  static Node createCall(Node value, List<Node> arguments) {
+    assert value.kind.isExpression();
+    assert checkAllNodeKinds(arguments, new NodeKindIsExpression());
+    arguments.unshift(value);
+    return new Node(NodeKind.CALL).withChildren(arguments);
+  }
+
+  static Node createError() {
+    return new Node(NodeKind.ERROR);
+  }
+
+  static Node createSequence(List<Node> values) {
+    assert checkAllNodeKinds(values, new NodeKindIsExpression());
+    return new Node(NodeKind.SEQUENCE).withChildren(values);
+  }
+
+  static Node createUnary(NodeKind kind, Node value) {
+    assert kind.isUnaryOperator();
+    assert value.kind.isExpression();
+    return new Node(kind).withChildren({ value });
+  }
+
+  static Node createAssign(Node left, Node right) {
+    return createBinary(NodeKind.ASSIGN, left, right);
+  }
+
+  static Node createBinary(NodeKind kind, Node left, Node right) {
+    assert kind.isBinaryOperator();
+    assert left.kind.isExpression();
+    assert right.kind.isExpression();
+    return new Node(kind).withChildren({ left, right });
+  }
+
+  static Node createTertiary(NodeKind kind, Node left, Node middle, Node right) {
+    assert kind.isTertiaryOperator();
+    assert left.kind.isExpression();
+    assert middle.kind.isExpression();
+    assert right.kind.isExpression();
+    return new Node(kind).withChildren({ left, middle, right });
+  }
+}
+
+interface INodeKindCheck {
+  virtual bool call(Node node);
+}
+
+class NodeKindIsVariable : INodeKindCheck {
+  override bool call(Node node) {
+    return node.kind == NodeKind.VARIABLE;
+  }
+}
+
+class NodeKindIsParameter : INodeKindCheck {
+  override bool call(Node node) {
+    return node.kind == NodeKind.PARAMETER;
+  }
+}
+
+class NodeKindIsCaseOrDefault : INodeKindCheck {
+  override bool call(Node node) {
+    return node.kind == NodeKind.CASE || node.kind == NodeKind.DEFAULT;
+  }
+}
+
+class NodeKindIsStatement : INodeKindCheck {
+  override bool call(Node node) {
+    return node.kind.isStatement();
+  }
+}
+
+class NodeKindIsExpression : INodeKindCheck {
+  override bool call(Node node) {
+    return node.kind.isExpression();
+  }
+}
+
+bool checkAllNodeKinds(List<Node> nodes, INodeKindCheck check) {
+  int i;
+  for (i = 0; i < nodes.length; i++) {
+    check.call(nodes.get(i));
+  }
+}

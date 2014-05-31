@@ -1,0 +1,257 @@
+enum NodeKind {
+  // Structure
+  PROGRAM,
+  BLOCK,
+  PARAMETER_LIST,
+  BASE_LIST,
+
+  // Type declarations
+  NAMESPACE,
+  ENUM,
+  ENUM_FLAGS,
+  CLASS,
+  STRUCT,
+  INTERFACE,
+
+  // Other declarations
+  EXTENSION,
+  CONSTRUCTOR,
+  FUNCTION,
+  VARIABLE,
+  VARIABLE_LIST,
+  PARAMETER,
+
+  // Statements
+  IF,
+  FOR,
+  FOREACH,
+  WHILE,
+  DO_WHILE,
+  RETURN,
+  BREAK,
+  CONTINUE,
+  ASSERT,
+  USING,
+  EXPRESSION,
+  MODIFIER,
+  SWITCH,
+  CASE,
+  DEFAULT,
+
+  // Expressions
+  NAME,
+  TYPE,
+  NULL,
+  THIS,
+  TRUE,
+  FALSE,
+  HOOK,
+  INT,
+  FLOAT,
+  DOUBLE,
+  STRING,
+  INITIALIZER,
+  DOT,
+  DOT_CALL,
+  CALL,
+  ERROR,
+  SEQUENCE,
+
+  // Unary operators
+  NOT,
+  POSITIVE,
+  NEGATIVE,
+  COMPLEMENT,
+  PRE_INCREMENT,
+  PRE_DECREMENT,
+  POST_INCREMENT,
+  POST_DECREMENT,
+
+  // Binary operators
+  ADD,
+  SUBTRACT,
+  MULTIPLY,
+  DIVIDE,
+  REMAINDER,
+  LOGICAL_OR,
+  LOGICAL_AND,
+  BITWISE_OR,
+  BITWISE_AND,
+  BITWISE_XOR,
+  SHIFT_LEFT,
+  SHIFT_RIGHT,
+  INDEX,
+
+  // Assignment operators
+  ASSIGN,
+  ASSIGN_ADD,
+  ASSIGN_SUBTRACT,
+  ASSIGN_MULTIPLY,
+  ASSIGN_DIVIDE,
+  ASSIGN_REMAINDER,
+  ASSIGN_LOGICAL_OR,
+  ASSIGN_LOGICAL_AND,
+  ASSIGN_BITWISE_OR,
+  ASSIGN_BITWISE_AND,
+  ASSIGN_BITWISE_XOR,
+  ASSIGN_SHIFT_LEFT,
+  ASSIGN_SHIFT_RIGHT,
+  ASSIGN_INDEX,
+}
+
+in NodeKind {
+  bool isStatement() {
+    return this >= NAMESPACE && this <= MODIFIER;
+  }
+
+  bool isExpression() {
+    return this >= NAME && this <= ASSIGN_INDEX;
+  }
+
+  bool isUnaryOperator() {
+    return this >= NOT && this <= POST_DECREMENT;
+  }
+
+  bool isBinaryOperator() {
+    return this >= ADD && this <= ASSIGN_SHIFT_RIGHT;
+  }
+
+  bool isTertiaryOperator() {
+    return this >= ASSIGN_INDEX;
+  }
+}
+
+class Node {
+  NodeKind kind;
+  Range range = Range.EMPTY;
+  Node parent = null;
+  List<Node> children = null;
+  Type type = null;
+  Symbol symbol = null;
+  Content content = null;
+
+  int indexInParent() {
+    assert parent != null;
+    return parent.children.indexOf(this);
+  }
+
+  void prependChild(Node node) {
+    insertChild(0, node);
+  }
+
+  void prependChildren(List<Node> nodes) {
+    insertChildren(0, nodes);
+  }
+
+  void appendChild(Node node) {
+    insertChild(children == null ? 0 : children.length, node);
+  }
+
+  void appendChildren(List<Node> nodes) {
+    insertChildren(children == null ? 0 : children.length, nodes);
+  }
+
+  void insertSiblingBefore(Node node) {
+    parent.insertChild(indexInParent(), node);
+  }
+
+  void insertSiblingAfter(Node node) {
+    parent.insertChild(indexInParent() + 1, node);
+  }
+
+  void remove() {
+    if (parent != null) {
+      int index = indexInParent();
+      assert index >= 0 && index < parent.children.length;
+      parent.children.remove(index);
+      parent = null;
+    }
+  }
+
+  void replaceWith(Node node) {
+    assert node.parent == null;
+    node.parent = parent;
+    parent.children.set(indexInParent(), node);
+    parent = null;
+  }
+
+  void insertChild(int index, Node node) {
+    if (children == null) children = {};
+    assert index >= 0 && index <= children.length;
+    assert node.parent == null;
+    node.parent = this;
+    children.insert(index, node);
+  }
+
+  void insertChildren(int index, List<Node> nodes) {
+    if (children == null) children = {};
+    assert index >= 0 && index <= children.length;
+    int i;
+    for (i = 0; i < nodes.length; i++) {
+      Node node = nodes.get(i);
+      assert node.parent == null;
+      node.parent = this;
+      children.insert(index++, node);
+    }
+  }
+
+  Node withRange(Range value) {
+    range = value;
+    return this;
+  }
+
+  Node withType(Type value) {
+    type = value;
+    return this;
+  }
+
+  Node withContent(Content value) {
+    content = value;
+    return this;
+  }
+
+  Node withChildren(List<Node> nodes) {
+    int i;
+    for (i = 0; i < nodes.length; i++) {
+      Node node = nodes.get(i);
+      assert node.parent == null;
+      node.parent = this;
+    }
+    children = nodes;
+    return this;
+  }
+}
+
+enum ContentType {
+  INT,
+  DOUBLE,
+  STRING,
+}
+
+class Content {
+  virtual ContentType type();
+}
+
+class IntContent : Content {
+  int value;
+
+  override ContentType type() {
+    return ContentType.INT;
+  }
+}
+
+class DoubleContent : Content {
+  double value;
+
+  override ContentType type() {
+    return ContentType.DOUBLE;
+  }
+}
+
+class StringContent : Content {
+  string value;
+
+  override ContentType type() {
+    return ContentType.STRING;
+  }
+}

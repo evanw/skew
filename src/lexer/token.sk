@@ -1,0 +1,95 @@
+class Token {
+  Range range;
+  TokenKind kind;
+  string text;
+}
+
+void prepareTokens(List<Token> tokens) {
+  List<int> stack = {};
+  int i;
+
+  for (i = 0; i < tokens.length; i++) {
+    Token token = tokens.get(i);
+    TokenKind tokenKind = token.kind;
+
+    // Note: The check for "token.text.length > 0" is very important. Without
+    // it, v8 will continue to deoptimize on codeUnitAt(0) until it hits its
+    // deoptimization threshold and then this function will be permanently
+    // deoptimized. This isn't so bad by itself but Google Closure Compiler
+    // inlines this along with all other tokenizing functions into a single
+    // function. Permanent deoptimization inside this inlined function causes
+    // tokenizing to be twice as slow.
+    bool tokenStartsWithGreaterThan = token.text.length > 0 && token.text.codeUnitAt(0) == '>';
+
+    // Retokens on the stack if they aren't working out
+    while (stack.length > 0) {
+      Token top = tokens.get(stack.get(stack.length - 1));
+      TokenKind topKind = top.kind;
+
+      // Stop parsing a type if we find a token that no type expression uses
+      if (topKind == TokenKind.LESS_THAN && tokenKind != TokenKind.LESS_THAN &&
+          tokenKind != TokenKind.IDENTIFIER && tokenKind != TokenKind.IS &&
+          tokenKind != TokenKind.COMMA && tokenKind != TokenKind.DOT &&
+          !tokenStartsWithGreaterThan) {
+        stack.pop();
+      } else {
+        break;
+      }
+    }
+
+    // Group open
+    if (tokenKind == TokenKind.LEFT_PARENTHESIS || tokenKind == TokenKind.LEFT_BRACE || tokenKind == TokenKind.LEFT_BRACKET || tokenKind == TokenKind.LESS_THAN) {
+      stack.push(i);
+      continue;
+    }
+
+    // Group close
+    if (tokenKind == TokenKind.RIGHT_PARENTHESIS || tokenKind == TokenKind.RIGHT_BRACE || tokenKind == TokenKind.RIGHT_BRACKET || tokenStartsWithGreaterThan) {
+      // Search for a matching opposite token
+      while (stack.length > 0) {
+        Token top = tokens.get(stack.get(stack.length - 1));
+        TokenKind topKind = top.kind;
+
+        // Don't match closing angle brackets that don't work since they are just operators
+        if (tokenStartsWithGreaterThan && topKind != TokenKind.LESS_THAN) {
+          break;
+        }
+
+        // Consume the current token
+        stack.pop();
+
+        // Special-case angle brackets matches
+        if (topKind == TokenKind.LESS_THAN) {
+
+          // Retentative matches that didn't work out
+          if (!tokenStartsWithGreaterThan) {
+            continue;
+          }
+
+          // Break apart operators that start with a closing angle bracket
+          if (tokenKind != TokenKind.GREATER_THAN) {
+            Range range = token.range;
+            int start = range.start;
+            string text = token.text.slice(1, token.text.length);
+            TokenKind kind =
+              tokenKind == TokenKind.SHIFT_RIGHT ? TokenKind.GREATER_THAN :
+              tokenKind == TokenKind.GREATER_THAN_OR_EQUAL ? TokenKind.ASSIGN :
+              tokenKind == TokenKind.ASSIGN_SHIFT_RIGHT ? TokenKind.GREATER_THAN_OR_EQUAL :
+              TokenKind.ERROR;
+            assert kind != TokenKind.ERROR;
+            tokens.insert(i + 1, new Token(new Range(range.source, start + 1, range.end), kind, text));
+            token.range = new Range(range.source, start, start + 1);
+            token.text = ">";
+          }
+
+          // Convert < and > into bounds for type parameter lists
+          top.kind = TokenKind.START_PARAMETER_LIST;
+          token.kind = TokenKind.END_PARAMETER_LIST;
+        }
+
+        // Stop the search since we found a match
+        break;
+      }
+    }
+  }
+}

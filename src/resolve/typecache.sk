@@ -1,0 +1,18 @@
+class TypeCache {
+  Type globalType = null;
+  Type voidType = null;
+  Type intType = null;
+  Type boolType = null;
+  Type floatType = null;
+  Type doubleType = null;
+  Type stringType = null;
+  Type nullType = createType("null");
+  Type errorType = createType("<error>");
+  Type circularType = createType("<circular>");
+}
+
+Type createType(string name) {
+  Type type = new Type(new Symbol(name, SymbolKind.OTHER));
+  type.symbol.type = type;
+  return type;
+}

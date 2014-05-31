@@ -1,0 +1,4 @@
+class Type {
+  Symbol symbol;
+  StringMap<Symbol> members = new StringMap<Symbol>();
+}

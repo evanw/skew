@@ -1,0 +1,12 @@
+string repeat(string text, int count) {
+  int i;
+  string result = "";
+  for (i = 0; i < count; i++) {
+    result = result.append(text);
+  }
+  return result;
+}
+
+string plural(int value, string singular, string plural) {
+  return value == 1 ? singular : plural;
+}

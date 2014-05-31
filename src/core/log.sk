@@ -1,0 +1,31 @@
+enum DiagnosticKind {
+  ERROR,
+  WARNING,
+  NOTE,
+}
+
+class Diagnostic {
+  DiagnosticKind kind;
+  Range range;
+  string text;
+}
+
+class Log {
+  List<Diagnostic> diagnostics = {};
+  int warningCount = 0;
+  int errorCount = 0;
+
+  void error(Range range, string text) {
+    diagnostics.push(new Diagnostic(DiagnosticKind.ERROR, range, text));
+    errorCount++;
+  }
+
+  void warning(Range range, string text) {
+    diagnostics.push(new Diagnostic(DiagnosticKind.WARNING, range, text));
+    warningCount++;
+  }
+
+  void note(Range range, string text) {
+    diagnostics.push(new Diagnostic(DiagnosticKind.NOTE, range, text));
+  }
+}
