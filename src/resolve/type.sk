@@ -1,4 +1,8 @@
 class Type {
   Symbol symbol;
   StringMap<Symbol> members = new StringMap<Symbol>();
+
+  string toString() {
+    return "TODO";
+  }
 }

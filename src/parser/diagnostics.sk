@@ -2,9 +2,9 @@ string simpleQuote(string name) {
   return "\"".append(name).append("\"");
 }
 
-// string typeToText(Type type) {
-//   return "type \"".append(type.toString()).append("\"");
-// }
+string typeToText(Type type) {
+  return "type \"".append(type.toString()).append("\"");
+}
 
 string firstLineOf(string text) {
   int index = text.indexOf("\n");
