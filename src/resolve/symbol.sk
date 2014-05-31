@@ -25,6 +25,28 @@ enum SymbolKind {
   INSTANCE_VARIABLE,
 }
 
+in SymbolKind {
+  bool isNamespace() {
+    return this == GLOBAL_NAMESPACE || this == NAMESPACE;
+  }
+
+  bool isEnum() {
+    return this == ENUM || this == ENUM_FLAGS;
+  }
+
+  bool isObject() {
+    return this >= CLASS && this <= INTERFACE;
+  }
+
+  bool isFunction() {
+    return this >= GLOBAL_FUNCTION && this <= CONSTRUCTOR_FUNCTION;
+  }
+
+  bool isVariable() {
+    return this >= LOCAL_VARIABLE && this <= INSTANCE_VARIABLE;
+  }
+}
+
 enum flags SymbolFlags {
   // Access flags
   PUBLIC,
