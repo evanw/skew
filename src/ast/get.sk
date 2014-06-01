@@ -10,4 +10,22 @@ in Node {
     assert children.length == 2;
     return children.get(1);
   }
+
+  Node unaryValue() {
+    assert kind.isUnaryOperator();
+    assert children.length == 1;
+    return children.get(0);
+  }
+
+  Node binaryLeft() {
+    assert kind.isBinaryOperator();
+    assert children.length == 2;
+    return children.get(0);
+  }
+
+  Node binaryRight() {
+    assert kind.isBinaryOperator();
+    assert children.length == 2;
+    return children.get(1);
+  }
 }

@@ -111,16 +111,15 @@ Node parseBlockOrStatement(ParserContext context) {
 
 Node parseCaseStatement(ParserContext context) {
   Token token = context.current();
-  List<Node> values = null;
+  List<Node> values = {};
   if (!context.eat(TokenKind.DEFAULT)) {
     if (!context.expect(TokenKind.CASE)) return null;
-    values = {};
     do {
       values.push(pratt.parse(context, Precedence.COMMA));
     } while (context.eat(TokenKind.COMMA));
   }
   Node block = parseBlock(context, StatementHint.NORMAL); if (block == null) return null;
-  return (values != null ? Node.createCase(values, block) : Node.createDefault(block)).withRange(context.spanSince(token.range));
+  return Node.createCase(values, block).withRange(context.spanSince(token.range));
 }
 
 List<Node> parseStatements(ParserContext context, StatementHint hint) {
@@ -200,21 +199,21 @@ List<Node> parseArgumentList(ParserContext context, TokenKind left, TokenKind ri
   return values;
 }
 
-Node parseTypeList(ParserContext context) {
+List<Node> parseTypeList(ParserContext context) {
   Token token = context.current();
   List<Node> types = {};
   while (types.length == 0 || !context.peek(TokenKind.END_PARAMETER_LIST) && !context.peek(TokenKind.LEFT_BRACE)) {
     if (types.length > 0 && !context.expect(TokenKind.COMMA)) break;
     types.push(parseType(context));
   }
-  return Node.createNodeList(types);
+  return types;
 }
 
 Node parseObject(ParserContext context, NodeKind kind) {
   Token token = context.next();
   Node name = parseName(context); if (name == null) return null;
   Node parameters = parseParameters(context);
-  Node bases = context.eat(TokenKind.COLON) ? parseTypeList(context) : null;
+  Node bases = context.eat(TokenKind.COLON) ? Node.createNodeList(parseTypeList(context)) : null;
   Node block = parseBlock(context, StatementHint.IN_OBJECT); if (block == null) return null;
   return Node.createObject(kind, name, parameters, bases, block).withRange(context.spanSince(token.range));
 }
@@ -352,7 +351,7 @@ Node parseVariableCluster(ParserContext context, Node type, Node name) {
   while (variables.length == 0 || !context.peek(TokenKind.SEMICOLON)) {
     if (variables.length > 0 && !context.expect(TokenKind.COMMA)) break;
     if (name == null) name = parseName(context); if (name == null) break;
-    Node value = context.eat(TokenKind.ASSIGN) ? pratt.parse(context, TokenKind.COMMA) : null;
+    Node value = context.eat(TokenKind.ASSIGN) ? pratt.parse(context, Precedence.COMMA) : null;
     variables.push(Node.createVariable(name, null, value).withRange(context.spanSince(name.range)));
     name = null;
   }
@@ -391,11 +390,37 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
   // Parse a constructor
   if (hint == StatementHint.IN_OBJECT && type.kind == NodeKind.NAME && context.peek(TokenKind.LEFT_PARENTHESIS)) {
     Node arguments = parseArgumentVariables(context); if (arguments == null) return null;
+    Node superInitializer = null;
+    Node memberInitializers = null;
+
+    // Parse the initializer list
+    if (context.eat(TokenKind.COLON)) {
+
+      // The super initializer can have multiple arguments
+      if (context.peek(TokenKind.SUPER)) {
+        Token token = context.next();
+        List<Node> values = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO);
+        superInitializer = Node.createSuperCall(values).withRange(context.spanSince(token.range));
+      }
+
+      // Each member initializer has one argument
+      if (superInitializer == null || context.eat(TokenKind.COMMA)) {
+        List<Node> values = {};
+        do {
+          Node member = parseName(context); if (member == null) break;
+          if (!context.expect(TokenKind.ASSIGN)) break;
+          Node value = pratt.parse(context, Precedence.COMMA);
+          values.push(Node.createVariable(member, null, value).withRange(context.spanSince(member.range)));
+        } while (context.eat(TokenKind.COMMA));
+        memberInitializers = Node.createNodeList(values);
+      }
+    }
+
     Node block = null;
     if (!context.eat(TokenKind.SEMICOLON)) {
       block = parseBlock(context, StatementHint.NORMAL); if (block == null) return null;
     }
-    return Node.createConstructor(type, arguments, block, null, null).withRange(context.spanSince(type.range));
+    return Node.createConstructor(type, arguments, block, superInitializer, memberInitializers).withRange(context.spanSince(type.range));
   }
 
   // If this isn't a typed declaration, just parse an expression statement
@@ -424,6 +449,15 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
   return cluster;
 }
 
+Node parseUsing(ParserContext context) {
+  Token token = context.next();
+  Node name = parseName(context); if (name == null) return null;
+  if (!context.expect(TokenKind.ASSIGN)) return null;
+  Node value = pratt.parse(context, Precedence.LOWEST);
+  scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+  return Node.createUsing(name, value).withRange(context.spanSince(token.range));
+}
+
 Node parseStatement(ParserContext context, StatementHint hint) {
   switch (context.current().kind) {
     case TokenKind.ASSERT { return parseAssert(context); }
@@ -450,6 +484,7 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case TokenKind.STATIC { return parseModifier(context, SymbolFlag.STATIC); }
     case TokenKind.STRUCT { return parseObject(context, NodeKind.STRUCT); }
     case TokenKind.SWITCH { return parseSwitch(context); }
+    case TokenKind.USING { return parseUsing(context); }
     case TokenKind.VIRTUAL { return parseModifier(context, SymbolFlag.VIRTUAL); }
     case TokenKind.WHILE { return parseWhile(context); }
     default { return parseExpression(context); }
@@ -573,6 +608,80 @@ class SequenceInfix : IInfixParselet {
   }
 }
 
+class DotInfix : IInfixParselet {
+  override Node run(ParserContext context, Node left) {
+    context.next();
+    Node name = parseName(context); // Allow this to be null for autocomplete
+    return Node.createDot(left, name).withRange(context.spanSince(left.range));
+  }
+}
+
+class UnaryPostfix : IPostfixCallback {
+  NodeKind kind;
+
+  override Node run(ParserContext context, Node value, Token token) {
+    return Node.createUnary(kind, value).withRange(Range.span(value.range, token.range));
+  }
+}
+
+class UnaryPrefix : IPrefixCallback {
+  NodeKind kind;
+
+  override Node run(ParserContext context, Token token, Node value) {
+    return Node.createUnary(kind, value).withRange(Range.span(token.range, value.range));
+  }
+}
+
+class BinaryInfix : IInfixCallback {
+  NodeKind kind;
+
+  override Node run(ParserContext context, Node left, Token token, Node right) {
+    return Node.createBinary(kind, left, right).withRange(Range.span(left.range, right.range));
+  }
+}
+
+class CallInfix : IInfixParselet {
+  override Node run(ParserContext context, Node left) {
+    List<Node> arguments = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO);
+    return Node.createCall(left, arguments).withRange(context.spanSince(left.range));
+  }
+}
+
+class IndexInfix : IInfixParselet {
+  override Node run(ParserContext context, Node left) {
+    context.next();
+    Node index = pratt.parse(context, Precedence.LOWEST);
+    scanForToken(context, TokenKind.RIGHT_BRACKET, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+    return Node.createBinary(NodeKind.INDEX, left, index).withRange(context.spanSince(left.range));
+  }
+}
+
+class NewPrefix : IPrefixParselet {
+  override Node run(ParserContext context) {
+    Token token = context.next();
+    Node type = parseType(context);
+    List<Node> arguments = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO);
+    return Node.createNew(type, arguments).withRange(context.spanSince(token.range));
+  }
+}
+
+class SubstitutionInfix : IInfixParselet {
+  override Node run(ParserContext context, Node left) {
+    Token token = context.next();
+    List<Node> substitutions = parseTypeList(context);
+    if (!context.expect(TokenKind.END_PARAMETER_LIST)) return Node.createError().withRange(context.spanSince(token.range));
+    return Node.createParameterize(left, substitutions).withRange(context.spanSince(left.range));
+  }
+}
+
+class DefaultPrefix : IPrefixParselet {
+  override Node run(ParserContext context) {
+    Token token = context.next();
+    Node type = parseGroup(context);
+    return Node.createDefault(type).withRange(context.spanSince(token.range));
+  }
+}
+
 Pratt createParser() {
   Pratt pratt = new Pratt();
 
@@ -591,11 +700,61 @@ Pratt createParser() {
   pratt.literal(TokenKind.STRING, new StringLiteral());
   pratt.literal(TokenKind.CHARACTER, new CharacterLiteral());
 
+  // Unary expressions
+  pratt.postfix(TokenKind.INCREMENT, Precedence.UNARY_POSTFIX, new UnaryPostfix(NodeKind.POSTFIX_INCREMENT));
+  pratt.postfix(TokenKind.DECREMENT, Precedence.UNARY_POSTFIX, new UnaryPostfix(NodeKind.POSTFIX_DECREMENT));
+  pratt.prefix(TokenKind.INCREMENT, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.PREFIX_INCREMENT));
+  pratt.prefix(TokenKind.DECREMENT, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.PREFIX_DECREMENT));
+  pratt.prefix(TokenKind.PLUS, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.POSITIVE));
+  pratt.prefix(TokenKind.MINUS, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.NEGATIVE));
+  pratt.prefix(TokenKind.NOT, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.NOT));
+  pratt.prefix(TokenKind.TILDE, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.COMPLEMENT));
+
+  // Binary expressions
+  pratt.infix(TokenKind.BITWISE_AND, Precedence.BITWISE_AND, new BinaryInfix(NodeKind.BITWISE_AND));
+  pratt.infix(TokenKind.BITWISE_OR, Precedence.BITWISE_OR, new BinaryInfix(NodeKind.BITWISE_OR));
+  pratt.infix(TokenKind.BITWISE_XOR, Precedence.BITWISE_XOR, new BinaryInfix(NodeKind.BITWISE_XOR));
+  pratt.infix(TokenKind.DIVIDE, Precedence.MULTIPLY, new BinaryInfix(NodeKind.DIVIDE));
+  pratt.infix(TokenKind.EQUAL, Precedence.EQUAL, new BinaryInfix(NodeKind.EQUAL));
+  pratt.infix(TokenKind.GREATER_THAN, Precedence.COMPARE, new BinaryInfix(NodeKind.GREATER_THAN));
+  pratt.infix(TokenKind.GREATER_THAN_OR_EQUAL, Precedence.COMPARE, new BinaryInfix(NodeKind.GREATER_THAN_OR_EQUAL));
+  pratt.infix(TokenKind.IN, Precedence.COMPARE, new BinaryInfix(NodeKind.IN));
+  pratt.infix(TokenKind.LESS_THAN, Precedence.COMPARE, new BinaryInfix(NodeKind.LESS_THAN));
+  pratt.infix(TokenKind.LESS_THAN_OR_EQUAL, Precedence.COMPARE, new BinaryInfix(NodeKind.LESS_THAN_OR_EQUAL));
+  pratt.infix(TokenKind.LOGICAL_AND, Precedence.LOGICAL_AND, new BinaryInfix(NodeKind.LOGICAL_AND));
+  pratt.infix(TokenKind.LOGICAL_OR, Precedence.LOGICAL_OR, new BinaryInfix(NodeKind.LOGICAL_OR));
+  pratt.infix(TokenKind.MINUS, Precedence.ADD, new BinaryInfix(NodeKind.SUBTRACT));
+  pratt.infix(TokenKind.MULTIPLY, Precedence.MULTIPLY, new BinaryInfix(NodeKind.MULTIPLY));
+  pratt.infix(TokenKind.NOT_EQUAL, Precedence.EQUAL, new BinaryInfix(NodeKind.NOT_EQUAL));
+  pratt.infix(TokenKind.PLUS, Precedence.ADD, new BinaryInfix(NodeKind.ADD));
+  pratt.infix(TokenKind.REMAINDER, Precedence.MULTIPLY, new BinaryInfix(NodeKind.REMAINDER));
+  pratt.infix(TokenKind.SHIFT_LEFT, Precedence.SHIFT, new BinaryInfix(NodeKind.SHIFT_LEFT));
+  pratt.infix(TokenKind.SHIFT_RIGHT, Precedence.SHIFT, new BinaryInfix(NodeKind.SHIFT_RIGHT));
+
+  // Assignment expressions
+  pratt.infixRight(TokenKind.ASSIGN, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN));
+  pratt.infixRight(TokenKind.ASSIGN_PLUS, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_ADD));
+  pratt.infixRight(TokenKind.ASSIGN_BITWISE_AND, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_BITWISE_AND));
+  pratt.infixRight(TokenKind.ASSIGN_BITWISE_OR, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_BITWISE_OR));
+  pratt.infixRight(TokenKind.ASSIGN_BITWISE_XOR, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_BITWISE_XOR));
+  pratt.infixRight(TokenKind.ASSIGN_DIVIDE, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_DIVIDE));
+  pratt.infixRight(TokenKind.ASSIGN_MULTIPLY, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_MULTIPLY));
+  pratt.infixRight(TokenKind.ASSIGN_REMAINDER, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_REMAINDER));
+  pratt.infixRight(TokenKind.ASSIGN_SHIFT_LEFT, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_SHIFT_LEFT));
+  pratt.infixRight(TokenKind.ASSIGN_SHIFT_RIGHT, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_SHIFT_RIGHT));
+  pratt.infixRight(TokenKind.ASSIGN_MINUS, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_SUBTRACT));
+
   // Other expressions
   pratt.parselet(TokenKind.LEFT_BRACE, Precedence.LOWEST).prefix = new InitializerParselet();
   pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.LOWEST).prefix = new GroupParselet();
   pratt.parselet(TokenKind.QUESTION_MARK, Precedence.ASSIGN).infix = new HookInfix();
   pratt.parselet(TokenKind.COMMA, Precedence.COMMA).infix = new SequenceInfix();
+  pratt.parselet(TokenKind.DOT, Precedence.MEMBER).infix = new DotInfix();
+  pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = new CallInfix();
+  pratt.parselet(TokenKind.LEFT_BRACKET, Precedence.UNARY_POSTFIX).infix = new IndexInfix();
+  pratt.parselet(TokenKind.NEW, Precedence.LOWEST).prefix = new NewPrefix();
+  pratt.parselet(TokenKind.START_PARAMETER_LIST, Precedence.MEMBER).infix = new SubstitutionInfix();
+  pratt.parselet(TokenKind.DEFAULT, Precedence.UNARY_PREFIX).prefix = new DefaultPrefix();
 
   return pratt;
 }

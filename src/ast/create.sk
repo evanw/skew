@@ -99,6 +99,12 @@ in Node {
     return new Node(NodeKind.PARAMETER).withChildren({ name, bound });
   }
 
+  static Node createUsing(Node name, Node value) {
+    assert name.kind == NodeKind.NAME;
+    assert value.kind.isExpression();
+    return new Node(NodeKind.USING).withChildren({ name, value });
+  }
+
   static Node createIf(Node test, Node trueNode, Node falseNode) {
     assert test.kind.isExpression();
     assert trueNode.kind == NodeKind.BLOCK;
@@ -144,11 +150,6 @@ in Node {
     return new Node(NodeKind.ASSERT).withChildren({ value });
   }
 
-  static Node createUsing(Node value) {
-    assert value.kind.isExpression();
-    return new Node(NodeKind.USING).withChildren({ value });
-  }
-
   static Node createExpression(Node value) {
     assert value.kind.isExpression();
     return new Node(NodeKind.EXPRESSION).withChildren({ value });
@@ -169,16 +170,10 @@ in Node {
   }
 
   static Node createCase(List<Node> values, Node block) {
-    assert values.length > 0;
     assert checkAllNodeKinds(values, new NodeKindIsExpression());
     assert block.kind == NodeKind.BLOCK;
     values.push(block);
     return new Node(NodeKind.CASE).withChildren(values);
-  }
-
-  static Node createDefault(Node block) {
-    assert block.kind == NodeKind.BLOCK;
-    return new Node(NodeKind.DEFAULT).withChildren({ block });
   }
 
   static Node createName(string name) {
@@ -260,6 +255,13 @@ in Node {
     return new Node(NodeKind.SUPER_CALL).withChildren(arguments);
   }
 
+  static Node createNew(Node value, List<Node> arguments) {
+    assert value.kind.isExpression();
+    assert checkAllNodeKinds(arguments, new NodeKindIsExpression());
+    arguments.unshift(value);
+    return new Node(NodeKind.NEW).withChildren(arguments);
+  }
+
   static Node createError() {
     return new Node(NodeKind.ERROR);
   }
@@ -288,6 +290,11 @@ in Node {
     return new Node(NodeKind.IMPLICIT_CAST).withChildren({ type, value });
   }
 
+  static Node createDefault(Node type) {
+    assert type.kind.isExpression();
+    return new Node(NodeKind.DEFAULT).withChildren({ type });
+  }
+
   static Node createUnary(NodeKind kind, Node value) {
     assert kind.isUnaryOperator();
     assert value.kind.isExpression();
@@ -302,6 +309,14 @@ in Node {
     assert kind.isBinaryOperator();
     assert left.kind.isExpression();
     assert right.kind.isExpression();
+
+    // Automatically convert an index nested inside an assignment to ASSIGN_INDEX
+    if (kind == NodeKind.ASSIGN && left.kind == NodeKind.INDEX) {
+      Node target = left.binaryLeft();
+      Node index = left.binaryRight();
+      return createTertiary(NodeKind.ASSIGN_INDEX, target.remove(), index.remove(), right);
+    }
+
     return new Node(kind).withChildren({ left, right });
   }
 

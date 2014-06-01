@@ -5,7 +5,6 @@ enum NodeKind {
   BLOCK,
   NODE_LIST,
   CASE,
-  DEFAULT,
 
   // Type declarations
   NAMESPACE,
@@ -22,6 +21,7 @@ enum NodeKind {
   VARIABLE,
   VARIABLE_CLUSTER,
   PARAMETER,
+  USING,
 
   // Statements
   IF,
@@ -33,7 +33,6 @@ enum NodeKind {
   BREAK,
   CONTINUE,
   ASSERT,
-  USING,
   EXPRESSION,
   SWITCH,
   MODIFIER,
@@ -55,51 +54,60 @@ enum NodeKind {
   DOT_CALL,
   CALL,
   SUPER_CALL,
+  NEW,
   ERROR,
   SEQUENCE,
   PARAMETERIZE,
   CAST,
   IMPLICIT_CAST,
+  DEFAULT,
 
   // Unary operators
   NOT,
   POSITIVE,
   NEGATIVE,
   COMPLEMENT,
-  PRE_INCREMENT,
-  PRE_DECREMENT,
-  POST_INCREMENT,
-  POST_DECREMENT,
+  PREFIX_INCREMENT,
+  PREFIX_DECREMENT,
+  POSTFIX_INCREMENT,
+  POSTFIX_DECREMENT,
 
   // Binary operators
   ADD,
-  SUBTRACT,
-  MULTIPLY,
-  DIVIDE,
-  REMAINDER,
-  LOGICAL_OR,
-  LOGICAL_AND,
-  BITWISE_OR,
   BITWISE_AND,
+  BITWISE_OR,
   BITWISE_XOR,
+  DIVIDE,
+  EQUAL,
+  GREATER_THAN,
+  GREATER_THAN_OR_EQUAL,
+  IN,
+  INDEX,
+  LESS_THAN,
+  LESS_THAN_OR_EQUAL,
+  LOGICAL_AND,
+  LOGICAL_OR,
+  MULTIPLY,
+  NOT_EQUAL,
+  REMAINDER,
   SHIFT_LEFT,
   SHIFT_RIGHT,
-  INDEX,
+  SUBTRACT,
 
-  // Assignment operators
+  // Binary assignment operators
   ASSIGN,
   ASSIGN_ADD,
-  ASSIGN_SUBTRACT,
-  ASSIGN_MULTIPLY,
-  ASSIGN_DIVIDE,
-  ASSIGN_REMAINDER,
-  ASSIGN_LOGICAL_OR,
-  ASSIGN_LOGICAL_AND,
-  ASSIGN_BITWISE_OR,
   ASSIGN_BITWISE_AND,
+  ASSIGN_BITWISE_OR,
   ASSIGN_BITWISE_XOR,
+  ASSIGN_DIVIDE,
+  ASSIGN_MULTIPLY,
+  ASSIGN_REMAINDER,
   ASSIGN_SHIFT_LEFT,
   ASSIGN_SHIFT_RIGHT,
+  ASSIGN_SUBTRACT,
+
+  // Tertiary assignment operators
   ASSIGN_INDEX,
 }
 
@@ -113,7 +121,7 @@ in NodeKind {
   }
 
   bool isUnaryOperator() {
-    return this >= NOT && this <= POST_DECREMENT;
+    return this >= NOT && this <= POSTFIX_DECREMENT;
   }
 
   bool isBinaryOperator() {
@@ -121,7 +129,7 @@ in NodeKind {
   }
 
   bool isTertiaryOperator() {
-    return this >= ASSIGN_INDEX;
+    return this == ASSIGN_INDEX;
   }
 }
 
@@ -185,13 +193,14 @@ class Node {
     parent.insertChild(indexInParent() + 1, node);
   }
 
-  void remove() {
+  Node remove() {
     if (parent != null) {
       int index = indexInParent();
       assert index >= 0 && index < parent.children.length;
       parent.children.remove(index);
       parent = null;
     }
+    return this;
   }
 
   List<Node> removeChildren() {
