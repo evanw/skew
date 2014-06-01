@@ -29,5 +29,5 @@ build:
 build/debug: build
 	mkdir build/debug
 
-build/debug/skewc.js: build/debug $(SOURCES) Makefile
-	skewc $(SOURCES) --verbose --target js --output-file build/debug/skewc.js
+build/debug/skewc.js: build/debug $(SOURCES) Makefile src/core/support.js
+	skewc $(SOURCES) --verbose --target js --output-file build/debug/skewc.js --append src/core/support.js

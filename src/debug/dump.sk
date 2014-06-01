@@ -9,12 +9,16 @@ class DumpVisitor {
   string indent = "";
 
   void visit(Node node) {
+    if (node == null) {
+      builder.append("null");
+      return;
+    }
     builder.append("(").append(node.kind.toString());
     if (node.content != null) {
       switch (node.content.type()) {
         case ContentType.INT { builder.append(" ").append(node.asInt().toString()); }
         case ContentType.DOUBLE { builder.append(" ").append(node.asDouble().toString()); }
-        case ContentType.STRING { builder.append(" ").append(node.asString()); }
+        case ContentType.STRING { builder.append(" ").append(quoteString(node.asString(), '"')); }
       }
     }
     if (node.hasChildren()) {

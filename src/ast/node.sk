@@ -191,12 +191,14 @@ class Node {
     }
   }
 
-  void removeChildren() {
+  List<Node> removeChildren() {
+    List<Node> result = children;
     int i;
     for (i = 0; i < children.length; i++) {
       children.get(i).parent = null;
     }
     children = null;
+    return result;
   }
 
   void replaceWith(Node node) {
@@ -223,11 +225,18 @@ class Node {
     }
   }
 
-  static void updateParent(Node node, Node parent) {
-    if (node != null) {
-      assert node.parent == null;
-      node.parent = parent;
+  Node clone() {
+    Node node = new Node(kind);
+    node.range = range;
+    node.children = {};
+    node.type = type;
+    node.symbol = symbol;
+    node.content = content.clone();
+    int i;
+    for (i = 0; i < children.length; i++) {
+      node.appendChild(children.get(i).clone());
     }
+    return node;
   }
 
   Node withRange(Range value) {
@@ -253,6 +262,13 @@ class Node {
     children = nodes;
     return this;
   }
+
+  static void updateParent(Node node, Node parent) {
+    if (node != null) {
+      assert node.parent == null;
+      node.parent = parent;
+    }
+  }
 }
 
 enum ContentType {
@@ -263,6 +279,7 @@ enum ContentType {
 
 class Content {
   virtual ContentType type();
+  virtual Content clone();
 }
 
 class IntContent : Content {
@@ -270,6 +287,10 @@ class IntContent : Content {
 
   override ContentType type() {
     return ContentType.INT;
+  }
+
+  override Content clone() {
+    return new IntContent(value);
   }
 }
 
@@ -279,6 +300,10 @@ class DoubleContent : Content {
   override ContentType type() {
     return ContentType.DOUBLE;
   }
+
+  override Content clone() {
+    return new DoubleContent(value);
+  }
 }
 
 class StringContent : Content {
@@ -286,5 +311,9 @@ class StringContent : Content {
 
   override ContentType type() {
     return ContentType.STRING;
+  }
+
+  override Content clone() {
+    return new StringContent(value);
   }
 }

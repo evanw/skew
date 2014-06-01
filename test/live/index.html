@@ -18,18 +18,22 @@ textarea {
 <script>
 
 function compile() {
-  var source = new Source('<stdin>', input.value);
-  var log = new Log();
-  var tokens = tokenize(log, source);
-  var file = parseFile(log, tokens);
-  var text = '';
-  for (var i = 0; i < log.diagnostics.length; i++) {
-    var diagnostic = log.diagnostics[i];
-    var formatted = diagnostic.range.format(80);
-    text += diagnostic.range.locationString() + ': ' + diagnostic.text + '\n' + formatted.line + '\n' + formatted.range + '\n';
+  try {
+    var source = new Source('<stdin>', input.value);
+    var log = new Log();
+    var tokens = tokenize(log, source);
+    var file = parseFile(log, tokens);
+    var text = '';
+    for (var i = 0; i < log.diagnostics.length; i++) {
+      var diagnostic = log.diagnostics[i];
+      var formatted = diagnostic.range.format(80);
+      text += diagnostic.range.locationString() + ': ' + diagnostic.text + '\n' + formatted.line + '\n' + formatted.range + '\n';
+    }
+    if (file) text += dump(file);
+    output.value = text;
+  } catch (e) {
+    output.value = e.stack || e;
   }
-  if (file) text += dump(file);
-  output.value = text;
 }
 
 input.oninput = input.onchange = compile;
