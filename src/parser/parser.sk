@@ -384,6 +384,12 @@ Node parseFor(ParserContext context) {
   return Node.createFor(setup, test, update, block).withRange(context.spanSince(token.range));
 }
 
+Node parseSuperCall(ParserContext context) {
+  Token token = context.next();
+  List<Node> values = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO);
+  return Node.createSuperCall(values).withRange(context.spanSince(token.range));
+}
+
 Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
   Node type = parseType(context);
 
@@ -398,9 +404,7 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
 
       // The super initializer can have multiple arguments
       if (context.peek(TokenKind.SUPER)) {
-        Token token = context.next();
-        List<Node> values = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO);
-        superInitializer = Node.createSuperCall(values).withRange(context.spanSince(token.range));
+        superInitializer = parseSuperCall(context);
       }
 
       // Each member initializer has one argument
@@ -682,6 +686,12 @@ class DefaultPrefix : IPrefixParselet {
   }
 }
 
+class SuperCallPrefix : IPrefixParselet {
+  override Node run(ParserContext context) {
+    return parseSuperCall(context);
+  }
+}
+
 Pratt createParser() {
   Pratt pratt = new Pratt();
 
@@ -755,6 +765,7 @@ Pratt createParser() {
   pratt.parselet(TokenKind.NEW, Precedence.LOWEST).prefix = new NewPrefix();
   pratt.parselet(TokenKind.START_PARAMETER_LIST, Precedence.MEMBER).infix = new SubstitutionInfix();
   pratt.parselet(TokenKind.DEFAULT, Precedence.UNARY_PREFIX).prefix = new DefaultPrefix();
+  pratt.parselet(TokenKind.SUPER, Precedence.LOWEST).prefix = new SuperCallPrefix();
 
   return pratt;
 }
