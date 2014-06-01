@@ -1,9 +1,11 @@
 enum NodeKind {
   // Structure
   PROGRAM,
+  FILE,
   BLOCK,
-  PARAMETER_LIST,
-  BASE_LIST,
+  NODE_LIST,
+  CASE,
+  DEFAULT,
 
   // Type declarations
   NAMESPACE,
@@ -18,7 +20,7 @@ enum NodeKind {
   CONSTRUCTOR,
   FUNCTION,
   VARIABLE,
-  VARIABLE_LIST,
+  VARIABLE_CLUSTER,
   PARAMETER,
 
   // Statements
@@ -33,10 +35,8 @@ enum NodeKind {
   ASSERT,
   USING,
   EXPRESSION,
-  MODIFIER,
   SWITCH,
-  CASE,
-  DEFAULT,
+  MODIFIER,
 
   // Expressions
   NAME,
@@ -54,6 +54,7 @@ enum NodeKind {
   DOT,
   DOT_CALL,
   CALL,
+  SUPER_CALL,
   ERROR,
   SEQUENCE,
 
@@ -130,6 +131,28 @@ class Node {
   Symbol symbol = null;
   Content content = null;
 
+  int asInt() {
+    assert content != null;
+    assert content.type() == ContentType.INT;
+    return ((IntContent)content).value;
+  }
+
+  double asDouble() {
+    assert content != null;
+    assert content.type() == ContentType.DOUBLE;
+    return ((DoubleContent)content).value;
+  }
+
+  string asString() {
+    assert content != null;
+    assert content.type() == ContentType.STRING;
+    return ((StringContent)content).value;
+  }
+
+  bool hasChildren() {
+    return children != null && children.length > 0;
+  }
+
   int indexInParent() {
     assert parent != null;
     return parent.children.indexOf(this);
@@ -168,9 +191,16 @@ class Node {
     }
   }
 
+  void removeChildren() {
+    int i;
+    for (i = 0; i < children.length; i++) {
+      children.get(i).parent = null;
+    }
+    children = null;
+  }
+
   void replaceWith(Node node) {
-    assert node.parent == null;
-    node.parent = parent;
+    updateParent(node, parent);
     parent.children.set(indexInParent(), node);
     parent = null;
   }
@@ -178,8 +208,7 @@ class Node {
   void insertChild(int index, Node node) {
     if (children == null) children = {};
     assert index >= 0 && index <= children.length;
-    assert node.parent == null;
-    node.parent = this;
+    updateParent(node, this);
     children.insert(index, node);
   }
 
@@ -189,9 +218,15 @@ class Node {
     int i;
     for (i = 0; i < nodes.length; i++) {
       Node node = nodes.get(i);
-      assert node.parent == null;
-      node.parent = this;
+      updateParent(node, this);
       children.insert(index++, node);
+    }
+  }
+
+  static void updateParent(Node node, Node parent) {
+    if (node != null) {
+      assert node.parent == null;
+      node.parent = parent;
     }
   }
 
@@ -213,9 +248,7 @@ class Node {
   Node withChildren(List<Node> nodes) {
     int i;
     for (i = 0; i < nodes.length; i++) {
-      Node node = nodes.get(i);
-      assert node.parent == null;
-      node.parent = this;
+      updateParent(nodes.get(i), this);
     }
     children = nodes;
     return this;

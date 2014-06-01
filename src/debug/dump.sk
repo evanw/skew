@@ -1,0 +1,32 @@
+string dump(Node node) {
+  DumpVisitor visitor = new DumpVisitor();
+  visitor.visit(node);
+  return visitor.builder.toString();
+}
+
+class DumpVisitor {
+  StringBuilder builder = new StringBuilder();
+  string indent = "";
+
+  void visit(Node node) {
+    builder.append("(").append(node.kind.toString());
+    if (node.content != null) {
+      switch (node.content.type()) {
+        case ContentType.INT { builder.append(" ").append(node.asInt().toString()); }
+        case ContentType.DOUBLE { builder.append(" ").append(node.asDouble().toString()); }
+        case ContentType.STRING { builder.append(" ").append(node.asString()); }
+      }
+    }
+    if (node.hasChildren()) {
+      string old = indent;
+      indent = indent.append("  ");
+      int i;
+      for (i = 0; i < node.children.length; i++) {
+        builder.append("\n").append(indent);
+        visit(node.children.get(i));
+      }
+      indent = old;
+    }
+    builder.append(")");
+  }
+}

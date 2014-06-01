@@ -3,13 +3,16 @@ SOURCES += src/ast/node.sk
 
 SOURCES += src/core/log.sk
 SOURCES += src/core/range.sk
+SOURCES += src/core/source.sk
 SOURCES += src/core/support.sk
+
+SOURCES += src/debug/dump.sk
 
 SOURCES += src/lexer/lexer.sk
 SOURCES += src/lexer/token.sk
 
 SOURCES += src/parser/diagnostics.sk
-# SOURCES += src/parser/parser.sk
+SOURCES += src/parser/parser.sk
 SOURCES += src/parser/pratt.sk
 
 SOURCES += src/resolve/symbol.sk
@@ -27,4 +30,4 @@ build/debug: build
 	mkdir build/debug
 
 build/debug/skewc.js: build/debug $(SOURCES) Makefile
-	skewc $(SOURCES) --verbose --optimize --target js --output-file build/debug/skewc.js
+	skewc $(SOURCES) --verbose --target js --output-file build/debug/skewc.js

@@ -50,26 +50,30 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
     }
 
     if (tokenScan == TokenScan.STOP_BEFORE_NEXT_STATEMENT && (
-        context.peek(TokenKind.IF) ||
-        context.peek(TokenKind.ELSE) ||
-        context.peek(TokenKind.FOR) ||
-        context.peek(TokenKind.DO) ||
-        context.peek(TokenKind.WHILE) ||
-        context.peek(TokenKind.RETURN) ||
-        context.peek(TokenKind.CONTINUE) ||
-        context.peek(TokenKind.BREAK) ||
         context.peek(TokenKind.ASSERT) ||
-        context.peek(TokenKind.SWITCH) ||
+        context.peek(TokenKind.BREAK) ||
         context.peek(TokenKind.CASE) ||
         context.peek(TokenKind.CLASS) ||
-        context.peek(TokenKind.STRUCT) ||
-        context.peek(TokenKind.INTERFACE) ||
-        context.peek(TokenKind.FINAL) ||
-        context.peek(TokenKind.STATIC) ||
-        context.peek(TokenKind.IMPORT) ||
+        context.peek(TokenKind.CONTINUE) ||
+        context.peek(TokenKind.DO) ||
+        context.peek(TokenKind.ELSE) ||
         context.peek(TokenKind.EXPORT) ||
+        context.peek(TokenKind.FINAL) ||
+        context.peek(TokenKind.FOR) ||
+        context.peek(TokenKind.IF) ||
+        context.peek(TokenKind.IMPORT) ||
+        context.peek(TokenKind.INLINE) ||
+        context.peek(TokenKind.INTERFACE) ||
+        context.peek(TokenKind.OVERRIDE) ||
+        context.peek(TokenKind.PRIVATE) ||
+        context.peek(TokenKind.PROTECTED) ||
+        context.peek(TokenKind.PUBLIC) ||
+        context.peek(TokenKind.RETURN) ||
+        context.peek(TokenKind.STATIC) ||
+        context.peek(TokenKind.STRUCT) ||
+        context.peek(TokenKind.SWITCH) ||
         context.peek(TokenKind.VIRTUAL) ||
-        context.peek(TokenKind.OVERRIDE))) {
+        context.peek(TokenKind.WHILE))) {
       return true;
     }
 
@@ -79,38 +83,35 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
   return false;
 }
 
-Expression parseGroup(ParserContext context) {
+Node parseGroup(ParserContext context) {
   if (!context.expect(TokenKind.LEFT_PARENTHESIS)) return null;
-  Expression value = pratt.parse(context, Precedence.LOWEST);
+  Node value = pratt.parse(context, Precedence.LOWEST);
   scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
   return value;
 }
 
-Identifier parseIdentifier(ParserContext context) {
+Node parseName(ParserContext context) {
   Token token = context.current(); if (!context.expect(TokenKind.IDENTIFIER)) return null;
-  return new Identifier(token.range, token.text);
+  return Node.createName(token.text).withRange(token.range);
 }
 
-Block parseBlock(ParserContext context, StatementHint hint) {
+Node parseBlock(ParserContext context, StatementHint hint) {
   Token token = context.current();
   if (!context.expect(TokenKind.LEFT_BRACE)) return null;
-  List<Statement> statements = parseStatements(context, hint);
+  List<Node> statements = parseStatements(context, hint);
   scanForToken(context, TokenKind.RIGHT_BRACE, TokenScan.NORMAL);
-  return new Block(context.spanSince(token.range), statements);
+  return Node.createBlock(statements).withRange(context.spanSince(token.range));
 }
 
-Block parseBlockOrStatement(ParserContext context) {
+Node parseBlockOrStatement(ParserContext context) {
   if (context.peek(TokenKind.LEFT_BRACE)) return parseBlock(context, StatementHint.NORMAL);
-  Statement statement = parseStatement(context, StatementHint.NORMAL);
-  if (statement == null) return null;
-  List<Statement> statements = {};
-  statements.push(statement);
-  return new Block(statement.range, statements);
+  Node statement = parseStatement(context, StatementHint.NORMAL); if (statement == null) return null;
+  return Node.createBlock({ statement }).withRange(statement.range);
 }
 
-CaseStatement parseCaseStatement(ParserContext context) {
+Node parseCaseStatement(ParserContext context) {
   Token token = context.current();
-  List<Expression> values = null;
+  List<Node> values = null;
   if (!context.eat(TokenKind.DEFAULT)) {
     if (!context.expect(TokenKind.CASE)) return null;
     values = {};
@@ -118,639 +119,138 @@ CaseStatement parseCaseStatement(ParserContext context) {
       values.push(pratt.parse(context, Precedence.COMMA));
     } while (context.eat(TokenKind.COMMA));
   }
-  Block block = parseBlock(context, StatementHint.NORMAL); if (block == null) return null;
-  return new CaseStatement(context.spanSince(token.range), values, block);
+  Node block = parseBlock(context, StatementHint.NORMAL); if (block == null) return null;
+  return (values != null ? Node.createCase(values, block) : Node.createDefault(block)).withRange(context.spanSince(token.range));
 }
 
-List<Statement> parseStatements(ParserContext context, StatementHint hint) {
-  List<Statement> statements = {};
+List<Node> parseStatements(ParserContext context, StatementHint hint) {
+  List<Node> statements = {};
   while (!context.peek(TokenKind.RIGHT_BRACE) && !context.peek(TokenKind.END_OF_FILE)) {
     if (hint == StatementHint.IN_ENUM) {
-      EnumValueDeclaration declaration = parseEnumValueDeclaration(context); if (declaration == null) break;
+      Node declaration = parseEnumValueDeclaration(context); if (declaration == null) break;
       statements.push(declaration);
       if (!context.eat(TokenKind.COMMA)) break;
-    } else if (hint == StatementHint.IN_SWITCH) {
-      Statement statement = parseCaseStatement(context); if (statement == null) break;
-      statements.push(statement);
     } else {
-      Statement statement = parseStatement(context, hint); if (statement == null) break;
+      Node statement = hint == StatementHint.IN_SWITCH ? parseCaseStatement(context) : parseStatement(context, hint); if (statement == null) break;
       statements.push(statement);
     }
   }
   return statements;
 }
 
-class ModifierParser {
-  List<Modifier> modifiers = {};
-  ParserContext context;
-  int flags = 0;
-
-  bool parseModifier(SymbolFlag flag, TokenKind kind) {
-    Token token = context.current();
-    if (!context.eat(kind)) {
-      return false;
-    }
-    if (hasFlag(flags, flag)) {
-      syntaxWarningDuplicateModifier(context.log, token.range, token.text);
-      return true; // Don't store a duplicate
-    }
-    modifiers.push(new Modifier(token.range, token.text, flag));
-    flags = flags | flag;
-    return true;
-  }
-}
-
-List<Modifier> parseModifiers(ParserContext context) {
-  ModifierParser parser = new ModifierParser(context);
-  while (
-    parser.parseModifier(SymbolFlag.FINAL, TokenKind.FINAL) ||
-    parser.parseModifier(SymbolFlag.STATIC, TokenKind.STATIC) ||
-    parser.parseModifier(SymbolFlag.IMPORT, TokenKind.IMPORT) ||
-    parser.parseModifier(SymbolFlag.EXPORT, TokenKind.EXPORT) ||
-    parser.parseModifier(SymbolFlag.VIRTUAL, TokenKind.VIRTUAL) ||
-    parser.parseModifier(SymbolFlag.OVERRIDE, TokenKind.OVERRIDE)) {
-  }
-  return parser.modifiers;
-}
-
-List<VariableDeclaration> parseArgumentVariables(ParserContext context) {
-  List<VariableDeclaration> arguments = {};
+Node parseArgumentVariables(ParserContext context) {
+  Token token = context.current();
+  List<Node> arguments = {};
   if (!context.expect(TokenKind.LEFT_PARENTHESIS)) return null;
   while (!context.peek(TokenKind.RIGHT_PARENTHESIS)) {
     if (arguments.length > 0 && !context.expect(TokenKind.COMMA)) break;
-    List<Modifier> modifiers = parseModifiers(context);
-    Expression type = parseType(context);
-    Identifier id = parseIdentifier(context); if (id == null) break;
-    arguments.push(new VariableDeclaration(spanRange(type.range, id.range), id, modifiers, type, null));
+    // TODO: Parse modifiers here
+    Node type = parseType(context);
+    Node name = parseName(context); if (name == null) break;
+    arguments.push(Node.createVariable(name, type, null).withRange(Range.span(type.range, name.range)));
   }
   scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.NORMAL);
-  return arguments;
+  return Node.createNodeList(arguments).withRange(context.spanSince(token.range));
 }
 
-class Initializers {
-  SuperInitializer superInitializer = null;
-  List<MemberInitializer> memberInitializers = null;
-}
-
-Initializers parseInitializers(ParserContext context) {
-  Initializers initializers = new Initializers();
-
-  // The super initializer can have multiple arguments
-  if (context.peek(TokenKind.SUPER)) {
-    Token token = context.next();
-    Range range = context.current().range;
-    List<Expression> values = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO);
-    initializers.superInitializer = new SuperInitializer(context.spanSince(token.range), values);
-    initializers.superInitializer.argumentsRange = context.spanSince(range);
-    if (!context.eat(TokenKind.COMMA)) return initializers;
-  }
-
-  // Each member initializer has one argument
-  initializers.memberInitializers = {};
-  do {
-    Identifier id = parseIdentifier(context); if (id == null) return null;
-    if (!context.expect(TokenKind.ASSIGN)) return null;
-    Expression value = pratt.parse(context, Precedence.COMMA); if (value == null) return null;
-    initializers.memberInitializers.push(new MemberInitializer(context.spanSince(id.range), id, value));
-  } while (context.eat(TokenKind.COMMA));
-
-  return initializers;
-}
-
-Expression parseType(ParserContext context) {
+Node parseType(ParserContext context) {
   return pratt.parse(context, Precedence.MEMBER - 1);
 }
 
-EnumValueDeclaration parseEnumValueDeclaration(ParserContext context) {
-  Identifier id = parseIdentifier(context); if (id == null) return null;
-  Expression value = context.eat(TokenKind.ASSIGN) ? pratt.parse(context, Precedence.COMMA) : null;
-  return new EnumValueDeclaration(context.spanSince(id.range), id, null, value);
+Node parseEnumValueDeclaration(ParserContext context) {
+  Node name = parseName(context); if (name == null) return null;
+  Node value = context.eat(TokenKind.ASSIGN) ? pratt.parse(context, Precedence.COMMA) : null;
+  return Node.createVariable(name, null, value).withRange(context.spanSince(name.range));
 }
 
-List<TypeParameterDeclaration> parseTypeParameters(ParserContext context) {
-  List<TypeParameterDeclaration> parameters = {};
-  if (!context.eat(TokenKind.START_PARAMETER_LIST)) return parameters;
-  while (parameters.length == 0 || !context.peek(TokenKind.END_PARAMETER_LIST)) {
-    if (parameters.length > 0 && !context.expect(TokenKind.COMMA)) break;
-    Range range = context.current().range;
-    Identifier id = parseIdentifier(context); if (id == null) break;
-    Expression bound = context.eat(TokenKind.IS) ? pratt.parse(context, Precedence.COMMA) : null;
-    parameters.push(new TypeParameterDeclaration(context.spanSince(range), id, null, bound));
-  }
-  scanForToken(context, TokenKind.END_PARAMETER_LIST, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-  return parameters;
+Node parseObject(ParserContext context, NodeKind kind) {
+  Token token = context.next();
+  Node name = parseName(context); if (name == null) return null;
+  Node parameters = null;
+  Node bases = null;
+  Node block = parseBlock(context, StatementHint.IN_OBJECT); if (block == null) return null;
+  return Node.createObject(kind, name, parameters, bases, block).withRange(context.spanSince(token.range));
 }
 
-enum AllowTrailingComma {
-  NO,
-  YES,
-}
-
-List<Expression> parseArgumentList(ParserContext context, TokenKind left, TokenKind right, AllowTrailingComma comma) {
-  List<Expression> values = {};
-  if (!context.expect(left)) return values;
-  while (!context.peek(right)) {
-    if (comma == AllowTrailingComma.NO && values.length > 0 && !context.expect(TokenKind.COMMA)) break;
-    Expression value = pratt.parse(context, Precedence.COMMA);
-    values.push(value);
-    if (value.isErrorExpression() || comma == AllowTrailingComma.YES && !context.peek(right) && !context.expect(TokenKind.COMMA)) break;
-  }
-  scanForToken(context, right, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-  return values;
-}
-
-List<Expression> parseTypeList(ParserContext context) {
-  List<Expression> types = {};
-  while (types.length == 0 || !context.peek(TokenKind.END_PARAMETER_LIST) && !context.peek(TokenKind.LEFT_BRACE)) {
-    if (types.length > 0 && !context.expect(TokenKind.COMMA)) break;
-    types.push(parseType(context));
-  }
-  return types;
-}
-
-Block parseNestedNamespaceBlock(ParserContext context) {
+Node parseNestedNamespaceBlock(ParserContext context) {
   if (!context.eat(TokenKind.DOT)) {
     return parseBlock(context, StatementHint.NORMAL);
   }
-  Identifier id = parseIdentifier(context); if (id == null) return null;
-  Block block = parseNestedNamespaceBlock(context); if (block == null) return null;
-  Range range = context.spanSince(id.range);
-  List<Statement> statements = {};
-  statements.push(new NamespaceDeclaration(range, id, null, block));
-  return new Block(range, statements);
+  Node name = parseName(context); if (name == null) return null;
+  Node block = parseNestedNamespaceBlock(context); if (block == null) return null;
+  Range range = context.spanSince(name.range);
+  return Node.createBlock({ Node.createNamespace(name, block).withRange(range) }).withRange(range);
 }
 
-Statement parseStatement(ParserContext context, StatementHint hint) {
-  Range range = context.current().range;
-  List<Modifier> modifiers = parseModifiers(context);
-
-  // Special-case constructors within class bodies
-  if (hint == StatementHint.IN_OBJECT) {
-    Token token = context.current();
-    if (context.eat(TokenKind.NEW)) {
-      Identifier id = new Identifier(token.range, token.text);
-      Initializers initializers = null;
-      Block block = null;
-      List<VariableDeclaration> arguments = parseArgumentVariables(context); if (arguments == null) return null;
-      if (context.eat(TokenKind.COLON)) {
-        initializers = parseInitializers(context); if (initializers == null) return null;
-      }
-      if (!context.eat(TokenKind.SEMICOLON)) {
-        block = parseBlock(context, StatementHint.NORMAL); if (block == null) return null;
-      }
-      return new FunctionDeclaration(context.spanSince(range), id, modifiers, null, arguments,
-        initializers != null ? initializers.superInitializer : null,
-        initializers != null ? initializers.memberInitializers : null, block);
-    }
-  }
-
-  // Object declaration
-  int kind =
-    context.eat(TokenKind.CLASS) ? ObjectKind.CLASS :
-    context.eat(TokenKind.STRUCT) ? ObjectKind.STRUCT :
-    context.eat(TokenKind.INTERFACE) ? ObjectKind.INTERFACE :
-    -1;
-  if (kind != -1) {
-    Identifier id = parseIdentifier(context); if (id == null) return null;
-    List<TypeParameterDeclaration> parameters = parseTypeParameters(context);
-    List<Expression> bases = context.eat(TokenKind.COLON) ? parseTypeList(context) : null;
-    Block block = parseBlock(context, StatementHint.IN_OBJECT); if (block == null) return null;
-    return new ObjectDeclaration(context.spanSince(range), id, modifiers, (ObjectKind)kind, parameters, bases, block);
-  }
-
-  // Namespace declaration
-  else if (context.eat(TokenKind.NAMESPACE)) {
-    Identifier id = parseIdentifier(context); if (id == null) return null;
-    Block block = parseNestedNamespaceBlock(context); if (block == null) return null;
-    return new NamespaceDeclaration(context.spanSince(range), id, modifiers, block);
-  }
-
-  // Enum declaration
-  else if (context.eat(TokenKind.ENUM)) {
-    bool isFlags = false;
-    if (context.peek(TokenKind.IDENTIFIER) && context.current().text == "flags") {
-      isFlags = true;
-      context.next();
-    }
-    Identifier id = parseIdentifier(context); if (id == null) return null;
-    Block block = parseBlock(context, StatementHint.IN_ENUM); if (block == null) return null;
-    return new EnumDeclaration(context.spanSince(range), id, modifiers, isFlags, block);
-  }
-
-  // Extension declaration
-  else if (context.eat(TokenKind.IN)) {
-    Identifier id = parseIdentifier(context); if (id == null) return null;
-    Block block = parseBlock(context, StatementHint.IN_OBJECT); if (block == null) return null;
-    return new ExtensionDeclaration(context.spanSince(range), id, modifiers, block);
-  }
-
-  // Disambiguate identifiers used in expressions from identifiers used
-  // as types in symbol declarations by starting to parse a type and
-  // switching to parsing an expression if it doesn't work out
-  else if (modifiers.length > 0 || context.peek(TokenKind.IDENTIFIER)) {
-    Expression type = parseType(context);
-    if (modifiers.length == 0 && !context.peek(TokenKind.IDENTIFIER)) {
-      Expression value = pratt.resume(context, Precedence.LOWEST, type);
-      scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-      return new ExpressionStatement(context.spanSince(range), value);
-    }
-    Identifier id = parseIdentifier(context); if (id == null) return null;
-
-    // Function declaration
-    if (context.peek(TokenKind.LEFT_PARENTHESIS)) {
-      List<VariableDeclaration> arguments = parseArgumentVariables(context); if (arguments == null) return null;
-      Block block = null;
-      if (!context.eat(TokenKind.SEMICOLON)) {
-        block = parseBlock(context, StatementHint.NORMAL); if (block == null) return null;
-      }
-      return new FunctionDeclaration(context.spanSince(range), id, modifiers, type, arguments, null, null, block);
-    }
-
-    // Variable declaration
-    Expression initial = context.eat(TokenKind.ASSIGN) ? pratt.parse(context, Precedence.LOWEST) : null;
-    scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-    return new VariableDeclaration(context.spanSince(range), id, modifiers, type, initial);
-  }
-
-  // If statement
-  else if (context.eat(TokenKind.IF)) {
-    Expression value = parseGroup(context);
-    Block thenBlock = parseBlockOrStatement(context); if (thenBlock == null) return null;
-    Block elseBlock = null;
-    if (context.eat(TokenKind.ELSE)) {
-      elseBlock = parseBlockOrStatement(context); if (elseBlock == null) return null;
-    }
-    return new IfStatement(context.spanSince(range), value, thenBlock, elseBlock);
-  }
-
-  // While statement
-  else if (context.eat(TokenKind.WHILE)) {
-    Expression value = parseGroup(context);
-    Block block = parseBlockOrStatement(context); if (block == null) return null;
-    return new WhileStatement(context.spanSince(range), value, block);
-  }
-
-  // Do-while statement
-  else if (context.eat(TokenKind.DO)) {
-    Block block = parseBlockOrStatement(context); if (block == null) return null;
-    if (!context.expect(TokenKind.WHILE)) return null;
-    Expression value = parseGroup(context);
-    scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-    return new DoWhileStatement(context.spanSince(range), block, value);
-  }
-
-  // For statement
-  else if (context.eat(TokenKind.FOR)) {
-    if (!context.expect(TokenKind.LEFT_PARENTHESIS)) return null;
-    Expression setup = null;
-    Expression test = null;
-    Expression update = null;
-    do {
-      if (!context.peek(TokenKind.SEMICOLON)) setup = pratt.parse(context, Precedence.LOWEST);
-      if (!context.expect(TokenKind.SEMICOLON)) break;
-      if (!context.peek(TokenKind.SEMICOLON)) test = pratt.parse(context, Precedence.LOWEST);
-      if (!context.expect(TokenKind.SEMICOLON)) break;
-      if (!context.peek(TokenKind.RIGHT_PARENTHESIS)) update = pratt.parse(context, Precedence.LOWEST);
-    } while (false);
-    scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.NORMAL);
-    Block block = parseBlockOrStatement(context); if (block == null) return null;
-    return new ForStatement(context.spanSince(range), setup, test, update, block);
-  }
-
-  // Switch statement
-  else if (context.eat(TokenKind.SWITCH)) {
-    Expression value = parseGroup(context);
-    Block block = parseBlock(context, StatementHint.IN_SWITCH); if (block == null) return null;
-    return new SwitchStatement(context.spanSince(range), value, block);
-  }
-
-  // Return statement
-  else if (context.eat(TokenKind.RETURN)) {
-    Expression value = null;
-    if (!context.eat(TokenKind.SEMICOLON)) {
-      value = pratt.parse(context, Precedence.LOWEST);
-      scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-    }
-    return new ReturnStatement(context.spanSince(range), value);
-  }
-
-  // Assert statement
-  else if (context.eat(TokenKind.ASSERT)) {
-    Expression value = pratt.parse(context, Precedence.LOWEST);
-    scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-    return new AssertStatement(context.spanSince(range), value);
-  }
-
-  // Break statement
-  else if (context.eat(TokenKind.BREAK)) {
-    context.expect(TokenKind.SEMICOLON); // No need to use scanForToken() here
-    return new BreakStatement(context.spanSince(range));
-  }
-
-  // Continue statement
-  else if (context.eat(TokenKind.CONTINUE)) {
-    context.expect(TokenKind.SEMICOLON); // No need to use scanForToken() here
-    return new ContinueStatement(context.spanSince(range));
-  }
-
-  // Expression statement
-  else {
-    if (context.peek(TokenKind.LEFT_BRACE)) {
-      context.unexpectedToken();
-      return null;
-    }
-    Expression value = pratt.parse(context, Precedence.LOWEST);
-    if (!scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT) && context.current().range.start == range.start) {
-      context.next(); // This is necessary to prevent an infinite loop when the first token of the expression is a syntax error
-    }
-    assert context.current().range.start >= range.end;
-    return new ExpressionStatement(context.spanSince(range), value);
-  }
+Node parseNamespace(ParserContext context) {
+  Token token = context.next();
+  Node name = parseName(context); if (name == null) return null;
+  Node block = parseNestedNamespaceBlock(context); if (block == null) return null;
+  return Node.createNamespace(name, block).withRange(context.spanSince(token.range));
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
-class SymbolLiteral : ILiteralCallback {
-  override Expression run(ParserContext context, Token token) {
-    return new SymbolExpression(token.range, token.text);
+Node parseExpression(ParserContext context) {
+  // Make sure we don't parse an initializer expression. The user is likely
+  // trying to type a C-style block statement, which is not supported. An
+  // initializer expression wouldn't make sense here anyway since there's no
+  // type context yet at the start of an expression statement.
+  if (context.peek(TokenKind.LEFT_BRACE)) {
+    context.unexpectedToken();
+    return null;
   }
+
+  // Parse an expression
+  Token token = context.current();
+  Node value = pratt.parse(context, Precedence.LOWEST);
+  if (!scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT) && context.current().range.start == token.range.start) {
+    context.next(); // This is necessary to prevent an infinite loop when the first token of the expression is a syntax error
+  }
+
+  assert context.current().range.start >= token.range.end;
+  return Node.createExpression(value);
 }
 
-class NullLiteral : ILiteralCallback {
-  override Expression run(ParserContext context, Token token) {
-    return new NullExpression(token.range);
-  }
+Node parseModifier(ParserContext context, SymbolFlag flag) {
+  Token token = context.next();
+  Node name = Node.createName(token.text).withRange(token.range);
+  Node block = parseBlockOrStatement(context); if (block == null) return null;
+  List<Node> statements = block.children;
+  block.removeChildren();
+  return Node.createModifier(name, statements).withRange(context.spanSince(token.range));
 }
 
-class ThisLiteral : ILiteralCallback {
-  override Expression run(ParserContext context, Token token) {
-    return new ThisExpression(token.range);
-  }
-}
-
-class SuperLiteral : ILiteralCallback {
-  override Expression run(ParserContext context, Token token) {
-    return new SuperExpression(token.range);
-  }
-}
-
-class BoolLiteral : ILiteralCallback {
-  bool value;
-
-  override Expression run(ParserContext context, Token token) {
-    return new BoolExpression(token.range, value);
-  }
-}
-
-class IntLiteral : ILiteralCallback {
-  int base;
-
-  override Expression run(ParserContext context, Token token) {
-    return new IntExpression(token.range, parseIntLiteral(token.text, base));
-  }
-}
-
-class FloatLiteral : ILiteralCallback {
-  override Expression run(ParserContext context, Token token) {
-    return new FloatExpression(token.range, (float)parseDoubleLiteral(token.text.slice(0, token.text.length - 1)));
-  }
-}
-
-class DoubleLiteral : ILiteralCallback {
-  override Expression run(ParserContext context, Token token) {
-    return new DoubleExpression(token.range, parseDoubleLiteral(token.text));
-  }
-}
-
-class StringLiteral : ILiteralCallback {
-  override Expression run(ParserContext context, Token token) {
-    StringValue result = parseStringLiteral(context.log, token.range, token.text);
-    if (!result.hasValue) return null;
-    return new StringExpression(token.range, result.value);
-  }
-}
-
-class CharacterLiteral : ILiteralCallback {
-  override Expression run(ParserContext context, Token token) {
-    StringValue result = parseStringLiteral(context.log, token.range, token.text);
-    if (result.hasValue && result.value.length != 1) { // TODO: Do true unicode code point parsing
-      syntaxErrorInvalidCharacter(context.log, token.range, token.text);
-      result = StringValue.EMPTY;
-    }
-    if (!result.hasValue) return new IntExpression(token.range, 0); // Don't return null because this doesn't affect parsing
-    return new IntExpression(token.range, result.value.codeUnitAt(0));
-  }
-}
-
-class UnaryPostfix : IPostfixCallback {
-  UnaryOperator op;
-
-  override Expression run(ParserContext context, Expression value, Token token) {
-    return new UnaryExpression(spanRange(value.range, token.range), op, value);
-  }
-}
-
-class UnaryPrefix : IPrefixCallback {
-  UnaryOperator op;
-
-  override Expression run(ParserContext context, Token token, Expression value) {
-    return new UnaryExpression(spanRange(token.range, value.range), op, value);
-  }
-}
-
-class BinaryInfix : IInfixCallback {
-  BinaryOperator op;
-
-  override Expression run(ParserContext context, Expression left, Token token, Expression right) {
-    return new BinaryExpression(spanRange(left.range, right.range), op, left, right);
-  }
-}
-
-class GroupParselet : IPrefixParselet {
-  override Expression run(ParserContext context) {
-    Range range = context.current().range;
-    Expression type = parseGroup(context);
-    if (type.looksLikeType()) {
-      Expression value = pratt.parse(context, Precedence.UNARY_PREFIX);
-      return new CastExpression(context.spanSince(range), type, value, CastKind.EXPLICIT);
-    }
-    return type;
-  }
-}
-
-class BraceLiteralParselet : IPrefixParselet {
-  override Expression run(ParserContext context) {
-    Range range = context.current().range;
-    List<Expression> arguments = parseArgumentList(context, TokenKind.LEFT_BRACE, TokenKind.RIGHT_BRACE, AllowTrailingComma.YES);
-    return new LiteralExpression(context.spanSince(range), arguments);
-  }
-}
-
-class TernaryInfix : IInfixParselet {
-  override Expression run(ParserContext context, Expression left) {
-    context.next();
-    Expression middle = pratt.parse(context, Precedence.ASSIGN - 1);
-    Expression right = context.expect(TokenKind.COLON) ? pratt.parse(context, Precedence.ASSIGN - 1) : new ErrorExpression(context.spanSince(context.current().range));
-    return new TernaryExpression(context.spanSince(left.range), left, middle, right);
-  }
-}
-
-class MemberInfix : IInfixParselet {
-  override Expression run(ParserContext context, Expression left) {
-    context.next();
-    Identifier id = parseIdentifier(context); // Allow this to be null for autocomplete
-    return new MemberExpression(context.spanSince(left.range), left, id);
-  }
-}
-
-class CallInfix : IInfixParselet {
-  override Expression run(ParserContext context, Expression left) {
-    Token token = context.current();
-    List<Expression> arguments = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO);
-    CallExpression node = new CallExpression(context.spanSince(left.range), left, arguments);
-    node.argumentsRange = context.spanSince(token.range);
-    return node;
-  }
-}
-
-class IndexInfix : IInfixParselet {
-  override Expression run(ParserContext context, Expression left) {
-    Expression index = pratt.parse(context, Precedence.LOWEST);
-    scanForToken(context, TokenKind.RIGHT_BRACKET, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-    return new BinaryExpression(context.spanSince(left.range), BinaryOperator.INDEX, left, index);
-  }
-}
-
-class NewPrefix : IPrefixParselet {
-  override Expression run(ParserContext context) {
-    Token token = context.next();
-    Expression type = parseType(context);
-    Token argumentsToken = context.current();
-    List<Expression> arguments = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO);
-    NewExpression node = new NewExpression(context.spanSince(token.range), type, arguments);
-    node.argumentsRange = context.spanSince(argumentsToken.range);
-    return node;
-  }
-}
-
-class SubstitutionInfix : IInfixParselet {
-  override Expression run(ParserContext context, Expression left) {
-    Token token = context.next();
-    List<Expression> substitutions = parseTypeList(context);
-    if (!context.expect(TokenKind.END_PARAMETER_LIST)) return null; // TODO: Fix this, return new ErrorExpression() instead
-    TypeSubstitutionExpression node = new TypeSubstitutionExpression(context.spanSince(left.range), left, substitutions);
-    node.substitutionsRange = context.spanSince(token.range);
-    return node;
-  }
-}
-
-class DefaultPrefix : IPrefixParselet {
-  override Expression run(ParserContext context) {
-    Token token = context.next();
-    Expression type = parseGroup(context);
-    return new DefaultExpression(spanRange(token.range, type.range), type);
+Node parseStatement(ParserContext context, StatementHint hint) {
+  switch (context.current().kind) {
+    case TokenKind.CLASS { return parseObject(context, NodeKind.CLASS); }
+    case TokenKind.EXPORT { return parseModifier(context, SymbolFlag.EXPORT); }
+    case TokenKind.FINAL { return parseModifier(context, SymbolFlag.FINAL); }
+    case TokenKind.IMPORT { return parseModifier(context, SymbolFlag.IMPORT); }
+    case TokenKind.INLINE { return parseModifier(context, SymbolFlag.INLINE); }
+    case TokenKind.INTERFACE { return parseObject(context, NodeKind.INTERFACE); }
+    case TokenKind.NAMESPACE { return parseNamespace(context); }
+    case TokenKind.OVERRIDE { return parseModifier(context, SymbolFlag.OVERRIDE); }
+    case TokenKind.PRIVATE { return parseModifier(context, SymbolFlag.PRIVATE); }
+    case TokenKind.PROTECTED { return parseModifier(context, SymbolFlag.PROTECTED); }
+    case TokenKind.PUBLIC { return parseModifier(context, SymbolFlag.PUBLIC); }
+    case TokenKind.STATIC { return parseModifier(context, SymbolFlag.STATIC); }
+    case TokenKind.STRUCT { return parseObject(context, NodeKind.STRUCT); }
+    case TokenKind.VIRTUAL { return parseModifier(context, SymbolFlag.VIRTUAL); }
+    default { return parseExpression(context); }
   }
 }
 
 Pratt createParser() {
   Pratt pratt = new Pratt();
-
-  // Literals
-  pratt.literal(TokenKind.IDENTIFIER, new SymbolLiteral());
-  pratt.literal(TokenKind.NULL, new NullLiteral());
-  pratt.literal(TokenKind.THIS, new ThisLiteral());
-  pratt.literal(TokenKind.SUPER, new SuperLiteral());
-  pratt.literal(TokenKind.TRUE, new BoolLiteral(true));
-  pratt.literal(TokenKind.FALSE, new BoolLiteral(false));
-  pratt.literal(TokenKind.INT_DECIMAL, new IntLiteral(10));
-  pratt.literal(TokenKind.INT_BINARY, new IntLiteral(2));
-  pratt.literal(TokenKind.INT_OCTAL, new IntLiteral(8));
-  pratt.literal(TokenKind.INT_HEX, new IntLiteral(16));
-  pratt.literal(TokenKind.FLOAT, new FloatLiteral());
-  pratt.literal(TokenKind.DOUBLE, new DoubleLiteral());
-  pratt.literal(TokenKind.STRING, new StringLiteral());
-  pratt.literal(TokenKind.CHARACTER, new CharacterLiteral());
-
-  // Unary expressions
-  pratt.postfix(TokenKind.INCREMENT, Precedence.UNARY_POSTFIX, new UnaryPostfix(UnaryOperator.POSTFIX_INCREMENT));
-  pratt.postfix(TokenKind.DECREMENT, Precedence.UNARY_POSTFIX, new UnaryPostfix(UnaryOperator.POSTFIX_DECREMENT));
-  pratt.prefix(TokenKind.INCREMENT, Precedence.UNARY_PREFIX, new UnaryPrefix(UnaryOperator.PREFIX_INCREMENT));
-  pratt.prefix(TokenKind.DECREMENT, Precedence.UNARY_PREFIX, new UnaryPrefix(UnaryOperator.PREFIX_DECREMENT));
-  pratt.prefix(TokenKind.PLUS, Precedence.UNARY_PREFIX, new UnaryPrefix(UnaryOperator.POSITIVE));
-  pratt.prefix(TokenKind.MINUS, Precedence.UNARY_PREFIX, new UnaryPrefix(UnaryOperator.NEGATIVE));
-  pratt.prefix(TokenKind.NOT, Precedence.UNARY_PREFIX, new UnaryPrefix(UnaryOperator.NOT));
-  pratt.prefix(TokenKind.TILDE, Precedence.UNARY_PREFIX, new UnaryPrefix(UnaryOperator.COMPLEMENT));
-
-  // Binary expressions
-  pratt.infix(TokenKind.COMMA, Precedence.COMMA, new BinaryInfix(BinaryOperator.SEQUENCE));
-  pratt.infixRight(TokenKind.ASSIGN, Precedence.ASSIGN, new BinaryInfix(BinaryOperator.ASSIGN));
-  pratt.infix(TokenKind.LOGICAL_OR, Precedence.LOGICAL_OR, new BinaryInfix(BinaryOperator.LOGICAL_OR));
-  pratt.infix(TokenKind.LOGICAL_AND, Precedence.LOGICAL_AND, new BinaryInfix(BinaryOperator.LOGICAL_AND));
-  pratt.infix(TokenKind.BITWISE_OR, Precedence.BITWISE_OR, new BinaryInfix(BinaryOperator.BITWISE_OR));
-  pratt.infix(TokenKind.BITWISE_XOR, Precedence.BITWISE_XOR, new BinaryInfix(BinaryOperator.BITWISE_XOR));
-  pratt.infix(TokenKind.BITWISE_AND, Precedence.BITWISE_AND, new BinaryInfix(BinaryOperator.BITWISE_AND));
-  pratt.infix(TokenKind.EQUAL, Precedence.EQUAL, new BinaryInfix(BinaryOperator.EQUAL));
-  pratt.infix(TokenKind.NOT_EQUAL, Precedence.EQUAL, new BinaryInfix(BinaryOperator.NOT_EQUAL));
-  pratt.infix(TokenKind.LESS_THAN, Precedence.COMPARE, new BinaryInfix(BinaryOperator.LESS_THAN));
-  pratt.infix(TokenKind.GREATER_THAN, Precedence.COMPARE, new BinaryInfix(BinaryOperator.GREATER_THAN));
-  pratt.infix(TokenKind.LESS_THAN_OR_EQUAL, Precedence.COMPARE, new BinaryInfix(BinaryOperator.LESS_THAN_OR_EQUAL));
-  pratt.infix(TokenKind.GREATER_THAN_OR_EQUAL, Precedence.COMPARE, new BinaryInfix(BinaryOperator.GREATER_THAN_OR_EQUAL));
-  pratt.infix(TokenKind.IN, Precedence.COMPARE, new BinaryInfix(BinaryOperator.IN));
-  pratt.infix(TokenKind.SHIFT_LEFT, Precedence.SHIFT, new BinaryInfix(BinaryOperator.SHIFT_LEFT));
-  pratt.infix(TokenKind.SHIFT_RIGHT, Precedence.SHIFT, new BinaryInfix(BinaryOperator.SHIFT_RIGHT));
-  pratt.infix(TokenKind.PLUS, Precedence.ADD, new BinaryInfix(BinaryOperator.ADD));
-  pratt.infix(TokenKind.MINUS, Precedence.ADD, new BinaryInfix(BinaryOperator.SUBTRACT));
-  pratt.infix(TokenKind.MULTIPLY, Precedence.MULTIPLY, new BinaryInfix(BinaryOperator.MULTIPLY));
-  pratt.infix(TokenKind.DIVIDE, Precedence.MULTIPLY, new BinaryInfix(BinaryOperator.DIVIDE));
-  pratt.infix(TokenKind.REMAINDER, Precedence.MULTIPLY, new BinaryInfix(BinaryOperator.REMAINDER));
-
-  // Other expressions
-  pratt.parselet(TokenKind.LEFT_BRACE, Precedence.LOWEST).prefix = new BraceLiteralParselet();
-  pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.LOWEST).prefix = new GroupParselet();
-  pratt.parselet(TokenKind.QUESTION_MARK, Precedence.ASSIGN).infix = new TernaryInfix();
-  pratt.parselet(TokenKind.DOT, Precedence.MEMBER).infix = new MemberInfix();
-  pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = new CallInfix();
-  pratt.parselet(TokenKind.LEFT_BRACKET, Precedence.UNARY_POSTFIX).infix = new IndexInfix();
-  pratt.parselet(TokenKind.NEW, Precedence.LOWEST).prefix = new NewPrefix();
-  pratt.parselet(TokenKind.START_PARAMETER_LIST, Precedence.MEMBER).infix = new SubstitutionInfix();
-  pratt.parselet(TokenKind.DEFAULT, Precedence.UNARY_PREFIX).prefix = new DefaultPrefix();
-
   return pratt;
 }
 
 final Pratt pratt = createParser();
 
-Module parse(Log log, List<Token> tokens) {
+Node parseFile(Log log, List<Token> tokens) {
   ParserContext context = new ParserContext(log, tokens);
-  Range range = context.current().range;
-  List<Statement> statements = parseStatements(context, StatementHint.NORMAL); if (statements == null) return null;
+  Token token = context.current();
+  List<Node> statements = parseStatements(context, StatementHint.NORMAL); if (statements == null) return null;
   if (!context.expect(TokenKind.END_OF_FILE)) return null;
-  range = context.spanSince(range);
-  return new Module(range, new Block(range, statements));
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-
-in Expression {
-  virtual bool looksLikeType() { return false; }
-  virtual bool isErrorExpression() { return false; }
-}
-
-in SymbolExpression {
-  override bool looksLikeType() { return true; }
-}
-
-in MemberExpression {
-  override bool looksLikeType() { return value.looksLikeType(); } }
-
-in TypeSubstitutionExpression {
-  override bool looksLikeType() { return type.looksLikeType(); } }
-
-in TypeExpression {
-  override bool looksLikeType() { return true; }
-}
-
-in ErrorExpression {
-  override bool isErrorExpression() { return true; }
+  Range range = context.spanSince(token.range);
+  return Node.createFile(Node.createBlock(statements).withRange(range)).withRange(range);
 }

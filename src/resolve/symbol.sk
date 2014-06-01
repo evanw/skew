@@ -47,7 +47,7 @@ in SymbolKind {
   }
 }
 
-enum flags SymbolFlags {
+enum flags SymbolFlag {
   // Access flags
   PUBLIC,
   PRIVATE,
@@ -62,11 +62,16 @@ enum flags SymbolFlags {
   // Optimization flags
   FINAL,
   INLINE,
+
+  // Binding flags
+  EXPORT,
+  IMPORT,
 }
 
 class Symbol {
   string name;
   SymbolKind kind;
+  SymbolFlag flags = 0;
   Node node = null;
   Type type = null;
 

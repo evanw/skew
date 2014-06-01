@@ -1,0 +1,60 @@
+struct LineColumn {
+  final int line; // 0-based index
+  final int column; // 0-based index
+}
+
+class Source {
+  string name;
+  string contents;
+
+  // This maps line numbers to indices within contents
+  List<int> lineOffsets = null;
+
+  void computeLineOffsets() {
+    if (lineOffsets != null) return;
+    lineOffsets = { 0 };
+    int i;
+    for (i = 0; i < contents.length; i++) {
+      if (contents.codeUnitAt(i) == '\n') {
+        lineOffsets.push(i + 1);
+      }
+    }
+  }
+
+  int lineCount() {
+    computeLineOffsets();
+    return lineOffsets.length - 1; // Ignore the line offset at 0
+  }
+
+  string contentsOfLine(int line) {
+    computeLineOffsets();
+    if (line < 0 || line >= lineOffsets.length) {
+      return "";
+    }
+    int start = lineOffsets.get(line);
+    int end = line + 1 < lineOffsets.length ? lineOffsets.get(line + 1) - 1 : contents.length;
+    return contents.slice(start, end);
+  }
+
+  LineColumn indexToLineColumn(int index) {
+    computeLineOffsets();
+
+    // Binary search to find the line
+    int count = lineOffsets.length;
+    int line = 0;
+    while (count > 0) {
+      int step = count / 2;
+      int i = line + step;
+      if (lineOffsets.get(i) <= index) {
+        line = i + 1;
+        count = count - step - 1;
+      } else {
+        count = step;
+      }
+    }
+
+    // Use the line to compute the column
+    int column = line > 0 ? index - lineOffsets.get(line - 1) : index;
+    return new LineColumn(line - 1, column);
+  }
+}
