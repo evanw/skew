@@ -21,6 +21,10 @@ void syntaxErrorInvalidCharacter(Log log, Range range, string text) {
   log.error(range, "Invalid character literal ".append(firstLineOf(text)));
 }
 
+void syntaxErrorInvalidInteger(Log log, Range range, string text) {
+  log.error(range, "Invalid integer literal ".append(text));
+}
+
 void syntaxErrorExtraData(Log log, Range range, string text) {
   log.error(range, "Syntax error ".append(simpleQuote(text)));
 }

@@ -1,6 +1,7 @@
 function parseIntLiteral(value, base) {
   if (base !== 10) value = value.slice(2);
-  return parseInt(value, base);
+  var result = parseInt(value, base);
+  return result === (result | 0) ? result : NaN;
 }
 
 function parseDoubleLiteral(value) {

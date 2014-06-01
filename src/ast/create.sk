@@ -62,18 +62,19 @@ in Node {
     return new Node(NodeKind.EXTENSION).withChildren({ name, block });
   }
 
-  static Node createConstructor(Node arguments, Node block, Node superInitializer, Node memberInitializers) {
+  static Node createConstructor(Node name, Node arguments, Node block, Node superInitializer, Node memberInitializers) {
+    assert name.kind == NodeKind.NAME;
     assert checkAllNodeListKinds(arguments, new NodeKindCheck(NodeKind.VARIABLE));
-    assert block.kind == NodeKind.BLOCK;
+    assert block == null || block.kind == NodeKind.BLOCK;
     assert superInitializer == null || superInitializer.kind == NodeKind.SUPER_CALL;
     assert memberInitializers == null || checkAllNodeListKinds(memberInitializers, new NodeKindCheck(NodeKind.VARIABLE));
-    return new Node(NodeKind.CONSTRUCTOR).withChildren({ arguments, block, superInitializer, memberInitializers });
+    return new Node(NodeKind.CONSTRUCTOR).withChildren({ name, arguments, block, superInitializer, memberInitializers });
   }
 
   static Node createFunction(Node name, Node arguments, Node block, Node result) {
     assert name.kind == NodeKind.NAME;
     assert checkAllNodeListKinds(arguments, new NodeKindCheck(NodeKind.VARIABLE));
-    assert block.kind == NodeKind.BLOCK;
+    assert block == null || block.kind == NodeKind.BLOCK;
     assert result.kind.isExpression();
     return new Node(NodeKind.FUNCTION).withChildren({ name, arguments, block, result });
   }
