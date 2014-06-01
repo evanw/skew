@@ -57,6 +57,9 @@ enum NodeKind {
   SUPER_CALL,
   ERROR,
   SEQUENCE,
+  PARAMETERIZE,
+  CAST,
+  IMPLICIT_CAST,
 
   // Unary operators
   NOT,

@@ -1,0 +1,13 @@
+in Node {
+  Node dotTarget() {
+    assert kind == NodeKind.DOT;
+    assert children.length == 2;
+    return children.get(0);
+  }
+
+  Node dotName() {
+    assert kind == NodeKind.DOT;
+    assert children.length == 2;
+    return children.get(1);
+  }
+}

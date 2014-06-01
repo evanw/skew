@@ -1,4 +1,5 @@
 SOURCES += src/ast/create.sk
+SOURCES += src/ast/get.sk
 SOURCES += src/ast/node.sk
 
 SOURCES += src/core/log.sk

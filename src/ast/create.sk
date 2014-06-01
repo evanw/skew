@@ -106,7 +106,7 @@ in Node {
   }
 
   static Node createFor(Node setup, Node test, Node update, Node block) {
-    assert setup == null || setup.kind.isExpression();
+    assert setup == null || setup.kind.isExpression() || setup.kind == NodeKind.VARIABLE_CLUSTER;
     assert test == null || test.kind.isExpression();
     assert update == null || update.kind.isExpression();
     assert block.kind == NodeKind.BLOCK;
@@ -266,6 +266,25 @@ in Node {
   static Node createSequence(List<Node> values) {
     assert checkAllNodeKinds(values, new NodeKindIsExpression());
     return new Node(NodeKind.SEQUENCE).withChildren(values);
+  }
+
+  static Node createParameterize(Node value, List<Node> types) {
+    assert value.kind.isExpression();
+    assert checkAllNodeKinds(types, new NodeKindIsExpression());
+    types.unshift(value);
+    return new Node(NodeKind.PARAMETERIZE).withChildren(types);
+  }
+
+  static Node createCast(Node type, Node value) {
+    assert type.kind.isExpression();
+    assert value.kind.isExpression();
+    return new Node(NodeKind.CAST).withChildren({ type, value });
+  }
+
+  static Node createImplicitCast(Node type, Node value) {
+    assert type.kind.isExpression();
+    assert value.kind.isExpression();
+    return new Node(NodeKind.IMPLICIT_CAST).withChildren({ type, value });
   }
 
   static Node createUnary(NodeKind kind, Node value) {
