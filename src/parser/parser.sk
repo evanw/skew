@@ -346,7 +346,6 @@ Node parseEnum(ParserContext context) {
 }
 
 Node parseVariableCluster(ParserContext context, Node type, Node name) {
-  Token token = context.current();
   List<Node> variables = {};
   while (variables.length == 0 || !context.peek(TokenKind.SEMICOLON) && !context.peek(TokenKind.IN)) {
     if (variables.length > 0 && !context.expect(TokenKind.COMMA)) break;
@@ -355,7 +354,7 @@ Node parseVariableCluster(ParserContext context, Node type, Node name) {
     variables.push(Node.createVariable(name, null, value).withRange(context.spanSince(name.range)));
     name = null;
   }
-  return Node.createVariableCluster(type, variables).withRange(context.spanSince(token.range));
+  return Node.createVariableCluster(type, variables).withRange(context.spanSince(type.range));
 }
 
 Node parseFor(ParserContext context) {
