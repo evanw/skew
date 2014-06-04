@@ -348,7 +348,7 @@ Node parseEnum(ParserContext context) {
 Node parseVariableCluster(ParserContext context, Node type, Node name) {
   Token token = context.current();
   List<Node> variables = {};
-  while (variables.length == 0 || !context.peek(TokenKind.SEMICOLON)) {
+  while (variables.length == 0 || !context.peek(TokenKind.SEMICOLON) && !context.peek(TokenKind.IN)) {
     if (variables.length > 0 && !context.expect(TokenKind.COMMA)) break;
     if (name == null) name = parseName(context); if (name == null) break;
     Node value = context.eat(TokenKind.ASSIGN) ? pratt.parse(context, Precedence.COMMA) : null;
@@ -370,6 +370,15 @@ Node parseFor(ParserContext context) {
       if (context.peek(TokenKind.IDENTIFIER)) {
         Node name = parseName(context);
         setup = name != null ? parseVariableCluster(context, setup, name) : null;
+        if (setup != null && context.eat(TokenKind.IN)) {
+          Node values = pratt.parse(context, Precedence.LOWEST);
+          scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.NORMAL);
+          Node body = parseBlockOrStatement(context); if (body == null) return null;
+          List<Node> variables = setup.clusterVariables();
+          if (variables.length > 1) syntaxErrorBadForeach(context.log, setup.range);
+          Node value = Node.createVariable(variables.get(0).declarationName().remove(), setup.clusterType().remove(), null);
+          return Node.createForeach(value, values, body).withRange(context.spanSince(token.range));
+        }
       } else if (!context.peek(TokenKind.SEMICOLON)) {
         setup = pratt.resume(context, Precedence.LOWEST, setup);
       }

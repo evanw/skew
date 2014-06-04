@@ -1,0 +1,13 @@
+string typeToText(Type type) {
+  return "type \"".append(type.toString()).append("\"");
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void semanticWarningDuplicateModifier(Log log, Range range, string modifier) {
+  log.warning(range, "Duplicate modifier ".append(simpleQuote(modifier)));
+}
+
+void semanticWarningRedundantModifier(Log log, Range range, string modifier) {
+  log.warning(range, "Redundant modifier ".append(simpleQuote(modifier)));
+}

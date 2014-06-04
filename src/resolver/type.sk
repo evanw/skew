@@ -2,6 +2,11 @@ class Type {
   Symbol symbol;
   StringMap<Symbol> members = new StringMap<Symbol>();
 
+  void addMember(Symbol member) {
+    member.enclosingSymbol = symbol;
+    members.set(member.name, member);
+  }
+
   string toString() {
     return "TODO";
   }

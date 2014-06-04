@@ -28,4 +28,19 @@ in Node {
     assert children.length == 2;
     return children.get(1);
   }
+
+  Node declarationName() {
+    assert kind.isNamedDeclaration();
+    return children.get(0);
+  }
+
+  Node clusterType() {
+    assert kind == NodeKind.VARIABLE_CLUSTER;
+    return children.get(0);
+  }
+
+  List<Node> clusterVariables() {
+    assert kind == NodeKind.VARIABLE_CLUSTER;
+    return children.slice(1, children.length);
+  }
 }

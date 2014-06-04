@@ -5,6 +5,7 @@ enum NodeKind {
   BLOCK,
   NODE_LIST,
   CASE,
+  VARIABLE_CLUSTER,
 
   // Type declarations
   NAMESPACE,
@@ -19,7 +20,6 @@ enum NodeKind {
   CONSTRUCTOR,
   FUNCTION,
   VARIABLE,
-  VARIABLE_CLUSTER,
   PARAMETER,
   USING,
 
@@ -116,6 +116,10 @@ in NodeKind {
     return this >= NAMESPACE && this <= MODIFIER;
   }
 
+  bool isNamedDeclaration() {
+    return this >= NAMESPACE && this <= USING;
+  }
+
   bool isExpression() {
     return this >= NAME && this <= ASSIGN_INDEX;
   }
@@ -139,6 +143,7 @@ class Node {
   Node parent = null;
   List<Node> children = null;
   Type type = null;
+  Scope scope = null; // The scope that this node introduces, if any
   Symbol symbol = null;
   Content content = null;
 

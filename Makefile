@@ -16,9 +16,12 @@ SOURCES += src/parser/diagnostics.sk
 SOURCES += src/parser/parser.sk
 SOURCES += src/parser/pratt.sk
 
-SOURCES += src/resolve/symbol.sk
-SOURCES += src/resolve/type.sk
-SOURCES += src/resolve/typecache.sk
+SOURCES += src/resolver/diagnostics.sk
+SOURCES += src/resolver/resolver.sk
+SOURCES += src/resolver/scope.sk
+SOURCES += src/resolver/symbol.sk
+SOURCES += src/resolver/type.sk
+SOURCES += src/resolver/typecache.sk
 
 default: debug
 

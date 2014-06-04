@@ -1,0 +1,261 @@
+void resolve(Node program) {
+  assert program.kind == NodeKind.PROGRAM;
+  Resolver resolver = new Resolver();
+  resolver.setup(program, new Scope(null));
+  resolver.resolve(program);
+}
+
+class Resolver {
+  TypeCache cache = new TypeCache();
+
+  void setup(Node node, Scope scope) {
+    switch (node.kind) {
+      case NodeKind.PROGRAM {
+        node.scope = scope;
+      }
+
+      case NodeKind.BLOCK {
+        node.scope = new Scope(scope);
+      }
+    }
+
+    if (node.kind.isNamedDeclaration()) {
+      string name = node.declarationName().asString();
+      node.symbol = new Symbol(name, SymbolKind.OTHER); // TODO
+      scope.insert(node.symbol);
+    }
+
+    if (node.hasChildren()) {
+      int i;
+      for (i = 0; i < node.children.length; i++) {
+        setup(node.children.get(i), node.scope != null ? node.scope : scope);
+      }
+    }
+  }
+
+  void resolve(Node node) {
+    switch (node.kind) {
+      case NodeKind.PROGRAM { resolveProgram(node); }
+      case NodeKind.FILE { resolveFile(node); }
+      case NodeKind.BLOCK { resolveBlock(node); }
+      case NodeKind.NODE_LIST { resolveNodeList(node); }
+      case NodeKind.CASE { resolveCase(node); }
+
+      case NodeKind.NAMESPACE { resolveNamespace(node); }
+      case NodeKind.ENUM { resolveEnum(node); }
+      case NodeKind.ENUM_FLAGS { resolveEnumFlags(node); }
+      case NodeKind.CLASS { resolveClass(node); }
+      case NodeKind.STRUCT { resolveStruct(node); }
+      case NodeKind.INTERFACE { resolveInterface(node); }
+
+      case NodeKind.EXTENSION { resolveExtension(node); }
+      case NodeKind.CONSTRUCTOR { resolveConstructor(node); }
+      case NodeKind.FUNCTION { resolveFunction(node); }
+      case NodeKind.VARIABLE { resolveVariable(node); }
+      case NodeKind.VARIABLE_CLUSTER { resolveVariableCluster(node); }
+      case NodeKind.PARAMETER { resolveParameter(node); }
+      case NodeKind.USING { resolveUsing(node); }
+
+      case NodeKind.IF { resolveIf(node); }
+      case NodeKind.FOR { resolveFor(node); }
+      case NodeKind.FOREACH { resolveForeach(node); }
+      case NodeKind.WHILE { resolveWhile(node); }
+      case NodeKind.DO_WHILE { resolveDoWhile(node); }
+      case NodeKind.RETURN { resolveReturn(node); }
+      case NodeKind.BREAK { resolveBreak(node); }
+      case NodeKind.CONTINUE { resolveContinue(node); }
+      case NodeKind.ASSERT { resolveAssert(node); }
+      case NodeKind.EXPRESSION { resolveExpression(node); }
+      case NodeKind.SWITCH { resolveSwitch(node); }
+      case NodeKind.MODIFIER { resolveModifier(node); }
+
+      case NodeKind.NAME { resolveName(node); }
+      case NodeKind.TYPE { resolveType(node); }
+      case NodeKind.NULL { node.type = cache.nullType; }
+      case NodeKind.THIS { resolveThis(node); }
+      case NodeKind.TRUE { node.type = cache.boolType; }
+      case NodeKind.FALSE { node.type = cache.boolType; }
+      case NodeKind.HOOK { resolveHook(node); }
+      case NodeKind.INT { node.type = cache.intType; }
+      case NodeKind.FLOAT { node.type = cache.floatType; }
+      case NodeKind.DOUBLE { node.type = cache.doubleType; }
+      case NodeKind.STRING { node.type = cache.stringType; }
+      case NodeKind.INITIALIZER { resolveInitializer(node); }
+      case NodeKind.DOT { resolveDot(node); }
+      case NodeKind.DOT_CALL { resolveDotCall(node); }
+      case NodeKind.CALL { resolveCall(node); }
+      case NodeKind.SUPER_CALL { resolveSuperCall(node); }
+      case NodeKind.NEW { resolveNew(node); }
+      case NodeKind.ERROR { resolveError(node); }
+      case NodeKind.SEQUENCE { resolveSequence(node); }
+      case NodeKind.PARAMETERIZE { resolveParameterize(node); }
+      case NodeKind.CAST { resolveCast(node); }
+      case NodeKind.IMPLICIT_CAST { resolveImplicitCast(node); }
+      case NodeKind.DEFAULT { resolveDefault(node); }
+
+      case
+        NodeKind.NOT, NodeKind.POSITIVE, NodeKind.NEGATIVE, NodeKind.COMPLEMENT,
+        NodeKind.PREFIX_INCREMENT, NodeKind.PREFIX_DECREMENT,
+        NodeKind.POSTFIX_INCREMENT, NodeKind.POSTFIX_DECREMENT {
+      }
+
+      case
+        NodeKind.ADD, NodeKind.BITWISE_AND, NodeKind.BITWISE_OR, NodeKind.BITWISE_XOR,
+        NodeKind.DIVIDE, NodeKind.EQUAL, NodeKind.GREATER_THAN, NodeKind.GREATER_THAN_OR_EQUAL,
+        NodeKind.IN, NodeKind.INDEX, NodeKind.LESS_THAN, NodeKind.LESS_THAN_OR_EQUAL,
+        NodeKind.LOGICAL_AND, NodeKind.LOGICAL_OR, NodeKind.MULTIPLY, NodeKind.NOT_EQUAL,
+        NodeKind.REMAINDER, NodeKind.SHIFT_LEFT, NodeKind.SHIFT_RIGHT, NodeKind.SUBTRACT {
+      }
+
+      case
+        NodeKind.ASSIGN, NodeKind.ASSIGN_ADD, NodeKind.ASSIGN_BITWISE_AND, NodeKind.ASSIGN_BITWISE_OR,
+        NodeKind.ASSIGN_BITWISE_XOR, NodeKind.ASSIGN_DIVIDE, NodeKind.ASSIGN_MULTIPLY,
+        NodeKind.ASSIGN_REMAINDER, NodeKind.ASSIGN_SHIFT_LEFT, NodeKind.ASSIGN_SHIFT_RIGHT, NodeKind.ASSIGN_SUBTRACT {
+      }
+
+      case NodeKind.ASSIGN_INDEX {}
+
+      default {
+        assert false;
+      }
+    }
+  }
+
+  void resolveProgram(Node node) {
+  }
+
+  void resolveFile(Node node) {
+  }
+
+  void resolveBlock(Node node) {
+  }
+
+  void resolveNodeList(Node node) {
+  }
+
+  void resolveCase(Node node) {
+  }
+
+  void resolveNamespace(Node node) {
+  }
+
+  void resolveEnum(Node node) {
+  }
+
+  void resolveEnumFlags(Node node) {
+  }
+
+  void resolveClass(Node node) {
+  }
+
+  void resolveStruct(Node node) {
+  }
+
+  void resolveInterface(Node node) {
+  }
+
+  void resolveExtension(Node node) {
+  }
+
+  void resolveConstructor(Node node) {
+  }
+
+  void resolveFunction(Node node) {
+  }
+
+  void resolveVariable(Node node) {
+  }
+
+  void resolveVariableCluster(Node node) {
+  }
+
+  void resolveParameter(Node node) {
+  }
+
+  void resolveUsing(Node node) {
+  }
+
+  void resolveIf(Node node) {
+  }
+
+  void resolveFor(Node node) {
+  }
+
+  void resolveForeach(Node node) {
+  }
+
+  void resolveWhile(Node node) {
+  }
+
+  void resolveDoWhile(Node node) {
+  }
+
+  void resolveReturn(Node node) {
+  }
+
+  void resolveBreak(Node node) {
+  }
+
+  void resolveContinue(Node node) {
+  }
+
+  void resolveAssert(Node node) {
+  }
+
+  void resolveExpression(Node node) {
+  }
+
+  void resolveSwitch(Node node) {
+  }
+
+  void resolveModifier(Node node) {
+  }
+
+  void resolveName(Node node) {
+  }
+
+  void resolveType(Node node) {
+  }
+
+  void resolveThis(Node node) {
+  }
+
+  void resolveHook(Node node) {
+  }
+
+  void resolveInitializer(Node node) {
+  }
+
+  void resolveDot(Node node) {
+  }
+
+  void resolveDotCall(Node node) {
+  }
+
+  void resolveCall(Node node) {
+  }
+
+  void resolveSuperCall(Node node) {
+  }
+
+  void resolveNew(Node node) {
+  }
+
+  void resolveError(Node node) {
+  }
+
+  void resolveSequence(Node node) {
+  }
+
+  void resolveParameterize(Node node) {
+  }
+
+  void resolveCast(Node node) {
+  }
+
+  void resolveImplicitCast(Node node) {
+  }
+
+  void resolveDefault(Node node) {
+  }
+}

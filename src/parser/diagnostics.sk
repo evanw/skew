@@ -2,10 +2,6 @@ string simpleQuote(string name) {
   return "\"".append(name).append("\"");
 }
 
-string typeToText(Type type) {
-  return "type \"".append(type.toString()).append("\"");
-}
-
 string firstLineOf(string text) {
   int index = text.indexOf("\n");
   return index < 0 ? text : text.slice(0, index);
@@ -41,10 +37,6 @@ void syntaxErrorUnterminatedToken(Log log, Range range, string what) {
   log.error(range, "Unterminated ".append(what));
 }
 
-void syntaxWarningDuplicateModifier(Log log, Range range, string modifier) {
-  log.warning(range, "Duplicate modifier ".append(simpleQuote(modifier)));
-}
-
-void syntaxWarningRedundantModifier(Log log, Range range, string modifier) {
-  log.warning(range, "Redundant modifier ".append(simpleQuote(modifier)));
+void syntaxErrorBadForeach(Log log, Range range) {
+  log.error(range, "More than one variable inside a for-each loop");
 }

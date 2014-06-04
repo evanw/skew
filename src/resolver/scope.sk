@@ -1,0 +1,24 @@
+class Scope {
+  // This is the lexically enclosing scope. It will be null for the global scope.
+  Scope lexicalParent;
+
+  // This references the type containing the member symbols for this scope. If
+  // this is null, lookups fall back to the list of locals.
+  Type type = null;
+
+  // This stores all local symbols. Local symbols automatically override any
+  // member symbols on the type. Scopes inside function bodies will only contain
+  // local symbols since those scopes don't have a type.
+  StringMap<Symbol> locals = null;
+
+  void insert(Symbol symbol) {
+    if (type != null) {
+      type.addMember(symbol);
+      return;
+    }
+    if (locals == null) {
+      locals = new StringMap<Symbol>();
+    }
+    locals.set(symbol.name, symbol);
+  }
+}

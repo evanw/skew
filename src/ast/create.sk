@@ -17,6 +17,20 @@ in Node {
     return new Node(NodeKind.NODE_LIST).withChildren(nodes);
   }
 
+  static Node createCase(List<Node> values, Node block) {
+    assert checkAllNodeKinds(values, new NodeKindIsExpression());
+    assert block.kind == NodeKind.BLOCK;
+    values.push(block);
+    return new Node(NodeKind.CASE).withChildren(values);
+  }
+
+  static Node createVariableCluster(Node type, List<Node> variables) {
+    assert type.kind.isExpression();
+    assert checkAllNodeKinds(variables, new NodeKindCheck(NodeKind.VARIABLE));
+    variables.unshift(type);
+    return new Node(NodeKind.VARIABLE_CLUSTER).withChildren(variables);
+  }
+
   static Node createNamespace(Node name, Node block) {
     assert name.kind == NodeKind.NAME;
     assert block.kind == NodeKind.BLOCK;
@@ -86,13 +100,6 @@ in Node {
     return new Node(NodeKind.VARIABLE).withChildren({ name, type, value });
   }
 
-  static Node createVariableCluster(Node type, List<Node> variables) {
-    assert type.kind.isExpression();
-    assert checkAllNodeKinds(variables, new NodeKindCheck(NodeKind.VARIABLE));
-    variables.unshift(type);
-    return new Node(NodeKind.VARIABLE_CLUSTER).withChildren(variables);
-  }
-
   static Node createParameter(Node name, Node bound) {
     assert name.kind == NodeKind.NAME;
     assert bound == null || bound.kind.isExpression();
@@ -118,6 +125,13 @@ in Node {
     assert update == null || update.kind.isExpression();
     assert block.kind == NodeKind.BLOCK;
     return new Node(NodeKind.FOR).withChildren({ setup, test, update, block });
+  }
+
+  static Node createForeach(Node value, Node values, Node block) {
+    assert value.kind == NodeKind.VARIABLE;
+    assert values.kind.isExpression();
+    assert block.kind == NodeKind.BLOCK;
+    return new Node(NodeKind.FOREACH).withChildren({ value, values, block });
   }
 
   static Node createWhile(Node test, Node block) {
@@ -167,13 +181,6 @@ in Node {
     assert checkAllNodeKinds(cases, new NodeKindIsCaseOrDefault());
     cases.unshift(value);
     return new Node(NodeKind.SWITCH).withChildren(cases);
-  }
-
-  static Node createCase(List<Node> values, Node block) {
-    assert checkAllNodeKinds(values, new NodeKindIsExpression());
-    assert block.kind == NodeKind.BLOCK;
-    values.push(block);
-    return new Node(NodeKind.CASE).withChildren(values);
   }
 
   static Node createName(string name) {
@@ -230,7 +237,7 @@ in Node {
 
   static Node createDot(Node value, Node name) {
     assert value.kind.isExpression();
-    assert name.kind == NodeKind.NAME;
+    assert name == null || name.kind == NodeKind.NAME;
     return new Node(NodeKind.DOT).withChildren({ value, name });
   }
 

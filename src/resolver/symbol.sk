@@ -74,6 +74,7 @@ class Symbol {
   SymbolFlag flags = 0;
   Node node = null;
   Type type = null;
+  Symbol enclosingSymbol = null;
 
   bool isNamespace() {
     return kind == SymbolKind.GLOBAL_NAMESPACE || kind == SymbolKind.NAMESPACE;
