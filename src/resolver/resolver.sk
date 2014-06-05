@@ -40,6 +40,7 @@ class Resolver {
       case NodeKind.BLOCK { resolveBlock(node); }
       case NodeKind.NODE_LIST { resolveNodeList(node); }
       case NodeKind.CASE { resolveCase(node); }
+      case NodeKind.USING_NAMESPACE { resolveUsingNamespace(node); }
 
       case NodeKind.NAMESPACE { resolveNamespace(node); }
       case NodeKind.ENUM { resolveEnum(node); }
@@ -54,7 +55,7 @@ class Resolver {
       case NodeKind.VARIABLE { resolveVariable(node); }
       case NodeKind.VARIABLE_CLUSTER { resolveVariableCluster(node); }
       case NodeKind.PARAMETER { resolveParameter(node); }
-      case NodeKind.USING { resolveUsing(node); }
+      case NodeKind.USING_ALIAS { resolveUsingAlias(node); }
 
       case NodeKind.IF { resolveIf(node); }
       case NodeKind.FOR { resolveFor(node); }
@@ -136,6 +137,9 @@ class Resolver {
   void resolveCase(Node node) {
   }
 
+  void resolveUsingNamespace(Node node) {
+  }
+
   void resolveNamespace(Node node) {
   }
 
@@ -172,7 +176,7 @@ class Resolver {
   void resolveParameter(Node node) {
   }
 
-  void resolveUsing(Node node) {
+  void resolveUsingAlias(Node node) {
   }
 
   void resolveIf(Node node) {

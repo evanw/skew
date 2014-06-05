@@ -57,6 +57,7 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
         context.peek(TokenKind.CONTINUE) ||
         context.peek(TokenKind.DO) ||
         context.peek(TokenKind.ELSE) ||
+        context.peek(TokenKind.ENUM) ||
         context.peek(TokenKind.EXPORT) ||
         context.peek(TokenKind.FINAL) ||
         context.peek(TokenKind.FOR) ||
@@ -64,6 +65,7 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
         context.peek(TokenKind.IMPORT) ||
         context.peek(TokenKind.INLINE) ||
         context.peek(TokenKind.INTERFACE) ||
+        context.peek(TokenKind.NAMESPACE) ||
         context.peek(TokenKind.OVERRIDE) ||
         context.peek(TokenKind.PRIVATE) ||
         context.peek(TokenKind.PROTECTED) ||
@@ -72,6 +74,7 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
         context.peek(TokenKind.STATIC) ||
         context.peek(TokenKind.STRUCT) ||
         context.peek(TokenKind.SWITCH) ||
+        context.peek(TokenKind.USING) ||
         context.peek(TokenKind.VIRTUAL) ||
         context.peek(TokenKind.WHILE))) {
       return true;
@@ -222,9 +225,9 @@ Node parseNestedNamespaceBlock(ParserContext context) {
   if (!context.eat(TokenKind.DOT)) {
     return parseBlock(context, StatementHint.NORMAL);
   }
-  Node name = parseName(context); if (name == null) return null;
+  Node name = parseName(context); // Allow this to be null for autocomplete
   Node block = parseNestedNamespaceBlock(context); if (block == null) return null;
-  Range range = context.spanSince(name.range);
+  Range range = context.spanSince((name != null ? name : block).range);
   return Node.createBlock({ Node.createNamespace(name, block).withRange(range) }).withRange(range);
 }
 
@@ -464,10 +467,15 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
 Node parseUsing(ParserContext context) {
   Token token = context.next();
   Node name = parseName(context); if (name == null) return null;
-  if (!context.expect(TokenKind.ASSIGN)) return null;
-  Node value = pratt.parse(context, Precedence.LOWEST);
-  scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-  return Node.createUsing(name, value).withRange(context.spanSince(token.range));
+  if (!context.eat(TokenKind.ASSIGN)) {
+    Node value = pratt.resume(context, Precedence.LOWEST, name);
+    scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+    return Node.createUsingNamespace(value).withRange(context.spanSince(token.range));
+  } else {
+    Node value = pratt.parse(context, Precedence.LOWEST);
+    scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+    return Node.createUsingAlias(name, value).withRange(context.spanSince(token.range));
+  }
 }
 
 Node parseStatement(ParserContext context, StatementHint hint) {

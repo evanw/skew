@@ -32,7 +32,7 @@ in Node {
   }
 
   static Node createNamespace(Node name, Node block) {
-    assert name.kind == NodeKind.NAME;
+    assert name == null || name.kind == NodeKind.NAME;
     assert block.kind == NodeKind.BLOCK;
     return new Node(NodeKind.NAMESPACE).withChildren({ name, block });
   }
@@ -106,10 +106,15 @@ in Node {
     return new Node(NodeKind.PARAMETER).withChildren({ name, bound });
   }
 
-  static Node createUsing(Node name, Node value) {
+  static Node createUsingAlias(Node name, Node value) {
     assert name.kind == NodeKind.NAME;
     assert value.kind.isExpression();
-    return new Node(NodeKind.USING).withChildren({ name, value });
+    return new Node(NodeKind.USING_ALIAS).withChildren({ name, value });
+  }
+
+  static Node createUsingNamespace(Node value) {
+    assert value.kind.isExpression();
+    return new Node(NodeKind.USING_NAMESPACE).withChildren({ value });
   }
 
   static Node createIf(Node test, Node trueNode, Node falseNode) {

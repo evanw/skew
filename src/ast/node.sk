@@ -6,6 +6,7 @@ enum NodeKind {
   NODE_LIST,
   CASE,
   VARIABLE_CLUSTER,
+  USING_NAMESPACE,
 
   // Type declarations
   NAMESPACE,
@@ -21,7 +22,7 @@ enum NodeKind {
   FUNCTION,
   VARIABLE,
   PARAMETER,
-  USING,
+  USING_ALIAS,
 
   // Statements
   IF,
@@ -117,7 +118,7 @@ in NodeKind {
   }
 
   bool isNamedDeclaration() {
-    return this >= NAMESPACE && this <= USING;
+    return this >= NAMESPACE && this <= USING_ALIAS;
   }
 
   bool isExpression() {
