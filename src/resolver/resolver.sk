@@ -2,33 +2,75 @@ void resolve(Node program) {
   assert program.kind == NodeKind.PROGRAM;
   Resolver resolver = new Resolver();
   resolver.setup(program, new Scope(null));
-  resolver.resolve(program);
+  // resolver.resolve(program);
 }
 
 class Resolver {
   TypeCache cache = new TypeCache();
 
   void setup(Node node, Scope scope) {
-    switch (node.kind) {
-      case NodeKind.PROGRAM {
-        node.scope = scope;
+    // Remember each scope on the node that introduced that scope
+    if (node.kind == NodeKind.PROGRAM) {
+      node.scope = scope;
+    } else if (node.kind == NodeKind.BLOCK) {
+      node.scope = scope = new Scope(scope);
+
+      // Declarations at the file level go in the global scope
+      if (node.parent.kind == NodeKind.FILE) {
+        scope.type = cache.globalType;
       }
 
-      case NodeKind.BLOCK {
-        node.scope = new Scope(scope);
+      // Declarations in a block declaration go in that block's type
+      else {
+        Symbol parentSymbol = node.parent.symbol;
+        if (parentSymbol != null && parentSymbol.type != null) {
+          scope.type = parentSymbol.type;
+        }
       }
     }
 
-    if (node.kind.isNamedDeclaration()) {
+    // Declare this node if needed
+    if (node.kind.isNamedDeclaration() && node.kind != NodeKind.USING_ALIAS) {
       string name = node.declarationName().asString();
-      node.symbol = new Symbol(name, SymbolKind.OTHER); // TODO
-      scope.insert(node.symbol);
+      Symbol symbol = scope.findLocal(name);
+
+      // Append the symbol's current node to the linked list of nodes
+      if (symbol != null) {
+        node.symbol = symbol;
+        node.sibling = symbol.node;
+      }
+
+      // Make a new symbol
+      else {
+        symbol = new Symbol(name, SymbolKind.OTHER);
+        scope.insert(symbol);
+      }
+
+      // Link the node with its symbol
+      symbol.node = node;
+      node.symbol = symbol;
+
+      // Create a type for block declarations so that declarations inside the
+      // block can be linked as siblings with declarations inside other adjacent
+      // block declarations:
+      //
+      //   // Both "Bar" declarations are siblings linked through the type "Foo"
+      //   namespace Foo { in Bar {} }
+      //   namespace Foo { class Bar {} }
+      //
+      if (symbol.type == null && node.kind.isNamedBlockDeclaration()) {
+        symbol.type = new Type(symbol);
+      }
     }
 
+    // Automatically traverse the children of all nodes, even though this pass
+    // only initializing scopes. There will be scopes with statements inside
+    // some expressions due to lambda expressions.
     if (node.hasChildren()) {
       int i;
       for (i = 0; i < node.children.length; i++) {
-        setup(node.children.get(i), node.scope != null ? node.scope : scope);
+        Node child = node.children.get(i);
+        if (child != null) setup(child, scope);
       }
     }
   }

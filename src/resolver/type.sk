@@ -7,6 +7,10 @@ class Type {
     members.set(member.name, member);
   }
 
+  Symbol findMember(string name) {
+    return members.getOrDefault(name, null);
+  }
+
   string toString() {
     return "TODO";
   }

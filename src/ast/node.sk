@@ -117,6 +117,10 @@ in NodeKind {
     return this >= NAMESPACE && this <= USING_NAMESPACE;
   }
 
+  bool isNamedBlockDeclaration() {
+    return this >= NAMESPACE && this <= EXTENSION;
+  }
+
   bool isNamedDeclaration() {
     return this >= NAMESPACE && this <= USING_ALIAS;
   }
@@ -142,6 +146,7 @@ class Node {
   NodeKind kind;
   Range range = Range.EMPTY;
   Node parent = null;
+  Node sibling = null; // Adjacent declarations with the same name
   List<Node> children = null;
   Type type = null;
   Scope scope = null; // The scope that this node introduces, if any

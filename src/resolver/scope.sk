@@ -16,9 +16,30 @@ class Scope {
       type.addMember(symbol);
       return;
     }
+    insertLocal(symbol);
+  }
+
+  void insertLocal(Symbol symbol) {
     if (locals == null) {
       locals = new StringMap<Symbol>();
     }
     locals.set(symbol.name, symbol);
+  }
+
+  Symbol find(string name) {
+    Symbol symbol = findLocal(name);
+    return symbol != null ? symbol : lexicalParent != null ? lexicalParent.find(name) : null;
+  }
+
+  Symbol findLocal(string name) {
+    if (locals != null) {
+      Symbol symbol = locals.getOrDefault(name, null);
+      if (symbol != null) return symbol;
+    }
+    if (type != null) {
+      Symbol symbol = type.findMember(name);
+      if (symbol != null) return symbol;
+    }
+    return null;
   }
 }
