@@ -27,11 +27,11 @@ enum SymbolKind {
 
 in SymbolKind {
   bool isNamespace() {
-    return this == GLOBAL_NAMESPACE || this == NAMESPACE;
+    return this >= GLOBAL_NAMESPACE && this <= NAMESPACE;
   }
 
   bool isEnum() {
-    return this == ENUM || this == ENUM_FLAGS;
+    return this >= ENUM && this <= ENUM_FLAGS;
   }
 
   bool isObject() {

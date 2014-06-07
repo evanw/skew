@@ -26,7 +26,7 @@ function compile() {
     var tokens = tokenize(log, source);
     var program = Node.createProgram([parseFile(log, tokens)]);
     var text = '';
-    resolve(program);
+    Resolver.run(log, program);
     for (var i = 0; i < log.diagnostics.length; i++) {
       var diagnostic = log.diagnostics[i];
       var formatted = diagnostic.range.format(80);
@@ -39,7 +39,7 @@ function compile() {
   }
 }
 
-var old = '';
+var old = null;
 input.oninput = input.onchange = compile;
 compile();
 

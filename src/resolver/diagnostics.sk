@@ -11,3 +11,13 @@ void semanticWarningDuplicateModifier(Log log, Range range, string modifier) {
 void semanticWarningRedundantModifier(Log log, Range range, string modifier) {
   log.warning(range, "Redundant modifier ".append(simpleQuote(modifier)));
 }
+
+void semanticWarningShadowedSymbolFromUsingNamespace(Log log, Range range, string name, Range shadowed) {
+  log.warning(range, simpleQuote(name).append(" shadows an imported symbol with the same name"));
+  if (!shadowed.isEmpty()) log.note(shadowed, "The shadowed declaration is here");
+}
+
+void semanticErrorDuplicateSymbol(Log log, Range range, string name, Range previous) {
+  log.error(range, simpleQuote(name).append(" is already declared"));
+  if (!previous.isEmpty()) log.note(previous, "Another declaration is here");
+}

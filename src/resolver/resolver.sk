@@ -1,19 +1,25 @@
-void resolve(Node program) {
-  assert program.kind == NodeKind.PROGRAM;
-  Resolver resolver = new Resolver();
-  resolver.setup(program, new Scope(null));
-  // resolver.resolve(program);
-}
-
 class Resolver {
   TypeCache cache = new TypeCache();
+  List<Node> blocks = {};
+  Log log;
 
-  void setup(Node node, Scope scope) {
-    // Remember each scope on the node that introduced that scope
+  static void run(Log log, Node program) {
+    assert program.kind == NodeKind.PROGRAM;
+    Resolver resolver = new Resolver(log);
+    resolver.setupScopesAndMergeSymbols(program, new Scope(null));
+    resolver.processBlocks();
+  }
+
+  void setupScopesAndMergeSymbols(Node node, Scope scope) {
+    // The root program introduces the global scope
     if (node.kind == NodeKind.PROGRAM) {
       node.scope = scope;
-    } else if (node.kind == NodeKind.BLOCK) {
+    }
+
+    // Remember each scope on the node that introduced that scope
+    else if (node.kind == NodeKind.BLOCK) {
       node.scope = scope = new Scope(scope);
+      blocks.push(node);
 
       // Declarations at the file level go in the global scope
       if (node.parent.kind == NodeKind.FILE) {
@@ -27,6 +33,11 @@ class Resolver {
           scope.type = parentSymbol.type;
         }
       }
+    }
+
+    // Also introduce a scope for function declarations for the arguments
+    else if (node.kind.isFunctionDeclaration()) {
+      node.scope = scope = new Scope(scope);
     }
 
     // Declare this node if needed
@@ -70,7 +81,49 @@ class Resolver {
       int i;
       for (i = 0; i < node.children.length; i++) {
         Node child = node.children.get(i);
-        if (child != null) setup(child, scope);
+        if (child != null) setupScopesAndMergeSymbols(child, scope);
+      }
+    }
+  }
+
+  void processBlocks() {
+    int i;
+    for (i = 0; i < blocks.length; i++) {
+      Node block = blocks.get(i);
+      int j;
+
+      // Empty blocks will have a children array of null
+      if (!block.hasChildren()) {
+        continue;
+      }
+
+      // Add using aliases. These aren't added in setupScopesAndMergeSymbols()
+      // because using aliases are limited to the scope in which they appear
+      // and cannot be accessed by or merged symbols in other scopes:
+      //
+      //   namespace Foo { using Bar = bool; }
+      //   namespace Foo { Bar bar; } // This is an error
+      //
+      for (j = 0; j < block.children.length; j++) {
+        Node statement = block.children.get(j);
+        if (statement.kind == NodeKind.USING_ALIAS) {
+          Node declarationName = statement.declarationName();
+          string name = declarationName.asString();
+
+          // Detect duplicate symbol declarations
+          Symbol symbol = block.scope.findLocal(name);
+          if (symbol != null) {
+            semanticErrorDuplicateSymbol(log, declarationName.range, name, symbol.node.declarationName().range);
+            continue;
+          }
+
+          // Insert a new unresolved symbol as a local symbol only on this scope.
+          // It will not be added on the type associated with this scope, if any.
+          symbol = new Symbol(name, SymbolKind.OTHER);
+          symbol.node = statement;
+          statement.symbol = symbol;
+          block.scope.insertLocal(symbol);
+        }
       }
     }
   }
