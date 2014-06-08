@@ -101,10 +101,12 @@ class Resolver {
     SymbolFlag flags = 0;
     Node parent = node.parent;
 
+    // Make sure modifiers are detected for variables inside a variable cluster
     if (parent.kind == NodeKind.VARIABLE_CLUSTER) {
       parent = parent.parent;
     }
 
+    // Keep accumulating modifiers that are immediately nested inside each other
     while (parent != null && parent.kind == NodeKind.MODIFIER) {
       Node modifierName = parent.modifierName();
       string name = modifierName.asString();

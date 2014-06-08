@@ -1,10 +1,28 @@
 test("
-final public final public class Foo {}
+import public import public class Foo {}
 ", "
-<stdin>:2:7: warning: Duplicate modifier \"public\"
-final public final public class Foo {}
-      ~~~~~~
-<stdin>:2:1: warning: Duplicate modifier \"final\"
-final public final public class Foo {}
-~~~~~
+<stdin>:2:8: warning: Duplicate modifier \"public\"
+import public import public class Foo {}
+       ~~~~~~
+<stdin>:2:1: warning: Duplicate modifier \"import\"
+import public import public class Foo {}
+~~~~~~
+");
+
+test("
+public public public class Foo {}
+", "
+<stdin>:2:8: warning: Duplicate modifier \"public\"
+public public public class Foo {}
+       ~~~~~~
+<stdin>:2:1: warning: Duplicate modifier \"public\"
+public public public class Foo {}
+~~~~~~
+");
+
+test("
+public class Foo {
+  public void main() {}
+}
+", "
 ");
