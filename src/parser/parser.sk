@@ -41,6 +41,7 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
     return true;
   }
 
+  // Scan until the next closing token
   while (!context.peek(TokenKind.END_OF_FILE)) {
     if (context.peek(TokenKind.RIGHT_PARENTHESIS) ||
         context.peek(TokenKind.RIGHT_BRACKET) ||
@@ -49,6 +50,7 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
       return context.eat(kind);
     }
 
+    // Optionally recover parsing before the next statement if unambiguous
     if (tokenScan == TokenScan.STOP_BEFORE_NEXT_STATEMENT && (
         context.peek(TokenKind.ASSERT) ||
         context.peek(TokenKind.BREAK) ||

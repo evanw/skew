@@ -1,14 +1,15 @@
 class Resolver {
   TypeCache cache = new TypeCache();
-  List<Node> declarationsForMergeSiblingDeclarations = {};
-  List<Node> blocksForProcessUsingStatements = {};
+  List<Node> parsedDeclarations = {};
+  List<Node> parsedBlocks = {};
   Log log;
 
   static void run(Log log, Node program) {
     assert program.kind == NodeKind.PROGRAM;
     Resolver resolver = new Resolver(log);
     resolver.setupScopesAndMergeSymbols(program, new Scope(null));
-    resolver.mergeSiblingDeclarations();
+    resolver.accumulateSymbolFlags();
+    resolver.setSymbolKindsAndMergeSiblings();
     resolver.processUsingStatements();
   }
 
@@ -21,7 +22,7 @@ class Resolver {
     // Remember each scope on the node that introduced that scope
     else if (node.kind == NodeKind.BLOCK) {
       node.scope = scope = new Scope(scope);
-      blocksForProcessUsingStatements.push(node);
+      parsedBlocks.push(node);
 
       // Declarations at the file level go in the global scope
       if (node.parent.kind == NodeKind.FILE) {
@@ -61,7 +62,7 @@ class Resolver {
         }
 
         // Link the node with its symbol
-        declarationsForMergeSiblingDeclarations.push(node);
+        parsedDeclarations.push(node);
         node.symbol = symbol;
 
         // Create a type for block declarations so that declarations inside the
@@ -96,10 +97,64 @@ class Resolver {
     }
   }
 
-  void mergeSiblingDeclarations() {
+  SymbolFlag symbolFlagsForNode(Node node) {
+    SymbolFlag flags = 0;
+    Node parent = node.parent;
+
+    if (parent.kind == NodeKind.VARIABLE_CLUSTER) {
+      parent = parent.parent;
+    }
+
+    while (parent != null && parent.kind == NodeKind.MODIFIER) {
+      Node modifierName = parent.modifierName();
+      string name = modifierName.asString();
+      SymbolFlag flag = nameToSymbolFlag.get(name);
+      if ((flags & flag) != 0) semanticWarningDuplicateModifier(log, modifierName.range, name);
+      flags = flags | flag;
+      parent = parent.parent;
+    }
+
+    return flags;
+  }
+
+  void accumulateSymbolFlags() {
     int i;
-    for (i = 0; i < declarationsForMergeSiblingDeclarations.length; i++) {
-      Node node = declarationsForMergeSiblingDeclarations.get(i);
+    for (i = 0; i < parsedDeclarations.length; i++) {
+      Node node = parsedDeclarations.get(i);
+
+      // Skip all node in a sibling chain other than the first node
+      if (node.symbol.node != node) {
+        continue;
+      }
+
+      Node declarationName = node.declarationName();
+      SymbolFlag flags = symbolFlagsForNode(node);
+      Node sibling;
+
+      // Make sure all siblings have the same modifiers
+      for (sibling = node.sibling; sibling != null; sibling = sibling.sibling) {
+        SymbolFlag siblingFlags = symbolFlagsForNode(sibling);
+        if (flags != siblingFlags) semanticErrorDifferentModifiers(log, sibling.declarationName().range, declarationName.asString(), declarationName.range);
+        flags = flags | siblingFlags;
+      }
+
+      node.symbol.flags = flags;
+    }
+  }
+
+  static bool checkParentsForFunction(Node node) {
+    for (node = node.parent; node != null; node = node.parent) {
+      if (node.kind.isFunctionDeclaration()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void setSymbolKindsAndMergeSiblings() {
+    int i;
+    for (i = 0; i < parsedDeclarations.length; i++) {
+      Node node = parsedDeclarations.get(i);
 
       // Skip all node in a sibling chain other than the first node
       if (node.symbol.node != node) {
@@ -132,30 +187,44 @@ class Resolver {
 
       switch (kind) {
         case NodeKind.NAMESPACE { node.symbol.kind = SymbolKind.NAMESPACE; }
-
         case NodeKind.ENUM { node.symbol.kind = SymbolKind.ENUM; }
         case NodeKind.ENUM_FLAGS { node.symbol.kind = SymbolKind.ENUM_FLAGS; }
-
         case NodeKind.CLASS { node.symbol.kind = SymbolKind.CLASS; }
         case NodeKind.STRUCT { node.symbol.kind = SymbolKind.STRUCT; }
         case NodeKind.INTERFACE { node.symbol.kind = SymbolKind.INTERFACE; }
-
         case NodeKind.FUNCTION { node.symbol.kind = SymbolKind.GLOBAL_FUNCTION; }
         case NodeKind.CONSTRUCTOR { node.symbol.kind = SymbolKind.CONSTRUCTOR_FUNCTION; }
-
         case NodeKind.VARIABLE { node.symbol.kind = SymbolKind.GLOBAL_VARIABLE; }
         case NodeKind.PARAMETER { node.symbol.kind = SymbolKind.PARAMETER; }
-
         case NodeKind.EXTENSION { semanticErrorExtensionMissingTarget(log, declarationName.range, declarationName.asString()); }
         default { assert false; }
+      }
+    }
+
+    // Distinguish between global and instance functions and variables now that
+    // all symbols have a kind associated with them
+    for (i = 0; i < parsedDeclarations.length; i++) {
+      Node node = parsedDeclarations.get(i);
+      Symbol symbol = node.symbol;
+      Symbol enclosingSymbol = symbol.enclosingSymbol;
+
+      // Change non-static global functions/variables to instance
+      if (enclosingSymbol != null && enclosingSymbol.kind.isObject() && !symbol.isStatic()) {
+        if (symbol.kind == SymbolKind.GLOBAL_FUNCTION) symbol.kind = SymbolKind.INSTANCE_FUNCTION;
+        else if (symbol.kind == SymbolKind.GLOBAL_VARIABLE) symbol.kind = SymbolKind.INSTANCE_VARIABLE;
+      }
+
+      // Change global variables to local
+      else if (symbol.kind == SymbolKind.GLOBAL_VARIABLE && checkParentsForFunction(node)) {
+        symbol.kind = SymbolKind.LOCAL_VARIABLE;
       }
     }
   }
 
   void processUsingStatements() {
     int i;
-    for (i = 0; i < blocksForProcessUsingStatements.length; i++) {
-      Node block = blocksForProcessUsingStatements.get(i);
+    for (i = 0; i < parsedBlocks.length; i++) {
+      Node block = parsedBlocks.get(i);
       int j;
 
       // Empty blocks will have a children array of null
@@ -477,3 +546,20 @@ class Resolver {
   void resolveDefault(Node node) {
   }
 }
+
+StringMap<SymbolFlag> createNameToSymbolFlag() {
+  StringMap<SymbolFlag> result = new StringMap<SymbolFlag>();
+  result.set("export", SymbolFlag.EXPORT);
+  result.set("final", SymbolFlag.FINAL);
+  result.set("import", SymbolFlag.IMPORT);
+  result.set("inline", SymbolFlag.INLINE);
+  result.set("override", SymbolFlag.OVERRIDE);
+  result.set("private", SymbolFlag.PRIVATE);
+  result.set("protected", SymbolFlag.PROTECTED);
+  result.set("public", SymbolFlag.PUBLIC);
+  result.set("static", SymbolFlag.STATIC);
+  result.set("virtual", SymbolFlag.VIRTUAL);
+  return result;
+}
+
+StringMap<SymbolFlag> nameToSymbolFlag = createNameToSymbolFlag();

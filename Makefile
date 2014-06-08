@@ -25,6 +25,7 @@ SOURCES += src/resolver/typecache.sk
 
 TEST_SOURCES += tests/system/common.sk
 TEST_SOURCES += tests/system/merging.sk
+TEST_SOURCES += tests/system/modifiers.sk
 
 DEBUG_DIR = build/debug
 TESTS_DIR = build/tests

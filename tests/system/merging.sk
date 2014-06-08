@@ -146,3 +146,15 @@ namespace Foo.Bar { class Baz {} }
 namespace Foo { in Bar { class Baz {} } }
                                ~~~
 ");
+
+test("
+import class Foo {}
+export in Foo {}
+", "
+<stdin>:3:11: error: Cannot merge multiple declarations for \"Foo\" with different modifiers
+export in Foo {}
+          ~~~
+<stdin>:2:14: note: Conflicting declaration is here
+import class Foo {}
+             ~~~
+");

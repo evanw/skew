@@ -1,0 +1,10 @@
+test("
+final public final public class Foo {}
+", "
+<stdin>:2:7: warning: Duplicate modifier \"public\"
+final public final public class Foo {}
+      ~~~~~~
+<stdin>:2:1: warning: Duplicate modifier \"final\"
+final public final public class Foo {}
+~~~~~
+");

@@ -78,11 +78,11 @@ class Symbol {
   Symbol enclosingSymbol = null;
 
   bool isNamespace() {
-    return kind == SymbolKind.GLOBAL_NAMESPACE || kind == SymbolKind.NAMESPACE;
+    return kind >= SymbolKind.GLOBAL_NAMESPACE && kind <= SymbolKind.NAMESPACE;
   }
 
   bool isEnum() {
-    return kind == SymbolKind.ENUM || kind == SymbolKind.ENUM_FLAGS;
+    return kind >= SymbolKind.ENUM && kind <= SymbolKind.ENUM_FLAGS;
   }
 
   bool isObject() {
@@ -95,5 +95,49 @@ class Symbol {
 
   bool isVariable() {
     return kind >= SymbolKind.LOCAL_VARIABLE && kind <= SymbolKind.INSTANCE_VARIABLE;
+  }
+
+  bool isPublic() {
+    return (flags & SymbolFlag.PUBLIC) != 0;
+  }
+
+  bool isPrivate() {
+    return (flags & SymbolFlag.PRIVATE) != 0;
+  }
+
+  bool isProtected() {
+    return (flags & SymbolFlag.PROTECTED) != 0;
+  }
+
+  bool isAbstract() {
+    return (flags & SymbolFlag.ABSTRACT) != 0;
+  }
+
+  bool isOverride() {
+    return (flags & SymbolFlag.OVERRIDE) != 0;
+  }
+
+  bool isStatic() {
+    return (flags & SymbolFlag.STATIC) != 0;
+  }
+
+  bool isVirtual() {
+    return (flags & SymbolFlag.VIRTUAL) != 0;
+  }
+
+  bool isFinal() {
+    return (flags & SymbolFlag.FINAL) != 0;
+  }
+
+  bool isInline() {
+    return (flags & SymbolFlag.INLINE) != 0;
+  }
+
+  bool isImport() {
+    return (flags & SymbolFlag.IMPORT) != 0;
+  }
+
+  bool isExport() {
+    return (flags & SymbolFlag.EXPORT) != 0;
   }
 }

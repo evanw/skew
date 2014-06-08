@@ -41,3 +41,8 @@ void semanticErrorUnknownMemberSymbol(Log log, Range range, string name, Type ty
 void semanticErrorExtensionMissingTarget(Log log, Range range, string name) {
   log.error(range, "No type named ".append(simpleQuote(name)).append(" to extend"));
 }
+
+void semanticErrorDifferentModifiers(Log log, Range range, string name, Range previous) {
+  log.error(range, "Cannot merge multiple declarations for ".append(simpleQuote(name)).append(" with different modifiers"));
+  if (!previous.isEmpty()) log.note(previous, "Conflicting declaration is here");
+}

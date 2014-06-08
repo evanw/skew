@@ -115,7 +115,7 @@ enum NodeKind {
 
 in NodeKind {
   bool isStatement() {
-    return this >= NAMESPACE && this <= USING_NAMESPACE;
+    return this >= VARIABLE_CLUSTER && this <= USING_NAMESPACE;
   }
 
   bool isNamedBlockDeclaration() {

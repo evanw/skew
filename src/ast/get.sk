@@ -48,4 +48,9 @@ in Node {
     assert kind == NodeKind.USING_NAMESPACE;
     return children.get(0);
   }
+
+  Node modifierName() {
+    assert kind == NodeKind.MODIFIER;
+    return children.get(0);
+  }
 }
