@@ -21,7 +21,18 @@ class Resolver {
 
     // Remember each scope on the node that introduced that scope
     else if (node.kind == NodeKind.BLOCK) {
-      node.scope = scope = new Scope(scope);
+      // Object declaration blocks just use the scope from their parent node so
+      // that symbols inside the block will be marked duplicates of parameters
+      //
+      //   class Foo<T> {
+      //     int T;
+      //   }
+      //
+      if (!node.parent.kind.isObjectDeclaration()) {
+        scope = new Scope(scope);
+      }
+
+      node.scope = scope;
       parsedBlocks.push(node);
 
       // Declarations at the file level go in the global scope
@@ -280,7 +291,7 @@ class Resolver {
         }
 
         // Resolve the namespace as an absolute name
-        Symbol symbol = resolveUsingNamespaceValue(statement.usingNamespaceValue());
+        Symbol symbol = resolveGlobalUsingValue(statement.usingNamespaceValue());
 
         // TODO: Resolve using namespace nodes relative to the current (or global?) namespace without considering local symbols
         // - must make sure the order of using namespace nodes doesn't matter
@@ -292,7 +303,7 @@ class Resolver {
     }
   }
 
-  Symbol resolveUsingNamespaceValue(Node node) {
+  Symbol resolveGlobalUsingValue(Node node) {
     if (node.kind == NodeKind.NAME) {
       string name = node.asString();
       Symbol symbol = cache.globalType.findMember(name);
@@ -302,7 +313,7 @@ class Resolver {
     }
 
     if (node.kind == NodeKind.DOT) {
-      Symbol target = resolveUsingNamespaceValue(node.dotTarget());
+      Symbol target = resolveGlobalUsingValue(node.dotTarget());
       Node dotName = node.dotName();
       if (target == null || dotName == null) {
         return null;

@@ -158,3 +158,16 @@ export in Foo {}
 import class Foo {}
              ~~~
 ");
+
+test("
+class Foo<T> {
+  int T;
+}
+", "
+<stdin>:3:7: error: \"T\" is already declared
+  int T;
+      ^
+<stdin>:2:11: note: Previous declaration is here
+class Foo<T> {
+          ^
+");
