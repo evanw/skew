@@ -27,6 +27,10 @@ enum SymbolKind {
 }
 
 in SymbolKind {
+  bool isGlobalNamespace() {
+    return this == SymbolKind.GLOBAL_NAMESPACE;
+  }
+
   bool isNamespace() {
     return this >= GLOBAL_NAMESPACE && this <= NAMESPACE;
   }
@@ -37,6 +41,10 @@ in SymbolKind {
 
   bool isObject() {
     return this >= CLASS && this <= INTERFACE;
+  }
+
+  bool isType() {
+    return this >= GLOBAL_NAMESPACE && this <= INTERFACE;
   }
 
   bool isFunction() {
@@ -76,26 +84,6 @@ class Symbol {
   Node node = null;
   Type type = null;
   Symbol enclosingSymbol = null;
-
-  bool isNamespace() {
-    return kind >= SymbolKind.GLOBAL_NAMESPACE && kind <= SymbolKind.NAMESPACE;
-  }
-
-  bool isEnum() {
-    return kind >= SymbolKind.ENUM && kind <= SymbolKind.ENUM_FLAGS;
-  }
-
-  bool isObject() {
-    return kind >= SymbolKind.CLASS && kind <= SymbolKind.INTERFACE;
-  }
-
-  bool isFunction() {
-    return kind >= SymbolKind.GLOBAL_FUNCTION && kind <= SymbolKind.CONSTRUCTOR_FUNCTION;
-  }
-
-  bool isVariable() {
-    return kind >= SymbolKind.LOCAL_VARIABLE && kind <= SymbolKind.INSTANCE_VARIABLE;
-  }
 
   bool isPublic() {
     return (flags & SymbolFlag.PUBLIC) != 0;

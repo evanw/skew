@@ -1,0 +1,68 @@
+test("
+int foo;
+using foo;
+", "
+<stdin>:2:7: error: Expected a type here
+using foo;
+      ~~~
+");
+
+test("
+using foo;
+class foo {}
+", "
+<stdin>:1:7: error: Expected a namespace here
+using foo;
+      ~~~
+");
+
+test("
+using foo;
+namespace foo {}
+", "
+");
+
+test("
+namespace ns { int foo; }
+using ns.foo;
+", "
+<stdin>:2:7: error: Expected a type here
+using ns.foo;
+         ~~~
+");
+
+test("
+using ns.foo;
+namespace ns { class foo {} }
+", "
+<stdin>:1:7: error: Expected a namespace here
+using ns.foo;
+      ~~~~~~
+");
+
+test("
+using ns.foo;
+namespace ns.foo {}
+", "
+");
+
+test("
+int foo;
+using bar = foo;
+", "
+<stdin>:2:13: error: Expected a type here
+using bar = foo;
+            ~~~
+");
+
+test("
+using bar = foo;
+class foo {}
+", "
+");
+
+test("
+using bar = foo;
+namespace foo {}
+", "
+");

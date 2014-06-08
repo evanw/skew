@@ -28,7 +28,7 @@ class Resolver {
       //     int T;
       //   }
       //
-      if (!node.parent.kind.isObjectDeclaration()) {
+      if (!node.parent.kind.isNamedBlockDeclaration()) {
         scope = new Scope(scope);
       }
 
@@ -92,7 +92,7 @@ class Resolver {
 
     // Also introduce a scope on object declarations for the type parameters
     // and on function declarations and lambda expressions for the arguments
-    if (node.kind.isObjectDeclaration() || node.kind.isFunctionDeclaration() || node.kind == NodeKind.LAMBDA) {
+    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction()) {
       node.scope = scope = new Scope(scope);
     }
 
@@ -157,7 +157,7 @@ class Resolver {
 
   static bool checkParentsForFunction(Node node) {
     for (node = node.parent; node != null; node = node.parent) {
-      if (node.kind.isFunctionDeclaration()) {
+      if (node.kind.isFunction()) {
         return true;
       }
     }
@@ -168,13 +168,14 @@ class Resolver {
     int i;
     for (i = 0; i < parsedDeclarations.length; i++) {
       Node node = parsedDeclarations.get(i);
+      Symbol symbol = node.symbol;
 
       // Skip all node in a sibling chain other than the first node
-      if (node.symbol.node != node) {
+      if (symbol.node != node) {
         continue;
       }
 
-      // The declaration name isn't null here because node.symbol != null
+      // The declaration name isn't null here because symbol != null
       Node declarationName = node.declarationName();
       NodeKind kind = node.kind;
       Node sibling;
@@ -198,19 +199,36 @@ class Resolver {
         semanticErrorDuplicateSymbol(log, siblingName.range, siblingName.asString(), declarationName.range);
       }
 
+      // Set the symbol kind
       switch (kind) {
-        case NodeKind.NAMESPACE { node.symbol.kind = SymbolKind.NAMESPACE; }
-        case NodeKind.ENUM { node.symbol.kind = SymbolKind.ENUM; }
-        case NodeKind.ENUM_FLAGS { node.symbol.kind = SymbolKind.ENUM_FLAGS; }
-        case NodeKind.CLASS { node.symbol.kind = SymbolKind.CLASS; }
-        case NodeKind.STRUCT { node.symbol.kind = SymbolKind.STRUCT; }
-        case NodeKind.INTERFACE { node.symbol.kind = SymbolKind.INTERFACE; }
-        case NodeKind.FUNCTION { node.symbol.kind = SymbolKind.GLOBAL_FUNCTION; }
-        case NodeKind.CONSTRUCTOR { node.symbol.kind = SymbolKind.CONSTRUCTOR_FUNCTION; }
-        case NodeKind.VARIABLE { node.symbol.kind = SymbolKind.GLOBAL_VARIABLE; }
-        case NodeKind.PARAMETER { node.symbol.kind = SymbolKind.PARAMETER; }
+        case NodeKind.NAMESPACE { symbol.kind = SymbolKind.NAMESPACE; }
+        case NodeKind.ENUM { symbol.kind = SymbolKind.ENUM; }
+        case NodeKind.ENUM_FLAGS { symbol.kind = SymbolKind.ENUM_FLAGS; }
+        case NodeKind.CLASS { symbol.kind = SymbolKind.CLASS; }
+        case NodeKind.STRUCT { symbol.kind = SymbolKind.STRUCT; }
+        case NodeKind.INTERFACE { symbol.kind = SymbolKind.INTERFACE; }
+        case NodeKind.FUNCTION { symbol.kind = SymbolKind.GLOBAL_FUNCTION; }
+        case NodeKind.CONSTRUCTOR { symbol.kind = SymbolKind.CONSTRUCTOR_FUNCTION; }
+        case NodeKind.VARIABLE { symbol.kind = SymbolKind.GLOBAL_VARIABLE; }
+        case NodeKind.PARAMETER { symbol.kind = SymbolKind.PARAMETER; }
         case NodeKind.EXTENSION { semanticErrorExtensionMissingTarget(log, declarationName.range, declarationName.asString()); }
         default { assert false; }
+      }
+
+      // Create the types for all declarations now so that we can start
+      // resolving the types of expressions in using statements
+      if (symbol.kind.isType()) {
+        symbol.type = new Type(symbol);
+
+        // Move all symbols from all scopes into the type itself. Errors for
+        // duplicate declarations should have already been logged. This will
+        // not capture using statements because they haven't been processed yet.
+        for (sibling = node; sibling != null; sibling = sibling.sibling) {
+          Scope scope = sibling.scope;
+          assert scope != null;
+          scope.type = symbol.type;
+          scope.moveLocalsIntoType();
+        }
       }
     }
 
@@ -269,11 +287,15 @@ class Resolver {
         }
 
         // Insert a new unresolved symbol as a local symbol only on this scope.
-        // It will not be added on the type associated with this scope, if any.
+        // It will not be added on the type associated with this scope.
         symbol = new Symbol(name, SymbolKind.OTHER);
         symbol.node = statement;
         statement.symbol = symbol;
         block.scope.insertLocal(symbol);
+
+        // Resolve the value now because it should only depend on symbols that
+        // already have a type (namespaces, enums, and objects)
+        resolveGlobalUsingValue(statement.usingAliasValue());
       }
 
       // Add symbols from using statements. These must be added after using
@@ -291,11 +313,18 @@ class Resolver {
         }
 
         // Resolve the namespace as an absolute name
-        Symbol symbol = resolveGlobalUsingValue(statement.usingNamespaceValue());
+        Node value = statement.usingNamespaceValue();
+        resolveGlobalUsingValue(value);
+        if (value.symbol == null) {
+          continue;
+        }
 
-        // TODO: Resolve using namespace nodes relative to the current (or global?) namespace without considering local symbols
-        // - must make sure the order of using namespace nodes doesn't matter
-        // TODO: ensure the symbol is a namespace
+        // Unlike a using alias, using statements must be a namespace
+        if (!value.symbol.kind.isNamespace()) {
+          semanticErrorBadUsingNamespace(log, value.range);
+          continue;
+        }
+
         // TODO: Insert each imported symbol
         // TODO: Don't import nested namespaces
         // TODO: Importing multiple different symbols with the same name should be replaced with an ambiguous marker that disables the name
@@ -303,30 +332,44 @@ class Resolver {
     }
   }
 
-  Symbol resolveGlobalUsingValue(Node node) {
+  void resolveGlobalUsingValue(Node node) {
+    node.type = cache.errorType;
+
     if (node.kind == NodeKind.NAME) {
       string name = node.asString();
-      Symbol symbol = cache.globalType.findMember(name);
-      if (symbol == null) semanticErrorUndeclaredGlobalSymbol(log, node.range, name);
-      // TODO: Check that symbol is a namespace
-      return symbol;
-    }
-
-    if (node.kind == NodeKind.DOT) {
-      Symbol target = resolveGlobalUsingValue(node.dotTarget());
+      node.symbol = cache.globalType.findMember(name);
+      if (node.symbol == null) {
+        semanticErrorUndeclaredSymbol(log, node.range, name);
+        return;
+      }
+    } else if (node.kind == NodeKind.DOT) {
+      Node target = node.dotTarget();
+      resolveGlobalUsingValue(target);
+      Symbol targetSymbol = target.symbol;
       Node dotName = node.dotName();
-      if (target == null || dotName == null) {
-        return null;
+      if (targetSymbol == null || targetSymbol.type == null || dotName == null) {
+        return;
       }
       string name = dotName.asString();
-      Symbol symbol = target.type == null ? null : target.type.findMember(name);
-      if (symbol == null) semanticErrorUndeclaredSymbol(log, dotName.range, name);
-      // TODO: Check that symbol is a namespace
-      return symbol;
+      node.symbol = targetSymbol.type.findMember(name);
+      if (node.symbol == null) {
+        semanticErrorUnknownMemberSymbol(log, dotName.range, name, targetSymbol.type);
+        return;
+      }
+    } else {
+      semanticErrorUnexpectedExpression(log, node.range, node.kind);
+      return;
     }
 
-    semanticErrorUnexpectedExpression(log, node.range, node.kind);
-    return null;
+    // Validate the symbol type, must not be an instance
+    if (!node.symbol.kind.isType()) {
+      semanticErrorBadUsingValue(log, node.range);
+      node.symbol = null;
+      node.type = cache.errorType;
+    } else {
+      node.type = node.symbol.type;
+      assert node.type != null; // All type symbols should have a type by now
+    }
   }
 
   void resolve(Node node) {

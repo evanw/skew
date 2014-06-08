@@ -1,10 +1,10 @@
 test("
 import public import public class Foo {}
 ", "
-<stdin>:2:8: warning: Duplicate modifier \"public\"
+<stdin>:1:8: warning: Duplicate modifier \"public\"
 import public import public class Foo {}
        ~~~~~~
-<stdin>:2:1: warning: Duplicate modifier \"import\"
+<stdin>:1:1: warning: Duplicate modifier \"import\"
 import public import public class Foo {}
 ~~~~~~
 ");
@@ -12,10 +12,10 @@ import public import public class Foo {}
 test("
 public public public class Foo {}
 ", "
-<stdin>:2:8: warning: Duplicate modifier \"public\"
+<stdin>:1:8: warning: Duplicate modifier \"public\"
 public public public class Foo {}
        ~~~~~~
-<stdin>:2:1: warning: Duplicate modifier \"public\"
+<stdin>:1:1: warning: Duplicate modifier \"public\"
 public public public class Foo {}
 ~~~~~~
 ");

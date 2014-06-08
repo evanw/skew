@@ -44,6 +44,11 @@ in Node {
     return children.slice(1, children.length);
   }
 
+  Node usingAliasValue() {
+    assert kind == NodeKind.USING_ALIAS;
+    return children.get(1);
+  }
+
   Node usingNamespaceValue() {
     assert kind == NodeKind.USING_NAMESPACE;
     return children.get(0);

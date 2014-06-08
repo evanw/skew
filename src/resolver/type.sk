@@ -12,6 +12,7 @@ class Type {
   }
 
   string toString() {
-    return "TODO";
+    Symbol enclosingSymbol = symbol.enclosingSymbol;
+    return (enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() ? enclosingSymbol.type.toString().append(".") : "").append(symbol.name);
   }
 }

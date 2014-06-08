@@ -1,7 +1,8 @@
 var assert = require('assert');
 
 function test(input, expected) {
-  it(input.trim().replace(/\s+/g, ' '), function() {
+  input = input.trim();
+  it(input.replace(/\s+/g, ' '), function() {
     run(input, expected);
   });
 }

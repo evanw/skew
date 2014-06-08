@@ -130,8 +130,8 @@ in NodeKind {
     return this >= NAMESPACE && this <= USING_ALIAS;
   }
 
-  bool isFunctionDeclaration() {
-    return this >= CONSTRUCTOR && this <= FUNCTION;
+  bool isFunction() {
+    return this >= CONSTRUCTOR && this <= FUNCTION || this == LAMBDA;
   }
 
   bool isExpression() {
