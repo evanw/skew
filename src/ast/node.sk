@@ -61,6 +61,7 @@ enum NodeKind {
   PARAMETERIZE,
   CAST,
   IMPLICIT_CAST,
+  LAMBDA,
   DEFAULT,
 
   // Unary operators
@@ -119,6 +120,10 @@ in NodeKind {
 
   bool isNamedBlockDeclaration() {
     return this >= NAMESPACE && this <= EXTENSION;
+  }
+
+  bool isObjectDeclaration() {
+    return this >= CLASS && this <= INTERFACE;
   }
 
   bool isNamedDeclaration() {
@@ -219,6 +224,7 @@ class Node {
   }
 
   List<Node> removeChildren() {
+    if (children == null) return {};
     List<Node> result = children;
     int i;
     for (i = 0; i < children.length; i++) {

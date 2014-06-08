@@ -302,6 +302,13 @@ in Node {
     return new Node(NodeKind.IMPLICIT_CAST).withChildren({ type, value });
   }
 
+  static Node createLambda(List<Node> arguments, Node block) {
+    assert checkAllNodeKinds(arguments, new NodeKindCheck(NodeKind.VARIABLE));
+    assert block.kind == NodeKind.BLOCK;
+    arguments.push(block);
+    return new Node(NodeKind.LAMBDA).withChildren(arguments);
+  }
+
   static Node createDefault(Node type) {
     assert type.kind.isExpression();
     return new Node(NodeKind.DEFAULT).withChildren({ type });

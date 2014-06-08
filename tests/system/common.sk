@@ -1,0 +1,14 @@
+import void test(string input, string expected);
+import void expect(string output, string expected);
+
+void run(string input, string expected) {
+  Source source = new Source("<stdin>", input);
+  Log log = new Log();
+  List<Token> tokens = tokenize(log, source);
+  Node file = parseFile(log, tokens);
+  if (file != null) {
+    Node program = Node.createProgram({ file });
+    Resolver.run(log, program);
+  }
+  expect(log.toString(), expected);
+}

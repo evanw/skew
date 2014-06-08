@@ -1,18 +1,18 @@
 class TypeCache {
-  Type globalType = null;
+  Type globalType = createType(new Symbol("<global>", SymbolKind.GLOBAL_NAMESPACE));
   Type voidType = null;
   Type intType = null;
   Type boolType = null;
   Type floatType = null;
   Type doubleType = null;
   Type stringType = null;
-  Type nullType = createType("null");
-  Type errorType = createType("<error>");
-  Type circularType = createType("<circular>");
-}
+  Type nullType = createType(new Symbol("null", SymbolKind.OTHER));
+  Type errorType = createType(new Symbol("<error>", SymbolKind.OTHER));
+  Type circularType = createType(new Symbol("<circular>", SymbolKind.OTHER));
 
-Type createType(string name) {
-  Type type = new Type(new Symbol(name, SymbolKind.OTHER));
-  type.symbol.type = type;
-  return type;
+  static Type createType(Symbol symbol) {
+    Type type = new Type(symbol);
+    type.symbol.type = type;
+    return type;
+  }
 }

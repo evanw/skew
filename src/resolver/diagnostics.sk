@@ -12,12 +12,32 @@ void semanticWarningRedundantModifier(Log log, Range range, string modifier) {
   log.warning(range, "Redundant modifier ".append(simpleQuote(modifier)));
 }
 
-void semanticWarningShadowedSymbolFromUsingNamespace(Log log, Range range, string name, Range shadowed) {
-  log.warning(range, simpleQuote(name).append(" shadows an imported symbol with the same name"));
+void semanticWarningShadowedSymbol(Log log, Range range, string name, Range shadowed) {
+  log.warning(range, simpleQuote(name).append(" shadows another symbol with the same name"));
   if (!shadowed.isEmpty()) log.note(shadowed, "The shadowed declaration is here");
 }
 
 void semanticErrorDuplicateSymbol(Log log, Range range, string name, Range previous) {
   log.error(range, simpleQuote(name).append(" is already declared"));
-  if (!previous.isEmpty()) log.note(previous, "Another declaration is here");
+  if (!previous.isEmpty()) log.note(previous, "Previous declaration is here");
+}
+
+void semanticErrorUnexpectedExpression(Log log, Range range, NodeKind kind) {
+  log.error(range, "Unexpected ".append(kind.toString()));
+}
+
+void semanticErrorUndeclaredSymbol(Log log, Range range, string name) {
+  log.error(range, simpleQuote(name).append(" is not declared"));
+}
+
+void semanticErrorUndeclaredGlobalSymbol(Log log, Range range, string name) {
+  log.error(range, simpleQuote(name).append(" is not declared at the global scope"));
+}
+
+void semanticErrorUnknownMemberSymbol(Log log, Range range, string name, Type type) {
+  log.error(range, simpleQuote(name).append(" is not declared on ").append(typeToText(type)));
+}
+
+void semanticErrorExtensionMissingTarget(Log log, Range range, string name) {
+  log.error(range, "No type named ".append(simpleQuote(name)).append(" to extend"));
 }

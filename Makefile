@@ -23,15 +23,44 @@ SOURCES += src/resolver/symbol.sk
 SOURCES += src/resolver/type.sk
 SOURCES += src/resolver/typecache.sk
 
+TEST_SOURCES += tests/system/common.sk
+TEST_SOURCES += tests/system/merging.sk
+
+DEBUG_DIR = build/debug
+TESTS_DIR = build/tests
+
 default: debug
 
-debug: build/debug/skewc.js
+clean:
+	rm -fr build
 
-build:
-	mkdir build
+################################################################################
+# DEBUG
+################################################################################
 
-build/debug: build
-	mkdir build/debug
+debug: $(DEBUG_DIR)/skewc.js
 
-build/debug/skewc.js: build/debug $(SOURCES) Makefile src/core/support.js
-	skewc $(SOURCES) --verbose --target js --output-file build/debug/skewc.js --append src/core/support.js
+$(DEBUG_DIR):
+	mkdir -p $(DEBUG_DIR)
+
+$(DEBUG_DIR)/skewc.js: Makefile $(SOURCES) src/core/support.js | $(DEBUG_DIR)
+	skewc --verbose $(SOURCES) --append src/core/support.js --target js --output-file $(DEBUG_DIR)/skewc.js
+
+################################################################################
+# TEST
+################################################################################
+
+test: $(TESTS_DIR)/mocha.js | $(TESTS_DIR)/node_modules/mocha
+	$(TESTS_DIR)/node_modules/mocha/bin/mocha $(TESTS_DIR)/mocha.js
+
+$(TESTS_DIR):
+	mkdir -p $(TESTS_DIR)
+
+$(TESTS_DIR)/mocha.js: Makefile $(SOURCES) $(TEST_SOURCES) tests/system/common.js src/core/support.js | $(TESTS_DIR)
+	skewc --verbose $(SOURCES) $(TEST_SOURCES) --prepend tests/system/common.js --append src/core/support.js --target js --output-file $(TESTS_DIR)/mocha.js
+
+$(TESTS_DIR)/package.json: tests/system/package.json | $(TESTS_DIR)
+	cp tests/system/package.json $(TESTS_DIR)/package.json
+
+$(TESTS_DIR)/node_modules/mocha: | $(TESTS_DIR)/package.json
+	cd $(TESTS_DIR) && npm install

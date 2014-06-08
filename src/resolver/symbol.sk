@@ -1,5 +1,6 @@
 enum SymbolKind {
   OTHER,
+  PARAMETER,
 
   // Namespace kinds
   GLOBAL_NAMESPACE,

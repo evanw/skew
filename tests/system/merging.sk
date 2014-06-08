@@ -1,0 +1,148 @@
+test("
+in Foo {}
+class Foo {}
+", "
+");
+
+test("
+in Foo {}
+struct Foo {}
+", "
+");
+
+test("
+in Foo {}
+interface Foo {}
+", "
+");
+
+test("
+in Foo {}
+namespace Foo {}
+", "
+");
+
+test("
+in Foo {}
+enum Foo {}
+", "
+");
+
+test("
+in Foo {}
+enum flags Foo {}
+", "
+");
+
+test("
+in foo {}
+int foo;
+", "
+<stdin>:3:5: error: \"foo\" is already declared
+int foo;
+    ~~~
+<stdin>:2:4: note: Previous declaration is here
+in foo {}
+   ~~~
+<stdin>:2:4: error: No type named \"foo\" to extend
+in foo {}
+   ~~~
+");
+
+test("
+in foo {}
+int foo() {}
+", "
+<stdin>:3:5: error: \"foo\" is already declared
+int foo() {}
+    ~~~
+<stdin>:2:4: note: Previous declaration is here
+in foo {}
+   ~~~
+<stdin>:2:4: error: No type named \"foo\" to extend
+in foo {}
+   ~~~
+");
+
+test("
+namespace Foo {}
+namespace Foo {}
+", "
+");
+
+test("
+class Foo {}
+class Foo {}
+", "
+<stdin>:3:7: error: \"Foo\" is already declared
+class Foo {}
+      ~~~
+<stdin>:2:7: note: Previous declaration is here
+class Foo {}
+      ~~~
+");
+
+test("
+class Foo {}
+struct Foo {}
+", "
+<stdin>:3:8: error: \"Foo\" is already declared
+struct Foo {}
+       ~~~
+<stdin>:2:7: note: Previous declaration is here
+class Foo {}
+      ~~~
+");
+
+test("
+struct Foo {}
+interface Foo {}
+", "
+<stdin>:3:11: error: \"Foo\" is already declared
+interface Foo {}
+          ~~~
+<stdin>:2:8: note: Previous declaration is here
+struct Foo {}
+       ~~~
+");
+
+test("
+in Foo {}
+", "
+<stdin>:2:4: error: No type named \"Foo\" to extend
+in Foo {}
+   ~~~
+");
+
+test("
+in Foo {}
+in Foo {}
+", "
+<stdin>:2:4: error: No type named \"Foo\" to extend
+in Foo {}
+   ~~~
+");
+
+test("
+namespace Foo.Bar { class Baz {} }
+namespace Foo.Bar { class Baz {} }
+", "
+<stdin>:3:27: error: \"Baz\" is already declared
+namespace Foo.Bar { class Baz {} }
+                          ~~~
+<stdin>:2:27: note: Previous declaration is here
+namespace Foo.Bar { class Baz {} }
+                          ~~~
+");
+
+test("
+namespace Foo { in Bar { class Baz {} } }
+namespace Foo.Bar { class Baz {} }
+", "
+<stdin>:3:27: error: \"Baz\" is already declared
+namespace Foo.Bar { class Baz {} }
+                          ~~~
+<stdin>:2:32: note: Previous declaration is here
+namespace Foo { in Bar { class Baz {} } }
+                               ~~~
+");

@@ -84,6 +84,7 @@
 "<"                           LESS_THAN;
 ">"                           GREATER_THAN;
 "!"                           NOT;
+"=>"                          LAMBDA;
 "="                           ASSIGN;
 
 ['](\\.|[^\\'])*[']           CHARACTER;

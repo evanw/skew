@@ -87,10 +87,18 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
 }
 
 Node parseGroup(ParserContext context) {
+  Token token = context.current();
   if (!context.expect(TokenKind.LEFT_PARENTHESIS)) return null;
-  Node value = pratt.parse(context, Precedence.LOWEST);
-  scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-  return value;
+  if (!context.eat(TokenKind.RIGHT_PARENTHESIS)) {
+    Node value = pratt.parse(context, Precedence.LOWEST);
+    scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+    return value;
+  }
+  if (!context.peek(TokenKind.LAMBDA)) {
+    context.expect(TokenKind.LAMBDA);
+    return Node.createError().withRange(context.spanSince(token.range));
+  }
+  return Node.createSequence({}).withRange(context.spanSince(token.range));
 }
 
 Node parseName(ParserContext context) {
@@ -110,6 +118,14 @@ Node parseBlockOrStatement(ParserContext context) {
   if (context.peek(TokenKind.LEFT_BRACE)) return parseBlock(context, StatementHint.NORMAL);
   Node statement = parseStatement(context, StatementHint.NORMAL); if (statement == null) return null;
   return Node.createBlock({ statement }).withRange(statement.range);
+}
+
+Node parseLambdaBlock(ParserContext context) {
+  if (context.peek(TokenKind.LEFT_BRACE)) {
+    return parseBlock(context, StatementHint.NORMAL);
+  }
+  Node value = pratt.parse(context, Precedence.COMMA);
+  return Node.createBlock({ Node.createReturn(value).withRange(value.range) }).withRange(value.range);
 }
 
 Node parseCaseStatement(ParserContext context) {
@@ -466,7 +482,12 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
 
 Node parseUsing(ParserContext context) {
   Token token = context.next();
-  Node name = parseName(context); if (name == null) return null;
+  Node name = parseName(context);
+  if (name == null) {
+    scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+    Range range = context.spanSince(token.range);
+    return Node.createExpression(Node.createError().withRange(range)).withRange(range);
+  }
   if (!context.eat(TokenKind.ASSIGN)) {
     Node value = pratt.resume(context, Precedence.LOWEST, name);
     scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
@@ -475,6 +496,37 @@ Node parseUsing(ParserContext context) {
     Node value = pratt.parse(context, Precedence.LOWEST);
     scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
     return Node.createUsingAlias(name, value).withRange(context.spanSince(token.range));
+  }
+}
+
+bool looksLikeLambdaArguments(Node node) {
+  if (node.kind == NodeKind.SEQUENCE) {
+    int i;
+    for (i = 0; i < node.children.length; i++) {
+      if (node.children.get(i).kind != NodeKind.NAME) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+Node createLambdaFromNames(List<Node> names, Node block) {
+  int i;
+  for (i = 0; i < names.length; i++) {
+    Node name = names.get(i);
+    assert name.kind == NodeKind.NAME;
+    names.set(i, Node.createVariable(name, null, null).withRange(name.range));
+  }
+  return Node.createLambda(names, block);
+}
+
+bool looksLikeType(Node node) {
+  switch (node.kind) {
+    case NodeKind.DOT { return looksLikeType(node.dotTarget()); }
+    case NodeKind.NAME { return true; }
+    case NodeKind.PARAMETERIZE { return true; }
+    default { return false; }
   }
 }
 
@@ -518,12 +570,6 @@ Node parseFile(Log log, List<Token> tokens) {
   if (!context.expect(TokenKind.END_OF_FILE)) return null;
   Range range = context.spanSince(token.range);
   return Node.createFile(Node.createBlock(statements).withRange(range)).withRange(range);
-}
-
-class NameLiteral : ILiteralCallback {
-  override Node run(ParserContext context, Token token) {
-    return Node.createName(token.text).withRange(token.range);
-  }
 }
 
 class TokenLiteral : ILiteralCallback {
@@ -588,19 +634,18 @@ class InitializerParselet : IPrefixParselet {
   }
 }
 
-bool looksLikeType(Node node) {
-  switch (node.kind) {
-    case NodeKind.DOT { return looksLikeType(node.dotTarget()); }
-    case NodeKind.NAME { return true; }
-    case NodeKind.PARAMETERIZE { return true; }
-    default { return false; }
-  }
-}
-
 class GroupParselet : IPrefixParselet {
   override Node run(ParserContext context) {
     Token token = context.current();
     Node type = parseGroup(context);
+    if (type.kind == NodeKind.NAME && context.eat(TokenKind.LAMBDA)) {
+      Node block = parseLambdaBlock(context);
+      return createLambdaFromNames({ type }, block).withRange(context.spanSince(token.range));
+    }
+    if (looksLikeLambdaArguments(type) && context.eat(TokenKind.LAMBDA)) {
+      Node block = parseLambdaBlock(context);
+      return createLambdaFromNames(type.removeChildren(), block).withRange(context.spanSince(token.range));
+    }
     if (looksLikeType(type)) {
       Node value = pratt.parse(context, Precedence.UNARY_PREFIX);
       return Node.createCast(type, value).withRange(context.spanSince(token.range));
@@ -708,11 +753,30 @@ class SuperCallPrefix : IPrefixParselet {
   }
 }
 
+class NamePrefix : IPrefixParselet {
+  override Node run(ParserContext context) {
+    Token token = context.next();
+    Node name = Node.createName(token.text).withRange(token.range);
+    if (context.eat(TokenKind.LAMBDA)) {
+      Node block = parseLambdaBlock(context);
+      return createLambdaFromNames({ name }, block).withRange(context.spanSince(token.range));
+    }
+    return name;
+  }
+}
+
+class LambdaPrefix : IPrefixParselet {
+  override Node run(ParserContext context) {
+    Token token = context.next();
+    Node block = parseLambdaBlock(context);
+    return Node.createLambda({}, block).withRange(context.spanSince(token.range));
+  }
+}
+
 Pratt createParser() {
   Pratt pratt = new Pratt();
 
   // Literals
-  pratt.literal(TokenKind.IDENTIFIER, new NameLiteral());
   pratt.literal(TokenKind.NULL, new TokenLiteral(NodeKind.NULL));
   pratt.literal(TokenKind.THIS, new TokenLiteral(NodeKind.THIS));
   pratt.literal(TokenKind.TRUE, new TokenLiteral(NodeKind.TRUE));
@@ -782,6 +846,8 @@ Pratt createParser() {
   pratt.parselet(TokenKind.START_PARAMETER_LIST, Precedence.MEMBER).infix = new SubstitutionInfix();
   pratt.parselet(TokenKind.DEFAULT, Precedence.UNARY_PREFIX).prefix = new DefaultPrefix();
   pratt.parselet(TokenKind.SUPER, Precedence.LOWEST).prefix = new SuperCallPrefix();
+  pratt.parselet(TokenKind.IDENTIFIER, Precedence.LOWEST).prefix = new NamePrefix();
+  pratt.parselet(TokenKind.LAMBDA, Precedence.LOWEST).prefix = new LambdaPrefix();
 
   return pratt;
 }

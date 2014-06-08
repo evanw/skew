@@ -43,4 +43,9 @@ in Node {
     assert kind == NodeKind.VARIABLE_CLUSTER;
     return children.slice(1, children.length);
   }
+
+  Node usingNamespaceValue() {
+    assert kind == NodeKind.USING_NAMESPACE;
+    return children.get(0);
+  }
 }
