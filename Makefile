@@ -30,6 +30,7 @@ TEST_SOURCES += tests/system/parsing.sk
 TEST_SOURCES += tests/system/using.sk
 
 DEBUG_DIR = build/debug
+RELEASE_DIR = build/release
 TESTS_DIR = build/tests
 
 default: debug
@@ -48,6 +49,18 @@ $(DEBUG_DIR):
 
 $(DEBUG_DIR)/skewc.js: Makefile $(SOURCES) src/core/support.js | $(DEBUG_DIR)
 	skewc --verbose $(SOURCES) --append src/core/support.js --target js --output-file $(DEBUG_DIR)/skewc.js
+
+################################################################################
+# RELEASE
+################################################################################
+
+release: $(RELEASE_DIR)/skewc.js
+
+$(RELEASE_DIR):
+	mkdir -p $(RELEASE_DIR)
+
+$(RELEASE_DIR)/skewc.js: Makefile $(SOURCES) src/core/support.js | $(RELEASE_DIR)
+	skewc --verbose --optimize $(SOURCES) --append src/core/support.js --target js --output-file $(RELEASE_DIR)/skewc.js
 
 ################################################################################
 # TEST

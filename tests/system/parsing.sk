@@ -71,8 +71,12 @@ do {} while
 
 test("
 do {} while;
+do {} while;
 ", "
 <stdin>:1:12: error: Expected LEFT_PARENTHESIS but found SEMICOLON
+do {} while;
+           ^
+<stdin>:2:12: error: Expected LEFT_PARENTHESIS but found SEMICOLON
 do {} while;
            ^
 ");
