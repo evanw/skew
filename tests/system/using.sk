@@ -28,7 +28,7 @@ using ns.foo;
 ", "
 <stdin>:2:7: error: Expected a type here
 using ns.foo;
-         ~~~
+      ~~~~~~
 ");
 
 test("

@@ -42,16 +42,4 @@ class Scope {
     }
     return null;
   }
-
-  void moveLocalsIntoType() {
-    assert type != null;
-    if (locals != null) {
-      List<Symbol> members = locals.values();
-      int i;
-      for (i = 0; i < members.length; i++) {
-        type.addMember(members.get(i));
-      }
-      locals = null;
-    }
-  }
 }

@@ -214,22 +214,6 @@ class Resolver {
         case NodeKind.EXTENSION { semanticErrorExtensionMissingTarget(log, declarationName.range, declarationName.asString()); }
         default { assert false; }
       }
-
-      // Create the types for all declarations now so that we can start
-      // resolving the types of expressions in using statements
-      if (symbol.kind.isType()) {
-        symbol.type = new Type(symbol);
-
-        // Move all symbols from all scopes into the type itself. Errors for
-        // duplicate declarations should have already been logged. This will
-        // not capture using statements because they haven't been processed yet.
-        for (sibling = node; sibling != null; sibling = sibling.sibling) {
-          Scope scope = sibling.scope;
-          assert scope != null;
-          scope.type = symbol.type;
-          scope.moveLocalsIntoType();
-        }
-      }
     }
 
     // Distinguish between global and instance functions and variables now that
