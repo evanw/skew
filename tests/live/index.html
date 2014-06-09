@@ -26,10 +26,11 @@ function compile() {
     var tokens = tokenize(log, source);
     var file = parseFile(log, tokens);
     var program = file !== null ? Node.createProgram([file]) : null;
+    var parsed = program && dump(program); // Dump before the resolver changes stuff
     var text = '';
     if (program !== null) Resolver.run(log, program);
     text += log.toString();
-    if (program !== null) text += dump(program);
+    if (program !== null) text += parsed;
     output.value = text;
   } catch (e) {
     output.value = e.stack || e;

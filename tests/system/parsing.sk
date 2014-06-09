@@ -1,0 +1,78 @@
+test("
+int x = .
+", "
+<stdin>:1:10: error: Expected IDENTIFIER but found END_OF_FILE
+int x = .
+         ^
+");
+
+test("
+int x = .;
+", "
+<stdin>:1:10: error: Expected IDENTIFIER but found SEMICOLON
+int x = .;
+         ^
+");
+
+test("
+enum Foo { FOO }
+Foo x = Foo.;
+", "
+<stdin>:2:13: error: Expected IDENTIFIER but found SEMICOLON
+Foo x = Foo.;
+            ^
+");
+
+test("
+enum Foo { FOO }
+Foo x = .FOO;
+", "
+");
+
+test("
+for (int x, y in z) {}
+", "
+<stdin>:1:6: error: More than one variable inside a for-each loop
+for (int x, y in z) {}
+     ~~~~~~~~
+");
+
+test("
+if
+", "
+<stdin>:1:3: error: Expected LEFT_PARENTHESIS but found END_OF_FILE
+if
+  ^
+");
+
+test("
+while
+", "
+<stdin>:1:6: error: Expected LEFT_PARENTHESIS but found END_OF_FILE
+while
+     ^
+");
+
+test("
+for
+", "
+<stdin>:1:4: error: Expected LEFT_PARENTHESIS but found END_OF_FILE
+for
+   ^
+");
+
+test("
+do {} while
+", "
+<stdin>:1:12: error: Expected LEFT_PARENTHESIS but found END_OF_FILE
+do {} while
+           ^
+");
+
+test("
+do {} while;
+", "
+<stdin>:1:12: error: Expected LEFT_PARENTHESIS but found SEMICOLON
+do {} while;
+           ^
+");

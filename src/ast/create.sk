@@ -147,7 +147,7 @@ in Node {
 
   static Node createDoWhile(Node block, Node test) {
     assert block.kind == NodeKind.BLOCK;
-    assert test.kind.isExpression();
+    assert test == null || test.kind.isExpression();
     return new Node(NodeKind.DO_WHILE).withChildren({ block, test });
   }
 

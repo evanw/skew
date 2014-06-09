@@ -1,4 +1,10 @@
 in Node {
+  Node fileBlock() {
+    assert kind == NodeKind.FILE;
+    assert children.length == 1;
+    return children.get(0);
+  }
+
   Node dotTarget() {
     assert kind == NodeKind.DOT;
     assert children.length == 2;
@@ -8,6 +14,7 @@ in Node {
   Node dotName() {
     assert kind == NodeKind.DOT;
     assert children.length == 2;
+    assert children.get(1) == null || children.get(1).kind == NodeKind.NAME;
     return children.get(1);
   }
 
@@ -31,31 +38,52 @@ in Node {
 
   Node declarationName() {
     assert kind.isNamedDeclaration();
+    assert children.length >= 1;
+    assert children.get(0) == null || children.get(0).kind == NodeKind.NAME;
     return children.get(0);
+  }
+
+  Node declarationBlock() {
+    assert kind.isNamedBlockDeclaration();
+    assert children.length >= 2;
+    assert children.get(1).kind == NodeKind.BLOCK;
+    return children.get(1);
   }
 
   Node clusterType() {
     assert kind == NodeKind.VARIABLE_CLUSTER;
+    assert children.length >= 1;
     return children.get(0);
   }
 
   List<Node> clusterVariables() {
     assert kind == NodeKind.VARIABLE_CLUSTER;
+    assert children.length >= 1;
     return children.slice(1, children.length);
   }
 
   Node usingAliasValue() {
     assert kind == NodeKind.USING_ALIAS;
+    assert children.length == 2;
     return children.get(1);
   }
 
   Node usingNamespaceValue() {
     assert kind == NodeKind.USING_NAMESPACE;
+    assert children.length == 1;
     return children.get(0);
   }
 
   Node modifierName() {
     assert kind == NodeKind.MODIFIER;
+    assert children.length == 2;
+    assert children.get(0).kind == NodeKind.NAME;
     return children.get(0);
+  }
+
+  List<Node> modifierStatements() {
+    assert kind == NodeKind.MODIFIER;
+    assert children.length >= 1;
+    return children.slice(1, children.length);
   }
 }

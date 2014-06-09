@@ -11,6 +11,7 @@ class Resolver {
     resolver.accumulateSymbolFlags();
     resolver.setSymbolKindsAndMergeSiblings();
     resolver.processUsingStatements();
+    resolver.resolve(program);
   }
 
   void setupScopesAndMergeSymbols(Node node, Scope scope) {
@@ -74,6 +75,7 @@ class Resolver {
 
         // Link the node with its symbol
         parsedDeclarations.push(node);
+        declarationName.symbol = symbol;
         node.symbol = symbol;
 
         // Create a type for block declarations so that declarations inside the
@@ -363,7 +365,7 @@ class Resolver {
       case NodeKind.PROGRAM { resolveProgram(node); }
       case NodeKind.FILE { resolveFile(node); }
       case NodeKind.BLOCK { resolveBlock(node); }
-      case NodeKind.NODE_LIST { resolveNodeList(node); }
+      case NodeKind.NODE_LIST { resolveChildren(node); }
       case NodeKind.CASE { resolveCase(node); }
       case NodeKind.USING_NAMESPACE { resolveUsingNamespace(node); }
 
@@ -417,6 +419,7 @@ class Resolver {
       case NodeKind.PARAMETERIZE { resolveParameterize(node); }
       case NodeKind.CAST { resolveCast(node); }
       case NodeKind.IMPLICIT_CAST { resolveImplicitCast(node); }
+      case NodeKind.LAMBDA { resolveLambda(node); }
       case NodeKind.DEFAULT { resolveDefault(node); }
 
       case
@@ -447,145 +450,240 @@ class Resolver {
     }
   }
 
+  void mustBeInsideBlock(Node node) {
+    assert node.parent != null;
+    if (node.parent.kind != NodeKind.BLOCK) {
+      semanticErrorUnexpectedStatement(log, node.range, node.kind.toString());
+    }
+  }
+
+  void mustBeInsideBlockOrModifier(Node node) {
+    assert node.parent != null;
+    if (node.parent.kind != NodeKind.BLOCK && node.parent.kind != NodeKind.MODIFIER) {
+      semanticErrorUnexpectedStatement(log, node.range, node.kind.toString());
+    }
+  }
+
+  void unsupportedNodeKind(Node node) {
+    // log.error(node.range, "TODO: Support nodes of kind ".append(node.kind.toString()));
+  }
+
+  void resolveNodes(List<Node> nodes) {
+    int i;
+    for (i = 0; i < nodes.length; i++) {
+      resolve(nodes.get(i));
+    }
+  }
+
+  void resolveChildren(Node node) {
+    if (node.hasChildren()) {
+      resolveNodes(node.children);
+    }
+  }
+
   void resolveProgram(Node node) {
+    assert node.parent == null;
+    resolveChildren(node);
   }
 
   void resolveFile(Node node) {
+    assert node.parent != null;
+    assert node.parent.kind == NodeKind.PROGRAM;
+    resolve(node.fileBlock());
   }
 
   void resolveBlock(Node node) {
-  }
-
-  void resolveNodeList(Node node) {
+    assert node.kind == NodeKind.BLOCK;
+    resolveChildren(node);
   }
 
   void resolveCase(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveUsingNamespace(Node node) {
+    mustBeInsideBlock(node);
   }
 
   void resolveNamespace(Node node) {
+    mustBeInsideBlockOrModifier(node);
+    resolveBlock(node.declarationBlock());
   }
 
   void resolveEnum(Node node) {
+    mustBeInsideBlockOrModifier(node);
+    unsupportedNodeKind(node);
   }
 
   void resolveEnumFlags(Node node) {
+    mustBeInsideBlockOrModifier(node);
+    unsupportedNodeKind(node);
   }
 
   void resolveClass(Node node) {
+    mustBeInsideBlockOrModifier(node);
+    unsupportedNodeKind(node);
   }
 
   void resolveStruct(Node node) {
+    mustBeInsideBlockOrModifier(node);
+    unsupportedNodeKind(node);
   }
 
   void resolveInterface(Node node) {
+    mustBeInsideBlockOrModifier(node);
+    unsupportedNodeKind(node);
   }
 
   void resolveExtension(Node node) {
+    mustBeInsideBlockOrModifier(node);
+    unsupportedNodeKind(node);
   }
 
   void resolveConstructor(Node node) {
+    mustBeInsideBlockOrModifier(node);
+    unsupportedNodeKind(node);
   }
 
   void resolveFunction(Node node) {
+    mustBeInsideBlockOrModifier(node);
+    unsupportedNodeKind(node);
   }
 
   void resolveVariable(Node node) {
+    mustBeInsideBlockOrModifier(node);
+    unsupportedNodeKind(node);
   }
 
   void resolveVariableCluster(Node node) {
+    mustBeInsideBlockOrModifier(node);
+    unsupportedNodeKind(node);
   }
 
   void resolveParameter(Node node) {
+    assert node.parent != null;
+    assert node.parent.kind.isObjectDeclaration();
+    unsupportedNodeKind(node);
   }
 
   void resolveUsingAlias(Node node) {
+    mustBeInsideBlock(node);
   }
 
   void resolveIf(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveFor(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveForeach(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveWhile(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveDoWhile(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveReturn(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveBreak(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveContinue(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveAssert(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveExpression(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveSwitch(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveModifier(Node node) {
+    resolveNodes(node.modifierStatements());
   }
 
   void resolveName(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveType(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveThis(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveHook(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveInitializer(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveDot(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveDotCall(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveCall(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveSuperCall(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveNew(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveError(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveSequence(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveParameterize(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveCast(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveImplicitCast(Node node) {
+    unsupportedNodeKind(node);
+  }
+
+  void resolveLambda(Node node) {
+    unsupportedNodeKind(node);
   }
 
   void resolveDefault(Node node) {
+    unsupportedNodeKind(node);
   }
 }
 
