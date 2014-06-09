@@ -76,3 +76,11 @@ do {} while;
 do {} while;
            ^
 ");
+
+test("
+else
+", "
+<stdin>:1:1: error: Unexpected ELSE
+else
+~~~~
+");

@@ -58,7 +58,6 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
         context.peek(TokenKind.CLASS) ||
         context.peek(TokenKind.CONTINUE) ||
         context.peek(TokenKind.DO) ||
-        context.peek(TokenKind.ELSE) ||
         context.peek(TokenKind.ENUM) ||
         context.peek(TokenKind.EXPORT) ||
         context.peek(TokenKind.FINAL) ||
