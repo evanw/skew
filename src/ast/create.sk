@@ -241,7 +241,7 @@ in Node {
   }
 
   static Node createDot(Node value, Node name) {
-    assert value.kind.isExpression();
+    assert value == null || value.kind.isExpression();
     assert name == null || name.kind == NodeKind.NAME;
     return new Node(NodeKind.DOT).withChildren({ value, name });
   }

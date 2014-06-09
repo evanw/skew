@@ -683,6 +683,14 @@ class DotInfix : IInfixParselet {
   }
 }
 
+class DotPrefix : IPrefixParselet {
+  override Node run(ParserContext context) {
+    Token token = context.next();
+    Node name = parseName(context); // Allow this to be null for autocomplete
+    return Node.createDot(null, name).withRange(context.spanSince(token.range));
+  }
+}
+
 class UnaryPostfix : IPostfixCallback {
   NodeKind kind;
 
@@ -842,6 +850,7 @@ Pratt createParser() {
   pratt.parselet(TokenKind.QUESTION_MARK, Precedence.ASSIGN).infix = new HookInfix();
   pratt.parselet(TokenKind.COMMA, Precedence.COMMA).infix = new SequenceInfix();
   pratt.parselet(TokenKind.DOT, Precedence.MEMBER).infix = new DotInfix();
+  pratt.parselet(TokenKind.DOT, Precedence.LOWEST).prefix = new DotPrefix();
   pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = new CallInfix();
   pratt.parselet(TokenKind.LEFT_BRACKET, Precedence.UNARY_POSTFIX).infix = new IndexInfix();
   pratt.parselet(TokenKind.NEW, Precedence.LOWEST).prefix = new NewPrefix();

@@ -303,15 +303,17 @@ class Resolver {
           continue;
         }
 
-        // Unlike a using alias, using statements must be a namespace
+        // Unlike a using alias, using statements must be a namespace. While
+        // this could in theory support arbitrary types, it's more readable and
+        // gives clearer errors to limit this to namespaces.
         if (!value.symbol.kind.isNamespace()) {
           semanticErrorBadUsingNamespace(log, value.range);
           continue;
         }
 
-        // TODO: Insert each imported symbol
-        // TODO: Don't import nested namespaces
-        // TODO: Importing multiple different symbols with the same name should be replaced with an ambiguous marker that disables the name
+        // TODO: Insert each non-namespace symbol in the namespace
+        // TODO: Importing multiple different symbols with the same name should
+        // be replaced with an ambiguous marker that disables the name with an error
       }
     }
   }

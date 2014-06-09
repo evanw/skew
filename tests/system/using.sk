@@ -66,3 +66,24 @@ using bar = foo;
 namespace foo {}
 ", "
 ");
+
+test("
+namespace ns { int foo; }
+using bar = ns.foo;
+", "
+<stdin>:2:13: error: Expected a type here
+using bar = ns.foo;
+            ~~~~~~
+");
+
+test("
+using bar = ns.foo;
+namespace ns { class foo {} }
+", "
+");
+
+test("
+using bar = ns.foo;
+namespace ns.foo {}
+", "
+");
