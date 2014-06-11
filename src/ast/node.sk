@@ -246,9 +246,14 @@ class Node {
     return result;
   }
 
+  // Change this node in place to become the provided node. The parent node is
+  // not changed, so become() can be called within a nested method and does not
+  // need to report the updated node reference to the caller since the reference
+  // does not change.
   void become(Node node) {
     kind = node.kind;
     range = node.range;
+    sibling = node.sibling;
     removeChildren();
     withChildren(node.removeChildren());
     type = node.type;

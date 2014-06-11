@@ -527,7 +527,9 @@ class Resolver {
 
     // Make the implicit conversion explicit for convenience later on
     if (node.kind.isType()) return;
-    node.become(Node.createImplicitCast(Node.createType(to), node).withType(to).withRange(node.range));
+    Node value = new Node(NodeKind.NULL);
+    value.become(node);
+    node.become(Node.createImplicitCast(Node.createType(to), value).withType(to).withRange(node.range));
   }
 
   void checkInsideBlock(Node node) {
@@ -670,6 +672,7 @@ class Resolver {
 
   void resolveVariableCluster(Node node) {
     resolveAsParameterizedType(node.clusterType());
+    resolveNodes(node.clusterVariables());
     unsupportedNodeKind(node);
   }
 
@@ -848,8 +851,9 @@ class Resolver {
   }
 
   void resolveCast(Node node) {
-    resolveAsParameterizedType(node.castType());
-    resolveAsExpression(node.castValue());
+    Node type = node.castType();
+    resolveAsParameterizedType(type);
+    resolveAsExpressionWithConversion(node.castValue(), type.type, CastKind.EXPLICIT);
   }
 
   void resolveLambda(Node node) {
