@@ -86,4 +86,80 @@ in Node {
     assert children.length >= 1;
     return children.slice(1, children.length);
   }
+
+  Node castType() {
+    assert kind.isCast();
+    assert children.length == 2;
+    return children.get(0);
+  }
+
+  Node castValue() {
+    assert kind.isCast();
+    assert children.length == 2;
+    return children.get(1);
+  }
+
+  Node expressionValue() {
+    assert kind == NodeKind.EXPRESSION;
+    assert children.length == 1;
+    return children.get(0);
+  }
+
+  Node ifTest() {
+    assert kind == NodeKind.IF;
+    assert children.length == 3;
+    return children.get(0);
+  }
+
+  Node ifTrue() {
+    assert kind == NodeKind.IF;
+    assert children.length == 3;
+    assert children.get(1) == null || children.get(1).kind == NodeKind.BLOCK;
+    return children.get(1);
+  }
+
+  Node ifFalse() {
+    assert kind == NodeKind.IF;
+    assert children.length == 3;
+    assert children.get(2) == null || children.get(2).kind == NodeKind.BLOCK;
+    return children.get(2);
+  }
+
+  Node forSetup() {
+    assert kind == NodeKind.FOR;
+    assert children.length == 4;
+    return children.get(0);
+  }
+
+  Node forTest() {
+    assert kind == NodeKind.FOR;
+    assert children.length == 4;
+    return children.get(1);
+  }
+
+  Node forUpdate() {
+    assert kind == NodeKind.FOR;
+    assert children.length == 4;
+    return children.get(2);
+  }
+
+  Node forBlock() {
+    assert kind == NodeKind.FOR;
+    assert children.length == 4;
+    assert children.get(3).kind == NodeKind.BLOCK;
+    return children.get(3);
+  }
+
+  Node whileTest() {
+    assert kind == NodeKind.WHILE || kind == NodeKind.DO_WHILE;
+    assert children.length == 2;
+    return children.get(0);
+  }
+
+  Node whileBlock() {
+    assert kind == NodeKind.WHILE || kind == NodeKind.DO_WHILE;
+    assert children.length == 2;
+    assert children.get(1).kind == NodeKind.BLOCK;
+    return children.get(1);
+  }
 }

@@ -146,9 +146,9 @@ in Node {
   }
 
   static Node createDoWhile(Node block, Node test) {
-    assert block.kind == NodeKind.BLOCK;
     assert test == null || test.kind.isExpression();
-    return new Node(NodeKind.DO_WHILE).withChildren({ block, test });
+    assert block.kind == NodeKind.BLOCK;
+    return new Node(NodeKind.DO_WHILE).withChildren({ test, block });
   }
 
   static Node createReturn(Node value) {

@@ -1,5 +1,41 @@
+enum CastKind {
+  IMPLICIT,
+  EXPLICIT,
+}
+
+class ResolveContext {
+  Scope scope = null;
+
+  // Keep track of the nearest enclosing node for certain node types
+  Node loop = null;
+  Node object = null;
+  Node function = null;
+
+  ResolveContext clone() {
+    ResolveContext context = new ResolveContext();
+    context.scope = scope;
+    context.loop = loop;
+    context.object = object;
+    context.function = function;
+    return context;
+  }
+
+  static ResolveContext fromNode(Node node) {
+    ResolveContext context = new ResolveContext();
+    Node parent;
+    for (parent = node; node != null; node = node.parent) {
+      if (context.scope == null) context.scope = node.scope;
+      if (context.loop == null && node.kind.isLoop()) context.loop = node;
+      if (context.object == null && node.kind.isObject()) context.object = node;
+      if (context.function == null && node.kind.isFunction()) context.function = node;
+    }
+    return context;
+  }
+}
+
 class Resolver {
   TypeCache cache = new TypeCache();
+  ResolveContext context = new ResolveContext();
   List<Node> parsedDeclarations = {};
   List<Node> parsedBlocks = {};
   Log log;
@@ -7,7 +43,9 @@ class Resolver {
   static void run(Log log, Node program) {
     assert program.kind == NodeKind.PROGRAM;
     Resolver resolver = new Resolver(log);
-    resolver.setupScopesAndMergeSymbols(program, new Scope(null));
+    Scope globalScope = new Scope(null);
+    globalScope.insertGlobals(resolver.cache);
+    resolver.setupScopesAndMergeSymbols(program, globalScope);
     resolver.accumulateSymbolFlags();
     resolver.setSymbolKindsAndMergeSiblings();
     resolver.processUsingStatements();
@@ -345,7 +383,7 @@ class Resolver {
         return;
       }
     } else {
-      semanticErrorUnexpectedExpression(log, node.range, node.kind);
+      semanticErrorUnexpectedNode(log, node.range, node.kind);
       return;
     }
 
@@ -361,6 +399,16 @@ class Resolver {
   }
 
   void resolve(Node node) {
+    // Only resolve once
+    if (node.type != null) {
+      return;
+    }
+    node.type = cache.errorType;
+
+    // Use the current scope for all child nodes
+    Scope oldScope = context.scope;
+    if (node.scope != null) context.scope = node.scope;
+
     switch (node.kind) {
       case NodeKind.PROGRAM { resolveProgram(node); }
       case NodeKind.FILE { resolveFile(node); }
@@ -371,14 +419,11 @@ class Resolver {
 
       case NodeKind.NAMESPACE { resolveNamespace(node); }
       case NodeKind.ENUM { resolveEnum(node); }
-      case NodeKind.ENUM_FLAGS { resolveEnumFlags(node); }
-      case NodeKind.CLASS { resolveClass(node); }
-      case NodeKind.STRUCT { resolveStruct(node); }
-      case NodeKind.INTERFACE { resolveInterface(node); }
+      case NodeKind.ENUM_FLAGS { resolveEnum(node); }
+      case NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE { resolveObject(node); }
 
       case NodeKind.EXTENSION { resolveExtension(node); }
-      case NodeKind.CONSTRUCTOR { resolveConstructor(node); }
-      case NodeKind.FUNCTION { resolveFunction(node); }
+      case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION { resolveFunction(node); }
       case NodeKind.VARIABLE { resolveVariable(node); }
       case NodeKind.VARIABLE_CLUSTER { resolveVariableCluster(node); }
       case NodeKind.PARAMETER { resolveParameter(node); }
@@ -388,7 +433,7 @@ class Resolver {
       case NodeKind.FOR { resolveFor(node); }
       case NodeKind.FOREACH { resolveForeach(node); }
       case NodeKind.WHILE { resolveWhile(node); }
-      case NodeKind.DO_WHILE { resolveDoWhile(node); }
+      case NodeKind.DO_WHILE { resolveWhile(node); }
       case NodeKind.RETURN { resolveReturn(node); }
       case NodeKind.BREAK { resolveBreak(node); }
       case NodeKind.CONTINUE { resolveContinue(node); }
@@ -418,7 +463,7 @@ class Resolver {
       case NodeKind.SEQUENCE { resolveSequence(node); }
       case NodeKind.PARAMETERIZE { resolveParameterize(node); }
       case NodeKind.CAST { resolveCast(node); }
-      case NodeKind.IMPLICIT_CAST { resolveImplicitCast(node); }
+      case NodeKind.IMPLICIT_CAST { resolveCast(node); }
       case NodeKind.LAMBDA { resolveLambda(node); }
       case NodeKind.DEFAULT { resolveDefault(node); }
 
@@ -448,24 +493,103 @@ class Resolver {
         assert false;
       }
     }
+
+    context.scope = oldScope;
+    assert node.type != null;
   }
 
-  void mustBeInsideBlock(Node node) {
+  void checkConversion(Type to, Node node, CastKind kind) {
+    Type from = node.type;
+    assert from != null;
+    assert to != null;
+
+    // Avoid reporting further errors
+    if (from == cache.errorType || to == cache.errorType) {
+      return;
+    }
+
+    // No implicit conversion needed for identical types
+    if (from == to) {
+      return;
+    }
+
+    // Special-case assigning 0 to an enum flags type
+    if (to.symbol.kind == SymbolKind.ENUM_FLAGS && node.kind == NodeKind.INT && node.asInt() == 0) {
+      from = to;
+    }
+
+    // The implicit conversion must be valid
+    if (kind == CastKind.IMPLICIT && !cache.canImplicitlyConvert(from, to) ||
+        kind == CastKind.EXPLICIT && !cache.canExplicitlyConvert(from, to)) {
+      semanticErrorIncompatibleTypes(log, node.range, from, to, cache.canExplicitlyConvert(from, to));
+      return;
+    }
+
+    // Make the implicit conversion explicit for convenience later on
+    if (node.kind.isType()) return;
+    node.become(Node.createImplicitCast(Node.createType(to), node).withType(to).withRange(node.range));
+  }
+
+  void checkInsideBlock(Node node) {
     assert node.parent != null;
+
+    // This will detect statements inside modifier "blocks", which aren't real
+    // blocks and don't have their own scope:
+    //
+    //   inline { using bar = foo; }
+    //
     if (node.parent.kind != NodeKind.BLOCK) {
       semanticErrorUnexpectedStatement(log, node.range, node.kind.toString());
     }
   }
 
-  void mustBeInsideBlockOrModifier(Node node) {
+  void checkTopLevelDeclaration(Node node) {
     assert node.parent != null;
-    if (node.parent.kind != NodeKind.BLOCK && node.parent.kind != NodeKind.MODIFIER) {
-      semanticErrorUnexpectedStatement(log, node.range, node.kind.toString());
+
+    // Top-level declarations cannot live inside object declarations, function
+    // declarations, or conditional statements
+    Node parent;
+    for (parent = node.parent; parent != null; parent = parent.parent) {
+      NodeKind kind = parent.kind;
+      if (kind != NodeKind.PROGRAM && kind != NodeKind.FILE &&
+          kind != NodeKind.MODIFIER && kind != NodeKind.BLOCK &&
+          kind != NodeKind.NAMESPACE && kind != NodeKind.EXTENSION) {
+        semanticErrorUnexpectedStatement(log, node.range, node.kind.toString());
+        break;
+      }
     }
   }
 
   void unsupportedNodeKind(Node node) {
-    // log.error(node.range, "TODO: Support nodes of kind ".append(node.kind.toString()));
+    log.error(node.range, "TODO: Support nodes of kind ".append(node.kind.toString()));
+  }
+
+  void resolveAsType(Node node) {
+    resolve(node);
+
+    // Must not be an instance
+    if (node.type != cache.errorType && !node.kind.isType()) {
+      semanticErrorUnexpectedExpression(log, node.range, node.type);
+      node.type = cache.errorType;
+    }
+  }
+
+  void resolveAsParameterizedType(Node node) {
+    resolveAsType(node);
+  }
+
+  void resolveAsExpression(Node node) {
+    resolve(node);
+
+    if (node.type != cache.errorType && node.kind.isType()) {
+      semanticErrorUnexpectedType(log, node.range, node.type);
+      node.type = cache.errorType;
+    }
+  }
+
+  void resolveAsExpressionWithConversion(Node node, Type type, CastKind kind) {
+    resolveAsExpression(node);
+    checkConversion(type, node, kind);
   }
 
   void resolveNodes(List<Node> nodes) {
@@ -502,80 +626,74 @@ class Resolver {
   }
 
   void resolveUsingNamespace(Node node) {
-    mustBeInsideBlock(node);
+    checkInsideBlock(node);
   }
 
   void resolveNamespace(Node node) {
-    mustBeInsideBlockOrModifier(node);
+    checkTopLevelDeclaration(node);
     resolveBlock(node.declarationBlock());
   }
 
   void resolveEnum(Node node) {
-    mustBeInsideBlockOrModifier(node);
+    checkTopLevelDeclaration(node);
     unsupportedNodeKind(node);
   }
 
-  void resolveEnumFlags(Node node) {
-    mustBeInsideBlockOrModifier(node);
-    unsupportedNodeKind(node);
-  }
+  void resolveObject(Node node) {
+    Node oldObject = context.object;
+    context.object = node;
 
-  void resolveClass(Node node) {
-    mustBeInsideBlockOrModifier(node);
+    checkTopLevelDeclaration(node);
     unsupportedNodeKind(node);
-  }
 
-  void resolveStruct(Node node) {
-    mustBeInsideBlockOrModifier(node);
-    unsupportedNodeKind(node);
-  }
-
-  void resolveInterface(Node node) {
-    mustBeInsideBlockOrModifier(node);
-    unsupportedNodeKind(node);
+    context.object = oldObject;
   }
 
   void resolveExtension(Node node) {
-    mustBeInsideBlockOrModifier(node);
-    unsupportedNodeKind(node);
-  }
-
-  void resolveConstructor(Node node) {
-    mustBeInsideBlockOrModifier(node);
+    checkTopLevelDeclaration(node);
     unsupportedNodeKind(node);
   }
 
   void resolveFunction(Node node) {
-    mustBeInsideBlockOrModifier(node);
+    Node oldFunction = context.function;
+    context.function = node;
+
+    checkTopLevelDeclaration(node);
     unsupportedNodeKind(node);
+
+    context.function = oldFunction;
   }
 
   void resolveVariable(Node node) {
-    mustBeInsideBlockOrModifier(node);
     unsupportedNodeKind(node);
   }
 
   void resolveVariableCluster(Node node) {
-    mustBeInsideBlockOrModifier(node);
+    resolveAsParameterizedType(node.clusterType());
     unsupportedNodeKind(node);
   }
 
   void resolveParameter(Node node) {
     assert node.parent != null;
-    assert node.parent.kind.isObjectDeclaration();
+    assert node.parent.kind.isObject();
     unsupportedNodeKind(node);
   }
 
   void resolveUsingAlias(Node node) {
-    mustBeInsideBlock(node);
+    checkInsideBlock(node);
   }
 
   void resolveIf(Node node) {
-    unsupportedNodeKind(node);
+    resolveAsExpressionWithConversion(node.ifTest(), cache.boolType, CastKind.IMPLICIT);
+    resolveBlock(node.ifTrue());
+    if (node.ifFalse() != null) resolveBlock(node.ifFalse());
   }
 
   void resolveFor(Node node) {
-    unsupportedNodeKind(node);
+    if (node.forSetup() != null) resolveAsExpression(node.forSetup());
+    if (node.forTest() != null) resolveAsExpressionWithConversion(node.forTest(), cache.boolType, CastKind.IMPLICIT);
+    if (node.forUpdate() != null) resolveAsExpression(node.forUpdate());
+    resolveBlock(node.forBlock());
   }
 
   void resolveForeach(Node node) {
@@ -583,11 +701,8 @@ class Resolver {
   }
 
   void resolveWhile(Node node) {
-    unsupportedNodeKind(node);
-  }
-
-  void resolveDoWhile(Node node) {
-    unsupportedNodeKind(node);
+    resolveAsExpressionWithConversion(node.whileTest(), cache.boolType, CastKind.IMPLICIT);
+    resolveBlock(node.whileBlock());
   }
 
   void resolveReturn(Node node) {
@@ -607,7 +722,7 @@ class Resolver {
   }
 
   void resolveExpression(Node node) {
-    unsupportedNodeKind(node);
+    resolveAsExpression(node.expressionValue());
   }
 
   void resolveSwitch(Node node) {
@@ -618,8 +733,70 @@ class Resolver {
     resolveNodes(node.modifierStatements());
   }
 
+  void checkAccessToThis(ResolveContext context, Range range) {
+    // // Only allow "this" inside instance methods
+    // if (context.thisType == null || context.functionSymbol == null || !context.functionSymbol.isInstance()) {
+      semanticErrorStaticThis(log, range);
+    // }
+  }
+
+  void initializeDeclaration(Node node) {
+    // Only initialize once (symbol should already have been set)
+    assert node.symbol != null;
+    if (node.symbol.type == null) {
+      // Set the symbol's type to the circular type sentinel for the duration
+      // of the declaration's initialization. This way we can detect cycles
+      // that try to use the symbol in its own type, such as "foo foo;". The
+      // declaration initializer should return the error type in this case.
+      node.symbol.type = cache.cyclicType;
+
+      // Resolve using node.symbol.node to start from the first node in the
+      // sibling chain to ensure that the entire chain is processed at once
+      ResolveContext oldContext = context;
+      context = ResolveContext.fromNode(node);
+      Type type = cache.errorType; // TODO = initialize(node.symbol.node);
+      context = oldContext;
+
+      // Update the type now that cycle detection is complete
+      assert type != null;
+      assert type != cache.cyclicType;
+      node.symbol.type = type;
+    }
+  }
+
+  void initializeSymbol(Symbol symbol) {
+    // Only initialize the symbol once
+    if (symbol.type == null) {
+      assert symbol.node != null; // Internal symbols have no node but should already have a type
+      initializeDeclaration(symbol.node);
+      assert symbol.type != null;
+    }
+
+    // Detect cyclic symbol references such as "foo foo;"
+    else if (symbol.type == cache.cyclicType) {
+      semanticErrorCyclicDeclaration(log, symbol.node.range, symbol.name);
+      symbol.type = cache.errorType;
+    }
+  }
+
   void resolveName(Node node) {
-    unsupportedNodeKind(node);
+    ResolveContext context = ResolveContext.fromNode(node); // TODO: Cache this
+    string name = node.asString();
+    Symbol symbol = context.scope.find(name);
+    if (symbol == null) {
+      semanticErrorUndeclaredSymbol(log, node.range, name);
+      return;
+    }
+    initializeSymbol(symbol);
+
+    // Wrap type symbols in a type node to distinguish them from instances
+    if (symbol.kind.isType()) {
+      node.become(Node.createType(symbol.type).withRange(node.range));
+    } else {
+      if (symbol.kind.isInstance()) checkAccessToThis(context, node.range);
+      node.symbol = symbol;
+      node.type = symbol.type;
+    }
   }
 
   void resolveType(Node node) {
@@ -671,15 +848,17 @@ class Resolver {
   }
 
   void resolveCast(Node node) {
-    unsupportedNodeKind(node);
-  }
-
-  void resolveImplicitCast(Node node) {
-    unsupportedNodeKind(node);
+    resolveAsParameterizedType(node.castType());
+    resolveAsExpression(node.castValue());
   }
 
   void resolveLambda(Node node) {
+    Node oldFunction = context.function;
+    context.function = node;
+
     unsupportedNodeKind(node);
+
+    context.function = oldFunction;
   }
 
   void resolveDefault(Node node) {

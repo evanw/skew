@@ -1,18 +1,76 @@
 class TypeCache {
   Type globalType = createType(new Symbol("<global>", SymbolKind.GLOBAL_NAMESPACE));
-  Type voidType = null;
-  Type intType = null;
-  Type boolType = null;
-  Type floatType = null;
-  Type doubleType = null;
-  Type stringType = null;
   Type nullType = createType(new Symbol("null", SymbolKind.OTHER));
   Type errorType = createType(new Symbol("<error>", SymbolKind.OTHER));
-  Type circularType = createType(new Symbol("<circular>", SymbolKind.OTHER));
+  Type cyclicType = createType(new Symbol("<cyclic>", SymbolKind.OTHER));
+
+  // // TODO: Load these from Skew library code
+  // Type voidType = null;
+  // Type intType = null;
+  // Type boolType = null;
+  // Type floatType = null;
+  // Type doubleType = null;
+  // Type stringType = null;
+
+  Type voidType = createType(new Symbol("void", SymbolKind.OTHER_TYPE));
+  Type intType = createType(new Symbol("int", SymbolKind.STRUCT));
+  Type boolType = createType(new Symbol("bool", SymbolKind.STRUCT));
+  Type floatType = createType(new Symbol("float", SymbolKind.STRUCT));
+  Type doubleType = createType(new Symbol("double", SymbolKind.STRUCT));
+  Type stringType = createType(new Symbol("string", SymbolKind.STRUCT));
 
   static Type createType(Symbol symbol) {
     Type type = new Type(symbol);
     type.symbol.type = type;
     return type;
+  }
+
+  bool canCastToNumeric(Type type) {
+    return type.isNumeric(this) || type.isBool(this);
+  }
+
+  Type commonImplicitType(Type left, Type right) {
+    // Short-circuit early for identical types
+    if (left == right) return left;
+
+    // Check implicit conversions
+    if (canImplicitlyConvert(left, right)) return right;
+    if (canImplicitlyConvert(right, left)) return left;
+
+    // Implement common implicit types for numeric types
+    if (left.isNumeric(this) && right.isNumeric(this)) {
+      return left.isInteger(this) && right.isInteger(this) ? intType : doubleType;
+    }
+
+    // // Check for a common base class
+    // ClassType leftClass = left.asClass();
+    // ClassType rightClass = right.asClass();
+    // if (leftClass != null && rightClass != null) {
+    //   return commonBaseClass(left.asClass(), right.asClass());
+    // }
+
+    return null;
+  }
+
+  bool canImplicitlyConvert(Type from, Type to) {
+    if (from == to) return true;
+    if (from.isNull(this) && to.isReference()) return true;
+    if ((from.isInteger(this) || from.isFloat(this)) && to.isDouble(this)) return true;
+    if (from.isEnum() && (to.isInt(this) || to.isDouble(this))) return true;
+    // if (isSubtypeOf(from, to)) return true;
+    // TypeParameter parameter = from.asParameter();
+    // if (parameter != null && parameter.bound != null) return canImplicitlyConvert(parameter.bound, to);
+    return false;
+  }
+
+  bool canExplicitlyConvert(Type from, Type to) {
+    if (canImplicitlyConvert(from, to)) return true;
+    if (canCastToNumeric(from) && canCastToNumeric(to)) return true;
+    // if (isSubtypeOf(to, from)) return true;
+    // TypeParameter parameter = from.asParameter();
+    // if (parameter != null && parameter.bound != null) return canExplicitlyConvert(parameter.bound, to);
+    // parameter = to.asParameter();
+    // if (parameter != null && parameter.bound != null) return canExplicitlyConvert(from, parameter.bound);
+    return false;
   }
 }

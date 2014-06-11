@@ -1,0 +1,31 @@
+test("
+inline using bar = foo;
+", "
+<stdin>:1:8: error: Cannot use a statement of type USING_ALIAS here
+inline using bar = foo;
+       ~~~~~~~~~~~~~~~~
+");
+
+test("
+if (true) class Foo {}
+", "
+<stdin>:1:11: error: Cannot use a statement of type CLASS here
+if (true) class Foo {}
+          ~~~~~~~~~~~~
+");
+
+test("
+if (true) struct Foo {}
+", "
+<stdin>:1:11: error: Cannot use a statement of type STRUCT here
+if (true) struct Foo {}
+          ~~~~~~~~~~~~~
+");
+
+test("
+if (true) interface Foo {}
+", "
+<stdin>:1:11: error: Cannot use a statement of type INTERFACE here
+if (true) interface Foo {}
+          ~~~~~~~~~~~~~~~~
+");

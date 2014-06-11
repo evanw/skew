@@ -6,9 +6,6 @@ void run(string input, string expected) {
   Log log = new Log();
   List<Token> tokens = tokenize(log, source);
   Node file = parseFile(log, tokens);
-  if (file != null) {
-    Node program = Node.createProgram({ file });
-    Resolver.run(log, program);
-  }
+  if (file != null) Resolver.run(log, Node.createProgram({ file }));
   expect(log.toString(), expected);
 }

@@ -1,6 +1,7 @@
 enum SymbolKind {
   OTHER,
   PARAMETER,
+  OTHER_TYPE,
 
   // Namespace kinds
   GLOBAL_NAMESPACE,
@@ -44,7 +45,7 @@ in SymbolKind {
   }
 
   bool isType() {
-    return this >= GLOBAL_NAMESPACE && this <= INTERFACE;
+    return this >= OTHER_TYPE && this <= INTERFACE;
   }
 
   bool isFunction() {
@@ -53,6 +54,10 @@ in SymbolKind {
 
   bool isVariable() {
     return this >= LOCAL_VARIABLE && this <= INSTANCE_VARIABLE;
+  }
+
+  bool isInstance() {
+    return this == INSTANCE_FUNCTION || this == INSTANCE_VARIABLE;
   }
 }
 

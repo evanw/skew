@@ -15,4 +15,76 @@ class Type {
     Symbol enclosingSymbol = symbol.enclosingSymbol;
     return (enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() ? enclosingSymbol.type.toString().append(".") : "").append(symbol.name);
   }
+
+  bool isVoid(TypeCache cache) {
+    return this == cache.voidType;
+  }
+
+  bool isInt(TypeCache cache) {
+    return this == cache.intType;
+  }
+
+  bool isNull(TypeCache cache) {
+    return this == cache.nullType;
+  }
+
+  bool isBool(TypeCache cache) {
+    return this == cache.boolType;
+  }
+
+  bool isFloat(TypeCache cache) {
+    return this == cache.floatType;
+  }
+
+  bool isDouble(TypeCache cache) {
+    return this == cache.doubleType;
+  }
+
+  bool isString(TypeCache cache) {
+    return this == cache.stringType;
+  }
+
+  bool isError(TypeCache cache) {
+    return this == cache.errorType;
+  }
+
+  bool isCyclic(TypeCache cache) {
+    return this == cache.cyclicType;
+  }
+
+  bool isEnum() {
+    return symbol.kind.isEnum();
+  }
+
+  bool isObject() {
+    return symbol.kind.isObject();
+  }
+
+  bool isClass() {
+    return symbol.kind == SymbolKind.CLASS;
+  }
+
+  bool isStruct() {
+    return symbol.kind == SymbolKind.STRUCT;
+  }
+
+  bool isInterface() {
+    return symbol.kind == SymbolKind.INTERFACE;
+  }
+
+  bool isReference() {
+    return isClass() || isInterface();
+  }
+
+  bool isInteger(TypeCache cache) {
+    return isInt(cache) || isEnum();
+  }
+
+  bool isReal(TypeCache cache) {
+    return isFloat(cache) || isDouble(cache);
+  }
+
+  bool isNumeric(TypeCache cache) {
+    return isInteger(cache) || isReal(cache);
+  }
 }

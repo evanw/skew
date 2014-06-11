@@ -11,6 +11,15 @@ class Scope {
   // local symbols since those scopes don't have a type.
   StringMap<Symbol> locals = null;
 
+  void insertGlobals(TypeCache cache) {
+    insert(cache.voidType.symbol);
+    insert(cache.intType.symbol);
+    insert(cache.boolType.symbol);
+    insert(cache.floatType.symbol);
+    insert(cache.doubleType.symbol);
+    insert(cache.stringType.symbol);
+  }
+
   void insert(Symbol symbol) {
     if (type != null) {
       type.addMember(symbol);
