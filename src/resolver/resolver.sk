@@ -418,8 +418,7 @@ class Resolver {
       case NodeKind.USING_NAMESPACE { resolveUsingNamespace(node); }
 
       case NodeKind.NAMESPACE { resolveNamespace(node); }
-      case NodeKind.ENUM { resolveEnum(node); }
-      case NodeKind.ENUM_FLAGS { resolveEnum(node); }
+      case NodeKind.ENUM, NodeKind.ENUM_FLAGS { resolveEnum(node); }
       case NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE { resolveObject(node); }
 
       case NodeKind.EXTENSION { resolveExtension(node); }
@@ -526,10 +525,12 @@ class Resolver {
     }
 
     // Make the implicit conversion explicit for convenience later on
-    if (node.kind.isType()) return;
-    Node value = new Node(NodeKind.NULL);
-    value.become(node);
-    node.become(Node.createImplicitCast(Node.createType(to), value).withType(to).withRange(node.range));
+    if (kind == CastKind.IMPLICIT) {
+      if (node.kind.isType()) return;
+      Node value = new Node(NodeKind.NULL);
+      value.become(node);
+      node.become(Node.createImplicitCast(Node.createType(to), value).withType(to).withRange(node.range));
+    }
   }
 
   void checkInsideBlock(Node node) {
@@ -569,7 +570,7 @@ class Resolver {
   void resolveAsType(Node node) {
     resolve(node);
 
-    // Must not be an instance
+    // Must not be a type, not an instance
     if (node.type != cache.errorType && !node.kind.isType()) {
       semanticErrorUnexpectedExpression(log, node.range, node.type);
       node.type = cache.errorType;
@@ -583,6 +584,7 @@ class Resolver {
   void resolveAsExpression(Node node) {
     resolve(node);
 
+    // Must be an instance, not a type
     if (node.type != cache.errorType && node.kind.isType()) {
       semanticErrorUnexpectedType(log, node.range, node.type);
       node.type = cache.errorType;
@@ -743,6 +745,38 @@ class Resolver {
     // }
   }
 
+  Type initializeNamespace(Node node) {
+    return cache.errorType;
+  }
+
+  Type initializeEnum(Node node) {
+    return cache.errorType;
+  }
+
+  Type initializeObject(Node node) {
+    return cache.errorType;
+  }
+
+  Type initializeExtension(Node node) {
+    return cache.errorType;
+  }
+
+  Type initializeFunction(Node node) {
+    return cache.errorType;
+  }
+
+  Type initializeVariable(Node node) {
+    return cache.errorType;
+  }
+
+  Type initializeParameter(Node node) {
+    return cache.errorType;
+  }
+
+  Type initializeUsingAlias(Node node) {
+    return cache.errorType;
+  }
+
   void initializeDeclaration(Node node) {
     // Only initialize once (symbol should already have been set)
     assert node.symbol != null;
@@ -757,7 +791,19 @@ class Resolver {
       // sibling chain to ensure that the entire chain is processed at once
       ResolveContext oldContext = context;
       context = ResolveContext.fromNode(node);
-      Type type = cache.errorType; // TODO = initialize(node.symbol.node);
+      Type type = cache.errorType;
+      Node first = node.symbol.node;
+      switch (first.kind) {
+        case NodeKind.NAMESPACE { type = initializeNamespace(first); }
+        case NodeKind.ENUM, NodeKind.ENUM_FLAGS { type = initializeEnum(first); }
+        case NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE { type = initializeObject(first); }
+        case NodeKind.EXTENSION { type = initializeExtension(first); }
+        case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION { type = initializeFunction(first); }
+        case NodeKind.VARIABLE { type = initializeVariable(first); }
+        case NodeKind.PARAMETER { type = initializeParameter(first); }
+        case NodeKind.USING_ALIAS { type = initializeUsingAlias(first); }
+        default { assert false; }
+      }
       context = oldContext;
 
       // Update the type now that cycle detection is complete
