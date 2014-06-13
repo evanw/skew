@@ -36,6 +36,24 @@ in Node {
     return children.get(1);
   }
 
+  Node hookTest() {
+    assert kind == NodeKind.HOOK;
+    assert children.length == 3;
+    return children.get(0);
+  }
+
+  Node hookTrue() {
+    assert kind == NodeKind.HOOK;
+    assert children.length == 3;
+    return children.get(1);
+  }
+
+  Node hookFalse() {
+    assert kind == NodeKind.HOOK;
+    assert children.length == 3;
+    return children.get(2);
+  }
+
   Node declarationName() {
     assert kind.isNamedDeclaration();
     assert children.length >= 1;
@@ -161,5 +179,11 @@ in Node {
     assert children.length == 2;
     assert children.get(1).kind == NodeKind.BLOCK;
     return children.get(1);
+  }
+
+  Node defaultType() {
+    assert kind == NodeKind.DEFAULT;
+    assert children.length == 1;
+    return children.get(0);
   }
 }

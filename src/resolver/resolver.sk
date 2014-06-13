@@ -38,6 +38,7 @@ class Resolver {
   ResolveContext context = new ResolveContext();
   List<Node> parsedDeclarations = {};
   List<Node> parsedBlocks = {};
+  Type typeContext = null;
   Log log;
 
   static void run(Log log, Node program) {
@@ -49,7 +50,7 @@ class Resolver {
     resolver.accumulateSymbolFlags();
     resolver.setSymbolKindsAndMergeSiblings();
     resolver.processUsingStatements();
-    resolver.resolve(program);
+    resolver.resolve(program, null);
   }
 
   void setupScopesAndMergeSymbols(Node node, Scope scope) {
@@ -398,7 +399,7 @@ class Resolver {
     }
   }
 
-  void resolve(Node node) {
+  void resolve(Node node, Type expectedType) {
     // Only resolve once
     if (node.type != null) {
       return;
@@ -408,6 +409,10 @@ class Resolver {
     // Use the current scope for all child nodes
     Scope oldScope = context.scope;
     if (node.scope != null) context.scope = node.scope;
+
+    // Track the type from the context this node is used in
+    Type oldType = typeContext;
+    typeContext = expectedType;
 
     switch (node.kind) {
       case NodeKind.PROGRAM { resolveProgram(node); }
@@ -494,7 +499,29 @@ class Resolver {
     }
 
     context.scope = oldScope;
+    typeContext = oldType;
     assert node.type != null;
+  }
+
+  void checkIsType(Node node) {
+    if (node.type != cache.errorType && !node.kind.isType()) {
+      semanticErrorUnexpectedExpression(log, node.range, node.type);
+      node.type = cache.errorType;
+    }
+  }
+
+  void checkIsInstance(Node node) {
+    if (node.type != cache.errorType && node.kind.isType()) {
+      semanticErrorUnexpectedType(log, node.range, node.type);
+      node.type = cache.errorType;
+    }
+  }
+
+  void checkIsValidVariableType(Node node) {
+    if (node.type.isVoid(cache) || node.type.isNamespace()) {
+      semanticErrorBadVariableType(log, node.range, node.type);
+      node.type = cache.errorType;
+    }
   }
 
   void checkConversion(Type to, Node node, CastKind kind) {
@@ -521,6 +548,7 @@ class Resolver {
     if (kind == CastKind.IMPLICIT && !cache.canImplicitlyConvert(from, to) ||
         kind == CastKind.EXPLICIT && !cache.canExplicitlyConvert(from, to)) {
       semanticErrorIncompatibleTypes(log, node.range, from, to, cache.canExplicitlyConvert(from, to));
+      node.type = cache.errorType;
       return;
     }
 
@@ -563,186 +591,13 @@ class Resolver {
     }
   }
 
-  void unsupportedNodeKind(Node node) {
-    log.error(node.range, "TODO: Support nodes of kind ".append(node.kind.toString()));
-  }
-
-  void resolveAsType(Node node) {
-    resolve(node);
-
-    // Must not be a type, not an instance
-    if (node.type != cache.errorType && !node.kind.isType()) {
-      semanticErrorUnexpectedExpression(log, node.range, node.type);
-      node.type = cache.errorType;
+  bool checkAccessToThis(Range range) {
+    if (context.function != null && context.function.symbol.kind.isInstance()) {
+      return true;
     }
-  }
 
-  void resolveAsParameterizedType(Node node) {
-    resolveAsType(node);
-  }
-
-  void resolveAsExpression(Node node) {
-    resolve(node);
-
-    // Must be an instance, not a type
-    if (node.type != cache.errorType && node.kind.isType()) {
-      semanticErrorUnexpectedType(log, node.range, node.type);
-      node.type = cache.errorType;
-    }
-  }
-
-  void resolveAsExpressionWithConversion(Node node, Type type, CastKind kind) {
-    resolveAsExpression(node);
-    checkConversion(type, node, kind);
-  }
-
-  void resolveNodes(List<Node> nodes) {
-    int i;
-    for (i = 0; i < nodes.length; i++) {
-      resolve(nodes.get(i));
-    }
-  }
-
-  void resolveChildren(Node node) {
-    if (node.hasChildren()) {
-      resolveNodes(node.children);
-    }
-  }
-
-  void resolveProgram(Node node) {
-    assert node.parent == null;
-    resolveChildren(node);
-  }
-
-  void resolveFile(Node node) {
-    assert node.parent != null;
-    assert node.parent.kind == NodeKind.PROGRAM;
-    resolve(node.fileBlock());
-  }
-
-  void resolveBlock(Node node) {
-    assert node.kind == NodeKind.BLOCK;
-    resolveChildren(node);
-  }
-
-  void resolveCase(Node node) {
-    unsupportedNodeKind(node);
-  }
-
-  void resolveUsingNamespace(Node node) {
-    checkInsideBlock(node);
-  }
-
-  void resolveNamespace(Node node) {
-    checkTopLevelDeclaration(node);
-    resolveBlock(node.declarationBlock());
-  }
-
-  void resolveEnum(Node node) {
-    checkTopLevelDeclaration(node);
-    unsupportedNodeKind(node);
-  }
-
-  void resolveObject(Node node) {
-    Node oldObject = context.object;
-    context.object = node;
-
-    checkTopLevelDeclaration(node);
-    unsupportedNodeKind(node);
-
-    context.object = oldObject;
-  }
-
-  void resolveExtension(Node node) {
-    checkTopLevelDeclaration(node);
-    unsupportedNodeKind(node);
-  }
-
-  void resolveFunction(Node node) {
-    Node oldFunction = context.function;
-    context.function = node;
-
-    checkTopLevelDeclaration(node);
-    unsupportedNodeKind(node);
-
-    context.function = oldFunction;
-  }
-
-  void resolveVariable(Node node) {
-    unsupportedNodeKind(node);
-  }
-
-  void resolveVariableCluster(Node node) {
-    resolveAsParameterizedType(node.clusterType());
-    resolveNodes(node.clusterVariables());
-    unsupportedNodeKind(node);
-  }
-
-  void resolveParameter(Node node) {
-    assert node.parent != null;
-    assert node.parent.kind.isObject();
-    unsupportedNodeKind(node);
-  }
-
-  void resolveUsingAlias(Node node) {
-    checkInsideBlock(node);
-  }
-
-  void resolveIf(Node node) {
-    resolveAsExpressionWithConversion(node.ifTest(), cache.boolType, CastKind.IMPLICIT);
-    resolveBlock(node.ifTrue());
-    if (node.ifFalse() != null) resolveBlock(node.ifFalse());
-  }
-
-  void resolveFor(Node node) {
-    if (node.forSetup() != null) resolveAsExpression(node.forSetup());
-    if (node.forTest() != null) resolveAsExpressionWithConversion(node.forTest(), cache.boolType, CastKind.IMPLICIT);
-    if (node.forUpdate() != null) resolveAsExpression(node.forUpdate());
-    resolveBlock(node.forBlock());
-  }
-
-  void resolveForeach(Node node) {
-    unsupportedNodeKind(node);
-  }
-
-  void resolveWhile(Node node) {
-    resolveAsExpressionWithConversion(node.whileTest(), cache.boolType, CastKind.IMPLICIT);
-    resolveBlock(node.whileBlock());
-  }
-
-  void resolveReturn(Node node) {
-    unsupportedNodeKind(node);
-  }
-
-  void resolveBreak(Node node) {
-    unsupportedNodeKind(node);
-  }
-
-  void resolveContinue(Node node) {
-    unsupportedNodeKind(node);
-  }
-
-  void resolveAssert(Node node) {
-    unsupportedNodeKind(node);
-  }
-
-  void resolveExpression(Node node) {
-    resolveAsExpression(node.expressionValue());
-  }
-
-  void resolveSwitch(Node node) {
-    unsupportedNodeKind(node);
-  }
-
-  void resolveModifier(Node node) {
-    resolveNodes(node.modifierStatements());
-  }
-
-  void checkAccessToThis(ResolveContext context, Range range) {
-    // // Only allow "this" inside instance methods
-    // if (context.thisType == null || context.functionSymbol == null || !context.functionSymbol.isInstance()) {
-      semanticErrorStaticThis(log, range);
-    // }
+    semanticErrorStaticThis(log, range);
+    return false;
   }
 
   Type initializeNamespace(Node node) {
@@ -828,6 +683,188 @@ class Resolver {
     }
   }
 
+  void unsupportedNodeKind(Node node) {
+    log.error(node.range, "TODO: Support nodes of kind ".append(node.kind.toString()));
+  }
+
+  void resolveAsType(Node node) {
+    resolve(node, null);
+    checkIsType(node);
+  }
+
+  void resolveAsParameterizedType(Node node) {
+    resolveAsType(node);
+  }
+
+  void resolveAsExpression(Node node) {
+    resolve(node, null);
+    checkIsInstance(node);
+  }
+
+  void resolveAsExpressionWithConversion(Node node, Type type, CastKind kind) {
+    resolve(node, type);
+    checkIsInstance(node);
+    if (type != null) checkConversion(type, node, kind);
+  }
+
+  void resolveNodes(List<Node> nodes) {
+    int i;
+    for (i = 0; i < nodes.length; i++) {
+      resolve(nodes.get(i), null);
+    }
+  }
+
+  void resolveChildren(Node node) {
+    if (node.hasChildren()) {
+      resolveNodes(node.children);
+    }
+  }
+
+  void resolveProgram(Node node) {
+    assert node.parent == null;
+    resolveChildren(node);
+  }
+
+  void resolveFile(Node node) {
+    assert node.parent != null;
+    assert node.parent.kind == NodeKind.PROGRAM;
+    resolve(node.fileBlock(), null);
+  }
+
+  void resolveBlock(Node node) {
+    assert node.kind == NodeKind.BLOCK;
+    resolveChildren(node);
+  }
+
+  void resolveCase(Node node) {
+    unsupportedNodeKind(node);
+  }
+
+  void resolveUsingNamespace(Node node) {
+    checkInsideBlock(node);
+  }
+
+  void resolveNamespace(Node node) {
+    checkTopLevelDeclaration(node);
+    resolveBlock(node.declarationBlock());
+  }
+
+  void resolveEnum(Node node) {
+    checkTopLevelDeclaration(node);
+    unsupportedNodeKind(node);
+  }
+
+  void resolveObject(Node node) {
+    Node oldObject = context.object;
+    context.object = node;
+
+    checkTopLevelDeclaration(node);
+    unsupportedNodeKind(node);
+
+    context.object = oldObject;
+  }
+
+  void resolveExtension(Node node) {
+    checkTopLevelDeclaration(node);
+    unsupportedNodeKind(node);
+  }
+
+  void resolveFunction(Node node) {
+    Node oldFunction = context.function;
+    context.function = node;
+
+    checkTopLevelDeclaration(node);
+    unsupportedNodeKind(node);
+
+    context.function = oldFunction;
+  }
+
+  void resolveVariable(Node node) {
+    unsupportedNodeKind(node);
+  }
+
+  void resolveVariableCluster(Node node) {
+    resolveAsParameterizedType(node.clusterType());
+    resolveNodes(node.clusterVariables());
+    unsupportedNodeKind(node);
+  }
+
+  void resolveParameter(Node node) {
+    assert node.parent != null;
+    assert node.parent.kind.isObject();
+    unsupportedNodeKind(node);
+  }
+
+  void resolveUsingAlias(Node node) {
+    checkInsideBlock(node);
+  }
+
+  void resolveIf(Node node) {
+    resolveAsExpressionWithConversion(node.ifTest(), cache.boolType, CastKind.IMPLICIT);
+    resolveBlock(node.ifTrue());
+    if (node.ifFalse() != null) resolveBlock(node.ifFalse());
+  }
+
+  void resolveFor(Node node) {
+    if (node.forSetup() != null) resolveAsExpression(node.forSetup());
+    if (node.forTest() != null) resolveAsExpressionWithConversion(node.forTest(), cache.boolType, CastKind.IMPLICIT);
+    if (node.forUpdate() != null) resolveAsExpression(node.forUpdate());
+
+    Node oldLoop = context.loop;
+    context.loop = node;
+
+    resolveBlock(node.forBlock());
+
+    context.loop = oldLoop;
+  }
+
+  void resolveForeach(Node node) {
+    Node oldLoop = context.loop;
+    context.loop = node;
+
+    unsupportedNodeKind(node);
+
+    context.loop = oldLoop;
+  }
+
+  void resolveWhile(Node node) {
+    Node oldLoop = context.loop;
+    context.loop = node;
+
+    resolveAsExpressionWithConversion(node.whileTest(), cache.boolType, CastKind.IMPLICIT);
+    resolveBlock(node.whileBlock());
+
+    context.loop = oldLoop;
+  }
+
+  void resolveReturn(Node node) {
+    unsupportedNodeKind(node);
+  }
+
+  void resolveBreak(Node node) {
+    unsupportedNodeKind(node);
+  }
+
+  void resolveContinue(Node node) {
+    unsupportedNodeKind(node);
+  }
+
+  void resolveAssert(Node node) {
+    unsupportedNodeKind(node);
+  }
+
+  void resolveExpression(Node node) {
+    resolveAsExpression(node.expressionValue());
+  }
+
+  void resolveSwitch(Node node) {
+    unsupportedNodeKind(node);
+  }
+
+  void resolveModifier(Node node) {
+    resolveNodes(node.modifierStatements());
+  }
+
   void resolveName(Node node) {
     ResolveContext context = ResolveContext.fromNode(node); // TODO: Cache this
     string name = node.asString();
@@ -842,7 +879,9 @@ class Resolver {
     if (symbol.kind.isType()) {
       node.become(Node.createType(symbol.type).withRange(node.range));
     } else {
-      if (symbol.kind.isInstance()) checkAccessToThis(context, node.range);
+      if (symbol.kind.isInstance()) {
+        checkAccessToThis(node.range);
+      }
       node.symbol = symbol;
       node.type = symbol.type;
     }
@@ -853,11 +892,45 @@ class Resolver {
   }
 
   void resolveThis(Node node) {
-    unsupportedNodeKind(node);
+    if (checkAccessToThis(node.range)) {
+      assert context.object != null;
+      Symbol symbol = context.object.symbol;
+      initializeSymbol(symbol);
+      node.type = symbol.type;
+    }
   }
 
   void resolveHook(Node node) {
-    unsupportedNodeKind(node);
+    Node trueNode = node.hookTrue();
+    Node falseNode = node.hookFalse();
+    resolveAsExpressionWithConversion(node.hookTest(), cache.boolType, CastKind.IMPLICIT);
+    resolveAsExpression(trueNode);
+    resolveAsExpression(falseNode);
+
+    // Avoid reporting further errors
+    Type trueType = trueNode.type;
+    Type falseType = falseNode.type;
+    if (trueType.isError(cache) || falseType.isError(cache)) {
+      return;
+    }
+
+    // Ensure both branches can implicitly convert to a common type
+    Type commonType = cache.commonImplicitType(trueType, falseType);
+    if (commonType == null) {
+
+      // As a fallback, try to disambiguate by how the result will be used
+      commonType = typeContext;
+      if (commonType == null || !cache.canImplicitlyConvert(trueType, commonType) || !cache.canImplicitlyConvert(falseType, commonType)) {
+        semanticErrorNoCommonType(log, Range.span(trueNode.range, falseNode.range), trueType, falseType);
+        return;
+      }
+    }
+
+    // Finally, check that the conversion works. This check must be done
+    // even when using the common type because it inserts implicit casts.
+    checkConversion(commonType, trueNode, CastKind.IMPLICIT);
+    checkConversion(commonType, falseNode, CastKind.IMPLICIT);
+    node.type = commonType;
   }
 
   void resolveInitializer(Node node) {
@@ -885,11 +958,18 @@ class Resolver {
   }
 
   void resolveError(Node node) {
-    unsupportedNodeKind(node);
+    // Error nodes represent parse errors. They exist to allow a valid AST to
+    // be produced from an invalid parse after parser recovery, which is most
+    // useful when the compiler is being run as part of an IDE.
   }
 
   void resolveSequence(Node node) {
-    unsupportedNodeKind(node);
+    assert node.hasChildren();
+    int i;
+    int n;
+    for (i = 0, n = node.children.length; i < n; i++) {
+      resolveAsExpressionWithConversion(node.children.get(i), i + 1 < n ? null : typeContext, CastKind.IMPLICIT);
+    }
   }
 
   void resolveParameterize(Node node) {
@@ -899,7 +979,9 @@ class Resolver {
   void resolveCast(Node node) {
     Node type = node.castType();
     resolveAsParameterizedType(type);
+    checkIsValidVariableType(type);
     resolveAsExpressionWithConversion(node.castValue(), type.type, CastKind.EXPLICIT);
+    node.type = type.type;
   }
 
   void resolveLambda(Node node) {
@@ -912,7 +994,10 @@ class Resolver {
   }
 
   void resolveDefault(Node node) {
-    unsupportedNodeKind(node);
+    Node type = node.defaultType();
+    resolveAsParameterizedType(type);
+    checkIsValidVariableType(type);
+    node.type = type.type;
   }
 }
 

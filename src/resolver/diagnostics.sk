@@ -78,3 +78,11 @@ void semanticErrorStaticThis(Log log, Range range) {
 void semanticErrorIncompatibleTypes(Log log, Range range, Type from, Type to, bool isCastAllowed) {
   log.error(range, "Cannot convert from ".append(typeToText(from)).append(" to ").append(typeToText(to)).append(isCastAllowed ? " without a cast" : ""));
 }
+
+void semanticErrorNoCommonType(Log log, Range range, Type left, Type right) {
+  log.error(range, "No common type for ".append(typeToText(left)).append(" and ").append(typeToText(right)));
+}
+
+void semanticErrorBadVariableType(Log log, Range range, Type type) {
+  log.error(range, "Cannot use ".append(typeToText(type)).append(" here"));
+}

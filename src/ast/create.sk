@@ -279,6 +279,7 @@ in Node {
   }
 
   static Node createSequence(List<Node> values) {
+    assert values.length > 0;
     assert checkAllNodeKinds(values, new NodeKindIsExpression());
     return new Node(NodeKind.SEQUENCE).withChildren(values);
   }

@@ -52,6 +52,10 @@ class Type {
     return this == cache.cyclicType;
   }
 
+  bool isNamespace() {
+    return symbol.kind.isNamespace();
+  }
+
   bool isEnum() {
     return symbol.kind.isEnum();
   }

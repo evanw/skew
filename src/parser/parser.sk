@@ -752,7 +752,7 @@ class DefaultPrefix : IPrefixParselet {
   override Node run(ParserContext context) {
     Token token = context.next();
     Node type = parseGroup(context);
-    return Node.createDefault(type).withRange(context.spanSince(token.range));
+    return (type == null ? Node.createError() : Node.createDefault(type)).withRange(context.spanSince(token.range));
   }
 }
 
