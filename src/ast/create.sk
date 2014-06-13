@@ -132,11 +132,11 @@ in Node {
     return new Node(NodeKind.FOR).withChildren({ setup, test, update, block });
   }
 
-  static Node createForeach(Node value, Node values, Node block) {
-    assert value.kind == NodeKind.VARIABLE;
-    assert values.kind.isExpression();
+  static Node createForEach(Node variable, Node value, Node block) {
+    assert variable.kind == NodeKind.VARIABLE;
+    assert value.kind.isExpression();
     assert block.kind == NodeKind.BLOCK;
-    return new Node(NodeKind.FOREACH).withChildren({ value, values, block });
+    return new Node(NodeKind.FOR_EACH).withChildren({ variable, value, block });
   }
 
   static Node createWhile(Node test, Node block) {

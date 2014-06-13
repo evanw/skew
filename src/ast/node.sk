@@ -26,7 +26,7 @@ enum NodeKind {
   // Statements
   IF,
   FOR,
-  FOREACH,
+  FOR_EACH,
   WHILE,
   DO_WHILE,
   RETURN,
@@ -260,6 +260,15 @@ class Node {
     scope = node.scope;
     symbol = node.symbol;
     content = node.content;
+  }
+
+  void replaceChild(int index, Node node) {
+    assert children != null;
+    assert index >= 0 && index <= children.length;
+    updateParent(node, this);
+    Node old = children.get(index);
+    if (old != null) old.parent = null;
+    children.set(index, node);
   }
 
   void insertChild(int index, Node node) {

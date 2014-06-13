@@ -435,7 +435,7 @@ class Resolver {
 
       case NodeKind.IF { resolveIf(node); }
       case NodeKind.FOR { resolveFor(node); }
-      case NodeKind.FOREACH { resolveForeach(node); }
+      case NodeKind.FOR_EACH { resolveForEach(node); }
       case NodeKind.WHILE { resolveWhile(node); }
       case NodeKind.DO_WHILE { resolveWhile(node); }
       case NodeKind.RETURN { resolveReturn(node); }
@@ -621,7 +621,12 @@ class Resolver {
   }
 
   Type initializeVariable(Node node) {
-    return cache.errorType;
+    Node type = node.variableType();
+    if (type == null && node.parent.kind == NodeKind.VARIABLE_CLUSTER) {
+      type = node.parent.clusterType();
+    }
+    resolveAsParameterizedType(type);
+    return type.type;
   }
 
   Type initializeParameter(Node node) {
@@ -759,10 +764,8 @@ class Resolver {
   void resolveObject(Node node) {
     Node oldObject = context.object;
     context.object = node;
-
     checkTopLevelDeclaration(node);
     unsupportedNodeKind(node);
-
     context.object = oldObject;
   }
 
@@ -774,21 +777,21 @@ class Resolver {
   void resolveFunction(Node node) {
     Node oldFunction = context.function;
     context.function = node;
-
     checkTopLevelDeclaration(node);
     unsupportedNodeKind(node);
-
     context.function = oldFunction;
   }
 
   void resolveVariable(Node node) {
-    unsupportedNodeKind(node);
+    initializeSymbol(node.symbol);
+    Node value = node.variableValue();
+    if (value != null) resolveAsExpressionWithConversion(value, node.symbol.type, CastKind.IMPLICIT);
   }
 
   void resolveVariableCluster(Node node) {
-    resolveAsParameterizedType(node.clusterType());
+    Node type = node.clusterType();
+    resolveAsParameterizedType(type);
     resolveNodes(node.clusterVariables());
-    unsupportedNodeKind(node);
   }
 
   void resolveParameter(Node node) {
@@ -820,28 +823,25 @@ class Resolver {
 
     Node oldLoop = context.loop;
     context.loop = node;
-
     resolve(node.forBlock(), null);
-
     context.loop = oldLoop;
   }
 
-  void resolveForeach(Node node) {
+  void resolveForEach(Node node) {
+    resolve(node.forEachVariable(), null);
+    resolve(node.forEachValue(), null);
     Node oldLoop = context.loop;
     context.loop = node;
-
-    unsupportedNodeKind(node);
-
+    resolve(node.forEachBlock(), null);
     context.loop = oldLoop;
+    unsupportedNodeKind(node);
   }
 
   void resolveWhile(Node node) {
     Node oldLoop = context.loop;
     context.loop = node;
-
     resolveAsExpressionWithConversion(node.whileTest(), cache.boolType, CastKind.IMPLICIT);
     resolve(node.whileBlock(), null);
-
     context.loop = oldLoop;
   }
 
@@ -997,9 +997,7 @@ class Resolver {
   void resolveLambda(Node node) {
     Node oldFunction = context.function;
     context.function = node;
-
     unsupportedNodeKind(node);
-
     context.function = oldFunction;
   }
 

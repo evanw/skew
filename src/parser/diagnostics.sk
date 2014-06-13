@@ -37,6 +37,6 @@ void syntaxErrorUnterminatedToken(Log log, Range range, string what) {
   log.error(range, "Unterminated ".append(what));
 }
 
-void syntaxErrorBadForeach(Log log, Range range) {
+void syntaxErrorBadForEach(Log log, Range range) {
   log.error(range, "More than one variable inside a for-each loop");
 }

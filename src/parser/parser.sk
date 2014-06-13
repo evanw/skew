@@ -396,9 +396,9 @@ Node parseFor(ParserContext context) {
           scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.NORMAL);
           Node body = parseBlockOrStatement(context); if (body == null) return null;
           List<Node> variables = setup.clusterVariables();
-          if (variables.length > 1) syntaxErrorBadForeach(context.log, setup.range);
+          if (variables.length > 1) syntaxErrorBadForEach(context.log, setup.range);
           Node value = Node.createVariable(variables.get(0).declarationName().remove(), setup.clusterType().remove(), null);
-          return Node.createForeach(value, values, body).withRange(context.spanSince(token.range));
+          return Node.createForEach(value, values, body).withRange(context.spanSince(token.range));
         }
       } else if (!context.peek(TokenKind.SEMICOLON)) {
         setup = pratt.resume(context, Precedence.LOWEST, setup);

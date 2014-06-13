@@ -80,6 +80,18 @@ in Node {
     return children.slice(1, children.length);
   }
 
+  Node variableType() {
+    assert kind == NodeKind.VARIABLE;
+    assert children.length == 3;
+    return children.get(1);
+  }
+
+  Node variableValue() {
+    assert kind == NodeKind.VARIABLE;
+    assert children.length == 3;
+    return children.get(2);
+  }
+
   Node usingAliasValue() {
     assert kind == NodeKind.USING_ALIAS;
     assert children.length == 2;
@@ -166,6 +178,26 @@ in Node {
     assert children.length == 4;
     assert children.get(3).kind == NodeKind.BLOCK;
     return children.get(3);
+  }
+
+  Node forEachVariable() {
+    assert kind == NodeKind.FOR_EACH;
+    assert children.length == 3;
+    assert children.get(0).kind == NodeKind.VARIABLE;
+    return children.get(0);
+  }
+
+  Node forEachValue() {
+    assert kind == NodeKind.FOR_EACH;
+    assert children.length == 3;
+    return children.get(1);
+  }
+
+  Node forEachBlock() {
+    assert kind == NodeKind.FOR_EACH;
+    assert children.length == 3;
+    assert children.get(2).kind == NodeKind.BLOCK;
+    return children.get(2);
   }
 
   Node whileTest() {
