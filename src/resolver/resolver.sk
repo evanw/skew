@@ -968,7 +968,9 @@ class Resolver {
     int i;
     int n;
     for (i = 0, n = node.children.length; i < n; i++) {
-      resolveAsExpressionWithConversion(node.children.get(i), i + 1 < n ? null : typeContext, CastKind.IMPLICIT);
+      Node child = node.children.get(i);
+      if (i + 1 < n) resolveAsExpression(child);
+      else resolveAsExpressionWithConversion(child, typeContext, node.parent.kind == NodeKind.CAST ? CastKind.EXPLICIT : CastKind.IMPLICIT);
     }
   }
 

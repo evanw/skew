@@ -43,41 +43,43 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
 
   // Scan until the next closing token
   while (!context.peek(TokenKind.END_OF_FILE)) {
-    if (context.peek(TokenKind.RIGHT_PARENTHESIS) ||
-        context.peek(TokenKind.RIGHT_BRACKET) ||
-        context.peek(TokenKind.RIGHT_BRACE) ||
-        tokenScan == TokenScan.STOP_BEFORE_NEXT_STATEMENT && context.peek(TokenKind.SEMICOLON)) {
+    TokenKind currentKind = context.current().kind;
+
+    if (currentKind == TokenKind.RIGHT_PARENTHESIS ||
+        currentKind == TokenKind.RIGHT_BRACKET ||
+        currentKind == TokenKind.RIGHT_BRACE ||
+        currentKind == TokenKind.SEMICOLON && tokenScan == TokenScan.STOP_BEFORE_NEXT_STATEMENT) {
       return context.eat(kind);
     }
 
     // Optionally recover parsing before the next statement if unambiguous
     if (tokenScan == TokenScan.STOP_BEFORE_NEXT_STATEMENT && (
-        context.peek(TokenKind.ASSERT) ||
-        context.peek(TokenKind.BREAK) ||
-        context.peek(TokenKind.CASE) ||
-        context.peek(TokenKind.CLASS) ||
-        context.peek(TokenKind.CONTINUE) ||
-        context.peek(TokenKind.DO) ||
-        context.peek(TokenKind.ENUM) ||
-        context.peek(TokenKind.EXPORT) ||
-        context.peek(TokenKind.FINAL) ||
-        context.peek(TokenKind.FOR) ||
-        context.peek(TokenKind.IF) ||
-        context.peek(TokenKind.IMPORT) ||
-        context.peek(TokenKind.INLINE) ||
-        context.peek(TokenKind.INTERFACE) ||
-        context.peek(TokenKind.NAMESPACE) ||
-        context.peek(TokenKind.OVERRIDE) ||
-        context.peek(TokenKind.PRIVATE) ||
-        context.peek(TokenKind.PROTECTED) ||
-        context.peek(TokenKind.PUBLIC) ||
-        context.peek(TokenKind.RETURN) ||
-        context.peek(TokenKind.STATIC) ||
-        context.peek(TokenKind.STRUCT) ||
-        context.peek(TokenKind.SWITCH) ||
-        context.peek(TokenKind.USING) ||
-        context.peek(TokenKind.VIRTUAL) ||
-        context.peek(TokenKind.WHILE))) {
+        currentKind == TokenKind.ASSERT ||
+        currentKind == TokenKind.BREAK ||
+        currentKind == TokenKind.CASE ||
+        currentKind == TokenKind.CLASS ||
+        currentKind == TokenKind.CONTINUE ||
+        currentKind == TokenKind.DO ||
+        currentKind == TokenKind.ENUM ||
+        currentKind == TokenKind.EXPORT ||
+        currentKind == TokenKind.FINAL ||
+        currentKind == TokenKind.FOR ||
+        currentKind == TokenKind.IF ||
+        currentKind == TokenKind.IMPORT ||
+        currentKind == TokenKind.INLINE ||
+        currentKind == TokenKind.INTERFACE ||
+        currentKind == TokenKind.NAMESPACE ||
+        currentKind == TokenKind.OVERRIDE ||
+        currentKind == TokenKind.PRIVATE ||
+        currentKind == TokenKind.PROTECTED ||
+        currentKind == TokenKind.PUBLIC ||
+        currentKind == TokenKind.RETURN ||
+        currentKind == TokenKind.STATIC ||
+        currentKind == TokenKind.STRUCT ||
+        currentKind == TokenKind.SWITCH ||
+        currentKind == TokenKind.USING ||
+        currentKind == TokenKind.VIRTUAL ||
+        currentKind == TokenKind.WHILE)) {
       return true;
     }
 
