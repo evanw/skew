@@ -222,3 +222,27 @@ string d = (string)0.0;
 string e = (string)null;
                    ~~~~
 ");
+
+test("
+int x = true ? true : false;
+", "
+<stdin>:1:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int x = true ? true : false;
+        ~~~~~~~~~~~~~~~~~~~
+");
+
+test("
+bool x = true ? 0 : 1.0f;
+", "
+<stdin>:1:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool x = true ? 0 : 1.0f;
+         ~~~~~~~~~~~~~~~
+");
+
+test("
+int x = true ? 1 : false;
+", "
+<stdin>:1:16: error: No common type for type \"int\" and type \"bool\"
+int x = true ? 1 : false;
+               ~~~~~~~~~
+");
