@@ -838,9 +838,10 @@ class Resolver {
   }
 
   void resolveWhile(Node node) {
+    Node test = node.whileTest();
+    if (test != null) resolveAsExpressionWithConversion(test, cache.boolType, CastKind.IMPLICIT);
     Node oldLoop = context.loop;
     context.loop = node;
-    resolveAsExpressionWithConversion(node.whileTest(), cache.boolType, CastKind.IMPLICIT);
     resolve(node.whileBlock(), null);
     context.loop = oldLoop;
   }

@@ -35,6 +35,9 @@ for (int x, y in z) {}
 <stdin>:1:6: error: More than one variable inside a for-each loop
 for (int x, y in z) {}
      ~~~~~~~~
+<stdin>:1:18: error: \"z\" is not declared
+for (int x, y in z) {}
+                 ^
 ");
 
 test("
@@ -79,6 +82,22 @@ do {} while;
 <stdin>:2:12: error: Expected LEFT_PARENTHESIS but found SEMICOLON
 do {} while;
            ^
+");
+
+test("
+for (int x in
+", "
+<stdin>:1:14: error: Unexpected END_OF_FILE
+for (int x in
+             ^
+");
+
+test("
+for (int x in) {}
+", "
+<stdin>:1:14: error: Unexpected RIGHT_PARENTHESIS
+for (int x in) {}
+             ^
 ");
 
 test("

@@ -24,6 +24,7 @@ SOURCES += src/resolver/type.sk
 SOURCES += src/resolver/typecache.sk
 
 TEST_SOURCES += tests/system/common.sk
+TEST_SOURCES += tests/system/conversions.sk
 TEST_SOURCES += tests/system/merging.sk
 TEST_SOURCES += tests/system/modifiers.sk
 TEST_SOURCES += tests/system/parsing.sk

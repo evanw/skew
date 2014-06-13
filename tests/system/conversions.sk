@@ -1,0 +1,135 @@
+test("
+(void)null;
+", "
+<stdin>:1:2: error: Cannot use type \"void\" here
+(void)null;
+ ~~~~
+");
+
+test("
+(ns)null;
+namespace ns {}
+", "
+<stdin>:1:2: error: Cannot use type \"ns\" here
+(ns)null;
+ ~~
+");
+
+test("
+int a = 0;
+int b = false;
+int c = 0.0f;
+int d = 0.0;
+int e = null;
+int f = \"\";
+", "
+<stdin>:2:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int b = false;
+        ~~~~~
+<stdin>:3:9: error: Cannot convert from type \"float\" to type \"int\" without a cast
+int c = 0.0f;
+        ~~~~
+<stdin>:4:9: error: Cannot convert from type \"double\" to type \"int\" without a cast
+int d = 0.0;
+        ~~~
+<stdin>:5:9: error: Cannot convert from type \"null\" to type \"int\"
+int e = null;
+        ~~~~
+<stdin>:6:9: error: Cannot convert from type \"string\" to type \"int\"
+int f = \"\";
+        ~~
+");
+
+test("
+bool a = 0;
+bool b = false;
+bool c = 0.0f;
+bool d = 0.0;
+bool e = null;
+bool f = \"\";
+", "
+<stdin>:1:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool a = 0;
+         ^
+<stdin>:3:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
+bool c = 0.0f;
+         ~~~~
+<stdin>:4:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool d = 0.0;
+         ~~~
+<stdin>:5:10: error: Cannot convert from type \"null\" to type \"bool\"
+bool e = null;
+         ~~~~
+<stdin>:6:10: error: Cannot convert from type \"string\" to type \"bool\"
+bool f = \"\";
+         ~~
+");
+
+test("
+float a = 0;
+float b = false;
+float c = 0.0f;
+float d = 0.0;
+float e = null;
+float f = \"\";
+", "
+<stdin>:1:11: error: Cannot convert from type \"int\" to type \"float\" without a cast
+float a = 0;
+          ^
+<stdin>:2:11: error: Cannot convert from type \"bool\" to type \"float\" without a cast
+float b = false;
+          ~~~~~
+<stdin>:4:11: error: Cannot convert from type \"double\" to type \"float\" without a cast
+float d = 0.0;
+          ~~~
+<stdin>:5:11: error: Cannot convert from type \"null\" to type \"float\"
+float e = null;
+          ~~~~
+<stdin>:6:11: error: Cannot convert from type \"string\" to type \"float\"
+float f = \"\";
+          ~~
+");
+
+test("
+double a = 0;
+double b = false;
+double c = 0.0f;
+double d = 0.0;
+double e = null;
+double f = \"\";
+", "
+<stdin>:2:12: error: Cannot convert from type \"bool\" to type \"double\" without a cast
+double b = false;
+           ~~~~~
+<stdin>:5:12: error: Cannot convert from type \"null\" to type \"double\"
+double e = null;
+           ~~~~
+<stdin>:6:12: error: Cannot convert from type \"string\" to type \"double\"
+double f = \"\";
+           ~~
+");
+
+test("
+string a = 0;
+string b = false;
+string c = 0.0f;
+string d = 0.0;
+string e = null;
+string f = \"\";
+", "
+<stdin>:1:12: error: Cannot convert from type \"int\" to type \"string\"
+string a = 0;
+           ^
+<stdin>:2:12: error: Cannot convert from type \"bool\" to type \"string\"
+string b = false;
+           ~~~~~
+<stdin>:3:12: error: Cannot convert from type \"float\" to type \"string\"
+string c = 0.0f;
+           ~~~~
+<stdin>:4:12: error: Cannot convert from type \"double\" to type \"string\"
+string d = 0.0;
+           ~~~
+<stdin>:5:12: error: Cannot convert from type \"null\" to type \"string\"
+string e = null;
+           ~~~~
+");
