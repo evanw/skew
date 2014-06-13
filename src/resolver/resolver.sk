@@ -688,6 +688,7 @@ class Resolver {
   }
 
   void resolveAsType(Node node) {
+    assert node.kind.isExpression();
     resolve(node, null);
     checkIsType(node);
   }
@@ -697,11 +698,13 @@ class Resolver {
   }
 
   void resolveAsExpression(Node node) {
+    assert node.kind.isExpression();
     resolve(node, null);
     checkIsInstance(node);
   }
 
   void resolveAsExpressionWithConversion(Node node, Type type, CastKind kind) {
+    assert node.kind.isExpression();
     resolve(node, type);
     checkIsInstance(node);
     if (type != null) checkConversion(type, node, kind);
@@ -732,7 +735,6 @@ class Resolver {
   }
 
   void resolveBlock(Node node) {
-    assert node.kind == NodeKind.BLOCK;
     resolveChildren(node);
   }
 
@@ -746,7 +748,7 @@ class Resolver {
 
   void resolveNamespace(Node node) {
     checkTopLevelDeclaration(node);
-    resolveBlock(node.declarationBlock());
+    resolve(node.declarationBlock(), null);
   }
 
   void resolveEnum(Node node) {
@@ -801,19 +803,25 @@ class Resolver {
 
   void resolveIf(Node node) {
     resolveAsExpressionWithConversion(node.ifTest(), cache.boolType, CastKind.IMPLICIT);
-    resolveBlock(node.ifTrue());
-    if (node.ifFalse() != null) resolveBlock(node.ifFalse());
+    resolve(node.ifTrue(), null);
+    if (node.ifFalse() != null) resolve(node.ifFalse(), null);
   }
 
   void resolveFor(Node node) {
-    if (node.forSetup() != null) resolveAsExpression(node.forSetup());
-    if (node.forTest() != null) resolveAsExpressionWithConversion(node.forTest(), cache.boolType, CastKind.IMPLICIT);
-    if (node.forUpdate() != null) resolveAsExpression(node.forUpdate());
+    Node setup = node.forSetup();
+    Node test = node.forTest();
+    Node update = node.forUpdate();
+    if (setup != null) {
+      if (setup.kind == NodeKind.VARIABLE_CLUSTER) resolve(setup, null);
+      else resolveAsExpression(setup);
+    }
+    if (test != null) resolveAsExpressionWithConversion(test, cache.boolType, CastKind.IMPLICIT);
+    if (update != null) resolveAsExpression(update);
 
     Node oldLoop = context.loop;
     context.loop = node;
 
-    resolveBlock(node.forBlock());
+    resolve(node.forBlock(), null);
 
     context.loop = oldLoop;
   }
@@ -832,7 +840,7 @@ class Resolver {
     context.loop = node;
 
     resolveAsExpressionWithConversion(node.whileTest(), cache.boolType, CastKind.IMPLICIT);
-    resolveBlock(node.whileBlock());
+    resolve(node.whileBlock(), null);
 
     context.loop = oldLoop;
   }
