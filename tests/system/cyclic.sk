@@ -1,0 +1,32 @@
+test("
+foo foo;
+", "
+<stdin>:1:5: error: Circular declaration of \"foo\"
+foo foo;
+    ~~~
+");
+
+test("
+foo foo, bar;
+", "
+<stdin>:1:5: error: Circular declaration of \"foo\"
+foo foo, bar;
+    ~~~
+");
+
+test("
+bar foo, bar;
+", "
+<stdin>:1:10: error: Circular declaration of \"bar\"
+bar foo, bar;
+         ~~~
+");
+
+test("
+bar foo;
+foo bar;
+", "
+<stdin>:1:5: error: Circular declaration of \"foo\"
+bar foo;
+    ~~~
+");

@@ -296,9 +296,11 @@ class Node {
     node.type = type;
     node.symbol = symbol;
     node.content = content.clone();
-    int i;
-    for (i = 0; i < children.length; i++) {
-      node.appendChild(children.get(i).clone());
+    if (hasChildren()) {
+      int i;
+      for (i = 0; i < children.length; i++) {
+        node.appendChild(children.get(i).clone());
+      }
     }
     return node;
   }

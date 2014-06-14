@@ -623,7 +623,8 @@ class Resolver {
   Type initializeVariable(Node node) {
     Node type = node.variableType();
     if (type == null && node.parent.kind == NodeKind.VARIABLE_CLUSTER) {
-      type = node.parent.clusterType();
+      type = node.parent.clusterType().clone();
+      node.replaceChild(1, type);
     }
     resolveAsParameterizedType(type);
     return type.type;
@@ -789,8 +790,8 @@ class Resolver {
   }
 
   void resolveVariableCluster(Node node) {
-    Node type = node.clusterType();
-    resolveAsParameterizedType(type);
+    // This must not initialize node.clusterType() here for circular declaration
+    // detection to work correctly ("foo foo;" is a circular declaration)
     resolveNodes(node.clusterVariables());
   }
 
