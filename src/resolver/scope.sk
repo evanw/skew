@@ -12,6 +12,7 @@ class Scope {
   StringMap<Symbol> locals = null;
 
   void insertGlobals(TypeCache cache) {
+    type = cache.globalType;
     insert(cache.voidType.symbol);
     insert(cache.intType.symbol);
     insert(cache.boolType.symbol);

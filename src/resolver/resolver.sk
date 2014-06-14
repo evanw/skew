@@ -313,7 +313,7 @@ class Resolver {
 
         // Insert a new unresolved symbol as a local symbol only on this scope.
         // It will not be added on the type associated with this scope.
-        symbol = new Symbol(name, SymbolKind.OTHER);
+        symbol = new Symbol(name, SymbolKind.OTHER_TYPE);
         symbol.node = statement;
         statement.symbol = symbol;
         block.scope.insertLocal(symbol);
@@ -340,14 +340,18 @@ class Resolver {
         // Resolve the namespace as an absolute name
         Node value = statement.usingNamespaceValue();
         resolveGlobalUsingValue(value);
-        if (value.symbol == null) {
+        if (value.type.isError(cache)) {
+          continue;
+        }
+        Symbol symbol = value.type.symbol;
+        if (symbol == null) {
           continue;
         }
 
         // Unlike a using alias, using statements must be a namespace. While
         // this could in theory support arbitrary types, it's more readable and
         // gives clearer errors to limit this to namespaces.
-        if (!value.symbol.kind.isNamespace()) {
+        if (!symbol.kind.isNamespace()) {
           semanticErrorBadUsingNamespace(log, value.range);
           continue;
         }
@@ -361,42 +365,50 @@ class Resolver {
 
   void resolveGlobalUsingValue(Node node) {
     node.type = cache.errorType;
+    Symbol symbol;
 
+    // Handle top-level names
     if (node.kind == NodeKind.NAME) {
       string name = node.asString();
-      node.symbol = cache.globalType.findMember(name);
-      if (node.symbol == null) {
+      symbol = cache.globalType.findMember(name);
+      if (symbol == null) {
         semanticErrorUndeclaredSymbol(log, node.range, name);
         return;
       }
-    } else if (node.kind == NodeKind.DOT) {
+    }
+
+    // Handle nested names
+    else if (node.kind == NodeKind.DOT) {
       Node target = node.dotTarget();
       resolveGlobalUsingValue(target);
-      Symbol targetSymbol = target.symbol;
+      Type targetType = target.type;
       Node dotName = node.dotName();
-      if (targetSymbol == null || targetSymbol.type == null || dotName == null) {
+      if (targetType == null || dotName == null) {
         return;
       }
       string name = dotName.asString();
-      node.symbol = targetSymbol.type.findMember(name);
-      if (node.symbol == null) {
-        semanticErrorUnknownMemberSymbol(log, dotName.range, name, targetSymbol.type);
+      symbol = targetType.findMember(name);
+      if (symbol == null) {
+        semanticErrorUnknownMemberSymbol(log, dotName.range, name, targetType);
         return;
       }
-    } else {
+    }
+
+    // Non-name nodes are not allowed
+    else {
       semanticErrorUnexpectedNode(log, node.range, node.kind);
       return;
     }
 
     // Validate the symbol type, must not be an instance
-    if (!node.symbol.kind.isType()) {
+    if (!symbol.kind.isType()) {
       semanticErrorBadUsingValue(log, node.range);
-      node.symbol = null;
-      node.type = cache.errorType;
-    } else {
-      node.type = node.symbol.type;
-      assert node.type != null; // All type symbols should have a type by now
+      return;
     }
+
+    // Create a type node to distinguish the type from an instance of that type
+    node.become(Node.createType(symbol.type).withRange(node.range));
+    assert node.type != null; // All type symbols should have a type by now
   }
 
   void resolve(Node node, Type expectedType) {
@@ -504,14 +516,14 @@ class Resolver {
   }
 
   void checkIsType(Node node) {
-    if (node.type != cache.errorType && !node.kind.isType()) {
+    if (!node.type.isError(cache) && !node.kind.isType()) {
       semanticErrorUnexpectedExpression(log, node.range, node.type);
       node.type = cache.errorType;
     }
   }
 
   void checkIsInstance(Node node) {
-    if (node.type != cache.errorType && node.kind.isType()) {
+    if (!node.type.isError(cache) && node.kind.isType()) {
       semanticErrorUnexpectedType(log, node.range, node.type);
       node.type = cache.errorType;
     }
@@ -530,7 +542,7 @@ class Resolver {
     assert to != null;
 
     // Avoid reporting further errors
-    if (from == cache.errorType || to == cache.errorType) {
+    if (from.isError(cache) || to.isError(cache)) {
       return;
     }
 
@@ -627,6 +639,7 @@ class Resolver {
       node.replaceChild(1, type);
     }
     resolveAsParameterizedType(type);
+    checkIsValidVariableType(type);
     return type.type;
   }
 
@@ -635,7 +648,9 @@ class Resolver {
   }
 
   Type initializeUsingAlias(Node node) {
-    return cache.errorType;
+    Node type = node.usingAliasValue();
+    resolveAsParameterizedType(type);
+    return type.type;
   }
 
   void initializeDeclaration(Node node) {
@@ -803,6 +818,9 @@ class Resolver {
 
   void resolveUsingAlias(Node node) {
     checkInsideBlock(node);
+    if (node.symbol != null) {
+      initializeSymbol(node.symbol);
+    }
   }
 
   void resolveIf(Node node) {
@@ -888,13 +906,14 @@ class Resolver {
     // Wrap type symbols in a type node to distinguish them from instances
     if (symbol.kind.isType()) {
       node.become(Node.createType(symbol.type).withRange(node.range));
-    } else {
-      if (symbol.kind.isInstance()) {
-        checkAccessToThis(node.range);
-      }
-      node.symbol = symbol;
-      node.type = symbol.type;
+      return;
     }
+
+    if (symbol.kind.isInstance()) {
+      checkAccessToThis(node.range);
+    }
+    node.symbol = symbol;
+    node.type = symbol.type;
   }
 
   void resolveType(Node node) {

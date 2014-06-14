@@ -87,3 +87,12 @@ using bar = ns.foo;
 namespace ns.foo {}
 ", "
 ");
+
+test("
+Int foo = false;
+using Int = int;
+", "
+<stdin>:1:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+Int foo = false;
+          ~~~~~
+");
