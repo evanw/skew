@@ -50,7 +50,7 @@ in Node {
   }
 
   static Node createObject(NodeKind kind, Node name, Node parameters, Node bases, Node block) {
-    assert kind == NodeKind.CLASS || kind == NodeKind.STRUCT || kind == NodeKind.INTERFACE;
+    assert kind.isObject();
     assert name.kind == NodeKind.NAME;
     assert parameters == null || checkAllNodeListKinds(parameters, new NodeKindCheck(NodeKind.PARAMETER));
     assert bases == null || checkAllNodeListKinds(bases, new NodeKindIsExpression());

@@ -3,6 +3,11 @@ enum CastKind {
   EXPLICIT,
 }
 
+enum AllowDeclaration {
+  TOP_LEVEL,
+  TOP_OR_OBJECT_LEVEL,
+}
+
 class ResolveContext {
   Scope scope = null;
 
@@ -597,7 +602,7 @@ class Resolver {
     }
   }
 
-  void checkTopLevelDeclaration(Node node) {
+  void checkDeclarationLocation(Node node, AllowDeclaration allowDeclaration) {
     assert node.parent != null;
 
     // Top-level declarations cannot live inside object declarations, function
@@ -607,7 +612,8 @@ class Resolver {
       NodeKind kind = parent.kind;
       if (kind != NodeKind.PROGRAM && kind != NodeKind.FILE &&
           kind != NodeKind.MODIFIER && kind != NodeKind.BLOCK &&
-          kind != NodeKind.NAMESPACE && kind != NodeKind.EXTENSION) {
+          kind != NodeKind.NAMESPACE && kind != NodeKind.EXTENSION &&
+          (allowDeclaration != AllowDeclaration.TOP_OR_OBJECT_LEVEL || !kind.isObject())) {
         semanticErrorUnexpectedStatement(log, node.range, node.kind.toString());
         break;
       }
@@ -686,7 +692,7 @@ class Resolver {
       // Resolve using node.symbol.node to start from the first node in the
       // sibling chain to ensure that the entire chain is processed at once
       ResolveContext oldContext = context;
-      context = ResolveContext.fromNode(node);
+      context = ResolveContext.fromNode(node); // TODO: Cache this?
       Type type = cache.errorType;
       Node first = node.symbol.node;
       switch (first.kind) {
@@ -788,33 +794,33 @@ class Resolver {
   }
 
   void resolveNamespace(Node node) {
-    checkTopLevelDeclaration(node);
+    checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     resolve(node.declarationBlock(), null);
   }
 
   void resolveEnum(Node node) {
-    checkTopLevelDeclaration(node);
+    checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     unsupportedNodeKind(node);
   }
 
   void resolveObject(Node node) {
     Node oldObject = context.object;
     context.object = node;
-    checkTopLevelDeclaration(node);
+    checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     initializeSymbol(node.symbol);
-    unsupportedNodeKind(node);
+    resolve(node.objectBlock(), null);
     context.object = oldObject;
   }
 
   void resolveExtension(Node node) {
-    checkTopLevelDeclaration(node);
+    checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     unsupportedNodeKind(node);
   }
 
   void resolveFunction(Node node) {
     Node oldFunction = context.function;
     context.function = node;
-    checkTopLevelDeclaration(node);
+    checkDeclarationLocation(node, AllowDeclaration.TOP_OR_OBJECT_LEVEL);
     initializeSymbol(node.symbol);
     resolve(node.functionBlock(), null);
     context.function = oldFunction;
@@ -916,7 +922,6 @@ class Resolver {
   }
 
   void resolveName(Node node) {
-    ResolveContext context = ResolveContext.fromNode(node); // TODO: Cache this
     string name = node.asString();
     Symbol symbol = context.scope.find(name);
     if (symbol == null) {
@@ -931,9 +936,11 @@ class Resolver {
       return;
     }
 
+    // Instance members inside an object must have access to "this"
     if (symbol.kind.isInstance()) {
       checkAccessToThis(node.range);
     }
+
     node.symbol = symbol;
     node.type = symbol.type;
   }

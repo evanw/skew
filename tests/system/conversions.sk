@@ -229,3 +229,15 @@ int x = true ? 1 : false;
 int x = true ? 1 : false;
                ~~~~~~~~~
 ");
+
+test("
+class Foo {
+  void baz() {
+    int x = this;
+  }
+}
+", "
+<stdin>:3:13: error: Cannot convert from type \"Foo\" to type \"int\"
+    int x = this;
+            ~~~~
+");

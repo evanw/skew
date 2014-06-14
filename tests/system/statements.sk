@@ -29,3 +29,11 @@ if (true) interface Foo {}
 if (true) interface Foo {}
           ~~~~~~~~~~~~~~~~
 ");
+
+test("
+void foo() { void bar() {} }
+", "
+<stdin>:1:14: error: Cannot use a statement of type FUNCTION here
+void foo() { void bar() {} }
+             ~~~~~~~~~~~~~
+");
