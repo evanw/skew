@@ -96,3 +96,17 @@ using Int = int;
 Int foo = false;
           ~~~~~
 ");
+
+test("
+namespace ns1 {
+  Foo bar = 0;
+  using Foo = ns2.Foo;
+}
+namespace ns2 {
+  class Foo {}
+}
+", "
+<stdin>:2:13: error: Cannot convert from type \"int\" to type \"ns2.Foo\"
+  Foo bar = 0;
+            ^
+");

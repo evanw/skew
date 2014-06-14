@@ -218,4 +218,24 @@ in Node {
     assert children.length == 1;
     return children.get(0);
   }
+
+  Node functionArguments() {
+    assert kind.isFunction();
+    assert children.length >= 4;
+    assert children.get(1).kind == NodeKind.NODE_LIST;
+    return children.get(1);
+  }
+
+  Node functionBlock() {
+    assert kind.isFunction();
+    assert children.length >= 4;
+    assert children.get(2).kind == NodeKind.BLOCK;
+    return children.get(2);
+  }
+
+  Node functionResult() {
+    assert kind == NodeKind.FUNCTION;
+    assert children.length == 4;
+    return children.get(3);
+  }
 }

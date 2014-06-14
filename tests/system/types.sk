@@ -1,0 +1,53 @@
+test("
+(void)null;
+", "
+<stdin>:1:2: error: Cannot use type \"void\" here
+(void)null;
+ ~~~~
+");
+
+test("
+(ns)null;
+namespace ns {}
+", "
+<stdin>:1:2: error: Cannot use type \"ns\" here
+(ns)null;
+ ~~
+");
+
+test("
+void foo;
+", "
+<stdin>:1:1: error: Cannot use type \"void\" here
+void foo;
+~~~~
+");
+
+test("
+ns foo;
+namespace ns {}
+", "
+<stdin>:1:1: error: Cannot use type \"ns\" here
+ns foo;
+~~
+");
+
+test("
+void foo() {}
+", "
+");
+
+test("
+ns foo(ns bar, ns baz) {}
+namespace ns {}
+", "
+<stdin>:1:1: error: Cannot use type \"ns\" here
+ns foo(ns bar, ns baz) {}
+~~
+<stdin>:1:8: error: Cannot use type \"ns\" here
+ns foo(ns bar, ns baz) {}
+       ~~
+<stdin>:1:16: error: Cannot use type \"ns\" here
+ns foo(ns bar, ns baz) {}
+               ~~
+");

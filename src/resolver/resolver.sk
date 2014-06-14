@@ -487,6 +487,7 @@ class Resolver {
         NodeKind.NOT, NodeKind.POSITIVE, NodeKind.NEGATIVE, NodeKind.COMPLEMENT,
         NodeKind.PREFIX_INCREMENT, NodeKind.PREFIX_DECREMENT,
         NodeKind.POSTFIX_INCREMENT, NodeKind.POSTFIX_DECREMENT {
+        unsupportedNodeKind(node);
       }
 
       case
@@ -495,15 +496,19 @@ class Resolver {
         NodeKind.IN, NodeKind.INDEX, NodeKind.LESS_THAN, NodeKind.LESS_THAN_OR_EQUAL,
         NodeKind.LOGICAL_AND, NodeKind.LOGICAL_OR, NodeKind.MULTIPLY, NodeKind.NOT_EQUAL,
         NodeKind.REMAINDER, NodeKind.SHIFT_LEFT, NodeKind.SHIFT_RIGHT, NodeKind.SUBTRACT {
+        unsupportedNodeKind(node);
       }
 
       case
         NodeKind.ASSIGN, NodeKind.ASSIGN_ADD, NodeKind.ASSIGN_BITWISE_AND, NodeKind.ASSIGN_BITWISE_OR,
         NodeKind.ASSIGN_BITWISE_XOR, NodeKind.ASSIGN_DIVIDE, NodeKind.ASSIGN_MULTIPLY,
         NodeKind.ASSIGN_REMAINDER, NodeKind.ASSIGN_SHIFT_LEFT, NodeKind.ASSIGN_SHIFT_RIGHT, NodeKind.ASSIGN_SUBTRACT {
+        unsupportedNodeKind(node);
       }
 
-      case NodeKind.ASSIGN_INDEX {}
+      case NodeKind.ASSIGN_INDEX {
+        unsupportedNodeKind(node);
+      }
 
       default {
         assert false;
@@ -529,9 +534,15 @@ class Resolver {
     }
   }
 
+  void checkIsValidFunctionReturnType(Node node) {
+    if (!node.type.isVoid(cache)) {
+      checkIsValidVariableType(node);
+    }
+  }
+
   void checkIsValidVariableType(Node node) {
     if (node.type.isVoid(cache) || node.type.isNamespace()) {
-      semanticErrorBadVariableType(log, node.range, node.type);
+      semanticErrorBadType(log, node.range, node.type);
       node.type = cache.errorType;
     }
   }
@@ -608,12 +619,13 @@ class Resolver {
       return true;
     }
 
-    semanticErrorStaticThis(log, range);
+    if (context.object != null) semanticErrorStaticThis(log, range);
+    else semanticErrorUnexpectedThis(log, range);
     return false;
   }
 
   Type initializeNamespace(Node node) {
-    return cache.errorType;
+    return node.symbol.type;
   }
 
   Type initializeEnum(Node node) {
@@ -629,7 +641,15 @@ class Resolver {
   }
 
   Type initializeFunction(Node node) {
-    return cache.errorType;
+    Node result = null;
+    Node arguments = node.functionArguments();
+    if (node.kind == NodeKind.FUNCTION) {
+      result = node.functionResult();
+      resolveAsParameterizedType(result);
+      checkIsValidFunctionReturnType(result);
+    }
+    resolve(arguments, null);
+    return cache.errorType; // TODO
   }
 
   Type initializeVariable(Node node) {
@@ -781,6 +801,7 @@ class Resolver {
     Node oldObject = context.object;
     context.object = node;
     checkTopLevelDeclaration(node);
+    initializeSymbol(node.symbol);
     unsupportedNodeKind(node);
     context.object = oldObject;
   }
@@ -794,7 +815,8 @@ class Resolver {
     Node oldFunction = context.function;
     context.function = node;
     checkTopLevelDeclaration(node);
-    unsupportedNodeKind(node);
+    initializeSymbol(node.symbol);
+    resolve(node.functionBlock(), null);
     context.function = oldFunction;
   }
 

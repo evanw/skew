@@ -89,10 +89,15 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
   return false;
 }
 
-Node parseGroup(ParserContext context) {
+enum AllowLambda {
+  NO,
+  YES,
+}
+
+Node parseGroup(ParserContext context, AllowLambda allowLambda) {
   Token token = context.current();
   if (!context.expect(TokenKind.LEFT_PARENTHESIS)) return null;
-  if (!context.eat(TokenKind.RIGHT_PARENTHESIS)) {
+  if (allowLambda == AllowLambda.NO || !context.eat(TokenKind.RIGHT_PARENTHESIS)) {
     Node value = pratt.parse(context, Precedence.LOWEST);
     scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
     return value;
@@ -316,14 +321,14 @@ Node parseAssert(ParserContext context) {
 
 Node parseSwitch(ParserContext context) {
   Token token = context.next();
-  Node value = parseGroup(context); if (value == null) return null;
+  Node value = parseGroup(context, AllowLambda.NO); if (value == null) return null;
   Node block = parseBlock(context, StatementHint.IN_SWITCH); if (block == null) return null;
   return Node.createSwitch(value, block.removeChildren()).withRange(context.spanSince(token.range));
 }
 
 Node parseWhile(ParserContext context) {
   Token token = context.next();
-  Node value = parseGroup(context); if (value == null) return null;
+  Node value = parseGroup(context, AllowLambda.NO); if (value == null) return null;
   Node block = parseBlockOrStatement(context); if (block == null) return null;
   return Node.createWhile(value, block).withRange(context.spanSince(token.range));
 }
@@ -332,14 +337,14 @@ Node parseDoWhile(ParserContext context) {
   Token token = context.next();
   Node block = parseBlockOrStatement(context); if (block == null) return null;
   if (!context.expect(TokenKind.WHILE)) return null;
-  Node value = parseGroup(context);
+  Node value = parseGroup(context, AllowLambda.NO);
   scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
   return Node.createDoWhile(block, value).withRange(context.spanSince(token.range));
 }
 
 Node parseIf(ParserContext context) {
   Token token = context.next();
-  Node value = parseGroup(context); if (value == null) return null;
+  Node value = parseGroup(context, AllowLambda.NO); if (value == null) return null;
   Node trueBlock = parseBlockOrStatement(context); if (trueBlock == null) return null;
   Node falseBlock = null;
   if (context.eat(TokenKind.ELSE)) {
@@ -640,7 +645,7 @@ class InitializerParselet : IPrefixParselet {
 class GroupParselet : IPrefixParselet {
   override Node run(ParserContext context) {
     Token token = context.current();
-    Node type = parseGroup(context);
+    Node type = parseGroup(context, AllowLambda.YES);
     if (type.kind == NodeKind.NAME && context.eat(TokenKind.LAMBDA)) {
       Node block = parseLambdaBlock(context);
       return createLambdaFromNames({ type }, block).withRange(context.spanSince(token.range));
@@ -753,7 +758,7 @@ class SubstitutionInfix : IInfixParselet {
 class DefaultPrefix : IPrefixParselet {
   override Node run(ParserContext context) {
     Token token = context.next();
-    Node type = parseGroup(context);
+    Node type = parseGroup(context, AllowLambda.NO);
     return (type == null ? Node.createError() : Node.createDefault(type)).withRange(context.spanSince(token.range));
   }
 }

@@ -107,3 +107,11 @@ else
 else
 ~~~~
 ");
+
+test("
+if () {}
+", "
+<stdin>:1:5: error: Unexpected RIGHT_PARENTHESIS
+if () {}
+    ^
+");

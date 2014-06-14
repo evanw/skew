@@ -1,21 +1,4 @@
 test("
-(void)null;
-", "
-<stdin>:1:2: error: Cannot use type \"void\" here
-(void)null;
- ~~~~
-");
-
-test("
-(ns)null;
-namespace ns {}
-", "
-<stdin>:1:2: error: Cannot use type \"ns\" here
-(ns)null;
- ~~
-");
-
-test("
 int a = 0;
 int b = false;
 int c = 0.0f;
