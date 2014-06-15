@@ -906,7 +906,7 @@ class Resolver {
   }
 
   void resolveAssert(Node node) {
-    unsupportedNodeKind(node);
+    resolveAsExpressionWithConversion(node.assertValue(), cache.boolType, CastKind.IMPLICIT);
   }
 
   void resolveExpression(Node node) {
@@ -1033,6 +1033,13 @@ class Resolver {
   }
 
   void resolveParameterize(Node node) {
+    Node type = node.parameterizeType();
+    resolveAsParameterizedType(type);
+    List<Node> types = node.parameterizeTypes();
+    int i;
+    for (i = 0; i < types.length; i++) {
+      resolveAsParameterizedType(types.get(i));
+    }
     unsupportedNodeKind(node);
   }
 

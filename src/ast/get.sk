@@ -259,4 +259,22 @@ in Node {
     assert children.length == 4;
     return children.get(3);
   }
+
+  Node assertValue() {
+    assert kind == NodeKind.ASSERT;
+    assert children.length == 1;
+    return children.get(0);
+  }
+
+  Node parameterizeType() {
+    assert kind == NodeKind.PARAMETERIZE;
+    assert children.length >= 1;
+    return children.get(0);
+  }
+
+  List<Node> parameterizeTypes() {
+    assert kind == NodeKind.PARAMETERIZE;
+    assert children.length >= 1;
+    return children.slice(1, children.length);
+  }
 }

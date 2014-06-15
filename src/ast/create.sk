@@ -284,10 +284,10 @@ in Node {
     return new Node(NodeKind.SEQUENCE).withChildren(values);
   }
 
-  static Node createParameterize(Node value, List<Node> types) {
-    assert value.kind.isExpression();
+  static Node createParameterize(Node type, List<Node> types) {
+    assert type.kind.isExpression();
     assert checkAllNodeKinds(types, new NodeKindIsExpression());
-    types.unshift(value);
+    types.unshift(type);
     return new Node(NodeKind.PARAMETERIZE).withChildren(types);
   }
 
