@@ -126,6 +126,10 @@ in NodeKind {
     return this >= NAMESPACE && this <= USING_ALIAS;
   }
 
+  bool isEnum() {
+    return this >= ENUM && this <= ENUM_FLAGS;
+  }
+
   bool isObject() {
     return this >= CLASS && this <= INTERFACE;
   }

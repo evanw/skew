@@ -241,3 +241,11 @@ class Foo {
     int x = this;
             ~~~~
 ");
+
+test("
+enum Foo { FOO = false }
+", "
+<stdin>:1:18: error: Cannot convert from type \"bool\" to type \"Foo\" without a cast
+enum Foo { FOO = false }
+                 ~~~~~
+");

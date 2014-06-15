@@ -660,8 +660,21 @@ class Resolver {
 
   Type initializeVariable(Node node) {
     Node type = node.variableType();
-    if (type == null && node.parent.kind == NodeKind.VARIABLE_CLUSTER) {
-      type = node.parent.clusterType().clone();
+    if (type == null) {
+
+      // Take the variable type from the enclosing variable cluster
+      if (node.parent.kind == NodeKind.VARIABLE_CLUSTER) {
+        type = node.parent.clusterType().clone();
+      }
+
+      // Take the variable type from the enclosing enum declaration
+      else {
+        Symbol enclosingSymbol = node.symbol.enclosingSymbol;
+        if (enclosingSymbol.kind.isEnum()) {
+          type = Node.createType(enclosingSymbol.type);
+        }
+      }
+
       node.replaceChild(1, type);
     }
     resolveAsParameterizedType(type);
@@ -800,7 +813,7 @@ class Resolver {
 
   void resolveEnum(Node node) {
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
-    unsupportedNodeKind(node);
+    resolve(node.declarationBlock(), null);
   }
 
   void resolveObject(Node node) {
