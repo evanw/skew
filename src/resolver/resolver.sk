@@ -763,6 +763,12 @@ class Resolver {
     checkIsInstance(node);
   }
 
+  void resolveAsExpressionWithTypeContext(Node node, Type type) {
+    assert node.kind.isExpression();
+    resolve(node, type);
+    checkIsInstance(node);
+  }
+
   void resolveAsExpressionWithConversion(Node node, Type type, CastKind kind) {
     assert node.kind.isExpression();
     resolve(node, type);
@@ -975,8 +981,11 @@ class Resolver {
     Node trueNode = node.hookTrue();
     Node falseNode = node.hookFalse();
     resolveAsExpressionWithConversion(node.hookTest(), cache.boolType, CastKind.IMPLICIT);
-    resolveAsExpression(trueNode);
-    resolveAsExpression(falseNode);
+
+    // Resolve both branches with type context but don't warn about type
+    // conversion problems yet (warning later gives better error messages)
+    resolveAsExpressionWithTypeContext(trueNode, typeContext);
+    resolveAsExpressionWithTypeContext(falseNode, typeContext);
 
     // Avoid reporting further errors
     Type trueType = trueNode.type;

@@ -231,6 +231,12 @@ int x = true ? 1 : false;
 ");
 
 test("
+enum Foo { BAR, BAZ }
+Foo x = true ? .BAR : .BAZ;
+", "
+");
+
+test("
 class Foo {
   void baz() {
     int x = this;
