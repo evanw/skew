@@ -26,7 +26,11 @@ Foo x = Foo.;
 test("
 enum Foo { FOO }
 Foo x = .FOO;
+bool y = (Foo).FOO;
 ", "
+<stdin>:3:10: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
+bool y = (Foo).FOO;
+         ~~~~~~~~~
 ");
 
 test("

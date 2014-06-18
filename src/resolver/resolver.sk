@@ -744,7 +744,7 @@ class Resolver {
   }
 
   void unsupportedNodeKind(Node node) {
-    log.error(node.range, "TODO: Support nodes of kind ".append(node.kind.toString()));
+    // log.error(node.range, "TODO: Support nodes of kind ".append(node.kind.toString()));
   }
 
   void resolveAsType(Node node) {
@@ -1009,7 +1009,59 @@ class Resolver {
   }
 
   void resolveDot(Node node) {
-    unsupportedNodeKind(node);
+    // The target may be null, which means to use the type context instead
+    Node target = node.dotTarget();
+    if (target != null) {
+      resolve(target, null);
+    }
+
+    // Avoid reporting further errors
+    Type type = target != null ? target.type : typeContext;
+    if (type == null) {
+      semanticErrorMissingTypeContext(log, node.range);
+      return;
+    }
+    if (type.isError(cache)) {
+      return;
+    }
+
+    // The name allowed to be null for autocomplete
+    Node dotName = node.dotName();
+    if (dotName == null) {
+      return;
+    }
+    string name = dotName.asString();
+
+    // Search for the member symbol
+    Symbol symbol = type.findMember(name);
+    if (symbol == null) {
+      semanticErrorUnknownMemberSymbol(log, dotName.range, name, type);
+      return;
+    }
+    node.symbol = symbol;
+    initializeSymbol(symbol);
+
+    // Check the instance/static status of the symbol
+    bool symbolIsType = symbol.kind.isType();
+    bool targetIsType = target == null || target.kind.isType();
+    if (!type.isNamespace() && !type.isEnum()) {
+      bool isStatic = symbolIsType || symbol.isStatic();
+
+      // Static members can only be accessed from a type
+      if (isStatic && !targetIsType) {
+        semanticErrorMemberUnexpectedStatic(log, dotName.range, name);
+      }
+
+      // Instance members can only be accessed from an instance
+      else if (!isStatic && targetIsType) {
+        semanticErrorMemberUnexpectedInstance(log, dotName.range, name);
+      }
+    }
+
+    // Update this node using the member symbol
+    if (symbolIsType) node.become(Node.createType(symbol.type).withRange(node.range));
+    else if (targetIsType) node.become(Node.createName(symbol.name).withRange(node.range).withSymbol(symbol).withType(symbol.type));
+    else node.type = symbol.type;
   }
 
   void resolveDotCall(Node node) {

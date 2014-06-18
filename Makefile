@@ -23,13 +23,14 @@ SOURCES += src/resolver/symbol.sk
 SOURCES += src/resolver/type.sk
 SOURCES += src/resolver/typecache.sk
 
-TEST_SOURCES += tests/system/cyclic.sk
 TEST_SOURCES += tests/system/common.sk
 TEST_SOURCES += tests/system/conversions.sk
+TEST_SOURCES += tests/system/cyclic.sk
 TEST_SOURCES += tests/system/merging.sk
 TEST_SOURCES += tests/system/modifiers.sk
 TEST_SOURCES += tests/system/parsing.sk
 TEST_SOURCES += tests/system/statements.sk
+TEST_SOURCES += tests/system/static.sk
 TEST_SOURCES += tests/system/types.sk
 TEST_SOURCES += tests/system/using.sk
 

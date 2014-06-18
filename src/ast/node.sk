@@ -244,7 +244,10 @@ class Node {
     List<Node> result = children;
     int i;
     for (i = 0; i < children.length; i++) {
-      children.get(i).parent = null;
+      Node child = children.get(i);
+      if (child != null) {
+        child.parent = null;
+      }
     }
     children = null;
     return result;
@@ -316,6 +319,11 @@ class Node {
 
   Node withType(Type value) {
     type = value;
+    return this;
+  }
+
+  Node withSymbol(Symbol value) {
+    symbol = value;
     return this;
   }
 
