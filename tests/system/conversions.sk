@@ -233,7 +233,11 @@ int x = true ? 1 : false;
 test("
 enum Foo { BAR, BAZ }
 Foo x = true ? .BAR : .BAZ;
+Foo y = .FOO;
 ", "
+<stdin>:3:10: error: \"FOO\" is not declared on type \"Foo\"
+Foo y = .FOO;
+         ~~~
 ");
 
 test("
