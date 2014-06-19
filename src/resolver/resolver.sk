@@ -322,10 +322,6 @@ class Resolver {
         symbol.node = statement;
         statement.symbol = symbol;
         block.scope.insertLocal(symbol);
-
-        // Resolve the value now because it should only depend on symbols that
-        // already have a type (namespaces, enums, and objects)
-        resolveGlobalUsingValue(statement.usingAliasValue());
       }
 
       // Add symbols from using statements. These must be added after using
@@ -631,7 +627,7 @@ class Resolver {
   }
 
   Type initializeNamespace(Node node) {
-    return node.symbol.type;
+    return cache.errorType;
   }
 
   Type initializeEnum(Node node) {
@@ -780,6 +776,13 @@ class Resolver {
     int i;
     for (i = 0; i < nodes.length; i++) {
       resolve(nodes.get(i), null);
+    }
+  }
+
+  void resolveNodesAsExpressions(List<Node> nodes) {
+    int i;
+    for (i = 0; i < nodes.length; i++) {
+      resolveAsExpression(nodes.get(i));
     }
   }
 
@@ -1014,7 +1017,24 @@ class Resolver {
   }
 
   void resolveInitializer(Node node) {
+    List<Node> values = node.initializerValues();
+
+    // The type of the literal comes from how it's used
+    if (typeContext == null) {
+      semanticErrorMissingTypeContext(log, node.range);
+      resolveNodesAsExpressions(values);
+      return;
+    }
+
+    // Avoid reporting further errors
+    if (typeContext.isError(cache)) {
+      resolveNodesAsExpressions(values);
+      return;
+    }
+
+    // TODO
     unsupportedNodeKind(node);
+    resolveNodesAsExpressions(values);
   }
 
   void resolveDot(Node node) {

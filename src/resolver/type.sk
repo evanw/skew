@@ -2,6 +2,18 @@ class Type {
   Symbol symbol;
   StringMap<Symbol> members = new StringMap<Symbol>();
 
+  // This contains types used in the definition of this type. Classes derive
+  // from at most one base class and implement any number of interfaces.
+  // Interfaces can extend any number of other interfaces. Structs are just
+  // named tuples and cannot derive from or implement any other types.
+  // Functions have one relevant type per argument variable followed by one
+  // return type for non-constructor functions. Type parameters may have one
+  // type bound.
+  List<Type> relevantTypes = null;
+
+  // All type parameters for this type, used for generics
+  List<Type> parameters = null;
+
   void addMember(Symbol member) {
     member.enclosingSymbol = symbol;
     members.set(member.name, member);

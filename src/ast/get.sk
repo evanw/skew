@@ -277,4 +277,9 @@ in Node {
     assert children.length >= 1;
     return children.slice(1, children.length);
   }
+
+  List<Node> initializerValues() {
+    assert kind == NodeKind.INITIALIZER;
+    return children;
+  }
 }
