@@ -50,7 +50,7 @@ test("
 int foo;
 using bar = foo;
 ", "
-<stdin>:2:13: error: Expected a type here
+<stdin>:2:13: error: Unexpected expression of type \"int\"
 using bar = foo;
             ~~~
 ");
@@ -71,7 +71,7 @@ test("
 namespace ns { int foo; }
 using bar = ns.foo;
 ", "
-<stdin>:2:13: error: Expected a type here
+<stdin>:2:13: error: Unexpected expression of type \"int\"
 using bar = ns.foo;
             ~~~~~~
 ");

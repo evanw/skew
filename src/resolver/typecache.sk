@@ -2,7 +2,6 @@ class TypeCache {
   Type globalType = createType(new Symbol("<global>", SymbolKind.GLOBAL_NAMESPACE));
   Type nullType = createType(new Symbol("null", SymbolKind.OTHER));
   Type errorType = createType(new Symbol("<error>", SymbolKind.OTHER));
-  Type cyclicType = createType(new Symbol("<cyclic>", SymbolKind.OTHER));
 
   // // TODO: Load these from Skew library code
   // Type voidType = null;
@@ -21,7 +20,8 @@ class TypeCache {
 
   static Type createType(Symbol symbol) {
     Type type = new Type(symbol);
-    type.symbol.type = type;
+    symbol.type = type;
+    symbol.flags = symbol.flags | SymbolFlag.INITIALIZED;
     return type;
   }
 

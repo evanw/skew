@@ -318,7 +318,7 @@ class Resolver {
 
         // Insert a new unresolved symbol as a local symbol only on this scope.
         // It will not be added on the type associated with this scope.
-        symbol = new Symbol(name, SymbolKind.OTHER_TYPE);
+        symbol = new Symbol(name, SymbolKind.USING_ALIAS);
         symbol.node = statement;
         statement.symbol = symbol;
         block.scope.insertLocal(symbol);
@@ -626,23 +626,20 @@ class Resolver {
     return false;
   }
 
-  Type initializeNamespace(Node node) {
-    return cache.errorType;
+  void initializeNamespace(Symbol symbol) {
+    assert symbol.type.isNamespace();
   }
 
-  Type initializeEnum(Node node) {
-    return cache.errorType;
+  void initializeEnum(Symbol symbol) {
+    assert symbol.type.isEnum();
   }
 
-  Type initializeObject(Node node) {
-    return cache.errorType;
+  void initializeObject(Symbol symbol) {
+    assert symbol.type.isObject();
   }
 
-  Type initializeExtension(Node node) {
-    return cache.errorType;
-  }
-
-  Type initializeFunction(Node node) {
+  void initializeFunction(Symbol symbol) {
+    Node node = symbol.node;
     Node result = null;
     Node arguments = node.functionArguments();
     if (node.kind == NodeKind.FUNCTION) {
@@ -651,89 +648,97 @@ class Resolver {
       checkIsValidFunctionReturnType(result);
     }
     resolve(arguments, null);
-    return cache.errorType; // TODO
+    symbol.type = cache.errorType;
   }
 
-  Type initializeVariable(Node node) {
-    Node type = node.variableType();
-    if (type == null) {
+  void initializeVariable(Symbol symbol) {
+    Node node = symbol.node;
+    Node variableType = node.variableType();
+    if (variableType == null) {
 
       // Take the variable type from the enclosing variable cluster
       if (node.parent.kind == NodeKind.VARIABLE_CLUSTER) {
-        type = node.parent.clusterType().clone();
+        variableType = node.parent.clusterType().clone();
       }
 
       // Take the variable type from the enclosing enum declaration
       else {
         Symbol enclosingSymbol = node.symbol.enclosingSymbol;
         if (enclosingSymbol.kind.isEnum()) {
-          type = Node.createType(enclosingSymbol.type);
+          variableType = Node.createType(enclosingSymbol.type);
         }
       }
 
-      node.replaceChild(1, type);
+      node.replaceChild(1, variableType);
     }
-    resolveAsParameterizedType(type);
-    checkIsValidVariableType(type);
-    return type.type;
+    resolveAsParameterizedType(variableType);
+    checkIsValidVariableType(variableType);
+    symbol.type = variableType.type;
   }
 
-  Type initializeParameter(Node node) {
-    return cache.errorType;
+  void initializeParameter(Symbol symbol) {
+    symbol.type = cache.errorType;
   }
 
-  Type initializeUsingAlias(Node node) {
-    Node type = node.usingAliasValue();
-    resolveAsParameterizedType(type);
-    return type.type;
+  void initializeUsingAlias(Symbol symbol) {
+    Node value = symbol.node.usingAliasValue();
+    resolveAsParameterizedType(value);
+    symbol.type = value.type;
   }
 
   void initializeDeclaration(Node node) {
-    // Only initialize once (symbol should already have been set)
-    assert node.symbol != null;
-    if (node.symbol.type == null) {
-      // Set the symbol's type to the circular type sentinel for the duration
-      // of the declaration's initialization. This way we can detect cycles
-      // that try to use the symbol in its own type, such as "foo foo;". The
-      // declaration initializer should return the error type in this case.
-      node.symbol.type = cache.cyclicType;
+    // The symbol should already have been set
+    Symbol symbol = node.symbol;
+    assert symbol != null;
+
+    // Only initialize once
+    if (symbol.isUninitialized()) {
+      // Flag the symbol's as initializing for the duration of the declaration's
+      // initialization. This way we can detect cycles that try to use the symbol
+      // in its own type, such as "foo foo;" or "class Foo : Foo {}". Cyclic
+      // symbol references will return the error type in this case.
+      symbol.flags = symbol.flags | SymbolFlag.INITIALIZING;
 
       // Resolve using node.symbol.node to start from the first node in the
       // sibling chain to ensure that the entire chain is processed at once
       ResolveContext oldContext = context;
+      Type oldTypeContext = typeContext;
       context = ResolveContext.fromNode(node); // TODO: Cache this?
-      Type type = cache.errorType;
-      Node first = node.symbol.node;
-      switch (first.kind) {
-        case NodeKind.NAMESPACE { type = initializeNamespace(first); }
-        case NodeKind.ENUM, NodeKind.ENUM_FLAGS { type = initializeEnum(first); }
-        case NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE { type = initializeObject(first); }
-        case NodeKind.EXTENSION { type = initializeExtension(first); }
-        case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION { type = initializeFunction(first); }
-        case NodeKind.VARIABLE { type = initializeVariable(first); }
-        case NodeKind.PARAMETER { type = initializeParameter(first); }
-        case NodeKind.USING_ALIAS { type = initializeUsingAlias(first); }
+      typeContext = null;
+      switch (symbol.kind) {
+        case SymbolKind.NAMESPACE { initializeNamespace(symbol); }
+        case SymbolKind.ENUM, SymbolKind.ENUM_FLAGS { initializeEnum(symbol); }
+        case SymbolKind.CLASS, SymbolKind.STRUCT, SymbolKind.INTERFACE { initializeObject(symbol); }
+        case SymbolKind.GLOBAL_FUNCTION, SymbolKind.INSTANCE_FUNCTION, SymbolKind.CONSTRUCTOR_FUNCTION { initializeFunction(symbol); }
+        case SymbolKind.LOCAL_VARIABLE, SymbolKind.GLOBAL_VARIABLE, SymbolKind.INSTANCE_VARIABLE { initializeVariable(symbol); }
+        case SymbolKind.PARAMETER { initializeParameter(symbol); }
+        case SymbolKind.USING_ALIAS { initializeUsingAlias(symbol); }
+        case SymbolKind.OTHER {}
         default { assert false; }
       }
       context = oldContext;
+      typeContext = oldTypeContext;
 
       // Update the type now that cycle detection is complete
-      assert type != null;
-      assert type != cache.cyclicType;
-      node.symbol.type = type;
+      assert symbol.type != null;
+      assert symbol.isInitializing();
+      assert !symbol.isInitialized();
+      symbol.flags = (symbol.flags & ~SymbolFlag.INITIALIZING) | SymbolFlag.INITIALIZED;
     }
   }
 
   void initializeSymbol(Symbol symbol) {
     // Only initialize the symbol once
-    if (symbol.type == null) {
+    if (symbol.isUninitialized()) {
       assert symbol.node != null; // Internal symbols have no node but should already have a type
       initializeDeclaration(symbol.node);
+      assert !symbol.isInitializing();
+      assert symbol.isInitialized();
       assert symbol.type != null;
     }
 
     // Detect cyclic symbol references such as "foo foo;"
-    else if (symbol.type == cache.cyclicType) {
+    else if (symbol.isInitializing()) {
       semanticErrorCyclicDeclaration(log, symbol.node.range, symbol.name);
       symbol.type = cache.errorType;
     }

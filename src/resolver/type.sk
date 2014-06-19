@@ -60,10 +60,6 @@ class Type {
     return this == cache.errorType;
   }
 
-  bool isCyclic(TypeCache cache) {
-    return this == cache.cyclicType;
-  }
-
   bool isNamespace() {
     return symbol.kind.isNamespace();
   }

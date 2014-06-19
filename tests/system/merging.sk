@@ -35,6 +35,18 @@ enum flags Foo {}
 ");
 
 test("
+int foo;
+in foo {}
+", "
+<stdin>:2:4: error: \"foo\" is already declared
+in foo {}
+   ~~~
+<stdin>:1:5: note: Previous declaration is here
+int foo;
+    ~~~
+");
+
+test("
 in foo {}
 int foo;
 ", "
