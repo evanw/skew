@@ -911,8 +911,11 @@ class Resolver {
 
     // Instance variables without initial values aren't allowed in extension
     // blocks because default constructors need to order their arguments
-    if (!symbol.isStatic() && symbol.isFromExtension() && value == null) {
-      unexpectedStatement(node);
+    if (!symbol.isStatic() && symbol.isFromExtension()) {
+      Type enclosingType = symbol.enclosingSymbol.type;
+      if (!enclosingType.isClass() || value == null) {
+        unexpectedStatement(node);
+      }
     }
 
     if (value != null) resolveAsExpressionWithConversion(value, symbol.type, CastKind.IMPLICIT);
