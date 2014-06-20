@@ -55,7 +55,7 @@ in Node {
     assert parameters == null || checkAllNodeListKinds(parameters, new NodeKindCheck(NodeKind.PARAMETER));
     assert bases == null || checkAllNodeListKinds(bases, new NodeKindIsExpression());
     assert block.kind == NodeKind.BLOCK;
-    return new Node(kind).withChildren({ name, parameters, bases, block });
+    return new Node(kind).withChildren({ name, block, parameters, bases });
   }
 
   static Node createClass(Node name, Node parameters, Node bases, Node block) {

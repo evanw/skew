@@ -33,8 +33,18 @@ bar foo = foo;
 
 test("
 class Foo : Foo {}
+in Foo {}
 ", "
 <stdin>:1:7: error: Circular declaration of \"Foo\"
+class Foo : Foo {}
+      ~~~
+");
+
+test("
+in Foo {}
+class Foo : Foo {}
+", "
+<stdin>:2:7: error: Circular declaration of \"Foo\"
 class Foo : Foo {}
       ~~~
 ");

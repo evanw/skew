@@ -1,7 +1,7 @@
 test("
 inline using bar = foo;
 ", "
-<stdin>:1:8: error: Cannot use a statement of type USING_ALIAS here
+<stdin>:1:8: error: Cannot use this statement here
 inline using bar = foo;
        ~~~~~~~~~~~~~~~~
 ");
@@ -9,7 +9,7 @@ inline using bar = foo;
 test("
 if (true) class Foo {}
 ", "
-<stdin>:1:11: error: Cannot use a statement of type CLASS here
+<stdin>:1:11: error: Cannot use this statement here
 if (true) class Foo {}
           ~~~~~~~~~~~~
 ");
@@ -17,7 +17,7 @@ if (true) class Foo {}
 test("
 if (true) struct Foo {}
 ", "
-<stdin>:1:11: error: Cannot use a statement of type STRUCT here
+<stdin>:1:11: error: Cannot use this statement here
 if (true) struct Foo {}
           ~~~~~~~~~~~~~
 ");
@@ -25,7 +25,7 @@ if (true) struct Foo {}
 test("
 if (true) interface Foo {}
 ", "
-<stdin>:1:11: error: Cannot use a statement of type INTERFACE here
+<stdin>:1:11: error: Cannot use this statement here
 if (true) interface Foo {}
           ~~~~~~~~~~~~~~~~
 ");
@@ -33,7 +33,21 @@ if (true) interface Foo {}
 test("
 void foo() { void bar() {} }
 ", "
-<stdin>:1:14: error: Cannot use a statement of type FUNCTION here
+<stdin>:1:14: error: Cannot use this statement here
 void foo() { void bar() {} }
              ~~~~~~~~~~~~~
+");
+
+test("
+class Foo {}
+in Foo {
+  int a = 0;
+  int b;
+  static int c = 0;
+  static int d;
+}
+", "
+<stdin>:4:7: error: Cannot use this statement here
+  int b;
+      ^
 ");

@@ -222,21 +222,14 @@ in Node {
   Node objectParameters() {
     assert kind.isObject();
     assert children.length == 4;
-    assert children.get(1) == null || children.get(1).kind == NodeKind.NODE_LIST;
-    return children.get(1);
+    assert children.get(2) == null || children.get(2).kind == NodeKind.NODE_LIST;
+    return children.get(2);
   }
 
   Node objectBases() {
     assert kind.isObject();
     assert children.length == 4;
-    assert children.get(2) == null || children.get(2).kind == NodeKind.NODE_LIST;
-    return children.get(2);
-  }
-
-  Node objectBlock() {
-    assert kind.isObject();
-    assert children.length == 4;
-    assert children.get(3).kind == NodeKind.BLOCK;
+    assert children.get(3) == null || children.get(3).kind == NodeKind.NODE_LIST;
     return children.get(3);
   }
 

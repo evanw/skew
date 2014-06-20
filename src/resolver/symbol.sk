@@ -73,6 +73,7 @@ enum flags SymbolFlag {
   OVERRIDE,
   STATIC,
   VIRTUAL,
+  FROM_EXTENSION,
 
   // Optimization flags
   FINAL,
@@ -136,6 +137,10 @@ class Symbol {
 
   bool isVirtual() {
     return (flags & SymbolFlag.VIRTUAL) != 0;
+  }
+
+  bool isFromExtension() {
+    return (flags & SymbolFlag.FROM_EXTENSION) != 0;
   }
 
   bool isFinal() {

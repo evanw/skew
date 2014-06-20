@@ -51,14 +51,14 @@ class Resolver {
     Resolver resolver = new Resolver(log);
     Scope globalScope = new Scope(null);
     globalScope.insertGlobals(resolver.cache);
-    resolver.setupScopesAndMergeSymbols(program, globalScope);
+    resolver.setupScopesAndUseNamespaces(program, globalScope);
     resolver.accumulateSymbolFlags();
     resolver.setSymbolKindsAndMergeSiblings();
     resolver.processUsingStatements();
     resolver.resolve(program, null);
   }
 
-  void setupScopesAndMergeSymbols(Node node, Scope scope) {
+  void setupScopesAndUseNamespaces(Node node, Scope scope) {
     // The root program introduces the global scope
     if (node.kind == NodeKind.PROGRAM) {
       node.scope = scope;
@@ -149,7 +149,7 @@ class Resolver {
       int i;
       for (i = 0; i < node.children.length; i++) {
         Node child = node.children.get(i);
-        if (child != null) setupScopesAndMergeSymbols(child, scope);
+        if (child != null) setupScopesAndUseNamespaces(child, scope);
       }
     }
   }
@@ -173,6 +173,11 @@ class Resolver {
       parent = parent.parent;
     }
 
+    // Mark nodes directly inside extension blocks for easy checking later
+    if (parent != null && parent.kind == NodeKind.BLOCK && parent.parent.kind == NodeKind.EXTENSION) {
+      flags = flags | SymbolFlag.FROM_EXTENSION;
+    }
+
     return flags;
   }
 
@@ -181,7 +186,7 @@ class Resolver {
     for (i = 0; i < parsedDeclarations.length; i++) {
       Node node = parsedDeclarations.get(i);
 
-      // Skip all node in a sibling chain other than the first node
+      // Skip all nodes in a sibling chain other than the first node
       if (node.symbol.node != node) {
         continue;
       }
@@ -193,7 +198,12 @@ class Resolver {
       // Make sure all siblings have the same modifiers
       for (sibling = node.sibling; sibling != null; sibling = sibling.sibling) {
         SymbolFlag siblingFlags = symbolFlagsForNode(sibling);
-        if (flags != siblingFlags) semanticErrorDifferentModifiers(log, sibling.declarationName().range, declarationName.asString(), declarationName.range);
+
+        // Don't count implicitly added modifiers
+        if ((flags & ~SymbolFlag.FROM_EXTENSION) != (siblingFlags & ~SymbolFlag.FROM_EXTENSION)) {
+          semanticErrorDifferentModifiers(log, sibling.declarationName().range, declarationName.asString(), declarationName.range);
+        }
+
         flags = flags | siblingFlags;
       }
 
@@ -293,7 +303,7 @@ class Resolver {
         continue;
       }
 
-      // Add using aliases. These aren't added in setupScopesAndMergeSymbols()
+      // Add using aliases. These aren't added in setupScopesAndUseNamespaces()
       // because using aliases are limited to the scope in which they appear
       // and cannot be accessed by or merged symbols in other scopes:
       //
@@ -521,6 +531,13 @@ class Resolver {
     assert node.type != null;
   }
 
+  static Node findFirstNonExtension(Node node) {
+    while (node != null && node.kind == NodeKind.EXTENSION) {
+      node = node.sibling;
+    }
+    return node;
+  }
+
   void checkIsType(Node node) {
     if (!node.type.isError(cache) && !node.kind.isType()) {
       semanticErrorUnexpectedExpression(log, node.range, node.type);
@@ -585,6 +602,10 @@ class Resolver {
     }
   }
 
+  void unexpectedStatement(Node node) {
+    semanticErrorUnexpectedStatement(log, node.range);
+  }
+
   void checkInsideBlock(Node node) {
     assert node.parent != null;
 
@@ -594,7 +615,7 @@ class Resolver {
     //   inline { using bar = foo; }
     //
     if (node.parent.kind != NodeKind.BLOCK) {
-      semanticErrorUnexpectedStatement(log, node.range, node.kind.toString());
+      unexpectedStatement(node);
     }
   }
 
@@ -610,7 +631,7 @@ class Resolver {
           kind != NodeKind.MODIFIER && kind != NodeKind.BLOCK &&
           kind != NodeKind.NAMESPACE && kind != NodeKind.EXTENSION &&
           (allowDeclaration != AllowDeclaration.TOP_OR_OBJECT_LEVEL || !kind.isObject())) {
-        semanticErrorUnexpectedStatement(log, node.range, node.kind.toString());
+        unexpectedStatement(node);
         break;
       }
     }
@@ -637,26 +658,22 @@ class Resolver {
   void initializeObject(Symbol symbol) {
     assert symbol.type.isObject();
 
-    Node node;
-    for (node = symbol.node; node != null; node = node.sibling) {
-      if (node.kind.isObject()) {
-        Node parameters = node.objectParameters();
-        Node bases = node.objectBases();
+    Node node = findFirstNonExtension(symbol.node);
+    Node parameters = node.objectParameters();
+    Node bases = node.objectBases();
 
-        if (parameters != null && parameters.hasChildren()) {
-          resolveNodes(parameters.children);
-        }
+    // Resolve type parameters
+    if (parameters != null && parameters.hasChildren()) {
+      resolveNodes(parameters.children);
+    }
 
-        if (bases != null && bases.hasChildren()) {
-          List<Node> children = bases.children;
-          int i;
-          for (i = 0; i < children.length; i++) {
-            Node base = children.get(i);
-            resolveAsParameterizedType(base);
-          }
-        }
-
-        break;
+    // Resolve base types
+    if (bases != null && bases.hasChildren()) {
+      List<Node> children = bases.children;
+      int i;
+      for (i = 0; i < children.length; i++) {
+        Node base = children.get(i);
+        resolveAsParameterizedType(base);
       }
     }
   }
@@ -773,7 +790,7 @@ class Resolver {
 
     // Detect cyclic symbol references such as "foo foo;"
     else if (symbol.isInitializing()) {
-      semanticErrorCyclicDeclaration(log, symbol.node.declarationName().range, symbol.name);
+      semanticErrorCyclicDeclaration(log, findFirstNonExtension(symbol.node).declarationName().range, symbol.name);
       symbol.type = cache.errorType;
     }
   }
@@ -869,13 +886,13 @@ class Resolver {
     context.object = node;
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     initializeSymbol(node.symbol);
-    resolve(node.objectBlock(), null);
+    resolve(node.declarationBlock(), null);
     context.object = oldObject;
   }
 
   void resolveExtension(Node node) {
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
-    unsupportedNodeKind(node);
+    resolve(node.declarationBlock(), null);
   }
 
   void resolveFunction(Node node) {
@@ -888,9 +905,17 @@ class Resolver {
   }
 
   void resolveVariable(Node node) {
-    initializeSymbol(node.symbol);
+    Symbol symbol = node.symbol;
+    initializeSymbol(symbol);
     Node value = node.variableValue();
-    if (value != null) resolveAsExpressionWithConversion(value, node.symbol.type, CastKind.IMPLICIT);
+
+    // Instance variables without initial values aren't allowed in extension
+    // blocks because default constructors need to order their arguments
+    if (!symbol.isStatic() && symbol.isFromExtension() && value == null) {
+      unexpectedStatement(node);
+    }
+
+    if (value != null) resolveAsExpressionWithConversion(value, symbol.type, CastKind.IMPLICIT);
   }
 
   void resolveVariableCluster(Node node) {

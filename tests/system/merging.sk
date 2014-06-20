@@ -182,21 +182,34 @@ class Foo<T> {
   int T;
 }
 ", "
-<stdin>:2:7: error: \"T\" is already declared
-  int T;
-      ^
-<stdin>:1:11: note: Previous declaration is here
+<stdin>:1:11: error: \"T\" is already declared
 class Foo<T> {
           ^
+<stdin>:2:7: note: Previous declaration is here
+  int T;
+      ^
 ");
 
 test("
 class Foo<T, T> {}
+in Foo {}
 ", "
 <stdin>:1:14: error: \"T\" is already declared
 class Foo<T, T> {}
              ^
 <stdin>:1:11: note: Previous declaration is here
+class Foo<T, T> {}
+          ^
+");
+
+test("
+in Foo {}
+class Foo<T, T> {}
+", "
+<stdin>:2:14: error: \"T\" is already declared
+class Foo<T, T> {}
+             ^
+<stdin>:2:11: note: Previous declaration is here
 class Foo<T, T> {}
           ^
 ");
