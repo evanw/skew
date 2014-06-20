@@ -493,6 +493,7 @@ class Resolver {
       case NodeKind.IMPLICIT_CAST { resolveCast(node); }
       case NodeKind.LAMBDA { resolveLambda(node); }
       case NodeKind.DEFAULT { resolveDefault(node); }
+      case NodeKind.VAR { resolveVar(node); }
 
       case
         NodeKind.NOT, NodeKind.POSITIVE, NodeKind.NEGATIVE, NodeKind.COMPLEMENT,
@@ -704,16 +705,34 @@ class Resolver {
       // Take the variable type from the enclosing enum declaration
       else {
         Symbol enclosingSymbol = node.symbol.enclosingSymbol;
-        if (enclosingSymbol.kind.isEnum()) {
-          variableType = Node.createType(enclosingSymbol.type);
-        }
+        assert enclosingSymbol.kind.isEnum();
+        variableType = Node.createType(enclosingSymbol.type);
       }
 
+      assert variableType != null;
       node.replaceChild(1, variableType);
     }
-    resolveAsParameterizedType(variableType);
-    checkIsValidVariableType(variableType);
-    symbol.type = variableType.type;
+
+    if (variableType.kind == NodeKind.VAR) {
+      Node value = node.variableValue();
+      if (value == null) {
+        semanticErrorVarMissingValue(log, variableType.range);
+        symbol.type = cache.errorType;
+      } else {
+        resolveAsExpression(value);
+        Type type = value.type;
+        if (type.isNull(cache) || type.isVoid(cache)) {
+          semanticErrorVarMissingValue(log, variableType.range);
+          symbol.type = cache.errorType;
+        } else {
+          symbol.type = type;
+        }
+      }
+    } else {
+      resolveAsParameterizedType(variableType);
+      checkIsValidVariableType(variableType);
+      symbol.type = variableType.type;
+    }
   }
 
   void initializeParameter(Symbol symbol) {
@@ -1223,6 +1242,10 @@ class Resolver {
     resolveAsParameterizedType(type);
     checkIsValidVariableType(type);
     node.type = type.type;
+  }
+
+  void resolveVar(Node node) {
+    semanticErrorUnexpectedNode(log, node.range, node.kind);
   }
 }
 

@@ -552,7 +552,7 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case TokenKind.EXPORT { return parseModifier(context, SymbolFlag.EXPORT); }
     case TokenKind.FINAL { return parseModifier(context, SymbolFlag.FINAL); }
     case TokenKind.FOR { return parseFor(context); }
-    case TokenKind.IDENTIFIER { return parsePossibleTypedDeclaration(context, hint); }
+    case TokenKind.IDENTIFIER, TokenKind.VAR { return parsePossibleTypedDeclaration(context, hint); }
     case TokenKind.IF { return parseIf(context); }
     case TokenKind.IMPORT { return parseModifier(context, SymbolFlag.IMPORT); }
     case TokenKind.IN { return parseExtension(context); }
@@ -634,6 +634,12 @@ class CharacterLiteral : ILiteralCallback {
 
     // Don't return null on failure because this doesn't affect the rest of the compilation
     return Node.createInt(result != null ? result.value.codeUnitAt(0) : 0).withRange(token.range);
+  }
+}
+
+class VarLiteral : ILiteralCallback {
+  override Node run(ParserContext context, Token token) {
+    return Node.createVar().withRange(token.range);
   }
 }
 
@@ -808,6 +814,7 @@ Pratt createParser() {
   pratt.literal(TokenKind.DOUBLE, new DoubleLiteral());
   pratt.literal(TokenKind.STRING, new StringLiteral());
   pratt.literal(TokenKind.CHARACTER, new CharacterLiteral());
+  pratt.literal(TokenKind.VAR, new VarLiteral());
 
   // Unary expressions
   pratt.postfix(TokenKind.INCREMENT, Precedence.UNARY_POSTFIX, new UnaryPostfix(NodeKind.POSTFIX_INCREMENT));

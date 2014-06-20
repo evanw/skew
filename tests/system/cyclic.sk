@@ -1,7 +1,15 @@
 test("
+var foo = foo;
+", "
+<stdin>:1:5: error: Cyclic declaration of \"foo\"
+var foo = foo;
+    ~~~
+");
+
+test("
 foo foo = foo;
 ", "
-<stdin>:1:5: error: Circular declaration of \"foo\"
+<stdin>:1:5: error: Cyclic declaration of \"foo\"
 foo foo = foo;
     ~~~
 ");
@@ -9,7 +17,7 @@ foo foo = foo;
 test("
 foo foo = foo, bar = bar;
 ", "
-<stdin>:1:5: error: Circular declaration of \"foo\"
+<stdin>:1:5: error: Cyclic declaration of \"foo\"
 foo foo = foo, bar = bar;
     ~~~
 ");
@@ -17,7 +25,7 @@ foo foo = foo, bar = bar;
 test("
 bar foo = foo, bar = bar;
 ", "
-<stdin>:1:16: error: Circular declaration of \"bar\"
+<stdin>:1:16: error: Cyclic declaration of \"bar\"
 bar foo = foo, bar = bar;
                ~~~
 ");
@@ -26,7 +34,7 @@ test("
 bar foo = foo;
 foo bar = bar;
 ", "
-<stdin>:1:5: error: Circular declaration of \"foo\"
+<stdin>:1:5: error: Cyclic declaration of \"foo\"
 bar foo = foo;
     ~~~
 ");
@@ -35,7 +43,7 @@ test("
 class Foo : Foo {}
 in Foo {}
 ", "
-<stdin>:1:7: error: Circular declaration of \"Foo\"
+<stdin>:1:7: error: Cyclic declaration of \"Foo\"
 class Foo : Foo {}
       ~~~
 ");
@@ -44,7 +52,7 @@ test("
 in Foo {}
 class Foo : Foo {}
 ", "
-<stdin>:2:7: error: Circular declaration of \"Foo\"
+<stdin>:2:7: error: Cyclic declaration of \"Foo\"
 class Foo : Foo {}
       ~~~
 ");
@@ -53,7 +61,7 @@ test("
 class Foo : Bar {}
 class Bar : Foo {}
 ", "
-<stdin>:1:7: error: Circular declaration of \"Foo\"
+<stdin>:1:7: error: Cyclic declaration of \"Foo\"
 class Foo : Bar {}
       ~~~
 ");
@@ -63,7 +71,7 @@ class Foo : Bar {}
 class Bar : Baz {}
 class Baz : Foo {}
 ", "
-<stdin>:1:7: error: Circular declaration of \"Foo\"
+<stdin>:1:7: error: Cyclic declaration of \"Foo\"
 class Foo : Bar {}
       ~~~
 ");
@@ -71,7 +79,7 @@ class Foo : Bar {}
 test("
 class Foo<T is T> {}
 ", "
-<stdin>:1:11: error: Circular declaration of \"T\"
+<stdin>:1:11: error: Cyclic declaration of \"T\"
 class Foo<T is T> {}
           ^
 ");
@@ -79,7 +87,7 @@ class Foo<T is T> {}
 test("
 class Foo<A is B, B is A> {}
 ", "
-<stdin>:1:11: error: Circular declaration of \"A\"
+<stdin>:1:11: error: Cyclic declaration of \"A\"
 class Foo<A is B, B is A> {}
           ^
 ");
@@ -87,7 +95,7 @@ class Foo<A is B, B is A> {}
 test("
 class Foo<A is B, B is C, C is A> {}
 ", "
-<stdin>:1:11: error: Circular declaration of \"A\"
+<stdin>:1:11: error: Cyclic declaration of \"A\"
 class Foo<A is B, B is C, C is A> {}
           ^
 ");

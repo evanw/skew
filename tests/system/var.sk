@@ -1,0 +1,40 @@
+test("
+var foo;
+", "
+<stdin>:1:1: error: Type inference requires a value
+var foo;
+~~~
+");
+
+test("
+var foo = bar;
+int bar = foo;
+", "
+");
+
+test("
+var foo = 0;
+bool bar = foo;
+", "
+<stdin>:2:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool bar = foo;
+           ~~~
+");
+
+test("
+var foo = null;
+", "
+<stdin>:1:1: error: Type inference requires a value
+var foo = null;
+~~~
+");
+
+// // TODO: Uncomment this once function types work
+// test("
+// var foo = bar();
+// void bar() {}
+// ", "
+// <stdin>:1:1: error: Type inference requires a value
+// var foo = bar();
+// ~~~
+// ");

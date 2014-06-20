@@ -3,7 +3,6 @@
 [ \t\r\n]+                    WHITESPACE;
 [/][/].*                      WHITESPACE;
 
-"as"                          AS;
 "assert"                      ASSERT;
 "break"                       BREAK;
 "case"                        CASE;
@@ -38,6 +37,7 @@
 "this"                        THIS;
 "true"                        TRUE;
 "using"                       USING;
+"var"                         VAR;
 "virtual"                     VIRTUAL;
 "while"                       WHILE;
 

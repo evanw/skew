@@ -63,6 +63,7 @@ enum NodeKind {
   IMPLICIT_CAST,
   LAMBDA,
   DEFAULT,
+  VAR,
 
   // Unary operators
   NOT,

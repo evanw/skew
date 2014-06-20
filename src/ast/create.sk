@@ -193,6 +193,7 @@ in Node {
   }
 
   static Node createType(Type type) {
+    assert type != null;
     return new Node(NodeKind.TYPE).withType(type);
   }
 
@@ -313,6 +314,10 @@ in Node {
   static Node createDefault(Node type) {
     assert type.kind.isExpression();
     return new Node(NodeKind.DEFAULT).withChildren({ type });
+  }
+
+  static Node createVar() {
+    return new Node(NodeKind.VAR);
   }
 
   static Node createUnary(NodeKind kind, Node value) {
