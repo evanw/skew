@@ -282,4 +282,10 @@ in Node {
     assert kind == NodeKind.INITIALIZER;
     return children;
   }
+
+  Node parameterBound() {
+    assert kind == NodeKind.PARAMETER;
+    assert children.length == 2;
+    return children.get(1);
+  }
 }

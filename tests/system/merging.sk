@@ -172,6 +172,12 @@ import class Foo {}
 ");
 
 test("
+class Foo<T> {}
+int T;
+", "
+");
+
+test("
 class Foo<T> {
   int T;
 }
@@ -181,5 +187,16 @@ class Foo<T> {
       ^
 <stdin>:1:11: note: Previous declaration is here
 class Foo<T> {
+          ^
+");
+
+test("
+class Foo<T, T> {}
+", "
+<stdin>:1:14: error: \"T\" is already declared
+class Foo<T, T> {}
+             ^
+<stdin>:1:11: note: Previous declaration is here
+class Foo<T, T> {}
           ^
 ");

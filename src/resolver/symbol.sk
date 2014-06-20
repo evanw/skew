@@ -46,7 +46,7 @@ in SymbolKind {
   }
 
   bool isType() {
-    return this >= OTHER_TYPE && this <= INTERFACE;
+    return this >= PARAMETER && this <= INTERFACE;
   }
 
   bool isFunction() {

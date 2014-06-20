@@ -636,6 +636,29 @@ class Resolver {
 
   void initializeObject(Symbol symbol) {
     assert symbol.type.isObject();
+
+    Node node;
+    for (node = symbol.node; node != null; node = node.sibling) {
+      if (node.kind.isObject()) {
+        Node parameters = node.objectParameters();
+        Node bases = node.objectBases();
+
+        if (parameters != null && parameters.hasChildren()) {
+          resolveNodes(parameters.children);
+        }
+
+        if (bases != null && bases.hasChildren()) {
+          List<Node> children = bases.children;
+          int i;
+          for (i = 0; i < children.length; i++) {
+            Node base = children.get(i);
+            resolveAsParameterizedType(base);
+          }
+        }
+
+        break;
+      }
+    }
   }
 
   void initializeFunction(Symbol symbol) {
@@ -677,7 +700,18 @@ class Resolver {
   }
 
   void initializeParameter(Symbol symbol) {
-    symbol.type = cache.errorType;
+    Type type = symbol.type = new Type(symbol);
+    Node bound = symbol.node.parameterBound();
+
+    if (bound != null) {
+      resolveAsParameterizedType(bound);
+      Type boundType = bound.type;
+      if (boundType.isError(cache)) {
+        symbol.type = cache.errorType;
+      } else if (!boundType.isInterface()) {
+        semanticErrorBadTypeParameterBound(log, bound.range, boundType);
+      }
+    }
   }
 
   void initializeUsingAlias(Symbol symbol) {
@@ -739,7 +773,7 @@ class Resolver {
 
     // Detect cyclic symbol references such as "foo foo;"
     else if (symbol.isInitializing()) {
-      semanticErrorCyclicDeclaration(log, symbol.node.range, symbol.name);
+      semanticErrorCyclicDeclaration(log, symbol.node.declarationName().range, symbol.name);
       symbol.type = cache.errorType;
     }
   }
@@ -866,9 +900,7 @@ class Resolver {
   }
 
   void resolveParameter(Node node) {
-    assert node.parent != null;
-    assert node.parent.kind.isObject();
-    unsupportedNodeKind(node);
+    initializeSymbol(node.symbol);
   }
 
   void resolveUsingAlias(Node node) {

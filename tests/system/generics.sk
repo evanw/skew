@@ -1,0 +1,52 @@
+test("
+class Foo<T is int> {}
+", "
+<stdin>:1:16: error: Cannot use type \"int\" as a type parameter bound
+class Foo<T is int> {}
+               ~~~
+");
+
+test("
+class Foo<T is void> {}
+", "
+<stdin>:1:16: error: Cannot use type \"void\" as a type parameter bound
+class Foo<T is void> {}
+               ~~~~
+");
+
+test("
+class Foo<T is Bar> {}
+class Bar {}
+", "
+<stdin>:1:16: error: Cannot use type \"Bar\" as a type parameter bound
+class Foo<T is Bar> {}
+               ~~~
+");
+
+test("
+class Foo<T is IBar> {}
+interface IBar {}
+", "
+");
+
+test("
+class Foo<T is IBar<int>> {}
+interface IBar<T> {}
+", "
+");
+
+test("
+class Foo<A, B is A> {}
+", "
+<stdin>:1:19: error: Cannot use type \"A\" as a type parameter bound
+class Foo<A, B is A> {}
+                  ^
+");
+
+test("
+class Foo<A is B, B> {}
+", "
+<stdin>:1:16: error: Cannot use type \"B\" as a type parameter bound
+class Foo<A is B, B> {}
+               ^
+");

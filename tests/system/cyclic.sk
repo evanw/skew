@@ -1,32 +1,83 @@
 test("
-foo foo;
+foo foo = foo;
 ", "
 <stdin>:1:5: error: Circular declaration of \"foo\"
-foo foo;
+foo foo = foo;
     ~~~
 ");
 
 test("
-foo foo, bar;
+foo foo = foo, bar = bar;
 ", "
 <stdin>:1:5: error: Circular declaration of \"foo\"
-foo foo, bar;
+foo foo = foo, bar = bar;
     ~~~
 ");
 
 test("
-bar foo, bar;
+bar foo = foo, bar = bar;
 ", "
-<stdin>:1:10: error: Circular declaration of \"bar\"
-bar foo, bar;
-         ~~~
+<stdin>:1:16: error: Circular declaration of \"bar\"
+bar foo = foo, bar = bar;
+               ~~~
 ");
 
 test("
-bar foo;
-foo bar;
+bar foo = foo;
+foo bar = bar;
 ", "
 <stdin>:1:5: error: Circular declaration of \"foo\"
-bar foo;
+bar foo = foo;
     ~~~
+");
+
+test("
+class Foo : Foo {}
+", "
+<stdin>:1:7: error: Circular declaration of \"Foo\"
+class Foo : Foo {}
+      ~~~
+");
+
+test("
+class Foo : Bar {}
+class Bar : Foo {}
+", "
+<stdin>:1:7: error: Circular declaration of \"Foo\"
+class Foo : Bar {}
+      ~~~
+");
+
+test("
+class Foo : Bar {}
+class Bar : Baz {}
+class Baz : Foo {}
+", "
+<stdin>:1:7: error: Circular declaration of \"Foo\"
+class Foo : Bar {}
+      ~~~
+");
+
+test("
+class Foo<T is T> {}
+", "
+<stdin>:1:11: error: Circular declaration of \"T\"
+class Foo<T is T> {}
+          ^
+");
+
+test("
+class Foo<A is B, B is A> {}
+", "
+<stdin>:1:11: error: Circular declaration of \"A\"
+class Foo<A is B, B is A> {}
+          ^
+");
+
+test("
+class Foo<A is B, B is C, C is A> {}
+", "
+<stdin>:1:11: error: Circular declaration of \"A\"
+class Foo<A is B, B is C, C is A> {}
+          ^
 ");
