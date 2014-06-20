@@ -486,6 +486,8 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
   // Variable declaration
   Node cluster = parseVariableCluster(context, type, name);
   scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+  Node last = cluster.children.get(cluster.children.length - 1);
+  last.withRange(context.spanSince(last.range));
   return cluster;
 }
 
