@@ -243,7 +243,7 @@ in Node {
   Node functionBlock() {
     assert kind.isFunction();
     assert children.length >= 4;
-    assert children.get(2).kind == NodeKind.BLOCK;
+    assert children.get(2) == null || children.get(2).kind == NodeKind.BLOCK;
     return children.get(2);
   }
 

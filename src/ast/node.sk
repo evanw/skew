@@ -302,7 +302,9 @@ class Node {
     node.children = {};
     node.type = type;
     node.symbol = symbol;
-    node.content = content.clone();
+    if (content != null) {
+      node.content = content.clone();
+    }
     if (hasChildren()) {
       int i;
       for (i = 0; i < children.length; i++) {

@@ -900,7 +900,8 @@ class Resolver {
     context.function = node;
     checkDeclarationLocation(node, AllowDeclaration.TOP_OR_OBJECT_LEVEL);
     initializeSymbol(node.symbol);
-    resolve(node.functionBlock(), null);
+    Node block = node.functionBlock();
+    if (block != null) resolve(block, null);
     context.function = oldFunction;
   }
 

@@ -12,30 +12,37 @@ textarea {
 </style>
 <h2>Input</h2>
 <textarea id="input" rows="10" cols="80" spellcheck="false" autofocus></textarea>
-<h2>Output</h2>
-<textarea id="output" rows="20" cols="80" spellcheck="false" readonly></textarea>
+<p id="compileTime">Loading...</p>
+<h2>Log</h2>
+<textarea id="outputLog" rows="10" cols="80" spellcheck="false" readonly></textarea>
+<h2>Tree</h2>
+<textarea id="outputTree" rows="20" cols="80" spellcheck="false" readonly></textarea>
 <script src="../../build/debug/skewc.js"></script>
 <script>
 
 function compile() {
+  var start = now();
   if (input.value === old) return;
   old = input.value;
+  outputLog.value = outputTree.value = '';
   try {
     var source = new Source('<stdin>', input.value);
     var log = new Log();
     var tokens = tokenize(log, source);
     var file = parseFile(log, tokens);
     var program = file !== null ? Node.createProgram([file]) : null;
-    var parsed = program && dump(program); // Dump before the resolver changes stuff
-    var text = '';
+    if (program) outputTree.value = dump(program); // Dump before the resolver changes stuff
     if (program !== null) Resolver.run(log, program);
-    text += log.toString();
-    if (program !== null) text += parsed;
-    output.value = text;
+    outputLog.value = log.toString();
   } catch (e) {
-    output.value = e.stack || e;
+    outputLog.value = e.stack || e;
   }
+  compileTime.innerHTML = 'Compile time: ' + +(now() - start).toFixed(1) + 'ms';
 }
+
+var now = this.performance && performance.now
+  ? function() { return performance.now(); }
+  : function() { return +new Date; };
 
 var old = null;
 input.oninput = input.onchange = compile;

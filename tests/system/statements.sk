@@ -31,6 +31,14 @@ if (true) interface Foo {}
 ");
 
 test("
+void foo() { void bar(); }
+", "
+<stdin>:1:14: error: Cannot use this statement here
+void foo() { void bar(); }
+             ~~~~~~~~~~~
+");
+
+test("
 void foo() { void bar() {} }
 ", "
 <stdin>:1:14: error: Cannot use this statement here
