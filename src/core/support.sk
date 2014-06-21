@@ -31,7 +31,7 @@ bool hasFlag(int flags, int flag) {
 }
 
 int hashCombine(int left, int right) {
-  return left ^ right + 0x9e3779b9 + (left << 6) + (left >> 2);
+  return left ^ right - 0x61c88647 + (left << 6) + (left >> 2);
 }
 
 string doubleToString(double value) {

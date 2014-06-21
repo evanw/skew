@@ -1064,8 +1064,11 @@ class Resolver {
       return;
     }
 
+    // Get the return type
+    Type functionType = context.function.symbol.type;
+    Type resultType = functionType.isError(cache) ? cache.errorType : functionType.resultType();
+
     // Check the return value
-    Type resultType = context.function.symbol.type.resultType();
     if (value != null) {
       resolveAsExpressionWithConversion(value, resultType, CastKind.IMPLICIT);
     }
