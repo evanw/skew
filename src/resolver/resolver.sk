@@ -1197,7 +1197,41 @@ class Resolver {
   }
 
   void resolveCall(Node node) {
-    unsupportedNodeKind(node);
+    Node value = node.callValue();
+    List<Node> arguments = node.callArguments();
+    resolveAsExpression(value);
+    Type valueType = value.type;
+
+    // Avoid reporting further errors
+    if (valueType.isError(cache)) {
+      resolveNodesAsExpressions(arguments);
+      return;
+    }
+
+    // Can only call an instance of a function type
+    if (!valueType.isFunction()) {
+      semanticErrorInvalidCall(log, value.range, valueType);
+      resolveNodesAsExpressions(arguments);
+      return;
+    }
+
+    // Set the result type now even if the arguments are incorrect
+    Type resultType = valueType.resultType();
+    List<Type> argumentTypes = valueType.argumentTypes();
+    node.type = resultType;
+
+    // Validate the argument count
+    if (argumentTypes.length != arguments.length) {
+      semanticErrorArgumentCount(log, Range.after(node.range, value.range), argumentTypes.length, arguments.length);
+      resolveNodesAsExpressions(arguments);
+      return;
+    }
+
+    // Validate the arguments and provide type context
+    int i;
+    for (i = 0; i < arguments.length; i++) {
+      resolveAsExpressionWithConversion(arguments.get(i), argumentTypes.get(i), CastKind.IMPLICIT);
+    }
   }
 
   void resolveSuperCall(Node node) {

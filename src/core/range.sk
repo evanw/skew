@@ -83,4 +83,18 @@ struct Range {
     assert start.end <= end.start;
     return new Range(start.source, start.end, end.start);
   }
+
+  static Range before(Range outer, Range inner) {
+    assert outer.source == inner.source;
+    assert outer.start <= inner.start;
+    assert outer.end >= inner.end;
+    return new Range(outer.source, outer.start, inner.start);
+  }
+
+  static Range after(Range outer, Range inner) {
+    assert outer.source == inner.source;
+    assert outer.start <= inner.start;
+    assert outer.end >= inner.end;
+    return new Range(outer.source, inner.end, outer.end);
+  }
 }

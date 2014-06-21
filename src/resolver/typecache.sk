@@ -1,6 +1,12 @@
 class TypeCache {
   Type globalType = createType(new Symbol("<global>", SymbolKind.GLOBAL_NAMESPACE));
   Type nullType = createType(new Symbol("null", SymbolKind.OTHER));
+
+  // All expressions that have syntax and/or semantic errors have this type,
+  // which silences all further errors related to that expression. When the
+  // compiler comes a cross a symbol or expression of this type, it just skips
+  // over it because an error has already been logged and further errors will
+  // most likely just be noise.
   Type errorType = createType(new Symbol("<error>", SymbolKind.OTHER));
 
   // // TODO: Load these from Skew library code

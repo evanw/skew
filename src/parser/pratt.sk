@@ -168,7 +168,7 @@ class Pratt {
 
   Node resume(ParserContext context, int precedence, Node left) {
     assert left != null;
-    while (true) {
+    while (!left.kind.isError()) {
       TokenKind kind = context.current().kind;
       Parselet parselet = table.getOrDefault(kind, null);
       if (parselet == null || parselet.infix == null || parselet.precedence <= precedence) {

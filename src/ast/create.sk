@@ -275,6 +275,9 @@ in Node {
     return new Node(NodeKind.NEW).withChildren(arguments);
   }
 
+  // The parser generates an error node when it encounters a syntax error.
+  // This node acts as a placeholder so the parser can recover from the
+  // error, continue parsing, and still return a valid AST.
   static Node createError() {
     return new Node(NodeKind.ERROR);
   }

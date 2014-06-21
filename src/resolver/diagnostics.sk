@@ -114,3 +114,12 @@ void semanticErrorVarMissingValue(Log log, Range range) {
 void semanticErrorVarBadType(Log log, Range range, Type type) {
   log.error(range, "Implicitly typed variables cannot be of ".append(typeToText(type)));
 }
+
+void semanticErrorInvalidCall(Log log, Range range, Type type) {
+  log.error(range, "Cannot call ".append(typeToText(type)));
+}
+
+void semanticErrorArgumentCount(Log log, Range range, int expected, int found) {
+  log.error(range, "Expected ".append(expected.toString()).append(plural(expected, " argument", " arguments")).append(
+    " but found ").append(found.toString()).append(plural(found, " argument", " arguments")));
+}

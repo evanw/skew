@@ -225,7 +225,7 @@ List<Node> parseArgumentList(ParserContext context, TokenKind left, TokenKind ri
     if (comma == AllowTrailingComma.NO && values.length > 0 && !context.expect(TokenKind.COMMA)) break;
     Node value = pratt.parse(context, Precedence.COMMA);
     values.push(value);
-    if (value.kind == NodeKind.ERROR || comma == AllowTrailingComma.YES && !context.peek(right) && !context.expect(TokenKind.COMMA)) break;
+    if (value.kind.isError() || comma == AllowTrailingComma.YES && !context.peek(right) && !context.expect(TokenKind.COMMA)) break;
   }
   scanForToken(context, right, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
   return values;

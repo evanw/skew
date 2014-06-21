@@ -248,9 +248,12 @@ test("
 <stdin>:1:7: error: Unexpected FN
 (int) fn(int, float) foo = null, bar = null;
       ~~
-<stdin>:1:22: error: Expected SEMICOLON but found IDENTIFIER
+<stdin>:1:9: error: Expected SEMICOLON but found LEFT_PARENTHESIS
 (int) fn(int, float) foo = null, bar = null;
-                     ~~~
+        ^
+<stdin>:1:20: error: Unexpected RIGHT_PARENTHESIS
+(int) fn(int, float) foo = null, bar = null;
+                   ^
 ");
 
 test("
@@ -275,7 +278,10 @@ test("
 <stdin>:1:5: error: Unexpected FN
 100 fn() foo = null, bar = null;
     ~~
-<stdin>:1:10: error: Expected SEMICOLON but found IDENTIFIER
+<stdin>:1:7: error: Expected SEMICOLON but found LEFT_PARENTHESIS
 100 fn() foo = null, bar = null;
-         ~~~
+      ^
+<stdin>:1:8: error: Unexpected RIGHT_PARENTHESIS
+100 fn() foo = null, bar = null;
+       ^
 ");

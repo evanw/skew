@@ -283,6 +283,18 @@ in Node {
     return children.slice(1, children.length);
   }
 
+  Node callValue() {
+    assert kind == NodeKind.CALL;
+    assert children.length >= 1;
+    return children.get(0);
+  }
+
+  List<Node> callArguments() {
+    assert kind == NodeKind.CALL;
+    assert children.length >= 1;
+    return children.slice(1, children.length);
+  }
+
   List<Node> initializerValues() {
     assert kind == NodeKind.INITIALIZER;
     return children;
