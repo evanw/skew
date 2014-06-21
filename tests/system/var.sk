@@ -1,9 +1,9 @@
 test("
 var foo;
 ", "
-<stdin>:1:1: error: Type inference requires a value
+<stdin>:1:5: error: Implicitly typed variables must be initialized
 var foo;
-~~~
+    ~~~
 ");
 
 test("
@@ -22,11 +22,30 @@ bool bar = foo;
 ");
 
 test("
-var foo = null;
+var foo = null, bar = null;
 ", "
-<stdin>:1:1: error: Type inference requires a value
-var foo = null;
+<stdin>:1:5: error: Implicitly typed variables cannot be of type \"null\"
+var foo = null, bar = null;
+    ~~~
+<stdin>:1:17: error: Implicitly typed variables cannot be of type \"null\"
+var foo = null, bar = null;
+                ~~~
+");
+
+test("
+var foo() {}
+", "
+<stdin>:1:1: error: Unexpected VAR
+var foo() {}
 ~~~
+");
+
+test("
+void foo(var bar) {}
+", "
+<stdin>:1:14: error: Implicitly typed variables must be initialized
+void foo(var bar) {}
+             ~~~
 ");
 
 // // TODO: Uncomment this once function types work
@@ -34,7 +53,7 @@ var foo = null;
 // var foo = bar();
 // void bar() {}
 // ", "
-// <stdin>:1:1: error: Type inference requires a value
+// <stdin>:1:1: error: Implicitly typed variables cannot be of type \"void\"
 // var foo = bar();
 // ~~~
 // ");

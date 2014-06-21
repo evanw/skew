@@ -108,5 +108,9 @@ void semanticErrorBadTypeParameterBound(Log log, Range range, Type type) {
 }
 
 void semanticErrorVarMissingValue(Log log, Range range) {
-  log.error(range, "Type inference requires a value");
+  log.error(range, "Implicitly typed variables must be initialized");
+}
+
+void semanticErrorVarBadType(Log log, Range range, Type type) {
+  log.error(range, "Implicitly typed variables cannot be of ".append(typeToText(type)));
 }

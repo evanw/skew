@@ -713,22 +713,26 @@ class Resolver {
       node.replaceChild(1, variableType);
     }
 
+    // Do "type inference" by taking the type from the assigned value
     if (variableType.kind == NodeKind.VAR) {
       Node value = node.variableValue();
       if (value == null) {
-        semanticErrorVarMissingValue(log, variableType.range);
+        semanticErrorVarMissingValue(log, node.declarationName().range);
         symbol.type = cache.errorType;
       } else {
         resolveAsExpression(value);
         Type type = value.type;
         if (type.isNull(cache) || type.isVoid(cache)) {
-          semanticErrorVarMissingValue(log, variableType.range);
+          semanticErrorVarBadType(log, node.declarationName().range, type);
           symbol.type = cache.errorType;
         } else {
           symbol.type = type;
         }
       }
-    } else {
+    }
+
+    // Resolve the expression for the variable type
+    else {
       resolveAsParameterizedType(variableType);
       checkIsValidVariableType(variableType);
       symbol.type = variableType.type;
