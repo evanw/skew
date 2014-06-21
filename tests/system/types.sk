@@ -38,6 +38,22 @@ void foo() {}
 ");
 
 test("
+void fn() foo;
+", "
+");
+
+test("
+void fn(void, void) foo;
+", "
+<stdin>:1:9: error: Cannot use type \"void\" here
+void fn(void, void) foo;
+        ~~~~
+<stdin>:1:15: error: Cannot use type \"void\" here
+void fn(void, void) foo;
+              ~~~~
+");
+
+test("
 ns foo(ns bar, ns baz) {}
 namespace ns {}
 ", "

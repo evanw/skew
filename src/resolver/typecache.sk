@@ -18,10 +18,71 @@ class TypeCache {
   Type doubleType = createType(new Symbol("double", SymbolKind.STRUCT));
   Type stringType = createType(new Symbol("string", SymbolKind.STRUCT));
 
+  IntMap<List<Type>> derivedTypes = new IntMap<List<Type>>();
+  IntMap<List<Type>> functionTypes = new IntMap<List<Type>>();
+
   static Type createType(Symbol symbol) {
     Type type = new Type(symbol);
     symbol.type = type;
     symbol.flags = symbol.flags | SymbolFlag.INITIALIZED;
+    return type;
+  }
+
+  static Type commonBaseClass(Type left, Type right) {
+    Type a;
+    for (a = left; a != null; a = a.baseClass()) {
+      Type b;
+      for (b = right; b != null; b = b.baseClass()) {
+        if (a == b) {
+          return a;
+        }
+      }
+    }
+    return null;
+  }
+
+  static int hashCodeForTypes(List<Type> relevantTypes) {
+    int seed = 0;
+    int i;
+    for (i = 0; i < relevantTypes.length; i++) {
+      seed = hashCombine(seed, relevantTypes.get(i).uniqueID);
+    }
+    return seed;
+  }
+
+  static bool areTypeListsEqual(List<Type> left, List<Type> right) {
+    int n = left.length;
+    if (n != right.length) {
+      return false;
+    }
+    int i;
+    for (i = 0; i < n; i++) {
+      if (left.get(i) != right.get(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Type functionType(Type result, List<Type> arguments) {
+    arguments.unshift(result);
+    int hash = hashCodeForTypes(arguments);
+    List<Type> existingTypes = functionTypes.getOrDefault(hash, null);
+    if (existingTypes != null) {
+      int i;
+      for (i = 0; i < existingTypes.length; i++) {
+        Type existing = existingTypes.get(i);
+        if (areTypeListsEqual(existing.relevantTypes, arguments)) {
+          return existing;
+        }
+      }
+    } else {
+      existingTypes = {};
+      functionTypes.set(hash, existingTypes);
+    }
+    Type type = new Type(null);
+    type.relevantTypes = arguments;
+    existingTypes.push(type);
     return type;
   }
 
@@ -42,12 +103,10 @@ class TypeCache {
       return left.isInteger(this) && right.isInteger(this) ? intType : doubleType;
     }
 
-    // // Check for a common base class
-    // ClassType leftClass = left.asClass();
-    // ClassType rightClass = right.asClass();
-    // if (leftClass != null && rightClass != null) {
-    //   return commonBaseClass(left.asClass(), right.asClass());
-    // }
+    // Check for a common base class
+    if (left.isClass() && right.isClass()) {
+      return commonBaseClass(left, right);
+    }
 
     return null;
   }

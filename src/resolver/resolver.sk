@@ -583,7 +583,7 @@ class Resolver {
     }
 
     // Special-case assigning 0 to an enum flags type
-    if (to.symbol.kind == SymbolKind.ENUM_FLAGS && node.kind == NodeKind.INT && node.asInt() == 0) {
+    if (to.isEnumFlags() && node.kind == NodeKind.INT && node.asInt() == 0) {
       from = to;
     }
 
@@ -866,10 +866,12 @@ class Resolver {
     }
   }
 
-  void resolveNodesAsParameterizedTypes(List<Node> nodes) {
+  void resolveNodesAsVariableTypes(List<Node> nodes) {
     int i;
     for (i = 0; i < nodes.length; i++) {
-      resolveAsParameterizedType(nodes.get(i));
+      Node node = nodes.get(i);
+      resolveAsParameterizedType(node);
+      checkIsValidVariableType(node);
     }
   }
 
@@ -1227,7 +1229,7 @@ class Resolver {
     Node type = node.parameterizeType();
     List<Node> substitutions = node.parameterizeTypes();
     resolveAsParameterizedType(type);
-    resolveNodesAsParameterizedTypes(substitutions);
+    resolveNodesAsVariableTypes(substitutions);
     unsupportedNodeKind(node);
   }
 
@@ -1261,8 +1263,19 @@ class Resolver {
     Node result = node.functionTypeResult();
     List<Node> arguments = node.functionTypeArguments();
     resolveAsParameterizedType(result);
-    resolveNodesAsParameterizedTypes(arguments);
-    unsupportedNodeKind(node);
+    resolveNodesAsVariableTypes(arguments);
+    if (!result.type.isError(cache)) {
+      List<Type> argumentTypes = {};
+      int i;
+      for (i = 0; i < arguments.length; i++) {
+        Type argumentType = arguments.get(i).type;
+        if (argumentType.isError(cache)) {
+          return;
+        }
+        argumentTypes.push(argumentType);
+      }
+      node.become(Node.createType(cache.functionType(result.type, argumentTypes)).withRange(node.range));
+    }
   }
 }
 

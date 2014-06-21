@@ -30,6 +30,10 @@ bool hasFlag(int flags, int flag) {
   return (flags & flag) != 0;
 }
 
+int hashCombine(int left, int right) {
+  return left ^ right + 0x9e3779b9 + (left << 6) + (left >> 2);
+}
+
 string doubleToString(double value) {
   string result = value.toString();
   if (result.indexOf(".") < 0) {

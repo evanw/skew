@@ -1,18 +1,25 @@
 class Type {
-  Symbol symbol;
   StringMap<Symbol> members = new StringMap<Symbol>();
+
+  // The symbol that declared this type, if any. Function types don't have a
+  // declaring symbol, so this will be null for function types.
+  Symbol symbol;
 
   // This contains types used in the definition of this type. Classes derive
   // from at most one base class and implement any number of interfaces.
   // Interfaces can extend any number of other interfaces. Structs are just
   // named tuples and cannot derive from or implement any other types.
-  // Functions have one relevant type per argument variable followed by one
-  // return type for non-constructor functions. Type parameters may have one
+  // Functions have one return type followed by a relevant type for each
+  // argument variable. Type parameters are either unbounded or have a single
   // type bound.
   List<Type> relevantTypes = null;
 
   // All type parameters for this type, used for generics
   List<Type> parameters = null;
+
+  // Give each type a unique integer as a hash code
+  static int nextUniqueID = 0;
+  int uniqueID = nextUniqueID++;
 
   void addMember(Symbol member) {
     member.enclosingSymbol = symbol;
@@ -24,9 +31,52 @@ class Type {
   }
 
   string toString() {
-    if (isParameter()) return symbol.name;
+    // Special-case function types
+    if (isFunction()) {
+      string text = resultType().toString().append(" fn(");
+      List<Type> arguments = argumentTypes();
+      int i;
+      for (i = 0; i < arguments.length; i++) {
+        if (i > 0) text = text.append(", ");
+        text = text.append(arguments.get(i).toString());
+      }
+      return text.append(")");
+    }
+
+    // Return the local name for type parameters
+    if (isParameter()) {
+      return symbol.name;
+    }
+
+    // Return the fully-qualified name for all other symbols
     Symbol enclosingSymbol = symbol.enclosingSymbol;
     return (enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() ? enclosingSymbol.type.toString().append(".") : "").append(symbol.name);
+  }
+
+  bool hasRelevantTypes() {
+    return relevantTypes != null && relevantTypes.length > 0;
+  }
+
+  Type baseClass() {
+    assert isClass();
+    return hasRelevantTypes() ? relevantTypes.get(0) : null;
+  }
+
+  Type bound() {
+    assert isParameter();
+    return hasRelevantTypes() ? relevantTypes.get(0) : null;
+  }
+
+  Type resultType() {
+    assert isFunction();
+    assert hasRelevantTypes();
+    return relevantTypes.get(0);
+  }
+
+  List<Type> argumentTypes() {
+    assert isFunction();
+    assert hasRelevantTypes();
+    return relevantTypes.slice(1, relevantTypes.length);
   }
 
   bool isVoid(TypeCache cache) {
@@ -61,36 +111,44 @@ class Type {
     return this == cache.errorType;
   }
 
+  bool isFunction() {
+    return symbol == null;
+  }
+
   bool isNamespace() {
-    return symbol.kind.isNamespace();
+    return symbol != null && symbol.kind.isNamespace();
   }
 
   bool isEnum() {
-    return symbol.kind.isEnum();
+    return symbol != null && symbol.kind.isEnum();
+  }
+
+  bool isEnumFlags() {
+    return symbol != null && symbol.kind == SymbolKind.ENUM_FLAGS;
   }
 
   bool isParameter() {
-    return symbol.kind == SymbolKind.PARAMETER;
+    return symbol != null && symbol.kind == SymbolKind.PARAMETER;
   }
 
   bool isObject() {
-    return symbol.kind.isObject();
+    return symbol != null && symbol.kind.isObject();
   }
 
   bool isClass() {
-    return symbol.kind == SymbolKind.CLASS;
+    return symbol != null && symbol.kind == SymbolKind.CLASS;
   }
 
   bool isStruct() {
-    return symbol.kind == SymbolKind.STRUCT;
+    return symbol != null && symbol.kind == SymbolKind.STRUCT;
   }
 
   bool isInterface() {
-    return symbol.kind == SymbolKind.INTERFACE;
+    return symbol != null && symbol.kind == SymbolKind.INTERFACE;
   }
 
   bool isReference() {
-    return isClass() || isInterface();
+    return isClass() || isInterface() || isFunction();
   }
 
   bool isInteger(TypeCache cache) {

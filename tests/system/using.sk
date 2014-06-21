@@ -98,6 +98,15 @@ Int foo = false;
 ");
 
 test("
+Callback foo = false;
+using Callback = void fn();
+", "
+<stdin>:1:16: error: Cannot convert from type \"bool\" to type \"void fn()\"
+Callback foo = false;
+               ~~~~~
+");
+
+test("
 namespace ns1 {
   Foo bar = 0;
   using Foo = ns2.Foo;
