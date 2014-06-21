@@ -1,0 +1,40 @@
+test("
+0();
+", "
+<stdin>:1:1: error: Cannot call type \"int\"
+0();
+^
+");
+
+test("
+void fn() foo = null;
+int bar = foo(100);
+", "
+<stdin>:2:14: error: Expected 0 arguments but found 1 argument
+int bar = foo(100);
+             ~~~~~
+<stdin>:2:11: error: Cannot convert from type \"void\" to type \"int\"
+int bar = foo(100);
+          ~~~~~~~~
+");
+
+test("
+bool fn(int, bool) foo = null;
+int bar = foo(false, 100);
+", "
+<stdin>:2:15: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int bar = foo(false, 100);
+              ~~~~~
+<stdin>:2:22: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+int bar = foo(false, 100);
+                     ~~~
+<stdin>:2:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int bar = foo(false, 100);
+          ~~~~~~~~~~~~~~~
+");
+
+test("
+void fn() fn(void fn()) foo = null;
+void fn() bar = foo(bar);
+", "
+");
