@@ -1,4 +1,15 @@
 test("
+int x = (in)1.5;
+", "
+<stdin>:1:10: error: Unexpected IN
+int x = (in)1.5;
+         ~~
+<stdin>:1:13: error: Expected SEMICOLON but found DOUBLE
+int x = (in)1.5;
+            ~~~
+");
+
+test("
 int x = .
 ", "
 <stdin>:1:10: error: Expected IDENTIFIER but found END_OF_FILE
@@ -151,6 +162,22 @@ x => { return; };
 test("
 int fn(int, float) foo = null, bar = null;
 ", "
+");
+
+test("
+int fn(int, float) fn(int fn(int, float), float fn(int, float)) foo = null, bar = null;
+", "
+");
+
+test("
+(int) fn(int, float) foo = null, bar = null;
+", "
+<stdin>:1:7: error: Unexpected FN
+(int) fn(int, float) foo = null, bar = null;
+      ~~
+<stdin>:1:22: error: Expected SEMICOLON but found IDENTIFIER
+(int) fn(int, float) foo = null, bar = null;
+                     ~~~
 ");
 
 test("

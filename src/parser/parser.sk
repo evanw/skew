@@ -381,7 +381,10 @@ Node parseVariableCluster(ParserContext context, Node type, Node name) {
   List<Node> variables = {};
   Node start = type;
   while (variables.length == 0 || !context.peek(TokenKind.SEMICOLON) && !context.peek(TokenKind.IN)) {
-    if (variables.length > 0 && !context.expect(TokenKind.COMMA)) break;
+    if (variables.length > 0 && !context.eat(TokenKind.COMMA)) {
+      context.expect(TokenKind.SEMICOLON); // Expecting a semicolon here makes more sense than a comma
+      break;
+    }
     if (name == null) name = start = parseName(context); if (name == null) break;
     Node value = context.eat(TokenKind.ASSIGN) ? pratt.parse(context, Precedence.COMMA) : null;
     variables.push(Node.createVariable(name, null, value).withRange(context.spanSince(start.range)));
@@ -540,8 +543,7 @@ Node createLambdaFromNames(List<Node> names, Node block) {
 bool looksLikeType(Node node) {
   switch (node.kind) {
     case NodeKind.DOT { return looksLikeType(node.dotTarget()); }
-    case NodeKind.NAME { return true; }
-    case NodeKind.PARAMETERIZE { return true; }
+    case NodeKind.NAME, NodeKind.PARAMETERIZE, NodeKind.FUNCTION_TYPE { return true; }
     default { return false; }
   }
 }
