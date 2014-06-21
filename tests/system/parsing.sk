@@ -1,4 +1,77 @@
 test("
+bool a = 0b1101;
+bool b = 0xFF01;
+bool c = 0o7071;
+", "
+<stdin>:1:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool a = 0b1101;
+         ~~~~~~
+<stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool b = 0xFF01;
+         ~~~~~~
+<stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool c = 0o7071;
+         ~~~~~~
+");
+
+test("
+bool a = 0b1102;
+bool b = 0xFF0G;
+bool c = 0o7078;
+", "
+<stdin>:1:15: error: Expected SEMICOLON but found INT_DECIMAL
+bool a = 0b1102;
+              ^
+<stdin>:2:15: error: Expected SEMICOLON but found IDENTIFIER
+bool b = 0xFF0G;
+              ^
+<stdin>:3:15: error: Expected SEMICOLON but found INT_DECIMAL
+bool c = 0o7078;
+              ^
+<stdin>:1:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool a = 0b1102;
+         ~~~~~
+<stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool b = 0xFF0G;
+         ~~~~~
+<stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool c = 0o7078;
+         ~~~~~
+");
+
+test("
+bool a = 0b11.01;
+bool b = 0xFF.01;
+bool c = 0o70.71;
+", "
+<stdin>:1:15: error: Expected IDENTIFIER but found INT_DECIMAL
+bool a = 0b11.01;
+              ~~
+<stdin>:2:15: error: Expected IDENTIFIER but found INT_DECIMAL
+bool b = 0xFF.01;
+              ~~
+<stdin>:3:15: error: Expected IDENTIFIER but found INT_DECIMAL
+bool c = 0o70.71;
+              ~~
+");
+
+test("
+bool a = 0b11.01f;
+bool b = 0xFF.01f;
+bool c = 0o70.71f;
+", "
+<stdin>:1:15: error: Expected IDENTIFIER but found FLOAT
+bool a = 0b11.01f;
+              ~~~
+<stdin>:2:15: error: Expected IDENTIFIER but found FLOAT
+bool b = 0xFF.01f;
+              ~~~
+<stdin>:3:15: error: Expected IDENTIFIER but found FLOAT
+bool c = 0o70.71f;
+              ~~~
+");
+
+test("
 int x = (in)1.5;
 ", "
 <stdin>:1:10: error: Unexpected IN
