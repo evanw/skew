@@ -162,7 +162,7 @@ class Pratt {
     }
     Node node = resume(context, precedence, parselet.prefix.run(context));
     assert node != null; // Parselets must return Node.createError() instead of null
-    assert node.range.source != null; // Parselets must set the range of every node
+    assert !node.range.isEmpty(); // Parselets must set the range of every node
     return node;
   }
 
@@ -176,7 +176,7 @@ class Pratt {
       }
       left = parselet.infix.run(context, left);
       assert left != null; // Parselets must return Node.createError() instead of null
-      assert left.range.source != null; // Parselets must set the range of every node
+      assert !left.range.isEmpty(); // Parselets must set the range of every node
     }
     return left;
   }

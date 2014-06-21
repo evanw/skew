@@ -866,6 +866,13 @@ class Resolver {
     }
   }
 
+  void resolveNodesAsParameterizedTypes(List<Node> nodes) {
+    int i;
+    for (i = 0; i < nodes.length; i++) {
+      resolveAsParameterizedType(nodes.get(i));
+    }
+  }
+
   void resolveChildren(Node node) {
     if (node.hasChildren()) {
       resolveNodes(node.children);
@@ -1218,12 +1225,9 @@ class Resolver {
 
   void resolveParameterize(Node node) {
     Node type = node.parameterizeType();
+    List<Node> substitutions = node.parameterizeTypes();
     resolveAsParameterizedType(type);
-    List<Node> types = node.parameterizeTypes();
-    int i;
-    for (i = 0; i < types.length; i++) {
-      resolveAsParameterizedType(types.get(i));
-    }
+    resolveNodesAsParameterizedTypes(substitutions);
     unsupportedNodeKind(node);
   }
 
@@ -1254,6 +1258,10 @@ class Resolver {
   }
 
   void resolveFunctionType(Node node) {
+    Node result = node.functionTypeResult();
+    List<Node> arguments = node.functionTypeArguments();
+    resolveAsParameterizedType(result);
+    resolveNodesAsParameterizedTypes(arguments);
     unsupportedNodeKind(node);
   }
 }

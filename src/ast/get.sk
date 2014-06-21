@@ -271,6 +271,18 @@ in Node {
     return children.slice(1, children.length);
   }
 
+  Node functionTypeResult() {
+    assert kind == NodeKind.FUNCTION_TYPE;
+    assert children.length >= 1;
+    return children.get(0);
+  }
+
+  List<Node> functionTypeArguments() {
+    assert kind == NodeKind.FUNCTION_TYPE;
+    assert children.length >= 1;
+    return children.slice(1, children.length);
+  }
+
   List<Node> initializerValues() {
     assert kind == NodeKind.INITIALIZER;
     return children;
