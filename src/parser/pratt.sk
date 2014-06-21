@@ -160,15 +160,23 @@ class Pratt {
       context.unexpectedToken();
       return Node.createError().withRange(context.spanSince(token.range));
     }
-    return resume(context, precedence, parselet.prefix.run(context));
+    Node node = resume(context, precedence, parselet.prefix.run(context));
+    assert node != null; // Parselets must return Node.createError() instead of null
+    assert node.range.source != null; // Parselets must set the range of every node
+    return node;
   }
 
   Node resume(ParserContext context, int precedence, Node left) {
-    while (left != null) {
+    assert left != null;
+    while (true) {
       TokenKind kind = context.current().kind;
       Parselet parselet = table.getOrDefault(kind, null);
-      if (parselet == null || parselet.infix == null || parselet.precedence <= precedence) break;
+      if (parselet == null || parselet.infix == null || parselet.precedence <= precedence) {
+        break;
+      }
       left = parselet.infix.run(context, left);
+      assert left != null; // Parselets must return Node.createError() instead of null
+      assert left.range.source != null; // Parselets must set the range of every node
     }
     return left;
   }

@@ -132,6 +132,11 @@ Node parseLambdaBlock(ParserContext context) {
   if (context.peek(TokenKind.LEFT_BRACE)) {
     return parseBlock(context, StatementHint.NORMAL);
   }
+  if (context.peek(TokenKind.RIGHT_PARENTHESIS) ||
+      context.peek(TokenKind.COMMA) ||
+      context.peek(TokenKind.SEMICOLON)) {
+    return Node.createBlock({});
+  }
   Node value = pratt.parse(context, Precedence.COMMA);
   return Node.createBlock({ Node.createReturn(value).withRange(value.range) }).withRange(value.range);
 }
@@ -706,6 +711,19 @@ class DotPrefix : IPrefixParselet {
   }
 }
 
+class FnInfix : IInfixParselet {
+  override Node run(ParserContext context, Node left) {
+    if (!looksLikeType(left)) {
+      context.unexpectedToken();
+      context.next();
+      return Node.createError().withRange(context.spanSince(left.range));
+    }
+    context.next();
+    List<Node> arguments = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.YES);
+    return Node.createFunctionType(left, arguments).withRange(context.spanSince(left.range));
+  }
+}
+
 class UnaryPostfix : IPostfixCallback {
   NodeKind kind;
 
@@ -867,6 +885,7 @@ Pratt createParser() {
   pratt.parselet(TokenKind.COMMA, Precedence.COMMA).infix = new SequenceInfix();
   pratt.parselet(TokenKind.DOT, Precedence.MEMBER).infix = new DotInfix();
   pratt.parselet(TokenKind.DOT, Precedence.LOWEST).prefix = new DotPrefix();
+  pratt.parselet(TokenKind.FN, Precedence.MEMBER).infix = new FnInfix();
   pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = new CallInfix();
   pratt.parselet(TokenKind.LEFT_BRACKET, Precedence.UNARY_POSTFIX).infix = new IndexInfix();
   pratt.parselet(TokenKind.NEW, Precedence.LOWEST).prefix = new NewPrefix();

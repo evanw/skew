@@ -64,6 +64,7 @@ enum NodeKind {
   LAMBDA,
   DEFAULT,
   VAR,
+  FUNCTION_TYPE,
 
   // Unary operators
   NOT,
@@ -309,7 +310,8 @@ class Node {
     if (hasChildren()) {
       int i;
       for (i = 0; i < children.length; i++) {
-        node.appendChild(children.get(i).clone());
+        Node child = children.get(i);
+        node.appendChild(child != null ? child.clone() : null);
       }
     }
     return node;

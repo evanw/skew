@@ -119,3 +119,63 @@ if () {}
 if () {}
     ^
 ");
+
+test("
+=>;
+=> 0;
+=> {};
+=> { return; };
+
+() =>;
+() => 0;
+() => {};
+() => { return; };
+
+x =>;
+x => 0;
+x => {};
+x => { return; };
+
+(x) =>;
+(x) => 0;
+(x) => {};
+(x) => { return; };
+
+(x, y) =>;
+(x, y) => 0;
+(x, y) => {};
+(x, y) => { return; };
+", "
+");
+
+test("
+int fn(int, float) foo = null, bar = null;
+", "
+");
+
+test("
+int fn(int x, float y) foo = null, bar = null;
+", "
+<stdin>:1:12: error: Expected COMMA but found IDENTIFIER
+int fn(int x, float y) foo = null, bar = null;
+           ^
+");
+
+test("
+int. fn() foo = null, bar = null;
+", "
+<stdin>:1:6: error: Expected IDENTIFIER but found FN
+int. fn() foo = null, bar = null;
+     ~~
+");
+
+test("
+100 fn() foo = null, bar = null;
+", "
+<stdin>:1:5: error: Unexpected FN
+100 fn() foo = null, bar = null;
+    ~~
+<stdin>:1:10: error: Expected SEMICOLON but found IDENTIFIER
+100 fn() foo = null, bar = null;
+         ~~~
+");

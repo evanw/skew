@@ -24,8 +24,9 @@ class Type {
   }
 
   string toString() {
+    if (isParameter()) return symbol.name;
     Symbol enclosingSymbol = symbol.enclosingSymbol;
-    return (enclosingSymbol != null && !isParameter() && !enclosingSymbol.kind.isGlobalNamespace() ? enclosingSymbol.type.toString().append(".") : "").append(symbol.name);
+    return (enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() ? enclosingSymbol.type.toString().append(".") : "").append(symbol.name);
   }
 
   bool isVoid(TypeCache cache) {

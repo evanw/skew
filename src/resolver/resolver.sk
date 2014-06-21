@@ -494,6 +494,7 @@ class Resolver {
       case NodeKind.LAMBDA { resolveLambda(node); }
       case NodeKind.DEFAULT { resolveDefault(node); }
       case NodeKind.VAR { resolveVar(node); }
+      case NodeKind.FUNCTION_TYPE { resolveFunctionType(node); }
 
       case
         NodeKind.NOT, NodeKind.POSITIVE, NodeKind.NEGATIVE, NodeKind.COMPLEMENT,
@@ -1250,6 +1251,10 @@ class Resolver {
 
   void resolveVar(Node node) {
     semanticErrorUnexpectedNode(log, node.range, node.kind);
+  }
+
+  void resolveFunctionType(Node node) {
+    unsupportedNodeKind(node);
   }
 }
 
