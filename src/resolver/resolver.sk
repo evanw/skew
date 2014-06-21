@@ -577,6 +577,12 @@ class Resolver {
       return;
     }
 
+    // Converting from "void" to "void" always fails
+    if (from.isVoid(cache) && to.isVoid(cache)) {
+      semanticErrorUnexpectedExpression(log, node.range, to);
+      return;
+    }
+
     // No implicit conversion needed for identical types
     if (from == to) {
       return;
@@ -683,14 +689,32 @@ class Resolver {
   void initializeFunction(Symbol symbol) {
     Node node = symbol.node;
     Node result = null;
-    Node arguments = node.functionArguments();
+
+    // Constructors don't have return types
     if (node.kind == NodeKind.FUNCTION) {
       result = node.functionResult();
       resolveAsParameterizedType(result);
       checkIsValidFunctionReturnType(result);
     }
+
+    // Resolve argument variables
+    Node arguments = node.functionArguments();
     resolve(arguments, null);
+
+    // Create the function type. Constructors get a return type of "void" so
+    // that return statements inside the constructor cannot have values.
+    Type resultType = result != null ? result.type : cache.voidType;
     symbol.type = cache.errorType;
+    if (!resultType.isError(cache)) {
+      List<Type> argumentTypes = {};
+      int i;
+      for (i = 0; i < arguments.children.length; i++) {
+        Type type = arguments.children.get(i).symbol.type;
+        if (type.isError(cache)) return;
+        argumentTypes.push(type);
+      }
+      symbol.type = cache.functionType(resultType, argumentTypes);
+    }
   }
 
   void initializeVariable(Symbol symbol) {
@@ -714,7 +738,7 @@ class Resolver {
       node.replaceChild(1, variableType);
     }
 
-    // Do "type inference" by taking the type from the assigned value
+    // Handle implicitly typed variables by taking the type from the assigned value
     if (variableType.kind == NodeKind.VAR) {
       Node value = node.variableValue();
       if (value == null) {
@@ -744,6 +768,20 @@ class Resolver {
     Type type = symbol.type = new Type(symbol);
     Node bound = symbol.node.parameterBound();
 
+    // Type parameters can optionally have a single interface as an upper bound.
+    // This forces all parameterizations to implement that interface and allows
+    // use of that interface inside the scope of the parameter:
+    //
+    //   interface IFoo {
+    //     void foo();
+    //   }
+    //
+    //   class Foo<T is IFoo> {
+    //     void foo(T value) {
+    //       value.foo();
+    //     }
+    //   }
+    //
     if (bound != null) {
       resolveAsParameterizedType(bound);
       Type boundType = bound.type;
@@ -751,6 +789,8 @@ class Resolver {
         symbol.type = cache.errorType;
       } else if (!boundType.isInterface()) {
         semanticErrorBadTypeParameterBound(log, bound.range, boundType);
+      } else {
+        type.copyMembersFrom(boundType);
       }
     }
   }
@@ -1015,7 +1055,25 @@ class Resolver {
   }
 
   void resolveReturn(Node node) {
-    unsupportedNodeKind(node);
+    Node value = node.returnValue();
+
+    // Return statements must live inside functions
+    if (context.function == null) {
+      unexpectedStatement(node);
+      if (value != null) resolveAsExpression(value);
+      return;
+    }
+
+    // Check the return value
+    Type resultType = context.function.symbol.type.resultType();
+    if (value != null) {
+      resolveAsExpressionWithConversion(value, resultType, CastKind.IMPLICIT);
+    }
+
+    // The return value may be missing only when the return type is void
+    else if (!resultType.isError(cache) && !resultType.isVoid(cache)) {
+      semanticErrorExpectedReturnValue(log, node.range, resultType);
+    }
   }
 
   void resolveBreak(Node node) {

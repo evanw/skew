@@ -58,7 +58,7 @@ in SymbolKind {
   }
 
   bool isInstance() {
-    return this == INSTANCE_FUNCTION || this == INSTANCE_VARIABLE;
+    return this == INSTANCE_FUNCTION || this == INSTANCE_VARIABLE || this == CONSTRUCTOR_FUNCTION;
   }
 }
 

@@ -336,3 +336,19 @@ int fn() baz = foo;
 int fn() baz = foo;
                ~~~
 ");
+
+test("
+int foo() { return; }
+void bar() { return 100; }
+void baz() { return bar(); }
+", "
+<stdin>:1:13: error: Return statement must return type \"int\"
+int foo() { return; }
+            ~~~~~~~
+<stdin>:2:21: error: Cannot convert from type \"int\" to type \"void\"
+void bar() { return 100; }
+                    ~~~
+<stdin>:3:21: error: Unexpected expression of type \"void\"
+void baz() { return bar(); }
+                    ~~~~~
+");

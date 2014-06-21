@@ -305,4 +305,10 @@ in Node {
     assert children.length == 2;
     return children.get(1);
   }
+
+  Node returnValue() {
+    assert kind == NodeKind.RETURN;
+    assert children.length == 1;
+    return children.get(0);
+  }
 }

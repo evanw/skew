@@ -26,6 +26,17 @@ class Type {
     members.set(member.name, member);
   }
 
+  void copyMembersFrom(Type other) {
+    List<Symbol> symbols = other.members.values();
+    int i;
+    for (i = 0; i < symbols.length; i++) {
+      Symbol member = symbols.get(i);
+      if (!members.has(member.name)) {
+        members.set(member.name, member);
+      }
+    }
+  }
+
   Symbol findMember(string name) {
     return members.getOrDefault(name, null);
   }

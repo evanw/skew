@@ -50,3 +50,21 @@ class Foo<A is B, B> {}
 class Foo<A is B, B> {}
                ^
 ");
+
+test("
+interface IFoo {
+  bool foo(int bar);
+}
+class Foo<T is IFoo> {
+  int foo(T value) {
+    return value.foo(false);
+  }
+}
+", "
+<stdin>:6:22: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    return value.foo(false);
+                     ~~~~~
+<stdin>:6:12: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    return value.foo(false);
+           ~~~~~~~~~~~~~~~~
+");
