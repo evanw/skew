@@ -241,6 +241,16 @@ Foo y = .FOO;
 ");
 
 test("
+enum Foo { BAR }
+Foo foo() { return .BAZ; }
+Foo bar() { return .BAR; }
+", "
+<stdin>:2:21: error: \"BAZ\" is not declared on type \"Foo\"
+Foo foo() { return .BAZ; }
+                    ~~~
+");
+
+test("
 class Foo {
   void baz() {
     int x = this;

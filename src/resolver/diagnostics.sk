@@ -127,3 +127,7 @@ void semanticErrorArgumentCount(Log log, Range range, int expected, int found) {
 void semanticErrorExpectedReturnValue(Log log, Range range, Type type) {
   log.error(range, "Return statement must return ".append(typeToText(type)));
 }
+
+void semanticErrorBadLambdaTypeContext(Log log, Range range, Type type) {
+  log.error(range, "Cannot use a lambda expression with ".append(typeToText(type)));
+}

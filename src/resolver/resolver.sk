@@ -15,6 +15,7 @@ class ResolveContext {
   Node loop = null;
   Node object = null;
   Node function = null;
+  Node lambda = null;
 
   ResolveContext clone() {
     ResolveContext context = new ResolveContext();
@@ -22,6 +23,7 @@ class ResolveContext {
     context.loop = loop;
     context.object = object;
     context.function = function;
+    context.lambda = lambda;
     return context;
   }
 
@@ -33,6 +35,7 @@ class ResolveContext {
       if (context.loop == null && node.kind.isLoop()) context.loop = node;
       if (context.object == null && node.kind.isObject()) context.object = node;
       if (context.function == null && node.kind.isFunction()) context.function = node;
+      if (context.lambda == null && node.kind == NodeKind.LAMBDA) context.lambda = node;
     }
     return context;
   }
@@ -138,7 +141,7 @@ class Resolver {
 
     // Also introduce a scope on object declarations for the type parameters
     // and on function declarations and lambda expressions for the arguments
-    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction()) {
+    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == NodeKind.LAMBDA) {
       node.scope = scope = new Scope(scope);
     }
 
@@ -213,7 +216,7 @@ class Resolver {
 
   static bool checkParentsForFunction(Node node) {
     for (node = node.parent; node != null; node = node.parent) {
-      if (node.kind.isFunction()) {
+      if (node.kind.isFunction() || node.kind == NodeKind.LAMBDA) {
         return true;
       }
     }
@@ -727,11 +730,14 @@ class Resolver {
         variableType = node.parent.clusterType().clone();
       }
 
-      // Take the variable type from the enclosing enum declaration
+      // Take the variable type from the enclosing symbol, which should be an
+      // enum declaration if it exists. If not, than assume the error has been
+      // logged already and just use the error type. This is the case when a
+      // lambda expression lacks type context.
       else {
         Symbol enclosingSymbol = node.symbol.enclosingSymbol;
-        assert enclosingSymbol.kind.isEnum();
-        variableType = Node.createType(enclosingSymbol.type);
+        assert enclosingSymbol != null ? enclosingSymbol.kind.isEnum() : node.parent.kind == NodeKind.LAMBDA;
+        variableType = Node.createType(enclosingSymbol != null ? enclosingSymbol.type : cache.errorType);
       }
 
       assert variableType != null;
@@ -1058,14 +1064,14 @@ class Resolver {
     Node value = node.returnValue();
 
     // Return statements must live inside functions
-    if (context.function == null) {
+    if (context.function == null && context.lambda == null) {
       unexpectedStatement(node);
       if (value != null) resolveAsExpression(value);
       return;
     }
 
     // Get the return type
-    Type functionType = context.function.symbol.type;
+    Type functionType = context.function != null ? context.function.symbol.type : context.lambda.type;
     Type resultType = functionType.isError(cache) ? cache.errorType : functionType.resultType();
 
     // Check the return value
@@ -1337,10 +1343,51 @@ class Resolver {
   }
 
   void resolveLambda(Node node) {
-    Node oldFunction = context.function;
-    context.function = node;
-    unsupportedNodeKind(node);
-    context.function = oldFunction;
+    Node oldLambda = context.lambda;
+    Node oldLoop = context.loop;
+    context.lambda = node;
+    context.loop = null;
+
+    List<Node> arguments = node.lambdaArguments();
+    Node block = node.lambdaBlock();
+
+    // Lambdas require type context instead of attempting type inference
+    if (typeContext == null) {
+      semanticErrorMissingTypeContext(log, node.range);
+    }
+
+    else if (!typeContext.isError(cache)) {
+      if (!typeContext.isFunction()) {
+        semanticErrorBadLambdaTypeContext(log, node.range, typeContext);
+      }
+
+      else if (!typeContext.isError(cache)) {
+        // Set the expression type now even if the arguments are incorrect
+        Type resultType = typeContext.resultType();
+        List<Type> argumentTypes = typeContext.argumentTypes();
+        node.type = typeContext;
+
+        // Validate the argument count
+        if (argumentTypes.length != arguments.length) {
+          semanticErrorArgumentCount(log, node.range, argumentTypes.length, arguments.length);
+        }
+
+        // Give each argument variable the corresponding type from the function signature
+        else {
+          int i;
+          for (i = 0; i < arguments.length; i++) {
+            assert arguments.get(i).variableType() == null;
+            arguments.get(i).children.set(1, Node.createType(argumentTypes.get(i)));
+          }
+        }
+      }
+    }
+
+    resolveNodes(arguments);
+    resolve(block, null);
+
+    context.lambda = oldLambda;
+    context.loop = oldLoop;
   }
 
   void resolveDefault(Node node) {

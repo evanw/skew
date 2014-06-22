@@ -253,6 +253,19 @@ in Node {
     return children.get(3);
   }
 
+  List<Node> lambdaArguments() {
+    assert kind == NodeKind.LAMBDA;
+    assert children.length >= 1;
+    return children.slice(0, children.length - 1);
+  }
+
+  Node lambdaBlock() {
+    assert kind == NodeKind.LAMBDA;
+    assert children.length >= 1;
+    assert children.get(children.length - 1).kind == NodeKind.BLOCK;
+    return children.get(children.length - 1);
+  }
+
   Node assertValue() {
     assert kind == NodeKind.ASSERT;
     assert children.length == 1;

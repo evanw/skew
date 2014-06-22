@@ -205,30 +205,30 @@ if () {}
 ");
 
 test("
-=>;
-=> 0;
-=> {};
-=> { return; };
+void fn() a0 = =>;
+bool fn() a1 = => false;
+void fn() a2 = => {};
+void fn() a3 = => { return; };
 
-() =>;
-() => 0;
-() => {};
-() => { return; };
+void fn() b0 = () =>;
+bool fn() b1 = () => false;
+void fn() b2 = () => {};
+void fn() b3 = () => { return; };
 
-x =>;
-x => 0;
-x => {};
-x => { return; };
+void fn(int) c0 = x =>;
+bool fn(int) c1 = x => false;
+void fn(int) c2 = x => {};
+void fn(int) c3 = x => { return; };
 
-(x) =>;
-(x) => 0;
-(x) => {};
-(x) => { return; };
+void fn(int) d0 = (x) =>;
+bool fn(int) d1 = (x) => false;
+void fn(int) d2 = (x) => {};
+void fn(int) d3 = (x) => { return; };
 
-(x, y) =>;
-(x, y) => 0;
-(x, y) => {};
-(x, y) => { return; };
+void fn(int, int) e0 = (x, y) =>;
+bool fn(int, int) e1 = (x, y) => false;
+void fn(int, int) e2 = (x, y) => {};
+void fn(int, int) e3 = (x, y) => { return; };
 ", "
 ");
 

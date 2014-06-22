@@ -137,7 +137,7 @@ in NodeKind {
   }
 
   bool isFunction() {
-    return this >= CONSTRUCTOR && this <= FUNCTION || this == LAMBDA;
+    return this >= CONSTRUCTOR && this <= FUNCTION;
   }
 
   bool isExpression() {
