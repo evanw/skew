@@ -31,6 +31,7 @@ TEST_SOURCES += tests/system/generics.sk
 TEST_SOURCES += tests/system/lambdas.sk
 TEST_SOURCES += tests/system/merging.sk
 TEST_SOURCES += tests/system/modifiers.sk
+TEST_SOURCES += tests/system/objects.sk
 TEST_SOURCES += tests/system/parsing.sk
 TEST_SOURCES += tests/system/statements.sk
 TEST_SOURCES += tests/system/static.sk

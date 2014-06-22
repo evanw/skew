@@ -49,6 +49,10 @@ in SymbolKind {
     return this >= PARAMETER && this <= INTERFACE;
   }
 
+  bool isConstructor() {
+    return this == CONSTRUCTOR_FUNCTION;
+  }
+
   bool isFunction() {
     return this >= GLOBAL_FUNCTION && this <= CONSTRUCTOR_FUNCTION;
   }

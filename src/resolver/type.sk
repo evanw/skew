@@ -38,7 +38,15 @@ class Type {
   }
 
   Symbol findMember(string name) {
-    return members.getOrDefault(name, null);
+    Symbol symbol = members.getOrDefault(name, null);
+
+    // A constructor must not be visible using name lookup because then it
+    // would obscure the enclosing object type
+    if (symbol != null && symbol.kind.isConstructor()) {
+      return null;
+    }
+
+    return symbol;
   }
 
   string toString() {
