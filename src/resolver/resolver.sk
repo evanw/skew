@@ -1471,6 +1471,7 @@ class Resolver {
   void resolveLambda(Node node) {
     Type oldResultType = resultType;
     Node oldLoop = context.loop;
+    resultType = cache.errorType;
     context.loop = null;
 
     List<Node> arguments = node.lambdaArguments();
