@@ -54,7 +54,6 @@ enum NodeKind {
   DOT,
   CALL,
   SUPER_CALL,
-  NEW,
   ERROR,
   SEQUENCE,
   PARAMETERIZE,

@@ -505,7 +505,6 @@ class Resolver {
       case NodeKind.DOT { resolveDot(node); }
       case NodeKind.CALL { resolveCall(node); }
       case NodeKind.SUPER_CALL { resolveSuperCall(node); }
-      case NodeKind.NEW { resolveNew(node); }
       case NodeKind.ERROR { resolveError(node); }
       case NodeKind.SEQUENCE { resolveSequence(node); }
       case NodeKind.PARAMETERIZE { resolveParameterize(node); }
@@ -1438,11 +1437,6 @@ class Resolver {
   }
 
   void resolveSuperCall(Node node) {
-    unsupportedNodeKind(node);
-  }
-
-  void resolveNew(Node node) {
-    resolveAsParameterizedType(node);
     unsupportedNodeKind(node);
   }
 
