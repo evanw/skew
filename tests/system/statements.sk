@@ -64,6 +64,17 @@ void bar() { void bar() {} }
 ");
 
 test("
+void fn() foo = => { void fn() bar() { return => { void baz() {} }; } };
+", "
+<stdin>:1:22: error: Cannot use this statement here
+void fn() foo = => { void fn() bar() { return => { void baz() {} }; } };
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<stdin>:1:52: error: Cannot use this statement here
+void fn() foo = => { void fn() bar() { return => { void baz() {} }; } };
+                                                   ~~~~~~~~~~~~~
+");
+
+test("
 void foo() {
   class Foo {}
   interface Bar {}

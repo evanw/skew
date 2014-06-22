@@ -976,12 +976,17 @@ class Resolver {
 
   void resolveFunction(Node node) {
     Node oldFunction = context.function;
+    Node oldLambda = context.lambda;
     context.function = node;
+    context.lambda = null;
+
     checkDeclarationLocation(node, AllowDeclaration.TOP_OR_OBJECT_LEVEL);
     initializeSymbol(node.symbol);
     Node block = node.functionBlock();
     if (block != null) resolve(block, null);
+
     context.function = oldFunction;
+    context.lambda = oldLambda;
   }
 
   void resolveVariable(Node node) {
