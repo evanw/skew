@@ -30,6 +30,8 @@ void prepareTokens(List<Token> tokens) {
       if (topKind == TokenKind.LESS_THAN && tokenKind != TokenKind.LESS_THAN &&
           tokenKind != TokenKind.IDENTIFIER && tokenKind != TokenKind.IS &&
           tokenKind != TokenKind.COMMA && tokenKind != TokenKind.DOT &&
+          tokenKind != TokenKind.FN && tokenKind != TokenKind.LEFT_PARENTHESIS &&
+          tokenKind != TokenKind.RIGHT_PARENTHESIS &&
           !tokenStartsWithGreaterThan) {
         stack.pop();
       } else {

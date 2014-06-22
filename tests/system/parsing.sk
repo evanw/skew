@@ -370,3 +370,22 @@ switch (0) {
   case 2, 3, {}
              ^
 ");
+
+test("
+class Foo<T> {}
+int y() { return 0; }
+Foo<void fn()>;
+int x;
+(x < x) > x;
+x < y() > x;
+", "
+<stdin>:6:6: error: Expected END_PARAMETER_LIST but found LEFT_PARENTHESIS
+x < y() > x;
+     ^
+<stdin>:6:7: error: Expected SEMICOLON but found RIGHT_PARENTHESIS
+x < y() > x;
+      ^
+<stdin>:6:9: error: Unexpected END_PARAMETER_LIST
+x < y() > x;
+        ^
+");
