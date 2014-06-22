@@ -1071,7 +1071,7 @@ class Resolver {
     }
 
     // Get the return type
-    Type functionType = context.function != null ? context.function.symbol.type : context.lambda.type;
+    Type functionType = context.lambda != null ? context.lambda.type : context.function.symbol.type;
     Type resultType = functionType.isError(cache) ? cache.errorType : functionType.resultType();
 
     // Check the return value

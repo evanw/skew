@@ -36,3 +36,13 @@ test("
 (int)(x => x)(false);
            ^
 ");
+
+test("
+int fn() foo() {
+  return => false;
+}
+", "
+<stdin>:2:13: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  return => false;
+            ~~~~~
+");
