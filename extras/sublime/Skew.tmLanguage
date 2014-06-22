@@ -20,7 +20,7 @@
     </dict>
     <dict>
       <key>match</key>
-      <string>\b(?:if|else|while|do|for|continue|break|default|case|switch|return|assert|class|struct|enum(?:\s+flags)?|interface|namespace|using|true|false|null|this|super|new|is|as|in|virtual|override|final|static|import|export)\b</string>
+      <string>\b(?:assert|break|case|class|continue|default|do|else|enum(?:\s+flags)?|export|final|fn|for|if|import|in|inline|interface|is|namespace|override|private|protected|public|return|static|struct|super|switch|using|var|virtual|while)\b</string>
       <key>name</key>
       <string>keyword.skew</string>
     </dict>
