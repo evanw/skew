@@ -33,6 +33,7 @@ class Scope {
     if (locals == null) {
       locals = new StringMap<Symbol>();
     }
+    assert !locals.has(symbol.name);
     locals.set(symbol.name, symbol);
   }
 

@@ -258,6 +258,23 @@ class Resolver {
         semanticErrorDuplicateSymbol(log, siblingName.range, siblingName.asString(), declarationName.range);
       }
 
+      // Disconnect all sibling variable and function declarations. All errors
+      // about duplicate symbols should have already been logged by now. New
+      // symbols are created for each node but are not inserted into the scope
+      // so that the contents of the duplicate nodes can still be type-checked.
+      Node previous = node;
+      sibling = node.sibling;
+      while (sibling != null) {
+        if (sibling.kind == NodeKind.VARIABLE || sibling.kind.isFunction()) {
+          sibling.symbol = new Symbol(symbol.name, SymbolKind.OTHER);
+          sibling.symbol.node = sibling;
+          sibling = previous.sibling = sibling.sibling;
+        } else {
+          previous = sibling;
+          sibling = sibling.sibling;
+        }
+      }
+
       // Set the symbol kind
       switch (kind) {
         case NodeKind.NAMESPACE { symbol.kind = SymbolKind.NAMESPACE; }
@@ -473,7 +490,6 @@ class Resolver {
       case NodeKind.MODIFIER { resolveModifier(node); }
 
       case NodeKind.NAME { resolveName(node); }
-      case NodeKind.TYPE { resolveType(node); }
       case NodeKind.NULL { node.type = cache.nullType; }
       case NodeKind.THIS { resolveThis(node); }
       case NodeKind.TRUE { node.type = cache.boolType; }
@@ -1140,10 +1156,6 @@ class Resolver {
 
     node.symbol = symbol;
     node.type = symbol.type;
-  }
-
-  void resolveType(Node node) {
-    unsupportedNodeKind(node);
   }
 
   void resolveThis(Node node) {

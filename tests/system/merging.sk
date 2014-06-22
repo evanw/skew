@@ -77,6 +77,42 @@ in foo {}
 ");
 
 test("
+void foo() { return 100; }
+int foo = false;
+", "
+<stdin>:2:5: error: \"foo\" is already declared
+int foo = false;
+    ~~~
+<stdin>:1:6: note: Previous declaration is here
+void foo() { return 100; }
+     ~~~
+<stdin>:1:21: error: Cannot convert from type \"int\" to type \"void\"
+void foo() { return 100; }
+                    ~~~
+<stdin>:2:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int foo = false;
+          ~~~~~
+");
+
+test("
+int foo = false;
+void foo() { return 100; }
+", "
+<stdin>:2:6: error: \"foo\" is already declared
+void foo() { return 100; }
+     ~~~
+<stdin>:1:5: note: Previous declaration is here
+int foo = false;
+    ~~~
+<stdin>:1:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int foo = false;
+          ~~~~~
+<stdin>:2:21: error: Cannot convert from type \"int\" to type \"void\"
+void foo() { return 100; }
+                    ~~~
+");
+
+test("
 namespace Foo {}
 namespace Foo {}
 ", "
