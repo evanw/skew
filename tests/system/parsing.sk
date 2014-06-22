@@ -189,6 +189,18 @@ for (int x in) {}
 ");
 
 test("
+for () {}
+for (;) {}
+", "
+<stdin>:1:6: error: Expected SEMICOLON but found RIGHT_PARENTHESIS
+for () {}
+     ^
+<stdin>:2:7: error: Expected SEMICOLON but found RIGHT_PARENTHESIS
+for (;) {}
+      ^
+");
+
+test("
 else
 ", "
 <stdin>:1:1: error: Unexpected ELSE

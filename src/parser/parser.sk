@@ -432,7 +432,7 @@ Node parseFor(ParserContext context) {
   Node test = null;
   Node update = null;
   do {
-    if (!context.peek(TokenKind.SEMICOLON)) {
+    if (!context.peek(TokenKind.SEMICOLON) && !context.peek(TokenKind.RIGHT_PARENTHESIS)) {
       setup = parseType(context);
       if (context.peek(TokenKind.IDENTIFIER)) {
         Node name = parseName(context);
@@ -451,7 +451,7 @@ Node parseFor(ParserContext context) {
       }
     }
     if (!context.expect(TokenKind.SEMICOLON)) break;
-    if (!context.peek(TokenKind.SEMICOLON)) test = pratt.parse(context, Precedence.LOWEST);
+    if (!context.peek(TokenKind.SEMICOLON) && !context.peek(TokenKind.RIGHT_PARENTHESIS)) test = pratt.parse(context, Precedence.LOWEST);
     if (!context.expect(TokenKind.SEMICOLON)) break;
     if (!context.peek(TokenKind.RIGHT_PARENTHESIS)) update = pratt.parse(context, Precedence.LOWEST);
   } while (false);
