@@ -140,3 +140,7 @@ void semanticErrorDuplicateCase(Log log, Range range, Range previous) {
   log.error(range, "Duplicate case value here");
   if (!previous.isEmpty()) log.note(previous, "First occurrence is here");
 }
+
+void semanticErrorUnconstructableType(Log log, Range range, Type type) {
+  log.error(range, "Cannot construct ".append(typeToText(type)));
+}

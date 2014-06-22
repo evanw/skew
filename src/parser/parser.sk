@@ -787,15 +787,6 @@ class IndexInfix : IInfixParselet {
   }
 }
 
-class NewPrefix : IPrefixParselet {
-  override Node run(ParserContext context) {
-    Token token = context.next();
-    Node type = parseType(context);
-    List<Node> arguments = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO);
-    return Node.createNew(type, arguments).withRange(context.spanSince(token.range));
-  }
-}
-
 class SubstitutionInfix : IInfixParselet {
   override Node run(ParserContext context, Node left) {
     Token token = context.next();
@@ -911,7 +902,6 @@ Pratt createParser() {
   pratt.parselet(TokenKind.FN, Precedence.MEMBER).infix = new FnInfix();
   pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = new CallInfix();
   pratt.parselet(TokenKind.LEFT_BRACKET, Precedence.UNARY_POSTFIX).infix = new IndexInfix();
-  pratt.parselet(TokenKind.NEW, Precedence.LOWEST).prefix = new NewPrefix();
   pratt.parselet(TokenKind.START_PARAMETER_LIST, Precedence.MEMBER).infix = new SubstitutionInfix();
   pratt.parselet(TokenKind.DEFAULT, Precedence.UNARY_PREFIX).prefix = new DefaultPrefix();
   pratt.parselet(TokenKind.SUPER, Precedence.LOWEST).prefix = new SuperCallPrefix();

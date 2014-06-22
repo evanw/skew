@@ -52,7 +52,6 @@ enum NodeKind {
   STRING,
   INITIALIZER,
   DOT,
-  DOT_CALL,
   CALL,
   SUPER_CALL,
   NEW,

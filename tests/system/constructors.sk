@@ -1,0 +1,43 @@
+test("
+void();
+", "
+<stdin>:1:1: error: Cannot construct type \"void\"
+void();
+~~~~
+");
+
+test("
+void fn()();
+", "
+<stdin>:1:1: error: Cannot construct type \"void fn()\"
+void fn()();
+~~~~~~~~~
+");
+
+test("
+struct Foo {
+  Foo(int x) {}
+}
+int foo = Foo();
+", "
+<stdin>:4:14: error: Expected 1 argument but found 0 arguments
+int foo = Foo();
+             ~~
+<stdin>:4:11: error: Cannot convert from type \"Foo\" to type \"int\"
+int foo = Foo();
+          ~~~~~
+");
+
+test("
+class Foo {
+  Foo() {}
+}
+int foo = Foo(1);
+", "
+<stdin>:4:14: error: Expected 0 arguments but found 1 argument
+int foo = Foo(1);
+             ~~~
+<stdin>:4:11: error: Cannot convert from type \"Foo\" to type \"int\"
+int foo = Foo(1);
+          ~~~~~~
+");

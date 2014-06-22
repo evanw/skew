@@ -21,6 +21,11 @@ class Type {
   static int nextUniqueID = 0;
   int uniqueID = nextUniqueID++;
 
+  Symbol constructor() {
+    if (symbol == null) return null;
+    return members.getOrDefault(symbol.name, null);
+  }
+
   void addMember(Symbol member) {
     member.enclosingSymbol = symbol;
     members.set(member.name, member);

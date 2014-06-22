@@ -247,15 +247,6 @@ in Node {
     return new Node(NodeKind.DOT).withChildren({ value, name });
   }
 
-  static Node createDotCall(Node value, Node name, List<Node> arguments) {
-    assert value.kind.isExpression();
-    assert name.kind == NodeKind.NAME;
-    assert checkAllNodeKinds(arguments, new NodeKindIsExpression());
-    arguments.unshift(name);
-    arguments.unshift(value);
-    return new Node(NodeKind.DOT_CALL).withChildren(arguments);
-  }
-
   static Node createCall(Node value, List<Node> arguments) {
     assert value.kind.isExpression();
     assert checkAllNodeKinds(arguments, new NodeKindIsExpression());
@@ -266,13 +257,6 @@ in Node {
   static Node createSuperCall(List<Node> arguments) {
     assert checkAllNodeKinds(arguments, new NodeKindIsExpression());
     return new Node(NodeKind.SUPER_CALL).withChildren(arguments);
-  }
-
-  static Node createNew(Node value, List<Node> arguments) {
-    assert value.kind.isExpression();
-    assert checkAllNodeKinds(arguments, new NodeKindIsExpression());
-    arguments.unshift(value);
-    return new Node(NodeKind.NEW).withChildren(arguments);
   }
 
   // The parser generates an error node when it encounters a syntax error.

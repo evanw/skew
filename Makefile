@@ -25,6 +25,7 @@ SOURCES += src/resolver/typecache.sk
 
 TEST_SOURCES += tests/system/calls.sk
 TEST_SOURCES += tests/system/common.sk
+TEST_SOURCES += tests/system/constructors.sk
 TEST_SOURCES += tests/system/conversions.sk
 TEST_SOURCES += tests/system/cyclic.sk
 TEST_SOURCES += tests/system/generics.sk

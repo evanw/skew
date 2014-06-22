@@ -15,7 +15,6 @@ class ResolveContext {
   Node loop = null;
   Node object = null;
   Node function = null;
-  Node lambda = null;
   Node switchValue = null;
 
   ResolveContext clone() {
@@ -24,7 +23,6 @@ class ResolveContext {
     context.loop = loop;
     context.object = object;
     context.function = function;
-    context.lambda = lambda;
     context.switchValue = switchValue;
     return context;
   }
@@ -37,7 +35,6 @@ class ResolveContext {
       if (context.loop == null && node.kind.isLoop()) context.loop = node;
       if (context.object == null && node.kind.isObject()) context.object = node;
       if (context.function == null && node.kind.isFunction()) context.function = node;
-      if (context.lambda == null && node.kind == NodeKind.LAMBDA) context.lambda = node;
       if (context.switchValue == null && node.kind == NodeKind.SWITCH) context.switchValue = node.switchValue();
     }
     return context;
@@ -50,6 +47,7 @@ class Resolver {
   List<Node> parsedDeclarations = {};
   List<Node> parsedBlocks = {};
   Type typeContext = null;
+  Type resultType = null;
   Log log;
 
   static void run(Log log, Node program) {
@@ -269,8 +267,9 @@ class Resolver {
       sibling = node.sibling;
       while (sibling != null) {
         if (sibling.kind == NodeKind.VARIABLE || sibling.kind.isFunction()) {
-          sibling.symbol = new Symbol(symbol.name, SymbolKind.OTHER);
-          sibling.symbol.node = sibling;
+          Symbol disconnected = sibling.symbol = new Symbol(symbol.name, SymbolKind.OTHER);
+          disconnected.enclosingSymbol = symbol.enclosingSymbol;
+          disconnected.node = sibling;
           sibling = previous.sibling = sibling.sibling;
         } else {
           previous = sibling;
@@ -504,7 +503,6 @@ class Resolver {
       case NodeKind.STRING { node.type = cache.stringType; }
       case NodeKind.INITIALIZER { resolveInitializer(node); }
       case NodeKind.DOT { resolveDot(node); }
-      case NodeKind.DOT_CALL { resolveDotCall(node); }
       case NodeKind.CALL { resolveCall(node); }
       case NodeKind.SUPER_CALL { resolveSuperCall(node); }
       case NodeKind.NEW { resolveNew(node); }
@@ -725,7 +723,7 @@ class Resolver {
 
     // Create the function type. Constructors get a return type of "void" so
     // that return statements inside the constructor cannot have values.
-    Type resultType = result != null ? result.type : cache.voidType;
+    Type resultType = result != null ? result.type : symbol.enclosingSymbol.type;
     symbol.type = cache.errorType;
     if (!resultType.isError(cache)) {
       List<Type> argumentTypes = {};
@@ -843,8 +841,10 @@ class Resolver {
       // sibling chain to ensure that the entire chain is processed at once
       ResolveContext oldContext = context;
       Type oldTypeContext = typeContext;
+      Type oldResultType = resultType;
       context = ResolveContext.fromNode(node); // TODO: Cache this?
       typeContext = null;
+      resultType = null;
       switch (symbol.kind) {
         case SymbolKind.NAMESPACE { initializeNamespace(symbol); }
         case SymbolKind.ENUM, SymbolKind.ENUM_FLAGS { initializeEnum(symbol); }
@@ -858,6 +858,7 @@ class Resolver {
       }
       context = oldContext;
       typeContext = oldTypeContext;
+      resultType = oldResultType;
 
       // Update the type now that cycle detection is complete
       assert symbol.type != null;
@@ -1005,17 +1006,22 @@ class Resolver {
 
   void resolveFunction(Node node) {
     Node oldFunction = context.function;
-    Node oldLambda = context.lambda;
     context.function = node;
-    context.lambda = null;
 
     checkDeclarationLocation(node, AllowDeclaration.TOP_OR_OBJECT_LEVEL);
     initializeSymbol(node.symbol);
     Node block = node.functionBlock();
-    if (block != null) resolve(block, null);
+    if (block != null) {
+      Type oldResultType = resultType;
+      Symbol symbol = node.symbol;
+      if (symbol.type.isError(cache)) resultType = cache.errorType;
+      else if (symbol.kind.isConstructor()) resultType = cache.voidType;
+      else resultType = symbol.type.resultType();
+      resolve(block, null);
+      resultType = oldResultType;
+    }
 
     context.function = oldFunction;
-    context.lambda = oldLambda;
   }
 
   void resolveVariable(Node node) {
@@ -1098,15 +1104,11 @@ class Resolver {
     Node value = node.returnValue();
 
     // Return statements must live inside functions
-    if (context.function == null && context.lambda == null) {
+    if (resultType == null) {
       unexpectedStatement(node);
       if (value != null) resolveAsExpression(value);
       return;
     }
-
-    // Get the return type
-    Type functionType = context.lambda != null ? context.lambda.type : context.function.symbol.type;
-    Type resultType = functionType.isError(cache) ? cache.errorType : functionType.resultType();
 
     // Check the return value
     if (value != null) {
@@ -1335,10 +1337,6 @@ class Resolver {
     else node.type = symbol.type;
   }
 
-  void resolveDotCall(Node node) {
-    unsupportedNodeKind(node);
-  }
-
   void resolveCall(Node node) {
     Node value = node.callValue();
     List<Node> arguments = node.callArguments();
@@ -1369,13 +1367,25 @@ class Resolver {
 
     // Otherwise, resolve the value and use that to provide type context to the arguments
     else {
-      resolveAsExpression(value);
+      assert value.kind.isExpression();
+      resolve(value, null);
       Type valueType = value.type;
 
       // Avoid reporting further errors
       if (valueType.isError(cache)) {
         resolveNodesAsExpressions(arguments);
         return;
+      }
+
+      // Types are constructed by calling the type, which forwards to the constructor
+      if (value.kind.isType()) {
+        Symbol symbol = node.symbol = valueType.constructor();
+        if (symbol == null) {
+          semanticErrorUnconstructableType(log, value.range, valueType);
+          resolveNodesAsExpressions(arguments);
+          return;
+        }
+        valueType = symbol.type;
       }
 
       // Can only call an instance of a function type
@@ -1410,6 +1420,7 @@ class Resolver {
   }
 
   void resolveNew(Node node) {
+    resolveAsParameterizedType(node);
     unsupportedNodeKind(node);
   }
 
@@ -1447,9 +1458,8 @@ class Resolver {
   }
 
   void resolveLambda(Node node) {
-    Node oldLambda = context.lambda;
+    Type oldResultType = resultType;
     Node oldLoop = context.loop;
-    context.lambda = node;
     context.loop = null;
 
     List<Node> arguments = node.lambdaArguments();
@@ -1467,8 +1477,8 @@ class Resolver {
 
       else if (!typeContext.isError(cache)) {
         // Set the expression type now even if the arguments are incorrect
-        Type resultType = typeContext.resultType();
         List<Type> argumentTypes = typeContext.argumentTypes();
+        resultType = typeContext.resultType();
         node.type = typeContext;
 
         // Validate the argument count
@@ -1490,7 +1500,7 @@ class Resolver {
     resolveNodes(arguments);
     resolve(block, null);
 
-    context.lambda = oldLambda;
+    resultType = oldResultType;
     context.loop = oldLoop;
   }
 
