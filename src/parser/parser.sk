@@ -243,10 +243,10 @@ List<Node> parseArgumentList(ParserContext context, TokenKind left, TokenKind ri
   return values;
 }
 
-List<Node> parseTypeList(ParserContext context) {
+List<Node> parseTypeList(ParserContext context, TokenKind end) {
   Token token = context.current();
   List<Node> types = {};
-  while (types.length == 0 || !context.peek(TokenKind.END_PARAMETER_LIST) && !context.peek(TokenKind.LEFT_BRACE)) {
+  while (types.length == 0 || !context.peek(end)) {
     // Make sure we don't parse an initializer expression. The user is likely
     // in the middle of typing an object base type list and trying to parse an
     // initializer expression will generate many confusing errors as the parser
@@ -256,7 +256,10 @@ List<Node> parseTypeList(ParserContext context) {
       break;
     }
 
-    if (types.length > 0 && !context.expect(TokenKind.COMMA)) break;
+    if (types.length > 0 && !context.eat(TokenKind.COMMA)) {
+      context.expect(end); // Expecting the end token here makes more sense than a comma
+      break;
+    }
     types.push(parseType(context));
   }
   return types;
@@ -266,7 +269,7 @@ Node parseObject(ParserContext context, NodeKind kind) {
   Token token = context.next();
   Node name = parseName(context); if (name == null) return null;
   Node parameters = parseParameters(context);
-  Node bases = context.eat(TokenKind.COLON) ? Node.createNodeList(parseTypeList(context)) : null;
+  Node bases = context.eat(TokenKind.COLON) ? Node.createNodeList(parseTypeList(context, TokenKind.LEFT_BRACE)) : null;
   Node block = parseBlock(context, StatementHint.IN_OBJECT); if (block == null) return null;
   return Node.createObject(kind, name, parameters, bases, block).withRange(context.spanSince(token.range));
 }
@@ -790,8 +793,11 @@ class IndexInfix : IInfixParselet {
 class SubstitutionInfix : IInfixParselet {
   override Node run(ParserContext context, Node left) {
     Token token = context.next();
-    List<Node> substitutions = parseTypeList(context);
-    if (!context.expect(TokenKind.END_PARAMETER_LIST)) return Node.createError().withRange(context.spanSince(token.range));
+    List<Node> substitutions = parseTypeList(context, TokenKind.END_PARAMETER_LIST);
+    if (!context.expect(TokenKind.END_PARAMETER_LIST)) {
+      scanForToken(context, TokenKind.END_PARAMETER_LIST, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+      return Node.createError().withRange(context.spanSince(token.range));
+    }
     return Node.createParameterize(left, substitutions).withRange(context.spanSince(left.range));
   }
 }

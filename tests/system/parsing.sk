@@ -287,6 +287,34 @@ test("
 ");
 
 test("
+Foo<Bar Baz> foo;
+Foo<Bar Baz> bar;
+", "
+<stdin>:1:9: error: Expected END_PARAMETER_LIST but found IDENTIFIER
+Foo<Bar Baz> foo;
+        ~~~
+<stdin>:2:9: error: Expected END_PARAMETER_LIST but found IDENTIFIER
+Foo<Bar Baz> bar;
+        ~~~
+");
+
+test("
+class Foo :
+", "
+<stdin>:1:12: error: Unexpected END_OF_FILE
+class Foo :
+           ^
+");
+
+test("
+class Foo : Bar
+", "
+<stdin>:1:16: error: Expected LEFT_BRACE but found END_OF_FILE
+class Foo : Bar
+               ^
+");
+
+test("
 class Foo : {
   void foo() {}
 }
