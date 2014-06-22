@@ -558,8 +558,9 @@ bool looksLikeLambdaArguments(Node node) {
         return false;
       }
     }
+    return true;
   }
-  return true;
+  return false;
 }
 
 Node createLambdaFromNames(List<Node> names, Node block) {

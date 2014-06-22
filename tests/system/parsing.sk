@@ -217,6 +217,14 @@ if () {}
 ");
 
 test("
+(null) =>;
+", "
+<stdin>:1:8: error: Expected SEMICOLON but found LAMBDA
+(null) =>;
+       ~~
+");
+
+test("
 void fn() a0 = =>;
 bool fn() a1 = => false;
 void fn() a2 = => {};
