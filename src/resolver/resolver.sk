@@ -505,7 +505,7 @@ class Resolver {
       case NodeKind.DOT { resolveDot(node); }
       case NodeKind.CALL { resolveCall(node); }
       case NodeKind.SUPER_CALL { resolveSuperCall(node); }
-      case NodeKind.ERROR { resolveError(node); }
+      case NodeKind.ERROR {} // Ignore parse errors
       case NodeKind.SEQUENCE { resolveSequence(node); }
       case NodeKind.PARAMETERIZE { resolveParameterize(node); }
       case NodeKind.CAST { resolveCast(node); }
@@ -1439,12 +1439,6 @@ class Resolver {
 
   void resolveSuperCall(Node node) {
     unsupportedNodeKind(node);
-  }
-
-  void resolveError(Node node) {
-    // Error nodes represent parse errors. They exist to allow a valid AST to
-    // be produced from an invalid parse after parser recovery, which is most
-    // useful when the compiler is being run as part of an IDE.
   }
 
   void resolveSequence(Node node) {

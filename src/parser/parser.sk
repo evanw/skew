@@ -256,10 +256,18 @@ List<Node> parseTypeList(ParserContext context, TokenKind end) {
       break;
     }
 
+    // Commas must come between types
     if (types.length > 0 && !context.eat(TokenKind.COMMA)) {
       context.expect(end); // Expecting the end token here makes more sense than a comma
       break;
     }
+
+    // Also prevent initializer expression parsing after a comma
+    if (context.peek(TokenKind.LEFT_BRACE)) {
+      context.unexpectedToken();
+      break;
+    }
+
     types.push(parseType(context));
   }
   return types;

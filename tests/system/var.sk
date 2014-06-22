@@ -7,6 +7,14 @@ var foo;
 ");
 
 test("
+var foo = {};
+", "
+<stdin>:1:11: error: Expression has no type context here
+var foo = {};
+          ~~
+");
+
+test("
 var foo = bar;
 int bar = foo;
 ", "

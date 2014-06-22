@@ -259,9 +259,9 @@ in Node {
     return new Node(NodeKind.SUPER_CALL).withChildren(arguments);
   }
 
-  // The parser generates an error node when it encounters a syntax error.
-  // This node acts as a placeholder so the parser can recover from the
-  // error, continue parsing, and still return a valid AST.
+  // Error nodes represent parse errors. They exist to allow a valid AST to
+  // be produced from an invalid parse after parser recovery, which is most
+  // useful when the compiler is being run as part of an IDE.
   static Node createError() {
     return new Node(NodeKind.ERROR);
   }

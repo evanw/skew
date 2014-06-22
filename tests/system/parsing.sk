@@ -315,13 +315,30 @@ class Foo : Bar
 ");
 
 test("
-class Foo : {
-  void foo() {}
-}
+class Foo : {}
+class Bar : {}
 ", "
 <stdin>:1:13: error: Unexpected LEFT_BRACE
-class Foo : {
+class Foo : {}
             ^
+<stdin>:2:13: error: Unexpected LEFT_BRACE
+class Bar : {}
+            ^
+");
+
+test("
+class Foo : Bar, {}
+class Bar : Baz, {}
+", "
+<stdin>:1:18: error: Unexpected LEFT_BRACE
+class Foo : Bar, {}
+                 ^
+<stdin>:2:18: error: Unexpected LEFT_BRACE
+class Bar : Baz, {}
+                 ^
+<stdin>:2:13: error: \"Baz\" is not declared
+class Bar : Baz, {}
+            ~~~
 ");
 
 test("
