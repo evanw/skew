@@ -35,6 +35,7 @@ TEST_SOURCES += tests/system/objects.sk
 TEST_SOURCES += tests/system/parsing.sk
 TEST_SOURCES += tests/system/statements.sk
 TEST_SOURCES += tests/system/static.sk
+TEST_SOURCES += tests/system/switch.sk
 TEST_SOURCES += tests/system/types.sk
 TEST_SOURCES += tests/system/using.sk
 TEST_SOURCES += tests/system/var.sk

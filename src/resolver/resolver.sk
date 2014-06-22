@@ -16,6 +16,7 @@ class ResolveContext {
   Node object = null;
   Node function = null;
   Node lambda = null;
+  Node switchValue = null;
 
   ResolveContext clone() {
     ResolveContext context = new ResolveContext();
@@ -24,6 +25,7 @@ class ResolveContext {
     context.object = object;
     context.function = function;
     context.lambda = lambda;
+    context.switchValue = switchValue;
     return context;
   }
 
@@ -36,6 +38,7 @@ class ResolveContext {
       if (context.object == null && node.kind.isObject()) context.object = node;
       if (context.function == null && node.kind.isFunction()) context.function = node;
       if (context.lambda == null && node.kind == NodeKind.LAMBDA) context.lambda = node;
+      if (context.switchValue == null && node.kind == NodeKind.SWITCH) context.switchValue = node.switchValue();
     }
     return context;
   }
@@ -959,7 +962,17 @@ class Resolver {
   }
 
   void resolveCase(Node node) {
-    unsupportedNodeKind(node);
+    assert node.parent != null;
+    assert node.parent.kind == NodeKind.SWITCH;
+    assert context.switchValue != null;
+    assert context.switchValue.type != null;
+    List<Node> values = node.caseValues();
+    Node block = node.caseBlock();
+    int i;
+    for (i = 0; i < values.length; i++) {
+      resolveAsExpressionWithConversion(values.get(i), context.switchValue.type, CastKind.IMPLICIT);
+    }
+    resolve(block, null);
   }
 
   void resolveUsingNamespace(Node node) {
@@ -1127,7 +1140,49 @@ class Resolver {
   }
 
   void resolveSwitch(Node node) {
-    unsupportedNodeKind(node);
+    Node value = node.switchValue();
+    List<Node> cases = node.switchCases();
+    resolveAsExpression(value);
+
+    int i;
+    List<Node> uniqueValues = {};
+    for (i = 0; i < cases.length; i++) {
+      Node child = cases.get(i);
+
+      // Require only one default case and make sure it's last. That way this
+      // switch statement can be converted to an if-else chain if it doesn't
+      // consist of compile-time integer constants without moving the user's
+      // code around.
+      if (child.children.length == 1 && i < cases.length - 1) {
+        semanticErrorBadDefaultCase(log, child.range);
+      }
+
+      // Check previous values for duplicates
+      List<Node> caseValues = child.caseValues();
+      int j;
+      for (j = 0; j < caseValues.length; j++) {
+        Node caseValue = caseValues.get(j);
+        if (!caseValue.kind.isConstant()) {
+          continue;
+        }
+        int k;
+        for (k = 0; k < uniqueValues.length; k++) {
+          Node original = uniqueValues.get(k);
+          if (original.kind == caseValue.kind && Content.equal(original.content, caseValue.content)) {
+            semanticErrorDuplicateCase(log, caseValue.range, original.range);
+            break;
+          }
+        }
+        if (k == uniqueValues.length) {
+          uniqueValues.push(caseValue);
+        }
+      }
+    }
+
+    Node oldSwitchValue = context.switchValue;
+    context.switchValue = value;
+    resolveNodes(cases);
+    context.switchValue = oldSwitchValue;
   }
 
   void resolveModifier(Node node) {

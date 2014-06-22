@@ -147,6 +147,18 @@ Node parseCaseStatement(ParserContext context) {
   if (!context.eat(TokenKind.DEFAULT)) {
     if (!context.expect(TokenKind.CASE)) return null;
     do {
+      // Make sure we don't parse an initializer expression here. The user is
+      // likely in the middle of typing a case statement and trying to parse an
+      // initializer expression will generate many confusing errors as the
+      // parser tries to interpret the case block as an initializer expression.
+      // An initializer expression here will still work if it's wrapped in
+      // parentheses.
+      if (context.peek(TokenKind.LEFT_BRACE)) {
+        context.unexpectedToken();
+        values.push(Node.createError()); // Make sure this case doesn't look like a default case
+        break;
+      }
+
       values.push(pratt.parse(context, Precedence.COMMA));
     } while (context.eat(TokenKind.COMMA));
   }
@@ -235,6 +247,15 @@ List<Node> parseTypeList(ParserContext context) {
   Token token = context.current();
   List<Node> types = {};
   while (types.length == 0 || !context.peek(TokenKind.END_PARAMETER_LIST) && !context.peek(TokenKind.LEFT_BRACE)) {
+    // Make sure we don't parse an initializer expression. The user is likely
+    // in the middle of typing an object base type list and trying to parse an
+    // initializer expression will generate many confusing errors as the parser
+    // tries to interpret the object block as an initializer expression.
+    if (context.peek(TokenKind.LEFT_BRACE)) {
+      context.unexpectedToken();
+      break;
+    }
+
     if (types.length > 0 && !context.expect(TokenKind.COMMA)) break;
     types.push(parseType(context));
   }

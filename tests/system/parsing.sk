@@ -285,3 +285,31 @@ test("
 100 fn() foo = null, bar = null;
        ^
 ");
+
+test("
+class Foo : {
+  void foo() {}
+}
+", "
+<stdin>:1:13: error: Unexpected LEFT_BRACE
+class Foo : {
+            ^
+");
+
+test("
+switch (0) {
+  case {}
+  case 1, {}
+  case 2, 3, {}
+}
+", "
+<stdin>:2:8: error: Unexpected LEFT_BRACE
+  case {}
+       ^
+<stdin>:3:11: error: Unexpected LEFT_BRACE
+  case 1, {}
+          ^
+<stdin>:4:14: error: Unexpected LEFT_BRACE
+  case 2, 3, {}
+             ^
+");

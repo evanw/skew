@@ -41,11 +41,11 @@ enum NodeKind {
   // Expressions
   NAME,
   TYPE,
-  NULL,
   THIS,
+  HOOK,
+  NULL,
   TRUE,
   FALSE,
-  HOOK,
   INT,
   FLOAT,
   DOUBLE,
@@ -142,6 +142,10 @@ in NodeKind {
 
   bool isExpression() {
     return this >= NAME && this <= ASSIGN_INDEX;
+  }
+
+  bool isConstant() {
+    return this >= NULL && this <= STRING;
   }
 
   bool isUnaryOperator() {
@@ -368,6 +372,21 @@ enum ContentType {
 class Content {
   virtual ContentType type();
   virtual Content clone();
+
+  static bool equal(Content left, Content right) {
+    if (left == right) return true;
+    if (left != null && right != null) {
+      ContentType type = left.type();
+      if (type == right.type()) {
+        switch (type) {
+          case ContentType.INT { return ((IntContent)left).value == ((IntContent)right).value; }
+          case ContentType.DOUBLE { return ((DoubleContent)left).value == ((DoubleContent)right).value; }
+          case ContentType.STRING { return ((StringContent)left).value == ((StringContent)right).value; }
+        }
+      }
+    }
+    return false;
+  }
 }
 
 class IntContent : Content {

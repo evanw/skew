@@ -131,3 +131,12 @@ void semanticErrorExpectedReturnValue(Log log, Range range, Type type) {
 void semanticErrorBadLambdaTypeContext(Log log, Range range, Type type) {
   log.error(range, "Cannot use a lambda expression with ".append(typeToText(type)));
 }
+
+void semanticErrorBadDefaultCase(Log log, Range range) {
+  log.error(range, "Only the last case can be a default case");
+}
+
+void semanticErrorDuplicateCase(Log log, Range range, Range previous) {
+  log.error(range, "Duplicate case value here");
+  if (!previous.isEmpty()) log.note(previous, "First occurrence is here");
+}

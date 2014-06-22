@@ -99,3 +99,20 @@ class Foo<A is B, B is C, C is A> {}
 class Foo<A is B, B is C, C is A> {}
           ^
 ");
+
+test("
+void foo(foo bar);
+", "
+<stdin>:1:6: error: Cyclic declaration of \"foo\"
+void foo(foo bar);
+     ~~~
+");
+
+test("
+void foo(bar baz);
+void bar(foo baz);
+", "
+<stdin>:1:6: error: Cyclic declaration of \"foo\"
+void foo(bar baz);
+     ~~~
+");
