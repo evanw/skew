@@ -1266,38 +1266,66 @@ class Resolver {
   void resolveCall(Node node) {
     Node value = node.callValue();
     List<Node> arguments = node.callArguments();
-    resolveAsExpression(value);
-    Type valueType = value.type;
 
-    // Avoid reporting further errors
-    if (valueType.isError(cache)) {
+    // Special-case immediately-invoked lambdas to provide type context from the arguments
+    if (value.kind == NodeKind.LAMBDA && typeContext != null) {
       resolveNodesAsExpressions(arguments);
-      return;
+
+      // Avoid reporting further errors
+      if (typeContext.isError(cache)) {
+        resolveAsExpression(value);
+        return;
+      }
+
+      // Use the argument types as type context for the value being called
+      List<Type> argumentTypes = {};
+      int i;
+      for (i = 0; i < arguments.length; i++) {
+        Type type = arguments.get(i).type;
+        if (type.isError(cache)) {
+          resolveAsExpression(value);
+          return;
+        }
+        argumentTypes.push(type);
+      }
+      resolveAsExpressionWithConversion(value, cache.functionType(typeContext, argumentTypes), CastKind.IMPLICIT);
     }
 
-    // Can only call an instance of a function type
-    if (!valueType.isFunction()) {
-      semanticErrorInvalidCall(log, value.range, valueType);
-      resolveNodesAsExpressions(arguments);
-      return;
-    }
+    // Otherwise, resolve the value and use that to provide type context to the arguments
+    else {
+      resolveAsExpression(value);
+      Type valueType = value.type;
 
-    // Set the result type now even if the arguments are incorrect
-    Type resultType = valueType.resultType();
-    List<Type> argumentTypes = valueType.argumentTypes();
-    node.type = resultType;
+      // Avoid reporting further errors
+      if (valueType.isError(cache)) {
+        resolveNodesAsExpressions(arguments);
+        return;
+      }
 
-    // Validate the argument count
-    if (argumentTypes.length != arguments.length) {
-      semanticErrorArgumentCount(log, Range.after(node.range, value.range), argumentTypes.length, arguments.length);
-      resolveNodesAsExpressions(arguments);
-      return;
-    }
+      // Can only call an instance of a function type
+      if (!valueType.isFunction()) {
+        semanticErrorInvalidCall(log, value.range, valueType);
+        resolveNodesAsExpressions(arguments);
+        return;
+      }
 
-    // Validate the arguments and provide type context
-    int i;
-    for (i = 0; i < arguments.length; i++) {
-      resolveAsExpressionWithConversion(arguments.get(i), argumentTypes.get(i), CastKind.IMPLICIT);
+      // Set the result type now even if the arguments are incorrect
+      Type resultType = valueType.resultType();
+      List<Type> argumentTypes = valueType.argumentTypes();
+      node.type = resultType;
+
+      // Validate the argument count
+      if (argumentTypes.length != arguments.length) {
+        semanticErrorArgumentCount(log, Range.after(node.range, value.range), argumentTypes.length, arguments.length);
+        resolveNodesAsExpressions(arguments);
+        return;
+      }
+
+      // Validate the arguments and provide type context
+      int i;
+      for (i = 0; i < arguments.length; i++) {
+        resolveAsExpressionWithConversion(arguments.get(i), argumentTypes.get(i), CastKind.IMPLICIT);
+      }
     }
   }
 

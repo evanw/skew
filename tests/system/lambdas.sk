@@ -1,0 +1,38 @@
+test("
+int fn(bool) foo = foo => foo;
+int fn(bool) fn(float) bar = bar => bar => bar;
+", "
+<stdin>:1:27: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int fn(bool) foo = foo => foo;
+                          ~~~
+<stdin>:2:44: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int fn(bool) fn(float) bar = bar => bar => bar;
+                                           ~~~
+");
+
+test("
+foo => { foo; bar; };
+", "
+<stdin>:1:1: error: Expression has no type context here
+foo => { foo; bar; };
+~~~~~~~~~~~~~~~~~~~~
+<stdin>:1:15: error: \"bar\" is not declared
+foo => { foo; bar; };
+              ~~~
+");
+
+test("
+int foo = (=> false)();
+", "
+<stdin>:1:15: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int foo = (=> false)();
+              ~~~~~
+");
+
+test("
+(int)(x => x)(false);
+", "
+<stdin>:1:12: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+(int)(x => x)(false);
+           ^
+");
