@@ -273,3 +273,37 @@ break;
 continue;
 ~~~~~~~~~
 ");
+
+test("
+class Foo {
+  assert true;
+  for (;;) {}
+  if (false) {}
+  while (false) {}
+  do {} while (false);
+  switch (0) {}
+  0;
+}
+", "
+<stdin>:2:3: error: Cannot use this statement here
+  assert true;
+  ~~~~~~~~~~~~
+<stdin>:3:3: error: Cannot use this statement here
+  for (;;) {}
+  ~~~~~~~~~~~
+<stdin>:4:3: error: Cannot use this statement here
+  if (false) {}
+  ~~~~~~~~~~~~~
+<stdin>:5:3: error: Cannot use this statement here
+  while (false) {}
+  ~~~~~~~~~~~~~~~~
+<stdin>:6:3: error: Cannot use this statement here
+  do {} while (false);
+  ~~~~~~~~~~~~~~~~~~~~
+<stdin>:7:3: error: Cannot use this statement here
+  switch (0) {}
+  ~~~~~~~~~~~~~
+<stdin>:8:3: error: Cannot use this statement here
+  0;
+  ~~
+");

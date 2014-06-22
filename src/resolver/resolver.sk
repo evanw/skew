@@ -665,6 +665,17 @@ class Resolver {
     }
   }
 
+  void checkStatementLocation(Node node) {
+    assert node.parent != null;
+
+    // Statements cannot live inside non-namespace type declarations
+    // Top-level declarations cannot live inside object declarations, function
+    // declarations, or conditional statements
+    if (node.parent.kind != NodeKind.BLOCK || node.parent.parent.kind.isNamedBlockDeclaration() && node.parent.parent.kind != NodeKind.NAMESPACE) {
+      unexpectedStatement(node);
+    }
+  }
+
   bool checkAccessToThis(Range range) {
     if (context.function != null && context.function.symbol.kind.isInstance()) {
       return true;
@@ -1059,12 +1070,14 @@ class Resolver {
   }
 
   void resolveIf(Node node) {
+    checkStatementLocation(node);
     resolveAsExpressionWithConversion(node.ifTest(), cache.boolType, CastKind.IMPLICIT);
     resolve(node.ifTrue(), null);
     if (node.ifFalse() != null) resolve(node.ifFalse(), null);
   }
 
   void resolveFor(Node node) {
+    checkStatementLocation(node);
     Node setup = node.forSetup();
     Node test = node.forTest();
     Node update = node.forUpdate();
@@ -1082,6 +1095,7 @@ class Resolver {
   }
 
   void resolveForEach(Node node) {
+    checkStatementLocation(node);
     resolve(node.forEachVariable(), null);
     resolve(node.forEachValue(), null);
     Node oldLoop = context.loop;
@@ -1092,6 +1106,7 @@ class Resolver {
   }
 
   void resolveWhile(Node node) {
+    checkStatementLocation(node);
     Node test = node.whileTest();
     if (test != null) resolveAsExpressionWithConversion(test, cache.boolType, CastKind.IMPLICIT);
     Node oldLoop = context.loop;
@@ -1134,14 +1149,17 @@ class Resolver {
   }
 
   void resolveAssert(Node node) {
+    checkStatementLocation(node);
     resolveAsExpressionWithConversion(node.assertValue(), cache.boolType, CastKind.IMPLICIT);
   }
 
   void resolveExpression(Node node) {
+    checkStatementLocation(node);
     resolveAsExpression(node.expressionValue());
   }
 
   void resolveSwitch(Node node) {
+    checkStatementLocation(node);
     Node value = node.switchValue();
     List<Node> cases = node.switchCases();
     resolveAsExpression(value);

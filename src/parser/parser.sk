@@ -306,7 +306,7 @@ Node parseExpression(ParserContext context) {
   }
 
   assert context.current().range.start >= token.range.end; // Make sure the context was advanced
-  return Node.createExpression(value);
+  return Node.createExpression(value).withRange(context.spanSince(token.range));
 }
 
 Node parseModifier(ParserContext context, SymbolFlag flag) {

@@ -17,16 +17,19 @@ class Log {
   int errorCount = 0;
 
   void error(Range range, string text) {
+    assert !range.isEmpty();
     diagnostics.push(new Diagnostic(DiagnosticKind.ERROR, range, text));
     errorCount++;
   }
 
   void warning(Range range, string text) {
+    assert !range.isEmpty();
     diagnostics.push(new Diagnostic(DiagnosticKind.WARNING, range, text));
     warningCount++;
   }
 
   void note(Range range, string text) {
+    assert !range.isEmpty();
     Diagnostic last = diagnostics.get(diagnostics.length - 1);
     last.noteRange = range;
     last.noteText = text;

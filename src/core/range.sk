@@ -33,6 +33,7 @@ struct Range {
   }
 
   FormattedRange format(int maxLength) {
+    assert source != null;
     LineColumn start = source.indexToLineColumn(this.start);
     LineColumn end = source.indexToLineColumn(this.end);
     string line = source.contentsOfLine(start.line);
