@@ -41,3 +41,41 @@ int foo = Foo(1);
 int foo = Foo(1);
           ~~~~~~
 ");
+
+test("
+int foo = { false };
+", "
+<stdin>:1:11: error: Cannot construct type \"int\"
+int foo = { false };
+          ~~~~~~~~~
+");
+
+test("
+void fn() foo = { false };
+", "
+<stdin>:1:17: error: Cannot construct type \"void fn()\"
+void fn() foo = { false };
+                ~~~~~~~~~
+");
+
+test("
+class Foo {
+  Foo(int x) {}
+}
+Foo foo = { false };
+", "
+<stdin>:4:13: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+Foo foo = { false };
+            ~~~~~
+");
+
+test("
+class Foo {
+  Foo(int x) {}
+}
+Foo foo = { 0, 1 };
+", "
+<stdin>:4:11: error: Expected 1 argument but found 2 arguments
+Foo foo = { 0, 1 };
+          ~~~~~~~~
+");

@@ -98,4 +98,8 @@ struct Range {
     assert outer.end >= inner.end;
     return new Range(outer.source, inner.end, outer.end);
   }
+
+  static bool same(Range left, Range right) {
+    return left.source == right.source && left.start == right.start && left.end == right.end;
+  }
 }

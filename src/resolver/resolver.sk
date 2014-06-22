@@ -1297,9 +1297,9 @@ class Resolver {
       return;
     }
 
-    // TODO
-    unsupportedNodeKind(node);
-    resolveNodesAsExpressions(values);
+    // Resolve this initializer expression as a constructor call expression
+    node.become(Node.createCall(Node.createType(typeContext).withRange(node.range), node.removeChildren()).withRange(node.range));
+    resolveAsExpressionWithTypeContext(node, typeContext);
   }
 
   void resolveDot(Node node) {
@@ -1423,7 +1423,8 @@ class Resolver {
 
       // Validate the argument count
       if (argumentTypes.length != arguments.length) {
-        semanticErrorArgumentCount(log, Range.after(node.range, value.range), argumentTypes.length, arguments.length);
+        Range range = Range.same(node.range, value.range) ? node.range : Range.after(node.range, value.range);
+        semanticErrorArgumentCount(log, range, argumentTypes.length, arguments.length);
         resolveNodesAsExpressions(arguments);
         return;
       }
