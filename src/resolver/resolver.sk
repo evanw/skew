@@ -1091,11 +1091,15 @@ class Resolver {
   }
 
   void resolveBreak(Node node) {
-    unsupportedNodeKind(node);
+    if (context.loop == null) {
+      unexpectedStatement(node);
+    }
   }
 
   void resolveContinue(Node node) {
-    unsupportedNodeKind(node);
+    if (context.loop == null) {
+      unexpectedStatement(node);
+    }
   }
 
   void resolveAssert(Node node) {
