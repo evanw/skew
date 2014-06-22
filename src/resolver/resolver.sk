@@ -763,9 +763,9 @@ class Resolver {
       // logged already and just use the error type. This is the case when a
       // lambda expression lacks type context.
       else {
-        Symbol enclosingSymbol = node.symbol.enclosingSymbol;
-        assert enclosingSymbol != null ? enclosingSymbol.kind.isEnum() : node.parent.kind == NodeKind.LAMBDA;
-        variableType = Node.createType(enclosingSymbol != null ? enclosingSymbol.type : cache.errorType);
+        Symbol enclosingSymbol = symbol.enclosingSymbol;
+        assert enclosingSymbol != null ? symbol.isEnumValue() : node.parent.kind == NodeKind.LAMBDA;
+        variableType = Node.createType(symbol.isEnumValue() ? enclosingSymbol.type : cache.errorType);
       }
 
       assert variableType != null;
@@ -1049,7 +1049,11 @@ class Resolver {
       }
     }
 
-    if (value != null) resolveAsExpressionWithConversion(value, symbol.type, CastKind.IMPLICIT);
+    // Enum values are resolved as ints instead of as the enum type because ints
+    // don't implicitly convert to enums.
+    if (value != null) {
+      resolveAsExpressionWithConversion(value, symbol.isEnumValue() ? cache.intType : symbol.type, CastKind.IMPLICIT);
+    }
   }
 
   void resolveVariableCluster(Node node) {

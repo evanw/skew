@@ -263,11 +263,15 @@ class Foo {
 ");
 
 test("
-enum Foo { FOO = false }
+enum Foo {
+  FOO = 0,
+  BAR = FOO,
+  BAZ = false,
+}
 ", "
-<stdin>:1:18: error: Cannot convert from type \"bool\" to type \"Foo\" without a cast
-enum Foo { FOO = false }
-                 ~~~~~
+<stdin>:4:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  BAZ = false,
+        ~~~~~
 ");
 
 test("

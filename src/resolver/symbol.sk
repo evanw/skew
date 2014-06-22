@@ -115,6 +115,10 @@ class Symbol {
   // enums have an enum value, so this should be ignored for imported enums.
   int enumValue = 0;
 
+  bool isEnumValue() {
+    return kind == SymbolKind.GLOBAL_VARIABLE && enclosingSymbol != null && enclosingSymbol.kind.isEnum();
+  }
+
   bool isPublic() {
     return (flags & SymbolFlag.PUBLIC) != 0;
   }
