@@ -144,3 +144,15 @@ void semanticErrorDuplicateCase(Log log, Range range, Range previous) {
 void semanticErrorUnconstructableType(Log log, Range range, Type type) {
   log.error(range, "Cannot construct ".append(typeToText(type)));
 }
+
+void semanticErrorStructBaseType(Log log, Range range) {
+  log.error(range, "A struct cannot inherit from another type");
+}
+
+void semanticErrorClassBaseNotFirst(Log log, Range range, Type type) {
+  log.error(range, "Base ".append(typeToText(type)).append(" must come first"));
+}
+
+void semanticErrorBaseTypeNotInterface(Log log, Range range, Type type) {
+  log.error(range, "Base ".append(typeToText(type)).append(" must be an interface"));
+}

@@ -79,3 +79,14 @@ Foo foo = { 0, 1 };
 Foo foo = { 0, 1 };
           ~~~~~~~~
 ");
+
+test("
+class Foo {
+  Foo foo = false;
+  Foo() {}
+}
+", "
+<stdin>:2:13: error: Cannot convert from type \"bool\" to type \"Foo\"
+  Foo foo = false;
+            ~~~~~
+");

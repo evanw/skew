@@ -1,10 +1,56 @@
 test("
-class Foo {
-  Foo foo = false;
-  Foo() {}
-}
+class Foo<T> : T {}
 ", "
-<stdin>:2:13: error: Cannot convert from type \"bool\" to type \"Foo\"
-  Foo foo = false;
-            ~~~~~
+<stdin>:1:16: error: Base type \"T\" must be an interface
+class Foo<T> : T {}
+               ^
+");
+
+test("
+struct Foo : Bar {}
+struct Bar {}
+", "
+<stdin>:1:14: error: A struct cannot inherit from another type
+struct Foo : Bar {}
+             ~~~
+");
+
+test("
+interface IFoo {}
+class Foo : IFoo, Bar {}
+class Bar {}
+", "
+<stdin>:2:19: error: Base type \"Bar\" must come first
+class Foo : IFoo, Bar {}
+                  ~~~
+");
+
+test("
+class Foo : Bar {}
+class Bar {}
+", "
+");
+
+test("
+interface IFoo : IBar {}
+interface IBar {}
+", "
+");
+
+test("
+interface IFoo : Bar {}
+struct Bar {}
+", "
+<stdin>:1:18: error: Base type \"Bar\" must be an interface
+interface IFoo : Bar {}
+                 ~~~
+");
+
+test("
+interface IFoo : Bar {}
+class Bar {}
+", "
+<stdin>:1:18: error: Base type \"Bar\" must be an interface
+interface IFoo : Bar {}
+                 ~~~
 ");

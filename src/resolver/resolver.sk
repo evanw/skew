@@ -712,6 +712,19 @@ class Resolver {
       for (i = 0; i < children.length; i++) {
         Node base = children.get(i);
         resolveAsParameterizedType(base);
+        Type baseType = base.type;
+        if (baseType.isError(cache)) {
+          continue;
+        }
+        if (node.kind == NodeKind.STRUCT) {
+          semanticErrorStructBaseType(log, base.range);
+        } else if (node.kind == NodeKind.CLASS && baseType.isClass()) {
+          if (i != 0) {
+            semanticErrorClassBaseNotFirst(log, base.range, baseType);
+          }
+        } else if (!baseType.isInterface()) {
+          semanticErrorBaseTypeNotInterface(log, base.range, baseType);
+        }
       }
     }
   }
@@ -1001,10 +1014,11 @@ class Resolver {
   }
 
   void resolveObject(Node node) {
-    Node oldObject = context.object;
-    context.object = node;
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     initializeSymbol(node.symbol);
+
+    Node oldObject = context.object;
+    context.object = node;
     resolve(node.declarationBlock(), null);
     context.object = oldObject;
   }
@@ -1015,23 +1029,23 @@ class Resolver {
   }
 
   void resolveFunction(Node node) {
-    Node oldFunction = context.function;
-    context.function = node;
-
     checkDeclarationLocation(node, AllowDeclaration.TOP_OR_OBJECT_LEVEL);
     initializeSymbol(node.symbol);
     Node block = node.functionBlock();
     if (block != null) {
       Type oldResultType = resultType;
+      Node oldFunction = context.function;
+      context.function = node;
+
       Symbol symbol = node.symbol;
       if (symbol.type.isError(cache)) resultType = cache.errorType;
       else if (symbol.kind.isConstructor()) resultType = cache.voidType;
       else resultType = symbol.type.resultType();
       resolve(block, null);
-      resultType = oldResultType;
-    }
 
-    context.function = oldFunction;
+      resultType = oldResultType;
+      context.function = oldFunction;
+    }
   }
 
   void resolveVariable(Node node) {
@@ -1098,20 +1112,22 @@ class Resolver {
   }
 
   void resolveForEach(Node node) {
+    unsupportedNodeKind(node);
     checkStatementLocation(node);
     resolve(node.forEachVariable(), null);
+
     resolve(node.forEachValue(), null);
     Node oldLoop = context.loop;
     context.loop = node;
     resolve(node.forEachBlock(), null);
     context.loop = oldLoop;
-    unsupportedNodeKind(node);
   }
 
   void resolveWhile(Node node) {
     checkStatementLocation(node);
     Node test = node.whileTest();
     if (test != null) resolveAsExpressionWithConversion(test, cache.boolType, CastKind.IMPLICIT);
+
     Node oldLoop = context.loop;
     context.loop = node;
     resolve(node.whileBlock(), null);
