@@ -73,7 +73,6 @@ class Type {
   }
 
   string toString() {
-    // Special-case function types
     if (isFunction()) {
       string text = resultType().toString().append(" fn(");
       List<Type> arguments = argumentTypes();
@@ -84,10 +83,7 @@ class Type {
       }
       return text.append(")");
     }
-
-    // Return the fully-qualified name for all other symbols
-    Symbol enclosingSymbol = symbol.enclosingSymbol;
-    return (enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() ? enclosingSymbol.type.toString().append(".") : "").append(symbol.name);
+    return symbol.fullName();
   }
 
   bool hasRelevantTypes() {

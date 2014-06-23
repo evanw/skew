@@ -32,11 +32,11 @@ using ns.foo;
 ");
 
 test("
-using ns.foo;
-namespace ns { class foo {} }
+using ns.Foo;
+namespace ns { class Foo {} }
 ", "
 <stdin>:1:7: error: Expected a namespace here
-using ns.foo;
+using ns.Foo;
       ~~~~~~
 ");
 
@@ -63,8 +63,12 @@ class foo {}
 
 test("
 using bar = foo;
-namespace foo {}
+namespace foo { int x; }
+bool y = bar.x;
 ", "
+<stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool y = bar.x;
+         ~~~~~
 ");
 
 test("
@@ -77,9 +81,13 @@ using bar = ns.foo;
 ");
 
 test("
-using bar = ns.foo;
-namespace ns { class foo {} }
+using bar = ns.Foo;
+namespace ns { class Foo {} }
+bar Foo = 0;
 ", "
+<stdin>:3:11: error: Cannot convert from type \"int\" to type \"ns.Foo\"
+bar Foo = 0;
+          ^
 ");
 
 test("
@@ -117,5 +125,107 @@ namespace ns2 {
 ", "
 <stdin>:2:13: error: Cannot convert from type \"int\" to type \"ns2.Foo\"
   Foo bar = 0;
+            ^
+");
+
+test("
+namespace ns {
+  class Foo {}
+}
+Foo foo;
+", "
+<stdin>:4:1: error: \"Foo\" is not declared
+Foo foo;
+~~~
+");
+
+test("
+using ns;
+Foo foo = 0;
+namespace ns {
+  class Foo {}
+}
+", "
+<stdin>:2:11: error: Cannot convert from type \"int\" to type \"ns.Foo\"
+Foo foo = 0;
+          ^
+");
+
+test("
+using ns1;
+using ns2;
+Foo foo = 0;
+namespace ns1 { class Foo {} }
+namespace ns2 { class Foo {} }
+", "
+<stdin>:3:1: error: Reference to \"Foo\" is ambiguous, could be \"ns1.Foo\" or \"ns2.Foo\"
+Foo foo = 0;
+~~~
+");
+
+test("
+using Foo = ns1.Foo;
+using ns1;
+using ns2;
+Foo foo = 0;
+namespace ns1 { class Foo {} }
+namespace ns2 { class Foo {} }
+", "
+<stdin>:4:11: error: Cannot convert from type \"int\" to type \"ns1.Foo\"
+Foo foo = 0;
+          ^
+");
+
+test("
+using ns1;
+using ns2;
+using ns3;
+Foo foo = 0;
+namespace ns1 { class Foo {} }
+namespace ns2 { class Foo {} }
+namespace ns3 { class Foo {} }
+", "
+<stdin>:4:1: error: Reference to \"Foo\" is ambiguous, could be \"ns1.Foo\" or \"ns2.Foo\" or \"ns3.Foo\"
+Foo foo = 0;
+~~~
+");
+
+test("
+namespace ns {
+  using ns;
+  class Foo {}
+  Foo foo = 0;
+}
+", "
+<stdin>:4:13: error: Cannot convert from type \"int\" to type \"ns.Foo\"
+  Foo foo = 0;
+            ^
+");
+
+test("
+namespace ns {
+  using ns;
+  Foo foo = 0;
+}
+namespace ns {
+  class Foo {}
+}
+", "
+<stdin>:3:13: error: Cannot convert from type \"int\" to type \"ns.Foo\"
+  Foo foo = 0;
+            ^
+");
+
+test("
+namespace ns {
+  class Foo {}
+}
+namespace ns {
+  using ns;
+  Foo foo = 0;
+}
+", "
+<stdin>:6:13: error: Cannot convert from type \"int\" to type \"ns.Foo\"
+  Foo foo = 0;
             ^
 ");

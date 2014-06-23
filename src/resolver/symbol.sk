@@ -1,5 +1,6 @@
 enum SymbolKind {
   OTHER,
+  AMBIGUOUS,
   PARAMETER,
   OTHER_TYPE,
   USING_ALIAS,
@@ -114,6 +115,15 @@ class Symbol {
   // The value that this symbol takes if it is of enum type. Only user-defined
   // enums have an enum value, so this should be ignored for imported enums.
   int enumValue = 0;
+
+  // Ambiguous symbols due to using namespace statements are allowed and are
+  // only an error when used. All symbols in the collision are tracked here
+  // for nice error messages.
+  List<Symbol> ambiguousSymbols = null;
+
+  string fullName() {
+    return enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() ? enclosingSymbol.fullName().append(".").append(name) : name;
+  }
 
   bool isEnumValue() {
     return kind == SymbolKind.GLOBAL_VARIABLE && enclosingSymbol != null && enclosingSymbol.kind.isEnum();

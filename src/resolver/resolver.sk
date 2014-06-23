@@ -353,6 +353,7 @@ class Resolver {
       //   using Foo;
       //   class Bar {} // This is not an error
       //
+      List<Symbol> insertedSymbols = null;
       for (j = 0; j < block.children.length; j++) {
         Node statement = block.children.get(j);
         if (statement.kind != NodeKind.USING_NAMESPACE) {
@@ -361,7 +362,7 @@ class Resolver {
 
         // Resolve the namespace as an absolute name
         Node value = statement.usingNamespaceValue();
-        resolveGlobalUsingValue(value);
+        resolveGlobalUsingNamespaceValue(value);
         if (value.type.isError(cache)) {
           continue;
         }
@@ -378,14 +379,38 @@ class Resolver {
           continue;
         }
 
-        // TODO: Insert each non-namespace symbol in the namespace
-        // TODO: Importing multiple different symbols with the same name should
-        // be replaced with an ambiguous marker that disables the name with an error
+        // Lazily allocate this list to reduce allocations
+        if (insertedSymbols == null) {
+          insertedSymbols = {};
+        }
+
+        // Copy each non-namespace symbol into this namespace if not already
+        // present. If a symbol is already present but was due to another
+        // using namespace statement, then mark the symbol as ambiguous.
+        List<Symbol> members = symbol.type.members.values();
+        int k;
+        for (k = 0; k < members.length; k++) {
+          Symbol member = members.get(k);
+          Symbol current = block.scope.findLocal(member.name);
+          if (current == null) {
+            insertedSymbols.push(member);
+            block.scope.insertLocal(member);
+          } else if (insertedSymbols.indexOf(current) >= 0) {
+            if (current.kind != SymbolKind.AMBIGUOUS) {
+              Symbol collision = new Symbol(member.name, SymbolKind.AMBIGUOUS);
+              collision.ambiguousSymbols = { current, member };
+              block.scope.locals.set(member.name, collision);
+              insertedSymbols.push(collision);
+            } else {
+              current.ambiguousSymbols.push(member);
+            }
+          }
+        }
       }
     }
   }
 
-  void resolveGlobalUsingValue(Node node) {
+  void resolveGlobalUsingNamespaceValue(Node node) {
     node.type = cache.errorType;
     Symbol symbol;
 
@@ -402,7 +427,7 @@ class Resolver {
     // Handle nested names
     else if (node.kind == NodeKind.DOT) {
       Node target = node.dotTarget();
-      resolveGlobalUsingValue(target);
+      resolveGlobalUsingNamespaceValue(target);
       Type targetType = target.type;
       Node dotName = node.dotName();
       if (targetType == null || dotName == null) {
@@ -933,6 +958,20 @@ class Resolver {
     }
   }
 
+  void initializePotentiallyAmbiguousSymbol(Symbol symbol, Range range) {
+    if (symbol.kind != SymbolKind.AMBIGUOUS) {
+      initializeSymbol(symbol);
+    } else {
+      List<string> names = {};
+      int i;
+      for (i = 0; i < symbol.ambiguousSymbols.length; i++) {
+        names.push(symbol.ambiguousSymbols.get(i).fullName());
+      }
+      semanticErrorAmbiguousSymbol(log, range, symbol.name, names);
+      symbol.type = cache.errorType;
+    }
+  }
+
   void initializeSymbol(Symbol symbol) {
     // Only initialize the symbol once
     if (symbol.isUninitialized()) {
@@ -1277,7 +1316,7 @@ class Resolver {
       semanticErrorUndeclaredSymbol(log, node.range, name);
       return;
     }
-    initializeSymbol(symbol);
+    initializePotentiallyAmbiguousSymbol(symbol, node.range);
 
     // Wrap type symbols in a type node to distinguish them from instances
     if (symbol.kind.isType()) {
