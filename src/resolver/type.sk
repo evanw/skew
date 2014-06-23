@@ -26,6 +26,24 @@ class Type {
     return members.getOrDefault(symbol.name, null);
   }
 
+  bool hasBaseType(Type type) {
+    if (!isClass() && !isInterface()) {
+      return false;
+    }
+    if (this == type) {
+      return true;
+    }
+    if (relevantTypes != null) {
+      int i;
+      for (i = 0; i < relevantTypes.length; i++) {
+        if (relevantTypes.get(i).hasBaseType(type)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   void addMember(Symbol member) {
     member.enclosingSymbol = symbol;
     members.set(member.name, member);
@@ -65,11 +83,6 @@ class Type {
         text = text.append(arguments.get(i).toString());
       }
       return text.append(")");
-    }
-
-    // Return the local name for type parameters
-    if (isParameter()) {
-      return symbol.name;
     }
 
     // Return the fully-qualified name for all other symbols

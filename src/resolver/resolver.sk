@@ -70,18 +70,7 @@ class Resolver {
 
     // Remember each scope on the node that introduced that scope
     else if (node.kind == NodeKind.BLOCK) {
-      // Object declaration blocks just use the scope from their parent node so
-      // that symbols inside the block will be marked duplicates of parameters
-      //
-      //   class Foo<T> {
-      //     int T;
-      //   }
-      //
-      if (!node.parent.kind.isNamedBlockDeclaration()) {
-        scope = new Scope(scope);
-      }
-
-      node.scope = scope;
+      node.scope = scope = new Scope(scope);
       parsedBlocks.push(node);
 
       // Declarations at the file level go in the global scope
@@ -685,46 +674,99 @@ class Resolver {
     return false;
   }
 
+  static List<Node> collectBaseTypes(Symbol symbol) {
+    List<Node> baseTypes = {};
+    Node node;
+    for (node = symbol.node; node != null; node = node.sibling) {
+      if (node.kind.isObject() || node.kind == NodeKind.EXTENSION) {
+        Node types = node.baseTypes();
+        if (types != null && types.hasChildren()) {
+          int i;
+          for (i = 0; i < types.children.length; i++) {
+            baseTypes.push(types.children.get(i));
+          }
+        }
+      }
+    }
+    return baseTypes;
+  }
+
+  void checkNoBaseTypes(Symbol symbol, string what) {
+    List<Node> baseTypes = collectBaseTypes(symbol);
+    int i;
+    for (i = 0; i < baseTypes.length; i++) {
+      Node baseType = baseTypes.get(i);
+      resolveAsParameterizedType(baseType);
+      semanticErrorUnexpectedBaseType(log, baseType.range, what);
+    }
+  }
+
   void initializeNamespace(Symbol symbol) {
     assert symbol.type.isNamespace();
+    checkNoBaseTypes(symbol, "A namespaces");
   }
 
   void initializeEnum(Symbol symbol) {
     assert symbol.type.isEnum();
+    checkNoBaseTypes(symbol, "An enum");
   }
 
   void initializeObject(Symbol symbol) {
-    assert symbol.type.isObject();
-
     Node node = findFirstNonExtension(symbol.node);
     Node parameters = node.objectParameters();
-    Node bases = node.objectBases();
+    Type type = symbol.type;
+    assert type.isObject();
 
     // Resolve type parameters
     if (parameters != null && parameters.hasChildren()) {
       resolveNodes(parameters.children);
     }
 
+    // A struct has no base type because it's meant to be a named tuple type
+    if (symbol.kind == SymbolKind.STRUCT) {
+      checkNoBaseTypes(symbol, "A struct");
+    }
+
     // Resolve base types
-    if (bases != null && bases.hasChildren()) {
-      List<Node> children = bases.children;
+    else {
+      List<Node> baseTypes = collectBaseTypes(symbol);
+      assert type.relevantTypes == null;
+      type.relevantTypes = {};
+
       int i;
-      for (i = 0; i < children.length; i++) {
-        Node base = children.get(i);
+      for (i = 0; i < baseTypes.length; i++) {
+        Node base = baseTypes.get(i);
         resolveAsParameterizedType(base);
         Type baseType = base.type;
+
+        // Avoid reporting further errors
         if (baseType.isError(cache)) {
           continue;
         }
-        if (node.kind == NodeKind.STRUCT) {
-          semanticErrorStructBaseType(log, base.range);
-        } else if (node.kind == NodeKind.CLASS && baseType.isClass()) {
-          if (i != 0) {
+
+        // Ensure there is one base class and everything else is an interface
+        if (symbol.kind == SymbolKind.CLASS && baseType.isClass()) {
+          if (base.parent.parent != node || node.baseTypes().children.indexOf(base) != 0) {
             semanticErrorClassBaseNotFirst(log, base.range, baseType);
+            continue;
           }
         } else if (!baseType.isInterface()) {
           semanticErrorBaseTypeNotInterface(log, base.range, baseType);
+          continue;
         }
+
+        // Prevent duplicates, but only within this type (duplicates among base
+        // types are fine)
+        if (type.relevantTypes.indexOf(baseType) >= 0) {
+          semanticErrorDuplicateBaseType(log, base.range, baseType);
+          continue;
+        }
+
+        // Cycles should already be prevented by the general-purpose cycle
+        // detection algorithm, since symbol should still be initializing
+        assert !baseType.hasBaseType(type);
+
+        type.relevantTypes.push(baseType);
       }
     }
   }

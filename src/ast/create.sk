@@ -55,7 +55,7 @@ in Node {
     assert parameters == null || checkAllNodeListKinds(parameters, new NodeKindCheck(NodeKind.PARAMETER));
     assert bases == null || checkAllNodeListKinds(bases, new NodeKindIsExpression());
     assert block.kind == NodeKind.BLOCK;
-    return new Node(kind).withChildren({ name, block, parameters, bases });
+    return new Node(kind).withChildren({ name, block, bases, parameters });
   }
 
   static Node createClass(Node name, Node parameters, Node bases, Node block) {
@@ -70,10 +70,11 @@ in Node {
     return createObject(NodeKind.INTERFACE, name, parameters, bases, block);
   }
 
-  static Node createExtension(Node name, Node block) {
+  static Node createExtension(Node name, Node bases, Node block) {
     assert name.kind == NodeKind.NAME;
+    assert bases == null || checkAllNodeListKinds(bases, new NodeKindIsExpression());
     assert block.kind == NodeKind.BLOCK;
-    return new Node(NodeKind.EXTENSION).withChildren({ name, block });
+    return new Node(NodeKind.EXTENSION).withChildren({ name, block, bases });
   }
 
   static Node createConstructor(Node name, Node arguments, Node block, Node superInitializer, Node memberInitializers) {

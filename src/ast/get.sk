@@ -219,14 +219,14 @@ in Node {
     return children.get(0);
   }
 
-  Node objectParameters() {
-    assert kind.isObject();
-    assert children.length == 4;
+  Node baseTypes() {
+    assert kind.isObject() || kind == NodeKind.EXTENSION;
+    assert children.length >= 3;
     assert children.get(2) == null || children.get(2).kind == NodeKind.NODE_LIST;
     return children.get(2);
   }
 
-  Node objectBases() {
+  Node objectParameters() {
     assert kind.isObject();
     assert children.length == 4;
     assert children.get(3) == null || children.get(3).kind == NodeKind.NODE_LIST;

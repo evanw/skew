@@ -393,8 +393,9 @@ Node parseIf(ParserContext context) {
 Node parseExtension(ParserContext context) {
   Token token = context.next();
   Node name = parseName(context); if (name == null) return null;
+  Node bases = context.eat(TokenKind.COLON) ? Node.createNodeList(parseTypeList(context, TokenKind.LEFT_BRACE)) : null;
   Node block = parseBlock(context, StatementHint.IN_OBJECT); if (block == null) return null;
-  return Node.createExtension(name, block).withRange(context.spanSince(token.range));
+  return Node.createExtension(name, bases, block).withRange(context.spanSince(token.range));
 }
 
 Node parseEnum(ParserContext context) {
