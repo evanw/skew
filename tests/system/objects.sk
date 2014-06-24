@@ -133,7 +133,7 @@ interface C : A, B {}
 interface A { void foo(); }
 interface B { int foo(); }
 ", "
-<stdin>:2:11: error: Member \"C.foo\" has an ambiguous type, could be type \"void fn()\" or type \"int fn()\"
+<stdin>:2:11: error: Member \"C.foo\" has an ambiguous inherited type, could be type \"void fn()\" or type \"int fn()\"
 interface C : A, B {}
           ^
 ");
@@ -150,10 +150,10 @@ interface D { bool foo(); }
 interface E { float foo(); }
 interface F : E, D {}
 ", "
-<stdin>:6:11: error: Member \"C.foo\" has an ambiguous type, could be type \"void fn()\" or type \"int fn()\"
+<stdin>:6:11: error: Member \"C.foo\" has an ambiguous inherited type, could be type \"void fn()\" or type \"int fn()\"
 interface C : A, B {}
           ^
-<stdin>:10:11: error: Member \"F.foo\" has an ambiguous type, could be type \"float fn()\" or type \"bool fn()\"
+<stdin>:10:11: error: Member \"F.foo\" has an ambiguous inherited type, could be type \"float fn()\" or type \"bool fn()\"
 interface F : E, D {}
           ^
 ");
@@ -170,7 +170,7 @@ interface D { bool foo(); }
 interface E { bool foo(); }
 interface F : E, D {}
 ", "
-<stdin>:2:11: error: Member \"G.foo\" has an ambiguous type, could be type \"int fn()\" or type \"bool fn()\"
+<stdin>:2:11: error: Member \"G.foo\" has an ambiguous inherited type, could be type \"int fn()\" or type \"bool fn()\"
 interface G : C, F {}
           ^
 ");
@@ -180,7 +180,7 @@ interface Foo { bool foo(); }
 interface Bar { int foo(); }
 interface Baz : Foo, Bar {}
 ", "
-<stdin>:3:11: error: Member \"Baz.foo\" has an ambiguous type, could be type \"bool fn()\" or type \"int fn()\"
+<stdin>:3:11: error: Member \"Baz.foo\" has an ambiguous inherited type, could be type \"bool fn()\" or type \"int fn()\"
 interface Baz : Foo, Bar {}
           ~~~
 ");

@@ -204,9 +204,11 @@ class Resolver {
     }
   }
 
-  static bool checkParentsForFunction(Node node) {
+  static bool checkParentsForLocalVariable(Node node) {
     for (node = node.parent; node != null; node = node.parent) {
-      if (node.kind.isFunction() || node.kind == NodeKind.LAMBDA) {
+      if (node.kind != NodeKind.PROGRAM && node.kind != NodeKind.FILE &&
+          node.kind != NodeKind.BLOCK && node.kind != NodeKind.MODIFIER &&
+          node.kind != NodeKind.EXTENSION && node.kind != NodeKind.ENUM) {
         return true;
       }
     }
@@ -297,7 +299,7 @@ class Resolver {
       }
 
       // Change global variables to local
-      else if (symbol.kind == SymbolKind.GLOBAL_VARIABLE && checkParentsForFunction(node)) {
+      else if (symbol.kind == SymbolKind.GLOBAL_VARIABLE && checkParentsForLocalVariable(node)) {
         symbol.kind = SymbolKind.LOCAL_VARIABLE;
       }
     }

@@ -171,5 +171,5 @@ void semanticErrorUnmergedSymbol(Log log, Range range, string name, List<Type> t
   List<string> names = {};
   int i;
   for (i = 0; i < types.length; i++) names.push(typeToText(types.get(i)));
-  log.error(range, "Member ".append(simpleQuote(name)).append(" has an ambiguous type, could be ").append(" or ".join(names)));
+  log.error(range, "Member ".append(simpleQuote(name)).append(" has an ambiguous inherited type, could be ").append(" or ".join(names)));
 }
