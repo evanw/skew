@@ -391,6 +391,9 @@ class Resolver {
         int k;
         for (k = 0; k < members.length; k++) {
           Symbol member = members.get(k);
+          if (member.kind == SymbolKind.NAMESPACE) {
+            continue;
+          }
           Symbol current = block.scope.findLocal(member.name);
           if (current == null) {
             insertedSymbols.push(member);
@@ -1120,6 +1123,8 @@ class Resolver {
       Node oldFunction = context.function;
       context.function = node;
 
+      // Special-case the return type of constructors to void for the purpose
+      // of type conversions in return statements inside the constructor
       Symbol symbol = node.symbol;
       if (symbol.type.isError(cache)) resultType = cache.errorType;
       else if (symbol.kind.isConstructor()) resultType = cache.voidType;

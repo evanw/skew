@@ -254,3 +254,13 @@ namespace ns {
   Foo foo = 0;
             ^
 ");
+
+test("
+namespace ns.foo { class Foo {} }
+using ns;
+foo.Foo bar = 0;
+", "
+<stdin>:3:1: error: \"foo\" is not declared
+foo.Foo bar = 0;
+~~~
+");

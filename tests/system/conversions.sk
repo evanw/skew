@@ -385,6 +385,10 @@ class Foo<T is IFoo> {
   IFoo fn(T) foo = bar => bar;
   IBar fn(T) bar = foo => foo;
 }
+class Bar<T is IBar> {
+  IFoo fn(T) foo = bar => bar;
+  IBar fn(T) bar = foo => foo;
+}
 ", "
 <stdin>:5:27: error: Cannot convert from type \"T\" to type \"IBar\"
   IBar fn(T) bar = foo => foo;
