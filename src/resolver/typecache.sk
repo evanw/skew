@@ -122,20 +122,14 @@ class TypeCache {
     if (from.isNull(this) && to.isReference()) return true;
     if ((from.isInteger(this) || from.isFloat(this)) && to.isDouble(this)) return true;
     if (from.isEnum() && (to.isInt(this) || to.isDouble(this))) return true;
-    // if (isSubtypeOf(from, to)) return true;
-    // TypeParameter parameter = from.asParameter();
-    // if (parameter != null && parameter.bound != null) return canImplicitlyConvert(parameter.bound, to);
+    if (from.hasBaseType(to)) return true;
     return false;
   }
 
   bool canExplicitlyConvert(Type from, Type to) {
     if (canImplicitlyConvert(from, to)) return true;
     if (canCastToNumeric(from) && canCastToNumeric(to)) return true;
-    // if (isSubtypeOf(to, from)) return true;
-    // TypeParameter parameter = from.asParameter();
-    // if (parameter != null && parameter.bound != null) return canExplicitlyConvert(parameter.bound, to);
-    // parameter = to.asParameter();
-    // if (parameter != null && parameter.bound != null) return canExplicitlyConvert(from, parameter.bound);
+    if (to.hasBaseType(from)) return true;
     return false;
   }
 }

@@ -27,6 +27,10 @@ class Type {
   }
 
   bool hasBaseType(Type type) {
+    if (isParameter()) {
+      Type upper = bound();
+      return upper != null && upper.hasBaseType(type);
+    }
     if (!isClass() && !isInterface()) {
       return false;
     }

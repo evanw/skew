@@ -366,3 +366,27 @@ void bar() { return 100; }
 void baz() { return bar(); }
                     ~~~~~
 ");
+
+test("
+class Foo {}
+class Bar : Foo {}
+Foo fn(Bar) foo = bar => bar;
+Bar fn(Foo) bar = foo => foo;
+", "
+<stdin>:4:26: error: Cannot convert from type \"Foo\" to type \"Bar\" without a cast
+Bar fn(Foo) bar = foo => foo;
+                         ~~~
+");
+
+test("
+interface IFoo {}
+interface IBar : IFoo {}
+class Foo<T is IFoo> {
+  IFoo fn(T) foo = bar => bar;
+  IBar fn(T) bar = foo => foo;
+}
+", "
+<stdin>:5:27: error: Cannot convert from type \"T\" to type \"IBar\"
+  IBar fn(T) bar = foo => foo;
+                          ~~~
+");
