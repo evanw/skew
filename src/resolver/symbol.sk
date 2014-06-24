@@ -1,6 +1,7 @@
 enum SymbolKind {
   OTHER,
   AMBIGUOUS,
+  UNMERGED,
   PARAMETER,
   OTHER_TYPE,
   USING_ALIAS,
@@ -112,14 +113,20 @@ class Symbol {
   // function symbol.
   Symbol enclosingSymbol = null;
 
+  // The symbol from a base type that this symbol is shadowing. If that same
+  // symbol comes from multiple base types, the overridden symbol will point
+  // to an unmerged symbol containing the symbols to be merged.
+  Symbol overriddenSymbol = null;
+
   // The value that this symbol takes if it is of enum type. Only user-defined
   // enums have an enum value, so this should be ignored for imported enums.
   int enumValue = 0;
 
   // Ambiguous symbols due to using namespace statements are allowed and are
   // only an error when used. All symbols in the collision are tracked here
-  // for nice error messages.
-  List<Symbol> ambiguousSymbols = null;
+  // for nice error messages. This is also used to track unmerged symbols from
+  // multiple base types.
+  List<Symbol> identicalSymbols = null;
 
   string fullName() {
     return enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() ? enclosingSymbol.fullName().append(".").append(name) : name;

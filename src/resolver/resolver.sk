@@ -401,11 +401,11 @@ class Resolver {
           } else if (insertedSymbols.indexOf(current) >= 0) {
             if (current.kind != SymbolKind.AMBIGUOUS) {
               Symbol collision = new Symbol(member.name, SymbolKind.AMBIGUOUS);
-              collision.ambiguousSymbols = { current, member };
+              collision.identicalSymbols = { current, member };
               block.scope.locals.set(member.name, collision);
               insertedSymbols.push(collision);
             } else {
-              current.ambiguousSymbols.push(member);
+              current.identicalSymbols.push(member);
             }
           }
         }
@@ -758,6 +758,7 @@ class Resolver {
     // Resolve base types
     else {
       List<Node> baseTypes = collectBaseTypes(symbol);
+      StringMap<Symbol> unmergedSymbols = new StringMap<Symbol>();
       assert type.relevantTypes == null;
       type.relevantTypes = {};
 
@@ -795,6 +796,39 @@ class Resolver {
         assert !baseType.hasBaseType(type);
 
         type.relevantTypes.push(baseType);
+
+        // Collect all base type symbols
+        List<Symbol> members = baseType.members.values();
+        int j;
+        for (j = 0; j < members.length; j++) {
+          Symbol member = members.get(j);
+          Symbol unmerged = unmergedSymbols.getOrDefault(member.name, null);
+          if (unmerged == null) {
+            unmergedSymbols.set(member.name, member);
+          } else if (unmerged.enclosingSymbol != member) {
+            Symbol combined = new Symbol(member.name, SymbolKind.UNMERGED);
+            combined.enclosingSymbol = symbol;
+            combined.identicalSymbols = { unmerged, member };
+            unmergedSymbols.set(member.name, combined);
+          } else {
+            assert unmerged.kind == SymbolKind.UNMERGED;
+            unmerged.identicalSymbols.push(member);
+          }
+        }
+      }
+
+      // Insert unmerged symbols into the derived type, but don't replace the
+      // member symbols that are already there
+      List<Symbol> baseMembers = unmergedSymbols.values();
+      for (i = 0; i < baseMembers.length; i++) {
+        Symbol member = baseMembers.get(i);
+        Symbol existing = type.members.getOrDefault(member.name, null);
+        if (existing == null) {
+          type.members.set(member.name, member);
+        } else {
+          assert existing.overriddenSymbol == null;
+          existing.overriddenSymbol = member;
+        }
       }
     }
   }
@@ -963,21 +997,46 @@ class Resolver {
     }
   }
 
-  void initializePotentiallyAmbiguousSymbol(Symbol symbol, Range range) {
-    if (symbol.kind != SymbolKind.AMBIGUOUS) {
-      initializeSymbol(symbol);
-    } else {
+  void initializePotentiallyDuplicatedSymbol(Symbol symbol, Range range) {
+    // Ambiguous symbols are the result of multiple using namespace statements
+    if (symbol.kind == SymbolKind.AMBIGUOUS) {
       List<string> names = {};
       int i;
-      for (i = 0; i < symbol.ambiguousSymbols.length; i++) {
-        names.push(symbol.ambiguousSymbols.get(i).fullName());
+      for (i = 0; i < symbol.identicalSymbols.length; i++) {
+        names.push(symbol.identicalSymbols.get(i).fullName());
       }
       semanticErrorAmbiguousSymbol(log, range, symbol.name, names);
       symbol.type = cache.errorType;
+      return;
     }
+
+    initializeSymbol(symbol);
   }
 
   void initializeSymbol(Symbol symbol) {
+    // Unmerged symbols are the result of multiple base types
+    if (symbol.kind == SymbolKind.UNMERGED) {
+      if (symbol.type != null) {
+        return;
+      }
+      List<Type> types = {};
+      int i;
+      for (i = 0; i < symbol.identicalSymbols.length; i++) {
+        Symbol identical = symbol.identicalSymbols.get(i);
+        initializeSymbol(identical);
+        Type type = identical.type;
+        int index = types.indexOf(type);
+        if (index < 0) types.push(type);
+      }
+      if (types.length != 1) {
+        semanticErrorUnmergedSymbol(log, symbol.enclosingSymbol.node.declarationName().range, symbol.fullName(), types);
+        symbol.type = cache.errorType;
+      } else {
+        symbol.type = types.get(0);
+      }
+      return;
+    }
+
     // Only initialize the symbol once
     if (symbol.isUninitialized()) {
       assert symbol.node != null; // Internal symbols have no node but should already have a type
@@ -1102,6 +1161,23 @@ class Resolver {
   void resolveObject(Node node) {
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     initializeSymbol(node.symbol);
+
+    // Force the resolution of all base type members in case some of them are
+    // still unmerged. If this is not done for each object type, then some
+    // conflicts will remain undetected until used:
+    //
+    //   interface Foo { bool foo(); }
+    //   interface Bar { int foo(); }
+    //   interface Baz : Foo, Bar {}
+    //
+    List<Symbol> members = node.symbol.type.members.values();
+    int i;
+    for (i = 0; i < members.length; i++) {
+      Symbol member = members.get(i);
+      if (member.kind == SymbolKind.UNMERGED) {
+        initializeSymbol(member);
+      }
+    }
 
     Node oldObject = context.object;
     context.object = node;
@@ -1323,7 +1399,7 @@ class Resolver {
       semanticErrorUndeclaredSymbol(log, node.range, name);
       return;
     }
-    initializePotentiallyAmbiguousSymbol(symbol, node.range);
+    initializePotentiallyDuplicatedSymbol(symbol, node.range);
 
     // Wrap type symbols in a type node to distinguish them from instances
     if (symbol.kind.isType()) {
@@ -1437,7 +1513,7 @@ class Resolver {
       return;
     }
     node.symbol = symbol;
-    initializeSymbol(symbol);
+    initializePotentiallyDuplicatedSymbol(symbol, dotName.range);
 
     // Check the instance/static status of the symbol
     bool symbolIsType = symbol.kind.isType();
