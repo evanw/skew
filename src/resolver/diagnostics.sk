@@ -124,6 +124,10 @@ void semanticErrorArgumentCount(Log log, Range range, int expected, int found) {
     " but found ").append(found.toString()).append(plural(found, " argument", " arguments")));
 }
 
+void semanticErrorExpectedReturnType(Log log, Range range, string name) {
+  log.error(range, "Non-constructor function ".append(simpleQuote(name)).append(" must have a return type"));
+}
+
 void semanticErrorExpectedReturnValue(Log log, Range range, Type type) {
   log.error(range, "Return statement must return ".append(typeToText(type)));
 }

@@ -846,6 +846,13 @@ class Resolver {
       checkIsValidFunctionReturnType(result);
     }
 
+    else {
+      assert node.kind == NodeKind.CONSTRUCTOR;
+      if (symbol.name != symbol.enclosingSymbol.name) {
+        semanticErrorExpectedReturnType(log, node.declarationName().range, symbol.name);
+      }
+    }
+
     // Resolve argument variables
     Node arguments = node.functionArguments();
     resolve(arguments, null);

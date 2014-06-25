@@ -1,4 +1,14 @@
 test("
+class Foo {
+  Bar() {}
+}
+", "
+<stdin>:2:3: error: Non-constructor function \"Bar\" must have a return type
+  Bar() {}
+  ~~~
+");
+
+test("
 class Foo<T> : T {}
 ", "
 <stdin>:1:16: error: Base type \"T\" must be an interface
@@ -181,6 +191,18 @@ interface Bar { int foo(); }
 interface Baz : Foo, Bar {}
 ", "
 <stdin>:3:11: error: Member \"Baz.foo\" has an ambiguous inherited type, could be type \"bool fn()\" or type \"int fn()\"
+interface Baz : Foo, Bar {}
+          ~~~
+");
+
+test("
+interface Foo {}
+in Foo { namespace foo {} }
+interface Bar {}
+in Bar { int foo(); }
+interface Baz : Foo, Bar {}
+", "
+<stdin>:5:11: error: Member \"Baz.foo\" has an ambiguous inherited type, could be type \"Foo.foo\" or type \"int fn()\"
 interface Baz : Foo, Bar {}
           ~~~
 ");
