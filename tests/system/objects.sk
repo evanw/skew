@@ -1,11 +1,20 @@
 test("
 class Foo {
-  Bar() {}
+  Foo() { return 0; }
+}
+class Bar {
+  Baz() { return 0; foo; }
 }
 ", "
-<stdin>:2:3: error: Non-constructor function \"Bar\" must have a return type
-  Bar() {}
+<stdin>:2:18: error: Cannot convert from type \"int\" to type \"void\"
+  Foo() { return 0; }
+                 ^
+<stdin>:5:3: error: Non-constructor function \"Baz\" must have a return type
+  Baz() { return 0; foo; }
   ~~~
+<stdin>:5:21: error: \"foo\" is not declared
+  Baz() { return 0; foo; }
+                    ~~~
 ");
 
 test("

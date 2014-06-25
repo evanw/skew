@@ -836,6 +836,7 @@ class Resolver {
   }
 
   void initializeFunction(Symbol symbol) {
+    bool missingReturnType = false;
     Node node = symbol.node;
     Node result = null;
 
@@ -850,6 +851,7 @@ class Resolver {
       assert node.kind == NodeKind.CONSTRUCTOR;
       if (symbol.name != symbol.enclosingSymbol.name) {
         semanticErrorExpectedReturnType(log, node.declarationName().range, symbol.name);
+        missingReturnType = true;
       }
     }
 
@@ -861,7 +863,7 @@ class Resolver {
     // that return statements inside the constructor cannot have values.
     Type resultType = result != null ? result.type : symbol.enclosingSymbol.type;
     symbol.type = cache.errorType;
-    if (!resultType.isError(cache)) {
+    if (!missingReturnType && !resultType.isError(cache)) {
       List<Type> argumentTypes = {};
       int i;
       for (i = 0; i < arguments.children.length; i++) {
