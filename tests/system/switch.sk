@@ -25,22 +25,22 @@ switch (0) {
   case 1 { foo; }
 }
 ", "
-<stdin>:3:14: error: Duplicate case value here
+<stdin>:3:14: error: Duplicate case value
   case 2, 3, 1, 1 { foo; }
              ^
-<stdin>:2:8: note: First occurrence is here
+<stdin>:2:8: note: The first occurrence is here
   case 1 { foo; }
        ^
-<stdin>:3:17: error: Duplicate case value here
+<stdin>:3:17: error: Duplicate case value
   case 2, 3, 1, 1 { foo; }
                 ^
-<stdin>:2:8: note: First occurrence is here
+<stdin>:2:8: note: The first occurrence is here
   case 1 { foo; }
        ^
-<stdin>:4:8: error: Duplicate case value here
+<stdin>:4:8: error: Duplicate case value
   case 1 { foo; }
        ^
-<stdin>:2:8: note: First occurrence is here
+<stdin>:2:8: note: The first occurrence is here
   case 1 { foo; }
        ^
 <stdin>:2:12: error: \"foo\" is not declared
@@ -60,10 +60,10 @@ switch (0) {
   case false { foo; }
 }
 ", "
-<stdin>:3:8: error: Duplicate case value here
+<stdin>:3:8: error: Duplicate case value
   case false { foo; }
        ~~~~~
-<stdin>:2:8: note: First occurrence is here
+<stdin>:2:8: note: The first occurrence is here
   case false { foo; }
        ~~~~~
 <stdin>:2:8: error: Cannot convert from type \"bool\" to type \"int\" without a cast

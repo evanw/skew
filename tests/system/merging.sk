@@ -41,7 +41,7 @@ in foo {}
 <stdin>:2:4: error: \"foo\" is already declared
 in foo {}
    ~~~
-<stdin>:1:5: note: Previous declaration is here
+<stdin>:1:5: note: The previous declaration is here
 int foo;
     ~~~
 ");
@@ -53,7 +53,7 @@ int foo;
 <stdin>:2:5: error: \"foo\" is already declared
 int foo;
     ~~~
-<stdin>:1:4: note: Previous declaration is here
+<stdin>:1:4: note: The previous declaration is here
 in foo {}
    ~~~
 <stdin>:1:4: error: No type named \"foo\" to extend
@@ -68,7 +68,7 @@ int foo() {}
 <stdin>:2:5: error: \"foo\" is already declared
 int foo() {}
     ~~~
-<stdin>:1:4: note: Previous declaration is here
+<stdin>:1:4: note: The previous declaration is here
 in foo {}
    ~~~
 <stdin>:1:4: error: No type named \"foo\" to extend
@@ -83,7 +83,7 @@ int foo = false;
 <stdin>:2:5: error: \"foo\" is already declared
 int foo = false;
     ~~~
-<stdin>:1:6: note: Previous declaration is here
+<stdin>:1:6: note: The previous declaration is here
 void foo() { return 100; }
      ~~~
 <stdin>:1:21: error: Cannot convert from type \"int\" to type \"void\"
@@ -101,7 +101,7 @@ void foo() { return 100; }
 <stdin>:2:6: error: \"foo\" is already declared
 void foo() { return 100; }
      ~~~
-<stdin>:1:5: note: Previous declaration is here
+<stdin>:1:5: note: The previous declaration is here
 int foo = false;
     ~~~
 <stdin>:1:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
@@ -125,7 +125,7 @@ class Foo {}
 <stdin>:2:7: error: \"Foo\" is already declared
 class Foo {}
       ~~~
-<stdin>:1:7: note: Previous declaration is here
+<stdin>:1:7: note: The previous declaration is here
 class Foo {}
       ~~~
 ");
@@ -137,7 +137,7 @@ struct Foo {}
 <stdin>:2:8: error: \"Foo\" is already declared
 struct Foo {}
        ~~~
-<stdin>:1:7: note: Previous declaration is here
+<stdin>:1:7: note: The previous declaration is here
 class Foo {}
       ~~~
 ");
@@ -149,7 +149,7 @@ interface Foo {}
 <stdin>:2:11: error: \"Foo\" is already declared
 interface Foo {}
           ~~~
-<stdin>:1:8: note: Previous declaration is here
+<stdin>:1:8: note: The previous declaration is here
 struct Foo {}
        ~~~
 ");
@@ -178,7 +178,7 @@ namespace Foo.Bar { class Baz {} }
 <stdin>:2:27: error: \"Baz\" is already declared
 namespace Foo.Bar { class Baz {} }
                           ~~~
-<stdin>:1:27: note: Previous declaration is here
+<stdin>:1:27: note: The previous declaration is here
 namespace Foo.Bar { class Baz {} }
                           ~~~
 ");
@@ -190,7 +190,7 @@ namespace Foo.Bar { class Baz {} }
 <stdin>:2:27: error: \"Baz\" is already declared
 namespace Foo.Bar { class Baz {} }
                           ~~~
-<stdin>:1:32: note: Previous declaration is here
+<stdin>:1:32: note: The previous declaration is here
 namespace Foo { in Bar { class Baz {} } }
                                ~~~
 ");
@@ -202,7 +202,7 @@ export in Foo {}
 <stdin>:2:11: error: Cannot merge multiple declarations for \"Foo\" with different modifiers
 export in Foo {}
           ~~~
-<stdin>:1:14: note: Conflicting declaration is here
+<stdin>:1:14: note: The conflicting declaration is here
 import class Foo {}
              ~~~
 ");
@@ -227,7 +227,7 @@ in Foo {}
 <stdin>:1:14: error: \"T\" is already declared
 class Foo<T, T> {}
              ^
-<stdin>:1:11: note: Previous declaration is here
+<stdin>:1:11: note: The previous declaration is here
 class Foo<T, T> {}
           ^
 ");
@@ -239,7 +239,7 @@ class Foo<T, T> {}
 <stdin>:2:14: error: \"T\" is already declared
 class Foo<T, T> {}
              ^
-<stdin>:2:11: note: Previous declaration is here
+<stdin>:2:11: note: The previous declaration is here
 class Foo<T, T> {}
           ^
 ");
@@ -253,7 +253,7 @@ class Foo {
 <stdin>:3:3: error: \"Foo\" is already declared
   Foo() { return 100; }
   ~~~
-<stdin>:2:7: note: Previous declaration is here
+<stdin>:2:7: note: The previous declaration is here
   int Foo = false;
       ~~~
 <stdin>:2:13: error: Cannot convert from type \"bool\" to type \"int\" without a cast
@@ -273,7 +273,7 @@ class Foo {
 <stdin>:3:7: error: \"Foo\" is already declared
   int Foo = false;
       ~~~
-<stdin>:2:3: note: Previous declaration is here
+<stdin>:2:3: note: The previous declaration is here
   Foo() { return 100; }
   ~~~
 <stdin>:2:18: error: Cannot convert from type \"int\" to type \"void\"

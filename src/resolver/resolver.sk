@@ -836,34 +836,37 @@ class Resolver {
   }
 
   void initializeFunction(Symbol symbol) {
-    bool missingReturnType = false;
     Node node = symbol.node;
-    Node result = null;
+    Type resultType;
+    Node result;
 
-    // Constructors don't have return types
+    // Only functions have return types (constructors don't)
     if (node.kind == NodeKind.FUNCTION) {
       result = node.functionResult();
       resolveAsParameterizedType(result);
       checkIsValidFunctionReturnType(result);
+      resultType = result.type;
     }
 
+    // Constructors get a return type of the object that they create
     else {
       assert node.kind == NodeKind.CONSTRUCTOR;
-      if (symbol.name != symbol.enclosingSymbol.name) {
-        semanticErrorExpectedReturnType(log, node.declarationName().range, symbol.name);
-        missingReturnType = true;
-      }
+      resultType = symbol.enclosingSymbol.type;
     }
 
     // Resolve argument variables
     Node arguments = node.functionArguments();
     resolve(arguments, null);
 
-    // Create the function type. Constructors get a return type of "void" so
-    // that return statements inside the constructor cannot have values.
-    Type resultType = result != null ? result.type : symbol.enclosingSymbol.type;
+    // Constructors must have the same name as their enclosing symbol
+    if (symbol.kind.isConstructor() && symbol.name != symbol.enclosingSymbol.name) {
+      semanticErrorExpectedReturnType(log, node.declarationName().range, symbol.name);
+      resultType = cache.errorType;
+    }
+
+    // Create the function type
     symbol.type = cache.errorType;
-    if (!missingReturnType && !resultType.isError(cache)) {
+    if (!resultType.isError(cache)) {
       List<Type> argumentTypes = {};
       int i;
       for (i = 0; i < arguments.children.length; i++) {
@@ -872,6 +875,31 @@ class Resolver {
         argumentTypes.push(type);
       }
       symbol.type = cache.functionType(resultType, argumentTypes);
+    }
+
+    // Functions must not have a different type than the symbol they override
+    Symbol overriddenSymbol = symbol.overriddenSymbol;
+    if (overriddenSymbol != null) {
+      initializeSymbol(overriddenSymbol);
+      Type base = overriddenSymbol.type;
+      Type derived = symbol.type;
+      if (base.isError(cache) || derived.isError(cache)) {
+        return;
+      }
+
+      // Functions can only override other functions
+      if (!base.isFunction()) {
+        semanticErrorBadOverride(log, node.declarationName().range, symbol.name,
+          overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.declarationName().range);
+        return;
+      }
+
+      // Functions can only override other functions with the same signature
+      if (base != derived) {
+        semanticErrorOverrideDifferentTypes(log, node.declarationName().range, symbol.name,
+          base, derived, overriddenSymbol.node.declarationName().range);
+        return;
+      }
     }
   }
 

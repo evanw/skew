@@ -13,13 +13,13 @@ void semanticWarningRedundantModifier(Log log, Range range, string modifier) {
 }
 
 void semanticWarningShadowedSymbol(Log log, Range range, string name, Range shadowed) {
-  log.warning(range, simpleQuote(name).append(" shadows another symbol with the same name"));
+  log.warning(range, simpleQuote(name).append(" shadows another declaration with the same name"));
   if (!shadowed.isEmpty()) log.note(shadowed, "The shadowed declaration is here");
 }
 
 void semanticErrorDuplicateSymbol(Log log, Range range, string name, Range previous) {
   log.error(range, simpleQuote(name).append(" is already declared"));
-  if (!previous.isEmpty()) log.note(previous, "Previous declaration is here");
+  if (!previous.isEmpty()) log.note(previous, "The previous declaration is here");
 }
 
 void semanticErrorUnexpectedNode(Log log, Range range, NodeKind kind) {
@@ -52,7 +52,7 @@ void semanticErrorExtensionMissingTarget(Log log, Range range, string name) {
 
 void semanticErrorDifferentModifiers(Log log, Range range, string name, Range previous) {
   log.error(range, "Cannot merge multiple declarations for ".append(simpleQuote(name)).append(" with different modifiers"));
-  if (!previous.isEmpty()) log.note(previous, "Conflicting declaration is here");
+  if (!previous.isEmpty()) log.note(previous, "The conflicting declaration is here");
 }
 
 void semanticErrorBadUsingValue(Log log, Range range) {
@@ -141,8 +141,8 @@ void semanticErrorBadDefaultCase(Log log, Range range) {
 }
 
 void semanticErrorDuplicateCase(Log log, Range range, Range previous) {
-  log.error(range, "Duplicate case value here");
-  if (!previous.isEmpty()) log.note(previous, "First occurrence is here");
+  log.error(range, "Duplicate case value");
+  if (!previous.isEmpty()) log.note(previous, "The first occurrence is here");
 }
 
 void semanticErrorUnconstructableType(Log log, Range range, Type type) {
@@ -176,4 +176,15 @@ void semanticErrorUnmergedSymbol(Log log, Range range, string name, List<Type> t
   int i;
   for (i = 0; i < types.length; i++) names.push(typeToText(types.get(i)));
   log.error(range, "Member ".append(simpleQuote(name)).append(" has an ambiguous inherited type, could be ").append(" or ".join(names)));
+}
+
+void semanticErrorBadOverride(Log log, Range range, string name, Type base, Range overridden) {
+  log.error(range, simpleQuote(name).append(" overrides another declaration with the same name in base ").append(typeToText(base)));
+  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
+}
+
+void semanticErrorOverrideDifferentTypes(Log log, Range range, string name, Type base, Type derived, Range overridden) {
+  log.error(range, simpleQuote(name).append(" must have the same signature as the method it overrides (").append(
+    "expected ").append(typeToText(base)).append(" but found ").append(typeToText(derived)).append(")"));
+  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
 }
