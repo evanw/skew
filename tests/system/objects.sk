@@ -217,51 +217,121 @@ interface Baz : Foo, Bar {}
 ");
 
 test("
-class Foo {
-  void foo() {}
-}
-class Bar : Foo {
-  int foo() {}
-}
+class Foo { void foo() {} }
+class Bar : Foo { void foo() {} }
 ", "
-<stdin>:5:7: error: \"foo\" must have the same signature as the method it overrides (expected type \"void fn()\" but found type \"int fn()\")
-  int foo() {}
-      ~~~
-<stdin>:2:8: note: The overridden declaration is here
-  void foo() {}
-       ~~~
+<stdin>:2:24: error: \"foo\" overrides another symbol with the same name but is missing the \"override\" modifier
+class Bar : Foo { void foo() {} }
+                       ~~~
+<stdin>:1:18: note: The overridden declaration is here
+class Foo { void foo() {} }
+                 ~~~
 ");
 
 test("
-class Foo {
-  int foo;
-}
-class Bar : Foo {
-  int foo() {}
-}
+class Foo { void foo() {} }
+class Bar : Foo { override void foo() {} }
 ", "
-<stdin>:5:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
-  int foo() {}
-      ~~~
-<stdin>:2:7: note: The overridden declaration is here
-  int foo;
-      ~~~
+<stdin>:2:33: error: \"foo\" cannot override a non-virtual method
+class Bar : Foo { override void foo() {} }
+                                ~~~
+<stdin>:1:18: note: The overridden declaration is here
+class Foo { void foo() {} }
+                 ~~~
 ");
 
 test("
-class Foo {
-}
-class Bar : Foo {
-  int foo() {}
-}
-in Foo {
-  namespace foo {}
-}
+class Foo { override void foo() {} }
+class Bar : Foo { override void foo() {} }
 ", "
-<stdin>:4:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
-  int foo() {}
-      ~~~
-<stdin>:7:13: note: The overridden declaration is here
-  namespace foo {}
-            ~~~
+<stdin>:1:13: error: Cannot use the \"override\" modifier on a function that doesn't override anything
+class Foo { override void foo() {} }
+            ~~~~~~~~
+");
+
+test("
+class Foo { virtual void foo() {} }
+class Bar : Foo { virtual override void foo() {} }
+", "
+<stdin>:2:19: error: Redundant modifier \"virtual\" on an overriding function
+class Bar : Foo { virtual override void foo() {} }
+                  ~~~~~~~
+");
+
+test("
+class Foo { virtual override void foo() {} }
+class Bar : Foo { virtual void foo() {} }
+", "
+<stdin>:1:21: error: Cannot use the \"override\" modifier on a function that doesn't override anything
+class Foo { virtual override void foo() {} }
+                    ~~~~~~~~
+<stdin>:2:32: error: \"foo\" overrides another symbol with the same name but is missing the \"override\" modifier
+class Bar : Foo { virtual void foo() {} }
+                               ~~~
+<stdin>:1:35: note: The overridden declaration is here
+class Foo { virtual override void foo() {} }
+                                  ~~~
+");
+
+test("
+class Foo { virtual void foo() {} }
+class Bar : Foo { override void foo() {} }
+", "
+");
+
+test("
+class Foo { virtual void foo() {} }
+class Bar : Foo { override void foo() {} }
+class Baz : Bar { override void foo() {} }
+", "
+");
+
+test("
+class Foo { virtual void foo() {} }
+class Bar : Foo { void foo() {} }
+class Baz : Bar { override void foo() {} }
+", "
+<stdin>:2:24: error: \"foo\" overrides another symbol with the same name but is missing the \"override\" modifier
+class Bar : Foo { void foo() {} }
+                       ~~~
+<stdin>:1:26: note: The overridden declaration is here
+class Foo { virtual void foo() {} }
+                         ~~~
+");
+
+test("
+class Foo { void foo() {} }
+class Bar : Foo { int foo() {} }
+", "
+<stdin>:2:23: error: \"foo\" must have the same signature as the method it overrides (expected type \"void fn()\" but found type \"int fn()\")
+class Bar : Foo { int foo() {} }
+                      ~~~
+<stdin>:1:18: note: The overridden declaration is here
+class Foo { void foo() {} }
+                 ~~~
+");
+
+test("
+class Foo { int foo; }
+class Bar : Foo { int foo() {} }
+", "
+<stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
+class Bar : Foo { int foo() {} }
+                      ~~~
+<stdin>:1:17: note: The overridden declaration is here
+class Foo { int foo; }
+                ~~~
+");
+
+test("
+class Foo {}
+class Bar : Foo { int foo() {} }
+in Foo { namespace foo {} }
+", "
+<stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
+class Bar : Foo { int foo() {} }
+                      ~~~
+<stdin>:3:20: note: The overridden declaration is here
+in Foo { namespace foo {} }
+                   ~~~
 ");

@@ -883,22 +883,78 @@ class Resolver {
       initializeSymbol(overriddenSymbol);
       Type base = overriddenSymbol.type;
       Type derived = symbol.type;
-      if (base.isError(cache) || derived.isError(cache)) {
-        return;
+      if (!base.isError(cache) && !derived.isError(cache)) {
+
+        // Functions can only override other functions
+        if (!base.isFunction()) {
+          semanticErrorBadOverride(log, node.declarationName().range, symbol.name,
+            overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.declarationName().range);
+        }
+
+        // Functions can only override other functions with the same signature
+        else if (base != derived) {
+          semanticErrorOverrideDifferentTypes(log, node.declarationName().range, symbol.name,
+            base, derived, overriddenSymbol.node.declarationName().range);
+        }
+
+        // Overriding must be explicit with the "override" modifier
+        else if (!symbol.isOverride()) {
+          semanticErrorModifierMissingOverride(log, node.declarationName().range, symbol.name,
+            overriddenSymbol.node.declarationName().range);
+        }
+
+        // Overriding must be explicit with the "override" modifier
+        else if (!overriddenSymbol.isVirtual()) {
+          semanticErrorCannotOverrideNonVirtual(log, node.declarationName().range, symbol.name,
+            overriddenSymbol.node.declarationName().range);
+        }
+
+        // The "override" modifier replaces the "virtual" modifier
+        else {
+          redundantModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on an overriding function");
+        }
       }
 
-      // Functions can only override other functions
-      if (!base.isFunction()) {
-        semanticErrorBadOverride(log, node.declarationName().range, symbol.name,
-          overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.declarationName().range);
-        return;
-      }
+      // The "virtual" modifier is implied
+      symbol.flags = symbol.flags | SymbolFlag.VIRTUAL;
+    }
 
-      // Functions can only override other functions with the same signature
-      if (base != derived) {
-        semanticErrorOverrideDifferentTypes(log, node.declarationName().range, symbol.name,
-          base, derived, overriddenSymbol.node.declarationName().range);
-        return;
+    // The "override" modifier requires overriding to take place
+    else {
+      unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on a function that doesn't override anything");
+
+      // If "override" is used, imply "virtual" to mask further errors
+      if (symbol.isOverride()) symbol.flags = symbol.flags | SymbolFlag.VIRTUAL;
+    }
+  }
+
+  static Node findModifierName(Symbol symbol, SymbolFlag flag) {
+    Node node = symbol.node;
+    while (node != null) {
+      if (node.kind == NodeKind.MODIFIER) {
+        Node modifierName = node.modifierName();
+        if (nameToSymbolFlag.get(modifierName.asString()) == flag) {
+          return modifierName;
+        }
+      }
+      node = node.parent;
+    }
+  }
+
+  void redundantModifierIfPresent(Symbol symbol, SymbolFlag flag, string where) {
+    if ((symbol.flags & flag) != 0) {
+      Node modifierName = findModifierName(symbol, flag);
+      if (modifierName != null) {
+        semanticErrorRedundantModifier(log, modifierName.range, modifierName.asString(), where);
+      }
+    }
+  }
+
+  void unexpectedModifierIfPresent(Symbol symbol, SymbolFlag flag, string where) {
+    if ((symbol.flags & flag) != 0) {
+      Node modifierName = findModifierName(symbol, flag);
+      if (modifierName != null) {
+        semanticErrorUnexpectedModifier(log, modifierName.range, modifierName.asString(), where);
       }
     }
   }

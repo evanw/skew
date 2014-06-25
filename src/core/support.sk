@@ -26,10 +26,6 @@ string encodeBase64(string data) {
   return result.toString();
 }
 
-bool hasFlag(int flags, int flag) {
-  return (flags & flag) != 0;
-}
-
 int hashCombine(int left, int right) {
   return left ^ right - 0x61c88647 + (left << 6) + (left >> 2);
 }
