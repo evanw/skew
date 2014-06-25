@@ -136,6 +136,10 @@ class Symbol {
     return kind == SymbolKind.GLOBAL_VARIABLE && enclosingSymbol != null && enclosingSymbol.kind.isEnum();
   }
 
+  bool isObjectMember() {
+    return enclosingSymbol != null && enclosingSymbol.kind.isObject();
+  }
+
   bool isPublic() {
     return (flags & SymbolFlag.PUBLIC) != 0;
   }

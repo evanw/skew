@@ -335,3 +335,59 @@ class Bar : Foo { int foo() {} }
 in Foo { namespace foo {} }
                    ~~~
 ");
+
+test("
+class Foo { static virtual int foo() {} }
+", "
+<stdin>:1:20: error: Cannot use the \"virtual\" modifier on a non-instance function
+class Foo { static virtual int foo() {} }
+                   ~~~~~~~
+");
+
+test("
+class Foo { int foo() {} }
+class Bar : Foo { static int foo() {} }
+", "
+<stdin>:2:30: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
+class Bar : Foo { static int foo() {} }
+                             ~~~
+<stdin>:1:17: note: The overridden declaration is here
+class Foo { int foo() {} }
+                ~~~
+");
+
+test("
+class Foo { static int foo() {} }
+class Bar : Foo { int foo() {} }
+", "
+<stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
+class Bar : Foo { int foo() {} }
+                      ~~~
+<stdin>:1:24: note: The overridden declaration is here
+class Foo { static int foo() {} }
+                       ~~~
+");
+
+test("
+class Foo { static int foo() {} }
+class Bar : Foo { static int foo() {} }
+", "
+<stdin>:2:30: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
+class Bar : Foo { static int foo() {} }
+                             ~~~
+<stdin>:1:24: note: The overridden declaration is here
+class Foo { static int foo() {} }
+                       ~~~
+");
+
+test("
+virtual void foo() {}
+override void bar() {}
+", "
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier outside an object declaration
+virtual void foo() {}
+~~~~~~~
+<stdin>:2:1: error: Cannot use the \"override\" modifier outside an object declaration
+override void bar() {}
+~~~~~~~~
+");

@@ -290,10 +290,9 @@ class Resolver {
     for (i = 0; i < parsedDeclarations.length; i++) {
       Node node = parsedDeclarations.get(i);
       Symbol symbol = node.symbol;
-      Symbol enclosingSymbol = symbol.enclosingSymbol;
 
       // Change non-static global functions/variables to instance
-      if (enclosingSymbol != null && enclosingSymbol.kind.isObject() && !symbol.isStatic()) {
+      if (symbol.isObjectMember() && !symbol.isStatic()) {
         if (symbol.kind == SymbolKind.GLOBAL_FUNCTION) symbol.kind = SymbolKind.INSTANCE_FUNCTION;
         else if (symbol.kind == SymbolKind.GLOBAL_VARIABLE) symbol.kind = SymbolKind.INSTANCE_VARIABLE;
       }
@@ -886,7 +885,7 @@ class Resolver {
       if (!base.isError(cache) && !derived.isError(cache)) {
 
         // Functions can only override other functions
-        if (!base.isFunction()) {
+        if (!base.isFunction() || !overriddenSymbol.kind.isInstance() || !symbol.kind.isInstance()) {
           semanticErrorBadOverride(log, node.declarationName().range, symbol.name,
             overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.declarationName().range);
         }
@@ -919,8 +918,15 @@ class Resolver {
       symbol.flags = symbol.flags | SymbolFlag.VIRTUAL;
     }
 
-    // The "override" modifier requires overriding to take place
+    // Ignore overriding-related modifiers outside an object
+    else if (!symbol.isObjectMember()) {
+      unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "outside an object declaration");
+      unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "outside an object declaration");
+    }
+
+    // Validate modifiers when nothing is being overridden
     else {
+      if (!symbol.kind.isInstance()) unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on a non-instance function");
       unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on a function that doesn't override anything");
 
       // If "override" is used, imply "virtual" to mask further errors
