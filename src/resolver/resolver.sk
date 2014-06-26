@@ -568,6 +568,10 @@ class Resolver {
     assert node.type != null;
   }
 
+  static bool isConstantOrEnumValue(Node node) {
+    return node.kind.isConstant() || node.kind == NodeKind.NAME && node.symbol != null && node.symbol.isEnumValue();
+  }
+
   static Node findFirstNonExtension(Node node) {
     while (node != null && node.kind == NodeKind.EXTENSION) {
       node = node.sibling;
@@ -1301,7 +1305,15 @@ class Resolver {
     Node block = node.caseBlock();
     int i;
     for (i = 0; i < values.length; i++) {
-      resolveAsExpressionWithConversion(values.get(i), context.switchValue.type, CastKind.IMPLICIT);
+      Node value = values.get(i);
+      resolveAsExpressionWithConversion(value, context.switchValue.type, CastKind.IMPLICIT);
+      constantFolder.foldConstants(value);
+
+      // All case values must be constants but can include enum values
+      if (!value.type.isError(cache) && !isConstantOrEnumValue(value)) {
+        semanticErrorNonConstantCaseValue(log, value.range);
+        value.type = cache.errorType;
+      }
     }
     resolve(block, null);
   }
@@ -1511,15 +1523,19 @@ class Resolver {
     List<Node> cases = node.switchCases();
     resolveAsExpression(value);
 
+    Node oldSwitchValue = context.switchValue;
+    context.switchValue = value;
+    resolveNodes(cases);
+    context.switchValue = oldSwitchValue;
+
     int i;
     List<Node> uniqueValues = {};
     for (i = 0; i < cases.length; i++) {
       Node child = cases.get(i);
 
       // Require only one default case and make sure it's last. That way this
-      // switch statement can be converted to an if-else chain if it doesn't
-      // consist of compile-time integer constants without moving the user's
-      // code around.
+      // switch statement can be converted to an if-else chain without moving
+      // the user's code around.
       if (child.children.length == 1 && i < cases.length - 1) {
         semanticErrorBadDefaultCase(log, child.range);
       }
@@ -1529,9 +1545,9 @@ class Resolver {
       int j;
       for (j = 0; j < caseValues.length; j++) {
         Node caseValue = caseValues.get(j);
-        if (!caseValue.kind.isConstant()) {
-          continue;
-        }
+        if (caseValue.type.isError(cache)) continue;
+        assert isConstantOrEnumValue(caseValue);
+
         int k;
         for (k = 0; k < uniqueValues.length; k++) {
           Node original = uniqueValues.get(k);
@@ -1540,16 +1556,12 @@ class Resolver {
             break;
           }
         }
+
         if (k == uniqueValues.length) {
           uniqueValues.push(caseValue);
         }
       }
     }
-
-    Node oldSwitchValue = context.switchValue;
-    context.switchValue = value;
-    resolveNodes(cases);
-    context.switchValue = oldSwitchValue;
   }
 
   void resolveModifier(Node node) {

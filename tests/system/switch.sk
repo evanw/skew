@@ -7,15 +7,15 @@ switch (0) {
   default {}
 }
 ", "
+<stdin>:4:13: error: \"foo\" is not declared
+  default { foo; }
+            ~~~
 <stdin>:2:3: error: Only the last case can be a default case
   default {}
   ~~~~~~~~~~
 <stdin>:4:3: error: Only the last case can be a default case
   default { foo; }
   ~~~~~~~~~~~~~~~~
-<stdin>:4:13: error: \"foo\" is not declared
-  default { foo; }
-            ~~~
 ");
 
 test("
@@ -25,6 +25,15 @@ switch (0) {
   case 1 { foo; }
 }
 ", "
+<stdin>:2:12: error: \"foo\" is not declared
+  case 1 { foo; }
+           ~~~
+<stdin>:3:21: error: \"foo\" is not declared
+  case 2, 3, 1, 1 { foo; }
+                    ~~~
+<stdin>:4:12: error: \"foo\" is not declared
+  case 1 { foo; }
+           ~~~
 <stdin>:3:14: error: Duplicate case value
   case 2, 3, 1, 1 { foo; }
              ^
@@ -43,15 +52,6 @@ switch (0) {
 <stdin>:2:8: note: The first occurrence is here
   case 1 { foo; }
        ^
-<stdin>:2:12: error: \"foo\" is not declared
-  case 1 { foo; }
-           ~~~
-<stdin>:3:21: error: \"foo\" is not declared
-  case 2, 3, 1, 1 { foo; }
-                    ~~~
-<stdin>:4:12: error: \"foo\" is not declared
-  case 1 { foo; }
-           ~~~
 ");
 
 test("
@@ -60,12 +60,6 @@ switch (0) {
   case false { foo; }
 }
 ", "
-<stdin>:3:8: error: Duplicate case value
-  case false { foo; }
-       ~~~~~
-<stdin>:2:8: note: The first occurrence is here
-  case false { foo; }
-       ~~~~~
 <stdin>:2:8: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   case false { foo; }
        ~~~~~
@@ -86,10 +80,33 @@ void foo(Foo foo) {
   switch (foo) {
     case .FOO, .BAR {}
     case .BAZ, .BAD {}
+    case .FOO {}
   }
 }
 ", "
 <stdin>:5:17: error: \"BAD\" is not declared on type \"Foo\"
     case .BAZ, .BAD {}
                 ~~~
+<stdin>:6:10: error: Duplicate case value
+    case .FOO {}
+         ~~~~
+<stdin>:4:10: note: The first occurrence is here
+    case .FOO, .BAR {}
+         ~~~~
+");
+
+test("
+enum Foo { FOO, BAR = 0 }
+void foo(Foo foo) {
+  switch (foo) {
+    case .FOO, .BAR {}
+  }
+}
+", "
+<stdin>:4:16: error: Duplicate case value
+    case .FOO, .BAR {}
+               ~~~~
+<stdin>:4:10: note: The first occurrence is here
+    case .FOO, .BAR {}
+         ~~~~
 ");

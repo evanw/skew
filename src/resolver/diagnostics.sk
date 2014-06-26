@@ -140,6 +140,10 @@ void semanticErrorBadLambdaTypeContext(Log log, Range range, Type type) {
   log.error(range, "Cannot use a lambda expression with ".append(typeToText(type)));
 }
 
+void semanticErrorNonConstantCaseValue(Log log, Range range) {
+  log.error(range, "Non-constant case value");
+}
+
 void semanticErrorBadDefaultCase(Log log, Range range) {
   log.error(range, "Only the last case can be a default case");
 }
