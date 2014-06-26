@@ -210,7 +210,7 @@ class Resolver {
     for (node = node.parent; node != null; node = node.parent) {
       if (node.kind != NodeKind.PROGRAM && node.kind != NodeKind.FILE &&
           node.kind != NodeKind.BLOCK && node.kind != NodeKind.MODIFIER &&
-          node.kind != NodeKind.EXTENSION && node.kind != NodeKind.ENUM) {
+          node.kind != NodeKind.EXTENSION && !node.kind.isEnum()) {
         return true;
       }
     }
@@ -997,12 +997,13 @@ class Resolver {
       // Take the variable type from the enclosing enum declaration
       else if (symbol.enclosingSymbol != null) {
         assert symbol.isEnumValue();
-        variableType = Node.createType(symbol.enclosingSymbol.type);
+        Type type = symbol.enclosingSymbol.type;
+        variableType = Node.createType(type);
 
         // All enum values are final
         symbol.flags = symbol.flags | SymbolFlag.FINAL;
 
-        // Resolve the enum value now as part of the initialization
+        // Look at the initializer now
         Node variableValue = node.variableValue();
         if (variableValue != null) {
           resolveAsExpressionWithConversion(variableValue, cache.intType, CastKind.IMPLICIT);
@@ -1014,6 +1015,25 @@ class Resolver {
             if (!variableValue.type.isError(cache)) {
               semanticErrorBadIntegerConstant(log, variableValue.range, variableValue.type);
             }
+          }
+        }
+
+        // If there is no initializer, create a value based on the previous enum value
+        else {
+          int index = node.parent.children.indexOf(node);
+          if (index > 0) {
+            Symbol previous = node.parent.children.get(index - 1).symbol;
+            initializeSymbol(previous);
+            if (!previous.type.isError(cache)) {
+              symbol.enumValue = type.isEnumFlags() ? previous.enumValue * 2 : previous.enumValue + 1;
+            } else {
+              variableType = Node.createType(cache.errorType);
+            }
+          }
+
+          // If there is no previous enum value, use the default value
+          else {
+            symbol.enumValue = type.isEnumFlags() ? 1 : 0;
           }
         }
       }

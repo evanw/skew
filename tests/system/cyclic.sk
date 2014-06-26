@@ -124,3 +124,11 @@ enum Foo { FOO = FOO }
 enum Foo { FOO = FOO }
            ~~~
 ");
+
+test("
+enum Foo { FOO = BAR, BAR }
+", "
+<stdin>:1:12: error: Cyclic declaration of \"FOO\"
+enum Foo { FOO = BAR, BAR }
+           ~~~
+");
