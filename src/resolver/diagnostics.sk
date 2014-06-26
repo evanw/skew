@@ -206,3 +206,21 @@ void semanticErrorCannotOverrideNonVirtual(Log log, Range range, string name, Ra
 void semanticErrorBadIntegerConstant(Log log, Range range, Type type) {
   log.error(range, "Expected integer constant but found expression of ".append(typeToText(type)));
 }
+
+void semanticErrorNoUnaryOperator(Log log, Range range, NodeKind kind, Type type) {
+  assert kind.isUnaryOperator();
+  log.error(range, "No unary operator ".append(operatorInfo.get(kind).text).append(" for ").append(typeToText(type)));
+}
+
+void semanticErrorNoBinaryOperator(Log log, Range range, NodeKind kind, Type left, Type right) {
+  assert kind.isBinaryOperator();
+  log.error(range, "No binary operator ".append(operatorInfo.get(kind).text).append(" for ").append(typeToText(left)).append(" and ").append(typeToText(right)));
+}
+
+void semanticErrorBadStorage(Log log, Range range) {
+  log.error(range, "Cannot store to this location");
+}
+
+void semanticErrorStorageToFinal(Log log, Range range) {
+  log.error(range, "Cannot store to a symbol marked as \"final\"");
+}

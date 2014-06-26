@@ -539,7 +539,7 @@ class Resolver {
         NodeKind.NOT, NodeKind.POSITIVE, NodeKind.NEGATIVE, NodeKind.COMPLEMENT,
         NodeKind.PREFIX_INCREMENT, NodeKind.PREFIX_DECREMENT,
         NodeKind.POSTFIX_INCREMENT, NodeKind.POSTFIX_DECREMENT {
-        unsupportedNodeKind(node);
+        resolveUnaryOperator(node);
       }
 
       case
@@ -547,19 +547,15 @@ class Resolver {
         NodeKind.DIVIDE, NodeKind.EQUAL, NodeKind.GREATER_THAN, NodeKind.GREATER_THAN_OR_EQUAL,
         NodeKind.IN, NodeKind.INDEX, NodeKind.LESS_THAN, NodeKind.LESS_THAN_OR_EQUAL,
         NodeKind.LOGICAL_AND, NodeKind.LOGICAL_OR, NodeKind.MULTIPLY, NodeKind.NOT_EQUAL,
-        NodeKind.REMAINDER, NodeKind.SHIFT_LEFT, NodeKind.SHIFT_RIGHT, NodeKind.SUBTRACT {
-        unsupportedNodeKind(node);
-      }
-
-      case
+        NodeKind.REMAINDER, NodeKind.SHIFT_LEFT, NodeKind.SHIFT_RIGHT, NodeKind.SUBTRACT,
         NodeKind.ASSIGN, NodeKind.ASSIGN_ADD, NodeKind.ASSIGN_BITWISE_AND, NodeKind.ASSIGN_BITWISE_OR,
         NodeKind.ASSIGN_BITWISE_XOR, NodeKind.ASSIGN_DIVIDE, NodeKind.ASSIGN_MULTIPLY,
         NodeKind.ASSIGN_REMAINDER, NodeKind.ASSIGN_SHIFT_LEFT, NodeKind.ASSIGN_SHIFT_RIGHT, NodeKind.ASSIGN_SUBTRACT {
-        unsupportedNodeKind(node);
+        resolveBinaryOperator(node);
       }
 
       case NodeKind.ASSIGN_INDEX {
-        unsupportedNodeKind(node);
+        resolveTertiaryOperator(node);
       }
 
       default {
@@ -603,6 +599,27 @@ class Resolver {
     if (node.type.isVoid(cache) || node.type.isNamespace()) {
       semanticErrorBadType(log, node.range, node.type);
       node.type = cache.errorType;
+    }
+  }
+
+  void checkUnusedExpression(Node node) {
+  }
+
+  void checkStorage(Node node) {
+    if (node.type.isError(cache)) {
+      return;
+    }
+
+    // Only certain expressions support storage
+    if (!node.kind.isStorage()) {
+      semanticErrorBadStorage(log, node.range);
+      return;
+    }
+
+    // Forbid storage to final symbols
+    if (node.symbol.isFinal()) {
+      semanticErrorStorageToFinal(log, node.range);
+      return;
     }
   }
 
@@ -982,15 +999,21 @@ class Resolver {
         assert symbol.isEnumValue();
         variableType = Node.createType(symbol.enclosingSymbol.type);
 
+        // All enum values are final
+        symbol.flags = symbol.flags | SymbolFlag.FINAL;
+
         // Resolve the enum value now as part of the initialization
         Node variableValue = node.variableValue();
         if (variableValue != null) {
           resolveAsExpressionWithConversion(variableValue, cache.intType, CastKind.IMPLICIT);
           constantFolder.foldConstants(variableValue);
           if (variableValue.kind == NodeKind.INT) {
-            symbol.enumValue = new IntContent(variableValue.asInt());
-          } else if (!variableValue.type.isError(cache)) {
-            semanticErrorBadIntegerConstant(log, variableValue.range, variableValue.type);
+            symbol.enumValue = variableValue.asInt();
+          } else {
+            variableType = Node.createType(cache.errorType);
+            if (!variableValue.type.isError(cache)) {
+              semanticErrorBadIntegerConstant(log, variableValue.range, variableValue.type);
+            }
           }
         }
       }
@@ -1457,7 +1480,9 @@ class Resolver {
 
   void resolveExpression(Node node) {
     checkStatementLocation(node);
-    resolveAsExpression(node.expressionValue());
+    Node value = node.expressionValue();
+    resolveAsExpression(value);
+    checkUnusedExpression(value);
   }
 
   void resolveSwitch(Node node) {
@@ -1746,8 +1771,12 @@ class Resolver {
     int n;
     for (i = 0, n = node.children.length; i < n; i++) {
       Node child = node.children.get(i);
-      if (i + 1 < n) resolveAsExpression(child);
-      else resolveAsExpressionWithConversion(child, typeContext, node.parent.kind == NodeKind.CAST ? CastKind.EXPLICIT : CastKind.IMPLICIT);
+      if (i < n - 1) {
+        resolveAsExpression(child);
+        checkUnusedExpression(child);
+      } else {
+        resolveAsExpressionWithConversion(child, typeContext, node.parent.kind == NodeKind.CAST ? CastKind.EXPLICIT : CastKind.IMPLICIT);
+      }
     }
   }
 
@@ -1843,6 +1872,147 @@ class Resolver {
       }
       node.become(Node.createType(cache.functionType(result.type, argumentTypes)).withRange(node.range));
     }
+  }
+
+  void resolveUnaryOperator(Node node) {
+    NodeKind kind = node.kind;
+    Node value = node.unaryValue();
+    resolveAsExpression(value);
+
+    // Avoid reporting further errors
+    Type type = value.type;
+    if (type.isError(cache)) {
+      return;
+    }
+
+    if (kind == NodeKind.POSITIVE || kind == NodeKind.NEGATIVE) {
+      if (type.isEnum()) {
+        node.type = cache.intType;
+      } else if (type.isNumeric(cache)) {
+        node.type = type;
+      }
+    }
+
+    else if (kind.isUnaryStorageOperator()) {
+      if (!type.isEnum() && type.isNumeric(cache)) {
+        checkStorage(value);
+        node.type = type;
+      }
+    }
+
+    else if (kind == NodeKind.NOT) {
+      if (type.isBool(cache)) {
+        node.type = type;
+      }
+    }
+
+    else if (kind == NodeKind.COMPLEMENT) {
+      if (type.isEnumFlags()) {
+        node.type = type;
+      } else if (type.isInteger(cache)) {
+        node.type = cache.intType;
+      }
+    }
+
+    // Report an error if no match is found
+    if (node.type.isError(cache)) {
+      semanticErrorNoUnaryOperator(log, node.range, kind, type);
+      return;
+    }
+
+    // Insert an implicit cast if necessary
+    checkConversion(node.type, value, CastKind.IMPLICIT);
+  }
+
+  void resolveBinaryOperator(Node node) {
+    NodeKind kind = node.kind;
+    Node left = node.binaryLeft();
+    Node right = node.binaryRight();
+
+    // Special-case assignment logic
+    if (kind == NodeKind.ASSIGN) {
+      resolveAsExpression(left);
+      resolveAsExpressionWithConversion(right, left.type, CastKind.IMPLICIT);
+      checkStorage(left);
+      node.type = left.type;
+      return;
+    }
+
+    resolveAsExpression(left);
+    resolveAsExpression(right);
+
+    // Avoid reporting further errors
+    Type leftType = left.type;
+    Type rightType = right.type;
+    Type commonType = null;
+    if (leftType.isError(cache) || rightType.isError(cache)) {
+      return;
+    }
+
+    if (kind == NodeKind.EQUAL || kind == NodeKind.NOT_EQUAL) {
+      commonType = cache.commonImplicitType(leftType, rightType);
+      if (commonType != null) {
+        node.type = cache.boolType;
+      }
+    }
+
+    else if (kind == NodeKind.ADD || kind == NodeKind.SUBTRACT || kind == NodeKind.MULTIPLY || kind == NodeKind.DIVIDE) {
+      if (leftType.isNumeric(cache) && rightType.isNumeric(cache)) {
+        node.type = commonType = cache.commonImplicitType(leftType, rightType);
+      }
+    }
+
+    else if (kind == NodeKind.REMAINDER || kind == NodeKind.SHIFT_LEFT || kind == NodeKind.SHIFT_RIGHT) {
+      if (leftType.isInteger(cache) && rightType.isInteger(cache)) {
+        node.type = commonType = cache.intType;
+      }
+    }
+
+    else if (kind == NodeKind.BITWISE_AND || kind == NodeKind.BITWISE_OR || kind == NodeKind.BITWISE_XOR) {
+      if (leftType == rightType && leftType.isEnumFlags()) {
+        node.type = commonType = leftType;
+      } else if (leftType.isInteger(cache) && rightType.isInteger(cache)) {
+        node.type = commonType = cache.intType;
+      }
+    }
+
+    else if (kind == NodeKind.LOGICAL_AND || kind == NodeKind.LOGICAL_OR) {
+      if (leftType.isBool(cache) && rightType.isBool(cache)) {
+        node.type = commonType = cache.boolType;
+      }
+    }
+
+    else if (kind == NodeKind.LESS_THAN || kind == NodeKind.GREATER_THAN ||
+        kind == NodeKind.LESS_THAN_OR_EQUAL || kind == NodeKind.GREATER_THAN_OR_EQUAL) {
+      if (leftType.isNumeric(cache) && rightType.isNumeric(cache) ||
+          leftType.isString(cache) && rightType.isString(cache)) {
+        commonType = cache.commonImplicitType(leftType, rightType);
+        node.type = cache.boolType;
+        node.type = cache.boolType;
+      }
+    }
+
+    // Report an error if no match is found
+    if (node.type.isError(cache)) {
+      semanticErrorNoBinaryOperator(log, node.range, kind, leftType, rightType);
+      return;
+    }
+
+    // Insert implicit casts if necessary
+    if (commonType != null) {
+      checkConversion(commonType, left, CastKind.IMPLICIT);
+      checkConversion(commonType, right, CastKind.IMPLICIT);
+    }
+  }
+
+  void resolveTertiaryOperator(Node node) {
+    Node left = node.tertiaryLeft();
+    Node middle = node.tertiaryMiddle();
+    Node right = node.tertiaryRight();
+    resolveAsExpression(left);
+    resolveAsExpression(middle);
+    resolveAsExpression(right);
+    unsupportedNodeKind(node);
   }
 }
 

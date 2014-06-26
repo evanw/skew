@@ -36,6 +36,24 @@ in Node {
     return children.get(1);
   }
 
+  Node tertiaryLeft() {
+    assert kind.isTertiaryOperator();
+    assert children.length == 3;
+    return children.get(0);
+  }
+
+  Node tertiaryMiddle() {
+    assert kind.isTertiaryOperator();
+    assert children.length == 3;
+    return children.get(1);
+  }
+
+  Node tertiaryRight() {
+    assert kind.isTertiaryOperator();
+    assert children.length == 3;
+    return children.get(2);
+  }
+
   Node hookTest() {
     assert kind == NodeKind.HOOK;
     assert children.length == 3;

@@ -274,6 +274,12 @@ test("
 <stdin>:1:20: error: Unexpected RIGHT_PARENTHESIS
 (int) fn(int, float) foo = null, bar = null;
                    ^
+<stdin>:1:22: error: \"foo\" is not declared
+(int) fn(int, float) foo = null, bar = null;
+                     ~~~
+<stdin>:1:34: error: \"bar\" is not declared
+(int) fn(int, float) foo = null, bar = null;
+                                 ~~~
 ");
 
 test("
@@ -304,6 +310,12 @@ test("
 <stdin>:1:8: error: Unexpected RIGHT_PARENTHESIS
 100 fn() foo = null, bar = null;
        ^
+<stdin>:1:10: error: \"foo\" is not declared
+100 fn() foo = null, bar = null;
+         ~~~
+<stdin>:1:22: error: \"bar\" is not declared
+100 fn() foo = null, bar = null;
+                     ~~~
 ");
 
 test("
@@ -396,4 +408,7 @@ x < y() > x;
 <stdin>:6:9: error: Unexpected END_PARAMETER_LIST
 x < y() > x;
         ^
+<stdin>:5:2: error: No binary operator > for type \"bool\" and type \"int\"
+(x < x) > x;
+ ~~~~~~~~~~
 ");

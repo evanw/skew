@@ -2,27 +2,24 @@ class ConstantFolder {
   TypeCache cache;
 
   void flattenBool(Node node, bool value) {
-    assert node.type == cache.boolType;
+    assert node.type.isError(cache) || node.type.isBool(cache);
     node.removeChildren();
     node.kind = value ? NodeKind.TRUE : NodeKind.FALSE;
-    node.type = cache.boolType;
+    node.content = null;
   }
 
   void flattenInt(Node node, int value) {
-    assert node.type == cache.intType;
+    assert node.type.isError(cache) || node.type.isInt(cache);
     node.removeChildren();
     node.kind = NodeKind.INT;
     node.content = new IntContent(value);
-    node.type = cache.intType;
   }
 
-  void flattenReal(Node node, double value, NodeKind kind) {
-    assert kind == NodeKind.FLOAT ? node.type == cache.floatType : node.type == cache.doubleType;
-    assert kind.isReal();
+  void flattenReal(Node node, double value) {
+    assert node.type.isError(cache) || node.type.isReal(cache);
     node.removeChildren();
-    node.kind = kind;
+    node.kind = node.type == cache.floatType ? NodeKind.FLOAT : NodeKind.DOUBLE;
     node.content = new DoubleContent(value);
-    node.type = kind == NodeKind.FLOAT ? cache.floatType : cache.doubleType;
   }
 
   void foldConstants(Node node) {
@@ -32,12 +29,51 @@ class ConstantFolder {
     if (node.hasChildren()) {
       int i;
       for (i = 0; i < node.children.length; i++) {
-        foldConstants(node.children.get(i));
+        Node child = node.children.get(i);
+        if (child != null) foldConstants(child);
+      }
+    }
+
+    // Casts
+    if (kind.isCast()) {
+      Type type = node.castType().type;
+      Node value = node.castValue();
+      NodeKind valueKind = value.kind;
+
+      // Cast "bool" values
+      if (valueKind.isBool()) {
+        if (type.isBool(cache)) flattenBool(node, (bool)value.asBool());
+        else if (type.isInt(cache)) flattenInt(node, (int)value.asBool());
+        else if (type.isReal(cache)) flattenReal(node, (double)value.asBool());
+      }
+
+      // Cast "int" values
+      else if (valueKind == NodeKind.INT) {
+        if (type.isBool(cache)) flattenBool(node, (bool)value.asInt());
+        else if (type.isInt(cache)) flattenInt(node, (int)value.asInt());
+        else if (type.isReal(cache)) flattenReal(node, (double)value.asInt());
+      }
+
+      // Cast "float" or "double" values
+      else if (valueKind.isReal()) {
+        if (type.isBool(cache)) flattenBool(node, (bool)value.asDouble());
+        else if (type.isInt(cache)) flattenInt(node, (int)value.asDouble());
+        else if (type.isReal(cache)) flattenReal(node, (double)value.asDouble());
+      }
+
+      // Cast enum values
+      else if (valueKind == NodeKind.NAME) {
+        Symbol symbol = value.symbol;
+        if (symbol != null && symbol.type.isEnum()) {
+          if (type.isBool(cache)) flattenBool(node, (bool)symbol.enumValue);
+          else if (type.isInt(cache)) flattenInt(node, (int)symbol.enumValue);
+          else if (type.isReal(cache)) flattenReal(node, (double)symbol.enumValue);
+        }
       }
     }
 
     // Unary operators
-    if (kind.isUnaryOperator()) {
+    else if (kind.isUnaryOperator()) {
       Node value = node.unaryValue();
       NodeKind valueKind = value.kind;
 
@@ -55,8 +91,8 @@ class ConstantFolder {
 
       // Fold "float" or "double" values
       else if (valueKind.isReal()) {
-        if (kind == NodeKind.POSITIVE) flattenReal(node, +value.asDouble(), valueKind);
-        else if (kind == NodeKind.NEGATIVE) flattenReal(node, -value.asDouble(), valueKind);
+        if (kind == NodeKind.POSITIVE) flattenReal(node, +value.asDouble());
+        else if (kind == NodeKind.NEGATIVE) flattenReal(node, -value.asDouble());
       }
     }
 
@@ -102,10 +138,10 @@ class ConstantFolder {
       // Fold "float" and "double" values
       else if (valueKind.isReal()) {
         switch (kind) {
-          case NodeKind.ADD { flattenReal(node, left.asDouble() + right.asDouble(), valueKind); }
-          case NodeKind.SUBTRACT { flattenReal(node, left.asDouble() - right.asDouble(), valueKind); }
-          case NodeKind.MULTIPLY { flattenReal(node, left.asDouble() * right.asDouble(), valueKind); }
-          case NodeKind.DIVIDE { flattenReal(node, left.asDouble() / right.asDouble(), valueKind); }
+          case NodeKind.ADD { flattenReal(node, left.asDouble() + right.asDouble()); }
+          case NodeKind.SUBTRACT { flattenReal(node, left.asDouble() - right.asDouble()); }
+          case NodeKind.MULTIPLY { flattenReal(node, left.asDouble() * right.asDouble()); }
+          case NodeKind.DIVIDE { flattenReal(node, left.asDouble() / right.asDouble()); }
           case NodeKind.EQUAL { flattenBool(node, left.asDouble() == right.asDouble()); }
           case NodeKind.NOT_EQUAL { flattenBool(node, left.asDouble() != right.asDouble()); }
           case NodeKind.LESS_THAN { flattenBool(node, left.asDouble() < right.asDouble()); }

@@ -106,7 +106,9 @@ class TypeCache {
 
     // Implement common implicit types for numeric types
     if (left.isNumeric(this) && right.isNumeric(this)) {
-      return left.isInteger(this) && right.isInteger(this) ? intType : doubleType;
+      return left.isInteger(this) && right.isInteger(this) ? intType :
+        left.isFloat(this) && right.isFloat(this) ? floatType :
+        doubleType;
     }
 
     // Check for a common base class

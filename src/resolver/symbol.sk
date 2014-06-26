@@ -120,7 +120,7 @@ class Symbol {
 
   // The value that this symbol takes if it is of enum type. Only user-defined
   // enums have an enum value, so this should be ignored for imported enums.
-  IntContent enumValue = null;
+  int enumValue = 0;
 
   // Ambiguous symbols due to using namespace statements are allowed and are
   // only an error when used. All symbols in the collision are tracked here

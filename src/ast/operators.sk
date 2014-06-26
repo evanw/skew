@@ -1,0 +1,56 @@
+struct OperatorInfo {
+  final string text;
+  final Precedence precedence;
+}
+
+IntMap<OperatorInfo> createOperatorMap() {
+  IntMap<OperatorInfo> result = new IntMap<OperatorInfo>();
+
+  result.set(NodeKind.NOT, new OperatorInfo("!", Precedence.UNARY_PREFIX));
+  result.set(NodeKind.POSITIVE, new OperatorInfo("+", Precedence.UNARY_PREFIX));
+  result.set(NodeKind.NEGATIVE, new OperatorInfo("-", Precedence.UNARY_PREFIX));
+  result.set(NodeKind.COMPLEMENT, new OperatorInfo("~", Precedence.UNARY_PREFIX));
+  result.set(NodeKind.PREFIX_INCREMENT, new OperatorInfo("++", Precedence.UNARY_PREFIX));
+  result.set(NodeKind.PREFIX_DECREMENT, new OperatorInfo("--", Precedence.UNARY_PREFIX));
+  result.set(NodeKind.POSTFIX_INCREMENT, new OperatorInfo("++", Precedence.UNARY_POSTFIX));
+  result.set(NodeKind.POSTFIX_DECREMENT, new OperatorInfo("--", Precedence.UNARY_POSTFIX));
+
+  result.set(NodeKind.ADD, new OperatorInfo("+", Precedence.ADD));
+  result.set(NodeKind.BITWISE_AND, new OperatorInfo("&", Precedence.BITWISE_AND));
+  result.set(NodeKind.BITWISE_OR, new OperatorInfo("|", Precedence.BITWISE_OR));
+  result.set(NodeKind.BITWISE_XOR, new OperatorInfo("^", Precedence.BITWISE_XOR));
+  result.set(NodeKind.DIVIDE, new OperatorInfo("/", Precedence.MULTIPLY));
+  result.set(NodeKind.EQUAL, new OperatorInfo("==", Precedence.EQUAL));
+  result.set(NodeKind.GREATER_THAN, new OperatorInfo(">", Precedence.COMPARE));
+  result.set(NodeKind.GREATER_THAN_OR_EQUAL, new OperatorInfo(">=", Precedence.COMPARE));
+  result.set(NodeKind.IN, new OperatorInfo("in", Precedence.COMPARE));
+  result.set(NodeKind.INDEX, new OperatorInfo("[]", Precedence.MEMBER));
+  result.set(NodeKind.LESS_THAN, new OperatorInfo("<", Precedence.COMPARE));
+  result.set(NodeKind.LESS_THAN_OR_EQUAL, new OperatorInfo("<=", Precedence.COMPARE));
+  result.set(NodeKind.LOGICAL_AND, new OperatorInfo("&&", Precedence.LOGICAL_AND));
+  result.set(NodeKind.LOGICAL_OR, new OperatorInfo("||", Precedence.LOGICAL_OR));
+  result.set(NodeKind.MULTIPLY, new OperatorInfo("*", Precedence.MULTIPLY));
+  result.set(NodeKind.NOT_EQUAL, new OperatorInfo("!=", Precedence.EQUAL));
+  result.set(NodeKind.REMAINDER, new OperatorInfo("%", Precedence.MULTIPLY));
+  result.set(NodeKind.SHIFT_LEFT, new OperatorInfo("<<", Precedence.SHIFT));
+  result.set(NodeKind.SHIFT_RIGHT, new OperatorInfo(">>", Precedence.SHIFT));
+  result.set(NodeKind.SUBTRACT, new OperatorInfo("-", Precedence.ADD));
+
+  result.set(NodeKind.ASSIGN, new OperatorInfo("=", Precedence.ASSIGN));
+  result.set(NodeKind.ASSIGN_ADD, new OperatorInfo("+=", Precedence.ASSIGN));
+  result.set(NodeKind.ASSIGN_BITWISE_AND, new OperatorInfo("&=", Precedence.ASSIGN));
+  result.set(NodeKind.ASSIGN_BITWISE_OR, new OperatorInfo("|=", Precedence.ASSIGN));
+  result.set(NodeKind.ASSIGN_BITWISE_XOR, new OperatorInfo("^=", Precedence.ASSIGN));
+  result.set(NodeKind.ASSIGN_DIVIDE, new OperatorInfo("/=", Precedence.ASSIGN));
+  result.set(NodeKind.ASSIGN_MULTIPLY, new OperatorInfo("*=", Precedence.ASSIGN));
+  result.set(NodeKind.ASSIGN_REMAINDER, new OperatorInfo("%=", Precedence.ASSIGN));
+  result.set(NodeKind.ASSIGN_SHIFT_LEFT, new OperatorInfo("<<=", Precedence.ASSIGN));
+  result.set(NodeKind.ASSIGN_SHIFT_RIGHT, new OperatorInfo(">>=", Precedence.ASSIGN));
+  result.set(NodeKind.ASSIGN_SUBTRACT, new OperatorInfo("-=", Precedence.ASSIGN));
+
+  result.set(NodeKind.SEQUENCE, new OperatorInfo(",", Precedence.COMMA));
+
+  return result;
+}
+
+final IntMap<OperatorInfo> operatorInfo = createOperatorMap();

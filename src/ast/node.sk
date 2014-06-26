@@ -150,8 +150,12 @@ in NodeKind {
     return this >= NOT && this <= POSTFIX_DECREMENT;
   }
 
+  bool isUnaryStorageOperator() {
+    return this >= PREFIX_INCREMENT && this <= POSTFIX_DECREMENT;
+  }
+
   bool isBinaryOperator() {
-    return this >= ADD && this <= ASSIGN_SHIFT_RIGHT;
+    return this >= ADD && this <= ASSIGN_SUBTRACT;
   }
 
   bool isTertiaryOperator() {
@@ -180,6 +184,10 @@ in NodeKind {
 
   bool isLoop() {
     return this >= FOR && this <= DO_WHILE;
+  }
+
+  bool isStorage() {
+    return this == NAME || this == DOT;
   }
 }
 
