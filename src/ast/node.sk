@@ -166,6 +166,14 @@ in NodeKind {
     return this == TYPE;
   }
 
+  bool isReal() {
+    return this >= FLOAT && this <= DOUBLE;
+  }
+
+  bool isBool() {
+    return this >= TRUE && this <= FALSE;
+  }
+
   bool isError() {
     return this == ERROR;
   }
@@ -186,19 +194,27 @@ class Node {
   Symbol symbol = null;
   Content content = null;
 
+  bool asBool() {
+    assert kind.isBool();
+    return kind == NodeKind.TRUE;
+  }
+
   int asInt() {
+    assert kind == NodeKind.INT;
     assert content != null;
     assert content.type() == ContentType.INT;
     return ((IntContent)content).value;
   }
 
   double asDouble() {
+    assert kind.isReal();
     assert content != null;
     assert content.type() == ContentType.DOUBLE;
     return ((DoubleContent)content).value;
   }
 
   string asString() {
+    assert kind == NodeKind.NAME || kind == NodeKind.STRING;
     assert content != null;
     assert content.type() == ContentType.STRING;
     return ((StringContent)content).value;

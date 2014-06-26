@@ -287,6 +287,14 @@ class Baz : Bar { override void foo() {} }
 ");
 
 test("
+interface IFoo { virtual void foo(); }
+class Foo {}
+in Foo { override void foo() {} }
+in Foo : IFoo {}
+", "
+");
+
+test("
 class Foo { virtual void foo() {} }
 class Bar : Foo { void foo() {} }
 class Baz : Bar { override void foo() {} }
