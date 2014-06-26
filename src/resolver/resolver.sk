@@ -43,6 +43,7 @@ class ResolveContext {
 
 class Resolver {
   TypeCache cache = new TypeCache();
+  ConstantFolder constantFolder = null;
   ResolveContext context = new ResolveContext();
   List<Node> parsedDeclarations = {};
   List<Node> parsedBlocks = {};
@@ -55,6 +56,7 @@ class Resolver {
     Resolver resolver = new Resolver(log);
     Scope globalScope = new Scope(null);
     globalScope.insertGlobals(resolver.cache);
+    resolver.constantFolder = new ConstantFolder(resolver.cache);
     resolver.setupScopesAndUseNamespaces(program, globalScope);
     resolver.accumulateSymbolFlags();
     resolver.setSymbolKindsAndMergeSiblings();
@@ -975,14 +977,30 @@ class Resolver {
         variableType = node.parent.clusterType().clone();
       }
 
-      // Take the variable type from the enclosing symbol, which should be an
-      // enum declaration if it exists. If not, than assume the error has been
-      // logged already and just use the error type. This is the case when a
-      // lambda expression lacks type context.
+      // Take the variable type from the enclosing enum declaration
+      else if (symbol.enclosingSymbol != null) {
+        assert symbol.isEnumValue();
+        variableType = Node.createType(symbol.enclosingSymbol.type);
+
+        // Resolve the enum value now as part of the initialization
+        Node variableValue = node.variableValue();
+        if (variableValue != null) {
+          resolveAsExpressionWithConversion(variableValue, cache.intType, CastKind.IMPLICIT);
+          constantFolder.foldConstants(variableValue);
+          if (variableValue.kind == NodeKind.INT) {
+            symbol.enumValue = new IntContent(variableValue.asInt());
+          } else if (!variableValue.type.isError(cache)) {
+            semanticErrorBadIntegerConstant(log, variableValue.range, variableValue.type);
+          }
+        }
+      }
+
+      // If there is still no variable type, assume an error has been logged
+      // already and just use the error type. This is the case when a lambda
+      // expression lacks type context.
       else {
-        Symbol enclosingSymbol = symbol.enclosingSymbol;
-        assert enclosingSymbol != null ? symbol.isEnumValue() : node.parent.kind == NodeKind.LAMBDA;
-        variableType = Node.createType(symbol.isEnumValue() ? enclosingSymbol.type : cache.errorType);
+        assert node.parent.kind == NodeKind.LAMBDA;
+        variableType = Node.createType(cache.errorType);
       }
 
       assert variableType != null;
@@ -1704,7 +1722,7 @@ class Resolver {
 
       // Validate the argument count
       if (argumentTypes.length != arguments.length) {
-        Range range = Range.same(node.range, value.range) ? node.range : Range.after(node.range, value.range);
+        Range range = Range.equal(node.range, value.range) ? node.range : Range.after(node.range, value.range);
         semanticErrorArgumentCount(log, range, argumentTypes.length, arguments.length);
         resolveNodesAsExpressions(arguments);
         return;

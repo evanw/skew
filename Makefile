@@ -29,6 +29,7 @@ TEST_SOURCES += tests/system/common.sk
 TEST_SOURCES += tests/system/constructors.sk
 TEST_SOURCES += tests/system/conversions.sk
 TEST_SOURCES += tests/system/cyclic.sk
+TEST_SOURCES += tests/system/enums.sk
 TEST_SOURCES += tests/system/generics.sk
 TEST_SOURCES += tests/system/lambdas.sk
 TEST_SOURCES += tests/system/merging.sk

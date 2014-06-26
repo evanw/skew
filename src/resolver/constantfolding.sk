@@ -2,12 +2,14 @@ class ConstantFolder {
   TypeCache cache;
 
   void flattenBool(Node node, bool value) {
+    assert node.type == cache.boolType;
     node.removeChildren();
     node.kind = value ? NodeKind.TRUE : NodeKind.FALSE;
     node.type = cache.boolType;
   }
 
   void flattenInt(Node node, int value) {
+    assert node.type == cache.intType;
     node.removeChildren();
     node.kind = NodeKind.INT;
     node.content = new IntContent(value);
@@ -15,6 +17,7 @@ class ConstantFolder {
   }
 
   void flattenReal(Node node, double value, NodeKind kind) {
+    assert kind == NodeKind.FLOAT ? node.type == cache.floatType : node.type == cache.doubleType;
     assert kind.isReal();
     node.removeChildren();
     node.kind = kind;

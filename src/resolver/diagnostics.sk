@@ -202,3 +202,7 @@ void semanticErrorCannotOverrideNonVirtual(Log log, Range range, string name, Ra
   log.error(range, simpleQuote(name).append(" cannot override a non-virtual method"));
   if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
 }
+
+void semanticErrorBadIntegerConstant(Log log, Range range, Type type) {
+  log.error(range, "Expected integer constant but found expression of ".append(typeToText(type)));
+}

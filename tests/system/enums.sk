@@ -1,0 +1,8 @@
+test("
+int foo;
+enum Foo { FOO = foo }
+", "
+<stdin>:2:18: error: Expected integer constant but found expression of type \"int\"
+enum Foo { FOO = foo }
+                 ~~~
+");
