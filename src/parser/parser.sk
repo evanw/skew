@@ -576,7 +576,10 @@ Node createLambdaFromNames(List<Node> names, Node block) {
 
 bool looksLikeType(Node node) {
   switch (node.kind) {
-    case NodeKind.DOT { return looksLikeType(node.dotTarget()); }
+    case NodeKind.DOT {
+      Node target = node.dotTarget();
+      return target != null && looksLikeType(target);
+    }
     case NodeKind.NAME, NodeKind.PARAMETERIZE, NodeKind.FUNCTION_TYPE { return true; }
     default { return false; }
   }

@@ -111,10 +111,14 @@ test("
 enum Foo { FOO }
 Foo x = .FOO;
 bool y = (Foo).FOO;
+bool z = (Foo)(.FOO);
 ", "
 <stdin>:3:10: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
 bool y = (Foo).FOO;
          ~~~~~~~~~
+<stdin>:4:10: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
+bool z = (Foo)(.FOO);
+         ~~~~~~~~~~~
 ");
 
 test("
@@ -162,14 +166,14 @@ do {} while
 
 test("
 do {} while;
-do {} while;
+do {} while (;
 ", "
 <stdin>:1:12: error: Expected LEFT_PARENTHESIS but found SEMICOLON
 do {} while;
            ^
-<stdin>:2:12: error: Expected LEFT_PARENTHESIS but found SEMICOLON
-do {} while;
-           ^
+<stdin>:2:14: error: Unexpected SEMICOLON
+do {} while (;
+             ^
 ");
 
 test("
