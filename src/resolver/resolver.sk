@@ -568,10 +568,6 @@ class Resolver {
     assert node.type != null;
   }
 
-  static bool isConstantOrEnumValue(Node node) {
-    return node.kind.isConstant() || node.kind == NodeKind.NAME && node.symbol != null && node.symbol.isEnumValue();
-  }
-
   static Node findFirstNonExtension(Node node) {
     while (node != null && node.kind == NodeKind.EXTENSION) {
       node = node.sibling;
@@ -1310,7 +1306,7 @@ class Resolver {
       constantFolder.foldConstants(value);
 
       // All case values must be constants but can include enum values
-      if (!value.type.isError(cache) && !isConstantOrEnumValue(value)) {
+      if (!value.type.isError(cache) && !value.kind.isConstant()) {
         semanticErrorNonConstantCaseValue(log, value.range);
         value.type = cache.errorType;
       }
@@ -1546,7 +1542,7 @@ class Resolver {
       for (j = 0; j < caseValues.length; j++) {
         Node caseValue = caseValues.get(j);
         if (caseValue.type.isError(cache)) continue;
-        assert isConstantOrEnumValue(caseValue);
+        assert caseValue.kind.isConstant();
 
         int k;
         for (k = 0; k < uniqueValues.length; k++) {

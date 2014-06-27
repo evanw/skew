@@ -35,12 +35,14 @@ class ConstantFolder {
     }
 
     // Symbols
-    if (kind == NodeKind.NAME && node.symbol != null && node.symbol.isEnumValue()) {
-      flattenInt(node, (int)node.symbol.enumValue);
+    if (kind == NodeKind.NAME) {
+      if (node.symbol != null && node.symbol.isEnumValue()) {
+        flattenInt(node, (int)node.symbol.enumValue);
+      }
     }
 
     // Casts
-    if (kind.isCast()) {
+    else if (kind.isCast()) {
       Type type = node.castType().type;
       Node value = node.castValue();
       NodeKind valueKind = value.kind;
