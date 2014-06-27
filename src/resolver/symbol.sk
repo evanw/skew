@@ -76,10 +76,10 @@ enum flags SymbolFlag {
 
   // Structural flags
   ABSTRACT,
+  FROM_EXTENSION,
   OVERRIDE,
   STATIC,
   VIRTUAL,
-  FROM_EXTENSION,
 
   // Optimization flags
   FINAL,
@@ -94,6 +94,10 @@ enum flags SymbolFlag {
   // if they have a declaration.
   INITIALIZING,
   INITIALIZED,
+
+  // Other flags
+  HAS_MODIFIER_ERRORS,
+  KEYWORD_MASK = PUBLIC | PRIVATE | PROTECTED | OVERRIDE | STATIC | VIRTUAL | FINAL | INLINE | IMPORT | EXPORT,
 }
 
 class Symbol {
@@ -156,6 +160,10 @@ class Symbol {
     return (flags & SymbolFlag.ABSTRACT) != 0;
   }
 
+  bool isFromExtension() {
+    return (flags & SymbolFlag.FROM_EXTENSION) != 0;
+  }
+
   bool isOverride() {
     return (flags & SymbolFlag.OVERRIDE) != 0;
   }
@@ -166,10 +174,6 @@ class Symbol {
 
   bool isVirtual() {
     return (flags & SymbolFlag.VIRTUAL) != 0;
-  }
-
-  bool isFromExtension() {
-    return (flags & SymbolFlag.FROM_EXTENSION) != 0;
   }
 
   bool isFinal() {
@@ -201,5 +205,9 @@ class Symbol {
   bool isInitialized() {
     assert (flags & (SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED)) != (SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED);
     return (flags & SymbolFlag.INITIALIZED) != 0;
+  }
+
+  bool hasModifierErrors() {
+    return (flags & SymbolFlag.HAS_MODIFIER_ERRORS) != 0;
   }
 }

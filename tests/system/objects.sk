@@ -389,6 +389,30 @@ class Foo { static int foo() {} }
 ");
 
 test("
+class Foo { int foo; }
+class Bar : Foo { int foo; }
+", "
+<stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
+class Bar : Foo { int foo; }
+                      ~~~
+<stdin>:1:17: note: The overridden declaration is here
+class Foo { int foo; }
+                ~~~
+");
+
+test("
+class Foo { int foo() {} }
+class Bar : Foo { int foo; }
+", "
+<stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
+class Bar : Foo { int foo; }
+                      ~~~
+<stdin>:1:17: note: The overridden declaration is here
+class Foo { int foo() {} }
+                ~~~
+");
+
+test("
 virtual void foo() {}
 override void bar() {}
 ", "
@@ -398,4 +422,140 @@ virtual void foo() {}
 <stdin>:2:1: error: Cannot use the \"override\" modifier outside an object declaration
 override void bar() {}
 ~~~~~~~~
+");
+
+test("
+virtual int foo;
+override int bar;
+", "
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on a variable declaration
+virtual int foo;
+~~~~~~~
+<stdin>:2:1: error: Cannot use the \"override\" modifier on a variable declaration
+override int bar;
+~~~~~~~~
+");
+
+test("
+virtual namespace foo {}
+override namespace bar {}
+", "
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on a namespace declaration
+virtual namespace foo {}
+~~~~~~~
+<stdin>:2:1: error: Cannot use the \"override\" modifier on a namespace declaration
+override namespace bar {}
+~~~~~~~~
+");
+
+test("
+virtual struct Foo {}
+override struct Bar {}
+", "
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on a struct declaration
+virtual struct Foo {}
+~~~~~~~
+<stdin>:2:1: error: Cannot use the \"override\" modifier on a struct declaration
+override struct Bar {}
+~~~~~~~~
+");
+
+test("
+virtual class Foo {}
+override class Bar {}
+", "
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on a class declaration
+virtual class Foo {}
+~~~~~~~
+<stdin>:2:1: error: Cannot use the \"override\" modifier on a class declaration
+override class Bar {}
+~~~~~~~~
+");
+
+test("
+virtual interface Foo {}
+override interface Bar {}
+", "
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on an interface declaration
+virtual interface Foo {}
+~~~~~~~
+<stdin>:2:1: error: Cannot use the \"override\" modifier on an interface declaration
+override interface Bar {}
+~~~~~~~~
+");
+
+test("
+virtual enum Foo {}
+override enum Bar {}
+", "
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on an enum declaration
+virtual enum Foo {}
+~~~~~~~
+<stdin>:2:1: error: Cannot use the \"override\" modifier on an enum declaration
+override enum Bar {}
+~~~~~~~~
+");
+
+test("
+virtual enum flags Foo {}
+override enum flags Bar {}
+", "
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on an enum declaration
+virtual enum flags Foo {}
+~~~~~~~
+<stdin>:2:1: error: Cannot use the \"override\" modifier on an enum declaration
+override enum flags Bar {}
+~~~~~~~~
+");
+
+test("
+class Foo {}
+virtual in Foo {}
+override in Bar {}
+class Bar {}
+", "
+<stdin>:2:12: error: Cannot merge multiple declarations for \"Foo\" with different modifiers
+virtual in Foo {}
+           ~~~
+<stdin>:1:7: note: The conflicting declaration is here
+class Foo {}
+      ~~~
+<stdin>:4:7: error: Cannot merge multiple declarations for \"Bar\" with different modifiers
+class Bar {}
+      ~~~
+<stdin>:3:13: note: The conflicting declaration is here
+override in Bar {}
+            ~~~
+");
+
+test("
+virtual class Foo {}
+virtual in Foo {}
+override in Bar {}
+override class Bar {}
+", "
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on a class declaration
+virtual class Foo {}
+~~~~~~~
+<stdin>:3:1: error: Cannot use the \"override\" modifier on a class declaration
+override in Bar {}
+~~~~~~~~
+");
+
+test("
+namespace foo {}
+in foo : int {}
+", "
+<stdin>:2:10: error: A namespace cannot inherit from another type
+in foo : int {}
+         ~~~
+");
+
+test("
+enum Foo {}
+in Foo : int {}
+", "
+<stdin>:2:10: error: An enum cannot inherit from another type
+in Foo : int {}
+         ~~~
 ");

@@ -194,9 +194,10 @@ class Resolver {
       for (sibling = node.sibling; sibling != null; sibling = sibling.sibling) {
         SymbolFlag siblingFlags = symbolFlagsForNode(sibling);
 
-        // Don't count implicitly added modifiers
-        if ((flags & ~SymbolFlag.FROM_EXTENSION) != (siblingFlags & ~SymbolFlag.FROM_EXTENSION)) {
+        // Don't count non-keyword modifiers
+        if ((flags & SymbolFlag.KEYWORD_MASK) != (siblingFlags & SymbolFlag.KEYWORD_MASK)) {
           semanticErrorDifferentModifiers(log, sibling.declarationName().range, declarationName.asString(), declarationName.range);
+          siblingFlags = siblingFlags | SymbolFlag.HAS_MODIFIER_ERRORS;
         }
 
         flags = flags | siblingFlags;
@@ -751,11 +752,15 @@ class Resolver {
 
   void initializeNamespace(Symbol symbol) {
     assert symbol.type.isNamespace();
-    checkNoBaseTypes(symbol, "A namespaces");
+    unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on a namespace declaration");
+    unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on a namespace declaration");
+    checkNoBaseTypes(symbol, "A namespace");
   }
 
   void initializeEnum(Symbol symbol) {
     assert symbol.type.isEnum();
+    unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on an enum declaration");
+    unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on an enum declaration");
     checkNoBaseTypes(symbol, "An enum");
   }
 
@@ -764,6 +769,15 @@ class Resolver {
     Node parameters = node.objectParameters();
     Type type = symbol.type;
     assert type.isObject();
+
+    string where;
+    switch (symbol.kind) {
+      case SymbolKind.CLASS { where = "on a class declaration"; }
+      case SymbolKind.STRUCT { where = "on a struct declaration"; }
+      case SymbolKind.INTERFACE { where = "on an interface declaration"; }
+    }
+    unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, where);
+    unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, where);
 
     // Resolve type parameters
     if (parameters != null && parameters.hasChildren()) {
@@ -964,10 +978,11 @@ class Resolver {
       }
       node = node.parent;
     }
+    return null;
   }
 
   void redundantModifierIfPresent(Symbol symbol, SymbolFlag flag, string where) {
-    if ((symbol.flags & flag) != 0) {
+    if ((symbol.flags & flag) != 0 && !symbol.hasModifierErrors()) {
       Node modifierName = findModifierName(symbol, flag);
       if (modifierName != null) {
         semanticErrorRedundantModifier(log, modifierName.range, modifierName.asString(), where);
@@ -976,7 +991,7 @@ class Resolver {
   }
 
   void unexpectedModifierIfPresent(Symbol symbol, SymbolFlag flag, string where) {
-    if ((symbol.flags & flag) != 0) {
+    if ((symbol.flags & flag) != 0 && !symbol.hasModifierErrors()) {
       Node modifierName = findModifierName(symbol, flag);
       if (modifierName != null) {
         semanticErrorUnexpectedModifier(log, modifierName.range, modifierName.asString(), where);
@@ -985,6 +1000,9 @@ class Resolver {
   }
 
   void initializeVariable(Symbol symbol) {
+    unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on a variable declaration");
+    unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on a variable declaration");
+
     Node node = symbol.node;
     Node variableType = node.variableType();
     if (variableType == null) {
@@ -1073,6 +1091,18 @@ class Resolver {
       resolveAsParameterizedType(variableType);
       checkIsValidVariableType(variableType);
       symbol.type = variableType.type;
+    }
+
+    // Variables must not override other symbols
+    Symbol overriddenSymbol = symbol.overriddenSymbol;
+    if (overriddenSymbol != null) {
+      initializeSymbol(overriddenSymbol);
+      Type base = overriddenSymbol.type;
+      Type derived = symbol.type;
+      if (!base.isError(cache) && !derived.isError(cache)) {
+        semanticErrorBadOverride(log, node.declarationName().range, symbol.name,
+          overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.declarationName().range);
+      }
     }
   }
 
@@ -1320,11 +1350,13 @@ class Resolver {
 
   void resolveNamespace(Node node) {
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
+    initializeSymbol(node.symbol);
     resolve(node.declarationBlock(), null);
   }
 
   void resolveEnum(Node node) {
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
+    initializeSymbol(node.symbol);
     resolve(node.declarationBlock(), null);
   }
 
@@ -1357,6 +1389,7 @@ class Resolver {
 
   void resolveExtension(Node node) {
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
+    initializeSymbol(node.symbol);
     resolve(node.declarationBlock(), null);
   }
 
