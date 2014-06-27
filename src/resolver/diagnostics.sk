@@ -4,6 +4,10 @@ string typeToText(Type type) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void semanticWarningUnusedExpression(Log log, Range range) {
+  log.warning(range, "Unused expression");
+}
+
 void semanticWarningDuplicateModifier(Log log, Range range, string modifier) {
   log.warning(range, "Duplicate modifier ".append(simpleQuote(modifier)));
 }

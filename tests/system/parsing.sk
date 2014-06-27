@@ -222,6 +222,9 @@ test("
 <stdin>:1:8: error: Expected SEMICOLON but found LAMBDA
 (null) =>;
        ~~
+<stdin>:1:2: warning: Unused expression
+(null) =>;
+ ~~~~
 ");
 
 test("

@@ -604,6 +604,17 @@ class Resolver {
   }
 
   void checkUnusedExpression(Node node) {
+    NodeKind kind = node.kind;
+    if (kind == NodeKind.HOOK) {
+      checkUnusedExpression(node.hookTrue());
+      checkUnusedExpression(node.hookFalse());
+    } else if (kind == NodeKind.SEQUENCE) {
+      if (node.hasChildren()) {
+        checkUnusedExpression(node.children.get(node.children.length - 1));
+      }
+    } else if (!kind.isCall() && !node.type.isError(cache)) {
+      semanticWarningUnusedExpression(log, node.range);
+    }
   }
 
   void checkStorage(Node node) {

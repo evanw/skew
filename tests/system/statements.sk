@@ -306,4 +306,31 @@ class Foo {
 <stdin>:8:3: error: Cannot use this statement here
   0;
   ~~
+<stdin>:8:3: warning: Unused expression
+  0;
+  ^
+");
+
+test("
+void foo() {}
+foo;
+foo();
+1, 2;
+true ? 1 : 2;
+", "
+<stdin>:2:1: warning: Unused expression
+foo;
+~~~
+<stdin>:4:1: warning: Unused expression
+1, 2;
+^
+<stdin>:4:4: warning: Unused expression
+1, 2;
+   ^
+<stdin>:5:8: warning: Unused expression
+true ? 1 : 2;
+       ^
+<stdin>:5:12: warning: Unused expression
+true ? 1 : 2;
+           ^
 ");

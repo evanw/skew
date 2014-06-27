@@ -146,6 +146,10 @@ in NodeKind {
     return this >= NULL && this <= STRING;
   }
 
+  bool isCall() {
+    return this >= CALL && this <= SUPER_CALL;
+  }
+
   bool isUnaryOperator() {
     return this >= NOT && this <= POSTFIX_DECREMENT;
   }

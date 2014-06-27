@@ -35,6 +35,9 @@ test("
 <stdin>:1:12: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 (int)(x => x)(false);
            ^
+<stdin>:1:1: warning: Unused expression
+(int)(x => x)(false);
+~~~~~~~~~~~~~~~~~~~~
 ");
 
 test("
