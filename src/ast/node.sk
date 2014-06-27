@@ -162,6 +162,10 @@ in NodeKind {
     return this >= ADD && this <= ASSIGN_SUBTRACT;
   }
 
+  bool isBinaryStorageOperator() {
+    return this >= ASSIGN && this <= ASSIGN_SUBTRACT;
+  }
+
   bool isTertiaryOperator() {
     return this == ASSIGN_INDEX;
   }
