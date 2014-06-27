@@ -9,7 +9,7 @@ class ConstantFolder {
   }
 
   void flattenInt(Node node, int value) {
-    assert node.type.isError(cache) || node.type.isInt(cache);
+    assert node.type.isError(cache) || node.type.isInteger(cache);
     node.removeChildren();
     node.kind = NodeKind.INT;
     node.content = new IntContent(value);
@@ -34,6 +34,11 @@ class ConstantFolder {
       }
     }
 
+    // Symbols
+    if (kind == NodeKind.NAME && node.symbol != null && node.symbol.isEnumValue()) {
+      flattenInt(node, (int)node.symbol.enumValue);
+    }
+
     // Casts
     if (kind.isCast()) {
       Type type = node.castType().type;
@@ -43,32 +48,22 @@ class ConstantFolder {
       // Cast "bool" values
       if (valueKind.isBool()) {
         if (type.isBool(cache)) flattenBool(node, (bool)value.asBool());
-        else if (type.isInt(cache)) flattenInt(node, (int)value.asBool());
+        else if (type.isInteger(cache)) flattenInt(node, (int)value.asBool());
         else if (type.isReal(cache)) flattenReal(node, (double)value.asBool());
       }
 
       // Cast "int" values
       else if (valueKind == NodeKind.INT) {
         if (type.isBool(cache)) flattenBool(node, (bool)value.asInt());
-        else if (type.isInt(cache)) flattenInt(node, (int)value.asInt());
+        else if (type.isInteger(cache)) flattenInt(node, (int)value.asInt());
         else if (type.isReal(cache)) flattenReal(node, (double)value.asInt());
       }
 
       // Cast "float" or "double" values
       else if (valueKind.isReal()) {
         if (type.isBool(cache)) flattenBool(node, (bool)value.asDouble());
-        else if (type.isInt(cache)) flattenInt(node, (int)value.asDouble());
+        else if (type.isInteger(cache)) flattenInt(node, (int)value.asDouble());
         else if (type.isReal(cache)) flattenReal(node, (double)value.asDouble());
-      }
-
-      // Cast enum values
-      else if (valueKind == NodeKind.NAME) {
-        Symbol symbol = value.symbol;
-        if (symbol != null && symbol.type.isEnum()) {
-          if (type.isBool(cache)) flattenBool(node, (bool)symbol.enumValue);
-          else if (type.isInt(cache)) flattenInt(node, (int)symbol.enumValue);
-          else if (type.isReal(cache)) flattenReal(node, (double)symbol.enumValue);
-        }
       }
     }
 

@@ -110,3 +110,19 @@ void foo(Foo foo) {
     case .FOO, .BAR {}
          ~~~~
 ");
+
+test("
+enum Foo { FOO }
+void foo(int foo) {
+  switch (foo) {
+    case 0, Foo.FOO {}
+  }
+}
+", "
+<stdin>:4:13: error: Duplicate case value
+    case 0, Foo.FOO {}
+            ~~~~~~~
+<stdin>:4:10: note: The first occurrence is here
+    case 0, Foo.FOO {}
+         ^
+");
