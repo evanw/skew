@@ -214,3 +214,49 @@ bool bar = Foo.bar();
   static T bar() { return default(T); }
                                   ^
 ");
+
+test("
+class Foo<T> {}
+in Foo { T foo() {} }
+", "
+<stdin>:2:10: error: \"T\" is not declared
+in Foo { T foo() {} }
+         ^
+");
+
+test("
+class Foo<F> {
+  class Bar<B is F> : F {
+    B bar() { return F(); }
+  }
+}
+", "
+<stdin>:2:3: error: Cannot use this statement here
+  class Bar<B is F> : F {
+  ~~~~~~~~~~~~~~~~~~~~~~~
+<stdin>:2:18: error: Cannot access \"F\" from a static context
+  class Bar<B is F> : F {
+                 ^
+<stdin>:2:23: error: Cannot access \"F\" from a static context
+  class Bar<B is F> : F {
+                      ^
+<stdin>:3:22: error: Cannot access \"F\" from a static context
+    B bar() { return F(); }
+                     ^
+");
+
+test("
+class Foo<T> { Foo(bool foo) {} }
+int foo = Foo(0);
+int bar = Foo<int>(0);
+", "
+<stdin>:2:11: error: Cannot use unparameterized type \"Foo<T>\"
+int foo = Foo(0);
+          ~~~
+<stdin>:3:20: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+int bar = Foo<int>(0);
+                   ^
+<stdin>:3:11: error: Cannot convert from type \"Foo<int>\" to type \"int\"
+int bar = Foo<int>(0);
+          ~~~~~~~~~~~
+");

@@ -1306,6 +1306,9 @@ class Resolver {
     if (member.dependency != null) {
       initializeMember(member.dependency);
       member.type = member.dependency.type;
+      if (member.symbol.kind.isConstructor() && member.type.isFunction()) {
+        member.type.relevantTypes.set(0, member.enclosingType);
+      }
     } else {
       initializeSymbol(member.symbol);
       member.type = member.symbol.type;
@@ -1889,6 +1892,9 @@ class Resolver {
     else {
       assert value.kind.isExpression();
       resolve(value, null);
+      if (value.kind.isType()) {
+        checkIsParameterized(value);
+      }
       Type valueType = value.type;
 
       // Avoid reporting further errors
