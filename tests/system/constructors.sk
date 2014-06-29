@@ -43,6 +43,18 @@ int foo = Foo(1);
 ");
 
 test("
+class Foo {}
+int foo = Foo(1);
+", "
+<stdin>:2:14: error: Expected 0 arguments but found 1 argument
+int foo = Foo(1);
+             ~~~
+<stdin>:2:11: error: Cannot convert from type \"Foo\" to type \"int\"
+int foo = Foo(1);
+          ~~~~~~
+");
+
+test("
 int foo = { false };
 ", "
 <stdin>:1:11: error: Cannot construct type \"int\"

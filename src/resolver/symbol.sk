@@ -1,5 +1,6 @@
 enum SymbolKind {
   OTHER,
+  AUTOMATIC,
   AMBIGUOUS,
   UNMERGED,
   PARAMETER,
