@@ -1,5 +1,20 @@
 test("
 class Foo {
+  int foo;
+  static int bar;
+}
+struct Bar {
+  int foo;
+  static int bar;
+}
+", "
+<stdin>:6:7: error: Expected the \"final\" modifier on a variable declaration inside a struct
+  int foo;
+      ~~~
+");
+
+test("
+class Foo {
   Foo() { return 0; }
 }
 class Bar {

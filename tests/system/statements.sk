@@ -99,6 +99,16 @@ void foo() {
 ");
 
 test("
+class Foo { final int foo; }
+struct Bar { final int foo; }
+interface Baz { final int foo; }
+", "
+<stdin>:3:23: error: Cannot use this statement here
+interface Baz { final int foo; }
+                      ~~~~~~~~
+");
+
+test("
 class Foo {}
 in Foo {
   int a = 0;
@@ -107,12 +117,12 @@ in Foo {
   static int d;
 }
 ", "
-<stdin>:4:3: error: Cannot use this statement here
+<stdin>:4:7: error: Instance variables in extension blocks must be initialized
   int b, foo;
-  ~~~~~
-<stdin>:4:10: error: Cannot use this statement here
+      ^
+<stdin>:4:10: error: Instance variables in extension blocks must be initialized
   int b, foo;
-         ~~~~
+         ~~~
 ");
 
 test("
@@ -135,18 +145,18 @@ in Foo {
 test("
 struct Foo {}
 in Foo {
-  int a = 0;
-  int b;
+  final int a = 0;
+  final int b;
   static int c = 0;
   static int d;
 }
 ", "
-<stdin>:3:3: error: Cannot use this statement here
-  int a = 0;
-  ~~~~~~~~~~
-<stdin>:4:3: error: Cannot use this statement here
-  int b;
-  ~~~~~~
+<stdin>:3:9: error: Cannot use this statement here
+  final int a = 0;
+        ~~~~~~~~~~
+<stdin>:4:9: error: Cannot use this statement here
+  final int b;
+        ~~~~~~
 ");
 
 test("

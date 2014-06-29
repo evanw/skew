@@ -1082,9 +1082,18 @@ class Resolver {
     }
   }
 
+  void expectedModifierIfAbsent(Symbol symbol, SymbolFlag flag, string where) {
+    if ((symbol.flags & flag) == 0 && !symbol.hasModifierErrors() && findModifierName(symbol, flag) == null) {
+      semanticErrorExpectedModifier(log, symbol.node.declarationName().range, symbolFlagToName.get(flag), where);
+    }
+  }
+
   void initializeVariable(Symbol symbol) {
     unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on a variable declaration");
     unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on a variable declaration");
+    if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind == SymbolKind.STRUCT && !symbol.isStatic()) {
+      expectedModifierIfAbsent(symbol, SymbolFlag.FINAL, "on a variable declaration inside a struct");
+    }
 
     Node node = symbol.node;
     Node variableType = node.variableType();
@@ -1536,12 +1545,15 @@ class Resolver {
     initializeSymbol(symbol);
     Node value = node.variableValue();
 
-    // Instance variables without initial values aren't allowed in extension
-    // blocks because default constructors need to order their arguments
-    if (!symbol.isStatic() && symbol.isFromExtension()) {
+    // Prevent instance variables inside interfaces. Also prevent instance
+    // variables without initial values in extension blocks because default
+    // constructors need to order their arguments.
+    if (!symbol.isStatic() && symbol.enclosingSymbol != null) {
       Type enclosingType = symbol.enclosingSymbol.type;
-      if (!enclosingType.isClass() || value == null) {
+      if (enclosingType.isInterface() || symbol.isFromExtension() && !enclosingType.isClass()) {
         unexpectedStatement(node);
+      } else if (symbol.isFromExtension() && value == null) {
+        semanticErrorUninitializedExtensionVariable(log, node.declarationName().range);
       }
     }
 
@@ -2253,3 +2265,20 @@ StringMap<SymbolFlag> createNameToSymbolFlag() {
 }
 
 StringMap<SymbolFlag> nameToSymbolFlag = createNameToSymbolFlag();
+
+IntMap<string> createSymbolFlagToName() {
+  IntMap<string> result = new IntMap<string>();
+  result.set(SymbolFlag.EXPORT, "export");
+  result.set(SymbolFlag.FINAL, "final");
+  result.set(SymbolFlag.IMPORT, "import");
+  result.set(SymbolFlag.INLINE, "inline");
+  result.set(SymbolFlag.OVERRIDE, "override");
+  result.set(SymbolFlag.PRIVATE, "private");
+  result.set(SymbolFlag.PROTECTED, "protected");
+  result.set(SymbolFlag.PUBLIC, "public");
+  result.set(SymbolFlag.STATIC, "static");
+  result.set(SymbolFlag.VIRTUAL, "virtual");
+  return result;
+}
+
+IntMap<string> symbolFlagToName = createSymbolFlagToName();
