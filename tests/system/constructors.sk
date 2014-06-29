@@ -141,3 +141,21 @@ class Foo : IFoo { bool foo; }
 Foo foo = { 1 };
             ^
 ");
+
+test("
+class Foo {}
+in Foo { void Foo() {} }
+Foo foo = {};
+", "
+TODO
+");
+
+test("
+namespace ns {
+  class Foo {}
+  in Foo { ns.Foo Foo() {} }
+  int foo = Foo();
+}
+", "
+TODO
+");
