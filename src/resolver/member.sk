@@ -1,0 +1,21 @@
+class Member {
+  Symbol symbol;
+  Type enclosingType = null;
+
+  // The type of the member may be different from the symbol since the symbol
+  // represents the unparameterized type and the member is a parameterization
+  // of that symbol
+  Type type = null;
+
+  // The member that this symbol re-parameterizes. The type of a member in a
+  // derived type may depend on type substitution on that member's type in a
+  // base class with a new type environment:
+  //
+  //   class Foo<A, B> { A foo(B bar) {} }
+  //   class Bar<T> : Foo<int, T> {}
+  //   class Baz : Bar<bool> {}
+  //   int baz = new Baz().foo(false);
+  //
+  Member dependency = null;
+  Environment environment = null;
+}

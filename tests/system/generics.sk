@@ -68,3 +68,104 @@ class Foo<T is IFoo> {
     return value.foo(false);
            ~~~~~~~~~~~~~~~~
 ");
+
+test("
+int<int> foo = 0;
+void fn()<int> bar = 0;
+", "
+<stdin>:1:1: error: Cannot parameterize type \"int\" because it has no type parameters
+int<int> foo = 0;
+~~~
+<stdin>:2:1: error: Cannot parameterize type \"void fn()\" because it has no type parameters
+void fn()<int> bar = 0;
+~~~~~~~~~
+");
+
+test("
+class Foo<T> {}
+Foo<int, int> foo = 0;
+", "
+<stdin>:2:4: error: Expected 1 type parameter but found 2 type parameters
+Foo<int, int> foo = 0;
+   ~~~~~~~~~~
+");
+
+test("
+Foo<Bar> foo = 0;
+Foo<Baz> bar = 0;
+class Foo<T is IFoo> {}
+interface IFoo {}
+class Bar : IFoo {}
+class Baz {}
+", "
+<stdin>:1:16: error: Cannot convert from type \"int\" to type \"Foo<Bar>\"
+Foo<Bar> foo = 0;
+               ^
+<stdin>:2:5: error: Cannot convert from type \"Baz\" to type \"IFoo\"
+Foo<Baz> bar = 0;
+    ~~~
+");
+
+test("
+Foo<Bar><Bar> foo = 0;
+Foo<Bar><Baz> bar = 0;
+class Foo<T> {}
+class Bar {}
+class Baz {}
+", "
+<stdin>:1:1: error: Cannot parameterize type \"Foo<Bar>\" because it is already parameterized
+Foo<Bar><Bar> foo = 0;
+~~~~~~~~
+<stdin>:2:1: error: Cannot parameterize type \"Foo<Bar>\" because it is already parameterized
+Foo<Bar><Baz> bar = 0;
+~~~~~~~~
+");
+
+test("
+Foo<int, bool> foo = bar;
+Foo<bool, int> bar = foo;
+class Foo<A, B> {}
+", "
+<stdin>:1:22: error: Cannot convert from type \"Foo<bool, int>\" to type \"Foo<int, bool>\"
+Foo<int, bool> foo = bar;
+                     ~~~
+<stdin>:2:22: error: Cannot convert from type \"Foo<int, bool>\" to type \"Foo<bool, int>\"
+Foo<bool, int> bar = foo;
+                     ~~~
+");
+
+test("
+class Foo<A, B> { A foo(B foo); }
+bool foo(Foo<int, bool> foo) { return foo.foo(0); }
+", "
+<stdin>:2:47: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool foo(Foo<int, bool> foo) { return foo.foo(0); }
+                                              ^
+<stdin>:2:39: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool foo(Foo<int, bool> foo) { return foo.foo(0); }
+                                      ~~~~~~~~~~
+");
+
+test("
+class Foo<A, B> { A foo(B bar) {} }
+class Bar<T> : Foo<int, T> {}
+class Baz : Bar<bool> {}
+Baz foo = null;
+bool bar = foo.foo(0);
+", "
+<stdin>:5:20: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool bar = foo.foo(0);
+                   ^
+<stdin>:5:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool bar = foo.foo(0);
+           ~~~~~~~~~~
+");
+
+test("
+interface IFoo<T> { T foo(); }
+class Foo : IFoo<int>, IFoo<float> {}
+", "
+<stdin>:2:7: error: Member \"Foo.foo\" has an ambiguous inherited type, could be type \"int fn()\" or type \"float fn()\"
+class Foo : IFoo<int>, IFoo<float> {}
+      ~~~
+");

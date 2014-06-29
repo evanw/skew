@@ -1,0 +1,30 @@
+class Environment {
+  List<Symbol> parameters;
+  List<Type> types;
+
+  new(List<Symbol> p, List<Type> t) {
+    assert p.length == t.length;
+    parameters = p;
+    types = t;
+  }
+
+  bool isEmpty() {
+    assert parameters.length == types.length;
+    return parameters.length == 0;
+  }
+
+  Environment clone() {
+    assert parameters.length == types.length;
+    return new Environment(parameters.clone(), types.clone());
+  }
+
+  string toString() {
+    assert parameters.length == types.length;
+    List<string> parts = {};
+    int i;
+    for (i = 0; i < parameters.length; i++) {
+      parts.push(parameters.get(i).name.append(" => ").append(types.get(i).toString()));
+    }
+    return ", ".join(parts);
+  }
+}

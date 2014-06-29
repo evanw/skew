@@ -1,5 +1,6 @@
 class Type {
-  StringMap<Symbol> members = new StringMap<Symbol>();
+  StringMap<Member> members = new StringMap<Member>();
+  Environment environment = null;
 
   // The symbol that declared this type, if any. Function types don't have a
   // declaring symbol, so this will be null for function types.
@@ -21,7 +22,7 @@ class Type {
   static int nextUniqueID = 0;
   int uniqueID = nextUniqueID++;
 
-  Symbol constructor() {
+  Member constructor() {
     if (symbol == null) return null;
     return members.getOrDefault(symbol.name, null);
   }
@@ -48,35 +49,36 @@ class Type {
     return false;
   }
 
-  void addMember(Symbol member) {
-    member.enclosingSymbol = symbol;
-    members.set(member.name, member);
+  void addMember(Member member) {
+    member.enclosingType = this;
+    members.set(member.symbol.name, member);
   }
 
   void copyMembersFrom(Type other) {
-    List<Symbol> symbols = other.members.values();
+    List<Member> otherMembers = other.members.values();
     int i;
-    for (i = 0; i < symbols.length; i++) {
-      Symbol member = symbols.get(i);
-      if (!members.has(member.name)) {
-        members.set(member.name, member);
+    for (i = 0; i < otherMembers.length; i++) {
+      Member member = otherMembers.get(i);
+      if (!members.has(member.symbol.name)) {
+        members.set(member.symbol.name, member);
       }
     }
   }
 
-  Symbol findMember(string name) {
-    Symbol symbol = members.getOrDefault(name, null);
+  Member findMember(string name) {
+    Member member = members.getOrDefault(name, null);
 
     // A constructor must not be visible using name lookup because then it
     // would obscure the enclosing object type
-    if (symbol != null && symbol.kind.isConstructor()) {
+    if (member != null && member.symbol.kind.isConstructor()) {
       return null;
     }
 
-    return symbol;
+    return member;
   }
 
   string toString() {
+    // Special-case functions
     if (isFunction()) {
       string text = resultType().toString().append(" fn(");
       List<Type> arguments = argumentTypes();
@@ -87,7 +89,34 @@ class Type {
       }
       return text.append(")");
     }
+
+    // Special-case generic types
+    if (hasParameters()) {
+      List<string> parts = {};
+      int i;
+      for (i = 0; i < symbol.parameters.length; i++) {
+        Symbol parameter = symbol.parameters.get(i);
+        if (environment != null) {
+          int index = environment.parameters.indexOf(parameter);
+          if (index != -1) {
+            parts.push(environment.types.get(index).toString());
+            continue;
+          }
+        }
+        parts.push(parameter.name);
+      }
+      return symbol.fullName().append("<").append(", ".join(parts)).append(">");
+    }
+
     return symbol.fullName();
+  }
+
+  bool hasParameters() {
+    return symbol != null && symbol.hasParameters();
+  }
+
+  bool isParameterized() {
+    return environment != null;
   }
 
   bool hasRelevantTypes() {

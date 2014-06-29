@@ -121,7 +121,7 @@ Foo.T foo = 0;
 <stdin>:2:11: error: Cannot convert from type \"int\" to type \"T\"
   T foo = 0;
           ^
-<stdin>:4:5: error: \"T\" is not declared on type \"Foo\"
+<stdin>:4:5: error: \"T\" is not declared on type \"Foo<T>\"
 Foo.T foo = 0;
     ^
 ");

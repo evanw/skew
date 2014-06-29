@@ -94,10 +94,12 @@ class Resolver {
       Node declarationName = node.declarationName();
       if (declarationName != null) {
         string name = declarationName.asString();
-        Symbol symbol = scope.findLocal(name);
+        Member member = scope.findLocal(name);
+        Symbol symbol;
 
         // Append this symbol the linked list of sibling nodes
-        if (symbol != null) {
+        if (member != null) {
+          symbol = member.symbol;
           Node last = symbol.node;
           while (last.sibling != null) {
             last = last.sibling;
@@ -109,6 +111,9 @@ class Resolver {
         else {
           symbol = new Symbol(name, SymbolKind.OTHER);
           symbol.node = node;
+          if (scope.type != null) {
+            symbol.enclosingSymbol = scope.type.symbol;
+          }
           scope.insert(symbol);
         }
 
@@ -334,16 +339,16 @@ class Resolver {
         string name = declarationName.asString();
 
         // Detect duplicate symbol declarations
-        Symbol symbol = block.scope.findLocal(name);
-        if (symbol != null) {
-          Node otherName = symbol.node.declarationName();
+        Member member = block.scope.findLocal(name);
+        if (member != null) {
+          Node otherName = member.symbol.node.declarationName();
           if (otherName != null) semanticErrorDuplicateSymbol(log, declarationName.range, name, otherName.range);
           continue;
         }
 
         // Insert a new unresolved symbol as a local symbol only on this scope.
         // It will not be added on the type associated with this scope.
-        symbol = new Symbol(name, SymbolKind.USING_ALIAS);
+        Symbol symbol = new Symbol(name, SymbolKind.USING_ALIAS);
         symbol.node = statement;
         statement.symbol = symbol;
         block.scope.insertLocal(symbol);
@@ -391,25 +396,29 @@ class Resolver {
         // Copy each non-namespace symbol into this namespace if not already
         // present. If a symbol is already present but was due to another
         // using namespace statement, then mark the symbol as ambiguous.
-        List<Symbol> members = symbol.type.members.values();
+        List<Member> members = symbol.type.members.values();
         int k;
         for (k = 0; k < members.length; k++) {
-          Symbol member = members.get(k);
-          if (member.kind == SymbolKind.NAMESPACE) {
+          Member member = members.get(k);
+          Symbol memberSymbol = member.symbol;
+          if (memberSymbol.kind == SymbolKind.NAMESPACE) {
             continue;
           }
-          Symbol current = block.scope.findLocal(member.name);
+          Member current = block.scope.findLocal(memberSymbol.name);
           if (current == null) {
-            insertedSymbols.push(member);
-            block.scope.insertLocal(member);
-          } else if (insertedSymbols.indexOf(current) >= 0) {
-            if (current.kind != SymbolKind.AMBIGUOUS) {
-              Symbol collision = new Symbol(member.name, SymbolKind.AMBIGUOUS);
-              collision.identicalSymbols = { current, member };
-              block.scope.locals.set(member.name, collision);
-              insertedSymbols.push(collision);
-            } else {
-              current.identicalSymbols.push(member);
+            insertedSymbols.push(memberSymbol);
+            block.scope.insertLocal(memberSymbol);
+          } else {
+            Symbol currentSymbol = current.symbol;
+            if (insertedSymbols.indexOf(currentSymbol) >= 0) {
+              if (currentSymbol.kind != SymbolKind.AMBIGUOUS) {
+                Symbol collision = new Symbol(memberSymbol.name, SymbolKind.AMBIGUOUS);
+                collision.identicalMembers = { current, member };
+                block.scope.locals.set(memberSymbol.name, new Member(collision));
+                insertedSymbols.push(collision);
+              } else {
+                currentSymbol.identicalMembers.push(member);
+              }
             }
           }
         }
@@ -419,13 +428,13 @@ class Resolver {
 
   void resolveGlobalUsingNamespaceValue(Node node) {
     node.type = cache.errorType;
-    Symbol symbol;
+    Member member;
 
     // Handle top-level names
     if (node.kind == NodeKind.NAME) {
       string name = node.asString();
-      symbol = cache.globalType.findMember(name);
-      if (symbol == null) {
+      member = cache.globalType.findMember(name);
+      if (member == null) {
         semanticErrorUndeclaredSymbol(log, node.range, name);
         return;
       }
@@ -441,8 +450,8 @@ class Resolver {
         return;
       }
       string name = dotName.asString();
-      symbol = targetType.findMember(name);
-      if (symbol == null) {
+      member = targetType.findMember(name);
+      if (member == null) {
         semanticErrorUnknownMemberSymbol(log, dotName.range, name, targetType);
         return;
       }
@@ -454,14 +463,14 @@ class Resolver {
       return;
     }
 
-    // Validate the symbol type, must not be an instance
-    if (!symbol.kind.isType()) {
+    // Validate the member type, must not be an instance
+    if (!member.symbol.kind.isType()) {
       semanticErrorBadUsingValue(log, node.range);
       return;
     }
 
     // Create a type node to distinguish the type from an instance of that type
-    node.become(Node.createType(symbol.type).withRange(node.range));
+    node.become(Node.createType(member.symbol.type).withRange(node.range));
     assert node.type != null; // All type symbols should have a type by now
   }
 
@@ -574,6 +583,13 @@ class Resolver {
       node = node.sibling;
     }
     return node;
+  }
+
+  void checkIsParameterized(Node node) {
+    if (!node.type.isError(cache) && node.type.hasParameters() && !node.type.isParameterized()) {
+      semanticErrorUnparameterizedType(log, node.range, node.type);
+      node.type = cache.errorType;
+    }
   }
 
   void checkIsType(Node node) {
@@ -791,8 +807,14 @@ class Resolver {
     unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, where);
 
     // Resolve type parameters
+    List<Symbol> parameterSymbols = null;
     if (parameters != null && parameters.hasChildren()) {
+      symbol.parameters = {};
       resolveNodes(parameters.children);
+      int i;
+      for (i = 0; i < parameters.children.length; i++) {
+        symbol.parameters.push(parameters.children.get(i).symbol);
+      }
     }
 
     // A struct has no base type because it's meant to be a named tuple type
@@ -803,7 +825,7 @@ class Resolver {
     // Resolve base types
     else {
       List<Node> baseTypes = collectBaseTypes(symbol);
-      StringMap<Symbol> unmergedSymbols = new StringMap<Symbol>();
+      StringMap<Member> unmergedMembers = new StringMap<Member>();
       assert type.relevantTypes == null;
       type.relevantTypes = {};
 
@@ -842,37 +864,38 @@ class Resolver {
 
         type.relevantTypes.push(baseType);
 
-        // Collect all base type symbols
-        List<Symbol> members = baseType.members.values();
+        // Collect all base type members
+        List<Member> members = baseType.members.values();
         int j;
         for (j = 0; j < members.length; j++) {
-          Symbol member = members.get(j);
-          Symbol unmerged = unmergedSymbols.getOrDefault(member.name, null);
+          Member member = members.get(j);
+          Symbol memberSymbol = member.symbol;
+          Member unmerged = unmergedMembers.getOrDefault(memberSymbol.name, null);
           if (unmerged == null) {
-            unmergedSymbols.set(member.name, member);
-          } else if (unmerged.enclosingSymbol != member) {
-            Symbol combined = new Symbol(member.name, SymbolKind.UNMERGED);
+            unmergedMembers.set(memberSymbol.name, member);
+          } else if (unmerged.symbol.enclosingSymbol != memberSymbol) {
+            Symbol combined = new Symbol(memberSymbol.name, SymbolKind.UNMERGED);
             combined.enclosingSymbol = symbol;
-            combined.identicalSymbols = { unmerged, member };
-            unmergedSymbols.set(member.name, combined);
+            combined.identicalMembers = { unmerged, member };
+            unmergedMembers.set(memberSymbol.name, new Member(combined));
           } else {
-            assert unmerged.kind == SymbolKind.UNMERGED;
-            unmerged.identicalSymbols.push(member);
+            assert unmerged.symbol.kind == SymbolKind.UNMERGED;
+            unmerged.symbol.identicalMembers.push(member);
           }
         }
       }
 
       // Insert unmerged symbols into the derived type, but don't replace the
       // member symbols that are already there
-      List<Symbol> baseMembers = unmergedSymbols.values();
+      List<Member> baseMembers = unmergedMembers.values();
       for (i = 0; i < baseMembers.length; i++) {
-        Symbol member = baseMembers.get(i);
-        Symbol existing = type.members.getOrDefault(member.name, null);
+        Member member = baseMembers.get(i);
+        Member existing = type.members.getOrDefault(member.symbol.name, null);
         if (existing == null) {
-          type.members.set(member.name, member);
+          type.addMember(member);
         } else {
-          assert existing.overriddenSymbol == null;
-          existing.overriddenSymbol = member;
+          assert existing.symbol.overriddenMember == null;
+          existing.symbol.overriddenMember = member;
         }
       }
     }
@@ -921,12 +944,13 @@ class Resolver {
     }
 
     // Functions must not have a different type than the symbol they override
-    Symbol overriddenSymbol = symbol.overriddenSymbol;
-    if (overriddenSymbol != null) {
-      initializeSymbol(overriddenSymbol);
-      Type base = overriddenSymbol.type;
+    Member overriddenMember = symbol.overriddenMember;
+    if (overriddenMember != null) {
+      initializeMember(overriddenMember);
+      Type base = overriddenMember.type;
       Type derived = symbol.type;
       if (!base.isError(cache) && !derived.isError(cache)) {
+        Symbol overriddenSymbol = overriddenMember.symbol;
 
         // Functions can only override other functions
         if (!base.isFunction() || !overriddenSymbol.kind.isInstance() || !symbol.kind.isInstance()) {
@@ -1105,14 +1129,14 @@ class Resolver {
     }
 
     // Variables must not override other symbols
-    Symbol overriddenSymbol = symbol.overriddenSymbol;
-    if (overriddenSymbol != null) {
-      initializeSymbol(overriddenSymbol);
-      Type base = overriddenSymbol.type;
+    Member overriddenMember = symbol.overriddenMember;
+    if (overriddenMember != null) {
+      initializeMember(overriddenMember);
+      Type base = overriddenMember.type;
       Type derived = symbol.type;
       if (!base.isError(cache) && !derived.isError(cache)) {
         semanticErrorBadOverride(log, node.declarationName().range, symbol.name,
-          overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.declarationName().range);
+          overriddenMember.symbol.enclosingSymbol.type, overriddenMember.symbol.node.declarationName().range);
       }
     }
   }
@@ -1200,20 +1224,49 @@ class Resolver {
     }
   }
 
-  void initializePotentiallyDuplicatedSymbol(Symbol symbol, Range range) {
+  void initializePotentiallyDuplicatedMember(Member member, Range range) {
     // Ambiguous symbols are the result of multiple using namespace statements
+    Symbol symbol = member.symbol;
     if (symbol.kind == SymbolKind.AMBIGUOUS) {
       List<string> names = {};
       int i;
-      for (i = 0; i < symbol.identicalSymbols.length; i++) {
-        names.push(symbol.identicalSymbols.get(i).fullName());
+      for (i = 0; i < symbol.identicalMembers.length; i++) {
+        names.push(symbol.identicalMembers.get(i).symbol.fullName());
       }
       semanticErrorAmbiguousSymbol(log, range, symbol.name, names);
-      symbol.type = cache.errorType;
+      member.type = symbol.type = cache.errorType;
       return;
     }
 
-    initializeSymbol(symbol);
+    initializeMember(member);
+  }
+
+  void initializeMember(Member member) {
+    // Only initialize the member once
+    if (member.type != null) {
+      return;
+    }
+
+    // The type of a member in a derived type may depend on type substitution
+    // on that member's type in a base class:
+    //
+    //   class Foo<A, B> { A foo(B bar) {} }
+    //   class Bar<T> : Foo<int, T> {}
+    //   class Baz : Bar<bool> {}
+    //   int baz = new Baz().foo(false);
+    //
+    if (member.dependency != null) {
+      initializeMember(member.dependency);
+      member.type = member.dependency.type;
+    } else {
+      initializeSymbol(member.symbol);
+      member.type = member.symbol.type;
+    }
+
+    // Perform a lazy type substitution for members on generic types
+    if (member.environment != null) {
+      member.type = cache.substitute(member.type, member.environment);
+    }
   }
 
   void initializeSymbol(Symbol symbol) {
@@ -1224,9 +1277,9 @@ class Resolver {
       }
       List<Type> types = {};
       int i;
-      for (i = 0; i < symbol.identicalSymbols.length; i++) {
-        Symbol identical = symbol.identicalSymbols.get(i);
-        initializeSymbol(identical);
+      for (i = 0; i < symbol.identicalMembers.length; i++) {
+        Member identical = symbol.identicalMembers.get(i);
+        initializeMember(identical);
         Type type = identical.type;
         int index = types.indexOf(type);
         if (index < 0) types.push(type);
@@ -1268,6 +1321,7 @@ class Resolver {
 
   void resolveAsParameterizedType(Node node) {
     resolveAsType(node);
+    checkIsParameterized(node);
   }
 
   void resolveAsExpression(Node node) {
@@ -1383,12 +1437,12 @@ class Resolver {
     //   interface Bar { int foo(); }
     //   interface Baz : Foo, Bar {}
     //
-    List<Symbol> members = node.symbol.type.members.values();
+    List<Member> members = node.symbol.type.members.values();
     int i;
     for (i = 0; i < members.length; i++) {
-      Symbol member = members.get(i);
-      if (member.kind == SymbolKind.UNMERGED) {
-        initializeSymbol(member);
+      Member member = members.get(i);
+      if (member.symbol.kind == SymbolKind.UNMERGED) {
+        initializeMember(member);
       }
     }
 
@@ -1610,26 +1664,26 @@ class Resolver {
 
   void resolveName(Node node) {
     string name = node.asString();
-    Symbol symbol = context.scope.find(name);
-    if (symbol == null) {
+    Member member = context.scope.find(name);
+    if (member == null) {
       semanticErrorUndeclaredSymbol(log, node.range, name);
       return;
     }
-    initializePotentiallyDuplicatedSymbol(symbol, node.range);
+    initializePotentiallyDuplicatedMember(member, node.range);
 
     // Wrap type symbols in a type node to distinguish them from instances
-    if (symbol.kind.isType()) {
-      node.become(Node.createType(symbol.type).withRange(node.range));
+    if (member.symbol.kind.isType()) {
+      node.become(Node.createType(member.type).withRange(node.range));
       return;
     }
 
     // Instance members inside an object must have access to "this"
-    if (symbol.kind.isInstance()) {
+    if (member.symbol.kind.isInstance()) {
       checkAccessToThis(node.range);
     }
 
-    node.symbol = symbol;
-    node.type = symbol.type;
+    node.symbol = member.symbol;
+    node.type = member.type;
   }
 
   void resolveThis(Node node) {
@@ -1723,19 +1777,19 @@ class Resolver {
     string name = dotName.asString();
 
     // Search for the member symbol
-    Symbol symbol = type.findMember(name);
-    if (symbol == null) {
+    Member member = type.findMember(name);
+    if (member == null) {
       semanticErrorUnknownMemberSymbol(log, dotName.range, name, type);
       return;
     }
-    node.symbol = symbol;
-    initializePotentiallyDuplicatedSymbol(symbol, dotName.range);
+    node.symbol = member.symbol;
+    initializePotentiallyDuplicatedMember(member, dotName.range);
 
-    // Check the instance/static status of the symbol
-    bool symbolIsType = symbol.kind.isType();
+    // Check the instance/static status of the member
+    bool symbolIsType = member.symbol.kind.isType();
     bool targetIsType = target == null || target.kind.isType();
     if (!type.isNamespace() && !type.isEnum()) {
-      bool isStatic = symbolIsType || symbol.isStatic();
+      bool isStatic = symbolIsType || member.symbol.isStatic();
 
       // Static members can only be accessed from a type
       if (isStatic && !targetIsType) {
@@ -1748,10 +1802,10 @@ class Resolver {
       }
     }
 
-    // Update this node using the member symbol
-    if (symbolIsType) node.become(Node.createType(symbol.type).withRange(node.range));
-    else if (targetIsType) node.become(Node.createName(symbol.name).withRange(node.range).withSymbol(symbol).withType(symbol.type));
-    else node.type = symbol.type;
+    // Update this node using the member member
+    if (symbolIsType) node.become(Node.createType(member.type).withRange(node.range));
+    else if (targetIsType) node.become(Node.createName(member.symbol.name).withRange(node.range).withSymbol(member.symbol).withType(member.type));
+    else node.type = member.type;
   }
 
   void resolveCall(Node node) {
@@ -1796,13 +1850,15 @@ class Resolver {
 
       // Types are constructed by calling the type, which forwards to the constructor
       if (value.kind.isType()) {
-        Symbol symbol = node.symbol = valueType.constructor();
-        if (symbol == null) {
+        Member member = valueType.constructor();
+        if (member == null) {
           semanticErrorUnconstructableType(log, value.range, valueType);
           resolveNodesAsExpressions(arguments);
           return;
         }
-        valueType = symbol.type;
+        initializeMember(member);
+        node.symbol = member.symbol;
+        valueType = member.type;
       }
 
       // Can only call an instance of a function type
@@ -1853,11 +1909,47 @@ class Resolver {
   }
 
   void resolveParameterize(Node node) {
-    Node type = node.parameterizeType();
+    Node parameterizeType = node.parameterizeType();
     List<Node> substitutions = node.parameterizeTypes();
-    resolveAsParameterizedType(type);
+    resolveAsType(parameterizeType);
     resolveNodesAsVariableTypes(substitutions);
-    unsupportedNodeKind(node);
+
+    // Avoid reporting further errors
+    Type unparameterized = parameterizeType.type;
+    if (unparameterized.isError(cache)) {
+      return;
+    }
+
+    // Check that the type is parameterizable
+    if (!unparameterized.hasParameters() || unparameterized.isParameterized()) {
+      semanticErrorCannotParameterize(log, parameterizeType.range, unparameterized);
+      return;
+    }
+
+    // Validate the type parameter count
+    List<Symbol> parameters = unparameterized.symbol.parameters;
+    if (parameters.length != substitutions.length) {
+      semanticErrorParameterCount(log, Range.after(node.range, parameterizeType.range), parameters.length, substitutions.length);
+      return;
+    }
+
+    // Fill in the type parameters
+    List<Type> types = {};
+    bool foundError = false;
+    int i;
+    for (i = 0; i < substitutions.length; i++) {
+      Symbol parameter = parameters.get(i);
+      Node substitution = substitutions.get(i);
+      Type bound = parameter.type.bound();
+      if (bound != null) checkConversion(bound, substitution, CastKind.IMPLICIT);
+      if (substitution.type.isError(cache)) foundError = true;
+      types.push(substitution.type);
+    }
+
+    // Only parameterize the type if no errors were found in the type parameters
+    if (!foundError) {
+      node.become(Node.createType(cache.parameterize(unparameterized.symbol, types)).withRange(node.range));
+    }
   }
 
   void resolveCast(Node node) {

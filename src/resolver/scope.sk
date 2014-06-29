@@ -9,7 +9,7 @@ class Scope {
   // This stores all local symbols. Local symbols automatically override any
   // member symbols on the type. Scopes inside function bodies will only contain
   // local symbols since those scopes don't have a type.
-  StringMap<Symbol> locals = null;
+  StringMap<Member> locals = null;
 
   void insertGlobals(TypeCache cache) {
     type = cache.globalType;
@@ -23,7 +23,7 @@ class Scope {
 
   void insert(Symbol symbol) {
     if (type != null) {
-      type.addMember(symbol);
+      type.addMember(new Member(symbol));
       return;
     }
     insertLocal(symbol);
@@ -31,25 +31,25 @@ class Scope {
 
   void insertLocal(Symbol symbol) {
     if (locals == null) {
-      locals = new StringMap<Symbol>();
+      locals = new StringMap<Member>();
     }
     assert !locals.has(symbol.name);
-    locals.set(symbol.name, symbol);
+    locals.set(symbol.name, new Member(symbol));
   }
 
-  Symbol find(string name) {
-    Symbol symbol = findLocal(name);
-    return symbol != null ? symbol : lexicalParent != null ? lexicalParent.find(name) : null;
+  Member find(string name) {
+    Member member = findLocal(name);
+    return member != null ? member : lexicalParent != null ? lexicalParent.find(name) : null;
   }
 
-  Symbol findLocal(string name) {
+  Member findLocal(string name) {
     if (locals != null) {
-      Symbol symbol = locals.getOrDefault(name, null);
-      if (symbol != null) return symbol;
+      Member member = locals.getOrDefault(name, null);
+      if (member != null) return member;
     }
     if (type != null) {
-      Symbol symbol = type.findMember(name);
-      if (symbol != null) return symbol;
+      Member member = type.findMember(name);
+      if (member != null) return member;
     }
     return null;
   }

@@ -24,8 +24,7 @@ class TypeCache {
   Type doubleType = createType(new Symbol("double", SymbolKind.STRUCT));
   Type stringType = createType(new Symbol("string", SymbolKind.STRUCT));
 
-  IntMap<List<Type>> derivedTypes = new IntMap<List<Type>>();
-  IntMap<List<Type>> functionTypes = new IntMap<List<Type>>();
+  IntMap<List<Type>> hashTable = new IntMap<List<Type>>();
 
   static Type createType(Symbol symbol) {
     Type type = new Type(symbol);
@@ -47,8 +46,8 @@ class TypeCache {
     return null;
   }
 
-  static int hashCodeForTypes(List<Type> relevantTypes) {
-    int seed = 0;
+  static int computeHashCode(Symbol symbol, List<Type> relevantTypes) {
+    int seed = symbol == null ? -1 : symbol.type.uniqueID;
     int i;
     for (i = 0; i < relevantTypes.length; i++) {
       seed = hashCombine(seed, relevantTypes.get(i).uniqueID);
@@ -70,26 +69,85 @@ class TypeCache {
     return true;
   }
 
-  Type functionType(Type result, List<Type> arguments) {
-    arguments.unshift(result);
-    int hash = hashCodeForTypes(arguments);
-    List<Type> existingTypes = functionTypes.getOrDefault(hash, null);
+  Environment merge(Environment before, Environment after) {
+    Environment clone = before.clone();
+    int i;
+    for (i = 0; i < clone.parameters.length; i++) {
+      clone.types.set(i, substitute(clone.types.get(i), after));
+    }
+    for (i = 0; i < after.parameters.length; i++) {
+      Symbol parameter = after.parameters.get(i);
+      if (clone.parameters.indexOf(parameter) == -1) {
+        clone.parameters.push(parameter);
+        clone.types.push(after.types.get(i));
+      }
+    }
+    return clone;
+  }
+
+  Type substitute(Type type, Environment environment) {
+    if (!type.hasRelevantTypes()) {
+      int index = environment.parameters.indexOf(type.symbol);
+      return index >= 0 ? environment.types.get(index) : type;
+    }
+    List<Type> relevantTypes = {};
+    int i;
+    for (i = 0; i < type.relevantTypes.length; i++) {
+      relevantTypes.push(substitute(type.relevantTypes.get(i), environment));
+    }
+    return parameterize(type.symbol, relevantTypes);
+  }
+
+  Type parameterize(Symbol symbol, List<Type> relevantTypes) {
+    if (symbol != null) {
+      assert symbol.hasParameters();
+      assert !symbol.type.isParameterized();
+      assert symbol.parameters.length == relevantTypes.length;
+    }
+
+    // Hash the symbol along with all types
+    int hash = computeHashCode(symbol, relevantTypes);
+    List<Type> existingTypes = hashTable.getOrDefault(hash, null);
+
+    // Check existing types in that hash bucket for a match
     if (existingTypes != null) {
       int i;
       for (i = 0; i < existingTypes.length; i++) {
         Type existing = existingTypes.get(i);
-        if (areTypeListsEqual(existing.relevantTypes, arguments)) {
+        if (symbol == existing.symbol && areTypeListsEqual(relevantTypes, existing.relevantTypes)) {
           return existing;
         }
       }
-    } else {
-      existingTypes = {};
-      functionTypes.set(hash, existingTypes);
     }
-    Type type = new Type(null);
-    type.relevantTypes = arguments;
+
+    // Make a new hash bucket
+    else {
+      existingTypes = {};
+      hashTable.set(hash, existingTypes);
+    }
+
+    // We didn't find a match, so make the type for the first time
+    Type type = new Type(symbol);
+    type.relevantTypes = relevantTypes;
+    if (symbol != null) {
+      type.environment = new Environment(symbol.parameters, relevantTypes);
+      List<Member> members = symbol.type.members.values();
+      int i;
+      for (i = 0; i < members.length; i++) {
+        Member member = members.get(i);
+        Member clone = new Member(member.symbol);
+        clone.dependency = member;
+        clone.environment = type.environment;
+        type.addMember(clone);
+      }
+    }
     existingTypes.push(type);
     return type;
+  }
+
+  Type functionType(Type result, List<Type> arguments) {
+    arguments.unshift(result);
+    return parameterize(null, arguments);
   }
 
   bool canCastToNumeric(Type type) {

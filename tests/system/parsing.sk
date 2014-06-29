@@ -401,7 +401,7 @@ switch (0) {
 test("
 class Foo<T> {}
 int y() { return 0; }
-Foo<void fn()>;
+Foo<void fn()> z;
 int x;
 (x < x) > x;
 x < y() > x;

@@ -127,6 +127,11 @@ void semanticErrorInvalidCall(Log log, Range range, Type type) {
   log.error(range, "Cannot call ".append(typeToText(type)));
 }
 
+void semanticErrorParameterCount(Log log, Range range, int expected, int found) {
+  log.error(range, "Expected ".append(expected.toString()).append(plural(expected, " type parameter", " type parameters")).append(
+    " but found ").append(found.toString()).append(plural(found, " type parameter", " type parameters")));
+}
+
 void semanticErrorArgumentCount(Log log, Range range, int expected, int found) {
   log.error(range, "Expected ".append(expected.toString()).append(plural(expected, " argument", " arguments")).append(
     " but found ").append(found.toString()).append(plural(found, " argument", " arguments")));
@@ -231,4 +236,13 @@ void semanticErrorBadStorage(Log log, Range range) {
 
 void semanticErrorStorageToFinal(Log log, Range range) {
   log.error(range, "Cannot store to a symbol marked as \"final\"");
+}
+
+void semanticErrorUnparameterizedType(Log log, Range range, Type type) {
+  log.error(range, "Cannot use unparameterized ".append(typeToText(type)));
+}
+
+void semanticErrorCannotParameterize(Log log, Range range, Type type) {
+  log.error(range, "Cannot parameterize ".append(typeToText(type)).append(
+    type.hasParameters() ? " because it is already parameterized" : " because it has no type parameters"));
 }
