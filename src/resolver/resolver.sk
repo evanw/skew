@@ -939,11 +939,11 @@ class Resolver {
       for (i = 0; i < baseMembers.length; i++) {
         Member member = baseMembers.get(i);
         Member existing = type.members.getOrDefault(member.symbol.name, null);
-        if (existing == null) {
-          type.addMember(member);
-        } else {
+        if (existing != null) {
           assert existing.symbol.overriddenMember == null;
           existing.symbol.overriddenMember = member;
+        } else if (!member.symbol.kind.isConstructor()) {
+          type.addMember(member);
         }
       }
     }

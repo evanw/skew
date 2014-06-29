@@ -90,3 +90,29 @@ class Foo {
   Foo foo = false;
             ~~~~~
 ");
+
+test("
+class Foo { Foo() {} }
+class Bar : Foo {}
+Bar.Foo foo;
+", "
+<stdin>:3:5: error: \"Foo\" is not declared on type \"Bar\"
+Bar.Foo foo;
+    ~~~
+");
+
+test("
+class Foo { Foo() {} }
+class Bar : Foo { int Foo() {} }
+", "
+<stdin>:2:13: error: Cannot access \"Foo\" from a static context
+class Bar : Foo { int Foo() {} }
+            ~~~
+");
+
+test("
+class Foo { Foo() {} }
+class Bar : Foo {}
+class Baz : Bar { int Foo() {} }
+", "
+");
