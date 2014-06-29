@@ -24,6 +24,7 @@
 "interface"                   INTERFACE;
 "is"                          IS;
 "namespace"                   NAMESPACE;
+"new"                         NEW;
 "null"                        NULL;
 "override"                    OVERRIDE;
 "private"                     PRIVATE;

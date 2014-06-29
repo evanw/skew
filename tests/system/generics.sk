@@ -246,7 +246,7 @@ class Foo<F> {
 ");
 
 test("
-class Foo<T> { Foo(bool foo) {} }
+class Foo<T> { new(bool foo) {} }
 int foo = Foo(0);
 int bar = Foo<int>(0);
 ", "

@@ -24,7 +24,7 @@ class Type {
 
   Member constructor() {
     if (symbol == null) return null;
-    return members.getOrDefault(symbol.name, null);
+    return members.getOrDefault("new", null);
   }
 
   bool hasBaseType(Type type) {
@@ -66,15 +66,7 @@ class Type {
   }
 
   Member findMember(string name) {
-    Member member = members.getOrDefault(name, null);
-
-    // A constructor must not be visible using name lookup because then it
-    // would obscure the enclosing object type
-    if (member != null && member.symbol.kind.isConstructor()) {
-      return null;
-    }
-
-    return member;
+    return members.getOrDefault(name, null);
   }
 
   string toString() {

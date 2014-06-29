@@ -1,4 +1,23 @@
 test("
+class Foo {
+  new() { return 0; }
+}
+class Bar {
+  new() { return 0; foo; }
+}
+", "
+<stdin>:2:18: error: Cannot convert from type \"int\" to type \"void\"
+  new() { return 0; }
+                 ^
+<stdin>:5:18: error: Cannot convert from type \"int\" to type \"void\"
+  new() { return 0; foo; }
+                 ^
+<stdin>:5:21: error: \"foo\" is not declared
+  new() { return 0; foo; }
+                    ~~~
+");
+
+test("
 void();
 ", "
 <stdin>:1:1: error: Cannot construct type \"void\"
@@ -16,7 +35,7 @@ void fn()();
 
 test("
 struct Foo {
-  Foo(int x) {}
+  new(int x) {}
 }
 int foo = Foo();
 ", "
@@ -30,7 +49,7 @@ int foo = Foo();
 
 test("
 class Foo {
-  Foo() {}
+  new() {}
 }
 int foo = Foo(1);
 ", "
@@ -72,7 +91,7 @@ void fn() foo = { false };
 
 test("
 class Foo {
-  Foo(int x) {}
+  new(int x) {}
 }
 Foo foo = { false };
 ", "
@@ -83,79 +102,11 @@ Foo foo = { false };
 
 test("
 class Foo {
-  Foo(int x) {}
+  new(int x) {}
 }
 Foo foo = { 0, 1 };
 ", "
 <stdin>:4:11: error: Expected 1 argument but found 2 arguments
 Foo foo = { 0, 1 };
           ~~~~~~~~
-");
-
-test("
-class Foo {
-  Foo foo = false;
-  Foo() {}
-}
-", "
-<stdin>:2:13: error: Cannot convert from type \"bool\" to type \"Foo\"
-  Foo foo = false;
-            ~~~~~
-");
-
-test("
-class Foo { Foo() {} }
-class Bar : Foo {}
-Bar.Foo foo;
-", "
-<stdin>:3:5: error: \"Foo\" is not declared on type \"Bar\"
-Bar.Foo foo;
-    ~~~
-");
-
-test("
-class Foo { Foo() {} }
-class Bar : Foo { int Foo() {} }
-", "
-<stdin>:2:13: error: Cannot access \"Foo\" from a static context
-class Bar : Foo { int Foo() {} }
-            ~~~
-");
-
-test("
-class Foo { Foo() {} }
-class Bar : Foo {}
-class Baz : Bar { int Foo() {} }
-", "
-");
-
-test("
-class Foo : IFoo { bool foo; }
-interface IFoo { int Foo(); }
-Foo foo = { 1 };
-", "
-<stdin>:1:7: error: Cannot inherit \"IFoo.Foo\" because it conflicts with the constructor name
-class Foo : IFoo { bool foo; }
-      ~~~
-<stdin>:3:13: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-Foo foo = { 1 };
-            ^
-");
-
-test("
-class Foo {}
-in Foo { void Foo() {} }
-Foo foo = {};
-", "
-TODO
-");
-
-test("
-namespace ns {
-  class Foo {}
-  in Foo { ns.Foo Foo() {} }
-  int foo = Foo();
-}
-", "
-TODO
 ");

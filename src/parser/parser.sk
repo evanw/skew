@@ -299,6 +299,47 @@ Node parseNamespace(ParserContext context) {
   return Node.createNamespace(name, block).withRange(context.spanSince(token.range));
 }
 
+Node parseConstructor(ParserContext context, StatementHint hint) {
+  if (hint != StatementHint.IN_OBJECT) {
+    context.unexpectedToken();
+    return null;
+  }
+
+  // Parse a constructor
+  Token token = context.next();
+  Node name = Node.createName(token.text).withRange(token.range);
+  Node arguments = parseArgumentVariables(context); if (arguments == null) return null;
+  Node superInitializer = null;
+  Node memberInitializers = null;
+
+  // Parse the initializer list
+  if (context.eat(TokenKind.COLON)) {
+
+    // The super initializer can have multiple arguments
+    if (context.peek(TokenKind.SUPER)) {
+      superInitializer = parseSuperCall(context);
+    }
+
+    // Each member initializer has one argument
+    if (superInitializer == null || context.eat(TokenKind.COMMA)) {
+      List<Node> values = {};
+      do {
+        Node member = parseName(context); if (member == null) break;
+        if (!context.expect(TokenKind.ASSIGN)) break;
+        Node value = pratt.parse(context, Precedence.COMMA);
+        values.push(Node.createVariable(member, null, value).withRange(context.spanSince(member.range)));
+      } while (context.eat(TokenKind.COMMA));
+      memberInitializers = Node.createNodeList(values);
+    }
+  }
+
+  Node block = null;
+  if (!context.eat(TokenKind.SEMICOLON)) {
+    block = parseBlock(context, StatementHint.NORMAL); if (block == null) return null;
+  }
+  return Node.createConstructor(name, arguments, block, superInitializer, memberInitializers).withRange(context.spanSince(token.range));
+}
+
 Node parseExpression(ParserContext context) {
   // Make sure we don't parse an initializer expression. The user is likely
   // trying to type a C-style block statement, which is not supported. An
@@ -470,40 +511,6 @@ Node parseSuperCall(ParserContext context) {
 Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
   Node type = parseType(context);
 
-  // Parse a constructor
-  if (hint == StatementHint.IN_OBJECT && type.kind == NodeKind.NAME && context.peek(TokenKind.LEFT_PARENTHESIS)) {
-    Node arguments = parseArgumentVariables(context); if (arguments == null) return null;
-    Node superInitializer = null;
-    Node memberInitializers = null;
-
-    // Parse the initializer list
-    if (context.eat(TokenKind.COLON)) {
-
-      // The super initializer can have multiple arguments
-      if (context.peek(TokenKind.SUPER)) {
-        superInitializer = parseSuperCall(context);
-      }
-
-      // Each member initializer has one argument
-      if (superInitializer == null || context.eat(TokenKind.COMMA)) {
-        List<Node> values = {};
-        do {
-          Node member = parseName(context); if (member == null) break;
-          if (!context.expect(TokenKind.ASSIGN)) break;
-          Node value = pratt.parse(context, Precedence.COMMA);
-          values.push(Node.createVariable(member, null, value).withRange(context.spanSince(member.range)));
-        } while (context.eat(TokenKind.COMMA));
-        memberInitializers = Node.createNodeList(values);
-      }
-    }
-
-    Node block = null;
-    if (!context.eat(TokenKind.SEMICOLON)) {
-      block = parseBlock(context, StatementHint.NORMAL); if (block == null) return null;
-    }
-    return Node.createConstructor(type, arguments, block, superInitializer, memberInitializers).withRange(context.spanSince(type.range));
-  }
-
   // If this isn't a typed declaration, just parse an expression statement
   if (!context.peek(TokenKind.IDENTIFIER)) {
     Node value = pratt.resume(context, Precedence.LOWEST, type);
@@ -603,6 +610,7 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case TokenKind.INLINE { return parseModifier(context, SymbolFlag.INLINE); }
     case TokenKind.INTERFACE { return parseObject(context, NodeKind.INTERFACE); }
     case TokenKind.NAMESPACE { return parseNamespace(context); }
+    case TokenKind.NEW { return parseConstructor(context, hint); }
     case TokenKind.OVERRIDE { return parseModifier(context, SymbolFlag.OVERRIDE); }
     case TokenKind.PRIVATE { return parseModifier(context, SymbolFlag.PRIVATE); }
     case TokenKind.PROTECTED { return parseModifier(context, SymbolFlag.PROTECTED); }
