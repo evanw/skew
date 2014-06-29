@@ -128,3 +128,16 @@ class Bar : Foo {}
 class Baz : Bar { int Foo() {} }
 ", "
 ");
+
+test("
+class Foo : IFoo { bool foo; }
+interface IFoo { int Foo(); }
+Foo foo = { 1 };
+", "
+<stdin>:1:7: error: Cannot inherit \"IFoo.Foo\" because it conflicts with the constructor name
+class Foo : IFoo { bool foo; }
+      ~~~
+<stdin>:3:13: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+Foo foo = { 1 };
+            ^
+");

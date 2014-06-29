@@ -260,3 +260,19 @@ int bar = Foo<int>(0);
 int bar = Foo<int>(0);
           ~~~~~~~~~~~
 ");
+
+test("
+class Foo<A, B is IFoo<A>> {}
+interface IFoo<T> { T foo(); }
+Foo<int, IFoo<bool>> foo;
+", "
+TODO
+");
+
+test("
+class Foo<A is IFoo<B>, B> {}
+interface IFoo<T> { T foo(); }
+Foo<IFoo<bool>, int> foo;
+", "
+TODO
+");

@@ -926,6 +926,10 @@ class Resolver {
         assert existing.symbol.overriddenMember == null;
         existing.symbol.overriddenMember = member;
       } else if (!member.symbol.kind.isConstructor()) {
+        if (member.symbol.name == symbol.name) {
+          semanticErrorInheritedConstructorConflict(log, node.declarationName().range, member.symbol.fullName());
+          continue;
+        }
         type.addMember(member);
       }
     }
