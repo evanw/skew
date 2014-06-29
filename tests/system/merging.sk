@@ -218,6 +218,12 @@ class Foo<T> {
   int T;
 }
 ", "
+<stdin>:1:11: error: \"T\" is already declared
+class Foo<T> {
+          ^
+<stdin>:2:7: note: The previous declaration is here
+  int T;
+      ^
 ");
 
 test("

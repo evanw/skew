@@ -207,6 +207,19 @@ string e = (string)null;
 ");
 
 test("
+class C {}
+struct S {}
+interface I {}
+C c = null;
+S s = null;
+I i = null;
+", "
+<stdin>:5:7: error: Cannot convert from type \"null\" to type \"S\"
+S s = null;
+      ~~~~
+");
+
+test("
 int x = true ? true : false;
 ", "
 <stdin>:1:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast

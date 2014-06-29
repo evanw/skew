@@ -6,3 +6,17 @@ enum Foo { FOO = foo }
 enum Foo { FOO = foo }
                  ~~~
 ");
+
+test("
+enum Foo { FOO }
+enum flags Bar { FOO }
+bool foo = Foo.FOO | Foo.FOO;
+bool bar = Bar.FOO | Bar.FOO;
+", "
+<stdin>:3:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool foo = Foo.FOO | Foo.FOO;
+           ~~~~~~~~~~~~~~~~~
+<stdin>:4:12: error: Cannot convert from type \"Bar\" to type \"bool\" without a cast
+bool bar = Bar.FOO | Bar.FOO;
+           ~~~~~~~~~~~~~~~~~
+");

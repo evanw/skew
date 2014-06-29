@@ -136,7 +136,8 @@ class Symbol {
   List<Symbol> parameters = null;
 
   string fullName() {
-    return enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() ? enclosingSymbol.fullName().append(".").append(name) : name;
+    return enclosingSymbol != null && kind != SymbolKind.PARAMETER && !enclosingSymbol.kind.isGlobalNamespace()
+      ? enclosingSymbol.fullName().append(".").append(name) : name;
   }
 
   bool hasParameters() {

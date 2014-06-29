@@ -169,3 +169,48 @@ class Foo : IFoo<int>, IFoo<float> {}
 class Foo : IFoo<int>, IFoo<float> {}
       ~~~
 ");
+
+test("
+class Foo<T> { T foo(); }
+bool foo = Foo.foo();
+", "
+<stdin>:2:16: error: Cannot access instance member \"foo\" from a static context
+bool foo = Foo.foo();
+               ~~~
+<stdin>:2:12: error: Cannot convert from type \"T\" to type \"bool\"
+bool foo = Foo.foo();
+           ~~~~~~~~~
+");
+
+test("
+class Foo<T> {
+  T foo = 0;
+}
+Foo.T foo = 0;
+", "
+<stdin>:2:11: error: Cannot convert from type \"int\" to type \"T\"
+  T foo = 0;
+          ^
+<stdin>:4:5: error: \"T\" is not declared on type \"Foo<T>\"
+Foo.T foo = 0;
+    ^
+");
+
+test("
+class Foo<T> {
+  static T foo;
+  static T bar() { return default(T); }
+}
+bool foo = Foo.foo;
+bool bar = Foo.bar();
+", "
+<stdin>:2:10: error: Cannot access \"T\" from a static context
+  static T foo;
+         ^
+<stdin>:3:10: error: Cannot access \"T\" from a static context
+  static T bar() { return default(T); }
+         ^
+<stdin>:3:35: error: Cannot access \"T\" from a static context
+  static T bar() { return default(T); }
+                                  ^
+");

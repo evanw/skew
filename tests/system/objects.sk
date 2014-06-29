@@ -113,26 +113,9 @@ interface IBar : IFoo {}
 ");
 
 test("
-class Foo<T> {
-  T foo = 0;
-}
-Foo.T foo = 0;
-", "
-<stdin>:2:11: error: Cannot convert from type \"int\" to type \"T\"
-  T foo = 0;
-          ^
-<stdin>:4:5: error: \"T\" is not declared on type \"Foo<T>\"
-Foo.T foo = 0;
-    ^
-");
-
-test("
 class Foo : Bar {}
 in Foo { class Bar {} }
 ", "
-<stdin>:1:13: error: \"Bar\" is not declared
-class Foo : Bar {}
-            ~~~
 ");
 
 test("
@@ -558,4 +541,15 @@ in Foo : int {}
 <stdin>:2:10: error: An enum cannot inherit from another type
 in Foo : int {}
          ~~~
+");
+
+test("
+class Foo {
+  int foo;
+  int bar = foo;
+}
+", "
+<stdin>:3:13: error: Cannot access \"foo\" from a static context
+  int bar = foo;
+            ~~~
 ");

@@ -72,7 +72,11 @@ class Resolver {
 
     // Remember each scope on the node that introduced that scope
     else if (node.kind == NodeKind.BLOCK) {
-      node.scope = scope = new Scope(scope);
+      // Just use the existing scope from named block declarations
+      if (!node.parent.kind.isNamedBlockDeclaration()) {
+        scope = new Scope(scope);
+      }
+      node.scope = scope;
       parsedBlocks.push(node);
 
       // Declarations at the file level go in the global scope
@@ -114,7 +118,13 @@ class Resolver {
           if (scope.type != null) {
             symbol.enclosingSymbol = scope.type.symbol;
           }
-          scope.insert(symbol);
+
+          // Type parameters should not be accessable as members of their type
+          if (node.kind == NodeKind.PARAMETER) {
+            scope.insertLocal(symbol);
+          } else {
+            scope.insert(symbol);
+          }
         }
 
         // Link the node with its symbol
@@ -745,8 +755,46 @@ class Resolver {
       return true;
     }
 
-    if (context.object != null) semanticErrorStaticThis(log, range);
-    else semanticErrorUnexpectedThis(log, range);
+    if (context.object != null) semanticErrorStaticThis(log, range, "this");
+    else semanticErrorUnexpectedThis(log, range, "this");
+    return false;
+  }
+
+  bool checkAccessToInstanceSymbol(Node node) {
+    Symbol symbol = node.symbol;
+
+    // No need to check for static symbols
+    if (!symbol.kind.isInstance() && symbol.kind != SymbolKind.PARAMETER) {
+      return true;
+    }
+
+    // Allow instance access inside instance functions
+    if (context.function != null && context.function.symbol.kind.isInstance() &&
+        context.function.symbol.enclosingSymbol == symbol.enclosingSymbol) {
+      return true;
+    }
+
+    // Use a different error message when outside a function for clarity
+    if (context.object == null) {
+      semanticErrorUnexpectedThis(log, node.range, symbol.name);
+      return false;
+    }
+
+    // The cases where type parameters may appear are more complicated
+    if (symbol.kind == SymbolKind.PARAMETER && context.object.symbol == symbol.enclosingSymbol) {
+      Node parent;
+      for (parent = node.parent; parent != context.object; parent = parent.parent) {
+        if (parent.kind == NodeKind.NODE_LIST && parent.parent == context.object &&
+            (parent == parent.parent.objectParameters() || parent == parent.parent.baseTypes())) {
+          return true;
+        }
+        if ((parent.kind == NodeKind.VARIABLE || parent.kind.isFunction()) && parent.symbol.kind.isInstance()) {
+          return true;
+        }
+      }
+    }
+
+    semanticErrorStaticThis(log, node.range, symbol.name);
     return false;
   }
 
@@ -1670,6 +1718,13 @@ class Resolver {
       return;
     }
     initializePotentiallyDuplicatedMember(member, node.range);
+    node.symbol = member.symbol;
+
+    // Instance members inside an object must have access to "this"
+    if (!checkAccessToInstanceSymbol(node)) {
+      node.type = cache.errorType;
+      return;
+    }
 
     // Wrap type symbols in a type node to distinguish them from instances
     if (member.symbol.kind.isType()) {
@@ -1677,12 +1732,6 @@ class Resolver {
       return;
     }
 
-    // Instance members inside an object must have access to "this"
-    if (member.symbol.kind.isInstance()) {
-      checkAccessToThis(node.range);
-    }
-
-    node.symbol = member.symbol;
     node.type = member.type;
   }
 
