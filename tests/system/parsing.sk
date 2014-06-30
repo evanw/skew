@@ -419,3 +419,12 @@ x < y() > x;
 (x < x) > x;
  ~~~~~~~~~~
 ");
+
+test("
+class Foo<A is> {}
+Foo<int> foo;
+", "
+<stdin>:1:15: error: Unexpected END_PARAMETER_LIST
+class Foo<A is> {}
+              ^
+");

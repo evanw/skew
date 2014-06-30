@@ -2117,10 +2117,14 @@ class Resolver {
     for (i = 0; i < substitutions.length; i++) {
       Symbol parameter = parameters.get(i);
       Node substitution = substitutions.get(i);
-      Type bound = parameter.type.bound();
-      if (bound != null) checkConversion(bound, substitution, CastKind.IMPLICIT);
-      if (substitution.type.isError(cache)) foundError = true;
-      types.push(substitution.type);
+      if (parameter.type.isError(cache)) {
+        foundError = true;
+      } else {
+        Type bound = parameter.type.bound();
+        if (bound != null) checkConversion(bound, substitution, CastKind.IMPLICIT);
+        if (substitution.type.isError(cache)) foundError = true;
+        types.push(substitution.type);
+      }
     }
 
     // Only parameterize the type if no errors were found in the type parameters
