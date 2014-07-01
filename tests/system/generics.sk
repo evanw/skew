@@ -289,7 +289,15 @@ Foo<int, IFoo<int>, float> b;
 Foo<int, IFoo<int>, IFoo<float>> c;
 Foo<int, IFoo<int>, IFoo<IFoo<int>>> d;
 ", "
-TODO
+<stdin>:3:10: error: Cannot convert from type \"bool\" to type \"IFoo<int>\"
+Foo<int, bool, float> a;
+         ~~~~
+<stdin>:4:21: error: Cannot convert from type \"float\" to type \"IFoo<IFoo<int>>\"
+Foo<int, IFoo<int>, float> b;
+                    ~~~~~
+<stdin>:5:21: error: Cannot convert from type \"IFoo<float>\" to type \"IFoo<IFoo<int>>\"
+Foo<int, IFoo<int>, IFoo<float>> c;
+                    ~~~~~~~~~~~
 ");
 
 test("
@@ -300,5 +308,13 @@ Foo<float, IFoo<int>, int> b;
 Foo<IFoo<float>, IFoo<int>, int> c;
 Foo<IFoo<IFoo<int>>, IFoo<int>, int> d;
 ", "
-TODO
+<stdin>:3:12: error: Cannot convert from type \"bool\" to type \"IFoo<int>\"
+Foo<float, bool, int> a;
+           ~~~~
+<stdin>:4:5: error: Cannot convert from type \"float\" to type \"IFoo<IFoo<int>>\"
+Foo<float, IFoo<int>, int> b;
+    ~~~~~
+<stdin>:5:5: error: Cannot convert from type \"IFoo<float>\" to type \"IFoo<IFoo<int>>\"
+Foo<IFoo<float>, IFoo<int>, int> c;
+    ~~~~~~~~~~~
 ");

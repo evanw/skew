@@ -69,44 +69,42 @@ class TypeCache {
     return true;
   }
 
-  Environment merge(Environment before, Environment after) {
-    Environment clone = before.clone();
+  Type substitute(Type type, List<Symbol> parameters, List<Type> substitutions) {
+    if (type.isFunction()) {
+      return parameterize(type, substituteAll(type.relevantTypes, parameters, substitutions));
+    }
+    if (!type.hasParameters()) {
+      int index = parameters.indexOf(type.symbol);
+      return index >= 0 ? substitutions.get(index) : type;
+    }
+    List<Type> types = {};
     int i;
-    for (i = 0; i < clone.parameters.length; i++) {
-      clone.types.set(i, substitute(clone.types.get(i), after));
+    for (i = 0; i < type.symbol.parameters.length; i++) {
+      types.push(type.substitutions.get(i));
     }
-    for (i = 0; i < after.parameters.length; i++) {
-      Symbol parameter = after.parameters.get(i);
-      if (clone.parameters.indexOf(parameter) == -1) {
-        clone.parameters.push(parameter);
-        clone.types.push(after.types.get(i));
-      }
-    }
-    return clone;
+    return parameterize(type, substituteAll(types, parameters, substitutions));
   }
 
-  Type substitute(Type type, Environment environment) {
-    if (!type.hasRelevantTypes()) {
-      int index = environment.parameters.indexOf(type.symbol);
-      return index >= 0 ? environment.types.get(index) : type;
-    }
-    List<Type> relevantTypes = {};
+  List<Type> substituteAll(List<Type> types, List<Symbol> parameters, List<Type> substitutions) {
+    List<Type> results = {};
     int i;
-    for (i = 0; i < type.relevantTypes.length; i++) {
-      relevantTypes.push(substitute(type.relevantTypes.get(i), environment));
+    for (i = 0; i < types.length; i++) {
+      results.push(substitute(types.get(i), parameters, substitutions));
     }
-    return parameterize(type.symbol, relevantTypes);
+    return results;
   }
 
-  Type parameterize(Symbol symbol, List<Type> relevantTypes) {
+  Type parameterize(Type unparameterized, List<Type> substitutions) {
+    Symbol symbol = unparameterized != null ? unparameterized.symbol : null;
+
     if (symbol != null) {
       assert symbol.hasParameters();
       assert !symbol.type.isParameterized();
-      assert symbol.parameters.length == relevantTypes.length;
+      assert symbol.parameters.length == substitutions.length;
     }
 
     // Hash the symbol along with all types
-    int hash = computeHashCode(symbol, relevantTypes);
+    int hash = computeHashCode(symbol, substitutions);
     List<Type> existingTypes = hashTable.getOrDefault(hash, null);
 
     // Check existing types in that hash bucket for a match
@@ -114,7 +112,10 @@ class TypeCache {
       int i;
       for (i = 0; i < existingTypes.length; i++) {
         Type existing = existingTypes.get(i);
-        if (symbol == existing.symbol && areTypeListsEqual(relevantTypes, existing.relevantTypes)) {
+        assert symbol != existing.symbol || symbol == null || substitutions.length == existing.substitutions.length;
+        if (symbol == existing.symbol && (
+            symbol == null && areTypeListsEqual(substitutions, existing.relevantTypes) ||
+            symbol != null && areTypeListsEqual(substitutions, existing.substitutions))) {
           return existing;
         }
       }
@@ -128,18 +129,20 @@ class TypeCache {
 
     // We didn't find a match, so make the type for the first time
     Type type = new Type(symbol);
-    type.relevantTypes = relevantTypes;
     if (symbol != null) {
-      type.environment = new Environment(symbol.parameters, relevantTypes);
-      List<Member> members = symbol.type.members.values();
+      type.substitutions = substitutions;
+      type.relevantTypes = substituteAll(unparameterized.relevantTypes, symbol.parameters, type.substitutions);
+      List<Member> members = unparameterized.members.values();
       int i;
       for (i = 0; i < members.length; i++) {
         Member member = members.get(i);
         Member clone = new Member(member.symbol);
         clone.dependency = member;
-        clone.environment = type.environment;
+        clone.parameterizedType = type;
         type.addMember(clone);
       }
+    } else {
+      type.relevantTypes = substitutions;
     }
     existingTypes.push(type);
     return type;

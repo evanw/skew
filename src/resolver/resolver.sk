@@ -1336,8 +1336,9 @@ class Resolver {
     }
 
     // Perform a lazy type substitution for members on generic types
-    if (member.environment != null) {
-      member.type = cache.substitute(member.type, member.environment);
+    Type parameterizedType = member.parameterizedType;
+    if (parameterizedType != null && parameterizedType.isParameterized()) {
+      member.type = cache.substitute(member.type, parameterizedType.symbol.parameters, parameterizedType.substitutions);
     }
   }
 
@@ -1654,8 +1655,8 @@ class Resolver {
     // variables without initial values in extension blocks because default
     // constructors need to order their arguments.
     if (!symbol.isStatic() && symbol.enclosingSymbol != null) {
-      Type enclosingType = symbol.enclosingSymbol.type;
-      if (enclosingType.isInterface() || symbol.isFromExtension() && !enclosingType.isClass()) {
+      Type enclosingSymbolType = symbol.enclosingSymbol.type;
+      if (enclosingSymbolType.isInterface() || symbol.isFromExtension() && !enclosingSymbolType.isClass()) {
         unexpectedStatement(node);
       } else if (symbol.isFromExtension() && value == null) {
         semanticErrorUninitializedExtensionVariable(log, node.declarationName().range);
@@ -2117,31 +2118,25 @@ class Resolver {
     // to dependents. Type parameters aren't allowed to form cycles but they
     // can still form a DAG of dependencies.
     List<Type> sortedTypes = {};
-    bool foundError = false;
     int i;
     for (i = 0; i < sortedParameters.length; i++) {
       Symbol parameter = sortedParameters.get(i);
       int index = parameters.indexOf(parameter);
       Node substitution = substitutions.get(index);
-      if (parameter.type.isError(cache)) {
-        foundError = true;
-        continue;
-      }
+      if (parameter.type.isError(cache)) return;
       Type bound = parameter.type.bound();
       if (bound != null) {
-        if (i > 0) bound = cache.substitute(bound, new Environment(sortedParameters.slice(0, i), sortedTypes.slice(0, i)));
+        if (i > 0) bound = cache.substitute(bound, sortedParameters.slice(0, i), sortedTypes.slice(0, i));
         checkConversion(bound, substitution, CastKind.IMPLICIT);
       }
-      if (substitution.type.isError(cache)) foundError = true;
+      if (substitution.type.isError(cache)) return;
       sortedTypes.push(substitution.type);
     }
 
     // Only parameterize the type if no errors were found in the type parameters
-    if (!foundError) {
-      List<Type> types = {};
-      for (i = 0; i < substitutions.length; i++) types.push(substitutions.get(i).type);
-      node.become(Node.createType(cache.parameterize(unparameterized.symbol, types)).withRange(node.range));
-    }
+    List<Type> types = {};
+    for (i = 0; i < substitutions.length; i++) types.push(substitutions.get(i).type);
+    node.become(Node.createType(cache.parameterize(unparameterized, types)).withRange(node.range));
   }
 
   void resolveCast(Node node) {

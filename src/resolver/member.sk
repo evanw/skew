@@ -16,6 +16,10 @@ class Member {
   //   class Baz : Bar<bool> {}
   //   int baz = new Baz().foo(false);
   //
+  // In that case, parameterizedType stores the type environment to be applied
+  // to the type of the dependency after being resolved. This needs to be
+  // separate from enclosingType because the type environment for the dependency
+  // may not be from the immediately enclosing type.
   Member dependency = null;
-  Environment environment = null;
+  Type parameterizedType = null;
 }

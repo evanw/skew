@@ -1,6 +1,5 @@
 class Type {
   StringMap<Member> members = new StringMap<Member>();
-  Environment environment = null;
 
   // The symbol that declared this type, if any. Function types don't have a
   // declaring symbol, so this will be null for function types.
@@ -14,6 +13,10 @@ class Type {
   // argument variable. Type parameters are either unbounded or have a single
   // type bound.
   List<Type> relevantTypes = null;
+
+  // Types that have been substituted for the type parameters of this symbol.
+  // If non-null, the length must equal symbol.parameters.length.
+  List<Type> substitutions = null;
 
   // Give each type a unique integer as a hash code
   static int nextUniqueID = 0;
@@ -84,15 +87,7 @@ class Type {
       List<string> parts = {};
       int i;
       for (i = 0; i < symbol.parameters.length; i++) {
-        Symbol parameter = symbol.parameters.get(i);
-        if (environment != null) {
-          int index = environment.parameters.indexOf(parameter);
-          if (index != -1) {
-            parts.push(environment.types.get(index).toString());
-            continue;
-          }
-        }
-        parts.push(parameter.name);
+        parts.push(isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name);
       }
       return symbol.fullName().append("<").append(", ".join(parts)).append(">");
     }
@@ -105,7 +100,7 @@ class Type {
   }
 
   bool isParameterized() {
-    return environment != null;
+    return substitutions != null;
   }
 
   bool hasRelevantTypes() {
@@ -123,11 +118,16 @@ class Type {
   }
 
   bool dependsOnParameter(Symbol parameter) {
+    if (symbol == parameter ||
+        hasParameters() && symbol.parameters.indexOf(parameter) >= 0 ||
+        isParameterized() && substitutions.indexOf(parameter.type) >= 0) {
+      return true;
+    }
     if (hasRelevantTypes()) {
       int i;
       for (i = 0; i < relevantTypes.length; i++) {
         Type type = relevantTypes.get(i);
-        if (type.symbol == parameter || type.dependsOnParameter(parameter)) {
+        if (type.dependsOnParameter(parameter)) {
           return true;
         }
       }
