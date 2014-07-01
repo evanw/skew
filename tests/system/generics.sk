@@ -280,3 +280,25 @@ Foo<IFoo<bool>, int> foo;
 Foo<IFoo<bool>, int> foo;
     ~~~~~~~~~~
 ");
+
+test("
+class Foo<A, B is IFoo<A>, C is IFoo<B>> {}
+interface IFoo<T> { T foo(); }
+Foo<int, bool, float> a;
+Foo<int, IFoo<int>, float> b;
+Foo<int, IFoo<int>, IFoo<float>> c;
+Foo<int, IFoo<int>, IFoo<IFoo<int>>> d;
+", "
+TODO
+");
+
+test("
+class Foo<C is IFoo<B>, B is IFoo<A>, A> {}
+interface IFoo<T> { T foo(); }
+Foo<float, bool, int> a;
+Foo<float, IFoo<int>, int> b;
+Foo<IFoo<float>, IFoo<int>, int> c;
+Foo<IFoo<IFoo<int>>, IFoo<int>, int> d;
+", "
+TODO
+");
