@@ -31,7 +31,7 @@ namespace lisp {
         builder.append("nil");
         return;
       }
-      builder.append("(").append(node.kind.toString().toLowerCase());
+      builder.append("(").append(node.kind.prettyPrint());
       if (node.content != null) {
         switch (node.content.type()) {
           case ContentType.INT { builder.append(" ").append(node.asInt().toString()); }

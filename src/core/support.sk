@@ -99,6 +99,18 @@ string quoteString(string text, int quote) {
   return result.toString();
 }
 
+// TODO: Move this into the standard library
+string replace(string text, string before, string after) {
+  string result = "";
+  int index;
+  while ((index = text.indexOf(before)) != -1) {
+    result = result.append(text.slice(0, index)).append(after);
+    text = text.slice(index + before.length, text.length);
+  }
+  return result.append(text);
+}
+
+// TODO: Move this into the standard library
 string repeat(string text, int count) {
   int i;
   string result = "";

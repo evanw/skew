@@ -27,7 +27,33 @@ namespace xml {
     string indent = "";
 
     void visit(Node node) {
-      // TODO
+      if (node == null) {
+        builder.append("<null/>");
+        return;
+      }
+      builder.append("<").append(node.kind.prettyPrint());
+      if (node.content != null) {
+        builder.append(" content=");
+        switch (node.content.type()) {
+          case ContentType.INT { builder.append(simpleQuote(node.asInt().toString())); }
+          case ContentType.DOUBLE { builder.append(simpleQuote(node.asDouble().toString())); }
+          case ContentType.STRING { builder.append(quoteString(node.asString(), '"')); }
+        }
+      }
+      if (node.hasChildren()) {
+        builder.append(">");
+        string inner = indent;
+        indent = indent.append("  ");
+        int i;
+        for (i = 0; i < node.children.length; i++) {
+          builder.append("\n").append(indent);
+          visit(node.children.get(i));
+        }
+        indent = inner;
+        builder.append("\n").append(indent).append("</").append(node.kind.toString().toLowerCase()).append(">");
+      } else {
+        builder.append("/>");
+      }
     }
   }
 }

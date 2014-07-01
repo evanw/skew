@@ -197,6 +197,10 @@ in NodeKind {
   bool isStorage() {
     return this == NAME || this == DOT;
   }
+
+  string prettyPrint() {
+    return replace(toString().toLowerCase(), "_", "-");
+  }
 }
 
 class Node {

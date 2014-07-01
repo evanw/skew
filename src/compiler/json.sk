@@ -27,7 +27,36 @@ namespace json {
     string indent = "";
 
     void visit(Node node) {
-      // TODO
+      if (node == null) {
+        builder.append("null");
+        return;
+      }
+      string outer = indent;
+      indent = indent.append("  ");
+      builder.append("{\n").append(indent).append("\"kind\": ").append(simpleQuote(node.kind.prettyPrint()));
+      if (node.content != null) {
+        builder.append(",\n").append(indent).append("\"content\": ");
+        switch (node.content.type()) {
+          case ContentType.INT { builder.append(node.asInt().toString()); }
+          case ContentType.DOUBLE { builder.append(node.asDouble().toString()); }
+          case ContentType.STRING { builder.append(quoteString(node.asString(), '"')); }
+        }
+      }
+      if (node.hasChildren()) {
+        builder.append(",\n").append(indent).append("\"children\": [");
+        string inner = indent;
+        indent = indent.append("  ");
+        int i;
+        for (i = 0; i < node.children.length; i++) {
+          if (i > 0) builder.append(",");
+          builder.append("\n").append(indent);
+          visit(node.children.get(i));
+        }
+        indent = inner;
+        builder.append("\n").append(indent).append("]");
+      }
+      indent = outer;
+      builder.append("\n").append(indent).append("}");
     }
   }
 }
