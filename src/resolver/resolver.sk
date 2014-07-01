@@ -955,6 +955,7 @@ class Resolver {
       for (i = 0; i < parameters.children.length; i++) {
         symbol.parameters.push(parameters.children.get(i).symbol);
       }
+      symbol.sortParametersByDependencies();
     }
 
     // Resolve base types and copy all base symbols onto this type
@@ -2105,30 +2106,40 @@ class Resolver {
 
     // Validate the type parameter count
     List<Symbol> parameters = unparameterized.symbol.parameters;
+    List<Symbol> sortedParameters = unparameterized.symbol.sortedParameters;
     if (parameters.length != substitutions.length) {
       semanticErrorParameterCount(log, Range.after(node.range, parameterizeType.range), parameters.length, substitutions.length);
       return;
     }
+    assert parameters.length == sortedParameters.length;
 
-    // Fill in the type parameters
-    List<Type> types = {};
+    // Fill in the type parameters, which must be done in order of dependencies
+    // to dependents. Type parameters aren't allowed to form cycles but they
+    // can still form a DAG of dependencies.
+    List<Type> sortedTypes = {};
     bool foundError = false;
     int i;
-    for (i = 0; i < substitutions.length; i++) {
-      Symbol parameter = parameters.get(i);
-      Node substitution = substitutions.get(i);
+    for (i = 0; i < sortedParameters.length; i++) {
+      Symbol parameter = sortedParameters.get(i);
+      int index = parameters.indexOf(parameter);
+      Node substitution = substitutions.get(index);
       if (parameter.type.isError(cache)) {
         foundError = true;
-      } else {
-        Type bound = parameter.type.bound();
-        if (bound != null) checkConversion(bound, substitution, CastKind.IMPLICIT);
-        if (substitution.type.isError(cache)) foundError = true;
-        types.push(substitution.type);
+        continue;
       }
+      Type bound = parameter.type.bound();
+      if (bound != null) {
+        if (i > 0) bound = cache.substitute(bound, new Environment(sortedParameters.slice(0, i), sortedTypes.slice(0, i)));
+        checkConversion(bound, substitution, CastKind.IMPLICIT);
+      }
+      if (substitution.type.isError(cache)) foundError = true;
+      sortedTypes.push(substitution.type);
     }
 
     // Only parameterize the type if no errors were found in the type parameters
     if (!foundError) {
+      List<Type> types = {};
+      for (i = 0; i < substitutions.length; i++) types.push(substitutions.get(i).type);
       node.become(Node.createType(cache.parameterize(unparameterized.symbol, types)).withRange(node.range));
     }
   }

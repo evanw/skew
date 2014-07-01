@@ -136,6 +136,49 @@ class Symbol {
   // These are generic type parameter symbols, in order of declaration
   List<Symbol> parameters = null;
 
+  // Type parameters sorted by dependencies, which occur where one type
+  // parameter is used by the other:
+  //
+  //   class Foo<A is IFoo<B>, B> {}
+  //   interface IFoo<T> {}
+  //   Foo<IFoo<int>, int> foo;
+  //
+  List<Symbol> sortedParameters = null;
+
+  void sortParametersByDependencies() {
+    sortedParameters = parameters.clone();
+    int i;
+    for (i = 0; i < sortedParameters.length; i++) {
+      int j;
+
+      // Select a parameter that doesn't depend on any unchecked parameter
+      for (j = i; j < sortedParameters.length; j++) {
+        Symbol parameter = sortedParameters.get(j);
+        if (!parameter.type.isParameter()) continue;
+        Type parameterBound = parameter.type.bound();
+        if (parameterBound == null) break;
+
+        // Check to see if this depends on any other unchecked parameters
+        int k;
+        for (k = i; k < sortedParameters.length; k++) {
+          Symbol other = sortedParameters.get(k);
+          if (parameter == other || !other.type.isParameter()) continue;
+          if (parameterBound != null && parameterBound.dependsOnParameter(other)) {
+            break;
+          }
+        }
+        if (k == sortedParameters.length) break;
+      }
+
+      // Swap the ith and jth parameter
+      if (j < sortedParameters.length) {
+        Symbol temp = sortedParameters.get(i);
+        sortedParameters.set(i, sortedParameters.get(j));
+        sortedParameters.set(j, temp);
+      }
+    }
+  }
+
   string fullName() {
     return enclosingSymbol != null && kind != SymbolKind.PARAMETER && !enclosingSymbol.kind.isGlobalNamespace()
       ? enclosingSymbol.fullName().append(".").append(name) : name;

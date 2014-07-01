@@ -15,9 +15,6 @@ class Type {
   // type bound.
   List<Type> relevantTypes = null;
 
-  // All type parameters for this type, used for generics
-  List<Type> parameters = null;
-
   // Give each type a unique integer as a hash code
   static int nextUniqueID = 0;
   int uniqueID = nextUniqueID++;
@@ -123,6 +120,19 @@ class Type {
   Type bound() {
     assert isParameter();
     return hasRelevantTypes() ? relevantTypes.get(0) : null;
+  }
+
+  bool dependsOnParameter(Symbol parameter) {
+    if (hasRelevantTypes()) {
+      int i;
+      for (i = 0; i < relevantTypes.length; i++) {
+        Type type = relevantTypes.get(i);
+        if (type.symbol == parameter || type.dependsOnParameter(parameter)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   Type resultType() {
