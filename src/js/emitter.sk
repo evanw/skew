@@ -1,0 +1,10 @@
+namespace js {
+  class Emitter : IEmitter {
+    CompilerOptions options;
+    TypeCache cache;
+
+    override List<Source> emitProgram(Node program) {
+      return {};
+    }
+  }
+}

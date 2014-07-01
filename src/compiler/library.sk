@@ -1,0 +1,7 @@
+final string NATIVE_LIBRARY = "
+import struct int { string toString(); }
+import struct bool { string toString(); }
+import struct float { string toString(); }
+import struct double { string toString(); }
+import struct string {}
+";

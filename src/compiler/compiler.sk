@@ -1,0 +1,106 @@
+enum TargetLanguage {
+  NONE,
+  JS,
+  LISP_AST,
+  JSON_AST,
+  XML_AST,
+}
+
+class CompilerOptions {
+  TargetLanguage targetLanguage = TargetLanguage.NONE;
+  List<Source> inputs = {};
+  string outputDirectory = "";
+  string outputFile = "";
+
+  bool isSingleFileMode() {
+    assert outputFile.length > 0 || outputDirectory.length > 0;
+    return outputFile.length > 0;
+  }
+}
+
+class CompilerResult {
+  CompilerOptions options;
+  List<Source> outputs;
+  Node program;
+  Resolver resolver;
+}
+
+class Compiler {
+  double tokenizeTime = 0;
+  double parseTime = 0;
+  double resolveTime = 0;
+  double emitTime = 0;
+  double totalTime = 0;
+  Log log = new Log();
+
+  string statistics() {
+    List<string> parts = {};
+    if (tokenizeTime > 0) parts.push("tokenize: ".append(formatNumber(tokenizeTime)).append("ms"));
+    if (parseTime > 0) parts.push("parse: ".append(formatNumber(parseTime)).append("ms"));
+    if (resolveTime > 0) parts.push("resolve: ".append(formatNumber(resolveTime)).append("ms"));
+    if (emitTime > 0) parts.push("emit: ".append(formatNumber(emitTime)).append("ms"));
+    string result = "compile time: ".append(formatNumber(totalTime)).append("ms");
+    if (parts.length > 0) result = result.append(" (").append(", ".join(parts)).append(")");
+    return result;
+  }
+
+  CompilerResult compile(CompilerOptions options) {
+    double totalStart = now();
+    List<Source> outputs = null;
+    Node program = Node.createProgram({});
+
+    // Tokenize and parse each module individually
+    processInput(program, new Source("<native>", NATIVE_LIBRARY));
+    int i;
+    for (i = 0; i < options.inputs.length; i++) {
+      processInput(program, options.inputs.get(i));
+    }
+
+    // Create one module and resolve everything together
+    double compileStart = now();
+    Resolver resolver = new Resolver(log);
+    resolver.resolveProgram(program);
+    resolveTime = resolveTime + now() - compileStart;
+    if (log.errorCount == 0) {
+
+      // Create an emitter if there's a target language
+      IEmitter emitter = null;
+      switch (options.targetLanguage) {
+        case TargetLanguage.NONE {}
+        case TargetLanguage.JS { emitter = new js.Emitter(options, resolver.cache); }
+        case TargetLanguage.LISP_AST { emitter = new lisp.Emitter(options); }
+        case TargetLanguage.JSON_AST { emitter = new json.Emitter(options); }
+        case TargetLanguage.XML_AST { emitter = new xml.Emitter(options); }
+      }
+
+      // Emit the module in the target language
+      if (emitter != null) {
+        double emitStart = now();
+        outputs = emitter.emitProgram(program);
+        emitTime = emitTime + now() - emitStart;
+      }
+    }
+
+    totalTime = totalTime + now() - totalStart;
+    return new CompilerResult(options, outputs, program, resolver);
+  }
+
+  void processInput(Node program, Source source) {
+    int errorCount = log.errorCount;
+
+    // Tokenize the source
+    double tokenizeStart = now();
+    List<Token> sourceTokens = tokenize(log, source);
+    tokenizeTime = tokenizeTime + now() - tokenizeStart;
+
+    // Parse the source if the tokenize was successful
+    if (log.errorCount == errorCount) {
+      double parseStart = now();
+      Node file = parseFile(log, sourceTokens);
+      parseTime = parseTime + now() - parseStart;
+      if (file != null) {
+        program.children.push(file);
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+namespace xml {
+  class Emitter : IEmitter {
+    CompilerOptions options;
+
+    override List<Source> emitProgram(Node program) {
+      List<Source> outputs = {};
+      if (options.isSingleFileMode()) {
+        outputs.push(new Source(options.outputFile, dump(program)));
+      } else {
+        int i;
+        for (i = 0; i < program.children.length; i++) {
+          Node file = program.children.get(i);
+          outputs.push(new Source(joinPath(options.outputDirectory, file.range.source.name.append(".xml")), dump(file)));
+        }
+      }
+    }
+  }
+
+  string dump(Node node) {
+    DumpVisitor visitor = new DumpVisitor();
+    visitor.visit(node);
+    return visitor.builder.toString();
+  }
+
+  class DumpVisitor {
+    StringBuilder builder = new StringBuilder();
+    string indent = "";
+
+    void visit(Node node) {
+      // TODO
+    }
+  }
+}

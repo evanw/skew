@@ -31,7 +31,7 @@ function compile() {
     var tokens = tokenize(log, source);
     var file = parseFile(log, tokens);
     var program = file !== null ? Node.createProgram([file]) : null;
-    if (program) outputTree.value = dump(program); // Dump before the resolver changes stuff
+    if (program) outputTree.value = lisp.dump(program); // Dump before the resolver changes stuff
     if (program !== null) Resolver.run(log, program);
     outputLog.value = log.toString();
   } catch (e) {

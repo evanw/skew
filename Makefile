@@ -3,12 +3,20 @@ SOURCES += src/ast/get.sk
 SOURCES += src/ast/node.sk
 SOURCES += src/ast/operators.sk
 
+SOURCES += src/compiler/compiler.sk
+SOURCES += src/compiler/emitter.sk
+SOURCES += src/compiler/library.sk
+SOURCES += src/compiler/lisp.sk
+SOURCES += src/compiler/json.sk
+SOURCES += src/compiler/xml.sk
+
 SOURCES += src/core/log.sk
 SOURCES += src/core/range.sk
 SOURCES += src/core/source.sk
 SOURCES += src/core/support.sk
 
-SOURCES += src/debug/dump.sk
+SOURCES += src/js/emitter.sk
+SOURCES += src/js/sourcemap.sk
 
 SOURCES += src/lexer/lexer.sk
 SOURCES += src/lexer/token.sk

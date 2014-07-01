@@ -1,0 +1,124 @@
+class SourceMapping {
+  int sourceIndex;
+  int originalLine; // 0-based
+  int originalColumn; // 0-based
+  int generatedLine; // 0-based
+  int generatedColumn; // 0-based
+}
+
+// Based on: https://github.com/mozilla/source-map
+class SourceMapGenerator {
+  List<SourceMapping> mappings = {};
+  List<Source> sources = {};
+
+  void addMapping(Source source, int originalLine, int originalColumn, int generatedLine, int generatedColumn) {
+    int sourceIndex = sources.indexOf(source);
+    if (sourceIndex == -1) {
+      sourceIndex = sources.length;
+      sources.push(source);
+    }
+    mappings.push(new SourceMapping(sourceIndex, originalLine, originalColumn, generatedLine, generatedColumn));
+  }
+
+  string toString() {
+    List<string> sourceNames = {};
+    List<string> sourceContents = {};
+    int i;
+    for (i = 0; i < sources.length; i++) {
+      Source source = sources.get(i);
+      sourceNames.push(quoteString(source.name, '"'));
+      sourceContents.push(quoteString(source.contents, '"'));
+    }
+    StringBuilder result = new StringBuilder();
+    result.append("{\"version\":3,\"sources\":[").append(",".join(sourceNames)).append(
+      "],\"sourcesContent\":[").append(",".join(sourceContents)).append("],\"names\":[],\"mappings\":\"");
+    compile(result);
+    return result.append("\"}\n").toString();
+  }
+
+  void compile(StringBuilder result) {
+    // Sort the mappings in increasing order by generated location
+    mappings.sort(SourceMappingComparer.INSTANCE);
+
+    int previousGeneratedColumn = 0;
+    int previousGeneratedLine = 0;
+    int previousOriginalColumn = 0;
+    int previousOriginalLine = 0;
+    int previousSourceIndex = 0;
+
+    // Generate the base64 VLQ encoded mappings
+    int i;
+    for (i = 0; i < mappings.length; i++) {
+      SourceMapping mapping = mappings.get(i);
+      int generatedLine = mapping.generatedLine;
+
+      // Insert ',' for the same line and ';' for a new line
+      if (previousGeneratedLine == generatedLine) {
+        if (previousGeneratedColumn == mapping.generatedColumn && (
+            previousGeneratedLine > 0 || previousGeneratedColumn > 0)) {
+          continue;
+        }
+        result.append(",");
+      } else {
+        previousGeneratedColumn = 0;
+        while (previousGeneratedLine < generatedLine) {
+          result.append(";");
+          previousGeneratedLine++;
+        }
+      }
+
+      // Record the generated column (the line is recorded using ';' above)
+      result.append(encodeVLQ(mapping.generatedColumn - previousGeneratedColumn));
+      previousGeneratedColumn = mapping.generatedColumn;
+
+      // Record the generated source
+      result.append(encodeVLQ(mapping.sourceIndex - previousSourceIndex));
+      previousSourceIndex = mapping.sourceIndex;
+
+      // Record the original line
+      result.append(encodeVLQ(mapping.originalLine - previousOriginalLine));
+      previousOriginalLine = mapping.originalLine;
+
+      // Record the original column
+      result.append(encodeVLQ(mapping.originalColumn - previousOriginalColumn));
+      previousOriginalColumn = mapping.originalColumn;
+    }
+  }
+
+  // A single base 64 digit can contain 6 bits of data. For the base 64 variable
+  // length quantities we use in the source map spec, the first bit is the sign,
+  // the next four bits are the actual value, and the 6th bit is the continuation
+  // bit. The continuation bit tells us whether there are more digits in this
+  // value following this digit.
+  //
+  //   Continuation
+  //   |    Sign
+  //   |    |
+  //   V    V
+  //   101011
+  //
+  static string encodeVLQ(int value) {
+    int vlq = value < 0 ? -value << 1 | 1 : value << 1;
+    string encoded = "";
+    do {
+      int digit = vlq & 31;
+      vlq = vlq >> 5;
+
+      // If there are still more digits in this value, we must make sure the
+      // continuation bit is marked
+      if (vlq > 0) digit = digit | 32;
+
+      encoded = encoded.append(BASE64.get(digit));
+    } while (vlq > 0);
+    return encoded;
+  }
+}
+
+class SourceMappingComparer : IComparer<SourceMapping> {
+  static SourceMappingComparer INSTANCE = new SourceMappingComparer();
+
+  override int compare(SourceMapping left, SourceMapping right) {
+    int result = left.generatedLine - right.generatedLine;
+    return result != 0 ? result : left.generatedColumn - right.generatedColumn;
+  }
+}
