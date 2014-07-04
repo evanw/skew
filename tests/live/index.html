@@ -9,14 +9,30 @@ textarea {
   font: 12px Monaco, monospace;
 }
 
+div {
+  display: inline-block;
+  vertical-align: top;
+  margin: 20px;
+}
+
 </style>
-<h2>Input</h2>
-<textarea id="input" rows="10" cols="80" spellcheck="false" autofocus></textarea>
-<p id="compileTime">Loading...</p>
-<h2>Log</h2>
-<textarea id="outputLog" rows="10" cols="80" spellcheck="false" readonly></textarea>
-<h2>Tree</h2>
-<textarea id="outputTree" rows="20" cols="80" spellcheck="false" readonly></textarea>
+<div>
+  <h2>Input</h2>
+  <textarea id="input" rows="10" cols="80" spellcheck="false" autofocus></textarea>
+  <p id="compileTime">Loading...</p>
+</div>
+<div>
+  <h2>Log</h2>
+  <textarea id="outputLog" rows="10" cols="80" spellcheck="false" readonly></textarea>
+</div>
+<div>
+  <h2>Tree</h2>
+  <textarea id="outputTree" rows="20" cols="80" spellcheck="false" readonly></textarea>
+</div>
+<div>
+  <h2>Code</h2>
+  <textarea id="outputCode" rows="20" cols="80" spellcheck="false" readonly></textarea>
+</div>
 <script src="../../build/debug/skewc.js"></script>
 <script>
 
@@ -24,16 +40,20 @@ function compile() {
   var start = now();
   if (input.value === old) return;
   old = input.value;
-  outputLog.value = outputTree.value = '';
+  outputLog.value = outputTree.value = outputCode.value = '';
   try {
-    var source = new Source('<stdin>', input.value);
-    var log = new Log();
-    var tokens = tokenize(log, source);
-    var file = parseFile(log, tokens);
-    var program = file !== null ? Node.createProgram([file]) : null;
-    if (program) outputTree.value = lisp.dump(program); // Dump before the resolver changes stuff
-    if (program !== null) Resolver.run(log, program);
-    outputLog.value = log.toString();
+    var compiler = new Compiler();
+    var options = new CompilerOptions();
+    options.targetFormat = TargetFormat.JS;
+    options.inputs.push(new Source('<stdin>', input.value));
+    var result = compiler.compile(options);
+    outputLog.value = compiler.log.toString();
+    if (result.program !== null && result.program.children.length === 2) {
+      outputTree.value = lisp.dump(result.program.children[1]);
+    }
+    if (result.outputs !== null) {
+      outputCode.value = result.outputs.map(function(output) { return output.contents; }).join('');
+    }
   } catch (e) {
     outputLog.value = e.stack || e;
   }

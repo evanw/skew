@@ -1,6 +1,7 @@
 class TypeCache {
   Type globalType = createType(new Symbol("<global>", SymbolKind.GLOBAL_NAMESPACE));
   Type nullType = createType(new Symbol("null", SymbolKind.OTHER));
+  Type voidType = createType(new Symbol("void", SymbolKind.OTHER_TYPE));
 
   // All expressions that have syntax and/or semantic errors have this type,
   // which silences all further errors related to that expression. When the
@@ -9,20 +10,12 @@ class TypeCache {
   // most likely just be noise.
   Type errorType = createType(new Symbol("<error>", SymbolKind.OTHER));
 
-  // // TODO: Load these from Skew library code
-  // Type voidType = null;
-  // Type intType = null;
-  // Type boolType = null;
-  // Type floatType = null;
-  // Type doubleType = null;
-  // Type stringType = null;
-
-  Type voidType = createType(new Symbol("void", SymbolKind.OTHER_TYPE));
-  Type intType = createType(new Symbol("int", SymbolKind.STRUCT));
-  Type boolType = createType(new Symbol("bool", SymbolKind.STRUCT));
-  Type floatType = createType(new Symbol("float", SymbolKind.STRUCT));
-  Type doubleType = createType(new Symbol("double", SymbolKind.STRUCT));
-  Type stringType = createType(new Symbol("string", SymbolKind.STRUCT));
+  // These are defined in the standard library
+  Type intType = null;
+  Type boolType = null;
+  Type floatType = null;
+  Type doubleType = null;
+  Type stringType = null;
 
   IntMap<List<Type>> hashTable = new IntMap<List<Type>>();
 

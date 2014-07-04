@@ -1,10 +1,251 @@
 namespace js {
   class Emitter : IEmitter {
+    int currentLine = 0;
+    int currentColumn = 0;
+    Source currentSource = null;
+    SourceMapGenerator generator = new SourceMapGenerator();
     CompilerOptions options;
     TypeCache cache;
+    string indent = "";
 
     override List<Source> emitProgram(Node program) {
-      return {};
+      currentSource = new Source(options.outputFile, "");
+      emitNode(program);
+      return { currentSource };
+    }
+
+    void addMapping(Node node) {
+      if (options.jsSourceMap) {
+        Range range = node.range;
+        if (range.source != null) {
+          LineColumn location = range.source.indexToLineColumn(range.start);
+          generator.addMapping(range.source, location.line, location.column, currentLine, currentColumn);
+        }
+      }
+    }
+
+    void increaseIndent() {
+      indent = indent.append("  ");
+    }
+
+    void decreaseIndent() {
+      indent = indent.slice(2, indent.length);
+    }
+
+    void write(string text) {
+      if (options.jsSourceMap) {
+        int i;
+        for (i = 0; i < text.length; i++) {
+          int c = text.codeUnitAt(i);
+          if (c == '\n') {
+            currentColumn = 0;
+            currentLine++;
+          } else {
+            currentColumn++;
+          }
+        }
+      }
+      currentSource.contents = currentSource.contents.append(text);
+    }
+
+    void emitChildren(Node node) {
+      if (node.hasChildren()) {
+        int i;
+        for (i = 0; i < node.children.length; i++) {
+          emitNode(node.children.get(i));
+        }
+      }
+    }
+
+    void recursiveEmitIfStatement(Node node) {
+      write("if (");
+      emitExpression(node.ifTest(), Precedence.LOWEST);
+      write(") ");
+      emitNode(node.ifTrue());
+      Node block = node.ifFalse();
+      if (block != null) {
+        write(" else ");
+        Node statement = block.hasChildren() && block.children.length == 1 ? block.children.get(0) : null;
+        if (statement != null && statement.kind == NodeKind.IF) {
+          recursiveEmitIfStatement(statement);
+        } else {
+          emitNode(block);
+        }
+      }
+    }
+
+    void emitNode(Node node) {
+      addMapping(node);
+      switch (node.kind) {
+        case NodeKind.PROGRAM {
+          emitChildren(node);
+        }
+
+        case NodeKind.FILE {
+          emitChildren(node.fileBlock());
+        }
+
+        case NodeKind.BLOCK {
+          write("{\n");
+          increaseIndent();
+          emitChildren(node);
+          decreaseIndent();
+          write(indent.append("}"));
+        }
+
+        case NodeKind.CASE {}
+        case NodeKind.VARIABLE_CLUSTER {}
+
+        case NodeKind.NAMESPACE {}
+        case NodeKind.ENUM {}
+        case NodeKind.ENUM_FLAGS {}
+        case NodeKind.CLASS {}
+        case NodeKind.STRUCT {}
+        case NodeKind.INTERFACE {}
+
+        case NodeKind.EXTENSION {}
+        case NodeKind.CONSTRUCTOR {}
+        case NodeKind.FUNCTION {}
+        case NodeKind.VARIABLE {}
+        case NodeKind.PARAMETER {}
+        case NodeKind.USING_ALIAS {}
+
+        case NodeKind.IF {
+          write(indent);
+          recursiveEmitIfStatement(node);
+          write("\n");
+        }
+
+        case NodeKind.FOR {
+        }
+
+        case NodeKind.FOR_EACH {
+        }
+
+        case NodeKind.WHILE {
+          write(indent.append("while ("));
+          emitExpression(node.whileTest(), Precedence.LOWEST);
+          write(") ");
+          emitNode(node.whileBlock());
+          write("\n");
+        }
+
+        case NodeKind.DO_WHILE {
+          write(indent.append("do "));
+          emitNode(node.whileBlock());
+          write(" while (");
+          emitExpression(node.whileTest(), Precedence.LOWEST);
+          write(");\n");
+        }
+
+        case NodeKind.RETURN {
+          Node value = node.returnValue();
+          write(indent);
+          if (value != null) {
+            write("return ");
+            emitExpression(value, Precedence.LOWEST);
+            write(";\n");
+          } else {
+            write("return;\n");
+          }
+        }
+
+        case NodeKind.BREAK {
+          write(indent.append("break;\n"));
+        }
+
+        case NodeKind.CONTINUE {
+          write(indent.append("continue;\n"));
+        }
+
+        case NodeKind.ASSERT {
+        }
+
+        case NodeKind.EXPRESSION {
+          write(indent);
+          emitExpression(node.expressionValue(), Precedence.LOWEST);
+          write(";\n");
+        }
+
+        case NodeKind.SWITCH {
+        }
+
+        case NodeKind.MODIFIER {
+        }
+
+        case NodeKind.USING_NAMESPACE {
+        }
+
+        default {
+          assert false;
+        }
+      }
+    }
+
+    void emitExpression(Node node, Precedence precedence) {
+      addMapping(node);
+      switch (node.kind) {
+        case NodeKind.NAME {}
+        case NodeKind.TYPE {}
+        case NodeKind.THIS {}
+        case NodeKind.HOOK {}
+        case NodeKind.NULL {}
+        case NodeKind.TRUE {}
+        case NodeKind.FALSE {}
+
+        case NodeKind.INT {
+          write(node.asInt().toString());
+        }
+
+        case NodeKind.FLOAT, NodeKind.DOUBLE {
+          write(node.asDouble().toString());
+        }
+
+        case NodeKind.STRING {
+          write(quoteString(node.asString(), '"'));
+        }
+
+        case NodeKind.INITIALIZER {}
+        case NodeKind.DOT {}
+        case NodeKind.CALL {}
+        case NodeKind.SUPER_CALL {}
+        case NodeKind.ERROR {}
+        case NodeKind.SEQUENCE {}
+        case NodeKind.PARAMETERIZE {}
+        case NodeKind.CAST {}
+        case NodeKind.IMPLICIT_CAST {}
+        case NodeKind.LAMBDA {}
+        case NodeKind.DEFAULT {}
+        case NodeKind.VAR {}
+        case NodeKind.FUNCTION_TYPE {}
+
+        case
+          NodeKind.NOT, NodeKind.POSITIVE, NodeKind.NEGATIVE, NodeKind.COMPLEMENT,
+          NodeKind.PREFIX_INCREMENT, NodeKind.PREFIX_DECREMENT,
+          NodeKind.POSTFIX_INCREMENT, NodeKind.POSTFIX_DECREMENT {
+        }
+
+        case
+          NodeKind.ADD, NodeKind.BITWISE_AND, NodeKind.BITWISE_OR, NodeKind.BITWISE_XOR,
+          NodeKind.DIVIDE, NodeKind.EQUAL, NodeKind.GREATER_THAN, NodeKind.GREATER_THAN_OR_EQUAL,
+          NodeKind.IN, NodeKind.INDEX, NodeKind.LESS_THAN, NodeKind.LESS_THAN_OR_EQUAL,
+          NodeKind.LOGICAL_AND, NodeKind.LOGICAL_OR, NodeKind.MULTIPLY, NodeKind.NOT_EQUAL,
+          NodeKind.REMAINDER, NodeKind.SHIFT_LEFT, NodeKind.SHIFT_RIGHT, NodeKind.SUBTRACT {
+        }
+
+        case
+          NodeKind.ASSIGN, NodeKind.ASSIGN_ADD, NodeKind.ASSIGN_BITWISE_AND,
+          NodeKind.ASSIGN_BITWISE_OR, NodeKind.ASSIGN_BITWISE_XOR, NodeKind.ASSIGN_DIVIDE,
+          NodeKind.ASSIGN_MULTIPLY, NodeKind.ASSIGN_REMAINDER, NodeKind.ASSIGN_SHIFT_LEFT,
+          NodeKind.ASSIGN_SHIFT_RIGHT, NodeKind.ASSIGN_SUBTRACT {
+        }
+
+        case NodeKind.ASSIGN_INDEX {}
+
+        default {
+          assert false;
+        }
+      }
     }
   }
 }

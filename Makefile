@@ -15,6 +15,8 @@ SOURCES += src/core/range.sk
 SOURCES += src/core/source.sk
 SOURCES += src/core/support.sk
 
+SOURCES += src/frontend/frontend.sk
+
 SOURCES += src/js/emitter.sk
 SOURCES += src/js/sourcemap.sk
 
@@ -57,6 +59,9 @@ DEBUG_DIR = build/debug
 RELEASE_DIR = build/release
 TESTS_DIR = build/tests
 
+JS_FLAGS += --target js
+JS_FLAGS += --append src/core/support.js
+
 default: debug
 
 clean:
@@ -72,7 +77,7 @@ $(DEBUG_DIR):
 	mkdir -p $(DEBUG_DIR)
 
 $(DEBUG_DIR)/skewc.js: Makefile $(SOURCES) src/core/support.js | $(DEBUG_DIR)
-	skewc --verbose $(SOURCES) --append src/core/support.js --target js --output-file $(DEBUG_DIR)/skewc.js
+	skewc --verbose $(SOURCES) $(JS_FLAGS) --append src/frontend/frontend.js --output-file $(DEBUG_DIR)/skewc.js
 
 ################################################################################
 # RELEASE
@@ -84,7 +89,7 @@ $(RELEASE_DIR):
 	mkdir -p $(RELEASE_DIR)
 
 $(RELEASE_DIR)/skewc.js: Makefile $(SOURCES) src/core/support.js | $(RELEASE_DIR)
-	skewc --verbose --optimize $(SOURCES) --append src/core/support.js --target js --output-file $(RELEASE_DIR)/skewc.js
+	skewc --verbose --optimize $(SOURCES) $(JS_FLAGS) --append src/frontend/frontend.js --output-file $(RELEASE_DIR)/skewc.js
 
 ################################################################################
 # TEST
@@ -97,7 +102,7 @@ $(TESTS_DIR):
 	mkdir -p $(TESTS_DIR)
 
 $(TESTS_DIR)/mocha.js: Makefile $(SOURCES) $(TEST_SOURCES) tests/system/common.js src/core/support.js | $(TESTS_DIR)
-	skewc --verbose $(SOURCES) $(TEST_SOURCES) --prepend tests/system/common.js --append src/core/support.js --target js --output-file $(TESTS_DIR)/mocha.js
+	skewc --verbose $(SOURCES) $(TEST_SOURCES) $(JS_FLAGS) --prepend tests/system/common.js --output-file $(TESTS_DIR)/mocha.js
 
 $(TESTS_DIR)/package.json: tests/system/package.json | $(TESTS_DIR)
 	cp tests/system/package.json $(TESTS_DIR)/package.json

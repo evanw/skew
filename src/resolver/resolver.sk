@@ -51,17 +51,17 @@ class Resolver {
   Type resultType = null;
   Log log;
 
-  static void run(Log log, Node program) {
+  void run(Node program) {
     assert program.kind == NodeKind.PROGRAM;
-    Resolver resolver = new Resolver(log);
     Scope globalScope = new Scope(null);
-    globalScope.insertGlobals(resolver.cache);
-    resolver.constantFolder = new ConstantFolder(resolver.cache);
-    resolver.setupScopesAndUseNamespaces(program, globalScope);
-    resolver.accumulateSymbolFlags();
-    resolver.setSymbolKindsAndMergeSiblings();
-    resolver.processUsingStatements();
-    resolver.resolve(program, null);
+    globalScope.insertGlobals(cache);
+    constantFolder = new ConstantFolder(cache);
+    setupScopesAndUseNamespaces(program, globalScope);
+    accumulateSymbolFlags();
+    setSymbolKindsAndMergeSiblings();
+    processUsingStatements();
+    globalScope.linkGlobals(cache);
+    resolve(program, null);
   }
 
   void setupScopesAndUseNamespaces(Node node, Scope scope) {
@@ -225,8 +225,9 @@ class Resolver {
   static bool checkParentsForLocalVariable(Node node) {
     for (node = node.parent; node != null; node = node.parent) {
       if (node.kind != NodeKind.PROGRAM && node.kind != NodeKind.FILE &&
-          node.kind != NodeKind.BLOCK && node.kind != NodeKind.MODIFIER &&
-          node.kind != NodeKind.EXTENSION && !node.kind.isEnum()) {
+          node.kind != NodeKind.BLOCK && node.kind != NodeKind.NAMESPACE &&
+          node.kind != NodeKind.MODIFIER && node.kind != NodeKind.EXTENSION &&
+          !node.kind.isEnum()) {
         return true;
       }
     }

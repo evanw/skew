@@ -8,6 +8,16 @@ enum Foo { FOO = foo }
 ");
 
 test("
+namespace foo {
+  enum Foo { FOO = false }
+}
+", "
+<stdin>:2:20: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  enum Foo { FOO = false }
+                   ~~~~~
+");
+
+test("
 enum Foo { FOO }
 enum flags Bar { FOO }
 bool foo = Foo.FOO | Foo.FOO;

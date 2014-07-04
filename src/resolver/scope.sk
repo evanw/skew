@@ -14,11 +14,18 @@ class Scope {
   void insertGlobals(TypeCache cache) {
     type = cache.globalType;
     insert(cache.voidType.symbol);
-    insert(cache.intType.symbol);
-    insert(cache.boolType.symbol);
-    insert(cache.floatType.symbol);
-    insert(cache.doubleType.symbol);
-    insert(cache.stringType.symbol);
+  }
+
+  void linkGlobals(TypeCache cache) {
+    cache.intType = findType("int");
+    cache.boolType = findType("bool");
+    cache.floatType = findType("float");
+    cache.doubleType = findType("double");
+    cache.stringType = findType("string");
+  }
+
+  Type findType(string name) {
+    return findLocal(name).symbol.type;
   }
 
   void insert(Symbol symbol) {

@@ -857,6 +857,14 @@ class LambdaPrefix : IPrefixParselet {
   }
 }
 
+class NewPrefix : IPrefixParselet {
+  override Node run(ParserContext context) {
+    context.unexpectedToken();
+    context.next(); // Provide nicer error messages for Java-style new by just ignoring it
+    return parseType(context);
+  }
+}
+
 Pratt createParser() {
   Pratt pratt = new Pratt();
 
@@ -934,6 +942,7 @@ Pratt createParser() {
   pratt.parselet(TokenKind.SUPER, Precedence.LOWEST).prefix = new SuperCallPrefix();
   pratt.parselet(TokenKind.IDENTIFIER, Precedence.LOWEST).prefix = new NamePrefix();
   pratt.parselet(TokenKind.LAMBDA, Precedence.LOWEST).prefix = new LambdaPrefix();
+  pratt.parselet(TokenKind.NEW, Precedence.LOWEST).prefix = new NewPrefix();
 
   return pratt;
 }

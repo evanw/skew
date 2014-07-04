@@ -74,11 +74,54 @@ int foo = Foo(1);
 ");
 
 test("
-int foo = { false };
+int i = { 0 };
+bool b = { false };
+float f = { 0.0f };
+double d = { 0.0 };
+string s = { \"\" };
 ", "
-<stdin>:1:11: error: Cannot construct type \"int\"
-int foo = { false };
-          ~~~~~~~~~
+<stdin>:1:9: error: Expected 0 arguments but found 1 argument
+int i = { 0 };
+        ~~~~~
+<stdin>:2:10: error: Expected 0 arguments but found 1 argument
+bool b = { false };
+         ~~~~~~~~~
+<stdin>:3:11: error: Expected 0 arguments but found 1 argument
+float f = { 0.0f };
+          ~~~~~~~~
+<stdin>:4:12: error: Expected 0 arguments but found 1 argument
+double d = { 0.0 };
+           ~~~~~~~
+<stdin>:5:12: error: Expected 0 arguments but found 1 argument
+string s = { \"\" };
+           ~~~~~~
+");
+
+test("
+int i = {};
+bool b = {};
+float f = {};
+double d = {};
+string s = {};
+", "
+");
+
+test("
+int i = int();
+bool b = bool();
+float f = float();
+double d = double();
+string s = string();
+", "
+");
+
+test("
+int i = default(int);
+bool b = default(bool);
+float f = default(float);
+double d = default(double);
+string s = default(string);
+", "
 ");
 
 test("

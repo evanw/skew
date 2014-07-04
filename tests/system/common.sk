@@ -2,10 +2,9 @@ import void test(string input, string expected);
 import void expect(string output, string expected);
 
 void run(string input, string expected) {
-  Source source = new Source("<stdin>", input);
-  Log log = new Log();
-  List<Token> tokens = tokenize(log, source);
-  Node file = parseFile(log, tokens);
-  if (file != null) Resolver.run(log, Node.createProgram({ file }));
-  expect(log.toString(), expected);
+  CompilerOptions options = new CompilerOptions();
+  options.inputs = { new Source("<stdin>", input) };
+  Compiler compiler = new Compiler();
+  CompilerResult result = compiler.compile(options);
+  expect(compiler.log.toString(), expected);
 }

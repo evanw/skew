@@ -1,16 +1,27 @@
-enum TargetLanguage {
+enum TargetFormat {
+  // Target languages that run the resolver
   NONE,
   JS,
+  CPP,
+
+  // AST-only targets
   LISP_AST,
   JSON_AST,
   XML_AST,
 }
 
+in TargetFormat {
+  bool shouldRunResolver() {
+    return this >= NONE && this <= CPP;
+  }
+}
+
 class CompilerOptions {
-  TargetLanguage targetLanguage = TargetLanguage.NONE;
+  TargetFormat targetFormat = TargetFormat.NONE;
   List<Source> inputs = {};
   string outputDirectory = "";
   string outputFile = "";
+  bool jsSourceMap = false;
 
   bool isSingleFileMode() {
     assert outputFile.length > 0 || outputDirectory.length > 0;
@@ -56,21 +67,26 @@ class Compiler {
       processInput(program, options.inputs.get(i));
     }
 
-    // Create one module and resolve everything together
-    double compileStart = now();
-    Resolver resolver = new Resolver(log);
-    resolver.resolveProgram(program);
-    resolveTime = resolveTime + now() - compileStart;
+    // Resolve everything together
+    Resolver resolver;
+    if (options.targetFormat.shouldRunResolver()) {
+      double resolveStart = now();
+      resolver = new Resolver(log);
+      resolver.run(program);
+      resolveTime = resolveTime + now() - resolveStart;
+    }
     if (log.errorCount == 0) {
 
       // Create an emitter if there's a target language
       IEmitter emitter = null;
-      switch (options.targetLanguage) {
-        case TargetLanguage.NONE {}
-        case TargetLanguage.JS { emitter = new js.Emitter(options, resolver.cache); }
-        case TargetLanguage.LISP_AST { emitter = new lisp.Emitter(options); }
-        case TargetLanguage.JSON_AST { emitter = new json.Emitter(options); }
-        case TargetLanguage.XML_AST { emitter = new xml.Emitter(options); }
+      switch (options.targetFormat) {
+        case TargetFormat.NONE {}
+        case TargetFormat.JS { emitter = new js.Emitter(options, resolver.cache); }
+        case TargetFormat.CPP {}
+        case TargetFormat.LISP_AST { emitter = new lisp.Emitter(options); }
+        case TargetFormat.JSON_AST { emitter = new json.Emitter(options); }
+        case TargetFormat.XML_AST { emitter = new xml.Emitter(options); }
+        default { assert false; }
       }
 
       // Emit the module in the target language
@@ -99,7 +115,7 @@ class Compiler {
       Node file = parseFile(log, sourceTokens);
       parseTime = parseTime + now() - parseStart;
       if (file != null) {
-        program.children.push(file);
+        program.appendChild(file);
       }
     }
   }

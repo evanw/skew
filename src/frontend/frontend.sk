@@ -1,0 +1,205 @@
+namespace io {
+  enum Color {
+    DEFAULT = 0,
+    BOLD = 1,
+    GRAY = 90,
+    RED = 91,
+    GREEN = 92,
+    YELLOW = 93,
+    BLUE = 94,
+    MAGENTA = 95,
+    CYAN = 96,
+  }
+
+  import int terminalWidth;
+  import void setColor(Color color);
+  import void print(string text);
+  import bool writeFile(string path, string contents);
+  import Source readFile(string path);
+
+  void printWithColor(Color color, string text) {
+    io.setColor(color);
+    print(text);
+    io.setColor(Color.DEFAULT);
+  }
+}
+
+namespace frontend {
+  void printError(string text) {
+    io.printWithColor(io.Color.RED, "error: ");
+    io.printWithColor(io.Color.BOLD, text.append("\n"));
+  }
+
+  string printNote(string text) {
+    io.printWithColor(io.Color.GRAY, "note: ");
+    io.printWithColor(io.Color.BOLD, text.append("\n"));
+  }
+
+  string printWarning(string text) {
+    io.printWithColor(io.Color.MAGENTA, "warning: ");
+    io.printWithColor(io.Color.BOLD, text.append("\n"));
+  }
+
+  void printUsage() {
+    io.printWithColor(io.Color.GREEN, "\nusage: ");
+    io.printWithColor(io.Color.BOLD, "skewc [flags] [inputs]\n");
+    io.print("
+  --help (-h)       Print this message.
+
+  --verbose         Print out useful information about the compilation.
+
+  --target=___      Set the target language. Valid target languages: none, js,
+                    c++, lisp-ast, json-ast, and xml-ast.
+
+  --output-file=___ Combines all output into a single file.
+
+  --js-source-map   Generate a source map when targeting JavaScript. The source
+                    map will be saved with the \".map\" extension in the same
+                    directory as the main output file.
+
+");
+  }
+
+  class Flags {
+    bool help = false;
+    bool verbose = false;
+    string target = "";
+    string outputFile = "";
+    bool jsSourceMap = false;
+
+    bool shouldWriteToStdout() {
+      return outputFile == "";
+    }
+  }
+
+  string afterEquals(string text) {
+    int equals = text.indexOf("=");
+    assert equals >= 0;
+    return text.slice(equals + 1, text.length);
+  }
+
+  // TODO: Move this to the standard library
+  bool startsWith(string text, string prefix) {
+    return text.length >= prefix.length && text.slice(0, prefix.length) == prefix;
+  }
+
+  export int main(List<string> args) {
+    List<string> inputs = {};
+    Flags flags = new Flags();
+
+    int i;
+    for (i = 0; i < args.length; i++) {
+      string arg = args.get(i);
+
+      // Ignore empty arguments
+      if (arg.length == 0) continue;
+
+      // Remember file paths
+      if (arg.codeUnitAt(0) != '-') { inputs.push(arg); continue; }
+
+      // Check flags
+      if (arg == "-help" || arg == "--help" || arg == "-h") { printUsage(); return 0; }
+      else if (arg == "-verbose" || arg == "--verbose") { flags.verbose = true; continue; }
+      else if (arg == "-js-source-map" || arg == "--js-source-map") { flags.jsSourceMap = true; continue; }
+      else if (startsWith(arg, "-target=") || startsWith(arg, "--target=")) { flags.target = afterEquals(arg); continue; }
+      else if (startsWith(arg, "-output-file=") || startsWith(arg, "--output-file=")) { flags.outputFile = afterEquals(arg); continue; }
+
+      // An unknown argument is an error
+      printError("Unknown flag ".append(quoteString(arg, '"')));
+      return 1;
+    }
+
+    // Input files are required
+    if (inputs.length == 0) {
+      printError("Missing input files");
+      return 1;
+    }
+
+    // The target language is required
+    TargetFormat target;
+    if (flags.target == "") {
+      printError("Set the target language with \"--target=___\"");
+      return 1;
+    }
+    switch (flags.target) {
+      case "none" { target = TargetFormat.NONE; }
+      case "js" { target = TargetFormat.JS; }
+      case "c++" { target = TargetFormat.CPP; }
+      case "lisp-ast" { target = TargetFormat.LISP_AST; }
+      case "json-ast" { target = TargetFormat.JSON_AST; }
+      case "xml-ast" { target = TargetFormat.XML_AST; }
+      default { printError("Unknown target language ".append(quoteString(flags.target, '"'))); return 1; }
+    }
+
+    // Translate frontend flags to compiler options
+    CompilerOptions options = new CompilerOptions();
+    options.targetFormat = target;
+    options.outputFile = flags.shouldWriteToStdout() ? "<stdout>" : flags.outputFile;
+    options.jsSourceMap = flags.jsSourceMap && flags.outputFile != "" && target == TargetFormat.JS;
+
+    // Read all inputs
+    for (i = 0; i < inputs.length; i++) {
+      string input = inputs.get(i);
+      Source source = io.readFile(input);
+      if (source == null) { printError("Could not read from ".append(quoteString(input, '"'))); return 1; }
+      options.inputs.push(source);
+    }
+
+    // Run the compilation
+    Compiler compiler = new Compiler();
+    CompilerResult result = compiler.compile(options);
+
+    // Print any errors and warnings
+    Log log = compiler.log;
+    for (i = 0; i < log.diagnostics.length; i++) {
+      Diagnostic diagnostic = log.diagnostics.get(i);
+      if (!diagnostic.range.isEmpty()) {
+        io.printWithColor(io.Color.BOLD, diagnostic.range.locationString().append(": "));
+      }
+      switch (diagnostic.kind) {
+        case DiagnosticKind.WARNING { printWarning(diagnostic.text); }
+        case DiagnosticKind.ERROR { printError(diagnostic.text); }
+      }
+      if (!diagnostic.range.isEmpty()) {
+        FormattedRange formatted = diagnostic.range.format(io.terminalWidth);
+        io.print(formatted.line.append("\n"));
+        io.printWithColor(io.Color.GREEN, formatted.range.append("\n"));
+      }
+      if (!diagnostic.noteRange.isEmpty()) {
+        io.printWithColor(io.Color.BOLD, diagnostic.noteRange.locationString().append(": "));
+        printNote(diagnostic.noteText);
+      }
+    }
+
+    // Print the summary
+    bool hasErrors = log.errorCount > 0;
+    bool hasWarnings = log.warningCount > 0;
+    string summary;
+    if (hasWarnings) {
+      summary = summary.append(log.warningCount.toString().append(plural(log.warningCount, " warning", " warnings")));
+      if (hasErrors) summary = summary.append(" and ");
+    }
+    if (hasErrors) summary = summary.append(log.errorCount.toString().append(plural(log.errorCount, " error", " errors")));
+    if (hasWarnings || hasErrors) io.print(summary.append(" generated\n"));
+    if (flags.verbose) io.print(compiler.statistics().append("\n"));
+    if (hasErrors) return 1;
+
+    // Write all outputs
+    if (result.outputs != null) {
+      for (i = 0; i < result.outputs.length; i++) {
+        Source output = result.outputs.get(i);
+        if (flags.shouldWriteToStdout()) {
+          io.print(output.contents);
+          continue;
+        }
+        if (!io.writeFile(output.name, output.contents)) {
+          printError("Could not write to ".append(quoteString(output.name, '"')));
+          return 1;
+        }
+        if (flags.verbose) io.print(output.name.append(": ").append(bytesToString(output.contents.length)).append("\n"));
+      }
+    }
+
+    return 0;
+  }
+}
