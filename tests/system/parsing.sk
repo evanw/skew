@@ -473,3 +473,10 @@ case 0 {}
 case 0 {}
         ^
 ");
+
+test("
+class Foo {
+  private new() {}
+}
+", "
+");

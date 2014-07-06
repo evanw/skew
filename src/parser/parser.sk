@@ -121,9 +121,9 @@ Node parseBlock(ParserContext context, StatementHint hint) {
   return Node.createBlock(statements).withRange(context.spanSince(token.range));
 }
 
-Node parseBlockOrStatement(ParserContext context) {
-  if (context.peek(TokenKind.LEFT_BRACE)) return parseBlock(context, StatementHint.NORMAL);
-  Node statement = parseStatement(context, StatementHint.NORMAL); if (statement == null) return null;
+Node parseBlockOrStatement(ParserContext context, StatementHint hint) {
+  if (context.peek(TokenKind.LEFT_BRACE)) return parseBlock(context, hint);
+  Node statement = parseStatement(context, hint); if (statement == null) return null;
   return Node.createBlock({ statement }).withRange(statement.range);
 }
 
@@ -360,10 +360,10 @@ Node parseExpression(ParserContext context) {
   return Node.createExpression(value).withRange(context.spanSince(token.range));
 }
 
-Node parseModifier(ParserContext context, SymbolFlag flag) {
+Node parseModifier(ParserContext context, StatementHint hint, SymbolFlag flag) {
   Token token = context.next();
   Node name = Node.createName(token.text).withRange(token.range);
-  Node block = parseBlockOrStatement(context); if (block == null) return null;
+  Node block = parseBlockOrStatement(context, hint); if (block == null) return null;
   return Node.createModifier(name, block.removeChildren()).withRange(context.spanSince(token.range));
 }
 
@@ -406,13 +406,13 @@ Node parseSwitch(ParserContext context) {
 Node parseWhile(ParserContext context) {
   Token token = context.next();
   Node value = parseGroup(context, AllowLambda.NO); if (value == null) return null;
-  Node block = parseBlockOrStatement(context); if (block == null) return null;
+  Node block = parseBlockOrStatement(context, StatementHint.NORMAL); if (block == null) return null;
   return Node.createWhile(value, block).withRange(context.spanSince(token.range));
 }
 
 Node parseDoWhile(ParserContext context) {
   Token token = context.next();
-  Node block = parseBlockOrStatement(context); if (block == null) return null;
+  Node block = parseBlockOrStatement(context, StatementHint.NORMAL); if (block == null) return null;
   if (!context.expect(TokenKind.WHILE)) return null;
   Node value = parseGroup(context, AllowLambda.NO);
   scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
@@ -422,10 +422,10 @@ Node parseDoWhile(ParserContext context) {
 Node parseIf(ParserContext context) {
   Token token = context.next();
   Node value = parseGroup(context, AllowLambda.NO); if (value == null) return null;
-  Node trueBlock = parseBlockOrStatement(context); if (trueBlock == null) return null;
+  Node trueBlock = parseBlockOrStatement(context, StatementHint.NORMAL); if (trueBlock == null) return null;
   Node falseBlock = null;
   if (context.eat(TokenKind.ELSE)) {
-    falseBlock = parseBlockOrStatement(context); if (falseBlock == null) return null;
+    falseBlock = parseBlockOrStatement(context, StatementHint.NORMAL); if (falseBlock == null) return null;
   }
   return Node.createIf(value, trueBlock, falseBlock).withRange(context.spanSince(token.range));
 }
@@ -481,7 +481,7 @@ Node parseFor(ParserContext context) {
         if (setup != null && context.eat(TokenKind.IN)) {
           Node values = pratt.parse(context, Precedence.LOWEST);
           scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.NORMAL);
-          Node body = parseBlockOrStatement(context); if (body == null) return null;
+          Node body = parseBlockOrStatement(context, StatementHint.NORMAL); if (body == null) return null;
           List<Node> variables = setup.clusterVariables();
           if (variables.length > 1) syntaxErrorBadForEach(context.log, setup.range);
           Node value = Node.createVariable(variables.get(0).declarationName().remove(), setup.clusterType().remove(), null);
@@ -497,7 +497,7 @@ Node parseFor(ParserContext context) {
     if (!context.peek(TokenKind.RIGHT_PARENTHESIS)) update = pratt.parse(context, Precedence.LOWEST);
   } while (false);
   scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.NORMAL);
-  Node block = parseBlockOrStatement(context); if (block == null) return null;
+  Node block = parseBlockOrStatement(context, StatementHint.NORMAL); if (block == null) return null;
   return Node.createFor(setup, test, update, block).withRange(context.spanSince(token.range));
 }
 
@@ -599,27 +599,27 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case TokenKind.CONTINUE { return parseContinue(context); }
     case TokenKind.DO { return parseDoWhile(context); }
     case TokenKind.ENUM { return parseEnum(context); }
-    case TokenKind.EXPORT { return parseModifier(context, SymbolFlag.EXPORT); }
-    case TokenKind.FINAL { return parseModifier(context, SymbolFlag.FINAL); }
+    case TokenKind.EXPORT { return parseModifier(context, hint, SymbolFlag.EXPORT); }
+    case TokenKind.FINAL { return parseModifier(context, hint, SymbolFlag.FINAL); }
     case TokenKind.FOR { return parseFor(context); }
     case TokenKind.IDENTIFIER, TokenKind.VAR { return parsePossibleTypedDeclaration(context, hint); }
     case TokenKind.IF { return parseIf(context); }
-    case TokenKind.IMPORT { return parseModifier(context, SymbolFlag.IMPORT); }
+    case TokenKind.IMPORT { return parseModifier(context, hint, SymbolFlag.IMPORT); }
     case TokenKind.IN { return parseExtension(context); }
-    case TokenKind.INLINE { return parseModifier(context, SymbolFlag.INLINE); }
+    case TokenKind.INLINE { return parseModifier(context, hint, SymbolFlag.INLINE); }
     case TokenKind.INTERFACE { return parseObject(context, NodeKind.INTERFACE); }
     case TokenKind.NAMESPACE { return parseNamespace(context); }
     case TokenKind.NEW { return parseConstructor(context, hint); }
-    case TokenKind.OVERRIDE { return parseModifier(context, SymbolFlag.OVERRIDE); }
-    case TokenKind.PRIVATE { return parseModifier(context, SymbolFlag.PRIVATE); }
-    case TokenKind.PROTECTED { return parseModifier(context, SymbolFlag.PROTECTED); }
-    case TokenKind.PUBLIC { return parseModifier(context, SymbolFlag.PUBLIC); }
+    case TokenKind.OVERRIDE { return parseModifier(context, hint, SymbolFlag.OVERRIDE); }
+    case TokenKind.PRIVATE { return parseModifier(context, hint, SymbolFlag.PRIVATE); }
+    case TokenKind.PROTECTED { return parseModifier(context, hint, SymbolFlag.PROTECTED); }
+    case TokenKind.PUBLIC { return parseModifier(context, hint, SymbolFlag.PUBLIC); }
     case TokenKind.RETURN { return parseReturn(context); }
-    case TokenKind.STATIC { return parseModifier(context, SymbolFlag.STATIC); }
+    case TokenKind.STATIC { return parseModifier(context, hint, SymbolFlag.STATIC); }
     case TokenKind.STRUCT { return parseObject(context, NodeKind.STRUCT); }
     case TokenKind.SWITCH { return parseSwitch(context); }
     case TokenKind.USING { return parseUsing(context); }
-    case TokenKind.VIRTUAL { return parseModifier(context, SymbolFlag.VIRTUAL); }
+    case TokenKind.VIRTUAL { return parseModifier(context, hint, SymbolFlag.VIRTUAL); }
     case TokenKind.WHILE { return parseWhile(context); }
     default { return parseExpression(context); }
   }
