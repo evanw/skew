@@ -32,7 +32,7 @@ namespace js {
       indent = indent.slice(2, indent.length);
     }
 
-    void write(string text) {
+    void emit(string text) {
       if (options.jsSourceMap) {
         int i;
         for (i = 0; i < text.length; i++) {
@@ -48,25 +48,52 @@ namespace js {
       currentSource.contents = currentSource.contents.append(text);
     }
 
+    void emitNodes(List<Node> nodes) {
+      int i;
+      for (i = 0; i < nodes.length; i++) {
+        emitNode(nodes.get(i));
+      }
+    }
+
+    void emitCommaSeparatedNodes(List<Node> nodes) {
+      int i;
+      for (i = 0; i < nodes.length; i++) {
+        if (i > 0) emit(", ");
+        emitNode(nodes.get(i));
+      }
+    }
+
+    void emitCommaSeparatedExpressions(List<Node> nodes) {
+      int i;
+      for (i = 0; i < nodes.length; i++) {
+        if (i > 0) emit(", ");
+        emitExpression(nodes.get(i), Precedence.COMMA);
+      }
+    }
+
+    void emitArguments(List<Node> nodes) {
+      emit("(");
+      emitCommaSeparatedNodes(nodes);
+      emit(")");
+    }
+
     void emitChildren(Node node) {
       if (node.hasChildren()) {
-        int i;
-        for (i = 0; i < node.children.length; i++) {
-          emitNode(node.children.get(i));
-        }
+        emitNodes(node.children);
       }
     }
 
     void recursiveEmitIfStatement(Node node) {
-      write("if (");
+      emit("if (");
       emitExpression(node.ifTest(), Precedence.LOWEST);
-      write(") ");
+      emit(") ");
       emitNode(node.ifTrue());
       Node block = node.ifFalse();
       if (block != null) {
-        write(" else ");
+        emit(" else ");
         Node statement = block.hasChildren() && block.children.length == 1 ? block.children.get(0) : null;
         if (statement != null && statement.kind == NodeKind.IF) {
+          addMapping(statement);
           recursiveEmitIfStatement(statement);
         } else {
           emitNode(block);
@@ -86,15 +113,35 @@ namespace js {
         }
 
         case NodeKind.BLOCK {
-          write("{\n");
+          emit("{\n");
           increaseIndent();
           emitChildren(node);
           decreaseIndent();
-          write(indent.append("}"));
+          emit(indent.append("}"));
         }
 
-        case NodeKind.CASE {}
-        case NodeKind.VARIABLE_CLUSTER {}
+        case NodeKind.CASE {
+          List<Node> values = node.caseValues();
+          int i;
+          for (i = 0; i < values.length; i++) {
+            emit(indent.append("case "));
+            emitExpression(values.get(i), Precedence.LOWEST);
+            emit(":\n");
+          }
+          if (values.length == 0) {
+            emit(indent.append("default:\n"));
+          }
+          increaseIndent();
+          emitChildren(node.caseBlock());
+          emit(indent.append("break;\n"));
+          decreaseIndent();
+        }
+
+        case NodeKind.VARIABLE_CLUSTER {
+          emit(indent.append("var "));
+          emitCommaSeparatedNodes(node.clusterVariables());
+          emit(";\n");
+        }
 
         case NodeKind.NAMESPACE {}
         case NodeKind.ENUM {}
@@ -106,71 +153,115 @@ namespace js {
         case NodeKind.EXTENSION {}
         case NodeKind.CONSTRUCTOR {}
         case NodeKind.FUNCTION {}
-        case NodeKind.VARIABLE {}
-        case NodeKind.PARAMETER {}
-        case NodeKind.USING_ALIAS {}
+
+        case NodeKind.VARIABLE {
+          Node value = node.variableValue();
+          emit(node.symbol.name);
+          if (value != null) {
+            emit(" = ");
+            emitExpression(value, Precedence.COMMA);
+          }
+        }
+
+        case NodeKind.PARAMETER {
+        }
+
+        case NodeKind.USING_ALIAS {
+        }
 
         case NodeKind.IF {
-          write(indent);
+          emit(indent);
           recursiveEmitIfStatement(node);
-          write("\n");
+          emit("\n");
         }
 
         case NodeKind.FOR {
+          Node setup = node.forSetup();
+          Node test = node.forTest();
+          Node update = node.forUpdate();
+          emit(indent.append("for ("));
+          if (setup != null) {
+            if (setup.kind == NodeKind.VARIABLE_CLUSTER) {
+              emit("var ");
+              emitCommaSeparatedNodes(setup.clusterVariables());
+            } else {
+              emitExpression(setup, Precedence.LOWEST);
+            }
+          }
+          if (test != null) {
+            emit("; ");
+            emitExpression(test, Precedence.LOWEST);
+          } else {
+            emit(";");
+          }
+          if (update != null) {
+            emit("; ");
+            emitExpression(update, Precedence.LOWEST);
+          } else {
+            emit(";");
+          }
+          emit(") ");
+          emitNode(node.forBlock());
         }
 
         case NodeKind.FOR_EACH {
         }
 
         case NodeKind.WHILE {
-          write(indent.append("while ("));
+          emit(indent.append("while ("));
           emitExpression(node.whileTest(), Precedence.LOWEST);
-          write(") ");
+          emit(") ");
           emitNode(node.whileBlock());
-          write("\n");
+          emit("\n");
         }
 
         case NodeKind.DO_WHILE {
-          write(indent.append("do "));
+          emit(indent.append("do "));
           emitNode(node.whileBlock());
-          write(" while (");
+          emit(" while (");
           emitExpression(node.whileTest(), Precedence.LOWEST);
-          write(");\n");
+          emit(");\n");
         }
 
         case NodeKind.RETURN {
           Node value = node.returnValue();
-          write(indent);
+          emit(indent);
           if (value != null) {
-            write("return ");
+            emit("return ");
             emitExpression(value, Precedence.LOWEST);
-            write(";\n");
+            emit(";\n");
           } else {
-            write("return;\n");
+            emit("return;\n");
           }
         }
 
         case NodeKind.BREAK {
-          write(indent.append("break;\n"));
+          emit(indent.append("break;\n"));
         }
 
         case NodeKind.CONTINUE {
-          write(indent.append("continue;\n"));
+          emit(indent.append("continue;\n"));
         }
 
         case NodeKind.ASSERT {
         }
 
         case NodeKind.EXPRESSION {
-          write(indent);
+          emit(indent);
           emitExpression(node.expressionValue(), Precedence.LOWEST);
-          write(";\n");
+          emit(";\n");
         }
 
         case NodeKind.SWITCH {
+          emit(indent.append("switch ("));
+          emitExpression(node.switchValue(), Precedence.LOWEST);
+          emit(") {\n");
+          emitNodes(node.switchCases());
+          emit(indent.append("}"));
         }
 
         case NodeKind.MODIFIER {
+          emitNodes(node.modifierStatements());
         }
 
         case NodeKind.USING_NAMESPACE {
@@ -185,62 +276,139 @@ namespace js {
     void emitExpression(Node node, Precedence precedence) {
       addMapping(node);
       switch (node.kind) {
-        case NodeKind.NAME {}
-        case NodeKind.TYPE {}
-        case NodeKind.THIS {}
-        case NodeKind.HOOK {}
-        case NodeKind.NULL {}
-        case NodeKind.TRUE {}
-        case NodeKind.FALSE {}
+        case NodeKind.NAME {
+          emit(node.asString());
+        }
+
+        case NodeKind.TYPE {
+        }
+
+        case NodeKind.THIS {
+          emit("this");
+        }
+
+        case NodeKind.HOOK {
+          if (Precedence.ASSIGN < precedence) emit("(");
+          emitExpression(node.hookTest(), Precedence.LOGICAL_OR);
+          emit(" ? ");
+          emitExpression(node.hookTrue(), Precedence.ASSIGN);
+          emit(" : ");
+          emitExpression(node.hookFalse(), Precedence.ASSIGN);
+          if (Precedence.ASSIGN < precedence) emit(")");
+        }
+
+        case NodeKind.NULL {
+          emit("null");
+        }
+
+        case NodeKind.TRUE {
+          emit("true");
+        }
+
+        case NodeKind.FALSE {
+          emit("false");
+        }
 
         case NodeKind.INT {
-          write(node.asInt().toString());
+          emit(node.asInt().toString());
         }
 
         case NodeKind.FLOAT, NodeKind.DOUBLE {
-          write(node.asDouble().toString());
+          emit(node.asDouble().toString());
         }
 
         case NodeKind.STRING {
-          write(quoteString(node.asString(), '"'));
+          emit(quoteString(node.asString(), '"'));
         }
 
-        case NodeKind.INITIALIZER {}
-        case NodeKind.DOT {}
-        case NodeKind.CALL {}
-        case NodeKind.SUPER_CALL {}
-        case NodeKind.ERROR {}
-        case NodeKind.SEQUENCE {}
-        case NodeKind.PARAMETERIZE {}
-        case NodeKind.CAST {}
-        case NodeKind.IMPLICIT_CAST {}
-        case NodeKind.LAMBDA {}
-        case NodeKind.DEFAULT {}
-        case NodeKind.VAR {}
-        case NodeKind.FUNCTION_TYPE {}
+        case NodeKind.INITIALIZER {
+          emit("[");
+          emitCommaSeparatedExpressions(node.initializerValues());
+          emit("]");
+        }
+
+        case NodeKind.DOT {
+          emitExpression(node.dotTarget(), Precedence.MEMBER);
+          emit(".");
+          emitExpression(node.dotName(), Precedence.MEMBER);
+        }
+
+        case NodeKind.CALL {
+          if (Precedence.MEMBER < precedence) emit("(");
+          emitExpression(node.callValue(), Precedence.UNARY_POSTFIX);
+          emit("(");
+          emitCommaSeparatedExpressions(node.callArguments());
+          emit(")");
+          if (Precedence.MEMBER < precedence) emit(")");
+        }
+
+        case NodeKind.SUPER_CALL {
+        }
+
+        case NodeKind.SEQUENCE {
+          emitCommaSeparatedExpressions(node.children);
+        }
+
+        case NodeKind.CAST {
+          emitExpression(node.castValue(), precedence);
+        }
+
+        case NodeKind.IMPLICIT_CAST {
+          emitExpression(node.castValue(), precedence);
+        }
+
+        case NodeKind.LAMBDA {
+          emit("function ");
+          emitArguments(node.lambdaArguments());
+          emit(" ");
+          emitNode(node.lambdaBlock());
+        }
+
+        case NodeKind.DEFAULT {
+        }
 
         case
           NodeKind.NOT, NodeKind.POSITIVE, NodeKind.NEGATIVE, NodeKind.COMPLEMENT,
           NodeKind.PREFIX_INCREMENT, NodeKind.PREFIX_DECREMENT,
           NodeKind.POSTFIX_INCREMENT, NodeKind.POSTFIX_DECREMENT {
+
+          OperatorInfo info = operatorInfo.get(node.kind);
+          if (info.precedence < precedence) emit("(");
+          bool isPostfix = info.precedence == Precedence.UNARY_POSTFIX;
+          if (!isPostfix) emit(info.text);
+          emitExpression(node.unaryValue(), info.precedence);
+          if (isPostfix) emit(info.text);
+          if (info.precedence < precedence) emit(")");
         }
 
         case
-          NodeKind.ADD, NodeKind.BITWISE_AND, NodeKind.BITWISE_OR, NodeKind.BITWISE_XOR,
-          NodeKind.DIVIDE, NodeKind.EQUAL, NodeKind.GREATER_THAN, NodeKind.GREATER_THAN_OR_EQUAL,
-          NodeKind.IN, NodeKind.INDEX, NodeKind.LESS_THAN, NodeKind.LESS_THAN_OR_EQUAL,
-          NodeKind.LOGICAL_AND, NodeKind.LOGICAL_OR, NodeKind.MULTIPLY, NodeKind.NOT_EQUAL,
-          NodeKind.REMAINDER, NodeKind.SHIFT_LEFT, NodeKind.SHIFT_RIGHT, NodeKind.SUBTRACT {
-        }
-
-        case
-          NodeKind.ASSIGN, NodeKind.ASSIGN_ADD, NodeKind.ASSIGN_BITWISE_AND,
+          NodeKind.ADD, NodeKind.ASSIGN, NodeKind.ASSIGN_ADD, NodeKind.ASSIGN_BITWISE_AND,
           NodeKind.ASSIGN_BITWISE_OR, NodeKind.ASSIGN_BITWISE_XOR, NodeKind.ASSIGN_DIVIDE,
           NodeKind.ASSIGN_MULTIPLY, NodeKind.ASSIGN_REMAINDER, NodeKind.ASSIGN_SHIFT_LEFT,
-          NodeKind.ASSIGN_SHIFT_RIGHT, NodeKind.ASSIGN_SUBTRACT {
+          NodeKind.ASSIGN_SHIFT_RIGHT, NodeKind.ASSIGN_SUBTRACT, NodeKind.BITWISE_AND,
+          NodeKind.BITWISE_OR, NodeKind.BITWISE_XOR, NodeKind.DIVIDE, NodeKind.EQUAL,
+          NodeKind.GREATER_THAN, NodeKind.GREATER_THAN_OR_EQUAL, NodeKind.IN, NodeKind.LESS_THAN,
+          NodeKind.LESS_THAN_OR_EQUAL, NodeKind.LOGICAL_AND, NodeKind.LOGICAL_OR, NodeKind.MULTIPLY,
+          NodeKind.NOT_EQUAL, NodeKind.REMAINDER, NodeKind.SHIFT_LEFT, NodeKind.SHIFT_RIGHT,
+          NodeKind.SUBTRACT {
+
+          OperatorInfo info = operatorInfo.get(node.kind);
+          if (info.precedence < precedence) emit("(");
+          emitExpression(node.binaryLeft(), info.precedence);
+          emit(" ".append(info.text).append(" "));
+          emitExpression(node.binaryRight(), info.precedence);
+          if (info.precedence < precedence) emit(")");
         }
 
-        case NodeKind.ASSIGN_INDEX {}
+        case NodeKind.INDEX {
+          emitExpression(node.binaryLeft(), Precedence.MEMBER);
+          emit("[");
+          emitExpression(node.binaryRight(), Precedence.LOWEST);
+          emit("]");
+        }
+
+        case NodeKind.ASSIGN_INDEX {
+        }
 
         default {
           assert false;

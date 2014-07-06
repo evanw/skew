@@ -445,3 +445,31 @@ int foo = new Foo(false);
 int foo = new Foo(false);
               ~~~~~~~~~~
 ");
+
+test("
+switch (0) {
+  case 0 1 {}
+  case 2 {}
+}
+", "
+<stdin>:2:10: error: Expected LEFT_BRACE but found INT_DECIMAL
+  case 0 1 {}
+         ^
+<stdin>:3:3: error: Unexpected CASE
+  case 2 {}
+  ~~~~
+<stdin>:3:11: error: Expected END_OF_FILE but found RIGHT_BRACE
+  case 2 {}
+          ^
+");
+
+test("
+case 0 {}
+", "
+<stdin>:1:1: error: Unexpected CASE
+case 0 {}
+~~~~
+<stdin>:1:9: error: Expected END_OF_FILE but found RIGHT_BRACE
+case 0 {}
+        ^
+");

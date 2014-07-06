@@ -56,7 +56,6 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
     if (tokenScan == TokenScan.STOP_BEFORE_NEXT_STATEMENT && (
         currentKind == TokenKind.ASSERT ||
         currentKind == TokenKind.BREAK ||
-        currentKind == TokenKind.CASE ||
         currentKind == TokenKind.CLASS ||
         currentKind == TokenKind.CONTINUE ||
         currentKind == TokenKind.DO ||

@@ -249,3 +249,17 @@ class Foo<T, T> {}
 class Foo<T, T> {}
           ^
 ");
+
+test("
+bool foo;
+for (int foo = 0;;) {
+  string foo;
+}
+", "
+<stdin>:3:10: error: \"foo\" is already declared
+  string foo;
+         ~~~
+<stdin>:2:10: note: The previous declaration is here
+for (int foo = 0;;) {
+         ~~~
+");

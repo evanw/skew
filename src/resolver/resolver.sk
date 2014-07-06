@@ -73,7 +73,7 @@ class Resolver {
     // Remember each scope on the node that introduced that scope
     else if (node.kind == NodeKind.BLOCK) {
       // Just use the existing scope from named block declarations
-      if (!node.parent.kind.isNamedBlockDeclaration()) {
+      if (!node.parent.kind.isNamedBlockDeclaration() && !node.parent.kind.isLoop()) {
         scope = new Scope(scope);
       }
       node.scope = scope;
@@ -148,7 +148,7 @@ class Resolver {
 
     // Also introduce a scope on object declarations for the type parameters
     // and on function declarations and lambda expressions for the arguments
-    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == NodeKind.LAMBDA) {
+    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == NodeKind.LAMBDA || node.kind.isLoop()) {
       node.scope = scope = new Scope(scope);
     }
 
