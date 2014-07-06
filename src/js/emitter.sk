@@ -282,6 +282,7 @@ namespace js {
         }
 
         case NodeKind.TYPE {
+          emit(node.type.symbol.fullName());
         }
 
         case NodeKind.THIS {
@@ -335,8 +336,10 @@ namespace js {
         }
 
         case NodeKind.CALL {
+          Node value = node.callValue();
           if (Precedence.MEMBER < precedence) emit("(");
-          emitExpression(node.callValue(), Precedence.UNARY_POSTFIX);
+          if (value.kind.isType()) emit("new ");
+          emitExpression(value, Precedence.UNARY_POSTFIX);
           emit("(");
           emitCommaSeparatedExpressions(node.callArguments());
           emit(")");
