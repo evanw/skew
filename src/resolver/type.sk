@@ -175,6 +175,10 @@ class Type {
     return this == cache.stringType;
   }
 
+  bool isList(TypeCache cache) {
+    return symbol == cache.listType.symbol;
+  }
+
   bool isError(TypeCache cache) {
     return this == cache.errorType;
   }

@@ -16,6 +16,7 @@ class TypeCache {
   Type floatType = null;
   Type doubleType = null;
   Type stringType = null;
+  Type listType = null;
 
   IntMap<List<Type>> hashTable = new IntMap<List<Type>>();
 

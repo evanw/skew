@@ -22,6 +22,7 @@ class Scope {
     cache.floatType = findType("float");
     cache.doubleType = findType("double");
     cache.stringType = findType("string");
+    cache.listType = findType("List");
   }
 
   Type findType(string name) {

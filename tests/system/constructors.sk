@@ -80,19 +80,19 @@ float f = { 0.0f };
 double d = { 0.0 };
 string s = { \"\" };
 ", "
-<stdin>:1:9: error: Expected 0 arguments but found 1 argument
+<stdin>:1:9: error: Cannot construct type \"int\"
 int i = { 0 };
         ~~~~~
-<stdin>:2:10: error: Expected 0 arguments but found 1 argument
+<stdin>:2:10: error: Cannot construct type \"bool\"
 bool b = { false };
          ~~~~~~~~~
-<stdin>:3:11: error: Expected 0 arguments but found 1 argument
+<stdin>:3:11: error: Cannot construct type \"float\"
 float f = { 0.0f };
           ~~~~~~~~
-<stdin>:4:12: error: Expected 0 arguments but found 1 argument
+<stdin>:4:12: error: Cannot construct type \"double\"
 double d = { 0.0 };
            ~~~~~~~
-<stdin>:5:12: error: Expected 0 arguments but found 1 argument
+<stdin>:5:12: error: Cannot construct type \"string\"
 string s = { \"\" };
            ~~~~~~
 ");
@@ -104,6 +104,21 @@ float f = {};
 double d = {};
 string s = {};
 ", "
+<stdin>:1:9: error: Cannot construct type \"int\"
+int i = {};
+        ~~
+<stdin>:2:10: error: Cannot construct type \"bool\"
+bool b = {};
+         ~~
+<stdin>:3:11: error: Cannot construct type \"float\"
+float f = {};
+          ~~
+<stdin>:4:12: error: Cannot construct type \"double\"
+double d = {};
+           ~~
+<stdin>:5:12: error: Cannot construct type \"string\"
+string s = {};
+           ~~
 ");
 
 test("
@@ -113,6 +128,21 @@ float f = float();
 double d = double();
 string s = string();
 ", "
+<stdin>:1:9: error: Cannot construct type \"int\"
+int i = int();
+        ~~~
+<stdin>:2:10: error: Cannot construct type \"bool\"
+bool b = bool();
+         ~~~~
+<stdin>:3:11: error: Cannot construct type \"float\"
+float f = float();
+          ~~~~~
+<stdin>:4:12: error: Cannot construct type \"double\"
+double d = double();
+           ~~~~~~
+<stdin>:5:12: error: Cannot construct type \"string\"
+string s = string();
+           ~~~~~~
 ");
 
 test("
