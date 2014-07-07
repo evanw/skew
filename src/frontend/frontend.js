@@ -16,7 +16,7 @@ if (typeof process !== 'undefined') {
 
   io.readFile = function(path) {
     try {
-      return new Source(path, fs['readFileSync'](path, 'utf8'));
+      return new Source(path, fs.readFileSync(path, 'utf8'));
     } catch (e) {
       return null;
     }
@@ -24,7 +24,7 @@ if (typeof process !== 'undefined') {
 
   io.writeFile = function(path, contents) {
     try {
-      fs['writeFileSync'](path, contents);
+      fs.writeFileSync(path, contents);
       return true;
     } catch (e) {
       return false;

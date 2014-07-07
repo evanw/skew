@@ -10,8 +10,77 @@ namespace js {
 
     override List<Source> emitProgram(Node program) {
       currentSource = new Source(options.outputFile, "");
-      emitNode(program);
+      // emitNode(program);
+
+      collectDefinitions(cache.globalType);
+      collectTopLevelStatements(program);
+
+      int i;
+      for (i = 0; i < topLevelStatements.length; i++) {
+        emitNode(topLevelStatements.get(i));
+      }
+
+      // Append the source map inline with the compiled output
+      if (options.jsSourceMap) {
+        currentSource.contents = currentSource.contents.append("/").append(
+          "/# sourceMappingURL=data:application/json;base64,").append(
+          encodeBase64(generator.toString()));
+      }
+
       return { currentSource };
+    }
+
+    List<Symbol> types = {};
+    List<Symbol> functions = {};
+    List<Node> topLevelStatements = {};
+
+    void collectDefinitions(Type type) {
+      List<Member> members = type.members.values();
+      int i;
+      for (i = 0; i < members.length; i++) {
+        Symbol symbol = members.get(i).symbol;
+        if (symbol.kind.isType()) {
+          types.push(symbol);
+          collectDefinitions(symbol.type);
+        } else if (symbol.kind.isFunction() && !symbol.kind.isConstructor()) {
+          functions.push(symbol);
+        }
+      }
+    }
+
+    void collectTopLevelStatements(Node node) {
+      switch (node.kind) {
+        case
+          NodeKind.PROGRAM, NodeKind.FILE, NodeKind.NAMESPACE,
+          NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE,
+          NodeKind.EXTENSION, NodeKind.MODIFIER, NodeKind.BLOCK {
+
+          if (node.hasChildren()) {
+            int i;
+            for (i = 0; i < node.children.length; i++) {
+              Node child = node.children.get(i);
+              if (child != null) {
+                collectTopLevelStatements(child);
+              }
+            }
+          }
+        }
+
+        case
+          NodeKind.USING_ALIAS, NodeKind.USING_NAMESPACE,
+          NodeKind.ENUM, NodeKind.ENUM_FLAGS,
+          NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
+        }
+
+        case
+          NodeKind.VARIABLE_CLUSTER, NodeKind.IF, NodeKind.FOR,
+          NodeKind.FOR_EACH, NodeKind.WHILE, NodeKind.DO_WHILE,
+          NodeKind.RETURN, NodeKind.BREAK, NodeKind.CONTINUE,
+          NodeKind.ASSERT, NodeKind.EXPRESSION, NodeKind.SWITCH {
+
+          topLevelStatements.push(node);
+        }
+      }
     }
 
     void addMapping(Node node) {
@@ -71,7 +140,7 @@ namespace js {
       }
     }
 
-    void emitArguments(List<Node> nodes) {
+    void emitArgumentVariables(List<Node> nodes) {
       emit("(");
       emitCommaSeparatedNodes(nodes);
       emit(")");
@@ -143,20 +212,33 @@ namespace js {
           emit(";\n");
         }
 
-        case NodeKind.NAMESPACE {}
-        case NodeKind.ENUM {}
-        case NodeKind.ENUM_FLAGS {}
-        case NodeKind.CLASS {}
-        case NodeKind.STRUCT {}
-        case NodeKind.INTERFACE {}
+        case NodeKind.NAMESPACE {
+        }
 
-        case NodeKind.EXTENSION {}
-        case NodeKind.CONSTRUCTOR {}
-        case NodeKind.FUNCTION {}
+        case NodeKind.ENUM {
+        }
+
+        case NodeKind.ENUM_FLAGS {
+        }
+
+        case NodeKind.CLASS, NodeKind.STRUCT {
+        }
+
+        case NodeKind.INTERFACE {
+        }
+
+        case NodeKind.EXTENSION {
+        }
+
+        case NodeKind.CONSTRUCTOR {
+        }
+
+        case NodeKind.FUNCTION {
+        }
 
         case NodeKind.VARIABLE {
           Node value = node.variableValue();
-          emit(node.symbol.name);
+          emit(mangleName(node.symbol));
           if (value != null) {
             emit(" = ");
             emitExpression(value, Precedence.COMMA);
@@ -278,11 +360,17 @@ namespace js {
       addMapping(node);
       switch (node.kind) {
         case NodeKind.NAME {
-          emit(node.asString());
+          if (node.symbol == null) {
+            emit(node.asString());
+          } else if (!node.symbol.kind.isInstance()) {
+            emit(fullName(node.symbol));
+          } else {
+            emit("this.".append(mangleName(node.symbol)));
+          }
         }
 
         case NodeKind.TYPE {
-          emit(node.type.symbol.fullName());
+          emit(fullName(node.type.symbol));
         }
 
         case NodeKind.THIS {
@@ -363,7 +451,7 @@ namespace js {
 
         case NodeKind.LAMBDA {
           emit("function ");
-          emitArguments(node.lambdaArguments());
+          emitArgumentVariables(node.lambdaArguments());
           emit(" ");
           emitNode(node.lambdaBlock());
         }
@@ -418,6 +506,41 @@ namespace js {
           assert false;
         }
       }
+    }
+
+    static StringMap<bool> createIsKeyword() {
+      StringMap<bool> result = new StringMap<bool>();
+      result.set("arguments", true);
+      result.set("call", true);
+      result.set("apply", true);
+      result.set("constructor", true);
+      result.set("function", true);
+      result.set("throw", true);
+      result.set("this", true);
+      return result;
+    }
+
+    static StringMap<bool> isKeyword = createIsKeyword();
+
+    string mangleName(Symbol symbol) {
+      if (symbol.isImportOrExport()) {
+        return symbol.name;
+      }
+      if (symbol.kind.isConstructor()) {
+        return mangleName(symbol.enclosingSymbol);
+      }
+      if (isKeyword.has(symbol.name)) {
+        return "$".append(symbol.name);
+      }
+      return symbol.name;
+    }
+
+    string fullName(Symbol symbol) {
+      Symbol enclosingSymbol = symbol.enclosingSymbol;
+      if (enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace()) {
+        return fullName(enclosingSymbol).append(".").append(mangleName(symbol));
+      }
+      return mangleName(symbol);
     }
   }
 }

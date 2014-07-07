@@ -244,6 +244,10 @@ class Symbol {
     return (flags & SymbolFlag.EXPORT) != 0;
   }
 
+  bool isImportOrExport() {
+    return isImport() || isExport();
+  }
+
   bool isUninitialized() {
     assert (flags & (SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED)) != (SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED);
     return (flags & (SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED)) == 0;

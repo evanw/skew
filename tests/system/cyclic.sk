@@ -132,3 +132,22 @@ enum Foo { FOO = BAR, BAR }
 enum Foo { FOO = BAR, BAR }
            ~~~
 ");
+
+test("
+class A : C {}
+in A { class B : C.D {} }
+class C {}
+in C { class D : A {} }
+", "
+");
+
+test("
+class A : C.D {}
+in A { class B {} }
+class C : A.B {}
+in C { class D {} }
+", "
+<stdin>:1:7: error: Cyclic declaration of \"A\"
+class A : C.D {}
+      ^
+");
