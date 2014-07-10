@@ -6,11 +6,15 @@ import struct double { string toString(); }
 
 import struct string {
   final int length;
+  int codeUnitAt(int i);
+  string slice(int start, int end);
+  string append(string value);
 }
 
 import class List<T> {
   final int length;
   T get(int index);
   void set(int index, T value);
+  void push(T value);
 }
 ";

@@ -16,11 +16,17 @@ namespace js {
       int i;
       for (i = 0; i < collector.typeSymbols.length; i++) {
         Type type = collector.typeSymbols.get(i).type;
-        Member constructor = type.constructor();
-        if (constructor != null) {
-          emitNode(constructor.symbol.node);
-        } else if (type.isEnum()) {
+        if (type.isNamespace()) {
           emitNode(type.symbol.node.firstNonExtensionSibling());
+          continue;
+        }
+        if (type.isEnum()) {
+          emitNode(type.symbol.node.firstNonExtensionSibling());
+        } else {
+          Member constructor = type.constructor();
+          if (constructor != null) {
+            emitNode(constructor.symbol.node);
+          }
         }
         List<Member> members = type.members.values();
         int j;
@@ -180,17 +186,30 @@ namespace js {
           int i;
           for (i = 0; i < variables.length; i++) {
             Node variable = variables.get(i);
-            if (!variable.symbol.kind.isInstance()) {
+            bool isCompoundName = hasCompoundName(variable.symbol);
+            if (!variable.symbol.kind.isInstance() && (!isCompoundName || variable.variableValue() != null)) {
               emit(indent);
-              // emit("var "); // TODO: Only for compound names
+              if (!isCompoundName) {
+                emit("var ");
+              }
               emitNode(variable);
               emit(";\n");
             }
           }
         }
 
+        case NodeKind.NAMESPACE {
+          if (!hasCompoundName(node.symbol)) {
+            emit("var ");
+          }
+          emit(indent.append(fullName(node.symbol)).append(" = {};\n"));
+        }
+
         case NodeKind.ENUM, NodeKind.ENUM_FLAGS {
           Node block = node.declarationBlock();
+          if (!hasCompoundName(node.symbol)) {
+            emit("var ");
+          }
           emit(indent.append(fullName(node.symbol)).append(" = {\n"));
           increaseIndent();
           int i;
@@ -205,6 +224,9 @@ namespace js {
         case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
           Node block = node.functionBlock();
           if (block != null) {
+            if (!hasCompoundName(node.symbol)) {
+              emit("var ");
+            }
             emit(indent.append(fullName(node.symbol)).append(" = function"));
             emitArgumentVariables(node.functionArguments().children);
             emit(" ");
@@ -483,6 +505,12 @@ namespace js {
           assert false;
         }
       }
+    }
+
+    bool hasCompoundName(Symbol symbol) {
+      Symbol enclosingSymbol = symbol.enclosingSymbol;
+      return enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() && (
+        !symbol.kind.isConstructor() || hasCompoundName(enclosingSymbol));
     }
 
     static StringMap<bool> createIsKeyword() {

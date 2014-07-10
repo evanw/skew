@@ -32,9 +32,7 @@ class Collector {
         continue;
       }
       if (symbol.kind.isType()) {
-        if (symbol.kind.isTypeWithInstances()) {
-          typeSymbols.push(symbol);
-        }
+        typeSymbols.push(symbol);
         collectDefinitions(symbol.type);
       } else if (symbol.kind.isFunction() && symbol.node != null && (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances())) {
         freeFunctionSymbols.push(symbol);

@@ -183,3 +183,15 @@ Foo foo = { 0, 1 };
 Foo foo = { 0, 1 };
           ~~~~~~~~
 ");
+
+test("
+struct Foo {
+  static int foo;
+  final int bar;
+}
+Foo foo = { 1, 2 };
+", "
+<stdin>:5:11: error: Expected 1 argument but found 2 arguments
+Foo foo = { 1, 2 };
+          ~~~~~~~~
+");

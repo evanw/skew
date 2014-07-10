@@ -1381,7 +1381,7 @@ class Resolver {
     for (i = 0; i < members.length; i++) {
       Member member = members.get(i);
       Symbol memberSymbol = member.symbol;
-      if (memberSymbol.kind.isVariable() && memberSymbol.enclosingSymbol == enclosingSymbol && memberSymbol.node.variableValue() == null) {
+      if (memberSymbol.kind == SymbolKind.INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol && memberSymbol.node.variableValue() == null) {
         initializeMember(member);
         if (member.type.isError(cache)) {
           symbol.flags = symbol.flags | SymbolFlag.INITIALIZED;
