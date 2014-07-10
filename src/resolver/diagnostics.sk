@@ -251,3 +251,7 @@ void semanticErrorCannotParameterize(Log log, Range range, Type type) {
   log.error(range, "Cannot parameterize ".append(typeToText(type)).append(
     type.hasParameters() ? " because it is already parameterized" : " because it has no type parameters"));
 }
+
+void semanticErrorBadSuperInitializer(Log log, Range range) {
+  log.error(range, "No base constructor to call");
+}

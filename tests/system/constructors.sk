@@ -206,5 +206,13 @@ class Bar {
 Foo foo = { false };
 Bar bar = { 0 };
 ", "
-TODO
+<stdin>:2:24: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  new(int foo) : super(foo) {}
+                       ~~~
+<stdin>:7:13: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+Foo foo = { false };
+            ~~~~~
+<stdin>:8:13: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+Bar bar = { 0 };
+            ^
 ");

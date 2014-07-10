@@ -453,9 +453,14 @@ namespace js {
         }
 
         case NodeKind.SUPER_CALL {
-          emit("super"); // TODO
-          emit("(");
-          emitCommaSeparatedExpressions(node.superCallArguments());
+          List<Node> arguments = node.superCallArguments();
+          emit(fullName(node.symbol));
+          emit(".call(this");
+          int i;
+          for (i = 0; i < arguments.length; i++) {
+            emit(", ");
+            emitExpression(arguments.get(i), Precedence.COMMA);
+          }
           emit(")");
         }
 

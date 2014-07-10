@@ -1497,6 +1497,22 @@ class Resolver {
     // log.error(node.range, "TODO: Support nodes of kind ".append(node.kind.toString()));
   }
 
+  void resolveArguments(List<Node> arguments, List<Type> argumentTypes, Range outer, Range inner) {
+    // Validate the argument count
+    if (argumentTypes.length != arguments.length) {
+      Range range = Range.equal(outer, inner) ? outer : Range.after(outer, inner);
+      semanticErrorArgumentCount(log, range, argumentTypes.length, arguments.length);
+      resolveNodesAsExpressions(arguments);
+      return;
+    }
+
+    // Validate the arguments and provide type context
+    int i;
+    for (i = 0; i < arguments.length; i++) {
+      resolveAsExpressionWithConversion(arguments.get(i), argumentTypes.get(i), CastKind.IMPLICIT);
+    }
+  }
+
   void resolveAsType(Node node) {
     assert node.kind.isExpression();
     resolve(node, null);
@@ -1649,6 +1665,8 @@ class Resolver {
   void resolveFunction(Node node) {
     checkDeclarationLocation(node, AllowDeclaration.TOP_OR_OBJECT_LEVEL);
     initializeSymbol(node.symbol);
+
+    // Resolve the function block
     Node block = node.functionBlock();
     if (block != null) {
       Type oldResultType = resultType;
@@ -1665,6 +1683,42 @@ class Resolver {
 
       resultType = oldResultType;
       context.function = oldFunction;
+    }
+
+    // Resolve the initializer list
+    if (node.kind == NodeKind.CONSTRUCTOR) {
+      // Resolve the super initializer
+      Node superInitializer = node.superInitializer();
+      if (superInitializer != null) {
+        // Get the overridden constructor type
+        Member overriddenMember = node.symbol.overriddenMember;
+        Type overriddenType = cache.errorType;
+        if (overriddenMember != null) {
+          initializeMember(overriddenMember);
+          overriddenType = overriddenMember.type;
+          superInitializer.symbol = overriddenMember.symbol;
+        } else {
+          semanticErrorBadSuperInitializer(log, superInitializer.range);
+        }
+
+        // Resolve the arguments
+        List<Node> arguments = superInitializer.superCallArguments();
+        if (overriddenType.isError(cache)) {
+          resolveNodesAsExpressions(arguments);
+        } else {
+          assert overriddenType.isFunction();
+          resolveArguments(arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
+        }
+      }
+
+      // Resolve the member initializers
+      Node memberInitializers = node.memberInitializers();
+      if (memberInitializers != null) {
+        int i;
+        for (i = 0; i < memberInitializers.children.length; i++) {
+          Node variable = memberInitializers.children.get(i);
+        }
+      }
     }
   }
 
@@ -2082,23 +2136,8 @@ class Resolver {
       }
 
       // Set the result type now even if the arguments are incorrect
-      Type resultType = valueType.resultType();
-      List<Type> argumentTypes = valueType.argumentTypes();
-      node.type = resultType;
-
-      // Validate the argument count
-      if (argumentTypes.length != arguments.length) {
-        Range range = Range.equal(node.range, value.range) ? node.range : Range.after(node.range, value.range);
-        semanticErrorArgumentCount(log, range, argumentTypes.length, arguments.length);
-        resolveNodesAsExpressions(arguments);
-        return;
-      }
-
-      // Validate the arguments and provide type context
-      int i;
-      for (i = 0; i < arguments.length; i++) {
-        resolveAsExpressionWithConversion(arguments.get(i), argumentTypes.get(i), CastKind.IMPLICIT);
-      }
+      node.type = valueType.resultType();
+      resolveArguments(arguments, valueType.argumentTypes(), node.range, value.range);
     }
   }
 
