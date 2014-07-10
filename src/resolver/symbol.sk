@@ -40,6 +40,10 @@ in SymbolKind {
     return this >= GLOBAL_NAMESPACE && this <= NAMESPACE;
   }
 
+  bool isTypeWithInstances() {
+    return this >= ENUM && this <= INTERFACE;
+  }
+
   bool isEnum() {
     return this >= ENUM && this <= ENUM_FLAGS;
   }
@@ -177,6 +181,10 @@ class Symbol {
         sortedParameters.set(j, temp);
       }
     }
+  }
+
+  bool isContainedBy(Symbol symbol) {
+    return enclosingSymbol == null ? false : enclosingSymbol == symbol || enclosingSymbol.isContainedBy(symbol);
   }
 
   string fullName() {

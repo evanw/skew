@@ -1,3 +1,115 @@
 interface IEmitter {
   virtual List<Source> emitProgram(Node program);
 }
+
+enum SortTypes {
+  NO,
+  BY_INHERITANCE,
+  BY_INHERITANCE_AND_VALUE,
+  BY_INHERITANCE_AND_CONTAINMENT,
+}
+
+class Collector {
+  TypeCache cache;
+  SortTypes sort;
+  List<Symbol> typeSymbols = {};
+  List<Symbol> freeFunctionSymbols = {};
+  List<Node> topLevelStatements = {};
+
+  new(TypeCache cache, Node program, SortTypes sort) : cache = cache, sort = sort {
+    assert program.kind == NodeKind.PROGRAM;
+    collectDefinitions(cache.globalType);
+    collectTopLevelStatements(program);
+    sortTypeSymbols();
+  }
+
+  void collectDefinitions(Type type) {
+    List<Member> members = type.members.values();
+    int i;
+    for (i = 0; i < members.length; i++) {
+      Symbol symbol = members.get(i).symbol;
+      if (symbol.enclosingSymbol != type.symbol) {
+        continue;
+      }
+      if (symbol.kind.isType()) {
+        if (symbol.kind.isTypeWithInstances()) {
+          typeSymbols.push(symbol);
+        }
+        collectDefinitions(symbol.type);
+      } else if (symbol.kind.isFunction() && symbol.node != null && (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances())) {
+        freeFunctionSymbols.push(symbol);
+      }
+    }
+  }
+
+  void collectTopLevelStatements(Node node) {
+    switch (node.kind) {
+      case
+        NodeKind.PROGRAM, NodeKind.FILE, NodeKind.NAMESPACE,
+        NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE,
+        NodeKind.EXTENSION, NodeKind.MODIFIER, NodeKind.BLOCK {
+
+        if (node.hasChildren()) {
+          int i;
+          for (i = 0; i < node.children.length; i++) {
+            Node child = node.children.get(i);
+            if (child != null) {
+              collectTopLevelStatements(child);
+            }
+          }
+        }
+      }
+
+      case
+        NodeKind.VARIABLE_CLUSTER, NodeKind.IF, NodeKind.FOR,
+        NodeKind.FOR_EACH, NodeKind.WHILE, NodeKind.DO_WHILE,
+        NodeKind.RETURN, NodeKind.BREAK, NodeKind.CONTINUE,
+        NodeKind.ASSERT, NodeKind.EXPRESSION, NodeKind.SWITCH {
+
+        topLevelStatements.push(node);
+      }
+    }
+  }
+
+  void sortTypeSymbols() {
+    if (sort == SortTypes.NO) {
+      return;
+    }
+    int i;
+    for (i = 1; i < typeSymbols.length; i++) {
+      Symbol symbol = typeSymbols.get(i);
+      int j;
+      for (j = 0; j < i; j++) {
+        if (typeComesBefore(symbol.type, typeSymbols.get(j).type)) {
+          int k;
+          for (k = i; k > j; k--) {
+            typeSymbols.set(k, typeSymbols.get(k - 1));
+          }
+          typeSymbols.set(j, symbol);
+          break;
+        }
+      }
+    }
+  }
+
+  bool typeComesBefore(Type left, Type right) {
+    if (right.hasBaseType(left)) {
+      return true;
+    }
+    if (sort == SortTypes.BY_INHERITANCE_AND_VALUE && left.isStruct()) {
+      List<Member> members = right.members.values();
+      if (members != null) {
+        int i;
+        for (i = 0; i < members.length; i++) {
+          if (members.get(i).type == left) {
+            return true;
+          }
+        }
+      }
+    }
+    if (sort == SortTypes.BY_INHERITANCE_AND_CONTAINMENT && right.symbol.isContainedBy(left.symbol)) {
+      return true;
+    }
+    return false;
+  }
+}

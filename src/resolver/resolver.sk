@@ -589,13 +589,6 @@ class Resolver {
     assert node.type != null;
   }
 
-  static Node findFirstNonExtension(Node node) {
-    while (node != null && node.kind == NodeKind.EXTENSION) {
-      node = node.sibling;
-    }
-    return node;
-  }
-
   void checkIsParameterized(Node node) {
     if (!node.type.isError(cache) && node.type.hasParameters() && !node.type.isParameterized()) {
       semanticErrorUnparameterizedType(log, node.range, node.type);
@@ -923,17 +916,24 @@ class Resolver {
     for (i = 0; i < baseMembers.length; i++) {
       Member member = baseMembers.get(i);
       Member existing = type.findMember(member.symbol.name);
+
+      // Link existing members with the member they override
       if (existing != null) {
         assert existing.symbol.overriddenMember == null;
         existing.symbol.overriddenMember = member;
-      } else if (!member.symbol.kind.isConstructor()) {
+      }
+
+      // Note that member.symbol.kind.isConstructor() will miss automatically
+      // generated constructors that haven't been initialized yet, but checking
+      // the name against "new" will always be correct since "new" is a keyword
+      else if (member.symbol.name != "new") {
         type.addMember(member);
       }
     }
   }
 
   void initializeObject(Symbol symbol) {
-    Node node = findFirstNonExtension(symbol.node);
+    Node node = symbol.node.firstNonExtensionSibling();
     Node parameters = node.objectParameters();
     Type type = symbol.type;
     assert type.isObject();
@@ -1360,7 +1360,7 @@ class Resolver {
           List<Type> argumentTypes = constructor.type.argumentTypes();
           int j;
           for (j = 0; j < argumentTypes.length; j++) {
-            string name = arguments.length.toString();
+            string name = "_".append(arguments.length.toString());
             Node argument = Node.createVariable(Node.createName(name), Node.createType(argumentTypes.get(j)), null);
             argument.symbol = new Symbol(name, SymbolKind.LOCAL_VARIABLE);
             argument.symbol.node = argument;
@@ -1406,7 +1406,7 @@ class Resolver {
     // Append each uninitialized member argument now that they are sorted
     for (i = 0; i < uninitializedMembers.length; i++) {
       Member member = uninitializedMembers.get(i);
-      string name = arguments.length.toString();
+      string name = "_".append(arguments.length.toString());
       Node argument = Node.createVariable(Node.createName(name), Node.createType(member.type), null);
       argument.symbol = new Symbol(name, SymbolKind.LOCAL_VARIABLE);
       argument.symbol.node = argument;
@@ -1431,7 +1431,6 @@ class Resolver {
   void initializeSymbol(Symbol symbol) {
     // Handle auto-generated symbols now
     if (symbol.kind == SymbolKind.AUTOMATIC) {
-      Symbol enclosingSymbol = symbol.enclosingSymbol;
       if (symbol.name == "new") {
         generateDefaultConstructor(symbol);
       }
@@ -1471,7 +1470,7 @@ class Resolver {
 
     // Detect cyclic symbol references such as "foo foo;"
     else if (symbol.isInitializing()) {
-      semanticErrorCyclicDeclaration(log, findFirstNonExtension(symbol.node).declarationName().range, symbol.name);
+      semanticErrorCyclicDeclaration(log, symbol.node.firstNonExtensionSibling().declarationName().range, symbol.name);
       symbol.type = cache.errorType;
     }
   }
@@ -1595,6 +1594,10 @@ class Resolver {
   void resolveObject(Node node) {
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     initializeSymbol(node.symbol);
+
+    // Ensure the default constructor is generated if needed
+    Member constructor = node.symbol.type.constructor();
+    if (constructor != null) initializeMember(constructor);
 
     // Force the resolution of all base type members in case some of them are
     // still unmerged. If this is not done for each object type, then some

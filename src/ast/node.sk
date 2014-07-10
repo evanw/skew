@@ -389,6 +389,14 @@ class Node {
     return this;
   }
 
+  Node firstNonExtensionSibling() {
+    Node node = this;
+    while (node != null && node.kind == NodeKind.EXTENSION) {
+      node = node.sibling;
+    }
+    return node;
+  }
+
   static void updateParent(Node node, Node parent) {
     if (node != null) {
       assert node.parent == null;

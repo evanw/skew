@@ -10,14 +10,36 @@ namespace js {
 
     override List<Source> emitProgram(Node program) {
       currentSource = new Source(options.outputFile, "");
-      // emitNode(program);
+      Collector collector = new Collector(cache, program, SortTypes.BY_INHERITANCE_AND_CONTAINMENT);
 
-      collectDefinitions(cache.globalType);
-      collectTopLevelStatements(program);
-
+      // Emit types
       int i;
-      for (i = 0; i < topLevelStatements.length; i++) {
-        emitNode(topLevelStatements.get(i));
+      for (i = 0; i < collector.typeSymbols.length; i++) {
+        Type type = collector.typeSymbols.get(i).type;
+        Member constructor = type.constructor();
+        if (constructor != null) {
+          emitNode(constructor.symbol.node);
+        } else if (type.isEnum()) {
+          emitNode(type.symbol.node.firstNonExtensionSibling());
+        }
+        List<Member> members = type.members.values();
+        int j;
+        for (j = 0; j < members.length; j++) {
+          Symbol symbol = members.get(j).symbol;
+          if (symbol.node != null && symbol.kind.isFunction() && !symbol.kind.isConstructor()) {
+            emitNode(symbol.node);
+          }
+        }
+      }
+
+      // Emit free functions
+      for (i = 0; i < collector.freeFunctionSymbols.length; i++) {
+        emitNode(collector.freeFunctionSymbols.get(i).node);
+      }
+
+      // Emit top-level statements
+      for (i = 0; i < collector.topLevelStatements.length; i++) {
+        emitNode(collector.topLevelStatements.get(i));
       }
 
       // Append the source map inline with the compiled output
@@ -28,59 +50,6 @@ namespace js {
       }
 
       return { currentSource };
-    }
-
-    List<Symbol> types = {};
-    List<Symbol> functions = {};
-    List<Node> topLevelStatements = {};
-
-    void collectDefinitions(Type type) {
-      List<Member> members = type.members.values();
-      int i;
-      for (i = 0; i < members.length; i++) {
-        Symbol symbol = members.get(i).symbol;
-        if (symbol.kind.isType()) {
-          types.push(symbol);
-          collectDefinitions(symbol.type);
-        } else if (symbol.kind.isFunction() && !symbol.kind.isConstructor()) {
-          functions.push(symbol);
-        }
-      }
-    }
-
-    void collectTopLevelStatements(Node node) {
-      switch (node.kind) {
-        case
-          NodeKind.PROGRAM, NodeKind.FILE, NodeKind.NAMESPACE,
-          NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE,
-          NodeKind.EXTENSION, NodeKind.MODIFIER, NodeKind.BLOCK {
-
-          if (node.hasChildren()) {
-            int i;
-            for (i = 0; i < node.children.length; i++) {
-              Node child = node.children.get(i);
-              if (child != null) {
-                collectTopLevelStatements(child);
-              }
-            }
-          }
-        }
-
-        case
-          NodeKind.USING_ALIAS, NodeKind.USING_NAMESPACE,
-          NodeKind.ENUM, NodeKind.ENUM_FLAGS,
-          NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
-        }
-
-        case
-          NodeKind.VARIABLE_CLUSTER, NodeKind.IF, NodeKind.FOR,
-          NodeKind.FOR_EACH, NodeKind.WHILE, NodeKind.DO_WHILE,
-          NodeKind.RETURN, NodeKind.BREAK, NodeKind.CONTINUE,
-          NodeKind.ASSERT, NodeKind.EXPRESSION, NodeKind.SWITCH {
-
-          topLevelStatements.push(node);
-        }
-      }
     }
 
     void addMapping(Node node) {
@@ -207,38 +176,46 @@ namespace js {
         }
 
         case NodeKind.VARIABLE_CLUSTER {
-          emit(indent.append("var "));
-          emitCommaSeparatedNodes(node.clusterVariables());
-          emit(";\n");
+          List<Node> variables = node.clusterVariables();
+          int i;
+          for (i = 0; i < variables.length; i++) {
+            Node variable = variables.get(i);
+            if (!variable.symbol.kind.isInstance()) {
+              emit(indent);
+              // emit("var "); // TODO: Only for compound names
+              emitNode(variable);
+              emit(";\n");
+            }
+          }
         }
 
-        case NodeKind.NAMESPACE {
+        case NodeKind.ENUM, NodeKind.ENUM_FLAGS {
+          Node block = node.declarationBlock();
+          emit(indent.append(fullName(node.symbol)).append(" = {\n"));
+          increaseIndent();
+          int i;
+          for (i = 0; i < block.children.length; i++) {
+            Symbol symbol = block.children.get(i).symbol;
+            emit(indent.append(mangleName(symbol)).append(": ").append(symbol.enumValue.toString()).append(i == block.children.length - 1 ? "\n" : ",\n"));
+          }
+          decreaseIndent();
+          emit(indent.append("};\n"));
         }
 
-        case NodeKind.ENUM {
-        }
-
-        case NodeKind.ENUM_FLAGS {
-        }
-
-        case NodeKind.CLASS, NodeKind.STRUCT {
-        }
-
-        case NodeKind.INTERFACE {
-        }
-
-        case NodeKind.EXTENSION {
-        }
-
-        case NodeKind.CONSTRUCTOR {
-        }
-
-        case NodeKind.FUNCTION {
+        case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
+          Node block = node.functionBlock();
+          if (block != null) {
+            emit(indent.append(fullName(node.symbol)).append(" = function"));
+            emitArgumentVariables(node.functionArguments().children);
+            emit(" ");
+            emitNode(block);
+            emit(";\n");
+          }
         }
 
         case NodeKind.VARIABLE {
           Node value = node.variableValue();
-          emit(mangleName(node.symbol));
+          emit(fullName(node.symbol));
           if (value != null) {
             emit(" = ");
             emitExpression(value, Precedence.COMMA);
@@ -538,7 +515,14 @@ namespace js {
     string fullName(Symbol symbol) {
       Symbol enclosingSymbol = symbol.enclosingSymbol;
       if (enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace()) {
-        return fullName(enclosingSymbol).append(".").append(mangleName(symbol));
+        string enclosingName = fullName(enclosingSymbol);
+        if (symbol.kind.isConstructor()) {
+          return enclosingName;
+        }
+        if (symbol.kind.isInstance()) {
+          enclosingName = enclosingName.append(".prototype");
+        }
+        return enclosingName.append(".").append(mangleName(symbol));
       }
       return mangleName(symbol);
     }
