@@ -827,6 +827,8 @@ class Resolver {
 
   void initializeNamespace(Symbol symbol) {
     assert symbol.type.isNamespace();
+    unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, "on a namespace declaration");
+    unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, "on a namespace declaration");
     unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on a namespace declaration");
     unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on a namespace declaration");
     checkNoBaseTypes(symbol, "A namespace");
@@ -834,6 +836,8 @@ class Resolver {
 
   void initializeEnum(Symbol symbol) {
     assert symbol.type.isEnum();
+    unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, "on an enum declaration");
+    unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, "on an enum declaration");
     unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on an enum declaration");
     unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on an enum declaration");
     checkNoBaseTypes(symbol, "An enum");
@@ -933,6 +937,9 @@ class Resolver {
   }
 
   void initializeObject(Symbol symbol) {
+    unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, "on an object declaration");
+    unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, "on an object declaration");
+
     Node node = symbol.node.firstNonExtensionSibling();
     Node parameters = node.objectParameters();
     Type type = symbol.type;
@@ -969,6 +976,11 @@ class Resolver {
   }
 
   void initializeFunction(Symbol symbol) {
+    unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, "on a function declaration");
+    if (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances()) {
+      unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, "outside an object declaration");
+    }
+
     Node node = symbol.node;
     Type resultType;
     Node result;
@@ -1104,6 +1116,9 @@ class Resolver {
   void initializeVariable(Symbol symbol) {
     unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on a variable declaration");
     unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on a variable declaration");
+    if (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances()) {
+      unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, "outside an object declaration");
+    }
     if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind == SymbolKind.STRUCT && !symbol.isStatic()) {
       expectedModifierIfAbsent(symbol, SymbolFlag.FINAL, "on a variable declaration inside a struct");
     }
@@ -1658,11 +1673,12 @@ class Resolver {
     // Prevent instance variables inside interfaces. Also prevent instance
     // variables without initial values in extension blocks because default
     // constructors need to order their arguments.
-    if (!symbol.isStatic() && symbol.enclosingSymbol != null) {
-      Type enclosingSymbolType = symbol.enclosingSymbol.type;
-      if (enclosingSymbolType.isInterface() || symbol.isFromExtension() && !enclosingSymbolType.isClass()) {
+    Symbol enclosingSymbol = symbol.enclosingSymbol;
+    if (!symbol.isStatic() && enclosingSymbol != null) {
+      Type enclosingSymbolType = enclosingSymbol.type;
+      if (enclosingSymbolType.isInterface() || symbol.isFromExtension() && enclosingSymbolType.isEnum()) {
         unexpectedStatement(node);
-      } else if (symbol.isFromExtension() && value == null) {
+      } else if (symbol.isFromExtension() && enclosingSymbol.kind.isTypeWithInstances() && value == null) {
         semanticErrorUninitializedExtensionVariable(log, node.declarationName().range);
       }
     }

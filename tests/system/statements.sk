@@ -146,17 +146,17 @@ test("
 struct Foo {}
 in Foo {
   final int a = 0;
-  final int b;
+  final int b, foo;
   static int c = 0;
   static int d;
 }
 ", "
-<stdin>:3:9: error: Cannot use this statement here
-  final int a = 0;
-        ~~~~~~~~~~
-<stdin>:4:9: error: Cannot use this statement here
-  final int b;
-        ~~~~~~
+<stdin>:4:13: error: Instance variables in extension blocks must be initialized
+  final int b, foo;
+            ^
+<stdin>:4:16: error: Instance variables in extension blocks must be initialized
+  final int b, foo;
+               ~~~
 ");
 
 test("
@@ -173,6 +173,23 @@ in Foo {
   ~~~~~~~~~~
 <stdin>:4:3: error: Cannot use this statement here
   int b;
+  ~~~~~~
+");
+
+test("
+namespace Foo {}
+in Foo {
+  int a = 0;
+  int b;
+  static int c = 0;
+  static int d;
+}
+", "
+<stdin>:5:3: error: Cannot use the \"static\" modifier outside an object declaration
+  static int c = 0;
+  ~~~~~~
+<stdin>:6:3: error: Cannot use the \"static\" modifier outside an object declaration
+  static int d;
   ~~~~~~
 ");
 

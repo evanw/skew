@@ -26,3 +26,111 @@ public class Foo {
 }
 ", "
 ");
+
+test("
+final int v;
+final void f() {}
+final enum E {}
+final class C {}
+final namespace n {}
+", "
+<stdin>:2:1: error: Cannot use the \"final\" modifier on a function declaration
+final void f() {}
+~~~~~
+<stdin>:3:1: error: Cannot use the \"final\" modifier on an enum declaration
+final enum E {}
+~~~~~
+<stdin>:4:1: error: Cannot use the \"final\" modifier on an object declaration
+final class C {}
+~~~~~
+<stdin>:5:1: error: Cannot use the \"final\" modifier on a namespace declaration
+final namespace n {}
+~~~~~
+");
+
+test("
+virtual int v;
+virtual void f() {}
+virtual enum E {}
+virtual class C {}
+virtual namespace n {}
+", "
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on a variable declaration
+virtual int v;
+~~~~~~~
+<stdin>:2:1: error: Cannot use the \"virtual\" modifier outside an object declaration
+virtual void f() {}
+~~~~~~~
+<stdin>:3:1: error: Cannot use the \"virtual\" modifier on an enum declaration
+virtual enum E {}
+~~~~~~~
+<stdin>:4:1: error: Cannot use the \"virtual\" modifier on a class declaration
+virtual class C {}
+~~~~~~~
+<stdin>:5:1: error: Cannot use the \"virtual\" modifier on a namespace declaration
+virtual namespace n {}
+~~~~~~~
+");
+
+test("
+override int v;
+override void f() {}
+override enum E {}
+override class C {}
+override namespace n {}
+", "
+<stdin>:1:1: error: Cannot use the \"override\" modifier on a variable declaration
+override int v;
+~~~~~~~~
+<stdin>:2:1: error: Cannot use the \"override\" modifier outside an object declaration
+override void f() {}
+~~~~~~~~
+<stdin>:3:1: error: Cannot use the \"override\" modifier on an enum declaration
+override enum E {}
+~~~~~~~~
+<stdin>:4:1: error: Cannot use the \"override\" modifier on a class declaration
+override class C {}
+~~~~~~~~
+<stdin>:5:1: error: Cannot use the \"override\" modifier on a namespace declaration
+override namespace n {}
+~~~~~~~~
+");
+
+test("
+static int v;
+static void f() {}
+static enum E {}
+static class C {}
+static namespace n {}
+", "
+<stdin>:1:1: error: Cannot use the \"static\" modifier outside an object declaration
+static int v;
+~~~~~~
+<stdin>:2:1: error: Cannot use the \"static\" modifier outside an object declaration
+static void f() {}
+~~~~~~
+<stdin>:3:1: error: Cannot use the \"static\" modifier on an enum declaration
+static enum E {}
+~~~~~~
+<stdin>:4:1: error: Cannot use the \"static\" modifier on an object declaration
+static class C {}
+~~~~~~
+<stdin>:5:1: error: Cannot use the \"static\" modifier on a namespace declaration
+static namespace n {}
+~~~~~~
+");
+
+test("
+namespace foo {}
+in foo {
+  static int foo;
+  static void bar() {}
+}
+", "
+<stdin>:3:3: error: Cannot use the \"static\" modifier outside an object declaration
+  static int foo;
+  ~~~~~~
+<stdin>:4:3: error: Cannot use the \"static\" modifier outside an object declaration
+  static void bar() {}
+  ~~~~~~
+");
