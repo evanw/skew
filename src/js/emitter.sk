@@ -230,7 +230,28 @@ namespace js {
             emit(indent.append(fullName(node.symbol)).append(" = function"));
             emitArgumentVariables(node.functionArguments().children);
             emit(" ");
-            emitNode(block);
+            emit("{\n");
+            increaseIndent();
+            if (node.kind == NodeKind.CONSTRUCTOR) {
+              Node superInitializer = node.superInitializer();
+              Node memberInitializers = node.memberInitializers();
+              if (superInitializer != null) {
+                emit(indent);
+                emitExpression(superInitializer, Precedence.LOWEST);
+                emit(";\n");
+              }
+              if (memberInitializers != null) {
+                int i;
+                for (i = 0; i < memberInitializers.children.length; i++) {
+                  emit(indent);
+                  emitNode(memberInitializers.children.get(i));
+                  emit(";\n");
+                }
+              }
+            }
+            emitChildren(block);
+            decreaseIndent();
+            emit(indent.append("}"));
             emit(";\n");
           }
         }
@@ -424,16 +445,18 @@ namespace js {
 
         case NodeKind.CALL {
           Node value = node.callValue();
-          if (Precedence.MEMBER < precedence) emit("(");
           if (value.kind.isType()) emit("new ");
           emitExpression(value, Precedence.UNARY_POSTFIX);
           emit("(");
           emitCommaSeparatedExpressions(node.callArguments());
           emit(")");
-          if (Precedence.MEMBER < precedence) emit(")");
         }
 
         case NodeKind.SUPER_CALL {
+          emit("super"); // TODO
+          emit("(");
+          emitCommaSeparatedExpressions(node.superCallArguments());
+          emit(")");
         }
 
         case NodeKind.SEQUENCE {

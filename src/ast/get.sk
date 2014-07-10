@@ -271,6 +271,18 @@ in Node {
     return children.get(3);
   }
 
+  Node superInitializer() {
+    assert kind == NodeKind.CONSTRUCTOR;
+    assert children.length == 5;
+    return children.get(3);
+  }
+
+  Node memberInitializers() {
+    assert kind == NodeKind.CONSTRUCTOR;
+    assert children.length == 5;
+    return children.get(4);
+  }
+
   List<Node> lambdaArguments() {
     assert kind == NodeKind.LAMBDA;
     assert children.length >= 1;
@@ -324,6 +336,11 @@ in Node {
     assert kind == NodeKind.CALL;
     assert children.length >= 1;
     return children.slice(1, children.length);
+  }
+
+  List<Node> superCallArguments() {
+    assert kind == NodeKind.SUPER_CALL;
+    return children;
   }
 
   List<Node> initializerValues() {

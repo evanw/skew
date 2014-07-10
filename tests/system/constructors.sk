@@ -195,3 +195,16 @@ Foo foo = { 1, 2 };
 Foo foo = { 1, 2 };
           ~~~~~~~~
 ");
+
+test("
+class Foo : Bar {
+  new(int foo) : super(foo) {}
+}
+class Bar {
+  new(bool foo) {}
+}
+Foo foo = { false };
+Bar bar = { 0 };
+", "
+TODO
+");

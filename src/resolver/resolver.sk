@@ -1018,7 +1018,7 @@ class Resolver {
 
     // Functions must not have a different type than the symbol they override
     Member overriddenMember = symbol.overriddenMember;
-    if (overriddenMember != null) {
+    if (overriddenMember != null && !symbol.kind.isConstructor()) {
       initializeMember(overriddenMember);
       Type base = overriddenMember.type;
       Type derived = symbol.type;
@@ -1363,7 +1363,7 @@ class Resolver {
     List<Member> members = enclosingSymbol.type.members.values();
     List<Node> arguments = {};
     List<Node> superArguments = null;
-    List<Node> memberInitializers = null;
+    List<Node> memberInitializers = {};
 
     // Add arguments for each base constructor argument
     Type baseClass = enclosingSymbol.type.isClass() ? enclosingSymbol.type.baseClass() : null;
@@ -1374,12 +1374,14 @@ class Resolver {
         if (constructor.type.isFunction()) {
           List<Type> argumentTypes = constructor.type.argumentTypes();
           int j;
+          superArguments = {};
           for (j = 0; j < argumentTypes.length; j++) {
             string name = "_".append(arguments.length.toString());
             Node argument = Node.createVariable(Node.createName(name), Node.createType(argumentTypes.get(j)), null);
             argument.symbol = new Symbol(name, SymbolKind.LOCAL_VARIABLE);
             argument.symbol.node = argument;
             arguments.push(argument);
+            superArguments.push(Node.createName(name));
           }
         } else {
           assert constructor.type.isError(cache);
@@ -1426,6 +1428,7 @@ class Resolver {
       argument.symbol = new Symbol(name, SymbolKind.LOCAL_VARIABLE);
       argument.symbol.node = argument;
       arguments.push(argument);
+      memberInitializers.push(Node.createVariable(Node.createName(name), null, Node.createName(name)));
     }
 
     // Change the automatic symbol into a constructor symbol
