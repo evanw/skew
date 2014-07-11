@@ -197,7 +197,7 @@ class Symbol {
   }
 
   bool isEnumValue() {
-    return kind == SymbolKind.GLOBAL_VARIABLE && enclosingSymbol != null && enclosingSymbol.kind.isEnum();
+    return kind.isVariable() && enclosingSymbol != null && enclosingSymbol.kind.isEnum();
   }
 
   bool isObjectMember() {

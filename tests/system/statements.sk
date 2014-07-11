@@ -370,3 +370,13 @@ i = 1;
 i *= 2;
 ", "
 ");
+
+test("
+void foo() {
+  enum Foo { FOO }
+}
+", "
+<stdin>:2:3: error: Cannot use this statement here
+  enum Foo { FOO }
+  ~~~~~~~~~~~~~~~~
+");
