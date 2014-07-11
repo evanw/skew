@@ -1,0 +1,67 @@
+testJS("
+class Foo : Bar {}
+class Bar {}
+", "
+var Bar = function() {
+};
+var Foo = function() {
+  Bar.call(this);
+};
+");
+
+testJS("
+class Foo : Bar {}
+class Bar { int x; }
+", "
+var Bar = function(_0) {
+  this.x = _0;
+};
+var Foo = function(_0) {
+  Bar.call(this, _0);
+};
+");
+
+testJS("
+class Foo : Bar { int y; }
+class Bar {}
+", "
+var Bar = function() {
+};
+var Foo = function(_0) {
+  Bar.call(this);
+  this.y = _0;
+};
+");
+
+testJS("
+class Foo : Bar { int y; }
+class Bar { int x; }
+", "
+var Bar = function(_0) {
+  this.x = _0;
+};
+var Foo = function(_0, _1) {
+  Bar.call(this, _0);
+  this.y = _1;
+};
+");
+
+testJS("
+namespace ns {
+  interface IFoo {}
+  class Foo : IFoo {}
+  struct Bar {}
+  enum Baz { A, B, C }
+}
+", "
+var ns = {};
+ns.Foo = function() {
+};
+ns.Bar = function() {
+};
+ns.Baz = {
+  A: 0,
+  B: 1,
+  C: 2
+};
+");

@@ -7,6 +7,13 @@ function test(input, expected) {
   });
 }
 
+function testJS(input, expected) {
+  input = input.trim();
+  it(input.replace(/\s+/g, ' '), function() {
+    runJS(input, expected);
+  });
+}
+
 function expect(output, expected) {
   assert.strictEqual(output.trim(), expected.trim());
 }

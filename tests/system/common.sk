@@ -1,4 +1,5 @@
 import void test(string input, string expected);
+import void testJS(string input, string expected);
 import void expect(string output, string expected);
 
 void run(string input, string expected) {
@@ -7,4 +8,22 @@ void run(string input, string expected) {
   Compiler compiler = new Compiler();
   CompilerResult result = compiler.compile(options);
   expect(compiler.log.toString(), expected);
+}
+
+void runJS(string input, string expected) {
+  CompilerOptions options = new CompilerOptions();
+  options.inputs = { new Source("<stdin>", input) };
+  options.targetFormat = TargetFormat.JS;
+  Compiler compiler = new Compiler();
+  CompilerResult result = compiler.compile(options);
+  if (result.outputs != null) {
+    string output = "";
+    int i;
+    for (i = 0; i < result.outputs.length; i++) {
+      output = output.append(result.outputs.get(i).contents).append("\n");
+    }
+    expect(output, expected);
+  } else {
+    expect(compiler.log.toString(), expected);
+  }
 }
