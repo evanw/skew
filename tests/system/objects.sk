@@ -571,3 +571,12 @@ Bar foo = {};
 class Foo { var foo; }
                 ~~~
 ");
+
+test("
+class Foo {}
+in Foo { int foo() { return this; } }
+", "
+<stdin>:2:29: error: Cannot convert from type \"Foo\" to type \"int\"
+in Foo { int foo() { return this; } }
+                            ~~~~
+");

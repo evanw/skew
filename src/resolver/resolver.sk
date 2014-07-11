@@ -1670,7 +1670,14 @@ class Resolver {
   void resolveExtension(Node node) {
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     initializeSymbol(node.symbol);
+
+    Node oldObject = context.object;
+    if (node.symbol.kind.isObject()) {
+      context.object = node.symbol.node.firstNonExtensionSibling();
+      assert context.object.kind.isObject();
+    }
     resolve(node.declarationBlock(), null);
+    context.object = oldObject;
   }
 
   void resolveFunction(Node node) {
