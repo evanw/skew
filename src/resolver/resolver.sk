@@ -2389,6 +2389,20 @@ class Resolver {
       }
     }
 
+    // Special-case equality comparisons to provide type context
+    if (kind == NodeKind.EQUAL || kind == NodeKind.NOT_EQUAL) {
+      bool leftNeedsContext = left.needsTypeContext();
+      bool rightNeedsContext = right.needsTypeContext();
+      if (leftNeedsContext && !rightNeedsContext) {
+        resolveAsExpression(right);
+        resolveAsExpressionWithTypeContext(left, right.type);
+      } else if (!leftNeedsContext && rightNeedsContext) {
+        resolveAsExpression(left);
+        resolveAsExpressionWithTypeContext(right, left.type);
+      }
+    }
+
+    // This won't resolve twice if the nodes were already resolved above
     resolveAsExpression(left);
     resolveAsExpression(right);
 

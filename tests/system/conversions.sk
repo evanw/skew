@@ -247,10 +247,17 @@ test("
 enum Foo { BAR, BAZ }
 Foo x = true ? .BAR : .BAZ;
 Foo y = .FOO;
+int z = x == .FOO || .FOO == y;
 ", "
 <stdin>:3:10: error: \"FOO\" is not declared on type \"Foo\"
 Foo y = .FOO;
          ~~~
+<stdin>:4:15: error: \"FOO\" is not declared on type \"Foo\"
+int z = x == .FOO || .FOO == y;
+              ~~~
+<stdin>:4:23: error: \"FOO\" is not declared on type \"Foo\"
+int z = x == .FOO || .FOO == y;
+                      ~~~
 ");
 
 test("

@@ -398,6 +398,11 @@ class Node {
     return node;
   }
 
+  bool needsTypeContext() {
+    assert kind.isExpression();
+    return kind == NodeKind.INITIALIZER || kind == NodeKind.DOT && dotTarget() == null;
+  }
+
   static void updateParent(Node node, Node parent) {
     if (node != null) {
       assert node.parent == null;
