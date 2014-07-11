@@ -528,9 +528,9 @@ namespace js {
 
           OperatorInfo info = operatorInfo.get(node.kind);
           if (info.precedence < precedence) emit("(");
-          emitExpression(node.binaryLeft(), info.precedence);
+          emitExpression(node.binaryLeft(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.RIGHT)));
           emit(" ".append(info.text).append(" "));
-          emitExpression(node.binaryRight(), info.precedence);
+          emitExpression(node.binaryRight(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.LEFT)));
           if (info.precedence < precedence) emit(")");
         }
 
