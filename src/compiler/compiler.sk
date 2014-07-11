@@ -44,15 +44,39 @@ class Compiler {
   double totalTime = 0;
   Log log = new Log();
 
-  string statistics() {
-    List<string> parts = {};
-    if (tokenizeTime > 0) parts.push("tokenize: ".append(formatNumber(tokenizeTime)).append("ms"));
-    if (parseTime > 0) parts.push("parse: ".append(formatNumber(parseTime)).append("ms"));
-    if (resolveTime > 0) parts.push("resolve: ".append(formatNumber(resolveTime)).append("ms"));
-    if (emitTime > 0) parts.push("emit: ".append(formatNumber(emitTime)).append("ms"));
-    string result = "compile time: ".append(formatNumber(totalTime)).append("ms");
-    if (parts.length > 0) result = result.append(" (").append(", ".join(parts)).append(")");
-    return result;
+  string statistics(CompilerResult result) {
+    // Line count
+    int lineCount = 0;
+    int i;
+    for (i = 0; i < result.options.inputs.length; i++) {
+      lineCount = lineCount + result.options.inputs.get(i).lineCount();
+    }
+    string text = "Lines: ".append(lineCount.toString());
+
+    // Compilation time
+    text = text.append("\nTime: ").append(formatNumber(totalTime)).append("ms");
+    if (tokenizeTime > 0) text = text.append("\n  Tokenize: ").append(formatNumber(tokenizeTime).append("ms"));
+    if (parseTime > 0) text = text.append("\n  Parse: ").append(formatNumber(parseTime).append("ms"));
+    if (resolveTime > 0) text = text.append("\n  Resolve: ").append(formatNumber(resolveTime).append("ms"));
+    if (emitTime > 0) text = text.append("\n  Emit: ").append(formatNumber(emitTime).append("ms"));
+
+    // Inputs
+    text = text.append("\nInputs: ").append(result.options.inputs.length.toString());
+    for (i = 0; i < result.options.inputs.length; i++) {
+      Source source = result.options.inputs.get(i);
+      text = text.append("\n  ").append(source.name).append(": ").append(bytesToString(source.contents.length));
+    }
+
+    // Outputs
+    if (result.outputs != null) {
+      text = text.append("\nOutputs: ").append(result.outputs.length.toString());
+      for (i = 0; i < result.outputs.length; i++) {
+        Source source = result.outputs.get(i);
+        text = text.append("\n  ").append(source.name).append(": ").append(bytesToString(source.contents.length));
+      }
+    }
+
+    return text;
   }
 
   CompilerResult compile(CompilerOptions options) {
@@ -61,10 +85,10 @@ class Compiler {
     Node program = Node.createProgram({});
 
     // Tokenize and parse each module individually
-    processInput(program, new Source("<native>", NATIVE_LIBRARY));
+    options.inputs.unshift(new Source("<native>", NATIVE_LIBRARY));
     int i;
     for (i = 0; i < options.inputs.length; i++) {
-      processInput(program, options.inputs.get(i));
+      processInput(program, options, options.inputs.get(i));
     }
 
     // Resolve everything together
@@ -101,7 +125,7 @@ class Compiler {
     return new CompilerResult(options, outputs, program, resolver);
   }
 
-  void processInput(Node program, Source source) {
+  void processInput(Node program, CompilerOptions options, Source source) {
     int errorCount = log.errorCount;
 
     // Tokenize the source

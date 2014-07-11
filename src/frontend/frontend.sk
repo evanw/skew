@@ -181,7 +181,7 @@ namespace frontend {
     }
     if (hasErrors) summary = summary.append(log.errorCount.toString().append(plural(log.errorCount, " error", " errors")));
     if (hasWarnings || hasErrors) io.print(summary.append(" generated\n"));
-    if (flags.verbose) io.print(compiler.statistics().append("\n"));
+    if (flags.verbose) io.print(compiler.statistics(result).append("\n"));
     if (hasErrors) return 1;
 
     // Write all outputs
@@ -196,7 +196,6 @@ namespace frontend {
           printError("Could not write to ".append(quoteString(output.name, '"')));
           return 1;
         }
-        if (flags.verbose) io.print(output.name.append(": ").append(bytesToString(output.contents.length)).append("\n"));
       }
     }
 
