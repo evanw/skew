@@ -497,11 +497,20 @@ namespace js {
           NodeKind.PREFIX_INCREMENT, NodeKind.PREFIX_DECREMENT,
           NodeKind.POSTFIX_INCREMENT, NodeKind.POSTFIX_DECREMENT {
 
+          Node value = node.unaryValue();
           OperatorInfo info = operatorInfo.get(node.kind);
           if (info.precedence < precedence) emit("(");
           bool isPostfix = info.precedence == Precedence.UNARY_POSTFIX;
-          if (!isPostfix) emit(info.text);
-          emitExpression(node.unaryValue(), info.precedence);
+          if (!isPostfix) {
+            emit(info.text);
+
+            // Prevent "- -1" from becoming "--1"
+            if (node.kind == NodeKind.POSITIVE && (value.kind == NodeKind.POSITIVE || value.kind == NodeKind.PREFIX_INCREMENT) ||
+                node.kind == NodeKind.NEGATIVE && (value.kind == NodeKind.NEGATIVE || value.kind == NodeKind.PREFIX_DECREMENT)) {
+              emit(" ");
+            }
+          }
+          emitExpression(value, info.precedence);
           if (isPostfix) emit(info.text);
           if (info.precedence < precedence) emit(")");
         }
