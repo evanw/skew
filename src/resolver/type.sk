@@ -109,7 +109,9 @@ class Type {
 
   Type baseClass() {
     assert isClass();
-    return hasRelevantTypes() ? relevantTypes.get(0) : null;
+    if (!hasRelevantTypes()) return null;
+    Type first = relevantTypes.get(0);
+    return first.isClass() ? first : null;
   }
 
   Type bound() {

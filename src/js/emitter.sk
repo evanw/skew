@@ -12,6 +12,21 @@ namespace js {
       currentSource = new Source(options.outputFile, "");
       Collector collector = new Collector(cache, program, SortTypes.BY_INHERITANCE_AND_CONTAINMENT);
 
+      // Emit helper functions
+      for (i = 0; i < collector.typeSymbols.length; i++) {
+        Type type = collector.typeSymbols.get(i).type;
+        if (type.isClass() && type.baseClass() != null) {
+          emit(
+"function $extends(derived, base) {
+  function shim() { this.constructor = derived; }
+  shim.prototype = base.prototype;
+  derived.prototype = new shim();
+}
+");
+          break;
+        }
+      }
+
       // Emit types
       int i;
       for (i = 0; i < collector.typeSymbols.length; i++) {
@@ -223,36 +238,44 @@ namespace js {
 
         case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
           Node block = node.functionBlock();
-          if (block != null) {
-            if (!hasCompoundName(node.symbol)) {
-              emit("var ");
-            }
+          if (block == null) {
+            return;
+          }
+          bool isCompoundName = hasCompoundName(node.symbol);
+          if (!isCompoundName) {
+            emit(indent.append("function ").append(fullName(node.symbol)));
+          } else {
             emit(indent.append(fullName(node.symbol)).append(" = function"));
-            emitArgumentVariables(node.functionArguments().children);
-            emit(" ");
-            emit("{\n");
-            increaseIndent();
-            if (node.kind == NodeKind.CONSTRUCTOR) {
-              Node superInitializer = node.superInitializer();
-              Node memberInitializers = node.memberInitializers();
-              if (superInitializer != null) {
+          }
+          emitArgumentVariables(node.functionArguments().children);
+          emit(" ");
+          emit("{\n");
+          increaseIndent();
+          if (node.kind == NodeKind.CONSTRUCTOR) {
+            Node superInitializer = node.superInitializer();
+            Node memberInitializers = node.memberInitializers();
+            if (superInitializer != null) {
+              emit(indent);
+              emitExpression(superInitializer, Precedence.LOWEST);
+              emit(";\n");
+            }
+            if (memberInitializers != null) {
+              int i;
+              for (i = 0; i < memberInitializers.children.length; i++) {
                 emit(indent);
-                emitExpression(superInitializer, Precedence.LOWEST);
+                emitNode(memberInitializers.children.get(i));
                 emit(";\n");
               }
-              if (memberInitializers != null) {
-                int i;
-                for (i = 0; i < memberInitializers.children.length; i++) {
-                  emit(indent);
-                  emitNode(memberInitializers.children.get(i));
-                  emit(";\n");
-                }
-              }
             }
-            emitChildren(block);
-            decreaseIndent();
-            emit(indent.append("}"));
-            emit(";\n");
+          }
+          emitChildren(block);
+          decreaseIndent();
+          emit(indent.append(isCompoundName ? "};\n" : "}\n"));
+          if (node.kind == NodeKind.CONSTRUCTOR) {
+            Type type = node.symbol.enclosingSymbol.type;
+            if (type.isClass() && type.baseClass() != null) {
+              emit(indent.append("$extends(").append(fullName(type.symbol)).append(", ").append(fullName(type.baseClass().symbol)).append(");\n"));
+            }
           }
         }
 
@@ -483,7 +506,7 @@ namespace js {
         }
 
         case NodeKind.LAMBDA {
-          emit("function ");
+          emit("function");
           emitArgumentVariables(node.lambdaArguments());
           emit(" ");
           emitNode(node.lambdaBlock());

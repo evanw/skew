@@ -2,48 +2,72 @@ testJS("
 class Foo : Bar {}
 class Bar {}
 ", "
-var Bar = function() {
-};
-var Foo = function() {
+function $extends(derived, base) {
+  function shim() { this.constructor = derived; }
+  shim.prototype = base.prototype;
+  derived.prototype = new shim();
+}
+function Bar() {
+}
+function Foo() {
   Bar.call(this);
-};
+}
+$extends(Foo, Bar);
 ");
 
 testJS("
 class Foo : Bar {}
 class Bar { int x; }
 ", "
-var Bar = function(_0) {
+function $extends(derived, base) {
+  function shim() { this.constructor = derived; }
+  shim.prototype = base.prototype;
+  derived.prototype = new shim();
+}
+function Bar(_0) {
   this.x = _0;
-};
-var Foo = function(_0) {
+}
+function Foo(_0) {
   Bar.call(this, _0);
-};
+}
+$extends(Foo, Bar);
 ");
 
 testJS("
 class Foo : Bar { int y; }
 class Bar {}
 ", "
-var Bar = function() {
-};
-var Foo = function(_0) {
+function $extends(derived, base) {
+  function shim() { this.constructor = derived; }
+  shim.prototype = base.prototype;
+  derived.prototype = new shim();
+}
+function Bar() {
+}
+function Foo(_0) {
   Bar.call(this);
   this.y = _0;
-};
+}
+$extends(Foo, Bar);
 ");
 
 testJS("
 class Foo : Bar { int y; }
 class Bar { int x; }
 ", "
-var Bar = function(_0) {
+function $extends(derived, base) {
+  function shim() { this.constructor = derived; }
+  shim.prototype = base.prototype;
+  derived.prototype = new shim();
+}
+function Bar(_0) {
   this.x = _0;
-};
-var Foo = function(_0, _1) {
+}
+function Foo(_0, _1) {
   Bar.call(this, _0);
   this.y = _1;
-};
+}
+$extends(Foo, Bar);
 ");
 
 testJS("
