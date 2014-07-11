@@ -216,3 +216,49 @@ Foo foo = { false };
 Bar bar = { 0 };
             ^
 ");
+
+test("
+class Foo {
+  new() : super(x) {}
+}
+", "
+<stdin>:2:11: error: No base constructor to call
+  new() : super(x) {}
+          ~~~~~~~~
+<stdin>:2:17: error: \"x\" is not declared
+  new() : super(x) {}
+                ^
+");
+
+test("
+class Foo : Bar { new() {} }
+class Bar {}
+", "
+");
+
+test("
+class Foo : Bar {
+  new() {}
+}
+class Bar {
+  int foo;
+}
+", "
+<stdin>:2:3: error: Missing call to \"super\" in initializer list
+  new() {}
+  ~~~
+");
+
+test("
+class Foo : Bar {
+  int x;
+  new() : x = 0 {}
+}
+class Bar {
+  new(int foo) {}
+}
+", "
+<stdin>:3:3: error: Missing call to \"super\" in initializer list
+  new() : x = 0 {}
+  ~~~
+");

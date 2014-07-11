@@ -1705,15 +1705,18 @@ class Resolver {
 
     // Resolve the initializer list
     if (node.kind == NodeKind.CONSTRUCTOR) {
+      // Get the base constructor type
+      Member overriddenMember = node.symbol.overriddenMember;
+      Type overriddenType = cache.errorType;
+      if (overriddenMember != null) {
+        initializeMember(overriddenMember);
+        overriddenType = overriddenMember.type;
+      }
+
       // Resolve the super initializer
       Node superInitializer = node.superInitializer();
       if (superInitializer != null) {
-        // Get the overridden constructor type
-        Member overriddenMember = node.symbol.overriddenMember;
-        Type overriddenType = cache.errorType;
         if (overriddenMember != null) {
-          initializeMember(overriddenMember);
-          overriddenType = overriddenMember.type;
           superInitializer.symbol = overriddenMember.symbol;
         } else {
           semanticErrorBadSuperInitializer(log, superInitializer.range);
@@ -1726,6 +1729,15 @@ class Resolver {
         } else {
           assert overriddenType.isFunction();
           resolveArguments(arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
+        }
+      }
+
+      // Automatically insert a call to the base constructor if possible
+      else if (overriddenType.isFunction()) {
+        if (overriddenType.argumentTypes().length > 0) {
+          semanticErrorMissingSuperInitializer(log, node.declarationName().range);
+        } else {
+          node.children.set(3, Node.createSuperCall({}).withSymbol(overriddenMember.symbol));
         }
       }
 

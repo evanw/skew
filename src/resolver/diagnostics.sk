@@ -255,3 +255,7 @@ void semanticErrorCannotParameterize(Log log, Range range, Type type) {
 void semanticErrorBadSuperInitializer(Log log, Range range) {
   log.error(range, "No base constructor to call");
 }
+
+void semanticErrorMissingSuperInitializer(Log log, Range range) {
+  log.error(range, "Missing call to \"super\" in initializer list");
+}
