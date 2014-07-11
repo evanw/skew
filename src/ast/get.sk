@@ -283,6 +283,18 @@ in Node {
     return children.get(4);
   }
 
+  Node memberInitializerName() {
+    assert kind == NodeKind.MEMBER_INITIALIZER;
+    assert children.length == 2;
+    return children.get(0);
+  }
+
+  Node memberInitializerValue() {
+    assert kind == NodeKind.MEMBER_INITIALIZER;
+    assert children.length == 2;
+    return children.get(1);
+  }
+
   List<Node> lambdaArguments() {
     assert kind == NodeKind.LAMBDA;
     assert children.length >= 1;

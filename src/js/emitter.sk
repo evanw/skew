@@ -256,6 +256,12 @@ namespace js {
           }
         }
 
+        case NodeKind.MEMBER_INITIALIZER {
+          emitExpression(node.memberInitializerName(), Precedence.MEMBER);
+          emit(" = ");
+          emitExpression(node.memberInitializerValue(), Precedence.COMMA);
+        }
+
         case NodeKind.VARIABLE {
           Node value = node.variableValue();
           emit(fullName(node.symbol));

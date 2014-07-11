@@ -31,6 +31,12 @@ in Node {
     return new Node(NodeKind.VARIABLE_CLUSTER).withChildren(variables);
   }
 
+  static Node createMemberInitializer(Node name, Node value) {
+    assert name.kind == NodeKind.NAME;
+    assert value.kind.isExpression();
+    return new Node(NodeKind.MEMBER_INITIALIZER).withChildren({ name, value });
+  }
+
   static Node createNamespace(Node name, Node block) {
     assert name == null || name.kind == NodeKind.NAME;
     assert block.kind == NodeKind.BLOCK;
@@ -82,7 +88,7 @@ in Node {
     assert checkAllNodeListKinds(arguments, new NodeKindCheck(NodeKind.VARIABLE));
     assert block == null || block.kind == NodeKind.BLOCK;
     assert superInitializer == null || superInitializer.kind == NodeKind.SUPER_CALL;
-    assert memberInitializers == null || checkAllNodeListKinds(memberInitializers, new NodeKindCheck(NodeKind.VARIABLE));
+    assert memberInitializers == null || checkAllNodeListKinds(memberInitializers, new NodeKindCheck(NodeKind.MEMBER_INITIALIZER));
     return new Node(NodeKind.CONSTRUCTOR).withChildren({ name, arguments, block, superInitializer, memberInitializers });
   }
 

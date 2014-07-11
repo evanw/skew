@@ -6,6 +6,7 @@ enum NodeKind {
   NODE_LIST,
   CASE,
   VARIABLE_CLUSTER,
+  MEMBER_INITIALIZER,
 
   // Type declarations
   NAMESPACE,

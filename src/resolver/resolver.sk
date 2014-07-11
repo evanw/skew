@@ -1426,7 +1426,7 @@ class Resolver {
       argument.symbol = new Symbol(name, SymbolKind.LOCAL_VARIABLE);
       argument.symbol.node = argument;
       arguments.push(argument);
-      memberInitializers.push(Node.createVariable(Node.createName(name), null, Node.createName(name)));
+      memberInitializers.push(Node.createMemberInitializer(Node.createName(member.symbol.name), Node.createName(name)));
     }
 
     // Change the automatic symbol into a constructor symbol
@@ -1453,6 +1453,12 @@ class Resolver {
     if (symbol.kind == SymbolKind.AUTOMATIC) {
       if (symbol.name == "new") {
         generateDefaultConstructor(symbol);
+      }
+
+      // Automatically generated symbols need to be explicitly resolved because
+      // they aren't reachable from the parse tree, only from the type cache
+      if (symbol.node != null) {
+        resolve(symbol.node, null);
       }
     }
 
@@ -1631,13 +1637,6 @@ class Resolver {
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     initializeSymbol(node.symbol);
 
-    // Ensure the default constructor is generated if needed
-    Member constructor = node.symbol.type.constructor();
-    if (constructor != null) {
-      initializeMember(constructor);
-      resolve(constructor.symbol.node, null);
-    }
-
     // Force the resolution of all base type members in case some of them are
     // still unmerged. If this is not done for each object type, then some
     // conflicts will remain undetected until used:
@@ -1657,6 +1656,13 @@ class Resolver {
 
     Node oldObject = context.object;
     context.object = node;
+
+    // Ensure the default constructor is generated if needed
+    Member constructor = node.symbol.type.constructor();
+    if (constructor != null) {
+      initializeMember(constructor);
+    }
+
     resolve(node.declarationBlock(), null);
     context.object = oldObject;
   }
@@ -1671,12 +1677,13 @@ class Resolver {
     checkDeclarationLocation(node, AllowDeclaration.TOP_OR_OBJECT_LEVEL);
     initializeSymbol(node.symbol);
 
+    Node oldFunction = context.function;
+    context.function = node;
+
     // Resolve the function block
     Node block = node.functionBlock();
     if (block != null) {
       Type oldResultType = resultType;
-      Node oldFunction = context.function;
-      context.function = node;
 
       // Special-case the return type of constructors to void for the purpose
       // of type conversions in return statements inside the constructor
@@ -1687,7 +1694,6 @@ class Resolver {
       resolve(block, null);
 
       resultType = oldResultType;
-      context.function = oldFunction;
     }
 
     // Resolve the initializer list
@@ -1721,10 +1727,17 @@ class Resolver {
       if (memberInitializers != null) {
         int i;
         for (i = 0; i < memberInitializers.children.length; i++) {
-          Node variable = memberInitializers.children.get(i);
+          Node memberInitializer = memberInitializers.children.get(i);
+          Scope oldScope = context.scope;
+          context.scope = node.scope.lexicalParent;
+          resolve(memberInitializer.memberInitializerName(), null);
+          context.scope = oldScope;
+          resolveAsExpression(memberInitializer.memberInitializerValue());
         }
       }
     }
+
+    context.function = oldFunction;
   }
 
   void resolveVariable(Node node) {

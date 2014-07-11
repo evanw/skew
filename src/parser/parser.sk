@@ -322,13 +322,14 @@ Node parseConstructor(ParserContext context, StatementHint hint) {
     // Each member initializer has one argument
     if (superInitializer == null || context.eat(TokenKind.COMMA)) {
       List<Node> values = {};
+      Token first = context.current();
       do {
         Node member = parseName(context); if (member == null) break;
         if (!context.expect(TokenKind.ASSIGN)) break;
         Node value = pratt.parse(context, Precedence.COMMA);
-        values.push(Node.createVariable(member, null, value).withRange(context.spanSince(member.range)));
+        values.push(Node.createMemberInitializer(member, value).withRange(context.spanSince(member.range)));
       } while (context.eat(TokenKind.COMMA));
-      memberInitializers = Node.createNodeList(values);
+      memberInitializers = Node.createNodeList(values).withRange(context.spanSince(first.range));
     }
   }
 
