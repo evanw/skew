@@ -3,11 +3,11 @@ SOURCES += src/ast/get.sk
 SOURCES += src/ast/node.sk
 SOURCES += src/ast/operators.sk
 
+SOURCES += src/compiler/collector.sk
 SOURCES += src/compiler/compiler.sk
-SOURCES += src/compiler/emitter.sk
+SOURCES += src/compiler/json.sk
 SOURCES += src/compiler/library.sk
 SOURCES += src/compiler/lisp.sk
-SOURCES += src/compiler/json.sk
 SOURCES += src/compiler/xml.sk
 
 SOURCES += src/core/log.sk
@@ -37,6 +37,7 @@ SOURCES += src/resolver/type.sk
 SOURCES += src/resolver/typecache.sk
 
 TEST_SOURCES += tests/system/common.sk
+
 TEST_SOURCES += tests/system/core/calls.sk
 TEST_SOURCES += tests/system/core/constructors.sk
 TEST_SOURCES += tests/system/core/conversions.sk
@@ -54,6 +55,7 @@ TEST_SOURCES += tests/system/core/switch.sk
 TEST_SOURCES += tests/system/core/types.sk
 TEST_SOURCES += tests/system/core/using.sk
 TEST_SOURCES += tests/system/core/var.sk
+
 TEST_SOURCES += tests/system/js/objects.sk
 TEST_SOURCES += tests/system/js/operators.sk
 

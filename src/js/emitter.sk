@@ -31,15 +31,19 @@ namespace js {
       for (i = 0; i < collector.typeSymbols.length; i++) {
         Type type = collector.typeSymbols.get(i).type;
         if (type.isNamespace()) {
-          emitNode(type.symbol.node.firstNonExtensionSibling());
+          if (!type.symbol.isImport()) {
+            emitNode(type.symbol.node.firstNonExtensionSibling());
+          }
           continue;
         }
-        if (type.isEnum()) {
-          emitNode(type.symbol.node.firstNonExtensionSibling());
-        } else {
-          Member constructor = type.constructor();
-          if (constructor != null) {
-            emitNode(constructor.symbol.node);
+        if (!type.symbol.isImport()) {
+          if (type.isEnum()) {
+            emitNode(type.symbol.node.firstNonExtensionSibling());
+          } else {
+            Member constructor = type.constructor();
+            if (constructor != null) {
+              emitNode(constructor.symbol.node);
+            }
           }
         }
         List<Member> members = type.members.values();

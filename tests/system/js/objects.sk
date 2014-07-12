@@ -85,3 +85,13 @@ ns.Baz = {
   C: 2
 };
 ");
+
+testJS("
+import namespace ns {
+  import interface IFoo {}
+  import class Foo : IFoo {}
+  import struct Bar {}
+  import enum Baz { A, B, C }
+}
+", "
+");

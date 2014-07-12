@@ -1,4 +1,12 @@
 test("
+int foo = 0123;
+", "
+<stdin>:1:11: warning: Use the prefix \"0o\" for octal numbers
+int foo = 0123;
+          ~~~~
+");
+
+test("
 bool a = 0b1101;
 bool b = 0xFF01;
 bool c = 0o7071;
