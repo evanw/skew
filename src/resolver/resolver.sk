@@ -1748,17 +1748,73 @@ class Resolver {
         }
       }
 
-      // Resolve the member initializers
+      // Ensure the member initializer list exists
       Node memberInitializers = node.memberInitializers();
-      if (memberInitializers != null) {
-        int i;
-        for (i = 0; i < memberInitializers.children.length; i++) {
-          Node memberInitializer = memberInitializers.children.get(i);
-          Scope oldScope = context.scope;
-          context.scope = node.scope.lexicalParent;
-          resolve(memberInitializer.memberInitializerName(), null);
-          context.scope = oldScope;
-          resolveAsExpression(memberInitializer.memberInitializerValue());
+      if (memberInitializers == null) {
+        memberInitializers = Node.createNodeList({});
+        node.children.set(4, memberInitializers);
+      }
+
+      // Move the initial values for all member variables to initializers. The
+      // order isn't guaranteed here because extension blocks can add member
+      // variables as long as they are initialized, but those are unordered.
+      Symbol enclosingSymbol = node.symbol.enclosingSymbol;
+      List<Member> members = enclosingSymbol.type.members.values();
+      List<Node> initializers = {};
+      int index = 0;
+      int i;
+      for (i = 0; i < members.length; i++) {
+        Member member = members.get(i);
+        Symbol memberSymbol = member.symbol;
+        if (memberSymbol.kind == SymbolKind.INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
+          Node value = memberSymbol.node.variableValue();
+          if (value != null) {
+            initializeMember(member);
+            memberInitializers.insertChild(index++, Node.createMemberInitializer(
+              Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type),
+              value.remove()));
+
+            // Replace the removed value with an error expression instead of
+            // with null to avoid breaking the check that member variables
+            // declared inside an extension block are initialized:
+            //
+            //   class Foo {}
+            //   in Foo { int foo = 0; }
+            //
+            memberSymbol.node.appendChild(Node.createError());
+
+            // Resolve the value in the context of the object
+            Scope oldScope = context.scope;
+            context.scope = node.scope.lexicalParent;
+            context.function = oldFunction;
+            resolveAsExpressionWithConversion(value, member.type, CastKind.IMPLICIT);
+            context.function = node;
+            context.scope = oldScope;
+          }
+        }
+      }
+
+      // Resolve the member initializers
+      for (i = 0; i < memberInitializers.children.length; i++) {
+        Node memberInitializer = memberInitializers.children.get(i);
+        Node name = memberInitializer.memberInitializerName();
+        Node value = memberInitializer.memberInitializerValue();
+        Scope oldScope = context.scope;
+        context.scope = node.scope.lexicalParent;
+        resolve(name, null);
+        context.scope = oldScope;
+        if (name.symbol != null) {
+          resolveAsExpressionWithConversion(value, name.symbol.type, CastKind.IMPLICIT);
+          int j;
+          for (j = 0; j < i; j++) {
+            Node other = memberInitializers.children.get(j);
+            if (other.memberInitializerName().symbol == name.symbol) {
+              semanticErrorAlreadyInitialized(log, value.range, name.symbol.name, other.memberInitializerValue().range);
+              break;
+            }
+          }
+        } else {
+          resolveAsExpression(value);
         }
       }
     }

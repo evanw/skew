@@ -18,9 +18,8 @@ namespace js {
         if (type.isClass() && type.baseClass() != null) {
           emit(
 "function $extends(derived, base) {
-  function shim() { this.constructor = derived; }
-  shim.prototype = base.prototype;
-  derived.prototype = new shim();
+  derived.prototype = Object.create(base.prototype);
+  derived.prototype.constructor = derived;
 }
 ");
           break;

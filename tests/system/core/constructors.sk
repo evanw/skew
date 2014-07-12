@@ -262,3 +262,184 @@ class Bar {
   new() : x = 0 {}
   ~~~
 ");
+
+test("
+class Foo {
+  Bar bar;
+  new() : bar = .FOO {}
+}
+enum Bar { FOO }
+", "
+");
+
+test("
+class Foo {
+  int foo;
+  new() : foo = 0, foo = 1 {}
+}
+", "
+<stdin>:3:26: error: \"foo\" is already initialized
+  new() : foo = 0, foo = 1 {}
+                         ^
+<stdin>:3:17: note: The previous initialization is here
+  new() : foo = 0, foo = 1 {}
+                ^
+");
+
+test("
+class Foo {
+  int foo = 0;
+  new() : foo = 1 {}
+}
+", "
+<stdin>:3:17: error: \"foo\" is already initialized
+  new() : foo = 1 {}
+                ^
+<stdin>:2:13: note: The previous initialization is here
+  int foo = 0;
+            ^
+");
+
+test("
+class Foo {
+  int foo = 0;
+  new() : bar = 3, foo = 2 {}
+  int bar = 1;
+}
+", "
+<stdin>:3:17: error: \"bar\" is already initialized
+  new() : bar = 3, foo = 2 {}
+                ^
+<stdin>:4:13: note: The previous initialization is here
+  int bar = 1;
+            ^
+<stdin>:3:26: error: \"foo\" is already initialized
+  new() : bar = 3, foo = 2 {}
+                         ^
+<stdin>:2:13: note: The previous initialization is here
+  int foo = 0;
+            ^
+");
+
+test("
+class Foo {
+  int foo = bar;
+  new(int bar) {}
+}
+", "
+<stdin>:2:13: error: \"bar\" is not declared
+  int foo = bar;
+            ~~~
+");
+
+test("
+class Foo {
+  new(int bar) {}
+  int foo = bar;
+}
+", "
+<stdin>:3:13: error: \"bar\" is not declared
+  int foo = bar;
+            ~~~
+");
+
+test("
+class Foo {
+  int foo;
+  new() : foo = this {}
+}
+", "
+<stdin>:3:17: error: Cannot convert from type \"Foo\" to type \"int\"
+  new() : foo = this {}
+                ~~~~
+");
+
+test("
+class Foo {
+  new() : foo = 0 {}
+}
+", "
+<stdin>:2:11: error: \"foo\" is not declared
+  new() : foo = 0 {}
+          ~~~
+");
+
+test("
+class Foo {
+  int foo;
+  new() : foo = this {}
+}
+", "
+<stdin>:3:17: error: Cannot convert from type \"Foo\" to type \"int\"
+  new() : foo = this {}
+                ~~~~
+");
+
+test("
+class Foo {
+  Foo foo = this;
+}
+", "
+<stdin>:2:13: error: Cannot access \"this\" from a static context
+  Foo foo = this;
+            ~~~~
+");
+
+test("
+class Foo {}
+in Foo {
+  Foo foo = this;
+}
+", "
+<stdin>:3:13: error: Cannot access \"this\" from a static context
+  Foo foo = this;
+            ~~~~
+");
+
+test("
+in Foo {
+  Foo foo = this;
+}
+class Foo {}
+", "
+<stdin>:2:13: error: Cannot access \"this\" from a static context
+  Foo foo = this;
+            ~~~~
+");
+
+test("
+class Foo {
+  new() {}
+  Foo foo = this;
+}
+", "
+<stdin>:3:13: error: Cannot access \"this\" from a static context
+  Foo foo = this;
+            ~~~~
+");
+
+test("
+class Foo {
+  new() {}
+}
+in Foo {
+  Foo foo = this;
+}
+", "
+<stdin>:5:13: error: Cannot access \"this\" from a static context
+  Foo foo = this;
+            ~~~~
+");
+
+test("
+in Foo {
+  Foo foo = this;
+}
+class Foo {
+  new() {}
+}
+", "
+<stdin>:2:13: error: Cannot access \"this\" from a static context
+  Foo foo = this;
+            ~~~~
+");

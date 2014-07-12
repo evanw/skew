@@ -259,3 +259,8 @@ void semanticErrorBadSuperInitializer(Log log, Range range) {
 void semanticErrorMissingSuperInitializer(Log log, Range range) {
   log.error(range, "Missing call to \"super\" in initializer list");
 }
+
+void semanticErrorAlreadyInitialized(Log log, Range range, string name, Range previous) {
+  log.error(range, simpleQuote(name).append(" is already initialized"));
+  if (!previous.isEmpty()) log.note(previous, "The previous initialization is here");
+}

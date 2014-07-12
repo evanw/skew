@@ -3,9 +3,8 @@ class Foo : Bar {}
 class Bar {}
 ", "
 function $extends(derived, base) {
-  function shim() { this.constructor = derived; }
-  shim.prototype = base.prototype;
-  derived.prototype = new shim();
+  derived.prototype = Object.create(base.prototype);
+  derived.prototype.constructor = derived;
 }
 function Bar() {
 }
@@ -20,9 +19,8 @@ class Foo : Bar {}
 class Bar { int x; }
 ", "
 function $extends(derived, base) {
-  function shim() { this.constructor = derived; }
-  shim.prototype = base.prototype;
-  derived.prototype = new shim();
+  derived.prototype = Object.create(base.prototype);
+  derived.prototype.constructor = derived;
 }
 function Bar(_0) {
   this.x = _0;
@@ -38,9 +36,8 @@ class Foo : Bar { int y; }
 class Bar {}
 ", "
 function $extends(derived, base) {
-  function shim() { this.constructor = derived; }
-  shim.prototype = base.prototype;
-  derived.prototype = new shim();
+  derived.prototype = Object.create(base.prototype);
+  derived.prototype.constructor = derived;
 }
 function Bar() {
 }
@@ -56,9 +53,8 @@ class Foo : Bar { int y; }
 class Bar { int x; }
 ", "
 function $extends(derived, base) {
-  function shim() { this.constructor = derived; }
-  shim.prototype = base.prototype;
-  derived.prototype = new shim();
+  derived.prototype = Object.create(base.prototype);
+  derived.prototype.constructor = derived;
 }
 function Bar(_0) {
   this.x = _0;

@@ -30,3 +30,49 @@ bool foo = Foo.FOO | Foo.FOO;
 bool bar = Bar.FOO | Bar.FOO;
            ~~~~~~~~~~~~~~~~~
 ");
+
+test("
+enum Foo { BAR, BAZ }
+Foo x = true ? .BAR : .BAZ;
+Foo y = .FOO;
+int z = x == .FOO || .FOO == y;
+", "
+<stdin>:3:10: error: \"FOO\" is not declared on type \"Foo\"
+Foo y = .FOO;
+         ~~~
+<stdin>:4:15: error: \"FOO\" is not declared on type \"Foo\"
+int z = x == .FOO || .FOO == y;
+              ~~~
+<stdin>:4:23: error: \"FOO\" is not declared on type \"Foo\"
+int z = x == .FOO || .FOO == y;
+                      ~~~
+");
+
+test("
+enum Foo { BAR }
+Foo foo() { return .BAZ; }
+Foo bar() { return .BAR; }
+", "
+<stdin>:2:21: error: \"BAZ\" is not declared on type \"Foo\"
+Foo foo() { return .BAZ; }
+                    ~~~
+");
+
+test("
+Foo foo(bool foo, bool bar) {
+  return foo ? .A : bar ? .B : .C;
+}
+enum Foo { A, B, C }
+", "
+");
+
+test("
+int foo(Foo foo, bool bar) {
+  return foo == (bar ? .A : .B);
+}
+enum Foo { A, B, C }
+", "
+<stdin>:2:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  return foo == (bar ? .A : .B);
+         ~~~~~~~~~~~~~~~~~~~~~
+");
