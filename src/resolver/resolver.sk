@@ -13,16 +13,16 @@ class ResolveContext {
 
   // Keep track of the nearest enclosing node for certain node types
   Node loop = null;
-  Node object = null;
   Node function = null;
+  Node nodeForThis = null;
   Node switchValue = null;
 
   ResolveContext clone() {
     ResolveContext context = new ResolveContext();
     context.scope = scope;
     context.loop = loop;
-    context.object = object;
     context.function = function;
+    context.nodeForThis = nodeForThis;
     context.switchValue = switchValue;
     return context;
   }
@@ -33,8 +33,8 @@ class ResolveContext {
     for (parent = node; node != null; node = node.parent) {
       if (context.scope == null) context.scope = node.scope;
       if (context.loop == null && node.kind.isLoop()) context.loop = node;
-      if (context.object == null && node.kind.isObject()) context.object = node;
       if (context.function == null && node.kind.isFunction()) context.function = node;
+      if (context.nodeForThis == null && node.kind.isObject()) context.nodeForThis = node;
       if (context.switchValue == null && node.kind == NodeKind.SWITCH) context.switchValue = node.switchValue();
     }
     return context;
@@ -311,7 +311,7 @@ class Resolver {
       Symbol symbol = node.symbol;
 
       // Change non-static global functions/variables to instance
-      if (symbol.isObjectMember() && !symbol.isStatic()) {
+      if (!symbol.isStatic() && (symbol.isObjectMember() || symbol.isEnumMember() && symbol.isFromExtension())) {
         if (symbol.kind == SymbolKind.GLOBAL_FUNCTION) symbol.kind = SymbolKind.INSTANCE_FUNCTION;
         else if (symbol.kind == SymbolKind.GLOBAL_VARIABLE) symbol.kind = SymbolKind.INSTANCE_VARIABLE;
       }
@@ -747,7 +747,7 @@ class Resolver {
       return true;
     }
 
-    if (context.object != null) semanticErrorStaticThis(log, range, "this");
+    if (context.nodeForThis != null) semanticErrorStaticThis(log, range, "this");
     else semanticErrorUnexpectedThis(log, range, "this");
     return false;
   }
@@ -767,16 +767,16 @@ class Resolver {
     }
 
     // Use a different error message when outside a function for clarity
-    if (context.object == null) {
+    if (context.nodeForThis == null) {
       semanticErrorUnexpectedThis(log, node.range, symbol.name);
       return false;
     }
 
     // The cases where type parameters may appear are more complicated
-    if (symbol.kind == SymbolKind.PARAMETER && context.object.symbol == symbol.enclosingSymbol) {
+    if (symbol.kind == SymbolKind.PARAMETER && context.nodeForThis.symbol == symbol.enclosingSymbol) {
       Node parent;
-      for (parent = node.parent; parent != context.object; parent = parent.parent) {
-        if (parent.kind == NodeKind.NODE_LIST && parent.parent == context.object &&
+      for (parent = node.parent; parent != context.nodeForThis; parent = parent.parent) {
+        if (parent.kind == NodeKind.NODE_LIST && parent.parent == context.nodeForThis &&
             (parent == parent.parent.objectParameters() || parent == parent.parent.baseTypes())) {
           return true;
         }
@@ -1661,8 +1661,8 @@ class Resolver {
       }
     }
 
-    Node oldObject = context.object;
-    context.object = node;
+    Node oldNodeForThis = context.nodeForThis;
+    context.nodeForThis = node;
 
     // Ensure the default constructor is generated if needed
     Member constructor = node.symbol.type.constructor();
@@ -1671,20 +1671,20 @@ class Resolver {
     }
 
     resolve(node.declarationBlock(), null);
-    context.object = oldObject;
+    context.nodeForThis = oldNodeForThis;
   }
 
   void resolveExtension(Node node) {
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     initializeSymbol(node.symbol);
 
-    Node oldObject = context.object;
-    if (node.symbol.kind.isObject()) {
-      context.object = node.symbol.node.firstNonExtensionSibling();
-      assert context.object.kind.isObject();
+    Node oldNodeForThis = context.nodeForThis;
+    if (node.symbol.kind.isTypeWithInstances()) {
+      context.nodeForThis = node.symbol.node.firstNonExtensionSibling();
+      assert context.nodeForThis.kind.isObject() || context.nodeForThis.kind.isEnum();
     }
     resolve(node.declarationBlock(), null);
-    context.object = oldObject;
+    context.nodeForThis = oldNodeForThis;
   }
 
   void resolveFunction(Node node) {
@@ -2035,8 +2035,8 @@ class Resolver {
 
   void resolveThis(Node node) {
     if (checkAccessToThis(node.range)) {
-      assert context.object != null;
-      Symbol symbol = context.object.symbol;
+      assert context.nodeForThis != null;
+      Symbol symbol = context.nodeForThis.symbol;
       initializeSymbol(symbol);
       node.type = symbol.type;
     }
@@ -2146,7 +2146,7 @@ class Resolver {
     // Check the instance/static status of the member
     bool symbolIsType = member.symbol.kind.isType();
     bool targetIsType = target == null || target.kind.isType();
-    if (!type.isNamespace() && !type.isEnum()) {
+    if (!type.isNamespace() && (!type.isEnum() || member.symbol.isFromExtension())) {
       bool isStatic = symbolIsType || member.symbol.isStatic();
 
       // Static members can only be accessed from a type

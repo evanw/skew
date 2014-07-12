@@ -6,9 +6,13 @@ import struct double { string toString(); }
 
 import struct string {
   final int length;
-  int codeUnitAt(int i);
+  string get(int index);
+  int codeUnitAt(int index);
   string slice(int start, int end);
   string append(string value);
+  int indexOf(string value);
+  int lastIndexOf(string value);
+  string join(List<string> values);
 }
 
 import class List<T> {
@@ -16,5 +20,14 @@ import class List<T> {
   T get(int index);
   void set(int index, T value);
   void push(T value);
+  void unshift(T value);
+  void insert(int index, T value);
+  List<T> slice(int start, int end);
+  List<T> clone();
+  int indexOf(T value);
+  int lastIndexOf(T value);
+  T remove(int index);
+  T shift();
+  T pop();
 }
 ";

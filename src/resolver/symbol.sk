@@ -204,6 +204,10 @@ class Symbol {
     return enclosingSymbol != null && enclosingSymbol.kind.isObject();
   }
 
+  bool isEnumMember() {
+    return enclosingSymbol != null && enclosingSymbol.kind.isEnum();
+  }
+
   bool isPublic() {
     return (flags & SymbolFlag.PUBLIC) != 0;
   }

@@ -76,3 +76,45 @@ enum Foo { A, B, C }
   return foo == (bar ? .A : .B);
          ~~~~~~~~~~~~~~~~~~~~~
 ");
+
+test("
+enum Foo {}
+in Foo { int foo() { return this; } }
+", "
+");
+
+test("
+enum Foo { FOO }
+in Foo { int foo; }
+bool foo = Foo.FOO.foo;
+", "
+<stdin>:2:10: error: Cannot use this statement here
+in Foo { int foo; }
+         ~~~~~~~~
+<stdin>:3:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool foo = Foo.FOO.foo;
+           ~~~~~~~~~~~
+");
+
+test("
+enum Foo { FOO }
+in Foo { static int foo; }
+bool foo = Foo.FOO.foo;
+", "
+<stdin>:3:20: error: Cannot access static member \"foo\" from an instance context
+bool foo = Foo.FOO.foo;
+                   ~~~
+<stdin>:3:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool foo = Foo.FOO.foo;
+           ~~~~~~~~~~~
+");
+
+test("
+enum Foo { FOO }
+in Foo { static int foo; }
+bool foo = Foo.foo;
+", "
+<stdin>:3:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool foo = Foo.foo;
+           ~~~~~~~
+");
