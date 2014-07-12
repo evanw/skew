@@ -51,7 +51,7 @@ namespace xml {
           visit(node.children.get(i));
         }
         indent = inner;
-        builder.append("\n").append(indent).append("</").append(node.kind.toString().toLowerCase()).append(">");
+        builder.append("\n").append(indent).append("</").append(node.kind.prettyPrint()).append(">");
       } else {
         builder.append("/>");
       }
