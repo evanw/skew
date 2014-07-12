@@ -13,6 +13,7 @@ import struct string {
   int indexOf(string value);
   int lastIndexOf(string value);
   string join(List<string> values);
+  static string fromCodeUnit(int value);
 }
 
 import class List<T> {
@@ -29,5 +30,7 @@ import class List<T> {
   T remove(int index);
   T shift();
   T pop();
+  void reverse();
+  void sort(int fn(T, T) callback);
 }
 ";
