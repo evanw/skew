@@ -385,7 +385,7 @@ test("
 int foo() {}
 void bar() {}
 ", "
-<stdin>:1:5: error: All control paths for \"foo\" must return a value
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo() {}
     ~~~
 ");
@@ -395,7 +395,7 @@ int foo(bool bar) {
   if (bar) return 0;
 }
 ", "
-<stdin>:1:5: error: All control paths for \"foo\" must return a value
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(bool bar) {
     ~~~
 ");
@@ -406,7 +406,7 @@ int foo(bool bar) {
   else {}
 }
 ", "
-<stdin>:1:5: error: All control paths for \"foo\" must return a value
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(bool bar) {
     ~~~
 ");
@@ -427,7 +427,7 @@ int foo(int bar) {
   }
 }
 ", "
-<stdin>:1:5: error: All control paths for \"foo\" must return a value
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(int bar) {
     ~~~
 ");
@@ -440,7 +440,7 @@ int foo(int bar) {
   }
 }
 ", "
-<stdin>:1:5: error: All control paths for \"foo\" must return a value
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(int bar) {
     ~~~
 ");
@@ -453,7 +453,7 @@ int foo(int bar) {
   }
 }
 ", "
-<stdin>:1:5: error: All control paths for \"foo\" must return a value
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(int bar) {
     ~~~
 ");
@@ -466,7 +466,7 @@ int foo(int bar) {
   }
 }
 ", "
-<stdin>:1:5: error: All control paths for \"foo\" must return a value
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(int bar) {
     ~~~
 ");

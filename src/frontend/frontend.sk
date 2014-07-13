@@ -30,12 +30,12 @@ namespace frontend {
     io.printWithColor(io.Color.BOLD, text.append("\n"));
   }
 
-  string printNote(string text) {
+  void printNote(string text) {
     io.printWithColor(io.Color.GRAY, "note: ");
     io.printWithColor(io.Color.BOLD, text.append("\n"));
   }
 
-  string printWarning(string text) {
+  void printWarning(string text) {
     io.printWithColor(io.Color.MAGENTA, "warning: ");
     io.printWithColor(io.Color.BOLD, text.append("\n"));
   }

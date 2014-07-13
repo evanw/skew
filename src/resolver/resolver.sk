@@ -1817,7 +1817,7 @@ class Resolver {
 
       // Missing a return statement is an error
       if (!resultType.isError(cache) && !resultType.isVoid(cache) && !block.blockAlwaysEndsWithReturn()) {
-        semanticErrorMissingReturn(log, node.declarationName().range, node.symbol.name);
+        semanticErrorMissingReturn(log, node.declarationName().range, node.symbol.name, resultType);
       }
 
       resultType = oldResultType;
