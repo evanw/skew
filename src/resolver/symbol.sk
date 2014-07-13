@@ -197,7 +197,7 @@ class Symbol {
   }
 
   bool isEnumValue() {
-    return kind.isVariable() && enclosingSymbol != null && enclosingSymbol.kind.isEnum();
+    return kind.isVariable() && enclosingSymbol != null && enclosingSymbol.kind.isEnum() && !isFromExtension();
   }
 
   bool isObjectMember() {

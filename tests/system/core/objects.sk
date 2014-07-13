@@ -126,7 +126,7 @@ int foo(C foo) { return foo.foo(); }
 ");
 
 test("
-int foo(C foo) { foo.foo(); }
+void foo(C foo) { foo.foo(); }
 interface C : A, B {}
 interface A { void foo(); }
 interface B { int foo(); }
@@ -138,7 +138,7 @@ interface C : A, B {}
 
 test("
 interface G : C, F {}
-int foo(G foo) { foo.foo(); }
+void foo(G foo) { foo.foo(); }
 
 interface A { void foo(); }
 interface B { int foo(); }
@@ -157,7 +157,7 @@ interface F : E, D {}
 ");
 
 test("
-int foo(G foo) { foo.foo(); }
+void foo(G foo) { foo.foo(); }
 interface G : C, F {}
 
 interface A { int foo(); }
@@ -288,10 +288,10 @@ class Foo { virtual void foo() {} }
 
 test("
 class Foo { void foo() {} }
-class Bar : Foo { int foo() {} }
+class Bar : Foo { int foo() { return 0; } }
 ", "
 <stdin>:2:23: error: \"foo\" must have the same signature as the method it overrides (expected type \"void fn()\" but found type \"int fn()\")
-class Bar : Foo { int foo() {} }
+class Bar : Foo { int foo() { return 0; } }
                       ~~~
 <stdin>:1:18: note: The overridden declaration is here
 class Foo { void foo() {} }
@@ -300,10 +300,10 @@ class Foo { void foo() {} }
 
 test("
 class Foo { int foo; }
-class Bar : Foo { int foo() {} }
+class Bar : Foo { int foo() { return 0; } }
 ", "
 <stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
-class Bar : Foo { int foo() {} }
+class Bar : Foo { int foo() { return 0; } }
                       ~~~
 <stdin>:1:17: note: The overridden declaration is here
 class Foo { int foo; }
@@ -312,11 +312,11 @@ class Foo { int foo; }
 
 test("
 class Foo {}
-class Bar : Foo { int foo() {} }
+class Bar : Foo { int foo() { return 0; } }
 in Foo { namespace foo {} }
 ", "
 <stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
-class Bar : Foo { int foo() {} }
+class Bar : Foo { int foo() { return 0; } }
                       ~~~
 <stdin>:3:20: note: The overridden declaration is here
 in Foo { namespace foo {} }
@@ -324,47 +324,47 @@ in Foo { namespace foo {} }
 ");
 
 test("
-class Foo { static virtual int foo() {} }
+class Foo { static virtual void foo() {} }
 ", "
 <stdin>:1:20: error: Cannot use the \"virtual\" modifier on a non-instance function
-class Foo { static virtual int foo() {} }
+class Foo { static virtual void foo() {} }
                    ~~~~~~~
 ");
 
 test("
-class Foo { int foo() {} }
-class Bar : Foo { static int foo() {} }
+class Foo { void foo() {} }
+class Bar : Foo { static void foo() {} }
 ", "
-<stdin>:2:30: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
-class Bar : Foo { static int foo() {} }
-                             ~~~
-<stdin>:1:17: note: The overridden declaration is here
-class Foo { int foo() {} }
-                ~~~
+<stdin>:2:31: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
+class Bar : Foo { static void foo() {} }
+                              ~~~
+<stdin>:1:18: note: The overridden declaration is here
+class Foo { void foo() {} }
+                 ~~~
 ");
 
 test("
-class Foo { static int foo() {} }
-class Bar : Foo { int foo() {} }
+class Foo { static void foo() {} }
+class Bar : Foo { void foo() {} }
 ", "
-<stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
-class Bar : Foo { int foo() {} }
-                      ~~~
-<stdin>:1:24: note: The overridden declaration is here
-class Foo { static int foo() {} }
+<stdin>:2:24: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
+class Bar : Foo { void foo() {} }
                        ~~~
+<stdin>:1:25: note: The overridden declaration is here
+class Foo { static void foo() {} }
+                        ~~~
 ");
 
 test("
-class Foo { static int foo() {} }
-class Bar : Foo { static int foo() {} }
+class Foo { static void foo() {} }
+class Bar : Foo { static void foo() {} }
 ", "
-<stdin>:2:30: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
-class Bar : Foo { static int foo() {} }
-                             ~~~
-<stdin>:1:24: note: The overridden declaration is here
-class Foo { static int foo() {} }
-                       ~~~
+<stdin>:2:31: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
+class Bar : Foo { static void foo() {} }
+                              ~~~
+<stdin>:1:25: note: The overridden declaration is here
+class Foo { static void foo() {} }
+                        ~~~
 ");
 
 test("
@@ -380,15 +380,15 @@ class Foo { int foo; }
 ");
 
 test("
-class Foo { int foo() {} }
+class Foo { void foo() {} }
 class Bar : Foo { int foo; }
 ", "
 <stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
 class Bar : Foo { int foo; }
                       ~~~
-<stdin>:1:17: note: The overridden declaration is here
-class Foo { int foo() {} }
-                ~~~
+<stdin>:1:18: note: The overridden declaration is here
+class Foo { void foo() {} }
+                 ~~~
 ");
 
 test("

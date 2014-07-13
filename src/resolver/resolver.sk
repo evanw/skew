@@ -13,29 +13,25 @@ class ResolveContext {
 
   // Keep track of the nearest enclosing node for certain node types
   Node loop = null;
-  Node function = null;
-  Node nodeForThis = null;
   Node switchValue = null;
-
-  ResolveContext clone() {
-    ResolveContext context = new ResolveContext();
-    context.scope = scope;
-    context.loop = loop;
-    context.function = function;
-    context.nodeForThis = nodeForThis;
-    context.switchValue = switchValue;
-    return context;
-  }
+  Symbol symbolForThis = null;
+  Symbol functionSymbol = null;
 
   static ResolveContext fromNode(Node node) {
     ResolveContext context = new ResolveContext();
-    Node parent;
-    for (parent = node; node != null; node = node.parent) {
+    if (node.parent == null && node.symbol.enclosingSymbol != null) {
+      assert node.symbol.enclosingSymbol.kind.isTypeWithInstances();
+      context.symbolForThis = node.symbol.enclosingSymbol;
+      context.scope = context.symbolForThis.node.scope;
+      assert context.scope != null;
+    }
+    while (node != null) {
       if (context.scope == null) context.scope = node.scope;
       if (context.loop == null && node.kind.isLoop()) context.loop = node;
-      if (context.function == null && node.kind.isFunction()) context.function = node;
-      if (context.nodeForThis == null && node.kind.isObject()) context.nodeForThis = node;
       if (context.switchValue == null && node.kind == NodeKind.SWITCH) context.switchValue = node.switchValue();
+      if (context.symbolForThis == null && node.symbol != null && node.symbol.kind.isTypeWithInstances()) context.symbolForThis = node.symbol;
+      if (context.functionSymbol == null && node.kind.isFunction()) context.functionSymbol = node.symbol;
+      node = node.parent;
     }
     return context;
   }
@@ -493,6 +489,7 @@ class Resolver {
     node.type = cache.errorType;
 
     // Use the current scope for all child nodes
+    assert context.scope != null || node.kind == NodeKind.PROGRAM;
     Scope oldScope = context.scope;
     if (node.scope != null) context.scope = node.scope;
 
@@ -743,11 +740,11 @@ class Resolver {
   }
 
   bool checkAccessToThis(Range range) {
-    if (context.function != null && context.function.symbol.kind.isInstance()) {
+    if (context.functionSymbol != null && context.functionSymbol.kind.isInstance()) {
       return true;
     }
 
-    if (context.nodeForThis != null) semanticErrorStaticThis(log, range, "this");
+    if (context.symbolForThis != null) semanticErrorStaticThis(log, range, "this");
     else semanticErrorUnexpectedThis(log, range, "this");
     return false;
   }
@@ -761,22 +758,23 @@ class Resolver {
     }
 
     // Allow instance access inside instance functions
-    if (context.function != null && context.function.symbol.kind.isInstance() &&
-        context.function.symbol.enclosingSymbol == symbol.enclosingSymbol) {
+    if (context.functionSymbol != null && context.functionSymbol.kind.isInstance() &&
+        context.functionSymbol.enclosingSymbol == symbol.enclosingSymbol) {
       return true;
     }
 
     // Use a different error message when outside a function for clarity
-    if (context.nodeForThis == null) {
+    if (context.symbolForThis == null) {
       semanticErrorUnexpectedThis(log, node.range, symbol.name);
       return false;
     }
 
     // The cases where type parameters may appear are more complicated
-    if (symbol.kind == SymbolKind.PARAMETER && context.nodeForThis.symbol == symbol.enclosingSymbol) {
+    if (symbol.kind == SymbolKind.PARAMETER && context.symbolForThis == symbol.enclosingSymbol) {
+      Node enclosingNode = symbol.enclosingSymbol.node;
       Node parent;
-      for (parent = node.parent; parent != context.nodeForThis; parent = parent.parent) {
-        if (parent.kind == NodeKind.NODE_LIST && parent.parent == context.nodeForThis &&
+      for (parent = node.parent; parent != enclosingNode; parent = parent.parent) {
+        if (parent.kind == NodeKind.NODE_LIST && parent.parent == enclosingNode &&
             (parent == parent.parent.objectParameters() || parent == parent.parent.baseTypes())) {
           return true;
         }
@@ -986,6 +984,10 @@ class Resolver {
   }
 
   void initializeFunction(Symbol symbol) {
+    // Sanity check
+    assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||
+      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol;
+
     unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, "on a function declaration");
     if (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances()) {
       unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, "outside an object declaration");
@@ -1461,7 +1463,89 @@ class Resolver {
   }
 
   void generateDefaultToString(Symbol symbol) {
-    Node statement = Node.createReturn(Node.createString(""));
+    assert symbol.isEnumMember();
+    Symbol enclosingSymbol = symbol.enclosingSymbol;
+    List<Member> members = enclosingSymbol.type.members.values();
+    List<Symbol> fields = {};
+
+    // Gather the fields corresponding to enum values
+    int i;
+    for (i = 0; i < members.length; i++) {
+      Symbol field = members.get(i).symbol;
+      if (field.kind == SymbolKind.GLOBAL_VARIABLE && !field.isFromExtension()) {
+        fields.push(field);
+      }
+    }
+
+    // Check the fields for duplicates and sequential layout
+    int minimum = 0x7FFFFFFF;
+    int maximum = -0x7FFFFFFF; // TODO: -0x80000000
+    for (i = 0; i < fields.length; i++) {
+      Symbol field = fields.get(i);
+      initializeSymbol(field);
+      if (field.type.isError(cache)) {
+        break;
+      }
+      int value = field.enumValue;
+      minimum = Math.imin(minimum, value);
+      maximum = Math.imax(maximum, value);
+      int j;
+      for (j = 0; j < i; j++) {
+        Symbol other = fields.get(j);
+        if (value == other.enumValue) {
+          semanticErrorBadEnumToString(log, enclosingSymbol.node.declarationName().range, enclosingSymbol.name, field.name, other.name, value);
+          break;
+        }
+      }
+      if (j < i) {
+        break;
+      }
+    }
+
+    // Generate an empty function body if an error was emitted
+    Node statement;
+    if (fields.length == 0 || i < fields.length) {
+      statement = Node.createReturn(Node.createString(""));
+    }
+
+    // Generate an array lookup if all enum values form a sequential range.
+    // This check only needs to use the minimum and maximum since it is now
+    // known that there are no duplicates in the list.
+    else if (maximum - minimum == fields.length - 1) {
+      string name = "STRINGS"; // TODO: gensym
+      Type stringListType = cache.parameterize(cache.listType, { cache.stringType });
+      Symbol helperSymbol = new Symbol(name, SymbolKind.GLOBAL_VARIABLE);
+      Member helperMember = new Member(helperSymbol);
+      helperMember.type = helperSymbol.type = stringListType;
+      helperSymbol.enclosingSymbol = enclosingSymbol;
+      helperSymbol.flags = helperSymbol.flags | SymbolFlag.FROM_EXTENSION;
+      enclosingSymbol.type.addMember(helperMember);
+      List<Node> values = {};
+      for (i = 0; i < fields.length; i++) {
+        values.push(Node.createString(fields.get(i).name).withType(cache.stringType));
+      }
+      helperSymbol.node = Node.createVariableCluster(Node.createType(stringListType), { Node.createVariable(
+        Node.createName(name).withType(stringListType).withSymbol(helperSymbol),
+        Node.createType(stringListType),
+        Node.createInitializer(values).withType(stringListType)).withSymbol(helperSymbol) });
+      statement = Node.createReturn(Node.createCall(
+        Node.createDot(Node.createName(name), Node.createName("get")),
+        { Node.createCast(Node.createType(cache.intType), Node.createThis()) }));
+    }
+
+    // Generate a string switch statment
+    else {
+      List<Node> cases = {};
+      for (i = 0; i < fields.length; i++) {
+        Symbol field = fields.get(i);
+        cases.push(Node.createCase(
+          { Node.createDot(null, Node.createName(field.name)) },
+          Node.createBlock({ Node.createReturn(Node.createString(field.name)) })));
+      }
+      statement = Node.createSwitch(Node.createThis(), cases);
+    }
+
+    // Change the automatic symbol into an instance function
     symbol.kind = SymbolKind.INSTANCE_FUNCTION;
     symbol.node = Node.createFunction(
       Node.createName(symbol.name),
@@ -1483,7 +1567,10 @@ class Resolver {
       // Automatically generated symbols need to be explicitly resolved because
       // they aren't reachable from the parse tree, only from the type cache
       if (symbol.node != null) {
+        ResolveContext oldContext = context;
+        context = ResolveContext.fromNode(symbol.node);
         resolve(symbol.node, null);
+        context = oldContext;
       }
     }
 
@@ -1679,8 +1766,8 @@ class Resolver {
       }
     }
 
-    Node oldNodeForThis = context.nodeForThis;
-    context.nodeForThis = node;
+    Symbol oldSymbolForThis = context.symbolForThis;
+    context.symbolForThis = node.symbol;
 
     // Ensure the default constructor is generated if needed
     Member constructor = node.symbol.type.constructor();
@@ -1689,28 +1776,31 @@ class Resolver {
     }
 
     resolve(node.declarationBlock(), null);
-    context.nodeForThis = oldNodeForThis;
+    context.symbolForThis = oldSymbolForThis;
   }
 
   void resolveExtension(Node node) {
     checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
     initializeSymbol(node.symbol);
 
-    Node oldNodeForThis = context.nodeForThis;
+    Symbol oldSymbolForThis = context.symbolForThis;
     if (node.symbol.kind.isTypeWithInstances()) {
-      context.nodeForThis = node.symbol.node.firstNonExtensionSibling();
-      assert context.nodeForThis.kind.isObject() || context.nodeForThis.kind.isEnum();
+      context.symbolForThis = node.symbol;
     }
     resolve(node.declarationBlock(), null);
-    context.nodeForThis = oldNodeForThis;
+    context.symbolForThis = oldSymbolForThis;
   }
 
   void resolveFunction(Node node) {
+    // Sanity check
+    assert node.symbol.enclosingSymbol == null || !node.symbol.enclosingSymbol.kind.isTypeWithInstances() ||
+      context.symbolForThis != null && context.symbolForThis == node.symbol.enclosingSymbol;
+
     checkDeclarationLocation(node, AllowDeclaration.TOP_OR_OBJECT_LEVEL);
     initializeSymbol(node.symbol);
 
-    Node oldFunction = context.function;
-    context.function = node;
+    Symbol oldFunctionSymbol = context.functionSymbol;
+    context.functionSymbol = node.symbol;
 
     // Resolve the function block
     Node block = node.functionBlock();
@@ -1724,6 +1814,11 @@ class Resolver {
       else if (symbol.kind.isConstructor()) resultType = cache.voidType;
       else resultType = symbol.type.resultType();
       resolve(block, null);
+
+      // Missing a return statement is an error
+      if (!resultType.isError(cache) && !resultType.isVoid(cache) && !block.blockAlwaysEndsWithReturn()) {
+        semanticErrorMissingReturn(log, node.declarationName().range, node.symbol.name);
+      }
 
       resultType = oldResultType;
     }
@@ -1788,6 +1883,16 @@ class Resolver {
           Node value = memberSymbol.node.variableValue();
           if (value != null) {
             initializeMember(member);
+
+            // Resolve the value in the context of the object
+            Scope oldScope = context.scope;
+            context.scope = node.scope.lexicalParent;
+            context.functionSymbol = null;
+            resolve(memberSymbol.node, null);
+            context.functionSymbol = node.symbol;
+            context.scope = oldScope;
+
+            // Move the value from the variable to a member initializer
             memberInitializers.insertChild(index++, Node.createMemberInitializer(
               Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type),
               value.remove()));
@@ -1800,14 +1905,6 @@ class Resolver {
             //   in Foo { int foo = 0; }
             //
             memberSymbol.node.appendChild(Node.createError());
-
-            // Resolve the value in the context of the object
-            Scope oldScope = context.scope;
-            context.scope = node.scope.lexicalParent;
-            context.function = oldFunction;
-            resolveAsExpressionWithConversion(value, member.type, CastKind.IMPLICIT);
-            context.function = node;
-            context.scope = oldScope;
           }
         }
       }
@@ -1837,7 +1934,7 @@ class Resolver {
       }
     }
 
-    context.function = oldFunction;
+    context.functionSymbol = oldFunctionSymbol;
   }
 
   void resolveVariable(Node node) {
@@ -2053,8 +2150,8 @@ class Resolver {
 
   void resolveThis(Node node) {
     if (checkAccessToThis(node.range)) {
-      assert context.nodeForThis != null;
-      Symbol symbol = context.nodeForThis.symbol;
+      assert context.symbolForThis != null;
+      Symbol symbol = context.symbolForThis;
       initializeSymbol(symbol);
       node.type = symbol.type;
     }

@@ -147,7 +147,7 @@ bool foo(Foo<int, bool> foo) { return foo.foo(0); }
 ");
 
 test("
-class Foo<A, B> { A foo(B bar) {} }
+class Foo<A, B> { A foo(B bar) { return default(A); } }
 class Bar<T> : Foo<int, T> {}
 class Baz : Bar<bool> {}
 Baz foo = null;

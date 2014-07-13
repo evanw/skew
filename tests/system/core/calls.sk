@@ -31,7 +31,7 @@ int bar = foo(100);
 ");
 
 test("
-bool foo(int x, bool y) {}
+bool foo(int x, bool y) { return false; }
 int bar = foo(false, 100);
 ", "
 <stdin>:2:15: error: Cannot convert from type \"bool\" to type \"int\" without a cast

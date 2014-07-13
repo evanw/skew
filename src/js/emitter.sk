@@ -184,6 +184,7 @@ namespace js {
 
         case NodeKind.CASE {
           List<Node> values = node.caseValues();
+          Node block = node.caseBlock();
           int i;
           for (i = 0; i < values.length; i++) {
             emit(indent.append("case "));
@@ -194,8 +195,10 @@ namespace js {
             emit(indent.append("default:\n"));
           }
           increaseIndent();
-          emitChildren(node.caseBlock());
-          emit(indent.append("break;\n"));
+          emitChildren(block);
+          if (!block.blockAlwaysEndsWithReturn()) {
+            emit(indent.append("break;\n"));
+          }
           decreaseIndent();
         }
 
@@ -297,12 +300,6 @@ namespace js {
           }
         }
 
-        case NodeKind.PARAMETER {
-        }
-
-        case NodeKind.USING_ALIAS {
-        }
-
         case NodeKind.IF {
           emit(indent);
           recursiveEmitIfStatement(node);
@@ -392,14 +389,14 @@ namespace js {
           emitExpression(node.switchValue(), Precedence.LOWEST);
           emit(") {\n");
           emitNodes(node.switchCases());
-          emit(indent.append("}"));
+          emit(indent.append("}\n"));
         }
 
         case NodeKind.MODIFIER {
           emitNodes(node.modifierStatements());
         }
 
-        case NodeKind.USING_NAMESPACE {
+        case NodeKind.PARAMETER, NodeKind.USING_ALIAS, NodeKind.USING_NAMESPACE {
         }
 
         default {

@@ -1,7 +1,3 @@
-interface IEmitter {
-  virtual List<Source> emitProgram(Node program);
-}
-
 enum SortTypes {
   NO,
   BY_INHERITANCE,
@@ -36,6 +32,8 @@ class Collector {
         collectDefinitions(symbol.type);
       } else if (symbol.kind.isFunction() && symbol.node != null && (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances())) {
         freeFunctionSymbols.push(symbol);
+      } else if (symbol.kind.isVariable() && symbol.node != null && symbol.node.parent == null) {
+        topLevelStatements.push(symbol.node);
       }
     }
   }

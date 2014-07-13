@@ -19,6 +19,15 @@ namespace foo {
 
 test("
 enum Foo { FOO }
+Foo.FOO = Foo.FOO;
+", "
+<stdin>:2:1: error: Cannot store to a symbol marked as \"final\"
+Foo.FOO = Foo.FOO;
+~~~~~~~
+");
+
+test("
+enum Foo { FOO }
 enum flags Bar { FOO }
 bool foo = Foo.FOO | Foo.FOO;
 bool bar = Bar.FOO | Bar.FOO;
@@ -117,4 +126,37 @@ bool foo = Foo.foo;
 <stdin>:3:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
 bool foo = Foo.foo;
            ~~~~~~~
+");
+
+test("
+Foo.FOO.toString();
+enum Foo { FOO = 1, BAR = 1 }
+", "
+<stdin>:2:6: error: Cannot automatically generate \"toString\" for \"Foo\" because \"BAR\" and \"FOO\" both have the same value 1
+enum Foo { FOO = 1, BAR = 1 }
+     ~~~
+");
+
+test("
+Foo.FOO.toString();
+enum Foo { FOO, BAR }
+", "
+");
+
+test("
+class Foo {}
+in Foo { int foo() { return this; } }
+", "
+<stdin>:2:29: error: Cannot convert from type \"Foo\" to type \"int\"
+in Foo { int foo() { return this; } }
+                            ~~~~
+");
+
+test("
+enum Foo {}
+in Foo { static string names = false; }
+", "
+<stdin>:2:32: error: Cannot convert from type \"bool\" to type \"string\"
+in Foo { static string names = false; }
+                               ~~~~~
 ");

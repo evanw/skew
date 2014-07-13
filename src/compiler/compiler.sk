@@ -1,3 +1,7 @@
+interface IEmitter {
+  virtual List<Source> emitProgram(Node program);
+}
+
 enum TargetFormat {
   // Target languages that run the resolver
   NONE,

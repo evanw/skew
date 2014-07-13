@@ -63,11 +63,11 @@ in foo {}
 
 test("
 in foo {}
-int foo() {}
+void foo() {}
 ", "
-<stdin>:2:5: error: \"foo\" is already declared
-int foo() {}
-    ~~~
+<stdin>:2:6: error: \"foo\" is already declared
+void foo() {}
+     ~~~
 <stdin>:1:4: note: The previous declaration is here
 in foo {}
    ~~~
