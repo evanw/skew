@@ -377,7 +377,7 @@ namespace js {
 
         case NodeKind.ASSERT {
           Node value = node.assertValue();
-          value.invertBooleanCondition();
+          value.invertBooleanCondition(cache);
           bool couldBeFalse = value.kind != NodeKind.TRUE;
           if (couldBeFalse) {
             emit(indent.append("if ("));

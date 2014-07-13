@@ -1,35 +1,82 @@
 in Node {
-  void invertBooleanCondition() {
+  void invertBooleanCondition(TypeCache cache) {
     assert kind.isExpression();
     switch (kind) {
-      case NodeKind.TRUE { kind = NodeKind.FALSE; }
-      case NodeKind.FALSE { kind = NodeKind.TRUE; }
-      case NodeKind.NOT { become(unaryValue().remove()); }
+      case NodeKind.TRUE {
+        kind = NodeKind.FALSE;
+        return;
+      }
 
-      case NodeKind.EQUAL { kind = NodeKind.NOT_EQUAL; }
-      case NodeKind.NOT_EQUAL { kind = NodeKind.EQUAL; }
-      case NodeKind.LESS_THAN { kind = NodeKind.GREATER_THAN_OR_EQUAL; }
-      case NodeKind.GREATER_THAN { kind = NodeKind.LESS_THAN_OR_EQUAL; }
-      case NodeKind.LESS_THAN_OR_EQUAL { kind = NodeKind.GREATER_THAN; }
-      case NodeKind.GREATER_THAN_OR_EQUAL { kind = NodeKind.LESS_THAN; }
+      case NodeKind.FALSE {
+        kind = NodeKind.TRUE;
+        return;
+      }
+
+      case NodeKind.NOT {
+        become(unaryValue().remove());
+        return;
+      }
+
+      case NodeKind.EQUAL {
+        kind = NodeKind.NOT_EQUAL;
+        return;
+      }
+
+      case NodeKind.NOT_EQUAL {
+        kind = NodeKind.EQUAL;
+        return;
+      }
 
       case NodeKind.LOGICAL_OR {
         kind = NodeKind.LOGICAL_AND;
-        binaryLeft().invertBooleanCondition();
-        binaryRight().invertBooleanCondition();
+        binaryLeft().invertBooleanCondition(cache);
+        binaryRight().invertBooleanCondition(cache);
+        return;
       }
 
       case NodeKind.LOGICAL_AND {
         kind = NodeKind.LOGICAL_OR;
-        binaryLeft().invertBooleanCondition();
-        binaryRight().invertBooleanCondition();
+        binaryLeft().invertBooleanCondition(cache);
+        binaryRight().invertBooleanCondition(cache);
+        return;
       }
 
-      default {
-        List<Node> children = removeChildren();
-        become(Node.createUnary(NodeKind.NOT, clone().withChildren(children)));
+      // Non-equality comparison operators involving floating-point numbers
+      // can't be inverted because one or both of those values may be NAN.
+      // Equality comparisons still work fine because inverting the test
+      // inverts the result as expected:
+      //
+      //   Test        |  Result
+      // --------------+----------
+      //   0 == NAN    |  false
+      //   0 != NAN    |  true
+      //   0 < NAN     |  false
+      //   0 > NAN     |  false
+      //   0 <= NAN    |  false
+      //   0 >= NAN    |  false
+      //   NAN == NAN  |  false
+      //   NAN != NAN  |  true
+      //   NAN < NAN   |  false
+      //   NAN > NAN   |  false
+      //   NAN <= NAN  |  false
+      //   NAN >= NAN  |  false
+      //
+      case NodeKind.LESS_THAN, NodeKind.GREATER_THAN, NodeKind.LESS_THAN_OR_EQUAL, NodeKind.GREATER_THAN_OR_EQUAL {
+        if (!cache.commonImplicitType(binaryLeft().type, binaryRight().type).isReal(cache)) {
+          switch (kind) {
+            case NodeKind.LESS_THAN { kind = NodeKind.GREATER_THAN_OR_EQUAL; }
+            case NodeKind.GREATER_THAN { kind = NodeKind.LESS_THAN_OR_EQUAL; }
+            case NodeKind.LESS_THAN_OR_EQUAL { kind = NodeKind.GREATER_THAN; }
+            case NodeKind.GREATER_THAN_OR_EQUAL { kind = NodeKind.LESS_THAN; }
+          }
+          return;
+        }
       }
     }
+
+    // Remove children before clone() so they are moved instead of copied
+    List<Node> children = removeChildren();
+    become(Node.createUnary(NodeKind.NOT, clone().withChildren(children)).withType(cache.boolType));
   }
 
   bool blockAlwaysEndsWithReturn() {
