@@ -376,6 +376,20 @@ namespace js {
         }
 
         case NodeKind.ASSERT {
+          Node value = node.assertValue();
+          bool isFalse = value.kind == NodeKind.FALSE;
+          if (!isFalse) {
+            emit(indent.append("if (!"));
+            emitExpression(value, Precedence.UNARY_PREFIX);
+            emit(") {\n");
+            increaseIndent();
+          }
+          string text = node.range.toString().append(" (").append(node.range.locationString()).append(")");
+          emit(indent.append("throw new Error(").append(quoteString(text, '"')).append(");\n"));
+          if (!isFalse) {
+            decreaseIndent();
+            emit(indent.append("}\n"));
+          }
         }
 
         case NodeKind.EXPRESSION {
