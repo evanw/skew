@@ -344,7 +344,6 @@ class Node {
   Node clone() {
     Node node = new Node(kind);
     node.range = range;
-    node.children = {};
     node.type = type;
     node.symbol = symbol;
     if (content != null) {
@@ -396,47 +395,6 @@ class Node {
       node = node.sibling;
     }
     return node;
-  }
-
-  bool blockAlwaysEndsWithReturn() {
-    assert kind == NodeKind.BLOCK;
-    if (!hasChildren()) {
-      return false;
-    }
-
-    Node last = children.get(children.length - 1);
-    switch (last.kind) {
-      case NodeKind.RETURN {
-        return true;
-      }
-
-      case NodeKind.IF {
-        Node trueBlock = last.ifTrue();
-        Node falseBlock = last.ifFalse();
-        return falseBlock != null && trueBlock.blockAlwaysEndsWithReturn() && falseBlock.blockAlwaysEndsWithReturn();
-      }
-
-      case NodeKind.SWITCH {
-        Node value = last.switchValue();
-        List<Node> cases = last.switchCases();
-        bool foundDefault = false;
-        int i;
-        for (i = 0; i < cases.length; i++) {
-          Node node = cases.get(i);
-          if (!node.caseBlock().blockAlwaysEndsWithReturn()) {
-            return false;
-          }
-          if (node.caseValues().length == 0) {
-            foundDefault = true;
-          }
-        }
-        return foundDefault;
-      }
-
-      default {
-        return false;
-      }
-    }
   }
 
   static void updateParent(Node node, Node parent) {
