@@ -513,6 +513,10 @@ namespace js {
         }
 
         case NodeKind.DEFAULT {
+          if (node.type.isNumeric(cache)) emit("0");
+          else if (node.type.isBool(cache)) emit("false");
+          else if (node.type.isReference()) emit("null");
+          else assert false; // TODO: Handle structs
         }
 
         case

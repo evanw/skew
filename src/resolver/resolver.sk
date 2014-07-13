@@ -1906,6 +1906,22 @@ class Resolver {
             //
             memberSymbol.node.appendChild(Node.createError());
           }
+
+          // Automatically add an initializer if one is missing
+          else {
+            int j;
+            for (j = 0; j < memberInitializers.children.length; j++) {
+              if (memberInitializers.children.get(j).memberInitializerName().asString() == memberSymbol.name) {
+                break;
+              }
+            }
+            if (j == memberInitializers.children.length) {
+              initializeMember(member);
+              memberInitializers.insertChild(index++, Node.createMemberInitializer(
+                Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type),
+                Node.createDefault(Node.createType(member.type))));
+            }
+          }
         }
       }
 
