@@ -571,7 +571,7 @@ namespace js {
           OperatorInfo info = operatorInfo.get(node.kind);
           if (info.precedence < precedence) emit("(");
           emitExpression(node.binaryLeft(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.RIGHT)));
-          emit(" ".append(info.text).append(" "));
+          emit(node.kind == NodeKind.EQUAL ? " === " : node.kind == NodeKind.NOT_EQUAL ? " !== " : " ".append(info.text).append(" "));
           emitExpression(node.binaryRight(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.LEFT)));
           if (info.precedence < precedence) emit(")");
         }
