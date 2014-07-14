@@ -477,7 +477,7 @@ class Resolver {
     }
 
     // Create a type node to distinguish the type from an instance of that type
-    node.become(Node.createType(member.symbol.type).withRange(node.range));
+    node.become(Node.createType(member.symbol.type).withRange(node.range).withSymbol(member.symbol));
     assert node.type != null; // All type symbols should have a type by now
   }
 
@@ -1148,7 +1148,7 @@ class Resolver {
       else if (symbol.enclosingSymbol != null) {
         assert symbol.isEnumValue();
         Type type = symbol.enclosingSymbol.type;
-        variableType = Node.createType(type);
+        variableType = Node.createType(type).withSymbol(symbol.enclosingSymbol);
 
         // All enum values are final
         symbol.flags = symbol.flags | SymbolFlag.FINAL;
@@ -1223,6 +1223,11 @@ class Resolver {
       resolveAsParameterizedType(variableType);
       checkIsValidVariableType(variableType);
       symbol.type = variableType.type;
+
+      // Make sure the variable cluster has a resolved type
+      if (node.parent.kind == NodeKind.VARIABLE_CLUSTER && node.parent.clusterType().type == null) {
+        node.parent.replaceChild(0, variableType.clone());
+      }
     }
 
     // Variables must not override other symbols
@@ -1318,6 +1323,11 @@ class Resolver {
       assert symbol.isInitializing();
       assert !symbol.isInitialized();
       symbol.flags = (symbol.flags & ~SymbolFlag.INITIALIZING) | SymbolFlag.INITIALIZED;
+
+      // Attach information to the name for the language service
+      Node name = node.declarationName();
+      name.symbol = symbol;
+      name.type = symbol.type;
     }
   }
 
@@ -2157,7 +2167,7 @@ class Resolver {
 
     // Wrap type symbols in a type node to distinguish them from instances
     if (member.symbol.kind.isType()) {
-      node.become(Node.createType(member.type).withRange(node.range));
+      node.become(Node.createType(member.type).withRange(node.range).withSymbol(member.symbol));
       return;
     }
 
@@ -2170,6 +2180,7 @@ class Resolver {
       Symbol symbol = context.symbolForThis;
       initializeSymbol(symbol);
       node.type = symbol.type;
+      node.symbol = symbol;
     }
   }
 
@@ -2292,7 +2303,7 @@ class Resolver {
     }
 
     // Update this node using the member member
-    if (symbolIsType) node.become(Node.createType(member.type).withRange(node.range));
+    if (symbolIsType) node.become(Node.createType(member.type).withRange(node.range).withSymbol(member.symbol));
     else if (targetIsType) node.become(Node.createName(member.symbol.name).withRange(node.range).withSymbol(member.symbol).withType(member.type));
     else node.type = dotName.type = member.type;
   }
@@ -2440,7 +2451,7 @@ class Resolver {
     // Only parameterize the type if no errors were found in the type parameters
     List<Type> types = {};
     for (i = 0; i < substitutions.length; i++) types.push(substitutions.get(i).type);
-    node.become(Node.createType(cache.parameterize(unparameterized, types)).withRange(node.range));
+    node.become(Node.createType(cache.parameterize(unparameterized, types)).withRange(node.range).withSymbol(parameterizeType.symbol));
   }
 
   void resolveCast(Node node) {

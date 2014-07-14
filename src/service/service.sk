@@ -87,16 +87,18 @@ class LanguageService {
 namespace serviceHelpers {
   Node nodeFromPosition(Node node, Source source, int index) {
     while (node.hasChildren()) {
-      int count = node.children.length;
+      // Search in reverse order to handle initializer expressions, which get
+      // turned into call expressions where the target of the call spans the
+      // entire range of the initializer expression and hides the arguments
       int i;
-      for (i = 0; i < count; i++) {
+      for (i = node.children.length - 1; i >= 0; i--) {
         Node child = node.children.get(i);
         if (child != null && child.range.source == source && child.range.touches(index)) {
           node = child;
           break;
         }
       }
-      if (i == count) {
+      if (i < 0) {
         break;
       }
     }
@@ -105,10 +107,72 @@ namespace serviceHelpers {
 
   LanguageServiceTypeResult typeFromPosition(Node node, Source source, int index) {
     node = nodeFromPosition(node, source, index);
-    if (node.type != null && node.symbol != null) {
+    Symbol symbol = node.symbol;
+    Type type = node.type;
+    if (type != null && symbol != null) {
       LineColumn start = source.indexToLineColumn(node.range.start);
-      LanguageServiceTypeResult result = new LanguageServiceTypeResult(start.line, start.column, node.range.start, node.range.singleLineLength(), node.type.toString());
-      result.declaration = node.type.toString().append(" ").append(node.symbol.name).append(";");
+      LanguageServiceTypeResult result = new LanguageServiceTypeResult(start.line, start.column, node.range.start, node.range.singleLineLength(), type.toString());
+
+      // Pretty-print the symbol
+      switch (symbol.kind) {
+        case SymbolKind.PARAMETER {
+          Type bound = symbol.type.bound();
+          string text = "type ".append(symbol.name);
+          if (bound != null) {
+            text = text.append(" is ").append(bound.toString());
+          }
+          result.declaration = text;
+        }
+
+        case SymbolKind.NAMESPACE {
+          result.declaration = "namespace ".append(symbol.fullName());
+        }
+
+        case SymbolKind.CLASS {
+          result.declaration = "class ".append(type.toString());
+        }
+
+        case SymbolKind.STRUCT {
+          result.declaration = "struct ".append(type.toString());
+        }
+
+        case SymbolKind.INTERFACE {
+          result.declaration = "interface ".append(type.toString());
+        }
+
+        case SymbolKind.ENUM {
+          result.declaration = "enum ".append(symbol.fullName());
+        }
+
+        case SymbolKind.ENUM_FLAGS {
+          result.declaration = "enum flags ".append(symbol.fullName());
+        }
+
+        case SymbolKind.GLOBAL_FUNCTION, SymbolKind.INSTANCE_FUNCTION, SymbolKind.CONSTRUCTOR_FUNCTION {
+          string text = type.resultType().toString().append(" ").append(symbol.name).append("(");
+          List<Node> arguments = symbol.node.functionArguments().children;
+          List<Type> argumentTypes = type.argumentTypes();
+          int i;
+          for (i = 0; i < arguments.length; i++) {
+            if (i > 0) text = text.append(", ");
+            text = text.append(argumentTypes.get(i).toString()).append(" ").append(arguments.get(i).symbol.name);
+          }
+          result.declaration = text.append(");");
+        }
+
+        case SymbolKind.LOCAL_VARIABLE, SymbolKind.GLOBAL_VARIABLE, SymbolKind.INSTANCE_VARIABLE {
+          string text = type.toString().append(" ").append(symbol.name);
+          if (symbol.isEnumValue()) {
+            text = text.append(" = ").append(symbol.enumValue.toString());
+          }
+          result.declaration = text.append(";");
+        }
+
+        default {
+          return null;
+        }
+      }
+
       return result;
     }
     return null;
