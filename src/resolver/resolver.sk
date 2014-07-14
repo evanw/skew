@@ -788,16 +788,26 @@ class Resolver {
     return false;
   }
 
-  static List<Node> collectBaseTypes(Symbol symbol) {
+  List<Node> collectAndResolveBaseTypes(Symbol symbol) {
     List<Node> baseTypes = {};
     Node node;
     for (node = symbol.node; node != null; node = node.sibling) {
-      if (node.kind.isObject() || node.kind == NodeKind.EXTENSION) {
+      bool isObject = node.kind.isObject();
+      if (isObject || node.kind == NodeKind.EXTENSION) {
         Node types = node.baseTypes();
         if (types != null && types.hasChildren()) {
+          int index = 0;
           int i;
           for (i = 0; i < types.children.length; i++) {
-            baseTypes.push(types.children.get(i));
+            Node baseType = types.children.get(i);
+            resolveAsParameterizedType(baseType);
+            if (isObject) {
+              baseTypes.insert(index++, baseType);
+            } else if (baseType.type.isClass()) {
+              semanticErrorBaseClassInExtension(log, baseType.range);
+            } else {
+              baseTypes.push(baseType);
+            }
           }
         }
       }
@@ -806,12 +816,10 @@ class Resolver {
   }
 
   void checkNoBaseTypes(Symbol symbol, string what) {
-    List<Node> baseTypes = collectBaseTypes(symbol);
+    List<Node> baseTypes = collectAndResolveBaseTypes(symbol);
     int i;
     for (i = 0; i < baseTypes.length; i++) {
-      Node baseType = baseTypes.get(i);
-      resolveAsParameterizedType(baseType);
-      semanticErrorUnexpectedBaseType(log, baseType.range, what);
+      semanticErrorUnexpectedBaseType(log, baseTypes.get(i).range, what);
     }
   }
 
@@ -854,7 +862,7 @@ class Resolver {
   void resolveBaseTypes(Symbol symbol) {
     Node node = symbol.node;
     Type type = symbol.type;
-    List<Node> baseTypes = collectBaseTypes(symbol);
+    List<Node> baseTypes = collectAndResolveBaseTypes(symbol);
     StringMap<Member> unmergedMembers = new StringMap<Member>();
     assert type.relevantTypes == null;
     type.relevantTypes = {};
@@ -862,14 +870,12 @@ class Resolver {
     // A struct has no base type because it's meant to be a named tuple type
     if (symbol.kind == SymbolKind.STRUCT) {
       checkNoBaseTypes(symbol, "A struct");
-      resolveNodesAsVariableTypes(baseTypes);
       return;
     }
 
     int i;
     for (i = 0; i < baseTypes.length; i++) {
       Node base = baseTypes.get(i);
-      resolveAsParameterizedType(base);
       Type baseType = base.type;
 
       // Avoid reporting further errors
@@ -879,7 +885,7 @@ class Resolver {
 
       // Ensure there is one base class and everything else is an interface
       if (symbol.kind == SymbolKind.CLASS && baseType.isClass()) {
-        if (base.parent.parent != node || node.baseTypes().children.indexOf(base) != 0) {
+        if (baseTypes.indexOf(base) != 0) {
           semanticErrorClassBaseNotFirst(log, base.range, baseType);
           continue;
         }

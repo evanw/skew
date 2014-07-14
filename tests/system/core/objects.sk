@@ -84,7 +84,7 @@ class Foo {}
 in Foo : Bar {}
 class Bar {}
 ", "
-<stdin>:2:10: error: Base type \"Bar\" must come first in a class declaration
+<stdin>:2:10: error: The base class must be set from the class declaration, not from an extension block
 in Foo : Bar {}
          ~~~
 ");
@@ -579,4 +579,15 @@ in Foo { int foo() { return this; } }
 <stdin>:2:29: error: Cannot convert from type \"Foo\" to type \"int\"
 in Foo { int foo() { return this; } }
                             ~~~~
+");
+
+test("
+class Foo {}
+in Bar : Baz {}
+class Bar : Foo {}
+interface Baz {}
+Foo foo = Bar();
+Bar bar = Bar();
+Baz baz = Bar();
+", "
 ");
