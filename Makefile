@@ -37,6 +37,8 @@ SOURCES += src/resolver/symbol.sk
 SOURCES += src/resolver/type.sk
 SOURCES += src/resolver/typecache.sk
 
+SOURCES += src/service/service.sk
+
 TEST_SOURCES += tests/system/common.sk
 
 TEST_SOURCES += tests/system/core/calls.sk

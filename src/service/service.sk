@@ -1,0 +1,202 @@
+class LanguageServiceTypeResult {
+  int line;
+  int column;
+  int index;
+  int length;
+  string type;
+  string declaration = "";
+}
+
+class LanguageServiceDiagnostic {
+  string kind;
+  string text;
+  int line;
+  int column;
+  int index;
+  int length;
+}
+
+class LanguageServiceCompletion {
+  string name;
+  string type;
+  string completion; // Uses '$' for where the cursor should be
+}
+
+class LanguageService {
+  CompilerResult previousResult = null;
+  Source previousSource = null;
+
+  LanguageServiceTypeResult typeFromPosition(int line, int column) {
+    if (previousResult != null && previousResult.program != null && previousSource != null && column >= 0 &&
+        column < previousSource.contentsOfLine(line).length && previousResult.program.children.length == 2) {
+      int index = previousSource.lineOffsets.get(line) + column;
+      Node previousFile = previousResult.program.children.get(1);
+      assert previousFile.range.source == previousSource;
+      return serviceHelpers.typeFromPosition(previousFile, previousSource, index);
+    }
+    return null;
+  }
+
+  List<LanguageServiceDiagnostic> checkForDiagnostics(string input) {
+    // Compile input
+    CompilerOptions options = new CompilerOptions();
+    Compiler compiler = new Compiler();
+    previousSource = new Source("<input>", input);
+    options.inputs = { previousSource };
+    previousResult = compiler.compile(options);
+
+    // Construct diagnostics
+    List<LanguageServiceDiagnostic> diagnostics = {};
+    int i;
+    for (i = 0; i < compiler.log.diagnostics.length; i++) {
+      Diagnostic diagnostic = compiler.log.diagnostics.get(i);
+      Range range = diagnostic.range;
+      if (range.source == previousSource) {
+        LineColumn start = range.source.indexToLineColumn(range.start);
+        string type;
+        switch (diagnostic.kind) {
+          case DiagnosticKind.ERROR { type = "error"; }
+          case DiagnosticKind.WARNING { type = "warning"; }
+        }
+        diagnostics.push(new LanguageServiceDiagnostic(type, diagnostic.text, start.line, start.column, range.start, range.singleLineLength()));
+      }
+    }
+    return diagnostics;
+  }
+
+  List<LanguageServiceCompletion> checkForCompletions(string input, int line, int column) {
+    // Compile input
+    CompilerOptions options = new CompilerOptions();
+    Compiler compiler = new Compiler();
+    previousSource = new Source("<input>", input);
+    options.inputs = { previousSource };
+    previousResult = compiler.compile(options);
+
+    // Construct completions
+    if (previousResult.program != null && column >= 0 && column <= previousSource.contentsOfLine(line).length && previousResult.program.children.length == 2) {
+      int index = previousSource.lineOffsets.get(line) + column;
+      Node previousFile = previousResult.program.children.get(1);
+      assert previousFile.range.source == previousSource;
+      return serviceHelpers.completionsFromPosition(previousFile, previousResult.resolver, previousSource, index);
+    }
+
+    return null;
+  }
+}
+
+namespace serviceHelpers {
+  Node nodeFromPosition(Node node, Source source, int index) {
+    while (node.hasChildren()) {
+      int count = node.children.length;
+      int i;
+      for (i = 0; i < count; i++) {
+        Node child = node.children.get(i);
+        if (child != null && child.range.source == source && child.range.touches(index)) {
+          node = child;
+          break;
+        }
+      }
+      if (i == count) {
+        break;
+      }
+    }
+    return node;
+  }
+
+  LanguageServiceTypeResult typeFromPosition(Node node, Source source, int index) {
+    node = nodeFromPosition(node, source, index);
+    if (node.type != null && node.symbol != null) {
+      LineColumn start = source.indexToLineColumn(node.range.start);
+      LanguageServiceTypeResult result = new LanguageServiceTypeResult(start.line, start.column, node.range.start, node.range.singleLineLength(), node.type.toString());
+      result.declaration = node.type.toString().append(" ").append(node.symbol.name).append(";");
+      return result;
+    }
+    return null;
+  }
+
+  List<LanguageServiceCompletion> completionsFromPosition(Node node, Resolver resolver, Source source, int index) {
+    List<LanguageServiceCompletion> completions = {};
+    node = nodeFromPosition(node, source, index);
+
+    // Special-case completions for members
+    if (node.kind == NodeKind.DOT) {
+      Node target = node.dotTarget();
+      if (target.type != null) {
+        bool isInstance = !target.kind.isType();
+        List<Member> members = target.type.members.values();
+        int i;
+        for (i = 0; i < members.length; i++) {
+          Member member = members.get(i);
+          resolver.initializeMember(member);
+          if (member.symbol.kind.isInstance() == isInstance) {
+            addCompletion(completions, member);
+          }
+        }
+        return completions;
+      }
+    }
+
+    // Return completions from the tightest enclosing scope
+    while (node != null) {
+      if (node.scope == null) {
+        node = node.parent;
+        continue;
+      }
+
+      // Walk up the scope chain and accumulate all members
+      StringMap<Member> allMembers = new StringMap<Member>();
+      collectAllMembers(node.scope, allMembers);
+      List<Member> members = allMembers.values();
+
+      int i;
+      for (i = 0; i < members.length; i++) {
+        Member member = members.get(i);
+        resolver.initializeMember(member);
+        addCompletion(completions, member);
+      }
+      break;
+    }
+
+    return completions;
+  }
+
+  void addCompletion(List<LanguageServiceCompletion> completions, Member member) {
+    string name = member.symbol.name;
+    Type type = member.type;
+    if (name != "new" && type != null) {
+      string text = name;
+      if (type.isFunction()) {
+        bool semicolon = type.resultType().toString() == "void";
+        text = text.append(type.argumentTypes().length == 0
+          ? semicolon ? "();$" : "()$"
+          : semicolon ? "($);" : "($)");
+      } else {
+        text = text.append("$");
+      }
+      completions.push(new LanguageServiceCompletion(name, type.toString(), text));
+    }
+  }
+
+  void addAllMembers(StringMap<Member> allMembers, StringMap<Member> membersToAdd) {
+    List<Member> members = membersToAdd.values();
+    int i;
+    for (i = 0; i < members.length; i++) {
+      Member member = members.get(i);
+      if (!allMembers.has(member.symbol.name)) {
+        allMembers.set(member.symbol.name, member);
+      }
+    }
+  }
+
+  void collectAllMembers(Scope scope, StringMap<Member> allMembers) {
+    if (scope.locals != null) {
+      addAllMembers(allMembers, scope.locals);
+    }
+    if (scope.type != null) {
+      addAllMembers(allMembers, scope.type.members);
+    }
+    if (scope.lexicalParent != null) {
+      collectAllMembers(scope.lexicalParent, allMembers);
+    }
+  }
+}

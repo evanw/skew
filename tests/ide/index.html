@@ -1,0 +1,391 @@
+<meta charset="utf8">
+<script src="ace.js"></script>
+<script src="ext-language_tools.js"></script>
+<script src="ace.skew.js"></script>
+<link rel="stylesheet" href="style.css">
+<div id="content"></div>
+<script>
+
+  function ajax(url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    xhr.onload = function() {
+      callback(xhr.response);
+    };
+    xhr.send(null);
+  }
+
+  function main() {
+    ace.require('ace/ext/language_tools');
+    var content = ace.edit('content');
+    content.renderer.setShowPrintMargin(false);
+    content.session.setTabSize(2);
+    content.focus();
+    content.setOptions({
+      scrollSpeed: 1,
+      showFoldWidgets: false,
+      highlightActiveLine: false,
+      scrollPastEnd: true
+    });
+    var Mode = ace.require('ace/mode/skew').Mode;
+    var editor = new Editor(content, new Mode);
+
+    ajax('../../src/resolver/constantfolding.sk', function(value) {
+      content.session.setValue(value);
+      content.session.selection.setSelectionAnchor(0, 0);
+      content.session.selection.selectTo(0, 0);
+    });
+
+    window.onfocus = function() {
+      content.focus();
+    };
+  }
+
+  function rpc(task, input, callback) {
+    if (!worker) return;
+    var id = nextMessageId++;
+    callbacks[id] = function(response) {
+      delete callbacks[id];
+      callback(response.output);
+    };
+    worker.postMessage({ task: task, id: id, input: input });
+  }
+
+  var worker = null;
+  var nextMessageId = 0;
+  var callbacks = {};
+
+  ajax('../../build/debug/skewc.js', function(value1) {
+    ajax('worker.js', function(value2) {
+      worker = new Worker(URL.createObjectURL(new Blob([value1, value2], { type: 'text/javascript' })));
+      worker.onmessage = function(message) {
+        message = message.data;
+        callbacks[message.id](message);
+      };
+    });
+  });
+
+  var RPC = {
+    NONE: 0,
+    PENDING: 1,
+    PENDING_OUTDATED: 2
+  };
+
+  function Editor(content, mode) {
+    this.content = content;
+    this.mode = mode;
+    this.isTooltipVisible = false;
+    this.currentTooltipResult = null;
+    this.tooltipTimeout = null;
+    this.tooltip = null;
+    this.completionsCheck = RPC.NONE;
+    this.completionsCallback = null;
+    this.diagnosticsCheck = RPC.NONE;
+    this.diagnosticsByLine = {};
+
+    // Initialize the content editor
+    this.wrapTokenizer();
+    this.content.session.setMode(this.mode);
+    this.loadDiagnosticTooltips();
+
+    // Check for diagnostics after a delay of inactivity
+    var timeout = 0;
+    this.content.on('change', function(delta) {
+      this.hideTooltip();
+      this.updateDiagnosticsFromChange(delta.data);
+      clearTimeout(timeout);
+      timeout = setTimeout(this.checkForDiagnostics.bind(this), 250);
+    }.bind(this));
+
+    // Implement context-aware autocomplete
+    var ensureCompleterExists = function(editor) {
+      if (!editor.completer) {
+        editor.completer = new (require('ace/autocomplete').Autocomplete)();
+        editor.completer.goTo = function(where) {
+          var row = this.popup.getRow();
+          var max = this.popup.session.getLength() - 1;
+          var delta = { up: -1, down: 1, start: -Infinity, end: Infinity };
+          this.popup.setRow(Math.max(0, Math.min(max, row + delta[where])));
+        };
+        editor.completers = [{
+          getCompletions: function(editor, session, pos, prefix, callback) {
+            this.checkForCompletions(function(completions) {
+              callback(null, completions === null ? [] : completions.map(function(entry) {
+                return {
+                  score: 0,
+                  value: entry.name,
+                  meta: entry.type,
+                  snippet: entry.completion.replace('$', '$0')
+                };
+              }));
+            });
+          }.bind(this)
+        }];
+      }
+    }.bind(this);
+
+    // Open autocomplete with a spacebar shortcut
+    content.commands.addCommand({
+      name: 'startAutocomplete',
+      exec: function(editor) {
+        ensureCompleterExists(editor);
+        editor.completer.autoInsert = true;
+        editor.completer.showPopup(editor);
+        editor.completer.cancelContextMenu();
+      }.bind(this),
+      bindKey: 'Ctrl-Space|Ctrl-Shift-Space|Alt-Space'
+    });
+
+    // Open autocomplete automatically on '.'
+    content.onTextInput = function(text) {
+      this.call(content, text);
+      if (/^[\w.]$/.test(text)) {
+        ensureCompleterExists(content);
+        content.completer.autoInsert = false;
+        content.completer.showPopup(content);
+        content.completer.cancelContextMenu();
+      }
+    }.bind(content.onTextInput);
+
+    // This interferes with the browser's location bar
+    content.commands.removeCommand('gotoline');
+  }
+
+  Editor.prototype.checkForCompletions = function(callback) {
+    this.completionsCallback = callback;
+
+    // Since it's impossible to cancel a worker task, just wait it out. Delay
+    // until the task has finished instead of sending a new task for speed.
+    if (this.completionsCheck !== RPC.NONE) {
+      this.completionsCheck = RPC.PENDING_OUTDATED;
+      return;
+    }
+
+    // Send the RPC and update the diagnostics when it completes
+    var position = this.content.getSelection().getCursor();
+    this.completionsCheck = RPC.PENDING;
+    rpc('checkForCompletions', [this.content.getValue(), position.row, position.column], function(result) {
+      // Check for diagnostics again if other checks have been requested in the meantime
+      if (this.completionsCheck === RPC.PENDING_OUTDATED) {
+        this.completionsCheck = RPC.NONE;
+        this.checkForCompletions(this.completionsCallback);
+      } else {
+        var callback = this.completionsCallback;
+        this.completionsCheck = RPC.NONE;
+        this.completionsCallback = null;
+        callback(result);
+      }
+    }.bind(this));
+  };
+
+  Editor.prototype.checkForDiagnostics = function() {
+    // Since it's impossible to cancel a worker task, just wait it out. Delay
+    // until the task has finished instead of sending a new task for speed.
+    if (this.diagnosticsCheck !== RPC.NONE) {
+      this.diagnosticsCheck = RPC.PENDING_OUTDATED;
+      return;
+    }
+
+    // Send the RPC and update the diagnostics when it completes
+    this.diagnosticsCheck = RPC.PENDING;
+    rpc('checkForDiagnostics', [this.content.getValue()], function(result) {
+      if (result === null) return;
+
+      // Check for diagnostics again if other checks have been requested in the meantime
+      if (this.diagnosticsCheck === RPC.PENDING_OUTDATED) {
+        this.diagnosticsCheck = RPC.NONE;
+        this.checkForDiagnostics();
+      } else {
+        this.diagnosticsCheck = RPC.NONE;
+        this.changeDiagnostics(result);
+      }
+    }.bind(this));
+  };
+
+  Editor.prototype.updateDiagnosticsFromChange = function(delta) {
+    var isInsert = delta.action === 'insertText' || delta.action === 'insertLines';
+    var start = delta.range.start;
+    var oldEnd = isInsert ? start : delta.range.end;
+    var newEnd = isInsert ? delta.range.end : start;
+    var diagnosticsByLine = this.diagnosticsByLine;
+
+    // Remove all diagnostics that touch the modified lines
+    this.diagnosticsByLine = {};
+    for (var key in diagnosticsByLine) {
+      var line = key | 0;
+      if (+key === line && line !== start.row) {
+        var diagnostics = diagnosticsByLine[key];
+        if (key >= oldEnd.row) {
+          diagnostics.forEach(function(diagnostic) {
+            diagnostic.line += newEnd.row - oldEnd.row;
+          });
+        }
+        this.appendDiagnostics(diagnostics);
+      }
+    }
+  };
+
+  Editor.prototype.appendDiagnostics = function(diagnostics) {
+    diagnostics.forEach(function(diagnostic) {
+      (this.diagnosticsByLine[diagnostic.line] || (this.diagnosticsByLine[diagnostic.line] = [])).push(diagnostic);
+    }, this);
+  };
+
+  // Update the diagnostic markers when the diagnostics change
+  Editor.prototype.changeDiagnostics = function(diagnostics) {
+    this.diagnosticsByLine = {};
+    this.appendDiagnostics(diagnostics.filter(function(diagnostic) {
+      return diagnostic.kind !== 'note';
+    }));
+    this.content.session.$mode = null;
+    this.content.session.setMode(this.mode);
+  };
+
+  Editor.prototype.wrapTokenizer = function() {
+    var getTokenizer = this.mode.getTokenizer;
+    this.mode.getTokenizer = function() {
+      if (this.mode.$tokenizer) {
+        return this.mode.$tokenizer;
+      }
+
+      var tokenizer = getTokenizer.call(this.mode);
+      var getLineTokens = tokenizer.getLineTokens;
+
+      tokenizer.getLineTokens = function(line, startState, row) {
+        var result = getLineTokens.call(tokenizer, line, startState, row);
+        var diagnostics = this.diagnosticsByLine[row] || [];
+        var column = 0;
+
+        for (var i = 0; i < result.tokens.length; i++) {
+          var token = result.tokens[i];
+
+          for (var j = 0; j < diagnostics.length; j++) {
+            var diagnostic = diagnostics[j];
+            var start = diagnostic.column - column;
+            var end = start + diagnostic.length;
+
+            if (start >= token.value.length || end <= 0) {
+              continue;
+            }
+
+            if (start > 0) {
+              result.tokens.splice(i++, 0, {
+                type: token.type,
+                value: token.value.slice(0, start)
+              });
+            }
+
+            if (end < token.value.length) {
+              result.tokens.splice(i + 1, 0, {
+                type: token.type,
+                value: token.value.slice(end)
+              });
+            }
+
+            // Add the error type to the covered bit
+            var from = Math.max(start, 0);
+            var to = Math.min(end, token.value.length);
+            token.value = token.value.slice(from, to);
+            token.type += '.' + diagnostic.kind;
+            column += from;
+          }
+
+          column += token.value.length;
+        }
+
+        if (diagnostics.length > 0) {
+          var diagnostic = diagnostics[diagnostics.length - 1];
+          if (diagnostic.column === line.length) {
+            result.tokens.push({ type: diagnostic.kind, value: ' ' });
+          }
+        }
+
+        return result;
+      }.bind(this);
+
+      return tokenizer;
+    }.bind(this);
+  };
+
+  Editor.prototype.showTooltip = function(x, y, text) {
+    this.tooltip.textContent = text;
+    this.tooltip.style.display = 'block';
+    this.tooltip.style.left = x + 'px';
+    this.tooltip.style.top = y + 'px';
+    this.isTooltipVisible = true;
+  };
+
+  Editor.prototype.hideTooltip = function() {
+    if (!this.isTooltipVisible) return;
+    this.currentTooltipResult = null;
+    this.tooltip.style.display = 'none';
+    this.isTooltipVisible = false;
+    clearTimeout(this.tooltipTimeout);
+    this.tooltipTimeout = null;
+  };
+
+  Editor.prototype.moveTooltip = function(x, y, text) {
+    if (this.isTooltipVisible) {
+      this.showTooltip(x, y, text);
+    } else {
+      this.tooltipTimeout = setTimeout(function() {
+        this.showTooltip(x, y, text);
+      }.bind(this), 250);
+    }
+  };
+
+  Editor.prototype.loadDiagnosticTooltips = function() {
+    var checkTooltip = function(e) {
+      clearTimeout(this.tooltipTimeout);
+      this.tooltipTimeout = null;
+
+      var renderer = this.content.renderer;
+      var position = renderer.pixelToScreenCoordinates(e.pageX, e.pageY);
+      var diagnostics = this.diagnosticsByLine[position.row] || [];
+
+      for (var i = 0; i < diagnostics.length; i++) {
+        var diagnostic = diagnostics[i];
+        var start = diagnostic.column;
+        var end = start + diagnostic.length;
+        if (position.column > start && position.column < end || position.column === start && position.side === 1 || position.column === end && position.side === -1) {
+          var x = renderer.gutterWidth + renderer.$padding + Math.round(start * renderer.characterWidth) - renderer.scrollLeft;
+          var y = (diagnostic.line + 1) * renderer.lineHeight - renderer.scrollTop;
+          this.moveTooltip(x, y, diagnostic.text);
+          this.currentTooltipResult = null;
+          return;
+        }
+      }
+
+      var current = this.currentTooltipResult;
+      if (current === null || position.row !== current.line || position.column < current.column || position.column > current.column + current.length) {
+        this.hideTooltip();
+      }
+
+      // Do an asynchronous check for the type under the mouse
+      var query = { line: position.row, column: position.column, length: 0 };
+      this.currentTooltipResult = query;
+      rpc('typeFromPosition', [position.row, position.column], function(result) {
+        if (this.currentTooltipResult === query) {
+          if (result !== null) {
+            var x = renderer.gutterWidth + renderer.$padding + Math.round(result.column * renderer.characterWidth) - renderer.scrollLeft;
+            var y = (result.line + 1) * renderer.lineHeight - renderer.scrollTop;
+            this.moveTooltip(x, y, result.declaration);
+            this.currentTooltipResult = result;
+          } else {
+            this.hideTooltip();
+          }
+        }
+      }.bind(this));
+    }.bind(this);
+
+    this.tooltip = document.createElement('div');
+    this.tooltip.className = 'ace_tooltip';
+    this.content.renderer.container.appendChild(this.tooltip);
+    document.addEventListener('mousemove', checkTooltip);
+    this.content.session.on('changeScrollLeft', this.hideTooltip.bind(this));
+    this.content.session.on('changeScrollTop', this.hideTooltip.bind(this));
+  };
+
+  main();
+
+</script>

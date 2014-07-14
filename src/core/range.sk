@@ -24,6 +24,10 @@ struct Range {
     return source.name.append(":").append((location.line + 1).toString()).append(":").append((location.column + 1).toString());
   }
 
+  bool touches(int index) {
+    return start <= index && index <= end;
+  }
+
   // Return the length from the start to the end of the range or the end of the
   // first line, whichever comes first
   int singleLineLength() {

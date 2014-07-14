@@ -154,9 +154,9 @@ in Foo { int foo() { return this; } }
 
 test("
 enum Foo {}
-in Foo { static string names = false; }
+in Foo { static string foo = false; }
 ", "
-<stdin>:2:32: error: Cannot convert from type \"bool\" to type \"string\"
-in Foo { static string names = false; }
-                               ~~~~~
+<stdin>:2:30: error: Cannot convert from type \"bool\" to type \"string\"
+in Foo { static string foo = false; }
+                             ~~~~~
 ");

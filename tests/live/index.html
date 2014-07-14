@@ -46,7 +46,6 @@ function compile() {
     var options = new CompilerOptions();
     options.targetFormat = TargetFormat.JS;
     options.inputs.push(new Source('<stdin>', input.value));
-    // options.jsSourceMap = true;
     var result = compiler.compile(options);
     outputLog.value = compiler.log.toString();
     if (result.program !== null && result.program.children.length === 2) {
