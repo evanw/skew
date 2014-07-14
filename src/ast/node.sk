@@ -349,7 +349,8 @@ class Node {
     if (content != null) {
       node.content = content.clone();
     }
-    if (hasChildren()) {
+    if (children != null) {
+      node.children = {};
       int i;
       for (i = 0; i < children.length; i++) {
         Node child = children.get(i);

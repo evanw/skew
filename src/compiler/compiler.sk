@@ -41,6 +41,9 @@ class CompilerResult {
 }
 
 class Compiler {
+  static Source nativeLibrarySource = null;
+  static Node nativeLibraryFile = null;
+
   double tokenizeTime = 0;
   double parseTime = 0;
   double resolveTime = 0;
@@ -88,11 +91,20 @@ class Compiler {
     List<Source> outputs = null;
     Node program = Node.createProgram({});
 
+    // Cache the standard library for a small speed increase
+    if (nativeLibrarySource != null) {
+      program.appendChild(nativeLibraryFile.clone());
+    } else {
+      nativeLibrarySource = new Source("<native>", NATIVE_LIBRARY);
+      processInput(program, nativeLibrarySource);
+      nativeLibraryFile = program.children.get(0).clone();
+    }
+    options.inputs.unshift(nativeLibrarySource);
+
     // Tokenize and parse each module individually
-    options.inputs.unshift(new Source("<native>", NATIVE_LIBRARY));
     int i;
-    for (i = 0; i < options.inputs.length; i++) {
-      processInput(program, options, options.inputs.get(i));
+    for (i = 1; i < options.inputs.length; i++) {
+      processInput(program, options.inputs.get(i));
     }
 
     // Resolve everything together
@@ -129,7 +141,7 @@ class Compiler {
     return new CompilerResult(options, outputs, program, resolver);
   }
 
-  void processInput(Node program, CompilerOptions options, Source source) {
+  void processInput(Node program, Source source) {
     int errorCount = log.errorCount;
 
     // Tokenize the source

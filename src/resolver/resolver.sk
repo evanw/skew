@@ -1144,7 +1144,7 @@ class Resolver {
         variableType = node.parent.clusterType().clone();
       }
 
-      // Take the variable type from the enclosing enum declaration
+      // Take the variable type from the surrounding context
       else if (symbol.enclosingSymbol != null) {
         assert symbol.isEnumValue();
         Type type = symbol.enclosingSymbol.type;
@@ -1857,7 +1857,7 @@ class Resolver {
         if (overriddenType.argumentTypes().length > 0) {
           semanticErrorMissingSuperInitializer(log, node.declarationName().range);
         } else {
-          node.children.set(3, Node.createSuperCall({}).withSymbol(overriddenMember.symbol));
+          node.replaceChild(3, Node.createSuperCall({}).withSymbol(overriddenMember.symbol));
         }
       }
 
@@ -1865,7 +1865,7 @@ class Resolver {
       Node memberInitializers = node.memberInitializers();
       if (memberInitializers == null) {
         memberInitializers = Node.createNodeList({});
-        node.children.set(4, memberInitializers);
+        node.replaceChild(4, memberInitializers);
       }
 
       // Move the initial values for all member variables to initializers. The
@@ -2271,7 +2271,7 @@ class Resolver {
       semanticErrorUnknownMemberSymbol(log, dotName.range, name, type);
       return;
     }
-    node.symbol = member.symbol;
+    node.symbol = dotName.symbol = member.symbol;
     initializePotentiallyDuplicatedMember(member, dotName.range);
 
     // Check the instance/static status of the member
@@ -2294,7 +2294,7 @@ class Resolver {
     // Update this node using the member member
     if (symbolIsType) node.become(Node.createType(member.type).withRange(node.range));
     else if (targetIsType) node.become(Node.createName(member.symbol.name).withRange(node.range).withSymbol(member.symbol).withType(member.type));
-    else node.type = member.type;
+    else node.type = dotName.type = member.type;
   }
 
   void resolveCall(Node node) {
@@ -2486,7 +2486,7 @@ class Resolver {
           int i;
           for (i = 0; i < arguments.length; i++) {
             assert arguments.get(i).variableType() == null;
-            arguments.get(i).children.set(1, Node.createType(argumentTypes.get(i)));
+            arguments.get(i).replaceChild(1, Node.createType(argumentTypes.get(i)));
           }
         }
       }
