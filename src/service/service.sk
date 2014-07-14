@@ -128,16 +128,15 @@ namespace serviceHelpers {
           result.declaration = "namespace ".append(symbol.fullName());
         }
 
-        case SymbolKind.CLASS {
-          result.declaration = "class ".append(type.toString());
-        }
-
-        case SymbolKind.STRUCT {
-          result.declaration = "struct ".append(type.toString());
-        }
-
-        case SymbolKind.INTERFACE {
-          result.declaration = "interface ".append(type.toString());
+        case SymbolKind.CLASS, SymbolKind.STRUCT, SymbolKind.INTERFACE {
+          string text = symbol.kind.toString().toLowerCase().append(" ").append(type.toString());
+          if (type.hasRelevantTypes()) {
+            int i;
+            for (i = 0; i < type.relevantTypes.length; i++) {
+              text = text.append(i == 0 ? " : " : ", ").append(type.relevantTypes.get(i).toString());
+            }
+          }
+          result.declaration = text;
         }
 
         case SymbolKind.ENUM {
