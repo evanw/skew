@@ -6,3 +6,16 @@ function foo() {
 }
 var bar = foo;
 ");
+
+testJS("
+class Foo {
+  void foo() {}
+}
+Foo().foo();
+", "
+function Foo() {
+}
+Foo.prototype.foo = function() {
+};
+new Foo().foo();
+");

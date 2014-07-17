@@ -424,13 +424,10 @@ namespace js {
       addMapping(node);
       switch (node.kind) {
         case NodeKind.NAME {
-          if (node.symbol == null) {
-            emit(node.asString());
-          } else if (!node.symbol.kind.isInstance()) {
-            emit(fullName(node.symbol));
-          } else {
-            emit("this.".append(mangleName(node.symbol)));
-          }
+          emit(
+            node.symbol == null ? node.asString() :
+            node.symbol.kind.isInstance() ? "this.".append(mangleName(node.symbol)) :
+            fullName(node.symbol));
         }
 
         case NodeKind.TYPE {
@@ -484,7 +481,11 @@ namespace js {
         case NodeKind.DOT {
           emitExpression(node.dotTarget(), Precedence.MEMBER);
           emit(".");
-          emitExpression(node.dotName(), Precedence.MEMBER);
+          Node name = node.dotName();
+          emit(
+            name.symbol == null ? name.asString() :
+            name.symbol.kind.isInstance() ? mangleName(name.symbol) :
+            fullName(name.symbol));
         }
 
         case NodeKind.CALL {
