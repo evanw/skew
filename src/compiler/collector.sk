@@ -30,7 +30,7 @@ class Collector {
       if (symbol.kind.isType()) {
         typeSymbols.push(symbol);
         collectDefinitions(symbol.type);
-      } else if (symbol.kind.isFunction() && symbol.node != null && (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances())) {
+      } else if (symbol.kind.isFunction() && symbol.node != null && !symbol.enclosingSymbol.kind.isTypeWithInstances()) {
         freeFunctionSymbols.push(symbol);
       } else if (symbol.kind.isVariable() && symbol.node != null && symbol.node.parent == null) {
         topLevelStatements.push(symbol.node);
@@ -71,6 +71,7 @@ class Collector {
     if (sort == SortTypes.NO) {
       return;
     }
+
     int i;
     for (i = 1; i < typeSymbols.length; i++) {
       Symbol symbol = typeSymbols.get(i);
@@ -92,6 +93,7 @@ class Collector {
     if (right.hasBaseType(left)) {
       return true;
     }
+
     if (sort == SortTypes.BY_INHERITANCE_AND_VALUE && left.isStruct()) {
       List<Member> members = right.members.values();
       if (members != null) {
@@ -103,9 +105,11 @@ class Collector {
         }
       }
     }
+
     if (sort == SortTypes.BY_INHERITANCE_AND_CONTAINMENT && right.symbol.isContainedBy(left.symbol)) {
       return true;
     }
+
     return false;
   }
 }

@@ -1,0 +1,8 @@
+testJS("
+void foo() {}
+var bar = foo;
+", "
+function foo() {
+}
+var bar = foo;
+");

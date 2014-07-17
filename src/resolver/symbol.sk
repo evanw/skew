@@ -149,6 +149,10 @@ class Symbol {
   //
   List<Symbol> sortedParameters = null;
 
+  // Give each symbol a unique integer as a hash code
+  static int nextUniqueID = 0;
+  int uniqueID = nextUniqueID++;
+
   void sortParametersByDependencies() {
     sortedParameters = parameters.clone();
     int i;

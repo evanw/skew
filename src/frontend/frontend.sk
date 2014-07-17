@@ -49,7 +49,7 @@ namespace frontend {
   --verbose         Print out useful information about the compilation.
 
   --target=___      Set the target language. Valid target languages: none, js,
-                    c++, lisp-ast, json-ast, and xml-ast.
+                    lisp-ast, json-ast, and xml-ast.
 
   --output-file=___ Combines all output into a single file.
 
@@ -124,7 +124,6 @@ namespace frontend {
     switch (flags.target) {
       case "none" { target = TargetFormat.NONE; }
       case "js" { target = TargetFormat.JS; }
-      case "c++" { target = TargetFormat.CPP; }
       case "lisp-ast" { target = TargetFormat.LISP_AST; }
       case "json-ast" { target = TargetFormat.JSON_AST; }
       case "xml-ast" { target = TargetFormat.XML_AST; }

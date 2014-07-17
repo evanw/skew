@@ -59,6 +59,7 @@ TEST_SOURCES += tests/system/core/types.sk
 TEST_SOURCES += tests/system/core/using.sk
 TEST_SOURCES += tests/system/core/var.sk
 
+TEST_SOURCES += tests/system/js/functions.sk
 TEST_SOURCES += tests/system/js/objects.sk
 TEST_SOURCES += tests/system/js/operators.sk
 

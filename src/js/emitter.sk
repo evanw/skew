@@ -50,7 +50,7 @@ namespace js {
         int j;
         for (j = 0; j < members.length; j++) {
           Symbol symbol = members.get(j).symbol;
-          if (symbol.node != null && symbol.kind.isFunction() && !symbol.kind.isConstructor()) {
+          if (symbol.enclosingSymbol == type.symbol && symbol.node != null && symbol.kind.isFunction() && !symbol.kind.isConstructor()) {
             emitNode(symbol.node);
           }
         }

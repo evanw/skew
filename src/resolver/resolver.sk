@@ -1330,10 +1330,13 @@ class Resolver {
       assert !symbol.isInitialized();
       symbol.flags = (symbol.flags & ~SymbolFlag.INITIALIZING) | SymbolFlag.INITIALIZED;
 
-      // Attach information to the name for the language service
-      Node name = node.declarationName();
-      name.symbol = symbol;
-      name.type = symbol.type;
+      // Attach information to the declaration names for the language service
+      while (node != null) {
+        Node name = node.declarationName();
+        name.symbol = symbol;
+        name.type = symbol.type;
+        node = node.sibling;
+      }
     }
   }
 

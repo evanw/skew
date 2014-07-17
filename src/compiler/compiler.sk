@@ -6,7 +6,6 @@ enum TargetFormat {
   // Target languages that run the resolver
   NONE,
   JS,
-  CPP,
 
   // AST-only targets
   LISP_AST,
@@ -16,7 +15,7 @@ enum TargetFormat {
 
 in TargetFormat {
   bool shouldRunResolver() {
-    return this >= NONE && this <= CPP;
+    return this >= NONE && this <= JS;
   }
 }
 
@@ -122,7 +121,6 @@ class Compiler {
       switch (options.targetFormat) {
         case TargetFormat.NONE {}
         case TargetFormat.JS { emitter = new js.Emitter(options, resolver.cache); }
-        case TargetFormat.CPP {}
         case TargetFormat.LISP_AST { emitter = new lisp.Emitter(options); }
         case TargetFormat.JSON_AST { emitter = new json.Emitter(options); }
         case TargetFormat.XML_AST { emitter = new xml.Emitter(options); }

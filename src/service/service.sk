@@ -32,7 +32,7 @@ class LanguageService {
       int index = previousSource.lineOffsets.get(line) + column;
       Node previousFile = previousResult.program.children.get(1);
       assert previousFile.range.source == previousSource;
-      return serviceHelpers.typeFromPosition(previousFile, previousSource, index);
+      return service.typeFromPosition(previousFile, previousSource, index);
     }
     return null;
   }
@@ -77,14 +77,14 @@ class LanguageService {
       int index = previousSource.lineOffsets.get(line) + column;
       Node previousFile = previousResult.program.children.get(1);
       assert previousFile.range.source == previousSource;
-      return serviceHelpers.completionsFromPosition(previousFile, previousResult.resolver, previousSource, index);
+      return service.completionsFromPosition(previousFile, previousResult.resolver, previousSource, index);
     }
 
     return null;
   }
 }
 
-namespace serviceHelpers {
+namespace service {
   Node nodeFromPosition(Node node, Source source, int index) {
     while (node.hasChildren()) {
       // Search in reverse order to handle initializer expressions, which get

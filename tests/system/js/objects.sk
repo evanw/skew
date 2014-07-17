@@ -95,3 +95,23 @@ import namespace ns {
 }
 ", "
 ");
+
+testJS("
+class Foo {
+  void foo() {}
+}
+class Bar : Foo {}
+", "
+function $extends(derived, base) {
+  derived.prototype = Object.create(base.prototype);
+  derived.prototype.constructor = derived;
+}
+function Foo() {
+}
+Foo.prototype.foo = function() {
+};
+function Bar() {
+  Foo.call(this);
+}
+$extends(Bar, Foo);
+");
