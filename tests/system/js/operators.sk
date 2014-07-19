@@ -35,3 +35,79 @@ var x = 0;
 1 / (2 * 3);
 x = x = x;
 ");
+
+testJS("
+(bool)1;
+(int)false;
+(float)false;
+", "
+!1;
+false | 0;
++false;
+");
+
+testJS("
+assert (bool)1;
+", "
+if (1) {
+  throw new Error(\"assert (bool)1; (<stdin>:1:1)\");
+}
+");
+
+testJS("
+void foo(bool foo) {
+  (int)foo + 1;
+  (int)foo - 1;
+  (int)foo * 1;
+  (int)foo / 1;
+  (int)foo % 1;
+  (int)foo | 1;
+  (int)foo ^ 1;
+  (int)foo & 1;
+  (int)foo << 1;
+  (int)foo >> 1;
+  (int)foo, (int)true;
+}
+", "
+function foo(foo) {
+  (foo | 0) + 1;
+  (foo | 0) - 1;
+  (foo | 0) * 1;
+  (foo | 0) / 1;
+  (foo | 0) % 1;
+  foo | 1;
+  foo ^ 1;
+  foo & 1;
+  foo << 1;
+  foo >> 1;
+  foo | 0, true | 0;
+}
+");
+
+testJS("
+void foo(int foo, bool bar) {
+  foo += (int)bar;
+  foo -= (int)bar;
+  foo *= (int)bar;
+  foo /= (int)bar;
+  foo %= (int)bar;
+  foo |= (int)bar;
+  foo &= (int)bar;
+  foo ^= (int)bar;
+  foo <<= (int)bar;
+  foo >>= (int)bar;
+}
+", "
+function foo(foo, bar) {
+  foo += bar | 0;
+  foo -= bar | 0;
+  foo *= bar | 0;
+  foo /= bar | 0;
+  foo %= bar | 0;
+  foo |= bar;
+  foo &= bar;
+  foo ^= bar;
+  foo >>= bar;
+  foo <<= bar;
+}
+");
