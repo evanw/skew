@@ -509,6 +509,10 @@ namespace js {
           emit(")");
         }
 
+        case NodeKind.BIND {
+          emitExpression(node.bindValue(), precedence);
+        }
+
         case NodeKind.SEQUENCE {
           emitCommaSeparatedExpressions(node.children);
         }

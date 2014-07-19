@@ -156,7 +156,7 @@ namespace service {
             if (i > 0) text = text.append(", ");
             text = text.append(argumentTypes.get(i).toString()).append(" ").append(arguments.get(i).symbol.name);
           }
-          result.declaration = text.append(");");
+          result.declaration = text.append(")");
         }
 
         case SymbolKind.LOCAL_VARIABLE, SymbolKind.GLOBAL_VARIABLE, SymbolKind.INSTANCE_VARIABLE {
@@ -164,7 +164,7 @@ namespace service {
           if (symbol.isEnumValue()) {
             text = text.append(" = ").append(symbol.enumValue.toString());
           }
-          result.declaration = text.append(";");
+          result.declaration = text;
         }
 
         default {

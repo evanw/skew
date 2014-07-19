@@ -273,6 +273,11 @@ in Node {
     return new Node(NodeKind.ERROR);
   }
 
+  static Node createBind(Node value) {
+    assert value.kind.isExpression();
+    return new Node(NodeKind.BIND).withChildren({ value });
+  }
+
   static Node createSequence(List<Node> values) {
     assert checkAllNodeKinds(values, new NodeKindIsExpression());
     return new Node(NodeKind.SEQUENCE).withChildren(values);

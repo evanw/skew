@@ -547,7 +547,6 @@ class Resolver {
       case NodeKind.SEQUENCE { resolveSequence(node); }
       case NodeKind.PARAMETERIZE { resolveParameterize(node); }
       case NodeKind.CAST { resolveCast(node); }
-      case NodeKind.IMPLICIT_CAST { resolveCast(node); }
       case NodeKind.LAMBDA { resolveLambda(node); }
       case NodeKind.DEFAULT { resolveDefault(node); }
       case NodeKind.VAR { resolveVar(node); }
@@ -670,6 +669,15 @@ class Resolver {
 
     // No implicit conversion needed for identical types
     if (from == to) {
+      // Bind global and instance functions before they become values of
+      // function type since the representation for function values is likely
+      // not the same as the function itself. For example, referencing instead
+      // of calling an instance function creates a function object binds that
+      // instance function to that instance.
+      if ((node.kind == NodeKind.NAME || node.kind == NodeKind.DOT) && node.symbol != null && node.symbol.kind.isFunction()) {
+        List<Node> children = node.removeChildren();
+        node.become(Node.createBind(node.clone().withChildren(children)).withRange(node.range).withType(to).withSymbol(node.symbol));
+      }
       return;
     }
 

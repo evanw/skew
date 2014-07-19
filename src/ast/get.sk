@@ -314,6 +314,12 @@ in Node {
     return children.get(0);
   }
 
+  Node bindValue() {
+    assert kind == NodeKind.BIND;
+    assert children.length == 1;
+    return children.get(0);
+  }
+
   Node parameterizeType() {
     assert kind == NodeKind.PARAMETERIZE;
     assert children.length >= 1;
