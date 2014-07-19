@@ -3,6 +3,7 @@ namespace js {
     int currentLine = 0;
     int currentColumn = 0;
     Source currentSource = null;
+    bool isStartOfExpression = false;
     SourceMapGenerator generator = new SourceMapGenerator();
     CompilerOptions options;
     TypeCache cache;
@@ -164,6 +165,7 @@ namespace js {
     }
 
     void emitNode(Node node) {
+      isStartOfExpression = false;
       addMapping(node);
       switch (node.kind) {
         case NodeKind.PROGRAM {
@@ -395,6 +397,7 @@ namespace js {
 
         case NodeKind.EXPRESSION {
           emit(indent);
+          isStartOfExpression = true;
           emitExpression(node.expressionValue(), Precedence.LOWEST);
           emit(";\n");
         }
@@ -421,6 +424,8 @@ namespace js {
     }
 
     void emitExpression(Node node, Precedence precedence) {
+      bool wasStartOfExpression = isStartOfExpression;
+      isStartOfExpression = false;
       addMapping(node);
       switch (node.kind) {
         case NodeKind.NAME {
@@ -491,6 +496,7 @@ namespace js {
         case NodeKind.CALL {
           Node value = node.callValue();
           if (value.kind.isType()) emit("new ");
+          isStartOfExpression = wasStartOfExpression;
           emitExpression(value, Precedence.UNARY_POSTFIX);
           emit("(");
           emitCommaSeparatedExpressions(node.callArguments());
@@ -517,19 +523,18 @@ namespace js {
           emitCommaSeparatedExpressions(node.children);
         }
 
-        case NodeKind.CAST {
-          emitExpression(node.castValue(), precedence);
-        }
-
-        case NodeKind.IMPLICIT_CAST {
+        case NodeKind.CAST, NodeKind.IMPLICIT_CAST {
+          isStartOfExpression = wasStartOfExpression;
           emitExpression(node.castValue(), precedence);
         }
 
         case NodeKind.LAMBDA {
+          if (wasStartOfExpression) emit("(");
           emit("function");
           emitArgumentVariables(node.lambdaArguments());
           emit(" ");
           emitNode(node.lambdaBlock());
+          if (wasStartOfExpression) emit(")");
         }
 
         case NodeKind.DEFAULT {

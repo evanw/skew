@@ -2517,6 +2517,11 @@ class Resolver {
             arguments.get(i).replaceChild(1, Node.createType(argumentTypes.get(i)));
           }
         }
+
+        // Missing a return statement is an error
+        if (!resultType.isError(cache) && !resultType.isVoid(cache) && !block.blockAlwaysEndsWithReturn()) {
+          semanticErrorLambdaMissingReturn(log, node.range, resultType);
+        }
       }
     }
 

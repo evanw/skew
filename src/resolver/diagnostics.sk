@@ -274,6 +274,10 @@ void semanticErrorMissingReturn(Log log, Range range, string name, Type type) {
   log.error(range, "All control paths for ".append(simpleQuote(name)).append(" must return a value of ").append(typeToText(type)));
 }
 
+void semanticErrorLambdaMissingReturn(Log log, Range range, Type type) {
+  log.error(range, "All control paths for lambda expression must return a value of ".append(typeToText(type)));
+}
+
 void semanticErrorBaseClassInExtension(Log log, Range range) {
   log.error(range, "The base class must be set from the class declaration, not from an extension block");
 }

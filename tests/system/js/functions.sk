@@ -19,3 +19,24 @@ Foo.prototype.foo = function() {
 };
 new Foo().foo();
 ");
+
+testJS("
+(void fn())(=>);
+", "
+(function() {
+});
+");
+
+testJS("
+((void fn())=>)();
+", "
+(function() {
+})();
+");
+
+testJS("
+void fn() foo = =>;
+", "
+var foo = function() {
+};
+");

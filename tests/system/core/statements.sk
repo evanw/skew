@@ -480,3 +480,12 @@ int foo(int bar) {
 }
 ", "
 ");
+
+test("
+int fn() foo = =>;
+int fn() bar = => 0;
+", "
+<stdin>:1:16: error: All control paths for lambda expression must return a value of type \"int\"
+int fn() foo = =>;
+               ~~
+");
