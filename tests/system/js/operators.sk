@@ -1,5 +1,5 @@
 testJS("
-int x = 0;
+double x = 0;
 - -1;
 + +1;
 - +1;
@@ -21,7 +21,7 @@ var x = 0;
 ");
 
 testJS("
-int x = 0;
+double x = 0;
 (1.0 - 2.0) - 3.0;
 (1.0 / 2.0) * 3.0;
 1.0 - (2.0 - 3.0);
@@ -128,4 +128,74 @@ function foo(foo, bar) {
   foo >>= bar;
   foo <<= bar;
 }
+");
+
+testJS("
+void foo(int bar) {
+  bar++, bar++;
+  bar--, bar--;
+  ++bar, ++bar;
+  --bar, --bar;
+  foo((bar++, bar++));
+  foo((bar--, bar--));
+  foo((++bar, ++bar));
+  foo((--bar, --bar));
+}
+", "
+function foo(bar) {
+  bar = bar + 1 | 0, bar = bar + 1 | 0;
+  bar = bar - 1 | 0, bar = bar - 1 | 0;
+  bar = bar + 1 | 0, bar = bar + 1 | 0;
+  bar = bar - 1 | 0, bar = bar - 1 | 0;
+  foo((bar = bar + 1 | 0, (bar = bar + 1 | 0) - 1 | 0));
+  foo((bar = bar - 1 | 0, (bar = bar - 1 | 0) + 1 | 0));
+  foo((bar = bar + 1 | 0, bar = bar + 1 | 0));
+  foo((bar = bar - 1 | 0, bar = bar - 1 | 0));
+}
+");
+
+testJS("
+class Foo {
+  int bar;
+  void foo(int foo) {
+  }
+  void baz() {
+    bar++, bar++;
+    bar--, bar--;
+    ++bar, ++bar;
+    --bar, --bar;
+    foo((bar++, bar++));
+    foo((bar--, bar--));
+    foo((++bar, ++bar));
+    foo((--bar, --bar));
+  }
+}
+", "
+function Foo(_0) {
+  this.bar = _0;
+}
+Foo.prototype.foo = function(foo) {
+};
+Foo.prototype.baz = function() {
+  this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0;
+  this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0;
+  this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0;
+  this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0;
+  this.foo((this.bar = this.bar + 1 | 0, (this.bar = this.bar + 1 | 0) - 1 | 0));
+  this.foo((this.bar = this.bar - 1 | 0, (this.bar = this.bar - 1 | 0) + 1 | 0));
+  this.foo((this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0));
+  this.foo((this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0));
+};
+");
+
+testJS("
+int foo = (1, 2);
+foo = (1, 2);
+foo = 1, 2;
+(1, 2), (3, 4);
+", "
+var foo = (1, 2);
+foo = (1, 2);
+foo = 1, 2;
+(1, 2), (3, 4);
 ");

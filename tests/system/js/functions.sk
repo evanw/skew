@@ -40,3 +40,12 @@ void fn() foo = =>;
 var foo = function() {
 };
 ");
+
+testJS("
+void foo(int foo) {}
+foo((1, 2));
+", "
+function foo(foo) {
+}
+foo((1, 2));
+");

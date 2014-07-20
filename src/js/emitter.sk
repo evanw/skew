@@ -527,7 +527,9 @@ namespace js {
         }
 
         case NodeKind.SEQUENCE {
+          if (Precedence.COMMA <= precedence) emit("(");
           emitCommaSeparatedExpressions(node.children);
+          if (Precedence.COMMA <= precedence) emit(")");
         }
 
         case NodeKind.CAST, NodeKind.IMPLICIT_CAST {
@@ -625,6 +627,22 @@ namespace js {
       }
     }
 
+    static bool isSimpleNameAccess(Node node) {
+      return node.kind == NodeKind.NAME || node.kind == NodeKind.THIS || node.kind == NodeKind.DOT && isSimpleNameAccess(node.dotTarget());
+    }
+
+    static bool isExpressionUsed(Node node) {
+      assert node.kind.isExpression();
+      Node parent = node.parent;
+      if (!parent.kind.isExpression()) {
+        return false;
+      }
+      if (parent.kind == NodeKind.SEQUENCE && (!isExpressionUsed(parent) || parent.children.indexOf(node) < parent.children.length - 1)) {
+        return false;
+      }
+      return true;
+    }
+
     void patchNode(Node node) {
       if (node.hasChildren()) {
         int i;
@@ -653,6 +671,28 @@ namespace js {
           // Cast to float/double
           else if (node.type.isReal(cache) && !value.type.isNumeric(cache)) {
             node.become(Node.createUnary(NodeKind.POSITIVE, value.remove()).withRange(node.range).withType(node.type));
+          }
+        }
+
+        case NodeKind.PREFIX_INCREMENT, NodeKind.PREFIX_DECREMENT, NodeKind.POSTFIX_DECREMENT, NodeKind.POSTFIX_INCREMENT {
+          if (node.type.isInt(cache)) {
+            bool isPostfix = node.kind == NodeKind.POSTFIX_INCREMENT || node.kind == NodeKind.POSTFIX_DECREMENT;
+            bool isIncrement = node.kind == NodeKind.PREFIX_INCREMENT || node.kind == NodeKind.POSTFIX_INCREMENT;
+            Node value = node.unaryValue();
+            if (isSimpleNameAccess(value)) {
+              Node result =
+                Node.createBinary(NodeKind.ASSIGN,
+                  value.clone(),
+                  Node.createBinary(NodeKind.BITWISE_OR,
+                    Node.createBinary(isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.remove(), Node.createInt(1)),
+                    Node.createInt(0)));
+              if (isPostfix && isExpressionUsed(node)) {
+                result = Node.createBinary(NodeKind.BITWISE_OR,
+                  Node.createBinary(isIncrement ? NodeKind.SUBTRACT : NodeKind.ADD, result, Node.createInt(1)),
+                  Node.createInt(0));
+              }
+              node.become(result.withRange(node.range).withType(node.type));
+            }
           }
         }
 
