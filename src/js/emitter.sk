@@ -636,22 +636,31 @@ namespace js {
         }
       }
 
-      if (node.kind == NodeKind.CAST) {
-        Node value = node.castValue();
+      switch (node.kind) {
+        case NodeKind.CAST {
+          Node value = node.castValue();
 
-        // Cast to bool
-        if (node.type.isBool(cache) && !value.type.isBool(cache)) {
-          node.become(Node.createUnary(NodeKind.NOT, value.remove()).withRange(node.range).withType(node.type));
+          // Cast to bool
+          if (node.type.isBool(cache) && !value.type.isBool(cache)) {
+            node.become(Node.createUnary(NodeKind.NOT, value.remove()).withRange(node.range).withType(node.type));
+          }
+
+          // Cast to int
+          else if (node.type.isInt(cache) && !value.type.isInteger(cache) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
+            node.become(Node.createBinary(NodeKind.BITWISE_OR, value.remove(), Node.createInt(0)).withRange(node.range).withType(node.type));
+          }
+
+          // Cast to float/double
+          else if (node.type.isReal(cache) && !value.type.isNumeric(cache)) {
+            node.become(Node.createUnary(NodeKind.POSITIVE, value.remove()).withRange(node.range).withType(node.type));
+          }
         }
 
-        // Cast to int
-        else if (node.type.isInt(cache) && !value.type.isInteger(cache) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
-          node.become(Node.createBinary(NodeKind.BITWISE_OR, value.remove(), Node.createInt(0)).withRange(node.range).withType(node.type));
-        }
-
-        // Cast to float/double
-        else if (node.type.isReal(cache) && !value.type.isNumeric(cache)) {
-          node.become(Node.createUnary(NodeKind.POSITIVE, value.remove()).withRange(node.range).withType(node.type));
+        case NodeKind.ADD, NodeKind.SUBTRACT, NodeKind.MULTIPLY, NodeKind.DIVIDE, NodeKind.REMAINDER {
+          if (node.type.isInt(cache) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
+            List<Node> children = node.removeChildren();
+            node.become(Node.createBinary(NodeKind.BITWISE_OR, node.clone().withChildren(children), Node.createInt(0)).withRange(node.range).withType(node.type));
+          }
         }
       }
     }

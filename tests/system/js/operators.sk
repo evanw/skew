@@ -22,10 +22,10 @@ var x = 0;
 
 testJS("
 int x = 0;
-(1 - 2) - 3;
-(1 / 2) * 3;
-1 - (2 - 3);
-1 / (2 * 3);
+(1.0 - 2.0) - 3.0;
+(1.0 / 2.0) * 3.0;
+1.0 - (2.0 - 3.0);
+1.0 / (2.0 * 3.0);
 x = (x = x);
 ", "
 var x = 0;
@@ -70,17 +70,35 @@ void foo(bool foo) {
 }
 ", "
 function foo(foo) {
-  (foo | 0) + 1;
-  (foo | 0) - 1;
-  (foo | 0) * 1;
-  (foo | 0) / 1;
-  (foo | 0) % 1;
+  (foo | 0) + 1 | 0;
+  (foo | 0) - 1 | 0;
+  (foo | 0) * 1 | 0;
+  (foo | 0) / 1 | 0;
+  (foo | 0) % 1 | 0;
   foo | 1;
   foo ^ 1;
   foo & 1;
   foo << 1;
   foo >> 1;
   foo | 0, true | 0;
+}
+");
+
+testJS("
+void foo(int foo) {
+  foo + 1 | 1;
+  foo - 1 | 1;
+  foo * 1 | 1;
+  foo / 1 | 1;
+  foo % 1 | 1;
+}
+", "
+function foo(foo) {
+  foo + 1 | 1;
+  foo - 1 | 1;
+  foo * 1 | 1;
+  foo / 1 | 1;
+  foo % 1 | 1;
 }
 ");
 
