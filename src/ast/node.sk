@@ -399,6 +399,14 @@ class Node {
     return node;
   }
 
+  void appendToSiblingChain(Node node) {
+    Node last = this;
+    while (last.sibling != null) {
+      last = last.sibling;
+    }
+    last.sibling = node;
+  }
+
   static void updateParent(Node node, Node parent) {
     if (node != null) {
       assert node.parent == null;

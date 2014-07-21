@@ -101,6 +101,7 @@ enum flags SymbolFlag {
   INITIALIZED,
 
   // Other flags
+  HAS_LOCATION_ERROR,
   HAS_MODIFIER_ERRORS,
   KEYWORD_MASK = PUBLIC | PRIVATE | PROTECTED | OVERRIDE | STATIC | VIRTUAL | FINAL | INLINE | IMPORT | EXPORT,
 }
@@ -277,6 +278,10 @@ class Symbol {
   bool isInitialized() {
     assert (flags & (SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED)) != (SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED);
     return (flags & SymbolFlag.INITIALIZED) != 0;
+  }
+
+  bool hasLocationError() {
+    return (flags & SymbolFlag.HAS_LOCATION_ERROR) != 0;
   }
 
   bool hasModifierErrors() {

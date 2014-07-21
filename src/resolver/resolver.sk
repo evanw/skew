@@ -52,15 +52,19 @@ class Resolver {
     Scope globalScope = new Scope(null);
     globalScope.insertGlobals(cache);
     constantFolder = new ConstantFolder(cache);
-    setupScopesAndUseNamespaces(program, globalScope);
-    accumulateSymbolFlags();
-    setSymbolKindsAndMergeSiblings();
-    processUsingStatements();
+    prepareNode(program, globalScope);
     globalScope.linkGlobals(cache);
     resolve(program, null);
   }
 
-  void setupScopesAndUseNamespaces(Node node, Scope scope) {
+  void prepareNode(Node node, Scope scope) {
+    setupScopesAndSymbols(node, scope);
+    accumulateSymbolFlags();
+    setSymbolKindsAndMergeSiblings();
+    processUsingStatements();
+  }
+
+  void setupScopesAndSymbols(Node node, Scope scope) {
     // The root program introduces the global scope
     if (node.kind == NodeKind.PROGRAM) {
       node.scope = scope;
@@ -92,7 +96,7 @@ class Resolver {
     // Declare this node if needed
     if (node.kind.isNamedDeclaration() && node.kind != NodeKind.USING_ALIAS) {
       Node declarationName = node.declarationName();
-      if (declarationName != null) {
+      if (declarationName != null && node.symbol == null) {
         string name = declarationName.asString();
         Member member = scope.findLocal(name);
         Symbol symbol;
@@ -100,11 +104,7 @@ class Resolver {
         // Append this symbol the linked list of sibling nodes
         if (member != null) {
           symbol = member.symbol;
-          Node last = symbol.node;
-          while (last.sibling != null) {
-            last = last.sibling;
-          }
-          last.sibling = node;
+          symbol.node.appendToSiblingChain(node);
         }
 
         // Make a new symbol
@@ -155,7 +155,7 @@ class Resolver {
       int i;
       for (i = 0; i < node.children.length; i++) {
         Node child = node.children.get(i);
-        if (child != null) setupScopesAndUseNamespaces(child, scope);
+        if (child != null) setupScopesAndSymbols(child, scope);
       }
     }
   }
@@ -214,7 +214,7 @@ class Resolver {
         flags = flags | siblingFlags;
       }
 
-      node.symbol.flags = flags;
+      node.symbol.flags = node.symbol.flags | flags;
     }
   }
 
@@ -330,7 +330,7 @@ class Resolver {
         continue;
       }
 
-      // Add using aliases. These aren't added in setupScopesAndUseNamespaces()
+      // Add using aliases. These aren't added in setupScopesAndSymbols()
       // because using aliases are limited to the scope in which they appear
       // and cannot be accessed by or merged symbols in other scopes:
       //
@@ -725,6 +725,9 @@ class Resolver {
     // declarations, or conditional statements
     Node parent;
     for (parent = node.parent; parent != null; parent = parent.parent) {
+      if (parent.symbol != null && parent.symbol.hasLocationError()) {
+        break;
+      }
       NodeKind kind = parent.kind;
       if (kind != NodeKind.PROGRAM && kind != NodeKind.FILE &&
           kind != NodeKind.MODIFIER && kind != NodeKind.BLOCK &&
@@ -733,6 +736,9 @@ class Resolver {
         unexpectedStatement(node);
         break;
       }
+    }
+    if (parent != null) {
+      node.symbol.flags = node.symbol.flags | SymbolFlag.HAS_LOCATION_ERROR;
     }
   }
 
@@ -1478,6 +1484,7 @@ class Resolver {
       Node.createBlock({}),
       superArguments != null ? Node.createSuperCall(superArguments) : null,
       memberInitializers != null ? Node.createNodeList(memberInitializers) : null);
+    enclosingSymbol.node.declarationBlock().appendChild(symbol.node);
 
     // Initialize the scope ourselves since that pass is already over
     assert enclosingSymbol.node.scope != null;
@@ -1492,6 +1499,7 @@ class Resolver {
   void generateDefaultToString(Symbol symbol) {
     assert symbol.isEnumMember();
     Symbol enclosingSymbol = symbol.enclosingSymbol;
+    Node enclosingNode = enclosingSymbol.node;
     List<Member> members = enclosingSymbol.type.members.values();
     List<Symbol> fields = {};
 
@@ -1520,7 +1528,7 @@ class Resolver {
       for (j = 0; j < i; j++) {
         Symbol other = fields.get(j);
         if (value == other.enumValue) {
-          semanticErrorBadEnumToString(log, enclosingSymbol.node.declarationName().range, enclosingSymbol.name, field.name, other.name, value);
+          semanticErrorBadEnumToString(log, enclosingNode.declarationName().range, enclosingSymbol.name, field.name, other.name, value);
           break;
         }
       }
@@ -1528,6 +1536,12 @@ class Resolver {
         break;
       }
     }
+
+    // Generate an extension block next to the enum declaration
+    Node block = Node.createBlock({});
+    Node extension = Node.createExtension(Node.createName(enclosingSymbol.name), null, block).withSymbol(enclosingSymbol);
+    enclosingNode.insertSiblingAfter(extension);
+    enclosingNode.appendToSiblingChain(extension);
 
     // Generate an empty function body if an error was emitted
     Node statement;
@@ -1540,24 +1554,14 @@ class Resolver {
     // known that there are no duplicates in the list.
     else if (maximum - minimum == fields.length - 1) {
       string name = "STRINGS"; // TODO: gensym
-      Type stringListType = cache.parameterize(cache.listType, { cache.stringType });
-      Symbol helperSymbol = new Symbol(name, SymbolKind.GLOBAL_VARIABLE);
-      Member helperMember = new Member(helperSymbol);
-      helperMember.type = helperSymbol.type = stringListType;
-      helperSymbol.enclosingSymbol = enclosingSymbol;
-      helperSymbol.flags = helperSymbol.flags | SymbolFlag.FROM_EXTENSION;
-      enclosingSymbol.type.addMember(helperMember);
       List<Node> values = {};
       for (i = 0; i < fields.length; i++) {
-        values.push(Node.createString(fields.get(i).name).withType(cache.stringType));
+        values.push(Node.createString(fields.get(i).name));
       }
-      helperSymbol.node = Node.createVariableCluster(Node.createType(stringListType), { Node.createVariable(
-        Node.createName(name).withType(stringListType).withSymbol(helperSymbol),
-        Node.createType(stringListType),
-        Node.createInitializer(values).withType(stringListType)).withSymbol(helperSymbol) });
-      statement = Node.createReturn(Node.createCall(
-        Node.createDot(Node.createName(name), Node.createName("get")),
-        { Node.createCast(Node.createType(cache.intType), Node.createThis()) }));
+      block.appendChild(Node.createModifier(Node.createName("static"), { Node.createVariableCluster(
+        Node.createType(cache.parameterize(cache.listType, { cache.stringType })),
+        { Node.createVariable(Node.createName(name), null, Node.createInitializer(values)) }) }));
+      statement = Node.createReturn(Node.createCall(Node.createDot(Node.createName(name), Node.createName("get")), { Node.createThis() }));
     }
 
     // Generate a string switch statment
@@ -1574,12 +1578,17 @@ class Resolver {
 
     // Change the automatic symbol into an instance function
     symbol.kind = SymbolKind.INSTANCE_FUNCTION;
+    symbol.flags = SymbolFlag.FROM_EXTENSION;
     symbol.node = Node.createFunction(
       Node.createName(symbol.name),
       Node.createNodeList({}),
       Node.createBlock({ statement }),
-      Node.createType(cache.stringType));
-    symbol.node.symbol = symbol;
+      Node.createType(cache.stringType)).withSymbol(symbol);
+    block.appendChild(symbol.node);
+
+    // Resolve it now since it otherwise may never be resolved
+    prepareNode(extension, enclosingNode.parent.scope);
+    resolve(extension, null);
   }
 
   void initializeSymbol(Symbol symbol) {

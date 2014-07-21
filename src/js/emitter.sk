@@ -10,8 +10,9 @@ namespace js {
     string indent = "";
 
     override List<Source> emitProgram(Node program) {
+      patchNode(program);
       currentSource = new Source(options.outputFile, "");
-      Collector collector = new Collector(cache, program, SortTypes.BY_INHERITANCE_AND_CONTAINMENT);
+      Collector collector = new Collector(program, SortTypes.BY_INHERITANCE_AND_CONTAINMENT);
 
       // Emit helper functions
       for (i = 0; i < collector.typeSymbols.length; i++) {
@@ -33,17 +34,17 @@ namespace js {
         Type type = collector.typeSymbols.get(i).type;
         if (type.isNamespace()) {
           if (!type.symbol.isImport()) {
-            patchAndEmitNode(type.symbol.node.firstNonExtensionSibling());
+            emitNode(type.symbol.node.firstNonExtensionSibling());
           }
           continue;
         }
         if (!type.symbol.isImport()) {
           if (type.isEnum()) {
-            patchAndEmitNode(type.symbol.node.firstNonExtensionSibling());
+            emitNode(type.symbol.node.firstNonExtensionSibling());
           } else {
             Member constructor = type.constructor();
             if (constructor != null) {
-              patchAndEmitNode(constructor.symbol.node);
+              emitNode(constructor.symbol.node);
             }
           }
         }
@@ -52,19 +53,19 @@ namespace js {
         for (j = 0; j < members.length; j++) {
           Symbol symbol = members.get(j).symbol;
           if (symbol.enclosingSymbol == type.symbol && symbol.node != null && symbol.kind.isFunction() && !symbol.kind.isConstructor()) {
-            patchAndEmitNode(symbol.node);
+            emitNode(symbol.node);
           }
         }
       }
 
       // Emit free functions
       for (i = 0; i < collector.freeFunctionSymbols.length; i++) {
-        patchAndEmitNode(collector.freeFunctionSymbols.get(i).node);
+        emitNode(collector.freeFunctionSymbols.get(i).node);
       }
 
       // Emit top-level statements
       for (i = 0; i < collector.topLevelStatements.length; i++) {
-        patchAndEmitNode(collector.topLevelStatements.get(i));
+        emitNode(collector.topLevelStatements.get(i));
       }
 
       // Append the source map inline with the compiled output
@@ -109,11 +110,6 @@ namespace js {
         }
       }
       currentSource.contents = currentSource.contents.append(text);
-    }
-
-    void patchAndEmitNode(Node node) {
-      patchNode(node);
-      emitNode(node);
     }
 
     void emitNodes(List<Node> nodes) {

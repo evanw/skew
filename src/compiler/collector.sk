@@ -6,53 +6,33 @@ enum SortTypes {
 }
 
 class Collector {
-  TypeCache cache;
   SortTypes sort;
   List<Symbol> typeSymbols = {};
   List<Symbol> freeFunctionSymbols = {};
   List<Node> topLevelStatements = {};
 
-  new(TypeCache cache, Node program, SortTypes sort) : cache = cache, sort = sort {
+  new(Node program, SortTypes sort) : sort = sort {
     assert program.kind == NodeKind.PROGRAM;
-    collectDefinitions(cache.globalType);
-    collectTopLevelStatements(program);
+    collectStatements(program);
     sortTypeSymbols();
   }
 
-  void collectDefinitions(Type type) {
-    List<Member> members = type.members.values();
-    int i;
-    for (i = 0; i < members.length; i++) {
-      Symbol symbol = members.get(i).symbol;
-      if (symbol.enclosingSymbol != type.symbol) {
-        continue;
-      }
-      if (symbol.kind.isType()) {
-        typeSymbols.push(symbol);
-        collectDefinitions(symbol.type);
-      } else if (symbol.kind.isFunction() && symbol.node != null && !symbol.enclosingSymbol.kind.isTypeWithInstances()) {
-        freeFunctionSymbols.push(symbol);
-      } else if (symbol.kind.isVariable() && symbol.node != null && symbol.node.parent == null) {
-        topLevelStatements.push(symbol.node);
-      }
-    }
-  }
-
-  void collectTopLevelStatements(Node node) {
+  void collectStatements(Node node) {
     switch (node.kind) {
-      case
-        NodeKind.PROGRAM, NodeKind.FILE, NodeKind.NAMESPACE,
-        NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE,
-        NodeKind.EXTENSION, NodeKind.MODIFIER, NodeKind.BLOCK {
+      case NodeKind.PROGRAM, NodeKind.FILE, NodeKind.EXTENSION, NodeKind.MODIFIER, NodeKind.BLOCK {
+        collectChildStatements(node);
+      }
 
-        if (node.hasChildren()) {
-          int i;
-          for (i = 0; i < node.children.length; i++) {
-            Node child = node.children.get(i);
-            if (child != null) {
-              collectTopLevelStatements(child);
-            }
-          }
+      case NodeKind.NAMESPACE, NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE, NodeKind.ENUM, NodeKind.ENUM_FLAGS {
+        if (node == node.symbol.node) {
+          typeSymbols.push(node.symbol);
+        }
+        collectChildStatements(node);
+      }
+
+      case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
+        if (!node.symbol.enclosingSymbol.kind.isTypeWithInstances()) {
+          freeFunctionSymbols.push(node.symbol);
         }
       }
 
@@ -111,5 +91,17 @@ class Collector {
     }
 
     return false;
+  }
+
+  void collectChildStatements(Node node) {
+    if (node.hasChildren()) {
+      int i;
+      for (i = 0; i < node.children.length; i++) {
+        Node child = node.children.get(i);
+        if (child != null) {
+          collectStatements(child);
+        }
+      }
+    }
   }
 }
