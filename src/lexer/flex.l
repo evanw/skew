@@ -66,8 +66,8 @@
 "&="                          ASSIGN_BITWISE_AND;
 "|="                          ASSIGN_BITWISE_OR;
 "^="                          ASSIGN_BITWISE_XOR;
-">>="                         ASSIGN_SHIFT_LEFT;
-"<<="                         ASSIGN_SHIFT_RIGHT;
+"<<="                         ASSIGN_SHIFT_LEFT;
+">>="                         ASSIGN_SHIFT_RIGHT;
 "+"                           PLUS;
 "-"                           MINUS;
 "*"                           MULTIPLY;
@@ -76,8 +76,8 @@
 "&"                           BITWISE_AND;
 "|"                           BITWISE_OR;
 "^"                           BITWISE_XOR;
-">>"                          SHIFT_RIGHT;
 "<<"                          SHIFT_LEFT;
+">>"                          SHIFT_RIGHT;
 "!="                          NOT_EQUAL;
 "=="                          EQUAL;
 "<="                          LESS_THAN_OR_EQUAL;

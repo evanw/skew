@@ -117,16 +117,16 @@ void foo(int foo, bool bar) {
 }
 ", "
 function foo(foo, bar) {
-  foo += bar | 0;
-  foo -= bar | 0;
-  foo *= bar | 0;
-  foo /= bar | 0;
-  foo %= bar | 0;
+  foo = foo + (bar | 0) | 0;
+  foo = foo - (bar | 0) | 0;
+  foo = foo * (bar | 0) | 0;
+  foo = foo / (bar | 0) | 0;
+  foo = foo % (bar | 0) | 0;
   foo |= bar;
   foo &= bar;
   foo ^= bar;
-  foo >>= bar;
   foo <<= bar;
+  foo >>= bar;
 }
 ");
 

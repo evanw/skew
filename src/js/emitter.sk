@@ -702,6 +702,30 @@ namespace js {
             node.become(Node.createBinary(NodeKind.BITWISE_OR, node.clone().withChildren(children), Node.createInt(0)).withRange(node.range).withType(node.type));
           }
         }
+
+        case NodeKind.ASSIGN_ADD, NodeKind.ASSIGN_SUBTRACT, NodeKind.ASSIGN_MULTIPLY, NodeKind.ASSIGN_DIVIDE, NodeKind.ASSIGN_REMAINDER {
+          if (node.type.isInt(cache)) {
+            bool isPostfix = node.kind == NodeKind.POSTFIX_INCREMENT || node.kind == NodeKind.POSTFIX_DECREMENT;
+            bool isIncrement = node.kind == NodeKind.PREFIX_INCREMENT || node.kind == NodeKind.POSTFIX_INCREMENT;
+            Node left = node.binaryLeft();
+            Node right = node.binaryRight();
+            if (isSimpleNameAccess(left)) {
+              NodeKind kind =
+                node.kind == NodeKind.ASSIGN_ADD ? NodeKind.ADD :
+                node.kind == NodeKind.ASSIGN_SUBTRACT ? NodeKind.SUBTRACT :
+                node.kind == NodeKind.ASSIGN_MULTIPLY ? NodeKind.MULTIPLY :
+                node.kind == NodeKind.ASSIGN_DIVIDE ? NodeKind.DIVIDE :
+                NodeKind.REMAINDER;
+              Node result =
+                Node.createBinary(NodeKind.ASSIGN,
+                  left.clone(),
+                  Node.createBinary(NodeKind.BITWISE_OR,
+                    Node.createBinary(kind, left.remove(), right.remove()),
+                    Node.createInt(0)));
+              node.become(result.withRange(node.range).withType(node.type));
+            }
+          }
+        }
       }
     }
 
