@@ -144,7 +144,7 @@ class Resolver {
 
     // Also introduce a scope on object declarations for the type parameters
     // and on function declarations and lambda expressions for the arguments
-    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == NodeKind.LAMBDA || node.kind.isLoop()) {
+    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == NodeKind.LAMBDA || node.kind.isLoop() || node.kind == NodeKind.LET) {
       node.scope = scope = new Scope(scope);
     }
 
@@ -541,6 +541,7 @@ class Resolver {
       case NodeKind.STRING { node.type = cache.stringType; }
       case NodeKind.INITIALIZER { resolveInitializer(node); }
       case NodeKind.DOT { resolveDot(node); }
+      case NodeKind.LET { resolveLet(node); }
       case NodeKind.CALL { resolveCall(node); }
       case NodeKind.SUPER_CALL { resolveSuperCall(node); }
       case NodeKind.ERROR {} // Ignore parse errors
@@ -628,6 +629,8 @@ class Resolver {
       if (node.hasChildren()) {
         checkUnusedExpression(node.children.get(node.children.length - 1));
       }
+    } else if (kind == NodeKind.LET) {
+      checkUnusedExpression(node.letValue());
     } else if (!node.type.isError(cache) && !kind.isCall() && !node.kind.isUnaryStorageOperator() && !node.kind.isBinaryStorageOperator()) {
       semanticWarningUnusedExpression(log, node.range);
     }
@@ -1227,7 +1230,14 @@ class Resolver {
         semanticErrorVarMissingValue(log, node.declarationName().range);
         symbol.type = cache.errorType;
       } else {
-        resolveAsExpression(value);
+        if (node.parent.kind == NodeKind.LET) {
+          Scope oldScope = context.scope;
+          context.scope = oldScope.lexicalParent;
+          resolveAsExpression(value);
+          context.scope = oldScope;
+        } else {
+          resolveAsExpression(value);
+        }
         Type type = value.type;
         if (type.isNull(cache) || type.isVoid(cache)) {
           semanticErrorVarBadType(log, node.declarationName().range, type);
@@ -2332,6 +2342,11 @@ class Resolver {
     if (symbolIsType) node.become(Node.createType(member.type).withRange(node.range).withSymbol(member.symbol));
     else if (targetIsType) node.become(Node.createName(member.symbol.name).withRange(node.range).withSymbol(member.symbol).withType(member.type));
     else node.type = dotName.type = member.type;
+  }
+
+  void resolveLet(Node node) {
+    resolve(node.letVariable(), null);
+    resolveAsExpression(node.letValue());
   }
 
   void resolveCall(Node node) {

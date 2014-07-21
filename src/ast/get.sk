@@ -18,6 +18,18 @@ in Node {
     return children.get(1);
   }
 
+  Node letVariable() {
+    assert kind == NodeKind.LET;
+    assert children.length == 2;
+    return children.get(0);
+  }
+
+  Node letValue() {
+    assert kind == NodeKind.LET;
+    assert children.length == 2;
+    return children.get(1);
+  }
+
   Node unaryValue() {
     assert kind.isUnaryOperator();
     assert children.length == 1;

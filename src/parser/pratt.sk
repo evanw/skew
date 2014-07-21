@@ -154,24 +154,32 @@ class Pratt {
   }
 
   Node parse(ParserContext context, int precedence) {
+    return parseIgnoringParselet(context, precedence, null);
+  }
+
+  Node resume(ParserContext context, int precedence, Node left) {
+    return resumeIgnoringParselet(context, precedence, left, null);
+  }
+
+  Node parseIgnoringParselet(ParserContext context, int precedence, Parselet parseletToIgnore) {
     Token token = context.current();
     Parselet parselet = table.getOrDefault(token.kind, null);
-    if (parselet == null || parselet.prefix == null) {
+    if (parselet == null || parselet == parseletToIgnore || parselet.prefix == null) {
       context.unexpectedToken();
       return Node.createError().withRange(context.spanSince(token.range));
     }
-    Node node = resume(context, precedence, parselet.prefix.run(context));
+    Node node = resumeIgnoringParselet(context, precedence, parselet.prefix.run(context), parseletToIgnore);
     assert node != null; // Parselets must return Node.createError() instead of null
     assert !node.range.isEmpty(); // Parselets must set the range of every node
     return node;
   }
 
-  Node resume(ParserContext context, int precedence, Node left) {
+  Node resumeIgnoringParselet(ParserContext context, int precedence, Node left, Parselet parseletToIgnore) {
     assert left != null;
     while (!left.kind.isError()) {
       TokenKind kind = context.current().kind;
       Parselet parselet = table.getOrDefault(kind, null);
-      if (parselet == null || parselet.infix == null || parselet.precedence <= precedence) {
+      if (parselet == null || parselet == parseletToIgnore || parselet.infix == null || parselet.precedence <= precedence) {
         break;
       }
       left = parselet.infix.run(context, left);

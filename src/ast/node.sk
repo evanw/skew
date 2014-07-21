@@ -53,6 +53,7 @@ enum NodeKind {
   STRING,
   INITIALIZER,
   DOT,
+  LET,
   CALL,
   SUPER_CALL,
   ERROR,

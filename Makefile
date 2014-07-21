@@ -48,6 +48,7 @@ TEST_SOURCES += tests/system/core/cyclic.sk
 TEST_SOURCES += tests/system/core/enums.sk
 TEST_SOURCES += tests/system/core/generics.sk
 TEST_SOURCES += tests/system/core/lambdas.sk
+TEST_SOURCES += tests/system/core/let.sk
 TEST_SOURCES += tests/system/core/merging.sk
 TEST_SOURCES += tests/system/core/modifiers.sk
 TEST_SOURCES += tests/system/core/objects.sk
@@ -59,9 +60,9 @@ TEST_SOURCES += tests/system/core/types.sk
 TEST_SOURCES += tests/system/core/using.sk
 TEST_SOURCES += tests/system/core/var.sk
 
+TEST_SOURCES += tests/system/js/expressions.sk
 TEST_SOURCES += tests/system/js/functions.sk
 TEST_SOURCES += tests/system/js/objects.sk
-TEST_SOURCES += tests/system/js/operators.sk
 
 DEBUG_DIR = build/debug
 RELEASE_DIR = build/release

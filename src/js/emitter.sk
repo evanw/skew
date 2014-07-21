@@ -496,6 +496,24 @@ namespace js {
             fullName(name.symbol));
         }
 
+        case NodeKind.LET {
+          Node variable = node.letVariable();
+          if (wasStartOfExpression) emit("(");
+          emit("function(");
+          emit(variable.symbol.name);
+          emit(") {\n");
+          increaseIndent();
+          emit(indent.append("return "));
+          emitExpression(node.letValue(), Precedence.LOWEST);
+          emit(";\n");
+          decreaseIndent();
+          emit(indent.append("}"));
+          if (wasStartOfExpression) emit(")");
+          emit("(");
+          emitExpression(variable.variableValue(), Precedence.LOWEST);
+          emit(")");
+        }
+
         case NodeKind.CALL {
           Node value = node.callValue();
           if (value.kind.isType()) emit("new ");
@@ -524,6 +542,7 @@ namespace js {
 
         case NodeKind.SEQUENCE {
           if (Precedence.COMMA <= precedence) emit("(");
+          isStartOfExpression = wasStartOfExpression;
           emitCommaSeparatedExpressions(node.children);
           if (Precedence.COMMA <= precedence) emit(")");
         }

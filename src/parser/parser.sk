@@ -869,6 +869,25 @@ class NewPrefix : IPrefixParselet {
   }
 }
 
+class LetPrefix : IPrefixParselet {
+  Parselet parselet;
+
+  override Node run(ParserContext context) {
+    Token token = context.next();
+    Node name = parseName(context);
+    if (name == null || !context.expect(TokenKind.ASSIGN)) {
+      return Node.createError().withRange(context.spanSince(token.range));
+    }
+    Node initial = pratt.parseIgnoringParselet(context, Precedence.LOWEST, parselet);
+    Node variable = Node.createVariable(name, Node.createVar(), initial).withRange(context.spanSince(token.range));
+    if (initial.kind.isError() || !context.expect(TokenKind.IN)) {
+      return Node.createError().withRange(context.spanSince(token.range));
+    }
+    Node value = pratt.parse(context, Precedence.LOWEST);
+    return Node.createLet(variable, value).withRange(context.spanSince(token.range));
+  }
+}
+
 Pratt createParser() {
   Pratt pratt = new Pratt();
 
@@ -947,6 +966,7 @@ Pratt createParser() {
   pratt.parselet(TokenKind.IDENTIFIER, Precedence.LOWEST).prefix = new NamePrefix();
   pratt.parselet(TokenKind.LAMBDA, Precedence.LOWEST).prefix = new LambdaPrefix();
   pratt.parselet(TokenKind.NEW, Precedence.LOWEST).prefix = new NewPrefix();
+  pratt.parselet(TokenKind.LET, Precedence.LOWEST).prefix = new LetPrefix(pratt.parselet(TokenKind.IN, 0));
 
   return pratt;
 }

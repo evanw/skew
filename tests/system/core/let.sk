@@ -1,0 +1,12 @@
+test("
+int y = let x = x in x;
+", "
+<stdin>:1:17: error: \"x\" is not declared
+int y = let x = x in x;
+                ^
+");
+
+test("
+int y = let x = 1 in let x = x + 1 in x + 1;
+", "
+");
