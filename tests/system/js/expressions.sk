@@ -212,8 +212,8 @@ var y = function(x) {
 
 testJS("
 let x = 0 in x;
-(let x = 0 in x), 1;
-1, (let x = 0 in x), 1;
+let x = 0 in x, 1;
+1, let x = 0 in x, 1;
 ", "
 (function(x) {
   return x;

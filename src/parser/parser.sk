@@ -883,7 +883,7 @@ class LetPrefix : IPrefixParselet {
     if (initial.kind.isError() || !context.expect(TokenKind.IN)) {
       return Node.createError().withRange(context.spanSince(token.range));
     }
-    Node value = pratt.parse(context, Precedence.LOWEST);
+    Node value = pratt.parse(context, Precedence.COMMA);
     return Node.createLet(variable, value).withRange(context.spanSince(token.range));
   }
 }

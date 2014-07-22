@@ -496,24 +496,6 @@ namespace js {
             fullName(name.symbol));
         }
 
-        case NodeKind.LET {
-          Node variable = node.letVariable();
-          if (wasStartOfExpression) emit("(");
-          emit("function(");
-          emit(variable.symbol.name);
-          emit(") {\n");
-          increaseIndent();
-          emit(indent.append("return "));
-          emitExpression(node.letValue(), Precedence.LOWEST);
-          emit(";\n");
-          decreaseIndent();
-          emit(indent.append("}"));
-          if (wasStartOfExpression) emit(")");
-          emit("(");
-          emitExpression(variable.variableValue(), Precedence.LOWEST);
-          emit(")");
-        }
-
         case NodeKind.CALL {
           Node value = node.callValue();
           if (value.kind.isType()) emit("new ");
@@ -659,6 +641,13 @@ namespace js {
     }
 
     void patchNode(Node node) {
+      if (node.kind == NodeKind.LET) {
+        Node value = node.letValue();
+        Node variable = node.letVariable();
+        node.become(Node.createCall(Node.createLambda({ variable.remove() }, Node.createBlock({ Node.createReturn(value.remove()) })), { variable.variableValue().remove() }));
+        variable.appendChild(null);
+      }
+
       if (node.hasChildren()) {
         int i;
         for (i = 0; i < node.children.length; i++) {
