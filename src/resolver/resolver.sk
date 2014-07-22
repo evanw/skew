@@ -2352,8 +2352,10 @@ class Resolver {
   }
 
   void resolveLet(Node node) {
+    Node value = node.letValue();
     resolve(node.letVariable(), null);
-    resolveAsExpression(node.letValue());
+    resolveAsExpressionWithTypeContext(value, typeContext);
+    node.type = value.type;
   }
 
   void resolveCall(Node node) {
