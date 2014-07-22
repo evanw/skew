@@ -250,6 +250,37 @@ let x = 0 in x, 1;
 testJS("
 class Foo {
   int foo;
+  int fn() bar() {
+    foo;
+    int fn() bar = => foo;
+    foo;
+    int fn() baz = => foo;
+    foo;
+    return bar;
+  }
+}
+", "
+function Foo(_0) {
+  this.foo = _0;
+}
+Foo.prototype.bar = function() {
+  var $this = this;
+  this.foo;
+  var bar = function() {
+    return $this.foo;
+  };
+  this.foo;
+  var baz = function() {
+    return $this.foo;
+  };
+  this.foo;
+  return bar;
+};
+");
+
+testJS("
+class Foo {
+  int foo;
   int fn() bar = () => foo;
 }
 ", "

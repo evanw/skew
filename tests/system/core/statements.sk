@@ -489,3 +489,14 @@ int fn() bar = => 0;
 int fn() foo = =>;
                ~~
 ");
+
+test("
+int foo() {
+  return 0;
+  1;
+}
+", "
+<stdin>:3:3: warning: Unused expression
+  1;
+  ^
+");

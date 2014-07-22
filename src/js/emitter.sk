@@ -1,4 +1,24 @@
 namespace js {
+  class PatchContext {
+    int lambdaCount = 0;
+    Node function = null;
+    bool createdThisAlias = false;
+
+    void setFunction(Node node) {
+      function = node;
+      createdThisAlias = false;
+    }
+
+    Node thisAlias() {
+      if (!createdThisAlias) {
+        createdThisAlias = true;
+        function.functionBlock().insertChild(0, Node.createVariableCluster(Node.createError(),
+          { Node.createVariable(Node.createName("$this"), null, Node.createThis()) }));
+      }
+      return Node.createName("$this");
+    }
+  }
+
   class Emitter : IEmitter {
     int currentLine = 0;
     int currentColumn = 0;
@@ -10,7 +30,7 @@ namespace js {
     string indent = "";
 
     override List<Source> emitProgram(Node program) {
-      patchNode(program);
+      patchNode(program, new PatchContext());
       currentSource = new Source(options.outputFile, "");
       Collector collector = new Collector(program, SortTypes.BY_INHERITANCE_AND_CONTAINMENT);
 
@@ -211,8 +231,8 @@ namespace js {
           int i;
           for (i = 0; i < variables.length; i++) {
             Node variable = variables.get(i);
-            bool isCompoundName = hasCompoundName(variable.symbol);
-            if (!variable.symbol.kind.isInstance() && (!isCompoundName || variable.variableValue() != null)) {
+            bool isCompoundName = variable.symbol != null && hasCompoundName(variable.symbol);
+            if ((variable.symbol == null || !variable.symbol.kind.isInstance()) && (!isCompoundName || variable.variableValue() != null)) {
               emit(indent);
               if (!isCompoundName) {
                 emit("var ");
@@ -297,7 +317,7 @@ namespace js {
 
         case NodeKind.VARIABLE {
           Node value = node.variableValue();
-          emit(fullName(node.symbol));
+          emit(node.symbol == null ? node.declarationName().asString() : fullName(node.symbol));
           if (value != null) {
             emit(" = ");
             emitExpression(value, Precedence.COMMA);
@@ -432,10 +452,7 @@ namespace js {
 
       switch (node.kind) {
         case NodeKind.NAME {
-          emit(
-            node.symbol == null ? node.asString() :
-            node.symbol.kind.isInstance() ? "this.".append(mangleName(node.symbol)) :
-            fullName(node.symbol));
+          emit(node.symbol == null ? node.asString() : fullName(node.symbol));
         }
 
         case NodeKind.TYPE {
@@ -640,12 +657,34 @@ namespace js {
       return true;
     }
 
-    void patchNode(Node node) {
-      if (node.kind == NodeKind.LET) {
-        Node value = node.letValue();
-        Node variable = node.letVariable();
-        node.become(Node.createCall(Node.createLambda({ variable.remove() }, Node.createBlock({ Node.createReturn(value.remove()) })), { variable.variableValue().remove() }));
-        variable.appendChild(null);
+    void patchNode(Node node, PatchContext context) {
+      switch (node.kind) {
+        case NodeKind.LET {
+          Node value = node.letValue();
+          Node variable = node.letVariable();
+          node.become(Node.createCall(Node.createLambda({ variable.remove() }, Node.createBlock({ Node.createReturn(value.remove()) })), { variable.variableValue().remove() }));
+          variable.appendChild(null);
+        }
+
+        case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
+          context.setFunction(node);
+        }
+
+        case NodeKind.LAMBDA {
+          context.lambdaCount++;
+        }
+
+        case NodeKind.THIS {
+          if (context.lambdaCount > 0) {
+            node.become(context.thisAlias());
+          }
+        }
+
+        case NodeKind.NAME {
+          if (node.symbol != null && node.symbol.kind.isInstance() && node.parent.kind != NodeKind.DOT) {
+            node.become(Node.createDot(Node.createThis(), node.clone()));
+          }
+        }
       }
 
       if (node.hasChildren()) {
@@ -653,12 +692,20 @@ namespace js {
         for (i = 0; i < node.children.length; i++) {
           Node child = node.children.get(i);
           if (child != null) {
-            patchNode(child);
+            patchNode(child, context);
           }
         }
       }
 
       switch (node.kind) {
+        case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
+          context.setFunction(null);
+        }
+
+        case NodeKind.LAMBDA {
+          context.lambdaCount--;
+        }
+
         case NodeKind.CAST {
           Node value = node.castValue();
 
