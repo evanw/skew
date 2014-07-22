@@ -280,7 +280,7 @@ class Node {
     if (parent != null) {
       int index = indexInParent();
       assert index >= 0 && index < parent.children.length;
-      parent.children.remove(index);
+      parent.children.set(index, null);
       parent = null;
     }
     return this;
@@ -314,6 +314,10 @@ class Node {
     scope = node.scope;
     symbol = node.symbol;
     content = node.content;
+  }
+
+  void replaceWith(Node node) {
+    parent.replaceChild(indexInParent(), node);
   }
 
   void replaceChild(int index, Node node) {

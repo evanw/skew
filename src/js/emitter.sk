@@ -281,23 +281,6 @@ namespace js {
           emit(" ");
           emit("{\n");
           increaseIndent();
-          if (node.kind == NodeKind.CONSTRUCTOR) {
-            Node superInitializer = node.superInitializer();
-            Node memberInitializers = node.memberInitializers();
-            if (superInitializer != null) {
-              emit(indent);
-              emitExpression(superInitializer, Precedence.LOWEST);
-              emit(";\n");
-            }
-            if (memberInitializers != null) {
-              int i;
-              for (i = 0; i < memberInitializers.children.length; i++) {
-                emit(indent);
-                emitNode(memberInitializers.children.get(i));
-                emit(";\n");
-              }
-            }
-          }
           emitChildren(block);
           decreaseIndent();
           emit(indent.append(isCompoundName ? "};\n" : "}\n"));
@@ -307,12 +290,6 @@ namespace js {
               emit(indent.append("$extends(").append(fullName(type.symbol)).append(", ").append(fullName(type.baseClass().symbol)).append(");\n"));
             }
           }
-        }
-
-        case NodeKind.MEMBER_INITIALIZER {
-          emitExpression(node.memberInitializerName(), Precedence.MEMBER);
-          emit(" = ");
-          emitExpression(node.memberInitializerValue(), Precedence.COMMA);
         }
 
         case NodeKind.VARIABLE {
@@ -663,10 +640,27 @@ namespace js {
           Node value = node.letValue();
           Node variable = node.letVariable();
           node.become(Node.createCall(Node.createLambda({ variable.remove() }, Node.createBlock({ Node.createReturn(value.remove()) })), { variable.variableValue().remove() }));
-          variable.appendChild(null);
         }
 
-        case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
+        case NodeKind.CONSTRUCTOR {
+          Node superInitializer = node.superInitializer();
+          Node memberInitializers = node.memberInitializers();
+          Node block = node.functionBlock();
+          int index = 0;
+          if (superInitializer != null) {
+            block.insertChild(index++, Node.createExpression(superInitializer.remove()));
+          }
+          if (memberInitializers != null) {
+            int i;
+            for (i = 0; i < memberInitializers.children.length; i++) {
+              Node child = memberInitializers.children.get(i);
+              block.insertChild(index++, Node.createExpression(Node.createBinary(NodeKind.ASSIGN, child.memberInitializerName().remove(), child.memberInitializerValue().remove())));
+            }
+          }
+          context.setFunction(node);
+        }
+
+        case NodeKind.FUNCTION {
           context.setFunction(node);
         }
 

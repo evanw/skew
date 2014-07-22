@@ -1925,54 +1925,55 @@ class Resolver {
       // order isn't guaranteed here because extension blocks can add member
       // variables as long as they are initialized, but those are unordered.
       Symbol enclosingSymbol = node.symbol.enclosingSymbol;
-      List<Member> members = enclosingSymbol.type.members.values();
-      List<Node> initializers = {};
-      int index = 0;
       int i;
-      for (i = 0; i < members.length; i++) {
-        Member member = members.get(i);
-        Symbol memberSymbol = member.symbol;
-        if (memberSymbol.kind == SymbolKind.INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
-          Node value = memberSymbol.node.variableValue();
-          if (value != null) {
-            initializeMember(member);
-
-            // Resolve the value in the context of the object
-            Scope oldScope = context.scope;
-            context.scope = node.scope.lexicalParent;
-            context.functionSymbol = null;
-            resolve(memberSymbol.node, null);
-            context.functionSymbol = node.symbol;
-            context.scope = oldScope;
-
-            // Move the value from the variable to a member initializer
-            memberInitializers.insertChild(index++, Node.createMemberInitializer(
-              Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type),
-              value.remove()));
-
-            // Replace the removed value with an error expression instead of
-            // with null to avoid breaking the check that member variables
-            // declared inside an extension block are initialized:
-            //
-            //   class Foo {}
-            //   in Foo { int foo = 0; }
-            //
-            memberSymbol.node.appendChild(Node.createError());
-          }
-
-          // Automatically add an initializer if one is missing
-          else {
-            int j;
-            for (j = 0; j < memberInitializers.children.length; j++) {
-              if (memberInitializers.children.get(j).memberInitializerName().asString() == memberSymbol.name) {
-                break;
-              }
-            }
-            if (j == memberInitializers.children.length) {
+      if (!enclosingSymbol.isImport()) {
+        List<Member> members = enclosingSymbol.type.members.values();
+        List<Node> initializers = {};
+        int index = 0;
+        for (i = 0; i < members.length; i++) {
+          Member member = members.get(i);
+          Symbol memberSymbol = member.symbol;
+          if (memberSymbol.kind == SymbolKind.INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
+            Node value = memberSymbol.node.variableValue();
+            if (value != null) {
               initializeMember(member);
+
+              // Resolve the value in the context of the object
+              Scope oldScope = context.scope;
+              context.scope = node.scope.lexicalParent;
+              context.functionSymbol = null;
+              resolve(memberSymbol.node, null);
+              context.functionSymbol = node.symbol;
+              context.scope = oldScope;
+
+              // Replace the value with an error expression instead of with null
+              // to avoid breaking the check that member variables declared
+              // inside an extension block are initialized:
+              //
+              //   class Foo {}
+              //   in Foo { int foo = 0; }
+              //
+              value.replaceWith(Node.createError());
+
+              // Move the value from the variable to a member initializer
               memberInitializers.insertChild(index++, Node.createMemberInitializer(
-                Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type),
-                Node.createDefault(Node.createType(member.type))));
+                Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type), value));
+            }
+
+            // Automatically add an initializer if one is missing
+            else {
+              int j;
+              for (j = 0; j < memberInitializers.children.length; j++) {
+                if (memberInitializers.children.get(j).memberInitializerName().asString() == memberSymbol.name) {
+                  break;
+                }
+              }
+              if (j == memberInitializers.children.length) {
+                initializeMember(member);
+                memberInitializers.insertChild(index++, Node.createMemberInitializer(
+                  Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type),
+                  Node.createDefault(Node.createType(member.type))));
+              }
             }
           }
         }
