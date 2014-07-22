@@ -250,6 +250,42 @@ class Bar {
 ");
 
 test("
+class Foo {
+  int foo;
+  new() : foo = 0;
+}
+", "
+<stdin>:3:11: error: An abstract constructor must not have initializer list
+  new() : foo = 0;
+          ~~~~~~~
+");
+
+test("
+class Foo : Bar {
+  new() : super();
+}
+class Bar {
+}
+", "
+<stdin>:2:11: error: An abstract constructor must not have initializer list
+  new() : super();
+          ~~~~~~~
+");
+
+test("
+class Foo : Bar {
+  int foo;
+  new() : super(), foo = 0;
+}
+class Bar {
+}
+", "
+<stdin>:3:11: error: An abstract constructor must not have initializer list
+  new() : super(), foo = 0;
+          ~~~~~~~~~~~~~~~~
+");
+
+test("
 class Foo : Bar {
   int x;
   new() : x = 0 {}

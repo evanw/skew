@@ -1914,6 +1914,13 @@ class Resolver {
         node.replaceChild(4, memberInitializers);
       }
 
+      // Abstract constructors cannot have initializer lists
+      if ((superInitializer != null || memberInitializers.children.length > 0) && block == null) {
+        semanticErrorAbstractConstructorInitializer(log, Range.span(
+          (superInitializer != null ? superInitializer : memberInitializers.children.get(0)).range,
+          (memberInitializers.children.length < 1 ? superInitializer : memberInitializers.children.get(memberInitializers.children.length - 1)).range));
+      }
+
       // Move the initial values for all member variables to initializers. The
       // order isn't guaranteed here because extension blocks can add member
       // variables as long as they are initialized, but those are unordered.

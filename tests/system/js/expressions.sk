@@ -189,6 +189,27 @@ Foo.prototype.baz = function() {
 ");
 
 testJS("
+class Foo {
+  int foo = 0;
+}
+void foo(int baz) {
+  bar().foo++, bar().foo++;
+  bar().foo--, bar().foo--;
+  ++bar().foo, ++bar().foo;
+  --bar().foo, --bar().foo;
+  foo((bar().foo++, bar().foo++));
+  foo((bar().foo--, bar().foo--));
+  foo((++bar().foo, ++bar().foo));
+  foo((--bar().foo, --bar().foo));
+}
+Foo bar() {
+  return Foo();
+}
+", "
+TODO
+");
+
+testJS("
 int foo = (1, 2);
 foo = (1, 2);
 foo = 1, 2;
@@ -224,4 +245,54 @@ let x = 0 in x, 1;
 1, function(x) {
   return x;
 }(0), 1;
+");
+
+testJS("
+class Foo {
+  int foo;
+  int fn() bar = () => foo;
+}
+", "
+function Foo() {
+  var $this = this;
+  this.foo = 0;
+  this.bar = function() {
+    return $this.foo;
+  };
+}
+");
+
+testJS("
+class Foo {
+  int foo;
+  int fn() bar;
+  new() : bar = () => foo {}
+}
+", "
+function Foo() {
+  var $this = this;
+  this.foo = 0;
+  this.bar = function() {
+    return $this.foo;
+  };
+}
+");
+
+testJS("
+class Foo {
+  int foo;
+  int bar() {
+    return let x = foo in x + foo;
+  }
+}
+", "
+function Foo(_0) {
+  this.foo = _0;
+}
+Foo.prototype.bar = function() {
+  var $this = this;
+  return function(x) {
+    return x + $this.foo | 0;
+  }(this.foo);
+};
 ");
