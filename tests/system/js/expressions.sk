@@ -69,17 +69,15 @@ void foo(bool foo) {
   (int)foo, (int)true;
 }
 ", "
-if (!Math.imul) {
-  Math.imul = function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF;
-    var bh = b >>> 16, bl = b & 0xFFFF;
-    return al * bl + (ah * bl + al * bh << 16) | 0;
-  };
-}
+var $imul = Math.imul || function(a, b) {
+  var ah = a >>> 16, al = a & 0xFFFF;
+  var bh = b >>> 16, bl = b & 0xFFFF;
+  return al * bl + (ah * bl + al * bh << 16) | 0;
+};
 function foo(foo) {
   (foo | 0) + 1 | 0;
   (foo | 0) - 1 | 0;
-  Math.imul(foo | 0, 1);
+  $imul(foo | 0, 1);
   (foo | 0) / 1 | 0;
   (foo | 0) % 1 | 0;
   foo | 1;
@@ -100,10 +98,15 @@ void foo(int foo) {
   foo % 1 | 1;
 }
 ", "
+var $imul = Math.imul || function(a, b) {
+  var ah = a >>> 16, al = a & 0xFFFF;
+  var bh = b >>> 16, bl = b & 0xFFFF;
+  return al * bl + (ah * bl + al * bh << 16) | 0;
+};
 function foo(foo) {
   foo + 1 | 1;
   foo - 1 | 1;
-  foo * 1 | 1;
+  $imul(foo, 1) | 1;
   foo / 1 | 1;
   foo % 1 | 1;
 }
@@ -123,17 +126,15 @@ void foo(int foo, bool bar) {
   foo >>= (int)bar;
 }
 ", "
-if (!Math.imul) {
-  Math.imul = function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF;
-    var bh = b >>> 16, bl = b & 0xFFFF;
-    return al * bl + (ah * bl + al * bh << 16) | 0;
-  };
-}
+var $imul = Math.imul || function(a, b) {
+  var ah = a >>> 16, al = a & 0xFFFF;
+  var bh = b >>> 16, bl = b & 0xFFFF;
+  return al * bl + (ah * bl + al * bh << 16) | 0;
+};
 function foo(foo, bar) {
   foo = foo + (bar | 0) | 0;
   foo = foo - (bar | 0) | 0;
-  foo = Math.imul(foo, bar | 0);
+  foo = $imul(foo, bar | 0);
   foo = foo / (bar | 0) | 0;
   foo = foo % (bar | 0) | 0;
   foo |= bar;
@@ -284,22 +285,20 @@ void foo(int bar) {
   foo(bar %= 1);
 }
 ", "
-if (!Math.imul) {
-  Math.imul = function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF;
-    var bh = b >>> 16, bl = b & 0xFFFF;
-    return al * bl + (ah * bl + al * bh << 16) | 0;
-  };
-}
+var $imul = Math.imul || function(a, b) {
+  var ah = a >>> 16, al = a & 0xFFFF;
+  var bh = b >>> 16, bl = b & 0xFFFF;
+  return al * bl + (ah * bl + al * bh << 16) | 0;
+};
 function foo(bar) {
   bar = bar + 1 | 0;
   bar = bar - 1 | 0;
-  bar = Math.imul(bar, 1);
+  bar = $imul(bar, 1);
   bar = bar / 1 | 0;
   bar = bar % 1 | 0;
   foo(bar = bar + 1 | 0);
   foo(bar = bar - 1 | 0);
-  foo(bar = Math.imul(bar, 1));
+  foo(bar = $imul(bar, 1));
   foo(bar = bar / 1 | 0);
   foo(bar = bar % 1 | 0);
 }
@@ -324,13 +323,11 @@ class Foo {
   }
 }
 ", "
-if (!Math.imul) {
-  Math.imul = function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF;
-    var bh = b >>> 16, bl = b & 0xFFFF;
-    return al * bl + (ah * bl + al * bh << 16) | 0;
-  };
-}
+var $imul = Math.imul || function(a, b) {
+  var ah = a >>> 16, al = a & 0xFFFF;
+  var bh = b >>> 16, bl = b & 0xFFFF;
+  return al * bl + (ah * bl + al * bh << 16) | 0;
+};
 function Foo(_0) {
   this.bar = _0;
 }
@@ -339,12 +336,12 @@ Foo.prototype.foo = function(foo) {
 Foo.prototype.baz = function() {
   this.bar = this.bar + 1 | 0;
   this.bar = this.bar - 1 | 0;
-  this.bar = Math.imul(this.bar, 1);
+  this.bar = $imul(this.bar, 1);
   this.bar = this.bar / 1 | 0;
   this.bar = this.bar % 1 | 0;
   this.foo(this.bar = this.bar + 1 | 0);
   this.foo(this.bar = this.bar - 1 | 0);
-  this.foo(this.bar = Math.imul(this.bar, 1));
+  this.foo(this.bar = $imul(this.bar, 1));
   this.foo(this.bar = this.bar / 1 | 0);
   this.foo(this.bar = this.bar % 1 | 0);
 };
@@ -370,13 +367,11 @@ Foo baz() {
   return Foo();
 }
 ", "
-if (!Math.imul) {
-  Math.imul = function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF;
-    var bh = b >>> 16, bl = b & 0xFFFF;
-    return al * bl + (ah * bl + al * bh << 16) | 0;
-  };
-}
+var $imul = Math.imul || function(a, b) {
+  var ah = a >>> 16, al = a & 0xFFFF;
+  var bh = b >>> 16, bl = b & 0xFFFF;
+  return al * bl + (ah * bl + al * bh << 16) | 0;
+};
 function Foo() {
   this.foo = 0;
 }
@@ -389,7 +384,7 @@ Foo.prototype.bar = function() {
     return $temp.foo = $temp.foo - $this.foo | 0;
   })(baz());
   (function($temp) {
-    return $temp.foo = Math.imul($temp.foo, $this.foo);
+    return $temp.foo = $imul($temp.foo, $this.foo);
   })(baz());
   (function($temp) {
     return $temp.foo = $temp.foo / $this.foo | 0;
@@ -404,7 +399,7 @@ Foo.prototype.bar = function() {
     return $temp.foo = $temp.foo - $this.foo | 0;
   }(baz());
   this.foo = function($temp) {
-    return $temp.foo = Math.imul($temp.foo, $this.foo);
+    return $temp.foo = $imul($temp.foo, $this.foo);
   }(baz());
   this.foo = function($temp) {
     return $temp.foo = $temp.foo / $this.foo | 0;
