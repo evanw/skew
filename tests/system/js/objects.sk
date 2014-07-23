@@ -115,3 +115,11 @@ function Bar() {
 }
 $extends(Bar, Foo);
 ");
+
+testJS("
+import class Foo : Bar { new() {} }
+import class Bar { new() {} }
+var foo = Foo();
+", "
+var foo = new Foo();
+");

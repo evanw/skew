@@ -640,7 +640,7 @@ namespace js {
     void patchNode(Node node, PatchContext context) {
       switch (node.kind) {
         case NodeKind.CLASS {
-          if (node.symbol.type.baseClass() != null) {
+          if (!node.symbol.isImport() && node.symbol.type.baseClass() != null) {
             needExtends = true;
           }
         }
