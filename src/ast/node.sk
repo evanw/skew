@@ -353,9 +353,7 @@ class Node {
     node.range = range;
     node.type = type;
     node.symbol = symbol;
-    if (content != null) {
-      node.content = content.clone();
-    }
+    node.content = content;
     if (children != null) {
       node.children = {};
       int i;
@@ -429,7 +427,6 @@ enum ContentType {
 
 class Content {
   virtual ContentType type();
-  virtual Content clone();
 
   static bool equal(Content left, Content right) {
     if (left == right) return true;
@@ -448,37 +445,25 @@ class Content {
 }
 
 class IntContent : Content {
-  int value;
+  final int value;
 
   override ContentType type() {
     return ContentType.INT;
   }
-
-  override Content clone() {
-    return new IntContent(value);
-  }
 }
 
 class DoubleContent : Content {
-  double value;
+  final double value;
 
   override ContentType type() {
     return ContentType.DOUBLE;
   }
-
-  override Content clone() {
-    return new DoubleContent(value);
-  }
 }
 
 class StringContent : Content {
-  string value;
+  final string value;
 
   override ContentType type() {
     return ContentType.STRING;
-  }
-
-  override Content clone() {
-    return new StringContent(value);
   }
 }
