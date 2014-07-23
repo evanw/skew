@@ -92,3 +92,23 @@ Foo.foo = function() {
 };
 var foo = Foo.foo;
 ");
+
+testJS("
+enum Foo { A, B, C }
+in Foo {
+  int foo() {
+    return this;
+  }
+}
+Foo.A.foo();
+", "
+var Foo = {
+  A: 0,
+  B: 1,
+  C: 2
+};
+Foo.foo = function($this) {
+  return $this;
+};
+Foo.foo(Foo.A);
+");

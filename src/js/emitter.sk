@@ -32,6 +32,7 @@ namespace js {
     string indent = "";
 
     override List<Source> emitProgram(Node program) {
+      InstanceToStaticPass.run(program);
       patchNode(program, new PatchContext());
       currentSource = new Source(options.outputFile, "");
       Collector collector = new Collector(program, SortTypes.BY_INHERITANCE_AND_CONTAINMENT);

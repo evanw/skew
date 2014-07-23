@@ -28,8 +28,10 @@ SOURCES += src/parser/diagnostics.sk
 SOURCES += src/parser/parser.sk
 SOURCES += src/parser/pratt.sk
 
+SOURCES += src/resolver/callgraph.sk
 SOURCES += src/resolver/constantfolding.sk
 SOURCES += src/resolver/diagnostics.sk
+SOURCES += src/resolver/instancetostatic.sk
 SOURCES += src/resolver/member.sk
 SOURCES += src/resolver/resolver.sk
 SOURCES += src/resolver/scope.sk

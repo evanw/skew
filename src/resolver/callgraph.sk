@@ -1,0 +1,55 @@
+class CallInfo {
+  Symbol symbol;
+  List<Node> callSites = {};
+}
+
+class CallGraph {
+  List<CallInfo> callInfo = {};
+  IntMap<int> symbolToInfoIndex = new IntMap<int>();
+
+  new(Node program) {
+    assert program.kind == NodeKind.PROGRAM;
+    visit(program);
+  }
+
+  void visit(Node node) {
+    if (node.kind == NodeKind.CALL) {
+      Node value = node.callValue();
+      if (value.symbol != null && value.symbol.kind.isFunction()) {
+        assert value.kind == NodeKind.NAME || value.kind == NodeKind.DOT;
+        recordCallSite(value.symbol, node);
+      }
+    }
+
+    else if (node.kind == NodeKind.BIND) {
+      assert node.symbol != null;
+      recordCallSite(node.symbol, node);
+    }
+
+    else if (node.kind == NodeKind.FUNCTION) {
+      recordCallSite(node.symbol, null);
+    }
+
+    if (node.hasChildren()) {
+      int i;
+      for (i = 0; i < node.children.length; i++) {
+        Node child = node.children.get(i);
+        if (child != null) {
+          visit(child);
+        }
+      }
+    }
+  }
+
+  void recordCallSite(Symbol symbol, Node node) {
+    int index = symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
+    CallInfo info = index < 0 ? new CallInfo(symbol) : callInfo.get(index);
+    if (index < 0) {
+      symbolToInfoIndex.set(symbol.uniqueID, callInfo.length);
+      callInfo.push(info);
+    }
+    if (node != null) {
+      info.callSites.push(node);
+    }
+  }
+}
