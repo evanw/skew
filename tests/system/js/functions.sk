@@ -49,3 +49,31 @@ function foo(foo) {
 }
 foo((1, 2));
 ");
+
+testJS("
+class Foo {
+  void foo() {}
+}
+var foo = Foo().foo;
+", "
+function Foo() {
+}
+Foo.prototype.foo = function() {
+};
+var foo = function($temp) {
+  return $temp.foo.bind($temp);
+}(new Foo());
+");
+
+testJS("
+class Foo {
+  static void foo() {}
+}
+var foo = Foo.foo;
+", "
+function Foo() {
+}
+Foo.foo = function() {
+};
+var foo = Foo.foo;
+");

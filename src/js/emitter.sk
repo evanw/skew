@@ -674,6 +674,18 @@ namespace js {
           context.setFunction(node);
         }
 
+        case NodeKind.BIND {
+          if (node.symbol.kind == SymbolKind.INSTANCE_FUNCTION) {
+            Node function = node.bindValue();
+            Node target = function.dotTarget().remove();
+            Node name = function.dotName().remove();
+            Node temporaryName = Node.createName("$temp");
+            node.become(Node.createLet(
+              Node.createVariable(temporaryName.clone(), null, target),
+              Node.createCall(Node.createDot(Node.createDot(temporaryName.clone(), name), Node.createName("bind")), { temporaryName })).withRange(node.range));
+          }
+        }
+
         case NodeKind.THIS {
           if (context.lambdaCount > 0) {
             node.become(context.thisAlias());
