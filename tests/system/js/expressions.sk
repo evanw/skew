@@ -257,6 +257,133 @@ function bar() {
 ");
 
 testJS("
+void foo(int bar) {
+  bar += 1;
+  bar -= 1;
+  bar *= 1;
+  bar /= 1;
+  bar %= 1;
+  foo(bar += 1);
+  foo(bar -= 1);
+  foo(bar *= 1);
+  foo(bar /= 1);
+  foo(bar %= 1);
+}
+", "
+function foo(bar) {
+  bar = bar + 1 | 0;
+  bar = bar - 1 | 0;
+  bar = bar * 1 | 0;
+  bar = bar / 1 | 0;
+  bar = bar % 1 | 0;
+  foo(bar = bar + 1 | 0);
+  foo(bar = bar - 1 | 0);
+  foo(bar = bar * 1 | 0);
+  foo(bar = bar / 1 | 0);
+  foo(bar = bar % 1 | 0);
+}
+");
+
+testJS("
+class Foo {
+  int bar;
+  void foo(int foo) {
+  }
+  void baz() {
+    bar += 1;
+    bar -= 1;
+    bar *= 1;
+    bar /= 1;
+    bar %= 1;
+    foo(bar += 1);
+    foo(bar -= 1);
+    foo(bar *= 1);
+    foo(bar /= 1);
+    foo(bar %= 1);
+  }
+}
+", "
+function Foo(_0) {
+  this.bar = _0;
+}
+Foo.prototype.foo = function(foo) {
+};
+Foo.prototype.baz = function() {
+  this.bar = this.bar + 1 | 0;
+  this.bar = this.bar - 1 | 0;
+  this.bar = this.bar * 1 | 0;
+  this.bar = this.bar / 1 | 0;
+  this.bar = this.bar % 1 | 0;
+  this.foo(this.bar = this.bar + 1 | 0);
+  this.foo(this.bar = this.bar - 1 | 0);
+  this.foo(this.bar = this.bar * 1 | 0);
+  this.foo(this.bar = this.bar / 1 | 0);
+  this.foo(this.bar = this.bar % 1 | 0);
+};
+");
+
+testJS("
+class Foo {
+  int foo = 0;
+  void bar() {
+    baz().foo += foo;
+    baz().foo -= foo;
+    baz().foo *= foo;
+    baz().foo /= foo;
+    baz().foo %= foo;
+    foo = baz().foo += foo;
+    foo = baz().foo -= foo;
+    foo = baz().foo *= foo;
+    foo = baz().foo /= foo;
+    foo = baz().foo %= foo;
+  }
+}
+Foo baz() {
+  return Foo();
+}
+", "
+function Foo() {
+  this.foo = 0;
+}
+Foo.prototype.bar = function() {
+  var $this = this;
+  (function($temp) {
+    return $temp.foo = $temp.foo + $this.foo | 0;
+  })(baz());
+  (function($temp) {
+    return $temp.foo = $temp.foo - $this.foo | 0;
+  })(baz());
+  (function($temp) {
+    return $temp.foo = $temp.foo * $this.foo | 0;
+  })(baz());
+  (function($temp) {
+    return $temp.foo = $temp.foo / $this.foo | 0;
+  })(baz());
+  (function($temp) {
+    return $temp.foo = $temp.foo % $this.foo | 0;
+  })(baz());
+  this.foo = function($temp) {
+    return $temp.foo = $temp.foo + $this.foo | 0;
+  }(baz());
+  this.foo = function($temp) {
+    return $temp.foo = $temp.foo - $this.foo | 0;
+  }(baz());
+  this.foo = function($temp) {
+    return $temp.foo = $temp.foo * $this.foo | 0;
+  }(baz());
+  this.foo = function($temp) {
+    return $temp.foo = $temp.foo / $this.foo | 0;
+  }(baz());
+  this.foo = function($temp) {
+    return $temp.foo = $temp.foo % $this.foo | 0;
+  }(baz());
+};
+function baz() {
+  return new Foo();
+}
+");
+
+testJS("
 int foo = (1, 2);
 foo = (1, 2);
 foo = 1, 2;
