@@ -71,8 +71,8 @@ void foo(bool foo) {
 ", "
 if (!Math.imul) {
   Math.imul = function(a, b) {
-    var ah  = a >>> 16, al = a & 0xFFFF;
-    var bh  = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 0xFFFF;
+    var bh = b >>> 16, bl = b & 0xFFFF;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
 }
@@ -125,8 +125,8 @@ void foo(int foo, bool bar) {
 ", "
 if (!Math.imul) {
   Math.imul = function(a, b) {
-    var ah  = a >>> 16, al = a & 0xFFFF;
-    var bh  = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 0xFFFF;
+    var bh = b >>> 16, bl = b & 0xFFFF;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
 }
@@ -286,8 +286,8 @@ void foo(int bar) {
 ", "
 if (!Math.imul) {
   Math.imul = function(a, b) {
-    var ah  = a >>> 16, al = a & 0xFFFF;
-    var bh  = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 0xFFFF;
+    var bh = b >>> 16, bl = b & 0xFFFF;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
 }
@@ -326,8 +326,8 @@ class Foo {
 ", "
 if (!Math.imul) {
   Math.imul = function(a, b) {
-    var ah  = a >>> 16, al = a & 0xFFFF;
-    var bh  = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 0xFFFF;
+    var bh = b >>> 16, bl = b & 0xFFFF;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
 }
@@ -372,8 +372,8 @@ Foo baz() {
 ", "
 if (!Math.imul) {
   Math.imul = function(a, b) {
-    var ah  = a >>> 16, al = a & 0xFFFF;
-    var bh  = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 0xFFFF;
+    var bh = b >>> 16, bl = b & 0xFFFF;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
 }

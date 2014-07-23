@@ -41,8 +41,8 @@ namespace js {
         emit(
 "if (!Math.imul) {
   Math.imul = function(a, b) {
-    var ah  = a >>> 16, al = a & 0xFFFF;
-    var bh  = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 0xFFFF;
+    var bh = b >>> 16, bl = b & 0xFFFF;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
 }
