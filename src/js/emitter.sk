@@ -22,6 +22,8 @@ namespace js {
   class Emitter : IEmitter {
     int currentLine = 0;
     int currentColumn = 0;
+    bool needExtends = false;
+    bool needMathImul = false;
     Source currentSource = null;
     bool isStartOfExpression = false;
     SourceMapGenerator generator = new SourceMapGenerator();
@@ -35,17 +37,24 @@ namespace js {
       Collector collector = new Collector(program, SortTypes.BY_INHERITANCE_AND_CONTAINMENT);
 
       // Emit helper functions
-      for (i = 0; i < collector.typeSymbols.length; i++) {
-        Type type = collector.typeSymbols.get(i).type;
-        if (type.isClass() && type.baseClass() != null) {
-          emit(
+      if (needMathImul) {
+        emit(
+"if (!Math.imul) {
+  Math.imul = function(a, b) {
+    var ah  = a >>> 16, al = a & 0xFFFF;
+    var bh  = b >>> 16, bl = b & 0xFFFF;
+    return al * bl + (ah * bl + al * bh << 16) | 0;
+  };
+}
+");
+      }
+      if (needExtends) {
+        emit(
 "function $extends(derived, base) {
   derived.prototype = Object.create(base.prototype);
   derived.prototype.constructor = derived;
 }
 ");
-          break;
-        }
       }
 
       // Emit types
@@ -632,6 +641,12 @@ namespace js {
 
     void patchNode(Node node, PatchContext context) {
       switch (node.kind) {
+        case NodeKind.CLASS {
+          if (node.symbol.type.baseClass() != null) {
+            needExtends = true;
+          }
+        }
+
         case NodeKind.CONSTRUCTOR {
           Node superInitializer = node.superInitializer();
           Node memberInitializers = node.memberInitializers();
@@ -703,8 +718,7 @@ namespace js {
 
         case NodeKind.ADD, NodeKind.SUBTRACT, NodeKind.MULTIPLY, NodeKind.DIVIDE, NodeKind.REMAINDER {
           if (node.type.isInt(cache) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
-            List<Node> children = node.removeChildren();
-            node.become(Node.createBinary(NodeKind.BITWISE_OR, node.clone().withChildren(children), Node.createInt(0)).withRange(node.range));
+            node.become(createBinaryInt(node.kind, node.binaryLeft().remove(), node.binaryRight().remove()).withRange(node.range));
           }
         }
 
@@ -751,6 +765,10 @@ namespace js {
     }
 
     Node createBinaryInt(NodeKind kind, Node left, Node right) {
+      if (kind == NodeKind.MULTIPLY) {
+        needMathImul = true;
+        return Node.createCall(Node.createName("Math.imul"), { left, right }).withType(cache.intType);
+      }
       return Node.createBinary(NodeKind.BITWISE_OR, Node.createBinary(kind, left, right).withType(cache.intType), Node.createInt(0).withType(cache.intType)).withType(cache.intType);
     }
 
