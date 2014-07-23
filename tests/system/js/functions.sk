@@ -67,6 +67,21 @@ var foo = function($temp) {
 
 testJS("
 class Foo {
+  void foo() {}
+  void fn() bar() { return foo; }
+}
+", "
+function Foo() {
+}
+Foo.prototype.foo = function() {
+};
+Foo.prototype.bar = function() {
+  return this.foo.bind(this);
+};
+");
+
+testJS("
+class Foo {
   static void foo() {}
 }
 var foo = Foo.foo;
