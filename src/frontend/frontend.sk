@@ -167,6 +167,9 @@ namespace frontend {
       if (!diagnostic.noteRange.isEmpty()) {
         io.printWithColor(io.Color.BOLD, diagnostic.noteRange.locationString().append(": "));
         printNote(diagnostic.noteText);
+        FormattedRange formatted = diagnostic.noteRange.format(io.terminalWidth);
+        io.print(formatted.line.append("\n"));
+        io.printWithColor(io.Color.GREEN, formatted.range.append("\n"));
       }
     }
 

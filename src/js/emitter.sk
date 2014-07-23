@@ -710,10 +710,6 @@ namespace js {
           }
         }
 
-        case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
-          context.setFunction(null);
-        }
-
         case NodeKind.CAST {
           Node value = node.castValue();
 
@@ -788,8 +784,14 @@ namespace js {
         }
       }
 
-      if (node.kind == NodeKind.LAMBDA) {
-        context.lambdaCount--;
+      switch (node.kind) {
+        case NodeKind.LAMBDA {
+          context.lambdaCount--;
+        }
+
+        case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
+          context.setFunction(null);
+        }
       }
     }
 
