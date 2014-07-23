@@ -471,10 +471,17 @@ namespace js {
 
         case NodeKind.INT {
           emit(node.asInt().toString());
+          if (node.parent.kind == NodeKind.DOT) {
+            emit(".");
+          }
         }
 
         case NodeKind.FLOAT, NodeKind.DOUBLE {
-          emit(node.asDouble().toString());
+          string text = node.asDouble().toString();
+          emit(text);
+          if (node.parent.kind == NodeKind.DOT && text.indexOf(".") < 0) {
+            emit(".");
+          }
         }
 
         case NodeKind.STRING {
