@@ -618,10 +618,6 @@ namespace js {
       }
     }
 
-    static bool isSimpleNameAccess(Node node) {
-      return node.kind == NodeKind.NAME || node.kind == NodeKind.THIS || node.kind == NodeKind.DOT && isSimpleNameAccess(node.dotTarget());
-    }
-
     static bool isExpressionUsed(Node node) {
       assert node.kind.isExpression();
       Node parent = node.parent;
@@ -636,12 +632,6 @@ namespace js {
 
     void patchNode(Node node, PatchContext context) {
       switch (node.kind) {
-        case NodeKind.LET {
-          Node value = node.letValue();
-          Node variable = node.letVariable();
-          node.become(Node.createCall(Node.createLambda({ variable.remove() }, Node.createBlock({ Node.createReturn(value.remove()) })), { variable.variableValue().remove() }));
-        }
-
         case NodeKind.CONSTRUCTOR {
           Node superInitializer = node.superInitializer();
           Node memberInitializers = node.memberInitializers();
@@ -664,10 +654,6 @@ namespace js {
           context.setFunction(node);
         }
 
-        case NodeKind.LAMBDA {
-          context.lambdaCount++;
-        }
-
         case NodeKind.THIS {
           if (context.lambdaCount > 0) {
             node.become(context.thisAlias());
@@ -679,25 +665,9 @@ namespace js {
             node.become(Node.createDot(Node.createThis(), node.clone()));
           }
         }
-      }
 
-      if (node.hasChildren()) {
-        int i;
-        for (i = 0; i < node.children.length; i++) {
-          Node child = node.children.get(i);
-          if (child != null) {
-            patchNode(child, context);
-          }
-        }
-      }
-
-      switch (node.kind) {
         case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
           context.setFunction(null);
-        }
-
-        case NodeKind.LAMBDA {
-          context.lambdaCount--;
         }
 
         case NodeKind.CAST {
@@ -723,28 +693,18 @@ namespace js {
           if (node.type.isInt(cache)) {
             bool isPostfix = node.kind == NodeKind.POSTFIX_INCREMENT || node.kind == NodeKind.POSTFIX_DECREMENT;
             bool isIncrement = node.kind == NodeKind.PREFIX_INCREMENT || node.kind == NodeKind.POSTFIX_INCREMENT;
-            Node value = node.unaryValue();
-            if (isSimpleNameAccess(value)) {
-              Node result =
-                Node.createBinary(NodeKind.ASSIGN,
-                  value.clone(),
-                  Node.createBinary(NodeKind.BITWISE_OR,
-                    Node.createBinary(isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.remove(), Node.createInt(1)),
-                    Node.createInt(0)));
-              if (isPostfix && isExpressionUsed(node)) {
-                result = Node.createBinary(NodeKind.BITWISE_OR,
-                  Node.createBinary(isIncrement ? NodeKind.SUBTRACT : NodeKind.ADD, result, Node.createInt(1)),
-                  Node.createInt(0));
-              }
-              node.become(result.withRange(node.range).withType(node.type));
+            Node result = createBinaryIntAssignment(context, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, node.unaryValue().remove(), Node.createInt(1));
+            if (isPostfix && isExpressionUsed(node)) {
+              result = createBinaryInt(isIncrement ? NodeKind.SUBTRACT : NodeKind.ADD, result, Node.createInt(1));
             }
+            node.become(result.withRange(node.range).withType(node.type));
           }
         }
 
         case NodeKind.ADD, NodeKind.SUBTRACT, NodeKind.MULTIPLY, NodeKind.DIVIDE, NodeKind.REMAINDER {
           if (node.type.isInt(cache) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
             List<Node> children = node.removeChildren();
-            node.become(Node.createBinary(NodeKind.BITWISE_OR, node.clone().withChildren(children), Node.createInt(0)).withRange(node.range).withType(node.type));
+            node.become(Node.createBinary(NodeKind.BITWISE_OR, node.clone().withChildren(children), Node.createInt(0)).withRange(node.range));
           }
         }
 
@@ -754,24 +714,61 @@ namespace js {
             bool isIncrement = node.kind == NodeKind.PREFIX_INCREMENT || node.kind == NodeKind.POSTFIX_INCREMENT;
             Node left = node.binaryLeft();
             Node right = node.binaryRight();
-            if (isSimpleNameAccess(left)) {
-              NodeKind kind =
-                node.kind == NodeKind.ASSIGN_ADD ? NodeKind.ADD :
-                node.kind == NodeKind.ASSIGN_SUBTRACT ? NodeKind.SUBTRACT :
-                node.kind == NodeKind.ASSIGN_MULTIPLY ? NodeKind.MULTIPLY :
-                node.kind == NodeKind.ASSIGN_DIVIDE ? NodeKind.DIVIDE :
-                NodeKind.REMAINDER;
-              Node result =
-                Node.createBinary(NodeKind.ASSIGN,
-                  left.clone(),
-                  Node.createBinary(NodeKind.BITWISE_OR,
-                    Node.createBinary(kind, left.remove(), right.remove()),
-                    Node.createInt(0)));
-              node.become(result.withRange(node.range).withType(node.type));
-            }
+            NodeKind kind =
+              node.kind == NodeKind.ASSIGN_ADD ? NodeKind.ADD :
+              node.kind == NodeKind.ASSIGN_SUBTRACT ? NodeKind.SUBTRACT :
+              node.kind == NodeKind.ASSIGN_MULTIPLY ? NodeKind.MULTIPLY :
+              node.kind == NodeKind.ASSIGN_DIVIDE ? NodeKind.DIVIDE :
+              NodeKind.REMAINDER;
+            node.become(createBinaryIntAssignment(context, kind, left.remove(), right.remove()).withRange(node.range));
+          }
+        }
+
+        case NodeKind.LAMBDA {
+          context.lambdaCount++;
+        }
+      }
+
+      if (node.kind == NodeKind.LET) {
+        Node value = node.letValue();
+        Node variable = node.letVariable();
+        node.become(Node.createCall(Node.createLambda({ variable.remove() }, Node.createBlock({ Node.createReturn(value.remove()) })), { variable.variableValue().remove() }));
+      }
+
+      if (node.hasChildren()) {
+        int i;
+        for (i = 0; i < node.children.length; i++) {
+          Node child = node.children.get(i);
+          if (child != null) {
+            patchNode(child, context);
           }
         }
       }
+
+      if (node.kind == NodeKind.LAMBDA) {
+        context.lambdaCount--;
+      }
+    }
+
+    Node createBinaryInt(NodeKind kind, Node left, Node right) {
+      return Node.createBinary(NodeKind.BITWISE_OR, Node.createBinary(kind, left, right).withType(cache.intType), Node.createInt(0).withType(cache.intType)).withType(cache.intType);
+    }
+
+    static bool isSimpleNameAccess(Node node) {
+      return node.kind == NodeKind.NAME || node.kind == NodeKind.THIS || node.kind == NodeKind.DOT && isSimpleNameAccess(node.dotTarget());
+    }
+
+    Node createBinaryIntAssignment(PatchContext context, NodeKind kind, Node left, Node right) {
+      if (isSimpleNameAccess(left)) {
+        return Node.createBinary(NodeKind.ASSIGN, left.clone(), createBinaryInt(kind, left, right));
+      }
+      assert left.kind == NodeKind.DOT;
+      Node target = left.dotTarget().remove();
+      Node temporaryName = Node.createName("$temp");
+      Node dot = Node.createDot(temporaryName, left.dotName().remove());
+      return Node.createLet(
+        Node.createVariable(temporaryName.clone(), null, target),
+        Node.createBinary(NodeKind.ASSIGN, dot, createBinaryInt(kind, dot.clone(), right)).withType(cache.intType)).withType(cache.intType);
     }
 
     bool hasCompoundName(Symbol symbol) {

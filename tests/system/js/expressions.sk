@@ -206,7 +206,54 @@ Foo bar() {
   return Foo();
 }
 ", "
-TODO
+function Foo() {
+  this.foo = 0;
+}
+function foo(baz) {
+  (function($temp) {
+    return $temp.foo = $temp.foo + 1 | 0;
+  })(bar()), function($temp) {
+    return $temp.foo = $temp.foo + 1 | 0;
+  }(bar());
+  (function($temp) {
+    return $temp.foo = $temp.foo - 1 | 0;
+  })(bar()), function($temp) {
+    return $temp.foo = $temp.foo - 1 | 0;
+  }(bar());
+  (function($temp) {
+    return $temp.foo = $temp.foo + 1 | 0;
+  })(bar()), function($temp) {
+    return $temp.foo = $temp.foo + 1 | 0;
+  }(bar());
+  (function($temp) {
+    return $temp.foo = $temp.foo - 1 | 0;
+  })(bar()), function($temp) {
+    return $temp.foo = $temp.foo - 1 | 0;
+  }(bar());
+  foo((function($temp) {
+    return $temp.foo = $temp.foo + 1 | 0;
+  }(bar()), function($temp) {
+    return $temp.foo = $temp.foo + 1 | 0;
+  }(bar()) - 1 | 0));
+  foo((function($temp) {
+    return $temp.foo = $temp.foo - 1 | 0;
+  }(bar()), function($temp) {
+    return $temp.foo = $temp.foo - 1 | 0;
+  }(bar()) + 1 | 0));
+  foo((function($temp) {
+    return $temp.foo = $temp.foo + 1 | 0;
+  }(bar()), function($temp) {
+    return $temp.foo = $temp.foo + 1 | 0;
+  }(bar())));
+  foo((function($temp) {
+    return $temp.foo = $temp.foo - 1 | 0;
+  }(bar()), function($temp) {
+    return $temp.foo = $temp.foo - 1 | 0;
+  }(bar())));
+}
+function bar() {
+  return new Foo();
+}
 ");
 
 testJS("
