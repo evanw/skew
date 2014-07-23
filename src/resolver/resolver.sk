@@ -1984,10 +1984,22 @@ class Resolver {
         Node memberInitializer = memberInitializers.children.get(i);
         Node name = memberInitializer.memberInitializerName();
         Node value = memberInitializer.memberInitializerValue();
+
+        // Avoid the function arguments when looking up member initializer
+        // names. This allows function arguments to have the same name as a
+        // member initializer without a conflict:
+        //
+        //   class Foo {
+        //     int foo;
+        //     new(int foo) : foo = foo {}
+        //   }
+        //
         Scope oldScope = context.scope;
         context.scope = node.scope.lexicalParent;
         resolve(name, null);
         context.scope = oldScope;
+
+        // Resolve the value and check for duplicate initializations
         if (name.symbol != null) {
           resolveAsExpressionWithConversion(value, name.symbol.type, CastKind.IMPLICIT);
           int j;

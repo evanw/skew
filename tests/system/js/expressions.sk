@@ -488,13 +488,9 @@ class Foo {
   int fn() bar = () => foo;
 }
 ", "
-function Foo() {
-  var $this = this;
-  this.foo = 0;
-  this.bar = function() {
-    return $this.foo;
-  };
-}
+<stdin>:3:24: error: Cannot access \"foo\" from a static context
+  int fn() bar = () => foo;
+                       ~~~
 ");
 
 testJS("
