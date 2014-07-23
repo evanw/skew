@@ -1523,8 +1523,6 @@ class Resolver {
     }
 
     // Check the fields for duplicates and sequential layout
-    int minimum = 0x7FFFFFFF;
-    int maximum = -0x7FFFFFFF; // TODO: -0x80000000
     for (i = 0; i < fields.length; i++) {
       Symbol field = fields.get(i);
       initializeSymbol(field);
@@ -1532,8 +1530,6 @@ class Resolver {
         break;
       }
       int value = field.enumValue;
-      minimum = Math.imin(minimum, value);
-      maximum = Math.imax(maximum, value);
       int j;
       for (j = 0; j < i; j++) {
         Symbol other = fields.get(j);
@@ -1559,21 +1555,6 @@ class Resolver {
       statement = Node.createReturn(Node.createString(""));
     }
 
-    // Generate an array lookup if all enum values form a sequential range.
-    // This check only needs to use the minimum and maximum since it is now
-    // known that there are no duplicates in the list.
-    else if (maximum - minimum == fields.length - 1) {
-      string name = "STRINGS"; // TODO: gensym
-      List<Node> values = {};
-      for (i = 0; i < fields.length; i++) {
-        values.push(Node.createString(fields.get(i).name));
-      }
-      block.appendChild(Node.createModifier(Node.createName("static"), { Node.createVariableCluster(
-        Node.createType(cache.parameterize(cache.listType, { cache.stringType })),
-        { Node.createVariable(Node.createName(name), null, Node.createInitializer(values)) }) }));
-      statement = Node.createReturn(Node.createCall(Node.createDot(Node.createName(name), Node.createName("get")), { Node.createThis() }));
-    }
-
     // Generate a string switch statment
     else {
       List<Node> cases = {};
@@ -1583,6 +1564,7 @@ class Resolver {
           { Node.createDot(null, Node.createName(field.name)) },
           Node.createBlock({ Node.createReturn(Node.createString(field.name)) })));
       }
+      cases.push(Node.createCase({}, Node.createBlock({ Node.createReturn(Node.createString("")) })));
       statement = Node.createSwitch(Node.createThis(), cases);
     }
 
