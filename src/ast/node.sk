@@ -31,6 +31,7 @@ enum NodeKind {
   WHILE,
   DO_WHILE,
   RETURN,
+  IMPLICIT_RETURN,
   BREAK,
   CONTINUE,
   ASSERT,

@@ -363,7 +363,7 @@ namespace js {
           emit(");\n");
         }
 
-        case NodeKind.RETURN {
+        case NodeKind.RETURN, NodeKind.IMPLICIT_RETURN {
           Node value = node.returnValue();
           emit(indent);
           if (value != null) {

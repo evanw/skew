@@ -385,7 +385,7 @@ in Node {
   }
 
   Node returnValue() {
-    assert kind == NodeKind.RETURN;
+    assert kind == NodeKind.RETURN || kind == NodeKind.IMPLICIT_RETURN;
     assert children.length == 1;
     return children.get(0);
   }

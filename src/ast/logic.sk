@@ -89,7 +89,7 @@ in Node {
     for (i = children.length - 1; i >= 0; i--) {
       Node child = children.get(i);
       switch (child.kind) {
-        case NodeKind.RETURN {
+        case NodeKind.RETURN, NodeKind.IMPLICIT_RETURN {
           return true;
         }
 

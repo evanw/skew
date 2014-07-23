@@ -60,3 +60,18 @@ var foo = =>
 var foo = =>
           ~~
 ");
+
+test("
+void foo() {}
+void fn() bar = () => foo();
+", "
+");
+
+test("
+void foo() {}
+void fn() bar = () => { return foo(); };
+", "
+<stdin>:2:32: error: Unexpected expression of type \"void\"
+void fn() bar = () => { return foo(); };
+                               ~~~~~
+");

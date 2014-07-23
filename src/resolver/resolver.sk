@@ -521,7 +521,7 @@ class Resolver {
       case NodeKind.FOR_EACH { resolveForEach(node); }
       case NodeKind.WHILE { resolveWhile(node); }
       case NodeKind.DO_WHILE { resolveWhile(node); }
-      case NodeKind.RETURN { resolveReturn(node); }
+      case NodeKind.RETURN, NodeKind.IMPLICIT_RETURN { resolveReturn(node); }
       case NodeKind.BREAK { resolveBreak(node); }
       case NodeKind.CONTINUE { resolveContinue(node); }
       case NodeKind.ASSERT { resolveAssert(node); }
@@ -2109,7 +2109,19 @@ class Resolver {
 
     // Check the return value
     if (value != null) {
-      resolveAsExpressionWithConversion(value, resultType, CastKind.IMPLICIT);
+      // Automatically convert implicit return statements inside lambda
+      // expressions that return void into expression statements. This
+      // prevents type errors here:
+      //
+      //   void foo() {}
+      //   void fn() bar = () => foo();
+      //
+      if (node.kind == NodeKind.IMPLICIT_RETURN && resultType.isVoid(cache)) {
+        node.become(Node.createExpression(value.remove()));
+        resolve(node, null);
+      } else {
+        resolveAsExpressionWithConversion(value, resultType, CastKind.IMPLICIT);
+      }
     }
 
     // The return value may be missing only when the return type is void

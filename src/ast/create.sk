@@ -163,6 +163,11 @@ in Node {
     return new Node(NodeKind.RETURN).withChildren({ value });
   }
 
+  static Node createImplicitReturn(Node value) {
+    assert value == null || value.kind.isExpression();
+    return new Node(NodeKind.IMPLICIT_RETURN).withChildren({ value });
+  }
+
   static Node createBreak() {
     return new Node(NodeKind.BREAK);
   }

@@ -137,7 +137,7 @@ Node parseLambdaBlock(ParserContext context) {
     return Node.createBlock({});
   }
   Node value = pratt.parse(context, Precedence.COMMA);
-  return Node.createBlock({ Node.createReturn(value).withRange(value.range) }).withRange(value.range);
+  return Node.createBlock({ Node.createImplicitReturn(value).withRange(value.range) }).withRange(value.range);
 }
 
 Node parseCaseStatement(ParserContext context) {
