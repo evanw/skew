@@ -117,8 +117,23 @@ $extends(Bar, Foo);
 ");
 
 testJS("
-import class Foo : Bar { new() {} }
-import class Bar { new() {} }
+class Foo {
+  int foo;
+  new() {}
+}
+", "
+function Foo() {
+  this.foo = 0;
+}
+");
+
+testJS("
+import class Foo : Bar {
+  new() {}
+}
+import class Bar {
+  new() {}
+}
 var foo = Foo();
 ", "
 var foo = new Foo();
