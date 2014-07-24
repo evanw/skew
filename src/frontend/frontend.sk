@@ -176,7 +176,7 @@ namespace frontend {
     // Print the summary
     bool hasErrors = log.errorCount > 0;
     bool hasWarnings = log.warningCount > 0;
-    string summary;
+    string summary = "";
     if (hasWarnings) {
       summary = summary.append(log.warningCount.toString().append(plural(log.warningCount, " warning", " warnings")));
       if (hasErrors) summary = summary.append(" and ");

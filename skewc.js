@@ -4005,221 +4005,6 @@ var AllowTrailingComma = {
   NO: 0,
   YES: 1
 };
-function TokenLiteral(_0) {
-  this.kind = _0;
-}
-TokenLiteral.prototype.run = function(context, token) {
-  return new Node(this.kind).withRange(token.range);
-};
-function IntLiteral(_0) {
-  this.base = _0;
-}
-IntLiteral.prototype.run = function(context, token) {
-  var value = parseIntLiteral(token.text, this.base);
-  if (value !== value) {
-    syntaxErrorInvalidInteger(context.log, token.range, token.text);
-  } else if (this.base === 10 && value !== 0 && token.text.codeUnitAt(0) === 48) {
-    syntaxWarningOctal(context.log, token.range);
-  }
-  return Node.createInt(value | 0).withRange(token.range);
-};
-function FloatLiteral() {
-}
-FloatLiteral.prototype.run = function(context, token) {
-  return Node.createFloat(parseDoubleLiteral(token.text.slice(0, token.text.length - 1 | 0))).withRange(token.range);
-};
-function DoubleLiteral() {
-}
-DoubleLiteral.prototype.run = function(context, token) {
-  return Node.createDouble(parseDoubleLiteral(token.text)).withRange(token.range);
-};
-function StringLiteral() {
-}
-StringLiteral.prototype.run = function(context, token) {
-  var result = parseStringLiteral(context.log, token.range, token.text);
-  return Node.createString(result !== null ? result.value : "").withRange(token.range);
-};
-function CharacterLiteral() {
-}
-CharacterLiteral.prototype.run = function(context, token) {
-  var result = parseStringLiteral(context.log, token.range, token.text);
-  if (result !== null && result.value.length !== 1) {
-    syntaxErrorInvalidCharacter(context.log, token.range, token.text);
-    result = null;
-  }
-  return Node.createInt(result !== null ? result.value.codeUnitAt(0) : 0).withRange(token.range);
-};
-function VarLiteral() {
-}
-VarLiteral.prototype.run = function(context, token) {
-  return Node.createVar().withRange(token.range);
-};
-function InitializerParselet() {
-}
-InitializerParselet.prototype.run = function(context) {
-  var token = context.current();
-  var $arguments = parseArgumentList(context, TokenKind.LEFT_BRACE, TokenKind.RIGHT_BRACE, AllowTrailingComma.YES);
-  return Node.createInitializer($arguments).withRange(context.spanSince(token.range));
-};
-function GroupParselet() {
-}
-GroupParselet.prototype.run = function(context) {
-  var token = context.current();
-  var type = parseGroup(context, AllowLambda.YES);
-  if (type.kind === NodeKind.NAME && context.eat(TokenKind.LAMBDA)) {
-    var block = parseLambdaBlock(context);
-    return createLambdaFromNames([type], block).withRange(context.spanSince(token.range));
-  }
-  if (looksLikeLambdaArguments(type) && context.eat(TokenKind.LAMBDA)) {
-    var block = parseLambdaBlock(context);
-    return createLambdaFromNames(type.removeChildren(), block).withRange(context.spanSince(token.range));
-  }
-  if (looksLikeType(type)) {
-    var value = pratt.parse(context, Precedence.UNARY_PREFIX);
-    return Node.createCast(type, value).withRange(context.spanSince(token.range));
-  }
-  return type;
-};
-function HookInfix() {
-}
-HookInfix.prototype.run = function(context, left) {
-  context.next();
-  var middle = pratt.parse(context, Precedence.ASSIGN - 1 | 0);
-  var right = context.expect(TokenKind.COLON) ? pratt.parse(context, Precedence.ASSIGN - 1 | 0) : Node.createError().withRange(context.spanSince(context.current().range));
-  return Node.createHook(left, middle, right).withRange(context.spanSince(left.range));
-};
-function SequenceInfix() {
-}
-SequenceInfix.prototype.run = function(context, left) {
-  var values = [left];
-  while (context.eat(TokenKind.COMMA)) {
-    values.push(pratt.parse(context, Precedence.COMMA));
-  }
-  return Node.createSequence(values).withRange(context.spanSince(left.range));
-};
-function DotInfix() {
-}
-DotInfix.prototype.run = function(context, left) {
-  context.next();
-  var name = parseName(context);
-  return Node.createDot(left, name).withRange(context.spanSince(left.range));
-};
-function DotPrefix() {
-}
-DotPrefix.prototype.run = function(context) {
-  var token = context.next();
-  var name = parseName(context);
-  return Node.createDot(null, name).withRange(context.spanSince(token.range));
-};
-function FnInfix() {
-}
-FnInfix.prototype.run = function(context, left) {
-  if (!looksLikeType(left)) {
-    context.unexpectedToken();
-    context.next();
-    return Node.createError().withRange(context.spanSince(left.range));
-  }
-  context.next();
-  var $arguments = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.YES);
-  return Node.createFunctionType(left, $arguments).withRange(context.spanSince(left.range));
-};
-function UnaryPostfix(_0) {
-  this.kind = _0;
-}
-UnaryPostfix.prototype.run = function(context, value, token) {
-  return Node.createUnary(this.kind, value).withRange(Range.span(value.range, token.range));
-};
-function UnaryPrefix(_0) {
-  this.kind = _0;
-}
-UnaryPrefix.prototype.run = function(context, token, value) {
-  return Node.createUnary(this.kind, value).withRange(Range.span(token.range, value.range));
-};
-function BinaryInfix(_0) {
-  this.kind = _0;
-}
-BinaryInfix.prototype.run = function(context, left, token, right) {
-  return Node.createBinary(this.kind, left, right).withRange(Range.span(left.range, right.range));
-};
-function CallInfix() {
-}
-CallInfix.prototype.run = function(context, left) {
-  var $arguments = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO);
-  return Node.createCall(left, $arguments).withRange(context.spanSince(left.range));
-};
-function IndexInfix() {
-}
-IndexInfix.prototype.run = function(context, left) {
-  context.next();
-  var index = pratt.parse(context, Precedence.LOWEST);
-  scanForToken(context, TokenKind.RIGHT_BRACKET, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-  return Node.createBinary(NodeKind.INDEX, left, index).withRange(context.spanSince(left.range));
-};
-function SubstitutionInfix() {
-}
-SubstitutionInfix.prototype.run = function(context, left) {
-  var token = context.next();
-  var substitutions = parseTypeList(context, TokenKind.END_PARAMETER_LIST);
-  if (!context.expect(TokenKind.END_PARAMETER_LIST)) {
-    scanForToken(context, TokenKind.END_PARAMETER_LIST, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-    return Node.createError().withRange(context.spanSince(token.range));
-  }
-  return Node.createParameterize(left, substitutions).withRange(context.spanSince(left.range));
-};
-function DefaultPrefix() {
-}
-DefaultPrefix.prototype.run = function(context) {
-  var token = context.next();
-  var type = parseGroup(context, AllowLambda.NO);
-  return (type === null ? Node.createError() : Node.createDefault(type)).withRange(context.spanSince(token.range));
-};
-function SuperCallPrefix() {
-}
-SuperCallPrefix.prototype.run = function(context) {
-  return parseSuperCall(context);
-};
-function NamePrefix() {
-}
-NamePrefix.prototype.run = function(context) {
-  var token = context.next();
-  var name = Node.createName(token.text).withRange(token.range);
-  if (context.eat(TokenKind.LAMBDA)) {
-    var block = parseLambdaBlock(context);
-    return createLambdaFromNames([name], block).withRange(context.spanSince(token.range));
-  }
-  return name;
-};
-function LambdaPrefix() {
-}
-LambdaPrefix.prototype.run = function(context) {
-  var token = context.next();
-  var block = parseLambdaBlock(context);
-  return Node.createLambda([], block).withRange(context.spanSince(token.range));
-};
-function NewPrefix() {
-}
-NewPrefix.prototype.run = function(context) {
-  context.unexpectedToken();
-  context.next();
-  return parseType(context);
-};
-function LetPrefix(_0) {
-  this.parselet = _0;
-}
-LetPrefix.prototype.run = function(context) {
-  var token = context.next();
-  var name = parseName(context);
-  if (name === null || !context.expect(TokenKind.ASSIGN)) {
-    return Node.createError().withRange(context.spanSince(token.range));
-  }
-  var initial = pratt.parseIgnoringParselet(context, Precedence.LOWEST, this.parselet);
-  var variable = Node.createVariable(name, Node.createVar(), initial).withRange(context.spanSince(token.range));
-  if (NodeKind.isError(initial.kind) || !context.expect(TokenKind.IN)) {
-    return Node.createError().withRange(context.spanSince(token.range));
-  }
-  var value = pratt.parse(context, Precedence.COMMA);
-  return Node.createLet(variable, value).withRange(context.spanSince(token.range));
-};
 function ParserContext(_0, _1) {
   this.index = 0;
   this.previousSyntaxError = null;
@@ -4268,38 +4053,6 @@ ParserContext.prototype.unexpectedToken = function() {
     this.previousSyntaxError = token;
   }
 };
-function LiteralParselet(_0) {
-  this.callback = _0;
-}
-LiteralParselet.prototype.run = function(context) {
-  return this.callback.run(context, context.next());
-};
-function PrefixParselet(_0, _1, _2) {
-  this.callback = _0;
-  this.pratt = _1;
-  this.precedence = _2;
-}
-PrefixParselet.prototype.run = function(context) {
-  var token = context.next();
-  var value = this.pratt.parse(context, this.precedence);
-  return value !== null ? this.callback.run(context, token, value) : null;
-};
-function PostfixParselet(_0) {
-  this.callback = _0;
-}
-PostfixParselet.prototype.run = function(context, left) {
-  return this.callback.run(context, left, context.next());
-};
-function InfixParselet(_0, _1, _2) {
-  this.callback = _0;
-  this.pratt = _1;
-  this.precedence = _2;
-}
-InfixParselet.prototype.run = function(context, left) {
-  var token = context.next();
-  var right = this.pratt.parse(context, this.precedence);
-  return right !== null ? this.callback.run(context, left, token, right) : null;
-};
 function Parselet(_0) {
   this.prefix = null;
   this.infix = null;
@@ -4332,18 +4085,18 @@ Pratt.prototype.parseIgnoringParselet = function(context, precedence, parseletTo
     context.unexpectedToken();
     return Node.createError().withRange(context.spanSince(token.range));
   }
-  var node = this.resumeIgnoringParselet(context, precedence, parselet.prefix.run(context), parseletToIgnore);
+  var node = this.resumeIgnoringParselet(context, precedence, parselet.prefix(context), parseletToIgnore);
   if (node === null) {
-    throw new Error("assert node != null; (src/parser/pratt.sk:172:5)");
+    throw new Error("assert node != null; (src/parser/pratt.sk:111:5)");
   }
   if (node.range.isEmpty()) {
-    throw new Error("assert !node.range.isEmpty(); (src/parser/pratt.sk:173:5)");
+    throw new Error("assert !node.range.isEmpty(); (src/parser/pratt.sk:112:5)");
   }
   return node;
 };
 Pratt.prototype.resumeIgnoringParselet = function(context, precedence, left, parseletToIgnore) {
   if (left === null) {
-    throw new Error("assert left != null; (src/parser/pratt.sk:178:5)");
+    throw new Error("assert left != null; (src/parser/pratt.sk:117:5)");
   }
   while (!NodeKind.isError(left.kind)) {
     var kind = context.current().kind;
@@ -4351,30 +4104,46 @@ Pratt.prototype.resumeIgnoringParselet = function(context, precedence, left, par
     if (parselet === null || parselet === parseletToIgnore || parselet.infix === null || parselet.precedence <= precedence) {
       break;
     }
-    left = parselet.infix.run(context, left);
+    left = parselet.infix(context, left);
     if (left === null) {
-      throw new Error("assert left != null; (src/parser/pratt.sk:186:7)");
+      throw new Error("assert left != null; (src/parser/pratt.sk:125:7)");
     }
     if (left.range.isEmpty()) {
-      throw new Error("assert !left.range.isEmpty(); (src/parser/pratt.sk:187:7)");
+      throw new Error("assert !left.range.isEmpty(); (src/parser/pratt.sk:126:7)");
     }
   }
   return left;
 };
 Pratt.prototype.literal = function(kind, callback) {
-  this.parselet(kind, 0).prefix = new LiteralParselet(callback);
+  this.parselet(kind, 0).prefix = function(context) {
+    return callback(context, context.next());
+  };
 };
 Pratt.prototype.prefix = function(kind, precedence, callback) {
-  this.parselet(kind, 0).prefix = new PrefixParselet(callback, this, precedence);
+  this.parselet(kind, 0).prefix = function(context) {
+    var token = context.next();
+    var value = pratt.parse(context, precedence);
+    return value !== null ? callback(context, token, value) : null;
+  };
 };
 Pratt.prototype.postfix = function(kind, precedence, callback) {
-  this.parselet(kind, precedence).infix = new PostfixParselet(callback);
+  this.parselet(kind, precedence).infix = function(context, left) {
+    return callback(context, left, context.next());
+  };
 };
 Pratt.prototype.infix = function(kind, precedence, callback) {
-  this.parselet(kind, precedence).infix = new InfixParselet(callback, this, precedence);
+  this.parselet(kind, precedence).infix = function(context, left) {
+    var token = context.next();
+    var right = pratt.parse(context, precedence);
+    return right !== null ? callback(context, left, token, right) : null;
+  };
 };
 Pratt.prototype.infixRight = function(kind, precedence, callback) {
-  this.parselet(kind, precedence).infix = new InfixParselet(callback, this, precedence - 1 | 0);
+  this.parselet(kind, precedence).infix = function(context, left) {
+    var token = context.next();
+    var right = pratt.parse(context, precedence - 1 | 0);
+    return right !== null ? callback(context, left, token, right) : null;
+  };
 };
 function CallInfo(_0) {
   this.callSites = [];
@@ -8233,7 +8002,7 @@ frontend.main = function(args) {
   }
   var hasErrors = log.errorCount > 0;
   var hasWarnings = log.warningCount > 0;
-  var summary;
+  var summary = "";
   if (hasWarnings) {
     summary = summary.append(log.warningCount.toString().append(plural(log.warningCount, " warning", " warnings")));
     if (hasErrors) {
@@ -9083,75 +8852,222 @@ function parseFile(log, tokens) {
   var range = context.spanSince(token.range);
   return Node.createFile(Node.createBlock(statements).withRange(range)).withRange(range);
 }
+function tokenLiteral(kind) {
+  return function(context, token) {
+    return new Node(kind).withRange(token.range);
+  };
+}
+function intLiteral(base) {
+  return function(context, token) {
+    var value = parseIntLiteral(token.text, base);
+    if (value !== value) {
+      syntaxErrorInvalidInteger(context.log, token.range, token.text);
+    } else if (base === 10 && value !== 0 && token.text.codeUnitAt(0) === 48) {
+      syntaxWarningOctal(context.log, token.range);
+    }
+    return Node.createInt(value | 0).withRange(token.range);
+  };
+}
+function unaryPostfix(kind) {
+  return function(context, value, token) {
+    return Node.createUnary(kind, value).withRange(Range.span(value.range, token.range));
+  };
+}
+function unaryPrefix(kind) {
+  return function(context, token, value) {
+    return Node.createUnary(kind, value).withRange(Range.span(token.range, value.range));
+  };
+}
+function binaryInfix(kind) {
+  return function(context, left, token, right) {
+    return Node.createBinary(kind, left, right).withRange(Range.span(left.range, right.range));
+  };
+}
 function createParser() {
   var pratt = new Pratt();
-  pratt.literal(TokenKind.NULL, new TokenLiteral(NodeKind.NULL));
-  pratt.literal(TokenKind.THIS, new TokenLiteral(NodeKind.THIS));
-  pratt.literal(TokenKind.TRUE, new TokenLiteral(NodeKind.TRUE));
-  pratt.literal(TokenKind.FALSE, new TokenLiteral(NodeKind.FALSE));
-  pratt.literal(TokenKind.INT_DECIMAL, new IntLiteral(10));
-  pratt.literal(TokenKind.INT_BINARY, new IntLiteral(2));
-  pratt.literal(TokenKind.INT_OCTAL, new IntLiteral(8));
-  pratt.literal(TokenKind.INT_HEX, new IntLiteral(16));
-  pratt.literal(TokenKind.FLOAT, new FloatLiteral());
-  pratt.literal(TokenKind.DOUBLE, new DoubleLiteral());
-  pratt.literal(TokenKind.STRING, new StringLiteral());
-  pratt.literal(TokenKind.CHARACTER, new CharacterLiteral());
-  pratt.literal(TokenKind.VAR, new VarLiteral());
-  pratt.postfix(TokenKind.INCREMENT, Precedence.UNARY_POSTFIX, new UnaryPostfix(NodeKind.POSTFIX_INCREMENT));
-  pratt.postfix(TokenKind.DECREMENT, Precedence.UNARY_POSTFIX, new UnaryPostfix(NodeKind.POSTFIX_DECREMENT));
-  pratt.prefix(TokenKind.INCREMENT, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.PREFIX_INCREMENT));
-  pratt.prefix(TokenKind.DECREMENT, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.PREFIX_DECREMENT));
-  pratt.prefix(TokenKind.PLUS, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.POSITIVE));
-  pratt.prefix(TokenKind.MINUS, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.NEGATIVE));
-  pratt.prefix(TokenKind.NOT, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.NOT));
-  pratt.prefix(TokenKind.TILDE, Precedence.UNARY_PREFIX, new UnaryPrefix(NodeKind.COMPLEMENT));
-  pratt.infix(TokenKind.BITWISE_AND, Precedence.BITWISE_AND, new BinaryInfix(NodeKind.BITWISE_AND));
-  pratt.infix(TokenKind.BITWISE_OR, Precedence.BITWISE_OR, new BinaryInfix(NodeKind.BITWISE_OR));
-  pratt.infix(TokenKind.BITWISE_XOR, Precedence.BITWISE_XOR, new BinaryInfix(NodeKind.BITWISE_XOR));
-  pratt.infix(TokenKind.DIVIDE, Precedence.MULTIPLY, new BinaryInfix(NodeKind.DIVIDE));
-  pratt.infix(TokenKind.EQUAL, Precedence.EQUAL, new BinaryInfix(NodeKind.EQUAL));
-  pratt.infix(TokenKind.GREATER_THAN, Precedence.COMPARE, new BinaryInfix(NodeKind.GREATER_THAN));
-  pratt.infix(TokenKind.GREATER_THAN_OR_EQUAL, Precedence.COMPARE, new BinaryInfix(NodeKind.GREATER_THAN_OR_EQUAL));
-  pratt.infix(TokenKind.IN, Precedence.COMPARE, new BinaryInfix(NodeKind.IN));
-  pratt.infix(TokenKind.LESS_THAN, Precedence.COMPARE, new BinaryInfix(NodeKind.LESS_THAN));
-  pratt.infix(TokenKind.LESS_THAN_OR_EQUAL, Precedence.COMPARE, new BinaryInfix(NodeKind.LESS_THAN_OR_EQUAL));
-  pratt.infix(TokenKind.LOGICAL_AND, Precedence.LOGICAL_AND, new BinaryInfix(NodeKind.LOGICAL_AND));
-  pratt.infix(TokenKind.LOGICAL_OR, Precedence.LOGICAL_OR, new BinaryInfix(NodeKind.LOGICAL_OR));
-  pratt.infix(TokenKind.MINUS, Precedence.ADD, new BinaryInfix(NodeKind.SUBTRACT));
-  pratt.infix(TokenKind.MULTIPLY, Precedence.MULTIPLY, new BinaryInfix(NodeKind.MULTIPLY));
-  pratt.infix(TokenKind.NOT_EQUAL, Precedence.EQUAL, new BinaryInfix(NodeKind.NOT_EQUAL));
-  pratt.infix(TokenKind.PLUS, Precedence.ADD, new BinaryInfix(NodeKind.ADD));
-  pratt.infix(TokenKind.REMAINDER, Precedence.MULTIPLY, new BinaryInfix(NodeKind.REMAINDER));
-  pratt.infix(TokenKind.SHIFT_LEFT, Precedence.SHIFT, new BinaryInfix(NodeKind.SHIFT_LEFT));
-  pratt.infix(TokenKind.SHIFT_RIGHT, Precedence.SHIFT, new BinaryInfix(NodeKind.SHIFT_RIGHT));
-  pratt.infixRight(TokenKind.ASSIGN, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN));
-  pratt.infixRight(TokenKind.ASSIGN_PLUS, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_ADD));
-  pratt.infixRight(TokenKind.ASSIGN_BITWISE_AND, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_BITWISE_AND));
-  pratt.infixRight(TokenKind.ASSIGN_BITWISE_OR, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_BITWISE_OR));
-  pratt.infixRight(TokenKind.ASSIGN_BITWISE_XOR, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_BITWISE_XOR));
-  pratt.infixRight(TokenKind.ASSIGN_DIVIDE, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_DIVIDE));
-  pratt.infixRight(TokenKind.ASSIGN_MULTIPLY, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_MULTIPLY));
-  pratt.infixRight(TokenKind.ASSIGN_REMAINDER, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_REMAINDER));
-  pratt.infixRight(TokenKind.ASSIGN_SHIFT_LEFT, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_SHIFT_LEFT));
-  pratt.infixRight(TokenKind.ASSIGN_SHIFT_RIGHT, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_SHIFT_RIGHT));
-  pratt.infixRight(TokenKind.ASSIGN_MINUS, Precedence.ASSIGN, new BinaryInfix(NodeKind.ASSIGN_SUBTRACT));
-  pratt.parselet(TokenKind.LEFT_BRACE, Precedence.LOWEST).prefix = new InitializerParselet();
-  pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.LOWEST).prefix = new GroupParselet();
-  pratt.parselet(TokenKind.QUESTION_MARK, Precedence.ASSIGN).infix = new HookInfix();
-  pratt.parselet(TokenKind.COMMA, Precedence.COMMA).infix = new SequenceInfix();
-  pratt.parselet(TokenKind.DOT, Precedence.MEMBER).infix = new DotInfix();
-  pratt.parselet(TokenKind.DOT, Precedence.LOWEST).prefix = new DotPrefix();
-  pratt.parselet(TokenKind.FN, Precedence.MEMBER).infix = new FnInfix();
-  pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = new CallInfix();
-  pratt.parselet(TokenKind.LEFT_BRACKET, Precedence.UNARY_POSTFIX).infix = new IndexInfix();
-  pratt.parselet(TokenKind.START_PARAMETER_LIST, Precedence.MEMBER).infix = new SubstitutionInfix();
-  pratt.parselet(TokenKind.DEFAULT, Precedence.UNARY_PREFIX).prefix = new DefaultPrefix();
-  pratt.parselet(TokenKind.SUPER, Precedence.LOWEST).prefix = new SuperCallPrefix();
-  pratt.parselet(TokenKind.IDENTIFIER, Precedence.LOWEST).prefix = new NamePrefix();
-  pratt.parselet(TokenKind.LAMBDA, Precedence.LOWEST).prefix = new LambdaPrefix();
-  pratt.parselet(TokenKind.NEW, Precedence.LOWEST).prefix = new NewPrefix();
-  pratt.parselet(TokenKind.LET, Precedence.LOWEST).prefix = new LetPrefix(pratt.parselet(TokenKind.IN, 0));
+  pratt.literal(TokenKind.NULL, tokenLiteral(NodeKind.NULL));
+  pratt.literal(TokenKind.THIS, tokenLiteral(NodeKind.THIS));
+  pratt.literal(TokenKind.TRUE, tokenLiteral(NodeKind.TRUE));
+  pratt.literal(TokenKind.FALSE, tokenLiteral(NodeKind.FALSE));
+  pratt.literal(TokenKind.INT_DECIMAL, intLiteral(10));
+  pratt.literal(TokenKind.INT_BINARY, intLiteral(2));
+  pratt.literal(TokenKind.INT_OCTAL, intLiteral(8));
+  pratt.literal(TokenKind.INT_HEX, intLiteral(16));
+  pratt.literal(TokenKind.FLOAT, function(context, token) {
+    return Node.createFloat(parseDoubleLiteral(token.text.slice(0, token.text.length - 1 | 0))).withRange(token.range);
+  });
+  pratt.literal(TokenKind.DOUBLE, function(context, token) {
+    return Node.createDouble(parseDoubleLiteral(token.text)).withRange(token.range);
+  });
+  pratt.literal(TokenKind.VAR, function(context, token) {
+    return Node.createVar().withRange(token.range);
+  });
+  pratt.literal(TokenKind.STRING, function(context, token) {
+    var result = parseStringLiteral(context.log, token.range, token.text);
+    return Node.createString(result !== null ? result.value : "").withRange(token.range);
+  });
+  pratt.literal(TokenKind.CHARACTER, function(context, token) {
+    var result = parseStringLiteral(context.log, token.range, token.text);
+    if (result !== null && result.value.length !== 1) {
+      syntaxErrorInvalidCharacter(context.log, token.range, token.text);
+      result = null;
+    }
+    return Node.createInt(result !== null ? result.value.codeUnitAt(0) : 0).withRange(token.range);
+  });
+  pratt.postfix(TokenKind.INCREMENT, Precedence.UNARY_POSTFIX, unaryPostfix(NodeKind.POSTFIX_INCREMENT));
+  pratt.postfix(TokenKind.DECREMENT, Precedence.UNARY_POSTFIX, unaryPostfix(NodeKind.POSTFIX_DECREMENT));
+  pratt.prefix(TokenKind.INCREMENT, Precedence.UNARY_PREFIX, unaryPrefix(NodeKind.PREFIX_INCREMENT));
+  pratt.prefix(TokenKind.DECREMENT, Precedence.UNARY_PREFIX, unaryPrefix(NodeKind.PREFIX_DECREMENT));
+  pratt.prefix(TokenKind.PLUS, Precedence.UNARY_PREFIX, unaryPrefix(NodeKind.POSITIVE));
+  pratt.prefix(TokenKind.MINUS, Precedence.UNARY_PREFIX, unaryPrefix(NodeKind.NEGATIVE));
+  pratt.prefix(TokenKind.NOT, Precedence.UNARY_PREFIX, unaryPrefix(NodeKind.NOT));
+  pratt.prefix(TokenKind.TILDE, Precedence.UNARY_PREFIX, unaryPrefix(NodeKind.COMPLEMENT));
+  pratt.infix(TokenKind.BITWISE_AND, Precedence.BITWISE_AND, binaryInfix(NodeKind.BITWISE_AND));
+  pratt.infix(TokenKind.BITWISE_OR, Precedence.BITWISE_OR, binaryInfix(NodeKind.BITWISE_OR));
+  pratt.infix(TokenKind.BITWISE_XOR, Precedence.BITWISE_XOR, binaryInfix(NodeKind.BITWISE_XOR));
+  pratt.infix(TokenKind.DIVIDE, Precedence.MULTIPLY, binaryInfix(NodeKind.DIVIDE));
+  pratt.infix(TokenKind.EQUAL, Precedence.EQUAL, binaryInfix(NodeKind.EQUAL));
+  pratt.infix(TokenKind.GREATER_THAN, Precedence.COMPARE, binaryInfix(NodeKind.GREATER_THAN));
+  pratt.infix(TokenKind.GREATER_THAN_OR_EQUAL, Precedence.COMPARE, binaryInfix(NodeKind.GREATER_THAN_OR_EQUAL));
+  pratt.infix(TokenKind.IN, Precedence.COMPARE, binaryInfix(NodeKind.IN));
+  pratt.infix(TokenKind.LESS_THAN, Precedence.COMPARE, binaryInfix(NodeKind.LESS_THAN));
+  pratt.infix(TokenKind.LESS_THAN_OR_EQUAL, Precedence.COMPARE, binaryInfix(NodeKind.LESS_THAN_OR_EQUAL));
+  pratt.infix(TokenKind.LOGICAL_AND, Precedence.LOGICAL_AND, binaryInfix(NodeKind.LOGICAL_AND));
+  pratt.infix(TokenKind.LOGICAL_OR, Precedence.LOGICAL_OR, binaryInfix(NodeKind.LOGICAL_OR));
+  pratt.infix(TokenKind.MINUS, Precedence.ADD, binaryInfix(NodeKind.SUBTRACT));
+  pratt.infix(TokenKind.MULTIPLY, Precedence.MULTIPLY, binaryInfix(NodeKind.MULTIPLY));
+  pratt.infix(TokenKind.NOT_EQUAL, Precedence.EQUAL, binaryInfix(NodeKind.NOT_EQUAL));
+  pratt.infix(TokenKind.PLUS, Precedence.ADD, binaryInfix(NodeKind.ADD));
+  pratt.infix(TokenKind.REMAINDER, Precedence.MULTIPLY, binaryInfix(NodeKind.REMAINDER));
+  pratt.infix(TokenKind.SHIFT_LEFT, Precedence.SHIFT, binaryInfix(NodeKind.SHIFT_LEFT));
+  pratt.infix(TokenKind.SHIFT_RIGHT, Precedence.SHIFT, binaryInfix(NodeKind.SHIFT_RIGHT));
+  pratt.infixRight(TokenKind.ASSIGN, Precedence.ASSIGN, binaryInfix(NodeKind.ASSIGN));
+  pratt.infixRight(TokenKind.ASSIGN_PLUS, Precedence.ASSIGN, binaryInfix(NodeKind.ASSIGN_ADD));
+  pratt.infixRight(TokenKind.ASSIGN_BITWISE_AND, Precedence.ASSIGN, binaryInfix(NodeKind.ASSIGN_BITWISE_AND));
+  pratt.infixRight(TokenKind.ASSIGN_BITWISE_OR, Precedence.ASSIGN, binaryInfix(NodeKind.ASSIGN_BITWISE_OR));
+  pratt.infixRight(TokenKind.ASSIGN_BITWISE_XOR, Precedence.ASSIGN, binaryInfix(NodeKind.ASSIGN_BITWISE_XOR));
+  pratt.infixRight(TokenKind.ASSIGN_DIVIDE, Precedence.ASSIGN, binaryInfix(NodeKind.ASSIGN_DIVIDE));
+  pratt.infixRight(TokenKind.ASSIGN_MULTIPLY, Precedence.ASSIGN, binaryInfix(NodeKind.ASSIGN_MULTIPLY));
+  pratt.infixRight(TokenKind.ASSIGN_REMAINDER, Precedence.ASSIGN, binaryInfix(NodeKind.ASSIGN_REMAINDER));
+  pratt.infixRight(TokenKind.ASSIGN_SHIFT_LEFT, Precedence.ASSIGN, binaryInfix(NodeKind.ASSIGN_SHIFT_LEFT));
+  pratt.infixRight(TokenKind.ASSIGN_SHIFT_RIGHT, Precedence.ASSIGN, binaryInfix(NodeKind.ASSIGN_SHIFT_RIGHT));
+  pratt.infixRight(TokenKind.ASSIGN_MINUS, Precedence.ASSIGN, binaryInfix(NodeKind.ASSIGN_SUBTRACT));
+  pratt.parselet(TokenKind.LEFT_BRACE, Precedence.LOWEST).prefix = function(context) {
+    var token = context.current();
+    var $arguments = parseArgumentList(context, TokenKind.LEFT_BRACE, TokenKind.RIGHT_BRACE, AllowTrailingComma.YES);
+    return Node.createInitializer($arguments).withRange(context.spanSince(token.range));
+  };
+  pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.LOWEST).prefix = function(context) {
+    var token = context.current();
+    var type = parseGroup(context, AllowLambda.YES);
+    if (type.kind === NodeKind.NAME && context.eat(TokenKind.LAMBDA)) {
+      var block = parseLambdaBlock(context);
+      return createLambdaFromNames([type], block).withRange(context.spanSince(token.range));
+    }
+    if (looksLikeLambdaArguments(type) && context.eat(TokenKind.LAMBDA)) {
+      var block = parseLambdaBlock(context);
+      return createLambdaFromNames(type.removeChildren(), block).withRange(context.spanSince(token.range));
+    }
+    if (looksLikeType(type)) {
+      var value = pratt.parse(context, Precedence.UNARY_PREFIX);
+      return Node.createCast(type, value).withRange(context.spanSince(token.range));
+    }
+    return type;
+  };
+  pratt.parselet(TokenKind.QUESTION_MARK, Precedence.ASSIGN).infix = function(context, left) {
+    context.next();
+    var middle = pratt.parse(context, Precedence.ASSIGN - 1 | 0);
+    var right = context.expect(TokenKind.COLON) ? pratt.parse(context, Precedence.ASSIGN - 1 | 0) : Node.createError().withRange(context.spanSince(context.current().range));
+    return Node.createHook(left, middle, right).withRange(context.spanSince(left.range));
+  };
+  pratt.parselet(TokenKind.COMMA, Precedence.COMMA).infix = function(context, left) {
+    var values = [left];
+    while (context.eat(TokenKind.COMMA)) {
+      values.push(pratt.parse(context, Precedence.COMMA));
+    }
+    return Node.createSequence(values).withRange(context.spanSince(left.range));
+  };
+  pratt.parselet(TokenKind.DOT, Precedence.MEMBER).infix = function(context, left) {
+    context.next();
+    var name = parseName(context);
+    return Node.createDot(left, name).withRange(context.spanSince(left.range));
+  };
+  pratt.parselet(TokenKind.DOT, Precedence.LOWEST).prefix = function(context) {
+    var token = context.next();
+    var name = parseName(context);
+    return Node.createDot(null, name).withRange(context.spanSince(token.range));
+  };
+  pratt.parselet(TokenKind.FN, Precedence.MEMBER).infix = function(context, left) {
+    if (!looksLikeType(left)) {
+      context.unexpectedToken();
+      context.next();
+      return Node.createError().withRange(context.spanSince(left.range));
+    }
+    context.next();
+    var $arguments = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.YES);
+    return Node.createFunctionType(left, $arguments).withRange(context.spanSince(left.range));
+  };
+  pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = function(context, left) {
+    var $arguments = parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO);
+    return Node.createCall(left, $arguments).withRange(context.spanSince(left.range));
+  };
+  pratt.parselet(TokenKind.LEFT_BRACKET, Precedence.UNARY_POSTFIX).infix = function(context, left) {
+    context.next();
+    var index = pratt.parse(context, Precedence.LOWEST);
+    scanForToken(context, TokenKind.RIGHT_BRACKET, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+    return Node.createBinary(NodeKind.INDEX, left, index).withRange(context.spanSince(left.range));
+  };
+  pratt.parselet(TokenKind.START_PARAMETER_LIST, Precedence.MEMBER).infix = function(context, left) {
+    var token = context.next();
+    var substitutions = parseTypeList(context, TokenKind.END_PARAMETER_LIST);
+    if (!context.expect(TokenKind.END_PARAMETER_LIST)) {
+      scanForToken(context, TokenKind.END_PARAMETER_LIST, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+      return Node.createError().withRange(context.spanSince(token.range));
+    }
+    return Node.createParameterize(left, substitutions).withRange(context.spanSince(left.range));
+  };
+  pratt.parselet(TokenKind.DEFAULT, Precedence.UNARY_PREFIX).prefix = function(context) {
+    var token = context.next();
+    var type = parseGroup(context, AllowLambda.NO);
+    return (type === null ? Node.createError() : Node.createDefault(type)).withRange(context.spanSince(token.range));
+  };
+  pratt.parselet(TokenKind.IDENTIFIER, Precedence.LOWEST).prefix = function(context) {
+    var token = context.next();
+    var name = Node.createName(token.text).withRange(token.range);
+    if (context.eat(TokenKind.LAMBDA)) {
+      var block = parseLambdaBlock(context);
+      return createLambdaFromNames([name], block).withRange(context.spanSince(token.range));
+    }
+    return name;
+  };
+  pratt.parselet(TokenKind.LAMBDA, Precedence.LOWEST).prefix = function(context) {
+    var token = context.next();
+    var block = parseLambdaBlock(context);
+    return Node.createLambda([], block).withRange(context.spanSince(token.range));
+  };
+  pratt.parselet(TokenKind.NEW, Precedence.LOWEST).prefix = function(context) {
+    context.unexpectedToken();
+    context.next();
+    return parseType(context);
+  };
+  var inParselet = pratt.parselet(TokenKind.IN, 0);
+  pratt.parselet(TokenKind.LET, Precedence.LOWEST).prefix = function(context) {
+    var token = context.next();
+    var name = parseName(context);
+    if (name === null || !context.expect(TokenKind.ASSIGN)) {
+      return Node.createError().withRange(context.spanSince(token.range));
+    }
+    var initial = pratt.parseIgnoringParselet(context, Precedence.LOWEST, inParselet);
+    var variable = Node.createVariable(name, Node.createVar(), initial).withRange(context.spanSince(token.range));
+    if (NodeKind.isError(initial.kind) || !context.expect(TokenKind.IN)) {
+      return Node.createError().withRange(context.spanSince(token.range));
+    }
+    var value = pratt.parse(context, Precedence.COMMA);
+    return Node.createLet(variable, value).withRange(context.spanSince(token.range));
+  };
+  pratt.parselet(TokenKind.SUPER, Precedence.LOWEST).prefix = function(context) {
+    return parseSuperCall(context);
+  };
   return pratt;
 }
 function typeToText(type) {
