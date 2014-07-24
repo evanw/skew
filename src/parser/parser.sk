@@ -437,14 +437,14 @@ Node parseExtension(ParserContext context) {
 
 Node parseEnum(ParserContext context) {
   var token = context.next();
-  var kind = NodeKind.ENUM;
+  var isFlags = false;
   if (context.peek(.IDENTIFIER) && context.current().text == "flags") {
-    kind = .ENUM_FLAGS;
+    isFlags = true;
     context.next();
   }
   var name = parseName(context); if (name == null) return null;
   var block = parseBlock(context, .IN_ENUM); if (block == null) return null;
-  return Node(kind).withChildren({ name, block }).withRange(context.spanSince(token.range));
+  return (isFlags ? Node.createEnumFlags(name, block) : Node.createEnum(name, block)).withRange(context.spanSince(token.range));
 }
 
 Node parseVariableCluster(ParserContext context, Node type, Node name) {

@@ -8477,9 +8477,9 @@ function parseExtension(context) {
 }
 function parseEnum(context) {
   var token = context.next();
-  var kind = NodeKind.ENUM;
+  var isFlags = false;
   if (context.peek(TokenKind.IDENTIFIER) && context.current().text === "flags") {
-    kind = NodeKind.ENUM_FLAGS;
+    isFlags = true;
     context.next();
   }
   var name = parseName(context);
@@ -8490,7 +8490,7 @@ function parseEnum(context) {
   if (block === null) {
     return null;
   }
-  return new Node(kind).withChildren([name, block]).withRange(context.spanSince(token.range));
+  return (isFlags ? Node.createEnumFlags(name, block) : Node.createEnum(name, block)).withRange(context.spanSince(token.range));
 }
 function parseVariableCluster(context, type, name) {
   var variables = [];
