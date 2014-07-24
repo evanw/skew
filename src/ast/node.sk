@@ -22,6 +22,7 @@ enum NodeKind {
   FUNCTION,
   VARIABLE,
   PARAMETER,
+  ALIAS,
   USING_ALIAS,
 
   // Statements

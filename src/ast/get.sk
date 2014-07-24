@@ -122,8 +122,8 @@ in Node {
     return children.get(2);
   }
 
-  Node usingAliasValue() {
-    assert kind == NodeKind.USING_ALIAS;
+  Node aliasValue() {
+    assert kind == NodeKind.ALIAS || kind == NodeKind.USING_ALIAS;
     assert children.length == 2;
     return children.get(1);
   }

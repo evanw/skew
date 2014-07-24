@@ -113,6 +113,12 @@ in Node {
     return Node(NodeKind.PARAMETER).withChildren({ name, bound });
   }
 
+  static Node createAlias(Node name, Node value) {
+    assert name.kind == NodeKind.NAME;
+    assert value.kind.isExpression();
+    return Node(NodeKind.ALIAS).withChildren({ name, value });
+  }
+
   static Node createUsingAlias(Node name, Node value) {
     assert name.kind == NodeKind.NAME;
     assert value.kind.isExpression();

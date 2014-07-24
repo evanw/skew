@@ -3,6 +3,7 @@
 [ \t\r\n]+                    WHITESPACE;
 [/][/].*                      WHITESPACE;
 
+"alias"                       ALIAS;
 "assert"                      ASSERT;
 "break"                       BREAK;
 "case"                        CASE;

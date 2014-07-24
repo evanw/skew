@@ -5,6 +5,7 @@ enum SymbolKind {
   UNMERGED,
   PARAMETER,
   OTHER_TYPE,
+  ALIAS,
   USING_ALIAS,
 
   // Namespace kinds

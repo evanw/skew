@@ -264,3 +264,39 @@ foo.Foo bar = 0;
 foo.Foo bar = 0;
 ~~~
 ");
+
+test("
+bar foo = false;
+alias bar = int;
+", "
+<stdin>:1:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+bar foo = false;
+          ~~~~~
+");
+
+test("
+alias bar = int;
+bar foo = false;
+", "
+<stdin>:2:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+bar foo = false;
+          ~~~~~
+");
+
+test("
+ns.bar foo = false;
+namespace ns { alias bar = int; }
+", "
+<stdin>:1:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+ns.bar foo = false;
+             ~~~~~
+");
+
+test("
+namespace ns { alias bar = int; }
+ns.bar foo = false;
+", "
+<stdin>:2:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+ns.bar foo = false;
+             ~~~~~
+");

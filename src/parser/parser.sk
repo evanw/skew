@@ -77,6 +77,7 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
         currentKind == TokenKind.STRUCT ||
         currentKind == TokenKind.SWITCH ||
         currentKind == TokenKind.USING ||
+        currentKind == TokenKind.ALIAS ||
         currentKind == TokenKind.VIRTUAL ||
         currentKind == TokenKind.WHILE)) {
       return true;
@@ -558,6 +559,19 @@ Node parseUsing(ParserContext context) {
   }
 }
 
+Node parseAlias(ParserContext context) {
+  Token token = context.next();
+  Node name = parseName(context);
+  if (name == null || !context.expect(TokenKind.ASSIGN)) {
+    scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+    Range range = context.spanSince(token.range);
+    return Node.createExpression(Node.createError().withRange(range)).withRange(range);
+  }
+  Node value = pratt.parse(context, Precedence.LOWEST);
+  scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+  return Node.createAlias(name, value).withRange(context.spanSince(token.range));
+}
+
 bool looksLikeLambdaArguments(Node node) {
   if (node.kind == NodeKind.SEQUENCE) {
     int i;
@@ -620,6 +634,7 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case TokenKind.STRUCT { return parseObject(context, NodeKind.STRUCT); }
     case TokenKind.SWITCH { return parseSwitch(context); }
     case TokenKind.USING { return parseUsing(context); }
+    case TokenKind.ALIAS { return parseAlias(context); }
     case TokenKind.VIRTUAL { return parseModifier(context, hint, SymbolFlag.VIRTUAL); }
     case TokenKind.WHILE { return parseWhile(context); }
     default { return parseExpression(context); }

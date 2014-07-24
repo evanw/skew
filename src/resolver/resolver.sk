@@ -295,6 +295,7 @@ class Resolver {
         case NodeKind.CONSTRUCTOR { symbol.kind = SymbolKind.CONSTRUCTOR_FUNCTION; }
         case NodeKind.VARIABLE { symbol.kind = SymbolKind.GLOBAL_VARIABLE; }
         case NodeKind.PARAMETER { symbol.kind = SymbolKind.PARAMETER; }
+        case NodeKind.ALIAS { symbol.kind = SymbolKind.ALIAS; }
         case NodeKind.EXTENSION { semanticErrorExtensionMissingTarget(log, declarationName.range, declarationName.asString()); }
         default { assert false; }
       }
@@ -514,7 +515,7 @@ class Resolver {
       case NodeKind.VARIABLE { resolveVariable(node); }
       case NodeKind.VARIABLE_CLUSTER { resolveVariableCluster(node); }
       case NodeKind.PARAMETER { resolveParameter(node); }
-      case NodeKind.USING_ALIAS { resolveUsingAlias(node); }
+      case NodeKind.ALIAS, NodeKind.USING_ALIAS { resolveAlias(node); }
 
       case NodeKind.IF { resolveIf(node); }
       case NodeKind.FOR { resolveFor(node); }
@@ -1309,8 +1310,8 @@ class Resolver {
     }
   }
 
-  void initializeUsingAlias(Symbol symbol) {
-    Node value = symbol.node.usingAliasValue();
+  void initializeAlias(Symbol symbol) {
+    Node value = symbol.node.aliasValue();
     resolveAsParameterizedType(value);
     symbol.type = value.type;
   }
@@ -1343,7 +1344,7 @@ class Resolver {
         case SymbolKind.GLOBAL_FUNCTION, SymbolKind.INSTANCE_FUNCTION, SymbolKind.CONSTRUCTOR_FUNCTION { initializeFunction(symbol); }
         case SymbolKind.LOCAL_VARIABLE, SymbolKind.GLOBAL_VARIABLE, SymbolKind.INSTANCE_VARIABLE { initializeVariable(symbol); }
         case SymbolKind.PARAMETER { initializeParameter(symbol); }
-        case SymbolKind.USING_ALIAS { initializeUsingAlias(symbol); }
+        case SymbolKind.ALIAS, SymbolKind.USING_ALIAS { initializeAlias(symbol); }
         case SymbolKind.OTHER {}
         default { assert false; }
       }
@@ -2039,7 +2040,7 @@ class Resolver {
     initializeSymbol(node.symbol);
   }
 
-  void resolveUsingAlias(Node node) {
+  void resolveAlias(Node node) {
     checkInsideBlock(node);
     if (node.symbol != null) {
       initializeSymbol(node.symbol);

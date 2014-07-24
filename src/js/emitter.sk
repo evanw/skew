@@ -421,7 +421,7 @@ namespace js {
           emitNodes(node.modifierStatements());
         }
 
-        case NodeKind.PARAMETER, NodeKind.USING_ALIAS, NodeKind.USING_NAMESPACE {
+        case NodeKind.PARAMETER, NodeKind.USING_ALIAS, NodeKind.ALIAS, NodeKind.USING_NAMESPACE {
         }
 
         default {
