@@ -183,14 +183,14 @@ function Node(_0) {
   this.kind = _0;
 }
 Node.createProgram = function(files) {
-  if (!checkAllNodeKinds(files, new NodeKindCheck(NodeKind.FILE))) {
-    throw new Error("assert checkAllNodeKinds(files, NodeKindCheck(NodeKind.FILE)); (src/ast/create.sk:3:5)");
+  if (!checkAllNodeKinds(files, nodeKindCheck(NodeKind.FILE))) {
+    throw new Error("assert checkAllNodeKinds(files, nodeKindCheck(.FILE)); (src/ast/create.sk:3:5)");
   }
   return new Node(NodeKind.PROGRAM).withChildren(files);
 };
 Node.createFile = function(block) {
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:8:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:8:5)");
   }
   return new Node(NodeKind.FILE).withChildren([block]);
 };
@@ -201,11 +201,11 @@ Node.createNodeList = function(nodes) {
   return new Node(NodeKind.NODE_LIST).withChildren(nodes);
 };
 Node.createCase = function(values, block) {
-  if (!checkAllNodeKinds(values, new NodeKindIsExpression())) {
-    throw new Error("assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:21:5)");
+  if (!checkAllNodeKinds(values, nodeKindIsExpression)) {
+    throw new Error("assert checkAllNodeKinds(values, nodeKindIsExpression); (src/ast/create.sk:21:5)");
   }
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:22:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:22:5)");
   }
   values.push(block);
   return new Node(NodeKind.CASE).withChildren(values);
@@ -214,15 +214,15 @@ Node.createVariableCluster = function(type, variables) {
   if (!NodeKind.isExpression(type.kind)) {
     throw new Error("assert type.kind.isExpression(); (src/ast/create.sk:28:5)");
   }
-  if (!checkAllNodeKinds(variables, new NodeKindCheck(NodeKind.VARIABLE))) {
-    throw new Error("assert checkAllNodeKinds(variables, NodeKindCheck(NodeKind.VARIABLE)); (src/ast/create.sk:29:5)");
+  if (!checkAllNodeKinds(variables, nodeKindCheck(NodeKind.VARIABLE))) {
+    throw new Error("assert checkAllNodeKinds(variables, nodeKindCheck(.VARIABLE)); (src/ast/create.sk:29:5)");
   }
   variables.unshift(type);
   return new Node(NodeKind.VARIABLE_CLUSTER).withChildren(variables);
 };
 Node.createMemberInitializer = function(name, value) {
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:35:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:35:5)");
   }
   if (!NodeKind.isExpression(value.kind)) {
     throw new Error("assert value.kind.isExpression(); (src/ast/create.sk:36:5)");
@@ -231,28 +231,28 @@ Node.createMemberInitializer = function(name, value) {
 };
 Node.createNamespace = function(name, block) {
   if (name !== null && name.kind !== NodeKind.NAME) {
-    throw new Error("assert name == null || name.kind == NodeKind.NAME; (src/ast/create.sk:41:5)");
+    throw new Error("assert name == null || name.kind == .NAME; (src/ast/create.sk:41:5)");
   }
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:42:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:42:5)");
   }
   return new Node(NodeKind.NAMESPACE).withChildren([name, block]);
 };
 Node.createEnum = function(name, block) {
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:47:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:47:5)");
   }
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:48:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:48:5)");
   }
   return new Node(NodeKind.ENUM).withChildren([name, block]);
 };
 Node.createEnumFlags = function(name, block) {
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:53:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:53:5)");
   }
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:54:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:54:5)");
   }
   return new Node(NodeKind.ENUM_FLAGS).withChildren([name, block]);
 };
@@ -261,16 +261,16 @@ Node.createObject = function(kind, name, parameters, bases, block) {
     throw new Error("assert kind.isObject(); (src/ast/create.sk:59:5)");
   }
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:60:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:60:5)");
   }
-  if (parameters !== null && !checkAllNodeListKinds(parameters, new NodeKindCheck(NodeKind.PARAMETER))) {
-    throw new Error("assert parameters == null || checkAllNodeListKinds(parameters, NodeKindCheck(NodeKind.PARAMETER)); (src/ast/create.sk:61:5)");
+  if (parameters !== null && !checkAllNodeListKinds(parameters, nodeKindCheck(NodeKind.PARAMETER))) {
+    throw new Error("assert parameters == null || checkAllNodeListKinds(parameters, nodeKindCheck(.PARAMETER)); (src/ast/create.sk:61:5)");
   }
-  if (bases !== null && !checkAllNodeListKinds(bases, new NodeKindIsExpression())) {
-    throw new Error("assert bases == null || checkAllNodeListKinds(bases, NodeKindIsExpression()); (src/ast/create.sk:62:5)");
+  if (bases !== null && !checkAllNodeListKinds(bases, nodeKindIsExpression)) {
+    throw new Error("assert bases == null || checkAllNodeListKinds(bases, nodeKindIsExpression); (src/ast/create.sk:62:5)");
   }
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:63:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:63:5)");
   }
   return new Node(kind).withChildren([name, block, bases, parameters]);
 };
@@ -285,43 +285,43 @@ Node.createInterface = function(name, parameters, bases, block) {
 };
 Node.createExtension = function(name, bases, block) {
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:80:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:80:5)");
   }
-  if (bases !== null && !checkAllNodeListKinds(bases, new NodeKindIsExpression())) {
-    throw new Error("assert bases == null || checkAllNodeListKinds(bases, NodeKindIsExpression()); (src/ast/create.sk:81:5)");
+  if (bases !== null && !checkAllNodeListKinds(bases, nodeKindIsExpression)) {
+    throw new Error("assert bases == null || checkAllNodeListKinds(bases, nodeKindIsExpression); (src/ast/create.sk:81:5)");
   }
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:82:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:82:5)");
   }
   return new Node(NodeKind.EXTENSION).withChildren([name, block, bases]);
 };
 Node.createConstructor = function(name, $arguments, block, superInitializer, memberInitializers) {
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:87:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:87:5)");
   }
-  if (!checkAllNodeListKinds($arguments, new NodeKindCheck(NodeKind.VARIABLE))) {
-    throw new Error("assert checkAllNodeListKinds(arguments, NodeKindCheck(NodeKind.VARIABLE)); (src/ast/create.sk:88:5)");
+  if (!checkAllNodeListKinds($arguments, nodeKindCheck(NodeKind.VARIABLE))) {
+    throw new Error("assert checkAllNodeListKinds(arguments, nodeKindCheck(.VARIABLE)); (src/ast/create.sk:88:5)");
   }
   if (block !== null && block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block == null || block.kind == NodeKind.BLOCK; (src/ast/create.sk:89:5)");
+    throw new Error("assert block == null || block.kind == .BLOCK; (src/ast/create.sk:89:5)");
   }
   if (superInitializer !== null && superInitializer.kind !== NodeKind.SUPER_CALL) {
-    throw new Error("assert superInitializer == null || superInitializer.kind == NodeKind.SUPER_CALL; (src/ast/create.sk:90:5)");
+    throw new Error("assert superInitializer == null || superInitializer.kind == .SUPER_CALL; (src/ast/create.sk:90:5)");
   }
-  if (memberInitializers !== null && !checkAllNodeListKinds(memberInitializers, new NodeKindCheck(NodeKind.MEMBER_INITIALIZER))) {
-    throw new Error("assert memberInitializers == null || checkAllNodeListKinds(memberInitializers, NodeKindCheck(NodeKind.MEMBER_INITIALIZER)); (src/ast/create.sk:91:5)");
+  if (memberInitializers !== null && !checkAllNodeListKinds(memberInitializers, nodeKindCheck(NodeKind.MEMBER_INITIALIZER))) {
+    throw new Error("assert memberInitializers == null || checkAllNodeListKinds(memberInitializers, nodeKindCheck(.MEMBER_INITIALIZER)); (src/ast/create.sk:91:5)");
   }
   return new Node(NodeKind.CONSTRUCTOR).withChildren([name, $arguments, block, superInitializer, memberInitializers]);
 };
 Node.createFunction = function(name, $arguments, block, result) {
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:96:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:96:5)");
   }
-  if (!checkAllNodeListKinds($arguments, new NodeKindCheck(NodeKind.VARIABLE))) {
-    throw new Error("assert checkAllNodeListKinds(arguments, NodeKindCheck(NodeKind.VARIABLE)); (src/ast/create.sk:97:5)");
+  if (!checkAllNodeListKinds($arguments, nodeKindCheck(NodeKind.VARIABLE))) {
+    throw new Error("assert checkAllNodeListKinds(arguments, nodeKindCheck(.VARIABLE)); (src/ast/create.sk:97:5)");
   }
   if (block !== null && block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block == null || block.kind == NodeKind.BLOCK; (src/ast/create.sk:98:5)");
+    throw new Error("assert block == null || block.kind == .BLOCK; (src/ast/create.sk:98:5)");
   }
   if (!NodeKind.isExpression(result.kind)) {
     throw new Error("assert result.kind.isExpression(); (src/ast/create.sk:99:5)");
@@ -330,7 +330,7 @@ Node.createFunction = function(name, $arguments, block, result) {
 };
 Node.createVariable = function(name, type, value) {
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:104:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:104:5)");
   }
   if (type !== null && !NodeKind.isExpression(type.kind)) {
     throw new Error("assert type == null || type.kind.isExpression(); (src/ast/create.sk:105:5)");
@@ -342,7 +342,7 @@ Node.createVariable = function(name, type, value) {
 };
 Node.createParameter = function(name, bound) {
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:111:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:111:5)");
   }
   if (bound !== null && !NodeKind.isExpression(bound.kind)) {
     throw new Error("assert bound == null || bound.kind.isExpression(); (src/ast/create.sk:112:5)");
@@ -351,7 +351,7 @@ Node.createParameter = function(name, bound) {
 };
 Node.createAlias = function(name, value) {
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:117:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:117:5)");
   }
   if (!NodeKind.isExpression(value.kind)) {
     throw new Error("assert value.kind.isExpression(); (src/ast/create.sk:118:5)");
@@ -360,7 +360,7 @@ Node.createAlias = function(name, value) {
 };
 Node.createUsingAlias = function(name, value) {
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:123:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:123:5)");
   }
   if (!NodeKind.isExpression(value.kind)) {
     throw new Error("assert value.kind.isExpression(); (src/ast/create.sk:124:5)");
@@ -378,16 +378,16 @@ Node.createIf = function(test, trueNode, falseNode) {
     throw new Error("assert test.kind.isExpression(); (src/ast/create.sk:134:5)");
   }
   if (trueNode.kind !== NodeKind.BLOCK) {
-    throw new Error("assert trueNode.kind == NodeKind.BLOCK; (src/ast/create.sk:135:5)");
+    throw new Error("assert trueNode.kind == .BLOCK; (src/ast/create.sk:135:5)");
   }
   if (falseNode !== null && falseNode.kind !== NodeKind.BLOCK) {
-    throw new Error("assert falseNode == null || falseNode.kind == NodeKind.BLOCK; (src/ast/create.sk:136:5)");
+    throw new Error("assert falseNode == null || falseNode.kind == .BLOCK; (src/ast/create.sk:136:5)");
   }
   return new Node(NodeKind.IF).withChildren([test, trueNode, falseNode]);
 };
 Node.createFor = function(setup, test, update, block) {
   if (setup !== null && !NodeKind.isExpression(setup.kind) && setup.kind !== NodeKind.VARIABLE_CLUSTER) {
-    throw new Error("assert setup == null || setup.kind.isExpression() || setup.kind == NodeKind.VARIABLE_CLUSTER; (src/ast/create.sk:141:5)");
+    throw new Error("assert setup == null || setup.kind.isExpression() || setup.kind == .VARIABLE_CLUSTER; (src/ast/create.sk:141:5)");
   }
   if (test !== null && !NodeKind.isExpression(test.kind)) {
     throw new Error("assert test == null || test.kind.isExpression(); (src/ast/create.sk:142:5)");
@@ -396,19 +396,19 @@ Node.createFor = function(setup, test, update, block) {
     throw new Error("assert update == null || update.kind.isExpression(); (src/ast/create.sk:143:5)");
   }
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:144:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:144:5)");
   }
   return new Node(NodeKind.FOR).withChildren([setup, test, update, block]);
 };
 Node.createForEach = function(variable, value, block) {
   if (variable.kind !== NodeKind.VARIABLE) {
-    throw new Error("assert variable.kind == NodeKind.VARIABLE; (src/ast/create.sk:149:5)");
+    throw new Error("assert variable.kind == .VARIABLE; (src/ast/create.sk:149:5)");
   }
   if (!NodeKind.isExpression(value.kind)) {
     throw new Error("assert value.kind.isExpression(); (src/ast/create.sk:150:5)");
   }
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:151:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:151:5)");
   }
   return new Node(NodeKind.FOR_EACH).withChildren([variable, value, block]);
 };
@@ -417,7 +417,7 @@ Node.createWhile = function(test, block) {
     throw new Error("assert test.kind.isExpression(); (src/ast/create.sk:156:5)");
   }
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:157:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:157:5)");
   }
   return new Node(NodeKind.WHILE).withChildren([test, block]);
 };
@@ -426,7 +426,7 @@ Node.createDoWhile = function(block, test) {
     throw new Error("assert test == null || test.kind.isExpression(); (src/ast/create.sk:162:5)");
   }
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:163:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:163:5)");
   }
   return new Node(NodeKind.DO_WHILE).withChildren([test, block]);
 };
@@ -462,10 +462,12 @@ Node.createExpression = function(value) {
 };
 Node.createModifier = function(name, statements) {
   if (name.kind !== NodeKind.NAME) {
-    throw new Error("assert name.kind == NodeKind.NAME; (src/ast/create.sk:196:5)");
+    throw new Error("assert name.kind == .NAME; (src/ast/create.sk:196:5)");
   }
-  if (!checkAllNodeKinds(statements, new NodeKindIsStatement())) {
-    throw new Error("assert checkAllNodeKinds(statements, NodeKindIsStatement()); (src/ast/create.sk:197:5)");
+  if (!checkAllNodeKinds(statements, function(node) {
+    return NodeKind.isStatement(node.kind);
+  })) {
+    throw new Error("assert checkAllNodeKinds(statements, node => node.kind.isStatement()); (src/ast/create.sk:197:5)");
   }
   statements.unshift(name);
   return new Node(NodeKind.MODIFIER).withChildren(statements);
@@ -474,8 +476,10 @@ Node.createSwitch = function(value, cases) {
   if (!NodeKind.isExpression(value.kind)) {
     throw new Error("assert value.kind.isExpression(); (src/ast/create.sk:203:5)");
   }
-  if (!checkAllNodeKinds(cases, new NodeKindIsCaseOrDefault())) {
-    throw new Error("assert checkAllNodeKinds(cases, NodeKindIsCaseOrDefault()); (src/ast/create.sk:204:5)");
+  if (!checkAllNodeKinds(cases, function(node) {
+    return node.kind === NodeKind.CASE || node.kind === NodeKind.DEFAULT;
+  })) {
+    throw new Error("assert checkAllNodeKinds(cases, node => node.kind == .CASE || node.kind == .DEFAULT); (src/ast/create.sk:204:5)");
   }
   cases.unshift(value);
   return new Node(NodeKind.SWITCH).withChildren(cases);
@@ -526,8 +530,8 @@ Node.createString = function(value) {
   return new Node(NodeKind.STRING).withContent(new StringContent(value));
 };
 Node.createInitializer = function(values) {
-  if (!checkAllNodeKinds(values, new NodeKindIsExpression())) {
-    throw new Error("assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:258:5)");
+  if (!checkAllNodeKinds(values, nodeKindIsExpression)) {
+    throw new Error("assert checkAllNodeKinds(values, nodeKindIsExpression); (src/ast/create.sk:258:5)");
   }
   return new Node(NodeKind.INITIALIZER).withChildren(values);
 };
@@ -536,13 +540,13 @@ Node.createDot = function(value, name) {
     throw new Error("assert value == null || value.kind.isExpression(); (src/ast/create.sk:263:5)");
   }
   if (name !== null && name.kind !== NodeKind.NAME) {
-    throw new Error("assert name == null || name.kind == NodeKind.NAME; (src/ast/create.sk:264:5)");
+    throw new Error("assert name == null || name.kind == .NAME; (src/ast/create.sk:264:5)");
   }
   return new Node(NodeKind.DOT).withChildren([value, name]);
 };
 Node.createLet = function(variable, value) {
   if (variable.kind !== NodeKind.VARIABLE) {
-    throw new Error("assert variable.kind == NodeKind.VARIABLE; (src/ast/create.sk:269:5)");
+    throw new Error("assert variable.kind == .VARIABLE; (src/ast/create.sk:269:5)");
   }
   if (!NodeKind.isExpression(value.kind)) {
     throw new Error("assert value.kind.isExpression(); (src/ast/create.sk:270:5)");
@@ -553,15 +557,15 @@ Node.createCall = function(value, $arguments) {
   if (!NodeKind.isExpression(value.kind)) {
     throw new Error("assert value.kind.isExpression(); (src/ast/create.sk:275:5)");
   }
-  if (!checkAllNodeKinds($arguments, new NodeKindIsExpression())) {
-    throw new Error("assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:276:5)");
+  if (!checkAllNodeKinds($arguments, nodeKindIsExpression)) {
+    throw new Error("assert checkAllNodeKinds(arguments, nodeKindIsExpression); (src/ast/create.sk:276:5)");
   }
   $arguments.unshift(value);
   return new Node(NodeKind.CALL).withChildren($arguments);
 };
 Node.createSuperCall = function($arguments) {
-  if (!checkAllNodeKinds($arguments, new NodeKindIsExpression())) {
-    throw new Error("assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:282:5)");
+  if (!checkAllNodeKinds($arguments, nodeKindIsExpression)) {
+    throw new Error("assert checkAllNodeKinds(arguments, nodeKindIsExpression); (src/ast/create.sk:282:5)");
   }
   return new Node(NodeKind.SUPER_CALL).withChildren($arguments);
 };
@@ -575,8 +579,8 @@ Node.createBind = function(value) {
   return new Node(NodeKind.BIND).withChildren([value]);
 };
 Node.createSequence = function(values) {
-  if (!checkAllNodeKinds(values, new NodeKindIsExpression())) {
-    throw new Error("assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:299:5)");
+  if (!checkAllNodeKinds(values, nodeKindIsExpression)) {
+    throw new Error("assert checkAllNodeKinds(values, nodeKindIsExpression); (src/ast/create.sk:299:5)");
   }
   return new Node(NodeKind.SEQUENCE).withChildren(values);
 };
@@ -584,8 +588,8 @@ Node.createParameterize = function(type, types) {
   if (!NodeKind.isExpression(type.kind)) {
     throw new Error("assert type.kind.isExpression(); (src/ast/create.sk:304:5)");
   }
-  if (!checkAllNodeKinds(types, new NodeKindIsExpression())) {
-    throw new Error("assert checkAllNodeKinds(types, NodeKindIsExpression()); (src/ast/create.sk:305:5)");
+  if (!checkAllNodeKinds(types, nodeKindIsExpression)) {
+    throw new Error("assert checkAllNodeKinds(types, nodeKindIsExpression); (src/ast/create.sk:305:5)");
   }
   types.unshift(type);
   return new Node(NodeKind.PARAMETERIZE).withChildren(types);
@@ -609,11 +613,11 @@ Node.createImplicitCast = function(type, value) {
   return new Node(NodeKind.IMPLICIT_CAST).withChildren([type, value]);
 };
 Node.createLambda = function($arguments, block) {
-  if (!checkAllNodeKinds($arguments, new NodeKindCheck(NodeKind.VARIABLE))) {
-    throw new Error("assert checkAllNodeKinds(arguments, NodeKindCheck(NodeKind.VARIABLE)); (src/ast/create.sk:323:5)");
+  if (!checkAllNodeKinds($arguments, nodeKindCheck(NodeKind.VARIABLE))) {
+    throw new Error("assert checkAllNodeKinds(arguments, nodeKindCheck(.VARIABLE)); (src/ast/create.sk:323:5)");
   }
   if (block.kind !== NodeKind.BLOCK) {
-    throw new Error("assert block.kind == NodeKind.BLOCK; (src/ast/create.sk:324:5)");
+    throw new Error("assert block.kind == .BLOCK; (src/ast/create.sk:324:5)");
   }
   $arguments.push(block);
   return new Node(NodeKind.LAMBDA).withChildren($arguments);
@@ -631,8 +635,8 @@ Node.createFunctionType = function(result, $arguments) {
   if (!NodeKind.isExpression(result.kind)) {
     throw new Error("assert result.kind.isExpression(); (src/ast/create.sk:339:5)");
   }
-  if (!checkAllNodeKinds($arguments, new NodeKindIsExpression())) {
-    throw new Error("assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:340:5)");
+  if (!checkAllNodeKinds($arguments, nodeKindIsExpression)) {
+    throw new Error("assert checkAllNodeKinds(arguments, nodeKindIsExpression); (src/ast/create.sk:340:5)");
   }
   $arguments.unshift(result);
   return new Node(NodeKind.FUNCTION_TYPE).withChildren($arguments);
@@ -1627,27 +1631,6 @@ Node.updateParent = function(node, parent) {
     }
     node.parent = parent;
   }
-};
-function NodeKindCheck(_0) {
-  this.kind = _0;
-}
-NodeKindCheck.prototype.$call = function(node) {
-  return node.kind === this.kind;
-};
-function NodeKindIsCaseOrDefault() {
-}
-NodeKindIsCaseOrDefault.prototype.$call = function(node) {
-  return node.kind === NodeKind.CASE || node.kind === NodeKind.DEFAULT;
-};
-function NodeKindIsStatement() {
-}
-NodeKindIsStatement.prototype.$call = function(node) {
-  return NodeKind.isStatement(node.kind);
-};
-function NodeKindIsExpression() {
-}
-NodeKindIsExpression.prototype.$call = function(node) {
-  return NodeKind.isExpression(node.kind);
 };
 var NodeKind = {
   PROGRAM: 0,
@@ -7515,24 +7498,29 @@ LanguageService.prototype.checkForCompletions = function(input, line, column) {
   return null;
 };
 var service = {};
+function nodeKindCheck(kind) {
+  return function(node) {
+    return node.kind === kind;
+  };
+}
 function checkAllNodeListKinds(node, check) {
   if (node === null) {
-    throw new Error("assert node != null; (src/ast/create.sk:410:3)");
+    throw new Error("assert node != null; (src/ast/create.sk:387:3)");
   }
   if (node.kind !== NodeKind.NODE_LIST) {
-    throw new Error("assert node.kind == NodeKind.NODE_LIST; (src/ast/create.sk:411:3)");
+    throw new Error("assert node.kind == .NODE_LIST; (src/ast/create.sk:388:3)");
   }
   if (node.children === null) {
-    throw new Error("assert node.children != null; (src/ast/create.sk:412:3)");
+    throw new Error("assert node.children != null; (src/ast/create.sk:389:3)");
   }
   return checkAllNodeKinds(node.children, check);
 }
 function checkAllNodeKinds(nodes, check) {
   if (nodes === null) {
-    throw new Error("assert nodes != null; (src/ast/create.sk:417:3)");
+    throw new Error("assert nodes != null; (src/ast/create.sk:394:3)");
   }
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-    if (!check.$call(nodes.get(i))) {
+    if (!check(nodes.get(i))) {
       return false;
     }
   }
@@ -9393,6 +9381,9 @@ service.collectAllMembers = function(scope, allMembers) {
   if (scope.lexicalParent !== null) {
     service.collectAllMembers(scope.lexicalParent, allMembers);
   }
+};
+var nodeKindIsExpression = function(node) {
+  return NodeKind.isExpression(node.kind);
 };
 var operatorInfo = createOperatorMap();
 Compiler.nativeLibrarySource = null;
