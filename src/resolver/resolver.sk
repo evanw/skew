@@ -1,11 +1,11 @@
 enum CastKind {
-  IMPLICIT,
-  EXPLICIT,
+  IMPLICIT_CAST,
+  EXPLICIT_CAST,
 }
 
 enum AllowDeclaration {
-  TOP_LEVEL,
-  TOP_OR_OBJECT_LEVEL,
+  ALLOW_TOP_LEVEL,
+  ALLOW_TOP_OR_OBJECT_LEVEL,
 }
 
 class ResolveContext {
@@ -28,7 +28,7 @@ class ResolveContext {
     while (node != null) {
       if (context.scope == null) context.scope = node.scope;
       if (context.loop == null && node.kind.isLoop()) context.loop = node;
-      if (context.switchValue == null && node.kind == NodeKind.SWITCH) context.switchValue = node.switchValue();
+      if (context.switchValue == null && node.kind == .SWITCH) context.switchValue = node.switchValue();
       if (context.symbolForThis == null && node.symbol != null && node.symbol.kind.isTypeWithInstances()) context.symbolForThis = node.symbol;
       if (context.functionSymbol == null && node.kind.isFunction()) context.functionSymbol = node.symbol;
       node = node.parent;
@@ -48,7 +48,7 @@ class Resolver {
   Log log;
 
   void run(Node program) {
-    assert program.kind == NodeKind.PROGRAM;
+    assert program.kind == .PROGRAM;
     Scope globalScope = Scope(null);
     globalScope.insertGlobals(cache);
     constantFolder = ConstantFolder(cache);
@@ -66,12 +66,12 @@ class Resolver {
 
   void setupScopesAndSymbols(Node node, Scope scope) {
     // The root program introduces the global scope
-    if (node.kind == NodeKind.PROGRAM) {
+    if (node.kind == .PROGRAM) {
       node.scope = scope;
     }
 
     // Remember each scope on the node that introduced that scope
-    else if (node.kind == NodeKind.BLOCK) {
+    else if (node.kind == .BLOCK) {
       // Just use the existing scope from named block declarations
       if (!node.parent.kind.isNamedBlockDeclaration() && !node.parent.kind.isLoop()) {
         scope = Scope(scope);
@@ -80,7 +80,7 @@ class Resolver {
       parsedBlocks.push(node);
 
       // Declarations at the file level go in the global scope
-      if (node.parent.kind == NodeKind.FILE) {
+      if (node.parent.kind == .FILE) {
         scope.type = cache.globalType;
       }
 
@@ -94,7 +94,7 @@ class Resolver {
     }
 
     // Declare this node if needed
-    if (node.kind.isNamedDeclaration() && node.kind != NodeKind.USING_ALIAS) {
+    if (node.kind.isNamedDeclaration() && node.kind != .USING_ALIAS) {
       Node declarationName = node.declarationName();
       if (declarationName != null && node.symbol == null) {
         string name = declarationName.asString();
@@ -109,14 +109,14 @@ class Resolver {
 
         // Make a symbol
         else {
-          symbol = Symbol(name, SymbolKind.OTHER);
+          symbol = Symbol(name, .OTHER);
           symbol.node = node;
           if (scope.type != null) {
             symbol.enclosingSymbol = scope.type.symbol;
           }
 
           // Type parameters should not be accessable as members of their type
-          if (node.kind == NodeKind.PARAMETER) {
+          if (node.kind == .PARAMETER) {
             scope.insertLocal(symbol);
           } else {
             scope.insert(symbol);
@@ -144,7 +144,7 @@ class Resolver {
 
     // Also introduce a scope on object declarations for the type parameters
     // and on function declarations and lambda expressions for the arguments
-    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == NodeKind.LAMBDA || node.kind.isLoop() || node.kind == NodeKind.LET) {
+    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == .LAMBDA || node.kind.isLoop() || node.kind == .LET) {
       node.scope = scope = Scope(scope);
     }
 
@@ -165,12 +165,12 @@ class Resolver {
     Node parent = node.parent;
 
     // Make sure modifiers are detected for variables inside a variable cluster
-    if (parent.kind == NodeKind.VARIABLE_CLUSTER) {
+    if (parent.kind == .VARIABLE_CLUSTER) {
       parent = parent.parent;
     }
 
     // Keep accumulating modifiers that are immediately nested inside each other
-    while (parent != null && parent.kind == NodeKind.MODIFIER) {
+    while (parent != null && parent.kind == .MODIFIER) {
       Node modifierName = parent.modifierName();
       string name = modifierName.asString();
       SymbolFlag flag = nameToSymbolFlag.get(name);
@@ -180,7 +180,7 @@ class Resolver {
     }
 
     // Mark nodes directly inside extension blocks for easy checking later
-    if (parent != null && parent.kind == NodeKind.BLOCK && parent.parent.kind == NodeKind.EXTENSION) {
+    if (parent != null && parent.kind == .BLOCK && parent.parent.kind == .EXTENSION) {
       flags = flags | SymbolFlag.FROM_EXTENSION;
     }
 
@@ -220,9 +220,9 @@ class Resolver {
 
   static bool checkParentsForLocalVariable(Node node) {
     for (node = node.parent; node != null; node = node.parent) {
-      if (node.kind != NodeKind.PROGRAM && node.kind != NodeKind.FILE &&
-          node.kind != NodeKind.BLOCK && node.kind != NodeKind.NAMESPACE &&
-          node.kind != NodeKind.MODIFIER && node.kind != NodeKind.EXTENSION &&
+      if (node.kind != .PROGRAM && node.kind != .FILE &&
+          node.kind != .BLOCK && node.kind != .NAMESPACE &&
+          node.kind != .MODIFIER && node.kind != .EXTENSION &&
           !node.kind.isEnum()) {
         return true;
       }
@@ -248,13 +248,13 @@ class Resolver {
 
       for (sibling = node.sibling; sibling != null; sibling = sibling.sibling) {
         // Extensions off of block declarations are fine
-        if (sibling.kind == NodeKind.EXTENSION && kind.isNamedBlockDeclaration()) {
+        if (sibling.kind == .EXTENSION && kind.isNamedBlockDeclaration()) {
           continue;
         }
 
         // Merge block declarations with extension blocks
-        if (sibling.kind != NodeKind.EXTENSION && sibling.kind.isNamedBlockDeclaration()) {
-          if (kind == NodeKind.EXTENSION || kind == NodeKind.NAMESPACE && sibling.kind == NodeKind.NAMESPACE) {
+        if (sibling.kind != .EXTENSION && sibling.kind.isNamedBlockDeclaration()) {
+          if (kind == .EXTENSION || kind == .NAMESPACE && sibling.kind == .NAMESPACE) {
             kind = sibling.kind;
             continue;
           }
@@ -272,8 +272,8 @@ class Resolver {
       Node previous = node;
       sibling = node.sibling;
       while (sibling != null) {
-        if (sibling.kind == NodeKind.VARIABLE || sibling.kind.isFunction()) {
-          Symbol disconnected = sibling.symbol = Symbol(symbol.name, SymbolKind.OTHER);
+        if (sibling.kind == .VARIABLE || sibling.kind.isFunction()) {
+          Symbol disconnected = sibling.symbol = Symbol(symbol.name, .OTHER);
           disconnected.enclosingSymbol = symbol.enclosingSymbol;
           disconnected.node = sibling;
           sibling = previous.sibling = sibling.sibling;
@@ -285,18 +285,18 @@ class Resolver {
 
       // Set the symbol kind
       switch (kind) {
-        case NodeKind.NAMESPACE { symbol.kind = SymbolKind.NAMESPACE; }
-        case NodeKind.ENUM { symbol.kind = SymbolKind.ENUM; }
-        case NodeKind.ENUM_FLAGS { symbol.kind = SymbolKind.ENUM_FLAGS; }
-        case NodeKind.CLASS { symbol.kind = SymbolKind.CLASS; }
-        case NodeKind.STRUCT { symbol.kind = SymbolKind.STRUCT; }
-        case NodeKind.INTERFACE { symbol.kind = SymbolKind.INTERFACE; }
-        case NodeKind.FUNCTION { symbol.kind = SymbolKind.GLOBAL_FUNCTION; }
-        case NodeKind.CONSTRUCTOR { symbol.kind = SymbolKind.CONSTRUCTOR_FUNCTION; }
-        case NodeKind.VARIABLE { symbol.kind = SymbolKind.GLOBAL_VARIABLE; }
-        case NodeKind.PARAMETER { symbol.kind = SymbolKind.PARAMETER; }
-        case NodeKind.ALIAS { symbol.kind = SymbolKind.ALIAS; }
-        case NodeKind.EXTENSION { semanticErrorExtensionMissingTarget(log, declarationName.range, declarationName.asString()); }
+        case .NAMESPACE { symbol.kind = .NAMESPACE; }
+        case .ENUM { symbol.kind = .ENUM; }
+        case .ENUM_FLAGS { symbol.kind = .ENUM_FLAGS; }
+        case .CLASS { symbol.kind = .CLASS; }
+        case .STRUCT { symbol.kind = .STRUCT; }
+        case .INTERFACE { symbol.kind = .INTERFACE; }
+        case .FUNCTION { symbol.kind = .GLOBAL_FUNCTION; }
+        case .CONSTRUCTOR { symbol.kind = .CONSTRUCTOR_FUNCTION; }
+        case .VARIABLE { symbol.kind = .GLOBAL_VARIABLE; }
+        case .PARAMETER { symbol.kind = .PARAMETER; }
+        case .ALIAS { symbol.kind = .ALIAS; }
+        case .EXTENSION { semanticErrorExtensionMissingTarget(log, declarationName.range, declarationName.asString()); }
         default { assert false; }
       }
     }
@@ -309,13 +309,13 @@ class Resolver {
 
       // Change non-static global functions/variables to instance
       if (!symbol.isStatic() && (symbol.isObjectMember() || symbol.isEnumMember() && symbol.isFromExtension())) {
-        if (symbol.kind == SymbolKind.GLOBAL_FUNCTION) symbol.kind = SymbolKind.INSTANCE_FUNCTION;
-        else if (symbol.kind == SymbolKind.GLOBAL_VARIABLE) symbol.kind = SymbolKind.INSTANCE_VARIABLE;
+        if (symbol.kind == .GLOBAL_FUNCTION) symbol.kind = .INSTANCE_FUNCTION;
+        else if (symbol.kind == .GLOBAL_VARIABLE) symbol.kind = .INSTANCE_VARIABLE;
       }
 
       // Change global variables to local
-      else if (symbol.kind == SymbolKind.GLOBAL_VARIABLE && checkParentsForLocalVariable(node)) {
-        symbol.kind = SymbolKind.LOCAL_VARIABLE;
+      else if (symbol.kind == .GLOBAL_VARIABLE && checkParentsForLocalVariable(node)) {
+        symbol.kind = .LOCAL_VARIABLE;
       }
     }
   }
@@ -340,7 +340,7 @@ class Resolver {
       //
       for (j = 0; j < block.children.length; j++) {
         Node statement = block.children.get(j);
-        if (statement.kind != NodeKind.USING_ALIAS) {
+        if (statement.kind != .USING_ALIAS) {
           continue;
         }
         Node declarationName = statement.declarationName();
@@ -356,7 +356,7 @@ class Resolver {
 
         // Insert a unresolved symbol as a local symbol only on this scope.
         // It will not be added on the type associated with this scope.
-        Symbol symbol = Symbol(name, SymbolKind.USING_ALIAS);
+        Symbol symbol = Symbol(name, .USING_ALIAS);
         symbol.node = statement;
         statement.symbol = symbol;
         block.scope.insertLocal(symbol);
@@ -373,7 +373,7 @@ class Resolver {
       List<Symbol> insertedSymbols = null;
       for (j = 0; j < block.children.length; j++) {
         Node statement = block.children.get(j);
-        if (statement.kind != NodeKind.USING_NAMESPACE) {
+        if (statement.kind != .USING_NAMESPACE) {
           continue;
         }
 
@@ -409,7 +409,7 @@ class Resolver {
         for (k = 0; k < members.length; k++) {
           Member member = members.get(k);
           Symbol memberSymbol = member.symbol;
-          if (memberSymbol.kind == SymbolKind.NAMESPACE) {
+          if (memberSymbol.kind == .NAMESPACE) {
             continue;
           }
           Member current = block.scope.findLocal(memberSymbol.name);
@@ -419,8 +419,8 @@ class Resolver {
           } else {
             Symbol currentSymbol = current.symbol;
             if (insertedSymbols.indexOf(currentSymbol) >= 0) {
-              if (currentSymbol.kind != SymbolKind.AMBIGUOUS) {
-                Symbol collision = Symbol(memberSymbol.name, SymbolKind.AMBIGUOUS);
+              if (currentSymbol.kind != .AMBIGUOUS) {
+                Symbol collision = Symbol(memberSymbol.name, .AMBIGUOUS);
                 collision.identicalMembers = { current, member };
                 block.scope.locals.set(memberSymbol.name, Member(collision));
                 insertedSymbols.push(collision);
@@ -439,7 +439,7 @@ class Resolver {
     Member member;
 
     // Handle top-level names
-    if (node.kind == NodeKind.NAME) {
+    if (node.kind == .NAME) {
       string name = node.asString();
       member = cache.globalType.findMember(name);
       if (member == null) {
@@ -449,7 +449,7 @@ class Resolver {
     }
 
     // Handle nested names
-    else if (node.kind == NodeKind.DOT) {
+    else if (node.kind == .DOT) {
       Node target = node.dotTarget();
       resolveGlobalUsingNamespaceValue(target);
       Type targetType = target.type;
@@ -490,7 +490,7 @@ class Resolver {
     node.type = cache.errorType;
 
     // Use the current scope for all child nodes
-    assert context.scope != null || node.kind == NodeKind.PROGRAM;
+    assert context.scope != null || node.kind == .PROGRAM;
     Scope oldScope = context.scope;
     if (node.scope != null) context.scope = node.scope;
 
@@ -499,81 +499,74 @@ class Resolver {
     typeContext = expectedType;
 
     switch (node.kind) {
-      case NodeKind.PROGRAM { resolveProgram(node); }
-      case NodeKind.FILE { resolveFile(node); }
-      case NodeKind.BLOCK { resolveBlock(node); }
-      case NodeKind.NODE_LIST { resolveChildren(node); }
-      case NodeKind.CASE { resolveCase(node); }
-      case NodeKind.USING_NAMESPACE { resolveUsingNamespace(node); }
+      case .PROGRAM { resolveProgram(node); }
+      case .FILE { resolveFile(node); }
+      case .BLOCK { resolveBlock(node); }
+      case .NODE_LIST { resolveChildren(node); }
+      case .CASE { resolveCase(node); }
+      case .USING_NAMESPACE { resolveUsingNamespace(node); }
 
-      case NodeKind.NAMESPACE { resolveNamespace(node); }
-      case NodeKind.ENUM, NodeKind.ENUM_FLAGS { resolveEnum(node); }
-      case NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE { resolveObject(node); }
+      case .NAMESPACE { resolveNamespace(node); }
+      case .ENUM, .ENUM_FLAGS { resolveEnum(node); }
+      case .CLASS, .STRUCT, .INTERFACE { resolveObject(node); }
 
-      case NodeKind.EXTENSION { resolveExtension(node); }
-      case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION { resolveFunction(node); }
-      case NodeKind.VARIABLE { resolveVariable(node); }
-      case NodeKind.VARIABLE_CLUSTER { resolveVariableCluster(node); }
-      case NodeKind.PARAMETER { resolveParameter(node); }
-      case NodeKind.ALIAS, NodeKind.USING_ALIAS { resolveAlias(node); }
+      case .EXTENSION { resolveExtension(node); }
+      case .CONSTRUCTOR, .FUNCTION { resolveFunction(node); }
+      case .VARIABLE { resolveVariable(node); }
+      case .VARIABLE_CLUSTER { resolveVariableCluster(node); }
+      case .PARAMETER { resolveParameter(node); }
+      case .ALIAS, .USING_ALIAS { resolveAlias(node); }
 
-      case NodeKind.IF { resolveIf(node); }
-      case NodeKind.FOR { resolveFor(node); }
-      case NodeKind.FOR_EACH { resolveForEach(node); }
-      case NodeKind.WHILE { resolveWhile(node); }
-      case NodeKind.DO_WHILE { resolveWhile(node); }
-      case NodeKind.RETURN, NodeKind.IMPLICIT_RETURN { resolveReturn(node); }
-      case NodeKind.BREAK { resolveBreak(node); }
-      case NodeKind.CONTINUE { resolveContinue(node); }
-      case NodeKind.ASSERT { resolveAssert(node); }
-      case NodeKind.EXPRESSION { resolveExpression(node); }
-      case NodeKind.SWITCH { resolveSwitch(node); }
-      case NodeKind.MODIFIER { resolveModifier(node); }
+      case .IF { resolveIf(node); }
+      case .FOR { resolveFor(node); }
+      case .FOR_EACH { resolveForEach(node); }
+      case .WHILE { resolveWhile(node); }
+      case .DO_WHILE { resolveWhile(node); }
+      case .RETURN, .IMPLICIT_RETURN { resolveReturn(node); }
+      case .BREAK { resolveBreak(node); }
+      case .CONTINUE { resolveContinue(node); }
+      case .ASSERT { resolveAssert(node); }
+      case .EXPRESSION { resolveExpression(node); }
+      case .SWITCH { resolveSwitch(node); }
+      case .MODIFIER { resolveModifier(node); }
 
-      case NodeKind.NAME { resolveName(node); }
-      case NodeKind.NULL { node.type = cache.nullType; }
-      case NodeKind.THIS { resolveThis(node); }
-      case NodeKind.TRUE { node.type = cache.boolType; }
-      case NodeKind.FALSE { node.type = cache.boolType; }
-      case NodeKind.HOOK { resolveHook(node); }
-      case NodeKind.INT { node.type = cache.intType; }
-      case NodeKind.FLOAT { node.type = cache.floatType; }
-      case NodeKind.DOUBLE { node.type = cache.doubleType; }
-      case NodeKind.STRING { node.type = cache.stringType; }
-      case NodeKind.INITIALIZER { resolveInitializer(node); }
-      case NodeKind.DOT { resolveDot(node); }
-      case NodeKind.LET { resolveLet(node); }
-      case NodeKind.CALL { resolveCall(node); }
-      case NodeKind.SUPER_CALL { resolveSuperCall(node); }
-      case NodeKind.ERROR {} // Ignore parse errors
-      case NodeKind.SEQUENCE { resolveSequence(node); }
-      case NodeKind.PARAMETERIZE { resolveParameterize(node); }
-      case NodeKind.CAST { resolveCast(node); }
-      case NodeKind.LAMBDA { resolveLambda(node); }
-      case NodeKind.DEFAULT { resolveDefault(node); }
-      case NodeKind.VAR { resolveVar(node); }
-      case NodeKind.FUNCTION_TYPE { resolveFunctionType(node); }
+      case .NAME { resolveName(node); }
+      case .NULL { node.type = cache.nullType; }
+      case .THIS { resolveThis(node); }
+      case .TRUE { node.type = cache.boolType; }
+      case .FALSE { node.type = cache.boolType; }
+      case .HOOK { resolveHook(node); }
+      case .INT { node.type = cache.intType; }
+      case .FLOAT { node.type = cache.floatType; }
+      case .DOUBLE { node.type = cache.doubleType; }
+      case .STRING { node.type = cache.stringType; }
+      case .INITIALIZER { resolveInitializer(node); }
+      case .DOT { resolveDot(node); }
+      case .LET { resolveLet(node); }
+      case .CALL { resolveCall(node); }
+      case .SUPER_CALL { resolveSuperCall(node); }
+      case .ERROR {} // Ignore parse errors
+      case .SEQUENCE { resolveSequence(node); }
+      case .PARAMETERIZE { resolveParameterize(node); }
+      case .CAST { resolveCast(node); }
+      case .LAMBDA { resolveLambda(node); }
+      case .DEFAULT { resolveDefault(node); }
+      case .VAR { resolveVar(node); }
+      case .FUNCTION_TYPE { resolveFunctionType(node); }
 
-      case
-        NodeKind.NOT, NodeKind.POSITIVE, NodeKind.NEGATIVE, NodeKind.COMPLEMENT,
-        NodeKind.PREFIX_INCREMENT, NodeKind.PREFIX_DECREMENT,
-        NodeKind.POSTFIX_INCREMENT, NodeKind.POSTFIX_DECREMENT {
+      case .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
         resolveUnaryOperator(node);
       }
 
       case
-        NodeKind.ADD, NodeKind.BITWISE_AND, NodeKind.BITWISE_OR, NodeKind.BITWISE_XOR,
-        NodeKind.DIVIDE, NodeKind.EQUAL, NodeKind.GREATER_THAN, NodeKind.GREATER_THAN_OR_EQUAL,
-        NodeKind.IN, NodeKind.INDEX, NodeKind.LESS_THAN, NodeKind.LESS_THAN_OR_EQUAL,
-        NodeKind.LOGICAL_AND, NodeKind.LOGICAL_OR, NodeKind.MULTIPLY, NodeKind.NOT_EQUAL,
-        NodeKind.REMAINDER, NodeKind.SHIFT_LEFT, NodeKind.SHIFT_RIGHT, NodeKind.SUBTRACT,
-        NodeKind.ASSIGN, NodeKind.ASSIGN_ADD, NodeKind.ASSIGN_BITWISE_AND, NodeKind.ASSIGN_BITWISE_OR,
-        NodeKind.ASSIGN_BITWISE_XOR, NodeKind.ASSIGN_DIVIDE, NodeKind.ASSIGN_MULTIPLY,
-        NodeKind.ASSIGN_REMAINDER, NodeKind.ASSIGN_SHIFT_LEFT, NodeKind.ASSIGN_SHIFT_RIGHT, NodeKind.ASSIGN_SUBTRACT {
+        .ADD, .BITWISE_AND, .BITWISE_OR, .BITWISE_XOR, .DIVIDE, .EQUAL, .GREATER_THAN, .GREATER_THAN_OR_EQUAL, .IN,
+        .INDEX, .LESS_THAN, .LESS_THAN_OR_EQUAL, .LOGICAL_AND, .LOGICAL_OR, .MULTIPLY, .NOT_EQUAL, .REMAINDER,
+        .SHIFT_LEFT, .SHIFT_RIGHT, .SUBTRACT, .ASSIGN, .ASSIGN_ADD, .ASSIGN_BITWISE_AND, .ASSIGN_BITWISE_OR,
+        .ASSIGN_BITWISE_XOR, .ASSIGN_DIVIDE, .ASSIGN_MULTIPLY, .ASSIGN_REMAINDER, .ASSIGN_SHIFT_LEFT, .ASSIGN_SHIFT_RIGHT, .ASSIGN_SUBTRACT {
         resolveBinaryOperator(node);
       }
 
-      case NodeKind.ASSIGN_INDEX {
+      case .ASSIGN_INDEX {
         resolveTertiaryOperator(node);
       }
 
@@ -623,14 +616,14 @@ class Resolver {
 
   void checkUnusedExpression(Node node) {
     NodeKind kind = node.kind;
-    if (kind == NodeKind.HOOK) {
+    if (kind == .HOOK) {
       checkUnusedExpression(node.hookTrue());
       checkUnusedExpression(node.hookFalse());
-    } else if (kind == NodeKind.SEQUENCE) {
+    } else if (kind == .SEQUENCE) {
       if (node.hasChildren()) {
         checkUnusedExpression(node.children.get(node.children.length - 1));
       }
-    } else if (kind == NodeKind.LET) {
+    } else if (kind == .LET) {
       checkUnusedExpression(node.letValue());
     } else if (!node.type.isError(cache) && !kind.isCall() && !node.kind.isUnaryStorageOperator() && !node.kind.isBinaryStorageOperator()) {
       semanticWarningUnusedExpression(log, node.range);
@@ -678,7 +671,7 @@ class Resolver {
       // not the same as the function itself. For example, referencing instead
       // of calling an instance function creates a function object binds that
       // instance function to that instance.
-      if ((node.kind == NodeKind.NAME || node.kind == NodeKind.DOT) && node.symbol != null && node.symbol.kind.isFunction()) {
+      if ((node.kind == .NAME || node.kind == .DOT) && node.symbol != null && node.symbol.kind.isFunction()) {
         List<Node> children = node.removeChildren();
         node.become(Node.createBind(node.clone().withChildren(children)).withRange(node.range).withType(to).withSymbol(node.symbol));
       }
@@ -686,22 +679,22 @@ class Resolver {
     }
 
     // Special-case assigning 0 to an enum flags type
-    if (to.isEnumFlags() && node.kind == NodeKind.INT && node.asInt() == 0) {
+    if (to.isEnumFlags() && node.kind == .INT && node.asInt() == 0) {
       from = to;
     }
 
     // The implicit conversion must be valid
-    if (kind == CastKind.IMPLICIT && !cache.canImplicitlyConvert(from, to) ||
-        kind == CastKind.EXPLICIT && !cache.canExplicitlyConvert(from, to)) {
+    if (kind == .IMPLICIT_CAST && !cache.canImplicitlyConvert(from, to) ||
+        kind == .EXPLICIT_CAST && !cache.canExplicitlyConvert(from, to)) {
       semanticErrorIncompatibleTypes(log, node.range, from, to, cache.canExplicitlyConvert(from, to));
       node.type = cache.errorType;
       return;
     }
 
     // Make the implicit conversion explicit for convenience later on
-    if (kind == CastKind.IMPLICIT) {
+    if (kind == .IMPLICIT_CAST) {
       if (node.kind.isType()) return;
-      Node value = Node(NodeKind.NULL);
+      Node value = Node(.NULL);
       value.become(node);
       node.become(Node.createImplicitCast(Node.createType(to), value).withType(to).withRange(node.range));
     }
@@ -722,7 +715,7 @@ class Resolver {
     //
     //   inline { using bar = foo; }
     //
-    if (node.parent.kind != NodeKind.BLOCK) {
+    if (node.parent.kind != .BLOCK) {
       unexpectedStatement(node);
     }
   }
@@ -736,10 +729,10 @@ class Resolver {
         break;
       }
       NodeKind kind = parent.kind;
-      if (kind != NodeKind.PROGRAM && kind != NodeKind.FILE &&
-          kind != NodeKind.MODIFIER && kind != NodeKind.BLOCK &&
-          kind != NodeKind.NAMESPACE && kind != NodeKind.EXTENSION &&
-          (allowDeclaration != AllowDeclaration.TOP_OR_OBJECT_LEVEL || !kind.isObject())) {
+      if (kind != .PROGRAM && kind != .FILE &&
+          kind != .MODIFIER && kind != .BLOCK &&
+          kind != .NAMESPACE && kind != .EXTENSION &&
+          (allowDeclaration != .ALLOW_TOP_OR_OBJECT_LEVEL || !kind.isObject())) {
         unexpectedStatement(node);
         break;
       }
@@ -755,7 +748,7 @@ class Resolver {
     // Statements cannot live inside non-namespace type declarations
     // Top-level declarations cannot live inside object declarations, function
     // declarations, or conditional statements
-    if (node.parent.kind != NodeKind.BLOCK || node.parent.parent.kind.isNamedBlockDeclaration() && node.parent.parent.kind != NodeKind.NAMESPACE) {
+    if (node.parent.kind != .BLOCK || node.parent.parent.kind.isNamedBlockDeclaration() && node.parent.parent.kind != .NAMESPACE) {
       unexpectedStatement(node);
     }
   }
@@ -774,7 +767,7 @@ class Resolver {
     Symbol symbol = node.symbol;
 
     // No need to check for static symbols
-    if (!symbol.kind.isInstance() && symbol.kind != SymbolKind.PARAMETER) {
+    if (!symbol.kind.isInstance() && symbol.kind != .PARAMETER) {
       return true;
     }
 
@@ -791,15 +784,15 @@ class Resolver {
     }
 
     // The cases where type parameters may appear are more complicated
-    if (symbol.kind == SymbolKind.PARAMETER && context.symbolForThis == symbol.enclosingSymbol) {
+    if (symbol.kind == .PARAMETER && context.symbolForThis == symbol.enclosingSymbol) {
       Node enclosingNode = symbol.enclosingSymbol.node;
       Node parent;
       for (parent = node.parent; parent != enclosingNode; parent = parent.parent) {
-        if (parent.kind == NodeKind.NODE_LIST && parent.parent == enclosingNode &&
+        if (parent.kind == .NODE_LIST && parent.parent == enclosingNode &&
             (parent == parent.parent.objectParameters() || parent == parent.parent.baseTypes())) {
           return true;
         }
-        if ((parent.kind == NodeKind.VARIABLE || parent.kind.isFunction()) && parent.symbol.kind.isInstance()) {
+        if ((parent.kind == .VARIABLE || parent.kind.isFunction()) && parent.symbol.kind.isInstance()) {
           return true;
         }
       }
@@ -814,7 +807,7 @@ class Resolver {
     Node node;
     for (node = symbol.node; node != null; node = node.sibling) {
       bool isObject = node.kind.isObject();
-      if (isObject || node.kind == NodeKind.EXTENSION) {
+      if (isObject || node.kind == .EXTENSION) {
         Node types = node.baseTypes();
         if (types != null && types.hasChildren()) {
           int index = 0;
@@ -846,32 +839,32 @@ class Resolver {
 
   bool needsTypeContext(Node node) {
     return
-      node.kind == NodeKind.INITIALIZER ||
-      node.kind == NodeKind.DOT && node.dotTarget() == null ||
-      node.kind == NodeKind.HOOK && needsTypeContext(node.hookTrue()) && needsTypeContext(node.hookFalse());
+      node.kind == .INITIALIZER ||
+      node.kind == .DOT && node.dotTarget() == null ||
+      node.kind == .HOOK && needsTypeContext(node.hookTrue()) && needsTypeContext(node.hookFalse());
   }
 
   void addAutoGeneratedMember(Type type, string name) {
-    Symbol symbol = Symbol(name, SymbolKind.AUTOMATIC);
+    Symbol symbol = Symbol(name, .AUTOMATIC);
     symbol.enclosingSymbol = type.symbol;
     type.addMember(Member(symbol));
   }
 
   void initializeNamespace(Symbol symbol) {
     assert symbol.type.isNamespace();
-    unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, "on a namespace declaration");
-    unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, "on a namespace declaration");
-    unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on a namespace declaration");
-    unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on a namespace declaration");
+    unexpectedModifierIfPresent(symbol, .FINAL, "on a namespace declaration");
+    unexpectedModifierIfPresent(symbol, .STATIC, "on a namespace declaration");
+    unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a namespace declaration");
+    unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a namespace declaration");
     checkNoBaseTypes(symbol, "A namespace");
   }
 
   void initializeEnum(Symbol symbol) {
     assert symbol.type.isEnum();
-    unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, "on an enum declaration");
-    unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, "on an enum declaration");
-    unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on an enum declaration");
-    unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on an enum declaration");
+    unexpectedModifierIfPresent(symbol, .FINAL, "on an enum declaration");
+    unexpectedModifierIfPresent(symbol, .STATIC, "on an enum declaration");
+    unexpectedModifierIfPresent(symbol, .VIRTUAL, "on an enum declaration");
+    unexpectedModifierIfPresent(symbol, .OVERRIDE, "on an enum declaration");
     checkNoBaseTypes(symbol, "An enum");
 
     // Automatically generate toString() if missing
@@ -889,7 +882,7 @@ class Resolver {
     type.relevantTypes = {};
 
     // A struct has no base type because it's meant to be a named tuple type
-    if (symbol.kind == SymbolKind.STRUCT) {
+    if (symbol.kind == .STRUCT) {
       checkNoBaseTypes(symbol, "A struct");
       return;
     }
@@ -905,7 +898,7 @@ class Resolver {
       }
 
       // Ensure there is one base class and everything else is an interface
-      if (symbol.kind == SymbolKind.CLASS && baseType.isClass()) {
+      if (symbol.kind == .CLASS && baseType.isClass()) {
         if (baseTypes.indexOf(base) != 0) {
           semanticErrorClassBaseNotFirst(log, base.range, baseType);
           continue;
@@ -938,12 +931,12 @@ class Resolver {
         if (unmerged == null) {
           unmergedMembers.set(memberSymbol.name, member);
         } else if (unmerged.symbol.enclosingSymbol != memberSymbol) {
-          Symbol combined = Symbol(memberSymbol.name, SymbolKind.UNMERGED);
+          Symbol combined = Symbol(memberSymbol.name, .UNMERGED);
           combined.enclosingSymbol = symbol;
           combined.identicalMembers = { unmerged, member };
           unmergedMembers.set(memberSymbol.name, Member(combined));
         } else {
-          assert unmerged.symbol.kind == SymbolKind.UNMERGED;
+          assert unmerged.symbol.kind == .UNMERGED;
           unmerged.symbol.identicalMembers.push(member);
         }
       }
@@ -972,8 +965,8 @@ class Resolver {
   }
 
   void initializeObject(Symbol symbol) {
-    unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, "on an object declaration");
-    unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, "on an object declaration");
+    unexpectedModifierIfPresent(symbol, .FINAL, "on an object declaration");
+    unexpectedModifierIfPresent(symbol, .STATIC, "on an object declaration");
 
     Node node = symbol.node.firstNonExtensionSibling();
     Node parameters = node.objectParameters();
@@ -982,12 +975,12 @@ class Resolver {
 
     string where;
     switch (symbol.kind) {
-      case SymbolKind.CLASS { where = "on a class declaration"; }
-      case SymbolKind.STRUCT { where = "on a struct declaration"; }
-      case SymbolKind.INTERFACE { where = "on an interface declaration"; }
+      case .CLASS { where = "on a class declaration"; }
+      case .STRUCT { where = "on a struct declaration"; }
+      case .INTERFACE { where = "on an interface declaration"; }
     }
-    unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, where);
-    unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, where);
+    unexpectedModifierIfPresent(symbol, .VIRTUAL, where);
+    unexpectedModifierIfPresent(symbol, .OVERRIDE, where);
 
     // Resolve type parameters
     List<Symbol> parameterSymbols = null;
@@ -1015,9 +1008,9 @@ class Resolver {
     assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||
       context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol;
 
-    unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, "on a function declaration");
+    unexpectedModifierIfPresent(symbol, .FINAL, "on a function declaration");
     if (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances()) {
-      unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, "outside an object declaration");
+      unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
     }
 
     Node node = symbol.node;
@@ -1025,7 +1018,7 @@ class Resolver {
     Node result;
 
     // Only functions have return types (constructors don't)
-    if (node.kind == NodeKind.FUNCTION) {
+    if (node.kind == .FUNCTION) {
       result = node.functionResult();
       resolveAsParameterizedType(result);
       checkIsValidFunctionReturnType(result);
@@ -1034,7 +1027,7 @@ class Resolver {
 
     // Constructors get a return type of the object that they create
     else {
-      assert node.kind == NodeKind.CONSTRUCTOR;
+      assert node.kind == .CONSTRUCTOR;
       resultType = symbol.enclosingSymbol.type;
     }
 
@@ -1090,7 +1083,7 @@ class Resolver {
 
         // The "override" modifier replaces the "virtual" modifier
         else {
-          redundantModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on an overriding function");
+          redundantModifierIfPresent(symbol, .VIRTUAL, "on an overriding function");
         }
       }
 
@@ -1100,14 +1093,14 @@ class Resolver {
 
     // Ignore overriding-related modifiers outside an object
     else if (!symbol.isObjectMember()) {
-      unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "outside an object declaration");
-      unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "outside an object declaration");
+      unexpectedModifierIfPresent(symbol, .VIRTUAL, "outside an object declaration");
+      unexpectedModifierIfPresent(symbol, .OVERRIDE, "outside an object declaration");
     }
 
     // Validate modifiers when nothing is being overridden
     else {
-      if (!symbol.kind.isInstance()) unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on a non-instance function");
-      unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on a function that doesn't override anything");
+      if (!symbol.kind.isInstance()) unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a non-instance function");
+      unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a function that doesn't override anything");
 
       // If "override" is used, imply "virtual" to mask further errors
       if (symbol.isOverride()) symbol.flags = symbol.flags | SymbolFlag.VIRTUAL;
@@ -1117,7 +1110,7 @@ class Resolver {
   static Node findModifierName(Symbol symbol, SymbolFlag flag) {
     Node node = symbol.node;
     while (node != null) {
-      if (node.kind == NodeKind.MODIFIER) {
+      if (node.kind == .MODIFIER) {
         Node modifierName = node.modifierName();
         if (nameToSymbolFlag.get(modifierName.asString()) == flag) {
           return modifierName;
@@ -1153,13 +1146,13 @@ class Resolver {
   }
 
   void initializeVariable(Symbol symbol) {
-    unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, "on a variable declaration");
-    unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on a variable declaration");
+    unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a variable declaration");
+    unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a variable declaration");
     if (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances()) {
-      unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, "outside an object declaration");
+      unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
     }
-    if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind == SymbolKind.STRUCT && !symbol.isStatic()) {
-      expectedModifierIfAbsent(symbol, SymbolFlag.FINAL, "on a variable declaration inside a struct");
+    if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind == .STRUCT && !symbol.isStatic()) {
+      expectedModifierIfAbsent(symbol, .FINAL, "on a variable declaration inside a struct");
     }
 
     Node node = symbol.node;
@@ -1167,7 +1160,7 @@ class Resolver {
     if (variableType == null) {
 
       // Take the variable type from the enclosing variable cluster
-      if (node.parent.kind == NodeKind.VARIABLE_CLUSTER) {
+      if (node.parent.kind == .VARIABLE_CLUSTER) {
         variableType = node.parent.clusterType().clone();
       }
 
@@ -1183,9 +1176,9 @@ class Resolver {
         // Look at the initializer now
         Node variableValue = node.variableValue();
         if (variableValue != null) {
-          resolveAsExpressionWithConversion(variableValue, cache.intType, CastKind.IMPLICIT);
+          resolveAsExpressionWithConversion(variableValue, cache.intType, .IMPLICIT_CAST);
           constantFolder.foldConstants(variableValue);
-          if (variableValue.kind == NodeKind.INT) {
+          if (variableValue.kind == .INT) {
             symbol.enumValue = variableValue.asInt();
           } else {
             variableType = Node.createType(cache.errorType);
@@ -1219,7 +1212,7 @@ class Resolver {
       // already and just use the error type. This is the case when a lambda
       // expression lacks type context.
       else {
-        assert node.parent.kind == NodeKind.LAMBDA;
+        assert node.parent.kind == .LAMBDA;
         variableType = Node.createType(cache.errorType);
       }
 
@@ -1228,13 +1221,13 @@ class Resolver {
     }
 
     // Handle implicitly typed variables by taking the type from the assigned value
-    if (variableType.kind == NodeKind.VAR) {
+    if (variableType.kind == .VAR) {
       Node value = node.variableValue();
       if (value == null) {
         semanticErrorVarMissingValue(log, node.declarationName().range);
         symbol.type = cache.errorType;
       } else {
-        if (node.parent.kind == NodeKind.LET) {
+        if (node.parent.kind == .LET) {
           Scope oldScope = context.scope;
           context.scope = oldScope.lexicalParent;
           resolveAsExpression(value);
@@ -1259,7 +1252,7 @@ class Resolver {
       symbol.type = variableType.type;
 
       // Make sure the variable cluster has a resolved type
-      if (node.parent.kind == NodeKind.VARIABLE_CLUSTER && node.parent.clusterType().type == null) {
+      if (node.parent.kind == .VARIABLE_CLUSTER && node.parent.clusterType().type == null) {
         node.parent.replaceChild(0, variableType.clone());
       }
     }
@@ -1338,14 +1331,14 @@ class Resolver {
       typeContext = null;
       resultType = null;
       switch (symbol.kind) {
-        case SymbolKind.NAMESPACE { initializeNamespace(symbol); }
-        case SymbolKind.ENUM, SymbolKind.ENUM_FLAGS { initializeEnum(symbol); }
-        case SymbolKind.CLASS, SymbolKind.STRUCT, SymbolKind.INTERFACE { initializeObject(symbol); }
-        case SymbolKind.GLOBAL_FUNCTION, SymbolKind.INSTANCE_FUNCTION, SymbolKind.CONSTRUCTOR_FUNCTION { initializeFunction(symbol); }
-        case SymbolKind.LOCAL_VARIABLE, SymbolKind.GLOBAL_VARIABLE, SymbolKind.INSTANCE_VARIABLE { initializeVariable(symbol); }
-        case SymbolKind.PARAMETER { initializeParameter(symbol); }
-        case SymbolKind.ALIAS, SymbolKind.USING_ALIAS { initializeAlias(symbol); }
-        case SymbolKind.OTHER {}
+        case .NAMESPACE { initializeNamespace(symbol); }
+        case .ENUM, .ENUM_FLAGS { initializeEnum(symbol); }
+        case .CLASS, .STRUCT, .INTERFACE { initializeObject(symbol); }
+        case .GLOBAL_FUNCTION, .INSTANCE_FUNCTION, .CONSTRUCTOR_FUNCTION { initializeFunction(symbol); }
+        case .LOCAL_VARIABLE, .GLOBAL_VARIABLE, .INSTANCE_VARIABLE { initializeVariable(symbol); }
+        case .PARAMETER { initializeParameter(symbol); }
+        case .ALIAS, .USING_ALIAS { initializeAlias(symbol); }
+        case .OTHER {}
         default { assert false; }
       }
       context = oldContext;
@@ -1371,7 +1364,7 @@ class Resolver {
   void initializePotentiallyDuplicatedMember(Member member, Range range) {
     // Ambiguous symbols are the result of multiple using namespace statements
     Symbol symbol = member.symbol;
-    if (symbol.kind == SymbolKind.AMBIGUOUS) {
+    if (symbol.kind == .AMBIGUOUS) {
       List<string> names = {};
       int i;
       for (i = 0; i < symbol.identicalMembers.length; i++) {
@@ -1437,7 +1430,7 @@ class Resolver {
           for (j = 0; j < argumentTypes.length; j++) {
             string name = "_".append(arguments.length.toString());
             Node argument = Node.createVariable(Node.createName(name), Node.createType(argumentTypes.get(j)), null);
-            argument.symbol = Symbol(name, SymbolKind.LOCAL_VARIABLE);
+            argument.symbol = Symbol(name, .LOCAL_VARIABLE);
             argument.symbol.node = argument;
             arguments.push(argument);
             superArguments.push(Node.createName(name));
@@ -1457,7 +1450,7 @@ class Resolver {
     for (i = 0; i < members.length; i++) {
       Member member = members.get(i);
       Symbol memberSymbol = member.symbol;
-      if (memberSymbol.kind == SymbolKind.INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol && memberSymbol.node.variableValue() == null) {
+      if (memberSymbol.kind == .INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol && memberSymbol.node.variableValue() == null) {
         initializeMember(member);
         if (member.type.isError(cache)) {
           symbol.flags = symbol.flags | SymbolFlag.INITIALIZED;
@@ -1484,14 +1477,14 @@ class Resolver {
       Member member = uninitializedMembers.get(i);
       string name = "_".append(arguments.length.toString());
       Node argument = Node.createVariable(Node.createName(name), Node.createType(member.type), null);
-      argument.symbol = Symbol(name, SymbolKind.LOCAL_VARIABLE);
+      argument.symbol = Symbol(name, .LOCAL_VARIABLE);
       argument.symbol.node = argument;
       arguments.push(argument);
       memberInitializers.push(Node.createMemberInitializer(Node.createName(member.symbol.name), Node.createName(name)));
     }
 
     // Change the automatic symbol into a constructor symbol
-    symbol.kind = SymbolKind.CONSTRUCTOR_FUNCTION;
+    symbol.kind = .CONSTRUCTOR_FUNCTION;
     symbol.node = Node.createConstructor(
       Node.createName(symbol.name),
       Node.createNodeList(arguments),
@@ -1521,7 +1514,7 @@ class Resolver {
     int i;
     for (i = 0; i < members.length; i++) {
       Symbol field = members.get(i).symbol;
-      if (field.kind == SymbolKind.GLOBAL_VARIABLE && !field.isFromExtension()) {
+      if (field.kind == .GLOBAL_VARIABLE && !field.isFromExtension()) {
         fields.push(field);
       }
     }
@@ -1573,8 +1566,8 @@ class Resolver {
     }
 
     // Change the automatic symbol into an instance function
-    symbol.kind = SymbolKind.INSTANCE_FUNCTION;
-    symbol.flags = SymbolFlag.FROM_EXTENSION;
+    symbol.kind = .INSTANCE_FUNCTION;
+    symbol.flags = .FROM_EXTENSION;
     symbol.node = Node.createFunction(
       Node.createName(symbol.name),
       Node.createNodeList({}),
@@ -1589,7 +1582,7 @@ class Resolver {
 
   void initializeSymbol(Symbol symbol) {
     // Handle auto-generated symbols now
-    if (symbol.kind == SymbolKind.AUTOMATIC) {
+    if (symbol.kind == .AUTOMATIC) {
       switch (symbol.name) {
         case "new" { generateDefaultConstructor(symbol); }
         case "toString" { generateDefaultToString(symbol); }
@@ -1607,7 +1600,7 @@ class Resolver {
     }
 
     // Unmerged symbols are the result of multiple base types
-    if (symbol.kind == SymbolKind.UNMERGED) {
+    if (symbol.kind == .UNMERGED) {
       if (symbol.type != null) {
         return;
       }
@@ -1661,7 +1654,7 @@ class Resolver {
     // Validate the arguments and provide type context
     int i;
     for (i = 0; i < arguments.length; i++) {
-      resolveAsExpressionWithConversion(arguments.get(i), argumentTypes.get(i), CastKind.IMPLICIT);
+      resolveAsExpressionWithConversion(arguments.get(i), argumentTypes.get(i), .IMPLICIT_CAST);
     }
   }
 
@@ -1731,7 +1724,7 @@ class Resolver {
 
   void resolveFile(Node node) {
     assert node.parent != null;
-    assert node.parent.kind == NodeKind.PROGRAM;
+    assert node.parent.kind == .PROGRAM;
     resolve(node.fileBlock(), null);
   }
 
@@ -1741,7 +1734,7 @@ class Resolver {
 
   void resolveCase(Node node) {
     assert node.parent != null;
-    assert node.parent.kind == NodeKind.SWITCH;
+    assert node.parent.kind == .SWITCH;
     assert context.switchValue != null;
     assert context.switchValue.type != null;
     List<Node> values = node.caseValues();
@@ -1749,7 +1742,7 @@ class Resolver {
     int i;
     for (i = 0; i < values.length; i++) {
       Node value = values.get(i);
-      resolveAsExpressionWithConversion(value, context.switchValue.type, CastKind.IMPLICIT);
+      resolveAsExpressionWithConversion(value, context.switchValue.type, .IMPLICIT_CAST);
       constantFolder.foldConstants(value);
 
       // All case values must be constants but can include enum values
@@ -1766,19 +1759,19 @@ class Resolver {
   }
 
   void resolveNamespace(Node node) {
-    checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
+    checkDeclarationLocation(node, .ALLOW_TOP_LEVEL);
     initializeSymbol(node.symbol);
     resolve(node.declarationBlock(), null);
   }
 
   void resolveEnum(Node node) {
-    checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
+    checkDeclarationLocation(node, .ALLOW_TOP_LEVEL);
     initializeSymbol(node.symbol);
     resolve(node.declarationBlock(), null);
   }
 
   void resolveObject(Node node) {
-    checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
+    checkDeclarationLocation(node, .ALLOW_TOP_LEVEL);
     initializeSymbol(node.symbol);
 
     // Force the resolution of all base type members in case some of them are
@@ -1793,7 +1786,7 @@ class Resolver {
     int i;
     for (i = 0; i < members.length; i++) {
       Member member = members.get(i);
-      if (member.symbol.kind == SymbolKind.UNMERGED) {
+      if (member.symbol.kind == .UNMERGED) {
         initializeMember(member);
       }
     }
@@ -1812,7 +1805,7 @@ class Resolver {
   }
 
   void resolveExtension(Node node) {
-    checkDeclarationLocation(node, AllowDeclaration.TOP_LEVEL);
+    checkDeclarationLocation(node, .ALLOW_TOP_LEVEL);
     initializeSymbol(node.symbol);
 
     Symbol oldSymbolForThis = context.symbolForThis;
@@ -1828,7 +1821,7 @@ class Resolver {
     assert node.symbol.enclosingSymbol == null || !node.symbol.enclosingSymbol.kind.isTypeWithInstances() ||
       context.symbolForThis != null && context.symbolForThis == node.symbol.enclosingSymbol;
 
-    checkDeclarationLocation(node, AllowDeclaration.TOP_OR_OBJECT_LEVEL);
+    checkDeclarationLocation(node, .ALLOW_TOP_OR_OBJECT_LEVEL);
     initializeSymbol(node.symbol);
 
     Symbol oldFunctionSymbol = context.functionSymbol;
@@ -1856,7 +1849,7 @@ class Resolver {
     }
 
     // Resolve the initializer list
-    if (node.kind == NodeKind.CONSTRUCTOR) {
+    if (node.kind == .CONSTRUCTOR) {
       // Get the base constructor type
       Member overriddenMember = node.symbol.overriddenMember;
       Type overriddenType = cache.errorType;
@@ -1919,7 +1912,7 @@ class Resolver {
         for (i = 0; i < members.length; i++) {
           Member member = members.get(i);
           Symbol memberSymbol = member.symbol;
-          if (memberSymbol.kind == SymbolKind.INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
+          if (memberSymbol.kind == .INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
             Node value = memberSymbol.node.variableValue();
             if (value != null) {
               initializeMember(member);
@@ -1987,7 +1980,7 @@ class Resolver {
 
         // Resolve the value and check for duplicate initializations
         if (name.symbol != null) {
-          resolveAsExpressionWithConversion(value, name.symbol.type, CastKind.IMPLICIT);
+          resolveAsExpressionWithConversion(value, name.symbol.type, .IMPLICIT_CAST);
           int j;
           for (j = 0; j < i; j++) {
             Node other = memberInitializers.children.get(j);
@@ -2026,7 +2019,7 @@ class Resolver {
     // Enum values are resolved as ints instead of as the enum type because ints
     // don't implicitly convert to enums.
     if (value != null) {
-      resolveAsExpressionWithConversion(value, symbol.isEnumValue() ? cache.intType : symbol.type, CastKind.IMPLICIT);
+      resolveAsExpressionWithConversion(value, symbol.isEnumValue() ? cache.intType : symbol.type, .IMPLICIT_CAST);
     }
   }
 
@@ -2049,7 +2042,7 @@ class Resolver {
 
   void resolveIf(Node node) {
     checkStatementLocation(node);
-    resolveAsExpressionWithConversion(node.ifTest(), cache.boolType, CastKind.IMPLICIT);
+    resolveAsExpressionWithConversion(node.ifTest(), cache.boolType, .IMPLICIT_CAST);
     resolve(node.ifTrue(), null);
     if (node.ifFalse() != null) resolve(node.ifFalse(), null);
   }
@@ -2060,10 +2053,10 @@ class Resolver {
     Node test = node.forTest();
     Node update = node.forUpdate();
     if (setup != null) {
-      if (setup.kind == NodeKind.VARIABLE_CLUSTER) resolve(setup, null);
+      if (setup.kind == .VARIABLE_CLUSTER) resolve(setup, null);
       else resolveAsExpression(setup);
     }
-    if (test != null) resolveAsExpressionWithConversion(test, cache.boolType, CastKind.IMPLICIT);
+    if (test != null) resolveAsExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
     if (update != null) resolveAsExpression(update);
 
     Node oldLoop = context.loop;
@@ -2087,7 +2080,7 @@ class Resolver {
   void resolveWhile(Node node) {
     checkStatementLocation(node);
     Node test = node.whileTest();
-    if (test != null) resolveAsExpressionWithConversion(test, cache.boolType, CastKind.IMPLICIT);
+    if (test != null) resolveAsExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
 
     Node oldLoop = context.loop;
     context.loop = node;
@@ -2114,11 +2107,11 @@ class Resolver {
       //   void foo() {}
       //   void fn() bar = () => foo();
       //
-      if (node.kind == NodeKind.IMPLICIT_RETURN && resultType.isVoid(cache)) {
+      if (node.kind == .IMPLICIT_RETURN && resultType.isVoid(cache)) {
         node.become(Node.createExpression(value.remove()));
         resolve(node, null);
       } else {
-        resolveAsExpressionWithConversion(value, resultType, CastKind.IMPLICIT);
+        resolveAsExpressionWithConversion(value, resultType, .IMPLICIT_CAST);
       }
     }
 
@@ -2142,7 +2135,7 @@ class Resolver {
 
   void resolveAssert(Node node) {
     checkStatementLocation(node);
-    resolveAsExpressionWithConversion(node.assertValue(), cache.boolType, CastKind.IMPLICIT);
+    resolveAsExpressionWithConversion(node.assertValue(), cache.boolType, .IMPLICIT_CAST);
   }
 
   void resolveExpression(Node node) {
@@ -2241,7 +2234,7 @@ class Resolver {
   void resolveHook(Node node) {
     Node trueNode = node.hookTrue();
     Node falseNode = node.hookFalse();
-    resolveAsExpressionWithConversion(node.hookTest(), cache.boolType, CastKind.IMPLICIT);
+    resolveAsExpressionWithConversion(node.hookTest(), cache.boolType, .IMPLICIT_CAST);
 
     // Resolve both branches with type context but don't warn about type
     // conversion problems yet (warning later gives better error messages)
@@ -2269,8 +2262,8 @@ class Resolver {
 
     // Finally, check that the conversion works. This check must be done
     // even when using the common type because it inserts implicit casts.
-    checkConversion(commonType, trueNode, CastKind.IMPLICIT);
-    checkConversion(commonType, falseNode, CastKind.IMPLICIT);
+    checkConversion(commonType, trueNode, .IMPLICIT_CAST);
+    checkConversion(commonType, falseNode, .IMPLICIT_CAST);
     node.type = commonType;
   }
 
@@ -2295,7 +2288,7 @@ class Resolver {
       Type itemType = typeContext.substitutions.get(0);
       int i;
       for (i = 0; i < values.length; i++) {
-        resolveAsExpressionWithConversion(values.get(i), itemType, CastKind.IMPLICIT);
+        resolveAsExpressionWithConversion(values.get(i), itemType, .IMPLICIT_CAST);
       }
       node.type = typeContext;
       return;
@@ -2374,7 +2367,7 @@ class Resolver {
     List<Node> arguments = node.callArguments();
 
     // Special-case immediately-invoked lambdas to provide type context from the arguments
-    if (value.kind == NodeKind.LAMBDA && typeContext != null) {
+    if (value.kind == .LAMBDA && typeContext != null) {
       resolveNodesAsExpressions(arguments);
 
       // Avoid reporting further errors
@@ -2394,7 +2387,7 @@ class Resolver {
         }
         argumentTypes.push(type);
       }
-      resolveAsExpressionWithConversion(value, cache.functionType(typeContext, argumentTypes), CastKind.IMPLICIT);
+      resolveAsExpressionWithConversion(value, cache.functionType(typeContext, argumentTypes), .IMPLICIT_CAST);
     }
 
     // Otherwise, resolve the value and use that to provide type context to the arguments
@@ -2458,7 +2451,7 @@ class Resolver {
         resolveAsExpression(child);
         checkUnusedExpression(child);
       } else {
-        resolveAsExpressionWithConversion(child, typeContext, node.parent.kind == NodeKind.CAST ? CastKind.EXPLICIT : CastKind.IMPLICIT);
+        resolveAsExpressionWithConversion(child, typeContext, node.parent.kind == .CAST ? .EXPLICIT_CAST : .IMPLICIT_CAST);
       }
     }
   }
@@ -2503,7 +2496,7 @@ class Resolver {
       Type bound = parameter.type.bound();
       if (bound != null) {
         if (i > 0) bound = cache.substitute(bound, sortedParameters.slice(0, i), sortedTypes.slice(0, i));
-        checkConversion(bound, substitution, CastKind.IMPLICIT);
+        checkConversion(bound, substitution, .IMPLICIT_CAST);
       }
       if (substitution.type.isError(cache)) return;
       sortedTypes.push(substitution.type);
@@ -2519,7 +2512,7 @@ class Resolver {
     Node type = node.castType();
     resolveAsParameterizedType(type);
     checkIsValidVariableType(type);
-    resolveAsExpressionWithConversion(node.castValue(), type.type, CastKind.EXPLICIT);
+    resolveAsExpressionWithConversion(node.castValue(), type.type, .EXPLICIT_CAST);
     node.type = type.type;
   }
 
@@ -2617,7 +2610,7 @@ class Resolver {
       return;
     }
 
-    if (kind == NodeKind.POSITIVE || kind == NodeKind.NEGATIVE) {
+    if (kind == .POSITIVE || kind == .NEGATIVE) {
       if (type.isEnum()) {
         node.type = cache.intType;
       } else if (type.isNumeric(cache)) {
@@ -2632,13 +2625,13 @@ class Resolver {
       }
     }
 
-    else if (kind == NodeKind.NOT) {
+    else if (kind == .NOT) {
       if (type.isBool(cache)) {
         node.type = type;
       }
     }
 
-    else if (kind == NodeKind.COMPLEMENT) {
+    else if (kind == .COMPLEMENT) {
       if (type.isEnumFlags()) {
         node.type = type;
       } else if (type.isInteger(cache)) {
@@ -2653,7 +2646,7 @@ class Resolver {
     }
 
     // Insert an implicit cast if necessary
-    checkConversion(node.type, value, CastKind.IMPLICIT);
+    checkConversion(node.type, value, .IMPLICIT_CAST);
   }
 
   void resolveBinaryOperator(Node node) {
@@ -2664,8 +2657,8 @@ class Resolver {
     // Special-case assignment logic
     if (kind.isBinaryStorageOperator()) {
       resolveAsExpression(left);
-      if (kind == NodeKind.ASSIGN || left.type.isNumeric(cache)) {
-        resolveAsExpressionWithConversion(right, left.type, CastKind.IMPLICIT);
+      if (kind == .ASSIGN || left.type.isNumeric(cache)) {
+        resolveAsExpressionWithConversion(right, left.type, .IMPLICIT_CAST);
         checkStorage(left);
         node.type = left.type;
         return;
@@ -2673,7 +2666,7 @@ class Resolver {
     }
 
     // Special-case equality comparisons to provide type context
-    if (kind == NodeKind.EQUAL || kind == NodeKind.NOT_EQUAL) {
+    if (kind == .EQUAL || kind == .NOT_EQUAL) {
       bool leftNeedsContext = needsTypeContext(left);
       bool rightNeedsContext = needsTypeContext(right);
       if (leftNeedsContext && !rightNeedsContext) {
@@ -2697,26 +2690,26 @@ class Resolver {
       return;
     }
 
-    if (kind == NodeKind.EQUAL || kind == NodeKind.NOT_EQUAL) {
+    if (kind == .EQUAL || kind == .NOT_EQUAL) {
       commonType = cache.commonImplicitType(leftType, rightType);
       if (commonType != null) {
         node.type = cache.boolType;
       }
     }
 
-    else if (kind == NodeKind.ADD || kind == NodeKind.SUBTRACT || kind == NodeKind.MULTIPLY || kind == NodeKind.DIVIDE) {
+    else if (kind == .ADD || kind == .SUBTRACT || kind == .MULTIPLY || kind == .DIVIDE) {
       if (leftType.isNumeric(cache) && rightType.isNumeric(cache)) {
         node.type = commonType = cache.commonImplicitType(leftType, rightType);
       }
     }
 
-    else if (kind == NodeKind.REMAINDER || kind == NodeKind.SHIFT_LEFT || kind == NodeKind.SHIFT_RIGHT) {
+    else if (kind == .REMAINDER || kind == .SHIFT_LEFT || kind == .SHIFT_RIGHT) {
       if (leftType.isInteger(cache) && rightType.isInteger(cache)) {
         node.type = commonType = cache.intType;
       }
     }
 
-    else if (kind == NodeKind.BITWISE_AND || kind == NodeKind.BITWISE_OR || kind == NodeKind.BITWISE_XOR) {
+    else if (kind == .BITWISE_AND || kind == .BITWISE_OR || kind == .BITWISE_XOR) {
       if (leftType == rightType && leftType.isEnumFlags()) {
         node.type = commonType = leftType;
       } else if (leftType.isInteger(cache) && rightType.isInteger(cache)) {
@@ -2724,14 +2717,13 @@ class Resolver {
       }
     }
 
-    else if (kind == NodeKind.LOGICAL_AND || kind == NodeKind.LOGICAL_OR) {
+    else if (kind == .LOGICAL_AND || kind == .LOGICAL_OR) {
       if (leftType.isBool(cache) && rightType.isBool(cache)) {
         node.type = commonType = cache.boolType;
       }
     }
 
-    else if (kind == NodeKind.LESS_THAN || kind == NodeKind.GREATER_THAN ||
-        kind == NodeKind.LESS_THAN_OR_EQUAL || kind == NodeKind.GREATER_THAN_OR_EQUAL) {
+    else if (kind == .LESS_THAN || kind == .GREATER_THAN || kind == .LESS_THAN_OR_EQUAL || kind == .GREATER_THAN_OR_EQUAL) {
       if (leftType.isNumeric(cache) && rightType.isNumeric(cache) ||
           leftType.isString(cache) && rightType.isString(cache)) {
         commonType = cache.commonImplicitType(leftType, rightType);
@@ -2748,8 +2740,8 @@ class Resolver {
 
     // Insert implicit casts if necessary
     if (commonType != null) {
-      checkConversion(commonType, left, CastKind.IMPLICIT);
-      checkConversion(commonType, right, CastKind.IMPLICIT);
+      checkConversion(commonType, left, .IMPLICIT_CAST);
+      checkConversion(commonType, right, .IMPLICIT_CAST);
     }
   }
 
@@ -2766,16 +2758,16 @@ class Resolver {
 
 StringMap<SymbolFlag> createNameToSymbolFlag() {
   StringMap<SymbolFlag> result = StringMap<SymbolFlag>();
-  result.set("export", SymbolFlag.EXPORT);
-  result.set("final", SymbolFlag.FINAL);
-  result.set("import", SymbolFlag.IMPORT);
-  result.set("inline", SymbolFlag.INLINE);
-  result.set("override", SymbolFlag.OVERRIDE);
-  result.set("private", SymbolFlag.PRIVATE);
-  result.set("protected", SymbolFlag.PROTECTED);
-  result.set("public", SymbolFlag.PUBLIC);
-  result.set("static", SymbolFlag.STATIC);
-  result.set("virtual", SymbolFlag.VIRTUAL);
+  result.set("export", .EXPORT);
+  result.set("final", .FINAL);
+  result.set("import", .IMPORT);
+  result.set("inline", .INLINE);
+  result.set("override", .OVERRIDE);
+  result.set("private", .PRIVATE);
+  result.set("protected", .PROTECTED);
+  result.set("public", .PUBLIC);
+  result.set("static", .STATIC);
+  result.set("virtual", .VIRTUAL);
   return result;
 }
 

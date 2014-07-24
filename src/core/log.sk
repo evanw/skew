@@ -18,13 +18,13 @@ class Log {
 
   void error(Range range, string text) {
     assert !range.isEmpty();
-    diagnostics.push(Diagnostic(DiagnosticKind.ERROR, range, text));
+    diagnostics.push(Diagnostic(.ERROR, range, text));
     errorCount++;
   }
 
   void warning(Range range, string text) {
     assert !range.isEmpty();
-    diagnostics.push(Diagnostic(DiagnosticKind.WARNING, range, text));
+    diagnostics.push(Diagnostic(.WARNING, range, text));
     warningCount++;
   }
 
@@ -43,7 +43,7 @@ class Log {
     for (i = 0; i < diagnostics.length; i++) {
       Diagnostic diagnostic = diagnostics.get(i);
       FormattedRange formatted = diagnostic.range.format(0);
-      builder.append(diagnostic.range.locationString()).append(diagnostic.kind == DiagnosticKind.ERROR ? ": error: " : ": warning: ")
+      builder.append(diagnostic.range.locationString()).append(diagnostic.kind == .ERROR ? ": error: " : ": warning: ")
         .append(diagnostic.text).append("\n").append(formatted.line).append("\n").append(formatted.range).append("\n");
 
       // Append notes after the diagnostic they apply to

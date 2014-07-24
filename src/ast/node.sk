@@ -221,27 +221,27 @@ class Node {
 
   bool asBool() {
     assert kind.isBool();
-    return kind == NodeKind.TRUE;
+    return kind == .TRUE;
   }
 
   int asInt() {
-    assert kind == NodeKind.INT;
+    assert kind == .INT;
     assert content != null;
-    assert content.type() == ContentType.INT;
+    assert content.type() == .INT;
     return ((IntContent)content).value;
   }
 
   double asDouble() {
     assert kind.isReal();
     assert content != null;
-    assert content.type() == ContentType.DOUBLE;
+    assert content.type() == .DOUBLE;
     return ((DoubleContent)content).value;
   }
 
   string asString() {
-    assert kind == NodeKind.NAME || kind == NodeKind.STRING;
+    assert kind == .NAME || kind == .STRING;
     assert content != null;
-    assert content.type() == ContentType.STRING;
+    assert content.type() == .STRING;
     return ((StringContent)content).value;
   }
 
@@ -398,7 +398,7 @@ class Node {
 
   Node firstNonExtensionSibling() {
     Node node = this;
-    while (node != null && node.kind == NodeKind.EXTENSION) {
+    while (node != null && node.kind == .EXTENSION) {
       node = node.sibling;
     }
     return node;
@@ -435,9 +435,9 @@ class Content {
       ContentType type = left.type();
       if (type == right.type()) {
         switch (type) {
-          case ContentType.INT { return ((IntContent)left).value == ((IntContent)right).value; }
-          case ContentType.DOUBLE { return ((DoubleContent)left).value == ((DoubleContent)right).value; }
-          case ContentType.STRING { return ((StringContent)left).value == ((StringContent)right).value; }
+          case .INT { return ((IntContent)left).value == ((IntContent)right).value; }
+          case .DOUBLE { return ((DoubleContent)left).value == ((DoubleContent)right).value; }
+          case .STRING { return ((StringContent)left).value == ((StringContent)right).value; }
         }
       }
     }
@@ -449,7 +449,7 @@ class IntContent : Content {
   final int value;
 
   override ContentType type() {
-    return ContentType.INT;
+    return .INT;
   }
 }
 
@@ -457,7 +457,7 @@ class DoubleContent : Content {
   final double value;
 
   override ContentType type() {
-    return ContentType.DOUBLE;
+    return .DOUBLE;
   }
 }
 
@@ -465,6 +465,6 @@ class StringContent : Content {
   final string value;
 
   override ContentType type() {
-    return ContentType.STRING;
+    return .STRING;
   }
 }

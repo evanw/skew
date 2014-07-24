@@ -20,7 +20,7 @@ in TargetFormat {
 }
 
 class CompilerOptions {
-  TargetFormat targetFormat = TargetFormat.NONE;
+  TargetFormat targetFormat = .NONE;
   List<Source> inputs = {};
   string outputDirectory = "";
   string outputFile = "";
@@ -119,11 +119,11 @@ class Compiler {
       // Create an emitter if there's a target language
       IEmitter emitter = null;
       switch (options.targetFormat) {
-        case TargetFormat.NONE {}
-        case TargetFormat.JS { emitter = js.Emitter(options, resolver.cache); }
-        case TargetFormat.LISP_AST { emitter = lisp.Emitter(options); }
-        case TargetFormat.JSON_AST { emitter = json.Emitter(options); }
-        case TargetFormat.XML_AST { emitter = xml.Emitter(options); }
+        case .NONE {}
+        case .JS { emitter = js.Emitter(options, resolver.cache); }
+        case .LISP_AST { emitter = lisp.Emitter(options); }
+        case .JSON_AST { emitter = json.Emitter(options); }
+        case .XML_AST { emitter = xml.Emitter(options); }
         default { assert false; }
       }
 

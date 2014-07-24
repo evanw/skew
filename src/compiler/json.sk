@@ -38,9 +38,9 @@ namespace json {
       if (node.content != null) {
         builder.append(",\n").append(indent).append("\"content\": ");
         switch (node.content.type()) {
-          case ContentType.INT { builder.append(node.asInt().toString()); }
-          case ContentType.DOUBLE { builder.append(node.asDouble().toString()); }
-          case ContentType.STRING { builder.append(quoteString(node.asString(), '"')); }
+          case .INT { builder.append(node.asInt().toString()); }
+          case .DOUBLE { builder.append(node.asDouble().toString()); }
+          case .STRING { builder.append(quoteString(node.asString(), '"')); }
         }
       }
       if (node.hasChildren()) {

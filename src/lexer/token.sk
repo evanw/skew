@@ -27,11 +27,11 @@ void prepareTokens(List<Token> tokens) {
       TokenKind topKind = top.kind;
 
       // Stop parsing a type if we find a token that no type expression uses
-      if (topKind == TokenKind.LESS_THAN && tokenKind != TokenKind.LESS_THAN &&
-          tokenKind != TokenKind.IDENTIFIER && tokenKind != TokenKind.IS &&
-          tokenKind != TokenKind.COMMA && tokenKind != TokenKind.DOT &&
-          tokenKind != TokenKind.FN && tokenKind != TokenKind.LEFT_PARENTHESIS &&
-          tokenKind != TokenKind.RIGHT_PARENTHESIS &&
+      if (topKind == .LESS_THAN && tokenKind != .LESS_THAN &&
+          tokenKind != .IDENTIFIER && tokenKind != .IS &&
+          tokenKind != .COMMA && tokenKind != .DOT &&
+          tokenKind != .FN && tokenKind != .LEFT_PARENTHESIS &&
+          tokenKind != .RIGHT_PARENTHESIS &&
           !tokenStartsWithGreaterThan) {
         stack.pop();
       } else {
@@ -40,20 +40,20 @@ void prepareTokens(List<Token> tokens) {
     }
 
     // Group open
-    if (tokenKind == TokenKind.LEFT_PARENTHESIS || tokenKind == TokenKind.LEFT_BRACE || tokenKind == TokenKind.LEFT_BRACKET || tokenKind == TokenKind.LESS_THAN) {
+    if (tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET || tokenKind == .LESS_THAN) {
       stack.push(i);
       continue;
     }
 
     // Group close
-    if (tokenKind == TokenKind.RIGHT_PARENTHESIS || tokenKind == TokenKind.RIGHT_BRACE || tokenKind == TokenKind.RIGHT_BRACKET || tokenStartsWithGreaterThan) {
+    if (tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan) {
       // Search for a matching opposite token
       while (stack.length > 0) {
         Token top = tokens.get(stack.get(stack.length - 1));
         TokenKind topKind = top.kind;
 
         // Don't match closing angle brackets that don't work since they are just operators
-        if (tokenStartsWithGreaterThan && topKind != TokenKind.LESS_THAN) {
+        if (tokenStartsWithGreaterThan && topKind != .LESS_THAN) {
           break;
         }
 
@@ -61,7 +61,7 @@ void prepareTokens(List<Token> tokens) {
         stack.pop();
 
         // Special-case angle brackets matches
-        if (topKind == TokenKind.LESS_THAN) {
+        if (topKind == .LESS_THAN) {
 
           // Retentative matches that didn't work out
           if (!tokenStartsWithGreaterThan) {
@@ -69,24 +69,24 @@ void prepareTokens(List<Token> tokens) {
           }
 
           // Break apart operators that start with a closing angle bracket
-          if (tokenKind != TokenKind.GREATER_THAN) {
+          if (tokenKind != .GREATER_THAN) {
             Range range = token.range;
             int start = range.start;
             string text = token.text.slice(1, token.text.length);
             TokenKind kind =
-              tokenKind == TokenKind.SHIFT_RIGHT ? TokenKind.GREATER_THAN :
-              tokenKind == TokenKind.GREATER_THAN_OR_EQUAL ? TokenKind.ASSIGN :
-              tokenKind == TokenKind.ASSIGN_SHIFT_RIGHT ? TokenKind.GREATER_THAN_OR_EQUAL :
-              TokenKind.ERROR;
-            assert kind != TokenKind.ERROR;
+              tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
+              tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :
+              tokenKind == .ASSIGN_SHIFT_RIGHT ? .GREATER_THAN_OR_EQUAL :
+              .ERROR;
+            assert kind != .ERROR;
             tokens.insert(i + 1, Token(Range(range.source, start + 1, range.end), kind, text));
             token.range = Range(range.source, start, start + 1);
             token.text = ">";
           }
 
           // Convert < and > into bounds for type parameter lists
-          top.kind = TokenKind.START_PARAMETER_LIST;
-          token.kind = TokenKind.END_PARAMETER_LIST;
+          top.kind = .START_PARAMETER_LIST;
+          token.kind = .END_PARAMETER_LIST;
         }
 
         // Stop the search since we found a match

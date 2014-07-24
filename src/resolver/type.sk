@@ -198,11 +198,11 @@ class Type {
   }
 
   bool isEnumFlags() {
-    return symbol != null && symbol.kind == SymbolKind.ENUM_FLAGS;
+    return symbol != null && symbol.kind == .ENUM_FLAGS;
   }
 
   bool isParameter() {
-    return symbol != null && symbol.kind == SymbolKind.PARAMETER;
+    return symbol != null && symbol.kind == .PARAMETER;
   }
 
   bool isObject() {
@@ -210,15 +210,15 @@ class Type {
   }
 
   bool isClass() {
-    return symbol != null && symbol.kind == SymbolKind.CLASS;
+    return symbol != null && symbol.kind == .CLASS;
   }
 
   bool isStruct() {
-    return symbol != null && symbol.kind == SymbolKind.STRUCT;
+    return symbol != null && symbol.kind == .STRUCT;
   }
 
   bool isInterface() {
-    return symbol != null && symbol.kind == SymbolKind.INTERFACE;
+    return symbol != null && symbol.kind == .INTERFACE;
   }
 
   bool isReference() {

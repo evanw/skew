@@ -6,11 +6,11 @@ class InstanceToStaticPass {
       CallInfo info = graph.callInfo.get(i);
       Symbol symbol = info.symbol;
       Symbol enclosingSymbol = symbol.enclosingSymbol;
-      if (symbol.kind == SymbolKind.INSTANCE_FUNCTION && !symbol.isImportOrExport() && symbol.node.functionBlock() != null && (enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum())) {
+      if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImportOrExport() && symbol.node.functionBlock() != null && (enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum())) {
         // Change the instance function to a static function
-        symbol.kind = SymbolKind.GLOBAL_FUNCTION;
+        symbol.kind = .GLOBAL_FUNCTION;
         symbol.flags = symbol.flags | SymbolFlag.STATIC;
-        Symbol thisSymbol = Symbol("this", SymbolKind.LOCAL_VARIABLE);
+        Symbol thisSymbol = Symbol("this", .LOCAL_VARIABLE);
         thisSymbol.type = enclosingSymbol.type;
         symbol.node.functionArguments().insertChild(0, Node.createVariable(Node.createName("this").withSymbol(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol));
         recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
@@ -20,15 +20,15 @@ class InstanceToStaticPass {
         for (j = 0; j < info.callSites.length; j++) {
           Node callSite = info.callSites.get(j);
           switch (callSite.kind) {
-            case NodeKind.CALL {
+            case .CALL {
               Node value = callSite.callValue();
               Node target;
               Node name;
-              if (value.kind == NodeKind.DOT) {
+              if (value.kind == .DOT) {
                 target = value.dotTarget().remove();
                 name = value.dotName().remove();
               } else {
-                assert value.kind == NodeKind.NAME;
+                assert value.kind == .NAME;
                 target = Node.createThis();
                 name = value.remove();
               }
@@ -36,7 +36,7 @@ class InstanceToStaticPass {
               callSite.insertChild(1, target);
             }
 
-            case NodeKind.BIND {
+            case .BIND {
               assert false; // TODO
             }
 
@@ -50,7 +50,7 @@ class InstanceToStaticPass {
   }
 
   static void recursivelyReplaceThis(Node node, Symbol symbol) {
-    if (node.kind == NodeKind.THIS) {
+    if (node.kind == .THIS) {
       node.become(Node.createName(symbol.name).withSymbol(symbol).withType(symbol.type));
     } else if (node.hasChildren()) {
       int i;

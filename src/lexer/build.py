@@ -53,7 +53,7 @@ List<Token> tokenize(Log log, Source source) {
         break; // This prevents syntax errors from causing infinite loops
       }
       int yy_c = yy_ec.get(index);
-      if (yy_accept.get(yy_current_state) != TokenKind.YY_INVALID_ACTION) {
+      if (yy_accept.get(yy_current_state) != .YY_INVALID_ACTION) {
         yy_last_accepting_state = yy_current_state;
         yy_last_accepting_cpos = yy_cp;
       }
@@ -69,7 +69,7 @@ List<Token> tokenize(Log log, Source source) {
 
     // Find the action
     TokenKind yy_act = yy_accept.get(yy_current_state);
-    while (yy_act == TokenKind.YY_INVALID_ACTION) {
+    while (yy_act == .YY_INVALID_ACTION) {
       // Have to back up
       yy_cp = yy_last_accepting_cpos;
       yy_current_state = yy_last_accepting_state;
@@ -77,24 +77,24 @@ List<Token> tokenize(Log log, Source source) {
     }
 
     // Ignore whitespace
-    if (yy_act == TokenKind.WHITESPACE) {
+    if (yy_act == .WHITESPACE) {
       continue;
     }
 
     // This is the default action in flex, which is usually called ECHO
-    else if (yy_act == TokenKind.ERROR) {
+    else if (yy_act == .ERROR) {
       syntaxErrorExtraData(log, Range(source, yy_bp, yy_cp), text.slice(yy_bp, yy_cp));
       break;
     }
 
     // Ignore END_OF_FILE since this loop must still perform the last action
-    else if (yy_act != TokenKind.END_OF_FILE) {
+    else if (yy_act != .END_OF_FILE) {
       tokens.push(Token(Range(source, yy_bp, yy_cp), yy_act, text.slice(yy_bp, yy_cp)));
     }
   }
 
   // Every token stream ends in END_OF_FILE
-  tokens.push(Token(Range(source, text_length, text_length), TokenKind.END_OF_FILE, ""));
+  tokens.push(Token(Range(source, text_length, text_length), .END_OF_FILE, ""));
 
   // Do a single post-processing pass on the token list
   prepareTokens(tokens);
@@ -128,7 +128,7 @@ if result['yy_end_of_buffer'] != len(result['actions']) + 1:
 
 # Patch the results
 result['actions'] = dict((k, v if v != 'ECHO' else 'ERROR') for k, v in result['actions'] + [(0, 'YY_INVALID_ACTION'), (result['yy_end_of_buffer'], 'END_OF_FILE')])
-result['yy_accept'] = ['TokenKind.%s' % result['actions'][x] for x in result['yy_accept']]
+result['yy_accept'] = ['.%s' % result['actions'][x] for x in result['yy_accept']]
 result['actions'] = '\n'.join('  %s,' % x for x in sorted(set(result['actions'].values())))
 result['yy_accept_length'] = len(result['yy_accept'])
 result['yy_accept'] = create_table(result, 'yy_accept', type='TokenKind')

@@ -35,9 +35,9 @@ namespace lisp {
       builder.append("(").append(node.kind.prettyPrint());
       if (node.content != null) {
         switch (node.content.type()) {
-          case ContentType.INT { builder.append(" ").append(node.asInt().toString()); }
-          case ContentType.DOUBLE { builder.append(" ").append(node.asDouble().toString()); }
-          case ContentType.STRING { builder.append(" ").append(quoteString(node.asString(), '"')); }
+          case .INT { builder.append(" ").append(node.asInt().toString()); }
+          case .DOUBLE { builder.append(" ").append(node.asDouble().toString()); }
+          case .STRING { builder.append(" ").append(quoteString(node.asString(), '"')); }
         }
       }
       if (node.hasChildren()) {

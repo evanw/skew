@@ -18,31 +18,31 @@ namespace io {
   import Source readFile(string path);
 
   void printWithColor(Color color, string text) {
-    io.setColor(color);
+    setColor(color);
     print(text);
-    io.setColor(Color.DEFAULT);
+    setColor(.DEFAULT);
   }
 }
 
 namespace frontend {
   void printError(string text) {
-    io.printWithColor(io.Color.RED, "error: ");
-    io.printWithColor(io.Color.BOLD, text.append("\n"));
+    io.printWithColor(.RED, "error: ");
+    io.printWithColor(.BOLD, text.append("\n"));
   }
 
   void printNote(string text) {
-    io.printWithColor(io.Color.GRAY, "note: ");
-    io.printWithColor(io.Color.BOLD, text.append("\n"));
+    io.printWithColor(.GRAY, "note: ");
+    io.printWithColor(.BOLD, text.append("\n"));
   }
 
   void printWarning(string text) {
-    io.printWithColor(io.Color.MAGENTA, "warning: ");
-    io.printWithColor(io.Color.BOLD, text.append("\n"));
+    io.printWithColor(.MAGENTA, "warning: ");
+    io.printWithColor(.BOLD, text.append("\n"));
   }
 
   void printUsage() {
-    io.printWithColor(io.Color.GREEN, "\nusage: ");
-    io.printWithColor(io.Color.BOLD, "skewc [flags] [inputs]\n");
+    io.printWithColor(.GREEN, "\nusage: ");
+    io.printWithColor(.BOLD, "skewc [flags] [inputs]\n");
     io.print("
   --help (-h)       Print this message.
 
@@ -122,11 +122,11 @@ namespace frontend {
       return 1;
     }
     switch (flags.target) {
-      case "none" { target = TargetFormat.NONE; }
-      case "js" { target = TargetFormat.JS; }
-      case "lisp-ast" { target = TargetFormat.LISP_AST; }
-      case "json-ast" { target = TargetFormat.JSON_AST; }
-      case "xml-ast" { target = TargetFormat.XML_AST; }
+      case "none" { target = .NONE; }
+      case "js" { target = .JS; }
+      case "lisp-ast" { target = .LISP_AST; }
+      case "json-ast" { target = .JSON_AST; }
+      case "xml-ast" { target = .XML_AST; }
       default { printError("Unknown target language ".append(quoteString(flags.target, '"'))); return 1; }
     }
 
@@ -134,7 +134,7 @@ namespace frontend {
     CompilerOptions options = CompilerOptions();
     options.targetFormat = target;
     options.outputFile = flags.shouldWriteToStdout() ? "<stdout>" : flags.outputFile;
-    options.jsSourceMap = flags.jsSourceMap && flags.outputFile != "" && target == TargetFormat.JS;
+    options.jsSourceMap = flags.jsSourceMap && flags.outputFile != "" && target == .JS;
 
     // Read all inputs
     for (i = 0; i < inputs.length; i++) {
@@ -153,23 +153,23 @@ namespace frontend {
     for (i = 0; i < log.diagnostics.length; i++) {
       Diagnostic diagnostic = log.diagnostics.get(i);
       if (!diagnostic.range.isEmpty()) {
-        io.printWithColor(io.Color.BOLD, diagnostic.range.locationString().append(": "));
+        io.printWithColor(.BOLD, diagnostic.range.locationString().append(": "));
       }
       switch (diagnostic.kind) {
-        case DiagnosticKind.WARNING { printWarning(diagnostic.text); }
-        case DiagnosticKind.ERROR { printError(diagnostic.text); }
+        case .WARNING { printWarning(diagnostic.text); }
+        case .ERROR { printError(diagnostic.text); }
       }
       if (!diagnostic.range.isEmpty()) {
         FormattedRange formatted = diagnostic.range.format(io.terminalWidth);
         io.print(formatted.line.append("\n"));
-        io.printWithColor(io.Color.GREEN, formatted.range.append("\n"));
+        io.printWithColor(.GREEN, formatted.range.append("\n"));
       }
       if (!diagnostic.noteRange.isEmpty()) {
-        io.printWithColor(io.Color.BOLD, diagnostic.noteRange.locationString().append(": "));
+        io.printWithColor(.BOLD, diagnostic.noteRange.locationString().append(": "));
         printNote(diagnostic.noteText);
         FormattedRange formatted = diagnostic.noteRange.format(io.terminalWidth);
         io.print(formatted.line.append("\n"));
-        io.printWithColor(io.Color.GREEN, formatted.range.append("\n"));
+        io.printWithColor(.GREEN, formatted.range.append("\n"));
       }
     }
 

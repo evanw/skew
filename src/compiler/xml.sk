@@ -36,9 +36,9 @@ namespace xml {
       if (node.content != null) {
         builder.append(" content=");
         switch (node.content.type()) {
-          case ContentType.INT { builder.append(simpleQuote(node.asInt().toString())); }
-          case ContentType.DOUBLE { builder.append(simpleQuote(node.asDouble().toString())); }
-          case ContentType.STRING { builder.append(quoteString(node.asString(), '"')); }
+          case .INT { builder.append(simpleQuote(node.asInt().toString())); }
+          case .DOUBLE { builder.append(simpleQuote(node.asDouble().toString())); }
+          case .STRING { builder.append(quoteString(node.asString(), '"')); }
         }
       }
       if (node.hasChildren()) {

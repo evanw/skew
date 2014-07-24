@@ -1,31 +1,31 @@
 in Node {
   Node fileBlock() {
-    assert kind == NodeKind.FILE;
+    assert kind == .FILE;
     assert children.length == 1;
     return children.get(0);
   }
 
   Node dotTarget() {
-    assert kind == NodeKind.DOT;
+    assert kind == .DOT;
     assert children.length == 2;
     return children.get(0);
   }
 
   Node dotName() {
-    assert kind == NodeKind.DOT;
+    assert kind == .DOT;
     assert children.length == 2;
-    assert children.get(1) == null || children.get(1).kind == NodeKind.NAME;
+    assert children.get(1) == null || children.get(1).kind == .NAME;
     return children.get(1);
   }
 
   Node letVariable() {
-    assert kind == NodeKind.LET;
+    assert kind == .LET;
     assert children.length == 2;
     return children.get(0);
   }
 
   Node letValue() {
-    assert kind == NodeKind.LET;
+    assert kind == .LET;
     assert children.length == 2;
     return children.get(1);
   }
@@ -67,19 +67,19 @@ in Node {
   }
 
   Node hookTest() {
-    assert kind == NodeKind.HOOK;
+    assert kind == .HOOK;
     assert children.length == 3;
     return children.get(0);
   }
 
   Node hookTrue() {
-    assert kind == NodeKind.HOOK;
+    assert kind == .HOOK;
     assert children.length == 3;
     return children.get(1);
   }
 
   Node hookFalse() {
-    assert kind == NodeKind.HOOK;
+    assert kind == .HOOK;
     assert children.length == 3;
     return children.get(2);
   }
@@ -87,62 +87,62 @@ in Node {
   Node declarationName() {
     assert kind.isNamedDeclaration();
     assert children.length >= 1;
-    assert children.get(0) == null || children.get(0).kind == NodeKind.NAME;
+    assert children.get(0) == null || children.get(0).kind == .NAME;
     return children.get(0);
   }
 
   Node declarationBlock() {
     assert kind.isNamedBlockDeclaration();
     assert children.length >= 2;
-    assert children.get(1).kind == NodeKind.BLOCK;
+    assert children.get(1).kind == .BLOCK;
     return children.get(1);
   }
 
   Node clusterType() {
-    assert kind == NodeKind.VARIABLE_CLUSTER;
+    assert kind == .VARIABLE_CLUSTER;
     assert children.length >= 1;
     return children.get(0);
   }
 
   List<Node> clusterVariables() {
-    assert kind == NodeKind.VARIABLE_CLUSTER;
+    assert kind == .VARIABLE_CLUSTER;
     assert children.length >= 1;
     return children.slice(1, children.length);
   }
 
   Node variableType() {
-    assert kind == NodeKind.VARIABLE;
+    assert kind == .VARIABLE;
     assert children.length == 3;
     return children.get(1);
   }
 
   Node variableValue() {
-    assert kind == NodeKind.VARIABLE;
+    assert kind == .VARIABLE;
     assert children.length == 3;
     return children.get(2);
   }
 
   Node aliasValue() {
-    assert kind == NodeKind.ALIAS || kind == NodeKind.USING_ALIAS;
+    assert kind == .ALIAS || kind == .USING_ALIAS;
     assert children.length == 2;
     return children.get(1);
   }
 
   Node usingNamespaceValue() {
-    assert kind == NodeKind.USING_NAMESPACE;
+    assert kind == .USING_NAMESPACE;
     assert children.length == 1;
     return children.get(0);
   }
 
   Node modifierName() {
-    assert kind == NodeKind.MODIFIER;
+    assert kind == .MODIFIER;
     assert children.length == 2;
-    assert children.get(0).kind == NodeKind.NAME;
+    assert children.get(0).kind == .NAME;
     return children.get(0);
   }
 
   List<Node> modifierStatements() {
-    assert kind == NodeKind.MODIFIER;
+    assert kind == .MODIFIER;
     assert children.length >= 1;
     return children.slice(1, children.length);
   }
@@ -160,258 +160,258 @@ in Node {
   }
 
   Node expressionValue() {
-    assert kind == NodeKind.EXPRESSION;
+    assert kind == .EXPRESSION;
     assert children.length == 1;
     return children.get(0);
   }
 
   Node ifTest() {
-    assert kind == NodeKind.IF;
+    assert kind == .IF;
     assert children.length == 3;
     return children.get(0);
   }
 
   Node ifTrue() {
-    assert kind == NodeKind.IF;
+    assert kind == .IF;
     assert children.length == 3;
-    assert children.get(1) == null || children.get(1).kind == NodeKind.BLOCK;
+    assert children.get(1) == null || children.get(1).kind == .BLOCK;
     return children.get(1);
   }
 
   Node ifFalse() {
-    assert kind == NodeKind.IF;
+    assert kind == .IF;
     assert children.length == 3;
-    assert children.get(2) == null || children.get(2).kind == NodeKind.BLOCK;
+    assert children.get(2) == null || children.get(2).kind == .BLOCK;
     return children.get(2);
   }
 
   Node forSetup() {
-    assert kind == NodeKind.FOR;
+    assert kind == .FOR;
     assert children.length == 4;
     return children.get(0);
   }
 
   Node forTest() {
-    assert kind == NodeKind.FOR;
+    assert kind == .FOR;
     assert children.length == 4;
     return children.get(1);
   }
 
   Node forUpdate() {
-    assert kind == NodeKind.FOR;
+    assert kind == .FOR;
     assert children.length == 4;
     return children.get(2);
   }
 
   Node forBlock() {
-    assert kind == NodeKind.FOR;
+    assert kind == .FOR;
     assert children.length == 4;
-    assert children.get(3).kind == NodeKind.BLOCK;
+    assert children.get(3).kind == .BLOCK;
     return children.get(3);
   }
 
   Node forEachVariable() {
-    assert kind == NodeKind.FOR_EACH;
+    assert kind == .FOR_EACH;
     assert children.length == 3;
-    assert children.get(0).kind == NodeKind.VARIABLE;
+    assert children.get(0).kind == .VARIABLE;
     return children.get(0);
   }
 
   Node forEachValue() {
-    assert kind == NodeKind.FOR_EACH;
+    assert kind == .FOR_EACH;
     assert children.length == 3;
     return children.get(1);
   }
 
   Node forEachBlock() {
-    assert kind == NodeKind.FOR_EACH;
+    assert kind == .FOR_EACH;
     assert children.length == 3;
-    assert children.get(2).kind == NodeKind.BLOCK;
+    assert children.get(2).kind == .BLOCK;
     return children.get(2);
   }
 
   Node whileTest() {
-    assert kind == NodeKind.WHILE || kind == NodeKind.DO_WHILE;
+    assert kind == .WHILE || kind == .DO_WHILE;
     assert children.length == 2;
     return children.get(0);
   }
 
   Node whileBlock() {
-    assert kind == NodeKind.WHILE || kind == NodeKind.DO_WHILE;
+    assert kind == .WHILE || kind == .DO_WHILE;
     assert children.length == 2;
-    assert children.get(1).kind == NodeKind.BLOCK;
+    assert children.get(1).kind == .BLOCK;
     return children.get(1);
   }
 
   Node defaultType() {
-    assert kind == NodeKind.DEFAULT;
+    assert kind == .DEFAULT;
     assert children.length == 1;
     return children.get(0);
   }
 
   Node baseTypes() {
-    assert kind.isObject() || kind == NodeKind.EXTENSION;
+    assert kind.isObject() || kind == .EXTENSION;
     assert children.length >= 3;
-    assert children.get(2) == null || children.get(2).kind == NodeKind.NODE_LIST;
+    assert children.get(2) == null || children.get(2).kind == .NODE_LIST;
     return children.get(2);
   }
 
   Node objectParameters() {
     assert kind.isObject();
     assert children.length == 4;
-    assert children.get(3) == null || children.get(3).kind == NodeKind.NODE_LIST;
+    assert children.get(3) == null || children.get(3).kind == .NODE_LIST;
     return children.get(3);
   }
 
   Node functionArguments() {
     assert kind.isFunction();
     assert children.length >= 4;
-    assert children.get(1).kind == NodeKind.NODE_LIST;
+    assert children.get(1).kind == .NODE_LIST;
     return children.get(1);
   }
 
   Node functionBlock() {
     assert kind.isFunction();
     assert children.length >= 4;
-    assert children.get(2) == null || children.get(2).kind == NodeKind.BLOCK;
+    assert children.get(2) == null || children.get(2).kind == .BLOCK;
     return children.get(2);
   }
 
   Node functionResult() {
-    assert kind == NodeKind.FUNCTION;
+    assert kind == .FUNCTION;
     assert children.length == 4;
     return children.get(3);
   }
 
   Node superInitializer() {
-    assert kind == NodeKind.CONSTRUCTOR;
+    assert kind == .CONSTRUCTOR;
     assert children.length == 5;
     return children.get(3);
   }
 
   Node memberInitializers() {
-    assert kind == NodeKind.CONSTRUCTOR;
+    assert kind == .CONSTRUCTOR;
     assert children.length == 5;
     return children.get(4);
   }
 
   Node memberInitializerName() {
-    assert kind == NodeKind.MEMBER_INITIALIZER;
+    assert kind == .MEMBER_INITIALIZER;
     assert children.length == 2;
     return children.get(0);
   }
 
   Node memberInitializerValue() {
-    assert kind == NodeKind.MEMBER_INITIALIZER;
+    assert kind == .MEMBER_INITIALIZER;
     assert children.length == 2;
     return children.get(1);
   }
 
   List<Node> lambdaArguments() {
-    assert kind == NodeKind.LAMBDA;
+    assert kind == .LAMBDA;
     assert children.length >= 1;
     return children.slice(0, children.length - 1);
   }
 
   Node lambdaBlock() {
-    assert kind == NodeKind.LAMBDA;
+    assert kind == .LAMBDA;
     assert children.length >= 1;
-    assert children.get(children.length - 1).kind == NodeKind.BLOCK;
+    assert children.get(children.length - 1).kind == .BLOCK;
     return children.get(children.length - 1);
   }
 
   Node assertValue() {
-    assert kind == NodeKind.ASSERT;
+    assert kind == .ASSERT;
     assert children.length == 1;
     return children.get(0);
   }
 
   Node bindValue() {
-    assert kind == NodeKind.BIND;
+    assert kind == .BIND;
     assert children.length == 1;
     return children.get(0);
   }
 
   Node parameterizeType() {
-    assert kind == NodeKind.PARAMETERIZE;
+    assert kind == .PARAMETERIZE;
     assert children.length >= 1;
     return children.get(0);
   }
 
   List<Node> parameterizeTypes() {
-    assert kind == NodeKind.PARAMETERIZE;
+    assert kind == .PARAMETERIZE;
     assert children.length >= 1;
     return children.slice(1, children.length);
   }
 
   Node functionTypeResult() {
-    assert kind == NodeKind.FUNCTION_TYPE;
+    assert kind == .FUNCTION_TYPE;
     assert children.length >= 1;
     return children.get(0);
   }
 
   List<Node> functionTypeArguments() {
-    assert kind == NodeKind.FUNCTION_TYPE;
+    assert kind == .FUNCTION_TYPE;
     assert children.length >= 1;
     return children.slice(1, children.length);
   }
 
   Node callValue() {
-    assert kind == NodeKind.CALL;
+    assert kind == .CALL;
     assert children.length >= 1;
     return children.get(0);
   }
 
   List<Node> callArguments() {
-    assert kind == NodeKind.CALL;
+    assert kind == .CALL;
     assert children.length >= 1;
     return children.slice(1, children.length);
   }
 
   List<Node> superCallArguments() {
-    assert kind == NodeKind.SUPER_CALL;
+    assert kind == .SUPER_CALL;
     return children;
   }
 
   List<Node> initializerValues() {
-    assert kind == NodeKind.INITIALIZER;
+    assert kind == .INITIALIZER;
     return children;
   }
 
   Node parameterBound() {
-    assert kind == NodeKind.PARAMETER;
+    assert kind == .PARAMETER;
     assert children.length == 2;
     return children.get(1);
   }
 
   Node returnValue() {
-    assert kind == NodeKind.RETURN || kind == NodeKind.IMPLICIT_RETURN;
+    assert kind == .RETURN || kind == .IMPLICIT_RETURN;
     assert children.length == 1;
     return children.get(0);
   }
 
   Node switchValue() {
-    assert kind == NodeKind.SWITCH;
+    assert kind == .SWITCH;
     assert children.length >= 1;
     return children.get(0);
   }
 
   List<Node> switchCases() {
-    assert kind == NodeKind.SWITCH;
+    assert kind == .SWITCH;
     assert children.length >= 1;
     return children.slice(1, children.length);
   }
 
   List<Node> caseValues() {
-    assert kind == NodeKind.CASE;
+    assert kind == .CASE;
     assert children.length >= 1;
     return children.slice(0, children.length - 1);
   }
 
   Node caseBlock() {
-    assert kind == NodeKind.CASE;
+    assert kind == .CASE;
     assert children.length >= 1;
-    assert children.get(children.length - 1).kind == NodeKind.BLOCK;
+    assert children.get(children.length - 1).kind == .BLOCK;
     return children.get(children.length - 1);
   }
 }

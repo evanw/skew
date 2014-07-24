@@ -55,8 +55,8 @@ class LanguageService {
         LineColumn start = range.source.indexToLineColumn(range.start);
         string type;
         switch (diagnostic.kind) {
-          case DiagnosticKind.ERROR { type = "error"; }
-          case DiagnosticKind.WARNING { type = "warning"; }
+          case .ERROR { type = "error"; }
+          case .WARNING { type = "warning"; }
         }
         diagnostics.push(LanguageServiceDiagnostic(type, diagnostic.text, start.line, start.column, range.start, range.singleLineLength()));
       }
@@ -115,7 +115,7 @@ namespace service {
 
       // Pretty-print the symbol
       switch (symbol.kind) {
-        case SymbolKind.PARAMETER {
+        case .PARAMETER {
           Type bound = symbol.type.bound();
           string text = "type ".append(symbol.name);
           if (bound != null) {
@@ -124,11 +124,11 @@ namespace service {
           result.declaration = text;
         }
 
-        case SymbolKind.NAMESPACE {
+        case .NAMESPACE {
           result.declaration = "namespace ".append(symbol.fullName());
         }
 
-        case SymbolKind.CLASS, SymbolKind.STRUCT, SymbolKind.INTERFACE {
+        case .CLASS, .STRUCT, .INTERFACE {
           string text = symbol.kind.toString().toLowerCase().append(" ").append(type.toString());
           if (type.hasRelevantTypes()) {
             int i;
@@ -139,15 +139,15 @@ namespace service {
           result.declaration = text;
         }
 
-        case SymbolKind.ENUM {
+        case .ENUM {
           result.declaration = "enum ".append(symbol.fullName());
         }
 
-        case SymbolKind.ENUM_FLAGS {
+        case .ENUM_FLAGS {
           result.declaration = "enum flags ".append(symbol.fullName());
         }
 
-        case SymbolKind.GLOBAL_FUNCTION, SymbolKind.INSTANCE_FUNCTION, SymbolKind.CONSTRUCTOR_FUNCTION {
+        case .GLOBAL_FUNCTION, .INSTANCE_FUNCTION, .CONSTRUCTOR_FUNCTION {
           string text = type.resultType().toString().append(" ").append(symbol.name).append("(");
           List<Node> arguments = symbol.node.functionArguments().children;
           List<Type> argumentTypes = type.argumentTypes();
@@ -159,7 +159,7 @@ namespace service {
           result.declaration = text.append(")");
         }
 
-        case SymbolKind.LOCAL_VARIABLE, SymbolKind.GLOBAL_VARIABLE, SymbolKind.INSTANCE_VARIABLE {
+        case .LOCAL_VARIABLE, .GLOBAL_VARIABLE, .INSTANCE_VARIABLE {
           string text = type.toString().append(" ").append(symbol.name);
           if (symbol.isEnumValue()) {
             text = text.append(" = ").append(symbol.enumValue.toString());
@@ -182,7 +182,7 @@ namespace service {
     node = nodeFromPosition(node, source, index);
 
     // Special-case completions for members
-    if (node.kind == NodeKind.DOT) {
+    if (node.kind == .DOT) {
       Node target = node.dotTarget();
       if (target.type != null) {
         bool isInstance = !target.kind.isType();

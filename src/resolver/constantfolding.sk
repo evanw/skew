@@ -4,21 +4,21 @@ class ConstantFolder {
   void flattenBool(Node node, bool value) {
     assert node.type.isError(cache) || node.type.isBool(cache);
     node.removeChildren();
-    node.kind = value ? NodeKind.TRUE : NodeKind.FALSE;
+    node.kind = value ? .TRUE : .FALSE;
     node.content = null;
   }
 
   void flattenInt(Node node, int value) {
     assert node.type.isError(cache) || node.type.isInteger(cache);
     node.removeChildren();
-    node.kind = NodeKind.INT;
+    node.kind = .INT;
     node.content = IntContent(value);
   }
 
   void flattenReal(Node node, double value) {
     assert node.type.isError(cache) || node.type.isReal(cache);
     node.removeChildren();
-    node.kind = node.type == cache.floatType ? NodeKind.FLOAT : NodeKind.DOUBLE;
+    node.kind = node.type == cache.floatType ? .FLOAT : .DOUBLE;
     node.content = DoubleContent(value);
   }
 
@@ -35,7 +35,7 @@ class ConstantFolder {
     }
 
     // Symbols
-    if (kind == NodeKind.NAME) {
+    if (kind == .NAME) {
       if (node.symbol != null && node.symbol.isEnumValue()) {
         flattenInt(node, (int)node.symbol.enumValue);
       }
@@ -55,7 +55,7 @@ class ConstantFolder {
       }
 
       // Cast "int" values
-      else if (valueKind == NodeKind.INT) {
+      else if (valueKind == .INT) {
         if (type.isBool(cache)) flattenBool(node, (bool)value.asInt());
         else if (type.isInteger(cache)) flattenInt(node, (int)value.asInt());
         else if (type.isReal(cache)) flattenReal(node, (double)value.asInt());
@@ -76,20 +76,20 @@ class ConstantFolder {
 
       // Fold "bool" values
       if (valueKind.isBool()) {
-        if (kind == NodeKind.NOT) flattenBool(node, !value.asBool());
+        if (kind == .NOT) flattenBool(node, !value.asBool());
       }
 
       // Fold "int" values
-      else if (valueKind == NodeKind.INT) {
-        if (kind == NodeKind.POSITIVE) flattenInt(node, +value.asInt());
-        else if (kind == NodeKind.NEGATIVE) flattenInt(node, -value.asInt());
-        else if (kind == NodeKind.COMPLEMENT) flattenInt(node, ~value.asInt());
+      else if (valueKind == .INT) {
+        if (kind == .POSITIVE) flattenInt(node, +value.asInt());
+        else if (kind == .NEGATIVE) flattenInt(node, -value.asInt());
+        else if (kind == .COMPLEMENT) flattenInt(node, ~value.asInt());
       }
 
       // Fold "float" or "double" values
       else if (valueKind.isReal()) {
-        if (kind == NodeKind.POSITIVE) flattenReal(node, +value.asDouble());
-        else if (kind == NodeKind.NEGATIVE) flattenReal(node, -value.asDouble());
+        if (kind == .POSITIVE) flattenReal(node, +value.asDouble());
+        else if (kind == .NEGATIVE) flattenReal(node, -value.asDouble());
       }
     }
 
@@ -103,48 +103,48 @@ class ConstantFolder {
       // Fold "bool" values
       if (valueKind.isBool()) {
         switch (kind) {
-          case NodeKind.LOGICAL_AND { flattenBool(node, left.asBool() && right.asBool()); }
-          case NodeKind.LOGICAL_OR { flattenBool(node, left.asBool() || right.asBool()); }
-          case NodeKind.EQUAL { flattenBool(node, left.asBool() == right.asBool()); }
-          case NodeKind.NOT_EQUAL { flattenBool(node, left.asBool() != right.asBool()); }
+          case .LOGICAL_AND { flattenBool(node, left.asBool() && right.asBool()); }
+          case .LOGICAL_OR { flattenBool(node, left.asBool() || right.asBool()); }
+          case .EQUAL { flattenBool(node, left.asBool() == right.asBool()); }
+          case .NOT_EQUAL { flattenBool(node, left.asBool() != right.asBool()); }
         }
       }
 
       // Fold "int" values
-      else if (valueKind == NodeKind.INT) {
+      else if (valueKind == .INT) {
         switch (kind) {
-          case NodeKind.ADD { flattenInt(node, left.asInt() + right.asInt()); }
-          case NodeKind.SUBTRACT { flattenInt(node, left.asInt() - right.asInt()); }
-          case NodeKind.MULTIPLY { flattenInt(node, left.asInt() * right.asInt()); }
-          case NodeKind.DIVIDE { flattenInt(node, left.asInt() / right.asInt()); }
-          case NodeKind.REMAINDER { flattenInt(node, left.asInt() % right.asInt()); }
-          case NodeKind.SHIFT_LEFT { flattenInt(node, left.asInt() << right.asInt()); }
-          case NodeKind.SHIFT_RIGHT { flattenInt(node, left.asInt() >> right.asInt()); }
-          case NodeKind.BITWISE_AND { flattenInt(node, left.asInt() & right.asInt()); }
-          case NodeKind.BITWISE_OR { flattenInt(node, left.asInt() | right.asInt()); }
-          case NodeKind.BITWISE_XOR { flattenInt(node, left.asInt() ^ right.asInt()); }
-          case NodeKind.EQUAL { flattenBool(node, left.asInt() == right.asInt()); }
-          case NodeKind.NOT_EQUAL { flattenBool(node, left.asInt() != right.asInt()); }
-          case NodeKind.LESS_THAN { flattenBool(node, left.asInt() < right.asInt()); }
-          case NodeKind.GREATER_THAN { flattenBool(node, left.asInt() > right.asInt()); }
-          case NodeKind.LESS_THAN_OR_EQUAL { flattenBool(node, left.asInt() <= right.asInt()); }
-          case NodeKind.GREATER_THAN_OR_EQUAL { flattenBool(node, left.asInt() >= right.asInt()); }
+          case .ADD { flattenInt(node, left.asInt() + right.asInt()); }
+          case .SUBTRACT { flattenInt(node, left.asInt() - right.asInt()); }
+          case .MULTIPLY { flattenInt(node, left.asInt() * right.asInt()); }
+          case .DIVIDE { flattenInt(node, left.asInt() / right.asInt()); }
+          case .REMAINDER { flattenInt(node, left.asInt() % right.asInt()); }
+          case .SHIFT_LEFT { flattenInt(node, left.asInt() << right.asInt()); }
+          case .SHIFT_RIGHT { flattenInt(node, left.asInt() >> right.asInt()); }
+          case .BITWISE_AND { flattenInt(node, left.asInt() & right.asInt()); }
+          case .BITWISE_OR { flattenInt(node, left.asInt() | right.asInt()); }
+          case .BITWISE_XOR { flattenInt(node, left.asInt() ^ right.asInt()); }
+          case .EQUAL { flattenBool(node, left.asInt() == right.asInt()); }
+          case .NOT_EQUAL { flattenBool(node, left.asInt() != right.asInt()); }
+          case .LESS_THAN { flattenBool(node, left.asInt() < right.asInt()); }
+          case .GREATER_THAN { flattenBool(node, left.asInt() > right.asInt()); }
+          case .LESS_THAN_OR_EQUAL { flattenBool(node, left.asInt() <= right.asInt()); }
+          case .GREATER_THAN_OR_EQUAL { flattenBool(node, left.asInt() >= right.asInt()); }
         }
       }
 
       // Fold "float" and "double" values
       else if (valueKind.isReal()) {
         switch (kind) {
-          case NodeKind.ADD { flattenReal(node, left.asDouble() + right.asDouble()); }
-          case NodeKind.SUBTRACT { flattenReal(node, left.asDouble() - right.asDouble()); }
-          case NodeKind.MULTIPLY { flattenReal(node, left.asDouble() * right.asDouble()); }
-          case NodeKind.DIVIDE { flattenReal(node, left.asDouble() / right.asDouble()); }
-          case NodeKind.EQUAL { flattenBool(node, left.asDouble() == right.asDouble()); }
-          case NodeKind.NOT_EQUAL { flattenBool(node, left.asDouble() != right.asDouble()); }
-          case NodeKind.LESS_THAN { flattenBool(node, left.asDouble() < right.asDouble()); }
-          case NodeKind.GREATER_THAN { flattenBool(node, left.asDouble() > right.asDouble()); }
-          case NodeKind.LESS_THAN_OR_EQUAL { flattenBool(node, left.asDouble() <= right.asDouble()); }
-          case NodeKind.GREATER_THAN_OR_EQUAL { flattenBool(node, left.asDouble() >= right.asDouble()); }
+          case .ADD { flattenReal(node, left.asDouble() + right.asDouble()); }
+          case .SUBTRACT { flattenReal(node, left.asDouble() - right.asDouble()); }
+          case .MULTIPLY { flattenReal(node, left.asDouble() * right.asDouble()); }
+          case .DIVIDE { flattenReal(node, left.asDouble() / right.asDouble()); }
+          case .EQUAL { flattenBool(node, left.asDouble() == right.asDouble()); }
+          case .NOT_EQUAL { flattenBool(node, left.asDouble() != right.asDouble()); }
+          case .LESS_THAN { flattenBool(node, left.asDouble() < right.asDouble()); }
+          case .GREATER_THAN { flattenBool(node, left.asDouble() > right.asDouble()); }
+          case .LESS_THAN_OR_EQUAL { flattenBool(node, left.asDouble() <= right.asDouble()); }
+          case .GREATER_THAN_OR_EQUAL { flattenBool(node, left.asDouble() >= right.asDouble()); }
         }
       }
     }

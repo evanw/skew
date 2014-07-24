@@ -8,25 +8,25 @@ class CallGraph {
   IntMap<int> symbolToInfoIndex = IntMap<int>();
 
   new(Node program) {
-    assert program.kind == NodeKind.PROGRAM;
+    assert program.kind == .PROGRAM;
     visit(program);
   }
 
   void visit(Node node) {
-    if (node.kind == NodeKind.CALL) {
+    if (node.kind == .CALL) {
       Node value = node.callValue();
       if (value.symbol != null && value.symbol.kind.isFunction()) {
-        assert value.kind == NodeKind.NAME || value.kind == NodeKind.DOT;
+        assert value.kind == .NAME || value.kind == .DOT;
         recordCallSite(value.symbol, node);
       }
     }
 
-    else if (node.kind == NodeKind.BIND) {
+    else if (node.kind == .BIND) {
       assert node.symbol != null;
       recordCallSite(node.symbol, node);
     }
 
-    else if (node.kind == NodeKind.FUNCTION) {
+    else if (node.kind == .FUNCTION) {
       recordCallSite(node.symbol, null);
     }
 

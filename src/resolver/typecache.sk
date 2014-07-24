@@ -1,14 +1,14 @@
 class TypeCache {
-  Type globalType = createType(Symbol("<global>", SymbolKind.GLOBAL_NAMESPACE));
-  Type nullType = createType(Symbol("null", SymbolKind.OTHER));
-  Type voidType = createType(Symbol("void", SymbolKind.OTHER_TYPE));
+  Type globalType = createType(Symbol("<global>", .GLOBAL_NAMESPACE));
+  Type nullType = createType(Symbol("null", .OTHER));
+  Type voidType = createType(Symbol("void", .OTHER_TYPE));
 
   // All expressions that have syntax and/or semantic errors have this type,
   // which silences all further errors related to that expression. When the
   // compiler comes a cross a symbol or expression of this type, it just skips
   // over it because an error has already been logged and further errors will
   // most likely just be noise.
-  Type errorType = createType(Symbol("<error>", SymbolKind.OTHER));
+  Type errorType = createType(Symbol("<error>", .OTHER));
 
   // These are defined in the standard library
   Type intType = null;

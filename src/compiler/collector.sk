@@ -1,8 +1,8 @@
 enum SortTypes {
-  NO,
-  BY_INHERITANCE,
-  BY_INHERITANCE_AND_VALUE,
-  BY_INHERITANCE_AND_CONTAINMENT,
+  DO_NOT_SORT,
+  SORT_BY_INHERITANCE,
+  SORT_BY_INHERITANCE_AND_VALUE,
+  SORT_BY_INHERITANCE_AND_CONTAINMENT,
 }
 
 class Collector {
@@ -12,35 +12,33 @@ class Collector {
   List<Node> topLevelStatements = {};
 
   new(Node program, SortTypes sort) : sort = sort {
-    assert program.kind == NodeKind.PROGRAM;
+    assert program.kind == .PROGRAM;
     collectStatements(program);
     sortTypeSymbols();
   }
 
   void collectStatements(Node node) {
     switch (node.kind) {
-      case NodeKind.PROGRAM, NodeKind.FILE, NodeKind.MODIFIER, NodeKind.BLOCK {
+      case .PROGRAM, .FILE, .MODIFIER, .BLOCK {
         collectChildStatements(node);
       }
 
-      case NodeKind.NAMESPACE, NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE, NodeKind.EXTENSION, NodeKind.ENUM, NodeKind.ENUM_FLAGS {
+      case .NAMESPACE, .CLASS, .STRUCT, .INTERFACE, .EXTENSION, .ENUM, .ENUM_FLAGS {
         if (node == node.symbol.node) {
           typeSymbols.push(node.symbol);
         }
         collectChildStatements(node);
       }
 
-      case NodeKind.CONSTRUCTOR, NodeKind.FUNCTION {
+      case .CONSTRUCTOR, .FUNCTION {
         if (!node.symbol.enclosingSymbol.kind.isTypeWithInstances()) {
           freeFunctionSymbols.push(node.symbol);
         }
       }
 
       case
-        NodeKind.VARIABLE_CLUSTER, NodeKind.IF, NodeKind.FOR,
-        NodeKind.FOR_EACH, NodeKind.WHILE, NodeKind.DO_WHILE,
-        NodeKind.RETURN, NodeKind.BREAK, NodeKind.CONTINUE,
-        NodeKind.ASSERT, NodeKind.EXPRESSION, NodeKind.SWITCH {
+        .VARIABLE_CLUSTER, .IF, .FOR, .FOR_EACH, .WHILE, .DO_WHILE,
+        .RETURN, .BREAK, .CONTINUE, .ASSERT, .EXPRESSION, .SWITCH {
 
         topLevelStatements.push(node);
       }
@@ -48,7 +46,7 @@ class Collector {
   }
 
   void sortTypeSymbols() {
-    if (sort == SortTypes.NO) {
+    if (sort == .DO_NOT_SORT) {
       return;
     }
 
@@ -74,7 +72,7 @@ class Collector {
       return true;
     }
 
-    if (sort == SortTypes.BY_INHERITANCE_AND_VALUE && left.isStruct()) {
+    if (sort == .SORT_BY_INHERITANCE_AND_VALUE && left.isStruct()) {
       List<Member> members = right.members.values();
       if (members != null) {
         int i;
@@ -86,7 +84,7 @@ class Collector {
       }
     }
 
-    if (sort == SortTypes.BY_INHERITANCE_AND_CONTAINMENT && right.symbol.isContainedBy(left.symbol)) {
+    if (sort == .SORT_BY_INHERITANCE_AND_CONTAINMENT && right.symbol.isContainedBy(left.symbol)) {
       return true;
     }
 

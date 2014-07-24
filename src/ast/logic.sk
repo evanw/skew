@@ -2,40 +2,40 @@ in Node {
   void invertBooleanCondition(TypeCache cache) {
     assert kind.isExpression();
     switch (kind) {
-      case NodeKind.TRUE {
-        kind = NodeKind.FALSE;
+      case .TRUE {
+        kind = .FALSE;
         return;
       }
 
-      case NodeKind.FALSE {
-        kind = NodeKind.TRUE;
+      case .FALSE {
+        kind = .TRUE;
         return;
       }
 
-      case NodeKind.NOT {
+      case .NOT {
         become(unaryValue().remove());
         return;
       }
 
-      case NodeKind.EQUAL {
-        kind = NodeKind.NOT_EQUAL;
+      case .EQUAL {
+        kind = .NOT_EQUAL;
         return;
       }
 
-      case NodeKind.NOT_EQUAL {
-        kind = NodeKind.EQUAL;
+      case .NOT_EQUAL {
+        kind = .EQUAL;
         return;
       }
 
-      case NodeKind.LOGICAL_OR {
-        kind = NodeKind.LOGICAL_AND;
+      case .LOGICAL_OR {
+        kind = .LOGICAL_AND;
         binaryLeft().invertBooleanCondition(cache);
         binaryRight().invertBooleanCondition(cache);
         return;
       }
 
-      case NodeKind.LOGICAL_AND {
-        kind = NodeKind.LOGICAL_OR;
+      case .LOGICAL_AND {
+        kind = .LOGICAL_OR;
         binaryLeft().invertBooleanCondition(cache);
         binaryRight().invertBooleanCondition(cache);
         return;
@@ -61,13 +61,13 @@ in Node {
       //   NAN <= NAN  |  false
       //   NAN >= NAN  |  false
       //
-      case NodeKind.LESS_THAN, NodeKind.GREATER_THAN, NodeKind.LESS_THAN_OR_EQUAL, NodeKind.GREATER_THAN_OR_EQUAL {
+      case .LESS_THAN, .GREATER_THAN, .LESS_THAN_OR_EQUAL, .GREATER_THAN_OR_EQUAL {
         if (!cache.commonImplicitType(binaryLeft().type, binaryRight().type).isReal(cache)) {
           switch (kind) {
-            case NodeKind.LESS_THAN { kind = NodeKind.GREATER_THAN_OR_EQUAL; }
-            case NodeKind.GREATER_THAN { kind = NodeKind.LESS_THAN_OR_EQUAL; }
-            case NodeKind.LESS_THAN_OR_EQUAL { kind = NodeKind.GREATER_THAN; }
-            case NodeKind.GREATER_THAN_OR_EQUAL { kind = NodeKind.LESS_THAN; }
+            case .LESS_THAN { kind = .GREATER_THAN_OR_EQUAL; }
+            case .GREATER_THAN { kind = .LESS_THAN_OR_EQUAL; }
+            case .LESS_THAN_OR_EQUAL { kind = .GREATER_THAN; }
+            case .GREATER_THAN_OR_EQUAL { kind = .LESS_THAN; }
           }
           return;
         }
@@ -76,11 +76,11 @@ in Node {
 
     // Remove children before clone() so they are moved instead of copied
     List<Node> children = removeChildren();
-    become(Node.createUnary(NodeKind.NOT, clone().withChildren(children)).withType(cache.boolType));
+    become(Node.createUnary(.NOT, clone().withChildren(children)).withType(cache.boolType));
   }
 
   bool blockAlwaysEndsWithReturn() {
-    assert kind == NodeKind.BLOCK;
+    assert kind == .BLOCK;
     if (!hasChildren()) {
       return false;
     }
@@ -89,11 +89,11 @@ in Node {
     for (i = children.length - 1; i >= 0; i--) {
       Node child = children.get(i);
       switch (child.kind) {
-        case NodeKind.RETURN, NodeKind.IMPLICIT_RETURN {
+        case .RETURN, .IMPLICIT_RETURN {
           return true;
         }
 
-        case NodeKind.IF {
+        case .IF {
           Node trueBlock = child.ifTrue();
           Node falseBlock = child.ifFalse();
           if (falseBlock != null && trueBlock.blockAlwaysEndsWithReturn() && falseBlock.blockAlwaysEndsWithReturn()) {
@@ -101,7 +101,7 @@ in Node {
           }
         }
 
-        case NodeKind.SWITCH {
+        case .SWITCH {
           Node value = child.switchValue();
           List<Node> cases = child.switchCases();
           bool foundDefault = false;

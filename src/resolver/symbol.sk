@@ -34,7 +34,7 @@ enum SymbolKind {
 
 in SymbolKind {
   bool isGlobalNamespace() {
-    return this == SymbolKind.GLOBAL_NAMESPACE;
+    return this == .GLOBAL_NAMESPACE;
   }
 
   bool isNamespace() {
@@ -194,7 +194,7 @@ class Symbol {
   }
 
   string fullName() {
-    return enclosingSymbol != null && kind != SymbolKind.PARAMETER && !enclosingSymbol.kind.isGlobalNamespace()
+    return enclosingSymbol != null && kind != .PARAMETER && !enclosingSymbol.kind.isGlobalNamespace()
       ? enclosingSymbol.fullName().append(".").append(name) : name;
   }
 
