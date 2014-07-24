@@ -4,7 +4,7 @@ struct FormattedRange {
 }
 
 struct Range {
-  static Range EMPTY;
+  static Range EMPTY = Range(null, 0, 0);
 
   final Source source;
   final int start;
@@ -74,33 +74,33 @@ struct Range {
       }
     }
 
-    return new FormattedRange(line, repeat(" ", a).append(b - a < 2 ? "^" : repeat("~", b - a)));
+    return FormattedRange(line, repeat(" ", a).append(b - a < 2 ? "^" : repeat("~", b - a)));
   }
 
   static Range span(Range start, Range end) {
     assert start.source == end.source;
     assert start.start <= end.end;
-    return new Range(start.source, start.start, end.end);
+    return Range(start.source, start.start, end.end);
   }
 
   static Range inner(Range start, Range end) {
     assert start.source == end.source;
     assert start.end <= end.start;
-    return new Range(start.source, start.end, end.start);
+    return Range(start.source, start.end, end.start);
   }
 
   static Range before(Range outer, Range inner) {
     assert outer.source == inner.source;
     assert outer.start <= inner.start;
     assert outer.end >= inner.end;
-    return new Range(outer.source, outer.start, inner.start);
+    return Range(outer.source, outer.start, inner.start);
   }
 
   static Range after(Range outer, Range inner) {
     assert outer.source == inner.source;
     assert outer.start <= inner.start;
     assert outer.end >= inner.end;
-    return new Range(outer.source, inner.end, outer.end);
+    return Range(outer.source, inner.end, outer.end);
   }
 
   static bool equal(Range left, Range right) {

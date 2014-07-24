@@ -349,7 +349,7 @@ class Node {
   }
 
   Node clone() {
-    Node node = new Node(kind);
+    Node node = Node(kind);
     node.range = range;
     node.type = type;
     node.symbol = symbol;

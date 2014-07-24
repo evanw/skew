@@ -55,6 +55,6 @@ class Source {
 
     // Use the line to compute the column
     int column = line > 0 ? index - lineOffsets.get(line - 1) : index;
-    return new LineColumn(line - 1, column);
+    return LineColumn(line - 1, column);
   }
 }

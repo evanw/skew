@@ -139,12 +139,12 @@ class Parselet {
 //   http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
 //
 class Pratt {
-  IntMap<Parselet> table = new IntMap<Parselet>();
+  IntMap<Parselet> table = IntMap<Parselet>();
 
   Parselet parselet(TokenKind kind, int precedence) {
     Parselet parselet = table.getOrDefault(kind, null);
     if (parselet == null) {
-      Parselet created = new Parselet(precedence);
+      Parselet created = Parselet(precedence);
       parselet = created;
       table.set(kind, created);
     } else if (precedence > parselet.precedence) {
@@ -190,22 +190,22 @@ class Pratt {
   }
 
   void literal(TokenKind kind, ILiteralCallback callback) {
-    parselet(kind, 0).prefix = new LiteralParselet(callback);
+    parselet(kind, 0).prefix = LiteralParselet(callback);
   }
 
   void prefix(TokenKind kind, int precedence, IPrefixCallback callback) {
-    parselet(kind, 0).prefix = new PrefixParselet(callback, this, precedence);
+    parselet(kind, 0).prefix = PrefixParselet(callback, this, precedence);
   }
 
   void postfix(TokenKind kind, int precedence, IPostfixCallback callback) {
-    parselet(kind, precedence).infix = new PostfixParselet(callback);
+    parselet(kind, precedence).infix = PostfixParselet(callback);
   }
 
   void infix(TokenKind kind, int precedence, IInfixCallback callback) {
-    parselet(kind, precedence).infix = new InfixParselet(callback, this, precedence);
+    parselet(kind, precedence).infix = InfixParselet(callback, this, precedence);
   }
 
   void infixRight(TokenKind kind, int precedence, IInfixCallback callback) {
-    parselet(kind, precedence).infix = new InfixParselet(callback, this, precedence - 1); // Subtract 1 for right-associativity
+    parselet(kind, precedence).infix = InfixParselet(callback, this, precedence - 1); // Subtract 1 for right-associativity
   }
 }

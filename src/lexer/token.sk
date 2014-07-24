@@ -79,8 +79,8 @@ void prepareTokens(List<Token> tokens) {
               tokenKind == TokenKind.ASSIGN_SHIFT_RIGHT ? TokenKind.GREATER_THAN_OR_EQUAL :
               TokenKind.ERROR;
             assert kind != TokenKind.ERROR;
-            tokens.insert(i + 1, new Token(new Range(range.source, start + 1, range.end), kind, text));
-            token.range = new Range(range.source, start, start + 1);
+            tokens.insert(i + 1, Token(Range(range.source, start + 1, range.end), kind, text));
+            token.range = Range(range.source, start, start + 1);
             token.text = ">";
           }
 

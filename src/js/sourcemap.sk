@@ -17,7 +17,7 @@ class SourceMapGenerator {
       sourceIndex = sources.length;
       sources.push(source);
     }
-    mappings.push(new SourceMapping(sourceIndex, originalLine, originalColumn, generatedLine, generatedColumn));
+    mappings.push(SourceMapping(sourceIndex, originalLine, originalColumn, generatedLine, generatedColumn));
   }
 
   string toString() {
@@ -29,7 +29,7 @@ class SourceMapGenerator {
       sourceNames.push(quoteString(source.name, '"'));
       sourceContents.push(quoteString(source.contents, '"'));
     }
-    StringBuilder result = new StringBuilder();
+    StringBuilder result = StringBuilder();
     result.append("{\"version\":3,\"sources\":[").append(",".join(sourceNames)).append(
       "],\"sourcesContent\":[").append(",".join(sourceContents)).append("],\"names\":[],\"mappings\":\"");
     compile(result);
@@ -38,7 +38,10 @@ class SourceMapGenerator {
 
   void compile(StringBuilder result) {
     // Sort the mappings in increasing order by generated location
-    mappings.sort(SourceMappingComparer.INSTANCE);
+    mappings.sort((left, right) => {
+      int result = left.generatedLine - right.generatedLine;
+      return result != 0 ? result : left.generatedColumn - right.generatedColumn;
+    });
 
     int previousGeneratedColumn = 0;
     int previousGeneratedLine = 0;
@@ -52,7 +55,7 @@ class SourceMapGenerator {
       SourceMapping mapping = mappings.get(i);
       int generatedLine = mapping.generatedLine;
 
-      // Insert ',' for the same line and ';' for a new line
+      // Insert ',' for the same line and ';' for a line
       if (previousGeneratedLine == generatedLine) {
         if (previousGeneratedColumn == mapping.generatedColumn && (
             previousGeneratedLine > 0 || previousGeneratedColumn > 0)) {
@@ -111,14 +114,5 @@ class SourceMapGenerator {
       encoded = encoded.append(BASE64.get(digit));
     } while (vlq > 0);
     return encoded;
-  }
-}
-
-class SourceMappingComparer : IComparer<SourceMapping> {
-  static SourceMappingComparer INSTANCE = new SourceMappingComparer();
-
-  override int compare(SourceMapping left, SourceMapping right) {
-    int result = left.generatedLine - right.generatedLine;
-    return result != 0 ? result : left.generatedColumn - right.generatedColumn;
   }
 }

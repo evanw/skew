@@ -1,4 +1,5 @@
-if (typeof process !== 'undefined') {
+// Run this when run with node but not when run with mocha
+if (typeof process !== 'undefined' && typeof it === 'undefined') {
   var fs = require('fs');
   var io = io || {};
 

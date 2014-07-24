@@ -1,14 +1,14 @@
 class TypeCache {
-  Type globalType = createType(new Symbol("<global>", SymbolKind.GLOBAL_NAMESPACE));
-  Type nullType = createType(new Symbol("null", SymbolKind.OTHER));
-  Type voidType = createType(new Symbol("void", SymbolKind.OTHER_TYPE));
+  Type globalType = createType(Symbol("<global>", SymbolKind.GLOBAL_NAMESPACE));
+  Type nullType = createType(Symbol("null", SymbolKind.OTHER));
+  Type voidType = createType(Symbol("void", SymbolKind.OTHER_TYPE));
 
   // All expressions that have syntax and/or semantic errors have this type,
   // which silences all further errors related to that expression. When the
   // compiler comes a cross a symbol or expression of this type, it just skips
   // over it because an error has already been logged and further errors will
   // most likely just be noise.
-  Type errorType = createType(new Symbol("<error>", SymbolKind.OTHER));
+  Type errorType = createType(Symbol("<error>", SymbolKind.OTHER));
 
   // These are defined in the standard library
   Type intType = null;
@@ -18,10 +18,10 @@ class TypeCache {
   Type stringType = null;
   Type listType = null;
 
-  IntMap<List<Type>> hashTable = new IntMap<List<Type>>();
+  IntMap<List<Type>> hashTable = IntMap<List<Type>>();
 
   static Type createType(Symbol symbol) {
-    Type type = new Type(symbol);
+    Type type = Type(symbol);
     symbol.type = type;
     symbol.flags = symbol.flags | SymbolFlag.INITIALIZED;
     return type;
@@ -115,14 +115,14 @@ class TypeCache {
       }
     }
 
-    // Make a new hash bucket
+    // Make a hash bucket
     else {
       existingTypes = {};
       hashTable.set(hash, existingTypes);
     }
 
     // We didn't find a match, so make the type for the first time
-    Type type = new Type(symbol);
+    Type type = Type(symbol);
     if (symbol != null) {
       type.substitutions = substitutions;
       type.relevantTypes = substituteAll(unparameterized.relevantTypes, symbol.parameters, type.substitutions);
@@ -130,7 +130,7 @@ class TypeCache {
       int i;
       for (i = 0; i < members.length; i++) {
         Member member = members.get(i);
-        Member clone = new Member(member.symbol);
+        Member clone = Member(member.symbol);
         clone.dependency = member;
         clone.parameterizedType = type;
         type.addMember(clone);

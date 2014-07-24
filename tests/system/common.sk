@@ -3,18 +3,18 @@ import void testJS(string input, string expected);
 import void expect(string output, string expected);
 
 void run(string input, string expected) {
-  CompilerOptions options = new CompilerOptions();
-  options.inputs = { new Source("<stdin>", input) };
-  Compiler compiler = new Compiler();
+  CompilerOptions options = CompilerOptions();
+  options.inputs = { Source("<stdin>", input) };
+  Compiler compiler = Compiler();
   CompilerResult result = compiler.compile(options);
   expect(compiler.log.toString(), expected);
 }
 
 void runJS(string input, string expected) {
-  CompilerOptions options = new CompilerOptions();
-  options.inputs = { new Source("<stdin>", input) };
+  CompilerOptions options = CompilerOptions();
+  options.inputs = { Source("<stdin>", input) };
   options.targetFormat = TargetFormat.JS;
-  Compiler compiler = new Compiler();
+  Compiler compiler = Compiler();
   CompilerResult result = compiler.compile(options);
   if (result.outputs != null) {
     string output = "";

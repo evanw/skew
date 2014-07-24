@@ -1,6 +1,6 @@
 class InstanceToStaticPass {
   static void run(Node program) {
-    CallGraph graph = new CallGraph(program);
+    CallGraph graph = CallGraph(program);
     int i;
     for (i = 0; i < graph.callInfo.length; i++) {
       CallInfo info = graph.callInfo.get(i);
@@ -10,7 +10,7 @@ class InstanceToStaticPass {
         // Change the instance function to a static function
         symbol.kind = SymbolKind.GLOBAL_FUNCTION;
         symbol.flags = symbol.flags | SymbolFlag.STATIC;
-        Symbol thisSymbol = new Symbol("this", SymbolKind.LOCAL_VARIABLE);
+        Symbol thisSymbol = Symbol("this", SymbolKind.LOCAL_VARIABLE);
         thisSymbol.type = enclosingSymbol.type;
         symbol.node.functionArguments().insertChild(0, Node.createVariable(Node.createName("this").withSymbol(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol));
         recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);

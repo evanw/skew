@@ -26,16 +26,16 @@ namespace js {
     bool needMathImul = false;
     Source currentSource = null;
     bool isStartOfExpression = false;
-    SourceMapGenerator generator = new SourceMapGenerator();
+    SourceMapGenerator generator = SourceMapGenerator();
     CompilerOptions options;
     TypeCache cache;
     string indent = "";
 
     override List<Source> emitProgram(Node program) {
       InstanceToStaticPass.run(program);
-      patchNode(program, new PatchContext());
-      currentSource = new Source(options.outputFile, "");
-      Collector collector = new Collector(program, SortTypes.BY_INHERITANCE_AND_CONTAINMENT);
+      patchNode(program, PatchContext());
+      currentSource = Source(options.outputFile, "");
+      Collector collector = Collector(program, SortTypes.BY_INHERITANCE_AND_CONTAINMENT);
 
       // Emit helper functions
       if (needMathImul) {
@@ -828,7 +828,7 @@ namespace js {
     }
 
     static StringMap<bool> createIsKeyword() {
-      StringMap<bool> result = new StringMap<bool>();
+      StringMap<bool> result = StringMap<bool>();
       result.set("arguments", true);
       result.set("call", true);
       result.set("apply", true);

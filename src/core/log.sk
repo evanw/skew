@@ -18,13 +18,13 @@ class Log {
 
   void error(Range range, string text) {
     assert !range.isEmpty();
-    diagnostics.push(new Diagnostic(DiagnosticKind.ERROR, range, text));
+    diagnostics.push(Diagnostic(DiagnosticKind.ERROR, range, text));
     errorCount++;
   }
 
   void warning(Range range, string text) {
     assert !range.isEmpty();
-    diagnostics.push(new Diagnostic(DiagnosticKind.WARNING, range, text));
+    diagnostics.push(Diagnostic(DiagnosticKind.WARNING, range, text));
     warningCount++;
   }
 
@@ -36,7 +36,7 @@ class Log {
   }
 
   string toString() {
-    StringBuilder builder = new StringBuilder();
+    StringBuilder builder = StringBuilder();
     int i;
 
     // Emit the log assuming an infinite terminal width

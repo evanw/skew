@@ -11,49 +11,49 @@ struct OperatorInfo {
 }
 
 IntMap<OperatorInfo> createOperatorMap() {
-  IntMap<OperatorInfo> result = new IntMap<OperatorInfo>();
+  IntMap<OperatorInfo> result = IntMap<OperatorInfo>();
 
-  result.set(NodeKind.NOT, new OperatorInfo("!", Precedence.UNARY_PREFIX, Associativity.NONE));
-  result.set(NodeKind.POSITIVE, new OperatorInfo("+", Precedence.UNARY_PREFIX, Associativity.NONE));
-  result.set(NodeKind.NEGATIVE, new OperatorInfo("-", Precedence.UNARY_PREFIX, Associativity.NONE));
-  result.set(NodeKind.COMPLEMENT, new OperatorInfo("~", Precedence.UNARY_PREFIX, Associativity.NONE));
-  result.set(NodeKind.PREFIX_INCREMENT, new OperatorInfo("++", Precedence.UNARY_PREFIX, Associativity.NONE));
-  result.set(NodeKind.PREFIX_DECREMENT, new OperatorInfo("--", Precedence.UNARY_PREFIX, Associativity.NONE));
-  result.set(NodeKind.POSTFIX_INCREMENT, new OperatorInfo("++", Precedence.UNARY_POSTFIX, Associativity.NONE));
-  result.set(NodeKind.POSTFIX_DECREMENT, new OperatorInfo("--", Precedence.UNARY_POSTFIX, Associativity.NONE));
+  result.set(NodeKind.NOT, OperatorInfo("!", Precedence.UNARY_PREFIX, Associativity.NONE));
+  result.set(NodeKind.POSITIVE, OperatorInfo("+", Precedence.UNARY_PREFIX, Associativity.NONE));
+  result.set(NodeKind.NEGATIVE, OperatorInfo("-", Precedence.UNARY_PREFIX, Associativity.NONE));
+  result.set(NodeKind.COMPLEMENT, OperatorInfo("~", Precedence.UNARY_PREFIX, Associativity.NONE));
+  result.set(NodeKind.PREFIX_INCREMENT, OperatorInfo("++", Precedence.UNARY_PREFIX, Associativity.NONE));
+  result.set(NodeKind.PREFIX_DECREMENT, OperatorInfo("--", Precedence.UNARY_PREFIX, Associativity.NONE));
+  result.set(NodeKind.POSTFIX_INCREMENT, OperatorInfo("++", Precedence.UNARY_POSTFIX, Associativity.NONE));
+  result.set(NodeKind.POSTFIX_DECREMENT, OperatorInfo("--", Precedence.UNARY_POSTFIX, Associativity.NONE));
 
-  result.set(NodeKind.ADD, new OperatorInfo("+", Precedence.ADD, Associativity.LEFT));
-  result.set(NodeKind.BITWISE_AND, new OperatorInfo("&", Precedence.BITWISE_AND, Associativity.LEFT));
-  result.set(NodeKind.BITWISE_OR, new OperatorInfo("|", Precedence.BITWISE_OR, Associativity.LEFT));
-  result.set(NodeKind.BITWISE_XOR, new OperatorInfo("^", Precedence.BITWISE_XOR, Associativity.LEFT));
-  result.set(NodeKind.DIVIDE, new OperatorInfo("/", Precedence.MULTIPLY, Associativity.LEFT));
-  result.set(NodeKind.EQUAL, new OperatorInfo("==", Precedence.EQUAL, Associativity.LEFT));
-  result.set(NodeKind.GREATER_THAN, new OperatorInfo(">", Precedence.COMPARE, Associativity.LEFT));
-  result.set(NodeKind.GREATER_THAN_OR_EQUAL, new OperatorInfo(">=", Precedence.COMPARE, Associativity.LEFT));
-  result.set(NodeKind.IN, new OperatorInfo("in", Precedence.COMPARE, Associativity.LEFT));
-  result.set(NodeKind.INDEX, new OperatorInfo("[]", Precedence.MEMBER, Associativity.LEFT));
-  result.set(NodeKind.LESS_THAN, new OperatorInfo("<", Precedence.COMPARE, Associativity.LEFT));
-  result.set(NodeKind.LESS_THAN_OR_EQUAL, new OperatorInfo("<=", Precedence.COMPARE, Associativity.LEFT));
-  result.set(NodeKind.LOGICAL_AND, new OperatorInfo("&&", Precedence.LOGICAL_AND, Associativity.LEFT));
-  result.set(NodeKind.LOGICAL_OR, new OperatorInfo("||", Precedence.LOGICAL_OR, Associativity.LEFT));
-  result.set(NodeKind.MULTIPLY, new OperatorInfo("*", Precedence.MULTIPLY, Associativity.LEFT));
-  result.set(NodeKind.NOT_EQUAL, new OperatorInfo("!=", Precedence.EQUAL, Associativity.LEFT));
-  result.set(NodeKind.REMAINDER, new OperatorInfo("%", Precedence.MULTIPLY, Associativity.LEFT));
-  result.set(NodeKind.SHIFT_LEFT, new OperatorInfo("<<", Precedence.SHIFT, Associativity.LEFT));
-  result.set(NodeKind.SHIFT_RIGHT, new OperatorInfo(">>", Precedence.SHIFT, Associativity.LEFT));
-  result.set(NodeKind.SUBTRACT, new OperatorInfo("-", Precedence.ADD, Associativity.LEFT));
+  result.set(NodeKind.ADD, OperatorInfo("+", Precedence.ADD, Associativity.LEFT));
+  result.set(NodeKind.BITWISE_AND, OperatorInfo("&", Precedence.BITWISE_AND, Associativity.LEFT));
+  result.set(NodeKind.BITWISE_OR, OperatorInfo("|", Precedence.BITWISE_OR, Associativity.LEFT));
+  result.set(NodeKind.BITWISE_XOR, OperatorInfo("^", Precedence.BITWISE_XOR, Associativity.LEFT));
+  result.set(NodeKind.DIVIDE, OperatorInfo("/", Precedence.MULTIPLY, Associativity.LEFT));
+  result.set(NodeKind.EQUAL, OperatorInfo("==", Precedence.EQUAL, Associativity.LEFT));
+  result.set(NodeKind.GREATER_THAN, OperatorInfo(">", Precedence.COMPARE, Associativity.LEFT));
+  result.set(NodeKind.GREATER_THAN_OR_EQUAL, OperatorInfo(">=", Precedence.COMPARE, Associativity.LEFT));
+  result.set(NodeKind.IN, OperatorInfo("in", Precedence.COMPARE, Associativity.LEFT));
+  result.set(NodeKind.INDEX, OperatorInfo("[]", Precedence.MEMBER, Associativity.LEFT));
+  result.set(NodeKind.LESS_THAN, OperatorInfo("<", Precedence.COMPARE, Associativity.LEFT));
+  result.set(NodeKind.LESS_THAN_OR_EQUAL, OperatorInfo("<=", Precedence.COMPARE, Associativity.LEFT));
+  result.set(NodeKind.LOGICAL_AND, OperatorInfo("&&", Precedence.LOGICAL_AND, Associativity.LEFT));
+  result.set(NodeKind.LOGICAL_OR, OperatorInfo("||", Precedence.LOGICAL_OR, Associativity.LEFT));
+  result.set(NodeKind.MULTIPLY, OperatorInfo("*", Precedence.MULTIPLY, Associativity.LEFT));
+  result.set(NodeKind.NOT_EQUAL, OperatorInfo("!=", Precedence.EQUAL, Associativity.LEFT));
+  result.set(NodeKind.REMAINDER, OperatorInfo("%", Precedence.MULTIPLY, Associativity.LEFT));
+  result.set(NodeKind.SHIFT_LEFT, OperatorInfo("<<", Precedence.SHIFT, Associativity.LEFT));
+  result.set(NodeKind.SHIFT_RIGHT, OperatorInfo(">>", Precedence.SHIFT, Associativity.LEFT));
+  result.set(NodeKind.SUBTRACT, OperatorInfo("-", Precedence.ADD, Associativity.LEFT));
 
-  result.set(NodeKind.ASSIGN, new OperatorInfo("=", Precedence.ASSIGN, Associativity.RIGHT));
-  result.set(NodeKind.ASSIGN_ADD, new OperatorInfo("+=", Precedence.ASSIGN, Associativity.RIGHT));
-  result.set(NodeKind.ASSIGN_BITWISE_AND, new OperatorInfo("&=", Precedence.ASSIGN, Associativity.RIGHT));
-  result.set(NodeKind.ASSIGN_BITWISE_OR, new OperatorInfo("|=", Precedence.ASSIGN, Associativity.RIGHT));
-  result.set(NodeKind.ASSIGN_BITWISE_XOR, new OperatorInfo("^=", Precedence.ASSIGN, Associativity.RIGHT));
-  result.set(NodeKind.ASSIGN_DIVIDE, new OperatorInfo("/=", Precedence.ASSIGN, Associativity.RIGHT));
-  result.set(NodeKind.ASSIGN_MULTIPLY, new OperatorInfo("*=", Precedence.ASSIGN, Associativity.RIGHT));
-  result.set(NodeKind.ASSIGN_REMAINDER, new OperatorInfo("%=", Precedence.ASSIGN, Associativity.RIGHT));
-  result.set(NodeKind.ASSIGN_SHIFT_LEFT, new OperatorInfo("<<=", Precedence.ASSIGN, Associativity.RIGHT));
-  result.set(NodeKind.ASSIGN_SHIFT_RIGHT, new OperatorInfo(">>=", Precedence.ASSIGN, Associativity.RIGHT));
-  result.set(NodeKind.ASSIGN_SUBTRACT, new OperatorInfo("-=", Precedence.ASSIGN, Associativity.RIGHT));
+  result.set(NodeKind.ASSIGN, OperatorInfo("=", Precedence.ASSIGN, Associativity.RIGHT));
+  result.set(NodeKind.ASSIGN_ADD, OperatorInfo("+=", Precedence.ASSIGN, Associativity.RIGHT));
+  result.set(NodeKind.ASSIGN_BITWISE_AND, OperatorInfo("&=", Precedence.ASSIGN, Associativity.RIGHT));
+  result.set(NodeKind.ASSIGN_BITWISE_OR, OperatorInfo("|=", Precedence.ASSIGN, Associativity.RIGHT));
+  result.set(NodeKind.ASSIGN_BITWISE_XOR, OperatorInfo("^=", Precedence.ASSIGN, Associativity.RIGHT));
+  result.set(NodeKind.ASSIGN_DIVIDE, OperatorInfo("/=", Precedence.ASSIGN, Associativity.RIGHT));
+  result.set(NodeKind.ASSIGN_MULTIPLY, OperatorInfo("*=", Precedence.ASSIGN, Associativity.RIGHT));
+  result.set(NodeKind.ASSIGN_REMAINDER, OperatorInfo("%=", Precedence.ASSIGN, Associativity.RIGHT));
+  result.set(NodeKind.ASSIGN_SHIFT_LEFT, OperatorInfo("<<=", Precedence.ASSIGN, Associativity.RIGHT));
+  result.set(NodeKind.ASSIGN_SHIFT_RIGHT, OperatorInfo(">>=", Precedence.ASSIGN, Associativity.RIGHT));
+  result.set(NodeKind.ASSIGN_SUBTRACT, OperatorInfo("-=", Precedence.ASSIGN, Associativity.RIGHT));
 
   return result;
 }

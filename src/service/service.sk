@@ -39,9 +39,9 @@ class LanguageService {
 
   List<LanguageServiceDiagnostic> checkForDiagnostics(string input) {
     // Compile input
-    CompilerOptions options = new CompilerOptions();
-    Compiler compiler = new Compiler();
-    previousSource = new Source("<input>", input);
+    CompilerOptions options = CompilerOptions();
+    Compiler compiler = Compiler();
+    previousSource = Source("<input>", input);
     options.inputs = { previousSource };
     previousResult = compiler.compile(options);
 
@@ -58,7 +58,7 @@ class LanguageService {
           case DiagnosticKind.ERROR { type = "error"; }
           case DiagnosticKind.WARNING { type = "warning"; }
         }
-        diagnostics.push(new LanguageServiceDiagnostic(type, diagnostic.text, start.line, start.column, range.start, range.singleLineLength()));
+        diagnostics.push(LanguageServiceDiagnostic(type, diagnostic.text, start.line, start.column, range.start, range.singleLineLength()));
       }
     }
     return diagnostics;
@@ -66,9 +66,9 @@ class LanguageService {
 
   List<LanguageServiceCompletion> checkForCompletions(string input, int line, int column) {
     // Compile input
-    CompilerOptions options = new CompilerOptions();
-    Compiler compiler = new Compiler();
-    previousSource = new Source("<input>", input);
+    CompilerOptions options = CompilerOptions();
+    Compiler compiler = Compiler();
+    previousSource = Source("<input>", input);
     options.inputs = { previousSource };
     previousResult = compiler.compile(options);
 
@@ -111,7 +111,7 @@ namespace service {
     Type type = node.type;
     if (type != null && symbol != null) {
       LineColumn start = source.indexToLineColumn(node.range.start);
-      LanguageServiceTypeResult result = new LanguageServiceTypeResult(start.line, start.column, node.range.start, node.range.singleLineLength(), type.toString());
+      LanguageServiceTypeResult result = LanguageServiceTypeResult(start.line, start.column, node.range.start, node.range.singleLineLength(), type.toString());
 
       // Pretty-print the symbol
       switch (symbol.kind) {
@@ -207,7 +207,7 @@ namespace service {
       }
 
       // Walk up the scope chain and accumulate all members
-      StringMap<Member> allMembers = new StringMap<Member>();
+      StringMap<Member> allMembers = StringMap<Member>();
       collectAllMembers(node.scope, allMembers);
       List<Member> members = allMembers.values();
 
@@ -236,7 +236,7 @@ namespace service {
       } else {
         text = text.append("$");
       }
-      completions.push(new LanguageServiceCompletion(name, type.toString(), text));
+      completions.push(LanguageServiceCompletion(name, type.toString(), text));
     }
   }
 

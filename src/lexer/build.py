@@ -83,18 +83,18 @@ List<Token> tokenize(Log log, Source source) {
 
     // This is the default action in flex, which is usually called ECHO
     else if (yy_act == TokenKind.ERROR) {
-      syntaxErrorExtraData(log, new Range(source, yy_bp, yy_cp), text.slice(yy_bp, yy_cp));
+      syntaxErrorExtraData(log, Range(source, yy_bp, yy_cp), text.slice(yy_bp, yy_cp));
       break;
     }
 
     // Ignore END_OF_FILE since this loop must still perform the last action
     else if (yy_act != TokenKind.END_OF_FILE) {
-      tokens.push(new Token(new Range(source, yy_bp, yy_cp), yy_act, text.slice(yy_bp, yy_cp)));
+      tokens.push(Token(Range(source, yy_bp, yy_cp), yy_act, text.slice(yy_bp, yy_cp)));
     }
   }
 
   // Every token stream ends in END_OF_FILE
-  tokens.push(new Token(new Range(source, text_length, text_length), TokenKind.END_OF_FILE, ""));
+  tokens.push(Token(Range(source, text_length, text_length), TokenKind.END_OF_FILE, ""));
 
   // Do a single post-processing pass on the token list
   prepareTokens(tokens);

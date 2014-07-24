@@ -31,7 +31,7 @@ class Scope {
 
   void insert(Symbol symbol) {
     if (type != null) {
-      type.addMember(new Member(symbol));
+      type.addMember(Member(symbol));
       return;
     }
     insertLocal(symbol);
@@ -39,10 +39,10 @@ class Scope {
 
   void insertLocal(Symbol symbol) {
     if (locals == null) {
-      locals = new StringMap<Member>();
+      locals = StringMap<Member>();
     }
     assert !locals.has(symbol.name);
-    locals.set(symbol.name, new Member(symbol));
+    locals.set(symbol.name, Member(symbol));
   }
 
   Member find(string name) {

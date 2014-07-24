@@ -5,7 +5,7 @@ class CallInfo {
 
 class CallGraph {
   List<CallInfo> callInfo = {};
-  IntMap<int> symbolToInfoIndex = new IntMap<int>();
+  IntMap<int> symbolToInfoIndex = IntMap<int>();
 
   new(Node program) {
     assert program.kind == NodeKind.PROGRAM;
@@ -43,7 +43,7 @@ class CallGraph {
 
   void recordCallSite(Symbol symbol, Node node) {
     int index = symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
-    CallInfo info = index < 0 ? new CallInfo(symbol) : callInfo.get(index);
+    CallInfo info = index < 0 ? CallInfo(symbol) : callInfo.get(index);
     if (index < 0) {
       symbolToInfoIndex.set(symbol.uniqueID, callInfo.length);
       callInfo.push(info);

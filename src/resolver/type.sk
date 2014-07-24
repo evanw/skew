@@ -1,5 +1,5 @@
 class Type {
-  StringMap<Member> members = new StringMap<Member>();
+  StringMap<Member> members = StringMap<Member>();
 
   // The symbol that declared this type, if any. Function types don't have a
   // declaring symbol, so this will be null for function types.

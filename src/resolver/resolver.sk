@@ -18,7 +18,7 @@ class ResolveContext {
   Symbol functionSymbol = null;
 
   static ResolveContext fromNode(Node node) {
-    ResolveContext context = new ResolveContext();
+    ResolveContext context = ResolveContext();
     if (node.parent == null && node.symbol.enclosingSymbol != null) {
       assert node.symbol.enclosingSymbol.kind.isTypeWithInstances();
       context.symbolForThis = node.symbol.enclosingSymbol;
@@ -38,9 +38,9 @@ class ResolveContext {
 }
 
 class Resolver {
-  TypeCache cache = new TypeCache();
+  TypeCache cache = TypeCache();
   ConstantFolder constantFolder = null;
-  ResolveContext context = new ResolveContext();
+  ResolveContext context = ResolveContext();
   List<Node> parsedDeclarations = {};
   List<Node> parsedBlocks = {};
   Type typeContext = null;
@@ -49,9 +49,9 @@ class Resolver {
 
   void run(Node program) {
     assert program.kind == NodeKind.PROGRAM;
-    Scope globalScope = new Scope(null);
+    Scope globalScope = Scope(null);
     globalScope.insertGlobals(cache);
-    constantFolder = new ConstantFolder(cache);
+    constantFolder = ConstantFolder(cache);
     prepareNode(program, globalScope);
     globalScope.linkGlobals(cache);
     resolve(program, null);
@@ -74,7 +74,7 @@ class Resolver {
     else if (node.kind == NodeKind.BLOCK) {
       // Just use the existing scope from named block declarations
       if (!node.parent.kind.isNamedBlockDeclaration() && !node.parent.kind.isLoop()) {
-        scope = new Scope(scope);
+        scope = Scope(scope);
       }
       node.scope = scope;
       parsedBlocks.push(node);
@@ -107,9 +107,9 @@ class Resolver {
           symbol.node.appendToSiblingChain(node);
         }
 
-        // Make a new symbol
+        // Make a symbol
         else {
-          symbol = new Symbol(name, SymbolKind.OTHER);
+          symbol = Symbol(name, SymbolKind.OTHER);
           symbol.node = node;
           if (scope.type != null) {
             symbol.enclosingSymbol = scope.type.symbol;
@@ -137,7 +137,7 @@ class Resolver {
         //   namespace Foo { class Bar {} }
         //
         if (symbol.type == null && node.kind.isNamedBlockDeclaration()) {
-          symbol.type = new Type(symbol);
+          symbol.type = Type(symbol);
         }
       }
     }
@@ -145,7 +145,7 @@ class Resolver {
     // Also introduce a scope on object declarations for the type parameters
     // and on function declarations and lambda expressions for the arguments
     if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == NodeKind.LAMBDA || node.kind.isLoop() || node.kind == NodeKind.LET) {
-      node.scope = scope = new Scope(scope);
+      node.scope = scope = Scope(scope);
     }
 
     // Automatically traverse the children of all nodes, even though this pass
@@ -273,7 +273,7 @@ class Resolver {
       sibling = node.sibling;
       while (sibling != null) {
         if (sibling.kind == NodeKind.VARIABLE || sibling.kind.isFunction()) {
-          Symbol disconnected = sibling.symbol = new Symbol(symbol.name, SymbolKind.OTHER);
+          Symbol disconnected = sibling.symbol = Symbol(symbol.name, SymbolKind.OTHER);
           disconnected.enclosingSymbol = symbol.enclosingSymbol;
           disconnected.node = sibling;
           sibling = previous.sibling = sibling.sibling;
@@ -353,9 +353,9 @@ class Resolver {
           continue;
         }
 
-        // Insert a new unresolved symbol as a local symbol only on this scope.
+        // Insert a unresolved symbol as a local symbol only on this scope.
         // It will not be added on the type associated with this scope.
-        Symbol symbol = new Symbol(name, SymbolKind.USING_ALIAS);
+        Symbol symbol = Symbol(name, SymbolKind.USING_ALIAS);
         symbol.node = statement;
         statement.symbol = symbol;
         block.scope.insertLocal(symbol);
@@ -419,9 +419,9 @@ class Resolver {
             Symbol currentSymbol = current.symbol;
             if (insertedSymbols.indexOf(currentSymbol) >= 0) {
               if (currentSymbol.kind != SymbolKind.AMBIGUOUS) {
-                Symbol collision = new Symbol(memberSymbol.name, SymbolKind.AMBIGUOUS);
+                Symbol collision = Symbol(memberSymbol.name, SymbolKind.AMBIGUOUS);
                 collision.identicalMembers = { current, member };
-                block.scope.locals.set(memberSymbol.name, new Member(collision));
+                block.scope.locals.set(memberSymbol.name, Member(collision));
                 insertedSymbols.push(collision);
               } else {
                 currentSymbol.identicalMembers.push(member);
@@ -700,7 +700,7 @@ class Resolver {
     // Make the implicit conversion explicit for convenience later on
     if (kind == CastKind.IMPLICIT) {
       if (node.kind.isType()) return;
-      Node value = new Node(NodeKind.NULL);
+      Node value = Node(NodeKind.NULL);
       value.become(node);
       node.become(Node.createImplicitCast(Node.createType(to), value).withType(to).withRange(node.range));
     }
@@ -848,9 +848,9 @@ class Resolver {
   }
 
   void addAutoGeneratedMember(Type type, string name) {
-    Symbol symbol = new Symbol(name, SymbolKind.AUTOMATIC);
+    Symbol symbol = Symbol(name, SymbolKind.AUTOMATIC);
     symbol.enclosingSymbol = type.symbol;
-    type.addMember(new Member(symbol));
+    type.addMember(Member(symbol));
   }
 
   void initializeNamespace(Symbol symbol) {
@@ -880,7 +880,7 @@ class Resolver {
     Node node = symbol.node;
     Type type = symbol.type;
     List<Node> baseTypes = collectAndResolveBaseTypes(symbol);
-    StringMap<Member> unmergedMembers = new StringMap<Member>();
+    StringMap<Member> unmergedMembers = StringMap<Member>();
     assert type.relevantTypes == null;
     type.relevantTypes = {};
 
@@ -934,10 +934,10 @@ class Resolver {
         if (unmerged == null) {
           unmergedMembers.set(memberSymbol.name, member);
         } else if (unmerged.symbol.enclosingSymbol != memberSymbol) {
-          Symbol combined = new Symbol(memberSymbol.name, SymbolKind.UNMERGED);
+          Symbol combined = Symbol(memberSymbol.name, SymbolKind.UNMERGED);
           combined.enclosingSymbol = symbol;
           combined.identicalMembers = { unmerged, member };
-          unmergedMembers.set(memberSymbol.name, new Member(combined));
+          unmergedMembers.set(memberSymbol.name, Member(combined));
         } else {
           assert unmerged.symbol.kind == SymbolKind.UNMERGED;
           unmerged.symbol.identicalMembers.push(member);
@@ -1274,7 +1274,7 @@ class Resolver {
   }
 
   void initializeParameter(Symbol symbol) {
-    Type type = symbol.type = new Type(symbol);
+    Type type = symbol.type = Type(symbol);
     Node bound = symbol.node.parameterBound();
 
     // Type parameters can optionally have a single interface as an upper bound.
@@ -1393,7 +1393,7 @@ class Resolver {
     //   class Foo<A, B> { A foo(B bar) {} }
     //   class Bar<T> : Foo<int, T> {}
     //   class Baz : Bar<bool> {}
-    //   int baz = new Baz().foo(false);
+    //   int baz = Baz().foo(false);
     //
     if (member.dependency != null) {
       initializeMember(member.dependency);
@@ -1433,7 +1433,7 @@ class Resolver {
           for (j = 0; j < argumentTypes.length; j++) {
             string name = "_".append(arguments.length.toString());
             Node argument = Node.createVariable(Node.createName(name), Node.createType(argumentTypes.get(j)), null);
-            argument.symbol = new Symbol(name, SymbolKind.LOCAL_VARIABLE);
+            argument.symbol = Symbol(name, SymbolKind.LOCAL_VARIABLE);
             argument.symbol.node = argument;
             arguments.push(argument);
             superArguments.push(Node.createName(name));
@@ -1480,7 +1480,7 @@ class Resolver {
       Member member = uninitializedMembers.get(i);
       string name = "_".append(arguments.length.toString());
       Node argument = Node.createVariable(Node.createName(name), Node.createType(member.type), null);
-      argument.symbol = new Symbol(name, SymbolKind.LOCAL_VARIABLE);
+      argument.symbol = Symbol(name, SymbolKind.LOCAL_VARIABLE);
       argument.symbol.node = argument;
       arguments.push(argument);
       memberInitializers.push(Node.createMemberInitializer(Node.createName(member.symbol.name), Node.createName(name)));
@@ -1498,7 +1498,7 @@ class Resolver {
 
     // Initialize the scope ourselves since that pass is already over
     assert enclosingSymbol.node.scope != null;
-    Scope scope = new Scope(enclosingSymbol.node.scope);
+    Scope scope = Scope(enclosingSymbol.node.scope);
     symbol.node.symbol = symbol;
     symbol.node.scope = scope;
     for (i = 0; i < arguments.length; i++) {
@@ -2761,7 +2761,7 @@ class Resolver {
 }
 
 StringMap<SymbolFlag> createNameToSymbolFlag() {
-  StringMap<SymbolFlag> result = new StringMap<SymbolFlag>();
+  StringMap<SymbolFlag> result = StringMap<SymbolFlag>();
   result.set("export", SymbolFlag.EXPORT);
   result.set("final", SymbolFlag.FINAL);
   result.set("import", SymbolFlag.IMPORT);
@@ -2778,7 +2778,7 @@ StringMap<SymbolFlag> createNameToSymbolFlag() {
 StringMap<SymbolFlag> nameToSymbolFlag = createNameToSymbolFlag();
 
 IntMap<string> createSymbolFlagToName() {
-  IntMap<string> result = new IntMap<string>();
+  IntMap<string> result = IntMap<string>();
   result.set(SymbolFlag.EXPORT, "export");
   result.set(SymbolFlag.FINAL, "final");
   result.set(SymbolFlag.IMPORT, "import");

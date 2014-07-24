@@ -70,8 +70,17 @@ DEBUG_DIR = build/debug
 RELEASE_DIR = build/release
 TESTS_DIR = build/tests
 
-JS_FLAGS += --target js
-JS_FLAGS += --append src/core/support.js
+JS_SOURCES += bootstrap.js
+JS_SOURCES += src/core/support.js
+JS_SOURCES += src/frontend/frontend.js
+
+compile = \
+	node $(1) $(SOURCES) --verbose --target=js --output-file=$(2)/skewc.compiled.js && \
+	cat bootstrap.js $(3) $(2)/skewc.compiled.js src/core/support.js src/frontend/frontend.js > $(2)/skewc.js && \
+	rm $(2)/skewc.compiled.js
+
+compile-frontend = \
+	$(call compile,$(1),$(2),)
 
 default: debug
 
@@ -79,11 +88,16 @@ clean:
 	rm -fr build
 
 ################################################################################
-# CHECK
+# INSTALL
 ################################################################################
 
-check: $(DEBUG_DIR)/skewc.js
-	node $(DEBUG_DIR)/skewc.js --verbose $(SOURCES) --target=js
+install: check
+	cp $(DEBUG_DIR)/skewc.js .
+
+check:
+	$(call compile-frontend,skewc.js,$(DEBUG_DIR))
+	$(call compile-frontend,$(DEBUG_DIR)/skewc.js,$(DEBUG_DIR))
+	$(call compile-frontend,$(DEBUG_DIR)/skewc.js,$(DEBUG_DIR))
 
 ################################################################################
 # DEBUG
@@ -94,8 +108,8 @@ debug: $(DEBUG_DIR)/skewc.js
 $(DEBUG_DIR):
 	mkdir -p $(DEBUG_DIR)
 
-$(DEBUG_DIR)/skewc.js: Makefile $(SOURCES) src/core/support.js | $(DEBUG_DIR)
-	skewc --verbose $(SOURCES) $(JS_FLAGS) --append src/frontend/frontend.js --output-file $(DEBUG_DIR)/skewc.js
+$(DEBUG_DIR)/skewc.js: Makefile $(SOURCES) $(JS_SOURCES) | $(DEBUG_DIR)
+	$(call compile-frontend,skewc.js,$(DEBUG_DIR))
 
 ################################################################################
 # RELEASE
@@ -106,21 +120,21 @@ release: $(RELEASE_DIR)/skewc.js
 $(RELEASE_DIR):
 	mkdir -p $(RELEASE_DIR)
 
-$(RELEASE_DIR)/skewc.js: Makefile $(SOURCES) src/core/support.js | $(RELEASE_DIR)
-	skewc --verbose --optimize $(SOURCES) $(JS_FLAGS) --append src/frontend/frontend.js --output-file $(RELEASE_DIR)/skewc.js
+$(RELEASE_DIR)/skewc.js: Makefile $(SOURCES) $(JS_SOURCES) | $(RELEASE_DIR)
+	$(call compile-frontend,skewc.js,$(RELEASE_DIR))
 
 ################################################################################
 # TEST
 ################################################################################
 
-test: $(TESTS_DIR)/mocha.js | $(TESTS_DIR)/node_modules/mocha
-	$(TESTS_DIR)/node_modules/mocha/bin/mocha $(TESTS_DIR)/mocha.js
+test: $(TESTS_DIR)/skewc.js | $(TESTS_DIR)/node_modules/mocha
+	$(TESTS_DIR)/node_modules/mocha/bin/mocha $(TESTS_DIR)/skewc.js
 
 $(TESTS_DIR):
 	mkdir -p $(TESTS_DIR)
 
-$(TESTS_DIR)/mocha.js: Makefile $(SOURCES) $(TEST_SOURCES) tests/system/common.js src/core/support.js | $(TESTS_DIR)
-	skewc --verbose $(SOURCES) $(TEST_SOURCES) $(JS_FLAGS) --prepend tests/system/common.js --output-file $(TESTS_DIR)/mocha.js
+$(TESTS_DIR)/skewc.js: Makefile $(SOURCES) $(JS_SOURCES) $(TEST_SOURCES) tests/system/common.js | $(TESTS_DIR)
+	$(call compile,skewc.js $(TEST_SOURCES),$(TESTS_DIR),tests/system/common.js)
 
 $(TESTS_DIR)/package.json: tests/system/package.json | $(TESTS_DIR)
 	cp tests/system/package.json $(TESTS_DIR)/package.json

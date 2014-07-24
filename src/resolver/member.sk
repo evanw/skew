@@ -9,12 +9,12 @@ class Member {
 
   // The member that this symbol re-parameterizes. The type of a member in a
   // derived type may depend on type substitution on that member's type in a
-  // base class with a new type environment:
+  // base class with a type environment:
   //
   //   class Foo<A, B> { A foo(B bar) {} }
   //   class Bar<T> : Foo<int, T> {}
   //   class Baz : Bar<bool> {}
-  //   int baz = new Baz().foo(false);
+  //   int baz = Baz().foo(false);
   //
   // In that case, parameterizedType stores the type environment to be applied
   // to the type of the dependency after being resolved. This needs to be

@@ -5,12 +5,12 @@ namespace json {
     override List<Source> emitProgram(Node program) {
       List<Source> outputs = {};
       if (options.isSingleFileMode()) {
-        outputs.push(new Source(options.outputFile, dump(program).append("\n")));
+        outputs.push(Source(options.outputFile, dump(program).append("\n")));
       } else {
         int i;
         for (i = 0; i < program.children.length; i++) {
           Node file = program.children.get(i);
-          outputs.push(new Source(joinPath(options.outputDirectory, file.range.source.name.append(".json")), dump(file).append("\n")));
+          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name.append(".json")), dump(file).append("\n")));
         }
       }
       return outputs;
@@ -18,13 +18,13 @@ namespace json {
   }
 
   string dump(Node node) {
-    DumpVisitor visitor = new DumpVisitor();
+    DumpVisitor visitor = DumpVisitor();
     visitor.visit(node);
     return visitor.builder.toString();
   }
 
   class DumpVisitor {
-    StringBuilder builder = new StringBuilder();
+    StringBuilder builder = StringBuilder();
     string indent = "";
 
     void visit(Node node) {

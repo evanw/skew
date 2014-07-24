@@ -85,7 +85,7 @@ namespace frontend {
 
   export int main(List<string> args) {
     List<string> inputs = {};
-    Flags flags = new Flags();
+    Flags flags = Flags();
 
     int i;
     for (i = 0; i < args.length; i++) {
@@ -131,7 +131,7 @@ namespace frontend {
     }
 
     // Translate frontend flags to compiler options
-    CompilerOptions options = new CompilerOptions();
+    CompilerOptions options = CompilerOptions();
     options.targetFormat = target;
     options.outputFile = flags.shouldWriteToStdout() ? "<stdout>" : flags.outputFile;
     options.jsSourceMap = flags.jsSourceMap && flags.outputFile != "" && target == TargetFormat.JS;
@@ -145,7 +145,7 @@ namespace frontend {
     }
 
     // Run the compilation
-    Compiler compiler = new Compiler();
+    Compiler compiler = Compiler();
     CompilerResult result = compiler.compile(options);
 
     // Print any errors and warnings

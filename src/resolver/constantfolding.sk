@@ -12,14 +12,14 @@ class ConstantFolder {
     assert node.type.isError(cache) || node.type.isInteger(cache);
     node.removeChildren();
     node.kind = NodeKind.INT;
-    node.content = new IntContent(value);
+    node.content = IntContent(value);
   }
 
   void flattenReal(Node node, double value) {
     assert node.type.isError(cache) || node.type.isReal(cache);
     node.removeChildren();
     node.kind = node.type == cache.floatType ? NodeKind.FLOAT : NodeKind.DOUBLE;
-    node.content = new DoubleContent(value);
+    node.content = DoubleContent(value);
   }
 
   void foldConstants(Node node) {

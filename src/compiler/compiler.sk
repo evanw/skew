@@ -48,7 +48,7 @@ class Compiler {
   double resolveTime = 0;
   double emitTime = 0;
   double totalTime = 0;
-  Log log = new Log();
+  Log log = Log();
 
   string statistics(CompilerResult result) {
     // Line count
@@ -94,7 +94,7 @@ class Compiler {
     if (nativeLibrarySource != null) {
       program.appendChild(nativeLibraryFile.clone());
     } else {
-      nativeLibrarySource = new Source("<native>", NATIVE_LIBRARY);
+      nativeLibrarySource = Source("<native>", NATIVE_LIBRARY);
       processInput(program, nativeLibrarySource);
       nativeLibraryFile = program.children.get(0).clone();
     }
@@ -110,7 +110,7 @@ class Compiler {
     Resolver resolver;
     if (options.targetFormat.shouldRunResolver()) {
       double resolveStart = now();
-      resolver = new Resolver(log);
+      resolver = Resolver(log);
       resolver.run(program);
       resolveTime = resolveTime + now() - resolveStart;
     }
@@ -120,10 +120,10 @@ class Compiler {
       IEmitter emitter = null;
       switch (options.targetFormat) {
         case TargetFormat.NONE {}
-        case TargetFormat.JS { emitter = new js.Emitter(options, resolver.cache); }
-        case TargetFormat.LISP_AST { emitter = new lisp.Emitter(options); }
-        case TargetFormat.JSON_AST { emitter = new json.Emitter(options); }
-        case TargetFormat.XML_AST { emitter = new xml.Emitter(options); }
+        case TargetFormat.JS { emitter = js.Emitter(options, resolver.cache); }
+        case TargetFormat.LISP_AST { emitter = lisp.Emitter(options); }
+        case TargetFormat.JSON_AST { emitter = json.Emitter(options); }
+        case TargetFormat.XML_AST { emitter = xml.Emitter(options); }
         default { assert false; }
       }
 
@@ -136,7 +136,7 @@ class Compiler {
     }
 
     totalTime = totalTime + now() - totalStart;
-    return new CompilerResult(options, outputs, program, resolver);
+    return CompilerResult(options, outputs, program, resolver);
   }
 
   void processInput(Node program, Source source) {
