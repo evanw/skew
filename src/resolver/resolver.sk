@@ -41,8 +41,8 @@ class Resolver {
   var cache = TypeCache();
   var context = ResolveContext();
   ConstantFolder constantFolder = null;
-  List<Node> parsedDeclarations = {};
-  List<Node> parsedBlocks = {};
+  List<Node> parsedDeclarations = null;
+  List<Node> parsedBlocks = null;
   Type typeContext = null;
   Type resultType = null;
   Log log;
@@ -58,6 +58,8 @@ class Resolver {
   }
 
   void prepareNode(Node node, Scope scope) {
+    parsedDeclarations = {};
+    parsedBlocks = {};
     setupScopesAndSymbols(node, scope);
     accumulateSymbolFlags();
     setSymbolKindsAndMergeSiblings();
