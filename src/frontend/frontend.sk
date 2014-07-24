@@ -61,11 +61,11 @@ namespace frontend {
   }
 
   class Flags {
-    bool help = false;
-    bool verbose = false;
-    string target = "";
-    string outputFile = "";
-    bool jsSourceMap = false;
+    var help = false;
+    var verbose = false;
+    var target = "";
+    var outputFile = "";
+    var jsSourceMap = false;
 
     bool shouldWriteToStdout() {
       return outputFile == "";
@@ -73,7 +73,7 @@ namespace frontend {
   }
 
   string afterEquals(string text) {
-    int equals = text.indexOf("=");
+    var equals = text.indexOf("=");
     assert equals >= 0;
     return text.slice(equals + 1, text.length);
   }
@@ -85,11 +85,10 @@ namespace frontend {
 
   export int main(List<string> args) {
     List<string> inputs = {};
-    Flags flags = Flags();
+    var flags = Flags();
 
-    int i;
-    for (i = 0; i < args.length; i++) {
-      string arg = args.get(i);
+    for (var i = 0; i < args.length; i++) {
+      var arg = args.get(i);
 
       // Ignore empty arguments
       if (arg.length == 0) continue;
@@ -131,27 +130,27 @@ namespace frontend {
     }
 
     // Translate frontend flags to compiler options
-    CompilerOptions options = CompilerOptions();
+    var options = CompilerOptions();
     options.targetFormat = target;
     options.outputFile = flags.shouldWriteToStdout() ? "<stdout>" : flags.outputFile;
     options.jsSourceMap = flags.jsSourceMap && flags.outputFile != "" && target == .JS;
 
     // Read all inputs
-    for (i = 0; i < inputs.length; i++) {
-      string input = inputs.get(i);
-      Source source = io.readFile(input);
+    for (var i = 0; i < inputs.length; i++) {
+      var input = inputs.get(i);
+      var source = io.readFile(input);
       if (source == null) { printError("Could not read from ".append(quoteString(input, '"'))); return 1; }
       options.inputs.push(source);
     }
 
     // Run the compilation
-    Compiler compiler = Compiler();
-    CompilerResult result = compiler.compile(options);
+    var compiler = Compiler();
+    var result = compiler.compile(options);
 
     // Print any errors and warnings
-    Log log = compiler.log;
-    for (i = 0; i < log.diagnostics.length; i++) {
-      Diagnostic diagnostic = log.diagnostics.get(i);
+    var log = compiler.log;
+    for (var i = 0; i < log.diagnostics.length; i++) {
+      var diagnostic = log.diagnostics.get(i);
       if (!diagnostic.range.isEmpty()) {
         io.printWithColor(.BOLD, diagnostic.range.locationString().append(": "));
       }
@@ -160,23 +159,23 @@ namespace frontend {
         case .ERROR { printError(diagnostic.text); }
       }
       if (!diagnostic.range.isEmpty()) {
-        FormattedRange formatted = diagnostic.range.format(io.terminalWidth);
+        var formatted = diagnostic.range.format(io.terminalWidth);
         io.print(formatted.line.append("\n"));
         io.printWithColor(.GREEN, formatted.range.append("\n"));
       }
       if (!diagnostic.noteRange.isEmpty()) {
         io.printWithColor(.BOLD, diagnostic.noteRange.locationString().append(": "));
         printNote(diagnostic.noteText);
-        FormattedRange formatted = diagnostic.noteRange.format(io.terminalWidth);
+        var formatted = diagnostic.noteRange.format(io.terminalWidth);
         io.print(formatted.line.append("\n"));
         io.printWithColor(.GREEN, formatted.range.append("\n"));
       }
     }
 
     // Print the summary
-    bool hasErrors = log.errorCount > 0;
-    bool hasWarnings = log.warningCount > 0;
-    string summary = "";
+    var hasErrors = log.errorCount > 0;
+    var hasWarnings = log.warningCount > 0;
+    var summary = "";
     if (hasWarnings) {
       summary = summary.append(log.warningCount.toString().append(plural(log.warningCount, " warning", " warnings")));
       if (hasErrors) summary = summary.append(" and ");
@@ -188,8 +187,8 @@ namespace frontend {
 
     // Write all outputs
     if (result.outputs != null) {
-      for (i = 0; i < result.outputs.length; i++) {
-        Source output = result.outputs.get(i);
+      for (var i = 0; i < result.outputs.length; i++) {
+        var output = result.outputs.get(i);
         if (flags.shouldWriteToStdout()) {
           io.print(output.contents);
           continue;

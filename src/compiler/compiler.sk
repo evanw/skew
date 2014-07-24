@@ -22,9 +22,9 @@ in TargetFormat {
 class CompilerOptions {
   TargetFormat targetFormat = .NONE;
   List<Source> inputs = {};
-  string outputDirectory = "";
-  string outputFile = "";
-  bool jsSourceMap = false;
+  var outputDirectory = "";
+  var outputFile = "";
+  var jsSourceMap = false;
 
   bool isSingleFileMode() {
     assert outputFile.length > 0 || outputDirectory.length > 0;
@@ -43,21 +43,20 @@ class Compiler {
   static Source nativeLibrarySource = null;
   static Node nativeLibraryFile = null;
 
-  double tokenizeTime = 0;
-  double parseTime = 0;
-  double resolveTime = 0;
-  double emitTime = 0;
-  double totalTime = 0;
-  Log log = Log();
+  var tokenizeTime = 0.0;
+  var parseTime = 0.0;
+  var resolveTime = 0.0;
+  var emitTime = 0.0;
+  var totalTime = 0.0;
+  var log = Log();
 
   string statistics(CompilerResult result) {
     // Line count
-    int lineCount = 0;
-    int i;
-    for (i = 0; i < result.options.inputs.length; i++) {
+    var lineCount = 0;
+    for (var i = 0; i < result.options.inputs.length; i++) {
       lineCount = lineCount + result.options.inputs.get(i).lineCount();
     }
-    string text = "Lines: ".append(lineCount.toString());
+    var text = "Lines: ".append(lineCount.toString());
 
     // Compilation time
     text = text.append("\nTime: ").append(formatNumber(totalTime)).append("ms");
@@ -68,16 +67,16 @@ class Compiler {
 
     // Inputs
     text = text.append("\nInputs: ").append(result.options.inputs.length.toString());
-    for (i = 0; i < result.options.inputs.length; i++) {
-      Source source = result.options.inputs.get(i);
+    for (var i = 0; i < result.options.inputs.length; i++) {
+      var source = result.options.inputs.get(i);
       text = text.append("\n  ").append(source.name).append(": ").append(bytesToString(source.contents.length));
     }
 
     // Outputs
     if (result.outputs != null) {
       text = text.append("\nOutputs: ").append(result.outputs.length.toString());
-      for (i = 0; i < result.outputs.length; i++) {
-        Source source = result.outputs.get(i);
+      for (var i = 0; i < result.outputs.length; i++) {
+        var source = result.outputs.get(i);
         text = text.append("\n  ").append(source.name).append(": ").append(bytesToString(source.contents.length));
       }
     }
@@ -86,9 +85,9 @@ class Compiler {
   }
 
   CompilerResult compile(CompilerOptions options) {
-    double totalStart = now();
+    var totalStart = now();
+    var program = Node.createProgram({});
     List<Source> outputs = null;
-    Node program = Node.createProgram({});
 
     // Cache the standard library for a small speed increase
     if (nativeLibrarySource != null) {
@@ -101,15 +100,14 @@ class Compiler {
     options.inputs.unshift(nativeLibrarySource);
 
     // Tokenize and parse each module individually
-    int i;
-    for (i = 1; i < options.inputs.length; i++) {
+    for (var i = 1; i < options.inputs.length; i++) {
       processInput(program, options.inputs.get(i));
     }
 
     // Resolve everything together
     Resolver resolver;
     if (options.targetFormat.shouldRunResolver()) {
-      double resolveStart = now();
+      var resolveStart = now();
       resolver = Resolver(log);
       resolver.run(program);
       resolveTime = resolveTime + now() - resolveStart;
@@ -129,7 +127,7 @@ class Compiler {
 
       // Emit the module in the target language
       if (emitter != null) {
-        double emitStart = now();
+        var emitStart = now();
         outputs = emitter.emitProgram(program);
         emitTime = emitTime + now() - emitStart;
       }
@@ -140,17 +138,17 @@ class Compiler {
   }
 
   void processInput(Node program, Source source) {
-    int errorCount = log.errorCount;
+    var errorCount = log.errorCount;
 
     // Tokenize the source
-    double tokenizeStart = now();
-    List<Token> sourceTokens = tokenize(log, source);
+    var tokenizeStart = now();
+    var sourceTokens = tokenize(log, source);
     tokenizeTime = tokenizeTime + now() - tokenizeStart;
 
     // Parse the source if the tokenize was successful
     if (log.errorCount == errorCount) {
-      double parseStart = now();
-      Node file = parseFile(log, sourceTokens);
+      var parseStart = now();
+      var file = parseFile(log, sourceTokens);
       parseTime = parseTime + now() - parseStart;
       if (file != null) {
         program.appendChild(file);

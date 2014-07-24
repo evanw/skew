@@ -1,4 +1,4 @@
-final string NATIVE_LIBRARY = "
+final var NATIVE_LIBRARY = "
 import struct int { string toString(); }
 import struct bool { string toString(); }
 import struct float { string toString(); }

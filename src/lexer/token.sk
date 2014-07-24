@@ -6,11 +6,10 @@ class Token {
 
 void prepareTokens(List<Token> tokens) {
   List<int> stack = {};
-  int i;
 
-  for (i = 0; i < tokens.length; i++) {
-    Token token = tokens.get(i);
-    TokenKind tokenKind = token.kind;
+  for (var i = 0; i < tokens.length; i++) {
+    var token = tokens.get(i);
+    var tokenKind = token.kind;
 
     // Note: The check for "token.text.length > 0" is very important. Without
     // it, v8 will continue to deoptimize on codeUnitAt(0) until it hits its
@@ -19,12 +18,12 @@ void prepareTokens(List<Token> tokens) {
     // inlines this along with all other tokenizing functions into a single
     // function. Permanent deoptimization inside this inlined function causes
     // tokenizing to be twice as slow.
-    bool tokenStartsWithGreaterThan = token.text.length > 0 && token.text.codeUnitAt(0) == '>';
+    var tokenStartsWithGreaterThan = token.text.length > 0 && token.text.codeUnitAt(0) == '>';
 
     // Retokens on the stack if they aren't working out
     while (stack.length > 0) {
-      Token top = tokens.get(stack.get(stack.length - 1));
-      TokenKind topKind = top.kind;
+      var top = tokens.get(stack.get(stack.length - 1));
+      var topKind = top.kind;
 
       // Stop parsing a type if we find a token that no type expression uses
       if (topKind == .LESS_THAN && tokenKind != .LESS_THAN &&
@@ -49,8 +48,8 @@ void prepareTokens(List<Token> tokens) {
     if (tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan) {
       // Search for a matching opposite token
       while (stack.length > 0) {
-        Token top = tokens.get(stack.get(stack.length - 1));
-        TokenKind topKind = top.kind;
+        var top = tokens.get(stack.get(stack.length - 1));
+        var topKind = top.kind;
 
         // Don't match closing angle brackets that don't work since they are just operators
         if (tokenStartsWithGreaterThan && topKind != .LESS_THAN) {
@@ -70,9 +69,9 @@ void prepareTokens(List<Token> tokens) {
 
           // Break apart operators that start with a closing angle bracket
           if (tokenKind != .GREATER_THAN) {
-            Range range = token.range;
-            int start = range.start;
-            string text = token.text.slice(1, token.text.length);
+            var range = token.range;
+            var start = range.start;
+            var text = token.text.slice(1, token.text.length);
             TokenKind kind =
               tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
               tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :

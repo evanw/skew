@@ -7,14 +7,14 @@ class Diagnostic {
   DiagnosticKind kind;
   Range range;
   string text;
-  Range noteRange = Range.EMPTY;
-  string noteText = "";
+  var noteRange = Range.EMPTY;
+  var noteText = "";
 }
 
 class Log {
   List<Diagnostic> diagnostics = {};
-  int warningCount = 0;
-  int errorCount = 0;
+  var warningCount = 0;
+  var errorCount = 0;
 
   void error(Range range, string text) {
     assert !range.isEmpty();
@@ -30,19 +30,18 @@ class Log {
 
   void note(Range range, string text) {
     assert !range.isEmpty();
-    Diagnostic last = diagnostics.get(diagnostics.length - 1);
+    var last = diagnostics.get(diagnostics.length - 1);
     last.noteRange = range;
     last.noteText = text;
   }
 
   string toString() {
-    StringBuilder builder = StringBuilder();
-    int i;
+    var builder = StringBuilder();
 
     // Emit the log assuming an infinite terminal width
-    for (i = 0; i < diagnostics.length; i++) {
-      Diagnostic diagnostic = diagnostics.get(i);
-      FormattedRange formatted = diagnostic.range.format(0);
+    for (var i = 0; i < diagnostics.length; i++) {
+      var diagnostic = diagnostics.get(i);
+      var formatted = diagnostic.range.format(0);
       builder.append(diagnostic.range.locationString()).append(diagnostic.kind == .ERROR ? ": error: " : ": warning: ")
         .append(diagnostic.text).append("\n").append(formatted.line).append("\n").append(formatted.range).append("\n");
 

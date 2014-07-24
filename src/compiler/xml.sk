@@ -7,9 +7,8 @@ namespace xml {
       if (options.isSingleFileMode()) {
         outputs.push(Source(options.outputFile, dump(program).append("\n")));
       } else {
-        int i;
-        for (i = 0; i < program.children.length; i++) {
-          Node file = program.children.get(i);
+        for (var i = 0; i < program.children.length; i++) {
+          var file = program.children.get(i);
           outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name.append(".xml")), dump(file).append("\n")));
         }
       }
@@ -18,14 +17,14 @@ namespace xml {
   }
 
   string dump(Node node) {
-    DumpVisitor visitor = DumpVisitor();
+    var visitor = DumpVisitor();
     visitor.visit(node);
     return visitor.builder.toString();
   }
 
   class DumpVisitor {
-    StringBuilder builder = StringBuilder();
-    string indent = "";
+    var builder = StringBuilder();
+    var indent = "";
 
     void visit(Node node) {
       if (node == null) {
@@ -43,10 +42,9 @@ namespace xml {
       }
       if (node.hasChildren()) {
         builder.append(">");
-        string inner = indent;
+        var inner = indent;
         indent = indent.append("  ");
-        int i;
-        for (i = 0; i < node.children.length; i++) {
+        for (var i = 0; i < node.children.length; i++) {
           builder.append("\n").append(indent);
           visit(node.children.get(i));
         }

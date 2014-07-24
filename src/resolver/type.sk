@@ -1,5 +1,5 @@
 class Type {
-  StringMap<Member> members = StringMap<Member>();
+  var members = StringMap<Member>();
 
   // The symbol that declared this type, if any. Function types don't have a
   // declaring symbol, so this will be null for function types.
@@ -19,8 +19,8 @@ class Type {
   List<Type> substitutions = null;
 
   // Give each type a unique integer as a hash code
-  static int nextUniqueID = 0;
-  int uniqueID = nextUniqueID++;
+  static var nextUniqueID = 0;
+  var uniqueID = nextUniqueID++;
 
   Member constructor() {
     if (symbol == null) return null;
@@ -29,7 +29,7 @@ class Type {
 
   bool hasBaseType(Type type) {
     if (isParameter()) {
-      Type upper = bound();
+      var upper = bound();
       return upper != null && upper.hasBaseType(type);
     }
     if (!isClass() && !isInterface()) {
@@ -39,8 +39,7 @@ class Type {
       return true;
     }
     if (relevantTypes != null) {
-      int i;
-      for (i = 0; i < relevantTypes.length; i++) {
+      for (var i = 0; i < relevantTypes.length; i++) {
         if (relevantTypes.get(i).hasBaseType(type)) {
           return true;
         }
@@ -55,10 +54,9 @@ class Type {
   }
 
   void copyMembersFrom(Type other) {
-    List<Member> otherMembers = other.members.values();
-    int i;
-    for (i = 0; i < otherMembers.length; i++) {
-      Member member = otherMembers.get(i);
+    var otherMembers = other.members.values();
+    for (var i = 0; i < otherMembers.length; i++) {
+      var member = otherMembers.get(i);
       if (!members.has(member.symbol.name)) {
         members.set(member.symbol.name, member);
       }
@@ -72,10 +70,9 @@ class Type {
   string toString() {
     // Special-case functions
     if (isFunction()) {
-      string text = resultType().toString().append(" fn(");
-      List<Type> arguments = argumentTypes();
-      int i;
-      for (i = 0; i < arguments.length; i++) {
+      var text = resultType().toString().append(" fn(");
+      var arguments = argumentTypes();
+      for (var i = 0; i < arguments.length; i++) {
         if (i > 0) text = text.append(", ");
         text = text.append(arguments.get(i).toString());
       }
@@ -85,8 +82,7 @@ class Type {
     // Special-case generic types
     if (hasParameters()) {
       List<string> parts = {};
-      int i;
-      for (i = 0; i < symbol.parameters.length; i++) {
+      for (var i = 0; i < symbol.parameters.length; i++) {
         parts.push(isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name);
       }
       return symbol.fullName().append("<").append(", ".join(parts)).append(">");
@@ -110,7 +106,7 @@ class Type {
   Type baseClass() {
     assert isClass();
     if (!hasRelevantTypes()) return null;
-    Type first = relevantTypes.get(0);
+    var first = relevantTypes.get(0);
     return first.isClass() ? first : null;
   }
 
@@ -126,9 +122,8 @@ class Type {
       return true;
     }
     if (hasRelevantTypes()) {
-      int i;
-      for (i = 0; i < relevantTypes.length; i++) {
-        Type type = relevantTypes.get(i);
+      for (var i = 0; i < relevantTypes.length; i++) {
+        var type = relevantTypes.get(i);
         if (type.dependsOnParameter(parameter)) {
           return true;
         }

@@ -359,8 +359,8 @@ in Node {
 
     // Automatically convert an index nested inside an assignment to ASSIGN_INDEX
     if (kind == NodeKind.ASSIGN && left.kind == NodeKind.INDEX) {
-      Node target = left.binaryLeft();
-      Node index = left.binaryRight();
+      var target = left.binaryLeft();
+      var index = left.binaryRight();
       return createTertiary(NodeKind.ASSIGN_INDEX, target.remove(), index.remove(), right);
     }
 
@@ -415,8 +415,7 @@ bool checkAllNodeListKinds(Node node, INodeKindCheck check) {
 
 bool checkAllNodeKinds(List<Node> nodes, INodeKindCheck check) {
   assert nodes != null;
-  int i;
-  for (i = 0; i < nodes.length; i++) {
+  for (var i = 0; i < nodes.length; i++) {
     if (!check.call(nodes.get(i))) {
       return false;
     }

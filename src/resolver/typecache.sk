@@ -1,14 +1,14 @@
 class TypeCache {
-  Type globalType = createType(Symbol("<global>", .GLOBAL_NAMESPACE));
-  Type nullType = createType(Symbol("null", .OTHER));
-  Type voidType = createType(Symbol("void", .OTHER_TYPE));
+  var globalType = createType(Symbol("<global>", .GLOBAL_NAMESPACE));
+  var nullType = createType(Symbol("null", .OTHER));
+  var voidType = createType(Symbol("void", .OTHER_TYPE));
 
   // All expressions that have syntax and/or semantic errors have this type,
   // which silences all further errors related to that expression. When the
   // compiler comes a cross a symbol or expression of this type, it just skips
   // over it because an error has already been logged and further errors will
   // most likely just be noise.
-  Type errorType = createType(Symbol("<error>", .OTHER));
+  var errorType = createType(Symbol("<error>", .OTHER));
 
   // These are defined in the standard library
   Type intType = null;
@@ -18,20 +18,18 @@ class TypeCache {
   Type stringType = null;
   Type listType = null;
 
-  IntMap<List<Type>> hashTable = IntMap<List<Type>>();
+  var hashTable = IntMap<List<Type>>();
 
   static Type createType(Symbol symbol) {
-    Type type = Type(symbol);
+    var type = Type(symbol);
     symbol.type = type;
     symbol.flags = symbol.flags | SymbolFlag.INITIALIZED;
     return type;
   }
 
   static Type commonBaseClass(Type left, Type right) {
-    Type a;
-    for (a = left; a != null; a = a.baseClass()) {
-      Type b;
-      for (b = right; b != null; b = b.baseClass()) {
+    for (var a = left; a != null; a = a.baseClass()) {
+      for (var b = right; b != null; b = b.baseClass()) {
         if (a == b) {
           return a;
         }
@@ -41,21 +39,19 @@ class TypeCache {
   }
 
   static int computeHashCode(Symbol symbol, List<Type> relevantTypes) {
-    int seed = symbol == null ? -1 : symbol.type.uniqueID;
-    int i;
-    for (i = 0; i < relevantTypes.length; i++) {
+    var seed = symbol == null ? -1 : symbol.type.uniqueID;
+    for (var i = 0; i < relevantTypes.length; i++) {
       seed = hashCombine(seed, relevantTypes.get(i).uniqueID);
     }
     return seed;
   }
 
   static bool areTypeListsEqual(List<Type> left, List<Type> right) {
-    int n = left.length;
+    var n = left.length;
     if (n != right.length) {
       return false;
     }
-    int i;
-    for (i = 0; i < n; i++) {
+    for (var i = 0; i < n; i++) {
       if (left.get(i) != right.get(i)) {
         return false;
       }
@@ -68,12 +64,11 @@ class TypeCache {
       return parameterize(type, substituteAll(type.relevantTypes, parameters, substitutions));
     }
     if (!type.hasParameters()) {
-      int index = parameters.indexOf(type.symbol);
+      var index = parameters.indexOf(type.symbol);
       return index >= 0 ? substitutions.get(index) : type;
     }
     List<Type> types = {};
-    int i;
-    for (i = 0; i < type.symbol.parameters.length; i++) {
+    for (var i = 0; i < type.symbol.parameters.length; i++) {
       types.push(type.substitutions.get(i));
     }
     return parameterize(type, substituteAll(types, parameters, substitutions));
@@ -81,15 +76,14 @@ class TypeCache {
 
   List<Type> substituteAll(List<Type> types, List<Symbol> parameters, List<Type> substitutions) {
     List<Type> results = {};
-    int i;
-    for (i = 0; i < types.length; i++) {
+    for (var i = 0; i < types.length; i++) {
       results.push(substitute(types.get(i), parameters, substitutions));
     }
     return results;
   }
 
   Type parameterize(Type unparameterized, List<Type> substitutions) {
-    Symbol symbol = unparameterized != null ? unparameterized.symbol : null;
+    var symbol = unparameterized != null ? unparameterized.symbol : null;
 
     if (symbol != null) {
       assert symbol.hasParameters();
@@ -98,14 +92,13 @@ class TypeCache {
     }
 
     // Hash the symbol along with all types
-    int hash = computeHashCode(symbol, substitutions);
-    List<Type> existingTypes = hashTable.getOrDefault(hash, null);
+    var hash = computeHashCode(symbol, substitutions);
+    var existingTypes = hashTable.getOrDefault(hash, null);
 
     // Check existing types in that hash bucket for a match
     if (existingTypes != null) {
-      int i;
-      for (i = 0; i < existingTypes.length; i++) {
-        Type existing = existingTypes.get(i);
+      for (var i = 0; i < existingTypes.length; i++) {
+        var existing = existingTypes.get(i);
         assert symbol != existing.symbol || symbol == null || substitutions.length == existing.substitutions.length;
         if (symbol == existing.symbol && (
             symbol == null && areTypeListsEqual(substitutions, existing.relevantTypes) ||
@@ -122,15 +115,14 @@ class TypeCache {
     }
 
     // We didn't find a match, so make the type for the first time
-    Type type = Type(symbol);
+    var type = Type(symbol);
     if (symbol != null) {
       type.substitutions = substitutions;
       type.relevantTypes = substituteAll(unparameterized.relevantTypes, symbol.parameters, type.substitutions);
-      List<Member> members = unparameterized.members.values();
-      int i;
-      for (i = 0; i < members.length; i++) {
-        Member member = members.get(i);
-        Member clone = Member(member.symbol);
+      var members = unparameterized.members.values();
+      for (var i = 0; i < members.length; i++) {
+        var member = members.get(i);
+        var clone = Member(member.symbol);
         clone.dependency = member;
         clone.parameterizedType = type;
         type.addMember(clone);

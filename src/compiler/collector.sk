@@ -50,14 +50,12 @@ class Collector {
       return;
     }
 
-    int i;
-    for (i = 1; i < typeSymbols.length; i++) {
-      Symbol symbol = typeSymbols.get(i);
-      int j;
-      for (j = 0; j < i; j++) {
+    for (var i = 1; i < typeSymbols.length; i++) {
+      var symbol = typeSymbols.get(i);
+      for (var j = 0; j < i; j++) {
         if (typeComesBefore(symbol.type, typeSymbols.get(j).type)) {
-          int k;
-          for (k = i; k > j; k--) {
+          var k = i;
+          for (; k > j; k--) {
             typeSymbols.set(k, typeSymbols.get(k - 1));
           }
           typeSymbols.set(j, symbol);
@@ -75,8 +73,7 @@ class Collector {
     if (sort == .SORT_BY_INHERITANCE_AND_VALUE && left.isStruct()) {
       List<Member> members = right.members.values();
       if (members != null) {
-        int i;
-        for (i = 0; i < members.length; i++) {
+        for (var i = 0; i < members.length; i++) {
           if (members.get(i).type == left) {
             return true;
           }
@@ -93,9 +90,8 @@ class Collector {
 
   void collectChildStatements(Node node) {
     if (node.hasChildren()) {
-      int i;
-      for (i = 0; i < node.children.length; i++) {
-        Node child = node.children.get(i);
+      for (var i = 0; i < node.children.length; i++) {
+        var child = node.children.get(i);
         if (child != null) {
           collectStatements(child);
         }

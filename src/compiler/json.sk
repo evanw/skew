@@ -7,9 +7,8 @@ namespace json {
       if (options.isSingleFileMode()) {
         outputs.push(Source(options.outputFile, dump(program).append("\n")));
       } else {
-        int i;
-        for (i = 0; i < program.children.length; i++) {
-          Node file = program.children.get(i);
+        for (var i = 0; i < program.children.length; i++) {
+          var file = program.children.get(i);
           outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name.append(".json")), dump(file).append("\n")));
         }
       }
@@ -18,21 +17,21 @@ namespace json {
   }
 
   string dump(Node node) {
-    DumpVisitor visitor = DumpVisitor();
+    var visitor = DumpVisitor();
     visitor.visit(node);
     return visitor.builder.toString();
   }
 
   class DumpVisitor {
-    StringBuilder builder = StringBuilder();
-    string indent = "";
+    var builder = StringBuilder();
+    var indent = "";
 
     void visit(Node node) {
       if (node == null) {
         builder.append("null");
         return;
       }
-      string outer = indent;
+      var outer = indent;
       indent = indent.append("  ");
       builder.append("{\n").append(indent).append("\"kind\": ").append(simpleQuote(node.kind.prettyPrint()));
       if (node.content != null) {
@@ -45,10 +44,9 @@ namespace json {
       }
       if (node.hasChildren()) {
         builder.append(",\n").append(indent).append("\"children\": [");
-        string inner = indent;
+        var inner = indent;
         indent = indent.append("  ");
-        int i;
-        for (i = 0; i < node.children.length; i++) {
+        for (var i = 0; i < node.children.length; i++) {
           if (i > 0) builder.append(",");
           builder.append("\n").append(indent);
           visit(node.children.get(i));

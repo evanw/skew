@@ -11,7 +11,7 @@ struct OperatorInfo {
 }
 
 IntMap<OperatorInfo> createOperatorMap() {
-  IntMap<OperatorInfo> result = IntMap<OperatorInfo>();
+  var result = IntMap<OperatorInfo>();
 
   result.set(NodeKind.NOT, OperatorInfo("!", .UNARY_PREFIX, .NONE));
   result.set(NodeKind.POSITIVE, OperatorInfo("+", .UNARY_PREFIX, .NONE));
@@ -58,4 +58,4 @@ IntMap<OperatorInfo> createOperatorMap() {
   return result;
 }
 
-final IntMap<OperatorInfo> operatorInfo = createOperatorMap();
+final var operatorInfo = createOperatorMap();

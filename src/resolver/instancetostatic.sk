@@ -1,27 +1,25 @@
 class InstanceToStaticPass {
   static void run(Node program) {
-    CallGraph graph = CallGraph(program);
-    int i;
-    for (i = 0; i < graph.callInfo.length; i++) {
-      CallInfo info = graph.callInfo.get(i);
-      Symbol symbol = info.symbol;
-      Symbol enclosingSymbol = symbol.enclosingSymbol;
+    var graph = CallGraph(program);
+    for (var i = 0; i < graph.callInfo.length; i++) {
+      var info = graph.callInfo.get(i);
+      var symbol = info.symbol;
+      var enclosingSymbol = symbol.enclosingSymbol;
       if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImportOrExport() && symbol.node.functionBlock() != null && (enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum())) {
         // Change the instance function to a static function
         symbol.kind = .GLOBAL_FUNCTION;
         symbol.flags = symbol.flags | SymbolFlag.STATIC;
-        Symbol thisSymbol = Symbol("this", .LOCAL_VARIABLE);
+        var thisSymbol = Symbol("this", .LOCAL_VARIABLE);
         thisSymbol.type = enclosingSymbol.type;
         symbol.node.functionArguments().insertChild(0, Node.createVariable(Node.createName("this").withSymbol(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol));
         recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
 
         // Update all call sites
-        int j;
-        for (j = 0; j < info.callSites.length; j++) {
-          Node callSite = info.callSites.get(j);
+        for (var j = 0; j < info.callSites.length; j++) {
+          var callSite = info.callSites.get(j);
           switch (callSite.kind) {
             case .CALL {
-              Node value = callSite.callValue();
+              var value = callSite.callValue();
               Node target;
               Node name;
               if (value.kind == .DOT) {
@@ -53,9 +51,8 @@ class InstanceToStaticPass {
     if (node.kind == .THIS) {
       node.become(Node.createName(symbol.name).withSymbol(symbol).withType(symbol.type));
     } else if (node.hasChildren()) {
-      int i;
-      for (i = 0; i < node.children.length; i++) {
-        Node child = node.children.get(i);
+      for (var i = 0; i < node.children.length; i++) {
+        var child = node.children.get(i);
         if (child != null) {
           recursivelyReplaceThis(child, symbol);
         }

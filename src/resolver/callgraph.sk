@@ -5,7 +5,7 @@ class CallInfo {
 
 class CallGraph {
   List<CallInfo> callInfo = {};
-  IntMap<int> symbolToInfoIndex = IntMap<int>();
+  var symbolToInfoIndex = IntMap<int>();
 
   new(Node program) {
     assert program.kind == .PROGRAM;
@@ -14,7 +14,7 @@ class CallGraph {
 
   void visit(Node node) {
     if (node.kind == .CALL) {
-      Node value = node.callValue();
+      var value = node.callValue();
       if (value.symbol != null && value.symbol.kind.isFunction()) {
         assert value.kind == .NAME || value.kind == .DOT;
         recordCallSite(value.symbol, node);
@@ -31,9 +31,8 @@ class CallGraph {
     }
 
     if (node.hasChildren()) {
-      int i;
-      for (i = 0; i < node.children.length; i++) {
-        Node child = node.children.get(i);
+      for (var i = 0; i < node.children.length; i++) {
+        var child = node.children.get(i);
         if (child != null) {
           visit(child);
         }
@@ -42,8 +41,8 @@ class CallGraph {
   }
 
   void recordCallSite(Symbol symbol, Node node) {
-    int index = symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
-    CallInfo info = index < 0 ? CallInfo(symbol) : callInfo.get(index);
+    var index = symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
+    var info = index < 0 ? CallInfo(symbol) : callInfo.get(index);
     if (index < 0) {
       symbolToInfoIndex.set(symbol.uniqueID, callInfo.length);
       callInfo.push(info);

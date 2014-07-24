@@ -3,7 +3,7 @@ string simpleQuote(string name) {
 }
 
 string firstLineOf(string text) {
-  int index = text.indexOf("\n");
+  var index = text.indexOf("\n");
   return index < 0 ? text : text.slice(0, index);
 }
 

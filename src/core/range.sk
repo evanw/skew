@@ -4,7 +4,7 @@ struct FormattedRange {
 }
 
 struct Range {
-  static Range EMPTY = Range(null, 0, 0);
+  static var EMPTY = Range(null, 0, 0);
 
   final Source source;
   final int start;
@@ -20,7 +20,7 @@ struct Range {
 
   string locationString() {
     if (isEmpty()) return "";
-    LineColumn location = source.indexToLineColumn(start);
+    var location = source.indexToLineColumn(start);
     return source.name.append(":").append((location.line + 1).toString()).append(":").append((location.column + 1).toString());
   }
 
@@ -31,24 +31,24 @@ struct Range {
   // Return the length from the start to the end of the range or the end of the
   // first line, whichever comes first
   int singleLineLength() {
-    LineColumn start = source.indexToLineColumn(this.start);
-    LineColumn end = source.indexToLineColumn(this.end);
+    var start = source.indexToLineColumn(this.start);
+    var end = source.indexToLineColumn(this.end);
     return (start.line == end.line ? end.column : source.contentsOfLine(start.line).length) - start.column;
   }
 
   FormattedRange format(int maxLength) {
     assert source != null;
-    LineColumn start = source.indexToLineColumn(this.start);
-    LineColumn end = source.indexToLineColumn(this.end);
-    string line = source.contentsOfLine(start.line);
-    int length = line.length;
-    int a = start.column;
-    int b = end.line == start.line ? end.column : length;
+    var start = source.indexToLineColumn(this.start);
+    var end = source.indexToLineColumn(this.end);
+    var line = source.contentsOfLine(start.line);
+    var length = line.length;
+    var a = start.column;
+    var b = end.line == start.line ? end.column : length;
 
     // Ensure the line length doesn't exceed maxLength
     if (maxLength > 0 && length > maxLength) {
-      int centeredWidth = b - a < maxLength / 2 ? b - a : maxLength / 2;
-      int centeredStart = (maxLength - centeredWidth) / 2;
+      var centeredWidth = b - a < maxLength / 2 ? b - a : maxLength / 2;
+      var centeredStart = (maxLength - centeredWidth) / 2;
 
       // Left aligned
       if (a < centeredStart) {
@@ -58,7 +58,7 @@ struct Range {
 
       // Right aligned
       else if (length - a < maxLength - centeredStart) {
-        int offset = length - maxLength;
+        var offset = length - maxLength;
         line = "...".append(line.slice(offset + 3, length));
         a = a - offset;
         b = b - offset;
@@ -66,7 +66,7 @@ struct Range {
 
       // Center aligned
       else {
-        int offset = a - centeredStart;
+        var offset = a - centeredStart;
         line = "...".append(line.slice(offset + 3, offset + maxLength - 3)).append("...");
         a = a - offset;
         b = b - offset;

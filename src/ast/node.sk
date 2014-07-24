@@ -209,8 +209,8 @@ in NodeKind {
 }
 
 class Node {
+  var range = Range.EMPTY;
   NodeKind kind;
-  Range range = Range.EMPTY;
   Node parent = null;
   Node sibling = null; // Adjacent declarations with the same name
   List<Node> children = null;
@@ -280,7 +280,7 @@ class Node {
 
   Node remove() {
     if (parent != null) {
-      int index = indexInParent();
+      var index = indexInParent();
       assert index >= 0 && index < parent.children.length;
       parent.children.set(index, null);
       parent = null;
@@ -290,10 +290,9 @@ class Node {
 
   List<Node> removeChildren() {
     if (children == null) return {};
-    List<Node> result = children;
-    int i;
-    for (i = 0; i < children.length; i++) {
-      Node child = children.get(i);
+    var result = children;
+    for (var i = 0; i < children.length; i++) {
+      var child = children.get(i);
       if (child != null) {
         child.parent = null;
       }
@@ -326,7 +325,7 @@ class Node {
     assert children != null;
     assert index >= 0 && index <= children.length;
     updateParent(node, this);
-    Node old = children.get(index);
+    var old = children.get(index);
     if (old != null) old.parent = null;
     children.set(index, node);
   }
@@ -341,25 +340,23 @@ class Node {
   void insertChildren(int index, List<Node> nodes) {
     if (children == null) children = {};
     assert index >= 0 && index <= children.length;
-    int i;
-    for (i = 0; i < nodes.length; i++) {
-      Node node = nodes.get(i);
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes.get(i);
       updateParent(node, this);
       children.insert(index++, node);
     }
   }
 
   Node clone() {
-    Node node = Node(kind);
+    var node = Node(kind);
     node.range = range;
     node.type = type;
     node.symbol = symbol;
     node.content = content;
     if (children != null) {
       node.children = {};
-      int i;
-      for (i = 0; i < children.length; i++) {
-        Node child = children.get(i);
+      for (var i = 0; i < children.length; i++) {
+        var child = children.get(i);
         node.appendChild(child != null ? child.clone() : null);
       }
     }
@@ -388,8 +385,7 @@ class Node {
 
   Node withChildren(List<Node> nodes) {
     assert children == null;
-    int i;
-    for (i = 0; i < nodes.length; i++) {
+    for (var i = 0; i < nodes.length; i++) {
       updateParent(nodes.get(i), this);
     }
     children = nodes;
@@ -397,7 +393,7 @@ class Node {
   }
 
   Node firstNonExtensionSibling() {
-    Node node = this;
+    var node = this;
     while (node != null && node.kind == .EXTENSION) {
       node = node.sibling;
     }
@@ -405,7 +401,7 @@ class Node {
   }
 
   void appendToSiblingChain(Node node) {
-    Node last = this;
+    var last = this;
     while (last.sibling != null) {
       last = last.sibling;
     }
@@ -432,7 +428,7 @@ class Content {
   static bool equal(Content left, Content right) {
     if (left == right) return true;
     if (left != null && right != null) {
-      ContentType type = left.type();
+      var type = left.type();
       if (type == right.type()) {
         switch (type) {
           case .INT { return ((IntContent)left).value == ((IntContent)right).value; }

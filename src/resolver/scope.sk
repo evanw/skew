@@ -46,17 +46,17 @@ class Scope {
   }
 
   Member find(string name) {
-    Member member = findLocal(name);
+    var member = findLocal(name);
     return member != null ? member : lexicalParent != null ? lexicalParent.find(name) : null;
   }
 
   Member findLocal(string name) {
     if (locals != null) {
-      Member member = locals.getOrDefault(name, null);
+      var member = locals.getOrDefault(name, null);
       if (member != null) return member;
     }
     if (type != null) {
-      Member member = type.findMember(name);
+      var member = type.findMember(name);
       if (member != null) return member;
     }
     return null;

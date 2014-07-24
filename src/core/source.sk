@@ -13,8 +13,7 @@ class Source {
   void computeLineOffsets() {
     if (lineOffsets != null) return;
     lineOffsets = { 0 };
-    int i;
-    for (i = 0; i < contents.length; i++) {
+    for (var i = 0; i < contents.length; i++) {
       if (contents.codeUnitAt(i) == '\n') {
         lineOffsets.push(i + 1);
       }
@@ -31,8 +30,8 @@ class Source {
     if (line < 0 || line >= lineOffsets.length) {
       return "";
     }
-    int start = lineOffsets.get(line);
-    int end = line + 1 < lineOffsets.length ? lineOffsets.get(line + 1) - 1 : contents.length;
+    var start = lineOffsets.get(line);
+    var end = line + 1 < lineOffsets.length ? lineOffsets.get(line + 1) - 1 : contents.length;
     return contents.slice(start, end);
   }
 
@@ -40,11 +39,11 @@ class Source {
     computeLineOffsets();
 
     // Binary search to find the line
-    int count = lineOffsets.length;
-    int line = 0;
+    var count = lineOffsets.length;
+    var line = 0;
     while (count > 0) {
-      int step = count / 2;
-      int i = line + step;
+      var step = count / 2;
+      var i = line + step;
       if (lineOffsets.get(i) <= index) {
         line = i + 1;
         count = count - step - 1;
@@ -54,7 +53,7 @@ class Source {
     }
 
     // Use the line to compute the column
-    int column = line > 0 ? index - lineOffsets.get(line - 1) : index;
+    var column = line > 0 ? index - lineOffsets.get(line - 1) : index;
     return LineColumn(line - 1, column);
   }
 }

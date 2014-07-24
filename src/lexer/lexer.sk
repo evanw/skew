@@ -122,30 +122,30 @@ final List<int> yy_chk = { 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 // replaces a simple hand-coded lexer and offers much better performance.
 List<Token> tokenize(Log log, Source source) {
   List<Token> tokens = {};
-  string text = source.contents;
-  int text_length = text.length;
+  var text = source.contents;
+  var text_length = text.length;
 
   // For backing up
-  int yy_last_accepting_state = 0;
-  int yy_last_accepting_cpos = 0;
+  var yy_last_accepting_state = 0;
+  var yy_last_accepting_cpos = 0;
 
   // The current character pointer
-  int yy_cp = 0;
+  var yy_cp = 0;
 
   while (yy_cp < text_length) {
-    int yy_current_state = 1; // Reset the NFA
-    int yy_bp = yy_cp; // The pointer to the beginning of the token
+    var yy_current_state = 1; // Reset the NFA
+    var yy_bp = yy_cp; // The pointer to the beginning of the token
 
     // Search for a match
     while (yy_current_state != 254) {
-      int index = 0;
+      var index = 0;
       if (yy_cp < text_length) {
-        int c = text.codeUnitAt(yy_cp);
+        var c = text.codeUnitAt(yy_cp);
         if (c < 0x7F) index = c;
       } else {
         break; // This prevents syntax errors from causing infinite loops
       }
-      int yy_c = yy_ec.get(index);
+      var yy_c = yy_ec.get(index);
       if (yy_accept.get(yy_current_state) != .YY_INVALID_ACTION) {
         yy_last_accepting_state = yy_current_state;
         yy_last_accepting_cpos = yy_cp;

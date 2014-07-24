@@ -6,18 +6,18 @@ final string BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01234
 final string HEX = "0123456789ABCDEF";
 
 string encodeBase64(string data) {
-  StringBuilder result = StringBuilder();
-  int n = data.length;
+  var result = StringBuilder();
+  var n = data.length;
   int i;
   for (i = 0; i + 2 < n; i = i + 3) {
-    int c = data.codeUnitAt(i) << 16 | data.codeUnitAt(i + 1) << 8 | data.codeUnitAt(i + 2);
+    var c = data.codeUnitAt(i) << 16 | data.codeUnitAt(i + 1) << 8 | data.codeUnitAt(i + 2);
     result.append(BASE64.get(c >> 18)).append(BASE64.get(c >> 12 & 0x3F)).append(BASE64.get(c >> 6 & 0x3F)).append(BASE64.get(c & 0x3F));
   }
   if (i < n) {
-    int a = data.codeUnitAt(i);
+    var a = data.codeUnitAt(i);
     result.append(BASE64.get(a >> 2));
     if (i + 1 < n) {
-      int b = data.codeUnitAt(i + 1);
+      var b = data.codeUnitAt(i + 1);
       result.append(BASE64.get(a << 4 & 0x30 | b >> 4)).append(BASE64.get(b << 2 & 0x3C)).append("=");
     } else {
       result.append(BASE64.get(a << 4 & 0x30)).append("==");
@@ -31,7 +31,7 @@ int hashCombine(int left, int right) {
 }
 
 string doubleToString(double value) {
-  string result = value.toString();
+  var result = value.toString();
   if (result.indexOf(".") < 0) {
     result = result.append(".0");
   }
@@ -46,15 +46,15 @@ int parseHexCharacter(int c) {
 }
 
 StringContent parseStringLiteral(Log log, Range range, string text) {
-  bool isValidString = true;
-  StringBuilder result = StringBuilder();
-  int start = 1; // Append long runs of unescaped characters using a single slice() for speed
-  int i = 1;
+  var isValidString = true;
+  var result = StringBuilder();
+  var start = 1; // Append long runs of unescaped characters using a single slice() for speed
+  var i = 1;
   while (i + 1 < text.length) {
-    int c = text.codeUnitAt(i);
+    var c = text.codeUnitAt(i);
     if (c == '\\') {
       result.append(text.slice(start, i));
-      int escape = i++;
+      var escape = i++;
       if (i + 1 < text.length) {
         c = text.codeUnitAt(i++);
         if (c == 'n') { result.append("\n"); start = i; continue; }
@@ -64,8 +64,8 @@ StringContent parseStringLiteral(Log log, Range range, string text) {
         else if (c == '0') { result.append("\0"); start = i; continue; }
         else if (c == '\\' || c == '"' || c == '\'') { result.append(string.fromCodeUnit(c)); start = i; continue; }
         else if (c == 'x') {
-          int c0 = i + 1 < text.length ? parseHexCharacter(text.codeUnitAt(i++)) : -1;
-          int c1 = i + 1 < text.length ? parseHexCharacter(text.codeUnitAt(i++)) : -1;
+          var c0 = i + 1 < text.length ? parseHexCharacter(text.codeUnitAt(i++)) : -1;
+          var c1 = i + 1 < text.length ? parseHexCharacter(text.codeUnitAt(i++)) : -1;
           if (c0 != -1 && c1 != -1) { result.append(string.fromCodeUnit(c0 << 4 | c1)); start = i; continue; }
         }
       }
@@ -80,13 +80,13 @@ StringContent parseStringLiteral(Log log, Range range, string text) {
 }
 
 string quoteString(string text, int quote) {
-  StringBuilder result = StringBuilder();
-  string quoteString = string.fromCodeUnit(quote);
+  var result = StringBuilder();
+  var quoteString = string.fromCodeUnit(quote);
   result.append(quoteString);
-  int start = 0; // Append long runs of unescaped characters using a single slice() for speed
+  var start = 0; // Append long runs of unescaped characters using a single slice() for speed
   int i;
   for (i = 0; i < text.length; i++) {
-    int c = text.codeUnitAt(i);
+    var c = text.codeUnitAt(i);
     if (c == quote) { result.append(text.slice(start, i)).append("\\").append(quoteString); start = i + 1; }
     else if (c == '\n') { result.append(text.slice(start, i)).append("\\n"); start = i + 1; }
     else if (c == '\r') { result.append(text.slice(start, i)).append("\\r"); start = i + 1; }
@@ -101,7 +101,7 @@ string quoteString(string text, int quote) {
 
 // TODO: Move this into the standard library
 string replace(string text, string before, string after) {
-  string result = "";
+  var result = "";
   int index;
   while ((index = text.indexOf(before)) != -1) {
     result = result.append(text.slice(0, index)).append(after);
@@ -112,9 +112,8 @@ string replace(string text, string before, string after) {
 
 // TODO: Move this into the standard library
 string repeat(string text, int count) {
-  int i;
-  string result = "";
-  for (i = 0; i < count; i++) {
+  var result = "";
+  for (var i = 0; i < count; i++) {
     result = result.append(text);
   }
   return result;
@@ -130,7 +129,7 @@ struct SplitPath {
 }
 
 SplitPath splitPath(string path) {
-  int slashIndex = Math.imax(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  var slashIndex = Math.imax(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return slashIndex == -1
     ? SplitPath(".", path)
     : SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1, path.length));

@@ -131,7 +131,7 @@ class Symbol {
 
   // The value that this symbol takes if it is of enum type. Only user-defined
   // enums have an enum value, so this should be ignored for imported enums.
-  int enumValue = 0;
+  var enumValue = 0;
 
   // Ambiguous symbols due to using namespace statements are allowed and are
   // only an error when used. All symbols in the collision are tracked here
@@ -152,26 +152,27 @@ class Symbol {
   List<Symbol> sortedParameters = null;
 
   // Give each symbol a unique integer as a hash code
-  static int nextUniqueID = 0;
-  int uniqueID = nextUniqueID++;
+  static var nextUniqueID = 0;
+  var uniqueID = nextUniqueID++;
 
   void sortParametersByDependencies() {
     sortedParameters = parameters.clone();
-    int i;
-    for (i = 0; i < sortedParameters.length; i++) {
-      int j;
+    for (var i = 0; i < sortedParameters.length; i++) {
+      var j = i;
 
       // Select a parameter that doesn't depend on any unchecked parameter
-      for (j = i; j < sortedParameters.length; j++) {
-        Symbol parameter = sortedParameters.get(j);
+      for (; j < sortedParameters.length; j++) {
+        var k = i;
+
+        // Find bounded type parameters
+        var parameter = sortedParameters.get(j);
         if (!parameter.type.isParameter()) continue;
-        Type parameterBound = parameter.type.bound();
+        var parameterBound = parameter.type.bound();
         if (parameterBound == null) break;
 
         // Check to see if this depends on any other unchecked parameters
-        int k;
-        for (k = i; k < sortedParameters.length; k++) {
-          Symbol other = sortedParameters.get(k);
+        for (; k < sortedParameters.length; k++) {
+          var other = sortedParameters.get(k);
           if (parameter == other || !other.type.isParameter()) continue;
           if (parameterBound != null && parameterBound.dependsOnParameter(other)) {
             break;
@@ -182,7 +183,7 @@ class Symbol {
 
       // Swap the ith and jth parameter
       if (j < sortedParameters.length) {
-        Symbol temp = sortedParameters.get(i);
+        var temp = sortedParameters.get(i);
         sortedParameters.set(i, sortedParameters.get(j));
         sortedParameters.set(j, temp);
       }

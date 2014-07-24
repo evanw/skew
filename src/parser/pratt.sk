@@ -1,7 +1,7 @@
 class ParserContext {
   Log log;
   List<Token> tokens;
-  int index = 0;
+  var index = 0;
 
   // Keep track of the previous syntax error so only one syntax error is emitted
   // per token when recovering from a parse error. For example:
@@ -17,7 +17,7 @@ class ParserContext {
   }
 
   Token next() {
-    Token token = current();
+    var token = current();
     if (index + 1 < tokens.length) {
       index++;
     }
@@ -25,7 +25,7 @@ class ParserContext {
   }
 
   Range spanSince(Range range) {
-    Token previous = tokens.get(index > 0 ? index - 1 : 0);
+    var previous = tokens.get(index > 0 ? index - 1 : 0);
     return previous.range.end < range.start ? range : Range.span(range, previous.range);
   }
 
@@ -43,7 +43,7 @@ class ParserContext {
 
   bool expect(TokenKind kind) {
     if (!eat(kind)) {
-      Token token = current();
+      var token = current();
       if (previousSyntaxError != token) {
         syntaxErrorExpectedToken(log, token, kind);
         previousSyntaxError = token;
@@ -54,7 +54,7 @@ class ParserContext {
   }
 
   void unexpectedToken() {
-    Token token = current();
+    var token = current();
     if (previousSyntaxError != token) {
       syntaxErrorUnexpectedToken(log, token);
       previousSyntaxError = token;
@@ -78,12 +78,12 @@ alias InfixParselet = Node fn(ParserContext, Node);
 //   http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
 //
 class Pratt {
-  IntMap<Parselet> table = IntMap<Parselet>();
+  var table = IntMap<Parselet>();
 
   Parselet parselet(TokenKind kind, int precedence) {
-    Parselet parselet = table.getOrDefault(kind, null);
+    var parselet = table.getOrDefault(kind, null);
     if (parselet == null) {
-      Parselet created = Parselet(precedence);
+      var created = Parselet(precedence);
       parselet = created;
       table.set(kind, created);
     } else if (precedence > parselet.precedence) {
@@ -101,13 +101,13 @@ class Pratt {
   }
 
   Node parseIgnoringParselet(ParserContext context, int precedence, Parselet parseletToIgnore) {
-    Token token = context.current();
-    Parselet parselet = table.getOrDefault(token.kind, null);
+    var token = context.current();
+    var parselet = table.getOrDefault(token.kind, null);
     if (parselet == null || parselet == parseletToIgnore || parselet.prefix == null) {
       context.unexpectedToken();
       return Node.createError().withRange(context.spanSince(token.range));
     }
-    Node node = resumeIgnoringParselet(context, precedence, parselet.prefix(context), parseletToIgnore);
+    var node = resumeIgnoringParselet(context, precedence, parselet.prefix(context), parseletToIgnore);
     assert node != null; // Parselets must return Node.createError() instead of null
     assert !node.range.isEmpty(); // Parselets must set the range of every node
     return node;
@@ -116,8 +116,8 @@ class Pratt {
   Node resumeIgnoringParselet(ParserContext context, int precedence, Node left, Parselet parseletToIgnore) {
     assert left != null;
     while (!left.kind.isError()) {
-      TokenKind kind = context.current().kind;
-      Parselet parselet = table.getOrDefault(kind, null);
+      var kind = context.current().kind;
+      var parselet = table.getOrDefault(kind, null);
       if (parselet == null || parselet == parseletToIgnore || parselet.infix == null || parselet.precedence <= precedence) {
         break;
       }
@@ -146,16 +146,16 @@ class Pratt {
 
   void infix(TokenKind kind, int precedence, InfixCallback callback) {
     parselet(kind, precedence).infix = (context, left) => {
-      Token token = context.next();
-      Node right = pratt.parse(context, precedence);
+      var token = context.next();
+      var right = pratt.parse(context, precedence);
       return right != null ? callback(context, left, token, right) : null;
     };
   }
 
   void infixRight(TokenKind kind, int precedence, InfixCallback callback) {
     parselet(kind, precedence).infix = (context, left) => {
-      Token token = context.next();
-      Node right = pratt.parse(context, precedence - 1); // Subtract 1 for right-associativity
+      var token = context.next();
+      var right = pratt.parse(context, precedence - 1); // Subtract 1 for right-associativity
       return right != null ? callback(context, left, token, right) : null;
     };
   }

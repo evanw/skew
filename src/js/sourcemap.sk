@@ -12,7 +12,7 @@ class SourceMapGenerator {
   List<Source> sources = {};
 
   void addMapping(Source source, int originalLine, int originalColumn, int generatedLine, int generatedColumn) {
-    int sourceIndex = sources.indexOf(source);
+    var sourceIndex = sources.indexOf(source);
     if (sourceIndex == -1) {
       sourceIndex = sources.length;
       sources.push(source);
@@ -23,13 +23,12 @@ class SourceMapGenerator {
   string toString() {
     List<string> sourceNames = {};
     List<string> sourceContents = {};
-    int i;
-    for (i = 0; i < sources.length; i++) {
+    for (var i = 0; i < sources.length; i++) {
       Source source = sources.get(i);
       sourceNames.push(quoteString(source.name, '"'));
       sourceContents.push(quoteString(source.contents, '"'));
     }
-    StringBuilder result = StringBuilder();
+    var result = StringBuilder();
     result.append("{\"version\":3,\"sources\":[").append(",".join(sourceNames)).append(
       "],\"sourcesContent\":[").append(",".join(sourceContents)).append("],\"names\":[],\"mappings\":\"");
     compile(result);
@@ -39,21 +38,20 @@ class SourceMapGenerator {
   void compile(StringBuilder result) {
     // Sort the mappings in increasing order by generated location
     mappings.sort((left, right) => {
-      int result = left.generatedLine - right.generatedLine;
+      var result = left.generatedLine - right.generatedLine;
       return result != 0 ? result : left.generatedColumn - right.generatedColumn;
     });
 
-    int previousGeneratedColumn = 0;
-    int previousGeneratedLine = 0;
-    int previousOriginalColumn = 0;
-    int previousOriginalLine = 0;
-    int previousSourceIndex = 0;
+    var previousGeneratedColumn = 0;
+    var previousGeneratedLine = 0;
+    var previousOriginalColumn = 0;
+    var previousOriginalLine = 0;
+    var previousSourceIndex = 0;
 
     // Generate the base64 VLQ encoded mappings
-    int i;
-    for (i = 0; i < mappings.length; i++) {
-      SourceMapping mapping = mappings.get(i);
-      int generatedLine = mapping.generatedLine;
+    for (var i = 0; i < mappings.length; i++) {
+      var mapping = mappings.get(i);
+      var generatedLine = mapping.generatedLine;
 
       // Insert ',' for the same line and ';' for a line
       if (previousGeneratedLine == generatedLine) {
@@ -101,10 +99,10 @@ class SourceMapGenerator {
   //   101011
   //
   static string encodeVLQ(int value) {
-    int vlq = value < 0 ? -value << 1 | 1 : value << 1;
-    string encoded = "";
+    var vlq = value < 0 ? -value << 1 | 1 : value << 1;
+    var encoded = "";
     do {
-      int digit = vlq & 31;
+      var digit = vlq & 31;
       vlq = vlq >> 5;
 
       // If there are still more digits in this value, we must make sure the

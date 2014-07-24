@@ -75,7 +75,7 @@ in Node {
     }
 
     // Remove children before clone() so they are moved instead of copied
-    List<Node> children = removeChildren();
+    var children = removeChildren();
     become(Node.createUnary(.NOT, clone().withChildren(children)).withType(cache.boolType));
   }
 
@@ -85,29 +85,28 @@ in Node {
       return false;
     }
 
-    int i;
-    for (i = children.length - 1; i >= 0; i--) {
-      Node child = children.get(i);
+    for (var i = children.length - 1; i >= 0; i--) {
+      var child = children.get(i);
       switch (child.kind) {
         case .RETURN, .IMPLICIT_RETURN {
           return true;
         }
 
         case .IF {
-          Node trueBlock = child.ifTrue();
-          Node falseBlock = child.ifFalse();
+          var trueBlock = child.ifTrue();
+          var falseBlock = child.ifFalse();
           if (falseBlock != null && trueBlock.blockAlwaysEndsWithReturn() && falseBlock.blockAlwaysEndsWithReturn()) {
             return true;
           }
         }
 
         case .SWITCH {
-          Node value = child.switchValue();
-          List<Node> cases = child.switchCases();
-          bool foundDefault = false;
+          var value = child.switchValue();
+          var cases = child.switchCases();
+          var foundDefault = false;
           int j;
           for (j = 0; j < cases.length; j++) {
-            Node node = cases.get(j);
+            var node = cases.get(j);
             if (!node.caseBlock().blockAlwaysEndsWithReturn()) {
               break;
             }

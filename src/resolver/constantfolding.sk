@@ -23,14 +23,15 @@ class ConstantFolder {
   }
 
   void foldConstants(Node node) {
-    NodeKind kind = node.kind;
+    var kind = node.kind;
 
     // Fold operands first
     if (node.hasChildren()) {
-      int i;
-      for (i = 0; i < node.children.length; i++) {
-        Node child = node.children.get(i);
-        if (child != null) foldConstants(child);
+      for (var i = 0; i < node.children.length; i++) {
+        var child = node.children.get(i);
+        if (child != null) {
+          foldConstants(child);
+        }
       }
     }
 
@@ -43,9 +44,9 @@ class ConstantFolder {
 
     // Casts
     else if (kind.isCast()) {
-      Type type = node.castType().type;
-      Node value = node.castValue();
-      NodeKind valueKind = value.kind;
+      var type = node.castType().type;
+      var value = node.castValue();
+      var valueKind = value.kind;
 
       // Cast "bool" values
       if (valueKind.isBool()) {
@@ -71,8 +72,8 @@ class ConstantFolder {
 
     // Unary operators
     else if (kind.isUnaryOperator()) {
-      Node value = node.unaryValue();
-      NodeKind valueKind = value.kind;
+      var value = node.unaryValue();
+      var valueKind = value.kind;
 
       // Fold "bool" values
       if (valueKind.isBool()) {
@@ -95,9 +96,9 @@ class ConstantFolder {
 
     // Binary operators
     else if (kind.isBinaryOperator()) {
-      Node left = node.binaryLeft();
-      Node right = node.binaryRight();
-      NodeKind valueKind = left.kind;
+      var left = node.binaryLeft();
+      var right = node.binaryRight();
+      var valueKind = left.kind;
       if (valueKind != right.kind) return;
 
       // Fold "bool" values
