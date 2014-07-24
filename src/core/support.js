@@ -1,7 +1,7 @@
 function parseIntLiteral(value, base) {
   if (base !== 10) value = value.slice(2);
   var result = parseInt(value, base);
-  return result === (result | 0) ? result : NaN;
+  return result === (result | 0) || result === 0x80000000 ? result | 0 : NaN;
 }
 
 function parseDoubleLiteral(value) {

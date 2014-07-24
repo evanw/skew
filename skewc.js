@@ -3236,7 +3236,7 @@ js.Emitter.prototype.emitExpression = function(node, precedence) {
     var isPostfix = info.precedence === Precedence.UNARY_POSTFIX;
     if (!isPostfix) {
       this.emit(info.text);
-      if (node.kind === NodeKind.POSITIVE && (value.kind === NodeKind.POSITIVE || value.kind === NodeKind.PREFIX_INCREMENT) || node.kind === NodeKind.NEGATIVE && (value.kind === NodeKind.NEGATIVE || value.kind === NodeKind.PREFIX_DECREMENT)) {
+      if (node.kind === NodeKind.POSITIVE && (value.kind === NodeKind.POSITIVE || value.kind === NodeKind.PREFIX_INCREMENT) || node.kind === NodeKind.NEGATIVE && (value.kind === NodeKind.NEGATIVE || value.kind === NodeKind.PREFIX_DECREMENT || value.kind === NodeKind.INT && value.asInt() < 0)) {
         this.emit(" ");
       }
     }
@@ -4918,7 +4918,7 @@ Resolver.prototype.resolve = function(node, expectedType) {
     this.resolveHook(node);
     break;
   case 41:
-    node.type = this.cache.intType;
+    this.resolveInt(node);
     break;
   case 42:
     node.type = this.cache.floatType;
@@ -6373,6 +6373,12 @@ Resolver.prototype.resolveHook = function(node) {
   this.checkConversion(commonType, falseNode, CastKind.IMPLICIT_CAST);
   node.type = commonType;
 };
+Resolver.prototype.resolveInt = function(node) {
+  if (node.asInt() === -2147483648) {
+    syntaxErrorInvalidInteger(this.log, node.range, node.range.toString());
+  }
+  node.type = this.cache.intType;
+};
 Resolver.prototype.resolveInitializer = function(node) {
   var values = node.initializerValues();
   if (this.typeContext === null) {
@@ -6465,7 +6471,7 @@ Resolver.prototype.resolveCall = function(node) {
     this.resolveAsExpressionWithConversion(value, this.cache.functionType(this.typeContext, argumentTypes), CastKind.IMPLICIT_CAST);
   } else {
     if (!NodeKind.isExpression(value.kind)) {
-      throw new Error("assert value.kind.isExpression(); (src/resolver/resolver.sk:2352:7)");
+      throw new Error("assert value.kind.isExpression(); (src/resolver/resolver.sk:2361:7)");
     }
     this.resolve(value, null);
     if (NodeKind.isType(value.kind)) {
@@ -6505,7 +6511,7 @@ Resolver.prototype.resolveSuperCall = function(node) {
 };
 Resolver.prototype.resolveSequence = function(node) {
   if (!node.hasChildren()) {
-    throw new Error("assert node.hasChildren(); (src/resolver/resolver.sk:2402:5)");
+    throw new Error("assert node.hasChildren(); (src/resolver/resolver.sk:2411:5)");
   }
   for (var i = 0, n = node.children.length; i < n; i = i + 1 | 0) {
     var child = node.children.get(i);
@@ -6537,7 +6543,7 @@ Resolver.prototype.resolveParameterize = function(node) {
     return;
   }
   if (parameters.length !== sortedParameters.length) {
-    throw new Error("assert parameters.length == sortedParameters.length; (src/resolver/resolver.sk:2439:5)");
+    throw new Error("assert parameters.length == sortedParameters.length; (src/resolver/resolver.sk:2448:5)");
   }
   var sortedTypes = [];
   for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -6593,7 +6599,7 @@ Resolver.prototype.resolveLambda = function(node) {
       } else {
         for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
           if ($arguments.get(i).variableType() !== null) {
-            throw new Error("assert arguments.get(i).variableType() == null; (src/resolver/resolver.sk:2508:13)");
+            throw new Error("assert arguments.get(i).variableType() == null; (src/resolver/resolver.sk:2517:13)");
           }
           $arguments.get(i).replaceChild(1, Node.createType(argumentTypes.get(i)));
         }
@@ -6637,6 +6643,10 @@ Resolver.prototype.resolveFunctionType = function(node) {
 Resolver.prototype.resolveUnaryOperator = function(node) {
   var kind = node.kind;
   var value = node.unaryValue();
+  if (kind === NodeKind.NEGATIVE && value.kind === NodeKind.INT && value.asInt() === -2147483648) {
+    node.become(value.withRange(node.range).withType(this.cache.intType));
+    return;
+  }
   this.resolveAsExpression(value);
   var type = value.type;
   if (type.isError(this.cache)) {
@@ -9408,7 +9418,7 @@ Type.nextUniqueID = 0;
 function parseIntLiteral(value, base) {
   if (base !== 10) value = value.slice(2);
   var result = parseInt(value, base);
-  return result === (result | 0) ? result : NaN;
+  return result === (result | 0) || result === 0x80000000 ? result | 0 : NaN;
 }
 
 function parseDoubleLiteral(value) {

@@ -573,7 +573,7 @@ namespace js {
 
             // Prevent "- -1" from becoming "--1"
             if (node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
-                node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT)) {
+                node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT || value.kind == NodeKind.INT && value.asInt() < 0)) {
               emit(" ");
             }
           }

@@ -524,7 +524,7 @@ class Resolver {
       case .TRUE { node.type = cache.boolType; }
       case .FALSE { node.type = cache.boolType; }
       case .HOOK { resolveHook(node); }
-      case .INT { node.type = cache.intType; }
+      case .INT { resolveInt(node); }
       case .FLOAT { node.type = cache.floatType; }
       case .DOUBLE { node.type = cache.doubleType; }
       case .STRING { node.type = cache.stringType; }
@@ -2226,6 +2226,15 @@ class Resolver {
     node.type = commonType;
   }
 
+  void resolveInt(Node node) {
+    // Typing "0x80000000" without a minus sign is an error
+    if (node.asInt() == -0x80000000) {
+      syntaxErrorInvalidInteger(log, node.range, node.range.toString());
+    }
+
+    node.type = cache.intType;
+  }
+
   void resolveInitializer(Node node) {
     var values = node.initializerValues();
 
@@ -2556,6 +2565,13 @@ class Resolver {
   void resolveUnaryOperator(Node node) {
     var kind = node.kind;
     var value = node.unaryValue();
+
+    // Special-case "-0x80000000"
+    if (kind == .NEGATIVE && value.kind == .INT && value.asInt() == -0x80000000) {
+      node.become(value.withRange(node.range).withType(cache.intType));
+      return;
+    }
+
     resolveAsExpression(value);
 
     // Avoid reporting further errors
