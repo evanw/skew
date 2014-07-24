@@ -2725,7 +2725,7 @@ StringMap<SymbolFlag> createNameToSymbolFlag() {
   return result;
 }
 
-var nameToSymbolFlag = createNameToSymbolFlag();
+final var nameToSymbolFlag = createNameToSymbolFlag();
 
 IntMap<string> createSymbolFlagToName() {
   var result = IntMap<string>();
@@ -2742,4 +2742,4 @@ IntMap<string> createSymbolFlagToName() {
   return result;
 }
 
-var symbolFlagToName = createSymbolFlagToName();
+final var symbolFlagToName = createSymbolFlagToName();

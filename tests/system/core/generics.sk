@@ -318,3 +318,17 @@ Foo<float, IFoo<int>, int> b;
 Foo<IFoo<float>, IFoo<int>, int> c;
     ~~~~~~~~~~~
 ");
+
+test("
+class Foo {
+  int foo;
+}
+class Bar<T> {
+  List<T> foo() { return {}; }
+}
+bool foo = Bar<Foo>().foo().get(0).foo;
+", "
+<stdin>:7:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool foo = Bar<Foo>().foo().get(0).foo;
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+");

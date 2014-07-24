@@ -300,3 +300,15 @@ ns.bar foo = false;
 ns.bar foo = false;
              ~~~~~
 ");
+
+test("
+using Foo = void fn();
+enum Bar {}
+in Bar {
+  string foo() {
+    return toString();
+  }
+}
+", "
+TODO
+");
