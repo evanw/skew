@@ -68,10 +68,26 @@ void fn() bar = () => foo();
 ");
 
 test("
+void fn() bar = () => 0;
+", "
+<stdin>:1:23: warning: Unused expression
+void fn() bar = () => 0;
+                      ^
+");
+
+test("
 void foo() {}
 void fn() bar = () => { return foo(); };
 ", "
 <stdin>:2:32: error: Unexpected expression of type \"void\"
 void fn() bar = () => { return foo(); };
                                ~~~~~
+");
+
+test("
+void fn() bar = () => { return 0; };
+", "
+<stdin>:1:32: error: Cannot convert from type \"int\" to type \"void\"
+void fn() bar = () => { return 0; };
+                               ^
 ");
