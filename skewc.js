@@ -1406,20 +1406,16 @@ Node.prototype.blockAlwaysEndsWithReturn = function() {
       var value = child.switchValue();
       var cases = child.switchCases();
       var foundDefault = false;
-      var j;
-      for (j = 0; j < cases.length; j = j + 1 | 0) {
+      for (var j = 0; j < cases.length; j = j + 1 | 0) {
         var node = cases.get(j);
         if (!node.caseBlock().blockAlwaysEndsWithReturn()) {
-          break;
+          return false;
         }
         if (node.caseValues().length === 0) {
           foundDefault = true;
         }
       }
-      if (j === cases.length && foundDefault) {
-        return true;
-      }
-      break;
+      return foundDefault;
     }
   }
   return false;
@@ -3962,10 +3958,6 @@ var Precedence = {
   UNARY_POSTFIX: 14,
   MEMBER: 15
 };
-var AllowEmpty = {
-  NO: 0,
-  YES: 1
-};
 var StatementHint = {
   NORMAL: 0,
   IN_ENUM: 1,
@@ -3977,8 +3969,8 @@ var TokenScan = {
   STOP_BEFORE_NEXT_STATEMENT: 1
 };
 var AllowLambda = {
-  NO: 0,
-  YES: 1
+  LAMBDA_NOT_ALLOWED: 0,
+  LAMBDA_ALLOWED: 1
 };
 var AllowTrailingComma = {
   NO_TRAILING_COMMA: 0,
@@ -8108,7 +8100,7 @@ function parseGroup(context, allowLambda) {
   if (!context.expect(TokenKind.LEFT_PARENTHESIS)) {
     return null;
   }
-  if (allowLambda === AllowLambda.NO || !context.eat(TokenKind.RIGHT_PARENTHESIS)) {
+  if (allowLambda === AllowLambda.LAMBDA_NOT_ALLOWED || !context.eat(TokenKind.RIGHT_PARENTHESIS)) {
     var value = pratt.parse(context, Precedence.LOWEST);
     scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
     return value;
@@ -8388,7 +8380,7 @@ function parseExpression(context) {
     context.next();
   }
   if (context.current().range.start < token.range.end) {
-    throw new Error("assert context.current().range.start >= token.range.end; (src/parser/parser.sk:361:3)");
+    throw new Error("assert context.current().range.start >= token.range.end; (src/parser/parser.sk:356:3)");
   }
   return Node.createExpression(value).withRange(context.spanSince(token.range));
 }
@@ -8428,7 +8420,7 @@ function parseAssert(context) {
 }
 function parseSwitch(context) {
   var token = context.next();
-  var value = parseGroup(context, AllowLambda.NO);
+  var value = parseGroup(context, AllowLambda.LAMBDA_NOT_ALLOWED);
   if (value === null) {
     return null;
   }
@@ -8440,7 +8432,7 @@ function parseSwitch(context) {
 }
 function parseWhile(context) {
   var token = context.next();
-  var value = parseGroup(context, AllowLambda.NO);
+  var value = parseGroup(context, AllowLambda.LAMBDA_NOT_ALLOWED);
   if (value === null) {
     return null;
   }
@@ -8459,13 +8451,13 @@ function parseDoWhile(context) {
   if (!context.expect(TokenKind.WHILE)) {
     return null;
   }
-  var value = parseGroup(context, AllowLambda.NO);
+  var value = parseGroup(context, AllowLambda.LAMBDA_NOT_ALLOWED);
   scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
   return Node.createDoWhile(block, value).withRange(context.spanSince(token.range));
 }
 function parseIf(context) {
   var token = context.next();
-  var value = parseGroup(context, AllowLambda.NO);
+  var value = parseGroup(context, AllowLambda.LAMBDA_NOT_ALLOWED);
   if (value === null) {
     return null;
   }
@@ -8665,7 +8657,7 @@ function createLambdaFromNames(names, block) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
     var name = names.get(i);
     if (name.kind !== NodeKind.NAME) {
-      throw new Error("assert name.kind == .NAME; (src/parser/parser.sk:590:5)");
+      throw new Error("assert name.kind == .NAME; (src/parser/parser.sk:585:5)");
     }
     names.set(i, Node.createVariable(name, null, null).withRange(name.range));
   }
@@ -8869,7 +8861,7 @@ function createParser() {
   };
   pratt.parselet(TokenKind.LEFT_PARENTHESIS, Precedence.LOWEST).prefix = function(context) {
     var token = context.current();
-    var type = parseGroup(context, AllowLambda.YES);
+    var type = parseGroup(context, AllowLambda.LAMBDA_ALLOWED);
     if (type.kind === NodeKind.NAME && context.eat(TokenKind.LAMBDA)) {
       var block = parseLambdaBlock(context);
       return createLambdaFromNames([type], block).withRange(context.spanSince(token.range));
@@ -8938,7 +8930,7 @@ function createParser() {
   };
   pratt.parselet(TokenKind.DEFAULT, Precedence.UNARY_PREFIX).prefix = function(context) {
     var token = context.next();
-    var type = parseGroup(context, AllowLambda.NO);
+    var type = parseGroup(context, AllowLambda.LAMBDA_NOT_ALLOWED);
     return (type === null ? Node.createError() : Node.createDefault(type)).withRange(context.spanSince(token.range));
   };
   pratt.parselet(TokenKind.IDENTIFIER, Precedence.LOWEST).prefix = function(context) {

@@ -104,19 +104,16 @@ in Node {
           var value = child.switchValue();
           var cases = child.switchCases();
           var foundDefault = false;
-          int j;
-          for (j = 0; j < cases.length; j++) {
+          for (var j = 0; j < cases.length; j++) {
             var node = cases.get(j);
             if (!node.caseBlock().blockAlwaysEndsWithReturn()) {
-              break;
+              return false;
             }
             if (node.caseValues().length == 0) {
               foundDefault = true;
             }
           }
-          if (j == cases.length && foundDefault) {
-            return true;
-          }
+          return foundDefault;
         }
       }
     }
