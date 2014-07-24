@@ -500,3 +500,21 @@ int foo() {
   1;
   ^
 ");
+
+test("
+class Foo {
+enum Bar {}
+in Bar {
+  void foo() { toString(); }
+}
+", "
+<stdin>:5:2: error: Expected RIGHT_BRACE but found END_OF_FILE
+}
+ ^
+<stdin>:2:1: error: Cannot use this statement here
+enum Bar {}
+~~~~~~~~~~~
+<stdin>:3:1: error: Cannot use this statement here
+in Bar {
+~~~~~~~~
+");

@@ -707,7 +707,10 @@ class Resolver {
   }
 
   void unexpectedStatement(Node node) {
-    semanticErrorUnexpectedStatement(log, node.range);
+    // Don't warn about compiler-generated statements
+    if (!node.range.isEmpty()) {
+      semanticErrorUnexpectedStatement(log, node.range);
+    }
   }
 
   void checkInsideBlock(Node node) {
