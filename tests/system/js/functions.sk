@@ -21,6 +21,22 @@ new Foo().foo();
 ");
 
 testJS("
+class Foo {
+  Foo foo;
+  void bar() {
+    foo.bar();
+  }
+}
+", "
+function Foo(_0) {
+  this.foo = _0;
+}
+Foo.prototype.bar = function() {
+  this.foo.bar();
+};
+");
+
+testJS("
 (void fn())(=>);
 ", "
 (function() {
@@ -111,4 +127,26 @@ Foo.foo = function($this) {
   return $this;
 };
 Foo.foo(Foo.A);
+");
+
+testJS("
+enum Foo { FOO }
+in Foo {
+  string foo() { return toString(); }
+}
+", "
+var Foo = {
+  FOO: 0
+};
+Foo.foo = function($this) {
+  return Foo.toString($this);
+};
+Foo.toString = function($this) {
+  switch ($this) {
+  case 0:
+    return \"FOO\";
+  default:
+    return \"\";
+  }
+};
 ");

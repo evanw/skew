@@ -1,4 +1,20 @@
 testJS("
+in Foo {}
+class Foo {}
+", "
+function Foo() {
+}
+");
+
+testJS("
+class Foo {}
+in Foo {}
+", "
+function Foo() {
+}
+");
+
+testJS("
 class Foo : Bar {}
 class Bar {}
 ", "

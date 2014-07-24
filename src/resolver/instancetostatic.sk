@@ -1,7 +1,3 @@
-import class console {
-  static void log(string text);
-}
-
 class InstanceToStaticPass {
   static void run(Node program) {
     CallGraph graph = new CallGraph(program);
@@ -26,8 +22,17 @@ class InstanceToStaticPass {
           switch (callSite.kind) {
             case NodeKind.CALL {
               Node value = callSite.callValue();
-              Node target = value.dotTarget().remove();
-              value.become(value.dotName().remove());
+              Node target;
+              Node name;
+              if (value.kind == NodeKind.DOT) {
+                target = value.dotTarget().remove();
+                name = value.dotName().remove();
+              } else {
+                assert value.kind == NodeKind.NAME;
+                target = Node.createThis();
+                name = value.remove();
+              }
+              callSite.replaceChild(0, name);
               callSite.insertChild(1, target);
             }
 

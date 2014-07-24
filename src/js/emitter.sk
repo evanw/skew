@@ -706,7 +706,7 @@ namespace js {
         }
 
         case NodeKind.NAME {
-          if (node.symbol != null && node.symbol.kind.isInstance() && node.parent.kind != NodeKind.DOT) {
+          if (node.symbol != null && node.symbol.kind.isInstance() && (node.parent.kind != NodeKind.DOT || node != node.parent.dotName())) {
             node.become(Node.createDot(Node.createThis(), node.clone()));
           }
         }

@@ -19,11 +19,11 @@ class Collector {
 
   void collectStatements(Node node) {
     switch (node.kind) {
-      case NodeKind.PROGRAM, NodeKind.FILE, NodeKind.EXTENSION, NodeKind.MODIFIER, NodeKind.BLOCK {
+      case NodeKind.PROGRAM, NodeKind.FILE, NodeKind.MODIFIER, NodeKind.BLOCK {
         collectChildStatements(node);
       }
 
-      case NodeKind.NAMESPACE, NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE, NodeKind.ENUM, NodeKind.ENUM_FLAGS {
+      case NodeKind.NAMESPACE, NodeKind.CLASS, NodeKind.STRUCT, NodeKind.INTERFACE, NodeKind.EXTENSION, NodeKind.ENUM, NodeKind.ENUM_FLAGS {
         if (node == node.symbol.node) {
           typeSymbols.push(node.symbol);
         }
