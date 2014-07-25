@@ -61,7 +61,7 @@ class TypeCache {
 
   Type substitute(Type type, List<Symbol> parameters, List<Type> substitutions) {
     if (type.isFunction()) {
-      return parameterize(type, substituteAll(type.relevantTypes, parameters, substitutions));
+      return parameterize(null, substituteAll(type.relevantTypes, parameters, substitutions));
     }
     if (!type.hasParameters()) {
       var index = parameters.indexOf(type.symbol);

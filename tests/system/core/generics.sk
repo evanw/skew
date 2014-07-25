@@ -320,15 +320,29 @@ Foo<IFoo<float>, IFoo<int>, int> c;
 ");
 
 test("
-class Foo {
-  int foo;
+class Foo<T> {
+  Foo<Foo<T>> foo() { return default(Foo<Foo<T>>); }
 }
-class Bar<T> {
-  List<T> foo() { return {}; }
-}
-bool foo = Bar<Foo>().foo().get(0).foo;
+int x = Foo<int>().foo();
 ", "
-<stdin>:7:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool foo = Bar<Foo>().foo().get(0).foo;
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<stdin>:4:9: error: Cannot convert from type \"Foo<Foo<int>>\" to type \"int\"
+int x = Foo<int>().foo();
+        ~~~~~~~~~~~~~~~~
+");
+
+test("
+class Foo<A, B, C> {
+  Bar<A, B> foo() { return Bar<A, B>(); }
+}
+class Bar<D, E> {
+  Baz<D> bar() { return Baz<D>(); }
+}
+class Baz<F> {
+  F baz() { return default(F); }
+}
+bool foo = Foo<int, bool, float>().foo().bar().baz();
+", "
+<stdin>:10:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool foo = Foo<int, bool, float>().foo().bar().baz();
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ");
