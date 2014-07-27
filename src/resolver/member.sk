@@ -1,6 +1,5 @@
 class Member {
   Symbol symbol;
-  Type enclosingType = null;
 
   // The type of the member may be different from the symbol since the symbol
   // represents the unparameterized type and the member is a parameterization
@@ -17,9 +16,7 @@ class Member {
   //   int baz = Baz().foo(false);
   //
   // In that case, parameterizedType stores the type environment to be applied
-  // to the type of the dependency after being resolved. This needs to be
-  // separate from enclosingType because the type environment for the dependency
-  // may not be from the immediately enclosing type.
+  // to the type of the dependency after being resolved.
   Member dependency = null;
   Type parameterizedType = null;
 }

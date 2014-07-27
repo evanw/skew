@@ -60,21 +60,28 @@ class TypeCache {
   }
 
   Type substitute(Type type, List<Symbol> parameters, List<Type> substitutions) {
+    assert parameters.length == substitutions.length;
+    trace.log("substitute ".append(type.toString()).append(" with ").append(Type.environmentToString(parameters, substitutions)));
+    trace.indent();
+
+    Type result;
     if (type.isFunction()) {
-      return parameterize(null, substituteAll(type.relevantTypes, parameters, substitutions));
-    }
-    if (!type.hasParameters()) {
+      result = parameterize(null, substituteAll(type.relevantTypes, parameters, substitutions));
+    } else if (!type.hasParameters()) {
       var index = parameters.indexOf(type.symbol);
-      return index >= 0 ? substitutions.get(index) : type;
+      result = index >= 0 ? substitutions.get(index) : type;
+    } else {
+      assert type.substitutions != null; // Unparameterized types should become errorType immediately and not get here
+      result = parameterize(type, substituteAll(type.substitutions, parameters, substitutions));
     }
-    List<Type> types = {};
-    for (var i = 0; i < type.symbol.parameters.length; i++) {
-      types.push(type.substitutions.get(i));
-    }
-    return parameterize(type, substituteAll(types, parameters, substitutions));
+
+    trace.log("substitution gave ".append(result.toString()));
+    trace.dedent();
+    return result;
   }
 
   List<Type> substituteAll(List<Type> types, List<Symbol> parameters, List<Type> substitutions) {
+    assert parameters.length == substitutions.length;
     List<Type> results = {};
     for (var i = 0; i < types.length; i++) {
       results.push(substitute(types.get(i), parameters, substitutions));
@@ -114,18 +121,56 @@ class TypeCache {
       hashTable.set(hash, existingTypes);
     }
 
+    if (symbol != null && substitutions != null) {
+      trace.log("parameterize ".append(unparameterized != null ? unparameterized.toString() : "null")
+        .append(" with ").append(Type.environmentToString(symbol.parameters, substitutions)));
+      trace.indent();
+    }
+
     // We didn't find a match, so make the type for the first time
     var type = Type(symbol);
     if (symbol != null) {
       type.substitutions = substitutions;
-      type.relevantTypes = substituteAll(unparameterized.relevantTypes, symbol.parameters, type.substitutions);
+      type.relevantTypes = substituteAll(unparameterized.relevantTypes, symbol.parameters, substitutions);
+
       var members = unparameterized.members.values();
       for (var i = 0; i < members.length; i++) {
         var member = members.get(i);
         var clone = Member(member.symbol);
-        clone.dependency = member;
+        clone.dependency = member.dependency != null ? member.dependency : member;
         clone.parameterizedType = type;
+
+        // The type environment for lazy type substitution of the member is
+        // stored in clone.parameterizedType. However, the type environment
+        // must be merged with the previous type environment if there is one.
+        // In the example below, the type environment [A => int, B => T] from
+        // Foo<int, T> must be merged with the type environment [T => bool]
+        // from Bar<bool>, or Bar<bool>.foo will have the wrong type:
+        //
+        //   class Foo<A, B> {
+        //     A foo(B bar) { return default(A); }
+        //   }
+        //   class Bar<T> : Foo<int, T> {}
+        //   class Baz : Bar<bool> {}
+        //   bool bar = Baz().foo(0);
+        //
+        var parameterizedType = member.parameterizedType;
+        if (parameterizedType != null) {
+          List<Type> merged = {};
+          for (var j = 0; j < parameterizedType.substitutions.length; j++) {
+            Symbol parameter = parameterizedType.symbol.parameters.get(j);
+            int index = symbol.parameters.indexOf(parameter);
+            merged.push(index >= 0 ? substitutions.get(index) : substitute(parameterizedType.substitutions.get(j), symbol.parameters, substitutions));
+          }
+          clone.parameterizedType = parameterize(parameterizedType.symbol.type, merged);
+        }
+
         type.addMember(clone);
+      }
+
+      if (substitutions != null) {
+        trace.log("parameterize gave ".append(type.toString()));
+        trace.dedent();
       }
     } else {
       type.relevantTypes = substitutions;

@@ -156,3 +156,10 @@ string bytesToString(int bytes) {
   if (bytes < ByteSize.GB) return formatNumber(bytes / (double)ByteSize.MB).append("mb");
   return formatNumber(bytes / (double)ByteSize.GB).append("gb");
 }
+
+// TODO: Remove these in release builds
+namespace trace {
+  void indent() {}
+  void log(string text) {}
+  void dedent() {}
+}

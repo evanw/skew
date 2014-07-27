@@ -150,15 +150,14 @@ test("
 class Foo<A, B> { A foo(B bar) { return default(A); } }
 class Bar<T> : Foo<int, T> {}
 class Baz : Bar<bool> {}
-Baz foo = null;
-bool bar = foo.foo(0);
+bool bar = Baz().foo(0);
 ", "
-<stdin>:5:20: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool bar = foo.foo(0);
-                   ^
-<stdin>:5:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool bar = foo.foo(0);
-           ~~~~~~~~~~
+<stdin>:4:22: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool bar = Baz().foo(0);
+                     ^
+<stdin>:4:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool bar = Baz().foo(0);
+           ~~~~~~~~~~~~
 ");
 
 test("
@@ -331,8 +330,52 @@ int x = Foo<int>().foo();
 ");
 
 test("
+class Foo<A> {
+  Bar<A> foo() { return Bar<A>(); }
+}
+class Bar<B> {
+  B bar() { return default(B); }
+  B baz() { return default(B); }
+}
+bool a = Foo<int>().foo().bar();
+bool b = Bar<int>().baz();
+bool c = Foo<double>().foo().bar();
+bool d = Bar<double>().baz();
+", "
+<stdin>:8:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool a = Foo<int>().foo().bar();
+         ~~~~~~~~~~~~~~~~~~~~~~
+<stdin>:9:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool b = Bar<int>().baz();
+         ~~~~~~~~~~~~~~~~
+<stdin>:10:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool c = Foo<double>().foo().bar();
+         ~~~~~~~~~~~~~~~~~~~~~~~~~
+<stdin>:11:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool d = Bar<double>().baz();
+         ~~~~~~~~~~~~~~~~~~~
+");
+
+test("
 class Foo<A, B, C> {
   Bar<A, B> foo() { return Bar<A, B>(); }
+}
+class Bar<D, E> {
+  Baz<D> bar() { return Baz<D>(); }
+}
+class Baz<F> {
+  F baz() { return default(F); }
+}
+bool foo = Foo<int, bool, float>().foo().bar().baz();
+", "
+<stdin>:10:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool foo = Foo<int, bool, float>().foo().bar().baz();
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+");
+
+test("
+class Foo<A, B, C> {
+  Bar<A, string> foo() { return Bar<A, string>(); }
 }
 class Bar<D, E> {
   Baz<D> bar() { return Baz<D>(); }

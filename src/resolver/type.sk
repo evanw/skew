@@ -49,7 +49,6 @@ class Type {
   }
 
   void addMember(Member member) {
-    member.enclosingType = this;
     members.set(member.symbol.name, member);
   }
 
@@ -67,7 +66,19 @@ class Type {
     return members.getOrDefault(name, null);
   }
 
+  static string environmentToString(List<Symbol> parameters, List<Type> substitutions) {
+    assert parameters.length == substitutions.length;
+    var text = "[";
+    for (var i = 0; i < parameters.length; i++) {
+      if (i > 0) text = text.append(", ");
+      text = text.append(parameters.get(i).name).append(" => ").append(substitutions.get(i).toString());
+    }
+    return text.append("]");
+  }
+
   string toString() {
+    assert substitutions == null || substitutions.length == symbol.parameters.length;
+
     // Special-case functions
     if (isFunction()) {
       var text = resultType().toString().append(" fn(");
@@ -81,11 +92,12 @@ class Type {
 
     // Special-case generic types
     if (hasParameters()) {
-      List<string> parts = {};
+      var text = "";
       for (var i = 0; i < symbol.parameters.length; i++) {
-        parts.push(isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name);
+        if (i > 0) text = text.append(", ");
+        text = text.append(isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name);
       }
-      return symbol.fullName().append("<").append(", ".join(parts)).append(">");
+      return symbol.fullName().append("<").append(text).append(">");
     }
 
     return symbol.fullName();

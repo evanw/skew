@@ -985,11 +985,12 @@ class Resolver {
 
   void initializeFunction(Symbol symbol) {
     // Sanity check
-    assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||
-      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol;
+    Symbol enclosingSymbol = symbol.enclosingSymbol;
+    assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||
+      context.symbolForThis != null && context.symbolForThis == enclosingSymbol;
 
     unexpectedModifierIfPresent(symbol, .FINAL, "on a function declaration");
-    if (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances()) {
+    if (enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances()) {
       unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
     }
 
@@ -1007,7 +1008,16 @@ class Resolver {
     // Constructors get a return type of the object that they create
     else {
       assert node.kind == .CONSTRUCTOR;
-      resultType = symbol.enclosingSymbol.type;
+      resultType = enclosingSymbol.type;
+
+      // Make sure the return type is parameterized
+      if (resultType.hasParameters()) {
+        List<Type> substitutions = {};
+        for (var i = 0; i < enclosingSymbol.parameters.length; i++) {
+          substitutions.push(enclosingSymbol.parameters.get(i).type);
+        }
+        resultType = cache.parameterize(resultType, substitutions);
+      }
     }
 
     // Resolve argument variables
@@ -1359,6 +1369,9 @@ class Resolver {
       return;
     }
 
+    trace.log("initializeMember ".append(member.symbol.fullName()).append(member.parameterizedType != null ? " on ".append(member.parameterizedType.toString()) : ""));
+    trace.indent();
+
     // The type of a member in a derived type may depend on type substitution
     // on that member's type in a base class:
     //
@@ -1368,11 +1381,9 @@ class Resolver {
     //   int baz = Baz().foo(false);
     //
     if (member.dependency != null) {
+      assert member.dependency.symbol == member.symbol;
       initializeMember(member.dependency);
       member.type = member.dependency.type;
-      if (member.symbol.kind.isConstructor() && member.type.isFunction()) {
-        member.type.relevantTypes.set(0, member.enclosingType);
-      }
     } else {
       initializeSymbol(member.symbol);
       member.type = member.symbol.type;
@@ -1383,6 +1394,8 @@ class Resolver {
     if (parameterizedType != null && parameterizedType.isParameterized()) {
       member.type = cache.substitute(member.type, parameterizedType.symbol.parameters, parameterizedType.substitutions);
     }
+
+    trace.dedent();
   }
 
   void generateDefaultConstructor(Symbol symbol) {
