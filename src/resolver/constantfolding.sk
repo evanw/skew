@@ -99,7 +99,7 @@ class ConstantFolder {
       var left = node.binaryLeft();
       var right = node.binaryRight();
       var valueKind = left.kind;
-      if (valueKind != right.kind) return;
+      if (valueKind != right.kind && (!left.kind.isBool() || !right.kind.isBool())) return;
 
       // Fold "bool" values
       if (valueKind.isBool()) {

@@ -75,12 +75,12 @@ JS_SOURCES += src/core/support.js
 JS_SOURCES += src/frontend/frontend.js
 
 compile = \
-	node $(1) $(SOURCES) --verbose --target=js --output-file=$(2)/skewc.compiled.js && \
+	node $(1) $(SOURCES) --verbose --target=js --output-file=$(2)/skewc.compiled.js $(4) && \
 	cat bootstrap.js $(3) $(2)/skewc.compiled.js src/core/support.js src/frontend/frontend.js > $(2)/skewc.js && \
 	rm $(2)/skewc.compiled.js
 
 compile-frontend = \
-	$(call compile,$(1),$(2),)
+	$(call compile,$(1),$(2),,$(3))
 
 default: debug
 
@@ -91,13 +91,18 @@ clean:
 # INSTALL
 ################################################################################
 
-install: check
-	cp $(DEBUG_DIR)/skewc.js .
+install: check-release
+	cp $(RELEASE_DIR)/skewc.js .
 
-check:
-	$(call compile-frontend,skewc.js,$(DEBUG_DIR))
-	$(call compile-frontend,$(DEBUG_DIR)/skewc.js,$(DEBUG_DIR))
-	$(call compile-frontend,$(DEBUG_DIR)/skewc.js,$(DEBUG_DIR))
+check: | $(DEBUG_DIR)
+	$(call compile-frontend,skewc.js,$(DEBUG_DIR),)
+	$(call compile-frontend,$(DEBUG_DIR)/skewc.js,$(DEBUG_DIR),)
+	$(call compile-frontend,$(DEBUG_DIR)/skewc.js,$(DEBUG_DIR),)
+
+check-release: | $(RELEASE_DIR)
+	$(call compile-frontend,skewc.js,$(RELEASE_DIR),--optimize)
+	$(call compile-frontend,$(RELEASE_DIR)/skewc.js,$(RELEASE_DIR),--optimize)
+	$(call compile-frontend,$(RELEASE_DIR)/skewc.js,$(RELEASE_DIR),--optimize)
 
 ################################################################################
 # DEBUG
@@ -109,7 +114,7 @@ $(DEBUG_DIR):
 	mkdir -p $(DEBUG_DIR)
 
 $(DEBUG_DIR)/skewc.js: Makefile $(SOURCES) $(JS_SOURCES) | $(DEBUG_DIR)
-	$(call compile-frontend,skewc.js,$(DEBUG_DIR))
+	$(call compile-frontend,skewc.js,$(DEBUG_DIR),)
 
 ################################################################################
 # RELEASE
@@ -121,7 +126,7 @@ $(RELEASE_DIR):
 	mkdir -p $(RELEASE_DIR)
 
 $(RELEASE_DIR)/skewc.js: Makefile $(SOURCES) $(JS_SOURCES) | $(RELEASE_DIR)
-	$(call compile-frontend,skewc.js,$(RELEASE_DIR))
+	$(call compile-frontend,skewc.js,$(RELEASE_DIR),--optimize)
 
 ################################################################################
 # TEST
@@ -134,7 +139,7 @@ $(TESTS_DIR):
 	mkdir -p $(TESTS_DIR)
 
 $(TESTS_DIR)/skewc.js: Makefile $(SOURCES) $(JS_SOURCES) $(TEST_SOURCES) tests/system/common.js | $(TESTS_DIR)
-	$(call compile,skewc.js $(TEST_SOURCES),$(TESTS_DIR),tests/system/common.js)
+	$(call compile,skewc.js $(TEST_SOURCES),$(TESTS_DIR),tests/system/common.js,)
 
 $(TESTS_DIR)/package.json: tests/system/package.json | $(TESTS_DIR)
 	cp tests/system/package.json $(TESTS_DIR)/package.json

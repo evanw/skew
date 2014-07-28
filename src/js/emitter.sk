@@ -1,8 +1,8 @@
 namespace js {
   class PatchContext {
-    int lambdaCount = 0;
+    var lambdaCount = 0;
+    var createdThisAlias = false;
     Node function = null;
-    bool createdThisAlias = false;
 
     void setFunction(Node node) {
       function = node;
@@ -20,22 +20,21 @@ namespace js {
   }
 
   class Emitter : IEmitter {
-    int currentLine = 0;
-    int currentColumn = 0;
-    bool needExtends = false;
-    bool needMathImul = false;
+    var indent = "";
+    var currentLine = 0;
+    var currentColumn = 0;
+    var needExtends = false;
+    var needMathImul = false;
+    var isStartOfExpression = false;
+    var generator = SourceMapGenerator();
     Source currentSource = null;
-    bool isStartOfExpression = false;
-    SourceMapGenerator generator = SourceMapGenerator();
     CompilerOptions options;
     TypeCache cache;
-    string indent = "";
 
     override List<Source> emitProgram(Node program) {
-      InstanceToStaticPass.run(program);
       patchNode(program, PatchContext());
       currentSource = Source(options.outputFile, "");
-      Collector collector = Collector(program, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
+      var collector = Collector(program, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
 
       // Emit helper functions
       if (needMathImul) {
@@ -57,9 +56,8 @@ namespace js {
       }
 
       // Emit types
-      int i;
-      for (i = 0; i < collector.typeSymbols.length; i++) {
-        Type type = collector.typeSymbols.get(i).type;
+      for (var i = 0; i < collector.typeSymbols.length; i++) {
+        var type = collector.typeSymbols.get(i).type;
         if (type.isNamespace()) {
           if (!type.symbol.isImport()) {
             emitNode(type.symbol.node.firstNonExtensionSibling());
@@ -70,16 +68,15 @@ namespace js {
           if (type.isEnum()) {
             emitNode(type.symbol.node.firstNonExtensionSibling());
           } else {
-            Member constructor = type.constructor();
+            var constructor = type.constructor();
             if (constructor != null) {
               emitNode(constructor.symbol.node);
             }
           }
         }
-        List<Member> members = type.members.values();
-        int j;
-        for (j = 0; j < members.length; j++) {
-          Symbol symbol = members.get(j).symbol;
+        var members = type.members.values();
+        for (var j = 0; j < members.length; j++) {
+          var symbol = members.get(j).symbol;
           if (symbol.enclosingSymbol == type.symbol && symbol.node != null && symbol.kind.isFunction() && !symbol.kind.isConstructor()) {
             emitNode(symbol.node);
           }
@@ -87,12 +84,12 @@ namespace js {
       }
 
       // Emit free functions
-      for (i = 0; i < collector.freeFunctionSymbols.length; i++) {
+      for (var i = 0; i < collector.freeFunctionSymbols.length; i++) {
         emitNode(collector.freeFunctionSymbols.get(i).node);
       }
 
       // Emit top-level statements
-      for (i = 0; i < collector.topLevelStatements.length; i++) {
+      for (var i = 0; i < collector.topLevelStatements.length; i++) {
         emitNode(collector.topLevelStatements.get(i));
       }
 
@@ -108,9 +105,9 @@ namespace js {
 
     void addMapping(Node node) {
       if (options.jsSourceMap) {
-        Range range = node.range;
+        var range = node.range;
         if (range.source != null) {
-          LineColumn location = range.source.indexToLineColumn(range.start);
+          var location = range.source.indexToLineColumn(range.start);
           generator.addMapping(range.source, location.line, location.column, currentLine, currentColumn);
         }
       }
@@ -126,9 +123,8 @@ namespace js {
 
     void emit(string text) {
       if (options.jsSourceMap) {
-        int i;
-        for (i = 0; i < text.length; i++) {
-          int c = text.codeUnitAt(i);
+        for (var i = 0; i < text.length; i++) {
+          var c = text.codeUnitAt(i);
           if (c == '\n') {
             currentColumn = 0;
             currentLine++;
@@ -141,23 +137,20 @@ namespace js {
     }
 
     void emitNodes(List<Node> nodes) {
-      int i;
-      for (i = 0; i < nodes.length; i++) {
+      for (var i = 0; i < nodes.length; i++) {
         emitNode(nodes.get(i));
       }
     }
 
     void emitCommaSeparatedNodes(List<Node> nodes) {
-      int i;
-      for (i = 0; i < nodes.length; i++) {
+      for (var i = 0; i < nodes.length; i++) {
         if (i > 0) emit(", ");
         emitNode(nodes.get(i));
       }
     }
 
     void emitCommaSeparatedExpressions(List<Node> nodes) {
-      int i;
-      for (i = 0; i < nodes.length; i++) {
+      for (var i = 0; i < nodes.length; i++) {
         if (i > 0) emit(", ");
         emitExpression(nodes.get(i), Precedence.COMMA);
       }
@@ -180,10 +173,10 @@ namespace js {
       emitExpression(node.ifTest(), Precedence.LOWEST);
       emit(") ");
       emitNode(node.ifTrue());
-      Node block = node.ifFalse();
+      var block = node.ifFalse();
       if (block != null) {
         emit(" else ");
-        Node statement = block.hasChildren() && block.children.length == 1 ? block.children.get(0) : null;
+        var statement = block.hasChildren() && block.children.length == 1 ? block.children.get(0) : null;
         if (statement != null && statement.kind == .IF) {
           addMapping(statement);
           recursiveEmitIfStatement(statement);
@@ -215,10 +208,9 @@ namespace js {
         }
 
         case .CASE {
-          List<Node> values = node.caseValues();
-          Node block = node.caseBlock();
-          int i;
-          for (i = 0; i < values.length; i++) {
+          var values = node.caseValues();
+          var block = node.caseBlock();
+          for (var i = 0; i < values.length; i++) {
             emit(indent.append("case "));
             emitExpression(values.get(i), Precedence.LOWEST);
             emit(":\n");
@@ -235,11 +227,10 @@ namespace js {
         }
 
         case .VARIABLE_CLUSTER {
-          List<Node> variables = node.clusterVariables();
-          int i;
-          for (i = 0; i < variables.length; i++) {
-            Node variable = variables.get(i);
-            bool isCompoundName = variable.symbol != null && hasCompoundName(variable.symbol);
+          var variables = node.clusterVariables();
+          for (var i = 0; i < variables.length; i++) {
+            var variable = variables.get(i);
+            var isCompoundName = variable.symbol != null && hasCompoundName(variable.symbol);
             if ((variable.symbol == null || !variable.symbol.kind.isInstance()) && (!isCompoundName || variable.variableValue() != null)) {
               emit(indent);
               if (!isCompoundName) {
@@ -259,27 +250,30 @@ namespace js {
         }
 
         case .ENUM, .ENUM_FLAGS {
-          Node block = node.declarationBlock();
+          var block = node.declarationBlock();
           if (!hasCompoundName(node.symbol)) {
             emit("var ");
           }
-          emit(indent.append(fullName(node.symbol)).append(" = {\n"));
-          increaseIndent();
-          int i;
-          for (i = 0; i < block.children.length; i++) {
-            Symbol symbol = block.children.get(i).symbol;
-            emit(indent.append(mangleName(symbol)).append(": ").append(symbol.enumValue.toString()).append(i == block.children.length - 1 ? "\n" : ",\n"));
+          if (options.optimize && !node.symbol.isImportOrExport()) {
+            emit(indent.append(fullName(node.symbol)).append(" = {};\n")); // Remove this once extension methods are flattened into global scope
+          } else {
+            emit(indent.append(fullName(node.symbol)).append(" = {\n"));
+            increaseIndent();
+            for (var i = 0; i < block.children.length; i++) {
+              var symbol = block.children.get(i).symbol;
+              emit(indent.append(mangleName(symbol)).append(": ").append(symbol.enumValue.toString()).append(i == block.children.length - 1 ? "\n" : ",\n"));
+            }
+            decreaseIndent();
+            emit(indent.append("};\n"));
           }
-          decreaseIndent();
-          emit(indent.append("};\n"));
         }
 
         case .CONSTRUCTOR, .FUNCTION {
-          Node block = node.functionBlock();
+          var block = node.functionBlock();
           if (block == null) {
             return;
           }
-          bool isCompoundName = hasCompoundName(node.symbol);
+          var isCompoundName = hasCompoundName(node.symbol);
           if (!isCompoundName) {
             emit(indent.append("function ").append(fullName(node.symbol)));
           } else {
@@ -301,7 +295,7 @@ namespace js {
         }
 
         case .VARIABLE {
-          Node value = node.variableValue();
+          var value = node.variableValue();
           emit(node.symbol == null ? node.declarationName().asString() : fullName(node.symbol));
           if (value != null) {
             emit(" = ");
@@ -316,9 +310,9 @@ namespace js {
         }
 
         case .FOR {
-          Node setup = node.forSetup();
-          Node test = node.forTest();
-          Node update = node.forUpdate();
+          var setup = node.forSetup();
+          var test = node.forTest();
+          var update = node.forUpdate();
           emit(indent.append("for ("));
           if (setup != null) {
             if (setup.kind == .VARIABLE_CLUSTER) {
@@ -365,7 +359,7 @@ namespace js {
         }
 
         case .RETURN, .IMPLICIT_RETURN {
-          Node value = node.returnValue();
+          var value = node.returnValue();
           emit(indent);
           if (value != null) {
             emit("return ");
@@ -385,20 +379,22 @@ namespace js {
         }
 
         case .ASSERT {
-          Node value = node.assertValue();
+          var value = node.assertValue();
           value.invertBooleanCondition(cache);
-          bool couldBeFalse = value.kind != .TRUE;
-          if (couldBeFalse) {
-            emit(indent.append("if ("));
-            emitExpression(value, Precedence.LOWEST);
-            emit(") {\n");
-            increaseIndent();
-          }
-          string text = node.range.toString().append(" (").append(node.range.locationString()).append(")");
-          emit(indent.append("throw new Error(").append(quoteString(text, '"')).append(");\n"));
-          if (couldBeFalse) {
-            decreaseIndent();
-            emit(indent.append("}\n"));
+          if (value.kind != .FALSE && !options.optimize) {
+            var couldBeFalse = value.kind != .TRUE;
+            if (couldBeFalse) {
+              emit(indent.append("if ("));
+              emitExpression(value, Precedence.LOWEST);
+              emit(") {\n");
+              increaseIndent();
+            }
+            var text = node.range.toString().append(" (").append(node.range.locationString()).append(")");
+            emit(indent.append("throw new Error(").append(quoteString(text, '"')).append(");\n"));
+            if (couldBeFalse) {
+              decreaseIndent();
+              emit(indent.append("}\n"));
+            }
           }
         }
 
@@ -431,7 +427,7 @@ namespace js {
     }
 
     void emitExpression(Node node, Precedence precedence) {
-      bool wasStartOfExpression = isStartOfExpression;
+      var wasStartOfExpression = isStartOfExpression;
       isStartOfExpression = false;
       addMapping(node);
 
@@ -478,7 +474,7 @@ namespace js {
         }
 
         case .FLOAT, .DOUBLE {
-          string text = node.asDouble().toString();
+          var text = node.asDouble().toString();
           emit(text);
           if (node.parent.kind == .DOT && text.indexOf(".") < 0) {
             emit(".");
@@ -498,7 +494,7 @@ namespace js {
         case .DOT {
           emitExpression(node.dotTarget(), Precedence.MEMBER);
           emit(".");
-          Node name = node.dotName();
+          var name = node.dotName();
           emit(
             name.symbol == null ? name.asString() :
             name.symbol.kind.isInstance() ? mangleName(name.symbol) :
@@ -506,7 +502,7 @@ namespace js {
         }
 
         case .CALL {
-          Node value = node.callValue();
+          var value = node.callValue();
           if (value.kind.isType()) emit("new ");
           isStartOfExpression = wasStartOfExpression;
           emitExpression(value, Precedence.UNARY_POSTFIX);
@@ -516,11 +512,10 @@ namespace js {
         }
 
         case .SUPER_CALL {
-          List<Node> arguments = node.superCallArguments();
+          var arguments = node.superCallArguments();
           emit(fullName(node.symbol));
           emit(".call(this");
-          int i;
-          for (i = 0; i < arguments.length; i++) {
+          for (var i = 0; i < arguments.length; i++) {
             emit(", ");
             emitExpression(arguments.get(i), Precedence.COMMA);
           }
@@ -564,10 +559,10 @@ namespace js {
           .PREFIX_INCREMENT, .PREFIX_DECREMENT,
           .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
 
-          Node value = node.unaryValue();
-          OperatorInfo info = operatorInfo.get(node.kind);
+          var value = node.unaryValue();
+          var info = operatorInfo.get(node.kind);
           if (info.precedence < precedence) emit("(");
-          bool isPostfix = info.precedence == Precedence.UNARY_POSTFIX;
+          var isPostfix = info.precedence == Precedence.UNARY_POSTFIX;
           if (!isPostfix) {
             emit(info.text);
 
@@ -593,7 +588,7 @@ namespace js {
           .NOT_EQUAL, .REMAINDER, .SHIFT_LEFT, .SHIFT_RIGHT,
           .SUBTRACT {
 
-          OperatorInfo info = operatorInfo.get(node.kind);
+          var info = operatorInfo.get(node.kind);
           if (info.precedence < precedence) emit("(");
           emitExpression(node.binaryLeft(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.RIGHT)));
           emit(node.kind == .EQUAL ? " === " : node.kind == .NOT_EQUAL ? " !== " : " ".append(info.text).append(" "));
@@ -635,7 +630,7 @@ namespace js {
 
     static bool isExpressionUsed(Node node) {
       assert node.kind.isExpression();
-      Node parent = node.parent;
+      var parent = node.parent;
       if (!parent.kind.isExpression()) {
         return false;
       }
@@ -654,17 +649,16 @@ namespace js {
         }
 
         case .CONSTRUCTOR {
-          Node superInitializer = node.superInitializer();
-          Node memberInitializers = node.memberInitializers();
-          Node block = node.functionBlock();
-          int index = 0;
+          var superInitializer = node.superInitializer();
+          var memberInitializers = node.memberInitializers();
+          var block = node.functionBlock();
+          var index = 0;
           if (superInitializer != null) {
             block.insertChild(index++, Node.createExpression(superInitializer.remove()));
           }
           if (memberInitializers != null) {
-            int i;
-            for (i = 0; i < memberInitializers.children.length; i++) {
-              Node child = memberInitializers.children.get(i);
+            for (var i = 0; i < memberInitializers.children.length; i++) {
+              var child = memberInitializers.children.get(i);
               block.insertChild(index++, Node.createExpression(Node.createBinary(.ASSIGN, child.memberInitializerName().remove(), child.memberInitializerValue().remove())));
             }
           }
@@ -677,7 +671,7 @@ namespace js {
 
         case .BIND {
           if (node.symbol.kind == .INSTANCE_FUNCTION) {
-            Node function = node.bindValue();
+            var function = node.bindValue();
             Node target;
             Node name;
             if (function.kind == .DOT) {
@@ -691,7 +685,7 @@ namespace js {
             if (isSimpleNameAccess(target)) {
               node.become(Node.createCall(Node.createDot(Node.createDot(target.clone(), name), Node.createName("bind")), { target }).withRange(node.range));
             } else {
-              Node temporaryName = Node.createName("$temp");
+              var temporaryName = Node.createName("$temp");
               node.become(Node.createLet(
                 Node.createVariable(temporaryName.clone(), null, target),
                 Node.createCall(Node.createDot(Node.createDot(temporaryName.clone(), name), Node.createName("bind")), { temporaryName })).withRange(node.range));
@@ -712,7 +706,7 @@ namespace js {
         }
 
         case .CAST {
-          Node value = node.castValue();
+          var value = node.castValue();
 
           // Cast to bool
           if (node.type.isBool(cache) && !value.type.isBool(cache)) {
@@ -732,9 +726,9 @@ namespace js {
 
         case .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT {
           if (node.type.isInt(cache)) {
-            bool isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
-            bool isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
-            Node result = createBinaryIntAssignment(context, isIncrement ? .ADD : .SUBTRACT, node.unaryValue().remove(), Node.createInt(1));
+            var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
+            var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
+            var result = createBinaryIntAssignment(context, isIncrement ? .ADD : .SUBTRACT, node.unaryValue().remove(), Node.createInt(1));
             if (isPostfix && isExpressionUsed(node)) {
               result = createBinaryInt(isIncrement ? .SUBTRACT : .ADD, result, Node.createInt(1));
             }
@@ -750,10 +744,10 @@ namespace js {
 
         case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER {
           if (node.type.isInt(cache)) {
-            bool isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
-            bool isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
-            Node left = node.binaryLeft();
-            Node right = node.binaryRight();
+            var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
+            var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
+            var left = node.binaryLeft();
+            var right = node.binaryRight();
             NodeKind kind =
               node.kind == .ASSIGN_ADD ? .ADD :
               node.kind == .ASSIGN_SUBTRACT ? .SUBTRACT :
@@ -770,15 +764,14 @@ namespace js {
       }
 
       if (node.kind == .LET) {
-        Node value = node.letValue();
-        Node variable = node.letVariable();
+        var value = node.letValue();
+        var variable = node.letVariable();
         node.become(Node.createCall(Node.createLambda({ variable.remove() }, Node.createBlock({ Node.createReturn(value.remove()) })), { variable.variableValue().remove() }));
       }
 
       if (node.hasChildren()) {
-        int i;
-        for (i = 0; i < node.children.length; i++) {
-          Node child = node.children.get(i);
+        for (var i = 0; i < node.children.length; i++) {
+          var child = node.children.get(i);
           if (child != null) {
             patchNode(child, context);
           }
@@ -813,22 +806,22 @@ namespace js {
         return Node.createBinary(.ASSIGN, left.clone(), createBinaryInt(kind, left, right));
       }
       assert left.kind == .DOT;
-      Node target = left.dotTarget().remove();
-      Node temporaryName = Node.createName("$temp");
-      Node dot = Node.createDot(temporaryName, left.dotName().remove());
+      var target = left.dotTarget().remove();
+      var temporaryName = Node.createName("$temp");
+      var dot = Node.createDot(temporaryName, left.dotName().remove());
       return Node.createLet(
         Node.createVariable(temporaryName.clone(), null, target),
         Node.createBinary(.ASSIGN, dot, createBinaryInt(kind, dot.clone(), right)).withType(cache.intType)).withType(cache.intType);
     }
 
     bool hasCompoundName(Symbol symbol) {
-      Symbol enclosingSymbol = symbol.enclosingSymbol;
+      var enclosingSymbol = symbol.enclosingSymbol;
       return enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() && (
         !symbol.kind.isConstructor() || hasCompoundName(enclosingSymbol));
     }
 
     static StringMap<bool> createIsKeyword() {
-      StringMap<bool> result = StringMap<bool>();
+      var result = StringMap<bool>();
       result.set("arguments", true);
       result.set("call", true);
       result.set("apply", true);
@@ -839,7 +832,7 @@ namespace js {
       return result;
     }
 
-    static StringMap<bool> isKeyword = createIsKeyword();
+    static var isKeyword = createIsKeyword();
 
     string mangleName(Symbol symbol) {
       if (symbol.isImportOrExport()) {
@@ -855,9 +848,9 @@ namespace js {
     }
 
     string fullName(Symbol symbol) {
-      Symbol enclosingSymbol = symbol.enclosingSymbol;
+      var enclosingSymbol = symbol.enclosingSymbol;
       if (enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace()) {
-        string enclosingName = fullName(enclosingSymbol);
+        var enclosingName = fullName(enclosingSymbol);
         if (symbol.kind.isConstructor()) {
           return enclosingName;
         }

@@ -25,6 +25,7 @@ class CompilerOptions {
   var outputDirectory = "";
   var outputFile = "";
   var jsSourceMap = false;
+  var optimize = false;
 
   bool isSingleFileMode() {
     assert outputFile.length > 0 || outputDirectory.length > 0;
@@ -127,6 +128,13 @@ class Compiler {
 
       // Emit the module in the target language
       if (emitter != null) {
+        if (options.targetFormat.shouldRunResolver()) {
+          InstanceToStaticPass.run(program);
+          if (options.optimize) {
+            resolver.constantFolder.foldConstants(program);
+          }
+        }
+
         var emitStart = now();
         outputs = emitter.emitProgram(program);
         emitTime = emitTime + now() - emitStart;

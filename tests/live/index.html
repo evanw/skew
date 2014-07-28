@@ -15,11 +15,24 @@ div {
   margin: 20px;
 }
 
+#compileTime {
+  float: right;
+}
+
+#optimizeLabel {
+  cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: -moz-none;
+}
+
 </style>
 <div>
   <h2>Input</h2>
   <textarea id="input" rows="10" cols="80" spellcheck="false" autofocus></textarea>
-  <p id="compileTime">Loading...</p>
+  <p>
+    <span id="compileTime">Loading...</span>
+    <label id="optimizeLabel"><input type="checkbox" id="optimize"> Optimize</label>
+  </p>
 </div>
 <div>
   <h2>Log</h2>
@@ -38,14 +51,17 @@ div {
 
 function compile() {
   var start = now();
-  if (input.value === old) return;
-  old = input.value;
+  if (input.value === oldInput && optimize.checked === oldOptimize) return;
+  oldInput = input.value;
+  oldOptimize = optimize.checked;
+  localStorage.optimize = oldOptimize;
   outputLog.value = outputTree.value = outputCode.value = '';
   try {
     var compiler = new Compiler();
     var options = new CompilerOptions();
+    options.optimize = oldOptimize;
     options.targetFormat = TargetFormat.JS;
-    options.inputs.push(new Source('<stdin>', input.value));
+    options.inputs.push(new Source('<stdin>', oldInput));
     var result = compiler.compile(options);
     outputLog.value = compiler.log.toString();
     if (result.program !== null && result.program.children.length === 2) {
@@ -64,8 +80,10 @@ var now = this.performance && performance.now
   ? function() { return performance.now(); }
   : function() { return +new Date; };
 
-var old = null;
-input.oninput = input.onchange = compile;
+var oldInput = null;
+var oldOptimize = null;
+optimize.checked = localStorage.optimize === 'true';
+input.oninput = input.onchange = optimize.onchange = compile;
 compile();
 
 </script>

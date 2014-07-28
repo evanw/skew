@@ -66,6 +66,7 @@ namespace frontend {
     var target = "";
     var outputFile = "";
     var jsSourceMap = false;
+    var optimize = false;
 
     bool shouldWriteToStdout() {
       return outputFile == "";
@@ -99,6 +100,7 @@ namespace frontend {
       // Check flags
       if (arg == "-help" || arg == "--help" || arg == "-h") { printUsage(); return 0; }
       else if (arg == "-verbose" || arg == "--verbose") { flags.verbose = true; continue; }
+      else if (arg == "-optimize" || arg == "--optimize") { flags.optimize = true; continue; }
       else if (arg == "-js-source-map" || arg == "--js-source-map") { flags.jsSourceMap = true; continue; }
       else if (startsWith(arg, "-target=") || startsWith(arg, "--target=")) { flags.target = afterEquals(arg); continue; }
       else if (startsWith(arg, "-output-file=") || startsWith(arg, "--output-file=")) { flags.outputFile = afterEquals(arg); continue; }
@@ -132,6 +134,7 @@ namespace frontend {
     // Translate frontend flags to compiler options
     var options = CompilerOptions();
     options.targetFormat = target;
+    options.optimize = flags.optimize;
     options.outputFile = flags.shouldWriteToStdout() ? "<stdout>" : flags.outputFile;
     options.jsSourceMap = flags.jsSourceMap && flags.outputFile != "" && target == .JS;
 
