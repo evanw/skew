@@ -24,7 +24,7 @@ namespace io {
   }
 }
 
-namespace frontend {
+export namespace frontend {
   void printError(string text) {
     io.printWithColor(.RED, "error: ");
     io.printWithColor(.BOLD, text.append("\n"));

@@ -1,18 +1,19 @@
 class InstanceToStaticPass {
-  static void run(Node program) {
+  static void run(Node program, CompilerOptions options) {
     var graph = CallGraph(program);
     for (var i = 0; i < graph.callInfo.length; i++) {
       var info = graph.callInfo.get(i);
       var symbol = info.symbol;
       var enclosingSymbol = symbol.enclosingSymbol;
-      if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImportOrExport() && symbol.node.functionBlock() != null && (enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum())) {
+      if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImportOrExport() && symbol.node.functionBlock() != null && (
+          enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() || options.optimize && options.targetFormat == .JS && !symbol.isVirtual())) {
+
         // Change the instance function to a static function
         symbol.kind = .GLOBAL_FUNCTION;
         symbol.flags = symbol.flags | SymbolFlag.STATIC;
         var thisSymbol = Symbol("this", .LOCAL_VARIABLE);
         thisSymbol.type = enclosingSymbol.type;
         symbol.node.functionArguments().insertChild(0, Node.createVariable(Node.createName("this").withSymbol(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol));
-        recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
 
         // Update all call sites
         for (var j = 0; j < info.callSites.length; j++) {
@@ -43,14 +44,29 @@ class InstanceToStaticPass {
             }
           }
         }
+
+        // Recursively replace "this" with the new explicit argument. This must
+        // be done after all call sites are updated in case that step introduced
+        // more "this" expressions.
+        recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
       }
     }
   }
 
+  static Node createThis(Symbol symbol) {
+    return Node.createName(symbol.name).withSymbol(symbol).withType(symbol.type);
+  }
+
   static void recursivelyReplaceThis(Node node, Symbol symbol) {
     if (node.kind == .THIS) {
-      node.become(Node.createName(symbol.name).withSymbol(symbol).withType(symbol.type));
-    } else if (node.hasChildren()) {
+      node.become(createThis(symbol).withRange(node.range));
+    }
+
+    else if (node.isNameExpression() && (node.symbol.kind == .INSTANCE_FUNCTION || node.symbol.kind == .INSTANCE_VARIABLE)) {
+      node.become(Node.createDot(createThis(symbol), node.clone()).withType(node.type).withRange(node.range));
+    }
+
+    else if (node.hasChildren()) {
       for (var i = 0; i < node.children.length; i++) {
         var child = node.children.get(i);
         if (child != null) {

@@ -47,6 +47,7 @@ class Compiler {
   var tokenizeTime = 0.0;
   var parseTime = 0.0;
   var resolveTime = 0.0;
+  var optimizeTime = 0.0;
   var emitTime = 0.0;
   var totalTime = 0.0;
   var log = Log();
@@ -64,6 +65,7 @@ class Compiler {
     if (tokenizeTime > 0) text = text.append("\n  Tokenize: ").append(formatNumber(tokenizeTime).append("ms"));
     if (parseTime > 0) text = text.append("\n  Parse: ").append(formatNumber(parseTime).append("ms"));
     if (resolveTime > 0) text = text.append("\n  Resolve: ").append(formatNumber(resolveTime).append("ms"));
+    if (optimizeTime > 0) text = text.append("\n  Optimize: ").append(formatNumber(optimizeTime).append("ms"));
     if (emitTime > 0) text = text.append("\n  Emit: ").append(formatNumber(emitTime).append("ms"));
 
     // Inputs
@@ -128,12 +130,14 @@ class Compiler {
 
       // Emit the module in the target language
       if (emitter != null) {
+        var optimizeStart = now();
         if (options.targetFormat.shouldRunResolver()) {
-          InstanceToStaticPass.run(program);
+          InstanceToStaticPass.run(program, options);
           if (options.optimize) {
             resolver.constantFolder.foldConstants(program);
           }
         }
+        optimizeTime = optimizeTime + now() - optimizeStart;
 
         var emitStart = now();
         outputs = emitter.emitProgram(program);

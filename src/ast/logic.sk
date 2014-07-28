@@ -120,4 +120,8 @@ in Node {
 
     return false;
   }
+
+  bool isNameExpression() {
+    return kind == .NAME && (parent.kind != .DOT || this != parent.dotName());
+  }
 }

@@ -700,7 +700,7 @@ namespace js {
         }
 
         case .NAME {
-          if (node.symbol != null && node.symbol.kind.isInstance() && (node.parent.kind != .DOT || node != node.parent.dotName())) {
+          if (node.symbol != null && node.symbol.kind.isInstance() && node.isNameExpression()) {
             node.become(Node.createDot(Node.createThis(), node.clone()));
           }
         }
