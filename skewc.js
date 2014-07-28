@@ -680,7 +680,7 @@ Node.blockAlwaysEndsWithReturn = function($this) {
   return false;
 };
 Node.isNameExpression = function($this) {
-  return $this.kind === 34 && ($this.parent.kind !== 46 || $this !== Node.dotName($this.parent));
+  return $this.kind === 34 && ($this.parent.kind !== 46 || $this !== Node.dotName($this.parent)) && (!NodeKind.isNamedDeclaration($this.parent.kind) || $this !== Node.declarationName($this.parent));
 };
 Node.asBool = function($this) {
   return $this.kind === 39;
