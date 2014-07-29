@@ -10,7 +10,7 @@ class InstanceToStaticPass {
 
         // Change the instance function to a static function
         symbol.kind = .GLOBAL_FUNCTION;
-        symbol.flags = symbol.flags | SymbolFlag.STATIC;
+        symbol.flags |= .STATIC;
         var thisSymbol = Symbol("this", .LOCAL_VARIABLE);
         thisSymbol.type = enclosingSymbol.type;
         symbol.node.functionArguments().insertChild(0, Node.createVariable(Node.createName("this").withSymbol(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol));

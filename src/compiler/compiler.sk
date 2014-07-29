@@ -56,7 +56,7 @@ class Compiler {
     // Line count
     var lineCount = 0;
     for (var i = 0; i < result.options.inputs.length; i++) {
-      lineCount = lineCount + result.options.inputs.get(i).lineCount();
+      lineCount += result.options.inputs.get(i).lineCount();
     }
     var text = "Lines: ".append(lineCount.toString());
 

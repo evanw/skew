@@ -103,11 +103,11 @@ class SourceMapGenerator {
     var encoded = "";
     do {
       var digit = vlq & 31;
-      vlq = vlq >> 5;
+      vlq >>= 5;
 
       // If there are still more digits in this value, we must make sure the
       // continuation bit is marked
-      if (vlq > 0) digit = digit | 32;
+      if (vlq > 0) digit |= 32;
 
       encoded = encoded.append(BASE64.get(digit));
     } while (vlq > 0);

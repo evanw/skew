@@ -60,16 +60,16 @@ struct Range {
       else if (length - a < maxLength - centeredStart) {
         var offset = length - maxLength;
         line = "...".append(line.slice(offset + 3, length));
-        a = a - offset;
-        b = b - offset;
+        a -= offset;
+        b -= offset;
       }
 
       // Center aligned
       else {
         var offset = a - centeredStart;
         line = "...".append(line.slice(offset + 3, offset + maxLength - 3)).append("...");
-        a = a - offset;
-        b = b - offset;
+        a -= offset;
+        b -= offset;
         if (b > maxLength - 3) b = maxLength - 3;
       }
     }

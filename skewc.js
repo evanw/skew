@@ -2616,9 +2616,9 @@ SourceMapGenerator.encodeVLQ = function(value) {
   var encoded = "";
   do {
     var digit = vlq & 31;
-    vlq = vlq >> 5;
+    vlq >>= 5;
     if (vlq > 0) {
-      digit = digit | 32;
+      digit |= 32;
     }
     encoded = encoded.append(BASE64.get(digit));
   } while (vlq > 0);
@@ -3208,7 +3208,7 @@ InstanceToStaticPass.run = function(program, options) {
     var enclosingSymbol = symbol.enclosingSymbol;
     if (symbol.kind === 16 && !Symbol.isImportOrExport(symbol) && Node.functionBlock(symbol.node) !== null && (Symbol.isImport(enclosingSymbol) || SymbolKind.isEnum(enclosingSymbol.kind) || options.optimize && options.targetFormat === 1 && !Symbol.isVirtual(symbol))) {
       symbol.kind = 15;
-      symbol.flags = symbol.flags | 64;
+      symbol.flags |= 64;
       var thisSymbol = new Symbol("this", 18);
       thisSymbol.type = enclosingSymbol.type;
       Node.insertChild(Node.functionArguments(symbol.node), 0, Node.withSymbol(Node.createVariable(Node.withSymbol(Node.createName("this"), thisSymbol), Node.createType(thisSymbol.type), null), thisSymbol));
@@ -3395,11 +3395,11 @@ Resolver.symbolFlagsForNode = function($this, node) {
     if ((flags & flag) !== 0) {
       semanticWarningDuplicateModifier($this.log, modifierName.range, name);
     }
-    flags = flags | flag;
+    flags |= flag;
     parent = parent.parent;
   }
   if (parent !== null && parent.kind === 2 && parent.parent.kind === 13) {
-    flags = flags | 16;
+    flags |= 16;
   }
   return flags;
 };
@@ -3415,11 +3415,11 @@ Resolver.accumulateSymbolFlags = function($this) {
       var siblingFlags = Resolver.symbolFlagsForNode($this, sibling);
       if ((flags & 4071) !== (siblingFlags & 4071)) {
         semanticErrorDifferentModifiers($this.log, Node.declarationName(sibling).range, Node.asString(declarationName), declarationName.range);
-        siblingFlags = siblingFlags | 32768;
+        siblingFlags |= 32768;
       }
-      flags = flags | siblingFlags;
+      flags |= siblingFlags;
     }
-    node.symbol.flags = node.symbol.flags | flags;
+    node.symbol.flags |= flags;
   }
 };
 Resolver.checkParentsForLocalVariable = function(node) {
@@ -3960,7 +3960,7 @@ Resolver.checkDeclarationLocation = function($this, node, allowDeclaration) {
     }
   }
   if (parent !== null) {
-    node.symbol.flags = node.symbol.flags | 16384;
+    node.symbol.flags |= 16384;
   }
 };
 Resolver.checkStatementLocation = function($this, node) {
@@ -4207,7 +4207,7 @@ Resolver.initializeFunction = function($this, symbol) {
         Resolver.redundantModifierIfPresent($this, symbol, 128, "on an overriding function");
       }
     }
-    symbol.flags = symbol.flags | 128;
+    symbol.flags |= 128;
   } else if (!Symbol.isObjectMember(symbol)) {
     Resolver.unexpectedModifierIfPresent($this, symbol, 128, "outside an object declaration");
     Resolver.unexpectedModifierIfPresent($this, symbol, 32, "outside an object declaration");
@@ -4217,7 +4217,7 @@ Resolver.initializeFunction = function($this, symbol) {
     }
     Resolver.unexpectedModifierIfPresent($this, symbol, 32, "on a function that doesn't override anything");
     if (Symbol.isOverride(symbol)) {
-      symbol.flags = symbol.flags | 128;
+      symbol.flags |= 128;
     }
   }
 };
@@ -4270,7 +4270,7 @@ Resolver.initializeVariable = function($this, symbol) {
     } else if (symbol.enclosingSymbol !== null) {
       var type = symbol.enclosingSymbol.type;
       variableType = Node.withSymbol(Node.createType(type), symbol.enclosingSymbol);
-      symbol.flags = symbol.flags | 256;
+      symbol.flags |= 256;
       var variableValue = Node.variableValue(node);
       if (variableValue !== null) {
         Resolver.resolveAsExpressionWithConversion($this, variableValue, $this.cache.intType, 0);
@@ -4366,7 +4366,7 @@ Resolver.initializeAlias = function($this, symbol) {
 Resolver.initializeDeclaration = function($this, node) {
   var symbol = node.symbol;
   if (Symbol.isUninitialized(symbol)) {
-    symbol.flags = symbol.flags | 4096;
+    symbol.flags |= 4096;
     var oldContext = $this.context;
     var oldTypeContext = $this.typeContext;
     var oldResultType = $this.resultType;
@@ -4475,7 +4475,7 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
           superArguments.push(Node.createName(name));
         }
       } else {
-        symbol.flags = symbol.flags | 8192;
+        symbol.flags |= 8192;
         symbol.type = $this.cache.errorType;
         return;
       }
@@ -4488,7 +4488,7 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
     if (memberSymbol.kind === 20 && memberSymbol.enclosingSymbol === enclosingSymbol && Node.variableValue(memberSymbol.node) === null) {
       Resolver.initializeMember($this, member);
       if (Type.isError(member.type, $this.cache)) {
-        symbol.flags = symbol.flags | 8192;
+        symbol.flags |= 8192;
         symbol.type = $this.cache.errorType;
         return;
       }
@@ -5901,7 +5901,7 @@ function TypeCache() {
 TypeCache.createType = function(symbol) {
   var type = new Type(symbol);
   symbol.type = type;
-  symbol.flags = symbol.flags | 8192;
+  symbol.flags |= 8192;
   return type;
 };
 TypeCache.commonBaseClass = function(left, right) {

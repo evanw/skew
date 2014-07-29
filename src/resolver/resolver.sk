@@ -176,13 +176,13 @@ class Resolver {
       var name = modifierName.asString();
       var flag = nameToSymbolFlag.get(name);
       if ((flags & flag) != 0) semanticWarningDuplicateModifier(log, modifierName.range, name);
-      flags = flags | flag;
+      flags |= flag;
       parent = parent.parent;
     }
 
     // Mark nodes directly inside extension blocks for easy checking later
     if (parent != null && parent.kind == .BLOCK && parent.parent.kind == .EXTENSION) {
-      flags = flags | SymbolFlag.FROM_EXTENSION;
+      flags |= .FROM_EXTENSION;
     }
 
     return flags;
@@ -207,13 +207,13 @@ class Resolver {
         // Don't count non-keyword modifiers
         if ((flags & SymbolFlag.KEYWORD_MASK) != (siblingFlags & SymbolFlag.KEYWORD_MASK)) {
           semanticErrorDifferentModifiers(log, sibling.declarationName().range, declarationName.asString(), declarationName.range);
-          siblingFlags = siblingFlags | SymbolFlag.HAS_MODIFIER_ERRORS;
+          siblingFlags |= .HAS_MODIFIER_ERRORS;
         }
 
-        flags = flags | siblingFlags;
+        flags |= siblingFlags;
       }
 
-      node.symbol.flags = node.symbol.flags | flags;
+      node.symbol.flags |= flags;
     }
   }
 
@@ -726,7 +726,7 @@ class Resolver {
       }
     }
     if (parent != null) {
-      node.symbol.flags = node.symbol.flags | SymbolFlag.HAS_LOCATION_ERROR;
+      node.symbol.flags |= .HAS_LOCATION_ERROR;
     }
   }
 
@@ -1076,7 +1076,7 @@ class Resolver {
       }
 
       // The "virtual" modifier is implied
-      symbol.flags = symbol.flags | SymbolFlag.VIRTUAL;
+      symbol.flags |= .VIRTUAL;
     }
 
     // Ignore overriding-related modifiers outside an object
@@ -1091,7 +1091,7 @@ class Resolver {
       unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a function that doesn't override anything");
 
       // If "override" is used, imply "virtual" to mask further errors
-      if (symbol.isOverride()) symbol.flags = symbol.flags | SymbolFlag.VIRTUAL;
+      if (symbol.isOverride()) symbol.flags |= .VIRTUAL;
     }
   }
 
@@ -1157,7 +1157,7 @@ class Resolver {
         variableType = Node.createType(type).withSymbol(symbol.enclosingSymbol);
 
         // All enum values are final
-        symbol.flags = symbol.flags | SymbolFlag.FINAL;
+        symbol.flags |= .FINAL;
 
         // Look at the initializer now
         var variableValue = node.variableValue();
@@ -1306,7 +1306,7 @@ class Resolver {
       // initialization. This way we can detect cycles that try to use the symbol
       // in its own type, such as "foo foo;" or "class Foo : Foo {}". Cyclic
       // symbol references will return the error type in this case.
-      symbol.flags = symbol.flags | SymbolFlag.INITIALIZING;
+      symbol.flags |= .INITIALIZING;
 
       // Resolve using node.symbol.node to start from the first node in the
       // sibling chain to ensure that the entire chain is processed at once
@@ -1424,7 +1424,7 @@ class Resolver {
           }
         } else {
           assert constructor.type.isError(cache);
-          symbol.flags = symbol.flags | SymbolFlag.INITIALIZED;
+          symbol.flags |= .INITIALIZED;
           symbol.type = cache.errorType;
           return;
         }
@@ -1439,7 +1439,7 @@ class Resolver {
       if (memberSymbol.kind == .INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol && memberSymbol.node.variableValue() == null) {
         initializeMember(member);
         if (member.type.isError(cache)) {
-          symbol.flags = symbol.flags | SymbolFlag.INITIALIZED;
+          symbol.flags |= .INITIALIZED;
           symbol.type = cache.errorType;
           return;
         }

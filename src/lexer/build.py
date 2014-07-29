@@ -64,7 +64,7 @@ List<Token> tokenize(Log log, Source source) {
         }
       }
       yy_current_state = yy_nxt.get(yy_base.get(yy_current_state) + yy_c);
-      yy_cp = yy_cp + 1;
+      yy_cp++;
     }
 
     // Find the action

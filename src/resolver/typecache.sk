@@ -23,7 +23,7 @@ class TypeCache {
   static Type createType(Symbol symbol) {
     var type = Type(symbol);
     symbol.type = type;
-    symbol.flags = symbol.flags | SymbolFlag.INITIALIZED;
+    symbol.flags |= .INITIALIZED;
     return type;
   }
 

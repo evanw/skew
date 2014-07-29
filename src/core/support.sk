@@ -9,7 +9,7 @@ string encodeBase64(string data) {
   var result = StringBuilder();
   var n = data.length;
   int i;
-  for (i = 0; i + 2 < n; i = i + 3) {
+  for (i = 0; i + 2 < n; i += 3) {
     var c = data.codeUnitAt(i) << 16 | data.codeUnitAt(i + 1) << 8 | data.codeUnitAt(i + 2);
     result.append(BASE64.get(c >> 18)).append(BASE64.get(c >> 12 & 0x3F)).append(BASE64.get(c >> 6 & 0x3F)).append(BASE64.get(c & 0x3F));
   }
