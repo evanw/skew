@@ -1,6 +1,5 @@
 class InstanceToStaticPass {
-  static void run(Node program, CompilerOptions options) {
-    var graph = CallGraph(program);
+  static void run(CallGraph graph, CompilerOptions options) {
     for (var i = 0; i < graph.callInfo.length; i++) {
       var info = graph.callInfo.get(i);
       var symbol = info.symbol;

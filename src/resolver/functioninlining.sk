@@ -1,0 +1,174 @@
+class FunctionInliningPass {
+  CallGraph graph;
+  CompilerOptions options;
+
+  static void run(CallGraph graph, CompilerOptions options) {
+    var pass = FunctionInliningPass(graph, options);
+    for (var i = 0; i < graph.callInfo.length; i++) {
+      pass.tryToInline(graph.callInfo.get(i).symbol);
+    }
+  }
+
+  void tryToInline(Symbol symbol) {
+    // Don't inline symbols that have already been inlined or that aren't
+    // tracked in the call graph
+    if (!symbol.isUninlined()) {
+      return;
+    }
+
+    // Symbols are always marked uninlineable while their body is being inlined
+    // to avoid recursively inlining a function within itself
+    symbol.flags |= .UNINLINEABLE;
+
+    // Inline functions consisting of a single return statement
+    if (symbol.kind == .GLOBAL_FUNCTION && (symbol.isInline() || options.optimize && options.targetFormat == .JS)) {
+      var block = symbol.node.functionBlock();
+      if (block != null && block.hasChildren()) {
+        var i = 0;
+
+        // Skip over asserts since they will be ignored when optimizing anyway
+        if (options.optimize) {
+          while (i < block.children.length && block.children.get(i).kind == .ASSERT) {
+            i++;
+          }
+        }
+
+        // Other than asserts, the body must be a single return statement. It
+        // doesn't matter if there are other statements after the return
+        // statement since those statements are just dead code.
+        if (i < block.children.length) {
+          var last = block.children.get(i);
+          if (last.kind == .RETURN) {
+            recursivelyInlineFunctionCalls(last);
+
+            // Count the number of times each symbol is observed. Argument
+            // variables that are used more than once may need a let statement
+            // to avoid changing the semantics of the call site. For now, just
+            // only inline functions where each argument is used exactly once.
+            var symbolCounts = IntMap<int>();
+            if (recursivelyCountArgumentUses(last, symbolCounts)) {
+              var arguments = symbol.node.functionArguments().children;
+              var isSimpleSubstitution = true;
+              for (var j = 0; j < arguments.length; j++) {
+                var argument = arguments.get(j).symbol;
+                assert argument != null;
+                if (symbolCounts.getOrDefault(argument.uniqueID, 0) != 1) {
+                  isSimpleSubstitution = false;
+                  break;
+                }
+              }
+              if (isSimpleSubstitution) {
+
+                // Inline this function into each call site
+                assert graph.symbolToInfoIndex.has(symbol.uniqueID);
+                var callSites = graph.callInfo.get(graph.symbolToInfoIndex.get(symbol.uniqueID)).callSites;
+                for (var j = 0; j < callSites.length; j++) {
+                  var callSite = callSites.get(j);
+                  switch (callSite.kind) {
+                    case .CALL {
+                      var clone = last.returnValue().clone();
+                      var values = callSite.removeChildren();
+                      assert values.length >= 1;
+                      var value = values.shift();
+                      assert value.kind == .NAME && value.symbol == symbol;
+                      assert arguments.length == values.length;
+                      for (var k = 0; k < values.length; k++) {
+                        recursivelyInlineFunctionCalls(values.get(k));
+                      }
+                      recursivelySubstituteArguments(clone, arguments, values);
+                      callSite.become(clone);
+                    }
+
+                    case .BIND {
+                      assert false; // TODO
+                    }
+
+                    default {
+                      assert false;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Mark the symbol as inlineable now that the body has been processed
+      symbol.flags = (symbol.flags & ~SymbolFlag.INLINE_MASK) | SymbolFlag.INLINEABLE;
+    }
+  }
+
+  void recursivelyInlineFunctionCalls(Node node) {
+    if (node.hasChildren()) {
+      for (var i = 0; i < node.children.length; i++) {
+        var child = node.children.get(i);
+        if (child != null) {
+          recursivelyInlineFunctionCalls(child);
+        }
+      }
+    }
+
+    // Inlining nested functions first is more efficient because it results in
+    // fewer inlining operations. This won't enter an infinite loop for
+    // recursive functions, even indirectly recursive functions, because
+    // function symbols are marked as uninlineable while everything in their
+    // body is being inlined.
+    var symbol = node.symbol;
+    if (symbol != null) {
+      tryToInline(symbol);
+    }
+  }
+
+  // This returns false if inlining is impossible
+  bool recursivelyCountArgumentUses(Node node, IntMap<int> symbolCounts) {
+    if (node.hasChildren()) {
+      for (var i = 0; i < node.children.length; i++) {
+        var child = node.children.get(i);
+        if (child != null && !recursivelyCountArgumentUses(child, symbolCounts)) {
+          return false;
+        }
+      }
+    }
+
+    var symbol = node.symbol;
+    if (symbol != null) {
+
+      // Prevent inlining of functions that modify their arguments locally. For
+      // example, inlining this would lead to incorrect code:
+      //
+      //   void foo(int x, int y) {
+      //     return x += y;
+      //   }
+      //   foo(1, 2);
+      //
+      if (node.isStorage()) {
+        return false;
+      }
+
+      symbolCounts.set(symbol.uniqueID, symbolCounts.getOrDefault(symbol.uniqueID, 0) + 1);
+    }
+
+    return true;
+  }
+
+  void recursivelySubstituteArguments(Node node, List<Node> arguments, List<Node> values) {
+    if (node.symbol != null) {
+      for (var i = 0; i < arguments.length; i++) {
+        if (arguments.get(i).symbol == node.symbol) {
+          node.become(values.get(i));
+          return;
+        }
+      }
+    }
+
+    if (node.hasChildren()) {
+      for (var i = 0; i < node.children.length; i++) {
+        var child = node.children.get(i);
+        if (child != null) {
+          recursivelySubstituteArguments(child, arguments, values);
+        }
+      }
+    }
+  }
+}

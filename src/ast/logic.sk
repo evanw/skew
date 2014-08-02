@@ -124,4 +124,8 @@ in Node {
   bool isNameExpression() {
     return kind == .NAME && (parent.kind != .DOT || this != parent.dotName()) && (!parent.kind.isNamedDeclaration() || this != parent.declarationName());
   }
+
+  bool isStorage() {
+    return parent.kind.isUnaryStorageOperator() || parent.kind.isBinaryStorageOperator() && this == parent.binaryLeft();
+  }
 }

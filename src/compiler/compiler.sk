@@ -44,29 +44,43 @@ class Compiler {
   static Source nativeLibrarySource = null;
   static Node nativeLibraryFile = null;
 
-  var tokenizeTime = 0.0;
-  var parseTime = 0.0;
-  var resolveTime = 0.0;
-  var optimizeTime = 0.0;
+  var tokenizingTime = 0.0;
+  var parsingTime = 0.0;
+  var resolvingTime = 0.0;
+  var callGraphTime = 0.0;
+  var instanceToStaticTime = 0.0;
+  var functionInliningTime = 0.0;
+  var constantFoldingTime = 0.0;
   var emitTime = 0.0;
+  var lineCountingTime = 0.0;
   var totalTime = 0.0;
   var log = Log();
 
   string statistics(CompilerResult result) {
     // Line count
+    var lineCountingStart = now();
     var lineCount = 0;
     for (var i = 0; i < result.options.inputs.length; i++) {
       lineCount += result.options.inputs.get(i).lineCount();
     }
-    var text = "Lines: ".append(lineCount.toString());
+    var text = "Line count: ".append(lineCount.toString());
+    lineCountingTime += now() - lineCountingStart;
 
     // Compilation time
-    text = text.append("\nTime: ").append(formatNumber(totalTime)).append("ms");
-    if (tokenizeTime > 0) text = text.append("\n  Tokenize: ").append(formatNumber(tokenizeTime).append("ms"));
-    if (parseTime > 0) text = text.append("\n  Parse: ").append(formatNumber(parseTime).append("ms"));
-    if (resolveTime > 0) text = text.append("\n  Resolve: ").append(formatNumber(resolveTime).append("ms"));
-    if (optimizeTime > 0) text = text.append("\n  Optimize: ").append(formatNumber(optimizeTime).append("ms"));
-    if (emitTime > 0) text = text.append("\n  Emit: ").append(formatNumber(emitTime).append("ms"));
+    var optimizingTime = callGraphTime + instanceToStaticTime + functionInliningTime + constantFoldingTime;
+    text = text.append("\nTotal compile time: ").append(formatNumber(totalTime + lineCountingTime)).append("ms");
+    if (tokenizingTime > 0) text = text.append("\n  Tokenizing: ").append(formatNumber(tokenizingTime)).append("ms");
+    if (parsingTime > 0) text = text.append("\n  Parsing: ").append(formatNumber(parsingTime)).append("ms");
+    if (resolvingTime > 0) text = text.append("\n  Resolving: ").append(formatNumber(resolvingTime)).append("ms");
+    if (optimizingTime > 0) {
+      text = text.append("\n  Optimizing: ").append(formatNumber(optimizingTime)).append("ms");
+      text = text.append("\n    Building call graph: ").append(formatNumber(callGraphTime)).append("ms");
+      text = text.append("\n    Instance to static: ").append(formatNumber(instanceToStaticTime)).append("ms");
+      text = text.append("\n    Function inlining: ").append(formatNumber(functionInliningTime)).append("ms");
+      text = text.append("\n    Constant folding: ").append(formatNumber(constantFoldingTime)).append("ms");
+    }
+    if (emitTime > 0) text = text.append("\n  Emit: ").append(formatNumber(emitTime)).append("ms");
+    if (lineCountingTime > 0) text = text.append("\n  Counting lines: ").append(formatNumber(lineCountingTime)).append("ms");
 
     // Inputs
     text = text.append("\nInputs: ").append(result.options.inputs.length.toString());
@@ -113,7 +127,7 @@ class Compiler {
       var resolveStart = now();
       resolver = Resolver(log);
       resolver.run(program);
-      resolveTime = resolveTime + now() - resolveStart;
+      resolvingTime += now() - resolveStart;
     }
     if (log.errorCount == 0) {
 
@@ -128,24 +142,41 @@ class Compiler {
         default { assert false; }
       }
 
-      // Emit the module in the target language
+      // Optimize and emit the module in the target language if present
       if (emitter != null) {
-        var optimizeStart = now();
         if (options.targetFormat.shouldRunResolver()) {
-          InstanceToStaticPass.run(program, options);
+
+          // Build call graph
+          var callGraphStart = now();
+          var graph = CallGraph(program);
+          callGraphTime += now() - callGraphStart;
+
+          // Convert instance functions to static functions
+          var instanceToStaticStart = now();
+          InstanceToStaticPass.run(graph, options);
+          instanceToStaticTime += now() - instanceToStaticStart;
+
+          // Inline functions
+          var functionInliningStart = now();
+          FunctionInliningPass.run(graph, options);
+          functionInliningTime += now() - functionInliningStart;
+
+          // Fold constants
           if (options.optimize) {
+            var constantFoldingStart = now();
             resolver.constantFolder.foldConstants(program);
+            constantFoldingTime += now() - constantFoldingStart;
           }
         }
-        optimizeTime = optimizeTime + now() - optimizeStart;
 
+        // Emit
         var emitStart = now();
         outputs = emitter.emitProgram(program);
-        emitTime = emitTime + now() - emitStart;
+        emitTime += now() - emitStart;
       }
     }
 
-    totalTime = totalTime + now() - totalStart;
+    totalTime += now() - totalStart;
     return CompilerResult(options, outputs, program, resolver);
   }
 
@@ -155,13 +186,13 @@ class Compiler {
     // Tokenize the source
     var tokenizeStart = now();
     var sourceTokens = tokenize(log, source);
-    tokenizeTime = tokenizeTime + now() - tokenizeStart;
+    tokenizingTime += now() - tokenizeStart;
 
     // Parse the source if the tokenize was successful
     if (log.errorCount == errorCount) {
       var parseStart = now();
       var file = parseFile(log, sourceTokens);
-      parseTime = parseTime + now() - parseStart;
+      parsingTime += now() - parseStart;
       if (file != null) {
         program.appendChild(file);
       }
