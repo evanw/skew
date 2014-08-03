@@ -19,39 +19,39 @@ namespace xml {
   string dump(Node node) {
     var visitor = DumpVisitor();
     visitor.visit(node);
-    return visitor.builder.toString();
+    return visitor.result;
   }
 
   class DumpVisitor {
-    var builder = StringBuilder();
+    var result = "";
     var indent = "";
 
     void visit(Node node) {
       if (node == null) {
-        builder.append("<null/>");
+        result = result.append("<null/>");
         return;
       }
-      builder.append("<").append(node.kind.prettyPrint());
+      result = result.append("<").append(node.kind.prettyPrint());
       if (node.content != null) {
-        builder.append(" content=");
+        result = result.append(" content=");
         switch (node.content.type()) {
-          case .INT { builder.append(simpleQuote(node.asInt().toString())); }
-          case .DOUBLE { builder.append(simpleQuote(node.asDouble().toString())); }
-          case .STRING { builder.append(quoteString(node.asString(), '"')); }
+          case .INT { result = result.append(simpleQuote(node.asInt().toString())); }
+          case .DOUBLE { result = result.append(simpleQuote(node.asDouble().toString())); }
+          case .STRING { result = result.append(quoteString(node.asString(), '"')); }
         }
       }
       if (node.hasChildren()) {
-        builder.append(">");
+        result = result.append(">");
         var inner = indent;
         indent = indent.append("  ");
         for (var i = 0; i < node.children.length; i++) {
-          builder.append("\n").append(indent);
+          result = result.append("\n").append(indent);
           visit(node.children.get(i));
         }
         indent = inner;
-        builder.append("\n").append(indent).append("</").append(node.kind.prettyPrint()).append(">");
+        result = result.append("\n").append(indent).append("</").append(node.kind.prettyPrint()).append(">");
       } else {
-        builder.append("/>");
+        result = result.append("/>");
       }
     }
   }

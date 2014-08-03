@@ -19,43 +19,43 @@ namespace json {
   string dump(Node node) {
     var visitor = DumpVisitor();
     visitor.visit(node);
-    return visitor.builder.toString();
+    return visitor.result;
   }
 
   class DumpVisitor {
-    var builder = StringBuilder();
+    var result = "";
     var indent = "";
 
     void visit(Node node) {
       if (node == null) {
-        builder.append("null");
+        result = result.append("null");
         return;
       }
       var outer = indent;
       indent = indent.append("  ");
-      builder.append("{\n").append(indent).append("\"kind\": ").append(simpleQuote(node.kind.prettyPrint()));
+      result = result.append("{\n").append(indent).append("\"kind\": ").append(simpleQuote(node.kind.prettyPrint()));
       if (node.content != null) {
-        builder.append(",\n").append(indent).append("\"content\": ");
+        result = result.append(",\n").append(indent).append("\"content\": ");
         switch (node.content.type()) {
-          case .INT { builder.append(node.asInt().toString()); }
-          case .DOUBLE { builder.append(node.asDouble().toString()); }
-          case .STRING { builder.append(quoteString(node.asString(), '"')); }
+          case .INT { result = result.append(node.asInt().toString()); }
+          case .DOUBLE { result = result.append(node.asDouble().toString()); }
+          case .STRING { result = result.append(quoteString(node.asString(), '"')); }
         }
       }
       if (node.hasChildren()) {
-        builder.append(",\n").append(indent).append("\"children\": [");
+        result = result.append(",\n").append(indent).append("\"children\": [");
         var inner = indent;
         indent = indent.append("  ");
         for (var i = 0; i < node.children.length; i++) {
-          if (i > 0) builder.append(",");
-          builder.append("\n").append(indent);
+          if (i > 0) result = result.append(",");
+          result = result.append("\n").append(indent);
           visit(node.children.get(i));
         }
         indent = inner;
-        builder.append("\n").append(indent).append("]");
+        result = result.append("\n").append(indent).append("]");
       }
       indent = outer;
-      builder.append("\n").append(indent).append("}");
+      result = result.append("\n").append(indent).append("}");
     }
   }
 }

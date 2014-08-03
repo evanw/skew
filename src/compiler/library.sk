@@ -92,11 +92,4 @@ import namespace Math {
   int imin(int a, int b);
   int imax(int a, int b);
 }
-
-// TODO: Remove this
-import class StringBuilder {
-  new();
-  StringBuilder append(string text);
-  string toString();
-}
 ";

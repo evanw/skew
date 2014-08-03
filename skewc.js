@@ -1,19 +1,6 @@
 // This file is just to bootstrap the compiler so it compiles itself. The need
 // for this file will disappear entirely when the compiler is finished.
 
-function StringBuilder() {
-  this.data = '';
-}
-
-StringBuilder.prototype.append = function(text) {
-  this.data += text;
-  return this;
-};
-
-StringBuilder.prototype.toString = function() {
-  return this.data;
-};
-
 function IntMap() {
   this._table = Object.create(null);
 }
@@ -1439,47 +1426,47 @@ json.Emitter.prototype.emitProgram = function(program) {
   return outputs;
 };
 json.DumpVisitor = function() {
-  this.builder = new StringBuilder();
+  this.result = "";
   this.indent = "";
 };
 json.DumpVisitor.visit = function($this, node) {
   if (node === null) {
-    $this.builder.append("null");
+    $this.result = $this.result + "null";
     return;
   }
   var outer = $this.indent;
   $this.indent = $this.indent + "  ";
-  $this.builder.append("{\n").append($this.indent).append("\"kind\": ").append("\"" + replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-") + "\"");
+  $this.result = $this.result + "{\n" + $this.indent + "\"kind\": " + string.append(string.append("\"", replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-")), "\"");
   if (node.content !== null) {
-    $this.builder.append(",\n").append($this.indent).append("\"content\": ");
+    $this.result = $this.result + ",\n" + $this.indent + "\"content\": ";
     switch (node.content.type()) {
     case 0:
-      $this.builder.append(node.content.value.toString());
+      $this.result = $this.result + node.content.value.toString();
       break;
     case 1:
-      $this.builder.append(node.content.value.toString());
+      $this.result = $this.result + node.content.value.toString();
       break;
     case 2:
-      $this.builder.append(quoteString(node.content.value, 34));
+      $this.result = $this.result + quoteString(node.content.value, 34);
       break;
     }
   }
   if (Node.hasChildren(node)) {
-    $this.builder.append(",\n").append($this.indent).append("\"children\": [");
+    $this.result = $this.result + ",\n" + $this.indent + "\"children\": [";
     var inner = $this.indent;
     $this.indent = $this.indent + "  ";
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       if (i > 0) {
-        $this.builder.append(",");
+        $this.result = $this.result + ",";
       }
-      $this.builder.append("\n").append($this.indent);
+      $this.result = $this.result + "\n" + $this.indent;
       json.DumpVisitor.visit($this, node.children[i]);
     }
     $this.indent = inner;
-    $this.builder.append("\n").append($this.indent).append("]");
+    $this.result = $this.result + "\n" + $this.indent + "]";
   }
   $this.indent = outer;
-  $this.builder.append("\n").append($this.indent).append("}");
+  $this.result = $this.result + "\n" + $this.indent + "}";
 };
 var lisp = {};
 lisp.Emitter = function(_0) {
@@ -1498,25 +1485,25 @@ lisp.Emitter.prototype.emitProgram = function(program) {
   return outputs;
 };
 lisp.DumpVisitor = function() {
-  this.builder = new StringBuilder();
+  this.result = "";
   this.indent = "";
 };
 lisp.DumpVisitor.visit = function($this, node) {
   if (node === null) {
-    $this.builder.append("nil");
+    $this.result = $this.result + "nil";
     return;
   }
-  $this.builder.append("(").append(replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-"));
+  $this.result = $this.result + "(" + replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-");
   if (node.content !== null) {
     switch (node.content.type()) {
     case 0:
-      $this.builder.append(" ").append(node.content.value.toString());
+      $this.result = $this.result + " " + node.content.value.toString();
       break;
     case 1:
-      $this.builder.append(" ").append(node.content.value.toString());
+      $this.result = $this.result + " " + node.content.value.toString();
       break;
     case 2:
-      $this.builder.append(" ").append(quoteString(node.content.value, 34));
+      $this.result = $this.result + " " + quoteString(node.content.value, 34);
       break;
     }
   }
@@ -1524,12 +1511,12 @@ lisp.DumpVisitor.visit = function($this, node) {
     var old = $this.indent;
     $this.indent = $this.indent + "  ";
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      $this.builder.append("\n").append($this.indent);
+      $this.result = $this.result + "\n" + $this.indent;
       lisp.DumpVisitor.visit($this, node.children[i]);
     }
     $this.indent = old;
   }
-  $this.builder.append(")");
+  $this.result = $this.result + ")";
 };
 var xml = {};
 xml.Emitter = function(_0) {
@@ -1548,41 +1535,41 @@ xml.Emitter.prototype.emitProgram = function(program) {
   return outputs;
 };
 xml.DumpVisitor = function() {
-  this.builder = new StringBuilder();
+  this.result = "";
   this.indent = "";
 };
 xml.DumpVisitor.visit = function($this, node) {
   if (node === null) {
-    $this.builder.append("<null/>");
+    $this.result = $this.result + "<null/>";
     return;
   }
-  $this.builder.append("<").append(replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-"));
+  $this.result = $this.result + "<" + replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-");
   if (node.content !== null) {
-    $this.builder.append(" content=");
+    $this.result = $this.result + " content=";
     switch (node.content.type()) {
     case 0:
-      $this.builder.append("\"" + node.content.value.toString() + "\"");
+      $this.result = $this.result + string.append(string.append("\"", node.content.value.toString()), "\"");
       break;
     case 1:
-      $this.builder.append("\"" + node.content.value.toString() + "\"");
+      $this.result = $this.result + string.append(string.append("\"", node.content.value.toString()), "\"");
       break;
     case 2:
-      $this.builder.append(quoteString(node.content.value, 34));
+      $this.result = $this.result + quoteString(node.content.value, 34);
       break;
     }
   }
   if (Node.hasChildren(node)) {
-    $this.builder.append(">");
+    $this.result = $this.result + ">";
     var inner = $this.indent;
     $this.indent = $this.indent + "  ";
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      $this.builder.append("\n").append($this.indent);
+      $this.result = $this.result + "\n" + $this.indent;
       xml.DumpVisitor.visit($this, node.children[i]);
     }
     $this.indent = inner;
-    $this.builder.append("\n").append($this.indent).append("</").append(replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-")).append(">");
+    $this.result = $this.result + "\n" + $this.indent + "</" + replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-") + ">";
   } else {
-    $this.builder.append("/>");
+    $this.result = $this.result + "/>";
   }
 };
 var DiagnosticKind = {};
@@ -1612,17 +1599,17 @@ Log.note = function($this, range, text) {
   last.noteText = text;
 };
 Log.toString = function($this) {
-  var builder = new StringBuilder();
+  var result = "";
   for (var i = 0; i < $this.diagnostics.length; i = i + 1 | 0) {
     var diagnostic = $this.diagnostics[i];
     var formatted = Range.format(diagnostic.range, 0);
-    builder.append(Range.locationString(diagnostic.range)).append(diagnostic.kind === 0 ? ": error: " : ": warning: ").append(diagnostic.text).append("\n").append(formatted.line).append("\n").append(formatted.range).append("\n");
+    result = result + Range.locationString(diagnostic.range) + (diagnostic.kind === 0 ? ": error: " : ": warning: ") + diagnostic.text + "\n" + formatted.line + "\n" + formatted.range + "\n";
     if (!(diagnostic.noteRange.source === null)) {
       formatted = Range.format(diagnostic.noteRange, 0);
-      builder.append(Range.locationString(diagnostic.noteRange)).append(": note: ").append(diagnostic.noteText).append("\n").append(formatted.line).append("\n").append(formatted.range).append("\n");
+      result = result + Range.locationString(diagnostic.noteRange) + ": note: " + diagnostic.noteText + "\n" + formatted.line + "\n" + formatted.range + "\n";
     }
   }
-  return builder.toString();
+  return result;
 };
 function FormattedRange(_0, _1) {
   this.line = _0;
@@ -2609,15 +2596,10 @@ SourceMapGenerator.toString = function($this) {
     sourceNames.push(quoteString(source.name, 34));
     sourceContents.push(quoteString(source.contents, 34));
   }
-  var result = new StringBuilder();
-  result.append("{\"version\":3,\"sources\":[").append(sourceNames.join(",")).append("],\"sourcesContent\":[").append(sourceContents.join(",")).append("],\"names\":[],\"mappings\":\"");
-  SourceMapGenerator.compile($this, result);
-  return result.append("\"}\n").toString();
-};
-SourceMapGenerator.compile = function($this, result) {
+  var result = "{\"version\":3,\"sources\":[" + sourceNames.join(",") + "],\"sourcesContent\":[" + sourceContents.join(",") + "],\"names\":[],\"mappings\":\"";
   $this.mappings.sort(function(left, right) {
-    var result = left.generatedLine - right.generatedLine | 0;
-    return result !== 0 ? result : left.generatedColumn - right.generatedColumn | 0;
+    var delta = left.generatedLine - right.generatedLine | 0;
+    return delta !== 0 ? delta : left.generatedColumn - right.generatedColumn | 0;
   });
   var previousGeneratedColumn = 0;
   var previousGeneratedLine = 0;
@@ -2631,23 +2613,24 @@ SourceMapGenerator.compile = function($this, result) {
       if (previousGeneratedColumn === mapping.generatedColumn && (previousGeneratedLine > 0 || previousGeneratedColumn > 0)) {
         continue;
       }
-      result.append(",");
+      result = result + ",";
     } else {
       previousGeneratedColumn = 0;
       while (previousGeneratedLine < generatedLine) {
-        result.append(";");
+        result = result + ";";
         previousGeneratedLine = previousGeneratedLine + 1 | 0;
       }
     }
-    result.append(SourceMapGenerator.encodeVLQ(mapping.generatedColumn - previousGeneratedColumn | 0));
+    result = result + SourceMapGenerator.encodeVLQ(mapping.generatedColumn - previousGeneratedColumn | 0);
     previousGeneratedColumn = mapping.generatedColumn;
-    result.append(SourceMapGenerator.encodeVLQ(mapping.sourceIndex - previousSourceIndex | 0));
+    result = result + SourceMapGenerator.encodeVLQ(mapping.sourceIndex - previousSourceIndex | 0);
     previousSourceIndex = mapping.sourceIndex;
-    result.append(SourceMapGenerator.encodeVLQ(mapping.originalLine - previousOriginalLine | 0));
+    result = result + SourceMapGenerator.encodeVLQ(mapping.originalLine - previousOriginalLine | 0);
     previousOriginalLine = mapping.originalLine;
-    result.append(SourceMapGenerator.encodeVLQ(mapping.originalColumn - previousOriginalColumn | 0));
+    result = result + SourceMapGenerator.encodeVLQ(mapping.originalColumn - previousOriginalColumn | 0);
     previousOriginalColumn = mapping.originalColumn;
   }
+  return result + "\"}\n";
 };
 SourceMapGenerator.encodeVLQ = function(value) {
   var vlq = value < 0 ? -value << 1 | 1 : value << 1;
@@ -6276,8 +6259,7 @@ LanguageService.checkForDiagnostics = function($this, input) {
   options.inputs = [$this.previousSource];
   $this.previousResult = Compiler.compile(compiler, options);
   var diagnostics = [];
-  var i;
-  for (i = 0; i < compiler.log.diagnostics.length; i = i + 1 | 0) {
+  for (var i = 0; i < compiler.log.diagnostics.length; i = i + 1 | 0) {
     var diagnostic = compiler.log.diagnostics[i];
     var range = diagnostic.range;
     if (range.source === $this.previousSource) {
@@ -6372,37 +6354,37 @@ function createOperatorMap() {
 json.dump = function(node) {
   var visitor = new json.DumpVisitor();
   json.DumpVisitor.visit(visitor, node);
-  return visitor.builder.toString();
+  return visitor.result;
 };
 lisp.dump = function(node) {
   var visitor = new lisp.DumpVisitor();
   lisp.DumpVisitor.visit(visitor, node);
-  return visitor.builder.toString();
+  return visitor.result;
 };
 xml.dump = function(node) {
   var visitor = new xml.DumpVisitor();
   xml.DumpVisitor.visit(visitor, node);
-  return visitor.builder.toString();
+  return visitor.result;
 };
 function encodeBase64(data) {
-  var result = new StringBuilder();
+  var result = "";
   var n = data.length;
   var i;
   for (i = 0; (i + 2 | 0) < n; i = i + 3 | 0) {
     var c = data.charCodeAt(i) << 16 | data.charCodeAt(i + 1 | 0) << 8 | data.charCodeAt(i + 2 | 0);
-    result.append(BASE64[c >> 18]).append(BASE64[c >> 12 & 63]).append(BASE64[c >> 6 & 63]).append(BASE64[c & 63]);
+    result = result + BASE64[c >> 18] + BASE64[c >> 12 & 63] + BASE64[c >> 6 & 63] + BASE64[c & 63];
   }
   if (i < n) {
     var a = data.charCodeAt(i);
-    result.append(BASE64[a >> 2]);
+    result = result + BASE64[a >> 2];
     if ((i + 1 | 0) < n) {
       var b = data.charCodeAt(i + 1 | 0);
-      result.append(BASE64[a << 4 & 48 | b >> 4]).append(BASE64[b << 2 & 60]).append("=");
+      result = result + BASE64[a << 4 & 48 | b >> 4] + BASE64[b << 2 & 60] + "=";
     } else {
-      result.append(BASE64[a << 4 & 48]).append("==");
+      result = result + BASE64[a << 4 & 48] + "==";
     }
   }
-  return result.toString();
+  return result;
 }
 function hashCombine(left, right) {
   return left ^ ((right - 1640531527 | 0) + (left << 6) | 0) + (left >> 2);
@@ -6428,45 +6410,45 @@ function parseHexCharacter(c) {
 }
 function parseStringLiteral(log, range, text) {
   var isValidString = true;
-  var result = new StringBuilder();
+  var result = "";
   var start = 1;
   var i = 1;
   while ((i + 1 | 0) < text.length) {
     var c = text.charCodeAt(i);
     if (c === 92) {
-      result.append(text.slice(start, i));
+      result = result + text.slice(start, i);
       var escape = i = i + 1 | 0;
       if ((i + 1 | 0) < text.length) {
         c = text.charCodeAt((i = i + 1 | 0) - 1 | 0);
         if (c === 110) {
-          result.append("\n");
+          result = result + "\n";
           start = i;
           continue;
         } else if (c === 114) {
-          result.append("\r");
+          result = result + "\r";
           start = i;
           continue;
         } else if (c === 116) {
-          result.append("\t");
+          result = result + "\t";
           start = i;
           continue;
         } else if (c === 101) {
-          result.append("\x1B");
+          result = result + "\x1B";
           start = i;
           continue;
         } else if (c === 48) {
-          result.append("\0");
+          result = result + "\0";
           start = i;
           continue;
         } else if (c === 92 || c === 34 || c === 39) {
-          result.append(String.fromCharCode(c));
+          result = result + String.fromCharCode(c);
           start = i;
           continue;
         } else if (c === 120) {
           var c0 = (i + 1 | 0) < text.length ? parseHexCharacter(text.charCodeAt((i = i + 1 | 0) - 1 | 0)) : -1;
           var c1 = (i + 1 | 0) < text.length ? parseHexCharacter(text.charCodeAt((i = i + 1 | 0) - 1 | 0)) : -1;
           if (c0 !== -1 && c1 !== -1) {
-            result.append(String.fromCharCode(c0 << 4 | c1));
+            result = result + String.fromCharCode(c0 << 4 | c1);
             start = i;
             continue;
           }
@@ -6478,42 +6460,42 @@ function parseStringLiteral(log, range, text) {
       i = i + 1 | 0;
     }
   }
-  result.append(text.slice(start, i));
-  return isValidString ? new StringContent(result.toString()) : null;
+  result = result + text.slice(start, i);
+  return isValidString ? new StringContent(result) : null;
 }
 function quoteString(text, quote) {
-  var result = new StringBuilder();
+  var result = "";
   var quoteString = String.fromCharCode(quote);
-  result.append(quoteString);
+  result = result + quoteString;
   var start = 0;
   var i;
   for (i = 0; i < text.length; i = i + 1 | 0) {
     var c = text.charCodeAt(i);
     if (c === quote) {
-      result.append(text.slice(start, i)).append("\\").append(quoteString);
+      result = result + text.slice(start, i) + "\\" + quoteString;
       start = i + 1 | 0;
     } else if (c === 10) {
-      result.append(text.slice(start, i)).append("\\n");
+      result = result + text.slice(start, i) + "\\n";
       start = i + 1 | 0;
     } else if (c === 13) {
-      result.append(text.slice(start, i)).append("\\r");
+      result = result + text.slice(start, i) + "\\r";
       start = i + 1 | 0;
     } else if (c === 9) {
-      result.append(text.slice(start, i)).append("\\t");
+      result = result + text.slice(start, i) + "\\t";
       start = i + 1 | 0;
     } else if (c === 0) {
-      result.append(text.slice(start, i)).append("\\0");
+      result = result + text.slice(start, i) + "\\0";
       start = i + 1 | 0;
     } else if (c === 92) {
-      result.append(text.slice(start, i)).append("\\\\");
+      result = result + text.slice(start, i) + "\\\\";
       start = i + 1 | 0;
     } else if (c < 32 || c >= 127 && c <= 255) {
-      result.append(text.slice(start, i)).append("\\x").append(HEX[c >> 4]).append(HEX[c & 15]);
+      result = result + text.slice(start, i) + "\\x" + HEX[c >> 4] + HEX[c & 15];
       start = i + 1 | 0;
     }
   }
-  result.append(text.slice(start, i)).append(quoteString);
-  return result.toString();
+  result = result + text.slice(start, i) + quoteString;
+  return result;
 }
 function replace(text, before, after) {
   var result = "";
@@ -6845,7 +6827,7 @@ function firstLineOf(text) {
   return index < 0 ? text : text.slice(0, index);
 }
 function syntaxErrorInvalidEscapeSequence(log, range, text) {
-  Log.error(log, range, "Invalid escape sequence " + firstLineOf("\"" + text + "\""));
+  Log.error(log, range, "Invalid escape sequence " + firstLineOf(string.append(string.append("\"", text), "\"")));
 }
 function syntaxErrorInvalidCharacter(log, range, text) {
   Log.error(log, range, "Invalid character literal " + firstLineOf(text));
@@ -6854,7 +6836,7 @@ function syntaxErrorInvalidInteger(log, range, text) {
   Log.error(log, range, "Invalid integer literal " + text);
 }
 function syntaxErrorExtraData(log, range, text) {
-  Log.error(log, range, "Syntax error " + ("\"" + text + "\""));
+  Log.error(log, range, "Syntax error " + string.append(string.append("\"", text), "\""));
 }
 function syntaxErrorUnexpectedToken(log, token) {
   Log.error(log, token.range, "Unexpected " + TokenKind.toString(token.kind));
@@ -7854,25 +7836,25 @@ function semanticWarningUnusedExpression(log, range) {
   Log.warning(log, range, "Unused expression");
 }
 function semanticWarningDuplicateModifier(log, range, modifier) {
-  Log.warning(log, range, "Duplicate modifier " + ("\"" + modifier + "\""));
+  Log.warning(log, range, "Duplicate modifier " + string.append(string.append("\"", modifier), "\""));
 }
 function semanticWarningShadowedSymbol(log, range, name, shadowed) {
-  Log.warning(log, range, "\"" + name + "\"" + " shadows another declaration with the same name");
+  Log.warning(log, range, string.append(string.append("\"", name), "\"") + " shadows another declaration with the same name");
   if (!(shadowed.source === null)) {
     Log.note(log, shadowed, "The shadowed declaration is here");
   }
 }
 function semanticErrorRedundantModifier(log, range, modifier, where) {
-  Log.error(log, range, "Redundant modifier " + ("\"" + modifier + "\"") + " " + where);
+  Log.error(log, range, "Redundant modifier " + string.append(string.append("\"", modifier), "\"") + " " + where);
 }
 function semanticErrorUnexpectedModifier(log, range, modifier, where) {
-  Log.error(log, range, "Cannot use the " + ("\"" + modifier + "\"") + " modifier " + where);
+  Log.error(log, range, "Cannot use the " + string.append(string.append("\"", modifier), "\"") + " modifier " + where);
 }
 function semanticErrorExpectedModifier(log, range, modifier, where) {
-  Log.error(log, range, "Expected the " + ("\"" + modifier + "\"") + " modifier " + where);
+  Log.error(log, range, "Expected the " + string.append(string.append("\"", modifier), "\"") + " modifier " + where);
 }
 function semanticErrorDuplicateSymbol(log, range, name, previous) {
-  Log.error(log, range, "\"" + name + "\"" + " is already declared");
+  Log.error(log, range, string.append(string.append("\"", name), "\"") + " is already declared");
   if (!(previous.source === null)) {
     Log.note(log, previous, "The previous declaration is here");
   }
@@ -7887,19 +7869,19 @@ function semanticErrorUnexpectedType(log, range, type) {
   Log.error(log, range, "Unexpected " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorUndeclaredSymbol(log, range, name) {
-  Log.error(log, range, "\"" + name + "\"" + " is not declared");
+  Log.error(log, range, string.append(string.append("\"", name), "\"") + " is not declared");
 }
 function semanticErrorUndeclaredGlobalSymbol(log, range, name) {
-  Log.error(log, range, "\"" + name + "\"" + " is not declared at the global scope");
+  Log.error(log, range, string.append(string.append("\"", name), "\"") + " is not declared at the global scope");
 }
 function semanticErrorUnknownMemberSymbol(log, range, name, type) {
-  Log.error(log, range, "\"" + name + "\"" + " is not declared on " + ("type \"" + Type.toString(type) + "\""));
+  Log.error(log, range, string.append(string.append("\"", name), "\"") + " is not declared on " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorExtensionMissingTarget(log, range, name) {
-  Log.error(log, range, "No type named " + ("\"" + name + "\"") + " to extend");
+  Log.error(log, range, "No type named " + string.append(string.append("\"", name), "\"") + " to extend");
 }
 function semanticErrorDifferentModifiers(log, range, name, previous) {
-  Log.error(log, range, "Cannot merge multiple declarations for " + ("\"" + name + "\"") + " with different modifiers");
+  Log.error(log, range, "Cannot merge multiple declarations for " + string.append(string.append("\"", name), "\"") + " with different modifiers");
   if (!(previous.source === null)) {
     Log.note(log, previous, "The conflicting declaration is here");
   }
@@ -7914,13 +7896,13 @@ function semanticErrorUnexpectedStatement(log, range) {
   Log.error(log, range, "Cannot use this statement here");
 }
 function semanticErrorCyclicDeclaration(log, range, name) {
-  Log.error(log, range, "Cyclic declaration of " + ("\"" + name + "\""));
+  Log.error(log, range, "Cyclic declaration of " + string.append(string.append("\"", name), "\""));
 }
 function semanticErrorUnexpectedThis(log, range, name) {
-  Log.error(log, range, "Cannot use " + ("\"" + name + "\"") + " outside a class or struct");
+  Log.error(log, range, "Cannot use " + string.append(string.append("\"", name), "\"") + " outside a class or struct");
 }
 function semanticErrorStaticThis(log, range, name) {
-  Log.error(log, range, "Cannot access " + ("\"" + name + "\"") + " from a static context");
+  Log.error(log, range, "Cannot access " + string.append(string.append("\"", name), "\"") + " from a static context");
 }
 function semanticErrorIncompatibleTypes(log, range, from, to, isCastAllowed) {
   Log.error(log, range, "Cannot convert from " + ("type \"" + Type.toString(from) + "\"") + " to " + ("type \"" + Type.toString(to) + "\"") + (isCastAllowed ? " without a cast" : ""));
@@ -7932,10 +7914,10 @@ function semanticErrorBadType(log, range, type) {
   Log.error(log, range, "Cannot use " + ("type \"" + Type.toString(type) + "\"") + " here");
 }
 function semanticErrorMemberUnexpectedStatic(log, range, name) {
-  Log.error(log, range, "Cannot access static member " + ("\"" + name + "\"") + " from an instance context");
+  Log.error(log, range, "Cannot access static member " + string.append(string.append("\"", name), "\"") + " from an instance context");
 }
 function semanticErrorMemberUnexpectedInstance(log, range, name) {
-  Log.error(log, range, "Cannot access instance member " + ("\"" + name + "\"") + " from a static context");
+  Log.error(log, range, "Cannot access instance member " + string.append(string.append("\"", name), "\"") + " from a static context");
 }
 function semanticErrorMissingTypeContext(log, range) {
   Log.error(log, range, "Expression has no type context here");
@@ -7999,37 +7981,37 @@ function semanticErrorDuplicateBaseType(log, range, type) {
 }
 function semanticErrorAmbiguousSymbol(log, range, name, names) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
-    List.set(names, i, "\"" + names[i] + "\"");
+    List.set(names, i, string.append(string.append("\"", names[i]), "\""));
   }
-  Log.error(log, range, "Reference to " + ("\"" + name + "\"") + " is ambiguous, could be " + names.join(" or "));
+  Log.error(log, range, "Reference to " + string.append(string.append("\"", name), "\"") + " is ambiguous, could be " + names.join(" or "));
 }
 function semanticErrorUnmergedSymbol(log, range, name, types) {
   var names = [];
   for (var i = 0; i < types.length; i = i + 1 | 0) {
     names.push("type \"" + Type.toString(types[i]) + "\"");
   }
-  Log.error(log, range, "Member " + ("\"" + name + "\"") + " has an ambiguous inherited type, could be " + names.join(" or "));
+  Log.error(log, range, "Member " + string.append(string.append("\"", name), "\"") + " has an ambiguous inherited type, could be " + names.join(" or "));
 }
 function semanticErrorBadOverride(log, range, name, base, overridden) {
-  Log.error(log, range, "\"" + name + "\"" + " overrides another declaration with the same name in base " + ("type \"" + Type.toString(base) + "\""));
+  Log.error(log, range, string.append(string.append("\"", name), "\"") + " overrides another declaration with the same name in base " + ("type \"" + Type.toString(base) + "\""));
   if (!(overridden.source === null)) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorOverrideDifferentTypes(log, range, name, base, derived, overridden) {
-  Log.error(log, range, "\"" + name + "\"" + " must have the same signature as the method it overrides (" + "expected " + ("type \"" + Type.toString(base) + "\"") + " but found " + ("type \"" + Type.toString(derived) + "\"") + ")");
+  Log.error(log, range, string.append(string.append("\"", name), "\"") + " must have the same signature as the method it overrides (" + "expected " + ("type \"" + Type.toString(base) + "\"") + " but found " + ("type \"" + Type.toString(derived) + "\"") + ")");
   if (!(overridden.source === null)) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorModifierMissingOverride(log, range, name, overridden) {
-  Log.error(log, range, "\"" + name + "\"" + " overrides another symbol with the same name but is missing the \"override\" modifier");
+  Log.error(log, range, string.append(string.append("\"", name), "\"") + " overrides another symbol with the same name but is missing the \"override\" modifier");
   if (!(overridden.source === null)) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorCannotOverrideNonVirtual(log, range, name, overridden) {
-  Log.error(log, range, "\"" + name + "\"" + " cannot override a non-virtual method");
+  Log.error(log, range, string.append(string.append("\"", name), "\"") + " cannot override a non-virtual method");
   if (!(overridden.source === null)) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
@@ -8062,16 +8044,16 @@ function semanticErrorMissingSuperInitializer(log, range) {
   Log.error(log, range, "Missing call to \"super\" in initializer list");
 }
 function semanticErrorAlreadyInitialized(log, range, name, previous) {
-  Log.error(log, range, "\"" + name + "\"" + " is already initialized");
+  Log.error(log, range, string.append(string.append("\"", name), "\"") + " is already initialized");
   if (!(previous.source === null)) {
     Log.note(log, previous, "The previous initialization is here");
   }
 }
 function semanticErrorBadEnumToString(log, range, name, first, second, value) {
-  Log.error(log, range, "Cannot automatically generate \"toString\" for " + ("\"" + name + "\"") + " because " + ("\"" + first + "\"") + " and " + ("\"" + second + "\"") + " both have the same value " + value.toString());
+  Log.error(log, range, "Cannot automatically generate \"toString\" for " + string.append(string.append("\"", name), "\"") + " because " + string.append(string.append("\"", first), "\"") + " and " + string.append(string.append("\"", second), "\"") + " both have the same value " + value.toString());
 }
 function semanticErrorMissingReturn(log, range, name, type) {
-  Log.error(log, range, "All control paths for " + ("\"" + name + "\"") + " must return a value of " + ("type \"" + Type.toString(type) + "\""));
+  Log.error(log, range, "All control paths for " + string.append(string.append("\"", name), "\"") + " must return a value of " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorLambdaMissingReturn(log, range, type) {
   Log.error(log, range, "All control paths for lambda expression must return a value of " + ("type \"" + Type.toString(type) + "\""));
@@ -8147,8 +8129,7 @@ service.typeFromPosition = function(node, source, index) {
     case 14:
       var text = SymbolKind.toString(symbol.kind).toLowerCase() + " " + Type.toString(type);
       if (Type.hasRelevantTypes(type)) {
-        var i;
-        for (i = 0; i < type.relevantTypes.length; i = i + 1 | 0) {
+        for (var i = 0; i < type.relevantTypes.length; i = i + 1 | 0) {
           text = text + (i === 0 ? " : " : ", ") + Type.toString(type.relevantTypes[i]);
         }
       }
@@ -8166,8 +8147,7 @@ service.typeFromPosition = function(node, source, index) {
       var text = Type.toString(type.relevantTypes[0]) + " " + symbol.name + "(";
       var $arguments = symbol.node.children[1].children;
       var argumentTypes = Type.argumentTypes(type);
-      var i;
-      for (i = 0; i < $arguments.length; i = i + 1 | 0) {
+      for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
         if (i > 0) {
           text = text + ", ";
         }
@@ -8199,8 +8179,7 @@ service.completionsFromPosition = function(node, resolver, source, index) {
     if (target.type !== null) {
       var isInstance = !(target.kind === 35);
       var members = target.type.members.values();
-      var i;
-      for (i = 0; i < members.length; i = i + 1 | 0) {
+      for (var i = 0; i < members.length; i = i + 1 | 0) {
         var member = members[i];
         Resolver.initializeMember(resolver, member);
         if (SymbolKind.isInstance(member.symbol.kind) === isInstance) {
@@ -8218,8 +8197,7 @@ service.completionsFromPosition = function(node, resolver, source, index) {
     var allMembers = new StringMap();
     service.collectAllMembers(node.scope, allMembers);
     var members = allMembers.values();
-    var i;
-    for (i = 0; i < members.length; i = i + 1 | 0) {
+    for (var i = 0; i < members.length; i = i + 1 | 0) {
       var member = members[i];
       Resolver.initializeMember(resolver, member);
       service.addCompletion(completions, member);
@@ -8244,8 +8222,7 @@ service.addCompletion = function(completions, member) {
 };
 service.addAllMembers = function(allMembers, membersToAdd) {
   var members = membersToAdd.values();
-  var i;
-  for (i = 0; i < members.length; i = i + 1 | 0) {
+  for (var i = 0; i < members.length; i = i + 1 | 0) {
     var member = members[i];
     if (!allMembers.has(member.symbol.name)) {
       allMembers.set(member.symbol.name, member);
@@ -8269,7 +8246,7 @@ var nodeKindIsExpression = function(node) {
 var operatorInfo = createOperatorMap();
 Compiler.nativeLibrarySource = null;
 Compiler.nativeLibraryFile = null;
-var NATIVE_LIBRARY = "\nimport struct int { string toString(); }\nimport struct bool { string toString(); }\nimport struct float { string toString(); }\nimport struct double { string toString(); }\n\nimport struct String {\n  static string fromCharCode(int value);\n}\n\nimport struct string {\n  final int length;\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  inline string append(string value) { return untyped(this) + value; }\n}\n\nimport class List<T> {\n  new();\n  final int length;\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  final double E;\n  final double PI;\n  final double NAN;\n  final double INFINITY;\n  double random();\n  double abs(double n);\n  double sin(double n);\n  double cos(double n);\n  double tan(double n);\n  double asin(double n);\n  double acos(double n);\n  double atan(double n);\n  double round(double n);\n  double floor(double n);\n  double ceil(double n);\n  double exp(double n);\n  double log(double n);\n  double sqrt(double n);\n  bool isNaN(double n);\n  bool isFinite(double n);\n  double atan2(double y, double x);\n  double pow(double base, double exponent);\n  double min(double a, double b);\n  double max(double a, double b);\n  int imin(int a, int b);\n  int imax(int a, int b);\n}\n\n// TODO: Remove this\nimport class StringBuilder {\n  new();\n  StringBuilder append(string text);\n  string toString();\n}\n";
+var NATIVE_LIBRARY = "\nimport struct int { string toString(); }\nimport struct bool { string toString(); }\nimport struct float { string toString(); }\nimport struct double { string toString(); }\n\nimport struct String {\n  static string fromCharCode(int value);\n}\n\nimport struct string {\n  final int length;\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  inline string append(string value) { return untyped(this) + value; }\n}\n\nimport class List<T> {\n  new();\n  final int length;\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  final double E;\n  final double PI;\n  final double NAN;\n  final double INFINITY;\n  double random();\n  double abs(double n);\n  double sin(double n);\n  double cos(double n);\n  double tan(double n);\n  double asin(double n);\n  double acos(double n);\n  double atan(double n);\n  double round(double n);\n  double floor(double n);\n  double ceil(double n);\n  double exp(double n);\n  double log(double n);\n  double sqrt(double n);\n  bool isNaN(double n);\n  bool isFinite(double n);\n  double atan2(double y, double x);\n  double pow(double base, double exponent);\n  double min(double a, double b);\n  double max(double a, double b);\n  int imin(int a, int b);\n  int imax(int a, int b);\n}\n";
 Range.EMPTY = new Range(null, 0, 0);
 var BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var HEX = "0123456789ABCDEF";

@@ -29,8 +29,8 @@ class LanguageService {
   LanguageServiceTypeResult typeFromPosition(int line, int column) {
     if (previousResult != null && previousResult.program != null && previousSource != null && column >= 0 &&
         column < previousSource.contentsOfLine(line).length && previousResult.program.children.length == 2) {
-      int index = previousSource.lineOffsets.get(line) + column;
-      Node previousFile = previousResult.program.children.get(1);
+      var index = previousSource.lineOffsets.get(line) + column;
+      var previousFile = previousResult.program.children.get(1);
       assert previousFile.range.source == previousSource;
       return service.typeFromPosition(previousFile, previousSource, index);
     }
@@ -39,20 +39,19 @@ class LanguageService {
 
   List<LanguageServiceDiagnostic> checkForDiagnostics(string input) {
     // Compile input
-    CompilerOptions options = CompilerOptions();
-    Compiler compiler = Compiler();
+    var options = CompilerOptions();
+    var compiler = Compiler();
     previousSource = Source("<input>", input);
     options.inputs = { previousSource };
     previousResult = compiler.compile(options);
 
     // Construct diagnostics
     List<LanguageServiceDiagnostic> diagnostics = {};
-    int i;
-    for (i = 0; i < compiler.log.diagnostics.length; i++) {
+    for (var i = 0; i < compiler.log.diagnostics.length; i++) {
       Diagnostic diagnostic = compiler.log.diagnostics.get(i);
       Range range = diagnostic.range;
       if (range.source == previousSource) {
-        LineColumn start = range.source.indexToLineColumn(range.start);
+        var start = range.source.indexToLineColumn(range.start);
         string type;
         switch (diagnostic.kind) {
           case .ERROR { type = "error"; }
@@ -66,16 +65,16 @@ class LanguageService {
 
   List<LanguageServiceCompletion> checkForCompletions(string input, int line, int column) {
     // Compile input
-    CompilerOptions options = CompilerOptions();
-    Compiler compiler = Compiler();
+    var options = CompilerOptions();
+    var compiler = Compiler();
     previousSource = Source("<input>", input);
     options.inputs = { previousSource };
     previousResult = compiler.compile(options);
 
     // Construct completions
     if (previousResult.program != null && column >= 0 && column <= previousSource.contentsOfLine(line).length && previousResult.program.children.length == 2) {
-      int index = previousSource.lineOffsets.get(line) + column;
-      Node previousFile = previousResult.program.children.get(1);
+      var index = previousSource.lineOffsets.get(line) + column;
+      var previousFile = previousResult.program.children.get(1);
       assert previousFile.range.source == previousSource;
       return service.completionsFromPosition(previousFile, previousResult.resolver, previousSource, index);
     }
@@ -107,17 +106,17 @@ namespace service {
 
   LanguageServiceTypeResult typeFromPosition(Node node, Source source, int index) {
     node = nodeFromPosition(node, source, index);
-    Symbol symbol = node.symbol;
-    Type type = node.type;
+    var symbol = node.symbol;
+    var type = node.type;
     if (type != null && symbol != null) {
-      LineColumn start = source.indexToLineColumn(node.range.start);
-      LanguageServiceTypeResult result = LanguageServiceTypeResult(start.line, start.column, node.range.start, node.range.singleLineLength(), type.toString());
+      var start = source.indexToLineColumn(node.range.start);
+      var result = LanguageServiceTypeResult(start.line, start.column, node.range.start, node.range.singleLineLength(), type.toString());
 
       // Pretty-print the symbol
       switch (symbol.kind) {
         case .PARAMETER {
-          Type bound = symbol.type.bound();
-          string text = "type ".append(symbol.name);
+          var bound = symbol.type.bound();
+          var text = "type ".append(symbol.name);
           if (bound != null) {
             text = text.append(" is ").append(bound.toString());
           }
@@ -129,10 +128,9 @@ namespace service {
         }
 
         case .CLASS, .STRUCT, .INTERFACE {
-          string text = symbol.kind.toString().toLowerCase().append(" ").append(type.toString());
+          var text = symbol.kind.toString().toLowerCase().append(" ").append(type.toString());
           if (type.hasRelevantTypes()) {
-            int i;
-            for (i = 0; i < type.relevantTypes.length; i++) {
+            for (var i = 0; i < type.relevantTypes.length; i++) {
               text = text.append(i == 0 ? " : " : ", ").append(type.relevantTypes.get(i).toString());
             }
           }
@@ -148,11 +146,10 @@ namespace service {
         }
 
         case .GLOBAL_FUNCTION, .INSTANCE_FUNCTION, .CONSTRUCTOR_FUNCTION {
-          string text = type.resultType().toString().append(" ").append(symbol.name).append("(");
-          List<Node> arguments = symbol.node.functionArguments().children;
-          List<Type> argumentTypes = type.argumentTypes();
-          int i;
-          for (i = 0; i < arguments.length; i++) {
+          var text = type.resultType().toString().append(" ").append(symbol.name).append("(");
+          var arguments = symbol.node.functionArguments().children;
+          var argumentTypes = type.argumentTypes();
+          for (var i = 0; i < arguments.length; i++) {
             if (i > 0) text = text.append(", ");
             text = text.append(argumentTypes.get(i).toString()).append(" ").append(arguments.get(i).symbol.name);
           }
@@ -160,7 +157,7 @@ namespace service {
         }
 
         case .LOCAL_VARIABLE, .GLOBAL_VARIABLE, .INSTANCE_VARIABLE {
-          string text = type.toString().append(" ").append(symbol.name);
+          var text = type.toString().append(" ").append(symbol.name);
           if (symbol.isEnumValue()) {
             text = text.append(" = ").append(symbol.enumValue.toString());
           }
@@ -183,13 +180,12 @@ namespace service {
 
     // Special-case completions for members
     if (node.kind == .DOT) {
-      Node target = node.dotTarget();
+      var target = node.dotTarget();
       if (target.type != null) {
-        bool isInstance = !target.kind.isType();
-        List<Member> members = target.type.members.values();
-        int i;
-        for (i = 0; i < members.length; i++) {
-          Member member = members.get(i);
+        var isInstance = !target.kind.isType();
+        var members = target.type.members.values();
+        for (var i = 0; i < members.length; i++) {
+          var member = members.get(i);
           resolver.initializeMember(member);
           if (member.symbol.kind.isInstance() == isInstance) {
             addCompletion(completions, member);
@@ -207,13 +203,12 @@ namespace service {
       }
 
       // Walk up the scope chain and accumulate all members
-      StringMap<Member> allMembers = StringMap<Member>();
+      var allMembers = StringMap<Member>();
       collectAllMembers(node.scope, allMembers);
-      List<Member> members = allMembers.values();
+      var members = allMembers.values();
 
-      int i;
-      for (i = 0; i < members.length; i++) {
-        Member member = members.get(i);
+      for (var i = 0; i < members.length; i++) {
+        var member = members.get(i);
         resolver.initializeMember(member);
         addCompletion(completions, member);
       }
@@ -224,12 +219,12 @@ namespace service {
   }
 
   void addCompletion(List<LanguageServiceCompletion> completions, Member member) {
-    string name = member.symbol.name;
-    Type type = member.type;
+    var name = member.symbol.name;
+    var type = member.type;
     if (name != "new" && type != null) {
-      string text = name;
+      var text = name;
       if (type.isFunction()) {
-        bool semicolon = type.resultType().toString() == "void";
+        var semicolon = type.resultType().toString() == "void";
         text = text.append(type.argumentTypes().length == 0
           ? semicolon ? "();$" : "()$"
           : semicolon ? "($);" : "($)");
@@ -241,10 +236,9 @@ namespace service {
   }
 
   void addAllMembers(StringMap<Member> allMembers, StringMap<Member> membersToAdd) {
-    List<Member> members = membersToAdd.values();
-    int i;
-    for (i = 0; i < members.length; i++) {
-      Member member = members.get(i);
+    var members = membersToAdd.values();
+    for (var i = 0; i < members.length; i++) {
+      var member = members.get(i);
       if (!allMembers.has(member.symbol.name)) {
         allMembers.set(member.symbol.name, member);
       }

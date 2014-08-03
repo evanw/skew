@@ -1,19 +1,6 @@
 // This file is just to bootstrap the compiler so it compiles itself. The need
 // for this file will disappear entirely when the compiler is finished.
 
-function StringBuilder() {
-  this.data = '';
-}
-
-StringBuilder.prototype.append = function(text) {
-  this.data += text;
-  return this;
-};
-
-StringBuilder.prototype.toString = function() {
-  return this.data;
-};
-
 function IntMap() {
   this._table = Object.create(null);
 }
