@@ -121,44 +121,5 @@ StringMap.prototype.clone = function() {
   return clone;
 };
 
-Array.prototype.get = function(i) {
-  return this[i];
-};
-
-Array.prototype.set = function(i, value) {
-  this[i] = value;
-};
-
-Array.prototype.insert = function(i, value) {
-  this.splice(i, 0, value);
-};
-
-Array.prototype.remove = function(i) {
-  this.splice(i, 1);
-};
-
-Array.prototype.clone = function() {
-  return this.slice();
-};
-
-String.prototype.codeUnitAt = function(i) {
-  return this.charCodeAt(i);
-};
-
-String.prototype.append = function(text) {
-  return this + text;
-};
-
-String.prototype.get = function(i) {
-  return this[i];
-};
-
-String.prototype.join = function(values) {
-  return values.join(this);
-};
-
 var string = {};
-
-string.fromCodeUnit = function(value) {
-  return String.fromCharCode(value);
-};
+var List = {};

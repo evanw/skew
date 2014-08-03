@@ -864,6 +864,13 @@ Pratt createParser() {
     return (type == null ? Node.createError() : Node.createDefault(type)).withRange(context.spanSince(token.range));
   };
 
+  // Untyped expressions
+  pratt.parselet(.UNTYPED, Precedence.UNARY_PREFIX).prefix = context => {
+    var token = context.next();
+    var value = parseGroup(context, .LAMBDA_NOT_ALLOWED);
+    return (value == null ? Node.createError() : Node.createUntyped(value)).withRange(context.spanSince(token.range));
+  };
+
   // Name and lambda expressions
   pratt.parselet(.IDENTIFIER, Precedence.LOWEST).prefix = context => {
     var token = context.next();

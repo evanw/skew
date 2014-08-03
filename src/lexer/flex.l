@@ -39,6 +39,7 @@
 "switch"                      SWITCH;
 "this"                        THIS;
 "true"                        TRUE;
+"untyped"                     UNTYPED;
 "using"                       USING;
 "var"                         VAR;
 "virtual"                     VIRTUAL;

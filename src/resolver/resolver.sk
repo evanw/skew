@@ -541,6 +541,7 @@ class Resolver {
       case .CAST { resolveCast(node); }
       case .LAMBDA { resolveLambda(node); }
       case .DEFAULT { resolveDefault(node); }
+      case .UNTYPED { resolveUntyped(node); }
       case .VAR { resolveVar(node); }
       case .FUNCTION_TYPE { resolveFunctionType(node); }
 
@@ -2553,6 +2554,10 @@ class Resolver {
     resolveAsParameterizedType(type);
     checkIsValidVariableType(type);
     node.type = type.type;
+  }
+
+  void resolveUntyped(Node node) {
+    resolveAsExpression(node.untypedValue());
   }
 
   void resolveVar(Node node) {

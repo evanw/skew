@@ -554,6 +554,10 @@ namespace js {
           else assert false; // TODO: Handle structs
         }
 
+        case .UNTYPED {
+          emitExpression(node.untypedValue(), precedence);
+        }
+
         case
           .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT,
           .PREFIX_INCREMENT, .PREFIX_DECREMENT,
@@ -604,6 +608,13 @@ namespace js {
         }
 
         case .ASSIGN_INDEX {
+          if (Precedence.ASSIGN < precedence) emit("(");
+          emitExpression(node.tertiaryLeft(), Precedence.MEMBER);
+          emit("[");
+          emitExpression(node.tertiaryMiddle(), Precedence.LOWEST);
+          emit("] = ");
+          emitExpression(node.tertiaryRight(), Precedence.ASSIGN);
+          if (Precedence.ASSIGN < precedence) emit(")");
         }
 
         default {

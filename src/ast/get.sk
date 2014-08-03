@@ -249,6 +249,12 @@ in Node {
     return children.get(0);
   }
 
+  Node untypedValue() {
+    assert kind == .UNTYPED;
+    assert children.length == 1;
+    return children.get(0);
+  }
+
   Node baseTypes() {
     assert kind.isObject() || kind == .EXTENSION;
     assert children.length >= 3;

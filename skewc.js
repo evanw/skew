@@ -121,47 +121,8 @@ StringMap.prototype.clone = function() {
   return clone;
 };
 
-Array.prototype.get = function(i) {
-  return this[i];
-};
-
-Array.prototype.set = function(i, value) {
-  this[i] = value;
-};
-
-Array.prototype.insert = function(i, value) {
-  this.splice(i, 0, value);
-};
-
-Array.prototype.remove = function(i) {
-  this.splice(i, 1);
-};
-
-Array.prototype.clone = function() {
-  return this.slice();
-};
-
-String.prototype.codeUnitAt = function(i) {
-  return this.charCodeAt(i);
-};
-
-String.prototype.append = function(text) {
-  return this + text;
-};
-
-String.prototype.get = function(i) {
-  return this[i];
-};
-
-String.prototype.join = function(values) {
-  return values.join(this);
-};
-
 var string = {};
-
-string.fromCodeUnit = function(value) {
-  return String.fromCharCode(value);
-};
+var List = {};
 var $imul = Math.imul || function(a, b) {
   var ah = a >>> 16, al = a & 0xFFFF;
   var bh = b >>> 16, bl = b & 0xFFFF;
@@ -171,6 +132,36 @@ function $extends(derived, base) {
   derived.prototype = Object.create(base.prototype);
   derived.prototype.constructor = derived;
 }
+string.fromCodeUnit = function(value) {
+  return String.fromCharCode(value);
+};
+string.get = function($this, index) {
+  return $this[index];
+};
+string.join = function($this, values) {
+  return values.join($this);
+};
+string.codeUnitAt = function($this, index) {
+  return $this.charCodeAt(index);
+};
+string.append = function($this, value) {
+  return $this + value;
+};
+List.clone = function($this) {
+  return $this.slice();
+};
+List.remove = function($this, index) {
+  return $this.splice(index, 1)[0];
+};
+List.insert = function($this, index, value) {
+  $this.splice(index, 0, value);
+};
+List.get = function($this, index) {
+  return $this[index];
+};
+List.set = function($this, index, value) {
+  $this[index] = value;
+};
 function Node(_0) {
   this.range = Range.EMPTY;
   this.parent = null;
@@ -366,24 +357,27 @@ Node.createLambda = function($arguments, block) {
 Node.createDefault = function(type) {
   return Node.withChildren(new Node(57), [type]);
 };
+Node.createUntyped = function(type) {
+  return Node.withChildren(new Node(58), [type]);
+};
 Node.createVar = function() {
-  return new Node(58);
+  return new Node(59);
 };
 Node.createFunctionType = function(result, $arguments) {
   $arguments.unshift(result);
-  return Node.withChildren(new Node(59), $arguments);
+  return Node.withChildren(new Node(60), $arguments);
 };
 Node.createUnary = function(kind, value) {
   return Node.withChildren(new Node(kind), [value]);
 };
 Node.createAssign = function(left, right) {
-  return Node.createBinary(88, left, right);
+  return Node.createBinary(89, left, right);
 };
 Node.createBinary = function(kind, left, right) {
-  if (kind === 88 && left.kind === 77) {
-    var target = left.children.get(0);
-    var index = left.children.get(1);
-    return Node.withChildren(new Node(99), [Node.remove(target), Node.remove(index), right]);
+  if (kind === 89 && left.kind === 78) {
+    var target = left.children[0];
+    var index = left.children[1];
+    return Node.withChildren(new Node(100), [Node.remove(target), Node.remove(index), right]);
   }
   return Node.withChildren(new Node(kind), [left, right]);
 };
@@ -391,178 +385,181 @@ Node.createTertiary = function(kind, left, middle, right) {
   return Node.withChildren(new Node(kind), [left, middle, right]);
 };
 Node.fileBlock = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.dotTarget = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.dotName = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.letVariable = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.letValue = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.unaryValue = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.binaryLeft = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.binaryRight = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.tertiaryLeft = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.tertiaryMiddle = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.tertiaryRight = function($this) {
-  return $this.children.get(2);
+  return $this.children[2];
 };
 Node.hookTest = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.hookTrue = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.hookFalse = function($this) {
-  return $this.children.get(2);
+  return $this.children[2];
 };
 Node.declarationName = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.declarationBlock = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.clusterType = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.clusterVariables = function($this) {
   return $this.children.slice(1, $this.children.length);
 };
 Node.variableType = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.variableValue = function($this) {
-  return $this.children.get(2);
+  return $this.children[2];
 };
 Node.aliasValue = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.usingNamespaceValue = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.modifierName = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.modifierStatements = function($this) {
   return $this.children.slice(1, $this.children.length);
 };
 Node.castType = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.castValue = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.expressionValue = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.ifTest = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.ifTrue = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.ifFalse = function($this) {
-  return $this.children.get(2);
+  return $this.children[2];
 };
 Node.forSetup = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.forTest = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.forUpdate = function($this) {
-  return $this.children.get(2);
+  return $this.children[2];
 };
 Node.forBlock = function($this) {
-  return $this.children.get(3);
+  return $this.children[3];
 };
 Node.forEachVariable = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.forEachValue = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.forEachBlock = function($this) {
-  return $this.children.get(2);
+  return $this.children[2];
 };
 Node.whileTest = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.whileBlock = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.defaultType = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
+};
+Node.untypedValue = function($this) {
+  return $this.children[0];
 };
 Node.baseTypes = function($this) {
-  return $this.children.get(2);
+  return $this.children[2];
 };
 Node.objectParameters = function($this) {
-  return $this.children.get(3);
+  return $this.children[3];
 };
 Node.functionArguments = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.functionBlock = function($this) {
-  return $this.children.get(2);
+  return $this.children[2];
 };
 Node.functionResult = function($this) {
-  return $this.children.get(3);
+  return $this.children[3];
 };
 Node.superInitializer = function($this) {
-  return $this.children.get(3);
+  return $this.children[3];
 };
 Node.memberInitializers = function($this) {
-  return $this.children.get(4);
+  return $this.children[4];
 };
 Node.memberInitializerName = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.memberInitializerValue = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.lambdaArguments = function($this) {
   return $this.children.slice(0, $this.children.length - 1 | 0);
 };
 Node.lambdaBlock = function($this) {
-  return $this.children.get($this.children.length - 1 | 0);
+  return $this.children[$this.children.length - 1 | 0];
 };
 Node.assertValue = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.bindValue = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.parameterizeType = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.parameterizeTypes = function($this) {
   return $this.children.slice(1, $this.children.length);
 };
 Node.functionTypeResult = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.functionTypeArguments = function($this) {
   return $this.children.slice(1, $this.children.length);
 };
 Node.callValue = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.callArguments = function($this) {
   return $this.children.slice(1, $this.children.length);
@@ -574,13 +571,13 @@ Node.initializerValues = function($this) {
   return $this.children;
 };
 Node.parameterBound = function($this) {
-  return $this.children.get(1);
+  return $this.children[1];
 };
 Node.returnValue = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.switchValue = function($this) {
-  return $this.children.get(0);
+  return $this.children[0];
 };
 Node.switchCases = function($this) {
   return $this.children.slice(1, $this.children.length);
@@ -589,7 +586,7 @@ Node.caseValues = function($this) {
   return $this.children.slice(0, $this.children.length - 1 | 0);
 };
 Node.caseBlock = function($this) {
-  return $this.children.get($this.children.length - 1 | 0);
+  return $this.children[$this.children.length - 1 | 0];
 };
 Node.invertBooleanCondition = function($this, cache) {
   switch ($this.kind) {
@@ -599,42 +596,42 @@ Node.invertBooleanCondition = function($this, cache) {
   case 40:
     $this.kind = 39;
     return;
-  case 60:
-    Node.become($this, Node.remove($this.children.get(0)));
+  case 61:
+    Node.become($this, Node.remove($this.children[0]));
     return;
-  case 73:
-    $this.kind = 83;
+  case 74:
+    $this.kind = 84;
     return;
-  case 83:
-    $this.kind = 73;
+  case 84:
+    $this.kind = 74;
+    return;
+  case 82:
+    $this.kind = 81;
+    Node.invertBooleanCondition($this.children[0], cache);
+    Node.invertBooleanCondition($this.children[1], cache);
     return;
   case 81:
-    $this.kind = 80;
-    Node.invertBooleanCondition($this.children.get(0), cache);
-    Node.invertBooleanCondition($this.children.get(1), cache);
+    $this.kind = 82;
+    Node.invertBooleanCondition($this.children[0], cache);
+    Node.invertBooleanCondition($this.children[1], cache);
     return;
-  case 80:
-    $this.kind = 81;
-    Node.invertBooleanCondition($this.children.get(0), cache);
-    Node.invertBooleanCondition($this.children.get(1), cache);
-    return;
-  case 78:
-  case 74:
   case 79:
   case 75:
-    if (!Type.isReal(TypeCache.commonImplicitType(cache, $this.children.get(0).type, $this.children.get(1).type), cache)) {
+  case 80:
+  case 76:
+    if (!Type.isReal(TypeCache.commonImplicitType(cache, $this.children[0].type, $this.children[1].type), cache)) {
       switch ($this.kind) {
-      case 78:
-        $this.kind = 75;
-        break;
-      case 74:
-        $this.kind = 79;
-        break;
       case 79:
-        $this.kind = 74;
+        $this.kind = 76;
         break;
       case 75:
-        $this.kind = 78;
+        $this.kind = 80;
+        break;
+      case 80:
+        $this.kind = 75;
+        break;
+      case 76:
+        $this.kind = 79;
         break;
       }
       return;
@@ -642,31 +639,31 @@ Node.invertBooleanCondition = function($this, cache) {
     break;
   }
   var children = Node.removeChildren($this);
-  Node.become($this, Node.withType(Node.withChildren(new Node(60), [Node.withChildren(Node.clone($this), children)]), cache.boolType));
+  Node.become($this, Node.withType(Node.withChildren(new Node(61), [Node.withChildren(Node.clone($this), children)]), cache.boolType));
 };
 Node.blockAlwaysEndsWithReturn = function($this) {
   if (!Node.hasChildren($this)) {
     return false;
   }
   for (var i = $this.children.length - 1 | 0; i >= 0; i = i - 1 | 0) {
-    var child = $this.children.get(i);
+    var child = $this.children[i];
     switch (child.kind) {
     case 25:
     case 26:
       return true;
     case 20:
-      var trueBlock = child.children.get(1);
-      var falseBlock = child.children.get(2);
+      var trueBlock = child.children[1];
+      var falseBlock = child.children[2];
       if (falseBlock !== null && Node.blockAlwaysEndsWithReturn(trueBlock) && Node.blockAlwaysEndsWithReturn(falseBlock)) {
         return true;
       }
       break;
     case 31:
-      var value = child.children.get(0);
+      var value = child.children[0];
       var cases = Node.switchCases(child);
       var foundDefault = false;
       for (var j = 0; j < cases.length; j = j + 1 | 0) {
-        var node = cases.get(j);
+        var node = cases[j];
         if (!Node.blockAlwaysEndsWithReturn(Node.caseBlock(node))) {
           return false;
         }
@@ -680,10 +677,10 @@ Node.blockAlwaysEndsWithReturn = function($this) {
   return false;
 };
 Node.isNameExpression = function($this) {
-  return $this.kind === 34 && ($this.parent.kind !== 46 || $this !== $this.parent.children.get(1)) && (!NodeKind.isNamedDeclaration($this.parent.kind) || $this !== $this.parent.children.get(0));
+  return $this.kind === 34 && ($this.parent.kind !== 46 || $this !== $this.parent.children[1]) && (!NodeKind.isNamedDeclaration($this.parent.kind) || $this !== $this.parent.children[0]);
 };
 Node.isStorage = function($this) {
-  return NodeKind.isUnaryStorageOperator($this.parent.kind) || NodeKind.isBinaryStorageOperator($this.parent.kind) && $this === $this.parent.children.get(0);
+  return NodeKind.isUnaryStorageOperator($this.parent.kind) || NodeKind.isBinaryStorageOperator($this.parent.kind) && $this === $this.parent.children[0];
 };
 Node.asBool = function($this) {
   return $this.kind === 39;
@@ -724,7 +721,7 @@ Node.insertSiblingAfter = function($this, node) {
 Node.remove = function($this) {
   if ($this.parent !== null) {
     var index = Node.indexInParent($this);
-    $this.parent.children.set(index, null);
+    List.set($this.parent.children, index, null);
     $this.parent = null;
   }
   return $this;
@@ -735,7 +732,7 @@ Node.removeChildren = function($this) {
   }
   var result = $this.children;
   for (var i = 0; i < $this.children.length; i = i + 1 | 0) {
-    var child = $this.children.get(i);
+    var child = $this.children[i];
     if (child !== null) {
       child.parent = null;
     }
@@ -759,27 +756,27 @@ Node.replaceWith = function($this, node) {
 };
 Node.replaceChild = function($this, index, node) {
   Node.updateParent(node, $this);
-  var old = $this.children.get(index);
+  var old = $this.children[index];
   if (old !== null) {
     old.parent = null;
   }
-  $this.children.set(index, node);
+  List.set($this.children, index, node);
 };
 Node.insertChild = function($this, index, node) {
   if ($this.children === null) {
     $this.children = [];
   }
   Node.updateParent(node, $this);
-  $this.children.insert(index, node);
+  List.insert($this.children, index, node);
 };
 Node.insertChildren = function($this, index, nodes) {
   if ($this.children === null) {
     $this.children = [];
   }
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-    var node = nodes.get(i);
+    var node = nodes[i];
     Node.updateParent(node, $this);
-    $this.children.insert((index = index + 1 | 0) - 1 | 0, node);
+    List.insert($this.children, (index = index + 1 | 0) - 1 | 0, node);
   }
 };
 Node.clone = function($this) {
@@ -791,7 +788,7 @@ Node.clone = function($this) {
   if ($this.children !== null) {
     node.children = [];
     for (var i = 0; i < $this.children.length; i = i + 1 | 0) {
-      var child = $this.children.get(i);
+      var child = $this.children[i];
       Node.appendChild(node, child !== null ? Node.clone(child) : null);
     }
   }
@@ -815,7 +812,7 @@ Node.withContent = function($this, value) {
 };
 Node.withChildren = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-    Node.updateParent(nodes.get(i), $this);
+    Node.updateParent(nodes[i], $this);
   }
   $this.children = nodes;
   return $this;
@@ -859,7 +856,7 @@ NodeKind.isFunction = function($this) {
   return $this >= 14 && $this <= 15;
 };
 NodeKind.isExpression = function($this) {
-  return $this >= 34 && $this <= 99;
+  return $this >= 34 && $this <= 100;
 };
 NodeKind.isConstant = function($this) {
   return $this >= 38 && $this <= 44;
@@ -868,19 +865,19 @@ NodeKind.isCall = function($this) {
   return $this >= 48 && $this <= 49;
 };
 NodeKind.isUnaryOperator = function($this) {
-  return $this >= 60 && $this <= 67;
+  return $this >= 61 && $this <= 68;
 };
 NodeKind.isUnaryStorageOperator = function($this) {
-  return $this >= 64 && $this <= 67;
+  return $this >= 65 && $this <= 68;
 };
 NodeKind.isBinaryOperator = function($this) {
-  return $this >= 68 && $this <= 98;
+  return $this >= 69 && $this <= 99;
 };
 NodeKind.isBinaryStorageOperator = function($this) {
-  return $this >= 88 && $this <= 98;
+  return $this >= 89 && $this <= 99;
 };
 NodeKind.isTertiaryOperator = function($this) {
-  return $this === 99;
+  return $this === 100;
 };
 NodeKind.isCast = function($this) {
   return $this >= 54 && $this <= 55;
@@ -1025,88 +1022,90 @@ NodeKind.toString = function($this) {
   case 57:
     return "DEFAULT";
   case 58:
-    return "VAR";
+    return "UNTYPED";
   case 59:
-    return "FUNCTION_TYPE";
+    return "VAR";
   case 60:
-    return "NOT";
+    return "FUNCTION_TYPE";
   case 61:
-    return "POSITIVE";
+    return "NOT";
   case 62:
-    return "NEGATIVE";
+    return "POSITIVE";
   case 63:
-    return "COMPLEMENT";
+    return "NEGATIVE";
   case 64:
-    return "PREFIX_INCREMENT";
+    return "COMPLEMENT";
   case 65:
-    return "PREFIX_DECREMENT";
+    return "PREFIX_INCREMENT";
   case 66:
-    return "POSTFIX_INCREMENT";
+    return "PREFIX_DECREMENT";
   case 67:
-    return "POSTFIX_DECREMENT";
+    return "POSTFIX_INCREMENT";
   case 68:
-    return "ADD";
+    return "POSTFIX_DECREMENT";
   case 69:
-    return "BITWISE_AND";
+    return "ADD";
   case 70:
-    return "BITWISE_OR";
+    return "BITWISE_AND";
   case 71:
-    return "BITWISE_XOR";
+    return "BITWISE_OR";
   case 72:
-    return "DIVIDE";
+    return "BITWISE_XOR";
   case 73:
-    return "EQUAL";
+    return "DIVIDE";
   case 74:
-    return "GREATER_THAN";
+    return "EQUAL";
   case 75:
-    return "GREATER_THAN_OR_EQUAL";
+    return "GREATER_THAN";
   case 76:
-    return "IN";
+    return "GREATER_THAN_OR_EQUAL";
   case 77:
-    return "INDEX";
+    return "IN";
   case 78:
-    return "LESS_THAN";
+    return "INDEX";
   case 79:
-    return "LESS_THAN_OR_EQUAL";
+    return "LESS_THAN";
   case 80:
-    return "LOGICAL_AND";
+    return "LESS_THAN_OR_EQUAL";
   case 81:
-    return "LOGICAL_OR";
+    return "LOGICAL_AND";
   case 82:
-    return "MULTIPLY";
+    return "LOGICAL_OR";
   case 83:
-    return "NOT_EQUAL";
+    return "MULTIPLY";
   case 84:
-    return "REMAINDER";
+    return "NOT_EQUAL";
   case 85:
-    return "SHIFT_LEFT";
+    return "REMAINDER";
   case 86:
-    return "SHIFT_RIGHT";
+    return "SHIFT_LEFT";
   case 87:
-    return "SUBTRACT";
+    return "SHIFT_RIGHT";
   case 88:
-    return "ASSIGN";
+    return "SUBTRACT";
   case 89:
-    return "ASSIGN_ADD";
+    return "ASSIGN";
   case 90:
-    return "ASSIGN_BITWISE_AND";
+    return "ASSIGN_ADD";
   case 91:
-    return "ASSIGN_BITWISE_OR";
+    return "ASSIGN_BITWISE_AND";
   case 92:
-    return "ASSIGN_BITWISE_XOR";
+    return "ASSIGN_BITWISE_OR";
   case 93:
-    return "ASSIGN_DIVIDE";
+    return "ASSIGN_BITWISE_XOR";
   case 94:
-    return "ASSIGN_MULTIPLY";
+    return "ASSIGN_DIVIDE";
   case 95:
-    return "ASSIGN_REMAINDER";
+    return "ASSIGN_MULTIPLY";
   case 96:
-    return "ASSIGN_SHIFT_LEFT";
+    return "ASSIGN_REMAINDER";
   case 97:
-    return "ASSIGN_SHIFT_RIGHT";
+    return "ASSIGN_SHIFT_LEFT";
   case 98:
-    return "ASSIGN_SUBTRACT";
+    return "ASSIGN_SHIFT_RIGHT";
   case 99:
+    return "ASSIGN_SUBTRACT";
+  case 100:
     return "ASSIGN_INDEX";
   default:
     return "";
@@ -1220,14 +1219,14 @@ Collector.sortTypeSymbols = function($this) {
     return;
   }
   for (var i = 1; i < $this.typeSymbols.length; i = i + 1 | 0) {
-    var symbol = $this.typeSymbols.get(i);
+    var symbol = $this.typeSymbols[i];
     for (var j = 0; j < i; j = j + 1 | 0) {
-      if (Collector.typeComesBefore($this, symbol.type, $this.typeSymbols.get(j).type)) {
+      if (Collector.typeComesBefore($this, symbol.type, $this.typeSymbols[j].type)) {
         var k = i;
         for (; k > j; k = k - 1 | 0) {
-          $this.typeSymbols.set(k, $this.typeSymbols.get(k - 1 | 0));
+          List.set($this.typeSymbols, k, $this.typeSymbols[k - 1 | 0]);
         }
-        $this.typeSymbols.set(j, symbol);
+        List.set($this.typeSymbols, j, symbol);
         break;
       }
     }
@@ -1241,7 +1240,7 @@ Collector.typeComesBefore = function($this, left, right) {
     var members = right.members.values();
     if (members !== null) {
       for (var i = 0; i < members.length; i = i + 1 | 0) {
-        if (members.get(i).type === left) {
+        if (members[i].type === left) {
           return true;
         }
       }
@@ -1255,7 +1254,7 @@ Collector.typeComesBefore = function($this, left, right) {
 Collector.collectChildStatements = function($this, node) {
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children.get(i);
+      var child = node.children[i];
       if (child !== null) {
         Collector.collectStatements($this, child);
       }
@@ -1300,44 +1299,44 @@ Compiler.statistics = function($this, result) {
   var lineCountingStart = now();
   var lineCount = 0;
   for (var i = 0; i < result.options.inputs.length; i = i + 1 | 0) {
-    lineCount = lineCount + Source.lineCount(result.options.inputs.get(i)) | 0;
+    lineCount = lineCount + Source.lineCount(result.options.inputs[i]) | 0;
   }
-  var text = "Line count: ".append(lineCount.toString());
+  var text = "Line count: " + lineCount.toString();
   $this.lineCountingTime += now() - lineCountingStart;
   var optimizingTime = $this.callGraphTime + $this.instanceToStaticTime + $this.functionInliningTime + $this.constantFoldingTime;
-  text = text.append("\nTotal compile time: ").append((Math.round(($this.totalTime + $this.lineCountingTime) * 10) / 10).toString()).append("ms");
+  text = text + "\nTotal compile time: " + (Math.round(($this.totalTime + $this.lineCountingTime) * 10) / 10).toString() + "ms";
   if ($this.tokenizingTime > 0) {
-    text = text.append("\n  Tokenizing: ").append((Math.round($this.tokenizingTime * 10) / 10).toString()).append("ms");
+    text = text + "\n  Tokenizing: " + (Math.round($this.tokenizingTime * 10) / 10).toString() + "ms";
   }
   if ($this.parsingTime > 0) {
-    text = text.append("\n  Parsing: ").append((Math.round($this.parsingTime * 10) / 10).toString()).append("ms");
+    text = text + "\n  Parsing: " + (Math.round($this.parsingTime * 10) / 10).toString() + "ms";
   }
   if ($this.resolvingTime > 0) {
-    text = text.append("\n  Resolving: ").append((Math.round($this.resolvingTime * 10) / 10).toString()).append("ms");
+    text = text + "\n  Resolving: " + (Math.round($this.resolvingTime * 10) / 10).toString() + "ms";
   }
   if (optimizingTime > 0) {
-    text = text.append("\n  Optimizing: ").append((Math.round(optimizingTime * 10) / 10).toString()).append("ms");
-    text = text.append("\n    Building call graph: ").append((Math.round($this.callGraphTime * 10) / 10).toString()).append("ms");
-    text = text.append("\n    Instance to static: ").append((Math.round($this.instanceToStaticTime * 10) / 10).toString()).append("ms");
-    text = text.append("\n    Function inlining: ").append((Math.round($this.functionInliningTime * 10) / 10).toString()).append("ms");
-    text = text.append("\n    Constant folding: ").append((Math.round($this.constantFoldingTime * 10) / 10).toString()).append("ms");
+    text = text + "\n  Optimizing: " + (Math.round(optimizingTime * 10) / 10).toString() + "ms";
+    text = text + "\n    Building call graph: " + (Math.round($this.callGraphTime * 10) / 10).toString() + "ms";
+    text = text + "\n    Instance to static: " + (Math.round($this.instanceToStaticTime * 10) / 10).toString() + "ms";
+    text = text + "\n    Function inlining: " + (Math.round($this.functionInliningTime * 10) / 10).toString() + "ms";
+    text = text + "\n    Constant folding: " + (Math.round($this.constantFoldingTime * 10) / 10).toString() + "ms";
   }
   if ($this.emitTime > 0) {
-    text = text.append("\n  Emit: ").append((Math.round($this.emitTime * 10) / 10).toString()).append("ms");
+    text = text + "\n  Emit: " + (Math.round($this.emitTime * 10) / 10).toString() + "ms";
   }
   if ($this.lineCountingTime > 0) {
-    text = text.append("\n  Counting lines: ").append((Math.round($this.lineCountingTime * 10) / 10).toString()).append("ms");
+    text = text + "\n  Counting lines: " + (Math.round($this.lineCountingTime * 10) / 10).toString() + "ms";
   }
-  text = text.append("\nInputs: ").append(result.options.inputs.length.toString());
+  text = text + "\nInputs: " + result.options.inputs.length.toString();
   for (var i = 0; i < result.options.inputs.length; i = i + 1 | 0) {
-    var source = result.options.inputs.get(i);
-    text = text.append("\n  ").append(source.name).append(": ").append(bytesToString(source.contents.length));
+    var source = result.options.inputs[i];
+    text = text + "\n  " + source.name + ": " + bytesToString(source.contents.length);
   }
   if (result.outputs !== null) {
-    text = text.append("\nOutputs: ").append(result.outputs.length.toString());
+    text = text + "\nOutputs: " + result.outputs.length.toString();
     for (var i = 0; i < result.outputs.length; i = i + 1 | 0) {
-      var source = result.outputs.get(i);
-      text = text.append("\n  ").append(source.name).append(": ").append(bytesToString(source.contents.length));
+      var source = result.outputs[i];
+      text = text + "\n  " + source.name + ": " + bytesToString(source.contents.length);
     }
   }
   return text;
@@ -1351,11 +1350,11 @@ Compiler.compile = function($this, options) {
   } else {
     Compiler.nativeLibrarySource = new Source("<native>", NATIVE_LIBRARY);
     Compiler.processInput($this, program, Compiler.nativeLibrarySource);
-    Compiler.nativeLibraryFile = Node.clone(program.children.get(0));
+    Compiler.nativeLibraryFile = Node.clone(program.children[0]);
   }
   options.inputs.unshift(Compiler.nativeLibrarySource);
   for (var i = 1; i < options.inputs.length; i = i + 1 | 0) {
-    Compiler.processInput($this, program, options.inputs.get(i));
+    Compiler.processInput($this, program, options.inputs[i]);
   }
   var resolver;
   if (TargetFormat.shouldRunResolver(options.targetFormat)) {
@@ -1392,10 +1391,10 @@ Compiler.compile = function($this, options) {
         var instanceToStaticStart = now();
         InstanceToStaticPass.run(graph, options);
         $this.instanceToStaticTime += now() - instanceToStaticStart;
+        var functionInliningStart = now();
+        FunctionInliningPass.run(graph, options);
+        $this.functionInliningTime += now() - functionInliningStart;
         if (options.optimize) {
-          var functionInliningStart = now();
-          FunctionInliningPass.run(graph, options);
-          $this.functionInliningTime += now() - functionInliningStart;
           var constantFoldingStart = now();
           ConstantFolder.foldConstants(resolver.constantFolder, program);
           $this.constantFoldingTime += now() - constantFoldingStart;
@@ -1430,11 +1429,11 @@ json.Emitter = function(_0) {
 json.Emitter.prototype.emitProgram = function(program) {
   var outputs = [];
   if (this.options.outputFile.length > 0) {
-    outputs.push(new Source(this.options.outputFile, json.dump(program).append("\n")));
+    outputs.push(new Source(this.options.outputFile, json.dump(program) + "\n"));
   } else {
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
-      var file = program.children.get(i);
-      outputs.push(new Source(this.options.outputDirectory.append("/").append(file.range.source.name.append(".json")), json.dump(file).append("\n")));
+      var file = program.children[i];
+      outputs.push(new Source(this.options.outputDirectory + "/" + (file.range.source.name + ".json"), json.dump(file) + "\n"));
     }
   }
   return outputs;
@@ -1449,8 +1448,8 @@ json.DumpVisitor.visit = function($this, node) {
     return;
   }
   var outer = $this.indent;
-  $this.indent = $this.indent.append("  ");
-  $this.builder.append("{\n").append($this.indent).append("\"kind\": ").append("\"".append(replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-")).append("\""));
+  $this.indent = $this.indent + "  ";
+  $this.builder.append("{\n").append($this.indent).append("\"kind\": ").append("\"" + replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-") + "\"");
   if (node.content !== null) {
     $this.builder.append(",\n").append($this.indent).append("\"content\": ");
     switch (node.content.type()) {
@@ -1468,13 +1467,13 @@ json.DumpVisitor.visit = function($this, node) {
   if (Node.hasChildren(node)) {
     $this.builder.append(",\n").append($this.indent).append("\"children\": [");
     var inner = $this.indent;
-    $this.indent = $this.indent.append("  ");
+    $this.indent = $this.indent + "  ";
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       if (i > 0) {
         $this.builder.append(",");
       }
       $this.builder.append("\n").append($this.indent);
-      json.DumpVisitor.visit($this, node.children.get(i));
+      json.DumpVisitor.visit($this, node.children[i]);
     }
     $this.indent = inner;
     $this.builder.append("\n").append($this.indent).append("]");
@@ -1489,11 +1488,11 @@ lisp.Emitter = function(_0) {
 lisp.Emitter.prototype.emitProgram = function(program) {
   var outputs = [];
   if (this.options.outputFile.length > 0) {
-    outputs.push(new Source(this.options.outputFile, lisp.dump(program).append("\n")));
+    outputs.push(new Source(this.options.outputFile, lisp.dump(program) + "\n"));
   } else {
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
-      var file = program.children.get(i);
-      outputs.push(new Source(this.options.outputDirectory.append("/").append(file.range.source.name.append(".lisp")), lisp.dump(file).append("\n")));
+      var file = program.children[i];
+      outputs.push(new Source(this.options.outputDirectory + "/" + (file.range.source.name + ".lisp"), lisp.dump(file) + "\n"));
     }
   }
   return outputs;
@@ -1523,10 +1522,10 @@ lisp.DumpVisitor.visit = function($this, node) {
   }
   if (Node.hasChildren(node)) {
     var old = $this.indent;
-    $this.indent = $this.indent.append("  ");
+    $this.indent = $this.indent + "  ";
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       $this.builder.append("\n").append($this.indent);
-      lisp.DumpVisitor.visit($this, node.children.get(i));
+      lisp.DumpVisitor.visit($this, node.children[i]);
     }
     $this.indent = old;
   }
@@ -1539,11 +1538,11 @@ xml.Emitter = function(_0) {
 xml.Emitter.prototype.emitProgram = function(program) {
   var outputs = [];
   if (this.options.outputFile.length > 0) {
-    outputs.push(new Source(this.options.outputFile, xml.dump(program).append("\n")));
+    outputs.push(new Source(this.options.outputFile, xml.dump(program) + "\n"));
   } else {
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
-      var file = program.children.get(i);
-      outputs.push(new Source(this.options.outputDirectory.append("/").append(file.range.source.name.append(".xml")), xml.dump(file).append("\n")));
+      var file = program.children[i];
+      outputs.push(new Source(this.options.outputDirectory + "/" + (file.range.source.name + ".xml"), xml.dump(file) + "\n"));
     }
   }
   return outputs;
@@ -1562,10 +1561,10 @@ xml.DumpVisitor.visit = function($this, node) {
     $this.builder.append(" content=");
     switch (node.content.type()) {
     case 0:
-      $this.builder.append("\"".append(node.content.value.toString()).append("\""));
+      $this.builder.append("\"" + node.content.value.toString() + "\"");
       break;
     case 1:
-      $this.builder.append("\"".append(node.content.value.toString()).append("\""));
+      $this.builder.append("\"" + node.content.value.toString() + "\"");
       break;
     case 2:
       $this.builder.append(quoteString(node.content.value, 34));
@@ -1575,10 +1574,10 @@ xml.DumpVisitor.visit = function($this, node) {
   if (Node.hasChildren(node)) {
     $this.builder.append(">");
     var inner = $this.indent;
-    $this.indent = $this.indent.append("  ");
+    $this.indent = $this.indent + "  ";
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       $this.builder.append("\n").append($this.indent);
-      xml.DumpVisitor.visit($this, node.children.get(i));
+      xml.DumpVisitor.visit($this, node.children[i]);
     }
     $this.indent = inner;
     $this.builder.append("\n").append($this.indent).append("</").append(replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-")).append(">");
@@ -1608,14 +1607,14 @@ Log.warning = function($this, range, text) {
   $this.warningCount = $this.warningCount + 1 | 0;
 };
 Log.note = function($this, range, text) {
-  var last = $this.diagnostics.get($this.diagnostics.length - 1 | 0);
+  var last = $this.diagnostics[$this.diagnostics.length - 1 | 0];
   last.noteRange = range;
   last.noteText = text;
 };
 Log.toString = function($this) {
   var builder = new StringBuilder();
   for (var i = 0; i < $this.diagnostics.length; i = i + 1 | 0) {
-    var diagnostic = $this.diagnostics.get(i);
+    var diagnostic = $this.diagnostics[i];
     var formatted = Range.format(diagnostic.range, 0);
     builder.append(Range.locationString(diagnostic.range)).append(diagnostic.kind === 0 ? ": error: " : ": warning: ").append(diagnostic.text).append("\n").append(formatted.line).append("\n").append(formatted.range).append("\n");
     if (!(diagnostic.noteRange.source === null)) {
@@ -1645,7 +1644,7 @@ Range.locationString = function($this) {
     return "";
   }
   var location = Source.indexToLineColumn($this.source, $this.start);
-  return $this.source.name.append(":").append((location.line + 1 | 0).toString()).append(":").append((location.column + 1 | 0).toString());
+  return $this.source.name + ":" + (location.line + 1 | 0).toString() + ":" + (location.column + 1 | 0).toString();
 };
 Range.touches = function($this, index) {
   return $this.start <= index && index <= $this.end;
@@ -1666,18 +1665,18 @@ Range.format = function($this, maxLength) {
     var centeredWidth = (b - a | 0) < (maxLength / 2 | 0) ? b - a | 0 : maxLength / 2 | 0;
     var centeredStart = (maxLength - centeredWidth | 0) / 2 | 0;
     if (a < centeredStart) {
-      line = line.slice(0, maxLength - 3 | 0).append("...");
+      line = line.slice(0, maxLength - 3 | 0) + "...";
       if (b > (maxLength - 3 | 0)) {
         b = maxLength - 3 | 0;
       }
     } else if ((length - a | 0) < (maxLength - centeredStart | 0)) {
       var offset = length - maxLength | 0;
-      line = "...".append(line.slice(offset + 3 | 0, length));
+      line = "..." + line.slice(offset + 3 | 0, length);
       a = a - offset | 0;
       b = b - offset | 0;
     } else {
       var offset = a - centeredStart | 0;
-      line = "...".append(line.slice(offset + 3 | 0, (offset + maxLength | 0) - 3 | 0)).append("...");
+      line = "..." + line.slice(offset + 3 | 0, (offset + maxLength | 0) - 3 | 0) + "...";
       a = a - offset | 0;
       b = b - offset | 0;
       if (b > (maxLength - 3 | 0)) {
@@ -1685,7 +1684,7 @@ Range.format = function($this, maxLength) {
       }
     }
   }
-  return new FormattedRange(line, repeat(" ", a).append((b - a | 0) < 2 ? "^" : repeat("~", b - a | 0)));
+  return new FormattedRange(line, repeat(" ", a) + ((b - a | 0) < 2 ? "^" : repeat("~", b - a | 0)));
 };
 Range.span = function(start, end) {
   return new Range(start.source, start.start, end.end);
@@ -1717,7 +1716,7 @@ Source.computeLineOffsets = function($this) {
   }
   $this.lineOffsets = [0];
   for (var i = 0; i < $this.contents.length; i = i + 1 | 0) {
-    if ($this.contents.codeUnitAt(i) === 10) {
+    if ($this.contents.charCodeAt(i) === 10) {
       $this.lineOffsets.push(i + 1 | 0);
     }
   }
@@ -1731,8 +1730,8 @@ Source.contentsOfLine = function($this, line) {
   if (line < 0 || line >= $this.lineOffsets.length) {
     return "";
   }
-  var start = $this.lineOffsets.get(line);
-  var end = (line + 1 | 0) < $this.lineOffsets.length ? $this.lineOffsets.get(line + 1 | 0) - 1 | 0 : $this.contents.length;
+  var start = $this.lineOffsets[line];
+  var end = (line + 1 | 0) < $this.lineOffsets.length ? $this.lineOffsets[line + 1 | 0] - 1 | 0 : $this.contents.length;
   return $this.contents.slice(start, end);
 };
 Source.indexToLineColumn = function($this, index) {
@@ -1742,14 +1741,14 @@ Source.indexToLineColumn = function($this, index) {
   while (count > 0) {
     var step = count / 2 | 0;
     var i = line + step | 0;
-    if ($this.lineOffsets.get(i) <= index) {
+    if ($this.lineOffsets[i] <= index) {
       line = i + 1 | 0;
       count = (count - step | 0) - 1 | 0;
     } else {
       count = step;
     }
   }
-  var column = line > 0 ? index - $this.lineOffsets.get(line - 1 | 0) | 0 : index;
+  var column = line > 0 ? index - $this.lineOffsets[line - 1 | 0] | 0 : index;
   return new LineColumn(line - 1 | 0, column);
 };
 function SplitPath(_0, _1) {
@@ -1785,7 +1784,7 @@ js.PatchContext.setFunction = function($this, node) {
 js.PatchContext.thisAlias = function($this) {
   if (!$this.createdThisAlias) {
     $this.createdThisAlias = true;
-    Node.insertChild($this.$function.children.get(2), 0, Node.createVariableCluster(new Node(50), [Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent("$this")), null, new Node(36)])]));
+    Node.insertChild($this.$function.children[2], 0, Node.createVariableCluster(new Node(50), [Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent("$this")), null, new Node(36)])]));
   }
   return Node.withContent(new Node(34), new StringContent("$this"));
 };
@@ -1812,7 +1811,7 @@ js.Emitter.prototype.emitProgram = function(program) {
     js.Emitter.emit(this, "function $extends(derived, base) {\n  derived.prototype = Object.create(base.prototype);\n  derived.prototype.constructor = derived;\n}\n");
   }
   for (var i = 0; i < collector.typeSymbols.length; i = i + 1 | 0) {
-    var type = collector.typeSymbols.get(i).type;
+    var type = collector.typeSymbols[i].type;
     if (Type.isNamespace(type)) {
       if (!((type.symbol.flags & 2048) !== 0)) {
         js.Emitter.emitNode(this, Node.firstNonExtensionSibling(type.symbol.node));
@@ -1831,20 +1830,20 @@ js.Emitter.prototype.emitProgram = function(program) {
     }
     var members = type.members.values();
     for (var j = 0; j < members.length; j = j + 1 | 0) {
-      var symbol = members.get(j).symbol;
+      var symbol = members[j].symbol;
       if (symbol.enclosingSymbol === type.symbol && symbol.node !== null && SymbolKind.isFunction(symbol.kind) && !(symbol.kind === 17)) {
         js.Emitter.emitNode(this, symbol.node);
       }
     }
   }
   for (var i = 0; i < collector.freeFunctionSymbols.length; i = i + 1 | 0) {
-    js.Emitter.emitNode(this, collector.freeFunctionSymbols.get(i).node);
+    js.Emitter.emitNode(this, collector.freeFunctionSymbols[i].node);
   }
   for (var i = 0; i < collector.topLevelStatements.length; i = i + 1 | 0) {
-    js.Emitter.emitNode(this, collector.topLevelStatements.get(i));
+    js.Emitter.emitNode(this, collector.topLevelStatements[i]);
   }
   if (this.options.jsSourceMap) {
-    this.currentSource.contents = this.currentSource.contents.append("/").append("/# sourceMappingURL=data:application/json;base64,").append(encodeBase64(SourceMapGenerator.toString(this.generator)));
+    this.currentSource.contents = this.currentSource.contents + "/" + "/# sourceMappingURL=data:application/json;base64," + encodeBase64(SourceMapGenerator.toString(this.generator));
   }
   return [this.currentSource];
 };
@@ -1858,7 +1857,7 @@ js.Emitter.addMapping = function($this, node) {
   }
 };
 js.Emitter.increaseIndent = function($this) {
-  $this.indent = $this.indent.append("  ");
+  $this.indent = $this.indent + "  ";
 };
 js.Emitter.decreaseIndent = function($this) {
   $this.indent = $this.indent.slice(2, $this.indent.length);
@@ -1866,7 +1865,7 @@ js.Emitter.decreaseIndent = function($this) {
 js.Emitter.emit = function($this, text) {
   if ($this.options.jsSourceMap) {
     for (var i = 0; i < text.length; i = i + 1 | 0) {
-      var c = text.codeUnitAt(i);
+      var c = text.charCodeAt(i);
       if (c === 10) {
         $this.currentColumn = 0;
         $this.currentLine = $this.currentLine + 1 | 0;
@@ -1875,11 +1874,11 @@ js.Emitter.emit = function($this, text) {
       }
     }
   }
-  $this.currentSource.contents = $this.currentSource.contents.append(text);
+  $this.currentSource.contents = $this.currentSource.contents + text;
 };
 js.Emitter.emitNodes = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-    js.Emitter.emitNode($this, nodes.get(i));
+    js.Emitter.emitNode($this, nodes[i]);
   }
 };
 js.Emitter.emitCommaSeparatedNodes = function($this, nodes) {
@@ -1887,7 +1886,7 @@ js.Emitter.emitCommaSeparatedNodes = function($this, nodes) {
     if (i > 0) {
       js.Emitter.emit($this, ", ");
     }
-    js.Emitter.emitNode($this, nodes.get(i));
+    js.Emitter.emitNode($this, nodes[i]);
   }
 };
 js.Emitter.emitCommaSeparatedExpressions = function($this, nodes) {
@@ -1895,7 +1894,7 @@ js.Emitter.emitCommaSeparatedExpressions = function($this, nodes) {
     if (i > 0) {
       js.Emitter.emit($this, ", ");
     }
-    js.Emitter.emitExpression($this, nodes.get(i), 1);
+    js.Emitter.emitExpression($this, nodes[i], 1);
   }
 };
 js.Emitter.emitArgumentVariables = function($this, nodes) {
@@ -1910,13 +1909,13 @@ js.Emitter.emitChildren = function($this, node) {
 };
 js.Emitter.recursiveEmitIfStatement = function($this, node) {
   js.Emitter.emit($this, "if (");
-  js.Emitter.emitExpression($this, node.children.get(0), 0);
+  js.Emitter.emitExpression($this, node.children[0], 0);
   js.Emitter.emit($this, ") ");
-  js.Emitter.emitNode($this, node.children.get(1));
-  var block = node.children.get(2);
+  js.Emitter.emitNode($this, node.children[1]);
+  var block = node.children[2];
   if (block !== null) {
     js.Emitter.emit($this, " else ");
-    var statement = Node.hasChildren(block) && block.children.length === 1 ? block.children.get(0) : null;
+    var statement = Node.hasChildren(block) && block.children.length === 1 ? block.children[0] : null;
     if (statement !== null && statement.kind === 20) {
       js.Emitter.addMapping($this, statement);
       js.Emitter.recursiveEmitIfStatement($this, statement);
@@ -1933,39 +1932,39 @@ js.Emitter.emitNode = function($this, node) {
     js.Emitter.emitChildren($this, node);
     break;
   case 1:
-    js.Emitter.emitChildren($this, node.children.get(0));
+    js.Emitter.emitChildren($this, node.children[0]);
     break;
   case 2:
     js.Emitter.emit($this, "{\n");
     js.Emitter.increaseIndent($this);
     js.Emitter.emitChildren($this, node);
     js.Emitter.decreaseIndent($this);
-    js.Emitter.emit($this, $this.indent.append("}"));
+    js.Emitter.emit($this, $this.indent + "}");
     break;
   case 4:
     var values = Node.caseValues(node);
     var block = Node.caseBlock(node);
     for (var i = 0; i < values.length; i = i + 1 | 0) {
-      js.Emitter.emit($this, $this.indent.append("case "));
-      js.Emitter.emitExpression($this, values.get(i), 0);
+      js.Emitter.emit($this, $this.indent + "case ");
+      js.Emitter.emitExpression($this, values[i], 0);
       js.Emitter.emit($this, ":\n");
     }
     if (values.length === 0) {
-      js.Emitter.emit($this, $this.indent.append("default:\n"));
+      js.Emitter.emit($this, $this.indent + "default:\n");
     }
     js.Emitter.increaseIndent($this);
     js.Emitter.emitChildren($this, block);
     if (!Node.blockAlwaysEndsWithReturn(block)) {
-      js.Emitter.emit($this, $this.indent.append("break;\n"));
+      js.Emitter.emit($this, $this.indent + "break;\n");
     }
     js.Emitter.decreaseIndent($this);
     break;
   case 6:
     var variables = Node.clusterVariables(node);
     for (var i = 0; i < variables.length; i = i + 1 | 0) {
-      var variable = variables.get(i);
+      var variable = variables[i];
       var isCompoundName = variable.symbol !== null && js.Emitter.hasCompoundName($this, variable.symbol);
-      if ((variable.symbol === null || !SymbolKind.isInstance(variable.symbol.kind)) && (!isCompoundName || variable.children.get(2) !== null)) {
+      if ((variable.symbol === null || !SymbolKind.isInstance(variable.symbol.kind)) && (!isCompoundName || variable.children[2] !== null)) {
         js.Emitter.emit($this, $this.indent);
         if (!isCompoundName) {
           js.Emitter.emit($this, "var ");
@@ -1979,56 +1978,56 @@ js.Emitter.emitNode = function($this, node) {
     if (!js.Emitter.hasCompoundName($this, node.symbol)) {
       js.Emitter.emit($this, "var ");
     }
-    js.Emitter.emit($this, $this.indent.append(js.Emitter.fullName($this, node.symbol)).append(" = {};\n"));
+    js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {};\n");
     break;
   case 8:
   case 9:
-    var block = node.children.get(1);
+    var block = node.children[1];
     if (!js.Emitter.hasCompoundName($this, node.symbol)) {
       js.Emitter.emit($this, "var ");
     }
     if ($this.options.optimize && !Symbol.isImportOrExport(node.symbol)) {
-      js.Emitter.emit($this, $this.indent.append(js.Emitter.fullName($this, node.symbol)).append(" = {};\n"));
+      js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {};\n");
     } else {
-      js.Emitter.emit($this, $this.indent.append(js.Emitter.fullName($this, node.symbol)).append(" = {\n"));
+      js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {\n");
       js.Emitter.increaseIndent($this);
       for (var i = 0; i < block.children.length; i = i + 1 | 0) {
-        var symbol = block.children.get(i).symbol;
-        js.Emitter.emit($this, $this.indent.append(js.Emitter.mangleName($this, symbol)).append(": ").append(symbol.enumValue.toString()).append(i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
+        var symbol = block.children[i].symbol;
+        js.Emitter.emit($this, $this.indent + js.Emitter.mangleName($this, symbol) + ": " + symbol.enumValue.toString() + (i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
       }
       js.Emitter.decreaseIndent($this);
-      js.Emitter.emit($this, $this.indent.append("};\n"));
+      js.Emitter.emit($this, $this.indent + "};\n");
     }
     break;
   case 14:
   case 15:
-    var block = node.children.get(2);
+    var block = node.children[2];
     if (block === null) {
       return;
     }
     var isCompoundName = js.Emitter.hasCompoundName($this, node.symbol);
     if (!isCompoundName) {
-      js.Emitter.emit($this, $this.indent.append("function ").append(js.Emitter.fullName($this, node.symbol)));
+      js.Emitter.emit($this, $this.indent + "function " + js.Emitter.fullName($this, node.symbol));
     } else {
-      js.Emitter.emit($this, $this.indent.append(js.Emitter.fullName($this, node.symbol)).append(" = function"));
+      js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = function");
     }
-    js.Emitter.emitArgumentVariables($this, node.children.get(1).children);
+    js.Emitter.emitArgumentVariables($this, node.children[1].children);
     js.Emitter.emit($this, " ");
     js.Emitter.emit($this, "{\n");
     js.Emitter.increaseIndent($this);
     js.Emitter.emitChildren($this, block);
     js.Emitter.decreaseIndent($this);
-    js.Emitter.emit($this, $this.indent.append(isCompoundName ? "};\n" : "}\n"));
+    js.Emitter.emit($this, $this.indent + (isCompoundName ? "};\n" : "}\n"));
     if (node.kind === 14) {
       var type = node.symbol.enclosingSymbol.type;
       if (Type.isClass(type) && Type.baseClass(type) !== null) {
-        js.Emitter.emit($this, $this.indent.append("$extends(").append(js.Emitter.fullName($this, type.symbol)).append(", ").append(js.Emitter.fullName($this, Type.baseClass(type).symbol)).append(");\n"));
+        js.Emitter.emit($this, $this.indent + "$extends(" + js.Emitter.fullName($this, type.symbol) + ", " + js.Emitter.fullName($this, Type.baseClass(type).symbol) + ");\n");
       }
     }
     break;
   case 16:
-    var value = node.children.get(2);
-    js.Emitter.emit($this, node.symbol === null ? node.children.get(0).content.value : js.Emitter.fullName($this, node.symbol));
+    var value = node.children[2];
+    js.Emitter.emit($this, node.symbol === null ? node.children[0].content.value : js.Emitter.fullName($this, node.symbol));
     if (value !== null) {
       js.Emitter.emit($this, " = ");
       js.Emitter.emitExpression($this, value, 1);
@@ -2040,10 +2039,10 @@ js.Emitter.emitNode = function($this, node) {
     js.Emitter.emit($this, "\n");
     break;
   case 21:
-    var setup = node.children.get(0);
-    var test = node.children.get(1);
-    var update = node.children.get(2);
-    js.Emitter.emit($this, $this.indent.append("for ("));
+    var setup = node.children[0];
+    var test = node.children[1];
+    var update = node.children[2];
+    js.Emitter.emit($this, $this.indent + "for (");
     if (setup !== null) {
       if (setup.kind === 6) {
         js.Emitter.emit($this, "var ");
@@ -2065,28 +2064,28 @@ js.Emitter.emitNode = function($this, node) {
       js.Emitter.emit($this, ";");
     }
     js.Emitter.emit($this, ") ");
-    js.Emitter.emitNode($this, node.children.get(3));
+    js.Emitter.emitNode($this, node.children[3]);
     js.Emitter.emit($this, "\n");
     break;
   case 22:
     break;
   case 23:
-    js.Emitter.emit($this, $this.indent.append("while ("));
-    js.Emitter.emitExpression($this, node.children.get(0), 0);
+    js.Emitter.emit($this, $this.indent + "while (");
+    js.Emitter.emitExpression($this, node.children[0], 0);
     js.Emitter.emit($this, ") ");
-    js.Emitter.emitNode($this, node.children.get(1));
+    js.Emitter.emitNode($this, node.children[1]);
     js.Emitter.emit($this, "\n");
     break;
   case 24:
-    js.Emitter.emit($this, $this.indent.append("do "));
-    js.Emitter.emitNode($this, node.children.get(1));
+    js.Emitter.emit($this, $this.indent + "do ");
+    js.Emitter.emitNode($this, node.children[1]);
     js.Emitter.emit($this, " while (");
-    js.Emitter.emitExpression($this, node.children.get(0), 0);
+    js.Emitter.emitExpression($this, node.children[0], 0);
     js.Emitter.emit($this, ");\n");
     break;
   case 25:
   case 26:
-    var value = node.children.get(0);
+    var value = node.children[0];
     js.Emitter.emit($this, $this.indent);
     if (value !== null) {
       js.Emitter.emit($this, "return ");
@@ -2097,42 +2096,42 @@ js.Emitter.emitNode = function($this, node) {
     }
     break;
   case 27:
-    js.Emitter.emit($this, $this.indent.append("break;\n"));
+    js.Emitter.emit($this, $this.indent + "break;\n");
     break;
   case 28:
-    js.Emitter.emit($this, $this.indent.append("continue;\n"));
+    js.Emitter.emit($this, $this.indent + "continue;\n");
     break;
   case 29:
-    var value = node.children.get(0);
+    var value = node.children[0];
     Node.invertBooleanCondition(value, $this.cache);
     if (value.kind !== 40 && !$this.options.optimize) {
       var couldBeFalse = value.kind !== 39;
       if (couldBeFalse) {
-        js.Emitter.emit($this, $this.indent.append("if ("));
+        js.Emitter.emit($this, $this.indent + "if (");
         js.Emitter.emitExpression($this, value, 0);
         js.Emitter.emit($this, ") {\n");
         js.Emitter.increaseIndent($this);
       }
-      var text = Range.toString(node.range).append(" (").append(Range.locationString(node.range)).append(")");
-      js.Emitter.emit($this, $this.indent.append("throw new Error(").append(quoteString(text, 34)).append(");\n"));
+      var text = Range.toString(node.range) + " (" + Range.locationString(node.range) + ")";
+      js.Emitter.emit($this, $this.indent + "throw new Error(" + quoteString(text, 34) + ");\n");
       if (couldBeFalse) {
         js.Emitter.decreaseIndent($this);
-        js.Emitter.emit($this, $this.indent.append("}\n"));
+        js.Emitter.emit($this, $this.indent + "}\n");
       }
     }
     break;
   case 30:
     js.Emitter.emit($this, $this.indent);
     $this.isStartOfExpression = true;
-    js.Emitter.emitExpression($this, node.children.get(0), 0);
+    js.Emitter.emitExpression($this, node.children[0], 0);
     js.Emitter.emit($this, ";\n");
     break;
   case 31:
-    js.Emitter.emit($this, $this.indent.append("switch ("));
-    js.Emitter.emitExpression($this, node.children.get(0), 0);
+    js.Emitter.emit($this, $this.indent + "switch (");
+    js.Emitter.emitExpression($this, node.children[0], 0);
     js.Emitter.emit($this, ") {\n");
     js.Emitter.emitNodes($this, Node.switchCases(node));
-    js.Emitter.emit($this, $this.indent.append("}\n"));
+    js.Emitter.emit($this, $this.indent + "}\n");
     break;
   case 32:
     js.Emitter.emitNodes($this, Node.modifierStatements(node));
@@ -2164,11 +2163,11 @@ js.Emitter.emitExpression = function($this, node, precedence) {
     if (2 < precedence) {
       js.Emitter.emit($this, "(");
     }
-    js.Emitter.emitExpression($this, node.children.get(0), 3);
+    js.Emitter.emitExpression($this, node.children[0], 3);
     js.Emitter.emit($this, " ? ");
-    js.Emitter.emitExpression($this, node.children.get(1), 2);
+    js.Emitter.emitExpression($this, node.children[1], 2);
     js.Emitter.emit($this, " : ");
-    js.Emitter.emitExpression($this, node.children.get(2), 2);
+    js.Emitter.emitExpression($this, node.children[2], 2);
     if (2 < precedence) {
       js.Emitter.emit($this, ")");
     }
@@ -2205,13 +2204,13 @@ js.Emitter.emitExpression = function($this, node, precedence) {
     js.Emitter.emit($this, "]");
     break;
   case 46:
-    js.Emitter.emitExpression($this, node.children.get(0), 15);
+    js.Emitter.emitExpression($this, node.children[0], 15);
     js.Emitter.emit($this, ".");
-    var name = node.children.get(1);
+    var name = node.children[1];
     js.Emitter.emit($this, name.symbol === null ? name.content.value : SymbolKind.isInstance(name.symbol.kind) ? js.Emitter.mangleName($this, name.symbol) : js.Emitter.fullName($this, name.symbol));
     break;
   case 48:
-    var value = node.children.get(0);
+    var value = node.children[0];
     if (value.kind === 35) {
       js.Emitter.emit($this, "new ");
     }
@@ -2227,12 +2226,12 @@ js.Emitter.emitExpression = function($this, node, precedence) {
     js.Emitter.emit($this, ".call(this");
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
       js.Emitter.emit($this, ", ");
-      js.Emitter.emitExpression($this, $arguments.get(i), 1);
+      js.Emitter.emitExpression($this, $arguments[i], 1);
     }
     js.Emitter.emit($this, ")");
     break;
   case 51:
-    js.Emitter.emitExpression($this, node.children.get(0), precedence);
+    js.Emitter.emitExpression($this, node.children[0], precedence);
     break;
   case 52:
     if (1 <= precedence) {
@@ -2247,7 +2246,7 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   case 54:
   case 55:
     $this.isStartOfExpression = wasStartOfExpression;
-    js.Emitter.emitExpression($this, node.children.get(1), precedence);
+    js.Emitter.emitExpression($this, node.children[1], precedence);
     break;
   case 56:
     if (wasStartOfExpression) {
@@ -2271,7 +2270,9 @@ js.Emitter.emitExpression = function($this, node, precedence) {
     } else {
     }
     break;
-  case 60:
+  case 58:
+    js.Emitter.emitExpression($this, node.children[0], precedence);
+    break;
   case 61:
   case 62:
   case 63:
@@ -2279,7 +2280,8 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   case 65:
   case 66:
   case 67:
-    var value = node.children.get(0);
+  case 68:
+    var value = node.children[0];
     var info = operatorInfo.get(node.kind);
     if (info.precedence < precedence) {
       js.Emitter.emit($this, "(");
@@ -2287,7 +2289,7 @@ js.Emitter.emitExpression = function($this, node, precedence) {
     var isPostfix = info.precedence === 14;
     if (!isPostfix) {
       js.Emitter.emit($this, info.text);
-      if (node.kind === 61 && (value.kind === 61 || value.kind === 64) || node.kind === 62 && (value.kind === 62 || value.kind === 65 || value.kind === 41 && value.content.value < 0)) {
+      if (node.kind === 62 && (value.kind === 62 || value.kind === 65) || node.kind === 63 && (value.kind === 63 || value.kind === 66 || value.kind === 41 && value.content.value < 0)) {
         js.Emitter.emit($this, " ");
       }
     }
@@ -2299,8 +2301,7 @@ js.Emitter.emitExpression = function($this, node, precedence) {
       js.Emitter.emit($this, ")");
     }
     break;
-  case 68:
-  case 88:
+  case 69:
   case 89:
   case 90:
   case 91:
@@ -2311,7 +2312,7 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   case 96:
   case 97:
   case 98:
-  case 69:
+  case 99:
   case 70:
   case 71:
   case 72:
@@ -2319,7 +2320,7 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   case 74:
   case 75:
   case 76:
-  case 78:
+  case 77:
   case 79:
   case 80:
   case 81:
@@ -2329,24 +2330,36 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   case 85:
   case 86:
   case 87:
+  case 88:
     var info = operatorInfo.get(node.kind);
     if (info.precedence < precedence) {
       js.Emitter.emit($this, "(");
     }
-    js.Emitter.emitExpression($this, node.children.get(0), info.precedence + (info.associativity === 2 | 0) | 0);
-    js.Emitter.emit($this, node.kind === 73 ? " === " : node.kind === 83 ? " !== " : " ".append(info.text).append(" "));
-    js.Emitter.emitExpression($this, node.children.get(1), info.precedence + (info.associativity === 1 | 0) | 0);
+    js.Emitter.emitExpression($this, node.children[0], info.precedence + (info.associativity === 2 | 0) | 0);
+    js.Emitter.emit($this, node.kind === 74 ? " === " : node.kind === 84 ? " !== " : " " + info.text + " ");
+    js.Emitter.emitExpression($this, node.children[1], info.precedence + (info.associativity === 1 | 0) | 0);
     if (info.precedence < precedence) {
       js.Emitter.emit($this, ")");
     }
     break;
-  case 77:
-    js.Emitter.emitExpression($this, node.children.get(0), 15);
+  case 78:
+    js.Emitter.emitExpression($this, node.children[0], 15);
     js.Emitter.emit($this, "[");
-    js.Emitter.emitExpression($this, node.children.get(1), 0);
+    js.Emitter.emitExpression($this, node.children[1], 0);
     js.Emitter.emit($this, "]");
     break;
-  case 99:
+  case 100:
+    if (2 < precedence) {
+      js.Emitter.emit($this, "(");
+    }
+    js.Emitter.emitExpression($this, node.children[0], 15);
+    js.Emitter.emit($this, "[");
+    js.Emitter.emitExpression($this, node.children[1], 0);
+    js.Emitter.emit($this, "] = ");
+    js.Emitter.emitExpression($this, node.children[2], 2);
+    if (2 < precedence) {
+      js.Emitter.emit($this, ")");
+    }
     break;
   default:
     break;
@@ -2354,16 +2367,16 @@ js.Emitter.emitExpression = function($this, node, precedence) {
 };
 js.Emitter.alwaysConvertsOperandsToInt = function(kind) {
   switch (kind) {
-  case 70:
-  case 69:
   case 71:
-  case 85:
+  case 70:
+  case 72:
   case 86:
-  case 91:
-  case 90:
+  case 87:
   case 92:
-  case 96:
+  case 91:
+  case 93:
   case 97:
+  case 98:
     return true;
   default:
     return false;
@@ -2387,17 +2400,17 @@ js.Emitter.patchNode = function($this, node, context) {
     }
     break;
   case 14:
-    var superInitializer = node.children.get(3);
-    var memberInitializers = node.children.get(4);
-    var block = node.children.get(2);
+    var superInitializer = node.children[3];
+    var memberInitializers = node.children[4];
+    var block = node.children[2];
     var index = 0;
     if (superInitializer !== null) {
       Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(30), [Node.remove(superInitializer)]));
     }
     if (memberInitializers !== null) {
       for (var i = 0; i < memberInitializers.children.length; i = i + 1 | 0) {
-        var child = memberInitializers.children.get(i);
-        Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(30), [Node.createBinary(88, Node.remove(child.children.get(0)), Node.remove(child.children.get(1)))]));
+        var child = memberInitializers.children[i];
+        Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(30), [Node.createBinary(89, Node.remove(child.children[0]), Node.remove(child.children[1]))]));
       }
     }
     js.PatchContext.setFunction(context, node);
@@ -2407,12 +2420,12 @@ js.Emitter.patchNode = function($this, node, context) {
     break;
   case 51:
     if (node.symbol.kind === 16) {
-      var $function = node.children.get(0);
+      var $function = node.children[0];
       var target;
       var name;
       if ($function.kind === 46) {
-        target = Node.remove($function.children.get(0));
-        name = Node.remove($function.children.get(1));
+        target = Node.remove($function.children[0]);
+        name = Node.remove($function.children[1]);
       } else {
         target = new Node(36);
         name = Node.remove($function);
@@ -2436,49 +2449,49 @@ js.Emitter.patchNode = function($this, node, context) {
     }
     break;
   case 54:
-    var value = node.children.get(1);
+    var value = node.children[1];
     if (node.type === $this.cache.boolType && !(value.type === $this.cache.boolType)) {
-      Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(60), [Node.remove(value)]), node.range), node.type));
-    } else if (node.type === $this.cache.intType && !Type.isInteger(value.type, $this.cache) && !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind)) {
-      Node.become(node, Node.withType(Node.withRange(Node.createBinary(70, Node.remove(value), Node.withContent(new Node(41), new IntContent(0))), node.range), node.type));
-    } else if (Type.isReal(node.type, $this.cache) && !Type.isNumeric(value.type, $this.cache)) {
       Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(61), [Node.remove(value)]), node.range), node.type));
+    } else if (node.type === $this.cache.intType && !Type.isInteger(value.type, $this.cache) && !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind)) {
+      Node.become(node, Node.withType(Node.withRange(Node.createBinary(71, Node.remove(value), Node.withContent(new Node(41), new IntContent(0))), node.range), node.type));
+    } else if (Type.isReal(node.type, $this.cache) && !Type.isNumeric(value.type, $this.cache)) {
+      Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(62), [Node.remove(value)]), node.range), node.type));
     }
     break;
-  case 64:
   case 65:
-  case 67:
   case 66:
+  case 68:
+  case 67:
     if (node.type === $this.cache.intType) {
-      var isPostfix = node.kind === 66 || node.kind === 67;
-      var isIncrement = node.kind === 64 || node.kind === 66;
-      var result = js.Emitter.createBinaryIntAssignment($this, context, isIncrement ? 68 : 87, Node.remove(node.children.get(0)), Node.withContent(new Node(41), new IntContent(1)));
+      var isPostfix = node.kind === 67 || node.kind === 68;
+      var isIncrement = node.kind === 65 || node.kind === 67;
+      var result = js.Emitter.createBinaryIntAssignment($this, context, isIncrement ? 69 : 88, Node.remove(node.children[0]), Node.withContent(new Node(41), new IntContent(1)));
       if (isPostfix && js.Emitter.isExpressionUsed(node)) {
-        result = js.Emitter.createBinaryInt($this, isIncrement ? 87 : 68, result, Node.withContent(new Node(41), new IntContent(1)));
+        result = js.Emitter.createBinaryInt($this, isIncrement ? 88 : 69, result, Node.withContent(new Node(41), new IntContent(1)));
       }
       Node.become(node, Node.withType(Node.withRange(result, node.range), node.type));
     }
     break;
-  case 68:
-  case 87:
-  case 82:
-  case 72:
-  case 84:
-    if (node.type === $this.cache.intType && (node.kind === 82 || !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind))) {
-      Node.become(node, Node.withRange(js.Emitter.createBinaryInt($this, node.kind, Node.remove(node.children.get(0)), Node.remove(node.children.get(1))), node.range));
+  case 69:
+  case 88:
+  case 83:
+  case 73:
+  case 85:
+    if (node.type === $this.cache.intType && (node.kind === 83 || !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind))) {
+      Node.become(node, Node.withRange(js.Emitter.createBinaryInt($this, node.kind, Node.remove(node.children[0]), Node.remove(node.children[1])), node.range));
     }
     break;
-  case 89:
-  case 98:
-  case 94:
-  case 93:
+  case 90:
+  case 99:
   case 95:
+  case 94:
+  case 96:
     if (node.type === $this.cache.intType) {
-      var isPostfix = node.kind === 66 || node.kind === 67;
-      var isIncrement = node.kind === 64 || node.kind === 66;
-      var left = node.children.get(0);
-      var right = node.children.get(1);
-      var kind = node.kind === 89 ? 68 : node.kind === 98 ? 87 : node.kind === 94 ? 82 : node.kind === 93 ? 72 : 84;
+      var isPostfix = node.kind === 67 || node.kind === 68;
+      var isIncrement = node.kind === 65 || node.kind === 67;
+      var left = node.children[0];
+      var right = node.children[1];
+      var kind = node.kind === 90 ? 69 : node.kind === 99 ? 88 : node.kind === 95 ? 83 : node.kind === 94 ? 73 : 85;
       Node.become(node, Node.withRange(js.Emitter.createBinaryIntAssignment($this, context, kind, Node.remove(left), Node.remove(right)), node.range));
     }
     break;
@@ -2487,13 +2500,13 @@ js.Emitter.patchNode = function($this, node, context) {
     break;
   }
   if (node.kind === 47) {
-    var value = node.children.get(1);
-    var variable = node.children.get(0);
-    Node.become(node, Node.createCall(Node.createLambda([Node.remove(variable)], Node.withChildren(new Node(2), [Node.withChildren(new Node(25), [Node.remove(value)])])), [Node.remove(variable.children.get(2))]));
+    var value = node.children[1];
+    var variable = node.children[0];
+    Node.become(node, Node.createCall(Node.createLambda([Node.remove(variable)], Node.withChildren(new Node(2), [Node.withChildren(new Node(25), [Node.remove(value)])])), [Node.remove(variable.children[2])]));
   }
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children.get(i);
+      var child = node.children[i];
       if (child !== null) {
         js.Emitter.patchNode($this, child, context);
       }
@@ -2510,23 +2523,23 @@ js.Emitter.patchNode = function($this, node, context) {
   }
 };
 js.Emitter.createBinaryInt = function($this, kind, left, right) {
-  if (kind === 82) {
+  if (kind === 83) {
     $this.needMathImul = true;
     return Node.withType(Node.createCall(Node.withContent(new Node(34), new StringContent("$imul")), [left, right]), $this.cache.intType);
   }
-  return Node.withType(Node.createBinary(70, Node.withType(Node.createBinary(kind, left, right), $this.cache.intType), Node.withType(Node.withContent(new Node(41), new IntContent(0)), $this.cache.intType)), $this.cache.intType);
+  return Node.withType(Node.createBinary(71, Node.withType(Node.createBinary(kind, left, right), $this.cache.intType), Node.withType(Node.withContent(new Node(41), new IntContent(0)), $this.cache.intType)), $this.cache.intType);
 };
 js.Emitter.isSimpleNameAccess = function(node) {
-  return node.kind === 34 || node.kind === 36 || node.kind === 46 && js.Emitter.isSimpleNameAccess(node.children.get(0));
+  return node.kind === 34 || node.kind === 36 || node.kind === 46 && js.Emitter.isSimpleNameAccess(node.children[0]);
 };
 js.Emitter.createBinaryIntAssignment = function($this, context, kind, left, right) {
   if (js.Emitter.isSimpleNameAccess(left)) {
-    return Node.createBinary(88, Node.clone(left), js.Emitter.createBinaryInt($this, kind, left, right));
+    return Node.createBinary(89, Node.clone(left), js.Emitter.createBinaryInt($this, kind, left, right));
   }
-  var target = Node.remove(left.children.get(0));
+  var target = Node.remove(left.children[0]);
   var temporaryName = Node.withContent(new Node(34), new StringContent("$temp"));
-  var dot = Node.withChildren(new Node(46), [temporaryName, Node.remove(left.children.get(1))]);
-  return Node.withType(Node.withChildren(new Node(47), [Node.withChildren(new Node(16), [Node.clone(temporaryName), null, target]), Node.withType(Node.createBinary(88, dot, js.Emitter.createBinaryInt($this, kind, Node.clone(dot), right)), $this.cache.intType)]), $this.cache.intType);
+  var dot = Node.withChildren(new Node(46), [temporaryName, Node.remove(left.children[1])]);
+  return Node.withType(Node.withChildren(new Node(47), [Node.withChildren(new Node(16), [Node.clone(temporaryName), null, target]), Node.withType(Node.createBinary(89, dot, js.Emitter.createBinaryInt($this, kind, Node.clone(dot), right)), $this.cache.intType)]), $this.cache.intType);
 };
 js.Emitter.hasCompoundName = function($this, symbol) {
   var enclosingSymbol = symbol.enclosingSymbol;
@@ -2551,7 +2564,7 @@ js.Emitter.mangleName = function($this, symbol) {
     return js.Emitter.mangleName($this, symbol.enclosingSymbol);
   }
   if (js.Emitter.isKeyword.has(symbol.name)) {
-    return "$".append(symbol.name);
+    return "$" + symbol.name;
   }
   return symbol.name;
 };
@@ -2563,9 +2576,9 @@ js.Emitter.fullName = function($this, symbol) {
       return enclosingName;
     }
     if (SymbolKind.isInstance(symbol.kind)) {
-      enclosingName = enclosingName.append(".prototype");
+      enclosingName = enclosingName + ".prototype";
     }
-    return enclosingName.append(".").append(js.Emitter.mangleName($this, symbol));
+    return enclosingName + "." + js.Emitter.mangleName($this, symbol);
   }
   return js.Emitter.mangleName($this, symbol);
 };
@@ -2592,12 +2605,12 @@ SourceMapGenerator.toString = function($this) {
   var sourceNames = [];
   var sourceContents = [];
   for (var i = 0; i < $this.sources.length; i = i + 1 | 0) {
-    var source = $this.sources.get(i);
+    var source = $this.sources[i];
     sourceNames.push(quoteString(source.name, 34));
     sourceContents.push(quoteString(source.contents, 34));
   }
   var result = new StringBuilder();
-  result.append("{\"version\":3,\"sources\":[").append(",".join(sourceNames)).append("],\"sourcesContent\":[").append(",".join(sourceContents)).append("],\"names\":[],\"mappings\":\"");
+  result.append("{\"version\":3,\"sources\":[").append(sourceNames.join(",")).append("],\"sourcesContent\":[").append(sourceContents.join(",")).append("],\"names\":[],\"mappings\":\"");
   SourceMapGenerator.compile($this, result);
   return result.append("\"}\n").toString();
 };
@@ -2612,7 +2625,7 @@ SourceMapGenerator.compile = function($this, result) {
   var previousOriginalLine = 0;
   var previousSourceIndex = 0;
   for (var i = 0; i < $this.mappings.length; i = i + 1 | 0) {
-    var mapping = $this.mappings.get(i);
+    var mapping = $this.mappings[i];
     var generatedLine = mapping.generatedLine;
     if (previousGeneratedLine === generatedLine) {
       if (previousGeneratedColumn === mapping.generatedColumn && (previousGeneratedLine > 0 || previousGeneratedColumn > 0)) {
@@ -2645,7 +2658,7 @@ SourceMapGenerator.encodeVLQ = function(value) {
     if (vlq > 0) {
       digit |= 32;
     }
-    encoded = encoded.append(BASE64.get(digit));
+    encoded = encoded + BASE64[digit];
   } while (vlq > 0);
   return encoded;
 };
@@ -2837,20 +2850,22 @@ TokenKind.toString = function($this) {
   case 91:
     return "TRUE";
   case 92:
-    return "USING";
+    return "UNTYPED";
   case 93:
-    return "VAR";
+    return "USING";
   case 94:
-    return "VIRTUAL";
+    return "VAR";
   case 95:
-    return "WHILE";
+    return "VIRTUAL";
   case 96:
-    return "WHITESPACE";
+    return "WHILE";
   case 97:
-    return "YY_INVALID_ACTION";
+    return "WHITESPACE";
   case 98:
-    return "START_PARAMETER_LIST";
+    return "YY_INVALID_ACTION";
   case 99:
+    return "START_PARAMETER_LIST";
+  case 100:
     return "END_PARAMETER_LIST";
   default:
     return "";
@@ -2873,7 +2888,7 @@ function ParserContext(_0, _1) {
   this.tokens = _1;
 }
 ParserContext.current = function($this) {
-  return $this.tokens.get($this.index);
+  return $this.tokens[$this.index];
 };
 ParserContext.next = function($this) {
   var token = ParserContext.current($this);
@@ -2883,7 +2898,7 @@ ParserContext.next = function($this) {
   return token;
 };
 ParserContext.spanSince = function($this, range) {
-  var previous = $this.tokens.get($this.index > 0 ? $this.index - 1 | 0 : 0);
+  var previous = $this.tokens[$this.index > 0 ? $this.index - 1 | 0 : 0];
   return previous.range.end < range.start ? range : Range.span(range, previous.range);
 };
 ParserContext.peek = function($this, kind) {
@@ -3003,14 +3018,14 @@ function CallGraph(program) {
 CallGraph.visit = function($this, node) {
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children.get(i);
+      var child = node.children[i];
       if (child !== null) {
         CallGraph.visit($this, child);
       }
     }
   }
   if (node.kind === 48) {
-    var value = node.children.get(0);
+    var value = node.children[0];
     if (value.symbol !== null && SymbolKind.isFunction(value.symbol.kind)) {
       CallGraph.recordCallSite($this, value.symbol, node);
     }
@@ -3022,7 +3037,7 @@ CallGraph.visit = function($this, node) {
 };
 CallGraph.recordCallSite = function($this, symbol, node) {
   var index = $this.symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
-  var info = index < 0 ? new CallInfo(symbol) : $this.callInfo.get(index);
+  var info = index < 0 ? new CallInfo(symbol) : $this.callInfo[index];
   if (index < 0) {
     $this.symbolToInfoIndex.set(symbol.uniqueID, $this.callInfo.length);
     $this.callInfo.push(info);
@@ -3053,7 +3068,7 @@ ConstantFolder.foldConstants = function($this, node) {
   var kind = node.kind;
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children.get(i);
+      var child = node.children[i];
       if (child !== null) {
         ConstantFolder.foldConstants($this, child);
       }
@@ -3064,8 +3079,8 @@ ConstantFolder.foldConstants = function($this, node) {
       ConstantFolder.flattenInt($this, node, node.symbol.enumValue);
     }
   } else if (NodeKind.isCast(kind)) {
-    var type = node.children.get(0).type;
-    var value = node.children.get(1);
+    var type = node.children[0].type;
+    var value = node.children[1];
     var valueKind = value.kind;
     if (NodeKind.isBool(valueKind)) {
       if (type === $this.cache.boolType) {
@@ -3093,130 +3108,130 @@ ConstantFolder.foldConstants = function($this, node) {
       }
     }
   } else if (NodeKind.isUnaryOperator(kind)) {
-    var value = node.children.get(0);
+    var value = node.children[0];
     var valueKind = value.kind;
     if (NodeKind.isBool(valueKind)) {
-      if (kind === 60) {
+      if (kind === 61) {
         ConstantFolder.flattenBool($this, node, !(value.kind === 39));
       }
     } else if (valueKind === 41) {
-      if (kind === 61) {
+      if (kind === 62) {
         ConstantFolder.flattenInt($this, node, +value.content.value);
-      } else if (kind === 62) {
-        ConstantFolder.flattenInt($this, node, -value.content.value);
       } else if (kind === 63) {
+        ConstantFolder.flattenInt($this, node, -value.content.value);
+      } else if (kind === 64) {
         ConstantFolder.flattenInt($this, node, ~value.content.value);
       }
     } else if (NodeKind.isReal(valueKind)) {
-      if (kind === 61) {
+      if (kind === 62) {
         ConstantFolder.flattenReal($this, node, +value.content.value);
-      } else if (kind === 62) {
+      } else if (kind === 63) {
         ConstantFolder.flattenReal($this, node, -value.content.value);
       }
     }
   } else if (NodeKind.isBinaryOperator(kind)) {
-    var left = node.children.get(0);
-    var right = node.children.get(1);
+    var left = node.children[0];
+    var right = node.children[1];
     var valueKind = left.kind;
     if (valueKind !== right.kind && (!NodeKind.isBool(left.kind) || !NodeKind.isBool(right.kind))) {
       return;
     }
     if (NodeKind.isBool(valueKind)) {
       switch (kind) {
-      case 80:
+      case 81:
         ConstantFolder.flattenBool($this, node, left.kind === 39 && right.kind === 39);
         break;
-      case 81:
+      case 82:
         ConstantFolder.flattenBool($this, node, left.kind === 39 || right.kind === 39);
         break;
-      case 73:
+      case 74:
         ConstantFolder.flattenBool($this, node, left.kind === 39 === (right.kind === 39));
         break;
-      case 83:
+      case 84:
         ConstantFolder.flattenBool($this, node, left.kind === 39 !== (right.kind === 39));
         break;
       }
     } else if (valueKind === 41) {
       switch (kind) {
-      case 68:
+      case 69:
         ConstantFolder.flattenInt($this, node, left.content.value + right.content.value | 0);
         break;
-      case 87:
+      case 88:
         ConstantFolder.flattenInt($this, node, left.content.value - right.content.value | 0);
         break;
-      case 82:
+      case 83:
         ConstantFolder.flattenInt($this, node, $imul(left.content.value, right.content.value));
         break;
-      case 72:
+      case 73:
         ConstantFolder.flattenInt($this, node, left.content.value / right.content.value | 0);
         break;
-      case 84:
+      case 85:
         ConstantFolder.flattenInt($this, node, left.content.value % right.content.value | 0);
         break;
-      case 85:
+      case 86:
         ConstantFolder.flattenInt($this, node, left.content.value << right.content.value);
         break;
-      case 86:
+      case 87:
         ConstantFolder.flattenInt($this, node, left.content.value >> right.content.value);
         break;
-      case 69:
+      case 70:
         ConstantFolder.flattenInt($this, node, left.content.value & right.content.value);
         break;
-      case 70:
+      case 71:
         ConstantFolder.flattenInt($this, node, left.content.value | right.content.value);
         break;
-      case 71:
+      case 72:
         ConstantFolder.flattenInt($this, node, left.content.value ^ right.content.value);
         break;
-      case 73:
+      case 74:
         ConstantFolder.flattenBool($this, node, left.content.value === right.content.value);
         break;
-      case 83:
+      case 84:
         ConstantFolder.flattenBool($this, node, left.content.value !== right.content.value);
         break;
-      case 78:
+      case 79:
         ConstantFolder.flattenBool($this, node, left.content.value < right.content.value);
         break;
-      case 74:
+      case 75:
         ConstantFolder.flattenBool($this, node, left.content.value > right.content.value);
         break;
-      case 79:
+      case 80:
         ConstantFolder.flattenBool($this, node, left.content.value <= right.content.value);
         break;
-      case 75:
+      case 76:
         ConstantFolder.flattenBool($this, node, left.content.value >= right.content.value);
         break;
       }
     } else if (NodeKind.isReal(valueKind)) {
       switch (kind) {
-      case 68:
+      case 69:
         ConstantFolder.flattenReal($this, node, left.content.value + right.content.value);
         break;
-      case 87:
+      case 88:
         ConstantFolder.flattenReal($this, node, left.content.value - right.content.value);
         break;
-      case 82:
+      case 83:
         ConstantFolder.flattenReal($this, node, left.content.value * right.content.value);
         break;
-      case 72:
+      case 73:
         ConstantFolder.flattenReal($this, node, left.content.value / right.content.value);
         break;
-      case 73:
+      case 74:
         ConstantFolder.flattenBool($this, node, left.content.value === right.content.value);
         break;
-      case 83:
+      case 84:
         ConstantFolder.flattenBool($this, node, left.content.value !== right.content.value);
         break;
-      case 78:
+      case 79:
         ConstantFolder.flattenBool($this, node, left.content.value < right.content.value);
         break;
-      case 74:
+      case 75:
         ConstantFolder.flattenBool($this, node, left.content.value > right.content.value);
         break;
-      case 79:
+      case 80:
         ConstantFolder.flattenBool($this, node, left.content.value <= right.content.value);
         break;
-      case 75:
+      case 76:
         ConstantFolder.flattenBool($this, node, left.content.value >= right.content.value);
         break;
       }
@@ -3227,25 +3242,25 @@ function InstanceToStaticPass() {
 }
 InstanceToStaticPass.run = function(graph, options) {
   for (var i = 0; i < graph.callInfo.length; i = i + 1 | 0) {
-    var info = graph.callInfo.get(i);
+    var info = graph.callInfo[i];
     var symbol = info.symbol;
     var enclosingSymbol = symbol.enclosingSymbol;
-    if (symbol.kind === 16 && !Symbol.isImportOrExport(symbol) && symbol.node.children.get(2) !== null && ((enclosingSymbol.flags & 2048) !== 0 || SymbolKind.isEnum(enclosingSymbol.kind) || options.optimize && options.targetFormat === 1 && !((symbol.flags & 128) !== 0))) {
+    if (symbol.kind === 16 && !Symbol.isImportOrExport(symbol) && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 2048) !== 0 || SymbolKind.isEnum(enclosingSymbol.kind) || options.optimize && options.targetFormat === 1 && !((symbol.flags & 128) !== 0))) {
       symbol.kind = 15;
       symbol.flags |= 64;
       var thisSymbol = new Symbol("this", 18);
       thisSymbol.type = enclosingSymbol.type;
-      Node.insertChild(symbol.node.children.get(1), 0, Node.withSymbol(Node.withChildren(new Node(16), [Node.withSymbol(Node.withContent(new Node(34), new StringContent("this")), thisSymbol), Node.withType(new Node(35), thisSymbol.type), null]), thisSymbol));
+      Node.insertChild(symbol.node.children[1], 0, Node.withSymbol(Node.withChildren(new Node(16), [Node.withSymbol(Node.withContent(new Node(34), new StringContent("this")), thisSymbol), Node.withType(new Node(35), thisSymbol.type), null]), thisSymbol));
       for (var j = 0; j < info.callSites.length; j = j + 1 | 0) {
-        var callSite = info.callSites.get(j);
+        var callSite = info.callSites[j];
         switch (callSite.kind) {
         case 48:
-          var value = callSite.children.get(0);
+          var value = callSite.children[0];
           var target;
           var name;
           if (value.kind === 46) {
-            target = Node.remove(value.children.get(0));
-            name = Node.remove(value.children.get(1));
+            target = Node.remove(value.children[0]);
+            name = Node.remove(value.children[1]);
           } else {
             target = new Node(36);
             name = Node.remove(value);
@@ -3259,7 +3274,7 @@ InstanceToStaticPass.run = function(graph, options) {
           break;
         }
       }
-      InstanceToStaticPass.recursivelyReplaceThis(symbol.node.children.get(2), thisSymbol);
+      InstanceToStaticPass.recursivelyReplaceThis(symbol.node.children[2], thisSymbol);
     }
   }
 };
@@ -3273,7 +3288,7 @@ InstanceToStaticPass.recursivelyReplaceThis = function(node, symbol) {
     Node.become(node, Node.withRange(Node.withType(Node.withChildren(new Node(46), [InstanceToStaticPass.createThis(symbol), Node.clone(node)]), node.type), node.range));
   } else if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children.get(i);
+      var child = node.children[i];
       if (child !== null) {
         InstanceToStaticPass.recursivelyReplaceThis(child, symbol);
       }
@@ -3287,7 +3302,7 @@ function FunctionInliningPass(_0, _1) {
 FunctionInliningPass.run = function(graph, options) {
   var pass = new FunctionInliningPass(graph, options);
   for (var i = 0; i < graph.callInfo.length; i = i + 1 | 0) {
-    FunctionInliningPass.tryToInline(pass, graph.callInfo.get(i).symbol);
+    FunctionInliningPass.tryToInline(pass, graph.callInfo[i].symbol);
   }
 };
 FunctionInliningPass.tryToInline = function($this, symbol) {
@@ -3296,40 +3311,40 @@ FunctionInliningPass.tryToInline = function($this, symbol) {
   }
   symbol.flags |= 16384;
   if (symbol.kind === 15 && ((symbol.flags & 512) !== 0 || $this.options.optimize && $this.options.targetFormat === 1)) {
-    var block = symbol.node.children.get(2);
+    var block = symbol.node.children[2];
     if (block !== null && Node.hasChildren(block)) {
       var i = 0;
       if ($this.options.optimize) {
-        while (i < block.children.length && block.children.get(i).kind === 29) {
+        while (i < block.children.length && block.children[i].kind === 29) {
           i = i + 1 | 0;
         }
       }
       if (i < block.children.length) {
-        var last = block.children.get(i);
+        var last = block.children[i];
         if (last.kind === 25) {
           FunctionInliningPass.recursivelyInlineFunctionCalls($this, last);
           var symbolCounts = new IntMap();
           if (FunctionInliningPass.recursivelyCountArgumentUses($this, last, symbolCounts)) {
-            var $arguments = symbol.node.children.get(1).children;
+            var $arguments = symbol.node.children[1].children;
             var isSimpleSubstitution = true;
             for (var j = 0; j < $arguments.length; j = j + 1 | 0) {
-              var argument = $arguments.get(j).symbol;
+              var argument = $arguments[j].symbol;
               if (symbolCounts.getOrDefault(argument.uniqueID, 0) !== 1) {
                 isSimpleSubstitution = false;
                 break;
               }
             }
             if (isSimpleSubstitution) {
-              var callSites = $this.graph.callInfo.get($this.graph.symbolToInfoIndex.get(symbol.uniqueID)).callSites;
+              var callSites = $this.graph.callInfo[$this.graph.symbolToInfoIndex.get(symbol.uniqueID)].callSites;
               for (var j = 0; j < callSites.length; j = j + 1 | 0) {
-                var callSite = callSites.get(j);
+                var callSite = callSites[j];
                 switch (callSite.kind) {
                 case 48:
-                  var clone = Node.clone(last.children.get(0));
+                  var clone = Node.clone(last.children[0]);
                   var values = Node.removeChildren(callSite);
                   var value = values.shift();
                   for (var k = 0; k < values.length; k = k + 1 | 0) {
-                    FunctionInliningPass.recursivelyInlineFunctionCalls($this, values.get(k));
+                    FunctionInliningPass.recursivelyInlineFunctionCalls($this, values[k]);
                   }
                   FunctionInliningPass.recursivelySubstituteArguments($this, clone, $arguments, values);
                   Node.become(callSite, clone);
@@ -3351,7 +3366,7 @@ FunctionInliningPass.tryToInline = function($this, symbol) {
 FunctionInliningPass.recursivelyInlineFunctionCalls = function($this, node) {
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children.get(i);
+      var child = node.children[i];
       if (child !== null) {
         FunctionInliningPass.recursivelyInlineFunctionCalls($this, child);
       }
@@ -3365,7 +3380,7 @@ FunctionInliningPass.recursivelyInlineFunctionCalls = function($this, node) {
 FunctionInliningPass.recursivelyCountArgumentUses = function($this, node, symbolCounts) {
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children.get(i);
+      var child = node.children[i];
       if (child !== null && !FunctionInliningPass.recursivelyCountArgumentUses($this, child, symbolCounts)) {
         return false;
       }
@@ -3383,15 +3398,15 @@ FunctionInliningPass.recursivelyCountArgumentUses = function($this, node, symbol
 FunctionInliningPass.recursivelySubstituteArguments = function($this, node, $arguments, values) {
   if (node.symbol !== null) {
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-      if ($arguments.get(i).symbol === node.symbol) {
-        Node.become(node, values.get(i));
+      if ($arguments[i].symbol === node.symbol) {
+        Node.become(node, values[i]);
         return;
       }
     }
   }
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children.get(i);
+      var child = node.children[i];
       if (child !== null) {
         FunctionInliningPass.recursivelySubstituteArguments($this, child, $arguments, values);
       }
@@ -3427,7 +3442,7 @@ ResolveContext.fromNode = function(node) {
       context.loop = node;
     }
     if (context.switchValue === null && node.kind === 31) {
-      context.switchValue = node.children.get(0);
+      context.switchValue = node.children[0];
     }
     if (context.symbolForThis === null && node.symbol !== null && SymbolKind.isTypeWithInstances(node.symbol.kind)) {
       context.symbolForThis = node.symbol;
@@ -3484,7 +3499,7 @@ Resolver.setupScopesAndSymbols = function($this, node, scope) {
     }
   }
   if (NodeKind.isNamedDeclaration(node.kind) && node.kind !== 19) {
-    var declarationName = node.children.get(0);
+    var declarationName = node.children[0];
     if (declarationName !== null && node.symbol === null) {
       var name = declarationName.content.value;
       var member = Scope.findLocal(scope, name);
@@ -3517,7 +3532,7 @@ Resolver.setupScopesAndSymbols = function($this, node, scope) {
   }
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children.get(i);
+      var child = node.children[i];
       if (child !== null) {
         Resolver.setupScopesAndSymbols($this, child, scope);
       }
@@ -3531,7 +3546,7 @@ Resolver.symbolFlagsForNode = function($this, node) {
     parent = parent.parent;
   }
   while (parent !== null && parent.kind === 32) {
-    var modifierName = parent.children.get(0);
+    var modifierName = parent.children[0];
     var name = modifierName.content.value;
     var flag = nameToSymbolFlag.get(name);
     if ((flags & flag) !== 0) {
@@ -3547,16 +3562,16 @@ Resolver.symbolFlagsForNode = function($this, node) {
 };
 Resolver.accumulateSymbolFlags = function($this) {
   for (var i = 0; i < $this.parsedDeclarations.length; i = i + 1 | 0) {
-    var node = $this.parsedDeclarations.get(i);
+    var node = $this.parsedDeclarations[i];
     if (node.symbol.node !== node) {
       continue;
     }
-    var declarationName = node.children.get(0);
+    var declarationName = node.children[0];
     var flags = Resolver.symbolFlagsForNode($this, node);
     for (var sibling = node.sibling; sibling !== null; sibling = sibling.sibling) {
       var siblingFlags = Resolver.symbolFlagsForNode($this, sibling);
       if ((flags & 4071) !== (siblingFlags & 4071)) {
-        semanticErrorDifferentModifiers($this.log, sibling.children.get(0).range, declarationName.content.value, declarationName.range);
+        semanticErrorDifferentModifiers($this.log, sibling.children[0].range, declarationName.content.value, declarationName.range);
         siblingFlags |= 131072;
       }
       flags |= siblingFlags;
@@ -3574,12 +3589,12 @@ Resolver.checkParentsForLocalVariable = function(node) {
 };
 Resolver.setSymbolKindsAndMergeSiblings = function($this) {
   for (var i = 0; i < $this.parsedDeclarations.length; i = i + 1 | 0) {
-    var node = $this.parsedDeclarations.get(i);
+    var node = $this.parsedDeclarations[i];
     var symbol = node.symbol;
     if (symbol.node !== node) {
       continue;
     }
-    var declarationName = node.children.get(0);
+    var declarationName = node.children[0];
     var kind = node.kind;
     for (var sibling = node.sibling; sibling !== null; sibling = sibling.sibling) {
       if (sibling.kind === 13 && NodeKind.isNamedBlockDeclaration(kind)) {
@@ -3591,7 +3606,7 @@ Resolver.setSymbolKindsAndMergeSiblings = function($this) {
           continue;
         }
       }
-      var siblingName = sibling.children.get(0);
+      var siblingName = sibling.children[0];
       semanticErrorDuplicateSymbol($this.log, siblingName.range, siblingName.content.value, declarationName.range);
     }
     var previous = node;
@@ -3647,7 +3662,7 @@ Resolver.setSymbolKindsAndMergeSiblings = function($this) {
     }
   }
   for (var i = 0; i < $this.parsedDeclarations.length; i = i + 1 | 0) {
-    var node = $this.parsedDeclarations.get(i);
+    var node = $this.parsedDeclarations[i];
     var symbol = node.symbol;
     if (!((symbol.flags & 64) !== 0) && (Symbol.isObjectMember(symbol) || Symbol.isEnumMember(symbol) && (symbol.flags & 16) !== 0)) {
       if (symbol.kind === 15) {
@@ -3662,20 +3677,20 @@ Resolver.setSymbolKindsAndMergeSiblings = function($this) {
 };
 Resolver.processUsingStatements = function($this) {
   for (var i = 0; i < $this.parsedBlocks.length; i = i + 1 | 0) {
-    var block = $this.parsedBlocks.get(i);
+    var block = $this.parsedBlocks[i];
     if (!Node.hasChildren(block)) {
       continue;
     }
     for (var j = 0; j < block.children.length; j = j + 1 | 0) {
-      var statement = block.children.get(j);
+      var statement = block.children[j];
       if (statement.kind !== 19) {
         continue;
       }
-      var declarationName = statement.children.get(0);
+      var declarationName = statement.children[0];
       var name = declarationName.content.value;
       var member = Scope.findLocal(block.scope, name);
       if (member !== null) {
-        var otherName = member.symbol.node.children.get(0);
+        var otherName = member.symbol.node.children[0];
         if (otherName !== null) {
           semanticErrorDuplicateSymbol($this.log, declarationName.range, name, otherName.range);
         }
@@ -3688,11 +3703,11 @@ Resolver.processUsingStatements = function($this) {
     }
     var insertedSymbols = null;
     for (var j = 0; j < block.children.length; j = j + 1 | 0) {
-      var statement = block.children.get(j);
+      var statement = block.children[j];
       if (statement.kind !== 33) {
         continue;
       }
-      var value = statement.children.get(0);
+      var value = statement.children[0];
       Resolver.resolveGlobalUsingNamespaceValue($this, value);
       if (value.type === $this.cache.errorType) {
         continue;
@@ -3710,7 +3725,7 @@ Resolver.processUsingStatements = function($this) {
       }
       var members = symbol.type.members.values();
       for (var k = 0; k < members.length; k = k + 1 | 0) {
-        var member = members.get(k);
+        var member = members[k];
         var memberSymbol = member.symbol;
         if (memberSymbol.kind === 9) {
           continue;
@@ -3747,10 +3762,10 @@ Resolver.resolveGlobalUsingNamespaceValue = function($this, node) {
       return;
     }
   } else if (node.kind === 46) {
-    var target = node.children.get(0);
+    var target = node.children[0];
     Resolver.resolveGlobalUsingNamespaceValue($this, target);
     var targetType = target.type;
-    var dotName = node.children.get(1);
+    var dotName = node.children[1];
     if (targetType === null || dotName === null) {
       return;
     }
@@ -3932,12 +3947,14 @@ Resolver.resolve = function($this, node, expectedType) {
     Resolver.resolveDefault($this, node);
     break;
   case 58:
-    Resolver.resolveVar($this, node);
+    Resolver.resolveUntyped($this, node);
     break;
   case 59:
-    Resolver.resolveFunctionType($this, node);
+    Resolver.resolveVar($this, node);
     break;
   case 60:
+    Resolver.resolveFunctionType($this, node);
+    break;
   case 61:
   case 62:
   case 63:
@@ -3945,9 +3962,9 @@ Resolver.resolve = function($this, node, expectedType) {
   case 65:
   case 66:
   case 67:
+  case 68:
     Resolver.resolveUnaryOperator($this, node);
     break;
-  case 68:
   case 69:
   case 70:
   case 71:
@@ -3978,9 +3995,10 @@ Resolver.resolve = function($this, node, expectedType) {
   case 96:
   case 97:
   case 98:
+  case 99:
     Resolver.resolveBinaryOperator($this, node);
     break;
-  case 99:
+  case 100:
     Resolver.resolveTertiaryOperator($this, node);
     break;
   default:
@@ -4021,14 +4039,14 @@ Resolver.checkIsValidVariableType = function($this, node) {
 Resolver.checkUnusedExpression = function($this, node) {
   var kind = node.kind;
   if (kind === 37) {
-    Resolver.checkUnusedExpression($this, node.children.get(1));
-    Resolver.checkUnusedExpression($this, node.children.get(2));
+    Resolver.checkUnusedExpression($this, node.children[1]);
+    Resolver.checkUnusedExpression($this, node.children[2]);
   } else if (kind === 52) {
     if (Node.hasChildren(node)) {
-      Resolver.checkUnusedExpression($this, node.children.get(node.children.length - 1 | 0));
+      Resolver.checkUnusedExpression($this, node.children[node.children.length - 1 | 0]);
     }
   } else if (kind === 47) {
-    Resolver.checkUnusedExpression($this, node.children.get(1));
+    Resolver.checkUnusedExpression($this, node.children[1]);
   } else if (!(node.type === $this.cache.errorType) && !NodeKind.isCall(kind) && !NodeKind.isUnaryStorageOperator(kind) && !NodeKind.isBinaryStorageOperator(kind)) {
     semanticWarningUnusedExpression($this.log, node.range);
   }
@@ -4136,7 +4154,7 @@ Resolver.checkAccessToInstanceSymbol = function($this, node) {
   if (symbol.kind === 4 && $this.context.symbolForThis === symbol.enclosingSymbol) {
     var enclosingNode = symbol.enclosingSymbol.node;
     for (var parent = node.parent; parent !== enclosingNode; parent = parent.parent) {
-      if (parent.kind === 3 && parent.parent === enclosingNode && (parent === parent.parent.children.get(3) || parent === parent.parent.children.get(2))) {
+      if (parent.kind === 3 && parent.parent === enclosingNode && (parent === parent.parent.children[3] || parent === parent.parent.children[2])) {
         return true;
       }
       if ((parent.kind === 16 || NodeKind.isFunction(parent.kind)) && SymbolKind.isInstance(parent.symbol.kind)) {
@@ -4152,14 +4170,14 @@ Resolver.collectAndResolveBaseTypes = function($this, symbol) {
   for (var node = symbol.node; node !== null; node = node.sibling) {
     var isObject = NodeKind.isObject(node.kind);
     if (isObject || node.kind === 13) {
-      var types = node.children.get(2);
+      var types = node.children[2];
       if (types !== null && Node.hasChildren(types)) {
         var index = 0;
         for (var i = 0; i < types.children.length; i = i + 1 | 0) {
-          var baseType = types.children.get(i);
+          var baseType = types.children[i];
           Resolver.resolveAsParameterizedType($this, baseType);
           if (isObject) {
-            baseTypes.insert((index = index + 1 | 0) - 1 | 0, baseType);
+            List.insert(baseTypes, (index = index + 1 | 0) - 1 | 0, baseType);
           } else if (Type.isClass(baseType.type)) {
             semanticErrorBaseClassInExtension($this.log, baseType.range);
           } else {
@@ -4174,11 +4192,11 @@ Resolver.collectAndResolveBaseTypes = function($this, symbol) {
 Resolver.checkNoBaseTypes = function($this, symbol, what) {
   var baseTypes = Resolver.collectAndResolveBaseTypes($this, symbol);
   for (var i = 0; i < baseTypes.length; i = i + 1 | 0) {
-    semanticErrorUnexpectedBaseType($this.log, baseTypes.get(i).range, what);
+    semanticErrorUnexpectedBaseType($this.log, baseTypes[i].range, what);
   }
 };
 Resolver.needsTypeContext = function($this, node) {
-  return node.kind === 45 || node.kind === 46 && node.children.get(0) === null || node.kind === 37 && Resolver.needsTypeContext($this, node.children.get(1)) && Resolver.needsTypeContext($this, node.children.get(2));
+  return node.kind === 45 || node.kind === 46 && node.children[0] === null || node.kind === 37 && Resolver.needsTypeContext($this, node.children[1]) && Resolver.needsTypeContext($this, node.children[2]);
 };
 Resolver.addAutoGeneratedMember = function($this, type, name) {
   var symbol = new Symbol(name, 1);
@@ -4213,7 +4231,7 @@ Resolver.resolveBaseTypes = function($this, symbol) {
     return;
   }
   for (var i = 0; i < baseTypes.length; i = i + 1 | 0) {
-    var base = baseTypes.get(i);
+    var base = baseTypes[i];
     var baseType = base.type;
     if (baseType === $this.cache.errorType) {
       continue;
@@ -4234,7 +4252,7 @@ Resolver.resolveBaseTypes = function($this, symbol) {
     type.relevantTypes.push(baseType);
     var members = baseType.members.values();
     for (var j = 0; j < members.length; j = j + 1 | 0) {
-      var member = members.get(j);
+      var member = members[j];
       var memberSymbol = member.symbol;
       var unmerged = unmergedMembers.getOrDefault(memberSymbol.name, null);
       if (unmerged === null) {
@@ -4251,7 +4269,7 @@ Resolver.resolveBaseTypes = function($this, symbol) {
   }
   var baseMembers = unmergedMembers.values();
   for (var i = 0; i < baseMembers.length; i = i + 1 | 0) {
-    var member = baseMembers.get(i);
+    var member = baseMembers[i];
     var existing = type.members.getOrDefault(member.symbol.name, null);
     if (existing !== null) {
       existing.symbol.overriddenMember = member;
@@ -4264,7 +4282,7 @@ Resolver.initializeObject = function($this, symbol) {
   Resolver.unexpectedModifierIfPresent($this, symbol, 256, "on an object declaration");
   Resolver.unexpectedModifierIfPresent($this, symbol, 64, "on an object declaration");
   var node = Node.firstNonExtensionSibling(symbol.node);
-  var parameters = node.children.get(3);
+  var parameters = node.children[3];
   var type = symbol.type;
   var where;
   switch (symbol.kind) {
@@ -4284,7 +4302,7 @@ Resolver.initializeObject = function($this, symbol) {
     symbol.parameters = [];
     Resolver.resolveNodes($this, parameters.children);
     for (var i = 0; i < parameters.children.length; i = i + 1 | 0) {
-      symbol.parameters.push(parameters.children.get(i).symbol);
+      symbol.parameters.push(parameters.children[i].symbol);
     }
     Symbol.sortParametersByDependencies(symbol);
   }
@@ -4302,7 +4320,7 @@ Resolver.initializeFunction = function($this, symbol) {
   var node = symbol.node;
   var resultType;
   if (node.kind === 15) {
-    var result = node.children.get(3);
+    var result = node.children[3];
     Resolver.resolveAsParameterizedType($this, result);
     Resolver.checkIsValidFunctionReturnType($this, result);
     resultType = result.type;
@@ -4311,18 +4329,18 @@ Resolver.initializeFunction = function($this, symbol) {
     if (Type.hasParameters(resultType)) {
       var substitutions = [];
       for (var i = 0; i < enclosingSymbol.parameters.length; i = i + 1 | 0) {
-        substitutions.push(enclosingSymbol.parameters.get(i).type);
+        substitutions.push(enclosingSymbol.parameters[i].type);
       }
       resultType = TypeCache.parameterize($this.cache, resultType, substitutions);
     }
   }
-  var $arguments = node.children.get(1);
+  var $arguments = node.children[1];
   Resolver.resolve($this, $arguments, null);
   symbol.type = $this.cache.errorType;
   if (!(resultType === $this.cache.errorType)) {
     var argumentTypes = [];
     for (var i = 0; i < $arguments.children.length; i = i + 1 | 0) {
-      var type = $arguments.children.get(i).symbol.type;
+      var type = $arguments.children[i].symbol.type;
       if (type === $this.cache.errorType) {
         return;
       }
@@ -4338,13 +4356,13 @@ Resolver.initializeFunction = function($this, symbol) {
     if (!(base === $this.cache.errorType) && !(derived === $this.cache.errorType)) {
       var overriddenSymbol = overriddenMember.symbol;
       if (!(base.symbol === null) || !SymbolKind.isInstance(overriddenSymbol.kind) || !SymbolKind.isInstance(symbol.kind)) {
-        semanticErrorBadOverride($this.log, node.children.get(0).range, symbol.name, overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.children.get(0).range);
+        semanticErrorBadOverride($this.log, node.children[0].range, symbol.name, overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.children[0].range);
       } else if (base !== derived) {
-        semanticErrorOverrideDifferentTypes($this.log, node.children.get(0).range, symbol.name, base, derived, overriddenSymbol.node.children.get(0).range);
+        semanticErrorOverrideDifferentTypes($this.log, node.children[0].range, symbol.name, base, derived, overriddenSymbol.node.children[0].range);
       } else if (!((symbol.flags & 32) !== 0)) {
-        semanticErrorModifierMissingOverride($this.log, node.children.get(0).range, symbol.name, overriddenSymbol.node.children.get(0).range);
+        semanticErrorModifierMissingOverride($this.log, node.children[0].range, symbol.name, overriddenSymbol.node.children[0].range);
       } else if (!((overriddenSymbol.flags & 128) !== 0)) {
-        semanticErrorCannotOverrideNonVirtual($this.log, node.children.get(0).range, symbol.name, overriddenSymbol.node.children.get(0).range);
+        semanticErrorCannotOverrideNonVirtual($this.log, node.children[0].range, symbol.name, overriddenSymbol.node.children[0].range);
       } else {
         Resolver.redundantModifierIfPresent($this, symbol, 128, "on an overriding function");
       }
@@ -4366,7 +4384,7 @@ Resolver.initializeFunction = function($this, symbol) {
 Resolver.findModifierName = function(symbol, flag) {
   for (var node = symbol.node; node !== null; node = node.parent) {
     if (node.kind === 32) {
-      var modifierName = node.children.get(0);
+      var modifierName = node.children[0];
       if (nameToSymbolFlag.get(modifierName.content.value) === flag) {
         return modifierName;
       }
@@ -4392,7 +4410,7 @@ Resolver.unexpectedModifierIfPresent = function($this, symbol, flag, where) {
 };
 Resolver.expectedModifierIfAbsent = function($this, symbol, flag, where) {
   if ((symbol.flags & flag) === 0 && !((symbol.flags & 131072) !== 0) && Resolver.findModifierName(symbol, flag) === null) {
-    semanticErrorExpectedModifier($this.log, symbol.node.children.get(0).range, symbolFlagToName.get(flag), where);
+    semanticErrorExpectedModifier($this.log, symbol.node.children[0].range, symbolFlagToName.get(flag), where);
   }
 };
 Resolver.initializeVariable = function($this, symbol) {
@@ -4405,15 +4423,15 @@ Resolver.initializeVariable = function($this, symbol) {
     Resolver.expectedModifierIfAbsent($this, symbol, 256, "on a variable declaration inside a struct");
   }
   var node = symbol.node;
-  var variableType = node.children.get(1);
+  var variableType = node.children[1];
   if (variableType === null) {
     if (node.parent.kind === 6) {
-      variableType = Node.clone(node.parent.children.get(0));
+      variableType = Node.clone(node.parent.children[0]);
     } else if (symbol.enclosingSymbol !== null) {
       var type = symbol.enclosingSymbol.type;
       variableType = Node.withSymbol(Node.withType(new Node(35), type), symbol.enclosingSymbol);
       symbol.flags |= 256;
-      var variableValue = node.children.get(2);
+      var variableValue = node.children[2];
       if (variableValue !== null) {
         Resolver.resolveAsExpressionWithConversion($this, variableValue, $this.cache.intType, 0);
         ConstantFolder.foldConstants($this.constantFolder, variableValue);
@@ -4428,7 +4446,7 @@ Resolver.initializeVariable = function($this, symbol) {
       } else {
         var index = node.parent.children.indexOf(node);
         if (index > 0) {
-          var previous = node.parent.children.get(index - 1 | 0).symbol;
+          var previous = node.parent.children[index - 1 | 0].symbol;
           Resolver.initializeSymbol($this, previous);
           if (!(previous.type === $this.cache.errorType)) {
             symbol.enumValue = Type.isEnumFlags(type) ? $imul(previous.enumValue, 2) : previous.enumValue + 1 | 0;
@@ -4444,10 +4462,10 @@ Resolver.initializeVariable = function($this, symbol) {
     }
     Node.replaceChild(node, 1, variableType);
   }
-  if (variableType.kind === 58) {
-    var value = node.children.get(2);
+  if (variableType.kind === 59) {
+    var value = node.children[2];
     if (value === null) {
-      semanticErrorVarMissingValue($this.log, node.children.get(0).range);
+      semanticErrorVarMissingValue($this.log, node.children[0].range);
       symbol.type = $this.cache.errorType;
     } else {
       if (node.parent.kind === 47) {
@@ -4460,7 +4478,7 @@ Resolver.initializeVariable = function($this, symbol) {
       }
       var type = value.type;
       if (type === $this.cache.nullType || type === $this.cache.voidType) {
-        semanticErrorVarBadType($this.log, node.children.get(0).range, type);
+        semanticErrorVarBadType($this.log, node.children[0].range, type);
         symbol.type = $this.cache.errorType;
       } else {
         symbol.type = type;
@@ -4470,7 +4488,7 @@ Resolver.initializeVariable = function($this, symbol) {
     Resolver.resolveAsParameterizedType($this, variableType);
     Resolver.checkIsValidVariableType($this, variableType);
     symbol.type = variableType.type;
-    if (node.parent.kind === 6 && node.parent.children.get(0).type === null) {
+    if (node.parent.kind === 6 && node.parent.children[0].type === null) {
       Node.replaceChild(node.parent, 0, Node.clone(variableType));
     }
   }
@@ -4480,13 +4498,13 @@ Resolver.initializeVariable = function($this, symbol) {
     var base = overriddenMember.type;
     var derived = symbol.type;
     if (!(base === $this.cache.errorType) && !(derived === $this.cache.errorType)) {
-      semanticErrorBadOverride($this.log, node.children.get(0).range, symbol.name, overriddenMember.symbol.enclosingSymbol.type, overriddenMember.symbol.node.children.get(0).range);
+      semanticErrorBadOverride($this.log, node.children[0].range, symbol.name, overriddenMember.symbol.enclosingSymbol.type, overriddenMember.symbol.node.children[0].range);
     }
   }
 };
 Resolver.initializeParameter = function($this, symbol) {
   var type = symbol.type = new Type(symbol);
-  var bound = symbol.node.children.get(1);
+  var bound = symbol.node.children[1];
   if (bound !== null) {
     Resolver.resolveAsParameterizedType($this, bound);
     var boundType = bound.type;
@@ -4501,7 +4519,7 @@ Resolver.initializeParameter = function($this, symbol) {
   }
 };
 Resolver.initializeAlias = function($this, symbol) {
-  var value = symbol.node.children.get(1);
+  var value = symbol.node.children[1];
   Resolver.resolveAsParameterizedType($this, value);
   symbol.type = value.type;
 };
@@ -4555,7 +4573,7 @@ Resolver.initializeDeclaration = function($this, node) {
     $this.resultType = oldResultType;
     symbol.flags = symbol.flags & -4097 | 8192;
     while (node !== null) {
-      var name = node.children.get(0);
+      var name = node.children[0];
       name.symbol = symbol;
       name.type = symbol.type;
       node = node.sibling;
@@ -4567,7 +4585,7 @@ Resolver.initializePotentiallyDuplicatedMember = function($this, member, range) 
   if (symbol.kind === 2) {
     var names = [];
     for (var i = 0; i < symbol.identicalMembers.length; i = i + 1 | 0) {
-      names.push(Symbol.fullName(symbol.identicalMembers.get(i).symbol));
+      names.push(Symbol.fullName(symbol.identicalMembers[i].symbol));
     }
     semanticErrorAmbiguousSymbol($this.log, range, symbol.name, names);
     member.type = symbol.type = $this.cache.errorType;
@@ -4579,7 +4597,7 @@ Resolver.initializeMember = function($this, member) {
   if (member.type !== null) {
     return;
   }
-  trace.log("initializeMember ".append(Symbol.fullName(member.symbol)).append(member.parameterizedType !== null ? " on ".append(Type.toString(member.parameterizedType)) : ""));
+  trace.log("initializeMember " + Symbol.fullName(member.symbol) + (member.parameterizedType !== null ? " on " + Type.toString(member.parameterizedType) : ""));
   trace.indent();
   if (member.dependency !== null) {
     Resolver.initializeMember($this, member.dependency);
@@ -4609,8 +4627,8 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
         var argumentTypes = Type.argumentTypes($constructor.type);
         superArguments = [];
         for (var j = 0; j < argumentTypes.length; j = j + 1 | 0) {
-          var name = "_".append($arguments.length.toString());
-          var argument = Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent(name)), Node.withType(new Node(35), argumentTypes.get(j)), null]);
+          var name = "_" + $arguments.length.toString();
+          var argument = Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent(name)), Node.withType(new Node(35), argumentTypes[j]), null]);
           argument.symbol = new Symbol(name, 18);
           argument.symbol.node = argument;
           $arguments.push(argument);
@@ -4625,9 +4643,9 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
   }
   var uninitializedMembers = [];
   for (var i = 0; i < members.length; i = i + 1 | 0) {
-    var member = members.get(i);
+    var member = members[i];
     var memberSymbol = member.symbol;
-    if (memberSymbol.kind === 20 && memberSymbol.enclosingSymbol === enclosingSymbol && memberSymbol.node.children.get(2) === null) {
+    if (memberSymbol.kind === 20 && memberSymbol.enclosingSymbol === enclosingSymbol && memberSymbol.node.children[2] === null) {
       Resolver.initializeMember($this, member);
       if (member.type === $this.cache.errorType) {
         symbol.flags |= 8192;
@@ -4639,15 +4657,15 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
   }
   for (var i = 1; i < uninitializedMembers.length; i = i + 1 | 0) {
     var j = i;
-    var member = uninitializedMembers.get(i);
-    for (; j > 0 && uninitializedMembers.get(j - 1 | 0).symbol.node.range.start > member.symbol.node.range.start; j = j - 1 | 0) {
-      uninitializedMembers.set(j, uninitializedMembers.get(j - 1 | 0));
+    var member = uninitializedMembers[i];
+    for (; j > 0 && uninitializedMembers[j - 1 | 0].symbol.node.range.start > member.symbol.node.range.start; j = j - 1 | 0) {
+      List.set(uninitializedMembers, j, uninitializedMembers[j - 1 | 0]);
     }
-    uninitializedMembers.set(j, member);
+    List.set(uninitializedMembers, j, member);
   }
   for (var i = 0; i < uninitializedMembers.length; i = i + 1 | 0) {
-    var member = uninitializedMembers.get(i);
-    var name = "_".append($arguments.length.toString());
+    var member = uninitializedMembers[i];
+    var name = "_" + $arguments.length.toString();
     var argument = Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent(name)), Node.withType(new Node(35), member.type), null]);
     argument.symbol = new Symbol(name, 18);
     argument.symbol.node = argument;
@@ -4656,12 +4674,12 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
   }
   symbol.kind = 17;
   symbol.node = Node.withChildren(new Node(14), [Node.withContent(new Node(34), new StringContent(symbol.name)), Node.withChildren(new Node(3), $arguments), Node.withChildren(new Node(2), []), superArguments !== null ? Node.withChildren(new Node(49), superArguments) : null, memberInitializers !== null ? Node.withChildren(new Node(3), memberInitializers) : null]);
-  Node.appendChild(enclosingSymbol.node.children.get(1), symbol.node);
+  Node.appendChild(enclosingSymbol.node.children[1], symbol.node);
   var scope = new Scope(enclosingSymbol.node.scope);
   symbol.node.symbol = symbol;
   symbol.node.scope = scope;
   for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-    Scope.insert(scope, $arguments.get(i).symbol);
+    Scope.insert(scope, $arguments[i].symbol);
   }
 };
 Resolver.generateDefaultToString = function($this, symbol) {
@@ -4671,13 +4689,13 @@ Resolver.generateDefaultToString = function($this, symbol) {
   var fields = [];
   var i;
   for (i = 0; i < members.length; i = i + 1 | 0) {
-    var field = members.get(i).symbol;
+    var field = members[i].symbol;
     if (field.kind === 19 && !((field.flags & 16) !== 0)) {
       fields.push(field);
     }
   }
   for (i = 0; i < fields.length; i = i + 1 | 0) {
-    var field = fields.get(i);
+    var field = fields[i];
     Resolver.initializeSymbol($this, field);
     if (field.type === $this.cache.errorType) {
       break;
@@ -4685,9 +4703,9 @@ Resolver.generateDefaultToString = function($this, symbol) {
     var value = field.enumValue;
     var j;
     for (j = 0; j < i; j = j + 1 | 0) {
-      var other = fields.get(j);
+      var other = fields[j];
       if (value === other.enumValue) {
-        semanticErrorBadEnumToString($this.log, enclosingNode.children.get(0).range, enclosingSymbol.name, field.name, other.name, value);
+        semanticErrorBadEnumToString($this.log, enclosingNode.children[0].range, enclosingSymbol.name, field.name, other.name, value);
         break;
       }
     }
@@ -4705,7 +4723,7 @@ Resolver.generateDefaultToString = function($this, symbol) {
   } else {
     var cases = [];
     for (i = 0; i < fields.length; i = i + 1 | 0) {
-      var field = fields.get(i);
+      var field = fields[i];
       cases.push(Node.createCase([Node.withChildren(new Node(46), [null, Node.withContent(new Node(34), new StringContent(field.name))])], Node.withChildren(new Node(2), [Node.withChildren(new Node(25), [Node.withContent(new Node(44), new StringContent(field.name))])])));
     }
     cases.push(Node.createCase([], Node.withChildren(new Node(2), [Node.withChildren(new Node(25), [Node.withContent(new Node(44), new StringContent(""))])])));
@@ -4743,7 +4761,7 @@ Resolver.initializeSymbol = function($this, symbol) {
     }
     var types = [];
     for (var i = 0; i < symbol.identicalMembers.length; i = i + 1 | 0) {
-      var identical = symbol.identicalMembers.get(i);
+      var identical = symbol.identicalMembers[i];
       Resolver.initializeMember($this, identical);
       var type = identical.type;
       var index = types.indexOf(type);
@@ -4752,17 +4770,17 @@ Resolver.initializeSymbol = function($this, symbol) {
       }
     }
     if (types.length !== 1) {
-      semanticErrorUnmergedSymbol($this.log, symbol.enclosingSymbol.node.children.get(0).range, Symbol.fullName(symbol), types);
+      semanticErrorUnmergedSymbol($this.log, symbol.enclosingSymbol.node.children[0].range, Symbol.fullName(symbol), types);
       symbol.type = $this.cache.errorType;
     } else {
-      symbol.type = types.get(0);
+      symbol.type = types[0];
     }
     return;
   }
   if ((symbol.flags & 12288) === 0) {
     Resolver.initializeDeclaration($this, symbol.node);
   } else if ((symbol.flags & 4096) !== 0) {
-    semanticErrorCyclicDeclaration($this.log, Node.firstNonExtensionSibling(symbol.node).children.get(0).range, symbol.name);
+    semanticErrorCyclicDeclaration($this.log, Node.firstNonExtensionSibling(symbol.node).children[0].range, symbol.name);
     symbol.type = $this.cache.errorType;
   }
 };
@@ -4776,7 +4794,7 @@ Resolver.resolveArguments = function($this, $arguments, argumentTypes, outer, in
     return;
   }
   for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-    Resolver.resolveAsExpressionWithConversion($this, $arguments.get(i), argumentTypes.get(i), 0);
+    Resolver.resolveAsExpressionWithConversion($this, $arguments[i], argumentTypes[i], 0);
   }
 };
 Resolver.resolveAsType = function($this, node) {
@@ -4804,17 +4822,17 @@ Resolver.resolveAsExpressionWithConversion = function($this, node, type, kind) {
 };
 Resolver.resolveNodes = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-    Resolver.resolve($this, nodes.get(i), null);
+    Resolver.resolve($this, nodes[i], null);
   }
 };
 Resolver.resolveNodesAsExpressions = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-    Resolver.resolveAsExpression($this, nodes.get(i));
+    Resolver.resolveAsExpression($this, nodes[i]);
   }
 };
 Resolver.resolveNodesAsVariableTypes = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-    var node = nodes.get(i);
+    var node = nodes[i];
     Resolver.resolveAsParameterizedType($this, node);
     Resolver.checkIsValidVariableType($this, node);
   }
@@ -4828,7 +4846,7 @@ Resolver.resolveProgram = function($this, node) {
   Resolver.resolveChildren($this, node);
 };
 Resolver.resolveFile = function($this, node) {
-  Resolver.resolve($this, node.children.get(0), null);
+  Resolver.resolve($this, node.children[0], null);
 };
 Resolver.resolveBlock = function($this, node) {
   Resolver.resolveChildren($this, node);
@@ -4837,7 +4855,7 @@ Resolver.resolveCase = function($this, node) {
   var values = Node.caseValues(node);
   var block = Node.caseBlock(node);
   for (var i = 0; i < values.length; i = i + 1 | 0) {
-    var value = values.get(i);
+    var value = values[i];
     Resolver.resolveAsExpressionWithConversion($this, value, $this.context.switchValue.type, 0);
     ConstantFolder.foldConstants($this.constantFolder, value);
     if (!(value.type === $this.cache.errorType) && !NodeKind.isConstant(value.kind)) {
@@ -4853,19 +4871,19 @@ Resolver.resolveUsingNamespace = function($this, node) {
 Resolver.resolveNamespace = function($this, node) {
   Resolver.checkDeclarationLocation($this, node, 0);
   Resolver.initializeSymbol($this, node.symbol);
-  Resolver.resolve($this, node.children.get(1), null);
+  Resolver.resolve($this, node.children[1], null);
 };
 Resolver.resolveEnum = function($this, node) {
   Resolver.checkDeclarationLocation($this, node, 0);
   Resolver.initializeSymbol($this, node.symbol);
-  Resolver.resolve($this, node.children.get(1), null);
+  Resolver.resolve($this, node.children[1], null);
 };
 Resolver.resolveObject = function($this, node) {
   Resolver.checkDeclarationLocation($this, node, 0);
   Resolver.initializeSymbol($this, node.symbol);
   var members = node.symbol.type.members.values();
   for (var i = 0; i < members.length; i = i + 1 | 0) {
-    var member = members.get(i);
+    var member = members[i];
     if (member.symbol.kind === 3) {
       Resolver.initializeMember($this, member);
     }
@@ -4876,7 +4894,7 @@ Resolver.resolveObject = function($this, node) {
   if ($constructor !== null) {
     Resolver.initializeMember($this, $constructor);
   }
-  Resolver.resolve($this, node.children.get(1), null);
+  Resolver.resolve($this, node.children[1], null);
   $this.context.symbolForThis = oldSymbolForThis;
 };
 Resolver.resolveExtension = function($this, node) {
@@ -4886,7 +4904,7 @@ Resolver.resolveExtension = function($this, node) {
   if (SymbolKind.isTypeWithInstances(node.symbol.kind)) {
     $this.context.symbolForThis = node.symbol;
   }
-  Resolver.resolve($this, node.children.get(1), null);
+  Resolver.resolve($this, node.children[1], null);
   $this.context.symbolForThis = oldSymbolForThis;
 };
 Resolver.resolveFunction = function($this, node) {
@@ -4894,7 +4912,7 @@ Resolver.resolveFunction = function($this, node) {
   Resolver.initializeSymbol($this, node.symbol);
   var oldFunctionSymbol = $this.context.functionSymbol;
   $this.context.functionSymbol = node.symbol;
-  var block = node.children.get(2);
+  var block = node.children[2];
   if (block !== null) {
     var oldResultType = $this.resultType;
     var symbol = node.symbol;
@@ -4903,11 +4921,11 @@ Resolver.resolveFunction = function($this, node) {
     } else if (symbol.kind === 17) {
       $this.resultType = $this.cache.voidType;
     } else {
-      $this.resultType = symbol.type.relevantTypes.get(0);
+      $this.resultType = symbol.type.relevantTypes[0];
     }
     Resolver.resolve($this, block, null);
     if (!($this.resultType === $this.cache.errorType) && !($this.resultType === $this.cache.voidType) && !Node.blockAlwaysEndsWithReturn(block)) {
-      semanticErrorMissingReturn($this.log, node.children.get(0).range, node.symbol.name, $this.resultType);
+      semanticErrorMissingReturn($this.log, node.children[0].range, node.symbol.name, $this.resultType);
     }
     $this.resultType = oldResultType;
   }
@@ -4918,7 +4936,7 @@ Resolver.resolveFunction = function($this, node) {
       Resolver.initializeMember($this, overriddenMember);
       overriddenType = overriddenMember.type;
     }
-    var superInitializer = node.children.get(3);
+    var superInitializer = node.children[3];
     if (superInitializer !== null) {
       if (overriddenMember !== null) {
         superInitializer.symbol = overriddenMember.symbol;
@@ -4933,28 +4951,28 @@ Resolver.resolveFunction = function($this, node) {
       }
     } else if (overriddenType.symbol === null) {
       if (Type.argumentTypes(overriddenType).length > 0) {
-        semanticErrorMissingSuperInitializer($this.log, node.children.get(0).range);
+        semanticErrorMissingSuperInitializer($this.log, node.children[0].range);
       } else {
         Node.replaceChild(node, 3, Node.withSymbol(Node.withChildren(new Node(49), []), overriddenMember.symbol));
       }
     }
-    var memberInitializers = node.children.get(4);
+    var memberInitializers = node.children[4];
     if (memberInitializers === null) {
       memberInitializers = Node.withChildren(new Node(3), []);
       Node.replaceChild(node, 4, memberInitializers);
     }
     if ((superInitializer !== null || memberInitializers.children.length > 0) && block === null) {
-      semanticErrorAbstractConstructorInitializer($this.log, Range.span((superInitializer !== null ? superInitializer : memberInitializers.children.get(0)).range, (memberInitializers.children.length < 1 ? superInitializer : memberInitializers.children.get(memberInitializers.children.length - 1 | 0)).range));
+      semanticErrorAbstractConstructorInitializer($this.log, Range.span((superInitializer !== null ? superInitializer : memberInitializers.children[0]).range, (memberInitializers.children.length < 1 ? superInitializer : memberInitializers.children[memberInitializers.children.length - 1 | 0]).range));
     }
     var enclosingSymbol = node.symbol.enclosingSymbol;
     if (!((enclosingSymbol.flags & 2048) !== 0)) {
       var members = enclosingSymbol.type.members.values();
       var index = 0;
       for (var i = 0; i < members.length; i = i + 1 | 0) {
-        var member = members.get(i);
+        var member = members[i];
         var memberSymbol = member.symbol;
         if (memberSymbol.kind === 20 && memberSymbol.enclosingSymbol === enclosingSymbol) {
-          var value = memberSymbol.node.children.get(2);
+          var value = memberSymbol.node.children[2];
           if (value !== null) {
             Resolver.initializeMember($this, member);
             var oldScope = $this.context.scope;
@@ -4968,7 +4986,7 @@ Resolver.resolveFunction = function($this, node) {
           } else {
             var j;
             for (j = 0; j < memberInitializers.children.length; j = j + 1 | 0) {
-              if (memberInitializers.children.get(j).children.get(0).content.value === memberSymbol.name) {
+              if (memberInitializers.children[j].children[0].content.value === memberSymbol.name) {
                 break;
               }
             }
@@ -4981,9 +4999,9 @@ Resolver.resolveFunction = function($this, node) {
       }
     }
     for (var i = 0; i < memberInitializers.children.length; i = i + 1 | 0) {
-      var memberInitializer = memberInitializers.children.get(i);
-      var name = memberInitializer.children.get(0);
-      var value = memberInitializer.children.get(1);
+      var memberInitializer = memberInitializers.children[i];
+      var name = memberInitializer.children[0];
+      var value = memberInitializer.children[1];
       var oldScope = $this.context.scope;
       $this.context.scope = node.scope.lexicalParent;
       Resolver.resolve($this, name, null);
@@ -4991,9 +5009,9 @@ Resolver.resolveFunction = function($this, node) {
       if (name.symbol !== null) {
         Resolver.resolveAsExpressionWithConversion($this, value, name.symbol.type, 0);
         for (var j = 0; j < i; j = j + 1 | 0) {
-          var other = memberInitializers.children.get(j);
-          if (other.children.get(0).symbol === name.symbol) {
-            semanticErrorAlreadyInitialized($this.log, value.range, name.symbol.name, other.children.get(1).range);
+          var other = memberInitializers.children[j];
+          if (other.children[0].symbol === name.symbol) {
+            semanticErrorAlreadyInitialized($this.log, value.range, name.symbol.name, other.children[1].range);
             break;
           }
         }
@@ -5007,14 +5025,14 @@ Resolver.resolveFunction = function($this, node) {
 Resolver.resolveVariable = function($this, node) {
   var symbol = node.symbol;
   Resolver.initializeSymbol($this, symbol);
-  var value = node.children.get(2);
+  var value = node.children[2];
   var enclosingSymbol = symbol.enclosingSymbol;
   if (!((symbol.flags & 64) !== 0) && enclosingSymbol !== null) {
     var enclosingSymbolType = enclosingSymbol.type;
     if (Type.isInterface(enclosingSymbolType) || (symbol.flags & 16) !== 0 && Type.isEnum(enclosingSymbolType)) {
       Resolver.unexpectedStatement($this, node);
     } else if ((symbol.flags & 16) !== 0 && SymbolKind.isTypeWithInstances(enclosingSymbol.kind) && value === null) {
-      semanticErrorUninitializedExtensionVariable($this.log, node.children.get(0).range);
+      semanticErrorUninitializedExtensionVariable($this.log, node.children[0].range);
     }
   }
   if (value !== null) {
@@ -5035,17 +5053,17 @@ Resolver.resolveAlias = function($this, node) {
 };
 Resolver.resolveIf = function($this, node) {
   Resolver.checkStatementLocation($this, node);
-  Resolver.resolveAsExpressionWithConversion($this, node.children.get(0), $this.cache.boolType, 0);
-  Resolver.resolve($this, node.children.get(1), null);
-  if (node.children.get(2) !== null) {
-    Resolver.resolve($this, node.children.get(2), null);
+  Resolver.resolveAsExpressionWithConversion($this, node.children[0], $this.cache.boolType, 0);
+  Resolver.resolve($this, node.children[1], null);
+  if (node.children[2] !== null) {
+    Resolver.resolve($this, node.children[2], null);
   }
 };
 Resolver.resolveFor = function($this, node) {
   Resolver.checkStatementLocation($this, node);
-  var setup = node.children.get(0);
-  var test = node.children.get(1);
-  var update = node.children.get(2);
+  var setup = node.children[0];
+  var test = node.children[1];
+  var update = node.children[2];
   if (setup !== null) {
     if (setup.kind === 6) {
       Resolver.resolve($this, setup, null);
@@ -5061,32 +5079,32 @@ Resolver.resolveFor = function($this, node) {
   }
   var oldLoop = $this.context.loop;
   $this.context.loop = node;
-  Resolver.resolve($this, node.children.get(3), null);
+  Resolver.resolve($this, node.children[3], null);
   $this.context.loop = oldLoop;
 };
 Resolver.resolveForEach = function($this, node) {
   Resolver.unsupportedNodeKind($this, node);
   Resolver.checkStatementLocation($this, node);
-  Resolver.resolve($this, node.children.get(0), null);
-  Resolver.resolve($this, node.children.get(1), null);
+  Resolver.resolve($this, node.children[0], null);
+  Resolver.resolve($this, node.children[1], null);
   var oldLoop = $this.context.loop;
   $this.context.loop = node;
-  Resolver.resolve($this, node.children.get(2), null);
+  Resolver.resolve($this, node.children[2], null);
   $this.context.loop = oldLoop;
 };
 Resolver.resolveWhile = function($this, node) {
   Resolver.checkStatementLocation($this, node);
-  var test = node.children.get(0);
+  var test = node.children[0];
   if (test !== null) {
     Resolver.resolveAsExpressionWithConversion($this, test, $this.cache.boolType, 0);
   }
   var oldLoop = $this.context.loop;
   $this.context.loop = node;
-  Resolver.resolve($this, node.children.get(1), null);
+  Resolver.resolve($this, node.children[1], null);
   $this.context.loop = oldLoop;
 };
 Resolver.resolveReturn = function($this, node) {
-  var value = node.children.get(0);
+  var value = node.children[0];
   if ($this.resultType === null) {
     Resolver.unexpectedStatement($this, node);
     if (value !== null) {
@@ -5117,17 +5135,17 @@ Resolver.resolveContinue = function($this, node) {
 };
 Resolver.resolveAssert = function($this, node) {
   Resolver.checkStatementLocation($this, node);
-  Resolver.resolveAsExpressionWithConversion($this, node.children.get(0), $this.cache.boolType, 0);
+  Resolver.resolveAsExpressionWithConversion($this, node.children[0], $this.cache.boolType, 0);
 };
 Resolver.resolveExpression = function($this, node) {
   Resolver.checkStatementLocation($this, node);
-  var value = node.children.get(0);
+  var value = node.children[0];
   Resolver.resolveAsExpression($this, value);
   Resolver.checkUnusedExpression($this, value);
 };
 Resolver.resolveSwitch = function($this, node) {
   Resolver.checkStatementLocation($this, node);
-  var value = node.children.get(0);
+  var value = node.children[0];
   var cases = Node.switchCases(node);
   Resolver.resolveAsExpression($this, value);
   var oldSwitchValue = $this.context.switchValue;
@@ -5136,19 +5154,19 @@ Resolver.resolveSwitch = function($this, node) {
   $this.context.switchValue = oldSwitchValue;
   var uniqueValues = [];
   for (var i = 0; i < cases.length; i = i + 1 | 0) {
-    var child = cases.get(i);
+    var child = cases[i];
     if (child.children.length === 1 && i < (cases.length - 1 | 0)) {
       semanticErrorBadDefaultCase($this.log, child.range);
     }
     var caseValues = Node.caseValues(child);
     for (var j = 0; j < caseValues.length; j = j + 1 | 0) {
-      var caseValue = caseValues.get(j);
+      var caseValue = caseValues[j];
       if (caseValue.type === $this.cache.errorType) {
         continue;
       }
       var k;
       for (k = 0; k < uniqueValues.length; k = k + 1 | 0) {
-        var original = uniqueValues.get(k);
+        var original = uniqueValues[k];
         if (original.kind === caseValue.kind && Content.equal(original.content, caseValue.content)) {
           semanticErrorDuplicateCase($this.log, caseValue.range, original.range);
           break;
@@ -5191,9 +5209,9 @@ Resolver.resolveThis = function($this, node) {
   }
 };
 Resolver.resolveHook = function($this, node) {
-  var trueNode = node.children.get(1);
-  var falseNode = node.children.get(2);
-  Resolver.resolveAsExpressionWithConversion($this, node.children.get(0), $this.cache.boolType, 0);
+  var trueNode = node.children[1];
+  var falseNode = node.children[2];
+  Resolver.resolveAsExpressionWithConversion($this, node.children[0], $this.cache.boolType, 0);
   Resolver.resolveAsExpressionWithTypeContext($this, trueNode, $this.typeContext);
   Resolver.resolveAsExpressionWithTypeContext($this, falseNode, $this.typeContext);
   var trueType = trueNode.type;
@@ -5231,9 +5249,9 @@ Resolver.resolveInitializer = function($this, node) {
     return;
   }
   if ($this.typeContext.symbol === $this.cache.listType.symbol) {
-    var itemType = $this.typeContext.substitutions.get(0);
+    var itemType = $this.typeContext.substitutions[0];
     for (var i = 0; i < values.length; i = i + 1 | 0) {
-      Resolver.resolveAsExpressionWithConversion($this, values.get(i), itemType, 0);
+      Resolver.resolveAsExpressionWithConversion($this, values[i], itemType, 0);
     }
     node.type = $this.typeContext;
     return;
@@ -5242,7 +5260,7 @@ Resolver.resolveInitializer = function($this, node) {
   Resolver.resolveAsExpression($this, node);
 };
 Resolver.resolveDot = function($this, node) {
-  var target = node.children.get(0);
+  var target = node.children[0];
   if (target !== null) {
     Resolver.resolve($this, target, null);
   }
@@ -5254,7 +5272,7 @@ Resolver.resolveDot = function($this, node) {
   if (type === $this.cache.errorType) {
     return;
   }
-  var dotName = node.children.get(1);
+  var dotName = node.children[1];
   if (dotName === null) {
     return;
   }
@@ -5285,13 +5303,13 @@ Resolver.resolveDot = function($this, node) {
   }
 };
 Resolver.resolveLet = function($this, node) {
-  var value = node.children.get(1);
-  Resolver.resolve($this, node.children.get(0), null);
+  var value = node.children[1];
+  Resolver.resolve($this, node.children[0], null);
   Resolver.resolveAsExpressionWithTypeContext($this, value, $this.typeContext);
   node.type = value.type;
 };
 Resolver.resolveCall = function($this, node) {
-  var value = node.children.get(0);
+  var value = node.children[0];
   var $arguments = Node.callArguments(node);
   if (value.kind === 56 && $this.typeContext !== null) {
     Resolver.resolveNodesAsExpressions($this, $arguments);
@@ -5301,7 +5319,7 @@ Resolver.resolveCall = function($this, node) {
     }
     var argumentTypes = [];
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-      var type = $arguments.get(i).type;
+      var type = $arguments[i].type;
       if (type === $this.cache.errorType) {
         Resolver.resolveAsExpression($this, value);
         return;
@@ -5339,7 +5357,7 @@ Resolver.resolveCall = function($this, node) {
       Resolver.resolveNodesAsExpressions($this, $arguments);
       return;
     }
-    node.type = valueType.relevantTypes.get(0);
+    node.type = valueType.relevantTypes[0];
     Resolver.resolveArguments($this, $arguments, Type.argumentTypes(valueType), node.range, value.range);
   }
 };
@@ -5348,7 +5366,7 @@ Resolver.resolveSuperCall = function($this, node) {
 };
 Resolver.resolveSequence = function($this, node) {
   for (var i = 0, n = node.children.length; i < n; i = i + 1 | 0) {
-    var child = node.children.get(i);
+    var child = node.children[i];
     if (i < (n - 1 | 0)) {
       Resolver.resolveAsExpression($this, child);
       Resolver.checkUnusedExpression($this, child);
@@ -5358,7 +5376,7 @@ Resolver.resolveSequence = function($this, node) {
   }
 };
 Resolver.resolveParameterize = function($this, node) {
-  var parameterizeType = node.children.get(0);
+  var parameterizeType = node.children[0];
   var substitutions = Node.parameterizeTypes(node);
   Resolver.resolveAsType($this, parameterizeType);
   Resolver.resolveNodesAsVariableTypes($this, substitutions);
@@ -5378,9 +5396,9 @@ Resolver.resolveParameterize = function($this, node) {
   }
   var sortedTypes = [];
   for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
-    var parameter = sortedParameters.get(i);
+    var parameter = sortedParameters[i];
     var index = parameters.indexOf(parameter);
-    var substitution = substitutions.get(index);
+    var substitution = substitutions[index];
     if (parameter.type === $this.cache.errorType) {
       return;
     }
@@ -5398,15 +5416,15 @@ Resolver.resolveParameterize = function($this, node) {
   }
   var types = [];
   for (var i = 0; i < substitutions.length; i = i + 1 | 0) {
-    types.push(substitutions.get(i).type);
+    types.push(substitutions[i].type);
   }
   Node.become(node, Node.withSymbol(Node.withRange(Node.withType(new Node(35), TypeCache.parameterize($this.cache, unparameterized, types)), node.range), parameterizeType.symbol));
 };
 Resolver.resolveCast = function($this, node) {
-  var type = node.children.get(0);
+  var type = node.children[0];
   Resolver.resolveAsParameterizedType($this, type);
   Resolver.checkIsValidVariableType($this, type);
-  Resolver.resolveAsExpressionWithConversion($this, node.children.get(1), type.type, 1);
+  Resolver.resolveAsExpressionWithConversion($this, node.children[1], type.type, 1);
   node.type = type.type;
 };
 Resolver.resolveLambda = function($this, node) {
@@ -5423,13 +5441,13 @@ Resolver.resolveLambda = function($this, node) {
       semanticErrorBadLambdaTypeContext($this.log, node.range, $this.typeContext);
     } else if (!($this.typeContext === $this.cache.errorType)) {
       var argumentTypes = Type.argumentTypes($this.typeContext);
-      $this.resultType = $this.typeContext.relevantTypes.get(0);
+      $this.resultType = $this.typeContext.relevantTypes[0];
       node.type = $this.typeContext;
       if (argumentTypes.length !== $arguments.length) {
         semanticErrorArgumentCount($this.log, node.range, argumentTypes.length, $arguments.length);
       } else {
         for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-          Node.replaceChild($arguments.get(i), 1, Node.withType(new Node(35), argumentTypes.get(i)));
+          Node.replaceChild($arguments[i], 1, Node.withType(new Node(35), argumentTypes[i]));
         }
       }
       if (!($this.resultType === $this.cache.errorType) && !($this.resultType === $this.cache.voidType) && !Node.blockAlwaysEndsWithReturn(block)) {
@@ -5443,23 +5461,26 @@ Resolver.resolveLambda = function($this, node) {
   $this.context.loop = oldLoop;
 };
 Resolver.resolveDefault = function($this, node) {
-  var type = node.children.get(0);
+  var type = node.children[0];
   Resolver.resolveAsParameterizedType($this, type);
   Resolver.checkIsValidVariableType($this, type);
   node.type = type.type;
+};
+Resolver.resolveUntyped = function($this, node) {
+  Resolver.resolveAsExpression($this, node.children[0]);
 };
 Resolver.resolveVar = function($this, node) {
   semanticErrorUnexpectedNode($this.log, node.range, node.kind);
 };
 Resolver.resolveFunctionType = function($this, node) {
-  var result = node.children.get(0);
+  var result = node.children[0];
   var $arguments = Node.functionTypeArguments(node);
   Resolver.resolveAsParameterizedType($this, result);
   Resolver.resolveNodesAsVariableTypes($this, $arguments);
   if (!(result.type === $this.cache.errorType)) {
     var argumentTypes = [];
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-      var argumentType = $arguments.get(i).type;
+      var argumentType = $arguments[i].type;
       if (argumentType === $this.cache.errorType) {
         return;
       }
@@ -5470,8 +5491,8 @@ Resolver.resolveFunctionType = function($this, node) {
 };
 Resolver.resolveUnaryOperator = function($this, node) {
   var kind = node.kind;
-  var value = node.children.get(0);
-  if (kind === 62 && value.kind === 41 && value.content.value === -2147483648) {
+  var value = node.children[0];
+  if (kind === 63 && value.kind === 41 && value.content.value === -2147483648) {
     Node.become(node, Node.withType(Node.withRange(value, node.range), $this.cache.intType));
     return;
   }
@@ -5480,7 +5501,7 @@ Resolver.resolveUnaryOperator = function($this, node) {
   if (type === $this.cache.errorType) {
     return;
   }
-  if (kind === 61 || kind === 62) {
+  if (kind === 62 || kind === 63) {
     if (Type.isEnum(type)) {
       node.type = $this.cache.intType;
     } else if (Type.isNumeric(type, $this.cache)) {
@@ -5491,11 +5512,11 @@ Resolver.resolveUnaryOperator = function($this, node) {
       Resolver.checkStorage($this, value);
       node.type = type;
     }
-  } else if (kind === 60) {
+  } else if (kind === 61) {
     if (type === $this.cache.boolType) {
       node.type = type;
     }
-  } else if (kind === 63) {
+  } else if (kind === 64) {
     if (Type.isEnumFlags(type)) {
       node.type = type;
     } else if (Type.isInteger(type, $this.cache)) {
@@ -5510,18 +5531,18 @@ Resolver.resolveUnaryOperator = function($this, node) {
 };
 Resolver.resolveBinaryOperator = function($this, node) {
   var kind = node.kind;
-  var left = node.children.get(0);
-  var right = node.children.get(1);
+  var left = node.children[0];
+  var right = node.children[1];
   if (NodeKind.isBinaryStorageOperator(kind)) {
     Resolver.resolveAsExpression($this, left);
-    if (kind === 88 || Type.isNumeric(left.type, $this.cache)) {
+    if (kind === 89 || Type.isNumeric(left.type, $this.cache)) {
       Resolver.resolveAsExpressionWithConversion($this, right, left.type, 0);
       Resolver.checkStorage($this, left);
       node.type = left.type;
       return;
     }
   }
-  if (kind === 73 || kind === 83) {
+  if (kind === 74 || kind === 84) {
     var leftNeedsContext = Resolver.needsTypeContext($this, left);
     var rightNeedsContext = Resolver.needsTypeContext($this, right);
     if (leftNeedsContext && !rightNeedsContext) {
@@ -5540,30 +5561,30 @@ Resolver.resolveBinaryOperator = function($this, node) {
   if (leftType === $this.cache.errorType || rightType === $this.cache.errorType) {
     return;
   }
-  if (kind === 73 || kind === 83) {
+  if (kind === 74 || kind === 84) {
     commonType = TypeCache.commonImplicitType($this.cache, leftType, rightType);
     if (commonType !== null) {
       node.type = $this.cache.boolType;
     }
-  } else if (kind === 68 || kind === 87 || kind === 82 || kind === 72) {
+  } else if (kind === 69 || kind === 88 || kind === 83 || kind === 73) {
     if (Type.isNumeric(leftType, $this.cache) && Type.isNumeric(rightType, $this.cache)) {
       node.type = commonType = TypeCache.commonImplicitType($this.cache, leftType, rightType);
     }
-  } else if (kind === 84 || kind === 85 || kind === 86) {
+  } else if (kind === 85 || kind === 86 || kind === 87) {
     if (Type.isInteger(leftType, $this.cache) && Type.isInteger(rightType, $this.cache)) {
       node.type = commonType = $this.cache.intType;
     }
-  } else if (kind === 69 || kind === 70 || kind === 71) {
+  } else if (kind === 70 || kind === 71 || kind === 72) {
     if (leftType === rightType && Type.isEnumFlags(leftType)) {
       node.type = commonType = leftType;
     } else if (Type.isInteger(leftType, $this.cache) && Type.isInteger(rightType, $this.cache)) {
       node.type = commonType = $this.cache.intType;
     }
-  } else if (kind === 80 || kind === 81) {
+  } else if (kind === 81 || kind === 82) {
     if (leftType === $this.cache.boolType && rightType === $this.cache.boolType) {
       node.type = commonType = $this.cache.boolType;
     }
-  } else if (kind === 78 || kind === 74 || kind === 79 || kind === 75) {
+  } else if (kind === 79 || kind === 75 || kind === 80 || kind === 76) {
     if (Type.isNumeric(leftType, $this.cache) && Type.isNumeric(rightType, $this.cache) || leftType === $this.cache.stringType && rightType === $this.cache.stringType) {
       commonType = TypeCache.commonImplicitType($this.cache, leftType, rightType);
       node.type = $this.cache.boolType;
@@ -5580,9 +5601,9 @@ Resolver.resolveBinaryOperator = function($this, node) {
   }
 };
 Resolver.resolveTertiaryOperator = function($this, node) {
-  var left = node.children.get(0);
-  var middle = node.children.get(1);
-  var right = node.children.get(2);
+  var left = node.children[0];
+  var middle = node.children[1];
+  var right = node.children[2];
   Resolver.resolveAsExpression($this, left);
   Resolver.resolveAsExpression($this, middle);
   Resolver.resolveAsExpression($this, right);
@@ -5735,12 +5756,12 @@ function Symbol(_0, _1) {
   this.kind = _1;
 }
 Symbol.sortParametersByDependencies = function($this) {
-  $this.sortedParameters = $this.parameters.clone();
+  $this.sortedParameters = $this.parameters.slice();
   for (var i = 0; i < $this.sortedParameters.length; i = i + 1 | 0) {
     var j = i;
     for (; j < $this.sortedParameters.length; j = j + 1 | 0) {
       var k = i;
-      var parameter = $this.sortedParameters.get(j);
+      var parameter = $this.sortedParameters[j];
       if (!Type.isParameter(parameter.type)) {
         continue;
       }
@@ -5749,7 +5770,7 @@ Symbol.sortParametersByDependencies = function($this) {
         break;
       }
       for (; k < $this.sortedParameters.length; k = k + 1 | 0) {
-        var other = $this.sortedParameters.get(k);
+        var other = $this.sortedParameters[k];
         if (parameter === other || !Type.isParameter(other.type)) {
           continue;
         }
@@ -5762,9 +5783,9 @@ Symbol.sortParametersByDependencies = function($this) {
       }
     }
     if (j < $this.sortedParameters.length) {
-      var temp = $this.sortedParameters.get(i);
-      $this.sortedParameters.set(i, $this.sortedParameters.get(j));
-      $this.sortedParameters.set(j, temp);
+      var temp = $this.sortedParameters[i];
+      List.set($this.sortedParameters, i, $this.sortedParameters[j]);
+      List.set($this.sortedParameters, j, temp);
     }
   }
 };
@@ -5772,7 +5793,7 @@ Symbol.isContainedBy = function($this, symbol) {
   return $this.enclosingSymbol === null ? false : $this.enclosingSymbol === symbol || Symbol.isContainedBy($this.enclosingSymbol, symbol);
 };
 Symbol.fullName = function($this) {
-  return $this.enclosingSymbol !== null && $this.kind !== 4 && !($this.enclosingSymbol.kind === 8) ? Symbol.fullName($this.enclosingSymbol).append(".").append($this.name) : $this.name;
+  return $this.enclosingSymbol !== null && $this.kind !== 4 && !($this.enclosingSymbol.kind === 8) ? Symbol.fullName($this.enclosingSymbol) + "." + $this.name : $this.name;
 };
 Symbol.hasParameters = function($this) {
   return $this.parameters !== null && $this.parameters.length > 0;
@@ -5875,7 +5896,7 @@ Type.hasBaseType = function($this, type) {
   }
   if ($this.relevantTypes !== null) {
     for (var i = 0; i < $this.relevantTypes.length; i = i + 1 | 0) {
-      if (Type.hasBaseType($this.relevantTypes.get(i), type)) {
+      if (Type.hasBaseType($this.relevantTypes[i], type)) {
         return true;
       }
     }
@@ -5888,7 +5909,7 @@ Type.addMember = function($this, member) {
 Type.copyMembersFrom = function($this, other) {
   var otherMembers = other.members.values();
   for (var i = 0; i < otherMembers.length; i = i + 1 | 0) {
-    var member = otherMembers.get(i);
+    var member = otherMembers[i];
     if (!$this.members.has(member.symbol.name)) {
       $this.members.set(member.symbol.name, member);
     }
@@ -5901,33 +5922,33 @@ Type.environmentToString = function(parameters, substitutions) {
   var text = "[";
   for (var i = 0; i < parameters.length; i = i + 1 | 0) {
     if (i > 0) {
-      text = text.append(", ");
+      text = text + ", ";
     }
-    text = text.append(parameters.get(i).name).append(" => ").append(Type.toString(substitutions.get(i)));
+    text = text + parameters[i].name + " => " + Type.toString(substitutions[i]);
   }
-  return text.append("]");
+  return text + "]";
 };
 Type.toString = function($this) {
   if ($this.symbol === null) {
-    var text = Type.toString($this.relevantTypes.get(0)).append(" fn(");
+    var text = Type.toString($this.relevantTypes[0]) + " fn(";
     var $arguments = Type.argumentTypes($this);
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
       if (i > 0) {
-        text = text.append(", ");
+        text = text + ", ";
       }
-      text = text.append(Type.toString($arguments.get(i)));
+      text = text + Type.toString($arguments[i]);
     }
-    return text.append(")");
+    return text + ")";
   }
   if (Type.hasParameters($this)) {
     var text = "";
     for (var i = 0; i < $this.symbol.parameters.length; i = i + 1 | 0) {
       if (i > 0) {
-        text = text.append(", ");
+        text = text + ", ";
       }
-      text = text.append($this.substitutions !== null ? Type.toString($this.substitutions.get(i)) : $this.symbol.parameters.get(i).name);
+      text = text + ($this.substitutions !== null ? Type.toString($this.substitutions[i]) : $this.symbol.parameters[i].name);
     }
-    return Symbol.fullName($this.symbol).append("<").append(text).append(">");
+    return Symbol.fullName($this.symbol) + "<" + text + ">";
   }
   return Symbol.fullName($this.symbol);
 };
@@ -5944,11 +5965,11 @@ Type.baseClass = function($this) {
   if (!Type.hasRelevantTypes($this)) {
     return null;
   }
-  var first = $this.relevantTypes.get(0);
+  var first = $this.relevantTypes[0];
   return Type.isClass(first) ? first : null;
 };
 Type.bound = function($this) {
-  return Type.hasRelevantTypes($this) ? $this.relevantTypes.get(0) : null;
+  return Type.hasRelevantTypes($this) ? $this.relevantTypes[0] : null;
 };
 Type.dependsOnParameter = function($this, parameter) {
   if ($this.symbol === parameter || Type.hasParameters($this) && $this.symbol.parameters.indexOf(parameter) >= 0 || $this.substitutions !== null && $this.substitutions.indexOf(parameter.type) >= 0) {
@@ -5956,7 +5977,7 @@ Type.dependsOnParameter = function($this, parameter) {
   }
   if (Type.hasRelevantTypes($this)) {
     for (var i = 0; i < $this.relevantTypes.length; i = i + 1 | 0) {
-      var type = $this.relevantTypes.get(i);
+      var type = $this.relevantTypes[i];
       if (Type.dependsOnParameter(type, parameter)) {
         return true;
       }
@@ -5965,7 +5986,7 @@ Type.dependsOnParameter = function($this, parameter) {
   return false;
 };
 Type.resultType = function($this) {
-  return $this.relevantTypes.get(0);
+  return $this.relevantTypes[0];
 };
 Type.argumentTypes = function($this) {
   return $this.relevantTypes.slice(1, $this.relevantTypes.length);
@@ -6068,7 +6089,7 @@ TypeCache.commonBaseClass = function(left, right) {
 TypeCache.computeHashCode = function(symbol, relevantTypes) {
   var seed = symbol === null ? -1 : symbol.type.uniqueID;
   for (var i = 0; i < relevantTypes.length; i = i + 1 | 0) {
-    seed = hashCombine(seed, relevantTypes.get(i).uniqueID);
+    seed = hashCombine(seed, relevantTypes[i].uniqueID);
   }
   return seed;
 };
@@ -6078,32 +6099,32 @@ TypeCache.areTypeListsEqual = function(left, right) {
     return false;
   }
   for (var i = 0; i < n; i = i + 1 | 0) {
-    if (left.get(i) !== right.get(i)) {
+    if (left[i] !== right[i]) {
       return false;
     }
   }
   return true;
 };
 TypeCache.substitute = function($this, type, parameters, substitutions) {
-  trace.log("substitute ".append(Type.toString(type)).append(" with ").append(Type.environmentToString(parameters, substitutions)));
+  trace.log("substitute " + Type.toString(type) + " with " + Type.environmentToString(parameters, substitutions));
   trace.indent();
   var result;
   if (type.symbol === null) {
     result = TypeCache.parameterize($this, null, TypeCache.substituteAll($this, type.relevantTypes, parameters, substitutions));
   } else if (!Type.hasParameters(type)) {
     var index = parameters.indexOf(type.symbol);
-    result = index >= 0 ? substitutions.get(index) : type;
+    result = index >= 0 ? substitutions[index] : type;
   } else {
     result = TypeCache.parameterize($this, type, TypeCache.substituteAll($this, type.substitutions, parameters, substitutions));
   }
-  trace.log("substitution gave ".append(Type.toString(result)));
+  trace.log("substitution gave " + Type.toString(result));
   trace.dedent();
   return result;
 };
 TypeCache.substituteAll = function($this, types, parameters, substitutions) {
   var results = [];
   for (var i = 0; i < types.length; i = i + 1 | 0) {
-    results.push(TypeCache.substitute($this, types.get(i), parameters, substitutions));
+    results.push(TypeCache.substitute($this, types[i], parameters, substitutions));
   }
   return results;
 };
@@ -6115,7 +6136,7 @@ TypeCache.parameterize = function($this, unparameterized, substitutions) {
   var existingTypes = $this.hashTable.getOrDefault(hash, null);
   if (existingTypes !== null) {
     for (var i = 0; i < existingTypes.length; i = i + 1 | 0) {
-      var existing = existingTypes.get(i);
+      var existing = existingTypes[i];
       if (symbol === existing.symbol && (symbol === null && TypeCache.areTypeListsEqual(substitutions, existing.relevantTypes) || symbol !== null && TypeCache.areTypeListsEqual(substitutions, existing.substitutions))) {
         return existing;
       }
@@ -6125,7 +6146,7 @@ TypeCache.parameterize = function($this, unparameterized, substitutions) {
     $this.hashTable.set(hash, existingTypes);
   }
   if (symbol !== null && substitutions !== null) {
-    trace.log("parameterize ".append(unparameterized !== null ? Type.toString(unparameterized) : "null").append(" with ").append(Type.environmentToString(symbol.parameters, substitutions)));
+    trace.log("parameterize " + (unparameterized !== null ? Type.toString(unparameterized) : "null") + " with " + Type.environmentToString(symbol.parameters, substitutions));
     trace.indent();
   }
   var type = new Type(symbol);
@@ -6134,7 +6155,7 @@ TypeCache.parameterize = function($this, unparameterized, substitutions) {
     type.relevantTypes = TypeCache.substituteAll($this, unparameterized.relevantTypes, symbol.parameters, substitutions);
     var members = unparameterized.members.values();
     for (var i = 0; i < members.length; i = i + 1 | 0) {
-      var member = members.get(i);
+      var member = members[i];
       var clone = new Member(member.symbol);
       clone.dependency = member.dependency !== null ? member.dependency : member;
       clone.parameterizedType = type;
@@ -6142,16 +6163,16 @@ TypeCache.parameterize = function($this, unparameterized, substitutions) {
       if (parameterizedType !== null) {
         var merged = [];
         for (var j = 0; j < parameterizedType.substitutions.length; j = j + 1 | 0) {
-          var parameter = parameterizedType.symbol.parameters.get(j);
+          var parameter = parameterizedType.symbol.parameters[j];
           var index = symbol.parameters.indexOf(parameter);
-          merged.push(index >= 0 ? substitutions.get(index) : TypeCache.substitute($this, parameterizedType.substitutions.get(j), symbol.parameters, substitutions));
+          merged.push(index >= 0 ? substitutions[index] : TypeCache.substitute($this, parameterizedType.substitutions[j], symbol.parameters, substitutions));
         }
         clone.parameterizedType = TypeCache.parameterize($this, parameterizedType.symbol.type, merged);
       }
       Type.addMember(type, clone);
     }
     if (substitutions !== null) {
-      trace.log("parameterize gave ".append(Type.toString(type)));
+      trace.log("parameterize gave " + Type.toString(type));
       trace.dedent();
     }
   } else {
@@ -6242,8 +6263,8 @@ function LanguageService() {
 }
 LanguageService.typeFromPosition = function($this, line, column) {
   if ($this.previousResult !== null && $this.previousResult.program !== null && $this.previousSource !== null && column >= 0 && column < Source.contentsOfLine($this.previousSource, line).length && $this.previousResult.program.children.length === 2) {
-    var index = $this.previousSource.lineOffsets.get(line) + column | 0;
-    var previousFile = $this.previousResult.program.children.get(1);
+    var index = $this.previousSource.lineOffsets[line] + column | 0;
+    var previousFile = $this.previousResult.program.children[1];
     return service.typeFromPosition(previousFile, $this.previousSource, index);
   }
   return null;
@@ -6257,7 +6278,7 @@ LanguageService.checkForDiagnostics = function($this, input) {
   var diagnostics = [];
   var i;
   for (i = 0; i < compiler.log.diagnostics.length; i = i + 1 | 0) {
-    var diagnostic = compiler.log.diagnostics.get(i);
+    var diagnostic = compiler.log.diagnostics[i];
     var range = diagnostic.range;
     if (range.source === $this.previousSource) {
       var start = Source.indexToLineColumn(range.source, range.start);
@@ -6282,8 +6303,8 @@ LanguageService.checkForCompletions = function($this, input, line, column) {
   options.inputs = [$this.previousSource];
   $this.previousResult = Compiler.compile(compiler, options);
   if ($this.previousResult.program !== null && column >= 0 && column <= Source.contentsOfLine($this.previousSource, line).length && $this.previousResult.program.children.length === 2) {
-    var index = $this.previousSource.lineOffsets.get(line) + column | 0;
-    var previousFile = $this.previousResult.program.children.get(1);
+    var index = $this.previousSource.lineOffsets[line] + column | 0;
+    var previousFile = $this.previousResult.program.children[1];
     return service.completionsFromPosition(previousFile, $this.previousResult.resolver, $this.previousSource, index);
   }
   return null;
@@ -6299,7 +6320,7 @@ function checkAllNodeListKinds(node, check) {
 }
 function checkAllNodeKinds(nodes, check) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-    if (!check(nodes.get(i))) {
+    if (!check(nodes[i])) {
       return false;
     }
   }
@@ -6307,45 +6328,45 @@ function checkAllNodeKinds(nodes, check) {
 }
 function createOperatorMap() {
   var result = new IntMap();
-  result.set(60, new OperatorInfo("!", 13, 0));
-  result.set(61, new OperatorInfo("+", 13, 0));
-  result.set(62, new OperatorInfo("-", 13, 0));
-  result.set(63, new OperatorInfo("~", 13, 0));
-  result.set(64, new OperatorInfo("++", 13, 0));
-  result.set(65, new OperatorInfo("--", 13, 0));
-  result.set(66, new OperatorInfo("++", 14, 0));
-  result.set(67, new OperatorInfo("--", 14, 0));
-  result.set(68, new OperatorInfo("+", 11, 1));
-  result.set(69, new OperatorInfo("&", 7, 1));
-  result.set(70, new OperatorInfo("|", 5, 1));
-  result.set(71, new OperatorInfo("^", 6, 1));
-  result.set(72, new OperatorInfo("/", 12, 1));
-  result.set(73, new OperatorInfo("==", 8, 1));
-  result.set(74, new OperatorInfo(">", 9, 1));
-  result.set(75, new OperatorInfo(">=", 9, 1));
-  result.set(76, new OperatorInfo("in", 9, 1));
-  result.set(77, new OperatorInfo("[]", 15, 1));
-  result.set(78, new OperatorInfo("<", 9, 1));
-  result.set(79, new OperatorInfo("<=", 9, 1));
-  result.set(80, new OperatorInfo("&&", 4, 1));
-  result.set(81, new OperatorInfo("||", 3, 1));
-  result.set(82, new OperatorInfo("*", 12, 1));
-  result.set(83, new OperatorInfo("!=", 8, 1));
-  result.set(84, new OperatorInfo("%", 12, 1));
-  result.set(85, new OperatorInfo("<<", 10, 1));
-  result.set(86, new OperatorInfo(">>", 10, 1));
-  result.set(87, new OperatorInfo("-", 11, 1));
-  result.set(88, new OperatorInfo("=", 2, 2));
-  result.set(89, new OperatorInfo("+=", 2, 2));
-  result.set(90, new OperatorInfo("&=", 2, 2));
-  result.set(91, new OperatorInfo("|=", 2, 2));
-  result.set(92, new OperatorInfo("^=", 2, 2));
-  result.set(93, new OperatorInfo("/=", 2, 2));
-  result.set(94, new OperatorInfo("*=", 2, 2));
-  result.set(95, new OperatorInfo("%=", 2, 2));
-  result.set(96, new OperatorInfo("<<=", 2, 2));
-  result.set(97, new OperatorInfo(">>=", 2, 2));
-  result.set(98, new OperatorInfo("-=", 2, 2));
+  result.set(61, new OperatorInfo("!", 13, 0));
+  result.set(62, new OperatorInfo("+", 13, 0));
+  result.set(63, new OperatorInfo("-", 13, 0));
+  result.set(64, new OperatorInfo("~", 13, 0));
+  result.set(65, new OperatorInfo("++", 13, 0));
+  result.set(66, new OperatorInfo("--", 13, 0));
+  result.set(67, new OperatorInfo("++", 14, 0));
+  result.set(68, new OperatorInfo("--", 14, 0));
+  result.set(69, new OperatorInfo("+", 11, 1));
+  result.set(70, new OperatorInfo("&", 7, 1));
+  result.set(71, new OperatorInfo("|", 5, 1));
+  result.set(72, new OperatorInfo("^", 6, 1));
+  result.set(73, new OperatorInfo("/", 12, 1));
+  result.set(74, new OperatorInfo("==", 8, 1));
+  result.set(75, new OperatorInfo(">", 9, 1));
+  result.set(76, new OperatorInfo(">=", 9, 1));
+  result.set(77, new OperatorInfo("in", 9, 1));
+  result.set(78, new OperatorInfo("[]", 15, 1));
+  result.set(79, new OperatorInfo("<", 9, 1));
+  result.set(80, new OperatorInfo("<=", 9, 1));
+  result.set(81, new OperatorInfo("&&", 4, 1));
+  result.set(82, new OperatorInfo("||", 3, 1));
+  result.set(83, new OperatorInfo("*", 12, 1));
+  result.set(84, new OperatorInfo("!=", 8, 1));
+  result.set(85, new OperatorInfo("%", 12, 1));
+  result.set(86, new OperatorInfo("<<", 10, 1));
+  result.set(87, new OperatorInfo(">>", 10, 1));
+  result.set(88, new OperatorInfo("-", 11, 1));
+  result.set(89, new OperatorInfo("=", 2, 2));
+  result.set(90, new OperatorInfo("+=", 2, 2));
+  result.set(91, new OperatorInfo("&=", 2, 2));
+  result.set(92, new OperatorInfo("|=", 2, 2));
+  result.set(93, new OperatorInfo("^=", 2, 2));
+  result.set(94, new OperatorInfo("/=", 2, 2));
+  result.set(95, new OperatorInfo("*=", 2, 2));
+  result.set(96, new OperatorInfo("%=", 2, 2));
+  result.set(97, new OperatorInfo("<<=", 2, 2));
+  result.set(98, new OperatorInfo(">>=", 2, 2));
+  result.set(99, new OperatorInfo("-=", 2, 2));
   return result;
 }
 json.dump = function(node) {
@@ -6368,17 +6389,17 @@ function encodeBase64(data) {
   var n = data.length;
   var i;
   for (i = 0; (i + 2 | 0) < n; i = i + 3 | 0) {
-    var c = data.codeUnitAt(i) << 16 | data.codeUnitAt(i + 1 | 0) << 8 | data.codeUnitAt(i + 2 | 0);
-    result.append(BASE64.get(c >> 18)).append(BASE64.get(c >> 12 & 63)).append(BASE64.get(c >> 6 & 63)).append(BASE64.get(c & 63));
+    var c = data.charCodeAt(i) << 16 | data.charCodeAt(i + 1 | 0) << 8 | data.charCodeAt(i + 2 | 0);
+    result.append(BASE64[c >> 18]).append(BASE64[c >> 12 & 63]).append(BASE64[c >> 6 & 63]).append(BASE64[c & 63]);
   }
   if (i < n) {
-    var a = data.codeUnitAt(i);
-    result.append(BASE64.get(a >> 2));
+    var a = data.charCodeAt(i);
+    result.append(BASE64[a >> 2]);
     if ((i + 1 | 0) < n) {
-      var b = data.codeUnitAt(i + 1 | 0);
-      result.append(BASE64.get(a << 4 & 48 | b >> 4)).append(BASE64.get(b << 2 & 60)).append("=");
+      var b = data.charCodeAt(i + 1 | 0);
+      result.append(BASE64[a << 4 & 48 | b >> 4]).append(BASE64[b << 2 & 60]).append("=");
     } else {
-      result.append(BASE64.get(a << 4 & 48)).append("==");
+      result.append(BASE64[a << 4 & 48]).append("==");
     }
   }
   return result.toString();
@@ -6389,7 +6410,7 @@ function hashCombine(left, right) {
 function doubleToString(value) {
   var result = value.toString();
   if (result.indexOf(".") < 0) {
-    result = result.append(".0");
+    result = result + ".0";
   }
   return result;
 }
@@ -6411,12 +6432,12 @@ function parseStringLiteral(log, range, text) {
   var start = 1;
   var i = 1;
   while ((i + 1 | 0) < text.length) {
-    var c = text.codeUnitAt(i);
+    var c = text.charCodeAt(i);
     if (c === 92) {
       result.append(text.slice(start, i));
       var escape = i = i + 1 | 0;
       if ((i + 1 | 0) < text.length) {
-        c = text.codeUnitAt((i = i + 1 | 0) - 1 | 0);
+        c = text.charCodeAt((i = i + 1 | 0) - 1 | 0);
         if (c === 110) {
           result.append("\n");
           start = i;
@@ -6438,14 +6459,14 @@ function parseStringLiteral(log, range, text) {
           start = i;
           continue;
         } else if (c === 92 || c === 34 || c === 39) {
-          result.append(string.fromCodeUnit(c));
+          result.append(String.fromCharCode(c));
           start = i;
           continue;
         } else if (c === 120) {
-          var c0 = (i + 1 | 0) < text.length ? parseHexCharacter(text.codeUnitAt((i = i + 1 | 0) - 1 | 0)) : -1;
-          var c1 = (i + 1 | 0) < text.length ? parseHexCharacter(text.codeUnitAt((i = i + 1 | 0) - 1 | 0)) : -1;
+          var c0 = (i + 1 | 0) < text.length ? parseHexCharacter(text.charCodeAt((i = i + 1 | 0) - 1 | 0)) : -1;
+          var c1 = (i + 1 | 0) < text.length ? parseHexCharacter(text.charCodeAt((i = i + 1 | 0) - 1 | 0)) : -1;
           if (c0 !== -1 && c1 !== -1) {
-            result.append(string.fromCodeUnit(c0 << 4 | c1));
+            result.append(String.fromCharCode(c0 << 4 | c1));
             start = i;
             continue;
           }
@@ -6462,12 +6483,12 @@ function parseStringLiteral(log, range, text) {
 }
 function quoteString(text, quote) {
   var result = new StringBuilder();
-  var quoteString = string.fromCodeUnit(quote);
+  var quoteString = String.fromCharCode(quote);
   result.append(quoteString);
   var start = 0;
   var i;
   for (i = 0; i < text.length; i = i + 1 | 0) {
-    var c = text.codeUnitAt(i);
+    var c = text.charCodeAt(i);
     if (c === quote) {
       result.append(text.slice(start, i)).append("\\").append(quoteString);
       start = i + 1 | 0;
@@ -6487,7 +6508,7 @@ function quoteString(text, quote) {
       result.append(text.slice(start, i)).append("\\\\");
       start = i + 1 | 0;
     } else if (c < 32 || c >= 127 && c <= 255) {
-      result.append(text.slice(start, i)).append("\\x").append(HEX.get(c >> 4)).append(HEX.get(c & 15));
+      result.append(text.slice(start, i)).append("\\x").append(HEX[c >> 4]).append(HEX[c & 15]);
       start = i + 1 | 0;
     }
   }
@@ -6498,15 +6519,15 @@ function replace(text, before, after) {
   var result = "";
   var index;
   while ((index = text.indexOf(before)) !== -1) {
-    result = result.append(text.slice(0, index)).append(after);
+    result = result + text.slice(0, index) + after;
     text = text.slice(index + before.length | 0, text.length);
   }
-  return result.append(text);
+  return result + text;
 }
 function repeat(text, count) {
   var result = "";
   for (var i = 0; i < count; i = i + 1 | 0) {
-    result = result.append(text);
+    result = result + text;
   }
   return result;
 }
@@ -6518,7 +6539,7 @@ function splitPath(path) {
   return slashIndex === -1 ? new SplitPath(".", path) : new SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1 | 0, path.length));
 }
 function joinPath(directory, entry) {
-  return directory.append("/").append(entry);
+  return directory + "/" + entry;
 }
 function formatNumber(number) {
   return (Math.round(number * 10) / 10).toString();
@@ -6528,15 +6549,15 @@ function bytesToString(bytes) {
     return "1 byte";
   }
   if (bytes < 1024) {
-    return bytes.toString().append(" bytes");
+    return bytes.toString() + " bytes";
   }
   if (bytes < 1048576) {
-    return (Math.round(bytes / 1024 * 10) / 10).toString().append("kb");
+    return (Math.round(bytes / 1024 * 10) / 10).toString() + "kb";
   }
   if (bytes < 1073741824) {
-    return (Math.round(bytes / 1048576 * 10) / 10).toString().append("mb");
+    return (Math.round(bytes / 1048576 * 10) / 10).toString() + "mb";
   }
-  return (Math.round(bytes / 1073741824 * 10) / 10).toString().append("gb");
+  return (Math.round(bytes / 1073741824 * 10) / 10).toString() + "gb";
 }
 trace.indent = function() {
 };
@@ -6551,15 +6572,15 @@ io.printWithColor = function(color, text) {
 };
 frontend.printError = function(text) {
   io.printWithColor(91, "error: ");
-  io.printWithColor(1, text.append("\n"));
+  io.printWithColor(1, text + "\n");
 };
 frontend.printNote = function(text) {
   io.printWithColor(90, "note: ");
-  io.printWithColor(1, text.append("\n"));
+  io.printWithColor(1, text + "\n");
 };
 frontend.printWarning = function(text) {
   io.printWithColor(95, "warning: ");
-  io.printWithColor(1, text.append("\n"));
+  io.printWithColor(1, text + "\n");
 };
 frontend.printUsage = function() {
   io.printWithColor(92, "\nusage: ");
@@ -6577,11 +6598,11 @@ frontend.main = function(args) {
   var inputs = [];
   var flags = new frontend.Flags();
   for (var i = 0; i < args.length; i = i + 1 | 0) {
-    var arg = args.get(i);
+    var arg = args[i];
     if (arg.length === 0) {
       continue;
     }
-    if (arg.codeUnitAt(0) !== 45) {
+    if (arg.charCodeAt(0) !== 45) {
       inputs.push(arg);
       continue;
     }
@@ -6604,7 +6625,7 @@ frontend.main = function(args) {
       flags.outputFile = frontend.afterEquals(arg);
       continue;
     }
-    frontend.printError("Unknown flag ".append(quoteString(arg, 34)));
+    frontend.printError("Unknown flag " + quoteString(arg, 34));
     return 1;
   }
   if (inputs.length === 0) {
@@ -6633,7 +6654,7 @@ frontend.main = function(args) {
     target = 4;
     break;
   default:
-    frontend.printError("Unknown target language ".append(quoteString(flags.target, 34)));
+    frontend.printError("Unknown target language " + quoteString(flags.target, 34));
     return 1;
   }
   var options = new CompilerOptions();
@@ -6642,10 +6663,10 @@ frontend.main = function(args) {
   options.outputFile = flags.outputFile === "" ? "<stdout>" : flags.outputFile;
   options.jsSourceMap = flags.jsSourceMap && flags.outputFile !== "" && target === 1;
   for (var i = 0; i < inputs.length; i = i + 1 | 0) {
-    var input = inputs.get(i);
+    var input = inputs[i];
     var source = io.readFile(input);
     if (source === null) {
-      frontend.printError("Could not read from ".append(quoteString(input, 34)));
+      frontend.printError("Could not read from " + quoteString(input, 34));
       return 1;
     }
     options.inputs.push(source);
@@ -6654,9 +6675,9 @@ frontend.main = function(args) {
   var result = Compiler.compile(compiler, options);
   var log = compiler.log;
   for (var i = 0; i < log.diagnostics.length; i = i + 1 | 0) {
-    var diagnostic = log.diagnostics.get(i);
+    var diagnostic = log.diagnostics[i];
     if (!(diagnostic.range.source === null)) {
-      io.printWithColor(1, Range.locationString(diagnostic.range).append(": "));
+      io.printWithColor(1, Range.locationString(diagnostic.range) + ": ");
     }
     switch (diagnostic.kind) {
     case 1:
@@ -6668,47 +6689,47 @@ frontend.main = function(args) {
     }
     if (!(diagnostic.range.source === null)) {
       var formatted = Range.format(diagnostic.range, io.terminalWidth);
-      io.print(formatted.line.append("\n"));
-      io.printWithColor(92, formatted.range.append("\n"));
+      io.print(formatted.line + "\n");
+      io.printWithColor(92, formatted.range + "\n");
     }
     if (!(diagnostic.noteRange.source === null)) {
-      io.printWithColor(1, Range.locationString(diagnostic.noteRange).append(": "));
+      io.printWithColor(1, Range.locationString(diagnostic.noteRange) + ": ");
       frontend.printNote(diagnostic.noteText);
       var formatted = Range.format(diagnostic.noteRange, io.terminalWidth);
-      io.print(formatted.line.append("\n"));
-      io.printWithColor(92, formatted.range.append("\n"));
+      io.print(formatted.line + "\n");
+      io.printWithColor(92, formatted.range + "\n");
     }
   }
   var hasErrors = log.errorCount > 0;
   var hasWarnings = log.warningCount > 0;
   var summary = "";
   if (hasWarnings) {
-    summary = summary.append(log.warningCount.toString().append(log.warningCount === 1 ? " warning" : " warnings"));
+    summary = summary + (log.warningCount.toString() + (log.warningCount === 1 ? " warning" : " warnings"));
     if (hasErrors) {
-      summary = summary.append(" and ");
+      summary = summary + " and ";
     }
   }
   if (hasErrors) {
-    summary = summary.append(log.errorCount.toString().append(log.errorCount === 1 ? " error" : " errors"));
+    summary = summary + (log.errorCount.toString() + (log.errorCount === 1 ? " error" : " errors"));
   }
   if (hasWarnings || hasErrors) {
-    io.print(summary.append(" generated\n"));
+    io.print(summary + " generated\n");
   }
   if (flags.verbose) {
-    io.print(Compiler.statistics(compiler, result).append("\n"));
+    io.print(Compiler.statistics(compiler, result) + "\n");
   }
   if (hasErrors) {
     return 1;
   }
   if (result.outputs !== null) {
     for (var i = 0; i < result.outputs.length; i = i + 1 | 0) {
-      var output = result.outputs.get(i);
+      var output = result.outputs[i];
       if (flags.outputFile === "") {
         io.print(output.contents);
         continue;
       }
       if (!io.writeFile(output.name, output.contents)) {
-        frontend.printError("Could not write to ".append(quoteString(output.name, 34)));
+        frontend.printError("Could not write to " + quoteString(output.name, 34));
         return 1;
       }
     }
@@ -6725,37 +6746,37 @@ function tokenize(log, source) {
   while (yy_cp < text_length) {
     var yy_current_state = 1;
     var yy_bp = yy_cp;
-    while (yy_current_state !== 254) {
+    while (yy_current_state !== 260) {
       var index = 0;
       if (yy_cp < text_length) {
-        var c = text.codeUnitAt(yy_cp);
+        var c = text.charCodeAt(yy_cp);
         if (c < 127) {
           index = c;
         }
       } else {
         break;
       }
-      var yy_c = yy_ec.get(index);
-      if (yy_accept.get(yy_current_state) !== 97) {
+      var yy_c = yy_ec[index];
+      if (yy_accept[yy_current_state] !== 98) {
         yy_last_accepting_state = yy_current_state;
         yy_last_accepting_cpos = yy_cp;
       }
-      while (yy_chk.get(yy_base.get(yy_current_state) + yy_c | 0) !== yy_current_state) {
-        yy_current_state = yy_def.get(yy_current_state);
-        if (yy_current_state >= 255) {
-          yy_c = yy_meta.get(yy_c);
+      while (yy_chk[yy_base[yy_current_state] + yy_c | 0] !== yy_current_state) {
+        yy_current_state = yy_def[yy_current_state];
+        if (yy_current_state >= 261) {
+          yy_c = yy_meta[yy_c];
         }
       }
-      yy_current_state = yy_nxt.get(yy_base.get(yy_current_state) + yy_c | 0);
+      yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c | 0];
       yy_cp = yy_cp + 1 | 0;
     }
-    var yy_act = yy_accept.get(yy_current_state);
-    while (yy_act === 97) {
+    var yy_act = yy_accept[yy_current_state];
+    while (yy_act === 98) {
       yy_cp = yy_last_accepting_cpos;
       yy_current_state = yy_last_accepting_state;
-      yy_act = yy_accept.get(yy_current_state);
+      yy_act = yy_accept[yy_current_state];
     }
-    if (yy_act === 96) {
+    if (yy_act === 97) {
       continue;
     } else if (yy_act === 33) {
       syntaxErrorExtraData(log, new Range(source, yy_bp, yy_cp), text.slice(yy_bp, yy_cp));
@@ -6771,11 +6792,11 @@ function tokenize(log, source) {
 function prepareTokens(tokens) {
   var stack = [];
   for (var i = 0; i < tokens.length; i = i + 1 | 0) {
-    var token = tokens.get(i);
+    var token = tokens[i];
     var tokenKind = token.kind;
-    var tokenStartsWithGreaterThan = token.text.length > 0 && token.text.codeUnitAt(0) === 62;
+    var tokenStartsWithGreaterThan = token.text.length > 0 && token.text.charCodeAt(0) === 62;
     while (stack.length > 0) {
-      var top = tokens.get(stack.get(stack.length - 1 | 0));
+      var top = tokens[stack[stack.length - 1 | 0]];
       var topKind = top.kind;
       if (topKind === 58 && tokenKind !== 58 && tokenKind !== 42 && tokenKind !== 53 && tokenKind !== 21 && tokenKind !== 27 && tokenKind !== 38 && tokenKind !== 57 && tokenKind !== 80 && !tokenStartsWithGreaterThan) {
         stack.pop();
@@ -6789,7 +6810,7 @@ function prepareTokens(tokens) {
     }
     if (tokenKind === 80 || tokenKind === 78 || tokenKind === 79 || tokenStartsWithGreaterThan) {
       while (stack.length > 0) {
-        var top = tokens.get(stack.get(stack.length - 1 | 0));
+        var top = tokens[stack[stack.length - 1 | 0]];
         var topKind = top.kind;
         if (tokenStartsWithGreaterThan && topKind !== 58) {
           break;
@@ -6804,12 +6825,12 @@ function prepareTokens(tokens) {
             var start = range.start;
             var text = token.text.slice(1, token.text.length);
             var kind = tokenKind === 83 ? 40 : tokenKind === 41 ? 2 : tokenKind === 12 ? 41 : 33;
-            tokens.insert(i + 1 | 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind, text));
+            List.insert(tokens, i + 1 | 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind, text));
             token.range = new Range(range.source, start, start + 1 | 0);
             token.text = ">";
           }
-          top.kind = 98;
-          token.kind = 99;
+          top.kind = 99;
+          token.kind = 100;
         }
         break;
       }
@@ -6817,32 +6838,32 @@ function prepareTokens(tokens) {
   }
 }
 function simpleQuote(name) {
-  return "\"".append(name).append("\"");
+  return "\"" + name + "\"";
 }
 function firstLineOf(text) {
   var index = text.indexOf("\n");
   return index < 0 ? text : text.slice(0, index);
 }
 function syntaxErrorInvalidEscapeSequence(log, range, text) {
-  Log.error(log, range, "Invalid escape sequence ".append(firstLineOf("\"".append(text).append("\""))));
+  Log.error(log, range, "Invalid escape sequence " + firstLineOf("\"" + text + "\""));
 }
 function syntaxErrorInvalidCharacter(log, range, text) {
-  Log.error(log, range, "Invalid character literal ".append(firstLineOf(text)));
+  Log.error(log, range, "Invalid character literal " + firstLineOf(text));
 }
 function syntaxErrorInvalidInteger(log, range, text) {
-  Log.error(log, range, "Invalid integer literal ".append(text));
+  Log.error(log, range, "Invalid integer literal " + text);
 }
 function syntaxErrorExtraData(log, range, text) {
-  Log.error(log, range, "Syntax error ".append("\"".append(text).append("\"")));
+  Log.error(log, range, "Syntax error " + ("\"" + text + "\""));
 }
 function syntaxErrorUnexpectedToken(log, token) {
-  Log.error(log, token.range, "Unexpected ".append(TokenKind.toString(token.kind)));
+  Log.error(log, token.range, "Unexpected " + TokenKind.toString(token.kind));
 }
 function syntaxErrorExpectedToken(log, found, expected) {
-  Log.error(log, found.range, "Expected ".append(TokenKind.toString(expected)).append(" but found ").append(TokenKind.toString(found.kind)));
+  Log.error(log, found.range, "Expected " + TokenKind.toString(expected) + " but found " + TokenKind.toString(found.kind));
 }
 function syntaxErrorUnterminatedToken(log, range, what) {
-  Log.error(log, range, "Unterminated ".append(what));
+  Log.error(log, range, "Unterminated " + what);
 }
 function syntaxErrorBadForEach(log, range) {
   Log.error(log, range, "More than one variable inside a for-each loop");
@@ -6859,7 +6880,7 @@ function scanForToken(context, kind, tokenScan) {
     if (currentKind === 80 || currentKind === 79 || currentKind === 78 || currentKind === 81 && tokenScan === 1) {
       return ParserContext.eat(context, kind);
     }
-    if (tokenScan === 1 && (currentKind === 1 || currentKind === 16 || currentKind === 19 || currentKind === 22 || currentKind === 26 || currentKind === 31 || currentKind === 34 || currentKind === 36 || currentKind === 39 || currentKind === 43 || currentKind === 44 || currentKind === 47 || currentKind === 48 || currentKind === 65 || currentKind === 70 || currentKind === 72 || currentKind === 73 || currentKind === 74 || currentKind === 77 || currentKind === 84 || currentKind === 86 || currentKind === 88 || currentKind === 92 || currentKind === 0 || currentKind === 94 || currentKind === 95)) {
+    if (tokenScan === 1 && (currentKind === 1 || currentKind === 16 || currentKind === 19 || currentKind === 22 || currentKind === 26 || currentKind === 31 || currentKind === 34 || currentKind === 36 || currentKind === 39 || currentKind === 43 || currentKind === 44 || currentKind === 47 || currentKind === 48 || currentKind === 65 || currentKind === 70 || currentKind === 72 || currentKind === 73 || currentKind === 74 || currentKind === 77 || currentKind === 84 || currentKind === 86 || currentKind === 88 || currentKind === 93 || currentKind === 0 || currentKind === 95 || currentKind === 96)) {
       return true;
     }
     ParserContext.next(context);
@@ -7005,10 +7026,10 @@ function parseParameter(context) {
 function parseParameters(context) {
   var token = ParserContext.current(context);
   var parameters = [];
-  if (!ParserContext.eat(context, 98)) {
+  if (!ParserContext.eat(context, 99)) {
     return null;
   }
-  while (parameters.length === 0 || !(ParserContext.current(context).kind === 99)) {
+  while (parameters.length === 0 || !(ParserContext.current(context).kind === 100)) {
     if (parameters.length > 0 && !ParserContext.expect(context, 21)) {
       break;
     }
@@ -7018,7 +7039,7 @@ function parseParameters(context) {
     }
     parameters.push(parameter);
   }
-  scanForToken(context, 99, 1);
+  scanForToken(context, 100, 1);
   return Node.withRange(Node.withChildren(new Node(3), parameters), ParserContext.spanSince(context, token.range));
 }
 function parseArgumentList(context, left, right, comma) {
@@ -7216,7 +7237,7 @@ function parseDoWhile(context) {
   if (block === null) {
     return null;
   }
-  if (!ParserContext.expect(context, 95)) {
+  if (!ParserContext.expect(context, 96)) {
     return null;
   }
   var value = parseGroup(context, 0);
@@ -7317,7 +7338,7 @@ function parseFor(context) {
           if (variables.length > 1) {
             syntaxErrorBadForEach(context.log, setup.range);
           }
-          var value = Node.withChildren(new Node(16), [Node.remove(variables.get(0).children.get(0)), Node.remove(setup.children.get(0)), null]);
+          var value = Node.withChildren(new Node(16), [Node.remove(variables[0].children[0]), Node.remove(setup.children[0]), null]);
           return Node.withRange(Node.withChildren(new Node(22), [value, values, body]), ParserContext.spanSince(context, token.range));
         }
       } else if (!(ParserContext.current(context).kind === 81)) {
@@ -7376,7 +7397,7 @@ function parsePossibleTypedDeclaration(context, hint) {
   }
   var cluster = parseVariableCluster(context, type, name);
   scanForToken(context, 81, 1);
-  var last = cluster.children.get(cluster.children.length - 1 | 0);
+  var last = cluster.children[cluster.children.length - 1 | 0];
   Node.withRange(last, ParserContext.spanSince(context, last.range));
   return cluster;
 }
@@ -7413,7 +7434,7 @@ function parseAlias(context) {
 function looksLikeLambdaArguments(node) {
   if (node.kind === 52) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      if (node.children.get(i).kind !== 34) {
+      if (node.children[i].kind !== 34) {
         return false;
       }
     }
@@ -7423,19 +7444,19 @@ function looksLikeLambdaArguments(node) {
 }
 function createLambdaFromNames(names, block) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
-    var name = names.get(i);
-    names.set(i, Node.withRange(Node.withChildren(new Node(16), [name, null, null]), name.range));
+    var name = names[i];
+    List.set(names, i, Node.withRange(Node.withChildren(new Node(16), [name, null, null]), name.range));
   }
   return Node.createLambda(names, block);
 }
 function looksLikeType(node) {
   switch (node.kind) {
   case 46:
-    var target = node.children.get(0);
+    var target = node.children[0];
     return target !== null && looksLikeType(target);
   case 34:
   case 53:
-  case 59:
+  case 60:
     return true;
   default:
     return false;
@@ -7462,7 +7483,7 @@ function parseStatement(context, hint) {
   case 39:
     return parseFor(context);
   case 42:
-  case 93:
+  case 94:
     return parsePossibleTypedDeclaration(context, hint);
   case 43:
     return parseIf(context);
@@ -7494,13 +7515,13 @@ function parseStatement(context, hint) {
     return parseObject(context, 11);
   case 88:
     return parseSwitch(context);
-  case 92:
+  case 93:
     return parseUsing(context);
   case 0:
     return parseAlias(context);
-  case 94:
-    return parseModifier(context, hint, 128);
   case 95:
+    return parseModifier(context, hint, 128);
+  case 96:
     return parseWhile(context);
   default:
     return parseExpression(context);
@@ -7529,7 +7550,7 @@ function intLiteral(base) {
     var value = parseIntLiteral(token.text, base);
     if (value !== value) {
       syntaxErrorInvalidInteger(context.log, token.range, token.text);
-    } else if (base === 10 && value !== 0 && token.text.codeUnitAt(0) === 48) {
+    } else if (base === 10 && value !== 0 && token.text.charCodeAt(0) === 48) {
       syntaxWarningOctal(context.log, token.range);
     }
     return Node.withRange(Node.withContent(new Node(41), new IntContent(value | 0)), token.range);
@@ -7574,8 +7595,8 @@ function createParser() {
   Pratt.literal(pratt, 28, function(context, token) {
     return Node.withRange(Node.withContent(new Node(43), new DoubleContent(parseDoubleLiteral(token.text))), token.range);
   });
-  Pratt.literal(pratt, 93, function(context, token) {
-    return Node.withRange(new Node(58), token.range);
+  Pratt.literal(pratt, 94, function(context, token) {
+    return Node.withRange(new Node(59), token.range);
   });
   Pratt.literal(pratt, 85, function(context, token) {
     var result = parseStringLiteral(context.log, token.range, token.text);
@@ -7587,121 +7608,121 @@ function createParser() {
       syntaxErrorInvalidCharacter(context.log, token.range, token.text);
       result = null;
     }
-    return Node.withRange(Node.withContent(new Node(41), new IntContent(result !== null ? result.value.codeUnitAt(0) : 0)), token.range);
+    return Node.withRange(Node.withContent(new Node(41), new IntContent(result !== null ? result.value.charCodeAt(0) : 0)), token.range);
   });
   Pratt.postfix(pratt, 46, 14, function(context, value, token) {
-    return Node.withRange(Node.withChildren(new Node(66), [value]), Range.span(value.range, token.range));
-  });
-  Pratt.postfix(pratt, 23, 14, function(context, value, token) {
     return Node.withRange(Node.withChildren(new Node(67), [value]), Range.span(value.range, token.range));
   });
-  Pratt.prefix(pratt, 46, 13, function(context, token, value) {
-    return Node.withRange(Node.withChildren(new Node(64), [value]), Range.span(token.range, value.range));
+  Pratt.postfix(pratt, 23, 14, function(context, value, token) {
+    return Node.withRange(Node.withChildren(new Node(68), [value]), Range.span(value.range, token.range));
   });
-  Pratt.prefix(pratt, 23, 13, function(context, token, value) {
+  Pratt.prefix(pratt, 46, 13, function(context, token, value) {
     return Node.withRange(Node.withChildren(new Node(65), [value]), Range.span(token.range, value.range));
   });
-  Pratt.prefix(pratt, 71, 13, function(context, token, value) {
-    return Node.withRange(Node.withChildren(new Node(61), [value]), Range.span(token.range, value.range));
+  Pratt.prefix(pratt, 23, 13, function(context, token, value) {
+    return Node.withRange(Node.withChildren(new Node(66), [value]), Range.span(token.range, value.range));
   });
-  Pratt.prefix(pratt, 63, 13, function(context, token, value) {
+  Pratt.prefix(pratt, 71, 13, function(context, token, value) {
     return Node.withRange(Node.withChildren(new Node(62), [value]), Range.span(token.range, value.range));
   });
-  Pratt.prefix(pratt, 67, 13, function(context, token, value) {
-    return Node.withRange(Node.withChildren(new Node(60), [value]), Range.span(token.range, value.range));
-  });
-  Pratt.prefix(pratt, 90, 13, function(context, token, value) {
+  Pratt.prefix(pratt, 63, 13, function(context, token, value) {
     return Node.withRange(Node.withChildren(new Node(63), [value]), Range.span(token.range, value.range));
   });
-  Pratt.infix(pratt, 13, 7, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(69, left, right), Range.span(left.range, right.range));
+  Pratt.prefix(pratt, 67, 13, function(context, token, value) {
+    return Node.withRange(Node.withChildren(new Node(61), [value]), Range.span(token.range, value.range));
   });
-  Pratt.infix(pratt, 14, 5, function(context, left, token, right) {
+  Pratt.prefix(pratt, 90, 13, function(context, token, value) {
+    return Node.withRange(Node.withChildren(new Node(64), [value]), Range.span(token.range, value.range));
+  });
+  Pratt.infix(pratt, 13, 7, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(70, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 15, 6, function(context, left, token, right) {
+  Pratt.infix(pratt, 14, 5, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(71, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 25, 12, function(context, left, token, right) {
+  Pratt.infix(pratt, 15, 6, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(72, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 32, 8, function(context, left, token, right) {
+  Pratt.infix(pratt, 25, 12, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(73, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 40, 9, function(context, left, token, right) {
+  Pratt.infix(pratt, 32, 8, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(74, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 41, 9, function(context, left, token, right) {
+  Pratt.infix(pratt, 40, 9, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(75, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 45, 9, function(context, left, token, right) {
+  Pratt.infix(pratt, 41, 9, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(76, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 58, 9, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(78, left, right), Range.span(left.range, right.range));
+  Pratt.infix(pratt, 45, 9, function(context, left, token, right) {
+    return Node.withRange(Node.createBinary(77, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 59, 9, function(context, left, token, right) {
+  Pratt.infix(pratt, 58, 9, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(79, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 61, 4, function(context, left, token, right) {
+  Pratt.infix(pratt, 59, 9, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(80, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 62, 3, function(context, left, token, right) {
+  Pratt.infix(pratt, 61, 4, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(81, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 63, 11, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(87, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 64, 12, function(context, left, token, right) {
+  Pratt.infix(pratt, 62, 3, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(82, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infix(pratt, 68, 8, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(83, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 71, 11, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(68, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 76, 12, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(84, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 82, 10, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(85, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 83, 10, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(86, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 2, 2, function(context, left, token, right) {
+  Pratt.infix(pratt, 63, 11, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(88, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infixRight(pratt, 9, 2, function(context, left, token, right) {
+  Pratt.infix(pratt, 64, 12, function(context, left, token, right) {
+    return Node.withRange(Node.createBinary(83, left, right), Range.span(left.range, right.range));
+  });
+  Pratt.infix(pratt, 68, 8, function(context, left, token, right) {
+    return Node.withRange(Node.createBinary(84, left, right), Range.span(left.range, right.range));
+  });
+  Pratt.infix(pratt, 71, 11, function(context, left, token, right) {
+    return Node.withRange(Node.createBinary(69, left, right), Range.span(left.range, right.range));
+  });
+  Pratt.infix(pratt, 76, 12, function(context, left, token, right) {
+    return Node.withRange(Node.createBinary(85, left, right), Range.span(left.range, right.range));
+  });
+  Pratt.infix(pratt, 82, 10, function(context, left, token, right) {
+    return Node.withRange(Node.createBinary(86, left, right), Range.span(left.range, right.range));
+  });
+  Pratt.infix(pratt, 83, 10, function(context, left, token, right) {
+    return Node.withRange(Node.createBinary(87, left, right), Range.span(left.range, right.range));
+  });
+  Pratt.infixRight(pratt, 2, 2, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(89, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infixRight(pratt, 3, 2, function(context, left, token, right) {
+  Pratt.infixRight(pratt, 9, 2, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(90, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infixRight(pratt, 4, 2, function(context, left, token, right) {
+  Pratt.infixRight(pratt, 3, 2, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(91, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infixRight(pratt, 5, 2, function(context, left, token, right) {
+  Pratt.infixRight(pratt, 4, 2, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(92, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infixRight(pratt, 6, 2, function(context, left, token, right) {
+  Pratt.infixRight(pratt, 5, 2, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(93, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infixRight(pratt, 8, 2, function(context, left, token, right) {
+  Pratt.infixRight(pratt, 6, 2, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(94, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infixRight(pratt, 10, 2, function(context, left, token, right) {
+  Pratt.infixRight(pratt, 8, 2, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(95, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infixRight(pratt, 11, 2, function(context, left, token, right) {
+  Pratt.infixRight(pratt, 10, 2, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(96, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infixRight(pratt, 12, 2, function(context, left, token, right) {
+  Pratt.infixRight(pratt, 11, 2, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(97, left, right), Range.span(left.range, right.range));
   });
-  Pratt.infixRight(pratt, 7, 2, function(context, left, token, right) {
+  Pratt.infixRight(pratt, 12, 2, function(context, left, token, right) {
     return Node.withRange(Node.createBinary(98, left, right), Range.span(left.range, right.range));
+  });
+  Pratt.infixRight(pratt, 7, 2, function(context, left, token, right) {
+    return Node.withRange(Node.createBinary(99, left, right), Range.span(left.range, right.range));
   });
   Pratt.parselet(pratt, 55, 0).prefix = function(context) {
     var token = ParserContext.current(context);
@@ -7766,13 +7787,13 @@ function createParser() {
     ParserContext.next(context);
     var index = Pratt.parseIgnoringParselet(pratt, context, 0, null);
     scanForToken(context, 79, 1);
-    return Node.withRange(Node.createBinary(77, left, index), ParserContext.spanSince(context, left.range));
+    return Node.withRange(Node.createBinary(78, left, index), ParserContext.spanSince(context, left.range));
   };
-  Pratt.parselet(pratt, 98, 15).infix = function(context, left) {
+  Pratt.parselet(pratt, 99, 15).infix = function(context, left) {
     var token = ParserContext.next(context);
-    var substitutions = parseTypeList(context, 99);
-    if (!ParserContext.expect(context, 99)) {
-      scanForToken(context, 99, 1);
+    var substitutions = parseTypeList(context, 100);
+    if (!ParserContext.expect(context, 100)) {
+      scanForToken(context, 100, 1);
       return Node.withRange(new Node(50), ParserContext.spanSince(context, token.range));
     }
     return Node.withRange(Node.createParameterize(left, substitutions), ParserContext.spanSince(context, left.range));
@@ -7781,6 +7802,11 @@ function createParser() {
     var token = ParserContext.next(context);
     var type = parseGroup(context, 0);
     return Node.withRange(type === null ? new Node(50) : Node.withChildren(new Node(57), [type]), ParserContext.spanSince(context, token.range));
+  };
+  Pratt.parselet(pratt, 92, 13).prefix = function(context) {
+    var token = ParserContext.next(context);
+    var value = parseGroup(context, 0);
+    return Node.withRange(value === null ? new Node(50) : Node.withChildren(new Node(58), [value]), ParserContext.spanSince(context, token.range));
   };
   Pratt.parselet(pratt, 42, 0).prefix = function(context) {
     var token = ParserContext.next(context);
@@ -7809,7 +7835,7 @@ function createParser() {
       return Node.withRange(new Node(50), ParserContext.spanSince(context, token.range));
     }
     var initial = Pratt.parseIgnoringParselet(pratt, context, 0, inParselet);
-    var variable = Node.withRange(Node.withChildren(new Node(16), [name, new Node(58), initial]), ParserContext.spanSince(context, token.range));
+    var variable = Node.withRange(Node.withChildren(new Node(16), [name, new Node(59), initial]), ParserContext.spanSince(context, token.range));
     if (initial.kind === 50 || !ParserContext.expect(context, 45)) {
       return Node.withRange(new Node(50), ParserContext.spanSince(context, token.range));
     }
@@ -7822,58 +7848,58 @@ function createParser() {
   return pratt;
 }
 function typeToText(type) {
-  return "type \"".append(Type.toString(type)).append("\"");
+  return "type \"" + Type.toString(type) + "\"";
 }
 function semanticWarningUnusedExpression(log, range) {
   Log.warning(log, range, "Unused expression");
 }
 function semanticWarningDuplicateModifier(log, range, modifier) {
-  Log.warning(log, range, "Duplicate modifier ".append("\"".append(modifier).append("\"")));
+  Log.warning(log, range, "Duplicate modifier " + ("\"" + modifier + "\""));
 }
 function semanticWarningShadowedSymbol(log, range, name, shadowed) {
-  Log.warning(log, range, "\"".append(name).append("\"").append(" shadows another declaration with the same name"));
+  Log.warning(log, range, "\"" + name + "\"" + " shadows another declaration with the same name");
   if (!(shadowed.source === null)) {
     Log.note(log, shadowed, "The shadowed declaration is here");
   }
 }
 function semanticErrorRedundantModifier(log, range, modifier, where) {
-  Log.error(log, range, "Redundant modifier ".append("\"".append(modifier).append("\"")).append(" ").append(where));
+  Log.error(log, range, "Redundant modifier " + ("\"" + modifier + "\"") + " " + where);
 }
 function semanticErrorUnexpectedModifier(log, range, modifier, where) {
-  Log.error(log, range, "Cannot use the ".append("\"".append(modifier).append("\"")).append(" modifier ").append(where));
+  Log.error(log, range, "Cannot use the " + ("\"" + modifier + "\"") + " modifier " + where);
 }
 function semanticErrorExpectedModifier(log, range, modifier, where) {
-  Log.error(log, range, "Expected the ".append("\"".append(modifier).append("\"")).append(" modifier ").append(where));
+  Log.error(log, range, "Expected the " + ("\"" + modifier + "\"") + " modifier " + where);
 }
 function semanticErrorDuplicateSymbol(log, range, name, previous) {
-  Log.error(log, range, "\"".append(name).append("\"").append(" is already declared"));
+  Log.error(log, range, "\"" + name + "\"" + " is already declared");
   if (!(previous.source === null)) {
     Log.note(log, previous, "The previous declaration is here");
   }
 }
 function semanticErrorUnexpectedNode(log, range, kind) {
-  Log.error(log, range, "Unexpected ".append(NodeKind.toString(kind)));
+  Log.error(log, range, "Unexpected " + NodeKind.toString(kind));
 }
 function semanticErrorUnexpectedExpression(log, range, type) {
-  Log.error(log, range, "Unexpected expression of ".append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "Unexpected expression of " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorUnexpectedType(log, range, type) {
-  Log.error(log, range, "Unexpected ".append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "Unexpected " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorUndeclaredSymbol(log, range, name) {
-  Log.error(log, range, "\"".append(name).append("\"").append(" is not declared"));
+  Log.error(log, range, "\"" + name + "\"" + " is not declared");
 }
 function semanticErrorUndeclaredGlobalSymbol(log, range, name) {
-  Log.error(log, range, "\"".append(name).append("\"").append(" is not declared at the global scope"));
+  Log.error(log, range, "\"" + name + "\"" + " is not declared at the global scope");
 }
 function semanticErrorUnknownMemberSymbol(log, range, name, type) {
-  Log.error(log, range, "\"".append(name).append("\"").append(" is not declared on ").append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "\"" + name + "\"" + " is not declared on " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorExtensionMissingTarget(log, range, name) {
-  Log.error(log, range, "No type named ".append("\"".append(name).append("\"")).append(" to extend"));
+  Log.error(log, range, "No type named " + ("\"" + name + "\"") + " to extend");
 }
 function semanticErrorDifferentModifiers(log, range, name, previous) {
-  Log.error(log, range, "Cannot merge multiple declarations for ".append("\"".append(name).append("\"")).append(" with different modifiers"));
+  Log.error(log, range, "Cannot merge multiple declarations for " + ("\"" + name + "\"") + " with different modifiers");
   if (!(previous.source === null)) {
     Log.note(log, previous, "The conflicting declaration is here");
   }
@@ -7888,34 +7914,34 @@ function semanticErrorUnexpectedStatement(log, range) {
   Log.error(log, range, "Cannot use this statement here");
 }
 function semanticErrorCyclicDeclaration(log, range, name) {
-  Log.error(log, range, "Cyclic declaration of ".append("\"".append(name).append("\"")));
+  Log.error(log, range, "Cyclic declaration of " + ("\"" + name + "\""));
 }
 function semanticErrorUnexpectedThis(log, range, name) {
-  Log.error(log, range, "Cannot use ".append("\"".append(name).append("\"")).append(" outside a class or struct"));
+  Log.error(log, range, "Cannot use " + ("\"" + name + "\"") + " outside a class or struct");
 }
 function semanticErrorStaticThis(log, range, name) {
-  Log.error(log, range, "Cannot access ".append("\"".append(name).append("\"")).append(" from a static context"));
+  Log.error(log, range, "Cannot access " + ("\"" + name + "\"") + " from a static context");
 }
 function semanticErrorIncompatibleTypes(log, range, from, to, isCastAllowed) {
-  Log.error(log, range, "Cannot convert from ".append("type \"".append(Type.toString(from)).append("\"")).append(" to ").append("type \"".append(Type.toString(to)).append("\"")).append(isCastAllowed ? " without a cast" : ""));
+  Log.error(log, range, "Cannot convert from " + ("type \"" + Type.toString(from) + "\"") + " to " + ("type \"" + Type.toString(to) + "\"") + (isCastAllowed ? " without a cast" : ""));
 }
 function semanticErrorNoCommonType(log, range, left, right) {
-  Log.error(log, range, "No common type for ".append("type \"".append(Type.toString(left)).append("\"")).append(" and ").append("type \"".append(Type.toString(right)).append("\"")));
+  Log.error(log, range, "No common type for " + ("type \"" + Type.toString(left) + "\"") + " and " + ("type \"" + Type.toString(right) + "\""));
 }
 function semanticErrorBadType(log, range, type) {
-  Log.error(log, range, "Cannot use ".append("type \"".append(Type.toString(type)).append("\"")).append(" here"));
+  Log.error(log, range, "Cannot use " + ("type \"" + Type.toString(type) + "\"") + " here");
 }
 function semanticErrorMemberUnexpectedStatic(log, range, name) {
-  Log.error(log, range, "Cannot access static member ".append("\"".append(name).append("\"")).append(" from an instance context"));
+  Log.error(log, range, "Cannot access static member " + ("\"" + name + "\"") + " from an instance context");
 }
 function semanticErrorMemberUnexpectedInstance(log, range, name) {
-  Log.error(log, range, "Cannot access instance member ".append("\"".append(name).append("\"")).append(" from a static context"));
+  Log.error(log, range, "Cannot access instance member " + ("\"" + name + "\"") + " from a static context");
 }
 function semanticErrorMissingTypeContext(log, range) {
   Log.error(log, range, "Expression has no type context here");
 }
 function semanticErrorBadTypeParameterBound(log, range, type) {
-  Log.error(log, range, "Cannot use ".append("type \"".append(Type.toString(type)).append("\"")).append(" as a type parameter bound"));
+  Log.error(log, range, "Cannot use " + ("type \"" + Type.toString(type) + "\"") + " as a type parameter bound");
 }
 function semanticErrorUninitializedExtensionVariable(log, range) {
   Log.error(log, range, "Instance variables in extension blocks must be initialized");
@@ -7924,22 +7950,22 @@ function semanticErrorVarMissingValue(log, range) {
   Log.error(log, range, "Implicitly typed variables must be initialized");
 }
 function semanticErrorVarBadType(log, range, type) {
-  Log.error(log, range, "Implicitly typed variables cannot be of ".append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "Implicitly typed variables cannot be of " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorInvalidCall(log, range, type) {
-  Log.error(log, range, "Cannot call ".append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "Cannot call " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorParameterCount(log, range, expected, found) {
-  Log.error(log, range, "Expected ".append(expected.toString()).append(expected === 1 ? " type parameter" : " type parameters").append(" but found ").append(found.toString()).append(found === 1 ? " type parameter" : " type parameters"));
+  Log.error(log, range, "Expected " + expected.toString() + (expected === 1 ? " type parameter" : " type parameters") + " but found " + found.toString() + (found === 1 ? " type parameter" : " type parameters"));
 }
 function semanticErrorArgumentCount(log, range, expected, found) {
-  Log.error(log, range, "Expected ".append(expected.toString()).append(expected === 1 ? " argument" : " arguments").append(" but found ").append(found.toString()).append(found === 1 ? " argument" : " arguments"));
+  Log.error(log, range, "Expected " + expected.toString() + (expected === 1 ? " argument" : " arguments") + " but found " + found.toString() + (found === 1 ? " argument" : " arguments"));
 }
 function semanticErrorExpectedReturnValue(log, range, type) {
-  Log.error(log, range, "Return statement must return ".append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "Return statement must return " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorBadLambdaTypeContext(log, range, type) {
-  Log.error(log, range, "Cannot use a lambda expression with ".append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "Cannot use a lambda expression with " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorNonConstantCaseValue(log, range) {
   Log.error(log, range, "Non-constant case value");
@@ -7954,68 +7980,68 @@ function semanticErrorDuplicateCase(log, range, previous) {
   }
 }
 function semanticErrorUnconstructableType(log, range, type) {
-  Log.error(log, range, "Cannot construct ".append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "Cannot construct " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorAbstractConstructorInitializer(log, range) {
   Log.error(log, range, "An abstract constructor must not have initializer list");
 }
 function semanticErrorUnexpectedBaseType(log, range, what) {
-  Log.error(log, range, what.append(" cannot inherit from another type"));
+  Log.error(log, range, what + " cannot inherit from another type");
 }
 function semanticErrorClassBaseNotFirst(log, range, type) {
-  Log.error(log, range, "Base ".append("type \"".append(Type.toString(type)).append("\"")).append(" must come first in a class declaration"));
+  Log.error(log, range, "Base " + ("type \"" + Type.toString(type) + "\"") + " must come first in a class declaration");
 }
 function semanticErrorBaseTypeNotInterface(log, range, type) {
-  Log.error(log, range, "Base ".append("type \"".append(Type.toString(type)).append("\"")).append(" must be an interface"));
+  Log.error(log, range, "Base " + ("type \"" + Type.toString(type) + "\"") + " must be an interface");
 }
 function semanticErrorDuplicateBaseType(log, range, type) {
-  Log.error(log, range, "Duplicate base ".append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "Duplicate base " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorAmbiguousSymbol(log, range, name, names) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
-    names.set(i, "\"".append(names.get(i)).append("\""));
+    List.set(names, i, "\"" + names[i] + "\"");
   }
-  Log.error(log, range, "Reference to ".append("\"".append(name).append("\"")).append(" is ambiguous, could be ").append(" or ".join(names)));
+  Log.error(log, range, "Reference to " + ("\"" + name + "\"") + " is ambiguous, could be " + names.join(" or "));
 }
 function semanticErrorUnmergedSymbol(log, range, name, types) {
   var names = [];
   for (var i = 0; i < types.length; i = i + 1 | 0) {
-    names.push("type \"".append(Type.toString(types.get(i))).append("\""));
+    names.push("type \"" + Type.toString(types[i]) + "\"");
   }
-  Log.error(log, range, "Member ".append("\"".append(name).append("\"")).append(" has an ambiguous inherited type, could be ").append(" or ".join(names)));
+  Log.error(log, range, "Member " + ("\"" + name + "\"") + " has an ambiguous inherited type, could be " + names.join(" or "));
 }
 function semanticErrorBadOverride(log, range, name, base, overridden) {
-  Log.error(log, range, "\"".append(name).append("\"").append(" overrides another declaration with the same name in base ").append("type \"".append(Type.toString(base)).append("\"")));
+  Log.error(log, range, "\"" + name + "\"" + " overrides another declaration with the same name in base " + ("type \"" + Type.toString(base) + "\""));
   if (!(overridden.source === null)) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorOverrideDifferentTypes(log, range, name, base, derived, overridden) {
-  Log.error(log, range, "\"".append(name).append("\"").append(" must have the same signature as the method it overrides (").append("expected ").append("type \"".append(Type.toString(base)).append("\"")).append(" but found ").append("type \"".append(Type.toString(derived)).append("\"")).append(")"));
+  Log.error(log, range, "\"" + name + "\"" + " must have the same signature as the method it overrides (" + "expected " + ("type \"" + Type.toString(base) + "\"") + " but found " + ("type \"" + Type.toString(derived) + "\"") + ")");
   if (!(overridden.source === null)) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorModifierMissingOverride(log, range, name, overridden) {
-  Log.error(log, range, "\"".append(name).append("\"").append(" overrides another symbol with the same name but is missing the \"override\" modifier"));
+  Log.error(log, range, "\"" + name + "\"" + " overrides another symbol with the same name but is missing the \"override\" modifier");
   if (!(overridden.source === null)) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorCannotOverrideNonVirtual(log, range, name, overridden) {
-  Log.error(log, range, "\"".append(name).append("\"").append(" cannot override a non-virtual method"));
+  Log.error(log, range, "\"" + name + "\"" + " cannot override a non-virtual method");
   if (!(overridden.source === null)) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorBadIntegerConstant(log, range, type) {
-  Log.error(log, range, "Expected integer constant but found expression of ".append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "Expected integer constant but found expression of " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorNoUnaryOperator(log, range, kind, type) {
-  Log.error(log, range, "No unary operator ".append(operatorInfo.get(kind).text).append(" for ").append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "No unary operator " + operatorInfo.get(kind).text + " for " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorNoBinaryOperator(log, range, kind, left, right) {
-  Log.error(log, range, "No binary operator ".append(operatorInfo.get(kind).text).append(" for ").append("type \"".append(Type.toString(left)).append("\"")).append(" and ").append("type \"".append(Type.toString(right)).append("\"")));
+  Log.error(log, range, "No binary operator " + operatorInfo.get(kind).text + " for " + ("type \"" + Type.toString(left) + "\"") + " and " + ("type \"" + Type.toString(right) + "\""));
 }
 function semanticErrorBadStorage(log, range) {
   Log.error(log, range, "Cannot store to this location");
@@ -8024,10 +8050,10 @@ function semanticErrorStorageToFinal(log, range) {
   Log.error(log, range, "Cannot store to a symbol marked as \"final\"");
 }
 function semanticErrorUnparameterizedType(log, range, type) {
-  Log.error(log, range, "Cannot use unparameterized ".append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "Cannot use unparameterized " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorCannotParameterize(log, range, type) {
-  Log.error(log, range, "Cannot parameterize ".append("type \"".append(Type.toString(type)).append("\"")).append(Type.hasParameters(type) ? " because it is already parameterized" : " because it has no type parameters"));
+  Log.error(log, range, "Cannot parameterize " + ("type \"" + Type.toString(type) + "\"") + (Type.hasParameters(type) ? " because it is already parameterized" : " because it has no type parameters"));
 }
 function semanticErrorBadSuperInitializer(log, range) {
   Log.error(log, range, "No base constructor to call");
@@ -8036,19 +8062,19 @@ function semanticErrorMissingSuperInitializer(log, range) {
   Log.error(log, range, "Missing call to \"super\" in initializer list");
 }
 function semanticErrorAlreadyInitialized(log, range, name, previous) {
-  Log.error(log, range, "\"".append(name).append("\"").append(" is already initialized"));
+  Log.error(log, range, "\"" + name + "\"" + " is already initialized");
   if (!(previous.source === null)) {
     Log.note(log, previous, "The previous initialization is here");
   }
 }
 function semanticErrorBadEnumToString(log, range, name, first, second, value) {
-  Log.error(log, range, "Cannot automatically generate \"toString\" for ".append("\"".append(name).append("\"")).append(" because ").append("\"".append(first).append("\"")).append(" and ").append("\"".append(second).append("\"")).append(" both have the same value ").append(value.toString()));
+  Log.error(log, range, "Cannot automatically generate \"toString\" for " + ("\"" + name + "\"") + " because " + ("\"" + first + "\"") + " and " + ("\"" + second + "\"") + " both have the same value " + value.toString());
 }
 function semanticErrorMissingReturn(log, range, name, type) {
-  Log.error(log, range, "All control paths for ".append("\"".append(name).append("\"")).append(" must return a value of ").append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "All control paths for " + ("\"" + name + "\"") + " must return a value of " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorLambdaMissingReturn(log, range, type) {
-  Log.error(log, range, "All control paths for lambda expression must return a value of ".append("type \"".append(Type.toString(type)).append("\"")));
+  Log.error(log, range, "All control paths for lambda expression must return a value of " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorBaseClassInExtension(log, range) {
   Log.error(log, range, "The base class must be set from the class declaration, not from an extension block");
@@ -8085,7 +8111,7 @@ service.nodeFromPosition = function(node, source, index) {
   while (Node.hasChildren(node)) {
     var i;
     for (i = node.children.length - 1 | 0; i >= 0; i = i - 1 | 0) {
-      var child = node.children.get(i);
+      var child = node.children[i];
       if (child !== null && child.range.source === source && Range.touches(child.range, index)) {
         node = child;
         break;
@@ -8107,54 +8133,54 @@ service.typeFromPosition = function(node, source, index) {
     switch (symbol.kind) {
     case 4:
       var bound = Type.bound(symbol.type);
-      var text = "type ".append(symbol.name);
+      var text = "type " + symbol.name;
       if (bound !== null) {
-        text = text.append(" is ").append(Type.toString(bound));
+        text = text + " is " + Type.toString(bound);
       }
       result.declaration = text;
       break;
     case 9:
-      result.declaration = "namespace ".append(Symbol.fullName(symbol));
+      result.declaration = "namespace " + Symbol.fullName(symbol);
       break;
     case 12:
     case 13:
     case 14:
-      var text = SymbolKind.toString(symbol.kind).toLowerCase().append(" ").append(Type.toString(type));
+      var text = SymbolKind.toString(symbol.kind).toLowerCase() + " " + Type.toString(type);
       if (Type.hasRelevantTypes(type)) {
         var i;
         for (i = 0; i < type.relevantTypes.length; i = i + 1 | 0) {
-          text = text.append(i === 0 ? " : " : ", ").append(Type.toString(type.relevantTypes.get(i)));
+          text = text + (i === 0 ? " : " : ", ") + Type.toString(type.relevantTypes[i]);
         }
       }
       result.declaration = text;
       break;
     case 10:
-      result.declaration = "enum ".append(Symbol.fullName(symbol));
+      result.declaration = "enum " + Symbol.fullName(symbol);
       break;
     case 11:
-      result.declaration = "enum flags ".append(Symbol.fullName(symbol));
+      result.declaration = "enum flags " + Symbol.fullName(symbol);
       break;
     case 15:
     case 16:
     case 17:
-      var text = Type.toString(type.relevantTypes.get(0)).append(" ").append(symbol.name).append("(");
-      var $arguments = symbol.node.children.get(1).children;
+      var text = Type.toString(type.relevantTypes[0]) + " " + symbol.name + "(";
+      var $arguments = symbol.node.children[1].children;
       var argumentTypes = Type.argumentTypes(type);
       var i;
       for (i = 0; i < $arguments.length; i = i + 1 | 0) {
         if (i > 0) {
-          text = text.append(", ");
+          text = text + ", ";
         }
-        text = text.append(Type.toString(argumentTypes.get(i))).append(" ").append($arguments.get(i).symbol.name);
+        text = text + Type.toString(argumentTypes[i]) + " " + $arguments[i].symbol.name;
       }
-      result.declaration = text.append(")");
+      result.declaration = text + ")";
       break;
     case 18:
     case 19:
     case 20:
-      var text = Type.toString(type).append(" ").append(symbol.name);
+      var text = Type.toString(type) + " " + symbol.name;
       if (Symbol.isEnumValue(symbol)) {
-        text = text.append(" = ").append(symbol.enumValue.toString());
+        text = text + " = " + symbol.enumValue.toString();
       }
       result.declaration = text;
       break;
@@ -8169,13 +8195,13 @@ service.completionsFromPosition = function(node, resolver, source, index) {
   var completions = [];
   node = service.nodeFromPosition(node, source, index);
   if (node.kind === 46) {
-    var target = node.children.get(0);
+    var target = node.children[0];
     if (target.type !== null) {
       var isInstance = !(target.kind === 35);
       var members = target.type.members.values();
       var i;
       for (i = 0; i < members.length; i = i + 1 | 0) {
-        var member = members.get(i);
+        var member = members[i];
         Resolver.initializeMember(resolver, member);
         if (SymbolKind.isInstance(member.symbol.kind) === isInstance) {
           service.addCompletion(completions, member);
@@ -8194,7 +8220,7 @@ service.completionsFromPosition = function(node, resolver, source, index) {
     var members = allMembers.values();
     var i;
     for (i = 0; i < members.length; i = i + 1 | 0) {
-      var member = members.get(i);
+      var member = members[i];
       Resolver.initializeMember(resolver, member);
       service.addCompletion(completions, member);
     }
@@ -8208,10 +8234,10 @@ service.addCompletion = function(completions, member) {
   if (name !== "new" && type !== null) {
     var text = name;
     if (type.symbol === null) {
-      var semicolon = Type.toString(type.relevantTypes.get(0)) === "void";
-      text = text.append(Type.argumentTypes(type).length === 0 ? semicolon ? "();$" : "()$" : semicolon ? "($);" : "($)");
+      var semicolon = Type.toString(type.relevantTypes[0]) === "void";
+      text = text + (Type.argumentTypes(type).length === 0 ? semicolon ? "();$" : "()$" : semicolon ? "($);" : "($)");
     } else {
-      text = text.append("$");
+      text = text + "$";
     }
     completions.push(new LanguageServiceCompletion(name, Type.toString(type), text));
   }
@@ -8220,7 +8246,7 @@ service.addAllMembers = function(allMembers, membersToAdd) {
   var members = membersToAdd.values();
   var i;
   for (i = 0; i < members.length; i = i + 1 | 0) {
-    var member = members.get(i);
+    var member = members[i];
     if (!allMembers.has(member.symbol.name)) {
       allMembers.set(member.symbol.name, member);
     }
@@ -8243,18 +8269,18 @@ var nodeKindIsExpression = function(node) {
 var operatorInfo = createOperatorMap();
 Compiler.nativeLibrarySource = null;
 Compiler.nativeLibraryFile = null;
-var NATIVE_LIBRARY = "\nimport struct int { string toString(); }\nimport struct bool { string toString(); }\nimport struct float { string toString(); }\nimport struct double { string toString(); }\n\nimport struct string {\n  final int length;\n  string get(int index);\n  int codeUnitAt(int index);\n  string slice(int start, int end);\n  string append(string value);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string join(List<string> values);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n}\n\nimport class List<T> {\n  new();\n  final int length;\n  T get(int index);\n  void set(int index, T value);\n  void push(T value);\n  void unshift(T value);\n  void insert(int index, T value);\n  List<T> slice(int start, int end);\n  List<T> clone();\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T remove(int index);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(int fn(T, T) callback);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  final double E;\n  final double PI;\n  final double NAN;\n  final double INFINITY;\n  double random();\n  double abs(double n);\n  double sin(double n);\n  double cos(double n);\n  double tan(double n);\n  double asin(double n);\n  double acos(double n);\n  double atan(double n);\n  double round(double n);\n  double floor(double n);\n  double ceil(double n);\n  double exp(double n);\n  double log(double n);\n  double sqrt(double n);\n  bool isNaN(double n);\n  bool isFinite(double n);\n  double atan2(double y, double x);\n  double pow(double base, double exponent);\n  double min(double a, double b);\n  double max(double a, double b);\n  int imin(int a, int b);\n  int imax(int a, int b);\n}\n\n// TODO: Remove this\nimport class StringBuilder {\n  new();\n  StringBuilder append(string text);\n  string toString();\n}\n";
+var NATIVE_LIBRARY = "\nimport struct int { string toString(); }\nimport struct bool { string toString(); }\nimport struct float { string toString(); }\nimport struct double { string toString(); }\n\nimport struct String {\n  static string fromCharCode(int value);\n}\n\nimport struct string {\n  final int length;\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  inline string append(string value) { return untyped(this) + value; }\n}\n\nimport class List<T> {\n  new();\n  final int length;\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  final double E;\n  final double PI;\n  final double NAN;\n  final double INFINITY;\n  double random();\n  double abs(double n);\n  double sin(double n);\n  double cos(double n);\n  double tan(double n);\n  double asin(double n);\n  double acos(double n);\n  double atan(double n);\n  double round(double n);\n  double floor(double n);\n  double ceil(double n);\n  double exp(double n);\n  double log(double n);\n  double sqrt(double n);\n  bool isNaN(double n);\n  bool isFinite(double n);\n  double atan2(double y, double x);\n  double pow(double base, double exponent);\n  double min(double a, double b);\n  double max(double a, double b);\n  int imin(int a, int b);\n  int imax(int a, int b);\n}\n\n// TODO: Remove this\nimport class StringBuilder {\n  new();\n  StringBuilder append(string text);\n  string toString();\n}\n";
 Range.EMPTY = new Range(null, 0, 0);
 var BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var HEX = "0123456789ABCDEF";
 js.Emitter.isKeyword = js.Emitter.createIsKeyword();
-var yy_accept = [97, 97, 97, 30, 33, 96, 67, 33, 76, 13, 33, 57, 80, 64, 71, 21, 63, 27, 25, 50, 50, 20, 81, 58, 2, 40, 75, 42, 56, 79, 15, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 55, 14, 78, 90, 96, 68, 97, 85, 97, 10, 61, 3, 97, 18, 97, 8, 46, 9, 23, 7, 96, 6, 97, 50, 97, 37, 97, 97, 82, 59, 32, 54, 41, 83, 42, 5, 42, 42, 42, 42, 42, 42, 42, 26, 42, 42, 42, 42, 42, 38, 42, 43, 42, 45, 53, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 4, 62, 96, 28, 49, 52, 51, 11, 12, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 39, 42, 42, 42, 60, 42, 66, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 93, 42, 42, 37, 42, 42, 42, 17, 42, 42, 42, 29, 31, 42, 42, 42, 42, 42, 42, 42, 69, 42, 42, 42, 42, 42, 42, 42, 42, 42, 89, 91, 42, 42, 42, 0, 42, 16, 19, 42, 42, 42, 35, 36, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 87, 42, 92, 42, 95, 1, 42, 42, 34, 44, 47, 42, 42, 42, 42, 42, 74, 77, 84, 86, 88, 42, 42, 24, 42, 42, 42, 72, 42, 94, 22, 42, 42, 70, 42, 48, 65, 73, 97];
-var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 1, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 32, 28, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 28, 42, 43, 44, 45, 46, 47, 28, 48, 49, 50, 51, 52, 53, 54, 28, 28, 55, 56, 57, 58, 1];
-var yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1];
-var yy_base = [0, 0, 0, 309, 310, 57, 284, 56, 283, 55, 55, 310, 310, 282, 52, 310, 51, 310, 50, 72, 63, 310, 310, 44, 45, 47, 310, 0, 310, 310, 281, 45, 256, 62, 47, 53, 70, 75, 266, 84, 250, 49, 264, 72, 64, 251, 95, 259, 310, 53, 310, 310, 127, 310, 97, 310, 295, 310, 310, 310, 123, 310, 294, 310, 310, 310, 310, 310, 0, 310, 120, 126, 115, 310, 130, 0, 272, 310, 310, 310, 310, 271, 0, 310, 253, 244, 255, 242, 257, 244, 250, 0, 238, 235, 238, 241, 238, 0, 234, 0, 234, 107, 0, 230, 235, 225, 234, 239, 110, 241, 224, 66, 226, 231, 230, 219, 228, 220, 219, 225, 310, 310, 0, 141, 137, 148, 0, 310, 310, 232, 227, 230, 225, 212, 210, 226, 221, 213, 210, 206, 221, 0, 207, 211, 214, 0, 213, 0, 206, 200, 195, 196, 202, 193, 193, 191, 204, 190, 190, 201, 192, 0, 186, 192, 310, 185, 185, 190, 0, 182, 189, 178, 0, 0, 180, 190, 183, 177, 179, 175, 173, 0, 173, 187, 182, 177, 169, 175, 180, 166, 178, 0, 0, 173, 160, 173, 0, 159, 0, 0, 163, 164, 156, 0, 0, 155, 167, 165, 155, 160, 150, 164, 163, 152, 161, 145, 0, 154, 0, 158, 0, 0, 127, 127, 0, 0, 0, 143, 142, 138, 136, 122, 0, 0, 0, 0, 0, 128, 133, 0, 134, 133, 126, 0, 125, 0, 0, 115, 105, 0, 98, 0, 0, 0, 310, 179, 183, 185, 189, 70];
-var yy_def = [0, 254, 1, 254, 254, 254, 254, 255, 254, 254, 256, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 257, 254, 254, 254, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 254, 254, 254, 254, 254, 254, 255, 254, 255, 254, 254, 254, 256, 254, 256, 254, 254, 254, 254, 254, 258, 254, 254, 254, 254, 254, 254, 259, 254, 254, 254, 254, 254, 254, 257, 254, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 254, 254, 258, 254, 254, 254, 259, 254, 254, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 254, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 0, 254, 254, 254, 254, 254];
-var yy_nxt = [0, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 21, 22, 23, 24, 25, 26, 27, 27, 28, 4, 29, 30, 31, 32, 33, 34, 35, 36, 27, 27, 37, 27, 38, 27, 39, 40, 41, 42, 43, 44, 45, 46, 47, 27, 48, 49, 50, 51, 52, 52, 55, 58, 61, 64, 66, 68, 76, 77, 78, 79, 80, 81, 126, 69, 67, 65, 120, 70, 59, 71, 71, 71, 71, 90, 62, 56, 70, 84, 71, 71, 71, 71, 91, 85, 87, 92, 108, 93, 154, 109, 73, 55, 95, 114, 88, 72, 94, 89, 121, 73, 96, 115, 99, 155, 97, 98, 104, 74, 100, 101, 105, 111, 112, 102, 113, 75, 56, 117, 52, 52, 61, 124, 124, 253, 106, 118, 123, 123, 123, 123, 70, 252, 71, 71, 71, 71, 125, 125, 125, 143, 150, 251, 62, 124, 124, 151, 144, 123, 123, 123, 123, 250, 249, 73, 125, 125, 125, 248, 247, 246, 245, 244, 243, 242, 241, 240, 239, 238, 164, 54, 54, 54, 54, 60, 60, 60, 60, 82, 82, 122, 237, 122, 122, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, 168, 167, 166, 165, 163, 162, 161, 160, 159, 158, 157, 156, 153, 152, 149, 148, 147, 146, 145, 142, 141, 140, 139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 128, 127, 254, 254, 119, 116, 110, 107, 103, 86, 83, 63, 57, 53, 254, 3, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254];
-var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 7, 9, 10, 14, 16, 18, 23, 23, 24, 24, 25, 25, 259, 18, 16, 14, 49, 20, 9, 20, 20, 20, 20, 34, 10, 7, 19, 31, 19, 19, 19, 19, 34, 31, 33, 35, 41, 35, 111, 41, 20, 54, 36, 44, 33, 19, 35, 33, 49, 19, 36, 44, 37, 111, 36, 36, 39, 19, 37, 37, 39, 43, 43, 37, 43, 19, 54, 46, 52, 52, 60, 72, 72, 250, 39, 46, 70, 70, 70, 70, 71, 248, 71, 71, 71, 71, 74, 74, 74, 101, 108, 247, 60, 124, 124, 108, 101, 123, 123, 123, 123, 244, 242, 71, 125, 125, 125, 241, 240, 238, 237, 231, 230, 229, 228, 227, 223, 222, 123, 255, 255, 255, 255, 256, 256, 256, 256, 257, 257, 258, 219, 258, 258, 217, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 202, 201, 200, 197, 195, 194, 193, 190, 189, 188, 187, 186, 185, 184, 183, 182, 180, 179, 178, 177, 176, 175, 174, 171, 170, 169, 167, 166, 165, 163, 162, 160, 159, 158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 148, 146, 144, 143, 142, 140, 139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 119, 118, 117, 116, 115, 114, 113, 112, 110, 109, 107, 106, 105, 104, 103, 100, 98, 96, 95, 94, 93, 92, 90, 89, 88, 87, 86, 85, 84, 81, 76, 62, 56, 47, 45, 42, 40, 38, 32, 30, 13, 8, 6, 3, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254];
+var yy_accept = [98, 98, 98, 30, 33, 97, 67, 33, 76, 13, 33, 57, 80, 64, 71, 21, 63, 27, 25, 50, 50, 20, 81, 58, 2, 40, 75, 42, 56, 79, 15, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 55, 14, 78, 90, 97, 68, 98, 85, 98, 10, 61, 3, 98, 18, 98, 8, 46, 9, 23, 7, 97, 6, 98, 50, 98, 37, 98, 98, 82, 59, 32, 54, 41, 83, 42, 5, 42, 42, 42, 42, 42, 42, 42, 26, 42, 42, 42, 42, 42, 38, 42, 43, 42, 45, 53, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 4, 62, 97, 28, 49, 52, 51, 11, 12, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 39, 42, 42, 42, 60, 42, 66, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 94, 42, 42, 37, 42, 42, 42, 17, 42, 42, 42, 29, 31, 42, 42, 42, 42, 42, 42, 42, 69, 42, 42, 42, 42, 42, 42, 42, 42, 42, 89, 91, 42, 42, 42, 42, 0, 42, 16, 19, 42, 42, 42, 35, 36, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 87, 42, 42, 93, 42, 96, 1, 42, 42, 34, 44, 47, 42, 42, 42, 42, 42, 74, 77, 84, 86, 88, 42, 42, 42, 24, 42, 42, 42, 72, 42, 92, 95, 22, 42, 42, 70, 42, 48, 65, 73, 98];
+var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 1, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 32, 28, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 28, 42, 43, 44, 45, 46, 47, 28, 48, 49, 50, 51, 52, 53, 54, 55, 28, 56, 57, 58, 59, 1];
+var yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1];
+var yy_base = [0, 0, 0, 316, 317, 58, 291, 57, 290, 56, 56, 317, 317, 289, 53, 317, 52, 317, 51, 73, 64, 317, 317, 45, 46, 48, 317, 0, 317, 317, 288, 46, 263, 63, 48, 54, 71, 76, 273, 85, 257, 50, 271, 73, 65, 29, 96, 267, 317, 76, 317, 317, 128, 317, 98, 317, 303, 317, 317, 317, 102, 317, 302, 317, 317, 317, 317, 317, 0, 317, 121, 127, 117, 317, 131, 0, 280, 317, 317, 317, 317, 279, 0, 317, 261, 252, 263, 250, 265, 252, 258, 0, 246, 243, 246, 249, 246, 0, 242, 0, 242, 108, 0, 238, 243, 233, 242, 247, 111, 249, 232, 120, 234, 239, 238, 227, 227, 235, 227, 226, 232, 317, 317, 0, 142, 137, 152, 0, 317, 317, 239, 234, 237, 232, 219, 217, 233, 228, 220, 217, 213, 228, 0, 214, 218, 221, 0, 220, 0, 213, 207, 202, 203, 209, 200, 200, 198, 211, 197, 197, 208, 189, 198, 0, 192, 198, 317, 191, 191, 196, 0, 188, 195, 184, 0, 0, 186, 196, 189, 183, 185, 181, 179, 0, 179, 193, 188, 183, 175, 181, 186, 172, 184, 0, 0, 171, 178, 165, 178, 0, 164, 0, 0, 168, 169, 161, 0, 0, 160, 172, 170, 160, 165, 155, 169, 168, 157, 166, 150, 0, 159, 161, 0, 164, 0, 0, 145, 145, 0, 0, 0, 159, 146, 142, 140, 126, 0, 0, 0, 0, 0, 139, 131, 136, 0, 137, 132, 129, 0, 127, 0, 0, 0, 126, 119, 0, 107, 0, 0, 0, 317, 180, 184, 186, 190, 112];
+var yy_def = [0, 260, 1, 260, 260, 260, 260, 261, 260, 260, 262, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 263, 260, 260, 260, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 260, 260, 260, 260, 260, 260, 261, 260, 261, 260, 260, 260, 262, 260, 262, 260, 260, 260, 260, 260, 264, 260, 260, 260, 260, 260, 260, 265, 260, 260, 260, 260, 260, 260, 263, 260, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 260, 260, 264, 260, 260, 260, 265, 260, 260, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 260, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 263, 0, 260, 260, 260, 260, 260];
+var yy_nxt = [0, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 21, 22, 23, 24, 25, 26, 27, 27, 28, 4, 29, 30, 31, 32, 33, 34, 35, 36, 27, 27, 37, 27, 38, 27, 39, 40, 41, 42, 43, 44, 45, 46, 47, 27, 27, 48, 49, 50, 51, 52, 52, 55, 58, 61, 64, 66, 68, 76, 77, 78, 79, 80, 81, 116, 69, 67, 65, 117, 70, 59, 71, 71, 71, 71, 90, 62, 56, 70, 84, 71, 71, 71, 71, 91, 85, 87, 92, 108, 93, 121, 109, 73, 55, 95, 114, 88, 72, 94, 89, 61, 73, 96, 115, 99, 127, 97, 98, 104, 74, 100, 101, 105, 111, 112, 102, 113, 75, 56, 118, 52, 52, 62, 122, 125, 125, 106, 119, 124, 124, 124, 124, 70, 259, 71, 71, 71, 71, 126, 126, 126, 144, 151, 155, 125, 125, 258, 152, 145, 124, 124, 124, 124, 257, 256, 73, 255, 254, 156, 126, 126, 126, 253, 252, 251, 250, 249, 248, 247, 246, 166, 54, 54, 54, 54, 60, 60, 60, 60, 82, 82, 123, 245, 123, 123, 244, 243, 242, 241, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, 168, 167, 165, 164, 163, 162, 161, 160, 159, 158, 157, 154, 153, 150, 149, 148, 147, 146, 143, 142, 141, 140, 139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 128, 260, 260, 120, 110, 107, 103, 86, 83, 63, 57, 53, 260, 3, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260];
+var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 7, 9, 10, 14, 16, 18, 23, 23, 24, 24, 25, 25, 45, 18, 16, 14, 45, 20, 9, 20, 20, 20, 20, 34, 10, 7, 19, 31, 19, 19, 19, 19, 34, 31, 33, 35, 41, 35, 49, 41, 20, 54, 36, 44, 33, 19, 35, 33, 60, 19, 36, 44, 37, 265, 36, 36, 39, 19, 37, 37, 39, 43, 43, 37, 43, 19, 54, 46, 52, 52, 60, 49, 72, 72, 39, 46, 70, 70, 70, 70, 71, 256, 71, 71, 71, 71, 74, 74, 74, 101, 108, 111, 125, 125, 254, 108, 101, 124, 124, 124, 124, 253, 249, 71, 247, 246, 111, 126, 126, 126, 245, 243, 242, 241, 235, 234, 233, 232, 124, 261, 261, 261, 261, 262, 262, 262, 262, 263, 263, 264, 231, 264, 264, 227, 226, 223, 221, 220, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 205, 204, 203, 200, 198, 197, 196, 195, 192, 191, 190, 189, 188, 187, 186, 185, 184, 182, 181, 180, 179, 178, 177, 176, 173, 172, 171, 169, 168, 167, 165, 164, 162, 161, 160, 159, 158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 147, 145, 144, 143, 141, 140, 139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 120, 119, 118, 117, 116, 115, 114, 113, 112, 110, 109, 107, 106, 105, 104, 103, 100, 98, 96, 95, 94, 93, 92, 90, 89, 88, 87, 86, 85, 84, 81, 76, 62, 56, 47, 42, 40, 38, 32, 30, 13, 8, 6, 3, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260];
 var pratt = createParser();
 var nameToSymbolFlag = createNameToSymbolFlag();
 var symbolFlagToName = createSymbolFlagToName();
