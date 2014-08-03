@@ -3564,7 +3564,8 @@ Resolver.accumulateSymbolFlags = function($this) {
 };
 Resolver.checkParentsForLocalVariable = function(node) {
   for (node = node.parent; node !== null; node = node.parent) {
-    if (node.kind !== 0 && node.kind !== 1 && node.kind !== 2 && node.kind !== 7 && node.kind !== 32 && node.kind !== 13 && !NodeKind.isEnum(node.kind)) {
+    var kind = node.kind;
+    if (kind !== 0 && kind !== 1 && kind !== 2 && kind !== 7 && kind !== 32 && kind !== 13 && !NodeKind.isEnum(kind)) {
       return true;
     }
   }
@@ -5570,7 +5571,6 @@ Resolver.resolveBinaryOperator = function($this, node) {
   } else if (kind === 79 || kind === 75 || kind === 80 || kind === 76) {
     if (Type.isNumeric(leftType, $this.cache) && Type.isNumeric(rightType, $this.cache) || leftType === $this.cache.stringType && rightType === $this.cache.stringType) {
       commonType = TypeCache.commonImplicitType($this.cache, leftType, rightType);
-      node.type = $this.cache.boolType;
       node.type = $this.cache.boolType;
     }
   }
@@ -7999,7 +7999,7 @@ function semanticErrorBadOverride(log, range, name, base, overridden) {
   }
 }
 function semanticErrorOverrideDifferentTypes(log, range, name, base, derived, overridden) {
-  Log.error(log, range, string.append(string.append("\"", name), "\"") + " must have the same signature as the method it overrides (" + "expected " + ("type \"" + Type.toString(base) + "\"") + " but found " + ("type \"" + Type.toString(derived) + "\"") + ")");
+  Log.error(log, range, string.append(string.append("\"", name), "\"") + " must have the same signature as the method it overrides (expected " + ("type \"" + Type.toString(base) + "\"") + " but found " + ("type \"" + Type.toString(derived) + "\"") + ")");
   if (!(overridden.source === null)) {
     Log.note(log, overridden, "The overridden declaration is here");
   }

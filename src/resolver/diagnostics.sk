@@ -207,8 +207,8 @@ void semanticErrorBadOverride(Log log, Range range, string name, Type base, Rang
 }
 
 void semanticErrorOverrideDifferentTypes(Log log, Range range, string name, Type base, Type derived, Range overridden) {
-  log.error(range, simpleQuote(name).append(" must have the same signature as the method it overrides (").append(
-    "expected ").append(typeToText(base)).append(" but found ").append(typeToText(derived)).append(")"));
+  log.error(range, simpleQuote(name).append(" must have the same signature as the method it overrides (expected ").append(
+    typeToText(base)).append(" but found ").append(typeToText(derived)).append(")"));
   if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
 }
 

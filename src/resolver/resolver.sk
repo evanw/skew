@@ -219,8 +219,9 @@ class Resolver {
 
   static bool checkParentsForLocalVariable(Node node) {
     for (node = node.parent; node != null; node = node.parent) {
-      if (node.kind != .PROGRAM && node.kind != .FILE && node.kind != .BLOCK && node.kind != .NAMESPACE &&
-          node.kind != .MODIFIER && node.kind != .EXTENSION && !node.kind.isEnum()) {
+      var kind = node.kind;
+      if (kind != .PROGRAM && kind != .FILE && kind != .BLOCK && kind != .NAMESPACE &&
+          kind != .MODIFIER && kind != .EXTENSION && !kind.isEnum()) {
         return true;
       }
     }
@@ -2717,7 +2718,6 @@ class Resolver {
       if (leftType.isNumeric(cache) && rightType.isNumeric(cache) ||
           leftType.isString(cache) && rightType.isString(cache)) {
         commonType = cache.commonImplicitType(leftType, rightType);
-        node.type = cache.boolType;
         node.type = cache.boolType;
       }
     }
