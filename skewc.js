@@ -3369,12 +3369,15 @@ FunctionInliningPass.recursivelyCountArgumentUses = function($this, node, symbol
       }
     }
   }
+  if (node.kind === 56) {
+    return false;
+  }
   var symbol = node.symbol;
   if (symbol !== null) {
+    symbolCounts.set(symbol.uniqueID, symbolCounts.getOrDefault(symbol.uniqueID, 0) + 1 | 0);
     if (Node.isStorage(node)) {
       return false;
     }
-    symbolCounts.set(symbol.uniqueID, symbolCounts.getOrDefault(symbol.uniqueID, 0) + 1 | 0);
   }
   return true;
 };
@@ -7555,18 +7558,10 @@ function binaryInfix(kind) {
 }
 function createParser() {
   var pratt = new Pratt();
-  Pratt.literal(pratt, 69, function(context, token) {
-    return Node.withRange(new Node(38), token.range);
-  });
-  Pratt.literal(pratt, 89, function(context, token) {
-    return Node.withRange(new Node(36), token.range);
-  });
-  Pratt.literal(pratt, 91, function(context, token) {
-    return Node.withRange(new Node(39), token.range);
-  });
-  Pratt.literal(pratt, 35, function(context, token) {
-    return Node.withRange(new Node(40), token.range);
-  });
+  Pratt.literal(pratt, 69, tokenLiteral(38));
+  Pratt.literal(pratt, 89, tokenLiteral(36));
+  Pratt.literal(pratt, 91, tokenLiteral(39));
+  Pratt.literal(pratt, 35, tokenLiteral(40));
   Pratt.literal(pratt, 50, intLiteral(10));
   Pratt.literal(pratt, 49, intLiteral(2));
   Pratt.literal(pratt, 52, intLiteral(8));
@@ -7592,120 +7587,44 @@ function createParser() {
     }
     return Node.withRange(Node.withContent(new Node(41), new IntContent(result !== null ? result.value.charCodeAt(0) : 0)), token.range);
   });
-  Pratt.postfix(pratt, 46, 14, function(context, value, token) {
-    return Node.withRange(Node.withChildren(new Node(67), [value]), Range.span(value.range, token.range));
-  });
-  Pratt.postfix(pratt, 23, 14, function(context, value, token) {
-    return Node.withRange(Node.withChildren(new Node(68), [value]), Range.span(value.range, token.range));
-  });
-  Pratt.prefix(pratt, 46, 13, function(context, token, value) {
-    return Node.withRange(Node.withChildren(new Node(65), [value]), Range.span(token.range, value.range));
-  });
-  Pratt.prefix(pratt, 23, 13, function(context, token, value) {
-    return Node.withRange(Node.withChildren(new Node(66), [value]), Range.span(token.range, value.range));
-  });
-  Pratt.prefix(pratt, 71, 13, function(context, token, value) {
-    return Node.withRange(Node.withChildren(new Node(62), [value]), Range.span(token.range, value.range));
-  });
-  Pratt.prefix(pratt, 63, 13, function(context, token, value) {
-    return Node.withRange(Node.withChildren(new Node(63), [value]), Range.span(token.range, value.range));
-  });
-  Pratt.prefix(pratt, 67, 13, function(context, token, value) {
-    return Node.withRange(Node.withChildren(new Node(61), [value]), Range.span(token.range, value.range));
-  });
-  Pratt.prefix(pratt, 90, 13, function(context, token, value) {
-    return Node.withRange(Node.withChildren(new Node(64), [value]), Range.span(token.range, value.range));
-  });
-  Pratt.infix(pratt, 13, 7, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(70, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 14, 5, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(71, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 15, 6, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(72, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 25, 12, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(73, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 32, 8, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(74, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 40, 9, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(75, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 41, 9, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(76, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 45, 9, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(77, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 58, 9, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(79, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 59, 9, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(80, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 61, 4, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(81, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 62, 3, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(82, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 63, 11, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(88, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 64, 12, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(83, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 68, 8, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(84, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 71, 11, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(69, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 76, 12, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(85, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 82, 10, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(86, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infix(pratt, 83, 10, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(87, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 2, 2, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(89, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 9, 2, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(90, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 3, 2, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(91, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 4, 2, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(92, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 5, 2, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(93, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 6, 2, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(94, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 8, 2, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(95, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 10, 2, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(96, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 11, 2, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(97, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 12, 2, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(98, left, right), Range.span(left.range, right.range));
-  });
-  Pratt.infixRight(pratt, 7, 2, function(context, left, token, right) {
-    return Node.withRange(Node.createBinary(99, left, right), Range.span(left.range, right.range));
-  });
+  Pratt.postfix(pratt, 46, 14, unaryPostfix(67));
+  Pratt.postfix(pratt, 23, 14, unaryPostfix(68));
+  Pratt.prefix(pratt, 46, 13, unaryPrefix(65));
+  Pratt.prefix(pratt, 23, 13, unaryPrefix(66));
+  Pratt.prefix(pratt, 71, 13, unaryPrefix(62));
+  Pratt.prefix(pratt, 63, 13, unaryPrefix(63));
+  Pratt.prefix(pratt, 67, 13, unaryPrefix(61));
+  Pratt.prefix(pratt, 90, 13, unaryPrefix(64));
+  Pratt.infix(pratt, 13, 7, binaryInfix(70));
+  Pratt.infix(pratt, 14, 5, binaryInfix(71));
+  Pratt.infix(pratt, 15, 6, binaryInfix(72));
+  Pratt.infix(pratt, 25, 12, binaryInfix(73));
+  Pratt.infix(pratt, 32, 8, binaryInfix(74));
+  Pratt.infix(pratt, 40, 9, binaryInfix(75));
+  Pratt.infix(pratt, 41, 9, binaryInfix(76));
+  Pratt.infix(pratt, 45, 9, binaryInfix(77));
+  Pratt.infix(pratt, 58, 9, binaryInfix(79));
+  Pratt.infix(pratt, 59, 9, binaryInfix(80));
+  Pratt.infix(pratt, 61, 4, binaryInfix(81));
+  Pratt.infix(pratt, 62, 3, binaryInfix(82));
+  Pratt.infix(pratt, 63, 11, binaryInfix(88));
+  Pratt.infix(pratt, 64, 12, binaryInfix(83));
+  Pratt.infix(pratt, 68, 8, binaryInfix(84));
+  Pratt.infix(pratt, 71, 11, binaryInfix(69));
+  Pratt.infix(pratt, 76, 12, binaryInfix(85));
+  Pratt.infix(pratt, 82, 10, binaryInfix(86));
+  Pratt.infix(pratt, 83, 10, binaryInfix(87));
+  Pratt.infixRight(pratt, 2, 2, binaryInfix(89));
+  Pratt.infixRight(pratt, 9, 2, binaryInfix(90));
+  Pratt.infixRight(pratt, 3, 2, binaryInfix(91));
+  Pratt.infixRight(pratt, 4, 2, binaryInfix(92));
+  Pratt.infixRight(pratt, 5, 2, binaryInfix(93));
+  Pratt.infixRight(pratt, 6, 2, binaryInfix(94));
+  Pratt.infixRight(pratt, 8, 2, binaryInfix(95));
+  Pratt.infixRight(pratt, 10, 2, binaryInfix(96));
+  Pratt.infixRight(pratt, 11, 2, binaryInfix(97));
+  Pratt.infixRight(pratt, 12, 2, binaryInfix(98));
+  Pratt.infixRight(pratt, 7, 2, binaryInfix(99));
   Pratt.parselet(pratt, 55, 0).prefix = function(context) {
     var token = ParserContext.current(context);
     var $arguments = parseArgumentList(context, 55, 78, 1);
