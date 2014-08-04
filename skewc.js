@@ -119,32 +119,11 @@ function $extends(derived, base) {
   derived.prototype = Object.create(base.prototype);
   derived.prototype.constructor = derived;
 }
-string.fromCodeUnit = function(value) {
-  return String.fromCharCode(value);
-};
-string.get = function($this, index) {
-  return $this[index];
-};
-string.join = function($this, values) {
-  return values.join($this);
-};
-string.codeUnitAt = function($this, index) {
-  return $this.charCodeAt(index);
-};
 string.append = function($this, value) {
   return $this + value;
 };
-List.clone = function($this) {
-  return $this.slice();
-};
-List.remove = function($this, index) {
-  return $this.splice(index, 1)[0];
-};
 List.insert = function($this, index, value) {
   $this.splice(index, 0, value);
-};
-List.get = function($this, index) {
-  return $this[index];
 };
 List.set = function($this, index, value) {
   $this[index] = value;
@@ -160,18 +139,6 @@ function Node(_0) {
   this.content = null;
   this.kind = _0;
 }
-Node.createProgram = function(files) {
-  return Node.withChildren(new Node(0), files);
-};
-Node.createFile = function(block) {
-  return Node.withChildren(new Node(1), [block]);
-};
-Node.createBlock = function(statements) {
-  return Node.withChildren(new Node(2), statements);
-};
-Node.createNodeList = function(nodes) {
-  return Node.withChildren(new Node(3), nodes);
-};
 Node.createCase = function(values, block) {
   values.push(block);
   return Node.withChildren(new Node(4), values);
@@ -179,87 +146,6 @@ Node.createCase = function(values, block) {
 Node.createVariableCluster = function(type, variables) {
   variables.unshift(type);
   return Node.withChildren(new Node(6), variables);
-};
-Node.createMemberInitializer = function(name, value) {
-  return Node.withChildren(new Node(5), [name, value]);
-};
-Node.createNamespace = function(name, block) {
-  return Node.withChildren(new Node(7), [name, block]);
-};
-Node.createEnum = function(name, block) {
-  return Node.withChildren(new Node(8), [name, block]);
-};
-Node.createEnumFlags = function(name, block) {
-  return Node.withChildren(new Node(9), [name, block]);
-};
-Node.createObject = function(kind, name, parameters, bases, block) {
-  return Node.withChildren(new Node(kind), [name, block, bases, parameters]);
-};
-Node.createClass = function(name, parameters, bases, block) {
-  return Node.withChildren(new Node(10), [name, block, bases, parameters]);
-};
-Node.createStruct = function(name, parameters, bases, block) {
-  return Node.withChildren(new Node(11), [name, block, bases, parameters]);
-};
-Node.createInterface = function(name, parameters, bases, block) {
-  return Node.withChildren(new Node(12), [name, block, bases, parameters]);
-};
-Node.createExtension = function(name, bases, block) {
-  return Node.withChildren(new Node(13), [name, block, bases]);
-};
-Node.createConstructor = function(name, $arguments, block, superInitializer, memberInitializers) {
-  return Node.withChildren(new Node(14), [name, $arguments, block, superInitializer, memberInitializers]);
-};
-Node.createFunction = function(name, $arguments, block, result) {
-  return Node.withChildren(new Node(15), [name, $arguments, block, result]);
-};
-Node.createVariable = function(name, type, value) {
-  return Node.withChildren(new Node(16), [name, type, value]);
-};
-Node.createParameter = function(name, bound) {
-  return Node.withChildren(new Node(17), [name, bound]);
-};
-Node.createAlias = function(name, value) {
-  return Node.withChildren(new Node(18), [name, value]);
-};
-Node.createUsingAlias = function(name, value) {
-  return Node.withChildren(new Node(19), [name, value]);
-};
-Node.createUsingNamespace = function(value) {
-  return Node.withChildren(new Node(33), [value]);
-};
-Node.createIf = function(test, trueNode, falseNode) {
-  return Node.withChildren(new Node(20), [test, trueNode, falseNode]);
-};
-Node.createFor = function(setup, test, update, block) {
-  return Node.withChildren(new Node(21), [setup, test, update, block]);
-};
-Node.createForEach = function(variable, value, block) {
-  return Node.withChildren(new Node(22), [variable, value, block]);
-};
-Node.createWhile = function(test, block) {
-  return Node.withChildren(new Node(23), [test, block]);
-};
-Node.createDoWhile = function(block, test) {
-  return Node.withChildren(new Node(24), [test, block]);
-};
-Node.createReturn = function(value) {
-  return Node.withChildren(new Node(25), [value]);
-};
-Node.createImplicitReturn = function(value) {
-  return Node.withChildren(new Node(26), [value]);
-};
-Node.createBreak = function() {
-  return new Node(27);
-};
-Node.createContinue = function() {
-  return new Node(28);
-};
-Node.createAssert = function(value) {
-  return Node.withChildren(new Node(29), [value]);
-};
-Node.createExpression = function(value) {
-  return Node.withChildren(new Node(30), [value]);
 };
 Node.createModifier = function(name, statements) {
   statements.unshift(name);
@@ -269,96 +155,21 @@ Node.createSwitch = function(value, cases) {
   cases.unshift(value);
   return Node.withChildren(new Node(31), cases);
 };
-Node.createName = function(name) {
-  return Node.withContent(new Node(34), new StringContent(name));
-};
-Node.createType = function(type) {
-  return Node.withType(new Node(35), type);
-};
-Node.createNull = function() {
-  return new Node(38);
-};
-Node.createThis = function() {
-  return new Node(36);
-};
-Node.createTrue = function() {
-  return new Node(39);
-};
-Node.createFalse = function() {
-  return new Node(40);
-};
-Node.createHook = function(test, trueNode, falseNode) {
-  return Node.withChildren(new Node(37), [test, trueNode, falseNode]);
-};
-Node.createInt = function(value) {
-  return Node.withContent(new Node(41), new IntContent(value));
-};
-Node.createFloat = function(value) {
-  return Node.withContent(new Node(42), new DoubleContent(value));
-};
-Node.createDouble = function(value) {
-  return Node.withContent(new Node(43), new DoubleContent(value));
-};
-Node.createString = function(value) {
-  return Node.withContent(new Node(44), new StringContent(value));
-};
-Node.createInitializer = function(values) {
-  return Node.withChildren(new Node(45), values);
-};
-Node.createDot = function(value, name) {
-  return Node.withChildren(new Node(46), [value, name]);
-};
-Node.createLet = function(variable, value) {
-  return Node.withChildren(new Node(47), [variable, value]);
-};
 Node.createCall = function(value, $arguments) {
   $arguments.unshift(value);
   return Node.withChildren(new Node(48), $arguments);
-};
-Node.createSuperCall = function($arguments) {
-  return Node.withChildren(new Node(49), $arguments);
-};
-Node.createError = function() {
-  return new Node(50);
-};
-Node.createBind = function(value) {
-  return Node.withChildren(new Node(51), [value]);
-};
-Node.createSequence = function(values) {
-  return Node.withChildren(new Node(52), values);
 };
 Node.createParameterize = function(type, types) {
   types.unshift(type);
   return Node.withChildren(new Node(53), types);
 };
-Node.createCast = function(type, value) {
-  return Node.withChildren(new Node(54), [type, value]);
-};
-Node.createImplicitCast = function(type, value) {
-  return Node.withChildren(new Node(55), [type, value]);
-};
 Node.createLambda = function($arguments, block) {
   $arguments.push(block);
   return Node.withChildren(new Node(56), $arguments);
 };
-Node.createDefault = function(type) {
-  return Node.withChildren(new Node(57), [type]);
-};
-Node.createUntyped = function(type) {
-  return Node.withChildren(new Node(58), [type]);
-};
-Node.createVar = function() {
-  return new Node(59);
-};
 Node.createFunctionType = function(result, $arguments) {
   $arguments.unshift(result);
   return Node.withChildren(new Node(60), $arguments);
-};
-Node.createUnary = function(kind, value) {
-  return Node.withChildren(new Node(kind), [value]);
-};
-Node.createAssign = function(left, right) {
-  return Node.createBinary(89, left, right);
 };
 Node.createBinary = function(kind, left, right) {
   if (kind === 89 && left.kind === 78) {
@@ -368,158 +179,11 @@ Node.createBinary = function(kind, left, right) {
   }
   return Node.withChildren(new Node(kind), [left, right]);
 };
-Node.createTertiary = function(kind, left, middle, right) {
-  return Node.withChildren(new Node(kind), [left, middle, right]);
-};
-Node.fileBlock = function($this) {
-  return $this.children[0];
-};
-Node.dotTarget = function($this) {
-  return $this.children[0];
-};
-Node.dotName = function($this) {
-  return $this.children[1];
-};
-Node.letVariable = function($this) {
-  return $this.children[0];
-};
-Node.letValue = function($this) {
-  return $this.children[1];
-};
-Node.unaryValue = function($this) {
-  return $this.children[0];
-};
-Node.binaryLeft = function($this) {
-  return $this.children[0];
-};
-Node.binaryRight = function($this) {
-  return $this.children[1];
-};
-Node.tertiaryLeft = function($this) {
-  return $this.children[0];
-};
-Node.tertiaryMiddle = function($this) {
-  return $this.children[1];
-};
-Node.tertiaryRight = function($this) {
-  return $this.children[2];
-};
-Node.hookTest = function($this) {
-  return $this.children[0];
-};
-Node.hookTrue = function($this) {
-  return $this.children[1];
-};
-Node.hookFalse = function($this) {
-  return $this.children[2];
-};
-Node.declarationName = function($this) {
-  return $this.children[0];
-};
-Node.declarationBlock = function($this) {
-  return $this.children[1];
-};
-Node.clusterType = function($this) {
-  return $this.children[0];
-};
 Node.clusterVariables = function($this) {
   return $this.children.slice(1, $this.children.length);
 };
-Node.variableType = function($this) {
-  return $this.children[1];
-};
-Node.variableValue = function($this) {
-  return $this.children[2];
-};
-Node.aliasValue = function($this) {
-  return $this.children[1];
-};
-Node.usingNamespaceValue = function($this) {
-  return $this.children[0];
-};
-Node.modifierName = function($this) {
-  return $this.children[0];
-};
 Node.modifierStatements = function($this) {
   return $this.children.slice(1, $this.children.length);
-};
-Node.castType = function($this) {
-  return $this.children[0];
-};
-Node.castValue = function($this) {
-  return $this.children[1];
-};
-Node.expressionValue = function($this) {
-  return $this.children[0];
-};
-Node.ifTest = function($this) {
-  return $this.children[0];
-};
-Node.ifTrue = function($this) {
-  return $this.children[1];
-};
-Node.ifFalse = function($this) {
-  return $this.children[2];
-};
-Node.forSetup = function($this) {
-  return $this.children[0];
-};
-Node.forTest = function($this) {
-  return $this.children[1];
-};
-Node.forUpdate = function($this) {
-  return $this.children[2];
-};
-Node.forBlock = function($this) {
-  return $this.children[3];
-};
-Node.forEachVariable = function($this) {
-  return $this.children[0];
-};
-Node.forEachValue = function($this) {
-  return $this.children[1];
-};
-Node.forEachBlock = function($this) {
-  return $this.children[2];
-};
-Node.whileTest = function($this) {
-  return $this.children[0];
-};
-Node.whileBlock = function($this) {
-  return $this.children[1];
-};
-Node.defaultType = function($this) {
-  return $this.children[0];
-};
-Node.untypedValue = function($this) {
-  return $this.children[0];
-};
-Node.baseTypes = function($this) {
-  return $this.children[2];
-};
-Node.objectParameters = function($this) {
-  return $this.children[3];
-};
-Node.functionArguments = function($this) {
-  return $this.children[1];
-};
-Node.functionBlock = function($this) {
-  return $this.children[2];
-};
-Node.functionResult = function($this) {
-  return $this.children[3];
-};
-Node.superInitializer = function($this) {
-  return $this.children[3];
-};
-Node.memberInitializers = function($this) {
-  return $this.children[4];
-};
-Node.memberInitializerName = function($this) {
-  return $this.children[0];
-};
-Node.memberInitializerValue = function($this) {
-  return $this.children[1];
 };
 Node.lambdaArguments = function($this) {
   return $this.children.slice(0, $this.children.length - 1 | 0);
@@ -527,44 +191,14 @@ Node.lambdaArguments = function($this) {
 Node.lambdaBlock = function($this) {
   return $this.children[$this.children.length - 1 | 0];
 };
-Node.assertValue = function($this) {
-  return $this.children[0];
-};
-Node.bindValue = function($this) {
-  return $this.children[0];
-};
-Node.parameterizeType = function($this) {
-  return $this.children[0];
-};
 Node.parameterizeTypes = function($this) {
   return $this.children.slice(1, $this.children.length);
-};
-Node.functionTypeResult = function($this) {
-  return $this.children[0];
 };
 Node.functionTypeArguments = function($this) {
   return $this.children.slice(1, $this.children.length);
 };
-Node.callValue = function($this) {
-  return $this.children[0];
-};
 Node.callArguments = function($this) {
   return $this.children.slice(1, $this.children.length);
-};
-Node.superCallArguments = function($this) {
-  return $this.children;
-};
-Node.initializerValues = function($this) {
-  return $this.children;
-};
-Node.parameterBound = function($this) {
-  return $this.children[1];
-};
-Node.returnValue = function($this) {
-  return $this.children[0];
-};
-Node.switchValue = function($this) {
-  return $this.children[0];
 };
 Node.switchCases = function($this) {
   return $this.children.slice(1, $this.children.length);
@@ -668,18 +302,6 @@ Node.isNameExpression = function($this) {
 };
 Node.isStorage = function($this) {
   return NodeKind.isUnaryStorageOperator($this.parent.kind) || NodeKind.isBinaryStorageOperator($this.parent.kind) && $this === $this.parent.children[0];
-};
-Node.asBool = function($this) {
-  return $this.kind === 39;
-};
-Node.asInt = function($this) {
-  return $this.content.value;
-};
-Node.asDouble = function($this) {
-  return $this.content.value;
-};
-Node.asString = function($this) {
-  return $this.content.value;
 };
 Node.hasChildren = function($this) {
   return $this.children !== null && $this.children.length > 0;
@@ -863,14 +485,8 @@ NodeKind.isBinaryOperator = function($this) {
 NodeKind.isBinaryStorageOperator = function($this) {
   return $this >= 89 && $this <= 99;
 };
-NodeKind.isTertiaryOperator = function($this) {
-  return $this === 100;
-};
 NodeKind.isCast = function($this) {
   return $this >= 54 && $this <= 55;
-};
-NodeKind.isType = function($this) {
-  return $this === 35;
 };
 NodeKind.isReal = function($this) {
   return $this >= 42 && $this <= 43;
@@ -878,17 +494,11 @@ NodeKind.isReal = function($this) {
 NodeKind.isBool = function($this) {
   return $this >= 39 && $this <= 40;
 };
-NodeKind.isError = function($this) {
-  return $this === 50;
-};
 NodeKind.isLoop = function($this) {
   return $this >= 21 && $this <= 24;
 };
 NodeKind.isStorage = function($this) {
   return $this === 34 || $this === 46;
-};
-NodeKind.prettyPrint = function($this) {
-  return replace(NodeKind.toString($this).toLowerCase(), "_", "-");
 };
 NodeKind.toString = function($this) {
   switch ($this) {
@@ -1260,9 +870,6 @@ function CompilerOptions() {
   this.jsSourceMap = false;
   this.optimize = false;
 }
-CompilerOptions.isSingleFileMode = function($this) {
-  return $this.outputFile.length > 0;
-};
 function CompilerResult(_0, _1, _2, _3) {
   this.options = _0;
   this.outputs = _1;
@@ -1620,9 +1227,6 @@ function Range(_0, _1, _2) {
   this.start = _1;
   this.end = _2;
 }
-Range.isEmpty = function($this) {
-  return $this.source === null;
-};
 Range.toString = function($this) {
   return $this.source === null ? "" : $this.source.contents.slice($this.start, $this.end);
 };
@@ -1755,9 +1359,6 @@ frontend.Flags = function() {
   this.jsSourceMap = false;
   this.optimize = false;
 };
-frontend.Flags.shouldWriteToStdout = function($this) {
-  return $this.outputFile === "";
-};
 var js = {};
 js.PatchContext = function() {
   this.lambdaCount = 0;
@@ -1783,6 +1384,7 @@ js.Emitter = function(_0, _1) {
   this.needMathImul = false;
   this.isStartOfExpression = false;
   this.generator = new SourceMapGenerator();
+  this.liveSymbols = new IntMap();
   this.currentSource = null;
   this.options = _0;
   this.cache = _1;
@@ -2047,14 +1649,15 @@ js.Emitter.emitEnum = function($this, node) {
 };
 js.Emitter.emitFunction = function($this, node) {
   var block = node.children[2];
-  if (block === null) {
+  var symbol = node.symbol;
+  if (block === null || !Symbol.isImportOrExport(symbol) && (symbol.flags & 32768) !== 0 && !$this.liveSymbols.has(symbol.uniqueID)) {
     return;
   }
-  var isCompoundName = js.Emitter.hasCompoundName($this, node.symbol);
+  var isCompoundName = js.Emitter.hasCompoundName($this, symbol);
   if (!isCompoundName) {
-    js.Emitter.emit($this, $this.indent + "function " + js.Emitter.fullName($this, node.symbol));
+    js.Emitter.emit($this, $this.indent + "function " + js.Emitter.fullName($this, symbol));
   } else {
-    js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = function");
+    js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, symbol) + " = function");
   }
   js.Emitter.emitArgumentVariables($this, node.children[1].children);
   js.Emitter.emit($this, " ");
@@ -2064,7 +1667,7 @@ js.Emitter.emitFunction = function($this, node) {
   js.Emitter.decreaseIndent($this);
   js.Emitter.emit($this, $this.indent + (isCompoundName ? "};\n" : "}\n"));
   if (node.kind === 14) {
-    var type = node.symbol.enclosingSymbol.type;
+    var type = symbol.enclosingSymbol.type;
     if (Type.isClass(type) && Type.baseClass(type) !== null) {
       js.Emitter.emit($this, $this.indent + "$extends(" + js.Emitter.fullName($this, type.symbol) + ", " + js.Emitter.fullName($this, Type.baseClass(type).symbol) + ");\n");
     }
@@ -2527,6 +2130,10 @@ js.Emitter.patchNode = function($this, node, context) {
     var variable = node.children[0];
     Node.become(node, Node.createCall(Node.createLambda([Node.remove(variable)], Node.withChildren(new Node(2), [Node.withChildren(new Node(25), [Node.remove(value)])])), [Node.remove(variable.children[2])]));
   }
+  var symbol = node.symbol;
+  if (symbol !== null && SymbolKind.isFunction(symbol.kind) && node !== symbol.node && node !== symbol.node.children[0]) {
+    $this.liveSymbols.set(symbol.uniqueID, true);
+  }
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       var child = node.children[i];
@@ -2987,9 +2594,6 @@ ParserContext.spanSince = function($this, range) {
   var previous = $this.tokens[$this.index > 0 ? $this.index - 1 | 0 : 0];
   return previous.range.end < range.start ? range : Range.span(range, previous.range);
 };
-ParserContext.peek = function($this, kind) {
-  return ParserContext.current($this).kind === kind;
-};
 ParserContext.eat = function($this, kind) {
   if (ParserContext.current($this).kind === kind) {
     ParserContext.next($this);
@@ -3033,12 +2637,6 @@ Pratt.parselet = function($this, kind, precedence) {
     parselet.precedence = precedence;
   }
   return parselet;
-};
-Pratt.parse = function($this, context, precedence) {
-  return Pratt.parseIgnoringParselet($this, context, precedence, null);
-};
-Pratt.resume = function($this, context, precedence, left) {
-  return Pratt.resumeIgnoringParselet($this, context, precedence, left, null);
 };
 Pratt.parseIgnoringParselet = function($this, context, precedence, parseletToIgnore) {
   var token = ParserContext.current(context);
@@ -5715,9 +5313,6 @@ Scope.linkGlobals = function($this, cache) {
   cache.stringType = Scope.findLocal($this, "string").symbol.type;
   cache.listType = Scope.findLocal($this, "List").symbol.type;
 };
-Scope.findType = function($this, name) {
-  return Scope.findLocal($this, name).symbol.type;
-};
 Scope.insert = function($this, symbol) {
   if ($this.type !== null) {
     Type.addMember($this.type, new Member(symbol));
@@ -5751,9 +5346,6 @@ Scope.findLocal = function($this, name) {
   return null;
 };
 var SymbolKind = {};
-SymbolKind.isGlobalNamespace = function($this) {
-  return $this === 8;
-};
 SymbolKind.isNamespace = function($this) {
   return $this >= 8 && $this <= 9;
 };
@@ -5768,9 +5360,6 @@ SymbolKind.isObject = function($this) {
 };
 SymbolKind.isType = function($this) {
   return $this >= 4 && $this <= 14;
-};
-SymbolKind.isConstructor = function($this) {
-  return $this === 17;
 };
 SymbolKind.isFunction = function($this) {
   return $this >= 15 && $this <= 17;
@@ -5896,68 +5485,8 @@ Symbol.isObjectMember = function($this) {
 Symbol.isEnumMember = function($this) {
   return $this.enclosingSymbol !== null && SymbolKind.isEnum($this.enclosingSymbol.kind);
 };
-Symbol.isPublic = function($this) {
-  return ($this.flags & 1) !== 0;
-};
-Symbol.isPrivate = function($this) {
-  return ($this.flags & 2) !== 0;
-};
-Symbol.isProtected = function($this) {
-  return ($this.flags & 4) !== 0;
-};
-Symbol.isAbstract = function($this) {
-  return ($this.flags & 8) !== 0;
-};
-Symbol.isFromExtension = function($this) {
-  return ($this.flags & 16) !== 0;
-};
-Symbol.isOverride = function($this) {
-  return ($this.flags & 32) !== 0;
-};
-Symbol.isStatic = function($this) {
-  return ($this.flags & 64) !== 0;
-};
-Symbol.isVirtual = function($this) {
-  return ($this.flags & 128) !== 0;
-};
-Symbol.isFinal = function($this) {
-  return ($this.flags & 256) !== 0;
-};
-Symbol.isInline = function($this) {
-  return ($this.flags & 512) !== 0;
-};
-Symbol.isImport = function($this) {
-  return ($this.flags & 2048) !== 0;
-};
-Symbol.isExport = function($this) {
-  return ($this.flags & 1024) !== 0;
-};
 Symbol.isImportOrExport = function($this) {
   return ($this.flags & 2048) !== 0 || ($this.flags & 1024) !== 0;
-};
-Symbol.isUninitialized = function($this) {
-  return ($this.flags & 12288) === 0;
-};
-Symbol.isInitializing = function($this) {
-  return ($this.flags & 4096) !== 0;
-};
-Symbol.isInitialized = function($this) {
-  return ($this.flags & 8192) !== 0;
-};
-Symbol.isUninlined = function($this) {
-  return ($this.flags & 49152) === 0;
-};
-Symbol.isUninlineable = function($this) {
-  return ($this.flags & 16384) !== 0;
-};
-Symbol.isInlineable = function($this) {
-  return ($this.flags & 32768) !== 0;
-};
-Symbol.hasLocationError = function($this) {
-  return ($this.flags & 65536) !== 0;
-};
-Symbol.hasModifierErrors = function($this) {
-  return ($this.flags & 131072) !== 0;
 };
 function Type(_0) {
   this.members = new StringMap();
@@ -6004,9 +5533,6 @@ Type.copyMembersFrom = function($this, other) {
     }
   }
 };
-Type.findMember = function($this, name) {
-  return $this.members.getOrDefault(name, null);
-};
 Type.environmentToString = function(parameters, substitutions) {
   var text = "[";
   for (var i = 0; i < parameters.length; i = i + 1 | 0) {
@@ -6044,9 +5570,6 @@ Type.toString = function($this) {
 Type.hasParameters = function($this) {
   return $this.symbol !== null && Symbol.hasParameters($this.symbol);
 };
-Type.isParameterized = function($this) {
-  return $this.substitutions !== null;
-};
 Type.hasRelevantTypes = function($this) {
   return $this.relevantTypes !== null && $this.relevantTypes.length > 0;
 };
@@ -6074,41 +5597,8 @@ Type.dependsOnParameter = function($this, parameter) {
   }
   return false;
 };
-Type.resultType = function($this) {
-  return $this.relevantTypes[0];
-};
 Type.argumentTypes = function($this) {
   return $this.relevantTypes.slice(1, $this.relevantTypes.length);
-};
-Type.isVoid = function($this, cache) {
-  return $this === cache.voidType;
-};
-Type.isInt = function($this, cache) {
-  return $this === cache.intType;
-};
-Type.isNull = function($this, cache) {
-  return $this === cache.nullType;
-};
-Type.isBool = function($this, cache) {
-  return $this === cache.boolType;
-};
-Type.isFloat = function($this, cache) {
-  return $this === cache.floatType;
-};
-Type.isDouble = function($this, cache) {
-  return $this === cache.doubleType;
-};
-Type.isString = function($this, cache) {
-  return $this === cache.stringType;
-};
-Type.isList = function($this, cache) {
-  return $this.symbol === cache.listType.symbol;
-};
-Type.isError = function($this, cache) {
-  return $this === cache.errorType;
-};
-Type.isFunction = function($this) {
-  return $this.symbol === null;
 };
 Type.isNamespace = function($this) {
   return $this.symbol !== null && SymbolKind.isNamespace($this.symbol.kind);
@@ -6403,9 +5893,6 @@ function nodeKindCheck(kind) {
     return node.kind === kind;
   };
 }
-function checkAllNodeListKinds(node, check) {
-  return checkAllNodeKinds(node.children, check);
-}
 function checkAllNodeKinds(nodes, check) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
     if (!check(nodes[i])) {
@@ -6619,18 +6106,9 @@ function repeat(text, count) {
   }
   return result;
 }
-function plural(value, singular, plural) {
-  return value === 1 ? singular : plural;
-}
 function splitPath(path) {
   var slashIndex = Math.imax(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return slashIndex === -1 ? new SplitPath(".", path) : new SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1 | 0, path.length));
-}
-function joinPath(directory, entry) {
-  return directory + "/" + entry;
-}
-function formatNumber(number) {
-  return (Math.round(number * 10) / 10).toString();
 }
 function bytesToString(bytes) {
   if (bytes === 1) {
@@ -6925,9 +6403,6 @@ function prepareTokens(tokens) {
     }
   }
 }
-function simpleQuote(name) {
-  return "\"" + name + "\"";
-}
 function firstLineOf(text) {
   var index = text.indexOf("\n");
   return index < 0 ? text : text.slice(0, index);
@@ -7090,9 +6565,6 @@ function parseArgumentVariables(context) {
   }
   scanForToken(context, 80, 0);
   return Node.withRange(Node.withChildren(new Node(3), $arguments), ParserContext.spanSince(context, token.range));
-}
-function parseType(context) {
-  return Pratt.parseIgnoringParselet(pratt, context, 14, null);
 }
 function parseEnumValueDeclaration(context) {
   var name = parseName(context);
@@ -7850,9 +7322,6 @@ function createParser() {
     return parseSuperCall(context);
   };
   return pratt;
-}
-function typeToText(type) {
-  return "type \"" + Type.toString(type) + "\"";
 }
 function semanticWarningUnusedExpression(log, range) {
   Log.warning(log, range, "Unused expression");

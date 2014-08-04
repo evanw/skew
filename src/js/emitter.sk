@@ -27,6 +27,7 @@ namespace js {
     var needMathImul = false;
     var isStartOfExpression = false;
     var generator = SourceMapGenerator();
+    var liveSymbols = IntMap<bool>();
     Source currentSource = null;
     CompilerOptions options;
     TypeCache cache;
@@ -286,14 +287,15 @@ namespace js {
 
     void emitFunction(Node node) {
       var block = node.functionBlock();
-      if (block == null) {
+      var symbol = node.symbol;
+      if (block == null || !symbol.isImportOrExport() && symbol.isInlineable() && !liveSymbols.has(symbol.uniqueID)) {
         return;
       }
-      var isCompoundName = hasCompoundName(node.symbol);
+      var isCompoundName = hasCompoundName(symbol);
       if (!isCompoundName) {
-        emit(indent.append("function ").append(fullName(node.symbol)));
+        emit(indent.append("function ").append(fullName(symbol)));
       } else {
-        emit(indent.append(fullName(node.symbol)).append(" = function"));
+        emit(indent.append(fullName(symbol)).append(" = function"));
       }
       emitArgumentVariables(node.functionArguments().children);
       emit(" ");
@@ -303,7 +305,7 @@ namespace js {
       decreaseIndent();
       emit(indent.append(isCompoundName ? "};\n" : "}\n"));
       if (node.kind == .CONSTRUCTOR) {
-        Type type = node.symbol.enclosingSymbol.type;
+        var type = symbol.enclosingSymbol.type;
         if (type.isClass() && type.baseClass() != null) {
           emit(indent.append("$extends(").append(fullName(type.symbol)).append(", ").append(fullName(type.baseClass().symbol)).append(");\n"));
         }
@@ -687,6 +689,14 @@ namespace js {
         var value = node.letValue();
         var variable = node.letVariable();
         node.become(Node.createCall(Node.createLambda({ variable.remove() }, Node.createBlock({ Node.createReturn(value.remove()) })), { variable.variableValue().remove() }));
+      }
+
+      // Track live symbols for simple dead code elimination. Internal symbols
+      // that have been inlined everywhere, especially in library code, should
+      // not be emitted.
+      var symbol = node.symbol;
+      if (symbol != null && symbol.kind.isFunction() && node != symbol.node && node != symbol.node.declarationName()) {
+        liveSymbols.set(symbol.uniqueID, true);
       }
 
       if (node.hasChildren()) {

@@ -1,12 +1,18 @@
 testJS("
+inline int foo(int foo) {
+  return foo;
+}
+var z = foo(foo(1));
+", "
+var z = 1;
+");
+
+testJS("
 inline int foo(int x, int y) {
   return x + y;
 }
 foo(1, 2);
 ", "
-function foo(x, y) {
-  return x + y | 0;
-}
 1 + 2 | 0;
 ");
 
