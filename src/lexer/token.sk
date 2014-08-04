@@ -11,8 +11,8 @@ void prepareTokens(List<Token> tokens) {
     var token = tokens.get(i);
     var tokenKind = token.kind;
 
-    // Note: The check for "token.text.length > 0" is very important. Without
-    // it, v8 will continue to deoptimize on codeUnitAt(0) until it hits its
+    // The check for "token.text.length > 0" is very important. Without it,
+    // V8 will continue to deoptimize on codeUnitAt(0) until it hits its
     // deoptimization threshold and then this function will be permanently
     // deoptimized. This isn't so bad by itself but Google Closure Compiler
     // inlines this along with all other tokenizing functions into a single

@@ -489,6 +489,7 @@ class Resolver {
     var oldType = typeContext;
     typeContext = expectedType;
 
+    // Separating the case bodies into separate functions makes the JavaScript JIT go faster
     switch (node.kind) {
       case .PROGRAM { resolveProgram(node); }
       case .FILE { resolveFile(node); }

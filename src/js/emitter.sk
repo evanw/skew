@@ -190,240 +190,244 @@ namespace js {
       isStartOfExpression = false;
       addMapping(node);
 
+      // Separating the case bodies into separate functions makes the JavaScript JIT go faster
       switch (node.kind) {
-        case .PROGRAM {
-          emitChildren(node);
-        }
+        case .BLOCK { emitBlock(node); }
+        case .CASE { emitCase(node); }
+        case .VARIABLE_CLUSTER { emitVariableCluster(node); }
+        case .NAMESPACE { emitNamespace(node); }
+        case .ENUM, .ENUM_FLAGS { emitEnum(node); }
+        case .CONSTRUCTOR, .FUNCTION { emitFunction(node); }
+        case .VARIABLE { emitVariable(node); }
+        case .IF { emitIf(node); }
+        case .FOR { emitFor(node); }
+        case .WHILE { emitWhile(node); }
+        case .DO_WHILE { emitDoWhile(node); }
+        case .RETURN, .IMPLICIT_RETURN { emitReturn(node); }
+        case .BREAK { emitBreak(node); }
+        case .CONTINUE { emitContinue(node); }
+        case .ASSERT { emitAssert(node); }
+        case .EXPRESSION { emitExpressionStatement(node); }
+        case .SWITCH { emitSwitch(node); }
+        case .MODIFIER { emitModifier(node); }
+        case .PARAMETER, .USING_ALIAS, .ALIAS, .USING_NAMESPACE {}
+        default { assert false; }
+      }
+    }
 
-        case .FILE {
-          emitChildren(node.fileBlock());
-        }
+    void emitBlock(Node node) {
+      emit("{\n");
+      increaseIndent();
+      emitChildren(node);
+      decreaseIndent();
+      emit(indent.append("}"));
+    }
 
-        case .BLOCK {
-          emit("{\n");
-          increaseIndent();
-          emitChildren(node);
-          decreaseIndent();
-          emit(indent.append("}"));
-        }
+    void emitCase(Node node) {
+      var values = node.caseValues();
+      var block = node.caseBlock();
+      for (var i = 0; i < values.length; i++) {
+        emit(indent.append("case "));
+        emitExpression(values.get(i), Precedence.LOWEST);
+        emit(":\n");
+      }
+      if (values.length == 0) {
+        emit(indent.append("default:\n"));
+      }
+      increaseIndent();
+      emitChildren(block);
+      if (!block.blockAlwaysEndsWithReturn()) {
+        emit(indent.append("break;\n"));
+      }
+      decreaseIndent();
+    }
 
-        case .CASE {
-          var values = node.caseValues();
-          var block = node.caseBlock();
-          for (var i = 0; i < values.length; i++) {
-            emit(indent.append("case "));
-            emitExpression(values.get(i), Precedence.LOWEST);
-            emit(":\n");
-          }
-          if (values.length == 0) {
-            emit(indent.append("default:\n"));
-          }
-          increaseIndent();
-          emitChildren(block);
-          if (!block.blockAlwaysEndsWithReturn()) {
-            emit(indent.append("break;\n"));
-          }
-          decreaseIndent();
-        }
-
-        case .VARIABLE_CLUSTER {
-          var variables = node.clusterVariables();
-          for (var i = 0; i < variables.length; i++) {
-            var variable = variables.get(i);
-            var isCompoundName = variable.symbol != null && hasCompoundName(variable.symbol);
-            if ((variable.symbol == null || !variable.symbol.kind.isInstance()) && (!isCompoundName || variable.variableValue() != null)) {
-              emit(indent);
-              if (!isCompoundName) {
-                emit("var ");
-              }
-              emitNode(variable);
-              emit(";\n");
-            }
-          }
-        }
-
-        case .NAMESPACE {
-          if (!hasCompoundName(node.symbol)) {
-            emit("var ");
-          }
-          emit(indent.append(fullName(node.symbol)).append(" = {};\n"));
-        }
-
-        case .ENUM, .ENUM_FLAGS {
-          var block = node.declarationBlock();
-          if (!hasCompoundName(node.symbol)) {
-            emit("var ");
-          }
-          if (options.optimize && !node.symbol.isImportOrExport()) {
-            emit(indent.append(fullName(node.symbol)).append(" = {};\n")); // Remove this once extension methods are flattened into global scope
-          } else {
-            emit(indent.append(fullName(node.symbol)).append(" = {\n"));
-            increaseIndent();
-            for (var i = 0; i < block.children.length; i++) {
-              var symbol = block.children.get(i).symbol;
-              emit(indent.append(mangleName(symbol)).append(": ").append(symbol.enumValue.toString()).append(i == block.children.length - 1 ? "\n" : ",\n"));
-            }
-            decreaseIndent();
-            emit(indent.append("};\n"));
-          }
-        }
-
-        case .CONSTRUCTOR, .FUNCTION {
-          var block = node.functionBlock();
-          if (block == null) {
-            return;
-          }
-          var isCompoundName = hasCompoundName(node.symbol);
+    void emitVariableCluster(Node node) {
+      var variables = node.clusterVariables();
+      for (var i = 0; i < variables.length; i++) {
+        var variable = variables.get(i);
+        var isCompoundName = variable.symbol != null && hasCompoundName(variable.symbol);
+        if ((variable.symbol == null || !variable.symbol.kind.isInstance()) && (!isCompoundName || variable.variableValue() != null)) {
+          emit(indent);
           if (!isCompoundName) {
-            emit(indent.append("function ").append(fullName(node.symbol)));
-          } else {
-            emit(indent.append(fullName(node.symbol)).append(" = function"));
+            emit("var ");
           }
-          emitArgumentVariables(node.functionArguments().children);
-          emit(" ");
-          emit("{\n");
-          increaseIndent();
-          emitChildren(block);
-          decreaseIndent();
-          emit(indent.append(isCompoundName ? "};\n" : "}\n"));
-          if (node.kind == .CONSTRUCTOR) {
-            Type type = node.symbol.enclosingSymbol.type;
-            if (type.isClass() && type.baseClass() != null) {
-              emit(indent.append("$extends(").append(fullName(type.symbol)).append(", ").append(fullName(type.baseClass().symbol)).append(");\n"));
-            }
-          }
-        }
-
-        case .VARIABLE {
-          var value = node.variableValue();
-          emit(node.symbol == null ? node.declarationName().asString() : fullName(node.symbol));
-          if (value != null) {
-            emit(" = ");
-            emitExpression(value, Precedence.COMMA);
-          }
-        }
-
-        case .IF {
-          emit(indent);
-          recursiveEmitIfStatement(node);
-          emit("\n");
-        }
-
-        case .FOR {
-          var setup = node.forSetup();
-          var test = node.forTest();
-          var update = node.forUpdate();
-          emit(indent.append("for ("));
-          if (setup != null) {
-            if (setup.kind == .VARIABLE_CLUSTER) {
-              emit("var ");
-              emitCommaSeparatedNodes(setup.clusterVariables());
-            } else {
-              emitExpression(setup, Precedence.LOWEST);
-            }
-          }
-          if (test != null) {
-            emit("; ");
-            emitExpression(test, Precedence.LOWEST);
-          } else {
-            emit(";");
-          }
-          if (update != null) {
-            emit("; ");
-            emitExpression(update, Precedence.LOWEST);
-          } else {
-            emit(";");
-          }
-          emit(") ");
-          emitNode(node.forBlock());
-          emit("\n");
-        }
-
-        case .FOR_EACH {
-        }
-
-        case .WHILE {
-          emit(indent.append("while ("));
-          emitExpression(node.whileTest(), Precedence.LOWEST);
-          emit(") ");
-          emitNode(node.whileBlock());
-          emit("\n");
-        }
-
-        case .DO_WHILE {
-          emit(indent.append("do "));
-          emitNode(node.whileBlock());
-          emit(" while (");
-          emitExpression(node.whileTest(), Precedence.LOWEST);
-          emit(");\n");
-        }
-
-        case .RETURN, .IMPLICIT_RETURN {
-          var value = node.returnValue();
-          emit(indent);
-          if (value != null) {
-            emit("return ");
-            emitExpression(value, Precedence.LOWEST);
-            emit(";\n");
-          } else {
-            emit("return;\n");
-          }
-        }
-
-        case .BREAK {
-          emit(indent.append("break;\n"));
-        }
-
-        case .CONTINUE {
-          emit(indent.append("continue;\n"));
-        }
-
-        case .ASSERT {
-          var value = node.assertValue();
-          value.invertBooleanCondition(cache);
-          if (value.kind != .FALSE && !options.optimize) {
-            var couldBeFalse = value.kind != .TRUE;
-            if (couldBeFalse) {
-              emit(indent.append("if ("));
-              emitExpression(value, Precedence.LOWEST);
-              emit(") {\n");
-              increaseIndent();
-            }
-            var text = node.range.toString().append(" (").append(node.range.locationString()).append(")");
-            emit(indent.append("throw new Error(").append(quoteString(text, '"')).append(");\n"));
-            if (couldBeFalse) {
-              decreaseIndent();
-              emit(indent.append("}\n"));
-            }
-          }
-        }
-
-        case .EXPRESSION {
-          emit(indent);
-          isStartOfExpression = true;
-          emitExpression(node.expressionValue(), Precedence.LOWEST);
+          emitNode(variable);
           emit(";\n");
         }
+      }
+    }
 
-        case .SWITCH {
-          emit(indent.append("switch ("));
-          emitExpression(node.switchValue(), Precedence.LOWEST);
-          emit(") {\n");
-          emitNodes(node.switchCases());
-          emit(indent.append("}\n"));
+    void emitNamespace(Node node) {
+      if (!hasCompoundName(node.symbol)) {
+        emit("var ");
+      }
+      emit(indent.append(fullName(node.symbol)).append(" = {};\n"));
+    }
+
+    void emitEnum(Node node) {
+      var block = node.declarationBlock();
+      if (!hasCompoundName(node.symbol)) {
+        emit("var ");
+      }
+      if (options.optimize && !node.symbol.isImportOrExport()) {
+        emit(indent.append(fullName(node.symbol)).append(" = {};\n")); // Remove this once extension methods are flattened into global scope
+      } else {
+        emit(indent.append(fullName(node.symbol)).append(" = {\n"));
+        increaseIndent();
+        for (var i = 0; i < block.children.length; i++) {
+          var symbol = block.children.get(i).symbol;
+          emit(indent.append(mangleName(symbol)).append(": ").append(symbol.enumValue.toString()).append(i == block.children.length - 1 ? "\n" : ",\n"));
         }
+        decreaseIndent();
+        emit(indent.append("};\n"));
+      }
+    }
 
-        case .MODIFIER {
-          emitNodes(node.modifierStatements());
-        }
-
-        case .PARAMETER, .USING_ALIAS, .ALIAS, .USING_NAMESPACE {
-        }
-
-        default {
-          assert false;
+    void emitFunction(Node node) {
+      var block = node.functionBlock();
+      if (block == null) {
+        return;
+      }
+      var isCompoundName = hasCompoundName(node.symbol);
+      if (!isCompoundName) {
+        emit(indent.append("function ").append(fullName(node.symbol)));
+      } else {
+        emit(indent.append(fullName(node.symbol)).append(" = function"));
+      }
+      emitArgumentVariables(node.functionArguments().children);
+      emit(" ");
+      emit("{\n");
+      increaseIndent();
+      emitChildren(block);
+      decreaseIndent();
+      emit(indent.append(isCompoundName ? "};\n" : "}\n"));
+      if (node.kind == .CONSTRUCTOR) {
+        Type type = node.symbol.enclosingSymbol.type;
+        if (type.isClass() && type.baseClass() != null) {
+          emit(indent.append("$extends(").append(fullName(type.symbol)).append(", ").append(fullName(type.baseClass().symbol)).append(");\n"));
         }
       }
+    }
+
+    void emitVariable(Node node) {
+      var value = node.variableValue();
+      emit(node.symbol == null ? node.declarationName().asString() : fullName(node.symbol));
+      if (value != null) {
+        emit(" = ");
+        emitExpression(value, Precedence.COMMA);
+      }
+    }
+
+    void emitIf(Node node) {
+      emit(indent);
+      recursiveEmitIfStatement(node);
+      emit("\n");
+    }
+
+    void emitFor(Node node) {
+      var setup = node.forSetup();
+      var test = node.forTest();
+      var update = node.forUpdate();
+      emit(indent.append("for ("));
+      if (setup != null) {
+        if (setup.kind == .VARIABLE_CLUSTER) {
+          emit("var ");
+          emitCommaSeparatedNodes(setup.clusterVariables());
+        } else {
+          emitExpression(setup, Precedence.LOWEST);
+        }
+      }
+      if (test != null) {
+        emit("; ");
+        emitExpression(test, Precedence.LOWEST);
+      } else {
+        emit(";");
+      }
+      if (update != null) {
+        emit("; ");
+        emitExpression(update, Precedence.LOWEST);
+      } else {
+        emit(";");
+      }
+      emit(") ");
+      emitNode(node.forBlock());
+      emit("\n");
+    }
+
+    void emitWhile(Node node) {
+      emit(indent.append("while ("));
+      emitExpression(node.whileTest(), Precedence.LOWEST);
+      emit(") ");
+      emitNode(node.whileBlock());
+      emit("\n");
+    }
+
+    void emitDoWhile(Node node) {
+      emit(indent.append("do "));
+      emitNode(node.whileBlock());
+      emit(" while (");
+      emitExpression(node.whileTest(), Precedence.LOWEST);
+      emit(");\n");
+    }
+
+    void emitReturn(Node node) {
+      var value = node.returnValue();
+      emit(indent);
+      if (value != null) {
+        emit("return ");
+        emitExpression(value, Precedence.LOWEST);
+        emit(";\n");
+      } else {
+        emit("return;\n");
+      }
+    }
+
+    void emitBreak(Node node) {
+      emit(indent.append("break;\n"));
+    }
+
+    void emitContinue(Node node) {
+      emit(indent.append("continue;\n"));
+    }
+
+    void emitAssert(Node node) {
+      var value = node.assertValue();
+      value.invertBooleanCondition(cache);
+      if (value.kind != .FALSE && !options.optimize) {
+        var couldBeFalse = value.kind != .TRUE;
+        if (couldBeFalse) {
+          emit(indent.append("if ("));
+          emitExpression(value, Precedence.LOWEST);
+          emit(") {\n");
+          increaseIndent();
+        }
+        var text = node.range.toString().append(" (").append(node.range.locationString()).append(")");
+        emit(indent.append("throw new Error(").append(quoteString(text, '"')).append(");\n"));
+        if (couldBeFalse) {
+          decreaseIndent();
+          emit(indent.append("}\n"));
+        }
+      }
+    }
+
+    void emitExpressionStatement(Node node) {
+      emit(indent);
+      isStartOfExpression = true;
+      emitExpression(node.expressionValue(), Precedence.LOWEST);
+      emit(";\n");
+    }
+
+    void emitSwitch(Node node) {
+      emit(indent.append("switch ("));
+      emitExpression(node.switchValue(), Precedence.LOWEST);
+      emit(") {\n");
+      emitNodes(node.switchCases());
+      emit(indent.append("}\n"));
+    }
+
+    void emitModifier(Node node) {
+      emitNodes(node.modifierStatements());
     }
 
     void emitExpression(Node node, Precedence precedence) {
@@ -432,153 +436,34 @@ namespace js {
       addMapping(node);
 
       switch (node.kind) {
-        case .NAME {
-          emit(node.symbol == null ? node.asString() : fullName(node.symbol));
-        }
-
-        case .TYPE {
-          emit(fullName(node.type.symbol));
-        }
-
-        case .THIS {
-          emit("this");
-        }
-
-        case .HOOK {
-          if (Precedence.ASSIGN < precedence) emit("(");
-          emitExpression(node.hookTest(), Precedence.LOGICAL_OR);
-          emit(" ? ");
-          emitExpression(node.hookTrue(), Precedence.ASSIGN);
-          emit(" : ");
-          emitExpression(node.hookFalse(), Precedence.ASSIGN);
-          if (Precedence.ASSIGN < precedence) emit(")");
-        }
-
-        case .NULL {
-          emit("null");
-        }
-
-        case .TRUE {
-          emit("true");
-        }
-
-        case .FALSE {
-          emit("false");
-        }
-
-        case .INT {
-          emit(node.asInt().toString());
-          if (node.parent.kind == .DOT) {
-            emit(".");
-          }
-        }
-
-        case .FLOAT, .DOUBLE {
-          var text = node.asDouble().toString();
-          emit(text);
-          if (node.parent.kind == .DOT && text.indexOf(".") < 0) {
-            emit(".");
-          }
-        }
-
-        case .STRING {
-          emit(quoteString(node.asString(), '"'));
-        }
-
-        case .INITIALIZER {
-          emit("[");
-          emitCommaSeparatedExpressions(node.initializerValues());
-          emit("]");
-        }
-
-        case .DOT {
-          emitExpression(node.dotTarget(), Precedence.MEMBER);
-          emit(".");
-          var name = node.dotName();
-          emit(
-            name.symbol == null ? name.asString() :
-            name.symbol.kind.isInstance() ? mangleName(name.symbol) :
-            fullName(name.symbol));
-        }
-
-        case .CALL {
-          var value = node.callValue();
-          if (value.kind.isType()) emit("new ");
-          isStartOfExpression = wasStartOfExpression;
-          emitExpression(value, Precedence.UNARY_POSTFIX);
-          emit("(");
-          emitCommaSeparatedExpressions(node.callArguments());
-          emit(")");
-        }
-
-        case .SUPER_CALL {
-          var arguments = node.superCallArguments();
-          emit(fullName(node.symbol));
-          emit(".call(this");
-          for (var i = 0; i < arguments.length; i++) {
-            emit(", ");
-            emitExpression(arguments.get(i), Precedence.COMMA);
-          }
-          emit(")");
-        }
-
-        case .BIND {
-          emitExpression(node.bindValue(), precedence);
-        }
-
-        case .SEQUENCE {
-          if (Precedence.COMMA <= precedence) emit("(");
-          isStartOfExpression = wasStartOfExpression;
-          emitCommaSeparatedExpressions(node.children);
-          if (Precedence.COMMA <= precedence) emit(")");
-        }
-
-        case .CAST, .IMPLICIT_CAST {
-          isStartOfExpression = wasStartOfExpression;
-          emitExpression(node.castValue(), precedence);
-        }
-
-        case .LAMBDA {
-          if (wasStartOfExpression) emit("(");
-          emit("function");
-          emitArgumentVariables(node.lambdaArguments());
-          emit(" ");
-          emitNode(node.lambdaBlock());
-          if (wasStartOfExpression) emit(")");
-        }
-
-        case .DEFAULT {
-          if (node.type.isNumeric(cache)) emit("0");
-          else if (node.type.isBool(cache)) emit("false");
-          else if (node.type.isReference()) emit("null");
-          else assert false; // TODO: Handle structs
-        }
-
-        case .UNTYPED {
-          emitExpression(node.untypedValue(), precedence);
-        }
+        case .NAME { emit(node.symbol == null ? node.asString() : fullName(node.symbol)); }
+        case .TYPE { emit(fullName(node.type.symbol)); }
+        case .THIS { emit("this"); }
+        case .HOOK { emitHook(node, precedence); }
+        case .NULL { emit("null"); }
+        case .TRUE { emit("true"); }
+        case .FALSE { emit("false"); }
+        case .INT { emitInt(node); }
+        case .FLOAT, .DOUBLE { emitDouble(node); }
+        case .STRING { emit(quoteString(node.asString(), '"')); }
+        case .INITIALIZER { emitInitializer(node); }
+        case .DOT { emitDot(node); }
+        case .CALL { isStartOfExpression = wasStartOfExpression; emitCall(node); }
+        case .SUPER_CALL { emitSuperCall(node); }
+        case .BIND { emitExpression(node.bindValue(), precedence); }
+        case .SEQUENCE { isStartOfExpression = wasStartOfExpression; emitSequence(node, precedence); }
+        case .LAMBDA { emitLambda(node, wasStartOfExpression); }
+        case .DEFAULT { emitDefault(node); }
+        case .UNTYPED { emitExpression(node.untypedValue(), precedence); }
+        case .INDEX { emitIndex(node, precedence); }
+        case .ASSIGN_INDEX { emitTertiary(node, precedence); }
+        case .CAST, .IMPLICIT_CAST { isStartOfExpression = wasStartOfExpression; emitExpression(node.castValue(), precedence); }
 
         case
           .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT,
           .PREFIX_INCREMENT, .PREFIX_DECREMENT,
           .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
-
-          var value = node.unaryValue();
-          var info = operatorInfo.get(node.kind);
-          if (info.precedence < precedence) emit("(");
-          var isPostfix = info.precedence == Precedence.UNARY_POSTFIX;
-          if (!isPostfix) {
-            emit(info.text);
-
-            // Prevent "- -1" from becoming "--1"
-            if (node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
-                node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT || value.kind == NodeKind.INT && value.asInt() < 0)) {
-              emit(" ");
-            }
-          }
-          emitExpression(value, info.precedence);
-          if (isPostfix) emit(info.text);
-          if (info.precedence < precedence) emit(")");
+          emitUnary(node, precedence);
         }
 
         case
@@ -586,41 +471,145 @@ namespace js {
           .ASSIGN_BITWISE_OR, .ASSIGN_BITWISE_XOR, .ASSIGN_DIVIDE,
           .ASSIGN_MULTIPLY, .ASSIGN_REMAINDER, .ASSIGN_SHIFT_LEFT,
           .ASSIGN_SHIFT_RIGHT, .ASSIGN_SUBTRACT, .BITWISE_AND,
-          .BITWISE_OR, .BITWISE_XOR, .DIVIDE, .EQUAL,
-          .GREATER_THAN, .GREATER_THAN_OR_EQUAL, .IN, .LESS_THAN,
-          .LESS_THAN_OR_EQUAL, .LOGICAL_AND, .LOGICAL_OR, .MULTIPLY,
-          .NOT_EQUAL, .REMAINDER, .SHIFT_LEFT, .SHIFT_RIGHT,
-          .SUBTRACT {
-
-          var info = operatorInfo.get(node.kind);
-          if (info.precedence < precedence) emit("(");
-          emitExpression(node.binaryLeft(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.RIGHT)));
-          emit(node.kind == .EQUAL ? " === " : node.kind == .NOT_EQUAL ? " !== " : " ".append(info.text).append(" "));
-          emitExpression(node.binaryRight(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.LEFT)));
-          if (info.precedence < precedence) emit(")");
-        }
-
-        case .INDEX {
-          emitExpression(node.binaryLeft(), Precedence.MEMBER);
-          emit("[");
-          emitExpression(node.binaryRight(), Precedence.LOWEST);
-          emit("]");
-        }
-
-        case .ASSIGN_INDEX {
-          if (Precedence.ASSIGN < precedence) emit("(");
-          emitExpression(node.tertiaryLeft(), Precedence.MEMBER);
-          emit("[");
-          emitExpression(node.tertiaryMiddle(), Precedence.LOWEST);
-          emit("] = ");
-          emitExpression(node.tertiaryRight(), Precedence.ASSIGN);
-          if (Precedence.ASSIGN < precedence) emit(")");
+          .BITWISE_OR, .BITWISE_XOR, .DIVIDE, .EQUAL, .GREATER_THAN,
+          .GREATER_THAN_OR_EQUAL, .IN, .LESS_THAN, .LESS_THAN_OR_EQUAL,
+          .LOGICAL_AND, .LOGICAL_OR, .MULTIPLY, .NOT_EQUAL, .REMAINDER,
+          .SHIFT_LEFT, .SHIFT_RIGHT, .SUBTRACT {
+          emitBinary(node, precedence);
         }
 
         default {
           assert false;
         }
       }
+    }
+
+    void emitHook(Node node, Precedence precedence) {
+      if (Precedence.ASSIGN < precedence) emit("(");
+      emitExpression(node.hookTest(), Precedence.LOGICAL_OR);
+      emit(" ? ");
+      emitExpression(node.hookTrue(), Precedence.ASSIGN);
+      emit(" : ");
+      emitExpression(node.hookFalse(), Precedence.ASSIGN);
+      if (Precedence.ASSIGN < precedence) emit(")");
+    }
+
+    void emitInt(Node node) {
+      emit(node.asInt().toString());
+      if (node.parent.kind == .DOT) {
+        emit(".");
+      }
+    }
+
+    void emitDouble(Node node) {
+      var text = node.asDouble().toString();
+      emit(text);
+      if (node.parent.kind == .DOT && text.indexOf(".") < 0) {
+        emit(".");
+      }
+    }
+
+    void emitInitializer(Node node) {
+      emit("[");
+      emitCommaSeparatedExpressions(node.initializerValues());
+      emit("]");
+    }
+
+    void emitDot(Node node) {
+      emitExpression(node.dotTarget(), Precedence.MEMBER);
+      emit(".");
+      var name = node.dotName();
+      emit(
+        name.symbol == null ? name.asString() :
+        name.symbol.kind.isInstance() ? mangleName(name.symbol) :
+        fullName(name.symbol));
+    }
+
+    void emitCall(Node node) {
+      var value = node.callValue();
+      if (value.kind.isType()) emit("new ");
+      emitExpression(value, Precedence.UNARY_POSTFIX);
+      emit("(");
+      emitCommaSeparatedExpressions(node.callArguments());
+      emit(")");
+    }
+
+    void emitSuperCall(Node node) {
+      var arguments = node.superCallArguments();
+      emit(fullName(node.symbol));
+      emit(".call(this");
+      for (var i = 0; i < arguments.length; i++) {
+        emit(", ");
+        emitExpression(arguments.get(i), Precedence.COMMA);
+      }
+      emit(")");
+    }
+
+    void emitSequence(Node node, Precedence precedence) {
+      if (Precedence.COMMA <= precedence) emit("(");
+      emitCommaSeparatedExpressions(node.children);
+      if (Precedence.COMMA <= precedence) emit(")");
+    }
+
+    void emitLambda(Node node, bool wasStartOfExpression) {
+      if (wasStartOfExpression) emit("(");
+      emit("function");
+      emitArgumentVariables(node.lambdaArguments());
+      emit(" ");
+      emitNode(node.lambdaBlock());
+      if (wasStartOfExpression) emit(")");
+    }
+
+    void emitDefault(Node node) {
+      if (node.type.isNumeric(cache)) emit("0");
+      else if (node.type.isBool(cache)) emit("false");
+      else if (node.type.isReference()) emit("null");
+      else assert false; // TODO: Handle structs
+    }
+
+    void emitUnary(Node node, Precedence precedence) {
+      var value = node.unaryValue();
+      var info = operatorInfo.get(node.kind);
+      if (info.precedence < precedence) emit("(");
+      var isPostfix = info.precedence == Precedence.UNARY_POSTFIX;
+      if (!isPostfix) {
+        emit(info.text);
+
+        // Prevent "- -1" from becoming "--1"
+        if (node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
+            node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT || value.kind == NodeKind.INT && value.asInt() < 0)) {
+          emit(" ");
+        }
+      }
+      emitExpression(value, info.precedence);
+      if (isPostfix) emit(info.text);
+      if (info.precedence < precedence) emit(")");
+    }
+
+    void emitBinary(Node node, Precedence precedence) {
+      var info = operatorInfo.get(node.kind);
+      if (info.precedence < precedence) emit("(");
+      emitExpression(node.binaryLeft(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.RIGHT)));
+      emit(node.kind == .EQUAL ? " === " : node.kind == .NOT_EQUAL ? " !== " : " ".append(info.text).append(" "));
+      emitExpression(node.binaryRight(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.LEFT)));
+      if (info.precedence < precedence) emit(")");
+    }
+
+    void emitIndex(Node node, Precedence precedence) {
+      emitExpression(node.binaryLeft(), Precedence.MEMBER);
+      emit("[");
+      emitExpression(node.binaryRight(), Precedence.LOWEST);
+      emit("]");
+    }
+
+    void emitTertiary(Node node, Precedence precedence) {
+      if (Precedence.ASSIGN < precedence) emit("(");
+      emitExpression(node.tertiaryLeft(), Precedence.MEMBER);
+      emit("[");
+      emitExpression(node.tertiaryMiddle(), Precedence.LOWEST);
+      emit("] = ");
+      emitExpression(node.tertiaryRight(), Precedence.ASSIGN);
+      if (Precedence.ASSIGN < precedence) emit(")");
     }
 
     static bool alwaysConvertsOperandsToInt(NodeKind kind) {
@@ -653,54 +642,15 @@ namespace js {
 
     void patchNode(Node node, PatchContext context) {
       switch (node.kind) {
+        case .LAMBDA { context.lambdaCount++; }
+        case .CONSTRUCTOR { patchConstructor(node, context); }
+        case .FUNCTION { context.setFunction(node); }
+        case .BIND { patchBind(node, context); }
+        case .CAST { patchCast(node, context); }
+
         case .CLASS {
           if (!node.symbol.isImport() && node.symbol.type.baseClass() != null) {
             needExtends = true;
-          }
-        }
-
-        case .CONSTRUCTOR {
-          var superInitializer = node.superInitializer();
-          var memberInitializers = node.memberInitializers();
-          var block = node.functionBlock();
-          var index = 0;
-          if (superInitializer != null) {
-            block.insertChild(index++, Node.createExpression(superInitializer.remove()));
-          }
-          if (memberInitializers != null) {
-            for (var i = 0; i < memberInitializers.children.length; i++) {
-              var child = memberInitializers.children.get(i);
-              block.insertChild(index++, Node.createExpression(Node.createBinary(.ASSIGN, child.memberInitializerName().remove(), child.memberInitializerValue().remove())));
-            }
-          }
-          context.setFunction(node);
-        }
-
-        case .FUNCTION {
-          context.setFunction(node);
-        }
-
-        case .BIND {
-          if (node.symbol.kind == .INSTANCE_FUNCTION) {
-            var function = node.bindValue();
-            Node target;
-            Node name;
-            if (function.kind == .DOT) {
-              target = function.dotTarget().remove();
-              name = function.dotName().remove();
-            } else {
-              assert function.kind == .NAME;
-              target = Node.createThis();
-              name = function.remove();
-            }
-            if (isSimpleNameAccess(target)) {
-              node.become(Node.createCall(Node.createDot(Node.createDot(target.clone(), name), Node.createName("bind")), { target }).withRange(node.range));
-            } else {
-              var temporaryName = Node.createName("$temp");
-              node.become(Node.createLet(
-                Node.createVariable(temporaryName.clone(), null, target),
-                Node.createCall(Node.createDot(Node.createDot(temporaryName.clone(), name), Node.createName("bind")), { temporaryName })).withRange(node.range));
-            }
           }
         }
 
@@ -716,64 +666,23 @@ namespace js {
           }
         }
 
-        case .CAST {
-          var value = node.castValue();
-
-          // Cast to bool
-          if (node.type.isBool(cache) && !value.type.isBool(cache)) {
-            node.become(Node.createUnary(.NOT, value.remove()).withRange(node.range).withType(node.type));
-          }
-
-          // Cast to int
-          else if (node.type.isInt(cache) && !value.type.isInteger(cache) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
-            node.become(Node.createBinary(.BITWISE_OR, value.remove(), Node.createInt(0)).withRange(node.range).withType(node.type));
-          }
-
-          // Cast to float/double
-          else if (node.type.isReal(cache) && !value.type.isNumeric(cache)) {
-            node.become(Node.createUnary(.POSITIVE, value.remove()).withRange(node.range).withType(node.type));
-          }
-        }
-
-        case .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT {
-          if (node.type.isInt(cache)) {
-            var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
-            var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
-            var result = createBinaryIntAssignment(context, isIncrement ? .ADD : .SUBTRACT, node.unaryValue().remove(), Node.createInt(1));
-            if (isPostfix && isExpressionUsed(node)) {
-              result = createBinaryInt(isIncrement ? .SUBTRACT : .ADD, result, Node.createInt(1));
-            }
-            node.become(result.withRange(node.range).withType(node.type));
-          }
-        }
-
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER {
           if (node.type.isInt(cache) && (node.kind == .MULTIPLY || !alwaysConvertsOperandsToInt(node.parent.kind))) {
             node.become(createBinaryInt(node.kind, node.binaryLeft().remove(), node.binaryRight().remove()).withRange(node.range));
           }
         }
 
-        case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER {
-          if (node.type.isInt(cache)) {
-            var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
-            var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
-            var left = node.binaryLeft();
-            var right = node.binaryRight();
-            NodeKind kind =
-              node.kind == .ASSIGN_ADD ? .ADD :
-              node.kind == .ASSIGN_SUBTRACT ? .SUBTRACT :
-              node.kind == .ASSIGN_MULTIPLY ? .MULTIPLY :
-              node.kind == .ASSIGN_DIVIDE ? .DIVIDE :
-              .REMAINDER;
-            node.become(createBinaryIntAssignment(context, kind, left.remove(), right.remove()).withRange(node.range));
-          }
+        case .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT {
+          patchUnary(node, context);
         }
 
-        case .LAMBDA {
-          context.lambdaCount++;
+        case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER {
+          patchAssign(node, context);
         }
       }
 
+      // This is not inside the switch statement above because one of the other
+      // case clauses may have introduced a let statement
       if (node.kind == .LET) {
         var value = node.letValue();
         var variable = node.letVariable();
@@ -790,14 +699,97 @@ namespace js {
       }
 
       switch (node.kind) {
-        case .LAMBDA {
-          context.lambdaCount--;
-        }
+        case .LAMBDA { context.lambdaCount--; }
+        case .CONSTRUCTOR, .FUNCTION { context.setFunction(null); }
+      }
+    }
 
-        case .CONSTRUCTOR, .FUNCTION {
-          context.setFunction(null);
+    void patchAssign(Node node, PatchContext context) {
+      if (node.type.isInt(cache)) {
+        var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
+        var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
+        var left = node.binaryLeft();
+        var right = node.binaryRight();
+        NodeKind kind =
+          node.kind == .ASSIGN_ADD ? .ADD :
+          node.kind == .ASSIGN_SUBTRACT ? .SUBTRACT :
+          node.kind == .ASSIGN_MULTIPLY ? .MULTIPLY :
+          node.kind == .ASSIGN_DIVIDE ? .DIVIDE :
+          .REMAINDER;
+        node.become(createBinaryIntAssignment(context, kind, left.remove(), right.remove()).withRange(node.range));
+      }
+    }
+
+    void patchUnary(Node node, PatchContext context) {
+      if (node.type.isInt(cache)) {
+        var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
+        var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
+        var result = createBinaryIntAssignment(context, isIncrement ? .ADD : .SUBTRACT, node.unaryValue().remove(), Node.createInt(1));
+        if (isPostfix && isExpressionUsed(node)) {
+          result = createBinaryInt(isIncrement ? .SUBTRACT : .ADD, result, Node.createInt(1));
+        }
+        node.become(result.withRange(node.range).withType(node.type));
+      }
+    }
+
+    void patchCast(Node node, PatchContext context) {
+      var value = node.castValue();
+
+      // Cast to bool
+      if (node.type.isBool(cache) && !value.type.isBool(cache)) {
+        node.become(Node.createUnary(.NOT, value.remove()).withRange(node.range).withType(node.type));
+      }
+
+      // Cast to int
+      else if (node.type.isInt(cache) && !value.type.isInteger(cache) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
+        node.become(Node.createBinary(.BITWISE_OR, value.remove(), Node.createInt(0)).withRange(node.range).withType(node.type));
+      }
+
+      // Cast to float/double
+      else if (node.type.isReal(cache) && !value.type.isNumeric(cache)) {
+        node.become(Node.createUnary(.POSITIVE, value.remove()).withRange(node.range).withType(node.type));
+      }
+    }
+
+    void patchBind(Node node, PatchContext context) {
+      if (node.symbol.kind == .INSTANCE_FUNCTION) {
+        var function = node.bindValue();
+        Node target;
+        Node name;
+        if (function.kind == .DOT) {
+          target = function.dotTarget().remove();
+          name = function.dotName().remove();
+        } else {
+          assert function.kind == .NAME;
+          target = Node.createThis();
+          name = function.remove();
+        }
+        if (isSimpleNameAccess(target)) {
+          node.become(Node.createCall(Node.createDot(Node.createDot(target.clone(), name), Node.createName("bind")), { target }).withRange(node.range));
+        } else {
+          var temporaryName = Node.createName("$temp");
+          node.become(Node.createLet(
+            Node.createVariable(temporaryName.clone(), null, target),
+            Node.createCall(Node.createDot(Node.createDot(temporaryName.clone(), name), Node.createName("bind")), { temporaryName })).withRange(node.range));
         }
       }
+    }
+
+    void patchConstructor(Node node, PatchContext context) {
+      var superInitializer = node.superInitializer();
+      var memberInitializers = node.memberInitializers();
+      var block = node.functionBlock();
+      var index = 0;
+      if (superInitializer != null) {
+        block.insertChild(index++, Node.createExpression(superInitializer.remove()));
+      }
+      if (memberInitializers != null) {
+        for (var i = 0; i < memberInitializers.children.length; i++) {
+          var child = memberInitializers.children.get(i);
+          block.insertChild(index++, Node.createExpression(Node.createBinary(.ASSIGN, child.memberInitializerName().remove(), child.memberInitializerValue().remove())));
+        }
+      }
+      context.setFunction(node);
     }
 
     Node createBinaryInt(NodeKind kind, Node left, Node right) {
