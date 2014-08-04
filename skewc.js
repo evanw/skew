@@ -1915,213 +1915,62 @@ js.Emitter.emitNode = function($this, node) {
   $this.isStartOfExpression = false;
   js.Emitter.addMapping($this, node);
   switch (node.kind) {
-  case 0:
-    js.Emitter.emitChildren($this, node);
-    break;
-  case 1:
-    js.Emitter.emitChildren($this, node.children[0]);
-    break;
   case 2:
-    js.Emitter.emit($this, "{\n");
-    js.Emitter.increaseIndent($this);
-    js.Emitter.emitChildren($this, node);
-    js.Emitter.decreaseIndent($this);
-    js.Emitter.emit($this, $this.indent + "}");
+    js.Emitter.emitBlock($this, node);
     break;
   case 4:
-    var values = Node.caseValues(node);
-    var block = Node.caseBlock(node);
-    for (var i = 0; i < values.length; i = i + 1 | 0) {
-      js.Emitter.emit($this, $this.indent + "case ");
-      js.Emitter.emitExpression($this, values[i], 0);
-      js.Emitter.emit($this, ":\n");
-    }
-    if (values.length === 0) {
-      js.Emitter.emit($this, $this.indent + "default:\n");
-    }
-    js.Emitter.increaseIndent($this);
-    js.Emitter.emitChildren($this, block);
-    if (!Node.blockAlwaysEndsWithReturn(block)) {
-      js.Emitter.emit($this, $this.indent + "break;\n");
-    }
-    js.Emitter.decreaseIndent($this);
+    js.Emitter.emitCase($this, node);
     break;
   case 6:
-    var variables = Node.clusterVariables(node);
-    for (var i = 0; i < variables.length; i = i + 1 | 0) {
-      var variable = variables[i];
-      var isCompoundName = variable.symbol !== null && js.Emitter.hasCompoundName($this, variable.symbol);
-      if ((variable.symbol === null || !SymbolKind.isInstance(variable.symbol.kind)) && (!isCompoundName || variable.children[2] !== null)) {
-        js.Emitter.emit($this, $this.indent);
-        if (!isCompoundName) {
-          js.Emitter.emit($this, "var ");
-        }
-        js.Emitter.emitNode($this, variable);
-        js.Emitter.emit($this, ";\n");
-      }
-    }
+    js.Emitter.emitVariableCluster($this, node);
     break;
   case 7:
-    if (!js.Emitter.hasCompoundName($this, node.symbol)) {
-      js.Emitter.emit($this, "var ");
-    }
-    js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {};\n");
+    js.Emitter.emitNamespace($this, node);
     break;
   case 8:
   case 9:
-    var block = node.children[1];
-    if (!js.Emitter.hasCompoundName($this, node.symbol)) {
-      js.Emitter.emit($this, "var ");
-    }
-    if ($this.options.optimize && !Symbol.isImportOrExport(node.symbol)) {
-      js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {};\n");
-    } else {
-      js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {\n");
-      js.Emitter.increaseIndent($this);
-      for (var i = 0; i < block.children.length; i = i + 1 | 0) {
-        var symbol = block.children[i].symbol;
-        js.Emitter.emit($this, $this.indent + js.Emitter.mangleName($this, symbol) + ": " + symbol.enumValue.toString() + (i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
-      }
-      js.Emitter.decreaseIndent($this);
-      js.Emitter.emit($this, $this.indent + "};\n");
-    }
+    js.Emitter.emitEnum($this, node);
     break;
   case 14:
   case 15:
-    var block = node.children[2];
-    if (block === null) {
-      return;
-    }
-    var isCompoundName = js.Emitter.hasCompoundName($this, node.symbol);
-    if (!isCompoundName) {
-      js.Emitter.emit($this, $this.indent + "function " + js.Emitter.fullName($this, node.symbol));
-    } else {
-      js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = function");
-    }
-    js.Emitter.emitArgumentVariables($this, node.children[1].children);
-    js.Emitter.emit($this, " ");
-    js.Emitter.emit($this, "{\n");
-    js.Emitter.increaseIndent($this);
-    js.Emitter.emitChildren($this, block);
-    js.Emitter.decreaseIndent($this);
-    js.Emitter.emit($this, $this.indent + (isCompoundName ? "};\n" : "}\n"));
-    if (node.kind === 14) {
-      var type = node.symbol.enclosingSymbol.type;
-      if (Type.isClass(type) && Type.baseClass(type) !== null) {
-        js.Emitter.emit($this, $this.indent + "$extends(" + js.Emitter.fullName($this, type.symbol) + ", " + js.Emitter.fullName($this, Type.baseClass(type).symbol) + ");\n");
-      }
-    }
+    js.Emitter.emitFunction($this, node);
     break;
   case 16:
-    var value = node.children[2];
-    js.Emitter.emit($this, node.symbol === null ? node.children[0].content.value : js.Emitter.fullName($this, node.symbol));
-    if (value !== null) {
-      js.Emitter.emit($this, " = ");
-      js.Emitter.emitExpression($this, value, 1);
-    }
+    js.Emitter.emitVariable($this, node);
     break;
   case 20:
-    js.Emitter.emit($this, $this.indent);
-    js.Emitter.recursiveEmitIfStatement($this, node);
-    js.Emitter.emit($this, "\n");
+    js.Emitter.emitIf($this, node);
     break;
   case 21:
-    var setup = node.children[0];
-    var test = node.children[1];
-    var update = node.children[2];
-    js.Emitter.emit($this, $this.indent + "for (");
-    if (setup !== null) {
-      if (setup.kind === 6) {
-        js.Emitter.emit($this, "var ");
-        js.Emitter.emitCommaSeparatedNodes($this, Node.clusterVariables(setup));
-      } else {
-        js.Emitter.emitExpression($this, setup, 0);
-      }
-    }
-    if (test !== null) {
-      js.Emitter.emit($this, "; ");
-      js.Emitter.emitExpression($this, test, 0);
-    } else {
-      js.Emitter.emit($this, ";");
-    }
-    if (update !== null) {
-      js.Emitter.emit($this, "; ");
-      js.Emitter.emitExpression($this, update, 0);
-    } else {
-      js.Emitter.emit($this, ";");
-    }
-    js.Emitter.emit($this, ") ");
-    js.Emitter.emitNode($this, node.children[3]);
-    js.Emitter.emit($this, "\n");
-    break;
-  case 22:
+    js.Emitter.emitFor($this, node);
     break;
   case 23:
-    js.Emitter.emit($this, $this.indent + "while (");
-    js.Emitter.emitExpression($this, node.children[0], 0);
-    js.Emitter.emit($this, ") ");
-    js.Emitter.emitNode($this, node.children[1]);
-    js.Emitter.emit($this, "\n");
+    js.Emitter.emitWhile($this, node);
     break;
   case 24:
-    js.Emitter.emit($this, $this.indent + "do ");
-    js.Emitter.emitNode($this, node.children[1]);
-    js.Emitter.emit($this, " while (");
-    js.Emitter.emitExpression($this, node.children[0], 0);
-    js.Emitter.emit($this, ");\n");
+    js.Emitter.emitDoWhile($this, node);
     break;
   case 25:
   case 26:
-    var value = node.children[0];
-    js.Emitter.emit($this, $this.indent);
-    if (value !== null) {
-      js.Emitter.emit($this, "return ");
-      js.Emitter.emitExpression($this, value, 0);
-      js.Emitter.emit($this, ";\n");
-    } else {
-      js.Emitter.emit($this, "return;\n");
-    }
+    js.Emitter.emitReturn($this, node);
     break;
   case 27:
-    js.Emitter.emit($this, $this.indent + "break;\n");
+    js.Emitter.emitBreak($this, node);
     break;
   case 28:
-    js.Emitter.emit($this, $this.indent + "continue;\n");
+    js.Emitter.emitContinue($this, node);
     break;
   case 29:
-    var value = node.children[0];
-    Node.invertBooleanCondition(value, $this.cache);
-    if (value.kind !== 40 && !$this.options.optimize) {
-      var couldBeFalse = value.kind !== 39;
-      if (couldBeFalse) {
-        js.Emitter.emit($this, $this.indent + "if (");
-        js.Emitter.emitExpression($this, value, 0);
-        js.Emitter.emit($this, ") {\n");
-        js.Emitter.increaseIndent($this);
-      }
-      var text = Range.toString(node.range) + " (" + Range.locationString(node.range) + ")";
-      js.Emitter.emit($this, $this.indent + "throw new Error(" + quoteString(text, 34) + ");\n");
-      if (couldBeFalse) {
-        js.Emitter.decreaseIndent($this);
-        js.Emitter.emit($this, $this.indent + "}\n");
-      }
-    }
+    js.Emitter.emitAssert($this, node);
     break;
   case 30:
-    js.Emitter.emit($this, $this.indent);
-    $this.isStartOfExpression = true;
-    js.Emitter.emitExpression($this, node.children[0], 0);
-    js.Emitter.emit($this, ";\n");
+    js.Emitter.emitExpressionStatement($this, node);
     break;
   case 31:
-    js.Emitter.emit($this, $this.indent + "switch (");
-    js.Emitter.emitExpression($this, node.children[0], 0);
-    js.Emitter.emit($this, ") {\n");
-    js.Emitter.emitNodes($this, Node.switchCases(node));
-    js.Emitter.emit($this, $this.indent + "}\n");
+    js.Emitter.emitSwitch($this, node);
     break;
   case 32:
-    js.Emitter.emitNodes($this, Node.modifierStatements(node));
+    js.Emitter.emitModifier($this, node);
     break;
   case 17:
   case 19:
@@ -2131,6 +1980,203 @@ js.Emitter.emitNode = function($this, node) {
   default:
     break;
   }
+};
+js.Emitter.emitBlock = function($this, node) {
+  js.Emitter.emit($this, "{\n");
+  js.Emitter.increaseIndent($this);
+  js.Emitter.emitChildren($this, node);
+  js.Emitter.decreaseIndent($this);
+  js.Emitter.emit($this, $this.indent + "}");
+};
+js.Emitter.emitCase = function($this, node) {
+  var values = Node.caseValues(node);
+  var block = Node.caseBlock(node);
+  for (var i = 0; i < values.length; i = i + 1 | 0) {
+    js.Emitter.emit($this, $this.indent + "case ");
+    js.Emitter.emitExpression($this, values[i], 0);
+    js.Emitter.emit($this, ":\n");
+  }
+  if (values.length === 0) {
+    js.Emitter.emit($this, $this.indent + "default:\n");
+  }
+  js.Emitter.increaseIndent($this);
+  js.Emitter.emitChildren($this, block);
+  if (!Node.blockAlwaysEndsWithReturn(block)) {
+    js.Emitter.emit($this, $this.indent + "break;\n");
+  }
+  js.Emitter.decreaseIndent($this);
+};
+js.Emitter.emitVariableCluster = function($this, node) {
+  var variables = Node.clusterVariables(node);
+  for (var i = 0; i < variables.length; i = i + 1 | 0) {
+    var variable = variables[i];
+    var isCompoundName = variable.symbol !== null && js.Emitter.hasCompoundName($this, variable.symbol);
+    if ((variable.symbol === null || !SymbolKind.isInstance(variable.symbol.kind)) && (!isCompoundName || variable.children[2] !== null)) {
+      js.Emitter.emit($this, $this.indent);
+      if (!isCompoundName) {
+        js.Emitter.emit($this, "var ");
+      }
+      js.Emitter.emitNode($this, variable);
+      js.Emitter.emit($this, ";\n");
+    }
+  }
+};
+js.Emitter.emitNamespace = function($this, node) {
+  if (!js.Emitter.hasCompoundName($this, node.symbol)) {
+    js.Emitter.emit($this, "var ");
+  }
+  js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {};\n");
+};
+js.Emitter.emitEnum = function($this, node) {
+  var block = node.children[1];
+  if (!js.Emitter.hasCompoundName($this, node.symbol)) {
+    js.Emitter.emit($this, "var ");
+  }
+  if ($this.options.optimize && !Symbol.isImportOrExport(node.symbol)) {
+    js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {};\n");
+  } else {
+    js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {\n");
+    js.Emitter.increaseIndent($this);
+    for (var i = 0; i < block.children.length; i = i + 1 | 0) {
+      var symbol = block.children[i].symbol;
+      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName($this, symbol) + ": " + symbol.enumValue.toString() + (i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
+    }
+    js.Emitter.decreaseIndent($this);
+    js.Emitter.emit($this, $this.indent + "};\n");
+  }
+};
+js.Emitter.emitFunction = function($this, node) {
+  var block = node.children[2];
+  if (block === null) {
+    return;
+  }
+  var isCompoundName = js.Emitter.hasCompoundName($this, node.symbol);
+  if (!isCompoundName) {
+    js.Emitter.emit($this, $this.indent + "function " + js.Emitter.fullName($this, node.symbol));
+  } else {
+    js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = function");
+  }
+  js.Emitter.emitArgumentVariables($this, node.children[1].children);
+  js.Emitter.emit($this, " ");
+  js.Emitter.emit($this, "{\n");
+  js.Emitter.increaseIndent($this);
+  js.Emitter.emitChildren($this, block);
+  js.Emitter.decreaseIndent($this);
+  js.Emitter.emit($this, $this.indent + (isCompoundName ? "};\n" : "}\n"));
+  if (node.kind === 14) {
+    var type = node.symbol.enclosingSymbol.type;
+    if (Type.isClass(type) && Type.baseClass(type) !== null) {
+      js.Emitter.emit($this, $this.indent + "$extends(" + js.Emitter.fullName($this, type.symbol) + ", " + js.Emitter.fullName($this, Type.baseClass(type).symbol) + ");\n");
+    }
+  }
+};
+js.Emitter.emitVariable = function($this, node) {
+  var value = node.children[2];
+  js.Emitter.emit($this, node.symbol === null ? node.children[0].content.value : js.Emitter.fullName($this, node.symbol));
+  if (value !== null) {
+    js.Emitter.emit($this, " = ");
+    js.Emitter.emitExpression($this, value, 1);
+  }
+};
+js.Emitter.emitIf = function($this, node) {
+  js.Emitter.emit($this, $this.indent);
+  js.Emitter.recursiveEmitIfStatement($this, node);
+  js.Emitter.emit($this, "\n");
+};
+js.Emitter.emitFor = function($this, node) {
+  var setup = node.children[0];
+  var test = node.children[1];
+  var update = node.children[2];
+  js.Emitter.emit($this, $this.indent + "for (");
+  if (setup !== null) {
+    if (setup.kind === 6) {
+      js.Emitter.emit($this, "var ");
+      js.Emitter.emitCommaSeparatedNodes($this, Node.clusterVariables(setup));
+    } else {
+      js.Emitter.emitExpression($this, setup, 0);
+    }
+  }
+  if (test !== null) {
+    js.Emitter.emit($this, "; ");
+    js.Emitter.emitExpression($this, test, 0);
+  } else {
+    js.Emitter.emit($this, ";");
+  }
+  if (update !== null) {
+    js.Emitter.emit($this, "; ");
+    js.Emitter.emitExpression($this, update, 0);
+  } else {
+    js.Emitter.emit($this, ";");
+  }
+  js.Emitter.emit($this, ") ");
+  js.Emitter.emitNode($this, node.children[3]);
+  js.Emitter.emit($this, "\n");
+};
+js.Emitter.emitWhile = function($this, node) {
+  js.Emitter.emit($this, $this.indent + "while (");
+  js.Emitter.emitExpression($this, node.children[0], 0);
+  js.Emitter.emit($this, ") ");
+  js.Emitter.emitNode($this, node.children[1]);
+  js.Emitter.emit($this, "\n");
+};
+js.Emitter.emitDoWhile = function($this, node) {
+  js.Emitter.emit($this, $this.indent + "do ");
+  js.Emitter.emitNode($this, node.children[1]);
+  js.Emitter.emit($this, " while (");
+  js.Emitter.emitExpression($this, node.children[0], 0);
+  js.Emitter.emit($this, ");\n");
+};
+js.Emitter.emitReturn = function($this, node) {
+  var value = node.children[0];
+  js.Emitter.emit($this, $this.indent);
+  if (value !== null) {
+    js.Emitter.emit($this, "return ");
+    js.Emitter.emitExpression($this, value, 0);
+    js.Emitter.emit($this, ";\n");
+  } else {
+    js.Emitter.emit($this, "return;\n");
+  }
+};
+js.Emitter.emitBreak = function($this, node) {
+  js.Emitter.emit($this, $this.indent + "break;\n");
+};
+js.Emitter.emitContinue = function($this, node) {
+  js.Emitter.emit($this, $this.indent + "continue;\n");
+};
+js.Emitter.emitAssert = function($this, node) {
+  var value = node.children[0];
+  Node.invertBooleanCondition(value, $this.cache);
+  if (value.kind !== 40 && !$this.options.optimize) {
+    var couldBeFalse = value.kind !== 39;
+    if (couldBeFalse) {
+      js.Emitter.emit($this, $this.indent + "if (");
+      js.Emitter.emitExpression($this, value, 0);
+      js.Emitter.emit($this, ") {\n");
+      js.Emitter.increaseIndent($this);
+    }
+    var text = Range.toString(node.range) + " (" + Range.locationString(node.range) + ")";
+    js.Emitter.emit($this, $this.indent + "throw new Error(" + quoteString(text, 34) + ");\n");
+    if (couldBeFalse) {
+      js.Emitter.decreaseIndent($this);
+      js.Emitter.emit($this, $this.indent + "}\n");
+    }
+  }
+};
+js.Emitter.emitExpressionStatement = function($this, node) {
+  js.Emitter.emit($this, $this.indent);
+  $this.isStartOfExpression = true;
+  js.Emitter.emitExpression($this, node.children[0], 0);
+  js.Emitter.emit($this, ";\n");
+};
+js.Emitter.emitSwitch = function($this, node) {
+  js.Emitter.emit($this, $this.indent + "switch (");
+  js.Emitter.emitExpression($this, node.children[0], 0);
+  js.Emitter.emit($this, ") {\n");
+  js.Emitter.emitNodes($this, Node.switchCases(node));
+  js.Emitter.emit($this, $this.indent + "}\n");
+};
+js.Emitter.emitModifier = function($this, node) {
+  js.Emitter.emitNodes($this, Node.modifierStatements(node));
 };
 js.Emitter.emitExpression = function($this, node, precedence) {
   var wasStartOfExpression = $this.isStartOfExpression;
@@ -2147,17 +2193,7 @@ js.Emitter.emitExpression = function($this, node, precedence) {
     js.Emitter.emit($this, "this");
     break;
   case 37:
-    if (2 < precedence) {
-      js.Emitter.emit($this, "(");
-    }
-    js.Emitter.emitExpression($this, node.children[0], 3);
-    js.Emitter.emit($this, " ? ");
-    js.Emitter.emitExpression($this, node.children[1], 2);
-    js.Emitter.emit($this, " : ");
-    js.Emitter.emitExpression($this, node.children[2], 2);
-    if (2 < precedence) {
-      js.Emitter.emit($this, ")");
-    }
+    js.Emitter.emitHook($this, node, precedence);
     break;
   case 38:
     js.Emitter.emit($this, "null");
@@ -2169,96 +2205,54 @@ js.Emitter.emitExpression = function($this, node, precedence) {
     js.Emitter.emit($this, "false");
     break;
   case 41:
-    js.Emitter.emit($this, node.content.value.toString());
-    if (node.parent.kind === 46) {
-      js.Emitter.emit($this, ".");
-    }
+    js.Emitter.emitInt($this, node);
     break;
   case 42:
   case 43:
-    var text = node.content.value.toString();
-    js.Emitter.emit($this, text);
-    if (node.parent.kind === 46 && text.indexOf(".") < 0) {
-      js.Emitter.emit($this, ".");
-    }
+    js.Emitter.emitDouble($this, node);
     break;
   case 44:
     js.Emitter.emit($this, quoteString(node.content.value, 34));
     break;
   case 45:
-    js.Emitter.emit($this, "[");
-    js.Emitter.emitCommaSeparatedExpressions($this, node.children);
-    js.Emitter.emit($this, "]");
+    js.Emitter.emitInitializer($this, node);
     break;
   case 46:
-    js.Emitter.emitExpression($this, node.children[0], 15);
-    js.Emitter.emit($this, ".");
-    var name = node.children[1];
-    js.Emitter.emit($this, name.symbol === null ? name.content.value : SymbolKind.isInstance(name.symbol.kind) ? js.Emitter.mangleName($this, name.symbol) : js.Emitter.fullName($this, name.symbol));
+    js.Emitter.emitDot($this, node);
     break;
   case 48:
-    var value = node.children[0];
-    if (value.kind === 35) {
-      js.Emitter.emit($this, "new ");
-    }
     $this.isStartOfExpression = wasStartOfExpression;
-    js.Emitter.emitExpression($this, value, 14);
-    js.Emitter.emit($this, "(");
-    js.Emitter.emitCommaSeparatedExpressions($this, Node.callArguments(node));
-    js.Emitter.emit($this, ")");
+    js.Emitter.emitCall($this, node);
     break;
   case 49:
-    var $arguments = node.children;
-    js.Emitter.emit($this, js.Emitter.fullName($this, node.symbol));
-    js.Emitter.emit($this, ".call(this");
-    for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-      js.Emitter.emit($this, ", ");
-      js.Emitter.emitExpression($this, $arguments[i], 1);
-    }
-    js.Emitter.emit($this, ")");
+    js.Emitter.emitSuperCall($this, node);
     break;
   case 51:
     js.Emitter.emitExpression($this, node.children[0], precedence);
     break;
   case 52:
-    if (1 <= precedence) {
-      js.Emitter.emit($this, "(");
-    }
     $this.isStartOfExpression = wasStartOfExpression;
-    js.Emitter.emitCommaSeparatedExpressions($this, node.children);
-    if (1 <= precedence) {
-      js.Emitter.emit($this, ")");
-    }
+    js.Emitter.emitSequence($this, node, precedence);
+    break;
+  case 56:
+    js.Emitter.emitLambda($this, node, wasStartOfExpression);
+    break;
+  case 57:
+    js.Emitter.emitDefault($this, node);
+    break;
+  case 58:
+    js.Emitter.emitExpression($this, node.children[0], precedence);
+    break;
+  case 78:
+    js.Emitter.emitIndex($this, node, precedence);
+    break;
+  case 100:
+    js.Emitter.emitTertiary($this, node, precedence);
     break;
   case 54:
   case 55:
     $this.isStartOfExpression = wasStartOfExpression;
     js.Emitter.emitExpression($this, node.children[1], precedence);
-    break;
-  case 56:
-    if (wasStartOfExpression) {
-      js.Emitter.emit($this, "(");
-    }
-    js.Emitter.emit($this, "function");
-    js.Emitter.emitArgumentVariables($this, Node.lambdaArguments(node));
-    js.Emitter.emit($this, " ");
-    js.Emitter.emitNode($this, Node.lambdaBlock(node));
-    if (wasStartOfExpression) {
-      js.Emitter.emit($this, ")");
-    }
-    break;
-  case 57:
-    if (Type.isNumeric(node.type, $this.cache)) {
-      js.Emitter.emit($this, "0");
-    } else if (node.type === $this.cache.boolType) {
-      js.Emitter.emit($this, "false");
-    } else if (Type.isReference(node.type)) {
-      js.Emitter.emit($this, "null");
-    } else {
-    }
-    break;
-  case 58:
-    js.Emitter.emitExpression($this, node.children[0], precedence);
     break;
   case 61:
   case 62:
@@ -2268,25 +2262,7 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   case 66:
   case 67:
   case 68:
-    var value = node.children[0];
-    var info = operatorInfo.get(node.kind);
-    if (info.precedence < precedence) {
-      js.Emitter.emit($this, "(");
-    }
-    var isPostfix = info.precedence === 14;
-    if (!isPostfix) {
-      js.Emitter.emit($this, info.text);
-      if (node.kind === 62 && (value.kind === 62 || value.kind === 65) || node.kind === 63 && (value.kind === 63 || value.kind === 66 || value.kind === 41 && value.content.value < 0)) {
-        js.Emitter.emit($this, " ");
-      }
-    }
-    js.Emitter.emitExpression($this, value, info.precedence);
-    if (isPostfix) {
-      js.Emitter.emit($this, info.text);
-    }
-    if (info.precedence < precedence) {
-      js.Emitter.emit($this, ")");
-    }
+    js.Emitter.emitUnary($this, node, precedence);
     break;
   case 69:
   case 89:
@@ -2318,38 +2294,150 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   case 86:
   case 87:
   case 88:
-    var info = operatorInfo.get(node.kind);
-    if (info.precedence < precedence) {
-      js.Emitter.emit($this, "(");
-    }
-    js.Emitter.emitExpression($this, node.children[0], info.precedence + (info.associativity === 2 | 0) | 0);
-    js.Emitter.emit($this, node.kind === 74 ? " === " : node.kind === 84 ? " !== " : " " + info.text + " ");
-    js.Emitter.emitExpression($this, node.children[1], info.precedence + (info.associativity === 1 | 0) | 0);
-    if (info.precedence < precedence) {
-      js.Emitter.emit($this, ")");
-    }
-    break;
-  case 78:
-    js.Emitter.emitExpression($this, node.children[0], 15);
-    js.Emitter.emit($this, "[");
-    js.Emitter.emitExpression($this, node.children[1], 0);
-    js.Emitter.emit($this, "]");
-    break;
-  case 100:
-    if (2 < precedence) {
-      js.Emitter.emit($this, "(");
-    }
-    js.Emitter.emitExpression($this, node.children[0], 15);
-    js.Emitter.emit($this, "[");
-    js.Emitter.emitExpression($this, node.children[1], 0);
-    js.Emitter.emit($this, "] = ");
-    js.Emitter.emitExpression($this, node.children[2], 2);
-    if (2 < precedence) {
-      js.Emitter.emit($this, ")");
-    }
+    js.Emitter.emitBinary($this, node, precedence);
     break;
   default:
     break;
+  }
+};
+js.Emitter.emitHook = function($this, node, precedence) {
+  if (2 < precedence) {
+    js.Emitter.emit($this, "(");
+  }
+  js.Emitter.emitExpression($this, node.children[0], 3);
+  js.Emitter.emit($this, " ? ");
+  js.Emitter.emitExpression($this, node.children[1], 2);
+  js.Emitter.emit($this, " : ");
+  js.Emitter.emitExpression($this, node.children[2], 2);
+  if (2 < precedence) {
+    js.Emitter.emit($this, ")");
+  }
+};
+js.Emitter.emitInt = function($this, node) {
+  js.Emitter.emit($this, node.content.value.toString());
+  if (node.parent.kind === 46) {
+    js.Emitter.emit($this, ".");
+  }
+};
+js.Emitter.emitDouble = function($this, node) {
+  var text = node.content.value.toString();
+  js.Emitter.emit($this, text);
+  if (node.parent.kind === 46 && text.indexOf(".") < 0) {
+    js.Emitter.emit($this, ".");
+  }
+};
+js.Emitter.emitInitializer = function($this, node) {
+  js.Emitter.emit($this, "[");
+  js.Emitter.emitCommaSeparatedExpressions($this, node.children);
+  js.Emitter.emit($this, "]");
+};
+js.Emitter.emitDot = function($this, node) {
+  js.Emitter.emitExpression($this, node.children[0], 15);
+  js.Emitter.emit($this, ".");
+  var name = node.children[1];
+  js.Emitter.emit($this, name.symbol === null ? name.content.value : SymbolKind.isInstance(name.symbol.kind) ? js.Emitter.mangleName($this, name.symbol) : js.Emitter.fullName($this, name.symbol));
+};
+js.Emitter.emitCall = function($this, node) {
+  var value = node.children[0];
+  if (value.kind === 35) {
+    js.Emitter.emit($this, "new ");
+  }
+  js.Emitter.emitExpression($this, value, 14);
+  js.Emitter.emit($this, "(");
+  js.Emitter.emitCommaSeparatedExpressions($this, Node.callArguments(node));
+  js.Emitter.emit($this, ")");
+};
+js.Emitter.emitSuperCall = function($this, node) {
+  var $arguments = node.children;
+  js.Emitter.emit($this, js.Emitter.fullName($this, node.symbol));
+  js.Emitter.emit($this, ".call(this");
+  for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
+    js.Emitter.emit($this, ", ");
+    js.Emitter.emitExpression($this, $arguments[i], 1);
+  }
+  js.Emitter.emit($this, ")");
+};
+js.Emitter.emitSequence = function($this, node, precedence) {
+  if (1 <= precedence) {
+    js.Emitter.emit($this, "(");
+  }
+  js.Emitter.emitCommaSeparatedExpressions($this, node.children);
+  if (1 <= precedence) {
+    js.Emitter.emit($this, ")");
+  }
+};
+js.Emitter.emitLambda = function($this, node, wasStartOfExpression) {
+  if (wasStartOfExpression) {
+    js.Emitter.emit($this, "(");
+  }
+  js.Emitter.emit($this, "function");
+  js.Emitter.emitArgumentVariables($this, Node.lambdaArguments(node));
+  js.Emitter.emit($this, " ");
+  js.Emitter.emitNode($this, Node.lambdaBlock(node));
+  if (wasStartOfExpression) {
+    js.Emitter.emit($this, ")");
+  }
+};
+js.Emitter.emitDefault = function($this, node) {
+  if (Type.isNumeric(node.type, $this.cache)) {
+    js.Emitter.emit($this, "0");
+  } else if (node.type === $this.cache.boolType) {
+    js.Emitter.emit($this, "false");
+  } else if (Type.isReference(node.type)) {
+    js.Emitter.emit($this, "null");
+  } else {
+  }
+};
+js.Emitter.emitUnary = function($this, node, precedence) {
+  var value = node.children[0];
+  var info = operatorInfo.get(node.kind);
+  if (info.precedence < precedence) {
+    js.Emitter.emit($this, "(");
+  }
+  var isPostfix = info.precedence === 14;
+  if (!isPostfix) {
+    js.Emitter.emit($this, info.text);
+    if (node.kind === 62 && (value.kind === 62 || value.kind === 65) || node.kind === 63 && (value.kind === 63 || value.kind === 66 || value.kind === 41 && value.content.value < 0)) {
+      js.Emitter.emit($this, " ");
+    }
+  }
+  js.Emitter.emitExpression($this, value, info.precedence);
+  if (isPostfix) {
+    js.Emitter.emit($this, info.text);
+  }
+  if (info.precedence < precedence) {
+    js.Emitter.emit($this, ")");
+  }
+};
+js.Emitter.emitBinary = function($this, node, precedence) {
+  var info = operatorInfo.get(node.kind);
+  if (info.precedence < precedence) {
+    js.Emitter.emit($this, "(");
+  }
+  js.Emitter.emitExpression($this, node.children[0], info.precedence + (info.associativity === 2 | 0) | 0);
+  js.Emitter.emit($this, node.kind === 74 ? " === " : node.kind === 84 ? " !== " : " " + info.text + " ");
+  js.Emitter.emitExpression($this, node.children[1], info.precedence + (info.associativity === 1 | 0) | 0);
+  if (info.precedence < precedence) {
+    js.Emitter.emit($this, ")");
+  }
+};
+js.Emitter.emitIndex = function($this, node, precedence) {
+  js.Emitter.emitExpression($this, node.children[0], 15);
+  js.Emitter.emit($this, "[");
+  js.Emitter.emitExpression($this, node.children[1], 0);
+  js.Emitter.emit($this, "]");
+};
+js.Emitter.emitTertiary = function($this, node, precedence) {
+  if (2 < precedence) {
+    js.Emitter.emit($this, "(");
+  }
+  js.Emitter.emitExpression($this, node.children[0], 15);
+  js.Emitter.emit($this, "[");
+  js.Emitter.emitExpression($this, node.children[1], 0);
+  js.Emitter.emit($this, "] = ");
+  js.Emitter.emitExpression($this, node.children[2], 2);
+  if (2 < precedence) {
+    js.Emitter.emit($this, ")");
   }
 };
 js.Emitter.alwaysConvertsOperandsToInt = function(kind) {
@@ -2381,48 +2469,24 @@ js.Emitter.isExpressionUsed = function(node) {
 };
 js.Emitter.patchNode = function($this, node, context) {
   switch (node.kind) {
-  case 10:
-    if (!((node.symbol.flags & 2048) !== 0) && Type.baseClass(node.symbol.type) !== null) {
-      $this.needExtends = true;
-    }
+  case 56:
+    context.lambdaCount = context.lambdaCount + 1 | 0;
     break;
   case 14:
-    var superInitializer = node.children[3];
-    var memberInitializers = node.children[4];
-    var block = node.children[2];
-    var index = 0;
-    if (superInitializer !== null) {
-      Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(30), [Node.remove(superInitializer)]));
-    }
-    if (memberInitializers !== null) {
-      for (var i = 0; i < memberInitializers.children.length; i = i + 1 | 0) {
-        var child = memberInitializers.children[i];
-        Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(30), [Node.createBinary(89, Node.remove(child.children[0]), Node.remove(child.children[1]))]));
-      }
-    }
-    js.PatchContext.setFunction(context, node);
+    js.Emitter.patchConstructor($this, node, context);
     break;
   case 15:
     js.PatchContext.setFunction(context, node);
     break;
   case 51:
-    if (node.symbol.kind === 16) {
-      var $function = node.children[0];
-      var target;
-      var name;
-      if ($function.kind === 46) {
-        target = Node.remove($function.children[0]);
-        name = Node.remove($function.children[1]);
-      } else {
-        target = new Node(36);
-        name = Node.remove($function);
-      }
-      if (js.Emitter.isSimpleNameAccess(target)) {
-        Node.become(node, Node.withRange(Node.createCall(Node.withChildren(new Node(46), [Node.withChildren(new Node(46), [Node.clone(target), name]), Node.withContent(new Node(34), new StringContent("bind"))]), [target]), node.range));
-      } else {
-        var temporaryName = Node.withContent(new Node(34), new StringContent("$temp"));
-        Node.become(node, Node.withRange(Node.withChildren(new Node(47), [Node.withChildren(new Node(16), [Node.clone(temporaryName), null, target]), Node.createCall(Node.withChildren(new Node(46), [Node.withChildren(new Node(46), [Node.clone(temporaryName), name]), Node.withContent(new Node(34), new StringContent("bind"))]), [temporaryName])]), node.range));
-      }
+    js.Emitter.patchBind($this, node, context);
+    break;
+  case 54:
+    js.Emitter.patchCast($this, node, context);
+    break;
+  case 10:
+    if (!((node.symbol.flags & 2048) !== 0) && Type.baseClass(node.symbol.type) !== null) {
+      $this.needExtends = true;
     }
     break;
   case 36:
@@ -2435,30 +2499,6 @@ js.Emitter.patchNode = function($this, node, context) {
       Node.become(node, Node.withChildren(new Node(46), [new Node(36), Node.clone(node)]));
     }
     break;
-  case 54:
-    var value = node.children[1];
-    if (node.type === $this.cache.boolType && !(value.type === $this.cache.boolType)) {
-      Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(61), [Node.remove(value)]), node.range), node.type));
-    } else if (node.type === $this.cache.intType && !Type.isInteger(value.type, $this.cache) && !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind)) {
-      Node.become(node, Node.withType(Node.withRange(Node.createBinary(71, Node.remove(value), Node.withContent(new Node(41), new IntContent(0))), node.range), node.type));
-    } else if (Type.isReal(node.type, $this.cache) && !Type.isNumeric(value.type, $this.cache)) {
-      Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(62), [Node.remove(value)]), node.range), node.type));
-    }
-    break;
-  case 65:
-  case 66:
-  case 68:
-  case 67:
-    if (node.type === $this.cache.intType) {
-      var isPostfix = node.kind === 67 || node.kind === 68;
-      var isIncrement = node.kind === 65 || node.kind === 67;
-      var result = js.Emitter.createBinaryIntAssignment($this, context, isIncrement ? 69 : 88, Node.remove(node.children[0]), Node.withContent(new Node(41), new IntContent(1)));
-      if (isPostfix && js.Emitter.isExpressionUsed(node)) {
-        result = js.Emitter.createBinaryInt($this, isIncrement ? 88 : 69, result, Node.withContent(new Node(41), new IntContent(1)));
-      }
-      Node.become(node, Node.withType(Node.withRange(result, node.range), node.type));
-    }
-    break;
   case 69:
   case 88:
   case 83:
@@ -2468,22 +2508,18 @@ js.Emitter.patchNode = function($this, node, context) {
       Node.become(node, Node.withRange(js.Emitter.createBinaryInt($this, node.kind, Node.remove(node.children[0]), Node.remove(node.children[1])), node.range));
     }
     break;
+  case 65:
+  case 66:
+  case 68:
+  case 67:
+    js.Emitter.patchUnary($this, node, context);
+    break;
   case 90:
   case 99:
   case 95:
   case 94:
   case 96:
-    if (node.type === $this.cache.intType) {
-      var isPostfix = node.kind === 67 || node.kind === 68;
-      var isIncrement = node.kind === 65 || node.kind === 67;
-      var left = node.children[0];
-      var right = node.children[1];
-      var kind = node.kind === 90 ? 69 : node.kind === 99 ? 88 : node.kind === 95 ? 83 : node.kind === 94 ? 73 : 85;
-      Node.become(node, Node.withRange(js.Emitter.createBinaryIntAssignment($this, context, kind, Node.remove(left), Node.remove(right)), node.range));
-    }
-    break;
-  case 56:
-    context.lambdaCount = context.lambdaCount + 1 | 0;
+    js.Emitter.patchAssign($this, node, context);
     break;
   }
   if (node.kind === 47) {
@@ -2508,6 +2544,73 @@ js.Emitter.patchNode = function($this, node, context) {
     js.PatchContext.setFunction(context, null);
     break;
   }
+};
+js.Emitter.patchAssign = function($this, node, context) {
+  if (node.type === $this.cache.intType) {
+    var isPostfix = node.kind === 67 || node.kind === 68;
+    var isIncrement = node.kind === 65 || node.kind === 67;
+    var left = node.children[0];
+    var right = node.children[1];
+    var kind = node.kind === 90 ? 69 : node.kind === 99 ? 88 : node.kind === 95 ? 83 : node.kind === 94 ? 73 : 85;
+    Node.become(node, Node.withRange(js.Emitter.createBinaryIntAssignment($this, context, kind, Node.remove(left), Node.remove(right)), node.range));
+  }
+};
+js.Emitter.patchUnary = function($this, node, context) {
+  if (node.type === $this.cache.intType) {
+    var isPostfix = node.kind === 67 || node.kind === 68;
+    var isIncrement = node.kind === 65 || node.kind === 67;
+    var result = js.Emitter.createBinaryIntAssignment($this, context, isIncrement ? 69 : 88, Node.remove(node.children[0]), Node.withContent(new Node(41), new IntContent(1)));
+    if (isPostfix && js.Emitter.isExpressionUsed(node)) {
+      result = js.Emitter.createBinaryInt($this, isIncrement ? 88 : 69, result, Node.withContent(new Node(41), new IntContent(1)));
+    }
+    Node.become(node, Node.withType(Node.withRange(result, node.range), node.type));
+  }
+};
+js.Emitter.patchCast = function($this, node, context) {
+  var value = node.children[1];
+  if (node.type === $this.cache.boolType && !(value.type === $this.cache.boolType)) {
+    Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(61), [Node.remove(value)]), node.range), node.type));
+  } else if (node.type === $this.cache.intType && !Type.isInteger(value.type, $this.cache) && !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind)) {
+    Node.become(node, Node.withType(Node.withRange(Node.createBinary(71, Node.remove(value), Node.withContent(new Node(41), new IntContent(0))), node.range), node.type));
+  } else if (Type.isReal(node.type, $this.cache) && !Type.isNumeric(value.type, $this.cache)) {
+    Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(62), [Node.remove(value)]), node.range), node.type));
+  }
+};
+js.Emitter.patchBind = function($this, node, context) {
+  if (node.symbol.kind === 16) {
+    var $function = node.children[0];
+    var target;
+    var name;
+    if ($function.kind === 46) {
+      target = Node.remove($function.children[0]);
+      name = Node.remove($function.children[1]);
+    } else {
+      target = new Node(36);
+      name = Node.remove($function);
+    }
+    if (js.Emitter.isSimpleNameAccess(target)) {
+      Node.become(node, Node.withRange(Node.createCall(Node.withChildren(new Node(46), [Node.withChildren(new Node(46), [Node.clone(target), name]), Node.withContent(new Node(34), new StringContent("bind"))]), [target]), node.range));
+    } else {
+      var temporaryName = Node.withContent(new Node(34), new StringContent("$temp"));
+      Node.become(node, Node.withRange(Node.withChildren(new Node(47), [Node.withChildren(new Node(16), [Node.clone(temporaryName), null, target]), Node.createCall(Node.withChildren(new Node(46), [Node.withChildren(new Node(46), [Node.clone(temporaryName), name]), Node.withContent(new Node(34), new StringContent("bind"))]), [temporaryName])]), node.range));
+    }
+  }
+};
+js.Emitter.patchConstructor = function($this, node, context) {
+  var superInitializer = node.children[3];
+  var memberInitializers = node.children[4];
+  var block = node.children[2];
+  var index = 0;
+  if (superInitializer !== null) {
+    Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(30), [Node.remove(superInitializer)]));
+  }
+  if (memberInitializers !== null) {
+    for (var i = 0; i < memberInitializers.children.length; i = i + 1 | 0) {
+      var child = memberInitializers.children[i];
+      Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(30), [Node.createBinary(89, Node.remove(child.children[0]), Node.remove(child.children[1]))]));
+    }
+  }
+  js.PatchContext.setFunction(context, node);
 };
 js.Emitter.createBinaryInt = function($this, kind, left, right) {
   if (kind === 83) {
