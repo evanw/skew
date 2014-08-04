@@ -88,14 +88,14 @@ class FunctionInliningPass {
                     }
                   }
                 }
+
+                // Mark the symbol as inlineable now that the body has been processed
+                symbol.flags = (symbol.flags & ~SymbolFlag.INLINE_MASK) | SymbolFlag.INLINEABLE;
               }
             }
           }
         }
       }
-
-      // Mark the symbol as inlineable now that the body has been processed
-      symbol.flags = (symbol.flags & ~SymbolFlag.INLINE_MASK) | SymbolFlag.INLINEABLE;
     }
   }
 
@@ -137,7 +137,7 @@ class FunctionInliningPass {
       // Prevent inlining of functions that modify their arguments locally. For
       // example, inlining this would lead to incorrect code:
       //
-      //   void foo(int x, int y) {
+      //   inline int foo(int x, int y) {
       //     return x += y;
       //   }
       //   foo(1, 2);

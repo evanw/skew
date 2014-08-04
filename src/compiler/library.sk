@@ -15,7 +15,7 @@ import struct string {
   int lastIndexOf(string value);
   string toLowerCase();
   string toUpperCase();
-  static string fromCodeUnit(int value) { return String.fromCharCode(value); }
+  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }
   inline string get(int index) { return untyped(this)[index]; }
   inline string join(List<string> values) { return untyped(values).join(this); }
   inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }

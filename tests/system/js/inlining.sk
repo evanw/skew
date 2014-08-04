@@ -1,0 +1,41 @@
+testJS("
+inline int foo(int x, int y) {
+  return x + y;
+}
+foo(1, 2);
+", "
+function foo(x, y) {
+  return x + y | 0;
+}
+1 + 2 | 0;
+");
+
+testJS("
+inline int foo(int x, int y) {
+  return x += y;
+}
+foo(1, 2);
+", "
+function foo(x, y) {
+  return x = x + y | 0;
+}
+foo(1, 2);
+");
+
+testJS("
+inline int fn() foo(int x) {
+  return => x;
+}
+var x = 0;
+var y = foo(x++);
+var z = foo(x++);
+", "
+function foo(x) {
+  return function() {
+    return x;
+  };
+}
+var x = 0;
+var y = foo((x = x + 1 | 0) - 1 | 0);
+var z = foo((x = x + 1 | 0) - 1 | 0);
+");
