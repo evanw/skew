@@ -6449,12 +6449,46 @@ function scanForToken(context, kind, tokenScan) {
     return true;
   }
   while (ParserContext.current(context).kind !== 30) {
-    var currentKind = ParserContext.current(context).kind;
-    if (currentKind === 80 || currentKind === 79 || currentKind === 78 || currentKind === 81 && tokenScan === 1) {
+    switch (ParserContext.current(context).kind) {
+    case 80:
+    case 79:
+    case 78:
       return ParserContext.eat(context, kind);
-    }
-    if (tokenScan === 1 && (currentKind === 1 || currentKind === 16 || currentKind === 19 || currentKind === 22 || currentKind === 26 || currentKind === 31 || currentKind === 34 || currentKind === 36 || currentKind === 39 || currentKind === 43 || currentKind === 44 || currentKind === 47 || currentKind === 48 || currentKind === 65 || currentKind === 70 || currentKind === 72 || currentKind === 73 || currentKind === 74 || currentKind === 77 || currentKind === 84 || currentKind === 86 || currentKind === 88 || currentKind === 93 || currentKind === 0 || currentKind === 95 || currentKind === 96)) {
-      return true;
+    case 81:
+      if (tokenScan === 1) {
+        return ParserContext.eat(context, kind);
+      }
+      break;
+    case 0:
+    case 1:
+    case 16:
+    case 19:
+    case 22:
+    case 26:
+    case 31:
+    case 34:
+    case 36:
+    case 39:
+    case 43:
+    case 44:
+    case 47:
+    case 48:
+    case 65:
+    case 70:
+    case 72:
+    case 73:
+    case 74:
+    case 77:
+    case 84:
+    case 86:
+    case 88:
+    case 93:
+    case 95:
+    case 96:
+      if (tokenScan === 1) {
+        return true;
+      }
+      break;
     }
     ParserContext.next(context);
   }

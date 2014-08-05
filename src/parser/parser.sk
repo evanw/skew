@@ -43,46 +43,28 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
 
   // Scan until the next closing token
   while (!context.peek(.END_OF_FILE)) {
-    var currentKind = context.current().kind;
+    switch (context.current().kind) {
+      case .RIGHT_PARENTHESIS, .RIGHT_BRACKET, .RIGHT_BRACE {
+        return context.eat(kind);
+      }
 
-    if (currentKind == .RIGHT_PARENTHESIS ||
-        currentKind == .RIGHT_BRACKET ||
-        currentKind == .RIGHT_BRACE ||
-        currentKind == .SEMICOLON && tokenScan == .STOP_BEFORE_NEXT_STATEMENT) {
-      return context.eat(kind);
+      case .SEMICOLON {
+        if (tokenScan == .STOP_BEFORE_NEXT_STATEMENT) {
+          return context.eat(kind);
+        }
+      }
+
+      case
+        .ALIAS, .ASSERT, .BREAK, .CLASS, .CONTINUE, .DO, .ENUM, .EXPORT, .FINAL, .FOR,
+        .IF, .IMPORT, .INLINE, .INTERFACE, .NAMESPACE, .OVERRIDE, .PRIVATE, .PROTECTED,
+        .PUBLIC, .RETURN, .STATIC, .STRUCT, .SWITCH, .USING, .VIRTUAL, .WHILE {
+
+        // Optionally recover parsing before the next statement if it's unambiguous
+        if (tokenScan == .STOP_BEFORE_NEXT_STATEMENT) {
+          return true;
+        }
+      }
     }
-
-    // Optionally recover parsing before the next statement if unambiguous
-    if (tokenScan == .STOP_BEFORE_NEXT_STATEMENT && (
-        currentKind == .ASSERT ||
-        currentKind == .BREAK ||
-        currentKind == .CLASS ||
-        currentKind == .CONTINUE ||
-        currentKind == .DO ||
-        currentKind == .ENUM ||
-        currentKind == .EXPORT ||
-        currentKind == .FINAL ||
-        currentKind == .FOR ||
-        currentKind == .IF ||
-        currentKind == .IMPORT ||
-        currentKind == .INLINE ||
-        currentKind == .INTERFACE ||
-        currentKind == .NAMESPACE ||
-        currentKind == .OVERRIDE ||
-        currentKind == .PRIVATE ||
-        currentKind == .PROTECTED ||
-        currentKind == .PUBLIC ||
-        currentKind == .RETURN ||
-        currentKind == .STATIC ||
-        currentKind == .STRUCT ||
-        currentKind == .SWITCH ||
-        currentKind == .USING ||
-        currentKind == .ALIAS ||
-        currentKind == .VIRTUAL ||
-        currentKind == .WHILE)) {
-      return true;
-    }
-
     context.next();
   }
 
