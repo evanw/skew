@@ -71,3 +71,29 @@ Bar.prototype.foo = function() {
 };
 new Bar().foo();
 ");
+
+testJS("
+inline string bar(string name) {
+  return \"bar\".append(name);
+}
+string foo(string foo) {
+  return \"foo\".append(bar(foo));
+}
+", "
+function foo(foo) {
+  return \"foo\" + (\"bar\" + foo);
+}
+");
+
+testJS("
+string foo(string foo) {
+  return \"foo\".append(bar(foo));
+}
+inline string bar(string name) {
+  return \"bar\".append(name);
+}
+", "
+function foo(foo) {
+  return \"foo\" + (\"bar\" + foo);
+}
+");
