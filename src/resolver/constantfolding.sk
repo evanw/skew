@@ -92,6 +92,16 @@ class ConstantFolder {
         if (kind == .POSITIVE) flattenReal(node, +value.asDouble());
         else if (kind == .NEGATIVE) flattenReal(node, -value.asDouble());
       }
+
+      // Partial evaluation
+      else if (kind == .NOT) {
+        switch (valueKind) {
+          case .NOT, .EQUAL, .NOT_EQUAL, .LOGICAL_OR, .LOGICAL_AND, .LESS_THAN, .GREATER_THAN, .LESS_THAN_OR_EQUAL, .GREATER_THAN_OR_EQUAL {
+            value.invertBooleanCondition(cache);
+            node.become(value);
+          }
+        }
+      }
     }
 
     // Binary operators

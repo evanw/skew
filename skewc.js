@@ -1205,7 +1205,7 @@ Log.toString = function($this) {
     var diagnostic = $this.diagnostics[i];
     var formatted = Range.format(diagnostic.range, 0);
     result = result + Range.locationString(diagnostic.range) + (diagnostic.kind === 0 ? ": error: " : ": warning: ") + diagnostic.text + "\n" + formatted.line + "\n" + formatted.range + "\n";
-    if (!(diagnostic.noteRange.source === null)) {
+    if (diagnostic.noteRange.source !== null) {
       formatted = Range.format(diagnostic.noteRange, 0);
       result = result + Range.locationString(diagnostic.noteRange) + ": note: " + diagnostic.noteText + "\n" + formatted.line + "\n" + formatted.range + "\n";
     }
@@ -1396,12 +1396,12 @@ js.Emitter.prototype.emitProgram = function(program) {
   for (var i = 0; i < collector.typeSymbols.length; i = i + 1 | 0) {
     var type = collector.typeSymbols[i].type;
     if (Type.isNamespace(type)) {
-      if (!((type.symbol.flags & 2048) !== 0)) {
+      if ((type.symbol.flags & 2048) === 0) {
         js.Emitter.emitNode(this, Node.firstNonExtensionSibling(type.symbol.node));
       }
       continue;
     }
-    if (!((type.symbol.flags & 2048) !== 0)) {
+    if ((type.symbol.flags & 2048) === 0) {
       if (Type.isEnum(type)) {
         js.Emitter.emitNode(this, Node.firstNonExtensionSibling(type.symbol.node));
       } else {
@@ -1414,7 +1414,7 @@ js.Emitter.prototype.emitProgram = function(program) {
     var members = type.members.values();
     for (var j = 0; j < members.length; j = j + 1 | 0) {
       var symbol = members[j].symbol;
-      if (symbol.enclosingSymbol === type.symbol && symbol.node !== null && SymbolKind.isFunction(symbol.kind) && !(symbol.kind === 17)) {
+      if (symbol.enclosingSymbol === type.symbol && symbol.node !== null && SymbolKind.isFunction(symbol.kind) && symbol.kind !== 17) {
         js.Emitter.emitNode(this, symbol.node);
       }
     }
@@ -1608,7 +1608,7 @@ js.Emitter.emitVariableCluster = function($this, node) {
     var variable = variables[i];
     var symbol = variable.symbol;
     var isCompoundName = symbol !== null && js.Emitter.hasCompoundName($this, symbol);
-    if ((symbol === null || !SymbolKind.isInstance(symbol.kind) && !((symbol.flags & 2048) !== 0)) && (!isCompoundName || variable.children[2] !== null)) {
+    if ((symbol === null || !SymbolKind.isInstance(symbol.kind) && (symbol.flags & 2048) === 0) && (!isCompoundName || variable.children[2] !== null)) {
       js.Emitter.emit($this, $this.indent);
       if (!isCompoundName) {
         js.Emitter.emit($this, "var ");
@@ -2083,7 +2083,7 @@ js.Emitter.patchNode = function($this, node, context) {
     js.Emitter.patchCast($this, node, context);
     break;
   case 10:
-    if (!((node.symbol.flags & 2048) !== 0) && Type.baseClass(node.symbol.type) !== null) {
+    if ((node.symbol.flags & 2048) === 0 && Type.baseClass(node.symbol.type) !== null) {
       $this.needExtends = true;
     }
     break;
@@ -2170,7 +2170,7 @@ js.Emitter.patchUnary = function($this, node, context) {
 };
 js.Emitter.patchCast = function($this, node, context) {
   var value = node.children[1];
-  if (node.type === $this.cache.boolType && !(value.type === $this.cache.boolType)) {
+  if (node.type === $this.cache.boolType && value.type !== $this.cache.boolType) {
     Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(61), [Node.remove(value)]), node.range), node.type));
   } else if (node.type === $this.cache.intType && !Type.isInteger(value.type, $this.cache) && !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind)) {
     Node.become(node, Node.withType(Node.withRange(Node.createBinary(71, Node.remove(value), Node.withContent(new Node(41), new IntContent(0))), node.range), node.type));
@@ -2235,7 +2235,7 @@ js.Emitter.createBinaryIntAssignment = function($this, context, kind, left, righ
 };
 js.Emitter.hasCompoundName = function($this, symbol) {
   var enclosingSymbol = symbol.enclosingSymbol;
-  return enclosingSymbol !== null && !(enclosingSymbol.kind === 8) && (!(symbol.kind === 17) || js.Emitter.hasCompoundName($this, enclosingSymbol));
+  return enclosingSymbol !== null && enclosingSymbol.kind !== 8 && (symbol.kind !== 17 || js.Emitter.hasCompoundName($this, enclosingSymbol));
 };
 js.Emitter.createIsKeyword = function() {
   var result = new StringMap();
@@ -2262,7 +2262,7 @@ js.Emitter.mangleName = function($this, symbol) {
 };
 js.Emitter.fullName = function($this, symbol) {
   var enclosingSymbol = symbol.enclosingSymbol;
-  if (enclosingSymbol !== null && !(enclosingSymbol.kind === 8)) {
+  if (enclosingSymbol !== null && enclosingSymbol.kind !== 8) {
     var enclosingName = js.Emitter.fullName($this, enclosingSymbol);
     if (symbol.kind === 17) {
       return enclosingName;
@@ -2644,7 +2644,7 @@ Pratt.parseIgnoringParselet = function($this, context, precedence, parseletToIgn
   return node;
 };
 Pratt.resumeIgnoringParselet = function($this, context, precedence, left, parseletToIgnore) {
-  while (!(left.kind === 50)) {
+  while (left.kind !== 50) {
     var kind = ParserContext.current(context).kind;
     var parselet = $this.table.getOrDefault(kind, null);
     if (parselet === null || parselet === parseletToIgnore || parselet.infix === null || parselet.precedence <= precedence) {
@@ -2791,7 +2791,7 @@ ConstantFolder.foldConstants = function($this, node) {
     var valueKind = value.kind;
     if (NodeKind.isBool(valueKind)) {
       if (kind === 61) {
-        ConstantFolder.flattenBool($this, node, !(value.kind === 39));
+        ConstantFolder.flattenBool($this, node, value.kind !== 39);
       }
     } else if (valueKind === 41) {
       if (kind === 62) {
@@ -2806,6 +2806,21 @@ ConstantFolder.foldConstants = function($this, node) {
         ConstantFolder.flattenReal($this, node, +value.content.value);
       } else if (kind === 63) {
         ConstantFolder.flattenReal($this, node, -value.content.value);
+      }
+    } else if (kind === 61) {
+      switch (valueKind) {
+      case 61:
+      case 74:
+      case 84:
+      case 82:
+      case 81:
+      case 79:
+      case 75:
+      case 80:
+      case 76:
+        Node.invertBooleanCondition(value, $this.cache);
+        Node.become(node, value);
+        break;
       }
     }
   } else if (NodeKind.isBinaryOperator(kind)) {
@@ -2924,7 +2939,7 @@ InstanceToStaticPass.run = function(graph, options) {
     var info = graph.callInfo[i];
     var symbol = info.symbol;
     var enclosingSymbol = symbol.enclosingSymbol;
-    if (symbol.kind === 16 && !Symbol.isImportOrExport(symbol) && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 2048) !== 0 || SymbolKind.isEnum(enclosingSymbol.kind) || options.optimize && options.targetFormat === 1 && !((symbol.flags & 128) !== 0))) {
+    if (symbol.kind === 16 && !Symbol.isImportOrExport(symbol) && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 2048) !== 0 || SymbolKind.isEnum(enclosingSymbol.kind) || options.optimize && options.targetFormat === 1 && (symbol.flags & 128) === 0)) {
       symbol.kind = 15;
       symbol.flags |= 64;
       var thisSymbol = new Symbol("this", 18);
@@ -2985,7 +3000,7 @@ FunctionInliningPass.run = function(graph, options) {
   }
 };
 FunctionInliningPass.tryToInline = function($this, symbol) {
-  if (!((symbol.flags & 49152) === 0)) {
+  if ((symbol.flags & 49152) !== 0) {
     return;
   }
   symbol.flags |= 16384;
@@ -3347,7 +3362,7 @@ Resolver.setSymbolKindsAndMergeSiblings = function($this) {
   for (var i = 0; i < $this.parsedDeclarations.length; i = i + 1 | 0) {
     var node = $this.parsedDeclarations[i];
     var symbol = node.symbol;
-    if (!((symbol.flags & 64) !== 0) && (Symbol.isObjectMember(symbol) || Symbol.isEnumMember(symbol) && (symbol.flags & 16) !== 0)) {
+    if ((symbol.flags & 64) === 0 && (Symbol.isObjectMember(symbol) || Symbol.isEnumMember(symbol) && (symbol.flags & 16) !== 0)) {
       if (symbol.kind === 15) {
         symbol.kind = 16;
       } else if (symbol.kind === 19) {
@@ -3691,25 +3706,25 @@ Resolver.resolve = function($this, node, expectedType) {
   $this.typeContext = oldType;
 };
 Resolver.checkIsParameterized = function($this, node) {
-  if (!(node.type === $this.cache.errorType) && Type.hasParameters(node.type) && !(node.type.substitutions !== null)) {
+  if (node.type !== $this.cache.errorType && Type.hasParameters(node.type) && node.type.substitutions === null) {
     semanticErrorUnparameterizedType($this.log, node.range, node.type);
     node.type = $this.cache.errorType;
   }
 };
 Resolver.checkIsType = function($this, node) {
-  if (!(node.type === $this.cache.errorType) && !(node.kind === 35)) {
+  if (node.type !== $this.cache.errorType && node.kind !== 35) {
     semanticErrorUnexpectedExpression($this.log, node.range, node.type);
     node.type = $this.cache.errorType;
   }
 };
 Resolver.checkIsInstance = function($this, node) {
-  if (!(node.type === $this.cache.errorType) && node.kind === 35) {
+  if (node.type !== $this.cache.errorType && node.kind === 35) {
     semanticErrorUnexpectedType($this.log, node.range, node.type);
     node.type = $this.cache.errorType;
   }
 };
 Resolver.checkIsValidFunctionReturnType = function($this, node) {
-  if (!(node.type === $this.cache.voidType)) {
+  if (node.type !== $this.cache.voidType) {
     Resolver.checkIsValidVariableType($this, node);
   }
 };
@@ -3730,7 +3745,7 @@ Resolver.checkUnusedExpression = function($this, node) {
     }
   } else if (kind === 47) {
     Resolver.checkUnusedExpression($this, node.children[1]);
-  } else if (!(node.type === $this.cache.errorType) && !NodeKind.isCall(kind) && !NodeKind.isUnaryStorageOperator(kind) && !NodeKind.isBinaryStorageOperator(kind)) {
+  } else if (node.type !== $this.cache.errorType && !NodeKind.isCall(kind) && !NodeKind.isUnaryStorageOperator(kind) && !NodeKind.isBinaryStorageOperator(kind)) {
     semanticWarningUnusedExpression($this.log, node.range);
   }
 };
@@ -3781,7 +3796,7 @@ Resolver.checkConversion = function($this, to, node, kind) {
   }
 };
 Resolver.unexpectedStatement = function($this, node) {
-  if (!(node.range.source === null)) {
+  if (node.range.source !== null) {
     semanticErrorUnexpectedStatement($this.log, node.range);
   }
 };
@@ -3899,7 +3914,7 @@ Resolver.initializeEnum = function($this, symbol) {
   Resolver.unexpectedModifierIfPresent($this, symbol, 128, "on an enum declaration");
   Resolver.unexpectedModifierIfPresent($this, symbol, 32, "on an enum declaration");
   Resolver.checkNoBaseTypes($this, symbol, "An enum");
-  if (symbol.type.members.getOrDefault("toString", null) === null && !((symbol.flags & 2048) !== 0)) {
+  if (symbol.type.members.getOrDefault("toString", null) === null && (symbol.flags & 2048) === 0) {
     Resolver.addAutoGeneratedMember($this, symbol.type, "toString");
   }
 };
@@ -3989,7 +4004,7 @@ Resolver.initializeObject = function($this, symbol) {
     }
     Symbol.sortParametersByDependencies(symbol);
   }
-  if (!Type.isInterface(type) && Type.$constructor(type) === null && !((symbol.flags & 2048) !== 0)) {
+  if (!Type.isInterface(type) && Type.$constructor(type) === null && (symbol.flags & 2048) === 0) {
     Resolver.addAutoGeneratedMember($this, type, "new");
   }
   Resolver.resolveBaseTypes($this, symbol);
@@ -4020,7 +4035,7 @@ Resolver.initializeFunction = function($this, symbol) {
   var $arguments = node.children[1];
   Resolver.resolve($this, $arguments, null);
   symbol.type = $this.cache.errorType;
-  if (!(resultType === $this.cache.errorType)) {
+  if (resultType !== $this.cache.errorType) {
     var argumentTypes = [];
     for (var i = 0; i < $arguments.children.length; i = i + 1 | 0) {
       var type = $arguments.children[i].symbol.type;
@@ -4032,19 +4047,19 @@ Resolver.initializeFunction = function($this, symbol) {
     symbol.type = TypeCache.functionType($this.cache, resultType, argumentTypes);
   }
   var overriddenMember = symbol.overriddenMember;
-  if (overriddenMember !== null && !(symbol.kind === 17)) {
+  if (overriddenMember !== null && symbol.kind !== 17) {
     Resolver.initializeMember($this, overriddenMember);
     var base = overriddenMember.type;
     var derived = symbol.type;
-    if (!(base === $this.cache.errorType) && !(derived === $this.cache.errorType)) {
+    if (base !== $this.cache.errorType && derived !== $this.cache.errorType) {
       var overriddenSymbol = overriddenMember.symbol;
-      if (!(base.symbol === null) || !SymbolKind.isInstance(overriddenSymbol.kind) || !SymbolKind.isInstance(symbol.kind)) {
+      if (base.symbol !== null || !SymbolKind.isInstance(overriddenSymbol.kind) || !SymbolKind.isInstance(symbol.kind)) {
         semanticErrorBadOverride($this.log, node.children[0].range, symbol.name, overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.children[0].range);
       } else if (base !== derived) {
         semanticErrorOverrideDifferentTypes($this.log, node.children[0].range, symbol.name, base, derived, overriddenSymbol.node.children[0].range);
-      } else if (!((symbol.flags & 32) !== 0)) {
+      } else if ((symbol.flags & 32) === 0) {
         semanticErrorModifierMissingOverride($this.log, node.children[0].range, symbol.name, overriddenSymbol.node.children[0].range);
-      } else if (!((overriddenSymbol.flags & 128) !== 0)) {
+      } else if ((overriddenSymbol.flags & 128) === 0) {
         semanticErrorCannotOverrideNonVirtual($this.log, node.children[0].range, symbol.name, overriddenSymbol.node.children[0].range);
       } else {
         Resolver.redundantModifierIfPresent($this, symbol, 128, "on an overriding function");
@@ -4076,7 +4091,7 @@ Resolver.findModifierName = function(symbol, flag) {
   return null;
 };
 Resolver.redundantModifierIfPresent = function($this, symbol, flag, where) {
-  if ((symbol.flags & flag) !== 0 && !((symbol.flags & 131072) !== 0)) {
+  if ((symbol.flags & flag) !== 0 && (symbol.flags & 131072) === 0) {
     var modifierName = Resolver.findModifierName(symbol, flag);
     if (modifierName !== null) {
       semanticErrorRedundantModifier($this.log, modifierName.range, modifierName.content.value, where);
@@ -4084,7 +4099,7 @@ Resolver.redundantModifierIfPresent = function($this, symbol, flag, where) {
   }
 };
 Resolver.unexpectedModifierIfPresent = function($this, symbol, flag, where) {
-  if ((symbol.flags & flag) !== 0 && !((symbol.flags & 131072) !== 0)) {
+  if ((symbol.flags & flag) !== 0 && (symbol.flags & 131072) === 0) {
     var modifierName = Resolver.findModifierName(symbol, flag);
     if (modifierName !== null) {
       semanticErrorUnexpectedModifier($this.log, modifierName.range, modifierName.content.value, where);
@@ -4092,7 +4107,7 @@ Resolver.unexpectedModifierIfPresent = function($this, symbol, flag, where) {
   }
 };
 Resolver.expectedModifierIfAbsent = function($this, symbol, flag, where) {
-  if ((symbol.flags & flag) === 0 && !((symbol.flags & 131072) !== 0) && Resolver.findModifierName(symbol, flag) === null) {
+  if ((symbol.flags & flag) === 0 && (symbol.flags & 131072) === 0 && Resolver.findModifierName(symbol, flag) === null) {
     semanticErrorExpectedModifier($this.log, symbol.node.children[0].range, symbolFlagToName.get(flag), where);
   }
 };
@@ -4102,7 +4117,7 @@ Resolver.initializeVariable = function($this, symbol) {
   if (symbol.enclosingSymbol === null || !SymbolKind.isTypeWithInstances(symbol.enclosingSymbol.kind)) {
     Resolver.unexpectedModifierIfPresent($this, symbol, 64, "outside an object declaration");
   }
-  if (symbol.enclosingSymbol !== null && symbol.enclosingSymbol.kind === 13 && !((symbol.flags & 64) !== 0)) {
+  if (symbol.enclosingSymbol !== null && symbol.enclosingSymbol.kind === 13 && (symbol.flags & 64) === 0) {
     Resolver.expectedModifierIfAbsent($this, symbol, 256, "on a variable declaration inside a struct");
   }
   var node = symbol.node;
@@ -4122,7 +4137,7 @@ Resolver.initializeVariable = function($this, symbol) {
           symbol.enumValue = variableValue.content.value;
         } else {
           variableType = Node.withType(new Node(35), $this.cache.errorType);
-          if (!(variableValue.type === $this.cache.errorType)) {
+          if (variableValue.type !== $this.cache.errorType) {
             semanticErrorBadIntegerConstant($this.log, variableValue.range, variableValue.type);
           }
         }
@@ -4131,7 +4146,7 @@ Resolver.initializeVariable = function($this, symbol) {
         if (index > 0) {
           var previous = node.parent.children[index - 1 | 0].symbol;
           Resolver.initializeSymbol($this, previous);
-          if (!(previous.type === $this.cache.errorType)) {
+          if (previous.type !== $this.cache.errorType) {
             symbol.enumValue = Type.isEnumFlags(type) ? $imul(previous.enumValue, 2) : previous.enumValue + 1 | 0;
           } else {
             variableType = Node.withType(new Node(35), $this.cache.errorType);
@@ -4180,7 +4195,7 @@ Resolver.initializeVariable = function($this, symbol) {
     Resolver.initializeMember($this, overriddenMember);
     var base = overriddenMember.type;
     var derived = symbol.type;
-    if (!(base === $this.cache.errorType) && !(derived === $this.cache.errorType)) {
+    if (base !== $this.cache.errorType && derived !== $this.cache.errorType) {
       semanticErrorBadOverride($this.log, node.children[0].range, symbol.name, overriddenMember.symbol.enclosingSymbol.type, overriddenMember.symbol.node.children[0].range);
     }
   }
@@ -4373,7 +4388,7 @@ Resolver.generateDefaultToString = function($this, symbol) {
   var i;
   for (i = 0; i < members.length; i = i + 1 | 0) {
     var field = members[i].symbol;
-    if (field.kind === 19 && !((field.flags & 16) !== 0)) {
+    if (field.kind === 19 && (field.flags & 16) === 0) {
       fields.push(field);
     }
   }
@@ -4541,7 +4556,7 @@ Resolver.resolveCase = function($this, node) {
     var value = values[i];
     Resolver.resolveAsExpressionWithConversion($this, value, $this.context.switchValue.type, 0);
     ConstantFolder.foldConstants($this.constantFolder, value);
-    if (!(value.type === $this.cache.errorType) && !NodeKind.isConstant(value.kind)) {
+    if (value.type !== $this.cache.errorType && !NodeKind.isConstant(value.kind)) {
       semanticErrorNonConstantCaseValue($this.log, value.range);
       value.type = $this.cache.errorType;
     }
@@ -4607,7 +4622,7 @@ Resolver.resolveFunction = function($this, node) {
       $this.resultType = symbol.type.relevantTypes[0];
     }
     Resolver.resolve($this, block, null);
-    if (!($this.resultType === $this.cache.errorType) && !($this.resultType === $this.cache.voidType) && !Node.blockAlwaysEndsWithReturn(block)) {
+    if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType && !Node.blockAlwaysEndsWithReturn(block)) {
       semanticErrorMissingReturn($this.log, node.children[0].range, node.symbol.name, $this.resultType);
     }
     $this.resultType = oldResultType;
@@ -4648,7 +4663,7 @@ Resolver.resolveFunction = function($this, node) {
       semanticErrorAbstractConstructorInitializer($this.log, Range.span((superInitializer !== null ? superInitializer : memberInitializers.children[0]).range, (memberInitializers.children.length < 1 ? superInitializer : memberInitializers.children[memberInitializers.children.length - 1 | 0]).range));
     }
     var enclosingSymbol = node.symbol.enclosingSymbol;
-    if (!((enclosingSymbol.flags & 2048) !== 0)) {
+    if ((enclosingSymbol.flags & 2048) === 0) {
       var members = enclosingSymbol.type.members.values();
       var index = 0;
       for (var i = 0; i < members.length; i = i + 1 | 0) {
@@ -4710,7 +4725,7 @@ Resolver.resolveVariable = function($this, node) {
   Resolver.initializeSymbol($this, symbol);
   var value = node.children[2];
   var enclosingSymbol = symbol.enclosingSymbol;
-  if (!((symbol.flags & 64) !== 0) && enclosingSymbol !== null) {
+  if ((symbol.flags & 64) === 0 && enclosingSymbol !== null) {
     var enclosingSymbolType = enclosingSymbol.type;
     if (Type.isInterface(enclosingSymbolType) || (symbol.flags & 16) !== 0 && Type.isEnum(enclosingSymbolType)) {
       Resolver.unexpectedStatement($this, node);
@@ -4802,7 +4817,7 @@ Resolver.resolveReturn = function($this, node) {
     } else {
       Resolver.resolveAsExpressionWithConversion($this, value, $this.resultType, 0);
     }
-  } else if (!($this.resultType === $this.cache.errorType) && !($this.resultType === $this.cache.voidType)) {
+  } else if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType) {
     semanticErrorExpectedReturnValue($this.log, node.range, $this.resultType);
   }
 };
@@ -5035,7 +5050,7 @@ Resolver.resolveCall = function($this, node) {
         return;
       }
     }
-    if (!(valueType.symbol === null)) {
+    if (valueType.symbol !== null) {
       semanticErrorInvalidCall($this.log, value.range, valueType);
       Resolver.resolveNodesAsExpressions($this, $arguments);
       return;
@@ -5119,10 +5134,10 @@ Resolver.resolveLambda = function($this, node) {
   var block = Node.lambdaBlock(node);
   if ($this.typeContext === null) {
     semanticErrorMissingTypeContext($this.log, node.range);
-  } else if (!($this.typeContext === $this.cache.errorType)) {
-    if (!($this.typeContext.symbol === null)) {
+  } else if ($this.typeContext !== $this.cache.errorType) {
+    if ($this.typeContext.symbol !== null) {
       semanticErrorBadLambdaTypeContext($this.log, node.range, $this.typeContext);
-    } else if (!($this.typeContext === $this.cache.errorType)) {
+    } else if ($this.typeContext !== $this.cache.errorType) {
       var argumentTypes = Type.argumentTypes($this.typeContext);
       $this.resultType = $this.typeContext.relevantTypes[0];
       node.type = $this.typeContext;
@@ -5133,7 +5148,7 @@ Resolver.resolveLambda = function($this, node) {
           Node.replaceChild($arguments[i], 1, Node.withType(new Node(35), argumentTypes[i]));
         }
       }
-      if (!($this.resultType === $this.cache.errorType) && !($this.resultType === $this.cache.voidType) && !Node.blockAlwaysEndsWithReturn(block)) {
+      if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType && !Node.blockAlwaysEndsWithReturn(block)) {
         semanticErrorLambdaMissingReturn($this.log, node.range, $this.resultType);
       }
     }
@@ -5160,7 +5175,7 @@ Resolver.resolveFunctionType = function($this, node) {
   var $arguments = Node.functionTypeArguments(node);
   Resolver.resolveAsParameterizedType($this, result);
   Resolver.resolveNodesAsVariableTypes($this, $arguments);
-  if (!(result.type === $this.cache.errorType)) {
+  if (result.type !== $this.cache.errorType) {
     var argumentTypes = [];
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
       var argumentType = $arguments[i].type;
@@ -5466,13 +5481,13 @@ Symbol.isContainedBy = function($this, symbol) {
   return $this.enclosingSymbol === null ? false : $this.enclosingSymbol === symbol || Symbol.isContainedBy($this.enclosingSymbol, symbol);
 };
 Symbol.fullName = function($this) {
-  return $this.enclosingSymbol !== null && $this.kind !== 4 && !($this.enclosingSymbol.kind === 8) ? Symbol.fullName($this.enclosingSymbol) + "." + $this.name : $this.name;
+  return $this.enclosingSymbol !== null && $this.kind !== 4 && $this.enclosingSymbol.kind !== 8 ? Symbol.fullName($this.enclosingSymbol) + "." + $this.name : $this.name;
 };
 Symbol.hasParameters = function($this) {
   return $this.parameters !== null && $this.parameters.length > 0;
 };
 Symbol.isEnumValue = function($this) {
-  return SymbolKind.isVariable($this.kind) && $this.enclosingSymbol !== null && SymbolKind.isEnum($this.enclosingSymbol.kind) && !(($this.flags & 16) !== 0);
+  return SymbolKind.isVariable($this.kind) && $this.enclosingSymbol !== null && SymbolKind.isEnum($this.enclosingSymbol.kind) && ($this.flags & 16) === 0;
 };
 Symbol.isObjectMember = function($this) {
   return $this.enclosingSymbol !== null && SymbolKind.isObject($this.enclosingSymbol.kind);
@@ -6237,7 +6252,7 @@ frontend.main = function(args) {
   var log = compiler.log;
   for (var i = 0; i < log.diagnostics.length; i = i + 1 | 0) {
     var diagnostic = log.diagnostics[i];
-    if (!(diagnostic.range.source === null)) {
+    if (diagnostic.range.source !== null) {
       io.printWithColor(1, Range.locationString(diagnostic.range) + ": ");
     }
     switch (diagnostic.kind) {
@@ -6248,12 +6263,12 @@ frontend.main = function(args) {
       frontend.printError(diagnostic.text);
       break;
     }
-    if (!(diagnostic.range.source === null)) {
+    if (diagnostic.range.source !== null) {
       var formatted = Range.format(diagnostic.range, io.terminalWidth);
       io.print(formatted.line + "\n");
       io.printWithColor(92, formatted.range + "\n");
     }
-    if (!(diagnostic.noteRange.source === null)) {
+    if (diagnostic.noteRange.source !== null) {
       io.printWithColor(1, Range.locationString(diagnostic.noteRange) + ": ");
       frontend.printNote(diagnostic.noteText);
       var formatted = Range.format(diagnostic.noteRange, io.terminalWidth);
@@ -6433,7 +6448,7 @@ function scanForToken(context, kind, tokenScan) {
   if (ParserContext.expect(context, kind)) {
     return true;
   }
-  while (!(ParserContext.current(context).kind === 30)) {
+  while (ParserContext.current(context).kind !== 30) {
     var currentKind = ParserContext.current(context).kind;
     if (currentKind === 80 || currentKind === 79 || currentKind === 78 || currentKind === 81 && tokenScan === 1) {
       return ParserContext.eat(context, kind);
@@ -6455,7 +6470,7 @@ function parseGroup(context, allowLambda) {
     scanForToken(context, 80, 1);
     return value;
   }
-  if (!(ParserContext.current(context).kind === 54)) {
+  if (ParserContext.current(context).kind !== 54) {
     ParserContext.expect(context, 54);
     return Node.withRange(new Node(50), ParserContext.spanSince(context, token.range));
   }
@@ -6521,7 +6536,7 @@ function parseCaseStatement(context) {
 }
 function parseStatements(context, hint) {
   var statements = [];
-  while (!(ParserContext.current(context).kind === 78) && !(ParserContext.current(context).kind === 30)) {
+  while (ParserContext.current(context).kind !== 78 && ParserContext.current(context).kind !== 30) {
     if (hint === 1) {
       var declaration = parseEnumValueDeclaration(context);
       if (declaration === null) {
@@ -6547,7 +6562,7 @@ function parseArgumentVariables(context) {
   if (!ParserContext.expect(context, 57)) {
     return null;
   }
-  while (!(ParserContext.current(context).kind === 80)) {
+  while (ParserContext.current(context).kind !== 80) {
     if ($arguments.length > 0 && !ParserContext.expect(context, 21)) {
       break;
     }
@@ -6584,7 +6599,7 @@ function parseParameters(context) {
   if (!ParserContext.eat(context, 99)) {
     return null;
   }
-  while (parameters.length === 0 || !(ParserContext.current(context).kind === 100)) {
+  while (parameters.length === 0 || ParserContext.current(context).kind !== 100) {
     if (parameters.length > 0 && !ParserContext.expect(context, 21)) {
       break;
     }
@@ -6602,13 +6617,13 @@ function parseArgumentList(context, left, right, comma) {
   if (!ParserContext.expect(context, left)) {
     return values;
   }
-  while (!(ParserContext.current(context).kind === right)) {
+  while (ParserContext.current(context).kind !== right) {
     if (comma === 0 && values.length > 0 && !ParserContext.expect(context, 21)) {
       break;
     }
     var value = Pratt.parseIgnoringParselet(pratt, context, 1, null);
     values.push(value);
-    if (value.kind === 50 || comma === 1 && !(ParserContext.current(context).kind === right) && !ParserContext.expect(context, 21)) {
+    if (value.kind === 50 || comma === 1 && ParserContext.current(context).kind !== right && !ParserContext.expect(context, 21)) {
       break;
     }
   }
@@ -6618,7 +6633,7 @@ function parseArgumentList(context, left, right, comma) {
 function parseTypeList(context, end) {
   var token = ParserContext.current(context);
   var types = [];
-  while (types.length === 0 || !(ParserContext.current(context).kind === end)) {
+  while (types.length === 0 || ParserContext.current(context).kind !== end) {
     if (ParserContext.current(context).kind === 55) {
       ParserContext.unexpectedToken(context);
       break;
@@ -6851,7 +6866,7 @@ function parseEnum(context) {
 function parseVariableCluster(context, type, name) {
   var variables = [];
   var start = type;
-  while (variables.length === 0 || !(ParserContext.current(context).kind === 81) && !(ParserContext.current(context).kind === 45)) {
+  while (variables.length === 0 || ParserContext.current(context).kind !== 81 && ParserContext.current(context).kind !== 45) {
     if (variables.length > 0 && !ParserContext.eat(context, 21)) {
       ParserContext.expect(context, 81);
       break;
@@ -6877,7 +6892,7 @@ function parseFor(context) {
   var test = null;
   var update = null;
   do {
-    if (!(ParserContext.current(context).kind === 81) && !(ParserContext.current(context).kind === 80)) {
+    if (ParserContext.current(context).kind !== 81 && ParserContext.current(context).kind !== 80) {
       setup = Pratt.parseIgnoringParselet(pratt, context, 14, null);
       if (ParserContext.current(context).kind === 42) {
         var name = parseName(context);
@@ -6896,20 +6911,20 @@ function parseFor(context) {
           var value = Node.withChildren(new Node(16), [Node.remove(variables[0].children[0]), Node.remove(setup.children[0]), null]);
           return Node.withRange(Node.withChildren(new Node(22), [value, values, body]), ParserContext.spanSince(context, token.range));
         }
-      } else if (!(ParserContext.current(context).kind === 81)) {
+      } else if (ParserContext.current(context).kind !== 81) {
         setup = Pratt.resumeIgnoringParselet(pratt, context, 0, setup, null);
       }
     }
     if (!ParserContext.expect(context, 81)) {
       break;
     }
-    if (!(ParserContext.current(context).kind === 81) && !(ParserContext.current(context).kind === 80)) {
+    if (ParserContext.current(context).kind !== 81 && ParserContext.current(context).kind !== 80) {
       test = Pratt.parseIgnoringParselet(pratt, context, 0, null);
     }
     if (!ParserContext.expect(context, 81)) {
       break;
     }
-    if (!(ParserContext.current(context).kind === 80)) {
+    if (ParserContext.current(context).kind !== 80) {
       update = Pratt.parseIgnoringParselet(pratt, context, 0, null);
     }
   } while (false);
@@ -6927,7 +6942,7 @@ function parseSuperCall(context) {
 }
 function parsePossibleTypedDeclaration(context, hint) {
   var type = Pratt.parseIgnoringParselet(pratt, context, 14, null);
-  if (!(ParserContext.current(context).kind === 42)) {
+  if (ParserContext.current(context).kind !== 42) {
     var value = Pratt.resumeIgnoringParselet(pratt, context, 0, type, null);
     scanForToken(context, 81, 1);
     return Node.withRange(Node.withChildren(new Node(30), [value]), ParserContext.spanSince(context, type.range));
@@ -7326,7 +7341,7 @@ function semanticWarningDuplicateModifier(log, range, modifier) {
 }
 function semanticWarningShadowedSymbol(log, range, name, shadowed) {
   Log.warning(log, range, string.append(string.append("\"", name), "\"") + " shadows another declaration with the same name");
-  if (!(shadowed.source === null)) {
+  if (shadowed.source !== null) {
     Log.note(log, shadowed, "The shadowed declaration is here");
   }
 }
@@ -7341,7 +7356,7 @@ function semanticErrorExpectedModifier(log, range, modifier, where) {
 }
 function semanticErrorDuplicateSymbol(log, range, name, previous) {
   Log.error(log, range, string.append(string.append("\"", name), "\"") + " is already declared");
-  if (!(previous.source === null)) {
+  if (previous.source !== null) {
     Log.note(log, previous, "The previous declaration is here");
   }
 }
@@ -7368,7 +7383,7 @@ function semanticErrorExtensionMissingTarget(log, range, name) {
 }
 function semanticErrorDifferentModifiers(log, range, name, previous) {
   Log.error(log, range, "Cannot merge multiple declarations for " + string.append(string.append("\"", name), "\"") + " with different modifiers");
-  if (!(previous.source === null)) {
+  if (previous.source !== null) {
     Log.note(log, previous, "The conflicting declaration is here");
   }
 }
@@ -7443,7 +7458,7 @@ function semanticErrorBadDefaultCase(log, range) {
 }
 function semanticErrorDuplicateCase(log, range, previous) {
   Log.error(log, range, "Duplicate case value");
-  if (!(previous.source === null)) {
+  if (previous.source !== null) {
     Log.note(log, previous, "The first occurrence is here");
   }
 }
@@ -7480,25 +7495,25 @@ function semanticErrorUnmergedSymbol(log, range, name, types) {
 }
 function semanticErrorBadOverride(log, range, name, base, overridden) {
   Log.error(log, range, string.append(string.append("\"", name), "\"") + " overrides another declaration with the same name in base " + ("type \"" + Type.toString(base) + "\""));
-  if (!(overridden.source === null)) {
+  if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorOverrideDifferentTypes(log, range, name, base, derived, overridden) {
   Log.error(log, range, string.append(string.append("\"", name), "\"") + " must have the same signature as the method it overrides (expected " + ("type \"" + Type.toString(base) + "\"") + " but found " + ("type \"" + Type.toString(derived) + "\"") + ")");
-  if (!(overridden.source === null)) {
+  if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorModifierMissingOverride(log, range, name, overridden) {
   Log.error(log, range, string.append(string.append("\"", name), "\"") + " overrides another symbol with the same name but is missing the \"override\" modifier");
-  if (!(overridden.source === null)) {
+  if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorCannotOverrideNonVirtual(log, range, name, overridden) {
   Log.error(log, range, string.append(string.append("\"", name), "\"") + " cannot override a non-virtual method");
-  if (!(overridden.source === null)) {
+  if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
@@ -7531,7 +7546,7 @@ function semanticErrorMissingSuperInitializer(log, range) {
 }
 function semanticErrorAlreadyInitialized(log, range, name, previous) {
   Log.error(log, range, string.append(string.append("\"", name), "\"") + " is already initialized");
-  if (!(previous.source === null)) {
+  if (previous.source !== null) {
     Log.note(log, previous, "The previous initialization is here");
   }
 }
@@ -7663,7 +7678,7 @@ service.completionsFromPosition = function(node, resolver, source, index) {
   if (node.kind === 46) {
     var target = node.children[0];
     if (target.type !== null) {
-      var isInstance = !(target.kind === 35);
+      var isInstance = target.kind !== 35;
       var members = target.type.members.values();
       for (var i = 0; i < members.length; i = i + 1 | 0) {
         var member = members[i];
