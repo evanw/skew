@@ -1,0 +1,4 @@
+testJS("
+import int foo;
+", "
+");

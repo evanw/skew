@@ -1606,8 +1606,9 @@ js.Emitter.emitVariableCluster = function($this, node) {
   var variables = Node.clusterVariables(node);
   for (var i = 0; i < variables.length; i = i + 1 | 0) {
     var variable = variables[i];
-    var isCompoundName = variable.symbol !== null && js.Emitter.hasCompoundName($this, variable.symbol);
-    if ((variable.symbol === null || !SymbolKind.isInstance(variable.symbol.kind)) && (!isCompoundName || variable.children[2] !== null)) {
+    var symbol = variable.symbol;
+    var isCompoundName = symbol !== null && js.Emitter.hasCompoundName($this, symbol);
+    if ((symbol === null || !SymbolKind.isInstance(symbol.kind) && !((symbol.flags & 2048) !== 0)) && (!isCompoundName || variable.children[2] !== null)) {
       js.Emitter.emit($this, $this.indent);
       if (!isCompoundName) {
         js.Emitter.emit($this, "var ");

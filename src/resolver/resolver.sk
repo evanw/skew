@@ -1,5 +1,3 @@
-import class console{static void log(string t);}
-
 enum CastKind {
   IMPLICIT_CAST,
   EXPLICIT_CAST,

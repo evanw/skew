@@ -247,8 +247,9 @@ namespace js {
       var variables = node.clusterVariables();
       for (var i = 0; i < variables.length; i++) {
         var variable = variables.get(i);
-        var isCompoundName = variable.symbol != null && hasCompoundName(variable.symbol);
-        if ((variable.symbol == null || !variable.symbol.kind.isInstance()) && (!isCompoundName || variable.variableValue() != null)) {
+        var symbol = variable.symbol;
+        var isCompoundName = symbol != null && hasCompoundName(symbol);
+        if ((symbol == null || !symbol.kind.isInstance() && !symbol.isImport()) && (!isCompoundName || variable.variableValue() != null)) {
           emit(indent);
           if (!isCompoundName) {
             emit("var ");

@@ -73,27 +73,49 @@ new Bar().foo();
 ");
 
 testJS("
-inline string bar(string name) {
-  return \"bar\".append(name);
+inline int foo(int a, int b) {
+  return a + b;
 }
-string foo(string foo) {
-  return \"foo\".append(bar(foo));
+inline int baz(int a) {
+  return foo(2, a);
+}
+int bar(int a) {
+  return foo(1, baz(a));
 }
 ", "
-function foo(foo) {
-  return \"foo\" + (\"bar\" + foo);
+function bar(a) {
+  return 1 + (2 + a | 0) | 0;
 }
 ");
 
 testJS("
-string foo(string foo) {
-  return \"foo\".append(bar(foo));
+inline int foo(int a, int b) {
+  return a + b;
 }
-inline string bar(string name) {
-  return \"bar\".append(name);
+int bar(int a) {
+  return foo(1, baz(a));
+}
+inline int baz(int a) {
+  return foo(2, a);
 }
 ", "
-function foo(foo) {
-  return \"foo\" + (\"bar\" + foo);
+function bar(a) {
+  return 1 + (2 + a | 0) | 0;
+}
+");
+
+testJS("
+inline int foo(int a, int b) {
+  return a + b;
+}
+int bar(int a) {
+  return foo(1, baz(baz(a)));
+}
+inline int baz(int a) {
+  return foo(2, a);
+}
+", "
+function bar(a) {
+  return 1 + (2 + a | 0) | 0;
 }
 ");
