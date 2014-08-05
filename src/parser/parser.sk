@@ -500,7 +500,7 @@ Node parseFor(ParserContext context) {
 
 Node parseSuperCall(ParserContext context) {
   var token = context.next();
-  var values = parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, AllowTrailingComma.NO_TRAILING_COMMA);
+  var values = parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
   return Node.createSuperCall(values).withRange(context.spanSince(token.range));
 }
 
@@ -600,6 +600,7 @@ bool looksLikeType(Node node) {
 }
 
 Node parseStatement(ParserContext context, StatementHint hint) {
+  // Separating the case bodies into separate functions makes the JavaScript JIT go faster
   switch (context.current().kind) {
     case .ASSERT { return parseAssert(context); }
     case .BREAK { return parseBreak(context); }
@@ -834,7 +835,7 @@ Pratt createParser() {
 
   // Call expressions
   pratt.parselet(.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = (context, left) => {
-    var arguments = parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, AllowTrailingComma.NO_TRAILING_COMMA);
+    var arguments = parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
     return Node.createCall(left, arguments).withRange(context.spanSince(left.range));
   };
 

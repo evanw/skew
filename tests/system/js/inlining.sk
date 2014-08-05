@@ -45,3 +45,29 @@ var x = 0;
 var y = foo((x = x + 1 | 0) - 1 | 0);
 var z = foo((x = x + 1 | 0) - 1 | 0);
 ");
+
+testJS("
+class Foo {
+  inline virtual void foo() {}
+}
+class Bar : Foo {
+  inline override void foo() {}
+}
+Bar().foo();
+", "
+function $extends(derived, base) {
+  derived.prototype = Object.create(base.prototype);
+  derived.prototype.constructor = derived;
+}
+function Foo() {
+}
+Foo.prototype.foo = function() {
+};
+function Bar() {
+  Foo.call(this);
+}
+$extends(Bar, Foo);
+Bar.prototype.foo = function() {
+};
+new Bar().foo();
+");

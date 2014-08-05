@@ -122,12 +122,6 @@ function $extends(derived, base) {
 string.append = function($this, value) {
   return $this + value;
 };
-List.insert = function($this, index, value) {
-  $this.splice(index, 0, value);
-};
-List.set = function($this, index, value) {
-  $this[index] = value;
-};
 function Node(_0) {
   this.range = Range.EMPTY;
   this.parent = null;
@@ -330,7 +324,7 @@ Node.insertSiblingAfter = function($this, node) {
 Node.remove = function($this) {
   if ($this.parent !== null) {
     var index = Node.indexInParent($this);
-    List.set($this.parent.children, index, null);
+    $this.parent.children[index] = null;
     $this.parent = null;
   }
   return $this;
@@ -369,14 +363,14 @@ Node.replaceChild = function($this, index, node) {
   if (old !== null) {
     old.parent = null;
   }
-  List.set($this.children, index, node);
+  $this.children[index] = node;
 };
 Node.insertChild = function($this, index, node) {
   if ($this.children === null) {
     $this.children = [];
   }
   Node.updateParent(node, $this);
-  List.insert($this.children, index, node);
+  $this.children.splice(index, 0, node);
 };
 Node.insertChildren = function($this, index, nodes) {
   if ($this.children === null) {
@@ -385,7 +379,7 @@ Node.insertChildren = function($this, index, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
     var node = nodes[i];
     Node.updateParent(node, $this);
-    List.insert($this.children, (index = index + 1 | 0) - 1 | 0, node);
+    $this.children.splice((index = index + 1 | 0) - 1 | 0, 0, node);
   }
 };
 Node.clone = function($this) {
@@ -821,9 +815,9 @@ Collector.sortTypeSymbols = function($this) {
       if (Collector.typeComesBefore($this, symbol.type, $this.typeSymbols[j].type)) {
         var k = i;
         for (; k > j; k = k - 1 | 0) {
-          List.set($this.typeSymbols, k, $this.typeSymbols[k - 1 | 0]);
+          $this.typeSymbols[k] = $this.typeSymbols[k - 1 | 0];
         }
-        List.set($this.typeSymbols, j, symbol);
+        $this.typeSymbols[j] = symbol;
         break;
       }
     }
@@ -3865,7 +3859,7 @@ Resolver.collectAndResolveBaseTypes = function($this, symbol) {
           var baseType = types.children[i];
           Resolver.resolveAsParameterizedType($this, baseType);
           if (isObject) {
-            List.insert(baseTypes, (index = index + 1 | 0) - 1 | 0, baseType);
+            baseTypes.splice((index = index + 1 | 0) - 1 | 0, 0, baseType);
           } else if (Type.isClass(baseType.type)) {
             semanticErrorBaseClassInExtension($this.log, baseType.range);
           } else {
@@ -4347,9 +4341,9 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
     var j = i;
     var member = uninitializedMembers[i];
     for (; j > 0 && uninitializedMembers[j - 1 | 0].symbol.node.range.start > member.symbol.node.range.start; j = j - 1 | 0) {
-      List.set(uninitializedMembers, j, uninitializedMembers[j - 1 | 0]);
+      uninitializedMembers[j] = uninitializedMembers[j - 1 | 0];
     }
-    List.set(uninitializedMembers, j, member);
+    uninitializedMembers[j] = member;
   }
   for (var i = 0; i < uninitializedMembers.length; i = i + 1 | 0) {
     var member = uninitializedMembers[i];
@@ -5462,8 +5456,8 @@ Symbol.sortParametersByDependencies = function($this) {
     }
     if (j < $this.sortedParameters.length) {
       var temp = $this.sortedParameters[i];
-      List.set($this.sortedParameters, i, $this.sortedParameters[j]);
-      List.set($this.sortedParameters, j, temp);
+      $this.sortedParameters[i] = $this.sortedParameters[j];
+      $this.sortedParameters[j] = temp;
     }
   }
 };
@@ -6391,7 +6385,7 @@ function prepareTokens(tokens) {
             var start = range.start;
             var text = token.text.slice(1, token.text.length);
             var kind = tokenKind === 83 ? 40 : tokenKind === 41 ? 2 : tokenKind === 12 ? 41 : 33;
-            List.insert(tokens, i + 1 | 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind, text));
+            tokens.splice(i + 1 | 0, 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind, text));
             token.range = new Range(range.source, start, start + 1 | 0);
             token.text = ">";
           }
@@ -7005,7 +6999,7 @@ function looksLikeLambdaArguments(node) {
 function createLambdaFromNames(names, block) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
     var name = names[i];
-    List.set(names, i, Node.withRange(Node.withChildren(new Node(16), [name, null, null]), name.range));
+    names[i] = Node.withRange(Node.withChildren(new Node(16), [name, null, null]), name.range);
   }
   return Node.createLambda(names, block);
 }
@@ -7472,7 +7466,7 @@ function semanticErrorDuplicateBaseType(log, range, type) {
 }
 function semanticErrorAmbiguousSymbol(log, range, name, names) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
-    List.set(names, i, string.append(string.append("\"", names[i]), "\""));
+    names[i] = string.append(string.append("\"", names[i]), "\"");
   }
   Log.error(log, range, "Reference to " + string.append(string.append("\"", name), "\"") + " is ambiguous, could be " + names.join(" or "));
 }
@@ -7737,7 +7731,7 @@ var nodeKindIsExpression = function(node) {
 var operatorInfo = createOperatorMap();
 Compiler.nativeLibrarySource = null;
 Compiler.nativeLibraryFile = null;
-var NATIVE_LIBRARY = "\nimport struct int { string toString(); }\nimport struct bool { string toString(); }\nimport struct float { string toString(); }\nimport struct double { string toString(); }\n\nimport struct String {\n  static string fromCharCode(int value);\n}\n\nimport struct string {\n  final int length;\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  inline string append(string value) { return untyped(this) + value; }\n}\n\nimport class List<T> {\n  new();\n  final int length;\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  final double E;\n  final double PI;\n  final double NAN;\n  final double INFINITY;\n  double random();\n  double abs(double n);\n  double sin(double n);\n  double cos(double n);\n  double tan(double n);\n  double asin(double n);\n  double acos(double n);\n  double atan(double n);\n  double round(double n);\n  double floor(double n);\n  double ceil(double n);\n  double exp(double n);\n  double log(double n);\n  double sqrt(double n);\n  bool isNaN(double n);\n  bool isFinite(double n);\n  double atan2(double y, double x);\n  double pow(double base, double exponent);\n  double min(double a, double b);\n  double max(double a, double b);\n  int imin(int a, int b);\n  int imax(int a, int b);\n}\n";
+var NATIVE_LIBRARY = "\nimport struct int { string toString(); }\nimport struct bool { string toString(); }\nimport struct float { string toString(); }\nimport struct double { string toString(); }\n\nimport struct String {\n  static string fromCharCode(int value);\n}\n\nimport struct string {\n  final int length;\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  inline string append(string value) { return untyped(this) + value; }\n}\n\nimport class List<T> {\n  new();\n  final int length;\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { return untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { return untyped(this)[index] = value; }\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  final double E;\n  final double PI;\n  final double NAN;\n  final double INFINITY;\n  double random();\n  double abs(double n);\n  double sin(double n);\n  double cos(double n);\n  double tan(double n);\n  double asin(double n);\n  double acos(double n);\n  double atan(double n);\n  double round(double n);\n  double floor(double n);\n  double ceil(double n);\n  double exp(double n);\n  double log(double n);\n  double sqrt(double n);\n  bool isNaN(double n);\n  bool isFinite(double n);\n  double atan2(double y, double x);\n  double pow(double base, double exponent);\n  double min(double a, double b);\n  double max(double a, double b);\n  int imin(int a, int b);\n  int imax(int a, int b);\n}\n";
 Range.EMPTY = new Range(null, 0, 0);
 var BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var HEX = "0123456789ABCDEF";
