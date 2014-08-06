@@ -102,8 +102,9 @@ check: | $(DEBUG_DIR)
 	$(call compile-frontend,$(DEBUG_DIR)/skewc.js,$(DEBUG_DIR),)
 	$(call compile-frontend,$(DEBUG_DIR)/skewc.js,$(DEBUG_DIR),)
 
-check-release: | $(RELEASE_DIR)
-	$(call compile-frontend,skewc.js,$(RELEASE_DIR),--optimize)
+check-release: | $(DEBUG_DIR) $(RELEASE_DIR)
+	$(call compile-frontend,skewc.js,$(DEBUG_DIR),)
+	$(call compile-frontend,$(DEBUG_DIR)/skewc.js,$(RELEASE_DIR),--optimize)
 	$(call compile-frontend,$(RELEASE_DIR)/skewc.js,$(RELEASE_DIR),--optimize)
 	$(call compile-frontend,$(RELEASE_DIR)/skewc.js,$(RELEASE_DIR),--optimize)
 

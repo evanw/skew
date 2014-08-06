@@ -2,9 +2,21 @@ testJS("
 inline int foo(int foo) {
   return foo;
 }
-var z = foo(foo(1));
+var bar = foo(foo(1));
 ", "
-var z = 1;
+var bar = 1;
+");
+
+testJS("
+inline int foo(int bar) {
+  return bar > 0 ? foo(bar - 1) : 0;
+}
+var bar = foo(foo(1));
+", "
+function foo(bar) {
+  return bar > 0 ? foo(bar - 1 | 0) : 0;
+}
+var bar = foo(foo(1));
 ");
 
 testJS("
@@ -116,6 +128,24 @@ inline int baz(int a) {
 }
 ", "
 function bar(a) {
-  return 1 + (2 + a | 0) | 0;
+  return 1 + (2 + (2 + a | 0) | 0) | 0;
 }
+");
+
+testJS("
+inline int foo(int baz) {
+  return bar(foo(baz));
+}
+inline int bar(int baz) {
+  return foo(bar(baz));
+}
+foo(bar(foo(bar(0))));
+", "
+function foo(baz) {
+  return bar(foo(baz));
+}
+function bar(baz) {
+  return foo(bar(baz));
+}
+foo(bar(foo(bar(0))));
 ");
