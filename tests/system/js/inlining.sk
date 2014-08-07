@@ -134,6 +134,24 @@ function bar(a) {
 
 testJS("
 inline int foo(int baz) {
+  return bar(baz);
+}
+inline int bar(int baz) {
+  return foo(baz);
+}
+foo(bar(foo(bar(0))));
+", "
+function foo(baz) {
+  return bar(foo(baz));
+}
+function bar(baz) {
+  return foo(bar(baz));
+}
+foo(bar(foo(bar(0))));
+");
+
+testJS("
+inline int foo(int baz) {
   return bar(foo(baz));
 }
 inline int bar(int baz) {

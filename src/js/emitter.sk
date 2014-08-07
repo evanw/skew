@@ -426,7 +426,7 @@ namespace js {
     void emitAssert(Node node) {
       var value = node.assertValue();
       value.invertBooleanCondition(cache);
-      if (value.kind != .FALSE && !options.optimize) {
+      if (value.kind != .FALSE && !options.removeAsserts) {
         var couldBeFalse = value.kind != .TRUE;
         if (couldBeFalse) {
           emit(indent.append("if ("));

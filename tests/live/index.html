@@ -60,6 +60,7 @@ function compile() {
     var compiler = new Compiler();
     var options = new CompilerOptions();
     options.optimize = oldOptimize;
+    options.removeAsserts = oldOptimize;
     options.targetFormat = TargetFormat.JS;
     options.inputs.push(new Source('<stdin>', oldInput));
     var result = compiler.compile(options);

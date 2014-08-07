@@ -27,7 +27,7 @@ class FunctionInliningPass {
         var i = 0;
 
         // Skip over asserts since they will be ignored when optimizing anyway
-        if (options.optimize) {
+        if (options.removeAsserts) {
           while (i < block.children.length && block.children.get(i).kind == .ASSERT) {
             i++;
           }

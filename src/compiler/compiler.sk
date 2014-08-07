@@ -28,6 +28,7 @@ class CompilerOptions {
   var outputFile = "";
   var jsSourceMap = false;
   var optimize = false;
+  var removeAsserts = false;
 
   bool willWriteToStandardOut() {
     return outputFile == "" || outputDirectory == "";

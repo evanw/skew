@@ -150,6 +150,7 @@ export namespace frontend {
     var options = CompilerOptions();
     options.targetFormat = target;
     options.optimize = flags.optimize;
+    options.removeAsserts = flags.optimize;
     options.outputFile = flags.outputFile;
     options.jsSourceMap = flags.jsSourceMap && target == .JS;
     options.inputs = readSources(inputs); if (options.inputs == null) return 1;

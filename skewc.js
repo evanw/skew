@@ -884,6 +884,7 @@ function CompilerOptions() {
   this.outputFile = "";
   this.jsSourceMap = false;
   this.optimize = false;
+  this.removeAsserts = false;
 }
 CompilerOptions.willWriteToStandardOut = function($this) {
   return $this.outputFile === "" || $this.outputDirectory === "";
@@ -1798,7 +1799,7 @@ js.Emitter.emitContinue = function($this, node) {
 js.Emitter.emitAssert = function($this, node) {
   var value = node.children[0];
   Node.invertBooleanCondition(value, $this.cache);
-  if (value.kind !== 40 && !$this.options.optimize) {
+  if (value.kind !== 40 && !$this.options.removeAsserts) {
     var couldBeFalse = value.kind !== 39;
     if (couldBeFalse) {
       js.Emitter.emit($this, $this.indent + "if (");
@@ -3062,7 +3063,7 @@ FunctionInliningPass.tryToInline = function($this, symbol) {
     var block = symbol.node.children[2];
     if (block !== null && Node.hasChildren(block)) {
       var i = 0;
-      if ($this.options.optimize) {
+      if ($this.options.removeAsserts) {
         while (i < block.children.length && block.children[i].kind === 29) {
           i = i + 1 | 0;
         }
@@ -6281,6 +6282,7 @@ frontend.main = function(args) {
   var options = new CompilerOptions();
   options.targetFormat = target;
   options.optimize = flags.optimize;
+  options.removeAsserts = flags.optimize;
   options.outputFile = flags.outputFile;
   options.jsSourceMap = flags.jsSourceMap && target === 1;
   options.inputs = frontend.readSources(inputs);
