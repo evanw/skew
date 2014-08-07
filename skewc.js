@@ -122,6 +122,25 @@ function $extends(derived, base) {
 string.append = function($this, value) {
   return $this + value;
 };
+string.startsWith = function($this, prefix) {
+  return $this.length >= prefix.length && $this.slice(0, prefix.length) === prefix;
+};
+string.endsWith = function($this, suffix) {
+  return $this.length >= suffix.length && $this.slice($this.length - suffix.length | 0, $this.length) === suffix;
+};
+string.repeat = function($this, count) {
+  var result = "";
+  for (var i = 0; i < count; i = i + 1 | 0) {
+    result = result + $this;
+  }
+  return result;
+};
+List.insert = function($this, index, value) {
+  $this.splice(index, 0, value);
+};
+List.set = function($this, index, value) {
+  $this[index] = value;
+};
 function Node(_0) {
   this.range = Range.EMPTY;
   this.parent = null;
@@ -324,7 +343,7 @@ Node.insertSiblingAfter = function($this, node) {
 Node.remove = function($this) {
   if ($this.parent !== null) {
     var index = Node.indexInParent($this);
-    $this.parent.children[index] = null;
+    List.set($this.parent.children, index, null);
     $this.parent = null;
   }
   return $this;
@@ -363,14 +382,14 @@ Node.replaceChild = function($this, index, node) {
   if (old !== null) {
     old.parent = null;
   }
-  $this.children[index] = node;
+  List.set($this.children, index, node);
 };
 Node.insertChild = function($this, index, node) {
   if ($this.children === null) {
     $this.children = [];
   }
   Node.updateParent(node, $this);
-  $this.children.splice(index, 0, node);
+  List.insert($this.children, index, node);
 };
 Node.insertChildren = function($this, index, nodes) {
   if ($this.children === null) {
@@ -379,7 +398,7 @@ Node.insertChildren = function($this, index, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
     var node = nodes[i];
     Node.updateParent(node, $this);
-    $this.children.splice((index = index + 1 | 0) - 1 | 0, 0, node);
+    List.insert($this.children, (index = index + 1 | 0) - 1 | 0, node);
   }
 };
 Node.clone = function($this) {
@@ -815,9 +834,9 @@ Collector.sortTypeSymbols = function($this) {
       if (Collector.typeComesBefore($this, symbol.type, $this.typeSymbols[j].type)) {
         var k = i;
         for (; k > j; k = k - 1 | 0) {
-          $this.typeSymbols[k] = $this.typeSymbols[k - 1 | 0];
+          List.set($this.typeSymbols, k, $this.typeSymbols[k - 1 | 0]);
         }
-        $this.typeSymbols[j] = symbol;
+        List.set($this.typeSymbols, j, symbol);
         break;
       }
     }
@@ -859,11 +878,16 @@ TargetFormat.shouldRunResolver = function($this) {
 function CompilerOptions() {
   this.targetFormat = 0;
   this.inputs = [];
+  this.prepend = [];
+  this.append = [];
   this.outputDirectory = "";
   this.outputFile = "";
   this.jsSourceMap = false;
   this.optimize = false;
 }
+CompilerOptions.willWriteToStandardOut = function($this) {
+  return $this.outputFile === "" || $this.outputDirectory === "";
+};
 function CompilerResult(_0, _1, _2, _3) {
   this.options = _0;
   this.outputs = _1;
@@ -886,10 +910,10 @@ function Compiler() {
 Compiler.statistics = function($this, result) {
   var lineCountingStart = now();
   var lineCount = 0;
-  for (var i = 0; i < result.options.inputs.length; i = i + 1 | 0) {
-    lineCount = lineCount + Source.lineCount(result.options.inputs[i]) | 0;
-  }
-  var text = "Line count: " + lineCount.toString();
+  lineCount = lineCount + Compiler.totalLineCount(result.options.prepend) | 0;
+  lineCount = lineCount + Compiler.totalLineCount(result.options.inputs) | 0;
+  lineCount = lineCount + Compiler.totalLineCount(result.options.append) | 0;
+  var text = "Input line count: " + lineCount.toString() + "\nOutput line count: " + Compiler.totalLineCount(result.outputs).toString();
   $this.lineCountingTime += now() - lineCountingStart;
   var optimizingTime = $this.callGraphTime + $this.instanceToStaticTime + $this.functionInliningTime + $this.constantFoldingTime;
   text = text + "\nTotal compile time: " + (Math.round(($this.totalTime + $this.lineCountingTime) * 10) / 10).toString() + "ms";
@@ -915,17 +939,24 @@ Compiler.statistics = function($this, result) {
   if ($this.lineCountingTime > 0) {
     text = text + "\n  Counting lines: " + (Math.round($this.lineCountingTime * 10) / 10).toString() + "ms";
   }
-  text = text + "\nInputs: " + result.options.inputs.length.toString();
-  for (var i = 0; i < result.options.inputs.length; i = i + 1 | 0) {
-    var source = result.options.inputs[i];
-    text = text + "\n  " + source.name + ": " + bytesToString(source.contents.length);
+  text = text + Compiler.sourceStatistics("Prepend", result.options.prepend);
+  text = text + Compiler.sourceStatistics("Inputs", result.options.inputs);
+  text = text + Compiler.sourceStatistics("Append", result.options.append);
+  text = text + Compiler.sourceStatistics("Outputs", result.outputs);
+  return text;
+};
+Compiler.totalLineCount = function(sources) {
+  var lineCount = 0;
+  for (var i = 0; i < sources.length; i = i + 1 | 0) {
+    lineCount = lineCount + Source.lineCount(sources[i]) | 0;
   }
-  if (result.outputs !== null) {
-    text = text + "\nOutputs: " + result.outputs.length.toString();
-    for (var i = 0; i < result.outputs.length; i = i + 1 | 0) {
-      var source = result.outputs[i];
-      text = text + "\n  " + source.name + ": " + bytesToString(source.contents.length);
-    }
+  return lineCount;
+};
+Compiler.sourceStatistics = function(name, sources) {
+  var text = "\n" + name + ": " + sources.length.toString();
+  for (var i = 0; i < sources.length; i = i + 1 | 0) {
+    var source = sources[i];
+    text = text + "\n  " + source.name + ": " + bytesToString(source.contents.length);
   }
   return text;
 };
@@ -1016,7 +1047,7 @@ json.Emitter = function(_0) {
 };
 json.Emitter.prototype.emitProgram = function(program) {
   var outputs = [];
-  if (this.options.outputFile.length > 0) {
+  if (this.options.outputDirectory === "") {
     outputs.push(new Source(this.options.outputFile, json.dump(program) + "\n"));
   } else {
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
@@ -1075,7 +1106,7 @@ lisp.Emitter = function(_0) {
 };
 lisp.Emitter.prototype.emitProgram = function(program) {
   var outputs = [];
-  if (this.options.outputFile.length > 0) {
+  if (this.options.outputDirectory === "") {
     outputs.push(new Source(this.options.outputFile, lisp.dump(program) + "\n"));
   } else {
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
@@ -1125,7 +1156,7 @@ xml.Emitter = function(_0) {
 };
 xml.Emitter.prototype.emitProgram = function(program) {
   var outputs = [];
-  if (this.options.outputFile.length > 0) {
+  if (this.options.outputDirectory === "") {
     outputs.push(new Source(this.options.outputFile, xml.dump(program) + "\n"));
   } else {
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
@@ -1269,7 +1300,7 @@ Range.format = function($this, maxLength) {
       }
     }
   }
-  return new FormattedRange(line, repeat(" ", a) + ((b - a | 0) < 2 ? "^" : repeat("~", b - a | 0)));
+  return new FormattedRange(line, string.repeat(" ", a) + ((b - a | 0) < 2 ? "^" : string.repeat("~", b - a | 0)));
 };
 Range.span = function(start, end) {
   return new Range(start.source, start.start, end.end);
@@ -1387,6 +1418,9 @@ js.Emitter.prototype.emitProgram = function(program) {
   js.Emitter.patchNode(this, program, new js.PatchContext());
   this.currentSource = new Source(this.options.outputFile, "");
   var collector = new Collector(program, 3);
+  for (var i = 0; i < this.options.prepend.length; i = i + 1 | 0) {
+    js.Emitter.appendSource(this, this.options.prepend[i]);
+  }
   if (this.needMathImul) {
     js.Emitter.emit(this, "var $imul = Math.imul || function(a, b) {\n  var ah = a >>> 16, al = a & 0xFFFF;\n  var bh = b >>> 16, bl = b & 0xFFFF;\n  return al * bl + (ah * bl + al * bh << 16) | 0;\n};\n");
   }
@@ -1425,10 +1459,30 @@ js.Emitter.prototype.emitProgram = function(program) {
   for (var i = 0; i < collector.topLevelStatements.length; i = i + 1 | 0) {
     js.Emitter.emitNode(this, collector.topLevelStatements[i]);
   }
+  for (var i = 0; i < this.options.append.length; i = i + 1 | 0) {
+    js.Emitter.appendSource(this, this.options.append[i]);
+  }
   if (this.options.jsSourceMap) {
-    this.currentSource.contents = this.currentSource.contents + "/" + "/# sourceMappingURL=data:application/json;base64," + encodeBase64(SourceMapGenerator.toString(this.generator));
+    if (this.options.outputFile === "") {
+      this.currentSource.contents = this.currentSource.contents + "/" + "/# sourceMappingURL=data:application/json;base64," + encodeBase64(SourceMapGenerator.toString(this.generator)) + "\n";
+    } else {
+      var name = this.options.outputFile + ".map";
+      this.currentSource.contents = this.currentSource.contents + "/" + "/# sourceMappingURL=" + splitPath(name).entry + "\n";
+      return [this.currentSource, new Source(name, SourceMapGenerator.toString(this.generator))];
+    }
   }
   return [this.currentSource];
+};
+js.Emitter.appendSource = function($this, source) {
+  if ($this.options.jsSourceMap && $this.currentColumn > 0) {
+    js.Emitter.emit($this, "\n");
+  }
+  $this.currentSource.contents = $this.currentSource.contents + source.contents;
+  if ($this.options.jsSourceMap) {
+    for (var i = 0, n = Source.lineCount(source); i < n; i = i + 1 | 0) {
+      SourceMapGenerator.addMapping($this.generator, source, i, 0, ($this.currentLine = $this.currentLine + 1 | 0) - 1 | 0, 0);
+    }
+  }
 };
 js.Emitter.addMapping = function($this, node) {
   if ($this.options.jsSourceMap) {
@@ -3875,7 +3929,7 @@ Resolver.collectAndResolveBaseTypes = function($this, symbol) {
           var baseType = types.children[i];
           Resolver.resolveAsParameterizedType($this, baseType);
           if (isObject) {
-            baseTypes.splice((index = index + 1 | 0) - 1 | 0, 0, baseType);
+            List.insert(baseTypes, (index = index + 1 | 0) - 1 | 0, baseType);
           } else if (Type.isClass(baseType.type)) {
             semanticErrorBaseClassInExtension($this.log, baseType.range);
           } else {
@@ -4357,9 +4411,9 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
     var j = i;
     var member = uninitializedMembers[i];
     for (; j > 0 && uninitializedMembers[j - 1 | 0].symbol.node.range.start > member.symbol.node.range.start; j = j - 1 | 0) {
-      uninitializedMembers[j] = uninitializedMembers[j - 1 | 0];
+      List.set(uninitializedMembers, j, uninitializedMembers[j - 1 | 0]);
     }
-    uninitializedMembers[j] = member;
+    List.set(uninitializedMembers, j, member);
   }
   for (var i = 0; i < uninitializedMembers.length; i = i + 1 | 0) {
     var member = uninitializedMembers[i];
@@ -5472,8 +5526,8 @@ Symbol.sortParametersByDependencies = function($this) {
     }
     if (j < $this.sortedParameters.length) {
       var temp = $this.sortedParameters[i];
-      $this.sortedParameters[i] = $this.sortedParameters[j];
-      $this.sortedParameters[j] = temp;
+      List.set($this.sortedParameters, i, $this.sortedParameters[j]);
+      List.set($this.sortedParameters, j, temp);
     }
   }
 };
@@ -5969,26 +6023,6 @@ xml.dump = function(node) {
   xml.DumpVisitor.visit(visitor, node);
   return visitor.result;
 };
-function encodeBase64(data) {
-  var result = "";
-  var n = data.length;
-  var i;
-  for (i = 0; (i + 2 | 0) < n; i = i + 3 | 0) {
-    var c = data.charCodeAt(i) << 16 | data.charCodeAt(i + 1 | 0) << 8 | data.charCodeAt(i + 2 | 0);
-    result = result + BASE64[c >> 18] + BASE64[c >> 12 & 63] + BASE64[c >> 6 & 63] + BASE64[c & 63];
-  }
-  if (i < n) {
-    var a = data.charCodeAt(i);
-    result = result + BASE64[a >> 2];
-    if ((i + 1 | 0) < n) {
-      var b = data.charCodeAt(i + 1 | 0);
-      result = result + BASE64[a << 4 & 48 | b >> 4] + BASE64[b << 2 & 60] + "=";
-    } else {
-      result = result + BASE64[a << 4 & 48] + "==";
-    }
-  }
-  return result;
-}
 function hashCombine(left, right) {
   return left ^ ((right - 1640531527 | 0) + (left << 6) | 0) + (left >> 2);
 }
@@ -6109,15 +6143,8 @@ function replace(text, before, after) {
   }
   return result + text;
 }
-function repeat(text, count) {
-  var result = "";
-  for (var i = 0; i < count; i = i + 1 | 0) {
-    result = result + text;
-  }
-  return result;
-}
 function splitPath(path) {
-  var slashIndex = Math.imax(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  var slashIndex = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return slashIndex === -1 ? new SplitPath(".", path) : new SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1 | 0, path.length));
 }
 function bytesToString(bytes) {
@@ -6161,17 +6188,29 @@ frontend.printWarning = function(text) {
 frontend.printUsage = function() {
   io.printWithColor(92, "\nusage: ");
   io.printWithColor(1, "skewc [flags] [inputs]\n");
-  io.print("\n  --help (-h)       Print this message.\n\n  --verbose         Print out useful information about the compilation.\n\n  --target=___      Set the target language. Valid target languages: none, js,\n                    lisp-ast, json-ast, and xml-ast.\n\n  --output-file=___ Combines all output into a single file.\n\n  --js-source-map   Generate a source map when targeting JavaScript. The source\n                    map will be saved with the \".map\" extension in the same\n                    directory as the main output file.\n\n");
+  io.print("\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     lisp-ast, json-ast, and xml-ast.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the \".map\" extension in the same\n                     directory as the main output file.\n\n");
 };
 frontend.afterEquals = function(text) {
   var equals = text.indexOf("=");
   return text.slice(equals + 1 | 0, text.length);
 };
-frontend.startsWith = function(text, prefix) {
-  return text.length >= prefix.length && text.slice(0, prefix.length) === prefix;
+frontend.readSources = function(files) {
+  var result = [];
+  for (var i = 0; i < files.length; i = i + 1 | 0) {
+    var file = files[i];
+    var source = io.readFile(file);
+    if (source === null) {
+      frontend.printError("Could not read from " + quoteString(file, 34));
+      return null;
+    }
+    result.push(source);
+  }
+  return result;
 };
 frontend.main = function(args) {
   var inputs = [];
+  var prepend = [];
+  var append = [];
   var flags = new frontend.Flags();
   for (var i = 0; i < args.length; i = i + 1 | 0) {
     var arg = args[i];
@@ -6194,11 +6233,17 @@ frontend.main = function(args) {
     } else if (arg === "-js-source-map" || arg === "--js-source-map") {
       flags.jsSourceMap = true;
       continue;
-    } else if (frontend.startsWith(arg, "-target=") || frontend.startsWith(arg, "--target=")) {
+    } else if (string.startsWith(arg, "-target=") || string.startsWith(arg, "--target=")) {
       flags.target = frontend.afterEquals(arg);
       continue;
-    } else if (frontend.startsWith(arg, "-output-file=") || frontend.startsWith(arg, "--output-file=")) {
+    } else if (string.startsWith(arg, "-output-file=") || string.startsWith(arg, "--output-file=")) {
       flags.outputFile = frontend.afterEquals(arg);
+      continue;
+    } else if (string.startsWith(arg, "-prepend-file=") || string.startsWith(arg, "--prepend-file=")) {
+      prepend.push(frontend.afterEquals(arg));
+      continue;
+    } else if (string.startsWith(arg, "-append-file=") || string.startsWith(arg, "--append-file=")) {
+      append.push(frontend.afterEquals(arg));
       continue;
     }
     frontend.printError("Unknown flag " + quoteString(arg, 34));
@@ -6236,16 +6281,19 @@ frontend.main = function(args) {
   var options = new CompilerOptions();
   options.targetFormat = target;
   options.optimize = flags.optimize;
-  options.outputFile = flags.outputFile === "" ? "<stdout>" : flags.outputFile;
-  options.jsSourceMap = flags.jsSourceMap && flags.outputFile !== "" && target === 1;
-  for (var i = 0; i < inputs.length; i = i + 1 | 0) {
-    var input = inputs[i];
-    var source = io.readFile(input);
-    if (source === null) {
-      frontend.printError("Could not read from " + quoteString(input, 34));
-      return 1;
-    }
-    options.inputs.push(source);
+  options.outputFile = flags.outputFile;
+  options.jsSourceMap = flags.jsSourceMap && target === 1;
+  options.inputs = frontend.readSources(inputs);
+  if (options.inputs === null) {
+    return 1;
+  }
+  options.prepend = frontend.readSources(prepend);
+  if (options.prepend === null) {
+    return 1;
+  }
+  options.append = frontend.readSources(append);
+  if (options.append === null) {
+    return 1;
   }
   var compiler = new Compiler();
   var result = Compiler.compile(compiler, options);
@@ -6300,7 +6348,7 @@ frontend.main = function(args) {
   if (result.outputs !== null) {
     for (var i = 0; i < result.outputs.length; i = i + 1 | 0) {
       var output = result.outputs[i];
-      if (flags.outputFile === "") {
+      if (output.name === "") {
         io.print(output.contents);
         continue;
       }
@@ -6401,7 +6449,7 @@ function prepareTokens(tokens) {
             var start = range.start;
             var text = token.text.slice(1, token.text.length);
             var kind = tokenKind === 83 ? 40 : tokenKind === 41 ? 2 : tokenKind === 12 ? 41 : 33;
-            tokens.splice(i + 1 | 0, 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind, text));
+            List.insert(tokens, i + 1 | 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind, text));
             token.range = new Range(range.source, start, start + 1 | 0);
             token.text = ">";
           }
@@ -7049,7 +7097,7 @@ function looksLikeLambdaArguments(node) {
 function createLambdaFromNames(names, block) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
     var name = names[i];
-    names[i] = Node.withRange(Node.withChildren(new Node(16), [name, null, null]), name.range);
+    List.set(names, i, Node.withRange(Node.withChildren(new Node(16), [name, null, null]), name.range));
   }
   return Node.createLambda(names, block);
 }
@@ -7516,7 +7564,7 @@ function semanticErrorDuplicateBaseType(log, range, type) {
 }
 function semanticErrorAmbiguousSymbol(log, range, name, names) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
-    names[i] = string.append(string.append("\"", names[i]), "\"");
+    List.set(names, i, string.append(string.append("\"", names[i]), "\""));
   }
   Log.error(log, range, "Reference to " + string.append(string.append("\"", name), "\"") + " is ambiguous, could be " + names.join(" or "));
 }
@@ -7781,7 +7829,7 @@ var nodeKindIsExpression = function(node) {
 var operatorInfo = createOperatorMap();
 Compiler.nativeLibrarySource = null;
 Compiler.nativeLibraryFile = null;
-var NATIVE_LIBRARY = "\nimport struct int { string toString(); }\nimport struct bool { string toString(); }\nimport struct float { string toString(); }\nimport struct double { string toString(); }\n\nimport struct String {\n  static string fromCharCode(int value);\n}\n\nimport struct string {\n  final int length;\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  inline string append(string value) { return untyped(this) + value; }\n}\n\nimport class List<T> {\n  new();\n  final int length;\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { return untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { return untyped(this)[index] = value; }\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  final double E;\n  final double PI;\n  final double NAN;\n  final double INFINITY;\n  double random();\n  double abs(double n);\n  double sin(double n);\n  double cos(double n);\n  double tan(double n);\n  double asin(double n);\n  double acos(double n);\n  double atan(double n);\n  double round(double n);\n  double floor(double n);\n  double ceil(double n);\n  double exp(double n);\n  double log(double n);\n  double sqrt(double n);\n  bool isNaN(double n);\n  bool isFinite(double n);\n  double atan2(double y, double x);\n  double pow(double base, double exponent);\n  double min(double a, double b);\n  double max(double a, double b);\n  int imin(int a, int b);\n  int imax(int a, int b);\n}\n";
+var NATIVE_LIBRARY = "\nimport struct int { string toString(); }\nimport struct bool { string toString(); }\nimport struct float { string toString(); }\nimport struct double { string toString(); }\n\nimport struct String {\n  static string fromCharCode(int value);\n}\n\nimport struct string {\n  final int length;\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  inline string append(string value) { return untyped(this) + value; }\n  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }\n  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }\n  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result = result.append(this); return result; }\n}\n\nimport class List<T> {\n  new();\n  final int length;\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  final double E;\n  final double PI;\n  final double NAN;\n  final double INFINITY;\n  double random();\n  double abs(double n);\n  double sin(double n);\n  double cos(double n);\n  double tan(double n);\n  double asin(double n);\n  double acos(double n);\n  double atan(double n);\n  double round(double n);\n  double floor(double n);\n  double ceil(double n);\n  double exp(double n);\n  double log(double n);\n  double sqrt(double n);\n  bool isNaN(double n);\n  bool isFinite(double n);\n  double atan2(double y, double x);\n  double pow(double base, double exponent);\n  double min(double a, double b);\n  double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n";
 Range.EMPTY = new Range(null, 0, 0);
 var BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var HEX = "0123456789ABCDEF";
@@ -7807,6 +7855,11 @@ function parseIntLiteral(value, base) {
 function parseDoubleLiteral(value) {
   return +value;
 }
+
+var encodeBase64 =
+  typeof btoa !== 'undefined' ? btoa :
+  typeof Buffer != 'undefined' ? function(data) { return new Buffer(data).toString('base64') } :
+  null;
 
 var now = typeof performance !== 'undefined' && performance['now']
   ? function() { return performance['now'](); }

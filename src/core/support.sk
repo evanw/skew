@@ -1,30 +1,10 @@
 import double parseIntLiteral(string value, int base); // Returns NaN on error
 import double parseDoubleLiteral(string value);
+import string encodeBase64(string data);
 import double now(); // The current time in seconds
 
 final string BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 final string HEX = "0123456789ABCDEF";
-
-string encodeBase64(string data) {
-  var result = "";
-  var n = data.length;
-  int i;
-  for (i = 0; i + 2 < n; i += 3) {
-    var c = data.codeUnitAt(i) << 16 | data.codeUnitAt(i + 1) << 8 | data.codeUnitAt(i + 2);
-    result = result.append(BASE64.get(c >> 18)).append(BASE64.get(c >> 12 & 0x3F)).append(BASE64.get(c >> 6 & 0x3F)).append(BASE64.get(c & 0x3F));
-  }
-  if (i < n) {
-    var a = data.codeUnitAt(i);
-    result = result.append(BASE64.get(a >> 2));
-    if (i + 1 < n) {
-      var b = data.codeUnitAt(i + 1);
-      result = result.append(BASE64.get(a << 4 & 0x30 | b >> 4)).append(BASE64.get(b << 2 & 0x3C)).append("=");
-    } else {
-      result = result.append(BASE64.get(a << 4 & 0x30)).append("==");
-    }
-  }
-  return result;
-}
 
 int hashCombine(int left, int right) {
   return left ^ right - 0x61c88647 + (left << 6) + (left >> 2);
@@ -108,15 +88,6 @@ string replace(string text, string before, string after) {
     text = text.slice(index + before.length, text.length);
   }
   return result.append(text);
-}
-
-// TODO: Move this into the standard library
-string repeat(string text, int count) {
-  var result = "";
-  for (var i = 0; i < count; i++) {
-    result = result.append(text);
-  }
-  return result;
 }
 
 string plural(int value, string singular, string plural) {

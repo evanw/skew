@@ -22,14 +22,15 @@ in TargetFormat {
 class CompilerOptions {
   TargetFormat targetFormat = .NONE;
   List<Source> inputs = {};
+  List<Source> prepend = {};
+  List<Source> append = {};
   var outputDirectory = "";
   var outputFile = "";
   var jsSourceMap = false;
   var optimize = false;
 
-  bool isSingleFileMode() {
-    assert outputFile.length > 0 || outputDirectory.length > 0;
-    return outputFile.length > 0;
+  bool willWriteToStandardOut() {
+    return outputFile == "" || outputDirectory == "";
   }
 }
 
@@ -60,10 +61,12 @@ class Compiler {
     // Line count
     var lineCountingStart = now();
     var lineCount = 0;
-    for (var i = 0; i < result.options.inputs.length; i++) {
-      lineCount += result.options.inputs.get(i).lineCount();
-    }
-    var text = "Line count: ".append(lineCount.toString());
+    lineCount += totalLineCount(result.options.prepend);
+    lineCount += totalLineCount(result.options.inputs);
+    lineCount += totalLineCount(result.options.append);
+    var text =
+      "Input line count: ".append(lineCount.toString()).append(
+      "\nOutput line count: ").append(totalLineCount(result.outputs).toString());
     lineCountingTime += now() - lineCountingStart;
 
     // Compilation time
@@ -82,22 +85,28 @@ class Compiler {
     if (emitTime > 0) text = text.append("\n  Emit: ").append(formatNumber(emitTime)).append("ms");
     if (lineCountingTime > 0) text = text.append("\n  Counting lines: ").append(formatNumber(lineCountingTime)).append("ms");
 
-    // Inputs
-    text = text.append("\nInputs: ").append(result.options.inputs.length.toString());
-    for (var i = 0; i < result.options.inputs.length; i++) {
-      var source = result.options.inputs.get(i);
+    // Sources
+    text = text.append(sourceStatistics("Prepend", result.options.prepend));
+    text = text.append(sourceStatistics("Inputs", result.options.inputs));
+    text = text.append(sourceStatistics("Append", result.options.append));
+    text = text.append(sourceStatistics("Outputs", result.outputs));
+    return text;
+  }
+
+  static int totalLineCount(List<Source> sources) {
+    var lineCount = 0;
+    for (var i = 0; i < sources.length; i++) {
+      lineCount += sources.get(i).lineCount();
+    }
+    return lineCount;
+  }
+
+  static string sourceStatistics(string name, List<Source> sources) {
+    var text = "\n".append(name).append(": ").append(sources.length.toString());
+    for (var i = 0; i < sources.length; i++) {
+      var source = sources.get(i);
       text = text.append("\n  ").append(source.name).append(": ").append(bytesToString(source.contents.length));
     }
-
-    // Outputs
-    if (result.outputs != null) {
-      text = text.append("\nOutputs: ").append(result.outputs.length.toString());
-      for (var i = 0; i < result.outputs.length; i++) {
-        var source = result.outputs.get(i);
-        text = text.append("\n  ").append(source.name).append(": ").append(bytesToString(source.contents.length));
-      }
-    }
-
     return text;
   }
 

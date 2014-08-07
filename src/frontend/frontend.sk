@@ -44,18 +44,24 @@ export namespace frontend {
     io.printWithColor(.GREEN, "\nusage: ");
     io.printWithColor(.BOLD, "skewc [flags] [inputs]\n");
     io.print("
-  --help (-h)       Print this message.
+  --help (-h)        Print this message.
 
-  --verbose         Print out useful information about the compilation.
+  --verbose          Print out useful information about the compilation.
 
-  --target=___      Set the target language. Valid target languages: none, js,
-                    lisp-ast, json-ast, and xml-ast.
+  --target=___       Set the target language. Valid target languages: none, js,
+                     lisp-ast, json-ast, and xml-ast.
 
-  --output-file=___ Combines all output into a single file.
+  --output-file=___  Combines all output into a single file.
 
-  --js-source-map   Generate a source map when targeting JavaScript. The source
-                    map will be saved with the \".map\" extension in the same
-                    directory as the main output file.
+  --prepend-file=___ Prepend the contents of this file to the output. Provide
+                     this flag multiple times to prepend multiple files.
+
+  --append-file=___  Append the contents of this file to the output. Provide
+                     this flag multiple times to append multiple files.
+
+  --js-source-map    Generate a source map when targeting JavaScript. The source
+                     map will be saved with the \".map\" extension in the same
+                     directory as the main output file.
 
 ");
   }
@@ -67,10 +73,6 @@ export namespace frontend {
     var outputFile = "";
     var jsSourceMap = false;
     var optimize = false;
-
-    bool shouldWriteToStdout() {
-      return outputFile == "";
-    }
   }
 
   string afterEquals(string text) {
@@ -79,13 +81,24 @@ export namespace frontend {
     return text.slice(equals + 1, text.length);
   }
 
-  // TODO: Move this to the standard library
-  bool startsWith(string text, string prefix) {
-    return text.length >= prefix.length && text.slice(0, prefix.length) == prefix;
+  List<Source> readSources(List<string> files) {
+    List<Source> result = {};
+    for (var i = 0; i < files.length; i++) {
+      var file = files.get(i);
+      var source = io.readFile(file);
+      if (source == null) {
+        printError("Could not read from ".append(quoteString(file, '"')));
+        return null;
+      }
+      result.push(source);
+    }
+    return result;
   }
 
   export int main(List<string> args) {
     List<string> inputs = {};
+    List<string> prepend = {};
+    List<string> append = {};
     var flags = Flags();
 
     for (var i = 0; i < args.length; i++) {
@@ -102,8 +115,10 @@ export namespace frontend {
       else if (arg == "-verbose" || arg == "--verbose") { flags.verbose = true; continue; }
       else if (arg == "-optimize" || arg == "--optimize") { flags.optimize = true; continue; }
       else if (arg == "-js-source-map" || arg == "--js-source-map") { flags.jsSourceMap = true; continue; }
-      else if (startsWith(arg, "-target=") || startsWith(arg, "--target=")) { flags.target = afterEquals(arg); continue; }
-      else if (startsWith(arg, "-output-file=") || startsWith(arg, "--output-file=")) { flags.outputFile = afterEquals(arg); continue; }
+      else if (arg.startsWith("-target=") || arg.startsWith("--target=")) { flags.target = afterEquals(arg); continue; }
+      else if (arg.startsWith("-output-file=") || arg.startsWith("--output-file=")) { flags.outputFile = afterEquals(arg); continue; }
+      else if (arg.startsWith("-prepend-file=") || arg.startsWith("--prepend-file=")) { prepend.push(afterEquals(arg)); continue; }
+      else if (arg.startsWith("-append-file=") || arg.startsWith("--append-file=")) { append.push(afterEquals(arg)); continue; }
 
       // An unknown argument is an error
       printError("Unknown flag ".append(quoteString(arg, '"')));
@@ -135,16 +150,11 @@ export namespace frontend {
     var options = CompilerOptions();
     options.targetFormat = target;
     options.optimize = flags.optimize;
-    options.outputFile = flags.shouldWriteToStdout() ? "<stdout>" : flags.outputFile;
-    options.jsSourceMap = flags.jsSourceMap && flags.outputFile != "" && target == .JS;
-
-    // Read all inputs
-    for (var i = 0; i < inputs.length; i++) {
-      var input = inputs.get(i);
-      var source = io.readFile(input);
-      if (source == null) { printError("Could not read from ".append(quoteString(input, '"'))); return 1; }
-      options.inputs.push(source);
-    }
+    options.outputFile = flags.outputFile;
+    options.jsSourceMap = flags.jsSourceMap && target == .JS;
+    options.inputs = readSources(inputs); if (options.inputs == null) return 1;
+    options.prepend = readSources(prepend); if (options.prepend == null) return 1;
+    options.append = readSources(append); if (options.append == null) return 1;
 
     // Run the compilation
     var compiler = Compiler();
@@ -192,7 +202,7 @@ export namespace frontend {
     if (result.outputs != null) {
       for (var i = 0; i < result.outputs.length; i++) {
         var output = result.outputs.get(i);
-        if (flags.shouldWriteToStdout()) {
+        if (output.name == "") {
           io.print(output.contents);
           continue;
         }

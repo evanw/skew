@@ -4,7 +4,7 @@ namespace lisp {
 
     override List<Source> emitProgram(Node program) {
       List<Source> outputs = {};
-      if (options.isSingleFileMode()) {
+      if (options.outputDirectory == "") {
         outputs.push(Source(options.outputFile, dump(program).append("\n")));
       } else {
         for (var i = 0; i < program.children.length; i++) {

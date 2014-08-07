@@ -20,6 +20,9 @@ import struct string {
   inline string join(List<string> values) { return untyped(values).join(this); }
   inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }
   inline string append(string value) { return untyped(this) + value; }
+  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }
+  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }
+  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result = result.append(this); return result; }
 }
 
 import class List<T> {
@@ -36,9 +39,9 @@ import class List<T> {
   void sort(int fn(T, T) callback);
   inline List<T> clone() { return untyped(this).slice(); }
   inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }
-  inline void insert(int index, T value) { return untyped(this).splice(index, 0, value); }
+  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }
   inline T get(int index) { return untyped(this)[index]; }
-  inline void set(int index, T value) { return untyped(this)[index] = value; }
+  inline void set(int index, T value) { untyped(this)[index] = value; }
 }
 
 import class StringMap<T> {
@@ -89,7 +92,7 @@ import namespace Math {
   double pow(double base, double exponent);
   double min(double a, double b);
   double max(double a, double b);
-  int imin(int a, int b);
-  int imax(int a, int b);
+  inline int imin(int a, int b) { return untyped(min)(a, b); }
+  inline int imax(int a, int b) { return untyped(max)(a, b); }
 }
 ";

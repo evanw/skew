@@ -74,7 +74,7 @@ struct Range {
       }
     }
 
-    return FormattedRange(line, repeat(" ", a).append(b - a < 2 ? "^" : repeat("~", b - a)));
+    return FormattedRange(line, " ".repeat(a).append(b - a < 2 ? "^" : "~".repeat(b - a)));
   }
 
   static Range span(Range start, Range end) {

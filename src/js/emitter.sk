@@ -37,6 +37,11 @@ namespace js {
       currentSource = Source(options.outputFile, "");
       var collector = Collector(program, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
 
+      // Prepend inputs
+      for (var i = 0; i < options.prepend.length; i++) {
+        appendSource(options.prepend.get(i));
+      }
+
       // Emit helper functions
       if (needMathImul) {
         emit(
@@ -94,14 +99,38 @@ namespace js {
         emitNode(collector.topLevelStatements.get(i));
       }
 
+      // Append inputs
+      for (var i = 0; i < options.append.length; i++) {
+        appendSource(options.append.get(i));
+      }
+
       // Append the source map inline with the compiled output
       if (options.jsSourceMap) {
-        currentSource.contents = currentSource.contents.append("/").append(
-          "/# sourceMappingURL=data:application/json;base64,").append(
-          encodeBase64(generator.toString()));
+        if (options.outputFile == "") {
+          currentSource.contents = currentSource.contents.append("/").append(
+            "/# sourceMappingURL=data:application/json;base64,").append(
+            encodeBase64(generator.toString())).append("\n");
+        } else {
+          string name = options.outputFile.append(".map");
+          currentSource.contents = currentSource.contents.append("/").append(
+            "/# sourceMappingURL=").append(splitPath(name).entry).append("\n");
+          return { currentSource, Source(name, generator.toString()) };
+        }
       }
 
       return { currentSource };
+    }
+
+    void appendSource(Source source) {
+      if (options.jsSourceMap && currentColumn > 0) {
+        emit("\n");
+      }
+      currentSource.contents = currentSource.contents.append(source.contents);
+      if (options.jsSourceMap) {
+        for (var i = 0, n = source.lineCount(); i < n; i++) {
+          generator.addMapping(source, i, 0, currentLine++, 0);
+        }
+      }
     }
 
     void addMapping(Node node) {
