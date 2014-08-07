@@ -68,9 +68,7 @@ function compile() {
     if (result.program !== null && result.program.children.length === 2) {
       outputTree.value = lisp.dump(result.program.children[1]);
     }
-    if (result.outputs !== null) {
-      outputCode.value = result.outputs.map(function(output) { return output.contents; }).join('');
-    }
+    outputCode.value = result.outputs.map(function(output) { return output.contents; }).join('');
   } catch (e) {
     outputLog.value = e.stack || e;
   }

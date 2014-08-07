@@ -91,7 +91,7 @@ inline int foo(int a, int b) {
 inline int baz(int a) {
   return foo(2, a);
 }
-int bar(int a) {
+export int bar(int a) {
   return foo(1, baz(a));
 }
 ", "
@@ -104,7 +104,7 @@ testJS("
 inline int foo(int a, int b) {
   return a + b;
 }
-int bar(int a) {
+export int bar(int a) {
   return foo(1, baz(a));
 }
 inline int baz(int a) {
@@ -120,7 +120,7 @@ testJS("
 inline int foo(int a, int b) {
   return a + b;
 }
-int bar(int a) {
+export int bar(int a) {
   return foo(1, baz(baz(a)));
 }
 inline int baz(int a) {

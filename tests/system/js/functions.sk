@@ -84,7 +84,7 @@ var foo = function($temp) {
 testJS("
 class Foo {
   void foo() {}
-  void fn() bar() { return foo; }
+  export void fn() bar() { return foo; }
 }
 ", "
 function Foo() {
@@ -132,7 +132,7 @@ Foo.foo(Foo.A);
 testJS("
 enum Foo { FOO }
 in Foo {
-  string foo() { return toString(); }
+  export string foo() { return toString(); }
 }
 ", "
 var Foo = {

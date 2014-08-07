@@ -125,9 +125,6 @@ string.append = function($this, value) {
 string.startsWith = function($this, prefix) {
   return $this.length >= prefix.length && $this.slice(0, prefix.length) === prefix;
 };
-string.endsWith = function($this, suffix) {
-  return $this.length >= suffix.length && $this.slice($this.length - suffix.length | 0, $this.length) === suffix;
-};
 string.repeat = function($this, count) {
   var result = "";
   for (var i = 0; i < count; i = i + 1 | 0) {
@@ -322,20 +319,8 @@ Node.hasChildren = function($this) {
 Node.indexInParent = function($this) {
   return $this.parent.children.indexOf($this);
 };
-Node.prependChild = function($this, node) {
-  Node.insertChild($this, 0, node);
-};
-Node.prependChildren = function($this, nodes) {
-  Node.insertChildren($this, 0, nodes);
-};
 Node.appendChild = function($this, node) {
   Node.insertChild($this, $this.children === null ? 0 : $this.children.length, node);
-};
-Node.appendChildren = function($this, nodes) {
-  Node.insertChildren($this, $this.children === null ? 0 : $this.children.length, nodes);
-};
-Node.insertSiblingBefore = function($this, node) {
-  Node.insertChild($this.parent, Node.indexInParent($this), node);
 };
 Node.insertSiblingAfter = function($this, node) {
   Node.insertChild($this.parent, Node.indexInParent($this) + 1 | 0, node);
@@ -886,9 +871,6 @@ function CompilerOptions() {
   this.optimize = false;
   this.removeAsserts = false;
 }
-CompilerOptions.willWriteToStandardOut = function($this) {
-  return $this.outputFile === "" || $this.outputDirectory === "";
-};
 function CompilerResult(_0, _1, _2, _3) {
   this.options = _0;
   this.outputs = _1;
@@ -964,7 +946,7 @@ Compiler.sourceStatistics = function(name, sources) {
 Compiler.compile = function($this, options) {
   var totalStart = now();
   var program = Node.withChildren(new Node(0), []);
-  var outputs = null;
+  var outputs = [];
   if (Compiler.nativeLibrarySource !== null) {
     Node.appendChild(program, Node.clone(Compiler.nativeLibraryFile));
   } else {
@@ -1231,10 +1213,10 @@ Log.note = function($this, range, text) {
   last.noteRange = range;
   last.noteText = text;
 };
-Log.toString = function($this) {
+Log.prototype.toString = function() {
   var result = "";
-  for (var i = 0; i < $this.diagnostics.length; i = i + 1 | 0) {
-    var diagnostic = $this.diagnostics[i];
+  for (var i = 0; i < this.diagnostics.length; i = i + 1 | 0) {
+    var diagnostic = this.diagnostics[i];
     var formatted = Range.format(diagnostic.range, 0);
     result = result + Range.locationString(diagnostic.range) + (diagnostic.kind === 0 ? ": error: " : ": warning: ") + diagnostic.text + "\n" + formatted.line + "\n" + formatted.range + "\n";
     if (diagnostic.noteRange.source !== null) {
@@ -1305,12 +1287,6 @@ Range.format = function($this, maxLength) {
 };
 Range.span = function(start, end) {
   return new Range(start.source, start.start, end.end);
-};
-Range.inner = function(start, end) {
-  return new Range(start.source, start.end, end.start);
-};
-Range.before = function(outer, inner) {
-  return new Range(outer.source, outer.start, inner.start);
 };
 Range.after = function(outer, inner) {
   return new Range(outer.source, inner.end, outer.end);
@@ -1700,7 +1676,7 @@ js.Emitter.emitEnum = function($this, node) {
 js.Emitter.emitFunction = function($this, node) {
   var block = node.children[2];
   var symbol = node.symbol;
-  if (block === null || !Symbol.isImportOrExport(symbol) && (symbol.flags & 32768) !== 0 && !$this.liveSymbols.has(symbol.uniqueID)) {
+  if (block === null || !Symbol.isImportOrExport(symbol) && (symbol.flags & 128) === 0 && symbol.kind !== 17 && !$this.liveSymbols.has(symbol.uniqueID)) {
     return;
   }
   var isCompoundName = js.Emitter.hasCompoundName($this, symbol);
@@ -2994,7 +2970,7 @@ InstanceToStaticPass.run = function(graph, options) {
     var info = graph.callInfo[i];
     var symbol = info.symbol;
     var enclosingSymbol = symbol.enclosingSymbol;
-    if (symbol.kind === 16 && !Symbol.isImportOrExport(symbol) && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 2048) !== 0 || SymbolKind.isEnum(enclosingSymbol.kind) || options.optimize && options.targetFormat === 1 && (symbol.flags & 128) === 0)) {
+    if (symbol.kind === 16 && (symbol.flags & 2048) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 2048) !== 0 || SymbolKind.isEnum(enclosingSymbol.kind) || options.optimize && options.targetFormat === 1 && (symbol.flags & 1024) === 0 && (symbol.flags & 128) === 0)) {
       symbol.kind = 15;
       symbol.flags |= 64;
       var thisSymbol = new Symbol("this", 18);
@@ -5905,25 +5881,25 @@ function LanguageService() {
   this.previousResult = null;
   this.previousSource = null;
 }
-LanguageService.typeFromPosition = function($this, line, column) {
-  if ($this.previousResult !== null && $this.previousResult.program !== null && $this.previousSource !== null && column >= 0 && column < Source.contentsOfLine($this.previousSource, line).length && $this.previousResult.program.children.length === 2) {
-    var index = $this.previousSource.lineOffsets[line] + column | 0;
-    var previousFile = $this.previousResult.program.children[1];
-    return service.typeFromPosition(previousFile, $this.previousSource, index);
+LanguageService.prototype.typeFromPosition = function(line, column) {
+  if (this.previousResult !== null && this.previousResult.program !== null && this.previousSource !== null && column >= 0 && column < Source.contentsOfLine(this.previousSource, line).length && this.previousResult.program.children.length === 2) {
+    var index = this.previousSource.lineOffsets[line] + column | 0;
+    var previousFile = this.previousResult.program.children[1];
+    return service.typeFromPosition(previousFile, this.previousSource, index);
   }
   return null;
 };
-LanguageService.checkForDiagnostics = function($this, input) {
+LanguageService.prototype.checkForDiagnostics = function(input) {
   var options = new CompilerOptions();
   var compiler = new Compiler();
-  $this.previousSource = new Source("<input>", input);
-  options.inputs = [$this.previousSource];
-  $this.previousResult = Compiler.compile(compiler, options);
+  this.previousSource = new Source("<input>", input);
+  options.inputs = [this.previousSource];
+  this.previousResult = Compiler.compile(compiler, options);
   var diagnostics = [];
   for (var i = 0; i < compiler.log.diagnostics.length; i = i + 1 | 0) {
     var diagnostic = compiler.log.diagnostics[i];
     var range = diagnostic.range;
-    if (range.source === $this.previousSource) {
+    if (range.source === this.previousSource) {
       var start = Source.indexToLineColumn(range.source, range.start);
       var type;
       switch (diagnostic.kind) {
@@ -5939,16 +5915,16 @@ LanguageService.checkForDiagnostics = function($this, input) {
   }
   return diagnostics;
 };
-LanguageService.checkForCompletions = function($this, input, line, column) {
+LanguageService.prototype.checkForCompletions = function(input, line, column) {
   var options = new CompilerOptions();
   var compiler = new Compiler();
-  $this.previousSource = new Source("<input>", input);
-  options.inputs = [$this.previousSource];
-  $this.previousResult = Compiler.compile(compiler, options);
-  if ($this.previousResult.program !== null && column >= 0 && column <= Source.contentsOfLine($this.previousSource, line).length && $this.previousResult.program.children.length === 2) {
-    var index = $this.previousSource.lineOffsets[line] + column | 0;
-    var previousFile = $this.previousResult.program.children[1];
-    return service.completionsFromPosition(previousFile, $this.previousResult.resolver, $this.previousSource, index);
+  this.previousSource = new Source("<input>", input);
+  options.inputs = [this.previousSource];
+  this.previousResult = Compiler.compile(compiler, options);
+  if (this.previousResult.program !== null && column >= 0 && column <= Source.contentsOfLine(this.previousSource, line).length && this.previousResult.program.children.length === 2) {
+    var index = this.previousSource.lineOffsets[line] + column | 0;
+    var previousFile = this.previousResult.program.children[1];
+    return service.completionsFromPosition(previousFile, this.previousResult.resolver, this.previousSource, index);
   }
   return null;
 };
@@ -6026,13 +6002,6 @@ xml.dump = function(node) {
 };
 function hashCombine(left, right) {
   return left ^ ((right - 1640531527 | 0) + (left << 6) | 0) + (left >> 2);
-}
-function doubleToString(value) {
-  var result = value.toString();
-  if (result.indexOf(".") < 0) {
-    result = result + ".0";
-  }
-  return result;
 }
 function parseHexCharacter(c) {
   if (c >= 48 && c <= 57) {
@@ -6347,17 +6316,15 @@ frontend.main = function(args) {
   if (hasErrors) {
     return 1;
   }
-  if (result.outputs !== null) {
-    for (var i = 0; i < result.outputs.length; i = i + 1 | 0) {
-      var output = result.outputs[i];
-      if (output.name === "") {
-        io.print(output.contents);
-        continue;
-      }
-      if (!io.writeFile(output.name, output.contents)) {
-        frontend.printError("Could not write to " + quoteString(output.name, 34));
-        return 1;
-      }
+  for (var i = 0; i < result.outputs.length; i = i + 1 | 0) {
+    var output = result.outputs[i];
+    if (output.name === "") {
+      io.print(output.contents);
+      continue;
+    }
+    if (!io.writeFile(output.name, output.contents)) {
+      frontend.printError("Could not write to " + quoteString(output.name, 34));
+      return 1;
     }
   }
   return 0;
@@ -6477,16 +6444,13 @@ function syntaxErrorInvalidInteger(log, range, text) {
   Log.error(log, range, "Invalid integer literal " + text);
 }
 function syntaxErrorExtraData(log, range, text) {
-  Log.error(log, range, "Syntax error " + string.append(string.append("\"", text), "\""));
+  Log.error(log, range, "Syntax error " + quoteString(text, 34));
 }
 function syntaxErrorUnexpectedToken(log, token) {
   Log.error(log, token.range, "Unexpected " + TokenKind.toString(token.kind));
 }
 function syntaxErrorExpectedToken(log, found, expected) {
   Log.error(log, found.range, "Expected " + TokenKind.toString(expected) + " but found " + TokenKind.toString(found.kind));
-}
-function syntaxErrorUnterminatedToken(log, range, what) {
-  Log.error(log, range, "Unterminated " + what);
 }
 function syntaxErrorBadForEach(log, range) {
   Log.error(log, range, "More than one variable inside a for-each loop");
@@ -7423,12 +7387,6 @@ function semanticWarningUnusedExpression(log, range) {
 function semanticWarningDuplicateModifier(log, range, modifier) {
   Log.warning(log, range, "Duplicate modifier " + string.append(string.append("\"", modifier), "\""));
 }
-function semanticWarningShadowedSymbol(log, range, name, shadowed) {
-  Log.warning(log, range, string.append(string.append("\"", name), "\"") + " shadows another declaration with the same name");
-  if (shadowed.source !== null) {
-    Log.note(log, shadowed, "The shadowed declaration is here");
-  }
-}
 function semanticErrorRedundantModifier(log, range, modifier, where) {
   Log.error(log, range, "Redundant modifier " + string.append(string.append("\"", modifier), "\"") + " " + where);
 }
@@ -7455,9 +7413,6 @@ function semanticErrorUnexpectedType(log, range, type) {
 }
 function semanticErrorUndeclaredSymbol(log, range, name) {
   Log.error(log, range, string.append(string.append("\"", name), "\"") + " is not declared");
-}
-function semanticErrorUndeclaredGlobalSymbol(log, range, name) {
-  Log.error(log, range, string.append(string.append("\"", name), "\"") + " is not declared at the global scope");
 }
 function semanticErrorUnknownMemberSymbol(log, range, name, type) {
   Log.error(log, range, string.append(string.append("\"", name), "\"") + " is not declared on " + ("type \"" + Type.toString(type) + "\""));

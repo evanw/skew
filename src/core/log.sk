@@ -35,7 +35,7 @@ class Log {
     last.noteText = text;
   }
 
-  string toString() {
+  export string toString() {
     var result = "";
 
     // Emit the log assuming an infinite terminal width

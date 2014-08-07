@@ -10,14 +10,6 @@ int hashCombine(int left, int right) {
   return left ^ right - 0x61c88647 + (left << 6) + (left >> 2);
 }
 
-string doubleToString(double value) {
-  var result = value.toString();
-  if (result.indexOf(".") < 0) {
-    result = result.append(".0");
-  }
-  return result;
-}
-
 int parseHexCharacter(int c) {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'A' && c <= 'F') return c - 'A' + 10;

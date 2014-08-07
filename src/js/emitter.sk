@@ -318,9 +318,12 @@ namespace js {
     void emitFunction(Node node) {
       var block = node.functionBlock();
       var symbol = node.symbol;
-      if (block == null || !symbol.isImportOrExport() && symbol.isInlineable() && !liveSymbols.has(symbol.uniqueID)) {
+
+      // Do a cheap, simple form of dead code elimination to remove unused library code
+      if (block == null || !symbol.isImportOrExport() && !symbol.isVirtual() && !symbol.kind.isConstructor() && !liveSymbols.has(symbol.uniqueID)) {
         return;
       }
+
       var isCompoundName = hasCompoundName(symbol);
       if (!isCompoundName) {
         emit(indent.append("function ").append(fullName(symbol)));

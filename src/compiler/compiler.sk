@@ -29,10 +29,6 @@ class CompilerOptions {
   var jsSourceMap = false;
   var optimize = false;
   var removeAsserts = false;
-
-  bool willWriteToStandardOut() {
-    return outputFile == "" || outputDirectory == "";
-  }
 }
 
 class CompilerResult {
@@ -114,7 +110,7 @@ class Compiler {
   CompilerResult compile(CompilerOptions options) {
     var totalStart = now();
     var program = Node.createProgram({});
-    List<Source> outputs = null;
+    List<Source> outputs = {};
 
     // Cache the standard library for a small speed increase
     if (nativeLibrarySource != null) {

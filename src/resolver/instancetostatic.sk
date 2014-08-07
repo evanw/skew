@@ -4,8 +4,8 @@ class InstanceToStaticPass {
       var info = graph.callInfo.get(i);
       var symbol = info.symbol;
       var enclosingSymbol = symbol.enclosingSymbol;
-      if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImportOrExport() && symbol.node.functionBlock() != null && (
-          enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() || options.optimize && options.targetFormat == .JS && !symbol.isVirtual())) {
+      if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() != null && (
+          enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() || options.optimize && options.targetFormat == .JS && !symbol.isExport() && !symbol.isVirtual())) {
 
         // Change the instance function to a static function
         symbol.kind = .GLOBAL_FUNCTION;

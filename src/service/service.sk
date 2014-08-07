@@ -1,4 +1,4 @@
-class LanguageServiceTypeResult {
+export class LanguageServiceTypeResult {
   int line;
   int column;
   int index;
@@ -7,7 +7,7 @@ class LanguageServiceTypeResult {
   string declaration = "";
 }
 
-class LanguageServiceDiagnostic {
+export class LanguageServiceDiagnostic {
   string kind;
   string text;
   int line;
@@ -16,17 +16,17 @@ class LanguageServiceDiagnostic {
   int length;
 }
 
-class LanguageServiceCompletion {
+export class LanguageServiceCompletion {
   string name;
   string type;
   string completion; // Uses '$' for where the cursor should be
 }
 
-class LanguageService {
+export class LanguageService {
   CompilerResult previousResult = null;
   Source previousSource = null;
 
-  LanguageServiceTypeResult typeFromPosition(int line, int column) {
+  export LanguageServiceTypeResult typeFromPosition(int line, int column) {
     if (previousResult != null && previousResult.program != null && previousSource != null && column >= 0 &&
         column < previousSource.contentsOfLine(line).length && previousResult.program.children.length == 2) {
       var index = previousSource.lineOffsets.get(line) + column;
@@ -37,7 +37,7 @@ class LanguageService {
     return null;
   }
 
-  List<LanguageServiceDiagnostic> checkForDiagnostics(string input) {
+  export List<LanguageServiceDiagnostic> checkForDiagnostics(string input) {
     // Compile input
     var options = CompilerOptions();
     var compiler = Compiler();
@@ -63,7 +63,7 @@ class LanguageService {
     return diagnostics;
   }
 
-  List<LanguageServiceCompletion> checkForCompletions(string input, int line, int column) {
+  export List<LanguageServiceCompletion> checkForCompletions(string input, int line, int column) {
     // Compile input
     var options = CompilerOptions();
     var compiler = Compiler();

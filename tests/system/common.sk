@@ -2,7 +2,7 @@ import void test(string input, string expected);
 import void testJS(string input, string expected);
 import void expect(string output, string expected);
 
-void run(string input, string expected) {
+export void run(string input, string expected) {
   CompilerOptions options = CompilerOptions();
   options.inputs = { Source("<stdin>", input) };
   Compiler compiler = Compiler();
@@ -10,7 +10,7 @@ void run(string input, string expected) {
   expect(compiler.log.toString(), expected);
 }
 
-void runJS(string input, string expected) {
+export void runJS(string input, string expected) {
   CompilerOptions options = CompilerOptions();
   options.inputs = { Source("<stdin>", input) };
   options.targetFormat = TargetFormat.JS;

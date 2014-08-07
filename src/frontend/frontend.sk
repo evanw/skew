@@ -200,17 +200,15 @@ export namespace frontend {
     if (hasErrors) return 1;
 
     // Write all outputs
-    if (result.outputs != null) {
-      for (var i = 0; i < result.outputs.length; i++) {
-        var output = result.outputs.get(i);
-        if (output.name == "") {
-          io.print(output.contents);
-          continue;
-        }
-        if (!io.writeFile(output.name, output.contents)) {
-          printError("Could not write to ".append(quoteString(output.name, '"')));
-          return 1;
-        }
+    for (var i = 0; i < result.outputs.length; i++) {
+      var output = result.outputs.get(i);
+      if (output.name == "") {
+        io.print(output.contents);
+        continue;
+      }
+      if (!io.writeFile(output.name, output.contents)) {
+        printError("Could not write to ".append(quoteString(output.name, '"')));
+        return 1;
       }
     }
 
