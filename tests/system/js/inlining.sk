@@ -228,7 +228,11 @@ inline void foo() { x = 0; }
 int x = 0;
 foo();
 ", "
-TODO
+function foo() {
+  x = 0;
+}
+var x = 0;
+foo();
 ");
 
 testJS("
@@ -237,7 +241,11 @@ inline void bar() { x = 0; }
 int x = 0;
 foo();
 ", "
-TODO
+function bar() {
+  x = 0;
+}
+var x = 0;
+bar();
 ");
 
 testJS("
@@ -247,5 +255,9 @@ inline void baz() { x = 0; }
 int x = 0;
 foo();
 ", "
-TODO
+function baz() {
+  x = 0;
+}
+var x = 0;
+baz();
 ");

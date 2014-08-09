@@ -150,3 +150,18 @@ Foo.toString = function($this) {
   }
 };
 ");
+
+testJS("
+import class Foo {
+  int x;
+  new();
+  int foo(Foo foo) {
+    return x + foo.x;
+  }
+}
+var foo = Foo().foo(Foo());
+var bar = Foo().foo;
+var baz = let _ = Foo() in _.foo;
+", "
+TODO
+");

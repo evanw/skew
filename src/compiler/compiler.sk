@@ -137,7 +137,32 @@ export class Compiler {
     }
     if (log.errorCount == 0) {
 
-      // Create an emitter if there's a target language
+      // Optimize the module if the target format requires it
+      if (options.targetFormat.shouldRunResolver()) {
+        // Build a call graph
+        var callGraphStart = now();
+        var graph = CallGraph(program);
+        callGraphTime += now() - callGraphStart;
+
+        // Convert instance functions to static functions
+        var instanceToStaticStart = now();
+        InstanceToStaticPass.run(graph, options);
+        instanceToStaticTime += now() - instanceToStaticStart;
+
+        // Inline functions
+        var functionInliningStart = now();
+        FunctionInliningPass.run(graph, options);
+        functionInliningTime += now() - functionInliningStart;
+
+        // Fold constants
+        if (options.optimize) {
+          var constantFoldingStart = now();
+          resolver.constantFolder.foldConstants(program);
+          constantFoldingTime += now() - constantFoldingStart;
+        }
+      }
+
+      // Emit the module in the target format
       IEmitter emitter = null;
       switch (options.targetFormat) {
         case .NONE {}
@@ -147,35 +172,7 @@ export class Compiler {
         case .XML_AST { emitter = xml.Emitter(options); }
         default { assert false; }
       }
-
-      // Optimize and emit the module in the target language if present
       if (emitter != null) {
-        if (options.targetFormat.shouldRunResolver()) {
-
-          // Build call graph
-          var callGraphStart = now();
-          var graph = CallGraph(program);
-          callGraphTime += now() - callGraphStart;
-
-          // Convert instance functions to static functions
-          var instanceToStaticStart = now();
-          InstanceToStaticPass.run(graph, options);
-          instanceToStaticTime += now() - instanceToStaticStart;
-
-          // Inline functions
-          var functionInliningStart = now();
-          FunctionInliningPass.run(graph, options);
-          functionInliningTime += now() - functionInliningStart;
-
-          // Fold constants
-          if (options.optimize) {
-            var constantFoldingStart = now();
-            resolver.constantFolder.foldConstants(program);
-            constantFoldingTime += now() - constantFoldingStart;
-          }
-        }
-
-        // Emit
         var emitStart = now();
         outputs = emitter.emitProgram(program);
         emitTime += now() - emitStart;

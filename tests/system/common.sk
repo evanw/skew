@@ -13,7 +13,7 @@ export void run(string input, string expected) {
 export void runJS(string input, string expected) {
   CompilerOptions options = CompilerOptions();
   options.inputs = { Source("<stdin>", input) };
-  options.targetFormat = TargetFormat.JS;
+  options.targetFormat = .JS;
   Compiler compiler = Compiler();
   CompilerResult result = compiler.compile(options);
   if (result.outputs.length > 0) {

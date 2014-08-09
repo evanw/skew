@@ -384,7 +384,7 @@ in Node {
   }
 }
 
-alias NodeKindCheck = bool fn(Node);
+using NodeKindCheck = bool fn(Node);
 final NodeKindCheck nodeKindIsExpression = node => node.kind.isExpression();
 
 NodeKindCheck nodeKindCheck(NodeKind kind) {

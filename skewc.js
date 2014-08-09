@@ -962,6 +962,22 @@ Compiler.prototype.compile = function(options) {
     this.resolvingTime += now() - resolveStart;
   }
   if (this.log.errorCount === 0) {
+    if (TargetFormat.shouldRunResolver(options.targetFormat)) {
+      var callGraphStart = now();
+      var graph = new CallGraph(program);
+      this.callGraphTime += now() - callGraphStart;
+      var instanceToStaticStart = now();
+      InstanceToStaticPass.run(graph, options);
+      this.instanceToStaticTime += now() - instanceToStaticStart;
+      var functionInliningStart = now();
+      FunctionInliningPass.run(graph, options);
+      this.functionInliningTime += now() - functionInliningStart;
+      if (options.optimize) {
+        var constantFoldingStart = now();
+        ConstantFolder.foldConstants(resolver.constantFolder, program);
+        this.constantFoldingTime += now() - constantFoldingStart;
+      }
+    }
     var emitter = null;
     switch (options.targetFormat) {
     case 0:
@@ -982,22 +998,6 @@ Compiler.prototype.compile = function(options) {
       break;
     }
     if (emitter !== null) {
-      if (TargetFormat.shouldRunResolver(options.targetFormat)) {
-        var callGraphStart = now();
-        var graph = new CallGraph(program);
-        this.callGraphTime += now() - callGraphStart;
-        var instanceToStaticStart = now();
-        InstanceToStaticPass.run(graph, options);
-        this.instanceToStaticTime += now() - instanceToStaticStart;
-        var functionInliningStart = now();
-        FunctionInliningPass.run(graph, options);
-        this.functionInliningTime += now() - functionInliningStart;
-        if (options.optimize) {
-          var constantFoldingStart = now();
-          ConstantFolder.foldConstants(resolver.constantFolder, program);
-          this.constantFoldingTime += now() - constantFoldingStart;
-        }
-      }
       var emitStart = now();
       outputs = emitter.emitProgram(program);
       this.emitTime += now() - emitStart;
