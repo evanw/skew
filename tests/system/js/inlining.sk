@@ -211,3 +211,41 @@ function bar(y) {
   return (y + 1 | 0) + 2 | 0;
 }
 ");
+
+testJS("
+inline void foo(int x) { bar(1, x); }
+int bar(int x, int y) { return x + y; }
+foo(2);
+", "
+function bar(x, y) {
+  return x + y | 0;
+}
+bar(1, 2);
+");
+
+testJS("
+inline void foo() { x = 0; }
+int x = 0;
+foo();
+", "
+TODO
+");
+
+testJS("
+inline void foo() { bar(); }
+inline void bar() { x = 0; }
+int x = 0;
+foo();
+", "
+TODO
+");
+
+testJS("
+inline void foo() { bar(); }
+inline void bar() { baz(); }
+inline void baz() { x = 0; }
+int x = 0;
+foo();
+", "
+TODO
+");
