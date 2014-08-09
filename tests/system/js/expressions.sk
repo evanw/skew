@@ -491,17 +491,6 @@ Foo.prototype.bar = function() {
 testJS("
 class Foo {
   int foo;
-  int fn() bar = () => foo;
-}
-", "
-<stdin>:3:24: error: Cannot access \"foo\" from a static context
-  int fn() bar = () => foo;
-                       ~~~
-");
-
-testJS("
-class Foo {
-  int foo;
   int fn() bar;
   new() : bar = () => foo {}
 }

@@ -551,6 +551,17 @@ class Foo {
 ");
 
 test("
+class Foo {
+  int foo;
+  int fn() bar = () => foo;
+}
+", "
+<stdin>:3:24: error: Cannot access \"foo\" from a static context
+  int fn() bar = () => foo;
+                       ~~~
+");
+
+test("
 class Foo { bool foo; int bar; }
 Foo foo = { 1, false };
 ", "
