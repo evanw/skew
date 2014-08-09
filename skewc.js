@@ -109,7 +109,6 @@ StringMap.prototype.clone = function() {
 };
 
 var string = {};
-var List = {};
 var $imul = Math.imul || function(a, b) {
   var ah = a >>> 16, al = a & 0xFFFF;
   var bh = b >>> 16, bl = b & 0xFFFF;
@@ -128,12 +127,6 @@ string.repeat = function($this, count) {
     result = result + $this;
   }
   return result;
-};
-List.insert = function($this, index, value) {
-  $this.splice(index, 0, value);
-};
-List.set = function($this, index, value) {
-  $this[index] = value;
 };
 function Node(_0) {
   this.range = Range.EMPTY;
@@ -325,7 +318,7 @@ Node.insertSiblingAfter = function($this, node) {
 Node.remove = function($this) {
   if ($this.parent !== null) {
     var index = Node.indexInParent($this);
-    List.set($this.parent.children, index, null);
+    $this.parent.children[index] = null;
     $this.parent = null;
   }
   return $this;
@@ -364,14 +357,14 @@ Node.replaceChild = function($this, index, node) {
   if (old !== null) {
     old.parent = null;
   }
-  List.set($this.children, index, node);
+  $this.children[index] = node;
 };
 Node.insertChild = function($this, index, node) {
   if ($this.children === null) {
     $this.children = [];
   }
   Node.updateParent(node, $this);
-  List.insert($this.children, index, node);
+  $this.children.splice(index, 0, node);
 };
 Node.insertChildren = function($this, index, nodes) {
   if ($this.children === null) {
@@ -380,7 +373,7 @@ Node.insertChildren = function($this, index, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
     var node = nodes[i];
     Node.updateParent(node, $this);
-    List.insert($this.children, (index = index + 1 | 0) - 1 | 0, node);
+    $this.children.splice((index = index + 1 | 0) - 1 | 0, 0, node);
   }
 };
 Node.clone = function($this) {
@@ -816,9 +809,9 @@ Collector.sortTypeSymbols = function($this) {
       if (Collector.typeComesBefore($this, symbol.type, $this.typeSymbols[j].type)) {
         var k = i;
         for (; k > j; k = k - 1 | 0) {
-          List.set($this.typeSymbols, k, $this.typeSymbols[k - 1 | 0]);
+          $this.typeSymbols[k] = $this.typeSymbols[k - 1 | 0];
         }
-        List.set($this.typeSymbols, j, symbol);
+        $this.typeSymbols[j] = symbol;
         break;
       }
     }
@@ -1600,7 +1593,7 @@ js.Emitter.emitNode = function($this, node) {
     js.Emitter.emitSwitch($this, node);
     break;
   case 32:
-    js.Emitter.emitModifier($this, node);
+    js.Emitter.emitNodes($this, Node.modifierStatements(node));
     break;
   case 17:
   case 19:
@@ -1806,9 +1799,6 @@ js.Emitter.emitSwitch = function($this, node) {
   js.Emitter.emit($this, ") {\n");
   js.Emitter.emitNodes($this, Node.switchCases(node));
   js.Emitter.emit($this, $this.indent + "}\n");
-};
-js.Emitter.emitModifier = function($this, node) {
-  js.Emitter.emitNodes($this, Node.modifierStatements(node));
 };
 js.Emitter.emitExpression = function($this, node, precedence) {
   var wasStartOfExpression = $this.isStartOfExpression;
@@ -3041,8 +3031,8 @@ FunctionInliningPass.inlineSymbol = function(graph, info) {
   for (var i = 0; i < info.callSites.length; i = i + 1 | 0) {
     var callSite = info.callSites[i];
     if (callSite !== null && callSite.kind === 48) {
-      List.set(info.callSites, i, null);
-      var clone = Node.clone(info.returnValue);
+      info.callSites[i] = null;
+      var clone = Node.clone(info.inlineValue);
       var values = Node.removeChildren(callSite);
       var value = values.shift();
       Node.become(callSite, clone);
@@ -3090,7 +3080,7 @@ function InliningInfo(_0, _1, _2, _3) {
   this.shouldInline = true;
   this.bodyCalls = [];
   this.symbol = _0;
-  this.returnValue = _1;
+  this.inlineValue = _1;
   this.callSites = _2;
   this.$arguments = _3;
 }
@@ -3150,10 +3140,24 @@ InliningGraph.createInliningInfo = function(info, options) {
         }
       }
       if (i < block.children.length) {
-        var last = block.children[i];
-        if (last.kind === 25) {
+        var first = block.children[i];
+        var inlineValue = null;
+        if (first.kind === 25) {
+          inlineValue = first.children[0];
+        } else if (first.kind === 30) {
+          i = i + 1 | 0;
+          if (options.removeAsserts) {
+            while (i < block.children.length && block.children[i].kind === 29) {
+              i = i + 1 | 0;
+            }
+          }
+          if (i === block.children.length) {
+            inlineValue = first.children[0];
+          }
+        }
+        if (inlineValue !== null) {
           var symbolCounts = new IntMap();
-          if (InliningGraph.recursivelyCountArgumentUses(last, symbolCounts)) {
+          if (InliningGraph.recursivelyCountArgumentUses(inlineValue, symbolCounts)) {
             var $arguments = [];
             var argumentVariables = symbol.node.children[1].children;
             var isSimpleSubstitution = true;
@@ -3166,7 +3170,7 @@ InliningGraph.createInliningInfo = function(info, options) {
               $arguments.push(argument);
             }
             if (isSimpleSubstitution) {
-              return new InliningInfo(symbol, last.children[0], info.callSites, $arguments);
+              return new InliningInfo(symbol, inlineValue, info.callSites, $arguments);
             }
           }
         }
@@ -3333,7 +3337,7 @@ Resolver.symbolFlagsForNode = function($this, node) {
     var name = modifierName.content.value;
     var flag = nameToSymbolFlag.get(name);
     if ((flags & flag) !== 0) {
-      semanticWarningDuplicateModifier($this.log, modifierName.range, name);
+      Log.warning($this.log, modifierName.range, "Duplicate modifier " + ("\"" + name + "\""));
     }
     flags |= flag;
     parent = parent.parent;
@@ -3439,7 +3443,7 @@ Resolver.setSymbolKindsAndMergeSiblings = function($this) {
       symbol.kind = 6;
       break;
     case 13:
-      semanticErrorExtensionMissingTarget($this.log, declarationName.range, declarationName.content.value);
+      Log.error($this.log, declarationName.range, "No type named " + ("\"" + declarationName.content.value + "\"") + " to extend");
       break;
     default:
       break;
@@ -3501,7 +3505,7 @@ Resolver.processUsingStatements = function($this) {
         continue;
       }
       if (!SymbolKind.isNamespace(symbol.kind)) {
-        semanticErrorBadUsingNamespace($this.log, value.range);
+        Log.error($this.log, value.range, "Expected a namespace here");
         continue;
       }
       if (insertedSymbols === null) {
@@ -3542,7 +3546,7 @@ Resolver.resolveGlobalUsingNamespaceValue = function($this, node) {
     var name = node.content.value;
     member = $this.cache.globalType.members.getOrDefault(name, null);
     if (member === null) {
-      semanticErrorUndeclaredSymbol($this.log, node.range, name);
+      Log.error($this.log, node.range, "\"" + name + "\"" + " is not declared");
       return;
     }
   } else if (node.kind === 46) {
@@ -3556,15 +3560,15 @@ Resolver.resolveGlobalUsingNamespaceValue = function($this, node) {
     var name = dotName.content.value;
     member = targetType.members.getOrDefault(name, null);
     if (member === null) {
-      semanticErrorUnknownMemberSymbol($this.log, dotName.range, name, targetType);
+      Log.error($this.log, dotName.range, "\"" + name + "\"" + " is not declared on " + ("type \"" + Type.toString(targetType) + "\""));
       return;
     }
   } else {
-    semanticErrorUnexpectedNode($this.log, node.range, node.kind);
+    Log.error($this.log, node.range, "Unexpected " + NodeKind.toString(node.kind));
     return;
   }
   if (!SymbolKind.isType(member.symbol.kind)) {
-    semanticErrorBadUsingValue($this.log, node.range);
+    Log.error($this.log, node.range, "Expected a type here");
     return;
   }
   Node.become(node, Node.withSymbol(Node.withRange(Node.withType(new Node(35), member.symbol.type), node.range), member.symbol));
@@ -3582,13 +3586,13 @@ Resolver.resolve = function($this, node, expectedType) {
   $this.typeContext = expectedType;
   switch (node.kind) {
   case 0:
-    Resolver.resolveProgram($this, node);
+    Resolver.resolveChildren($this, node);
     break;
   case 1:
-    Resolver.resolveFile($this, node);
+    Resolver.resolve($this, node.children[0], null);
     break;
   case 2:
-    Resolver.resolveBlock($this, node);
+    Resolver.resolveChildren($this, node);
     break;
   case 3:
     Resolver.resolveChildren($this, node);
@@ -3597,7 +3601,7 @@ Resolver.resolve = function($this, node, expectedType) {
     Resolver.resolveCase($this, node);
     break;
   case 33:
-    Resolver.resolveUsingNamespace($this, node);
+    Resolver.checkInsideBlock($this, node);
     break;
   case 7:
     Resolver.resolveNamespace($this, node);
@@ -3622,10 +3626,10 @@ Resolver.resolve = function($this, node, expectedType) {
     Resolver.resolveVariable($this, node);
     break;
   case 6:
-    Resolver.resolveVariableCluster($this, node);
+    Resolver.resolveNodes($this, Node.clusterVariables(node));
     break;
   case 17:
-    Resolver.resolveParameter($this, node);
+    Resolver.initializeSymbol($this, node.symbol);
     break;
   case 18:
   case 19:
@@ -3666,7 +3670,7 @@ Resolver.resolve = function($this, node, expectedType) {
     Resolver.resolveSwitch($this, node);
     break;
   case 32:
-    Resolver.resolveModifier($this, node);
+    Resolver.resolveNodes($this, Node.modifierStatements(node));
     break;
   case 34:
     Resolver.resolveName($this, node);
@@ -3711,7 +3715,7 @@ Resolver.resolve = function($this, node, expectedType) {
     Resolver.resolveCall($this, node);
     break;
   case 49:
-    Resolver.resolveSuperCall($this, node);
+    Resolver.unsupportedNodeKind($this, node);
     break;
   case 50:
     break;
@@ -3731,7 +3735,7 @@ Resolver.resolve = function($this, node, expectedType) {
     Resolver.resolveDefault($this, node);
     break;
   case 58:
-    Resolver.resolveUntyped($this, node);
+    Resolver.resolveAsExpression($this, node.children[0]);
     break;
   case 59:
     Resolver.resolveVar($this, node);
@@ -3793,19 +3797,19 @@ Resolver.resolve = function($this, node, expectedType) {
 };
 Resolver.checkIsParameterized = function($this, node) {
   if (node.type !== $this.cache.errorType && Type.hasParameters(node.type) && node.type.substitutions === null) {
-    semanticErrorUnparameterizedType($this.log, node.range, node.type);
+    Log.error($this.log, node.range, "Cannot use unparameterized " + ("type \"" + Type.toString(node.type) + "\""));
     node.type = $this.cache.errorType;
   }
 };
 Resolver.checkIsType = function($this, node) {
   if (node.type !== $this.cache.errorType && node.kind !== 35) {
-    semanticErrorUnexpectedExpression($this.log, node.range, node.type);
+    Log.error($this.log, node.range, "Unexpected expression of " + ("type \"" + Type.toString(node.type) + "\""));
     node.type = $this.cache.errorType;
   }
 };
 Resolver.checkIsInstance = function($this, node) {
   if (node.type !== $this.cache.errorType && node.kind === 35) {
-    semanticErrorUnexpectedType($this.log, node.range, node.type);
+    Log.error($this.log, node.range, "Unexpected " + ("type \"" + Type.toString(node.type) + "\""));
     node.type = $this.cache.errorType;
   }
 };
@@ -3816,7 +3820,7 @@ Resolver.checkIsValidFunctionReturnType = function($this, node) {
 };
 Resolver.checkIsValidVariableType = function($this, node) {
   if (node.type === $this.cache.voidType || Type.isNamespace(node.type)) {
-    semanticErrorBadType($this.log, node.range, node.type);
+    Log.error($this.log, node.range, "Cannot use " + ("type \"" + Type.toString(node.type) + "\"") + " here");
     node.type = $this.cache.errorType;
   }
 };
@@ -3832,7 +3836,7 @@ Resolver.checkUnusedExpression = function($this, node) {
   } else if (kind === 47) {
     Resolver.checkUnusedExpression($this, node.children[1]);
   } else if (node.type !== $this.cache.errorType && !NodeKind.isCall(kind) && !NodeKind.isUnaryStorageOperator(kind) && !NodeKind.isBinaryStorageOperator(kind)) {
-    semanticWarningUnusedExpression($this.log, node.range);
+    Log.warning($this.log, node.range, "Unused expression");
   }
 };
 Resolver.checkStorage = function($this, node) {
@@ -3840,11 +3844,11 @@ Resolver.checkStorage = function($this, node) {
     return;
   }
   if (!NodeKind.isStorage(node.kind)) {
-    semanticErrorBadStorage($this.log, node.range);
+    Log.error($this.log, node.range, "Cannot store to this location");
     return;
   }
   if ((node.symbol.flags & 256) !== 0) {
-    semanticErrorStorageToFinal($this.log, node.range);
+    Log.error($this.log, node.range, "Cannot store to a symbol marked as \"final\"");
     return;
   }
 };
@@ -3854,7 +3858,7 @@ Resolver.checkConversion = function($this, to, node, kind) {
     return;
   }
   if (from === $this.cache.voidType && to === $this.cache.voidType) {
-    semanticErrorUnexpectedExpression($this.log, node.range, to);
+    Log.error($this.log, node.range, "Unexpected expression of " + ("type \"" + Type.toString(to) + "\""));
     return;
   }
   if (from === to) {
@@ -3868,7 +3872,7 @@ Resolver.checkConversion = function($this, to, node, kind) {
     from = to;
   }
   if (kind === 0 && !TypeCache.canImplicitlyConvert($this.cache, from, to) || kind === 1 && !TypeCache.canExplicitlyConvert($this.cache, from, to)) {
-    semanticErrorIncompatibleTypes($this.log, node.range, from, to, TypeCache.canExplicitlyConvert($this.cache, from, to));
+    Log.error($this.log, node.range, "Cannot convert from " + ("type \"" + Type.toString(from) + "\"") + " to " + ("type \"" + Type.toString(to) + "\"") + (TypeCache.canExplicitlyConvert($this.cache, from, to) ? " without a cast" : ""));
     node.type = $this.cache.errorType;
     return;
   }
@@ -3883,7 +3887,7 @@ Resolver.checkConversion = function($this, to, node, kind) {
 };
 Resolver.unexpectedStatement = function($this, node) {
   if (node.range.source !== null) {
-    semanticErrorUnexpectedStatement($this.log, node.range);
+    Log.error($this.log, node.range, "Cannot use this statement here");
   }
 };
 Resolver.checkInsideBlock = function($this, node) {
@@ -3917,9 +3921,9 @@ Resolver.checkAccessToThis = function($this, range) {
     return true;
   }
   if ($this.context.symbolForThis !== null) {
-    semanticErrorStaticThis($this.log, range, "this");
+    Log.error($this.log, range, "Cannot access " + ("\"" + "this" + "\"") + " from a static context");
   } else {
-    semanticErrorUnexpectedThis($this.log, range, "this");
+    Log.error($this.log, range, "Cannot use " + ("\"" + "this" + "\"") + " outside a class or struct");
   }
   return false;
 };
@@ -3932,7 +3936,7 @@ Resolver.checkAccessToInstanceSymbol = function($this, node) {
     return true;
   }
   if ($this.context.symbolForThis === null) {
-    semanticErrorUnexpectedThis($this.log, node.range, symbol.name);
+    Log.error($this.log, node.range, "Cannot use " + ("\"" + symbol.name + "\"") + " outside a class or struct");
     return false;
   }
   if (symbol.kind === 4 && $this.context.symbolForThis === symbol.enclosingSymbol) {
@@ -3946,7 +3950,7 @@ Resolver.checkAccessToInstanceSymbol = function($this, node) {
       }
     }
   }
-  semanticErrorStaticThis($this.log, node.range, symbol.name);
+  Log.error($this.log, node.range, "Cannot access " + ("\"" + symbol.name + "\"") + " from a static context");
   return false;
 };
 Resolver.collectAndResolveBaseTypes = function($this, symbol) {
@@ -3961,9 +3965,9 @@ Resolver.collectAndResolveBaseTypes = function($this, symbol) {
           var baseType = types.children[i];
           Resolver.resolveAsParameterizedType($this, baseType);
           if (isObject) {
-            List.insert(baseTypes, (index = index + 1 | 0) - 1 | 0, baseType);
+            baseTypes.splice((index = index + 1 | 0) - 1 | 0, 0, baseType);
           } else if (Type.isClass(baseType.type)) {
-            semanticErrorBaseClassInExtension($this.log, baseType.range);
+            Log.error($this.log, baseType.range, "The base class must be set from the class declaration, not from an extension block");
           } else {
             baseTypes.push(baseType);
           }
@@ -3976,7 +3980,7 @@ Resolver.collectAndResolveBaseTypes = function($this, symbol) {
 Resolver.checkNoBaseTypes = function($this, symbol, what) {
   var baseTypes = Resolver.collectAndResolveBaseTypes($this, symbol);
   for (var i = 0; i < baseTypes.length; i = i + 1 | 0) {
-    semanticErrorUnexpectedBaseType($this.log, baseTypes[i].range, what);
+    Log.error($this.log, baseTypes[i].range, what + " cannot inherit from another type");
   }
 };
 Resolver.needsTypeContext = function($this, node) {
@@ -4022,15 +4026,15 @@ Resolver.resolveBaseTypes = function($this, symbol) {
     }
     if (symbol.kind === 12 && Type.isClass(baseType)) {
       if (baseTypes.indexOf(base) !== 0) {
-        semanticErrorClassBaseNotFirst($this.log, base.range, baseType);
+        Log.error($this.log, base.range, "Base " + ("type \"" + Type.toString(baseType) + "\"") + " must come first in a class declaration");
         continue;
       }
     } else if (!Type.isInterface(baseType)) {
-      semanticErrorBaseTypeNotInterface($this.log, base.range, baseType);
+      Log.error($this.log, base.range, "Base " + ("type \"" + Type.toString(baseType) + "\"") + " must be an interface");
       continue;
     }
     if (type.relevantTypes.indexOf(baseType) >= 0) {
-      semanticErrorDuplicateBaseType($this.log, base.range, baseType);
+      Log.error($this.log, base.range, "Duplicate base " + ("type \"" + Type.toString(baseType) + "\""));
       continue;
     }
     type.relevantTypes.push(baseType);
@@ -4180,7 +4184,7 @@ Resolver.redundantModifierIfPresent = function($this, symbol, flag, where) {
   if ((symbol.flags & flag) !== 0 && (symbol.flags & 32768) === 0) {
     var modifierName = Resolver.findModifierName(symbol, flag);
     if (modifierName !== null) {
-      semanticErrorRedundantModifier($this.log, modifierName.range, modifierName.content.value, where);
+      Log.error($this.log, modifierName.range, "Redundant modifier " + ("\"" + modifierName.content.value + "\"") + " " + where);
     }
   }
 };
@@ -4188,13 +4192,13 @@ Resolver.unexpectedModifierIfPresent = function($this, symbol, flag, where) {
   if ((symbol.flags & flag) !== 0 && (symbol.flags & 32768) === 0) {
     var modifierName = Resolver.findModifierName(symbol, flag);
     if (modifierName !== null) {
-      semanticErrorUnexpectedModifier($this.log, modifierName.range, modifierName.content.value, where);
+      Log.error($this.log, modifierName.range, "Cannot use the " + ("\"" + modifierName.content.value + "\"") + " modifier " + where);
     }
   }
 };
 Resolver.expectedModifierIfAbsent = function($this, symbol, flag, where) {
   if ((symbol.flags & flag) === 0 && (symbol.flags & 32768) === 0 && Resolver.findModifierName(symbol, flag) === null) {
-    semanticErrorExpectedModifier($this.log, symbol.node.children[0].range, symbolFlagToName.get(flag), where);
+    Log.error($this.log, symbol.node.children[0].range, "Expected the " + ("\"" + symbolFlagToName.get(flag) + "\"") + " modifier " + where);
   }
 };
 Resolver.initializeVariable = function($this, symbol) {
@@ -4224,7 +4228,7 @@ Resolver.initializeVariable = function($this, symbol) {
         } else {
           variableType = Node.withType(new Node(35), $this.cache.errorType);
           if (variableValue.type !== $this.cache.errorType) {
-            semanticErrorBadIntegerConstant($this.log, variableValue.range, variableValue.type);
+            Log.error($this.log, variableValue.range, "Expected integer constant but found expression of " + ("type \"" + Type.toString(variableValue.type) + "\""));
           }
         }
       } else {
@@ -4249,7 +4253,7 @@ Resolver.initializeVariable = function($this, symbol) {
   if (variableType.kind === 59) {
     var value = node.children[2];
     if (value === null) {
-      semanticErrorVarMissingValue($this.log, node.children[0].range);
+      Log.error($this.log, node.children[0].range, "Implicitly typed variables must be initialized");
       symbol.type = $this.cache.errorType;
     } else {
       if (node.parent.kind === 47) {
@@ -4262,7 +4266,7 @@ Resolver.initializeVariable = function($this, symbol) {
       }
       var type = value.type;
       if (type === $this.cache.nullType || type === $this.cache.voidType) {
-        semanticErrorVarBadType($this.log, node.children[0].range, type);
+        Log.error($this.log, node.children[0].range, "Implicitly typed variables cannot be of " + ("type \"" + Type.toString(type) + "\""));
         symbol.type = $this.cache.errorType;
       } else {
         symbol.type = type;
@@ -4295,7 +4299,7 @@ Resolver.initializeParameter = function($this, symbol) {
     if (boundType === $this.cache.errorType) {
       symbol.type = $this.cache.errorType;
     } else if (!Type.isInterface(boundType)) {
-      semanticErrorBadTypeParameterBound($this.log, bound.range, boundType);
+      Log.error($this.log, bound.range, "Cannot use " + ("type \"" + Type.toString(boundType) + "\"") + " as a type parameter bound");
     } else {
       type.relevantTypes = [boundType];
       Type.copyMembersFrom(type, boundType);
@@ -4443,9 +4447,9 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
     var j = i;
     var member = uninitializedMembers[i];
     for (; j > 0 && uninitializedMembers[j - 1 | 0].symbol.node.range.start > member.symbol.node.range.start; j = j - 1 | 0) {
-      List.set(uninitializedMembers, j, uninitializedMembers[j - 1 | 0]);
+      uninitializedMembers[j] = uninitializedMembers[j - 1 | 0];
     }
-    List.set(uninitializedMembers, j, member);
+    uninitializedMembers[j] = member;
   }
   for (var i = 0; i < uninitializedMembers.length; i = i + 1 | 0) {
     var member = uninitializedMembers[i];
@@ -4489,7 +4493,7 @@ Resolver.generateDefaultToString = function($this, symbol) {
     for (j = 0; j < i; j = j + 1 | 0) {
       var other = fields[j];
       if (value === other.enumValue) {
-        semanticErrorBadEnumToString($this.log, enclosingNode.children[0].range, enclosingSymbol.name, field.name, other.name, value);
+        Log.error($this.log, enclosingNode.children[0].range, "Cannot automatically generate \"toString\" for " + ("\"" + enclosingSymbol.name + "\"") + " because " + ("\"" + field.name + "\"") + " and " + ("\"" + other.name + "\"") + " both have the same value " + value.toString());
         break;
       }
     }
@@ -4564,7 +4568,7 @@ Resolver.initializeSymbol = function($this, symbol) {
   if ((symbol.flags & 12288) === 0) {
     Resolver.initializeDeclaration($this, symbol.node);
   } else if ((symbol.flags & 4096) !== 0) {
-    semanticErrorCyclicDeclaration($this.log, Node.firstNonExtensionSibling(symbol.node).children[0].range, symbol.name);
+    Log.error($this.log, Node.firstNonExtensionSibling(symbol.node).children[0].range, "Cyclic declaration of " + ("\"" + symbol.name + "\""));
     symbol.type = $this.cache.errorType;
   }
 };
@@ -4626,15 +4630,6 @@ Resolver.resolveChildren = function($this, node) {
     Resolver.resolveNodes($this, node.children);
   }
 };
-Resolver.resolveProgram = function($this, node) {
-  Resolver.resolveChildren($this, node);
-};
-Resolver.resolveFile = function($this, node) {
-  Resolver.resolve($this, node.children[0], null);
-};
-Resolver.resolveBlock = function($this, node) {
-  Resolver.resolveChildren($this, node);
-};
 Resolver.resolveCase = function($this, node) {
   var values = Node.caseValues(node);
   var block = Node.caseBlock(node);
@@ -4643,14 +4638,11 @@ Resolver.resolveCase = function($this, node) {
     Resolver.resolveAsExpressionWithConversion($this, value, $this.context.switchValue.type, 0);
     ConstantFolder.foldConstants($this.constantFolder, value);
     if (value.type !== $this.cache.errorType && !NodeKind.isConstant(value.kind)) {
-      semanticErrorNonConstantCaseValue($this.log, value.range);
+      Log.error($this.log, value.range, "Non-constant case value");
       value.type = $this.cache.errorType;
     }
   }
   Resolver.resolve($this, block, null);
-};
-Resolver.resolveUsingNamespace = function($this, node) {
-  Resolver.checkInsideBlock($this, node);
 };
 Resolver.resolveNamespace = function($this, node) {
   Resolver.checkDeclarationLocation($this, node, 0);
@@ -4709,7 +4701,7 @@ Resolver.resolveFunction = function($this, node) {
     }
     Resolver.resolve($this, block, null);
     if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType && !Node.blockAlwaysEndsWithReturn(block)) {
-      semanticErrorMissingReturn($this.log, node.children[0].range, node.symbol.name, $this.resultType);
+      Log.error($this.log, node.children[0].range, "All control paths for " + ("\"" + node.symbol.name + "\"") + " must return a value of " + ("type \"" + Type.toString($this.resultType) + "\""));
     }
     $this.resultType = oldResultType;
   }
@@ -4725,7 +4717,7 @@ Resolver.resolveFunction = function($this, node) {
       if (overriddenMember !== null) {
         superInitializer.symbol = overriddenMember.symbol;
       } else {
-        semanticErrorBadSuperInitializer($this.log, superInitializer.range);
+        Log.error($this.log, superInitializer.range, "No base constructor to call");
       }
       var $arguments = superInitializer.children;
       if (overriddenType === $this.cache.errorType) {
@@ -4735,7 +4727,7 @@ Resolver.resolveFunction = function($this, node) {
       }
     } else if (overriddenType.symbol === null) {
       if (Type.argumentTypes(overriddenType).length > 0) {
-        semanticErrorMissingSuperInitializer($this.log, node.children[0].range);
+        Log.error($this.log, node.children[0].range, "Missing call to \"super\" in initializer list");
       } else {
         Node.replaceChild(node, 3, Node.withSymbol(Node.withChildren(new Node(49), []), overriddenMember.symbol));
       }
@@ -4746,7 +4738,7 @@ Resolver.resolveFunction = function($this, node) {
       Node.replaceChild(node, 4, memberInitializers);
     }
     if ((superInitializer !== null || memberInitializers.children.length > 0) && block === null) {
-      semanticErrorAbstractConstructorInitializer($this.log, Range.span((superInitializer !== null ? superInitializer : memberInitializers.children[0]).range, (memberInitializers.children.length < 1 ? superInitializer : memberInitializers.children[memberInitializers.children.length - 1 | 0]).range));
+      Log.error($this.log, Range.span((superInitializer !== null ? superInitializer : memberInitializers.children[0]).range, (memberInitializers.children.length < 1 ? superInitializer : memberInitializers.children[memberInitializers.children.length - 1 | 0]).range), "An abstract constructor must not have initializer list");
     }
     var enclosingSymbol = node.symbol.enclosingSymbol;
     if ((enclosingSymbol.flags & 2048) === 0) {
@@ -4816,18 +4808,12 @@ Resolver.resolveVariable = function($this, node) {
     if (Type.isInterface(enclosingSymbolType) || (symbol.flags & 16) !== 0 && Type.isEnum(enclosingSymbolType)) {
       Resolver.unexpectedStatement($this, node);
     } else if ((symbol.flags & 16) !== 0 && SymbolKind.isTypeWithInstances(enclosingSymbol.kind) && value === null) {
-      semanticErrorUninitializedExtensionVariable($this.log, node.children[0].range);
+      Log.error($this.log, node.children[0].range, "Instance variables in extension blocks must be initialized");
     }
   }
   if (value !== null) {
     Resolver.resolveAsExpressionWithConversion($this, value, Symbol.isEnumValue(symbol) ? $this.cache.intType : symbol.type, 0);
   }
-};
-Resolver.resolveVariableCluster = function($this, node) {
-  Resolver.resolveNodes($this, Node.clusterVariables(node));
-};
-Resolver.resolveParameter = function($this, node) {
-  Resolver.initializeSymbol($this, node.symbol);
 };
 Resolver.resolveAlias = function($this, node) {
   Resolver.checkInsideBlock($this, node);
@@ -4904,7 +4890,7 @@ Resolver.resolveReturn = function($this, node) {
       Resolver.resolveAsExpressionWithConversion($this, value, $this.resultType, 0);
     }
   } else if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType) {
-    semanticErrorExpectedReturnValue($this.log, node.range, $this.resultType);
+    Log.error($this.log, node.range, "Return statement must return " + ("type \"" + Type.toString($this.resultType) + "\""));
   }
 };
 Resolver.resolveBreak = function($this, node) {
@@ -4940,7 +4926,7 @@ Resolver.resolveSwitch = function($this, node) {
   for (var i = 0; i < cases.length; i = i + 1 | 0) {
     var child = cases[i];
     if (child.children.length === 1 && i < (cases.length - 1 | 0)) {
-      semanticErrorBadDefaultCase($this.log, child.range);
+      Log.error($this.log, child.range, "Only the last case can be a default case");
     }
     var caseValues = Node.caseValues(child);
     for (var j = 0; j < caseValues.length; j = j + 1 | 0) {
@@ -4962,14 +4948,11 @@ Resolver.resolveSwitch = function($this, node) {
     }
   }
 };
-Resolver.resolveModifier = function($this, node) {
-  Resolver.resolveNodes($this, Node.modifierStatements(node));
-};
 Resolver.resolveName = function($this, node) {
   var name = node.content.value;
   var member = Scope.find($this.context.scope, name);
   if (member === null) {
-    semanticErrorUndeclaredSymbol($this.log, node.range, name);
+    Log.error($this.log, node.range, "\"" + name + "\"" + " is not declared");
     return;
   }
   Resolver.initializePotentiallyDuplicatedMember($this, member, node.range);
@@ -5007,7 +4990,7 @@ Resolver.resolveHook = function($this, node) {
   if (commonType === null) {
     commonType = $this.typeContext;
     if (commonType === null || !TypeCache.canImplicitlyConvert($this.cache, trueType, commonType) || !TypeCache.canImplicitlyConvert($this.cache, falseType, commonType)) {
-      semanticErrorNoCommonType($this.log, Range.span(trueNode.range, falseNode.range), trueType, falseType);
+      Log.error($this.log, Range.span(trueNode.range, falseNode.range), "No common type for " + ("type \"" + Type.toString(trueType) + "\"") + " and " + ("type \"" + Type.toString(falseType) + "\""));
       return;
     }
   }
@@ -5017,14 +5000,14 @@ Resolver.resolveHook = function($this, node) {
 };
 Resolver.resolveInt = function($this, node) {
   if (node.content.value === -2147483648) {
-    syntaxErrorInvalidInteger($this.log, node.range, Range.toString(node.range));
+    Log.error($this.log, node.range, "Invalid integer literal " + Range.toString(node.range));
   }
   node.type = $this.cache.intType;
 };
 Resolver.resolveInitializer = function($this, node) {
   var values = node.children;
   if ($this.typeContext === null) {
-    semanticErrorMissingTypeContext($this.log, node.range);
+    Log.error($this.log, node.range, "Expression has no type context here");
     Resolver.resolveNodesAsExpressions($this, values);
     return;
   }
@@ -5050,7 +5033,7 @@ Resolver.resolveDot = function($this, node) {
   }
   var type = target !== null ? target.type : $this.typeContext;
   if (type === null) {
-    semanticErrorMissingTypeContext($this.log, node.range);
+    Log.error($this.log, node.range, "Expression has no type context here");
     return;
   }
   if (type === $this.cache.errorType) {
@@ -5063,7 +5046,7 @@ Resolver.resolveDot = function($this, node) {
   var name = dotName.content.value;
   var member = type.members.getOrDefault(name, null);
   if (member === null) {
-    semanticErrorUnknownMemberSymbol($this.log, dotName.range, name, type);
+    Log.error($this.log, dotName.range, "\"" + name + "\"" + " is not declared on " + ("type \"" + Type.toString(type) + "\""));
     return;
   }
   node.symbol = dotName.symbol = member.symbol;
@@ -5073,9 +5056,9 @@ Resolver.resolveDot = function($this, node) {
   if (!Type.isNamespace(type) && (!Type.isEnum(type) || (member.symbol.flags & 16) !== 0)) {
     var isStatic = symbolIsType || (member.symbol.flags & 64) !== 0;
     if (isStatic && !targetIsType) {
-      semanticErrorMemberUnexpectedStatic($this.log, dotName.range, name);
+      Log.error($this.log, dotName.range, "Cannot access static member " + ("\"" + name + "\"") + " from an instance context");
     } else if (!isStatic && targetIsType) {
-      semanticErrorMemberUnexpectedInstance($this.log, dotName.range, name);
+      Log.error($this.log, dotName.range, "Cannot access instance member " + ("\"" + name + "\"") + " from a static context");
     }
   }
   if (symbolIsType) {
@@ -5124,7 +5107,7 @@ Resolver.resolveCall = function($this, node) {
     if (value.kind === 35) {
       var member = Type.$constructor(valueType);
       if (member === null) {
-        semanticErrorUnconstructableType($this.log, value.range, valueType);
+        Log.error($this.log, value.range, "Cannot construct " + ("type \"" + Type.toString(valueType) + "\""));
         Resolver.resolveNodesAsExpressions($this, $arguments);
         return;
       }
@@ -5137,16 +5120,13 @@ Resolver.resolveCall = function($this, node) {
       }
     }
     if (valueType.symbol !== null) {
-      semanticErrorInvalidCall($this.log, value.range, valueType);
+      Log.error($this.log, value.range, "Cannot call " + ("type \"" + Type.toString(valueType) + "\""));
       Resolver.resolveNodesAsExpressions($this, $arguments);
       return;
     }
     node.type = valueType.relevantTypes[0];
     Resolver.resolveArguments($this, $arguments, Type.argumentTypes(valueType), node.range, value.range);
   }
-};
-Resolver.resolveSuperCall = function($this, node) {
-  Resolver.unsupportedNodeKind($this, node);
 };
 Resolver.resolveSequence = function($this, node) {
   for (var i = 0, n = node.children.length; i < n; i = i + 1 | 0) {
@@ -5219,10 +5199,10 @@ Resolver.resolveLambda = function($this, node) {
   var $arguments = Node.lambdaArguments(node);
   var block = Node.lambdaBlock(node);
   if ($this.typeContext === null) {
-    semanticErrorMissingTypeContext($this.log, node.range);
+    Log.error($this.log, node.range, "Expression has no type context here");
   } else if ($this.typeContext !== $this.cache.errorType) {
     if ($this.typeContext.symbol !== null) {
-      semanticErrorBadLambdaTypeContext($this.log, node.range, $this.typeContext);
+      Log.error($this.log, node.range, "Cannot use a lambda expression with " + ("type \"" + Type.toString($this.typeContext) + "\""));
     } else if ($this.typeContext !== $this.cache.errorType) {
       var argumentTypes = Type.argumentTypes($this.typeContext);
       $this.resultType = $this.typeContext.relevantTypes[0];
@@ -5235,7 +5215,7 @@ Resolver.resolveLambda = function($this, node) {
         }
       }
       if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType && !Node.blockAlwaysEndsWithReturn(block)) {
-        semanticErrorLambdaMissingReturn($this.log, node.range, $this.resultType);
+        Log.error($this.log, node.range, "All control paths for lambda expression must return a value of " + ("type \"" + Type.toString($this.resultType) + "\""));
       }
     }
   }
@@ -5250,11 +5230,8 @@ Resolver.resolveDefault = function($this, node) {
   Resolver.checkIsValidVariableType($this, type);
   node.type = type.type;
 };
-Resolver.resolveUntyped = function($this, node) {
-  Resolver.resolveAsExpression($this, node.children[0]);
-};
 Resolver.resolveVar = function($this, node) {
-  semanticErrorUnexpectedNode($this.log, node.range, node.kind);
+  Log.error($this.log, node.range, "Unexpected " + NodeKind.toString(node.kind));
 };
 Resolver.resolveFunctionType = function($this, node) {
   var result = node.children[0];
@@ -5308,7 +5285,7 @@ Resolver.resolveUnaryOperator = function($this, node) {
     }
   }
   if (node.type === $this.cache.errorType) {
-    semanticErrorNoUnaryOperator($this.log, node.range, kind, type);
+    Log.error($this.log, node.range, "No unary operator " + operatorInfo.get(kind).text + " for " + ("type \"" + Type.toString(type) + "\""));
     return;
   }
   Resolver.checkConversion($this, node.type, value, 0);
@@ -5375,7 +5352,7 @@ Resolver.resolveBinaryOperator = function($this, node) {
     }
   }
   if (node.type === $this.cache.errorType) {
-    semanticErrorNoBinaryOperator($this.log, node.range, kind, leftType, rightType);
+    Log.error($this.log, node.range, "No binary operator " + operatorInfo.get(kind).text + " for " + ("type \"" + Type.toString(leftType) + "\"") + " and " + ("type \"" + Type.toString(rightType) + "\""));
     return;
   }
   if (commonType !== null) {
@@ -5558,8 +5535,8 @@ Symbol.sortParametersByDependencies = function($this) {
     }
     if (j < $this.sortedParameters.length) {
       var temp = $this.sortedParameters[i];
-      List.set($this.sortedParameters, i, $this.sortedParameters[j]);
-      List.set($this.sortedParameters, j, temp);
+      $this.sortedParameters[i] = $this.sortedParameters[j];
+      $this.sortedParameters[j] = temp;
     }
   }
 };
@@ -6116,7 +6093,7 @@ function parseStringLiteral(log, range, text) {
           }
         }
       }
-      syntaxErrorInvalidEscapeSequence(log, new Range(range.source, range.start + escape | 0, range.start + i | 0), text.slice(escape, i));
+      Log.error(log, new Range(range.source, range.start + escape | 0, range.start + i | 0), "Invalid escape sequence " + firstLineOf("\"" + text.slice(escape, i) + "\""));
       isValidString = false;
     } else {
       i = i + 1 | 0;
@@ -6427,7 +6404,7 @@ function tokenize(log, source) {
     if (yy_act === 97) {
       continue;
     } else if (yy_act === 33) {
-      syntaxErrorExtraData(log, new Range(source, yy_bp, yy_cp), text.slice(yy_bp, yy_cp));
+      Log.error(log, new Range(source, yy_bp, yy_cp), "Syntax error " + quoteString(text.slice(yy_bp, yy_cp), 34));
       break;
     } else if (yy_act !== 30) {
       tokens.push(new Token(new Range(source, yy_bp, yy_cp), yy_act, text.slice(yy_bp, yy_cp)));
@@ -6473,7 +6450,7 @@ function prepareTokens(tokens) {
             var start = range.start;
             var text = token.text.slice(1, token.text.length);
             var kind = tokenKind === 83 ? 40 : tokenKind === 41 ? 2 : tokenKind === 12 ? 41 : 33;
-            List.insert(tokens, i + 1 | 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind, text));
+            tokens.splice(i + 1 | 0, 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind, text));
             token.range = new Range(range.source, start, start + 1 | 0);
             token.text = ">";
           }
@@ -6489,29 +6466,11 @@ function firstLineOf(text) {
   var index = text.indexOf("\n");
   return index < 0 ? text : text.slice(0, index);
 }
-function syntaxErrorInvalidEscapeSequence(log, range, text) {
-  Log.error(log, range, "Invalid escape sequence " + firstLineOf("\"" + text + "\""));
-}
-function syntaxErrorInvalidCharacter(log, range, text) {
-  Log.error(log, range, "Invalid character literal " + firstLineOf(text));
-}
-function syntaxErrorInvalidInteger(log, range, text) {
-  Log.error(log, range, "Invalid integer literal " + text);
-}
-function syntaxErrorExtraData(log, range, text) {
-  Log.error(log, range, "Syntax error " + quoteString(text, 34));
-}
 function syntaxErrorUnexpectedToken(log, token) {
   Log.error(log, token.range, "Unexpected " + TokenKind.toString(token.kind));
 }
 function syntaxErrorExpectedToken(log, found, expected) {
   Log.error(log, found.range, "Expected " + TokenKind.toString(expected) + " but found " + TokenKind.toString(found.kind));
-}
-function syntaxErrorBadForEach(log, range) {
-  Log.error(log, range, "More than one variable inside a for-each loop");
-}
-function syntaxWarningOctal(log, range) {
-  Log.warning(log, range, "Use the prefix \"0o\" for octal numbers");
 }
 function scanForToken(context, kind, tokenScan) {
   if (ParserContext.expect(context, kind)) {
@@ -7009,7 +6968,7 @@ function parseFor(context) {
           }
           var variables = Node.clusterVariables(setup);
           if (variables.length > 1) {
-            syntaxErrorBadForEach(context.log, setup.range);
+            Log.error(context.log, setup.range, "More than one variable inside a for-each loop");
           }
           var value = Node.withChildren(new Node(16), [Node.remove(variables[0].children[0]), Node.remove(setup.children[0]), null]);
           return Node.withRange(Node.withChildren(new Node(22), [value, values, body]), ParserContext.spanSince(context, token.range));
@@ -7118,7 +7077,7 @@ function looksLikeLambdaArguments(node) {
 function createLambdaFromNames(names, block) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
     var name = names[i];
-    List.set(names, i, Node.withRange(Node.withChildren(new Node(16), [name, null, null]), name.range));
+    names[i] = Node.withRange(Node.withChildren(new Node(16), [name, null, null]), name.range);
   }
   return Node.createLambda(names, block);
 }
@@ -7222,9 +7181,9 @@ function intLiteral(base) {
   return function(context, token) {
     var value = parseIntLiteral(token.text, base);
     if (value !== value) {
-      syntaxErrorInvalidInteger(context.log, token.range, token.text);
+      Log.error(context.log, token.range, "Invalid integer literal " + token.text);
     } else if (base === 10 && value !== 0 && token.text.charCodeAt(0) === 48) {
-      syntaxWarningOctal(context.log, token.range);
+      Log.warning(context.log, token.range, "Use the prefix \"0o\" for octal numbers");
     }
     return Node.withRange(Node.withContent(new Node(41), new IntContent(value | 0)), token.range);
   };
@@ -7270,7 +7229,7 @@ function createParser() {
   Pratt.literal(pratt, 18, function(context, token) {
     var result = parseStringLiteral(context.log, token.range, token.text);
     if (result !== null && result.value.length !== 1) {
-      syntaxErrorInvalidCharacter(context.log, token.range, token.text);
+      Log.error(context.log, token.range, "Invalid character literal " + firstLineOf(token.text));
       result = null;
     }
     return Node.withRange(Node.withContent(new Node(41), new IntContent(result !== null ? result.value.charCodeAt(0) : 0)), token.range);
@@ -7436,44 +7395,11 @@ function createParser() {
   };
   return pratt;
 }
-function semanticWarningUnusedExpression(log, range) {
-  Log.warning(log, range, "Unused expression");
-}
-function semanticWarningDuplicateModifier(log, range, modifier) {
-  Log.warning(log, range, "Duplicate modifier " + ("\"" + modifier + "\""));
-}
-function semanticErrorRedundantModifier(log, range, modifier, where) {
-  Log.error(log, range, "Redundant modifier " + ("\"" + modifier + "\"") + " " + where);
-}
-function semanticErrorUnexpectedModifier(log, range, modifier, where) {
-  Log.error(log, range, "Cannot use the " + ("\"" + modifier + "\"") + " modifier " + where);
-}
-function semanticErrorExpectedModifier(log, range, modifier, where) {
-  Log.error(log, range, "Expected the " + ("\"" + modifier + "\"") + " modifier " + where);
-}
 function semanticErrorDuplicateSymbol(log, range, name, previous) {
   Log.error(log, range, "\"" + name + "\"" + " is already declared");
   if (previous.source !== null) {
     Log.note(log, previous, "The previous declaration is here");
   }
-}
-function semanticErrorUnexpectedNode(log, range, kind) {
-  Log.error(log, range, "Unexpected " + NodeKind.toString(kind));
-}
-function semanticErrorUnexpectedExpression(log, range, type) {
-  Log.error(log, range, "Unexpected expression of " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorUnexpectedType(log, range, type) {
-  Log.error(log, range, "Unexpected " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorUndeclaredSymbol(log, range, name) {
-  Log.error(log, range, "\"" + name + "\"" + " is not declared");
-}
-function semanticErrorUnknownMemberSymbol(log, range, name, type) {
-  Log.error(log, range, "\"" + name + "\"" + " is not declared on " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorExtensionMissingTarget(log, range, name) {
-  Log.error(log, range, "No type named " + ("\"" + name + "\"") + " to extend");
 }
 function semanticErrorDifferentModifiers(log, range, name, previous) {
   Log.error(log, range, "Cannot merge multiple declarations for " + ("\"" + name + "\"") + " with different modifiers");
@@ -7481,74 +7407,11 @@ function semanticErrorDifferentModifiers(log, range, name, previous) {
     Log.note(log, previous, "The conflicting declaration is here");
   }
 }
-function semanticErrorBadUsingValue(log, range) {
-  Log.error(log, range, "Expected a type here");
-}
-function semanticErrorBadUsingNamespace(log, range) {
-  Log.error(log, range, "Expected a namespace here");
-}
-function semanticErrorUnexpectedStatement(log, range) {
-  Log.error(log, range, "Cannot use this statement here");
-}
-function semanticErrorCyclicDeclaration(log, range, name) {
-  Log.error(log, range, "Cyclic declaration of " + ("\"" + name + "\""));
-}
-function semanticErrorUnexpectedThis(log, range, name) {
-  Log.error(log, range, "Cannot use " + ("\"" + name + "\"") + " outside a class or struct");
-}
-function semanticErrorStaticThis(log, range, name) {
-  Log.error(log, range, "Cannot access " + ("\"" + name + "\"") + " from a static context");
-}
-function semanticErrorIncompatibleTypes(log, range, from, to, isCastAllowed) {
-  Log.error(log, range, "Cannot convert from " + ("type \"" + Type.toString(from) + "\"") + " to " + ("type \"" + Type.toString(to) + "\"") + (isCastAllowed ? " without a cast" : ""));
-}
-function semanticErrorNoCommonType(log, range, left, right) {
-  Log.error(log, range, "No common type for " + ("type \"" + Type.toString(left) + "\"") + " and " + ("type \"" + Type.toString(right) + "\""));
-}
-function semanticErrorBadType(log, range, type) {
-  Log.error(log, range, "Cannot use " + ("type \"" + Type.toString(type) + "\"") + " here");
-}
-function semanticErrorMemberUnexpectedStatic(log, range, name) {
-  Log.error(log, range, "Cannot access static member " + ("\"" + name + "\"") + " from an instance context");
-}
-function semanticErrorMemberUnexpectedInstance(log, range, name) {
-  Log.error(log, range, "Cannot access instance member " + ("\"" + name + "\"") + " from a static context");
-}
-function semanticErrorMissingTypeContext(log, range) {
-  Log.error(log, range, "Expression has no type context here");
-}
-function semanticErrorBadTypeParameterBound(log, range, type) {
-  Log.error(log, range, "Cannot use " + ("type \"" + Type.toString(type) + "\"") + " as a type parameter bound");
-}
-function semanticErrorUninitializedExtensionVariable(log, range) {
-  Log.error(log, range, "Instance variables in extension blocks must be initialized");
-}
-function semanticErrorVarMissingValue(log, range) {
-  Log.error(log, range, "Implicitly typed variables must be initialized");
-}
-function semanticErrorVarBadType(log, range, type) {
-  Log.error(log, range, "Implicitly typed variables cannot be of " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorInvalidCall(log, range, type) {
-  Log.error(log, range, "Cannot call " + ("type \"" + Type.toString(type) + "\""));
-}
 function semanticErrorParameterCount(log, range, expected, found) {
   Log.error(log, range, "Expected " + expected.toString() + (expected === 1 ? " type parameter" : " type parameters") + " but found " + found.toString() + (found === 1 ? " type parameter" : " type parameters"));
 }
 function semanticErrorArgumentCount(log, range, expected, found) {
   Log.error(log, range, "Expected " + expected.toString() + (expected === 1 ? " argument" : " arguments") + " but found " + found.toString() + (found === 1 ? " argument" : " arguments"));
-}
-function semanticErrorExpectedReturnValue(log, range, type) {
-  Log.error(log, range, "Return statement must return " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorBadLambdaTypeContext(log, range, type) {
-  Log.error(log, range, "Cannot use a lambda expression with " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorNonConstantCaseValue(log, range) {
-  Log.error(log, range, "Non-constant case value");
-}
-function semanticErrorBadDefaultCase(log, range) {
-  Log.error(log, range, "Only the last case can be a default case");
 }
 function semanticErrorDuplicateCase(log, range, previous) {
   Log.error(log, range, "Duplicate case value");
@@ -7556,27 +7419,9 @@ function semanticErrorDuplicateCase(log, range, previous) {
     Log.note(log, previous, "The first occurrence is here");
   }
 }
-function semanticErrorUnconstructableType(log, range, type) {
-  Log.error(log, range, "Cannot construct " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorAbstractConstructorInitializer(log, range) {
-  Log.error(log, range, "An abstract constructor must not have initializer list");
-}
-function semanticErrorUnexpectedBaseType(log, range, what) {
-  Log.error(log, range, what + " cannot inherit from another type");
-}
-function semanticErrorClassBaseNotFirst(log, range, type) {
-  Log.error(log, range, "Base " + ("type \"" + Type.toString(type) + "\"") + " must come first in a class declaration");
-}
-function semanticErrorBaseTypeNotInterface(log, range, type) {
-  Log.error(log, range, "Base " + ("type \"" + Type.toString(type) + "\"") + " must be an interface");
-}
-function semanticErrorDuplicateBaseType(log, range, type) {
-  Log.error(log, range, "Duplicate base " + ("type \"" + Type.toString(type) + "\""));
-}
 function semanticErrorAmbiguousSymbol(log, range, name, names) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
-    List.set(names, i, "\"" + names[i] + "\"");
+    names[i] = "\"" + names[i] + "\"";
   }
   Log.error(log, range, "Reference to " + ("\"" + name + "\"") + " is ambiguous, could be " + names.join(" or "));
 }
@@ -7611,50 +7456,14 @@ function semanticErrorCannotOverrideNonVirtual(log, range, name, overridden) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
-function semanticErrorBadIntegerConstant(log, range, type) {
-  Log.error(log, range, "Expected integer constant but found expression of " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorNoUnaryOperator(log, range, kind, type) {
-  Log.error(log, range, "No unary operator " + operatorInfo.get(kind).text + " for " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorNoBinaryOperator(log, range, kind, left, right) {
-  Log.error(log, range, "No binary operator " + operatorInfo.get(kind).text + " for " + ("type \"" + Type.toString(left) + "\"") + " and " + ("type \"" + Type.toString(right) + "\""));
-}
-function semanticErrorBadStorage(log, range) {
-  Log.error(log, range, "Cannot store to this location");
-}
-function semanticErrorStorageToFinal(log, range) {
-  Log.error(log, range, "Cannot store to a symbol marked as \"final\"");
-}
-function semanticErrorUnparameterizedType(log, range, type) {
-  Log.error(log, range, "Cannot use unparameterized " + ("type \"" + Type.toString(type) + "\""));
-}
 function semanticErrorCannotParameterize(log, range, type) {
   Log.error(log, range, "Cannot parameterize " + ("type \"" + Type.toString(type) + "\"") + (Type.hasParameters(type) ? " because it is already parameterized" : " because it has no type parameters"));
-}
-function semanticErrorBadSuperInitializer(log, range) {
-  Log.error(log, range, "No base constructor to call");
-}
-function semanticErrorMissingSuperInitializer(log, range) {
-  Log.error(log, range, "Missing call to \"super\" in initializer list");
 }
 function semanticErrorAlreadyInitialized(log, range, name, previous) {
   Log.error(log, range, "\"" + name + "\"" + " is already initialized");
   if (previous.source !== null) {
     Log.note(log, previous, "The previous initialization is here");
   }
-}
-function semanticErrorBadEnumToString(log, range, name, first, second, value) {
-  Log.error(log, range, "Cannot automatically generate \"toString\" for " + ("\"" + name + "\"") + " because " + ("\"" + first + "\"") + " and " + ("\"" + second + "\"") + " both have the same value " + value.toString());
-}
-function semanticErrorMissingReturn(log, range, name, type) {
-  Log.error(log, range, "All control paths for " + ("\"" + name + "\"") + " must return a value of " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorLambdaMissingReturn(log, range, type) {
-  Log.error(log, range, "All control paths for lambda expression must return a value of " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorBaseClassInExtension(log, range) {
-  Log.error(log, range, "The base class must be set from the class declaration, not from an extension block");
 }
 function createNameToSymbolFlag() {
   var result = new StringMap();

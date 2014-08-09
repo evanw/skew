@@ -22,7 +22,7 @@ class FunctionInliningPass {
       var callSite = info.callSites.get(i);
       if (callSite != null && callSite.kind == .CALL) {
         info.callSites.set(i, null); // Make sure each call site is inlined once
-        var clone = info.returnValue.clone();
+        var clone = info.inlineValue.clone();
         var values = callSite.removeChildren();
         assert values.length == info.arguments.length + 1;
         var value = values.shift();
@@ -80,7 +80,7 @@ class FunctionInliningPass {
 
 class InliningInfo {
   Symbol symbol;
-  Node returnValue;
+  Node inlineValue;
   List<Node> callSites;
   List<Symbol> arguments;
   var shouldInline = true;
@@ -165,20 +165,41 @@ class InliningGraph {
           }
         }
 
-        // Other than asserts, the body must be a single return statement. It
-        // doesn't matter if there are other statements after the return
-        // statement since those statements are just dead code after an
-        // unconditional return statement.
         if (i < block.children.length) {
-          var last = block.children.get(i);
-          if (last.kind == .RETURN) {
+          var first = block.children.get(i);
+          Node inlineValue = null;
 
+          // If the first value in the function is a return statement, then the
+          // function body doesn't need to only have one statement. Subsequent
+          // statements are just dead code and will never be executed anyway.
+          if (first.kind == .RETURN) {
+            inlineValue = first.returnValue();
+          }
+
+          // Otherwise, this statement must be an expression statement
+          else if (first.kind == .EXPRESSION) {
+            i++;
+
+            // Skip over asserts if they will be removed
+            if (options.removeAsserts) {
+              while (i < block.children.length && block.children.get(i).kind == .ASSERT) {
+                i++;
+              }
+            }
+
+            // This expression statement must be the only statement in the function
+            if (i == block.children.length) {
+              inlineValue = first.expressionValue();
+            }
+          }
+
+          if (inlineValue != null) {
             // Count the number of times each symbol is observed. Argument
             // variables that are used more than once may need a let statement
             // to avoid changing the semantics of the call site. For now, just
             // only inline functions where each argument is used exactly once.
             var symbolCounts = IntMap<int>();
-            if (recursivelyCountArgumentUses(last, symbolCounts)) {
+            if (recursivelyCountArgumentUses(inlineValue, symbolCounts)) {
               List<Symbol> arguments = {};
               var argumentVariables = symbol.node.functionArguments().children;
               var isSimpleSubstitution = true;
@@ -192,7 +213,7 @@ class InliningGraph {
                 arguments.push(argument);
               }
               if (isSimpleSubstitution) {
-                return InliningInfo(symbol, last.returnValue(), info.callSites, arguments);
+                return InliningInfo(symbol, inlineValue, info.callSites, arguments);
               }
             }
           }

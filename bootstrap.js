@@ -109,4 +109,3 @@ StringMap.prototype.clone = function() {
 };
 
 var string = {};
-var List = {};
