@@ -101,18 +101,11 @@ enum flags SymbolFlag {
   INITIALIZING,
   INITIALIZED,
 
-  // Symbols have three states for inlining: unchecked, uninlineable, and
-  // inlineable. Symbols are always marked uninlineable while their body is
-  // being inlined to avoid recursively inlining a function within itself.
-  UNINLINEABLE,
-  INLINEABLE,
-
   // Other flags
   HAS_LOCATION_ERROR,
   HAS_MODIFIER_ERRORS,
 
   // Masks
-  INLINE_MASK = UNINLINEABLE | INLINEABLE,
   INITIALIZE_MASK = INITIALIZING | INITIALIZED,
   KEYWORD_MASK = PUBLIC | PRIVATE | PROTECTED | OVERRIDE | STATIC | VIRTUAL | FINAL | INLINE | IMPORT | EXPORT,
 }
@@ -290,21 +283,6 @@ class Symbol {
   bool isInitialized() {
     assert (flags & SymbolFlag.INITIALIZE_MASK) != .INITIALIZE_MASK;
     return (flags & SymbolFlag.INITIALIZED) != 0;
-  }
-
-  bool isUninlined() {
-    assert (flags & SymbolFlag.INLINE_MASK) != .INLINE_MASK;
-    return (flags & SymbolFlag.INLINE_MASK) == 0;
-  }
-
-  bool isUninlineable() {
-    assert (flags & SymbolFlag.INLINE_MASK) != .INLINE_MASK;
-    return (flags & SymbolFlag.UNINLINEABLE) != 0;
-  }
-
-  bool isInlineable() {
-    assert (flags & SymbolFlag.INLINE_MASK) != .INLINE_MASK;
-    return (flags & SymbolFlag.INLINEABLE) != 0;
   }
 
   bool hasLocationError() {

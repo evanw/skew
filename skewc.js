@@ -119,9 +119,6 @@ function $extends(derived, base) {
   derived.prototype = Object.create(base.prototype);
   derived.prototype.constructor = derived;
 }
-string.append = function($this, value) {
-  return $this + value;
-};
 string.startsWith = function($this, prefix) {
   return $this.length >= prefix.length && $this.slice(0, prefix.length) === prefix;
 };
@@ -1051,7 +1048,7 @@ json.DumpVisitor.visit = function($this, node) {
   }
   var outer = $this.indent;
   $this.indent = $this.indent + "  ";
-  $this.result = $this.result + "{\n" + $this.indent + "\"kind\": " + string.append(string.append("\"", replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-")), "\"");
+  $this.result = $this.result + "{\n" + $this.indent + "\"kind\": " + ("\"" + replace(NodeKind.toString(node.kind).toLowerCase(), "_", "-") + "\"");
   if (node.content !== null) {
     $this.result = $this.result + ",\n" + $this.indent + "\"content\": ";
     switch (node.content.type()) {
@@ -1163,10 +1160,10 @@ xml.DumpVisitor.visit = function($this, node) {
     $this.result = $this.result + " content=";
     switch (node.content.type()) {
     case 0:
-      $this.result = $this.result + string.append(string.append("\"", node.content.value.toString()), "\"");
+      $this.result = $this.result + ("\"" + node.content.value.toString() + "\"");
       break;
     case 1:
-      $this.result = $this.result + string.append(string.append("\"", node.content.value.toString()), "\"");
+      $this.result = $this.result + ("\"" + node.content.value.toString() + "\"");
       break;
     case 2:
       $this.result = $this.result + quoteString(node.content.value, 34);
@@ -3020,26 +3017,128 @@ InstanceToStaticPass.recursivelyReplaceThis = function(node, symbol) {
     }
   }
 };
-function FunctionInliningPass(_0, _1) {
-  this.graph = _0;
-  this.options = _1;
+function FunctionInliningPass() {
 }
-FunctionInliningPass.run = function(graph, options) {
-  var pass = new FunctionInliningPass(graph, options);
-  for (var i = 0; i < graph.callInfo.length; i = i + 1 | 0) {
-    FunctionInliningPass.tryToInline(pass, graph.callInfo[i].symbol);
+FunctionInliningPass.run = function(callGraph, options) {
+  var graph = new InliningGraph(callGraph, options);
+  for (var i = 0; i < graph.inliningInfo.length; i = i + 1 | 0) {
+    FunctionInliningPass.inlineSymbol(graph, graph.inliningInfo[i]);
   }
 };
-FunctionInliningPass.tryToInline = function($this, symbol) {
-  if ((symbol.flags & 49152) !== 0) {
+FunctionInliningPass.inlineSymbol = function(graph, info) {
+  if (!info.shouldInline) {
     return;
   }
-  symbol.flags |= 16384;
-  if (symbol.kind === 15 && ((symbol.flags & 512) !== 0 || $this.options.optimize && $this.options.targetFormat === 1)) {
+  for (var i = 0; i < info.bodyCalls.length; i = i + 1 | 0) {
+    FunctionInliningPass.inlineSymbol(graph, info.bodyCalls[i]);
+  }
+  for (var i = 0; i < info.callSites.length; i = i + 1 | 0) {
+    var callSite = info.callSites[i];
+    if (callSite !== null && callSite.kind === 48) {
+      List.set(info.callSites, i, null);
+      var clone = Node.clone(info.returnValue);
+      var values = Node.removeChildren(callSite);
+      var value = values.shift();
+      Node.become(callSite, clone);
+      FunctionInliningPass.recursivelySubstituteArguments(callSite, info.$arguments, values);
+    }
+  }
+};
+FunctionInliningPass.recursivelyInlineFunctionCalls = function(graph, node) {
+  if (Node.hasChildren(node)) {
+    for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+      var child = node.children[i];
+      if (child !== null) {
+        FunctionInliningPass.recursivelyInlineFunctionCalls(graph, child);
+      }
+    }
+  }
+  if (node.kind === 48) {
+    var symbol = node.children[0].symbol;
+    if (symbol !== null) {
+      var index = graph.symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
+      if (index >= 0) {
+        FunctionInliningPass.inlineSymbol(graph, graph.inliningInfo[index]);
+      }
+    }
+  }
+};
+FunctionInliningPass.recursivelySubstituteArguments = function(node, $arguments, values) {
+  if (node.symbol !== null) {
+    var index = $arguments.indexOf(node.symbol);
+    if (index >= 0) {
+      Node.replaceWith(node, values[index]);
+      return;
+    }
+  }
+  if (Node.hasChildren(node)) {
+    for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+      var child = node.children[i];
+      if (child !== null) {
+        FunctionInliningPass.recursivelySubstituteArguments(child, $arguments, values);
+      }
+    }
+  }
+};
+function InliningInfo(_0, _1, _2, _3) {
+  this.shouldInline = true;
+  this.bodyCalls = [];
+  this.symbol = _0;
+  this.returnValue = _1;
+  this.callSites = _2;
+  this.$arguments = _3;
+}
+function InliningGraph(graph, options) {
+  this.inliningInfo = [];
+  this.symbolToInfoIndex = new IntMap();
+  for (var i = 0; i < graph.callInfo.length; i = i + 1 | 0) {
+    var info = InliningGraph.createInliningInfo(graph.callInfo[i], options);
+    if (info !== null) {
+      this.symbolToInfoIndex.set(info.symbol.uniqueID, this.inliningInfo.length);
+      this.inliningInfo.push(info);
+    }
+  }
+  for (var i = 0; i < this.inliningInfo.length; i = i + 1 | 0) {
+    var info = this.inliningInfo[i];
+    var callSites = graph.callInfo[graph.symbolToInfoIndex.get(info.symbol.uniqueID)].callSites;
+    for (var j = 0; j < callSites.length; j = j + 1 | 0) {
+      var callSite = callSites[j];
+      for (var node = callSite.parent; node !== null; node = node.parent) {
+        if (node.kind === 15 && node.symbol.kind === 15) {
+          var index = this.symbolToInfoIndex.getOrDefault(node.symbol.uniqueID, -1);
+          if (index >= 0) {
+            var other = this.inliningInfo[index];
+            other.bodyCalls.push(info);
+          }
+        }
+      }
+    }
+  }
+  for (var i = 0; i < this.inliningInfo.length; i = i + 1 | 0) {
+    var info = this.inliningInfo[i];
+    info.shouldInline = !InliningGraph.containsInfiniteExpansion(info, []);
+  }
+}
+InliningGraph.containsInfiniteExpansion = function(info, symbols) {
+  if (symbols.indexOf(info.symbol) >= 0) {
+    return true;
+  }
+  symbols.push(info.symbol);
+  for (var i = 0; i < info.bodyCalls.length; i = i + 1 | 0) {
+    if (InliningGraph.containsInfiniteExpansion(info.bodyCalls[i], symbols)) {
+      return true;
+    }
+  }
+  symbols.pop();
+  return false;
+};
+InliningGraph.createInliningInfo = function(info, options) {
+  var symbol = info.symbol;
+  if (symbol.kind === 15 && ((symbol.flags & 512) !== 0 || options.optimize && options.targetFormat === 1)) {
     var block = symbol.node.children[2];
     if (block !== null && Node.hasChildren(block)) {
       var i = 0;
-      if ($this.options.removeAsserts) {
+      if (options.removeAsserts) {
         while (i < block.children.length && block.children[i].kind === 29) {
           i = i + 1 | 0;
         }
@@ -3047,66 +3146,34 @@ FunctionInliningPass.tryToInline = function($this, symbol) {
       if (i < block.children.length) {
         var last = block.children[i];
         if (last.kind === 25) {
-          FunctionInliningPass.recursivelyInlineFunctionCalls($this, last);
           var symbolCounts = new IntMap();
-          if (FunctionInliningPass.recursivelyCountArgumentUses($this, last, symbolCounts)) {
-            var $arguments = symbol.node.children[1].children;
+          if (InliningGraph.recursivelyCountArgumentUses(last, symbolCounts)) {
+            var $arguments = [];
+            var argumentVariables = symbol.node.children[1].children;
             var isSimpleSubstitution = true;
-            for (var j = 0; j < $arguments.length; j = j + 1 | 0) {
-              var argument = $arguments[j].symbol;
+            for (var j = 0; j < argumentVariables.length; j = j + 1 | 0) {
+              var argument = argumentVariables[j].symbol;
               if (symbolCounts.getOrDefault(argument.uniqueID, 0) !== 1) {
                 isSimpleSubstitution = false;
                 break;
               }
+              $arguments.push(argument);
             }
             if (isSimpleSubstitution) {
-              var callSites = $this.graph.callInfo[$this.graph.symbolToInfoIndex.get(symbol.uniqueID)].callSites;
-              for (var j = 0; j < callSites.length; j = j + 1 | 0) {
-                var callSite = callSites[j];
-                switch (callSite.kind) {
-                case 48:
-                  var clone = Node.clone(last.children[0]);
-                  var values = Node.removeChildren(callSite);
-                  var value = values.shift();
-                  for (var k = 0; k < values.length; k = k + 1 | 0) {
-                    FunctionInliningPass.recursivelyInlineFunctionCalls($this, values[k]);
-                  }
-                  FunctionInliningPass.recursivelySubstituteArguments($this, clone, $arguments, values);
-                  Node.become(callSite, clone);
-                  break;
-                case 51:
-                  break;
-                default:
-                  break;
-                }
-              }
-              symbol.flags = symbol.flags & -49153 | 32768;
+              return new InliningInfo(symbol, last.children[0], info.callSites, $arguments);
             }
           }
         }
       }
     }
   }
+  return null;
 };
-FunctionInliningPass.recursivelyInlineFunctionCalls = function($this, node) {
+InliningGraph.recursivelyCountArgumentUses = function(node, symbolCounts) {
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       var child = node.children[i];
-      if (child !== null) {
-        FunctionInliningPass.recursivelyInlineFunctionCalls($this, child);
-      }
-    }
-  }
-  var symbol = node.symbol;
-  if (symbol !== null) {
-    FunctionInliningPass.tryToInline($this, symbol);
-  }
-};
-FunctionInliningPass.recursivelyCountArgumentUses = function($this, node, symbolCounts) {
-  if (Node.hasChildren(node)) {
-    for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children[i];
-      if (child !== null && !FunctionInliningPass.recursivelyCountArgumentUses($this, child, symbolCounts)) {
+      if (child !== null && !InliningGraph.recursivelyCountArgumentUses(child, symbolCounts)) {
         return false;
       }
     }
@@ -3122,24 +3189,6 @@ FunctionInliningPass.recursivelyCountArgumentUses = function($this, node, symbol
     }
   }
   return true;
-};
-FunctionInliningPass.recursivelySubstituteArguments = function($this, node, $arguments, values) {
-  if (node.symbol !== null) {
-    for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-      if ($arguments[i].symbol === node.symbol) {
-        Node.become(node, values[i]);
-        return;
-      }
-    }
-  }
-  if (Node.hasChildren(node)) {
-    for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children[i];
-      if (child !== null) {
-        FunctionInliningPass.recursivelySubstituteArguments($this, child, $arguments, values);
-      }
-    }
-  }
 };
 function Member(_0) {
   this.type = null;
@@ -3300,7 +3349,7 @@ Resolver.accumulateSymbolFlags = function($this) {
       var siblingFlags = Resolver.symbolFlagsForNode($this, sibling);
       if ((flags & 4071) !== (siblingFlags & 4071)) {
         semanticErrorDifferentModifiers($this.log, sibling.children[0].range, declarationName.content.value, declarationName.range);
-        siblingFlags |= 131072;
+        siblingFlags |= 32768;
       }
       flags |= siblingFlags;
     }
@@ -3839,7 +3888,7 @@ Resolver.checkInsideBlock = function($this, node) {
 Resolver.checkDeclarationLocation = function($this, node, allowDeclaration) {
   var parent;
   for (parent = node.parent; parent !== null; parent = parent.parent) {
-    if (parent.symbol !== null && (parent.symbol.flags & 65536) !== 0) {
+    if (parent.symbol !== null && (parent.symbol.flags & 16384) !== 0) {
       break;
     }
     var kind = parent.kind;
@@ -3849,7 +3898,7 @@ Resolver.checkDeclarationLocation = function($this, node, allowDeclaration) {
     }
   }
   if (parent !== null) {
-    node.symbol.flags |= 65536;
+    node.symbol.flags |= 16384;
   }
 };
 Resolver.checkStatementLocation = function($this, node) {
@@ -4122,7 +4171,7 @@ Resolver.findModifierName = function(symbol, flag) {
   return null;
 };
 Resolver.redundantModifierIfPresent = function($this, symbol, flag, where) {
-  if ((symbol.flags & flag) !== 0 && (symbol.flags & 131072) === 0) {
+  if ((symbol.flags & flag) !== 0 && (symbol.flags & 32768) === 0) {
     var modifierName = Resolver.findModifierName(symbol, flag);
     if (modifierName !== null) {
       semanticErrorRedundantModifier($this.log, modifierName.range, modifierName.content.value, where);
@@ -4130,7 +4179,7 @@ Resolver.redundantModifierIfPresent = function($this, symbol, flag, where) {
   }
 };
 Resolver.unexpectedModifierIfPresent = function($this, symbol, flag, where) {
-  if ((symbol.flags & flag) !== 0 && (symbol.flags & 131072) === 0) {
+  if ((symbol.flags & flag) !== 0 && (symbol.flags & 32768) === 0) {
     var modifierName = Resolver.findModifierName(symbol, flag);
     if (modifierName !== null) {
       semanticErrorUnexpectedModifier($this.log, modifierName.range, modifierName.content.value, where);
@@ -4138,7 +4187,7 @@ Resolver.unexpectedModifierIfPresent = function($this, symbol, flag, where) {
   }
 };
 Resolver.expectedModifierIfAbsent = function($this, symbol, flag, where) {
-  if ((symbol.flags & flag) === 0 && (symbol.flags & 131072) === 0 && Resolver.findModifierName(symbol, flag) === null) {
+  if ((symbol.flags & flag) === 0 && (symbol.flags & 32768) === 0 && Resolver.findModifierName(symbol, flag) === null) {
     semanticErrorExpectedModifier($this.log, symbol.node.children[0].range, symbolFlagToName.get(flag), where);
   }
 };
@@ -6435,7 +6484,7 @@ function firstLineOf(text) {
   return index < 0 ? text : text.slice(0, index);
 }
 function syntaxErrorInvalidEscapeSequence(log, range, text) {
-  Log.error(log, range, "Invalid escape sequence " + firstLineOf(string.append(string.append("\"", text), "\"")));
+  Log.error(log, range, "Invalid escape sequence " + firstLineOf("\"" + text + "\""));
 }
 function syntaxErrorInvalidCharacter(log, range, text) {
   Log.error(log, range, "Invalid character literal " + firstLineOf(text));
@@ -7385,19 +7434,19 @@ function semanticWarningUnusedExpression(log, range) {
   Log.warning(log, range, "Unused expression");
 }
 function semanticWarningDuplicateModifier(log, range, modifier) {
-  Log.warning(log, range, "Duplicate modifier " + string.append(string.append("\"", modifier), "\""));
+  Log.warning(log, range, "Duplicate modifier " + ("\"" + modifier + "\""));
 }
 function semanticErrorRedundantModifier(log, range, modifier, where) {
-  Log.error(log, range, "Redundant modifier " + string.append(string.append("\"", modifier), "\"") + " " + where);
+  Log.error(log, range, "Redundant modifier " + ("\"" + modifier + "\"") + " " + where);
 }
 function semanticErrorUnexpectedModifier(log, range, modifier, where) {
-  Log.error(log, range, "Cannot use the " + string.append(string.append("\"", modifier), "\"") + " modifier " + where);
+  Log.error(log, range, "Cannot use the " + ("\"" + modifier + "\"") + " modifier " + where);
 }
 function semanticErrorExpectedModifier(log, range, modifier, where) {
-  Log.error(log, range, "Expected the " + string.append(string.append("\"", modifier), "\"") + " modifier " + where);
+  Log.error(log, range, "Expected the " + ("\"" + modifier + "\"") + " modifier " + where);
 }
 function semanticErrorDuplicateSymbol(log, range, name, previous) {
-  Log.error(log, range, string.append(string.append("\"", name), "\"") + " is already declared");
+  Log.error(log, range, "\"" + name + "\"" + " is already declared");
   if (previous.source !== null) {
     Log.note(log, previous, "The previous declaration is here");
   }
@@ -7412,16 +7461,16 @@ function semanticErrorUnexpectedType(log, range, type) {
   Log.error(log, range, "Unexpected " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorUndeclaredSymbol(log, range, name) {
-  Log.error(log, range, string.append(string.append("\"", name), "\"") + " is not declared");
+  Log.error(log, range, "\"" + name + "\"" + " is not declared");
 }
 function semanticErrorUnknownMemberSymbol(log, range, name, type) {
-  Log.error(log, range, string.append(string.append("\"", name), "\"") + " is not declared on " + ("type \"" + Type.toString(type) + "\""));
+  Log.error(log, range, "\"" + name + "\"" + " is not declared on " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorExtensionMissingTarget(log, range, name) {
-  Log.error(log, range, "No type named " + string.append(string.append("\"", name), "\"") + " to extend");
+  Log.error(log, range, "No type named " + ("\"" + name + "\"") + " to extend");
 }
 function semanticErrorDifferentModifiers(log, range, name, previous) {
-  Log.error(log, range, "Cannot merge multiple declarations for " + string.append(string.append("\"", name), "\"") + " with different modifiers");
+  Log.error(log, range, "Cannot merge multiple declarations for " + ("\"" + name + "\"") + " with different modifiers");
   if (previous.source !== null) {
     Log.note(log, previous, "The conflicting declaration is here");
   }
@@ -7436,13 +7485,13 @@ function semanticErrorUnexpectedStatement(log, range) {
   Log.error(log, range, "Cannot use this statement here");
 }
 function semanticErrorCyclicDeclaration(log, range, name) {
-  Log.error(log, range, "Cyclic declaration of " + string.append(string.append("\"", name), "\""));
+  Log.error(log, range, "Cyclic declaration of " + ("\"" + name + "\""));
 }
 function semanticErrorUnexpectedThis(log, range, name) {
-  Log.error(log, range, "Cannot use " + string.append(string.append("\"", name), "\"") + " outside a class or struct");
+  Log.error(log, range, "Cannot use " + ("\"" + name + "\"") + " outside a class or struct");
 }
 function semanticErrorStaticThis(log, range, name) {
-  Log.error(log, range, "Cannot access " + string.append(string.append("\"", name), "\"") + " from a static context");
+  Log.error(log, range, "Cannot access " + ("\"" + name + "\"") + " from a static context");
 }
 function semanticErrorIncompatibleTypes(log, range, from, to, isCastAllowed) {
   Log.error(log, range, "Cannot convert from " + ("type \"" + Type.toString(from) + "\"") + " to " + ("type \"" + Type.toString(to) + "\"") + (isCastAllowed ? " without a cast" : ""));
@@ -7454,10 +7503,10 @@ function semanticErrorBadType(log, range, type) {
   Log.error(log, range, "Cannot use " + ("type \"" + Type.toString(type) + "\"") + " here");
 }
 function semanticErrorMemberUnexpectedStatic(log, range, name) {
-  Log.error(log, range, "Cannot access static member " + string.append(string.append("\"", name), "\"") + " from an instance context");
+  Log.error(log, range, "Cannot access static member " + ("\"" + name + "\"") + " from an instance context");
 }
 function semanticErrorMemberUnexpectedInstance(log, range, name) {
-  Log.error(log, range, "Cannot access instance member " + string.append(string.append("\"", name), "\"") + " from a static context");
+  Log.error(log, range, "Cannot access instance member " + ("\"" + name + "\"") + " from a static context");
 }
 function semanticErrorMissingTypeContext(log, range) {
   Log.error(log, range, "Expression has no type context here");
@@ -7521,37 +7570,37 @@ function semanticErrorDuplicateBaseType(log, range, type) {
 }
 function semanticErrorAmbiguousSymbol(log, range, name, names) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
-    List.set(names, i, string.append(string.append("\"", names[i]), "\""));
+    List.set(names, i, "\"" + names[i] + "\"");
   }
-  Log.error(log, range, "Reference to " + string.append(string.append("\"", name), "\"") + " is ambiguous, could be " + names.join(" or "));
+  Log.error(log, range, "Reference to " + ("\"" + name + "\"") + " is ambiguous, could be " + names.join(" or "));
 }
 function semanticErrorUnmergedSymbol(log, range, name, types) {
   var names = [];
   for (var i = 0; i < types.length; i = i + 1 | 0) {
     names.push("type \"" + Type.toString(types[i]) + "\"");
   }
-  Log.error(log, range, "Member " + string.append(string.append("\"", name), "\"") + " has an ambiguous inherited type, could be " + names.join(" or "));
+  Log.error(log, range, "Member " + ("\"" + name + "\"") + " has an ambiguous inherited type, could be " + names.join(" or "));
 }
 function semanticErrorBadOverride(log, range, name, base, overridden) {
-  Log.error(log, range, string.append(string.append("\"", name), "\"") + " overrides another declaration with the same name in base " + ("type \"" + Type.toString(base) + "\""));
+  Log.error(log, range, "\"" + name + "\"" + " overrides another declaration with the same name in base " + ("type \"" + Type.toString(base) + "\""));
   if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorOverrideDifferentTypes(log, range, name, base, derived, overridden) {
-  Log.error(log, range, string.append(string.append("\"", name), "\"") + " must have the same signature as the method it overrides (expected " + ("type \"" + Type.toString(base) + "\"") + " but found " + ("type \"" + Type.toString(derived) + "\"") + ")");
+  Log.error(log, range, "\"" + name + "\"" + " must have the same signature as the method it overrides (expected " + ("type \"" + Type.toString(base) + "\"") + " but found " + ("type \"" + Type.toString(derived) + "\"") + ")");
   if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorModifierMissingOverride(log, range, name, overridden) {
-  Log.error(log, range, string.append(string.append("\"", name), "\"") + " overrides another symbol with the same name but is missing the \"override\" modifier");
+  Log.error(log, range, "\"" + name + "\"" + " overrides another symbol with the same name but is missing the \"override\" modifier");
   if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorCannotOverrideNonVirtual(log, range, name, overridden) {
-  Log.error(log, range, string.append(string.append("\"", name), "\"") + " cannot override a non-virtual method");
+  Log.error(log, range, "\"" + name + "\"" + " cannot override a non-virtual method");
   if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
@@ -7584,16 +7633,16 @@ function semanticErrorMissingSuperInitializer(log, range) {
   Log.error(log, range, "Missing call to \"super\" in initializer list");
 }
 function semanticErrorAlreadyInitialized(log, range, name, previous) {
-  Log.error(log, range, string.append(string.append("\"", name), "\"") + " is already initialized");
+  Log.error(log, range, "\"" + name + "\"" + " is already initialized");
   if (previous.source !== null) {
     Log.note(log, previous, "The previous initialization is here");
   }
 }
 function semanticErrorBadEnumToString(log, range, name, first, second, value) {
-  Log.error(log, range, "Cannot automatically generate \"toString\" for " + string.append(string.append("\"", name), "\"") + " because " + string.append(string.append("\"", first), "\"") + " and " + string.append(string.append("\"", second), "\"") + " both have the same value " + value.toString());
+  Log.error(log, range, "Cannot automatically generate \"toString\" for " + ("\"" + name + "\"") + " because " + ("\"" + first + "\"") + " and " + ("\"" + second + "\"") + " both have the same value " + value.toString());
 }
 function semanticErrorMissingReturn(log, range, name, type) {
-  Log.error(log, range, "All control paths for " + string.append(string.append("\"", name), "\"") + " must return a value of " + ("type \"" + Type.toString(type) + "\""));
+  Log.error(log, range, "All control paths for " + ("\"" + name + "\"") + " must return a value of " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorLambdaMissingReturn(log, range, type) {
   Log.error(log, range, "All control paths for lambda expression must return a value of " + ("type \"" + Type.toString(type) + "\""));

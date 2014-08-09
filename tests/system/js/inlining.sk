@@ -20,6 +20,18 @@ var bar = foo(foo(1));
 ");
 
 testJS("
+inline int foo(int bar) {
+  return Math.random() > 0.5 ? foo(bar) : 0;
+}
+var bar = foo(foo(1));
+", "
+function foo(bar) {
+  return Math.random() > 0.5 ? foo(bar) : 0;
+}
+var bar = foo(foo(1));
+");
+
+testJS("
 inline int foo(int x, int y) {
   return x + y;
 }
@@ -142,10 +154,10 @@ inline int bar(int baz) {
 foo(bar(foo(bar(0))));
 ", "
 function foo(baz) {
-  return bar(foo(baz));
+  return bar(baz);
 }
 function bar(baz) {
-  return foo(bar(baz));
+  return foo(baz);
 }
 foo(bar(foo(bar(0))));
 ");
@@ -166,4 +178,36 @@ function bar(baz) {
   return foo(bar(baz));
 }
 foo(bar(foo(bar(0))));
+");
+
+testJS("
+inline int foo(int x) {
+  return x + 1;
+}
+export int bar(int y) {
+  return foo(baz(y));
+}
+inline int baz(int z) {
+  return z + 2;
+}
+", "
+function bar(y) {
+  return (y + 2 | 0) + 1 | 0;
+}
+");
+
+testJS("
+inline int foo(int x) {
+  return x + 1;
+}
+export int bar(int y) {
+  return baz(foo(y));
+}
+inline int baz(int z) {
+  return z + 2;
+}
+", "
+function bar(y) {
+  return (y + 1 | 0) + 2 | 0;
+}
 ");
