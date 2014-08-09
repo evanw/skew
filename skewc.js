@@ -1447,14 +1447,14 @@ js.Emitter.prototype.emitProgram = function(program) {
   return [this.currentSource];
 };
 js.Emitter.appendSource = function($this, source) {
-  if ($this.options.jsSourceMap && $this.currentColumn > 0) {
-    js.Emitter.emit($this, "\n");
-  }
   $this.currentSource.contents = $this.currentSource.contents + source.contents;
   if ($this.options.jsSourceMap) {
     for (var i = 0, n = Source.lineCount(source); i < n; i = i + 1 | 0) {
       SourceMapGenerator.addMapping($this.generator, source, i, 0, ($this.currentLine = $this.currentLine + 1 | 0) - 1 | 0, 0);
     }
+  }
+  if (source.contents.charCodeAt(source.contents.length - 1 | 0) !== 10) {
+    js.Emitter.emit($this, "\n");
   }
 };
 js.Emitter.addMapping = function($this, node) {

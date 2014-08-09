@@ -122,14 +122,14 @@ namespace js {
     }
 
     void appendSource(Source source) {
-      if (options.jsSourceMap && currentColumn > 0) {
-        emit("\n");
-      }
       currentSource.contents = currentSource.contents.append(source.contents);
       if (options.jsSourceMap) {
         for (var i = 0, n = source.lineCount(); i < n; i++) {
           generator.addMapping(source, i, 0, currentLine++, 0);
         }
+      }
+      if (source.contents.codeUnitAt(source.contents.length - 1) != '\n') {
+        emit("\n");
       }
     }
 
