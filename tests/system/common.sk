@@ -16,7 +16,7 @@ export void runJS(string input, string expected) {
   options.targetFormat = TargetFormat.JS;
   Compiler compiler = Compiler();
   CompilerResult result = compiler.compile(options);
-  if (result.outputs != null) {
+  if (result.outputs.length > 0) {
     string output = "";
     int i;
     for (i = 0; i < result.outputs.length; i++) {
