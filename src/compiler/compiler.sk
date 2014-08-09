@@ -2,7 +2,7 @@ interface IEmitter {
   virtual List<Source> emitProgram(Node program);
 }
 
-enum TargetFormat {
+export enum TargetFormat {
   // Target languages that run the resolver
   NONE,
   JS,
@@ -13,7 +13,7 @@ enum TargetFormat {
   XML_AST,
 }
 
-in TargetFormat {
+export in TargetFormat {
   bool shouldRunResolver() {
     return this >= NONE && this <= JS;
   }
@@ -38,7 +38,7 @@ class CompilerResult {
   Resolver resolver;
 }
 
-class Compiler {
+export class Compiler {
   static Source nativeLibrarySource = null;
   static Node nativeLibraryFile = null;
 
@@ -107,7 +107,7 @@ class Compiler {
     return text;
   }
 
-  CompilerResult compile(CompilerOptions options) {
+  export CompilerResult compile(CompilerOptions options) {
     var totalStart = now();
     var program = Node.createProgram({});
     List<Source> outputs = {};
@@ -128,7 +128,7 @@ class Compiler {
     }
 
     // Resolve everything together
-    Resolver resolver;
+    Resolver resolver = null;
     if (options.targetFormat.shouldRunResolver()) {
       var resolveStart = now();
       resolver = Resolver(log);

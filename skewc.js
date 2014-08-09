@@ -853,7 +853,13 @@ Collector.collectChildStatements = function($this, node) {
     }
   }
 };
-var TargetFormat = {};
+var TargetFormat = {
+  NONE: 0,
+  JS: 1,
+  LISP_AST: 2,
+  JSON_AST: 3,
+  XML_AST: 4
+};
 TargetFormat.shouldRunResolver = function($this) {
   return $this >= 0 && $this <= 1;
 };
@@ -940,7 +946,7 @@ Compiler.sourceStatistics = function(name, sources) {
   }
   return text;
 };
-Compiler.compile = function($this, options) {
+Compiler.prototype.compile = function(options) {
   var totalStart = now();
   var program = Node.withChildren(new Node(0), []);
   var outputs = [];
@@ -948,21 +954,21 @@ Compiler.compile = function($this, options) {
     Node.appendChild(program, Node.clone(Compiler.nativeLibraryFile));
   } else {
     Compiler.nativeLibrarySource = new Source("<native>", NATIVE_LIBRARY);
-    Compiler.processInput($this, program, Compiler.nativeLibrarySource);
+    Compiler.processInput(this, program, Compiler.nativeLibrarySource);
     Compiler.nativeLibraryFile = Node.clone(program.children[0]);
   }
   options.inputs.unshift(Compiler.nativeLibrarySource);
   for (var i = 1; i < options.inputs.length; i = i + 1 | 0) {
-    Compiler.processInput($this, program, options.inputs[i]);
+    Compiler.processInput(this, program, options.inputs[i]);
   }
-  var resolver;
+  var resolver = null;
   if (TargetFormat.shouldRunResolver(options.targetFormat)) {
     var resolveStart = now();
-    resolver = new Resolver($this.log);
+    resolver = new Resolver(this.log);
     Resolver.run(resolver, program);
-    $this.resolvingTime += now() - resolveStart;
+    this.resolvingTime += now() - resolveStart;
   }
-  if ($this.log.errorCount === 0) {
+  if (this.log.errorCount === 0) {
     var emitter = null;
     switch (options.targetFormat) {
     case 0:
@@ -986,25 +992,25 @@ Compiler.compile = function($this, options) {
       if (TargetFormat.shouldRunResolver(options.targetFormat)) {
         var callGraphStart = now();
         var graph = new CallGraph(program);
-        $this.callGraphTime += now() - callGraphStart;
+        this.callGraphTime += now() - callGraphStart;
         var instanceToStaticStart = now();
         InstanceToStaticPass.run(graph, options);
-        $this.instanceToStaticTime += now() - instanceToStaticStart;
+        this.instanceToStaticTime += now() - instanceToStaticStart;
         var functionInliningStart = now();
         FunctionInliningPass.run(graph, options);
-        $this.functionInliningTime += now() - functionInliningStart;
+        this.functionInliningTime += now() - functionInliningStart;
         if (options.optimize) {
           var constantFoldingStart = now();
           ConstantFolder.foldConstants(resolver.constantFolder, program);
-          $this.constantFoldingTime += now() - constantFoldingStart;
+          this.constantFoldingTime += now() - constantFoldingStart;
         }
       }
       var emitStart = now();
       outputs = emitter.emitProgram(program);
-      $this.emitTime += now() - emitStart;
+      this.emitTime += now() - emitStart;
     }
   }
-  $this.totalTime += now() - totalStart;
+  this.totalTime += now() - totalStart;
   return new CompilerResult(options, outputs, program, resolver);
 };
 Compiler.processInput = function($this, program, source) {
@@ -5943,7 +5949,7 @@ LanguageService.prototype.checkForDiagnostics = function(input) {
   var compiler = new Compiler();
   this.previousSource = new Source("<input>", input);
   options.inputs = [this.previousSource];
-  this.previousResult = Compiler.compile(compiler, options);
+  this.previousResult = compiler.compile(options);
   var diagnostics = [];
   for (var i = 0; i < compiler.log.diagnostics.length; i = i + 1 | 0) {
     var diagnostic = compiler.log.diagnostics[i];
@@ -5969,7 +5975,7 @@ LanguageService.prototype.checkForCompletions = function(input, line, column) {
   var compiler = new Compiler();
   this.previousSource = new Source("<input>", input);
   options.inputs = [this.previousSource];
-  this.previousResult = Compiler.compile(compiler, options);
+  this.previousResult = compiler.compile(options);
   if (this.previousResult.program !== null && column >= 0 && column <= Source.contentsOfLine(this.previousSource, line).length && this.previousResult.program.children.length === 2) {
     var index = this.previousSource.lineOffsets[line] + column | 0;
     var previousFile = this.previousResult.program.children[1];
@@ -6316,7 +6322,7 @@ frontend.main = function(args) {
     return 1;
   }
   var compiler = new Compiler();
-  var result = Compiler.compile(compiler, options);
+  var result = compiler.compile(options);
   var log = compiler.log;
   for (var i = 0; i < log.diagnostics.length; i = i + 1 | 0) {
     var diagnostic = log.diagnostics[i];
