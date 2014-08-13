@@ -161,21 +161,21 @@ Node.createCall = function(value, $arguments) {
 };
 Node.createParameterize = function(type, types) {
   types.unshift(type);
-  return Node.withChildren(new Node(53), types);
+  return Node.withChildren(new Node(52), types);
 };
 Node.createLambda = function($arguments, block) {
   $arguments.push(block);
-  return Node.withChildren(new Node(56), $arguments);
+  return Node.withChildren(new Node(55), $arguments);
 };
 Node.createFunctionType = function(result, $arguments) {
   $arguments.unshift(result);
-  return Node.withChildren(new Node(60), $arguments);
+  return Node.withChildren(new Node(59), $arguments);
 };
 Node.createBinary = function(kind, left, right) {
-  if (kind === 89 && left.kind === 78) {
+  if (kind === 88 && left.kind === 77) {
     var target = left.children[0];
     var index = left.children[1];
-    return Node.withChildren(new Node(100), [Node.remove(target), Node.remove(index), right]);
+    return Node.withChildren(new Node(99), [Node.remove(target), Node.remove(index), right]);
   }
   return Node.withChildren(new Node(kind), [left, right]);
 };
@@ -217,42 +217,42 @@ Node.invertBooleanCondition = function($this, cache) {
   case 40:
     $this.kind = 39;
     return;
-  case 61:
+  case 60:
     Node.become($this, Node.remove($this.children[0]));
     return;
-  case 74:
-    $this.kind = 84;
+  case 73:
+    $this.kind = 83;
     return;
-  case 84:
-    $this.kind = 74;
+  case 83:
+    $this.kind = 73;
     return;
-  case 82:
+  case 81:
+    $this.kind = 80;
+    Node.invertBooleanCondition($this.children[0], cache);
+    Node.invertBooleanCondition($this.children[1], cache);
+    return;
+  case 80:
     $this.kind = 81;
     Node.invertBooleanCondition($this.children[0], cache);
     Node.invertBooleanCondition($this.children[1], cache);
     return;
-  case 81:
-    $this.kind = 82;
-    Node.invertBooleanCondition($this.children[0], cache);
-    Node.invertBooleanCondition($this.children[1], cache);
-    return;
+  case 78:
+  case 74:
   case 79:
   case 75:
-  case 80:
-  case 76:
     if (!Type.isReal(TypeCache.commonImplicitType(cache, $this.children[0].type, $this.children[1].type), cache)) {
       switch ($this.kind) {
-      case 79:
-        $this.kind = 76;
-        break;
-      case 75:
-        $this.kind = 80;
-        break;
-      case 80:
+      case 78:
         $this.kind = 75;
         break;
-      case 76:
+      case 74:
         $this.kind = 79;
+        break;
+      case 79:
+        $this.kind = 74;
+        break;
+      case 75:
+        $this.kind = 78;
         break;
       }
       return;
@@ -260,7 +260,7 @@ Node.invertBooleanCondition = function($this, cache) {
     break;
   }
   var children = Node.removeChildren($this);
-  Node.become($this, Node.withType(Node.withChildren(new Node(61), [Node.withChildren(Node.clone($this), children)]), cache.boolType));
+  Node.become($this, Node.withType(Node.withChildren(new Node(60), [Node.withChildren(Node.clone($this), children)]), cache.boolType));
 };
 Node.blockAlwaysEndsWithReturn = function($this) {
   if (!Node.hasChildren($this)) {
@@ -453,7 +453,7 @@ NodeKind.isFunction = function($this) {
   return $this >= 14 && $this <= 15;
 };
 NodeKind.isExpression = function($this) {
-  return $this >= 34 && $this <= 100;
+  return $this >= 34 && $this <= 99;
 };
 NodeKind.isConstant = function($this) {
   return $this >= 38 && $this <= 44;
@@ -462,19 +462,19 @@ NodeKind.isCall = function($this) {
   return $this >= 48 && $this <= 49;
 };
 NodeKind.isUnaryOperator = function($this) {
-  return $this >= 61 && $this <= 68;
+  return $this >= 60 && $this <= 67;
 };
 NodeKind.isUnaryStorageOperator = function($this) {
-  return $this >= 65 && $this <= 68;
+  return $this >= 64 && $this <= 67;
 };
 NodeKind.isBinaryOperator = function($this) {
-  return $this >= 69 && $this <= 99;
+  return $this >= 68 && $this <= 98;
 };
 NodeKind.isBinaryStorageOperator = function($this) {
-  return $this >= 89 && $this <= 99;
+  return $this >= 88 && $this <= 98;
 };
 NodeKind.isCast = function($this) {
-  return $this >= 54 && $this <= 55;
+  return $this >= 53 && $this <= 54;
 };
 NodeKind.isReal = function($this) {
   return $this >= 42 && $this <= 43;
@@ -593,104 +593,102 @@ NodeKind.toString = function($this) {
   case 50:
     return "ERROR";
   case 51:
-    return "BIND";
-  case 52:
     return "SEQUENCE";
-  case 53:
+  case 52:
     return "PARAMETERIZE";
-  case 54:
+  case 53:
     return "CAST";
-  case 55:
+  case 54:
     return "IMPLICIT_CAST";
-  case 56:
+  case 55:
     return "LAMBDA";
-  case 57:
+  case 56:
     return "DEFAULT";
-  case 58:
+  case 57:
     return "UNTYPED";
-  case 59:
+  case 58:
     return "VAR";
-  case 60:
+  case 59:
     return "FUNCTION_TYPE";
-  case 61:
+  case 60:
     return "NOT";
-  case 62:
+  case 61:
     return "POSITIVE";
-  case 63:
+  case 62:
     return "NEGATIVE";
-  case 64:
+  case 63:
     return "COMPLEMENT";
-  case 65:
+  case 64:
     return "PREFIX_INCREMENT";
-  case 66:
+  case 65:
     return "PREFIX_DECREMENT";
-  case 67:
+  case 66:
     return "POSTFIX_INCREMENT";
-  case 68:
+  case 67:
     return "POSTFIX_DECREMENT";
-  case 69:
+  case 68:
     return "ADD";
-  case 70:
+  case 69:
     return "BITWISE_AND";
-  case 71:
+  case 70:
     return "BITWISE_OR";
-  case 72:
+  case 71:
     return "BITWISE_XOR";
-  case 73:
+  case 72:
     return "DIVIDE";
-  case 74:
+  case 73:
     return "EQUAL";
-  case 75:
+  case 74:
     return "GREATER_THAN";
-  case 76:
+  case 75:
     return "GREATER_THAN_OR_EQUAL";
-  case 77:
+  case 76:
     return "IN";
-  case 78:
+  case 77:
     return "INDEX";
-  case 79:
+  case 78:
     return "LESS_THAN";
-  case 80:
+  case 79:
     return "LESS_THAN_OR_EQUAL";
-  case 81:
+  case 80:
     return "LOGICAL_AND";
-  case 82:
+  case 81:
     return "LOGICAL_OR";
-  case 83:
+  case 82:
     return "MULTIPLY";
-  case 84:
+  case 83:
     return "NOT_EQUAL";
-  case 85:
+  case 84:
     return "REMAINDER";
-  case 86:
+  case 85:
     return "SHIFT_LEFT";
-  case 87:
+  case 86:
     return "SHIFT_RIGHT";
-  case 88:
+  case 87:
     return "SUBTRACT";
-  case 89:
+  case 88:
     return "ASSIGN";
-  case 90:
+  case 89:
     return "ASSIGN_ADD";
-  case 91:
+  case 90:
     return "ASSIGN_BITWISE_AND";
-  case 92:
+  case 91:
     return "ASSIGN_BITWISE_OR";
-  case 93:
+  case 92:
     return "ASSIGN_BITWISE_XOR";
-  case 94:
+  case 93:
     return "ASSIGN_DIVIDE";
-  case 95:
+  case 94:
     return "ASSIGN_MULTIPLY";
-  case 96:
+  case 95:
     return "ASSIGN_REMAINDER";
-  case 97:
+  case 96:
     return "ASSIGN_SHIFT_LEFT";
-  case 98:
+  case 97:
     return "ASSIGN_SHIFT_RIGHT";
-  case 99:
+  case 98:
     return "ASSIGN_SUBTRACT";
-  case 100:
+  case 99:
     return "ASSIGN_INDEX";
   default:
     return "";
@@ -1850,32 +1848,30 @@ js.Emitter.emitExpression = function($this, node, precedence) {
     js.Emitter.emitSuperCall($this, node);
     break;
   case 51:
-    js.Emitter.emitExpression($this, node.children[0], precedence);
-    break;
-  case 52:
     $this.isStartOfExpression = wasStartOfExpression;
     js.Emitter.emitSequence($this, node, precedence);
     break;
-  case 56:
+  case 55:
     js.Emitter.emitLambda($this, node, wasStartOfExpression);
     break;
-  case 57:
+  case 56:
     js.Emitter.emitDefault($this, node);
     break;
-  case 58:
+  case 57:
     js.Emitter.emitExpression($this, node.children[0], precedence);
     break;
-  case 78:
+  case 77:
     js.Emitter.emitIndex($this, node, precedence);
     break;
-  case 100:
+  case 99:
     js.Emitter.emitTertiary($this, node, precedence);
     break;
+  case 53:
   case 54:
-  case 55:
     $this.isStartOfExpression = wasStartOfExpression;
     js.Emitter.emitExpression($this, node.children[1], precedence);
     break;
+  case 60:
   case 61:
   case 62:
   case 63:
@@ -1883,10 +1879,10 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   case 65:
   case 66:
   case 67:
-  case 68:
     js.Emitter.emitUnary($this, node, precedence);
     break;
-  case 69:
+  case 68:
+  case 88:
   case 89:
   case 90:
   case 91:
@@ -1897,7 +1893,7 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   case 96:
   case 97:
   case 98:
-  case 99:
+  case 69:
   case 70:
   case 71:
   case 72:
@@ -1905,7 +1901,7 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   case 74:
   case 75:
   case 76:
-  case 77:
+  case 78:
   case 79:
   case 80:
   case 81:
@@ -1915,7 +1911,6 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   case 85:
   case 86:
   case 87:
-  case 88:
     js.Emitter.emitBinary($this, node, precedence);
     break;
   default:
@@ -2019,7 +2014,7 @@ js.Emitter.emitUnary = function($this, node, precedence) {
   var isPostfix = info.precedence === 14;
   if (!isPostfix) {
     js.Emitter.emit($this, info.text);
-    if (node.kind === 62 && (value.kind === 62 || value.kind === 65) || node.kind === 63 && (value.kind === 63 || value.kind === 66 || value.kind === 41 && value.content.value < 0)) {
+    if (node.kind === 61 && (value.kind === 61 || value.kind === 64) || node.kind === 62 && (value.kind === 62 || value.kind === 65 || value.kind === 41 && value.content.value < 0)) {
       js.Emitter.emit($this, " ");
     }
   }
@@ -2037,7 +2032,7 @@ js.Emitter.emitBinary = function($this, node, precedence) {
     js.Emitter.emit($this, "(");
   }
   js.Emitter.emitExpression($this, node.children[0], info.precedence + (info.associativity === 2 | 0) | 0);
-  js.Emitter.emit($this, node.kind === 74 ? " === " : node.kind === 84 ? " !== " : " " + info.text + " ");
+  js.Emitter.emit($this, node.kind === 73 ? " === " : node.kind === 83 ? " !== " : " " + info.text + " ");
   js.Emitter.emitExpression($this, node.children[1], info.precedence + (info.associativity === 1 | 0) | 0);
   if (info.precedence < precedence) {
     js.Emitter.emit($this, ")");
@@ -2064,16 +2059,16 @@ js.Emitter.emitTertiary = function($this, node, precedence) {
 };
 js.Emitter.alwaysConvertsOperandsToInt = function(kind) {
   switch (kind) {
-  case 71:
   case 70:
-  case 72:
+  case 69:
+  case 71:
+  case 85:
   case 86:
-  case 87:
-  case 92:
   case 91:
-  case 93:
+  case 90:
+  case 92:
+  case 96:
   case 97:
-  case 98:
     return true;
   default:
     return false;
@@ -2084,14 +2079,14 @@ js.Emitter.isExpressionUsed = function(node) {
   if (!NodeKind.isExpression(parent.kind)) {
     return false;
   }
-  if (parent.kind === 52 && (!js.Emitter.isExpressionUsed(parent) || parent.children.indexOf(node) < (parent.children.length - 1 | 0))) {
+  if (parent.kind === 51 && (!js.Emitter.isExpressionUsed(parent) || parent.children.indexOf(node) < (parent.children.length - 1 | 0))) {
     return false;
   }
   return true;
 };
 js.Emitter.patchNode = function($this, node, context) {
   switch (node.kind) {
-  case 56:
+  case 55:
     context.lambdaCount = context.lambdaCount + 1 | 0;
     break;
   case 14:
@@ -2100,10 +2095,7 @@ js.Emitter.patchNode = function($this, node, context) {
   case 15:
     js.PatchContext.setFunction(context, node);
     break;
-  case 51:
-    js.Emitter.patchBind($this, node, context);
-    break;
-  case 54:
+  case 53:
     js.Emitter.patchCast($this, node, context);
     break;
   case 10:
@@ -2121,26 +2113,26 @@ js.Emitter.patchNode = function($this, node, context) {
       Node.become(node, Node.withChildren(new Node(46), [new Node(36), Node.clone(node)]));
     }
     break;
-  case 69:
-  case 88:
-  case 83:
-  case 73:
-  case 85:
-    if (node.type === $this.cache.intType && (node.kind === 83 || !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind))) {
+  case 68:
+  case 87:
+  case 82:
+  case 72:
+  case 84:
+    if (node.type === $this.cache.intType && (node.kind === 82 || !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind))) {
       Node.become(node, Node.withRange(js.Emitter.createBinaryInt($this, node.kind, Node.remove(node.children[0]), Node.remove(node.children[1])), node.range));
     }
     break;
+  case 64:
   case 65:
-  case 66:
-  case 68:
   case 67:
+  case 66:
     js.Emitter.patchUnary($this, node, context);
     break;
-  case 90:
-  case 99:
-  case 95:
+  case 89:
+  case 98:
   case 94:
-  case 96:
+  case 93:
+  case 95:
     js.Emitter.patchAssign($this, node, context);
     break;
   }
@@ -2162,7 +2154,7 @@ js.Emitter.patchNode = function($this, node, context) {
     }
   }
   switch (node.kind) {
-  case 56:
+  case 55:
     context.lambdaCount = context.lambdaCount - 1 | 0;
     break;
   case 14:
@@ -2173,21 +2165,21 @@ js.Emitter.patchNode = function($this, node, context) {
 };
 js.Emitter.patchAssign = function($this, node, context) {
   if (node.type === $this.cache.intType) {
-    var isPostfix = node.kind === 67 || node.kind === 68;
-    var isIncrement = node.kind === 65 || node.kind === 67;
+    var isPostfix = node.kind === 66 || node.kind === 67;
+    var isIncrement = node.kind === 64 || node.kind === 66;
     var left = node.children[0];
     var right = node.children[1];
-    var kind = node.kind === 90 ? 69 : node.kind === 99 ? 88 : node.kind === 95 ? 83 : node.kind === 94 ? 73 : 85;
+    var kind = node.kind === 89 ? 68 : node.kind === 98 ? 87 : node.kind === 94 ? 82 : node.kind === 93 ? 72 : 84;
     Node.become(node, Node.withRange(js.Emitter.createBinaryIntAssignment($this, context, kind, Node.remove(left), Node.remove(right)), node.range));
   }
 };
 js.Emitter.patchUnary = function($this, node, context) {
   if (node.type === $this.cache.intType) {
-    var isPostfix = node.kind === 67 || node.kind === 68;
-    var isIncrement = node.kind === 65 || node.kind === 67;
-    var result = js.Emitter.createBinaryIntAssignment($this, context, isIncrement ? 69 : 88, Node.remove(node.children[0]), Node.withContent(new Node(41), new IntContent(1)));
+    var isPostfix = node.kind === 66 || node.kind === 67;
+    var isIncrement = node.kind === 64 || node.kind === 66;
+    var result = js.Emitter.createBinaryIntAssignment($this, context, isIncrement ? 68 : 87, Node.remove(node.children[0]), Node.withContent(new Node(41), new IntContent(1)));
     if (isPostfix && js.Emitter.isExpressionUsed(node)) {
-      result = js.Emitter.createBinaryInt($this, isIncrement ? 88 : 69, result, Node.withContent(new Node(41), new IntContent(1)));
+      result = js.Emitter.createBinaryInt($this, isIncrement ? 87 : 68, result, Node.withContent(new Node(41), new IntContent(1)));
     }
     Node.become(node, Node.withType(Node.withRange(result, node.range), node.type));
   }
@@ -2195,31 +2187,11 @@ js.Emitter.patchUnary = function($this, node, context) {
 js.Emitter.patchCast = function($this, node, context) {
   var value = node.children[1];
   if (node.type === $this.cache.boolType && value.type !== $this.cache.boolType) {
-    Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(61), [Node.remove(value)]), node.range), node.type));
+    Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(60), [Node.remove(value)]), node.range), node.type));
   } else if (node.type === $this.cache.intType && !Type.isInteger(value.type, $this.cache) && !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind)) {
-    Node.become(node, Node.withType(Node.withRange(Node.createBinary(71, Node.remove(value), Node.withContent(new Node(41), new IntContent(0))), node.range), node.type));
+    Node.become(node, Node.withType(Node.withRange(Node.createBinary(70, Node.remove(value), Node.withContent(new Node(41), new IntContent(0))), node.range), node.type));
   } else if (Type.isReal(node.type, $this.cache) && !Type.isNumeric(value.type, $this.cache)) {
-    Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(62), [Node.remove(value)]), node.range), node.type));
-  }
-};
-js.Emitter.patchBind = function($this, node, context) {
-  if (node.symbol.kind === 16) {
-    var $function = node.children[0];
-    var target;
-    var name;
-    if ($function.kind === 46) {
-      target = Node.remove($function.children[0]);
-      name = Node.remove($function.children[1]);
-    } else {
-      target = new Node(36);
-      name = Node.remove($function);
-    }
-    if (js.Emitter.isSimpleNameAccess(target)) {
-      Node.become(node, Node.withRange(Node.createCall(Node.withChildren(new Node(46), [Node.withChildren(new Node(46), [Node.clone(target), name]), Node.withContent(new Node(34), new StringContent("bind"))]), [target]), node.range));
-    } else {
-      var temporaryName = Node.withContent(new Node(34), new StringContent("$temp"));
-      Node.become(node, Node.withRange(Node.withChildren(new Node(47), [Node.withChildren(new Node(16), [Node.clone(temporaryName), null, target]), Node.createCall(Node.withChildren(new Node(46), [Node.withChildren(new Node(46), [Node.clone(temporaryName), name]), Node.withContent(new Node(34), new StringContent("bind"))]), [temporaryName])]), node.range));
-    }
+    Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(61), [Node.remove(value)]), node.range), node.type));
   }
 };
 js.Emitter.patchConstructor = function($this, node, context) {
@@ -2233,29 +2205,29 @@ js.Emitter.patchConstructor = function($this, node, context) {
   if (memberInitializers !== null) {
     for (var i = 0; i < memberInitializers.children.length; i = i + 1 | 0) {
       var child = memberInitializers.children[i];
-      Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(30), [Node.createBinary(89, Node.remove(child.children[0]), Node.remove(child.children[1]))]));
+      Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(30), [Node.createBinary(88, Node.remove(child.children[0]), Node.remove(child.children[1]))]));
     }
   }
   js.PatchContext.setFunction(context, node);
 };
 js.Emitter.createBinaryInt = function($this, kind, left, right) {
-  if (kind === 83) {
+  if (kind === 82) {
     $this.needMathImul = true;
     return Node.withType(Node.createCall(Node.withContent(new Node(34), new StringContent("$imul")), [left, right]), $this.cache.intType);
   }
-  return Node.withType(Node.createBinary(71, Node.withType(Node.createBinary(kind, left, right), $this.cache.intType), Node.withType(Node.withContent(new Node(41), new IntContent(0)), $this.cache.intType)), $this.cache.intType);
+  return Node.withType(Node.createBinary(70, Node.withType(Node.createBinary(kind, left, right), $this.cache.intType), Node.withType(Node.withContent(new Node(41), new IntContent(0)), $this.cache.intType)), $this.cache.intType);
 };
 js.Emitter.isSimpleNameAccess = function(node) {
   return node.kind === 34 || node.kind === 36 || node.kind === 46 && js.Emitter.isSimpleNameAccess(node.children[0]);
 };
 js.Emitter.createBinaryIntAssignment = function($this, context, kind, left, right) {
   if (js.Emitter.isSimpleNameAccess(left)) {
-    return Node.createBinary(89, Node.clone(left), js.Emitter.createBinaryInt($this, kind, left, right));
+    return Node.createBinary(88, Node.clone(left), js.Emitter.createBinaryInt($this, kind, left, right));
   }
   var target = Node.remove(left.children[0]);
   var temporaryName = Node.withContent(new Node(34), new StringContent("$temp"));
   var dot = Node.withChildren(new Node(46), [temporaryName, Node.remove(left.children[1])]);
-  return Node.withType(Node.withChildren(new Node(47), [Node.withChildren(new Node(16), [Node.clone(temporaryName), null, target]), Node.withType(Node.createBinary(89, dot, js.Emitter.createBinaryInt($this, kind, Node.clone(dot), right)), $this.cache.intType)]), $this.cache.intType);
+  return Node.withType(Node.withChildren(new Node(47), [Node.withChildren(new Node(16), [Node.clone(temporaryName), null, target]), Node.withType(Node.createBinary(88, dot, js.Emitter.createBinaryInt($this, kind, Node.clone(dot), right)), $this.cache.intType)]), $this.cache.intType);
 };
 js.Emitter.hasCompoundName = function($this, symbol) {
   var enclosingSymbol = symbol.enclosingSymbol;
@@ -2732,8 +2704,6 @@ CallGraph.visit = function($this, node) {
     if (value.symbol !== null && SymbolKind.isFunction(value.symbol.kind)) {
       CallGraph.recordCallSite($this, value.symbol, node);
     }
-  } else if (node.kind === 51) {
-    CallGraph.recordCallSite($this, node.symbol, node);
   } else if (node.kind === 15) {
     CallGraph.recordCallSite($this, node.symbol, null);
   }
@@ -2814,34 +2784,34 @@ ConstantFolder.foldConstants = function($this, node) {
     var value = node.children[0];
     var valueKind = value.kind;
     if (NodeKind.isBool(valueKind)) {
-      if (kind === 61) {
+      if (kind === 60) {
         ConstantFolder.flattenBool($this, node, value.kind !== 39);
       }
     } else if (valueKind === 41) {
-      if (kind === 62) {
+      if (kind === 61) {
         ConstantFolder.flattenInt($this, node, +value.content.value);
-      } else if (kind === 63) {
+      } else if (kind === 62) {
         ConstantFolder.flattenInt($this, node, -value.content.value);
-      } else if (kind === 64) {
+      } else if (kind === 63) {
         ConstantFolder.flattenInt($this, node, ~value.content.value);
       }
     } else if (NodeKind.isReal(valueKind)) {
-      if (kind === 62) {
+      if (kind === 61) {
         ConstantFolder.flattenReal($this, node, +value.content.value);
-      } else if (kind === 63) {
+      } else if (kind === 62) {
         ConstantFolder.flattenReal($this, node, -value.content.value);
       }
-    } else if (kind === 61) {
+    } else if (kind === 60) {
       switch (valueKind) {
-      case 61:
-      case 74:
-      case 84:
-      case 82:
+      case 60:
+      case 73:
+      case 83:
       case 81:
+      case 80:
+      case 78:
+      case 74:
       case 79:
       case 75:
-      case 80:
-      case 76:
         Node.invertBooleanCondition(value, $this.cache);
         Node.become(node, value);
         break;
@@ -2856,100 +2826,100 @@ ConstantFolder.foldConstants = function($this, node) {
     }
     if (NodeKind.isBool(valueKind)) {
       switch (kind) {
-      case 81:
+      case 80:
         ConstantFolder.flattenBool($this, node, left.kind === 39 && right.kind === 39);
         break;
-      case 82:
+      case 81:
         ConstantFolder.flattenBool($this, node, left.kind === 39 || right.kind === 39);
         break;
-      case 74:
+      case 73:
         ConstantFolder.flattenBool($this, node, left.kind === 39 === (right.kind === 39));
         break;
-      case 84:
+      case 83:
         ConstantFolder.flattenBool($this, node, left.kind === 39 !== (right.kind === 39));
         break;
       }
     } else if (valueKind === 41) {
       switch (kind) {
-      case 69:
+      case 68:
         ConstantFolder.flattenInt($this, node, left.content.value + right.content.value | 0);
         break;
-      case 88:
+      case 87:
         ConstantFolder.flattenInt($this, node, left.content.value - right.content.value | 0);
         break;
-      case 83:
+      case 82:
         ConstantFolder.flattenInt($this, node, $imul(left.content.value, right.content.value));
         break;
-      case 73:
+      case 72:
         ConstantFolder.flattenInt($this, node, left.content.value / right.content.value | 0);
         break;
-      case 85:
+      case 84:
         ConstantFolder.flattenInt($this, node, left.content.value % right.content.value | 0);
         break;
-      case 86:
+      case 85:
         ConstantFolder.flattenInt($this, node, left.content.value << right.content.value);
         break;
-      case 87:
+      case 86:
         ConstantFolder.flattenInt($this, node, left.content.value >> right.content.value);
         break;
-      case 70:
+      case 69:
         ConstantFolder.flattenInt($this, node, left.content.value & right.content.value);
         break;
-      case 71:
+      case 70:
         ConstantFolder.flattenInt($this, node, left.content.value | right.content.value);
         break;
-      case 72:
+      case 71:
         ConstantFolder.flattenInt($this, node, left.content.value ^ right.content.value);
         break;
-      case 74:
+      case 73:
         ConstantFolder.flattenBool($this, node, left.content.value === right.content.value);
         break;
-      case 84:
+      case 83:
         ConstantFolder.flattenBool($this, node, left.content.value !== right.content.value);
         break;
-      case 79:
+      case 78:
         ConstantFolder.flattenBool($this, node, left.content.value < right.content.value);
         break;
-      case 75:
+      case 74:
         ConstantFolder.flattenBool($this, node, left.content.value > right.content.value);
         break;
-      case 80:
+      case 79:
         ConstantFolder.flattenBool($this, node, left.content.value <= right.content.value);
         break;
-      case 76:
+      case 75:
         ConstantFolder.flattenBool($this, node, left.content.value >= right.content.value);
         break;
       }
     } else if (NodeKind.isReal(valueKind)) {
       switch (kind) {
-      case 69:
+      case 68:
         ConstantFolder.flattenReal($this, node, left.content.value + right.content.value);
         break;
-      case 88:
+      case 87:
         ConstantFolder.flattenReal($this, node, left.content.value - right.content.value);
         break;
-      case 83:
+      case 82:
         ConstantFolder.flattenReal($this, node, left.content.value * right.content.value);
         break;
-      case 73:
+      case 72:
         ConstantFolder.flattenReal($this, node, left.content.value / right.content.value);
         break;
-      case 74:
+      case 73:
         ConstantFolder.flattenBool($this, node, left.content.value === right.content.value);
         break;
-      case 84:
+      case 83:
         ConstantFolder.flattenBool($this, node, left.content.value !== right.content.value);
         break;
-      case 79:
+      case 78:
         ConstantFolder.flattenBool($this, node, left.content.value < right.content.value);
         break;
-      case 75:
+      case 74:
         ConstantFolder.flattenBool($this, node, left.content.value > right.content.value);
         break;
-      case 80:
+      case 79:
         ConstantFolder.flattenBool($this, node, left.content.value <= right.content.value);
         break;
-      case 76:
+      case 75:
         ConstantFolder.flattenBool($this, node, left.content.value >= right.content.value);
         break;
       }
@@ -2985,8 +2955,6 @@ InstanceToStaticPass.run = function(graph, options) {
           }
           Node.replaceChild(callSite, 0, name);
           Node.insertChild(callSite, 1, target);
-          break;
-        case 51:
           break;
         default:
           break;
@@ -3188,7 +3156,7 @@ InliningGraph.recursivelyCountArgumentUses = function(node, symbolCounts) {
       }
     }
   }
-  if (node.kind === 56) {
+  if (node.kind === 55) {
     return false;
   }
   var symbol = node.symbol;
@@ -3314,7 +3282,7 @@ Resolver.setupScopesAndSymbols = function($this, node, scope) {
       }
     }
   }
-  if (NodeKind.isNamedBlockDeclaration(node.kind) || NodeKind.isFunction(node.kind) || node.kind === 56 || NodeKind.isLoop(node.kind) || node.kind === 47) {
+  if (NodeKind.isNamedBlockDeclaration(node.kind) || NodeKind.isFunction(node.kind) || node.kind === 55 || NodeKind.isLoop(node.kind) || node.kind === 47) {
     node.scope = scope = new Scope(scope);
   }
   if (Node.hasChildren(node)) {
@@ -3719,30 +3687,31 @@ Resolver.resolve = function($this, node, expectedType) {
     break;
   case 50:
     break;
-  case 52:
+  case 51:
     Resolver.resolveSequence($this, node);
     break;
-  case 53:
+  case 52:
     Resolver.resolveParameterize($this, node);
     break;
-  case 54:
+  case 53:
     Resolver.resolveCast($this, node);
     break;
-  case 56:
+  case 55:
     Resolver.resolveLambda($this, node);
     break;
-  case 57:
+  case 56:
     Resolver.resolveDefault($this, node);
     break;
-  case 58:
+  case 57:
     Resolver.resolveAsExpression($this, node.children[0]);
     break;
-  case 59:
+  case 58:
     Resolver.resolveVar($this, node);
     break;
-  case 60:
+  case 59:
     Resolver.resolveFunctionType($this, node);
     break;
+  case 60:
   case 61:
   case 62:
   case 63:
@@ -3750,9 +3719,9 @@ Resolver.resolve = function($this, node, expectedType) {
   case 65:
   case 66:
   case 67:
-  case 68:
     Resolver.resolveUnaryOperator($this, node);
     break;
+  case 68:
   case 69:
   case 70:
   case 71:
@@ -3783,10 +3752,9 @@ Resolver.resolve = function($this, node, expectedType) {
   case 96:
   case 97:
   case 98:
-  case 99:
     Resolver.resolveBinaryOperator($this, node);
     break;
-  case 100:
+  case 99:
     Resolver.resolveTertiaryOperator($this, node);
     break;
   default:
@@ -3829,7 +3797,7 @@ Resolver.checkUnusedExpression = function($this, node) {
   if (kind === 37) {
     Resolver.checkUnusedExpression($this, node.children[1]);
     Resolver.checkUnusedExpression($this, node.children[2]);
-  } else if (kind === 52) {
+  } else if (kind === 51) {
     if (Node.hasChildren(node)) {
       Resolver.checkUnusedExpression($this, node.children[node.children.length - 1 | 0]);
     }
@@ -3862,9 +3830,8 @@ Resolver.checkConversion = function($this, to, node, kind) {
     return;
   }
   if (from === to) {
-    if ((node.kind === 34 || node.kind === 46) && node.symbol !== null && SymbolKind.isFunction(node.symbol.kind)) {
-      var children = Node.removeChildren(node);
-      Node.become(node, Node.withSymbol(Node.withType(Node.withRange(Node.withChildren(new Node(51), [Node.withChildren(Node.clone(node), children)]), node.range), to), node.symbol));
+    if (node.symbol !== null && SymbolKind.isFunction(node.symbol.kind) && node.kind !== 48 && node.parent.kind !== 48) {
+      Log.error($this.log, node.range, "Raw function references are not allowed (call the function instead)");
     }
     return;
   }
@@ -3882,7 +3849,7 @@ Resolver.checkConversion = function($this, to, node, kind) {
     }
     var value = new Node(38);
     Node.become(value, node);
-    Node.become(node, Node.withRange(Node.withType(Node.withChildren(new Node(55), [Node.withType(new Node(35), to), value]), to), node.range));
+    Node.become(node, Node.withRange(Node.withType(Node.withChildren(new Node(54), [Node.withType(new Node(35), to), value]), to), node.range));
   }
 };
 Resolver.unexpectedStatement = function($this, node) {
@@ -4250,7 +4217,7 @@ Resolver.initializeVariable = function($this, symbol) {
     }
     Node.replaceChild(node, 1, variableType);
   }
-  if (variableType.kind === 59) {
+  if (variableType.kind === 58) {
     var value = node.children[2];
     if (value === null) {
       Log.error($this.log, node.children[0].range, "Implicitly typed variables must be initialized");
@@ -4768,7 +4735,7 @@ Resolver.resolveFunction = function($this, node) {
             }
             if (j === memberInitializers.children.length) {
               Resolver.initializeMember($this, member);
-              Node.insertChild(memberInitializers, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(5), [Node.withType(Node.withSymbol(Node.withContent(new Node(34), new StringContent(memberSymbol.name)), memberSymbol), member.type), Node.withChildren(new Node(57), [Node.withType(new Node(35), member.type)])]));
+              Node.insertChild(memberInitializers, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(5), [Node.withType(Node.withSymbol(Node.withContent(new Node(34), new StringContent(memberSymbol.name)), memberSymbol), member.type), Node.withChildren(new Node(56), [Node.withType(new Node(35), member.type)])]));
             }
           }
         }
@@ -5078,7 +5045,7 @@ Resolver.resolveLet = function($this, node) {
 Resolver.resolveCall = function($this, node) {
   var value = node.children[0];
   var $arguments = Node.callArguments(node);
-  if (value.kind === 56 && $this.typeContext !== null) {
+  if (value.kind === 55 && $this.typeContext !== null) {
     Resolver.resolveNodesAsExpressions($this, $arguments);
     if ($this.typeContext === $this.cache.errorType) {
       Resolver.resolveAsExpression($this, value);
@@ -5135,7 +5102,7 @@ Resolver.resolveSequence = function($this, node) {
       Resolver.resolveAsExpression($this, child);
       Resolver.checkUnusedExpression($this, child);
     } else {
-      Resolver.resolveAsExpressionWithConversion($this, child, $this.typeContext, node.parent.kind === 54 ? 1 : 0);
+      Resolver.resolveAsExpressionWithConversion($this, child, $this.typeContext, node.parent.kind === 53 ? 1 : 0);
     }
   }
 };
@@ -5253,7 +5220,7 @@ Resolver.resolveFunctionType = function($this, node) {
 Resolver.resolveUnaryOperator = function($this, node) {
   var kind = node.kind;
   var value = node.children[0];
-  if (kind === 63 && value.kind === 41 && value.content.value === -2147483648) {
+  if (kind === 62 && value.kind === 41 && value.content.value === -2147483648) {
     Node.become(node, Node.withType(Node.withRange(value, node.range), $this.cache.intType));
     return;
   }
@@ -5262,7 +5229,7 @@ Resolver.resolveUnaryOperator = function($this, node) {
   if (type === $this.cache.errorType) {
     return;
   }
-  if (kind === 62 || kind === 63) {
+  if (kind === 61 || kind === 62) {
     if (Type.isEnum(type)) {
       node.type = $this.cache.intType;
     } else if (Type.isNumeric(type, $this.cache)) {
@@ -5273,11 +5240,11 @@ Resolver.resolveUnaryOperator = function($this, node) {
       Resolver.checkStorage($this, value);
       node.type = type;
     }
-  } else if (kind === 61) {
+  } else if (kind === 60) {
     if (type === $this.cache.boolType) {
       node.type = type;
     }
-  } else if (kind === 64) {
+  } else if (kind === 63) {
     if (Type.isEnumFlags(type)) {
       node.type = type;
     } else if (Type.isInteger(type, $this.cache)) {
@@ -5296,14 +5263,14 @@ Resolver.resolveBinaryOperator = function($this, node) {
   var right = node.children[1];
   if (NodeKind.isBinaryStorageOperator(kind)) {
     Resolver.resolveAsExpression($this, left);
-    if (kind === 89 || Type.isNumeric(left.type, $this.cache)) {
+    if (kind === 88 || Type.isNumeric(left.type, $this.cache)) {
       Resolver.resolveAsExpressionWithConversion($this, right, left.type, 0);
       Resolver.checkStorage($this, left);
       node.type = left.type;
       return;
     }
   }
-  if (kind === 74 || kind === 84) {
+  if (kind === 73 || kind === 83) {
     var leftNeedsContext = Resolver.needsTypeContext($this, left);
     var rightNeedsContext = Resolver.needsTypeContext($this, right);
     if (leftNeedsContext && !rightNeedsContext) {
@@ -5322,30 +5289,30 @@ Resolver.resolveBinaryOperator = function($this, node) {
   if (leftType === $this.cache.errorType || rightType === $this.cache.errorType) {
     return;
   }
-  if (kind === 74 || kind === 84) {
+  if (kind === 73 || kind === 83) {
     commonType = TypeCache.commonImplicitType($this.cache, leftType, rightType);
     if (commonType !== null) {
       node.type = $this.cache.boolType;
     }
-  } else if (kind === 69 || kind === 88 || kind === 83 || kind === 73) {
+  } else if (kind === 68 || kind === 87 || kind === 82 || kind === 72) {
     if (Type.isNumeric(leftType, $this.cache) && Type.isNumeric(rightType, $this.cache)) {
       node.type = commonType = TypeCache.commonImplicitType($this.cache, leftType, rightType);
     }
-  } else if (kind === 85 || kind === 86 || kind === 87) {
+  } else if (kind === 84 || kind === 85 || kind === 86) {
     if (Type.isInteger(leftType, $this.cache) && Type.isInteger(rightType, $this.cache)) {
       node.type = commonType = $this.cache.intType;
     }
-  } else if (kind === 70 || kind === 71 || kind === 72) {
+  } else if (kind === 69 || kind === 70 || kind === 71) {
     if (leftType === rightType && Type.isEnumFlags(leftType)) {
       node.type = commonType = leftType;
     } else if (Type.isInteger(leftType, $this.cache) && Type.isInteger(rightType, $this.cache)) {
       node.type = commonType = $this.cache.intType;
     }
-  } else if (kind === 81 || kind === 82) {
+  } else if (kind === 80 || kind === 81) {
     if (leftType === $this.cache.boolType && rightType === $this.cache.boolType) {
       node.type = commonType = $this.cache.boolType;
     }
-  } else if (kind === 79 || kind === 75 || kind === 80 || kind === 76) {
+  } else if (kind === 78 || kind === 74 || kind === 79 || kind === 75) {
     if (Type.isNumeric(leftType, $this.cache) && Type.isNumeric(rightType, $this.cache) || leftType === $this.cache.stringType && rightType === $this.cache.stringType) {
       commonType = TypeCache.commonImplicitType($this.cache, leftType, rightType);
       node.type = $this.cache.boolType;
@@ -5976,45 +5943,45 @@ function checkAllNodeKinds(nodes, check) {
 }
 function createOperatorMap() {
   var result = new IntMap();
-  result.set(61, new OperatorInfo("!", 13, 0));
-  result.set(62, new OperatorInfo("+", 13, 0));
-  result.set(63, new OperatorInfo("-", 13, 0));
-  result.set(64, new OperatorInfo("~", 13, 0));
-  result.set(65, new OperatorInfo("++", 13, 0));
-  result.set(66, new OperatorInfo("--", 13, 0));
-  result.set(67, new OperatorInfo("++", 14, 0));
-  result.set(68, new OperatorInfo("--", 14, 0));
-  result.set(69, new OperatorInfo("+", 11, 1));
-  result.set(70, new OperatorInfo("&", 7, 1));
-  result.set(71, new OperatorInfo("|", 5, 1));
-  result.set(72, new OperatorInfo("^", 6, 1));
-  result.set(73, new OperatorInfo("/", 12, 1));
-  result.set(74, new OperatorInfo("==", 8, 1));
-  result.set(75, new OperatorInfo(">", 9, 1));
-  result.set(76, new OperatorInfo(">=", 9, 1));
-  result.set(77, new OperatorInfo("in", 9, 1));
-  result.set(78, new OperatorInfo("[]", 15, 1));
-  result.set(79, new OperatorInfo("<", 9, 1));
-  result.set(80, new OperatorInfo("<=", 9, 1));
-  result.set(81, new OperatorInfo("&&", 4, 1));
-  result.set(82, new OperatorInfo("||", 3, 1));
-  result.set(83, new OperatorInfo("*", 12, 1));
-  result.set(84, new OperatorInfo("!=", 8, 1));
-  result.set(85, new OperatorInfo("%", 12, 1));
-  result.set(86, new OperatorInfo("<<", 10, 1));
-  result.set(87, new OperatorInfo(">>", 10, 1));
-  result.set(88, new OperatorInfo("-", 11, 1));
-  result.set(89, new OperatorInfo("=", 2, 2));
-  result.set(90, new OperatorInfo("+=", 2, 2));
-  result.set(91, new OperatorInfo("&=", 2, 2));
-  result.set(92, new OperatorInfo("|=", 2, 2));
-  result.set(93, new OperatorInfo("^=", 2, 2));
-  result.set(94, new OperatorInfo("/=", 2, 2));
-  result.set(95, new OperatorInfo("*=", 2, 2));
-  result.set(96, new OperatorInfo("%=", 2, 2));
-  result.set(97, new OperatorInfo("<<=", 2, 2));
-  result.set(98, new OperatorInfo(">>=", 2, 2));
-  result.set(99, new OperatorInfo("-=", 2, 2));
+  result.set(60, new OperatorInfo("!", 13, 0));
+  result.set(61, new OperatorInfo("+", 13, 0));
+  result.set(62, new OperatorInfo("-", 13, 0));
+  result.set(63, new OperatorInfo("~", 13, 0));
+  result.set(64, new OperatorInfo("++", 13, 0));
+  result.set(65, new OperatorInfo("--", 13, 0));
+  result.set(66, new OperatorInfo("++", 14, 0));
+  result.set(67, new OperatorInfo("--", 14, 0));
+  result.set(68, new OperatorInfo("+", 11, 1));
+  result.set(69, new OperatorInfo("&", 7, 1));
+  result.set(70, new OperatorInfo("|", 5, 1));
+  result.set(71, new OperatorInfo("^", 6, 1));
+  result.set(72, new OperatorInfo("/", 12, 1));
+  result.set(73, new OperatorInfo("==", 8, 1));
+  result.set(74, new OperatorInfo(">", 9, 1));
+  result.set(75, new OperatorInfo(">=", 9, 1));
+  result.set(76, new OperatorInfo("in", 9, 1));
+  result.set(77, new OperatorInfo("[]", 15, 1));
+  result.set(78, new OperatorInfo("<", 9, 1));
+  result.set(79, new OperatorInfo("<=", 9, 1));
+  result.set(80, new OperatorInfo("&&", 4, 1));
+  result.set(81, new OperatorInfo("||", 3, 1));
+  result.set(82, new OperatorInfo("*", 12, 1));
+  result.set(83, new OperatorInfo("!=", 8, 1));
+  result.set(84, new OperatorInfo("%", 12, 1));
+  result.set(85, new OperatorInfo("<<", 10, 1));
+  result.set(86, new OperatorInfo(">>", 10, 1));
+  result.set(87, new OperatorInfo("-", 11, 1));
+  result.set(88, new OperatorInfo("=", 2, 2));
+  result.set(89, new OperatorInfo("+=", 2, 2));
+  result.set(90, new OperatorInfo("&=", 2, 2));
+  result.set(91, new OperatorInfo("|=", 2, 2));
+  result.set(92, new OperatorInfo("^=", 2, 2));
+  result.set(93, new OperatorInfo("/=", 2, 2));
+  result.set(94, new OperatorInfo("*=", 2, 2));
+  result.set(95, new OperatorInfo("%=", 2, 2));
+  result.set(96, new OperatorInfo("<<=", 2, 2));
+  result.set(97, new OperatorInfo(">>=", 2, 2));
+  result.set(98, new OperatorInfo("-=", 2, 2));
   return result;
 }
 json.dump = function(node) {
@@ -6536,7 +6503,7 @@ function parseGroup(context, allowLambda) {
     ParserContext.expect(context, 54);
     return Node.withRange(new Node(50), ParserContext.spanSince(context, token.range));
   }
-  return Node.withRange(Node.withChildren(new Node(52), []), ParserContext.spanSince(context, token.range));
+  return Node.withRange(Node.withChildren(new Node(51), []), ParserContext.spanSince(context, token.range));
 }
 function parseName(context) {
   var token = ParserContext.current(context);
@@ -7064,7 +7031,7 @@ function parseAlias(context) {
   return Node.withRange(Node.withChildren(new Node(18), [name, value]), ParserContext.spanSince(context, token.range));
 }
 function looksLikeLambdaArguments(node) {
-  if (node.kind === 52) {
+  if (node.kind === 51) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       if (node.children[i].kind !== 34) {
         return false;
@@ -7087,8 +7054,8 @@ function looksLikeType(node) {
     var target = node.children[0];
     return target !== null && looksLikeType(target);
   case 34:
-  case 53:
-  case 60:
+  case 52:
+  case 59:
     return true;
   default:
     return false;
@@ -7220,7 +7187,7 @@ function createParser() {
     return Node.withRange(Node.withContent(new Node(43), new DoubleContent(parseDoubleLiteral(token.text))), token.range);
   });
   Pratt.literal(pratt, 94, function(context, token) {
-    return Node.withRange(new Node(59), token.range);
+    return Node.withRange(new Node(58), token.range);
   });
   Pratt.literal(pratt, 85, function(context, token) {
     var result = parseStringLiteral(context.log, token.range, token.text);
@@ -7234,44 +7201,44 @@ function createParser() {
     }
     return Node.withRange(Node.withContent(new Node(41), new IntContent(result !== null ? result.value.charCodeAt(0) : 0)), token.range);
   });
-  Pratt.postfix(pratt, 46, 14, unaryPostfix(67));
-  Pratt.postfix(pratt, 23, 14, unaryPostfix(68));
-  Pratt.prefix(pratt, 46, 13, unaryPrefix(65));
-  Pratt.prefix(pratt, 23, 13, unaryPrefix(66));
-  Pratt.prefix(pratt, 71, 13, unaryPrefix(62));
-  Pratt.prefix(pratt, 63, 13, unaryPrefix(63));
-  Pratt.prefix(pratt, 67, 13, unaryPrefix(61));
-  Pratt.prefix(pratt, 90, 13, unaryPrefix(64));
-  Pratt.infix(pratt, 13, 7, binaryInfix(70));
-  Pratt.infix(pratt, 14, 5, binaryInfix(71));
-  Pratt.infix(pratt, 15, 6, binaryInfix(72));
-  Pratt.infix(pratt, 25, 12, binaryInfix(73));
-  Pratt.infix(pratt, 32, 8, binaryInfix(74));
-  Pratt.infix(pratt, 40, 9, binaryInfix(75));
-  Pratt.infix(pratt, 41, 9, binaryInfix(76));
-  Pratt.infix(pratt, 45, 9, binaryInfix(77));
-  Pratt.infix(pratt, 58, 9, binaryInfix(79));
-  Pratt.infix(pratt, 59, 9, binaryInfix(80));
-  Pratt.infix(pratt, 61, 4, binaryInfix(81));
-  Pratt.infix(pratt, 62, 3, binaryInfix(82));
-  Pratt.infix(pratt, 63, 11, binaryInfix(88));
-  Pratt.infix(pratt, 64, 12, binaryInfix(83));
-  Pratt.infix(pratt, 68, 8, binaryInfix(84));
-  Pratt.infix(pratt, 71, 11, binaryInfix(69));
-  Pratt.infix(pratt, 76, 12, binaryInfix(85));
-  Pratt.infix(pratt, 82, 10, binaryInfix(86));
-  Pratt.infix(pratt, 83, 10, binaryInfix(87));
-  Pratt.infixRight(pratt, 2, 2, binaryInfix(89));
-  Pratt.infixRight(pratt, 9, 2, binaryInfix(90));
-  Pratt.infixRight(pratt, 3, 2, binaryInfix(91));
-  Pratt.infixRight(pratt, 4, 2, binaryInfix(92));
-  Pratt.infixRight(pratt, 5, 2, binaryInfix(93));
-  Pratt.infixRight(pratt, 6, 2, binaryInfix(94));
-  Pratt.infixRight(pratt, 8, 2, binaryInfix(95));
-  Pratt.infixRight(pratt, 10, 2, binaryInfix(96));
-  Pratt.infixRight(pratt, 11, 2, binaryInfix(97));
-  Pratt.infixRight(pratt, 12, 2, binaryInfix(98));
-  Pratt.infixRight(pratt, 7, 2, binaryInfix(99));
+  Pratt.postfix(pratt, 46, 14, unaryPostfix(66));
+  Pratt.postfix(pratt, 23, 14, unaryPostfix(67));
+  Pratt.prefix(pratt, 46, 13, unaryPrefix(64));
+  Pratt.prefix(pratt, 23, 13, unaryPrefix(65));
+  Pratt.prefix(pratt, 71, 13, unaryPrefix(61));
+  Pratt.prefix(pratt, 63, 13, unaryPrefix(62));
+  Pratt.prefix(pratt, 67, 13, unaryPrefix(60));
+  Pratt.prefix(pratt, 90, 13, unaryPrefix(63));
+  Pratt.infix(pratt, 13, 7, binaryInfix(69));
+  Pratt.infix(pratt, 14, 5, binaryInfix(70));
+  Pratt.infix(pratt, 15, 6, binaryInfix(71));
+  Pratt.infix(pratt, 25, 12, binaryInfix(72));
+  Pratt.infix(pratt, 32, 8, binaryInfix(73));
+  Pratt.infix(pratt, 40, 9, binaryInfix(74));
+  Pratt.infix(pratt, 41, 9, binaryInfix(75));
+  Pratt.infix(pratt, 45, 9, binaryInfix(76));
+  Pratt.infix(pratt, 58, 9, binaryInfix(78));
+  Pratt.infix(pratt, 59, 9, binaryInfix(79));
+  Pratt.infix(pratt, 61, 4, binaryInfix(80));
+  Pratt.infix(pratt, 62, 3, binaryInfix(81));
+  Pratt.infix(pratt, 63, 11, binaryInfix(87));
+  Pratt.infix(pratt, 64, 12, binaryInfix(82));
+  Pratt.infix(pratt, 68, 8, binaryInfix(83));
+  Pratt.infix(pratt, 71, 11, binaryInfix(68));
+  Pratt.infix(pratt, 76, 12, binaryInfix(84));
+  Pratt.infix(pratt, 82, 10, binaryInfix(85));
+  Pratt.infix(pratt, 83, 10, binaryInfix(86));
+  Pratt.infixRight(pratt, 2, 2, binaryInfix(88));
+  Pratt.infixRight(pratt, 9, 2, binaryInfix(89));
+  Pratt.infixRight(pratt, 3, 2, binaryInfix(90));
+  Pratt.infixRight(pratt, 4, 2, binaryInfix(91));
+  Pratt.infixRight(pratt, 5, 2, binaryInfix(92));
+  Pratt.infixRight(pratt, 6, 2, binaryInfix(93));
+  Pratt.infixRight(pratt, 8, 2, binaryInfix(94));
+  Pratt.infixRight(pratt, 10, 2, binaryInfix(95));
+  Pratt.infixRight(pratt, 11, 2, binaryInfix(96));
+  Pratt.infixRight(pratt, 12, 2, binaryInfix(97));
+  Pratt.infixRight(pratt, 7, 2, binaryInfix(98));
   Pratt.parselet(pratt, 55, 0).prefix = function(context) {
     var token = ParserContext.current(context);
     var $arguments = parseArgumentList(context, 55, 78, 1);
@@ -7290,7 +7257,7 @@ function createParser() {
     }
     if (looksLikeType(type)) {
       var value = Pratt.parseIgnoringParselet(pratt, context, 13, null);
-      return Node.withRange(Node.withChildren(new Node(54), [type, value]), ParserContext.spanSince(context, token.range));
+      return Node.withRange(Node.withChildren(new Node(53), [type, value]), ParserContext.spanSince(context, token.range));
     }
     return type;
   };
@@ -7305,7 +7272,7 @@ function createParser() {
     while (ParserContext.eat(context, 21)) {
       values.push(Pratt.parseIgnoringParselet(pratt, context, 1, null));
     }
-    return Node.withRange(Node.withChildren(new Node(52), values), ParserContext.spanSince(context, left.range));
+    return Node.withRange(Node.withChildren(new Node(51), values), ParserContext.spanSince(context, left.range));
   };
   Pratt.parselet(pratt, 27, 15).infix = function(context, left) {
     ParserContext.next(context);
@@ -7335,7 +7302,7 @@ function createParser() {
     ParserContext.next(context);
     var index = Pratt.parseIgnoringParselet(pratt, context, 0, null);
     scanForToken(context, 79, 1);
-    return Node.withRange(Node.createBinary(78, left, index), ParserContext.spanSince(context, left.range));
+    return Node.withRange(Node.createBinary(77, left, index), ParserContext.spanSince(context, left.range));
   };
   Pratt.parselet(pratt, 99, 15).infix = function(context, left) {
     var token = ParserContext.next(context);
@@ -7349,12 +7316,12 @@ function createParser() {
   Pratt.parselet(pratt, 24, 13).prefix = function(context) {
     var token = ParserContext.next(context);
     var type = parseGroup(context, 0);
-    return Node.withRange(type === null ? new Node(50) : Node.withChildren(new Node(57), [type]), ParserContext.spanSince(context, token.range));
+    return Node.withRange(type === null ? new Node(50) : Node.withChildren(new Node(56), [type]), ParserContext.spanSince(context, token.range));
   };
   Pratt.parselet(pratt, 92, 13).prefix = function(context) {
     var token = ParserContext.next(context);
     var value = parseGroup(context, 0);
-    return Node.withRange(value === null ? new Node(50) : Node.withChildren(new Node(58), [value]), ParserContext.spanSince(context, token.range));
+    return Node.withRange(value === null ? new Node(50) : Node.withChildren(new Node(57), [value]), ParserContext.spanSince(context, token.range));
   };
   Pratt.parselet(pratt, 42, 0).prefix = function(context) {
     var token = ParserContext.next(context);
@@ -7383,7 +7350,7 @@ function createParser() {
       return Node.withRange(new Node(50), ParserContext.spanSince(context, token.range));
     }
     var initial = Pratt.parseIgnoringParselet(pratt, context, 0, inParselet);
-    var variable = Node.withRange(Node.withChildren(new Node(16), [name, new Node(59), initial]), ParserContext.spanSince(context, token.range));
+    var variable = Node.withRange(Node.withChildren(new Node(16), [name, new Node(58), initial]), ParserContext.spanSince(context, token.range));
     if (initial.kind === 50 || !ParserContext.expect(context, 45)) {
       return Node.withRange(new Node(50), ParserContext.spanSince(context, token.range));
     }
@@ -7650,7 +7617,7 @@ var nodeKindIsExpression = function(node) {
 var operatorInfo = createOperatorMap();
 Compiler.nativeLibrarySource = null;
 Compiler.nativeLibraryFile = null;
-var NATIVE_LIBRARY = "\nimport struct int { string toString(); }\nimport struct bool { string toString(); }\nimport struct float { string toString(); }\nimport struct double { string toString(); }\n\nimport struct String {\n  static string fromCharCode(int value);\n}\n\nimport struct string {\n  final int length;\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  inline string append(string value) { return untyped(this) + value; }\n  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }\n  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }\n  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result = result.append(this); return result; }\n}\n\nimport class List<T> {\n  new();\n  final int length;\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  final double E;\n  final double PI;\n  final double NAN;\n  final double INFINITY;\n  double random();\n  double abs(double n);\n  double sin(double n);\n  double cos(double n);\n  double tan(double n);\n  double asin(double n);\n  double acos(double n);\n  double atan(double n);\n  double round(double n);\n  double floor(double n);\n  double ceil(double n);\n  double exp(double n);\n  double log(double n);\n  double sqrt(double n);\n  bool isNaN(double n);\n  bool isFinite(double n);\n  double atan2(double y, double x);\n  double pow(double base, double exponent);\n  double min(double a, double b);\n  double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n";
+var NATIVE_LIBRARY = "\nimport struct int { string toString(); }\nimport struct bool { string toString(); }\nimport struct float { string toString(); }\nimport struct double { string toString(); }\n\nimport struct String {\n  static string fromCharCode(int value);\n}\n\nimport struct string {\n  final int length;\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  inline string append(string value) { return untyped(this) + value; }\n  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }\n  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }\n  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result = result.append(this); return result; }\n}\n\nimport class List<T> {\n  new();\n  final int length;\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  void swap(int a, int b) {\n    var temp = get(a);\n    set(a, get(b));\n    set(b, temp);\n  }\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  final double E;\n  final double PI;\n  final double NAN;\n  final double INFINITY;\n  double random();\n  double abs(double n);\n  double sin(double n);\n  double cos(double n);\n  double tan(double n);\n  double asin(double n);\n  double acos(double n);\n  double atan(double n);\n  double round(double n);\n  double floor(double n);\n  double ceil(double n);\n  double exp(double n);\n  double log(double n);\n  double sqrt(double n);\n  bool isNaN(double n);\n  bool isFinite(double n);\n  double atan2(double y, double x);\n  double pow(double base, double exponent);\n  double min(double a, double b);\n  double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n";
 Range.EMPTY = new Range(null, 0, 0);
 var BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var HEX = "0123456789ABCDEF";

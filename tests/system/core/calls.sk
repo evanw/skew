@@ -62,3 +62,12 @@ int fn() bar = foo(bar);
 int fn() bar = foo(bar);
                ~~~~~~~~
 ");
+
+test("
+void foo() {}
+var bar = foo;
+", "
+<stdin>:2:11: error: Raw function references are not allowed (call the function instead)
+var bar = foo;
+          ~~~
+");

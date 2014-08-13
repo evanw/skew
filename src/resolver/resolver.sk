@@ -659,14 +659,18 @@ class Resolver {
 
     // No implicit conversion needed for identical types
     if (from == to) {
-      // Bind global and instance functions before they become values of
-      // function type since the representation for function values is likely
-      // not the same as the function itself. For example, referencing instead
-      // of calling an instance function creates a function object binds that
-      // instance function to that instance.
-      if ((node.kind == .NAME || node.kind == .DOT) && node.symbol != null && node.symbol.kind.isFunction()) {
-        var children = node.removeChildren();
-        node.become(Node.createBind(node.clone().withChildren(children)).withRange(node.range).withType(to).withSymbol(node.symbol));
+      // Forbid raw function references. All function references must result in
+      // a call. The representation for values of function type is likely not
+      // the same as a function definition because values of function type may
+      // contain lambdas with captured variables which require an environment.
+      //
+      // In the future, some or all of these cases could be automatically be
+      // converted to lambda expressions that call the function. When doing
+      // this conversion, make sure to capture the value of "this" for member
+      // functions inside the lambda.
+      //
+      if (node.symbol != null && node.symbol.kind.isFunction() && node.kind != .CALL && node.parent.kind != .CALL) {
+        semanticErrorMustCallFunctionReference(log, node.range);
       }
       return;
     }

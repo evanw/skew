@@ -273,3 +273,7 @@ void semanticErrorLambdaMissingReturn(Log log, Range range, Type type) {
 void semanticErrorBaseClassInExtension(Log log, Range range) {
   log.error(range, "The base class must be set from the class declaration, not from an extension block");
 }
+
+void semanticErrorMustCallFunctionReference(Log log, Range range) {
+  log.error(range, "Raw function references are not allowed (call the function instead)");
+}

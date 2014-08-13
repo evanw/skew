@@ -485,7 +485,6 @@ namespace js {
         case .DOT { emitDot(node); }
         case .CALL { isStartOfExpression = wasStartOfExpression; emitCall(node); }
         case .SUPER_CALL { emitSuperCall(node); }
-        case .BIND { emitExpression(node.bindValue(), precedence); }
         case .SEQUENCE { isStartOfExpression = wasStartOfExpression; emitSequence(node, precedence); }
         case .LAMBDA { emitLambda(node, wasStartOfExpression); }
         case .DEFAULT { emitDefault(node); }
@@ -680,7 +679,6 @@ namespace js {
         case .LAMBDA { context.lambdaCount++; }
         case .CONSTRUCTOR { patchConstructor(node, context); }
         case .FUNCTION { context.setFunction(node); }
-        case .BIND { patchBind(node, context); }
         case .CAST { patchCast(node, context); }
 
         case .CLASS {
@@ -791,30 +789,6 @@ namespace js {
       // Cast to float/double
       else if (node.type.isReal(cache) && !value.type.isNumeric(cache)) {
         node.become(Node.createUnary(.POSITIVE, value.remove()).withRange(node.range).withType(node.type));
-      }
-    }
-
-    void patchBind(Node node, PatchContext context) {
-      if (node.symbol.kind == .INSTANCE_FUNCTION) {
-        var function = node.bindValue();
-        Node target;
-        Node name;
-        if (function.kind == .DOT) {
-          target = function.dotTarget().remove();
-          name = function.dotName().remove();
-        } else {
-          assert function.kind == .NAME;
-          target = Node.createThis();
-          name = function.remove();
-        }
-        if (isSimpleNameAccess(target)) {
-          node.become(Node.createCall(Node.createDot(Node.createDot(target.clone(), name), Node.createName("bind")), { target }).withRange(node.range));
-        } else {
-          var temporaryName = Node.createName("$temp");
-          node.become(Node.createLet(
-            Node.createVariable(temporaryName.clone(), null, target),
-            Node.createCall(Node.createDot(Node.createDot(temporaryName.clone(), name), Node.createName("bind")), { temporaryName })).withRange(node.range));
-        }
       }
     }
 

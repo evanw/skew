@@ -332,12 +332,6 @@ in Node {
     return children.get(0);
   }
 
-  Node bindValue() {
-    assert kind == .BIND;
-    assert children.length == 1;
-    return children.get(0);
-  }
-
   Node parameterizeType() {
     assert kind == .PARAMETERIZE;
     assert children.length >= 1;

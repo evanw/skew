@@ -1,13 +1,4 @@
 testJS("
-void foo() {}
-var bar = foo;
-", "
-function foo() {
-}
-var bar = foo;
-");
-
-testJS("
 class Foo {
   void foo() {}
 }
@@ -67,49 +58,6 @@ foo((1, 2));
 ");
 
 testJS("
-class Foo {
-  void foo() {}
-}
-var foo = Foo().foo;
-", "
-function Foo() {
-}
-Foo.prototype.foo = function() {
-};
-var foo = function($temp) {
-  return $temp.foo.bind($temp);
-}(new Foo());
-");
-
-testJS("
-class Foo {
-  void foo() {}
-  export void fn() bar() { return foo; }
-}
-", "
-function Foo() {
-}
-Foo.prototype.foo = function() {
-};
-Foo.prototype.bar = function() {
-  return this.foo.bind(this);
-};
-");
-
-testJS("
-class Foo {
-  static void foo() {}
-}
-var foo = Foo.foo;
-", "
-function Foo() {
-}
-Foo.foo = function() {
-};
-var foo = Foo.foo;
-");
-
-testJS("
 enum Foo { A, B, C }
 in Foo {
   int foo() {
@@ -149,19 +97,4 @@ Foo.toString = function($this) {
     return \"\";
   }
 };
-");
-
-testJS("
-import class Foo {
-  int x;
-  new();
-  int foo(Foo foo) {
-    return x + foo.x;
-  }
-}
-var foo = Foo().foo(Foo());
-var bar = Foo().foo;
-var baz = let _ = Foo() in _.foo;
-", "
-TODO
 ");

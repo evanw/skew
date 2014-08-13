@@ -34,10 +34,6 @@ class InstanceToStaticPass {
               callSite.insertChild(1, target);
             }
 
-            case .BIND {
-              assert false; // TODO
-            }
-
             default {
               assert false;
             }

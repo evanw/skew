@@ -42,6 +42,11 @@ import class List<T> {
   inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }
   inline T get(int index) { return untyped(this)[index]; }
   inline void set(int index, T value) { untyped(this)[index] = value; }
+  void swap(int a, int b) {
+    var temp = get(a);
+    set(a, get(b));
+    set(b, temp);
+  }
 }
 
 import class StringMap<T> {

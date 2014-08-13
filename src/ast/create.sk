@@ -290,11 +290,6 @@ in Node {
     return Node(.ERROR);
   }
 
-  static Node createBind(Node value) {
-    assert value.kind.isExpression();
-    return Node(.BIND).withChildren({ value });
-  }
-
   static Node createSequence(List<Node> values) {
     assert checkAllNodeKinds(values, nodeKindIsExpression);
     return Node(.SEQUENCE).withChildren(values);

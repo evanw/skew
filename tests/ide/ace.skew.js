@@ -84,7 +84,7 @@ define('ace/mode/skew', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/mo
         },
         {
           token: 'type',
-          regex: '(?:[A-Z_][a-zA-Z0-9_]*|' + types.join('|') + ')\\b'
+          regex: '(?:[A-Z][a-zA-Z0-9_]*|' + types.join('|') + ')\\b'
         },
         {
           token: 'keyword',

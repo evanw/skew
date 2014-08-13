@@ -30,11 +30,6 @@ class CallGraph {
       }
     }
 
-    else if (node.kind == .BIND) {
-      assert node.symbol != null;
-      recordCallSite(node.symbol, node);
-    }
-
     else if (node.kind == .FUNCTION) {
       recordCallSite(node.symbol, null);
     }

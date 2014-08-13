@@ -59,7 +59,6 @@ enum NodeKind {
   CALL,
   SUPER_CALL,
   ERROR,
-  BIND,
   SEQUENCE,
   PARAMETERIZE,
   CAST,
