@@ -14,7 +14,7 @@ new Foo().foo();
 testJS("
 class Foo {
   Foo foo;
-  void bar() {
+  export void bar() {
     foo.bar();
   }
 }
@@ -66,15 +66,17 @@ in Foo {
 }
 Foo.A.foo();
 ", "
+var $in = {};
+$in.Foo = {};
 var Foo = {
   A: 0,
   B: 1,
   C: 2
 };
-Foo.foo = function($this) {
+$in.Foo.foo = function($this) {
   return $this;
 };
-Foo.foo(Foo.A);
+$in.Foo.foo(Foo.A);
 ");
 
 testJS("
@@ -83,13 +85,15 @@ in Foo {
   export string foo() { return toString(); }
 }
 ", "
+var $in = {};
+$in.Foo = {};
 var Foo = {
   FOO: 0
 };
-Foo.foo = function($this) {
-  return Foo.toString($this);
+$in.Foo.foo = function($this) {
+  return $in.Foo.toString($this);
 };
-Foo.toString = function($this) {
+$in.Foo.toString = function($this) {
   switch ($this) {
   case 0:
     return \"FOO\";
