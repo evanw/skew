@@ -130,14 +130,11 @@ function $extends(derived, base) {
 }
 var $in = {};
 $in.$int = {};
-$in.bool = {};
-$in.$float = {};
 $in.$double = {};
 $in.string = {};
 $in.List = {};
 $in.StringMap = {};
 $in.IntMap = {};
-$in.Math = {};
 $in.NodeKind = {};
 $in.TargetFormat = {};
 $in.SymbolKind = {};
@@ -153,18 +150,6 @@ function Node(_0) {
   this.content = null;
   this.kind = _0;
 }
-Node.createProgram = function(files) {
-  return Node.withChildren(new Node(0), files);
-};
-Node.createFile = function(block) {
-  return Node.withChildren(new Node(1), [block]);
-};
-Node.createBlock = function(statements) {
-  return Node.withChildren(new Node(2), statements);
-};
-Node.createNodeList = function(nodes) {
-  return Node.withChildren(new Node(3), nodes);
-};
 Node.createCase = function(values, block) {
   values.push(block);
   return Node.withChildren(new Node(4), values);
@@ -172,87 +157,6 @@ Node.createCase = function(values, block) {
 Node.createVariableCluster = function(type, variables) {
   variables.unshift(type);
   return Node.withChildren(new Node(6), variables);
-};
-Node.createMemberInitializer = function(name, value) {
-  return Node.withChildren(new Node(5), [name, value]);
-};
-Node.createNamespace = function(name, block) {
-  return Node.withChildren(new Node(7), [name, block]);
-};
-Node.createEnum = function(name, block) {
-  return Node.withChildren(new Node(8), [name, block]);
-};
-Node.createEnumFlags = function(name, block) {
-  return Node.withChildren(new Node(9), [name, block]);
-};
-Node.createObject = function(kind, name, parameters, bases, block) {
-  return Node.withChildren(new Node(kind), [name, block, bases, parameters]);
-};
-Node.createClass = function(name, parameters, bases, block) {
-  return Node.withChildren(new Node(10), [name, block, bases, parameters]);
-};
-Node.createStruct = function(name, parameters, bases, block) {
-  return Node.withChildren(new Node(11), [name, block, bases, parameters]);
-};
-Node.createInterface = function(name, parameters, bases, block) {
-  return Node.withChildren(new Node(12), [name, block, bases, parameters]);
-};
-Node.createExtension = function(name, bases, block) {
-  return Node.withChildren(new Node(13), [name, block, bases]);
-};
-Node.createConstructor = function(name, $arguments, block, superInitializer, memberInitializers) {
-  return Node.withChildren(new Node(14), [name, $arguments, block, superInitializer, memberInitializers]);
-};
-Node.createFunction = function(name, $arguments, block, result) {
-  return Node.withChildren(new Node(15), [name, $arguments, block, result]);
-};
-Node.createVariable = function(name, type, value) {
-  return Node.withChildren(new Node(16), [name, type, value]);
-};
-Node.createParameter = function(name, bound) {
-  return Node.withChildren(new Node(17), [name, bound]);
-};
-Node.createAlias = function(name, value) {
-  return Node.withChildren(new Node(18), [name, value]);
-};
-Node.createUsingAlias = function(name, value) {
-  return Node.withChildren(new Node(19), [name, value]);
-};
-Node.createUsingNamespace = function(value) {
-  return Node.withChildren(new Node(33), [value]);
-};
-Node.createIf = function(test, trueNode, falseNode) {
-  return Node.withChildren(new Node(20), [test, trueNode, falseNode]);
-};
-Node.createFor = function(setup, test, update, block) {
-  return Node.withChildren(new Node(21), [setup, test, update, block]);
-};
-Node.createForEach = function(variable, value, block) {
-  return Node.withChildren(new Node(22), [variable, value, block]);
-};
-Node.createWhile = function(test, block) {
-  return Node.withChildren(new Node(23), [test, block]);
-};
-Node.createDoWhile = function(block, test) {
-  return Node.withChildren(new Node(24), [test, block]);
-};
-Node.createReturn = function(value) {
-  return Node.withChildren(new Node(25), [value]);
-};
-Node.createImplicitReturn = function(value) {
-  return Node.withChildren(new Node(26), [value]);
-};
-Node.createBreak = function() {
-  return new Node(27);
-};
-Node.createContinue = function() {
-  return new Node(28);
-};
-Node.createAssert = function(value) {
-  return Node.withChildren(new Node(29), [value]);
-};
-Node.createExpression = function(value) {
-  return Node.withChildren(new Node(30), [value]);
 };
 Node.createModifier = function(name, statements) {
   statements.unshift(name);
@@ -262,93 +166,21 @@ Node.createSwitch = function(value, cases) {
   cases.unshift(value);
   return Node.withChildren(new Node(31), cases);
 };
-Node.createName = function(name) {
-  return Node.withContent(new Node(34), new StringContent(name));
-};
-Node.createType = function(type) {
-  return Node.withType(new Node(35), type);
-};
-Node.createNull = function() {
-  return new Node(38);
-};
-Node.createThis = function() {
-  return new Node(36);
-};
-Node.createTrue = function() {
-  return new Node(39);
-};
-Node.createFalse = function() {
-  return new Node(40);
-};
-Node.createHook = function(test, trueNode, falseNode) {
-  return Node.withChildren(new Node(37), [test, trueNode, falseNode]);
-};
-Node.createInt = function(value) {
-  return Node.withContent(new Node(41), new IntContent(value));
-};
-Node.createFloat = function(value) {
-  return Node.withContent(new Node(42), new DoubleContent(value));
-};
-Node.createDouble = function(value) {
-  return Node.withContent(new Node(43), new DoubleContent(value));
-};
-Node.createString = function(value) {
-  return Node.withContent(new Node(44), new StringContent(value));
-};
-Node.createInitializer = function(values) {
-  return Node.withChildren(new Node(45), values);
-};
-Node.createDot = function(value, name) {
-  return Node.withChildren(new Node(46), [value, name]);
-};
-Node.createLet = function(variable, value) {
-  return Node.withChildren(new Node(47), [variable, value]);
-};
 Node.createCall = function(value, $arguments) {
   $arguments.unshift(value);
   return Node.withChildren(new Node(48), $arguments);
-};
-Node.createSuperCall = function($arguments) {
-  return Node.withChildren(new Node(49), $arguments);
-};
-Node.createError = function() {
-  return new Node(50);
-};
-Node.createSequence = function(values) {
-  return Node.withChildren(new Node(51), values);
 };
 Node.createParameterize = function(type, types) {
   types.unshift(type);
   return Node.withChildren(new Node(52), types);
 };
-Node.createCast = function(type, value) {
-  return Node.withChildren(new Node(53), [type, value]);
-};
-Node.createImplicitCast = function(type, value) {
-  return Node.withChildren(new Node(54), [type, value]);
-};
 Node.createLambda = function($arguments, block) {
   $arguments.push(block);
   return Node.withChildren(new Node(55), $arguments);
 };
-Node.createDefault = function(type) {
-  return Node.withChildren(new Node(56), [type]);
-};
-Node.createUntyped = function(type) {
-  return Node.withChildren(new Node(57), [type]);
-};
-Node.createVar = function() {
-  return new Node(58);
-};
 Node.createFunctionType = function(result, $arguments) {
   $arguments.unshift(result);
   return Node.withChildren(new Node(59), $arguments);
-};
-Node.createUnary = function(kind, value) {
-  return Node.withChildren(new Node(kind), [value]);
-};
-Node.createAssign = function(left, right) {
-  return Node.createBinary(88, left, right);
 };
 Node.createBinary = function(kind, left, right) {
   if (kind === 88 && left.kind === 77) {
@@ -358,158 +190,11 @@ Node.createBinary = function(kind, left, right) {
   }
   return Node.withChildren(new Node(kind), [left, right]);
 };
-Node.createTertiary = function(kind, left, middle, right) {
-  return Node.withChildren(new Node(kind), [left, middle, right]);
-};
-Node.fileBlock = function($this) {
-  return $this.children[0];
-};
-Node.dotTarget = function($this) {
-  return $this.children[0];
-};
-Node.dotName = function($this) {
-  return $this.children[1];
-};
-Node.letVariable = function($this) {
-  return $this.children[0];
-};
-Node.letValue = function($this) {
-  return $this.children[1];
-};
-Node.unaryValue = function($this) {
-  return $this.children[0];
-};
-Node.binaryLeft = function($this) {
-  return $this.children[0];
-};
-Node.binaryRight = function($this) {
-  return $this.children[1];
-};
-Node.tertiaryLeft = function($this) {
-  return $this.children[0];
-};
-Node.tertiaryMiddle = function($this) {
-  return $this.children[1];
-};
-Node.tertiaryRight = function($this) {
-  return $this.children[2];
-};
-Node.hookTest = function($this) {
-  return $this.children[0];
-};
-Node.hookTrue = function($this) {
-  return $this.children[1];
-};
-Node.hookFalse = function($this) {
-  return $this.children[2];
-};
-Node.declarationName = function($this) {
-  return $this.children[0];
-};
-Node.declarationBlock = function($this) {
-  return $this.children[1];
-};
-Node.clusterType = function($this) {
-  return $this.children[0];
-};
 Node.clusterVariables = function($this) {
   return $this.children.slice(1, $this.children.length);
 };
-Node.variableType = function($this) {
-  return $this.children[1];
-};
-Node.variableValue = function($this) {
-  return $this.children[2];
-};
-Node.aliasValue = function($this) {
-  return $this.children[1];
-};
-Node.usingNamespaceValue = function($this) {
-  return $this.children[0];
-};
-Node.modifierName = function($this) {
-  return $this.children[0];
-};
 Node.modifierStatements = function($this) {
   return $this.children.slice(1, $this.children.length);
-};
-Node.castType = function($this) {
-  return $this.children[0];
-};
-Node.castValue = function($this) {
-  return $this.children[1];
-};
-Node.expressionValue = function($this) {
-  return $this.children[0];
-};
-Node.ifTest = function($this) {
-  return $this.children[0];
-};
-Node.ifTrue = function($this) {
-  return $this.children[1];
-};
-Node.ifFalse = function($this) {
-  return $this.children[2];
-};
-Node.forSetup = function($this) {
-  return $this.children[0];
-};
-Node.forTest = function($this) {
-  return $this.children[1];
-};
-Node.forUpdate = function($this) {
-  return $this.children[2];
-};
-Node.forBlock = function($this) {
-  return $this.children[3];
-};
-Node.forEachVariable = function($this) {
-  return $this.children[0];
-};
-Node.forEachValue = function($this) {
-  return $this.children[1];
-};
-Node.forEachBlock = function($this) {
-  return $this.children[2];
-};
-Node.whileTest = function($this) {
-  return $this.children[0];
-};
-Node.whileBlock = function($this) {
-  return $this.children[1];
-};
-Node.defaultType = function($this) {
-  return $this.children[0];
-};
-Node.untypedValue = function($this) {
-  return $this.children[0];
-};
-Node.baseTypes = function($this) {
-  return $this.children[2];
-};
-Node.objectParameters = function($this) {
-  return $this.children[3];
-};
-Node.functionArguments = function($this) {
-  return $this.children[1];
-};
-Node.functionBlock = function($this) {
-  return $this.children[2];
-};
-Node.functionResult = function($this) {
-  return $this.children[3];
-};
-Node.superInitializer = function($this) {
-  return $this.children[3];
-};
-Node.memberInitializers = function($this) {
-  return $this.children[4];
-};
-Node.memberInitializerName = function($this) {
-  return $this.children[0];
-};
-Node.memberInitializerValue = function($this) {
-  return $this.children[1];
 };
 Node.lambdaArguments = function($this) {
   return $this.children.slice(0, $this.children.length - 1 | 0);
@@ -517,41 +202,14 @@ Node.lambdaArguments = function($this) {
 Node.lambdaBlock = function($this) {
   return $this.children[$this.children.length - 1 | 0];
 };
-Node.assertValue = function($this) {
-  return $this.children[0];
-};
-Node.parameterizeType = function($this) {
-  return $this.children[0];
-};
 Node.parameterizeTypes = function($this) {
   return $this.children.slice(1, $this.children.length);
-};
-Node.functionTypeResult = function($this) {
-  return $this.children[0];
 };
 Node.functionTypeArguments = function($this) {
   return $this.children.slice(1, $this.children.length);
 };
-Node.callValue = function($this) {
-  return $this.children[0];
-};
 Node.callArguments = function($this) {
   return $this.children.slice(1, $this.children.length);
-};
-Node.superCallArguments = function($this) {
-  return $this.children;
-};
-Node.initializerValues = function($this) {
-  return $this.children;
-};
-Node.parameterBound = function($this) {
-  return $this.children[1];
-};
-Node.returnValue = function($this) {
-  return $this.children[0];
-};
-Node.switchValue = function($this) {
-  return $this.children[0];
 };
 Node.switchCases = function($this) {
   return $this.children.slice(1, $this.children.length);
@@ -659,38 +317,14 @@ Node.isDeclarationName = function($this) {
 Node.isStorage = function($this) {
   return $in.NodeKind.isUnaryStorageOperator($this.parent.kind) || $in.NodeKind.isBinaryStorageOperator($this.parent.kind) && $this === $this.parent.children[0];
 };
-Node.asBool = function($this) {
-  return $this.kind === 39;
-};
-Node.asInt = function($this) {
-  return $this.content.value;
-};
-Node.asDouble = function($this) {
-  return $this.content.value;
-};
-Node.asString = function($this) {
-  return $this.content.value;
-};
 Node.hasChildren = function($this) {
   return $this.children !== null && $this.children.length > 0;
 };
 Node.indexInParent = function($this) {
   return $this.parent.children.indexOf($this);
 };
-Node.prependChild = function($this, node) {
-  Node.insertChild($this, 0, node);
-};
-Node.prependChildren = function($this, nodes) {
-  Node.insertChildren($this, 0, nodes);
-};
 Node.appendChild = function($this, node) {
   Node.insertChild($this, $this.children === null ? 0 : $this.children.length, node);
-};
-Node.appendChildren = function($this, nodes) {
-  Node.insertChildren($this, $this.children === null ? 0 : $this.children.length, nodes);
-};
-Node.insertSiblingBefore = function($this, node) {
-  Node.insertChild($this.parent, Node.indexInParent($this), node);
 };
 Node.insertSiblingAfter = function($this, node) {
   Node.insertChild($this.parent, Node.indexInParent($this) + 1 | 0, node);
@@ -760,16 +394,6 @@ Node.insertChild = function($this, index, node) {
   }
   Node.updateParent(node, $this);
   $this.children.splice(index, 0, node);
-};
-Node.insertChildren = function($this, index, nodes) {
-  if ($this.children === null) {
-    $this.children = [];
-  }
-  for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-    var node = nodes[i];
-    Node.updateParent(node, $this);
-    $this.children.splice((index = index + 1 | 0) - 1 | 0, 0, node);
-  }
 };
 Node.clone = function($this) {
   var node = new Node($this.kind);
@@ -1366,9 +990,6 @@ function Range(_0, _1, _2) {
   this.start = _1;
   this.end = _2;
 }
-Range.isEmpty = function($this) {
-  return $this.source === null;
-};
 Range.toString = function($this) {
   return $this.source === null ? "" : $this.source.contents.slice($this.start, $this.end);
 };
@@ -1421,12 +1042,6 @@ Range.format = function($this, maxLength) {
 };
 Range.span = function(start, end) {
   return new Range(start.source, start.start, end.end);
-};
-Range.inner = function(start, end) {
-  return new Range(start.source, start.end, end.start);
-};
-Range.before = function(outer, inner) {
-  return new Range(outer.source, outer.start, inner.start);
 };
 Range.after = function(outer, inner) {
   return new Range(outer.source, inner.end, outer.end);
@@ -1938,9 +1553,6 @@ js.Emitter.emitSwitch = function($this, node) {
   js.Emitter.emit($this, ") {\n");
   js.Emitter.emitNodes($this, Node.switchCases(node));
   js.Emitter.emit($this, $this.indent + "}\n");
-};
-js.Emitter.emitModifier = function($this, node) {
-  js.Emitter.emitNodes($this, Node.modifierStatements(node));
 };
 js.Emitter.emitExpression = function($this, node, precedence) {
   var wasStartOfExpression = $this.isStartOfExpression;
@@ -2518,9 +2130,6 @@ ParserContext.spanSince = function($this, range) {
   var previous = $this.tokens[$this.index > 0 ? $this.index - 1 | 0 : 0];
   return previous.range.end < range.start ? range : Range.span(range, previous.range);
 };
-ParserContext.peek = function($this, kind) {
-  return ParserContext.current($this).kind === kind;
-};
 ParserContext.eat = function($this, kind) {
   if (ParserContext.current($this).kind === kind) {
     ParserContext.next($this);
@@ -2564,12 +2173,6 @@ Pratt.parselet = function($this, kind, precedence) {
     parselet.precedence = precedence;
   }
   return parselet;
-};
-Pratt.parse = function($this, context, precedence) {
-  return Pratt.parseIgnoringParselet($this, context, precedence, null);
-};
-Pratt.resume = function($this, context, precedence, left) {
-  return Pratt.resumeIgnoringParselet($this, context, precedence, left, null);
 };
 Pratt.parseIgnoringParselet = function($this, context, precedence, parseletToIgnore) {
   var token = ParserContext.current(context);
@@ -2958,8 +2561,69 @@ ConstantFolder.foldHook = function(node) {
   }
 };
 function DeadCodeRemovalPass() {
+  this.includedSymbols = new IntMap();
 }
 DeadCodeRemovalPass.run = function(program, resolver) {
+  var pass = new DeadCodeRemovalPass();
+  DeadCodeRemovalPass.includeTopLevelStatements(pass, program);
+  var symbols = resolver.allSymbols;
+  for (var i = 0; i < symbols.length; i = i + 1 | 0) {
+    var symbol = symbols[i];
+    if ((symbol.flags & 1024) !== 0 || (symbol.flags & 128) !== 0) {
+      DeadCodeRemovalPass.includeSymbol(pass, symbol);
+    }
+  }
+  for (var i = 0; i < symbols.length; i = i + 1 | 0) {
+    var symbol = symbols[i];
+    var node = symbol.node;
+    if (node !== null && !pass.includedSymbols.has(symbol.uniqueID)) {
+      var kind = symbol.kind;
+      if (kind === 15 || kind === 16 || kind === 9) {
+        symbol.enclosingSymbol.type.members.remove(symbol.name);
+        symbols.splice(i, 1)[0];
+        Node.remove(node);
+        i = i - 1 | 0;
+      }
+    }
+  }
+};
+DeadCodeRemovalPass.includeTopLevelStatements = function($this, node) {
+  if (node.symbol !== null && node.kind !== 7 && !Node.isDeclarationName(node)) {
+    DeadCodeRemovalPass.includeSymbol($this, node.symbol);
+  }
+  if (Node.hasChildren(node)) {
+    for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+      var child = node.children[i];
+      if (child !== null && !$in.NodeKind.isFunction(child.kind)) {
+        DeadCodeRemovalPass.includeTopLevelStatements($this, child);
+      }
+    }
+  }
+};
+DeadCodeRemovalPass.includeSymbol = function($this, symbol) {
+  if (!$this.includedSymbols.has(symbol.uniqueID)) {
+    $this.includedSymbols.set(symbol.uniqueID, true);
+    if (symbol.enclosingSymbol !== null && symbol.kind !== 20) {
+      DeadCodeRemovalPass.includeSymbol($this, symbol.enclosingSymbol);
+    }
+    var node = symbol.node;
+    if (node !== null && !$in.NodeKind.isNamedBlockDeclaration(node.kind)) {
+      DeadCodeRemovalPass.visit($this, node);
+    }
+  }
+};
+DeadCodeRemovalPass.visit = function($this, node) {
+  if (node.symbol !== null) {
+    DeadCodeRemovalPass.includeSymbol($this, node.symbol);
+  }
+  if (Node.hasChildren(node)) {
+    for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+      var child = node.children[i];
+      if (child !== null) {
+        DeadCodeRemovalPass.visit($this, child);
+      }
+    }
+  }
 };
 function FunctionInliningPass() {
 }
@@ -2985,25 +2649,6 @@ FunctionInliningPass.inlineSymbol = function(graph, info) {
       var value = values.shift();
       Node.become(callSite, clone);
       FunctionInliningPass.recursivelySubstituteArguments(callSite, info.$arguments, values);
-    }
-  }
-};
-FunctionInliningPass.recursivelyInlineFunctionCalls = function(graph, node) {
-  if (Node.hasChildren(node)) {
-    for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children[i];
-      if (child !== null) {
-        FunctionInliningPass.recursivelyInlineFunctionCalls(graph, child);
-      }
-    }
-  }
-  if (node.kind === 48) {
-    var symbol = node.children[0].symbol;
-    if (symbol !== null) {
-      var index = graph.symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
-      if (index >= 0) {
-        FunctionInliningPass.inlineSymbol(graph, graph.inliningInfo[index]);
-      }
     }
   }
 };
@@ -4621,12 +4266,6 @@ Resolver.resolveChildren = function($this, node) {
     Resolver.resolveNodes($this, node.children);
   }
 };
-Resolver.resolveProgram = function($this, node) {
-  Resolver.resolveChildren($this, node);
-};
-Resolver.resolveFile = function($this, node) {
-  Resolver.resolve($this, node.children[0], null);
-};
 Resolver.resolveBlock = function($this, node) {
   Resolver.resolveChildren($this, node);
   if ($this.options.removeAsserts && Node.hasChildren(node)) {
@@ -4652,9 +4291,6 @@ Resolver.resolveCase = function($this, node) {
     }
   }
   Resolver.resolve($this, block, null);
-};
-Resolver.resolveUsingNamespace = function($this, node) {
-  Resolver.checkInsideBlock($this, node);
 };
 Resolver.resolveNamespace = function($this, node) {
   Resolver.checkDeclarationLocation($this, node, 0);
@@ -4829,12 +4465,6 @@ Resolver.resolveVariable = function($this, node) {
     Resolver.resolveAsExpressionWithConversion($this, value, Symbol.isEnumValue(symbol) ? $this.cache.intType : symbol.type, 0);
   }
 };
-Resolver.resolveVariableCluster = function($this, node) {
-  Resolver.resolveNodes($this, Node.clusterVariables(node));
-};
-Resolver.resolveParameter = function($this, node) {
-  Resolver.initializeSymbol($this, node.symbol);
-};
 Resolver.resolveAlias = function($this, node) {
   Resolver.checkInsideBlock($this, node);
   if (node.symbol !== null) {
@@ -4967,9 +4597,6 @@ Resolver.resolveSwitch = function($this, node) {
       }
     }
   }
-};
-Resolver.resolveModifier = function($this, node) {
-  Resolver.resolveNodes($this, Node.modifierStatements(node));
 };
 Resolver.resolveName = function($this, node) {
   var name = node.content.value;
@@ -5151,9 +4778,6 @@ Resolver.resolveCall = function($this, node) {
     Resolver.resolveArguments($this, $arguments, Type.argumentTypes(valueType), node.range, value.range);
   }
 };
-Resolver.resolveSuperCall = function($this, node) {
-  Resolver.unsupportedNodeKind($this, node);
-};
 Resolver.resolveSequence = function($this, node) {
   for (var i = 0, n = node.children.length; i < n; i = i + 1 | 0) {
     var child = node.children[i];
@@ -5255,9 +4879,6 @@ Resolver.resolveDefault = function($this, node) {
   Resolver.resolveAsParameterizedType($this, type);
   Resolver.checkIsValidVariableType($this, type);
   node.type = type.type;
-};
-Resolver.resolveUntyped = function($this, node) {
-  Resolver.resolveAsExpression($this, node.children[0]);
 };
 Resolver.resolveVar = function($this, node) {
   Log.error($this.log, node.range, "Unexpected " + $in.NodeKind.toString(node.kind));
@@ -5415,9 +5036,6 @@ Scope.linkGlobals = function($this, cache) {
   cache.stringType = Scope.findLocal($this, "string").symbol.type;
   cache.listType = Scope.findLocal($this, "List").symbol.type;
 };
-Scope.findType = function($this, name) {
-  return Scope.findLocal($this, name).symbol.type;
-};
 Scope.insert = function($this, symbol) {
   if ($this.type !== null) {
     Type.addMember($this.type, new Member(symbol));
@@ -5516,59 +5134,8 @@ Symbol.isObjectMember = function($this) {
 Symbol.isEnumMember = function($this) {
   return $this.enclosingSymbol !== null && $in.SymbolKind.isEnum($this.enclosingSymbol.kind);
 };
-Symbol.isPublic = function($this) {
-  return ($this.flags & 1) !== 0;
-};
-Symbol.isPrivate = function($this) {
-  return ($this.flags & 2) !== 0;
-};
-Symbol.isProtected = function($this) {
-  return ($this.flags & 4) !== 0;
-};
-Symbol.isAbstract = function($this) {
-  return ($this.flags & 8) !== 0;
-};
-Symbol.isFromExtension = function($this) {
-  return ($this.flags & 16) !== 0;
-};
-Symbol.isOverride = function($this) {
-  return ($this.flags & 32) !== 0;
-};
-Symbol.isStatic = function($this) {
-  return ($this.flags & 64) !== 0;
-};
-Symbol.isVirtual = function($this) {
-  return ($this.flags & 128) !== 0;
-};
-Symbol.isFinal = function($this) {
-  return ($this.flags & 256) !== 0;
-};
-Symbol.isInline = function($this) {
-  return ($this.flags & 512) !== 0;
-};
-Symbol.isImport = function($this) {
-  return ($this.flags & 2048) !== 0;
-};
-Symbol.isExport = function($this) {
-  return ($this.flags & 1024) !== 0;
-};
 Symbol.isImportOrExport = function($this) {
   return ($this.flags & 2048) !== 0 || ($this.flags & 1024) !== 0;
-};
-Symbol.isUninitialized = function($this) {
-  return ($this.flags & 12288) === 0;
-};
-Symbol.isInitializing = function($this) {
-  return ($this.flags & 4096) !== 0;
-};
-Symbol.isInitialized = function($this) {
-  return ($this.flags & 8192) !== 0;
-};
-Symbol.hasLocationError = function($this) {
-  return ($this.flags & 16384) !== 0;
-};
-Symbol.hasModifierErrors = function($this) {
-  return ($this.flags & 32768) !== 0;
 };
 function SymbolMotionPass(_0) {
   this.shadowForSymbol = new IntMap();
@@ -5678,9 +5245,6 @@ Type.copyMembersFrom = function($this, other) {
     }
   }
 };
-Type.findMember = function($this, name) {
-  return $this.members.getOrDefault(name, null);
-};
 Type.environmentToString = function(parameters, substitutions) {
   var text = "[";
   for (var i = 0; i < parameters.length; i = i + 1 | 0) {
@@ -5718,9 +5282,6 @@ Type.toString = function($this) {
 Type.hasParameters = function($this) {
   return $this.symbol !== null && Symbol.hasParameters($this.symbol);
 };
-Type.isParameterized = function($this) {
-  return $this.substitutions !== null;
-};
 Type.hasRelevantTypes = function($this) {
   return $this.relevantTypes !== null && $this.relevantTypes.length > 0;
 };
@@ -5748,41 +5309,8 @@ Type.dependsOnParameter = function($this, parameter) {
   }
   return false;
 };
-Type.resultType = function($this) {
-  return $this.relevantTypes[0];
-};
 Type.argumentTypes = function($this) {
   return $this.relevantTypes.slice(1, $this.relevantTypes.length);
-};
-Type.isVoid = function($this, cache) {
-  return $this === cache.voidType;
-};
-Type.isInt = function($this, cache) {
-  return $this === cache.intType;
-};
-Type.isNull = function($this, cache) {
-  return $this === cache.nullType;
-};
-Type.isBool = function($this, cache) {
-  return $this === cache.boolType;
-};
-Type.isFloat = function($this, cache) {
-  return $this === cache.floatType;
-};
-Type.isDouble = function($this, cache) {
-  return $this === cache.doubleType;
-};
-Type.isString = function($this, cache) {
-  return $this === cache.stringType;
-};
-Type.isList = function($this, cache) {
-  return $this.symbol === cache.listType.symbol;
-};
-Type.isError = function($this, cache) {
-  return $this === cache.errorType;
-};
-Type.isFunction = function($this) {
-  return $this.symbol === null;
 };
 Type.isNamespace = function($this) {
   return $this.symbol !== null && $in.SymbolKind.isNamespace($this.symbol.kind);
@@ -5795,9 +5323,6 @@ Type.isEnumFlags = function($this) {
 };
 Type.isParameter = function($this) {
   return $this.symbol !== null && $this.symbol.kind === 4;
-};
-Type.isObject = function($this) {
-  return $this.symbol !== null && $in.SymbolKind.isObject($this.symbol.kind);
 };
 Type.isClass = function($this) {
   return $this.symbol !== null && $this.symbol.kind === 12;
@@ -6072,26 +5597,8 @@ LanguageService.prototype.checkForCompletions = function(input, line, column) {
   return null;
 };
 var service = {};
-$in.string.fromCodeUnit = function(value) {
-  return String.fromCharCode(value);
-};
-$in.string.get = function($this, index) {
-  return $this[index];
-};
-$in.string.join = function($this, values) {
-  return values.join($this);
-};
-$in.string.codeUnitAt = function($this, index) {
-  return $this.charCodeAt(index);
-};
-$in.string.append = function($this, value) {
-  return $this + value;
-};
 $in.string.startsWith = function($this, prefix) {
   return $this.length >= prefix.length && $this.slice(0, prefix.length) === prefix;
-};
-$in.string.endsWith = function($this, suffix) {
-  return $this.length >= suffix.length && $this.slice($this.length - suffix.length | 0, $this.length) === suffix;
 };
 $in.string.repeat = function($this, count) {
   var result = "";
@@ -6099,35 +5606,6 @@ $in.string.repeat = function($this, count) {
     result = result + $this;
   }
   return result;
-};
-$in.List.clone = function($this) {
-  return $this.slice();
-};
-$in.List.remove = function($this, index) {
-  return $this.splice(index, 1)[0];
-};
-$in.List.insert = function($this, index, value) {
-  $this.splice(index, 0, value);
-};
-$in.List.get = function($this, index) {
-  return $this[index];
-};
-$in.List.set = function($this, index, value) {
-  $this[index] = value;
-};
-$in.List.swap = function($this, a, b) {
-  var temp = $this[a];
-  $this[a] = $this[b];
-  $this[b] = temp;
-};
-$in.Math.imin = function(a, b) {
-  return Math.min(a, b);
-};
-$in.Math.imax = function(a, b) {
-  return Math.max(a, b);
-};
-$in.NodeKind.isStatement = function($this) {
-  return $this >= 6 && $this <= 33;
 };
 $in.NodeKind.isNamedBlockDeclaration = function($this) {
   return $this >= 7 && $this <= 13;
@@ -6165,14 +5643,8 @@ $in.NodeKind.isBinaryOperator = function($this) {
 $in.NodeKind.isBinaryStorageOperator = function($this) {
   return $this >= 88 && $this <= 98;
 };
-$in.NodeKind.isTertiaryOperator = function($this) {
-  return $this === 99;
-};
 $in.NodeKind.isCast = function($this) {
   return $this >= 53 && $this <= 54;
-};
-$in.NodeKind.isType = function($this) {
-  return $this === 35;
 };
 $in.NodeKind.isReal = function($this) {
   return $this >= 42 && $this <= 43;
@@ -6180,17 +5652,11 @@ $in.NodeKind.isReal = function($this) {
 $in.NodeKind.isBool = function($this) {
   return $this >= 39 && $this <= 40;
 };
-$in.NodeKind.isError = function($this) {
-  return $this === 50;
-};
 $in.NodeKind.isLoop = function($this) {
   return $this >= 21 && $this <= 24;
 };
 $in.NodeKind.isStorage = function($this) {
   return $this === 34 || $this === 46;
-};
-$in.NodeKind.prettyPrint = function($this) {
-  return replace($in.NodeKind.toString($this).toLowerCase(), "_", "-");
 };
 $in.NodeKind.toString = function($this) {
   switch ($this) {
@@ -6401,9 +5867,6 @@ $in.NodeKind.toString = function($this) {
 $in.TargetFormat.shouldRunResolver = function($this) {
   return $this >= 0 && $this <= 1;
 };
-$in.SymbolKind.isGlobalNamespace = function($this) {
-  return $this === 8;
-};
 $in.SymbolKind.isNamespace = function($this) {
   return $this >= 8 && $this <= 9;
 };
@@ -6418,9 +5881,6 @@ $in.SymbolKind.isObject = function($this) {
 };
 $in.SymbolKind.isType = function($this) {
   return $this >= 4 && $this <= 14;
-};
-$in.SymbolKind.isConstructor = function($this) {
-  return $this === 17;
 };
 $in.SymbolKind.isFunction = function($this) {
   return $this >= 15 && $this <= 17;
@@ -6687,22 +6147,6 @@ $in.TokenKind.toString = function($this) {
     return "";
   }
 };
-function nodeKindCheck(kind) {
-  return function(node) {
-    return node.kind === kind;
-  };
-}
-function checkAllNodeListKinds(node, check) {
-  return checkAllNodeKinds(node.children, check);
-}
-function checkAllNodeKinds(nodes, check) {
-  for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-    if (!check(nodes[i])) {
-      return false;
-    }
-  }
-  return true;
-}
 function createOperatorMap() {
   var result = new IntMap();
   result.set(60, new OperatorInfo("!", 13, 0));
@@ -6874,18 +6318,9 @@ function replace(text, before, after) {
   }
   return result + text;
 }
-function plural(value, singular, plural) {
-  return value === 1 ? singular : plural;
-}
 function splitPath(path) {
   var slashIndex = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return slashIndex === -1 ? new SplitPath(".", path) : new SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1 | 0, path.length));
-}
-function joinPath(directory, entry) {
-  return directory + "/" + entry;
-}
-function formatNumber(number) {
-  return (Math.round(number * 10) / 10).toString();
 }
 function bytesToString(bytes) {
   if (bytes === 1) {
@@ -7200,36 +6635,15 @@ function prepareTokens(tokens) {
     }
   }
 }
-function simpleQuote(name) {
-  return "\"" + name + "\"";
-}
 function firstLineOf(text) {
   var index = text.indexOf("\n");
   return index < 0 ? text : text.slice(0, index);
-}
-function syntaxErrorInvalidEscapeSequence(log, range, text) {
-  Log.error(log, range, "Invalid escape sequence " + firstLineOf("\"" + text + "\""));
-}
-function syntaxErrorInvalidCharacter(log, range, text) {
-  Log.error(log, range, "Invalid character literal " + firstLineOf(text));
-}
-function syntaxErrorInvalidInteger(log, range, text) {
-  Log.error(log, range, "Invalid integer literal " + text);
-}
-function syntaxErrorExtraData(log, range, text) {
-  Log.error(log, range, "Syntax error " + quoteString(text, 34));
 }
 function syntaxErrorUnexpectedToken(log, token) {
   Log.error(log, token.range, "Unexpected " + $in.TokenKind.toString(token.kind));
 }
 function syntaxErrorExpectedToken(log, found, expected) {
   Log.error(log, found.range, "Expected " + $in.TokenKind.toString(expected) + " but found " + $in.TokenKind.toString(found.kind));
-}
-function syntaxErrorBadForEach(log, range) {
-  Log.error(log, range, "More than one variable inside a for-each loop");
-}
-function syntaxWarningOctal(log, range) {
-  Log.warning(log, range, "Use the prefix \"0o\" for octal numbers");
 }
 function scanForToken(context, kind, tokenScan) {
   if (ParserContext.expect(context, kind)) {
@@ -7396,9 +6810,6 @@ function parseArgumentVariables(context) {
   }
   scanForToken(context, 80, 0);
   return Node.withRange(Node.withChildren(new Node(3), $arguments), ParserContext.spanSince(context, token.range));
-}
-function parseType(context) {
-  return Pratt.parseIgnoringParselet(pratt, context, 14, null);
 }
 function parseEnumValueDeclaration(context) {
   var name = parseName(context);
@@ -8157,47 +7568,11 @@ function createParser() {
   };
   return pratt;
 }
-function typeToText(type) {
-  return "type \"" + Type.toString(type) + "\"";
-}
-function semanticWarningUnusedExpression(log, range) {
-  Log.warning(log, range, "Unused expression");
-}
-function semanticWarningDuplicateModifier(log, range, modifier) {
-  Log.warning(log, range, "Duplicate modifier " + ("\"" + modifier + "\""));
-}
-function semanticErrorRedundantModifier(log, range, modifier, where) {
-  Log.error(log, range, "Redundant modifier " + ("\"" + modifier + "\"") + " " + where);
-}
-function semanticErrorUnexpectedModifier(log, range, modifier, where) {
-  Log.error(log, range, "Cannot use the " + ("\"" + modifier + "\"") + " modifier " + where);
-}
-function semanticErrorExpectedModifier(log, range, modifier, where) {
-  Log.error(log, range, "Expected the " + ("\"" + modifier + "\"") + " modifier " + where);
-}
 function semanticErrorDuplicateSymbol(log, range, name, previous) {
   Log.error(log, range, "\"" + name + "\"" + " is already declared");
   if (previous.source !== null) {
     Log.note(log, previous, "The previous declaration is here");
   }
-}
-function semanticErrorUnexpectedNode(log, range, kind) {
-  Log.error(log, range, "Unexpected " + $in.NodeKind.toString(kind));
-}
-function semanticErrorUnexpectedExpression(log, range, type) {
-  Log.error(log, range, "Unexpected expression of " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorUnexpectedType(log, range, type) {
-  Log.error(log, range, "Unexpected " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorUndeclaredSymbol(log, range, name) {
-  Log.error(log, range, "\"" + name + "\"" + " is not declared");
-}
-function semanticErrorUnknownMemberSymbol(log, range, name, type) {
-  Log.error(log, range, "\"" + name + "\"" + " is not declared on " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorExtensionMissingTarget(log, range, name) {
-  Log.error(log, range, "No type named " + ("\"" + name + "\"") + " to extend");
 }
 function semanticErrorDifferentModifiers(log, range, name, previous) {
   Log.error(log, range, "Cannot merge multiple declarations for " + ("\"" + name + "\"") + " with different modifiers");
@@ -8205,98 +7580,17 @@ function semanticErrorDifferentModifiers(log, range, name, previous) {
     Log.note(log, previous, "The conflicting declaration is here");
   }
 }
-function semanticErrorBadUsingValue(log, range) {
-  Log.error(log, range, "Expected a type here");
-}
-function semanticErrorBadUsingNamespace(log, range) {
-  Log.error(log, range, "Expected a namespace here");
-}
-function semanticErrorUnexpectedStatement(log, range) {
-  Log.error(log, range, "Cannot use this statement here");
-}
-function semanticErrorCyclicDeclaration(log, range, name) {
-  Log.error(log, range, "Cyclic declaration of " + ("\"" + name + "\""));
-}
-function semanticErrorUnexpectedThis(log, range, name) {
-  Log.error(log, range, "Cannot use " + ("\"" + name + "\"") + " outside a class or struct");
-}
-function semanticErrorStaticThis(log, range, name) {
-  Log.error(log, range, "Cannot access " + ("\"" + name + "\"") + " from a static context");
-}
-function semanticErrorIncompatibleTypes(log, range, from, to, isCastAllowed) {
-  Log.error(log, range, "Cannot convert from " + ("type \"" + Type.toString(from) + "\"") + " to " + ("type \"" + Type.toString(to) + "\"") + (isCastAllowed ? " without a cast" : ""));
-}
-function semanticErrorNoCommonType(log, range, left, right) {
-  Log.error(log, range, "No common type for " + ("type \"" + Type.toString(left) + "\"") + " and " + ("type \"" + Type.toString(right) + "\""));
-}
-function semanticErrorBadType(log, range, type) {
-  Log.error(log, range, "Cannot use " + ("type \"" + Type.toString(type) + "\"") + " here");
-}
-function semanticErrorMemberUnexpectedStatic(log, range, name) {
-  Log.error(log, range, "Cannot access static member " + ("\"" + name + "\"") + " from an instance context");
-}
-function semanticErrorMemberUnexpectedInstance(log, range, name) {
-  Log.error(log, range, "Cannot access instance member " + ("\"" + name + "\"") + " from a static context");
-}
-function semanticErrorMissingTypeContext(log, range) {
-  Log.error(log, range, "Expression has no type context here");
-}
-function semanticErrorBadTypeParameterBound(log, range, type) {
-  Log.error(log, range, "Cannot use " + ("type \"" + Type.toString(type) + "\"") + " as a type parameter bound");
-}
-function semanticErrorUninitializedExtensionVariable(log, range) {
-  Log.error(log, range, "Instance variables in extension blocks must be initialized");
-}
-function semanticErrorVarMissingValue(log, range) {
-  Log.error(log, range, "Implicitly typed variables must be initialized");
-}
-function semanticErrorVarBadType(log, range, type) {
-  Log.error(log, range, "Implicitly typed variables cannot be of " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorInvalidCall(log, range, type) {
-  Log.error(log, range, "Cannot call " + ("type \"" + Type.toString(type) + "\""));
-}
 function semanticErrorParameterCount(log, range, expected, found) {
   Log.error(log, range, "Expected " + expected.toString() + (expected === 1 ? " type parameter" : " type parameters") + " but found " + found.toString() + (found === 1 ? " type parameter" : " type parameters"));
 }
 function semanticErrorArgumentCount(log, range, expected, found) {
   Log.error(log, range, "Expected " + expected.toString() + (expected === 1 ? " argument" : " arguments") + " but found " + found.toString() + (found === 1 ? " argument" : " arguments"));
 }
-function semanticErrorExpectedReturnValue(log, range, type) {
-  Log.error(log, range, "Return statement must return " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorBadLambdaTypeContext(log, range, type) {
-  Log.error(log, range, "Cannot use a lambda expression with " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorNonConstantCaseValue(log, range) {
-  Log.error(log, range, "Non-constant case value");
-}
-function semanticErrorBadDefaultCase(log, range) {
-  Log.error(log, range, "Only the last case can be a default case");
-}
 function semanticErrorDuplicateCase(log, range, previous) {
   Log.error(log, range, "Duplicate case value");
   if (previous.source !== null) {
     Log.note(log, previous, "The first occurrence is here");
   }
-}
-function semanticErrorUnconstructableType(log, range, type) {
-  Log.error(log, range, "Cannot construct " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorAbstractConstructorInitializer(log, range) {
-  Log.error(log, range, "An abstract constructor must not have initializer list");
-}
-function semanticErrorUnexpectedBaseType(log, range, what) {
-  Log.error(log, range, what + " cannot inherit from another type");
-}
-function semanticErrorClassBaseNotFirst(log, range, type) {
-  Log.error(log, range, "Base " + ("type \"" + Type.toString(type) + "\"") + " must come first in a class declaration");
-}
-function semanticErrorBaseTypeNotInterface(log, range, type) {
-  Log.error(log, range, "Base " + ("type \"" + Type.toString(type) + "\"") + " must be an interface");
-}
-function semanticErrorDuplicateBaseType(log, range, type) {
-  Log.error(log, range, "Duplicate base " + ("type \"" + Type.toString(type) + "\""));
 }
 function semanticErrorAmbiguousSymbol(log, range, name, names) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
@@ -8335,53 +7629,14 @@ function semanticErrorCannotOverrideNonVirtual(log, range, name, overridden) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
-function semanticErrorBadIntegerConstant(log, range, type) {
-  Log.error(log, range, "Expected integer constant but found expression of " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorNoUnaryOperator(log, range, kind, type) {
-  Log.error(log, range, "No unary operator " + operatorInfo.get(kind).text + " for " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorNoBinaryOperator(log, range, kind, left, right) {
-  Log.error(log, range, "No binary operator " + operatorInfo.get(kind).text + " for " + ("type \"" + Type.toString(left) + "\"") + " and " + ("type \"" + Type.toString(right) + "\""));
-}
-function semanticErrorBadStorage(log, range) {
-  Log.error(log, range, "Cannot store to this location");
-}
-function semanticErrorStorageToFinal(log, range) {
-  Log.error(log, range, "Cannot store to a symbol marked as \"final\"");
-}
-function semanticErrorUnparameterizedType(log, range, type) {
-  Log.error(log, range, "Cannot use unparameterized " + ("type \"" + Type.toString(type) + "\""));
-}
 function semanticErrorCannotParameterize(log, range, type) {
   Log.error(log, range, "Cannot parameterize " + ("type \"" + Type.toString(type) + "\"") + (Type.hasParameters(type) ? " because it is already parameterized" : " because it has no type parameters"));
-}
-function semanticErrorBadSuperInitializer(log, range) {
-  Log.error(log, range, "No base constructor to call");
-}
-function semanticErrorMissingSuperInitializer(log, range) {
-  Log.error(log, range, "Missing call to \"super\" in initializer list");
 }
 function semanticErrorAlreadyInitialized(log, range, name, previous) {
   Log.error(log, range, "\"" + name + "\"" + " is already initialized");
   if (previous.source !== null) {
     Log.note(log, previous, "The previous initialization is here");
   }
-}
-function semanticErrorBadEnumToString(log, range, name, first, second, value) {
-  Log.error(log, range, "Cannot automatically generate \"toString\" for " + ("\"" + name + "\"") + " because " + ("\"" + first + "\"") + " and " + ("\"" + second + "\"") + " both have the same value " + value.toString());
-}
-function semanticErrorMissingReturn(log, range, name, type) {
-  Log.error(log, range, "All control paths for " + ("\"" + name + "\"") + " must return a value of " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorLambdaMissingReturn(log, range, type) {
-  Log.error(log, range, "All control paths for lambda expression must return a value of " + ("type \"" + Type.toString(type) + "\""));
-}
-function semanticErrorBaseClassInExtension(log, range) {
-  Log.error(log, range, "The base class must be set from the class declaration, not from an extension block");
-}
-function semanticErrorMustCallFunctionReference(log, range) {
-  Log.error(log, range, "Raw function references are not allowed (call the function instead)");
 }
 function createNameToSymbolFlag() {
   var result = new StringMap();
