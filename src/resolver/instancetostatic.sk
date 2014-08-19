@@ -23,12 +23,12 @@ class InstanceToStaticPass {
               Node target;
               Node name;
               if (value.kind == .DOT) {
-                target = value.dotTarget().remove();
-                name = value.dotName().remove();
+                target = value.dotTarget().replaceWith(null);
+                name = value.dotName().replaceWith(null);
               } else {
                 assert value.kind == .NAME;
                 target = Node.createThis();
-                name = value.remove();
+                name = value.replaceWith(null);
               }
               callSite.replaceChild(0, name);
               callSite.insertChild(1, target);

@@ -21,6 +21,10 @@ IntMap.prototype.has = function(key) {
   return key in this._table;
 };
 
+IntMap.prototype.remove = function(key) {
+  delete this._table[key];
+};
+
 IntMap.prototype.keys = function() {
   var keys = [];
   for (var key in this._table) {
@@ -72,6 +76,14 @@ StringMap.prototype.has = function(key) {
   return key === '__proto__' ? this._proto !== void 0 : this._table[key] !== void 0;
 };
 
+StringMap.prototype.remove = function(key) {
+  if (key === '__proto__') {
+    this._proto = void 0;
+  } else {
+    delete this._table[key];
+  }
+};
+
 StringMap.prototype.keys = function() {
   var keys = [];
   for (var key in this._table) {
@@ -107,5 +119,3 @@ StringMap.prototype.clone = function() {
   clone._proto = this._proto;
   return clone;
 };
-
-var string = {};

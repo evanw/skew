@@ -125,6 +125,10 @@ in Node {
     return kind == .NAME && (parent.kind != .DOT || this != parent.dotName()) && (!parent.kind.isNamedDeclaration() || this != parent.declarationName());
   }
 
+  bool isDeclarationName() {
+    return kind == .NAME && parent.kind.isNamedDeclaration() && this == parent.declarationName();
+  }
+
   bool isStorage() {
     return parent.kind.isUnaryStorageOperator() || parent.kind.isBinaryStorageOperator() && this == parent.binaryLeft();
   }

@@ -22,6 +22,18 @@ class ConstantFolder {
     node.content = DoubleContent(value);
   }
 
+  static bool blockContainsVariableCluster(Node node) {
+    assert node.kind == .BLOCK;
+    if (node.hasChildren()) {
+      for (var i = 0; i < node.children.length; i++) {
+        if (node.children.get(i).kind == .VARIABLE_CLUSTER) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   void foldConstants(Node node) {
     var kind = node.kind;
 
@@ -33,131 +45,237 @@ class ConstantFolder {
           foldConstants(child);
         }
       }
-    }
-
-    // Symbols
-    if (kind == .NAME) {
-      if (node.symbol != null && node.symbol.isEnumValue()) {
-        flattenInt(node, (int)node.symbol.enumValue);
+      if (kind == .BLOCK) {
+        foldBlock(node);
+        return;
       }
     }
 
-    // Casts
-    else if (kind.isCast()) {
-      var type = node.castType().type;
-      var value = node.castValue();
-      var valueKind = value.kind;
+    // Separating the if blocks into separate functions makes the JavaScript JIT go faster
+    if (kind == .NAME) { foldName(node); }
+    else if (kind.isCast()) { foldCast(node); }
+    else if (kind.isUnaryOperator()) { foldUnaryOperator(node, kind); }
+    else if (kind.isBinaryOperator()) { foldBinaryOperator(node, kind); }
+    else if (kind == .HOOK) { foldHook(node); }
+  }
 
-      // Cast "bool" values
-      if (valueKind.isBool()) {
-        if (type.isBool(cache)) flattenBool(node, (bool)value.asBool());
-        else if (type.isInteger(cache)) flattenInt(node, (int)value.asBool());
-        else if (type.isReal(cache)) flattenReal(node, (double)value.asBool());
+  static void foldBlock(Node node) {
+    for (var i = 0; i < node.children.length; i++) {
+      var child = node.children.get(i);
+
+      // Remove constants and "while (false) { ... }" entirely
+      if (child.kind == .EXPRESSION && child.expressionValue().kind.isConstant() ||
+          child.kind == .WHILE && child.whileTest().kind == .FALSE) {
+        node.removeChildAtIndex(i);
+        i--;
       }
 
-      // Cast "int" values
-      else if (valueKind == .INT) {
-        if (type.isBool(cache)) flattenBool(node, (bool)value.asInt());
-        else if (type.isInteger(cache)) flattenInt(node, (int)value.asInt());
-        else if (type.isReal(cache)) flattenReal(node, (double)value.asInt());
+      // Reduce for loops that will never execute
+      else if (child.kind == .FOR) {
+        var test = child.forTest();
+        if (test != null && test.kind == .FALSE) {
+          var setup = child.forSetup();
+
+          // Remove "for (; false; c) d;" entirely
+          if (setup == null || setup.kind.isConstant()) {
+            node.removeChildAtIndex(i);
+            i--;
+          }
+
+          // Replace "for (a; false; c) d;" with "a;"
+          else if (setup.kind != .VARIABLE_CLUSTER) {
+            child.replaceWith(Node.createExpression(setup.remove()));
+          }
+
+          // The code "for (var a = 0; false; c) d;" can't be folded
+          // completely because that would pollute the enclosing scope
+          else {
+            var update = child.forUpdate();
+            if (update != null) {
+              update.replaceWith(null);
+            }
+            child.forBlock().removeChildren();
+          }
+        }
       }
 
-      // Cast "float" or "double" values
-      else if (valueKind.isReal()) {
-        if (type.isBool(cache)) flattenBool(node, (bool)value.asDouble());
-        else if (type.isInteger(cache)) flattenInt(node, (int)value.asDouble());
-        else if (type.isReal(cache)) flattenReal(node, (double)value.asDouble());
-      }
-    }
+      // Statically evaluate if statements where possible
+      else if (child.kind == .IF) {
+        var test = child.ifTest();
+        var testKind = test.kind;
+        var trueBlock = child.ifTrue();
+        var falseBlock = child.ifFalse();
 
-    // Unary operators
-    else if (kind.isUnaryOperator()) {
-      var value = node.unaryValue();
-      var valueKind = value.kind;
+        // Always true if statement
+        if (testKind == .TRUE) {
+          // Remove dead code in the "else" block
+          if (falseBlock != null) {
+            falseBlock.replaceWith(null);
+          }
 
-      // Fold "bool" values
-      if (valueKind.isBool()) {
-        if (kind == .NOT) flattenBool(node, !value.asBool());
-      }
+          // Be careful not to pollute the enclosing scope
+          if (!blockContainsVariableCluster(trueBlock)) {
+            var replacements = trueBlock.removeChildren();
+            child.replaceWithNodes(replacements);
+            i += replacements.length - 1;
+          }
+        }
 
-      // Fold "int" values
-      else if (valueKind == .INT) {
-        if (kind == .POSITIVE) flattenInt(node, +value.asInt());
-        else if (kind == .NEGATIVE) flattenInt(node, -value.asInt());
-        else if (kind == .COMPLEMENT) flattenInt(node, ~value.asInt());
-      }
+        // Always false if statement
+        else if (testKind == .FALSE) {
 
-      // Fold "float" or "double" values
-      else if (valueKind.isReal()) {
-        if (kind == .POSITIVE) flattenReal(node, +value.asDouble());
-        else if (kind == .NEGATIVE) flattenReal(node, -value.asDouble());
-      }
+          // Remove entirely
+          if (falseBlock == null) {
+            node.removeChildAtIndex(i);
+            i--;
+          }
 
-      // Partial evaluation
-      else if (kind == .NOT) {
-        switch (valueKind) {
-          case .NOT, .EQUAL, .NOT_EQUAL, .LOGICAL_OR, .LOGICAL_AND, .LESS_THAN, .GREATER_THAN, .LESS_THAN_OR_EQUAL, .GREATER_THAN_OR_EQUAL {
-            value.invertBooleanCondition(cache);
-            node.become(value);
+          // Be careful not to pollute the enclosing scope
+          else if (!blockContainsVariableCluster(falseBlock)) {
+            var replacements = falseBlock.removeChildren();
+            child.replaceWithNodes(replacements);
+            i += replacements.length - 1;
+          }
+
+          // Otherwise, transform to an "if (true) { ... }" statement
+          else {
+            test.replaceWith(Node.createTrue().withType(test.type));
+            trueBlock.replaceWith(falseBlock.replaceWith(null));
           }
         }
       }
     }
+  }
 
-    // Binary operators
-    else if (kind.isBinaryOperator()) {
-      var left = node.binaryLeft();
-      var right = node.binaryRight();
-      var valueKind = left.kind;
-      if (valueKind != right.kind && (!left.kind.isBool() || !right.kind.isBool())) return;
+  void foldName(Node node) {
+    if (node.symbol != null && node.symbol.isEnumValue()) {
+      flattenInt(node, (int)node.symbol.enumValue);
+    }
+  }
 
-      // Fold "bool" values
-      if (valueKind.isBool()) {
-        switch (kind) {
-          case .LOGICAL_AND { flattenBool(node, left.asBool() && right.asBool()); }
-          case .LOGICAL_OR { flattenBool(node, left.asBool() || right.asBool()); }
-          case .EQUAL { flattenBool(node, left.asBool() == right.asBool()); }
-          case .NOT_EQUAL { flattenBool(node, left.asBool() != right.asBool()); }
+  void foldCast(Node node) {
+    var type = node.castType().type;
+    var value = node.castValue();
+    var valueKind = value.kind;
+
+    // Cast "bool" values
+    if (valueKind.isBool()) {
+      if (type.isBool(cache)) flattenBool(node, (bool)value.asBool());
+      else if (type.isInteger(cache)) flattenInt(node, (int)value.asBool());
+      else if (type.isReal(cache)) flattenReal(node, (double)value.asBool());
+    }
+
+    // Cast "int" values
+    else if (valueKind == .INT) {
+      if (type.isBool(cache)) flattenBool(node, (bool)value.asInt());
+      else if (type.isInteger(cache)) flattenInt(node, (int)value.asInt());
+      else if (type.isReal(cache)) flattenReal(node, (double)value.asInt());
+    }
+
+    // Cast "float" or "double" values
+    else if (valueKind.isReal()) {
+      if (type.isBool(cache)) flattenBool(node, (bool)value.asDouble());
+      else if (type.isInteger(cache)) flattenInt(node, (int)value.asDouble());
+      else if (type.isReal(cache)) flattenReal(node, (double)value.asDouble());
+    }
+  }
+
+  void foldUnaryOperator(Node node, NodeKind kind) {
+    var value = node.unaryValue();
+    var valueKind = value.kind;
+
+    // Fold "bool" values
+    if (valueKind.isBool()) {
+      if (kind == .NOT) flattenBool(node, !value.asBool());
+    }
+
+    // Fold "int" values
+    else if (valueKind == .INT) {
+      if (kind == .POSITIVE) flattenInt(node, +value.asInt());
+      else if (kind == .NEGATIVE) flattenInt(node, -value.asInt());
+      else if (kind == .COMPLEMENT) flattenInt(node, ~value.asInt());
+    }
+
+    // Fold "float" or "double" values
+    else if (valueKind.isReal()) {
+      if (kind == .POSITIVE) flattenReal(node, +value.asDouble());
+      else if (kind == .NEGATIVE) flattenReal(node, -value.asDouble());
+    }
+
+    // Partial evaluation
+    else if (kind == .NOT) {
+      switch (valueKind) {
+        case .NOT, .EQUAL, .NOT_EQUAL, .LOGICAL_OR, .LOGICAL_AND, .LESS_THAN, .GREATER_THAN, .LESS_THAN_OR_EQUAL, .GREATER_THAN_OR_EQUAL {
+          value.invertBooleanCondition(cache);
+          node.become(value);
         }
       }
+    }
+  }
 
-      // Fold "int" values
-      else if (valueKind == .INT) {
-        switch (kind) {
-          case .ADD { flattenInt(node, left.asInt() + right.asInt()); }
-          case .SUBTRACT { flattenInt(node, left.asInt() - right.asInt()); }
-          case .MULTIPLY { flattenInt(node, left.asInt() * right.asInt()); }
-          case .DIVIDE { flattenInt(node, left.asInt() / right.asInt()); }
-          case .REMAINDER { flattenInt(node, left.asInt() % right.asInt()); }
-          case .SHIFT_LEFT { flattenInt(node, left.asInt() << right.asInt()); }
-          case .SHIFT_RIGHT { flattenInt(node, left.asInt() >> right.asInt()); }
-          case .BITWISE_AND { flattenInt(node, left.asInt() & right.asInt()); }
-          case .BITWISE_OR { flattenInt(node, left.asInt() | right.asInt()); }
-          case .BITWISE_XOR { flattenInt(node, left.asInt() ^ right.asInt()); }
-          case .EQUAL { flattenBool(node, left.asInt() == right.asInt()); }
-          case .NOT_EQUAL { flattenBool(node, left.asInt() != right.asInt()); }
-          case .LESS_THAN { flattenBool(node, left.asInt() < right.asInt()); }
-          case .GREATER_THAN { flattenBool(node, left.asInt() > right.asInt()); }
-          case .LESS_THAN_OR_EQUAL { flattenBool(node, left.asInt() <= right.asInt()); }
-          case .GREATER_THAN_OR_EQUAL { flattenBool(node, left.asInt() >= right.asInt()); }
-        }
-      }
+  void foldBinaryOperator(Node node, NodeKind kind) {
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+    var valueKind = left.kind;
+    if (valueKind != right.kind && (!left.kind.isBool() || !right.kind.isBool())) {
+      return;
+    }
 
-      // Fold "float" and "double" values
-      else if (valueKind.isReal()) {
-        switch (kind) {
-          case .ADD { flattenReal(node, left.asDouble() + right.asDouble()); }
-          case .SUBTRACT { flattenReal(node, left.asDouble() - right.asDouble()); }
-          case .MULTIPLY { flattenReal(node, left.asDouble() * right.asDouble()); }
-          case .DIVIDE { flattenReal(node, left.asDouble() / right.asDouble()); }
-          case .EQUAL { flattenBool(node, left.asDouble() == right.asDouble()); }
-          case .NOT_EQUAL { flattenBool(node, left.asDouble() != right.asDouble()); }
-          case .LESS_THAN { flattenBool(node, left.asDouble() < right.asDouble()); }
-          case .GREATER_THAN { flattenBool(node, left.asDouble() > right.asDouble()); }
-          case .LESS_THAN_OR_EQUAL { flattenBool(node, left.asDouble() <= right.asDouble()); }
-          case .GREATER_THAN_OR_EQUAL { flattenBool(node, left.asDouble() >= right.asDouble()); }
-        }
+    // Fold "bool" values
+    if (valueKind.isBool()) {
+      switch (kind) {
+        case .LOGICAL_AND { flattenBool(node, left.asBool() && right.asBool()); }
+        case .LOGICAL_OR { flattenBool(node, left.asBool() || right.asBool()); }
+        case .EQUAL { flattenBool(node, left.asBool() == right.asBool()); }
+        case .NOT_EQUAL { flattenBool(node, left.asBool() != right.asBool()); }
       }
+    }
+
+    // Fold "int" values
+    else if (valueKind == .INT) {
+      switch (kind) {
+        case .ADD { flattenInt(node, left.asInt() + right.asInt()); }
+        case .SUBTRACT { flattenInt(node, left.asInt() - right.asInt()); }
+        case .MULTIPLY { flattenInt(node, left.asInt() * right.asInt()); }
+        case .DIVIDE { flattenInt(node, left.asInt() / right.asInt()); }
+        case .REMAINDER { flattenInt(node, left.asInt() % right.asInt()); }
+        case .SHIFT_LEFT { flattenInt(node, left.asInt() << right.asInt()); }
+        case .SHIFT_RIGHT { flattenInt(node, left.asInt() >> right.asInt()); }
+        case .BITWISE_AND { flattenInt(node, left.asInt() & right.asInt()); }
+        case .BITWISE_OR { flattenInt(node, left.asInt() | right.asInt()); }
+        case .BITWISE_XOR { flattenInt(node, left.asInt() ^ right.asInt()); }
+        case .EQUAL { flattenBool(node, left.asInt() == right.asInt()); }
+        case .NOT_EQUAL { flattenBool(node, left.asInt() != right.asInt()); }
+        case .LESS_THAN { flattenBool(node, left.asInt() < right.asInt()); }
+        case .GREATER_THAN { flattenBool(node, left.asInt() > right.asInt()); }
+        case .LESS_THAN_OR_EQUAL { flattenBool(node, left.asInt() <= right.asInt()); }
+        case .GREATER_THAN_OR_EQUAL { flattenBool(node, left.asInt() >= right.asInt()); }
+      }
+    }
+
+    // Fold "float" and "double" values
+    else if (valueKind.isReal()) {
+      switch (kind) {
+        case .ADD { flattenReal(node, left.asDouble() + right.asDouble()); }
+        case .SUBTRACT { flattenReal(node, left.asDouble() - right.asDouble()); }
+        case .MULTIPLY { flattenReal(node, left.asDouble() * right.asDouble()); }
+        case .DIVIDE { flattenReal(node, left.asDouble() / right.asDouble()); }
+        case .EQUAL { flattenBool(node, left.asDouble() == right.asDouble()); }
+        case .NOT_EQUAL { flattenBool(node, left.asDouble() != right.asDouble()); }
+        case .LESS_THAN { flattenBool(node, left.asDouble() < right.asDouble()); }
+        case .GREATER_THAN { flattenBool(node, left.asDouble() > right.asDouble()); }
+        case .LESS_THAN_OR_EQUAL { flattenBool(node, left.asDouble() <= right.asDouble()); }
+        case .GREATER_THAN_OR_EQUAL { flattenBool(node, left.asDouble() >= right.asDouble()); }
+      }
+    }
+  }
+
+  static void foldHook(Node node) {
+    var testKind = node.hookTest().kind;
+    if (testKind == .TRUE) {
+      node.replaceWith(node.hookTrue().remove());
+    } else if (testKind == .FALSE) {
+      node.replaceWith(node.hookFalse().remove());
     }
   }
 }

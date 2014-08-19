@@ -5,7 +5,7 @@ import struct float { string toString(); }
 import struct double { string toString(); }
 
 import struct String {
-  static string fromCharCode(int value);
+  import static string fromCharCode(int value);
 }
 
 import struct string {
@@ -55,6 +55,7 @@ import class StringMap<T> {
   T getOrDefault(string key, T defaultValue);
   void set(string key, T value);
   bool has(string key);
+  void remove(string key);
   List<string> keys();
   List<T> values();
   StringMap<T> clone();
@@ -66,6 +67,7 @@ import class IntMap<T> {
   T getOrDefault(int key, T defaultValue);
   void set(int key, T value);
   bool has(int key);
+  void remove(int key);
   List<int> keys();
   List<T> values();
   IntMap<T> clone();
@@ -73,30 +75,30 @@ import class IntMap<T> {
 
 // TODO: Rename this to \"math\" since namespaces should be lower case
 import namespace Math {
-  final double E;
-  final double PI;
-  final double NAN;
-  final double INFINITY;
-  double random();
-  double abs(double n);
-  double sin(double n);
-  double cos(double n);
-  double tan(double n);
-  double asin(double n);
-  double acos(double n);
-  double atan(double n);
-  double round(double n);
-  double floor(double n);
-  double ceil(double n);
-  double exp(double n);
-  double log(double n);
-  double sqrt(double n);
-  bool isNaN(double n);
-  bool isFinite(double n);
-  double atan2(double y, double x);
-  double pow(double base, double exponent);
-  double min(double a, double b);
-  double max(double a, double b);
+  import final double E;
+  import final double PI;
+  import final double NAN;
+  import final double INFINITY;
+  import double random();
+  import double abs(double n);
+  import double sin(double n);
+  import double cos(double n);
+  import double tan(double n);
+  import double asin(double n);
+  import double acos(double n);
+  import double atan(double n);
+  import double round(double n);
+  import double floor(double n);
+  import double ceil(double n);
+  import double exp(double n);
+  import double log(double n);
+  import double sqrt(double n);
+  import bool isNaN(double n);
+  import bool isFinite(double n);
+  import double atan2(double y, double x);
+  import double pow(double base, double exponent);
+  import double min(double a, double b);
+  import double max(double a, double b);
   inline int imin(int a, int b) { return untyped(min)(a, b); }
   inline int imax(int a, int b) { return untyped(max)(a, b); }
 }

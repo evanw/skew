@@ -47,8 +47,10 @@ export class Compiler {
   var resolvingTime = 0.0;
   var callGraphTime = 0.0;
   var instanceToStaticTime = 0.0;
+  var symbolMotionTime = 0.0;
   var functionInliningTime = 0.0;
   var constantFoldingTime = 0.0;
+  var deadCodeRemovalTime = 0.0;
   var emitTime = 0.0;
   var lineCountingTime = 0.0;
   var totalTime = 0.0;
@@ -67,7 +69,7 @@ export class Compiler {
     lineCountingTime += now() - lineCountingStart;
 
     // Compilation time
-    var optimizingTime = callGraphTime + instanceToStaticTime + functionInliningTime + constantFoldingTime;
+    var optimizingTime = callGraphTime + instanceToStaticTime + symbolMotionTime + functionInliningTime + constantFoldingTime + deadCodeRemovalTime;
     text = text.append("\nTotal compile time: ").append(formatNumber(totalTime + lineCountingTime)).append("ms");
     if (tokenizingTime > 0) text = text.append("\n  Tokenizing: ").append(formatNumber(tokenizingTime)).append("ms");
     if (parsingTime > 0) text = text.append("\n  Parsing: ").append(formatNumber(parsingTime)).append("ms");
@@ -76,8 +78,10 @@ export class Compiler {
       text = text.append("\n  Optimizing: ").append(formatNumber(optimizingTime)).append("ms");
       text = text.append("\n    Building call graph: ").append(formatNumber(callGraphTime)).append("ms");
       text = text.append("\n    Instance to static: ").append(formatNumber(instanceToStaticTime)).append("ms");
+      text = text.append("\n    Symbol motion: ").append(formatNumber(symbolMotionTime)).append("ms");
       text = text.append("\n    Function inlining: ").append(formatNumber(functionInliningTime)).append("ms");
       text = text.append("\n    Constant folding: ").append(formatNumber(constantFoldingTime)).append("ms");
+      text = text.append("\n    Dead code removal: ").append(formatNumber(deadCodeRemovalTime)).append("ms");
     }
     if (emitTime > 0) text = text.append("\n  Emit: ").append(formatNumber(emitTime)).append("ms");
     if (lineCountingTime > 0) text = text.append("\n  Counting lines: ").append(formatNumber(lineCountingTime)).append("ms");
@@ -131,7 +135,7 @@ export class Compiler {
     Resolver resolver = null;
     if (options.targetFormat.shouldRunResolver()) {
       var resolveStart = now();
-      resolver = Resolver(log);
+      resolver = Resolver(log, options);
       resolver.run(program);
       resolvingTime += now() - resolveStart;
     }
@@ -149,6 +153,11 @@ export class Compiler {
         InstanceToStaticPass.run(graph, options);
         instanceToStaticTime += now() - instanceToStaticStart;
 
+        // Move functions
+        var symbolMotionStart = now();
+        SymbolMotionPass.run(resolver);
+        symbolMotionTime += now() - symbolMotionStart;
+
         // Inline functions
         var functionInliningStart = now();
         FunctionInliningPass.run(graph, options);
@@ -160,6 +169,11 @@ export class Compiler {
           resolver.constantFolder.foldConstants(program);
           constantFoldingTime += now() - constantFoldingStart;
         }
+
+        // Dead code elimination
+        var deadCodeRemovalStart = now();
+        DeadCodeRemovalPass.run(program, resolver);
+        deadCodeRemovalTime += now() - deadCodeRemovalStart;
       }
 
       // Emit the module in the target format

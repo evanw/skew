@@ -278,12 +278,19 @@ class Node {
     parent.insertChild(indexInParent() + 1, node);
   }
 
+  Node removeChildAtIndex(int index) {
+    assert index >= 0 && index < children.length;
+    var child = children.get(index);
+    if (child != null) {
+      child.parent = null;
+    }
+    children.remove(index);
+    return child;
+  }
+
   Node remove() {
     if (parent != null) {
-      var index = indexInParent();
-      assert index >= 0 && index < parent.children.length;
-      parent.children.set(index, null);
-      parent = null;
+      parent.removeChildAtIndex(indexInParent());
     }
     return this;
   }
@@ -317,8 +324,18 @@ class Node {
     content = node.content;
   }
 
-  void replaceWith(Node node) {
+  Node replaceWith(Node node) {
     parent.replaceChild(indexInParent(), node);
+    return this;
+  }
+
+  Node replaceWithNodes(List<Node> nodes) {
+    var index = indexInParent();
+    for (var i = 0; i < nodes.length; i++) {
+      parent.insertChild(index + i + 1, nodes.get(i));
+    }
+    parent.removeChildAtIndex(index);
+    return this;
   }
 
   void replaceChild(int index, Node node) {

@@ -27,7 +27,6 @@ namespace js {
     var needMathImul = false;
     var isStartOfExpression = false;
     var generator = SourceMapGenerator();
-    var liveSymbols = IntMap<bool>();
     Source currentSource = null;
     CompilerOptions options;
     TypeCache cache;
@@ -298,12 +297,10 @@ namespace js {
 
     void emitEnum(Node node) {
       var block = node.declarationBlock();
-      if (!hasCompoundName(node.symbol)) {
-        emit("var ");
-      }
-      if (options.optimize && !node.symbol.isImportOrExport()) {
-        emit(indent.append(fullName(node.symbol)).append(" = {};\n")); // Remove this once extension methods are flattened into global scope
-      } else {
+      if (!options.optimize || node.symbol.isImportOrExport()) {
+        if (!hasCompoundName(node.symbol)) {
+          emit("var ");
+        }
         emit(indent.append(fullName(node.symbol)).append(" = {\n"));
         increaseIndent();
         for (var i = 0; i < block.children.length; i++) {
@@ -318,12 +315,9 @@ namespace js {
     void emitFunction(Node node) {
       var block = node.functionBlock();
       var symbol = node.symbol;
-
-      // Do a cheap, simple form of dead code elimination to remove unused library code
-      if (block == null || !symbol.isImportOrExport() && !symbol.isVirtual() && !symbol.kind.isConstructor() && !liveSymbols.has(symbol.uniqueID)) {
+      if (block == null) {
         return;
       }
-
       var isCompoundName = hasCompoundName(symbol);
       if (!isCompoundName) {
         emit(indent.append("function ").append(fullName(symbol)));
@@ -429,7 +423,7 @@ namespace js {
     void emitAssert(Node node) {
       var value = node.assertValue();
       value.invertBooleanCondition(cache);
-      if (value.kind != .FALSE && !options.removeAsserts) {
+      if (value.kind != .FALSE) {
         var couldBeFalse = value.kind != .TRUE;
         if (couldBeFalse) {
           emit(indent.append("if ("));
@@ -701,7 +695,7 @@ namespace js {
 
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER {
           if (node.type.isInt(cache) && (node.kind == .MULTIPLY || !alwaysConvertsOperandsToInt(node.parent.kind))) {
-            node.become(createBinaryInt(node.kind, node.binaryLeft().remove(), node.binaryRight().remove()).withRange(node.range));
+            node.become(createBinaryInt(node.kind, node.binaryLeft().replaceWith(null), node.binaryRight().replaceWith(null)).withRange(node.range));
           }
         }
 
@@ -717,17 +711,9 @@ namespace js {
       // This is not inside the switch statement above because one of the other
       // case clauses may have introduced a let statement
       if (node.kind == .LET) {
-        var value = node.letValue();
-        var variable = node.letVariable();
-        node.become(Node.createCall(Node.createLambda({ variable.remove() }, Node.createBlock({ Node.createReturn(value.remove()) })), { variable.variableValue().remove() }));
-      }
-
-      // Track live symbols for simple dead code elimination. Internal symbols
-      // that have been inlined everywhere, especially in library code, should
-      // not be emitted.
-      var symbol = node.symbol;
-      if (symbol != null && symbol.kind.isFunction() && node != symbol.node && node != symbol.node.declarationName()) {
-        liveSymbols.set(symbol.uniqueID, true);
+        var value = node.letValue().replaceWith(null);
+        var variable = node.letVariable().replaceWith(null);
+        node.become(Node.createCall(Node.createLambda({ variable }, Node.createBlock({ Node.createReturn(value) })), { variable.variableValue().replaceWith(null) }));
       }
 
       if (node.hasChildren()) {
@@ -798,12 +784,14 @@ namespace js {
       var block = node.functionBlock();
       var index = 0;
       if (superInitializer != null) {
-        block.insertChild(index++, Node.createExpression(superInitializer.remove()));
+        block.insertChild(index++, Node.createExpression(superInitializer.replaceWith(null)));
       }
       if (memberInitializers != null) {
         for (var i = 0; i < memberInitializers.children.length; i++) {
           var child = memberInitializers.children.get(i);
-          block.insertChild(index++, Node.createExpression(Node.createBinary(.ASSIGN, child.memberInitializerName().remove(), child.memberInitializerValue().remove())));
+          var name = child.memberInitializerName();
+          var value = child.memberInitializerValue();
+          block.insertChild(index++, Node.createExpression(Node.createBinary(.ASSIGN, name.remove(), value.remove())));
         }
       }
       context.setFunction(node);
@@ -826,11 +814,12 @@ namespace js {
         return Node.createBinary(.ASSIGN, left.clone(), createBinaryInt(kind, left, right));
       }
       assert left.kind == .DOT;
-      var target = left.dotTarget().remove();
+      var target = left.dotTarget();
+      var name = left.dotName();
       var temporaryName = Node.createName("$temp");
-      var dot = Node.createDot(temporaryName, left.dotName().remove());
+      var dot = Node.createDot(temporaryName, name.remove());
       return Node.createLet(
-        Node.createVariable(temporaryName.clone(), null, target),
+        Node.createVariable(temporaryName.clone(), null, target.remove()),
         Node.createBinary(.ASSIGN, dot, createBinaryInt(kind, dot.clone(), right)).withType(cache.intType)).withType(cache.intType);
     }
 
@@ -842,13 +831,17 @@ namespace js {
 
     static StringMap<bool> createIsKeyword() {
       var result = StringMap<bool>();
+      result.set("apply", true);
       result.set("arguments", true);
       result.set("call", true);
-      result.set("apply", true);
       result.set("constructor", true);
+      result.set("double", true);
+      result.set("float", true);
       result.set("function", true);
-      result.set("throw", true);
+      result.set("in", true);
+      result.set("int", true);
       result.set("this", true);
+      result.set("throw", true);
       return result;
     }
 

@@ -488,3 +488,17 @@ class Foo {
 }
 ", "
 ");
+
+test("
+namespace foo.bar. {
+  void foo() {}
+}
+foo.bar.foo();
+", "
+<stdin>:1:20: error: Expected IDENTIFIER but found LEFT_BRACE
+namespace foo.bar. {
+                   ^
+<stdin>:4:9: error: \"foo\" is not declared on type \"foo.bar\"
+foo.bar.foo();
+        ~~~
+");

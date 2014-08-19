@@ -1,0 +1,4 @@
+class DeadCodeRemovalPass {
+  static void run(Node program, Resolver resolver) {
+  }
+}
