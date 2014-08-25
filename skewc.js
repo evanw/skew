@@ -132,6 +132,7 @@ var $in = {};
 $in.string = {};
 $in.NodeKind = {};
 $in.TargetFormat = {};
+$in.io = {};
 $in.SymbolKind = {};
 $in.TokenKind = {};
 function Node(_0) {
@@ -1099,7 +1100,6 @@ function SplitPath(_0, _1) {
   this.entry = _1;
 }
 var trace = {};
-var io = {};
 var frontend = {};
 frontend.Flags = function() {
   this.help = false;
@@ -1187,11 +1187,12 @@ js.Emitter.prototype.emitProgram = function(program) {
     js.Emitter.appendSource(this, this.options.append[i]);
   }
   if (this.options.jsSourceMap) {
+    this.currentSource.contents = this.currentSource.contents + "/";
     if (this.options.outputFile === "") {
-      this.currentSource.contents = this.currentSource.contents + "/" + "/# sourceMappingURL=data:application/json;base64," + encodeBase64(SourceMapGenerator.toString(this.generator)) + "\n";
+      this.currentSource.contents = this.currentSource.contents + "/# sourceMappingURL=data:application/json;base64," + encodeBase64(SourceMapGenerator.toString(this.generator)) + "\n";
     } else {
       var name = this.options.outputFile + ".map";
-      this.currentSource.contents = this.currentSource.contents + "/" + "/# sourceMappingURL=" + splitPath(name).entry + "\n";
+      this.currentSource.contents = this.currentSource.contents + "/# sourceMappingURL=" + splitPath(name).entry + "\n";
       return [this.currentSource, new Source(name, SourceMapGenerator.toString(this.generator))];
     }
   }
@@ -5862,6 +5863,11 @@ $in.NodeKind.toString = function($this) {
 $in.TargetFormat.shouldRunResolver = function($this) {
   return $this >= 0 && $this <= 1;
 };
+$in.io.printWithColor = function(color, text) {
+  io.setColor(color);
+  io.print(text);
+  io.setColor(0);
+};
 $in.SymbolKind.isNamespace = function($this) {
   return $this >= 8 && $this <= 9;
 };
@@ -6338,26 +6344,21 @@ trace.log = function(text) {
 };
 trace.dedent = function() {
 };
-io.printWithColor = function(color, text) {
-  io.setColor(color);
-  io.print(text);
-  io.setColor(0);
-};
 frontend.printError = function(text) {
-  io.printWithColor(91, "error: ");
-  io.printWithColor(1, text + "\n");
+  $in.io.printWithColor(91, "error: ");
+  $in.io.printWithColor(1, text + "\n");
 };
 frontend.printNote = function(text) {
-  io.printWithColor(90, "note: ");
-  io.printWithColor(1, text + "\n");
+  $in.io.printWithColor(90, "note: ");
+  $in.io.printWithColor(1, text + "\n");
 };
 frontend.printWarning = function(text) {
-  io.printWithColor(95, "warning: ");
-  io.printWithColor(1, text + "\n");
+  $in.io.printWithColor(95, "warning: ");
+  $in.io.printWithColor(1, text + "\n");
 };
 frontend.printUsage = function() {
-  io.printWithColor(92, "\nusage: ");
-  io.printWithColor(1, "skewc [flags] [inputs]\n");
+  $in.io.printWithColor(92, "\nusage: ");
+  $in.io.printWithColor(1, "skewc [flags] [inputs]\n");
   io.print("\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     lisp-ast, json-ast, and xml-ast.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the \".map\" extension in the same\n                     directory as the main output file.\n\n");
 };
 frontend.afterEquals = function(text) {
@@ -6472,7 +6473,7 @@ frontend.main = function(args) {
   for (var i = 0; i < log.diagnostics.length; i = i + 1 | 0) {
     var diagnostic = log.diagnostics[i];
     if (diagnostic.range.source !== null) {
-      io.printWithColor(1, Range.locationString(diagnostic.range) + ": ");
+      $in.io.printWithColor(1, Range.locationString(diagnostic.range) + ": ");
     }
     switch (diagnostic.kind) {
     case 1:
@@ -6485,14 +6486,14 @@ frontend.main = function(args) {
     if (diagnostic.range.source !== null) {
       var formatted = Range.format(diagnostic.range, io.terminalWidth);
       io.print(formatted.line + "\n");
-      io.printWithColor(92, formatted.range + "\n");
+      $in.io.printWithColor(92, formatted.range + "\n");
     }
     if (diagnostic.noteRange.source !== null) {
-      io.printWithColor(1, Range.locationString(diagnostic.noteRange) + ": ");
+      $in.io.printWithColor(1, Range.locationString(diagnostic.noteRange) + ": ");
       frontend.printNote(diagnostic.noteText);
       var formatted = Range.format(diagnostic.noteRange, io.terminalWidth);
       io.print(formatted.line + "\n");
-      io.printWithColor(92, formatted.range + "\n");
+      $in.io.printWithColor(92, formatted.range + "\n");
     }
   }
   var hasErrors = log.errorCount > 0;

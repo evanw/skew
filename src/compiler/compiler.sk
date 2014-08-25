@@ -19,23 +19,23 @@ export in TargetFormat {
   }
 }
 
-class CompilerOptions {
-  TargetFormat targetFormat = .NONE;
-  List<Source> inputs = {};
-  List<Source> prepend = {};
-  List<Source> append = {};
-  var outputDirectory = "";
-  var outputFile = "";
-  var jsSourceMap = false;
-  var optimize = false;
-  var removeAsserts = false;
+export class CompilerOptions {
+  export TargetFormat targetFormat = .NONE;
+  export List<Source> inputs = {};
+  export List<Source> prepend = {};
+  export List<Source> append = {};
+  export var outputDirectory = "";
+  export var outputFile = "";
+  export var jsSourceMap = false;
+  export var optimize = false;
+  export var removeAsserts = false;
 }
 
-class CompilerResult {
-  CompilerOptions options;
-  List<Source> outputs;
-  Node program;
-  Resolver resolver;
+export class CompilerResult {
+  export CompilerOptions options;
+  export List<Source> outputs;
+  export Node program;
+  export Resolver resolver;
 }
 
 export class Compiler {

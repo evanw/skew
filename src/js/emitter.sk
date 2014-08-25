@@ -103,15 +103,23 @@ namespace js {
         appendSource(options.append.get(i));
       }
 
-      // Append the source map inline with the compiled output
+      // Create the source map
       if (options.jsSourceMap) {
+        // Obfuscate the sourceMappingURL so it's not incorrectly picked up as
+        // the sourceMappingURL for the compiled JavaScript compiler file
+        currentSource.contents = currentSource.contents.append("/");
+
+        // Append the source map inline with the compiled output
         if (options.outputFile == "") {
-          currentSource.contents = currentSource.contents.append("/").append(
+          currentSource.contents = currentSource.contents.append(
             "/# sourceMappingURL=data:application/json;base64,").append(
             encodeBase64(generator.toString())).append("\n");
-        } else {
+        }
+
+        // Create the source map as another file alongside the output
+        else {
           string name = options.outputFile.append(".map");
-          currentSource.contents = currentSource.contents.append("/").append(
+          currentSource.contents = currentSource.contents.append(
             "/# sourceMappingURL=").append(splitPath(name).entry).append("\n");
           return { currentSource, Source(name, generator.toString()) };
         }

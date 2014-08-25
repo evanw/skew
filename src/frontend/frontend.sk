@@ -1,4 +1,4 @@
-namespace io {
+import namespace io {
   enum Color {
     DEFAULT = 0,
     BOLD = 1,

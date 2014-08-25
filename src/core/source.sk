@@ -3,7 +3,7 @@ struct LineColumn {
   final int column; // 0-based index
 }
 
-class Source {
+export class Source {
   string name;
   string contents;
 
