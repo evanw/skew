@@ -70,27 +70,27 @@ export class Compiler {
 
     // Compilation time
     var optimizingTime = callGraphTime + instanceToStaticTime + symbolMotionTime + functionInliningTime + constantFoldingTime + deadCodeRemovalTime;
-    text = text + "\nTotal compile time: " + formatNumber(totalTime + lineCountingTime) + "ms";
-    if (tokenizingTime > 0) text = text + "\n  Tokenizing: " + formatNumber(tokenizingTime) + "ms";
-    if (parsingTime > 0) text = text + "\n  Parsing: " + formatNumber(parsingTime) + "ms";
-    if (resolvingTime > 0) text = text + "\n  Resolving: " + formatNumber(resolvingTime) + "ms";
+    text += "\nTotal compile time: " + formatNumber(totalTime + lineCountingTime) + "ms";
+    if (tokenizingTime > 0) text += "\n  Tokenizing: " + formatNumber(tokenizingTime) + "ms";
+    if (parsingTime > 0) text += "\n  Parsing: " + formatNumber(parsingTime) + "ms";
+    if (resolvingTime > 0) text += "\n  Resolving: " + formatNumber(resolvingTime) + "ms";
     if (optimizingTime > 0) {
-      text = text + "\n  Optimizing: " + formatNumber(optimizingTime) + "ms";
-      text = text + "\n    Building call graph: " + formatNumber(callGraphTime) + "ms";
-      text = text + "\n    Instance to static: " + formatNumber(instanceToStaticTime) + "ms";
-      text = text + "\n    Symbol motion: " + formatNumber(symbolMotionTime) + "ms";
-      text = text + "\n    Function inlining: " + formatNumber(functionInliningTime) + "ms";
-      text = text + "\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms";
-      text = text + "\n    Dead code removal: " + formatNumber(deadCodeRemovalTime) + "ms";
+      text += "\n  Optimizing: " + formatNumber(optimizingTime) + "ms";
+      text += "\n    Building call graph: " + formatNumber(callGraphTime) + "ms";
+      text += "\n    Instance to static: " + formatNumber(instanceToStaticTime) + "ms";
+      text += "\n    Symbol motion: " + formatNumber(symbolMotionTime) + "ms";
+      text += "\n    Function inlining: " + formatNumber(functionInliningTime) + "ms";
+      text += "\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms";
+      text += "\n    Dead code removal: " + formatNumber(deadCodeRemovalTime) + "ms";
     }
-    if (emitTime > 0) text = text + "\n  Emit: " + formatNumber(emitTime) + "ms";
-    if (lineCountingTime > 0) text = text + "\n  Counting lines: " + formatNumber(lineCountingTime) + "ms";
+    if (emitTime > 0) text += "\n  Emit: " + formatNumber(emitTime) + "ms";
+    if (lineCountingTime > 0) text += "\n  Counting lines: " + formatNumber(lineCountingTime) + "ms";
 
     // Sources
-    text = text + sourceStatistics("Prepend", result.options.prepend);
-    text = text + sourceStatistics("Inputs", result.options.inputs);
-    text = text + sourceStatistics("Append", result.options.append);
-    text = text + sourceStatistics("Outputs", result.outputs);
+    text += sourceStatistics("Prepend", result.options.prepend);
+    text += sourceStatistics("Inputs", result.options.inputs);
+    text += sourceStatistics("Append", result.options.append);
+    text += sourceStatistics("Outputs", result.outputs);
     return text;
   }
 
@@ -106,7 +106,7 @@ export class Compiler {
     var text = "\n" + name + ": " + sources.length;
     for (var i = 0; i < sources.length; i++) {
       var source = sources.get(i);
-      text = text + "\n  " + source.name + ": " + bytesToString(source.contents.length);
+      text += "\n  " + source.name + ": " + bytesToString(source.contents.length);
     }
     return text;
   }

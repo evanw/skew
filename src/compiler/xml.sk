@@ -28,30 +28,30 @@ namespace xml {
 
     void visit(Node node) {
       if (node == null) {
-        result = result + "<null/>";
+        result += "<null/>";
         return;
       }
-      result = result + "<" + node.kind.prettyPrint();
+      result += "<" + node.kind.prettyPrint();
       if (node.content != null) {
-        result = result + " content=";
+        result += " content=";
         switch (node.content.type()) {
-          case .INT { result = result + simpleQuote(node.asInt().toString()); }
-          case .DOUBLE { result = result + simpleQuote(node.asDouble().toString()); }
-          case .STRING { result = result + quoteString(node.asString(), '"'); }
+          case .INT { result += simpleQuote(node.asInt().toString()); }
+          case .DOUBLE { result += simpleQuote(node.asDouble().toString()); }
+          case .STRING { result += quoteString(node.asString(), '"'); }
         }
       }
       if (node.hasChildren()) {
-        result = result + ">";
+        result += ">";
         var inner = indent;
-        indent = indent + "  ";
+        indent += "  ";
         for (var i = 0; i < node.children.length; i++) {
-          result = result + "\n" + indent;
+          result += "\n" + indent;
           visit(node.children.get(i));
         }
         indent = inner;
-        result = result + "\n" + indent + "</" + node.kind.prettyPrint() + ">";
+        result += "\n" + indent + "</" + node.kind.prettyPrint() + ">";
       } else {
-        result = result + "/>";
+        result += "/>";
       }
     }
   }

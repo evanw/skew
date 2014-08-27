@@ -28,27 +28,27 @@ namespace lisp {
 
     void visit(Node node) {
       if (node == null) {
-        result = result + "nil";
+        result += "nil";
         return;
       }
-      result = result + "(" + node.kind.prettyPrint();
+      result += "(" + node.kind.prettyPrint();
       if (node.content != null) {
         switch (node.content.type()) {
-          case .INT { result = result + " " + node.asInt(); }
-          case .DOUBLE { result = result + " " + node.asDouble(); }
-          case .STRING { result = result + " " + quoteString(node.asString(), '"'); }
+          case .INT { result += " " + node.asInt(); }
+          case .DOUBLE { result += " " + node.asDouble(); }
+          case .STRING { result += " " + quoteString(node.asString(), '"'); }
         }
       }
       if (node.hasChildren()) {
         var old = indent;
-        indent = indent + "  ";
+        indent += "  ";
         for (var i = 0; i < node.children.length; i++) {
-          result = result + "\n" + indent;
+          result += "\n" + indent;
           visit(node.children.get(i));
         }
         indent = old;
       }
-      result = result + ")";
+      result += ")";
     }
   }
 }

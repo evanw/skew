@@ -118,7 +118,7 @@ namespace service {
           var bound = symbol.type.bound();
           var text = "type " + symbol.name;
           if (bound != null) {
-            text = text + " is " + bound;
+            text += " is " + bound;
           }
           result.declaration = text;
         }
@@ -131,7 +131,7 @@ namespace service {
           var text = symbol.kind.toString().toLowerCase() + " " + type;
           if (type.hasRelevantTypes()) {
             for (var i = 0; i < type.relevantTypes.length; i++) {
-              text = text + (i == 0 ? " : " : ", ") + type.relevantTypes.get(i);
+              text += (i == 0 ? " : " : ", ") + type.relevantTypes.get(i);
             }
           }
           result.declaration = text;
@@ -150,8 +150,8 @@ namespace service {
           var arguments = symbol.node.functionArguments().children;
           var argumentTypes = type.argumentTypes();
           for (var i = 0; i < arguments.length; i++) {
-            if (i > 0) text = text + ", ";
-            text = text + argumentTypes.get(i) + " " + arguments.get(i).symbol.name;
+            if (i > 0) text += ", ";
+            text += argumentTypes.get(i) + " " + arguments.get(i).symbol.name;
           }
           result.declaration = text + ")";
         }
@@ -159,7 +159,7 @@ namespace service {
         case .LOCAL_VARIABLE, .GLOBAL_VARIABLE, .INSTANCE_VARIABLE {
           var text = type + " " + symbol.name;
           if (symbol.isEnumValue()) {
-            text = text + " = " + symbol.enumValue;
+            text += " = " + symbol.enumValue;
           }
           result.declaration = text;
         }
@@ -225,11 +225,11 @@ namespace service {
       var text = name;
       if (type.isFunction()) {
         var semicolon = type.resultType().toString() == "void";
-        text = text + (type.argumentTypes().length == 0
+        text += type.argumentTypes().length == 0
           ? semicolon ? "();$" : "()$"
-          : semicolon ? "($);" : "($)");
+          : semicolon ? "($);" : "($)";
       } else {
-        text = text + "$";
+        text += "$";
       }
       completions.push(LanguageServiceCompletion(name, type.toString(), text));
     }

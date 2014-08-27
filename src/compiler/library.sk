@@ -21,7 +21,7 @@ import struct string {
   inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }
   bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }
   bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }
-  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result = result + this; return result; }
+  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }
 }
 
 import class List<T> {

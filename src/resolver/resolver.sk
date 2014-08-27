@@ -2709,6 +2709,16 @@ class Resolver {
         node.type = left.type;
         return;
       }
+
+      else if (kind == .ASSIGN_ADD && left.type.isString(cache)) {
+        resolveAsExpression(right);
+        if (!right.type.isString(cache)) {
+          wrapWithToStringCall(right);
+        }
+        checkStorage(left);
+        node.type = left.type;
+        return;
+      }
     }
 
     // Special-case equality comparisons to provide type context

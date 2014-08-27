@@ -643,35 +643,35 @@ Compiler.statistics = function($this, result) {
   var text = "Input line count: " + lineCount.toString() + "\nOutput line count: " + Compiler.totalLineCount(result.outputs).toString();
   $this.lineCountingTime += now() - lineCountingStart;
   var optimizingTime = $this.callGraphTime + $this.instanceToStaticTime + $this.symbolMotionTime + $this.functionInliningTime + $this.constantFoldingTime + $this.deadCodeRemovalTime;
-  text = text + "\nTotal compile time: " + (Math.round(($this.totalTime + $this.lineCountingTime) * 10) / 10).toString() + "ms";
+  text += "\nTotal compile time: " + (Math.round(($this.totalTime + $this.lineCountingTime) * 10) / 10).toString() + "ms";
   if ($this.tokenizingTime > 0) {
-    text = text + "\n  Tokenizing: " + (Math.round($this.tokenizingTime * 10) / 10).toString() + "ms";
+    text += "\n  Tokenizing: " + (Math.round($this.tokenizingTime * 10) / 10).toString() + "ms";
   }
   if ($this.parsingTime > 0) {
-    text = text + "\n  Parsing: " + (Math.round($this.parsingTime * 10) / 10).toString() + "ms";
+    text += "\n  Parsing: " + (Math.round($this.parsingTime * 10) / 10).toString() + "ms";
   }
   if ($this.resolvingTime > 0) {
-    text = text + "\n  Resolving: " + (Math.round($this.resolvingTime * 10) / 10).toString() + "ms";
+    text += "\n  Resolving: " + (Math.round($this.resolvingTime * 10) / 10).toString() + "ms";
   }
   if (optimizingTime > 0) {
-    text = text + "\n  Optimizing: " + (Math.round(optimizingTime * 10) / 10).toString() + "ms";
-    text = text + "\n    Building call graph: " + (Math.round($this.callGraphTime * 10) / 10).toString() + "ms";
-    text = text + "\n    Instance to static: " + (Math.round($this.instanceToStaticTime * 10) / 10).toString() + "ms";
-    text = text + "\n    Symbol motion: " + (Math.round($this.symbolMotionTime * 10) / 10).toString() + "ms";
-    text = text + "\n    Function inlining: " + (Math.round($this.functionInliningTime * 10) / 10).toString() + "ms";
-    text = text + "\n    Constant folding: " + (Math.round($this.constantFoldingTime * 10) / 10).toString() + "ms";
-    text = text + "\n    Dead code removal: " + (Math.round($this.deadCodeRemovalTime * 10) / 10).toString() + "ms";
+    text += "\n  Optimizing: " + (Math.round(optimizingTime * 10) / 10).toString() + "ms";
+    text += "\n    Building call graph: " + (Math.round($this.callGraphTime * 10) / 10).toString() + "ms";
+    text += "\n    Instance to static: " + (Math.round($this.instanceToStaticTime * 10) / 10).toString() + "ms";
+    text += "\n    Symbol motion: " + (Math.round($this.symbolMotionTime * 10) / 10).toString() + "ms";
+    text += "\n    Function inlining: " + (Math.round($this.functionInliningTime * 10) / 10).toString() + "ms";
+    text += "\n    Constant folding: " + (Math.round($this.constantFoldingTime * 10) / 10).toString() + "ms";
+    text += "\n    Dead code removal: " + (Math.round($this.deadCodeRemovalTime * 10) / 10).toString() + "ms";
   }
   if ($this.emitTime > 0) {
-    text = text + "\n  Emit: " + (Math.round($this.emitTime * 10) / 10).toString() + "ms";
+    text += "\n  Emit: " + (Math.round($this.emitTime * 10) / 10).toString() + "ms";
   }
   if ($this.lineCountingTime > 0) {
-    text = text + "\n  Counting lines: " + (Math.round($this.lineCountingTime * 10) / 10).toString() + "ms";
+    text += "\n  Counting lines: " + (Math.round($this.lineCountingTime * 10) / 10).toString() + "ms";
   }
-  text = text + Compiler.sourceStatistics("Prepend", result.options.prepend);
-  text = text + Compiler.sourceStatistics("Inputs", result.options.inputs);
-  text = text + Compiler.sourceStatistics("Append", result.options.append);
-  text = text + Compiler.sourceStatistics("Outputs", result.outputs);
+  text += Compiler.sourceStatistics("Prepend", result.options.prepend);
+  text += Compiler.sourceStatistics("Inputs", result.options.inputs);
+  text += Compiler.sourceStatistics("Append", result.options.append);
+  text += Compiler.sourceStatistics("Outputs", result.outputs);
   return text;
 };
 Compiler.totalLineCount = function(sources) {
@@ -685,7 +685,7 @@ Compiler.sourceStatistics = function(name, sources) {
   var text = "\n" + name + ": " + sources.length.toString();
   for (var i = 0; i < sources.length; i = i + 1 | 0) {
     var source = sources[i];
-    text = text + "\n  " + source.name + ": " + bytesToString(source.contents.length);
+    text += "\n  " + source.name + ": " + bytesToString(source.contents.length);
   }
   return text;
 };
@@ -798,42 +798,42 @@ json.DumpVisitor = function() {
 };
 json.DumpVisitor.visit = function($this, node) {
   if (node === null) {
-    $this.result = $this.result + "null";
+    $this.result += "null";
     return;
   }
   var outer = $this.indent;
-  $this.indent = $this.indent + "  ";
-  $this.result = $this.result + "{\n" + $this.indent + "\"kind\": " + ("\"" + replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-") + "\"");
+  $this.indent += "  ";
+  $this.result += "{\n" + $this.indent + "\"kind\": " + ("\"" + replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-") + "\"");
   if (node.content !== null) {
-    $this.result = $this.result + ",\n" + $this.indent + "\"content\": ";
+    $this.result += ",\n" + $this.indent + "\"content\": ";
     switch (node.content.type()) {
     case 0:
-      $this.result = $this.result + node.content.value.toString();
+      $this.result += node.content.value.toString();
       break;
     case 1:
-      $this.result = $this.result + node.content.value.toString();
+      $this.result += node.content.value.toString();
       break;
     case 2:
-      $this.result = $this.result + quoteString(node.content.value, 34);
+      $this.result += quoteString(node.content.value, 34);
       break;
     }
   }
   if (Node.hasChildren(node)) {
-    $this.result = $this.result + ",\n" + $this.indent + "\"children\": [";
+    $this.result += ",\n" + $this.indent + "\"children\": [";
     var inner = $this.indent;
-    $this.indent = $this.indent + "  ";
+    $this.indent += "  ";
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       if (i > 0) {
-        $this.result = $this.result + ",";
+        $this.result += ",";
       }
-      $this.result = $this.result + "\n" + $this.indent;
+      $this.result += "\n" + $this.indent;
       json.DumpVisitor.visit($this, node.children[i]);
     }
     $this.indent = inner;
-    $this.result = $this.result + "\n" + $this.indent + "]";
+    $this.result += "\n" + $this.indent + "]";
   }
   $this.indent = outer;
-  $this.result = $this.result + "\n" + $this.indent + "}";
+  $this.result += "\n" + $this.indent + "}";
 };
 var lisp = {};
 lisp.Emitter = function(_0) {
@@ -857,33 +857,33 @@ lisp.DumpVisitor = function() {
 };
 lisp.DumpVisitor.visit = function($this, node) {
   if (node === null) {
-    $this.result = $this.result + "nil";
+    $this.result += "nil";
     return;
   }
-  $this.result = $this.result + "(" + replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-");
+  $this.result += "(" + replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-");
   if (node.content !== null) {
     switch (node.content.type()) {
     case 0:
-      $this.result = $this.result + " " + node.content.value.toString();
+      $this.result += " " + node.content.value.toString();
       break;
     case 1:
-      $this.result = $this.result + " " + node.content.value.toString();
+      $this.result += " " + node.content.value.toString();
       break;
     case 2:
-      $this.result = $this.result + " " + quoteString(node.content.value, 34);
+      $this.result += " " + quoteString(node.content.value, 34);
       break;
     }
   }
   if (Node.hasChildren(node)) {
     var old = $this.indent;
-    $this.indent = $this.indent + "  ";
+    $this.indent += "  ";
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      $this.result = $this.result + "\n" + $this.indent;
+      $this.result += "\n" + $this.indent;
       lisp.DumpVisitor.visit($this, node.children[i]);
     }
     $this.indent = old;
   }
-  $this.result = $this.result + ")";
+  $this.result += ")";
 };
 var xml = {};
 xml.Emitter = function(_0) {
@@ -907,36 +907,36 @@ xml.DumpVisitor = function() {
 };
 xml.DumpVisitor.visit = function($this, node) {
   if (node === null) {
-    $this.result = $this.result + "<null/>";
+    $this.result += "<null/>";
     return;
   }
-  $this.result = $this.result + "<" + replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-");
+  $this.result += "<" + replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-");
   if (node.content !== null) {
-    $this.result = $this.result + " content=";
+    $this.result += " content=";
     switch (node.content.type()) {
     case 0:
-      $this.result = $this.result + ("\"" + node.content.value.toString() + "\"");
+      $this.result += "\"" + node.content.value.toString() + "\"";
       break;
     case 1:
-      $this.result = $this.result + ("\"" + node.content.value.toString() + "\"");
+      $this.result += "\"" + node.content.value.toString() + "\"";
       break;
     case 2:
-      $this.result = $this.result + quoteString(node.content.value, 34);
+      $this.result += quoteString(node.content.value, 34);
       break;
     }
   }
   if (Node.hasChildren(node)) {
-    $this.result = $this.result + ">";
+    $this.result += ">";
     var inner = $this.indent;
-    $this.indent = $this.indent + "  ";
+    $this.indent += "  ";
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      $this.result = $this.result + "\n" + $this.indent;
+      $this.result += "\n" + $this.indent;
       xml.DumpVisitor.visit($this, node.children[i]);
     }
     $this.indent = inner;
-    $this.result = $this.result + "\n" + $this.indent + "</" + replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-") + ">";
+    $this.result += "\n" + $this.indent + "</" + replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-") + ">";
   } else {
-    $this.result = $this.result + "/>";
+    $this.result += "/>";
   }
 };
 function Diagnostic(_0, _1, _2) {
@@ -1218,9 +1218,6 @@ js.Emitter.addMapping = function($this, node) {
     }
   }
 };
-js.Emitter.increaseIndent = function($this) {
-  $this.indent = $this.indent + "  ";
-};
 js.Emitter.decreaseIndent = function($this) {
   $this.indent = $this.indent.slice(2, $this.indent.length);
 };
@@ -1358,7 +1355,7 @@ js.Emitter.emitNode = function($this, node) {
 };
 js.Emitter.emitBlock = function($this, node) {
   js.Emitter.emit($this, "{\n");
-  js.Emitter.increaseIndent($this);
+  $this.indent += "  ";
   js.Emitter.emitChildren($this, node);
   js.Emitter.decreaseIndent($this);
   js.Emitter.emit($this, $this.indent + "}");
@@ -1374,7 +1371,7 @@ js.Emitter.emitCase = function($this, node) {
   if (values.length === 0) {
     js.Emitter.emit($this, $this.indent + "default:\n");
   }
-  js.Emitter.increaseIndent($this);
+  $this.indent += "  ";
   js.Emitter.emitChildren($this, block);
   if (!Node.blockAlwaysEndsWithReturn(block)) {
     js.Emitter.emit($this, $this.indent + "break;\n");
@@ -1410,7 +1407,7 @@ js.Emitter.emitEnum = function($this, node) {
       js.Emitter.emit($this, "var ");
     }
     js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {\n");
-    js.Emitter.increaseIndent($this);
+    $this.indent += "  ";
     for (var i = 0; i < block.children.length; i = i + 1 | 0) {
       var symbol = block.children[i].symbol;
       js.Emitter.emit($this, $this.indent + js.Emitter.mangleName($this, symbol) + ": " + symbol.enumValue.toString() + (i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
@@ -1434,7 +1431,7 @@ js.Emitter.emitFunction = function($this, node) {
   js.Emitter.emitArgumentVariables($this, node.children[1].children);
   js.Emitter.emit($this, " ");
   js.Emitter.emit($this, "{\n");
-  js.Emitter.increaseIndent($this);
+  $this.indent += "  ";
   js.Emitter.emitChildren($this, block);
   js.Emitter.decreaseIndent($this);
   js.Emitter.emit($this, $this.indent + (isCompoundName ? "};\n" : "}\n"));
@@ -1527,7 +1524,7 @@ js.Emitter.emitAssert = function($this, node) {
       js.Emitter.emit($this, $this.indent + "if (");
       js.Emitter.emitExpression($this, value, 0);
       js.Emitter.emit($this, ") {\n");
-      js.Emitter.increaseIndent($this);
+      $this.indent += "  ";
     }
     var text = Range.toString(node.range) + " (" + Range.locationString(node.range) + ")";
     js.Emitter.emit($this, $this.indent + "throw new Error(" + quoteString(text, 34) + ");\n");
@@ -2019,7 +2016,7 @@ js.Emitter.fullName = function($this, symbol) {
       return enclosingName;
     }
     if ($in.SymbolKind.isInstance(symbol.kind)) {
-      enclosingName = enclosingName + ".prototype";
+      enclosingName += ".prototype";
     }
     return enclosingName + "." + js.Emitter.mangleName($this, symbol);
   }
@@ -2069,21 +2066,21 @@ SourceMapGenerator.toString = function($this) {
       if (previousGeneratedColumn === mapping.generatedColumn && (previousGeneratedLine > 0 || previousGeneratedColumn > 0)) {
         continue;
       }
-      result = result + ",";
+      result += ",";
     } else {
       previousGeneratedColumn = 0;
       while (previousGeneratedLine < generatedLine) {
-        result = result + ";";
+        result += ";";
         previousGeneratedLine = previousGeneratedLine + 1 | 0;
       }
     }
-    result = result + SourceMapGenerator.encodeVLQ(mapping.generatedColumn - previousGeneratedColumn | 0);
+    result += SourceMapGenerator.encodeVLQ(mapping.generatedColumn - previousGeneratedColumn | 0);
     previousGeneratedColumn = mapping.generatedColumn;
-    result = result + SourceMapGenerator.encodeVLQ(mapping.sourceIndex - previousSourceIndex | 0);
+    result += SourceMapGenerator.encodeVLQ(mapping.sourceIndex - previousSourceIndex | 0);
     previousSourceIndex = mapping.sourceIndex;
-    result = result + SourceMapGenerator.encodeVLQ(mapping.originalLine - previousOriginalLine | 0);
+    result += SourceMapGenerator.encodeVLQ(mapping.originalLine - previousOriginalLine | 0);
     previousOriginalLine = mapping.originalLine;
-    result = result + SourceMapGenerator.encodeVLQ(mapping.originalColumn - previousOriginalColumn | 0);
+    result += SourceMapGenerator.encodeVLQ(mapping.originalColumn - previousOriginalColumn | 0);
     previousOriginalColumn = mapping.originalColumn;
   }
   return result + "\"}\n";
@@ -2097,7 +2094,7 @@ SourceMapGenerator.encodeVLQ = function(value) {
     if (vlq > 0) {
       digit |= 32;
     }
-    encoded = encoded + BASE64[digit];
+    encoded += BASE64[digit];
   } while (vlq > 0);
   return encoded;
 };
@@ -4971,6 +4968,14 @@ Resolver.resolveBinaryOperator = function($this, node) {
       Resolver.checkStorage($this, left);
       node.type = left.type;
       return;
+    } else if (kind === 89 && left.type === $this.cache.stringType) {
+      Resolver.resolveAsExpression($this, right);
+      if (right.type !== $this.cache.stringType) {
+        Resolver.wrapWithToStringCall($this, right);
+      }
+      Resolver.checkStorage($this, left);
+      node.type = left.type;
+      return;
     }
   }
   if (kind === 73 || kind === 83) {
@@ -5286,9 +5291,9 @@ Type.environmentToString = function(parameters, substitutions) {
   var text = "[";
   for (var i = 0; i < parameters.length; i = i + 1 | 0) {
     if (i > 0) {
-      text = text + ", ";
+      text += ", ";
     }
-    text = text + parameters[i].name + " => " + Type.toString(substitutions[i]);
+    text += parameters[i].name + " => " + Type.toString(substitutions[i]);
   }
   return text + "]";
 };
@@ -5298,9 +5303,9 @@ Type.toString = function($this) {
     var $arguments = Type.argumentTypes($this);
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
       if (i > 0) {
-        text = text + ", ";
+        text += ", ";
       }
-      text = text + Type.toString($arguments[i]);
+      text += Type.toString($arguments[i]);
     }
     return text + ")";
   }
@@ -5308,9 +5313,9 @@ Type.toString = function($this) {
     var text = "";
     for (var i = 0; i < $this.symbol.parameters.length; i = i + 1 | 0) {
       if (i > 0) {
-        text = text + ", ";
+        text += ", ";
       }
-      text = text + ($this.substitutions !== null ? Type.toString($this.substitutions[i]) : $this.symbol.parameters[i].name);
+      text += $this.substitutions !== null ? Type.toString($this.substitutions[i]) : $this.symbol.parameters[i].name;
     }
     return Symbol.fullName($this.symbol) + "<" + text + ">";
   }
@@ -5641,7 +5646,7 @@ $in.string.startsWith = function($this, prefix) {
 $in.string.repeat = function($this, count) {
   var result = "";
   for (var i = 0; i < count; i = i + 1 | 0) {
-    result = result + $this;
+    result += $this;
   }
   return result;
 };
@@ -6271,39 +6276,39 @@ function parseStringLiteral(log, range, text) {
   while ((i + 1 | 0) < text.length) {
     var c = text.charCodeAt(i);
     if (c === 92) {
-      result = result + text.slice(start, i);
+      result += text.slice(start, i);
       var escape = i = i + 1 | 0;
       if ((i + 1 | 0) < text.length) {
         c = text.charCodeAt((i = i + 1 | 0) - 1 | 0);
         if (c === 110) {
-          result = result + "\n";
+          result += "\n";
           start = i;
           continue;
         } else if (c === 114) {
-          result = result + "\r";
+          result += "\r";
           start = i;
           continue;
         } else if (c === 116) {
-          result = result + "\t";
+          result += "\t";
           start = i;
           continue;
         } else if (c === 101) {
-          result = result + "\x1B";
+          result += "\x1B";
           start = i;
           continue;
         } else if (c === 48) {
-          result = result + "\0";
+          result += "\0";
           start = i;
           continue;
         } else if (c === 92 || c === 34 || c === 39) {
-          result = result + String.fromCharCode(c);
+          result += String.fromCharCode(c);
           start = i;
           continue;
         } else if (c === 120) {
           var c0 = (i + 1 | 0) < text.length ? parseHexCharacter(text.charCodeAt((i = i + 1 | 0) - 1 | 0)) : -1;
           var c1 = (i + 1 | 0) < text.length ? parseHexCharacter(text.charCodeAt((i = i + 1 | 0) - 1 | 0)) : -1;
           if (c0 !== -1 && c1 !== -1) {
-            result = result + String.fromCharCode(c0 << 4 | c1);
+            result += String.fromCharCode(c0 << 4 | c1);
             start = i;
             continue;
           }
@@ -6315,48 +6320,48 @@ function parseStringLiteral(log, range, text) {
       i = i + 1 | 0;
     }
   }
-  result = result + text.slice(start, i);
+  result += text.slice(start, i);
   return isValidString ? new StringContent(result) : null;
 }
 function quoteString(text, quote) {
   var result = "";
   var quoteString = String.fromCharCode(quote);
-  result = result + quoteString;
+  result += quoteString;
   var start = 0;
   var i;
   for (i = 0; i < text.length; i = i + 1 | 0) {
     var c = text.charCodeAt(i);
     if (c === quote) {
-      result = result + text.slice(start, i) + "\\" + quoteString;
+      result += text.slice(start, i) + "\\" + quoteString;
       start = i + 1 | 0;
     } else if (c === 10) {
-      result = result + text.slice(start, i) + "\\n";
+      result += text.slice(start, i) + "\\n";
       start = i + 1 | 0;
     } else if (c === 13) {
-      result = result + text.slice(start, i) + "\\r";
+      result += text.slice(start, i) + "\\r";
       start = i + 1 | 0;
     } else if (c === 9) {
-      result = result + text.slice(start, i) + "\\t";
+      result += text.slice(start, i) + "\\t";
       start = i + 1 | 0;
     } else if (c === 0) {
-      result = result + text.slice(start, i) + "\\0";
+      result += text.slice(start, i) + "\\0";
       start = i + 1 | 0;
     } else if (c === 92) {
-      result = result + text.slice(start, i) + "\\\\";
+      result += text.slice(start, i) + "\\\\";
       start = i + 1 | 0;
     } else if (c < 32 || c >= 127 && c <= 255) {
-      result = result + text.slice(start, i) + "\\x" + HEX[c >> 4] + HEX[c & 15];
+      result += text.slice(start, i) + "\\x" + HEX[c >> 4] + HEX[c & 15];
       start = i + 1 | 0;
     }
   }
-  result = result + text.slice(start, i) + quoteString;
+  result += text.slice(start, i) + quoteString;
   return result;
 }
 function replace(text, before, after) {
   var result = "";
   var index;
   while ((index = text.indexOf(before)) !== -1) {
-    result = result + text.slice(0, index) + after;
+    result += text.slice(0, index) + after;
     text = text.slice(index + before.length | 0, text.length);
   }
   return result + text;
@@ -6542,13 +6547,13 @@ frontend.main = function(args) {
   var hasWarnings = log.warningCount > 0;
   var summary = "";
   if (hasWarnings) {
-    summary = summary + log.warningCount.toString() + (log.warningCount === 1 ? " warning" : " warnings");
+    summary += log.warningCount.toString() + (log.warningCount === 1 ? " warning" : " warnings");
     if (hasErrors) {
-      summary = summary + " and ";
+      summary += " and ";
     }
   }
   if (hasErrors) {
-    summary = summary + log.errorCount.toString() + (log.errorCount === 1 ? " error" : " errors");
+    summary += log.errorCount.toString() + (log.errorCount === 1 ? " error" : " errors");
   }
   if (hasWarnings || hasErrors) {
     io.print(summary + " generated\n");
@@ -7732,7 +7737,7 @@ service.typeFromPosition = function(node, source, index) {
       var bound = Type.bound(symbol.type);
       var text = "type " + symbol.name;
       if (bound !== null) {
-        text = text + " is " + Type.toString(bound);
+        text += " is " + Type.toString(bound);
       }
       result.declaration = text;
       break;
@@ -7745,7 +7750,7 @@ service.typeFromPosition = function(node, source, index) {
       var text = $in.SymbolKind.toString(symbol.kind).toLowerCase() + " " + Type.toString(type);
       if (Type.hasRelevantTypes(type)) {
         for (var i = 0; i < type.relevantTypes.length; i = i + 1 | 0) {
-          text = text + (i === 0 ? " : " : ", ") + Type.toString(type.relevantTypes[i]);
+          text += (i === 0 ? " : " : ", ") + Type.toString(type.relevantTypes[i]);
         }
       }
       result.declaration = text;
@@ -7764,9 +7769,9 @@ service.typeFromPosition = function(node, source, index) {
       var argumentTypes = Type.argumentTypes(type);
       for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
         if (i > 0) {
-          text = text + ", ";
+          text += ", ";
         }
-        text = text + Type.toString(argumentTypes[i]) + " " + $arguments[i].symbol.name;
+        text += Type.toString(argumentTypes[i]) + " " + $arguments[i].symbol.name;
       }
       result.declaration = text + ")";
       break;
@@ -7775,7 +7780,7 @@ service.typeFromPosition = function(node, source, index) {
     case 20:
       var text = Type.toString(type) + " " + symbol.name;
       if (Symbol.isEnumValue(symbol)) {
-        text = text + " = " + symbol.enumValue.toString();
+        text += " = " + symbol.enumValue.toString();
       }
       result.declaration = text;
       break;
@@ -7828,9 +7833,9 @@ service.addCompletion = function(completions, member) {
     var text = name;
     if (type.symbol === null) {
       var semicolon = Type.toString(type.relevantTypes[0]) === "void";
-      text = text + (Type.argumentTypes(type).length === 0 ? semicolon ? "();$" : "()$" : semicolon ? "($);" : "($)");
+      text += Type.argumentTypes(type).length === 0 ? semicolon ? "();$" : "()$" : semicolon ? "($);" : "($)";
     } else {
-      text = text + "$";
+      text += "$";
     }
     completions.push(new LanguageServiceCompletion(name, Type.toString(type), text));
   }
@@ -7861,7 +7866,7 @@ var nodeKindIsExpression = function(node) {
 var operatorInfo = createOperatorMap();
 Compiler.nativeLibrarySource = null;
 Compiler.nativeLibraryFile = null;
-var NATIVE_LIBRARY = "\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct String {\n  import static string fromCharCode(int value);\n}\n\nimport struct string {\n  import final int length;\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }\n  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }\n  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result = result + this; return result; }\n}\n\nimport class List<T> {\n  import new();\n  import final int length;\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  void swap(int a, int b) {\n    var temp = get(a);\n    set(a, get(b));\n    set(b, temp);\n  }\n}\n\nimport class StringMap<T> {\n  import new();\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  import new();\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n";
+var NATIVE_LIBRARY = "\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct String {\n  import static string fromCharCode(int value);\n}\n\nimport struct string {\n  import final int length;\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }\n  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }\n  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport class List<T> {\n  import new();\n  import final int length;\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  void swap(int a, int b) {\n    var temp = get(a);\n    set(a, get(b));\n    set(b, temp);\n  }\n}\n\nimport class StringMap<T> {\n  import new();\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  import new();\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n";
 Range.EMPTY = new Range(null, 0, 0);
 var BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var HEX = "0123456789ABCDEF";

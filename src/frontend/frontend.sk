@@ -191,10 +191,10 @@ export namespace frontend {
     var hasWarnings = log.warningCount > 0;
     var summary = "";
     if (hasWarnings) {
-      summary = summary + log.warningCount + (plural(log.warningCount, " warning", " warnings"));
-      if (hasErrors) summary = summary + " and ";
+      summary += log.warningCount + (plural(log.warningCount, " warning", " warnings"));
+      if (hasErrors) summary += " and ";
     }
-    if (hasErrors) summary = summary + log.errorCount + (plural(log.errorCount, " error", " errors"));
+    if (hasErrors) summary += log.errorCount + (plural(log.errorCount, " error", " errors"));
     if (hasWarnings || hasErrors) io.print(summary + " generated\n");
     if (flags.verbose) io.print(compiler.statistics(result) + "\n");
     if (hasErrors) return 1;

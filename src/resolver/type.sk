@@ -70,8 +70,8 @@ class Type {
     assert parameters.length == substitutions.length;
     var text = "[";
     for (var i = 0; i < parameters.length; i++) {
-      if (i > 0) text = text + ", ";
-      text = text + parameters.get(i).name + " => " + substitutions.get(i);
+      if (i > 0) text += ", ";
+      text += parameters.get(i).name + " => " + substitutions.get(i);
     }
     return text + "]";
   }
@@ -84,8 +84,8 @@ class Type {
       var text = resultType() + " fn(";
       var arguments = argumentTypes();
       for (var i = 0; i < arguments.length; i++) {
-        if (i > 0) text = text + ", ";
-        text = text + arguments.get(i);
+        if (i > 0) text += ", ";
+        text += arguments.get(i);
       }
       return text + ")";
     }
@@ -94,8 +94,8 @@ class Type {
     if (hasParameters()) {
       var text = "";
       for (var i = 0; i < symbol.parameters.length; i++) {
-        if (i > 0) text = text + ", ";
-        text = text + (isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name);
+        if (i > 0) text += ", ";
+        text += isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name;
       }
       return symbol.fullName() + "<" + text + ">";
     }

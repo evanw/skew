@@ -151,7 +151,7 @@ namespace js {
     }
 
     void increaseIndent() {
-      indent = indent + "  ";
+      indent += "  ";
     }
 
     void decreaseIndent() {
@@ -876,7 +876,7 @@ namespace js {
           return enclosingName;
         }
         if (symbol.kind.isInstance()) {
-          enclosingName = enclosingName + ".prototype";
+          enclosingName += ".prototype";
         }
         return enclosingName + "." + mangleName(symbol);
       }

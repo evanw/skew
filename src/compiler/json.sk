@@ -28,34 +28,34 @@ namespace json {
 
     void visit(Node node) {
       if (node == null) {
-        result = result + "null";
+        result += "null";
         return;
       }
       var outer = indent;
-      indent = indent + "  ";
-      result = result + "{\n" + indent + "\"kind\": " + simpleQuote(node.kind.prettyPrint());
+      indent += "  ";
+      result += "{\n" + indent + "\"kind\": " + simpleQuote(node.kind.prettyPrint());
       if (node.content != null) {
-        result = result + ",\n" + indent + "\"content\": ";
+        result += ",\n" + indent + "\"content\": ";
         switch (node.content.type()) {
-          case .INT { result = result + node.asInt(); }
-          case .DOUBLE { result = result + node.asDouble(); }
-          case .STRING { result = result + quoteString(node.asString(), '"'); }
+          case .INT { result += node.asInt(); }
+          case .DOUBLE { result += node.asDouble(); }
+          case .STRING { result += quoteString(node.asString(), '"'); }
         }
       }
       if (node.hasChildren()) {
-        result = result + ",\n" + indent + "\"children\": [";
+        result += ",\n" + indent + "\"children\": [";
         var inner = indent;
-        indent = indent + "  ";
+        indent += "  ";
         for (var i = 0; i < node.children.length; i++) {
-          if (i > 0) result = result + ",";
-          result = result + "\n" + indent;
+          if (i > 0) result += ",";
+          result += "\n" + indent;
           visit(node.children.get(i));
         }
         indent = inner;
-        result = result + "\n" + indent + "]";
+        result += "\n" + indent + "]";
       }
       indent = outer;
-      result = result + "\n" + indent + "}";
+      result += "\n" + indent + "}";
     }
   }
 }

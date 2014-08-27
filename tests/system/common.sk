@@ -3,24 +3,23 @@ import void testJS(string input, string expected);
 import void expect(string output, string expected);
 
 export void run(string input, string expected) {
-  CompilerOptions options = CompilerOptions();
+  var options = CompilerOptions();
   options.inputs = { Source("<stdin>", input) };
-  Compiler compiler = Compiler();
-  CompilerResult result = compiler.compile(options);
+  var compiler = Compiler();
+  var result = compiler.compile(options);
   expect(compiler.log.toString(), expected);
 }
 
 export void runJS(string input, string expected) {
-  CompilerOptions options = CompilerOptions();
+  var options = CompilerOptions();
   options.inputs = { Source("<stdin>", input) };
   options.targetFormat = .JS;
-  Compiler compiler = Compiler();
-  CompilerResult result = compiler.compile(options);
+  var compiler = Compiler();
+  var result = compiler.compile(options);
   if (result.outputs.length > 0) {
-    string output = "";
-    int i;
-    for (i = 0; i < result.outputs.length; i++) {
-      output = output + result.outputs.get(i).contents + "\n";
+    var output = "";
+    for (var i = 0; i < result.outputs.length; i++) {
+      output += result.outputs.get(i).contents + "\n";
     }
     expect(output, expected);
   } else {

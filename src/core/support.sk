@@ -25,20 +25,20 @@ StringContent parseStringLiteral(Log log, Range range, string text) {
   while (i + 1 < text.length) {
     var c = text.codeUnitAt(i);
     if (c == '\\') {
-      result = result + text.slice(start, i);
+      result += text.slice(start, i);
       var escape = i++;
       if (i + 1 < text.length) {
         c = text.codeUnitAt(i++);
-        if (c == 'n') { result = result + "\n"; start = i; continue; }
-        else if (c == 'r') { result = result + "\r"; start = i; continue; }
-        else if (c == 't') { result = result + "\t"; start = i; continue; }
-        else if (c == 'e') { result = result + "\e"; start = i; continue; }
-        else if (c == '0') { result = result + "\0"; start = i; continue; }
-        else if (c == '\\' || c == '"' || c == '\'') { result = result + string.fromCodeUnit(c); start = i; continue; }
+        if (c == 'n') { result += "\n"; start = i; continue; }
+        else if (c == 'r') { result += "\r"; start = i; continue; }
+        else if (c == 't') { result += "\t"; start = i; continue; }
+        else if (c == 'e') { result += "\e"; start = i; continue; }
+        else if (c == '0') { result += "\0"; start = i; continue; }
+        else if (c == '\\' || c == '"' || c == '\'') { result += string.fromCodeUnit(c); start = i; continue; }
         else if (c == 'x') {
           var c0 = i + 1 < text.length ? parseHexCharacter(text.codeUnitAt(i++)) : -1;
           var c1 = i + 1 < text.length ? parseHexCharacter(text.codeUnitAt(i++)) : -1;
-          if (c0 != -1 && c1 != -1) { result = result + string.fromCodeUnit(c0 << 4 | c1); start = i; continue; }
+          if (c0 != -1 && c1 != -1) { result += string.fromCodeUnit(c0 << 4 | c1); start = i; continue; }
         }
       }
       syntaxErrorInvalidEscapeSequence(log, Range(range.source, range.start + escape, range.start + i), text.slice(escape, i));
@@ -47,27 +47,27 @@ StringContent parseStringLiteral(Log log, Range range, string text) {
       i++;
     }
   }
-  result = result + text.slice(start, i);
+  result += text.slice(start, i);
   return isValidString ? StringContent(result) : null;
 }
 
 string quoteString(string text, int quote) {
   var result = "";
   var quoteString = string.fromCodeUnit(quote);
-  result = result + quoteString;
+  result += quoteString;
   var start = 0; // Append long runs of unescaped characters using a single slice() for speed
   int i;
   for (i = 0; i < text.length; i++) {
     var c = text.codeUnitAt(i);
-    if (c == quote) { result = result + text.slice(start, i) + "\\" + quoteString; start = i + 1; }
-    else if (c == '\n') { result = result + text.slice(start, i) + "\\n"; start = i + 1; }
-    else if (c == '\r') { result = result + text.slice(start, i) + "\\r"; start = i + 1; }
-    else if (c == '\t') { result = result + text.slice(start, i) + "\\t"; start = i + 1; }
-    else if (c == '\0') { result = result + text.slice(start, i) + "\\0"; start = i + 1; }
-    else if (c == '\\') { result = result + text.slice(start, i) + "\\\\"; start = i + 1; }
-    else if (c < ' ' || c >= 0x7F && c <= 0xFF) { result = result + text.slice(start, i) + "\\x" + HEX.get(c >> 4) + HEX.get(c & 15); start = i + 1; }
+    if (c == quote) { result += text.slice(start, i) + "\\" + quoteString; start = i + 1; }
+    else if (c == '\n') { result += text.slice(start, i) + "\\n"; start = i + 1; }
+    else if (c == '\r') { result += text.slice(start, i) + "\\r"; start = i + 1; }
+    else if (c == '\t') { result += text.slice(start, i) + "\\t"; start = i + 1; }
+    else if (c == '\0') { result += text.slice(start, i) + "\\0"; start = i + 1; }
+    else if (c == '\\') { result += text.slice(start, i) + "\\\\"; start = i + 1; }
+    else if (c < ' ' || c >= 0x7F && c <= 0xFF) { result += text.slice(start, i) + "\\x" + HEX.get(c >> 4) + HEX.get(c & 15); start = i + 1; }
   }
-  result = result + text.slice(start, i) + quoteString;
+  result += text.slice(start, i) + quoteString;
   return result;
 }
 
@@ -76,7 +76,7 @@ string replace(string text, string before, string after) {
   var result = "";
   int index;
   while ((index = text.indexOf(before)) != -1) {
-    result = result + text.slice(0, index) + after;
+    result += text.slice(0, index) + after;
     text = text.slice(index + before.length, text.length);
   }
   return result + text;

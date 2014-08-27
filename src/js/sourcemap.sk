@@ -56,29 +56,29 @@ class SourceMapGenerator {
             previousGeneratedLine > 0 || previousGeneratedColumn > 0)) {
           continue;
         }
-        result = result + ",";
+        result += ",";
       } else {
         previousGeneratedColumn = 0;
         while (previousGeneratedLine < generatedLine) {
-          result = result + ";";
+          result += ";";
           previousGeneratedLine++;
         }
       }
 
       // Record the generated column (the line is recorded using ';' above)
-      result = result + encodeVLQ(mapping.generatedColumn - previousGeneratedColumn);
+      result += encodeVLQ(mapping.generatedColumn - previousGeneratedColumn);
       previousGeneratedColumn = mapping.generatedColumn;
 
       // Record the generated source
-      result = result + encodeVLQ(mapping.sourceIndex - previousSourceIndex);
+      result += encodeVLQ(mapping.sourceIndex - previousSourceIndex);
       previousSourceIndex = mapping.sourceIndex;
 
       // Record the original line
-      result = result + encodeVLQ(mapping.originalLine - previousOriginalLine);
+      result += encodeVLQ(mapping.originalLine - previousOriginalLine);
       previousOriginalLine = mapping.originalLine;
 
       // Record the original column
-      result = result + encodeVLQ(mapping.originalColumn - previousOriginalColumn);
+      result += encodeVLQ(mapping.originalColumn - previousOriginalColumn);
       previousOriginalColumn = mapping.originalColumn;
     }
 
@@ -108,7 +108,7 @@ class SourceMapGenerator {
       // continuation bit is marked
       if (vlq > 0) digit |= 32;
 
-      encoded = encoded + BASE64.get(digit);
+      encoded += BASE64.get(digit);
     } while (vlq > 0);
     return encoded;
   }
