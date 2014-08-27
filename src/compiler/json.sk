@@ -5,11 +5,11 @@ namespace json {
     override List<Source> emitProgram(Node program) {
       List<Source> outputs = {};
       if (options.outputDirectory == "") {
-        outputs.push(Source(options.outputFile, dump(program).append("\n")));
+        outputs.push(Source(options.outputFile, dump(program) + "\n"));
       } else {
         for (var i = 0; i < program.children.length; i++) {
           var file = program.children.get(i);
-          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name.append(".json")), dump(file).append("\n")));
+          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".json"), dump(file) + "\n"));
         }
       }
       return outputs;
@@ -28,34 +28,34 @@ namespace json {
 
     void visit(Node node) {
       if (node == null) {
-        result = result.append("null");
+        result = result + "null";
         return;
       }
       var outer = indent;
-      indent = indent.append("  ");
-      result = result.append("{\n").append(indent).append("\"kind\": ").append(simpleQuote(node.kind.prettyPrint()));
+      indent = indent + "  ";
+      result = result + "{\n" + indent + "\"kind\": " + simpleQuote(node.kind.prettyPrint());
       if (node.content != null) {
-        result = result.append(",\n").append(indent).append("\"content\": ");
+        result = result + ",\n" + indent + "\"content\": ";
         switch (node.content.type()) {
-          case .INT { result = result.append(node.asInt().toString()); }
-          case .DOUBLE { result = result.append(node.asDouble().toString()); }
-          case .STRING { result = result.append(quoteString(node.asString(), '"')); }
+          case .INT { result = result + node.asInt(); }
+          case .DOUBLE { result = result + node.asDouble(); }
+          case .STRING { result = result + quoteString(node.asString(), '"'); }
         }
       }
       if (node.hasChildren()) {
-        result = result.append(",\n").append(indent).append("\"children\": [");
+        result = result + ",\n" + indent + "\"children\": [";
         var inner = indent;
-        indent = indent.append("  ");
+        indent = indent + "  ";
         for (var i = 0; i < node.children.length; i++) {
-          if (i > 0) result = result.append(",");
-          result = result.append("\n").append(indent);
+          if (i > 0) result = result + ",";
+          result = result + "\n" + indent;
           visit(node.children.get(i));
         }
         indent = inner;
-        result = result.append("\n").append(indent).append("]");
+        result = result + "\n" + indent + "]";
       }
       indent = outer;
-      result = result.append("\n").append(indent).append("}");
+      result = result + "\n" + indent + "}";
     }
   }
 }

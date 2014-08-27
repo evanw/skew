@@ -19,10 +19,9 @@ import struct string {
   inline string get(int index) { return untyped(this)[index]; }
   inline string join(List<string> values) { return untyped(values).join(this); }
   inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }
-  inline string append(string value) { return untyped(this) + value; }
   bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }
   bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }
-  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result = result.append(this); return result; }
+  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result = result + this; return result; }
 }
 
 import class List<T> {

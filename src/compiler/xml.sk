@@ -5,11 +5,11 @@ namespace xml {
     override List<Source> emitProgram(Node program) {
       List<Source> outputs = {};
       if (options.outputDirectory == "") {
-        outputs.push(Source(options.outputFile, dump(program).append("\n")));
+        outputs.push(Source(options.outputFile, dump(program) + "\n"));
       } else {
         for (var i = 0; i < program.children.length; i++) {
           var file = program.children.get(i);
-          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name.append(".xml")), dump(file).append("\n")));
+          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".xml"), dump(file) + "\n"));
         }
       }
       return outputs;
@@ -28,30 +28,30 @@ namespace xml {
 
     void visit(Node node) {
       if (node == null) {
-        result = result.append("<null/>");
+        result = result + "<null/>";
         return;
       }
-      result = result.append("<").append(node.kind.prettyPrint());
+      result = result + "<" + node.kind.prettyPrint();
       if (node.content != null) {
-        result = result.append(" content=");
+        result = result + " content=";
         switch (node.content.type()) {
-          case .INT { result = result.append(simpleQuote(node.asInt().toString())); }
-          case .DOUBLE { result = result.append(simpleQuote(node.asDouble().toString())); }
-          case .STRING { result = result.append(quoteString(node.asString(), '"')); }
+          case .INT { result = result + simpleQuote(node.asInt().toString()); }
+          case .DOUBLE { result = result + simpleQuote(node.asDouble().toString()); }
+          case .STRING { result = result + quoteString(node.asString(), '"'); }
         }
       }
       if (node.hasChildren()) {
-        result = result.append(">");
+        result = result + ">";
         var inner = indent;
-        indent = indent.append("  ");
+        indent = indent + "  ";
         for (var i = 0; i < node.children.length; i++) {
-          result = result.append("\n").append(indent);
+          result = result + "\n" + indent;
           visit(node.children.get(i));
         }
         indent = inner;
-        result = result.append("\n").append(indent).append("</").append(node.kind.prettyPrint()).append(">");
+        result = result + "\n" + indent + "</" + node.kind.prettyPrint() + ">";
       } else {
-        result = result.append("/>");
+        result = result + "/>";
       }
     }
   }

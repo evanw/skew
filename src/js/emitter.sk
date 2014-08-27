@@ -107,20 +107,20 @@ namespace js {
       if (options.jsSourceMap) {
         // Obfuscate the sourceMappingURL so it's not incorrectly picked up as
         // the sourceMappingURL for the compiled JavaScript compiler file
-        currentSource.contents = currentSource.contents.append("/");
+        currentSource.contents = currentSource.contents + "/";
 
         // Append the source map inline with the compiled output
         if (options.outputFile == "") {
-          currentSource.contents = currentSource.contents.append(
-            "/# sourceMappingURL=data:application/json;base64,").append(
-            encodeBase64(generator.toString())).append("\n");
+          currentSource.contents = currentSource.contents +
+            "/# sourceMappingURL=data:application/json;base64," +
+            encodeBase64(generator.toString()) + "\n";
         }
 
         // Create the source map as another file alongside the output
         else {
-          string name = options.outputFile.append(".map");
-          currentSource.contents = currentSource.contents.append(
-            "/# sourceMappingURL=").append(splitPath(name).entry).append("\n");
+          string name = options.outputFile + ".map";
+          currentSource.contents = currentSource.contents +
+            "/# sourceMappingURL=" + splitPath(name).entry + "\n";
           return { currentSource, Source(name, generator.toString()) };
         }
       }
@@ -129,7 +129,7 @@ namespace js {
     }
 
     void appendSource(Source source) {
-      currentSource.contents = currentSource.contents.append(source.contents);
+      currentSource.contents = currentSource.contents + source.contents;
       if (options.jsSourceMap) {
         for (var i = 0, n = source.lineCount(); i < n; i++) {
           generator.addMapping(source, i, 0, currentLine++, 0);
@@ -151,7 +151,7 @@ namespace js {
     }
 
     void increaseIndent() {
-      indent = indent.append("  ");
+      indent = indent + "  ";
     }
 
     void decreaseIndent() {
@@ -170,7 +170,7 @@ namespace js {
           }
         }
       }
-      currentSource.contents = currentSource.contents.append(text);
+      currentSource.contents = currentSource.contents + text;
     }
 
     void emitNodes(List<Node> nodes) {
@@ -257,24 +257,24 @@ namespace js {
       increaseIndent();
       emitChildren(node);
       decreaseIndent();
-      emit(indent.append("}"));
+      emit(indent + "}");
     }
 
     void emitCase(Node node) {
       var values = node.caseValues();
       var block = node.caseBlock();
       for (var i = 0; i < values.length; i++) {
-        emit(indent.append("case "));
+        emit(indent + "case ");
         emitExpression(values.get(i), Precedence.LOWEST);
         emit(":\n");
       }
       if (values.length == 0) {
-        emit(indent.append("default:\n"));
+        emit(indent + "default:\n");
       }
       increaseIndent();
       emitChildren(block);
       if (!block.blockAlwaysEndsWithReturn()) {
-        emit(indent.append("break;\n"));
+        emit(indent + "break;\n");
       }
       decreaseIndent();
     }
@@ -300,7 +300,7 @@ namespace js {
       if (!hasCompoundName(node.symbol)) {
         emit("var ");
       }
-      emit(indent.append(fullName(node.symbol)).append(" = {};\n"));
+      emit(indent + fullName(node.symbol) + " = {};\n");
     }
 
     void emitEnum(Node node) {
@@ -309,14 +309,14 @@ namespace js {
         if (!hasCompoundName(node.symbol)) {
           emit("var ");
         }
-        emit(indent.append(fullName(node.symbol)).append(" = {\n"));
+        emit(indent + fullName(node.symbol) + " = {\n");
         increaseIndent();
         for (var i = 0; i < block.children.length; i++) {
           var symbol = block.children.get(i).symbol;
-          emit(indent.append(mangleName(symbol)).append(": ").append(symbol.enumValue.toString()).append(i == block.children.length - 1 ? "\n" : ",\n"));
+          emit(indent + mangleName(symbol) + ": " + symbol.enumValue + (i == block.children.length - 1 ? "\n" : ",\n"));
         }
         decreaseIndent();
-        emit(indent.append("};\n"));
+        emit(indent + "};\n");
       }
     }
 
@@ -328,9 +328,9 @@ namespace js {
       }
       var isCompoundName = hasCompoundName(symbol);
       if (!isCompoundName) {
-        emit(indent.append("function ").append(fullName(symbol)));
+        emit(indent + "function " + fullName(symbol));
       } else {
-        emit(indent.append(fullName(symbol)).append(" = function"));
+        emit(indent + fullName(symbol) + " = function");
       }
       emitArgumentVariables(node.functionArguments().children);
       emit(" ");
@@ -338,11 +338,11 @@ namespace js {
       increaseIndent();
       emitChildren(block);
       decreaseIndent();
-      emit(indent.append(isCompoundName ? "};\n" : "}\n"));
+      emit(indent + (isCompoundName ? "};\n" : "}\n"));
       if (node.kind == .CONSTRUCTOR) {
         var type = symbol.enclosingSymbol.type;
         if (type.isClass() && type.baseClass() != null) {
-          emit(indent.append("$extends(").append(fullName(type.symbol)).append(", ").append(fullName(type.baseClass().symbol)).append(");\n"));
+          emit(indent + "$extends(" + fullName(type.symbol) + ", " + fullName(type.baseClass().symbol) + ");\n");
         }
       }
     }
@@ -366,7 +366,7 @@ namespace js {
       var setup = node.forSetup();
       var test = node.forTest();
       var update = node.forUpdate();
-      emit(indent.append("for ("));
+      emit(indent + "for (");
       if (setup != null) {
         if (setup.kind == .VARIABLE_CLUSTER) {
           emit("var ");
@@ -393,7 +393,7 @@ namespace js {
     }
 
     void emitWhile(Node node) {
-      emit(indent.append("while ("));
+      emit(indent + "while (");
       emitExpression(node.whileTest(), Precedence.LOWEST);
       emit(") ");
       emitNode(node.whileBlock());
@@ -401,7 +401,7 @@ namespace js {
     }
 
     void emitDoWhile(Node node) {
-      emit(indent.append("do "));
+      emit(indent + "do ");
       emitNode(node.whileBlock());
       emit(" while (");
       emitExpression(node.whileTest(), Precedence.LOWEST);
@@ -421,11 +421,11 @@ namespace js {
     }
 
     void emitBreak(Node node) {
-      emit(indent.append("break;\n"));
+      emit(indent + "break;\n");
     }
 
     void emitContinue(Node node) {
-      emit(indent.append("continue;\n"));
+      emit(indent + "continue;\n");
     }
 
     void emitAssert(Node node) {
@@ -434,16 +434,16 @@ namespace js {
       if (value.kind != .FALSE) {
         var couldBeFalse = value.kind != .TRUE;
         if (couldBeFalse) {
-          emit(indent.append("if ("));
+          emit(indent + "if (");
           emitExpression(value, Precedence.LOWEST);
           emit(") {\n");
           increaseIndent();
         }
-        var text = node.range.toString().append(" (").append(node.range.locationString()).append(")");
-        emit(indent.append("throw new Error(").append(quoteString(text, '"')).append(");\n"));
+        var text = node.range + " (" + node.range.locationString() + ")";
+        emit(indent + "throw new Error(" + quoteString(text, '"') + ");\n");
         if (couldBeFalse) {
           decreaseIndent();
-          emit(indent.append("}\n"));
+          emit(indent + "}\n");
         }
       }
     }
@@ -456,11 +456,11 @@ namespace js {
     }
 
     void emitSwitch(Node node) {
-      emit(indent.append("switch ("));
+      emit(indent + "switch (");
       emitExpression(node.switchValue(), Precedence.LOWEST);
       emit(") {\n");
       emitNodes(node.switchCases());
-      emit(indent.append("}\n"));
+      emit(indent + "}\n");
     }
 
     void emitModifier(Node node) {
@@ -626,7 +626,7 @@ namespace js {
       var info = operatorInfo.get(node.kind);
       if (info.precedence < precedence) emit("(");
       emitExpression(node.binaryLeft(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.RIGHT)));
-      emit(node.kind == .EQUAL ? " === " : node.kind == .NOT_EQUAL ? " !== " : " ".append(info.text).append(" "));
+      emit(node.kind == .EQUAL ? " === " : node.kind == .NOT_EQUAL ? " !== " : " " + info.text + " ");
       emitExpression(node.binaryRight(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.LEFT)));
       if (info.precedence < precedence) emit(")");
     }
@@ -863,7 +863,7 @@ namespace js {
         return mangleName(symbol.enclosingSymbol);
       }
       if (isKeyword.has(symbol.name)) {
-        return "$".append(symbol.name);
+        return "$" + symbol.name;
       }
       return symbol.name;
     }
@@ -876,9 +876,9 @@ namespace js {
           return enclosingName;
         }
         if (symbol.kind.isInstance()) {
-          enclosingName = enclosingName.append(".prototype");
+          enclosingName = enclosingName + ".prototype";
         }
-        return enclosingName.append(".").append(mangleName(symbol));
+        return enclosingName + "." + mangleName(symbol);
       }
       return mangleName(symbol);
     }

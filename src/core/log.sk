@@ -42,14 +42,14 @@ class Log {
     for (var i = 0; i < diagnostics.length; i++) {
       var diagnostic = diagnostics.get(i);
       var formatted = diagnostic.range.format(0);
-      result = result.append(diagnostic.range.locationString()).append(diagnostic.kind == .ERROR ? ": error: " : ": warning: ")
-        .append(diagnostic.text).append("\n").append(formatted.line).append("\n").append(formatted.range).append("\n");
+      result = result + diagnostic.range.locationString() + (diagnostic.kind == .ERROR ? ": error: " : ": warning: ")
+         + diagnostic.text + "\n" + formatted.line + "\n" + formatted.range + "\n";
 
       // Append notes after the diagnostic they apply to
       if (!diagnostic.noteRange.isEmpty()) {
         formatted = diagnostic.noteRange.format(0);
-        result = result.append(diagnostic.noteRange.locationString()).append(": note: ").append(diagnostic.noteText).append("\n")
-          .append(formatted.line).append("\n").append(formatted.range).append("\n");
+        result = result + diagnostic.noteRange.locationString() + ": note: " + diagnostic.noteText + "\n"
+           + formatted.line + "\n" + formatted.range + "\n";
       }
     }
 

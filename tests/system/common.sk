@@ -20,7 +20,7 @@ export void runJS(string input, string expected) {
     string output = "";
     int i;
     for (i = 0; i < result.outputs.length; i++) {
-      output = output.append(result.outputs.get(i).contents).append("\n");
+      output = output + result.outputs.get(i).contents + "\n";
     }
     expect(output, expected);
   } else {

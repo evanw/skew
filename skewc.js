@@ -4936,6 +4936,30 @@ Resolver.resolveUnaryOperator = function($this, node) {
   }
   Resolver.checkConversion($this, node.type, value, 0);
 };
+Resolver.wrapWithToStringCall = function($this, node) {
+  var toString = node.type.members.getOrDefault("toString", null);
+  if (toString === null) {
+    Log.error($this.log, node.range, "Expression of " + ("type \"" + Type.toString(node.type) + "\"") + " has no toString() member to call");
+    return false;
+  }
+  Resolver.initializeMember($this, toString);
+  if (toString.type === $this.cache.errorType) {
+    return false;
+  }
+  if (toString.type !== $this.cache.toStringType) {
+    Log.error($this.log, node.range, "Expected toString() member to have " + ("type \"" + Type.toString($this.cache.toStringType) + "\"") + " but found " + ("type \"" + Type.toString(toString.type) + "\""));
+    return false;
+  }
+  var children = Node.removeChildren(node);
+  var name = Node.withContent(new Node(34), new StringContent("toString"));
+  var target = Node.withChildren(new Node(46), [Node.withChildren(Node.clone(node), children), name]);
+  var $call = Node.createCall(target, []);
+  target.symbol = name.symbol = toString.symbol;
+  target.type = $this.cache.toStringType;
+  $call.type = $this.cache.stringType;
+  Node.become(node, $call);
+  return true;
+};
 Resolver.resolveBinaryOperator = function($this, node) {
   var kind = node.kind;
   var left = node.children[0];
@@ -4976,6 +5000,22 @@ Resolver.resolveBinaryOperator = function($this, node) {
   } else if (kind === 68 || kind === 87 || kind === 82 || kind === 72) {
     if (Type.isNumeric(leftType, $this.cache) && Type.isNumeric(rightType, $this.cache)) {
       node.type = commonType = TypeCache.commonImplicitType($this.cache, leftType, rightType);
+    } else if (kind === 68) {
+      if (leftType === $this.cache.stringType && rightType === $this.cache.stringType) {
+        node.type = commonType = $this.cache.stringType;
+      } else if (leftType === $this.cache.stringType) {
+        if (Resolver.wrapWithToStringCall($this, right)) {
+          node.type = commonType = $this.cache.stringType;
+        } else {
+          return;
+        }
+      } else if (rightType === $this.cache.stringType) {
+        if (Resolver.wrapWithToStringCall($this, left)) {
+          node.type = commonType = $this.cache.stringType;
+        } else {
+          return;
+        }
+      }
     }
   } else if (kind === 84 || kind === 85 || kind === 86) {
     if (Type.isInteger(leftType, $this.cache) && Type.isInteger(rightType, $this.cache)) {
@@ -5031,6 +5071,7 @@ Scope.linkGlobals = function($this, cache) {
   cache.doubleType = Scope.findLocal($this, "double").symbol.type;
   cache.stringType = Scope.findLocal($this, "string").symbol.type;
   cache.listType = Scope.findLocal($this, "List").symbol.type;
+  cache.toStringType = TypeCache.functionType(cache, cache.stringType, []);
 };
 Scope.insert = function($this, symbol) {
   if ($this.type !== null) {
@@ -5352,6 +5393,7 @@ function TypeCache() {
   this.doubleType = null;
   this.stringType = null;
   this.listType = null;
+  this.toStringType = null;
   this.hashTable = new IntMap();
 }
 TypeCache.createType = function(symbol) {
@@ -6500,13 +6542,13 @@ frontend.main = function(args) {
   var hasWarnings = log.warningCount > 0;
   var summary = "";
   if (hasWarnings) {
-    summary = summary + (log.warningCount.toString() + (log.warningCount === 1 ? " warning" : " warnings"));
+    summary = summary + log.warningCount.toString() + (log.warningCount === 1 ? " warning" : " warnings");
     if (hasErrors) {
       summary = summary + " and ";
     }
   }
   if (hasErrors) {
-    summary = summary + (log.errorCount.toString() + (log.errorCount === 1 ? " error" : " errors"));
+    summary = summary + log.errorCount.toString() + (log.errorCount === 1 ? " error" : " errors");
   }
   if (hasWarnings || hasErrors) {
     io.print(summary + " generated\n");
@@ -7819,7 +7861,7 @@ var nodeKindIsExpression = function(node) {
 var operatorInfo = createOperatorMap();
 Compiler.nativeLibrarySource = null;
 Compiler.nativeLibraryFile = null;
-var NATIVE_LIBRARY = "\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct String {\n  import static string fromCharCode(int value);\n}\n\nimport struct string {\n  import final int length;\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  inline string append(string value) { return untyped(this) + value; }\n  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }\n  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }\n  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result = result.append(this); return result; }\n}\n\nimport class List<T> {\n  import new();\n  import final int length;\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  void swap(int a, int b) {\n    var temp = get(a);\n    set(a, get(b));\n    set(b, temp);\n  }\n}\n\nimport class StringMap<T> {\n  import new();\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  import new();\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n";
+var NATIVE_LIBRARY = "\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct String {\n  import static string fromCharCode(int value);\n}\n\nimport struct string {\n  import final int length;\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }\n  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }\n  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result = result + this; return result; }\n}\n\nimport class List<T> {\n  import new();\n  import final int length;\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  void swap(int a, int b) {\n    var temp = get(a);\n    set(a, get(b));\n    set(b, temp);\n  }\n}\n\nimport class StringMap<T> {\n  import new();\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  import new();\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n";
 Range.EMPTY = new Range(null, 0, 0);
 var BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var HEX = "0123456789ABCDEF";

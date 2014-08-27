@@ -70,10 +70,10 @@ class Type {
     assert parameters.length == substitutions.length;
     var text = "[";
     for (var i = 0; i < parameters.length; i++) {
-      if (i > 0) text = text.append(", ");
-      text = text.append(parameters.get(i).name).append(" => ").append(substitutions.get(i).toString());
+      if (i > 0) text = text + ", ";
+      text = text + parameters.get(i).name + " => " + substitutions.get(i);
     }
-    return text.append("]");
+    return text + "]";
   }
 
   string toString() {
@@ -81,23 +81,23 @@ class Type {
 
     // Special-case functions
     if (isFunction()) {
-      var text = resultType().toString().append(" fn(");
+      var text = resultType() + " fn(";
       var arguments = argumentTypes();
       for (var i = 0; i < arguments.length; i++) {
-        if (i > 0) text = text.append(", ");
-        text = text.append(arguments.get(i).toString());
+        if (i > 0) text = text + ", ";
+        text = text + arguments.get(i);
       }
-      return text.append(")");
+      return text + ")";
     }
 
     // Special-case generic types
     if (hasParameters()) {
       var text = "";
       for (var i = 0; i < symbol.parameters.length; i++) {
-        if (i > 0) text = text.append(", ");
-        text = text.append(isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name);
+        if (i > 0) text = text + ", ";
+        text = text + (isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name);
       }
-      return symbol.fullName().append("<").append(text).append(">");
+      return symbol.fullName() + "<" + text + ">";
     }
 
     return symbol.fullName();

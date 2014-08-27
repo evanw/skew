@@ -1,5 +1,5 @@
 string simpleQuote(string name) {
-  return "\"".append(name).append("\"");
+  return "\"" + name + "\"";
 }
 
 string firstLineOf(string text) {
@@ -10,27 +10,27 @@ string firstLineOf(string text) {
 ////////////////////////////////////////////////////////////////////////////////
 
 void syntaxErrorInvalidEscapeSequence(Log log, Range range, string text) {
-  log.error(range, "Invalid escape sequence ".append(firstLineOf(simpleQuote(text))));
+  log.error(range, "Invalid escape sequence " + firstLineOf(simpleQuote(text)));
 }
 
 void syntaxErrorInvalidCharacter(Log log, Range range, string text) {
-  log.error(range, "Invalid character literal ".append(firstLineOf(text)));
+  log.error(range, "Invalid character literal " + firstLineOf(text));
 }
 
 void syntaxErrorInvalidInteger(Log log, Range range, string text) {
-  log.error(range, "Invalid integer literal ".append(text));
+  log.error(range, "Invalid integer literal " + text);
 }
 
 void syntaxErrorExtraData(Log log, Range range, string text) {
-  log.error(range, "Syntax error ".append(quoteString(text, '"')));
+  log.error(range, "Syntax error " + quoteString(text, '"'));
 }
 
 void syntaxErrorUnexpectedToken(Log log, Token token) {
-  log.error(token.range, "Unexpected ".append(token.kind.toString()));
+  log.error(token.range, "Unexpected " + token.kind);
 }
 
 void syntaxErrorExpectedToken(Log log, Token found, TokenKind expected) {
-  log.error(found.range, "Expected ".append(expected.toString()).append(" but found ").append(found.kind.toString()));
+  log.error(found.range, "Expected " + expected + " but found " + found.kind);
 }
 
 void syntaxErrorBadForEach(Log log, Range range) {

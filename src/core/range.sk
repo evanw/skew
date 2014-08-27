@@ -21,7 +21,7 @@ struct Range {
   string locationString() {
     if (isEmpty()) return "";
     var location = source.indexToLineColumn(start);
-    return source.name.append(":").append((location.line + 1).toString()).append(":").append((location.column + 1).toString());
+    return source.name + ":" + (location.line + 1) + ":" + (location.column + 1);
   }
 
   bool touches(int index) {
@@ -52,14 +52,14 @@ struct Range {
 
       // Left aligned
       if (a < centeredStart) {
-        line = line.slice(0, maxLength - 3).append("...");
+        line = line.slice(0, maxLength - 3) + "...";
         if (b > maxLength - 3) b = maxLength - 3;
       }
 
       // Right aligned
       else if (length - a < maxLength - centeredStart) {
         var offset = length - maxLength;
-        line = "...".append(line.slice(offset + 3, length));
+        line = "..." + line.slice(offset + 3, length);
         a -= offset;
         b -= offset;
       }
@@ -67,14 +67,14 @@ struct Range {
       // Center aligned
       else {
         var offset = a - centeredStart;
-        line = "...".append(line.slice(offset + 3, offset + maxLength - 3)).append("...");
+        line = "..." + line.slice(offset + 3, offset + maxLength - 3) + "...";
         a -= offset;
         b -= offset;
         if (b > maxLength - 3) b = maxLength - 3;
       }
     }
 
-    return FormattedRange(line, " ".repeat(a).append(b - a < 2 ? "^" : "~".repeat(b - a)));
+    return FormattedRange(line, " ".repeat(a) + (b - a < 2 ? "^" : "~".repeat(b - a)));
   }
 
   static Range span(Range start, Range end) {

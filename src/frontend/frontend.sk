@@ -27,17 +27,17 @@ import namespace io {
 export namespace frontend {
   void printError(string text) {
     io.printWithColor(.RED, "error: ");
-    io.printWithColor(.BOLD, text.append("\n"));
+    io.printWithColor(.BOLD, text + "\n");
   }
 
   void printNote(string text) {
     io.printWithColor(.GRAY, "note: ");
-    io.printWithColor(.BOLD, text.append("\n"));
+    io.printWithColor(.BOLD, text + "\n");
   }
 
   void printWarning(string text) {
     io.printWithColor(.MAGENTA, "warning: ");
-    io.printWithColor(.BOLD, text.append("\n"));
+    io.printWithColor(.BOLD, text + "\n");
   }
 
   void printUsage() {
@@ -87,7 +87,7 @@ export namespace frontend {
       var file = files.get(i);
       var source = io.readFile(file);
       if (source == null) {
-        printError("Could not read from ".append(quoteString(file, '"')));
+        printError("Could not read from " + quoteString(file, '"'));
         return null;
       }
       result.push(source);
@@ -121,7 +121,7 @@ export namespace frontend {
       else if (arg.startsWith("-append-file=") || arg.startsWith("--append-file=")) { append.push(afterEquals(arg)); continue; }
 
       // An unknown argument is an error
-      printError("Unknown flag ".append(quoteString(arg, '"')));
+      printError("Unknown flag " + quoteString(arg, '"'));
       return 1;
     }
 
@@ -143,7 +143,7 @@ export namespace frontend {
       case "lisp-ast" { target = .LISP_AST; }
       case "json-ast" { target = .JSON_AST; }
       case "xml-ast" { target = .XML_AST; }
-      default { printError("Unknown target language ".append(quoteString(flags.target, '"'))); return 1; }
+      default { printError("Unknown target language " + quoteString(flags.target, '"')); return 1; }
     }
 
     // Translate frontend flags to compiler options
@@ -166,7 +166,7 @@ export namespace frontend {
     for (var i = 0; i < log.diagnostics.length; i++) {
       var diagnostic = log.diagnostics.get(i);
       if (!diagnostic.range.isEmpty()) {
-        io.printWithColor(.BOLD, diagnostic.range.locationString().append(": "));
+        io.printWithColor(.BOLD, diagnostic.range.locationString() + ": ");
       }
       switch (diagnostic.kind) {
         case .WARNING { printWarning(diagnostic.text); }
@@ -174,15 +174,15 @@ export namespace frontend {
       }
       if (!diagnostic.range.isEmpty()) {
         var formatted = diagnostic.range.format(io.terminalWidth);
-        io.print(formatted.line.append("\n"));
-        io.printWithColor(.GREEN, formatted.range.append("\n"));
+        io.print(formatted.line + "\n");
+        io.printWithColor(.GREEN, formatted.range + "\n");
       }
       if (!diagnostic.noteRange.isEmpty()) {
-        io.printWithColor(.BOLD, diagnostic.noteRange.locationString().append(": "));
+        io.printWithColor(.BOLD, diagnostic.noteRange.locationString() + ": ");
         printNote(diagnostic.noteText);
         var formatted = diagnostic.noteRange.format(io.terminalWidth);
-        io.print(formatted.line.append("\n"));
-        io.printWithColor(.GREEN, formatted.range.append("\n"));
+        io.print(formatted.line + "\n");
+        io.printWithColor(.GREEN, formatted.range + "\n");
       }
     }
 
@@ -191,12 +191,12 @@ export namespace frontend {
     var hasWarnings = log.warningCount > 0;
     var summary = "";
     if (hasWarnings) {
-      summary = summary.append(log.warningCount.toString().append(plural(log.warningCount, " warning", " warnings")));
-      if (hasErrors) summary = summary.append(" and ");
+      summary = summary + log.warningCount + (plural(log.warningCount, " warning", " warnings"));
+      if (hasErrors) summary = summary + " and ";
     }
-    if (hasErrors) summary = summary.append(log.errorCount.toString().append(plural(log.errorCount, " error", " errors")));
-    if (hasWarnings || hasErrors) io.print(summary.append(" generated\n"));
-    if (flags.verbose) io.print(compiler.statistics(result).append("\n"));
+    if (hasErrors) summary = summary + log.errorCount + (plural(log.errorCount, " error", " errors"));
+    if (hasWarnings || hasErrors) io.print(summary + " generated\n");
+    if (flags.verbose) io.print(compiler.statistics(result) + "\n");
     if (hasErrors) return 1;
 
     // Write all outputs
@@ -207,7 +207,7 @@ export namespace frontend {
         continue;
       }
       if (!io.writeFile(output.name, output.contents)) {
-        printError("Could not write to ".append(quoteString(output.name, '"')));
+        printError("Could not write to " + quoteString(output.name, '"'));
         return 1;
       }
     }

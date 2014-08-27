@@ -1384,7 +1384,7 @@ class Resolver {
       return;
     }
 
-    trace.log("initializeMember ".append(member.symbol.fullName()).append(member.parameterizedType != null ? " on ".append(member.parameterizedType.toString()) : ""));
+    trace.log("initializeMember " + member.symbol.fullName() + (member.parameterizedType != null ? " on " + member.parameterizedType : ""));
     trace.indent();
 
     // The type of a member in a derived type may depend on type substitution
@@ -1430,7 +1430,7 @@ class Resolver {
           var argumentTypes = constructor.type.argumentTypes();
           superArguments = {};
           for (var j = 0; j < argumentTypes.length; j++) {
-            var name = "_".append(arguments.length.toString());
+            var name = "_" + arguments.length;
             var argument = Node.createVariable(Node.createName(name), Node.createType(argumentTypes.get(j)), null);
             argument.symbol = createSymbol(name, .LOCAL_VARIABLE);
             argument.symbol.node = argument;
@@ -1476,7 +1476,7 @@ class Resolver {
     // Append each uninitialized member argument now that they are sorted
     for (var i = 0; i < uninitializedMembers.length; i++) {
       var member = uninitializedMembers.get(i);
-      var name = "_".append(arguments.length.toString());
+      var name = "_" + arguments.length;
       var argument = Node.createVariable(Node.createName(name), Node.createType(member.type), null);
       argument.symbol = createSymbol(name, .LOCAL_VARIABLE);
       argument.symbol.node = argument;
@@ -1639,7 +1639,7 @@ class Resolver {
   }
 
   void unsupportedNodeKind(Node node) {
-    // log.error(node.range, "TODO: Support nodes of kind ".append(node.kind.toString()));
+    // log.error(node.range, "TODO: Support nodes of kind " + node.kind);
   }
 
   void resolveArguments(List<Node> arguments, List<Type> argumentTypes, Range outer, Range inner) {
@@ -2667,6 +2667,34 @@ class Resolver {
     checkConversion(node.type, value, .IMPLICIT_CAST);
   }
 
+  bool wrapWithToStringCall(Node node) {
+    var toString = node.type.findMember("toString");
+    if (toString == null) {
+      semanticErrorMissingToString(log, node.range, node.type);
+      return false;
+    }
+
+    initializeMember(toString);
+    if (toString.type.isError(cache)) {
+      return false;
+    }
+
+    if (toString.type != cache.toStringType) {
+      semanticErrorToStringWrongType(log, node.range, cache.toStringType, toString.type);
+      return false;
+    }
+
+    var children = node.removeChildren();
+    var name = Node.createName("toString");
+    var target = Node.createDot(node.clone().withChildren(children), name);
+    var call = Node.createCall(target, {});
+    target.symbol = name.symbol = toString.symbol;
+    target.type = cache.toStringType;
+    call.type = cache.stringType;
+    node.become(call);
+    return true;
+  }
+
   void resolveBinaryOperator(Node node) {
     var kind = node.kind;
     var left = node.binaryLeft();
@@ -2718,6 +2746,28 @@ class Resolver {
     else if (kind == .ADD || kind == .SUBTRACT || kind == .MULTIPLY || kind == .DIVIDE) {
       if (leftType.isNumeric(cache) && rightType.isNumeric(cache)) {
         node.type = commonType = cache.commonImplicitType(leftType, rightType);
+      }
+
+      else if (kind == .ADD) {
+        if (leftType.isString(cache) && rightType.isString(cache)) {
+          node.type = commonType = cache.stringType;
+        }
+
+        else if (leftType.isString(cache)) {
+          if (wrapWithToStringCall(right)) {
+            node.type = commonType = cache.stringType;
+          } else {
+            return;
+          }
+        }
+
+        else if (rightType.isString(cache)) {
+          if (wrapWithToStringCall(left)) {
+            node.type = commonType = cache.stringType;
+          } else {
+            return;
+          }
+        }
       }
     }
 

@@ -17,6 +17,7 @@ class TypeCache {
   Type doubleType = null;
   Type stringType = null;
   Type listType = null;
+  Type toStringType = null;
 
   var hashTable = IntMap<List<Type>>();
 
@@ -61,7 +62,7 @@ class TypeCache {
 
   Type substitute(Type type, List<Symbol> parameters, List<Type> substitutions) {
     assert parameters.length == substitutions.length;
-    trace.log("substitute ".append(type.toString()).append(" with ").append(Type.environmentToString(parameters, substitutions)));
+    trace.log("substitute " + type + " with " + Type.environmentToString(parameters, substitutions));
     trace.indent();
 
     Type result;
@@ -75,7 +76,7 @@ class TypeCache {
       result = parameterize(type, substituteAll(type.substitutions, parameters, substitutions));
     }
 
-    trace.log("substitution gave ".append(result.toString()));
+    trace.log("substitution gave " + result);
     trace.dedent();
     return result;
   }
@@ -122,8 +123,8 @@ class TypeCache {
     }
 
     if (symbol != null && substitutions != null) {
-      trace.log("parameterize ".append(unparameterized != null ? unparameterized.toString() : "null")
-        .append(" with ").append(Type.environmentToString(symbol.parameters, substitutions)));
+      trace.log("parameterize " + (unparameterized != null ? unparameterized.toString() : "null") +
+        " with " + Type.environmentToString(symbol.parameters, substitutions));
       trace.indent();
     }
 
@@ -169,7 +170,7 @@ class TypeCache {
       }
 
       if (substitutions != null) {
-        trace.log("parameterize gave ".append(type.toString()));
+        trace.log("parameterize gave " + type);
         trace.dedent();
       }
     } else {

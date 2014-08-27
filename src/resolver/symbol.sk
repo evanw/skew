@@ -199,7 +199,7 @@ class Symbol {
 
   string fullName() {
     return enclosingSymbol != null && kind != .PARAMETER && !enclosingSymbol.kind.isGlobalNamespace()
-      ? enclosingSymbol.fullName().append(".").append(name) : name;
+      ? enclosingSymbol.fullName() + "." + name : name;
   }
 
   bool hasParameters() {
