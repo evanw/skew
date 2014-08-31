@@ -328,6 +328,17 @@ class Node {
     return this;
   }
 
+  void swapWith(Node node) {
+    Node parentA = parent;
+    Node parentB = node.parent;
+    int indexA = indexInParent();
+    int indexB = node.indexInParent();
+    parentA.children.set(indexA, node);
+    parentB.children.set(indexB, this);
+    parent = parentB;
+    node.parent = parentA;
+  }
+
   Node replaceWithNodes(List<Node> nodes) {
     var index = indexInParent();
     for (var i = 0; i < nodes.length; i++) {

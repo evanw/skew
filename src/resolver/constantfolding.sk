@@ -1,6 +1,7 @@
 class ConstantFolder {
   TypeCache cache;
 
+  // Use this instead of Node.become(Node.createTrue()) to avoid more GC
   void flattenBool(Node node, bool value) {
     assert node.type.isError(cache) || node.type.isBool(cache);
     node.removeChildren();
@@ -8,6 +9,7 @@ class ConstantFolder {
     node.content = null;
   }
 
+  // Use this instead of Node.become(Node.createInt()) to avoid more GC
   void flattenInt(Node node, int value) {
     assert node.type.isError(cache) || node.type.isInteger(cache);
     node.removeChildren();
@@ -15,11 +17,20 @@ class ConstantFolder {
     node.content = IntContent(value);
   }
 
+  // Use this instead of Node.become(Node.createDouble()) to avoid more GC
   void flattenReal(Node node, double value) {
     assert node.type.isError(cache) || node.type.isReal(cache);
     node.removeChildren();
     node.kind = node.type == cache.floatType ? .FLOAT : .DOUBLE;
     node.content = DoubleContent(value);
+  }
+
+  // Use this instead of Node.become(Node.createString()) to avoid more GC
+  void flattenString(Node node, string value) {
+    assert node.type.isError(cache) || node.type.isString(cache);
+    node.removeChildren();
+    node.kind = .STRING;
+    node.content = StringContent(value);
   }
 
   static bool blockContainsVariableCluster(Node node) {
@@ -37,7 +48,12 @@ class ConstantFolder {
   void foldConstants(Node node) {
     var kind = node.kind;
 
-    // Fold operands first
+    // Transform "a + (b + c)" => "(a + b) + c" before operands are folded
+    if (kind == .ADD && node.type.isString(cache)) {
+      rotateStringConcatenation(node);
+    }
+
+    // Fold operands before folding this node
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.length; i++) {
         var child = node.children.get(i);
@@ -46,7 +62,7 @@ class ConstantFolder {
         }
       }
 
-      // Test these here since hasChildren() must be true
+      // Test these here since hasChildren() is already true
       if (kind == .BLOCK) {
         foldBlock(node);
         return;
@@ -62,6 +78,50 @@ class ConstantFolder {
     else if (kind.isUnaryOperator()) foldUnaryOperator(node, kind);
     else if (kind.isBinaryOperator()) foldBinaryOperator(node, kind);
     else if (kind == .HOOK) foldHook(node);
+  }
+
+  void rotateStringConcatenation(Node node) {
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+    assert left.type.isString(cache) || left.type.isError(cache);
+    assert right.type.isString(cache) || right.type.isError(cache);
+
+    if (right.kind == .ADD) {
+      var rightLeft = right.binaryLeft();
+      var rightRight = right.binaryRight();
+      assert rightLeft.type.isString(cache) || rightLeft.type.isError(cache);
+      assert rightRight.type.isString(cache) || rightRight.type.isError(cache);
+      left.swapWith(right);
+      left.swapWith(rightRight);
+      left.swapWith(rightLeft);
+    }
+  }
+
+  void foldStringConcatenation(Node node) {
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+    assert left.type.isString(cache) || left.type.isError(cache);
+    assert right.type.isString(cache) || right.type.isError(cache);
+
+    if (right.kind == .STRING) {
+      // "a" + "b" => "ab"
+      if (left.kind == .STRING) {
+        flattenString(node, left.asString() + right.asString());
+      }
+
+      else if (left.kind == .ADD) {
+        var leftLeft = left.binaryLeft();
+        var leftRight = left.binaryRight();
+        assert leftLeft.type.isString(cache) || leftLeft.type.isError(cache);
+        assert leftRight.type.isString(cache) || leftRight.type.isError(cache);
+
+        // (a + "b") + "c" => a + "bc"
+        if (leftRight.kind == .STRING) {
+          flattenString(leftRight, leftRight.asString() + right.asString());
+          node.swapWith(left);
+        }
+      }
+    }
   }
 
   void foldBlock(Node node) {
@@ -219,6 +279,11 @@ class ConstantFolder {
   }
 
   void foldBinaryOperator(Node node, NodeKind kind) {
+    if (kind == .ADD && node.type.isString(cache)) {
+      foldStringConcatenation(node);
+      return;
+    }
+
     var left = node.binaryLeft();
     var right = node.binaryRight();
     var valueKind = left.kind;

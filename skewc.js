@@ -387,6 +387,16 @@ Node.replaceWith = function($this, node) {
   Node.replaceChild($this.parent, Node.indexInParent($this), node);
   return $this;
 };
+Node.swapWith = function($this, node) {
+  var parentA = $this.parent;
+  var parentB = node.parent;
+  var indexA = Node.indexInParent($this);
+  var indexB = Node.indexInParent(node);
+  parentA.children[indexA] = node;
+  parentB.children[indexB] = $this;
+  $this.parent = parentB;
+  node.parent = parentA;
+};
 Node.replaceWithNodes = function($this, nodes) {
   var index = Node.indexInParent($this);
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
@@ -806,7 +816,7 @@ json.Emitter.prototype.emitProgram = function(program) {
   } else {
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
       var file = program.children[i];
-      outputs.push(new Source(this.options.outputDirectory + "/" + (file.range.source.name + ".json"), json.dump(file) + "\n"));
+      outputs.push(new Source(this.options.outputDirectory + "/" + file.range.source.name + ".json", json.dump(file) + "\n"));
     }
   }
   return outputs;
@@ -822,7 +832,7 @@ json.DumpVisitor.visit = function($this, node) {
   }
   var outer = $this.indent;
   $this.indent += "  ";
-  $this.result += "{\n" + $this.indent + "\"kind\": " + ("\"" + replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-") + "\"");
+  $this.result += "{\n" + $this.indent + "\"kind\": \"" + replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-") + "\"";
   if (node.content !== null) {
     $this.result += ",\n" + $this.indent + "\"content\": ";
     switch (node.content.type()) {
@@ -865,7 +875,7 @@ lisp.Emitter.prototype.emitProgram = function(program) {
   } else {
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
       var file = program.children[i];
-      outputs.push(new Source(this.options.outputDirectory + "/" + (file.range.source.name + ".lisp"), lisp.dump(file) + "\n"));
+      outputs.push(new Source(this.options.outputDirectory + "/" + file.range.source.name + ".lisp", lisp.dump(file) + "\n"));
     }
   }
   return outputs;
@@ -915,7 +925,7 @@ xml.Emitter.prototype.emitProgram = function(program) {
   } else {
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
       var file = program.children[i];
-      outputs.push(new Source(this.options.outputDirectory + "/" + (file.range.source.name + ".xml"), xml.dump(file) + "\n"));
+      outputs.push(new Source(this.options.outputDirectory + "/" + file.range.source.name + ".xml", xml.dump(file) + "\n"));
     }
   }
   return outputs;
@@ -2314,6 +2324,11 @@ ConstantFolder.flattenReal = function($this, node, value) {
   node.kind = node.type === $this.cache.floatType ? 41 : 42;
   node.content = new DoubleContent(value);
 };
+ConstantFolder.flattenString = function(node, value) {
+  Node.removeChildren(node);
+  node.kind = 43;
+  node.content = new StringContent(value);
+};
 ConstantFolder.blockContainsVariableCluster = function(node) {
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
@@ -2326,6 +2341,9 @@ ConstantFolder.blockContainsVariableCluster = function(node) {
 };
 ConstantFolder.foldConstants = function($this, node) {
   var kind = node.kind;
+  if (kind === 67 && node.type === $this.cache.stringType) {
+    ConstantFolder.rotateStringConcatenation(node);
+  }
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       var child = node.children[i];
@@ -2351,6 +2369,33 @@ ConstantFolder.foldConstants = function($this, node) {
     ConstantFolder.foldBinaryOperator($this, node, kind);
   } else if (kind === 36) {
     ConstantFolder.foldHook(node);
+  }
+};
+ConstantFolder.rotateStringConcatenation = function(node) {
+  var left = node.children[0];
+  var right = node.children[1];
+  if (right.kind === 67) {
+    var rightLeft = right.children[0];
+    var rightRight = right.children[1];
+    Node.swapWith(left, right);
+    Node.swapWith(left, rightRight);
+    Node.swapWith(left, rightLeft);
+  }
+};
+ConstantFolder.foldStringConcatenation = function(node) {
+  var left = node.children[0];
+  var right = node.children[1];
+  if (right.kind === 43) {
+    if (left.kind === 43) {
+      ConstantFolder.flattenString(node, left.content.value + right.content.value);
+    } else if (left.kind === 67) {
+      var leftLeft = left.children[0];
+      var leftRight = left.children[1];
+      if (leftRight.kind === 43) {
+        ConstantFolder.flattenString(leftRight, leftRight.content.value + right.content.value);
+        Node.swapWith(node, left);
+      }
+    }
   }
 };
 ConstantFolder.foldBlock = function(node) {
@@ -2480,6 +2525,10 @@ ConstantFolder.foldUnaryOperator = function($this, node, kind) {
   }
 };
 ConstantFolder.foldBinaryOperator = function($this, node, kind) {
+  if (kind === 67 && node.type === $this.cache.stringType) {
+    ConstantFolder.foldStringConcatenation(node);
+    return;
+  }
   var left = node.children[0];
   var right = node.children[1];
   var valueKind = left.kind;
@@ -3076,7 +3125,7 @@ Resolver.symbolFlagsForNode = function($this, node) {
     var name = modifierName.content.value;
     var flag = nameToSymbolFlag.get(name);
     if ((flags & flag) !== 0) {
-      Log.warning($this.log, modifierName.range, "Duplicate modifier " + ("\"" + name + "\""));
+      Log.warning($this.log, modifierName.range, "Duplicate modifier \"" + name + "\"");
     }
     flags |= flag;
     parent = parent.parent;
@@ -3182,7 +3231,7 @@ Resolver.setSymbolKindsAndMergeSiblings = function($this) {
       symbol.kind = 6;
       break;
     case 13:
-      Log.error($this.log, declarationName.range, "No type named " + ("\"" + declarationName.content.value + "\"") + " to extend");
+      Log.error($this.log, declarationName.range, "No type named \"" + declarationName.content.value + "\" to extend");
       break;
     default:
       break;
@@ -3265,7 +3314,7 @@ Resolver.resolveGlobalUsingValue = function($this, node) {
     var name = node.content.value;
     member = $this.cache.globalType.members.getOrDefault(name, null);
     if (member === null) {
-      Log.error($this.log, node.range, "\"" + name + "\"" + " is not declared");
+      Log.error($this.log, node.range, "\"" + name + "\" is not declared");
       return;
     }
   } else if (node.kind === 45) {
@@ -3279,7 +3328,7 @@ Resolver.resolveGlobalUsingValue = function($this, node) {
     var name = dotName.content.value;
     member = targetType.members.getOrDefault(name, null);
     if (member === null) {
-      Log.error($this.log, dotName.range, "\"" + name + "\"" + " is not declared on " + ("type \"" + Type.toString(targetType) + "\""));
+      Log.error($this.log, dotName.range, "\"" + name + "\" is not declared on type \"" + Type.toString(targetType) + "\"");
       return;
     }
   } else {
@@ -3514,19 +3563,19 @@ Resolver.resolve = function($this, node, expectedType) {
 };
 Resolver.checkIsParameterized = function($this, node) {
   if (node.type !== $this.cache.errorType && Type.hasParameters(node.type) && node.type.substitutions === null) {
-    Log.error($this.log, node.range, "Cannot use unparameterized " + ("type \"" + Type.toString(node.type) + "\""));
+    Log.error($this.log, node.range, "Cannot use unparameterized type \"" + Type.toString(node.type) + "\"");
     node.type = $this.cache.errorType;
   }
 };
 Resolver.checkIsType = function($this, node) {
   if (node.type !== $this.cache.errorType && node.kind !== 34) {
-    Log.error($this.log, node.range, "Unexpected expression of " + ("type \"" + Type.toString(node.type) + "\""));
+    Log.error($this.log, node.range, "Unexpected expression of type \"" + Type.toString(node.type) + "\"");
     node.type = $this.cache.errorType;
   }
 };
 Resolver.checkIsInstance = function($this, node) {
   if (node.type !== $this.cache.errorType && node.kind === 34) {
-    Log.error($this.log, node.range, "Unexpected " + ("type \"" + Type.toString(node.type) + "\""));
+    Log.error($this.log, node.range, "Unexpected type \"" + Type.toString(node.type) + "\"");
     node.type = $this.cache.errorType;
   }
 };
@@ -3537,7 +3586,7 @@ Resolver.checkIsValidFunctionReturnType = function($this, node) {
 };
 Resolver.checkIsValidVariableType = function($this, node) {
   if (node.type === $this.cache.voidType || Type.isNamespace(node.type)) {
-    Log.error($this.log, node.range, "Cannot use " + ("type \"" + Type.toString(node.type) + "\"") + " here");
+    Log.error($this.log, node.range, "Cannot use type \"" + Type.toString(node.type) + "\" here");
     node.type = $this.cache.errorType;
   }
 };
@@ -3575,7 +3624,7 @@ Resolver.checkConversion = function($this, to, node, kind) {
     return;
   }
   if (from === $this.cache.voidType && to === $this.cache.voidType) {
-    Log.error($this.log, node.range, "Unexpected expression of " + ("type \"" + Type.toString(to) + "\""));
+    Log.error($this.log, node.range, "Unexpected expression of type \"" + Type.toString(to) + "\"");
     return;
   }
   if (from === to) {
@@ -3588,7 +3637,7 @@ Resolver.checkConversion = function($this, to, node, kind) {
     from = to;
   }
   if (kind === 0 && !TypeCache.canImplicitlyConvert($this.cache, from, to) || kind === 1 && !TypeCache.canExplicitlyConvert($this.cache, from, to)) {
-    Log.error($this.log, node.range, "Cannot convert from " + ("type \"" + Type.toString(from) + "\"") + " to " + ("type \"" + Type.toString(to) + "\"") + (TypeCache.canExplicitlyConvert($this.cache, from, to) ? " without a cast" : ""));
+    Log.error($this.log, node.range, "Cannot convert from type \"" + Type.toString(from) + "\" to type \"" + Type.toString(to) + "\"" + (TypeCache.canExplicitlyConvert($this.cache, from, to) ? " without a cast" : ""));
     node.type = $this.cache.errorType;
     return;
   }
@@ -3637,9 +3686,9 @@ Resolver.checkAccessToThis = function($this, range) {
     return true;
   }
   if ($this.context.symbolForThis !== null) {
-    Log.error($this.log, range, "Cannot access " + ("\"" + "this" + "\"") + " from a static context");
+    Log.error($this.log, range, "Cannot access \"this\" from a static context");
   } else {
-    Log.error($this.log, range, "Cannot use " + ("\"" + "this" + "\"") + " outside a class or struct");
+    Log.error($this.log, range, "Cannot use \"this\" outside a class or struct");
   }
   return false;
 };
@@ -3652,7 +3701,7 @@ Resolver.checkAccessToInstanceSymbol = function($this, node) {
     return true;
   }
   if ($this.context.symbolForThis === null) {
-    Log.error($this.log, node.range, "Cannot use " + ("\"" + symbol.name + "\"") + " outside a class or struct");
+    Log.error($this.log, node.range, "Cannot use \"" + symbol.name + "\" outside a class or struct");
     return false;
   }
   if (symbol.kind === 4 && $this.context.symbolForThis === symbol.enclosingSymbol) {
@@ -3666,7 +3715,7 @@ Resolver.checkAccessToInstanceSymbol = function($this, node) {
       }
     }
   }
-  Log.error($this.log, node.range, "Cannot access " + ("\"" + symbol.name + "\"") + " from a static context");
+  Log.error($this.log, node.range, "Cannot access \"" + symbol.name + "\" from a static context");
   return false;
 };
 Resolver.collectAndResolveBaseTypes = function($this, symbol) {
@@ -3742,15 +3791,15 @@ Resolver.resolveBaseTypes = function($this, symbol) {
     }
     if (symbol.kind === 11 && Type.isClass(baseType)) {
       if (baseTypes.indexOf(base) !== 0) {
-        Log.error($this.log, base.range, "Base " + ("type \"" + Type.toString(baseType) + "\"") + " must come first in a class declaration");
+        Log.error($this.log, base.range, "Base type \"" + Type.toString(baseType) + "\" must come first in a class declaration");
         continue;
       }
     } else if (!Type.isInterface(baseType)) {
-      Log.error($this.log, base.range, "Base " + ("type \"" + Type.toString(baseType) + "\"") + " must be an interface");
+      Log.error($this.log, base.range, "Base type \"" + Type.toString(baseType) + "\" must be an interface");
       continue;
     }
     if (type.relevantTypes.indexOf(baseType) >= 0) {
-      Log.error($this.log, base.range, "Duplicate base " + ("type \"" + Type.toString(baseType) + "\""));
+      Log.error($this.log, base.range, "Duplicate base type \"" + Type.toString(baseType) + "\"");
       continue;
     }
     type.relevantTypes.push(baseType);
@@ -3905,7 +3954,7 @@ Resolver.redundantModifierIfPresent = function($this, symbol, flag, where) {
   if ((symbol.flags & flag) !== 0 && (symbol.flags & 32768) === 0) {
     var modifierName = Resolver.findModifierName(symbol, flag);
     if (modifierName !== null) {
-      Log.error($this.log, modifierName.range, "Redundant modifier " + ("\"" + modifierName.content.value + "\"") + " " + where);
+      Log.error($this.log, modifierName.range, "Redundant modifier \"" + modifierName.content.value + "\" " + where);
     }
   }
 };
@@ -3913,13 +3962,13 @@ Resolver.unexpectedModifierIfPresent = function($this, symbol, flag, where) {
   if ((symbol.flags & flag) !== 0 && (symbol.flags & 32768) === 0) {
     var modifierName = Resolver.findModifierName(symbol, flag);
     if (modifierName !== null) {
-      Log.error($this.log, modifierName.range, "Cannot use the " + ("\"" + modifierName.content.value + "\"") + " modifier " + where);
+      Log.error($this.log, modifierName.range, "Cannot use the \"" + modifierName.content.value + "\" modifier " + where);
     }
   }
 };
 Resolver.expectedModifierIfAbsent = function($this, symbol, flag, where) {
   if ((symbol.flags & flag) === 0 && (symbol.flags & 32768) === 0 && Resolver.findModifierName(symbol, flag) === null) {
-    Log.error($this.log, symbol.node.children[0].range, "Expected the " + ("\"" + symbolFlagToName.get(flag) + "\"") + " modifier " + where);
+    Log.error($this.log, symbol.node.children[0].range, "Expected the \"" + symbolFlagToName.get(flag) + "\" modifier " + where);
   }
 };
 Resolver.initializeVariable = function($this, symbol) {
@@ -3949,7 +3998,7 @@ Resolver.initializeVariable = function($this, symbol) {
         } else {
           variableType = Node.withType(new Node(34), $this.cache.errorType);
           if (variableValue.type !== $this.cache.errorType) {
-            Log.error($this.log, variableValue.range, "Expected integer constant but found expression of " + ("type \"" + Type.toString(variableValue.type) + "\""));
+            Log.error($this.log, variableValue.range, "Expected integer constant but found expression of type \"" + Type.toString(variableValue.type) + "\"");
           }
         }
       } else {
@@ -3987,7 +4036,7 @@ Resolver.initializeVariable = function($this, symbol) {
       }
       var type = value.type;
       if (type === $this.cache.nullType || type === $this.cache.voidType) {
-        Log.error($this.log, node.children[0].range, "Implicitly typed variables cannot be of " + ("type \"" + Type.toString(type) + "\""));
+        Log.error($this.log, node.children[0].range, "Implicitly typed variables cannot be of type \"" + Type.toString(type) + "\"");
         symbol.type = $this.cache.errorType;
       } else {
         symbol.type = type;
@@ -4020,7 +4069,7 @@ Resolver.initializeParameter = function($this, symbol) {
     if (boundType === $this.cache.errorType) {
       symbol.type = $this.cache.errorType;
     } else if (!Type.isInterface(boundType)) {
-      Log.error($this.log, bound.range, "Cannot use " + ("type \"" + Type.toString(boundType) + "\"") + " as a type parameter bound");
+      Log.error($this.log, bound.range, "Cannot use type \"" + Type.toString(boundType) + "\" as a type parameter bound");
     } else {
       type.relevantTypes = [boundType];
       Type.copyMembersFrom(type, boundType);
@@ -4211,7 +4260,7 @@ Resolver.generateDefaultToString = function($this, symbol) {
     for (j = 0; j < i; j = j + 1 | 0) {
       var other = fields[j];
       if (value === other.enumValue) {
-        Log.error($this.log, enclosingNode.children[0].range, "Cannot automatically generate \"toString\" for " + ("\"" + enclosingSymbol.name + "\"") + " because " + ("\"" + field.name + "\"") + " and " + ("\"" + other.name + "\"") + " both have the same value " + value.toString());
+        Log.error($this.log, enclosingNode.children[0].range, "Cannot automatically generate \"toString\" for \"" + enclosingSymbol.name + "\" because \"" + field.name + "\" and \"" + other.name + "\" both have the same value " + value.toString());
         break;
       }
     }
@@ -4286,7 +4335,7 @@ Resolver.initializeSymbol = function($this, symbol) {
   if ((symbol.flags & 12288) === 0) {
     Resolver.initializeDeclaration($this, symbol.node);
   } else if ((symbol.flags & 4096) !== 0) {
-    Log.error($this.log, Node.firstNonExtensionSibling(symbol.node).children[0].range, "Cyclic declaration of " + ("\"" + symbol.name + "\""));
+    Log.error($this.log, Node.firstNonExtensionSibling(symbol.node).children[0].range, "Cyclic declaration of \"" + symbol.name + "\"");
     symbol.type = $this.cache.errorType;
   }
 };
@@ -4431,7 +4480,7 @@ Resolver.resolveFunction = function($this, node) {
     }
     Resolver.resolve($this, block, null);
     if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType && !Node.blockAlwaysEndsWithReturn(block)) {
-      Log.error($this.log, node.children[0].range, "All control paths for " + ("\"" + node.symbol.name + "\"") + " must return a value of " + ("type \"" + Type.toString($this.resultType) + "\""));
+      Log.error($this.log, node.children[0].range, "All control paths for \"" + node.symbol.name + "\" must return a value of type \"" + Type.toString($this.resultType) + "\"");
     }
     $this.resultType = oldResultType;
   }
@@ -4621,7 +4670,7 @@ Resolver.resolveReturn = function($this, node) {
       Resolver.resolveAsExpressionWithConversion($this, value, $this.resultType, 0);
     }
   } else if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType) {
-    Log.error($this.log, node.range, "Return statement must return " + ("type \"" + Type.toString($this.resultType) + "\""));
+    Log.error($this.log, node.range, "Return statement must return type \"" + Type.toString($this.resultType) + "\"");
   }
 };
 Resolver.resolveBreak = function($this, node) {
@@ -4683,7 +4732,7 @@ Resolver.resolveName = function($this, node) {
   var name = node.content.value;
   var member = Scope.find($this.context.scope, name);
   if (member === null) {
-    Log.error($this.log, node.range, "\"" + name + "\"" + " is not declared");
+    Log.error($this.log, node.range, "\"" + name + "\" is not declared");
     return;
   }
   Resolver.initializePotentiallyDuplicatedMember($this, member, node.range);
@@ -4721,7 +4770,7 @@ Resolver.resolveHook = function($this, node) {
   if (commonType === null) {
     commonType = $this.typeContext;
     if (commonType === null || !TypeCache.canImplicitlyConvert($this.cache, trueType, commonType) || !TypeCache.canImplicitlyConvert($this.cache, falseType, commonType)) {
-      Log.error($this.log, Range.span(trueNode.range, falseNode.range), "No common type for " + ("type \"" + Type.toString(trueType) + "\"") + " and " + ("type \"" + Type.toString(falseType) + "\""));
+      Log.error($this.log, Range.span(trueNode.range, falseNode.range), "No common type for type \"" + Type.toString(trueType) + "\" and type \"" + Type.toString(falseType) + "\"");
       return;
     }
   }
@@ -4777,7 +4826,7 @@ Resolver.resolveDot = function($this, node) {
   var name = dotName.content.value;
   var member = type.members.getOrDefault(name, null);
   if (member === null) {
-    Log.error($this.log, dotName.range, "\"" + name + "\"" + " is not declared on " + ("type \"" + Type.toString(type) + "\""));
+    Log.error($this.log, dotName.range, "\"" + name + "\" is not declared on type \"" + Type.toString(type) + "\"");
     return;
   }
   node.symbol = dotName.symbol = member.symbol;
@@ -4787,9 +4836,9 @@ Resolver.resolveDot = function($this, node) {
   if (!Type.isNamespace(type) && (!Type.isEnum(type) || (member.symbol.flags & 16) !== 0)) {
     var isStatic = symbolIsType || (member.symbol.flags & 64) !== 0;
     if (isStatic && !targetIsType) {
-      Log.error($this.log, dotName.range, "Cannot access static member " + ("\"" + name + "\"") + " from an instance context");
+      Log.error($this.log, dotName.range, "Cannot access static member \"" + name + "\" from an instance context");
     } else if (!isStatic && targetIsType) {
-      Log.error($this.log, dotName.range, "Cannot access instance member " + ("\"" + name + "\"") + " from a static context");
+      Log.error($this.log, dotName.range, "Cannot access instance member \"" + name + "\" from a static context");
     }
   }
   if (symbolIsType) {
@@ -4838,7 +4887,7 @@ Resolver.resolveCall = function($this, node) {
     if (value.kind === 34) {
       var member = Type.$constructor(valueType);
       if (member === null) {
-        Log.error($this.log, value.range, "Cannot construct " + ("type \"" + Type.toString(valueType) + "\""));
+        Log.error($this.log, value.range, "Cannot construct type \"" + Type.toString(valueType) + "\"");
         Resolver.resolveNodesAsExpressions($this, $arguments);
         return;
       }
@@ -4851,7 +4900,7 @@ Resolver.resolveCall = function($this, node) {
       }
     }
     if (valueType.symbol !== null) {
-      Log.error($this.log, value.range, "Cannot call " + ("type \"" + Type.toString(valueType) + "\""));
+      Log.error($this.log, value.range, "Cannot call type \"" + Type.toString(valueType) + "\"");
       Resolver.resolveNodesAsExpressions($this, $arguments);
       return;
     }
@@ -4933,7 +4982,7 @@ Resolver.resolveLambda = function($this, node) {
     Log.error($this.log, node.range, "Expression has no type context here");
   } else if ($this.typeContext !== $this.cache.errorType) {
     if ($this.typeContext.symbol !== null) {
-      Log.error($this.log, node.range, "Cannot use a lambda expression with " + ("type \"" + Type.toString($this.typeContext) + "\""));
+      Log.error($this.log, node.range, "Cannot use a lambda expression with type \"" + Type.toString($this.typeContext) + "\"");
     } else if ($this.typeContext !== $this.cache.errorType) {
       var argumentTypes = Type.argumentTypes($this.typeContext);
       $this.resultType = $this.typeContext.relevantTypes[0];
@@ -4946,7 +4995,7 @@ Resolver.resolveLambda = function($this, node) {
         }
       }
       if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType && !Node.blockAlwaysEndsWithReturn(block)) {
-        Log.error($this.log, node.range, "All control paths for lambda expression must return a value of " + ("type \"" + Type.toString($this.resultType) + "\""));
+        Log.error($this.log, node.range, "All control paths for lambda expression must return a value of type \"" + Type.toString($this.resultType) + "\"");
       }
     }
   }
@@ -5016,7 +5065,7 @@ Resolver.resolveUnaryOperator = function($this, node) {
     }
   }
   if (node.type === $this.cache.errorType) {
-    Log.error($this.log, node.range, "No unary operator " + operatorInfo.get(kind).text + " for " + ("type \"" + Type.toString(type) + "\""));
+    Log.error($this.log, node.range, "No unary operator " + operatorInfo.get(kind).text + " for type \"" + Type.toString(type) + "\"");
     return;
   }
   Resolver.checkConversion($this, node.type, value, 0);
@@ -5024,7 +5073,7 @@ Resolver.resolveUnaryOperator = function($this, node) {
 Resolver.wrapWithToStringCall = function($this, node) {
   var toString = node.type.members.getOrDefault("toString", null);
   if (toString === null) {
-    Log.error($this.log, node.range, "Expression of " + ("type \"" + Type.toString(node.type) + "\"") + " has no toString() member to call");
+    Log.error($this.log, node.range, "Expression of type \"" + Type.toString(node.type) + "\" has no toString() member to call");
     return false;
   }
   Resolver.initializeMember($this, toString);
@@ -5032,7 +5081,7 @@ Resolver.wrapWithToStringCall = function($this, node) {
     return false;
   }
   if (toString.type !== $this.cache.toStringType) {
-    Log.error($this.log, node.range, "Expected toString() member to have " + ("type \"" + Type.toString($this.cache.toStringType) + "\"") + " but found " + ("type \"" + Type.toString(toString.type) + "\""));
+    Log.error($this.log, node.range, "Expected toString() member to have type \"" + Type.toString($this.cache.toStringType) + "\" but found type \"" + Type.toString(toString.type) + "\"");
     return false;
   }
   var children = Node.removeChildren(node);
@@ -5131,7 +5180,7 @@ Resolver.resolveBinaryOperator = function($this, node) {
     }
   }
   if (node.type === $this.cache.errorType) {
-    Log.error($this.log, node.range, "No binary operator " + operatorInfo.get(kind).text + " for " + ("type \"" + Type.toString(leftType) + "\"") + " and " + ("type \"" + Type.toString(rightType) + "\""));
+    Log.error($this.log, node.range, "No binary operator " + operatorInfo.get(kind).text + " for type \"" + Type.toString(leftType) + "\" and type \"" + Type.toString(rightType) + "\"");
     return;
   }
   if (commonType !== null) {
@@ -7673,13 +7722,13 @@ function createParser() {
   return pratt;
 }
 function semanticErrorDuplicateSymbol(log, range, name, previous) {
-  Log.error(log, range, "\"" + name + "\"" + " is already declared");
+  Log.error(log, range, "\"" + name + "\" is already declared");
   if (previous.source !== null) {
     Log.note(log, previous, "The previous declaration is here");
   }
 }
 function semanticErrorDifferentModifiers(log, range, name, previous) {
-  Log.error(log, range, "Cannot merge multiple declarations for " + ("\"" + name + "\"") + " with different modifiers");
+  Log.error(log, range, "Cannot merge multiple declarations for \"" + name + "\" with different modifiers");
   if (previous.source !== null) {
     Log.note(log, previous, "The conflicting declaration is here");
   }
@@ -7700,44 +7749,44 @@ function semanticErrorAmbiguousSymbol(log, range, name, names) {
   for (var i = 0; i < names.length; i = i + 1 | 0) {
     names[i] = "\"" + names[i] + "\"";
   }
-  Log.error(log, range, "Reference to " + ("\"" + name + "\"") + " is ambiguous, could be " + names.join(" or "));
+  Log.error(log, range, "Reference to \"" + name + "\" is ambiguous, could be " + names.join(" or "));
 }
 function semanticErrorUnmergedSymbol(log, range, name, types) {
   var names = [];
   for (var i = 0; i < types.length; i = i + 1 | 0) {
     names.push("type \"" + Type.toString(types[i]) + "\"");
   }
-  Log.error(log, range, "Member " + ("\"" + name + "\"") + " has an ambiguous inherited type, could be " + names.join(" or "));
+  Log.error(log, range, "Member \"" + name + "\" has an ambiguous inherited type, could be " + names.join(" or "));
 }
 function semanticErrorBadOverride(log, range, name, base, overridden) {
-  Log.error(log, range, "\"" + name + "\"" + " overrides another declaration with the same name in base " + ("type \"" + Type.toString(base) + "\""));
+  Log.error(log, range, "\"" + name + "\" overrides another declaration with the same name in base type \"" + Type.toString(base) + "\"");
   if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorOverrideDifferentTypes(log, range, name, base, derived, overridden) {
-  Log.error(log, range, "\"" + name + "\"" + " must have the same signature as the method it overrides (expected " + ("type \"" + Type.toString(base) + "\"") + " but found " + ("type \"" + Type.toString(derived) + "\"") + ")");
+  Log.error(log, range, "\"" + name + "\" must have the same signature as the method it overrides (expected type \"" + Type.toString(base) + "\" but found type \"" + Type.toString(derived) + "\")");
   if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorModifierMissingOverride(log, range, name, overridden) {
-  Log.error(log, range, "\"" + name + "\"" + " overrides another symbol with the same name but is missing the \"override\" modifier");
+  Log.error(log, range, "\"" + name + "\" overrides another symbol with the same name but is missing the \"override\" modifier");
   if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorCannotOverrideNonVirtual(log, range, name, overridden) {
-  Log.error(log, range, "\"" + name + "\"" + " cannot override a non-virtual method");
+  Log.error(log, range, "\"" + name + "\" cannot override a non-virtual method");
   if (overridden.source !== null) {
     Log.note(log, overridden, "The overridden declaration is here");
   }
 }
 function semanticErrorCannotParameterize(log, range, type) {
-  Log.error(log, range, "Cannot parameterize " + ("type \"" + Type.toString(type) + "\"") + (Type.hasParameters(type) ? " because it is already parameterized" : " because it has no type parameters"));
+  Log.error(log, range, "Cannot parameterize type \"" + Type.toString(type) + "\"" + (Type.hasParameters(type) ? " because it is already parameterized" : " because it has no type parameters"));
 }
 function semanticErrorAlreadyInitialized(log, range, name, previous) {
-  Log.error(log, range, "\"" + name + "\"" + " is already initialized");
+  Log.error(log, range, "\"" + name + "\" is already initialized");
   if (previous.source !== null) {
     Log.note(log, previous, "The previous initialization is here");
   }
