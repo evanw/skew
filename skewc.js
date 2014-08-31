@@ -2966,52 +2966,59 @@ Resolver.prepareNode = function($this, node, scope) {
   Resolver.setSymbolKindsAndMergeSiblings($this);
   Resolver.processUsingStatements($this);
 };
+Resolver.setupBlock = function($this, node, scope) {
+  if (!$in.NodeKind.isNamedBlockDeclaration(node.parent.kind) && !$in.NodeKind.isLoop(node.parent.kind)) {
+    scope = new Scope(scope);
+  }
+  node.scope = scope;
+  $this.parsedBlocks.push(node);
+  if (node.parent.kind === 1) {
+    scope.type = $this.cache.globalType;
+  } else {
+    var parentSymbol = node.parent.symbol;
+    if (parentSymbol !== null && parentSymbol.type !== null) {
+      scope.type = parentSymbol.type;
+    }
+  }
+  return scope;
+};
+Resolver.setupNamedDeclaration = function($this, node, scope) {
+  var declarationName = node.children[0];
+  if (declarationName !== null && node.symbol === null) {
+    var name = declarationName.content.value;
+    var member = Scope.findLocal(scope, name);
+    var symbol = null;
+    if (member !== null) {
+      symbol = member.symbol;
+      Node.appendToSiblingChain(symbol.node, node);
+    } else {
+      symbol = Resolver.createSymbol($this, name, 0);
+      symbol.node = node;
+      if (scope.type !== null) {
+        symbol.enclosingSymbol = scope.type.symbol;
+      }
+      if (node.kind === 17) {
+        Scope.insertLocal(scope, symbol);
+      } else {
+        Scope.insert(scope, symbol);
+      }
+    }
+    $this.parsedDeclarations.push(node);
+    declarationName.symbol = symbol;
+    node.symbol = symbol;
+    if (symbol.type === null && $in.NodeKind.isNamedBlockDeclaration(node.kind)) {
+      symbol.type = new Type(symbol);
+    }
+  }
+};
 Resolver.setupScopesAndSymbols = function($this, node, scope) {
   if (node.kind === 0) {
     node.scope = scope;
   } else if (node.kind === 2) {
-    if (!$in.NodeKind.isNamedBlockDeclaration(node.parent.kind) && !$in.NodeKind.isLoop(node.parent.kind)) {
-      scope = new Scope(scope);
-    }
-    node.scope = scope;
-    $this.parsedBlocks.push(node);
-    if (node.parent.kind === 1) {
-      scope.type = $this.cache.globalType;
-    } else {
-      var parentSymbol = node.parent.symbol;
-      if (parentSymbol !== null && parentSymbol.type !== null) {
-        scope.type = parentSymbol.type;
-      }
-    }
+    scope = Resolver.setupBlock($this, node, scope);
   }
   if ($in.NodeKind.isNamedDeclaration(node.kind)) {
-    var declarationName = node.children[0];
-    if (declarationName !== null && node.symbol === null) {
-      var name = declarationName.content.value;
-      var member = Scope.findLocal(scope, name);
-      var symbol = null;
-      if (member !== null) {
-        symbol = member.symbol;
-        Node.appendToSiblingChain(symbol.node, node);
-      } else {
-        symbol = Resolver.createSymbol($this, name, 0);
-        symbol.node = node;
-        if (scope.type !== null) {
-          symbol.enclosingSymbol = scope.type.symbol;
-        }
-        if (node.kind === 17) {
-          Scope.insertLocal(scope, symbol);
-        } else {
-          Scope.insert(scope, symbol);
-        }
-      }
-      $this.parsedDeclarations.push(node);
-      declarationName.symbol = symbol;
-      node.symbol = symbol;
-      if (symbol.type === null && $in.NodeKind.isNamedBlockDeclaration(node.kind)) {
-        symbol.type = new Type(symbol);
-      }
-    }
+    Resolver.setupNamedDeclaration($this, node, scope);
   }
   if ($in.NodeKind.isNamedBlockDeclaration(node.kind) || $in.NodeKind.isFunction(node.kind) || node.kind === 54 || $in.NodeKind.isLoop(node.kind) || node.kind === 46) {
     node.scope = scope = new Scope(scope);

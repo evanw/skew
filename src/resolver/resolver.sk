@@ -68,6 +68,78 @@ class Resolver {
     processUsingStatements();
   }
 
+  Scope setupBlock(Node node, Scope scope) {
+    // Just use the existing scope from named block declarations
+    if (!node.parent.kind.isNamedBlockDeclaration() && !node.parent.kind.isLoop()) {
+      scope = Scope(scope);
+    }
+    node.scope = scope;
+    parsedBlocks.push(node);
+
+    // Declarations at the file level go in the global scope
+    if (node.parent.kind == .FILE) {
+      scope.type = cache.globalType;
+    }
+
+    // Declarations in a block declaration go in that block's type
+    else {
+      var parentSymbol = node.parent.symbol;
+      if (parentSymbol != null && parentSymbol.type != null) {
+        scope.type = parentSymbol.type;
+      }
+    }
+
+    return scope;
+  }
+
+  void setupNamedDeclaration(Node node, Scope scope) {
+    var declarationName = node.declarationName();
+    if (declarationName != null && node.symbol == null) {
+      var name = declarationName.asString();
+      var member = scope.findLocal(name);
+      Symbol symbol;
+
+      // Append this symbol the linked list of sibling nodes
+      if (member != null) {
+        symbol = member.symbol;
+        symbol.node.appendToSiblingChain(node);
+      }
+
+      // Make a symbol
+      else {
+        symbol = createSymbol(name, .OTHER);
+        symbol.node = node;
+        if (scope.type != null) {
+          symbol.enclosingSymbol = scope.type.symbol;
+        }
+
+        // Type parameters should not be accessable as members of their type
+        if (node.kind == .PARAMETER) {
+          scope.insertLocal(symbol);
+        } else {
+          scope.insert(symbol);
+        }
+      }
+
+      // Link the node with its symbol
+      parsedDeclarations.push(node);
+      declarationName.symbol = symbol;
+      node.symbol = symbol;
+
+      // Create a type for block declarations so that declarations inside the
+      // block can be linked as siblings with declarations inside other adjacent
+      // block declarations:
+      //
+      //   // Both "Bar" declarations are siblings linked through the type "Foo"
+      //   namespace Foo { in Bar {} }
+      //   namespace Foo { class Bar {} }
+      //
+      if (symbol.type == null && node.kind.isNamedBlockDeclaration()) {
+        symbol.type = Type(symbol);
+      }
+    }
+  }
+
   void setupScopesAndSymbols(Node node, Scope scope) {
     // The root program introduces the global scope
     if (node.kind == .PROGRAM) {
@@ -76,74 +148,12 @@ class Resolver {
 
     // Remember each scope on the node that introduced that scope
     else if (node.kind == .BLOCK) {
-      // Just use the existing scope from named block declarations
-      if (!node.parent.kind.isNamedBlockDeclaration() && !node.parent.kind.isLoop()) {
-        scope = Scope(scope);
-      }
-      node.scope = scope;
-      parsedBlocks.push(node);
-
-      // Declarations at the file level go in the global scope
-      if (node.parent.kind == .FILE) {
-        scope.type = cache.globalType;
-      }
-
-      // Declarations in a block declaration go in that block's type
-      else {
-        var parentSymbol = node.parent.symbol;
-        if (parentSymbol != null && parentSymbol.type != null) {
-          scope.type = parentSymbol.type;
-        }
-      }
+      scope = setupBlock(node, scope); // Outlined for JIT performance
     }
 
     // Declare this node if needed
     if (node.kind.isNamedDeclaration()) {
-      var declarationName = node.declarationName();
-      if (declarationName != null && node.symbol == null) {
-        var name = declarationName.asString();
-        var member = scope.findLocal(name);
-        Symbol symbol;
-
-        // Append this symbol the linked list of sibling nodes
-        if (member != null) {
-          symbol = member.symbol;
-          symbol.node.appendToSiblingChain(node);
-        }
-
-        // Make a symbol
-        else {
-          symbol = createSymbol(name, .OTHER);
-          symbol.node = node;
-          if (scope.type != null) {
-            symbol.enclosingSymbol = scope.type.symbol;
-          }
-
-          // Type parameters should not be accessable as members of their type
-          if (node.kind == .PARAMETER) {
-            scope.insertLocal(symbol);
-          } else {
-            scope.insert(symbol);
-          }
-        }
-
-        // Link the node with its symbol
-        parsedDeclarations.push(node);
-        declarationName.symbol = symbol;
-        node.symbol = symbol;
-
-        // Create a type for block declarations so that declarations inside the
-        // block can be linked as siblings with declarations inside other adjacent
-        // block declarations:
-        //
-        //   // Both "Bar" declarations are siblings linked through the type "Foo"
-        //   namespace Foo { in Bar {} }
-        //   namespace Foo { class Bar {} }
-        //
-        if (symbol.type == null && node.kind.isNamedBlockDeclaration()) {
-          symbol.type = Type(symbol);
-        }
-      }
+      setupNamedDeclaration(node, scope); // Outlined for JIT performance
     }
 
     // Also introduce a scope on object declarations for the type parameters
