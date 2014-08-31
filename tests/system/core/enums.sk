@@ -184,6 +184,8 @@ var xor_d = ~.FOO ^ Foo.BAR;
 test("
 enum flags Foo { FOO, BAR, BAZ }
 Foo a = .FOO | .BAR & .BAZ;
-var b = Foo.FOO | .BAR & .BAZ;
+var b = ~Foo.FOO | .BAR & .BAZ;
+var c = .FOO | ~Foo.BAR & .BAZ;
+var d = .FOO | .BAR & ~Foo.BAZ;
 ", "
 ");
