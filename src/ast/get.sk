@@ -123,13 +123,13 @@ in Node {
   }
 
   Node aliasValue() {
-    assert kind == .ALIAS || kind == .USING_ALIAS;
+    assert kind == .ALIAS;
     assert children.length == 2;
     return children.get(1);
   }
 
-  Node usingNamespaceValue() {
-    assert kind == .USING_NAMESPACE;
+  Node usingValue() {
+    assert kind == .USING;
     assert children.length == 1;
     return children.get(0);
   }

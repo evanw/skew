@@ -119,15 +119,9 @@ in Node {
     return Node(.ALIAS).withChildren({ name, value });
   }
 
-  static Node createUsingAlias(Node name, Node value) {
-    assert name.kind == .NAME;
+  static Node createUsing(Node value) {
     assert value.kind.isExpression();
-    return Node(.USING_ALIAS).withChildren({ name, value });
-  }
-
-  static Node createUsingNamespace(Node value) {
-    assert value.kind.isExpression();
-    return Node(.USING_NAMESPACE).withChildren({ value });
+    return Node(.USING).withChildren({ value });
   }
 
   static Node createIf(Node test, Node trueNode, Node falseNode) {
@@ -379,7 +373,7 @@ in Node {
   }
 }
 
-using NodeKindCheck = bool fn(Node);
+alias NodeKindCheck = bool fn(Node);
 final NodeKindCheck nodeKindIsExpression = node => node.kind.isExpression();
 
 NodeKindCheck nodeKindCheck(NodeKind kind) {

@@ -23,7 +23,6 @@ enum NodeKind {
   VARIABLE,
   PARAMETER,
   ALIAS,
-  USING_ALIAS,
 
   // Statements
   IF,
@@ -39,7 +38,7 @@ enum NodeKind {
   EXPRESSION,
   SWITCH,
   MODIFIER,
-  USING_NAMESPACE,
+  USING,
 
   // Expressions
   NAME,
@@ -120,7 +119,7 @@ enum NodeKind {
 
 in NodeKind {
   bool isStatement() {
-    return this >= VARIABLE_CLUSTER && this <= USING_NAMESPACE;
+    return this >= VARIABLE_CLUSTER && this <= USING;
   }
 
   bool isNamedBlockDeclaration() {
@@ -128,7 +127,7 @@ in NodeKind {
   }
 
   bool isNamedDeclaration() {
-    return this >= NAMESPACE && this <= USING_ALIAS;
+    return this >= NAMESPACE && this <= ALIAS;
   }
 
   bool isEnum() {

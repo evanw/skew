@@ -23,15 +23,18 @@ interface Baz { return; }
 ");
 
 test("
-inline using bar = foo;
+inline alias bar = foo;
 ", "
 <stdin>:1:8: error: Cannot use this statement here
-inline using bar = foo;
+inline alias bar = foo;
        ~~~~~~~~~~~~~~~~
+<stdin>:1:20: error: \"foo\" is not declared
+inline alias bar = foo;
+                   ~~~
 ");
 
 test("
-void foo() { using bar = int; }
+void foo() { alias bar = int; }
 ", "
 ");
 

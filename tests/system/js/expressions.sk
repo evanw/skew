@@ -528,7 +528,7 @@ testJS("
 0.0.toString();
 0.5.toString();
 ", "
-0..toString();
-0..toString();
-0.5.toString();
+(0).toString();
+(0).toString();
+(0.5).toString();
 ");

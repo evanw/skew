@@ -247,7 +247,7 @@ namespace js {
         case .EXPRESSION { emitExpressionStatement(node); }
         case .SWITCH { emitSwitch(node); }
         case .MODIFIER { emitModifier(node); }
-        case .PARAMETER, .USING_ALIAS, .ALIAS, .USING_NAMESPACE {}
+        case .PARAMETER, .ALIAS, .USING {}
         default { assert false; }
       }
     }

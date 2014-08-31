@@ -11,13 +11,10 @@ Foo foo;
 
 test("
 namespace ns {
-  using Foo = int;
+  alias Foo = int;
 }
 ns.Foo foo;
 ", "
-<stdin>:4:4: error: \"Foo\" is not declared on type \"ns\"
-ns.Foo foo;
-   ~~~
 ");
 
 test("
@@ -84,21 +81,21 @@ namespace ns.foo {}
 
 test("
 int foo;
-using bar = foo;
+alias bar = foo;
 ", "
 <stdin>:2:13: error: Unexpected expression of type \"int\"
-using bar = foo;
+alias bar = foo;
             ~~~
 ");
 
 test("
-using bar = foo;
+alias bar = foo;
 class foo {}
 ", "
 ");
 
 test("
-using bar = foo;
+alias bar = foo;
 namespace foo { int x; }
 bool y = bar.x;
 ", "
@@ -109,15 +106,15 @@ bool y = bar.x;
 
 test("
 namespace ns { int foo; }
-using bar = ns.foo;
+alias bar = ns.foo;
 ", "
 <stdin>:2:13: error: Unexpected expression of type \"int\"
-using bar = ns.foo;
+alias bar = ns.foo;
             ~~~~~~
 ");
 
 test("
-using bar = ns.Foo;
+alias bar = ns.Foo;
 namespace ns { class Foo {} }
 bar Foo = 0;
 ", "
@@ -127,14 +124,14 @@ bar Foo = 0;
 ");
 
 test("
-using bar = ns.foo;
+alias bar = ns.foo;
 namespace ns.foo {}
 ", "
 ");
 
 test("
 Int foo = false;
-using Int = int;
+alias Int = int;
 ", "
 <stdin>:1:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 Int foo = false;
@@ -143,7 +140,7 @@ Int foo = false;
 
 test("
 Callback foo = false;
-using Callback = void fn();
+alias Callback = void fn();
 ", "
 <stdin>:1:16: error: Cannot convert from type \"bool\" to type \"void fn()\"
 Callback foo = false;
@@ -153,7 +150,7 @@ Callback foo = false;
 test("
 namespace ns1 {
   Foo bar = 0;
-  using Foo = ns2.Foo;
+  alias Foo = ns2.Foo;
 }
 namespace ns2 {
   class Foo {}
@@ -189,7 +186,7 @@ Foo foo = 0;
 ");
 
 test("
-using Foo = ns1.Foo;
+alias Foo = ns1.Foo;
 using ns1;
 using ns2;
 Foo foo = 0;
@@ -302,7 +299,7 @@ ns.bar foo = false;
 ");
 
 test("
-using Foo = void fn();
+alias Foo = void fn();
 enum Bar {}
 in Bar {
   string foo() {

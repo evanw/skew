@@ -62,7 +62,7 @@ void semanticErrorBadUsingValue(Log log, Range range) {
   log.error(range, "Expected a type here");
 }
 
-void semanticErrorBadUsingNamespace(Log log, Range range) {
+void semanticErrorBadUsing(Log log, Range range) {
   log.error(range, "Expected a namespace here");
 }
 

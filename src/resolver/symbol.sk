@@ -6,7 +6,6 @@ enum SymbolKind {
   PARAMETER,
   OTHER_TYPE,
   ALIAS,
-  USING_ALIAS,
 
   // Namespace kinds
   GLOBAL_NAMESPACE,

@@ -98,7 +98,7 @@ class Resolver {
     }
 
     // Declare this node if needed
-    if (node.kind.isNamedDeclaration() && node.kind != .USING_ALIAS) {
+    if (node.kind.isNamedDeclaration()) {
       var declarationName = node.declarationName();
       if (declarationName != null && node.symbol == null) {
         var name = declarationName.asString();
@@ -325,37 +325,6 @@ class Resolver {
         continue;
       }
 
-      // Add using aliases. These aren't added in setupScopesAndSymbols()
-      // because using aliases are limited to the scope in which they appear
-      // and cannot be accessed by or merged symbols in other scopes:
-      //
-      //   namespace Foo { using Bar = bool; }
-      //   namespace Foo { Bar bar; } // This is an error
-      //
-      for (var j = 0; j < block.children.length; j++) {
-        var statement = block.children.get(j);
-        if (statement.kind != .USING_ALIAS) {
-          continue;
-        }
-        var declarationName = statement.declarationName();
-        var name = declarationName.asString();
-
-        // Detect duplicate symbol declarations
-        var member = block.scope.findLocal(name);
-        if (member != null) {
-          var otherName = member.symbol.node.declarationName();
-          if (otherName != null) semanticErrorDuplicateSymbol(log, declarationName.range, name, otherName.range);
-          continue;
-        }
-
-        // Insert a unresolved symbol as a local symbol only on this scope.
-        // It will not be added on the type associated with this scope.
-        var symbol = createSymbol(name, .USING_ALIAS);
-        symbol.node = statement;
-        statement.symbol = symbol;
-        block.scope.insertLocal(symbol);
-      }
-
       // Add symbols from using statements. These must be added after using
       // aliases because using statements only import symbols from their
       // namespace if there isn't already an existing symbol:
@@ -367,13 +336,13 @@ class Resolver {
       List<Symbol> insertedSymbols = null;
       for (var j = 0; j < block.children.length; j++) {
         var statement = block.children.get(j);
-        if (statement.kind != .USING_NAMESPACE) {
+        if (statement.kind != .USING) {
           continue;
         }
 
         // Resolve the namespace as an absolute name
-        var value = statement.usingNamespaceValue();
-        resolveGlobalUsingNamespaceValue(value);
+        var value = statement.usingValue();
+        resolveGlobalUsingValue(value);
         if (value.type.isError(cache)) {
           continue;
         }
@@ -386,7 +355,7 @@ class Resolver {
         // this could in theory support arbitrary types, it's more readable and
         // gives clearer errors to limit this to namespaces.
         if (!symbol.kind.isNamespace()) {
-          semanticErrorBadUsingNamespace(log, value.range);
+          semanticErrorBadUsing(log, value.range);
           continue;
         }
 
@@ -427,7 +396,7 @@ class Resolver {
     }
   }
 
-  void resolveGlobalUsingNamespaceValue(Node node) {
+  void resolveGlobalUsingValue(Node node) {
     node.type = cache.errorType;
     Member member;
 
@@ -444,7 +413,7 @@ class Resolver {
     // Handle nested names
     else if (node.kind == .DOT) {
       var target = node.dotTarget();
-      resolveGlobalUsingNamespaceValue(target);
+      resolveGlobalUsingValue(target);
       var targetType = target.type;
       var dotName = node.dotName();
       if (targetType == null || dotName == null) {
@@ -498,7 +467,7 @@ class Resolver {
       case .BLOCK { resolveBlock(node); }
       case .NODE_LIST { resolveChildren(node); }
       case .CASE { resolveCase(node); }
-      case .USING_NAMESPACE { resolveUsingNamespace(node); }
+      case .USING { resolveUsing(node); }
 
       case .NAMESPACE { resolveNamespace(node); }
       case .ENUM, .ENUM_FLAGS { resolveEnum(node); }
@@ -509,7 +478,7 @@ class Resolver {
       case .VARIABLE { resolveVariable(node); }
       case .VARIABLE_CLUSTER { resolveVariableCluster(node); }
       case .PARAMETER { resolveParameter(node); }
-      case .ALIAS, .USING_ALIAS { resolveAlias(node); }
+      case .ALIAS { resolveAlias(node); }
 
       case .IF { resolveIf(node); }
       case .FOR { resolveFor(node); }
@@ -712,7 +681,7 @@ class Resolver {
     // This will detect statements inside modifier "blocks", which aren't real
     // blocks and don't have their own scope:
     //
-    //   inline { using bar = foo; }
+    //   inline { alias bar = foo; }
     //
     if (node.parent.kind != .BLOCK) {
       unexpectedStatement(node);
@@ -1338,7 +1307,7 @@ class Resolver {
         case .GLOBAL_FUNCTION, .INSTANCE_FUNCTION, .CONSTRUCTOR_FUNCTION { initializeFunction(symbol); }
         case .LOCAL_VARIABLE, .GLOBAL_VARIABLE, .INSTANCE_VARIABLE { initializeVariable(symbol); }
         case .PARAMETER { initializeParameter(symbol); }
-        case .ALIAS, .USING_ALIAS { initializeAlias(symbol); }
+        case .ALIAS { initializeAlias(symbol); }
         case .OTHER {}
         default { assert false; }
       }
@@ -1761,7 +1730,7 @@ class Resolver {
     resolve(block, null);
   }
 
-  void resolveUsingNamespace(Node node) {
+  void resolveUsing(Node node) {
     checkInsideBlock(node);
   }
 

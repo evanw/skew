@@ -519,21 +519,9 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
 
 Node parseUsing(ParserContext context) {
   var token = context.next();
-  var name = parseName(context);
-  if (name == null) {
-    scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-    var range = context.spanSince(token.range);
-    return Node.createExpression(Node.createError().withRange(range)).withRange(range);
-  }
-  if (!context.eat(.ASSIGN)) {
-    var value = pratt.resume(context, Precedence.LOWEST, name);
-    scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-    return Node.createUsingNamespace(value).withRange(context.spanSince(token.range));
-  } else {
-    var value = pratt.parse(context, Precedence.LOWEST);
-    scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-    return Node.createUsingAlias(name, value).withRange(context.spanSince(token.range));
-  }
+  var value = pratt.parse(context, Precedence.LOWEST);
+  scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
+  return Node.createUsing(value).withRange(context.spanSince(token.range));
 }
 
 Node parseAlias(ParserContext context) {
