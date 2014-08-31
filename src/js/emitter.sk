@@ -680,46 +680,18 @@ namespace js {
         case .CONSTRUCTOR { patchConstructor(node, context); }
         case .FUNCTION { context.setFunction(node); }
         case .CAST { patchCast(node, context); }
-
-        case .CLASS {
-          if (!node.symbol.isImport() && node.symbol.type.baseClass() != null) {
-            needExtends = true;
-          }
-        }
-
-        case .THIS {
-          if (context.lambdaCount > 0) {
-            node.become(context.thisAlias());
-          }
-        }
-
-        case .NAME {
-          if (node.symbol != null && node.symbol.kind.isInstance() && node.isNameExpression()) {
-            node.become(Node.createDot(Node.createThis(), node.clone()));
-          }
-        }
-
-        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER {
-          if (node.type.isInt(cache) && (node.kind == .MULTIPLY || !alwaysConvertsOperandsToInt(node.parent.kind))) {
-            node.become(createBinaryInt(node.kind, node.binaryLeft().replaceWith(null), node.binaryRight().replaceWith(null)).withRange(node.range));
-          }
-        }
-
-        case .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT {
-          patchUnary(node, context);
-        }
-
-        case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER {
-          patchAssign(node, context);
-        }
+        case .CLASS { patchClass(node); }
+        case .THIS { patchThis(node, context); }
+        case .NAME { patchName(node); }
+        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinary(node); }
+        case .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node, context); }
+        case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER { patchAssign(node, context); }
       }
 
       // This is not inside the switch statement above because one of the other
       // case clauses may have introduced a let statement
       if (node.kind == .LET) {
-        var value = node.letValue().replaceWith(null);
-        var variable = node.letVariable().replaceWith(null);
-        node.become(Node.createCall(Node.createLambda({ variable }, Node.createBlock({ Node.createReturn(value) })), { variable.variableValue().replaceWith(null) }));
+        patchLet(node);
       }
 
       if (node.hasChildren()) {
@@ -735,6 +707,36 @@ namespace js {
         case .LAMBDA { context.lambdaCount--; }
         case .CONSTRUCTOR, .FUNCTION { context.setFunction(null); }
       }
+    }
+
+    void patchThis(Node node, PatchContext context) {
+      if (context.lambdaCount > 0) {
+        node.become(context.thisAlias());
+      }
+    }
+
+    void patchClass(Node node) {
+      if (!node.symbol.isImport() && node.symbol.type.baseClass() != null) {
+        needExtends = true;
+      }
+    }
+
+    static void patchName(Node node) {
+      if (node.symbol != null && node.symbol.kind.isInstance() && node.isNameExpression()) {
+        node.become(Node.createDot(Node.createThis(), node.clone()));
+      }
+    }
+
+    void patchBinary(Node node) {
+      if (node.type.isInt(cache) && (node.kind == .MULTIPLY || !alwaysConvertsOperandsToInt(node.parent.kind))) {
+        node.become(createBinaryInt(node.kind, node.binaryLeft().replaceWith(null), node.binaryRight().replaceWith(null)).withRange(node.range));
+      }
+    }
+
+    static void patchLet(Node node) {
+      var value = node.letValue().replaceWith(null);
+      var variable = node.letVariable().replaceWith(null);
+      node.become(Node.createCall(Node.createLambda({ variable }, Node.createBlock({ Node.createReturn(value) })), { variable.variableValue().replaceWith(null) }));
     }
 
     void patchAssign(Node node, PatchContext context) {
@@ -829,7 +831,7 @@ namespace js {
         Node.createBinary(.ASSIGN, dot, createBinaryInt(kind, dot.clone(), right)).withType(cache.intType)).withType(cache.intType);
     }
 
-    bool hasCompoundName(Symbol symbol) {
+    static bool hasCompoundName(Symbol symbol) {
       var enclosingSymbol = symbol.enclosingSymbol;
       return enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() && (
         !symbol.kind.isConstructor() || hasCompoundName(enclosingSymbol));
@@ -853,7 +855,7 @@ namespace js {
 
     static var isKeyword = createIsKeyword();
 
-    string mangleName(Symbol symbol) {
+    static string mangleName(Symbol symbol) {
       if (symbol.isImportOrExport()) {
         return symbol.name;
       }
@@ -866,7 +868,7 @@ namespace js {
       return symbol.name;
     }
 
-    string fullName(Symbol symbol) {
+    static string fullName(Symbol symbol) {
       var enclosingSymbol = symbol.enclosingSymbol;
       if (enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace()) {
         var enclosingName = fullName(enclosingSymbol);

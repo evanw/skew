@@ -1382,7 +1382,7 @@ js.Emitter.emitVariableCluster = function($this, node) {
   for (var i = 0; i < variables.length; i = i + 1 | 0) {
     var variable = variables[i];
     var symbol = variable.symbol;
-    var isCompoundName = symbol !== null && js.Emitter.hasCompoundName($this, symbol);
+    var isCompoundName = symbol !== null && js.Emitter.hasCompoundName(symbol);
     if ((symbol === null || !$in.SymbolKind.isInstance(symbol.kind) && (symbol.flags & 2048) === 0) && (!isCompoundName || variable.children[2] !== null)) {
       js.Emitter.emit($this, $this.indent);
       if (!isCompoundName) {
@@ -1394,22 +1394,22 @@ js.Emitter.emitVariableCluster = function($this, node) {
   }
 };
 js.Emitter.emitNamespace = function($this, node) {
-  if (!js.Emitter.hasCompoundName($this, node.symbol)) {
+  if (!js.Emitter.hasCompoundName(node.symbol)) {
     js.Emitter.emit($this, "var ");
   }
-  js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {};\n");
+  js.Emitter.emit($this, $this.indent + js.Emitter.fullName(node.symbol) + " = {};\n");
 };
 js.Emitter.emitEnum = function($this, node) {
   var block = node.children[1];
   if (!$this.options.optimize || Symbol.isImportOrExport(node.symbol)) {
-    if (!js.Emitter.hasCompoundName($this, node.symbol)) {
+    if (!js.Emitter.hasCompoundName(node.symbol)) {
       js.Emitter.emit($this, "var ");
     }
-    js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, node.symbol) + " = {\n");
+    js.Emitter.emit($this, $this.indent + js.Emitter.fullName(node.symbol) + " = {\n");
     $this.indent += "  ";
     for (var i = 0; i < block.children.length; i = i + 1 | 0) {
       var symbol = block.children[i].symbol;
-      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName($this, symbol) + ": " + symbol.enumValue.toString() + (i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
+      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(symbol) + ": " + symbol.enumValue.toString() + (i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
     }
     js.Emitter.decreaseIndent($this);
     js.Emitter.emit($this, $this.indent + "};\n");
@@ -1421,11 +1421,11 @@ js.Emitter.emitFunction = function($this, node) {
   if (block === null) {
     return;
   }
-  var isCompoundName = js.Emitter.hasCompoundName($this, symbol);
+  var isCompoundName = js.Emitter.hasCompoundName(symbol);
   if (!isCompoundName) {
-    js.Emitter.emit($this, $this.indent + "function " + js.Emitter.fullName($this, symbol));
+    js.Emitter.emit($this, $this.indent + "function " + js.Emitter.fullName(symbol));
   } else {
-    js.Emitter.emit($this, $this.indent + js.Emitter.fullName($this, symbol) + " = function");
+    js.Emitter.emit($this, $this.indent + js.Emitter.fullName(symbol) + " = function");
   }
   js.Emitter.emitArgumentVariables($this, node.children[1].children);
   js.Emitter.emit($this, " ");
@@ -1437,13 +1437,13 @@ js.Emitter.emitFunction = function($this, node) {
   if (node.kind === 14) {
     var type = symbol.enclosingSymbol.type;
     if (Type.isClass(type) && Type.baseClass(type) !== null) {
-      js.Emitter.emit($this, $this.indent + "$extends(" + js.Emitter.fullName($this, type.symbol) + ", " + js.Emitter.fullName($this, Type.baseClass(type).symbol) + ");\n");
+      js.Emitter.emit($this, $this.indent + "$extends(" + js.Emitter.fullName(type.symbol) + ", " + js.Emitter.fullName(Type.baseClass(type).symbol) + ");\n");
     }
   }
 };
 js.Emitter.emitVariable = function($this, node) {
   var value = node.children[2];
-  js.Emitter.emit($this, node.symbol === null ? node.children[0].content.value : js.Emitter.fullName($this, node.symbol));
+  js.Emitter.emit($this, node.symbol === null ? node.children[0].content.value : js.Emitter.fullName(node.symbol));
   if (value !== null) {
     js.Emitter.emit($this, " = ");
     js.Emitter.emitExpression($this, value, 1);
@@ -1552,10 +1552,10 @@ js.Emitter.emitExpression = function($this, node, precedence) {
   js.Emitter.addMapping($this, node);
   switch (node.kind) {
   case 33:
-    js.Emitter.emit($this, node.symbol === null ? node.content.value : js.Emitter.fullName($this, node.symbol));
+    js.Emitter.emit($this, node.symbol === null ? node.content.value : js.Emitter.fullName(node.symbol));
     break;
   case 34:
-    js.Emitter.emit($this, js.Emitter.fullName($this, node.type.symbol));
+    js.Emitter.emit($this, js.Emitter.fullName(node.type.symbol));
     break;
   case 35:
     js.Emitter.emit($this, "this");
@@ -1705,7 +1705,7 @@ js.Emitter.emitDot = function($this, node) {
   js.Emitter.emitExpression($this, node.children[0], 15);
   js.Emitter.emit($this, ".");
   var name = node.children[1];
-  js.Emitter.emit($this, name.symbol === null ? name.content.value : $in.SymbolKind.isInstance(name.symbol.kind) ? js.Emitter.mangleName($this, name.symbol) : js.Emitter.fullName($this, name.symbol));
+  js.Emitter.emit($this, name.symbol === null ? name.content.value : $in.SymbolKind.isInstance(name.symbol.kind) ? js.Emitter.mangleName(name.symbol) : js.Emitter.fullName(name.symbol));
 };
 js.Emitter.emitCall = function($this, node) {
   var value = node.children[0];
@@ -1719,7 +1719,7 @@ js.Emitter.emitCall = function($this, node) {
 };
 js.Emitter.emitSuperCall = function($this, node) {
   var $arguments = node.children;
-  js.Emitter.emit($this, js.Emitter.fullName($this, node.symbol));
+  js.Emitter.emit($this, js.Emitter.fullName(node.symbol));
   js.Emitter.emit($this, ".call(this");
   for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
     js.Emitter.emit($this, ", ");
@@ -1854,28 +1854,20 @@ js.Emitter.patchNode = function($this, node, context) {
     js.Emitter.patchCast($this, node, context);
     break;
   case 10:
-    if ((node.symbol.flags & 2048) === 0 && Type.baseClass(node.symbol.type) !== null) {
-      $this.needExtends = true;
-    }
+    js.Emitter.patchClass($this, node);
     break;
   case 35:
-    if (context.lambdaCount > 0) {
-      Node.become(node, js.PatchContext.thisAlias(context));
-    }
+    js.Emitter.patchThis($this, node, context);
     break;
   case 33:
-    if (node.symbol !== null && $in.SymbolKind.isInstance(node.symbol.kind) && Node.isNameExpression(node)) {
-      Node.become(node, Node.withChildren(new Node(45), [new Node(35), Node.clone(node)]));
-    }
+    js.Emitter.patchName(node);
     break;
   case 67:
   case 86:
   case 81:
   case 71:
   case 83:
-    if (node.type === $this.cache.intType && (node.kind === 81 || !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind))) {
-      Node.become(node, Node.withRange(js.Emitter.createBinaryInt($this, node.kind, Node.replaceWith(node.children[0], null), Node.replaceWith(node.children[1], null)), node.range));
-    }
+    js.Emitter.patchBinary($this, node);
     break;
   case 63:
   case 64:
@@ -1892,9 +1884,7 @@ js.Emitter.patchNode = function($this, node, context) {
     break;
   }
   if (node.kind === 46) {
-    var value = Node.replaceWith(node.children[1], null);
-    var variable = Node.replaceWith(node.children[0], null);
-    Node.become(node, Node.createCall(Node.createLambda([variable], Node.withChildren(new Node(2), [Node.withChildren(new Node(24), [value])])), [Node.replaceWith(variable.children[2], null)]));
+    js.Emitter.patchLet(node);
   }
   if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
@@ -1913,6 +1903,31 @@ js.Emitter.patchNode = function($this, node, context) {
     js.PatchContext.setFunction(context, null);
     break;
   }
+};
+js.Emitter.patchThis = function($this, node, context) {
+  if (context.lambdaCount > 0) {
+    Node.become(node, js.PatchContext.thisAlias(context));
+  }
+};
+js.Emitter.patchClass = function($this, node) {
+  if ((node.symbol.flags & 2048) === 0 && Type.baseClass(node.symbol.type) !== null) {
+    $this.needExtends = true;
+  }
+};
+js.Emitter.patchName = function(node) {
+  if (node.symbol !== null && $in.SymbolKind.isInstance(node.symbol.kind) && Node.isNameExpression(node)) {
+    Node.become(node, Node.withChildren(new Node(45), [new Node(35), Node.clone(node)]));
+  }
+};
+js.Emitter.patchBinary = function($this, node) {
+  if (node.type === $this.cache.intType && (node.kind === 81 || !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind))) {
+    Node.become(node, Node.withRange(js.Emitter.createBinaryInt($this, node.kind, Node.replaceWith(node.children[0], null), Node.replaceWith(node.children[1], null)), node.range));
+  }
+};
+js.Emitter.patchLet = function(node) {
+  var value = Node.replaceWith(node.children[1], null);
+  var variable = Node.replaceWith(node.children[0], null);
+  Node.become(node, Node.createCall(Node.createLambda([variable], Node.withChildren(new Node(2), [Node.withChildren(new Node(24), [value])])), [Node.replaceWith(variable.children[2], null)]));
 };
 js.Emitter.patchAssign = function($this, node, context) {
   if (node.type === $this.cache.intType) {
@@ -1983,9 +1998,9 @@ js.Emitter.createBinaryIntAssignment = function($this, context, kind, left, righ
   var dot = Node.withChildren(new Node(45), [temporaryName, Node.remove(name)]);
   return Node.withType(Node.withChildren(new Node(46), [Node.withChildren(new Node(16), [Node.clone(temporaryName), null, Node.remove(target)]), Node.withType(Node.createBinary(87, dot, js.Emitter.createBinaryInt($this, kind, Node.clone(dot), right)), $this.cache.intType)]), $this.cache.intType);
 };
-js.Emitter.hasCompoundName = function($this, symbol) {
+js.Emitter.hasCompoundName = function(symbol) {
   var enclosingSymbol = symbol.enclosingSymbol;
-  return enclosingSymbol !== null && enclosingSymbol.kind !== 7 && (symbol.kind !== 16 || js.Emitter.hasCompoundName($this, enclosingSymbol));
+  return enclosingSymbol !== null && enclosingSymbol.kind !== 7 && (symbol.kind !== 16 || js.Emitter.hasCompoundName(enclosingSymbol));
 };
 js.Emitter.createIsKeyword = function() {
   var result = new StringMap();
@@ -2002,31 +2017,31 @@ js.Emitter.createIsKeyword = function() {
   result.set("throw", true);
   return result;
 };
-js.Emitter.mangleName = function($this, symbol) {
+js.Emitter.mangleName = function(symbol) {
   if (Symbol.isImportOrExport(symbol)) {
     return symbol.name;
   }
   if (symbol.kind === 16) {
-    return js.Emitter.mangleName($this, symbol.enclosingSymbol);
+    return js.Emitter.mangleName(symbol.enclosingSymbol);
   }
   if (js.Emitter.isKeyword.has(symbol.name)) {
     return "$" + symbol.name;
   }
   return symbol.name;
 };
-js.Emitter.fullName = function($this, symbol) {
+js.Emitter.fullName = function(symbol) {
   var enclosingSymbol = symbol.enclosingSymbol;
   if (enclosingSymbol !== null && enclosingSymbol.kind !== 7) {
-    var enclosingName = js.Emitter.fullName($this, enclosingSymbol);
+    var enclosingName = js.Emitter.fullName(enclosingSymbol);
     if (symbol.kind === 16) {
       return enclosingName;
     }
     if ($in.SymbolKind.isInstance(symbol.kind)) {
       enclosingName += ".prototype";
     }
-    return enclosingName + "." + js.Emitter.mangleName($this, symbol);
+    return enclosingName + "." + js.Emitter.mangleName(symbol);
   }
-  return js.Emitter.mangleName($this, symbol);
+  return js.Emitter.mangleName(symbol);
 };
 function SourceMapping(_0, _1, _2, _3, _4) {
   this.sourceIndex = _0;
