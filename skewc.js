@@ -313,6 +313,24 @@ Node.isDeclarationName = function($this) {
 Node.isStorage = function($this) {
   return $in.NodeKind.isUnaryStorageOperator($this.parent.kind) || $in.NodeKind.isBinaryStorageOperator($this.parent.kind) && $this === $this.parent.children[0];
 };
+Node.hasNoSideEffects = function($this) {
+  switch ($this.kind) {
+  case 33:
+  case 35:
+  case 38:
+  case 39:
+  case 40:
+  case 41:
+  case 42:
+  case 43:
+  case 37:
+    return true;
+  case 45:
+    return Node.hasNoSideEffects($this.children[0]);
+  default:
+    return false;
+  }
+};
 Node.hasChildren = function($this) {
   return $this.children !== null && $this.children.length > 0;
 };
@@ -2335,14 +2353,14 @@ ConstantFolder.foldConstants = function($this, node) {
 ConstantFolder.foldBlock = function(node) {
   for (var i = 0; i < node.children.length; i = i + 1 | 0) {
     var child = node.children[i];
-    if (child.kind === 29 && $in.NodeKind.isConstant(child.children[0].kind) || child.kind === 22 && child.children[0].kind === 39) {
+    if (child.kind === 29 && Node.hasNoSideEffects(child.children[0]) || child.kind === 22 && child.children[0].kind === 39) {
       Node.removeChildAtIndex(node, i);
       i = i - 1 | 0;
     } else if (child.kind === 20) {
       var test = child.children[1];
       if (test !== null && test.kind === 39) {
         var setup = child.children[0];
-        if (setup === null || $in.NodeKind.isConstant(setup.kind)) {
+        if (setup === null || Node.hasNoSideEffects(setup)) {
           Node.removeChildAtIndex(node, i);
           i = i - 1 | 0;
         } else if (setup.kind !== 6) {
@@ -2661,6 +2679,25 @@ FunctionInliningPass.inlineSymbol = function(graph, info) {
       var clone = Node.clone(info.inlineValue);
       var values = Node.removeChildren(callSite);
       var value = values.shift();
+      if (info.unusedArguments.length > 0) {
+        var sequence = null;
+        for (var j = 0; j < info.unusedArguments.length; j = j + 1 | 0) {
+          var index = info.$arguments.indexOf(info.unusedArguments[j]);
+          var replacement = values[index];
+          if (!Node.hasNoSideEffects(replacement)) {
+            if (sequence === null) {
+              sequence = [];
+            }
+            sequence.push(replacement);
+          }
+        }
+        if (sequence !== null) {
+          sequence.push(clone);
+          Node.become(callSite, Node.withChildren(new Node(50), sequence));
+          FunctionInliningPass.recursivelySubstituteArguments(callSite, info.$arguments, values);
+          continue;
+        }
+      }
       Node.become(callSite, clone);
       FunctionInliningPass.recursivelySubstituteArguments(callSite, info.$arguments, values);
     }
@@ -2683,13 +2720,14 @@ FunctionInliningPass.recursivelySubstituteArguments = function(node, $arguments,
     }
   }
 };
-function InliningInfo(_0, _1, _2, _3) {
+function InliningInfo(_0, _1, _2, _3, _4) {
   this.shouldInline = true;
   this.bodyCalls = [];
   this.symbol = _0;
   this.inlineValue = _1;
   this.callSites = _2;
   this.$arguments = _3;
+  this.unusedArguments = _4;
 }
 function InliningGraph(graph, options) {
   this.inliningInfo = [];
@@ -2750,19 +2788,23 @@ InliningGraph.createInliningInfo = function(info, options) {
       if (inlineValue !== null) {
         var symbolCounts = new IntMap();
         if (InliningGraph.recursivelyCountArgumentUses(inlineValue, symbolCounts)) {
+          var unusedArguments = [];
           var $arguments = [];
           var argumentVariables = symbol.node.children[1].children;
           var isSimpleSubstitution = true;
           for (var j = 0; j < argumentVariables.length; j = j + 1 | 0) {
             var argument = argumentVariables[j].symbol;
-            if (symbolCounts.getOrDefault(argument.uniqueID, 0) !== 1) {
+            var count = symbolCounts.getOrDefault(argument.uniqueID, 0);
+            if (count === 0) {
+              unusedArguments.push(argument);
+            } else if (count !== 1) {
               isSimpleSubstitution = false;
               break;
             }
             $arguments.push(argument);
           }
           if (isSimpleSubstitution) {
-            return new InliningInfo(symbol, inlineValue, info.callSites, $arguments);
+            return new InliningInfo(symbol, inlineValue, info.callSites, $arguments, unusedArguments);
           }
         }
       }
@@ -3347,7 +3389,7 @@ Resolver.resolve = function($this, node, expectedType) {
     Resolver.resolveCall($this, node);
     break;
   case 48:
-    Resolver.resolveSuperCall($this, node);
+    Resolver.unsupportedNodeKind(node);
     break;
   case 49:
     break;
@@ -4778,9 +4820,6 @@ Resolver.resolveCall = function($this, node) {
     node.type = valueType.relevantTypes[0];
     Resolver.resolveArguments($this, $arguments, Type.argumentTypes(valueType), node.range, value.range);
   }
-};
-Resolver.resolveSuperCall = function($this, node) {
-  Resolver.unsupportedNodeKind(node);
 };
 Resolver.resolveSequence = function($this, node) {
   for (var i = 0, n = node.children.length; i < n; i = i + 1 | 0) {

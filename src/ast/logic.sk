@@ -132,4 +132,12 @@ in Node {
   bool isStorage() {
     return parent.kind.isUnaryStorageOperator() || parent.kind.isBinaryStorageOperator() && this == parent.binaryLeft();
   }
+
+  bool hasNoSideEffects() {
+    switch (kind) {
+      case .NAME, .THIS, .TRUE, .FALSE, .INT, .FLOAT, .DOUBLE, .STRING, .NULL { return true; }
+      case .DOT { return dotTarget().hasNoSideEffects(); }
+      default { return false; }
+    }
+  }
 }

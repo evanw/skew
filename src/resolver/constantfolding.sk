@@ -64,7 +64,7 @@ class ConstantFolder {
       var child = node.children.get(i);
 
       // Remove constants and "while (false) { ... }" entirely
-      if (child.kind == .EXPRESSION && child.expressionValue().kind.isConstant() ||
+      if (child.kind == .EXPRESSION && child.expressionValue().hasNoSideEffects() ||
           child.kind == .WHILE && child.whileTest().kind == .FALSE) {
         node.removeChildAtIndex(i);
         i--;
@@ -77,7 +77,7 @@ class ConstantFolder {
           var setup = child.forSetup();
 
           // Remove "for (; false; c) d;" entirely
-          if (setup == null || setup.kind.isConstant()) {
+          if (setup == null || setup.hasNoSideEffects()) {
             node.removeChildAtIndex(i);
             i--;
           }

@@ -261,3 +261,19 @@ function baz() {
 var x = 0;
 baz();
 ");
+
+testJS("
+import int foo();
+inline int bar(int a, int b) { return a; }
+var baz = bar(1, foo());
+", "
+var baz = (foo(), 1);
+");
+
+testJS("
+inline int foo() { return 2; }
+inline int bar(int a, int b) { return a; }
+var baz = bar(1, foo());
+", "
+var baz = 1;
+");

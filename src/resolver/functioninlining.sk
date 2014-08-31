@@ -31,6 +31,38 @@ class FunctionInliningPass {
         assert values.length == info.arguments.length + 1;
         var value = values.shift();
         assert value.kind == .NAME && value.symbol == info.symbol;
+
+        // If there are unused arguments, then stick any with side effects in a
+        // sequence expression so they will be evaluated before the call body.
+        // For example:
+        //
+        //   import int foo();
+        //   int bar(int a, int b) { return a; }
+        //   var baz = bar(1, foo());
+        //
+        // This should compile to:
+        //
+        //   var baz = (foo(), 1);
+        //
+        if (info.unusedArguments.length > 0) {
+          List<Node> sequence = null;
+          for (var j = 0; j < info.unusedArguments.length; j++) {
+            var index = info.arguments.indexOf(info.unusedArguments.get(j));
+            assert index >= 0;
+            var replacement = values.get(index);
+            if (!replacement.hasNoSideEffects()) {
+              if (sequence == null) sequence = {}; // Save on allocations
+              sequence.push(replacement);
+            }
+          }
+          if (sequence != null) {
+            sequence.push(clone);
+            callSite.become(Node.createSequence(sequence));
+            recursivelySubstituteArguments(callSite, info.arguments, values);
+            continue;
+          }
+        }
+
         callSite.become(clone);
         recursivelySubstituteArguments(callSite, info.arguments, values);
       }
@@ -87,6 +119,7 @@ class InliningInfo {
   Node inlineValue;
   List<Node> callSites;
   List<Symbol> arguments;
+  List<Symbol> unusedArguments;
   var shouldInline = true;
   List<InliningInfo> bodyCalls = {};
 }
@@ -182,20 +215,24 @@ class InliningGraph {
           // only inline functions where each argument is used exactly once.
           var symbolCounts = IntMap<int>();
           if (recursivelyCountArgumentUses(inlineValue, symbolCounts)) {
+            List<Symbol> unusedArguments = {};
             List<Symbol> arguments = {};
             var argumentVariables = symbol.node.functionArguments().children;
             var isSimpleSubstitution = true;
             for (var j = 0; j < argumentVariables.length; j++) {
               var argument = argumentVariables.get(j).symbol;
               assert argument != null;
-              if (symbolCounts.getOrDefault(argument.uniqueID, 0) != 1) {
+              var count = symbolCounts.getOrDefault(argument.uniqueID, 0);
+              if (count == 0) {
+                unusedArguments.push(argument);
+              } else if (count != 1) {
                 isSimpleSubstitution = false;
                 break;
               }
               arguments.push(argument);
             }
             if (isSimpleSubstitution) {
-              return InliningInfo(symbol, inlineValue, info.callSites, arguments);
+              return InliningInfo(symbol, inlineValue, info.callSites, arguments, unusedArguments);
             }
           }
         }
