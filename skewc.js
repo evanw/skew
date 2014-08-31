@@ -2867,6 +2867,10 @@ InstanceToStaticPass.run = function(graph, cache, options) {
         Node.replaceChild(callSite, 0, name);
         if (replacedThis) {
           Node.insertChild(callSite, 1, target);
+        } else if (!Node.hasNoSideEffects(target)) {
+          var children = Node.removeChildren(callSite);
+          var clone = Node.withChildren(Node.clone(callSite), children);
+          Node.become(callSite, Node.withChildren(new Node(50), [target, clone]));
         }
       }
     }

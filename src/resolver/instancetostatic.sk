@@ -46,6 +46,13 @@ class InstanceToStaticPass {
           if (replacedThis) {
             callSite.insertChild(1, target);
           }
+
+          // Make sure that the target is still called if it has side effects
+          else if (!target.hasNoSideEffects()) {
+            var children = callSite.removeChildren();
+            var clone = callSite.clone().withChildren(children);
+            callSite.become(Node.createSequence({ target, clone }));
+          }
         }
       }
     }

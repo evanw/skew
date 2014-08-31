@@ -102,3 +102,17 @@ $in.Foo.toString = function($this) {
   }
 };
 ");
+
+testJS("
+import class Foo {
+  new();
+  void foo() {}
+}
+Foo().foo();
+", "
+var $in = {};
+$in.Foo = {};
+$in.Foo.foo = function() {
+};
+new Foo(), $in.Foo.foo();
+");
