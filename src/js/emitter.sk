@@ -531,18 +531,15 @@ namespace js {
     }
 
     void emitInt(Node node) {
+      if (node.parent.kind == .DOT) emit("(");
       emit(node.asInt().toString());
-      if (node.parent.kind == .DOT) {
-        emit(".");
-      }
+      if (node.parent.kind == .DOT) emit(")");
     }
 
     void emitDouble(Node node) {
-      var text = node.asDouble().toString();
-      emit(text);
-      if (node.parent.kind == .DOT && text.indexOf(".") < 0) {
-        emit(".");
-      }
+      if (node.parent.kind == .DOT) emit("(");
+      emit(node.asDouble().toString());
+      if (node.parent.kind == .DOT) emit(")");
     }
 
     void emitInitializer(Node node) {

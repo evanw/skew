@@ -1680,16 +1680,21 @@ js.Emitter.emitHook = function($this, node, precedence) {
   }
 };
 js.Emitter.emitInt = function($this, node) {
+  if (node.parent.kind === 46) {
+    js.Emitter.emit($this, "(");
+  }
   js.Emitter.emit($this, node.content.value.toString());
   if (node.parent.kind === 46) {
-    js.Emitter.emit($this, ".");
+    js.Emitter.emit($this, ")");
   }
 };
 js.Emitter.emitDouble = function($this, node) {
-  var text = node.content.value.toString();
-  js.Emitter.emit($this, text);
-  if (node.parent.kind === 46 && text.indexOf(".") < 0) {
-    js.Emitter.emit($this, ".");
+  if (node.parent.kind === 46) {
+    js.Emitter.emit($this, "(");
+  }
+  js.Emitter.emit($this, node.content.value.toString());
+  if (node.parent.kind === 46) {
+    js.Emitter.emit($this, ")");
   }
 };
 js.Emitter.emitInitializer = function($this, node) {
