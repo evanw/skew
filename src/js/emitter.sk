@@ -31,6 +31,13 @@ namespace js {
     CompilerOptions options;
     TypeCache cache;
 
+    // Numbers normally need to be wrapped in parentheses when toString() is
+    // called on them because "1.toString()" is a syntax error in JavaScript.
+    // However, toString() can be called implicitly as part of a string binary
+    // + operation. This variable prevents wrapping in parentheses when the
+    // toString() call has been elided.
+    Node toStringTarget = null;
+
     override List<Source> emitProgram(Node program) {
       patchNode(program, PatchContext());
       currentSource = Source(options.outputFile, "");
@@ -189,7 +196,7 @@ namespace js {
     void emitCommaSeparatedExpressions(List<Node> nodes) {
       for (var i = 0; i < nodes.length; i++) {
         if (i > 0) emit(", ");
-        emitExpression(nodes.get(i), Precedence.COMMA);
+        emitExpression(nodes.get(i), .COMMA);
       }
     }
 
@@ -207,7 +214,7 @@ namespace js {
 
     void recursiveEmitIfStatement(Node node) {
       emit("if (");
-      emitExpression(node.ifTest(), Precedence.LOWEST);
+      emitExpression(node.ifTest(), .LOWEST);
       emit(") ");
       emitNode(node.ifTrue());
       var block = node.ifFalse();
@@ -265,7 +272,7 @@ namespace js {
       var block = node.caseBlock();
       for (var i = 0; i < values.length; i++) {
         emit(indent + "case ");
-        emitExpression(values.get(i), Precedence.LOWEST);
+        emitExpression(values.get(i), .LOWEST);
         emit(":\n");
       }
       if (values.length == 0) {
@@ -352,7 +359,7 @@ namespace js {
       emit(node.symbol == null ? node.declarationName().asString() : fullName(node.symbol));
       if (value != null) {
         emit(" = ");
-        emitExpression(value, Precedence.COMMA);
+        emitExpression(value, .COMMA);
       }
     }
 
@@ -372,18 +379,18 @@ namespace js {
           emit("var ");
           emitCommaSeparatedNodes(setup.clusterVariables());
         } else {
-          emitExpression(setup, Precedence.LOWEST);
+          emitExpression(setup, .LOWEST);
         }
       }
       if (test != null) {
         emit("; ");
-        emitExpression(test, Precedence.LOWEST);
+        emitExpression(test, .LOWEST);
       } else {
         emit(";");
       }
       if (update != null) {
         emit("; ");
-        emitExpression(update, Precedence.LOWEST);
+        emitExpression(update, .LOWEST);
       } else {
         emit(";");
       }
@@ -394,7 +401,7 @@ namespace js {
 
     void emitWhile(Node node) {
       emit(indent + "while (");
-      emitExpression(node.whileTest(), Precedence.LOWEST);
+      emitExpression(node.whileTest(), .LOWEST);
       emit(") ");
       emitNode(node.whileBlock());
       emit("\n");
@@ -404,7 +411,7 @@ namespace js {
       emit(indent + "do ");
       emitNode(node.whileBlock());
       emit(" while (");
-      emitExpression(node.whileTest(), Precedence.LOWEST);
+      emitExpression(node.whileTest(), .LOWEST);
       emit(");\n");
     }
 
@@ -413,7 +420,7 @@ namespace js {
       emit(indent);
       if (value != null) {
         emit("return ");
-        emitExpression(value, Precedence.LOWEST);
+        emitExpression(value, .LOWEST);
         emit(";\n");
       } else {
         emit("return;\n");
@@ -435,7 +442,7 @@ namespace js {
         var couldBeFalse = value.kind != .TRUE;
         if (couldBeFalse) {
           emit(indent + "if (");
-          emitExpression(value, Precedence.LOWEST);
+          emitExpression(value, .LOWEST);
           emit(") {\n");
           increaseIndent();
         }
@@ -451,13 +458,13 @@ namespace js {
     void emitExpressionStatement(Node node) {
       emit(indent);
       isStartOfExpression = true;
-      emitExpression(node.expressionValue(), Precedence.LOWEST);
+      emitExpression(node.expressionValue(), .LOWEST);
       emit(";\n");
     }
 
     void emitSwitch(Node node) {
       emit(indent + "switch (");
-      emitExpression(node.switchValue(), Precedence.LOWEST);
+      emitExpression(node.switchValue(), .LOWEST);
       emit(") {\n");
       emitNodes(node.switchCases());
       emit(indent + "}\n");
@@ -522,24 +529,26 @@ namespace js {
 
     void emitHook(Node node, Precedence precedence) {
       if (Precedence.ASSIGN < precedence) emit("(");
-      emitExpression(node.hookTest(), Precedence.LOGICAL_OR);
+      emitExpression(node.hookTest(), .LOGICAL_OR);
       emit(" ? ");
-      emitExpression(node.hookTrue(), Precedence.ASSIGN);
+      emitExpression(node.hookTrue(), .ASSIGN);
       emit(" : ");
-      emitExpression(node.hookFalse(), Precedence.ASSIGN);
+      emitExpression(node.hookFalse(), .ASSIGN);
       if (Precedence.ASSIGN < precedence) emit(")");
     }
 
     void emitInt(Node node) {
-      if (node.parent.kind == .DOT) emit("(");
+      var wrap = node.parent.kind == .DOT && node != toStringTarget;
+      if (wrap) emit("(");
       emit(node.asInt().toString());
-      if (node.parent.kind == .DOT) emit(")");
+      if (wrap) emit(")");
     }
 
     void emitDouble(Node node) {
-      if (node.parent.kind == .DOT) emit("(");
+      var wrap = node.parent.kind == .DOT && node != toStringTarget;
+      if (wrap) emit("(");
       emit(node.asDouble().toString());
-      if (node.parent.kind == .DOT) emit(")");
+      if (wrap) emit(")");
     }
 
     void emitInitializer(Node node) {
@@ -549,7 +558,7 @@ namespace js {
     }
 
     void emitDot(Node node) {
-      emitExpression(node.dotTarget(), Precedence.MEMBER);
+      emitExpression(node.dotTarget(), .MEMBER);
       emit(".");
       var name = node.dotName();
       emit(
@@ -561,7 +570,7 @@ namespace js {
     void emitCall(Node node) {
       var value = node.callValue();
       if (value.kind.isType()) emit("new ");
-      emitExpression(value, Precedence.UNARY_POSTFIX);
+      emitExpression(value, .UNARY_POSTFIX);
       emit("(");
       emitCommaSeparatedExpressions(node.callArguments());
       emit(")");
@@ -573,7 +582,7 @@ namespace js {
       emit(".call(this");
       for (var i = 0; i < arguments.length; i++) {
         emit(", ");
-        emitExpression(arguments.get(i), Precedence.COMMA);
+        emitExpression(arguments.get(i), .COMMA);
       }
       emit(")");
     }
@@ -620,29 +629,52 @@ namespace js {
       if (info.precedence < precedence) emit(")");
     }
 
+    bool isToStringCall(Node node) {
+      if (node.kind == .CALL) {
+        var value = node.callValue();
+        return value.kind == .DOT && value.symbol != null && value.symbol.name == "toString" && node.callArguments().length == 0;
+      }
+      return false;
+    }
+
     void emitBinary(Node node, Precedence precedence) {
       var info = operatorInfo.get(node.kind);
       if (info.precedence < precedence) emit("(");
-      emitExpression(node.binaryLeft(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.RIGHT)));
+      var left = node.binaryLeft();
+      var right = node.binaryRight();
+
+      // Special case adding a string with the result of calling toString()
+      // since the JavaScript runtime will automatically call toString()
+      if (node.kind == .ADD) {
+        if (left.type != null && left.type.isString(cache) && isToStringCall(right)) {
+          right = right.callValue().dotTarget();
+        } else if (right.type != null && right.type.isString(cache) && isToStringCall(left)) {
+          left = left.callValue().dotTarget();
+        }
+      }
+
+      toStringTarget = left;
+      emitExpression(left, info.precedence.incrementIfRightAssociative(info.associativity));
       emit(node.kind == .EQUAL ? " === " : node.kind == .NOT_EQUAL ? " !== " : " " + info.text + " ");
-      emitExpression(node.binaryRight(), (Precedence)(info.precedence + (int)(info.associativity == Associativity.LEFT)));
+      toStringTarget = right;
+      emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity));
       if (info.precedence < precedence) emit(")");
     }
 
     void emitIndex(Node node, Precedence precedence) {
-      emitExpression(node.binaryLeft(), Precedence.MEMBER);
+      emitExpression(node.binaryLeft(), .MEMBER);
       emit("[");
-      emitExpression(node.binaryRight(), Precedence.LOWEST);
+      emitExpression(node.binaryRight(), .LOWEST);
       emit("]");
     }
 
     void emitTertiary(Node node, Precedence precedence) {
       if (Precedence.ASSIGN < precedence) emit("(");
-      emitExpression(node.tertiaryLeft(), Precedence.MEMBER);
+      emitExpression(node.tertiaryLeft(), .MEMBER);
       emit("[");
-      emitExpression(node.tertiaryMiddle(), Precedence.LOWEST);
+      emitExpression(node.tertiaryMiddle(), .LOWEST);
       emit("] = ");
-      emitExpression(node.tertiaryRight(), Precedence.ASSIGN);
+      emitExpression(node.tertiaryRight(), .ASSIGN);
       if (Precedence.ASSIGN < precedence) emit(")");
     }
 

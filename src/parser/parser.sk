@@ -18,6 +18,16 @@ enum Precedence {
   MEMBER,
 }
 
+in Precedence {
+  Precedence incrementIfLeftAssociative(Associativity associativity) {
+    return (Precedence)(this + (int)(associativity == .LEFT));
+  }
+
+  Precedence incrementIfRightAssociative(Associativity associativity) {
+    return (Precedence)(this + (int)(associativity == .RIGHT));
+  }
+}
+
 enum StatementHint {
   NORMAL,
   IN_ENUM,

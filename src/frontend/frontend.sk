@@ -108,21 +108,25 @@ export namespace frontend {
       if (arg.length == 0) continue;
 
       // Remember file paths
-      if (arg.codeUnitAt(0) != '-') { inputs.push(arg); continue; }
+      if (arg.codeUnitAt(0) != '-') inputs.push(arg);
 
       // Check flags
-      if (arg == "-help" || arg == "--help" || arg == "-h") { printUsage(); return 0; }
-      else if (arg == "-verbose" || arg == "--verbose") { flags.verbose = true; continue; }
-      else if (arg == "-optimize" || arg == "--optimize") { flags.optimize = true; continue; }
-      else if (arg == "-js-source-map" || arg == "--js-source-map") { flags.jsSourceMap = true; continue; }
-      else if (arg.startsWith("-target=") || arg.startsWith("--target=")) { flags.target = afterEquals(arg); continue; }
-      else if (arg.startsWith("-output-file=") || arg.startsWith("--output-file=")) { flags.outputFile = afterEquals(arg); continue; }
-      else if (arg.startsWith("-prepend-file=") || arg.startsWith("--prepend-file=")) { prepend.push(afterEquals(arg)); continue; }
-      else if (arg.startsWith("-append-file=") || arg.startsWith("--append-file=")) { append.push(afterEquals(arg)); continue; }
+      else if (arg == "-help" || arg == "--help" || arg == "-h") { printUsage(); return 0; }
+      else if (arg == "-verbose" || arg == "--verbose") flags.verbose = true;
+      else if (arg == "-optimize" || arg == "--optimize") flags.optimize = true;
+      else if (arg == "-js-source-map" || arg == "--js-source-map") flags.jsSourceMap = true;
+      else if (arg.startsWith("-target=") || arg.startsWith("--target=")) flags.target = afterEquals(arg);
+      else if (arg.startsWith("-output-file=") || arg.startsWith("--output-file=")) flags.outputFile = afterEquals(arg);
+      else if (arg.startsWith("-prepend-file=") || arg.startsWith("--prepend-file=")) prepend.push(afterEquals(arg));
+      else if (arg.startsWith("-append-file=") || arg.startsWith("--append-file=")) append.push(afterEquals(arg));
 
       // An unknown argument is an error
-      printError("Unknown flag " + quoteString(arg, '"'));
-      return 1;
+      else {
+        printError("Unknown flag " + quoteString(arg, '"'));
+        return 1;
+      }
+
+      continue;
     }
 
     // Input files are required

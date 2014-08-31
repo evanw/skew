@@ -669,33 +669,33 @@ Compiler.statistics = function($this, result) {
   lineCount = lineCount + Compiler.totalLineCount(result.options.prepend) | 0;
   lineCount = lineCount + Compiler.totalLineCount(result.options.inputs) | 0;
   lineCount = lineCount + Compiler.totalLineCount(result.options.append) | 0;
-  var text = "Input line count: " + lineCount.toString() + "\nOutput line count: " + Compiler.totalLineCount(result.outputs).toString();
+  var text = "Input line count: " + lineCount + "\nOutput line count: " + Compiler.totalLineCount(result.outputs);
   $this.lineCountingTime += now() - lineCountingStart;
   var optimizingTime = $this.callGraphTime + $this.instanceToStaticTime + $this.symbolMotionTime + $this.functionInliningTime + $this.constantFoldingTime + $this.deadCodeRemovalTime;
-  text += "\nTotal compile time: " + (Math.round(($this.totalTime + $this.lineCountingTime) * 10) / 10).toString() + "ms";
+  text += "\nTotal compile time: " + Math.round(($this.totalTime + $this.lineCountingTime) * 10) / 10 + "ms";
   if ($this.tokenizingTime > 0) {
-    text += "\n  Tokenizing: " + (Math.round($this.tokenizingTime * 10) / 10).toString() + "ms";
+    text += "\n  Tokenizing: " + Math.round($this.tokenizingTime * 10) / 10 + "ms";
   }
   if ($this.parsingTime > 0) {
-    text += "\n  Parsing: " + (Math.round($this.parsingTime * 10) / 10).toString() + "ms";
+    text += "\n  Parsing: " + Math.round($this.parsingTime * 10) / 10 + "ms";
   }
   if ($this.resolvingTime > 0) {
-    text += "\n  Resolving: " + (Math.round($this.resolvingTime * 10) / 10).toString() + "ms";
+    text += "\n  Resolving: " + Math.round($this.resolvingTime * 10) / 10 + "ms";
   }
   if (optimizingTime > 0) {
-    text += "\n  Optimizing: " + (Math.round(optimizingTime * 10) / 10).toString() + "ms";
-    text += "\n    Building call graph: " + (Math.round($this.callGraphTime * 10) / 10).toString() + "ms";
-    text += "\n    Instance to static: " + (Math.round($this.instanceToStaticTime * 10) / 10).toString() + "ms";
-    text += "\n    Symbol motion: " + (Math.round($this.symbolMotionTime * 10) / 10).toString() + "ms";
-    text += "\n    Function inlining: " + (Math.round($this.functionInliningTime * 10) / 10).toString() + "ms";
-    text += "\n    Constant folding: " + (Math.round($this.constantFoldingTime * 10) / 10).toString() + "ms";
-    text += "\n    Dead code removal: " + (Math.round($this.deadCodeRemovalTime * 10) / 10).toString() + "ms";
+    text += "\n  Optimizing: " + Math.round(optimizingTime * 10) / 10 + "ms";
+    text += "\n    Building call graph: " + Math.round($this.callGraphTime * 10) / 10 + "ms";
+    text += "\n    Instance to static: " + Math.round($this.instanceToStaticTime * 10) / 10 + "ms";
+    text += "\n    Symbol motion: " + Math.round($this.symbolMotionTime * 10) / 10 + "ms";
+    text += "\n    Function inlining: " + Math.round($this.functionInliningTime * 10) / 10 + "ms";
+    text += "\n    Constant folding: " + Math.round($this.constantFoldingTime * 10) / 10 + "ms";
+    text += "\n    Dead code removal: " + Math.round($this.deadCodeRemovalTime * 10) / 10 + "ms";
   }
   if ($this.emitTime > 0) {
-    text += "\n  Emit: " + (Math.round($this.emitTime * 10) / 10).toString() + "ms";
+    text += "\n  Emit: " + Math.round($this.emitTime * 10) / 10 + "ms";
   }
   if ($this.lineCountingTime > 0) {
-    text += "\n  Counting lines: " + (Math.round($this.lineCountingTime * 10) / 10).toString() + "ms";
+    text += "\n  Counting lines: " + Math.round($this.lineCountingTime * 10) / 10 + "ms";
   }
   text += Compiler.sourceStatistics("Prepend", result.options.prepend);
   text += Compiler.sourceStatistics("Inputs", result.options.inputs);
@@ -711,7 +711,7 @@ Compiler.totalLineCount = function(sources) {
   return lineCount;
 };
 Compiler.sourceStatistics = function(name, sources) {
-  var text = "\n" + name + ": " + sources.length.toString();
+  var text = "\n" + name + ": " + sources.length;
   for (var i = 0; i < sources.length; i = i + 1 | 0) {
     var source = sources[i];
     text += "\n  " + source.name + ": " + bytesToString(source.contents.length);
@@ -893,10 +893,10 @@ lisp.DumpVisitor.visit = function($this, node) {
   if (node.content !== null) {
     switch (node.content.type()) {
     case 0:
-      $this.result += " " + node.content.value.toString();
+      $this.result += " " + node.content.value;
       break;
     case 1:
-      $this.result += " " + node.content.value.toString();
+      $this.result += " " + node.content.value;
       break;
     case 2:
       $this.result += " " + quoteString(node.content.value, 34);
@@ -944,10 +944,10 @@ xml.DumpVisitor.visit = function($this, node) {
     $this.result += " content=";
     switch (node.content.type()) {
     case 0:
-      $this.result += "\"" + node.content.value.toString() + "\"";
+      $this.result += "\"" + node.content.value + "\"";
       break;
     case 1:
-      $this.result += "\"" + node.content.value.toString() + "\"";
+      $this.result += "\"" + node.content.value + "\"";
       break;
     case 2:
       $this.result += quoteString(node.content.value, 34);
@@ -1023,7 +1023,7 @@ Range.locationString = function($this) {
     return "";
   }
   var location = Source.indexToLineColumn($this.source, $this.start);
-  return $this.source.name + ":" + (location.line + 1 | 0).toString() + ":" + (location.column + 1 | 0).toString();
+  return $this.source.name + ":" + (location.line + 1 | 0) + ":" + (location.column + 1 | 0);
 };
 Range.touches = function($this, index) {
   return $this.start <= index && index <= $this.end;
@@ -1163,6 +1163,7 @@ js.Emitter = function(_0, _1) {
   this.isStartOfExpression = false;
   this.generator = new SourceMapGenerator();
   this.currentSource = null;
+  this.toStringTarget = null;
   this.options = _0;
   this.cache = _1;
 };
@@ -1437,7 +1438,7 @@ js.Emitter.emitEnum = function($this, node) {
     $this.indent += "  ";
     for (var i = 0; i < block.children.length; i = i + 1 | 0) {
       var symbol = block.children[i].symbol;
-      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(symbol) + ": " + symbol.enumValue.toString() + (i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
+      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(symbol) + ": " + symbol.enumValue + (i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
     }
     js.Emitter.decreaseIndent($this);
     js.Emitter.emit($this, $this.indent + "};\n");
@@ -1707,20 +1708,22 @@ js.Emitter.emitHook = function($this, node, precedence) {
   }
 };
 js.Emitter.emitInt = function($this, node) {
-  if (node.parent.kind === 45) {
+  var wrap = node.parent.kind === 45 && node !== $this.toStringTarget;
+  if (wrap) {
     js.Emitter.emit($this, "(");
   }
   js.Emitter.emit($this, node.content.value.toString());
-  if (node.parent.kind === 45) {
+  if (wrap) {
     js.Emitter.emit($this, ")");
   }
 };
 js.Emitter.emitDouble = function($this, node) {
-  if (node.parent.kind === 45) {
+  var wrap = node.parent.kind === 45 && node !== $this.toStringTarget;
+  if (wrap) {
     js.Emitter.emit($this, "(");
   }
   js.Emitter.emit($this, node.content.value.toString());
-  if (node.parent.kind === 45) {
+  if (wrap) {
     js.Emitter.emit($this, ")");
   }
 };
@@ -1809,14 +1812,32 @@ js.Emitter.emitUnary = function($this, node, precedence) {
     js.Emitter.emit($this, ")");
   }
 };
+js.Emitter.isToStringCall = function(node) {
+  if (node.kind === 47) {
+    var value = node.children[0];
+    return value.kind === 45 && value.symbol !== null && value.symbol.name === "toString" && Node.callArguments(node).length === 0;
+  }
+  return false;
+};
 js.Emitter.emitBinary = function($this, node, precedence) {
   var info = operatorInfo.get(node.kind);
   if (info.precedence < precedence) {
     js.Emitter.emit($this, "(");
   }
-  js.Emitter.emitExpression($this, node.children[0], info.precedence + (info.associativity === 2 | 0) | 0);
+  var left = node.children[0];
+  var right = node.children[1];
+  if (node.kind === 67) {
+    if (left.type !== null && left.type === $this.cache.stringType && js.Emitter.isToStringCall(right)) {
+      right = right.children[0].children[0];
+    } else if (right.type !== null && right.type === $this.cache.stringType && js.Emitter.isToStringCall(left)) {
+      left = left.children[0].children[0];
+    }
+  }
+  $this.toStringTarget = left;
+  js.Emitter.emitExpression($this, left, info.precedence + (info.associativity === 2 | 0) | 0);
   js.Emitter.emit($this, node.kind === 72 ? " === " : node.kind === 82 ? " !== " : " " + info.text + " ");
-  js.Emitter.emitExpression($this, node.children[1], info.precedence + (info.associativity === 1 | 0) | 0);
+  $this.toStringTarget = right;
+  js.Emitter.emitExpression($this, right, info.precedence + (info.associativity === 1 | 0) | 0);
   if (info.precedence < precedence) {
     js.Emitter.emit($this, ")");
   }
@@ -4182,7 +4203,7 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
         var argumentTypes = Type.argumentTypes($constructor.type);
         superArguments = [];
         for (var j = 0; j < argumentTypes.length; j = j + 1 | 0) {
-          var name = "_" + $arguments.length.toString();
+          var name = "_" + $arguments.length;
           var argument = Node.withChildren(new Node(16), [Node.withContent(new Node(33), new StringContent(name)), Node.withType(new Node(34), argumentTypes[j]), null]);
           argument.symbol = Resolver.createSymbol($this, name, 17);
           argument.symbol.node = argument;
@@ -4220,7 +4241,7 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
   }
   for (var i = 0; i < uninitializedMembers.length; i = i + 1 | 0) {
     var member = uninitializedMembers[i];
-    var name = "_" + $arguments.length.toString();
+    var name = "_" + $arguments.length;
     var argument = Node.withChildren(new Node(16), [Node.withContent(new Node(33), new StringContent(name)), Node.withType(new Node(34), member.type), null]);
     argument.symbol = Resolver.createSymbol($this, name, 17);
     argument.symbol.node = argument;
@@ -4260,7 +4281,7 @@ Resolver.generateDefaultToString = function($this, symbol) {
     for (j = 0; j < i; j = j + 1 | 0) {
       var other = fields[j];
       if (value === other.enumValue) {
-        Log.error($this.log, enclosingNode.children[0].range, "Cannot automatically generate \"toString\" for \"" + enclosingSymbol.name + "\" because \"" + field.name + "\" and \"" + other.name + "\" both have the same value " + value.toString());
+        Log.error($this.log, enclosingNode.children[0].range, "Cannot automatically generate \"toString\" for \"" + enclosingSymbol.name + "\" because \"" + field.name + "\" and \"" + other.name + "\" both have the same value " + value);
         break;
       }
     }
@@ -6475,26 +6496,22 @@ function quoteString(text, quote) {
     var c = text.charCodeAt(i);
     if (c === quote) {
       result += text.slice(start, i) + "\\" + quoteString;
-      start = i + 1 | 0;
     } else if (c === 10) {
       result += text.slice(start, i) + "\\n";
-      start = i + 1 | 0;
     } else if (c === 13) {
       result += text.slice(start, i) + "\\r";
-      start = i + 1 | 0;
     } else if (c === 9) {
       result += text.slice(start, i) + "\\t";
-      start = i + 1 | 0;
     } else if (c === 0) {
       result += text.slice(start, i) + "\\0";
-      start = i + 1 | 0;
     } else if (c === 92) {
       result += text.slice(start, i) + "\\\\";
-      start = i + 1 | 0;
     } else if (c < 32 || c >= 127 && c <= 255) {
       result += text.slice(start, i) + "\\x" + HEX[c >> 4] + HEX[c & 15];
-      start = i + 1 | 0;
+    } else {
+      continue;
     }
+    start = i + 1 | 0;
   }
   result += text.slice(start, i) + quoteString;
   return result;
@@ -6517,15 +6534,15 @@ function bytesToString(bytes) {
     return "1 byte";
   }
   if (bytes < 1024) {
-    return bytes.toString() + " bytes";
+    return bytes + " bytes";
   }
   if (bytes < 1048576) {
-    return (Math.round(bytes / 1024 * 10) / 10).toString() + "kb";
+    return Math.round(bytes / 1024 * 10) / 10 + "kb";
   }
   if (bytes < 1073741824) {
-    return (Math.round(bytes / 1048576 * 10) / 10).toString() + "mb";
+    return Math.round(bytes / 1048576 * 10) / 10 + "mb";
   }
-  return (Math.round(bytes / 1073741824 * 10) / 10).toString() + "gb";
+  return Math.round(bytes / 1073741824 * 10) / 10 + "gb";
 }
 frontend.printError = function(text) {
   $in.io.printWithColor(91, "error: ");
@@ -6573,35 +6590,28 @@ frontend.main = function(args) {
     }
     if (arg.charCodeAt(0) !== 45) {
       inputs.push(arg);
-      continue;
-    }
-    if (arg === "-help" || arg === "--help" || arg === "-h") {
+    } else if (arg === "-help" || arg === "--help" || arg === "-h") {
       frontend.printUsage();
       return 0;
     } else if (arg === "-verbose" || arg === "--verbose") {
       flags.verbose = true;
-      continue;
     } else if (arg === "-optimize" || arg === "--optimize") {
       flags.optimize = true;
-      continue;
     } else if (arg === "-js-source-map" || arg === "--js-source-map") {
       flags.jsSourceMap = true;
-      continue;
     } else if ($in.string.startsWith(arg, "-target=") || $in.string.startsWith(arg, "--target=")) {
       flags.target = frontend.afterEquals(arg);
-      continue;
     } else if ($in.string.startsWith(arg, "-output-file=") || $in.string.startsWith(arg, "--output-file=")) {
       flags.outputFile = frontend.afterEquals(arg);
-      continue;
     } else if ($in.string.startsWith(arg, "-prepend-file=") || $in.string.startsWith(arg, "--prepend-file=")) {
       prepend.push(frontend.afterEquals(arg));
-      continue;
     } else if ($in.string.startsWith(arg, "-append-file=") || $in.string.startsWith(arg, "--append-file=")) {
       append.push(frontend.afterEquals(arg));
-      continue;
+    } else {
+      frontend.printError("Unknown flag " + quoteString(arg, 34));
+      return 1;
     }
-    frontend.printError("Unknown flag " + quoteString(arg, 34));
-    return 1;
+    continue;
   }
   if (inputs.length === 0) {
     frontend.printError("Missing input files");
@@ -6683,13 +6693,13 @@ frontend.main = function(args) {
   var hasWarnings = log.warningCount > 0;
   var summary = "";
   if (hasWarnings) {
-    summary += log.warningCount.toString() + (log.warningCount === 1 ? " warning" : " warnings");
+    summary += log.warningCount + (log.warningCount === 1 ? " warning" : " warnings");
     if (hasErrors) {
       summary += " and ";
     }
   }
   if (hasErrors) {
-    summary += log.errorCount.toString() + (log.errorCount === 1 ? " error" : " errors");
+    summary += log.errorCount + (log.errorCount === 1 ? " error" : " errors");
   }
   if (hasWarnings || hasErrors) {
     io.print(summary + " generated\n");
@@ -7748,10 +7758,10 @@ function semanticErrorDifferentModifiers(log, range, name, previous) {
   }
 }
 function semanticErrorParameterCount(log, range, expected, found) {
-  Log.error(log, range, "Expected " + expected.toString() + (expected === 1 ? " type parameter" : " type parameters") + " but found " + found.toString() + (found === 1 ? " type parameter" : " type parameters"));
+  Log.error(log, range, "Expected " + expected + (expected === 1 ? " type parameter" : " type parameters") + " but found " + found + (found === 1 ? " type parameter" : " type parameters"));
 }
 function semanticErrorArgumentCount(log, range, expected, found) {
-  Log.error(log, range, "Expected " + expected.toString() + (expected === 1 ? " argument" : " arguments") + " but found " + found.toString() + (found === 1 ? " argument" : " arguments"));
+  Log.error(log, range, "Expected " + expected + (expected === 1 ? " argument" : " arguments") + " but found " + found + (found === 1 ? " argument" : " arguments"));
 }
 function semanticErrorDuplicateCase(log, range, previous) {
   Log.error(log, range, "Duplicate case value");
@@ -7904,7 +7914,7 @@ service.typeFromPosition = function(node, source, index) {
     case 19:
       var text = Type.toString(type) + " " + symbol.name;
       if (Symbol.isEnumValue(symbol)) {
-        text += " = " + symbol.enumValue.toString();
+        text += " = " + symbol.enumValue;
       }
       result.declaration = text;
       break;
