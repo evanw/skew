@@ -1150,8 +1150,8 @@ class Resolver {
         var type = symbol.enclosingSymbol.type;
         variableType = Node.createType(type).withSymbol(symbol.enclosingSymbol);
 
-        // All enum values are final
-        symbol.flags |= .FINAL;
+        // All enum values are final and always transfer the import/export flags
+        symbol.flags |= SymbolFlag.FINAL | symbol.enclosingSymbol.flags & (SymbolFlag.IMPORT | SymbolFlag.EXPORT);
 
         // Look at the initializer now
         var variableValue = node.variableValue();

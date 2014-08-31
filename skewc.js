@@ -3907,7 +3907,7 @@ Resolver.initializeVariable = function($this, symbol) {
     } else if (symbol.enclosingSymbol !== null) {
       var type = symbol.enclosingSymbol.type;
       variableType = Node.withSymbol(Node.withType(new Node(34), type), symbol.enclosingSymbol);
-      symbol.flags |= 256;
+      symbol.flags |= 256 | symbol.enclosingSymbol.flags & 3072;
       var variableValue = node.children[2];
       if (variableValue !== null) {
         Resolver.resolveAsExpressionWithConversion($this, variableValue, $this.cache.intType, 0);
