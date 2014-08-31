@@ -135,7 +135,7 @@ in Node {
 
   bool hasNoSideEffects() {
     switch (kind) {
-      case .NAME, .THIS, .TRUE, .FALSE, .INT, .FLOAT, .DOUBLE, .STRING, .NULL { return true; }
+      case .NAME, .THIS, .TRUE, .FALSE, .INT, .FLOAT, .DOUBLE, .STRING, .NULL, .DEFAULT { return true; }
       case .DOT { return dotTarget().hasNoSideEffects(); }
       default { return false; }
     }

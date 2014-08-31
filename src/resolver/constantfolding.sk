@@ -45,21 +45,26 @@ class ConstantFolder {
           foldConstants(child);
         }
       }
+
+      // Test these here since hasChildren() must be true
       if (kind == .BLOCK) {
         foldBlock(node);
+        return;
+      } else if (kind == .SEQUENCE) {
+        foldSequence(node);
         return;
       }
     }
 
     // Separating the if blocks into separate functions makes the JavaScript JIT go faster
-    if (kind == .NAME) { foldName(node); }
-    else if (kind.isCast()) { foldCast(node); }
-    else if (kind.isUnaryOperator()) { foldUnaryOperator(node, kind); }
-    else if (kind.isBinaryOperator()) { foldBinaryOperator(node, kind); }
-    else if (kind == .HOOK) { foldHook(node); }
+    if (kind == .NAME) foldName(node);
+    else if (kind.isCast()) foldCast(node);
+    else if (kind.isUnaryOperator()) foldUnaryOperator(node, kind);
+    else if (kind.isBinaryOperator()) foldBinaryOperator(node, kind);
+    else if (kind == .HOOK) foldHook(node);
   }
 
-  static void foldBlock(Node node) {
+  void foldBlock(Node node) {
     for (var i = 0; i < node.children.length; i++) {
       var child = node.children.get(i);
 
@@ -270,12 +275,37 @@ class ConstantFolder {
     }
   }
 
-  static void foldHook(Node node) {
+  void foldHook(Node node) {
     var testKind = node.hookTest().kind;
     if (testKind == .TRUE) {
       node.replaceWith(node.hookTrue().remove());
     } else if (testKind == .FALSE) {
       node.replaceWith(node.hookFalse().remove());
+    }
+  }
+
+  void foldSequence(Node node) {
+    // Remove all children without side effects that aren't the result
+    var i = 0;
+    while (i + 1 < node.children.length) {
+      if (node.children.get(i).hasNoSideEffects()) {
+        node.removeChildAtIndex(i);
+      } else {
+        i++;
+      }
+    }
+
+    // Replace a single-element sequence with the single element
+    if (node.children.length == 1) {
+      node.become(node.children.get(0).remove());
+    }
+
+    // Otherwise, try to drop the result if it has no side effects
+    else {
+      var last = node.children.get(i);
+      if (last.hasNoSideEffects() && node.parent.kind == .EXPRESSION) {
+        last.remove();
+      }
     }
   }
 }

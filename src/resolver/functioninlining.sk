@@ -192,48 +192,64 @@ class InliningGraph {
     // Inline functions consisting of a single return statement
     if (symbol.kind == .GLOBAL_FUNCTION && (symbol.isInline() || options.optimize && options.targetFormat == .JS)) {
       var block = symbol.node.functionBlock();
-      if (block != null && block.hasChildren()) {
-        var first = block.children.get(0);
-        Node inlineValue = null;
+      if (block == null) {
+        return null;
+      }
 
-        // If the first value in the function is a return statement, then the
-        // function body doesn't need to only have one statement. Subsequent
-        // statements are just dead code and will never be executed anyway.
-        if (first.kind == .RETURN) {
-          inlineValue = first.returnValue();
+      // Replace functions with empty bodies with null when optimizing, since
+      // null expressions will automatically be removed by constant folding
+      if (!block.hasChildren()) {
+        if (options.optimize && options.targetFormat == .JS) {
+          List<Symbol> arguments = {};
+          var argumentVariables = symbol.node.functionArguments().children;
+          for (var i = 0; i < argumentVariables.length; i++) {
+            arguments.push(argumentVariables.get(i).symbol);
+          }
+          return InliningInfo(symbol, Node.createNull().withType(symbol.type.resultType()), info.callSites, arguments, arguments);
         }
+        return null;
+      }
 
-        // Otherwise, this statement must be a lone expression statement
-        else if (first.kind == .EXPRESSION && block.children.length == 1) {
-          inlineValue = first.expressionValue();
-        }
+      var first = block.children.get(0);
+      Node inlineValue = null;
 
-        if (inlineValue != null) {
-          // Count the number of times each symbol is observed. Argument
-          // variables that are used more than once may need a let statement
-          // to avoid changing the semantics of the call site. For now, just
-          // only inline functions where each argument is used exactly once.
-          var symbolCounts = IntMap<int>();
-          if (recursivelyCountArgumentUses(inlineValue, symbolCounts)) {
-            List<Symbol> unusedArguments = {};
-            List<Symbol> arguments = {};
-            var argumentVariables = symbol.node.functionArguments().children;
-            var isSimpleSubstitution = true;
-            for (var j = 0; j < argumentVariables.length; j++) {
-              var argument = argumentVariables.get(j).symbol;
-              assert argument != null;
-              var count = symbolCounts.getOrDefault(argument.uniqueID, 0);
-              if (count == 0) {
-                unusedArguments.push(argument);
-              } else if (count != 1) {
-                isSimpleSubstitution = false;
-                break;
-              }
-              arguments.push(argument);
+      // If the first value in the function is a return statement, then the
+      // function body doesn't need to only have one statement. Subsequent
+      // statements are just dead code and will never be executed anyway.
+      if (first.kind == .RETURN) {
+        inlineValue = first.returnValue();
+      }
+
+      // Otherwise, this statement must be a lone expression statement
+      else if (first.kind == .EXPRESSION && block.children.length == 1) {
+        inlineValue = first.expressionValue();
+      }
+
+      if (inlineValue != null) {
+        // Count the number of times each symbol is observed. Argument
+        // variables that are used more than once may need a let statement
+        // to avoid changing the semantics of the call site. For now, just
+        // only inline functions where each argument is used exactly once.
+        var symbolCounts = IntMap<int>();
+        if (recursivelyCountArgumentUses(inlineValue, symbolCounts)) {
+          List<Symbol> unusedArguments = {};
+          List<Symbol> arguments = {};
+          var argumentVariables = symbol.node.functionArguments().children;
+          var isSimpleSubstitution = true;
+          for (var i = 0; i < argumentVariables.length; i++) {
+            var argument = argumentVariables.get(i).symbol;
+            assert argument != null;
+            var count = symbolCounts.getOrDefault(argument.uniqueID, 0);
+            if (count == 0) {
+              unusedArguments.push(argument);
+            } else if (count != 1) {
+              isSimpleSubstitution = false;
+              break;
             }
-            if (isSimpleSubstitution) {
-              return InliningInfo(symbol, inlineValue, info.callSites, arguments, unusedArguments);
-            }
+            arguments.push(argument);
+          }
+          if (isSimpleSubstitution) {
+            return InliningInfo(symbol, inlineValue, info.callSites, arguments, unusedArguments);
           }
         }
       }

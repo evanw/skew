@@ -324,6 +324,7 @@ Node.hasNoSideEffects = function($this) {
   case 42:
   case 43:
   case 37:
+  case 55:
     return true;
   case 45:
     return Node.hasNoSideEffects($this.children[0]);
@@ -1117,7 +1118,6 @@ function SplitPath(_0, _1) {
   this.directory = _0;
   this.entry = _1;
 }
-var trace = {};
 var frontend = {};
 frontend.Flags = function() {
   this.help = false;
@@ -2336,6 +2336,9 @@ ConstantFolder.foldConstants = function($this, node) {
     if (kind === 2) {
       ConstantFolder.foldBlock(node);
       return;
+    } else if (kind === 50) {
+      ConstantFolder.foldSequence(node);
+      return;
     }
   }
   if (kind === 33) {
@@ -2592,6 +2595,24 @@ ConstantFolder.foldHook = function(node) {
     Node.replaceWith(node, Node.remove(node.children[2]));
   }
 };
+ConstantFolder.foldSequence = function(node) {
+  var i = 0;
+  while ((i + 1 | 0) < node.children.length) {
+    if (Node.hasNoSideEffects(node.children[i])) {
+      Node.removeChildAtIndex(node, i);
+    } else {
+      i = i + 1 | 0;
+    }
+  }
+  if (node.children.length === 1) {
+    Node.become(node, Node.remove(node.children[0]));
+  } else {
+    var last = node.children[i];
+    if (Node.hasNoSideEffects(last) && node.parent.kind === 29) {
+      Node.remove(last);
+    }
+  }
+};
 function DeadCodeRemovalPass() {
   this.includedSymbols = new IntMap();
 }
@@ -2777,35 +2798,47 @@ InliningGraph.createInliningInfo = function(info, options) {
   var symbol = info.symbol;
   if (symbol.kind === 14 && ((symbol.flags & 512) !== 0 || options.optimize && options.targetFormat === 1)) {
     var block = symbol.node.children[2];
-    if (block !== null && Node.hasChildren(block)) {
-      var first = block.children[0];
-      var inlineValue = null;
-      if (first.kind === 24) {
-        inlineValue = first.children[0];
-      } else if (first.kind === 29 && block.children.length === 1) {
-        inlineValue = first.children[0];
+    if (block === null) {
+      return null;
+    }
+    if (!Node.hasChildren(block)) {
+      if (options.optimize && options.targetFormat === 1) {
+        var $arguments = [];
+        var argumentVariables = symbol.node.children[1].children;
+        for (var i = 0; i < argumentVariables.length; i = i + 1 | 0) {
+          $arguments.push(argumentVariables[i].symbol);
+        }
+        return new InliningInfo(symbol, Node.withType(new Node(37), symbol.type.relevantTypes[0]), info.callSites, $arguments, $arguments);
       }
-      if (inlineValue !== null) {
-        var symbolCounts = new IntMap();
-        if (InliningGraph.recursivelyCountArgumentUses(inlineValue, symbolCounts)) {
-          var unusedArguments = [];
-          var $arguments = [];
-          var argumentVariables = symbol.node.children[1].children;
-          var isSimpleSubstitution = true;
-          for (var j = 0; j < argumentVariables.length; j = j + 1 | 0) {
-            var argument = argumentVariables[j].symbol;
-            var count = symbolCounts.getOrDefault(argument.uniqueID, 0);
-            if (count === 0) {
-              unusedArguments.push(argument);
-            } else if (count !== 1) {
-              isSimpleSubstitution = false;
-              break;
-            }
-            $arguments.push(argument);
+      return null;
+    }
+    var first = block.children[0];
+    var inlineValue = null;
+    if (first.kind === 24) {
+      inlineValue = first.children[0];
+    } else if (first.kind === 29 && block.children.length === 1) {
+      inlineValue = first.children[0];
+    }
+    if (inlineValue !== null) {
+      var symbolCounts = new IntMap();
+      if (InliningGraph.recursivelyCountArgumentUses(inlineValue, symbolCounts)) {
+        var unusedArguments = [];
+        var $arguments = [];
+        var argumentVariables = symbol.node.children[1].children;
+        var isSimpleSubstitution = true;
+        for (var i = 0; i < argumentVariables.length; i = i + 1 | 0) {
+          var argument = argumentVariables[i].symbol;
+          var count = symbolCounts.getOrDefault(argument.uniqueID, 0);
+          if (count === 0) {
+            unusedArguments.push(argument);
+          } else if (count !== 1) {
+            isSimpleSubstitution = false;
+            break;
           }
-          if (isSimpleSubstitution) {
-            return new InliningInfo(symbol, inlineValue, info.callSites, $arguments, unusedArguments);
-          }
+          $arguments.push(argument);
+        }
+        if (isSimpleSubstitution) {
+          return new InliningInfo(symbol, inlineValue, info.callSites, $arguments, unusedArguments);
         }
       }
     }
@@ -3400,7 +3433,6 @@ Resolver.resolve = function($this, node, expectedType) {
     Resolver.resolveCall($this, node);
     break;
   case 48:
-    Resolver.unsupportedNodeKind(node);
     break;
   case 49:
     break;
@@ -4073,8 +4105,7 @@ Resolver.initializeMember = function($this, member) {
   if (member.type !== null) {
     return;
   }
-  trace.log("initializeMember " + Symbol.fullName(member.symbol) + (member.parameterizedType !== null ? " on " + Type.toString(member.parameterizedType) : ""));
-  trace.indent();
+  "initializeMember " + Symbol.fullName(member.symbol) + (member.parameterizedType !== null ? " on " + Type.toString(member.parameterizedType) : "");
   if (member.dependency !== null) {
     Resolver.initializeMember($this, member.dependency);
     member.type = member.dependency.type;
@@ -4086,7 +4117,6 @@ Resolver.initializeMember = function($this, member) {
   if (parameterizedType !== null && parameterizedType.substitutions !== null) {
     member.type = TypeCache.substitute($this.cache, member.type, parameterizedType.symbol.parameters, parameterizedType.substitutions);
   }
-  trace.dedent();
 };
 Resolver.generateDefaultConstructor = function($this, symbol) {
   var enclosingSymbol = symbol.enclosingSymbol;
@@ -4259,8 +4289,6 @@ Resolver.initializeSymbol = function($this, symbol) {
     Log.error($this.log, Node.firstNonExtensionSibling(symbol.node).children[0].range, "Cyclic declaration of " + ("\"" + symbol.name + "\""));
     symbol.type = $this.cache.errorType;
   }
-};
-Resolver.unsupportedNodeKind = function(node) {
 };
 Resolver.resolveArguments = function($this, $arguments, argumentTypes, outer, inner) {
   if (argumentTypes.length !== $arguments.length) {
@@ -4557,7 +4585,6 @@ Resolver.resolveFor = function($this, node) {
   $this.context.loop = oldLoop;
 };
 Resolver.resolveForEach = function($this, node) {
-  Resolver.unsupportedNodeKind(node);
   Resolver.checkStatementLocation($this, node);
   Resolver.resolve($this, node.children[0], null);
   Resolver.resolve($this, node.children[1], null);
@@ -5119,7 +5146,6 @@ Resolver.resolveTertiaryOperator = function($this, node) {
   Resolver.resolveAsExpression($this, left);
   Resolver.resolveAsExpression($this, middle);
   Resolver.resolveAsExpression($this, right);
-  Resolver.unsupportedNodeKind(node);
 };
 function Scope(_0) {
   this.type = null;
@@ -5498,8 +5524,7 @@ TypeCache.areTypeListsEqual = function(left, right) {
   return true;
 };
 TypeCache.substitute = function($this, type, parameters, substitutions) {
-  trace.log("substitute " + Type.toString(type) + " with " + Type.environmentToString(parameters, substitutions));
-  trace.indent();
+  "substitute " + Type.toString(type) + " with " + Type.environmentToString(parameters, substitutions);
   var result = null;
   if (type.symbol === null) {
     result = TypeCache.parameterize($this, null, TypeCache.substituteAll($this, type.relevantTypes, parameters, substitutions));
@@ -5509,8 +5534,7 @@ TypeCache.substitute = function($this, type, parameters, substitutions) {
   } else {
     result = TypeCache.parameterize($this, type, TypeCache.substituteAll($this, type.substitutions, parameters, substitutions));
   }
-  trace.log("substitution gave " + Type.toString(result));
-  trace.dedent();
+  "substitution gave " + Type.toString(result);
   return result;
 };
 TypeCache.substituteAll = function($this, types, parameters, substitutions) {
@@ -5538,8 +5562,7 @@ TypeCache.parameterize = function($this, unparameterized, substitutions) {
     $this.hashTable.set(hash, existingTypes);
   }
   if (symbol !== null && substitutions !== null) {
-    trace.log("parameterize " + (unparameterized !== null ? Type.toString(unparameterized) : "null") + " with " + Type.environmentToString(symbol.parameters, substitutions));
-    trace.indent();
+    "parameterize " + (unparameterized !== null ? Type.toString(unparameterized) : "null") + " with " + Type.environmentToString(symbol.parameters, substitutions);
   }
   var type = new Type(symbol);
   if (symbol !== null) {
@@ -5564,8 +5587,7 @@ TypeCache.parameterize = function($this, unparameterized, substitutions) {
       Type.addMember(type, clone);
     }
     if (substitutions !== null) {
-      trace.log("parameterize gave " + Type.toString(type));
-      trace.dedent();
+      "parameterize gave " + Type.toString(type);
     }
   } else {
     type.relevantTypes = substitutions;
@@ -6442,12 +6464,6 @@ function bytesToString(bytes) {
   }
   return (Math.round(bytes / 1073741824 * 10) / 10).toString() + "gb";
 }
-trace.indent = function() {
-};
-trace.log = function(text) {
-};
-trace.dedent = function() {
-};
 frontend.printError = function(text) {
   $in.io.printWithColor(91, "error: ");
   $in.io.printWithColor(1, text + "\n");
