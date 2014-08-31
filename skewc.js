@@ -1753,6 +1753,8 @@ js.Emitter.emitDefault = function($this, node) {
     js.Emitter.emit($this, "0");
   } else if (node.type === $this.cache.boolType) {
     js.Emitter.emit($this, "false");
+  } else if (node.type === $this.cache.stringType) {
+    js.Emitter.emit($this, "\"\"");
   } else if (Type.isReference(node.type)) {
     js.Emitter.emit($this, "null");
   } else {
@@ -2792,8 +2794,8 @@ InstanceToStaticPass.run = function(graph, options) {
         switch (callSite.kind) {
         case 47:
           var value = callSite.children[0];
-          var target;
-          var name;
+          var target = null;
+          var name = null;
           if (value.kind === 45) {
             target = Node.replaceWith(value.children[0], null);
             name = Node.replaceWith(value.children[1], null);
@@ -2919,7 +2921,7 @@ Resolver.setupScopesAndSymbols = function($this, node, scope) {
     if (declarationName !== null && node.symbol === null) {
       var name = declarationName.content.value;
       var member = Scope.findLocal(scope, name);
-      var symbol;
+      var symbol = null;
       if (member !== null) {
         symbol = member.symbol;
         Node.appendToSiblingChain(symbol.node, node);
@@ -3150,7 +3152,7 @@ Resolver.processUsingStatements = function($this) {
 };
 Resolver.resolveGlobalUsingValue = function($this, node) {
   node.type = $this.cache.errorType;
-  var member;
+  var member = null;
   if (node.kind === 33) {
     var name = node.content.value;
     member = $this.cache.globalType.members.getOrDefault(name, null);
@@ -3503,7 +3505,7 @@ Resolver.checkInsideBlock = function($this, node) {
   }
 };
 Resolver.checkDeclarationLocation = function($this, node, allowDeclaration) {
-  var parent;
+  var parent = null;
   for (parent = node.parent; parent !== null; parent = parent.parent) {
     if (parent.symbol !== null && (parent.symbol.flags & 16384) !== 0) {
       break;
@@ -3679,7 +3681,7 @@ Resolver.initializeObject = function($this, symbol) {
   var node = Node.firstNonExtensionSibling(symbol.node);
   var parameters = node.children[3];
   var type = symbol.type;
-  var where;
+  var where = "";
   switch (symbol.kind) {
   case 11:
     where = "on a class declaration";
@@ -3713,7 +3715,7 @@ Resolver.initializeFunction = function($this, symbol) {
     Resolver.unexpectedModifierIfPresent($this, symbol, 64, "outside an object declaration");
   }
   var node = symbol.node;
-  var resultType;
+  var resultType = null;
   if (node.kind === 15) {
     var result = node.children[3];
     Resolver.resolveAsParameterizedType($this, result);
@@ -4086,7 +4088,7 @@ Resolver.generateDefaultToString = function($this, symbol) {
   var enclosingNode = enclosingSymbol.node;
   var members = enclosingSymbol.type.members.values();
   var fields = [];
-  var i;
+  var i = 0;
   for (i = 0; i < members.length; i = i + 1 | 0) {
     var field = members[i].symbol;
     if (field.kind === 18 && (field.flags & 16) === 0) {
@@ -4100,7 +4102,7 @@ Resolver.generateDefaultToString = function($this, symbol) {
       break;
     }
     var value = field.enumValue;
-    var j;
+    var j = 0;
     for (j = 0; j < i; j = j + 1 | 0) {
       var other = fields[j];
       if (value === other.enumValue) {
@@ -4116,7 +4118,7 @@ Resolver.generateDefaultToString = function($this, symbol) {
   var extension = Node.withSymbol(Node.withChildren(new Node(13), [Node.withContent(new Node(33), new StringContent(enclosingSymbol.name)), block, null]), enclosingSymbol);
   Node.insertSiblingAfter(enclosingNode, extension);
   Node.appendToSiblingChain(enclosingNode, extension);
-  var statement;
+  var statement = null;
   if (fields.length === 0 || i < fields.length) {
     statement = Node.withChildren(new Node(24), [Node.withContent(new Node(43), new StringContent(""))]);
   } else {
@@ -4385,7 +4387,7 @@ Resolver.resolveFunction = function($this, node) {
             Node.replaceWith(value, new Node(49));
             Node.insertChild(memberInitializers, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(5), [Node.withType(Node.withSymbol(Node.withContent(new Node(33), new StringContent(memberSymbol.name)), memberSymbol), member.type), value]));
           } else {
-            var j;
+            var j = 0;
             for (j = 0; j < memberInitializers.children.length; j = j + 1 | 0) {
               if (memberInitializers.children[j].children[0].content.value === memberSymbol.name) {
                 break;
@@ -4438,6 +4440,8 @@ Resolver.resolveVariable = function($this, node) {
   }
   if (value !== null) {
     Resolver.resolveAsExpressionWithConversion($this, value, Symbol.isEnumValue(symbol) ? $this.cache.intType : symbol.type, 0);
+  } else if (symbol.type !== $this.cache.errorType && node.parent.kind === 6 && symbol.kind !== 19) {
+    node.children[2] = Node.withType(Node.withChildren(new Node(55), [Node.withType(new Node(34), symbol.type)]), symbol.type);
   }
 };
 Resolver.resolveAlias = function($this, node) {
@@ -4559,7 +4563,7 @@ Resolver.resolveSwitch = function($this, node) {
       if (caseValue.type === $this.cache.errorType) {
         continue;
       }
-      var k;
+      var k = 0;
       for (k = 0; k < uniqueValues.length; k = k + 1 | 0) {
         var original = uniqueValues[k];
         if (original.kind === caseValue.kind && Content.equal(original.content, caseValue.content)) {
@@ -5200,7 +5204,7 @@ SymbolMotionPass.createShadowForSymbol = function($this, symbol) {
   var enclosingSymbol = symbol.enclosingSymbol;
   var enclosingType = enclosingSymbol.type;
   var inMember = enclosingType.members.getOrDefault("in", null);
-  var inType;
+  var inType = null;
   if (inMember !== null) {
     inType = inMember.type;
   } else {
@@ -5421,7 +5425,7 @@ TypeCache.areTypeListsEqual = function(left, right) {
 TypeCache.substitute = function($this, type, parameters, substitutions) {
   trace.log("substitute " + Type.toString(type) + " with " + Type.environmentToString(parameters, substitutions));
   trace.indent();
-  var result;
+  var result = null;
   if (type.symbol === null) {
     result = TypeCache.parameterize($this, null, TypeCache.substituteAll($this, type.relevantTypes, parameters, substitutions));
   } else if (!Type.hasParameters(type)) {
@@ -5594,7 +5598,7 @@ LanguageService.prototype.checkForDiagnostics = function(input) {
     var range = diagnostic.range;
     if (range.source === this.previousSource) {
       var start = Source.indexToLineColumn(range.source, range.start);
-      var type;
+      var type = "";
       switch (diagnostic.kind) {
       case 0:
         type = "error";
@@ -6306,7 +6310,7 @@ function quoteString(text, quote) {
   var quoteString = String.fromCharCode(quote);
   result += quoteString;
   var start = 0;
-  var i;
+  var i = 0;
   for (i = 0; i < text.length; i = i + 1 | 0) {
     var c = text.charCodeAt(i);
     if (c === quote) {
@@ -6337,7 +6341,7 @@ function quoteString(text, quote) {
 }
 function replace(text, before, after) {
   var result = "";
-  var index;
+  var index = 0;
   while ((index = text.indexOf(before)) !== -1) {
     result += text.slice(0, index) + after;
     text = text.slice(index + before.length | 0, text.length);
@@ -6449,7 +6453,7 @@ frontend.main = function(args) {
     frontend.printError("Missing input files");
     return 1;
   }
-  var target;
+  var target = 0;
   if (flags.target === "") {
     frontend.printError("Set the target language with \"--target=___\"");
     return 1;
@@ -7677,7 +7681,7 @@ function createSymbolFlagToName() {
 }
 service.nodeFromPosition = function(node, source, index) {
   while (Node.hasChildren(node)) {
-    var i;
+    var i = 0;
     for (i = node.children.length - 1 | 0; i >= 0; i = i - 1 | 0) {
       var child = node.children[i];
       if (child !== null && child.range.source === source && Range.touches(child.range, index)) {

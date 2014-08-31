@@ -1995,6 +1995,11 @@ class Resolver {
     if (value != null) {
       resolveAsExpressionWithConversion(value, symbol.isEnumValue() ? cache.intType : symbol.type, .IMPLICIT_CAST);
     }
+
+    // Automatically initialize uninitialized variables to their default value
+    else if (!symbol.type.isError(cache) && node.parent.kind == .VARIABLE_CLUSTER && symbol.kind != .INSTANCE_VARIABLE) {
+      node.children.set(2, Node.createDefault(Node.createType(symbol.type)).withType(symbol.type));
+    }
   }
 
   void resolveVariableCluster(Node node) {

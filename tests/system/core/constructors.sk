@@ -146,12 +146,16 @@ string s = string();
 ");
 
 test("
+var v = default(void);
 int i = default(int);
 bool b = default(bool);
 float f = default(float);
 double d = default(double);
 string s = default(string);
 ", "
+<stdin>:1:17: error: Cannot use type \"void\" here
+var v = default(void);
+                ~~~~
 ");
 
 test("
