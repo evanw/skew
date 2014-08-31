@@ -528,13 +528,13 @@ namespace js {
     }
 
     void emitHook(Node node, Precedence precedence) {
-      if (Precedence.ASSIGN < precedence) emit("(");
+      if (.ASSIGN < precedence) emit("(");
       emitExpression(node.hookTest(), .LOGICAL_OR);
       emit(" ? ");
       emitExpression(node.hookTrue(), .ASSIGN);
       emit(" : ");
       emitExpression(node.hookFalse(), .ASSIGN);
-      if (Precedence.ASSIGN < precedence) emit(")");
+      if (.ASSIGN < precedence) emit(")");
     }
 
     void emitInt(Node node) {
@@ -588,9 +588,9 @@ namespace js {
     }
 
     void emitSequence(Node node, Precedence precedence) {
-      if (Precedence.COMMA <= precedence) emit("(");
+      if (.COMMA <= precedence) emit("(");
       emitCommaSeparatedExpressions(node.children);
-      if (Precedence.COMMA <= precedence) emit(")");
+      if (.COMMA <= precedence) emit(")");
     }
 
     void emitLambda(Node node, bool wasStartOfExpression) {
@@ -614,13 +614,13 @@ namespace js {
       var value = node.unaryValue();
       var info = operatorInfo.get(node.kind);
       if (info.precedence < precedence) emit("(");
-      var isPostfix = info.precedence == Precedence.UNARY_POSTFIX;
+      var isPostfix = info.precedence == .UNARY_POSTFIX;
       if (!isPostfix) {
         emit(info.text);
 
         // Prevent "- -1" from becoming "--1"
         if (node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
-            node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT || value.kind == NodeKind.INT && value.asInt() < 0)) {
+            node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT || value.kind == .INT && value.asInt() < 0)) {
           emit(" ");
         }
       }
@@ -669,13 +669,13 @@ namespace js {
     }
 
     void emitTertiary(Node node, Precedence precedence) {
-      if (Precedence.ASSIGN < precedence) emit("(");
+      if (.ASSIGN < precedence) emit("(");
       emitExpression(node.tertiaryLeft(), .MEMBER);
       emit("[");
       emitExpression(node.tertiaryMiddle(), .LOWEST);
       emit("] = ");
       emitExpression(node.tertiaryRight(), .ASSIGN);
-      if (Precedence.ASSIGN < precedence) emit(")");
+      if (.ASSIGN < precedence) emit(")");
     }
 
     bool alwaysConvertsOperandsToInt(NodeKind kind) {

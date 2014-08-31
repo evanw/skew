@@ -165,27 +165,75 @@ test("
 enum flags Foo { FOO, BAR }
 
 Foo or_a = .FOO | ~.BAR;
-var or_b = Foo.FOO | ~.BAR;
+bool or_b = Foo.FOO | ~.BAR;
 Foo or_c = ~.FOO | .BAR;
-var or_d = ~.FOO | Foo.BAR;
+bool or_d = ~.FOO | Foo.BAR;
 
 Foo and_a = .FOO & ~.BAR;
-var and_b = Foo.FOO & ~.BAR;
+bool and_b = Foo.FOO & ~.BAR;
 Foo and_c = ~.FOO & .BAR;
-var and_d = ~.FOO & Foo.BAR;
+bool and_d = ~.FOO & Foo.BAR;
 
 Foo xor_a = .FOO ^ ~.BAR;
-var xor_b = Foo.FOO ^ ~.BAR;
+bool xor_b = Foo.FOO ^ ~.BAR;
 Foo xor_c = ~.FOO ^ .BAR;
-var xor_d = ~.FOO ^ Foo.BAR;
+bool xor_d = ~.FOO ^ Foo.BAR;
 ", "
+<stdin>:4:13: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
+bool or_b = Foo.FOO | ~.BAR;
+            ~~~~~~~~~~~~~~~
+<stdin>:6:13: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
+bool or_d = ~.FOO | Foo.BAR;
+            ~~~~~~~~~~~~~~~
+<stdin>:9:14: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
+bool and_b = Foo.FOO & ~.BAR;
+             ~~~~~~~~~~~~~~~
+<stdin>:11:14: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
+bool and_d = ~.FOO & Foo.BAR;
+             ~~~~~~~~~~~~~~~
+<stdin>:14:14: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
+bool xor_b = Foo.FOO ^ ~.BAR;
+             ~~~~~~~~~~~~~~~
+<stdin>:16:14: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
+bool xor_d = ~.FOO ^ Foo.BAR;
+             ~~~~~~~~~~~~~~~
 ");
 
 test("
 enum flags Foo { FOO, BAR, BAZ }
 Foo a = .FOO | .BAR & .BAZ;
-var b = ~Foo.FOO | .BAR & .BAZ;
-var c = .FOO | ~Foo.BAR & .BAZ;
-var d = .FOO | .BAR & ~Foo.BAZ;
+bool b = ~Foo.FOO | .BAR & .BAZ;
+bool c = .FOO | ~Foo.BAR & .BAZ;
+bool d = .FOO | .BAR & ~Foo.BAZ;
 ", "
+<stdin>:3:10: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
+bool b = ~Foo.FOO | .BAR & .BAZ;
+         ~~~~~~~~~~~~~~~~~~~~~~
+<stdin>:4:10: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
+bool c = .FOO | ~Foo.BAR & .BAZ;
+         ~~~~~~~~~~~~~~~~~~~~~~
+<stdin>:5:10: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
+bool d = .FOO | .BAR & ~Foo.BAZ;
+         ~~~~~~~~~~~~~~~~~~~~~~
+");
+
+test("
+enum Foo { FOO, BAR }
+int a = Foo.FOO < .BAR;
+int b = .FOO > Foo.BAR;
+int c = Foo.FOO <= .BAR;
+int d = .FOO >= Foo.BAR;
+", "
+<stdin>:2:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int a = Foo.FOO < .BAR;
+        ~~~~~~~~~~~~~~
+<stdin>:3:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int b = .FOO > Foo.BAR;
+        ~~~~~~~~~~~~~~
+<stdin>:4:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int c = Foo.FOO <= .BAR;
+        ~~~~~~~~~~~~~~~
+<stdin>:5:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int d = .FOO >= Foo.BAR;
+        ~~~~~~~~~~~~~~~
 ");

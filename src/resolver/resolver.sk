@@ -2685,6 +2685,16 @@ class Resolver {
     return true;
   }
 
+  void resolveWithTypeContextTransfer(Node left, Node right) {
+    if (!needsTypeContext(left)) {
+      resolveAsExpression(left);
+      resolveAsExpressionWithTypeContext(right, left.type);
+    } else if (!needsTypeContext(right)) {
+      resolveAsExpression(right);
+      resolveAsExpressionWithTypeContext(left, right.type);
+    }
+  }
+
   void resolveBinaryOperator(Node node) {
     var kind = node.kind;
     var left = node.binaryLeft();
@@ -2712,17 +2722,12 @@ class Resolver {
       }
     }
 
-    // Special-case equality comparisons to provide type context
-    else if (kind == .EQUAL || kind == .NOT_EQUAL) {
-      var leftNeedsContext = needsTypeContext(left);
-      var rightNeedsContext = needsTypeContext(right);
-      if (leftNeedsContext && !rightNeedsContext) {
-        resolveAsExpression(right);
-        resolveAsExpressionWithTypeContext(left, right.type);
-      } else if (!leftNeedsContext && rightNeedsContext) {
-        resolveAsExpression(left);
-        resolveAsExpressionWithTypeContext(right, left.type);
-      }
+    // Special-case equality comparisons and relational operators on enum types
+    // to transfer type context from left to right or right to left
+    else if (kind == .EQUAL || kind == .NOT_EQUAL ||
+        kind == .LESS_THAN || kind == .GREATER_THAN ||
+        kind == .LESS_THAN_OR_EQUAL || kind == .GREATER_THAN_OR_EQUAL) {
+      resolveWithTypeContextTransfer(left, right);
     }
 
     // Special-case bitwise operators on enum flags types
@@ -2730,12 +2735,8 @@ class Resolver {
       if (typeContext != null && typeContext.isEnumFlags()) {
         resolveAsExpressionWithTypeContext(left, typeContext);
         resolveAsExpressionWithTypeContext(right, typeContext);
-      } else if (!needsTypeContext(left)) {
-        resolveAsExpression(left);
-        resolveAsExpressionWithTypeContext(right, left.type);
-      } else if (!needsTypeContext(right)) {
-        resolveAsExpression(right);
-        resolveAsExpressionWithTypeContext(left, right.type);
+      } else {
+        resolveWithTypeContextTransfer(left, right);
       }
     }
 

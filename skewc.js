@@ -5119,6 +5119,15 @@ Resolver.wrapWithToStringCall = function($this, node) {
   Node.become(node, $call);
   return true;
 };
+Resolver.resolveWithTypeContextTransfer = function($this, left, right) {
+  if (!Resolver.needsTypeContext($this, left)) {
+    Resolver.resolveAsExpression($this, left);
+    Resolver.resolveAsExpressionWithTypeContext($this, right, left.type);
+  } else if (!Resolver.needsTypeContext($this, right)) {
+    Resolver.resolveAsExpression($this, right);
+    Resolver.resolveAsExpressionWithTypeContext($this, left, right.type);
+  }
+};
 Resolver.resolveBinaryOperator = function($this, node) {
   var kind = node.kind;
   var left = node.children[0];
@@ -5139,26 +5148,14 @@ Resolver.resolveBinaryOperator = function($this, node) {
       node.type = left.type;
       return;
     }
-  } else if (kind === 72 || kind === 82) {
-    var leftNeedsContext = Resolver.needsTypeContext($this, left);
-    var rightNeedsContext = Resolver.needsTypeContext($this, right);
-    if (leftNeedsContext && !rightNeedsContext) {
-      Resolver.resolveAsExpression($this, right);
-      Resolver.resolveAsExpressionWithTypeContext($this, left, right.type);
-    } else if (!leftNeedsContext && rightNeedsContext) {
-      Resolver.resolveAsExpression($this, left);
-      Resolver.resolveAsExpressionWithTypeContext($this, right, left.type);
-    }
+  } else if (kind === 72 || kind === 82 || kind === 77 || kind === 73 || kind === 78 || kind === 74) {
+    Resolver.resolveWithTypeContextTransfer($this, left, right);
   } else if (kind === 68 || kind === 69 || kind === 70) {
     if ($this.typeContext !== null && Type.isEnumFlags($this.typeContext)) {
       Resolver.resolveAsExpressionWithTypeContext($this, left, $this.typeContext);
       Resolver.resolveAsExpressionWithTypeContext($this, right, $this.typeContext);
-    } else if (!Resolver.needsTypeContext($this, left)) {
-      Resolver.resolveAsExpression($this, left);
-      Resolver.resolveAsExpressionWithTypeContext($this, right, left.type);
-    } else if (!Resolver.needsTypeContext($this, right)) {
-      Resolver.resolveAsExpression($this, right);
-      Resolver.resolveAsExpressionWithTypeContext($this, left, right.type);
+    } else {
+      Resolver.resolveWithTypeContextTransfer($this, left, right);
     }
   }
   Resolver.resolveAsExpression($this, left);
