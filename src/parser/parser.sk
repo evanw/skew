@@ -578,28 +578,28 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case .CONTINUE { return parseContinue(context); }
     case .DO { return parseDoWhile(context); }
     case .ENUM { return parseEnum(context); }
-    case .EXPORT { return parseModifier(context, hint, SymbolFlag.EXPORT); }
-    case .FINAL { return parseModifier(context, hint, SymbolFlag.FINAL); }
+    case .EXPORT { return parseModifier(context, hint, .EXPORT); }
+    case .FINAL { return parseModifier(context, hint, .FINAL); }
     case .FOR { return parseFor(context); }
     case .IDENTIFIER, .VAR { return parsePossibleTypedDeclaration(context, hint); }
     case .IF { return parseIf(context); }
-    case .IMPORT { return parseModifier(context, hint, SymbolFlag.IMPORT); }
+    case .IMPORT { return parseModifier(context, hint, .IMPORT); }
     case .IN { return parseExtension(context); }
-    case .INLINE { return parseModifier(context, hint, SymbolFlag.INLINE); }
+    case .INLINE { return parseModifier(context, hint, .INLINE); }
     case .INTERFACE { return parseObject(context, .INTERFACE); }
     case .NAMESPACE { return parseNamespace(context); }
     case .NEW { return parseConstructor(context, hint); }
-    case .OVERRIDE { return parseModifier(context, hint, SymbolFlag.OVERRIDE); }
-    case .PRIVATE { return parseModifier(context, hint, SymbolFlag.PRIVATE); }
-    case .PROTECTED { return parseModifier(context, hint, SymbolFlag.PROTECTED); }
-    case .PUBLIC { return parseModifier(context, hint, SymbolFlag.PUBLIC); }
+    case .OVERRIDE { return parseModifier(context, hint, .OVERRIDE); }
+    case .PRIVATE { return parseModifier(context, hint, .PRIVATE); }
+    case .PROTECTED { return parseModifier(context, hint, .PROTECTED); }
+    case .PUBLIC { return parseModifier(context, hint, .PUBLIC); }
     case .RETURN { return parseReturn(context); }
-    case .STATIC { return parseModifier(context, hint, SymbolFlag.STATIC); }
+    case .STATIC { return parseModifier(context, hint, .STATIC); }
     case .STRUCT { return parseObject(context, .STRUCT); }
     case .SWITCH { return parseSwitch(context); }
     case .USING { return parseUsing(context); }
     case .ALIAS { return parseAlias(context); }
-    case .VIRTUAL { return parseModifier(context, hint, SymbolFlag.VIRTUAL); }
+    case .VIRTUAL { return parseModifier(context, hint, .VIRTUAL); }
     case .WHILE { return parseWhile(context); }
     default { return parseExpression(context); }
   }

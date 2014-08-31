@@ -218,51 +218,51 @@ class Symbol {
   }
 
   bool isPublic() {
-    return (flags & SymbolFlag.PUBLIC) != 0;
+    return (flags & .PUBLIC) != 0;
   }
 
   bool isPrivate() {
-    return (flags & SymbolFlag.PRIVATE) != 0;
+    return (flags & .PRIVATE) != 0;
   }
 
   bool isProtected() {
-    return (flags & SymbolFlag.PROTECTED) != 0;
+    return (flags & .PROTECTED) != 0;
   }
 
   bool isAbstract() {
-    return (flags & SymbolFlag.ABSTRACT) != 0;
+    return (flags & .ABSTRACT) != 0;
   }
 
   bool isFromExtension() {
-    return (flags & SymbolFlag.FROM_EXTENSION) != 0;
+    return (flags & .FROM_EXTENSION) != 0;
   }
 
   bool isOverride() {
-    return (flags & SymbolFlag.OVERRIDE) != 0;
+    return (flags & .OVERRIDE) != 0;
   }
 
   bool isStatic() {
-    return (flags & SymbolFlag.STATIC) != 0;
+    return (flags & .STATIC) != 0;
   }
 
   bool isVirtual() {
-    return (flags & SymbolFlag.VIRTUAL) != 0;
+    return (flags & .VIRTUAL) != 0;
   }
 
   bool isFinal() {
-    return (flags & SymbolFlag.FINAL) != 0;
+    return (flags & .FINAL) != 0;
   }
 
   bool isInline() {
-    return (flags & SymbolFlag.INLINE) != 0;
+    return (flags & .INLINE) != 0;
   }
 
   bool isImport() {
-    return (flags & SymbolFlag.IMPORT) != 0;
+    return (flags & .IMPORT) != 0;
   }
 
   bool isExport() {
-    return (flags & SymbolFlag.EXPORT) != 0;
+    return (flags & .EXPORT) != 0;
   }
 
   bool isImportOrExport() {
@@ -270,25 +270,25 @@ class Symbol {
   }
 
   bool isUninitialized() {
-    assert (flags & SymbolFlag.INITIALIZE_MASK) != .INITIALIZE_MASK;
-    return (flags & SymbolFlag.INITIALIZE_MASK) == 0;
+    assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK;
+    return (flags & .INITIALIZE_MASK) == 0;
   }
 
   bool isInitializing() {
-    assert (flags & SymbolFlag.INITIALIZE_MASK) != .INITIALIZE_MASK;
-    return (flags & SymbolFlag.INITIALIZING) != 0;
+    assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK;
+    return (flags & .INITIALIZING) != 0;
   }
 
   bool isInitialized() {
-    assert (flags & SymbolFlag.INITIALIZE_MASK) != .INITIALIZE_MASK;
-    return (flags & SymbolFlag.INITIALIZED) != 0;
+    assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK;
+    return (flags & .INITIALIZED) != 0;
   }
 
   bool hasLocationError() {
-    return (flags & SymbolFlag.HAS_LOCATION_ERROR) != 0;
+    return (flags & .HAS_LOCATION_ERROR) != 0;
   }
 
   bool hasModifierErrors() {
-    return (flags & SymbolFlag.HAS_MODIFIER_ERRORS) != 0;
+    return (flags & .HAS_MODIFIER_ERRORS) != 0;
   }
 }

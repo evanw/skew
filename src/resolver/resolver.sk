@@ -217,7 +217,7 @@ class Resolver {
         var siblingFlags = symbolFlagsForNode(sibling);
 
         // Don't count non-keyword modifiers
-        if ((flags & SymbolFlag.KEYWORD_MASK) != (siblingFlags & SymbolFlag.KEYWORD_MASK)) {
+        if ((flags & .KEYWORD_MASK) != (siblingFlags & .KEYWORD_MASK)) {
           semanticErrorDifferentModifiers(log, sibling.declarationName().range, declarationName.asString(), declarationName.range);
           siblingFlags |= .HAS_MODIFIER_ERRORS;
         }
@@ -813,6 +813,7 @@ class Resolver {
     return
       node.kind == .INITIALIZER ||
       node.kind == .DOT && node.dotTarget() == null ||
+      node.kind == .COMPLEMENT && needsTypeContext(node.unaryValue()) ||
       node.kind == .HOOK && needsTypeContext(node.hookTrue()) && needsTypeContext(node.hookFalse());
   }
 
@@ -1151,7 +1152,7 @@ class Resolver {
         variableType = Node.createType(type).withSymbol(symbol.enclosingSymbol);
 
         // All enum values are final and always transfer the import/export flags
-        symbol.flags |= SymbolFlag.FINAL | symbol.enclosingSymbol.flags & (SymbolFlag.IMPORT | SymbolFlag.EXPORT);
+        symbol.flags |= .FINAL | symbol.enclosingSymbol.flags & (.IMPORT | .EXPORT);
 
         // Look at the initializer now
         var variableValue = node.variableValue();
@@ -1329,7 +1330,7 @@ class Resolver {
       assert symbol.type != null;
       assert symbol.isInitializing();
       assert !symbol.isInitialized();
-      symbol.flags = (symbol.flags & ~SymbolFlag.INITIALIZING) | SymbolFlag.INITIALIZED;
+      symbol.flags = (symbol.flags & ~.INITIALIZING) | .INITIALIZED;
 
       // Attach information to the declaration names for the language service
       while (node != null) {
@@ -2604,7 +2605,12 @@ class Resolver {
       return;
     }
 
-    resolveAsExpression(value);
+    // Make sure enum flags type context transfers into the value
+    if (kind == .COMPLEMENT && typeContext != null && typeContext.isEnumFlags()) {
+      resolveAsExpressionWithTypeContext(value, typeContext);
+    } else {
+      resolveAsExpression(value);
+    }
 
     // Avoid reporting further errors
     var type = value.type;
@@ -2687,6 +2693,7 @@ class Resolver {
     // Special-case assignment logic
     if (kind.isBinaryStorageOperator()) {
       resolveAsExpression(left);
+
       if (kind == .ASSIGN || left.type.isNumeric(cache)) {
         resolveAsExpressionWithConversion(right, left.type, .IMPLICIT_CAST);
         checkStorage(left);
@@ -2706,7 +2713,7 @@ class Resolver {
     }
 
     // Special-case equality comparisons to provide type context
-    if (kind == .EQUAL || kind == .NOT_EQUAL) {
+    else if (kind == .EQUAL || kind == .NOT_EQUAL) {
       var leftNeedsContext = needsTypeContext(left);
       var rightNeedsContext = needsTypeContext(right);
       if (leftNeedsContext && !rightNeedsContext) {
@@ -2715,6 +2722,20 @@ class Resolver {
       } else if (!leftNeedsContext && rightNeedsContext) {
         resolveAsExpression(left);
         resolveAsExpressionWithTypeContext(right, left.type);
+      }
+    }
+
+    // Special-case bitwise operators on enum flags types
+    else if (kind == .BITWISE_AND || kind == .BITWISE_OR || kind == .BITWISE_XOR) {
+      if (typeContext != null && typeContext.isEnumFlags()) {
+        resolveAsExpressionWithTypeContext(left, typeContext);
+        resolveAsExpressionWithTypeContext(right, typeContext);
+      } else if (!needsTypeContext(left)) {
+        resolveAsExpression(left);
+        resolveAsExpressionWithTypeContext(right, left.type);
+      } else if (!needsTypeContext(right)) {
+        resolveAsExpression(right);
+        resolveAsExpressionWithTypeContext(left, right.type);
       }
     }
 

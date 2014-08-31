@@ -160,3 +160,30 @@ in Foo { static string foo = false; }
 in Foo { static string foo = false; }
                              ~~~~~
 ");
+
+test("
+enum flags Foo { FOO, BAR }
+
+Foo or_a = .FOO | ~.BAR;
+var or_b = Foo.FOO | ~.BAR;
+Foo or_c = ~.FOO | .BAR;
+var or_d = ~.FOO | Foo.BAR;
+
+Foo and_a = .FOO & ~.BAR;
+var and_b = Foo.FOO & ~.BAR;
+Foo and_c = ~.FOO & .BAR;
+var and_d = ~.FOO & Foo.BAR;
+
+Foo xor_a = .FOO ^ ~.BAR;
+var xor_b = Foo.FOO ^ ~.BAR;
+Foo xor_c = ~.FOO ^ .BAR;
+var xor_d = ~.FOO ^ Foo.BAR;
+", "
+");
+
+test("
+enum flags Foo { FOO, BAR, BAZ }
+Foo a = .FOO | .BAR & .BAZ;
+var b = Foo.FOO | .BAR & .BAZ;
+", "
+");
