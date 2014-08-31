@@ -646,7 +646,7 @@ namespace js {
       if (Precedence.ASSIGN < precedence) emit(")");
     }
 
-    static bool alwaysConvertsOperandsToInt(NodeKind kind) {
+    bool alwaysConvertsOperandsToInt(NodeKind kind) {
       switch (kind) {
         case
           .BITWISE_OR, .BITWISE_AND, .BITWISE_XOR, .SHIFT_LEFT,
@@ -721,7 +721,7 @@ namespace js {
       }
     }
 
-    static void patchName(Node node) {
+    void patchName(Node node) {
       if (node.symbol != null && node.symbol.kind.isInstance() && node.isNameExpression()) {
         node.become(Node.createDot(Node.createThis(), node.clone()));
       }
@@ -733,7 +733,7 @@ namespace js {
       }
     }
 
-    static void patchLet(Node node) {
+    void patchLet(Node node) {
       var value = node.letValue().replaceWith(null);
       var variable = node.letVariable().replaceWith(null);
       node.become(Node.createCall(Node.createLambda({ variable }, Node.createBlock({ Node.createReturn(value) })), { variable.variableValue().replaceWith(null) }));

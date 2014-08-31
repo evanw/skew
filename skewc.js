@@ -717,7 +717,7 @@ Compiler.prototype.compile = function(options) {
       var graph = new CallGraph(program);
       this.callGraphTime += now() - callGraphStart;
       var instanceToStaticStart = now();
-      InstanceToStaticPass.run(graph, options);
+      InstanceToStaticPass.run(graph, resolver.cache, options);
       this.instanceToStaticTime += now() - instanceToStaticStart;
       var symbolMotionStart = now();
       SymbolMotionPass.run(resolver);
@@ -1845,7 +1845,7 @@ js.Emitter.patchNode = function($this, node, context) {
     context.lambdaCount = context.lambdaCount + 1 | 0;
     break;
   case 14:
-    js.Emitter.patchConstructor($this, node, context);
+    js.Emitter.patchConstructor(node, context);
     break;
   case 15:
     js.PatchContext.setFunction(context, node);
@@ -1857,7 +1857,7 @@ js.Emitter.patchNode = function($this, node, context) {
     js.Emitter.patchClass($this, node);
     break;
   case 35:
-    js.Emitter.patchThis($this, node, context);
+    js.Emitter.patchThis(node, context);
     break;
   case 33:
     js.Emitter.patchName(node);
@@ -1904,7 +1904,7 @@ js.Emitter.patchNode = function($this, node, context) {
     break;
   }
 };
-js.Emitter.patchThis = function($this, node, context) {
+js.Emitter.patchThis = function(node, context) {
   if (context.lambdaCount > 0) {
     Node.become(node, js.PatchContext.thisAlias(context));
   }
@@ -1960,7 +1960,7 @@ js.Emitter.patchCast = function($this, node, context) {
     Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(60), [Node.remove(value)]), node.range), node.type));
   }
 };
-js.Emitter.patchConstructor = function($this, node, context) {
+js.Emitter.patchConstructor = function(node, context) {
   var superInitializer = node.children[3];
   var memberInitializers = node.children[4];
   var block = node.children[2];
@@ -2281,12 +2281,12 @@ CallGraph.recordCallSite = function($this, symbol, node) {
 function ConstantFolder(_0) {
   this.cache = _0;
 }
-ConstantFolder.flattenBool = function($this, node, value) {
+ConstantFolder.flattenBool = function(node, value) {
   Node.removeChildren(node);
   node.kind = value ? 38 : 39;
   node.content = null;
 };
-ConstantFolder.flattenInt = function($this, node, value) {
+ConstantFolder.flattenInt = function(node, value) {
   Node.removeChildren(node);
   node.kind = 40;
   node.content = new IntContent(value);
@@ -2321,7 +2321,7 @@ ConstantFolder.foldConstants = function($this, node) {
     }
   }
   if (kind === 33) {
-    ConstantFolder.foldName($this, node);
+    ConstantFolder.foldName(node);
   } else if ($in.NodeKind.isCast(kind)) {
     ConstantFolder.foldCast($this, node);
   } else if ($in.NodeKind.isUnaryOperator(kind)) {
@@ -2385,9 +2385,9 @@ ConstantFolder.foldBlock = function(node) {
     }
   }
 };
-ConstantFolder.foldName = function($this, node) {
+ConstantFolder.foldName = function(node) {
   if (node.symbol !== null && Symbol.isEnumValue(node.symbol)) {
-    ConstantFolder.flattenInt($this, node, node.symbol.enumValue);
+    ConstantFolder.flattenInt(node, node.symbol.enumValue);
   }
 };
 ConstantFolder.foldCast = function($this, node) {
@@ -2396,25 +2396,25 @@ ConstantFolder.foldCast = function($this, node) {
   var valueKind = value.kind;
   if ($in.NodeKind.isBool(valueKind)) {
     if (type === $this.cache.boolType) {
-      ConstantFolder.flattenBool($this, node, value.kind === 38);
+      ConstantFolder.flattenBool(node, value.kind === 38);
     } else if (Type.isInteger(type, $this.cache)) {
-      ConstantFolder.flattenInt($this, node, value.kind === 38 | 0);
+      ConstantFolder.flattenInt(node, value.kind === 38 | 0);
     } else if (Type.isReal(type, $this.cache)) {
       ConstantFolder.flattenReal($this, node, +(value.kind === 38));
     }
   } else if (valueKind === 40) {
     if (type === $this.cache.boolType) {
-      ConstantFolder.flattenBool($this, node, !value.content.value);
+      ConstantFolder.flattenBool(node, !value.content.value);
     } else if (Type.isInteger(type, $this.cache)) {
-      ConstantFolder.flattenInt($this, node, value.content.value);
+      ConstantFolder.flattenInt(node, value.content.value);
     } else if (Type.isReal(type, $this.cache)) {
       ConstantFolder.flattenReal($this, node, value.content.value);
     }
   } else if ($in.NodeKind.isReal(valueKind)) {
     if (type === $this.cache.boolType) {
-      ConstantFolder.flattenBool($this, node, !value.content.value);
+      ConstantFolder.flattenBool(node, !value.content.value);
     } else if (Type.isInteger(type, $this.cache)) {
-      ConstantFolder.flattenInt($this, node, value.content.value | 0);
+      ConstantFolder.flattenInt(node, value.content.value | 0);
     } else if (Type.isReal(type, $this.cache)) {
       ConstantFolder.flattenReal($this, node, value.content.value);
     }
@@ -2425,15 +2425,15 @@ ConstantFolder.foldUnaryOperator = function($this, node, kind) {
   var valueKind = value.kind;
   if ($in.NodeKind.isBool(valueKind)) {
     if (kind === 59) {
-      ConstantFolder.flattenBool($this, node, value.kind !== 38);
+      ConstantFolder.flattenBool(node, value.kind !== 38);
     }
   } else if (valueKind === 40) {
     if (kind === 60) {
-      ConstantFolder.flattenInt($this, node, +value.content.value);
+      ConstantFolder.flattenInt(node, +value.content.value);
     } else if (kind === 61) {
-      ConstantFolder.flattenInt($this, node, -value.content.value);
+      ConstantFolder.flattenInt(node, -value.content.value);
     } else if (kind === 62) {
-      ConstantFolder.flattenInt($this, node, ~value.content.value);
+      ConstantFolder.flattenInt(node, ~value.content.value);
     }
   } else if ($in.NodeKind.isReal(valueKind)) {
     if (kind === 60) {
@@ -2468,67 +2468,67 @@ ConstantFolder.foldBinaryOperator = function($this, node, kind) {
   if ($in.NodeKind.isBool(valueKind)) {
     switch (kind) {
     case 79:
-      ConstantFolder.flattenBool($this, node, left.kind === 38 && right.kind === 38);
+      ConstantFolder.flattenBool(node, left.kind === 38 && right.kind === 38);
       break;
     case 80:
-      ConstantFolder.flattenBool($this, node, left.kind === 38 || right.kind === 38);
+      ConstantFolder.flattenBool(node, left.kind === 38 || right.kind === 38);
       break;
     case 72:
-      ConstantFolder.flattenBool($this, node, left.kind === 38 === (right.kind === 38));
+      ConstantFolder.flattenBool(node, left.kind === 38 === (right.kind === 38));
       break;
     case 82:
-      ConstantFolder.flattenBool($this, node, left.kind === 38 !== (right.kind === 38));
+      ConstantFolder.flattenBool(node, left.kind === 38 !== (right.kind === 38));
       break;
     }
   } else if (valueKind === 40) {
     switch (kind) {
     case 67:
-      ConstantFolder.flattenInt($this, node, left.content.value + right.content.value | 0);
+      ConstantFolder.flattenInt(node, left.content.value + right.content.value | 0);
       break;
     case 86:
-      ConstantFolder.flattenInt($this, node, left.content.value - right.content.value | 0);
+      ConstantFolder.flattenInt(node, left.content.value - right.content.value | 0);
       break;
     case 81:
-      ConstantFolder.flattenInt($this, node, $imul(left.content.value, right.content.value));
+      ConstantFolder.flattenInt(node, $imul(left.content.value, right.content.value));
       break;
     case 71:
-      ConstantFolder.flattenInt($this, node, left.content.value / right.content.value | 0);
+      ConstantFolder.flattenInt(node, left.content.value / right.content.value | 0);
       break;
     case 83:
-      ConstantFolder.flattenInt($this, node, left.content.value % right.content.value | 0);
+      ConstantFolder.flattenInt(node, left.content.value % right.content.value | 0);
       break;
     case 84:
-      ConstantFolder.flattenInt($this, node, left.content.value << right.content.value);
+      ConstantFolder.flattenInt(node, left.content.value << right.content.value);
       break;
     case 85:
-      ConstantFolder.flattenInt($this, node, left.content.value >> right.content.value);
+      ConstantFolder.flattenInt(node, left.content.value >> right.content.value);
       break;
     case 68:
-      ConstantFolder.flattenInt($this, node, left.content.value & right.content.value);
+      ConstantFolder.flattenInt(node, left.content.value & right.content.value);
       break;
     case 69:
-      ConstantFolder.flattenInt($this, node, left.content.value | right.content.value);
+      ConstantFolder.flattenInt(node, left.content.value | right.content.value);
       break;
     case 70:
-      ConstantFolder.flattenInt($this, node, left.content.value ^ right.content.value);
+      ConstantFolder.flattenInt(node, left.content.value ^ right.content.value);
       break;
     case 72:
-      ConstantFolder.flattenBool($this, node, left.content.value === right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value === right.content.value);
       break;
     case 82:
-      ConstantFolder.flattenBool($this, node, left.content.value !== right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value !== right.content.value);
       break;
     case 77:
-      ConstantFolder.flattenBool($this, node, left.content.value < right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value < right.content.value);
       break;
     case 73:
-      ConstantFolder.flattenBool($this, node, left.content.value > right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value > right.content.value);
       break;
     case 78:
-      ConstantFolder.flattenBool($this, node, left.content.value <= right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value <= right.content.value);
       break;
     case 74:
-      ConstantFolder.flattenBool($this, node, left.content.value >= right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value >= right.content.value);
       break;
     }
   } else if ($in.NodeKind.isReal(valueKind)) {
@@ -2546,22 +2546,22 @@ ConstantFolder.foldBinaryOperator = function($this, node, kind) {
       ConstantFolder.flattenReal($this, node, left.content.value / right.content.value);
       break;
     case 72:
-      ConstantFolder.flattenBool($this, node, left.content.value === right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value === right.content.value);
       break;
     case 82:
-      ConstantFolder.flattenBool($this, node, left.content.value !== right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value !== right.content.value);
       break;
     case 77:
-      ConstantFolder.flattenBool($this, node, left.content.value < right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value < right.content.value);
       break;
     case 73:
-      ConstantFolder.flattenBool($this, node, left.content.value > right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value > right.content.value);
       break;
     case 78:
-      ConstantFolder.flattenBool($this, node, left.content.value <= right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value <= right.content.value);
       break;
     case 74:
-      ConstantFolder.flattenBool($this, node, left.content.value >= right.content.value);
+      ConstantFolder.flattenBool(node, left.content.value >= right.content.value);
       break;
     }
   }
@@ -2793,39 +2793,40 @@ InliningGraph.recursivelyCountArgumentUses = function(node, symbolCounts) {
 };
 function InstanceToStaticPass() {
 }
-InstanceToStaticPass.run = function(graph, options) {
+InstanceToStaticPass.run = function(graph, cache, options) {
   for (var i = 0; i < graph.callInfo.length; i = i + 1 | 0) {
     var info = graph.callInfo[i];
     var symbol = info.symbol;
     var enclosingSymbol = symbol.enclosingSymbol;
     if (symbol.kind === 15 && (symbol.flags & 2048) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 2048) !== 0 || $in.SymbolKind.isEnum(enclosingSymbol.kind) || options.optimize && options.targetFormat === 1 && (symbol.flags & 1024) === 0 && (symbol.flags & 128) === 0)) {
-      symbol.kind = 14;
-      symbol.flags |= 64;
       var thisSymbol = new Symbol("this", 17);
       thisSymbol.type = enclosingSymbol.type;
-      Node.insertChild(symbol.node.children[1], 0, Node.withSymbol(Node.withChildren(new Node(16), [Node.withSymbol(Node.withContent(new Node(33), new StringContent("this")), thisSymbol), Node.withType(new Node(34), thisSymbol.type), null]), thisSymbol));
+      var replacedThis = InstanceToStaticPass.recursivelyReplaceThis(symbol.node.children[2], thisSymbol);
+      symbol.kind = 14;
+      symbol.flags |= 64;
+      if (replacedThis) {
+        var $arguments = Type.argumentTypes(symbol.type);
+        $arguments.unshift(enclosingSymbol.type);
+        symbol.type = TypeCache.functionType(cache, symbol.type.relevantTypes[0], $arguments);
+        Node.insertChild(symbol.node.children[1], 0, Node.withSymbol(Node.withChildren(new Node(16), [Node.withSymbol(Node.withContent(new Node(33), new StringContent("this")), thisSymbol), Node.withType(new Node(34), thisSymbol.type), null]), thisSymbol));
+      }
       for (var j = 0; j < info.callSites.length; j = j + 1 | 0) {
         var callSite = info.callSites[j];
-        switch (callSite.kind) {
-        case 47:
-          var value = callSite.children[0];
-          var target = null;
-          var name = null;
-          if (value.kind === 45) {
-            target = Node.replaceWith(value.children[0], null);
-            name = Node.replaceWith(value.children[1], null);
-          } else {
-            target = new Node(35);
-            name = Node.replaceWith(value, null);
-          }
-          Node.replaceChild(callSite, 0, name);
+        var value = callSite.children[0];
+        var target = null;
+        var name = null;
+        if (value.kind === 45) {
+          target = Node.replaceWith(value.children[0], null);
+          name = Node.replaceWith(value.children[1], null);
+        } else {
+          target = new Node(35);
+          name = Node.replaceWith(value, null);
+        }
+        Node.replaceChild(callSite, 0, name);
+        if (replacedThis) {
           Node.insertChild(callSite, 1, target);
-          break;
-        default:
-          break;
         }
       }
-      InstanceToStaticPass.recursivelyReplaceThis(symbol.node.children[2], thisSymbol);
     }
   }
 };
@@ -2835,16 +2836,22 @@ InstanceToStaticPass.createThis = function(symbol) {
 InstanceToStaticPass.recursivelyReplaceThis = function(node, symbol) {
   if (node.kind === 35) {
     Node.become(node, Node.withRange(InstanceToStaticPass.createThis(symbol), node.range));
-  } else if (Node.isNameExpression(node) && (node.symbol.kind === 15 || node.symbol.kind === 19)) {
+    return true;
+  }
+  if (Node.isNameExpression(node) && (node.symbol.kind === 15 || node.symbol.kind === 19)) {
     Node.become(node, Node.withRange(Node.withType(Node.withChildren(new Node(45), [InstanceToStaticPass.createThis(symbol), Node.clone(node)]), node.type), node.range));
-  } else if (Node.hasChildren(node)) {
+    return true;
+  }
+  var replacedThis = false;
+  if (Node.hasChildren(node)) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       var child = node.children[i];
-      if (child !== null) {
-        InstanceToStaticPass.recursivelyReplaceThis(child, symbol);
+      if (child !== null && InstanceToStaticPass.recursivelyReplaceThis(child, symbol)) {
+        replacedThis = true;
       }
     }
   }
+  return replacedThis;
 };
 function Member(_0) {
   this.type = null;
@@ -3340,7 +3347,7 @@ Resolver.resolve = function($this, node, expectedType) {
     Resolver.resolveCall($this, node);
     break;
   case 48:
-    Resolver.unsupportedNodeKind($this, node);
+    Resolver.resolveSuperCall($this, node);
     break;
   case 49:
     break;
@@ -4200,7 +4207,7 @@ Resolver.initializeSymbol = function($this, symbol) {
     symbol.type = $this.cache.errorType;
   }
 };
-Resolver.unsupportedNodeKind = function($this, node) {
+Resolver.unsupportedNodeKind = function(node) {
 };
 Resolver.resolveArguments = function($this, $arguments, argumentTypes, outer, inner) {
   if (argumentTypes.length !== $arguments.length) {
@@ -4497,7 +4504,7 @@ Resolver.resolveFor = function($this, node) {
   $this.context.loop = oldLoop;
 };
 Resolver.resolveForEach = function($this, node) {
-  Resolver.unsupportedNodeKind($this, node);
+  Resolver.unsupportedNodeKind(node);
   Resolver.checkStatementLocation($this, node);
   Resolver.resolve($this, node.children[0], null);
   Resolver.resolve($this, node.children[1], null);
@@ -4771,6 +4778,9 @@ Resolver.resolveCall = function($this, node) {
     node.type = valueType.relevantTypes[0];
     Resolver.resolveArguments($this, $arguments, Type.argumentTypes(valueType), node.range, value.range);
   }
+};
+Resolver.resolveSuperCall = function($this, node) {
+  Resolver.unsupportedNodeKind(node);
 };
 Resolver.resolveSequence = function($this, node) {
   for (var i = 0, n = node.children.length; i < n; i = i + 1 | 0) {
@@ -5059,7 +5069,7 @@ Resolver.resolveTertiaryOperator = function($this, node) {
   Resolver.resolveAsExpression($this, left);
   Resolver.resolveAsExpression($this, middle);
   Resolver.resolveAsExpression($this, right);
-  Resolver.unsupportedNodeKind($this, node);
+  Resolver.unsupportedNodeKind(node);
 };
 function Scope(_0) {
   this.type = null;

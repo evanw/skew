@@ -150,7 +150,7 @@ export class Compiler {
 
         // Convert instance functions to static functions
         var instanceToStaticStart = now();
-        InstanceToStaticPass.run(graph, options);
+        InstanceToStaticPass.run(graph, resolver.cache, options);
         instanceToStaticTime += now() - instanceToStaticStart;
 
         // Move functions

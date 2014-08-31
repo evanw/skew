@@ -1,5 +1,5 @@
 class InstanceToStaticPass {
-  static void run(CallGraph graph, CompilerOptions options) {
+  static void run(CallGraph graph, TypeCache cache, CompilerOptions options) {
     for (var i = 0; i < graph.callInfo.length; i++) {
       var info = graph.callInfo.get(i);
       var symbol = info.symbol;
@@ -7,43 +7,46 @@ class InstanceToStaticPass {
       if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() != null && (
           enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() || options.optimize && options.targetFormat == .JS && !symbol.isExport() && !symbol.isVirtual())) {
 
+        // Recursively replace "this" with the new explicit argument. This must
+        // be done after all call sites are updated in case that step introduced
+        // more "this" expressions.
+        var thisSymbol = Symbol("this", .LOCAL_VARIABLE);
+        thisSymbol.type = enclosingSymbol.type;
+        var replacedThis = recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
+
         // Change the instance function to a static function
         symbol.kind = .GLOBAL_FUNCTION;
         symbol.flags |= .STATIC;
-        var thisSymbol = Symbol("this", .LOCAL_VARIABLE);
-        thisSymbol.type = enclosingSymbol.type;
-        symbol.node.functionArguments().insertChild(0, Node.createVariable(Node.createName("this").withSymbol(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol));
+
+        // Only add an argument for "this" if there were "this" expressions.
+        // This will always add a "this" argument for recursive functions
+        // even when unnecessary because handling that case is more complex.
+        if (replacedThis) {
+          var arguments = symbol.type.argumentTypes();
+          arguments.unshift(enclosingSymbol.type);
+          symbol.type = cache.functionType(symbol.type.resultType(), arguments);
+          symbol.node.functionArguments().insertChild(0, Node.createVariable(Node.createName("this").withSymbol(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol));
+        }
 
         // Update all call sites
         for (var j = 0; j < info.callSites.length; j++) {
           var callSite = info.callSites.get(j);
-          switch (callSite.kind) {
-            case .CALL {
-              var value = callSite.callValue();
-              Node target;
-              Node name;
-              if (value.kind == .DOT) {
-                target = value.dotTarget().replaceWith(null);
-                name = value.dotName().replaceWith(null);
-              } else {
-                assert value.kind == .NAME;
-                target = Node.createThis();
-                name = value.replaceWith(null);
-              }
-              callSite.replaceChild(0, name);
-              callSite.insertChild(1, target);
-            }
-
-            default {
-              assert false;
-            }
+          var value = callSite.callValue();
+          Node target;
+          Node name;
+          if (value.kind == .DOT) {
+            target = value.dotTarget().replaceWith(null);
+            name = value.dotName().replaceWith(null);
+          } else {
+            assert value.kind == .NAME;
+            target = Node.createThis();
+            name = value.replaceWith(null);
+          }
+          callSite.replaceChild(0, name);
+          if (replacedThis) {
+            callSite.insertChild(1, target);
           }
         }
-
-        // Recursively replace "this" with the new explicit argument. This must
-        // be done after all call sites are updated in case that step introduced
-        // more "this" expressions.
-        recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
       }
     }
   }
@@ -52,22 +55,26 @@ class InstanceToStaticPass {
     return Node.createName(symbol.name).withSymbol(symbol).withType(symbol.type);
   }
 
-  static void recursivelyReplaceThis(Node node, Symbol symbol) {
+  static bool recursivelyReplaceThis(Node node, Symbol symbol) {
     if (node.kind == .THIS) {
       node.become(createThis(symbol).withRange(node.range));
+      return true;
     }
 
-    else if (node.isNameExpression() && (node.symbol.kind == .INSTANCE_FUNCTION || node.symbol.kind == .INSTANCE_VARIABLE)) {
+    if (node.isNameExpression() && (node.symbol.kind == .INSTANCE_FUNCTION || node.symbol.kind == .INSTANCE_VARIABLE)) {
       node.become(Node.createDot(createThis(symbol), node.clone()).withType(node.type).withRange(node.range));
+      return true;
     }
 
-    else if (node.hasChildren()) {
+    var replacedThis = false;
+    if (node.hasChildren()) {
       for (var i = 0; i < node.children.length; i++) {
         var child = node.children.get(i);
-        if (child != null) {
-          recursivelyReplaceThis(child, symbol);
+        if (child != null && recursivelyReplaceThis(child, symbol)) {
+          replacedThis = true;
         }
       }
     }
+    return replacedThis;
   }
 }
