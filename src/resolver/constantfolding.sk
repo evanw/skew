@@ -280,6 +280,47 @@ class ConstantFolder {
     }
   }
 
+  static int powerOf2(int value) {
+    if (value > 0 && (value & (value - 1)) == 0) {
+      var result = 0;
+      while ((value >>= 1) > 0) {
+        result++;
+      }
+      return result;
+    }
+    return -1;
+  }
+
+  void foldMultiply(Node node, Node variable, Node constant) {
+    // Canonicalize multiplication order
+    if (node.binaryLeft() == constant) {
+      variable.swapWith(constant);
+    }
+
+    // Apply identities
+    var value = constant.asInt();
+    if (value == 0) {
+      if (variable.hasNoSideEffects()) {
+        node.swapWith(constant);
+      }
+      return;
+    }
+    if (value == 1) {
+      node.swapWith(variable);
+      return;
+    }
+
+    // Multiply by a power of 2 should be a left-shift operation, which is
+    // more concise and always faster (or at least never slower) than the
+    // alternative. Division can't be replaced by a right-shift operation
+    // because that would lead to incorrect results for negative numbers.
+    int power = powerOf2(value);
+    if (power != -1) {
+      constant.content = IntContent(power);
+      node.kind = .SHIFT_LEFT;
+    }
+  }
+
   void foldBinaryOperator(Node node, NodeKind kind) {
     if (kind == .ADD && node.type.isString(cache)) {
       foldStringConcatenation(node);
@@ -290,6 +331,10 @@ class ConstantFolder {
     var right = node.binaryRight();
     var valueKind = left.kind;
     if (valueKind != right.kind) {
+      if (kind == .MULTIPLY) {
+        if (left.kind == .INT) foldMultiply(node, right, left);
+        else if (right.kind == .INT) foldMultiply(node, left, right);
+      }
       return;
     }
 

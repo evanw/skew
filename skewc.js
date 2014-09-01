@@ -2551,6 +2551,37 @@ ConstantFolder.foldUnaryOperator = function($this, node, kind) {
     }
   }
 };
+ConstantFolder.powerOf2 = function(value) {
+  if (value > 0 && (value & value - 1) === 0) {
+    var result = 0;
+    while ((value >>= 1) > 0) {
+      result = result + 1 | 0;
+    }
+    return result;
+  }
+  return -1;
+};
+ConstantFolder.foldMultiply = function(node, variable, constant) {
+  if (node.children[0] === constant) {
+    Node.swapWith(variable, constant);
+  }
+  var value = constant.content.value;
+  if (value === 0) {
+    if (Node.hasNoSideEffects(variable)) {
+      Node.swapWith(node, constant);
+    }
+    return;
+  }
+  if (value === 1) {
+    Node.swapWith(node, variable);
+    return;
+  }
+  var power = ConstantFolder.powerOf2(value);
+  if (power !== -1) {
+    constant.content = new IntContent(power);
+    node.kind = 83;
+  }
+};
 ConstantFolder.foldBinaryOperator = function($this, node, kind) {
   if (kind === 66 && node.type === $this.cache.stringType) {
     ConstantFolder.foldStringConcatenation($this, node);
@@ -2560,6 +2591,13 @@ ConstantFolder.foldBinaryOperator = function($this, node, kind) {
   var right = node.children[1];
   var valueKind = left.kind;
   if (valueKind !== right.kind) {
+    if (kind === 80) {
+      if (left.kind === 39) {
+        ConstantFolder.foldMultiply(node, right, left);
+      } else if (right.kind === 39) {
+        ConstantFolder.foldMultiply(node, left, right);
+      }
+    }
     return;
   }
   if (valueKind === 38) {
@@ -4032,7 +4070,7 @@ Resolver.initializeVariable = function($this, symbol) {
           Resolver.initializeSymbol($this, previous);
           if (previous.type !== $this.cache.errorType) {
             var constant = previous.constant.value;
-            symbol.constant = new IntContent(Type.isEnumFlags(type) ? $imul(constant, 2) : constant + 1 | 0);
+            symbol.constant = new IntContent(Type.isEnumFlags(type) ? constant << 1 : constant + 1 | 0);
           } else {
             variableType = Node.withType(new Node(34), $this.cache.errorType);
           }
