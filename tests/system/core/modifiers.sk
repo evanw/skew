@@ -28,6 +28,30 @@ public class Foo {
 ");
 
 test("
+import export int v;
+import export void f();
+import export enum E {}
+import export class C {}
+import export namespace n {}
+", "
+<stdin>:1:8: error: Cannot use the \"export\" modifier on an imported declaration
+import export int v;
+       ~~~~~~
+<stdin>:2:8: error: Cannot use the \"export\" modifier on an imported declaration
+import export void f();
+       ~~~~~~
+<stdin>:3:8: error: Cannot use the \"export\" modifier on an imported declaration
+import export enum E {}
+       ~~~~~~
+<stdin>:4:8: error: Cannot use the \"export\" modifier on an imported declaration
+import export class C {}
+       ~~~~~~
+<stdin>:5:8: error: Cannot use the \"export\" modifier on an imported declaration
+import export namespace n {}
+       ~~~~~~
+");
+
+test("
 inline int v;
 inline void f() {}
 inline enum E {}

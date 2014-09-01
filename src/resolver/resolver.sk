@@ -822,25 +822,27 @@ class Resolver {
     type.addMember(Member(symbol));
   }
 
+  void forbidBlockDeclarationModifiers(Symbol symbol, string where) {
+    unexpectedModifierIfPresent(symbol, .CONST, where);
+    unexpectedModifierIfPresent(symbol, .FINAL, where);
+    unexpectedModifierIfPresent(symbol, .INLINE, where);
+    unexpectedModifierIfPresent(symbol, .STATIC, where);
+    unexpectedModifierIfPresent(symbol, .VIRTUAL, where);
+    unexpectedModifierIfPresent(symbol, .OVERRIDE, where);
+    if (symbol.isImport()) {
+      unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
+    }
+  }
+
   void initializeNamespace(Symbol symbol) {
     assert symbol.type.isNamespace();
-    unexpectedModifierIfPresent(symbol, .CONST, "on a namespace declaration");
-    unexpectedModifierIfPresent(symbol, .FINAL, "on a namespace declaration");
-    unexpectedModifierIfPresent(symbol, .INLINE, "on a namespace declaration");
-    unexpectedModifierIfPresent(symbol, .STATIC, "on a namespace declaration");
-    unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a namespace declaration");
-    unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a namespace declaration");
+    forbidBlockDeclarationModifiers(symbol, "on a namespace declaration");
     checkNoBaseTypes(symbol, "A namespace");
   }
 
   void initializeEnum(Symbol symbol) {
     assert symbol.type.isEnum();
-    unexpectedModifierIfPresent(symbol, .CONST, "on an enum declaration");
-    unexpectedModifierIfPresent(symbol, .FINAL, "on an enum declaration");
-    unexpectedModifierIfPresent(symbol, .INLINE, "on an enum declaration");
-    unexpectedModifierIfPresent(symbol, .STATIC, "on an enum declaration");
-    unexpectedModifierIfPresent(symbol, .VIRTUAL, "on an enum declaration");
-    unexpectedModifierIfPresent(symbol, .OVERRIDE, "on an enum declaration");
+    forbidBlockDeclarationModifiers(symbol, "on an enum declaration");
     checkNoBaseTypes(symbol, "An enum");
 
     // Automatically generate toString() if missing
@@ -939,17 +941,12 @@ class Resolver {
   }
 
   void initializeObject(Symbol symbol) {
-    unexpectedModifierIfPresent(symbol, .CONST, "on an object declaration");
-    unexpectedModifierIfPresent(symbol, .FINAL, "on an object declaration");
-    unexpectedModifierIfPresent(symbol, .INLINE, "on an object declaration");
-    unexpectedModifierIfPresent(symbol, .STATIC, "on an object declaration");
-    unexpectedModifierIfPresent(symbol, .VIRTUAL, "on an object declaration");
-    unexpectedModifierIfPresent(symbol, .OVERRIDE, "on an object declaration");
+    assert symbol.type.isObject();
+    forbidBlockDeclarationModifiers(symbol, "on an object declaration");
 
     var node = symbol.node.firstNonExtensionSibling();
     var parameters = node.objectParameters();
     var type = symbol.type;
-    assert type.isObject();
 
     // Resolve type parameters
     if (parameters != null && parameters.hasChildren()) {
@@ -980,6 +977,9 @@ class Resolver {
     unexpectedModifierIfPresent(symbol, .FINAL, "on a function declaration");
     if (enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances()) {
       unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
+    }
+    if (symbol.isImport()) {
+      unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
     }
 
     // // TODO: Implied modifiers
@@ -1095,51 +1095,6 @@ class Resolver {
     }
   }
 
-  Symbol createSymbol(string name, SymbolKind kind) {
-    var symbol = Symbol(name, kind);
-    allSymbols.push(symbol);
-    return symbol;
-  }
-
-  static Node findModifierName(Symbol symbol, SymbolFlag flag) {
-    var node = symbol.node.parent;
-    if (node.kind == .VARIABLE_CLUSTER) {
-      node = node.parent;
-    }
-    while (node != null && node.kind == .MODIFIER) {
-      var modifierName = node.modifierName();
-      if (nameToSymbolFlag.get(modifierName.asString()) == flag) {
-        return modifierName;
-      }
-      node = node.parent;
-    }
-    return null;
-  }
-
-  void redundantModifierIfPresent(Symbol symbol, SymbolFlag flag, string where) {
-    if ((symbol.flags & flag) != 0 && !symbol.hasModifierErrors()) {
-      var modifierName = findModifierName(symbol, flag);
-      if (modifierName != null) {
-        semanticErrorRedundantModifier(log, modifierName.range, modifierName.asString(), where);
-      }
-    }
-  }
-
-  void unexpectedModifierIfPresent(Symbol symbol, SymbolFlag flag, string where) {
-    if ((symbol.flags & flag) != 0 && !symbol.hasModifierErrors()) {
-      var modifierName = findModifierName(symbol, flag);
-      if (modifierName != null) {
-        semanticErrorUnexpectedModifier(log, modifierName.range, modifierName.asString(), where);
-      }
-    }
-  }
-
-  void expectedModifierIfAbsent(Symbol symbol, SymbolFlag flag, string where) {
-    if ((symbol.flags & flag) == 0 && !symbol.hasModifierErrors() && findModifierName(symbol, flag) == null) {
-      semanticErrorExpectedModifier(log, symbol.node.declarationName().range, symbolFlagToName.get(flag), where);
-    }
-  }
-
   void initializeVariable(Symbol symbol) {
     unexpectedModifierIfPresent(symbol, .INLINE, "on a variable declaration");
     unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a variable declaration");
@@ -1149,6 +1104,9 @@ class Resolver {
     }
     if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind == .STRUCT && !symbol.isStatic()) {
       expectedModifierIfAbsent(symbol, .FINAL, "on a variable declaration inside a struct");
+    }
+    if (symbol.isImport()) {
+      unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
     }
 
     var node = symbol.node;
@@ -1427,6 +1385,51 @@ class Resolver {
 
     if (trace.GENERICS) {
       trace.dedent();
+    }
+  }
+
+  Symbol createSymbol(string name, SymbolKind kind) {
+    var symbol = Symbol(name, kind);
+    allSymbols.push(symbol);
+    return symbol;
+  }
+
+  Node findModifierName(Symbol symbol, SymbolFlag flag) {
+    var node = symbol.node.parent;
+    if (node.kind == .VARIABLE_CLUSTER) {
+      node = node.parent;
+    }
+    while (node != null && node.kind == .MODIFIER) {
+      var modifierName = node.modifierName();
+      if (nameToSymbolFlag.get(modifierName.asString()) == flag) {
+        return modifierName;
+      }
+      node = node.parent;
+    }
+    return null;
+  }
+
+  void redundantModifierIfPresent(Symbol symbol, SymbolFlag flag, string where) {
+    if ((symbol.flags & flag) != 0 && !symbol.hasModifierErrors()) {
+      var modifierName = findModifierName(symbol, flag);
+      if (modifierName != null) {
+        semanticErrorRedundantModifier(log, modifierName.range, modifierName.asString(), where);
+      }
+    }
+  }
+
+  void unexpectedModifierIfPresent(Symbol symbol, SymbolFlag flag, string where) {
+    if ((symbol.flags & flag) != 0 && !symbol.hasModifierErrors()) {
+      var modifierName = findModifierName(symbol, flag);
+      if (modifierName != null) {
+        semanticErrorUnexpectedModifier(log, modifierName.range, modifierName.asString(), where);
+      }
+    }
+  }
+
+  void expectedModifierIfAbsent(Symbol symbol, SymbolFlag flag, string where) {
+    if ((symbol.flags & flag) == 0 && !symbol.hasModifierErrors() && findModifierName(symbol, flag) == null) {
+      semanticErrorExpectedModifier(log, symbol.node.declarationName().range, symbolFlagToName.get(flag), where);
     }
   }
 
