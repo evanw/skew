@@ -10,6 +10,18 @@ int hashCombine(int left, int right) {
   return left ^ right - 0x61c88647 + (left << 6) + (left >> 2);
 }
 
+// Returns the log2(value) or -1 if log2(value) is not an integer
+int logBase2(int value) {
+  if (value > 0 && (value & (value - 1)) == 0) {
+    var result = 0;
+    while ((value >>= 1) > 0) {
+      result++;
+    }
+    return result;
+  }
+  return -1;
+}
+
 int parseHexCharacter(int c) {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'A' && c <= 'F') return c - 'A' + 10;
@@ -122,9 +134,10 @@ string bytesToString(int bytes) {
   return formatNumber(bytes / (double)ByteSize.GB) + "gb";
 }
 
-// TODO: Remove these in release builds
 namespace trace {
+  const bool GENERICS = false;
+
   void indent() {}
-  void log(string text) {}
   void dedent() {}
+  void log(string text) {}
 }

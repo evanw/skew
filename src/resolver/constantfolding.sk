@@ -280,17 +280,6 @@ class ConstantFolder {
     }
   }
 
-  static int powerOf2(int value) {
-    if (value > 0 && (value & (value - 1)) == 0) {
-      var result = 0;
-      while ((value >>= 1) > 0) {
-        result++;
-      }
-      return result;
-    }
-    return -1;
-  }
-
   void foldMultiply(Node node, Node variable, Node constant) {
     // Canonicalize multiplication order
     if (node.binaryLeft() == constant) {
@@ -314,10 +303,36 @@ class ConstantFolder {
     // more concise and always faster (or at least never slower) than the
     // alternative. Division can't be replaced by a right-shift operation
     // because that would lead to incorrect results for negative numbers.
-    int power = powerOf2(value);
-    if (power != -1) {
-      constant.content = IntContent(power);
+    int shift = logBase2(value);
+    if (shift != -1) {
+      constant.content = IntContent(shift);
       node.kind = .SHIFT_LEFT;
+    }
+  }
+
+  void foldBinaryOperatorWithConstant(Node node, Node left, Node right) {
+    switch (node.kind) {
+      // These are important for dead code elimination
+      case .LOGICAL_AND {
+        if (left.isFalse() || right.isTrue()) node.swapWith(left);
+        else if (left.isTrue()) node.swapWith(right);
+      }
+      case .LOGICAL_OR {
+        if (left.isTrue() || right.isFalse()) node.swapWith(left);
+        else if (left.isFalse()) node.swapWith(right);
+      }
+
+      // Multiplication is special-cased here because in JavaScript, optimizing
+      // away the general-purpose Math.imul() function may result in large
+      // speedups when it's implemented with a polyfill.
+      //
+      // There are lots of other folding opportunities for other binary
+      // operators here but those usually have a negligible performance impact
+      // on the generated code and instead slow the compiler down.
+      case .MULTIPLY {
+        if (left.kind == .INT) foldMultiply(node, right, left);
+        else if (right.kind == .INT) foldMultiply(node, left, right);
+      }
     }
   }
 
@@ -329,17 +344,13 @@ class ConstantFolder {
 
     var left = node.binaryLeft();
     var right = node.binaryRight();
-    var valueKind = left.kind;
-    if (valueKind != right.kind) {
-      if (kind == .MULTIPLY) {
-        if (left.kind == .INT) foldMultiply(node, right, left);
-        else if (right.kind == .INT) foldMultiply(node, left, right);
-      }
+    if (left.kind != right.kind) {
+      foldBinaryOperatorWithConstant(node, left, right);
       return;
     }
 
     // Fold "bool" values
-    if (valueKind == .BOOL) {
+    if (left.kind == .BOOL) {
       switch (kind) {
         case .LOGICAL_AND { flattenBool(node, left.asBool() && right.asBool()); }
         case .LOGICAL_OR { flattenBool(node, left.asBool() || right.asBool()); }
@@ -349,7 +360,7 @@ class ConstantFolder {
     }
 
     // Fold "int" values
-    else if (valueKind == .INT) {
+    else if (left.kind == .INT) {
       switch (kind) {
         case .ADD { flattenInt(node, left.asInt() + right.asInt()); }
         case .SUBTRACT { flattenInt(node, left.asInt() - right.asInt()); }
@@ -371,7 +382,7 @@ class ConstantFolder {
     }
 
     // Fold "float" and "double" values
-    else if (valueKind.isReal()) {
+    else if (left.kind.isReal()) {
       switch (kind) {
         case .ADD { flattenReal(node, left.asDouble() + right.asDouble()); }
         case .SUBTRACT { flattenReal(node, left.asDouble() - right.asDouble()); }

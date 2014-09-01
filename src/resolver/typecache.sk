@@ -62,8 +62,10 @@ class TypeCache {
 
   Type substitute(Type type, List<Symbol> parameters, List<Type> substitutions) {
     assert parameters.length == substitutions.length;
-    trace.log("substitute " + type + " with " + Type.environmentToString(parameters, substitutions));
-    trace.indent();
+    if (trace.GENERICS) {
+      trace.log("substitute " + type + " with " + Type.environmentToString(parameters, substitutions));
+      trace.indent();
+    }
 
     Type result;
     if (type.isFunction()) {
@@ -76,8 +78,10 @@ class TypeCache {
       result = parameterize(type, substituteAll(type.substitutions, parameters, substitutions));
     }
 
-    trace.log("substitution gave " + result);
-    trace.dedent();
+    if (trace.GENERICS) {
+      trace.log("substitution gave " + result);
+      trace.dedent();
+    }
     return result;
   }
 
@@ -122,7 +126,7 @@ class TypeCache {
       hashTable.set(hash, existingTypes);
     }
 
-    if (symbol != null && substitutions != null) {
+    if (trace.GENERICS && symbol != null && substitutions != null) {
       trace.log("parameterize " + (unparameterized != null ? unparameterized.toString() : "null") +
         " with " + Type.environmentToString(symbol.parameters, substitutions));
       trace.indent();
@@ -169,7 +173,7 @@ class TypeCache {
         type.addMember(clone);
       }
 
-      if (substitutions != null) {
+      if (trace.GENERICS && substitutions != null) {
         trace.log("parameterize gave " + type);
         trace.dedent();
       }

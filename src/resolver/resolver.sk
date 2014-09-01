@@ -1249,6 +1249,23 @@ class Resolver {
           overriddenMember.symbol.enclosingSymbol.type, overriddenMember.symbol.node.declarationName().range);
       }
     }
+
+    // Constants must be resolved during initialization
+    if (symbol.isConst()) {
+      var value = node.variableValue();
+      if (value == null) {
+        semanticErrorConstMissingValue(log, node.declarationName().range);
+      } else {
+        resolveAsExpressionWithConversion(value, symbol.type, .IMPLICIT_CAST);
+        constantFolder.foldConstants(value);
+        if (value.kind.isConstant()) {
+          symbol.constant = value.content;
+        } else if (!value.type.isError(cache)) {
+          semanticErrorNonConstantConstValue(log, value.range);
+          value.type = cache.errorType;
+        }
+      }
+    }
   }
 
   void initializeParameter(Symbol symbol) {
@@ -1364,8 +1381,10 @@ class Resolver {
       return;
     }
 
-    trace.log("initializeMember " + member.symbol.fullName() + (member.parameterizedType != null ? " on " + member.parameterizedType : ""));
-    trace.indent();
+    if (trace.GENERICS) {
+      trace.log("initializeMember " + member.symbol.fullName() + (member.parameterizedType != null ? " on " + member.parameterizedType : ""));
+      trace.indent();
+    }
 
     // The type of a member in a derived type may depend on type substitution
     // on that member's type in a base class:
@@ -1390,7 +1409,9 @@ class Resolver {
       member.type = cache.substitute(member.type, parameterizedType.symbol.parameters, parameterizedType.substitutions);
     }
 
-    trace.dedent();
+    if (trace.GENERICS) {
+      trace.dedent();
+    }
   }
 
   void generateDefaultConstructor(Symbol symbol) {
@@ -2844,6 +2865,7 @@ class Resolver {
 
 StringMap<SymbolFlag> createNameToSymbolFlag() {
   var result = StringMap<SymbolFlag>();
+  result.set("const", .CONST);
   result.set("export", .EXPORT);
   result.set("final", .FINAL);
   result.set("import", .IMPORT);
@@ -2861,6 +2883,7 @@ final var nameToSymbolFlag = createNameToSymbolFlag();
 
 IntMap<string> createSymbolFlagToName() {
   var result = IntMap<string>();
+  result.set(SymbolFlag.CONST, "const");
   result.set(SymbolFlag.EXPORT, "export");
   result.set(SymbolFlag.FINAL, "final");
   result.set(SymbolFlag.IMPORT, "import");

@@ -56,6 +56,7 @@ SOURCES += src/service/service.sk
 TEST_SOURCES += tests/system/common.sk
 
 TEST_SOURCES += tests/system/core/calls.sk
+TEST_SOURCES += tests/system/core/const.sk
 TEST_SOURCES += tests/system/core/constructors.sk
 TEST_SOURCES += tests/system/core/conversions.sk
 TEST_SOURCES += tests/system/core/cyclic.sk
