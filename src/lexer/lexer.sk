@@ -140,13 +140,11 @@ List<Token> tokenize(Log log, Source source) {
 
     // Search for a match
     while (yy_current_state != 262) {
-      var index = 0;
-      if (yy_cp < text_length) {
-        var c = text.codeUnitAt(yy_cp);
-        if (c < 0x7F) index = c;
-      } else {
+      if (yy_cp >= text_length) {
         break; // This prevents syntax errors from causing infinite loops
       }
+      var c = text.codeUnitAt(yy_cp);
+      var index = c < 127 ? c : 127;
       var yy_c = yy_ec.get(index);
       if (yy_accept.get(yy_current_state) != .YY_INVALID_ACTION) {
         yy_last_accepting_state = yy_current_state;

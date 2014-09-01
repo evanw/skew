@@ -4110,7 +4110,7 @@ Resolver.initializeVariable = function($this, symbol) {
       ConstantFolder.foldConstants($this.constantFolder, value);
       if ($in.NodeKind.isConstant(value.kind)) {
         symbol.constant = value.content;
-      } else if (value.type !== $this.cache.errorType) {
+      } else if (value.type !== $this.cache.errorType && symbol.type !== $this.cache.errorType) {
         Log.error($this.log, value.range, "Variables with the \"const\" modifier must be initialized with a compile-time constant");
         value.type = $this.cache.errorType;
       }
@@ -6801,15 +6801,11 @@ function tokenize(log, source) {
     var yy_current_state = 1;
     var yy_bp = yy_cp;
     while (yy_current_state !== 262) {
-      var index = 0;
-      if (yy_cp < text_length) {
-        var c = text.charCodeAt(yy_cp);
-        if (c < 127) {
-          index = c;
-        }
-      } else {
+      if (yy_cp >= text_length) {
         break;
       }
+      var c = text.charCodeAt(yy_cp);
+      var index = c < 127 ? c : 127;
       var yy_c = yy_ec[index];
       if (yy_accept[yy_current_state] !== 99) {
         yy_last_accepting_state = yy_current_state;

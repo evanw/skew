@@ -7,7 +7,7 @@ import subprocess
 def _run_flex(source):
   fd, path = tempfile.mkstemp()
   os.close(fd)
-  flex = subprocess.Popen(['flex', '--never-interactive', '-B', '-7', '-o', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  flex = subprocess.Popen(['flex', '-B', '-7', '-o', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   stdout, stderr = flex.communicate(input=source)
   sys.stdout.write(stdout)
   sys.stderr.write(stderr)

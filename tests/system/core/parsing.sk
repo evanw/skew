@@ -1,4 +1,17 @@
 test("
+var π = Math.PI;
+", "
+<stdin>:1:5: error: Syntax error \"π\"
+var π = Math.PI;
+    ^
+");
+
+test("
+var x = \"π\";
+", "
+");
+
+test("
 int foo = 0123;
 ", "
 <stdin>:1:11: warning: Use the prefix \"0o\" for octal numbers
