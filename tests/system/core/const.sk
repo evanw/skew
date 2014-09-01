@@ -1,0 +1,39 @@
+test("
+const int foo;
+", "
+<stdin>:1:11: error: Variables with the \"const\" modifier must be initialized
+const int foo;
+          ~~~
+");
+
+test("
+import int bar;
+const int foo = bar;
+", "
+<stdin>:2:17: error: Variables with the \"const\" modifier must be initialized with a compile-time constant
+const int foo = bar;
+                ~~~
+");
+
+test("
+const int foo = 1 + 2 + 3;
+enum Foo { FOO = foo }
+", "
+");
+
+test("
+import int baz;
+const int foo = 1 + bar - 1;
+const int bar = 9 - 3;
+switch (baz) {
+  case foo {}
+  case bar {}
+}
+", "
+<stdin>:6:8: error: Duplicate case value
+  case bar {}
+       ~~~
+<stdin>:5:8: note: The first occurrence is here
+  case foo {}
+       ~~~
+");

@@ -29,6 +29,9 @@ export class CompilerOptions {
   export var jsSourceMap = false;
   export var optimize = false;
   export var removeAsserts = false;
+  export var foldAllConstants = false;
+  export var inlineAllFunctions = false;
+  export var convertAllInstanceToStatic = false;
 }
 
 export class CompilerResult {
@@ -164,7 +167,7 @@ export class Compiler {
         functionInliningTime += now() - functionInliningStart;
 
         // Fold constants
-        if (options.optimize) {
+        if (options.foldAllConstants) {
           var constantFoldingStart = now();
           resolver.constantFolder.foldConstants(program);
           constantFoldingTime += now() - constantFoldingStart;

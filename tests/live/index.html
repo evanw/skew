@@ -59,8 +59,10 @@ function compile() {
   try {
     var compiler = new Compiler();
     var options = new CompilerOptions();
-    options.optimize = oldOptimize;
     options.removeAsserts = oldOptimize;
+    options.foldAllConstants = oldOptimize;
+    options.inlineAllFunctions = oldOptimize;
+    options.convertAllInstanceToStatic = oldOptimize;
     options.targetFormat = TargetFormat.JS;
     options.inputs.push(new Source('<stdin>', oldInput));
     var result = compiler.compile(options);

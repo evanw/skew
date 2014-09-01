@@ -653,6 +653,9 @@ function CompilerOptions() {
   this.jsSourceMap = false;
   this.optimize = false;
   this.removeAsserts = false;
+  this.foldAllConstants = false;
+  this.inlineAllFunctions = false;
+  this.convertAllInstanceToStatic = false;
 }
 function CompilerResult(_0, _1, _2, _3) {
   this.options = _0;
@@ -766,7 +769,7 @@ Compiler.prototype.compile = function(options) {
       var functionInliningStart = now();
       FunctionInliningPass.run(graph, options);
       this.functionInliningTime += now() - functionInliningStart;
-      if (options.optimize) {
+      if (options.foldAllConstants) {
         var constantFoldingStart = now();
         ConstantFolder.foldConstants(resolver.constantFolder, program);
         this.constantFoldingTime += now() - constantFoldingStart;
@@ -1443,7 +1446,7 @@ js.Emitter.emitNamespace = function($this, node) {
 };
 js.Emitter.emitEnum = function($this, node) {
   var block = node.children[1];
-  if (!$this.options.optimize || Symbol.isImportOrExport(node.symbol)) {
+  if (!$this.options.foldAllConstants || Symbol.isImportOrExport(node.symbol)) {
     if (!js.Emitter.hasCompoundName(node.symbol)) {
       js.Emitter.emit($this, "var ");
     }
@@ -2919,13 +2922,13 @@ InliningGraph.containsInfiniteExpansion = function(info, symbols) {
 };
 InliningGraph.createInliningInfo = function(info, options) {
   var symbol = info.symbol;
-  if (symbol.kind === 14 && ((symbol.flags & 512) !== 0 || options.optimize && options.targetFormat === 1)) {
+  if (symbol.kind === 14 && ((symbol.flags & 512) !== 0 || options.inlineAllFunctions)) {
     var block = symbol.node.children[2];
     if (block === null) {
       return null;
     }
     if (!Node.hasChildren(block)) {
-      if (options.optimize && options.targetFormat === 1) {
+      if (options.foldAllConstants) {
         var $arguments = [];
         var argumentVariables = symbol.node.children[1].children;
         for (var i = 0; i < argumentVariables.length; i = i + 1 | 0) {
@@ -2996,7 +2999,7 @@ InstanceToStaticPass.run = function(graph, cache, options) {
     var info = graph.callInfo[i];
     var symbol = info.symbol;
     var enclosingSymbol = symbol.enclosingSymbol;
-    if (symbol.kind === 15 && (symbol.flags & 4096) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 4096) !== 0 || $in.SymbolKind.isEnum(enclosingSymbol.kind) || options.optimize && options.targetFormat === 1 && (symbol.flags & 2048) === 0 && (symbol.flags & 128) === 0)) {
+    if (symbol.kind === 15 && (symbol.flags & 4096) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 4096) !== 0 || $in.SymbolKind.isEnum(enclosingSymbol.kind) || options.convertAllInstanceToStatic && (symbol.flags & 2048) === 0 && (symbol.flags & 128) === 0)) {
       var thisSymbol = new Symbol("this", 17);
       thisSymbol.type = enclosingSymbol.type;
       var replacedThis = InstanceToStaticPass.recursivelyReplaceThis(symbol.node.children[2], thisSymbol);
@@ -6697,9 +6700,12 @@ frontend.main = function(args) {
     return 1;
   }
   var options = new CompilerOptions();
+  var optimizeJS = flags.optimize && target === 1;
   options.targetFormat = target;
-  options.optimize = flags.optimize;
   options.removeAsserts = flags.optimize;
+  options.foldAllConstants = optimizeJS;
+  options.inlineAllFunctions = optimizeJS;
+  options.convertAllInstanceToStatic = optimizeJS;
   options.outputFile = flags.outputFile;
   options.jsSourceMap = flags.jsSourceMap && target === 1;
   options.inputs = frontend.readSources(inputs);

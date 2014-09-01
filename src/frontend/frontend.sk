@@ -152,9 +152,12 @@ export namespace frontend {
 
     // Translate frontend flags to compiler options
     var options = CompilerOptions();
+    var optimizeJS = flags.optimize && target == .JS;
     options.targetFormat = target;
-    options.optimize = flags.optimize;
     options.removeAsserts = flags.optimize;
+    options.foldAllConstants = optimizeJS;
+    options.inlineAllFunctions = optimizeJS;
+    options.convertAllInstanceToStatic = optimizeJS;
     options.outputFile = flags.outputFile;
     options.jsSourceMap = flags.jsSourceMap && target == .JS;
     options.inputs = readSources(inputs); if (options.inputs == null) return 1;

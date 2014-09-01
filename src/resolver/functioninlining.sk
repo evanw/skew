@@ -190,16 +190,17 @@ class InliningGraph {
     var symbol = info.symbol;
 
     // Inline functions consisting of a single return statement
-    if (symbol.kind == .GLOBAL_FUNCTION && (symbol.isInline() || options.optimize && options.targetFormat == .JS)) {
+    if (symbol.kind == .GLOBAL_FUNCTION && (symbol.isInline() || options.inlineAllFunctions)) {
       var block = symbol.node.functionBlock();
       if (block == null) {
         return null;
       }
 
-      // Replace functions with empty bodies with null when optimizing, since
-      // null expressions will automatically be removed by constant folding
+      // Replace functions with empty bodies with null if global constant
+      // folding is active, since stray null expressions will automatically
+      // be removed
       if (!block.hasChildren()) {
-        if (options.optimize && options.targetFormat == .JS) {
+        if (options.foldAllConstants) {
           List<Symbol> arguments = {};
           var argumentVariables = symbol.node.functionArguments().children;
           for (var i = 0; i < argumentVariables.length; i++) {

@@ -312,7 +312,7 @@ namespace js {
 
     void emitEnum(Node node) {
       var block = node.declarationBlock();
-      if (!options.optimize || node.symbol.isImportOrExport()) {
+      if (!options.foldAllConstants || node.symbol.isImportOrExport()) {
         if (!hasCompoundName(node.symbol)) {
           emit("var ");
         }
