@@ -698,6 +698,8 @@ class Resolver {
   }
 
   void checkDeclarationLocation(Node node, AllowDeclaration allowDeclaration) {
+    assert node.parent != null;
+
     // Top-level declarations cannot live inside object declarations, function
     // declarations, or conditional statements
     Node parent;
@@ -720,11 +722,15 @@ class Resolver {
   void checkStatementLocation(Node node) {
     assert node.parent != null;
 
-    // Statements cannot live inside non-namespace type declarations
-    // Top-level declarations cannot live inside object declarations, function
-    // declarations, or conditional statements
-    if (node.parent.kind != .BLOCK || node.parent.parent.kind.isNamedBlockDeclaration() && node.parent.parent.kind != .NAMESPACE) {
-      unexpectedStatement(node);
+    // Statements must live inside functions
+    for (var parent = node.parent; parent != null; parent = parent.parent) {
+      var kind = parent.kind;
+      if (kind.isFunction() || kind == .LAMBDA) {
+        break;
+      } else if (kind == .FILE) {
+        unexpectedStatement(node);
+        break;
+      }
     }
   }
 

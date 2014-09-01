@@ -1,3 +1,5 @@
+namespace core { void statements() {
+
 test("
 return;
 in Foo { return; }
@@ -401,3 +403,5 @@ enum Bar {}
 in Bar {
 ~~~~~~~~
 ");
+
+}}

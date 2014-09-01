@@ -1,3 +1,5 @@
+namespace core { void using_() {
+
 test("
 namespace ns {
   class Foo {}
@@ -308,3 +310,5 @@ in Bar {
 }
 ", "
 ");
+
+}}

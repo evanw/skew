@@ -1,3 +1,5 @@
+namespace core { void conversions() {
+
 test("
 int a = 0;
 int b = false;
@@ -419,3 +421,5 @@ List<int> values = {
   0b10000000000000000000000000000000,
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ");
+
+}}

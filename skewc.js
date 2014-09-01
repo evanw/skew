@@ -3757,8 +3757,14 @@ Resolver.checkDeclarationLocation = function($this, node, allowDeclaration) {
   }
 };
 Resolver.checkStatementLocation = function($this, node) {
-  if (node.parent.kind !== 2 || $in.NodeKind.isNamedBlockDeclaration(node.parent.parent.kind) && node.parent.parent.kind !== 7) {
-    Resolver.unexpectedStatement($this, node);
+  for (var parent = node.parent; parent !== null; parent = parent.parent) {
+    var kind = parent.kind;
+    if ($in.NodeKind.isFunction(kind) || kind === 53) {
+      break;
+    } else if (kind === 1) {
+      Resolver.unexpectedStatement($this, node);
+      break;
+    }
   }
 };
 Resolver.checkAccessToThis = function($this, range) {

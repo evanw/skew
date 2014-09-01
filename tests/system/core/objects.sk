@@ -1,3 +1,5 @@
+namespace core { void objects() {
+
 test("
 class Foo {
   int foo;
@@ -602,3 +604,5 @@ Bar bar = Bar();
 Baz baz = Bar();
 ", "
 ");
+
+}}

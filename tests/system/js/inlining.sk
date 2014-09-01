@@ -1,3 +1,5 @@
+namespace js { void inlining() {
+
 testJS("
 inline int foo(int foo) {
   return foo;
@@ -277,3 +279,5 @@ var baz = bar(1, foo());
 ", "
 var baz = 1;
 ");
+
+}}

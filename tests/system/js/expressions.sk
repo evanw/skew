@@ -1,3 +1,5 @@
+namespace js { void expressions() {
+
 testJS("
 double x = 0;
 - -1;
@@ -566,3 +568,5 @@ var a = (1).toString() + 2 + \"\";
 var b = (1 + 2 | 0) + \"\";
 var c = (1 + 2 | 0) + \"\";
 ");
+
+}}

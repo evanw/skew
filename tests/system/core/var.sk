@@ -1,3 +1,5 @@
+namespace core { void var_() {
+
 test("
 var foo;
 ", "
@@ -66,3 +68,5 @@ void fn() bar = null;
 var foo = bar();
     ~~~
 ");
+
+}}

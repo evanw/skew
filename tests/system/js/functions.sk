@@ -1,3 +1,5 @@
+namespace js { void functions() {
+
 testJS("
 class Foo {
   void foo() {}
@@ -116,3 +118,5 @@ $in.Foo.foo = function() {
 };
 new Foo(), $in.Foo.foo();
 ");
+
+}}

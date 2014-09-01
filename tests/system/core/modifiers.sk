@@ -1,3 +1,5 @@
+namespace core { void modifiers() {
+
 test("
 import public import public class Foo {}
 ", "
@@ -203,3 +205,5 @@ in foo {
   static void bar() {}
   ~~~~~~
 ");
+
+}}

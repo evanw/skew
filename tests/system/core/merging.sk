@@ -1,3 +1,5 @@
+namespace core { void merging() {
+
 test("
 in Foo {}
 class Foo {}
@@ -263,3 +265,5 @@ for (int foo = 0;;) {
 for (int foo = 0;;) {
          ~~~
 ");
+
+}}

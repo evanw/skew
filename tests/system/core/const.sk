@@ -1,3 +1,5 @@
+namespace core { void const_() {
+
 test("
 const int foo;
 ", "
@@ -37,3 +39,5 @@ switch (baz) {
   case foo {}
        ~~~
 ");
+
+}}

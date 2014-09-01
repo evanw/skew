@@ -1,3 +1,5 @@
+namespace core { void lambdas() {
+
 test("
 int fn(bool) foo = foo => foo;
 int fn(bool) fn(float) bar = bar => bar => bar;
@@ -91,3 +93,5 @@ void fn() bar = () => { return 0; };
 void fn() bar = () => { return 0; };
                                ^
 ");
+
+}}

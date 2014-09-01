@@ -1,3 +1,5 @@
+namespace core { void constructors() {
+
 test("
 class Foo {
   new() { return 0; }
@@ -483,3 +485,5 @@ class Foo {
   Foo foo = this;
             ~~~~
 ");
+
+}}

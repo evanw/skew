@@ -1,3 +1,5 @@
+namespace core { void parsing() {
+
 test("
 var π = Math.PI;
 ", "
@@ -515,3 +517,5 @@ namespace foo.bar. {
 foo.bar.foo();
         ~~~
 ");
+
+}}

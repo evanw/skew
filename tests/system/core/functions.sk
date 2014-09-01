@@ -1,3 +1,5 @@
+namespace core { void functions() {
+
 test("
 import int foo();
 import int bar() {}
@@ -129,3 +131,5 @@ int fn() bar = => 0;
 int fn() foo = =>;
                ~~
 ");
+
+}}

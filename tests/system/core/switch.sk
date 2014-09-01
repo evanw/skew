@@ -1,3 +1,5 @@
+namespace core { void switch_() {
+
 test("
 switch (0) {
   default {}
@@ -126,3 +128,5 @@ void foo(int foo) {
     case 0, Foo.FOO {}
          ^
 ");
+
+}}

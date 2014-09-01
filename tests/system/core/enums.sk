@@ -1,3 +1,5 @@
+namespace core { void enums() {
+
 test("
 int foo;
 enum Foo { FOO = foo }
@@ -237,3 +239,5 @@ int c = Foo.FOO <= .BAR;
 int d = .FOO >= Foo.BAR;
         ~~~~~~~~~~~~~~~
 ");
+
+}}

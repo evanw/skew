@@ -1,3 +1,5 @@
+namespace core { void types() {
+
 test("
 (void)null;
 ", "
@@ -67,3 +69,5 @@ ns foo(ns bar, ns baz) {}
 ns foo(ns bar, ns baz) {}
                ~~
 ");
+
+}}

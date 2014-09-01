@@ -26,3 +26,32 @@ export void runJS(string input, string expected) {
     expect(compiler.log.toString(), expected);
   }
 }
+
+export void start() {
+  core.calls();
+  core.const_();
+  core.constructors();
+  core.conversions();
+  core.cyclic();
+  core.enums();
+  core.functions();
+  core.generics();
+  core.lambdas();
+  core.let_();
+  core.merging();
+  core.modifiers();
+  core.objects();
+  core.parsing();
+  core.statements();
+  core.static_();
+  core.switch_();
+  core.types();
+  core.using_();
+  core.var_();
+
+  js.expressions();
+  js.functions();
+  js.inlining();
+  js.objects();
+  js.statements();
+}

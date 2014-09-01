@@ -1,3 +1,5 @@
+namespace core { void static_() {
+
 test("
 namespace ns { int x; }
 bool y = ns.x;
@@ -50,3 +52,5 @@ bool y = foo.x;
 bool y = foo.x;
          ~~~~~
 ");
+
+}}

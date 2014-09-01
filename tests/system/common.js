@@ -17,3 +17,5 @@ function testJS(input, expected) {
 function expect(output, expected) {
   assert.strictEqual(output.trim(), expected.trim());
 }
+
+start();

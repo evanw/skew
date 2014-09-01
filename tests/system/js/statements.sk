@@ -1,4 +1,8 @@
+namespace js { void statements() {
+
 testJS("
 import int foo;
 ", "
 ");
+
+}}

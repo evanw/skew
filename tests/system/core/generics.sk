@@ -1,3 +1,5 @@
+namespace core { void generics() {
+
 test("
 class Foo<T is int> {}
 ", "
@@ -389,3 +391,5 @@ bool foo = Foo<int, bool, float>().foo().bar().baz();
 bool foo = Foo<int, bool, float>().foo().bar().baz();
            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ");
+
+}}

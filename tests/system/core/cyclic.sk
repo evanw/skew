@@ -1,3 +1,5 @@
+namespace core { void cyclic() {
+
 test("
 var foo = foo;
 ", "
@@ -177,3 +179,5 @@ const int foo = foo;
 const int bar = baz;
           ~~~
 ");
+
+}}

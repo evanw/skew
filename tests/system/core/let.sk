@@ -1,3 +1,5 @@
+namespace core { void let_() {
+
 test("
 int y = let x = x in x;
 ", "
@@ -26,3 +28,5 @@ bool fn() foo = let x = 0 in => x;
 bool fn() foo = let x = 0 in => x;
                                 ^
 ");
+
+}}
