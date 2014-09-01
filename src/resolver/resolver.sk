@@ -229,11 +229,11 @@ class Resolver {
     }
   }
 
-  static bool checkParentsForLocalVariable(Node node) {
+  bool checkParentsForLocalVariable(Node node) {
     for (node = node.parent; node != null; node = node.parent) {
       var kind = node.kind;
       if (kind != .PROGRAM && kind != .FILE && kind != .BLOCK && kind != .NAMESPACE &&
-          kind != .MODIFIER && kind != .EXTENSION && !kind.isEnum()) {
+          kind != .MODIFIER && kind != .EXTENSION && kind != .VARIABLE_CLUSTER && !kind.isEnum()) {
         return true;
       }
     }

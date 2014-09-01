@@ -775,7 +775,7 @@ Compiler.prototype.compile = function(options) {
         this.constantFoldingTime += now() - constantFoldingStart;
       }
       var deadCodeRemovalStart = now();
-      DeadCodeRemovalPass.run(program, resolver);
+      DeadCodeRemovalPass.run(program, options, resolver);
       this.deadCodeRemovalTime += now() - deadCodeRemovalStart;
     }
     var emitter = null;
@@ -1143,7 +1143,6 @@ function SplitPath(_0, _1) {
   this.directory = _0;
   this.entry = _1;
 }
-var trace = {};
 var frontend = {};
 frontend.Flags = function() {
   this.help = false;
@@ -2739,11 +2738,12 @@ ConstantFolder.foldSequence = function(node) {
     }
   }
 };
-function DeadCodeRemovalPass() {
+function DeadCodeRemovalPass(_0) {
   this.includedSymbols = new IntMap();
+  this.options = _0;
 }
-DeadCodeRemovalPass.run = function(program, resolver) {
-  var pass = new DeadCodeRemovalPass();
+DeadCodeRemovalPass.run = function(program, options, resolver) {
+  var pass = new DeadCodeRemovalPass(options);
   DeadCodeRemovalPass.includeTopLevelStatements(pass, program);
   var symbols = resolver.allSymbols;
   for (var i = 0; i < symbols.length; i = i + 1 | 0) {
@@ -2780,6 +2780,9 @@ DeadCodeRemovalPass.includeTopLevelStatements = function($this, node) {
   }
 };
 DeadCodeRemovalPass.includeSymbol = function($this, symbol) {
+  if (symbol.kind === 18 && (symbol.flags & 1024) !== 0 && $this.options.foldAllConstants) {
+    return;
+  }
   if (!$this.includedSymbols.has(symbol.uniqueID)) {
     $this.includedSymbols.set(symbol.uniqueID, true);
     if (symbol.enclosingSymbol !== null && symbol.kind !== 19) {
@@ -3234,7 +3237,7 @@ Resolver.accumulateSymbolFlags = function($this) {
 Resolver.checkParentsForLocalVariable = function(node) {
   for (node = node.parent; node !== null; node = node.parent) {
     var kind = node.kind;
-    if (kind !== 0 && kind !== 1 && kind !== 2 && kind !== 7 && kind !== 31 && kind !== 13 && !$in.NodeKind.isEnum(kind)) {
+    if (kind !== 0 && kind !== 1 && kind !== 2 && kind !== 7 && kind !== 31 && kind !== 13 && kind !== 6 && !$in.NodeKind.isEnum(kind)) {
       return true;
     }
   }
@@ -8072,7 +8075,6 @@ var NATIVE_LIBRARY = "\nimport struct int { import string toString(); }\nimport 
 Range.EMPTY = new Range(null, 0, 0);
 var BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var HEX = "0123456789ABCDEF";
-trace.GENERICS = false;
 js.Emitter.isKeyword = js.Emitter.createIsKeyword();
 var yy_accept = [99, 99, 99, 31, 34, 98, 68, 34, 77, 13, 34, 58, 81, 65, 72, 21, 64, 28, 26, 51, 51, 20, 82, 59, 2, 41, 76, 43, 57, 80, 15, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 56, 14, 79, 91, 98, 69, 99, 86, 99, 10, 62, 3, 99, 18, 99, 8, 47, 9, 24, 7, 98, 6, 99, 51, 99, 38, 99, 99, 83, 60, 33, 55, 42, 84, 43, 5, 43, 43, 43, 43, 43, 43, 43, 27, 43, 43, 43, 43, 43, 39, 43, 44, 43, 46, 54, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 4, 63, 98, 29, 50, 53, 52, 11, 12, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 40, 43, 43, 43, 61, 43, 67, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 95, 43, 43, 38, 43, 43, 43, 17, 43, 43, 43, 43, 30, 32, 43, 43, 43, 43, 43, 43, 43, 70, 43, 43, 43, 43, 43, 43, 43, 43, 43, 90, 92, 43, 43, 43, 43, 0, 43, 16, 19, 22, 43, 43, 43, 36, 37, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 88, 43, 43, 94, 43, 97, 1, 43, 43, 35, 45, 48, 43, 43, 43, 43, 43, 75, 78, 85, 87, 89, 43, 43, 43, 25, 43, 43, 43, 73, 43, 93, 96, 23, 43, 43, 71, 43, 49, 66, 74, 99];
 var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 1, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 32, 28, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 28, 42, 43, 44, 45, 46, 47, 28, 48, 49, 50, 51, 52, 53, 54, 55, 28, 56, 57, 58, 59, 1];

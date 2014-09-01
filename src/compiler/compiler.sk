@@ -175,7 +175,7 @@ export class Compiler {
 
         // Dead code elimination
         var deadCodeRemovalStart = now();
-        DeadCodeRemovalPass.run(program, resolver);
+        DeadCodeRemovalPass.run(program, options, resolver);
         deadCodeRemovalTime += now() - deadCodeRemovalStart;
       }
 

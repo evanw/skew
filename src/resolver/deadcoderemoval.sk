@@ -1,8 +1,9 @@
 class DeadCodeRemovalPass {
+  CompilerOptions options;
   var includedSymbols = IntMap<bool>();
 
-  static void run(Node program, Resolver resolver) {
-    var pass = DeadCodeRemovalPass();
+  static void run(Node program, CompilerOptions options, Resolver resolver) {
+    var pass = DeadCodeRemovalPass(options);
     pass.includeTopLevelStatements(program);
 
     // Include all exported symbols
@@ -46,6 +47,11 @@ class DeadCodeRemovalPass {
   }
 
   void includeSymbol(Symbol symbol) {
+    // Don't include constants, needed because constant folding hasn't run yet
+    if (symbol.kind == .GLOBAL_VARIABLE && symbol.isConst() && options.foldAllConstants) {
+      return;
+    }
+
     if (!includedSymbols.has(symbol.uniqueID)) {
       includedSymbols.set(symbol.uniqueID, true);
 
@@ -54,7 +60,7 @@ class DeadCodeRemovalPass {
         includeSymbol(symbol.enclosingSymbol);
       }
 
-      // Recursively include child nodes non-structural nodes
+      // Recursively include child non-structural nodes
       var node = symbol.node;
       if (node != null && !node.kind.isNamedBlockDeclaration()) {
         visit(node);
