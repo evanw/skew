@@ -293,3 +293,7 @@ void semanticErrorMissingToString(Log log, Range range, Type type) {
 void semanticErrorToStringWrongType(Log log, Range range, Type expected, Type found) {
   log.error(range, "Expected toString() member to have " + typeToText(expected) + " but found " + typeToText(found));
 }
+
+void semanticErrorCannotImplementImportedFunction(Log log, Range range) {
+  log.error(range, "Imported functions cannot have an implementation");
+}

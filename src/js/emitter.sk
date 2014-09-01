@@ -708,7 +708,7 @@ namespace js {
     void patchNode(Node node, PatchContext context) {
       switch (node.kind) {
         case .LAMBDA { context.lambdaCount++; }
-        case .CONSTRUCTOR { patchConstructor(node, context); }
+        case .CONSTRUCTOR { patchConstructor(node, context); context.setFunction(node); }
         case .FUNCTION { context.setFunction(node); }
         case .CAST { patchCast(node, context); }
         case .CLASS { patchClass(node); }
@@ -818,9 +818,12 @@ namespace js {
     }
 
     void patchConstructor(Node node, PatchContext context) {
+      var block = node.functionBlock();
+      if (block == null) {
+        return;
+      }
       var superInitializer = node.superInitializer();
       var memberInitializers = node.memberInitializers();
-      var block = node.functionBlock();
       var index = 0;
       if (superInitializer != null) {
         block.insertChild(index++, Node.createExpression(superInitializer.replaceWith(null)));
@@ -833,7 +836,6 @@ namespace js {
           block.insertChild(index++, Node.createExpression(Node.createBinary(.ASSIGN, name.remove(), value.remove())));
         }
       }
-      context.setFunction(node);
     }
 
     Node createBinaryInt(NodeKind kind, Node left, Node right) {

@@ -1907,6 +1907,7 @@ js.Emitter.patchNode = function($this, node, context) {
     break;
   case 14:
     js.Emitter.patchConstructor(node, context);
+    js.PatchContext.setFunction(context, node);
     break;
   case 15:
     js.PatchContext.setFunction(context, node);
@@ -2022,9 +2023,12 @@ js.Emitter.patchCast = function($this, node, context) {
   }
 };
 js.Emitter.patchConstructor = function(node, context) {
+  var block = node.children[2];
+  if (block === null) {
+    return;
+  }
   var superInitializer = node.children[3];
   var memberInitializers = node.children[4];
-  var block = node.children[2];
   var index = 0;
   if (superInitializer !== null) {
     Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(29), [Node.replaceWith(superInitializer, null)]));
@@ -2037,7 +2041,6 @@ js.Emitter.patchConstructor = function(node, context) {
       Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(29), [Node.createBinary(86, Node.remove(name), Node.remove(value))]));
     }
   }
-  js.PatchContext.setFunction(context, node);
 };
 js.Emitter.createBinaryInt = function($this, kind, left, right) {
   if (kind === 80) {
@@ -4558,6 +4561,9 @@ Resolver.resolveFunction = function($this, node) {
   var block = node.children[2];
   if (block !== null) {
     var oldResultType = $this.resultType;
+    if ((node.symbol.flags & 4096) !== 0) {
+      Log.error($this.log, block.range, "Imported functions cannot have an implementation");
+    }
     var symbol = node.symbol;
     if (symbol.type === $this.cache.errorType) {
       $this.resultType = $this.cache.errorType;

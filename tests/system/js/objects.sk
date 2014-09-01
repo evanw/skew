@@ -145,10 +145,10 @@ function Foo() {
 
 testJS("
 import class Foo : Bar {
-  import new() {}
+  import new();
 }
 import class Bar {
-  import new() {}
+  import new();
 }
 var foo = Foo();
 ", "

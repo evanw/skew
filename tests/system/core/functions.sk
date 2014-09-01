@@ -1,0 +1,131 @@
+test("
+import int foo();
+import int bar() {}
+", "
+<stdin>:2:18: error: Imported functions cannot have an implementation
+import int bar() {}
+                 ~~
+<stdin>:2:12: error: All control paths for \"bar\" must return a value of type \"int\"
+import int bar() {}
+           ~~~
+");
+
+test("
+int foo() {}
+void bar() {}
+", "
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+int foo() {}
+    ~~~
+");
+
+test("
+int foo(bool bar) {
+  if (bar) return 0;
+}
+", "
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+int foo(bool bar) {
+    ~~~
+");
+
+test("
+int foo(bool bar) {
+  if (bar) return 0;
+  else {}
+}
+", "
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+int foo(bool bar) {
+    ~~~
+");
+
+test("
+int foo(bool bar) {
+  if (bar) return 0;
+  else if (bar) return 0;
+  else return 0;
+}
+", "
+");
+
+test("
+int foo(int bar) {
+  switch (bar) {
+    case 0 { return 0; }
+  }
+}
+", "
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+int foo(int bar) {
+    ~~~
+");
+
+test("
+int foo(int bar) {
+  switch (bar) {
+    case 0 { return 0; }
+    case 1 {}
+  }
+}
+", "
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+int foo(int bar) {
+    ~~~
+");
+
+test("
+int foo(int bar) {
+  switch (bar) {
+    case 0 { return 0; }
+    default {}
+  }
+}
+", "
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+int foo(int bar) {
+    ~~~
+");
+
+test("
+int foo(int bar) {
+  switch (bar) {
+    case 0 { return 0; }
+    default { if (bar < 5) return 1; }
+  }
+}
+", "
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+int foo(int bar) {
+    ~~~
+");
+
+test("
+int foo(int bar) {
+  switch (bar) {
+    case 0 { return 0; }
+    default { if (bar < 5) return 1; else return 2; }
+  }
+}
+", "
+");
+
+test("
+int foo() {
+  return 0;
+  1;
+}
+", "
+<stdin>:3:3: warning: Unused expression
+  1;
+  ^
+");
+
+test("
+int fn() foo = =>;
+int fn() bar = => 0;
+", "
+<stdin>:1:16: error: All control paths for lambda expression must return a value of type \"int\"
+int fn() foo = =>;
+               ~~
+");

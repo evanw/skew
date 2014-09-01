@@ -61,6 +61,7 @@ TEST_SOURCES += tests/system/core/constructors.sk
 TEST_SOURCES += tests/system/core/conversions.sk
 TEST_SOURCES += tests/system/core/cyclic.sk
 TEST_SOURCES += tests/system/core/enums.sk
+TEST_SOURCES += tests/system/core/functions.sk
 TEST_SOURCES += tests/system/core/generics.sk
 TEST_SOURCES += tests/system/core/lambdas.sk
 TEST_SOURCES += tests/system/core/let.sk

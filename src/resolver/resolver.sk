@@ -1842,6 +1842,11 @@ class Resolver {
     if (block != null) {
       var oldResultType = resultType;
 
+      // Imported functions cannot have an implementation
+      if (node.symbol.isImport()) {
+        semanticErrorCannotImplementImportedFunction(log, block.range);
+      }
+
       // Special-case the return type of constructors to void for the purpose
       // of type conversions in return statements inside the constructor
       var symbol = node.symbol;
