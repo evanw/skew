@@ -132,9 +132,9 @@ class Symbol {
   // to an unmerged member containing the members to be merged.
   Member overriddenMember = null;
 
-  // The value that this symbol takes if it is of enum type. Only user-defined
-  // enums have an enum value, so this should be ignored for imported enums.
-  var enumValue = 0;
+  // The value for a constant symbol. Variables create constants when the
+  // "const" keyword is used, and all non-imported enum values are constants.
+  Content constant = null;
 
   // Ambiguous symbols due to using namespace statements are allowed and are
   // only an error when used. All symbols in the collision are tracked here

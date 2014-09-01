@@ -159,7 +159,7 @@ namespace service {
         case .LOCAL_VARIABLE, .GLOBAL_VARIABLE, .INSTANCE_VARIABLE {
           var text = type + " " + symbol.name;
           if (symbol.isEnumValue()) {
-            text += " = " + symbol.enumValue;
+            text += " = " + symbol.constant.asInt();
           }
           result.declaration = text;
         }

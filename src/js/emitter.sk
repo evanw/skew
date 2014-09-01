@@ -320,7 +320,7 @@ namespace js {
         increaseIndent();
         for (var i = 0; i < block.children.length; i++) {
           var symbol = block.children.get(i).symbol;
-          emit(indent + mangleName(symbol) + ": " + symbol.enumValue + (i == block.children.length - 1 ? "\n" : ",\n"));
+          emit(indent + mangleName(symbol) + ": " + symbol.constant.asInt() + (i == block.children.length - 1 ? "\n" : ",\n"));
         }
         decreaseIndent();
         emit(indent + "};\n");

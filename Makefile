@@ -2,6 +2,7 @@
 # SOURCES
 ################################################################################
 
+SOURCES += src/ast/content.sk
 SOURCES += src/ast/create.sk
 SOURCES += src/ast/get.sk
 SOURCES += src/ast/logic.sk

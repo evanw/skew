@@ -1159,7 +1159,7 @@ class Resolver {
           resolveAsExpressionWithConversion(variableValue, cache.intType, .IMPLICIT_CAST);
           constantFolder.foldConstants(variableValue);
           if (variableValue.kind == .INT) {
-            symbol.enumValue = variableValue.asInt();
+            symbol.constant = variableValue.content;
           } else {
             variableType = Node.createType(cache.errorType);
             if (!variableValue.type.isError(cache)) {
@@ -1175,7 +1175,8 @@ class Resolver {
             var previous = node.parent.children.get(index - 1).symbol;
             initializeSymbol(previous);
             if (!previous.type.isError(cache)) {
-              symbol.enumValue = type.isEnumFlags() ? previous.enumValue * 2 : previous.enumValue + 1;
+              var constant = previous.constant.asInt();
+              symbol.constant = IntContent(type.isEnumFlags() ? constant * 2 : constant + 1);
             } else {
               variableType = Node.createType(cache.errorType);
             }
@@ -1183,7 +1184,7 @@ class Resolver {
 
           // If there is no previous enum value, use the default value
           else {
-            symbol.enumValue = type.isEnumFlags() ? 1 : 0;
+            symbol.constant = IntContent(type.isEnumFlags() ? 1 : 0);
           }
         }
       }
@@ -1506,11 +1507,11 @@ class Resolver {
       if (field.type.isError(cache)) {
         break;
       }
-      var value = field.enumValue;
+      var value = field.constant.asInt();
       int j;
       for (j = 0; j < i; j++) {
         Symbol other = fields.get(j);
-        if (value == other.enumValue) {
+        if (value == other.constant.asInt()) {
           semanticErrorBadEnumToString(log, enclosingNode.declarationName().range, enclosingSymbol.name, field.name, other.name, value);
           break;
         }
@@ -2657,6 +2658,9 @@ class Resolver {
   }
 
   bool wrapWithToStringCall(Node node) {
+    if (node.type.isError(cache)) {
+      return false;
+    }
     var toString = node.type.findMember("toString");
     if (toString == null) {
       semanticErrorMissingToString(log, node.range, node.type);

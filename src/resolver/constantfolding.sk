@@ -1,36 +1,39 @@
 class ConstantFolder {
   TypeCache cache;
 
+  void flatten(Node node, Content content) {
+    node.removeChildren();
+    switch (content.type()) {
+      case .BOOL { node.kind = .BOOL; }
+      case .INT { node.kind = .INT; }
+      case .DOUBLE { node.kind = node.type == cache.floatType ? .FLOAT : .DOUBLE; }
+      case .STRING { node.kind = .STRING; }
+    }
+    node.content = content;
+  }
+
   // Use this instead of Node.become(Node.createTrue()) to avoid more GC
   void flattenBool(Node node, bool value) {
     assert node.type.isError(cache) || node.type.isBool(cache);
-    node.removeChildren();
-    node.kind = .BOOL;
-    node.content = BoolContent(value);
+    flatten(node, BoolContent(value));
   }
 
   // Use this instead of Node.become(Node.createInt()) to avoid more GC
   void flattenInt(Node node, int value) {
     assert node.type.isError(cache) || node.type.isInteger(cache);
-    node.removeChildren();
-    node.kind = .INT;
-    node.content = IntContent(value);
+    flatten(node, IntContent(value));
   }
 
   // Use this instead of Node.become(Node.createDouble()) to avoid more GC
   void flattenReal(Node node, double value) {
     assert node.type.isError(cache) || node.type.isReal(cache);
-    node.removeChildren();
-    node.kind = node.type == cache.floatType ? .FLOAT : .DOUBLE;
-    node.content = DoubleContent(value);
+    flatten(node, DoubleContent(value));
   }
 
   // Use this instead of Node.become(Node.createString()) to avoid more GC
   void flattenString(Node node, string value) {
     assert node.type.isError(cache) || node.type.isString(cache);
-    node.removeChildren();
-    node.kind = .STRING;
-    node.content = StringContent(value);
+    flatten(node, StringContent(value));
   }
 
   static bool blockContainsVariableCluster(Node node) {
@@ -212,8 +215,8 @@ class ConstantFolder {
   }
 
   void foldName(Node node) {
-    if (node.symbol != null && node.symbol.isEnumValue()) {
-      flattenInt(node, (int)node.symbol.enumValue);
+    if (node.symbol != null && node.symbol.constant != null) {
+      flatten(node, node.symbol.constant);
     }
   }
 

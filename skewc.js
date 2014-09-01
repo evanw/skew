@@ -135,6 +135,61 @@ $in.TargetFormat = {};
 $in.io = {};
 $in.SymbolKind = {};
 $in.TokenKind = {};
+function Content() {
+}
+Content.equal = function(left, right) {
+  if (left === right) {
+    return true;
+  }
+  if (left !== null && right !== null) {
+    var type = left.type();
+    if (type === right.type()) {
+      switch (type) {
+      case 0:
+        return left.value === right.value;
+      case 1:
+        return left.value === right.value;
+      case 2:
+        return left.value === right.value;
+      case 3:
+        return left.value === right.value;
+      }
+    }
+  }
+  return false;
+};
+function BoolContent(_0) {
+  Content.call(this);
+  this.value = _0;
+}
+$extends(BoolContent, Content);
+BoolContent.prototype.type = function() {
+  return 0;
+};
+function IntContent(_0) {
+  Content.call(this);
+  this.value = _0;
+}
+$extends(IntContent, Content);
+IntContent.prototype.type = function() {
+  return 1;
+};
+function DoubleContent(_0) {
+  Content.call(this);
+  this.value = _0;
+}
+$extends(DoubleContent, Content);
+DoubleContent.prototype.type = function() {
+  return 2;
+};
+function StringContent(_0) {
+  Content.call(this);
+  this.value = _0;
+}
+$extends(StringContent, Content);
+StringContent.prototype.type = function() {
+  return 3;
+};
 function Node(_0) {
   this.range = Range.EMPTY;
   this.parent = null;
@@ -146,6 +201,12 @@ function Node(_0) {
   this.content = null;
   this.kind = _0;
 }
+Node.isTrue = function($this) {
+  return $this.kind === 38 && $this.content.value;
+};
+Node.isFalse = function($this) {
+  return $this.kind === 38 && !$this.content.value;
+};
 Node.createCase = function(values, block) {
   values.push(block);
   return Node.withChildren(new Node(4), values);
@@ -472,67 +533,6 @@ Node.updateParent = function(node, parent) {
   if (node !== null) {
     node.parent = parent;
   }
-};
-Node.isTrue = function($this) {
-  return $this.kind === 38 && $this.content.value;
-};
-Node.isFalse = function($this) {
-  return $this.kind === 38 && !$this.content.value;
-};
-function Content() {
-}
-Content.equal = function(left, right) {
-  if (left === right) {
-    return true;
-  }
-  if (left !== null && right !== null) {
-    var type = left.type();
-    if (type === right.type()) {
-      switch (type) {
-      case 0:
-        return left.value === right.value;
-      case 1:
-        return left.value === right.value;
-      case 2:
-        return left.value === right.value;
-      case 3:
-        return left.value === right.value;
-      }
-    }
-  }
-  return false;
-};
-function BoolContent(_0) {
-  Content.call(this);
-  this.value = _0;
-}
-$extends(BoolContent, Content);
-BoolContent.prototype.type = function() {
-  return 0;
-};
-function IntContent(_0) {
-  Content.call(this);
-  this.value = _0;
-}
-$extends(IntContent, Content);
-IntContent.prototype.type = function() {
-  return 1;
-};
-function DoubleContent(_0) {
-  Content.call(this);
-  this.value = _0;
-}
-$extends(DoubleContent, Content);
-DoubleContent.prototype.type = function() {
-  return 2;
-};
-function StringContent(_0) {
-  Content.call(this);
-  this.value = _0;
-}
-$extends(StringContent, Content);
-StringContent.prototype.type = function() {
-  return 3;
 };
 function OperatorInfo(_0, _1, _2) {
   this.text = _0;
@@ -1450,7 +1450,7 @@ js.Emitter.emitEnum = function($this, node) {
     $this.indent += "  ";
     for (var i = 0; i < block.children.length; i = i + 1 | 0) {
       var symbol = block.children[i].symbol;
-      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(symbol) + ": " + symbol.enumValue + (i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
+      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(symbol) + ": " + symbol.constant.value + (i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
     }
     js.Emitter.decreaseIndent($this);
     js.Emitter.emit($this, $this.indent + "};\n");
@@ -2339,25 +2339,23 @@ CallGraph.recordCallSite = function($this, symbol, node) {
 function ConstantFolder(_0) {
   this.cache = _0;
 }
-ConstantFolder.flattenBool = function(node, value) {
+ConstantFolder.flatten = function($this, node, content) {
   Node.removeChildren(node);
-  node.kind = 38;
-  node.content = new BoolContent(value);
-};
-ConstantFolder.flattenInt = function(node, value) {
-  Node.removeChildren(node);
-  node.kind = 39;
-  node.content = new IntContent(value);
-};
-ConstantFolder.flattenReal = function($this, node, value) {
-  Node.removeChildren(node);
-  node.kind = node.type === $this.cache.floatType ? 40 : 41;
-  node.content = new DoubleContent(value);
-};
-ConstantFolder.flattenString = function(node, value) {
-  Node.removeChildren(node);
-  node.kind = 42;
-  node.content = new StringContent(value);
+  switch (content.type()) {
+  case 0:
+    node.kind = 38;
+    break;
+  case 1:
+    node.kind = 39;
+    break;
+  case 2:
+    node.kind = node.type === $this.cache.floatType ? 40 : 41;
+    break;
+  case 3:
+    node.kind = 42;
+    break;
+  }
+  node.content = content;
 };
 ConstantFolder.blockContainsVariableCluster = function(node) {
   if (Node.hasChildren(node)) {
@@ -2390,7 +2388,7 @@ ConstantFolder.foldConstants = function($this, node) {
     }
   }
   if (kind === 33) {
-    ConstantFolder.foldName(node);
+    ConstantFolder.foldName($this, node);
   } else if ($in.NodeKind.isCast(kind)) {
     ConstantFolder.foldCast($this, node);
   } else if ($in.NodeKind.isUnaryOperator(kind)) {
@@ -2412,17 +2410,17 @@ ConstantFolder.rotateStringConcatenation = function(node) {
     Node.swapWith(left, rightLeft);
   }
 };
-ConstantFolder.foldStringConcatenation = function(node) {
+ConstantFolder.foldStringConcatenation = function($this, node) {
   var left = node.children[0];
   var right = node.children[1];
   if (right.kind === 42) {
     if (left.kind === 42) {
-      ConstantFolder.flattenString(node, left.content.value + right.content.value);
+      ConstantFolder.flatten($this, node, new StringContent(left.content.value + right.content.value));
     } else if (left.kind === 66) {
       var leftLeft = left.children[0];
       var leftRight = left.children[1];
       if (leftRight.kind === 42) {
-        ConstantFolder.flattenString(leftRight, leftRight.content.value + right.content.value);
+        ConstantFolder.flatten($this, leftRight, new StringContent(leftRight.content.value + right.content.value));
         Node.swapWith(node, left);
       }
     }
@@ -2480,9 +2478,9 @@ ConstantFolder.foldBlock = function(node) {
     }
   }
 };
-ConstantFolder.foldName = function(node) {
-  if (node.symbol !== null && Symbol.isEnumValue(node.symbol)) {
-    ConstantFolder.flattenInt(node, node.symbol.enumValue);
+ConstantFolder.foldName = function($this, node) {
+  if (node.symbol !== null && node.symbol.constant !== null) {
+    ConstantFolder.flatten($this, node, node.symbol.constant);
   }
 };
 ConstantFolder.foldCast = function($this, node) {
@@ -2491,27 +2489,27 @@ ConstantFolder.foldCast = function($this, node) {
   var valueKind = value.kind;
   if (valueKind === 38) {
     if (type === $this.cache.boolType) {
-      ConstantFolder.flattenBool(node, value.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(value.content.value));
     } else if (Type.isInteger(type, $this.cache)) {
-      ConstantFolder.flattenInt(node, value.content.value | 0);
+      ConstantFolder.flatten($this, node, new IntContent(value.content.value | 0));
     } else if (Type.isReal(type, $this.cache)) {
-      ConstantFolder.flattenReal($this, node, +value.content.value);
+      ConstantFolder.flatten($this, node, new DoubleContent(+value.content.value));
     }
   } else if (valueKind === 39) {
     if (type === $this.cache.boolType) {
-      ConstantFolder.flattenBool(node, !value.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(!value.content.value));
     } else if (Type.isInteger(type, $this.cache)) {
-      ConstantFolder.flattenInt(node, value.content.value);
+      ConstantFolder.flatten($this, node, new IntContent(value.content.value));
     } else if (Type.isReal(type, $this.cache)) {
-      ConstantFolder.flattenReal($this, node, value.content.value);
+      ConstantFolder.flatten($this, node, new DoubleContent(value.content.value));
     }
   } else if ($in.NodeKind.isReal(valueKind)) {
     if (type === $this.cache.boolType) {
-      ConstantFolder.flattenBool(node, !value.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(!value.content.value));
     } else if (Type.isInteger(type, $this.cache)) {
-      ConstantFolder.flattenInt(node, value.content.value | 0);
+      ConstantFolder.flatten($this, node, new IntContent(value.content.value | 0));
     } else if (Type.isReal(type, $this.cache)) {
-      ConstantFolder.flattenReal($this, node, value.content.value);
+      ConstantFolder.flatten($this, node, new DoubleContent(value.content.value));
     }
   }
 };
@@ -2520,21 +2518,21 @@ ConstantFolder.foldUnaryOperator = function($this, node, kind) {
   var valueKind = value.kind;
   if (valueKind === 38) {
     if (kind === 58) {
-      ConstantFolder.flattenBool(node, !value.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(!value.content.value));
     }
   } else if (valueKind === 39) {
     if (kind === 59) {
-      ConstantFolder.flattenInt(node, +value.content.value);
+      ConstantFolder.flatten($this, node, new IntContent(+value.content.value));
     } else if (kind === 60) {
-      ConstantFolder.flattenInt(node, -value.content.value);
+      ConstantFolder.flatten($this, node, new IntContent(-value.content.value));
     } else if (kind === 61) {
-      ConstantFolder.flattenInt(node, ~value.content.value);
+      ConstantFolder.flatten($this, node, new IntContent(~value.content.value));
     }
   } else if ($in.NodeKind.isReal(valueKind)) {
     if (kind === 59) {
-      ConstantFolder.flattenReal($this, node, +value.content.value);
+      ConstantFolder.flatten($this, node, new DoubleContent(+value.content.value));
     } else if (kind === 60) {
-      ConstantFolder.flattenReal($this, node, -value.content.value);
+      ConstantFolder.flatten($this, node, new DoubleContent(-value.content.value));
     }
   } else if (kind === 58) {
     switch (valueKind) {
@@ -2555,7 +2553,7 @@ ConstantFolder.foldUnaryOperator = function($this, node, kind) {
 };
 ConstantFolder.foldBinaryOperator = function($this, node, kind) {
   if (kind === 66 && node.type === $this.cache.stringType) {
-    ConstantFolder.foldStringConcatenation(node);
+    ConstantFolder.foldStringConcatenation($this, node);
     return;
   }
   var left = node.children[0];
@@ -2567,100 +2565,100 @@ ConstantFolder.foldBinaryOperator = function($this, node, kind) {
   if (valueKind === 38) {
     switch (kind) {
     case 78:
-      ConstantFolder.flattenBool(node, left.content.value && right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value && right.content.value));
       break;
     case 79:
-      ConstantFolder.flattenBool(node, left.content.value || right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value || right.content.value));
       break;
     case 71:
-      ConstantFolder.flattenBool(node, left.content.value === right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value === right.content.value));
       break;
     case 81:
-      ConstantFolder.flattenBool(node, left.content.value !== right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value !== right.content.value));
       break;
     }
   } else if (valueKind === 39) {
     switch (kind) {
     case 66:
-      ConstantFolder.flattenInt(node, left.content.value + right.content.value | 0);
+      ConstantFolder.flatten($this, node, new IntContent(left.content.value + right.content.value | 0));
       break;
     case 85:
-      ConstantFolder.flattenInt(node, left.content.value - right.content.value | 0);
+      ConstantFolder.flatten($this, node, new IntContent(left.content.value - right.content.value | 0));
       break;
     case 80:
-      ConstantFolder.flattenInt(node, $imul(left.content.value, right.content.value));
+      ConstantFolder.flatten($this, node, new IntContent($imul(left.content.value, right.content.value)));
       break;
     case 70:
-      ConstantFolder.flattenInt(node, left.content.value / right.content.value | 0);
+      ConstantFolder.flatten($this, node, new IntContent(left.content.value / right.content.value | 0));
       break;
     case 82:
-      ConstantFolder.flattenInt(node, left.content.value % right.content.value | 0);
+      ConstantFolder.flatten($this, node, new IntContent(left.content.value % right.content.value | 0));
       break;
     case 83:
-      ConstantFolder.flattenInt(node, left.content.value << right.content.value);
+      ConstantFolder.flatten($this, node, new IntContent(left.content.value << right.content.value));
       break;
     case 84:
-      ConstantFolder.flattenInt(node, left.content.value >> right.content.value);
+      ConstantFolder.flatten($this, node, new IntContent(left.content.value >> right.content.value));
       break;
     case 67:
-      ConstantFolder.flattenInt(node, left.content.value & right.content.value);
+      ConstantFolder.flatten($this, node, new IntContent(left.content.value & right.content.value));
       break;
     case 68:
-      ConstantFolder.flattenInt(node, left.content.value | right.content.value);
+      ConstantFolder.flatten($this, node, new IntContent(left.content.value | right.content.value));
       break;
     case 69:
-      ConstantFolder.flattenInt(node, left.content.value ^ right.content.value);
+      ConstantFolder.flatten($this, node, new IntContent(left.content.value ^ right.content.value));
       break;
     case 71:
-      ConstantFolder.flattenBool(node, left.content.value === right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value === right.content.value));
       break;
     case 81:
-      ConstantFolder.flattenBool(node, left.content.value !== right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value !== right.content.value));
       break;
     case 76:
-      ConstantFolder.flattenBool(node, left.content.value < right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value < right.content.value));
       break;
     case 72:
-      ConstantFolder.flattenBool(node, left.content.value > right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value > right.content.value));
       break;
     case 77:
-      ConstantFolder.flattenBool(node, left.content.value <= right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value <= right.content.value));
       break;
     case 73:
-      ConstantFolder.flattenBool(node, left.content.value >= right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value >= right.content.value));
       break;
     }
   } else if ($in.NodeKind.isReal(valueKind)) {
     switch (kind) {
     case 66:
-      ConstantFolder.flattenReal($this, node, left.content.value + right.content.value);
+      ConstantFolder.flatten($this, node, new DoubleContent(left.content.value + right.content.value));
       break;
     case 85:
-      ConstantFolder.flattenReal($this, node, left.content.value - right.content.value);
+      ConstantFolder.flatten($this, node, new DoubleContent(left.content.value - right.content.value));
       break;
     case 80:
-      ConstantFolder.flattenReal($this, node, left.content.value * right.content.value);
+      ConstantFolder.flatten($this, node, new DoubleContent(left.content.value * right.content.value));
       break;
     case 70:
-      ConstantFolder.flattenReal($this, node, left.content.value / right.content.value);
+      ConstantFolder.flatten($this, node, new DoubleContent(left.content.value / right.content.value));
       break;
     case 71:
-      ConstantFolder.flattenBool(node, left.content.value === right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value === right.content.value));
       break;
     case 81:
-      ConstantFolder.flattenBool(node, left.content.value !== right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value !== right.content.value));
       break;
     case 76:
-      ConstantFolder.flattenBool(node, left.content.value < right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value < right.content.value));
       break;
     case 72:
-      ConstantFolder.flattenBool(node, left.content.value > right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value > right.content.value));
       break;
     case 77:
-      ConstantFolder.flattenBool(node, left.content.value <= right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value <= right.content.value));
       break;
     case 73:
-      ConstantFolder.flattenBool(node, left.content.value >= right.content.value);
+      ConstantFolder.flatten($this, node, new BoolContent(left.content.value >= right.content.value));
       break;
     }
   }
@@ -4020,7 +4018,7 @@ Resolver.initializeVariable = function($this, symbol) {
         Resolver.resolveAsExpressionWithConversion($this, variableValue, $this.cache.intType, 0);
         ConstantFolder.foldConstants($this.constantFolder, variableValue);
         if (variableValue.kind === 39) {
-          symbol.enumValue = variableValue.content.value;
+          symbol.constant = variableValue.content;
         } else {
           variableType = Node.withType(new Node(34), $this.cache.errorType);
           if (variableValue.type !== $this.cache.errorType) {
@@ -4033,12 +4031,13 @@ Resolver.initializeVariable = function($this, symbol) {
           var previous = node.parent.children[index - 1 | 0].symbol;
           Resolver.initializeSymbol($this, previous);
           if (previous.type !== $this.cache.errorType) {
-            symbol.enumValue = Type.isEnumFlags(type) ? $imul(previous.enumValue, 2) : previous.enumValue + 1 | 0;
+            var constant = previous.constant.value;
+            symbol.constant = new IntContent(Type.isEnumFlags(type) ? $imul(constant, 2) : constant + 1 | 0);
           } else {
             variableType = Node.withType(new Node(34), $this.cache.errorType);
           }
         } else {
-          symbol.enumValue = Type.isEnumFlags(type) ? 1 : 0;
+          symbol.constant = new IntContent(Type.isEnumFlags(type) ? 1 : 0);
         }
       }
     } else {
@@ -4281,11 +4280,11 @@ Resolver.generateDefaultToString = function($this, symbol) {
     if (field.type === $this.cache.errorType) {
       break;
     }
-    var value = field.enumValue;
+    var value = field.constant.value;
     var j = 0;
     for (j = 0; j < i; j = j + 1 | 0) {
       var other = fields[j];
-      if (value === other.enumValue) {
+      if (value === other.constant.value) {
         Log.error($this.log, enclosingNode.children[0].range, "Cannot automatically generate \"toString\" for \"" + enclosingSymbol.name + "\" because \"" + field.name + "\" and \"" + other.name + "\" both have the same value " + value);
         break;
       }
@@ -5101,6 +5100,9 @@ Resolver.resolveUnaryOperator = function($this, node) {
   Resolver.checkConversion($this, node.type, value, 0);
 };
 Resolver.wrapWithToStringCall = function($this, node) {
+  if (node.type === $this.cache.errorType) {
+    return false;
+  }
   var toString = node.type.members.getOrDefault("toString", null);
   if (toString === null) {
     Log.error($this.log, node.range, "Expression of type \"" + Type.toString(node.type) + "\" has no toString() member to call");
@@ -5289,7 +5291,7 @@ function Symbol(_0, _1) {
   this.node = null;
   this.enclosingSymbol = null;
   this.overriddenMember = null;
-  this.enumValue = 0;
+  this.constant = null;
   this.identicalMembers = null;
   this.parameters = null;
   this.sortedParameters = null;
@@ -7919,7 +7921,7 @@ service.typeFromPosition = function(node, source, index) {
     case 19:
       var text = Type.toString(type) + " " + symbol.name;
       if (Symbol.isEnumValue(symbol)) {
-        text += " = " + symbol.enumValue;
+        text += " = " + symbol.constant.value;
       }
       result.declaration = text;
       break;
