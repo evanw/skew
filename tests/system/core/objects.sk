@@ -431,10 +431,10 @@ test("
 virtual struct Foo {}
 override struct Bar {}
 ", "
-<stdin>:1:1: error: Cannot use the \"virtual\" modifier on a struct declaration
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on an object declaration
 virtual struct Foo {}
 ~~~~~~~
-<stdin>:2:1: error: Cannot use the \"override\" modifier on a struct declaration
+<stdin>:2:1: error: Cannot use the \"override\" modifier on an object declaration
 override struct Bar {}
 ~~~~~~~~
 ");
@@ -443,10 +443,10 @@ test("
 virtual class Foo {}
 override class Bar {}
 ", "
-<stdin>:1:1: error: Cannot use the \"virtual\" modifier on a class declaration
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on an object declaration
 virtual class Foo {}
 ~~~~~~~
-<stdin>:2:1: error: Cannot use the \"override\" modifier on a class declaration
+<stdin>:2:1: error: Cannot use the \"override\" modifier on an object declaration
 override class Bar {}
 ~~~~~~~~
 ");
@@ -455,10 +455,10 @@ test("
 virtual interface Foo {}
 override interface Bar {}
 ", "
-<stdin>:1:1: error: Cannot use the \"virtual\" modifier on an interface declaration
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on an object declaration
 virtual interface Foo {}
 ~~~~~~~
-<stdin>:2:1: error: Cannot use the \"override\" modifier on an interface declaration
+<stdin>:2:1: error: Cannot use the \"override\" modifier on an object declaration
 override interface Bar {}
 ~~~~~~~~
 ");
@@ -513,10 +513,10 @@ virtual in Foo {}
 override in Bar {}
 override class Bar {}
 ", "
-<stdin>:1:1: error: Cannot use the \"virtual\" modifier on a class declaration
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on an object declaration
 virtual class Foo {}
 ~~~~~~~
-<stdin>:3:1: error: Cannot use the \"override\" modifier on a class declaration
+<stdin>:3:1: error: Cannot use the \"override\" modifier on an object declaration
 override in Bar {}
 ~~~~~~~~
 ");

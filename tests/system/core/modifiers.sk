@@ -28,6 +28,51 @@ public class Foo {
 ");
 
 test("
+inline int v;
+inline void f() {}
+inline enum E {}
+inline class C {}
+inline namespace n {}
+", "
+<stdin>:1:1: error: Cannot use the \"inline\" modifier on a variable declaration
+inline int v;
+~~~~~~
+<stdin>:3:1: error: Cannot use the \"inline\" modifier on an enum declaration
+inline enum E {}
+~~~~~~
+<stdin>:4:1: error: Cannot use the \"inline\" modifier on an object declaration
+inline class C {}
+~~~~~~
+<stdin>:5:1: error: Cannot use the \"inline\" modifier on a namespace declaration
+inline namespace n {}
+~~~~~~
+");
+
+test("
+const int v;
+const void f() {}
+const enum E {}
+const class C {}
+const namespace n {}
+", "
+<stdin>:1:11: error: Variables with the \"const\" modifier must be initialized
+const int v;
+          ^
+<stdin>:2:1: error: Cannot use the \"const\" modifier on a function declaration
+const void f() {}
+~~~~~
+<stdin>:3:1: error: Cannot use the \"const\" modifier on an enum declaration
+const enum E {}
+~~~~~
+<stdin>:4:1: error: Cannot use the \"const\" modifier on an object declaration
+const class C {}
+~~~~~
+<stdin>:5:1: error: Cannot use the \"const\" modifier on a namespace declaration
+const namespace n {}
+~~~~~
+");
+
+test("
 final int v;
 final void f() {}
 final enum E {}
@@ -64,7 +109,7 @@ virtual void f() {}
 <stdin>:3:1: error: Cannot use the \"virtual\" modifier on an enum declaration
 virtual enum E {}
 ~~~~~~~
-<stdin>:4:1: error: Cannot use the \"virtual\" modifier on a class declaration
+<stdin>:4:1: error: Cannot use the \"virtual\" modifier on an object declaration
 virtual class C {}
 ~~~~~~~
 <stdin>:5:1: error: Cannot use the \"virtual\" modifier on a namespace declaration
@@ -88,7 +133,7 @@ override void f() {}
 <stdin>:3:1: error: Cannot use the \"override\" modifier on an enum declaration
 override enum E {}
 ~~~~~~~~
-<stdin>:4:1: error: Cannot use the \"override\" modifier on a class declaration
+<stdin>:4:1: error: Cannot use the \"override\" modifier on an object declaration
 override class C {}
 ~~~~~~~~
 <stdin>:5:1: error: Cannot use the \"override\" modifier on a namespace declaration

@@ -824,7 +824,9 @@ class Resolver {
 
   void initializeNamespace(Symbol symbol) {
     assert symbol.type.isNamespace();
+    unexpectedModifierIfPresent(symbol, .CONST, "on a namespace declaration");
     unexpectedModifierIfPresent(symbol, .FINAL, "on a namespace declaration");
+    unexpectedModifierIfPresent(symbol, .INLINE, "on a namespace declaration");
     unexpectedModifierIfPresent(symbol, .STATIC, "on a namespace declaration");
     unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a namespace declaration");
     unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a namespace declaration");
@@ -833,7 +835,9 @@ class Resolver {
 
   void initializeEnum(Symbol symbol) {
     assert symbol.type.isEnum();
+    unexpectedModifierIfPresent(symbol, .CONST, "on an enum declaration");
     unexpectedModifierIfPresent(symbol, .FINAL, "on an enum declaration");
+    unexpectedModifierIfPresent(symbol, .INLINE, "on an enum declaration");
     unexpectedModifierIfPresent(symbol, .STATIC, "on an enum declaration");
     unexpectedModifierIfPresent(symbol, .VIRTUAL, "on an enum declaration");
     unexpectedModifierIfPresent(symbol, .OVERRIDE, "on an enum declaration");
@@ -935,22 +939,17 @@ class Resolver {
   }
 
   void initializeObject(Symbol symbol) {
+    unexpectedModifierIfPresent(symbol, .CONST, "on an object declaration");
     unexpectedModifierIfPresent(symbol, .FINAL, "on an object declaration");
+    unexpectedModifierIfPresent(symbol, .INLINE, "on an object declaration");
     unexpectedModifierIfPresent(symbol, .STATIC, "on an object declaration");
+    unexpectedModifierIfPresent(symbol, .VIRTUAL, "on an object declaration");
+    unexpectedModifierIfPresent(symbol, .OVERRIDE, "on an object declaration");
 
     var node = symbol.node.firstNonExtensionSibling();
     var parameters = node.objectParameters();
     var type = symbol.type;
     assert type.isObject();
-
-    string where;
-    switch (symbol.kind) {
-      case .CLASS { where = "on a class declaration"; }
-      case .STRUCT { where = "on a struct declaration"; }
-      case .INTERFACE { where = "on an interface declaration"; }
-    }
-    unexpectedModifierIfPresent(symbol, .VIRTUAL, where);
-    unexpectedModifierIfPresent(symbol, .OVERRIDE, where);
 
     // Resolve type parameters
     if (parameters != null && parameters.hasChildren()) {
@@ -977,6 +976,7 @@ class Resolver {
     assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||
       context.symbolForThis != null && context.symbolForThis == enclosingSymbol;
 
+    unexpectedModifierIfPresent(symbol, .CONST, "on a function declaration");
     unexpectedModifierIfPresent(symbol, .FINAL, "on a function declaration");
     if (enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances()) {
       unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
@@ -1126,6 +1126,7 @@ class Resolver {
   }
 
   void initializeVariable(Symbol symbol) {
+    unexpectedModifierIfPresent(symbol, .INLINE, "on a variable declaration");
     unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a variable declaration");
     unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a variable declaration");
     if (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances()) {
