@@ -1445,7 +1445,7 @@ js.Emitter.emitNamespace = function($this, node) {
 };
 js.Emitter.emitEnum = function($this, node) {
   var block = node.children[1];
-  if (!$this.options.foldAllConstants || Symbol.isImportOrExport(node.symbol)) {
+  if (!$this.options.foldAllConstants || (node.symbol.flags & 6144) !== 0) {
     if (!js.Emitter.hasCompoundName(node.symbol)) {
       js.Emitter.emit($this, "var ");
     }
@@ -2082,7 +2082,7 @@ js.Emitter.createIsKeyword = function() {
   return result;
 };
 js.Emitter.mangleName = function(symbol) {
-  if (Symbol.isImportOrExport(symbol)) {
+  if ((symbol.flags & 6144) !== 0) {
     return symbol.name;
   }
   if (symbol.kind === 16) {
@@ -5424,9 +5424,6 @@ Symbol.isObjectMember = function($this) {
 };
 Symbol.isEnumMember = function($this) {
   return $this.enclosingSymbol !== null && $in.SymbolKind.isEnum($this.enclosingSymbol.kind);
-};
-Symbol.isImportOrExport = function($this) {
-  return ($this.flags & 4096) !== 0 || ($this.flags & 2048) !== 0;
 };
 function SymbolMotionPass(_0) {
   this.shadowForSymbol = new IntMap();

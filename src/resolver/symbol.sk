@@ -271,7 +271,7 @@ class Symbol {
   }
 
   bool isImportOrExport() {
-    return isImport() || isExport();
+    return (flags & (.IMPORT | .EXPORT)) != 0;
   }
 
   bool isUninitialized() {

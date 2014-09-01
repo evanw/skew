@@ -1234,7 +1234,7 @@ class Resolver {
         constantFolder.foldConstants(value);
         if (value.kind.isConstant()) {
           symbol.constant = value.content;
-        } else if (!value.type.isError(cache)) {
+        } else if (!value.type.isError(cache) && !symbol.type.isError(cache)) {
           semanticErrorNonConstantConstValue(log, value.range);
           value.type = cache.errorType;
         }
