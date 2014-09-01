@@ -4015,13 +4015,16 @@ Resolver.createSymbol = function($this, name, kind) {
   return symbol;
 };
 Resolver.findModifierName = function(symbol, flag) {
-  for (var node = symbol.node; node !== null; node = node.parent) {
-    if (node.kind === 31) {
-      var modifierName = node.children[0];
-      if (nameToSymbolFlag.get(modifierName.content.value) === flag) {
-        return modifierName;
-      }
+  var node = symbol.node.parent;
+  if (node.kind === 6) {
+    node = node.parent;
+  }
+  while (node !== null && node.kind === 31) {
+    var modifierName = node.children[0];
+    if (nameToSymbolFlag.get(modifierName.content.value) === flag) {
+      return modifierName;
     }
+    node = node.parent;
   }
   return null;
 };

@@ -982,6 +982,18 @@ class Resolver {
       unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
     }
 
+    // // TODO: Implied modifiers
+    // if (enclosingSymbol != null && !symbol.isFromExtension()) {
+    //   if (enclosingSymbol.isImport()) {
+    //     symbol.flags |= .IMPORT;
+    //     redundantModifierIfPresent(symbol, .IMPORT, "inside an imported declaration");
+    //   }
+    //   if (enclosingSymbol.isImport()) {
+    //     symbol.flags |= .EXPORT;
+    //     redundantModifierIfPresent(symbol, .EXPORT, "inside an exported declaration");
+    //   }
+    // }
+
     var node = symbol.node;
     Type resultType;
 
@@ -1090,13 +1102,16 @@ class Resolver {
   }
 
   static Node findModifierName(Symbol symbol, SymbolFlag flag) {
-    for (var node = symbol.node; node != null; node = node.parent) {
-      if (node.kind == .MODIFIER) {
-        var modifierName = node.modifierName();
-        if (nameToSymbolFlag.get(modifierName.asString()) == flag) {
-          return modifierName;
-        }
+    var node = symbol.node.parent;
+    if (node.kind == .VARIABLE_CLUSTER) {
+      node = node.parent;
+    }
+    while (node != null && node.kind == .MODIFIER) {
+      var modifierName = node.modifierName();
+      if (nameToSymbolFlag.get(modifierName.asString()) == flag) {
+        return modifierName;
       }
+      node = node.parent;
     }
     return null;
   }
