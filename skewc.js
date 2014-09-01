@@ -1243,7 +1243,7 @@ js.Emitter.prototype.emitProgram = function(program) {
   return [this.currentSource];
 };
 js.Emitter.appendSource = function($this, source) {
-  $this.currentSource.contents = $this.currentSource.contents + source.contents;
+  $this.currentSource.contents += source.contents;
   if ($this.options.jsSourceMap) {
     for (var i = 0, n = Source.lineCount(source); i < n; i = i + 1 | 0) {
       SourceMapGenerator.addMapping($this.generator, source, i, 0, ($this.currentLine = $this.currentLine + 1 | 0) - 1 | 0, 0);

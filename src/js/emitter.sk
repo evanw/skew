@@ -136,7 +136,7 @@ namespace js {
     }
 
     void appendSource(Source source) {
-      currentSource.contents = currentSource.contents + source.contents;
+      currentSource.contents += source.contents;
       if (options.jsSourceMap) {
         for (var i = 0, n = source.lineCount(); i < n; i++) {
           generator.addMapping(source, i, 0, currentLine++, 0);
