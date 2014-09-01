@@ -217,19 +217,15 @@ in Node {
     return Node(.THIS);
   }
 
-  static Node createTrue() {
-    return Node(.TRUE);
-  }
-
-  static Node createFalse() {
-    return Node(.FALSE);
-  }
-
   static Node createHook(Node test, Node trueNode, Node falseNode) {
     assert test.kind.isExpression();
     assert trueNode.kind.isExpression();
     assert falseNode.kind.isExpression();
     return Node(.HOOK).withChildren({ test, trueNode, falseNode });
+  }
+
+  static Node createBool(bool value) {
+    return Node(.BOOL).withContent(BoolContent(value));
   }
 
   static Node createInt(int value) {

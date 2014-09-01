@@ -8,6 +8,7 @@
 "break"                       BREAK;
 "case"                        CASE;
 "class"                       CLASS;
+"const"                       CONST;
 "continue"                    CONTINUE;
 "default"                     DEFAULT;
 "do"                          DO;

@@ -582,9 +582,11 @@ bool looksLikeType(Node node) {
 Node parseStatement(ParserContext context, StatementHint hint) {
   // Separating the case bodies into separate functions makes the JavaScript JIT go faster
   switch (context.current().kind) {
+    case .ALIAS { return parseAlias(context); }
     case .ASSERT { return parseAssert(context); }
     case .BREAK { return parseBreak(context); }
     case .CLASS { return parseObject(context, .CLASS); }
+    case .CONST { return parseModifier(context, hint, .CONST); }
     case .CONTINUE { return parseContinue(context); }
     case .DO { return parseDoWhile(context); }
     case .ENUM { return parseEnum(context); }
@@ -608,7 +610,6 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case .STRUCT { return parseObject(context, .STRUCT); }
     case .SWITCH { return parseSwitch(context); }
     case .USING { return parseUsing(context); }
-    case .ALIAS { return parseAlias(context); }
     case .VIRTUAL { return parseModifier(context, hint, .VIRTUAL); }
     case .WHILE { return parseWhile(context); }
     default { return parseExpression(context); }
@@ -661,8 +662,8 @@ Pratt createParser() {
 
   pratt.literal(.NULL, tokenLiteral(.NULL));
   pratt.literal(.THIS, tokenLiteral(.THIS));
-  pratt.literal(.TRUE, tokenLiteral(.TRUE));
-  pratt.literal(.FALSE, tokenLiteral(.FALSE));
+  pratt.literal(.TRUE, (context, token) => Node.createBool(true).withRange(token.range));
+  pratt.literal(.FALSE, (context, token) => Node.createBool(false).withRange(token.range));
   pratt.literal(.INT_DECIMAL, intLiteral(10));
   pratt.literal(.INT_BINARY, intLiteral(2));
   pratt.literal(.INT_OCTAL, intLiteral(8));

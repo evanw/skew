@@ -46,8 +46,7 @@ enum NodeKind {
   THIS,
   HOOK,
   NULL,
-  TRUE,
-  FALSE,
+  BOOL,
   INT,
   FLOAT,
   DOUBLE,
@@ -186,10 +185,6 @@ in NodeKind {
     return this >= FLOAT && this <= DOUBLE;
   }
 
-  bool isBool() {
-    return this >= TRUE && this <= FALSE;
-  }
-
   bool isError() {
     return this == ERROR;
   }
@@ -217,32 +212,6 @@ class Node {
   Scope scope = null; // The scope that this node introduces, if any
   Symbol symbol = null;
   Content content = null;
-
-  bool asBool() {
-    assert kind.isBool();
-    return kind == .TRUE;
-  }
-
-  int asInt() {
-    assert kind == .INT;
-    assert content != null;
-    assert content.type() == .INT;
-    return ((IntContent)content).value;
-  }
-
-  double asDouble() {
-    assert kind.isReal();
-    assert content != null;
-    assert content.type() == .DOUBLE;
-    return ((DoubleContent)content).value;
-  }
-
-  string asString() {
-    assert kind == .NAME || kind == .STRING;
-    assert content != null;
-    assert content.type() == .STRING;
-    return ((StringContent)content).value;
-  }
 
   bool hasChildren() {
     return children != null && children.length > 0;
@@ -444,6 +413,7 @@ class Node {
 }
 
 enum ContentType {
+  BOOL,
   INT,
   DOUBLE,
   STRING,
@@ -458,6 +428,7 @@ class Content {
       var type = left.type();
       if (type == right.type()) {
         switch (type) {
+          case .BOOL { return ((BoolContent)left).value == ((BoolContent)right).value; }
           case .INT { return ((IntContent)left).value == ((IntContent)right).value; }
           case .DOUBLE { return ((DoubleContent)left).value == ((DoubleContent)right).value; }
           case .STRING { return ((StringContent)left).value == ((StringContent)right).value; }
@@ -465,6 +436,14 @@ class Content {
       }
     }
     return false;
+  }
+}
+
+class BoolContent : Content {
+  final bool value;
+
+  override ContentType type() {
+    return .BOOL;
   }
 }
 
@@ -489,5 +468,43 @@ class StringContent : Content {
 
   override ContentType type() {
     return .STRING;
+  }
+}
+
+in Node {
+  bool isTrue() {
+    return kind == .BOOL && asBool();
+  }
+
+  bool isFalse() {
+    return kind == .BOOL && !asBool();
+  }
+
+  bool asBool() {
+    assert kind == .BOOL;
+    assert content != null;
+    assert content.type() == .BOOL;
+    return ((BoolContent)content).value;
+  }
+
+  int asInt() {
+    assert kind == .INT;
+    assert content != null;
+    assert content.type() == .INT;
+    return ((IntContent)content).value;
+  }
+
+  double asDouble() {
+    assert kind.isReal();
+    assert content != null;
+    assert content.type() == .DOUBLE;
+    return ((DoubleContent)content).value;
+  }
+
+  string asString() {
+    assert kind == .NAME || kind == .STRING;
+    assert content != null;
+    assert content.type() == .STRING;
+    return ((StringContent)content).value;
   }
 }

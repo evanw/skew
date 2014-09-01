@@ -5,8 +5,8 @@ class ConstantFolder {
   void flattenBool(Node node, bool value) {
     assert node.type.isError(cache) || node.type.isBool(cache);
     node.removeChildren();
-    node.kind = value ? .TRUE : .FALSE;
-    node.content = null;
+    node.kind = .BOOL;
+    node.content = BoolContent(value);
   }
 
   // Use this instead of Node.become(Node.createInt()) to avoid more GC
@@ -130,7 +130,7 @@ class ConstantFolder {
 
       // Remove constants and "while (false) { ... }" entirely
       if (child.kind == .EXPRESSION && child.expressionValue().hasNoSideEffects() ||
-          child.kind == .WHILE && child.whileTest().kind == .FALSE) {
+          child.kind == .WHILE && child.whileTest().isFalse()) {
         node.removeChildAtIndex(i);
         i--;
       }
@@ -138,7 +138,7 @@ class ConstantFolder {
       // Reduce for loops that will never execute
       else if (child.kind == .FOR) {
         var test = child.forTest();
-        if (test != null && test.kind == .FALSE) {
+        if (test != null && test.isFalse()) {
           var setup = child.forSetup();
 
           // Remove "for (; false; c) d;" entirely
@@ -167,12 +167,11 @@ class ConstantFolder {
       // Statically evaluate if statements where possible
       else if (child.kind == .IF) {
         var test = child.ifTest();
-        var testKind = test.kind;
         var trueBlock = child.ifTrue();
         var falseBlock = child.ifFalse();
 
         // Always true if statement
-        if (testKind == .TRUE) {
+        if (test.isTrue()) {
           // Remove dead code in the "else" block
           if (falseBlock != null) {
             falseBlock.replaceWith(null);
@@ -187,7 +186,7 @@ class ConstantFolder {
         }
 
         // Always false if statement
-        else if (testKind == .FALSE) {
+        else if (test.isFalse()) {
 
           // Remove entirely
           if (falseBlock == null) {
@@ -204,7 +203,7 @@ class ConstantFolder {
 
           // Otherwise, transform to an "if (true) { ... }" statement
           else {
-            test.replaceWith(Node.createTrue().withType(test.type));
+            test.replaceWith(Node.createBool(true).withType(test.type));
             trueBlock.replaceWith(falseBlock.replaceWith(null));
           }
         }
@@ -224,7 +223,7 @@ class ConstantFolder {
     var valueKind = value.kind;
 
     // Cast "bool" values
-    if (valueKind.isBool()) {
+    if (valueKind == .BOOL) {
       if (type.isBool(cache)) flattenBool(node, (bool)value.asBool());
       else if (type.isInteger(cache)) flattenInt(node, (int)value.asBool());
       else if (type.isReal(cache)) flattenReal(node, (double)value.asBool());
@@ -250,7 +249,7 @@ class ConstantFolder {
     var valueKind = value.kind;
 
     // Fold "bool" values
-    if (valueKind.isBool()) {
+    if (valueKind == .BOOL) {
       if (kind == .NOT) flattenBool(node, !value.asBool());
     }
 
@@ -287,12 +286,12 @@ class ConstantFolder {
     var left = node.binaryLeft();
     var right = node.binaryRight();
     var valueKind = left.kind;
-    if (valueKind != right.kind && (!left.kind.isBool() || !right.kind.isBool())) {
+    if (valueKind != right.kind) {
       return;
     }
 
     // Fold "bool" values
-    if (valueKind.isBool()) {
+    if (valueKind == .BOOL) {
       switch (kind) {
         case .LOGICAL_AND { flattenBool(node, left.asBool() && right.asBool()); }
         case .LOGICAL_OR { flattenBool(node, left.asBool() || right.asBool()); }
@@ -341,10 +340,10 @@ class ConstantFolder {
   }
 
   void foldHook(Node node) {
-    var testKind = node.hookTest().kind;
-    if (testKind == .TRUE) {
+    var test = node.hookTest();
+    if (test.isTrue()) {
       node.replaceWith(node.hookTrue().remove());
-    } else if (testKind == .FALSE) {
+    } else if (test.isFalse()) {
       node.replaceWith(node.hookFalse().remove());
     }
   }

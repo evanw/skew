@@ -506,8 +506,7 @@ class Resolver {
       case .NAME { resolveName(node); }
       case .NULL { node.type = cache.nullType; }
       case .THIS { resolveThis(node); }
-      case .TRUE { node.type = cache.boolType; }
-      case .FALSE { node.type = cache.boolType; }
+      case .BOOL { node.type = cache.boolType; }
       case .HOOK { resolveHook(node); }
       case .INT { resolveInt(node); }
       case .FLOAT { node.type = cache.floatType; }

@@ -89,6 +89,7 @@ enum flags SymbolFlag {
   // Optimization flags
   FINAL,
   INLINE,
+  CONST,
 
   // Binding flags
   EXPORT,
@@ -106,7 +107,7 @@ enum flags SymbolFlag {
 
   // Masks
   INITIALIZE_MASK = INITIALIZING | INITIALIZED,
-  KEYWORD_MASK = PUBLIC | PRIVATE | PROTECTED | OVERRIDE | STATIC | VIRTUAL | FINAL | INLINE | IMPORT | EXPORT,
+  KEYWORD_MASK = PUBLIC | PRIVATE | PROTECTED | OVERRIDE | STATIC | VIRTUAL | FINAL | INLINE | CONST | IMPORT | EXPORT,
 }
 
 class Symbol {
@@ -255,6 +256,10 @@ class Symbol {
 
   bool isInline() {
     return (flags & .INLINE) != 0;
+  }
+
+  bool isConst() {
+    return (flags & .CONST) != 0;
   }
 
   bool isImport() {

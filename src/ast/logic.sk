@@ -2,13 +2,8 @@ in Node {
   void invertBooleanCondition(TypeCache cache) {
     assert kind.isExpression();
     switch (kind) {
-      case .TRUE {
-        kind = .FALSE;
-        return;
-      }
-
-      case .FALSE {
-        kind = .TRUE;
+      case .BOOL {
+        content = BoolContent(!asBool());
         return;
       }
 
@@ -135,7 +130,7 @@ in Node {
 
   bool hasNoSideEffects() {
     switch (kind) {
-      case .NAME, .THIS, .TRUE, .FALSE, .INT, .FLOAT, .DOUBLE, .STRING, .NULL, .DEFAULT { return true; }
+      case .NAME, .THIS, .BOOL, .INT, .FLOAT, .DOUBLE, .STRING, .NULL, .DEFAULT { return true; }
       case .DOT { return dotTarget().hasNoSideEffects(); }
       default { return false; }
     }

@@ -438,8 +438,8 @@ namespace js {
     void emitAssert(Node node) {
       var value = node.assertValue();
       value.invertBooleanCondition(cache);
-      if (value.kind != .FALSE) {
-        var couldBeFalse = value.kind != .TRUE;
+      if (!value.isFalse()) {
+        var couldBeFalse = !value.isTrue();
         if (couldBeFalse) {
           emit(indent + "if (");
           emitExpression(value, .LOWEST);
@@ -485,8 +485,7 @@ namespace js {
         case .THIS { emit("this"); }
         case .HOOK { emitHook(node, precedence); }
         case .NULL { emit("null"); }
-        case .TRUE { emit("true"); }
-        case .FALSE { emit("false"); }
+        case .BOOL { emit(node.asBool() ? "true" : "false"); }
         case .INT { emitInt(node); }
         case .FLOAT, .DOUBLE { emitDouble(node); }
         case .STRING { emit(quoteString(node.asString(), '"')); }
