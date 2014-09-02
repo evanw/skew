@@ -38,8 +38,11 @@ namespace js {
     // toString() call has been elided.
     Node toStringTarget = null;
 
-    override List<Source> emitProgram(Node program) {
+    override void patchProgram(Node program) {
       patchNode(program, PatchContext());
+    }
+
+    override List<Source> emitProgram(Node program) {
       currentSource = Source(options.outputFile, "");
       var collector = Collector(program, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
 
@@ -177,7 +180,7 @@ namespace js {
           }
         }
       }
-      currentSource.contents = currentSource.contents + text;
+      currentSource.contents += text;
     }
 
     void emitNodes(List<Node> nodes) {

@@ -673,6 +673,7 @@ function Compiler() {
   this.functionInliningTime = 0;
   this.constantFoldingTime = 0;
   this.deadCodeRemovalTime = 0;
+  this.patchTime = 0;
   this.emitTime = 0;
   this.lineCountingTime = 0;
   this.totalTime = 0;
@@ -705,6 +706,9 @@ Compiler.statistics = function($this, result) {
     text += "\n    Function inlining: " + Math.round($this.functionInliningTime * 10) / 10 + "ms";
     text += "\n    Constant folding: " + Math.round($this.constantFoldingTime * 10) / 10 + "ms";
     text += "\n    Dead code removal: " + Math.round($this.deadCodeRemovalTime * 10) / 10 + "ms";
+  }
+  if ($this.patchTime > 0) {
+    text += "\n  Patch: " + Math.round($this.patchTime * 10) / 10 + "ms";
   }
   if ($this.emitTime > 0) {
     text += "\n  Emit: " + Math.round($this.emitTime * 10) / 10 + "ms";
@@ -798,6 +802,9 @@ Compiler.prototype.compile = function(options) {
       break;
     }
     if (emitter !== null) {
+      var patchStart = now();
+      emitter.patchProgram(program);
+      this.patchTime += now() - patchStart;
       var emitStart = now();
       outputs = emitter.emitProgram(program);
       this.emitTime += now() - emitStart;
@@ -823,6 +830,8 @@ Compiler.processInput = function($this, program, source) {
 var json = {};
 json.Emitter = function(_0) {
   this.options = _0;
+};
+json.Emitter.prototype.patchProgram = function(program) {
 };
 json.Emitter.prototype.emitProgram = function(program) {
   var outputs = [];
@@ -883,6 +892,8 @@ var lisp = {};
 lisp.Emitter = function(_0) {
   this.options = _0;
 };
+lisp.Emitter.prototype.patchProgram = function(program) {
+};
 lisp.Emitter.prototype.emitProgram = function(program) {
   var outputs = [];
   if (this.options.outputDirectory === "") {
@@ -932,6 +943,8 @@ lisp.DumpVisitor.visit = function($this, node) {
 var xml = {};
 xml.Emitter = function(_0) {
   this.options = _0;
+};
+xml.Emitter.prototype.patchProgram = function(program) {
 };
 xml.Emitter.prototype.emitProgram = function(program) {
   var outputs = [];
@@ -1182,8 +1195,10 @@ js.Emitter = function(_0, _1) {
   this.options = _0;
   this.cache = _1;
 };
-js.Emitter.prototype.emitProgram = function(program) {
+js.Emitter.prototype.patchProgram = function(program) {
   js.Emitter.patchNode(this, program, new js.PatchContext());
+};
+js.Emitter.prototype.emitProgram = function(program) {
   this.currentSource = new Source(this.options.outputFile, "");
   var collector = new Collector(program, 3);
   for (var i = 0; i < this.options.prepend.length; i = i + 1 | 0) {
@@ -1277,7 +1292,7 @@ js.Emitter.emit = function($this, text) {
       }
     }
   }
-  $this.currentSource.contents = $this.currentSource.contents + text;
+  $this.currentSource.contents += text;
 };
 js.Emitter.emitNodes = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
