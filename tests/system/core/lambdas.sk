@@ -13,14 +13,16 @@ int fn(bool) fn(float) bar = bar => bar => bar;
 ");
 
 test("
-foo => { foo; bar; };
+void test() {
+  foo => { foo; bar; };
+}
 ", "
-<stdin>:1:1: error: Expression has no type context here
-foo => { foo; bar; };
-~~~~~~~~~~~~~~~~~~~~
-<stdin>:1:15: error: \"bar\" is not declared
-foo => { foo; bar; };
-              ~~~
+<stdin>:2:3: error: Expression has no type context here
+  foo => { foo; bar; };
+  ~~~~~~~~~~~~~~~~~~~~
+<stdin>:2:17: error: \"bar\" is not declared
+  foo => { foo; bar; };
+                ~~~
 ");
 
 test("
@@ -32,14 +34,16 @@ int foo = (=> false)();
 ");
 
 test("
-(int)(x => x)(false);
+void test() {
+  (int)(x => x)(false);
+}
 ", "
-<stdin>:1:12: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-(int)(x => x)(false);
-           ^
-<stdin>:1:1: warning: Unused expression
-(int)(x => x)(false);
-~~~~~~~~~~~~~~~~~~~~
+<stdin>:2:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  (int)(x => x)(false);
+             ^
+<stdin>:2:3: warning: Unused expression
+  (int)(x => x)(false);
+  ~~~~~~~~~~~~~~~~~~~~
 ");
 
 test("

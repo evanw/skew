@@ -1,79 +1,85 @@
 namespace core { void switch_() {
 
 test("
-switch (0) {
-  default {}
-  case 1 {}
-  default { foo; }
-  case 2 {}
-  default {}
+void test() {
+  switch (0) {
+    default {}
+    case 1 {}
+    default { foo; }
+    case 2 {}
+    default {}
+  }
 }
 ", "
-<stdin>:4:13: error: \"foo\" is not declared
-  default { foo; }
-            ~~~
-<stdin>:2:3: error: Only the last case can be a default case
-  default {}
-  ~~~~~~~~~~
-<stdin>:4:3: error: Only the last case can be a default case
-  default { foo; }
-  ~~~~~~~~~~~~~~~~
+<stdin>:5:15: error: \"foo\" is not declared
+    default { foo; }
+              ~~~
+<stdin>:3:5: error: Only the last case can be a default case
+    default {}
+    ~~~~~~~~~~
+<stdin>:5:5: error: Only the last case can be a default case
+    default { foo; }
+    ~~~~~~~~~~~~~~~~
 ");
 
 test("
-switch (0) {
-  case 1 { foo; }
-  case 2, 3, 1, 1 { foo; }
-  case 1 { foo; }
+void test() {
+  switch (0) {
+    case 1 { foo; }
+    case 2, 3, 1, 1 { foo; }
+    case 1 { foo; }
+  }
 }
 ", "
-<stdin>:2:12: error: \"foo\" is not declared
-  case 1 { foo; }
-           ~~~
-<stdin>:3:21: error: \"foo\" is not declared
-  case 2, 3, 1, 1 { foo; }
-                    ~~~
-<stdin>:4:12: error: \"foo\" is not declared
-  case 1 { foo; }
-           ~~~
-<stdin>:3:14: error: Duplicate case value
-  case 2, 3, 1, 1 { foo; }
-             ^
-<stdin>:2:8: note: The first occurrence is here
-  case 1 { foo; }
-       ^
-<stdin>:3:17: error: Duplicate case value
-  case 2, 3, 1, 1 { foo; }
-                ^
-<stdin>:2:8: note: The first occurrence is here
-  case 1 { foo; }
-       ^
-<stdin>:4:8: error: Duplicate case value
-  case 1 { foo; }
-       ^
-<stdin>:2:8: note: The first occurrence is here
-  case 1 { foo; }
-       ^
+<stdin>:3:14: error: \"foo\" is not declared
+    case 1 { foo; }
+             ~~~
+<stdin>:4:23: error: \"foo\" is not declared
+    case 2, 3, 1, 1 { foo; }
+                      ~~~
+<stdin>:5:14: error: \"foo\" is not declared
+    case 1 { foo; }
+             ~~~
+<stdin>:4:16: error: Duplicate case value
+    case 2, 3, 1, 1 { foo; }
+               ^
+<stdin>:3:10: note: The first occurrence is here
+    case 1 { foo; }
+         ^
+<stdin>:4:19: error: Duplicate case value
+    case 2, 3, 1, 1 { foo; }
+                  ^
+<stdin>:3:10: note: The first occurrence is here
+    case 1 { foo; }
+         ^
+<stdin>:5:10: error: Duplicate case value
+    case 1 { foo; }
+         ^
+<stdin>:3:10: note: The first occurrence is here
+    case 1 { foo; }
+         ^
 ");
 
 test("
-switch (0) {
-  case false { foo; }
-  case false { foo; }
+void test() {
+  switch (0) {
+    case false { foo; }
+    case false { foo; }
+  }
 }
 ", "
-<stdin>:2:8: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-  case false { foo; }
-       ~~~~~
-<stdin>:2:16: error: \"foo\" is not declared
-  case false { foo; }
-               ~~~
-<stdin>:3:8: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-  case false { foo; }
-       ~~~~~
-<stdin>:3:16: error: \"foo\" is not declared
-  case false { foo; }
-               ~~~
+<stdin>:3:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    case false { foo; }
+         ~~~~~
+<stdin>:3:18: error: \"foo\" is not declared
+    case false { foo; }
+                 ~~~
+<stdin>:4:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    case false { foo; }
+         ~~~~~
+<stdin>:4:18: error: \"foo\" is not declared
+    case false { foo; }
+                 ~~~
 ");
 
 test("

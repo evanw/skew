@@ -2015,7 +2015,8 @@ js.Emitter.patchUnary = function($this, node, context) {
 js.Emitter.patchCast = function($this, node, context) {
   var value = node.children[1];
   if (node.type === $this.cache.boolType && value.type !== $this.cache.boolType) {
-    Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(58), [Node.remove(value)]), node.range), node.type));
+    value = Node.withType(Node.withRange(Node.withChildren(new Node(58), [Node.remove(value)]), node.range), node.type);
+    Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(58), [value]), node.range), node.type));
   } else if (node.type === $this.cache.intType && !Type.isInteger(value.type, $this.cache) && !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind)) {
     Node.become(node, Node.withType(Node.withRange(Node.createBinary(68, Node.remove(value), Node.withContent(new Node(39), new IntContent(0))), node.range), node.type));
   } else if (Type.isReal(node.type, $this.cache) && !Type.isNumeric(value.type, $this.cache)) {
@@ -2503,7 +2504,7 @@ ConstantFolder.foldCast = function($this, node) {
     }
   } else if (valueKind === 39) {
     if (type === $this.cache.boolType) {
-      ConstantFolder.flatten($this, node, new BoolContent(!value.content.value));
+      ConstantFolder.flatten($this, node, new BoolContent(!!value.content.value));
     } else if (Type.isInteger(type, $this.cache)) {
       ConstantFolder.flatten($this, node, new IntContent(value.content.value));
     } else if (Type.isReal(type, $this.cache)) {
@@ -2511,7 +2512,7 @@ ConstantFolder.foldCast = function($this, node) {
     }
   } else if ($in.NodeKind.isReal(valueKind)) {
     if (type === $this.cache.boolType) {
-      ConstantFolder.flatten($this, node, new BoolContent(!value.content.value));
+      ConstantFolder.flatten($this, node, new BoolContent(!!value.content.value));
     } else if (Type.isInteger(type, $this.cache)) {
       ConstantFolder.flatten($this, node, new IntContent(value.content.value | 0));
     } else if (Type.isReal(type, $this.cache)) {
@@ -3693,9 +3694,10 @@ Resolver.checkStorage = function($this, node) {
     Log.error($this.log, node.range, "Cannot store to this location");
     return;
   }
-  if ((node.symbol.flags & 256) !== 0) {
+  if ((node.symbol.flags & 1024) !== 0) {
+    Log.error($this.log, node.range, "Cannot store to a symbol marked as \"const\"");
+  } else if ((node.symbol.flags & 256) !== 0) {
     Log.error($this.log, node.range, "Cannot store to a symbol marked as \"final\"");
-    return;
   }
 };
 Resolver.checkConversion = function($this, to, node, kind) {
@@ -3759,11 +3761,15 @@ Resolver.checkDeclarationLocation = function($this, node, allowDeclaration) {
 Resolver.checkStatementLocation = function($this, node) {
   for (var parent = node.parent; parent !== null; parent = parent.parent) {
     var kind = parent.kind;
-    if ($in.NodeKind.isFunction(kind) || kind === 53) {
-      break;
-    } else if (kind === 1) {
+    if (kind === 1) {
       Resolver.unexpectedStatement($this, node);
       break;
+    }
+    if (kind === 2) {
+      var parentKind = parent.parent.kind;
+      if (!$in.NodeKind.isNamedBlockDeclaration(parentKind) && parentKind !== 1) {
+        break;
+      }
     }
   }
 };
@@ -4021,7 +4027,9 @@ Resolver.initializeVariable = function($this, symbol) {
   if (symbol.enclosingSymbol === null || !$in.SymbolKind.isTypeWithInstances(symbol.enclosingSymbol.kind)) {
     Resolver.unexpectedModifierIfPresent($this, symbol, 64, "outside an object declaration");
   }
-  if (symbol.enclosingSymbol !== null && symbol.enclosingSymbol.kind === 12 && (symbol.flags & 64) === 0) {
+  if ((symbol.flags & 1024) !== 0) {
+    Resolver.redundantModifierIfPresent($this, symbol, 256, "on a const variable declaration");
+  } else if (symbol.enclosingSymbol !== null && symbol.enclosingSymbol.kind === 12 && (symbol.flags & 64) === 0) {
     Resolver.expectedModifierIfAbsent($this, symbol, 256, "on a variable declaration inside a struct");
   }
   if ((symbol.flags & 4096) !== 0) {
@@ -4793,8 +4801,10 @@ Resolver.resolveAssert = function($this, node) {
   Resolver.resolveAsExpressionWithConversion($this, node.children[0], $this.cache.boolType, 0);
 };
 Resolver.resolveExpression = function($this, node) {
-  Resolver.checkStatementLocation($this, node);
   var value = node.children[0];
+  if (value.kind !== 48) {
+    Resolver.checkStatementLocation($this, node);
+  }
   Resolver.resolveAsExpression($this, value);
   Resolver.checkUnusedExpression($this, value);
 };

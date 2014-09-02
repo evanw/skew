@@ -615,9 +615,10 @@ class Resolver {
     }
 
     // Forbid storage to final symbols
-    if (node.symbol.isFinal()) {
-      semanticErrorStorageToFinal(log, node.range);
-      return;
+    if (node.symbol.isConst()) {
+      semanticErrorStorageToProtectedSymbol(log, node.range, "const");
+    } else if (node.symbol.isFinal()) {
+      semanticErrorStorageToProtectedSymbol(log, node.range, "final");
     }
   }
 
@@ -725,11 +726,22 @@ class Resolver {
     // Statements must live inside functions
     for (var parent = node.parent; parent != null; parent = parent.parent) {
       var kind = parent.kind;
-      if (kind.isFunction() || kind == .LAMBDA) {
-        break;
-      } else if (kind == .FILE) {
+
+      // If we reach the file then the statement doesn't belong here
+      if (kind == .FILE) {
         unexpectedStatement(node);
         break;
+      }
+
+      // Stop if we reach a function because then this statement is allowed.
+      // Also stop if we reach a block in another non-declaration statement
+      // because the error should already have been reported by whatever owns
+      // that block and fewer errors are better.
+      if (kind == .BLOCK) {
+        var parentKind = parent.parent.kind;
+        if (!parentKind.isNamedBlockDeclaration() && parentKind != .FILE) {
+          break;
+        }
       }
     }
   }
@@ -1108,7 +1120,9 @@ class Resolver {
     if (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances()) {
       unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
     }
-    if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind == .STRUCT && !symbol.isStatic()) {
+    if (symbol.isConst()) {
+      redundantModifierIfPresent(symbol, .FINAL, "on a const variable declaration");
+    } else if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind == .STRUCT && !symbol.isStatic()) {
       expectedModifierIfAbsent(symbol, .FINAL, "on a variable declaration inside a struct");
     }
     if (symbol.isImport()) {
@@ -2180,8 +2194,10 @@ class Resolver {
   }
 
   void resolveExpression(Node node) {
-    checkStatementLocation(node);
     var value = node.expressionValue();
+    if (value.kind != .ERROR) {
+      checkStatementLocation(node);
+    }
     resolveAsExpression(value);
     checkUnusedExpression(value);
   }

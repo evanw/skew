@@ -1,11 +1,13 @@
 namespace core { void calls() {
 
 test("
-0();
+void test() {
+  0();
+}
 ", "
-<stdin>:1:1: error: Cannot call type \"int\"
-0();
-^
+<stdin>:2:3: error: Cannot call type \"int\"
+  0();
+  ^
 ");
 
 test("

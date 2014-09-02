@@ -803,7 +803,8 @@ namespace js {
 
       // Cast to bool
       if (node.type.isBool(cache) && !value.type.isBool(cache)) {
-        node.become(Node.createUnary(.NOT, value.remove()).withRange(node.range).withType(node.type));
+        value = Node.createUnary(.NOT, value.remove()).withRange(node.range).withType(node.type);
+        node.become(Node.createUnary(.NOT, value).withRange(node.range).withType(node.type));
       }
 
       // Cast to int

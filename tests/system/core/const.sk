@@ -1,6 +1,25 @@
 namespace core { void const_() {
 
 test("
+const int foo = 1;
+void bar() {
+  foo = 2;
+}
+", "
+<stdin>:3:3: error: Cannot store to a symbol marked as \"const\"
+  foo = 2;
+  ~~~
+");
+
+test("
+const final int x = 1;
+", "
+<stdin>:1:7: error: Redundant modifier \"final\" on a const variable declaration
+const final int x = 1;
+      ~~~~~
+");
+
+test("
 const int foo;
 ", "
 <stdin>:1:11: error: Variables with the \"const\" modifier must be initialized
@@ -27,17 +46,19 @@ test("
 import int baz;
 const int foo = 1 + bar - 1;
 const int bar = 9 - 3;
-switch (baz) {
-  case foo {}
-  case bar {}
+void test() {
+  switch (baz) {
+    case foo {}
+    case bar {}
+  }
 }
 ", "
-<stdin>:6:8: error: Duplicate case value
-  case bar {}
-       ~~~
-<stdin>:5:8: note: The first occurrence is here
-  case foo {}
-       ~~~
+<stdin>:7:10: error: Duplicate case value
+    case bar {}
+         ~~~
+<stdin>:6:10: note: The first occurrence is here
+    case foo {}
+         ~~~
 ");
 
 }}

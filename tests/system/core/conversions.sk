@@ -270,11 +270,13 @@ enum Foo {
 ");
 
 test("
-assert 0;
+void test() {
+  assert 0;
+}
 ", "
-<stdin>:1:8: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-assert 0;
-       ^
+<stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  assert 0;
+         ^
 ");
 
 test("

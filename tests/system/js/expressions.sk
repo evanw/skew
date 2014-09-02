@@ -1,64 +1,84 @@
 namespace js { void expressions() {
 
 testJS("
-double x = 0;
-- -1;
-+ +1;
-- +1;
-+ -1;
-- --x;
-+ ++x;
-- ++x;
-+ --x;
+export void test() {
+  double x = 0;
+  - -1;
+  + +1;
+  - +1;
+  + -1;
+  - --x;
+  + ++x;
+  - ++x;
+  + --x;
+}
 ", "
-var x = 0;
-- -1;
-+ +1;
--+1;
-+-1;
-- --x;
-+ ++x;
--++x;
-+--x;
+function test() {
+  var x = 0;
+  - -1;
+  + +1;
+  -+1;
+  +-1;
+  - --x;
+  + ++x;
+  -++x;
+  +--x;
+}
 ");
 
 testJS("
-- -0x80000000;
+export void test() {
+  - -0x80000000;
+}
 ", "
-- -2147483648;
+function test() {
+  - -2147483648;
+}
 ");
 
 testJS("
-double x = 0;
-(1.0 - 2.0) - 3.0;
-(1.0 / 2.0) * 3.0;
-1.0 - (2.0 - 3.0);
-1.0 / (2.0 * 3.0);
-x = (x = x);
+export void test() {
+  double x = 0;
+  (1.0 - 2.0) - 3.0;
+  (1.0 / 2.0) * 3.0;
+  1.0 - (2.0 - 3.0);
+  1.0 / (2.0 * 3.0);
+  x = (x = x);
+}
 ", "
-var x = 0;
-1 - 2 - 3;
-1 / 2 * 3;
-1 - (2 - 3);
-1 / (2 * 3);
-x = x = x;
+function test() {
+  var x = 0;
+  1 - 2 - 3;
+  1 / 2 * 3;
+  1 - (2 - 3);
+  1 / (2 * 3);
+  x = x = x;
+}
 ");
 
 testJS("
-(bool)1;
-(int)false;
-(float)false;
+export void test() {
+  (bool)1;
+  (int)false;
+  (float)false;
+}
 ", "
-!1;
-false | 0;
-+false;
+function test() {
+  !!1;
+  false | 0;
+  +false;
+}
 ");
 
 testJS("
-assert (bool)1;
+export void test() {
+  assert (bool)1;
+}
 ", "
-if (1) {
-  throw new Error(\"assert (bool)1; (<stdin>:1:1)\");
+function test() {
+  if (!1) {
+    throw new Error(\"assert (bool)1; (<stdin>:2:3)\");
+  }
 }
 ");
 
@@ -422,15 +442,19 @@ function baz() {
 ");
 
 testJS("
-int foo = (1, 2);
-foo = (1, 2);
-foo = 1, 2;
-(1, 2), (3, 4);
+export void test() {
+  int foo = (1, 2);
+  foo = (1, 2);
+  foo = 1, 2;
+  (1, 2), (3, 4);
+}
 ", "
-var foo = (1, 2);
-foo = (1, 2);
-foo = 1, 2;
-(1, 2), (3, 4);
+function test() {
+  var foo = (1, 2);
+  foo = (1, 2);
+  foo = 1, 2;
+  (1, 2), (3, 4);
+}
 ");
 
 testJS("
@@ -444,19 +468,23 @@ var y = function(x) {
 ");
 
 testJS("
-let x = 0 in x;
-let x = 0 in x, 1;
-1, let x = 0 in x, 1;
+export void test() {
+  let x = 0 in x;
+  let x = 0 in x, 1;
+  1, let x = 0 in x, 1;
+}
 ", "
-(function(x) {
-  return x;
-})(0);
-(function(x) {
-  return x;
-})(0), 1;
-1, function(x) {
-  return x;
-}(0), 1;
+function test() {
+  (function(x) {
+    return x;
+  })(0);
+  (function(x) {
+    return x;
+  })(0), 1;
+  1, function(x) {
+    return x;
+  }(0), 1;
+}
 ");
 
 testJS("
@@ -526,13 +554,17 @@ Foo.prototype.bar = function() {
 ");
 
 testJS("
-0.toString();
-0.0.toString();
-0.5.toString();
+export void test() {
+  0.toString();
+  0.0.toString();
+  0.5.toString();
+}
 ", "
-(0).toString();
-(0).toString();
-(0.5).toString();
+function test() {
+  (0).toString();
+  (0).toString();
+  (0.5).toString();
+}
 ");
 
 testJS("

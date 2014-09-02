@@ -37,21 +37,29 @@ testJS("
 inline int foo(int x, int y) {
   return x + y;
 }
-foo(1, 2);
+export void test() {
+  foo(1, 2);
+}
 ", "
-1 + 2 | 0;
+function test() {
+  1 + 2 | 0;
+}
 ");
 
 testJS("
 inline int foo(int x, int y) {
   return x += y;
 }
-foo(1, 2);
+export void test() {
+  foo(1, 2);
+}
 ", "
 function foo(x, y) {
   return x = x + y | 0;
 }
-foo(1, 2);
+function test() {
+  foo(1, 2);
+}
 ");
 
 testJS("
@@ -79,7 +87,9 @@ class Foo {
 class Bar : Foo {
   inline override void foo() {}
 }
-Bar().foo();
+export void test() {
+  Bar().foo();
+}
 ", "
 function $extends(derived, base) {
   derived.prototype = Object.create(base.prototype);
@@ -95,7 +105,9 @@ function Bar() {
 $extends(Bar, Foo);
 Bar.prototype.foo = function() {
 };
-new Bar().foo();
+function test() {
+  new Bar().foo();
+}
 ");
 
 testJS("
@@ -153,7 +165,9 @@ inline int foo(int baz) {
 inline int bar(int baz) {
   return foo(baz);
 }
-foo(bar(foo(bar(0))));
+export void test() {
+  foo(bar(foo(bar(0))));
+}
 ", "
 function foo(baz) {
   return bar(baz);
@@ -161,7 +175,9 @@ function foo(baz) {
 function bar(baz) {
   return foo(baz);
 }
-foo(bar(foo(bar(0))));
+function test() {
+  foo(bar(foo(bar(0))));
+}
 ");
 
 testJS("
@@ -171,7 +187,9 @@ inline int foo(int baz) {
 inline int bar(int baz) {
   return foo(bar(baz));
 }
-foo(bar(foo(bar(0))));
+export void test() {
+  foo(bar(foo(bar(0))));
+}
 ", "
 function foo(baz) {
   return bar(foo(baz));
@@ -179,7 +197,9 @@ function foo(baz) {
 function bar(baz) {
   return foo(bar(baz));
 }
-foo(bar(foo(bar(0))));
+function test() {
+  foo(bar(foo(bar(0))));
+}
 ");
 
 testJS("
@@ -217,37 +237,49 @@ function bar(y) {
 testJS("
 inline void foo(int x) { bar(1, x); }
 int bar(int x, int y) { return x + y; }
-foo(2);
+export void test() {
+  foo(2);
+}
 ", "
 function bar(x, y) {
   return x + y | 0;
 }
-bar(1, 2);
+function test() {
+  bar(1, 2);
+}
 ");
 
 testJS("
 inline void foo() { x = 0; }
 int x = 0;
-foo();
+export void test() {
+  foo();
+}
 ", "
 function foo() {
   x = 0;
 }
+function test() {
+  foo();
+}
 var x = 0;
-foo();
 ");
 
 testJS("
 inline void foo() { bar(); }
 inline void bar() { x = 0; }
 int x = 0;
-foo();
+export void test() {
+  foo();
+}
 ", "
 function bar() {
   x = 0;
 }
+function test() {
+  bar();
+}
 var x = 0;
-bar();
 ");
 
 testJS("
@@ -255,13 +287,17 @@ inline void foo() { bar(); }
 inline void bar() { baz(); }
 inline void baz() { x = 0; }
 int x = 0;
-foo();
+export void test() {
+  foo();
+}
 ", "
 function baz() {
   x = 0;
 }
+function test() {
+  baz();
+}
 var x = 0;
-baz();
 ");
 
 testJS("
