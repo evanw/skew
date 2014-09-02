@@ -498,7 +498,7 @@ class Resolver {
       case .RETURN, .IMPLICIT_RETURN { resolveReturn(node); }
       case .BREAK { resolveBreak(node); }
       case .CONTINUE { resolveContinue(node); }
-      case .ASSERT { resolveAssert(node); }
+      case .ASSERT, .ASSERT_CONST { resolveAssert(node); }
       case .EXPRESSION { resolveExpression(node); }
       case .SWITCH { resolveSwitch(node); }
       case .MODIFIER { resolveModifier(node); }
@@ -1769,10 +1769,11 @@ class Resolver {
 
     // Remove asserts here since they will all be in blocks. Each assert should
     // still be resolved to check for compile errors, however.
-    if (options.removeAsserts && node.hasChildren()) {
+    if (node.hasChildren()) {
       for (var i = 0; i < node.children.length; i++) {
         var child = node.children.get(i);
-        if (child.kind == .ASSERT) {
+        var kind = child.kind;
+        if (kind == .ASSERT_CONST || kind == .ASSERT && options.removeAsserts) {
           node.removeChildAtIndex(i);
           i--;
         }
@@ -2189,8 +2190,21 @@ class Resolver {
   }
 
   void resolveAssert(Node node) {
-    checkStatementLocation(node);
-    resolveAsExpressionWithConversion(node.assertValue(), cache.boolType, .IMPLICIT_CAST);
+    if (node.kind == .ASSERT) {
+      checkStatementLocation(node);
+    }
+    var value = node.assertValue();
+    resolveAsExpressionWithConversion(value, cache.boolType, .IMPLICIT_CAST);
+
+    // Constant asserts are evaluated at compile time
+    if (node.kind == .ASSERT_CONST) {
+      constantFolder.foldConstants(value);
+      if (!value.kind.isConstant()) {
+        semanticErrorNonConstantAssert(log, value.range);
+      } else if (!value.isTrue()) {
+        semanticErrorFalseAssert(log, node.range);
+      }
+    }
   }
 
   void resolveExpression(Node node) {

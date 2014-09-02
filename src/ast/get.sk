@@ -327,7 +327,7 @@ in Node {
   }
 
   Node assertValue() {
-    assert kind == .ASSERT;
+    assert kind.isAssert();
     assert children.length == 1;
     return children.get(0);
   }

@@ -380,9 +380,10 @@ Node parseContinue(ParserContext context) {
 
 Node parseAssert(ParserContext context) {
   var token = context.next();
+  var isConst = context.eat(.CONST);
   var value = pratt.parse(context, Precedence.LOWEST);
   scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-  return Node.createAssert(value).withRange(context.spanSince(token.range));
+  return Node.createAssert(isConst ? .ASSERT_CONST : .ASSERT, value).withRange(context.spanSince(token.range));
 }
 
 Node parseSwitch(ParserContext context) {

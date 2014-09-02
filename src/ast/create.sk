@@ -176,9 +176,10 @@ in Node {
     return Node(.CONTINUE);
   }
 
-  static Node createAssert(Node value) {
+  static Node createAssert(NodeKind kind, Node value) {
+    assert kind == .ASSERT || kind == .ASSERT_CONST;
     assert value.kind.isExpression();
-    return Node(.ASSERT).withChildren({ value });
+    return Node(kind).withChildren({ value });
   }
 
   static Node createExpression(Node value) {

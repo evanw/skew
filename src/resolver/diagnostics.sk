@@ -297,3 +297,11 @@ void semanticErrorToStringWrongType(Log log, Range range, Type expected, Type fo
 void semanticErrorCannotImplementImportedFunction(Log log, Range range) {
   log.error(range, "Imported functions cannot have an implementation");
 }
+
+void semanticErrorNonConstantAssert(Log log, Range range) {
+  log.error(range, "The argument to a compile-time assert must be a constant");
+}
+
+void semanticErrorFalseAssert(Log log, Range range) {
+  log.error(range, "Assertion failed");
+}

@@ -438,4 +438,17 @@ in Bar {
 ~~~~~~~~
 ");
 
+test("
+assert false;
+assert const true;
+assert const false;
+", "
+<stdin>:1:1: error: Cannot use this statement here
+assert false;
+~~~~~~~~~~~~~
+<stdin>:3:1: error: Assertion failed
+assert const false;
+~~~~~~~~~~~~~~~~~~~
+");
+
 }}
