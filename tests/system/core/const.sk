@@ -31,7 +31,7 @@ test("
 import int bar;
 const int foo = bar;
 ", "
-<stdin>:2:17: error: Variables with the \"const\" modifier must be initialized with a compile-time constant
+<stdin>:2:17: error: Variables with the \"const\" modifier must be initialized to a compile-time constant
 const int foo = bar;
                 ~~~
 ");

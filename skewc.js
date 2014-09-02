@@ -741,6 +741,10 @@ Compiler.prototype.compile = function(options) {
   var totalStart = now();
   var program = Node.withChildren(new Node(0), []);
   var outputs = [];
+  createOperatorMap();
+  createParser();
+  createNameToSymbolFlag();
+  createSymbolFlagToName();
   if (Compiler.nativeLibrarySource !== null) {
     Node.appendChild(program, Node.clone(Compiler.nativeLibraryFile));
   } else {
@@ -4141,7 +4145,7 @@ Resolver.initializeVariable = function($this, symbol) {
       if ($in.NodeKind.isConstant(value.kind)) {
         symbol.constant = value.content;
       } else if (value.type !== $this.cache.errorType && symbol.type !== $this.cache.errorType) {
-        Log.error($this.log, value.range, "Variables with the \"const\" modifier must be initialized with a compile-time constant");
+        Log.error($this.log, value.range, "Variables with the \"const\" modifier must be initialized to a compile-time constant");
         value.type = $this.cache.errorType;
       }
     }
@@ -4707,6 +4711,20 @@ Resolver.resolveFunction = function($this, node) {
   }
   $this.context.functionSymbol = oldFunctionSymbol;
 };
+Resolver.isPureValue = function($this, node) {
+  var kind = node.kind;
+  if (kind === 44) {
+    if (Node.hasChildren(node)) {
+      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+        if (!Resolver.isPureValue($this, node.children[i])) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  return $in.NodeKind.isConstant(kind) || kind === 54;
+};
 Resolver.resolveVariable = function($this, node) {
   var symbol = node.symbol;
   Resolver.initializeSymbol($this, symbol);
@@ -4722,6 +4740,13 @@ Resolver.resolveVariable = function($this, node) {
   }
   if (value !== null) {
     Resolver.resolveAsExpressionWithConversion($this, value, Symbol.isEnumValue(symbol) ? $this.cache.intType : symbol.type, 0);
+    if (symbol.kind === 18) {
+      ConstantFolder.foldConstants($this.constantFolder, value);
+      if (!Resolver.isPureValue($this, value) && value.type !== $this.cache.errorType && symbol.type !== $this.cache.errorType) {
+        Log.error($this.log, value.range, "Global variables must be initialized to an expression without side effects");
+        value.type = $this.cache.errorType;
+      }
+    }
   } else if (symbol.type !== $this.cache.errorType && node.parent.kind === 6 && symbol.kind !== 19) {
     node.children[2] = Node.withType(Node.withChildren(new Node(55), [Node.withType(new Node(35), symbol.type)]), symbol.type);
   }
@@ -6459,47 +6484,49 @@ $in.TokenKind.toString = function($this) {
   }
 };
 function createOperatorMap() {
-  var result = new IntMap();
-  result.set(59, new OperatorInfo("!", 13, 0));
-  result.set(60, new OperatorInfo("+", 13, 0));
-  result.set(61, new OperatorInfo("-", 13, 0));
-  result.set(62, new OperatorInfo("~", 13, 0));
-  result.set(63, new OperatorInfo("++", 13, 0));
-  result.set(64, new OperatorInfo("--", 13, 0));
-  result.set(65, new OperatorInfo("++", 14, 0));
-  result.set(66, new OperatorInfo("--", 14, 0));
-  result.set(67, new OperatorInfo("+", 11, 1));
-  result.set(68, new OperatorInfo("&", 7, 1));
-  result.set(69, new OperatorInfo("|", 5, 1));
-  result.set(70, new OperatorInfo("^", 6, 1));
-  result.set(71, new OperatorInfo("/", 12, 1));
-  result.set(72, new OperatorInfo("==", 8, 1));
-  result.set(73, new OperatorInfo(">", 9, 1));
-  result.set(74, new OperatorInfo(">=", 9, 1));
-  result.set(75, new OperatorInfo("in", 9, 1));
-  result.set(76, new OperatorInfo("[]", 15, 1));
-  result.set(77, new OperatorInfo("<", 9, 1));
-  result.set(78, new OperatorInfo("<=", 9, 1));
-  result.set(79, new OperatorInfo("&&", 4, 1));
-  result.set(80, new OperatorInfo("||", 3, 1));
-  result.set(81, new OperatorInfo("*", 12, 1));
-  result.set(82, new OperatorInfo("!=", 8, 1));
-  result.set(83, new OperatorInfo("%", 12, 1));
-  result.set(84, new OperatorInfo("<<", 10, 1));
-  result.set(85, new OperatorInfo(">>", 10, 1));
-  result.set(86, new OperatorInfo("-", 11, 1));
-  result.set(87, new OperatorInfo("=", 2, 2));
-  result.set(88, new OperatorInfo("+=", 2, 2));
-  result.set(89, new OperatorInfo("&=", 2, 2));
-  result.set(90, new OperatorInfo("|=", 2, 2));
-  result.set(91, new OperatorInfo("^=", 2, 2));
-  result.set(92, new OperatorInfo("/=", 2, 2));
-  result.set(93, new OperatorInfo("*=", 2, 2));
-  result.set(94, new OperatorInfo("%=", 2, 2));
-  result.set(95, new OperatorInfo("<<=", 2, 2));
-  result.set(96, new OperatorInfo(">>=", 2, 2));
-  result.set(97, new OperatorInfo("-=", 2, 2));
-  return result;
+  if (operatorInfo !== null) {
+    return;
+  }
+  operatorInfo = new IntMap();
+  operatorInfo.set(59, new OperatorInfo("!", 13, 0));
+  operatorInfo.set(60, new OperatorInfo("+", 13, 0));
+  operatorInfo.set(61, new OperatorInfo("-", 13, 0));
+  operatorInfo.set(62, new OperatorInfo("~", 13, 0));
+  operatorInfo.set(63, new OperatorInfo("++", 13, 0));
+  operatorInfo.set(64, new OperatorInfo("--", 13, 0));
+  operatorInfo.set(65, new OperatorInfo("++", 14, 0));
+  operatorInfo.set(66, new OperatorInfo("--", 14, 0));
+  operatorInfo.set(67, new OperatorInfo("+", 11, 1));
+  operatorInfo.set(68, new OperatorInfo("&", 7, 1));
+  operatorInfo.set(69, new OperatorInfo("|", 5, 1));
+  operatorInfo.set(70, new OperatorInfo("^", 6, 1));
+  operatorInfo.set(71, new OperatorInfo("/", 12, 1));
+  operatorInfo.set(72, new OperatorInfo("==", 8, 1));
+  operatorInfo.set(73, new OperatorInfo(">", 9, 1));
+  operatorInfo.set(74, new OperatorInfo(">=", 9, 1));
+  operatorInfo.set(75, new OperatorInfo("in", 9, 1));
+  operatorInfo.set(76, new OperatorInfo("[]", 15, 1));
+  operatorInfo.set(77, new OperatorInfo("<", 9, 1));
+  operatorInfo.set(78, new OperatorInfo("<=", 9, 1));
+  operatorInfo.set(79, new OperatorInfo("&&", 4, 1));
+  operatorInfo.set(80, new OperatorInfo("||", 3, 1));
+  operatorInfo.set(81, new OperatorInfo("*", 12, 1));
+  operatorInfo.set(82, new OperatorInfo("!=", 8, 1));
+  operatorInfo.set(83, new OperatorInfo("%", 12, 1));
+  operatorInfo.set(84, new OperatorInfo("<<", 10, 1));
+  operatorInfo.set(85, new OperatorInfo(">>", 10, 1));
+  operatorInfo.set(86, new OperatorInfo("-", 11, 1));
+  operatorInfo.set(87, new OperatorInfo("=", 2, 2));
+  operatorInfo.set(88, new OperatorInfo("+=", 2, 2));
+  operatorInfo.set(89, new OperatorInfo("&=", 2, 2));
+  operatorInfo.set(90, new OperatorInfo("|=", 2, 2));
+  operatorInfo.set(91, new OperatorInfo("^=", 2, 2));
+  operatorInfo.set(92, new OperatorInfo("/=", 2, 2));
+  operatorInfo.set(93, new OperatorInfo("*=", 2, 2));
+  operatorInfo.set(94, new OperatorInfo("%=", 2, 2));
+  operatorInfo.set(95, new OperatorInfo("<<=", 2, 2));
+  operatorInfo.set(96, new OperatorInfo(">>=", 2, 2));
+  operatorInfo.set(97, new OperatorInfo("-=", 2, 2));
 }
 json.dump = function(node) {
   var visitor = new json.DumpVisitor();
@@ -7666,7 +7693,10 @@ function binaryInfix(kind) {
   };
 }
 function createParser() {
-  var pratt = new Pratt();
+  if (pratt !== null) {
+    return;
+  }
+  pratt = new Pratt();
   Pratt.literal(pratt, 70, tokenLiteral(38));
   Pratt.literal(pratt, 90, tokenLiteral(36));
   Pratt.literal(pratt, 92, function(context, token) {
@@ -7859,7 +7889,6 @@ function createParser() {
   Pratt.parselet(pratt, 88, 0).prefix = function(context) {
     return parseSuperCall(context);
   };
-  return pratt;
 }
 function semanticErrorDuplicateSymbol(log, range, name, previous) {
   Log.error(log, range, "\"" + name + "\" is already declared");
@@ -7932,34 +7961,38 @@ function semanticErrorAlreadyInitialized(log, range, name, previous) {
   }
 }
 function createNameToSymbolFlag() {
-  var result = new StringMap();
-  result.set("const", 1024);
-  result.set("export", 2048);
-  result.set("final", 256);
-  result.set("import", 4096);
-  result.set("inline", 512);
-  result.set("override", 32);
-  result.set("private", 2);
-  result.set("protected", 4);
-  result.set("public", 1);
-  result.set("static", 64);
-  result.set("virtual", 128);
-  return result;
+  if (nameToSymbolFlag !== null) {
+    return;
+  }
+  nameToSymbolFlag = new StringMap();
+  nameToSymbolFlag.set("const", 1024);
+  nameToSymbolFlag.set("export", 2048);
+  nameToSymbolFlag.set("final", 256);
+  nameToSymbolFlag.set("import", 4096);
+  nameToSymbolFlag.set("inline", 512);
+  nameToSymbolFlag.set("override", 32);
+  nameToSymbolFlag.set("private", 2);
+  nameToSymbolFlag.set("protected", 4);
+  nameToSymbolFlag.set("public", 1);
+  nameToSymbolFlag.set("static", 64);
+  nameToSymbolFlag.set("virtual", 128);
 }
 function createSymbolFlagToName() {
-  var result = new IntMap();
-  result.set(1024, "const");
-  result.set(2048, "export");
-  result.set(256, "final");
-  result.set(4096, "import");
-  result.set(512, "inline");
-  result.set(32, "override");
-  result.set(2, "private");
-  result.set(4, "protected");
-  result.set(1, "public");
-  result.set(64, "static");
-  result.set(128, "virtual");
-  return result;
+  if (symbolFlagToName !== null) {
+    return;
+  }
+  symbolFlagToName = new IntMap();
+  symbolFlagToName.set(1024, "const");
+  symbolFlagToName.set(2048, "export");
+  symbolFlagToName.set(256, "final");
+  symbolFlagToName.set(4096, "import");
+  symbolFlagToName.set(512, "inline");
+  symbolFlagToName.set(32, "override");
+  symbolFlagToName.set(2, "private");
+  symbolFlagToName.set(4, "protected");
+  symbolFlagToName.set(1, "public");
+  symbolFlagToName.set(64, "static");
+  symbolFlagToName.set(128, "virtual");
 }
 service.nodeFromPosition = function(node, source, index) {
   while (Node.hasChildren(node)) {
@@ -8115,7 +8148,7 @@ service.collectAllMembers = function(scope, allMembers) {
 var nodeKindIsExpression = function(node) {
   return $in.NodeKind.isExpression(node.kind);
 };
-var operatorInfo = createOperatorMap();
+var operatorInfo = null;
 Compiler.nativeLibrarySource = null;
 Compiler.nativeLibraryFile = null;
 var NATIVE_LIBRARY = "\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct String {\n  import static string fromCharCode(int value);\n}\n\nimport struct string {\n  import final int length;\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }\n  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }\n  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport class List<T> {\n  import new();\n  import final int length;\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  void swap(int a, int b) {\n    var temp = get(a);\n    set(a, get(b));\n    set(b, temp);\n  }\n}\n\nimport class StringMap<T> {\n  import new();\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  import new();\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n";
@@ -8130,9 +8163,9 @@ var yy_base = [0, 0, 0, 318, 319, 58, 293, 57, 292, 56, 56, 319, 319, 291, 53, 3
 var yy_def = [0, 262, 1, 262, 262, 262, 262, 263, 262, 262, 264, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 265, 262, 262, 262, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 262, 262, 262, 262, 262, 262, 263, 262, 263, 262, 262, 262, 264, 262, 264, 262, 262, 262, 262, 262, 266, 262, 262, 262, 262, 262, 262, 267, 262, 262, 262, 262, 262, 262, 265, 262, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 262, 262, 266, 262, 262, 262, 267, 262, 262, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 262, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 0, 262, 262, 262, 262, 262];
 var yy_nxt = [0, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 21, 22, 23, 24, 25, 26, 27, 27, 28, 4, 29, 30, 31, 32, 33, 34, 35, 36, 27, 27, 37, 27, 38, 27, 39, 40, 41, 42, 43, 44, 45, 46, 47, 27, 27, 48, 49, 50, 51, 52, 52, 55, 58, 61, 64, 66, 68, 76, 77, 78, 79, 80, 81, 116, 69, 67, 65, 117, 70, 59, 71, 71, 71, 71, 90, 62, 56, 70, 84, 71, 71, 71, 71, 91, 85, 87, 92, 108, 93, 121, 109, 73, 55, 95, 114, 88, 72, 94, 89, 61, 73, 96, 115, 99, 127, 97, 98, 104, 74, 100, 101, 105, 111, 112, 102, 113, 75, 56, 118, 52, 52, 62, 122, 125, 125, 106, 119, 124, 124, 124, 124, 70, 261, 71, 71, 71, 71, 126, 126, 126, 144, 151, 155, 125, 125, 260, 152, 145, 124, 124, 124, 124, 172, 173, 73, 259, 258, 156, 126, 126, 126, 257, 256, 255, 254, 253, 252, 251, 250, 166, 54, 54, 54, 54, 60, 60, 60, 60, 82, 82, 123, 249, 123, 123, 248, 247, 246, 245, 244, 243, 242, 241, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 171, 170, 169, 168, 167, 165, 164, 163, 162, 161, 160, 159, 158, 157, 154, 153, 150, 149, 148, 147, 146, 143, 142, 141, 140, 139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 128, 262, 262, 120, 110, 107, 103, 86, 83, 63, 57, 53, 262, 3, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262];
 var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 7, 9, 10, 14, 16, 18, 23, 23, 24, 24, 25, 25, 45, 18, 16, 14, 45, 20, 9, 20, 20, 20, 20, 34, 10, 7, 19, 31, 19, 19, 19, 19, 34, 31, 33, 35, 41, 35, 49, 41, 20, 54, 36, 44, 33, 19, 35, 33, 60, 19, 36, 44, 37, 267, 36, 36, 39, 19, 37, 37, 39, 43, 43, 37, 43, 19, 54, 46, 52, 52, 60, 49, 72, 72, 39, 46, 70, 70, 70, 70, 71, 258, 71, 71, 71, 71, 74, 74, 74, 101, 108, 111, 125, 125, 256, 108, 101, 124, 124, 124, 124, 135, 135, 71, 255, 251, 111, 126, 126, 126, 249, 248, 247, 245, 244, 243, 237, 236, 124, 263, 263, 263, 263, 264, 264, 264, 264, 265, 265, 266, 235, 266, 266, 234, 233, 229, 228, 225, 223, 222, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 207, 206, 205, 201, 199, 198, 197, 196, 193, 192, 191, 190, 189, 188, 187, 186, 185, 183, 182, 181, 180, 179, 178, 177, 174, 173, 172, 171, 169, 168, 167, 165, 164, 162, 161, 160, 159, 158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 147, 145, 144, 143, 141, 140, 139, 138, 137, 136, 134, 133, 132, 131, 130, 120, 119, 118, 117, 116, 115, 114, 113, 112, 110, 109, 107, 106, 105, 104, 103, 100, 98, 96, 95, 94, 93, 92, 90, 89, 88, 87, 86, 85, 84, 81, 76, 62, 56, 47, 42, 40, 38, 32, 30, 13, 8, 6, 3, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262];
-var pratt = createParser();
-var nameToSymbolFlag = createNameToSymbolFlag();
-var symbolFlagToName = createSymbolFlagToName();
+var pratt = null;
+var nameToSymbolFlag = null;
+var symbolFlagToName = null;
 Symbol.nextUniqueID = 0;
 Type.nextUniqueID = 0;
 function parseIntLiteral(value, base) {

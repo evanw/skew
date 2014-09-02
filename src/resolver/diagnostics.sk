@@ -114,8 +114,12 @@ void semanticErrorUninitializedExtensionVariable(Log log, Range range) {
   log.error(range, "Instance variables in extension blocks must be initialized");
 }
 
+void semanticErrorNonPureGlobalVariable(Log log, Range range) {
+  log.error(range, "Global variables must be initialized to an expression without side effects");
+}
+
 void semanticErrorNonConstantConstValue(Log log, Range range) {
-  log.error(range, "Variables with the \"const\" modifier must be initialized with a compile-time constant");
+  log.error(range, "Variables with the \"const\" modifier must be initialized to a compile-time constant");
 }
 
 void semanticErrorConstMissingValue(Log log, Range range) {

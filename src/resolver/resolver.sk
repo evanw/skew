@@ -2049,6 +2049,22 @@ class Resolver {
     context.functionSymbol = oldFunctionSymbol;
   }
 
+  // A pure value is one guaranteed to have no side effects
+  bool isPureValue(Node node) {
+    var kind = node.kind;
+    if (kind == .INITIALIZER) {
+      if (node.hasChildren()) {
+        for (var i = 0; i < node.children.length; i++) {
+          if (!isPureValue(node.children.get(i))) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+    return kind.isConstant() || kind == .LAMBDA;
+  }
+
   void resolveVariable(Node node) {
     var symbol = node.symbol;
     initializeSymbol(symbol);
@@ -2071,6 +2087,16 @@ class Resolver {
     // don't implicitly convert to enums.
     if (value != null) {
       resolveAsExpressionWithConversion(value, symbol.isEnumValue() ? cache.intType : symbol.type, .IMPLICIT_CAST);
+
+      // Global variables must be initialized to a value without side effects
+      // since that ensures there aren't any initialization ordering issues
+      if (symbol.kind == .GLOBAL_VARIABLE) {
+        constantFolder.foldConstants(value);
+        if (!isPureValue(value) && !value.type.isError(cache) && !symbol.type.isError(cache)) {
+          semanticErrorNonPureGlobalVariable(log, value.range);
+          value.type = cache.errorType;
+        }
+      }
     }
 
     // Automatically initialize uninitialized variables to their default value
@@ -2923,38 +2949,37 @@ class Resolver {
   }
 }
 
-StringMap<SymbolFlag> createNameToSymbolFlag() {
-  var result = StringMap<SymbolFlag>();
-  result.set("const", .CONST);
-  result.set("export", .EXPORT);
-  result.set("final", .FINAL);
-  result.set("import", .IMPORT);
-  result.set("inline", .INLINE);
-  result.set("override", .OVERRIDE);
-  result.set("private", .PRIVATE);
-  result.set("protected", .PROTECTED);
-  result.set("public", .PUBLIC);
-  result.set("static", .STATIC);
-  result.set("virtual", .VIRTUAL);
-  return result;
+void createNameToSymbolFlag() {
+  if (nameToSymbolFlag != null) return;
+  nameToSymbolFlag = StringMap<SymbolFlag>();
+  nameToSymbolFlag.set("const", .CONST);
+  nameToSymbolFlag.set("export", .EXPORT);
+  nameToSymbolFlag.set("final", .FINAL);
+  nameToSymbolFlag.set("import", .IMPORT);
+  nameToSymbolFlag.set("inline", .INLINE);
+  nameToSymbolFlag.set("override", .OVERRIDE);
+  nameToSymbolFlag.set("private", .PRIVATE);
+  nameToSymbolFlag.set("protected", .PROTECTED);
+  nameToSymbolFlag.set("public", .PUBLIC);
+  nameToSymbolFlag.set("static", .STATIC);
+  nameToSymbolFlag.set("virtual", .VIRTUAL);
 }
 
-final var nameToSymbolFlag = createNameToSymbolFlag();
-
-IntMap<string> createSymbolFlagToName() {
-  var result = IntMap<string>();
-  result.set(SymbolFlag.CONST, "const");
-  result.set(SymbolFlag.EXPORT, "export");
-  result.set(SymbolFlag.FINAL, "final");
-  result.set(SymbolFlag.IMPORT, "import");
-  result.set(SymbolFlag.INLINE, "inline");
-  result.set(SymbolFlag.OVERRIDE, "override");
-  result.set(SymbolFlag.PRIVATE, "private");
-  result.set(SymbolFlag.PROTECTED, "protected");
-  result.set(SymbolFlag.PUBLIC, "public");
-  result.set(SymbolFlag.STATIC, "static");
-  result.set(SymbolFlag.VIRTUAL, "virtual");
-  return result;
+void createSymbolFlagToName() {
+  if (symbolFlagToName != null) return;
+  symbolFlagToName = IntMap<string>();
+  symbolFlagToName.set(SymbolFlag.CONST, "const");
+  symbolFlagToName.set(SymbolFlag.EXPORT, "export");
+  symbolFlagToName.set(SymbolFlag.FINAL, "final");
+  symbolFlagToName.set(SymbolFlag.IMPORT, "import");
+  symbolFlagToName.set(SymbolFlag.INLINE, "inline");
+  symbolFlagToName.set(SymbolFlag.OVERRIDE, "override");
+  symbolFlagToName.set(SymbolFlag.PRIVATE, "private");
+  symbolFlagToName.set(SymbolFlag.PROTECTED, "protected");
+  symbolFlagToName.set(SymbolFlag.PUBLIC, "public");
+  symbolFlagToName.set(SymbolFlag.STATIC, "static");
+  symbolFlagToName.set(SymbolFlag.VIRTUAL, "virtual");
 }
 
-final var symbolFlagToName = createSymbolFlagToName();
+StringMap<SymbolFlag> nameToSymbolFlag;
+IntMap<string> symbolFlagToName;

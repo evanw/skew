@@ -122,6 +122,12 @@ export class Compiler {
     var program = Node.createProgram({});
     List<Source> outputs = {};
 
+    // Initialize global state
+    createOperatorMap();
+    createParser();
+    createNameToSymbolFlag();
+    createSymbolFlagToName();
+
     // Cache the standard library for a small speed increase
     if (nativeLibrarySource != null) {
       program.appendChild(nativeLibraryFile.clone());

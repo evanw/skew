@@ -654,8 +654,9 @@ InfixCallback binaryInfix(NodeKind kind) {
   return (context, left, token, right) => Node.createBinary(kind, left, right).withRange(Range.span(left.range, right.range));
 }
 
-Pratt createParser() {
-  Pratt pratt = Pratt();
+void createParser() {
+  if (pratt != null) return;
+  pratt = Pratt();
 
   ////////////////////////////////////////////////////////////////////////////////
   // Literals
@@ -898,8 +899,6 @@ Pratt createParser() {
 
   // Super call expressions
   pratt.parselet(.SUPER, Precedence.LOWEST).prefix = context => parseSuperCall(context);
-
-  return pratt;
 }
 
-final var pratt = createParser();
+Pratt pratt;
