@@ -152,9 +152,13 @@ import class Foo : Bar {
 import class Bar {
   import new();
 }
-var foo = Foo();
+export void test() {
+  var foo = Foo();
+}
 ", "
-var foo = new Foo();
+function test() {
+  var foo = new Foo();
+}
 ");
 
 }}

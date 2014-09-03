@@ -4,33 +4,46 @@ testJS("
 inline int foo(int foo) {
   return foo;
 }
-var bar = foo(foo(1));
+export void test() {
+  var bar = foo(foo(1));
+}
 ", "
-var bar = 1;
+function test() {
+  var bar = 1;
+}
 ");
 
 testJS("
 inline int foo(int bar) {
   return bar > 0 ? foo(bar - 1) : 0;
 }
-var bar = foo(foo(1));
+export void test() {
+  var bar = foo(foo(1));
+}
 ", "
 function foo(bar) {
   return bar > 0 ? foo(bar - 1 | 0) : 0;
 }
-var bar = foo(foo(1));
+function test() {
+  var bar = foo(foo(1));
+}
 ");
 
 testJS("
+import bool baz();
 inline int foo(int bar) {
-  return Math.random() > 0.5 ? foo(bar) : 0;
+  return baz() ? foo(bar) : 0;
 }
-var bar = foo(foo(1));
+export void test() {
+  var bar = foo(foo(1));
+}
 ", "
 function foo(bar) {
-  return Math.random() > 0.5 ? foo(bar) : 0;
+  return baz() ? foo(bar) : 0;
 }
-var bar = foo(foo(1));
+function test() {
+  var bar = foo(foo(1));
+}
 ");
 
 testJS("
@@ -66,18 +79,22 @@ testJS("
 inline int fn() foo(int x) {
   return => x;
 }
-var x = 0;
-var y = foo(x++);
-var z = foo(x++);
+export void test() {
+  var x = 0;
+  var y = foo(x++);
+  var z = foo(x++);
+}
 ", "
 function foo(x) {
   return function() {
     return x;
   };
 }
-var x = 0;
-var y = foo((x = x + 1 | 0) - 1 | 0);
-var z = foo((x = x + 1 | 0) - 1 | 0);
+function test() {
+  var x = 0;
+  var y = foo((x = x + 1 | 0) - 1 | 0);
+  var z = foo((x = x + 1 | 0) - 1 | 0);
+}
 ");
 
 testJS("
@@ -303,17 +320,25 @@ var x = 0;
 testJS("
 import int foo();
 inline int bar(int a, int b) { return a; }
-var baz = bar(1, foo());
+export void test() {
+  var baz = bar(1, foo());
+}
 ", "
-var baz = (foo(), 1);
+function test() {
+  var baz = (foo(), 1);
+}
 ");
 
 testJS("
 inline int foo() { return 2; }
 inline int bar(int a, int b) { return a; }
-var baz = bar(1, foo());
+export void test() {
+  var baz = bar(1, foo());
+}
 ", "
-var baz = 1;
+function test() {
+  var baz = 1;
+}
 ");
 
 }}

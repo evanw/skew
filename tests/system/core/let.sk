@@ -1,20 +1,24 @@
 namespace core { void let_() {
 
 test("
-int y = let x = x in x;
+export void test() {
+  int y = let x = x in x;
+}
 ", "
-<stdin>:1:17: error: \"x\" is not declared
-int y = let x = x in x;
-                ^
+<stdin>:2:19: error: \"x\" is not declared
+  int y = let x = x in x;
+                  ^
 ");
 
 test("
-int y = let x = 1 in let x = x + 1 in x + 1;
+export void test() {
+  int y = let x = 1 in let x = x + 1 in x + 1;
+}
 ", "
 ");
 
 test("
-void test() {
+export void test() {
   !let x = 0 in x;
 }
 ", "
@@ -24,11 +28,13 @@ void test() {
 ");
 
 test("
-bool fn() foo = let x = 0 in => x;
+export void test() {
+  bool fn() foo = let x = 0 in => x;
+}
 ", "
-<stdin>:1:33: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool fn() foo = let x = 0 in => x;
-                                ^
+<stdin>:2:35: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  bool fn() foo = let x = 0 in => x;
+                                  ^
 ");
 
 }}

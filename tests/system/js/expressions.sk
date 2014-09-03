@@ -458,13 +458,17 @@ function test() {
 ");
 
 testJS("
-int y = let x = 1 in let x = x + 1 in x + 1;
+export void test() {
+  int y = let x = 1 in let x = x + 1 in x + 1;
+}
 ", "
-var y = function(x) {
-  return function(x) {
-    return x + 1 | 0;
-  }(x + 1 | 0);
-}(1);
+function test() {
+  var y = function(x) {
+    return function(x) {
+      return x + 1 | 0;
+    }(x + 1 | 0);
+  }(1);
+}
 ");
 
 testJS("
@@ -582,23 +586,31 @@ var s = \"\";
 ");
 
 testJS("
-var a = \"\" + (1 + 2.toString());
-var b = \"\" + (1 + 2).toString();
-var c = \"\" + 1 + 2;
+export void test() {
+  var a = \"\" + (1 + 2.toString());
+  var b = \"\" + (1 + 2).toString();
+  var c = \"\" + 1 + 2;
+}
 ", "
-var a = \"\" + ((1).toString() + 2);
-var b = \"\" + (1 + 2 | 0);
-var c = \"\" + 1 + 2;
+function test() {
+  var a = \"\" + ((1).toString() + 2);
+  var b = \"\" + (1 + 2 | 0);
+  var c = \"\" + 1 + 2;
+}
 ");
 
 testJS("
-var a = (1 + 2.toString()) + \"\";
-var b = (1 + 2).toString() + \"\";
-var c = 1 + 2 + \"\";
+export void test() {
+  var a = (1 + 2.toString()) + \"\";
+  var b = (1 + 2).toString() + \"\";
+  var c = 1 + 2 + \"\";
+}
 ", "
-var a = (1).toString() + 2 + \"\";
-var b = (1 + 2 | 0) + \"\";
-var c = (1 + 2 | 0) + \"\";
+function test() {
+  var a = (1).toString() + 2 + \"\";
+  var b = (1 + 2 | 0) + \"\";
+  var c = (1 + 2 | 0) + \"\";
+}
 ");
 
 }}

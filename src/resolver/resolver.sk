@@ -635,6 +635,7 @@ class Resolver {
     // Converting from "void" to "void" always fails
     if (from.isVoid(cache) && to.isVoid(cache)) {
       semanticErrorUnexpectedExpression(log, node.range, to);
+      node.type = cache.errorType;
       return;
     }
 
@@ -652,6 +653,7 @@ class Resolver {
       //
       if (node.symbol != null && node.symbol.kind.isFunction() && node.kind != .CALL && node.parent.kind != .CALL) {
         semanticErrorMustCallFunctionReference(log, node.range);
+        node.type = cache.errorType;
       }
       return;
     }
@@ -2062,7 +2064,10 @@ class Resolver {
       }
       return true;
     }
-    return kind.isConstant() || kind == .LAMBDA;
+    if (kind.isCast()) {
+      return isPureValue(node.castValue());
+    }
+    return kind.isConstant() || kind == .LAMBDA || kind == .DEFAULT;
   }
 
   void resolveVariable(Node node) {

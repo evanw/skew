@@ -50,8 +50,10 @@ int bar = foo(false, 100);
 ");
 
 test("
-void fn() fn(void fn()) foo = null;
-void fn() bar = foo(bar);
+export void test() {
+  void fn() fn(void fn()) foo = null;
+  void fn() bar = foo(bar);
+}
 ", "
 ");
 

@@ -2447,7 +2447,7 @@ ConstantFolder.foldStringConcatenation = function($this, node) {
       var leftRight = left.children[1];
       if (leftRight.kind === 43) {
         ConstantFolder.flatten($this, leftRight, new StringContent(leftRight.content.value + right.content.value));
-        Node.swapWith(node, left);
+        Node.become(node, Node.remove(left));
       }
     }
   }
@@ -2584,12 +2584,12 @@ ConstantFolder.foldMultiply = function(node, variable, constant) {
   var value = constant.content.value;
   if (value === 0) {
     if (Node.hasNoSideEffects(variable)) {
-      Node.swapWith(node, constant);
+      Node.become(node, Node.remove(constant));
     }
     return;
   }
   if (value === 1) {
-    Node.swapWith(node, variable);
+    Node.become(node, Node.remove(variable));
     return;
   }
   var shift = logBase2(value);
@@ -2602,16 +2602,16 @@ ConstantFolder.foldBinaryOperatorWithConstant = function(node, left, right) {
   switch (node.kind) {
   case 79:
     if (Node.isFalse(left) || Node.isTrue(right)) {
-      Node.swapWith(node, left);
+      Node.become(node, Node.remove(left));
     } else if (Node.isTrue(left)) {
-      Node.swapWith(node, right);
+      Node.become(node, Node.remove(right));
     }
     break;
   case 80:
     if (Node.isTrue(left) || Node.isFalse(right)) {
-      Node.swapWith(node, left);
+      Node.become(node, Node.remove(left));
     } else if (Node.isFalse(left)) {
-      Node.swapWith(node, right);
+      Node.become(node, Node.remove(right));
     }
     break;
   case 81:
@@ -2738,9 +2738,9 @@ ConstantFolder.foldBinaryOperator = function($this, node, kind) {
 ConstantFolder.foldHook = function(node) {
   var test = node.children[0];
   if (Node.isTrue(test)) {
-    Node.replaceWith(node, Node.remove(node.children[1]));
+    Node.become(node, Node.remove(node.children[1]));
   } else if (Node.isFalse(test)) {
-    Node.replaceWith(node, Node.remove(node.children[2]));
+    Node.become(node, Node.remove(node.children[2]));
   }
 };
 ConstantFolder.foldSequence = function(node) {
@@ -3727,11 +3727,13 @@ Resolver.checkConversion = function($this, to, node, kind) {
   }
   if (from === $this.cache.voidType && to === $this.cache.voidType) {
     Log.error($this.log, node.range, "Unexpected expression of type \"" + Type.toString(to) + "\"");
+    node.type = $this.cache.errorType;
     return;
   }
   if (from === to) {
     if (node.symbol !== null && $in.SymbolKind.isFunction(node.symbol.kind) && node.kind !== 47 && node.parent.kind !== 47) {
       Log.error($this.log, node.range, "Raw function references are not allowed (call the function instead)");
+      node.type = $this.cache.errorType;
     }
     return;
   }
@@ -4723,7 +4725,10 @@ Resolver.isPureValue = function($this, node) {
     }
     return true;
   }
-  return $in.NodeKind.isConstant(kind) || kind === 54;
+  if ($in.NodeKind.isCast(kind)) {
+    return Resolver.isPureValue($this, node.children[1]);
+  }
+  return $in.NodeKind.isConstant(kind) || kind === 54 || kind === 55;
 };
 Resolver.resolveVariable = function($this, node) {
   var symbol = node.symbol;

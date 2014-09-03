@@ -337,63 +337,75 @@ void fn() bar = 0;
 ");
 
 test("
-void fn() foo;
-void fn() bar = foo;
-int fn() baz = foo;
+export void test() {
+  void fn() foo;
+  void fn() bar = foo;
+  int fn() baz = foo;
+}
 ", "
-<stdin>:3:16: error: Cannot convert from type \"void fn()\" to type \"int fn()\"
-int fn() baz = foo;
-               ~~~
+<stdin>:4:18: error: Cannot convert from type \"void fn()\" to type \"int fn()\"
+  int fn() baz = foo;
+                 ~~~
 ");
 
 test("
-void fn() foo;
-void fn() bar = foo;
-void fn(int) baz = foo;
+export void test() {
+  void fn() foo;
+  void fn() bar = foo;
+  void fn(int) baz = foo;
+}
 ", "
-<stdin>:3:20: error: Cannot convert from type \"void fn()\" to type \"void fn(int)\"
-void fn(int) baz = foo;
-                   ~~~
+<stdin>:4:22: error: Cannot convert from type \"void fn()\" to type \"void fn(int)\"
+  void fn(int) baz = foo;
+                     ~~~
 ");
 
 test("
-void fn(int) foo;
-void fn(int) bar = foo;
-void fn(double) baz = foo;
+export void test() {
+  void fn(int) foo;
+  void fn(int) bar = foo;
+  void fn(double) baz = foo;
+}
 ", "
-<stdin>:3:23: error: Cannot convert from type \"void fn(int)\" to type \"void fn(double)\"
-void fn(double) baz = foo;
-                      ~~~
+<stdin>:4:25: error: Cannot convert from type \"void fn(int)\" to type \"void fn(double)\"
+  void fn(double) baz = foo;
+                        ~~~
 ");
 
 test("
-void fn(double) foo;
-void fn(double) bar = foo;
-void fn(int) baz = foo;
+export void test() {
+  void fn(double) foo;
+  void fn(double) bar = foo;
+  void fn(int) baz = foo;
+}
 ", "
-<stdin>:3:20: error: Cannot convert from type \"void fn(double)\" to type \"void fn(int)\"
-void fn(int) baz = foo;
-                   ~~~
+<stdin>:4:22: error: Cannot convert from type \"void fn(double)\" to type \"void fn(int)\"
+  void fn(int) baz = foo;
+                     ~~~
 ");
 
 test("
-int fn() foo;
-int fn() bar = foo;
-double fn() baz = foo;
+export void test() {
+  int fn() foo;
+  int fn() bar = foo;
+  double fn() baz = foo;
+}
 ", "
-<stdin>:3:19: error: Cannot convert from type \"int fn()\" to type \"double fn()\"
-double fn() baz = foo;
-                  ~~~
+<stdin>:4:21: error: Cannot convert from type \"int fn()\" to type \"double fn()\"
+  double fn() baz = foo;
+                    ~~~
 ");
 
 test("
-double fn() foo;
-double fn() bar = foo;
-int fn() baz = foo;
+export void test() {
+  double fn() foo;
+  double fn() bar = foo;
+  int fn() baz = foo;
+}
 ", "
-<stdin>:3:16: error: Cannot convert from type \"double fn()\" to type \"int fn()\"
-int fn() baz = foo;
-               ~~~
+<stdin>:4:18: error: Cannot convert from type \"double fn()\" to type \"int fn()\"
+  int fn() baz = foo;
+                 ~~~
 ");
 
 test("

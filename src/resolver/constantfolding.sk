@@ -121,7 +121,7 @@ class ConstantFolder {
         // (a + "b") + "c" => a + "bc"
         if (leftRight.kind == .STRING) {
           flattenString(leftRight, leftRight.asString() + right.asString());
-          node.swapWith(left);
+          node.become(left.remove());
         }
       }
     }
@@ -290,12 +290,12 @@ class ConstantFolder {
     var value = constant.asInt();
     if (value == 0) {
       if (variable.hasNoSideEffects()) {
-        node.swapWith(constant);
+        node.become(constant.remove());
       }
       return;
     }
     if (value == 1) {
-      node.swapWith(variable);
+      node.become(variable.remove());
       return;
     }
 
@@ -314,12 +314,12 @@ class ConstantFolder {
     switch (node.kind) {
       // These are important for dead code elimination
       case .LOGICAL_AND {
-        if (left.isFalse() || right.isTrue()) node.swapWith(left);
-        else if (left.isTrue()) node.swapWith(right);
+        if (left.isFalse() || right.isTrue()) node.become(left.remove());
+        else if (left.isTrue()) node.become(right.remove());
       }
       case .LOGICAL_OR {
-        if (left.isTrue() || right.isFalse()) node.swapWith(left);
-        else if (left.isFalse()) node.swapWith(right);
+        if (left.isTrue() || right.isFalse()) node.become(left.remove());
+        else if (left.isFalse()) node.become(right.remove());
       }
 
       // Multiplication is special-cased here because in JavaScript, optimizing
@@ -401,9 +401,9 @@ class ConstantFolder {
   void foldHook(Node node) {
     var test = node.hookTest();
     if (test.isTrue()) {
-      node.replaceWith(node.hookTrue().remove());
+      node.become(node.hookTrue().remove());
     } else if (test.isFalse()) {
-      node.replaceWith(node.hookFalse().remove());
+      node.become(node.hookFalse().remove());
     }
   }
 

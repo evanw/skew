@@ -17,18 +17,22 @@ var foo = {};
 ");
 
 test("
-var foo = bar;
-int bar = foo;
+export void test() {
+  var foo = bar;
+  int bar = foo;
+}
 ", "
 ");
 
 test("
-var foo = 0;
-bool bar = foo;
+export void test() {
+  var foo = 0;
+  bool bar = foo;
+}
 ", "
-<stdin>:2:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool bar = foo;
-           ~~~
+<stdin>:3:14: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  bool bar = foo;
+             ~~~
 ");
 
 test("
@@ -61,12 +65,14 @@ void foo(var bar) {}
 ");
 
 test("
-var foo = bar();
-void fn() bar = null;
+export void test() {
+  var foo = bar();
+  void fn() bar = null;
+}
 ", "
-<stdin>:1:5: error: Implicitly typed variables cannot be of type \"void\"
-var foo = bar();
-    ~~~
+<stdin>:2:7: error: Implicitly typed variables cannot be of type \"void\"
+  var foo = bar();
+      ~~~
 ");
 
 }}
