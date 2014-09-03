@@ -51,7 +51,7 @@ class FunctionInliningPass {
             assert index >= 0;
             var replacement = values.get(index);
             if (!replacement.hasNoSideEffects()) {
-              if (sequence == null) sequence = {}; // Save on allocations
+              if (sequence == null) sequence = []; // Save on allocations
               sequence.push(replacement);
             }
           }
@@ -121,7 +121,7 @@ class InliningInfo {
   List<Symbol> arguments;
   List<Symbol> unusedArguments;
   var shouldInline = true;
-  List<InliningInfo> bodyCalls = {};
+  List<InliningInfo> bodyCalls = [];
 }
 
 // Each node in the Inlining graph is a symbol of an inlineable function and
@@ -130,7 +130,7 @@ class InliningInfo {
 // calls that may become direct calls through inlining can be discovered by
 // traversing edges of this graph.
 class InliningGraph {
-  List<InliningInfo> inliningInfo = {};
+  List<InliningInfo> inliningInfo = [];
   var symbolToInfoIndex = IntMap<int>();
 
   new(CallGraph graph, CompilerOptions options) {
@@ -164,7 +164,7 @@ class InliningGraph {
     // Detect and disable infinitely expanding inline operations
     for (var i = 0; i < inliningInfo.length; i++) {
       var info = inliningInfo.get(i);
-      info.shouldInline = !containsInfiniteExpansion(info, {});
+      info.shouldInline = !containsInfiniteExpansion(info, []);
     }
 
   }
@@ -201,7 +201,7 @@ class InliningGraph {
       // be removed
       if (!block.hasChildren()) {
         if (options.foldAllConstants) {
-          List<Symbol> arguments = {};
+          List<Symbol> arguments = [];
           var argumentVariables = symbol.node.functionArguments().children;
           for (var i = 0; i < argumentVariables.length; i++) {
             arguments.push(argumentVariables.get(i).symbol);
@@ -233,8 +233,8 @@ class InliningGraph {
         // only inline functions where each argument is used exactly once.
         var symbolCounts = IntMap<int>();
         if (recursivelyCountArgumentUses(inlineValue, symbolCounts)) {
-          List<Symbol> unusedArguments = {};
-          List<Symbol> arguments = {};
+          List<Symbol> unusedArguments = [];
+          List<Symbol> arguments = [];
           var argumentVariables = symbol.node.functionArguments().children;
           var isSimpleSubstitution = true;
           for (var i = 0; i < argumentVariables.length; i++) {

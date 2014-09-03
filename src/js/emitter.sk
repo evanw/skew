@@ -13,7 +13,7 @@ namespace js {
       if (!createdThisAlias) {
         createdThisAlias = true;
         function.functionBlock().insertChild(0, Node.createVariableCluster(Node.createError(),
-          { Node.createVariable(Node.createName("$this"), null, Node.createThis()) }));
+          [Node.createVariable(Node.createName("$this"), null, Node.createThis())]));
       }
       return Node.createName("$this");
     }
@@ -131,11 +131,11 @@ namespace js {
           string name = options.outputFile + ".map";
           currentSource.contents = currentSource.contents +
             "/# sourceMappingURL=" + splitPath(name).entry + "\n";
-          return { currentSource, Source(name, generator.toString()) };
+          return [currentSource, Source(name, generator.toString())];
         }
       }
 
-      return { currentSource };
+      return [currentSource];
     }
 
     void appendSource(Source source) {
@@ -492,7 +492,7 @@ namespace js {
         case .INT { emitInt(node); }
         case .FLOAT, .DOUBLE { emitDouble(node); }
         case .STRING { emit(quoteString(node.asString(), '"')); }
-        case .INITIALIZER { emitInitializer(node); }
+        case .LIST { emitList(node); }
         case .DOT { emitDot(node); }
         case .CALL { isStartOfExpression = wasStartOfExpression; emitCall(node); }
         case .SUPER_CALL { emitSuperCall(node); }
@@ -553,9 +553,9 @@ namespace js {
       if (wrap) emit(")");
     }
 
-    void emitInitializer(Node node) {
+    void emitList(Node node) {
       emit("[");
-      emitCommaSeparatedExpressions(node.initializerValues());
+      emitCommaSeparatedExpressions(node.listValues());
       emit("]");
     }
 
@@ -770,7 +770,7 @@ namespace js {
     void patchLet(Node node) {
       var value = node.letValue().replaceWith(null);
       var variable = node.letVariable().replaceWith(null);
-      node.become(Node.createCall(Node.createLambda({ variable }, Node.createBlock({ Node.createReturn(value) })), { variable.variableValue().replaceWith(null) }));
+      node.become(Node.createCall(Node.createLambda([variable], Node.createBlock([Node.createReturn(value)])), [variable.variableValue().replaceWith(null)]));
     }
 
     void patchAssign(Node node, PatchContext context) {
@@ -845,7 +845,7 @@ namespace js {
     Node createBinaryInt(NodeKind kind, Node left, Node right) {
       if (kind == .MULTIPLY) {
         needMathImul = true;
-        return Node.createCall(Node.createName("$imul"), { left, right }).withType(cache.intType);
+        return Node.createCall(Node.createName("$imul"), [left, right]).withType(cache.intType);
       }
       return Node.createBinary(.BITWISE_OR, Node.createBinary(kind, left, right).withType(cache.intType), Node.createInt(0).withType(cache.intType)).withType(cache.intType);
     }

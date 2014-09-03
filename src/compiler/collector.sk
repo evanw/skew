@@ -7,9 +7,9 @@ enum SortTypes {
 
 class Collector {
   SortTypes sort;
-  List<Symbol> typeSymbols = {};
-  List<Symbol> freeFunctionSymbols = {};
-  List<Node> topLevelStatements = {};
+  List<Symbol> typeSymbols = [];
+  List<Symbol> freeFunctionSymbols = [];
+  List<Node> topLevelStatements = [];
 
   new(Node program, SortTypes sort) : sort = sort {
     assert program.kind == .PROGRAM;

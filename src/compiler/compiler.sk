@@ -22,9 +22,9 @@ export in TargetFormat {
 
 export class CompilerOptions {
   export TargetFormat targetFormat = .NONE;
-  export List<Source> inputs = {};
-  export List<Source> prepend = {};
-  export List<Source> append = {};
+  export List<Source> inputs = [];
+  export List<Source> prepend = [];
+  export List<Source> append = [];
   export var outputDirectory = "";
   export var outputFile = "";
   export var jsSourceMap = false;
@@ -119,8 +119,8 @@ export class Compiler {
 
   export CompilerResult compile(CompilerOptions options) {
     var totalStart = now();
-    var program = Node.createProgram({});
-    List<Source> outputs = {};
+    var program = Node.createProgram([]);
+    List<Source> outputs = [];
 
     // Initialize global state
     createOperatorMap();

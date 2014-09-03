@@ -65,6 +65,7 @@ TEST_SOURCES += tests/system/core/functions.sk
 TEST_SOURCES += tests/system/core/generics.sk
 TEST_SOURCES += tests/system/core/lambdas.sk
 TEST_SOURCES += tests/system/core/let.sk
+TEST_SOURCES += tests/system/core/lists.sk
 TEST_SOURCES += tests/system/core/merging.sk
 TEST_SOURCES += tests/system/core/modifiers.sk
 TEST_SOURCES += tests/system/core/objects.sk

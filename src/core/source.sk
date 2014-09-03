@@ -12,7 +12,7 @@ export class Source {
 
   void computeLineOffsets() {
     if (lineOffsets != null) return;
-    lineOffsets = { 0 };
+    lineOffsets = [0];
     for (var i = 0; i < contents.length; i++) {
       if (contents.codeUnitAt(i) == '\n') {
         lineOffsets.push(i + 1);

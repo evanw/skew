@@ -1,0 +1,65 @@
+namespace core { void lists() {
+
+test("
+List<int> foo = [];
+", "
+");
+
+test("
+List<int> foo = [1, false, 2, 2.5];
+", "
+<stdin>:1:21: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+List<int> foo = [1, false, 2, 2.5];
+                    ~~~~~
+<stdin>:1:31: error: Cannot convert from type \"double\" to type \"int\" without a cast
+List<int> foo = [1, false, 2, 2.5];
+                              ~~~
+");
+
+test("
+var foo = [1, 1.5f, 2, 2.5];
+bool fn() bar = => foo.get(0);
+", "
+<stdin>:2:20: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool fn() bar = => foo.get(0);
+                   ~~~~~~~~~~
+");
+
+test("
+var foo = [1, false, 2, 2.5];
+", "
+<stdin>:1:11: error: Cannot infer a common element type for this list literal
+var foo = [1, false, 2, 2.5];
+          ~~~~~~~~~~~~~~~~~~
+");
+
+test("
+var foo = [];
+", "
+<stdin>:1:11: error: Cannot infer a common element type for this list literal
+var foo = [];
+          ~~
+");
+
+test("
+var foo = [1, 2, x, false];
+bool fn() bar = => foo.get(0);
+", "
+<stdin>:1:18: error: \"x\" is not declared
+var foo = [1, 2, x, false];
+                 ^
+");
+
+test("
+List<Foo> foo = [1, 2, x, false];
+bool fn() bar = => foo.get(0);
+", "
+<stdin>:1:6: error: \"Foo\" is not declared
+List<Foo> foo = [1, 2, x, false];
+     ~~~
+<stdin>:1:24: error: \"x\" is not declared
+List<Foo> foo = [1, 2, x, false];
+                       ^
+");
+
+}}

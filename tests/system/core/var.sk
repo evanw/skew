@@ -9,10 +9,10 @@ var foo;
 ");
 
 test("
-var foo = {};
+var foo = [];
 ", "
-<stdin>:1:11: error: Expression has no type context here
-var foo = {};
+<stdin>:1:11: error: Cannot infer a common element type for this list literal
+var foo = [];
           ~~
 ");
 

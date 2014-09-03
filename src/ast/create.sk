@@ -6,7 +6,7 @@ in Node {
 
   static Node createFile(Node block) {
     assert block.kind == .BLOCK;
-    return Node(.FILE).withChildren({ block });
+    return Node(.FILE).withChildren([block]);
   }
 
   static Node createBlock(List<Node> statements) {
@@ -34,25 +34,25 @@ in Node {
   static Node createMemberInitializer(Node name, Node value) {
     assert name.kind == .NAME;
     assert value.kind.isExpression();
-    return Node(.MEMBER_INITIALIZER).withChildren({ name, value });
+    return Node(.MEMBER_INITIALIZER).withChildren([name, value]);
   }
 
   static Node createNamespace(Node name, Node block) {
     assert name == null || name.kind == .NAME;
     assert block.kind == .BLOCK;
-    return Node(.NAMESPACE).withChildren({ name, block });
+    return Node(.NAMESPACE).withChildren([name, block]);
   }
 
   static Node createEnum(Node name, Node block) {
     assert name.kind == .NAME;
     assert block.kind == .BLOCK;
-    return Node(.ENUM).withChildren({ name, block });
+    return Node(.ENUM).withChildren([name, block]);
   }
 
   static Node createEnumFlags(Node name, Node block) {
     assert name.kind == .NAME;
     assert block.kind == .BLOCK;
-    return Node(.ENUM_FLAGS).withChildren({ name, block });
+    return Node(.ENUM_FLAGS).withChildren([name, block]);
   }
 
   static Node createObject(NodeKind kind, Node name, Node parameters, Node bases, Node block) {
@@ -61,7 +61,7 @@ in Node {
     assert parameters == null || checkAllNodeListKinds(parameters, nodeKindCheck(.PARAMETER));
     assert bases == null || checkAllNodeListKinds(bases, nodeKindIsExpression);
     assert block.kind == .BLOCK;
-    return Node(kind).withChildren({ name, block, bases, parameters });
+    return Node(kind).withChildren([name, block, bases, parameters]);
   }
 
   static Node createClass(Node name, Node parameters, Node bases, Node block) {
@@ -80,7 +80,7 @@ in Node {
     assert name.kind == .NAME;
     assert bases == null || checkAllNodeListKinds(bases, nodeKindIsExpression);
     assert block.kind == .BLOCK;
-    return Node(.EXTENSION).withChildren({ name, block, bases });
+    return Node(.EXTENSION).withChildren([name, block, bases]);
   }
 
   static Node createConstructor(Node name, Node arguments, Node block, Node superInitializer, Node memberInitializers) {
@@ -89,7 +89,7 @@ in Node {
     assert block == null || block.kind == .BLOCK;
     assert superInitializer == null || superInitializer.kind == .SUPER_CALL;
     assert memberInitializers == null || checkAllNodeListKinds(memberInitializers, nodeKindCheck(.MEMBER_INITIALIZER));
-    return Node(.CONSTRUCTOR).withChildren({ name, arguments, block, superInitializer, memberInitializers });
+    return Node(.CONSTRUCTOR).withChildren([name, arguments, block, superInitializer, memberInitializers]);
   }
 
   static Node createFunction(Node name, Node arguments, Node block, Node result) {
@@ -97,38 +97,38 @@ in Node {
     assert checkAllNodeListKinds(arguments, nodeKindCheck(.VARIABLE));
     assert block == null || block.kind == .BLOCK;
     assert result.kind.isExpression();
-    return Node(.FUNCTION).withChildren({ name, arguments, block, result });
+    return Node(.FUNCTION).withChildren([name, arguments, block, result]);
   }
 
   static Node createVariable(Node name, Node type, Node value) {
     assert name.kind == .NAME;
     assert type == null || type.kind.isExpression();
     assert value == null || value.kind.isExpression();
-    return Node(.VARIABLE).withChildren({ name, type, value });
+    return Node(.VARIABLE).withChildren([name, type, value]);
   }
 
   static Node createParameter(Node name, Node bound) {
     assert name.kind == .NAME;
     assert bound == null || bound.kind.isExpression();
-    return Node(.PARAMETER).withChildren({ name, bound });
+    return Node(.PARAMETER).withChildren([name, bound]);
   }
 
   static Node createAlias(Node name, Node value) {
     assert name.kind == .NAME;
     assert value.kind.isExpression();
-    return Node(.ALIAS).withChildren({ name, value });
+    return Node(.ALIAS).withChildren([name, value]);
   }
 
   static Node createUsing(Node value) {
     assert value.kind.isExpression();
-    return Node(.USING).withChildren({ value });
+    return Node(.USING).withChildren([value]);
   }
 
   static Node createIf(Node test, Node trueNode, Node falseNode) {
     assert test.kind.isExpression();
     assert trueNode.kind == .BLOCK;
     assert falseNode == null || falseNode.kind == .BLOCK;
-    return Node(.IF).withChildren({ test, trueNode, falseNode });
+    return Node(.IF).withChildren([test, trueNode, falseNode]);
   }
 
   static Node createFor(Node setup, Node test, Node update, Node block) {
@@ -136,36 +136,36 @@ in Node {
     assert test == null || test.kind.isExpression();
     assert update == null || update.kind.isExpression();
     assert block.kind == .BLOCK;
-    return Node(.FOR).withChildren({ setup, test, update, block });
+    return Node(.FOR).withChildren([setup, test, update, block]);
   }
 
   static Node createForEach(Node variable, Node value, Node block) {
     assert variable.kind == .VARIABLE;
     assert value.kind.isExpression();
     assert block.kind == .BLOCK;
-    return Node(.FOR_EACH).withChildren({ variable, value, block });
+    return Node(.FOR_EACH).withChildren([variable, value, block]);
   }
 
   static Node createWhile(Node test, Node block) {
     assert test.kind.isExpression();
     assert block.kind == .BLOCK;
-    return Node(.WHILE).withChildren({ test, block });
+    return Node(.WHILE).withChildren([test, block]);
   }
 
   static Node createDoWhile(Node block, Node test) {
     assert test == null || test.kind.isExpression();
     assert block.kind == .BLOCK;
-    return Node(.DO_WHILE).withChildren({ test, block });
+    return Node(.DO_WHILE).withChildren([test, block]);
   }
 
   static Node createReturn(Node value) {
     assert value == null || value.kind.isExpression();
-    return Node(.RETURN).withChildren({ value });
+    return Node(.RETURN).withChildren([value]);
   }
 
   static Node createImplicitReturn(Node value) {
     assert value == null || value.kind.isExpression();
-    return Node(.IMPLICIT_RETURN).withChildren({ value });
+    return Node(.IMPLICIT_RETURN).withChildren([value]);
   }
 
   static Node createBreak() {
@@ -179,12 +179,12 @@ in Node {
   static Node createAssert(NodeKind kind, Node value) {
     assert kind == .ASSERT || kind == .ASSERT_CONST;
     assert value.kind.isExpression();
-    return Node(kind).withChildren({ value });
+    return Node(kind).withChildren([value]);
   }
 
   static Node createExpression(Node value) {
     assert value.kind.isExpression();
-    return Node(.EXPRESSION).withChildren({ value });
+    return Node(.EXPRESSION).withChildren([value]);
   }
 
   static Node createModifier(Node name, List<Node> statements) {
@@ -222,7 +222,7 @@ in Node {
     assert test.kind.isExpression();
     assert trueNode.kind.isExpression();
     assert falseNode.kind.isExpression();
-    return Node(.HOOK).withChildren({ test, trueNode, falseNode });
+    return Node(.HOOK).withChildren([test, trueNode, falseNode]);
   }
 
   static Node createBool(bool value) {
@@ -245,21 +245,21 @@ in Node {
     return Node(.STRING).withContent(StringContent(value));
   }
 
-  static Node createInitializer(List<Node> values) {
+  static Node createList(List<Node> values) {
     assert checkAllNodeKinds(values, nodeKindIsExpression);
-    return Node(.INITIALIZER).withChildren(values);
+    return Node(.LIST).withChildren(values);
   }
 
   static Node createDot(Node value, Node name) {
     assert value == null || value.kind.isExpression();
     assert name == null || name.kind == .NAME;
-    return Node(.DOT).withChildren({ value, name });
+    return Node(.DOT).withChildren([value, name]);
   }
 
   static Node createLet(Node variable, Node value) {
     assert variable.kind == .VARIABLE;
     assert value.kind.isExpression();
-    return Node(.LET).withChildren({ variable, value });
+    return Node(.LET).withChildren([variable, value]);
   }
 
   static Node createCall(Node value, List<Node> arguments) {
@@ -296,13 +296,13 @@ in Node {
   static Node createCast(Node type, Node value) {
     assert type.kind.isExpression();
     assert value.kind.isExpression();
-    return Node(.CAST).withChildren({ type, value });
+    return Node(.CAST).withChildren([type, value]);
   }
 
   static Node createImplicitCast(Node type, Node value) {
     assert type.kind.isExpression();
     assert value.kind.isExpression();
-    return Node(.IMPLICIT_CAST).withChildren({ type, value });
+    return Node(.IMPLICIT_CAST).withChildren([type, value]);
   }
 
   static Node createLambda(List<Node> arguments, Node block) {
@@ -314,7 +314,7 @@ in Node {
 
   static Node createDefault(Node type) {
     assert type.kind.isExpression();
-    return Node(.DEFAULT).withChildren({ type });
+    return Node(.DEFAULT).withChildren([type]);
   }
 
   // Untyped nodes use the error type but don't report an error, thus silently
@@ -322,7 +322,7 @@ in Node {
   // binding layer for native code generation.
   static Node createUntyped(Node type) {
     assert type.kind.isExpression();
-    return Node(.UNTYPED).withChildren({ type });
+    return Node(.UNTYPED).withChildren([type]);
   }
 
   static Node createVar() {
@@ -339,7 +339,7 @@ in Node {
   static Node createUnary(NodeKind kind, Node value) {
     assert kind.isUnaryOperator();
     assert value.kind.isExpression();
-    return Node(kind).withChildren({ value });
+    return Node(kind).withChildren([value]);
   }
 
   static Node createAssign(Node left, Node right) {
@@ -358,7 +358,7 @@ in Node {
       return createTertiary(.ASSIGN_INDEX, target.remove(), index.remove(), right);
     }
 
-    return Node(kind).withChildren({ left, right });
+    return Node(kind).withChildren([left, right]);
   }
 
   static Node createTertiary(NodeKind kind, Node left, Node middle, Node right) {
@@ -366,7 +366,7 @@ in Node {
     assert left.kind.isExpression();
     assert middle.kind.isExpression();
     assert right.kind.isExpression();
-    return Node(kind).withChildren({ left, middle, right });
+    return Node(kind).withChildren([left, middle, right]);
   }
 }
 

@@ -373,8 +373,8 @@ in Node {
     return children;
   }
 
-  List<Node> initializerValues() {
-    assert kind == .INITIALIZER;
+  List<Node> listValues() {
+    assert kind == .LIST;
     return children;
   }
 

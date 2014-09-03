@@ -52,7 +52,7 @@ enum NodeKind {
   FLOAT,
   DOUBLE,
   STRING,
-  INITIALIZER,
+  LIST,
   DOT,
   LET,
   CALL,
@@ -269,7 +269,7 @@ class Node {
   }
 
   List<Node> removeChildren() {
-    if (children == null) return {};
+    if (children == null) return [];
     var result = children;
     for (var i = 0; i < children.length; i++) {
       var child = children.get(i);
@@ -332,14 +332,14 @@ class Node {
   }
 
   void insertChild(int index, Node node) {
-    if (children == null) children = {};
+    if (children == null) children = [];
     assert index >= 0 && index <= children.length;
     updateParent(node, this);
     children.insert(index, node);
   }
 
   void insertChildren(int index, List<Node> nodes) {
-    if (children == null) children = {};
+    if (children == null) children = [];
     assert index >= 0 && index <= children.length;
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes.get(i);
@@ -355,7 +355,7 @@ class Node {
     node.symbol = symbol;
     node.content = content;
     if (children != null) {
-      node.children = {};
+      node.children = [];
       for (var i = 0; i < children.length; i++) {
         var child = children.get(i);
         node.appendChild(child != null ? child.clone() : null);

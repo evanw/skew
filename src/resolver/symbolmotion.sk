@@ -27,7 +27,7 @@ class SymbolMotionPass {
       var parent = symbol.node.parent;
       var node = symbol.node.remove();
       if (parent.kind == .VARIABLE_CLUSTER) {
-        node = Node.createVariableCluster(Node.createType(symbol.type), { node });
+        node = Node.createVariableCluster(Node.createType(symbol.type), [node]);
         if (parent.children.length == 1) {
           parent.remove();
         }
@@ -57,7 +57,7 @@ class SymbolMotionPass {
       inMember = Member(inSymbol);
       inMember.type = inType;
       enclosingType.addMember(inMember);
-      inSymbol.node = Node.createNamespace(Node.createName("in").withSymbol(inSymbol), Node.createBlock({})).withSymbol(inSymbol);
+      inSymbol.node = Node.createNamespace(Node.createName("in").withSymbol(inSymbol), Node.createBlock([])).withSymbol(inSymbol);
       symbol.node.insertSiblingAfter(inSymbol.node);
     }
 
@@ -70,7 +70,7 @@ class SymbolMotionPass {
     assert inType.findMember(symbol.name) == null;
     inType.addMember(shadowMember);
     shadowForSymbol.set(symbol.uniqueID, shadowType);
-    shadowSymbol.node = Node.createNamespace(Node.createName(symbol.name).withSymbol(shadowSymbol), Node.createBlock({})).withSymbol(shadowSymbol);
+    shadowSymbol.node = Node.createNamespace(Node.createName(symbol.name).withSymbol(shadowSymbol), Node.createBlock([])).withSymbol(shadowSymbol);
     inType.symbol.node.declarationBlock().appendChild(shadowSymbol.node);
     return shadowType;
   }

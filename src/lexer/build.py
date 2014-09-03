@@ -28,7 +28,7 @@ enum TokenKind {
 // code) but it's fast and somewhat standard for compiler design. The code below
 // replaces a simple hand-coded lexer and offers much better performance.
 List<Token> tokenize(Log log, Source source) {
-  List<Token> tokens = {};
+  List<Token> tokens = [];
   var text = source.contents;
   var text_length = text.length;
 
@@ -100,8 +100,8 @@ List<Token> tokenize(Log log, Source source) {
 }
 '''
 
-def create_table(result, name, type='int'):
-  return 'final List<%(type)s> %(name)s = { %(entries)s };' % {
+def create_table(result, name, type='var'):
+  return 'final %(type)s %(name)s = [%(entries)s];' % {
     'type': type,
     'name': name,
     'entries': ', '.join('%s' % x for x in result[name]),
@@ -129,7 +129,7 @@ result['actions'] = dict((k, v if v != 'ECHO' else 'ERROR') for k, v in result['
 result['yy_accept'] = ['.%s' % result['actions'][x] for x in result['yy_accept']]
 result['actions'] = '\n'.join('  %s,' % x for x in sorted(set(result['actions'].values())))
 result['yy_accept_length'] = len(result['yy_accept'])
-result['yy_accept'] = create_table(result, 'yy_accept', type='TokenKind')
+result['yy_accept'] = create_table(result, 'yy_accept', type='List<TokenKind>')
 result['yy_ec'] = create_table(result, 'yy_ec')
 result['yy_meta'] = create_table(result, 'yy_meta')
 result['yy_base'] = create_table(result, 'yy_base')

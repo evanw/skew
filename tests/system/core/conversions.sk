@@ -453,7 +453,7 @@ class Bar<T is IBar> {
 ");
 
 test("
-List<int> values = {
+List<int> values = [
   2147483647,
   0x7FFFFFFF,
   0o17777777777,
@@ -468,7 +468,7 @@ List<int> values = {
   -0x80000000,
   -0o20000000000,
   -0b10000000000000000000000000000000,
-};
+];
 ", "
 <stdin>:7:3: error: Invalid integer literal 2147483648
   2147483648,

@@ -12,7 +12,7 @@ class Diagnostic {
 }
 
 class Log {
-  List<Diagnostic> diagnostics = {};
+  List<Diagnostic> diagnostics = [];
   var warningCount = 0;
   var errorCount = 0;
 

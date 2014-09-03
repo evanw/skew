@@ -82,7 +82,7 @@ export namespace frontend {
   }
 
   List<Source> readSources(List<string> files) {
-    List<Source> result = {};
+    List<Source> result = [];
     for (var i = 0; i < files.length; i++) {
       var file = files.get(i);
       var source = io.readFile(file);
@@ -96,9 +96,9 @@ export namespace frontend {
   }
 
   export int main(List<string> args) {
-    List<string> inputs = {};
-    List<string> prepend = {};
-    List<string> append = {};
+    List<string> inputs = [];
+    List<string> prepend = [];
+    List<string> append = [];
     var flags = Flags();
 
     for (var i = 0; i < args.length; i++) {

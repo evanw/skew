@@ -42,11 +42,11 @@ export class LanguageService {
     var options = CompilerOptions();
     var compiler = Compiler();
     previousSource = Source("<input>", input);
-    options.inputs = { previousSource };
+    options.inputs = [previousSource];
     previousResult = compiler.compile(options);
 
     // Construct diagnostics
-    List<LanguageServiceDiagnostic> diagnostics = {};
+    List<LanguageServiceDiagnostic> diagnostics = [];
     for (var i = 0; i < compiler.log.diagnostics.length; i++) {
       Diagnostic diagnostic = compiler.log.diagnostics.get(i);
       Range range = diagnostic.range;
@@ -68,7 +68,7 @@ export class LanguageService {
     var options = CompilerOptions();
     var compiler = Compiler();
     previousSource = Source("<input>", input);
-    options.inputs = { previousSource };
+    options.inputs = [previousSource];
     previousResult = compiler.compile(options);
 
     // Construct completions
@@ -175,7 +175,7 @@ namespace service {
   }
 
   List<LanguageServiceCompletion> completionsFromPosition(Node node, Resolver resolver, Source source, int index) {
-    List<LanguageServiceCompletion> completions = {};
+    List<LanguageServiceCompletion> completions = [];
     node = nodeFromPosition(node, source, index);
 
     // Special-case completions for members

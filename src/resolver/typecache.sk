@@ -87,7 +87,7 @@ class TypeCache {
 
   List<Type> substituteAll(List<Type> types, List<Symbol> parameters, List<Type> substitutions) {
     assert parameters.length == substitutions.length;
-    List<Type> results = {};
+    List<Type> results = [];
     for (var i = 0; i < types.length; i++) {
       results.push(substitute(types.get(i), parameters, substitutions));
     }
@@ -122,7 +122,7 @@ class TypeCache {
 
     // Make a hash bucket
     else {
-      existingTypes = {};
+      existingTypes = [];
       hashTable.set(hash, existingTypes);
     }
 
@@ -161,7 +161,7 @@ class TypeCache {
         //
         var parameterizedType = member.parameterizedType;
         if (parameterizedType != null) {
-          List<Type> merged = {};
+          List<Type> merged = [];
           for (var j = 0; j < parameterizedType.substitutions.length; j++) {
             Symbol parameter = parameterizedType.symbol.parameters.get(j);
             int index = symbol.parameters.indexOf(parameter);

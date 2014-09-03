@@ -8,8 +8,8 @@ class SourceMapping {
 
 // Based on: https://github.com/mozilla/source-map
 class SourceMapGenerator {
-  List<SourceMapping> mappings = {};
-  List<Source> sources = {};
+  List<SourceMapping> mappings = [];
+  List<Source> sources = [];
 
   void addMapping(Source source, int originalLine, int originalColumn, int generatedLine, int generatedColumn) {
     var sourceIndex = sources.indexOf(source);
@@ -21,8 +21,8 @@ class SourceMapGenerator {
   }
 
   string toString() {
-    List<string> sourceNames = {};
-    List<string> sourceContents = {};
+    List<string> sourceNames = [];
+    List<string> sourceContents = [];
 
     for (var i = 0; i < sources.length; i++) {
       Source source = sources.get(i);

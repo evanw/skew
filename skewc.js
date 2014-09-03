@@ -1643,7 +1643,7 @@ js.Emitter.emitExpression = function($this, node, precedence) {
     js.Emitter.emit($this, quoteString(node.content.value, 34));
     break;
   case 44:
-    js.Emitter.emitInitializer($this, node);
+    js.Emitter.emitList($this, node);
     break;
   case 45:
     js.Emitter.emitDot($this, node);
@@ -1758,7 +1758,7 @@ js.Emitter.emitDouble = function($this, node) {
     js.Emitter.emit($this, ")");
   }
 };
-js.Emitter.emitInitializer = function($this, node) {
+js.Emitter.emitList = function($this, node) {
   js.Emitter.emit($this, "[");
   js.Emitter.emitCommaSeparatedExpressions($this, node.children);
   js.Emitter.emit($this, "]");
@@ -3571,7 +3571,7 @@ Resolver.resolve = function($this, node, expectedType) {
     node.type = $this.cache.stringType;
     break;
   case 44:
-    Resolver.resolveInitializer($this, node);
+    Resolver.resolveList($this, node);
     break;
   case 45:
     Resolver.resolveDot($this, node);
@@ -4957,18 +4957,13 @@ Resolver.resolveInt = function($this, node) {
   }
   node.type = $this.cache.intType;
 };
-Resolver.resolveInitializer = function($this, node) {
+Resolver.resolveList = function($this, node) {
   var values = node.children;
-  if ($this.typeContext === null) {
-    Log.error($this.log, node.range, "Expression has no type context here");
+  if ($this.typeContext !== null && $this.typeContext === $this.cache.errorType) {
     Resolver.resolveNodesAsExpressions($this, values);
     return;
   }
-  if ($this.typeContext === $this.cache.errorType) {
-    Resolver.resolveNodesAsExpressions($this, values);
-    return;
-  }
-  if ($this.typeContext.symbol === $this.cache.listType.symbol) {
+  if ($this.typeContext !== null && $this.typeContext.symbol === $this.cache.listType.symbol) {
     var itemType = $this.typeContext.substitutions[0];
     for (var i = 0; i < values.length; i = i + 1 | 0) {
       Resolver.resolveAsExpressionWithConversion($this, values[i], itemType, 0);
@@ -4976,8 +4971,28 @@ Resolver.resolveInitializer = function($this, node) {
     node.type = $this.typeContext;
     return;
   }
-  Node.become(node, Node.withRange(Node.createCall(Node.withRange(Node.withType(new Node(35), $this.typeContext), node.range), Node.removeChildren(node)), node.range));
-  Resolver.resolveAsExpression($this, node);
+  var commonType = null;
+  for (var i = 0; i < values.length; i = i + 1 | 0) {
+    var value = values[i];
+    Resolver.resolveAsExpression($this, value);
+    if (commonType === null || value.type === $this.cache.errorType) {
+      commonType = value.type;
+    } else if (commonType !== $this.cache.errorType) {
+      commonType = TypeCache.commonImplicitType($this.cache, commonType, value.type);
+      if (commonType === null) {
+        Log.error($this.log, node.range, "Cannot infer a common element type for this list literal");
+        commonType = $this.cache.errorType;
+      }
+    }
+  }
+  if (commonType !== null && commonType === $this.cache.errorType) {
+    return;
+  }
+  if (commonType === null) {
+    Log.error($this.log, node.range, "Cannot infer a common element type for this list literal");
+    return;
+  }
+  node.type = TypeCache.parameterize($this.cache, $this.cache.listType, [commonType]);
 };
 Resolver.resolveDot = function($this, node) {
   var target = node.children[0];
@@ -6087,7 +6102,7 @@ $in.NodeKind.toString = function($this) {
   case 43:
     return "STRING";
   case 44:
-    return "INITIALIZER";
+    return "LIST";
   case 45:
     return "DOT";
   case 46:
@@ -7773,9 +7788,9 @@ function createParser() {
   Pratt.infixRight(pratt, 11, 2, binaryInfix(95));
   Pratt.infixRight(pratt, 12, 2, binaryInfix(96));
   Pratt.infixRight(pratt, 7, 2, binaryInfix(97));
-  Pratt.parselet(pratt, 56, 0).prefix = function(context) {
+  Pratt.parselet(pratt, 57, 0).prefix = function(context) {
     var token = ParserContext.current(context);
-    var $arguments = parseArgumentList(context, 56, 79, 1);
+    var $arguments = parseArgumentList(context, 57, 80, 1);
     return Node.withRange(Node.withChildren(new Node(44), $arguments), ParserContext.spanSince(context, token.range));
   };
   Pratt.parselet(pratt, 58, 0).prefix = function(context) {

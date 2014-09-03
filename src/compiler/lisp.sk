@@ -6,7 +6,7 @@ namespace lisp {
     }
 
     override List<Source> emitProgram(Node program) {
-      List<Source> outputs = {};
+      List<Source> outputs = [];
       if (options.outputDirectory == "") {
         outputs.push(Source(options.outputFile, dump(program) + "\n"));
       } else {

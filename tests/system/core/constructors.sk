@@ -80,54 +80,6 @@ int foo = Foo(1);
 ");
 
 test("
-int i = { 0 };
-bool b = { false };
-float f = { 0.0f };
-double d = { 0.0 };
-string s = { \"\" };
-", "
-<stdin>:1:9: error: Cannot construct type \"int\"
-int i = { 0 };
-        ~~~~~
-<stdin>:2:10: error: Cannot construct type \"bool\"
-bool b = { false };
-         ~~~~~~~~~
-<stdin>:3:11: error: Cannot construct type \"float\"
-float f = { 0.0f };
-          ~~~~~~~~
-<stdin>:4:12: error: Cannot construct type \"double\"
-double d = { 0.0 };
-           ~~~~~~~
-<stdin>:5:12: error: Cannot construct type \"string\"
-string s = { \"\" };
-           ~~~~~~
-");
-
-test("
-int i = {};
-bool b = {};
-float f = {};
-double d = {};
-string s = {};
-", "
-<stdin>:1:9: error: Cannot construct type \"int\"
-int i = {};
-        ~~
-<stdin>:2:10: error: Cannot construct type \"bool\"
-bool b = {};
-         ~~
-<stdin>:3:11: error: Cannot construct type \"float\"
-float f = {};
-          ~~
-<stdin>:4:12: error: Cannot construct type \"double\"
-double d = {};
-           ~~
-<stdin>:5:12: error: Cannot construct type \"string\"
-string s = {};
-           ~~
-");
-
-test("
 int i = int();
 bool b = bool();
 float f = float();
@@ -165,45 +117,15 @@ var v = default(void);
 ");
 
 test("
-void fn() foo = { false };
-", "
-<stdin>:1:17: error: Cannot construct type \"void fn()\"
-void fn() foo = { false };
-                ~~~~~~~~~
-");
-
-test("
-class Foo {
-  new(int x) {}
-}
-Foo foo = { false };
-", "
-<stdin>:4:13: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-Foo foo = { false };
-            ~~~~~
-");
-
-test("
-class Foo {
-  new(int x) {}
-}
-Foo foo = { 0, 1 };
-", "
-<stdin>:4:11: error: Expected 1 argument but found 2 arguments
-Foo foo = { 0, 1 };
-          ~~~~~~~~
-");
-
-test("
 struct Foo {
   static int foo;
   final int bar;
 }
-Foo foo = { 1, 2 };
+Foo fn() foo = => Foo(1, 2);
 ", "
-<stdin>:5:11: error: Expected 1 argument but found 2 arguments
-Foo foo = { 1, 2 };
-          ~~~~~~~~
+<stdin>:5:22: error: Expected 1 argument but found 2 arguments
+Foo fn() foo = => Foo(1, 2);
+                     ~~~~~~
 ");
 
 test("
@@ -213,18 +135,18 @@ class Foo : Bar {
 class Bar {
   new(bool foo) {}
 }
-Foo foo = { false };
-Bar bar = { 0 };
+Foo fn() foo = => Foo(false);
+Bar fn() bar = => Bar(0);
 ", "
 <stdin>:2:24: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   new(int foo) : super(foo) {}
                        ~~~
-<stdin>:7:13: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-Foo foo = { false };
-            ~~~~~
-<stdin>:8:13: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-Bar bar = { 0 };
-            ^
+<stdin>:7:23: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+Foo fn() foo = => Foo(false);
+                      ~~~~~
+<stdin>:8:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+Bar fn() bar = => Bar(0);
+                      ^
 ");
 
 test("

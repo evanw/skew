@@ -23,7 +23,7 @@ class Scope {
     cache.doubleType = findType("double");
     cache.stringType = findType("string");
     cache.listType = findType("List");
-    cache.toStringType = cache.functionType(cache.stringType, {});
+    cache.toStringType = cache.functionType(cache.stringType, []);
   }
 
   Type findType(string name) {
