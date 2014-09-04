@@ -102,7 +102,11 @@ class Resolver {
       // Append this symbol the linked list of sibling nodes
       if (member != null) {
         symbol = member.symbol;
-        symbol.node.appendToSiblingChain(node);
+
+        // The symbol for "void" has no corresponding node
+        if (symbol.node != null) {
+          symbol.node.appendToSiblingChain(node);
+        }
       }
 
       // Make a symbol

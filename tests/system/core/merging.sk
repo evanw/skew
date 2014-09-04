@@ -268,4 +268,12 @@ void test() {
            ~~~
 ");
 
+test("
+foo void // The node for the 'void' symbol is null
+", "
+<stdin>:1:51: error: Expected SEMICOLON but found END_OF_FILE
+foo void // The node for the 'void' symbol is null
+                                                  ^
+");
+
 }}

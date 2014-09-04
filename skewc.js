@@ -3175,7 +3175,9 @@ Resolver.setupNamedDeclaration = function($this, node, scope) {
     var symbol = null;
     if (member !== null) {
       symbol = member.symbol;
-      Node.appendToSiblingChain(symbol.node, node);
+      if (symbol.node !== null) {
+        Node.appendToSiblingChain(symbol.node, node);
+      }
     } else {
       symbol = Resolver.createSymbol($this, name, 0);
       symbol.node = node;

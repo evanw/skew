@@ -550,10 +550,4 @@ namespace foo.bar. {
           ~~~
 ");
 
-test("
-foo void bar
-", "
-TODO
-");
-
 }}

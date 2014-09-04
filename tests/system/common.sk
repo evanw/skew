@@ -4,7 +4,7 @@ import void expect(string output, string expected);
 
 export void run(string input, string expected) {
   var options = CompilerOptions();
-  options.inputs = { Source("<stdin>", input) };
+  options.inputs = [Source("<stdin>", input)];
   var compiler = Compiler();
   var result = compiler.compile(options);
   expect(compiler.log.toString(), expected);
@@ -12,7 +12,7 @@ export void run(string input, string expected) {
 
 export void runJS(string input, string expected) {
   var options = CompilerOptions();
-  options.inputs = { Source("<stdin>", input) };
+  options.inputs = [Source("<stdin>", input)];
   options.targetFormat = .JS;
   var compiler = Compiler();
   var result = compiler.compile(options);
