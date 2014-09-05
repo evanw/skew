@@ -4,7 +4,6 @@ class DeadCodeRemovalPass {
 
   static void run(Node program, CompilerOptions options, Resolver resolver) {
     var pass = DeadCodeRemovalPass(options);
-    pass.includeTopLevelStatements(program);
 
     // Include all exported symbols
     var symbols = resolver.allSymbols;
@@ -20,28 +19,12 @@ class DeadCodeRemovalPass {
       var symbol = symbols.get(i);
       var node = symbol.node;
       if (node != null && !pass.includedSymbols.has(symbol.uniqueID)) {
-        var kind = symbol.kind;
-        if (kind == .GLOBAL_FUNCTION || kind == .INSTANCE_FUNCTION || kind == .NAMESPACE) {
+        if (symbol.enclosingSymbol != null) {
           symbol.enclosingSymbol.type.members.remove(symbol.name);
-          symbols.remove(i);
-          node.remove();
-          i--;
         }
-      }
-    }
-  }
-
-  void includeTopLevelStatements(Node node) {
-    if (node.symbol != null && node.kind != .NAMESPACE && !node.isDeclarationName()) {
-      includeSymbol(node.symbol);
-    }
-
-    if (node.hasChildren()) {
-      for (var i = 0; i < node.children.length; i++) {
-        var child = node.children.get(i);
-        if (child != null && !child.kind.isFunction()) {
-          includeTopLevelStatements(child);
-        }
+        symbols.remove(i);
+        node.remove();
+        i--;
       }
     }
   }
@@ -58,6 +41,27 @@ class DeadCodeRemovalPass {
       // This symbol depends on the enclosing symbol being present
       if (symbol.enclosingSymbol != null && symbol.kind != .INSTANCE_VARIABLE) {
         includeSymbol(symbol.enclosingSymbol);
+      }
+
+      // Object types depend on their constructor even if not explicitly used
+      if (symbol.kind.isObject()) {
+        var constructor = symbol.type.constructor();
+        if (constructor != null) {
+          includeSymbol(constructor.symbol);
+        }
+      }
+
+      // This symbol depends on all other relevant types
+      if (symbol.type.hasRelevantTypes()) {
+        var types = symbol.type.relevantTypes;
+        for (var i = 0; i < types.length; i++) {
+          var relevantSymbol = types.get(i).symbol;
+
+          // Function types don't have a symbol
+          if (relevantSymbol != null) {
+            includeSymbol(relevantSymbol);
+          }
+        }
       }
 
       // Recursively include child non-structural nodes

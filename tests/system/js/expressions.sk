@@ -523,7 +523,7 @@ Foo.prototype.bar = function() {
 ");
 
 testJS("
-class Foo {
+export class Foo {
   int foo;
   int fn() bar;
   new() : bar = () => foo {}

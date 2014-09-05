@@ -365,9 +365,6 @@ Node.blockAlwaysEndsWithReturn = function($this) {
 Node.isNameExpression = function($this) {
   return $this.kind === 34 && ($this.parent.kind !== 45 || $this !== $this.parent.children[1]) && (!$in.NodeKind.isNamedDeclaration($this.parent.kind) || $this !== $this.parent.children[0]);
 };
-Node.isDeclarationName = function($this) {
-  return $this.kind === 34 && $in.NodeKind.isNamedDeclaration($this.parent.kind) && $this === $this.parent.children[0];
-};
 Node.isStorage = function($this) {
   return $in.NodeKind.isUnaryStorageOperator($this.parent.kind) || $in.NodeKind.isBinaryStorageOperator($this.parent.kind) && $this === $this.parent.children[0];
 };
@@ -2754,7 +2751,6 @@ function DeadCodeRemovalPass(_0) {
 }
 DeadCodeRemovalPass.run = function(program, options, resolver) {
   var pass = new DeadCodeRemovalPass(options);
-  DeadCodeRemovalPass.includeTopLevelStatements(pass, program);
   var symbols = resolver.allSymbols;
   for (var i = 0; i < symbols.length; i = i + 1 | 0) {
     var symbol = symbols[i];
@@ -2766,26 +2762,12 @@ DeadCodeRemovalPass.run = function(program, options, resolver) {
     var symbol = symbols[i];
     var node = symbol.node;
     if (node !== null && !pass.includedSymbols.has(symbol.uniqueID)) {
-      var kind = symbol.kind;
-      if (kind === 14 || kind === 15 || kind === 8) {
+      if (symbol.enclosingSymbol !== null) {
         symbol.enclosingSymbol.type.members.remove(symbol.name);
-        symbols.splice(i, 1)[0];
-        Node.remove(node);
-        i = i - 1 | 0;
       }
-    }
-  }
-};
-DeadCodeRemovalPass.includeTopLevelStatements = function($this, node) {
-  if (node.symbol !== null && node.kind !== 7 && !Node.isDeclarationName(node)) {
-    DeadCodeRemovalPass.includeSymbol($this, node.symbol);
-  }
-  if (Node.hasChildren(node)) {
-    for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-      var child = node.children[i];
-      if (child !== null && !$in.NodeKind.isFunction(child.kind)) {
-        DeadCodeRemovalPass.includeTopLevelStatements($this, child);
-      }
+      symbols.splice(i, 1)[0];
+      Node.remove(node);
+      i = i - 1 | 0;
     }
   }
 };
@@ -2797,6 +2779,21 @@ DeadCodeRemovalPass.includeSymbol = function($this, symbol) {
     $this.includedSymbols.set(symbol.uniqueID, true);
     if (symbol.enclosingSymbol !== null && symbol.kind !== 19) {
       DeadCodeRemovalPass.includeSymbol($this, symbol.enclosingSymbol);
+    }
+    if ($in.SymbolKind.isObject(symbol.kind)) {
+      var $constructor = Type.$constructor(symbol.type);
+      if ($constructor !== null) {
+        DeadCodeRemovalPass.includeSymbol($this, $constructor.symbol);
+      }
+    }
+    if (Type.hasRelevantTypes(symbol.type)) {
+      var types = symbol.type.relevantTypes;
+      for (var i = 0; i < types.length; i = i + 1 | 0) {
+        var relevantSymbol = types[i].symbol;
+        if (relevantSymbol !== null) {
+          DeadCodeRemovalPass.includeSymbol($this, relevantSymbol);
+        }
+      }
     }
     var node = symbol.node;
     if (node !== null && !$in.NodeKind.isNamedBlockDeclaration(node.kind)) {
@@ -8180,9 +8177,6 @@ service.collectAllMembers = function(scope, allMembers) {
   if (scope.lexicalParent !== null) {
     service.collectAllMembers(scope.lexicalParent, allMembers);
   }
-};
-var nodeKindIsExpression = function(node) {
-  return $in.NodeKind.isExpression(node.kind);
 };
 var operatorInfo = null;
 Compiler.nativeLibrarySource = null;
