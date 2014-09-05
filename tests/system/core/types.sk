@@ -9,7 +9,43 @@ double d;
 string e;
 void fn() f;
 Foo g;
+Foo h = Foo();
+void fn() i = => {};
 ", "
+");
+
+test("
+class Foo { int foo; }
+var foo = Foo(0);
+", "
+");
+
+test("
+class Foo { int foo = 0; }
+var foo = Foo();
+", "
+<stdin>:2:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Foo();
+          ~~~~~
+");
+
+test("
+class Foo { new() {} }
+var foo = Foo();
+", "
+<stdin>:2:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Foo();
+          ~~~~~
+");
+
+test("
+class Foo {}
+class Bar : Foo {}
+var foo = Bar();
+", "
+<stdin>:3:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Bar();
+          ~~~~~
 ");
 
 test("

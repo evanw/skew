@@ -115,7 +115,7 @@ void semanticErrorUninitializedExtensionVariable(Log log, Range range) {
 }
 
 void semanticErrorNonPureGlobalVariable(Log log, Range range) {
-  log.error(range, "Global variables must be initialized to an expression without side effects");
+  log.error(range, "Global variables must be initialized to a pure expression (one without side effects)");
 }
 
 void semanticErrorNonConstantConstValue(Log log, Range range) {

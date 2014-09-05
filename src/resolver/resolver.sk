@@ -235,9 +235,7 @@ class Resolver {
 
   bool checkParentsForLocalVariable(Node node) {
     for (node = node.parent; node != null; node = node.parent) {
-      var kind = node.kind;
-      if (kind != .PROGRAM && kind != .FILE && kind != .BLOCK && kind != .NAMESPACE &&
-          kind != .MODIFIER && kind != .EXTENSION && kind != .VARIABLE_CLUSTER && !kind.isEnum()) {
+      if (node.kind.isFunction()) {
         return true;
       }
     }
@@ -1477,9 +1475,14 @@ class Resolver {
     List<Node> superArguments = null;
     List<Node> memberInitializers = [];
 
+    // Compute a very conservative definition of pure for now. This is mostly
+    // just to allow struct literals to work as top-level variable initializers.
+    var isPure = true;
+
     // Add arguments for each base constructor argument
     var baseClass = enclosingSymbol.type.isClass() ? enclosingSymbol.type.baseClass() : null;
     if (baseClass != null) {
+      isPure = false;
       var constructor = baseClass.constructor();
       if (constructor != null) {
         initializeMember(constructor);
@@ -1508,27 +1511,23 @@ class Resolver {
     for (var i = 0; i < members.length; i++) {
       var member = members.get(i);
       var memberSymbol = member.symbol;
-      if (memberSymbol.kind == .INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol && memberSymbol.node.variableValue() == null) {
-        initializeMember(member);
-        if (member.type.isError(cache)) {
-          symbol.flags |= .INITIALIZED;
-          symbol.type = cache.errorType;
-          return;
+      if (memberSymbol.kind == .INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
+        if (memberSymbol.node.variableValue() == null) {
+          initializeMember(member);
+          if (member.type.isError(cache)) {
+            symbol.flags |= .INITIALIZED;
+            symbol.type = cache.errorType;
+            return;
+          }
+          uninitializedMembers.push(member);
+        } else {
+          isPure = false;
         }
-        uninitializedMembers.push(member);
       }
     }
 
     // Sort the uninitialized members by source location
-    for (var i = 1; i < uninitializedMembers.length; i++) {
-      var j = i;
-      var member = uninitializedMembers.get(i);
-      for (; j > 0 && uninitializedMembers.get(j - 1).symbol.node.range.start > member.symbol.node.range.start; j--) {
-        assert uninitializedMembers.get(j - 1).symbol.node.range.source == member.symbol.node.range.source;
-        uninitializedMembers.set(j, uninitializedMembers.get(j - 1));
-      }
-      uninitializedMembers.set(j, member);
-    }
+    uninitializedMembers.sort((a, b) => a.symbol.node.range.start - b.symbol.node.range.start);
 
     // Append each uninitialized member argument now that they are sorted
     for (var i = 0; i < uninitializedMembers.length; i++) {
@@ -1558,6 +1557,11 @@ class Resolver {
     symbol.node.scope = scope;
     for (var i = 0; i < arguments.length; i++) {
       scope.insert(arguments.get(i).symbol);
+    }
+
+    // Infer the pure modifier if all sanity checks passed
+    if (isPure) {
+      symbol.flags |= .PURE;
     }
   }
 
@@ -2069,6 +2073,13 @@ class Resolver {
   // A pure value is one guaranteed to have no side effects
   bool isPureValue(Node node) {
     var kind = node.kind;
+
+    // Treat errors as pure to avoid further errors
+    if (node.type.isError(cache)) {
+      return true;
+    }
+
+    // List literals are only pure if their elements are pure
     if (kind == .LIST) {
       if (node.hasChildren()) {
         for (var i = 0; i < node.children.length; i++) {
@@ -2079,9 +2090,28 @@ class Resolver {
       }
       return true;
     }
+
+    // Calls are pure if the function and all arguments are pure
+    if (kind == .CALL) {
+      var value = node.callValue();
+      var arguments = node.callArguments();
+      if (value.kind != .TYPE || !node.symbol.isPure()) {
+        return false;
+      }
+      for (var i = 0; i < arguments.length; i++) {
+        if (!isPureValue(arguments.get(i))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // Casts are pure if the casted value is pure
     if (kind.isCast()) {
       return isPureValue(node.castValue());
     }
+
+    // Literals are always pure
     return kind.isConstant() || kind == .LAMBDA;
   }
 
@@ -2112,7 +2142,7 @@ class Resolver {
       // since that ensures there aren't any initialization ordering issues
       if (symbol.kind == .GLOBAL_VARIABLE) {
         constantFolder.foldConstants(value);
-        if (!isPureValue(value) && !value.type.isError(cache) && !symbol.type.isError(cache)) {
+        if (!isPureValue(value) && !symbol.type.isError(cache)) {
           semanticErrorNonPureGlobalVariable(log, value.range);
           value.type = cache.errorType;
         }

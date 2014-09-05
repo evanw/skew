@@ -4,7 +4,7 @@ struct FormattedRange {
 }
 
 struct Range {
-  static var EMPTY = Range(null, 0, 0);
+  static final var EMPTY = Range(null, 0, 0);
 
   final Source source;
   final int start;

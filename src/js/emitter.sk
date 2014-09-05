@@ -20,6 +20,7 @@ namespace js {
   }
 
   class Emitter : IEmitter {
+    static StringMap<bool> isKeyword;
     var indent = "";
     var currentLine = 0;
     var currentColumn = 0;
@@ -43,6 +44,10 @@ namespace js {
     }
 
     override List<Source> emitProgram(Node program) {
+      if (isKeyword == null) {
+        isKeyword = createIsKeyword();
+      }
+
       currentSource = Source(options.outputFile, "");
       var collector = Collector(program, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
 
@@ -880,8 +885,6 @@ namespace js {
       result.set("throw", true);
       return result;
     }
-
-    static var isKeyword = createIsKeyword();
 
     static string mangleName(Symbol symbol) {
       if (symbol.isImportOrExport()) {

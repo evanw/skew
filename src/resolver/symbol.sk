@@ -90,6 +90,7 @@ enum flags SymbolFlag {
   FINAL,
   INLINE,
   CONST,
+  PURE,
 
   // Binding flags
   EXPORT,
@@ -260,6 +261,10 @@ class Symbol {
 
   bool isConst() {
     return (flags & .CONST) != 0;
+  }
+
+  bool isPure() {
+    return (flags & .PURE) != 0;
   }
 
   bool isImport() {
