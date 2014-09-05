@@ -196,7 +196,7 @@ in Node {
 
   static Node createSwitch(Node value, List<Node> cases) {
     assert value.kind.isExpression();
-    assert checkAllNodeKinds(cases, node => node.kind == .CASE || node.kind == .DEFAULT);
+    assert checkAllNodeKinds(cases, node => node.kind == .CASE);
     cases.unshift(value);
     return Node(.SWITCH).withChildren(cases);
   }
@@ -310,11 +310,6 @@ in Node {
     assert block.kind == .BLOCK;
     arguments.push(block);
     return Node(.LAMBDA).withChildren(arguments);
-  }
-
-  static Node createDefault(Node type) {
-    assert type.kind.isExpression();
-    return Node(.DEFAULT).withChildren([type]);
   }
 
   // Untyped nodes use the error type but don't report an error, thus silently

@@ -526,7 +526,6 @@ class Resolver {
       case .PARAMETERIZE { resolveParameterize(node); }
       case .CAST { resolveCast(node); }
       case .LAMBDA { resolveLambda(node); }
-      case .DEFAULT { resolveDefault(node); }
       case .UNTYPED { resolveUntyped(node); }
       case .VAR { resolveVar(node); }
       case .FUNCTION_TYPE { resolveFunctionType(node); }
@@ -830,6 +829,18 @@ class Resolver {
     for (var i = 0; i < baseTypes.length; i++) {
       semanticErrorUnexpectedBaseType(log, baseTypes.get(i).range, what);
     }
+  }
+
+  Node createDefaultValue(Type type, Range range) {
+    if (type.isReference()) return Node.createNull().withType(type);
+    if (type.isBool(cache)) return Node.createBool(false).withType(type);
+    if (type.isInt(cache)) return Node.createInt(0).withType(type);
+    if (type.isFloat(cache)) return Node.createFloat(0.0).withType(type);
+    if (type.isDouble(cache)) return Node.createDouble(0.0).withType(type);
+    if (type.isString(cache)) return Node.createString("").withType(type);
+    if (type.isEnum()) return Node.createInt(0).withType(type);
+    if (!type.isError(cache)) semanticErrorNoDefaultValue(log, range, type);
+    return Node.createError().withType(cache.errorType);
   }
 
   bool needsTypeContext(Node node) {
@@ -2009,7 +2020,7 @@ class Resolver {
                 initializeMember(member);
                 memberInitializers.insertChild(index++, Node.createMemberInitializer(
                   Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type),
-                  Node.createDefault(Node.createType(member.type))));
+                  createDefaultValue(member.type, memberSymbol.node.declarationName().range)));
               }
             }
           }
@@ -2071,7 +2082,7 @@ class Resolver {
     if (kind.isCast()) {
       return isPureValue(node.castValue());
     }
-    return kind.isConstant() || kind == .LAMBDA || kind == .DEFAULT;
+    return kind.isConstant() || kind == .LAMBDA;
   }
 
   void resolveVariable(Node node) {
@@ -2110,7 +2121,7 @@ class Resolver {
 
     // Automatically initialize uninitialized variables to their default value
     else if (!symbol.type.isError(cache) && node.parent.kind == .VARIABLE_CLUSTER && symbol.kind != .INSTANCE_VARIABLE) {
-      node.children.set(2, Node.createDefault(Node.createType(symbol.type)).withType(symbol.type));
+      node.replaceChild(2, createDefaultValue(symbol.type, node.declarationName().range).withType(symbol.type));
     }
   }
 
@@ -2695,13 +2706,6 @@ class Resolver {
 
     resultType = oldResultType;
     context.loop = oldLoop;
-  }
-
-  void resolveDefault(Node node) {
-    var type = node.defaultType();
-    resolveAsParameterizedType(type);
-    checkIsValidVariableType(type);
-    node.type = type.type;
   }
 
   void resolveUntyped(Node node) {

@@ -153,11 +153,12 @@ class TypeCache {
         // from Bar<bool>, or Bar<bool>.foo will have the wrong type:
         //
         //   class Foo<A, B> {
-        //     A foo(B bar) { return default(A); }
+        //     A baz;
+        //     A foo(B bar) { return baz; }
         //   }
         //   class Bar<T> : Foo<int, T> {}
         //   class Baz : Bar<bool> {}
-        //   bool bar = Baz().foo(0);
+        //   bool bar = Baz(0).foo(0);
         //
         var parameterizedType = member.parameterizedType;
         if (parameterizedType != null) {

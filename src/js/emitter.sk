@@ -498,7 +498,6 @@ namespace js {
         case .SUPER_CALL { emitSuperCall(node); }
         case .SEQUENCE { isStartOfExpression = wasStartOfExpression; emitSequence(node, precedence); }
         case .LAMBDA { emitLambda(node, wasStartOfExpression); }
-        case .DEFAULT { emitDefault(node); }
         case .UNTYPED { emitExpression(node.untypedValue(), precedence); }
         case .INDEX { emitIndex(node, precedence); }
         case .ASSIGN_INDEX { emitTertiary(node, precedence); }
@@ -602,14 +601,6 @@ namespace js {
       emit(" ");
       emitNode(node.lambdaBlock());
       if (wasStartOfExpression) emit(")");
-    }
-
-    void emitDefault(Node node) {
-      if (node.type.isNumeric(cache)) emit("0");
-      else if (node.type.isBool(cache)) emit("false");
-      else if (node.type.isString(cache)) emit("\"\"");
-      else if (node.type.isReference()) emit("null");
-      else assert false; // TODO: Handle structs
     }
 
     void emitUnary(Node node, Precedence precedence) {

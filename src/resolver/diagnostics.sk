@@ -313,3 +313,7 @@ void semanticErrorFalseAssert(Log log, Range range) {
 void semanticErrorListTypeInferenceFailed(Log log, Range range) {
   log.error(range, "Cannot infer a common element type for this list literal");
 }
+
+void semanticErrorNoDefaultValue(Log log, Range range, Type type) {
+  log.error(range, "Cannot create a default value for " + typeToText(type));
+}

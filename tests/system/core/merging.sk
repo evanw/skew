@@ -269,11 +269,14 @@ void test() {
 ");
 
 test("
-foo void // The node for the 'void' symbol is null
+foo void
 ", "
-<stdin>:1:51: error: Expected SEMICOLON but found END_OF_FILE
-foo void // The node for the 'void' symbol is null
-                                                  ^
+<stdin>:1:9: error: Expected SEMICOLON but found END_OF_FILE
+foo void
+        ^
+<stdin>:1:5: error: Cannot create a default value for type \"void\"
+foo void
+    ~~~~
 ");
 
 }}

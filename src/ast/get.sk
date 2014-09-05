@@ -243,12 +243,6 @@ in Node {
     return children.get(1);
   }
 
-  Node defaultType() {
-    assert kind == .DEFAULT;
-    assert children.length == 1;
-    return children.get(0);
-  }
-
   Node untypedValue() {
     assert kind == .UNTYPED;
     assert children.length == 1;

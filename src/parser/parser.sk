@@ -841,13 +841,6 @@ void createParser() {
     return Node.createParameterize(left, substitutions).withRange(context.spanSince(left.range));
   };
 
-  // Default expressions
-  pratt.parselet(.DEFAULT, Precedence.UNARY_PREFIX).prefix = context => {
-    var token = context.next();
-    var type = parseGroup(context, .LAMBDA_NOT_ALLOWED);
-    return (type == null ? Node.createError() : Node.createDefault(type)).withRange(context.spanSince(token.range));
-  };
-
   // Untyped expressions
   pratt.parselet(.UNTYPED, Precedence.UNARY_PREFIX).prefix = context => {
     var token = context.next();

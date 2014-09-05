@@ -1,6 +1,18 @@
 namespace core { void types() {
 
 test("
+class Foo {}
+int a;
+bool b;
+float c;
+double d;
+string e;
+void fn() f;
+Foo g;
+", "
+");
+
+test("
 void test() {
   (void)null;
 }
