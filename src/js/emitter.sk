@@ -44,6 +44,7 @@ namespace js {
     var currentColumn = 0;
     var needExtends = false;
     var needMathImul = false;
+    var needsSemicolon = false;
     var isStartOfExpression = false;
     var generator = SourceMapGenerator();
     Source currentSource = null;
@@ -233,8 +234,24 @@ namespace js {
       }
     }
 
-    void emitNodes(List<Node> nodes) {
+    void emitSemicolonAfterStatement() {
+      if (!options.jsMinify) {
+        emit(";\n");
+      } else {
+        needsSemicolon = true;
+      }
+    }
+
+    void emitSemicolonIfNeeded() {
+      if (needsSemicolon) {
+        emit(";");
+        needsSemicolon = false;
+      }
+    }
+
+    void emitStatements(List<Node> nodes) {
       for (var i = 0; i < nodes.length; i++) {
+        emitSemicolonIfNeeded();
         maybeEmitMinifedNewline();
         emitNode(nodes.get(i));
       }
@@ -264,9 +281,6 @@ namespace js {
     }
 
     void emitChildren(Node node) {
-      if (node.hasChildren()) {
-        emitNodes(node.children);
-      }
     }
 
     Node singleStatement(Node node) {
@@ -286,6 +300,7 @@ namespace js {
       emitBlock(trueBlock, falseBlock != null && trueStatement != null && trueStatement.kind == .IF ? .MUST_KEEP_BRACES : .CAN_OMIT_BRACES);
 
       if (falseBlock != null) {
+        emitSemicolonIfNeeded();
         emit(space + "else ");
         var falseStatement = singleStatement(falseBlock);
         if (falseStatement != null && falseStatement.kind == .IF) {
@@ -334,16 +349,20 @@ namespace js {
         emitNode(node.children.get(0));
       } else {
         emit("{" + newline);
-        increaseIndent();
-        emitChildren(node);
-        decreaseIndent();
+        if (node.hasChildren()) {
+          increaseIndent();
+          emitStatements(node.children);
+          decreaseIndent();
+        }
         emit(indent + "}");
+        needsSemicolon = false;
       }
     }
 
     void emitCase(Node node) {
       var values = node.caseValues();
       var block = node.caseBlock();
+      emitSemicolonIfNeeded();
       for (var i = 0; i < values.length; i++) {
         emit(indent + "case ");
         emitExpression(values.get(i), .LOWEST);
@@ -354,9 +373,13 @@ namespace js {
         emit(indent + "default:" + newline);
       }
       increaseIndent();
-      emitChildren(block);
-      if (!block.blockAlwaysEndsWithReturn()) {
-        emit(indent + "break;" + newline);
+      if (block.hasChildren()) {
+        emitStatements(block.children);
+      }
+      if (!block.blockAlwaysEndsWithReturn() && (!options.jsMinify || !node.isLastChild())) {
+        emitSemicolonIfNeeded();
+        emit(indent + "break");
+        emitSemicolonAfterStatement();
       }
       decreaseIndent();
     }
@@ -368,27 +391,29 @@ namespace js {
         var variable = variables.get(i);
         var symbol = variable.symbol;
         var isCompoundName = symbol != null && hasCompoundName(symbol);
-        if ((symbol == null || !symbol.kind.isInstance() && !symbol.isImport()) && (!isCompoundName || variable.variableValue() != null)) {
-          if (isCompoundName) {
-            if (state == .VAR_CHAIN) {
+        if (symbol != null && (symbol.kind.isInstance() || symbol.isImport()) || isCompoundName && variable.variableValue() == null) {
+          continue;
+        }
+        emitSemicolonIfNeeded();
+        if (isCompoundName) {
+          if (state == .VAR_CHAIN) {
+            emit(";" + newline);
+          }
+          state = .COMPOUND_NAME;
+          emit(indent);
+        } else {
+          if (state != .VAR_CHAIN) {
+            if (state == .COMPOUND_NAME) {
               emit(";" + newline);
             }
-            state = .COMPOUND_NAME;
-            emit(indent);
+            emit(indent + "var ");
+            state = .VAR_CHAIN;
           } else {
-            if (state != .VAR_CHAIN) {
-              if (state == .COMPOUND_NAME) {
-                emit(";" + newline);
-              }
-              emit(indent + "var ");
-              state = .VAR_CHAIN;
-            } else {
-              emit("," + space);
-              maybeEmitMinifedNewline();
-            }
+            emit("," + space);
+            maybeEmitMinifedNewline();
           }
-          emitNode(variable);
         }
+        emitNode(variable);
       }
       if (state != .NONE) {
         emit(";" + newline);
@@ -396,33 +421,38 @@ namespace js {
     }
 
     void emitNamespace(Node node) {
+      emitSemicolonIfNeeded();
       if (!hasCompoundName(node.symbol)) {
         emit("var ");
       }
-      emit(indent + fullName(node.symbol) + space + "=" + space + "{};" + newline);
+      emit(indent + fullName(node.symbol) + space + "=" + space + "{}");
+      emitSemicolonAfterStatement();
     }
 
     void emitEnum(Node node) {
       var block = node.declarationBlock();
-      if (!options.foldAllConstants || node.symbol.isImportOrExport()) {
-        if (!hasCompoundName(node.symbol)) {
-          emit("var ");
-        }
-        emit(indent + fullName(node.symbol) + space + "=" + space + "{" + newline);
-        increaseIndent();
-        for (var i = 0; i < block.children.length; i++) {
-          var symbol = block.children.get(i).symbol;
-          emit(indent + mangleName(symbol) + ":" + space + symbol.constant.asInt());
-          if (i != block.children.length - 1) {
-            emit("," + newline);
-            maybeEmitMinifedNewline();
-          } else {
-            emit(newline);
-          }
-        }
-        decreaseIndent();
-        emit(indent + "};" + newline);
+      if (options.foldAllConstants && !node.symbol.isImportOrExport()) {
+        return;
       }
+      emitSemicolonIfNeeded();
+      if (!hasCompoundName(node.symbol)) {
+        emit("var ");
+      }
+      emit(indent + fullName(node.symbol) + space + "=" + space + "{" + newline);
+      increaseIndent();
+      for (var i = 0; i < block.children.length; i++) {
+        var symbol = block.children.get(i).symbol;
+        emit(indent + mangleName(symbol) + ":" + space + symbol.constant.asInt());
+        if (i != block.children.length - 1) {
+          emit("," + newline);
+          maybeEmitMinifedNewline();
+        } else {
+          emit(newline);
+        }
+      }
+      decreaseIndent();
+      emit(indent + "}");
+      emitSemicolonAfterStatement();
     }
 
     void emitFunction(Node node) {
@@ -432,6 +462,7 @@ namespace js {
         return;
       }
       var isCompoundName = hasCompoundName(symbol);
+      emitSemicolonIfNeeded();
       if (!isCompoundName) {
         emit(indent + "function " + fullName(symbol));
       } else {
@@ -440,11 +471,14 @@ namespace js {
       emitArgumentVariables(node.functionArguments().children);
       emit(space);
       emitBlock(block, .MUST_KEEP_BRACES);
-      emit(isCompoundName ? ";" + newline : newline);
+      if (isCompoundName) emitSemicolonAfterStatement();
+      else emit(newline);
       if (node.kind == .CONSTRUCTOR) {
         var type = symbol.enclosingSymbol.type;
         if (type.isClass() && type.baseClass() != null) {
-          emit(indent + "$extends(" + fullName(type.symbol) + "," + space + fullName(type.baseClass().symbol) + ");" + newline);
+          emitSemicolonIfNeeded();
+          emit(indent + "$extends(" + fullName(type.symbol) + "," + space + fullName(type.baseClass().symbol) + ")");
+          emitSemicolonAfterStatement();
         }
       }
     }
@@ -507,7 +541,8 @@ namespace js {
       emitBlock(node.whileBlock(), .CAN_OMIT_BRACES);
       emit(space + "while" + space + "(");
       emitExpression(node.whileTest(), .LOWEST);
-      emit(");" + newline);
+      emit(")");
+      emitSemicolonAfterStatement();
     }
 
     void emitReturn(Node node) {
@@ -516,18 +551,20 @@ namespace js {
       if (value != null) {
         emit("return ");
         emitExpression(value, .LOWEST);
-        emit(";" + newline);
       } else {
-        emit("return;" + newline);
+        emit("return");
       }
+      emitSemicolonAfterStatement();
     }
 
     void emitBreak(Node node) {
-      emit(indent + "break;" + newline);
+      emit(indent + "break");
+      emitSemicolonAfterStatement();
     }
 
     void emitContinue(Node node) {
-      emit(indent + "continue;" + newline);
+      emit(indent + "continue");
+      emitSemicolonAfterStatement();
     }
 
     void emitAssert(Node node) {
@@ -545,8 +582,9 @@ namespace js {
           }
         }
         var text = node.range + " (" + node.range.locationString() + ")";
-        emit(indent + "throw new Error(" + quoteString(text, '"') + ");" + newline);
-        if (!options.jsMinify && couldBeFalse) {
+        emit(indent + "throw new Error(" + quoteString(text, '"') + ")");
+        emitSemicolonAfterStatement();
+        if (couldBeFalse && !options.jsMinify) {
           decreaseIndent();
           emit(indent + "}\n");
         }
@@ -557,19 +595,20 @@ namespace js {
       emit(indent);
       isStartOfExpression = true;
       emitExpression(node.expressionValue(), .LOWEST);
-      emit(";" + newline);
+      emitSemicolonAfterStatement();
     }
 
     void emitSwitch(Node node) {
       emit(indent + "switch" + space + "(");
       emitExpression(node.switchValue(), .LOWEST);
       emit(")" + space + "{" + newline);
-      emitNodes(node.switchCases());
+      emitStatements(node.switchCases());
       emit(indent + "}" + newline);
+      needsSemicolon = false;
     }
 
     void emitModifier(Node node) {
-      emitNodes(node.modifierStatements());
+      emitStatements(node.modifierStatements());
     }
 
     void emitExpression(Node node, Precedence precedence) {

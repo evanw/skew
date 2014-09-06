@@ -50,4 +50,28 @@ function bar() {
 }
 ");
 
+testJS("
+export int foo(int x) {
+  int y;
+  switch (x) {
+    case 1 { y = 1; }
+    case 2 { y = 2; }
+  }
+  return y;
+}
+", "
+function foo(x) {
+  var y = 0;
+  switch (x) {
+  case 1:
+    y = 1;
+    break;
+  case 2:
+    y = 2;
+    break;
+  }
+  return y;
+}
+");
+
 }}

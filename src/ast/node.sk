@@ -225,6 +225,10 @@ class Node {
     return children != null && children.length > 0;
   }
 
+  bool isLastChild() {
+    return parent.children.get(parent.children.length - 1) == this;
+  }
+
   int indexInParent() {
     assert parent != null;
     return parent.children.indexOf(this);

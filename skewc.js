@@ -399,6 +399,9 @@ Node.hasNoSideEffects = function($this) {
 Node.hasChildren = function($this) {
   return $this.children !== null && $this.children.length > 0;
 };
+Node.isLastChild = function($this) {
+  return $this.parent.children[$this.parent.children.length - 1 | 0] === $this;
+};
 Node.indexInParent = function($this) {
   return $this.parent.children.indexOf($this);
 };
@@ -1192,6 +1195,7 @@ js.Emitter = function(_0, _1) {
   this.currentColumn = 0;
   this.needExtends = false;
   this.needMathImul = false;
+  this.needsSemicolon = false;
   this.isStartOfExpression = false;
   this.generator = new SourceMapGenerator();
   this.currentSource = null;
@@ -1324,8 +1328,22 @@ js.Emitter.maybeEmitMinifedNewline = function($this) {
     js.Emitter.emit($this, "\n");
   }
 };
-js.Emitter.emitNodes = function($this, nodes) {
+js.Emitter.emitSemicolonAfterStatement = function($this) {
+  if (!$this.options.jsMinify) {
+    js.Emitter.emit($this, ";\n");
+  } else {
+    $this.needsSemicolon = true;
+  }
+};
+js.Emitter.emitSemicolonIfNeeded = function($this) {
+  if ($this.needsSemicolon) {
+    js.Emitter.emit($this, ";");
+    $this.needsSemicolon = false;
+  }
+};
+js.Emitter.emitStatements = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
+    js.Emitter.emitSemicolonIfNeeded($this);
     js.Emitter.maybeEmitMinifedNewline($this);
     js.Emitter.emitNode($this, nodes[i]);
   }
@@ -1352,11 +1370,6 @@ js.Emitter.emitArgumentVariables = function($this, nodes) {
   js.Emitter.emitCommaSeparatedNodes($this, nodes);
   js.Emitter.emit($this, ")");
 };
-js.Emitter.emitChildren = function($this, node) {
-  if (Node.hasChildren(node)) {
-    js.Emitter.emitNodes($this, node.children);
-  }
-};
 js.Emitter.singleStatement = function(node) {
   return Node.hasChildren(node) && node.children.length === 1 ? node.children[0] : null;
 };
@@ -1369,6 +1382,7 @@ js.Emitter.recursiveEmitIfStatement = function($this, node) {
   js.Emitter.emit($this, ")" + $this.space);
   js.Emitter.emitBlock($this, trueBlock, falseBlock !== null && trueStatement !== null && trueStatement.kind === 19 ? 0 : 1);
   if (falseBlock !== null) {
+    js.Emitter.emitSemicolonIfNeeded($this);
     js.Emitter.emit($this, $this.space + "else ");
     var falseStatement = js.Emitter.singleStatement(falseBlock);
     if (falseStatement !== null && falseStatement.kind === 19) {
@@ -1435,7 +1449,7 @@ js.Emitter.emitNode = function($this, node) {
     js.Emitter.emitSwitch($this, node);
     break;
   case 32:
-    js.Emitter.emitNodes($this, Node.modifierStatements(node));
+    js.Emitter.emitStatements($this, Node.modifierStatements(node));
     break;
   case 17:
   case 18:
@@ -1454,15 +1468,19 @@ js.Emitter.emitBlock = function($this, node, mode) {
     js.Emitter.emitNode($this, node.children[0]);
   } else {
     js.Emitter.emit($this, "{" + $this.newline);
-    js.Emitter.increaseIndent($this);
-    js.Emitter.emitChildren($this, node);
-    js.Emitter.decreaseIndent($this);
+    if (Node.hasChildren(node)) {
+      js.Emitter.increaseIndent($this);
+      js.Emitter.emitStatements($this, node.children);
+      js.Emitter.decreaseIndent($this);
+    }
     js.Emitter.emit($this, $this.indent + "}");
+    $this.needsSemicolon = false;
   }
 };
 js.Emitter.emitCase = function($this, node) {
   var values = Node.caseValues(node);
   var block = Node.caseBlock(node);
+  js.Emitter.emitSemicolonIfNeeded($this);
   for (var i = 0; i < values.length; i = i + 1 | 0) {
     js.Emitter.emit($this, $this.indent + "case ");
     js.Emitter.emitExpression($this, values[i], 0);
@@ -1473,9 +1491,13 @@ js.Emitter.emitCase = function($this, node) {
     js.Emitter.emit($this, $this.indent + "default:" + $this.newline);
   }
   js.Emitter.increaseIndent($this);
-  js.Emitter.emitChildren($this, block);
-  if (!Node.blockAlwaysEndsWithReturn(block)) {
-    js.Emitter.emit($this, $this.indent + "break;" + $this.newline);
+  if (Node.hasChildren(block)) {
+    js.Emitter.emitStatements($this, block.children);
+  }
+  if (!Node.blockAlwaysEndsWithReturn(block) && (!$this.options.jsMinify || !Node.isLastChild(node))) {
+    js.Emitter.emitSemicolonIfNeeded($this);
+    js.Emitter.emit($this, $this.indent + "break");
+    js.Emitter.emitSemicolonAfterStatement($this);
   }
   js.Emitter.decreaseIndent($this);
 };
@@ -1486,57 +1508,64 @@ js.Emitter.emitVariableCluster = function($this, node) {
     var variable = variables[i];
     var symbol = variable.symbol;
     var isCompoundName = symbol !== null && js.Emitter.hasCompoundName(symbol);
-    if ((symbol === null || !$in.SymbolKind.isInstance(symbol.kind) && (symbol.flags & 8192) === 0) && (!isCompoundName || variable.children[2] !== null)) {
-      if (isCompoundName) {
-        if (state === 1) {
-          js.Emitter.emit($this, ";" + $this.newline);
-        }
-        state = 2;
-        js.Emitter.emit($this, $this.indent);
-      } else if (state !== 1) {
-        if (state === 2) {
-          js.Emitter.emit($this, ";" + $this.newline);
-        }
-        js.Emitter.emit($this, $this.indent + "var ");
-        state = 1;
-      } else {
-        js.Emitter.emit($this, "," + $this.space);
-        js.Emitter.maybeEmitMinifedNewline($this);
-      }
-      js.Emitter.emitNode($this, variable);
+    if (symbol !== null && ($in.SymbolKind.isInstance(symbol.kind) || (symbol.flags & 8192) !== 0) || isCompoundName && variable.children[2] === null) {
+      continue;
     }
+    js.Emitter.emitSemicolonIfNeeded($this);
+    if (isCompoundName) {
+      if (state === 1) {
+        js.Emitter.emit($this, ";" + $this.newline);
+      }
+      state = 2;
+      js.Emitter.emit($this, $this.indent);
+    } else if (state !== 1) {
+      if (state === 2) {
+        js.Emitter.emit($this, ";" + $this.newline);
+      }
+      js.Emitter.emit($this, $this.indent + "var ");
+      state = 1;
+    } else {
+      js.Emitter.emit($this, "," + $this.space);
+      js.Emitter.maybeEmitMinifedNewline($this);
+    }
+    js.Emitter.emitNode($this, variable);
   }
   if (state !== 0) {
     js.Emitter.emit($this, ";" + $this.newline);
   }
 };
 js.Emitter.emitNamespace = function($this, node) {
+  js.Emitter.emitSemicolonIfNeeded($this);
   if (!js.Emitter.hasCompoundName(node.symbol)) {
     js.Emitter.emit($this, "var ");
   }
-  js.Emitter.emit($this, $this.indent + js.Emitter.fullName(node.symbol) + $this.space + "=" + $this.space + "{};" + $this.newline);
+  js.Emitter.emit($this, $this.indent + js.Emitter.fullName(node.symbol) + $this.space + "=" + $this.space + "{}");
+  js.Emitter.emitSemicolonAfterStatement($this);
 };
 js.Emitter.emitEnum = function($this, node) {
   var block = node.children[1];
-  if (!$this.options.foldAllConstants || (node.symbol.flags & 12288) !== 0) {
-    if (!js.Emitter.hasCompoundName(node.symbol)) {
-      js.Emitter.emit($this, "var ");
-    }
-    js.Emitter.emit($this, $this.indent + js.Emitter.fullName(node.symbol) + $this.space + "=" + $this.space + "{" + $this.newline);
-    js.Emitter.increaseIndent($this);
-    for (var i = 0; i < block.children.length; i = i + 1 | 0) {
-      var symbol = block.children[i].symbol;
-      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(symbol) + ":" + $this.space + symbol.constant.value);
-      if (i !== (block.children.length - 1 | 0)) {
-        js.Emitter.emit($this, "," + $this.newline);
-        js.Emitter.maybeEmitMinifedNewline($this);
-      } else {
-        js.Emitter.emit($this, $this.newline);
-      }
-    }
-    js.Emitter.decreaseIndent($this);
-    js.Emitter.emit($this, $this.indent + "};" + $this.newline);
+  if ($this.options.foldAllConstants && (node.symbol.flags & 12288) === 0) {
+    return;
   }
+  js.Emitter.emitSemicolonIfNeeded($this);
+  if (!js.Emitter.hasCompoundName(node.symbol)) {
+    js.Emitter.emit($this, "var ");
+  }
+  js.Emitter.emit($this, $this.indent + js.Emitter.fullName(node.symbol) + $this.space + "=" + $this.space + "{" + $this.newline);
+  js.Emitter.increaseIndent($this);
+  for (var i = 0; i < block.children.length; i = i + 1 | 0) {
+    var symbol = block.children[i].symbol;
+    js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(symbol) + ":" + $this.space + symbol.constant.value);
+    if (i !== (block.children.length - 1 | 0)) {
+      js.Emitter.emit($this, "," + $this.newline);
+      js.Emitter.maybeEmitMinifedNewline($this);
+    } else {
+      js.Emitter.emit($this, $this.newline);
+    }
+  }
+  js.Emitter.decreaseIndent($this);
+  js.Emitter.emit($this, $this.indent + "}");
+  js.Emitter.emitSemicolonAfterStatement($this);
 };
 js.Emitter.emitFunction = function($this, node) {
   var block = node.children[2];
@@ -1545,6 +1574,7 @@ js.Emitter.emitFunction = function($this, node) {
     return;
   }
   var isCompoundName = js.Emitter.hasCompoundName(symbol);
+  js.Emitter.emitSemicolonIfNeeded($this);
   if (!isCompoundName) {
     js.Emitter.emit($this, $this.indent + "function " + js.Emitter.fullName(symbol));
   } else {
@@ -1553,11 +1583,17 @@ js.Emitter.emitFunction = function($this, node) {
   js.Emitter.emitArgumentVariables($this, node.children[1].children);
   js.Emitter.emit($this, $this.space);
   js.Emitter.emitBlock($this, block, 0);
-  js.Emitter.emit($this, isCompoundName ? ";" + $this.newline : $this.newline);
+  if (isCompoundName) {
+    js.Emitter.emitSemicolonAfterStatement($this);
+  } else {
+    js.Emitter.emit($this, $this.newline);
+  }
   if (node.kind === 14) {
     var type = symbol.enclosingSymbol.type;
     if (Type.isClass(type) && Type.baseClass(type) !== null) {
-      js.Emitter.emit($this, $this.indent + "$extends(" + js.Emitter.fullName(type.symbol) + "," + $this.space + js.Emitter.fullName(Type.baseClass(type).symbol) + ");" + $this.newline);
+      js.Emitter.emitSemicolonIfNeeded($this);
+      js.Emitter.emit($this, $this.indent + "$extends(" + js.Emitter.fullName(type.symbol) + "," + $this.space + js.Emitter.fullName(Type.baseClass(type).symbol) + ")");
+      js.Emitter.emitSemicolonAfterStatement($this);
     }
   }
 };
@@ -1615,7 +1651,8 @@ js.Emitter.emitDoWhile = function($this, node) {
   js.Emitter.emitBlock($this, node.children[1], 1);
   js.Emitter.emit($this, $this.space + "while" + $this.space + "(");
   js.Emitter.emitExpression($this, node.children[0], 0);
-  js.Emitter.emit($this, ");" + $this.newline);
+  js.Emitter.emit($this, ")");
+  js.Emitter.emitSemicolonAfterStatement($this);
 };
 js.Emitter.emitReturn = function($this, node) {
   var value = node.children[0];
@@ -1623,16 +1660,18 @@ js.Emitter.emitReturn = function($this, node) {
   if (value !== null) {
     js.Emitter.emit($this, "return ");
     js.Emitter.emitExpression($this, value, 0);
-    js.Emitter.emit($this, ";" + $this.newline);
   } else {
-    js.Emitter.emit($this, "return;" + $this.newline);
+    js.Emitter.emit($this, "return");
   }
+  js.Emitter.emitSemicolonAfterStatement($this);
 };
 js.Emitter.emitBreak = function($this, node) {
-  js.Emitter.emit($this, $this.indent + "break;" + $this.newline);
+  js.Emitter.emit($this, $this.indent + "break");
+  js.Emitter.emitSemicolonAfterStatement($this);
 };
 js.Emitter.emitContinue = function($this, node) {
-  js.Emitter.emit($this, $this.indent + "continue;" + $this.newline);
+  js.Emitter.emit($this, $this.indent + "continue");
+  js.Emitter.emitSemicolonAfterStatement($this);
 };
 js.Emitter.emitAssert = function($this, node) {
   var value = node.children[0];
@@ -1649,8 +1688,9 @@ js.Emitter.emitAssert = function($this, node) {
       }
     }
     var text = Range.toString(node.range) + " (" + Range.locationString(node.range) + ")";
-    js.Emitter.emit($this, $this.indent + "throw new Error(" + quoteString(text, 34) + ");" + $this.newline);
-    if (!$this.options.jsMinify && couldBeFalse) {
+    js.Emitter.emit($this, $this.indent + "throw new Error(" + quoteString(text, 34) + ")");
+    js.Emitter.emitSemicolonAfterStatement($this);
+    if (couldBeFalse && !$this.options.jsMinify) {
       js.Emitter.decreaseIndent($this);
       js.Emitter.emit($this, $this.indent + "}\n");
     }
@@ -1660,14 +1700,15 @@ js.Emitter.emitExpressionStatement = function($this, node) {
   js.Emitter.emit($this, $this.indent);
   $this.isStartOfExpression = true;
   js.Emitter.emitExpression($this, node.children[0], 0);
-  js.Emitter.emit($this, ";" + $this.newline);
+  js.Emitter.emitSemicolonAfterStatement($this);
 };
 js.Emitter.emitSwitch = function($this, node) {
   js.Emitter.emit($this, $this.indent + "switch" + $this.space + "(");
   js.Emitter.emitExpression($this, node.children[0], 0);
   js.Emitter.emit($this, ")" + $this.space + "{" + $this.newline);
-  js.Emitter.emitNodes($this, Node.switchCases(node));
+  js.Emitter.emitStatements($this, Node.switchCases(node));
   js.Emitter.emit($this, $this.indent + "}" + $this.newline);
+  $this.needsSemicolon = false;
 };
 js.Emitter.emitExpression = function($this, node, precedence) {
   var wasStartOfExpression = $this.isStartOfExpression;
