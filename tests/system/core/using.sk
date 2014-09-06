@@ -176,6 +176,53 @@ Foo foo = 0;
 ");
 
 test("
+using ns;
+Foo foo = 0;
+namespace ns {
+  class Foo {}
+}
+using ns;
+", "
+<stdin>:2:11: error: Cannot convert from type \"int\" to type \"ns.Foo\"
+Foo foo = 0;
+          ^
+");
+
+test("
+using ns2;
+using ns1;
+Foo foo = 0;
+namespace ns1 {
+  class Foo {}
+}
+using ns1;
+namespace ns2 {
+  class Foo {}
+}
+", "
+<stdin>:3:1: error: Reference to \"Foo\" is ambiguous, could be \"ns2.Foo\" or \"ns1.Foo\"
+Foo foo = 0;
+~~~
+");
+
+test("
+using ns1;
+using ns2;
+Foo foo = 0;
+namespace ns1 {
+  class Foo {}
+}
+using ns1;
+namespace ns2 {
+  class Foo {}
+}
+", "
+<stdin>:3:1: error: Reference to \"Foo\" is ambiguous, could be \"ns1.Foo\" or \"ns2.Foo\"
+Foo foo = 0;
+~~~
+");
+
+test("
 using ns1;
 using ns2;
 Foo foo = 0;

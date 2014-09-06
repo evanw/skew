@@ -13,7 +13,7 @@ class Scope {
 
   void insertGlobals(TypeCache cache) {
     type = cache.globalType;
-    insert(cache.voidType.symbol);
+    insert(Member(cache.voidType.symbol));
   }
 
   void linkGlobals(TypeCache cache) {
@@ -30,20 +30,20 @@ class Scope {
     return findLocal(name).symbol.type;
   }
 
-  void insert(Symbol symbol) {
+  void insert(Member member) {
     if (type != null) {
-      type.addMember(Member(symbol));
+      type.addMember(member);
       return;
     }
-    insertLocal(symbol);
+    insertLocal(member);
   }
 
-  void insertLocal(Symbol symbol) {
+  void insertLocal(Member member) {
     if (locals == null) {
       locals = StringMap<Member>();
     }
-    assert !locals.has(symbol.name);
-    locals.set(symbol.name, Member(symbol));
+    assert !locals.has(member.symbol.name);
+    locals.set(member.symbol.name, member);
   }
 
   Member find(string name) {

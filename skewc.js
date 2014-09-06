@@ -3168,10 +3168,11 @@ Resolver.setupNamedDeclaration = function($this, node, scope) {
       if (scope.type !== null) {
         symbol.enclosingSymbol = scope.type.symbol;
       }
+      member = new Member(symbol);
       if (node.kind === 17) {
-        Scope.insertLocal(scope, symbol);
+        Scope.insertLocal(scope, member);
       } else {
-        Scope.insert(scope, symbol);
+        Scope.insert(scope, member);
       }
     }
     $this.parsedDeclarations.push(node);
@@ -3377,19 +3378,22 @@ Resolver.processUsingStatements = function($this) {
         var current = Scope.findLocal(block.scope, memberSymbol.name);
         if (current === null) {
           insertedSymbols.push(memberSymbol);
-          Scope.insertLocal(block.scope, memberSymbol);
-        } else {
-          var currentSymbol = current.symbol;
-          if (insertedSymbols.indexOf(currentSymbol) >= 0) {
-            if (currentSymbol.kind !== 2) {
-              var collision = Resolver.createSymbol($this, memberSymbol.name, 2);
-              collision.identicalMembers = [current, member];
-              block.scope.locals.set(memberSymbol.name, new Member(collision));
-              insertedSymbols.push(collision);
-            } else {
-              currentSymbol.identicalMembers.push(member);
-            }
+          Scope.insertLocal(block.scope, member);
+          continue;
+        }
+        var currentSymbol = current.symbol;
+        if (insertedSymbols.indexOf(currentSymbol) < 0) {
+          continue;
+        }
+        if (currentSymbol.kind !== 2) {
+          if (memberSymbol !== currentSymbol) {
+            var collision = Resolver.createSymbol($this, memberSymbol.name, 2);
+            collision.identicalMembers = [current, member];
+            block.scope.locals.set(memberSymbol.name, new Member(collision));
+            insertedSymbols.push(collision);
           }
+        } else if (currentSymbol.identicalMembers.indexOf(member) < 0) {
+          currentSymbol.identicalMembers.push(member);
         }
       }
     }
@@ -4376,7 +4380,7 @@ Resolver.generateDefaultConstructor = function($this, symbol) {
   symbol.node.symbol = symbol;
   symbol.node.scope = scope;
   for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-    Scope.insert(scope, $arguments[i].symbol);
+    Scope.insert(scope, new Member($arguments[i].symbol));
   }
   if (isPure) {
     symbol.flags |= 2048;
@@ -5428,7 +5432,7 @@ function Scope(_0) {
 }
 Scope.insertGlobals = function($this, cache) {
   $this.type = cache.globalType;
-  Scope.insert($this, cache.voidType.symbol);
+  Scope.insert($this, new Member(cache.voidType.symbol));
 };
 Scope.linkGlobals = function($this, cache) {
   cache.intType = Scope.findLocal($this, "int").symbol.type;
@@ -5439,18 +5443,18 @@ Scope.linkGlobals = function($this, cache) {
   cache.listType = Scope.findLocal($this, "List").symbol.type;
   cache.toStringType = TypeCache.functionType(cache, cache.stringType, []);
 };
-Scope.insert = function($this, symbol) {
+Scope.insert = function($this, member) {
   if ($this.type !== null) {
-    Type.addMember($this.type, new Member(symbol));
+    Type.addMember($this.type, member);
     return;
   }
-  Scope.insertLocal($this, symbol);
+  Scope.insertLocal($this, member);
 };
-Scope.insertLocal = function($this, symbol) {
+Scope.insertLocal = function($this, member) {
   if ($this.locals === null) {
     $this.locals = new StringMap();
   }
-  $this.locals.set(symbol.name, new Member(symbol));
+  $this.locals.set(member.symbol.name, member);
 };
 Scope.find = function($this, name) {
   var member = Scope.findLocal($this, name);

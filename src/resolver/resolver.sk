@@ -118,10 +118,11 @@ class Resolver {
         }
 
         // Type parameters should not be accessable as members of their type
+        member = Member(symbol);
         if (node.kind == .PARAMETER) {
-          scope.insertLocal(symbol);
+          scope.insertLocal(member);
         } else {
-          scope.insert(symbol);
+          scope.insert(member);
         }
       }
 
@@ -386,22 +387,31 @@ class Resolver {
           if (memberSymbol.kind == .NAMESPACE) {
             continue;
           }
+
+          // Look for a symbol with the same name already in this scope
           var current = block.scope.findLocal(memberSymbol.name);
           if (current == null) {
             insertedSymbols.push(memberSymbol);
-            block.scope.insertLocal(memberSymbol);
-          } else {
-            var currentSymbol = current.symbol;
-            if (insertedSymbols.indexOf(currentSymbol) >= 0) {
-              if (currentSymbol.kind != .AMBIGUOUS) {
-                var collision = createSymbol(memberSymbol.name, .AMBIGUOUS);
-                collision.identicalMembers = [current, member];
-                block.scope.locals.set(memberSymbol.name, Member(collision));
-                insertedSymbols.push(collision);
-              } else {
-                currentSymbol.identicalMembers.push(member);
-              }
+            block.scope.insertLocal(member);
+            continue;
+          }
+
+          // Only merge with other symbols that were also inserted by this pass
+          var currentSymbol = current.symbol;
+          if (insertedSymbols.indexOf(currentSymbol) < 0) {
+            continue;
+          }
+
+          // Only add the symbol if it's not already in the ambiguous symbol list
+          if (currentSymbol.kind != .AMBIGUOUS) {
+            if (memberSymbol != currentSymbol) {
+              var collision = createSymbol(memberSymbol.name, .AMBIGUOUS);
+              collision.identicalMembers = [current, member];
+              block.scope.locals.set(memberSymbol.name, Member(collision));
+              insertedSymbols.push(collision);
             }
+          } else if (currentSymbol.identicalMembers.indexOf(member) < 0) {
+            currentSymbol.identicalMembers.push(member);
           }
         }
       }
@@ -1556,7 +1566,7 @@ class Resolver {
     symbol.node.symbol = symbol;
     symbol.node.scope = scope;
     for (var i = 0; i < arguments.length; i++) {
-      scope.insert(arguments.get(i).symbol);
+      scope.insert(Member(arguments.get(i).symbol));
     }
 
     // Infer the pure modifier if all sanity checks passed
