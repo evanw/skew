@@ -692,6 +692,14 @@ namespace js {
       toStringTarget = left;
       emitExpression(left, info.precedence.incrementIfRightAssociative(info.associativity));
       emit(space + (node.kind == .EQUAL ? "===" : node.kind == .NOT_EQUAL ? "!==" : info.text) + space);
+
+      // Prevent "x - -1" from becoming "x--1"
+      if (space == "" && (
+          node.kind == .ADD && (right.kind == .POSITIVE || right.kind == .PREFIX_INCREMENT) ||
+          node.kind == .SUBTRACT && (right.kind == .NEGATIVE || right.kind == .PREFIX_DECREMENT || right.kind == .INT && right.asInt() < 0))) {
+        emit(" ");
+      }
+
       toStringTarget = right;
       emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity));
       if (info.precedence < precedence) emit(")");

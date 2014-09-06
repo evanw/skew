@@ -1892,6 +1892,9 @@ js.Emitter.emitBinary = function($this, node, precedence) {
   $this.toStringTarget = left;
   js.Emitter.emitExpression($this, left, info.precedence + (info.associativity === 2 | 0) | 0);
   js.Emitter.emit($this, $this.space + (node.kind === 71 ? "===" : node.kind === 81 ? "!==" : info.text) + $this.space);
+  if ($this.space === "" && (node.kind === 66 && (right.kind === 59 || right.kind === 62) || node.kind === 85 && (right.kind === 60 || right.kind === 63 || right.kind === 40 && right.content.value < 0))) {
+    js.Emitter.emit($this, " ");
+  }
   $this.toStringTarget = right;
   js.Emitter.emitExpression($this, right, info.precedence + (info.associativity === 1 | 0) | 0);
   if (info.precedence < precedence) {
