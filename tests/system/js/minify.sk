@@ -86,4 +86,56 @@ export int foo(int x, int y) {
 function foo(x,y){x<0?(x=x+1|0,y=y-1|0):y<0?x=x-y|0:(x=x-1|0,y=y+1|0);return y;}
 ");
 
+testMinify("
+export bool foo(int x, int y) {
+  var bar = x == 0 && y != 0;
+  if (x == 0 && y != 0) return true;
+  else return bar;
+}
+", "
+function foo(x,y){var bar=x===0&&y!==0;return !x&&y?!0:bar;}
+");
+
+testMinify("
+export bool foo(void fn() fn() x) {
+  var bar = x != null && x() == null;
+  if (x != null && x() == null) return true;
+  else return bar;
+}
+", "
+function foo(x){var bar=x!==null&&x()===null;return x&&!x()?!0:bar;}
+");
+
+testMinify("
+export bool foo(string x) {
+  var bar = x == \"\" || x.slice(1, 2) == \"\";
+  if (x == \"\" || x.slice(1, 2) == \"\") return true;
+  else return bar;
+}
+", "
+function foo(x){var bar=x===\"\"||x.slice(1,2)===\"\";return !x||!x.slice(1,2)?!0:bar;}
+");
+
+testMinify("
+export void foo(bool fn() foo, void fn() bar) {
+  if (foo()) {
+    bar();
+    if (foo()) {
+      bar();
+      if (foo()) bar();
+    }
+  }
+}
+", "
+function foo(foo,bar){foo()&&(bar(),foo()&&(bar(),foo()&&bar()));}
+");
+
+testMinify("
+export int foo(int a, int b) {
+  return a != b ? 1 : 2;
+}
+", "
+function foo(a,b){return a^b?1:2;}
+");
+
 }}

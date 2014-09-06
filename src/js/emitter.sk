@@ -562,7 +562,7 @@ namespace js {
         case .THIS { emit("this"); }
         case .HOOK { emitHook(node, precedence); }
         case .NULL { emit("null"); }
-        case .BOOL { emit(node.asBool() ? "true" : "false"); }
+        case .BOOL { emitBool(node); }
         case .INT { emitInt(node); }
         case .FLOAT, .DOUBLE { emitDouble(node); }
         case .STRING { emit(quoteString(node.asString(), '"')); }
@@ -610,6 +610,14 @@ namespace js {
       emit(space + ":" + space);
       emitExpression(node.hookFalse(), .ASSIGN);
       if (.ASSIGN < precedence) emit(")");
+    }
+
+    void emitBool(Node node) {
+      if (shouldMangle) {
+        emit(node.asBool() ? "!0" : "!1");
+      } else {
+        emit(node.asBool() ? "true" : "false");
+      }
     }
 
     void emitInt(Node node) {
@@ -815,17 +823,59 @@ namespace js {
         case .LAMBDA { context.lambdaCount--; }
         case .CONSTRUCTOR, .FUNCTION { context.setFunction(null); }
         case .IF { if (shouldMangle) peepholeMangleIf(node); }
+        case .FOR { if (shouldMangle) peepholeMangleBoolean(node.forTest()); }
+        case .WHILE, .DO_WHILE { if (shouldMangle) peepholeMangleBoolean(node.whileTest()); }
         case .BLOCK { if (shouldMangle) peepholeMangleBlock(node); }
         case .HOOK { if (shouldMangle) peepholeMangleHook(node); }
       }
     }
 
+    bool isFalsy(Node node) {
+      var kind = node.kind;
+      if (kind == .NULL) return true;
+      else if (kind == .INT) return node.asInt() == 0;
+      else if (kind.isReal()) return node.asDouble() == 0;
+      else if (kind == .STRING) return node.asString() == "";
+      else if (kind.isCast()) return isFalsy(node.castValue());
+      else return false;
+    }
+
+    void peepholeMangleBoolean(Node node) {
+      var kind = node.kind;
+
+      if (kind == .EQUAL || kind == .NOT_EQUAL) {
+        var left = node.binaryLeft();
+        var right = node.binaryRight();
+        var replacement = isFalsy(right) ? left : isFalsy(left) ? right : null;
+
+        // "if (a != 0) b;" => "if (a) b;"
+        if (replacement != null) {
+          replacement.replaceWith(null);
+          node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement);
+        }
+
+        // "if (a != b) c;" => "if (a ^ b) c;"
+        else if (kind == .NOT_EQUAL && left.type.isInteger(cache) && right.type.isInteger(cache)) {
+          node.kind = .BITWISE_XOR;
+        }
+      }
+
+      // "if (a != 0 || b != 0) c;" => "if (a || b) c;"
+      else if (kind == .LOGICAL_AND || kind == .LOGICAL_OR) {
+        peepholeMangleBoolean(node.binaryLeft());
+        peepholeMangleBoolean(node.binaryRight());
+      }
+    }
+
     void peepholeMangleIf(Node node) {
       var test = node.ifTest();
+      peepholeMangleBoolean(test);
+
       var trueBlock = node.ifTrue();
       var falseBlock = node.ifFalse();
+      var trueStatement = singleStatement(trueBlock);
+
       if (falseBlock != null) {
-        var trueStatement = singleStatement(trueBlock);
         var falseStatement = singleStatement(falseBlock);
         if (trueStatement != null && falseStatement != null) {
 
@@ -847,6 +897,11 @@ namespace js {
             }
           }
         }
+      }
+
+      // "if (a) b;" => "a && b;"
+      else if (trueStatement != null && trueStatement.kind == .EXPRESSION) {
+        node.replaceWith(Node.createExpression(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), trueStatement.expressionValue().replaceWith(null))));
       }
     }
 
@@ -911,10 +966,11 @@ namespace js {
 
     void peepholeMangleHook(Node node) {
       var test = node.hookTest();
-      var trueValue = node.hookTrue();
-      var falseValue = node.hookFalse();
+      peepholeMangleBoolean(test);
 
       // Collapse partially-identical binary expressions
+      var trueValue = node.hookTrue();
+      var falseValue = node.hookFalse();
       if (trueValue.kind == falseValue.kind && trueValue.kind.isBinaryOperator()) {
         var trueLeft = trueValue.binaryLeft();
         var trueRight = trueValue.binaryRight();

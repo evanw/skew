@@ -1689,7 +1689,7 @@ js.Emitter.emitExpression = function($this, node, precedence) {
     js.Emitter.emit($this, "null");
     break;
   case 39:
-    js.Emitter.emit($this, node.content.value ? "true" : "false");
+    js.Emitter.emitBool($this, node);
     break;
   case 40:
     js.Emitter.emitInt($this, node);
@@ -1792,6 +1792,13 @@ js.Emitter.emitHook = function($this, node, precedence) {
   js.Emitter.emitExpression($this, node.children[2], 2);
   if (2 < precedence) {
     js.Emitter.emit($this, ")");
+  }
+};
+js.Emitter.emitBool = function($this, node) {
+  if ($this.shouldMangle) {
+    js.Emitter.emit($this, node.content.value ? "!0" : "!1");
+  } else {
+    js.Emitter.emit($this, node.content.value ? "true" : "false");
   }
 };
 js.Emitter.emitInt = function($this, node) {
@@ -2036,6 +2043,17 @@ js.Emitter.patchNode = function($this, node, context) {
       js.Emitter.peepholeMangleIf($this, node);
     }
     break;
+  case 20:
+    if ($this.shouldMangle) {
+      js.Emitter.peepholeMangleBoolean($this, node.children[1]);
+    }
+    break;
+  case 22:
+  case 23:
+    if ($this.shouldMangle) {
+      js.Emitter.peepholeMangleBoolean($this, node.children[0]);
+    }
+    break;
   case 2:
     if ($this.shouldMangle) {
       js.Emitter.peepholeMangleBlock(node);
@@ -2048,12 +2066,46 @@ js.Emitter.patchNode = function($this, node, context) {
     break;
   }
 };
+js.Emitter.isFalsy = function($this, node) {
+  var kind = node.kind;
+  if (kind === 38) {
+    return true;
+  } else if (kind === 40) {
+    return node.content.value === 0;
+  } else if ($in.NodeKind.isReal(kind)) {
+    return node.content.value === 0;
+  } else if (kind === 43) {
+    return node.content.value === "";
+  } else if ($in.NodeKind.isCast(kind)) {
+    return js.Emitter.isFalsy($this, node.children[1]);
+  } else {
+    return false;
+  }
+};
+js.Emitter.peepholeMangleBoolean = function($this, node) {
+  var kind = node.kind;
+  if (kind === 71 || kind === 81) {
+    var left = node.children[0];
+    var right = node.children[1];
+    var replacement = js.Emitter.isFalsy($this, right) ? left : js.Emitter.isFalsy($this, left) ? right : null;
+    if (replacement !== null) {
+      Node.replaceWith(replacement, null);
+      Node.become(node, kind === 71 ? Node.withChildren(new Node(58), [replacement]) : replacement);
+    } else if (kind === 81 && Type.isInteger(left.type, $this.cache) && Type.isInteger(right.type, $this.cache)) {
+      node.kind = 69;
+    }
+  } else if (kind === 78 || kind === 79) {
+    js.Emitter.peepholeMangleBoolean($this, node.children[0]);
+    js.Emitter.peepholeMangleBoolean($this, node.children[1]);
+  }
+};
 js.Emitter.peepholeMangleIf = function($this, node) {
   var test = node.children[0];
+  js.Emitter.peepholeMangleBoolean($this, test);
   var trueBlock = node.children[1];
   var falseBlock = node.children[2];
+  var trueStatement = js.Emitter.singleStatement(trueBlock);
   if (falseBlock !== null) {
-    var trueStatement = js.Emitter.singleStatement(trueBlock);
     var falseStatement = js.Emitter.singleStatement(falseBlock);
     if (trueStatement !== null && falseStatement !== null) {
       if (trueStatement.kind === 30 && falseStatement.kind === 30) {
@@ -2070,6 +2122,8 @@ js.Emitter.peepholeMangleIf = function($this, node) {
         }
       }
     }
+  } else if (trueStatement !== null && trueStatement.kind === 30) {
+    Node.replaceWith(node, Node.withChildren(new Node(30), [Node.createBinary(78, Node.replaceWith(test, null), Node.replaceWith(trueStatement.children[0], null))]));
   }
 };
 js.Emitter.peepholeMangleBlock = function(node) {
@@ -2134,6 +2188,7 @@ js.Emitter.looksTheSame = function($this, left, right) {
 };
 js.Emitter.peepholeMangleHook = function($this, node) {
   var test = node.children[0];
+  js.Emitter.peepholeMangleBoolean($this, test);
   var trueValue = node.children[1];
   var falseValue = node.children[2];
   if (trueValue.kind === falseValue.kind && $in.NodeKind.isBinaryOperator(trueValue.kind)) {
