@@ -2089,8 +2089,10 @@ js.Emitter.peepholeMangleBoolean = function($this, node) {
     var right = node.children[1];
     var replacement = js.Emitter.isFalsy($this, right) ? left : js.Emitter.isFalsy($this, left) ? right : null;
     if (replacement !== null) {
-      Node.replaceWith(replacement, null);
-      Node.become(node, kind === 71 ? Node.withChildren(new Node(58), [replacement]) : replacement);
+      if (left.type !== null && !Type.isReal(left.type, $this.cache) && right.type !== null && !Type.isReal(right.type, $this.cache)) {
+        Node.replaceWith(replacement, null);
+        Node.become(node, kind === 71 ? Node.withChildren(new Node(58), [replacement]) : replacement);
+      }
     } else if (kind === 81 && Type.isInteger(left.type, $this.cache) && Type.isInteger(right.type, $this.cache)) {
       node.kind = 69;
     }

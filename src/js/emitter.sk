@@ -850,8 +850,14 @@ namespace js {
 
         // "if (a != 0) b;" => "if (a) b;"
         if (replacement != null) {
-          replacement.replaceWith(null);
-          node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement);
+
+          // This minification is not valid for floating-point values because
+          // of NaN, since NaN != 0 but NaN is falsy in JavaScript
+          if (left.type != null && !left.type.isReal(cache) &&
+              right.type != null && !right.type.isReal(cache)) {
+            replacement.replaceWith(null);
+            node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement);
+          }
         }
 
         // "if (a != b) c;" => "if (a ^ b) c;"

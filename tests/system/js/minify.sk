@@ -97,6 +97,16 @@ function foo(x,y){var bar=x===0&&y!==0;return !x&&y?!0:bar;}
 ");
 
 testMinify("
+export bool foo(float x, double y) {
+  var bar = x == 0 && y != 0;
+  if (x == 0 && y != 0) return true;
+  else return bar;
+}
+", "
+function foo(x,y){var bar=x===0&&y!==0;return x===0&&y!==0?!0:bar;}
+");
+
+testMinify("
 export bool foo(void fn() fn() x) {
   var bar = x != null && x() == null;
   if (x != null && x() == null) return true;
