@@ -1202,6 +1202,7 @@ js.Emitter = function(_0, _1) {
   this.currentColumn = 0;
   this.needExtends = false;
   this.needMathImul = false;
+  this.shouldMangle = false;
   this.isStartOfExpression = false;
   this.generator = new SourceMapGenerator();
   this.currentSource = null;
@@ -1210,15 +1211,16 @@ js.Emitter = function(_0, _1) {
   this.cache = _1;
 };
 js.Emitter.prototype.patchProgram = function(program) {
+  if (this.options.jsMinify) {
+    this.shouldMangle = true;
+    this.newline = "";
+    this.space = "";
+  }
   js.Emitter.patchNode(this, program, new js.PatchContext());
 };
 js.Emitter.prototype.emitProgram = function(program) {
   if (js.Emitter.isKeyword === null) {
     js.Emitter.isKeyword = js.Emitter.createIsKeyword();
-  }
-  if (this.options.jsMinify) {
-    this.newline = "";
-    this.space = "";
   }
   this.currentSource = new Source(this.options.outputFile, "");
   var collector = new Collector(program, 3);
@@ -2030,23 +2032,23 @@ js.Emitter.patchNode = function($this, node, context) {
     js.PatchContext.setFunction(context, null);
     break;
   case 19:
-    if ($this.options.jsMinify) {
-      js.Emitter.peepholeMinifyIf($this, node);
+    if ($this.shouldMangle) {
+      js.Emitter.peepholeMangleIf($this, node);
     }
     break;
   case 2:
-    if ($this.options.jsMinify) {
-      js.Emitter.peepholeMinifyBlock(node);
+    if ($this.shouldMangle) {
+      js.Emitter.peepholeMangleBlock(node);
     }
     break;
   case 37:
-    if ($this.options.jsMinify) {
-      js.Emitter.peepholeMinifyHook($this, node);
+    if ($this.shouldMangle) {
+      js.Emitter.peepholeMangleHook($this, node);
     }
     break;
   }
 };
-js.Emitter.peepholeMinifyIf = function($this, node) {
+js.Emitter.peepholeMangleIf = function($this, node) {
   var test = node.children[0];
   var trueBlock = node.children[1];
   var falseBlock = node.children[2];
@@ -2056,21 +2058,21 @@ js.Emitter.peepholeMinifyIf = function($this, node) {
     if (trueStatement !== null && falseStatement !== null) {
       if (trueStatement.kind === 30 && falseStatement.kind === 30) {
         var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueStatement.children[0], null), Node.replaceWith(falseStatement.children[0], null)]);
-        js.Emitter.peepholeMinifyHook($this, hook);
+        js.Emitter.peepholeMangleHook($this, hook);
         Node.replaceWith(node, Node.withChildren(new Node(30), [hook]));
       } else if (trueStatement.kind === 24 && falseStatement.kind === 24) {
         var trueValue = trueStatement.children[0];
         var falseValue = falseStatement.children[0];
         if (trueValue !== null && falseValue !== null) {
           var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueValue, null), Node.replaceWith(falseValue, null)]);
-          js.Emitter.peepholeMinifyHook($this, hook);
+          js.Emitter.peepholeMangleHook($this, hook);
           Node.replaceWith(node, Node.withChildren(new Node(24), [hook]));
         }
       }
     }
   }
 };
-js.Emitter.peepholeMinifyBlock = function(node) {
+js.Emitter.peepholeMangleBlock = function(node) {
   if (!Node.hasChildren(node)) {
     return;
   }
@@ -2087,6 +2089,22 @@ js.Emitter.peepholeMinifyBlock = function(node) {
         for (var j = 0; j < variables.length; j = j + 1 | 0) {
           Node.appendChild(child, Node.replaceWith(variables[j], null));
         }
+      }
+    } else if (kind === 30) {
+      var nodes = null;
+      while ((i + 1 | 0) < node.children.length) {
+        var next = node.children[i + 1 | 0];
+        if (next.kind !== 30) {
+          break;
+        }
+        if (nodes === null) {
+          nodes = [];
+        }
+        nodes.push(Node.remove(Node.remove(next).children[0]));
+      }
+      if (nodes !== null) {
+        nodes.unshift(Node.remove(child.children[0]));
+        Node.replaceWith(child, Node.withChildren(new Node(30), [Node.withChildren(new Node(50), nodes)]));
       }
     }
   }
@@ -2114,7 +2132,7 @@ js.Emitter.looksTheSame = function($this, left, right) {
   }
   return false;
 };
-js.Emitter.peepholeMinifyHook = function($this, node) {
+js.Emitter.peepholeMangleHook = function($this, node) {
   var test = node.children[0];
   var trueValue = node.children[1];
   var falseValue = node.children[2];
@@ -2125,11 +2143,11 @@ js.Emitter.peepholeMinifyHook = function($this, node) {
     var falseRight = falseValue.children[1];
     if (js.Emitter.looksTheSame($this, trueLeft, falseLeft)) {
       var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueRight, null), Node.replaceWith(falseRight, null)]);
-      js.Emitter.peepholeMinifyHook($this, hook);
+      js.Emitter.peepholeMangleHook($this, hook);
       Node.become(node, Node.createBinary(trueValue.kind, Node.replaceWith(trueLeft, null), hook));
     } else if (js.Emitter.looksTheSame($this, trueRight, falseRight) && !$in.NodeKind.isBinaryStorageOperator(trueValue.kind)) {
       var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueLeft, null), Node.replaceWith(falseLeft, null)]);
-      js.Emitter.peepholeMinifyHook($this, hook);
+      js.Emitter.peepholeMangleHook($this, hook);
       Node.become(node, Node.createBinary(trueValue.kind, hook, Node.replaceWith(trueRight, null)));
     }
   }

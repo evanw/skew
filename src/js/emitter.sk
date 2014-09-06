@@ -39,6 +39,7 @@ namespace js {
     var currentColumn = 0;
     var needExtends = false;
     var needMathImul = false;
+    var shouldMangle = false;
     var isStartOfExpression = false;
     var generator = SourceMapGenerator();
     Source currentSource = null;
@@ -53,17 +54,18 @@ namespace js {
     Node toStringTarget = null;
 
     override void patchProgram(Node program) {
+      if (options.jsMinify) {
+        shouldMangle = true;
+        newline = "";
+        space = "";
+      }
+
       patchNode(program, PatchContext());
     }
 
     override List<Source> emitProgram(Node program) {
       if (isKeyword == null) {
         isKeyword = createIsKeyword();
-      }
-
-      if (options.jsMinify) {
-        newline = "";
-        space = "";
       }
 
       currentSource = Source(options.outputFile, "");
@@ -812,13 +814,13 @@ namespace js {
       switch (node.kind) {
         case .LAMBDA { context.lambdaCount--; }
         case .CONSTRUCTOR, .FUNCTION { context.setFunction(null); }
-        case .IF { if (options.jsMinify) peepholeMinifyIf(node); }
-        case .BLOCK { if (options.jsMinify) peepholeMinifyBlock(node); }
-        case .HOOK { if (options.jsMinify) peepholeMinifyHook(node); }
+        case .IF { if (shouldMangle) peepholeMangleIf(node); }
+        case .BLOCK { if (shouldMangle) peepholeMangleBlock(node); }
+        case .HOOK { if (shouldMangle) peepholeMangleHook(node); }
       }
     }
 
-    void peepholeMinifyIf(Node node) {
+    void peepholeMangleIf(Node node) {
       var test = node.ifTest();
       var trueBlock = node.ifTrue();
       var falseBlock = node.ifFalse();
@@ -830,7 +832,7 @@ namespace js {
           // "if (a) b; else c;" => "a ? b : c;"
           if (trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION) {
             var hook = Node.createHook(test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null));
-            peepholeMinifyHook(hook);
+            peepholeMangleHook(hook);
             node.replaceWith(Node.createExpression(hook));
           }
 
@@ -840,7 +842,7 @@ namespace js {
             var falseValue = falseStatement.returnValue();
             if (trueValue != null && falseValue != null) {
               var hook = Node.createHook(test.replaceWith(null), trueValue.replaceWith(null), falseValue.replaceWith(null));
-              peepholeMinifyHook(hook);
+              peepholeMangleHook(hook);
               node.replaceWith(Node.createReturn(hook));
             }
           }
@@ -848,7 +850,7 @@ namespace js {
       }
     }
 
-    void peepholeMinifyBlock(Node node) {
+    void peepholeMangleBlock(Node node) {
       if (!node.hasChildren()) {
         return;
       }
@@ -870,6 +872,25 @@ namespace js {
             }
           }
         }
+
+        // "a; b; c;" => "a, b, c;"
+        else if (kind == .EXPRESSION) {
+          List<Node> nodes;
+          while (i + 1 < node.children.length) {
+            var next = node.children.get(i + 1);
+            if (next.kind != .EXPRESSION) {
+              break;
+            }
+            if (nodes == null) {
+              nodes = []; // Save on allocations
+            }
+            nodes.push(next.remove().expressionValue().remove());
+          }
+          if (nodes != null) {
+            nodes.unshift(child.expressionValue().remove());
+            child.replaceWith(Node.createExpression(Node.createSequence(nodes)));
+          }
+        }
       }
     }
 
@@ -888,7 +909,7 @@ namespace js {
       return false;
     }
 
-    void peepholeMinifyHook(Node node) {
+    void peepholeMangleHook(Node node) {
       var test = node.hookTest();
       var trueValue = node.hookTrue();
       var falseValue = node.hookFalse();
@@ -903,14 +924,14 @@ namespace js {
         // "a ? b = c : b = d;" => "b = a ? c : d;"
         if (looksTheSame(trueLeft, falseLeft)) {
           var hook = Node.createHook(test.replaceWith(null), trueRight.replaceWith(null), falseRight.replaceWith(null));
-          peepholeMinifyHook(hook);
+          peepholeMangleHook(hook);
           node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWith(null), hook));
         }
 
         // "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
         else if (looksTheSame(trueRight, falseRight) && !trueValue.kind.isBinaryStorageOperator()) {
           var hook = Node.createHook(test.replaceWith(null), trueLeft.replaceWith(null), falseLeft.replaceWith(null));
-          peepholeMinifyHook(hook);
+          peepholeMangleHook(hook);
           node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWith(null)));
         }
       }
