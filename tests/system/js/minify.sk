@@ -148,4 +148,33 @@ export int foo(int a, int b) {
 function foo(a,b){return a^b?1:2;}
 ");
 
+testMinify("
+export void foo(bool a, void fn() b) {
+  if (!a) b();
+}
+", "
+function foo(a,b){!a&&b();}
+");
+
+testMinify("
+export int foo(bool a, void fn() b) {
+  if (!a) {
+    b();
+    return 1;
+  } else {
+    return 2;
+  }
+}
+", "
+function foo(a,b){if(a)return 2;else {b();return 1;}}
+");
+
+testMinify("
+export int foo(bool a) {
+  return !a ? 1 : 2;
+}
+", "
+function foo(a){return a?2:1;}
+");
+
 }}

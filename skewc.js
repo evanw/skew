@@ -2092,7 +2092,7 @@ js.Emitter.peepholeMangleBoolean = function($this, node) {
         Node.replaceWith(replacement, null);
         Node.become(node, kind === 71 ? Node.withChildren(new Node(58), [replacement]) : replacement);
       }
-    } else if (kind === 81 && Type.isInteger(left.type, $this.cache) && Type.isInteger(right.type, $this.cache)) {
+    } else if (kind === 81 && left.type !== null && Type.isInteger(left.type, $this.cache) && right.type !== null && Type.isInteger(right.type, $this.cache)) {
       node.kind = 69;
     }
   } else if (kind === 78 || kind === 79) {
@@ -2105,6 +2105,13 @@ js.Emitter.peepholeMangleIf = function($this, node) {
   js.Emitter.peepholeMangleBoolean($this, test);
   var trueBlock = node.children[1];
   var falseBlock = node.children[2];
+  if (test.kind === 58 && falseBlock !== null) {
+    var temp = trueBlock;
+    trueBlock = falseBlock;
+    falseBlock = temp;
+    Node.swapWith(trueBlock, falseBlock);
+    Node.become(test, Node.replaceWith(test.children[0], null));
+  }
   var trueStatement = js.Emitter.singleStatement(trueBlock);
   if (falseBlock !== null) {
     var falseStatement = js.Emitter.singleStatement(falseBlock);
@@ -2192,6 +2199,13 @@ js.Emitter.peepholeMangleHook = function($this, node) {
   js.Emitter.peepholeMangleBoolean($this, test);
   var trueValue = node.children[1];
   var falseValue = node.children[2];
+  if (test.kind === 58) {
+    var temp = trueValue;
+    trueValue = falseValue;
+    falseValue = temp;
+    Node.swapWith(trueValue, falseValue);
+    Node.become(test, Node.replaceWith(test.children[0], null));
+  }
   if (trueValue.kind === falseValue.kind && $in.NodeKind.isBinaryOperator(trueValue.kind)) {
     var trueLeft = trueValue.children[0];
     var trueRight = trueValue.children[1];

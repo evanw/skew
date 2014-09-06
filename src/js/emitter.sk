@@ -851,15 +851,14 @@ namespace js {
 
           // This minification is not valid for floating-point values because
           // of NaN, since NaN != 0 but NaN is falsy in JavaScript
-          if (left.type != null && !left.type.isReal(cache) &&
-              right.type != null && !right.type.isReal(cache)) {
+          if (left.type != null && !left.type.isReal(cache) && right.type != null && !right.type.isReal(cache)) {
             replacement.replaceWith(null);
             node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement);
           }
         }
 
         // "if (a != b) c;" => "if (a ^ b) c;"
-        else if (kind == .NOT_EQUAL && left.type.isInteger(cache) && right.type.isInteger(cache)) {
+        else if (kind == .NOT_EQUAL && left.type != null && left.type.isInteger(cache) && right.type != null && right.type.isInteger(cache)) {
           node.kind = .BITWISE_XOR;
         }
       }
@@ -875,10 +874,18 @@ namespace js {
       var test = node.ifTest();
       peepholeMangleBoolean(test);
 
+      // "if (!a) b; else c;" => "if (a) c; else b;"
       var trueBlock = node.ifTrue();
       var falseBlock = node.ifFalse();
-      var trueStatement = singleStatement(trueBlock);
+      if (test.kind == .NOT && falseBlock != null) {
+        var temp = trueBlock;
+        trueBlock = falseBlock;
+        falseBlock = temp;
+        trueBlock.swapWith(falseBlock);
+        test.become(test.unaryValue().replaceWith(null));
+      }
 
+      var trueStatement = singleStatement(trueBlock);
       if (falseBlock != null) {
         var falseStatement = singleStatement(falseBlock);
         if (trueStatement != null && falseStatement != null) {
@@ -972,9 +979,18 @@ namespace js {
       var test = node.hookTest();
       peepholeMangleBoolean(test);
 
-      // Collapse partially-identical binary expressions
+      // "!a ? b : c;" => "a ? c : b;"
       var trueValue = node.hookTrue();
       var falseValue = node.hookFalse();
+      if (test.kind == .NOT) {
+        var temp = trueValue;
+        trueValue = falseValue;
+        falseValue = temp;
+        trueValue.swapWith(falseValue);
+        test.become(test.unaryValue().replaceWith(null));
+      }
+
+      // Collapse partially-identical binary expressions
       if (trueValue.kind == falseValue.kind && trueValue.kind.isBinaryOperator()) {
         var trueLeft = trueValue.binaryLeft();
         var trueRight = trueValue.binaryRight();
