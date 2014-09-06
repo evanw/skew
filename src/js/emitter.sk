@@ -131,6 +131,12 @@ namespace js {
         emitNode(collector.topLevelStatements.get(i));
       }
 
+      // Make sure the file ends with a newline for ease of use with external
+      // tools even when minifying (the "cat" terminal command, for example)
+      if (currentColumn > 0) {
+        emit("\n");
+      }
+
       // Append inputs
       for (var i = 0; i < options.append.length; i++) {
         appendSource(options.append.get(i));
@@ -806,8 +812,39 @@ namespace js {
       switch (node.kind) {
         case .LAMBDA { context.lambdaCount--; }
         case .CONSTRUCTOR, .FUNCTION { context.setFunction(null); }
+        case .IF { if (options.jsMinify) peepholeMinifyIf(node); }
         case .BLOCK { if (options.jsMinify) peepholeMinifyBlock(node); }
         case .HOOK { if (options.jsMinify) peepholeMinifyHook(node); }
+      }
+    }
+
+    void peepholeMinifyIf(Node node) {
+      var test = node.ifTest();
+      var trueBlock = node.ifTrue();
+      var falseBlock = node.ifFalse();
+      if (falseBlock != null) {
+        var trueStatement = singleStatement(trueBlock);
+        var falseStatement = singleStatement(falseBlock);
+        if (trueStatement != null && falseStatement != null) {
+
+          // "if (a) b; else c;" => "a ? b : c;"
+          if (trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION) {
+            var hook = Node.createHook(test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null));
+            peepholeMinifyHook(hook);
+            node.replaceWith(Node.createExpression(hook));
+          }
+
+          // "if (a) return b; else return c;" => "return a ? b : c;"
+          else if (trueStatement.kind == .RETURN && falseStatement.kind == .RETURN) {
+            var trueValue = trueStatement.returnValue();
+            var falseValue = falseStatement.returnValue();
+            if (trueValue != null && falseValue != null) {
+              var hook = Node.createHook(test.replaceWith(null), trueValue.replaceWith(null), falseValue.replaceWith(null));
+              peepholeMinifyHook(hook);
+              node.replaceWith(Node.createReturn(hook));
+            }
+          }
+        }
       }
     }
 
@@ -820,7 +857,7 @@ namespace js {
         var child = node.children.get(i);
         var kind = child.kind;
 
-        // Collapse variable statements
+        // "var a = 0; var b = 1;" => "var a = 0, b = 1;"
         if (kind == .VARIABLE_CLUSTER) {
           while (i + 1 < node.children.length) {
             var next = node.children.get(i + 1);
@@ -830,24 +867,6 @@ namespace js {
             var variables = next.remove().clusterVariables();
             for (var j = 0; j < variables.length; j++) {
               child.appendChild(variables.get(j).replaceWith(null));
-            }
-          }
-        }
-
-        // Collapse if statements
-        else if (kind == .IF) {
-          var test = child.ifTest();
-          var trueBlock = child.ifTrue();
-          var falseBlock = child.ifFalse();
-          if (falseBlock != null) {
-            var trueStatement = singleStatement(trueBlock);
-            var falseStatement = singleStatement(falseBlock);
-
-            // "if (a) b; else c;" => "a ? b : c;"
-            if (trueStatement != null && falseStatement != null && trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION) {
-              var hook = Node.createHook(test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null));
-              peepholeMinifyHook(hook);
-              child.replaceWith(Node.createExpression(hook));
             }
           }
         }

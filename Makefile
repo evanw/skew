@@ -80,6 +80,7 @@ TEST_SOURCES += tests/system/core/var.sk
 TEST_SOURCES += tests/system/js/expressions.sk
 TEST_SOURCES += tests/system/js/functions.sk
 TEST_SOURCES += tests/system/js/inlining.sk
+TEST_SOURCES += tests/system/js/minify.sk
 TEST_SOURCES += tests/system/js/objects.sk
 TEST_SOURCES += tests/system/js/statements.sk
 

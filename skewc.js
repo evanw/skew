@@ -1263,6 +1263,9 @@ js.Emitter.prototype.emitProgram = function(program) {
   for (var i = 0; i < collector.topLevelStatements.length; i = i + 1 | 0) {
     js.Emitter.emitNode(this, collector.topLevelStatements[i]);
   }
+  if (this.currentColumn > 0) {
+    js.Emitter.emit(this, "\n");
+  }
   for (var i = 0; i < this.options.append.length; i = i + 1 | 0) {
     js.Emitter.appendSource(this, this.options.append[i]);
   }
@@ -2026,9 +2029,14 @@ js.Emitter.patchNode = function($this, node, context) {
   case 15:
     js.PatchContext.setFunction(context, null);
     break;
+  case 19:
+    if ($this.options.jsMinify) {
+      js.Emitter.peepholeMinifyIf($this, node);
+    }
+    break;
   case 2:
     if ($this.options.jsMinify) {
-      js.Emitter.peepholeMinifyBlock($this, node);
+      js.Emitter.peepholeMinifyBlock(node);
     }
     break;
   case 37:
@@ -2038,7 +2046,31 @@ js.Emitter.patchNode = function($this, node, context) {
     break;
   }
 };
-js.Emitter.peepholeMinifyBlock = function($this, node) {
+js.Emitter.peepholeMinifyIf = function($this, node) {
+  var test = node.children[0];
+  var trueBlock = node.children[1];
+  var falseBlock = node.children[2];
+  if (falseBlock !== null) {
+    var trueStatement = js.Emitter.singleStatement(trueBlock);
+    var falseStatement = js.Emitter.singleStatement(falseBlock);
+    if (trueStatement !== null && falseStatement !== null) {
+      if (trueStatement.kind === 30 && falseStatement.kind === 30) {
+        var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueStatement.children[0], null), Node.replaceWith(falseStatement.children[0], null)]);
+        js.Emitter.peepholeMinifyHook($this, hook);
+        Node.replaceWith(node, Node.withChildren(new Node(30), [hook]));
+      } else if (trueStatement.kind === 24 && falseStatement.kind === 24) {
+        var trueValue = trueStatement.children[0];
+        var falseValue = falseStatement.children[0];
+        if (trueValue !== null && falseValue !== null) {
+          var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueValue, null), Node.replaceWith(falseValue, null)]);
+          js.Emitter.peepholeMinifyHook($this, hook);
+          Node.replaceWith(node, Node.withChildren(new Node(24), [hook]));
+        }
+      }
+    }
+  }
+};
+js.Emitter.peepholeMinifyBlock = function(node) {
   if (!Node.hasChildren(node)) {
     return;
   }
@@ -2054,19 +2086,6 @@ js.Emitter.peepholeMinifyBlock = function($this, node) {
         var variables = Node.clusterVariables(Node.remove(next));
         for (var j = 0; j < variables.length; j = j + 1 | 0) {
           Node.appendChild(child, Node.replaceWith(variables[j], null));
-        }
-      }
-    } else if (kind === 19) {
-      var test = child.children[0];
-      var trueBlock = child.children[1];
-      var falseBlock = child.children[2];
-      if (falseBlock !== null) {
-        var trueStatement = js.Emitter.singleStatement(trueBlock);
-        var falseStatement = js.Emitter.singleStatement(falseBlock);
-        if (trueStatement !== null && falseStatement !== null && trueStatement.kind === 30 && falseStatement.kind === 30) {
-          var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueStatement.children[0], null), Node.replaceWith(falseStatement.children[0], null)]);
-          js.Emitter.peepholeMinifyHook($this, hook);
-          Node.replaceWith(child, Node.withChildren(new Node(30), [hook]));
         }
       }
     }

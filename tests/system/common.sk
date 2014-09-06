@@ -1,5 +1,6 @@
 import void test(string input, string expected);
 import void testJS(string input, string expected);
+import void testMinify(string input, string expected);
 import void expect(string output, string expected);
 
 export void run(string input, string expected) {
@@ -13,6 +14,20 @@ export void run(string input, string expected) {
 export void runJS(string input, string expected) {
   var options = CompilerOptions();
   options.inputs = [Source("<stdin>", input)];
+  runHelperJS(options, expected);
+}
+
+export void runMinify(string input, string expected) {
+  var options = CompilerOptions();
+  options.inputs = [Source("<stdin>", input)];
+  options.jsMinify = true;
+  options.foldAllConstants = true;
+  options.inlineAllFunctions = true;
+  options.convertAllInstanceToStatic = true;
+  runHelperJS(options, expected);
+}
+
+void runHelperJS(CompilerOptions options, string expected) {
   options.targetFormat = .JS;
   var compiler = Compiler();
   var result = compiler.compile(options);
@@ -53,6 +68,7 @@ export void start() {
   js.expressions();
   js.functions();
   js.inlining();
+  js.minify();
   js.objects();
   js.statements();
 }
