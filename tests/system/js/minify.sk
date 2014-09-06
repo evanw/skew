@@ -177,4 +177,14 @@ export int foo(bool a) {
 function foo(a){return a?2:1;}
 ");
 
+testMinify("
+enum Foo {}
+export void foo(Foo a, Foo b, void fn() c, void fn() d) {
+  if (a == b) c();
+  else d();
+}
+", "
+function foo(a,b,c,d){a^b?d():c();}
+");
+
 }}

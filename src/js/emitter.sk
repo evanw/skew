@@ -1,4 +1,9 @@
 namespace js {
+  enum BooleanSwap {
+    SWAP,
+    NO_SWAP,
+  }
+
   enum ClusterState {
     NONE,
     VAR_CHAIN,
@@ -821,8 +826,8 @@ namespace js {
         case .LAMBDA { context.lambdaCount--; }
         case .CONSTRUCTOR, .FUNCTION { context.setFunction(null); }
         case .IF { if (options.jsMangle) peepholeMangleIf(node); }
-        case .FOR { if (options.jsMangle) peepholeMangleBoolean(node.forTest()); }
-        case .WHILE, .DO_WHILE { if (options.jsMangle) peepholeMangleBoolean(node.whileTest()); }
+        case .FOR { if (options.jsMangle) peepholeMangleBoolean(node.forTest(), .NO_SWAP); }
+        case .WHILE, .DO_WHILE { if (options.jsMangle) peepholeMangleBoolean(node.whileTest(), .NO_SWAP); }
         case .BLOCK { if (options.jsMangle) peepholeMangleBlock(node); }
         case .HOOK { if (options.jsMangle) peepholeMangleHook(node); }
       }
@@ -838,8 +843,14 @@ namespace js {
       else return false;
     }
 
-    void peepholeMangleBoolean(Node node) {
+    BooleanSwap peepholeMangleBoolean(Node node, BooleanSwap canSwap) {
       var kind = node.kind;
+
+      // "if (!a) b; else c;" => "if (a) c; else b;"
+      if (kind == .NOT && canSwap == .SWAP) {
+        node.become(node.unaryValue().replaceWith(null));
+        return .SWAP;
+      }
 
       if (kind == .EQUAL || kind == .NOT_EQUAL) {
         var left = node.binaryLeft();
@@ -857,32 +868,42 @@ namespace js {
           }
         }
 
-        // "if (a != b) c;" => "if (a ^ b) c;"
-        else if (kind == .NOT_EQUAL && left.type != null && left.type.isInteger(cache) && right.type != null && right.type.isInteger(cache)) {
-          node.kind = .BITWISE_XOR;
+        else if (left.type != null && left.type.isInteger(cache) && right.type != null && right.type.isInteger(cache)) {
+
+          // "if (a != b) c;" => "if (a ^ b) c;"
+          if (kind == .NOT_EQUAL) {
+            node.kind = .BITWISE_XOR;
+          }
+
+          // "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
+          else if (kind == .EQUAL && canSwap == .SWAP) {
+            node.kind = .BITWISE_XOR;
+            return .SWAP;
+          }
         }
       }
 
       // "if (a != 0 || b != 0) c;" => "if (a || b) c;"
       else if (kind == .LOGICAL_AND || kind == .LOGICAL_OR) {
-        peepholeMangleBoolean(node.binaryLeft());
-        peepholeMangleBoolean(node.binaryRight());
+        peepholeMangleBoolean(node.binaryLeft(), .NO_SWAP);
+        peepholeMangleBoolean(node.binaryRight(), .NO_SWAP);
       }
+
+      return .NO_SWAP;
     }
 
     void peepholeMangleIf(Node node) {
       var test = node.ifTest();
-      peepholeMangleBoolean(test);
-
-      // "if (!a) b; else c;" => "if (a) c; else b;"
       var trueBlock = node.ifTrue();
       var falseBlock = node.ifFalse();
-      if (test.kind == .NOT && falseBlock != null) {
+      var swapped = peepholeMangleBoolean(test, falseBlock != null ? .SWAP : .NO_SWAP);
+
+      // "if (!a) b; else c;" => "if (a) c; else b;"
+      if (swapped == .SWAP) {
         var temp = trueBlock;
         trueBlock = falseBlock;
         falseBlock = temp;
         trueBlock.swapWith(falseBlock);
-        test.become(test.unaryValue().replaceWith(null));
       }
 
       var trueStatement = singleStatement(trueBlock);
@@ -977,17 +998,16 @@ namespace js {
 
     void peepholeMangleHook(Node node) {
       var test = node.hookTest();
-      peepholeMangleBoolean(test);
-
-      // "!a ? b : c;" => "a ? c : b;"
       var trueValue = node.hookTrue();
       var falseValue = node.hookFalse();
-      if (test.kind == .NOT) {
+      var swapped = peepholeMangleBoolean(test, .SWAP);
+
+      // "!a ? b : c;" => "a ? c : b;"
+      if (swapped == .SWAP) {
         var temp = trueValue;
         trueValue = falseValue;
         falseValue = temp;
         trueValue.swapWith(falseValue);
-        test.become(test.unaryValue().replaceWith(null));
       }
 
       // Collapse partially-identical binary expressions
