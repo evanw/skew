@@ -4098,7 +4098,13 @@ Resolver.initializeVariable = function($this, symbol) {
           Resolver.initializeSymbol($this, previous);
           if (previous.type !== $this.cache.errorType) {
             var constant = previous.constant.value;
-            symbol.constant = new IntContent(Type.isEnumFlags(type) ? constant << 1 : constant + 1 | 0);
+            var value = Type.isEnumFlags(type) ? constant * 2 : constant + 1;
+            if (value === (value | 0)) {
+              symbol.constant = new IntContent(value | 0);
+            } else {
+              Log.error($this.log, node.range, "Assigned value for enum \"" + symbol.name + "\" cannot fit in an integer");
+              variableType = Node.withType(new Node(35), $this.cache.errorType);
+            }
           } else {
             variableType = Node.withType(new Node(35), $this.cache.errorType);
           }

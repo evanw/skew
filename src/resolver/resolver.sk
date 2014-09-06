@@ -1195,7 +1195,13 @@ class Resolver {
             initializeSymbol(previous);
             if (!previous.type.isError(cache)) {
               var constant = previous.constant.asInt();
-              symbol.constant = IntContent(type.isEnumFlags() ? constant * 2 : constant + 1);
+              var value = type.isEnumFlags() ? constant * 2.0 : constant + 1.0;
+              if (value == (int)value) {
+                symbol.constant = IntContent((int)value);
+              } else {
+                semanticErrorEnumValueOutOfRange(log, node.range, symbol.name);
+                variableType = Node.createType(cache.errorType);
+              }
             } else {
               variableType = Node.createType(cache.errorType);
             }

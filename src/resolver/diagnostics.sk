@@ -317,3 +317,7 @@ void semanticErrorListTypeInferenceFailed(Log log, Range range) {
 void semanticErrorNoDefaultValue(Log log, Range range, Type type) {
   log.error(range, "Cannot create a default value for " + typeToText(type));
 }
+
+void semanticErrorEnumValueOutOfRange(Log log, Range range, string name) {
+  log.error(range, "Assigned value for enum " + simpleQuote(name) + " cannot fit in an integer");
+}
