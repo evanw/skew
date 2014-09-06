@@ -27,8 +27,8 @@ export class CompilerOptions {
   export List<Source> append = [];
   export var outputDirectory = "";
   export var outputFile = "";
+  export var jsMinify = false;
   export var jsSourceMap = false;
-  export var optimize = false;
   export var removeAsserts = false;
   export var foldAllConstants = false;
   export var inlineAllFunctions = false;

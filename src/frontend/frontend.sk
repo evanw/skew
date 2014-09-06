@@ -59,6 +59,10 @@ export namespace frontend {
   --append-file=___  Append the contents of this file to the output. Provide
                      this flag multiple times to append multiple files.
 
+  --js-minify        Transform the emitted JavaScript so that it takes up less
+                     space. Make sure to use the \"export\" modifier on code
+                     that shouldn't be minifed.
+
   --js-source-map    Generate a source map when targeting JavaScript. The source
                      map will be saved with the \".map\" extension in the same
                      directory as the main output file.
@@ -71,6 +75,7 @@ export namespace frontend {
     var verbose = false;
     var target = "";
     var outputFile = "";
+    var jsMinify = false;
     var jsSourceMap = false;
     var optimize = false;
   }
@@ -114,6 +119,7 @@ export namespace frontend {
       else if (arg == "-help" || arg == "--help" || arg == "-h") { printUsage(); return 0; }
       else if (arg == "-verbose" || arg == "--verbose") flags.verbose = true;
       else if (arg == "-optimize" || arg == "--optimize") flags.optimize = true;
+      else if (arg == "-js-minify" || arg == "--js-minify") flags.jsMinify = true;
       else if (arg == "-js-source-map" || arg == "--js-source-map") flags.jsSourceMap = true;
       else if (arg.startsWith("-target=") || arg.startsWith("--target=")) flags.target = afterEquals(arg);
       else if (arg.startsWith("-output-file=") || arg.startsWith("--output-file=")) flags.outputFile = afterEquals(arg);
@@ -159,6 +165,7 @@ export namespace frontend {
     options.inlineAllFunctions = optimizeJS;
     options.convertAllInstanceToStatic = optimizeJS;
     options.outputFile = flags.outputFile;
+    options.jsMinify = flags.jsMinify && target == .JS;
     options.jsSourceMap = flags.jsSourceMap && target == .JS;
     options.inputs = readSources(inputs); if (options.inputs == null) return 1;
     options.prepend = readSources(prepend); if (options.prepend == null) return 1;

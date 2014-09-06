@@ -19,7 +19,7 @@ div {
   float: right;
 }
 
-#optimizeLabel {
+label {
   cursor: default;
   -webkit-user-select: none;
   -moz-user-select: -moz-none;
@@ -32,6 +32,7 @@ div {
   <p>
     <span id="compileTime">Loading...</span>
     <label id="optimizeLabel"><input type="checkbox" id="optimize"> Optimize</label>
+    <label id="minifyLabel"><input type="checkbox" id="minify"> Minify</label>
   </p>
 </div>
 <div>
@@ -51,14 +52,17 @@ div {
 
 function compile() {
   var start = now();
-  if (input.value === oldInput && optimize.checked === oldOptimize) return;
+  if (input.value === oldInput &&
+      optimize.checked === oldOptimize &&
+      minify.checked === oldMinify) return;
   oldInput = input.value;
-  oldOptimize = optimize.checked;
-  localStorage.optimize = oldOptimize;
+  localStorage.optimize = oldOptimize = optimize.checked;;
+  localStorage.minify = oldMinify = minify.checked;;
   outputLog.value = outputTree.value = outputCode.value = '';
   try {
     var compiler = new Compiler();
     var options = new CompilerOptions();
+    options.jsMinify = oldMinify;
     options.removeAsserts = oldOptimize;
     options.foldAllConstants = oldOptimize;
     options.inlineAllFunctions = oldOptimize;
@@ -83,8 +87,10 @@ var now = this.performance && performance.now
 
 var oldInput = null;
 var oldOptimize = null;
+var oldMinify = null;
 optimize.checked = localStorage.optimize === 'true';
-input.oninput = input.onchange = optimize.onchange = compile;
+minify.checked = localStorage.minify === 'true';
+input.oninput = input.onchange = optimize.onchange = minify.onchange = compile;
 compile();
 
 </script>

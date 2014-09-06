@@ -379,9 +379,20 @@ Node.hasNoSideEffects = function($this) {
   case 43:
   case 38:
     return true;
+  case 52:
+  case 53:
+    return Node.hasNoSideEffects($this.children[1]);
+  case 37:
+    return Node.hasNoSideEffects($this.children[0]) && Node.hasNoSideEffects($this.children[1]) && Node.hasNoSideEffects($this.children[2]);
   case 45:
     return Node.hasNoSideEffects($this.children[0]);
   default:
+    if ($in.NodeKind.isBinaryOperator($this.kind) && !$in.NodeKind.isBinaryStorageOperator($this.kind)) {
+      return Node.hasNoSideEffects($this.children[0]) && Node.hasNoSideEffects($this.children[1]);
+    }
+    if ($in.NodeKind.isUnaryOperator($this.kind) && !$in.NodeKind.isUnaryStorageOperator($this.kind)) {
+      return Node.hasNoSideEffects($this.children[0]);
+    }
     return false;
   }
 };
@@ -646,8 +657,8 @@ function CompilerOptions() {
   this.append = [];
   this.outputDirectory = "";
   this.outputFile = "";
+  this.jsMinify = false;
   this.jsSourceMap = false;
-  this.optimize = false;
   this.removeAsserts = false;
   this.foldAllConstants = false;
   this.inlineAllFunctions = false;
@@ -1162,6 +1173,7 @@ frontend.Flags = function() {
   this.verbose = false;
   this.target = "";
   this.outputFile = "";
+  this.jsMinify = false;
   this.jsSourceMap = false;
   this.optimize = false;
 };
@@ -1183,6 +1195,8 @@ js.PatchContext.thisAlias = function($this) {
   return Node.withContent(new Node(34), new StringContent("$this"));
 };
 js.Emitter = function(_0, _1) {
+  this.newline = "\n";
+  this.space = " ";
   this.indent = "";
   this.currentLine = 0;
   this.currentColumn = 0;
@@ -1201,6 +1215,10 @@ js.Emitter.prototype.patchProgram = function(program) {
 js.Emitter.prototype.emitProgram = function(program) {
   if (js.Emitter.isKeyword === null) {
     js.Emitter.isKeyword = js.Emitter.createIsKeyword();
+  }
+  if (this.options.jsMinify) {
+    this.newline = "";
+    this.space = "";
   }
   this.currentSource = new Source(this.options.outputFile, "");
   var collector = new Collector(program, 3);
@@ -1261,6 +1279,9 @@ js.Emitter.prototype.emitProgram = function(program) {
   return [this.currentSource];
 };
 js.Emitter.appendSource = function($this, source) {
+  if ($this.currentColumn > 0) {
+    js.Emitter.emit($this, "\n");
+  }
   $this.currentSource.contents += source.contents;
   if ($this.options.jsSourceMap) {
     for (var i = 0, n = Source.lineCount(source); i < n; i = i + 1 | 0) {
@@ -1280,11 +1301,18 @@ js.Emitter.addMapping = function($this, node) {
     }
   }
 };
+js.Emitter.increaseIndent = function($this) {
+  if (!$this.options.jsMinify) {
+    $this.indent += "  ";
+  }
+};
 js.Emitter.decreaseIndent = function($this) {
-  $this.indent = $this.indent.slice(2, $this.indent.length);
+  if (!$this.options.jsMinify) {
+    $this.indent = $this.indent.slice(2, $this.indent.length);
+  }
 };
 js.Emitter.emit = function($this, text) {
-  if ($this.options.jsSourceMap) {
+  if ($this.options.jsMinify || $this.options.jsSourceMap) {
     for (var i = 0; i < text.length; i = i + 1 | 0) {
       var c = text.charCodeAt(i);
       if (c === 10) {
@@ -1299,13 +1327,16 @@ js.Emitter.emit = function($this, text) {
 };
 js.Emitter.emitNodes = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
+    if ($this.newline === "" && $this.currentColumn > 1024) {
+      js.Emitter.emit($this, "\n");
+    }
     js.Emitter.emitNode($this, nodes[i]);
   }
 };
 js.Emitter.emitCommaSeparatedNodes = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
     if (i > 0) {
-      js.Emitter.emit($this, ", ");
+      js.Emitter.emit($this, "," + $this.space);
     }
     js.Emitter.emitNode($this, nodes[i]);
   }
@@ -1313,7 +1344,7 @@ js.Emitter.emitCommaSeparatedNodes = function($this, nodes) {
 js.Emitter.emitCommaSeparatedExpressions = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
     if (i > 0) {
-      js.Emitter.emit($this, ", ");
+      js.Emitter.emit($this, "," + $this.space);
     }
     js.Emitter.emitExpression($this, nodes[i], 1);
   }
@@ -1328,20 +1359,25 @@ js.Emitter.emitChildren = function($this, node) {
     js.Emitter.emitNodes($this, node.children);
   }
 };
+js.Emitter.singleStatement = function(node) {
+  return Node.hasChildren(node) && node.children.length === 1 ? node.children[0] : null;
+};
 js.Emitter.recursiveEmitIfStatement = function($this, node) {
-  js.Emitter.emit($this, "if (");
+  var trueBlock = node.children[1];
+  var falseBlock = node.children[2];
+  var trueStatement = js.Emitter.singleStatement(trueBlock);
+  js.Emitter.emit($this, "if" + $this.space + "(");
   js.Emitter.emitExpression($this, node.children[0], 0);
-  js.Emitter.emit($this, ") ");
-  js.Emitter.emitNode($this, node.children[1]);
-  var block = node.children[2];
-  if (block !== null) {
-    js.Emitter.emit($this, " else ");
-    var statement = Node.hasChildren(block) && block.children.length === 1 ? block.children[0] : null;
-    if (statement !== null && statement.kind === 19) {
-      js.Emitter.addMapping($this, statement);
-      js.Emitter.recursiveEmitIfStatement($this, statement);
+  js.Emitter.emit($this, ")" + $this.space);
+  js.Emitter.emitBlock($this, trueBlock, falseBlock !== null && trueStatement !== null && trueStatement.kind === 19 ? 0 : 1);
+  if (falseBlock !== null) {
+    js.Emitter.emit($this, $this.space + "else ");
+    var falseStatement = js.Emitter.singleStatement(falseBlock);
+    if (falseStatement !== null && falseStatement.kind === 19) {
+      js.Emitter.addMapping($this, falseStatement);
+      js.Emitter.recursiveEmitIfStatement($this, falseStatement);
     } else {
-      js.Emitter.emitNode($this, block);
+      js.Emitter.emitBlock($this, falseBlock, 1);
     }
   }
 };
@@ -1349,9 +1385,6 @@ js.Emitter.emitNode = function($this, node) {
   $this.isStartOfExpression = false;
   js.Emitter.addMapping($this, node);
   switch (node.kind) {
-  case 2:
-    js.Emitter.emitBlock($this, node);
-    break;
   case 4:
     js.Emitter.emitCase($this, node);
     break;
@@ -1414,12 +1447,20 @@ js.Emitter.emitNode = function($this, node) {
     break;
   }
 };
-js.Emitter.emitBlock = function($this, node) {
-  js.Emitter.emit($this, "{\n");
-  $this.indent += "  ";
-  js.Emitter.emitChildren($this, node);
-  js.Emitter.decreaseIndent($this);
-  js.Emitter.emit($this, $this.indent + "}");
+js.Emitter.emitBlock = function($this, node, mode) {
+  var shouldMinify = mode === 1 && $this.options.jsMinify;
+  js.Emitter.addMapping($this, node);
+  if (shouldMinify && !Node.hasChildren(node)) {
+    js.Emitter.emit($this, ";");
+  } else if (shouldMinify && node.children.length === 1) {
+    js.Emitter.emitNode($this, node.children[0]);
+  } else {
+    js.Emitter.emit($this, "{" + $this.newline);
+    js.Emitter.increaseIndent($this);
+    js.Emitter.emitChildren($this, node);
+    js.Emitter.decreaseIndent($this);
+    js.Emitter.emit($this, $this.indent + "}");
+  }
 };
 js.Emitter.emitCase = function($this, node) {
   var values = Node.caseValues(node);
@@ -1427,15 +1468,15 @@ js.Emitter.emitCase = function($this, node) {
   for (var i = 0; i < values.length; i = i + 1 | 0) {
     js.Emitter.emit($this, $this.indent + "case ");
     js.Emitter.emitExpression($this, values[i], 0);
-    js.Emitter.emit($this, ":\n");
+    js.Emitter.emit($this, ":" + $this.newline);
   }
   if (values.length === 0) {
-    js.Emitter.emit($this, $this.indent + "default:\n");
+    js.Emitter.emit($this, $this.indent + "default:" + $this.newline);
   }
-  $this.indent += "  ";
+  js.Emitter.increaseIndent($this);
   js.Emitter.emitChildren($this, block);
   if (!Node.blockAlwaysEndsWithReturn(block)) {
-    js.Emitter.emit($this, $this.indent + "break;\n");
+    js.Emitter.emit($this, $this.indent + "break;" + $this.newline);
   }
   js.Emitter.decreaseIndent($this);
 };
@@ -1451,7 +1492,7 @@ js.Emitter.emitVariableCluster = function($this, node) {
         js.Emitter.emit($this, "var ");
       }
       js.Emitter.emitNode($this, variable);
-      js.Emitter.emit($this, ";\n");
+      js.Emitter.emit($this, ";" + $this.newline);
     }
   }
 };
@@ -1459,7 +1500,7 @@ js.Emitter.emitNamespace = function($this, node) {
   if (!js.Emitter.hasCompoundName(node.symbol)) {
     js.Emitter.emit($this, "var ");
   }
-  js.Emitter.emit($this, $this.indent + js.Emitter.fullName(node.symbol) + " = {};\n");
+  js.Emitter.emit($this, $this.indent + js.Emitter.fullName(node.symbol) + $this.space + "=" + $this.space + "{};" + $this.newline);
 };
 js.Emitter.emitEnum = function($this, node) {
   var block = node.children[1];
@@ -1467,14 +1508,14 @@ js.Emitter.emitEnum = function($this, node) {
     if (!js.Emitter.hasCompoundName(node.symbol)) {
       js.Emitter.emit($this, "var ");
     }
-    js.Emitter.emit($this, $this.indent + js.Emitter.fullName(node.symbol) + " = {\n");
-    $this.indent += "  ";
+    js.Emitter.emit($this, $this.indent + js.Emitter.fullName(node.symbol) + $this.space + "=" + $this.space + "{" + $this.newline);
+    js.Emitter.increaseIndent($this);
     for (var i = 0; i < block.children.length; i = i + 1 | 0) {
       var symbol = block.children[i].symbol;
-      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(symbol) + ": " + symbol.constant.value + (i === (block.children.length - 1 | 0) ? "\n" : ",\n"));
+      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(symbol) + ":" + $this.space + symbol.constant.value + (i === (block.children.length - 1 | 0) ? "" : ",") + $this.newline);
     }
     js.Emitter.decreaseIndent($this);
-    js.Emitter.emit($this, $this.indent + "};\n");
+    js.Emitter.emit($this, $this.indent + "};" + $this.newline);
   }
 };
 js.Emitter.emitFunction = function($this, node) {
@@ -1487,19 +1528,16 @@ js.Emitter.emitFunction = function($this, node) {
   if (!isCompoundName) {
     js.Emitter.emit($this, $this.indent + "function " + js.Emitter.fullName(symbol));
   } else {
-    js.Emitter.emit($this, $this.indent + js.Emitter.fullName(symbol) + " = function");
+    js.Emitter.emit($this, $this.indent + js.Emitter.fullName(symbol) + $this.space + "=" + $this.space + "function");
   }
   js.Emitter.emitArgumentVariables($this, node.children[1].children);
-  js.Emitter.emit($this, " ");
-  js.Emitter.emit($this, "{\n");
-  $this.indent += "  ";
-  js.Emitter.emitChildren($this, block);
-  js.Emitter.decreaseIndent($this);
-  js.Emitter.emit($this, $this.indent + (isCompoundName ? "};\n" : "}\n"));
+  js.Emitter.emit($this, $this.space);
+  js.Emitter.emitBlock($this, block, 0);
+  js.Emitter.emit($this, isCompoundName ? ";" + $this.newline : $this.newline);
   if (node.kind === 14) {
     var type = symbol.enclosingSymbol.type;
     if (Type.isClass(type) && Type.baseClass(type) !== null) {
-      js.Emitter.emit($this, $this.indent + "$extends(" + js.Emitter.fullName(type.symbol) + ", " + js.Emitter.fullName(Type.baseClass(type).symbol) + ");\n");
+      js.Emitter.emit($this, $this.indent + "$extends(" + js.Emitter.fullName(type.symbol) + "," + $this.space + js.Emitter.fullName(Type.baseClass(type).symbol) + ");" + $this.newline);
     }
   }
 };
@@ -1507,20 +1545,20 @@ js.Emitter.emitVariable = function($this, node) {
   var value = node.children[2];
   js.Emitter.emit($this, node.symbol === null ? node.children[0].content.value : js.Emitter.fullName(node.symbol));
   if (value !== null) {
-    js.Emitter.emit($this, " = ");
+    js.Emitter.emit($this, $this.space + "=" + $this.space);
     js.Emitter.emitExpression($this, value, 1);
   }
 };
 js.Emitter.emitIf = function($this, node) {
   js.Emitter.emit($this, $this.indent);
   js.Emitter.recursiveEmitIfStatement($this, node);
-  js.Emitter.emit($this, "\n");
+  js.Emitter.emit($this, $this.newline);
 };
 js.Emitter.emitFor = function($this, node) {
   var setup = node.children[0];
   var test = node.children[1];
   var update = node.children[2];
-  js.Emitter.emit($this, $this.indent + "for (");
+  js.Emitter.emit($this, $this.indent + "for" + $this.space + "(");
   if (setup !== null) {
     if (setup.kind === 6) {
       js.Emitter.emit($this, "var ");
@@ -1530,34 +1568,34 @@ js.Emitter.emitFor = function($this, node) {
     }
   }
   if (test !== null) {
-    js.Emitter.emit($this, "; ");
+    js.Emitter.emit($this, ";" + $this.space);
     js.Emitter.emitExpression($this, test, 0);
   } else {
     js.Emitter.emit($this, ";");
   }
   if (update !== null) {
-    js.Emitter.emit($this, "; ");
+    js.Emitter.emit($this, ";" + $this.space);
     js.Emitter.emitExpression($this, update, 0);
   } else {
     js.Emitter.emit($this, ";");
   }
-  js.Emitter.emit($this, ") ");
-  js.Emitter.emitNode($this, node.children[3]);
-  js.Emitter.emit($this, "\n");
+  js.Emitter.emit($this, ")" + $this.space);
+  js.Emitter.emitBlock($this, node.children[3], 1);
+  js.Emitter.emit($this, $this.newline);
 };
 js.Emitter.emitWhile = function($this, node) {
-  js.Emitter.emit($this, $this.indent + "while (");
+  js.Emitter.emit($this, $this.indent + "while" + $this.space + "(");
   js.Emitter.emitExpression($this, node.children[0], 0);
-  js.Emitter.emit($this, ") ");
-  js.Emitter.emitNode($this, node.children[1]);
-  js.Emitter.emit($this, "\n");
+  js.Emitter.emit($this, ")" + $this.space);
+  js.Emitter.emitBlock($this, node.children[1], 1);
+  js.Emitter.emit($this, $this.newline);
 };
 js.Emitter.emitDoWhile = function($this, node) {
   js.Emitter.emit($this, $this.indent + "do ");
-  js.Emitter.emitNode($this, node.children[1]);
-  js.Emitter.emit($this, " while (");
+  js.Emitter.emitBlock($this, node.children[1], 1);
+  js.Emitter.emit($this, $this.space + "while" + $this.space + "(");
   js.Emitter.emitExpression($this, node.children[0], 0);
-  js.Emitter.emit($this, ");\n");
+  js.Emitter.emit($this, ");" + $this.newline);
 };
 js.Emitter.emitReturn = function($this, node) {
   var value = node.children[0];
@@ -1565,16 +1603,16 @@ js.Emitter.emitReturn = function($this, node) {
   if (value !== null) {
     js.Emitter.emit($this, "return ");
     js.Emitter.emitExpression($this, value, 0);
-    js.Emitter.emit($this, ";\n");
+    js.Emitter.emit($this, ";" + $this.newline);
   } else {
-    js.Emitter.emit($this, "return;\n");
+    js.Emitter.emit($this, "return;" + $this.newline);
   }
 };
 js.Emitter.emitBreak = function($this, node) {
-  js.Emitter.emit($this, $this.indent + "break;\n");
+  js.Emitter.emit($this, $this.indent + "break;" + $this.newline);
 };
 js.Emitter.emitContinue = function($this, node) {
-  js.Emitter.emit($this, $this.indent + "continue;\n");
+  js.Emitter.emit($this, $this.indent + "continue;" + $this.newline);
 };
 js.Emitter.emitAssert = function($this, node) {
   var value = node.children[0];
@@ -1582,14 +1620,17 @@ js.Emitter.emitAssert = function($this, node) {
   if (!Node.isFalse(value)) {
     var couldBeFalse = !Node.isTrue(value);
     if (couldBeFalse) {
-      js.Emitter.emit($this, $this.indent + "if (");
+      js.Emitter.emit($this, $this.indent + "if" + $this.space + "(");
       js.Emitter.emitExpression($this, value, 0);
-      js.Emitter.emit($this, ") {\n");
-      $this.indent += "  ";
+      js.Emitter.emit($this, ")");
+      if (!$this.options.jsMinify) {
+        js.Emitter.emit($this, " {\n");
+        js.Emitter.increaseIndent($this);
+      }
     }
     var text = Range.toString(node.range) + " (" + Range.locationString(node.range) + ")";
-    js.Emitter.emit($this, $this.indent + "throw new Error(" + quoteString(text, 34) + ");\n");
-    if (couldBeFalse) {
+    js.Emitter.emit($this, $this.indent + "throw new Error(" + quoteString(text, 34) + ");" + $this.newline);
+    if (!$this.options.jsMinify && couldBeFalse) {
       js.Emitter.decreaseIndent($this);
       js.Emitter.emit($this, $this.indent + "}\n");
     }
@@ -1599,14 +1640,14 @@ js.Emitter.emitExpressionStatement = function($this, node) {
   js.Emitter.emit($this, $this.indent);
   $this.isStartOfExpression = true;
   js.Emitter.emitExpression($this, node.children[0], 0);
-  js.Emitter.emit($this, ";\n");
+  js.Emitter.emit($this, ";" + $this.newline);
 };
 js.Emitter.emitSwitch = function($this, node) {
-  js.Emitter.emit($this, $this.indent + "switch (");
+  js.Emitter.emit($this, $this.indent + "switch" + $this.space + "(");
   js.Emitter.emitExpression($this, node.children[0], 0);
-  js.Emitter.emit($this, ") {\n");
+  js.Emitter.emit($this, ")" + $this.space + "{" + $this.newline);
   js.Emitter.emitNodes($this, Node.switchCases(node));
-  js.Emitter.emit($this, $this.indent + "}\n");
+  js.Emitter.emit($this, $this.indent + "}" + $this.newline);
 };
 js.Emitter.emitExpression = function($this, node, precedence) {
   var wasStartOfExpression = $this.isStartOfExpression;
@@ -1726,9 +1767,9 @@ js.Emitter.emitHook = function($this, node, precedence) {
     js.Emitter.emit($this, "(");
   }
   js.Emitter.emitExpression($this, node.children[0], 3);
-  js.Emitter.emit($this, " ? ");
+  js.Emitter.emit($this, $this.space + "?" + $this.space);
   js.Emitter.emitExpression($this, node.children[1], 2);
-  js.Emitter.emit($this, " : ");
+  js.Emitter.emit($this, $this.space + ":" + $this.space);
   js.Emitter.emitExpression($this, node.children[2], 2);
   if (2 < precedence) {
     js.Emitter.emit($this, ")");
@@ -1800,8 +1841,8 @@ js.Emitter.emitLambda = function($this, node, wasStartOfExpression) {
   }
   js.Emitter.emit($this, "function");
   js.Emitter.emitArgumentVariables($this, Node.lambdaArguments(node));
-  js.Emitter.emit($this, " ");
-  js.Emitter.emitNode($this, Node.lambdaBlock(node));
+  js.Emitter.emit($this, $this.space);
+  js.Emitter.emitBlock($this, Node.lambdaBlock(node), 0);
   if (wasStartOfExpression) {
     js.Emitter.emit($this, ")");
   }
@@ -1850,7 +1891,7 @@ js.Emitter.emitBinary = function($this, node, precedence) {
   }
   $this.toStringTarget = left;
   js.Emitter.emitExpression($this, left, info.precedence + (info.associativity === 2 | 0) | 0);
-  js.Emitter.emit($this, node.kind === 71 ? " === " : node.kind === 81 ? " !== " : " " + info.text + " ");
+  js.Emitter.emit($this, $this.space + (node.kind === 71 ? "===" : node.kind === 81 ? "!==" : info.text) + $this.space);
   $this.toStringTarget = right;
   js.Emitter.emitExpression($this, right, info.precedence + (info.associativity === 1 | 0) | 0);
   if (info.precedence < precedence) {
@@ -1870,7 +1911,7 @@ js.Emitter.emitTertiary = function($this, node, precedence) {
   js.Emitter.emitExpression($this, node.children[0], 15);
   js.Emitter.emit($this, "[");
   js.Emitter.emitExpression($this, node.children[1], 0);
-  js.Emitter.emit($this, "] = ");
+  js.Emitter.emit($this, "]" + $this.space + "=" + $this.space);
   js.Emitter.emitExpression($this, node.children[2], 2);
   if (2 < precedence) {
     js.Emitter.emit($this, ")");
@@ -2463,6 +2504,10 @@ ConstantFolder.foldBlock = function(node) {
       var test = child.children[0];
       var trueBlock = child.children[1];
       var falseBlock = child.children[2];
+      if (falseBlock !== null && !Node.hasChildren(falseBlock)) {
+        Node.replaceWith(falseBlock, null);
+        falseBlock = null;
+      }
       if (Node.isTrue(test)) {
         if (falseBlock !== null) {
           Node.replaceWith(falseBlock, null);
@@ -2483,6 +2528,13 @@ ConstantFolder.foldBlock = function(node) {
         } else {
           Node.replaceWith(test, Node.withType(Node.withContent(new Node(39), new BoolContent(true)), test.type));
           Node.replaceWith(trueBlock, Node.replaceWith(falseBlock, null));
+        }
+      } else if (!Node.hasChildren(trueBlock)) {
+        if (Node.hasNoSideEffects(test)) {
+          Node.removeChildAtIndex(node, i);
+          i = i - 1 | 0;
+        } else {
+          Node.become(child, Node.withChildren(new Node(30), [Node.remove(test)]));
         }
       }
     }
@@ -5815,8 +5867,6 @@ TypeCache.substituteAll = function($this, types, parameters, substitutions) {
 };
 TypeCache.parameterize = function($this, unparameterized, substitutions) {
   var symbol = unparameterized !== null ? unparameterized.symbol : null;
-  if (symbol !== null) {
-  }
   var hash = TypeCache.computeHashCode(symbol, substitutions);
   var existingTypes = $this.hashTable.getOrDefault(hash, null);
   if (existingTypes !== null) {
@@ -6744,7 +6794,7 @@ frontend.printWarning = function(text) {
 frontend.printUsage = function() {
   $in.io.printWithColor(92, "\nusage: ");
   $in.io.printWithColor(1, "skewc [flags] [inputs]\n");
-  io.print("\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     lisp-ast, json-ast, and xml-ast.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the \".map\" extension in the same\n                     directory as the main output file.\n\n");
+  io.print("\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     lisp-ast, json-ast, and xml-ast.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-minify        Transform the emitted JavaScript so that it takes up less\n                     space. Make sure to use the \"export\" modifier on code\n                     that shouldn't be minifed.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the \".map\" extension in the same\n                     directory as the main output file.\n\n");
 };
 frontend.afterEquals = function(text) {
   var equals = text.indexOf("=");
@@ -6782,6 +6832,8 @@ frontend.main = function(args) {
       flags.verbose = true;
     } else if (arg === "-optimize" || arg === "--optimize") {
       flags.optimize = true;
+    } else if (arg === "-js-minify" || arg === "--js-minify") {
+      flags.jsMinify = true;
     } else if (arg === "-js-source-map" || arg === "--js-source-map") {
       flags.jsSourceMap = true;
     } else if ($in.string.startsWith(arg, "-target=") || $in.string.startsWith(arg, "--target=")) {
@@ -6835,6 +6887,7 @@ frontend.main = function(args) {
   options.inlineAllFunctions = optimizeJS;
   options.convertAllInstanceToStatic = optimizeJS;
   options.outputFile = flags.outputFile;
+  options.jsMinify = flags.jsMinify && target === 1;
   options.jsSourceMap = flags.jsSourceMap && target === 1;
   options.inputs = frontend.readSources(inputs);
   if (options.inputs === null) {

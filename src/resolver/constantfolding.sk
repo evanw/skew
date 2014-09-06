@@ -173,6 +173,12 @@ class ConstantFolder {
         var trueBlock = child.ifTrue();
         var falseBlock = child.ifFalse();
 
+        // No reason to keep an empty "else" block
+        if (falseBlock != null && !falseBlock.hasChildren()) {
+          falseBlock.replaceWith(null);
+          falseBlock = null;
+        }
+
         // Always true if statement
         if (test.isTrue()) {
           // Remove dead code in the "else" block
@@ -208,6 +214,16 @@ class ConstantFolder {
           else {
             test.replaceWith(Node.createBool(true).withType(test.type));
             trueBlock.replaceWith(falseBlock.replaceWith(null));
+          }
+        }
+
+        // Remove if statements with empty blocks
+        else if (!trueBlock.hasChildren()) {
+          if (test.hasNoSideEffects()) {
+            node.removeChildAtIndex(i);
+            i--;
+          } else {
+            child.become(Node.createExpression(test.remove()));
           }
         }
       }

@@ -131,8 +131,14 @@ in Node {
   bool hasNoSideEffects() {
     switch (kind) {
       case .NAME, .THIS, .BOOL, .INT, .FLOAT, .DOUBLE, .STRING, .NULL { return true; }
+      case .CAST, .IMPLICIT_CAST { return castValue().hasNoSideEffects(); }
+      case .HOOK { return hookTest().hasNoSideEffects() && hookTrue().hasNoSideEffects() && hookFalse().hasNoSideEffects(); }
       case .DOT { return dotTarget().hasNoSideEffects(); }
-      default { return false; }
+      default {
+        if (kind.isBinaryOperator() && !kind.isBinaryStorageOperator()) return binaryLeft().hasNoSideEffects() && binaryRight().hasNoSideEffects();
+        if (kind.isUnaryOperator() && !kind.isUnaryStorageOperator()) return unaryValue().hasNoSideEffects();
+        return false;
+      }
     }
   }
 }
