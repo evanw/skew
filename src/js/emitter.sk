@@ -103,6 +103,7 @@ namespace js {
         var type = collector.typeSymbols.get(i).type;
         if (type.isNamespace()) {
           if (!type.symbol.isImport()) {
+            maybeEmitMinifedNewline();
             emitNode(type.symbol.node.firstNonExtensionSibling());
           }
           continue;
@@ -131,9 +132,9 @@ namespace js {
         emitNode(collector.freeFunctionSymbols.get(i).node);
       }
 
-      // Emit top-level statements
-      for (var i = 0; i < collector.topLevelStatements.length; i++) {
-        emitNode(collector.topLevelStatements.get(i));
+      // Emit free variables
+      for (var i = 0; i < collector.freeVariableSymbols.length; i++) {
+        emitNode(collector.freeVariableSymbols.get(i));
       }
 
       // Make sure the file ends with a newline for ease of use with external
@@ -224,11 +225,17 @@ namespace js {
       currentSource.contents += text;
     }
 
+    // Lots of text editors choke up on long lines, so add a newline every now
+    // and then for usability's sake
+    void maybeEmitMinifedNewline() {
+      if (newline == "" && currentColumn > 1024) {
+        emit("\n");
+      }
+    }
+
     void emitNodes(List<Node> nodes) {
       for (var i = 0; i < nodes.length; i++) {
-        if (newline == "" && currentColumn > 1024) {
-          emit("\n");
-        }
+        maybeEmitMinifedNewline();
         emitNode(nodes.get(i));
       }
     }
@@ -242,7 +249,10 @@ namespace js {
 
     void emitCommaSeparatedExpressions(List<Node> nodes) {
       for (var i = 0; i < nodes.length; i++) {
-        if (i > 0) emit("," + space);
+        if (i > 0) {
+          emit("," + space);
+          maybeEmitMinifedNewline();
+        }
         emitExpression(nodes.get(i), .COMMA);
       }
     }
@@ -338,6 +348,7 @@ namespace js {
         emit(indent + "case ");
         emitExpression(values.get(i), .LOWEST);
         emit(":" + newline);
+        maybeEmitMinifedNewline();
       }
       if (values.length == 0) {
         emit(indent + "default:" + newline);
@@ -373,6 +384,7 @@ namespace js {
               state = .VAR_CHAIN;
             } else {
               emit("," + space);
+              maybeEmitMinifedNewline();
             }
           }
           emitNode(variable);
@@ -400,7 +412,13 @@ namespace js {
         increaseIndent();
         for (var i = 0; i < block.children.length; i++) {
           var symbol = block.children.get(i).symbol;
-          emit(indent + mangleName(symbol) + ":" + space + symbol.constant.asInt() + (i == block.children.length - 1 ? "" : ",") + newline);
+          emit(indent + mangleName(symbol) + ":" + space + symbol.constant.asInt());
+          if (i != block.children.length - 1) {
+            emit("," + newline);
+            maybeEmitMinifedNewline();
+          } else {
+            emit(newline);
+          }
         }
         decreaseIndent();
         emit(indent + "};" + newline);

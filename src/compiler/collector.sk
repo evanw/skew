@@ -9,7 +9,7 @@ class Collector {
   SortTypes sort;
   List<Symbol> typeSymbols = [];
   List<Symbol> freeFunctionSymbols = [];
-  List<Node> topLevelStatements = [];
+  List<Node> freeVariableSymbols = [];
 
   new(Node program, SortTypes sort) : sort = sort {
     assert program.kind == .PROGRAM;
@@ -36,11 +36,8 @@ class Collector {
         }
       }
 
-      case
-        .VARIABLE_CLUSTER, .IF, .FOR, .FOR_EACH, .WHILE, .DO_WHILE,
-        .RETURN, .BREAK, .CONTINUE, .ASSERT, .EXPRESSION, .SWITCH {
-
-        topLevelStatements.push(node);
+      case .VARIABLE_CLUSTER {
+        freeVariableSymbols.push(node);
       }
     }
   }

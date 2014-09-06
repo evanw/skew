@@ -549,7 +549,7 @@ function OperatorInfo(_0, _1, _2) {
 function Collector(program, sort) {
   this.typeSymbols = [];
   this.freeFunctionSymbols = [];
-  this.topLevelStatements = [];
+  this.freeVariableSymbols = [];
   this.sort = sort;
   Collector.collectStatements(this, program);
   Collector.sortTypeSymbols(this);
@@ -581,18 +581,7 @@ Collector.collectStatements = function($this, node) {
     }
     break;
   case 6:
-  case 19:
-  case 20:
-  case 21:
-  case 22:
-  case 23:
-  case 24:
-  case 26:
-  case 27:
-  case 28:
-  case 30:
-  case 31:
-    $this.topLevelStatements.push(node);
+    $this.freeVariableSymbols.push(node);
     break;
   }
 };
@@ -1236,6 +1225,7 @@ js.Emitter.prototype.emitProgram = function(program) {
     var type = collector.typeSymbols[i].type;
     if (Type.isNamespace(type)) {
       if ((type.symbol.flags & 8192) === 0) {
+        js.Emitter.maybeEmitMinifedNewline(this);
         js.Emitter.emitNode(this, Node.firstNonExtensionSibling(type.symbol.node));
       }
       continue;
@@ -1261,8 +1251,8 @@ js.Emitter.prototype.emitProgram = function(program) {
   for (var i = 0; i < collector.freeFunctionSymbols.length; i = i + 1 | 0) {
     js.Emitter.emitNode(this, collector.freeFunctionSymbols[i].node);
   }
-  for (var i = 0; i < collector.topLevelStatements.length; i = i + 1 | 0) {
-    js.Emitter.emitNode(this, collector.topLevelStatements[i]);
+  for (var i = 0; i < collector.freeVariableSymbols.length; i = i + 1 | 0) {
+    js.Emitter.emitNode(this, collector.freeVariableSymbols[i]);
   }
   if (this.currentColumn > 0) {
     js.Emitter.emit(this, "\n");
@@ -1329,11 +1319,14 @@ js.Emitter.emit = function($this, text) {
   }
   $this.currentSource.contents += text;
 };
+js.Emitter.maybeEmitMinifedNewline = function($this) {
+  if ($this.newline === "" && $this.currentColumn > 1024) {
+    js.Emitter.emit($this, "\n");
+  }
+};
 js.Emitter.emitNodes = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-    if ($this.newline === "" && $this.currentColumn > 1024) {
-      js.Emitter.emit($this, "\n");
-    }
+    js.Emitter.maybeEmitMinifedNewline($this);
     js.Emitter.emitNode($this, nodes[i]);
   }
 };
@@ -1349,6 +1342,7 @@ js.Emitter.emitCommaSeparatedExpressions = function($this, nodes) {
   for (var i = 0; i < nodes.length; i = i + 1 | 0) {
     if (i > 0) {
       js.Emitter.emit($this, "," + $this.space);
+      js.Emitter.maybeEmitMinifedNewline($this);
     }
     js.Emitter.emitExpression($this, nodes[i], 1);
   }
@@ -1473,6 +1467,7 @@ js.Emitter.emitCase = function($this, node) {
     js.Emitter.emit($this, $this.indent + "case ");
     js.Emitter.emitExpression($this, values[i], 0);
     js.Emitter.emit($this, ":" + $this.newline);
+    js.Emitter.maybeEmitMinifedNewline($this);
   }
   if (values.length === 0) {
     js.Emitter.emit($this, $this.indent + "default:" + $this.newline);
@@ -1506,6 +1501,7 @@ js.Emitter.emitVariableCluster = function($this, node) {
         state = 1;
       } else {
         js.Emitter.emit($this, "," + $this.space);
+        js.Emitter.maybeEmitMinifedNewline($this);
       }
       js.Emitter.emitNode($this, variable);
     }
@@ -1530,7 +1526,13 @@ js.Emitter.emitEnum = function($this, node) {
     js.Emitter.increaseIndent($this);
     for (var i = 0; i < block.children.length; i = i + 1 | 0) {
       var symbol = block.children[i].symbol;
-      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(symbol) + ":" + $this.space + symbol.constant.value + (i === (block.children.length - 1 | 0) ? "" : ",") + $this.newline);
+      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(symbol) + ":" + $this.space + symbol.constant.value);
+      if (i !== (block.children.length - 1 | 0)) {
+        js.Emitter.emit($this, "," + $this.newline);
+        js.Emitter.maybeEmitMinifedNewline($this);
+      } else {
+        js.Emitter.emit($this, $this.newline);
+      }
     }
     js.Emitter.decreaseIndent($this);
     js.Emitter.emit($this, $this.indent + "};" + $this.newline);
