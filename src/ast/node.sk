@@ -193,6 +193,10 @@ in NodeKind {
     return this == ERROR;
   }
 
+  bool isJump() {
+    return this >= RETURN && this <= CONTINUE;
+  }
+
   bool isLoop() {
     return this >= FOR && this <= DO_WHILE;
   }

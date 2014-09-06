@@ -1,4 +1,10 @@
 namespace js {
+  enum ClusterState {
+    NONE,
+    VAR_CHAIN,
+    COMPOUND_NAME,
+  }
+
   enum BlockMode {
     MUST_KEEP_BRACES,
     CAN_OMIT_BRACES,
@@ -54,6 +60,7 @@ namespace js {
       if (isKeyword == null) {
         isKeyword = createIsKeyword();
       }
+
       if (options.jsMinify) {
         newline = "";
         space = "";
@@ -334,18 +341,34 @@ namespace js {
 
     void emitVariableCluster(Node node) {
       var variables = node.clusterVariables();
+      var state = ClusterState.NONE;
       for (var i = 0; i < variables.length; i++) {
         var variable = variables.get(i);
         var symbol = variable.symbol;
         var isCompoundName = symbol != null && hasCompoundName(symbol);
         if ((symbol == null || !symbol.kind.isInstance() && !symbol.isImport()) && (!isCompoundName || variable.variableValue() != null)) {
-          emit(indent);
-          if (!isCompoundName) {
-            emit("var ");
+          if (isCompoundName) {
+            if (state == .VAR_CHAIN) {
+              emit(";" + newline);
+            }
+            state = .COMPOUND_NAME;
+            emit(indent);
+          } else {
+            if (state != .VAR_CHAIN) {
+              if (state == .COMPOUND_NAME) {
+                emit(";" + newline);
+              }
+              emit(indent + "var ");
+              state = .VAR_CHAIN;
+            } else {
+              emit("," + space);
+            }
           }
           emitNode(variable);
-          emit(";" + newline);
         }
+      }
+      if (state != .NONE) {
+        emit(";" + newline);
       }
     }
 
@@ -783,6 +806,94 @@ namespace js {
       switch (node.kind) {
         case .LAMBDA { context.lambdaCount--; }
         case .CONSTRUCTOR, .FUNCTION { context.setFunction(null); }
+        case .BLOCK { if (options.jsMinify) peepholeMinifyBlock(node); }
+        case .HOOK { if (options.jsMinify) peepholeMinifyHook(node); }
+      }
+    }
+
+    void peepholeMinifyBlock(Node node) {
+      if (!node.hasChildren()) {
+        return;
+      }
+
+      for (var i = 0; i < node.children.length; i++) {
+        var child = node.children.get(i);
+        var kind = child.kind;
+
+        // Collapse variable statements
+        if (kind == .VARIABLE_CLUSTER) {
+          while (i + 1 < node.children.length) {
+            var next = node.children.get(i + 1);
+            if (next.kind != .VARIABLE_CLUSTER) {
+              break;
+            }
+            var variables = next.remove().clusterVariables();
+            for (var j = 0; j < variables.length; j++) {
+              child.appendChild(variables.get(j).replaceWith(null));
+            }
+          }
+        }
+
+        // Collapse if statements
+        else if (kind == .IF) {
+          var test = child.ifTest();
+          var trueBlock = child.ifTrue();
+          var falseBlock = child.ifFalse();
+          if (falseBlock != null) {
+            var trueStatement = singleStatement(trueBlock);
+            var falseStatement = singleStatement(falseBlock);
+
+            // "if (a) b; else c;" => "a ? b : c;"
+            if (trueStatement != null && falseStatement != null && trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION) {
+              var hook = Node.createHook(test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null));
+              peepholeMinifyHook(hook);
+              child.replaceWith(Node.createExpression(hook));
+            }
+          }
+        }
+      }
+    }
+
+    bool looksTheSame(Node left, Node right) {
+      if (left.kind == right.kind) {
+        switch (left.kind) {
+          case .NULL, .THIS { return true; }
+          case .INT { return left.asInt() == right.asInt(); }
+          case .BOOL { return left.asBool() == right.asBool(); }
+          case .FLOAT, .DOUBLE { return left.asDouble() == right.asDouble(); }
+          case .STRING { return left.asString() == right.asString(); }
+          case .NAME { return left.symbol != null && left.symbol == right.symbol || left.asString() == right.asString(); }
+          case .DOT { return left.symbol == right.symbol && left.dotName().asString() == right.dotName().asString() && looksTheSame(left.dotTarget(), right.dotTarget()); }
+        }
+      }
+      return false;
+    }
+
+    void peepholeMinifyHook(Node node) {
+      var test = node.hookTest();
+      var trueValue = node.hookTrue();
+      var falseValue = node.hookFalse();
+
+      // Collapse partially-identical binary expressions
+      if (trueValue.kind == falseValue.kind && trueValue.kind.isBinaryOperator()) {
+        var trueLeft = trueValue.binaryLeft();
+        var trueRight = trueValue.binaryRight();
+        var falseLeft = falseValue.binaryLeft();
+        var falseRight = falseValue.binaryRight();
+
+        // "a ? b = c : b = d;" => "b = a ? c : d;"
+        if (looksTheSame(trueLeft, falseLeft)) {
+          var hook = Node.createHook(test.replaceWith(null), trueRight.replaceWith(null), falseRight.replaceWith(null));
+          peepholeMinifyHook(hook);
+          node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWith(null), hook));
+        }
+
+        // "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
+        else if (looksTheSame(trueRight, falseRight) && !trueValue.kind.isBinaryStorageOperator()) {
+          var hook = Node.createHook(test.replaceWith(null), trueLeft.replaceWith(null), falseLeft.replaceWith(null));
+          peepholeMinifyHook(hook);
+          node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWith(null)));
+        }
       }
     }
 
@@ -828,7 +939,7 @@ namespace js {
           node.kind == .ASSIGN_MULTIPLY ? .MULTIPLY :
           node.kind == .ASSIGN_DIVIDE ? .DIVIDE :
           .REMAINDER;
-        node.become(createBinaryIntAssignment(context, kind, left.remove(), right.remove()).withRange(node.range));
+        node.become(createBinaryIntAssignment(context, kind, left.replaceWith(null), right.replaceWith(null)).withRange(node.range));
       }
     }
 
@@ -836,7 +947,7 @@ namespace js {
       if (node.type.isInt(cache)) {
         var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
         var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
-        var result = createBinaryIntAssignment(context, isIncrement ? .ADD : .SUBTRACT, node.unaryValue().remove(), Node.createInt(1));
+        var result = createBinaryIntAssignment(context, isIncrement ? .ADD : .SUBTRACT, node.unaryValue().replaceWith(null), Node.createInt(1));
         if (isPostfix && isExpressionUsed(node)) {
           result = createBinaryInt(isIncrement ? .SUBTRACT : .ADD, result, Node.createInt(1));
         }
@@ -849,18 +960,18 @@ namespace js {
 
       // Cast to bool
       if (node.type.isBool(cache) && !value.type.isBool(cache)) {
-        value = Node.createUnary(.NOT, value.remove()).withRange(node.range).withType(node.type);
+        value = Node.createUnary(.NOT, value.replaceWith(null)).withRange(node.range).withType(node.type);
         node.become(Node.createUnary(.NOT, value).withRange(node.range).withType(node.type));
       }
 
       // Cast to int
       else if (node.type.isInt(cache) && !value.type.isInteger(cache) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
-        node.become(Node.createBinary(.BITWISE_OR, value.remove(), Node.createInt(0)).withRange(node.range).withType(node.type));
+        node.become(Node.createBinary(.BITWISE_OR, value.replaceWith(null), Node.createInt(0)).withRange(node.range).withType(node.type));
       }
 
       // Cast to float/double
       else if (node.type.isReal(cache) && !value.type.isNumeric(cache)) {
-        node.become(Node.createUnary(.POSITIVE, value.remove()).withRange(node.range).withType(node.type));
+        node.become(Node.createUnary(.POSITIVE, value.replaceWith(null)).withRange(node.range).withType(node.type));
       }
     }
 
@@ -880,7 +991,7 @@ namespace js {
           var child = memberInitializers.children.get(i);
           var name = child.memberInitializerName();
           var value = child.memberInitializerValue();
-          block.insertChild(index++, Node.createExpression(Node.createBinary(.ASSIGN, name.remove(), value.remove())));
+          block.insertChild(index++, Node.createExpression(Node.createBinary(.ASSIGN, name.replaceWith(null), value.replaceWith(null))));
         }
       }
     }
@@ -905,9 +1016,9 @@ namespace js {
       var target = left.dotTarget();
       var name = left.dotName();
       var temporaryName = Node.createName("$temp");
-      var dot = Node.createDot(temporaryName, name.remove());
+      var dot = Node.createDot(temporaryName, name.replaceWith(null));
       return Node.createLet(
-        Node.createVariable(temporaryName.clone(), null, target.remove()),
+        Node.createVariable(temporaryName.clone(), null, target.replaceWith(null)),
         Node.createBinary(.ASSIGN, dot, createBinaryInt(kind, dot.clone(), right)).withType(cache.intType)).withType(cache.intType);
     }
 

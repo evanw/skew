@@ -130,16 +130,25 @@ class ConstantFolder {
   void foldBlock(Node node) {
     for (var i = 0; i < node.children.length; i++) {
       var child = node.children.get(i);
+      var kind = child.kind;
+
+      // Remove everything after a jump
+      if (kind.isJump()) {
+        for (var j = node.children.length - 1; j > i; j--) {
+          node.removeChildAtIndex(j);
+        }
+        break;
+      }
 
       // Remove constants and "while (false) { ... }" entirely
-      if (child.kind == .EXPRESSION && child.expressionValue().hasNoSideEffects() ||
-          child.kind == .WHILE && child.whileTest().isFalse()) {
+      if (kind == .EXPRESSION && child.expressionValue().hasNoSideEffects() ||
+          kind == .WHILE && child.whileTest().isFalse()) {
         node.removeChildAtIndex(i);
         i--;
       }
 
       // Reduce for loops that will never execute
-      else if (child.kind == .FOR) {
+      else if (kind == .FOR) {
         var test = child.forTest();
         if (test != null && test.isFalse()) {
           var setup = child.forSetup();
@@ -168,7 +177,7 @@ class ConstantFolder {
       }
 
       // Statically evaluate if statements where possible
-      else if (child.kind == .IF) {
+      else if (kind == .IF) {
         var test = child.ifTest();
         var trueBlock = child.ifTrue();
         var falseBlock = child.ifFalse();

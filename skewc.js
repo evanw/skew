@@ -1482,18 +1482,32 @@ js.Emitter.emitCase = function($this, node) {
 };
 js.Emitter.emitVariableCluster = function($this, node) {
   var variables = Node.clusterVariables(node);
+  var state = 0;
   for (var i = 0; i < variables.length; i = i + 1 | 0) {
     var variable = variables[i];
     var symbol = variable.symbol;
     var isCompoundName = symbol !== null && js.Emitter.hasCompoundName(symbol);
     if ((symbol === null || !$in.SymbolKind.isInstance(symbol.kind) && (symbol.flags & 8192) === 0) && (!isCompoundName || variable.children[2] !== null)) {
-      js.Emitter.emit($this, $this.indent);
-      if (!isCompoundName) {
-        js.Emitter.emit($this, "var ");
+      if (isCompoundName) {
+        if (state === 1) {
+          js.Emitter.emit($this, ";" + $this.newline);
+        }
+        state = 2;
+        js.Emitter.emit($this, $this.indent);
+      } else if (state !== 1) {
+        if (state === 2) {
+          js.Emitter.emit($this, ";" + $this.newline);
+        }
+        js.Emitter.emit($this, $this.indent + "var ");
+        state = 1;
+      } else {
+        js.Emitter.emit($this, "," + $this.space);
       }
       js.Emitter.emitNode($this, variable);
-      js.Emitter.emit($this, ";" + $this.newline);
     }
+  }
+  if (state !== 0) {
+    js.Emitter.emit($this, ";" + $this.newline);
   }
 };
 js.Emitter.emitNamespace = function($this, node) {
@@ -2012,6 +2026,93 @@ js.Emitter.patchNode = function($this, node, context) {
   case 15:
     js.PatchContext.setFunction(context, null);
     break;
+  case 2:
+    if ($this.options.jsMinify) {
+      js.Emitter.peepholeMinifyBlock($this, node);
+    }
+    break;
+  case 37:
+    if ($this.options.jsMinify) {
+      js.Emitter.peepholeMinifyHook($this, node);
+    }
+    break;
+  }
+};
+js.Emitter.peepholeMinifyBlock = function($this, node) {
+  if (!Node.hasChildren(node)) {
+    return;
+  }
+  for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+    var child = node.children[i];
+    var kind = child.kind;
+    if (kind === 6) {
+      while ((i + 1 | 0) < node.children.length) {
+        var next = node.children[i + 1 | 0];
+        if (next.kind !== 6) {
+          break;
+        }
+        var variables = Node.clusterVariables(Node.remove(next));
+        for (var j = 0; j < variables.length; j = j + 1 | 0) {
+          Node.appendChild(child, Node.replaceWith(variables[j], null));
+        }
+      }
+    } else if (kind === 19) {
+      var test = child.children[0];
+      var trueBlock = child.children[1];
+      var falseBlock = child.children[2];
+      if (falseBlock !== null) {
+        var trueStatement = js.Emitter.singleStatement(trueBlock);
+        var falseStatement = js.Emitter.singleStatement(falseBlock);
+        if (trueStatement !== null && falseStatement !== null && trueStatement.kind === 30 && falseStatement.kind === 30) {
+          var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueStatement.children[0], null), Node.replaceWith(falseStatement.children[0], null)]);
+          js.Emitter.peepholeMinifyHook($this, hook);
+          Node.replaceWith(child, Node.withChildren(new Node(30), [hook]));
+        }
+      }
+    }
+  }
+};
+js.Emitter.looksTheSame = function($this, left, right) {
+  if (left.kind === right.kind) {
+    switch (left.kind) {
+    case 38:
+    case 36:
+      return true;
+    case 40:
+      return left.content.value === right.content.value;
+    case 39:
+      return left.content.value === right.content.value;
+    case 41:
+    case 42:
+      return left.content.value === right.content.value;
+    case 43:
+      return left.content.value === right.content.value;
+    case 34:
+      return left.symbol !== null && left.symbol === right.symbol || left.content.value === right.content.value;
+    case 45:
+      return left.symbol === right.symbol && left.children[1].content.value === right.children[1].content.value && js.Emitter.looksTheSame($this, left.children[0], right.children[0]);
+    }
+  }
+  return false;
+};
+js.Emitter.peepholeMinifyHook = function($this, node) {
+  var test = node.children[0];
+  var trueValue = node.children[1];
+  var falseValue = node.children[2];
+  if (trueValue.kind === falseValue.kind && $in.NodeKind.isBinaryOperator(trueValue.kind)) {
+    var trueLeft = trueValue.children[0];
+    var trueRight = trueValue.children[1];
+    var falseLeft = falseValue.children[0];
+    var falseRight = falseValue.children[1];
+    if (js.Emitter.looksTheSame($this, trueLeft, falseLeft)) {
+      var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueRight, null), Node.replaceWith(falseRight, null)]);
+      js.Emitter.peepholeMinifyHook($this, hook);
+      Node.become(node, Node.createBinary(trueValue.kind, Node.replaceWith(trueLeft, null), hook));
+    } else if (js.Emitter.looksTheSame($this, trueRight, falseRight) && !$in.NodeKind.isBinaryStorageOperator(trueValue.kind)) {
+      var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueLeft, null), Node.replaceWith(falseLeft, null)]);
+      js.Emitter.peepholeMinifyHook($this, hook);
+      Node.become(node, Node.createBinary(trueValue.kind, hook, Node.replaceWith(trueRight, null)));
+    }
   }
 };
 js.Emitter.patchThis = function(node, context) {
@@ -2046,14 +2147,14 @@ js.Emitter.patchAssign = function($this, node, context) {
     var left = node.children[0];
     var right = node.children[1];
     var kind = node.kind === 87 ? 66 : node.kind === 96 ? 85 : node.kind === 92 ? 80 : node.kind === 91 ? 70 : 82;
-    Node.become(node, Node.withRange(js.Emitter.createBinaryIntAssignment($this, context, kind, Node.remove(left), Node.remove(right)), node.range));
+    Node.become(node, Node.withRange(js.Emitter.createBinaryIntAssignment($this, context, kind, Node.replaceWith(left, null), Node.replaceWith(right, null)), node.range));
   }
 };
 js.Emitter.patchUnary = function($this, node, context) {
   if (node.type === $this.cache.intType) {
     var isPostfix = node.kind === 64 || node.kind === 65;
     var isIncrement = node.kind === 62 || node.kind === 64;
-    var result = js.Emitter.createBinaryIntAssignment($this, context, isIncrement ? 66 : 85, Node.remove(node.children[0]), Node.withContent(new Node(40), new IntContent(1)));
+    var result = js.Emitter.createBinaryIntAssignment($this, context, isIncrement ? 66 : 85, Node.replaceWith(node.children[0], null), Node.withContent(new Node(40), new IntContent(1)));
     if (isPostfix && js.Emitter.isExpressionUsed(node)) {
       result = js.Emitter.createBinaryInt($this, isIncrement ? 85 : 66, result, Node.withContent(new Node(40), new IntContent(1)));
     }
@@ -2063,12 +2164,12 @@ js.Emitter.patchUnary = function($this, node, context) {
 js.Emitter.patchCast = function($this, node, context) {
   var value = node.children[1];
   if (node.type === $this.cache.boolType && value.type !== $this.cache.boolType) {
-    value = Node.withType(Node.withRange(Node.withChildren(new Node(58), [Node.remove(value)]), node.range), node.type);
+    value = Node.withType(Node.withRange(Node.withChildren(new Node(58), [Node.replaceWith(value, null)]), node.range), node.type);
     Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(58), [value]), node.range), node.type));
   } else if (node.type === $this.cache.intType && !Type.isInteger(value.type, $this.cache) && !js.Emitter.alwaysConvertsOperandsToInt(node.parent.kind)) {
-    Node.become(node, Node.withType(Node.withRange(Node.createBinary(68, Node.remove(value), Node.withContent(new Node(40), new IntContent(0))), node.range), node.type));
+    Node.become(node, Node.withType(Node.withRange(Node.createBinary(68, Node.replaceWith(value, null), Node.withContent(new Node(40), new IntContent(0))), node.range), node.type));
   } else if (Type.isReal(node.type, $this.cache) && !Type.isNumeric(value.type, $this.cache)) {
-    Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(59), [Node.remove(value)]), node.range), node.type));
+    Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(59), [Node.replaceWith(value, null)]), node.range), node.type));
   }
 };
 js.Emitter.patchConstructor = function(node, context) {
@@ -2087,7 +2188,7 @@ js.Emitter.patchConstructor = function(node, context) {
       var child = memberInitializers.children[i];
       var name = child.children[0];
       var value = child.children[1];
-      Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(30), [Node.createBinary(86, Node.remove(name), Node.remove(value))]));
+      Node.insertChild(block, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(30), [Node.createBinary(86, Node.replaceWith(name, null), Node.replaceWith(value, null))]));
     }
   }
 };
@@ -2108,8 +2209,8 @@ js.Emitter.createBinaryIntAssignment = function($this, context, kind, left, righ
   var target = left.children[0];
   var name = left.children[1];
   var temporaryName = Node.withContent(new Node(34), new StringContent("$temp"));
-  var dot = Node.withChildren(new Node(45), [temporaryName, Node.remove(name)]);
-  return Node.withType(Node.withChildren(new Node(46), [Node.withChildren(new Node(16), [Node.clone(temporaryName), null, Node.remove(target)]), Node.withType(Node.createBinary(86, dot, js.Emitter.createBinaryInt($this, kind, Node.clone(dot), right)), $this.cache.intType)]), $this.cache.intType);
+  var dot = Node.withChildren(new Node(45), [temporaryName, Node.replaceWith(name, null)]);
+  return Node.withType(Node.withChildren(new Node(46), [Node.withChildren(new Node(16), [Node.clone(temporaryName), null, Node.replaceWith(target, null)]), Node.withType(Node.createBinary(86, dot, js.Emitter.createBinaryInt($this, kind, Node.clone(dot), right)), $this.cache.intType)]), $this.cache.intType);
 };
 js.Emitter.hasCompoundName = function(symbol) {
   var enclosingSymbol = symbol.enclosingSymbol;
@@ -2484,10 +2585,17 @@ ConstantFolder.foldStringConcatenation = function($this, node) {
 ConstantFolder.foldBlock = function(node) {
   for (var i = 0; i < node.children.length; i = i + 1 | 0) {
     var child = node.children[i];
-    if (child.kind === 30 && Node.hasNoSideEffects(child.children[0]) || child.kind === 22 && Node.isFalse(child.children[0])) {
+    var kind = child.kind;
+    if ($in.NodeKind.isJump(kind)) {
+      for (var j = node.children.length - 1 | 0; j > i; j = j - 1 | 0) {
+        Node.removeChildAtIndex(node, j);
+      }
+      break;
+    }
+    if (kind === 30 && Node.hasNoSideEffects(child.children[0]) || kind === 22 && Node.isFalse(child.children[0])) {
       Node.removeChildAtIndex(node, i);
       i = i - 1 | 0;
-    } else if (child.kind === 20) {
+    } else if (kind === 20) {
       var test = child.children[1];
       if (test !== null && Node.isFalse(test)) {
         var setup = child.children[0];
@@ -2504,7 +2612,7 @@ ConstantFolder.foldBlock = function(node) {
           Node.removeChildren(child.children[3]);
         }
       }
-    } else if (child.kind === 19) {
+    } else if (kind === 19) {
       var test = child.children[0];
       var trueBlock = child.children[1];
       var falseBlock = child.children[2];
@@ -6088,6 +6196,9 @@ $in.NodeKind.isCast = function($this) {
 };
 $in.NodeKind.isReal = function($this) {
   return $this >= 41 && $this <= 42;
+};
+$in.NodeKind.isJump = function($this) {
+  return $this >= 24 && $this <= 27;
 };
 $in.NodeKind.isLoop = function($this) {
   return $this >= 20 && $this <= 23;
