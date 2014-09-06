@@ -1882,7 +1882,8 @@ js.Emitter.emitBinary = function($this, node, precedence) {
   }
   var left = node.children[0];
   var right = node.children[1];
-  if (node.kind === 66) {
+  var kind = node.kind;
+  if (kind === 66) {
     if (left.type !== null && left.type === $this.cache.stringType && js.Emitter.isToStringCall(right)) {
       right = right.children[0].children[0];
     } else if (right.type !== null && right.type === $this.cache.stringType && js.Emitter.isToStringCall(left)) {
@@ -1891,8 +1892,8 @@ js.Emitter.emitBinary = function($this, node, precedence) {
   }
   $this.toStringTarget = left;
   js.Emitter.emitExpression($this, left, info.precedence + (info.associativity === 2 | 0) | 0);
-  js.Emitter.emit($this, $this.space + (node.kind === 71 ? "===" : node.kind === 81 ? "!==" : info.text) + $this.space);
-  if ($this.space === "" && (node.kind === 66 && (right.kind === 59 || right.kind === 62) || node.kind === 85 && (right.kind === 60 || right.kind === 63 || right.kind === 40 && right.content.value < 0))) {
+  js.Emitter.emit($this, kind === 74 ? " in " : $this.space + (kind === 71 ? "===" : kind === 81 ? "!==" : info.text) + $this.space);
+  if ($this.space === "" && (kind === 66 && (right.kind === 59 || right.kind === 62) || kind === 85 && (right.kind === 60 || right.kind === 63 || right.kind === 40 && right.content.value < 0))) {
     js.Emitter.emit($this, " ");
   }
   $this.toStringTarget = right;

@@ -678,10 +678,11 @@ namespace js {
       if (info.precedence < precedence) emit("(");
       var left = node.binaryLeft();
       var right = node.binaryRight();
+      var kind = node.kind;
 
       // Special case adding a string with the result of calling toString()
       // since the JavaScript runtime will automatically call toString()
-      if (node.kind == .ADD) {
+      if (kind == .ADD) {
         if (left.type != null && left.type.isString(cache) && isToStringCall(right)) {
           right = right.callValue().dotTarget();
         } else if (right.type != null && right.type.isString(cache) && isToStringCall(left)) {
@@ -691,12 +692,12 @@ namespace js {
 
       toStringTarget = left;
       emitExpression(left, info.precedence.incrementIfRightAssociative(info.associativity));
-      emit(space + (node.kind == .EQUAL ? "===" : node.kind == .NOT_EQUAL ? "!==" : info.text) + space);
+      emit(kind == .IN ? " in " : space + (kind == .EQUAL ? "===" : kind == .NOT_EQUAL ? "!==" : info.text) + space);
 
       // Prevent "x - -1" from becoming "x--1"
       if (space == "" && (
-          node.kind == .ADD && (right.kind == .POSITIVE || right.kind == .PREFIX_INCREMENT) ||
-          node.kind == .SUBTRACT && (right.kind == .NEGATIVE || right.kind == .PREFIX_DECREMENT || right.kind == .INT && right.asInt() < 0))) {
+          kind == .ADD && (right.kind == .POSITIVE || right.kind == .PREFIX_INCREMENT) ||
+          kind == .SUBTRACT && (right.kind == .NEGATIVE || right.kind == .PREFIX_DECREMENT || right.kind == .INT && right.asInt() < 0))) {
         emit(" ");
       }
 
