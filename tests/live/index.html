@@ -62,7 +62,7 @@ function compile() {
   try {
     var compiler = new Compiler();
     var options = new CompilerOptions();
-    options.jsMinify = oldMinify;
+    options.jsMinify = options.jsMangle = oldMinify;
     options.removeAsserts = oldOptimize;
     options.foldAllConstants = oldOptimize;
     options.inlineAllFunctions = oldOptimize;

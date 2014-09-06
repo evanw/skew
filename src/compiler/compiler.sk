@@ -28,6 +28,7 @@ export class CompilerOptions {
   export var outputDirectory = "";
   export var outputFile = "";
   export var jsMinify = false;
+  export var jsMangle = false;
   export var jsSourceMap = false;
   export var removeAsserts = false;
   export var foldAllConstants = false;

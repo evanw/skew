@@ -39,7 +39,6 @@ namespace js {
     var currentColumn = 0;
     var needExtends = false;
     var needMathImul = false;
-    var shouldMangle = false;
     var isStartOfExpression = false;
     var generator = SourceMapGenerator();
     Source currentSource = null;
@@ -55,7 +54,6 @@ namespace js {
 
     override void patchProgram(Node program) {
       if (options.jsMinify) {
-        shouldMangle = true;
         newline = "";
         space = "";
       }
@@ -613,7 +611,7 @@ namespace js {
     }
 
     void emitBool(Node node) {
-      if (shouldMangle) {
+      if (options.jsMangle) {
         emit(node.asBool() ? "!0" : "!1");
       } else {
         emit(node.asBool() ? "true" : "false");
@@ -822,11 +820,11 @@ namespace js {
       switch (node.kind) {
         case .LAMBDA { context.lambdaCount--; }
         case .CONSTRUCTOR, .FUNCTION { context.setFunction(null); }
-        case .IF { if (shouldMangle) peepholeMangleIf(node); }
-        case .FOR { if (shouldMangle) peepholeMangleBoolean(node.forTest()); }
-        case .WHILE, .DO_WHILE { if (shouldMangle) peepholeMangleBoolean(node.whileTest()); }
-        case .BLOCK { if (shouldMangle) peepholeMangleBlock(node); }
-        case .HOOK { if (shouldMangle) peepholeMangleHook(node); }
+        case .IF { if (options.jsMangle) peepholeMangleIf(node); }
+        case .FOR { if (options.jsMangle) peepholeMangleBoolean(node.forTest()); }
+        case .WHILE, .DO_WHILE { if (options.jsMangle) peepholeMangleBoolean(node.whileTest()); }
+        case .BLOCK { if (options.jsMangle) peepholeMangleBlock(node); }
+        case .HOOK { if (options.jsMangle) peepholeMangleHook(node); }
       }
     }
 

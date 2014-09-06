@@ -165,7 +165,7 @@ export namespace frontend {
     options.inlineAllFunctions = optimizeJS;
     options.convertAllInstanceToStatic = optimizeJS;
     options.outputFile = flags.outputFile;
-    options.jsMinify = flags.jsMinify && target == .JS;
+    options.jsMinify = options.jsMangle = flags.jsMinify && target == .JS;
     options.jsSourceMap = flags.jsSourceMap && target == .JS;
     options.inputs = readSources(inputs); if (options.inputs == null) return 1;
     options.prepend = readSources(prepend); if (options.prepend == null) return 1;

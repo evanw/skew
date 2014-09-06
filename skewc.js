@@ -658,6 +658,7 @@ function CompilerOptions() {
   this.outputDirectory = "";
   this.outputFile = "";
   this.jsMinify = false;
+  this.jsMangle = false;
   this.jsSourceMap = false;
   this.removeAsserts = false;
   this.foldAllConstants = false;
@@ -1202,7 +1203,6 @@ js.Emitter = function(_0, _1) {
   this.currentColumn = 0;
   this.needExtends = false;
   this.needMathImul = false;
-  this.shouldMangle = false;
   this.isStartOfExpression = false;
   this.generator = new SourceMapGenerator();
   this.currentSource = null;
@@ -1212,7 +1212,6 @@ js.Emitter = function(_0, _1) {
 };
 js.Emitter.prototype.patchProgram = function(program) {
   if (this.options.jsMinify) {
-    this.shouldMangle = true;
     this.newline = "";
     this.space = "";
   }
@@ -1795,7 +1794,7 @@ js.Emitter.emitHook = function($this, node, precedence) {
   }
 };
 js.Emitter.emitBool = function($this, node) {
-  if ($this.shouldMangle) {
+  if ($this.options.jsMangle) {
     js.Emitter.emit($this, node.content.value ? "!0" : "!1");
   } else {
     js.Emitter.emit($this, node.content.value ? "true" : "false");
@@ -2039,28 +2038,28 @@ js.Emitter.patchNode = function($this, node, context) {
     js.PatchContext.setFunction(context, null);
     break;
   case 19:
-    if ($this.shouldMangle) {
+    if ($this.options.jsMangle) {
       js.Emitter.peepholeMangleIf($this, node);
     }
     break;
   case 20:
-    if ($this.shouldMangle) {
+    if ($this.options.jsMangle) {
       js.Emitter.peepholeMangleBoolean($this, node.children[1]);
     }
     break;
   case 22:
   case 23:
-    if ($this.shouldMangle) {
+    if ($this.options.jsMangle) {
       js.Emitter.peepholeMangleBoolean($this, node.children[0]);
     }
     break;
   case 2:
-    if ($this.shouldMangle) {
+    if ($this.options.jsMangle) {
       js.Emitter.peepholeMangleBlock(node);
     }
     break;
   case 37:
-    if ($this.shouldMangle) {
+    if ($this.options.jsMangle) {
       js.Emitter.peepholeMangleHook($this, node);
     }
     break;
@@ -7096,7 +7095,7 @@ frontend.main = function(args) {
   options.inlineAllFunctions = optimizeJS;
   options.convertAllInstanceToStatic = optimizeJS;
   options.outputFile = flags.outputFile;
-  options.jsMinify = flags.jsMinify && target === 1;
+  options.jsMinify = options.jsMangle = flags.jsMinify && target === 1;
   options.jsSourceMap = flags.jsSourceMap && target === 1;
   options.inputs = frontend.readSources(inputs);
   if (options.inputs === null) {
