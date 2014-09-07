@@ -1,6 +1,30 @@
 namespace js { void minify() {
 
 testMinify("
+export void foo() {
+  do {} while (true);
+}
+", "
+function foo(){do;while(!0)}
+");
+
+testMinify("
+export void foo(void fn() x) {
+  do { x(); } while (true);
+}
+", "
+function foo(a){do a();while(!0)}
+");
+
+testMinify("
+export void foo(void fn() x) {
+  do { x(); break; } while (true);
+}
+", "
+function foo(a){do{a();break}while(!0)}
+");
+
+testMinify("
 class Foo {
   int foo;
 }
@@ -310,6 +334,17 @@ function foo(a){return a>4&&a<9}function bar(a){return 4<a&&9>a}
 
 testMinify("
 export void foo(bool x, void fn() y) {
+  if (x) {
+    y();
+    return;
+  }
+}
+", "
+function foo(a,b){a&&b()}
+");
+
+testMinify("
+export void foo(bool x, void fn() y) {
   if (x) return;
   y();
   y();
@@ -365,6 +400,19 @@ export void foo(bool x, void fn() y) {
 }
 ", "
 function foo(b,a){b?a():(a(),a())}
+");
+
+testMinify("
+export void foo(bool x, bool y, void fn() z) {
+  while (x) {
+    if (y) {
+      z();
+      continue;
+    }
+  }
+}
+", "
+function foo(a,b,c){while(a)b&&c()}
 ");
 
 testMinify("

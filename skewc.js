@@ -1323,17 +1323,18 @@ js.Emitter.recursiveEmitIfStatement = function($this, node) {
   var trueStatement = Node.singleStatement(trueBlock);
   js.Emitter.emit($this, "if" + $this.space + "(");
   js.Emitter.emitExpression($this, node.children[0], 0);
-  js.Emitter.emit($this, ")" + $this.space);
-  js.Emitter.emitBlock($this, trueBlock, falseBlock !== null && trueStatement !== null && trueStatement.kind === 19 ? 0 : 1);
+  js.Emitter.emit($this, ")");
+  js.Emitter.emitBlock($this, trueBlock, 1, falseBlock !== null && trueStatement !== null && trueStatement.kind === 19 ? 0 : 1);
   if (falseBlock !== null) {
     js.Emitter.emitSemicolonIfNeeded($this);
-    js.Emitter.emit($this, $this.space + "else ");
+    js.Emitter.emit($this, $this.space + "else");
     var falseStatement = Node.singleStatement(falseBlock);
     if (falseStatement !== null && falseStatement.kind === 19) {
+      js.Emitter.emit($this, " ");
       js.Emitter.addMapping($this, falseStatement);
       js.Emitter.recursiveEmitIfStatement($this, falseStatement);
     } else {
-      js.Emitter.emitBlock($this, falseBlock, 1);
+      js.Emitter.emitBlock($this, falseBlock, 0, 1);
     }
   }
 };
@@ -1406,15 +1407,18 @@ js.Emitter.emitNode = function($this, node) {
     break;
   }
 };
-js.Emitter.emitBlock = function($this, node, mode) {
+js.Emitter.emitBlock = function($this, node, after, mode) {
   var shouldMinify = mode === 1 && $this.options.jsMinify;
   js.Emitter.addMapping($this, node);
   if (shouldMinify && !Node.hasChildren(node)) {
     js.Emitter.emit($this, ";");
   } else if (shouldMinify && node.children.length === 1) {
+    if (after === 0) {
+      js.Emitter.emit($this, " ");
+    }
     js.Emitter.emitNode($this, node.children[0]);
   } else {
-    js.Emitter.emit($this, "{" + $this.newline);
+    js.Emitter.emit($this, $this.space + "{" + $this.newline);
     if (Node.hasChildren(node)) {
       js.Emitter.increaseIndent($this);
       js.Emitter.emitStatements($this, node.children);
@@ -1532,8 +1536,7 @@ js.Emitter.emitFunction = function($this, node) {
     js.Emitter.emit($this, $this.indent + js.Emitter.fullName(symbol) + $this.space + "=" + $this.space + "function");
   }
   js.Emitter.emitArgumentVariables($this, node.children[1].children);
-  js.Emitter.emit($this, $this.space);
-  js.Emitter.emitBlock($this, block, 0);
+  js.Emitter.emitBlock($this, block, 1, 0);
   if (isCompoundName) {
     js.Emitter.emitSemicolonAfterStatement($this);
   } else {
@@ -1586,8 +1589,8 @@ js.Emitter.emitFor = function($this, node) {
   } else {
     js.Emitter.emit($this, ";");
   }
-  js.Emitter.emit($this, ")" + $this.space);
-  js.Emitter.emitBlock($this, node.children[3], 1);
+  js.Emitter.emit($this, ")");
+  js.Emitter.emitBlock($this, node.children[3], 1, 1);
   js.Emitter.emit($this, $this.newline);
 };
 js.Emitter.emitForEach = function($this, node) {
@@ -1597,20 +1600,20 @@ js.Emitter.emitForEach = function($this, node) {
   js.Emitter.emitNode($this, variable);
   js.Emitter.emit($this, " in ");
   js.Emitter.emitExpression($this, value, 0);
-  js.Emitter.emit($this, ")" + $this.space);
-  js.Emitter.emitBlock($this, node.children[2], 1);
+  js.Emitter.emit($this, ")");
+  js.Emitter.emitBlock($this, node.children[2], 1, 1);
   js.Emitter.emit($this, $this.newline);
 };
 js.Emitter.emitWhile = function($this, node) {
   js.Emitter.emit($this, $this.indent + "while" + $this.space + "(");
   js.Emitter.emitExpression($this, node.children[0], 0);
-  js.Emitter.emit($this, ")" + $this.space);
-  js.Emitter.emitBlock($this, node.children[1], 1);
+  js.Emitter.emit($this, ")");
+  js.Emitter.emitBlock($this, node.children[1], 1, 1);
   js.Emitter.emit($this, $this.newline);
 };
 js.Emitter.emitDoWhile = function($this, node) {
-  js.Emitter.emit($this, $this.indent + "do ");
-  js.Emitter.emitBlock($this, node.children[1], 1);
+  js.Emitter.emit($this, $this.indent + "do");
+  js.Emitter.emitBlock($this, node.children[1], 0, 1);
   js.Emitter.emitSemicolonIfNeeded($this);
   js.Emitter.emit($this, $this.space + "while" + $this.space + "(");
   js.Emitter.emitExpression($this, node.children[0], 0);
@@ -1873,8 +1876,7 @@ js.Emitter.emitLambda = function($this, node, wasStartOfExpression) {
   }
   js.Emitter.emit($this, "function");
   js.Emitter.emitArgumentVariables($this, Node.lambdaArguments(node));
-  js.Emitter.emit($this, $this.space);
-  js.Emitter.emitBlock($this, Node.lambdaBlock(node), 0);
+  js.Emitter.emitBlock($this, Node.lambdaBlock(node), 1, 0);
   if (wasStartOfExpression) {
     js.Emitter.emit($this, ")");
   }
@@ -2428,9 +2430,12 @@ js.Patcher.peepholeMangleBlock = function($this, node) {
           if (!Node.hasChildren(trueBlock)) {
             Node.invertBooleanCondition(child.children[0], $this.cache);
             block = trueBlock;
-          } else {
+          } else if (!Node.isLastChild(child)) {
             block = Node.withChildren(new Node(2), []);
             Node.replaceChild(child, 2, block);
+          } else {
+            js.Patcher.peepholeMangleIf($this, child);
+            return;
           }
           while ((i + 1 | 0) < node.children.length) {
             Node.appendChild(block, Node.remove(node.children[i + 1 | 0]));

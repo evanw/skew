@@ -455,10 +455,13 @@ namespace js {
               if (!trueBlock.hasChildren()) {
                 child.ifTest().invertBooleanCondition(cache);
                 block = trueBlock;
-              } else {
+              } else if (!child.isLastChild()) {
                 block = Node.createBlock([]);
                 child.replaceChild(2, block);
                 assert block == child.ifFalse();
+              } else {
+                peepholeMangleIf(child);
+                return;
               }
 
               // Move the rest of this block into the block for the if statement

@@ -5,7 +5,12 @@ namespace js {
     COMPOUND_NAME,
   }
 
-  enum BlockMode {
+  enum AfterToken {
+    AFTER_KEYWORD,
+    AFTER_PARENTHESIS,
+  }
+
+  enum BracesMode {
     MUST_KEEP_BRACES,
     CAN_OMIT_BRACES,
   }
@@ -266,20 +271,21 @@ namespace js {
       var trueStatement = trueBlock.singleStatement();
       emit("if" + space + "(");
       emitExpression(node.ifTest(), .LOWEST);
-      emit(")" + space);
+      emit(")");
 
       // Make sure to always keep braces to avoid the dangling "else" case
-      emitBlock(trueBlock, falseBlock != null && trueStatement != null && trueStatement.kind == .IF ? .MUST_KEEP_BRACES : .CAN_OMIT_BRACES);
+      emitBlock(trueBlock, .AFTER_PARENTHESIS, falseBlock != null && trueStatement != null && trueStatement.kind == .IF ? .MUST_KEEP_BRACES : .CAN_OMIT_BRACES);
 
       if (falseBlock != null) {
         emitSemicolonIfNeeded();
-        emit(space + "else ");
+        emit(space + "else");
         var falseStatement = falseBlock.singleStatement();
         if (falseStatement != null && falseStatement.kind == .IF) {
+          emit(" ");
           addMapping(falseStatement);
           recursiveEmitIfStatement(falseStatement);
         } else {
-          emitBlock(falseBlock, .CAN_OMIT_BRACES);
+          emitBlock(falseBlock, .AFTER_KEYWORD, .CAN_OMIT_BRACES);
         }
       }
     }
@@ -313,15 +319,16 @@ namespace js {
       }
     }
 
-    void emitBlock(Node node, BlockMode mode) {
+    void emitBlock(Node node, AfterToken after, BracesMode mode) {
       var shouldMinify = mode == .CAN_OMIT_BRACES && options.jsMinify;
       addMapping(node);
       if (shouldMinify && !node.hasChildren()) {
         emit(";");
       } else if (shouldMinify && node.children.length == 1) {
+        if (after == .AFTER_KEYWORD) emit(" ");
         emitNode(node.children.get(0));
       } else {
-        emit("{" + newline);
+        emit(space + "{" + newline);
         if (node.hasChildren()) {
           increaseIndent();
           emitStatements(node.children);
@@ -446,8 +453,7 @@ namespace js {
         emit(indent + fullName(symbol) + space + "=" + space + "function");
       }
       emitArgumentVariables(node.functionArguments().children);
-      emit(space);
-      emitBlock(block, .MUST_KEEP_BRACES);
+      emitBlock(block, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES);
       if (isCompoundName) emitSemicolonAfterStatement();
       else emit(newline);
       if (node.kind == .CONSTRUCTOR) {
@@ -500,8 +506,8 @@ namespace js {
       } else {
         emit(";");
       }
-      emit(")" + space);
-      emitBlock(node.forBlock(), .CAN_OMIT_BRACES);
+      emit(")");
+      emitBlock(node.forBlock(), .AFTER_PARENTHESIS, .CAN_OMIT_BRACES);
       emit(newline);
     }
 
@@ -512,22 +518,22 @@ namespace js {
       emitNode(variable);
       emit(" in ");
       emitExpression(value, .LOWEST);
-      emit(")" + space);
-      emitBlock(node.forEachBlock(), .CAN_OMIT_BRACES);
+      emit(")");
+      emitBlock(node.forEachBlock(), .AFTER_PARENTHESIS, .CAN_OMIT_BRACES);
       emit(newline);
     }
 
     void emitWhile(Node node) {
       emit(indent + "while" + space + "(");
       emitExpression(node.whileTest(), .LOWEST);
-      emit(")" + space);
-      emitBlock(node.whileBlock(), .CAN_OMIT_BRACES);
+      emit(")");
+      emitBlock(node.whileBlock(), .AFTER_PARENTHESIS, .CAN_OMIT_BRACES);
       emit(newline);
     }
 
     void emitDoWhile(Node node) {
-      emit(indent + "do ");
-      emitBlock(node.whileBlock(), .CAN_OMIT_BRACES);
+      emit(indent + "do");
+      emitBlock(node.whileBlock(), .AFTER_KEYWORD, .CAN_OMIT_BRACES);
       emitSemicolonIfNeeded();
       emit(space + "while" + space + "(");
       emitExpression(node.whileTest(), .LOWEST);
@@ -730,8 +736,7 @@ namespace js {
       if (wasStartOfExpression) emit("(");
       emit("function");
       emitArgumentVariables(node.lambdaArguments());
-      emit(space);
-      emitBlock(node.lambdaBlock(), .MUST_KEEP_BRACES);
+      emitBlock(node.lambdaBlock(), .AFTER_PARENTHESIS, .MUST_KEEP_BRACES);
       if (wasStartOfExpression) emit(")");
     }
 
