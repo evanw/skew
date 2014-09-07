@@ -67,10 +67,12 @@ namespace js {
         needsSemicolon = false;
       }
       if (patcher.needExtends) {
-        emit(indent + "function " + "$extends(d, b) {".replace(" ", space) + newline);
+        var derived = options.jsMangle ? "d" : "derived";
+        var base = options.jsMangle ? "b" : "base";
+        emit(indent + "function " + "$extends(" + derived + "," + space + base + ")" + space + "{" + newline);
         increaseIndent();
-        emit(indent + "d.prototype = Object.create(b.prototype);".replace(" ", space) + newline);
-        emit(indent + "d.prototype.constructor = d".replace(" ", space));
+        emit(indent + derived + ".prototype" + space + "=" + space + "Object.create(" + base + ".prototype);" + newline);
+        emit(indent + derived + ".prototype.constructor" + space + "=" + space + derived);
         emitSemicolonAfterStatement();
         decreaseIndent();
         emit(indent + "}" + newline);

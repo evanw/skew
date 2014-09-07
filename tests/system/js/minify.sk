@@ -11,7 +11,7 @@ export int foo() {
   return Foo(100).foo + Bar(200).bar;
 }
 ", "
-function a(f){this.b=f}function c(f){this.d=f}function foo(){return new a(100).b+new c(200).d|0}
+function a(e){this.b=e}function c(e){this.d=e}function foo(){return new a(100).b+new c(200).d|0}
 ");
 
 testMinify("
@@ -25,11 +25,7 @@ export int foo() {
   return Foo(100).foo + Bar(200, 300).foo;
 }
 ", "
-function $extends(derived, base) {
-  derived.prototype = Object.create(base.prototype);
-  derived.prototype.constructor = derived;
-}
-function a(f){this.b=f}function c(f,g){a.call(this,f),this.d=g}$extends(c,a);function foo(){return new a(100).b+new c(200,300).b|0}
+function $extends(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function a(e){this.b=e}function c(e,f){a.call(this,e),this.d=f}$extends(c,a);function foo(){return new a(100).b+new c(200,300).b|0}
 ");
 
 testMinify("
