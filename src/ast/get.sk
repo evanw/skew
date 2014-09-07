@@ -405,7 +405,7 @@ in Node {
   Node caseBlock() {
     assert kind == .CASE;
     assert children.length >= 1;
-    assert children.get(children.length - 1).kind == .BLOCK;
-    return children.get(children.length - 1);
+    assert lastChild().kind == .BLOCK;
+    return lastChild();
   }
 }

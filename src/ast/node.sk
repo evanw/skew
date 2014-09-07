@@ -227,7 +227,11 @@ class Node {
   }
 
   bool isLastChild() {
-    return parent.children.get(parent.children.length - 1) == this;
+    return parent.lastChild() == this;
+  }
+
+  Node lastChild() {
+    return children.get(children.length - 1);
   }
 
   int indexInParent() {

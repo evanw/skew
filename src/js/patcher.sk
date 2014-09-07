@@ -443,22 +443,40 @@ namespace js {
         // "while (a) { if (b) continue; c(); d(); }" => "while (a) { if (!b) { c(); d(); } }"
         else if (kind == .IF && child.ifFalse() == null) {
           var trueBlock = child.ifTrue();
-          var statement = trueBlock.singleStatement();
-          if (statement != null && (statement.kind == .RETURN && statement.returnValue() == null || statement.kind == .CONTINUE) && isJumpImplied(node, statement.kind)) {
-            child.ifTest().invertBooleanCondition(cache);
-            statement.remove();
-            while (i + 1 < node.children.length) {
-              trueBlock.appendChild(node.children.get(i + 1).remove());
-            }
-            peepholeMangleBlock(trueBlock);
-            peepholeMangleIf(child);
-            if (child.kind == .EXPRESSION && i > 0) {
-              var previous = node.children.get(i - 1);
-              if (previous.kind == .EXPRESSION) {
-                previous.replaceWith(Node.createExpression(joinExpressions(previous.expressionValue().replaceWith(null), child.remove().expressionValue().replaceWith(null))));
+          if (trueBlock.hasChildren()) {
+            var statement = trueBlock.lastChild();
+            if ((statement.kind == .RETURN && statement.returnValue() == null || statement.kind == .CONTINUE) && isJumpImplied(node, statement.kind)) {
+              Node block;
+
+              // If the if statement block without the jump is empty, then flip
+              // the condition of the if statement and reuse the block. Otherwise,
+              // create an else branch for the if statement and use that block.
+              statement.remove();
+              if (!trueBlock.hasChildren()) {
+                child.ifTest().invertBooleanCondition(cache);
+                block = trueBlock;
+              } else {
+                block = Node.createBlock([]);
+                child.replaceChild(2, block);
+                assert block == child.ifFalse();
               }
+
+              // Move the rest of this block into the block for the if statement
+              while (i + 1 < node.children.length) {
+                block.appendChild(node.children.get(i + 1).remove());
+              }
+              peepholeMangleBlock(block);
+              peepholeMangleIf(child);
+
+              // "a(); if (b) return; c();" => "a(); if (!b) c();" => "a(); !b && c();" => "a(), !b && c();"
+              if (child.kind == .EXPRESSION && i > 0) {
+                var previous = node.children.get(i - 1);
+                if (previous.kind == .EXPRESSION) {
+                  previous.replaceWith(Node.createExpression(joinExpressions(previous.expressionValue().replaceWith(null), child.remove().expressionValue().replaceWith(null))));
+                }
+              }
+              return;
             }
-            return;
           }
         }
 

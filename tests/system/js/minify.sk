@@ -355,6 +355,31 @@ function foo(b,c,a){if(b){if(c)return;a(),a()}a()}
 ");
 
 testMinify("
+export void foo(bool x, void fn() y) {
+  if (x) {
+    y();
+    return;
+  }
+  y();
+  y();
+}
+", "
+function foo(b,a){b?a():(a(),a())}
+");
+
+testMinify("
+export void foo(bool x, bool y, void fn() z) {
+  while (x) {
+    if (y) return;
+    z();
+    z();
+  }
+}
+", "
+function foo(b,c,a){while(b){if(c)return;a(),a()}}
+");
+
+testMinify("
 export void foo(bool x, bool y, void fn() z) {
   while (x) {
     if (y) continue;
@@ -408,6 +433,21 @@ export void foo(bool x, bool y, void fn() z) {
 }
 ", "
 function foo(c,b,a){while(c){if(b){a();if(b)continue;a(),a()}a()}}
+");
+
+testMinify("
+export void foo(bool x, bool y, void fn() z) {
+  while (x) {
+    if (y) {
+      z();
+      continue;
+    }
+    z();
+    z();
+  }
+}
+", "
+function foo(b,c,a){while(b)c?a():(a(),a())}
 ");
 
 }}

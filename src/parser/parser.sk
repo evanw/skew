@@ -523,7 +523,7 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
   // Variable declaration
   var cluster = parseVariableCluster(context, type, name);
   scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-  var last = cluster.children.get(cluster.children.length - 1);
+  var last = cluster.lastChild();
   last.withRange(context.spanSince(last.range));
   return cluster;
 }

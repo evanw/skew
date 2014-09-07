@@ -180,9 +180,6 @@ Node.switchCases = function($this) {
 Node.caseValues = function($this) {
   return $this.children.slice(0, $this.children.length - 1 | 0);
 };
-Node.caseBlock = function($this) {
-  return $this.children[$this.children.length - 1 | 0];
-};
 Node.invertBooleanCondition = function($this, cache) {
   switch ($this.kind) {
   case 39:
@@ -256,7 +253,7 @@ Node.blockAlwaysEndsWithReturn = function($this) {
       var foundDefault = false;
       for (var j = 0; j < cases.length; j = j + 1 | 0) {
         var node = cases[j];
-        if (!Node.blockAlwaysEndsWithReturn(Node.caseBlock(node))) {
+        if (!Node.blockAlwaysEndsWithReturn(Node.lastChild(node))) {
           return false;
         }
         if (Node.caseValues(node).length === 0) {
@@ -312,7 +309,10 @@ Node.hasChildren = function($this) {
   return $this.children !== null && $this.children.length > 0;
 };
 Node.isLastChild = function($this) {
-  return $this.parent.children[$this.parent.children.length - 1 | 0] === $this;
+  return Node.lastChild($this.parent) === $this;
+};
+Node.lastChild = function($this) {
+  return $this.children[$this.children.length - 1 | 0];
 };
 Node.indexInParent = function($this) {
   return $this.parent.children.indexOf($this);
@@ -1422,7 +1422,7 @@ js.Emitter.emitBlock = function($this, node, mode) {
 };
 js.Emitter.emitCase = function($this, node) {
   var values = Node.caseValues(node);
-  var block = Node.caseBlock(node);
+  var block = Node.lastChild(node);
   js.Emitter.emitSemicolonIfNeeded($this);
   for (var i = 0; i < values.length; i = i + 1 | 0) {
     js.Emitter.emit($this, $this.indent + "case ");
@@ -2416,22 +2416,31 @@ js.Patcher.peepholeMangleBlock = function($this, node) {
       }
     } else if (kind === 19 && child.children[2] === null) {
       var trueBlock = child.children[1];
-      var statement = Node.singleStatement(trueBlock);
-      if (statement !== null && (statement.kind === 24 && statement.children[0] === null || statement.kind === 27) && js.Patcher.isJumpImplied($this, node, statement.kind)) {
-        Node.invertBooleanCondition(child.children[0], $this.cache);
-        Node.remove(statement);
-        while ((i + 1 | 0) < node.children.length) {
-          Node.appendChild(trueBlock, Node.remove(node.children[i + 1 | 0]));
-        }
-        js.Patcher.peepholeMangleBlock($this, trueBlock);
-        js.Patcher.peepholeMangleIf($this, child);
-        if (child.kind === 30 && i > 0) {
-          var previous = node.children[i - 1 | 0];
-          if (previous.kind === 30) {
-            Node.replaceWith(previous, Node.withChildren(new Node(30), [js.Patcher.joinExpressions(Node.replaceWith(previous.children[0], null), Node.replaceWith(Node.remove(child).children[0], null))]));
+      if (Node.hasChildren(trueBlock)) {
+        var statement = Node.lastChild(trueBlock);
+        if ((statement.kind === 24 && statement.children[0] === null || statement.kind === 27) && js.Patcher.isJumpImplied($this, node, statement.kind)) {
+          var block = null;
+          Node.remove(statement);
+          if (!Node.hasChildren(trueBlock)) {
+            Node.invertBooleanCondition(child.children[0], $this.cache);
+            block = trueBlock;
+          } else {
+            block = Node.withChildren(new Node(2), []);
+            Node.replaceChild(child, 2, block);
           }
+          while ((i + 1 | 0) < node.children.length) {
+            Node.appendChild(block, Node.remove(node.children[i + 1 | 0]));
+          }
+          js.Patcher.peepholeMangleBlock($this, block);
+          js.Patcher.peepholeMangleIf($this, child);
+          if (child.kind === 30 && i > 0) {
+            var previous = node.children[i - 1 | 0];
+            if (previous.kind === 30) {
+              Node.replaceWith(previous, Node.withChildren(new Node(30), [js.Patcher.joinExpressions(Node.replaceWith(previous.children[0], null), Node.replaceWith(Node.remove(child).children[0], null))]));
+            }
+          }
+          return;
         }
-        return;
       }
     } else if (kind === 24 && child.children[0] !== null) {
       while (i > 0) {
@@ -4267,7 +4276,7 @@ Resolver.checkUnusedExpression = function($this, node) {
     Resolver.checkUnusedExpression($this, node.children[2]);
   } else if (kind === 50) {
     if (Node.hasChildren(node)) {
-      Resolver.checkUnusedExpression($this, node.children[node.children.length - 1 | 0]);
+      Resolver.checkUnusedExpression($this, Node.lastChild(node));
     }
   } else if (kind === 46) {
     Resolver.checkUnusedExpression($this, node.children[1]);
@@ -5148,7 +5157,7 @@ Resolver.resolveBlock = function($this, node) {
 };
 Resolver.resolveCase = function($this, node) {
   var values = Node.caseValues(node);
-  var block = Node.caseBlock(node);
+  var block = Node.lastChild(node);
   for (var i = 0; i < values.length; i = i + 1 | 0) {
     var value = values[i];
     Resolver.resolveAsExpressionWithConversion($this, value, $this.context.switchValue.type, 0);
@@ -5259,7 +5268,7 @@ Resolver.resolveFunction = function($this, node) {
       Node.replaceChild(node, 4, memberInitializers);
     }
     if ((superInitializer !== null || memberInitializers.children.length > 0) && block === null) {
-      Log.error($this.log, Range.span((superInitializer !== null ? superInitializer : memberInitializers.children[0]).range, (memberInitializers.children.length < 1 ? superInitializer : memberInitializers.children[memberInitializers.children.length - 1 | 0]).range), "An abstract constructor must not have initializer list");
+      Log.error($this.log, Range.span((superInitializer !== null ? superInitializer : memberInitializers.children[0]).range, (memberInitializers.children.length < 1 ? superInitializer : Node.lastChild(memberInitializers)).range), "An abstract constructor must not have initializer list");
     }
     var enclosingSymbol = node.symbol.enclosingSymbol;
     if ((enclosingSymbol.flags & 8192) === 0) {
@@ -8183,7 +8192,7 @@ function parsePossibleTypedDeclaration(context, hint) {
   }
   var cluster = parseVariableCluster(context, type, name);
   scanForToken(context, 83, 1);
-  var last = cluster.children[cluster.children.length - 1 | 0];
+  var last = Node.lastChild(cluster);
   Node.withRange(last, ParserContext.spanSince(context, last.range));
   return cluster;
 }

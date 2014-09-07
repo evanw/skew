@@ -605,7 +605,7 @@ class Resolver {
       checkUnusedExpression(node.hookFalse());
     } else if (kind == .SEQUENCE) {
       if (node.hasChildren()) {
-        checkUnusedExpression(node.children.get(node.children.length - 1));
+        checkUnusedExpression(node.lastChild());
       }
     } else if (kind == .LET) {
       checkUnusedExpression(node.letValue());
@@ -1984,7 +1984,7 @@ class Resolver {
       if ((superInitializer != null || memberInitializers.children.length > 0) && block == null) {
         semanticErrorAbstractConstructorInitializer(log, Range.span(
           (superInitializer != null ? superInitializer : memberInitializers.children.get(0)).range,
-          (memberInitializers.children.length < 1 ? superInitializer : memberInitializers.children.get(memberInitializers.children.length - 1)).range));
+          (memberInitializers.children.length < 1 ? superInitializer : memberInitializers.lastChild()).range));
       }
 
       // Move the initial values for all member variables to initializers. The
