@@ -599,4 +599,19 @@ function test() {
 }
 ");
 
+testJS("
+export string foo() {
+  string t;
+  t += 100;
+  return t;
+}
+", "
+function foo() {
+  var t = \"\";
+  t += 100;
+  return t;
+}
+");
+
+
 }}

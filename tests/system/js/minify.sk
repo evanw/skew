@@ -301,4 +301,15 @@ export int foo(int x) {
 function foo(a){var b=0;switch(a){case 1:b=1;break;case 2:b=2}return b}
 ");
 
+testMinify("
+export bool foo(int a) {
+  return a >= 5 && a <= 8;
+}
+export bool bar(int a) {
+  return 5 <= a && 8 >= a;
+}
+", "
+function foo(a){return a>4&&a<9}function bar(a){return 4<a&&9>a}
+");
+
 }}

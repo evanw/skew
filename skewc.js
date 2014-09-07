@@ -132,6 +132,7 @@ var $in = {};
 $in.string = {};
 $in.NodeKind = {};
 $in.TargetFormat = {};
+$in.$int = {};
 $in.io = {};
 $in.SymbolKind = {};
 $in.TokenKind = {};
@@ -868,10 +869,10 @@ json.DumpVisitor.visit = function($this, node) {
     $this.result += ",\n" + $this.indent + "\"content\": ";
     switch (node.content.type()) {
     case 1:
-      $this.result += node.content.value.toString();
+      $this.result += node.content.value;
       break;
     case 2:
-      $this.result += node.content.value.toString();
+      $this.result += node.content.value;
       break;
     case 3:
       $this.result += quoteString(node.content.value, 34);
@@ -1954,12 +1955,10 @@ js.Emitter.emitBinary = function($this, node, precedence) {
   var left = node.children[0];
   var right = node.children[1];
   var kind = node.kind;
-  if (kind === 66) {
-    if (left.type !== null && left.type === $this.resolver.cache.stringType && js.Emitter.isToStringCall(right)) {
-      right = right.children[0].children[0];
-    } else if (right.type !== null && right.type === $this.resolver.cache.stringType && js.Emitter.isToStringCall(left)) {
-      left = left.children[0].children[0];
-    }
+  if ((kind === 66 || kind === 87) && left.type !== null && left.type === $this.resolver.cache.stringType && js.Emitter.isToStringCall(right)) {
+    right = right.children[0].children[0];
+  } else if (kind === 66 && right.type !== null && right.type === $this.resolver.cache.stringType && js.Emitter.isToStringCall(left)) {
+    left = left.children[0].children[0];
   }
   $this.toStringTarget = left;
   js.Emitter.emitExpression($this, left, info.precedence + (info.associativity === 2 | 0) | 0);
@@ -2238,32 +2237,55 @@ js.Patcher.patchNode = function($this, node) {
       js.Patcher.unionVariableWithFunction($this, node);
     }
     break;
-  case 19:
-    if ($this.options.jsMangle) {
+  }
+  if ($this.options.jsMangle) {
+    switch (node.kind) {
+    case 19:
       js.Patcher.peepholeMangleIf($this, node);
-    }
-    break;
-  case 20:
-    if ($this.options.jsMangle) {
+      break;
+    case 20:
       js.Patcher.peepholeMangleBoolean($this, node.children[1], 1);
-    }
-    break;
-  case 22:
-  case 23:
-    if ($this.options.jsMangle) {
+      break;
+    case 73:
+    case 77:
+      js.Patcher.peepholeMangleBinaryRelational($this, node);
+      break;
+    case 22:
+    case 23:
       js.Patcher.peepholeMangleBoolean($this, node.children[0], 1);
-    }
-    break;
-  case 2:
-    if ($this.options.jsMangle) {
+      break;
+    case 2:
       js.Patcher.peepholeMangleBlock($this, node);
-    }
-    break;
-  case 37:
-    if ($this.options.jsMangle) {
+      break;
+    case 37:
       js.Patcher.peepholeMangleHook($this, node);
+      break;
     }
-    break;
+  }
+};
+js.Patcher.peepholeMangleBinaryRelational = function($this, node) {
+  var left = node.children[0];
+  var right = node.children[1];
+  if (left.type !== null && Type.isInteger(left.type, $this.cache) && right.type !== null && Type.isInteger(right.type, $this.cache)) {
+    if (left.kind === 40) {
+      var value = left.content.value;
+      if (node.kind === 73 && $in.$int.canIncrement(value)) {
+        left.content = new IntContent(value + 1 | 0);
+        node.kind = 72;
+      } else if (node.kind === 77 && $in.$int.canDecrement(value)) {
+        left.content = new IntContent(value - 1 | 0);
+        node.kind = 76;
+      }
+    } else if (right.kind === 40) {
+      var value = right.content.value;
+      if (node.kind === 73 && $in.$int.canDecrement(value)) {
+        right.content = new IntContent(value - 1 | 0);
+        node.kind = 72;
+      } else if (node.kind === 77 && $in.$int.canIncrement(value)) {
+        right.content = new IntContent(value + 1 | 0);
+        node.kind = 76;
+      }
+    }
   }
 };
 js.Patcher.isFalsy = function($this, node) {
@@ -6774,6 +6796,12 @@ $in.NodeKind.toString = function($this) {
 };
 $in.TargetFormat.shouldRunResolver = function($this) {
   return $this >= 0 && $this <= 1;
+};
+$in.$int.canIncrement = function($this) {
+  return ($this + 1 | 0) === $this + 1;
+};
+$in.$int.canDecrement = function($this) {
+  return ($this - 1 | 0) === $this - 1;
 };
 $in.io.printWithColor = function(color, text) {
   io.setColor(color);

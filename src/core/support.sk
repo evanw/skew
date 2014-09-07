@@ -30,6 +30,16 @@ class UnionFind {
   }
 }
 
+import in int {
+  bool canIncrement() {
+    return this + 1 == ((double)this + 1);
+  }
+
+  bool canDecrement() {
+    return this - 1 == ((double)this - 1);
+  }
+}
+
 int hashCombine(int left, int right) {
   return left ^ right - 0x61c88647 + (left << 6) + (left >> 2);
 }

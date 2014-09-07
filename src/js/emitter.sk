@@ -749,12 +749,10 @@ namespace js {
 
       // Special case adding a string with the result of calling toString()
       // since the JavaScript runtime will automatically call toString()
-      if (kind == .ADD) {
-        if (left.type != null && left.type.isString(resolver.cache) && isToStringCall(right)) {
-          right = right.callValue().dotTarget();
-        } else if (right.type != null && right.type.isString(resolver.cache) && isToStringCall(left)) {
-          left = left.callValue().dotTarget();
-        }
+      if ((kind == .ADD || kind == .ASSIGN_ADD) && left.type != null && left.type.isString(resolver.cache) && isToStringCall(right)) {
+        right = right.callValue().dotTarget();
+      } else if (kind == .ADD && right.type != null && right.type.isString(resolver.cache) && isToStringCall(left)) {
+        left = left.callValue().dotTarget();
       }
 
       toStringTarget = left;

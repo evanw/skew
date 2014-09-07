@@ -178,11 +178,54 @@ namespace js {
         case .LAMBDA { lambdaCount--; }
         case .CONSTRUCTOR, .FUNCTION { setCurrentFunction(null); }
         case .VARIABLE { if (options.jsMangle) unionVariableWithFunction(node); }
-        case .IF { if (options.jsMangle) peepholeMangleIf(node); }
-        case .FOR { if (options.jsMangle) peepholeMangleBoolean(node.forTest(), .NO_SWAP); }
-        case .WHILE, .DO_WHILE { if (options.jsMangle) peepholeMangleBoolean(node.whileTest(), .NO_SWAP); }
-        case .BLOCK { if (options.jsMangle) peepholeMangleBlock(node); }
-        case .HOOK { if (options.jsMangle) peepholeMangleHook(node); }
+      }
+
+      if (options.jsMangle) {
+        switch (node.kind) {
+          case .IF { peepholeMangleIf(node); }
+          case .FOR { peepholeMangleBoolean(node.forTest(), .NO_SWAP); }
+          case .GREATER_THAN_OR_EQUAL, .LESS_THAN_OR_EQUAL { peepholeMangleBinaryRelational(node); }
+          case .WHILE, .DO_WHILE { peepholeMangleBoolean(node.whileTest(), .NO_SWAP); }
+          case .BLOCK { peepholeMangleBlock(node); }
+          case .HOOK { peepholeMangleHook(node); }
+        }
+      }
+    }
+
+    void peepholeMangleBinaryRelational(Node node) {
+      assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL;
+      var left = node.binaryLeft();
+      var right = node.binaryRight();
+      if (left.type != null && left.type.isInteger(cache) && right.type != null && right.type.isInteger(cache)) {
+        if (left.kind == .INT) {
+          var value = left.asInt();
+
+          // "2 >= a" => "3 > a"
+          if (node.kind == .GREATER_THAN_OR_EQUAL && value.canIncrement()) {
+            left.content = IntContent(value + 1);
+            node.kind = .GREATER_THAN;
+          }
+
+          // "2 <= a" => "1 < a"
+          else if (node.kind == .LESS_THAN_OR_EQUAL && value.canDecrement()) {
+            left.content = IntContent(value - 1);
+            node.kind = .LESS_THAN;
+          }
+        } else if (right.kind == .INT) {
+          var value = right.asInt();
+
+          // "a >= 2" => "a > 1"
+          if (node.kind == .GREATER_THAN_OR_EQUAL && value.canDecrement()) {
+            right.content = IntContent(value - 1);
+            node.kind = .GREATER_THAN;
+          }
+
+          // "a <= 2" => "a < 3"
+          else if (node.kind == .LESS_THAN_OR_EQUAL && value.canIncrement()) {
+            right.content = IntContent(value + 1);
+            node.kind = .LESS_THAN;
+          }
+        }
       }
     }
 
