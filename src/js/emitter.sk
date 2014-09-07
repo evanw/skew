@@ -22,8 +22,8 @@ namespace js {
     var generator = SourceMapGenerator();
     Source currentSource = null;
     Patcher patcher = null;
-    CompilerOptions options;
-    TypeCache cache;
+    CompilerOptions options = null;
+    Resolver resolver;
 
     // Numbers normally need to be wrapped in parentheses when toString() is
     // called on them because "1.toString()" is a syntax error in JavaScript.
@@ -33,21 +33,19 @@ namespace js {
     Node toStringTarget = null;
 
     override void patchProgram(Node program) {
+      if (isKeyword == null) {
+        isKeyword = createIsKeyword();
+      }
+      options = resolver.options;
       if (options.jsMinify) {
         newline = "";
         space = "";
       }
-
-      patcher = Patcher(options, cache);
-      patcher.patchNode(program);
+      patcher = Patcher(resolver);
+      patcher.run(program);
     }
 
     override List<Source> emitProgram(Node program) {
-      // Ensure static variables exist
-      if (isKeyword == null) {
-        isKeyword = createIsKeyword();
-      }
-
       // Collect all interesting nodes for easy access
       var collector = Collector(program, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
       currentSource = Source(options.outputFile, "");
@@ -508,6 +506,7 @@ namespace js {
     void emitDoWhile(Node node) {
       emit(indent + "do ");
       emitBlock(node.whileBlock(), .CAN_OMIT_BRACES);
+      emitSemicolonIfNeeded();
       emit(space + "while" + space + "(");
       emitExpression(node.whileTest(), .LOWEST);
       emit(")");
@@ -538,7 +537,7 @@ namespace js {
 
     void emitAssert(Node node) {
       var value = node.assertValue();
-      value.invertBooleanCondition(cache);
+      value.invertBooleanCondition(resolver.cache);
       if (!value.isFalse()) {
         var couldBeFalse = !value.isTrue();
         if (couldBeFalse) {
@@ -751,9 +750,9 @@ namespace js {
       // Special case adding a string with the result of calling toString()
       // since the JavaScript runtime will automatically call toString()
       if (kind == .ADD) {
-        if (left.type != null && left.type.isString(cache) && isToStringCall(right)) {
+        if (left.type != null && left.type.isString(resolver.cache) && isToStringCall(right)) {
           right = right.callValue().dotTarget();
-        } else if (right.type != null && right.type.isString(cache) && isToStringCall(left)) {
+        } else if (right.type != null && right.type.isString(resolver.cache) && isToStringCall(left)) {
           left = left.callValue().dotTarget();
         }
       }
@@ -801,15 +800,42 @@ namespace js {
       var result = StringMap<bool>();
       result.set("apply", true);
       result.set("arguments", true);
+      result.set("break", true);
       result.set("call", true);
+      result.set("case", true);
+      result.set("catch", true);
+      result.set("class", true);
+      result.set("const", true);
       result.set("constructor", true);
+      result.set("continue", true);
+      result.set("debugger", true);
+      result.set("default", true);
+      result.set("delete", true);
+      result.set("do", true);
       result.set("double", true);
+      result.set("else", true);
+      result.set("export", true);
+      result.set("extends", true);
+      result.set("false", true);
+      result.set("finally", true);
       result.set("float", true);
+      result.set("for", true);
       result.set("function", true);
+      result.set("if", true);
+      result.set("import", true);
       result.set("in", true);
+      result.set("instanceof", true);
       result.set("int", true);
+      result.set("let", true);
+      result.set("new", true);
+      result.set("null", true);
+      result.set("return", true);
+      result.set("super", true);
       result.set("this", true);
       result.set("throw", true);
+      result.set("true", true);
+      result.set("try", true);
+      result.set("var", true);
       return result;
     }
 

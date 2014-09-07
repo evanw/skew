@@ -27,8 +27,8 @@ export class CompilerOptions {
   export List<Source> append = [];
   export var outputDirectory = "";
   export var outputFile = "";
-  export var jsMinify = false;
-  export var jsMangle = false;
+  export var jsMinify = false; // Removes whitespace
+  export var jsMangle = false; // Changes the code structure to save space
   export var jsSourceMap = false;
   export var removeAsserts = false;
   export var foldAllConstants = false;
@@ -163,7 +163,7 @@ export class Compiler {
 
         // Convert instance functions to static functions
         var instanceToStaticStart = now();
-        InstanceToStaticPass.run(graph, resolver.cache, options);
+        InstanceToStaticPass.run(graph, resolver);
         instanceToStaticTime += now() - instanceToStaticStart;
 
         // Move functions
@@ -193,7 +193,7 @@ export class Compiler {
       IEmitter emitter = null;
       switch (options.targetFormat) {
         case .NONE {}
-        case .JS { emitter = js.Emitter(options, resolver.cache); }
+        case .JS { emitter = js.Emitter(resolver); }
         case .LISP_AST { emitter = lisp.Emitter(options); }
         case .JSON_AST { emitter = json.Emitter(options); }
         case .XML_AST { emitter = xml.Emitter(options); }

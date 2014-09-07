@@ -7,17 +7,149 @@ namespace js {
   class Patcher {
     var lambdaCount = 0;
     var createdThisAlias = false;
-    Node functionWithThisAlias = null;
+    Symbol currentFunction = null;
     var needExtends = false;
     var needMathImul = false;
-    CompilerOptions options;
-    TypeCache cache;
+    var namingGroupIndexForSymbol = IntMap<int>();
+    var nextSymbolName = 0;
+    StringMap<bool> reservedNames = null;
+    CompilerOptions options = null;
+    UnionFind localVariableUnionFind = null;
+    TypeCache cache = null;
+    Resolver resolver;
+
+    void run(Node program) {
+      assert program.kind == .PROGRAM;
+      options = resolver.options;
+      cache = resolver.cache;
+
+      // A union-find data structure is used to quickly merge symbols into
+      // groups. All local variables inside a function are merged with that
+      // function. Also create a quick way of getting from a symbol to its
+      // union/find index.
+      if (options.jsMangle) {
+        localVariableUnionFind = UnionFind(resolver.allSymbols.length);
+        for (var i = 0; i < resolver.allSymbols.length; i++) {
+          var symbol = resolver.allSymbols.get(i);
+          namingGroupIndexForSymbol.set(symbol.uniqueID, i);
+        }
+      }
+
+      // Traverse the tree of nodes, fixing up everything for emission in one
+      // pass. Local variables will be grouped during the traversal of the node
+      // tree for speed. It should be faster because we can access the top-
+      // level function symbol instantly and avoid needing to traverse up to
+      // the function from every local variable symbol, which we would have to
+      // do if we just looped over symbols.
+      patchNode(program);
+
+      // Rename all internal symbols
+      if (options.jsMangle) {
+        // This holds the groups used for naming. Unioning two labels using
+        // this object will cause both groups of symbols to have the same name.
+        var namingGroupsUnionFind = UnionFind(resolver.allSymbols.length);
+
+        // Merge local variables from different functions together in the order
+        // they were declared. This will cause every argument list to use the
+        // same variables in the same order, which should offer better gzip:
+        //
+        //   function d(a, b) {}
+        //   function e(a, b, c) {}
+        //
+        List<int> order = [];
+        var localVariableGroups = extractGroups(localVariableUnionFind, symbol => symbol.kind == .LOCAL_VARIABLE);
+        zipTogetherInOrder(namingGroupsUnionFind, localVariableGroups, order);
+
+        // Ensure all overridden symbols have the same generated name
+        for (var i = 0; i < resolver.allSymbols.length; i++) {
+          var symbol = resolver.allSymbols.get(i);
+          if (symbol.overriddenMember != null) {
+            var overridden = symbol.overriddenMember.symbol;
+            var index = namingGroupIndexForSymbol.get(symbol.uniqueID);
+            namingGroupsUnionFind.union(index, namingGroupIndexForSymbol.get(overridden.uniqueID));
+            if (overridden.identicalMembers != null) {
+              for (var j = 0; j < overridden.identicalMembers.length; j++) {
+                namingGroupsUnionFind.union(index, namingGroupIndexForSymbol.get(overridden.identicalMembers.get(j).symbol.uniqueID));
+              }
+            }
+          }
+        }
+
+        // Collect all reserved names together into one big set for querying
+        reservedNames = Emitter.isKeyword.clone();
+        var members = cache.globalType.members.values();
+        for (var i = 0; i < members.length; i++) {
+          var member = members.get(i);
+          if (!canRename(member.symbol)) {
+            reservedNames.set(member.symbol.name, true);
+          }
+        }
+
+        // TODO: Remove this once the minified output is wrapped in a closure.
+        // This is needed because otherwise "var fs = require('fs');" writes
+        // over a generated variable used by the compiler.
+        reservedNames.set("fs", true);
+
+        // Everything that should have the same name is now grouped together
+        var namingGroups = extractGroups(namingGroupsUnionFind, null);
+        for (var i = 0; i < namingGroups.length; i++) {
+          var group = namingGroups.get(i);
+          var name = "";
+          for (var j = 0; j < group.length; j++) {
+            var symbol = group.get(j);
+            if (canRename(symbol)) {
+              if (name == "") name = generateSymbolName();
+              symbol.name = name;
+            }
+          }
+        }
+      }
+    }
+
+    void zipTogetherInOrder(UnionFind unionFind, List<List<Symbol>> groups, List<int> order) {
+      for (var i = 0; i < groups.length; i++) {
+        var group = groups.get(i);
+        if (group.length > 1) {
+          group.sort((a, b) => a.node.range.start - b.node.range.start);
+        }
+        for (var j = 0; j < group.length; j++) {
+          var symbol = group.get(j);
+          var index = namingGroupIndexForSymbol.get(symbol.uniqueID);
+          if (order.length <= j) {
+            order.push(index);
+          }
+          unionFind.union(index, order.get(j));
+        }
+      }
+    }
+
+    List<List<Symbol>> extractGroups(UnionFind unionFind, bool fn(Symbol) filter) {
+      var labelToGroup = IntMap<List<Symbol>>();
+      for (var i = 0; i < resolver.allSymbols.length; i++) {
+        var symbol = resolver.allSymbols.get(i);
+        if (filter != null && !filter(symbol)) {
+          continue;
+        }
+        var label = unionFind.find(namingGroupIndexForSymbol.get(symbol.uniqueID));
+        var group = labelToGroup.getOrDefault(label, null);
+        if (group == null) {
+          group = [];
+          labelToGroup.set(label, group);
+        }
+        group.push(symbol);
+      }
+      return labelToGroup.values();
+    }
+
+    bool canRename(Symbol symbol) {
+      return !symbol.isImportOrExport();
+    }
 
     void patchNode(Node node) {
       switch (node.kind) {
         case .LAMBDA { lambdaCount++; }
-        case .CONSTRUCTOR { patchConstructor(node); setFunctionWithThisAlias(node); }
-        case .FUNCTION { setFunctionWithThisAlias(node); }
+        case .CONSTRUCTOR { patchConstructor(node); setCurrentFunction(node.symbol); }
+        case .FUNCTION { setCurrentFunction(node.symbol); }
         case .CAST { patchCast(node); }
         case .CLASS { patchClass(node); }
         case .THIS { patchThis(node); }
@@ -44,7 +176,8 @@ namespace js {
 
       switch (node.kind) {
         case .LAMBDA { lambdaCount--; }
-        case .CONSTRUCTOR, .FUNCTION { setFunctionWithThisAlias(null); }
+        case .CONSTRUCTOR, .FUNCTION { setCurrentFunction(null); }
+        case .VARIABLE { if (options.jsMangle) unionVariableWithFunction(node); }
         case .IF { if (options.jsMangle) peepholeMangleIf(node); }
         case .FOR { if (options.jsMangle) peepholeMangleBoolean(node.forTest(), .NO_SWAP); }
         case .WHILE, .DO_WHILE { if (options.jsMangle) peepholeMangleBoolean(node.whileTest(), .NO_SWAP); }
@@ -311,6 +444,15 @@ namespace js {
       }
     }
 
+    void unionVariableWithFunction(Node node) {
+      assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null);
+      if (currentFunction != null) {
+        var left = namingGroupIndexForSymbol.get(currentFunction.uniqueID);
+        var right = namingGroupIndexForSymbol.get(node.symbol.uniqueID);
+        localVariableUnionFind.union(left, right);
+      }
+    }
+
     void patchBinary(Node node) {
       if (node.type.isInt(cache) && (node.kind == .MULTIPLY || !alwaysConvertsOperandsToInt(node.parent.kind))) {
         node.become(createBinaryInt(node.kind, node.binaryLeft().replaceWith(null), node.binaryRight().replaceWith(null)).withRange(node.range));
@@ -446,18 +588,36 @@ namespace js {
       return true;
     }
 
-    void setFunctionWithThisAlias(Node node) {
-      functionWithThisAlias = node;
+    void setCurrentFunction(Symbol symbol) {
+      currentFunction = symbol;
       createdThisAlias = false;
     }
 
     Node thisAlias() {
       if (!createdThisAlias) {
         createdThisAlias = true;
-        functionWithThisAlias.functionBlock().insertChild(0, Node.createVariableCluster(Node.createError(),
+        currentFunction.node.functionBlock().insertChild(0, Node.createVariableCluster(Node.createError(),
           [Node.createVariable(Node.createName("$this"), null, Node.createThis())]));
       }
       return Node.createName("$this");
+    }
+
+    static string numberToName(int number) {
+      var name = "";
+      if (number >= 52) {
+        name = numberToName(number / 52 - 1);
+        number = number % 52;
+      }
+      name += string.fromCodeUnit(number + (number < 26 ? 97 : 39));
+      return name;
+    }
+
+    string generateSymbolName() {
+      string name;
+      do {
+        name = numberToName(nextSymbolName++);
+      } while (reservedNames.has(name));
+      return name;
     }
   }
 }

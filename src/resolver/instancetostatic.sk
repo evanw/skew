@@ -1,11 +1,11 @@
 class InstanceToStaticPass {
-  static void run(CallGraph graph, TypeCache cache, CompilerOptions options) {
+  static void run(CallGraph graph, Resolver resolver) {
     for (var i = 0; i < graph.callInfo.length; i++) {
       var info = graph.callInfo.get(i);
       var symbol = info.symbol;
       var enclosingSymbol = symbol.enclosingSymbol;
       if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() != null && (
-          enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() || options.convertAllInstanceToStatic && !symbol.isExport() && !symbol.isVirtual())) {
+          enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() || resolver.options.convertAllInstanceToStatic && !symbol.isExport() && !symbol.isVirtual())) {
 
         // Recursively replace "this" with the new explicit argument. This must
         // be done after all call sites are updated in case that step introduced
@@ -24,8 +24,10 @@ class InstanceToStaticPass {
         if (replacedThis) {
           var arguments = symbol.type.argumentTypes();
           arguments.unshift(enclosingSymbol.type);
-          symbol.type = cache.functionType(symbol.type.resultType(), arguments);
-          symbol.node.functionArguments().insertChild(0, Node.createVariable(Node.createName("this").withSymbol(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol));
+          symbol.type = resolver.cache.functionType(symbol.type.resultType(), arguments);
+          thisSymbol.node = Node.createVariable(Node.createName("this").withSymbol(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol);
+          symbol.node.functionArguments().insertChild(0, thisSymbol.node);
+          resolver.allSymbols.push(thisSymbol);
         }
 
         // Update all call sites

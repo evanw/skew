@@ -772,7 +772,7 @@ Compiler.prototype.compile = function(options) {
       var graph = new CallGraph(program);
       this.callGraphTime += now() - callGraphStart;
       var instanceToStaticStart = now();
-      InstanceToStaticPass.run(graph, resolver.cache, options);
+      InstanceToStaticPass.run(graph, resolver);
       this.instanceToStaticTime += now() - instanceToStaticStart;
       var symbolMotionStart = now();
       SymbolMotionPass.run(resolver);
@@ -794,7 +794,7 @@ Compiler.prototype.compile = function(options) {
     case 0:
       break;
     case 1:
-      emitter = new js.Emitter(options, resolver.cache);
+      emitter = new js.Emitter(resolver);
       break;
     case 2:
       emitter = new lisp.Emitter(options);
@@ -1159,6 +1159,23 @@ Source.indexToLineColumn = function($this, index) {
   var column = line > 0 ? index - $this.lineOffsets[line - 1 | 0] | 0 : index;
   return new LineColumn(line - 1 | 0, column);
 };
+function UnionFind(count) {
+  this.parents = [];
+  for (var i = 0; i < count; i = i + 1 | 0) {
+    this.parents[i] = i;
+  }
+}
+UnionFind.union = function($this, left, right) {
+  $this.parents[UnionFind.find($this, left)] = UnionFind.find($this, right);
+};
+UnionFind.find = function($this, index) {
+  var parent = $this.parents[index];
+  if (parent !== index) {
+    parent = UnionFind.find($this, parent);
+    $this.parents[index] = parent;
+  }
+  return parent;
+};
 function SplitPath(_0, _1) {
   this.directory = _0;
   this.entry = _1;
@@ -1174,7 +1191,7 @@ frontend.Flags = function() {
   this.optimize = false;
 };
 var js = {};
-js.Emitter = function(_0, _1) {
+js.Emitter = function(_0) {
   this.newline = "\n";
   this.space = " ";
   this.indent = "";
@@ -1185,22 +1202,23 @@ js.Emitter = function(_0, _1) {
   this.generator = new SourceMapGenerator();
   this.currentSource = null;
   this.patcher = null;
+  this.options = null;
   this.toStringTarget = null;
-  this.options = _0;
-  this.cache = _1;
+  this.resolver = _0;
 };
 js.Emitter.prototype.patchProgram = function(program) {
+  if (js.Emitter.isKeyword === null) {
+    js.Emitter.isKeyword = js.Emitter.createIsKeyword();
+  }
+  this.options = this.resolver.options;
   if (this.options.jsMinify) {
     this.newline = "";
     this.space = "";
   }
-  this.patcher = new js.Patcher(this.options, this.cache);
-  js.Patcher.patchNode(this.patcher, program);
+  this.patcher = new js.Patcher(this.resolver);
+  js.Patcher.run(this.patcher, program);
 };
 js.Emitter.prototype.emitProgram = function(program) {
-  if (js.Emitter.isKeyword === null) {
-    js.Emitter.isKeyword = js.Emitter.createIsKeyword();
-  }
   var collector = new Collector(program, 3);
   this.currentSource = new Source(this.options.outputFile, "");
   for (var i = 0; i < this.options.prepend.length; i = i + 1 | 0) {
@@ -1633,6 +1651,7 @@ js.Emitter.emitWhile = function($this, node) {
 js.Emitter.emitDoWhile = function($this, node) {
   js.Emitter.emit($this, $this.indent + "do ");
   js.Emitter.emitBlock($this, node.children[1], 1);
+  js.Emitter.emitSemicolonIfNeeded($this);
   js.Emitter.emit($this, $this.space + "while" + $this.space + "(");
   js.Emitter.emitExpression($this, node.children[0], 0);
   js.Emitter.emit($this, ")");
@@ -1659,7 +1678,7 @@ js.Emitter.emitContinue = function($this, node) {
 };
 js.Emitter.emitAssert = function($this, node) {
   var value = node.children[0];
-  Node.invertBooleanCondition(value, $this.cache);
+  Node.invertBooleanCondition(value, $this.resolver.cache);
   if (!Node.isFalse(value)) {
     var couldBeFalse = !Node.isTrue(value);
     if (couldBeFalse) {
@@ -1936,9 +1955,9 @@ js.Emitter.emitBinary = function($this, node, precedence) {
   var right = node.children[1];
   var kind = node.kind;
   if (kind === 66) {
-    if (left.type !== null && left.type === $this.cache.stringType && js.Emitter.isToStringCall(right)) {
+    if (left.type !== null && left.type === $this.resolver.cache.stringType && js.Emitter.isToStringCall(right)) {
       right = right.children[0].children[0];
-    } else if (right.type !== null && right.type === $this.cache.stringType && js.Emitter.isToStringCall(left)) {
+    } else if (right.type !== null && right.type === $this.resolver.cache.stringType && js.Emitter.isToStringCall(left)) {
       left = left.children[0].children[0];
     }
   }
@@ -1981,15 +2000,42 @@ js.Emitter.createIsKeyword = function() {
   var result = new StringMap();
   result.set("apply", true);
   result.set("arguments", true);
+  result.set("break", true);
   result.set("call", true);
+  result.set("case", true);
+  result.set("catch", true);
+  result.set("class", true);
+  result.set("const", true);
   result.set("constructor", true);
+  result.set("continue", true);
+  result.set("debugger", true);
+  result.set("default", true);
+  result.set("delete", true);
+  result.set("do", true);
   result.set("double", true);
+  result.set("else", true);
+  result.set("export", true);
+  result.set("extends", true);
+  result.set("false", true);
+  result.set("finally", true);
   result.set("float", true);
+  result.set("for", true);
   result.set("function", true);
+  result.set("if", true);
+  result.set("import", true);
   result.set("in", true);
+  result.set("instanceof", true);
   result.set("int", true);
+  result.set("let", true);
+  result.set("new", true);
+  result.set("null", true);
+  result.set("return", true);
+  result.set("super", true);
   result.set("this", true);
   result.set("throw", true);
+  result.set("true", true);
+  result.set("try", true);
+  result.set("var", true);
   return result;
 };
 js.Emitter.mangleName = function(symbol) {
@@ -2018,14 +2064,110 @@ js.Emitter.fullName = function(symbol) {
   }
   return js.Emitter.mangleName(symbol);
 };
-js.Patcher = function(_0, _1) {
+js.Patcher = function(_0) {
   this.lambdaCount = 0;
   this.createdThisAlias = false;
-  this.functionWithThisAlias = null;
+  this.currentFunction = null;
   this.needExtends = false;
   this.needMathImul = false;
-  this.options = _0;
-  this.cache = _1;
+  this.namingGroupIndexForSymbol = new IntMap();
+  this.nextSymbolName = 0;
+  this.reservedNames = null;
+  this.options = null;
+  this.localVariableUnionFind = null;
+  this.cache = null;
+  this.resolver = _0;
+};
+js.Patcher.run = function($this, program) {
+  $this.options = $this.resolver.options;
+  $this.cache = $this.resolver.cache;
+  if ($this.options.jsMangle) {
+    $this.localVariableUnionFind = new UnionFind($this.resolver.allSymbols.length);
+    for (var i = 0; i < $this.resolver.allSymbols.length; i = i + 1 | 0) {
+      var symbol = $this.resolver.allSymbols[i];
+      $this.namingGroupIndexForSymbol.set(symbol.uniqueID, i);
+    }
+  }
+  js.Patcher.patchNode($this, program);
+  if ($this.options.jsMangle) {
+    var namingGroupsUnionFind = new UnionFind($this.resolver.allSymbols.length);
+    var order = [];
+    var localVariableGroups = js.Patcher.extractGroups($this, $this.localVariableUnionFind, function(symbol) {
+      return symbol.kind === 17;
+    });
+    js.Patcher.zipTogetherInOrder($this, namingGroupsUnionFind, localVariableGroups, order);
+    for (var i = 0; i < $this.resolver.allSymbols.length; i = i + 1 | 0) {
+      var symbol = $this.resolver.allSymbols[i];
+      if (symbol.overriddenMember !== null) {
+        var overridden = symbol.overriddenMember.symbol;
+        var index = $this.namingGroupIndexForSymbol.get(symbol.uniqueID);
+        UnionFind.union(namingGroupsUnionFind, index, $this.namingGroupIndexForSymbol.get(overridden.uniqueID));
+        if (overridden.identicalMembers !== null) {
+          for (var j = 0; j < overridden.identicalMembers.length; j = j + 1 | 0) {
+            UnionFind.union(namingGroupsUnionFind, index, $this.namingGroupIndexForSymbol.get(overridden.identicalMembers[j].symbol.uniqueID));
+          }
+        }
+      }
+    }
+    $this.reservedNames = js.Emitter.isKeyword.clone();
+    var members = $this.cache.globalType.members.values();
+    for (var i = 0; i < members.length; i = i + 1 | 0) {
+      var member = members[i];
+      if ((member.symbol.flags & 12288) !== 0) {
+        $this.reservedNames.set(member.symbol.name, true);
+      }
+    }
+    $this.reservedNames.set("fs", true);
+    var namingGroups = js.Patcher.extractGroups($this, namingGroupsUnionFind, null);
+    for (var i = 0; i < namingGroups.length; i = i + 1 | 0) {
+      var group = namingGroups[i];
+      var name = "";
+      for (var j = 0; j < group.length; j = j + 1 | 0) {
+        var symbol = group[j];
+        if ((symbol.flags & 12288) === 0) {
+          if (name === "") {
+            name = js.Patcher.generateSymbolName($this);
+          }
+          symbol.name = name;
+        }
+      }
+    }
+  }
+};
+js.Patcher.zipTogetherInOrder = function($this, unionFind, groups, order) {
+  for (var i = 0; i < groups.length; i = i + 1 | 0) {
+    var group = groups[i];
+    if (group.length > 1) {
+      group.sort(function(a, b) {
+        return a.node.range.start - b.node.range.start | 0;
+      });
+    }
+    for (var j = 0; j < group.length; j = j + 1 | 0) {
+      var symbol = group[j];
+      var index = $this.namingGroupIndexForSymbol.get(symbol.uniqueID);
+      if (order.length <= j) {
+        order.push(index);
+      }
+      UnionFind.union(unionFind, index, order[j]);
+    }
+  }
+};
+js.Patcher.extractGroups = function($this, unionFind, filter) {
+  var labelToGroup = new IntMap();
+  for (var i = 0; i < $this.resolver.allSymbols.length; i = i + 1 | 0) {
+    var symbol = $this.resolver.allSymbols[i];
+    if (filter !== null && !filter(symbol)) {
+      continue;
+    }
+    var label = UnionFind.find(unionFind, $this.namingGroupIndexForSymbol.get(symbol.uniqueID));
+    var group = labelToGroup.getOrDefault(label, null);
+    if (group === null) {
+      group = [];
+      labelToGroup.set(label, group);
+    }
+    group.push(symbol);
+  }
+  return labelToGroup.values();
 };
 js.Patcher.patchNode = function($this, node) {
   switch (node.kind) {
@@ -2034,10 +2176,10 @@ js.Patcher.patchNode = function($this, node) {
     break;
   case 14:
     js.Patcher.patchConstructor(node);
-    js.Patcher.setFunctionWithThisAlias($this, node);
+    js.Patcher.setCurrentFunction($this, node.symbol);
     break;
   case 15:
-    js.Patcher.setFunctionWithThisAlias($this, node);
+    js.Patcher.setCurrentFunction($this, node.symbol);
     break;
   case 52:
     js.Patcher.patchCast($this, node);
@@ -2089,7 +2231,12 @@ js.Patcher.patchNode = function($this, node) {
     break;
   case 14:
   case 15:
-    js.Patcher.setFunctionWithThisAlias($this, null);
+    js.Patcher.setCurrentFunction($this, null);
+    break;
+  case 16:
+    if ($this.options.jsMangle) {
+      js.Patcher.unionVariableWithFunction($this, node);
+    }
     break;
   case 19:
     if ($this.options.jsMangle) {
@@ -2329,6 +2476,13 @@ js.Patcher.patchName = function(node) {
     Node.become(node, Node.withChildren(new Node(45), [new Node(36), Node.clone(node)]));
   }
 };
+js.Patcher.unionVariableWithFunction = function($this, node) {
+  if ($this.currentFunction !== null) {
+    var left = $this.namingGroupIndexForSymbol.get($this.currentFunction.uniqueID);
+    var right = $this.namingGroupIndexForSymbol.get(node.symbol.uniqueID);
+    UnionFind.union($this.localVariableUnionFind, left, right);
+  }
+};
 js.Patcher.patchBinary = function($this, node) {
   if (node.type === $this.cache.intType && (node.kind === 80 || !js.Patcher.alwaysConvertsOperandsToInt(node.parent.kind))) {
     Node.become(node, Node.withRange(js.Patcher.createBinaryInt($this, node.kind, Node.replaceWith(node.children[0], null), Node.replaceWith(node.children[1], null)), node.range));
@@ -2438,16 +2592,32 @@ js.Patcher.isExpressionUsed = function(node) {
   }
   return true;
 };
-js.Patcher.setFunctionWithThisAlias = function($this, node) {
-  $this.functionWithThisAlias = node;
+js.Patcher.setCurrentFunction = function($this, symbol) {
+  $this.currentFunction = symbol;
   $this.createdThisAlias = false;
 };
 js.Patcher.thisAlias = function($this) {
   if (!$this.createdThisAlias) {
     $this.createdThisAlias = true;
-    Node.insertChild($this.functionWithThisAlias.children[2], 0, Node.createVariableCluster(new Node(49), [Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent("$this")), null, new Node(36)])]));
+    Node.insertChild($this.currentFunction.node.children[2], 0, Node.createVariableCluster(new Node(49), [Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent("$this")), null, new Node(36)])]));
   }
   return Node.withContent(new Node(34), new StringContent("$this"));
+};
+js.Patcher.numberToName = function(number) {
+  var name = "";
+  if (number >= 52) {
+    name = js.Patcher.numberToName((number / 52 | 0) - 1 | 0);
+    number = number % 52 | 0;
+  }
+  name += String.fromCharCode(number + (number < 26 ? 97 : 39) | 0);
+  return name;
+};
+js.Patcher.generateSymbolName = function($this) {
+  var name = "";
+  do {
+    name = js.Patcher.numberToName(($this.nextSymbolName = $this.nextSymbolName + 1 | 0) - 1 | 0);
+  } while ($this.reservedNames.has(name));
+  return name;
 };
 function SourceMapping(_0, _1, _2, _3, _4) {
   this.sourceIndex = _0;
@@ -3360,12 +3530,12 @@ InliningGraph.recursivelyCountArgumentUses = function(node, symbolCounts) {
 };
 function InstanceToStaticPass() {
 }
-InstanceToStaticPass.run = function(graph, cache, options) {
+InstanceToStaticPass.run = function(graph, resolver) {
   for (var i = 0; i < graph.callInfo.length; i = i + 1 | 0) {
     var info = graph.callInfo[i];
     var symbol = info.symbol;
     var enclosingSymbol = symbol.enclosingSymbol;
-    if (symbol.kind === 15 && (symbol.flags & 8192) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 8192) !== 0 || $in.SymbolKind.isEnum(enclosingSymbol.kind) || options.convertAllInstanceToStatic && (symbol.flags & 4096) === 0 && (symbol.flags & 128) === 0)) {
+    if (symbol.kind === 15 && (symbol.flags & 8192) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 8192) !== 0 || $in.SymbolKind.isEnum(enclosingSymbol.kind) || resolver.options.convertAllInstanceToStatic && (symbol.flags & 4096) === 0 && (symbol.flags & 128) === 0)) {
       var thisSymbol = new Symbol("this", 17);
       thisSymbol.type = enclosingSymbol.type;
       var replacedThis = InstanceToStaticPass.recursivelyReplaceThis(symbol.node.children[2], thisSymbol);
@@ -3374,8 +3544,10 @@ InstanceToStaticPass.run = function(graph, cache, options) {
       if (replacedThis) {
         var $arguments = Type.argumentTypes(symbol.type);
         $arguments.unshift(enclosingSymbol.type);
-        symbol.type = TypeCache.functionType(cache, symbol.type.relevantTypes[0], $arguments);
-        Node.insertChild(symbol.node.children[1], 0, Node.withSymbol(Node.withChildren(new Node(16), [Node.withSymbol(Node.withContent(new Node(34), new StringContent("this")), thisSymbol), Node.withType(new Node(35), thisSymbol.type), null]), thisSymbol));
+        symbol.type = TypeCache.functionType(resolver.cache, symbol.type.relevantTypes[0], $arguments);
+        thisSymbol.node = Node.withSymbol(Node.withChildren(new Node(16), [Node.withSymbol(Node.withContent(new Node(34), new StringContent("this")), thisSymbol), Node.withType(new Node(35), thisSymbol.type), null]), thisSymbol);
+        Node.insertChild(symbol.node.children[1], 0, thisSymbol.node);
+        resolver.allSymbols.push(thisSymbol);
       }
       for (var j = 0; j < info.callSites.length; j = j + 1 | 0) {
         var callSite = info.callSites[j];
