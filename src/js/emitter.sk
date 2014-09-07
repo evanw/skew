@@ -21,9 +21,9 @@ namespace js {
     var isStartOfExpression = false;
     var generator = SourceMapGenerator();
     Source currentSource = null;
+    Patcher patcher = null;
     CompilerOptions options;
     TypeCache cache;
-    Patcher patcher;
 
     // Numbers normally need to be wrapped in parentheses when toString() is
     // called on them because "1.toString()" is a syntax error in JavaScript.
@@ -32,16 +32,14 @@ namespace js {
     // toString() call has been elided.
     Node toStringTarget = null;
 
-    new(CompilerOptions options, TypeCache cache) : options = options, cache = cache, patcher = Patcher(options, cache) {
-    }
-
     override void patchProgram(Node program) {
       if (options.jsMinify) {
         newline = "";
         space = "";
       }
 
-      patcher.patchNode(program, PatchContext());
+      patcher = Patcher(options, cache);
+      patcher.patchNode(program);
     }
 
     override List<Source> emitProgram(Node program) {

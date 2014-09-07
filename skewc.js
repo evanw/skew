@@ -1174,7 +1174,7 @@ frontend.Flags = function() {
   this.optimize = false;
 };
 var js = {};
-js.Emitter = function(options, cache) {
+js.Emitter = function(_0, _1) {
   this.newline = "\n";
   this.space = " ";
   this.indent = "";
@@ -1184,17 +1184,18 @@ js.Emitter = function(options, cache) {
   this.isStartOfExpression = false;
   this.generator = new SourceMapGenerator();
   this.currentSource = null;
+  this.patcher = null;
   this.toStringTarget = null;
-  this.options = options;
-  this.cache = cache;
-  this.patcher = new js.Patcher(options, cache);
+  this.options = _0;
+  this.cache = _1;
 };
 js.Emitter.prototype.patchProgram = function(program) {
   if (this.options.jsMinify) {
     this.newline = "";
     this.space = "";
   }
-  js.Patcher.patchNode(this.patcher, program, new js.PatchContext());
+  this.patcher = new js.Patcher(this.options, this.cache);
+  js.Patcher.patchNode(this.patcher, program);
 };
 js.Emitter.prototype.emitProgram = function(program) {
   if (js.Emitter.isKeyword === null) {
@@ -2017,48 +2018,35 @@ js.Emitter.fullName = function(symbol) {
   }
   return js.Emitter.mangleName(symbol);
 };
-js.PatchContext = function() {
+js.Patcher = function(_0, _1) {
   this.lambdaCount = 0;
   this.createdThisAlias = false;
-  this.$function = null;
-};
-js.PatchContext.setFunction = function($this, node) {
-  $this.$function = node;
-  $this.createdThisAlias = false;
-};
-js.PatchContext.thisAlias = function($this) {
-  if (!$this.createdThisAlias) {
-    $this.createdThisAlias = true;
-    Node.insertChild($this.$function.children[2], 0, Node.createVariableCluster(new Node(49), [Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent("$this")), null, new Node(36)])]));
-  }
-  return Node.withContent(new Node(34), new StringContent("$this"));
-};
-js.Patcher = function(_0, _1) {
+  this.functionWithThisAlias = null;
   this.needExtends = false;
   this.needMathImul = false;
   this.options = _0;
   this.cache = _1;
 };
-js.Patcher.patchNode = function($this, node, context) {
+js.Patcher.patchNode = function($this, node) {
   switch (node.kind) {
   case 54:
-    context.lambdaCount = context.lambdaCount + 1 | 0;
+    $this.lambdaCount = $this.lambdaCount + 1 | 0;
     break;
   case 14:
-    js.Patcher.patchConstructor(node, context);
-    js.PatchContext.setFunction(context, node);
+    js.Patcher.patchConstructor(node);
+    js.Patcher.setFunctionWithThisAlias($this, node);
     break;
   case 15:
-    js.PatchContext.setFunction(context, node);
+    js.Patcher.setFunctionWithThisAlias($this, node);
     break;
   case 52:
-    js.Patcher.patchCast($this, node, context);
+    js.Patcher.patchCast($this, node);
     break;
   case 10:
     js.Patcher.patchClass($this, node);
     break;
   case 36:
-    js.Patcher.patchThis(node, context);
+    js.Patcher.patchThis($this, node);
     break;
   case 34:
     js.Patcher.patchName(node);
@@ -2074,14 +2062,14 @@ js.Patcher.patchNode = function($this, node, context) {
   case 63:
   case 65:
   case 64:
-    js.Patcher.patchUnary($this, node, context);
+    js.Patcher.patchUnary($this, node);
     break;
   case 87:
   case 96:
   case 92:
   case 91:
   case 93:
-    js.Patcher.patchAssign($this, node, context);
+    js.Patcher.patchAssign($this, node);
     break;
   }
   if (node.kind === 46) {
@@ -2091,17 +2079,17 @@ js.Patcher.patchNode = function($this, node, context) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       var child = node.children[i];
       if (child !== null) {
-        js.Patcher.patchNode($this, child, context);
+        js.Patcher.patchNode($this, child);
       }
     }
   }
   switch (node.kind) {
   case 54:
-    context.lambdaCount = context.lambdaCount - 1 | 0;
+    $this.lambdaCount = $this.lambdaCount - 1 | 0;
     break;
   case 14:
   case 15:
-    js.PatchContext.setFunction(context, null);
+    js.Patcher.setFunctionWithThisAlias($this, null);
     break;
   case 19:
     if ($this.options.jsMangle) {
@@ -2326,9 +2314,9 @@ js.Patcher.peepholeMangleHook = function($this, node) {
     }
   }
 };
-js.Patcher.patchThis = function(node, context) {
-  if (context.lambdaCount > 0) {
-    Node.become(node, js.PatchContext.thisAlias(context));
+js.Patcher.patchThis = function($this, node) {
+  if ($this.lambdaCount > 0) {
+    Node.become(node, js.Patcher.thisAlias($this));
   }
 };
 js.Patcher.patchClass = function($this, node) {
@@ -2351,28 +2339,28 @@ js.Patcher.patchLet = function(node) {
   var variable = Node.replaceWith(node.children[0], null);
   Node.become(node, Node.createCall(Node.createLambda([variable], Node.withChildren(new Node(2), [Node.withChildren(new Node(24), [value])])), [Node.replaceWith(variable.children[2], null)]));
 };
-js.Patcher.patchAssign = function($this, node, context) {
+js.Patcher.patchAssign = function($this, node) {
   if (node.type === $this.cache.intType) {
     var isPostfix = node.kind === 64 || node.kind === 65;
     var isIncrement = node.kind === 62 || node.kind === 64;
     var left = node.children[0];
     var right = node.children[1];
     var kind = node.kind === 87 ? 66 : node.kind === 96 ? 85 : node.kind === 92 ? 80 : node.kind === 91 ? 70 : 82;
-    Node.become(node, Node.withRange(js.Patcher.createBinaryIntAssignment($this, context, kind, Node.replaceWith(left, null), Node.replaceWith(right, null)), node.range));
+    Node.become(node, Node.withRange(js.Patcher.createBinaryIntAssignment($this, kind, Node.replaceWith(left, null), Node.replaceWith(right, null)), node.range));
   }
 };
-js.Patcher.patchUnary = function($this, node, context) {
+js.Patcher.patchUnary = function($this, node) {
   if (node.type === $this.cache.intType) {
     var isPostfix = node.kind === 64 || node.kind === 65;
     var isIncrement = node.kind === 62 || node.kind === 64;
-    var result = js.Patcher.createBinaryIntAssignment($this, context, isIncrement ? 66 : 85, Node.replaceWith(node.children[0], null), Node.withContent(new Node(40), new IntContent(1)));
+    var result = js.Patcher.createBinaryIntAssignment($this, isIncrement ? 66 : 85, Node.replaceWith(node.children[0], null), Node.withContent(new Node(40), new IntContent(1)));
     if (isPostfix && js.Patcher.isExpressionUsed(node)) {
       result = js.Patcher.createBinaryInt($this, isIncrement ? 85 : 66, result, Node.withContent(new Node(40), new IntContent(1)));
     }
     Node.become(node, Node.withType(Node.withRange(result, node.range), node.type));
   }
 };
-js.Patcher.patchCast = function($this, node, context) {
+js.Patcher.patchCast = function($this, node) {
   var value = node.children[1];
   if (node.type === $this.cache.boolType && value.type !== $this.cache.boolType) {
     value = Node.withType(Node.withRange(Node.withChildren(new Node(58), [Node.replaceWith(value, null)]), node.range), node.type);
@@ -2383,7 +2371,7 @@ js.Patcher.patchCast = function($this, node, context) {
     Node.become(node, Node.withType(Node.withRange(Node.withChildren(new Node(59), [Node.replaceWith(value, null)]), node.range), node.type));
   }
 };
-js.Patcher.patchConstructor = function(node, context) {
+js.Patcher.patchConstructor = function(node) {
   var block = node.children[2];
   if (block === null) {
     return;
@@ -2413,7 +2401,7 @@ js.Patcher.createBinaryInt = function($this, kind, left, right) {
 js.Patcher.isSimpleNameAccess = function(node) {
   return node.kind === 34 || node.kind === 36 || node.kind === 45 && js.Patcher.isSimpleNameAccess(node.children[0]);
 };
-js.Patcher.createBinaryIntAssignment = function($this, context, kind, left, right) {
+js.Patcher.createBinaryIntAssignment = function($this, kind, left, right) {
   if (js.Patcher.isSimpleNameAccess(left)) {
     return Node.createBinary(86, Node.clone(left), js.Patcher.createBinaryInt($this, kind, left, right));
   }
@@ -2449,6 +2437,17 @@ js.Patcher.isExpressionUsed = function(node) {
     return false;
   }
   return true;
+};
+js.Patcher.setFunctionWithThisAlias = function($this, node) {
+  $this.functionWithThisAlias = node;
+  $this.createdThisAlias = false;
+};
+js.Patcher.thisAlias = function($this) {
+  if (!$this.createdThisAlias) {
+    $this.createdThisAlias = true;
+    Node.insertChild($this.functionWithThisAlias.children[2], 0, Node.createVariableCluster(new Node(49), [Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent("$this")), null, new Node(36)])]));
+  }
+  return Node.withContent(new Node(34), new StringContent("$this"));
 };
 function SourceMapping(_0, _1, _2, _3, _4) {
   this.sourceIndex = _0;

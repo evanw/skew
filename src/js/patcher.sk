@@ -4,44 +4,27 @@ namespace js {
     NO_SWAP,
   }
 
-  class PatchContext {
+  class Patcher {
     var lambdaCount = 0;
     var createdThisAlias = false;
-    Node function = null;
-
-    void setFunction(Node node) {
-      function = node;
-      createdThisAlias = false;
-    }
-
-    Node thisAlias() {
-      if (!createdThisAlias) {
-        createdThisAlias = true;
-        function.functionBlock().insertChild(0, Node.createVariableCluster(Node.createError(),
-          [Node.createVariable(Node.createName("$this"), null, Node.createThis())]));
-      }
-      return Node.createName("$this");
-    }
-  }
-
-  class Patcher {
+    Node functionWithThisAlias = null;
     var needExtends = false;
     var needMathImul = false;
     CompilerOptions options;
     TypeCache cache;
 
-    void patchNode(Node node, PatchContext context) {
+    void patchNode(Node node) {
       switch (node.kind) {
-        case .LAMBDA { context.lambdaCount++; }
-        case .CONSTRUCTOR { patchConstructor(node, context); context.setFunction(node); }
-        case .FUNCTION { context.setFunction(node); }
-        case .CAST { patchCast(node, context); }
+        case .LAMBDA { lambdaCount++; }
+        case .CONSTRUCTOR { patchConstructor(node); setFunctionWithThisAlias(node); }
+        case .FUNCTION { setFunctionWithThisAlias(node); }
+        case .CAST { patchCast(node); }
         case .CLASS { patchClass(node); }
-        case .THIS { patchThis(node, context); }
+        case .THIS { patchThis(node); }
         case .NAME { patchName(node); }
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinary(node); }
-        case .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node, context); }
-        case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER { patchAssign(node, context); }
+        case .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node); }
+        case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER { patchAssign(node); }
       }
 
       // This is not inside the switch statement above because one of the other
@@ -54,14 +37,14 @@ namespace js {
         for (var i = 0; i < node.children.length; i++) {
           var child = node.children.get(i);
           if (child != null) {
-            patchNode(child, context);
+            patchNode(child);
           }
         }
       }
 
       switch (node.kind) {
-        case .LAMBDA { context.lambdaCount--; }
-        case .CONSTRUCTOR, .FUNCTION { context.setFunction(null); }
+        case .LAMBDA { lambdaCount--; }
+        case .CONSTRUCTOR, .FUNCTION { setFunctionWithThisAlias(null); }
         case .IF { if (options.jsMangle) peepholeMangleIf(node); }
         case .FOR { if (options.jsMangle) peepholeMangleBoolean(node.forTest(), .NO_SWAP); }
         case .WHILE, .DO_WHILE { if (options.jsMangle) peepholeMangleBoolean(node.whileTest(), .NO_SWAP); }
@@ -310,9 +293,9 @@ namespace js {
       }
     }
 
-    void patchThis(Node node, PatchContext context) {
-      if (context.lambdaCount > 0) {
-        node.become(context.thisAlias());
+    void patchThis(Node node) {
+      if (lambdaCount > 0) {
+        node.become(thisAlias());
       }
     }
 
@@ -340,7 +323,7 @@ namespace js {
       node.become(Node.createCall(Node.createLambda([variable], Node.createBlock([Node.createReturn(value)])), [variable.variableValue().replaceWith(null)]));
     }
 
-    void patchAssign(Node node, PatchContext context) {
+    void patchAssign(Node node) {
       if (node.type.isInt(cache)) {
         var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
         var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
@@ -352,15 +335,15 @@ namespace js {
           node.kind == .ASSIGN_MULTIPLY ? .MULTIPLY :
           node.kind == .ASSIGN_DIVIDE ? .DIVIDE :
           .REMAINDER;
-        node.become(createBinaryIntAssignment(context, kind, left.replaceWith(null), right.replaceWith(null)).withRange(node.range));
+        node.become(createBinaryIntAssignment(kind, left.replaceWith(null), right.replaceWith(null)).withRange(node.range));
       }
     }
 
-    void patchUnary(Node node, PatchContext context) {
+    void patchUnary(Node node) {
       if (node.type.isInt(cache)) {
         var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
         var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
-        var result = createBinaryIntAssignment(context, isIncrement ? .ADD : .SUBTRACT, node.unaryValue().replaceWith(null), Node.createInt(1));
+        var result = createBinaryIntAssignment(isIncrement ? .ADD : .SUBTRACT, node.unaryValue().replaceWith(null), Node.createInt(1));
         if (isPostfix && isExpressionUsed(node)) {
           result = createBinaryInt(isIncrement ? .SUBTRACT : .ADD, result, Node.createInt(1));
         }
@@ -368,7 +351,7 @@ namespace js {
       }
     }
 
-    void patchCast(Node node, PatchContext context) {
+    void patchCast(Node node) {
       var value = node.castValue();
 
       // Cast to bool
@@ -388,7 +371,7 @@ namespace js {
       }
     }
 
-    void patchConstructor(Node node, PatchContext context) {
+    void patchConstructor(Node node) {
       var block = node.functionBlock();
       if (block == null) {
         return;
@@ -421,7 +404,7 @@ namespace js {
       return node.kind == .NAME || node.kind == .THIS || node.kind == .DOT && isSimpleNameAccess(node.dotTarget());
     }
 
-    Node createBinaryIntAssignment(PatchContext context, NodeKind kind, Node left, Node right) {
+    Node createBinaryIntAssignment(NodeKind kind, Node left, Node right) {
       if (isSimpleNameAccess(left)) {
         return Node.createBinary(.ASSIGN, left.clone(), createBinaryInt(kind, left, right));
       }
@@ -461,6 +444,20 @@ namespace js {
         return false;
       }
       return true;
+    }
+
+    void setFunctionWithThisAlias(Node node) {
+      functionWithThisAlias = node;
+      createdThisAlias = false;
+    }
+
+    Node thisAlias() {
+      if (!createdThisAlias) {
+        createdThisAlias = true;
+        functionWithThisAlias.functionBlock().insertChild(0, Node.createVariableCluster(Node.createError(),
+          [Node.createVariable(Node.createName("$this"), null, Node.createThis())]));
+      }
+      return Node.createName("$this");
     }
   }
 }
