@@ -2377,7 +2377,12 @@ js.Patcher.peepholeMangleIf = function($this, node) {
       }
     }
   } else if (trueStatement !== null && trueStatement.kind === 30) {
-    Node.become(node, Node.withChildren(new Node(30), [Node.createBinary(79, Node.replaceWith(test, null), Node.replaceWith(trueStatement.children[0], null))]));
+    var value = Node.replaceWith(trueStatement.children[0], null);
+    if (test.kind === 58) {
+      Node.become(node, Node.withChildren(new Node(30), [Node.createBinary(80, Node.replaceWith(test.children[0], null), value)]));
+    } else {
+      Node.become(node, Node.withChildren(new Node(30), [Node.createBinary(79, Node.replaceWith(test, null), value)]));
+    }
   }
 };
 js.Patcher.isJumpImplied = function($this, node, kind) {

@@ -382,9 +382,14 @@ namespace js {
         }
       }
 
-      // "if (a) b;" => "a && b;"
       else if (trueStatement != null && trueStatement.kind == .EXPRESSION) {
-        node.become(Node.createExpression(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), trueStatement.expressionValue().replaceWith(null))));
+        var value = trueStatement.expressionValue().replaceWith(null);
+
+        // "if (!a) b;" => "a || b;"
+        if (test.kind == .NOT) node.become(Node.createExpression(Node.createBinary(.LOGICAL_OR, test.unaryValue().replaceWith(null), value)));
+
+        // "if (a) b;" => "a && b;"
+        else node.become(Node.createExpression(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), value)));
       }
     }
 

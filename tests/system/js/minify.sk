@@ -271,10 +271,18 @@ function foo(a,b){return a^b?1:2}
 
 testMinifyJS("
 export void foo(bool a, void fn() b) {
+  if (a) b();
+}
+", "
+function foo(a,b){a&&b()}
+");
+
+testMinifyJS("
+export void foo(bool a, void fn() b) {
   if (!a) b();
 }
 ", "
-function foo(a,b){!a&&b()}
+function foo(a,b){a||b()}
 ");
 
 testMinifyJS("
@@ -350,7 +358,7 @@ export void foo(bool x, void fn() y) {
   y();
 }
 ", "
-function foo(b,a){!b&&(a(),a())}
+function foo(b,a){b||(a(),a())}
 ");
 
 testMinifyJS("
@@ -361,7 +369,7 @@ export void foo(bool x, void fn() y) {
   y();
 }
 ", "
-function foo(a,b){!a&&(b(),!a&&b())}
+function foo(a,b){a||(b(),a||b())}
 ");
 
 testMinifyJS("
@@ -373,7 +381,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(b,c,a){b&&(!c&&(a(),a()))}
+function foo(b,c,a){b&&(c||(a(),a()))}
 ");
 
 testMinifyJS("
@@ -436,7 +444,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(b,c,a){while(b)!c&&(a(),a())}
+function foo(b,c,a){while(b)c||(a(),a())}
 ");
 
 testMinifyJS("
@@ -449,7 +457,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(c,a,b){while(c)!a&&(b(),!a&&b())}
+function foo(c,a,b){while(c)a||(b(),a||b())}
 ");
 
 testMinifyJS("
@@ -464,7 +472,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(c,b,a){while(c)b&&(a(),!b&&(a(),a()))}
+function foo(c,b,a){while(c)b&&(a(),b||(a(),a()))}
 ");
 
 testMinifyJS("
