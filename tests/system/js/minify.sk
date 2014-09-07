@@ -11,7 +11,7 @@ export int foo() {
   return Foo(100).foo + Bar(200).bar;
 }
 ", "
-function a(e){this.b=e}function c(e){this.d=e}function foo(){return new a(100).b+new c(200).d|0}
+function b(a){this.a=a}function c(a){this.a=a}function foo(){return new b(100).a+new c(200).a|0}
 ");
 
 testMinify("
@@ -25,7 +25,7 @@ export int foo() {
   return Foo(100).foo + Bar(200, 300).foo;
 }
 ", "
-function $extends(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function a(e){this.b=e}function c(e,f){a.call(this,e),this.d=f}$extends(c,a);function foo(){return new a(100).b+new c(200,300).b|0}
+function $extends(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function c(a){this.a=a}function d(a,b){c.call(this,a),this.b=b}$extends(d,c);function foo(){return new c(100).a+new d(200,300).a|0}
 ");
 
 testMinify("
@@ -294,7 +294,7 @@ export int foo(int x) {
   return y;
 }
 ", "
-function foo(a){var b=0;switch(a){case 1:b=1;break;case 2:b=2}return b}
+function foo(b){var a=0;switch(b){case 1:a=1;break;case 2:a=2}return a}
 ");
 
 testMinify("

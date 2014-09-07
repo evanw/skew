@@ -2,9 +2,9 @@ var $imul = Math.imul || function(a, b) {
   var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
   return al * bl + (ah * bl + al * bh << 16) | 0;
 };
-function $extends(d, b) {
-  d.prototype = Object.create(b.prototype);
-  d.prototype.constructor = d;
+function $extends(derived, base) {
+  derived.prototype = Object.create(base.prototype);
+  derived.prototype.constructor = derived;
 }
 var $in = {};
 $in.string = {};
@@ -270,6 +270,9 @@ Node.blockAlwaysEndsWithReturn = function($this) {
 };
 Node.isNameExpression = function($this) {
   return $this.kind === 34 && ($this.parent.kind !== 45 || $this !== $this.parent.children[1]) && (!$in.NodeKind.isNamedDeclaration($this.parent.kind) || $this !== $this.parent.children[0]);
+};
+Node.isDeclarationName = function($this) {
+  return $this.kind === 34 && $in.NodeKind.isNamedDeclaration($this.parent.kind) && $this === $this.parent.children[0];
 };
 Node.isStorage = function($this) {
   return $in.NodeKind.isUnaryStorageOperator($this.parent.kind) || $in.NodeKind.isBinaryStorageOperator($this.parent.kind) && $this === $this.parent.children[0];
@@ -1141,10 +1144,12 @@ js.Emitter.prototype.emitProgram = function(program) {
     this.needsSemicolon = false;
   }
   if (this.patcher.needExtends) {
-    js.Emitter.emit(this, this.indent + "function " + $in.string.replace("$extends(d, b) {", " ", this.space) + this.newline);
+    var derived = this.options.jsMangle ? "d" : "derived";
+    var base = this.options.jsMangle ? "b" : "base";
+    js.Emitter.emit(this, this.indent + "function $extends(" + derived + "," + this.space + base + ")" + this.space + "{" + this.newline);
     js.Emitter.increaseIndent(this);
-    js.Emitter.emit(this, this.indent + $in.string.replace("d.prototype = Object.create(b.prototype);", " ", this.space) + this.newline);
-    js.Emitter.emit(this, this.indent + $in.string.replace("d.prototype.constructor = d", " ", this.space));
+    js.Emitter.emit(this, this.indent + derived + ".prototype" + this.space + "=" + this.space + "Object.create(" + base + ".prototype);" + this.newline);
+    js.Emitter.emit(this, this.indent + derived + ".prototype.constructor" + this.space + "=" + this.space + derived);
     js.Emitter.emitSemicolonAfterStatement(this);
     js.Emitter.decreaseIndent(this);
     js.Emitter.emit(this, this.indent + "}" + this.newline);
@@ -1997,6 +2002,10 @@ js.Emitter.fullName = function(symbol) {
   }
   return js.Emitter.mangleName(symbol);
 };
+js.GroupWithCount = function(_0, _1) {
+  this.group = _0;
+  this.count = _1;
+};
 js.Patcher = function(_0) {
   this.lambdaCount = 0;
   this.createdThisAlias = false;
@@ -2005,6 +2014,7 @@ js.Patcher = function(_0) {
   this.needMathImul = false;
   this.namingGroupIndexForSymbol = new IntMap();
   this.nextSymbolName = 0;
+  this.symbolCounts = new IntMap();
   this.reservedNames = null;
   this.options = null;
   this.localVariableUnionFind = null;
@@ -2025,10 +2035,28 @@ js.Patcher.run = function($this, program) {
   if ($this.options.jsMangle) {
     var namingGroupsUnionFind = new UnionFind($this.resolver.allSymbols.length);
     var order = [];
-    var localVariableGroups = js.Patcher.extractGroups($this, $this.localVariableUnionFind, function(symbol) {
+    js.Patcher.zipTogetherInOrder($this, namingGroupsUnionFind, js.Patcher.extractGroups($this, $this.localVariableUnionFind, function(symbol) {
       return symbol.kind === 17;
-    });
-    js.Patcher.zipTogetherInOrder($this, namingGroupsUnionFind, localVariableGroups, order);
+    }), order);
+    var relatedTypesUnionFind = new UnionFind($this.resolver.allSymbols.length);
+    for (var i = 0; i < $this.resolver.allSymbols.length; i = i + 1 | 0) {
+      var symbol = $this.resolver.allSymbols[i];
+      if ($in.SymbolKind.isType(symbol.kind)) {
+        if (Type.hasRelevantTypes(symbol.type)) {
+          var types = symbol.type.relevantTypes;
+          for (var j = 0; j < types.length; j = j + 1 | 0) {
+            UnionFind.union(relatedTypesUnionFind, i, $this.namingGroupIndexForSymbol.table[types[j].symbol.uniqueID]);
+          }
+        }
+        var members = StringMap.values(symbol.type.members);
+        for (var j = 0; j < members.length; j = j + 1 | 0) {
+          UnionFind.union(relatedTypesUnionFind, i, $this.namingGroupIndexForSymbol.table[members[j].symbol.uniqueID]);
+        }
+      }
+    }
+    js.Patcher.zipTogetherInOrder($this, namingGroupsUnionFind, js.Patcher.extractGroups($this, relatedTypesUnionFind, function(symbol) {
+      return symbol.kind === 19;
+    }), order);
     for (var i = 0; i < $this.resolver.allSymbols.length; i = i + 1 | 0) {
       var symbol = $this.resolver.allSymbols[i];
       if (symbol.overriddenMember !== null) {
@@ -2053,8 +2081,23 @@ js.Patcher.run = function($this, program) {
     $this.reservedNames.table["fs"] = true;
     $this.reservedNames.table["it"] = true;
     var namingGroups = js.Patcher.extractGroups($this, namingGroupsUnionFind, null);
+    var sortedGroups = [];
     for (var i = 0; i < namingGroups.length; i = i + 1 | 0) {
       var group = namingGroups[i];
+      var count = 0;
+      for (var j = 0; j < group.length; j = j + 1 | 0) {
+        var symbol = group[j];
+        if (js.Patcher.canRename(symbol)) {
+          count = count + ($this.symbolCounts.table[symbol.uniqueID] || 0) | 0;
+        }
+      }
+      sortedGroups.push(new js.GroupWithCount(group, count));
+    }
+    sortedGroups.sort(function(a, b) {
+      return b.count - a.count | 0;
+    });
+    for (var i = 0; i < sortedGroups.length; i = i + 1 | 0) {
+      var group = sortedGroups[i].group;
       var name = "";
       for (var j = 0; j < group.length; j = j + 1 | 0) {
         var symbol = group[j];
@@ -2109,7 +2152,14 @@ js.Patcher.extractGroups = function($this, unionFind, filter) {
 js.Patcher.canRename = function(symbol) {
   return (symbol.flags & 12288) === 0 && symbol.kind !== 16;
 };
+js.Patcher.trackSymbolCount = function($this, node) {
+  var symbol = node.symbol;
+  if (symbol !== null && node.kind !== 35 && !Node.isDeclarationName(node)) {
+    $this.symbolCounts.table[symbol.uniqueID] = ($this.symbolCounts.table[symbol.uniqueID] || 0) + 1 | 0;
+  }
+};
 js.Patcher.patchNode = function($this, node) {
+  js.Patcher.trackSymbolCount($this, node);
   switch (node.kind) {
   case 54:
     $this.lambdaCount = $this.lambdaCount + 1 | 0;
