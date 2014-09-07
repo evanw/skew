@@ -394,11 +394,15 @@ namespace js {
     }
 
     void emitNamespace(Node node) {
+      var symbol = node.symbol;
+      if (options.jsMangle && !symbol.isImportOrExport()) {
+        return;
+      }
       emitSemicolonIfNeeded();
-      if (!hasCompoundName(node.symbol)) {
+      if (!hasCompoundName(symbol)) {
         emit("var ");
       }
-      emit(indent + fullName(node.symbol) + space + "=" + space + "{}");
+      emit(indent + fullName(symbol) + space + "=" + space + "{}");
       emitSemicolonAfterStatement();
     }
 

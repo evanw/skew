@@ -320,6 +320,9 @@ Node.indexInParent = function($this) {
 Node.appendChild = function($this, node) {
   Node.insertChild($this, $this.children === null ? 0 : $this.children.length, node);
 };
+Node.appendChildren = function($this, nodes) {
+  Node.insertChildren($this, $this.children === null ? 0 : $this.children.length, nodes);
+};
 Node.insertSiblingAfter = function($this, node) {
   Node.insertChild($this.parent, Node.indexInParent($this) + 1 | 0, node);
 };
@@ -398,6 +401,16 @@ Node.insertChild = function($this, index, node) {
   }
   Node.updateParent(node, $this);
   $this.children.splice(index, 0, node);
+};
+Node.insertChildren = function($this, index, nodes) {
+  if ($this.children === null) {
+    $this.children = [];
+  }
+  for (var i = 0; i < nodes.length; i = i + 1 | 0) {
+    var node = nodes[i];
+    Node.updateParent(node, $this);
+    $this.children.splice((index = index + 1 | 0) - 1 | 0, 0, node);
+  }
 };
 Node.clone = function($this) {
   var node = new Node($this.kind);
@@ -1465,11 +1478,15 @@ js.Emitter.emitVariableCluster = function($this, node) {
   }
 };
 js.Emitter.emitNamespace = function($this, node) {
+  var symbol = node.symbol;
+  if ($this.options.jsMangle && (symbol.flags & 12288) === 0) {
+    return;
+  }
   js.Emitter.emitSemicolonIfNeeded($this);
-  if (!js.Emitter.hasCompoundName(node.symbol)) {
+  if (!js.Emitter.hasCompoundName(symbol)) {
     js.Emitter.emit($this, "var ");
   }
-  js.Emitter.emit($this, $this.indent + js.Emitter.fullName(node.symbol) + $this.space + "=" + $this.space + "{}");
+  js.Emitter.emit($this, $this.indent + js.Emitter.fullName(symbol) + $this.space + "=" + $this.space + "{}");
   js.Emitter.emitSemicolonAfterStatement($this);
 };
 js.Emitter.emitEnum = function($this, node) {
@@ -2342,20 +2359,31 @@ js.Patcher.peepholeMangleIf = function($this, node) {
       if (trueStatement.kind === 30 && falseStatement.kind === 30) {
         var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueStatement.children[0], null), Node.replaceWith(falseStatement.children[0], null)]);
         js.Patcher.peepholeMangleHook($this, hook);
-        Node.replaceWith(node, Node.withChildren(new Node(30), [hook]));
+        Node.become(node, Node.withChildren(new Node(30), [hook]));
       } else if (trueStatement.kind === 24 && falseStatement.kind === 24) {
         var trueValue = trueStatement.children[0];
         var falseValue = falseStatement.children[0];
         if (trueValue !== null && falseValue !== null) {
           var hook = Node.withChildren(new Node(37), [Node.replaceWith(test, null), Node.replaceWith(trueValue, null), Node.replaceWith(falseValue, null)]);
           js.Patcher.peepholeMangleHook($this, hook);
-          Node.replaceWith(node, Node.withChildren(new Node(24), [hook]));
+          Node.become(node, Node.withChildren(new Node(24), [hook]));
         }
       }
     }
   } else if (trueStatement !== null && trueStatement.kind === 30) {
-    Node.replaceWith(node, Node.withChildren(new Node(30), [Node.createBinary(79, Node.replaceWith(test, null), Node.replaceWith(trueStatement.children[0], null))]));
+    Node.become(node, Node.withChildren(new Node(30), [Node.createBinary(79, Node.replaceWith(test, null), Node.replaceWith(trueStatement.children[0], null))]));
   }
+};
+js.Patcher.isJumpImplied = function($this, node, kind) {
+  var parent = node.parent;
+  var parentKind = parent.kind;
+  if (kind === 24 && parentKind === 15 || kind === 27 && $in.NodeKind.isLoop(parentKind)) {
+    return true;
+  }
+  if (parentKind === 19 && Node.isLastChild(parent)) {
+    return js.Patcher.isJumpImplied($this, parent.parent, kind);
+  }
+  return false;
 };
 js.Patcher.peepholeMangleBlock = function($this, node) {
   if (!Node.hasChildren(node)) {
@@ -2382,14 +2410,28 @@ js.Patcher.peepholeMangleBlock = function($this, node) {
         if (next.kind !== 30) {
           break;
         }
-        if (nodes === null) {
-          nodes = [];
-        }
-        nodes.push(Node.remove(Node.remove(next).children[0]));
+        var combined = Node.withChildren(new Node(30), [js.Patcher.joinExpressions(Node.replaceWith(child.children[0], null), Node.replaceWith(Node.remove(next).children[0], null))]);
+        Node.replaceWith(child, combined);
+        child = combined;
       }
-      if (nodes !== null) {
-        nodes.unshift(Node.remove(child.children[0]));
-        Node.replaceWith(child, Node.withChildren(new Node(30), [Node.withChildren(new Node(50), nodes)]));
+    } else if (kind === 19 && child.children[2] === null) {
+      var trueBlock = child.children[1];
+      var statement = Node.singleStatement(trueBlock);
+      if (statement !== null && (statement.kind === 24 && statement.children[0] === null || statement.kind === 27) && js.Patcher.isJumpImplied($this, node, statement.kind)) {
+        Node.invertBooleanCondition(child.children[0], $this.cache);
+        Node.remove(statement);
+        while ((i + 1 | 0) < node.children.length) {
+          Node.appendChild(trueBlock, Node.remove(node.children[i + 1 | 0]));
+        }
+        js.Patcher.peepholeMangleBlock($this, trueBlock);
+        js.Patcher.peepholeMangleIf($this, child);
+        if (child.kind === 30 && i > 0) {
+          var previous = node.children[i - 1 | 0];
+          if (previous.kind === 30) {
+            Node.replaceWith(previous, Node.withChildren(new Node(30), [js.Patcher.joinExpressions(Node.replaceWith(previous.children[0], null), Node.replaceWith(Node.remove(child).children[0], null))]));
+          }
+        }
+        return;
       }
     } else if (kind === 24 && child.children[0] !== null) {
       while (i > 0) {
@@ -2406,14 +2448,7 @@ js.Patcher.peepholeMangleBlock = function($this, node) {
             break;
           }
         } else if (previous.kind === 30) {
-          var values = Node.replaceWith(Node.remove(previous).children[0], null);
-          var value = Node.replaceWith(child.children[0], null);
-          if (values.kind === 50) {
-            Node.appendChild(values, value);
-          } else {
-            values = Node.withChildren(new Node(50), [values, value]);
-          }
-          var combined = Node.withChildren(new Node(24), [values]);
+          var combined = Node.withChildren(new Node(24), [js.Patcher.joinExpressions(Node.replaceWith(Node.remove(previous).children[0], null), Node.replaceWith(child.children[0], null))]);
           Node.replaceWith(child, combined);
           child = combined;
         } else {
@@ -2423,6 +2458,11 @@ js.Patcher.peepholeMangleBlock = function($this, node) {
       }
     }
   }
+};
+js.Patcher.joinExpressions = function(left, right) {
+  var sequence = Node.withChildren(new Node(50), left.kind === 50 ? Node.removeChildren(left) : [left]);
+  Node.appendChildren(sequence, right.kind === 50 ? Node.removeChildren(right) : [right]);
+  return sequence;
 };
 js.Patcher.looksTheSame = function($this, left, right) {
   if (left.kind === right.kind) {

@@ -366,7 +366,7 @@ namespace js {
           if (trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION) {
             var hook = Node.createHook(test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null));
             peepholeMangleHook(hook);
-            node.replaceWith(Node.createExpression(hook));
+            node.become(Node.createExpression(hook));
           }
 
           // "if (a) return b; else return c;" => "return a ? b : c;"
@@ -376,7 +376,7 @@ namespace js {
             if (trueValue != null && falseValue != null) {
               var hook = Node.createHook(test.replaceWith(null), trueValue.replaceWith(null), falseValue.replaceWith(null));
               peepholeMangleHook(hook);
-              node.replaceWith(Node.createReturn(hook));
+              node.become(Node.createReturn(hook));
             }
           }
         }
@@ -384,8 +384,22 @@ namespace js {
 
       // "if (a) b;" => "a && b;"
       else if (trueStatement != null && trueStatement.kind == .EXPRESSION) {
-        node.replaceWith(Node.createExpression(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), trueStatement.expressionValue().replaceWith(null))));
+        node.become(Node.createExpression(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), trueStatement.expressionValue().replaceWith(null))));
       }
+    }
+
+    bool isJumpImplied(Node node, NodeKind kind) {
+      assert node.kind == .BLOCK;
+      assert kind == .RETURN || kind == .CONTINUE;
+      var parent = node.parent;
+      var parentKind = parent.kind;
+      if (kind == .RETURN && parentKind == .FUNCTION || kind == .CONTINUE && parentKind.isLoop()) {
+        return true;
+      }
+      if (parentKind == .IF && parent.isLastChild()) {
+        return isJumpImplied(parent.parent, kind);
+      }
+      return false;
     }
 
     void peepholeMangleBlock(Node node) {
@@ -419,14 +433,32 @@ namespace js {
             if (next.kind != .EXPRESSION) {
               break;
             }
-            if (nodes == null) {
-              nodes = []; // Save on allocations
-            }
-            nodes.push(next.remove().expressionValue().remove());
+            var combined = Node.createExpression(joinExpressions(child.expressionValue().replaceWith(null), next.remove().expressionValue().replaceWith(null)));
+            child.replaceWith(combined);
+            child = combined;
           }
-          if (nodes != null) {
-            nodes.unshift(child.expressionValue().remove());
-            child.replaceWith(Node.createExpression(Node.createSequence(nodes)));
+        }
+
+        // "void foo() { if (a) return; b(); c(); }" => "void foo() { if (!a) { b(); c(); } }"
+        // "while (a) { if (b) continue; c(); d(); }" => "while (a) { if (!b) { c(); d(); } }"
+        else if (kind == .IF && child.ifFalse() == null) {
+          var trueBlock = child.ifTrue();
+          var statement = trueBlock.singleStatement();
+          if (statement != null && (statement.kind == .RETURN && statement.returnValue() == null || statement.kind == .CONTINUE) && isJumpImplied(node, statement.kind)) {
+            child.ifTest().invertBooleanCondition(cache);
+            statement.remove();
+            while (i + 1 < node.children.length) {
+              trueBlock.appendChild(node.children.get(i + 1).remove());
+            }
+            peepholeMangleBlock(trueBlock);
+            peepholeMangleIf(child);
+            if (child.kind == .EXPRESSION && i > 0) {
+              var previous = node.children.get(i - 1);
+              if (previous.kind == .EXPRESSION) {
+                previous.replaceWith(Node.createExpression(joinExpressions(previous.expressionValue().replaceWith(null), child.remove().expressionValue().replaceWith(null))));
+              }
+            }
+            return;
           }
         }
 
@@ -450,14 +482,7 @@ namespace js {
 
             // "a(); return b;" => "return a(), b;"
             else if (previous.kind == .EXPRESSION) {
-              var values = previous.remove().expressionValue().replaceWith(null);
-              var value = child.returnValue().replaceWith(null);
-              if (values.kind == .SEQUENCE) {
-                values.appendChild(value);
-              } else {
-                values = Node.createSequence([values, value]);
-              }
-              var combined = Node.createReturn(values);
+              var combined = Node.createReturn(joinExpressions(previous.remove().expressionValue().replaceWith(null), child.returnValue().replaceWith(null)));
               child.replaceWith(combined);
               child = combined;
             }
@@ -470,6 +495,12 @@ namespace js {
           }
         }
       }
+    }
+
+    Node joinExpressions(Node left, Node right) {
+      var sequence = Node.createSequence(left.kind == .SEQUENCE ? left.removeChildren() : [left]);
+      sequence.appendChildren(right.kind == .SEQUENCE ? right.removeChildren() : [right]);
+      return sequence;
     }
 
     bool looksTheSame(Node left, Node right) {

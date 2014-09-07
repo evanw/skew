@@ -308,4 +308,106 @@ export bool bar(int a) {
 function foo(a){return a>4&&a<9}function bar(a){return 4<a&&9>a}
 ");
 
+testMinify("
+export void foo(bool x, void fn() y) {
+  if (x) return;
+  y();
+  y();
+}
+", "
+function foo(b,a){!b&&(a(),a())}
+");
+
+testMinify("
+export void foo(bool x, void fn() y) {
+  if (x) return;
+  y();
+  if (x) return;
+  y();
+}
+", "
+function foo(a,b){!a&&(b(),!a&&b())}
+");
+
+testMinify("
+export void foo(bool x, bool y, void fn() z) {
+  if (x) {
+    if (y) return;
+    z();
+    z();
+  }
+}
+", "
+function foo(b,c,a){b&&(!c&&(a(),a()))}
+");
+
+testMinify("
+export void foo(bool x, bool y, void fn() z) {
+  if (x) {
+    if (y) return;
+    z();
+    z();
+  }
+  z();
+}
+", "
+function foo(b,c,a){if(b){if(c)return;a(),a()}a()}
+");
+
+testMinify("
+export void foo(bool x, bool y, void fn() z) {
+  while (x) {
+    if (y) continue;
+    z();
+    z();
+  }
+}
+", "
+function foo(b,c,a){while(b)!c&&(a(),a())}
+");
+
+testMinify("
+export void foo(bool x, bool y, void fn() z) {
+  while (x) {
+    if (y) continue;
+    z();
+    if (y) continue;
+    z();
+  }
+}
+", "
+function foo(c,a,b){while(c)!a&&(b(),!a&&b())}
+");
+
+testMinify("
+export void foo(bool x, bool y, void fn() z) {
+  while (x) {
+    if (y) {
+      z();
+      if (y) continue;
+      z();
+      z();
+    }
+  }
+}
+", "
+function foo(c,b,a){while(c)b&&(a(),!b&&(a(),a()))}
+");
+
+testMinify("
+export void foo(bool x, bool y, void fn() z) {
+  while (x) {
+    if (y) {
+      z();
+      if (y) continue;
+      z();
+      z();
+    }
+    z();
+  }
+}
+", "
+function foo(c,b,a){while(c){if(b){a();if(b)continue;a(),a()}a()}}
+");
+
 }}
