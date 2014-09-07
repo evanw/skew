@@ -141,4 +141,9 @@ in Node {
       }
     }
   }
+
+  Node singleStatement() {
+    assert kind == .BLOCK;
+    return hasChildren() && children.length == 1 ? children.get(0) : null;
+  }
 }

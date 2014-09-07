@@ -6,6 +6,30 @@ import double now(); // The current time in seconds
 final string BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 final string HEX = "0123456789ABCDEF";
 
+class UnionFind {
+  List<int> parents = [];
+
+  new(int count) {
+    for (var i = 0; i < count; i++) {
+      parents.set(i, i);
+    }
+  }
+
+  void union(int left, int right) {
+    parents.set(find(left), find(right));
+  }
+
+  int find(int index) {
+    assert index >= 0 && index < parents.length;
+    int parent = parents.get(index);
+    if (parent != index) {
+      parent = find(parent);
+      parents.set(index, parent);
+    }
+    return parent;
+  }
+}
+
 int hashCombine(int left, int right) {
   return left ^ right - 0x61c88647 + (left << 6) + (left >> 2);
 }

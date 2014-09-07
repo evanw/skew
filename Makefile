@@ -24,6 +24,7 @@ SOURCES += src/core/support.sk
 SOURCES += src/frontend/frontend.sk
 
 SOURCES += src/js/emitter.sk
+SOURCES += src/js/patcher.sk
 SOURCES += src/js/sourcemap.sk
 
 SOURCES += src/lexer/lexer.sk

@@ -1,9 +1,4 @@
 namespace js {
-  enum BooleanSwap {
-    SWAP,
-    NO_SWAP,
-  }
-
   enum ClusterState {
     NONE,
     VAR_CHAIN,
@@ -15,26 +10,6 @@ namespace js {
     CAN_OMIT_BRACES,
   }
 
-  class PatchContext {
-    var lambdaCount = 0;
-    var createdThisAlias = false;
-    Node function = null;
-
-    void setFunction(Node node) {
-      function = node;
-      createdThisAlias = false;
-    }
-
-    Node thisAlias() {
-      if (!createdThisAlias) {
-        createdThisAlias = true;
-        function.functionBlock().insertChild(0, Node.createVariableCluster(Node.createError(),
-          [Node.createVariable(Node.createName("$this"), null, Node.createThis())]));
-      }
-      return Node.createName("$this");
-    }
-  }
-
   class Emitter : IEmitter {
     static StringMap<bool> isKeyword;
     var newline = "\n";
@@ -42,14 +17,13 @@ namespace js {
     var indent = "";
     var currentLine = 0;
     var currentColumn = 0;
-    var needExtends = false;
-    var needMathImul = false;
     var needsSemicolon = false;
     var isStartOfExpression = false;
     var generator = SourceMapGenerator();
     Source currentSource = null;
     CompilerOptions options;
     TypeCache cache;
+    Patcher patcher;
 
     // Numbers normally need to be wrapped in parentheses when toString() is
     // called on them because "1.toString()" is a syntax error in JavaScript.
@@ -58,22 +32,27 @@ namespace js {
     // toString() call has been elided.
     Node toStringTarget = null;
 
+    new(CompilerOptions options, TypeCache cache) : options = options, cache = cache, patcher = Patcher(options, cache) {
+    }
+
     override void patchProgram(Node program) {
       if (options.jsMinify) {
         newline = "";
         space = "";
       }
 
-      patchNode(program, PatchContext());
+      patcher.patchNode(program, PatchContext());
     }
 
     override List<Source> emitProgram(Node program) {
+      // Ensure static variables exist
       if (isKeyword == null) {
         isKeyword = createIsKeyword();
       }
 
-      currentSource = Source(options.outputFile, "");
+      // Collect all interesting nodes for easy access
       var collector = Collector(program, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
+      currentSource = Source(options.outputFile, "");
 
       // Prepend inputs
       for (var i = 0; i < options.prepend.length; i++) {
@@ -81,7 +60,7 @@ namespace js {
       }
 
       // Emit helper functions
-      if (needMathImul) {
+      if (patcher.needMathImul) {
         emit(
 "var $imul = Math.imul || function(a, b) {
   var ah = a >>> 16, al = a & 0xFFFF;
@@ -90,7 +69,7 @@ namespace js {
 };
 ");
       }
-      if (needExtends) {
+      if (patcher.needExtends) {
         emit(
 "function $extends(derived, base) {
   derived.prototype = Object.create(base.prototype);
@@ -280,18 +259,10 @@ namespace js {
       emit(")");
     }
 
-    void emitChildren(Node node) {
-    }
-
-    Node singleStatement(Node node) {
-      assert node.kind == .BLOCK;
-      return node.hasChildren() && node.children.length == 1 ? node.children.get(0) : null;
-    }
-
     void recursiveEmitIfStatement(Node node) {
       var trueBlock = node.ifTrue();
       var falseBlock = node.ifFalse();
-      var trueStatement = singleStatement(trueBlock);
+      var trueStatement = trueBlock.singleStatement();
       emit("if" + space + "(");
       emitExpression(node.ifTest(), .LOWEST);
       emit(")" + space);
@@ -302,7 +273,7 @@ namespace js {
       if (falseBlock != null) {
         emitSemicolonIfNeeded();
         emit(space + "else ");
-        var falseStatement = singleStatement(falseBlock);
+        var falseStatement = falseBlock.singleStatement();
         if (falseStatement != null && falseStatement.kind == .IF) {
           addMapping(falseStatement);
           recursiveEmitIfStatement(falseStatement);
@@ -820,439 +791,6 @@ namespace js {
       emit("]" + space + "=" + space);
       emitExpression(node.tertiaryRight(), .ASSIGN);
       if (.ASSIGN < precedence) emit(")");
-    }
-
-    bool alwaysConvertsOperandsToInt(NodeKind kind) {
-      switch (kind) {
-        case
-          .BITWISE_OR, .BITWISE_AND, .BITWISE_XOR, .SHIFT_LEFT,
-          .SHIFT_RIGHT, .ASSIGN_BITWISE_OR, .ASSIGN_BITWISE_AND,
-          .ASSIGN_BITWISE_XOR, .ASSIGN_SHIFT_LEFT, .ASSIGN_SHIFT_RIGHT {
-
-          return true;
-        }
-
-        default {
-          return false;
-        }
-      }
-    }
-
-    static bool isExpressionUsed(Node node) {
-      assert node.kind.isExpression();
-      var parent = node.parent;
-      if (!parent.kind.isExpression()) {
-        return false;
-      }
-      if (parent.kind == .SEQUENCE && (!isExpressionUsed(parent) || parent.children.indexOf(node) < parent.children.length - 1)) {
-        return false;
-      }
-      return true;
-    }
-
-    void patchNode(Node node, PatchContext context) {
-      switch (node.kind) {
-        case .LAMBDA { context.lambdaCount++; }
-        case .CONSTRUCTOR { patchConstructor(node, context); context.setFunction(node); }
-        case .FUNCTION { context.setFunction(node); }
-        case .CAST { patchCast(node, context); }
-        case .CLASS { patchClass(node); }
-        case .THIS { patchThis(node, context); }
-        case .NAME { patchName(node); }
-        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinary(node); }
-        case .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node, context); }
-        case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER { patchAssign(node, context); }
-      }
-
-      // This is not inside the switch statement above because one of the other
-      // case clauses may have introduced a let statement
-      if (node.kind == .LET) {
-        patchLet(node);
-      }
-
-      if (node.hasChildren()) {
-        for (var i = 0; i < node.children.length; i++) {
-          var child = node.children.get(i);
-          if (child != null) {
-            patchNode(child, context);
-          }
-        }
-      }
-
-      switch (node.kind) {
-        case .LAMBDA { context.lambdaCount--; }
-        case .CONSTRUCTOR, .FUNCTION { context.setFunction(null); }
-        case .IF { if (options.jsMangle) peepholeMangleIf(node); }
-        case .FOR { if (options.jsMangle) peepholeMangleBoolean(node.forTest(), .NO_SWAP); }
-        case .WHILE, .DO_WHILE { if (options.jsMangle) peepholeMangleBoolean(node.whileTest(), .NO_SWAP); }
-        case .BLOCK { if (options.jsMangle) peepholeMangleBlock(node); }
-        case .HOOK { if (options.jsMangle) peepholeMangleHook(node); }
-      }
-    }
-
-    bool isFalsy(Node node) {
-      var kind = node.kind;
-      if (kind == .NULL) return true;
-      else if (kind == .INT) return node.asInt() == 0;
-      else if (kind.isReal()) return node.asDouble() == 0;
-      else if (kind == .STRING) return node.asString() == "";
-      else if (kind.isCast()) return isFalsy(node.castValue());
-      else return false;
-    }
-
-    BooleanSwap peepholeMangleBoolean(Node node, BooleanSwap canSwap) {
-      var kind = node.kind;
-
-      // "if (!a) b; else c;" => "if (a) c; else b;"
-      if (kind == .NOT && canSwap == .SWAP) {
-        node.become(node.unaryValue().replaceWith(null));
-        return .SWAP;
-      }
-
-      if (kind == .EQUAL || kind == .NOT_EQUAL) {
-        var left = node.binaryLeft();
-        var right = node.binaryRight();
-        var replacement = isFalsy(right) ? left : isFalsy(left) ? right : null;
-
-        // "if (a != 0) b;" => "if (a) b;"
-        if (replacement != null) {
-
-          // This minification is not valid for floating-point values because
-          // of NaN, since NaN != 0 but NaN is falsy in JavaScript
-          if (left.type != null && !left.type.isReal(cache) && right.type != null && !right.type.isReal(cache)) {
-            replacement.replaceWith(null);
-            node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement);
-          }
-        }
-
-        else if (left.type != null && left.type.isInteger(cache) && right.type != null && right.type.isInteger(cache)) {
-
-          // "if (a != b) c;" => "if (a ^ b) c;"
-          if (kind == .NOT_EQUAL) {
-            node.kind = .BITWISE_XOR;
-          }
-
-          // "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
-          else if (kind == .EQUAL && canSwap == .SWAP) {
-            node.kind = .BITWISE_XOR;
-            return .SWAP;
-          }
-        }
-      }
-
-      // "if (a != 0 || b != 0) c;" => "if (a || b) c;"
-      else if (kind == .LOGICAL_AND || kind == .LOGICAL_OR) {
-        peepholeMangleBoolean(node.binaryLeft(), .NO_SWAP);
-        peepholeMangleBoolean(node.binaryRight(), .NO_SWAP);
-      }
-
-      return .NO_SWAP;
-    }
-
-    void peepholeMangleIf(Node node) {
-      var test = node.ifTest();
-      var trueBlock = node.ifTrue();
-      var falseBlock = node.ifFalse();
-      var swapped = peepholeMangleBoolean(test, falseBlock != null ? .SWAP : .NO_SWAP);
-
-      // "if (!a) b; else c;" => "if (a) c; else b;"
-      if (swapped == .SWAP) {
-        var temp = trueBlock;
-        trueBlock = falseBlock;
-        falseBlock = temp;
-        trueBlock.swapWith(falseBlock);
-      }
-
-      var trueStatement = singleStatement(trueBlock);
-      if (falseBlock != null) {
-        var falseStatement = singleStatement(falseBlock);
-        if (trueStatement != null && falseStatement != null) {
-
-          // "if (a) b; else c;" => "a ? b : c;"
-          if (trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION) {
-            var hook = Node.createHook(test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null));
-            peepholeMangleHook(hook);
-            node.replaceWith(Node.createExpression(hook));
-          }
-
-          // "if (a) return b; else return c;" => "return a ? b : c;"
-          else if (trueStatement.kind == .RETURN && falseStatement.kind == .RETURN) {
-            var trueValue = trueStatement.returnValue();
-            var falseValue = falseStatement.returnValue();
-            if (trueValue != null && falseValue != null) {
-              var hook = Node.createHook(test.replaceWith(null), trueValue.replaceWith(null), falseValue.replaceWith(null));
-              peepholeMangleHook(hook);
-              node.replaceWith(Node.createReturn(hook));
-            }
-          }
-        }
-      }
-
-      // "if (a) b;" => "a && b;"
-      else if (trueStatement != null && trueStatement.kind == .EXPRESSION) {
-        node.replaceWith(Node.createExpression(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), trueStatement.expressionValue().replaceWith(null))));
-      }
-    }
-
-    void peepholeMangleBlock(Node node) {
-      if (!node.hasChildren()) {
-        return;
-      }
-
-      for (var i = 0; i < node.children.length; i++) {
-        var child = node.children.get(i);
-        var kind = child.kind;
-
-        // "var a = 0; var b = 1;" => "var a = 0, b = 1;"
-        if (kind == .VARIABLE_CLUSTER) {
-          while (i + 1 < node.children.length) {
-            var next = node.children.get(i + 1);
-            if (next.kind != .VARIABLE_CLUSTER) {
-              break;
-            }
-            var variables = next.remove().clusterVariables();
-            for (var j = 0; j < variables.length; j++) {
-              child.appendChild(variables.get(j).replaceWith(null));
-            }
-          }
-        }
-
-        // "a; b; c;" => "a, b, c;"
-        else if (kind == .EXPRESSION) {
-          List<Node> nodes;
-          while (i + 1 < node.children.length) {
-            var next = node.children.get(i + 1);
-            if (next.kind != .EXPRESSION) {
-              break;
-            }
-            if (nodes == null) {
-              nodes = []; // Save on allocations
-            }
-            nodes.push(next.remove().expressionValue().remove());
-          }
-          if (nodes != null) {
-            nodes.unshift(child.expressionValue().remove());
-            child.replaceWith(Node.createExpression(Node.createSequence(nodes)));
-          }
-        }
-
-        else if (kind == .RETURN && child.returnValue() != null) {
-          while (i > 0) {
-            var previous = node.children.get(i - 1);
-
-            // "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
-            if (previous.kind == .IF && previous.ifFalse() == null) {
-              var statement = singleStatement(previous.ifTrue());
-              if (statement != null && statement.kind == .RETURN && statement.returnValue() != null) {
-                var hook = Node.createHook(previous.ifTest().replaceWith(null), statement.returnValue().replaceWith(null), child.returnValue().replaceWith(null));
-                peepholeMangleHook(hook);
-                child.remove();
-                child = Node.createReturn(hook);
-                previous.replaceWith(child);
-              } else {
-                break;
-              }
-            }
-
-            // "a(); return b;" => "return a(), b;"
-            else if (previous.kind == .EXPRESSION) {
-              var values = previous.remove().expressionValue().replaceWith(null);
-              var value = child.returnValue().replaceWith(null);
-              if (values.kind == .SEQUENCE) {
-                values.appendChild(value);
-              } else {
-                values = Node.createSequence([values, value]);
-              }
-              var combined = Node.createReturn(values);
-              child.replaceWith(combined);
-              child = combined;
-            }
-
-            else {
-              break;
-            }
-
-            i--;
-          }
-        }
-      }
-    }
-
-    bool looksTheSame(Node left, Node right) {
-      if (left.kind == right.kind) {
-        switch (left.kind) {
-          case .NULL, .THIS { return true; }
-          case .INT { return left.asInt() == right.asInt(); }
-          case .BOOL { return left.asBool() == right.asBool(); }
-          case .FLOAT, .DOUBLE { return left.asDouble() == right.asDouble(); }
-          case .STRING { return left.asString() == right.asString(); }
-          case .NAME { return left.symbol != null && left.symbol == right.symbol || left.asString() == right.asString(); }
-          case .DOT { return left.symbol == right.symbol && left.dotName().asString() == right.dotName().asString() && looksTheSame(left.dotTarget(), right.dotTarget()); }
-        }
-      }
-      return false;
-    }
-
-    void peepholeMangleHook(Node node) {
-      var test = node.hookTest();
-      var trueValue = node.hookTrue();
-      var falseValue = node.hookFalse();
-      var swapped = peepholeMangleBoolean(test, .SWAP);
-
-      // "!a ? b : c;" => "a ? c : b;"
-      if (swapped == .SWAP) {
-        var temp = trueValue;
-        trueValue = falseValue;
-        falseValue = temp;
-        trueValue.swapWith(falseValue);
-      }
-
-      // Collapse partially-identical binary expressions
-      if (trueValue.kind == falseValue.kind && trueValue.kind.isBinaryOperator()) {
-        var trueLeft = trueValue.binaryLeft();
-        var trueRight = trueValue.binaryRight();
-        var falseLeft = falseValue.binaryLeft();
-        var falseRight = falseValue.binaryRight();
-
-        // "a ? b = c : b = d;" => "b = a ? c : d;"
-        if (looksTheSame(trueLeft, falseLeft)) {
-          var hook = Node.createHook(test.replaceWith(null), trueRight.replaceWith(null), falseRight.replaceWith(null));
-          peepholeMangleHook(hook);
-          node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWith(null), hook));
-        }
-
-        // "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
-        else if (looksTheSame(trueRight, falseRight) && !trueValue.kind.isBinaryStorageOperator()) {
-          var hook = Node.createHook(test.replaceWith(null), trueLeft.replaceWith(null), falseLeft.replaceWith(null));
-          peepholeMangleHook(hook);
-          node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWith(null)));
-        }
-      }
-    }
-
-    void patchThis(Node node, PatchContext context) {
-      if (context.lambdaCount > 0) {
-        node.become(context.thisAlias());
-      }
-    }
-
-    void patchClass(Node node) {
-      if (!node.symbol.isImport() && node.symbol.type.baseClass() != null) {
-        needExtends = true;
-      }
-    }
-
-    void patchName(Node node) {
-      if (node.symbol != null && node.symbol.kind.isInstance() && node.isNameExpression()) {
-        node.become(Node.createDot(Node.createThis(), node.clone()));
-      }
-    }
-
-    void patchBinary(Node node) {
-      if (node.type.isInt(cache) && (node.kind == .MULTIPLY || !alwaysConvertsOperandsToInt(node.parent.kind))) {
-        node.become(createBinaryInt(node.kind, node.binaryLeft().replaceWith(null), node.binaryRight().replaceWith(null)).withRange(node.range));
-      }
-    }
-
-    void patchLet(Node node) {
-      var value = node.letValue().replaceWith(null);
-      var variable = node.letVariable().replaceWith(null);
-      node.become(Node.createCall(Node.createLambda([variable], Node.createBlock([Node.createReturn(value)])), [variable.variableValue().replaceWith(null)]));
-    }
-
-    void patchAssign(Node node, PatchContext context) {
-      if (node.type.isInt(cache)) {
-        var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
-        var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
-        var left = node.binaryLeft();
-        var right = node.binaryRight();
-        NodeKind kind =
-          node.kind == .ASSIGN_ADD ? .ADD :
-          node.kind == .ASSIGN_SUBTRACT ? .SUBTRACT :
-          node.kind == .ASSIGN_MULTIPLY ? .MULTIPLY :
-          node.kind == .ASSIGN_DIVIDE ? .DIVIDE :
-          .REMAINDER;
-        node.become(createBinaryIntAssignment(context, kind, left.replaceWith(null), right.replaceWith(null)).withRange(node.range));
-      }
-    }
-
-    void patchUnary(Node node, PatchContext context) {
-      if (node.type.isInt(cache)) {
-        var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
-        var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
-        var result = createBinaryIntAssignment(context, isIncrement ? .ADD : .SUBTRACT, node.unaryValue().replaceWith(null), Node.createInt(1));
-        if (isPostfix && isExpressionUsed(node)) {
-          result = createBinaryInt(isIncrement ? .SUBTRACT : .ADD, result, Node.createInt(1));
-        }
-        node.become(result.withRange(node.range).withType(node.type));
-      }
-    }
-
-    void patchCast(Node node, PatchContext context) {
-      var value = node.castValue();
-
-      // Cast to bool
-      if (node.type.isBool(cache) && !value.type.isBool(cache)) {
-        value = Node.createUnary(.NOT, value.replaceWith(null)).withRange(node.range).withType(node.type);
-        node.become(Node.createUnary(.NOT, value).withRange(node.range).withType(node.type));
-      }
-
-      // Cast to int
-      else if (node.type.isInt(cache) && !value.type.isInteger(cache) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
-        node.become(Node.createBinary(.BITWISE_OR, value.replaceWith(null), Node.createInt(0)).withRange(node.range).withType(node.type));
-      }
-
-      // Cast to float/double
-      else if (node.type.isReal(cache) && !value.type.isNumeric(cache)) {
-        node.become(Node.createUnary(.POSITIVE, value.replaceWith(null)).withRange(node.range).withType(node.type));
-      }
-    }
-
-    void patchConstructor(Node node, PatchContext context) {
-      var block = node.functionBlock();
-      if (block == null) {
-        return;
-      }
-      var superInitializer = node.superInitializer();
-      var memberInitializers = node.memberInitializers();
-      var index = 0;
-      if (superInitializer != null) {
-        block.insertChild(index++, Node.createExpression(superInitializer.replaceWith(null)));
-      }
-      if (memberInitializers != null) {
-        for (var i = 0; i < memberInitializers.children.length; i++) {
-          var child = memberInitializers.children.get(i);
-          var name = child.memberInitializerName();
-          var value = child.memberInitializerValue();
-          block.insertChild(index++, Node.createExpression(Node.createBinary(.ASSIGN, name.replaceWith(null), value.replaceWith(null))));
-        }
-      }
-    }
-
-    Node createBinaryInt(NodeKind kind, Node left, Node right) {
-      if (kind == .MULTIPLY) {
-        needMathImul = true;
-        return Node.createCall(Node.createName("$imul"), [left, right]).withType(cache.intType);
-      }
-      return Node.createBinary(.BITWISE_OR, Node.createBinary(kind, left, right).withType(cache.intType), Node.createInt(0).withType(cache.intType)).withType(cache.intType);
-    }
-
-    static bool isSimpleNameAccess(Node node) {
-      return node.kind == .NAME || node.kind == .THIS || node.kind == .DOT && isSimpleNameAccess(node.dotTarget());
-    }
-
-    Node createBinaryIntAssignment(PatchContext context, NodeKind kind, Node left, Node right) {
-      if (isSimpleNameAccess(left)) {
-        return Node.createBinary(.ASSIGN, left.clone(), createBinaryInt(kind, left, right));
-      }
-      assert left.kind == .DOT;
-      var target = left.dotTarget();
-      var name = left.dotName();
-      var temporaryName = Node.createName("$temp");
-      var dot = Node.createDot(temporaryName, name.replaceWith(null));
-      return Node.createLet(
-        Node.createVariable(temporaryName.clone(), null, target.replaceWith(null)),
-        Node.createBinary(.ASSIGN, dot, createBinaryInt(kind, dot.clone(), right)).withType(cache.intType)).withType(cache.intType);
     }
 
     static bool hasCompoundName(Symbol symbol) {
