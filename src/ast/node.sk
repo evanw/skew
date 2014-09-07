@@ -69,6 +69,7 @@ enum NodeKind {
 
   // Unary operators
   NOT,
+  DELETE,
   POSITIVE,
   NEGATIVE,
   COMPLEMENT,
@@ -206,7 +207,7 @@ in NodeKind {
   }
 
   string prettyPrint() {
-    return replace(toString().toLowerCase(), "_", "-");
+    return toString().toLowerCase().replace("_", "-");
   }
 }
 

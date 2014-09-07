@@ -8,6 +8,10 @@ import struct String {
   import static string fromCharCode(int value);
 }
 
+import class Object {
+  import static Object create(Object prototype);
+}
+
 import struct string {
   import final int length;
   import string slice(int start, int end);
@@ -41,6 +45,7 @@ import class List<T> {
   inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }
   inline T get(int index) { return untyped(this)[index]; }
   inline void set(int index, T value) { untyped(this)[index] = value; }
+
   void swap(int a, int b) {
     var temp = get(a);
     set(a, get(b));
@@ -48,28 +53,58 @@ import class List<T> {
   }
 }
 
-import class StringMap<T> {
-  import new();
-  import T get(string key);
-  import T getOrDefault(string key, T defaultValue);
-  import void set(string key, T value);
-  import bool has(string key);
-  import void remove(string key);
-  import List<string> keys();
-  import List<T> values();
-  import StringMap<T> clone();
+class StringMap<T> {
+  Object table = Object.create(null);
+  inline T get(string key) { return untyped(table)[key]; }
+  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }
+  inline void set(string key, T value) { untyped(table)[key] = value; }
+  inline bool has(string key) { return key in untyped(table); }
+  inline void remove(string key) { delete(untyped(table)[key]); }
+
+  List<string> keys() {
+    List<string> keys = [];
+    for (string key in untyped(table)) keys.push(key);
+    return keys;
+  }
+
+  List<T> values() {
+    List<T> values = [];
+    for (string key in untyped(table)) values.push(get(key));
+    return values;
+  }
+
+  StringMap<T> clone() {
+    var clone = StringMap<T>();
+    for (string key in untyped(table)) clone.set(key, get(key));
+    return clone;
+  }
 }
 
-import class IntMap<T> {
-  import new();
-  import T get(int key);
-  import T getOrDefault(int key, T defaultValue);
-  import void set(int key, T value);
-  import bool has(int key);
-  import void remove(int key);
-  import List<int> keys();
-  import List<T> values();
-  import IntMap<T> clone();
+class IntMap<T> {
+  Object table = Object.create(null);
+  inline T get(int key) { return untyped(table)[key]; }
+  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }
+  inline void set(int key, T value) { untyped(table)[key] = value; }
+  inline bool has(int key) { return key in untyped(table); }
+  inline void remove(int key) { delete untyped(table)[key]; }
+
+  List<int> keys() {
+    List<int> keys = [];
+    for (double key in untyped(table)) keys.push((int)key);
+    return keys;
+  }
+
+  List<T> values() {
+    List<T> values = [];
+    for (int key in untyped(table)) values.push(get(key));
+    return values;
+  }
+
+  IntMap<T> clone() {
+    var clone = IntMap<T>();
+    for (int key in untyped(table)) clone.set(key, get(key));
+    return clone;
+  }
 }
 
 // TODO: Rename this to \"math\" since namespaces should be lower case

@@ -239,6 +239,11 @@ void semanticErrorNoBinaryOperator(Log log, Range range, NodeKind kind, Type lef
   log.error(range, "No binary operator " + operatorInfo.get(kind).text + " for " + typeToText(left) + " and " + typeToText(right));
 }
 
+void semanticErrorNoTertiaryOperator(Log log, Range range, NodeKind kind, Type left, Type middle, Type right) {
+  assert kind.isTertiaryOperator();
+  log.error(range, "No tertiary operator " + operatorInfo.get(kind).text + " for " + typeToText(left) + ", " + typeToText(middle) + ", and " + typeToText(right));
+}
+
 void semanticErrorBadStorage(Log log, Range range) {
   log.error(range, "Cannot store to this location");
 }

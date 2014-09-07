@@ -93,12 +93,10 @@ DEBUG_DIR = build/debug
 RELEASE_DIR = build/release
 TESTS_DIR = build/tests
 
-JS_SOURCES += bootstrap.js
 JS_SOURCES += src/core/support.js
 
 FLAGS += --verbose
 FLAGS += --target=js
-FLAGS += --prepend-file=bootstrap.js
 FLAGS += --append-file=src/core/support.js
 
 FRONTEND_DEPS += Makefile

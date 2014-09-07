@@ -120,14 +120,17 @@ string quoteString(string text, int quote) {
 }
 
 // TODO: Move this into the standard library
-string replace(string text, string before, string after) {
-  var result = "";
-  int index;
-  while ((index = text.indexOf(before)) != -1) {
-    result += text.slice(0, index) + after;
-    text = text.slice(index + before.length, text.length);
+import in string {
+  string replace(string before, string after) {
+    var text = this;
+    var result = "";
+    int index;
+    while ((index = text.indexOf(before)) != -1) {
+      result += text.slice(0, index) + after;
+      text = text.slice(index + before.length, text.length);
+    }
+    return result + text;
   }
-  return result + text;
 }
 
 string plural(int value, string singular, string plural) {

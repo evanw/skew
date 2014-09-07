@@ -538,7 +538,7 @@ class Resolver {
       case .VAR { resolveVar(node); }
       case .FUNCTION_TYPE { resolveFunctionType(node); }
 
-      case .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
+      case .NOT, .DELETE, .POSITIVE, .NEGATIVE, .COMPLEMENT, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
         resolveUnaryOperator(node);
       }
 
@@ -1715,10 +1715,6 @@ class Resolver {
     }
   }
 
-  void unsupportedNodeKind(Node node) {
-    // log.error(node.range, "TODO: Support nodes of kind " + node.kind);
-  }
-
   void resolveArguments(List<Node> arguments, List<Type> argumentTypes, Range outer, Range inner) {
     // Validate the argument count
     if (argumentTypes.length != arguments.length) {
@@ -2214,11 +2210,15 @@ class Resolver {
   }
 
   void resolveForEach(Node node) {
-    unsupportedNodeKind(node);
+    var value = node.forEachValue();
     checkStatementLocation(node);
     resolve(node.forEachVariable(), null);
+    resolve(value, null);
 
-    resolve(node.forEachValue(), null);
+    if (!value.type.isError(cache)) {
+      log.error(node.range, "TODO: implement for-each statement");
+    }
+
     var oldLoop = context.loop;
     context.loop = node;
     resolve(node.forEachBlock(), null);
@@ -2625,7 +2625,7 @@ class Resolver {
   }
 
   void resolveSuperCall(Node node) {
-    unsupportedNodeKind(node);
+    log.error(node.range, "TODO: implement super calls");
   }
 
   void resolveSequence(Node node) {
@@ -3020,10 +3020,15 @@ class Resolver {
     var left = node.tertiaryLeft();
     var middle = node.tertiaryMiddle();
     var right = node.tertiaryRight();
+
     resolveAsExpression(left);
     resolveAsExpression(middle);
     resolveAsExpression(right);
-    unsupportedNodeKind(node);
+
+    // User-defined operators aren't working yet
+    if (!left.type.isError(cache) && !middle.type.isError(cache) && !right.type.isError(cache)) {
+      semanticErrorNoTertiaryOperator(log, node.range, node.kind, left.type, middle.type, right.type);
+    }
   }
 }
 

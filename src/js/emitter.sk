@@ -57,21 +57,24 @@ namespace js {
 
       // Emit helper functions
       if (patcher.needMathImul) {
-        emit(
-"var $imul = Math.imul || function(a, b) {
-  var ah = a >>> 16, al = a & 0xFFFF;
-  var bh = b >>> 16, bl = b & 0xFFFF;
-  return al * bl + (ah * bl + al * bh << 16) | 0;
-};
-");
+        emit(indent + "var " + "$imul = Math.imul || function(a, b) {".replace(" ", space) + newline);
+        increaseIndent();
+        emit(indent + "var " + "ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;".replace(" ", space) + newline);
+        emit(indent + "return " + "al * bl + (ah * bl + al * bh << 16) | 0".replace(" ", space));
+        emitSemicolonAfterStatement();
+        decreaseIndent();
+        emit(indent + "};" + newline);
+        needsSemicolon = false;
       }
       if (patcher.needExtends) {
-        emit(
-"function $extends(derived, base) {
-  derived.prototype = Object.create(base.prototype);
-  derived.prototype.constructor = derived;
-}
-");
+        emit(indent + "function " + "$extends(d, b) {".replace(" ", space) + newline);
+        increaseIndent();
+        emit(indent + "d.prototype = Object.create(b.prototype);".replace(" ", space) + newline);
+        emit(indent + "d.prototype.constructor = d".replace(" ", space));
+        emitSemicolonAfterStatement();
+        decreaseIndent();
+        emit(indent + "}" + newline);
+        needsSemicolon = false;
       }
 
       // Emit types
@@ -293,6 +296,7 @@ namespace js {
         case .VARIABLE { emitVariable(node); }
         case .IF { emitIf(node); }
         case .FOR { emitFor(node); }
+        case .FOR_EACH { emitForEach(node); }
         case .WHILE { emitWhile(node); }
         case .DO_WHILE { emitDoWhile(node); }
         case .RETURN, .IMPLICIT_RETURN { emitReturn(node); }
@@ -495,6 +499,18 @@ namespace js {
       emit(newline);
     }
 
+    void emitForEach(Node node) {
+      var variable = node.forEachVariable();
+      var value = node.forEachValue();
+      emit(indent + "for" + space + "(var ");
+      emitNode(variable);
+      emit(" in ");
+      emitExpression(value, .LOWEST);
+      emit(")" + space);
+      emitBlock(node.forEachBlock(), .CAN_OMIT_BRACES);
+      emit(newline);
+    }
+
     void emitWhile(Node node) {
       emit(indent + "while" + space + "(");
       emitExpression(node.whileTest(), .LOWEST);
@@ -606,7 +622,7 @@ namespace js {
         case .CAST, .IMPLICIT_CAST { isStartOfExpression = wasStartOfExpression; emitExpression(node.castValue(), precedence); }
 
         case
-          .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT,
+          .NOT, .DELETE, .POSITIVE, .NEGATIVE, .COMPLEMENT,
           .PREFIX_INCREMENT, .PREFIX_DECREMENT,
           .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
           emitUnary(node, precedence);
@@ -722,7 +738,8 @@ namespace js {
         emit(info.text);
 
         // Prevent "- -1" from becoming "--1"
-        if (node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
+        if (node.kind == .DELETE ||
+            node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
             node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT || value.kind == .INT && value.asInt() < 0)) {
           emit(" ");
         }
