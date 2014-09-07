@@ -4,84 +4,96 @@ testJS("
 export in Foo {}
 export class Foo {}
 ", "
-function Foo() {
-}
+(function() {
+  Foo = function() {
+  };
+}());
 ");
 
 testJS("
 export class Foo {}
 export in Foo {}
 ", "
-function Foo() {
-}
+(function() {
+  Foo = function() {
+  };
+}());
 ");
 
 testJS("
 export class Foo : Bar {}
 class Bar {}
 ", "
-function $extends(derived, base) {
-  derived.prototype = Object.create(base.prototype);
-  derived.prototype.constructor = derived;
-}
-function Bar() {
-}
-function Foo() {
-  Bar.call(this);
-}
-$extends(Foo, Bar);
+(function() {
+  function $extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+  function Bar() {
+  }
+  Foo = function() {
+    Bar.call(this);
+  };
+  $extends(Foo, Bar);
+}());
 ");
 
 testJS("
 export class Foo : Bar {}
 class Bar { int x; }
 ", "
-function $extends(derived, base) {
-  derived.prototype = Object.create(base.prototype);
-  derived.prototype.constructor = derived;
-}
-function Bar(_0) {
-  this.x = _0;
-}
-function Foo(_0) {
-  Bar.call(this, _0);
-}
-$extends(Foo, Bar);
+(function() {
+  function $extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+  function Bar(_0) {
+    this.x = _0;
+  }
+  Foo = function(_0) {
+    Bar.call(this, _0);
+  };
+  $extends(Foo, Bar);
+}());
 ");
 
 testJS("
 export class Foo : Bar { int y; }
 class Bar {}
 ", "
-function $extends(derived, base) {
-  derived.prototype = Object.create(base.prototype);
-  derived.prototype.constructor = derived;
-}
-function Bar() {
-}
-function Foo(_0) {
-  Bar.call(this);
-  this.y = _0;
-}
-$extends(Foo, Bar);
+(function() {
+  function $extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+  function Bar() {
+  }
+  Foo = function(_0) {
+    Bar.call(this);
+    this.y = _0;
+  };
+  $extends(Foo, Bar);
+}());
 ");
 
 testJS("
 export class Foo : Bar { int y; }
 class Bar { int x; }
 ", "
-function $extends(derived, base) {
-  derived.prototype = Object.create(base.prototype);
-  derived.prototype.constructor = derived;
-}
-function Bar(_0) {
-  this.x = _0;
-}
-function Foo(_0, _1) {
-  Bar.call(this, _0);
-  this.y = _1;
-}
-$extends(Foo, Bar);
+(function() {
+  function $extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+  function Bar(_0) {
+    this.x = _0;
+  }
+  Foo = function(_0, _1) {
+    Bar.call(this, _0);
+    this.y = _1;
+  };
+  $extends(Foo, Bar);
+}());
 ");
 
 testJS("
@@ -92,16 +104,18 @@ namespace ns {
   export enum Baz { A, B, C }
 }
 ", "
-var ns = {};
-ns.Foo = function() {
-};
-ns.Bar = function() {
-};
-ns.Baz = {
-  A: 0,
-  B: 1,
-  C: 2
-};
+(function() {
+  var ns = {};
+  ns.Foo = function() {
+  };
+  ns.Bar = function() {
+  };
+  ns.Baz = {
+    A: 0,
+    B: 1,
+    C: 2
+  };
+}());
 ");
 
 testJS("
@@ -112,26 +126,30 @@ import namespace ns {
   import enum Baz { A, B, C }
 }
 ", "
+(function() {
+}());
 ");
 
 testJS("
-class Foo {
+export class Foo {
   export void foo() {}
 }
 export class Bar : Foo {}
 ", "
-function $extends(derived, base) {
-  derived.prototype = Object.create(base.prototype);
-  derived.prototype.constructor = derived;
-}
-function Foo() {
-}
-Foo.prototype.foo = function() {
-};
-function Bar() {
-  Foo.call(this);
-}
-$extends(Bar, Foo);
+(function() {
+  function $extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+  Foo = function() {
+  };
+  Foo.prototype.foo = function() {
+  };
+  Bar = function() {
+    Foo.call(this);
+  };
+  $extends(Bar, Foo);
+}());
 ");
 
 testJS("
@@ -140,9 +158,11 @@ export class Foo {
   new() {}
 }
 ", "
-function Foo() {
-  this.foo = 0;
-}
+(function() {
+  Foo = function() {
+    this.foo = 0;
+  };
+}());
 ");
 
 testJS("
@@ -156,9 +176,11 @@ export void test() {
   var foo = Foo();
 }
 ", "
-function test() {
-  var foo = new Foo();
-}
+(function() {
+  test = function() {
+    var foo = new Foo();
+  };
+}());
 ");
 
 }}

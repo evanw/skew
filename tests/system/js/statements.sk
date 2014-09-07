@@ -3,6 +3,8 @@ namespace js { void testStatements() {
 testJS("
 import int foo;
 ", "
+(function() {
+}());
 ");
 
 testJS("
@@ -11,26 +13,30 @@ void fn() bar = =>;
 class Foo {}
 class Bar : Foo {}
 ", "
+(function() {
+}());
 ");
 
 testJS("
 class Foo {}
-class Bar : Foo {
+export class Bar : Foo {
   export void foo() {}
 }
 ", "
-function $extends(derived, base) {
-  derived.prototype = Object.create(base.prototype);
-  derived.prototype.constructor = derived;
-}
-function Foo() {
-}
-function Bar() {
-  Foo.call(this);
-}
-$extends(Bar, Foo);
-Bar.prototype.foo = function() {
-};
+(function() {
+  function $extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+  function Foo() {
+  }
+  Bar = function() {
+    Foo.call(this);
+  };
+  $extends(Bar, Foo);
+  Bar.prototype.foo = function() {
+  };
+}());
 ");
 
 testJS("
@@ -38,16 +44,18 @@ enum Foo { A, B, C }
 export Foo foo() { return .A; }
 export Foo bar() { return .C; }
 ", "
-var Foo = {
-  A: 0,
-  C: 2
-};
-function foo() {
-  return Foo.A;
-}
-function bar() {
-  return Foo.C;
-}
+(function() {
+  var Foo = {
+    A: 0,
+    C: 2
+  };
+  foo = function() {
+    return Foo.A;
+  };
+  bar = function() {
+    return Foo.C;
+  };
+}());
 ");
 
 testJS("
@@ -60,18 +68,20 @@ export int foo(int x) {
   return y;
 }
 ", "
-function foo(x) {
-  var y = 0;
-  switch (x) {
-  case 1:
-    y = 1;
-    break;
-  case 2:
-    y = 2;
-    break;
-  }
-  return y;
-}
+(function() {
+  foo = function(x) {
+    var y = 0;
+    switch (x) {
+    case 1:
+      y = 1;
+      break;
+    case 2:
+      y = 2;
+      break;
+    }
+    return y;
+  };
+}());
 ");
 
 }}

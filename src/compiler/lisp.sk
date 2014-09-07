@@ -1,4 +1,4 @@
-namespace lisp {
+export namespace lisp {
   class Emitter : IEmitter {
     CompilerOptions options;
 
@@ -19,7 +19,7 @@ namespace lisp {
     }
   }
 
-  string dump(Node node) {
+  export string dump(Node node) {
     var visitor = DumpVisitor();
     visitor.visit(node);
     return visitor.result;

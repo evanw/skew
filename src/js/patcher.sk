@@ -55,38 +55,13 @@ namespace js {
         // this object will cause both groups of symbols to have the same name.
         var namingGroupsUnionFind = UnionFind(resolver.allSymbols.length);
 
-        // Merge local variables from different functions together in the order
-        // they were declared. This will cause every argument list to use the
-        // same variables in the same order, which should offer better gzip:
-        //
-        //   function d(a, b) {}
-        //   function e(a, b, c) {}
-        //
+        // These are optional and only reduce the number of generated names
         List<int> order = [];
-        zipTogetherInOrder(namingGroupsUnionFind, extractGroups(localVariableUnionFind, symbol => symbol.kind == .LOCAL_VARIABLE), order);
+        aliasLocalVariables(namingGroupsUnionFind, order);
+        aliasUnrelatedProperties(namingGroupsUnionFind, order);
 
-        // Merge all related types together into naming groups. This ensures
-        // names will be unique within a subclass hierarchy allowing names to
-        // be duplicated in separate subclass hierarchies.
-        var relatedTypesUnionFind = UnionFind(resolver.allSymbols.length);
-        for (var i = 0; i < resolver.allSymbols.length; i++) {
-          var symbol = resolver.allSymbols.get(i);
-          if (symbol.kind.isType()) {
-            if (symbol.type.hasRelevantTypes()) {
-              var types = symbol.type.relevantTypes;
-              for (var j = 0; j < types.length; j++) {
-                relatedTypesUnionFind.union(i, namingGroupIndexForSymbol.get(types.get(j).symbol.uniqueID));
-              }
-            }
-            var members = symbol.type.members.values();
-            for (var j = 0; j < members.length; j++) {
-              relatedTypesUnionFind.union(i, namingGroupIndexForSymbol.get(members.get(j).symbol.uniqueID));
-            }
-          }
-        }
-        zipTogetherInOrder(namingGroupsUnionFind, extractGroups(relatedTypesUnionFind, symbol => symbol.kind == .INSTANCE_VARIABLE), order);
-
-        // Ensure all overridden symbols have the same generated name
+        // Ensure all overridden symbols have the same generated name. This is
+        // manditory for correctness, otherwise virtual functions break.
         for (var i = 0; i < resolver.allSymbols.length; i++) {
           var symbol = resolver.allSymbols.get(i);
           if (symbol.overriddenMember != null) {
@@ -110,11 +85,6 @@ namespace js {
             reservedNames.set(member.symbol.name, true);
           }
         }
-
-        // TODO: Remove this once the minified output is wrapped in a closure.
-        // These global variables are already used in the node frontend.
-        reservedNames.set("fs", true);
-        reservedNames.set("it", true);
 
         // Everything that should have the same name is now grouped together.
         // Generate and assign names to all internal symbols, but use shorter
@@ -152,7 +122,41 @@ namespace js {
       }
     }
 
-    void zipTogetherInOrder(UnionFind unionFind, List<List<Symbol>> groups, List<int> order) {
+    // Merge local variables from different functions together in the order
+    // they were declared. This will cause every argument list to use the same
+    // variables in the same order, which should offer better gzip:
+    //
+    //   function d(a, b) {}
+    //   function e(a, b, c) {}
+    //
+    void aliasLocalVariables(UnionFind unionFind, List<int> order) {
+      zipTogetherInOrder(unionFind, order, extractGroups(localVariableUnionFind, symbol => symbol.kind == .LOCAL_VARIABLE));
+    }
+
+    // Merge all related types together into naming groups. This ensures names
+    // will be unique within a subclass hierarchy allowing names to be
+    // duplicated in separate subclass hierarchies.
+    void aliasUnrelatedProperties(UnionFind unionFind, List<int> order) {
+      var relatedTypesUnionFind = UnionFind(resolver.allSymbols.length);
+      for (var i = 0; i < resolver.allSymbols.length; i++) {
+        var symbol = resolver.allSymbols.get(i);
+        if (symbol.kind.isType()) {
+          if (symbol.type.hasRelevantTypes()) {
+            var types = symbol.type.relevantTypes;
+            for (var j = 0; j < types.length; j++) {
+              relatedTypesUnionFind.union(i, namingGroupIndexForSymbol.get(types.get(j).symbol.uniqueID));
+            }
+          }
+          var members = symbol.type.members.values();
+          for (var j = 0; j < members.length; j++) {
+            relatedTypesUnionFind.union(i, namingGroupIndexForSymbol.get(members.get(j).symbol.uniqueID));
+          }
+        }
+      }
+      zipTogetherInOrder(unionFind, order, extractGroups(relatedTypesUnionFind, symbol => symbol.kind == .INSTANCE_VARIABLE));
+    }
+
+    void zipTogetherInOrder(UnionFind unionFind, List<int> order, List<List<Symbol>> groups) {
       for (var i = 0; i < groups.length; i++) {
         var group = groups.get(i);
         if (group.length > 1) {

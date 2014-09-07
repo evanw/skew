@@ -13,17 +13,19 @@ export void test() {
   + --x;
 }
 ", "
-function test() {
-  var x = 0;
-  - -1;
-  + +1;
-  -+1;
-  +-1;
-  - --x;
-  + ++x;
-  -++x;
-  +--x;
-}
+(function() {
+  test = function() {
+    var x = 0;
+    - -1;
+    + +1;
+    -+1;
+    +-1;
+    - --x;
+    + ++x;
+    -++x;
+    +--x;
+  };
+}());
 ");
 
 testJS("
@@ -31,9 +33,11 @@ export void test() {
   - -0x80000000;
 }
 ", "
-function test() {
-  - -2147483648;
-}
+(function() {
+  test = function() {
+    - -2147483648;
+  };
+}());
 ");
 
 testJS("
@@ -46,14 +50,16 @@ export void test() {
   x = (x = x);
 }
 ", "
-function test() {
-  var x = 0;
-  1 - 2 - 3;
-  1 / 2 * 3;
-  1 - (2 - 3);
-  1 / (2 * 3);
-  x = x = x;
-}
+(function() {
+  test = function() {
+    var x = 0;
+    1 - 2 - 3;
+    1 / 2 * 3;
+    1 - (2 - 3);
+    1 / (2 * 3);
+    x = x = x;
+  };
+}());
 ");
 
 testJS("
@@ -63,11 +69,13 @@ export void test() {
   (float)false;
 }
 ", "
-function test() {
-  !!1;
-  false | 0;
-  +false;
-}
+(function() {
+  test = function() {
+    !!1;
+    false | 0;
+    +false;
+  };
+}());
 ");
 
 testJS("
@@ -75,11 +83,13 @@ export void test() {
   assert (bool)1;
 }
 ", "
-function test() {
-  if (!1) {
-    throw new Error(\"assert (bool)1; (<stdin>:2:3)\");
-  }
-}
+(function() {
+  test = function() {
+    if (!1) {
+      throw new Error(\"assert (bool)1; (<stdin>:2:3)\");
+    }
+  };
+}());
 ");
 
 testJS("
@@ -97,23 +107,25 @@ export void foo(bool foo) {
   (int)foo, (int)true;
 }
 ", "
-var $imul = Math.imul || function(a, b) {
-  var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
-  return al * bl + (ah * bl + al * bh << 16) | 0;
-};
-function foo(foo) {
-  (foo | 0) + 1 | 0;
-  (foo | 0) - 1 | 0;
-  $imul(foo | 0, 1);
-  (foo | 0) / 1 | 0;
-  (foo | 0) % 1 | 0;
-  foo | 1;
-  foo ^ 1;
-  foo & 1;
-  foo << 1;
-  foo >> 1;
-  foo | 0, true | 0;
-}
+(function() {
+  var $imul = Math.imul || function(a, b) {
+    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    return al * bl + (ah * bl + al * bh << 16) | 0;
+  };
+  foo = function(foo) {
+    (foo | 0) + 1 | 0;
+    (foo | 0) - 1 | 0;
+    $imul(foo | 0, 1);
+    (foo | 0) / 1 | 0;
+    (foo | 0) % 1 | 0;
+    foo | 1;
+    foo ^ 1;
+    foo & 1;
+    foo << 1;
+    foo >> 1;
+    foo | 0, true | 0;
+  };
+}());
 ");
 
 testJS("
@@ -125,17 +137,19 @@ export void foo(int foo) {
   foo % 1 | 1;
 }
 ", "
-var $imul = Math.imul || function(a, b) {
-  var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
-  return al * bl + (ah * bl + al * bh << 16) | 0;
-};
-function foo(foo) {
-  foo + 1 | 1;
-  foo - 1 | 1;
-  $imul(foo, 1) | 1;
-  foo / 1 | 1;
-  foo % 1 | 1;
-}
+(function() {
+  var $imul = Math.imul || function(a, b) {
+    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    return al * bl + (ah * bl + al * bh << 16) | 0;
+  };
+  foo = function(foo) {
+    foo + 1 | 1;
+    foo - 1 | 1;
+    $imul(foo, 1) | 1;
+    foo / 1 | 1;
+    foo % 1 | 1;
+  };
+}());
 ");
 
 testJS("
@@ -152,22 +166,24 @@ export void foo(int foo, bool bar) {
   foo >>= (int)bar;
 }
 ", "
-var $imul = Math.imul || function(a, b) {
-  var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
-  return al * bl + (ah * bl + al * bh << 16) | 0;
-};
-function foo(foo, bar) {
-  foo = foo + (bar | 0) | 0;
-  foo = foo - (bar | 0) | 0;
-  foo = $imul(foo, bar | 0);
-  foo = foo / (bar | 0) | 0;
-  foo = foo % (bar | 0) | 0;
-  foo |= bar;
-  foo &= bar;
-  foo ^= bar;
-  foo <<= bar;
-  foo >>= bar;
-}
+(function() {
+  var $imul = Math.imul || function(a, b) {
+    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    return al * bl + (ah * bl + al * bh << 16) | 0;
+  };
+  foo = function(foo, bar) {
+    foo = foo + (bar | 0) | 0;
+    foo = foo - (bar | 0) | 0;
+    foo = $imul(foo, bar | 0);
+    foo = foo / (bar | 0) | 0;
+    foo = foo % (bar | 0) | 0;
+    foo |= bar;
+    foo &= bar;
+    foo ^= bar;
+    foo <<= bar;
+    foo >>= bar;
+  };
+}());
 ");
 
 testJS("
@@ -182,20 +198,22 @@ export void foo(int bar) {
   foo((--bar, --bar));
 }
 ", "
-function foo(bar) {
-  bar = bar + 1 | 0, bar = bar + 1 | 0;
-  bar = bar - 1 | 0, bar = bar - 1 | 0;
-  bar = bar + 1 | 0, bar = bar + 1 | 0;
-  bar = bar - 1 | 0, bar = bar - 1 | 0;
-  foo((bar = bar + 1 | 0, (bar = bar + 1 | 0) - 1 | 0));
-  foo((bar = bar - 1 | 0, (bar = bar - 1 | 0) + 1 | 0));
-  foo((bar = bar + 1 | 0, bar = bar + 1 | 0));
-  foo((bar = bar - 1 | 0, bar = bar - 1 | 0));
-}
+(function() {
+  foo = function(bar) {
+    bar = bar + 1 | 0, bar = bar + 1 | 0;
+    bar = bar - 1 | 0, bar = bar - 1 | 0;
+    bar = bar + 1 | 0, bar = bar + 1 | 0;
+    bar = bar - 1 | 0, bar = bar - 1 | 0;
+    foo((bar = bar + 1 | 0, (bar = bar + 1 | 0) - 1 | 0));
+    foo((bar = bar - 1 | 0, (bar = bar - 1 | 0) + 1 | 0));
+    foo((bar = bar + 1 | 0, bar = bar + 1 | 0));
+    foo((bar = bar - 1 | 0, bar = bar - 1 | 0));
+  };
+}());
 ");
 
 testJS("
-class Foo {
+export class Foo {
   int bar;
   void foo(int foo) {
   }
@@ -211,21 +229,23 @@ class Foo {
   }
 }
 ", "
-function Foo(_0) {
-  this.bar = _0;
-}
-Foo.prototype.foo = function(foo) {
-};
-Foo.prototype.baz = function() {
-  this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0;
-  this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0;
-  this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0;
-  this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0;
-  this.foo((this.bar = this.bar + 1 | 0, (this.bar = this.bar + 1 | 0) - 1 | 0));
-  this.foo((this.bar = this.bar - 1 | 0, (this.bar = this.bar - 1 | 0) + 1 | 0));
-  this.foo((this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0));
-  this.foo((this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0));
-};
+(function() {
+  Foo = function(_0) {
+    this.bar = _0;
+  };
+  Foo.prototype.foo = function(foo) {
+  };
+  Foo.prototype.baz = function() {
+    this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0;
+    this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0;
+    this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0;
+    this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0;
+    this.foo((this.bar = this.bar + 1 | 0, (this.bar = this.bar + 1 | 0) - 1 | 0));
+    this.foo((this.bar = this.bar - 1 | 0, (this.bar = this.bar - 1 | 0) + 1 | 0));
+    this.foo((this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0));
+    this.foo((this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0));
+  };
+}());
 ");
 
 testJS("
@@ -246,54 +266,56 @@ Foo bar() {
   return Foo();
 }
 ", "
-function Foo() {
-  this.foo = 0;
-}
-function foo(baz) {
-  (function($temp) {
-    return $temp.foo = $temp.foo + 1 | 0;
-  })(bar()), function($temp) {
-    return $temp.foo = $temp.foo + 1 | 0;
-  }(bar());
-  (function($temp) {
-    return $temp.foo = $temp.foo - 1 | 0;
-  })(bar()), function($temp) {
-    return $temp.foo = $temp.foo - 1 | 0;
-  }(bar());
-  (function($temp) {
-    return $temp.foo = $temp.foo + 1 | 0;
-  })(bar()), function($temp) {
-    return $temp.foo = $temp.foo + 1 | 0;
-  }(bar());
-  (function($temp) {
-    return $temp.foo = $temp.foo - 1 | 0;
-  })(bar()), function($temp) {
-    return $temp.foo = $temp.foo - 1 | 0;
-  }(bar());
-  foo((function($temp) {
-    return $temp.foo = $temp.foo + 1 | 0;
-  }(bar()), function($temp) {
-    return $temp.foo = $temp.foo + 1 | 0;
-  }(bar()) - 1 | 0));
-  foo((function($temp) {
-    return $temp.foo = $temp.foo - 1 | 0;
-  }(bar()), function($temp) {
-    return $temp.foo = $temp.foo - 1 | 0;
-  }(bar()) + 1 | 0));
-  foo((function($temp) {
-    return $temp.foo = $temp.foo + 1 | 0;
-  }(bar()), function($temp) {
-    return $temp.foo = $temp.foo + 1 | 0;
-  }(bar())));
-  foo((function($temp) {
-    return $temp.foo = $temp.foo - 1 | 0;
-  }(bar()), function($temp) {
-    return $temp.foo = $temp.foo - 1 | 0;
-  }(bar())));
-}
-function bar() {
-  return new Foo();
-}
+(function() {
+  function Foo() {
+    this.foo = 0;
+  }
+  foo = function(baz) {
+    (function($temp) {
+      return $temp.foo = $temp.foo + 1 | 0;
+    })(bar()), function($temp) {
+      return $temp.foo = $temp.foo + 1 | 0;
+    }(bar());
+    (function($temp) {
+      return $temp.foo = $temp.foo - 1 | 0;
+    })(bar()), function($temp) {
+      return $temp.foo = $temp.foo - 1 | 0;
+    }(bar());
+    (function($temp) {
+      return $temp.foo = $temp.foo + 1 | 0;
+    })(bar()), function($temp) {
+      return $temp.foo = $temp.foo + 1 | 0;
+    }(bar());
+    (function($temp) {
+      return $temp.foo = $temp.foo - 1 | 0;
+    })(bar()), function($temp) {
+      return $temp.foo = $temp.foo - 1 | 0;
+    }(bar());
+    foo((function($temp) {
+      return $temp.foo = $temp.foo + 1 | 0;
+    }(bar()), function($temp) {
+      return $temp.foo = $temp.foo + 1 | 0;
+    }(bar()) - 1 | 0));
+    foo((function($temp) {
+      return $temp.foo = $temp.foo - 1 | 0;
+    }(bar()), function($temp) {
+      return $temp.foo = $temp.foo - 1 | 0;
+    }(bar()) + 1 | 0));
+    foo((function($temp) {
+      return $temp.foo = $temp.foo + 1 | 0;
+    }(bar()), function($temp) {
+      return $temp.foo = $temp.foo + 1 | 0;
+    }(bar())));
+    foo((function($temp) {
+      return $temp.foo = $temp.foo - 1 | 0;
+    }(bar()), function($temp) {
+      return $temp.foo = $temp.foo - 1 | 0;
+    }(bar())));
+  };
+  function bar() {
+    return new Foo();
+  }
+}());
 ");
 
 testJS("
@@ -310,26 +332,28 @@ export void foo(int bar) {
   foo(bar %= 1);
 }
 ", "
-var $imul = Math.imul || function(a, b) {
-  var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
-  return al * bl + (ah * bl + al * bh << 16) | 0;
-};
-function foo(bar) {
-  bar = bar + 1 | 0;
-  bar = bar - 1 | 0;
-  bar = $imul(bar, 1);
-  bar = bar / 1 | 0;
-  bar = bar % 1 | 0;
-  foo(bar = bar + 1 | 0);
-  foo(bar = bar - 1 | 0);
-  foo(bar = $imul(bar, 1));
-  foo(bar = bar / 1 | 0);
-  foo(bar = bar % 1 | 0);
-}
+(function() {
+  var $imul = Math.imul || function(a, b) {
+    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    return al * bl + (ah * bl + al * bh << 16) | 0;
+  };
+  foo = function(bar) {
+    bar = bar + 1 | 0;
+    bar = bar - 1 | 0;
+    bar = $imul(bar, 1);
+    bar = bar / 1 | 0;
+    bar = bar % 1 | 0;
+    foo(bar = bar + 1 | 0);
+    foo(bar = bar - 1 | 0);
+    foo(bar = $imul(bar, 1));
+    foo(bar = bar / 1 | 0);
+    foo(bar = bar % 1 | 0);
+  };
+}());
 ");
 
 testJS("
-class Foo {
+export class Foo {
   int bar;
   void foo(int foo) {
   }
@@ -347,31 +371,33 @@ class Foo {
   }
 }
 ", "
-var $imul = Math.imul || function(a, b) {
-  var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
-  return al * bl + (ah * bl + al * bh << 16) | 0;
-};
-function Foo(_0) {
-  this.bar = _0;
-}
-Foo.prototype.foo = function(foo) {
-};
-Foo.prototype.baz = function() {
-  this.bar = this.bar + 1 | 0;
-  this.bar = this.bar - 1 | 0;
-  this.bar = $imul(this.bar, 1);
-  this.bar = this.bar / 1 | 0;
-  this.bar = this.bar % 1 | 0;
-  this.foo(this.bar = this.bar + 1 | 0);
-  this.foo(this.bar = this.bar - 1 | 0);
-  this.foo(this.bar = $imul(this.bar, 1));
-  this.foo(this.bar = this.bar / 1 | 0);
-  this.foo(this.bar = this.bar % 1 | 0);
-};
+(function() {
+  var $imul = Math.imul || function(a, b) {
+    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    return al * bl + (ah * bl + al * bh << 16) | 0;
+  };
+  Foo = function(_0) {
+    this.bar = _0;
+  };
+  Foo.prototype.foo = function(foo) {
+  };
+  Foo.prototype.baz = function() {
+    this.bar = this.bar + 1 | 0;
+    this.bar = this.bar - 1 | 0;
+    this.bar = $imul(this.bar, 1);
+    this.bar = this.bar / 1 | 0;
+    this.bar = this.bar % 1 | 0;
+    this.foo(this.bar = this.bar + 1 | 0);
+    this.foo(this.bar = this.bar - 1 | 0);
+    this.foo(this.bar = $imul(this.bar, 1));
+    this.foo(this.bar = this.bar / 1 | 0);
+    this.foo(this.bar = this.bar % 1 | 0);
+  };
+}());
 ");
 
 testJS("
-class Foo {
+export class Foo {
   int foo = 0;
   export void bar() {
     baz().foo += foo;
@@ -390,49 +416,51 @@ Foo baz() {
   return Foo();
 }
 ", "
-var $imul = Math.imul || function(a, b) {
-  var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
-  return al * bl + (ah * bl + al * bh << 16) | 0;
-};
-function Foo() {
-  this.foo = 0;
-}
-Foo.prototype.bar = function() {
-  var $this = this;
-  (function($temp) {
-    return $temp.foo = $temp.foo + $this.foo | 0;
-  })(baz());
-  (function($temp) {
-    return $temp.foo = $temp.foo - $this.foo | 0;
-  })(baz());
-  (function($temp) {
-    return $temp.foo = $imul($temp.foo, $this.foo);
-  })(baz());
-  (function($temp) {
-    return $temp.foo = $temp.foo / $this.foo | 0;
-  })(baz());
-  (function($temp) {
-    return $temp.foo = $temp.foo % $this.foo | 0;
-  })(baz());
-  this.foo = function($temp) {
-    return $temp.foo = $temp.foo + $this.foo | 0;
-  }(baz());
-  this.foo = function($temp) {
-    return $temp.foo = $temp.foo - $this.foo | 0;
-  }(baz());
-  this.foo = function($temp) {
-    return $temp.foo = $imul($temp.foo, $this.foo);
-  }(baz());
-  this.foo = function($temp) {
-    return $temp.foo = $temp.foo / $this.foo | 0;
-  }(baz());
-  this.foo = function($temp) {
-    return $temp.foo = $temp.foo % $this.foo | 0;
-  }(baz());
-};
-function baz() {
-  return new Foo();
-}
+(function() {
+  var $imul = Math.imul || function(a, b) {
+    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    return al * bl + (ah * bl + al * bh << 16) | 0;
+  };
+  Foo = function() {
+    this.foo = 0;
+  };
+  Foo.prototype.bar = function() {
+    var $this = this;
+    (function($temp) {
+      return $temp.foo = $temp.foo + $this.foo | 0;
+    })(baz());
+    (function($temp) {
+      return $temp.foo = $temp.foo - $this.foo | 0;
+    })(baz());
+    (function($temp) {
+      return $temp.foo = $imul($temp.foo, $this.foo);
+    })(baz());
+    (function($temp) {
+      return $temp.foo = $temp.foo / $this.foo | 0;
+    })(baz());
+    (function($temp) {
+      return $temp.foo = $temp.foo % $this.foo | 0;
+    })(baz());
+    this.foo = function($temp) {
+      return $temp.foo = $temp.foo + $this.foo | 0;
+    }(baz());
+    this.foo = function($temp) {
+      return $temp.foo = $temp.foo - $this.foo | 0;
+    }(baz());
+    this.foo = function($temp) {
+      return $temp.foo = $imul($temp.foo, $this.foo);
+    }(baz());
+    this.foo = function($temp) {
+      return $temp.foo = $temp.foo / $this.foo | 0;
+    }(baz());
+    this.foo = function($temp) {
+      return $temp.foo = $temp.foo % $this.foo | 0;
+    }(baz());
+  };
+  function baz() {
+    return new Foo();
+  }
+}());
 ");
 
 testJS("
@@ -443,12 +471,14 @@ export void test() {
   (1, 2), (3, 4);
 }
 ", "
-function test() {
-  var foo = (1, 2);
-  foo = (1, 2);
-  foo = 1, 2;
-  (1, 2), (3, 4);
-}
+(function() {
+  test = function() {
+    var foo = (1, 2);
+    foo = (1, 2);
+    foo = 1, 2;
+    (1, 2), (3, 4);
+  };
+}());
 ");
 
 testJS("
@@ -456,13 +486,15 @@ export void test() {
   int y = let x = 1 in let x = x + 1 in x + 1;
 }
 ", "
-function test() {
-  var y = function(x) {
-    return function(x) {
-      return x + 1 | 0;
-    }(x + 1 | 0);
-  }(1);
-}
+(function() {
+  test = function() {
+    var y = function(x) {
+      return function(x) {
+        return x + 1 | 0;
+      }(x + 1 | 0);
+    }(1);
+  };
+}());
 ");
 
 testJS("
@@ -472,21 +504,23 @@ export void test() {
   1, let x = 0 in x, 1;
 }
 ", "
-function test() {
-  (function(x) {
-    return x;
-  })(0);
-  (function(x) {
-    return x;
-  })(0), 1;
-  1, function(x) {
-    return x;
-  }(0), 1;
-}
+(function() {
+  test = function() {
+    (function(x) {
+      return x;
+    })(0);
+    (function(x) {
+      return x;
+    })(0), 1;
+    1, function(x) {
+      return x;
+    }(0), 1;
+  };
+}());
 ");
 
 testJS("
-class Foo {
+export class Foo {
   int foo;
   export int fn() bar() {
     foo;
@@ -498,22 +532,24 @@ class Foo {
   }
 }
 ", "
-function Foo(_0) {
-  this.foo = _0;
-}
-Foo.prototype.bar = function() {
-  var $this = this;
-  this.foo;
-  var bar = function() {
-    return $this.foo;
+(function() {
+  Foo = function(_0) {
+    this.foo = _0;
   };
-  this.foo;
-  var baz = function() {
-    return $this.foo;
+  Foo.prototype.bar = function() {
+    var $this = this;
+    this.foo;
+    var bar = function() {
+      return $this.foo;
+    };
+    this.foo;
+    var baz = function() {
+      return $this.foo;
+    };
+    this.foo;
+    return bar;
   };
-  this.foo;
-  return bar;
-};
+}());
 ");
 
 testJS("
@@ -523,32 +559,36 @@ export class Foo {
   new() : bar = () => foo {}
 }
 ", "
-function Foo() {
-  var $this = this;
-  this.foo = 0;
-  this.bar = function() {
-    return $this.foo;
+(function() {
+  Foo = function() {
+    var $this = this;
+    this.foo = 0;
+    this.bar = function() {
+      return $this.foo;
+    };
   };
-}
+}());
 ");
 
 testJS("
-class Foo {
+export class Foo {
   int foo;
   export int bar() {
     return let x = foo in x + foo;
   }
 }
 ", "
-function Foo(_0) {
-  this.foo = _0;
-}
-Foo.prototype.bar = function() {
-  var $this = this;
-  return function(x) {
-    return x + $this.foo | 0;
-  }(this.foo);
-};
+(function() {
+  Foo = function(_0) {
+    this.foo = _0;
+  };
+  Foo.prototype.bar = function() {
+    var $this = this;
+    return function(x) {
+      return x + $this.foo | 0;
+    }(this.foo);
+  };
+}());
 ");
 
 testJS("
@@ -558,11 +598,13 @@ export void test() {
   0.5.toString();
 }
 ", "
-function test() {
-  (0).toString();
-  (0).toString();
-  (0.5).toString();
-}
+(function() {
+  test = function() {
+    (0).toString();
+    (0).toString();
+    (0.5).toString();
+  };
+}());
 ");
 
 testJS("
@@ -572,11 +614,13 @@ export void test() {
   var c = \"\" + 1 + 2;
 }
 ", "
-function test() {
-  var a = \"\" + ((1).toString() + 2);
-  var b = \"\" + (1 + 2 | 0);
-  var c = \"\" + 1 + 2;
-}
+(function() {
+  test = function() {
+    var a = \"\" + ((1).toString() + 2);
+    var b = \"\" + (1 + 2 | 0);
+    var c = \"\" + 1 + 2;
+  };
+}());
 ");
 
 testJS("
@@ -586,11 +630,13 @@ export void test() {
   var c = 1 + 2 + \"\";
 }
 ", "
-function test() {
-  var a = (1).toString() + 2 + \"\";
-  var b = (1 + 2 | 0) + \"\";
-  var c = (1 + 2 | 0) + \"\";
-}
+(function() {
+  test = function() {
+    var a = (1).toString() + 2 + \"\";
+    var b = (1 + 2 | 0) + \"\";
+    var c = (1 + 2 | 0) + \"\";
+  };
+}());
 ");
 
 testJS("
@@ -600,11 +646,13 @@ export string foo() {
   return t;
 }
 ", "
-function foo() {
-  var t = \"\";
-  t += 100;
-  return t;
-}
+(function() {
+  foo = function() {
+    var t = \"\";
+    t += 100;
+    return t;
+  };
+}());
 ");
 
 

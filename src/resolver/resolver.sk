@@ -1018,8 +1018,22 @@ class Resolver {
 
     unexpectedModifierIfPresent(symbol, .CONST, "on a function declaration");
     unexpectedModifierIfPresent(symbol, .FINAL, "on a function declaration");
-    if (enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances()) {
-      unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
+    if (enclosingSymbol != null) {
+      if (!enclosingSymbol.kind.isTypeWithInstances()) {
+        unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
+      }
+
+      // Constructors for exported object types are automatically exported
+      if (symbol.kind.isConstructor() && enclosingSymbol.isExport()) {
+        symbol.flags |= .EXPORT;
+        redundantModifierIfPresent(symbol, .EXPORT, "on an constructor for an exported object");
+      }
+
+      // Exporting a function on an object or namespace automatically exports
+      // all enclosing symbols
+      else if (symbol.isExport() && !enclosingSymbol.isExport() && !enclosingSymbol.kind.isGlobalNamespace()) {
+        unexpectedModifierIfPresent(symbol, .EXPORT, "on a non-exported type");
+      }
     }
     if (symbol.isImport()) {
       unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");

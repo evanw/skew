@@ -60,6 +60,10 @@ namespace js {
         appendSource(options.prepend.get(i));
       }
 
+      // The entire body of code is wrapped in a closure for safety
+      emit(indent + "(function()" + space + "{" + newline);
+      increaseIndent();
+
       // Emit helper functions
       if (patcher.needMathImul) {
         emit(indent + "var " + "$imul = Math.imul || function(a, b) {".replace(" ", space) + newline);
@@ -123,11 +127,9 @@ namespace js {
         emitNode(collector.freeVariableSymbols.get(i));
       }
 
-      // Make sure the file ends with a newline for ease of use with external
-      // tools even when minifying (the "cat" terminal command, for example)
-      if (currentColumn > 0) {
-        emit("\n");
-      }
+      // End the closure wrapping everything
+      decreaseIndent();
+      emit(indent + "}());\n");
 
       // Append inputs
       for (var i = 0; i < options.append.length; i++) {
@@ -370,7 +372,7 @@ namespace js {
       for (var i = 0; i < variables.length; i++) {
         var variable = variables.get(i);
         var symbol = variable.symbol;
-        var isCompoundName = symbol != null && hasCompoundName(symbol);
+        var isCompoundName = symbol != null && (hasCompoundName(symbol) || symbol.isExport());
         if (symbol != null && (symbol.kind.isInstance() || symbol.isImport()) || isCompoundName && variable.variableValue() == null) {
           continue;
         }
@@ -406,27 +408,30 @@ namespace js {
         return;
       }
       emitSemicolonIfNeeded();
-      if (!hasCompoundName(symbol)) {
+      emit(indent);
+      if (!hasCompoundName(symbol) && !symbol.isExport()) {
         emit("var ");
       }
-      emit(indent + fullName(symbol) + space + "=" + space + "{}");
+      emit(fullName(symbol) + space + "=" + space + "{}");
       emitSemicolonAfterStatement();
     }
 
     void emitEnum(Node node) {
+      var symbol = node.symbol;
       var block = node.declarationBlock();
-      if (options.foldAllConstants && !node.symbol.isImportOrExport()) {
+      if (options.foldAllConstants && !symbol.isImportOrExport()) {
         return;
       }
       emitSemicolonIfNeeded();
-      if (!hasCompoundName(node.symbol)) {
+      emit(indent);
+      if (!hasCompoundName(symbol) && !symbol.isExport()) {
         emit("var ");
       }
-      emit(indent + fullName(node.symbol) + space + "=" + space + "{" + newline);
+      emit(fullName(symbol) + space + "=" + space + "{" + newline);
       increaseIndent();
       for (var i = 0; i < block.children.length; i++) {
-        var symbol = block.children.get(i).symbol;
-        emit(indent + mangleName(symbol) + ":" + space + symbol.constant.asInt());
+        var child = block.children.get(i).symbol;
+        emit(indent + mangleName(child) + ":" + space + child.constant.asInt());
         if (i != block.children.length - 1) {
           emit("," + newline);
           maybeEmitMinifedNewline();
@@ -445,17 +450,15 @@ namespace js {
       if (block == null) {
         return;
       }
-      var isCompoundName = hasCompoundName(symbol);
+      var useFunctionStatement = !hasCompoundName(symbol) && !symbol.isExport();
       emitSemicolonIfNeeded();
-      if (!isCompoundName) {
-        emit(indent + "function " + fullName(symbol));
-      } else {
-        emit(indent + fullName(symbol) + space + "=" + space + "function");
-      }
+      emit(useFunctionStatement
+        ? indent + "function " + fullName(symbol)
+        : indent + fullName(symbol) + space + "=" + space + "function");
       emitArgumentVariables(node.functionArguments().children);
       emitBlock(block, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES);
-      if (isCompoundName) emitSemicolonAfterStatement();
-      else emit(newline);
+      if (useFunctionStatement) emit(newline);
+      else emitSemicolonAfterStatement();
       if (node.kind == .CONSTRUCTOR) {
         var type = symbol.enclosingSymbol.type;
         if (type.isClass() && type.baseClass() != null) {

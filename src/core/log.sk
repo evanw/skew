@@ -11,7 +11,7 @@ class Diagnostic {
   var noteText = "";
 }
 
-class Log {
+export class Log {
   List<Diagnostic> diagnostics = [];
   var warningCount = 0;
   var errorCount = 0;

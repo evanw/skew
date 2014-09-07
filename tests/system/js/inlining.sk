@@ -8,9 +8,11 @@ export void test() {
   var bar = foo(foo(1));
 }
 ", "
-function test() {
-  var bar = 1;
-}
+(function() {
+  test = function() {
+    var bar = 1;
+  };
+}());
 ");
 
 testJS("
@@ -21,12 +23,14 @@ export void test() {
   var bar = foo(foo(1));
 }
 ", "
-function foo(bar) {
-  return bar > 0 ? foo(bar - 1 | 0) : 0;
-}
-function test() {
-  var bar = foo(foo(1));
-}
+(function() {
+  function foo(bar) {
+    return bar > 0 ? foo(bar - 1 | 0) : 0;
+  }
+  test = function() {
+    var bar = foo(foo(1));
+  };
+}());
 ");
 
 testJS("
@@ -38,12 +42,14 @@ export void test() {
   var bar = foo(foo(1));
 }
 ", "
-function foo(bar) {
-  return baz() ? foo(bar) : 0;
-}
-function test() {
-  var bar = foo(foo(1));
-}
+(function() {
+  function foo(bar) {
+    return baz() ? foo(bar) : 0;
+  }
+  test = function() {
+    var bar = foo(foo(1));
+  };
+}());
 ");
 
 testJS("
@@ -54,9 +60,11 @@ export void test() {
   foo(1, 2);
 }
 ", "
-function test() {
-  1 + 2 | 0;
-}
+(function() {
+  test = function() {
+    1 + 2 | 0;
+  };
+}());
 ");
 
 testJS("
@@ -67,12 +75,14 @@ export void test() {
   foo(1, 2);
 }
 ", "
-function foo(x, y) {
-  return x = x + y | 0;
-}
-function test() {
-  foo(1, 2);
-}
+(function() {
+  function foo(x, y) {
+    return x = x + y | 0;
+  }
+  test = function() {
+    foo(1, 2);
+  };
+}());
 ");
 
 testJS("
@@ -85,16 +95,18 @@ export void test() {
   var z = foo(x++);
 }
 ", "
-function foo(x) {
-  return function() {
-    return x;
+(function() {
+  function foo(x) {
+    return function() {
+      return x;
+    };
+  }
+  test = function() {
+    var x = 0;
+    var y = foo((x = x + 1 | 0) - 1 | 0);
+    var z = foo((x = x + 1 | 0) - 1 | 0);
   };
-}
-function test() {
-  var x = 0;
-  var y = foo((x = x + 1 | 0) - 1 | 0);
-  var z = foo((x = x + 1 | 0) - 1 | 0);
-}
+}());
 ");
 
 testJS("
@@ -108,23 +120,25 @@ export void test() {
   Bar().foo();
 }
 ", "
-function $extends(derived, base) {
-  derived.prototype = Object.create(base.prototype);
-  derived.prototype.constructor = derived;
-}
-function Foo() {
-}
-Foo.prototype.foo = function() {
-};
-function Bar() {
-  Foo.call(this);
-}
-$extends(Bar, Foo);
-Bar.prototype.foo = function() {
-};
-function test() {
-  new Bar().foo();
-}
+(function() {
+  function $extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+  function Foo() {
+  }
+  Foo.prototype.foo = function() {
+  };
+  function Bar() {
+    Foo.call(this);
+  }
+  $extends(Bar, Foo);
+  Bar.prototype.foo = function() {
+  };
+  test = function() {
+    new Bar().foo();
+  };
+}());
 ");
 
 testJS("
@@ -138,9 +152,11 @@ export int bar(int a) {
   return foo(1, baz(a));
 }
 ", "
-function bar(a) {
-  return 1 + (2 + a | 0) | 0;
-}
+(function() {
+  bar = function(a) {
+    return 1 + (2 + a | 0) | 0;
+  };
+}());
 ");
 
 testJS("
@@ -154,9 +170,11 @@ inline int baz(int a) {
   return foo(2, a);
 }
 ", "
-function bar(a) {
-  return 1 + (2 + a | 0) | 0;
-}
+(function() {
+  bar = function(a) {
+    return 1 + (2 + a | 0) | 0;
+  };
+}());
 ");
 
 testJS("
@@ -170,9 +188,11 @@ inline int baz(int a) {
   return foo(2, a);
 }
 ", "
-function bar(a) {
-  return 1 + (2 + (2 + a | 0) | 0) | 0;
-}
+(function() {
+  bar = function(a) {
+    return 1 + (2 + (2 + a | 0) | 0) | 0;
+  };
+}());
 ");
 
 testJS("
@@ -186,15 +206,17 @@ export void test() {
   foo(bar(foo(bar(0))));
 }
 ", "
-function foo(baz) {
-  return bar(baz);
-}
-function bar(baz) {
-  return foo(baz);
-}
-function test() {
-  foo(bar(foo(bar(0))));
-}
+(function() {
+  function foo(baz) {
+    return bar(baz);
+  }
+  function bar(baz) {
+    return foo(baz);
+  }
+  test = function() {
+    foo(bar(foo(bar(0))));
+  };
+}());
 ");
 
 testJS("
@@ -208,15 +230,17 @@ export void test() {
   foo(bar(foo(bar(0))));
 }
 ", "
-function foo(baz) {
-  return bar(foo(baz));
-}
-function bar(baz) {
-  return foo(bar(baz));
-}
-function test() {
-  foo(bar(foo(bar(0))));
-}
+(function() {
+  function foo(baz) {
+    return bar(foo(baz));
+  }
+  function bar(baz) {
+    return foo(bar(baz));
+  }
+  test = function() {
+    foo(bar(foo(bar(0))));
+  };
+}());
 ");
 
 testJS("
@@ -230,9 +254,11 @@ inline int baz(int z) {
   return z + 2;
 }
 ", "
-function bar(y) {
-  return (y + 2 | 0) + 1 | 0;
-}
+(function() {
+  bar = function(y) {
+    return (y + 2 | 0) + 1 | 0;
+  };
+}());
 ");
 
 testJS("
@@ -246,9 +272,11 @@ inline int baz(int z) {
   return z + 2;
 }
 ", "
-function bar(y) {
-  return (y + 1 | 0) + 2 | 0;
-}
+(function() {
+  bar = function(y) {
+    return (y + 1 | 0) + 2 | 0;
+  };
+}());
 ");
 
 testJS("
@@ -258,12 +286,14 @@ export void test() {
   foo(2);
 }
 ", "
-function bar(x, y) {
-  return x + y | 0;
-}
-function test() {
-  bar(1, 2);
-}
+(function() {
+  function bar(x, y) {
+    return x + y | 0;
+  }
+  test = function() {
+    bar(1, 2);
+  };
+}());
 ");
 
 testJS("
@@ -273,13 +303,15 @@ export void test() {
   foo();
 }
 ", "
-function foo() {
-  x = 0;
-}
-function test() {
-  foo();
-}
-var x = 0;
+(function() {
+  function foo() {
+    x = 0;
+  }
+  test = function() {
+    foo();
+  };
+  var x = 0;
+}());
 ");
 
 testJS("
@@ -290,13 +322,15 @@ export void test() {
   foo();
 }
 ", "
-function bar() {
-  x = 0;
-}
-function test() {
-  bar();
-}
-var x = 0;
+(function() {
+  function bar() {
+    x = 0;
+  }
+  test = function() {
+    bar();
+  };
+  var x = 0;
+}());
 ");
 
 testJS("
@@ -308,13 +342,15 @@ export void test() {
   foo();
 }
 ", "
-function baz() {
-  x = 0;
-}
-function test() {
-  baz();
-}
-var x = 0;
+(function() {
+  function baz() {
+    x = 0;
+  }
+  test = function() {
+    baz();
+  };
+  var x = 0;
+}());
 ");
 
 testJS("
@@ -324,9 +360,11 @@ export void test() {
   var baz = bar(1, foo());
 }
 ", "
-function test() {
-  var baz = (foo(), 1);
-}
+(function() {
+  test = function() {
+    var baz = (foo(), 1);
+  };
+}());
 ");
 
 testJS("
@@ -336,9 +374,11 @@ export void test() {
   var baz = bar(1, foo());
 }
 ", "
-function test() {
-  var baz = 1;
-}
+(function() {
+  test = function() {
+    var baz = 1;
+  };
+}());
 ");
 
 }}

@@ -5,7 +5,7 @@ export void foo() {
   do {} while (true);
 }
 ", "
-function foo(){do;while(!0)}
+(function(){foo=function(){do;while(!0)}}());
 ");
 
 testMinifyJS("
@@ -13,7 +13,7 @@ export void foo(void fn() x) {
   do { x(); } while (true);
 }
 ", "
-function foo(a){do a();while(!0)}
+(function(){foo=function(a){do a();while(!0)}}());
 ");
 
 testMinifyJS("
@@ -21,7 +21,7 @@ export void foo(void fn() x) {
   do { x(); break; } while (true);
 }
 ", "
-function foo(a){do{a();break}while(!0)}
+(function(){foo=function(a){do{a();break}while(!0)}}());
 ");
 
 testMinifyJS("
@@ -35,7 +35,7 @@ export int foo() {
   return Foo(100).foo + Bar(200).bar;
 }
 ", "
-function b(a){this.a=a}function c(a){this.a=a}function foo(){return new b(100).a+new c(200).a|0}
+(function(){function b(a){this.a=a}function c(a){this.a=a}foo=function(){return new b(100).a+new c(200).a|0}}());
 ");
 
 testMinifyJS("
@@ -49,7 +49,7 @@ export int foo() {
   return Foo(100).foo + Bar(200, 300).foo;
 }
 ", "
-function $extends(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function c(a){this.a=a}function d(a,b){c.call(this,a),this.b=b}$extends(d,c);function foo(){return new c(100).a+new d(200,300).a|0}
+(function(){function $extends(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function c(a){this.a=a}function d(a,b){c.call(this,a),this.b=b}$extends(d,c);foo=function(){return new c(100).a+new d(200,300).a|0}}());
 ");
 
 testMinifyJS("
@@ -58,7 +58,7 @@ export int foo(int x) {
   return a() + x;
 }
 ", "
-function foo(b){return a()+b|0}
+(function(){foo=function(b){return a()+b|0}}());
 ");
 
 testMinifyJS("
@@ -69,7 +69,7 @@ export int foo(int b) {
   return a.b() + b;
 }
 ", "
-function foo(b){return a.b()+b|0}
+(function(){foo=function(b){return a.b()+b|0}}());
 ");
 
 testMinifyJS("
@@ -77,7 +77,7 @@ export void foo(int foo) { int bar, baz; }
 export void bar(int foo, int bar) { int baz; }
 export void baz(int foo, int bar, int baz) {}
 ", "
-function foo(a){var b=0,c=0;}function bar(a,b){var c=0;}function baz(a,b,c){}
+(function(){foo=function(a){var b=0,c=0;};bar=function(a,b){var c=0;};baz=function(a,b,c){}}());
 ");
 
 testMinifyJS("
@@ -85,7 +85,7 @@ export int foo() {
   return untyped(0) in 1;
 }
 ", "
-function foo(){return 0 in 1}
+(function(){foo=function(){return 0 in 1}}());
 ");
 
 testMinifyJS("
@@ -93,7 +93,7 @@ export int foo(int foo) {
   return foo + +1;
 }
 ", "
-function foo(a){return a+1|0}
+(function(){foo=function(a){return a+1|0}}());
 ");
 
 testMinifyJS("
@@ -101,7 +101,7 @@ export int foo(int foo) {
   return foo - -1;
 }
 ", "
-function foo(a){return a- -1|0}
+(function(){foo=function(a){return a- -1|0}}());
 ");
 
 testMinifyJS("
@@ -110,7 +110,7 @@ export int foo(void fn() foo) {
   return 1;
 }
 ", "
-function foo(a){return a(),1}
+(function(){foo=function(a){return a(),1}}());
 ");
 
 testMinifyJS("
@@ -120,7 +120,7 @@ export int foo(void fn() foo) {
   return 1;
 }
 ", "
-function foo(a){return a(),a(),1}
+(function(){foo=function(a){return a(),a(),1}}());
 ");
 
 testMinifyJS("
@@ -130,7 +130,7 @@ export int foo(int foo) {
   else return 1;
 }
 ", "
-function foo(a){return a<0?-1:a>0?1:1}
+(function(){foo=function(a){return a<0?-1:a>0?1:1}}());
 ");
 
 testMinifyJS("
@@ -140,7 +140,7 @@ export int foo(int foo) {
   return 1;
 }
 ", "
-function foo(a){return a<0?-1:a>0?1:1}
+(function(){foo=function(a){return a<0?-1:a>0?1:1}}());
 ");
 
 testMinifyJS("
@@ -152,7 +152,7 @@ export int foo(int x, void fn() y) {
   return 2;
 }
 ", "
-function foo(a,b){return a<0?(b(),1):2}
+(function(){foo=function(a,b){return a<0?(b(),1):2}}());
 ");
 
 testMinifyJS("
@@ -162,7 +162,7 @@ export int foo() {
   return foo + bar;
 }
 ", "
-function foo(){var a=0,b=0;return a+b|0}
+(function(){foo=function(){var a=0,b=0;return a+b|0}}());
 ");
 
 testMinifyJS("
@@ -176,7 +176,7 @@ export int foo(int y) {
   return y;
 }
 ", "
-function foo(a){return a<0?-a:a}
+(function(){foo=function(a){return a<0?-a:a}}());
 ");
 
 testMinifyJS("
@@ -187,7 +187,7 @@ export int foo(int y) {
   return y;
 }
 ", "
-function foo(a){return a=(a>0?a+1:a<0?a+2:a-1)|0,a}
+(function(){foo=function(a){return a=(a>0?a+1:a<0?a+2:a-1)|0,a}}());
 ");
 
 testMinifyJS("
@@ -204,7 +204,7 @@ export int foo(int x, int y) {
   return y;
 }
 ", "
-function foo(a,b){return a<0?(a=a+1|0,b=b-1|0):b<0?a=a-b|0:(a=a-1|0,b=b+1|0),b}
+(function(){foo=function(a,b){return a<0?(a=a+1|0,b=b-1|0):b<0?a=a-b|0:(a=a-1|0,b=b+1|0),b}}());
 ");
 
 testMinifyJS("
@@ -214,7 +214,7 @@ export bool foo(int x, int y) {
   else return bar;
 }
 ", "
-function foo(a,b){var c=a===0&&b!==0;return !a&&b?!0:c}
+(function(){foo=function(a,b){var c=a===0&&b!==0;return !a&&b?!0:c}}());
 ");
 
 testMinifyJS("
@@ -224,7 +224,7 @@ export bool foo(float x, double y) {
   else return bar;
 }
 ", "
-function foo(a,b){var c=a===0&&b!==0;return a===0&&b!==0?!0:c}
+(function(){foo=function(a,b){var c=a===0&&b!==0;return a===0&&b!==0?!0:c}}());
 ");
 
 testMinifyJS("
@@ -234,7 +234,7 @@ export bool foo(void fn() fn() x) {
   else return bar;
 }
 ", "
-function foo(a){var b=a!==null&&a()===null;return a&&!a()?!0:b}
+(function(){foo=function(a){var b=a!==null&&a()===null;return a&&!a()?!0:b}}());
 ");
 
 testMinifyJS("
@@ -244,7 +244,7 @@ export bool foo(string x) {
   else return bar;
 }
 ", "
-function foo(a){var b=a===\"\"||a.slice(1,2)===\"\";return !a||!a.slice(1,2)?!0:b}
+(function(){foo=function(a){var b=a===\"\"||a.slice(1,2)===\"\";return !a||!a.slice(1,2)?!0:b}}());
 ");
 
 testMinifyJS("
@@ -258,7 +258,7 @@ export void foo(bool fn() foo, void fn() bar) {
   }
 }
 ", "
-function foo(a,b){a()&&(b(),a()&&(b(),a()&&b()))}
+(function(){foo=function(a,b){a()&&(b(),a()&&(b(),a()&&b()))}}());
 ");
 
 testMinifyJS("
@@ -266,7 +266,7 @@ export int foo(int a, int b) {
   return a != b ? 1 : 2;
 }
 ", "
-function foo(a,b){return a^b?1:2}
+(function(){foo=function(a,b){return a^b?1:2}}());
 ");
 
 testMinifyJS("
@@ -274,7 +274,7 @@ export void foo(bool a, void fn() b) {
   if (a) b();
 }
 ", "
-function foo(a,b){a&&b()}
+(function(){foo=function(a,b){a&&b()}}());
 ");
 
 testMinifyJS("
@@ -282,7 +282,7 @@ export void foo(bool a, void fn() b) {
   if (!a) b();
 }
 ", "
-function foo(a,b){a||b()}
+(function(){foo=function(a,b){a||b()}}());
 ");
 
 testMinifyJS("
@@ -295,7 +295,7 @@ export int foo(bool a, void fn() b) {
   }
 }
 ", "
-function foo(a,b){return a?2:(b(),1)}
+(function(){foo=function(a,b){return a?2:(b(),1)}}());
 ");
 
 testMinifyJS("
@@ -303,7 +303,7 @@ export int foo(bool a) {
   return !a ? 1 : 2;
 }
 ", "
-function foo(a){return a?2:1}
+(function(){foo=function(a){return a?2:1}}());
 ");
 
 testMinifyJS("
@@ -313,7 +313,7 @@ export void foo(Foo a, Foo b, void fn() c, void fn() d) {
 }
 enum Foo {}
 ", "
-function foo(a,b,c,d){a^b?d():c()}
+(function(){foo=function(a,b,c,d){a^b?d():c()}}());
 ");
 
 testMinifyJS("
@@ -326,7 +326,7 @@ export int foo(int x) {
   return y;
 }
 ", "
-function foo(b){var a=0;switch(b){case 1:a=1;break;case 2:a=2}return a}
+(function(){foo=function(b){var a=0;switch(b){case 1:a=1;break;case 2:a=2}return a}}());
 ");
 
 testMinifyJS("
@@ -337,7 +337,7 @@ export bool bar(int a) {
   return 5 <= a && 8 >= a;
 }
 ", "
-function foo(a){return a>4&&a<9}function bar(a){return 4<a&&9>a}
+(function(){foo=function(a){return a>4&&a<9};bar=function(a){return 4<a&&9>a}}());
 ");
 
 testMinifyJS("
@@ -348,7 +348,7 @@ export void foo(bool x, void fn() y) {
   }
 }
 ", "
-function foo(a,b){a&&b()}
+(function(){foo=function(a,b){a&&b()}}());
 ");
 
 testMinifyJS("
@@ -358,7 +358,7 @@ export void foo(bool x, void fn() y) {
   y();
 }
 ", "
-function foo(b,a){b||(a(),a())}
+(function(){foo=function(b,a){b||(a(),a())}}());
 ");
 
 testMinifyJS("
@@ -369,7 +369,7 @@ export void foo(bool x, void fn() y) {
   y();
 }
 ", "
-function foo(a,b){a||(b(),a||b())}
+(function(){foo=function(a,b){a||(b(),a||b())}}());
 ");
 
 testMinifyJS("
@@ -381,7 +381,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(b,c,a){b&&(c||(a(),a()))}
+(function(){foo=function(b,c,a){b&&(c||(a(),a()))}}());
 ");
 
 testMinifyJS("
@@ -394,7 +394,7 @@ export void foo(bool x, bool y, void fn() z) {
   z();
 }
 ", "
-function foo(b,c,a){if(b){if(c)return;a(),a()}a()}
+(function(){foo=function(b,c,a){if(b){if(c)return;a(),a()}a()}}());
 ");
 
 testMinifyJS("
@@ -407,7 +407,7 @@ export void foo(bool x, void fn() y) {
   y();
 }
 ", "
-function foo(b,a){b?a():(a(),a())}
+(function(){foo=function(b,a){b?a():(a(),a())}}());
 ");
 
 testMinifyJS("
@@ -420,7 +420,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(a,b,c){while(a)b&&c()}
+(function(){foo=function(a,b,c){while(a)b&&c()}}());
 ");
 
 testMinifyJS("
@@ -432,7 +432,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(b,c,a){while(b){if(c)return;a(),a()}}
+(function(){foo=function(b,c,a){while(b){if(c)return;a(),a()}}}());
 ");
 
 testMinifyJS("
@@ -444,7 +444,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(b,c,a){while(b)c||(a(),a())}
+(function(){foo=function(b,c,a){while(b)c||(a(),a())}}());
 ");
 
 testMinifyJS("
@@ -457,7 +457,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(c,a,b){while(c)a||(b(),a||b())}
+(function(){foo=function(c,a,b){while(c)a||(b(),a||b())}}());
 ");
 
 testMinifyJS("
@@ -472,7 +472,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(c,b,a){while(c)b&&(a(),b||(a(),a()))}
+(function(){foo=function(c,b,a){while(c)b&&(a(),b||(a(),a()))}}());
 ");
 
 testMinifyJS("
@@ -488,7 +488,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(c,b,a){while(c){if(b){a();if(b)continue;a(),a()}a()}}
+(function(){foo=function(c,b,a){while(c){if(b){a();if(b)continue;a(),a()}a()}}}());
 ");
 
 testMinifyJS("
@@ -503,7 +503,7 @@ export void foo(bool x, bool y, void fn() z) {
   }
 }
 ", "
-function foo(b,c,a){while(b)c?a():(a(),a())}
+(function(){foo=function(b,c,a){while(b)c?a():(a(),a())}}());
 ");
 
 }}
