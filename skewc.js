@@ -655,7 +655,11 @@ Compiler.totalLineCount = function(sources) {
   return lineCount;
 };
 Compiler.sourceStatistics = function(name, sources) {
-  var text = "\n" + name + ": " + sources.length;
+  var total = 0;
+  for (var i = 0; i < sources.length; i = i + 1 | 0) {
+    total = total + sources[i].contents.length | 0;
+  }
+  var text = "\n" + name + ": " + sources.length + " (" + bytesToString(total) + " total)";
   for (var i = 0; i < sources.length; i = i + 1 | 0) {
     var source = sources[i];
     text += "\n  " + source.name + ": " + bytesToString(source.contents.length);

@@ -110,7 +110,11 @@ export class Compiler {
   }
 
   static string sourceStatistics(string name, List<Source> sources) {
-    var text = "\n" + name + ": " + sources.length;
+    var total = 0;
+    for (var i = 0; i < sources.length; i++) {
+      total += sources.get(i).contents.length;
+    }
+    var text = "\n" + name + ": " + sources.length + " (" + bytesToString(total) + " total)";
     for (var i = 0; i < sources.length; i++) {
       var source = sources.get(i);
       text += "\n  " + source.name + ": " + bytesToString(source.contents.length);
