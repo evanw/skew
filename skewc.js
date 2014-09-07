@@ -1893,7 +1893,7 @@ js.Emitter.emitSuperCall = function($this, node) {
   js.Emitter.emit($this, js.Emitter.fullName(node.symbol));
   js.Emitter.emit($this, ".call(this");
   for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-    js.Emitter.emit($this, ", ");
+    js.Emitter.emit($this, "," + $this.space);
     js.Emitter.emitExpression($this, $arguments[i], 1);
   }
   js.Emitter.emit($this, ")");

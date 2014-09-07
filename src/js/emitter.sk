@@ -692,7 +692,7 @@ namespace js {
       emit(fullName(node.symbol));
       emit(".call(this");
       for (var i = 0; i < arguments.length; i++) {
-        emit(", ");
+        emit("," + space);
         emitExpression(arguments.get(i), .COMMA);
       }
       emit(")");

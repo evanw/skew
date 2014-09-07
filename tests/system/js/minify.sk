@@ -29,7 +29,7 @@ function $extends(derived, base) {
   derived.prototype = Object.create(base.prototype);
   derived.prototype.constructor = derived;
 }
-function a(f){this.b=f}function c(f,g){a.call(this, f),this.d=g}$extends(c,a);function foo(){return new a(100).b+new c(200,300).b|0}
+function a(f){this.b=f}function c(f,g){a.call(this,f),this.d=g}$extends(c,a);function foo(){return new a(100).b+new c(200,300).b|0}
 ");
 
 testMinify("
