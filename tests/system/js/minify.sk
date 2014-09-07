@@ -244,7 +244,7 @@ export bool foo(string x) {
   else return bar;
 }
 ", "
-(function(){foo=function(a){var b=a===\"\"||a.slice(1,2)===\"\";return !a||!a.slice(1,2)?!0:b}}());
+(function(){foo=function(a){var b=a===''||a.slice(1,2)==='';return !a||!a.slice(1,2)?!0:b}}());
 ");
 
 testMinifyJS("

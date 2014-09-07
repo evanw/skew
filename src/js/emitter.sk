@@ -581,7 +581,7 @@ namespace js {
           }
         }
         var text = node.range + " (" + node.range.locationString() + ")";
-        emit(indent + "throw new Error(" + quoteString(text, '"') + ")");
+        emit(indent + "throw new Error(" + quoteStringJS(text) + ")");
         emitSemicolonAfterStatement();
         if (couldBeFalse && !options.jsMinify) {
           decreaseIndent();
@@ -624,7 +624,7 @@ namespace js {
         case .BOOL { emitBool(node); }
         case .INT { emitInt(node); }
         case .FLOAT, .DOUBLE { emitDouble(node); }
-        case .STRING { emit(quoteString(node.asString(), '"')); }
+        case .STRING { emit(quoteStringJS(node.asString())); }
         case .LIST { emitList(node); }
         case .DOT { emitDot(node); }
         case .CALL { isStartOfExpression = wasStartOfExpression; emitCall(node); }
@@ -817,6 +817,17 @@ namespace js {
       emit("]" + space + "=" + space);
       emitExpression(node.tertiaryRight(), .ASSIGN);
       if (.ASSIGN < precedence) emit(")");
+    }
+
+    string quoteStringJS(string text) {
+      var doubleCount = 0;
+      var singleCount = 0;
+      for (var i = 0; i < text.length; i++) {
+        var c = text.codeUnitAt(i);
+        if (c == '"') doubleCount++;
+        else if (c == '\'') singleCount++;
+      }
+      return quoteString(text, singleCount > doubleCount ? '"' : '\'');
     }
 
     static bool hasCompoundName(Symbol symbol) {

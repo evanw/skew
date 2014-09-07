@@ -131,9 +131,9 @@ export in Foo {
   $in.Foo.toString = function($this) {
     switch ($this) {
     case 0:
-      return \"FOO\";
+      return 'FOO';
     default:
-      return \"\";
+      return '';
     }
   };
 }());

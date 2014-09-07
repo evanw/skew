@@ -573,8 +573,8 @@
     this.inputs = [];
     this.prepend = [];
     this.append = [];
-    this.outputDirectory = "";
-    this.outputFile = "";
+    this.outputDirectory = '';
+    this.outputFile = '';
     this.jsMinify = false;
     this.jsMangle = false;
     this.jsSourceMap = false;
@@ -611,41 +611,41 @@
     lineCount = lineCount + Compiler.totalLineCount(result.options.prepend) | 0;
     lineCount = lineCount + Compiler.totalLineCount(result.options.inputs) | 0;
     lineCount = lineCount + Compiler.totalLineCount(result.options.append) | 0;
-    var text = "Input line count: " + lineCount + "\nOutput line count: " + Compiler.totalLineCount(result.outputs);
+    var text = 'Input line count: ' + lineCount + '\nOutput line count: ' + Compiler.totalLineCount(result.outputs);
     $this.lineCountingTime += now() - lineCountingStart;
     var optimizingTime = $this.callGraphTime + $this.instanceToStaticTime + $this.symbolMotionTime + $this.functionInliningTime + $this.constantFoldingTime + $this.deadCodeRemovalTime;
-    text += "\nTotal compile time: " + Math.round(($this.totalTime + $this.lineCountingTime) * 10) / 10 + "ms";
+    text += '\nTotal compile time: ' + Math.round(($this.totalTime + $this.lineCountingTime) * 10) / 10 + 'ms';
     if ($this.tokenizingTime > 0) {
-      text += "\n  Tokenizing: " + Math.round($this.tokenizingTime * 10) / 10 + "ms";
+      text += '\n  Tokenizing: ' + Math.round($this.tokenizingTime * 10) / 10 + 'ms';
     }
     if ($this.parsingTime > 0) {
-      text += "\n  Parsing: " + Math.round($this.parsingTime * 10) / 10 + "ms";
+      text += '\n  Parsing: ' + Math.round($this.parsingTime * 10) / 10 + 'ms';
     }
     if ($this.resolvingTime > 0) {
-      text += "\n  Resolving: " + Math.round($this.resolvingTime * 10) / 10 + "ms";
+      text += '\n  Resolving: ' + Math.round($this.resolvingTime * 10) / 10 + 'ms';
     }
     if (optimizingTime > 0) {
-      text += "\n  Optimizing: " + Math.round(optimizingTime * 10) / 10 + "ms";
-      text += "\n    Building call graph: " + Math.round($this.callGraphTime * 10) / 10 + "ms";
-      text += "\n    Instance to static: " + Math.round($this.instanceToStaticTime * 10) / 10 + "ms";
-      text += "\n    Symbol motion: " + Math.round($this.symbolMotionTime * 10) / 10 + "ms";
-      text += "\n    Function inlining: " + Math.round($this.functionInliningTime * 10) / 10 + "ms";
-      text += "\n    Constant folding: " + Math.round($this.constantFoldingTime * 10) / 10 + "ms";
-      text += "\n    Dead code removal: " + Math.round($this.deadCodeRemovalTime * 10) / 10 + "ms";
+      text += '\n  Optimizing: ' + Math.round(optimizingTime * 10) / 10 + 'ms';
+      text += '\n    Building call graph: ' + Math.round($this.callGraphTime * 10) / 10 + 'ms';
+      text += '\n    Instance to static: ' + Math.round($this.instanceToStaticTime * 10) / 10 + 'ms';
+      text += '\n    Symbol motion: ' + Math.round($this.symbolMotionTime * 10) / 10 + 'ms';
+      text += '\n    Function inlining: ' + Math.round($this.functionInliningTime * 10) / 10 + 'ms';
+      text += '\n    Constant folding: ' + Math.round($this.constantFoldingTime * 10) / 10 + 'ms';
+      text += '\n    Dead code removal: ' + Math.round($this.deadCodeRemovalTime * 10) / 10 + 'ms';
     }
     if ($this.patchTime > 0) {
-      text += "\n  Patch: " + Math.round($this.patchTime * 10) / 10 + "ms";
+      text += '\n  Patch: ' + Math.round($this.patchTime * 10) / 10 + 'ms';
     }
     if ($this.emitTime > 0) {
-      text += "\n  Emit: " + Math.round($this.emitTime * 10) / 10 + "ms";
+      text += '\n  Emit: ' + Math.round($this.emitTime * 10) / 10 + 'ms';
     }
     if ($this.lineCountingTime > 0) {
-      text += "\n  Counting lines: " + Math.round($this.lineCountingTime * 10) / 10 + "ms";
+      text += '\n  Counting lines: ' + Math.round($this.lineCountingTime * 10) / 10 + 'ms';
     }
-    text += Compiler.sourceStatistics("Prepend", result.options.prepend);
-    text += Compiler.sourceStatistics("Inputs", result.options.inputs);
-    text += Compiler.sourceStatistics("Append", result.options.append);
-    text += Compiler.sourceStatistics("Outputs", result.outputs);
+    text += Compiler.sourceStatistics('Prepend', result.options.prepend);
+    text += Compiler.sourceStatistics('Inputs', result.options.inputs);
+    text += Compiler.sourceStatistics('Append', result.options.append);
+    text += Compiler.sourceStatistics('Outputs', result.outputs);
     return text;
   };
   Compiler.totalLineCount = function(sources) {
@@ -660,10 +660,10 @@
     for (var i = 0; i < sources.length; i = i + 1 | 0) {
       total = total + sources[i].contents.length | 0;
     }
-    var text = "\n" + name + ": " + sources.length + " (" + bytesToString(total) + " total)";
+    var text = '\n' + name + ': ' + sources.length + ' (' + bytesToString(total) + ' total)';
     for (var i = 0; i < sources.length; i = i + 1 | 0) {
       var source = sources[i];
-      text += "\n  " + source.name + ": " + bytesToString(source.contents.length);
+      text += '\n  ' + source.name + ': ' + bytesToString(source.contents.length);
     }
     return text;
   };
@@ -678,7 +678,7 @@
     if (Compiler.nativeLibrarySource !== null) {
       Node.appendChild(program, Node.clone(Compiler.nativeLibraryFile));
     } else {
-      Compiler.nativeLibrarySource = new Source("<native>", NATIVE_LIBRARY);
+      Compiler.nativeLibrarySource = new Source('<native>', NATIVE_LIBRARY);
       Compiler.processInput(this, program, Compiler.nativeLibrarySource);
       Compiler.nativeLibraryFile = Node.clone(program.children[0]);
     }
@@ -769,30 +769,30 @@
   };
   json.Emitter.prototype.emitProgram = function(program) {
     var outputs = [];
-    if (this.options.outputDirectory === "") {
-      outputs.push(new Source(this.options.outputFile, json.dump(program) + "\n"));
+    if (this.options.outputDirectory === '') {
+      outputs.push(new Source(this.options.outputFile, json.dump(program) + '\n'));
     } else {
       for (var i = 0; i < program.children.length; i = i + 1 | 0) {
         var file = program.children[i];
-        outputs.push(new Source(this.options.outputDirectory + "/" + file.range.source.name + ".json", json.dump(file) + "\n"));
+        outputs.push(new Source(this.options.outputDirectory + '/' + file.range.source.name + '.json', json.dump(file) + '\n'));
       }
     }
     return outputs;
   };
   json.DumpVisitor = function() {
-    this.result = "";
-    this.indent = "";
+    this.result = '';
+    this.indent = '';
   };
   json.DumpVisitor.visit = function($this, node) {
     if (node === null) {
-      $this.result += "null";
+      $this.result += 'null';
       return;
     }
     var outer = $this.indent;
-    $this.indent += "  ";
-    $this.result += "{\n" + $this.indent + "\"kind\": \"" + $in.string.replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-") + "\"";
+    $this.indent += '  ';
+    $this.result += '{\n' + $this.indent + '"kind": "' + $in.string.replace($in.NodeKind.toString(node.kind).toLowerCase(), '_', '-') + '"';
     if (node.content !== null) {
-      $this.result += ",\n" + $this.indent + "\"content\": ";
+      $this.result += ',\n' + $this.indent + '"content": ';
       switch (node.content.type()) {
       case 1:
         $this.result += node.content.value;
@@ -806,21 +806,21 @@
       }
     }
     if (Node.hasChildren(node)) {
-      $this.result += ",\n" + $this.indent + "\"children\": [";
+      $this.result += ',\n' + $this.indent + '"children": [';
       var inner = $this.indent;
-      $this.indent += "  ";
+      $this.indent += '  ';
       for (var i = 0; i < node.children.length; i = i + 1 | 0) {
         if (i > 0) {
-          $this.result += ",";
+          $this.result += ',';
         }
-        $this.result += "\n" + $this.indent;
+        $this.result += '\n' + $this.indent;
         json.DumpVisitor.visit($this, node.children[i]);
       }
       $this.indent = inner;
-      $this.result += "\n" + $this.indent + "]";
+      $this.result += '\n' + $this.indent + ']';
     }
     $this.indent = outer;
-    $this.result += "\n" + $this.indent + "}";
+    $this.result += '\n' + $this.indent + '}';
   };
   lisp = {};
   lisp.Emitter = function(_0) {
@@ -830,49 +830,49 @@
   };
   lisp.Emitter.prototype.emitProgram = function(program) {
     var outputs = [];
-    if (this.options.outputDirectory === "") {
-      outputs.push(new Source(this.options.outputFile, lisp.dump(program) + "\n"));
+    if (this.options.outputDirectory === '') {
+      outputs.push(new Source(this.options.outputFile, lisp.dump(program) + '\n'));
     } else {
       for (var i = 0; i < program.children.length; i = i + 1 | 0) {
         var file = program.children[i];
-        outputs.push(new Source(this.options.outputDirectory + "/" + file.range.source.name + ".lisp", lisp.dump(file) + "\n"));
+        outputs.push(new Source(this.options.outputDirectory + '/' + file.range.source.name + '.lisp', lisp.dump(file) + '\n'));
       }
     }
     return outputs;
   };
   lisp.DumpVisitor = function() {
-    this.result = "";
-    this.indent = "";
+    this.result = '';
+    this.indent = '';
   };
   lisp.DumpVisitor.visit = function($this, node) {
     if (node === null) {
-      $this.result += "nil";
+      $this.result += 'nil';
       return;
     }
-    $this.result += "(" + $in.string.replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-");
+    $this.result += '(' + $in.string.replace($in.NodeKind.toString(node.kind).toLowerCase(), '_', '-');
     if (node.content !== null) {
       switch (node.content.type()) {
       case 1:
-        $this.result += " " + node.content.value;
+        $this.result += ' ' + node.content.value;
         break;
       case 2:
-        $this.result += " " + node.content.value;
+        $this.result += ' ' + node.content.value;
         break;
       case 3:
-        $this.result += " " + quoteString(node.content.value, 34);
+        $this.result += ' ' + quoteString(node.content.value, 34);
         break;
       }
     }
     if (Node.hasChildren(node)) {
       var old = $this.indent;
-      $this.indent += "  ";
+      $this.indent += '  ';
       for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        $this.result += "\n" + $this.indent;
+        $this.result += '\n' + $this.indent;
         lisp.DumpVisitor.visit($this, node.children[i]);
       }
       $this.indent = old;
     }
-    $this.result += ")";
+    $this.result += ')';
   };
   var xml = {};
   xml.Emitter = function(_0) {
@@ -882,34 +882,34 @@
   };
   xml.Emitter.prototype.emitProgram = function(program) {
     var outputs = [];
-    if (this.options.outputDirectory === "") {
-      outputs.push(new Source(this.options.outputFile, xml.dump(program) + "\n"));
+    if (this.options.outputDirectory === '') {
+      outputs.push(new Source(this.options.outputFile, xml.dump(program) + '\n'));
     } else {
       for (var i = 0; i < program.children.length; i = i + 1 | 0) {
         var file = program.children[i];
-        outputs.push(new Source(this.options.outputDirectory + "/" + file.range.source.name + ".xml", xml.dump(file) + "\n"));
+        outputs.push(new Source(this.options.outputDirectory + '/' + file.range.source.name + '.xml', xml.dump(file) + '\n'));
       }
     }
     return outputs;
   };
   xml.DumpVisitor = function() {
-    this.result = "";
-    this.indent = "";
+    this.result = '';
+    this.indent = '';
   };
   xml.DumpVisitor.visit = function($this, node) {
     if (node === null) {
-      $this.result += "<null/>";
+      $this.result += '<null/>';
       return;
     }
-    $this.result += "<" + $in.string.replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-");
+    $this.result += '<' + $in.string.replace($in.NodeKind.toString(node.kind).toLowerCase(), '_', '-');
     if (node.content !== null) {
-      $this.result += " content=";
+      $this.result += ' content=';
       switch (node.content.type()) {
       case 1:
-        $this.result += "\"" + node.content.value + "\"";
+        $this.result += '"' + node.content.value + '"';
         break;
       case 2:
-        $this.result += "\"" + node.content.value + "\"";
+        $this.result += '"' + node.content.value + '"';
         break;
       case 3:
         $this.result += quoteString(node.content.value, 34);
@@ -917,22 +917,22 @@
       }
     }
     if (Node.hasChildren(node)) {
-      $this.result += ">";
+      $this.result += '>';
       var inner = $this.indent;
-      $this.indent += "  ";
+      $this.indent += '  ';
       for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        $this.result += "\n" + $this.indent;
+        $this.result += '\n' + $this.indent;
         xml.DumpVisitor.visit($this, node.children[i]);
       }
       $this.indent = inner;
-      $this.result += "\n" + $this.indent + "</" + $in.string.replace($in.NodeKind.toString(node.kind).toLowerCase(), "_", "-") + ">";
+      $this.result += '\n' + $this.indent + '</' + $in.string.replace($in.NodeKind.toString(node.kind).toLowerCase(), '_', '-') + '>';
     } else {
-      $this.result += "/>";
+      $this.result += '/>';
     }
   };
   function Diagnostic(_0, _1, _2) {
     this.noteRange = Range.EMPTY;
-    this.noteText = "";
+    this.noteText = '';
     this.kind = _0;
     this.range = _1;
     this.text = _2;
@@ -956,14 +956,14 @@
     last.noteText = text;
   };
   Log.prototype.toString = function() {
-    var result = "";
+    var result = '';
     for (var i = 0; i < this.diagnostics.length; i = i + 1 | 0) {
       var diagnostic = this.diagnostics[i];
       var formatted = Range.format(diagnostic.range, 0);
-      result = result + Range.locationString(diagnostic.range) + (diagnostic.kind === 0 ? ": error: " : ": warning: ") + diagnostic.text + "\n" + formatted.line + "\n" + formatted.range + "\n";
+      result = result + Range.locationString(diagnostic.range) + (diagnostic.kind === 0 ? ': error: ' : ': warning: ') + diagnostic.text + '\n' + formatted.line + '\n' + formatted.range + '\n';
       if (diagnostic.noteRange.source !== null) {
         formatted = Range.format(diagnostic.noteRange, 0);
-        result = result + Range.locationString(diagnostic.noteRange) + ": note: " + diagnostic.noteText + "\n" + formatted.line + "\n" + formatted.range + "\n";
+        result = result + Range.locationString(diagnostic.noteRange) + ': note: ' + diagnostic.noteText + '\n' + formatted.line + '\n' + formatted.range + '\n';
       }
     }
     return result;
@@ -978,14 +978,14 @@
     this.end = _2;
   }
   Range.toString = function($this) {
-    return $this.source === null ? "" : $this.source.contents.slice($this.start, $this.end);
+    return $this.source === null ? '' : $this.source.contents.slice($this.start, $this.end);
   };
   Range.locationString = function($this) {
     if ($this.source === null) {
-      return "";
+      return '';
     }
     var location = Source.indexToLineColumn($this.source, $this.start);
-    return $this.source.name + ":" + (location.line + 1 | 0) + ":" + (location.column + 1 | 0);
+    return $this.source.name + ':' + (location.line + 1 | 0) + ':' + (location.column + 1 | 0);
   };
   Range.touches = function($this, index) {
     return $this.start <= index && index <= $this.end;
@@ -1006,18 +1006,18 @@
       var centeredWidth = (b - a | 0) < (maxLength / 2 | 0) ? b - a | 0 : maxLength / 2 | 0;
       var centeredStart = (maxLength - centeredWidth | 0) / 2 | 0;
       if (a < centeredStart) {
-        line = line.slice(0, maxLength - 3 | 0) + "...";
+        line = line.slice(0, maxLength - 3 | 0) + '...';
         if (b > (maxLength - 3 | 0)) {
           b = maxLength - 3 | 0;
         }
       } else if ((length - a | 0) < (maxLength - centeredStart | 0)) {
         var offset = length - maxLength | 0;
-        line = "..." + line.slice(offset + 3 | 0, length);
+        line = '...' + line.slice(offset + 3 | 0, length);
         a = a - offset | 0;
         b = b - offset | 0;
       } else {
         var offset = a - centeredStart | 0;
-        line = "..." + line.slice(offset + 3 | 0, (offset + maxLength | 0) - 3 | 0) + "...";
+        line = '...' + line.slice(offset + 3 | 0, (offset + maxLength | 0) - 3 | 0) + '...';
         a = a - offset | 0;
         b = b - offset | 0;
         if (b > (maxLength - 3 | 0)) {
@@ -1025,7 +1025,7 @@
         }
       }
     }
-    return new FormattedRange(line, $in.string.repeat(" ", a) + ((b - a | 0) < 2 ? "^" : $in.string.repeat("~", b - a | 0)));
+    return new FormattedRange(line, $in.string.repeat(' ', a) + ((b - a | 0) < 2 ? '^' : $in.string.repeat('~', b - a | 0)));
   };
   Range.span = function(start, end) {
     return new Range(start.source, start.start, end.end);
@@ -1063,7 +1063,7 @@
   Source.contentsOfLine = function($this, line) {
     Source.computeLineOffsets($this);
     if (line < 0 || line >= $this.lineOffsets.length) {
-      return "";
+      return '';
     }
     var start = $this.lineOffsets[line];
     var end = (line + 1 | 0) < $this.lineOffsets.length ? $this.lineOffsets[line + 1 | 0] - 1 | 0 : $this.contents.length;
@@ -1111,17 +1111,17 @@
   frontend.Flags = function() {
     this.help = false;
     this.verbose = false;
-    this.target = "";
-    this.outputFile = "";
+    this.target = '';
+    this.outputFile = '';
     this.jsMinify = false;
     this.jsSourceMap = false;
     this.optimize = false;
   };
   var js = {};
   js.Emitter = function(_0) {
-    this.newline = "\n";
-    this.space = " ";
-    this.indent = "";
+    this.newline = '\n';
+    this.space = ' ';
+    this.indent = '';
     this.currentLine = 0;
     this.currentColumn = 0;
     this.needsSemicolon = false;
@@ -1139,40 +1139,40 @@
     }
     this.options = this.resolver.options;
     if (this.options.jsMinify) {
-      this.newline = "";
-      this.space = "";
+      this.newline = '';
+      this.space = '';
     }
     this.patcher = new js.Patcher(this.resolver);
     js.Patcher.run(this.patcher, program);
   };
   js.Emitter.prototype.emitProgram = function(program) {
     var collector = new Collector(program, 3);
-    this.currentSource = new Source(this.options.outputFile, "");
+    this.currentSource = new Source(this.options.outputFile, '');
     for (var i = 0; i < this.options.prepend.length; i = i + 1 | 0) {
       js.Emitter.appendSource(this, this.options.prepend[i]);
     }
-    js.Emitter.emit(this, this.indent + "(function()" + this.space + "{" + this.newline);
+    js.Emitter.emit(this, this.indent + '(function()' + this.space + '{' + this.newline);
     js.Emitter.increaseIndent(this);
     if (this.patcher.needMathImul) {
-      js.Emitter.emit(this, this.indent + "var " + $in.string.replace("$imul = Math.imul || function(a, b) {", " ", this.space) + this.newline);
+      js.Emitter.emit(this, this.indent + 'var ' + $in.string.replace('$imul = Math.imul || function(a, b) {', ' ', this.space) + this.newline);
       js.Emitter.increaseIndent(this);
-      js.Emitter.emit(this, this.indent + "var " + $in.string.replace("ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;", " ", this.space) + this.newline);
-      js.Emitter.emit(this, this.indent + "return " + $in.string.replace("al * bl + (ah * bl + al * bh << 16) | 0", " ", this.space));
+      js.Emitter.emit(this, this.indent + 'var ' + $in.string.replace('ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;', ' ', this.space) + this.newline);
+      js.Emitter.emit(this, this.indent + 'return ' + $in.string.replace('al * bl + (ah * bl + al * bh << 16) | 0', ' ', this.space));
       js.Emitter.emitSemicolonAfterStatement(this);
       js.Emitter.decreaseIndent(this);
-      js.Emitter.emit(this, this.indent + "};" + this.newline);
+      js.Emitter.emit(this, this.indent + '};' + this.newline);
       this.needsSemicolon = false;
     }
     if (this.patcher.needExtends) {
-      var derived = this.options.jsMangle ? "d" : "derived";
-      var base = this.options.jsMangle ? "b" : "base";
-      js.Emitter.emit(this, this.indent + "function $extends(" + derived + "," + this.space + base + ")" + this.space + "{" + this.newline);
+      var derived = this.options.jsMangle ? 'd' : 'derived';
+      var base = this.options.jsMangle ? 'b' : 'base';
+      js.Emitter.emit(this, this.indent + 'function $extends(' + derived + ',' + this.space + base + ')' + this.space + '{' + this.newline);
       js.Emitter.increaseIndent(this);
-      js.Emitter.emit(this, this.indent + derived + ".prototype" + this.space + "=" + this.space + "Object.create(" + base + ".prototype);" + this.newline);
-      js.Emitter.emit(this, this.indent + derived + ".prototype.constructor" + this.space + "=" + this.space + derived);
+      js.Emitter.emit(this, this.indent + derived + '.prototype' + this.space + '=' + this.space + 'Object.create(' + base + '.prototype);' + this.newline);
+      js.Emitter.emit(this, this.indent + derived + '.prototype.constructor' + this.space + '=' + this.space + derived);
       js.Emitter.emitSemicolonAfterStatement(this);
       js.Emitter.decreaseIndent(this);
-      js.Emitter.emit(this, this.indent + "}" + this.newline);
+      js.Emitter.emit(this, this.indent + '}' + this.newline);
       this.needsSemicolon = false;
     }
     for (var i = 0; i < collector.typeSymbols.length; i = i + 1 | 0) {
@@ -1209,17 +1209,17 @@
       js.Emitter.emitNode(this, collector.freeVariableSymbols[i]);
     }
     js.Emitter.decreaseIndent(this);
-    js.Emitter.emit(this, this.indent + "}());\n");
+    js.Emitter.emit(this, this.indent + '}());\n');
     for (var i = 0; i < this.options.append.length; i = i + 1 | 0) {
       js.Emitter.appendSource(this, this.options.append[i]);
     }
     if (this.options.jsSourceMap) {
-      this.currentSource.contents = this.currentSource.contents + "/";
-      if (this.options.outputFile === "") {
-        this.currentSource.contents = this.currentSource.contents + "/# sourceMappingURL=data:application/json;base64," + encodeBase64(SourceMapGenerator.toString(this.generator)) + "\n";
+      this.currentSource.contents = this.currentSource.contents + '/';
+      if (this.options.outputFile === '') {
+        this.currentSource.contents = this.currentSource.contents + '/# sourceMappingURL=data:application/json;base64,' + encodeBase64(SourceMapGenerator.toString(this.generator)) + '\n';
       } else {
-        var name = this.options.outputFile + ".map";
-        this.currentSource.contents = this.currentSource.contents + "/# sourceMappingURL=" + splitPath(name).entry + "\n";
+        var name = this.options.outputFile + '.map';
+        this.currentSource.contents = this.currentSource.contents + '/# sourceMappingURL=' + splitPath(name).entry + '\n';
         return [this.currentSource, new Source(name, SourceMapGenerator.toString(this.generator))];
       }
     }
@@ -1227,7 +1227,7 @@
   };
   js.Emitter.appendSource = function($this, source) {
     if ($this.currentColumn > 0) {
-      js.Emitter.emit($this, "\n");
+      js.Emitter.emit($this, '\n');
     }
     $this.currentSource.contents += source.contents;
     if ($this.options.jsSourceMap) {
@@ -1236,7 +1236,7 @@
       }
     }
     if (source.contents.charCodeAt(source.contents.length - 1 | 0) !== 10) {
-      js.Emitter.emit($this, "\n");
+      js.Emitter.emit($this, '\n');
     }
   };
   js.Emitter.addMapping = function($this, node) {
@@ -1250,7 +1250,7 @@
   };
   js.Emitter.increaseIndent = function($this) {
     if (!$this.options.jsMinify) {
-      $this.indent += "  ";
+      $this.indent += '  ';
     }
   };
   js.Emitter.decreaseIndent = function($this) {
@@ -1273,20 +1273,20 @@
     $this.currentSource.contents += text;
   };
   js.Emitter.maybeEmitMinifedNewline = function($this) {
-    if ($this.newline === "" && $this.currentColumn > 1024) {
-      js.Emitter.emit($this, "\n");
+    if ($this.newline === '' && $this.currentColumn > 1024) {
+      js.Emitter.emit($this, '\n');
     }
   };
   js.Emitter.emitSemicolonAfterStatement = function($this) {
     if (!$this.options.jsMinify) {
-      js.Emitter.emit($this, ";\n");
+      js.Emitter.emit($this, ';\n');
     } else {
       $this.needsSemicolon = true;
     }
   };
   js.Emitter.emitSemicolonIfNeeded = function($this) {
     if ($this.needsSemicolon) {
-      js.Emitter.emit($this, ";");
+      js.Emitter.emit($this, ';');
       $this.needsSemicolon = false;
     }
   };
@@ -1300,7 +1300,7 @@
   js.Emitter.emitCommaSeparatedNodes = function($this, nodes) {
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
       if (i > 0) {
-        js.Emitter.emit($this, "," + $this.space);
+        js.Emitter.emit($this, ',' + $this.space);
       }
       js.Emitter.emitNode($this, nodes[i]);
     }
@@ -1308,31 +1308,31 @@
   js.Emitter.emitCommaSeparatedExpressions = function($this, nodes) {
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
       if (i > 0) {
-        js.Emitter.emit($this, "," + $this.space);
+        js.Emitter.emit($this, ',' + $this.space);
         js.Emitter.maybeEmitMinifedNewline($this);
       }
       js.Emitter.emitExpression($this, nodes[i], 1);
     }
   };
   js.Emitter.emitArgumentVariables = function($this, nodes) {
-    js.Emitter.emit($this, "(");
+    js.Emitter.emit($this, '(');
     js.Emitter.emitCommaSeparatedNodes($this, nodes);
-    js.Emitter.emit($this, ")");
+    js.Emitter.emit($this, ')');
   };
   js.Emitter.recursiveEmitIfStatement = function($this, node) {
     var trueBlock = node.children[1];
     var falseBlock = node.children[2];
     var trueStatement = Node.singleStatement(trueBlock);
-    js.Emitter.emit($this, "if" + $this.space + "(");
+    js.Emitter.emit($this, 'if' + $this.space + '(');
     js.Emitter.emitExpression($this, node.children[0], 0);
-    js.Emitter.emit($this, ")");
+    js.Emitter.emit($this, ')');
     js.Emitter.emitBlock($this, trueBlock, 1, falseBlock !== null && trueStatement !== null && trueStatement.kind === 19 ? 0 : 1);
     if (falseBlock !== null) {
       js.Emitter.emitSemicolonIfNeeded($this);
-      js.Emitter.emit($this, $this.space + "else");
+      js.Emitter.emit($this, $this.space + 'else');
       var falseStatement = Node.singleStatement(falseBlock);
       if (falseStatement !== null && falseStatement.kind === 19) {
-        js.Emitter.emit($this, " ");
+        js.Emitter.emit($this, ' ');
         js.Emitter.addMapping($this, falseStatement);
         js.Emitter.recursiveEmitIfStatement($this, falseStatement);
       } else {
@@ -1413,20 +1413,20 @@
     var shouldMinify = mode === 1 && $this.options.jsMinify;
     js.Emitter.addMapping($this, node);
     if (shouldMinify && !Node.hasChildren(node)) {
-      js.Emitter.emit($this, ";");
+      js.Emitter.emit($this, ';');
     } else if (shouldMinify && node.children.length === 1) {
       if (after === 0) {
-        js.Emitter.emit($this, " ");
+        js.Emitter.emit($this, ' ');
       }
       js.Emitter.emitNode($this, node.children[0]);
     } else {
-      js.Emitter.emit($this, $this.space + "{" + $this.newline);
+      js.Emitter.emit($this, $this.space + '{' + $this.newline);
       if (Node.hasChildren(node)) {
         js.Emitter.increaseIndent($this);
         js.Emitter.emitStatements($this, node.children);
         js.Emitter.decreaseIndent($this);
       }
-      js.Emitter.emit($this, $this.indent + "}");
+      js.Emitter.emit($this, $this.indent + '}');
       $this.needsSemicolon = false;
     }
   };
@@ -1435,13 +1435,13 @@
     var block = Node.lastChild(node);
     js.Emitter.emitSemicolonIfNeeded($this);
     for (var i = 0; i < values.length; i = i + 1 | 0) {
-      js.Emitter.emit($this, $this.indent + "case ");
+      js.Emitter.emit($this, $this.indent + 'case ');
       js.Emitter.emitExpression($this, values[i], 0);
-      js.Emitter.emit($this, ":" + $this.newline);
+      js.Emitter.emit($this, ':' + $this.newline);
       js.Emitter.maybeEmitMinifedNewline($this);
     }
     if (values.length === 0) {
-      js.Emitter.emit($this, $this.indent + "default:" + $this.newline);
+      js.Emitter.emit($this, $this.indent + 'default:' + $this.newline);
     }
     js.Emitter.increaseIndent($this);
     if (Node.hasChildren(block)) {
@@ -1449,7 +1449,7 @@
     }
     if (!Node.blockAlwaysEndsWithReturn(block) && (!$this.options.jsMinify || !Node.isLastChild(node))) {
       js.Emitter.emitSemicolonIfNeeded($this);
-      js.Emitter.emit($this, $this.indent + "break");
+      js.Emitter.emit($this, $this.indent + 'break');
       js.Emitter.emitSemicolonAfterStatement($this);
     }
     js.Emitter.decreaseIndent($this);
@@ -1467,24 +1467,24 @@
       js.Emitter.emitSemicolonIfNeeded($this);
       if (isCompoundName) {
         if (state === 1) {
-          js.Emitter.emit($this, ";" + $this.newline);
+          js.Emitter.emit($this, ';' + $this.newline);
         }
         state = 2;
         js.Emitter.emit($this, $this.indent);
       } else if (state !== 1) {
         if (state === 2) {
-          js.Emitter.emit($this, ";" + $this.newline);
+          js.Emitter.emit($this, ';' + $this.newline);
         }
-        js.Emitter.emit($this, $this.indent + "var ");
+        js.Emitter.emit($this, $this.indent + 'var ');
         state = 1;
       } else {
-        js.Emitter.emit($this, "," + $this.space);
+        js.Emitter.emit($this, ',' + $this.space);
         js.Emitter.maybeEmitMinifedNewline($this);
       }
       js.Emitter.emitNode($this, variable);
     }
     if (state !== 0) {
-      js.Emitter.emit($this, ";" + $this.newline);
+      js.Emitter.emit($this, ';' + $this.newline);
     }
   };
   js.Emitter.emitNamespace = function($this, node) {
@@ -1495,9 +1495,9 @@
     js.Emitter.emitSemicolonIfNeeded($this);
     js.Emitter.emit($this, $this.indent);
     if (!js.Emitter.hasCompoundName(symbol) && (symbol.flags & 4096) === 0) {
-      js.Emitter.emit($this, "var ");
+      js.Emitter.emit($this, 'var ');
     }
-    js.Emitter.emit($this, js.Emitter.fullName(symbol) + $this.space + "=" + $this.space + "{}");
+    js.Emitter.emit($this, js.Emitter.fullName(symbol) + $this.space + '=' + $this.space + '{}');
     js.Emitter.emitSemicolonAfterStatement($this);
   };
   js.Emitter.emitEnum = function($this, node) {
@@ -1509,22 +1509,22 @@
     js.Emitter.emitSemicolonIfNeeded($this);
     js.Emitter.emit($this, $this.indent);
     if (!js.Emitter.hasCompoundName(symbol) && (symbol.flags & 4096) === 0) {
-      js.Emitter.emit($this, "var ");
+      js.Emitter.emit($this, 'var ');
     }
-    js.Emitter.emit($this, js.Emitter.fullName(symbol) + $this.space + "=" + $this.space + "{" + $this.newline);
+    js.Emitter.emit($this, js.Emitter.fullName(symbol) + $this.space + '=' + $this.space + '{' + $this.newline);
     js.Emitter.increaseIndent($this);
     for (var i = 0; i < block.children.length; i = i + 1 | 0) {
       var child = block.children[i].symbol;
-      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(child) + ":" + $this.space + child.constant.value);
+      js.Emitter.emit($this, $this.indent + js.Emitter.mangleName(child) + ':' + $this.space + child.constant.value);
       if (i !== (block.children.length - 1 | 0)) {
-        js.Emitter.emit($this, "," + $this.newline);
+        js.Emitter.emit($this, ',' + $this.newline);
         js.Emitter.maybeEmitMinifedNewline($this);
       } else {
         js.Emitter.emit($this, $this.newline);
       }
     }
     js.Emitter.decreaseIndent($this);
-    js.Emitter.emit($this, $this.indent + "}");
+    js.Emitter.emit($this, $this.indent + '}');
     js.Emitter.emitSemicolonAfterStatement($this);
   };
   js.Emitter.emitFunction = function($this, node) {
@@ -1535,7 +1535,7 @@
     }
     var useFunctionStatement = !js.Emitter.hasCompoundName(symbol) && (symbol.flags & 4096) === 0;
     js.Emitter.emitSemicolonIfNeeded($this);
-    js.Emitter.emit($this, useFunctionStatement ? $this.indent + "function " + js.Emitter.fullName(symbol) : $this.indent + js.Emitter.fullName(symbol) + $this.space + "=" + $this.space + "function");
+    js.Emitter.emit($this, useFunctionStatement ? $this.indent + 'function ' + js.Emitter.fullName(symbol) : $this.indent + js.Emitter.fullName(symbol) + $this.space + '=' + $this.space + 'function');
     js.Emitter.emitArgumentVariables($this, node.children[1].children);
     js.Emitter.emitBlock($this, block, 1, 0);
     if (useFunctionStatement) {
@@ -1547,7 +1547,7 @@
       var type = symbol.enclosingSymbol.type;
       if (Type.isClass(type) && Type.baseClass(type) !== null) {
         js.Emitter.emitSemicolonIfNeeded($this);
-        js.Emitter.emit($this, $this.indent + "$extends(" + js.Emitter.fullName(type.symbol) + "," + $this.space + js.Emitter.fullName(Type.baseClass(type).symbol) + ")");
+        js.Emitter.emit($this, $this.indent + '$extends(' + js.Emitter.fullName(type.symbol) + ',' + $this.space + js.Emitter.fullName(Type.baseClass(type).symbol) + ')');
         js.Emitter.emitSemicolonAfterStatement($this);
       }
     }
@@ -1556,7 +1556,7 @@
     var value = node.children[2];
     js.Emitter.emit($this, node.symbol === null ? node.children[0].content.value : js.Emitter.fullName(node.symbol));
     if (value !== null) {
-      js.Emitter.emit($this, $this.space + "=" + $this.space);
+      js.Emitter.emit($this, $this.space + '=' + $this.space);
       js.Emitter.emitExpression($this, value, 1);
     }
   };
@@ -1569,75 +1569,75 @@
     var setup = node.children[0];
     var test = node.children[1];
     var update = node.children[2];
-    js.Emitter.emit($this, $this.indent + "for" + $this.space + "(");
+    js.Emitter.emit($this, $this.indent + 'for' + $this.space + '(');
     if (setup !== null) {
       if (setup.kind === 6) {
-        js.Emitter.emit($this, "var ");
+        js.Emitter.emit($this, 'var ');
         js.Emitter.emitCommaSeparatedNodes($this, Node.clusterVariables(setup));
       } else {
         js.Emitter.emitExpression($this, setup, 0);
       }
     }
     if (test !== null) {
-      js.Emitter.emit($this, ";" + $this.space);
+      js.Emitter.emit($this, ';' + $this.space);
       js.Emitter.emitExpression($this, test, 0);
     } else {
-      js.Emitter.emit($this, ";");
+      js.Emitter.emit($this, ';');
     }
     if (update !== null) {
-      js.Emitter.emit($this, ";" + $this.space);
+      js.Emitter.emit($this, ';' + $this.space);
       js.Emitter.emitExpression($this, update, 0);
     } else {
-      js.Emitter.emit($this, ";");
+      js.Emitter.emit($this, ';');
     }
-    js.Emitter.emit($this, ")");
+    js.Emitter.emit($this, ')');
     js.Emitter.emitBlock($this, node.children[3], 1, 1);
     js.Emitter.emit($this, $this.newline);
   };
   js.Emitter.emitForEach = function($this, node) {
     var variable = node.children[0];
     var value = node.children[1];
-    js.Emitter.emit($this, $this.indent + "for" + $this.space + "(var ");
+    js.Emitter.emit($this, $this.indent + 'for' + $this.space + '(var ');
     js.Emitter.emitNode($this, variable);
-    js.Emitter.emit($this, " in ");
+    js.Emitter.emit($this, ' in ');
     js.Emitter.emitExpression($this, value, 0);
-    js.Emitter.emit($this, ")");
+    js.Emitter.emit($this, ')');
     js.Emitter.emitBlock($this, node.children[2], 1, 1);
     js.Emitter.emit($this, $this.newline);
   };
   js.Emitter.emitWhile = function($this, node) {
-    js.Emitter.emit($this, $this.indent + "while" + $this.space + "(");
+    js.Emitter.emit($this, $this.indent + 'while' + $this.space + '(');
     js.Emitter.emitExpression($this, node.children[0], 0);
-    js.Emitter.emit($this, ")");
+    js.Emitter.emit($this, ')');
     js.Emitter.emitBlock($this, node.children[1], 1, 1);
     js.Emitter.emit($this, $this.newline);
   };
   js.Emitter.emitDoWhile = function($this, node) {
-    js.Emitter.emit($this, $this.indent + "do");
+    js.Emitter.emit($this, $this.indent + 'do');
     js.Emitter.emitBlock($this, node.children[1], 0, 1);
     js.Emitter.emitSemicolonIfNeeded($this);
-    js.Emitter.emit($this, $this.space + "while" + $this.space + "(");
+    js.Emitter.emit($this, $this.space + 'while' + $this.space + '(');
     js.Emitter.emitExpression($this, node.children[0], 0);
-    js.Emitter.emit($this, ")");
+    js.Emitter.emit($this, ')');
     js.Emitter.emitSemicolonAfterStatement($this);
   };
   js.Emitter.emitReturn = function($this, node) {
     var value = node.children[0];
     js.Emitter.emit($this, $this.indent);
     if (value !== null) {
-      js.Emitter.emit($this, "return ");
+      js.Emitter.emit($this, 'return ');
       js.Emitter.emitExpression($this, value, 0);
     } else {
-      js.Emitter.emit($this, "return");
+      js.Emitter.emit($this, 'return');
     }
     js.Emitter.emitSemicolonAfterStatement($this);
   };
   js.Emitter.emitBreak = function($this, node) {
-    js.Emitter.emit($this, $this.indent + "break");
+    js.Emitter.emit($this, $this.indent + 'break');
     js.Emitter.emitSemicolonAfterStatement($this);
   };
   js.Emitter.emitContinue = function($this, node) {
-    js.Emitter.emit($this, $this.indent + "continue");
+    js.Emitter.emit($this, $this.indent + 'continue');
     js.Emitter.emitSemicolonAfterStatement($this);
   };
   js.Emitter.emitAssert = function($this, node) {
@@ -1646,20 +1646,20 @@
     if (!Node.isFalse(value)) {
       var couldBeFalse = !Node.isTrue(value);
       if (couldBeFalse) {
-        js.Emitter.emit($this, $this.indent + "if" + $this.space + "(");
+        js.Emitter.emit($this, $this.indent + 'if' + $this.space + '(');
         js.Emitter.emitExpression($this, value, 0);
-        js.Emitter.emit($this, ")");
+        js.Emitter.emit($this, ')');
         if (!$this.options.jsMinify) {
-          js.Emitter.emit($this, " {\n");
+          js.Emitter.emit($this, ' {\n');
           js.Emitter.increaseIndent($this);
         }
       }
-      var text = Range.toString(node.range) + " (" + Range.locationString(node.range) + ")";
-      js.Emitter.emit($this, $this.indent + "throw new Error(" + quoteString(text, 34) + ")");
+      var text = Range.toString(node.range) + ' (' + Range.locationString(node.range) + ')';
+      js.Emitter.emit($this, $this.indent + 'throw new Error(' + js.Emitter.quoteStringJS(text) + ')');
       js.Emitter.emitSemicolonAfterStatement($this);
       if (couldBeFalse && !$this.options.jsMinify) {
         js.Emitter.decreaseIndent($this);
-        js.Emitter.emit($this, $this.indent + "}\n");
+        js.Emitter.emit($this, $this.indent + '}\n');
       }
     }
   };
@@ -1670,11 +1670,11 @@
     js.Emitter.emitSemicolonAfterStatement($this);
   };
   js.Emitter.emitSwitch = function($this, node) {
-    js.Emitter.emit($this, $this.indent + "switch" + $this.space + "(");
+    js.Emitter.emit($this, $this.indent + 'switch' + $this.space + '(');
     js.Emitter.emitExpression($this, node.children[0], 0);
-    js.Emitter.emit($this, ")" + $this.space + "{" + $this.newline);
+    js.Emitter.emit($this, ')' + $this.space + '{' + $this.newline);
     js.Emitter.emitStatements($this, Node.switchCases(node));
-    js.Emitter.emit($this, $this.indent + "}" + $this.newline);
+    js.Emitter.emit($this, $this.indent + '}' + $this.newline);
     $this.needsSemicolon = false;
   };
   js.Emitter.emitExpression = function($this, node, precedence) {
@@ -1689,13 +1689,13 @@
       js.Emitter.emit($this, js.Emitter.fullName(node.type.symbol));
       break;
     case 36:
-      js.Emitter.emit($this, "this");
+      js.Emitter.emit($this, 'this');
       break;
     case 37:
       js.Emitter.emitHook($this, node, precedence);
       break;
     case 38:
-      js.Emitter.emit($this, "null");
+      js.Emitter.emit($this, 'null');
       break;
     case 39:
       js.Emitter.emitBool($this, node);
@@ -1708,7 +1708,7 @@
       js.Emitter.emitDouble($this, node);
       break;
     case 43:
-      js.Emitter.emit($this, quoteString(node.content.value, 34));
+      js.Emitter.emit($this, js.Emitter.quoteStringJS(node.content.value));
       break;
     case 44:
       js.Emitter.emitList($this, node);
@@ -1793,106 +1793,106 @@
   };
   js.Emitter.emitHook = function($this, node, precedence) {
     if (2 < precedence) {
-      js.Emitter.emit($this, "(");
+      js.Emitter.emit($this, '(');
     }
     js.Emitter.emitExpression($this, node.children[0], 3);
-    js.Emitter.emit($this, $this.space + "?" + $this.space);
+    js.Emitter.emit($this, $this.space + '?' + $this.space);
     js.Emitter.emitExpression($this, node.children[1], 2);
-    js.Emitter.emit($this, $this.space + ":" + $this.space);
+    js.Emitter.emit($this, $this.space + ':' + $this.space);
     js.Emitter.emitExpression($this, node.children[2], 2);
     if (2 < precedence) {
-      js.Emitter.emit($this, ")");
+      js.Emitter.emit($this, ')');
     }
   };
   js.Emitter.emitBool = function($this, node) {
     if ($this.options.jsMangle) {
-      js.Emitter.emit($this, node.content.value ? "!0" : "!1");
+      js.Emitter.emit($this, node.content.value ? '!0' : '!1');
     } else {
-      js.Emitter.emit($this, node.content.value ? "true" : "false");
+      js.Emitter.emit($this, node.content.value ? 'true' : 'false');
     }
   };
   js.Emitter.emitInt = function($this, node) {
     var wrap = node.parent.kind === 45 && node !== $this.toStringTarget;
     if (wrap) {
-      js.Emitter.emit($this, "(");
+      js.Emitter.emit($this, '(');
     }
     js.Emitter.emit($this, node.content.value.toString());
     if (wrap) {
-      js.Emitter.emit($this, ")");
+      js.Emitter.emit($this, ')');
     }
   };
   js.Emitter.emitDouble = function($this, node) {
     var wrap = node.parent.kind === 45 && node !== $this.toStringTarget;
     if (wrap) {
-      js.Emitter.emit($this, "(");
+      js.Emitter.emit($this, '(');
     }
     js.Emitter.emit($this, node.content.value.toString());
     if (wrap) {
-      js.Emitter.emit($this, ")");
+      js.Emitter.emit($this, ')');
     }
   };
   js.Emitter.emitList = function($this, node) {
-    js.Emitter.emit($this, "[");
+    js.Emitter.emit($this, '[');
     js.Emitter.emitCommaSeparatedExpressions($this, node.children);
-    js.Emitter.emit($this, "]");
+    js.Emitter.emit($this, ']');
   };
   js.Emitter.emitDot = function($this, node) {
     js.Emitter.emitExpression($this, node.children[0], 15);
-    js.Emitter.emit($this, ".");
+    js.Emitter.emit($this, '.');
     var name = node.children[1];
     js.Emitter.emit($this, name.symbol === null ? name.content.value : $in.SymbolKind.isInstance(name.symbol.kind) ? js.Emitter.mangleName(name.symbol) : js.Emitter.fullName(name.symbol));
   };
   js.Emitter.emitCall = function($this, node) {
     var value = node.children[0];
     if (value.kind === 35) {
-      js.Emitter.emit($this, "new ");
+      js.Emitter.emit($this, 'new ');
     }
     js.Emitter.emitExpression($this, value, 14);
-    js.Emitter.emit($this, "(");
+    js.Emitter.emit($this, '(');
     js.Emitter.emitCommaSeparatedExpressions($this, Node.callArguments(node));
-    js.Emitter.emit($this, ")");
+    js.Emitter.emit($this, ')');
   };
   js.Emitter.emitSuperCall = function($this, node) {
     var $arguments = node.children;
     js.Emitter.emit($this, js.Emitter.fullName(node.symbol));
-    js.Emitter.emit($this, ".call(this");
+    js.Emitter.emit($this, '.call(this');
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-      js.Emitter.emit($this, "," + $this.space);
+      js.Emitter.emit($this, ',' + $this.space);
       js.Emitter.emitExpression($this, $arguments[i], 1);
     }
-    js.Emitter.emit($this, ")");
+    js.Emitter.emit($this, ')');
   };
   js.Emitter.emitSequence = function($this, node, precedence) {
     if (1 <= precedence) {
-      js.Emitter.emit($this, "(");
+      js.Emitter.emit($this, '(');
     }
     js.Emitter.emitCommaSeparatedExpressions($this, node.children);
     if (1 <= precedence) {
-      js.Emitter.emit($this, ")");
+      js.Emitter.emit($this, ')');
     }
   };
   js.Emitter.emitLambda = function($this, node, wasStartOfExpression) {
     if (wasStartOfExpression) {
-      js.Emitter.emit($this, "(");
+      js.Emitter.emit($this, '(');
     }
-    js.Emitter.emit($this, "function");
+    js.Emitter.emit($this, 'function');
     js.Emitter.emitArgumentVariables($this, Node.lambdaArguments(node));
     js.Emitter.emitBlock($this, Node.lambdaBlock(node), 1, 0);
     if (wasStartOfExpression) {
-      js.Emitter.emit($this, ")");
+      js.Emitter.emit($this, ')');
     }
   };
   js.Emitter.emitUnary = function($this, node, precedence) {
     var value = node.children[0];
     var info = operatorInfo.table[node.kind];
     if (info.precedence < precedence) {
-      js.Emitter.emit($this, "(");
+      js.Emitter.emit($this, '(');
     }
     var isPostfix = info.precedence === 14;
     if (!isPostfix) {
       js.Emitter.emit($this, info.text);
       if (node.kind === 59 || node.kind === 60 && (value.kind === 60 || value.kind === 63) || node.kind === 61 && (value.kind === 61 || value.kind === 64 || value.kind === 40 && value.content.value < 0)) {
-        js.Emitter.emit($this, " ");
+        js.Emitter.emit($this, ' ');
       }
     }
     js.Emitter.emitExpression($this, value, info.precedence);
@@ -1900,20 +1900,20 @@
       js.Emitter.emit($this, info.text);
     }
     if (info.precedence < precedence) {
-      js.Emitter.emit($this, ")");
+      js.Emitter.emit($this, ')');
     }
   };
   js.Emitter.isToStringCall = function(node) {
     if (node.kind === 47) {
       var value = node.children[0];
-      return value.kind === 45 && value.symbol !== null && value.symbol.name === "toString" && Node.callArguments(node).length === 0;
+      return value.kind === 45 && value.symbol !== null && value.symbol.name === 'toString' && Node.callArguments(node).length === 0;
     }
     return false;
   };
   js.Emitter.emitBinary = function($this, node, precedence) {
     var info = operatorInfo.table[node.kind];
     if (info.precedence < precedence) {
-      js.Emitter.emit($this, "(");
+      js.Emitter.emit($this, '(');
     }
     var left = node.children[0];
     var right = node.children[1];
@@ -1925,34 +1925,47 @@
     }
     $this.toStringTarget = left;
     js.Emitter.emitExpression($this, left, info.precedence + (info.associativity === 2 | 0) | 0);
-    js.Emitter.emit($this, kind === 75 ? " in " : $this.space + (kind === 72 ? "===" : kind === 82 ? "!==" : info.text) + $this.space);
-    if ($this.space === "" && (kind === 67 && (right.kind === 60 || right.kind === 63) || kind === 86 && (right.kind === 61 || right.kind === 64 || right.kind === 40 && right.content.value < 0))) {
-      js.Emitter.emit($this, " ");
+    js.Emitter.emit($this, kind === 75 ? ' in ' : $this.space + (kind === 72 ? '===' : kind === 82 ? '!==' : info.text) + $this.space);
+    if ($this.space === '' && (kind === 67 && (right.kind === 60 || right.kind === 63) || kind === 86 && (right.kind === 61 || right.kind === 64 || right.kind === 40 && right.content.value < 0))) {
+      js.Emitter.emit($this, ' ');
     }
     $this.toStringTarget = right;
     js.Emitter.emitExpression($this, right, info.precedence + (info.associativity === 1 | 0) | 0);
     if (info.precedence < precedence) {
-      js.Emitter.emit($this, ")");
+      js.Emitter.emit($this, ')');
     }
   };
   js.Emitter.emitIndex = function($this, node, precedence) {
     js.Emitter.emitExpression($this, node.children[0], 15);
-    js.Emitter.emit($this, "[");
+    js.Emitter.emit($this, '[');
     js.Emitter.emitExpression($this, node.children[1], 0);
-    js.Emitter.emit($this, "]");
+    js.Emitter.emit($this, ']');
   };
   js.Emitter.emitTertiary = function($this, node, precedence) {
     if (2 < precedence) {
-      js.Emitter.emit($this, "(");
+      js.Emitter.emit($this, '(');
     }
     js.Emitter.emitExpression($this, node.children[0], 15);
-    js.Emitter.emit($this, "[");
+    js.Emitter.emit($this, '[');
     js.Emitter.emitExpression($this, node.children[1], 0);
-    js.Emitter.emit($this, "]" + $this.space + "=" + $this.space);
+    js.Emitter.emit($this, ']' + $this.space + '=' + $this.space);
     js.Emitter.emitExpression($this, node.children[2], 2);
     if (2 < precedence) {
-      js.Emitter.emit($this, ")");
+      js.Emitter.emit($this, ')');
     }
+  };
+  js.Emitter.quoteStringJS = function(text) {
+    var doubleCount = 0;
+    var singleCount = 0;
+    for (var i = 0; i < text.length; i = i + 1 | 0) {
+      var c = text.charCodeAt(i);
+      if (c === 34) {
+        doubleCount = doubleCount + 1 | 0;
+      } else if (c === 39) {
+        singleCount = singleCount + 1 | 0;
+      }
+    }
+    return quoteString(text, singleCount > doubleCount ? 34 : 39);
   };
   js.Emitter.hasCompoundName = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
@@ -1960,44 +1973,44 @@
   };
   js.Emitter.createIsKeyword = function() {
     var result = new StringMap();
-    result.table["apply"] = true;
-    result.table["arguments"] = true;
-    result.table["break"] = true;
-    result.table["call"] = true;
-    result.table["case"] = true;
-    result.table["catch"] = true;
-    result.table["class"] = true;
-    result.table["const"] = true;
-    result.table["constructor"] = true;
-    result.table["continue"] = true;
-    result.table["debugger"] = true;
-    result.table["default"] = true;
-    result.table["delete"] = true;
-    result.table["do"] = true;
-    result.table["double"] = true;
-    result.table["else"] = true;
-    result.table["export"] = true;
-    result.table["extends"] = true;
-    result.table["false"] = true;
-    result.table["finally"] = true;
-    result.table["float"] = true;
-    result.table["for"] = true;
-    result.table["function"] = true;
-    result.table["if"] = true;
-    result.table["import"] = true;
-    result.table["in"] = true;
-    result.table["instanceof"] = true;
-    result.table["int"] = true;
-    result.table["let"] = true;
-    result.table["new"] = true;
-    result.table["null"] = true;
-    result.table["return"] = true;
-    result.table["super"] = true;
-    result.table["this"] = true;
-    result.table["throw"] = true;
-    result.table["true"] = true;
-    result.table["try"] = true;
-    result.table["var"] = true;
+    result.table['apply'] = true;
+    result.table['arguments'] = true;
+    result.table['break'] = true;
+    result.table['call'] = true;
+    result.table['case'] = true;
+    result.table['catch'] = true;
+    result.table['class'] = true;
+    result.table['const'] = true;
+    result.table['constructor'] = true;
+    result.table['continue'] = true;
+    result.table['debugger'] = true;
+    result.table['default'] = true;
+    result.table['delete'] = true;
+    result.table['do'] = true;
+    result.table['double'] = true;
+    result.table['else'] = true;
+    result.table['export'] = true;
+    result.table['extends'] = true;
+    result.table['false'] = true;
+    result.table['finally'] = true;
+    result.table['float'] = true;
+    result.table['for'] = true;
+    result.table['function'] = true;
+    result.table['if'] = true;
+    result.table['import'] = true;
+    result.table['in'] = true;
+    result.table['instanceof'] = true;
+    result.table['int'] = true;
+    result.table['let'] = true;
+    result.table['new'] = true;
+    result.table['null'] = true;
+    result.table['return'] = true;
+    result.table['super'] = true;
+    result.table['this'] = true;
+    result.table['throw'] = true;
+    result.table['true'] = true;
+    result.table['try'] = true;
+    result.table['var'] = true;
     return result;
   };
   js.Emitter.mangleName = function(symbol) {
@@ -2008,7 +2021,7 @@
       return js.Emitter.mangleName(symbol.enclosingSymbol);
     }
     if (symbol.name in js.Emitter.isKeyword.table) {
-      return "$" + symbol.name;
+      return '$' + symbol.name;
     }
     return symbol.name;
   };
@@ -2020,9 +2033,9 @@
         return enclosingName;
       }
       if ($in.SymbolKind.isInstance(symbol.kind)) {
-        enclosingName += ".prototype";
+        enclosingName += '.prototype';
       }
-      return enclosingName + "." + js.Emitter.mangleName(symbol);
+      return enclosingName + '.' + js.Emitter.mangleName(symbol);
     }
     return js.Emitter.mangleName(symbol);
   };
@@ -2100,11 +2113,11 @@
       });
       for (var i = 0; i < sortedGroups.length; i = i + 1 | 0) {
         var group = sortedGroups[i].group;
-        var name = "";
+        var name = '';
         for (var j = 0; j < group.length; j = j + 1 | 0) {
           var symbol = group[j];
           if (js.Patcher.canRename(symbol)) {
-            if (name === "") {
+            if (name === '') {
               name = js.Patcher.generateSymbolName($this);
             }
             if (symbol.kind !== 15) {
@@ -2316,7 +2329,7 @@
     } else if ($in.NodeKind.isReal(kind)) {
       return node.content.value === 0;
     } else if (kind === 43) {
-      return node.content.value === "";
+      return node.content.value === '';
     } else if ($in.NodeKind.isCast(kind)) {
       return js.Patcher.isFalsy($this, node.children[1]);
     } else {
@@ -2629,7 +2642,7 @@
   js.Patcher.createBinaryInt = function($this, kind, left, right) {
     if (kind === 81) {
       $this.needMathImul = true;
-      return Node.withType(Node.createCall(Node.withContent(new Node(34), new StringContent("$imul")), [left, right]), $this.cache.intType);
+      return Node.withType(Node.createCall(Node.withContent(new Node(34), new StringContent('$imul')), [left, right]), $this.cache.intType);
     }
     return Node.withType(Node.createBinary(69, Node.withType(Node.createBinary(kind, left, right), $this.cache.intType), Node.withType(Node.withContent(new Node(40), new IntContent(0)), $this.cache.intType)), $this.cache.intType);
   };
@@ -2642,7 +2655,7 @@
     }
     var target = left.children[0];
     var name = left.children[1];
-    var temporaryName = Node.withContent(new Node(34), new StringContent("$temp"));
+    var temporaryName = Node.withContent(new Node(34), new StringContent('$temp'));
     var dot = Node.withChildren(new Node(45), [temporaryName, Node.replaceWith(name, null)]);
     return Node.withType(Node.withChildren(new Node(46), [Node.withChildren(new Node(16), [Node.clone(temporaryName), null, Node.replaceWith(target, null)]), Node.withType(Node.createBinary(87, dot, js.Patcher.createBinaryInt($this, kind, Node.clone(dot), right)), $this.cache.intType)]), $this.cache.intType);
   };
@@ -2680,12 +2693,12 @@
   js.Patcher.thisAlias = function($this) {
     if (!$this.createdThisAlias) {
       $this.createdThisAlias = true;
-      Node.insertChild($this.currentFunction.node.children[2], 0, Node.createVariableCluster(new Node(49), [Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent("$this")), null, new Node(36)])]));
+      Node.insertChild($this.currentFunction.node.children[2], 0, Node.createVariableCluster(new Node(49), [Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent('$this')), null, new Node(36)])]));
     }
-    return Node.withContent(new Node(34), new StringContent("$this"));
+    return Node.withContent(new Node(34), new StringContent('$this'));
   };
   js.Patcher.numberToName = function(number) {
-    var name = "";
+    var name = '';
     if (number >= 52) {
       name = js.Patcher.numberToName((number / 52 | 0) - 1 | 0);
       number = number % 52 | 0;
@@ -2694,7 +2707,7 @@
     return name;
   };
   js.Patcher.generateSymbolName = function($this) {
-    var name = "";
+    var name = '';
     do {
       name = js.Patcher.numberToName(($this.nextSymbolName = $this.nextSymbolName + 1 | 0) - 1 | 0);
     } while (name in $this.reservedNames.table);
@@ -2727,7 +2740,7 @@
       sourceNames.push(quoteString(source.name, 34));
       sourceContents.push(quoteString(source.contents, 34));
     }
-    var result = "{\"version\":3,\"sources\":[" + sourceNames.join(",") + "],\"sourcesContent\":[" + sourceContents.join(",") + "],\"names\":[],\"mappings\":\"";
+    var result = '{"version":3,"sources":[' + sourceNames.join(',') + '],"sourcesContent":[' + sourceContents.join(',') + '],"names":[],"mappings":"';
     $this.mappings.sort(function(left, right) {
       var delta = left.generatedLine - right.generatedLine | 0;
       return delta !== 0 ? delta : left.generatedColumn - right.generatedColumn | 0;
@@ -2744,11 +2757,11 @@
         if (previousGeneratedColumn === mapping.generatedColumn && (previousGeneratedLine > 0 || previousGeneratedColumn > 0)) {
           continue;
         }
-        result += ",";
+        result += ',';
       } else {
         previousGeneratedColumn = 0;
         while (previousGeneratedLine < generatedLine) {
-          result += ";";
+          result += ';';
           previousGeneratedLine = previousGeneratedLine + 1 | 0;
         }
       }
@@ -2761,11 +2774,11 @@
       result += SourceMapGenerator.encodeVLQ(mapping.originalColumn - previousOriginalColumn | 0);
       previousOriginalColumn = mapping.originalColumn;
     }
-    return result + "\"}\n";
+    return result + '"}\n';
   };
   SourceMapGenerator.encodeVLQ = function(value) {
     var vlq = value < 0 ? -value << 1 | 1 : value << 1;
-    var encoded = "";
+    var encoded = '';
     do {
       var digit = vlq & 31;
       vlq >>= 5;
@@ -3617,7 +3630,7 @@
       var symbol = info.symbol;
       var enclosingSymbol = symbol.enclosingSymbol;
       if (symbol.kind === 15 && (symbol.flags & 8192) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 8192) !== 0 || $in.SymbolKind.isEnum(enclosingSymbol.kind) || resolver.options.convertAllInstanceToStatic && (symbol.flags & 4096) === 0 && (symbol.flags & 128) === 0)) {
-        var thisSymbol = new Symbol("this", 17);
+        var thisSymbol = new Symbol('this', 17);
         thisSymbol.type = enclosingSymbol.type;
         var replacedThis = InstanceToStaticPass.recursivelyReplaceThis(symbol.node.children[2], thisSymbol);
         symbol.kind = 14;
@@ -3626,7 +3639,7 @@
           var $arguments = Type.argumentTypes(symbol.type);
           $arguments.unshift(enclosingSymbol.type);
           symbol.type = TypeCache.functionType(resolver.cache, symbol.type.relevantTypes[0], $arguments);
-          thisSymbol.node = Node.withSymbol(Node.withChildren(new Node(16), [Node.withSymbol(Node.withContent(new Node(34), new StringContent("this")), thisSymbol), Node.withType(new Node(35), thisSymbol.type), null]), thisSymbol);
+          thisSymbol.node = Node.withSymbol(Node.withChildren(new Node(16), [Node.withSymbol(Node.withContent(new Node(34), new StringContent('this')), thisSymbol), Node.withType(new Node(35), thisSymbol.type), null]), thisSymbol);
           Node.insertChild(symbol.node.children[1], 0, thisSymbol.node);
           resolver.allSymbols.push(thisSymbol);
         }
@@ -3824,7 +3837,7 @@
       var name = modifierName.content.value;
       var flag = nameToSymbolFlag.table[name];
       if ((flags & flag) !== 0) {
-        Log.warning($this.log, modifierName.range, "Duplicate modifier \"" + name + "\"");
+        Log.warning($this.log, modifierName.range, 'Duplicate modifier "' + name + '"');
       }
       flags |= flag;
       parent = parent.parent;
@@ -3929,7 +3942,7 @@
         symbol.kind = 6;
         break;
       case 13:
-        Log.error($this.log, declarationName.range, "No type named \"" + declarationName.content.value + "\" to extend");
+        Log.error($this.log, declarationName.range, 'No type named "' + declarationName.content.value + '" to extend');
         break;
       default:
         break;
@@ -3971,7 +3984,7 @@
           continue;
         }
         if (!$in.SymbolKind.isNamespace(symbol.kind)) {
-          Log.error($this.log, value.range, "Expected a namespace here");
+          Log.error($this.log, value.range, 'Expected a namespace here');
           continue;
         }
         if (insertedSymbols === null) {
@@ -4015,7 +4028,7 @@
       var name = node.content.value;
       member = $this.cache.globalType.members.table[name] || null;
       if (member === null) {
-        Log.error($this.log, node.range, "\"" + name + "\" is not declared");
+        Log.error($this.log, node.range, '"' + name + '" is not declared');
         return;
       }
     } else if (node.kind === 45) {
@@ -4029,15 +4042,15 @@
       var name = dotName.content.value;
       member = targetType.members.table[name] || null;
       if (member === null) {
-        Log.error($this.log, dotName.range, "\"" + name + "\" is not declared on type \"" + Type.toString(targetType) + "\"");
+        Log.error($this.log, dotName.range, '"' + name + '" is not declared on type "' + Type.toString(targetType) + '"');
         return;
       }
     } else {
-      Log.error($this.log, node.range, "Unexpected " + $in.NodeKind.toString(node.kind));
+      Log.error($this.log, node.range, 'Unexpected ' + $in.NodeKind.toString(node.kind));
       return;
     }
     if (!$in.SymbolKind.isType(member.symbol.kind)) {
-      Log.error($this.log, node.range, "Expected a type here");
+      Log.error($this.log, node.range, 'Expected a type here');
       return;
     }
     Node.become(node, Node.withSymbol(Node.withRange(Node.withType(new Node(35), member.symbol.type), node.range), member.symbol));
@@ -4181,7 +4194,7 @@
       Resolver.resolveCall($this, node);
       break;
     case 48:
-      Log.error($this.log, node.range, "TODO: implement super calls");
+      Log.error($this.log, node.range, 'TODO: implement super calls');
       break;
     case 49:
       break;
@@ -4261,19 +4274,19 @@
   };
   Resolver.checkIsParameterized = function($this, node) {
     if (node.type !== $this.cache.errorType && Type.hasParameters(node.type) && node.type.substitutions === null) {
-      Log.error($this.log, node.range, "Cannot use unparameterized type \"" + Type.toString(node.type) + "\"");
+      Log.error($this.log, node.range, 'Cannot use unparameterized type "' + Type.toString(node.type) + '"');
       node.type = $this.cache.errorType;
     }
   };
   Resolver.checkIsType = function($this, node) {
     if (node.type !== $this.cache.errorType && node.kind !== 35) {
-      Log.error($this.log, node.range, "Unexpected expression of type \"" + Type.toString(node.type) + "\"");
+      Log.error($this.log, node.range, 'Unexpected expression of type "' + Type.toString(node.type) + '"');
       node.type = $this.cache.errorType;
     }
   };
   Resolver.checkIsInstance = function($this, node) {
     if (node.type !== $this.cache.errorType && node.kind === 35) {
-      Log.error($this.log, node.range, "Unexpected type \"" + Type.toString(node.type) + "\"");
+      Log.error($this.log, node.range, 'Unexpected type "' + Type.toString(node.type) + '"');
       node.type = $this.cache.errorType;
     }
   };
@@ -4284,7 +4297,7 @@
   };
   Resolver.checkIsValidVariableType = function($this, node) {
     if (node.type === $this.cache.voidType || Type.isNamespace(node.type)) {
-      Log.error($this.log, node.range, "Cannot use type \"" + Type.toString(node.type) + "\" here");
+      Log.error($this.log, node.range, 'Cannot use type "' + Type.toString(node.type) + '" here');
       node.type = $this.cache.errorType;
     }
   };
@@ -4300,7 +4313,7 @@
     } else if (kind === 46) {
       Resolver.checkUnusedExpression($this, node.children[1]);
     } else if (node.type !== $this.cache.errorType && !$in.NodeKind.isCall(kind) && !$in.NodeKind.isUnaryStorageOperator(kind) && !$in.NodeKind.isBinaryStorageOperator(kind)) {
-      Log.warning($this.log, node.range, "Unused expression");
+      Log.warning($this.log, node.range, 'Unused expression');
     }
   };
   Resolver.checkStorage = function($this, node) {
@@ -4308,13 +4321,13 @@
       return;
     }
     if (!$in.NodeKind.isStorage(node.kind)) {
-      Log.error($this.log, node.range, "Cannot store to this location");
+      Log.error($this.log, node.range, 'Cannot store to this location');
       return;
     }
     if ((node.symbol.flags & 1024) !== 0) {
-      Log.error($this.log, node.range, "Cannot store to a symbol marked as \"const\"");
+      Log.error($this.log, node.range, 'Cannot store to a symbol marked as "const"');
     } else if ((node.symbol.flags & 256) !== 0) {
-      Log.error($this.log, node.range, "Cannot store to a symbol marked as \"final\"");
+      Log.error($this.log, node.range, 'Cannot store to a symbol marked as "final"');
     }
   };
   Resolver.checkConversion = function($this, to, node, kind) {
@@ -4323,13 +4336,13 @@
       return;
     }
     if (from === $this.cache.voidType && to === $this.cache.voidType) {
-      Log.error($this.log, node.range, "Unexpected expression of type \"" + Type.toString(to) + "\"");
+      Log.error($this.log, node.range, 'Unexpected expression of type "' + Type.toString(to) + '"');
       node.type = $this.cache.errorType;
       return;
     }
     if (from === to) {
       if (node.symbol !== null && $in.SymbolKind.isFunction(node.symbol.kind) && node.kind !== 47 && node.parent.kind !== 47) {
-        Log.error($this.log, node.range, "Raw function references are not allowed (call the function instead)");
+        Log.error($this.log, node.range, 'Raw function references are not allowed (call the function instead)');
         node.type = $this.cache.errorType;
       }
       return;
@@ -4338,7 +4351,7 @@
       from = to;
     }
     if (kind === 0 && !TypeCache.canImplicitlyConvert($this.cache, from, to) || kind === 1 && !TypeCache.canExplicitlyConvert($this.cache, from, to)) {
-      Log.error($this.log, node.range, "Cannot convert from type \"" + Type.toString(from) + "\" to type \"" + Type.toString(to) + "\"" + (TypeCache.canExplicitlyConvert($this.cache, from, to) ? " without a cast" : ""));
+      Log.error($this.log, node.range, 'Cannot convert from type "' + Type.toString(from) + '" to type "' + Type.toString(to) + '"' + (TypeCache.canExplicitlyConvert($this.cache, from, to) ? ' without a cast' : ''));
       node.type = $this.cache.errorType;
       return;
     }
@@ -4353,7 +4366,7 @@
   };
   Resolver.unexpectedStatement = function($this, node) {
     if (node.range.source !== null) {
-      Log.error($this.log, node.range, "Cannot use this statement here");
+      Log.error($this.log, node.range, 'Cannot use this statement here');
     }
   };
   Resolver.checkInsideBlock = function($this, node) {
@@ -4397,9 +4410,9 @@
       return true;
     }
     if ($this.context.symbolForThis !== null) {
-      Log.error($this.log, range, "Cannot access \"this\" from a static context");
+      Log.error($this.log, range, 'Cannot access "this" from a static context');
     } else {
-      Log.error($this.log, range, "Cannot use \"this\" outside a class or struct");
+      Log.error($this.log, range, 'Cannot use "this" outside a class or struct');
     }
     return false;
   };
@@ -4412,7 +4425,7 @@
       return true;
     }
     if ($this.context.symbolForThis === null) {
-      Log.error($this.log, node.range, "Cannot use \"" + symbol.name + "\" outside a class or struct");
+      Log.error($this.log, node.range, 'Cannot use "' + symbol.name + '" outside a class or struct');
       return false;
     }
     if (symbol.kind === 4 && $this.context.symbolForThis === symbol.enclosingSymbol) {
@@ -4426,7 +4439,7 @@
         }
       }
     }
-    Log.error($this.log, node.range, "Cannot access \"" + symbol.name + "\" from a static context");
+    Log.error($this.log, node.range, 'Cannot access "' + symbol.name + '" from a static context');
     return false;
   };
   Resolver.collectAndResolveBaseTypes = function($this, symbol) {
@@ -4443,7 +4456,7 @@
             if (isObject) {
               baseTypes.splice((index = index + 1 | 0) - 1 | 0, 0, baseType);
             } else if (Type.isClass(baseType.type)) {
-              Log.error($this.log, baseType.range, "The base class must be set from the class declaration, not from an extension block");
+              Log.error($this.log, baseType.range, 'The base class must be set from the class declaration, not from an extension block');
             } else {
               baseTypes.push(baseType);
             }
@@ -4456,7 +4469,7 @@
   Resolver.checkNoBaseTypes = function($this, symbol, what) {
     var baseTypes = Resolver.collectAndResolveBaseTypes($this, symbol);
     for (var i = 0; i < baseTypes.length; i = i + 1 | 0) {
-      Log.error($this.log, baseTypes[i].range, what + " cannot inherit from another type");
+      Log.error($this.log, baseTypes[i].range, what + ' cannot inherit from another type');
     }
   };
   Resolver.createDefaultValue = function($this, type, range) {
@@ -4476,13 +4489,13 @@
       return Node.withType(Node.withContent(new Node(42), new DoubleContent(0)), type);
     }
     if (type === $this.cache.stringType) {
-      return Node.withType(Node.withContent(new Node(43), new StringContent("")), type);
+      return Node.withType(Node.withContent(new Node(43), new StringContent('')), type);
     }
     if (Type.isEnum(type)) {
       return Node.withType(Node.withContent(new Node(40), new IntContent(0)), type);
     }
     if (type !== $this.cache.errorType) {
-      Log.error($this.log, range, "Cannot create a default value for type \"" + Type.toString(type) + "\"");
+      Log.error($this.log, range, 'Cannot create a default value for type "' + Type.toString(type) + '"');
     }
     return Node.withType(new Node(49), $this.cache.errorType);
   };
@@ -4502,18 +4515,18 @@
     Resolver.unexpectedModifierIfPresent($this, symbol, 128, where);
     Resolver.unexpectedModifierIfPresent($this, symbol, 32, where);
     if ((symbol.flags & 8192) !== 0) {
-      Resolver.unexpectedModifierIfPresent($this, symbol, 4096, "on an imported declaration");
+      Resolver.unexpectedModifierIfPresent($this, symbol, 4096, 'on an imported declaration');
     }
   };
   Resolver.initializeNamespace = function($this, symbol) {
-    Resolver.forbidBlockDeclarationModifiers($this, symbol, "on a namespace declaration");
-    Resolver.checkNoBaseTypes($this, symbol, "A namespace");
+    Resolver.forbidBlockDeclarationModifiers($this, symbol, 'on a namespace declaration');
+    Resolver.checkNoBaseTypes($this, symbol, 'A namespace');
   };
   Resolver.initializeEnum = function($this, symbol) {
-    Resolver.forbidBlockDeclarationModifiers($this, symbol, "on an enum declaration");
-    Resolver.checkNoBaseTypes($this, symbol, "An enum");
-    if ((symbol.type.members.table["toString"] || null) === null && (symbol.flags & 8192) === 0) {
-      Resolver.addAutoGeneratedMember($this, symbol.type, "toString");
+    Resolver.forbidBlockDeclarationModifiers($this, symbol, 'on an enum declaration');
+    Resolver.checkNoBaseTypes($this, symbol, 'An enum');
+    if ((symbol.type.members.table['toString'] || null) === null && (symbol.flags & 8192) === 0) {
+      Resolver.addAutoGeneratedMember($this, symbol.type, 'toString');
     }
   };
   Resolver.resolveBaseTypes = function($this, symbol) {
@@ -4523,7 +4536,7 @@
     var unmergedMembers = new StringMap();
     type.relevantTypes = [];
     if (symbol.kind === 12) {
-      Resolver.checkNoBaseTypes($this, symbol, "A struct");
+      Resolver.checkNoBaseTypes($this, symbol, 'A struct');
       return;
     }
     for (var i = 0; i < baseTypes.length; i = i + 1 | 0) {
@@ -4534,15 +4547,15 @@
       }
       if (symbol.kind === 11 && Type.isClass(baseType)) {
         if (baseTypes.indexOf(base) !== 0) {
-          Log.error($this.log, base.range, "Base type \"" + Type.toString(baseType) + "\" must come first in a class declaration");
+          Log.error($this.log, base.range, 'Base type "' + Type.toString(baseType) + '" must come first in a class declaration');
           continue;
         }
       } else if (!Type.isInterface(baseType)) {
-        Log.error($this.log, base.range, "Base type \"" + Type.toString(baseType) + "\" must be an interface");
+        Log.error($this.log, base.range, 'Base type "' + Type.toString(baseType) + '" must be an interface');
         continue;
       }
       if (type.relevantTypes.indexOf(baseType) >= 0) {
-        Log.error($this.log, base.range, "Duplicate base type \"" + Type.toString(baseType) + "\"");
+        Log.error($this.log, base.range, 'Duplicate base type "' + Type.toString(baseType) + '"');
         continue;
       }
       type.relevantTypes.push(baseType);
@@ -4569,13 +4582,13 @@
       var existing = type.members.table[member.symbol.name] || null;
       if (existing !== null) {
         existing.symbol.overriddenMember = member;
-      } else if (member.symbol.name !== "new") {
+      } else if (member.symbol.name !== 'new') {
         Type.addMember(type, member);
       }
     }
   };
   Resolver.initializeObject = function($this, symbol) {
-    Resolver.forbidBlockDeclarationModifiers($this, symbol, "on an object declaration");
+    Resolver.forbidBlockDeclarationModifiers($this, symbol, 'on an object declaration');
     var node = Node.firstNonExtensionSibling(symbol.node);
     var parameters = node.children[3];
     var type = symbol.type;
@@ -4588,27 +4601,27 @@
       Symbol.sortParametersByDependencies(symbol);
     }
     if (!Type.isInterface(type) && Type.$constructor(type) === null && (symbol.flags & 8192) === 0) {
-      Resolver.addAutoGeneratedMember($this, type, "new");
+      Resolver.addAutoGeneratedMember($this, type, 'new');
     }
     Resolver.resolveBaseTypes($this, symbol);
   };
   Resolver.initializeFunction = function($this, symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
-    Resolver.unexpectedModifierIfPresent($this, symbol, 1024, "on a function declaration");
-    Resolver.unexpectedModifierIfPresent($this, symbol, 256, "on a function declaration");
+    Resolver.unexpectedModifierIfPresent($this, symbol, 1024, 'on a function declaration');
+    Resolver.unexpectedModifierIfPresent($this, symbol, 256, 'on a function declaration');
     if (enclosingSymbol !== null) {
       if (!$in.SymbolKind.isTypeWithInstances(enclosingSymbol.kind)) {
-        Resolver.unexpectedModifierIfPresent($this, symbol, 64, "outside an object declaration");
+        Resolver.unexpectedModifierIfPresent($this, symbol, 64, 'outside an object declaration');
       }
       if (symbol.kind === 16 && (enclosingSymbol.flags & 4096) !== 0) {
         symbol.flags |= 4096;
-        Resolver.redundantModifierIfPresent($this, symbol, 4096, "on an constructor for an exported object");
+        Resolver.redundantModifierIfPresent($this, symbol, 4096, 'on an constructor for an exported object');
       } else if ((symbol.flags & 4096) !== 0 && (enclosingSymbol.flags & 4096) === 0 && enclosingSymbol.kind !== 7) {
-        Resolver.unexpectedModifierIfPresent($this, symbol, 4096, "on a non-exported type");
+        Resolver.unexpectedModifierIfPresent($this, symbol, 4096, 'on a non-exported type');
       }
     }
     if ((symbol.flags & 8192) !== 0) {
-      Resolver.unexpectedModifierIfPresent($this, symbol, 4096, "on an imported declaration");
+      Resolver.unexpectedModifierIfPresent($this, symbol, 4096, 'on an imported declaration');
     }
     var node = symbol.node;
     var resultType = null;
@@ -4657,16 +4670,16 @@
         } else if ((overriddenSymbol.flags & 128) === 0) {
           semanticErrorCannotOverrideNonVirtual($this.log, node.children[0].range, symbol.name, overriddenSymbol.node.children[0].range);
         } else {
-          Resolver.redundantModifierIfPresent($this, symbol, 128, "on an overriding function");
+          Resolver.redundantModifierIfPresent($this, symbol, 128, 'on an overriding function');
         }
       }
       symbol.flags |= 128;
     } else if (!Symbol.isObjectMember(symbol)) {
-      Resolver.unexpectedModifierIfPresent($this, symbol, 128, "outside an object declaration");
-      Resolver.unexpectedModifierIfPresent($this, symbol, 32, "outside an object declaration");
+      Resolver.unexpectedModifierIfPresent($this, symbol, 128, 'outside an object declaration');
+      Resolver.unexpectedModifierIfPresent($this, symbol, 32, 'outside an object declaration');
     } else {
       if (!$in.SymbolKind.isInstance(symbol.kind)) {
-        Resolver.unexpectedModifierIfPresent($this, symbol, 128, "on a non-instance function");
+        Resolver.unexpectedModifierIfPresent($this, symbol, 128, 'on a non-instance function');
       }
       Resolver.unexpectedModifierIfPresent($this, symbol, 32, "on a function that doesn't override anything");
       if ((symbol.flags & 32) !== 0) {
@@ -4675,19 +4688,19 @@
     }
   };
   Resolver.initializeVariable = function($this, symbol) {
-    Resolver.unexpectedModifierIfPresent($this, symbol, 512, "on a variable declaration");
-    Resolver.unexpectedModifierIfPresent($this, symbol, 128, "on a variable declaration");
-    Resolver.unexpectedModifierIfPresent($this, symbol, 32, "on a variable declaration");
+    Resolver.unexpectedModifierIfPresent($this, symbol, 512, 'on a variable declaration');
+    Resolver.unexpectedModifierIfPresent($this, symbol, 128, 'on a variable declaration');
+    Resolver.unexpectedModifierIfPresent($this, symbol, 32, 'on a variable declaration');
     if (symbol.enclosingSymbol === null || !$in.SymbolKind.isTypeWithInstances(symbol.enclosingSymbol.kind)) {
-      Resolver.unexpectedModifierIfPresent($this, symbol, 64, "outside an object declaration");
+      Resolver.unexpectedModifierIfPresent($this, symbol, 64, 'outside an object declaration');
     }
     if ((symbol.flags & 1024) !== 0) {
-      Resolver.redundantModifierIfPresent($this, symbol, 256, "on a const variable declaration");
+      Resolver.redundantModifierIfPresent($this, symbol, 256, 'on a const variable declaration');
     } else if (symbol.enclosingSymbol !== null && symbol.enclosingSymbol.kind === 12 && (symbol.flags & 64) === 0) {
-      Resolver.expectedModifierIfAbsent($this, symbol, 256, "on a variable declaration inside a struct");
+      Resolver.expectedModifierIfAbsent($this, symbol, 256, 'on a variable declaration inside a struct');
     }
     if ((symbol.flags & 8192) !== 0) {
-      Resolver.unexpectedModifierIfPresent($this, symbol, 4096, "on an imported declaration");
+      Resolver.unexpectedModifierIfPresent($this, symbol, 4096, 'on an imported declaration');
     }
     var node = symbol.node;
     var variableType = node.children[1];
@@ -4707,7 +4720,7 @@
           } else {
             variableType = Node.withType(new Node(35), $this.cache.errorType);
             if (variableValue.type !== $this.cache.errorType) {
-              Log.error($this.log, variableValue.range, "Expected integer constant but found expression of type \"" + Type.toString(variableValue.type) + "\"");
+              Log.error($this.log, variableValue.range, 'Expected integer constant but found expression of type "' + Type.toString(variableValue.type) + '"');
             }
           }
         } else {
@@ -4721,7 +4734,7 @@
               if (value === (value | 0)) {
                 symbol.constant = new IntContent(value | 0);
               } else {
-                Log.error($this.log, node.range, "Assigned value for enum \"" + symbol.name + "\" cannot fit in an integer");
+                Log.error($this.log, node.range, 'Assigned value for enum "' + symbol.name + '" cannot fit in an integer');
                 variableType = Node.withType(new Node(35), $this.cache.errorType);
               }
             } else {
@@ -4739,7 +4752,7 @@
     if (variableType.kind === 56) {
       var value = node.children[2];
       if (value === null) {
-        Log.error($this.log, node.children[0].range, "Implicitly typed variables must be initialized");
+        Log.error($this.log, node.children[0].range, 'Implicitly typed variables must be initialized');
         symbol.type = $this.cache.errorType;
       } else {
         if (node.parent.kind === 46) {
@@ -4752,7 +4765,7 @@
         }
         var type = value.type;
         if (type === $this.cache.nullType || type === $this.cache.voidType) {
-          Log.error($this.log, node.children[0].range, "Implicitly typed variables cannot be of type \"" + Type.toString(type) + "\"");
+          Log.error($this.log, node.children[0].range, 'Implicitly typed variables cannot be of type "' + Type.toString(type) + '"');
           symbol.type = $this.cache.errorType;
         } else {
           symbol.type = type;
@@ -4778,14 +4791,14 @@
     if ((symbol.flags & 1024) !== 0) {
       var value = node.children[2];
       if (value === null) {
-        Log.error($this.log, node.children[0].range, "Variables with the \"const\" modifier must be initialized");
+        Log.error($this.log, node.children[0].range, 'Variables with the "const" modifier must be initialized');
       } else {
         Resolver.resolveAsExpressionWithConversion($this, value, symbol.type, 0);
         ConstantFolder.foldConstants($this.constantFolder, value);
         if ($in.NodeKind.isConstant(value.kind)) {
           symbol.constant = value.content;
         } else if (value.type !== $this.cache.errorType && symbol.type !== $this.cache.errorType) {
-          Log.error($this.log, value.range, "Variables with the \"const\" modifier must be initialized to a compile-time constant");
+          Log.error($this.log, value.range, 'Variables with the "const" modifier must be initialized to a compile-time constant');
           value.type = $this.cache.errorType;
         }
       }
@@ -4800,7 +4813,7 @@
       if (boundType === $this.cache.errorType) {
         symbol.type = $this.cache.errorType;
       } else if (!Type.isInterface(boundType)) {
-        Log.error($this.log, bound.range, "Cannot use type \"" + Type.toString(boundType) + "\" as a type parameter bound");
+        Log.error($this.log, bound.range, 'Cannot use type "' + Type.toString(boundType) + '" as a type parameter bound');
       } else {
         type.relevantTypes = [boundType];
         Type.copyMembersFrom(type, boundType);
@@ -4920,7 +4933,7 @@
     if ((symbol.flags & flag) !== 0 && (symbol.flags & 131072) === 0) {
       var modifierName = Resolver.findModifierName(symbol, flag);
       if (modifierName !== null) {
-        Log.error($this.log, modifierName.range, "Redundant modifier \"" + modifierName.content.value + "\" " + where);
+        Log.error($this.log, modifierName.range, 'Redundant modifier "' + modifierName.content.value + '" ' + where);
       }
     }
   };
@@ -4928,13 +4941,13 @@
     if ((symbol.flags & flag) !== 0 && (symbol.flags & 131072) === 0) {
       var modifierName = Resolver.findModifierName(symbol, flag);
       if (modifierName !== null) {
-        Log.error($this.log, modifierName.range, "Cannot use the \"" + modifierName.content.value + "\" modifier " + where);
+        Log.error($this.log, modifierName.range, 'Cannot use the "' + modifierName.content.value + '" modifier ' + where);
       }
     }
   };
   Resolver.expectedModifierIfAbsent = function($this, symbol, flag, where) {
     if ((symbol.flags & flag) === 0 && (symbol.flags & 131072) === 0 && Resolver.findModifierName(symbol, flag) === null) {
-      Log.error($this.log, symbol.node.children[0].range, "Expected the \"" + symbolFlagToName.table[flag] + "\" modifier " + where);
+      Log.error($this.log, symbol.node.children[0].range, 'Expected the "' + symbolFlagToName.table[flag] + '" modifier ' + where);
     }
   };
   Resolver.generateDefaultConstructor = function($this, symbol) {
@@ -4954,7 +4967,7 @@
           var argumentTypes = Type.argumentTypes($constructor.type);
           superArguments = [];
           for (var j = 0; j < argumentTypes.length; j = j + 1 | 0) {
-            var name = "_" + $arguments.length;
+            var name = '_' + $arguments.length;
             var argument = Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent(name)), Node.withType(new Node(35), argumentTypes[j]), null]);
             argument.symbol = Resolver.createSymbol($this, name, 17);
             argument.symbol.node = argument;
@@ -4991,7 +5004,7 @@
     });
     for (var i = 0; i < uninitializedMembers.length; i = i + 1 | 0) {
       var member = uninitializedMembers[i];
-      var name = "_" + $arguments.length;
+      var name = '_' + $arguments.length;
       var argument = Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent(name)), Node.withType(new Node(35), member.type), null]);
       argument.symbol = Resolver.createSymbol($this, name, 17);
       argument.symbol.node = argument;
@@ -5034,7 +5047,7 @@
       for (j = 0; j < i; j = j + 1 | 0) {
         var other = fields[j];
         if (value === other.constant.value) {
-          Log.error($this.log, enclosingNode.children[0].range, "Cannot automatically generate \"toString\" for \"" + enclosingSymbol.name + "\" because \"" + field.name + "\" and \"" + other.name + "\" both have the same value " + value);
+          Log.error($this.log, enclosingNode.children[0].range, 'Cannot automatically generate "toString" for "' + enclosingSymbol.name + '" because "' + field.name + '" and "' + other.name + '" both have the same value ' + value);
           break;
         }
       }
@@ -5048,14 +5061,14 @@
     Node.appendToSiblingChain(enclosingNode, extension);
     var statement = null;
     if (fields.length === 0 || i < fields.length) {
-      statement = Node.withChildren(new Node(24), [Node.withContent(new Node(43), new StringContent(""))]);
+      statement = Node.withChildren(new Node(24), [Node.withContent(new Node(43), new StringContent(''))]);
     } else {
       var cases = [];
       for (i = 0; i < fields.length; i = i + 1 | 0) {
         var field = fields[i];
         cases.push(Node.createCase([Node.withChildren(new Node(45), [null, Node.withContent(new Node(34), new StringContent(field.name))])], Node.withChildren(new Node(2), [Node.withChildren(new Node(24), [Node.withContent(new Node(43), new StringContent(field.name))])])));
       }
-      cases.push(Node.createCase([], Node.withChildren(new Node(2), [Node.withChildren(new Node(24), [Node.withContent(new Node(43), new StringContent(""))])])));
+      cases.push(Node.createCase([], Node.withChildren(new Node(2), [Node.withChildren(new Node(24), [Node.withContent(new Node(43), new StringContent(''))])])));
       statement = Node.createSwitch(new Node(36), cases);
     }
     symbol.kind = 15;
@@ -5068,10 +5081,10 @@
   Resolver.initializeSymbol = function($this, symbol) {
     if (symbol.kind === 1) {
       switch (symbol.name) {
-      case "new":
+      case 'new':
         Resolver.generateDefaultConstructor($this, symbol);
         break;
-      case "toString":
+      case 'toString':
         Resolver.generateDefaultToString($this, symbol);
         break;
       default:
@@ -5109,7 +5122,7 @@
     if ((symbol.flags & 49152) === 0) {
       Resolver.initializeDeclaration($this, symbol.node);
     } else if ((symbol.flags & 16384) !== 0) {
-      Log.error($this.log, Node.firstNonExtensionSibling(symbol.node).children[0].range, "Cyclic declaration of \"" + symbol.name + "\"");
+      Log.error($this.log, Node.firstNonExtensionSibling(symbol.node).children[0].range, 'Cyclic declaration of "' + symbol.name + '"');
       symbol.type = $this.cache.errorType;
     }
   };
@@ -5190,7 +5203,7 @@
       Resolver.resolveAsExpressionWithConversion($this, value, $this.context.switchValue.type, 0);
       ConstantFolder.foldConstants($this.constantFolder, value);
       if (value.type !== $this.cache.errorType && !$in.NodeKind.isConstant(value.kind)) {
-        Log.error($this.log, value.range, "Non-constant case value");
+        Log.error($this.log, value.range, 'Non-constant case value');
         value.type = $this.cache.errorType;
       }
     }
@@ -5246,7 +5259,7 @@
     if (block !== null) {
       var oldResultType = $this.resultType;
       if ((node.symbol.flags & 8192) !== 0) {
-        Log.error($this.log, block.range, "Imported functions cannot have an implementation");
+        Log.error($this.log, block.range, 'Imported functions cannot have an implementation');
       }
       var symbol = node.symbol;
       if (symbol.type === $this.cache.errorType) {
@@ -5258,7 +5271,7 @@
       }
       Resolver.resolve($this, block, null);
       if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType && !Node.blockAlwaysEndsWithReturn(block)) {
-        Log.error($this.log, node.children[0].range, "All control paths for \"" + node.symbol.name + "\" must return a value of type \"" + Type.toString($this.resultType) + "\"");
+        Log.error($this.log, node.children[0].range, 'All control paths for "' + node.symbol.name + '" must return a value of type "' + Type.toString($this.resultType) + '"');
       }
       $this.resultType = oldResultType;
     }
@@ -5274,7 +5287,7 @@
         if (overriddenMember !== null) {
           superInitializer.symbol = overriddenMember.symbol;
         } else {
-          Log.error($this.log, superInitializer.range, "No base constructor to call");
+          Log.error($this.log, superInitializer.range, 'No base constructor to call');
         }
         var $arguments = superInitializer.children;
         if (overriddenType === $this.cache.errorType) {
@@ -5284,7 +5297,7 @@
         }
       } else if (overriddenType.symbol === null) {
         if (Type.argumentTypes(overriddenType).length > 0) {
-          Log.error($this.log, node.children[0].range, "Missing call to \"super\" in initializer list");
+          Log.error($this.log, node.children[0].range, 'Missing call to "super" in initializer list');
         } else {
           Node.replaceChild(node, 3, Node.withSymbol(Node.withChildren(new Node(48), []), overriddenMember.symbol));
         }
@@ -5295,7 +5308,7 @@
         Node.replaceChild(node, 4, memberInitializers);
       }
       if ((superInitializer !== null || memberInitializers.children.length > 0) && block === null) {
-        Log.error($this.log, Range.span((superInitializer !== null ? superInitializer : memberInitializers.children[0]).range, (memberInitializers.children.length < 1 ? superInitializer : Node.lastChild(memberInitializers)).range), "An abstract constructor must not have initializer list");
+        Log.error($this.log, Range.span((superInitializer !== null ? superInitializer : memberInitializers.children[0]).range, (memberInitializers.children.length < 1 ? superInitializer : Node.lastChild(memberInitializers)).range), 'An abstract constructor must not have initializer list');
       }
       var enclosingSymbol = node.symbol.enclosingSymbol;
       if ((enclosingSymbol.flags & 8192) === 0) {
@@ -5398,7 +5411,7 @@
       if (Type.isInterface(enclosingSymbolType) || (symbol.flags & 16) !== 0 && Type.isEnum(enclosingSymbolType)) {
         Resolver.unexpectedStatement($this, node);
       } else if ((symbol.flags & 16) !== 0 && $in.SymbolKind.isTypeWithInstances(enclosingSymbol.kind) && value === null) {
-        Log.error($this.log, node.children[0].range, "Instance variables in extension blocks must be initialized");
+        Log.error($this.log, node.children[0].range, 'Instance variables in extension blocks must be initialized');
       }
     }
     if (value !== null) {
@@ -5406,7 +5419,7 @@
       if (symbol.kind === 18) {
         ConstantFolder.foldConstants($this.constantFolder, value);
         if (!Resolver.isPureValue($this, value) && symbol.type !== $this.cache.errorType) {
-          Log.error($this.log, value.range, "Global variables must be initialized to a pure expression (one without side effects)");
+          Log.error($this.log, value.range, 'Global variables must be initialized to a pure expression (one without side effects)');
           value.type = $this.cache.errorType;
         }
       }
@@ -5457,7 +5470,7 @@
     Resolver.resolve($this, node.children[0], null);
     Resolver.resolve($this, value, null);
     if (value.type !== $this.cache.errorType) {
-      Log.error($this.log, node.range, "TODO: implement for-each statement");
+      Log.error($this.log, node.range, 'TODO: implement for-each statement');
     }
     var oldLoop = $this.context.loop;
     $this.context.loop = node;
@@ -5492,7 +5505,7 @@
         Resolver.resolveAsExpressionWithConversion($this, value, $this.resultType, 0);
       }
     } else if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType) {
-      Log.error($this.log, node.range, "Return statement must return type \"" + Type.toString($this.resultType) + "\"");
+      Log.error($this.log, node.range, 'Return statement must return type "' + Type.toString($this.resultType) + '"');
     }
   };
   Resolver.resolveBreak = function($this, node) {
@@ -5514,9 +5527,9 @@
     if (node.kind === 29) {
       ConstantFolder.foldConstants($this.constantFolder, value);
       if (!$in.NodeKind.isConstant(value.kind)) {
-        Log.error($this.log, value.range, "The argument to a compile-time assert must be a constant");
+        Log.error($this.log, value.range, 'The argument to a compile-time assert must be a constant');
       } else if (!Node.isTrue(value)) {
-        Log.error($this.log, node.range, "Assertion failed");
+        Log.error($this.log, node.range, 'Assertion failed');
       }
     }
   };
@@ -5541,7 +5554,7 @@
     for (var i = 0; i < cases.length; i = i + 1 | 0) {
       var child = cases[i];
       if (child.children.length === 1 && i < (cases.length - 1 | 0)) {
-        Log.error($this.log, child.range, "Only the last case can be a default case");
+        Log.error($this.log, child.range, 'Only the last case can be a default case');
       }
       var caseValues = Node.caseValues(child);
       for (var j = 0; j < caseValues.length; j = j + 1 | 0) {
@@ -5567,7 +5580,7 @@
     var name = node.content.value;
     var member = Scope.find($this.context.scope, name);
     if (member === null) {
-      Log.error($this.log, node.range, "\"" + name + "\" is not declared");
+      Log.error($this.log, node.range, '"' + name + '" is not declared');
       return;
     }
     Resolver.initializePotentiallyDuplicatedMember($this, member, node.range);
@@ -5605,7 +5618,7 @@
     if (commonType === null) {
       commonType = $this.typeContext;
       if (commonType === null || !TypeCache.canImplicitlyConvert($this.cache, trueType, commonType) || !TypeCache.canImplicitlyConvert($this.cache, falseType, commonType)) {
-        Log.error($this.log, Range.span(trueNode.range, falseNode.range), "No common type for type \"" + Type.toString(trueType) + "\" and type \"" + Type.toString(falseType) + "\"");
+        Log.error($this.log, Range.span(trueNode.range, falseNode.range), 'No common type for type "' + Type.toString(trueType) + '" and type "' + Type.toString(falseType) + '"');
         return;
       }
     }
@@ -5615,7 +5628,7 @@
   };
   Resolver.resolveInt = function($this, node) {
     if (node.content.value === -2147483648) {
-      Log.error($this.log, node.range, "Invalid integer literal " + Range.toString(node.range));
+      Log.error($this.log, node.range, 'Invalid integer literal ' + Range.toString(node.range));
     }
     node.type = $this.cache.intType;
   };
@@ -5642,7 +5655,7 @@
       } else if (commonType !== $this.cache.errorType) {
         commonType = TypeCache.commonImplicitType($this.cache, commonType, value.type);
         if (commonType === null) {
-          Log.error($this.log, node.range, "Cannot infer a common element type for this list literal");
+          Log.error($this.log, node.range, 'Cannot infer a common element type for this list literal');
           commonType = $this.cache.errorType;
         }
       }
@@ -5651,7 +5664,7 @@
       return;
     }
     if (commonType === null) {
-      Log.error($this.log, node.range, "Cannot infer a common element type for this list literal");
+      Log.error($this.log, node.range, 'Cannot infer a common element type for this list literal');
       return;
     }
     node.type = TypeCache.parameterize($this.cache, $this.cache.listType, [commonType]);
@@ -5663,7 +5676,7 @@
     }
     var type = target !== null ? target.type : $this.typeContext;
     if (type === null) {
-      Log.error($this.log, node.range, "Expression has no type context here");
+      Log.error($this.log, node.range, 'Expression has no type context here');
       return;
     }
     if (type === $this.cache.errorType) {
@@ -5676,7 +5689,7 @@
     var name = dotName.content.value;
     var member = type.members.table[name] || null;
     if (member === null) {
-      Log.error($this.log, dotName.range, "\"" + name + "\" is not declared on type \"" + Type.toString(type) + "\"");
+      Log.error($this.log, dotName.range, '"' + name + '" is not declared on type "' + Type.toString(type) + '"');
       return;
     }
     node.symbol = dotName.symbol = member.symbol;
@@ -5686,9 +5699,9 @@
     if (!Type.isNamespace(type) && (!Type.isEnum(type) || (member.symbol.flags & 16) !== 0)) {
       var isStatic = symbolIsType || (member.symbol.flags & 64) !== 0;
       if (isStatic && !targetIsType) {
-        Log.error($this.log, dotName.range, "Cannot access static member \"" + name + "\" from an instance context");
+        Log.error($this.log, dotName.range, 'Cannot access static member "' + name + '" from an instance context');
       } else if (!isStatic && targetIsType) {
-        Log.error($this.log, dotName.range, "Cannot access instance member \"" + name + "\" from a static context");
+        Log.error($this.log, dotName.range, 'Cannot access instance member "' + name + '" from a static context');
       }
     }
     if (symbolIsType) {
@@ -5737,7 +5750,7 @@
       if (value.kind === 35) {
         var member = Type.$constructor(valueType);
         if (member === null) {
-          Log.error($this.log, value.range, "Cannot construct type \"" + Type.toString(valueType) + "\"");
+          Log.error($this.log, value.range, 'Cannot construct type "' + Type.toString(valueType) + '"');
           Resolver.resolveNodesAsExpressions($this, $arguments);
           return;
         }
@@ -5750,7 +5763,7 @@
         }
       }
       if (valueType.symbol !== null) {
-        Log.error($this.log, value.range, "Cannot call type \"" + Type.toString(valueType) + "\"");
+        Log.error($this.log, value.range, 'Cannot call type "' + Type.toString(valueType) + '"');
         Resolver.resolveNodesAsExpressions($this, $arguments);
         return;
       }
@@ -5829,10 +5842,10 @@
     var $arguments = Node.lambdaArguments(node);
     var block = Node.lambdaBlock(node);
     if ($this.typeContext === null) {
-      Log.error($this.log, node.range, "Expression has no type context here");
+      Log.error($this.log, node.range, 'Expression has no type context here');
     } else if ($this.typeContext !== $this.cache.errorType) {
       if ($this.typeContext.symbol !== null) {
-        Log.error($this.log, node.range, "Cannot use a lambda expression with type \"" + Type.toString($this.typeContext) + "\"");
+        Log.error($this.log, node.range, 'Cannot use a lambda expression with type "' + Type.toString($this.typeContext) + '"');
       } else if ($this.typeContext !== $this.cache.errorType) {
         var argumentTypes = Type.argumentTypes($this.typeContext);
         $this.resultType = $this.typeContext.relevantTypes[0];
@@ -5845,7 +5858,7 @@
           }
         }
         if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType && !Node.blockAlwaysEndsWithReturn(block)) {
-          Log.error($this.log, node.range, "All control paths for lambda expression must return a value of type \"" + Type.toString($this.resultType) + "\"");
+          Log.error($this.log, node.range, 'All control paths for lambda expression must return a value of type "' + Type.toString($this.resultType) + '"');
         }
       }
     }
@@ -5855,7 +5868,7 @@
     $this.context.loop = oldLoop;
   };
   Resolver.resolveVar = function($this, node) {
-    Log.error($this.log, node.range, "Unexpected " + $in.NodeKind.toString(node.kind));
+    Log.error($this.log, node.range, 'Unexpected ' + $in.NodeKind.toString(node.kind));
   };
   Resolver.resolveFunctionType = function($this, node) {
     var result = node.children[0];
@@ -5913,7 +5926,7 @@
       }
     }
     if (node.type === $this.cache.errorType) {
-      Log.error($this.log, node.range, "No unary operator " + operatorInfo.table[kind].text + " for type \"" + Type.toString(type) + "\"");
+      Log.error($this.log, node.range, 'No unary operator ' + operatorInfo.table[kind].text + ' for type "' + Type.toString(type) + '"');
       return;
     }
     Resolver.checkConversion($this, node.type, value, 0);
@@ -5922,9 +5935,9 @@
     if (node.type === $this.cache.errorType) {
       return false;
     }
-    var toString = node.type.members.table["toString"] || null;
+    var toString = node.type.members.table['toString'] || null;
     if (toString === null) {
-      Log.error($this.log, node.range, "Expression of type \"" + Type.toString(node.type) + "\" has no toString() member to call");
+      Log.error($this.log, node.range, 'Expression of type "' + Type.toString(node.type) + '" has no toString() member to call');
       return false;
     }
     Resolver.initializeMember($this, toString);
@@ -5932,11 +5945,11 @@
       return false;
     }
     if (toString.type !== $this.cache.toStringType) {
-      Log.error($this.log, node.range, "Expected toString() member to have type \"" + Type.toString($this.cache.toStringType) + "\" but found type \"" + Type.toString(toString.type) + "\"");
+      Log.error($this.log, node.range, 'Expected toString() member to have type "' + Type.toString($this.cache.toStringType) + '" but found type "' + Type.toString(toString.type) + '"');
       return false;
     }
     var children = Node.removeChildren(node);
-    var name = Node.withContent(new Node(34), new StringContent("toString"));
+    var name = Node.withContent(new Node(34), new StringContent('toString'));
     var target = Node.withChildren(new Node(45), [Node.withChildren(Node.clone(node), children), name]);
     var $call = Node.createCall(target, []);
     target.symbol = name.symbol = toString.symbol;
@@ -6038,7 +6051,7 @@
       }
     }
     if (node.type === $this.cache.errorType) {
-      Log.error($this.log, node.range, "No binary operator " + operatorInfo.table[kind].text + " for type \"" + Type.toString(leftType) + "\" and type \"" + Type.toString(rightType) + "\"");
+      Log.error($this.log, node.range, 'No binary operator ' + operatorInfo.table[kind].text + ' for type "' + Type.toString(leftType) + '" and type "' + Type.toString(rightType) + '"');
       return;
     }
     if (commonType !== null) {
@@ -6054,7 +6067,7 @@
     Resolver.resolveAsExpression($this, middle);
     Resolver.resolveAsExpression($this, right);
     if (left.type !== $this.cache.errorType && middle.type !== $this.cache.errorType && right.type !== $this.cache.errorType) {
-      Log.error($this.log, node.range, "No tertiary operator " + operatorInfo.table[node.kind].text + " for type \"" + Type.toString(left.type) + "\", type \"" + Type.toString(middle.type) + "\", and type \"" + Type.toString(right.type) + "\"");
+      Log.error($this.log, node.range, 'No tertiary operator ' + operatorInfo.table[node.kind].text + ' for type "' + Type.toString(left.type) + '", type "' + Type.toString(middle.type) + '", and type "' + Type.toString(right.type) + '"');
     }
   };
   function Scope(_0) {
@@ -6067,12 +6080,12 @@
     Scope.insert($this, new Member(cache.voidType.symbol));
   };
   Scope.linkGlobals = function($this, cache) {
-    cache.intType = Scope.findLocal($this, "int").symbol.type;
-    cache.boolType = Scope.findLocal($this, "bool").symbol.type;
-    cache.floatType = Scope.findLocal($this, "float").symbol.type;
-    cache.doubleType = Scope.findLocal($this, "double").symbol.type;
-    cache.stringType = Scope.findLocal($this, "string").symbol.type;
-    cache.listType = Scope.findLocal($this, "List").symbol.type;
+    cache.intType = Scope.findLocal($this, 'int').symbol.type;
+    cache.boolType = Scope.findLocal($this, 'bool').symbol.type;
+    cache.floatType = Scope.findLocal($this, 'float').symbol.type;
+    cache.doubleType = Scope.findLocal($this, 'double').symbol.type;
+    cache.stringType = Scope.findLocal($this, 'string').symbol.type;
+    cache.listType = Scope.findLocal($this, 'List').symbol.type;
     cache.toStringType = TypeCache.functionType(cache, cache.stringType, []);
   };
   Scope.insert = function($this, member) {
@@ -6159,7 +6172,7 @@
     return $this.enclosingSymbol === null ? false : $this.enclosingSymbol === symbol || Symbol.isContainedBy($this.enclosingSymbol, symbol);
   };
   Symbol.fullName = function($this) {
-    return $this.enclosingSymbol !== null && $this.kind !== 4 && $this.enclosingSymbol.kind !== 7 ? Symbol.fullName($this.enclosingSymbol) + "." + $this.name : $this.name;
+    return $this.enclosingSymbol !== null && $this.kind !== 4 && $this.enclosingSymbol.kind !== 7 ? Symbol.fullName($this.enclosingSymbol) + '.' + $this.name : $this.name;
   };
   Symbol.hasParameters = function($this) {
     return $this.parameters !== null && $this.parameters.length > 0;
@@ -6211,18 +6224,18 @@
     }
     var enclosingSymbol = symbol.enclosingSymbol;
     var enclosingType = enclosingSymbol.type;
-    var inMember = enclosingType.members.table["in"] || null;
+    var inMember = enclosingType.members.table['in'] || null;
     var inType = null;
     if (inMember !== null) {
       inType = inMember.type;
     } else {
-      var inSymbol = Resolver.createSymbol($this.resolver, "in", 8);
+      var inSymbol = Resolver.createSymbol($this.resolver, 'in', 8);
       inSymbol.enclosingSymbol = enclosingSymbol;
       inType = inSymbol.type = new Type(inSymbol);
       inMember = new Member(inSymbol);
       inMember.type = inType;
       Type.addMember(enclosingType, inMember);
-      inSymbol.node = Node.withSymbol(Node.withChildren(new Node(7), [Node.withSymbol(Node.withContent(new Node(34), new StringContent("in")), inSymbol), Node.withChildren(new Node(2), [])]), inSymbol);
+      inSymbol.node = Node.withSymbol(Node.withChildren(new Node(7), [Node.withSymbol(Node.withContent(new Node(34), new StringContent('in')), inSymbol), Node.withChildren(new Node(2), [])]), inSymbol);
       Node.insertSiblingAfter(symbol.node, inSymbol.node);
     }
     var shadowSymbol = Resolver.createSymbol($this.resolver, symbol.name, 8);
@@ -6247,7 +6260,7 @@
     if ($this.symbol === null) {
       return null;
     }
-    return $this.members.table["new"] || null;
+    return $this.members.table['new'] || null;
   };
   Type.hasBaseType = function($this, type) {
     if (Type.isParameter($this)) {
@@ -6283,25 +6296,25 @@
   };
   Type.toString = function($this) {
     if ($this.symbol === null) {
-      var text = Type.toString($this.relevantTypes[0]) + " fn(";
+      var text = Type.toString($this.relevantTypes[0]) + ' fn(';
       var $arguments = Type.argumentTypes($this);
       for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
         if (i > 0) {
-          text += ", ";
+          text += ', ';
         }
         text += Type.toString($arguments[i]);
       }
-      return text + ")";
+      return text + ')';
     }
     if (Type.hasParameters($this)) {
-      var text = "";
+      var text = '';
       for (var i = 0; i < $this.symbol.parameters.length; i = i + 1 | 0) {
         if (i > 0) {
-          text += ", ";
+          text += ', ';
         }
         text += $this.substitutions !== null ? Type.toString($this.substitutions[i]) : $this.symbol.parameters[i].name;
       }
-      return Symbol.fullName($this.symbol) + "<" + text + ">";
+      return Symbol.fullName($this.symbol) + '<' + text + '>';
     }
     return Symbol.fullName($this.symbol);
   };
@@ -6372,10 +6385,10 @@
     return Type.isInteger($this, cache) || Type.isReal($this, cache);
   };
   function TypeCache() {
-    this.globalType = TypeCache.createType(new Symbol("<global>", 7));
-    this.nullType = TypeCache.createType(new Symbol("null", 0));
-    this.voidType = TypeCache.createType(new Symbol("void", 5));
-    this.errorType = TypeCache.createType(new Symbol("<error>", 0));
+    this.globalType = TypeCache.createType(new Symbol('<global>', 7));
+    this.nullType = TypeCache.createType(new Symbol('null', 0));
+    this.voidType = TypeCache.createType(new Symbol('void', 5));
+    this.errorType = TypeCache.createType(new Symbol('<error>', 0));
     this.intType = null;
     this.boolType = null;
     this.floatType = null;
@@ -6538,7 +6551,7 @@
     return false;
   };
   LanguageServiceTypeResult = function(_0, _1, _2, _3, _4) {
-    this.declaration = "";
+    this.declaration = '';
     this.line = _0;
     this.column = _1;
     this.index = _2;
@@ -6573,7 +6586,7 @@
   LanguageService.prototype.checkForDiagnostics = function(input) {
     var options = new CompilerOptions();
     var compiler = new Compiler();
-    this.previousSource = new Source("<input>", input);
+    this.previousSource = new Source('<input>', input);
     options.inputs = [this.previousSource];
     this.previousResult = compiler.compile(options);
     var diagnostics = [];
@@ -6582,13 +6595,13 @@
       var range = diagnostic.range;
       if (range.source === this.previousSource) {
         var start = Source.indexToLineColumn(range.source, range.start);
-        var type = "";
+        var type = '';
         switch (diagnostic.kind) {
         case 0:
-          type = "error";
+          type = 'error';
           break;
         case 1:
-          type = "warning";
+          type = 'warning';
           break;
         }
         diagnostics.push(new LanguageServiceDiagnostic(type, diagnostic.text, start.line, start.column, range.start, Range.singleLineLength(range)));
@@ -6599,7 +6612,7 @@
   LanguageService.prototype.checkForCompletions = function(input, line, column) {
     var options = new CompilerOptions();
     var compiler = new Compiler();
-    this.previousSource = new Source("<input>", input);
+    this.previousSource = new Source('<input>', input);
     options.inputs = [this.previousSource];
     this.previousResult = compiler.compile(options);
     if (this.previousResult.program !== null && column >= 0 && column <= Source.contentsOfLine(this.previousSource, line).length && this.previousResult.program.children.length === 2) {
@@ -6614,7 +6627,7 @@
     return $this.length >= prefix.length && $this.slice(0, prefix.length) === prefix;
   };
   $in.string.repeat = function($this, count) {
-    var result = "";
+    var result = '';
     for (var i = 0; i < count; i = i + 1 | 0) {
       result += $this;
     }
@@ -6622,7 +6635,7 @@
   };
   $in.string.replace = function($this, before, after) {
     var text = $this;
-    var result = "";
+    var result = '';
     var index = 0;
     while ((index = text.indexOf(before)) !== -1) {
       result += text.slice(0, index) + after;
@@ -6681,205 +6694,205 @@
   $in.NodeKind.toString = function($this) {
     switch ($this) {
     case 0:
-      return "PROGRAM";
+      return 'PROGRAM';
     case 1:
-      return "FILE";
+      return 'FILE';
     case 2:
-      return "BLOCK";
+      return 'BLOCK';
     case 3:
-      return "NODE_LIST";
+      return 'NODE_LIST';
     case 4:
-      return "CASE";
+      return 'CASE';
     case 5:
-      return "MEMBER_INITIALIZER";
+      return 'MEMBER_INITIALIZER';
     case 6:
-      return "VARIABLE_CLUSTER";
+      return 'VARIABLE_CLUSTER';
     case 7:
-      return "NAMESPACE";
+      return 'NAMESPACE';
     case 8:
-      return "ENUM";
+      return 'ENUM';
     case 9:
-      return "ENUM_FLAGS";
+      return 'ENUM_FLAGS';
     case 10:
-      return "CLASS";
+      return 'CLASS';
     case 11:
-      return "STRUCT";
+      return 'STRUCT';
     case 12:
-      return "INTERFACE";
+      return 'INTERFACE';
     case 13:
-      return "EXTENSION";
+      return 'EXTENSION';
     case 14:
-      return "CONSTRUCTOR";
+      return 'CONSTRUCTOR';
     case 15:
-      return "FUNCTION";
+      return 'FUNCTION';
     case 16:
-      return "VARIABLE";
+      return 'VARIABLE';
     case 17:
-      return "PARAMETER";
+      return 'PARAMETER';
     case 18:
-      return "ALIAS";
+      return 'ALIAS';
     case 19:
-      return "IF";
+      return 'IF';
     case 20:
-      return "FOR";
+      return 'FOR';
     case 21:
-      return "FOR_EACH";
+      return 'FOR_EACH';
     case 22:
-      return "WHILE";
+      return 'WHILE';
     case 23:
-      return "DO_WHILE";
+      return 'DO_WHILE';
     case 24:
-      return "RETURN";
+      return 'RETURN';
     case 25:
-      return "IMPLICIT_RETURN";
+      return 'IMPLICIT_RETURN';
     case 26:
-      return "BREAK";
+      return 'BREAK';
     case 27:
-      return "CONTINUE";
+      return 'CONTINUE';
     case 28:
-      return "ASSERT";
+      return 'ASSERT';
     case 29:
-      return "ASSERT_CONST";
+      return 'ASSERT_CONST';
     case 30:
-      return "EXPRESSION";
+      return 'EXPRESSION';
     case 31:
-      return "SWITCH";
+      return 'SWITCH';
     case 32:
-      return "MODIFIER";
+      return 'MODIFIER';
     case 33:
-      return "USING";
+      return 'USING';
     case 34:
-      return "NAME";
+      return 'NAME';
     case 35:
-      return "TYPE";
+      return 'TYPE';
     case 36:
-      return "THIS";
+      return 'THIS';
     case 37:
-      return "HOOK";
+      return 'HOOK';
     case 38:
-      return "NULL";
+      return 'NULL';
     case 39:
-      return "BOOL";
+      return 'BOOL';
     case 40:
-      return "INT";
+      return 'INT';
     case 41:
-      return "FLOAT";
+      return 'FLOAT';
     case 42:
-      return "DOUBLE";
+      return 'DOUBLE';
     case 43:
-      return "STRING";
+      return 'STRING';
     case 44:
-      return "LIST";
+      return 'LIST';
     case 45:
-      return "DOT";
+      return 'DOT';
     case 46:
-      return "LET";
+      return 'LET';
     case 47:
-      return "CALL";
+      return 'CALL';
     case 48:
-      return "SUPER_CALL";
+      return 'SUPER_CALL';
     case 49:
-      return "ERROR";
+      return 'ERROR';
     case 50:
-      return "SEQUENCE";
+      return 'SEQUENCE';
     case 51:
-      return "PARAMETERIZE";
+      return 'PARAMETERIZE';
     case 52:
-      return "CAST";
+      return 'CAST';
     case 53:
-      return "IMPLICIT_CAST";
+      return 'IMPLICIT_CAST';
     case 54:
-      return "LAMBDA";
+      return 'LAMBDA';
     case 55:
-      return "UNTYPED";
+      return 'UNTYPED';
     case 56:
-      return "VAR";
+      return 'VAR';
     case 57:
-      return "FUNCTION_TYPE";
+      return 'FUNCTION_TYPE';
     case 58:
-      return "NOT";
+      return 'NOT';
     case 59:
-      return "DELETE";
+      return 'DELETE';
     case 60:
-      return "POSITIVE";
+      return 'POSITIVE';
     case 61:
-      return "NEGATIVE";
+      return 'NEGATIVE';
     case 62:
-      return "COMPLEMENT";
+      return 'COMPLEMENT';
     case 63:
-      return "PREFIX_INCREMENT";
+      return 'PREFIX_INCREMENT';
     case 64:
-      return "PREFIX_DECREMENT";
+      return 'PREFIX_DECREMENT';
     case 65:
-      return "POSTFIX_INCREMENT";
+      return 'POSTFIX_INCREMENT';
     case 66:
-      return "POSTFIX_DECREMENT";
+      return 'POSTFIX_DECREMENT';
     case 67:
-      return "ADD";
+      return 'ADD';
     case 68:
-      return "BITWISE_AND";
+      return 'BITWISE_AND';
     case 69:
-      return "BITWISE_OR";
+      return 'BITWISE_OR';
     case 70:
-      return "BITWISE_XOR";
+      return 'BITWISE_XOR';
     case 71:
-      return "DIVIDE";
+      return 'DIVIDE';
     case 72:
-      return "EQUAL";
+      return 'EQUAL';
     case 73:
-      return "GREATER_THAN";
+      return 'GREATER_THAN';
     case 74:
-      return "GREATER_THAN_OR_EQUAL";
+      return 'GREATER_THAN_OR_EQUAL';
     case 75:
-      return "IN";
+      return 'IN';
     case 76:
-      return "INDEX";
+      return 'INDEX';
     case 77:
-      return "LESS_THAN";
+      return 'LESS_THAN';
     case 78:
-      return "LESS_THAN_OR_EQUAL";
+      return 'LESS_THAN_OR_EQUAL';
     case 79:
-      return "LOGICAL_AND";
+      return 'LOGICAL_AND';
     case 80:
-      return "LOGICAL_OR";
+      return 'LOGICAL_OR';
     case 81:
-      return "MULTIPLY";
+      return 'MULTIPLY';
     case 82:
-      return "NOT_EQUAL";
+      return 'NOT_EQUAL';
     case 83:
-      return "REMAINDER";
+      return 'REMAINDER';
     case 84:
-      return "SHIFT_LEFT";
+      return 'SHIFT_LEFT';
     case 85:
-      return "SHIFT_RIGHT";
+      return 'SHIFT_RIGHT';
     case 86:
-      return "SUBTRACT";
+      return 'SUBTRACT';
     case 87:
-      return "ASSIGN";
+      return 'ASSIGN';
     case 88:
-      return "ASSIGN_ADD";
+      return 'ASSIGN_ADD';
     case 89:
-      return "ASSIGN_BITWISE_AND";
+      return 'ASSIGN_BITWISE_AND';
     case 90:
-      return "ASSIGN_BITWISE_OR";
+      return 'ASSIGN_BITWISE_OR';
     case 91:
-      return "ASSIGN_BITWISE_XOR";
+      return 'ASSIGN_BITWISE_XOR';
     case 92:
-      return "ASSIGN_DIVIDE";
+      return 'ASSIGN_DIVIDE';
     case 93:
-      return "ASSIGN_MULTIPLY";
+      return 'ASSIGN_MULTIPLY';
     case 94:
-      return "ASSIGN_REMAINDER";
+      return 'ASSIGN_REMAINDER';
     case 95:
-      return "ASSIGN_SHIFT_LEFT";
+      return 'ASSIGN_SHIFT_LEFT';
     case 96:
-      return "ASSIGN_SHIFT_RIGHT";
+      return 'ASSIGN_SHIFT_RIGHT';
     case 97:
-      return "ASSIGN_SUBTRACT";
+      return 'ASSIGN_SUBTRACT';
     case 98:
-      return "ASSIGN_INDEX";
+      return 'ASSIGN_INDEX';
     default:
-      return "";
+      return '';
     }
   };
   $in.TargetFormat.shouldRunResolver = function($this) {
@@ -6923,259 +6936,259 @@
   $in.SymbolKind.toString = function($this) {
     switch ($this) {
     case 0:
-      return "OTHER";
+      return 'OTHER';
     case 1:
-      return "AUTOMATIC";
+      return 'AUTOMATIC';
     case 2:
-      return "AMBIGUOUS";
+      return 'AMBIGUOUS';
     case 3:
-      return "UNMERGED";
+      return 'UNMERGED';
     case 4:
-      return "PARAMETER";
+      return 'PARAMETER';
     case 5:
-      return "OTHER_TYPE";
+      return 'OTHER_TYPE';
     case 6:
-      return "ALIAS";
+      return 'ALIAS';
     case 7:
-      return "GLOBAL_NAMESPACE";
+      return 'GLOBAL_NAMESPACE';
     case 8:
-      return "NAMESPACE";
+      return 'NAMESPACE';
     case 9:
-      return "ENUM";
+      return 'ENUM';
     case 10:
-      return "ENUM_FLAGS";
+      return 'ENUM_FLAGS';
     case 11:
-      return "CLASS";
+      return 'CLASS';
     case 12:
-      return "STRUCT";
+      return 'STRUCT';
     case 13:
-      return "INTERFACE";
+      return 'INTERFACE';
     case 14:
-      return "GLOBAL_FUNCTION";
+      return 'GLOBAL_FUNCTION';
     case 15:
-      return "INSTANCE_FUNCTION";
+      return 'INSTANCE_FUNCTION';
     case 16:
-      return "CONSTRUCTOR_FUNCTION";
+      return 'CONSTRUCTOR_FUNCTION';
     case 17:
-      return "LOCAL_VARIABLE";
+      return 'LOCAL_VARIABLE';
     case 18:
-      return "GLOBAL_VARIABLE";
+      return 'GLOBAL_VARIABLE';
     case 19:
-      return "INSTANCE_VARIABLE";
+      return 'INSTANCE_VARIABLE';
     default:
-      return "";
+      return '';
     }
   };
   $in.TokenKind.toString = function($this) {
     switch ($this) {
     case 0:
-      return "ALIAS";
+      return 'ALIAS';
     case 1:
-      return "ASSERT";
+      return 'ASSERT';
     case 2:
-      return "ASSIGN";
+      return 'ASSIGN';
     case 3:
-      return "ASSIGN_BITWISE_AND";
+      return 'ASSIGN_BITWISE_AND';
     case 4:
-      return "ASSIGN_BITWISE_OR";
+      return 'ASSIGN_BITWISE_OR';
     case 5:
-      return "ASSIGN_BITWISE_XOR";
+      return 'ASSIGN_BITWISE_XOR';
     case 6:
-      return "ASSIGN_DIVIDE";
+      return 'ASSIGN_DIVIDE';
     case 7:
-      return "ASSIGN_MINUS";
+      return 'ASSIGN_MINUS';
     case 8:
-      return "ASSIGN_MULTIPLY";
+      return 'ASSIGN_MULTIPLY';
     case 9:
-      return "ASSIGN_PLUS";
+      return 'ASSIGN_PLUS';
     case 10:
-      return "ASSIGN_REMAINDER";
+      return 'ASSIGN_REMAINDER';
     case 11:
-      return "ASSIGN_SHIFT_LEFT";
+      return 'ASSIGN_SHIFT_LEFT';
     case 12:
-      return "ASSIGN_SHIFT_RIGHT";
+      return 'ASSIGN_SHIFT_RIGHT';
     case 13:
-      return "BITWISE_AND";
+      return 'BITWISE_AND';
     case 14:
-      return "BITWISE_OR";
+      return 'BITWISE_OR';
     case 15:
-      return "BITWISE_XOR";
+      return 'BITWISE_XOR';
     case 16:
-      return "BREAK";
+      return 'BREAK';
     case 17:
-      return "CASE";
+      return 'CASE';
     case 18:
-      return "CHARACTER";
+      return 'CHARACTER';
     case 19:
-      return "CLASS";
+      return 'CLASS';
     case 20:
-      return "COLON";
+      return 'COLON';
     case 21:
-      return "COMMA";
+      return 'COMMA';
     case 22:
-      return "CONST";
+      return 'CONST';
     case 23:
-      return "CONTINUE";
+      return 'CONTINUE';
     case 24:
-      return "DECREMENT";
+      return 'DECREMENT';
     case 25:
-      return "DEFAULT";
+      return 'DEFAULT';
     case 26:
-      return "DELETE";
+      return 'DELETE';
     case 27:
-      return "DIVIDE";
+      return 'DIVIDE';
     case 28:
-      return "DO";
+      return 'DO';
     case 29:
-      return "DOT";
+      return 'DOT';
     case 30:
-      return "DOUBLE";
+      return 'DOUBLE';
     case 31:
-      return "ELSE";
+      return 'ELSE';
     case 32:
-      return "END_OF_FILE";
+      return 'END_OF_FILE';
     case 33:
-      return "ENUM";
+      return 'ENUM';
     case 34:
-      return "EQUAL";
+      return 'EQUAL';
     case 35:
-      return "ERROR";
+      return 'ERROR';
     case 36:
-      return "EXPORT";
+      return 'EXPORT';
     case 37:
-      return "FALSE";
+      return 'FALSE';
     case 38:
-      return "FINAL";
+      return 'FINAL';
     case 39:
-      return "FLOAT";
+      return 'FLOAT';
     case 40:
-      return "FN";
+      return 'FN';
     case 41:
-      return "FOR";
+      return 'FOR';
     case 42:
-      return "GREATER_THAN";
+      return 'GREATER_THAN';
     case 43:
-      return "GREATER_THAN_OR_EQUAL";
+      return 'GREATER_THAN_OR_EQUAL';
     case 44:
-      return "IDENTIFIER";
+      return 'IDENTIFIER';
     case 45:
-      return "IF";
+      return 'IF';
     case 46:
-      return "IMPORT";
+      return 'IMPORT';
     case 47:
-      return "IN";
+      return 'IN';
     case 48:
-      return "INCREMENT";
+      return 'INCREMENT';
     case 49:
-      return "INLINE";
+      return 'INLINE';
     case 50:
-      return "INTERFACE";
+      return 'INTERFACE';
     case 51:
-      return "INT_BINARY";
+      return 'INT_BINARY';
     case 52:
-      return "INT_DECIMAL";
+      return 'INT_DECIMAL';
     case 53:
-      return "INT_HEX";
+      return 'INT_HEX';
     case 54:
-      return "INT_OCTAL";
+      return 'INT_OCTAL';
     case 55:
-      return "IS";
+      return 'IS';
     case 56:
-      return "LAMBDA";
+      return 'LAMBDA';
     case 57:
-      return "LEFT_BRACE";
+      return 'LEFT_BRACE';
     case 58:
-      return "LEFT_BRACKET";
+      return 'LEFT_BRACKET';
     case 59:
-      return "LEFT_PARENTHESIS";
+      return 'LEFT_PARENTHESIS';
     case 60:
-      return "LESS_THAN";
+      return 'LESS_THAN';
     case 61:
-      return "LESS_THAN_OR_EQUAL";
+      return 'LESS_THAN_OR_EQUAL';
     case 62:
-      return "LET";
+      return 'LET';
     case 63:
-      return "LOGICAL_AND";
+      return 'LOGICAL_AND';
     case 64:
-      return "LOGICAL_OR";
+      return 'LOGICAL_OR';
     case 65:
-      return "MINUS";
+      return 'MINUS';
     case 66:
-      return "MULTIPLY";
+      return 'MULTIPLY';
     case 67:
-      return "NAMESPACE";
+      return 'NAMESPACE';
     case 68:
-      return "NEW";
+      return 'NEW';
     case 69:
-      return "NOT";
+      return 'NOT';
     case 70:
-      return "NOT_EQUAL";
+      return 'NOT_EQUAL';
     case 71:
-      return "NULL";
+      return 'NULL';
     case 72:
-      return "OVERRIDE";
+      return 'OVERRIDE';
     case 73:
-      return "PLUS";
+      return 'PLUS';
     case 74:
-      return "PRIVATE";
+      return 'PRIVATE';
     case 75:
-      return "PROTECTED";
+      return 'PROTECTED';
     case 76:
-      return "PUBLIC";
+      return 'PUBLIC';
     case 77:
-      return "QUESTION_MARK";
+      return 'QUESTION_MARK';
     case 78:
-      return "REMAINDER";
+      return 'REMAINDER';
     case 79:
-      return "RETURN";
+      return 'RETURN';
     case 80:
-      return "RIGHT_BRACE";
+      return 'RIGHT_BRACE';
     case 81:
-      return "RIGHT_BRACKET";
+      return 'RIGHT_BRACKET';
     case 82:
-      return "RIGHT_PARENTHESIS";
+      return 'RIGHT_PARENTHESIS';
     case 83:
-      return "SEMICOLON";
+      return 'SEMICOLON';
     case 84:
-      return "SHIFT_LEFT";
+      return 'SHIFT_LEFT';
     case 85:
-      return "SHIFT_RIGHT";
+      return 'SHIFT_RIGHT';
     case 86:
-      return "STATIC";
+      return 'STATIC';
     case 87:
-      return "STRING";
+      return 'STRING';
     case 88:
-      return "STRUCT";
+      return 'STRUCT';
     case 89:
-      return "SUPER";
+      return 'SUPER';
     case 90:
-      return "SWITCH";
+      return 'SWITCH';
     case 91:
-      return "THIS";
+      return 'THIS';
     case 92:
-      return "TILDE";
+      return 'TILDE';
     case 93:
-      return "TRUE";
+      return 'TRUE';
     case 94:
-      return "UNTYPED";
+      return 'UNTYPED';
     case 95:
-      return "USING";
+      return 'USING';
     case 96:
-      return "VAR";
+      return 'VAR';
     case 97:
-      return "VIRTUAL";
+      return 'VIRTUAL';
     case 98:
-      return "WHILE";
+      return 'WHILE';
     case 99:
-      return "WHITESPACE";
+      return 'WHITESPACE';
     case 100:
-      return "YY_INVALID_ACTION";
+      return 'YY_INVALID_ACTION';
     case 101:
-      return "START_PARAMETER_LIST";
+      return 'START_PARAMETER_LIST';
     case 102:
-      return "END_PARAMETER_LIST";
+      return 'END_PARAMETER_LIST';
     default:
-      return "";
+      return '';
     }
   };
   function createOperatorMap() {
@@ -7183,47 +7196,47 @@
       return;
     }
     operatorInfo = new IntMap();
-    operatorInfo.table[58] = new OperatorInfo("!", 13, 0);
-    operatorInfo.table[59] = new OperatorInfo("delete", 13, 0);
-    operatorInfo.table[60] = new OperatorInfo("+", 13, 0);
-    operatorInfo.table[61] = new OperatorInfo("-", 13, 0);
-    operatorInfo.table[62] = new OperatorInfo("~", 13, 0);
-    operatorInfo.table[63] = new OperatorInfo("++", 13, 0);
-    operatorInfo.table[64] = new OperatorInfo("--", 13, 0);
-    operatorInfo.table[65] = new OperatorInfo("++", 14, 0);
-    operatorInfo.table[66] = new OperatorInfo("--", 14, 0);
-    operatorInfo.table[67] = new OperatorInfo("+", 11, 1);
-    operatorInfo.table[68] = new OperatorInfo("&", 7, 1);
-    operatorInfo.table[69] = new OperatorInfo("|", 5, 1);
-    operatorInfo.table[70] = new OperatorInfo("^", 6, 1);
-    operatorInfo.table[71] = new OperatorInfo("/", 12, 1);
-    operatorInfo.table[72] = new OperatorInfo("==", 8, 1);
-    operatorInfo.table[73] = new OperatorInfo(">", 9, 1);
-    operatorInfo.table[74] = new OperatorInfo(">=", 9, 1);
-    operatorInfo.table[75] = new OperatorInfo("in", 9, 1);
-    operatorInfo.table[76] = new OperatorInfo("[]", 15, 1);
-    operatorInfo.table[77] = new OperatorInfo("<", 9, 1);
-    operatorInfo.table[78] = new OperatorInfo("<=", 9, 1);
-    operatorInfo.table[79] = new OperatorInfo("&&", 4, 1);
-    operatorInfo.table[80] = new OperatorInfo("||", 3, 1);
-    operatorInfo.table[81] = new OperatorInfo("*", 12, 1);
-    operatorInfo.table[82] = new OperatorInfo("!=", 8, 1);
-    operatorInfo.table[83] = new OperatorInfo("%", 12, 1);
-    operatorInfo.table[84] = new OperatorInfo("<<", 10, 1);
-    operatorInfo.table[85] = new OperatorInfo(">>", 10, 1);
-    operatorInfo.table[86] = new OperatorInfo("-", 11, 1);
-    operatorInfo.table[87] = new OperatorInfo("=", 2, 2);
-    operatorInfo.table[88] = new OperatorInfo("+=", 2, 2);
-    operatorInfo.table[89] = new OperatorInfo("&=", 2, 2);
-    operatorInfo.table[90] = new OperatorInfo("|=", 2, 2);
-    operatorInfo.table[91] = new OperatorInfo("^=", 2, 2);
-    operatorInfo.table[92] = new OperatorInfo("/=", 2, 2);
-    operatorInfo.table[93] = new OperatorInfo("*=", 2, 2);
-    operatorInfo.table[94] = new OperatorInfo("%=", 2, 2);
-    operatorInfo.table[95] = new OperatorInfo("<<=", 2, 2);
-    operatorInfo.table[96] = new OperatorInfo(">>=", 2, 2);
-    operatorInfo.table[97] = new OperatorInfo("-=", 2, 2);
-    operatorInfo.table[98] = new OperatorInfo("[]=", 2, 2);
+    operatorInfo.table[58] = new OperatorInfo('!', 13, 0);
+    operatorInfo.table[59] = new OperatorInfo('delete', 13, 0);
+    operatorInfo.table[60] = new OperatorInfo('+', 13, 0);
+    operatorInfo.table[61] = new OperatorInfo('-', 13, 0);
+    operatorInfo.table[62] = new OperatorInfo('~', 13, 0);
+    operatorInfo.table[63] = new OperatorInfo('++', 13, 0);
+    operatorInfo.table[64] = new OperatorInfo('--', 13, 0);
+    operatorInfo.table[65] = new OperatorInfo('++', 14, 0);
+    operatorInfo.table[66] = new OperatorInfo('--', 14, 0);
+    operatorInfo.table[67] = new OperatorInfo('+', 11, 1);
+    operatorInfo.table[68] = new OperatorInfo('&', 7, 1);
+    operatorInfo.table[69] = new OperatorInfo('|', 5, 1);
+    operatorInfo.table[70] = new OperatorInfo('^', 6, 1);
+    operatorInfo.table[71] = new OperatorInfo('/', 12, 1);
+    operatorInfo.table[72] = new OperatorInfo('==', 8, 1);
+    operatorInfo.table[73] = new OperatorInfo('>', 9, 1);
+    operatorInfo.table[74] = new OperatorInfo('>=', 9, 1);
+    operatorInfo.table[75] = new OperatorInfo('in', 9, 1);
+    operatorInfo.table[76] = new OperatorInfo('[]', 15, 1);
+    operatorInfo.table[77] = new OperatorInfo('<', 9, 1);
+    operatorInfo.table[78] = new OperatorInfo('<=', 9, 1);
+    operatorInfo.table[79] = new OperatorInfo('&&', 4, 1);
+    operatorInfo.table[80] = new OperatorInfo('||', 3, 1);
+    operatorInfo.table[81] = new OperatorInfo('*', 12, 1);
+    operatorInfo.table[82] = new OperatorInfo('!=', 8, 1);
+    operatorInfo.table[83] = new OperatorInfo('%', 12, 1);
+    operatorInfo.table[84] = new OperatorInfo('<<', 10, 1);
+    operatorInfo.table[85] = new OperatorInfo('>>', 10, 1);
+    operatorInfo.table[86] = new OperatorInfo('-', 11, 1);
+    operatorInfo.table[87] = new OperatorInfo('=', 2, 2);
+    operatorInfo.table[88] = new OperatorInfo('+=', 2, 2);
+    operatorInfo.table[89] = new OperatorInfo('&=', 2, 2);
+    operatorInfo.table[90] = new OperatorInfo('|=', 2, 2);
+    operatorInfo.table[91] = new OperatorInfo('^=', 2, 2);
+    operatorInfo.table[92] = new OperatorInfo('/=', 2, 2);
+    operatorInfo.table[93] = new OperatorInfo('*=', 2, 2);
+    operatorInfo.table[94] = new OperatorInfo('%=', 2, 2);
+    operatorInfo.table[95] = new OperatorInfo('<<=', 2, 2);
+    operatorInfo.table[96] = new OperatorInfo('>>=', 2, 2);
+    operatorInfo.table[97] = new OperatorInfo('-=', 2, 2);
+    operatorInfo.table[98] = new OperatorInfo('[]=', 2, 2);
   }
   json.dump = function(node) {
     var visitor = new json.DumpVisitor();
@@ -7267,7 +7280,7 @@
   }
   function parseStringLiteral(log, range, text) {
     var isValidString = true;
-    var result = "";
+    var result = '';
     var start = 1;
     var i = 1;
     while ((i + 1 | 0) < text.length) {
@@ -7278,23 +7291,23 @@
         if ((i + 1 | 0) < text.length) {
           c = text.charCodeAt((i = i + 1 | 0) - 1 | 0);
           if (c === 110) {
-            result += "\n";
+            result += '\n';
             start = i;
             continue;
           } else if (c === 114) {
-            result += "\r";
+            result += '\r';
             start = i;
             continue;
           } else if (c === 116) {
-            result += "\t";
+            result += '\t';
             start = i;
             continue;
           } else if (c === 101) {
-            result += "\x1B";
+            result += '\x1B';
             start = i;
             continue;
           } else if (c === 48) {
-            result += "\0";
+            result += '\0';
             start = i;
             continue;
           } else if (c === 92 || c === 34 || c === 39) {
@@ -7311,7 +7324,7 @@
             }
           }
         }
-        Log.error(log, new Range(range.source, range.start + escape | 0, range.start + i | 0), "Invalid escape sequence " + firstLineOf("\"" + text.slice(escape, i) + "\""));
+        Log.error(log, new Range(range.source, range.start + escape | 0, range.start + i | 0), 'Invalid escape sequence ' + firstLineOf('"' + text.slice(escape, i) + '"'));
         isValidString = false;
       } else {
         i = i + 1 | 0;
@@ -7321,7 +7334,7 @@
     return isValidString ? new StringContent(result) : null;
   }
   function quoteString(text, quote) {
-    var result = "";
+    var result = '';
     var quoteString = String.fromCharCode(quote);
     result += quoteString;
     var start = 0;
@@ -7329,19 +7342,19 @@
     for (i = 0; i < text.length; i = i + 1 | 0) {
       var c = text.charCodeAt(i);
       if (c === quote) {
-        result += text.slice(start, i) + "\\" + quoteString;
+        result += text.slice(start, i) + '\\' + quoteString;
       } else if (c === 10) {
-        result += text.slice(start, i) + "\\n";
+        result += text.slice(start, i) + '\\n';
       } else if (c === 13) {
-        result += text.slice(start, i) + "\\r";
+        result += text.slice(start, i) + '\\r';
       } else if (c === 9) {
-        result += text.slice(start, i) + "\\t";
+        result += text.slice(start, i) + '\\t';
       } else if (c === 0) {
-        result += text.slice(start, i) + "\\0";
+        result += text.slice(start, i) + '\\0';
       } else if (c === 92) {
-        result += text.slice(start, i) + "\\\\";
+        result += text.slice(start, i) + '\\\\';
       } else if (c < 32 || c >= 127 && c <= 255) {
-        result += text.slice(start, i) + "\\x" + HEX[c >> 4] + HEX[c & 15];
+        result += text.slice(start, i) + '\\x' + HEX[c >> 4] + HEX[c & 15];
       } else {
         continue;
       }
@@ -7351,43 +7364,43 @@
     return result;
   }
   function splitPath(path) {
-    var slashIndex = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-    return slashIndex === -1 ? new SplitPath(".", path) : new SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1 | 0, path.length));
+    var slashIndex = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+    return slashIndex === -1 ? new SplitPath('.', path) : new SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1 | 0, path.length));
   }
   function bytesToString(bytes) {
     if (bytes === 1) {
-      return "1 byte";
+      return '1 byte';
     }
     if (bytes < 1024) {
-      return bytes + " bytes";
+      return bytes + ' bytes';
     }
     if (bytes < 1048576) {
-      return Math.round(bytes / 1024 * 10) / 10 + "kb";
+      return Math.round(bytes / 1024 * 10) / 10 + 'kb';
     }
     if (bytes < 1073741824) {
-      return Math.round(bytes / 1048576 * 10) / 10 + "mb";
+      return Math.round(bytes / 1048576 * 10) / 10 + 'mb';
     }
-    return Math.round(bytes / 1073741824 * 10) / 10 + "gb";
+    return Math.round(bytes / 1073741824 * 10) / 10 + 'gb';
   }
   frontend.printError = function(text) {
-    $in.io.printWithColor(91, "error: ");
-    $in.io.printWithColor(1, text + "\n");
+    $in.io.printWithColor(91, 'error: ');
+    $in.io.printWithColor(1, text + '\n');
   };
   frontend.printNote = function(text) {
-    $in.io.printWithColor(90, "note: ");
-    $in.io.printWithColor(1, text + "\n");
+    $in.io.printWithColor(90, 'note: ');
+    $in.io.printWithColor(1, text + '\n');
   };
   frontend.printWarning = function(text) {
-    $in.io.printWithColor(95, "warning: ");
-    $in.io.printWithColor(1, text + "\n");
+    $in.io.printWithColor(95, 'warning: ');
+    $in.io.printWithColor(1, text + '\n');
   };
   frontend.printUsage = function() {
-    $in.io.printWithColor(92, "\nusage: ");
-    $in.io.printWithColor(1, "skewc [flags] [inputs]\n");
-    io.print("\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     lisp-ast, json-ast, and xml-ast.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-minify        Transform the emitted JavaScript so that it takes up less\n                     space. Make sure to use the \"export\" modifier on code\n                     that shouldn't be minifed.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the \".map\" extension in the same\n                     directory as the main output file.\n\n");
+    $in.io.printWithColor(92, '\nusage: ');
+    $in.io.printWithColor(1, 'skewc [flags] [inputs]\n');
+    io.print('\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     lisp-ast, json-ast, and xml-ast.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-minify        Transform the emitted JavaScript so that it takes up less\n                     space. Make sure to use the "export" modifier on code\n                     that shouldn\'t be minifed.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the ".map" extension in the same\n                     directory as the main output file.\n\n');
   };
   frontend.afterEquals = function(text) {
-    var equals = text.indexOf("=");
+    var equals = text.indexOf('=');
     return text.slice(equals + 1 | 0, text.length);
   };
   frontend.readSources = function(files) {
@@ -7396,7 +7409,7 @@
       var file = files[i];
       var source = io.readFile(file);
       if (source === null) {
-        frontend.printError("Could not read from " + quoteString(file, 34));
+        frontend.printError('Could not read from ' + quoteString(file, 34));
         return null;
       }
       result.push(source);
@@ -7415,58 +7428,58 @@
       }
       if (arg.charCodeAt(0) !== 45) {
         inputs.push(arg);
-      } else if (arg === "-help" || arg === "--help" || arg === "-h") {
+      } else if (arg === '-help' || arg === '--help' || arg === '-h') {
         frontend.printUsage();
         return 0;
-      } else if (arg === "-verbose" || arg === "--verbose") {
+      } else if (arg === '-verbose' || arg === '--verbose') {
         flags.verbose = true;
-      } else if (arg === "-optimize" || arg === "--optimize") {
+      } else if (arg === '-optimize' || arg === '--optimize') {
         flags.optimize = true;
-      } else if (arg === "-js-minify" || arg === "--js-minify") {
+      } else if (arg === '-js-minify' || arg === '--js-minify') {
         flags.jsMinify = true;
-      } else if (arg === "-js-source-map" || arg === "--js-source-map") {
+      } else if (arg === '-js-source-map' || arg === '--js-source-map') {
         flags.jsSourceMap = true;
-      } else if ($in.string.startsWith(arg, "-target=") || $in.string.startsWith(arg, "--target=")) {
+      } else if ($in.string.startsWith(arg, '-target=') || $in.string.startsWith(arg, '--target=')) {
         flags.target = frontend.afterEquals(arg);
-      } else if ($in.string.startsWith(arg, "-output-file=") || $in.string.startsWith(arg, "--output-file=")) {
+      } else if ($in.string.startsWith(arg, '-output-file=') || $in.string.startsWith(arg, '--output-file=')) {
         flags.outputFile = frontend.afterEquals(arg);
-      } else if ($in.string.startsWith(arg, "-prepend-file=") || $in.string.startsWith(arg, "--prepend-file=")) {
+      } else if ($in.string.startsWith(arg, '-prepend-file=') || $in.string.startsWith(arg, '--prepend-file=')) {
         prepend.push(frontend.afterEquals(arg));
-      } else if ($in.string.startsWith(arg, "-append-file=") || $in.string.startsWith(arg, "--append-file=")) {
+      } else if ($in.string.startsWith(arg, '-append-file=') || $in.string.startsWith(arg, '--append-file=')) {
         append.push(frontend.afterEquals(arg));
       } else {
-        frontend.printError("Unknown flag " + quoteString(arg, 34));
+        frontend.printError('Unknown flag ' + quoteString(arg, 34));
         return 1;
       }
       continue;
     }
     if (inputs.length === 0) {
-      frontend.printError("Missing input files");
+      frontend.printError('Missing input files');
       return 1;
     }
     var target = 0;
-    if (flags.target === "") {
-      frontend.printError("Set the target language with \"--target=___\"");
+    if (flags.target === '') {
+      frontend.printError('Set the target language with "--target=___"');
       return 1;
     }
     switch (flags.target) {
-    case "none":
+    case 'none':
       target = 0;
       break;
-    case "js":
+    case 'js':
       target = 1;
       break;
-    case "lisp-ast":
+    case 'lisp-ast':
       target = 2;
       break;
-    case "json-ast":
+    case 'json-ast':
       target = 3;
       break;
-    case "xml-ast":
+    case 'xml-ast':
       target = 4;
       break;
     default:
-      frontend.printError("Unknown target language " + quoteString(flags.target, 34));
+      frontend.printError('Unknown target language ' + quoteString(flags.target, 34));
       return 1;
     }
     var options = new CompilerOptions();
@@ -7497,7 +7510,7 @@
     for (var i = 0; i < log.diagnostics.length; i = i + 1 | 0) {
       var diagnostic = log.diagnostics[i];
       if (diagnostic.range.source !== null) {
-        $in.io.printWithColor(1, Range.locationString(diagnostic.range) + ": ");
+        $in.io.printWithColor(1, Range.locationString(diagnostic.range) + ': ');
       }
       switch (diagnostic.kind) {
       case 1:
@@ -7509,46 +7522,46 @@
       }
       if (diagnostic.range.source !== null) {
         var formatted = Range.format(diagnostic.range, io.terminalWidth);
-        io.print(formatted.line + "\n");
-        $in.io.printWithColor(92, formatted.range + "\n");
+        io.print(formatted.line + '\n');
+        $in.io.printWithColor(92, formatted.range + '\n');
       }
       if (diagnostic.noteRange.source !== null) {
-        $in.io.printWithColor(1, Range.locationString(diagnostic.noteRange) + ": ");
+        $in.io.printWithColor(1, Range.locationString(diagnostic.noteRange) + ': ');
         frontend.printNote(diagnostic.noteText);
         var formatted = Range.format(diagnostic.noteRange, io.terminalWidth);
-        io.print(formatted.line + "\n");
-        $in.io.printWithColor(92, formatted.range + "\n");
+        io.print(formatted.line + '\n');
+        $in.io.printWithColor(92, formatted.range + '\n');
       }
     }
     var hasErrors = log.errorCount > 0;
     var hasWarnings = log.warningCount > 0;
-    var summary = "";
+    var summary = '';
     if (hasWarnings) {
-      summary += log.warningCount + (log.warningCount === 1 ? " warning" : " warnings");
+      summary += log.warningCount + (log.warningCount === 1 ? ' warning' : ' warnings');
       if (hasErrors) {
-        summary += " and ";
+        summary += ' and ';
       }
     }
     if (hasErrors) {
-      summary += log.errorCount + (log.errorCount === 1 ? " error" : " errors");
+      summary += log.errorCount + (log.errorCount === 1 ? ' error' : ' errors');
     }
     if (hasWarnings || hasErrors) {
-      io.print(summary + " generated\n");
+      io.print(summary + ' generated\n');
     }
     if (flags.verbose) {
-      io.print(Compiler.statistics(compiler, result) + "\n");
+      io.print(Compiler.statistics(compiler, result) + '\n');
     }
     if (hasErrors) {
       return 1;
     }
     for (var i = 0; i < result.outputs.length; i = i + 1 | 0) {
       var output = result.outputs[i];
-      if (output.name === "") {
+      if (output.name === '') {
         io.print(output.contents);
         continue;
       }
       if (!io.writeFile(output.name, output.contents)) {
-        frontend.printError("Could not write to " + quoteString(output.name, 34));
+        frontend.printError('Could not write to ' + quoteString(output.name, 34));
         return 1;
       }
     }
@@ -7593,13 +7606,13 @@
       if (yy_act === 99) {
         continue;
       } else if (yy_act === 35) {
-        Log.error(log, new Range(source, yy_bp, yy_cp), "Syntax error " + quoteString(text.slice(yy_bp, yy_cp), 34));
+        Log.error(log, new Range(source, yy_bp, yy_cp), 'Syntax error ' + quoteString(text.slice(yy_bp, yy_cp), 34));
         break;
       } else if (yy_act !== 32) {
         tokens.push(new Token(new Range(source, yy_bp, yy_cp), yy_act, text.slice(yy_bp, yy_cp)));
       }
     }
-    tokens.push(new Token(new Range(source, text_length, text_length), 32, ""));
+    tokens.push(new Token(new Range(source, text_length, text_length), 32, ''));
     prepareTokens(tokens);
     return tokens;
   }
@@ -7641,7 +7654,7 @@
               var kind = tokenKind === 85 ? 42 : tokenKind === 43 ? 2 : tokenKind === 12 ? 43 : 35;
               tokens.splice(i + 1 | 0, 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind, text));
               token.range = new Range(range.source, start, start + 1 | 0);
-              token.text = ">";
+              token.text = '>';
             }
             top.kind = 101;
             token.kind = 102;
@@ -7652,14 +7665,14 @@
     }
   }
   function firstLineOf(text) {
-    var index = text.indexOf("\n");
+    var index = text.indexOf('\n');
     return index < 0 ? text : text.slice(0, index);
   }
   function syntaxErrorUnexpectedToken(log, token) {
-    Log.error(log, token.range, "Unexpected " + $in.TokenKind.toString(token.kind));
+    Log.error(log, token.range, 'Unexpected ' + $in.TokenKind.toString(token.kind));
   }
   function syntaxErrorExpectedToken(log, found, expected) {
-    Log.error(log, found.range, "Expected " + $in.TokenKind.toString(expected) + " but found " + $in.TokenKind.toString(found.kind));
+    Log.error(log, found.range, 'Expected ' + $in.TokenKind.toString(expected) + ' but found ' + $in.TokenKind.toString(found.kind));
   }
   function scanForToken(context, kind, tokenScan) {
     if (ParserContext.expect(context, kind)) {
@@ -8101,7 +8114,7 @@
   function parseEnum(context) {
     var token = ParserContext.next(context);
     var isFlags = false;
-    if (ParserContext.current(context).kind === 44 && ParserContext.current(context).text === "flags") {
+    if (ParserContext.current(context).kind === 44 && ParserContext.current(context).text === 'flags') {
       isFlags = true;
       ParserContext.next(context);
     }
@@ -8158,7 +8171,7 @@
             }
             var variables = Node.clusterVariables(setup);
             if (variables.length > 1) {
-              Log.error(context.log, setup.range, "More than one variable inside a for-each loop");
+              Log.error(context.log, setup.range, 'More than one variable inside a for-each loop');
             }
             var value = Node.withChildren(new Node(16), [Node.remove(variables[0].children[0]), Node.remove(setup.children[0]), null]);
             return Node.withRange(Node.withChildren(new Node(21), [value, values, body]), ParserContext.spanSince(context, token.range));
@@ -8361,9 +8374,9 @@
     return function(context, token) {
       var value = parseIntLiteral(token.text, base);
       if (value !== value) {
-        Log.error(context.log, token.range, "Invalid integer literal " + token.text);
+        Log.error(context.log, token.range, 'Invalid integer literal ' + token.text);
       } else if (base === 10 && value !== 0 && token.text.charCodeAt(0) === 48) {
-        Log.warning(context.log, token.range, "Use the prefix \"0o\" for octal numbers");
+        Log.warning(context.log, token.range, 'Use the prefix "0o" for octal numbers');
       }
       return Node.withRange(Node.withContent(new Node(40), new IntContent(value | 0)), token.range);
     };
@@ -8411,12 +8424,12 @@
     });
     Pratt.literal(pratt, 87, function(context, token) {
       var result = parseStringLiteral(context.log, token.range, token.text);
-      return Node.withRange(Node.withContent(new Node(43), new StringContent(result !== null ? result.value : "")), token.range);
+      return Node.withRange(Node.withContent(new Node(43), new StringContent(result !== null ? result.value : '')), token.range);
     });
     Pratt.literal(pratt, 18, function(context, token) {
       var result = parseStringLiteral(context.log, token.range, token.text);
       if (result !== null && result.value.length !== 1) {
-        Log.error(context.log, token.range, "Invalid character literal " + firstLineOf(token.text));
+        Log.error(context.log, token.range, 'Invalid character literal ' + firstLineOf(token.text));
         result = null;
       }
       return Node.withRange(Node.withContent(new Node(40), new IntContent(result !== null ? result.value.charCodeAt(0) : 0)), token.range);
@@ -8578,73 +8591,73 @@
     };
   }
   function semanticErrorDuplicateSymbol(log, range, name, previous) {
-    Log.error(log, range, "\"" + name + "\" is already declared");
+    Log.error(log, range, '"' + name + '" is already declared');
     if (previous.source !== null) {
-      Log.note(log, previous, "The previous declaration is here");
+      Log.note(log, previous, 'The previous declaration is here');
     }
   }
   function semanticErrorDifferentModifiers(log, range, name, previous) {
-    Log.error(log, range, "Cannot merge multiple declarations for \"" + name + "\" with different modifiers");
+    Log.error(log, range, 'Cannot merge multiple declarations for "' + name + '" with different modifiers');
     if (previous.source !== null) {
-      Log.note(log, previous, "The conflicting declaration is here");
+      Log.note(log, previous, 'The conflicting declaration is here');
     }
   }
   function semanticErrorParameterCount(log, range, expected, found) {
-    Log.error(log, range, "Expected " + expected + (expected === 1 ? " type parameter" : " type parameters") + " but found " + found + (found === 1 ? " type parameter" : " type parameters"));
+    Log.error(log, range, 'Expected ' + expected + (expected === 1 ? ' type parameter' : ' type parameters') + ' but found ' + found + (found === 1 ? ' type parameter' : ' type parameters'));
   }
   function semanticErrorArgumentCount(log, range, expected, found) {
-    Log.error(log, range, "Expected " + expected + (expected === 1 ? " argument" : " arguments") + " but found " + found + (found === 1 ? " argument" : " arguments"));
+    Log.error(log, range, 'Expected ' + expected + (expected === 1 ? ' argument' : ' arguments') + ' but found ' + found + (found === 1 ? ' argument' : ' arguments'));
   }
   function semanticErrorDuplicateCase(log, range, previous) {
-    Log.error(log, range, "Duplicate case value");
+    Log.error(log, range, 'Duplicate case value');
     if (previous.source !== null) {
-      Log.note(log, previous, "The first occurrence is here");
+      Log.note(log, previous, 'The first occurrence is here');
     }
   }
   function semanticErrorAmbiguousSymbol(log, range, name, names) {
     for (var i = 0; i < names.length; i = i + 1 | 0) {
-      names[i] = "\"" + names[i] + "\"";
+      names[i] = '"' + names[i] + '"';
     }
-    Log.error(log, range, "Reference to \"" + name + "\" is ambiguous, could be " + names.join(" or "));
+    Log.error(log, range, 'Reference to "' + name + '" is ambiguous, could be ' + names.join(' or '));
   }
   function semanticErrorUnmergedSymbol(log, range, name, types) {
     var names = [];
     for (var i = 0; i < types.length; i = i + 1 | 0) {
-      names.push("type \"" + Type.toString(types[i]) + "\"");
+      names.push('type "' + Type.toString(types[i]) + '"');
     }
-    Log.error(log, range, "Member \"" + name + "\" has an ambiguous inherited type, could be " + names.join(" or "));
+    Log.error(log, range, 'Member "' + name + '" has an ambiguous inherited type, could be ' + names.join(' or '));
   }
   function semanticErrorBadOverride(log, range, name, base, overridden) {
-    Log.error(log, range, "\"" + name + "\" overrides another declaration with the same name in base type \"" + Type.toString(base) + "\"");
+    Log.error(log, range, '"' + name + '" overrides another declaration with the same name in base type "' + Type.toString(base) + '"');
     if (overridden.source !== null) {
-      Log.note(log, overridden, "The overridden declaration is here");
+      Log.note(log, overridden, 'The overridden declaration is here');
     }
   }
   function semanticErrorOverrideDifferentTypes(log, range, name, base, derived, overridden) {
-    Log.error(log, range, "\"" + name + "\" must have the same signature as the method it overrides (expected type \"" + Type.toString(base) + "\" but found type \"" + Type.toString(derived) + "\")");
+    Log.error(log, range, '"' + name + '" must have the same signature as the method it overrides (expected type "' + Type.toString(base) + '" but found type "' + Type.toString(derived) + '")');
     if (overridden.source !== null) {
-      Log.note(log, overridden, "The overridden declaration is here");
+      Log.note(log, overridden, 'The overridden declaration is here');
     }
   }
   function semanticErrorModifierMissingOverride(log, range, name, overridden) {
-    Log.error(log, range, "\"" + name + "\" overrides another symbol with the same name but is missing the \"override\" modifier");
+    Log.error(log, range, '"' + name + '" overrides another symbol with the same name but is missing the "override" modifier');
     if (overridden.source !== null) {
-      Log.note(log, overridden, "The overridden declaration is here");
+      Log.note(log, overridden, 'The overridden declaration is here');
     }
   }
   function semanticErrorCannotOverrideNonVirtual(log, range, name, overridden) {
-    Log.error(log, range, "\"" + name + "\" cannot override a non-virtual method");
+    Log.error(log, range, '"' + name + '" cannot override a non-virtual method');
     if (overridden.source !== null) {
-      Log.note(log, overridden, "The overridden declaration is here");
+      Log.note(log, overridden, 'The overridden declaration is here');
     }
   }
   function semanticErrorCannotParameterize(log, range, type) {
-    Log.error(log, range, "Cannot parameterize type \"" + Type.toString(type) + "\"" + (Type.hasParameters(type) ? " because it is already parameterized" : " because it has no type parameters"));
+    Log.error(log, range, 'Cannot parameterize type "' + Type.toString(type) + '"' + (Type.hasParameters(type) ? ' because it is already parameterized' : ' because it has no type parameters'));
   }
   function semanticErrorAlreadyInitialized(log, range, name, previous) {
-    Log.error(log, range, "\"" + name + "\" is already initialized");
+    Log.error(log, range, '"' + name + '" is already initialized');
     if (previous.source !== null) {
-      Log.note(log, previous, "The previous initialization is here");
+      Log.note(log, previous, 'The previous initialization is here');
     }
   }
   function createNameToSymbolFlag() {
@@ -8652,34 +8665,34 @@
       return;
     }
     nameToSymbolFlag = new StringMap();
-    nameToSymbolFlag.table["const"] = 1024;
-    nameToSymbolFlag.table["export"] = 4096;
-    nameToSymbolFlag.table["final"] = 256;
-    nameToSymbolFlag.table["import"] = 8192;
-    nameToSymbolFlag.table["inline"] = 512;
-    nameToSymbolFlag.table["override"] = 32;
-    nameToSymbolFlag.table["private"] = 2;
-    nameToSymbolFlag.table["protected"] = 4;
-    nameToSymbolFlag.table["public"] = 1;
-    nameToSymbolFlag.table["static"] = 64;
-    nameToSymbolFlag.table["virtual"] = 128;
+    nameToSymbolFlag.table['const'] = 1024;
+    nameToSymbolFlag.table['export'] = 4096;
+    nameToSymbolFlag.table['final'] = 256;
+    nameToSymbolFlag.table['import'] = 8192;
+    nameToSymbolFlag.table['inline'] = 512;
+    nameToSymbolFlag.table['override'] = 32;
+    nameToSymbolFlag.table['private'] = 2;
+    nameToSymbolFlag.table['protected'] = 4;
+    nameToSymbolFlag.table['public'] = 1;
+    nameToSymbolFlag.table['static'] = 64;
+    nameToSymbolFlag.table['virtual'] = 128;
   }
   function createSymbolFlagToName() {
     if (symbolFlagToName !== null) {
       return;
     }
     symbolFlagToName = new IntMap();
-    symbolFlagToName.table[1024] = "const";
-    symbolFlagToName.table[4096] = "export";
-    symbolFlagToName.table[256] = "final";
-    symbolFlagToName.table[8192] = "import";
-    symbolFlagToName.table[512] = "inline";
-    symbolFlagToName.table[32] = "override";
-    symbolFlagToName.table[2] = "private";
-    symbolFlagToName.table[4] = "protected";
-    symbolFlagToName.table[1] = "public";
-    symbolFlagToName.table[64] = "static";
-    symbolFlagToName.table[128] = "virtual";
+    symbolFlagToName.table[1024] = 'const';
+    symbolFlagToName.table[4096] = 'export';
+    symbolFlagToName.table[256] = 'final';
+    symbolFlagToName.table[8192] = 'import';
+    symbolFlagToName.table[512] = 'inline';
+    symbolFlagToName.table[32] = 'override';
+    symbolFlagToName.table[2] = 'private';
+    symbolFlagToName.table[4] = 'protected';
+    symbolFlagToName.table[1] = 'public';
+    symbolFlagToName.table[64] = 'static';
+    symbolFlagToName.table[128] = 'virtual';
   }
   service.nodeFromPosition = function(node, source, index) {
     while (Node.hasChildren(node)) {
@@ -8707,52 +8720,52 @@
       switch (symbol.kind) {
       case 4:
         var bound = Type.bound(symbol.type);
-        var text = "type " + symbol.name;
+        var text = 'type ' + symbol.name;
         if (bound !== null) {
-          text += " is " + Type.toString(bound);
+          text += ' is ' + Type.toString(bound);
         }
         result.declaration = text;
         break;
       case 8:
-        result.declaration = "namespace " + Symbol.fullName(symbol);
+        result.declaration = 'namespace ' + Symbol.fullName(symbol);
         break;
       case 11:
       case 12:
       case 13:
-        var text = $in.SymbolKind.toString(symbol.kind).toLowerCase() + " " + Type.toString(type);
+        var text = $in.SymbolKind.toString(symbol.kind).toLowerCase() + ' ' + Type.toString(type);
         if (Type.hasRelevantTypes(type)) {
           for (var i = 0; i < type.relevantTypes.length; i = i + 1 | 0) {
-            text += (i === 0 ? " : " : ", ") + Type.toString(type.relevantTypes[i]);
+            text += (i === 0 ? ' : ' : ', ') + Type.toString(type.relevantTypes[i]);
           }
         }
         result.declaration = text;
         break;
       case 9:
-        result.declaration = "enum " + Symbol.fullName(symbol);
+        result.declaration = 'enum ' + Symbol.fullName(symbol);
         break;
       case 10:
-        result.declaration = "enum flags " + Symbol.fullName(symbol);
+        result.declaration = 'enum flags ' + Symbol.fullName(symbol);
         break;
       case 14:
       case 15:
       case 16:
-        var text = Type.toString(type.relevantTypes[0]) + " " + symbol.name + "(";
+        var text = Type.toString(type.relevantTypes[0]) + ' ' + symbol.name + '(';
         var $arguments = symbol.node.children[1].children;
         var argumentTypes = Type.argumentTypes(type);
         for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
           if (i > 0) {
-            text += ", ";
+            text += ', ';
           }
-          text += Type.toString(argumentTypes[i]) + " " + $arguments[i].symbol.name;
+          text += Type.toString(argumentTypes[i]) + ' ' + $arguments[i].symbol.name;
         }
-        result.declaration = text + ")";
+        result.declaration = text + ')';
         break;
       case 17:
       case 18:
       case 19:
-        var text = Type.toString(type) + " " + symbol.name;
+        var text = Type.toString(type) + ' ' + symbol.name;
         if (Symbol.isEnumValue(symbol)) {
-          text += " = " + symbol.constant.value;
+          text += ' = ' + symbol.constant.value;
         }
         result.declaration = text;
         break;
@@ -8801,13 +8814,13 @@
   service.addCompletion = function(completions, member) {
     var name = member.symbol.name;
     var type = member.type;
-    if (name !== "new" && type !== null) {
+    if (name !== 'new' && type !== null) {
       var text = name;
       if (type.symbol === null) {
-        var semicolon = Type.toString(type.relevantTypes[0]) === "void";
-        text += Type.argumentTypes(type).length === 0 ? semicolon ? "();$" : "()$" : semicolon ? "($);" : "($)";
+        var semicolon = Type.toString(type.relevantTypes[0]) === 'void';
+        text += Type.argumentTypes(type).length === 0 ? semicolon ? '();$' : '()$' : semicolon ? '($);' : '($)';
       } else {
-        text += "$";
+        text += '$';
       }
       completions.push(new LanguageServiceCompletion(name, Type.toString(type), text));
     }
@@ -8835,10 +8848,10 @@
   var operatorInfo = null;
   Compiler.nativeLibrarySource = null;
   Compiler.nativeLibraryFile = null;
-  var NATIVE_LIBRARY = "\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct String {\n  import static string fromCharCode(int value);\n}\n\nimport class Object {\n  import static Object create(Object prototype);\n}\n\nimport struct string {\n  import final int length;\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }\n  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }\n  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport class List<T> {\n  import new();\n  import final int length;\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n\n  void swap(int a, int b) {\n    var temp = get(a);\n    set(a, get(b));\n    set(b, temp);\n  }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n  inline T get(string key) { return untyped(table)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(string key, T value) { untyped(table)[key] = value; }\n  inline bool has(string key) { return key in untyped(table); }\n  inline void remove(string key) { delete(untyped(table)[key]); }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n  inline T get(int key) { return untyped(table)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(int key, T value) { untyped(table)[key] = value; }\n  inline bool has(int key) { return key in untyped(table); }\n  inline void remove(int key) { delete untyped(table)[key]; }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\n// TODO: Rename this to \"math\" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n";
+  var NATIVE_LIBRARY = '\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct String {\n  import static string fromCharCode(int value);\n}\n\nimport class Object {\n  import static Object create(Object prototype);\n}\n\nimport struct string {\n  import final int length;\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }\n  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport class List<T> {\n  import new();\n  import final int length;\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n\n  void swap(int a, int b) {\n    var temp = get(a);\n    set(a, get(b));\n    set(b, temp);\n  }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n  inline T get(string key) { return untyped(table)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(string key, T value) { untyped(table)[key] = value; }\n  inline bool has(string key) { return key in untyped(table); }\n  inline void remove(string key) { delete(untyped(table)[key]); }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n  inline T get(int key) { return untyped(table)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(int key, T value) { untyped(table)[key] = value; }\n  inline bool has(int key) { return key in untyped(table); }\n  inline void remove(int key) { delete untyped(table)[key]; }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n';
   Range.EMPTY = new Range(null, 0, 0);
-  var BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  var HEX = "0123456789ABCDEF";
+  var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  var HEX = '0123456789ABCDEF';
   js.Emitter.isKeyword = null;
   var yy_accept = [100, 100, 100, 32, 35, 99, 69, 35, 78, 13, 35, 59, 82, 66, 73, 21, 65, 29, 27, 52, 52, 20, 83, 60, 2, 42, 77, 44, 58, 81, 15, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 57, 14, 80, 92, 99, 70, 100, 87, 100, 10, 63, 3, 100, 18, 100, 8, 48, 9, 24, 7, 99, 6, 100, 52, 100, 39, 100, 100, 84, 61, 34, 56, 43, 85, 44, 5, 44, 44, 44, 44, 44, 44, 44, 28, 44, 44, 44, 44, 44, 40, 44, 45, 44, 47, 55, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 4, 64, 99, 30, 51, 54, 53, 11, 12, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 41, 44, 44, 44, 62, 44, 68, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 96, 44, 44, 39, 44, 44, 44, 17, 44, 44, 44, 44, 44, 31, 33, 44, 44, 44, 44, 44, 44, 44, 71, 44, 44, 44, 44, 44, 44, 44, 44, 44, 91, 93, 44, 44, 44, 44, 0, 44, 16, 19, 22, 44, 44, 44, 44, 37, 38, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 89, 44, 44, 95, 44, 98, 1, 44, 44, 26, 36, 46, 49, 44, 44, 44, 44, 44, 76, 79, 86, 88, 90, 44, 44, 44, 25, 44, 44, 44, 74, 44, 94, 97, 23, 44, 44, 72, 44, 50, 67, 75, 100];
   var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 1, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 32, 28, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 28, 42, 43, 44, 45, 46, 47, 28, 48, 49, 50, 51, 52, 53, 54, 55, 28, 56, 57, 58, 59, 1];
