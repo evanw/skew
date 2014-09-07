@@ -1154,7 +1154,7 @@
     js.Emitter.emit(this, this.indent + '(function()' + this.space + '{' + this.newline);
     js.Emitter.increaseIndent(this);
     if (this.patcher.needMathImul) {
-      js.Emitter.emit(this, this.indent + 'var ' + $in.string.replace('$imul = Math.imul || function(a, b) {', ' ', this.space) + this.newline);
+      js.Emitter.emit(this, this.indent + 'var ' + this.patcher.imul + $in.string.replace(' = Math.imul || function(a, b) {', ' ', this.space) + this.newline);
       js.Emitter.increaseIndent(this);
       js.Emitter.emit(this, this.indent + 'var ' + $in.string.replace('ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;', ' ', this.space) + this.newline);
       js.Emitter.emit(this, this.indent + 'return ' + $in.string.replace('al * bl + (ah * bl + al * bh << 16) | 0', ' ', this.space));
@@ -1166,7 +1166,7 @@
     if (this.patcher.needExtends) {
       var derived = this.options.jsMangle ? 'd' : 'derived';
       var base = this.options.jsMangle ? 'b' : 'base';
-      js.Emitter.emit(this, this.indent + 'function $extends(' + derived + ',' + this.space + base + ')' + this.space + '{' + this.newline);
+      js.Emitter.emit(this, this.indent + 'function ' + this.patcher.$extends + '(' + derived + ',' + this.space + base + ')' + this.space + '{' + this.newline);
       js.Emitter.increaseIndent(this);
       js.Emitter.emit(this, this.indent + derived + '.prototype' + this.space + '=' + this.space + 'Object.create(' + base + '.prototype);' + this.newline);
       js.Emitter.emit(this, this.indent + derived + '.prototype.constructor' + this.space + '=' + this.space + derived);
@@ -1547,7 +1547,7 @@
       var type = symbol.enclosingSymbol.type;
       if (Type.isClass(type) && Type.baseClass(type) !== null) {
         js.Emitter.emitSemicolonIfNeeded($this);
-        js.Emitter.emit($this, $this.indent + '$extends(' + js.Emitter.fullName(type.symbol) + ',' + $this.space + js.Emitter.fullName(Type.baseClass(type).symbol) + ')');
+        js.Emitter.emit($this, $this.indent + $this.patcher.$extends + '(' + js.Emitter.fullName(type.symbol) + ',' + $this.space + js.Emitter.fullName(Type.baseClass(type).symbol) + ')');
         js.Emitter.emitSemicolonAfterStatement($this);
       }
     }
@@ -2047,6 +2047,8 @@
     this.lambdaCount = 0;
     this.createdThisAlias = false;
     this.currentFunction = null;
+    this.imul = '$imul';
+    this.$extends = '$extends';
     this.needExtends = false;
     this.needMathImul = false;
     this.namingGroupIndexForSymbol = new IntMap();
@@ -2067,6 +2069,8 @@
         var symbol = $this.resolver.allSymbols[i];
         $this.namingGroupIndexForSymbol.table[symbol.uniqueID] = i;
       }
+      $this.imul = '$i';
+      $this.$extends = '$e';
     }
     js.Patcher.patchNode($this, program);
     if ($this.options.jsMangle) {
@@ -2642,7 +2646,7 @@
   js.Patcher.createBinaryInt = function($this, kind, left, right) {
     if (kind === 81) {
       $this.needMathImul = true;
-      return Node.withType(Node.createCall(Node.withContent(new Node(34), new StringContent('$imul')), [left, right]), $this.cache.intType);
+      return Node.withType(Node.createCall(Node.withContent(new Node(34), new StringContent($this.imul)), [left, right]), $this.cache.intType);
     }
     return Node.withType(Node.createBinary(69, Node.withType(Node.createBinary(kind, left, right), $this.cache.intType), Node.withType(Node.withContent(new Node(40), new IntContent(0)), $this.cache.intType)), $this.cache.intType);
   };

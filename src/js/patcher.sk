@@ -13,6 +13,8 @@ namespace js {
     var lambdaCount = 0;
     var createdThisAlias = false;
     Symbol currentFunction = null;
+    var imul = "$imul";
+    var extends = "$extends";
     var needExtends = false;
     var needMathImul = false;
     var namingGroupIndexForSymbol = IntMap<int>();
@@ -39,6 +41,11 @@ namespace js {
           var symbol = resolver.allSymbols.get(i);
           namingGroupIndexForSymbol.set(symbol.uniqueID, i);
         }
+
+        // Shorten the library function names while still avoiding needing to
+        // do conflict detection with user-defined symbol names
+        imul = "$i";
+        extends = "$e";
       }
 
       // Traverse the tree of nodes, fixing up everything for emission in one
@@ -696,7 +703,7 @@ namespace js {
     Node createBinaryInt(NodeKind kind, Node left, Node right) {
       if (kind == .MULTIPLY) {
         needMathImul = true;
-        return Node.createCall(Node.createName("$imul"), [left, right]).withType(cache.intType);
+        return Node.createCall(Node.createName(imul), [left, right]).withType(cache.intType);
       }
       return Node.createBinary(.BITWISE_OR, Node.createBinary(kind, left, right).withType(cache.intType), Node.createInt(0).withType(cache.intType)).withType(cache.intType);
     }

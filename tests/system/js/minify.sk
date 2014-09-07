@@ -49,7 +49,7 @@ export int foo() {
   return Foo(100).foo + Bar(200, 300).foo;
 }
 ", "
-(function(){function $extends(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function c(a){this.a=a}function d(a,b){c.call(this,a),this.b=b}$extends(d,c);foo=function(){return new c(100).a+new d(200,300).a|0}}());
+(function(){function $e(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function c(a){this.a=a}function d(a,b){c.call(this,a),this.b=b}$e(d,c);foo=function(){return new c(100).a+new d(200,300).a|0}}());
 ");
 
 testMinifyJS("
