@@ -2231,11 +2231,24 @@ js.Emitter.peepholeMangleBlock = function($this, node) {
             Node.remove(child);
             child = Node.withChildren(new Node(24), [hook]);
             Node.replaceWith(previous, child);
-            i = i - 1 | 0;
-            continue;
+          } else {
+            break;
           }
+        } else if (previous.kind === 30) {
+          var values = Node.replaceWith(Node.remove(previous).children[0], null);
+          var value = Node.replaceWith(child.children[0], null);
+          if (values.kind === 50) {
+            Node.appendChild(values, value);
+          } else {
+            values = Node.withChildren(new Node(50), [values, value]);
+          }
+          var combined = Node.withChildren(new Node(24), [values]);
+          Node.replaceWith(child, combined);
+          child = combined;
+        } else {
+          break;
         }
-        break;
+        i = i - 1 | 0;
       }
     }
   }
