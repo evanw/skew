@@ -2098,7 +2098,7 @@ js.Emitter.patchNode = function($this, node, context) {
     break;
   case 2:
     if ($this.options.jsMangle) {
-      js.Emitter.peepholeMangleBlock(node);
+      js.Emitter.peepholeMangleBlock($this, node);
     }
     break;
   case 37:
@@ -2186,7 +2186,7 @@ js.Emitter.peepholeMangleIf = function($this, node) {
     Node.replaceWith(node, Node.withChildren(new Node(30), [Node.createBinary(78, Node.replaceWith(test, null), Node.replaceWith(trueStatement.children[0], null))]));
   }
 };
-js.Emitter.peepholeMangleBlock = function(node) {
+js.Emitter.peepholeMangleBlock = function($this, node) {
   if (!Node.hasChildren(node)) {
     return;
   }
@@ -2219,6 +2219,23 @@ js.Emitter.peepholeMangleBlock = function(node) {
       if (nodes !== null) {
         nodes.unshift(Node.remove(child.children[0]));
         Node.replaceWith(child, Node.withChildren(new Node(30), [Node.withChildren(new Node(50), nodes)]));
+      }
+    } else if (kind === 24 && child.children[0] !== null) {
+      while (i > 0) {
+        var previous = node.children[i - 1 | 0];
+        if (previous.kind === 19 && previous.children[2] === null) {
+          var statement = js.Emitter.singleStatement(previous.children[1]);
+          if (statement !== null && statement.kind === 24 && statement.children[0] !== null) {
+            var hook = Node.withChildren(new Node(37), [Node.replaceWith(previous.children[0], null), Node.replaceWith(statement.children[0], null), Node.replaceWith(child.children[0], null)]);
+            js.Emitter.peepholeMangleHook($this, hook);
+            Node.remove(child);
+            child = Node.withChildren(new Node(24), [hook]);
+            Node.replaceWith(previous, child);
+            i = i - 1 | 0;
+            continue;
+          }
+        }
+        break;
       }
     }
   }

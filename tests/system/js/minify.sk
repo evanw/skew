@@ -35,6 +35,28 @@ function foo(foo){return foo<0?-1:foo>0?1:1}
 ");
 
 testMinify("
+export int foo(int foo) {
+  if (foo < 0) return -1;
+  if (foo > 0) return 1;
+  return 1;
+}
+", "
+function foo(foo){return foo<0?-1:foo>0?1:1}
+");
+
+testMinify("
+export int foo(int x, void fn() y) {
+  if (x < 0) {
+    y();
+    return 1;
+  }
+  return 2;
+}
+", "
+function foo(x,y){if(x<0){y();return 1}return 2}
+");
+
+testMinify("
 export int foo() {
   int foo;
   int bar;
@@ -55,7 +77,7 @@ export int foo(int y) {
   return y;
 }
 ", "
-function foo(y){if(y<0)return -y;return y}
+function foo(y){return y<0?-y:y}
 ");
 
 testMinify("
