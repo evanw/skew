@@ -1,4 +1,4 @@
-namespace core { void var_() {
+namespace core { void testVar() {
 
 test("
 var foo;

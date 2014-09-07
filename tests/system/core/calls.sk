@@ -1,4 +1,4 @@
-namespace core { void calls() {
+namespace core { void testCalls() {
 
 test("
 void test() {

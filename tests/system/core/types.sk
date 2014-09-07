@@ -1,4 +1,4 @@
-namespace core { void types() {
+namespace core { void testTypes() {
 
 test("
 class Foo {}

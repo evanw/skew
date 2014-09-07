@@ -1,4 +1,4 @@
-namespace core { void objects() {
+namespace core { void testObjects() {
 
 test("
 class Foo {

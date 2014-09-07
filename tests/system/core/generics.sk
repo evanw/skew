@@ -1,4 +1,4 @@
-namespace core { void generics() {
+namespace core { void testGenerics() {
 
 test("
 class Foo<T is int> {}

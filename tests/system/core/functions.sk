@@ -1,4 +1,4 @@
-namespace core { void functions() {
+namespace core { void testFunctions() {
 
 test("
 import int foo();

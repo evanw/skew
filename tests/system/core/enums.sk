@@ -1,4 +1,4 @@
-namespace core { void enums() {
+namespace core { void testEnums() {
 
 test("
 int foo;

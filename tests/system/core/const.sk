@@ -1,4 +1,4 @@
-namespace core { void const_() {
+namespace core { void testConst() {
 
 test("
 const int foo = 1;

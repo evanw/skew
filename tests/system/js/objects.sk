@@ -1,4 +1,4 @@
-namespace js { void objects() {
+namespace js { void testObjects() {
 
 testJS("
 export in Foo {}

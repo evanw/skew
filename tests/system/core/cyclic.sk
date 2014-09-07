@@ -1,4 +1,4 @@
-namespace core { void cyclic() {
+namespace core { void testCyclic() {
 
 test("
 var foo = foo;

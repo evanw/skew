@@ -1,4 +1,4 @@
-namespace core { void lists() {
+namespace core { void testLists() {
 
 test("
 List<int> foo = [];

@@ -1,4 +1,4 @@
-namespace core { void let_() {
+namespace core { void testLet() {
 
 test("
 export void test() {

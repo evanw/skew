@@ -1,4 +1,4 @@
-namespace js { void expressions() {
+namespace js { void testExpressions() {
 
 testJS("
 export void test() {

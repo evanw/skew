@@ -1,34 +1,45 @@
-import void test(string input, string expected);
-import void testJS(string input, string expected);
-import void testMinify(string input, string expected);
+import void registerTest(string input, void fn() callback);
 import void expect(string output, string expected);
 
-export void run(string input, string expected) {
-  var options = CompilerOptions();
-  options.inputs = [Source("<stdin>", input)];
-  var compiler = Compiler();
-  var result = compiler.compile(options);
-  expect(compiler.log.toString(), expected);
+import in string {
+  import string trim();
 }
 
-export void runJS(string input, string expected) {
-  var options = CompilerOptions();
-  options.inputs = [Source("<stdin>", input)];
-  runHelperJS(options, expected);
+void test(string input, string expected) {
+  input = input.trim();
+  registerTest(input, => {
+    var options = CompilerOptions();
+    options.inputs = [Source("<stdin>", input)];
+    var compiler = Compiler();
+    var result = compiler.compile(options);
+    expect(compiler.log.toString(), expected);
+  });
 }
 
-export void runMinify(string input, string expected) {
-  var options = CompilerOptions();
-  options.inputs = [Source("<stdin>", input)];
-  options.jsMinify = true;
-  options.jsMangle = true;
-  options.foldAllConstants = true;
-  options.inlineAllFunctions = true;
-  options.convertAllInstanceToStatic = true;
-  runHelperJS(options, expected);
+void testJS(string input, string expected) {
+  input = input.trim();
+  registerTest(input, => {
+    var options = CompilerOptions();
+    options.inputs = [Source("<stdin>", input)];
+    testHelperJS(options, expected);
+  });
 }
 
-void runHelperJS(CompilerOptions options, string expected) {
+void testMinifyJS(string input, string expected) {
+  input = input.trim();
+  registerTest(input, => {
+    var options = CompilerOptions();
+    options.inputs = [Source("<stdin>", input)];
+    options.jsMinify = true;
+    options.jsMangle = true;
+    options.foldAllConstants = true;
+    options.inlineAllFunctions = true;
+    options.convertAllInstanceToStatic = true;
+    testHelperJS(options, expected);
+  });
+}
+
+void testHelperJS(CompilerOptions options, string expected) {
   options.targetFormat = .JS;
   var compiler = Compiler();
   var result = compiler.compile(options);
@@ -44,32 +55,32 @@ void runHelperJS(CompilerOptions options, string expected) {
 }
 
 export void start() {
-  core.calls();
-  core.const_();
-  core.constructors();
-  core.conversions();
-  core.cyclic();
-  core.enums();
-  core.functions();
-  core.generics();
-  core.lambdas();
-  core.let_();
-  core.lists();
-  core.merging();
-  core.modifiers();
-  core.objects();
-  core.parsing();
-  core.statements();
-  core.static_();
-  core.switch_();
-  core.types();
-  core.using_();
-  core.var_();
+  core.testCalls();
+  core.testConst();
+  core.testConstructors();
+  core.testConversions();
+  core.testCyclic();
+  core.testEnums();
+  core.testFunctions();
+  core.testGenerics();
+  core.testLambdas();
+  core.testLet();
+  core.testLists();
+  core.testMerging();
+  core.testModifiers();
+  core.testObjects();
+  core.testParsing();
+  core.testStatements();
+  core.testStatic();
+  core.testSwitch();
+  core.testTypes();
+  core.testUsing();
+  core.testVar();
 
-  js.expressions();
-  js.functions();
-  js.inlining();
-  js.minify();
-  js.objects();
-  js.statements();
+  js.testExpressions();
+  js.testFunctions();
+  js.testInlining();
+  js.testMinify();
+  js.testObjects();
+  js.testStatements();
 }

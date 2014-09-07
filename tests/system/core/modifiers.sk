@@ -1,4 +1,4 @@
-namespace core { void modifiers() {
+namespace core { void testModifiers() {
 
 test("
 import public import public class Foo {}

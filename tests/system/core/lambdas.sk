@@ -1,4 +1,4 @@
-namespace core { void lambdas() {
+namespace core { void testLambdas() {
 
 test("
 int fn(bool) foo = foo => foo;

@@ -1,4 +1,4 @@
-namespace js { void functions() {
+namespace js { void testFunctions() {
 
 testJS("
 class Foo {

@@ -1,4 +1,4 @@
-namespace js { void inlining() {
+namespace js { void testInlining() {
 
 testJS("
 inline int foo(int foo) {

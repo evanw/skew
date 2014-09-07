@@ -1,4 +1,4 @@
-namespace core { void static_() {
+namespace core { void testStatic() {
 
 test("
 namespace ns { int x; }

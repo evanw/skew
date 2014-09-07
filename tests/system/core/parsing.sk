@@ -1,4 +1,4 @@
-namespace core { void parsing() {
+namespace core { void testParsing() {
 
 test("
 var π = Math.PI;

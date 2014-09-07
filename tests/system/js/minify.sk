@@ -1,6 +1,6 @@
-namespace js { void minify() {
+namespace js { void testMinify() {
 
-testMinify("
+testMinifyJS("
 export void foo() {
   do {} while (true);
 }
@@ -8,7 +8,7 @@ export void foo() {
 function foo(){do;while(!0)}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(void fn() x) {
   do { x(); } while (true);
 }
@@ -16,7 +16,7 @@ export void foo(void fn() x) {
 function foo(a){do a();while(!0)}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(void fn() x) {
   do { x(); break; } while (true);
 }
@@ -24,7 +24,7 @@ export void foo(void fn() x) {
 function foo(a){do{a();break}while(!0)}
 ");
 
-testMinify("
+testMinifyJS("
 class Foo {
   int foo;
 }
@@ -38,7 +38,7 @@ export int foo() {
 function b(a){this.a=a}function c(a){this.a=a}function foo(){return new b(100).a+new c(200).a|0}
 ");
 
-testMinify("
+testMinifyJS("
 class Foo {
   int foo;
 }
@@ -52,7 +52,7 @@ export int foo() {
 function $extends(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function c(a){this.a=a}function d(a,b){c.call(this,a),this.b=b}$extends(d,c);function foo(){return new c(100).a+new d(200,300).a|0}
 ");
 
-testMinify("
+testMinifyJS("
 import int a();
 export int foo(int x) {
   return a() + x;
@@ -61,7 +61,7 @@ export int foo(int x) {
 function foo(b){return a()+b|0}
 ");
 
-testMinify("
+testMinifyJS("
 import namespace a {
   import int b();
 }
@@ -72,7 +72,7 @@ export int foo(int b) {
 function foo(b){return a.b()+b|0}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(int foo) { int bar, baz; }
 export void bar(int foo, int bar) { int baz; }
 export void baz(int foo, int bar, int baz) {}
@@ -80,7 +80,7 @@ export void baz(int foo, int bar, int baz) {}
 function foo(a){var b=0,c=0;}function bar(a,b){var c=0;}function baz(a,b,c){}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo() {
   return untyped(0) in 1;
 }
@@ -88,7 +88,7 @@ export int foo() {
 function foo(){return 0 in 1}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(int foo) {
   return foo + +1;
 }
@@ -96,7 +96,7 @@ export int foo(int foo) {
 function foo(a){return a+1|0}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(int foo) {
   return foo - -1;
 }
@@ -104,7 +104,7 @@ export int foo(int foo) {
 function foo(a){return a- -1|0}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(void fn() foo) {
   foo();
   return 1;
@@ -113,7 +113,7 @@ export int foo(void fn() foo) {
 function foo(a){return a(),1}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(void fn() foo) {
   foo();
   foo();
@@ -123,7 +123,7 @@ export int foo(void fn() foo) {
 function foo(a){return a(),a(),1}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(int foo) {
   if (foo < 0) return -1;
   else if (foo > 0) return 1;
@@ -133,7 +133,7 @@ export int foo(int foo) {
 function foo(a){return a<0?-1:a>0?1:1}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(int foo) {
   if (foo < 0) return -1;
   if (foo > 0) return 1;
@@ -143,7 +143,7 @@ export int foo(int foo) {
 function foo(a){return a<0?-1:a>0?1:1}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(int x, void fn() y) {
   if (x < 0) {
     y();
@@ -155,7 +155,7 @@ export int foo(int x, void fn() y) {
 function foo(a,b){return a<0?(b(),1):2}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo() {
   int foo;
   int bar;
@@ -165,7 +165,7 @@ export int foo() {
 function foo(){var a=0,b=0;return a+b|0}
 ");
 
-testMinify("
+testMinifyJS("
 const bool bar = false;
 export int foo(int y) {
   if (y < 0) {
@@ -179,7 +179,7 @@ export int foo(int y) {
 function foo(a){return a<0?-a:a}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(int y) {
   if (y > 0) y++;
   else if (y < 0) y += 2;
@@ -190,7 +190,7 @@ export int foo(int y) {
 function foo(a){return a=(a>0?a+1:a<0?a+2:a-1)|0,a}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(int x, int y) {
   if (x < 0) {
     x++;
@@ -207,7 +207,7 @@ export int foo(int x, int y) {
 function foo(a,b){return a<0?(a=a+1|0,b=b-1|0):b<0?a=a-b|0:(a=a-1|0,b=b+1|0),b}
 ");
 
-testMinify("
+testMinifyJS("
 export bool foo(int x, int y) {
   var bar = x == 0 && y != 0;
   if (x == 0 && y != 0) return true;
@@ -217,7 +217,7 @@ export bool foo(int x, int y) {
 function foo(a,b){var c=a===0&&b!==0;return !a&&b?!0:c}
 ");
 
-testMinify("
+testMinifyJS("
 export bool foo(float x, double y) {
   var bar = x == 0 && y != 0;
   if (x == 0 && y != 0) return true;
@@ -227,7 +227,7 @@ export bool foo(float x, double y) {
 function foo(a,b){var c=a===0&&b!==0;return a===0&&b!==0?!0:c}
 ");
 
-testMinify("
+testMinifyJS("
 export bool foo(void fn() fn() x) {
   var bar = x != null && x() == null;
   if (x != null && x() == null) return true;
@@ -237,7 +237,7 @@ export bool foo(void fn() fn() x) {
 function foo(a){var b=a!==null&&a()===null;return a&&!a()?!0:b}
 ");
 
-testMinify("
+testMinifyJS("
 export bool foo(string x) {
   var bar = x == \"\" || x.slice(1, 2) == \"\";
   if (x == \"\" || x.slice(1, 2) == \"\") return true;
@@ -247,7 +247,7 @@ export bool foo(string x) {
 function foo(a){var b=a===\"\"||a.slice(1,2)===\"\";return !a||!a.slice(1,2)?!0:b}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool fn() foo, void fn() bar) {
   if (foo()) {
     bar();
@@ -261,7 +261,7 @@ export void foo(bool fn() foo, void fn() bar) {
 function foo(a,b){a()&&(b(),a()&&(b(),a()&&b()))}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(int a, int b) {
   return a != b ? 1 : 2;
 }
@@ -269,7 +269,7 @@ export int foo(int a, int b) {
 function foo(a,b){return a^b?1:2}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool a, void fn() b) {
   if (!a) b();
 }
@@ -277,7 +277,7 @@ export void foo(bool a, void fn() b) {
 function foo(a,b){!a&&b()}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(bool a, void fn() b) {
   if (!a) {
     b();
@@ -290,7 +290,7 @@ export int foo(bool a, void fn() b) {
 function foo(a,b){return a?2:(b(),1)}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(bool a) {
   return !a ? 1 : 2;
 }
@@ -298,7 +298,7 @@ export int foo(bool a) {
 function foo(a){return a?2:1}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(Foo a, Foo b, void fn() c, void fn() d) {
   if (a == b) c();
   else d();
@@ -308,7 +308,7 @@ enum Foo {}
 function foo(a,b,c,d){a^b?d():c()}
 ");
 
-testMinify("
+testMinifyJS("
 export int foo(int x) {
   int y;
   switch (x) {
@@ -321,7 +321,7 @@ export int foo(int x) {
 function foo(b){var a=0;switch(b){case 1:a=1;break;case 2:a=2}return a}
 ");
 
-testMinify("
+testMinifyJS("
 export bool foo(int a) {
   return a >= 5 && a <= 8;
 }
@@ -332,7 +332,7 @@ export bool bar(int a) {
 function foo(a){return a>4&&a<9}function bar(a){return 4<a&&9>a}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, void fn() y) {
   if (x) {
     y();
@@ -343,7 +343,7 @@ export void foo(bool x, void fn() y) {
 function foo(a,b){a&&b()}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, void fn() y) {
   if (x) return;
   y();
@@ -353,7 +353,7 @@ export void foo(bool x, void fn() y) {
 function foo(b,a){!b&&(a(),a())}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, void fn() y) {
   if (x) return;
   y();
@@ -364,7 +364,7 @@ export void foo(bool x, void fn() y) {
 function foo(a,b){!a&&(b(),!a&&b())}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, bool y, void fn() z) {
   if (x) {
     if (y) return;
@@ -376,7 +376,7 @@ export void foo(bool x, bool y, void fn() z) {
 function foo(b,c,a){b&&(!c&&(a(),a()))}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, bool y, void fn() z) {
   if (x) {
     if (y) return;
@@ -389,7 +389,7 @@ export void foo(bool x, bool y, void fn() z) {
 function foo(b,c,a){if(b){if(c)return;a(),a()}a()}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, void fn() y) {
   if (x) {
     y();
@@ -402,7 +402,7 @@ export void foo(bool x, void fn() y) {
 function foo(b,a){b?a():(a(),a())}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, bool y, void fn() z) {
   while (x) {
     if (y) {
@@ -415,7 +415,7 @@ export void foo(bool x, bool y, void fn() z) {
 function foo(a,b,c){while(a)b&&c()}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, bool y, void fn() z) {
   while (x) {
     if (y) return;
@@ -427,7 +427,7 @@ export void foo(bool x, bool y, void fn() z) {
 function foo(b,c,a){while(b){if(c)return;a(),a()}}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, bool y, void fn() z) {
   while (x) {
     if (y) continue;
@@ -439,7 +439,7 @@ export void foo(bool x, bool y, void fn() z) {
 function foo(b,c,a){while(b)!c&&(a(),a())}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, bool y, void fn() z) {
   while (x) {
     if (y) continue;
@@ -452,7 +452,7 @@ export void foo(bool x, bool y, void fn() z) {
 function foo(c,a,b){while(c)!a&&(b(),!a&&b())}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, bool y, void fn() z) {
   while (x) {
     if (y) {
@@ -467,7 +467,7 @@ export void foo(bool x, bool y, void fn() z) {
 function foo(c,b,a){while(c)b&&(a(),!b&&(a(),a()))}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, bool y, void fn() z) {
   while (x) {
     if (y) {
@@ -483,7 +483,7 @@ export void foo(bool x, bool y, void fn() z) {
 function foo(c,b,a){while(c){if(b){a();if(b)continue;a(),a()}a()}}
 ");
 
-testMinify("
+testMinifyJS("
 export void foo(bool x, bool y, void fn() z) {
   while (x) {
     if (y) {

@@ -1,4 +1,4 @@
-namespace core { void statements() {
+namespace core { void testStatements() {
 
 test("
 return;

@@ -1,4 +1,4 @@
-namespace core { void merging() {
+namespace core { void testMerging() {
 
 test("
 in Foo {}

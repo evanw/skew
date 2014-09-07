@@ -1,4 +1,4 @@
-namespace core { void using_() {
+namespace core { void testUsing() {
 
 test("
 namespace ns {
