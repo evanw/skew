@@ -2112,20 +2112,24 @@ js.Patcher.run = function($this, program) {
     var members = $this.cache.globalType.members.values();
     for (var i = 0; i < members.length; i = i + 1 | 0) {
       var member = members[i];
-      if ((member.symbol.flags & 12288) !== 0) {
+      if (!js.Patcher.canRename(member.symbol)) {
         $this.reservedNames.set(member.symbol.name, true);
       }
     }
     $this.reservedNames.set("fs", true);
+    $this.reservedNames.set("it", true);
     var namingGroups = js.Patcher.extractGroups($this, namingGroupsUnionFind, null);
     for (var i = 0; i < namingGroups.length; i = i + 1 | 0) {
       var group = namingGroups[i];
       var name = "";
       for (var j = 0; j < group.length; j = j + 1 | 0) {
         var symbol = group[j];
-        if ((symbol.flags & 12288) === 0) {
+        if (js.Patcher.canRename(symbol)) {
           if (name === "") {
             name = js.Patcher.generateSymbolName($this);
+          }
+          if (symbol.kind !== 15) {
+            symbol.enclosingSymbol = $this.cache.globalType.symbol;
           }
           symbol.name = name;
         }
@@ -2167,6 +2171,9 @@ js.Patcher.extractGroups = function($this, unionFind, filter) {
     group.push(symbol);
   }
   return labelToGroup.values();
+};
+js.Patcher.canRename = function(symbol) {
+  return (symbol.flags & 12288) === 0 && symbol.kind !== 16;
 };
 js.Patcher.patchNode = function($this, node) {
   switch (node.kind) {

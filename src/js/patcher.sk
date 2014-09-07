@@ -86,9 +86,9 @@ namespace js {
         }
 
         // TODO: Remove this once the minified output is wrapped in a closure.
-        // This is needed because otherwise "var fs = require('fs');" writes
-        // over a generated variable used by the compiler.
+        // These global variables are already used in the node frontend.
         reservedNames.set("fs", true);
+        reservedNames.set("it", true);
 
         // Everything that should have the same name is now grouped together
         var namingGroups = extractGroups(namingGroupsUnionFind, null);
@@ -98,7 +98,12 @@ namespace js {
           for (var j = 0; j < group.length; j++) {
             var symbol = group.get(j);
             if (canRename(symbol)) {
-              if (name == "") name = generateSymbolName();
+              if (name == "") {
+                name = generateSymbolName();
+              }
+              if (symbol.kind != .INSTANCE_FUNCTION) {
+                symbol.enclosingSymbol = cache.globalType.symbol;
+              }
               symbol.name = name;
             }
           }
@@ -142,7 +147,7 @@ namespace js {
     }
 
     bool canRename(Symbol symbol) {
-      return !symbol.isImportOrExport();
+      return !symbol.isImportOrExport() && !symbol.kind.isConstructor();
     }
 
     void patchNode(Node node) {
