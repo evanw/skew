@@ -78,4 +78,86 @@ var bar = foo;
           ~~~
 ");
 
+test("
+var x = super();
+", "
+<stdin>:1:9: error: Cannot use \"super\" here
+var x = super();
+        ~~~~~~~
+");
+
+test("
+int foo() { return super(); }
+", "
+<stdin>:1:20: error: Cannot use \"super\" here
+int foo() { return super(); }
+                   ~~~~~~~
+");
+
+test("
+int foo() { int foo() { return super(); } }
+", "
+<stdin>:1:13: error: Cannot use this statement here
+int foo() { int foo() { return super(); } }
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<stdin>:1:32: error: Cannot use \"super\" here
+int foo() { int foo() { return super(); } }
+                               ~~~~~~~
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+int foo() { int foo() { return super(); } }
+    ~~~
+");
+
+test("
+namespace ns {
+  int foo() { return super(); }
+}
+", "
+<stdin>:2:22: error: Cannot use \"super\" here
+  int foo() { return super(); }
+                     ~~~~~~~
+");
+
+test("
+class Foo {
+  int foo() { return super(); }
+}
+", "
+<stdin>:2:22: error: Cannot use \"super\" here
+  int foo() { return super(); }
+                     ~~~~~~~
+");
+
+test("
+class Foo {
+  virtual int foo(int bar) { return bar; }
+}
+class Bar : Foo {
+  override int foo(int bar) { bool foo = super(false); return 0; }
+}
+", "
+<stdin>:5:48: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  override int foo(int bar) { bool foo = super(false); return 0; }
+                                               ~~~~~
+<stdin>:5:42: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  override int foo(int bar) { bool foo = super(false); return 0; }
+                                         ~~~~~~~~~~~~
+");
+
+test("
+interface IFoo {
+  virtual int foo();
+}
+class Bar : IFoo {
+  override int foo() { return super(); }
+}
+", "
+<stdin>:5:31: error: Cannot call abstract member in base class
+  override int foo() { return super(); }
+                              ~~~~~~~
+<stdin>:2:15: note: The overridden member is here
+  virtual int foo();
+              ~~~
+");
+
 }}

@@ -4138,7 +4138,7 @@
       Resolver.resolveCall($this, node);
       break;
     case 48:
-      Log.error($this.log, node.range, 'TODO: implement super calls');
+      Resolver.resolveSuperCall($this, node);
       break;
     case 49:
       break;
@@ -4285,7 +4285,7 @@
       return;
     }
     if (from === to) {
-      if (node.symbol !== null && $in.SymbolKind.isFunction(node.symbol.kind) && node.kind !== 47 && node.parent.kind !== 47) {
+      if (node.symbol !== null && $in.SymbolKind.isFunction(node.symbol.kind) && !$in.NodeKind.isCall(node.kind) && node.parent.kind !== 47) {
         Log.error($this.log, node.range, 'Raw function references are not allowed (call the function instead)');
         node.type = $this.cache.errorType;
       }
@@ -5738,6 +5738,29 @@
       }
       node.type = valueType.relevantTypes[0];
       Resolver.resolveArguments($this, $arguments, Type.argumentTypes(valueType), node.range, value.range);
+    }
+  };
+  Resolver.resolveSuperCall = function($this, node) {
+    var $arguments = node.children;
+    if ($this.context.functionSymbol === null || $this.context.functionSymbol.enclosingSymbol === null || !$in.SymbolKind.isObject($this.context.functionSymbol.enclosingSymbol.kind) || $this.context.functionSymbol.overriddenMember === null) {
+      Log.error($this.log, node.range, 'Cannot use "super" here');
+      Resolver.resolveNodesAsExpressions($this, $arguments);
+    } else {
+      var member = $this.context.functionSymbol.overriddenMember;
+      Resolver.initializeMember($this, member);
+      var type = member.type;
+      if (type === $this.cache.errorType || type.symbol !== null) {
+        Resolver.resolveNodesAsExpressions($this, $arguments);
+        return;
+      }
+      if (member.symbol.node.children[2] === null) {
+        semanticErrorAbstractSuperCall($this.log, node.range, member.symbol.node.children[0].range);
+        Resolver.resolveNodesAsExpressions($this, $arguments);
+        return;
+      }
+      Resolver.resolveArguments($this, $arguments, Type.argumentTypes(type), node.range, node.range);
+      node.symbol = member.symbol;
+      node.type = type.relevantTypes[0];
     }
   };
   Resolver.resolveSequence = function($this, node) {
@@ -8689,6 +8712,12 @@
     Log.error(log, range, '"' + name + '" is already initialized');
     if (previous.source !== null) {
       Log.note(log, previous, 'The previous initialization is here');
+    }
+  }
+  function semanticErrorAbstractSuperCall(log, range, overridden) {
+    Log.error(log, range, 'Cannot call abstract member in base class');
+    if (overridden.source !== null) {
+      Log.note(log, overridden, 'The overridden member is here');
     }
   }
   FunctionInliningPass.run = function(callGraph, options) {

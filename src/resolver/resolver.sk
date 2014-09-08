@@ -662,7 +662,7 @@ class Resolver {
       // this conversion, make sure to capture the value of "this" for member
       // functions inside the lambda.
       //
-      if (node.symbol != null && node.symbol.kind.isFunction() && node.kind != .CALL && node.parent.kind != .CALL) {
+      if (node.symbol != null && node.symbol.kind.isFunction() && !node.kind.isCall() && node.parent.kind != .CALL) {
         semanticErrorMustCallFunctionReference(log, node.range);
         node.type = cache.errorType;
       }
@@ -2662,7 +2662,38 @@ class Resolver {
   }
 
   void resolveSuperCall(Node node) {
-    log.error(node.range, "TODO: implement super calls");
+    var arguments = node.superCallArguments();
+
+    // Make sure a super call even makes sense here
+    if (context.functionSymbol == null || context.functionSymbol.enclosingSymbol == null ||
+        !context.functionSymbol.enclosingSymbol.kind.isObject() || context.functionSymbol.overriddenMember == null) {
+      semanticErrorBadSuperCall(log, node.range);
+      resolveNodesAsExpressions(arguments);
+    }
+
+    else {
+      var member = context.functionSymbol.overriddenMember;
+      initializeMember(member);
+
+      // Avoid reporting further errors
+      var type = member.type;
+      if (type.isError(cache) || !type.isFunction()) {
+        resolveNodesAsExpressions(arguments);
+        return;
+      }
+
+      // Super calls are statically resolved, so the symbol must not be abstract
+      if (member.symbol.node.functionBlock() == null) {
+        semanticErrorAbstractSuperCall(log, node.range, member.symbol.node.declarationName().range);
+        resolveNodesAsExpressions(arguments);
+        return;
+      }
+
+      // Store the overridden symbol for reference during emission
+      resolveArguments(arguments, type.argumentTypes(), node.range, node.range);
+      node.symbol = member.symbol;
+      node.type = type.resultType();
+    }
   }
 
   void resolveSequence(Node node) {

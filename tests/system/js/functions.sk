@@ -159,4 +159,38 @@ export void test() {
 }());
 ");
 
+testJS("
+class Foo {
+  virtual int foo(int bar) { return bar; }
+}
+class Bar : Foo {
+  override int foo(int bar) { return super(bar); }
+}
+export void test() {
+  Bar().foo(1);
+}
+", "
+(function() {
+  function $extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+  function Foo() {
+  }
+  Foo.prototype.foo = function(bar) {
+    return bar;
+  };
+  function Bar() {
+    Foo.call(this);
+  }
+  $extends(Bar, Foo);
+  Bar.prototype.foo = function(bar) {
+    return Foo.prototype.foo.call(this, bar);
+  };
+  test = function() {
+    new Bar().foo(1);
+  };
+}());
+");
+
 }}
