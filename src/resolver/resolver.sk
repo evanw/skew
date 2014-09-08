@@ -1075,6 +1075,19 @@ class Resolver {
         }
         resultType = cache.parameterize(resultType, substitutions);
       }
+
+      // Mark the class as abstract if it contains any abstract symbols. This
+      // is done here since the constructor must be initialized before being
+      // invoked, which ensures that the abstract flag will be set correctly.
+      var members = enclosingSymbol.type.members.values();
+      for (var i = 0; i < members.length; i++) {
+        var member = members.get(i).symbol;
+        if (!member.isImport() && member.kind.isFunction() && member.node.functionBlock() == null) {
+          enclosingSymbol.reasonForAbstract = member;
+          enclosingSymbol.flags |= .ABSTRACT;
+          break;
+        }
+      }
     }
 
     // Resolve argument variables
@@ -2614,6 +2627,15 @@ class Resolver {
           resolveNodesAsExpressions(arguments);
           return;
         }
+
+        // Cannot instantiate abstract types
+        if (valueType.symbol.isAbstract()) {
+          var reason = valueType.symbol.reasonForAbstract;
+          semanticErrorAbstractNew(log, value.range, valueType, reason.node.declarationName().range, reason.fullName());
+          resolveNodesAsExpressions(arguments);
+          return;
+        }
+
         initializeMember(member);
         node.symbol = member.symbol;
         valueType = member.type;

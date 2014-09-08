@@ -177,6 +177,11 @@ void semanticErrorAbstractConstructorInitializer(Log log, Range range) {
   log.error(range, "An abstract constructor must not have initializer list");
 }
 
+void semanticErrorAbstractNew(Log log, Range range, Type type, Range reason, string name) {
+  log.error(range, "Cannot construct abstract " + typeToText(type));
+  if (!reason.isEmpty()) log.note(reason, "The " + typeToText(type) + " is abstract due to member " + simpleQuote(name));
+}
+
 void semanticErrorUnexpectedBaseType(Log log, Range range, string what) {
   log.error(range, what + " cannot inherit from another type");
 }

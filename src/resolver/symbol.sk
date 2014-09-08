@@ -33,7 +33,7 @@ enum SymbolKind {
 
 in SymbolKind {
   bool isGlobalNamespace() {
-    return this == .GLOBAL_NAMESPACE;
+    return this == GLOBAL_NAMESPACE;
   }
 
   bool isNamespace() {
@@ -127,6 +127,10 @@ class Symbol {
   // because you don't access symbols declared inside the function off of the
   // function symbol.
   Symbol enclosingSymbol = null;
+
+  // This stores the symbol that caused this symbol to become abstract. Only
+  // object types may be abstract, so this only applies to object types.
+  Symbol reasonForAbstract = null;
 
   // The member from a base type that this symbol is shadowing. If that same
   // member comes from multiple base types, the overridden member will point

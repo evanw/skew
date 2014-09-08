@@ -399,4 +399,56 @@ class Foo {
             ~~~~
 ");
 
+test("
+class Foo {
+  virtual void foo();
+}
+Foo fn() foo = => Foo();
+", "
+<stdin>:4:19: error: Cannot construct abstract type \"Foo\"
+Foo fn() foo = => Foo();
+                  ~~~
+<stdin>:2:16: note: The type \"Foo\" is abstract due to member \"Foo.foo\"
+  virtual void foo();
+               ~~~
+");
+
+test("
+class Foo {
+  virtual void foo();
+}
+class Bar : Foo {
+}
+Foo fn() foo = => Bar();
+", "
+<stdin>:6:19: error: Cannot construct abstract type \"Bar\"
+Foo fn() foo = => Bar();
+                  ~~~
+<stdin>:2:16: note: The type \"Bar\" is abstract due to member \"Foo.foo\"
+  virtual void foo();
+               ~~~
+");
+
+test("
+class Foo {
+  virtual void foo();
+}
+class Bar : Foo {
+  override void foo() {}
+}
+Foo fn() foo = => Bar();
+", "
+");
+
+test("
+interface IFoo {
+  virtual void foo();
+}
+class Bar : IFoo {
+  override void foo() {}
+}
+IFoo fn() foo = => Bar();
+", "
+");
+
 }}

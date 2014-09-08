@@ -141,7 +141,7 @@ export in Foo {
 
 testJS("
 import class Foo {
-  new();
+  import new();
   void foo() {}
 }
 export void test() {

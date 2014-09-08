@@ -4564,6 +4564,15 @@
         }
         resultType = TypeCache.parameterize($this.cache, resultType, substitutions);
       }
+      var members = StringMap.values(enclosingSymbol.type.members);
+      for (var i = 0; i < members.length; i = i + 1 | 0) {
+        var member = members[i].symbol;
+        if ((member.flags & 8192) === 0 && $in.SymbolKind.isFunction(member.kind) && member.node.children[2] === null) {
+          enclosingSymbol.reasonForAbstract = member;
+          enclosingSymbol.flags |= 8;
+          break;
+        }
+      }
     }
     var $arguments = node.children[1];
     Resolver.resolve($this, $arguments, null);
@@ -5679,6 +5688,12 @@
           Resolver.resolveNodesAsExpressions($this, $arguments);
           return;
         }
+        if ((valueType.symbol.flags & 8) !== 0) {
+          var reason = valueType.symbol.reasonForAbstract;
+          semanticErrorAbstractNew($this.log, value.range, valueType, reason.node.children[0].range, Symbol.fullName(reason));
+          Resolver.resolveNodesAsExpressions($this, $arguments);
+          return;
+        }
         Resolver.initializeMember($this, member);
         node.symbol = member.symbol;
         valueType = member.type;
@@ -6050,6 +6065,7 @@
     this.type = null;
     this.node = null;
     this.enclosingSymbol = null;
+    this.reasonForAbstract = null;
     this.overriddenMember = null;
     this.constant = null;
     this.identicalMembers = null;
@@ -8538,6 +8554,12 @@
     Log.error(log, range, 'Duplicate case value');
     if (previous.source !== null) {
       Log.note(log, previous, 'The first occurrence is here');
+    }
+  }
+  function semanticErrorAbstractNew(log, range, type, reason, name) {
+    Log.error(log, range, 'Cannot construct abstract type "' + Type.toString(type) + '"');
+    if (reason.source !== null) {
+      Log.note(log, reason, 'The type "' + Type.toString(type) + '" is abstract due to member "' + name + '"');
     }
   }
   function semanticErrorAmbiguousSymbol(log, range, name, names) {
