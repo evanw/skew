@@ -398,7 +398,7 @@ namespace js {
         emitNode(variable);
       }
       if (state != .NONE) {
-        emit(";" + newline);
+        emitSemicolonAfterStatement();
       }
     }
 

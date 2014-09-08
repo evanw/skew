@@ -128,7 +128,7 @@ export void foo(int foo) { int bar, baz; }
 export void bar(int foo, int bar) { int baz; }
 export void baz(int foo, int bar, int baz) {}
 ", "
-(function(){foo=function(a){var b=0,c=0;};bar=function(a,b){var c=0;};baz=function(a,b,c){}}());
+(function(){foo=function(a){var b=0,c=0};bar=function(a,b){var c=0};baz=function(a,b,c){}}());
 ");
 
 testMinifyJS("

@@ -1495,7 +1495,7 @@
       js.Emitter.emitNode($this, variable);
     }
     if (state !== 0) {
-      js.Emitter.emit($this, ';' + $this.newline);
+      js.Emitter.emitSemicolonAfterStatement($this);
     }
   };
   js.Emitter.emitNamespace = function($this, node) {
