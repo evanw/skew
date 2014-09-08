@@ -25,17 +25,24 @@ export class Foo {
 ");
 
 testMinifyJS("
-export void foo() {
-  var map = StringMap<bool>();
-  map.set(\"a\", true);
-  map.set(\"b\", true);
-  map.set(\"c\", true);
-  map.set(\"d\", false);
-  map.set(\"e\", false);
-  map.set(\"f\", true);
+export int foo(StringMap<int> map) {
+  return map.get(\"x\") + map.get(\"_\") + map.get(\"x\") + map.get(\"0\") + map.get(\"x0\") + map.get(\"if\");
 }
 ", "
-(function(){function b(){this.a=Object.create(null)}foo=function(){var a=new b();a.a['a']=a.a['b']=a.a['c']=!0,a.a['d']=a.a['e']=!1,a.a['f']=!0}}());
+(function(){function b(){this.a=Object.create(null)}foo=function(a){return ((((a.a.x+a.a._|0)+a.a.x|0)+a.a['0']|0)+a.a.x0|0)+a.a['if']|0}}());
+");
+
+testMinifyJS("
+export void foo(StringMap<int> map) {
+  map.set(\"x\", 0);
+  map.set(\"_\", 0);
+  map.set(\"x\", 0);
+  map.set(\"0\", 0);
+  map.set(\"x0\", 0);
+  map.set(\"if\", 0);
+}
+", "
+(function(){function b(){this.a=Object.create(null)}foo=function(a){a.a.x=a.a._=a.a.x=a.a['0']=a.a.x0=a.a['if']=0}}());
 ");
 
 testMinifyJS("
@@ -48,7 +55,7 @@ export void foo() {
   map.set(\"a\", true);
 }
 ", "
-(function(){function c(){this.a=Object.create(null)}foo=function(){var a=new c(),b=!1;b=a.a['a']=!1,b=a.a['a']=!0}}());
+(function(){function c(){this.a=Object.create(null)}foo=function(){var a=new c(),b=!1;b=a.a.a=!1,b=a.a.a=!0}}());
 ");
 
 testMinifyJS("

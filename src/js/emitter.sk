@@ -772,11 +772,11 @@ namespace js {
     }
 
     void emitBinary(Node node, Precedence precedence) {
-      var info = operatorInfo.get(node.kind);
-      if (info.precedence < precedence) emit("(");
+      var kind = node.kind;
       var left = node.binaryLeft();
       var right = node.binaryRight();
-      var kind = node.kind;
+      var info = operatorInfo.get(kind);
+      if (info.precedence < precedence) emit("(");
 
       // Special case adding a string with the result of calling toString()
       // since the JavaScript runtime will automatically call toString()
@@ -802,19 +802,40 @@ namespace js {
       if (info.precedence < precedence) emit(")");
     }
 
+    bool isIdentifierString(Node node) {
+      if (node.kind == .STRING) {
+        var value = node.asString();
+        for (var i = 0; i < value.length; i++) {
+          var c = value.codeUnitAt(i);
+          if ((c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && c != '_' && c != '$' && (i == 0 || c < '0' || c > '9')) {
+            return false;
+          }
+        }
+        return value.length > 0 && !isKeyword.has(value);
+      }
+      return false;
+    }
+
+    void emitIndexProperty(Node node) {
+      if (options.jsMangle && isIdentifierString(node)) {
+        emit("." + node.asString());
+      } else {
+        emit("[");
+        emitExpression(node, .LOWEST);
+        emit("]");
+      }
+    }
+
     void emitIndex(Node node, Precedence precedence) {
       emitExpression(node.binaryLeft(), .MEMBER);
-      emit("[");
-      emitExpression(node.binaryRight(), .LOWEST);
-      emit("]");
+      emitIndexProperty(node.binaryRight());
     }
 
     void emitTertiary(Node node, Precedence precedence) {
       if (.ASSIGN < precedence) emit("(");
       emitExpression(node.tertiaryLeft(), .MEMBER);
-      emit("[");
-      emitExpression(node.tertiaryMiddle(), .LOWEST);
-      emit("]" + space + "=" + space);
+      emitIndexProperty(node.tertiaryMiddle());
+      emit(space + "=" + space);
       emitExpression(node.tertiaryRight(), .ASSIGN);
       if (.ASSIGN < precedence) emit(")");
     }

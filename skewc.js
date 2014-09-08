@@ -1922,13 +1922,13 @@
     return false;
   };
   js.Emitter.emitBinary = function($this, node, precedence) {
-    var info = operatorInfo.table[node.kind];
+    var kind = node.kind;
+    var left = node.children[0];
+    var right = node.children[1];
+    var info = operatorInfo.table[kind];
     if (info.precedence < precedence) {
       js.Emitter.emit($this, '(');
     }
-    var left = node.children[0];
-    var right = node.children[1];
-    var kind = node.kind;
     if ((kind === 67 || kind === 88) && left.type !== null && left.type === $this.resolver.cache.stringType && js.Emitter.isToStringCall(right)) {
       right = right.children[0].children[0];
     } else if (kind === 67 && right.type !== null && right.type === $this.resolver.cache.stringType && js.Emitter.isToStringCall(left)) {
@@ -1946,20 +1946,39 @@
       js.Emitter.emit($this, ')');
     }
   };
+  js.Emitter.isIdentifierString = function(node) {
+    if (node.kind === 43) {
+      var value = node.content.value;
+      for (var i = 0; i < value.length; i = i + 1 | 0) {
+        var c = value.charCodeAt(i);
+        if ((c < 65 || c > 90) && (c < 97 || c > 122) && c !== 95 && c !== 36 && (i === 0 || c < 48 || c > 57)) {
+          return false;
+        }
+      }
+      return value.length > 0 && !(value in js.Emitter.isKeyword.table);
+    }
+    return false;
+  };
+  js.Emitter.emitIndexProperty = function($this, node) {
+    if ($this.options.jsMangle && js.Emitter.isIdentifierString(node)) {
+      js.Emitter.emit($this, '.' + node.content.value);
+    } else {
+      js.Emitter.emit($this, '[');
+      js.Emitter.emitExpression($this, node, 0);
+      js.Emitter.emit($this, ']');
+    }
+  };
   js.Emitter.emitIndex = function($this, node, precedence) {
     js.Emitter.emitExpression($this, node.children[0], 15);
-    js.Emitter.emit($this, '[');
-    js.Emitter.emitExpression($this, node.children[1], 0);
-    js.Emitter.emit($this, ']');
+    js.Emitter.emitIndexProperty($this, node.children[1]);
   };
   js.Emitter.emitTertiary = function($this, node, precedence) {
     if (2 < precedence) {
       js.Emitter.emit($this, '(');
     }
     js.Emitter.emitExpression($this, node.children[0], 15);
-    js.Emitter.emit($this, '[');
-    js.Emitter.emitExpression($this, node.children[1], 0);
-    js.Emitter.emit($this, ']' + $this.space + '=' + $this.space);
+    js.Emitter.emitIndexProperty($this, node.children[1]);
+    js.Emitter.emit($this, $this.space + '=' + $this.space);
     js.Emitter.emitExpression($this, node.children[2], 2);
     if (2 < precedence) {
       js.Emitter.emit($this, ')');
