@@ -5789,12 +5789,18 @@
     $this.context.loop = null;
     var $arguments = Node.lambdaArguments(node);
     var block = Node.lambdaBlock(node);
+    var inferReturnType = false;
     if ($this.typeContext === null) {
-      Log.error($this.log, node.range, 'Expression has no type context here');
-    } else if ($this.typeContext !== $this.cache.errorType) {
+      if ($arguments.length === 0) {
+        $this.typeContext = TypeCache.functionType($this.cache, $this.cache.errorType, []);
+      } else {
+        Log.error($this.log, node.range, 'Expression has no type context here');
+      }
+    }
+    if ($this.typeContext !== null && $this.typeContext !== $this.cache.errorType) {
       if ($this.typeContext.symbol !== null) {
         Log.error($this.log, node.range, 'Cannot use a lambda expression with type "' + Type.toString($this.typeContext) + '"');
-      } else if ($this.typeContext !== $this.cache.errorType) {
+      } else {
         var argumentTypes = Type.argumentTypes($this.typeContext);
         $this.resultType = $this.typeContext.relevantTypes[0];
         node.type = $this.typeContext;
@@ -5805,15 +5811,54 @@
             Node.replaceChild($arguments[i], 1, Node.withType(new Node(35), argumentTypes[i]));
           }
         }
-        if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType && !Node.blockAlwaysEndsWithReturn(block)) {
+        if ($this.resultType === $this.cache.errorType) {
+          inferReturnType = true;
+        } else if ($this.resultType !== $this.cache.voidType && !Node.blockAlwaysEndsWithReturn(block)) {
           Log.error($this.log, node.range, 'All control paths for lambda expression must return a value of type "' + Type.toString($this.resultType) + '"');
         }
       }
     }
     Resolver.resolveNodes($this, $arguments);
     Resolver.resolve($this, block, null);
+    if (inferReturnType) {
+      var returnStatements = [];
+      Resolver.collectReturnStatements(block, returnStatements);
+      var commonType = returnStatements.length === 0 ? $this.cache.voidType : null;
+      for (var i = 0; i < returnStatements.length; i = i + 1 | 0) {
+        var value = returnStatements[i].children[0];
+        var type = value !== null ? value.type : $this.cache.voidType;
+        if (type === $this.cache.errorType) {
+          commonType = null;
+          break;
+        }
+        if (commonType === null) {
+          commonType = type;
+        } else {
+          var merged = TypeCache.commonImplicitType($this.cache, commonType, type);
+          if (merged === null) {
+            semanticErrorLambdaReturnTypeInferenceFailed($this.log, node.range, value.range, commonType, type);
+            commonType = null;
+            break;
+          }
+          commonType = merged;
+        }
+      }
+      node.type = commonType !== null ? TypeCache.functionType($this.cache, commonType, Type.argumentTypes(node.type)) : $this.cache.errorType;
+    }
     $this.resultType = oldResultType;
     $this.context.loop = oldLoop;
+  };
+  Resolver.collectReturnStatements = function(node, returnStatements) {
+    if ($in.NodeKind.isReturn(node.kind)) {
+      returnStatements.push(node);
+    } else if (node.kind !== 54 && Node.hasChildren(node)) {
+      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+        var child = node.children[i];
+        if (child !== null) {
+          Resolver.collectReturnStatements(child, returnStatements);
+        }
+      }
+    }
   };
   Resolver.resolveVar = function($this, node) {
     Log.error($this.log, node.range, 'Unexpected ' + $in.NodeKind.toString(node.kind));
@@ -6612,6 +6657,9 @@
   };
   $in.NodeKind.isCall = function($this) {
     return $this >= 47 && $this <= 48;
+  };
+  $in.NodeKind.isReturn = function($this) {
+    return $this >= 24 && $this <= 25;
   };
   $in.NodeKind.isUnaryOperator = function($this) {
     return $this >= 58 && $this <= 66;
@@ -8550,6 +8598,12 @@
     Log.error(log, range, 'Cannot merge multiple declarations for "' + name + '" with different modifiers');
     if (previous.source !== null) {
       Log.note(log, previous, 'The conflicting declaration is here');
+    }
+  }
+  function semanticErrorLambdaReturnTypeInferenceFailed(log, range, failed, left, right) {
+    Log.error(log, range, 'Could not infer return type of lambda expression');
+    if (failed.source !== null) {
+      Log.note(log, failed, 'No common type for type "' + Type.toString(left) + '" and type "' + Type.toString(right) + '"');
     }
   }
   function semanticErrorParameterCount(log, range, expected, found) {

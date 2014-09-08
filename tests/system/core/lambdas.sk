@@ -62,9 +62,6 @@ var foo = =>
 <stdin>:1:13: error: Unexpected END_OF_FILE
 var foo = =>
             ^
-<stdin>:1:11: error: Expression has no type context here
-var foo = =>
-          ~~
 ");
 
 test("
@@ -96,6 +93,53 @@ void fn() bar = () => { return 0; };
 <stdin>:1:32: error: Cannot convert from type \"int\" to type \"void\"
 void fn() bar = () => { return 0; };
                                ^
+");
+
+test("
+var a = =>;
+var b = => {};
+var c = => 100;
+var d = => { return 100; return false; };
+var e = => { return 1; return 0.5f; };
+var f = => foo;
+void test(bool x) {
+  x = a;
+  x = b;
+  x = c;
+  x = d;
+  x = e;
+  x = f;
+}
+", "
+<stdin>:4:9: error: Could not infer return type of lambda expression
+var d = => { return 100; return false; };
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<stdin>:4:33: note: No common type for type \"int\" and type \"bool\"
+var d = => { return 100; return false; };
+                                ~~~~~
+<stdin>:6:12: error: \"foo\" is not declared
+var f = => foo;
+           ~~~
+<stdin>:8:7: error: Cannot convert from type \"void fn()\" to type \"bool\"
+  x = a;
+      ^
+<stdin>:9:7: error: Cannot convert from type \"void fn()\" to type \"bool\"
+  x = b;
+      ^
+<stdin>:10:7: error: Cannot convert from type \"int fn()\" to type \"bool\"
+  x = c;
+      ^
+<stdin>:12:7: error: Cannot convert from type \"double fn()\" to type \"bool\"
+  x = e;
+      ^
+");
+
+test("
+var foo = => foo;
+", "
+<stdin>:1:5: error: Cyclic declaration of \"foo\"
+var foo = => foo;
+    ~~~
 ");
 
 }}

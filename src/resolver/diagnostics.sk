@@ -90,6 +90,11 @@ void semanticErrorNoCommonType(Log log, Range range, Type left, Type right) {
   log.error(range, "No common type for " + typeToText(left) + " and " + typeToText(right));
 }
 
+void semanticErrorLambdaReturnTypeInferenceFailed(Log log, Range range, Range failed, Type left, Type right) {
+  log.error(range, "Could not infer return type of lambda expression");
+  if (!failed.isEmpty()) log.note(failed, "No common type for " + typeToText(left) + " and " + typeToText(right));
+}
+
 void semanticErrorBadType(Log log, Range range, Type type) {
   log.error(range, "Cannot use " + typeToText(type) + " here");
 }

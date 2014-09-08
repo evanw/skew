@@ -158,6 +158,10 @@ in NodeKind {
     return this >= CALL && this <= SUPER_CALL;
   }
 
+  bool isReturn() {
+    return this >= RETURN && this <= IMPLICIT_RETURN;
+  }
+
   bool isUnaryOperator() {
     return this >= NOT && this <= POSTFIX_DECREMENT;
   }

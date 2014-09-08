@@ -1039,18 +1039,6 @@ class Resolver {
       unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
     }
 
-    // // TODO: Implied modifiers
-    // if (enclosingSymbol != null && !symbol.isFromExtension()) {
-    //   if (enclosingSymbol.isImport()) {
-    //     symbol.flags |= .IMPORT;
-    //     redundantModifierIfPresent(symbol, .IMPORT, "inside an imported declaration");
-    //   }
-    //   if (enclosingSymbol.isImport()) {
-    //     symbol.flags |= .EXPORT;
-    //     redundantModifierIfPresent(symbol, .EXPORT, "inside an exported declaration");
-    //   }
-    // }
-
     var node = symbol.node;
     Type resultType;
 
@@ -2757,18 +2745,22 @@ class Resolver {
 
     var arguments = node.lambdaArguments();
     var block = node.lambdaBlock();
+    var inferReturnType = false;
 
-    // Lambdas require type context instead of attempting type inference
+    // If there are no arguments, attempt type inference for the return type
     if (typeContext == null) {
-      semanticErrorMissingTypeContext(log, node.range);
+      if (arguments.length == 0) {
+        typeContext = cache.functionType(cache.errorType, []);
+      } else {
+        semanticErrorMissingTypeContext(log, node.range);
+      }
     }
 
-    else if (!typeContext.isError(cache)) {
+    // Set the argument types using the type context
+    if (typeContext != null && !typeContext.isError(cache)) {
       if (!typeContext.isFunction()) {
         semanticErrorBadLambdaTypeContext(log, node.range, typeContext);
-      }
-
-      else if (!typeContext.isError(cache)) {
+      } else {
         // Set the expression type now even if the arguments are incorrect
         var argumentTypes = typeContext.argumentTypes();
         resultType = typeContext.resultType();
@@ -2788,7 +2780,9 @@ class Resolver {
         }
 
         // Missing a return statement is an error
-        if (!resultType.isError(cache) && !resultType.isVoid(cache) && !block.blockAlwaysEndsWithReturn()) {
+        if (resultType.isError(cache)) {
+          inferReturnType = true;
+        } else if (!resultType.isVoid(cache) && !block.blockAlwaysEndsWithReturn()) {
           semanticErrorLambdaMissingReturn(log, node.range, resultType);
         }
       }
@@ -2797,8 +2791,61 @@ class Resolver {
     resolveNodes(arguments);
     resolve(block, null);
 
+    // Attempt to infer the return type after the body has been processed. To
+    // implement return type inference, the type of the lambda is set to a
+    // function type with valid arguments and an error return type. That way
+    // return statements don't try to convert their values and we can collect
+    // and merge the types of all return statements now.
+    if (inferReturnType) {
+      List<Node> returnStatements = [];
+      collectReturnStatements(block, returnStatements);
+
+      // Try to merge all types into a common return type
+      Type commonType = returnStatements.length == 0 ? cache.voidType : null;
+      for (var i = 0; i < returnStatements.length; i++) {
+        var value = returnStatements.get(i).returnValue();
+        var type = value != null ? value.type : cache.voidType;
+        if (type.isError(cache)) {
+          commonType = null;
+          break;
+        }
+        if (commonType == null) {
+          commonType = type;
+        } else {
+          var merged = cache.commonImplicitType(commonType, type);
+          if (merged == null) {
+            semanticErrorLambdaReturnTypeInferenceFailed(log, node.range, value.range, commonType, type);
+            commonType = null;
+            break;
+          }
+          commonType = merged;
+        }
+      }
+
+      // Either update the return type or completely remove the function type.
+      // Don't leave a function type around with an error return type.
+      node.type = commonType != null ? cache.functionType(commonType, node.type.argumentTypes()) : cache.errorType;
+    }
+
     resultType = oldResultType;
     context.loop = oldLoop;
+  }
+
+  static void collectReturnStatements(Node node, List<Node> returnStatements) {
+    if (node.kind.isReturn()) {
+      returnStatements.push(node);
+    }
+
+    // Be careful not to traverse into nested lambdas. Those return statements
+    // aren't the ones we want.
+    else if (node.kind != .LAMBDA && node.hasChildren()) {
+      for (var i = 0; i < node.children.length; i++) {
+        var child = node.children.get(i);
+        if (child != null) {
+          collectReturnStatements(child, returnStatements);
+        }
+      }
+    }
   }
 
   void resolveUntyped(Node node) {
