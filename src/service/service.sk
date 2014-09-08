@@ -1,25 +1,25 @@
 export class LanguageServiceTypeResult {
-  int line;
-  int column;
-  int index;
-  int length;
-  string type;
-  string declaration = "";
+  export int line;
+  export int column;
+  export int index;
+  export int length;
+  export string type;
+  export string declaration = "";
 }
 
 export class LanguageServiceDiagnostic {
-  string kind;
-  string text;
-  int line;
-  int column;
-  int index;
-  int length;
+  export string kind;
+  export string text;
+  export int line;
+  export int column;
+  export int index;
+  export int length;
 }
 
 export class LanguageServiceCompletion {
-  string name;
-  string type;
-  string completion; // Uses '$' for where the cursor should be
+  export string name;
+  export string type;
+  export string completion; // Uses '$' for where the cursor should be
 }
 
 export class LanguageService {
