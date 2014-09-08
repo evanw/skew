@@ -5487,10 +5487,12 @@
     Resolver.resolveAsExpressionWithConversion($this, value, $this.cache.boolType, 0);
     if (node.kind === 29) {
       ConstantFolder.foldConstants($this.constantFolder, value);
-      if (!$in.NodeKind.isConstant(value.kind)) {
-        Log.error($this.log, value.range, 'The argument to a compile-time assert must be a constant');
-      } else if (!Node.isTrue(value)) {
-        Log.error($this.log, node.range, 'Assertion failed');
+      if (value.type !== $this.cache.errorType) {
+        if (!$in.NodeKind.isConstant(value.kind)) {
+          Log.error($this.log, value.range, 'The argument to a compile-time assert must be a constant');
+        } else if (!Node.isTrue(value)) {
+          Log.error($this.log, node.range, 'Assertion failed');
+        }
       }
     }
   };

@@ -445,6 +445,9 @@ test("
 assert false;
 assert const true;
 assert const false;
+assert const foo;
+assert const bar;
+import bool bar;
 ", "
 <stdin>:1:1: error: Cannot use this statement here
 assert false;
@@ -452,6 +455,12 @@ assert false;
 <stdin>:3:1: error: Assertion failed
 assert const false;
 ~~~~~~~~~~~~~~~~~~~
+<stdin>:4:14: error: \"foo\" is not declared
+assert const foo;
+             ~~~
+<stdin>:5:14: error: The argument to a compile-time assert must be a constant
+assert const bar;
+             ~~~
 ");
 
 }}

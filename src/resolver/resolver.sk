@@ -2317,10 +2317,12 @@ class Resolver {
     // Constant asserts are evaluated at compile time
     if (node.kind == .ASSERT_CONST) {
       constantFolder.foldConstants(value);
-      if (!value.kind.isConstant()) {
-        semanticErrorNonConstantAssert(log, value.range);
-      } else if (!value.isTrue()) {
-        semanticErrorFalseAssert(log, node.range);
+      if (!value.type.isError(cache)) {
+        if (!value.kind.isConstant()) {
+          semanticErrorNonConstantAssert(log, value.range);
+        } else if (!value.isTrue()) {
+          semanticErrorFalseAssert(log, node.range);
+        }
       }
     }
   }
