@@ -1,12 +1,12 @@
-class FunctionInliningPass {
-  static void run(CallGraph callGraph, CompilerOptions options) {
+namespace FunctionInliningPass {
+  void run(CallGraph callGraph, CompilerOptions options) {
     var graph = InliningGraph(callGraph, options);
     for (var i = 0; i < graph.inliningInfo.length; i++) {
       inlineSymbol(graph, graph.inliningInfo.get(i));
     }
   }
 
-  static void inlineSymbol(InliningGraph graph, InliningInfo info) {
+  void inlineSymbol(InliningGraph graph, InliningInfo info) {
     if (!info.shouldInline) {
       return;
     }
@@ -69,7 +69,7 @@ class FunctionInliningPass {
     }
   }
 
-  static void recursivelyInlineFunctionCalls(InliningGraph graph, Node node) {
+  void recursivelyInlineFunctionCalls(InliningGraph graph, Node node) {
     // Recursively inline child nodes first
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.length; i++) {
@@ -92,7 +92,7 @@ class FunctionInliningPass {
     }
   }
 
-  static void recursivelySubstituteArguments(Node node, List<Symbol> arguments, List<Node> values) {
+  void recursivelySubstituteArguments(Node node, List<Symbol> arguments, List<Node> values) {
     // Substitute the argument if this is an argument name
     if (node.symbol != null) {
       var index = arguments.indexOf(node.symbol);

@@ -3488,69 +3488,7 @@
       }
     }
   };
-  function FunctionInliningPass() {
-  }
-  FunctionInliningPass.run = function(callGraph, options) {
-    var graph = new InliningGraph(callGraph, options);
-    for (var i = 0; i < graph.inliningInfo.length; i = i + 1 | 0) {
-      FunctionInliningPass.inlineSymbol(graph, graph.inliningInfo[i]);
-    }
-  };
-  FunctionInliningPass.inlineSymbol = function(graph, info) {
-    if (!info.shouldInline) {
-      return;
-    }
-    for (var i = 0; i < info.bodyCalls.length; i = i + 1 | 0) {
-      FunctionInliningPass.inlineSymbol(graph, info.bodyCalls[i]);
-    }
-    for (var i = 0; i < info.callSites.length; i = i + 1 | 0) {
-      var callSite = info.callSites[i];
-      if (callSite !== null && callSite.kind === 47) {
-        info.callSites[i] = null;
-        var clone = Node.clone(info.inlineValue);
-        var values = Node.removeChildren(callSite);
-        var value = values.shift();
-        if (info.unusedArguments.length > 0) {
-          var sequence = null;
-          for (var j = 0; j < info.unusedArguments.length; j = j + 1 | 0) {
-            var index = info.$arguments.indexOf(info.unusedArguments[j]);
-            var replacement = values[index];
-            if (!Node.hasNoSideEffects(replacement)) {
-              if (sequence === null) {
-                sequence = [];
-              }
-              sequence.push(replacement);
-            }
-          }
-          if (sequence !== null) {
-            sequence.push(clone);
-            Node.become(callSite, Node.withChildren(new Node(50), sequence));
-            FunctionInliningPass.recursivelySubstituteArguments(callSite, info.$arguments, values);
-            continue;
-          }
-        }
-        Node.become(callSite, clone);
-        FunctionInliningPass.recursivelySubstituteArguments(callSite, info.$arguments, values);
-      }
-    }
-  };
-  FunctionInliningPass.recursivelySubstituteArguments = function(node, $arguments, values) {
-    if (node.symbol !== null) {
-      var index = $arguments.indexOf(node.symbol);
-      if (index >= 0) {
-        Node.replaceWith(node, values[index]);
-        return;
-      }
-    }
-    if (Node.hasChildren(node)) {
-      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        var child = node.children[i];
-        if (child !== null) {
-          FunctionInliningPass.recursivelySubstituteArguments(child, $arguments, values);
-        }
-      }
-    }
-  };
+  var FunctionInliningPass = {};
   function InliningInfo(_0, _1, _2, _3, _4) {
     this.shouldInline = true;
     this.bodyCalls = [];
@@ -3676,74 +3614,7 @@
     }
     return true;
   };
-  function InstanceToStaticPass() {
-  }
-  InstanceToStaticPass.run = function(graph, resolver) {
-    for (var i = 0; i < graph.callInfo.length; i = i + 1 | 0) {
-      var info = graph.callInfo[i];
-      var symbol = info.symbol;
-      var enclosingSymbol = symbol.enclosingSymbol;
-      if (symbol.kind === 15 && (symbol.flags & 8192) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 8192) !== 0 || $in.SymbolKind.isEnum(enclosingSymbol.kind) || resolver.options.convertAllInstanceToStatic && (symbol.flags & 4096) === 0 && (symbol.flags & 128) === 0)) {
-        var thisSymbol = new Symbol('this', 17);
-        thisSymbol.type = enclosingSymbol.type;
-        var replacedThis = InstanceToStaticPass.recursivelyReplaceThis(symbol.node.children[2], thisSymbol);
-        symbol.kind = 14;
-        symbol.flags |= 64;
-        if (replacedThis) {
-          var $arguments = Type.argumentTypes(symbol.type);
-          $arguments.unshift(enclosingSymbol.type);
-          symbol.type = TypeCache.functionType(resolver.cache, symbol.type.relevantTypes[0], $arguments);
-          thisSymbol.node = Node.withSymbol(Node.withChildren(new Node(16), [Node.withSymbol(Node.withContent(new Node(34), new StringContent('this')), thisSymbol), Node.withType(new Node(35), thisSymbol.type), null]), thisSymbol);
-          Node.insertChild(symbol.node.children[1], 0, thisSymbol.node);
-          resolver.allSymbols.push(thisSymbol);
-        }
-        for (var j = 0; j < info.callSites.length; j = j + 1 | 0) {
-          var callSite = info.callSites[j];
-          var value = callSite.children[0];
-          var target = null;
-          var name = null;
-          if (value.kind === 45) {
-            target = Node.replaceWith(value.children[0], null);
-            name = Node.replaceWith(value.children[1], null);
-          } else {
-            target = new Node(36);
-            name = Node.replaceWith(value, null);
-          }
-          Node.replaceChild(callSite, 0, name);
-          if (replacedThis) {
-            Node.insertChild(callSite, 1, target);
-          } else if (!Node.hasNoSideEffects(target)) {
-            var children = Node.removeChildren(callSite);
-            var clone = Node.withChildren(Node.clone(callSite), children);
-            Node.become(callSite, Node.withChildren(new Node(50), [target, clone]));
-          }
-        }
-      }
-    }
-  };
-  InstanceToStaticPass.createThis = function(symbol) {
-    return Node.withType(Node.withSymbol(Node.withContent(new Node(34), new StringContent(symbol.name)), symbol), symbol.type);
-  };
-  InstanceToStaticPass.recursivelyReplaceThis = function(node, symbol) {
-    if (node.kind === 36) {
-      Node.become(node, Node.withRange(InstanceToStaticPass.createThis(symbol), node.range));
-      return true;
-    }
-    if (Node.isNameExpression(node) && (node.symbol.kind === 15 || node.symbol.kind === 19)) {
-      Node.become(node, Node.withRange(Node.withType(Node.withChildren(new Node(45), [InstanceToStaticPass.createThis(symbol), Node.clone(node)]), node.type), node.range));
-      return true;
-    }
-    var replacedThis = false;
-    if (Node.hasChildren(node)) {
-      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        var child = node.children[i];
-        if (child !== null && InstanceToStaticPass.recursivelyReplaceThis(child, symbol)) {
-          replacedThis = true;
-        }
-      }
-    }
-    return replacedThis;
-  };
+  var InstanceToStaticPass = {};
   function Member(_0) {
     this.type = null;
     this.dependency = null;
@@ -8715,6 +8586,133 @@
       Log.note(log, previous, 'The previous initialization is here');
     }
   }
+  FunctionInliningPass.run = function(callGraph, options) {
+    var graph = new InliningGraph(callGraph, options);
+    for (var i = 0; i < graph.inliningInfo.length; i = i + 1 | 0) {
+      FunctionInliningPass.inlineSymbol(graph, graph.inliningInfo[i]);
+    }
+  };
+  FunctionInliningPass.inlineSymbol = function(graph, info) {
+    if (!info.shouldInline) {
+      return;
+    }
+    for (var i = 0; i < info.bodyCalls.length; i = i + 1 | 0) {
+      FunctionInliningPass.inlineSymbol(graph, info.bodyCalls[i]);
+    }
+    for (var i = 0; i < info.callSites.length; i = i + 1 | 0) {
+      var callSite = info.callSites[i];
+      if (callSite !== null && callSite.kind === 47) {
+        info.callSites[i] = null;
+        var clone = Node.clone(info.inlineValue);
+        var values = Node.removeChildren(callSite);
+        var value = values.shift();
+        if (info.unusedArguments.length > 0) {
+          var sequence = null;
+          for (var j = 0; j < info.unusedArguments.length; j = j + 1 | 0) {
+            var index = info.$arguments.indexOf(info.unusedArguments[j]);
+            var replacement = values[index];
+            if (!Node.hasNoSideEffects(replacement)) {
+              if (sequence === null) {
+                sequence = [];
+              }
+              sequence.push(replacement);
+            }
+          }
+          if (sequence !== null) {
+            sequence.push(clone);
+            Node.become(callSite, Node.withChildren(new Node(50), sequence));
+            FunctionInliningPass.recursivelySubstituteArguments(callSite, info.$arguments, values);
+            continue;
+          }
+        }
+        Node.become(callSite, clone);
+        FunctionInliningPass.recursivelySubstituteArguments(callSite, info.$arguments, values);
+      }
+    }
+  };
+  FunctionInliningPass.recursivelySubstituteArguments = function(node, $arguments, values) {
+    if (node.symbol !== null) {
+      var index = $arguments.indexOf(node.symbol);
+      if (index >= 0) {
+        Node.replaceWith(node, values[index]);
+        return;
+      }
+    }
+    if (Node.hasChildren(node)) {
+      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+        var child = node.children[i];
+        if (child !== null) {
+          FunctionInliningPass.recursivelySubstituteArguments(child, $arguments, values);
+        }
+      }
+    }
+  };
+  InstanceToStaticPass.run = function(graph, resolver) {
+    for (var i = 0; i < graph.callInfo.length; i = i + 1 | 0) {
+      var info = graph.callInfo[i];
+      var symbol = info.symbol;
+      var enclosingSymbol = symbol.enclosingSymbol;
+      if (symbol.kind === 15 && (symbol.flags & 8192) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 8192) !== 0 || $in.SymbolKind.isEnum(enclosingSymbol.kind) || resolver.options.convertAllInstanceToStatic && (symbol.flags & 4096) === 0 && (symbol.flags & 128) === 0)) {
+        var thisSymbol = new Symbol('this', 17);
+        thisSymbol.type = enclosingSymbol.type;
+        var replacedThis = InstanceToStaticPass.recursivelyReplaceThis(symbol.node.children[2], thisSymbol);
+        symbol.kind = 14;
+        symbol.flags |= 64;
+        if (replacedThis) {
+          var $arguments = Type.argumentTypes(symbol.type);
+          $arguments.unshift(enclosingSymbol.type);
+          symbol.type = TypeCache.functionType(resolver.cache, symbol.type.relevantTypes[0], $arguments);
+          thisSymbol.node = Node.withSymbol(Node.withChildren(new Node(16), [Node.withSymbol(Node.withContent(new Node(34), new StringContent('this')), thisSymbol), Node.withType(new Node(35), thisSymbol.type), null]), thisSymbol);
+          Node.insertChild(symbol.node.children[1], 0, thisSymbol.node);
+          resolver.allSymbols.push(thisSymbol);
+        }
+        for (var j = 0; j < info.callSites.length; j = j + 1 | 0) {
+          var callSite = info.callSites[j];
+          var value = callSite.children[0];
+          var target = null;
+          var name = null;
+          if (value.kind === 45) {
+            target = Node.replaceWith(value.children[0], null);
+            name = Node.replaceWith(value.children[1], null);
+          } else {
+            target = new Node(36);
+            name = Node.replaceWith(value, null);
+          }
+          Node.replaceChild(callSite, 0, name);
+          if (replacedThis) {
+            Node.insertChild(callSite, 1, target);
+          } else if (!Node.hasNoSideEffects(target)) {
+            var children = Node.removeChildren(callSite);
+            var clone = Node.withChildren(Node.clone(callSite), children);
+            Node.become(callSite, Node.withChildren(new Node(50), [target, clone]));
+          }
+        }
+      }
+    }
+  };
+  InstanceToStaticPass.createThis = function(symbol) {
+    return Node.withType(Node.withSymbol(Node.withContent(new Node(34), new StringContent(symbol.name)), symbol), symbol.type);
+  };
+  InstanceToStaticPass.recursivelyReplaceThis = function(node, symbol) {
+    if (node.kind === 36) {
+      Node.become(node, Node.withRange(InstanceToStaticPass.createThis(symbol), node.range));
+      return true;
+    }
+    if (Node.isNameExpression(node) && (node.symbol.kind === 15 || node.symbol.kind === 19)) {
+      Node.become(node, Node.withRange(Node.withType(Node.withChildren(new Node(45), [InstanceToStaticPass.createThis(symbol), Node.clone(node)]), node.type), node.range));
+      return true;
+    }
+    var replacedThis = false;
+    if (Node.hasChildren(node)) {
+      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+        var child = node.children[i];
+        if (child !== null && InstanceToStaticPass.recursivelyReplaceThis(child, symbol)) {
+          replacedThis = true;
+        }
+      }
+    }
+    return replacedThis;
+  };
   function createNameToSymbolFlag() {
     if (nameToSymbolFlag !== null) {
       return;

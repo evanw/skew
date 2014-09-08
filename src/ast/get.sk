@@ -1,3 +1,5 @@
+import class console{import static void log(string t);}
+
 in Node {
   Node fileBlock() {
     assert kind == .FILE;
