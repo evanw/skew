@@ -135,7 +135,7 @@ int fn() foo = =>;
 test("
 void foo();
 ", "
-<stdin>:1:6: error: This function is missing an implementation
+<stdin>:1:6: error: Use the \"import\" modifier to import functions
 void foo();
      ~~~
 ");

@@ -317,7 +317,7 @@ void semanticErrorFunctionMustBeAbstract(Log log, Range range) {
 }
 
 void semanticErrorUnimplementedFunction(Log log, Range range) {
-  log.error(range, "This function is missing an implementation");
+  log.error(range, "Use the \"import\" modifier to import functions");
 }
 
 void semanticErrorNonConstantAssert(Log log, Range range) {

@@ -5214,7 +5214,7 @@
       if (symbol.kind === 15) {
         Log.error($this.log, node.children[0].range, 'Abstract functions must use the "virtual" modifier');
       } else {
-        Log.error($this.log, node.children[0].range, 'This function is missing an implementation');
+        Log.error($this.log, node.children[0].range, 'Use the "import" modifier to import functions');
       }
     }
     if (node.kind === 14) {
