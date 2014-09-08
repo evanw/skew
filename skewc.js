@@ -917,7 +917,7 @@
         $this.result += '"' + node.content.value + '"';
         break;
       case 0:
-        $this.result += node.content.value;
+        $this.result += '"' + node.content.value + '"';
         break;
       case 2:
         $this.result += '"' + node.content.value + '"';

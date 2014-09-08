@@ -21,7 +21,7 @@ class UnionFind {
 
   int find(int index) {
     assert index >= 0 && index < parents.length;
-    int parent = parents.get(index);
+    var parent = parents.get(index);
     if (parent != index) {
       parent = find(parent);
       parents.set(index, parent);

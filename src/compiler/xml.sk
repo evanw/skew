@@ -39,7 +39,7 @@ export namespace xml {
         result += " content=";
         switch (node.content.type()) {
           case .INT { result += simpleQuote(node.asInt().toString()); }
-          case .BOOL { result += node.asBool(); }
+          case .BOOL { result += simpleQuote(node.asBool().toString()); }
           case .DOUBLE { result += simpleQuote(node.asDouble().toString()); }
           case .STRING { result += quoteString(node.asString(), '"'); }
         }

@@ -68,7 +68,7 @@ class Collector {
     }
 
     if (sort == .SORT_BY_INHERITANCE_AND_VALUE && left.isStruct()) {
-      List<Member> members = right.members.values();
+      var members = right.members.values();
       if (members != null) {
         for (var i = 0; i < members.length; i++) {
           if (members.get(i).type == left) {

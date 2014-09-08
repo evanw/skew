@@ -328,7 +328,7 @@ class ConstantFolder {
     // more concise and always faster (or at least never slower) than the
     // alternative. Division can't be replaced by a right-shift operation
     // because that would lead to incorrect results for negative numbers.
-    int shift = logBase2(value);
+    var shift = logBase2(value);
     if (shift != -1) {
       constant.content = IntContent(shift);
       node.kind = .SHIFT_LEFT;

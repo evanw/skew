@@ -164,8 +164,8 @@ class TypeCache {
         if (parameterizedType != null) {
           List<Type> merged = [];
           for (var j = 0; j < parameterizedType.substitutions.length; j++) {
-            Symbol parameter = parameterizedType.symbol.parameters.get(j);
-            int index = symbol.parameters.indexOf(parameter);
+            var parameter = parameterizedType.symbol.parameters.get(j);
+            var index = symbol.parameters.indexOf(parameter);
             merged.push(index >= 0 ? substitutions.get(index) : substitute(parameterizedType.substitutions.get(j), symbol.parameters, substitutions));
           }
           clone.parameterizedType = parameterize(parameterizedType.symbol.type, merged);

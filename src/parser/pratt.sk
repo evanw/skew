@@ -134,8 +134,8 @@ class Pratt {
 
   void prefix(TokenKind kind, int precedence, PrefixCallback callback) {
     parselet(kind, 0).prefix = context => {
-      Token token = context.next();
-      Node value = pratt.parse(context, precedence);
+      var token = context.next();
+      var value = pratt.parse(context, precedence);
       return value != null ? callback(context, token, value) : null;
     };
   }

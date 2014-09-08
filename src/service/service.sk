@@ -48,8 +48,8 @@ export class LanguageService {
     // Construct diagnostics
     List<LanguageServiceDiagnostic> diagnostics = [];
     for (var i = 0; i < compiler.log.diagnostics.length; i++) {
-      Diagnostic diagnostic = compiler.log.diagnostics.get(i);
-      Range range = diagnostic.range;
+      var diagnostic = compiler.log.diagnostics.get(i);
+      var range = diagnostic.range;
       if (range.source == previousSource) {
         var start = range.source.indexToLineColumn(range.start);
         string type;
@@ -91,7 +91,7 @@ namespace service {
       // entire range of the initializer expression and hides the arguments
       int i;
       for (i = node.children.length - 1; i >= 0; i--) {
-        Node child = node.children.get(i);
+        var child = node.children.get(i);
         if (child != null && child.range.source == source && child.range.touches(index)) {
           node = child;
           break;

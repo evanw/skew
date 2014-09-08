@@ -151,7 +151,7 @@ namespace js {
 
         // Create the source map as another file alongside the output
         else {
-          string name = options.outputFile + ".map";
+          var name = options.outputFile + ".map";
           currentSource.contents = currentSource.contents +
             "/# sourceMappingURL=" + splitPath(name).entry + "\n";
           return [currentSource, Source(name, generator.toString())];
