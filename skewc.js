@@ -4612,7 +4612,9 @@
       Resolver.unexpectedModifierIfPresent($this, symbol, 128, 'outside an object declaration');
       Resolver.unexpectedModifierIfPresent($this, symbol, 32, 'outside an object declaration');
     } else {
-      if (!$in.SymbolKind.isInstance(symbol.kind)) {
+      if (enclosingSymbol.kind === 12) {
+        Resolver.unexpectedModifierIfPresent($this, symbol, 128, 'inside a struct');
+      } else if (!$in.SymbolKind.isInstance(symbol.kind)) {
         Resolver.unexpectedModifierIfPresent($this, symbol, 128, 'on a non-instance function');
       }
       Resolver.unexpectedModifierIfPresent($this, symbol, 32, "on a function that doesn't override anything");
@@ -5185,17 +5187,17 @@
     $this.context.symbolForThis = oldSymbolForThis;
   };
   Resolver.resolveFunction = function($this, node) {
+    var symbol = node.symbol;
     Resolver.checkDeclarationLocation($this, node, 1);
-    Resolver.initializeSymbol($this, node.symbol);
+    Resolver.initializeSymbol($this, symbol);
     var oldFunctionSymbol = $this.context.functionSymbol;
-    $this.context.functionSymbol = node.symbol;
+    $this.context.functionSymbol = symbol;
     var block = node.children[2];
     if (block !== null) {
       var oldResultType = $this.resultType;
-      if ((node.symbol.flags & 8192) !== 0) {
+      if ((symbol.flags & 8192) !== 0) {
         Log.error($this.log, block.range, 'Imported functions cannot have an implementation');
       }
-      var symbol = node.symbol;
       if (symbol.type === $this.cache.errorType) {
         $this.resultType = $this.cache.errorType;
       } else if (symbol.kind === 16) {
@@ -5205,12 +5207,18 @@
       }
       Resolver.resolve($this, block, null);
       if ($this.resultType !== $this.cache.errorType && $this.resultType !== $this.cache.voidType && !Node.blockAlwaysEndsWithReturn(block)) {
-        Log.error($this.log, node.children[0].range, 'All control paths for "' + node.symbol.name + '" must return a value of type "' + Type.toString($this.resultType) + '"');
+        Log.error($this.log, node.children[0].range, 'All control paths for "' + symbol.name + '" must return a value of type "' + Type.toString($this.resultType) + '"');
       }
       $this.resultType = oldResultType;
+    } else if ((symbol.flags & 8192) === 0 && (symbol.flags & 128) === 0) {
+      if (symbol.kind === 15) {
+        Log.error($this.log, node.children[0].range, 'Abstract functions must use the "virtual" modifier');
+      } else {
+        Log.error($this.log, node.children[0].range, 'This function is missing an implementation');
+      }
     }
     if (node.kind === 14) {
-      var overriddenMember = node.symbol.overriddenMember;
+      var overriddenMember = symbol.overriddenMember;
       var overriddenType = $this.cache.errorType;
       if (overriddenMember !== null) {
         Resolver.initializeMember($this, overriddenMember);
@@ -5244,7 +5252,7 @@
       if ((superInitializer !== null || memberInitializers.children.length > 0) && block === null) {
         Log.error($this.log, Range.span((superInitializer !== null ? superInitializer : memberInitializers.children[0]).range, (memberInitializers.children.length < 1 ? superInitializer : Node.lastChild(memberInitializers)).range), 'An abstract constructor must not have initializer list');
       }
-      var enclosingSymbol = node.symbol.enclosingSymbol;
+      var enclosingSymbol = symbol.enclosingSymbol;
       if ((enclosingSymbol.flags & 8192) === 0) {
         var members = StringMap.values(enclosingSymbol.type.members);
         var index = 0;
@@ -5259,7 +5267,7 @@
               $this.context.scope = node.scope.lexicalParent;
               $this.context.functionSymbol = null;
               Resolver.resolve($this, memberSymbol.node, null);
-              $this.context.functionSymbol = node.symbol;
+              $this.context.functionSymbol = symbol;
               $this.context.scope = oldScope;
               Node.replaceWith(value, new Node(49));
               Node.insertChild(memberInitializers, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(5), [Node.withType(Node.withSymbol(Node.withContent(new Node(34), new StringContent(memberSymbol.name)), memberSymbol), member.type), value]));

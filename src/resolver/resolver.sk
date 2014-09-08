@@ -1157,7 +1157,8 @@ class Resolver {
 
     // Validate modifiers when nothing is being overridden
     else {
-      if (!symbol.kind.isInstance()) unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a non-instance function");
+      if (enclosingSymbol.kind == .STRUCT) unexpectedModifierIfPresent(symbol, .VIRTUAL, "inside a struct");
+      else if (!symbol.kind.isInstance()) unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a non-instance function");
       unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a function that doesn't override anything");
 
       // If "override" is used, imply "virtual" to mask further errors
@@ -1926,15 +1927,17 @@ class Resolver {
   }
 
   void resolveFunction(Node node) {
+    var symbol = node.symbol;
+
     // Sanity check
-    assert node.symbol.enclosingSymbol == null || !node.symbol.enclosingSymbol.kind.isTypeWithInstances() ||
-      context.symbolForThis != null && context.symbolForThis == node.symbol.enclosingSymbol;
+    assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||
+      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol;
 
     checkDeclarationLocation(node, .ALLOW_TOP_OR_OBJECT_LEVEL);
-    initializeSymbol(node.symbol);
+    initializeSymbol(symbol);
 
     var oldFunctionSymbol = context.functionSymbol;
-    context.functionSymbol = node.symbol;
+    context.functionSymbol = symbol;
 
     // Resolve the function block
     var block = node.functionBlock();
@@ -1942,13 +1945,12 @@ class Resolver {
       var oldResultType = resultType;
 
       // Imported functions cannot have an implementation
-      if (node.symbol.isImport()) {
+      if (symbol.isImport()) {
         semanticErrorCannotImplementImportedFunction(log, block.range);
       }
 
       // Special-case the return type of constructors to void for the purpose
       // of type conversions in return statements inside the constructor
-      var symbol = node.symbol;
       if (symbol.type.isError(cache)) resultType = cache.errorType;
       else if (symbol.kind.isConstructor()) resultType = cache.voidType;
       else resultType = symbol.type.resultType();
@@ -1956,16 +1958,25 @@ class Resolver {
 
       // Missing a return statement is an error
       if (!resultType.isError(cache) && !resultType.isVoid(cache) && !block.blockAlwaysEndsWithReturn()) {
-        semanticErrorMissingReturn(log, node.declarationName().range, node.symbol.name, resultType);
+        semanticErrorMissingReturn(log, node.declarationName().range, symbol.name, resultType);
       }
 
       resultType = oldResultType;
     }
 
+    // All abstract functions must be virtual
+    else if (!symbol.isImport() && !symbol.isVirtual()) {
+      if (symbol.kind == .INSTANCE_FUNCTION) {
+        semanticErrorFunctionMustBeAbstract(log, node.declarationName().range);
+      } else {
+        semanticErrorUnimplementedFunction(log, node.declarationName().range);
+      }
+    }
+
     // Resolve the initializer list
     if (node.kind == .CONSTRUCTOR) {
       // Get the base constructor type
-      var overriddenMember = node.symbol.overriddenMember;
+      var overriddenMember = symbol.overriddenMember;
       var overriddenType = cache.errorType;
       if (overriddenMember != null) {
         initializeMember(overriddenMember);
@@ -2017,7 +2028,7 @@ class Resolver {
       // Move the initial values for all member variables to initializers. The
       // order isn't guaranteed here because extension blocks can add member
       // variables as long as they are initialized, but those are unordered.
-      var enclosingSymbol = node.symbol.enclosingSymbol;
+      var enclosingSymbol = symbol.enclosingSymbol;
       if (!enclosingSymbol.isImport()) {
         var members = enclosingSymbol.type.members.values();
         var index = 0;
@@ -2034,7 +2045,7 @@ class Resolver {
               context.scope = node.scope.lexicalParent;
               context.functionSymbol = null;
               resolve(memberSymbol.node, null);
-              context.functionSymbol = node.symbol;
+              context.functionSymbol = symbol;
               context.scope = oldScope;
 
               // Replace the value with an error expression instead of with null

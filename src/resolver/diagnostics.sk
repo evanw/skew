@@ -312,6 +312,14 @@ void semanticErrorCannotImplementImportedFunction(Log log, Range range) {
   log.error(range, "Imported functions cannot have an implementation");
 }
 
+void semanticErrorFunctionMustBeAbstract(Log log, Range range) {
+  log.error(range, "Abstract functions must use the \"virtual\" modifier");
+}
+
+void semanticErrorUnimplementedFunction(Log log, Range range) {
+  log.error(range, "This function is missing an implementation");
+}
+
 void semanticErrorNonConstantAssert(Log log, Range range) {
   log.error(range, "The argument to a compile-time assert must be a constant");
 }

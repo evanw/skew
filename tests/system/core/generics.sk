@@ -55,7 +55,7 @@ class Foo<A is B, B> {}
 
 test("
 interface IFoo {
-  bool foo(int bar);
+  virtual bool foo(int bar);
 }
 class Foo<T is IFoo> {
   int foo(T value) {
@@ -137,7 +137,7 @@ Foo<bool, int> bar = foo;
 ");
 
 test("
-class Foo<A, B> { A foo(B foo); }
+class Foo<A, B> { virtual A foo(B foo); }
 bool foo(Foo<int, bool> foo) { return foo.foo(0); }
 ", "
 <stdin>:2:47: error: Cannot convert from type \"int\" to type \"bool\" without a cast
@@ -166,7 +166,7 @@ bool bar = Baz(0).foo(0);
 ");
 
 test("
-interface IFoo<T> { T foo(); }
+interface IFoo<T> { virtual T foo(); }
 class Foo : IFoo<int>, IFoo<float> {}
 ", "
 <stdin>:2:7: error: Member \"Foo.foo\" has an ambiguous inherited type, could be type \"int fn()\" or type \"float fn()\"
@@ -175,7 +175,7 @@ class Foo : IFoo<int>, IFoo<float> {}
 ");
 
 test("
-class Foo<T> { T foo(); }
+class Foo<T> { virtual T foo(); }
 bool foo = Foo.foo();
 ", "
 <stdin>:2:16: error: Cannot access instance member \"foo\" from a static context
@@ -267,7 +267,7 @@ int bar = Foo<int>(0);
 
 test("
 class Foo<A, B is IFoo<A>> {}
-interface IFoo<T> { T foo(); }
+interface IFoo<T> { virtual T foo(); }
 Foo<int, IFoo<bool>> foo;
 ", "
 <stdin>:3:10: error: Cannot convert from type \"IFoo<bool>\" to type \"IFoo<int>\"
@@ -277,7 +277,7 @@ Foo<int, IFoo<bool>> foo;
 
 test("
 class Foo<A is IFoo<B>, B> {}
-interface IFoo<T> { T foo(); }
+interface IFoo<T> { virtual T foo(); }
 Foo<IFoo<bool>, int> foo;
 ", "
 <stdin>:3:5: error: Cannot convert from type \"IFoo<bool>\" to type \"IFoo<int>\"
@@ -287,7 +287,7 @@ Foo<IFoo<bool>, int> foo;
 
 test("
 class Foo<A, B is IFoo<A>, C is IFoo<B>> {}
-interface IFoo<T> { T foo(); }
+interface IFoo<T> { virtual T foo(); }
 Foo<int, bool, float> a;
 Foo<int, IFoo<int>, float> b;
 Foo<int, IFoo<int>, IFoo<float>> c;
@@ -306,7 +306,7 @@ Foo<int, IFoo<int>, IFoo<float>> c;
 
 test("
 class Foo<C is IFoo<B>, B is IFoo<A>, A> {}
-interface IFoo<T> { T foo(); }
+interface IFoo<T> { virtual T foo(); }
 Foo<float, bool, int> a;
 Foo<float, IFoo<int>, int> b;
 Foo<IFoo<float>, IFoo<int>, int> c;

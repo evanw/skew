@@ -117,8 +117,8 @@ in Foo { class Bar {} }
 ");
 
 test("
-interface A { void foo(); }
-interface B { void foo(); }
+interface A { virtual void foo(); }
+interface B { virtual void foo(); }
 interface C : A, B {}
 int foo(C foo) { return foo.foo(); }
 ", "
@@ -130,8 +130,8 @@ int foo(C foo) { return foo.foo(); }
 test("
 void foo(C foo) { foo.foo(); }
 interface C : A, B {}
-interface A { void foo(); }
-interface B { int foo(); }
+interface A { virtual void foo(); }
+interface B { virtual int foo(); }
 ", "
 <stdin>:2:11: error: Member \"C.foo\" has an ambiguous inherited type, could be type \"void fn()\" or type \"int fn()\"
 interface C : A, B {}
@@ -142,12 +142,12 @@ test("
 interface G : C, F {}
 void foo(G foo) { foo.foo(); }
 
-interface A { void foo(); }
-interface B { int foo(); }
+interface A { virtual void foo(); }
+interface B { virtual int foo(); }
 interface C : A, B {}
 
-interface D { bool foo(); }
-interface E { float foo(); }
+interface D { virtual bool foo(); }
+interface E { virtual float foo(); }
 interface F : E, D {}
 ", "
 <stdin>:6:11: error: Member \"C.foo\" has an ambiguous inherited type, could be type \"void fn()\" or type \"int fn()\"
@@ -162,12 +162,12 @@ test("
 void foo(G foo) { foo.foo(); }
 interface G : C, F {}
 
-interface A { int foo(); }
-interface B { int foo(); }
+interface A { virtual int foo(); }
+interface B { virtual int foo(); }
 interface C : A, B {}
 
-interface D { bool foo(); }
-interface E { bool foo(); }
+interface D { virtual bool foo(); }
+interface E { virtual bool foo(); }
 interface F : E, D {}
 ", "
 <stdin>:2:11: error: Member \"G.foo\" has an ambiguous inherited type, could be type \"int fn()\" or type \"bool fn()\"
@@ -176,8 +176,8 @@ interface G : C, F {}
 ");
 
 test("
-interface Foo { bool foo(); }
-interface Bar { int foo(); }
+interface Foo { virtual bool foo(); }
+interface Bar { virtual int foo(); }
 interface Baz : Foo, Bar {}
 ", "
 <stdin>:3:11: error: Member \"Baz.foo\" has an ambiguous inherited type, could be type \"bool fn()\" or type \"int fn()\"
@@ -189,7 +189,7 @@ test("
 interface Foo {}
 in Foo { namespace foo {} }
 interface Bar {}
-in Bar { int foo(); }
+in Bar { virtual int foo(); }
 interface Baz : Foo, Bar {}
 ", "
 <stdin>:5:11: error: Member \"Baz.foo\" has an ambiguous inherited type, could be type \"Foo.foo\" or type \"int fn()\"
