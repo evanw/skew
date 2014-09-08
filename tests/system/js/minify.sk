@@ -2,6 +2,15 @@ namespace js { void testMinify() {
 
 testMinifyJS("
 export class Foo {
+  Foo foo = null;
+  Foo bar = null;
+}
+", "
+(function(){Foo=function(){this.a=this.b=null}}());
+");
+
+testMinifyJS("
+export class Foo {
   var xa = 0;
   var xb = false;
   var xc = 0;
@@ -346,6 +355,14 @@ export int foo(bool a) {
 }
 ", "
 (function(){foo=function(a){return a?2:1}}());
+");
+
+testMinifyJS("
+export int foo(int x, int fn() y, int fn() z) {
+  return x == 0 ? y() : z();
+}
+", "
+(function(){foo=function(a,b,c){return a?c():b()}}());
 ");
 
 testMinifyJS("

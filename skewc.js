@@ -2353,10 +2353,6 @@
   };
   js.Patcher.peepholeMangleBoolean = function($this, node, canSwap) {
     var kind = node.kind;
-    if (kind === 58 && canSwap === 0) {
-      Node.become(node, Node.replaceWith(node.children[0], null));
-      return 0;
-    }
     if (kind === 72 || kind === 82) {
       var left = node.children[0];
       var right = node.children[1];
@@ -2377,6 +2373,10 @@
     } else if (kind === 79 || kind === 80) {
       js.Patcher.peepholeMangleBoolean($this, node.children[0], 1);
       js.Patcher.peepholeMangleBoolean($this, node.children[1], 1);
+    }
+    if (node.kind === 58 && canSwap === 0) {
+      Node.become(node, Node.replaceWith(node.children[0], null));
+      return 0;
     }
     return 1;
   };
@@ -2573,6 +2573,12 @@
       case 45:
         return left.symbol === right.symbol && left.children[1].content.value === right.children[1].content.value && js.Patcher.looksTheSame($this, left.children[0], right.children[0]);
       }
+    }
+    if (left.kind === 53) {
+      return js.Patcher.looksTheSame($this, left.children[1], right);
+    }
+    if (right.kind === 53) {
+      return js.Patcher.looksTheSame($this, left, right.children[1]);
     }
     return false;
   };

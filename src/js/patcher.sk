@@ -308,12 +308,6 @@ namespace js {
     BooleanSwap peepholeMangleBoolean(Node node, BooleanSwap canSwap) {
       var kind = node.kind;
 
-      // "if (!a) b; else c;" => "if (a) c; else b;"
-      if (kind == .NOT && canSwap == .SWAP) {
-        node.become(node.unaryValue().replaceWith(null));
-        return .SWAP;
-      }
-
       if (kind == .EQUAL || kind == .NOT_EQUAL) {
         var left = node.binaryLeft();
         var right = node.binaryRight();
@@ -349,6 +343,13 @@ namespace js {
       else if (kind == .LOGICAL_AND || kind == .LOGICAL_OR) {
         peepholeMangleBoolean(node.binaryLeft(), .NO_SWAP);
         peepholeMangleBoolean(node.binaryRight(), .NO_SWAP);
+      }
+
+      // "if (!a) b; else c;" => "if (a) c; else b;"
+      // "a == 0 ? b : c;" => "a ? c : b;" (NOT must come after EQUAL since EQUAL may turn into NOT)
+      if (node.kind == .NOT && canSwap == .SWAP) {
+        node.become(node.unaryValue().replaceWith(null));
+        return .SWAP;
       }
 
       return .NO_SWAP;
@@ -592,6 +593,10 @@ namespace js {
           case .DOT { return left.symbol == right.symbol && left.dotName().asString() == right.dotName().asString() && looksTheSame(left.dotTarget(), right.dotTarget()); }
         }
       }
+
+      // Null literals are always implicitly casted, so unwrap implicit casts
+      if (left.kind == .IMPLICIT_CAST) return looksTheSame(left.castValue(), right);
+      if (right.kind == .IMPLICIT_CAST) return looksTheSame(left, right.castValue());
       return false;
     }
 
