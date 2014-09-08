@@ -1,4 +1,10 @@
 export namespace lisp {
+  export string dump(Node node) {
+    var visitor = DumpVisitor();
+    visitor.visit(node);
+    return visitor.result;
+  }
+
   class Emitter : IEmitter {
     CompilerOptions options;
 
@@ -17,12 +23,6 @@ export namespace lisp {
       }
       return outputs;
     }
-  }
-
-  export string dump(Node node) {
-    var visitor = DumpVisitor();
-    visitor.visit(node);
-    return visitor.result;
   }
 
   class DumpVisitor {

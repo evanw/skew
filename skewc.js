@@ -763,7 +763,7 @@
       }
     }
   };
-  var json = {};
+  json = {};
   json.Emitter = function(_0) {
     this.options = _0;
   };
@@ -882,7 +882,7 @@
     }
     $this.result += ')';
   };
-  var xml = {};
+  xml = {};
   xml.Emitter = function(_0) {
     this.options = _0;
   };
