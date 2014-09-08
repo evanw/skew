@@ -453,6 +453,10 @@ namespace js {
             child.replaceWith(combined);
             child = combined;
           }
+          var value = child.expressionValue();
+          if (value.kind == .SEQUENCE) {
+            peepholeMangleSequence(value);
+          }
         }
 
         // "void foo() { if (a) return; b(); c(); }" => "void foo() { if (!a) { b(); c(); } }"
@@ -528,6 +532,42 @@ namespace js {
               break;
             }
 
+            i--;
+          }
+        }
+      }
+    }
+
+    Node assignSourceIfNoSideEffects(Node node) {
+      if (node.kind == .ASSIGN && node.binaryLeft().hasNoSideEffects()) {
+        var right = node.binaryRight();
+        return right.hasNoSideEffects() ? right : null;
+      }
+
+      if (node.kind == .ASSIGN_INDEX && node.tertiaryLeft().hasNoSideEffects() && node.tertiaryMiddle().hasNoSideEffects()) {
+        var right = node.tertiaryRight();
+        return right.hasNoSideEffects() ? right : null;
+      }
+
+      return null;
+    }
+
+    void peepholeMangleSequence(Node node) {
+      assert node.kind == .SEQUENCE;
+
+      // "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
+      for (var i = node.children.length - 1; i > 0; i--) {
+        var current = node.children.get(i);
+        var currentRight = assignSourceIfNoSideEffects(current);
+        if (currentRight != null) {
+          while (i > 0) {
+            var previous = node.children.get(i - 1);
+            var previousRight = assignSourceIfNoSideEffects(previous);
+            if (previousRight == null || !looksTheSame(previousRight, currentRight)) {
+              break;
+            }
+            previousRight.replaceWith(current.remove());
+            current = previous;
             i--;
           }
         }

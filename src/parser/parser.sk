@@ -474,7 +474,8 @@ Node parseFor(ParserContext context) {
           var body = parseBlockOrStatement(context, .NORMAL); if (body == null) return null;
           var variables = setup.clusterVariables();
           if (variables.length > 1) syntaxErrorBadForEach(context.log, setup.range);
-          var value = Node.createVariable(variables.get(0).declarationName().remove(), setup.clusterType().remove(), null);
+          var name = variables.get(0).declarationName().remove();
+          var value = Node.createVariable(name, setup.clusterType().remove(), null).withRange(name.range);
           return Node.createForEach(value, values, body).withRange(context.spanSince(token.range));
         }
       } else if (!context.peek(.SEMICOLON)) {

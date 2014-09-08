@@ -293,11 +293,13 @@
       return Node.hasNoSideEffects($this.children[0]) && Node.hasNoSideEffects($this.children[1]) && Node.hasNoSideEffects($this.children[2]);
     case 45:
       return Node.hasNoSideEffects($this.children[0]);
+    case 55:
+      return Node.hasNoSideEffects($this.children[0]);
     default:
       if ($in.NodeKind.isBinaryOperator($this.kind) && !$in.NodeKind.isBinaryStorageOperator($this.kind)) {
         return Node.hasNoSideEffects($this.children[0]) && Node.hasNoSideEffects($this.children[1]);
       }
-      if ($in.NodeKind.isUnaryOperator($this.kind) && !$in.NodeKind.isUnaryStorageOperator($this.kind)) {
+      if ($in.NodeKind.isUnaryOperator($this.kind) && !$in.NodeKind.isUnaryStorageOperator($this.kind) && $this.kind !== 59) {
         return Node.hasNoSideEffects($this.children[0]);
       }
       return false;
@@ -797,6 +799,9 @@
       case 1:
         $this.result += node.content.value;
         break;
+      case 0:
+        $this.result += node.content.value;
+        break;
       case 2:
         $this.result += node.content.value;
         break;
@@ -855,6 +860,9 @@
       case 1:
         $this.result += ' ' + node.content.value;
         break;
+      case 0:
+        $this.result += ' ' + node.content.value;
+        break;
       case 2:
         $this.result += ' ' + node.content.value;
         break;
@@ -907,6 +915,9 @@
       switch (node.content.type()) {
       case 1:
         $this.result += '"' + node.content.value + '"';
+        break;
+      case 0:
+        $this.result += node.content.value;
         break;
       case 2:
         $this.result += '"' + node.content.value + '"';
@@ -2447,6 +2458,10 @@
           Node.replaceWith(child, combined);
           child = combined;
         }
+        var value = child.children[0];
+        if (value.kind === 50) {
+          js.Patcher.peepholeMangleSequence($this, value);
+        }
       } else if (kind === 19 && child.children[2] === null) {
         var trueBlock = child.children[1];
         if (Node.hasChildren(trueBlock)) {
@@ -2499,6 +2514,35 @@
           } else {
             break;
           }
+          i = i - 1 | 0;
+        }
+      }
+    }
+  };
+  js.Patcher.assignSourceIfNoSideEffects = function(node) {
+    if (node.kind === 87 && Node.hasNoSideEffects(node.children[0])) {
+      var right = node.children[1];
+      return Node.hasNoSideEffects(right) ? right : null;
+    }
+    if (node.kind === 98 && Node.hasNoSideEffects(node.children[0]) && Node.hasNoSideEffects(node.children[1])) {
+      var right = node.children[2];
+      return Node.hasNoSideEffects(right) ? right : null;
+    }
+    return null;
+  };
+  js.Patcher.peepholeMangleSequence = function($this, node) {
+    for (var i = node.children.length - 1 | 0; i > 0; i = i - 1 | 0) {
+      var current = node.children[i];
+      var currentRight = js.Patcher.assignSourceIfNoSideEffects(current);
+      if (currentRight !== null) {
+        while (i > 0) {
+          var previous = node.children[i - 1 | 0];
+          var previousRight = js.Patcher.assignSourceIfNoSideEffects(previous);
+          if (previousRight === null || !js.Patcher.looksTheSame($this, previousRight, currentRight)) {
+            break;
+          }
+          Node.replaceWith(previousRight, Node.remove(current));
+          current = previous;
           i = i - 1 | 0;
         }
       }
@@ -8177,7 +8221,8 @@
             if (variables.length > 1) {
               Log.error(context.log, setup.range, 'More than one variable inside a for-each loop');
             }
-            var value = Node.withChildren(new Node(16), [Node.remove(variables[0].children[0]), Node.remove(setup.children[0]), null]);
+            var name = Node.remove(variables[0].children[0]);
+            var value = Node.withRange(Node.withChildren(new Node(16), [name, Node.remove(setup.children[0]), null]), name.range);
             return Node.withRange(Node.withChildren(new Node(21), [value, values, body]), ParserContext.spanSince(context, token.range));
           }
         } else if (ParserContext.current(context).kind !== 83) {

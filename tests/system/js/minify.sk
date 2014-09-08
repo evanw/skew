@@ -1,6 +1,48 @@
 namespace js { void testMinify() {
 
 testMinifyJS("
+export class Foo {
+  var xa = 0;
+  var xb = false;
+  var xc = 0;
+  var xd = 0;
+  var xe = 0;
+  var xf = false;
+  var xg = false;
+  var xh = 0;
+}
+", "
+(function(){Foo=function(){this.a=0,this.b=!1,this.c=this.d=this.e=0,this.f=this.g=!1,this.h=0}}());
+");
+
+testMinifyJS("
+export void foo() {
+  var map = StringMap<bool>();
+  map.set(\"a\", true);
+  map.set(\"b\", true);
+  map.set(\"c\", true);
+  map.set(\"d\", false);
+  map.set(\"e\", false);
+  map.set(\"f\", true);
+}
+", "
+(function(){function b(){this.a=Object.create(null)}foo=function(){var a=new b();a.a['a']=a.a['b']=a.a['c']=!0,a.a['d']=a.a['e']=!1,a.a['f']=!0}}());
+");
+
+testMinifyJS("
+export void foo() {
+  var map = StringMap<bool>();
+  bool a;
+  a = false;
+  map.set(\"a\", false);
+  a = true;
+  map.set(\"a\", true);
+}
+", "
+(function(){function c(){this.a=Object.create(null)}foo=function(){var a=new c(),b=!1;b=a.a['a']=!1,b=a.a['a']=!0}}());
+");
+
+testMinifyJS("
 export void foo() {
   do {} while (true);
 }

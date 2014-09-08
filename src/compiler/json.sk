@@ -41,6 +41,7 @@ namespace json {
         result += ",\n" + indent + "\"content\": ";
         switch (node.content.type()) {
           case .INT { result += node.asInt(); }
+          case .BOOL { result += node.asBool(); }
           case .DOUBLE { result += node.asDouble(); }
           case .STRING { result += quoteString(node.asString(), '"'); }
         }
