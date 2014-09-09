@@ -53,4 +53,14 @@ bool y = foo.x;
          ~~~~~
 ");
 
+test("
+class Foo { var foo = 0; }
+class Bar : Foo { void bar() { foo; } }
+class Baz : Foo { static void bar() { foo; } }
+", "
+<stdin>:3:39: error: Cannot access \"foo\" from a static context
+class Baz : Foo { static void bar() { foo; } }
+                                      ~~~
+");
+
 }}
