@@ -4365,7 +4365,7 @@
     if (!$in.SymbolKind.isInstance(symbol.kind) && symbol.kind !== 4) {
       return true;
     }
-    if ($this.context.functionSymbol !== null && $in.SymbolKind.isInstance($this.context.functionSymbol.kind) && $this.context.functionSymbol.enclosingSymbol === symbol.enclosingSymbol) {
+    if ($this.context.functionSymbol !== null && $in.SymbolKind.isInstance($this.context.functionSymbol.kind) && ($this.context.functionSymbol.enclosingSymbol === symbol.enclosingSymbol || Type.hasBaseType($this.context.functionSymbol.enclosingSymbol.type, symbol.enclosingSymbol.type))) {
       return true;
     }
     if ($this.context.symbolForThis === null) {

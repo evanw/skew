@@ -778,8 +778,9 @@ class Resolver {
     }
 
     // Allow instance access inside instance functions
-    if (context.functionSymbol != null && context.functionSymbol.kind.isInstance() &&
-        context.functionSymbol.enclosingSymbol == symbol.enclosingSymbol) {
+    if (context.functionSymbol != null && context.functionSymbol.kind.isInstance() && (
+        context.functionSymbol.enclosingSymbol == symbol.enclosingSymbol ||
+        context.functionSymbol.enclosingSymbol.type.hasBaseType(symbol.enclosingSymbol.type))) {
       return true;
     }
 
