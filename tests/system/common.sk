@@ -40,7 +40,7 @@ void testMinifyJS(string input, string expected) {
 }
 
 void testHelperJS(CompilerOptions options, string expected) {
-  options.targetFormat = .JS;
+  options.targetFormat = .JAVASCRIPT;
   var compiler = Compiler();
   var result = compiler.compile(options);
   if (result.outputs.length > 0) {

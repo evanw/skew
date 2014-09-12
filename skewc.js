@@ -565,7 +565,7 @@
   };
   TargetFormat = {
     NONE: 0,
-    JS: 1,
+    JAVASCRIPT: 1,
     LISP_AST: 2,
     JSON_AST: 3,
     XML_AST: 4
@@ -7524,13 +7524,10 @@
       return 1;
     }
     var options = new CompilerOptions();
-    var optimizeJS = flags.optimize && target === 1;
     options.targetFormat = target;
     options.removeAsserts = flags.optimize;
-    options.foldAllConstants = optimizeJS;
-    options.inlineAllFunctions = optimizeJS;
-    options.convertAllInstanceToStatic = optimizeJS;
     options.outputFile = flags.outputFile;
+    options.foldAllConstants = options.inlineAllFunctions = options.convertAllInstanceToStatic = flags.optimize && target === 1;
     options.jsMinify = options.jsMangle = flags.jsMinify && target === 1;
     options.jsSourceMap = flags.jsSourceMap && target === 1;
     options.inputs = frontend.readSources(inputs);

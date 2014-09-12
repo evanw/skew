@@ -149,7 +149,7 @@ export namespace frontend {
     }
     switch (flags.target) {
       case "none" { target = .NONE; }
-      case "js" { target = .JS; }
+      case "js" { target = .JAVASCRIPT; }
       case "lisp-ast" { target = .LISP_AST; }
       case "json-ast" { target = .JSON_AST; }
       case "xml-ast" { target = .XML_AST; }
@@ -158,15 +158,12 @@ export namespace frontend {
 
     // Translate frontend flags to compiler options
     var options = CompilerOptions();
-    var optimizeJS = flags.optimize && target == .JS;
     options.targetFormat = target;
     options.removeAsserts = flags.optimize;
-    options.foldAllConstants = optimizeJS;
-    options.inlineAllFunctions = optimizeJS;
-    options.convertAllInstanceToStatic = optimizeJS;
     options.outputFile = flags.outputFile;
-    options.jsMinify = options.jsMangle = flags.jsMinify && target == .JS;
-    options.jsSourceMap = flags.jsSourceMap && target == .JS;
+    options.foldAllConstants = options.inlineAllFunctions = options.convertAllInstanceToStatic = flags.optimize && target == .JAVASCRIPT;
+    options.jsMinify = options.jsMangle = flags.jsMinify && target == .JAVASCRIPT;
+    options.jsSourceMap = flags.jsSourceMap && target == .JAVASCRIPT;
     options.inputs = readSources(inputs); if (options.inputs == null) return 1;
     options.prepend = readSources(prepend); if (options.prepend == null) return 1;
     options.append = readSources(append); if (options.append == null) return 1;

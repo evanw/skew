@@ -67,7 +67,7 @@ function compile() {
     options.foldAllConstants = oldOptimize;
     options.inlineAllFunctions = oldOptimize;
     options.convertAllInstanceToStatic = oldOptimize;
-    options.targetFormat = TargetFormat.JS;
+    options.targetFormat = TargetFormat.JAVASCRIPT;
     options.inputs.push(new Source('<stdin>', oldInput));
     var result = compiler.compile(options);
     outputLog.value = compiler.log.toString();
