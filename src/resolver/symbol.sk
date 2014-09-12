@@ -174,32 +174,34 @@ class Symbol {
 
         // Find bounded type parameters
         var parameter = sortedParameters.get(j);
-        if (!parameter.type.isParameter()) continue;
+        if (!parameter.type.isParameter()) {
+          continue;
+        }
         var parameterBound = parameter.type.bound();
-        if (parameterBound == null) break;
+        if (parameterBound == null) {
+          break;
+        }
 
         // Check to see if this depends on any other unchecked parameters
         for (; k < sortedParameters.length; k++) {
           var other = sortedParameters.get(k);
-          if (parameter == other || !other.type.isParameter()) continue;
+          if (parameter == other || !other.type.isParameter()) {
+            continue;
+          }
           if (parameterBound != null && parameterBound.dependsOnParameter(other)) {
             break;
           }
         }
-        if (k == sortedParameters.length) break;
+        if (k == sortedParameters.length) {
+          break;
+        }
       }
 
-      // Swap the ith and jth parameter
+      // Swap the parameter into the correct order
       if (j < sortedParameters.length) {
-        var temp = sortedParameters.get(i);
-        sortedParameters.set(i, sortedParameters.get(j));
-        sortedParameters.set(j, temp);
+        sortedParameters.swap(i, j);
       }
     }
-  }
-
-  bool isContainedBy(Symbol symbol) {
-    return enclosingSymbol == null ? false : enclosingSymbol == symbol || enclosingSymbol.isContainedBy(symbol);
   }
 
   string fullName() {

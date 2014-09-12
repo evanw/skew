@@ -9,6 +9,7 @@
   }
   var $in = {};
   $in.string = {};
+  $in.List = {};
   $in.NodeKind = {};
   $in.TargetFormat = {};
   $in.$int = {};
@@ -520,35 +521,57 @@
     if ($this.sort === 0) {
       return;
     }
-    for (var i = 1; i < $this.typeSymbols.length; i = i + 1 | 0) {
-      var symbol = $this.typeSymbols[i];
-      for (var j = 0; j < i; j = j + 1 | 0) {
-        if (Collector.typeComesBefore($this, symbol.type, $this.typeSymbols[j].type)) {
-          var k = i;
-          for (; k > j; k = k - 1 | 0) {
-            $this.typeSymbols[k] = $this.typeSymbols[k - 1 | 0];
+    for (var i = 0; i < $this.typeSymbols.length; i = i + 1 | 0) {
+      var j = i;
+      for (; j < $this.typeSymbols.length; j = j + 1 | 0) {
+        var type = $this.typeSymbols[j].type;
+        var k = i;
+        for (; k < $this.typeSymbols.length; k = k + 1 | 0) {
+          if (j === k) {
+            continue;
           }
-          $this.typeSymbols[j] = symbol;
+          var other = $this.typeSymbols[k];
+          if (Collector.typeComesBefore($this, $this.typeSymbols[k].type, type)) {
+            break;
+          }
+        }
+        if (k === $this.typeSymbols.length) {
           break;
         }
       }
+      if (j < $this.typeSymbols.length) {
+        $in.List.swap($this.typeSymbols, i, j);
+      }
     }
   };
-  Collector.typeComesBefore = function($this, left, right) {
-    if (Type.hasBaseType(right, left)) {
-      return true;
-    }
-    if ($this.sort === 2 && Type.isStruct(left)) {
-      var members = StringMap.values(right.members);
-      if (members !== null) {
-        for (var i = 0; i < members.length; i = i + 1 | 0) {
-          if (members[i].type === left) {
-            return true;
-          }
+  Collector.hasMemberOfType = function(typeWithMembers, typeOfMember) {
+    var members = StringMap.values(typeWithMembers.members);
+    if (members !== null) {
+      for (var i = 0; i < members.length; i = i + 1 | 0) {
+        if (members[i].type === typeOfMember) {
+          return true;
         }
       }
     }
-    if ($this.sort === 3 && Symbol.isContainedBy(right.symbol, left.symbol)) {
+    return false;
+  };
+  Collector.isContainedBy = function($this, inner, outer) {
+    if (inner.enclosingSymbol === null) {
+      return false;
+    }
+    if (inner.enclosingSymbol === outer) {
+      return true;
+    }
+    return Collector.isContainedBy($this, inner.enclosingSymbol, outer);
+  };
+  Collector.typeComesBefore = function($this, before, after) {
+    if (Type.hasBaseType(after, before)) {
+      return true;
+    }
+    if ($this.sort === 2 && Type.isStruct(before) && Collector.hasMemberOfType(after, before)) {
+      return true;
+    }
+    if ($this.sort === 3 && Collector.isContainedBy($this, after.symbol, before.symbol)) {
       return true;
     }
     return false;
@@ -6200,14 +6223,9 @@
         }
       }
       if (j < $this.sortedParameters.length) {
-        var temp = $this.sortedParameters[i];
-        $this.sortedParameters[i] = $this.sortedParameters[j];
-        $this.sortedParameters[j] = temp;
+        $in.List.swap($this.sortedParameters, i, j);
       }
     }
-  };
-  Symbol.isContainedBy = function($this, symbol) {
-    return $this.enclosingSymbol === null ? false : $this.enclosingSymbol === symbol || Symbol.isContainedBy($this.enclosingSymbol, symbol);
   };
   Symbol.fullName = function($this) {
     return $this.enclosingSymbol !== null && $this.kind !== 4 && $this.enclosingSymbol.kind !== 7 ? Symbol.fullName($this.enclosingSymbol) + '.' + $this.name : $this.name;
@@ -6680,6 +6698,11 @@
       text = text.slice(index + before.length | 0, text.length);
     }
     return result + text;
+  };
+  $in.List.swap = function($this, a, b) {
+    var temp = $this[a];
+    $this[a] = $this[b];
+    $this[b] = temp;
   };
   $in.NodeKind.isNamedBlockDeclaration = function($this) {
     return $this >= 7 && $this <= 13;

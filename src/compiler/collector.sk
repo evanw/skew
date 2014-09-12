@@ -47,41 +47,58 @@ class Collector {
       return;
     }
 
-    for (var i = 1; i < typeSymbols.length; i++) {
-      var symbol = typeSymbols.get(i);
-      for (var j = 0; j < i; j++) {
-        if (typeComesBefore(symbol.type, typeSymbols.get(j).type)) {
-          var k = i;
-          for (; k > j; k--) {
-            typeSymbols.set(k, typeSymbols.get(k - 1));
+    for (var i = 0; i < typeSymbols.length; i++) {
+      var j = i;
+
+      // Select a type that comes before all other types
+      for (; j < typeSymbols.length; j++) {
+        var type = typeSymbols.get(j).type;
+        var k = i;
+
+        // Check to see if this comes before all other types
+        for (; k < typeSymbols.length; k++) {
+          if (j == k) {
+            continue;
           }
-          typeSymbols.set(j, symbol);
+          var other = typeSymbols.get(k);
+          if (typeComesBefore(typeSymbols.get(k).type, type)) {
+            break;
+          }
+        }
+        if (k == typeSymbols.length) {
           break;
         }
+      }
+
+      // Swap the type into the correct order
+      if (j < typeSymbols.length) {
+        typeSymbols.swap(i, j);
       }
     }
   }
 
-  bool typeComesBefore(Type left, Type right) {
-    if (right.hasBaseType(left)) {
-      return true;
-    }
-
-    if (sort == .SORT_BY_INHERITANCE_AND_VALUE && left.isStruct()) {
-      var members = right.members.values();
-      if (members != null) {
-        for (var i = 0; i < members.length; i++) {
-          if (members.get(i).type == left) {
-            return true;
-          }
+  bool hasMemberOfType(Type typeWithMembers, Type typeOfMember) {
+    var members = typeWithMembers.members.values();
+    if (members != null) {
+      for (var i = 0; i < members.length; i++) {
+        if (members.get(i).type == typeOfMember) {
+          return true;
         }
       }
     }
+    return false;
+  }
 
-    if (sort == .SORT_BY_INHERITANCE_AND_CONTAINMENT && right.symbol.isContainedBy(left.symbol)) {
-      return true;
-    }
+  bool isContainedBy(Symbol inner, Symbol outer) {
+    if (inner.enclosingSymbol == null) return false;
+    if (inner.enclosingSymbol == outer) return true;
+    return isContainedBy(inner.enclosingSymbol, outer);
+  }
 
+  bool typeComesBefore(Type before, Type after) {
+    if (after.hasBaseType(before)) return true;
+    if (sort == .SORT_BY_INHERITANCE_AND_VALUE && before.isStruct() && hasMemberOfType(after, before)) return true;
+    if (sort == .SORT_BY_INHERITANCE_AND_CONTAINMENT && isContainedBy(after.symbol, before.symbol)) return true;
     return false;
   }
 
