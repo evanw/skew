@@ -184,6 +184,10 @@ class Type {
     return this == cache.stringType;
   }
 
+  bool isPrimitive(TypeCache cache) {
+    return isInt(cache) || isBool(cache) || isFloat(cache) || isDouble(cache) || isString(cache);
+  }
+
   bool isList(TypeCache cache) {
     return symbol == cache.listType.symbol;
   }
@@ -230,6 +234,10 @@ class Type {
 
   bool isReference() {
     return isClass() || isInterface() || isFunction() || isParameter() && bound() != null;
+  }
+
+  bool isEqualityComparable(TypeCache cache) {
+    return isPrimitive(cache) || !isStruct() && (!isParameter() || bound() != null);
   }
 
   bool isInteger(TypeCache cache) {

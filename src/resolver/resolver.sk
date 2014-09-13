@@ -3070,7 +3070,7 @@ class Resolver {
 
     if (kind == .EQUAL || kind == .NOT_EQUAL) {
       commonType = cache.commonImplicitType(leftType, rightType);
-      if (commonType != null) {
+      if (commonType != null && commonType.isEqualityComparable(cache)) {
         node.type = cache.boolType;
       }
     }

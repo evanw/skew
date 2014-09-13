@@ -122,4 +122,68 @@ ns foo(ns bar, ns baz) {}
                ~~
 ");
 
+test("
+struct Foo {}
+Foo foo;
+", "
+<stdin>:2:5: error: Cannot create a default value for type \"Foo\"
+Foo foo;
+    ~~~
+");
+
+test("
+class Foo<T> {
+  void foo() {
+    T foo;
+  }
+}
+", "
+<stdin>:3:7: error: Cannot create a default value for type \"T\"
+    T foo;
+      ~~~
+");
+
+test("
+interface IFoo {}
+class Foo<T is IFoo> {
+  void foo() {
+    T foo;
+  }
+}
+", "
+");
+
+test("
+struct Foo {}
+bool foo(Foo a, Foo b) {
+  return a == b;
+}
+", "
+<stdin>:3:10: error: No binary operator == for type \"Foo\" and type \"Foo\"
+  return a == b;
+         ~~~~~~
+");
+
+test("
+class Foo<T> {
+  bool foo(T a, T b) {
+    return a == b;
+  }
+}
+", "
+<stdin>:3:12: error: No binary operator == for type \"T\" and type \"T\"
+    return a == b;
+           ~~~~~~
+");
+
+test("
+interface IFoo {}
+class Foo<T is IFoo> {
+  bool foo(T a, T b) {
+    return a == b;
+  }
+}
+", "
+");
+
 }}

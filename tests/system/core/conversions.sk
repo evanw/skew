@@ -507,35 +507,4 @@ void foo() {
       ~~~~~~~~
 ");
 
-test("
-struct Foo {}
-Foo foo;
-", "
-<stdin>:2:5: error: Cannot create a default value for type \"Foo\"
-Foo foo;
-    ~~~
-");
-
-test("
-class Foo<T> {
-  void foo() {
-    T foo;
-  }
-}
-", "
-<stdin>:3:7: error: Cannot create a default value for type \"T\"
-    T foo;
-      ~~~
-");
-
-test("
-interface IFoo {}
-class Foo<T is IFoo> {
-  void foo() {
-    T foo;
-  }
-}
-", "
-");
-
 }}
