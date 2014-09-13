@@ -484,4 +484,27 @@ List<int> values = [
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ");
 
+test("
+class Foo {
+  int toString() { return 0; }
+}
+void foo() {
+  Foo() + \"\";
+  \"\" + Foo();
+}
+", "
+<stdin>:5:3: error: Expected toString() to have type \"string fn()\" but found type \"int fn()\"
+  Foo() + \"\";
+  ~~~~~
+<stdin>:2:7: note: The declaration for toString() is here
+  int toString() { return 0; }
+      ~~~~~~~~
+<stdin>:6:8: error: Expected toString() to have type \"string fn()\" but found type \"int fn()\"
+  \"\" + Foo();
+       ~~~~~
+<stdin>:2:7: note: The declaration for toString() is here
+  int toString() { return 0; }
+      ~~~~~~~~
+");
+
 }}

@@ -309,8 +309,9 @@ void semanticErrorMissingToString(Log log, Range range, Type type) {
   log.error(range, "Expression of " + typeToText(type) + " has no toString() member to call");
 }
 
-void semanticErrorToStringWrongType(Log log, Range range, Type expected, Type found) {
-  log.error(range, "Expected toString() member to have " + typeToText(expected) + " but found " + typeToText(found));
+void semanticErrorToStringWrongType(Log log, Range range, Type expected, Type found, Range declaration) {
+  log.error(range, "Expected toString() to have " + typeToText(expected) + " but found " + typeToText(found));
+  if (!declaration.isEmpty()) log.note(declaration, "The declaration for toString() is here");
 }
 
 void semanticErrorCannotImplementImportedFunction(Log log, Range range) {

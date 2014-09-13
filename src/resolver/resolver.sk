@@ -2986,7 +2986,7 @@ class Resolver {
     }
 
     if (toString.type != cache.toStringType) {
-      semanticErrorToStringWrongType(log, node.range, cache.toStringType, toString.type);
+      semanticErrorToStringWrongType(log, node.range, cache.toStringType, toString.type, toString.symbol.node.declarationName().range);
       return false;
     }
 
