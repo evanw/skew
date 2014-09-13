@@ -167,10 +167,10 @@ export class Foo {
 
 testJS("
 import class Foo : Bar {
-  import new();
+  new();
 }
 import class Bar {
-  import new();
+  new();
 }
 export void test() {
   var foo = Foo();

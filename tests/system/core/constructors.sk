@@ -174,7 +174,7 @@ class Foo {
   new() : foo = 0;
 }
 ", "
-<stdin>:3:3: error: Use the \"import\" modifier to import functions
+<stdin>:3:3: error: Every constructor must have an implementation
   new() : foo = 0;
   ~~~
 <stdin>:3:11: error: An abstract constructor must not have initializer list
@@ -189,7 +189,7 @@ class Foo : Bar {
 class Bar {
 }
 ", "
-<stdin>:2:3: error: Use the \"import\" modifier to import functions
+<stdin>:2:3: error: Every constructor must have an implementation
   new() : super();
   ~~~
 <stdin>:2:11: error: An abstract constructor must not have initializer list
@@ -205,7 +205,7 @@ class Foo : Bar {
 class Bar {
 }
 ", "
-<stdin>:3:3: error: Use the \"import\" modifier to import functions
+<stdin>:3:3: error: Every constructor must have an implementation
   new() : super(), foo = 0;
   ~~~
 <stdin>:3:11: error: An abstract constructor must not have initializer list

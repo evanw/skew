@@ -322,6 +322,10 @@ void semanticErrorFunctionMustBeAbstract(Log log, Range range) {
   log.error(range, "Abstract functions must use the \"virtual\" modifier");
 }
 
+void semanticErrorUnimplementedConstructor(Log log, Range range) {
+  log.error(range, "Every constructor must have an implementation");
+}
+
 void semanticErrorUnimplementedFunction(Log log, Range range) {
   log.error(range, "Use the \"import\" modifier to import functions");
 }

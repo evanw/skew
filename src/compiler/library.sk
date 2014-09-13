@@ -29,7 +29,7 @@ import struct string {
 }
 
 import class List<T> {
-  import new();
+  new();
   import final int length;
   import void push(T value);
   import void unshift(T value);

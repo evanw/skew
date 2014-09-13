@@ -1025,10 +1025,15 @@ class Resolver {
         unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
       }
 
-      // Constructors for exported object types are automatically exported
-      if (symbol.kind.isConstructor() && enclosingSymbol.isExport()) {
-        symbol.flags |= .EXPORT;
-        redundantModifierIfPresent(symbol, .EXPORT, "on an constructor for an exported object");
+      // Constructors for imported/exported object types are automatically imported/exported
+      if (symbol.kind.isConstructor()) {
+        if (enclosingSymbol.isExport()) {
+          symbol.flags |= .EXPORT;
+          redundantModifierIfPresent(symbol, .EXPORT, "on an constructor for an exported object");
+        } else if (enclosingSymbol.isImport()) {
+          symbol.flags |= .IMPORT;
+          redundantModifierIfPresent(symbol, .IMPORT, "on an constructor for an imported object");
+        }
       }
 
       // Exporting a function on an object or namespace automatically exports
@@ -1969,6 +1974,8 @@ class Resolver {
     else if (!symbol.isImport() && !symbol.isVirtual()) {
       if (symbol.kind == .INSTANCE_FUNCTION) {
         semanticErrorFunctionMustBeAbstract(log, node.declarationName().range);
+      } else if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
+        semanticErrorUnimplementedConstructor(log, node.declarationName().range);
       } else {
         semanticErrorUnimplementedFunction(log, node.declarationName().range);
       }
