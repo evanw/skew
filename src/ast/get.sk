@@ -332,7 +332,7 @@ in Node {
     return children.get(0);
   }
 
-  Node parameterizeType() {
+  Node parameterizeValue() {
     assert kind == .PARAMETERIZE;
     assert children.length >= 1;
     return children.get(0);

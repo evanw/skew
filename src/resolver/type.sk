@@ -79,9 +79,20 @@ class Type {
   string toString() {
     assert substitutions == null || substitutions.length == symbol.parameters.length;
 
+    // Special-case generic types
+    var parameterText = "";
+    if (hasParameters()) {
+      parameterText = "<";
+      for (var i = 0; i < symbol.parameters.length; i++) {
+        if (i > 0) parameterText += ", ";
+        parameterText += isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name;
+      }
+      parameterText += ">";
+    }
+
     // Special-case functions
     if (isFunction()) {
-      var text = resultType() + " fn(";
+      var text = resultType() + " fn" + parameterText + "(";
       var arguments = argumentTypes();
       for (var i = 0; i < arguments.length; i++) {
         if (i > 0) text += ", ";
@@ -90,17 +101,7 @@ class Type {
       return text + ")";
     }
 
-    // Special-case generic types
-    if (hasParameters()) {
-      var text = "";
-      for (var i = 0; i < symbol.parameters.length; i++) {
-        if (i > 0) text += ", ";
-        text += isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name;
-      }
-      return symbol.fullName() + "<" + text + ">";
-    }
-
-    return symbol.fullName();
+    return symbol.fullName() + parameterText;
   }
 
   bool hasParameters() {

@@ -1094,7 +1094,15 @@ class Resolver {
         if (type.isError(cache)) return;
         argumentTypes.push(type);
       }
-      symbol.type = cache.functionType(resultType, argumentTypes);
+
+      // Generic functions get their own type
+      if (symbol.hasParameters()) {
+        symbol.type = Type(symbol);
+        argumentTypes.unshift(resultType);
+        symbol.type.relevantTypes = argumentTypes;
+      } else {
+        symbol.type = cache.functionType(resultType, argumentTypes);
+      }
     }
 
     // Functions must not have a different type than the symbol they override
@@ -1255,10 +1263,10 @@ class Resolver {
         if (node.parent.kind == .LET) {
           var oldScope = context.scope;
           context.scope = oldScope.lexicalParent;
-          resolveAsExpression(value);
+          resolveAsParameterizedExpression(value);
           context.scope = oldScope;
         } else {
-          resolveAsExpression(value);
+          resolveAsParameterizedExpression(value);
         }
         var type = value.type;
         if (type.isNull(cache) || type.isVoid(cache)) {
@@ -1761,10 +1769,11 @@ class Resolver {
     checkIsParameterized(node);
   }
 
-  void resolveAsExpression(Node node) {
+  void resolveAsParameterizedExpression(Node node) {
     assert node.kind.isExpression();
     resolve(node, null);
     checkIsInstance(node);
+    checkIsParameterized(node);
   }
 
   void resolveAsExpressionWithTypeContext(Node node, Type type) {
@@ -1788,7 +1797,7 @@ class Resolver {
 
   void resolveNodesAsExpressions(List<Node> nodes) {
     for (var i = 0; i < nodes.length; i++) {
-      resolveAsExpression(nodes.get(i));
+      resolveAsParameterizedExpression(nodes.get(i));
     }
   }
 
@@ -2104,7 +2113,7 @@ class Resolver {
             }
           }
         } else {
-          resolveAsExpression(value);
+          resolveAsParameterizedExpression(value);
         }
       }
     }
@@ -2228,10 +2237,10 @@ class Resolver {
     var update = node.forUpdate();
     if (setup != null) {
       if (setup.kind == .VARIABLE_CLUSTER) resolve(setup, null);
-      else resolveAsExpression(setup);
+      else resolveAsParameterizedExpression(setup);
     }
     if (test != null) resolveAsExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
-    if (update != null) resolveAsExpression(update);
+    if (update != null) resolveAsParameterizedExpression(update);
 
     var oldLoop = context.loop;
     context.loop = node;
@@ -2272,7 +2281,7 @@ class Resolver {
     // Return statements must live inside functions
     if (resultType == null) {
       unexpectedStatement(node);
-      if (value != null) resolveAsExpression(value);
+      if (value != null) resolveAsParameterizedExpression(value);
       return;
     }
 
@@ -2336,7 +2345,7 @@ class Resolver {
     if (value.kind != .ERROR) {
       checkStatementLocation(node);
     }
-    resolveAsExpression(value);
+    resolveAsParameterizedExpression(value);
     checkUnusedExpression(value);
   }
 
@@ -2344,7 +2353,7 @@ class Resolver {
     checkStatementLocation(node);
     var value = node.switchValue();
     var cases = node.switchCases();
-    resolveAsExpression(value);
+    resolveAsParameterizedExpression(value);
 
     var oldSwitchValue = context.switchValue;
     context.switchValue = value;
@@ -2419,8 +2428,20 @@ class Resolver {
       assert context.symbolForThis != null;
       var symbol = context.symbolForThis;
       initializeSymbol(symbol);
-      node.type = symbol.type;
       node.symbol = symbol;
+
+      // Make sure to substitute the type parameters for themselves for generic
+      // object types. This is used to distinguish between parameterized and
+      // unparameterized types.
+      if (symbol.type.hasParameters()) {
+        List<Type> types = [];
+        for (var i = 0; i < symbol.parameters.length; i++) {
+          types.push(symbol.parameters.get(i).type);
+        }
+        node.type = cache.parameterize(symbol.type, types);
+      } else {
+        node.type = symbol.type;
+      }
     }
   }
 
@@ -2492,7 +2513,7 @@ class Resolver {
     Type commonType;
     for (var i = 0; i < values.length; i++) {
       var value = values.get(i);
-      resolveAsExpression(value);
+      resolveAsParameterizedExpression(value);
       if (commonType == null || value.type.isError(cache)) {
         commonType = value.type;
       } else if (!commonType.isError(cache)) {
@@ -2592,7 +2613,7 @@ class Resolver {
 
       // Avoid reporting further errors
       if (typeContext.isError(cache)) {
-        resolveAsExpression(value);
+        resolveAsParameterizedExpression(value);
         return;
       }
 
@@ -2601,7 +2622,7 @@ class Resolver {
       for (var i = 0; i < arguments.length; i++) {
         var type = arguments.get(i).type;
         if (type.isError(cache)) {
-          resolveAsExpression(value);
+          resolveAsParameterizedExpression(value);
           return;
         }
         argumentTypes.push(type);
@@ -2613,9 +2634,7 @@ class Resolver {
     else {
       assert value.kind.isExpression();
       resolve(value, null);
-      if (value.kind.isType()) {
-        checkIsParameterized(value);
-      }
+      checkIsParameterized(value);
       var valueType = value.type;
 
       // Avoid reporting further errors
@@ -2705,7 +2724,7 @@ class Resolver {
     for (var i = 0, n = node.children.length; i < n; i++) {
       var child = node.children.get(i);
       if (i < n - 1) {
-        resolveAsExpression(child);
+        resolveAsParameterizedExpression(child);
         checkUnusedExpression(child);
       } else {
         resolveAsExpressionWithConversion(child, typeContext, node.parent.kind == .CAST ? .EXPLICIT_CAST : .IMPLICIT_CAST);
@@ -2714,20 +2733,20 @@ class Resolver {
   }
 
   void resolveParameterize(Node node) {
-    var parameterizeType = node.parameterizeType();
+    var value = node.parameterizeValue();
     var substitutions = node.parameterizeTypes();
-    resolveAsType(parameterizeType);
+    resolve(value, null);
     resolveNodesAsVariableTypes(substitutions);
 
     // Avoid reporting further errors
-    var unparameterized = parameterizeType.type;
+    var unparameterized = value.type;
     if (unparameterized.isError(cache)) {
       return;
     }
 
     // Check that the type is parameterizable
     if (!unparameterized.hasParameters() || unparameterized.isParameterized()) {
-      semanticErrorCannotParameterize(log, parameterizeType.range, unparameterized);
+      semanticErrorCannotParameterize(log, value.range, unparameterized);
       return;
     }
 
@@ -2735,7 +2754,7 @@ class Resolver {
     var parameters = unparameterized.symbol.parameters;
     var sortedParameters = unparameterized.symbol.sortedParameters;
     if (parameters.length != substitutions.length) {
-      semanticErrorParameterCount(log, Range.after(node.range, parameterizeType.range), parameters.length, substitutions.length);
+      semanticErrorParameterCount(log, Range.after(node.range, value.range), parameters.length, substitutions.length);
       return;
     }
     assert parameters.length == sortedParameters.length;
@@ -2763,7 +2782,10 @@ class Resolver {
     for (var i = 0; i < substitutions.length; i++) {
       types.push(substitutions.get(i).type);
     }
-    node.become(Node.createType(cache.parameterize(unparameterized, types)).withRange(node.range).withSymbol(parameterizeType.symbol));
+    var parameterized = cache.parameterize(unparameterized, types);
+    node.become(value.kind.isType()
+      ? Node.createType(parameterized).withRange(node.range).withSymbol(value.symbol)
+      : value.replaceWith(null).withRange(node.range).withType(parameterized));
   }
 
   void resolveCast(Node node) {
@@ -2886,7 +2908,7 @@ class Resolver {
   }
 
   void resolveUntyped(Node node) {
-    resolveAsExpression(node.untypedValue());
+    resolveAsParameterizedExpression(node.untypedValue());
   }
 
   void resolveVar(Node node) {
@@ -2925,7 +2947,7 @@ class Resolver {
     if (kind == .COMPLEMENT && typeContext != null && typeContext.isEnumFlags()) {
       resolveAsExpressionWithTypeContext(value, typeContext);
     } else {
-      resolveAsExpression(value);
+      resolveAsParameterizedExpression(value);
     }
 
     // Avoid reporting further errors
@@ -3006,10 +3028,10 @@ class Resolver {
 
   void resolveWithTypeContextTransfer(Node left, Node right) {
     if (!needsTypeContext(left)) {
-      resolveAsExpression(left);
+      resolveAsParameterizedExpression(left);
       resolveAsExpressionWithTypeContext(right, left.type);
     } else if (!needsTypeContext(right)) {
-      resolveAsExpression(right);
+      resolveAsParameterizedExpression(right);
       resolveAsExpressionWithTypeContext(left, right.type);
     }
   }
@@ -3021,7 +3043,7 @@ class Resolver {
 
     // Special-case assignment logic
     if (kind.isBinaryStorageOperator()) {
-      resolveAsExpression(left);
+      resolveAsParameterizedExpression(left);
 
       if (kind == .ASSIGN || left.type.isNumeric(cache)) {
         resolveAsExpressionWithConversion(right, left.type, .IMPLICIT_CAST);
@@ -3031,7 +3053,7 @@ class Resolver {
       }
 
       else if (kind == .ASSIGN_ADD && left.type.isString(cache)) {
-        resolveAsExpression(right);
+        resolveAsParameterizedExpression(right);
         if (!right.type.isString(cache)) {
           wrapWithToStringCall(right);
         }
@@ -3060,8 +3082,8 @@ class Resolver {
     }
 
     // This won't resolve twice if the nodes were already resolved above
-    resolveAsExpression(left);
-    resolveAsExpression(right);
+    resolveAsParameterizedExpression(left);
+    resolveAsParameterizedExpression(right);
 
     // Avoid reporting further errors
     var leftType = left.type;
@@ -3152,9 +3174,9 @@ class Resolver {
     var middle = node.tertiaryMiddle();
     var right = node.tertiaryRight();
 
-    resolveAsExpression(left);
-    resolveAsExpression(middle);
-    resolveAsExpression(right);
+    resolveAsParameterizedExpression(left);
+    resolveAsParameterizedExpression(middle);
+    resolveAsParameterizedExpression(right);
 
     // User-defined operators aren't working yet
     if (!left.type.isError(cache) && !middle.type.isError(cache) && !right.type.isError(cache)) {

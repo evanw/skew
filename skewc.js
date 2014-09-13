@@ -4178,7 +4178,7 @@
       Resolver.resolveLambda($this, node);
       break;
     case 55:
-      Resolver.resolveAsExpression($this, node.children[0]);
+      Resolver.resolveAsParameterizedExpression($this, node.children[0]);
       break;
     case 56:
       Resolver.resolveVar($this, node);
@@ -4631,7 +4631,13 @@
         }
         argumentTypes.push(type);
       }
-      symbol.type = TypeCache.functionType($this.cache, resultType, argumentTypes);
+      if (Symbol.hasParameters(symbol)) {
+        symbol.type = new Type(symbol);
+        argumentTypes.unshift(resultType);
+        symbol.type.relevantTypes = argumentTypes;
+      } else {
+        symbol.type = TypeCache.functionType($this.cache, resultType, argumentTypes);
+      }
     }
     var overriddenMember = symbol.overriddenMember;
     if (overriddenMember !== null && symbol.kind !== 17) {
@@ -4739,10 +4745,10 @@
         if (node.parent.kind === 46) {
           var oldScope = $this.context.scope;
           $this.context.scope = oldScope.lexicalParent;
-          Resolver.resolveAsExpression($this, value);
+          Resolver.resolveAsParameterizedExpression($this, value);
           $this.context.scope = oldScope;
         } else {
-          Resolver.resolveAsExpression($this, value);
+          Resolver.resolveAsParameterizedExpression($this, value);
         }
         var type = value.type;
         if (type === $this.cache.nullType || type === $this.cache.voidType) {
@@ -5127,9 +5133,10 @@
     Resolver.resolveAsType($this, node);
     Resolver.checkIsParameterized($this, node);
   };
-  Resolver.resolveAsExpression = function($this, node) {
+  Resolver.resolveAsParameterizedExpression = function($this, node) {
     Resolver.resolve($this, node, null);
     Resolver.checkIsInstance($this, node);
+    Resolver.checkIsParameterized($this, node);
   };
   Resolver.resolveAsExpressionWithTypeContext = function($this, node, type) {
     Resolver.resolve($this, node, type);
@@ -5149,7 +5156,7 @@
   };
   Resolver.resolveNodesAsExpressions = function($this, nodes) {
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-      Resolver.resolveAsExpression($this, nodes[i]);
+      Resolver.resolveAsParameterizedExpression($this, nodes[i]);
     }
   };
   Resolver.resolveNodesAsVariableTypes = function($this, nodes) {
@@ -5350,7 +5357,7 @@
             }
           }
         } else {
-          Resolver.resolveAsExpression($this, value);
+          Resolver.resolveAsParameterizedExpression($this, value);
         }
       }
     }
@@ -5438,14 +5445,14 @@
       if (setup.kind === 6) {
         Resolver.resolve($this, setup, null);
       } else {
-        Resolver.resolveAsExpression($this, setup);
+        Resolver.resolveAsParameterizedExpression($this, setup);
       }
     }
     if (test !== null) {
       Resolver.resolveAsExpressionWithConversion($this, test, $this.cache.boolType, 0);
     }
     if (update !== null) {
-      Resolver.resolveAsExpression($this, update);
+      Resolver.resolveAsParameterizedExpression($this, update);
     }
     var oldLoop = $this.context.loop;
     $this.context.loop = node;
@@ -5481,7 +5488,7 @@
     if ($this.resultType === null) {
       Resolver.unexpectedStatement($this, node);
       if (value !== null) {
-        Resolver.resolveAsExpression($this, value);
+        Resolver.resolveAsParameterizedExpression($this, value);
       }
       return;
     }
@@ -5528,14 +5535,14 @@
     if (value.kind !== 49) {
       Resolver.checkStatementLocation($this, node);
     }
-    Resolver.resolveAsExpression($this, value);
+    Resolver.resolveAsParameterizedExpression($this, value);
     Resolver.checkUnusedExpression($this, value);
   };
   Resolver.resolveSwitch = function($this, node) {
     Resolver.checkStatementLocation($this, node);
     var value = node.children[0];
     var cases = Node.switchCases(node);
-    Resolver.resolveAsExpression($this, value);
+    Resolver.resolveAsParameterizedExpression($this, value);
     var oldSwitchValue = $this.context.switchValue;
     $this.context.switchValue = value;
     Resolver.resolveNodes($this, cases);
@@ -5589,8 +5596,16 @@
     if (Resolver.checkAccessToThis($this, node.range)) {
       var symbol = $this.context.symbolForThis;
       Resolver.initializeSymbol($this, symbol);
-      node.type = symbol.type;
       node.symbol = symbol;
+      if (Type.hasParameters(symbol.type)) {
+        var types = [];
+        for (var i = 0; i < symbol.parameters.length; i = i + 1 | 0) {
+          types.push(symbol.parameters[i].type);
+        }
+        node.type = TypeCache.parameterize($this.cache, symbol.type, types);
+      } else {
+        node.type = symbol.type;
+      }
     }
   };
   Resolver.resolveHook = function($this, node) {
@@ -5639,7 +5654,7 @@
     var commonType = null;
     for (var i = 0; i < values.length; i = i + 1 | 0) {
       var value = values[i];
-      Resolver.resolveAsExpression($this, value);
+      Resolver.resolveAsParameterizedExpression($this, value);
       if (commonType === null || value.type === $this.cache.errorType) {
         commonType = value.type;
       } else if (commonType !== $this.cache.errorType) {
@@ -5714,14 +5729,14 @@
     if (value.kind === 54 && $this.typeContext !== null) {
       Resolver.resolveNodesAsExpressions($this, $arguments);
       if ($this.typeContext === $this.cache.errorType) {
-        Resolver.resolveAsExpression($this, value);
+        Resolver.resolveAsParameterizedExpression($this, value);
         return;
       }
       var argumentTypes = [];
       for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
         var type = $arguments[i].type;
         if (type === $this.cache.errorType) {
-          Resolver.resolveAsExpression($this, value);
+          Resolver.resolveAsParameterizedExpression($this, value);
           return;
         }
         argumentTypes.push(type);
@@ -5729,9 +5744,7 @@
       Resolver.resolveAsExpressionWithConversion($this, value, TypeCache.functionType($this.cache, $this.typeContext, argumentTypes), 0);
     } else {
       Resolver.resolve($this, value, null);
-      if (value.kind === 35) {
-        Resolver.checkIsParameterized($this, value);
-      }
+      Resolver.checkIsParameterized($this, value);
       var valueType = value.type;
       if (valueType === $this.cache.errorType) {
         Resolver.resolveNodesAsExpressions($this, $arguments);
@@ -5794,7 +5807,7 @@
     for (var i = 0, n = node.children.length; i < n; i = i + 1 | 0) {
       var child = node.children[i];
       if (i < (n - 1 | 0)) {
-        Resolver.resolveAsExpression($this, child);
+        Resolver.resolveAsParameterizedExpression($this, child);
         Resolver.checkUnusedExpression($this, child);
       } else {
         Resolver.resolveAsExpressionWithConversion($this, child, $this.typeContext, node.parent.kind === 52 ? 1 : 0);
@@ -5802,22 +5815,22 @@
     }
   };
   Resolver.resolveParameterize = function($this, node) {
-    var parameterizeType = node.children[0];
+    var value = node.children[0];
     var substitutions = Node.parameterizeTypes(node);
-    Resolver.resolveAsType($this, parameterizeType);
+    Resolver.resolve($this, value, null);
     Resolver.resolveNodesAsVariableTypes($this, substitutions);
-    var unparameterized = parameterizeType.type;
+    var unparameterized = value.type;
     if (unparameterized === $this.cache.errorType) {
       return;
     }
     if (!Type.hasParameters(unparameterized) || unparameterized.substitutions !== null) {
-      semanticErrorCannotParameterize($this.log, parameterizeType.range, unparameterized);
+      semanticErrorCannotParameterize($this.log, value.range, unparameterized);
       return;
     }
     var parameters = unparameterized.symbol.parameters;
     var sortedParameters = unparameterized.symbol.sortedParameters;
     if (parameters.length !== substitutions.length) {
-      semanticErrorParameterCount($this.log, Range.after(node.range, parameterizeType.range), parameters.length, substitutions.length);
+      semanticErrorParameterCount($this.log, Range.after(node.range, value.range), parameters.length, substitutions.length);
       return;
     }
     var sortedTypes = [];
@@ -5844,7 +5857,8 @@
     for (var i = 0; i < substitutions.length; i = i + 1 | 0) {
       types.push(substitutions[i].type);
     }
-    Node.become(node, Node.withSymbol(Node.withRange(Node.withType(new Node(35), TypeCache.parameterize($this.cache, unparameterized, types)), node.range), parameterizeType.symbol));
+    var parameterized = TypeCache.parameterize($this.cache, unparameterized, types);
+    Node.become(node, value.kind === 35 ? Node.withSymbol(Node.withRange(Node.withType(new Node(35), parameterized), node.range), value.symbol) : Node.withType(Node.withRange(Node.replaceWith(value, null), node.range), parameterized));
   };
   Resolver.resolveCast = function($this, node) {
     var type = node.children[0];
@@ -5961,7 +5975,7 @@
     if (kind === 62 && $this.typeContext !== null && Type.isEnumFlags($this.typeContext)) {
       Resolver.resolveAsExpressionWithTypeContext($this, value, $this.typeContext);
     } else {
-      Resolver.resolveAsExpression($this, value);
+      Resolver.resolveAsParameterizedExpression($this, value);
     }
     var type = value.type;
     if (type === $this.cache.errorType) {
@@ -6024,10 +6038,10 @@
   };
   Resolver.resolveWithTypeContextTransfer = function($this, left, right) {
     if (!Resolver.needsTypeContext($this, left)) {
-      Resolver.resolveAsExpression($this, left);
+      Resolver.resolveAsParameterizedExpression($this, left);
       Resolver.resolveAsExpressionWithTypeContext($this, right, left.type);
     } else if (!Resolver.needsTypeContext($this, right)) {
-      Resolver.resolveAsExpression($this, right);
+      Resolver.resolveAsParameterizedExpression($this, right);
       Resolver.resolveAsExpressionWithTypeContext($this, left, right.type);
     }
   };
@@ -6036,14 +6050,14 @@
     var left = node.children[0];
     var right = node.children[1];
     if ($in.NodeKind.isBinaryStorageOperator(kind)) {
-      Resolver.resolveAsExpression($this, left);
+      Resolver.resolveAsParameterizedExpression($this, left);
       if (kind === 87 || Type.isNumeric(left.type, $this.cache)) {
         Resolver.resolveAsExpressionWithConversion($this, right, left.type, 0);
         Resolver.checkStorage($this, left);
         node.type = left.type;
         return;
       } else if (kind === 88 && left.type === $this.cache.stringType) {
-        Resolver.resolveAsExpression($this, right);
+        Resolver.resolveAsParameterizedExpression($this, right);
         if (right.type !== $this.cache.stringType) {
           Resolver.wrapWithToStringCall($this, right);
         }
@@ -6061,8 +6075,8 @@
         Resolver.resolveWithTypeContextTransfer($this, left, right);
       }
     }
-    Resolver.resolveAsExpression($this, left);
-    Resolver.resolveAsExpression($this, right);
+    Resolver.resolveAsParameterizedExpression($this, left);
+    Resolver.resolveAsParameterizedExpression($this, right);
     var leftType = left.type;
     var rightType = right.type;
     var commonType = null;
@@ -6127,9 +6141,9 @@
     var left = node.children[0];
     var middle = node.children[1];
     var right = node.children[2];
-    Resolver.resolveAsExpression($this, left);
-    Resolver.resolveAsExpression($this, middle);
-    Resolver.resolveAsExpression($this, right);
+    Resolver.resolveAsParameterizedExpression($this, left);
+    Resolver.resolveAsParameterizedExpression($this, middle);
+    Resolver.resolveAsParameterizedExpression($this, right);
     if (left.type !== $this.cache.errorType && middle.type !== $this.cache.errorType && right.type !== $this.cache.errorType) {
       Log.error($this.log, node.range, 'No tertiary operator ' + operatorInfo.table[node.kind].text + ' for type "' + Type.toString(left.type) + '", type "' + Type.toString(middle.type) + '", and type "' + Type.toString(right.type) + '"');
     }
@@ -6355,8 +6369,19 @@
     }
   };
   Type.toString = function($this) {
+    var parameterText = '';
+    if (Type.hasParameters($this)) {
+      parameterText = '<';
+      for (var i = 0; i < $this.symbol.parameters.length; i = i + 1 | 0) {
+        if (i > 0) {
+          parameterText += ', ';
+        }
+        parameterText += $this.substitutions !== null ? Type.toString($this.substitutions[i]) : $this.symbol.parameters[i].name;
+      }
+      parameterText += '>';
+    }
     if (Type.isFunction($this)) {
-      var text = Type.toString($this.relevantTypes[0]) + ' fn(';
+      var text = Type.toString($this.relevantTypes[0]) + ' fn' + parameterText + '(';
       var $arguments = Type.argumentTypes($this);
       for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
         if (i > 0) {
@@ -6366,17 +6391,7 @@
       }
       return text + ')';
     }
-    if (Type.hasParameters($this)) {
-      var text = '';
-      for (var i = 0; i < $this.symbol.parameters.length; i = i + 1 | 0) {
-        if (i > 0) {
-          text += ', ';
-        }
-        text += $this.substitutions !== null ? Type.toString($this.substitutions[i]) : $this.symbol.parameters[i].name;
-      }
-      return Symbol.fullName($this.symbol) + '<' + text + '>';
-    }
-    return Symbol.fullName($this.symbol);
+    return Symbol.fullName($this.symbol) + parameterText;
   };
   Type.hasParameters = function($this) {
     return $this.symbol !== null && Symbol.hasParameters($this.symbol);

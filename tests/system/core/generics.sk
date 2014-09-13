@@ -410,4 +410,31 @@ T baz;
 ^
 ");
 
+test("
+void foo<T>() {}
+void bar() { foo(); }
+void baz() { foo<int>(); }
+void bat() { foo<int><int>(); }
+", "
+<stdin>:2:14: error: Cannot use unparameterized type \"void fn<T>()\"
+void bar() { foo(); }
+             ~~~
+<stdin>:4:14: error: Cannot parameterize type \"void fn<int>()\" because it is already parameterized
+void bat() { foo<int><int>(); }
+             ~~~~~~~~
+");
+
+test("
+void foo<T>(T foo) {}
+void bar() { foo(false); }
+void baz() { foo<int>(false); }
+", "
+<stdin>:2:14: error: Cannot use unparameterized type \"void fn<T>(T)\"
+void bar() { foo(false); }
+             ~~~
+<stdin>:3:23: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+void baz() { foo<int>(false); }
+                      ~~~~~
+");
+
 }}
