@@ -3,9 +3,12 @@ enum SymbolKind {
   AUTOMATIC,
   AMBIGUOUS,
   UNMERGED,
-  PARAMETER,
   OTHER_TYPE,
   ALIAS,
+
+  // Parameter kinds
+  OBJECT_PARAMETER,
+  FUNCTION_PARAMETER,
 
   // Namespace kinds
   GLOBAL_NAMESPACE,
@@ -36,6 +39,10 @@ in SymbolKind {
     return this == GLOBAL_NAMESPACE;
   }
 
+  bool isParameter() {
+    return this >= OBJECT_PARAMETER && this <= FUNCTION_PARAMETER;
+  }
+
   bool isNamespace() {
     return this >= GLOBAL_NAMESPACE && this <= NAMESPACE;
   }
@@ -53,7 +60,7 @@ in SymbolKind {
   }
 
   bool isType() {
-    return this >= PARAMETER && this <= INTERFACE;
+    return this >= OTHER_TYPE && this <= INTERFACE;
   }
 
   bool isConstructor() {
@@ -205,7 +212,7 @@ class Symbol {
   }
 
   string fullName() {
-    return enclosingSymbol != null && kind != .PARAMETER && !enclosingSymbol.kind.isGlobalNamespace()
+    return enclosingSymbol != null && !kind.isParameter() && !enclosingSymbol.kind.isGlobalNamespace()
       ? enclosingSymbol.fullName() + "." + name : name;
   }
 

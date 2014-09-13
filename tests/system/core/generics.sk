@@ -394,4 +394,20 @@ bool foo = Foo<int, bool, float>().foo().bar().baz(0);
            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ");
 
+test("
+T foo;
+T bar<T>(int x) { return x; }
+T baz;
+", "
+<stdin>:1:1: error: \"T\" is not declared
+T foo;
+^
+<stdin>:2:26: error: Cannot convert from type \"int\" to type \"T\"
+T bar<T>(int x) { return x; }
+                         ^
+<stdin>:3:1: error: \"T\" is not declared
+T baz;
+^
+");
+
 }}

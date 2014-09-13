@@ -303,7 +303,7 @@ class Resolver {
         case .FUNCTION { symbol.kind = .GLOBAL_FUNCTION; }
         case .CONSTRUCTOR { symbol.kind = .CONSTRUCTOR_FUNCTION; }
         case .VARIABLE { symbol.kind = .GLOBAL_VARIABLE; }
-        case .PARAMETER { symbol.kind = .PARAMETER; }
+        case .PARAMETER { symbol.kind = symbol.enclosingSymbol != null ? .OBJECT_PARAMETER : .FUNCTION_PARAMETER; }
         case .ALIAS { symbol.kind = .ALIAS; }
         case .EXTENSION { semanticErrorExtensionMissingTarget(log, declarationName.range, declarationName.asString()); }
         default { assert false; }
@@ -773,7 +773,7 @@ class Resolver {
     var symbol = node.symbol;
 
     // No need to check for static symbols
-    if (!symbol.kind.isInstance() && symbol.kind != .PARAMETER) {
+    if (!symbol.kind.isInstance() && symbol.kind != .OBJECT_PARAMETER) {
       return true;
     }
 
@@ -791,7 +791,7 @@ class Resolver {
     }
 
     // The cases where type parameters may appear are more complicated
-    if (symbol.kind == .PARAMETER && context.symbolForThis == symbol.enclosingSymbol) {
+    if (symbol.kind == .OBJECT_PARAMETER && context.symbolForThis == symbol.enclosingSymbol) {
       var enclosingNode = symbol.enclosingSymbol.node;
       for (var parent = node.parent; parent != enclosingNode; parent = parent.parent) {
         if (parent.kind == .NODE_LIST && parent.parent == enclosingNode &&
@@ -984,23 +984,24 @@ class Resolver {
     }
   }
 
+  void resolveTypeParameters(Symbol symbol, Node node) {
+    if (node != null && node.hasChildren()) {
+      symbol.parameters = [];
+      resolveNodes(node.children);
+      for (var i = 0; i < node.children.length; i++) {
+        symbol.parameters.push(node.children.get(i).symbol);
+      }
+      symbol.sortParametersByDependencies();
+    }
+  }
+
   void initializeObject(Symbol symbol) {
     assert symbol.type.isObject();
     forbidBlockDeclarationModifiers(symbol, "on an object declaration");
 
     var node = symbol.node.firstNonExtensionSibling();
-    var parameters = node.objectParameters();
     var type = symbol.type;
-
-    // Resolve type parameters
-    if (parameters != null && parameters.hasChildren()) {
-      symbol.parameters = [];
-      resolveNodes(parameters.children);
-      for (var i = 0; i < parameters.children.length; i++) {
-        symbol.parameters.push(parameters.children.get(i).symbol);
-      }
-      symbol.sortParametersByDependencies();
-    }
+    resolveTypeParameters(symbol, node.objectParameters());
 
     // Automatically generate a constructor if missing
     if (!type.isInterface() && type.constructor() == null && !symbol.isImport()) {
@@ -1046,6 +1047,7 @@ class Resolver {
     // Only functions have return types (constructors don't)
     if (node.kind == .FUNCTION) {
       var result = node.functionResult();
+      resolveTypeParameters(symbol, node.functionParameters());
       resolveAsParameterizedType(result);
       checkIsValidFunctionReturnType(result);
       resultType = result.type;
@@ -1376,7 +1378,7 @@ class Resolver {
         case .CLASS, .STRUCT, .INTERFACE { initializeObject(symbol); }
         case .GLOBAL_FUNCTION, .INSTANCE_FUNCTION, .CONSTRUCTOR_FUNCTION { initializeFunction(symbol); }
         case .LOCAL_VARIABLE, .GLOBAL_VARIABLE, .INSTANCE_VARIABLE { initializeVariable(symbol); }
-        case .PARAMETER { initializeParameter(symbol); }
+        case .OBJECT_PARAMETER, .FUNCTION_PARAMETER { initializeParameter(symbol); }
         case .ALIAS { initializeAlias(symbol); }
         case .OTHER {}
         default { assert false; }
@@ -1667,7 +1669,8 @@ class Resolver {
       Node.createName(symbol.name),
       Node.createNodeList([]),
       Node.createBlock([statement]),
-      Node.createType(cache.stringType)).withSymbol(symbol);
+      Node.createType(cache.stringType),
+      null).withSymbol(symbol);
     block.appendChild(symbol.node);
 
     // Resolve it now since it otherwise may never be resolved

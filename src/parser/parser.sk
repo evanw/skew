@@ -512,13 +512,14 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
   var name = parseName(context); if (name == null) return null;
 
   // Function declaration
-  if (context.peek(.LEFT_PARENTHESIS)) {
+  if (context.peek(.LEFT_PARENTHESIS) || context.peek(.START_PARAMETER_LIST)) {
+    var parameters = parseParameters(context);
     var arguments = parseArgumentVariables(context); if (arguments == null) return null;
     Node block = null;
     if (!context.eat(.SEMICOLON)) {
       block = parseBlock(context, .NORMAL); if (block == null) return null;
     }
-    return Node.createFunction(name, arguments, block, type).withRange(context.spanSince(type.range));
+    return Node.createFunction(name, arguments, block, type, parameters).withRange(context.spanSince(type.range));
   }
 
   // Variable declaration

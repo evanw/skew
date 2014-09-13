@@ -1,8 +1,8 @@
 class Type {
   var members = StringMap<Member>();
 
-  // The symbol that declared this type, if any. Function types don't have a
-  // declaring symbol, so this will be null for function types.
+  // The symbol that declared this type, if any. Non-generic function types
+  // don't have a declaring symbol, so this will be null for those types.
   Symbol symbol;
 
   // This contains types used in the definition of this type. Classes derive
@@ -197,7 +197,8 @@ class Type {
   }
 
   bool isFunction() {
-    return symbol == null;
+    // Generic function types have a symbol but non-generic function types don't
+    return symbol == null || symbol.kind.isFunction();
   }
 
   bool isNamespace() {
@@ -213,7 +214,7 @@ class Type {
   }
 
   bool isParameter() {
-    return symbol != null && symbol.kind == .PARAMETER;
+    return symbol != null && symbol.kind.isParameter();
   }
 
   bool isObject() {

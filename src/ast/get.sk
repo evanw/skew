@@ -265,22 +265,28 @@ in Node {
 
   Node functionArguments() {
     assert kind.isFunction();
-    assert children.length >= 4;
+    assert children.length == 5;
     assert children.get(1).kind == .NODE_LIST;
     return children.get(1);
   }
 
   Node functionBlock() {
     assert kind.isFunction();
-    assert children.length >= 4;
+    assert children.length == 5;
     assert children.get(2) == null || children.get(2).kind == .BLOCK;
     return children.get(2);
   }
 
   Node functionResult() {
     assert kind == .FUNCTION;
-    assert children.length == 4;
+    assert children.length == 5;
     return children.get(3);
+  }
+
+  Node functionParameters() {
+    assert kind == .FUNCTION;
+    assert children.length == 5;
+    return children.get(4);
   }
 
   Node superInitializer() {

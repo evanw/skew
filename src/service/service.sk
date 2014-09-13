@@ -114,7 +114,7 @@ namespace service {
 
       // Pretty-print the symbol
       switch (symbol.kind) {
-        case .PARAMETER {
+        case .OBJECT_PARAMETER, .FUNCTION_PARAMETER {
           var bound = symbol.type.bound();
           var text = "type " + symbol.name;
           if (bound != null) {

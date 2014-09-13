@@ -92,12 +92,13 @@ in Node {
     return Node(.CONSTRUCTOR).withChildren([name, arguments, block, superInitializer, memberInitializers]);
   }
 
-  static Node createFunction(Node name, Node arguments, Node block, Node result) {
+  static Node createFunction(Node name, Node arguments, Node block, Node result, Node parameters) {
     assert name.kind == .NAME;
     assert checkAllNodeListKinds(arguments, nodeKindCheck(.VARIABLE));
     assert block == null || block.kind == .BLOCK;
     assert result.kind.isExpression();
-    return Node(.FUNCTION).withChildren([name, arguments, block, result]);
+    assert parameters == null || checkAllNodeListKinds(parameters, nodeKindCheck(.PARAMETER));
+    return Node(.FUNCTION).withChildren([name, arguments, block, result, parameters]);
   }
 
   static Node createVariable(Node name, Node type, Node value) {

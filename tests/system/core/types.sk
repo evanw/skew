@@ -186,4 +186,22 @@ class Foo<T is IFoo> {
 ", "
 ");
 
+test("
+bool foo<T>(T a, T b) {
+  return a == b;
+}
+", "
+<stdin>:2:10: error: No binary operator == for type \"T\" and type \"T\"
+  return a == b;
+         ~~~~~~
+");
+
+test("
+interface IFoo {}
+bool foo<T is IFoo>(T a, T b) {
+  return a == b;
+}
+", "
+");
+
 }}

@@ -1231,7 +1231,7 @@
       var members = StringMap.values(type.members);
       for (var j = 0; j < members.length; j = j + 1 | 0) {
         var symbol = members[j].symbol;
-        if (symbol.enclosingSymbol === type.symbol && symbol.node !== null && $in.SymbolKind.isFunction(symbol.kind) && symbol.kind !== 16) {
+        if (symbol.enclosingSymbol === type.symbol && symbol.node !== null && $in.SymbolKind.isFunction(symbol.kind) && symbol.kind !== 17) {
           js.Emitter.emitNode(this, symbol.node);
         }
       }
@@ -2022,7 +2022,7 @@
   };
   js.Emitter.hasCompoundName = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
-    return enclosingSymbol !== null && enclosingSymbol.kind !== 7 && (symbol.kind !== 16 || js.Emitter.hasCompoundName(enclosingSymbol));
+    return enclosingSymbol !== null && enclosingSymbol.kind !== 8 && (symbol.kind !== 17 || js.Emitter.hasCompoundName(enclosingSymbol));
   };
   js.Emitter.createIsKeyword = function() {
     var result = new StringMap();
@@ -2070,7 +2070,7 @@
     if ((symbol.flags & 12288) !== 0) {
       return symbol.name;
     }
-    if (symbol.kind === 16) {
+    if (symbol.kind === 17) {
       return js.Emitter.mangleName(symbol.enclosingSymbol);
     }
     if (symbol.name in js.Emitter.isKeyword.table) {
@@ -2080,9 +2080,9 @@
   };
   js.Emitter.fullName = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
-    if (enclosingSymbol !== null && enclosingSymbol.kind !== 7) {
+    if (enclosingSymbol !== null && enclosingSymbol.kind !== 8) {
       var enclosingName = js.Emitter.fullName(enclosingSymbol);
-      if (symbol.kind === 16) {
+      if (symbol.kind === 17) {
         return enclosingName;
       }
       if ($in.SymbolKind.isInstance(symbol.kind)) {
@@ -2177,7 +2177,7 @@
             if (name === '') {
               name = js.Patcher.generateSymbolName($this);
             }
-            if (symbol.kind !== 15) {
+            if (symbol.kind !== 16) {
               symbol.enclosingSymbol = $this.cache.globalType.symbol;
             }
             symbol.name = name;
@@ -2188,7 +2188,7 @@
   };
   js.Patcher.aliasLocalVariables = function($this, unionFind, order) {
     js.Patcher.zipTogetherInOrder($this, unionFind, order, js.Patcher.extractGroups($this, $this.localVariableUnionFind, function(symbol) {
-      return symbol.kind === 17;
+      return symbol.kind === 18;
     }));
   };
   js.Patcher.aliasUnrelatedProperties = function($this, unionFind, order) {
@@ -2209,7 +2209,7 @@
       }
     }
     js.Patcher.zipTogetherInOrder($this, unionFind, order, js.Patcher.extractGroups($this, relatedTypesUnionFind, function(symbol) {
-      return symbol.kind === 19;
+      return symbol.kind === 20;
     }));
   };
   js.Patcher.zipTogetherInOrder = function($this, unionFind, order, groups) {
@@ -2248,7 +2248,7 @@
     return IntMap.values(labelToGroup);
   };
   js.Patcher.canRename = function(symbol) {
-    return (symbol.flags & 12288) === 0 && symbol.kind !== 16;
+    return (symbol.flags & 12288) === 0 && symbol.kind !== 17;
   };
   js.Patcher.trackSymbolCount = function($this, node) {
     var symbol = node.symbol;
@@ -3488,12 +3488,12 @@
     }
   };
   DeadCodeRemovalPass.includeSymbol = function($this, symbol) {
-    if (symbol.kind === 18 && (symbol.flags & 1024) !== 0 && $this.options.foldAllConstants) {
+    if (symbol.kind === 19 && (symbol.flags & 1024) !== 0 && $this.options.foldAllConstants) {
       return;
     }
     if (!(symbol.uniqueID in $this.includedSymbols.table)) {
       $this.includedSymbols.table[symbol.uniqueID] = true;
-      if (symbol.enclosingSymbol !== null && symbol.kind !== 19) {
+      if (symbol.enclosingSymbol !== null && symbol.kind !== 20) {
         DeadCodeRemovalPass.includeSymbol($this, symbol.enclosingSymbol);
       }
       if ($in.SymbolKind.isObject(symbol.kind)) {
@@ -3556,7 +3556,7 @@
       for (var j = 0; j < callSites.length; j = j + 1 | 0) {
         var callSite = callSites[j];
         for (var node = callSite.parent; node !== null; node = node.parent) {
-          if (node.kind === 15 && node.symbol.kind === 14) {
+          if (node.kind === 15 && node.symbol.kind === 15) {
             var index = this.symbolToInfoIndex.table[node.symbol.uniqueID] || -1;
             if (index >= 0) {
               var other = this.inliningInfo[index];
@@ -3586,7 +3586,7 @@
   };
   InliningGraph.createInliningInfo = function(info, options) {
     var symbol = info.symbol;
-    if (symbol.kind === 14 && ((symbol.flags & 512) !== 0 || options.inlineAllFunctions)) {
+    if (symbol.kind === 15 && ((symbol.flags & 512) !== 0 || options.inlineAllFunctions)) {
       var block = symbol.node.children[2];
       if (block === null) {
         return null;
@@ -3876,37 +3876,37 @@
       }
       switch (kind) {
       case 7:
-        symbol.kind = 8;
-        break;
-      case 8:
         symbol.kind = 9;
         break;
-      case 9:
+      case 8:
         symbol.kind = 10;
         break;
-      case 10:
+      case 9:
         symbol.kind = 11;
         break;
-      case 11:
+      case 10:
         symbol.kind = 12;
         break;
-      case 12:
+      case 11:
         symbol.kind = 13;
         break;
-      case 15:
+      case 12:
         symbol.kind = 14;
         break;
+      case 15:
+        symbol.kind = 15;
+        break;
       case 14:
-        symbol.kind = 16;
+        symbol.kind = 17;
         break;
       case 16:
-        symbol.kind = 18;
+        symbol.kind = 19;
         break;
       case 17:
-        symbol.kind = 4;
+        symbol.kind = symbol.enclosingSymbol !== null ? 6 : 7;
         break;
       case 18:
-        symbol.kind = 6;
+        symbol.kind = 5;
         break;
       case 13:
         Log.error($this.log, declarationName.range, 'No type named "' + declarationName.content.value + '" to extend');
@@ -3919,13 +3919,13 @@
       var node = $this.parsedDeclarations[i];
       var symbol = node.symbol;
       if ((symbol.flags & 64) === 0 && (Symbol.isObjectMember(symbol) || Symbol.isEnumMember(symbol) && (symbol.flags & 16) !== 0)) {
-        if (symbol.kind === 14) {
-          symbol.kind = 15;
-        } else if (symbol.kind === 18) {
-          symbol.kind = 19;
+        if (symbol.kind === 15) {
+          symbol.kind = 16;
+        } else if (symbol.kind === 19) {
+          symbol.kind = 20;
         }
-      } else if (symbol.kind === 18 && Resolver.checkParentsForLocalVariable(node)) {
-        symbol.kind = 17;
+      } else if (symbol.kind === 19 && Resolver.checkParentsForLocalVariable(node)) {
+        symbol.kind = 18;
       }
     }
   };
@@ -3961,7 +3961,7 @@
         for (var k = 0; k < members.length; k = k + 1 | 0) {
           var member = members[k];
           var memberSymbol = member.symbol;
-          if (memberSymbol.kind === 8) {
+          if (memberSymbol.kind === 9) {
             continue;
           }
           var current = Scope.findLocal(block.scope, memberSymbol.name);
@@ -4385,7 +4385,7 @@
   };
   Resolver.checkAccessToInstanceSymbol = function($this, node) {
     var symbol = node.symbol;
-    if (!$in.SymbolKind.isInstance(symbol.kind) && symbol.kind !== 4) {
+    if (!$in.SymbolKind.isInstance(symbol.kind) && symbol.kind !== 6) {
       return true;
     }
     if ($this.context.functionSymbol !== null && $in.SymbolKind.isInstance($this.context.functionSymbol.kind) && ($this.context.functionSymbol.enclosingSymbol === symbol.enclosingSymbol || Type.hasBaseType($this.context.functionSymbol.enclosingSymbol.type, symbol.enclosingSymbol.type))) {
@@ -4395,7 +4395,7 @@
       Log.error($this.log, node.range, 'Cannot use "' + symbol.name + '" outside a class or struct');
       return false;
     }
-    if (symbol.kind === 4 && $this.context.symbolForThis === symbol.enclosingSymbol) {
+    if (symbol.kind === 6 && $this.context.symbolForThis === symbol.enclosingSymbol) {
       var enclosingNode = symbol.enclosingSymbol.node;
       for (var parent = node.parent; parent !== enclosingNode; parent = parent.parent) {
         if (parent.kind === 3 && parent.parent === enclosingNode && (parent === parent.parent.children[3] || parent === parent.parent.children[2])) {
@@ -4502,7 +4502,7 @@
     var baseTypes = Resolver.collectAndResolveBaseTypes($this, symbol);
     var unmergedMembers = new StringMap();
     type.relevantTypes = [];
-    if (symbol.kind === 12) {
+    if (symbol.kind === 13) {
       Resolver.checkNoBaseTypes($this, symbol, 'A struct');
       return;
     }
@@ -4512,7 +4512,7 @@
       if (baseType === $this.cache.errorType) {
         continue;
       }
-      if (symbol.kind === 11 && Type.isClass(baseType)) {
+      if (symbol.kind === 12 && Type.isClass(baseType)) {
         if (baseTypes.indexOf(base) !== 0) {
           Log.error($this.log, base.range, 'Base type "' + Type.toString(baseType) + '" must come first in a class declaration');
           continue;
@@ -4554,19 +4554,21 @@
       }
     }
   };
-  Resolver.initializeObject = function($this, symbol) {
-    Resolver.forbidBlockDeclarationModifiers($this, symbol, 'on an object declaration');
-    var node = Node.firstNonExtensionSibling(symbol.node);
-    var parameters = node.children[3];
-    var type = symbol.type;
-    if (parameters !== null && Node.hasChildren(parameters)) {
+  Resolver.resolveTypeParameters = function($this, symbol, node) {
+    if (node !== null && Node.hasChildren(node)) {
       symbol.parameters = [];
-      Resolver.resolveNodes($this, parameters.children);
-      for (var i = 0; i < parameters.children.length; i = i + 1 | 0) {
-        symbol.parameters.push(parameters.children[i].symbol);
+      Resolver.resolveNodes($this, node.children);
+      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+        symbol.parameters.push(node.children[i].symbol);
       }
       Symbol.sortParametersByDependencies(symbol);
     }
+  };
+  Resolver.initializeObject = function($this, symbol) {
+    Resolver.forbidBlockDeclarationModifiers($this, symbol, 'on an object declaration');
+    var node = Node.firstNonExtensionSibling(symbol.node);
+    var type = symbol.type;
+    Resolver.resolveTypeParameters($this, symbol, node.children[3]);
     if (!Type.isInterface(type) && Type.$constructor(type) === null && (symbol.flags & 8192) === 0) {
       Resolver.addAutoGeneratedMember($this, type, 'new');
     }
@@ -4580,10 +4582,10 @@
       if (!$in.SymbolKind.isTypeWithInstances(enclosingSymbol.kind)) {
         Resolver.unexpectedModifierIfPresent($this, symbol, 64, 'outside an object declaration');
       }
-      if (symbol.kind === 16 && (enclosingSymbol.flags & 4096) !== 0) {
+      if (symbol.kind === 17 && (enclosingSymbol.flags & 4096) !== 0) {
         symbol.flags |= 4096;
         Resolver.redundantModifierIfPresent($this, symbol, 4096, 'on an constructor for an exported object');
-      } else if ((symbol.flags & 4096) !== 0 && (enclosingSymbol.flags & 4096) === 0 && enclosingSymbol.kind !== 7) {
+      } else if ((symbol.flags & 4096) !== 0 && (enclosingSymbol.flags & 4096) === 0 && enclosingSymbol.kind !== 8) {
         Resolver.unexpectedModifierIfPresent($this, symbol, 4096, 'on a non-exported type');
       }
     }
@@ -4594,6 +4596,7 @@
     var resultType = null;
     if (node.kind === 15) {
       var result = node.children[3];
+      Resolver.resolveTypeParameters($this, symbol, node.children[4]);
       Resolver.resolveAsParameterizedType($this, result);
       Resolver.checkIsValidFunctionReturnType($this, result);
       resultType = result.type;
@@ -4631,13 +4634,13 @@
       symbol.type = TypeCache.functionType($this.cache, resultType, argumentTypes);
     }
     var overriddenMember = symbol.overriddenMember;
-    if (overriddenMember !== null && symbol.kind !== 16) {
+    if (overriddenMember !== null && symbol.kind !== 17) {
       Resolver.initializeMember($this, overriddenMember);
       var base = overriddenMember.type;
       var derived = symbol.type;
       if (base !== $this.cache.errorType && derived !== $this.cache.errorType) {
         var overriddenSymbol = overriddenMember.symbol;
-        if (base.symbol !== null || !$in.SymbolKind.isInstance(overriddenSymbol.kind) || !$in.SymbolKind.isInstance(symbol.kind)) {
+        if (!Type.isFunction(base) || !$in.SymbolKind.isInstance(overriddenSymbol.kind) || !$in.SymbolKind.isInstance(symbol.kind)) {
           semanticErrorBadOverride($this.log, node.children[0].range, symbol.name, overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.children[0].range);
         } else if (base !== derived) {
           semanticErrorOverrideDifferentTypes($this.log, node.children[0].range, symbol.name, base, derived, overriddenSymbol.node.children[0].range);
@@ -4654,7 +4657,7 @@
       Resolver.unexpectedModifierIfPresent($this, symbol, 128, 'outside an object declaration');
       Resolver.unexpectedModifierIfPresent($this, symbol, 32, 'outside an object declaration');
     } else {
-      if (enclosingSymbol.kind === 12) {
+      if (enclosingSymbol.kind === 13) {
         Resolver.unexpectedModifierIfPresent($this, symbol, 128, 'inside a struct');
       } else if (!$in.SymbolKind.isInstance(symbol.kind)) {
         Resolver.unexpectedModifierIfPresent($this, symbol, 128, 'on a non-instance function');
@@ -4674,7 +4677,7 @@
     }
     if ((symbol.flags & 1024) !== 0) {
       Resolver.redundantModifierIfPresent($this, symbol, 256, 'on a const variable declaration');
-    } else if (symbol.enclosingSymbol !== null && symbol.enclosingSymbol.kind === 12 && (symbol.flags & 64) === 0) {
+    } else if (symbol.enclosingSymbol !== null && symbol.enclosingSymbol.kind === 13 && (symbol.flags & 64) === 0) {
       Resolver.expectedModifierIfAbsent($this, symbol, 256, 'on a variable declaration inside a struct');
     }
     if ((symbol.flags & 8192) !== 0) {
@@ -4814,32 +4817,33 @@
       $this.typeContext = null;
       $this.resultType = null;
       switch (symbol.kind) {
-      case 8:
+      case 9:
         Resolver.initializeNamespace($this, symbol);
         break;
-      case 9:
       case 10:
+      case 11:
         Resolver.initializeEnum($this, symbol);
         break;
-      case 11:
       case 12:
       case 13:
+      case 14:
         Resolver.initializeObject($this, symbol);
         break;
-      case 14:
       case 15:
       case 16:
+      case 17:
         Resolver.initializeFunction($this, symbol);
         break;
-      case 17:
       case 18:
       case 19:
+      case 20:
         Resolver.initializeVariable($this, symbol);
         break;
-      case 4:
+      case 6:
+      case 7:
         Resolver.initializeParameter($this, symbol);
         break;
-      case 6:
+      case 5:
         Resolver.initializeAlias($this, symbol);
         break;
       case 0:
@@ -4941,13 +4945,13 @@
       var $constructor = Type.$constructor(baseClass);
       if ($constructor !== null) {
         Resolver.initializeMember($this, $constructor);
-        if ($constructor.type.symbol === null) {
+        if (Type.isFunction($constructor.type)) {
           var argumentTypes = Type.argumentTypes($constructor.type);
           superArguments = [];
           for (var j = 0; j < argumentTypes.length; j = j + 1 | 0) {
             var name = '_' + $arguments.length;
             var argument = Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent(name)), Node.withType(new Node(35), argumentTypes[j]), null]);
-            argument.symbol = Resolver.createSymbol($this, name, 17);
+            argument.symbol = Resolver.createSymbol($this, name, 18);
             argument.symbol.node = argument;
             $arguments.push(argument);
             superArguments.push(Node.withContent(new Node(34), new StringContent(name)));
@@ -4963,7 +4967,7 @@
     for (var i = 0; i < members.length; i = i + 1 | 0) {
       var member = members[i];
       var memberSymbol = member.symbol;
-      if (memberSymbol.kind === 19 && memberSymbol.enclosingSymbol === enclosingSymbol) {
+      if (memberSymbol.kind === 20 && memberSymbol.enclosingSymbol === enclosingSymbol) {
         if (memberSymbol.node.children[2] === null) {
           Resolver.initializeMember($this, member);
           if (member.type === $this.cache.errorType) {
@@ -4984,12 +4988,12 @@
       var member = uninitializedMembers[i];
       var name = '_' + $arguments.length;
       var argument = Node.withChildren(new Node(16), [Node.withContent(new Node(34), new StringContent(name)), Node.withType(new Node(35), member.type), null]);
-      argument.symbol = Resolver.createSymbol($this, name, 17);
+      argument.symbol = Resolver.createSymbol($this, name, 18);
       argument.symbol.node = argument;
       $arguments.push(argument);
       memberInitializers.push(Node.withChildren(new Node(5), [Node.withContent(new Node(34), new StringContent(member.symbol.name)), Node.withContent(new Node(34), new StringContent(name))]));
     }
-    symbol.kind = 16;
+    symbol.kind = 17;
     symbol.node = Node.withChildren(new Node(14), [Node.withContent(new Node(34), new StringContent(symbol.name)), Node.withChildren(new Node(3), $arguments), Node.withChildren(new Node(2), []), superArguments !== null ? Node.withChildren(new Node(48), superArguments) : null, memberInitializers !== null ? Node.withChildren(new Node(3), memberInitializers) : null]);
     Node.appendChild(enclosingSymbol.node.children[1], symbol.node);
     var scope = new Scope(enclosingSymbol.node.scope);
@@ -5010,7 +5014,7 @@
     var i = 0;
     for (i = 0; i < members.length; i = i + 1 | 0) {
       var field = members[i].symbol;
-      if (field.kind === 18 && (field.flags & 16) === 0) {
+      if (field.kind === 19 && (field.flags & 16) === 0) {
         fields.push(field);
       }
     }
@@ -5049,9 +5053,9 @@
       cases.push(Node.createCase([], Node.withChildren(new Node(2), [Node.withChildren(new Node(24), [Node.withContent(new Node(43), new StringContent(''))])])));
       statement = Node.createSwitch(new Node(36), cases);
     }
-    symbol.kind = 15;
+    symbol.kind = 16;
     symbol.flags = 16;
-    symbol.node = Node.withSymbol(Node.withChildren(new Node(15), [Node.withContent(new Node(34), new StringContent(symbol.name)), Node.withChildren(new Node(3), []), Node.withChildren(new Node(2), [statement]), Node.withType(new Node(35), $this.cache.stringType)]), symbol);
+    symbol.node = Node.withSymbol(Node.withChildren(new Node(15), [Node.withContent(new Node(34), new StringContent(symbol.name)), Node.withChildren(new Node(3), []), Node.withChildren(new Node(2), [statement]), Node.withType(new Node(35), $this.cache.stringType), null]), symbol);
     Node.appendChild(block, symbol.node);
     Resolver.prepareNode($this, extension, enclosingNode.parent.scope);
     Resolver.resolve($this, extension, null);
@@ -5242,7 +5246,7 @@
       }
       if (symbol.type === $this.cache.errorType) {
         $this.resultType = $this.cache.errorType;
-      } else if (symbol.kind === 16) {
+      } else if (symbol.kind === 17) {
         $this.resultType = $this.cache.voidType;
       } else {
         $this.resultType = symbol.type.relevantTypes[0];
@@ -5253,7 +5257,7 @@
       }
       $this.resultType = oldResultType;
     } else if ((symbol.flags & 8192) === 0 && (symbol.flags & 128) === 0) {
-      if (symbol.kind === 15) {
+      if (symbol.kind === 16) {
         Log.error($this.log, node.children[0].range, 'Abstract functions must use the "virtual" modifier');
       } else {
         Log.error($this.log, node.children[0].range, 'Use the "import" modifier to import functions');
@@ -5279,7 +5283,7 @@
         } else {
           Resolver.resolveArguments($this, $arguments, Type.argumentTypes(overriddenType), superInitializer.range, superInitializer.range);
         }
-      } else if (overriddenType.symbol === null) {
+      } else if (Type.isFunction(overriddenType)) {
         if (Type.argumentTypes(overriddenType).length > 0) {
           Log.error($this.log, node.children[0].range, 'Missing call to "super" in initializer list');
         } else {
@@ -5301,7 +5305,7 @@
         for (var i = 0; i < members.length; i = i + 1 | 0) {
           var member = members[i];
           var memberSymbol = member.symbol;
-          if (memberSymbol.kind === 19 && memberSymbol.enclosingSymbol === enclosingSymbol) {
+          if (memberSymbol.kind === 20 && memberSymbol.enclosingSymbol === enclosingSymbol) {
             var value = memberSymbol.node.children[2];
             if (value !== null) {
               Resolver.initializeMember($this, member);
@@ -5400,14 +5404,14 @@
     }
     if (value !== null) {
       Resolver.resolveAsExpressionWithConversion($this, value, Symbol.isEnumValue(symbol) ? $this.cache.intType : symbol.type, 0);
-      if (symbol.kind === 18) {
+      if (symbol.kind === 19) {
         ConstantFolder.foldConstants($this.constantFolder, value);
         if (!Resolver.isPureValue($this, value) && symbol.type !== $this.cache.errorType) {
           Log.error($this.log, value.range, 'Global variables must be initialized to a pure expression (one without side effects)');
           value.type = $this.cache.errorType;
         }
       }
-    } else if (symbol.type !== $this.cache.errorType && node.parent.kind === 6 && symbol.kind !== 19) {
+    } else if (symbol.type !== $this.cache.errorType && node.parent.kind === 6 && symbol.kind !== 20) {
       Node.replaceChild(node, 2, Node.withType(Resolver.createDefaultValue($this, symbol.type, node.children[0].range), symbol.type));
     }
   };
@@ -5754,7 +5758,7 @@
           return;
         }
       }
-      if (valueType.symbol !== null) {
+      if (!Type.isFunction(valueType)) {
         Log.error($this.log, value.range, 'Cannot call type "' + Type.toString(valueType) + '"');
         Resolver.resolveNodesAsExpressions($this, $arguments);
         return;
@@ -5772,7 +5776,7 @@
       var member = $this.context.functionSymbol.overriddenMember;
       Resolver.initializeMember($this, member);
       var type = member.type;
-      if (type === $this.cache.errorType || type.symbol !== null) {
+      if (type === $this.cache.errorType || !Type.isFunction(type)) {
         Resolver.resolveNodesAsExpressions($this, $arguments);
         return;
       }
@@ -5865,7 +5869,7 @@
       }
     }
     if ($this.typeContext !== null && $this.typeContext !== $this.cache.errorType) {
-      if ($this.typeContext.symbol !== null) {
+      if (!Type.isFunction($this.typeContext)) {
         Log.error($this.log, node.range, 'Cannot use a lambda expression with type "' + Type.toString($this.typeContext) + '"');
       } else {
         var argumentTypes = Type.argumentTypes($this.typeContext);
@@ -6067,7 +6071,7 @@
     }
     if (kind === 72 || kind === 82) {
       commonType = TypeCache.commonImplicitType($this.cache, leftType, rightType);
-      if (commonType !== null) {
+      if (commonType !== null && Type.isEqualityComparable(commonType, $this.cache)) {
         node.type = $this.cache.boolType;
       }
     } else if (kind === 67 || kind === 86 || kind === 81 || kind === 71) {
@@ -6228,7 +6232,7 @@
     }
   };
   Symbol.fullName = function($this) {
-    return $this.enclosingSymbol !== null && $this.kind !== 4 && $this.enclosingSymbol.kind !== 7 ? Symbol.fullName($this.enclosingSymbol) + '.' + $this.name : $this.name;
+    return $this.enclosingSymbol !== null && !$in.SymbolKind.isParameter($this.kind) && $this.enclosingSymbol.kind !== 8 ? Symbol.fullName($this.enclosingSymbol) + '.' + $this.name : $this.name;
   };
   Symbol.hasParameters = function($this) {
     return $this.parameters !== null && $this.parameters.length > 0;
@@ -6254,7 +6258,7 @@
   };
   SymbolMotionPass.moveSymbol = function($this, symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
-    if ((symbol.flags & 8192) === 0 && enclosingSymbol !== null && symbol.kind !== 4 && ((enclosingSymbol.flags & 8192) !== 0 || $in.SymbolKind.isFunction(symbol.kind) && $in.SymbolKind.isEnum(enclosingSymbol.kind))) {
+    if ((symbol.flags & 8192) === 0 && enclosingSymbol !== null && !$in.SymbolKind.isParameter(symbol.kind) && ((enclosingSymbol.flags & 8192) !== 0 || $in.SymbolKind.isFunction(symbol.kind) && $in.SymbolKind.isEnum(enclosingSymbol.kind))) {
       var enclosingType = symbol.enclosingSymbol.type;
       var shadow = SymbolMotionPass.createShadowForSymbol($this, enclosingSymbol);
       var member = enclosingType.members.table[symbol.name];
@@ -6285,7 +6289,7 @@
     if (inMember !== null) {
       inType = inMember.type;
     } else {
-      var inSymbol = Resolver.createSymbol($this.resolver, 'in', 8);
+      var inSymbol = Resolver.createSymbol($this.resolver, 'in', 9);
       inSymbol.enclosingSymbol = enclosingSymbol;
       inType = inSymbol.type = new Type(inSymbol);
       inMember = new Member(inSymbol);
@@ -6294,7 +6298,7 @@
       inSymbol.node = Node.withSymbol(Node.withChildren(new Node(7), [Node.withSymbol(Node.withContent(new Node(34), new StringContent('in')), inSymbol), Node.withChildren(new Node(2), [])]), inSymbol);
       Node.insertSiblingAfter(symbol.node, inSymbol.node);
     }
-    var shadowSymbol = Resolver.createSymbol($this.resolver, symbol.name, 8);
+    var shadowSymbol = Resolver.createSymbol($this.resolver, symbol.name, 9);
     var shadowType = shadowSymbol.type = new Type(shadowSymbol);
     var shadowMember = new Member(shadowSymbol);
     shadowSymbol.enclosingSymbol = inType.symbol;
@@ -6351,7 +6355,7 @@
     }
   };
   Type.toString = function($this) {
-    if ($this.symbol === null) {
+    if (Type.isFunction($this)) {
       var text = Type.toString($this.relevantTypes[0]) + ' fn(';
       var $arguments = Type.argumentTypes($this);
       for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
@@ -6407,6 +6411,12 @@
   Type.argumentTypes = function($this) {
     return $this.relevantTypes.slice(1, $this.relevantTypes.length);
   };
+  Type.isPrimitive = function($this, cache) {
+    return $this === cache.intType || $this === cache.boolType || $this === cache.floatType || $this === cache.doubleType || $this === cache.stringType;
+  };
+  Type.isFunction = function($this) {
+    return $this.symbol === null || $in.SymbolKind.isFunction($this.symbol.kind);
+  };
   Type.isNamespace = function($this) {
     return $this.symbol !== null && $in.SymbolKind.isNamespace($this.symbol.kind);
   };
@@ -6414,22 +6424,25 @@
     return $this.symbol !== null && $in.SymbolKind.isEnum($this.symbol.kind);
   };
   Type.isEnumFlags = function($this) {
-    return $this.symbol !== null && $this.symbol.kind === 10;
-  };
-  Type.isParameter = function($this) {
-    return $this.symbol !== null && $this.symbol.kind === 4;
-  };
-  Type.isClass = function($this) {
     return $this.symbol !== null && $this.symbol.kind === 11;
   };
-  Type.isStruct = function($this) {
+  Type.isParameter = function($this) {
+    return $this.symbol !== null && $in.SymbolKind.isParameter($this.symbol.kind);
+  };
+  Type.isClass = function($this) {
     return $this.symbol !== null && $this.symbol.kind === 12;
   };
-  Type.isInterface = function($this) {
+  Type.isStruct = function($this) {
     return $this.symbol !== null && $this.symbol.kind === 13;
   };
+  Type.isInterface = function($this) {
+    return $this.symbol !== null && $this.symbol.kind === 14;
+  };
   Type.isReference = function($this) {
-    return Type.isClass($this) || Type.isInterface($this) || $this.symbol === null || Type.isParameter($this) && Type.bound($this) !== null;
+    return Type.isClass($this) || Type.isInterface($this) || Type.isFunction($this) || Type.isParameter($this) && Type.bound($this) !== null;
+  };
+  Type.isEqualityComparable = function($this, cache) {
+    return Type.isPrimitive($this, cache) || !Type.isStruct($this) && (!Type.isParameter($this) || Type.bound($this) !== null);
   };
   Type.isInteger = function($this, cache) {
     return $this === cache.intType || Type.isEnum($this);
@@ -6441,9 +6454,9 @@
     return Type.isInteger($this, cache) || Type.isReal($this, cache);
   };
   function TypeCache() {
-    this.globalType = TypeCache.createType(new Symbol('<global>', 7));
+    this.globalType = TypeCache.createType(new Symbol('<global>', 8));
     this.nullType = TypeCache.createType(new Symbol('null', 0));
-    this.voidType = TypeCache.createType(new Symbol('void', 5));
+    this.voidType = TypeCache.createType(new Symbol('void', 4));
     this.errorType = TypeCache.createType(new Symbol('<error>', 0));
     this.intType = null;
     this.boolType = null;
@@ -6491,7 +6504,7 @@
   };
   TypeCache.substitute = function($this, type, parameters, substitutions) {
     var result = null;
-    if (type.symbol === null) {
+    if (Type.isFunction(type)) {
       result = TypeCache.parameterize($this, null, TypeCache.substituteAll($this, type.relevantTypes, parameters, substitutions));
     } else if (!Type.hasParameters(type)) {
       var index = parameters.indexOf(type.symbol);
@@ -6973,29 +6986,32 @@
     io.print(text);
     io.setColor(0);
   };
+  $in.SymbolKind.isParameter = function($this) {
+    return $this >= 6 && $this <= 7;
+  };
   $in.SymbolKind.isNamespace = function($this) {
-    return $this >= 7 && $this <= 8;
+    return $this >= 8 && $this <= 9;
   };
   $in.SymbolKind.isTypeWithInstances = function($this) {
-    return $this >= 9 && $this <= 13;
+    return $this >= 10 && $this <= 14;
   };
   $in.SymbolKind.isEnum = function($this) {
-    return $this >= 9 && $this <= 10;
+    return $this >= 10 && $this <= 11;
   };
   $in.SymbolKind.isObject = function($this) {
-    return $this >= 11 && $this <= 13;
+    return $this >= 12 && $this <= 14;
   };
   $in.SymbolKind.isType = function($this) {
-    return $this >= 4 && $this <= 13;
+    return $this >= 4 && $this <= 14;
   };
   $in.SymbolKind.isFunction = function($this) {
-    return $this >= 14 && $this <= 16;
+    return $this >= 15 && $this <= 17;
   };
   $in.SymbolKind.isVariable = function($this) {
-    return $this >= 17 && $this <= 19;
+    return $this >= 18 && $this <= 20;
   };
   $in.SymbolKind.isInstance = function($this) {
-    return $this === 15 || $this === 19 || $this === 16;
+    return $this === 16 || $this === 20 || $this === 17;
   };
   $in.SymbolKind.toString = function($this) {
     switch ($this) {
@@ -7008,36 +7024,38 @@
     case 3:
       return 'UNMERGED';
     case 4:
-      return 'PARAMETER';
-    case 5:
       return 'OTHER_TYPE';
-    case 6:
+    case 5:
       return 'ALIAS';
+    case 6:
+      return 'OBJECT_PARAMETER';
     case 7:
-      return 'GLOBAL_NAMESPACE';
+      return 'FUNCTION_PARAMETER';
     case 8:
-      return 'NAMESPACE';
+      return 'GLOBAL_NAMESPACE';
     case 9:
-      return 'ENUM';
+      return 'NAMESPACE';
     case 10:
-      return 'ENUM_FLAGS';
+      return 'ENUM';
     case 11:
-      return 'CLASS';
+      return 'ENUM_FLAGS';
     case 12:
-      return 'STRUCT';
+      return 'CLASS';
     case 13:
-      return 'INTERFACE';
+      return 'STRUCT';
     case 14:
-      return 'GLOBAL_FUNCTION';
+      return 'INTERFACE';
     case 15:
-      return 'INSTANCE_FUNCTION';
+      return 'GLOBAL_FUNCTION';
     case 16:
-      return 'CONSTRUCTOR_FUNCTION';
+      return 'INSTANCE_FUNCTION';
     case 17:
-      return 'LOCAL_VARIABLE';
+      return 'CONSTRUCTOR_FUNCTION';
     case 18:
-      return 'GLOBAL_VARIABLE';
+      return 'LOCAL_VARIABLE';
     case 19:
+      return 'GLOBAL_VARIABLE';
+    case 20:
       return 'INSTANCE_VARIABLE';
     default:
       return '';
@@ -8278,7 +8296,8 @@
     if (name === null) {
       return null;
     }
-    if (ParserContext.current(context).kind === 59) {
+    if (ParserContext.current(context).kind === 59 || ParserContext.current(context).kind === 101) {
+      var parameters = parseParameters(context);
       var $arguments = parseArgumentVariables(context);
       if ($arguments === null) {
         return null;
@@ -8290,7 +8309,7 @@
           return null;
         }
       }
-      return Node.withRange(Node.withChildren(new Node(15), [name, $arguments, block, type]), ParserContext.spanSince(context, type.range));
+      return Node.withRange(Node.withChildren(new Node(15), [name, $arguments, block, type, parameters]), ParserContext.spanSince(context, type.range));
     }
     var cluster = parseVariableCluster(context, type, name);
     scanForToken(context, 83, 1);
@@ -8812,11 +8831,11 @@
       var info = graph.callInfo[i];
       var symbol = info.symbol;
       var enclosingSymbol = symbol.enclosingSymbol;
-      if (symbol.kind === 15 && (symbol.flags & 8192) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 8192) !== 0 || $in.SymbolKind.isEnum(enclosingSymbol.kind) || resolver.options.convertAllInstanceToStatic && (symbol.flags & 4096) === 0 && (symbol.flags & 128) === 0)) {
-        var thisSymbol = new Symbol('this', 17);
+      if (symbol.kind === 16 && (symbol.flags & 8192) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 8192) !== 0 || $in.SymbolKind.isEnum(enclosingSymbol.kind) || resolver.options.convertAllInstanceToStatic && (symbol.flags & 4096) === 0 && (symbol.flags & 128) === 0)) {
+        var thisSymbol = new Symbol('this', 18);
         thisSymbol.type = enclosingSymbol.type;
         var replacedThis = InstanceToStaticPass.recursivelyReplaceThis(symbol.node.children[2], thisSymbol);
-        symbol.kind = 14;
+        symbol.kind = 15;
         symbol.flags |= 64;
         if (replacedThis) {
           var $arguments = Type.argumentTypes(symbol.type);
@@ -8858,7 +8877,7 @@
       Node.become(node, Node.withRange(InstanceToStaticPass.createThis(symbol), node.range));
       return true;
     }
-    if (Node.isNameExpression(node) && (node.symbol.kind === 15 || node.symbol.kind === 19)) {
+    if (Node.isNameExpression(node) && (node.symbol.kind === 16 || node.symbol.kind === 20)) {
       Node.become(node, Node.withRange(Node.withType(Node.withChildren(new Node(45), [InstanceToStaticPass.createThis(symbol), Node.clone(node)]), node.type), node.range));
       return true;
     }
@@ -8931,7 +8950,8 @@
       var start = Source.indexToLineColumn(source, node.range.start);
       var result = new LanguageServiceTypeResult(start.line, start.column, node.range.start, Range.singleLineLength(node.range), Type.toString(type));
       switch (symbol.kind) {
-      case 4:
+      case 6:
+      case 7:
         var bound = Type.bound(symbol.type);
         var text = 'type ' + symbol.name;
         if (bound !== null) {
@@ -8939,12 +8959,12 @@
         }
         result.declaration = text;
         break;
-      case 8:
+      case 9:
         result.declaration = 'namespace ' + Symbol.fullName(symbol);
         break;
-      case 11:
       case 12:
       case 13:
+      case 14:
         var text = $in.SymbolKind.toString(symbol.kind).toLowerCase() + ' ' + Type.toString(type);
         if (Type.hasRelevantTypes(type)) {
           for (var i = 0; i < type.relevantTypes.length; i = i + 1 | 0) {
@@ -8953,15 +8973,15 @@
         }
         result.declaration = text;
         break;
-      case 9:
+      case 10:
         result.declaration = 'enum ' + Symbol.fullName(symbol);
         break;
-      case 10:
+      case 11:
         result.declaration = 'enum flags ' + Symbol.fullName(symbol);
         break;
-      case 14:
       case 15:
       case 16:
+      case 17:
         var text = Type.toString(type.relevantTypes[0]) + ' ' + symbol.name + '(';
         var $arguments = symbol.node.children[1].children;
         var argumentTypes = Type.argumentTypes(type);
@@ -8973,9 +8993,9 @@
         }
         result.declaration = text + ')';
         break;
-      case 17:
       case 18:
       case 19:
+      case 20:
         var text = Type.toString(type) + ' ' + symbol.name;
         if (Symbol.isEnumValue(symbol)) {
           text += ' = ' + symbol.constant.value;
@@ -9029,7 +9049,7 @@
     var type = member.type;
     if (name !== 'new' && type !== null) {
       var text = name;
-      if (type.symbol === null) {
+      if (Type.isFunction(type)) {
         var semicolon = Type.toString(type.relevantTypes[0]) === 'void';
         text += Type.argumentTypes(type).length === 0 ? semicolon ? '();$' : '()$' : semicolon ? '($);' : '($)';
       } else {

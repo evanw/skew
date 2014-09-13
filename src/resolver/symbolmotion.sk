@@ -11,7 +11,7 @@ class SymbolMotionPass {
 
   void moveSymbol(Symbol symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
-    if (!symbol.isImport() && enclosingSymbol != null && symbol.kind != .PARAMETER && (enclosingSymbol.isImport() || symbol.kind.isFunction() && enclosingSymbol.kind.isEnum())) {
+    if (!symbol.isImport() && enclosingSymbol != null && !symbol.kind.isParameter() && (enclosingSymbol.isImport() || symbol.kind.isFunction() && enclosingSymbol.kind.isEnum())) {
       // Move the symbol to an automatically-generated namespace
       var enclosingType = symbol.enclosingSymbol.type;
       var shadow = createShadowForSymbol(enclosingSymbol);
