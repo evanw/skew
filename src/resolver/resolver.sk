@@ -1028,10 +1028,12 @@ class Resolver {
       // Constructors for imported/exported object types are automatically imported/exported
       if (symbol.kind.isConstructor()) {
         if (enclosingSymbol.isExport()) {
-          symbol.flags |= .EXPORT;
+          unexpectedModifierIfPresent(symbol, .IMPORT, "on an exported declaration");
+          symbol.flags = (symbol.flags & ~.IMPORT) | .EXPORT;
           redundantModifierIfPresent(symbol, .EXPORT, "on an constructor for an exported object");
         } else if (enclosingSymbol.isImport()) {
-          symbol.flags |= .IMPORT;
+          unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
+          symbol.flags = (symbol.flags & ~.EXPORT) | .IMPORT;
           redundantModifierIfPresent(symbol, .IMPORT, "on an constructor for an imported object");
         }
       }
@@ -1042,6 +1044,8 @@ class Resolver {
         unexpectedModifierIfPresent(symbol, .EXPORT, "on a non-exported type");
       }
     }
+
+    // The import/export modifiers are mutually exclusive
     if (symbol.isImport()) {
       unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
     }

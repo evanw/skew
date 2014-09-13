@@ -4584,10 +4584,12 @@
       }
       if (symbol.kind === 17) {
         if ((enclosingSymbol.flags & 4096) !== 0) {
-          symbol.flags |= 4096;
+          Resolver.unexpectedModifierIfPresent($this, symbol, 8192, 'on an exported declaration');
+          symbol.flags = symbol.flags & -8193 | 4096;
           Resolver.redundantModifierIfPresent($this, symbol, 4096, 'on an constructor for an exported object');
         } else if ((enclosingSymbol.flags & 8192) !== 0) {
-          symbol.flags |= 8192;
+          Resolver.unexpectedModifierIfPresent($this, symbol, 4096, 'on an imported declaration');
+          symbol.flags = symbol.flags & -4097 | 8192;
           Resolver.redundantModifierIfPresent($this, symbol, 8192, 'on an constructor for an imported object');
         }
       } else if ((symbol.flags & 4096) !== 0 && (enclosingSymbol.flags & 4096) === 0 && enclosingSymbol.kind !== 8) {

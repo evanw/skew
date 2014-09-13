@@ -169,15 +169,36 @@ struct Bar { virtual void foo(); }
 test("
 import class A { new(); }
 import class B { import new(); }
-export class C { new(); }
-export class D { import new(); }
+import class C { export new(); }
 ", "
 <stdin>:2:18: error: Redundant modifier \"import\" on an constructor for an imported object
 import class B { import new(); }
                  ~~~~~~
-<stdin>:3:18: error: Every constructor must have an implementation
-export class C { new(); }
+<stdin>:3:18: error: Cannot use the \"export\" modifier on an imported declaration
+import class C { export new(); }
+                 ~~~~~~
+");
+
+test("
+export class A { new(); }
+export class B { import new(); }
+export class C { export new(); }
+", "
+<stdin>:1:18: error: Every constructor must have an implementation
+export class A { new(); }
                  ~~~
+<stdin>:2:18: error: Cannot use the \"import\" modifier on an exported declaration
+export class B { import new(); }
+                 ~~~~~~
+<stdin>:2:25: error: Every constructor must have an implementation
+export class B { import new(); }
+                        ~~~
+<stdin>:3:18: error: Redundant modifier \"export\" on an constructor for an exported object
+export class C { export new(); }
+                 ~~~~~~
+<stdin>:3:25: error: Every constructor must have an implementation
+export class C { export new(); }
+                        ~~~
 ");
 
 }}
