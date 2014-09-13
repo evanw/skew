@@ -229,7 +229,7 @@ class Type {
   }
 
   bool isReference() {
-    return isClass() || isInterface() || isFunction();
+    return isClass() || isInterface() || isFunction() || isParameter() && bound() != null;
   }
 
   bool isInteger(TypeCache cache) {

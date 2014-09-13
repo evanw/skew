@@ -84,4 +84,23 @@ export int foo(int x) {
 }());
 ");
 
+testJS("
+interface IFoo {}
+export class Foo<T is IFoo> {
+  export T foo() {
+    T foo;
+    return foo;
+  }
+}
+", "
+(function() {
+  Foo = function() {
+  };
+  Foo.prototype.foo = function() {
+    var foo = null;
+    return foo;
+  };
+}());
+");
+
 }}

@@ -6005,7 +6005,7 @@
       return false;
     }
     if (toString.type !== $this.cache.toStringType) {
-      Log.error($this.log, node.range, 'Expected toString() member to have type "' + Type.toString($this.cache.toStringType) + '" but found type "' + Type.toString(toString.type) + '"');
+      semanticErrorToStringWrongType($this.log, node.range, $this.cache.toStringType, toString.type, toString.symbol.node.children[0].range);
       return false;
     }
     var children = Node.removeChildren(node);
@@ -6429,7 +6429,7 @@
     return $this.symbol !== null && $this.symbol.kind === 13;
   };
   Type.isReference = function($this) {
-    return Type.isClass($this) || Type.isInterface($this) || $this.symbol === null;
+    return Type.isClass($this) || Type.isInterface($this) || $this.symbol === null || Type.isParameter($this) && Type.bound($this) !== null;
   };
   Type.isInteger = function($this, cache) {
     return $this === cache.intType || Type.isEnum($this);
@@ -8732,6 +8732,12 @@
     Log.error(log, range, '"' + name + '" is already initialized');
     if (previous.source !== null) {
       Log.note(log, previous, 'The previous initialization is here');
+    }
+  }
+  function semanticErrorToStringWrongType(log, range, expected, found, declaration) {
+    Log.error(log, range, 'Expected toString() to have type "' + Type.toString(expected) + '" but found type "' + Type.toString(found) + '"');
+    if (declaration.source !== null) {
+      Log.note(log, declaration, 'The declaration for toString() is here');
     }
   }
   function semanticErrorAbstractSuperCall(log, range, overridden) {
