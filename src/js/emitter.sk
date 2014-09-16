@@ -907,11 +907,11 @@ namespace js {
     }
 
     static string mangleName(Symbol symbol) {
-      if (symbol.isImportOrExport()) {
-        return symbol.name;
-      }
       if (symbol.kind.isConstructor()) {
         return mangleName(symbol.enclosingSymbol);
+      }
+      if (symbol.isImportOrExport()) {
+        return symbol.name;
       }
       if (isKeyword.has(symbol.name)) {
         return "$" + symbol.name;

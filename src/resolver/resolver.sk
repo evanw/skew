@@ -2060,18 +2060,9 @@ class Resolver {
               context.functionSymbol = symbol;
               context.scope = oldScope;
 
-              // Replace the value with an error expression instead of with null
-              // to avoid breaking the check that member variables declared
-              // inside an extension block are initialized:
-              //
-              //   class Foo {}
-              //   in Foo { int foo = 0; }
-              //
-              value.replaceWith(Node.createError());
-
               // Move the value from the variable to a member initializer
               memberInitializers.insertChild(index++, Node.createMemberInitializer(
-                Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type), value));
+                Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type), value.replaceWith(null)));
             }
 
             // Automatically add an initializer if one is missing

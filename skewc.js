@@ -595,9 +595,10 @@
   TargetFormat = {
     NONE: 0,
     JAVASCRIPT: 1,
-    LISP_AST: 2,
-    JSON_AST: 3,
-    XML_AST: 4
+    CSHARP: 2,
+    LISP_AST: 3,
+    JSON_AST: 4,
+    XML_AST: 5
   };
   CompilerOptions = function() {
     this.targetFormat = 0;
@@ -755,12 +756,15 @@
         emitter = new js.Emitter(resolver);
         break;
       case 2:
-        emitter = new lisp.Emitter(options);
+        emitter = new cs.Emitter(resolver);
         break;
       case 3:
-        emitter = new json.Emitter(options);
+        emitter = new lisp.Emitter(options);
         break;
       case 4:
+        emitter = new json.Emitter(options);
+        break;
+      case 5:
         emitter = new xml.Emitter(options);
         break;
       default:
@@ -1147,6 +1151,646 @@
     this.directory = _0;
     this.entry = _1;
   }
+  var cs = {};
+  cs.Emitter = function(_0) {
+    this.indent = '';
+    this.namespaceStack = [];
+    this.currentSource = null;
+    this.resolver = _0;
+  };
+  cs.Emitter.prototype.patchProgram = function(program) {
+  };
+  cs.Emitter.prototype.emitProgram = function(program) {
+    if (cs.Emitter.isKeyword === null) {
+      cs.Emitter.isKeyword = cs.Emitter.createIsKeyword();
+    }
+    var collector = new Collector(program, 0);
+    this.currentSource = new Source(this.resolver.options.outputFile, '');
+    var prepend = this.resolver.options.prepend;
+    for (var i = 0; i < prepend.length; i = i + 1 | 0) {
+      this.currentSource.contents += prepend[i].contents;
+    }
+    cs.Emitter.emit(this, this.indent + 'using System;\n');
+    cs.Emitter.emit(this, this.indent + 'using System.Collections.Generic;\n');
+    for (var i = 0; i < collector.typeSymbols.length; i = i + 1 | 0) {
+      var type = collector.typeSymbols[i].type;
+      if ((type.symbol.flags & 8192) === 0) {
+        cs.Emitter.emitNode(this, Node.firstNonExtensionSibling(type.symbol.node));
+      }
+    }
+    var functions = collector.freeFunctionSymbols;
+    var variables = collector.freeVariableSymbols;
+    if ((functions.length + variables.length | 0) > 0) {
+      cs.Emitter.emit(this, this.indent + 'class Global {\n');
+      this.indent += '  ';
+      for (var i = 0; i < functions.length; i = i + 1 | 0) {
+        cs.Emitter.emitNode(this, functions[i].node);
+      }
+      for (var i = 0; i < variables.length; i = i + 1 | 0) {
+        cs.Emitter.emitVariableStatement(this, variables[i].node);
+      }
+      cs.Emitter.decreaseIndent(this);
+      cs.Emitter.emit(this, this.indent + '}\n');
+    }
+    cs.Emitter.adjustNamespace(this, null);
+    var append = this.resolver.options.append;
+    for (var i = 0; i < append.length; i = i + 1 | 0) {
+      this.currentSource.contents += append[i].contents;
+    }
+    return [this.currentSource];
+  };
+  cs.Emitter.decreaseIndent = function($this) {
+    $this.indent = $this.indent.slice(2, $this.indent.length);
+  };
+  cs.Emitter.emit = function($this, text) {
+    $this.currentSource.contents += text;
+  };
+  cs.Emitter.emitCommaSeparatedExpressions = function($this, nodes) {
+    for (var i = 0; i < nodes.length; i = i + 1 | 0) {
+      if (i > 0) {
+        cs.Emitter.emit($this, ', ');
+      }
+      cs.Emitter.emitExpression($this, nodes[i], 1);
+    }
+  };
+  cs.Emitter.adjustNamespace = function($this, symbol) {
+    var target = [];
+    while (symbol !== null) {
+      if (symbol.kind === 9) {
+        target.unshift(symbol);
+      }
+      symbol = symbol.enclosingSymbol;
+    }
+    var same = 0;
+    while (same < target.length && same < $this.namespaceStack.length && target[same] === $this.namespaceStack[same]) {
+      same = same + 1 | 0;
+    }
+    while ($this.namespaceStack.length > same) {
+      cs.Emitter.decreaseIndent($this);
+      cs.Emitter.emit($this, $this.indent + '}\n');
+      $this.namespaceStack.pop();
+    }
+    while ($this.namespaceStack.length < target.length) {
+      symbol = target[$this.namespaceStack.length];
+      $this.namespaceStack.push(symbol);
+      cs.Emitter.emit($this, $this.indent + 'namespace ' + cs.Emitter.mangleName(symbol) + ' {\n');
+      $this.indent += '  ';
+    }
+  };
+  cs.Emitter.emitNode = function($this, node) {
+    switch (node.kind) {
+    case 10:
+    case 11:
+    case 12:
+      cs.Emitter.emitObject($this, node);
+      break;
+    case 14:
+    case 15:
+      cs.Emitter.emitFunction($this, node);
+      break;
+    case 24:
+    case 25:
+      cs.Emitter.emitReturn($this, node);
+      break;
+    case 30:
+      cs.Emitter.emitExpressionStatement($this, node);
+      break;
+    case 19:
+      cs.Emitter.emitIf($this, node);
+      break;
+    case 6:
+      cs.Emitter.emitVariableCluster($this, node);
+      break;
+    case 16:
+      cs.Emitter.emitVariableStatement($this, node);
+      break;
+    }
+  };
+  cs.Emitter.recursiveEmitIfStatement = function($this, node) {
+    var trueBlock = node.children[1];
+    var falseBlock = node.children[2];
+    var trueStatement = Node.singleStatement(trueBlock);
+    cs.Emitter.emit($this, 'if (');
+    cs.Emitter.emitExpression($this, node.children[0], 0);
+    cs.Emitter.emit($this, ') ');
+    cs.Emitter.emitBlock($this, trueBlock);
+    if (falseBlock !== null) {
+      cs.Emitter.emit($this, ' else ');
+      cs.Emitter.emitBlock($this, falseBlock);
+    }
+  };
+  cs.Emitter.emitIf = function($this, node) {
+    cs.Emitter.emit($this, $this.indent);
+    cs.Emitter.recursiveEmitIfStatement($this, node);
+    cs.Emitter.emit($this, '\n');
+  };
+  cs.Emitter.emitObject = function($this, node) {
+    var symbol = node.symbol;
+    var type = symbol.type;
+    cs.Emitter.adjustNamespace($this, symbol);
+    cs.Emitter.emit($this, $this.indent + 'public ');
+    if ((symbol.flags & 8) !== 0) {
+      cs.Emitter.emit($this, 'abstract ');
+    }
+    cs.Emitter.emit($this, symbol.kind === 12 ? 'class ' : symbol.kind === 13 ? 'struct ' : 'interface ');
+    cs.Emitter.emit($this, cs.Emitter.mangleName(symbol));
+    if (Type.hasRelevantTypes(type)) {
+      for (var i = 0; i < type.relevantTypes.length; i = i + 1 | 0) {
+        cs.Emitter.emit($this, i === 0 ? ' : ' : ', ');
+        cs.Emitter.emit($this, cs.Emitter.mangleName(type.relevantTypes[i].symbol));
+      }
+    }
+    cs.Emitter.emit($this, ' {\n');
+    $this.indent += '  ';
+    var members = StringMap.values(type.members);
+    for (var i = 0; i < members.length; i = i + 1 | 0) {
+      var symbol = members[i].symbol;
+      if (symbol.enclosingSymbol === type.symbol && symbol.node !== null) {
+        cs.Emitter.emitNode($this, symbol.node);
+      }
+    }
+    cs.Emitter.decreaseIndent($this);
+    cs.Emitter.emit($this, $this.indent + '}\n');
+  };
+  cs.Emitter.emitExpressionStatement = function($this, node) {
+    cs.Emitter.emit($this, $this.indent);
+    cs.Emitter.emitExpression($this, node.children[0], 0);
+    cs.Emitter.emit($this, ';\n');
+  };
+  cs.Emitter.emitReturn = function($this, node) {
+    var value = node.children[0];
+    cs.Emitter.emit($this, $this.indent + 'return');
+    if (value !== null) {
+      cs.Emitter.emit($this, ' ');
+      cs.Emitter.emitExpression($this, value, 0);
+    }
+    cs.Emitter.emit($this, ';\n');
+  };
+  cs.Emitter.emitArgumentVariables = function($this, nodes) {
+    cs.Emitter.emit($this, '(');
+    for (var i = 0; i < nodes.length; i = i + 1 | 0) {
+      var argument = nodes[i].symbol;
+      if (i > 0) {
+        cs.Emitter.emit($this, ', ');
+      }
+      cs.Emitter.emitType($this, argument.type);
+      cs.Emitter.emit($this, ' ');
+      cs.Emitter.emit($this, cs.Emitter.mangleName(argument));
+    }
+    cs.Emitter.emit($this, ')');
+  };
+  cs.Emitter.emitFunction = function($this, node) {
+    var block = node.children[2];
+    var symbol = node.symbol;
+    var isInterface = symbol.enclosingSymbol.kind === 14;
+    cs.Emitter.emit($this, $this.indent);
+    if (!isInterface) {
+      cs.Emitter.emit($this, 'public ');
+    }
+    if ((symbol.flags & 64) !== 0 || symbol.kind === 15) {
+      cs.Emitter.emit($this, 'static ');
+    }
+    if ((symbol.flags & 128) !== 0 && !isInterface) {
+      cs.Emitter.emit($this, (symbol.flags & 32) !== 0 ? 'override ' : block === null ? 'abstract ' : 'virtual ');
+    }
+    if (symbol.kind !== 17) {
+      cs.Emitter.emitType($this, symbol.type.relevantTypes[0]);
+      cs.Emitter.emit($this, ' ');
+    }
+    cs.Emitter.emit($this, cs.Emitter.mangleName(symbol));
+    cs.Emitter.emitArgumentVariables($this, node.children[1].children);
+    if (node.kind === 14) {
+      var superInitializer = node.children[3];
+      if (superInitializer !== null) {
+        cs.Emitter.emit($this, ' : ');
+        cs.Emitter.emitExpression($this, superInitializer, 0);
+      }
+    }
+    if (block === null) {
+      cs.Emitter.emit($this, ';\n');
+    } else {
+      cs.Emitter.emit($this, ' {\n');
+      $this.indent += '  ';
+      if (node.kind === 14) {
+        var memberInitializers = node.children[4];
+        if (memberInitializers !== null) {
+          for (var i = 0; i < memberInitializers.children.length; i = i + 1 | 0) {
+            var child = memberInitializers.children[i];
+            cs.Emitter.emit($this, $this.indent);
+            cs.Emitter.emit($this, cs.Emitter.mangleName(child.children[0].symbol) + ' = ');
+            cs.Emitter.emitExpression($this, child.children[1], 2);
+            cs.Emitter.emit($this, ';\n');
+          }
+        }
+      }
+      if (Node.hasChildren(block)) {
+        for (var i = 0; i < block.children.length; i = i + 1 | 0) {
+          cs.Emitter.emitNode($this, block.children[i]);
+        }
+      }
+      cs.Emitter.decreaseIndent($this);
+      cs.Emitter.emit($this, $this.indent + '}\n');
+    }
+  };
+  cs.Emitter.emitType = function($this, type) {
+    if (Type.isFunction(type)) {
+      var resultType = type.relevantTypes[0];
+      var argumentTypes = Type.argumentTypes(type);
+      var returnsVoid = resultType === $this.resolver.cache.voidType;
+      if (returnsVoid && argumentTypes.length === 0) {
+        cs.Emitter.emit($this, 'Action');
+      } else {
+        cs.Emitter.emit($this, returnsVoid ? 'Action<' : 'Func<');
+        for (var i = 0; i < argumentTypes.length; i = i + 1 | 0) {
+          if (i > 0) {
+            cs.Emitter.emit($this, ', ');
+          }
+          cs.Emitter.emitType($this, argumentTypes[i]);
+        }
+        if (!returnsVoid) {
+          if (argumentTypes.length > 0) {
+            cs.Emitter.emit($this, ', ');
+          }
+          cs.Emitter.emitType($this, resultType);
+        }
+        cs.Emitter.emit($this, '>');
+      }
+    } else {
+      cs.Emitter.emit($this, cs.Emitter.fullName(type.symbol));
+      if (Type.hasParameters(type)) {
+        cs.Emitter.emit($this, '<');
+        for (var i = 0; i < type.symbol.parameters.length; i = i + 1 | 0) {
+          if (i > 0) {
+            cs.Emitter.emit($this, ',');
+          }
+          cs.Emitter.emitType($this, type.substitutions[i]);
+        }
+        cs.Emitter.emit($this, '>');
+      }
+    }
+  };
+  cs.Emitter.emitBlock = function($this, node) {
+    cs.Emitter.emit($this, '{\n');
+    if (Node.hasChildren(node)) {
+      $this.indent += '  ';
+      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+        cs.Emitter.emitNode($this, node.children[i]);
+      }
+      cs.Emitter.decreaseIndent($this);
+    }
+    cs.Emitter.emit($this, $this.indent + '}');
+  };
+  cs.Emitter.emitExpression = function($this, node, precedence) {
+    switch (node.kind) {
+    case 34:
+      cs.Emitter.emit($this, node.symbol === null ? node.content.value : cs.Emitter.fullName(node.symbol));
+      break;
+    case 35:
+      cs.Emitter.emitType($this, node.type);
+      break;
+    case 36:
+      cs.Emitter.emit($this, 'this');
+      break;
+    case 37:
+      cs.Emitter.emitHook($this, node, precedence);
+      break;
+    case 38:
+      cs.Emitter.emit($this, 'null');
+      break;
+    case 39:
+      cs.Emitter.emit($this, node.content.value.toString());
+      break;
+    case 40:
+      cs.Emitter.emit($this, node.content.value.toString());
+      break;
+    case 41:
+    case 42:
+      cs.Emitter.emit($this, node.content.value.toString());
+      break;
+    case 43:
+      cs.Emitter.emit($this, quoteString(node.content.value, 34));
+      break;
+    case 44:
+      cs.Emitter.emitList($this, node);
+      break;
+    case 45:
+      cs.Emitter.emitDot($this, node);
+      break;
+    case 47:
+      cs.Emitter.emitCall($this, node);
+      break;
+    case 48:
+      cs.Emitter.emitSuperCall($this, node);
+      break;
+    case 50:
+      cs.Emitter.emitSequence($this, node, precedence);
+      break;
+    case 54:
+      cs.Emitter.emitLambda($this, node);
+      break;
+    case 55:
+      cs.Emitter.emitExpression($this, node.children[0], precedence);
+      break;
+    case 76:
+      cs.Emitter.emitIndex($this, node, precedence);
+      break;
+    case 98:
+      cs.Emitter.emitTertiary($this, node, precedence);
+      break;
+    case 52:
+    case 53:
+      cs.Emitter.emitExpression($this, node.children[1], precedence);
+      break;
+    case 58:
+    case 59:
+    case 60:
+    case 61:
+    case 62:
+    case 63:
+    case 64:
+    case 65:
+    case 66:
+      cs.Emitter.emitUnary($this, node, precedence);
+      break;
+    case 67:
+    case 87:
+    case 88:
+    case 89:
+    case 90:
+    case 91:
+    case 92:
+    case 93:
+    case 94:
+    case 95:
+    case 96:
+    case 97:
+    case 68:
+    case 69:
+    case 70:
+    case 71:
+    case 72:
+    case 73:
+    case 74:
+    case 75:
+    case 77:
+    case 78:
+    case 79:
+    case 80:
+    case 81:
+    case 82:
+    case 83:
+    case 84:
+    case 85:
+    case 86:
+      cs.Emitter.emitBinary($this, node, precedence);
+      break;
+    default:
+      cs.Emitter.emit($this, '<' + $in.NodeKind.toString(node.kind) + '>');
+      break;
+    }
+  };
+  cs.Emitter.emitVariable = function($this, node) {
+    var value = node.children[2];
+    var symbol = node.symbol;
+    if ((symbol.flags & 64) !== 0 || symbol.kind === 19) {
+      cs.Emitter.emit($this, 'static ');
+    }
+    if (symbol.enclosingSymbol !== null && $in.SymbolKind.isObject(symbol.enclosingSymbol.kind)) {
+      cs.Emitter.emit($this, 'public ');
+    }
+    cs.Emitter.emitType($this, symbol.type);
+    cs.Emitter.emit($this, ' ' + cs.Emitter.mangleName(symbol));
+    if (value !== null) {
+      cs.Emitter.emit($this, ' = ');
+      cs.Emitter.emitExpression($this, value, 1);
+    }
+  };
+  cs.Emitter.emitVariableStatement = function($this, node) {
+    cs.Emitter.emit($this, $this.indent);
+    cs.Emitter.emitVariable($this, node);
+    cs.Emitter.emit($this, ';\n');
+  };
+  cs.Emitter.emitVariableCluster = function($this, node) {
+    var variables = Node.clusterVariables(node);
+    for (var i = 0; i < variables.length; i = i + 1 | 0) {
+      cs.Emitter.emitVariableStatement($this, variables[i]);
+    }
+  };
+  cs.Emitter.emitSequence = function($this, node, precedence) {
+    if (1 <= precedence) {
+      cs.Emitter.emit($this, '(');
+    }
+    cs.Emitter.emitCommaSeparatedExpressions($this, node.children);
+    if (1 <= precedence) {
+      cs.Emitter.emit($this, ')');
+    }
+  };
+  cs.Emitter.emitLambda = function($this, node) {
+    cs.Emitter.emitArgumentVariables($this, Node.lambdaArguments(node));
+    cs.Emitter.emit($this, ' => ');
+    cs.Emitter.emitBlock($this, Node.lambdaBlock(node));
+  };
+  cs.Emitter.emitUnary = function($this, node, precedence) {
+    var value = node.children[0];
+    var info = operatorInfo.table[node.kind];
+    if (info.precedence < precedence) {
+      cs.Emitter.emit($this, '(');
+    }
+    var isPostfix = info.precedence === 14;
+    if (!isPostfix) {
+      cs.Emitter.emit($this, info.text);
+      if (node.kind === 60 && (value.kind === 60 || value.kind === 63) || node.kind === 61 && (value.kind === 61 || value.kind === 64 || value.kind === 40 && value.content.value < 0)) {
+        cs.Emitter.emit($this, ' ');
+      }
+    }
+    cs.Emitter.emitExpression($this, value, info.precedence);
+    if (isPostfix) {
+      cs.Emitter.emit($this, info.text);
+    }
+    if (info.precedence < precedence) {
+      cs.Emitter.emit($this, ')');
+    }
+  };
+  cs.Emitter.emitBinary = function($this, node, precedence) {
+    var kind = node.kind;
+    var left = node.children[0];
+    var right = node.children[1];
+    var info = operatorInfo.table[kind];
+    if (info.precedence < precedence) {
+      cs.Emitter.emit($this, '(');
+    }
+    cs.Emitter.emitExpression($this, left, info.precedence + (info.associativity === 2 | 0) | 0);
+    cs.Emitter.emit($this, ' ' + info.text + ' ');
+    cs.Emitter.emitExpression($this, right, info.precedence + (info.associativity === 1 | 0) | 0);
+    if (info.precedence < precedence) {
+      cs.Emitter.emit($this, ')');
+    }
+  };
+  cs.Emitter.emitIndex = function($this, node, precedence) {
+    cs.Emitter.emitExpression($this, node.children[0], 15);
+    cs.Emitter.emit($this, '[');
+    cs.Emitter.emitExpression($this, node.children[1], 0);
+    cs.Emitter.emit($this, ']');
+  };
+  cs.Emitter.emitTertiary = function($this, node, precedence) {
+    if (2 < precedence) {
+      cs.Emitter.emit($this, '(');
+    }
+    cs.Emitter.emitExpression($this, node.children[0], 15);
+    cs.Emitter.emit($this, '[');
+    cs.Emitter.emitExpression($this, node.children[1], 0);
+    cs.Emitter.emit($this, '] = ');
+    cs.Emitter.emitExpression($this, node.children[2], 2);
+    if (2 < precedence) {
+      cs.Emitter.emit($this, ')');
+    }
+  };
+  cs.Emitter.emitList = function($this, node) {
+    var values = node.children;
+    cs.Emitter.emit($this, 'new ');
+    cs.Emitter.emitType($this, node.type);
+    if (values.length > 0) {
+      cs.Emitter.emit($this, ' { ');
+      cs.Emitter.emitCommaSeparatedExpressions($this, values);
+      cs.Emitter.emit($this, ' }');
+    } else {
+      cs.Emitter.emit($this, '()');
+    }
+  };
+  cs.Emitter.emitDot = function($this, node) {
+    cs.Emitter.emitExpression($this, node.children[0], 15);
+    cs.Emitter.emit($this, '.');
+    var name = node.children[1];
+    cs.Emitter.emit($this, name.symbol === null ? name.content.value : $in.SymbolKind.isInstance(name.symbol.kind) ? cs.Emitter.mangleName(name.symbol) : cs.Emitter.fullName(name.symbol));
+  };
+  cs.Emitter.emitSuperCall = function($this, node) {
+    cs.Emitter.emit($this, 'base(');
+    cs.Emitter.emitCommaSeparatedExpressions($this, node.children);
+    cs.Emitter.emit($this, ')');
+  };
+  cs.Emitter.emitCall = function($this, node) {
+    var value = node.children[0];
+    if (value.kind === 35) {
+      cs.Emitter.emit($this, 'new ');
+    }
+    cs.Emitter.emitExpression($this, value, 14);
+    cs.Emitter.emit($this, '(');
+    cs.Emitter.emitCommaSeparatedExpressions($this, Node.callArguments(node));
+    cs.Emitter.emit($this, ')');
+  };
+  cs.Emitter.emitHook = function($this, node, precedence) {
+    if (2 < precedence) {
+      cs.Emitter.emit($this, '(');
+    }
+    cs.Emitter.emitExpression($this, node.children[0], 3);
+    cs.Emitter.emit($this, ' ? ');
+    cs.Emitter.emitExpression($this, node.children[1], 2);
+    cs.Emitter.emit($this, ' : ');
+    cs.Emitter.emitExpression($this, node.children[2], 2);
+    if (2 < precedence) {
+      cs.Emitter.emit($this, ')');
+    }
+  };
+  cs.Emitter.createIsKeyword = function() {
+    var result = new StringMap();
+    result.table['abstract'] = true;
+    result.table['as'] = true;
+    result.table['base'] = true;
+    result.table['bool'] = true;
+    result.table['break'] = true;
+    result.table['byte'] = true;
+    result.table['case'] = true;
+    result.table['catch'] = true;
+    result.table['char'] = true;
+    result.table['checked'] = true;
+    result.table['class'] = true;
+    result.table['const'] = true;
+    result.table['continue'] = true;
+    result.table['decimal'] = true;
+    result.table['default'] = true;
+    result.table['delegate'] = true;
+    result.table['do'] = true;
+    result.table['double'] = true;
+    result.table['else'] = true;
+    result.table['enum'] = true;
+    result.table['event'] = true;
+    result.table['explicit'] = true;
+    result.table['extern'] = true;
+    result.table['false'] = true;
+    result.table['finally'] = true;
+    result.table['fixed'] = true;
+    result.table['float'] = true;
+    result.table['for'] = true;
+    result.table['foreach'] = true;
+    result.table['goto'] = true;
+    result.table['if'] = true;
+    result.table['implicit'] = true;
+    result.table['in'] = true;
+    result.table['int'] = true;
+    result.table['interface'] = true;
+    result.table['internal'] = true;
+    result.table['is'] = true;
+    result.table['lock'] = true;
+    result.table['long'] = true;
+    result.table['namespace'] = true;
+    result.table['new'] = true;
+    result.table['null'] = true;
+    result.table['object'] = true;
+    result.table['operator'] = true;
+    result.table['out'] = true;
+    result.table['override'] = true;
+    result.table['params'] = true;
+    result.table['private'] = true;
+    result.table['protected'] = true;
+    result.table['public'] = true;
+    result.table['readonly'] = true;
+    result.table['ref'] = true;
+    result.table['return'] = true;
+    result.table['sbyte'] = true;
+    result.table['sealed'] = true;
+    result.table['short'] = true;
+    result.table['sizeof'] = true;
+    result.table['stackalloc'] = true;
+    result.table['static'] = true;
+    result.table['string'] = true;
+    result.table['struct'] = true;
+    result.table['switch'] = true;
+    result.table['this'] = true;
+    result.table['throw'] = true;
+    result.table['true'] = true;
+    result.table['try'] = true;
+    result.table['typeof'] = true;
+    result.table['uint'] = true;
+    result.table['ulong'] = true;
+    result.table['unchecked'] = true;
+    result.table['unsafe'] = true;
+    result.table['ushort'] = true;
+    result.table['using'] = true;
+    result.table['virtual'] = true;
+    result.table['void'] = true;
+    result.table['volatile'] = true;
+    result.table['while'] = true;
+    return result;
+  };
+  cs.Emitter.mangleName = function(symbol) {
+    if (symbol.kind === 17) {
+      return cs.Emitter.mangleName(symbol.enclosingSymbol);
+    }
+    if ((symbol.flags & 12288) !== 0) {
+      return symbol.name;
+    }
+    if (symbol.name in cs.Emitter.isKeyword.table) {
+      return '_' + symbol.name + '_';
+    }
+    return symbol.name;
+  };
+  cs.Emitter.fullName = function(symbol) {
+    var enclosingSymbol = symbol.enclosingSymbol;
+    if (!$in.SymbolKind.isInstance(symbol.kind) && enclosingSymbol !== null && enclosingSymbol.kind !== 8) {
+      return cs.Emitter.fullName(enclosingSymbol) + '.' + cs.Emitter.mangleName(symbol);
+    }
+    return cs.Emitter.mangleName(symbol);
+  };
   frontend = {};
   frontend.Flags = function() {
     this.help = false;
@@ -2079,11 +2723,11 @@
     return result;
   };
   js.Emitter.mangleName = function(symbol) {
-    if ((symbol.flags & 12288) !== 0) {
-      return symbol.name;
-    }
     if (symbol.kind === 17) {
       return js.Emitter.mangleName(symbol.enclosingSymbol);
+    }
+    if ((symbol.flags & 12288) !== 0) {
+      return symbol.name;
     }
     if (symbol.name in js.Emitter.isKeyword.table) {
       return '$' + symbol.name;
@@ -5343,8 +5987,7 @@
               Resolver.resolve($this, memberSymbol.node, null);
               $this.context.functionSymbol = symbol;
               $this.context.scope = oldScope;
-              Node.replaceWith(value, new Node(49));
-              Node.insertChild(memberInitializers, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(5), [Node.withType(Node.withSymbol(Node.withContent(new Node(34), new StringContent(memberSymbol.name)), memberSymbol), member.type), value]));
+              Node.insertChild(memberInitializers, (index = index + 1 | 0) - 1 | 0, Node.withChildren(new Node(5), [Node.withType(Node.withSymbol(Node.withContent(new Node(34), new StringContent(memberSymbol.name)), memberSymbol), member.type), Node.replaceWith(value, null)]));
             } else {
               var j = 0;
               for (j = 0; j < memberInitializers.children.length; j = j + 1 | 0) {
@@ -7009,7 +7652,7 @@
     }
   };
   $in.TargetFormat.shouldRunResolver = function($this) {
-    return $this >= 0 && $this <= 1;
+    return $this >= 0 && $this <= 2;
   };
   $in.$int.canIncrement = function($this) {
     return ($this + 1 | 0) === $this + 1;
@@ -7587,14 +8230,17 @@
     case 'js':
       target = 1;
       break;
-    case 'lisp-ast':
+    case 'cs':
       target = 2;
       break;
-    case 'json-ast':
+    case 'lisp-ast':
       target = 3;
       break;
-    case 'xml-ast':
+    case 'json-ast':
       target = 4;
+      break;
+    case 'xml-ast':
+      target = 5;
       break;
     default:
       frontend.printError('Unknown target language ' + quoteString(flags.target, 34));
@@ -8355,7 +9001,7 @@
   }
   function parseUsing(context) {
     var token = ParserContext.next(context);
-    var value = Pratt.parseIgnoringParselet(pratt, context, 0, null);
+    var value = Pratt.parseIgnoringParselet(pratt, context, 14, null);
     scanForToken(context, 83, 1);
     return Node.withRange(Node.withChildren(new Node(33), [value]), ParserContext.spanSince(context, token.range));
   }
@@ -9121,6 +9767,7 @@
   Range.EMPTY = new Range(null, 0, 0);
   var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   var HEX = '0123456789ABCDEF';
+  cs.Emitter.isKeyword = null;
   js.Emitter.isKeyword = null;
   var yy_accept = [100, 100, 100, 32, 35, 99, 69, 35, 78, 13, 35, 59, 82, 66, 73, 21, 65, 29, 27, 52, 52, 20, 83, 60, 2, 42, 77, 44, 58, 81, 15, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 57, 14, 80, 92, 99, 70, 100, 87, 100, 10, 63, 3, 100, 18, 100, 8, 48, 9, 24, 7, 99, 6, 100, 52, 100, 39, 100, 100, 84, 61, 34, 56, 43, 85, 44, 5, 44, 44, 44, 44, 44, 44, 44, 28, 44, 44, 44, 44, 44, 40, 44, 45, 44, 47, 55, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 4, 64, 99, 30, 51, 54, 53, 11, 12, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 41, 44, 44, 44, 62, 44, 68, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 96, 44, 44, 39, 44, 44, 44, 17, 44, 44, 44, 44, 44, 31, 33, 44, 44, 44, 44, 44, 44, 44, 71, 44, 44, 44, 44, 44, 44, 44, 44, 44, 91, 93, 44, 44, 44, 44, 0, 44, 16, 19, 22, 44, 44, 44, 44, 37, 38, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 89, 44, 44, 95, 44, 98, 1, 44, 44, 26, 36, 46, 49, 44, 44, 44, 44, 44, 76, 79, 86, 88, 90, 44, 44, 44, 25, 44, 44, 44, 74, 44, 94, 97, 23, 44, 44, 72, 44, 50, 67, 75, 100];
   var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 1, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 32, 28, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 28, 42, 43, 44, 45, 46, 47, 28, 48, 49, 50, 51, 52, 53, 54, 55, 28, 56, 57, 58, 59, 1];

@@ -7,6 +7,7 @@ export enum TargetFormat {
   // Target languages that run the resolver
   NONE,
   JAVASCRIPT,
+  CSHARP,
 
   // AST-only targets
   LISP_AST,
@@ -16,7 +17,7 @@ export enum TargetFormat {
 
 export in TargetFormat {
   bool shouldRunResolver() {
-    return this >= NONE && this <= JAVASCRIPT;
+    return this >= NONE && this <= CSHARP;
   }
 }
 
@@ -198,6 +199,7 @@ export class Compiler {
       switch (options.targetFormat) {
         case .NONE {}
         case .JAVASCRIPT { emitter = js.Emitter(resolver); }
+        case .CSHARP { emitter = cs.Emitter(resolver); }
         case .LISP_AST { emitter = lisp.Emitter(options); }
         case .JSON_AST { emitter = json.Emitter(options); }
         case .XML_AST { emitter = xml.Emitter(options); }

@@ -532,7 +532,7 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
 
 Node parseUsing(ParserContext context) {
   var token = context.next();
-  var value = pratt.parse(context, Precedence.LOWEST);
+  var value = parseType(context);
   scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
   return Node.createUsing(value).withRange(context.spanSince(token.range));
 }
