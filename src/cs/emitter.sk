@@ -147,6 +147,18 @@ namespace cs {
       emit("\n");
     }
 
+    void emitNameWithParameters(Symbol symbol) {
+      emit(mangleName(symbol));
+      if (symbol.hasParameters()) {
+        emit("<");
+        for (var i = 0; i < symbol.parameters.length; i++) {
+          if (i > 0) emit(", ");
+          emit(mangleName(symbol.parameters.get(i)));
+        }
+        emit(">");
+      }
+    }
+
     void emitObject(Node node) {
       var symbol = node.symbol;
       var type = symbol.type;
@@ -156,7 +168,7 @@ namespace cs {
         emit("abstract ");
       }
       emit(symbol.kind == .CLASS ? "class " : symbol.kind == .STRUCT ? "struct " : "interface ");
-      emit(mangleName(symbol));
+      emitNameWithParameters(symbol);
       if (type.hasRelevantTypes()) {
         for (var i = 0; i < type.relevantTypes.length; i++) {
           emit(i == 0 ? " : " : ", ");
@@ -222,7 +234,7 @@ namespace cs {
         emitType(symbol.type.resultType());
         emit(" ");
       }
-      emit(mangleName(symbol));
+      emitNameWithParameters(symbol);
       emitArgumentVariables(node.functionArguments().children);
       if (node.kind == .CONSTRUCTOR) {
         var superInitializer = node.superInitializer();
@@ -587,7 +599,7 @@ namespace cs {
 
     static string fullName(Symbol symbol) {
       var enclosingSymbol = symbol.enclosingSymbol;
-      if (!symbol.kind.isInstance() && enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace()) {
+      if (!symbol.kind.isInstance() && !symbol.kind.isParameter() && enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace()) {
         return fullName(enclosingSymbol) + "." + mangleName(symbol);
       }
       return mangleName(symbol);

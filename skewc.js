@@ -1284,6 +1284,19 @@
     cs.Emitter.recursiveEmitIfStatement($this, node);
     cs.Emitter.emit($this, '\n');
   };
+  cs.Emitter.emitNameWithParameters = function($this, symbol) {
+    cs.Emitter.emit($this, cs.Emitter.mangleName(symbol));
+    if (Symbol.hasParameters(symbol)) {
+      cs.Emitter.emit($this, '<');
+      for (var i = 0; i < symbol.parameters.length; i = i + 1 | 0) {
+        if (i > 0) {
+          cs.Emitter.emit($this, ', ');
+        }
+        cs.Emitter.emit($this, cs.Emitter.mangleName(symbol.parameters[i]));
+      }
+      cs.Emitter.emit($this, '>');
+    }
+  };
   cs.Emitter.emitObject = function($this, node) {
     var symbol = node.symbol;
     var type = symbol.type;
@@ -1293,7 +1306,7 @@
       cs.Emitter.emit($this, 'abstract ');
     }
     cs.Emitter.emit($this, symbol.kind === 12 ? 'class ' : symbol.kind === 13 ? 'struct ' : 'interface ');
-    cs.Emitter.emit($this, cs.Emitter.mangleName(symbol));
+    cs.Emitter.emitNameWithParameters($this, symbol);
     if (Type.hasRelevantTypes(type)) {
       for (var i = 0; i < type.relevantTypes.length; i = i + 1 | 0) {
         cs.Emitter.emit($this, i === 0 ? ' : ' : ', ');
@@ -1357,7 +1370,7 @@
       cs.Emitter.emitType($this, symbol.type.relevantTypes[0]);
       cs.Emitter.emit($this, ' ');
     }
-    cs.Emitter.emit($this, cs.Emitter.mangleName(symbol));
+    cs.Emitter.emitNameWithParameters($this, symbol);
     cs.Emitter.emitArgumentVariables($this, node.children[1].children);
     if (node.kind === 14) {
       var superInitializer = node.children[3];
@@ -1786,7 +1799,7 @@
   };
   cs.Emitter.fullName = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
-    if (!$in.SymbolKind.isInstance(symbol.kind) && enclosingSymbol !== null && enclosingSymbol.kind !== 8) {
+    if (!$in.SymbolKind.isInstance(symbol.kind) && !$in.SymbolKind.isParameter(symbol.kind) && enclosingSymbol !== null && enclosingSymbol.kind !== 8) {
       return cs.Emitter.fullName(enclosingSymbol) + '.' + cs.Emitter.mangleName(symbol);
     }
     return cs.Emitter.mangleName(symbol);
@@ -7133,10 +7146,10 @@
     return Type.isInteger($this, cache) || Type.isReal($this, cache);
   };
   function TypeCache() {
-    this.globalType = TypeCache.createType(new Symbol('<global>', 8));
-    this.nullType = TypeCache.createType(new Symbol('null', 0));
-    this.voidType = TypeCache.createType(new Symbol('void', 4));
-    this.errorType = TypeCache.createType(new Symbol('<error>', 0));
+    this.globalType = TypeCache.createType(new Symbol('<global>', 8), 0);
+    this.nullType = TypeCache.createType(new Symbol('null', 0), 0);
+    this.voidType = TypeCache.createType(new Symbol('void', 4), 8192);
+    this.errorType = TypeCache.createType(new Symbol('<error>', 0), 0);
     this.intType = null;
     this.boolType = null;
     this.floatType = null;
@@ -7146,10 +7159,10 @@
     this.toStringType = null;
     this.hashTable = new IntMap();
   }
-  TypeCache.createType = function(symbol) {
+  TypeCache.createType = function(symbol, flags) {
     var type = new Type(symbol);
     symbol.type = type;
-    symbol.flags |= 32768;
+    symbol.flags |= 32768 | flags;
     return type;
   };
   TypeCache.commonBaseClass = function(left, right) {
