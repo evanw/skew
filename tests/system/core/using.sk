@@ -358,4 +358,23 @@ in Bar {
 ", "
 ");
 
+test("
+namespace a.b.c {
+  class Foo<T> {
+    T id(T value) { return value; }
+  }
+}
+alias Foo = a.b.c.Foo;
+void foo() {
+  bool foo = Foo<int>().id(false);
+}
+", "
+<stdin>:8:28: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  bool foo = Foo<int>().id(false);
+                           ~~~~~
+<stdin>:8:14: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  bool foo = Foo<int>().id(false);
+             ~~~~~~~~~~~~~~~~~~~~
+");
+
 }}

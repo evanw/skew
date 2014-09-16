@@ -5472,7 +5472,7 @@
   };
   Resolver.initializeAlias = function($this, symbol) {
     var value = symbol.node.children[1];
-    Resolver.resolveAsParameterizedType($this, value);
+    Resolver.resolveAsType($this, value);
     symbol.type = value.type;
   };
   Resolver.initializeDeclaration = function($this, node) {
@@ -8158,7 +8158,7 @@
   frontend.printUsage = function() {
     $in.io.printWithColor(92, '\nusage: ');
     $in.io.printWithColor(1, 'skewc [flags] [inputs]\n');
-    io.print('\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     lisp-ast, json-ast, and xml-ast.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-minify        Transform the emitted JavaScript so that it takes up less\n                     space. Make sure to use the "export" modifier on code\n                     that shouldn\'t be minifed.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the ".map" extension in the same\n                     directory as the main output file.\n\n');
+    io.print('\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     c#, lisp-ast, json-ast, and xml-ast.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-minify        Transform the emitted JavaScript so that it takes up less\n                     space. Make sure to use the "export" modifier on code\n                     that shouldn\'t be minifed.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the ".map" extension in the same\n                     directory as the main output file.\n\n');
   };
   frontend.afterEquals = function(text) {
     var equals = text.indexOf('=');
@@ -8230,7 +8230,7 @@
     case 'js':
       target = 1;
       break;
-    case 'cs':
+    case 'c#':
       target = 2;
       break;
     case 'lisp-ast':
