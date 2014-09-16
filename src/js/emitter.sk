@@ -123,9 +123,13 @@ namespace js {
       }
 
       // Emit free variables
+      List<Node> variables = [];
       for (var i = 0; i < collector.freeVariableSymbols.length; i++) {
-        emitNode(collector.freeVariableSymbols.get(i));
+        var variable = collector.freeVariableSymbols.get(i).node;
+        if (options.jsMinify) variables.push(variable);
+        else emitVariables([variable]);
       }
+      emitVariables(variables);
 
       // End the closure wrapping everything
       decreaseIndent();
@@ -299,7 +303,7 @@ namespace js {
       // Separating the case bodies into separate functions makes the JavaScript JIT go faster
       switch (node.kind) {
         case .CASE { emitCase(node); }
-        case .VARIABLE_CLUSTER { emitVariableCluster(node); }
+        case .VARIABLE_CLUSTER { emitVariables(node.clusterVariables()); }
         case .NAMESPACE { emitNamespace(node); }
         case .ENUM, .ENUM_FLAGS { emitEnum(node); }
         case .CONSTRUCTOR, .FUNCTION { emitFunction(node); }
@@ -366,8 +370,7 @@ namespace js {
       decreaseIndent();
     }
 
-    void emitVariableCluster(Node node) {
-      var variables = node.clusterVariables();
+    void emitVariables(List<Node> variables) {
       var state = ClusterState.NONE;
       for (var i = 0; i < variables.length; i++) {
         var variable = variables.get(i);
@@ -378,7 +381,7 @@ namespace js {
         }
         emitSemicolonIfNeeded();
         if (isCompoundName) {
-          if (state == .VAR_CHAIN) {
+          if (state != .NONE) {
             emit(";" + newline);
           }
           state = .COMPOUND_NAME;
@@ -457,8 +460,11 @@ namespace js {
         : indent + fullName(symbol) + space + "=" + space + "function");
       emitArgumentVariables(node.functionArguments().children);
       emitBlock(block, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES);
-      if (useFunctionStatement) emit(newline);
-      else emitSemicolonAfterStatement();
+      if (useFunctionStatement) {
+        emit(newline);
+      } else {
+        emitSemicolonAfterStatement();
+      }
       if (node.kind == .CONSTRUCTOR) {
         var type = symbol.enclosingSymbol.type;
         if (type.isClass() && type.baseClass() != null) {

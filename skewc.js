@@ -513,7 +513,13 @@
       }
       break;
     case 6:
-      $this.freeVariableSymbols.push(node);
+      var variables = Node.clusterVariables(node);
+      for (var i = 0; i < variables.length; i = i + 1 | 0) {
+        var symbol = variables[i].symbol;
+        if (!$in.SymbolKind.isInstance(symbol.kind)) {
+          $this.freeVariableSymbols.push(symbol);
+        }
+      }
       break;
     }
   };
@@ -1239,9 +1245,16 @@
     for (var i = 0; i < collector.freeFunctionSymbols.length; i = i + 1 | 0) {
       js.Emitter.emitNode(this, collector.freeFunctionSymbols[i].node);
     }
+    var variables = [];
     for (var i = 0; i < collector.freeVariableSymbols.length; i = i + 1 | 0) {
-      js.Emitter.emitNode(this, collector.freeVariableSymbols[i]);
+      var variable = collector.freeVariableSymbols[i].node;
+      if (this.options.jsMinify) {
+        variables.push(variable);
+      } else {
+        js.Emitter.emitVariables(this, [variable]);
+      }
     }
+    js.Emitter.emitVariables(this, variables);
     js.Emitter.decreaseIndent(this);
     js.Emitter.emit(this, this.indent + '}());\n');
     for (var i = 0; i < this.options.append.length; i = i + 1 | 0) {
@@ -1382,7 +1395,7 @@
       js.Emitter.emitCase($this, node);
       break;
     case 6:
-      js.Emitter.emitVariableCluster($this, node);
+      js.Emitter.emitVariables($this, Node.clusterVariables(node));
       break;
     case 7:
       js.Emitter.emitNamespace($this, node);
@@ -1488,8 +1501,7 @@
     }
     js.Emitter.decreaseIndent($this);
   };
-  js.Emitter.emitVariableCluster = function($this, node) {
-    var variables = Node.clusterVariables(node);
+  js.Emitter.emitVariables = function($this, variables) {
     var state = 0;
     for (var i = 0; i < variables.length; i = i + 1 | 0) {
       var variable = variables[i];
@@ -1500,7 +1512,7 @@
       }
       js.Emitter.emitSemicolonIfNeeded($this);
       if (isCompoundName) {
-        if (state === 1) {
+        if (state !== 0) {
           js.Emitter.emit($this, ';' + $this.newline);
         }
         state = 2;

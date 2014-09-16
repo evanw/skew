@@ -9,7 +9,7 @@ class Collector {
   SortTypes sort;
   List<Symbol> typeSymbols = [];
   List<Symbol> freeFunctionSymbols = [];
-  List<Node> freeVariableSymbols = [];
+  List<Symbol> freeVariableSymbols = [];
 
   new(Node program, SortTypes sort) : sort = sort {
     assert program.kind == .PROGRAM;
@@ -37,7 +37,13 @@ class Collector {
       }
 
       case .VARIABLE_CLUSTER {
-        freeVariableSymbols.push(node);
+        var variables = node.clusterVariables();
+        for (var i = 0; i < variables.length; i++) {
+          var symbol = variables.get(i).symbol;
+          if (!symbol.kind.isInstance()) {
+            freeVariableSymbols.push(symbol);
+          }
+        }
       }
     }
   }
