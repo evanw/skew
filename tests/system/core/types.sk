@@ -24,6 +24,22 @@ test("
 class Foo { int foo = 0; }
 var foo = Foo();
 ", "
+");
+
+test("
+export class Foo { Foo foo = Foo(); }
+var foo = Foo();
+", "
+<stdin>:2:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Foo();
+          ~~~~~
+");
+
+test("
+class Foo { int foo = bar(); }
+var foo = Foo();
+inline int bar() { return 0; }
+", "
 <stdin>:2:11: error: Global variables must be initialized to a pure expression (one without side effects)
 var foo = Foo();
           ~~~~~

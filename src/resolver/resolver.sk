@@ -1564,7 +1564,10 @@ class Resolver {
       var member = members.get(i);
       var memberSymbol = member.symbol;
       if (memberSymbol.kind == .INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
-        if (memberSymbol.node.variableValue() == null) {
+        var value = memberSymbol.node.variableValue();
+
+        // Uninitialized variables need an argument to provide the value
+        if (value == null) {
           initializeMember(member);
           if (member.type.isError(cache)) {
             symbol.flags |= .INITIALIZED;
@@ -1572,7 +1575,20 @@ class Resolver {
             return;
           }
           uninitializedMembers.push(member);
-        } else {
+        }
+
+        // Ideally we could call isPureValue() but that requires resolving the
+        // initial value for this variable, which could lead to some strange
+        // circular reference issues. For example:
+        //
+        //   export class Foo {
+        //     Foo a = Foo(1);
+        //     int b = 100;
+        //     int c;
+        //   }
+        //
+        // Play it safe and just use statically-known constant values for now.
+        else if (!value.kind.isConstant()) {
           isPure = false;
         }
       }

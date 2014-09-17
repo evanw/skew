@@ -5657,7 +5657,8 @@
       var member = members[i];
       var memberSymbol = member.symbol;
       if (memberSymbol.kind === 20 && memberSymbol.enclosingSymbol === enclosingSymbol) {
-        if (memberSymbol.node.children[2] === null) {
+        var value = memberSymbol.node.children[2];
+        if (value === null) {
           Resolver.initializeMember($this, member);
           if (member.type === $this.cache.errorType) {
             symbol.flags |= 32768;
@@ -5665,7 +5666,7 @@
             return;
           }
           uninitializedMembers.push(member);
-        } else {
+        } else if (!$in.NodeKind.isConstant(value.kind)) {
           isPure = false;
         }
       }
