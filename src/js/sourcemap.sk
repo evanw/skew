@@ -14,7 +14,7 @@ class SourceMapGenerator {
   void addMapping(Source source, int originalLine, int originalColumn, int generatedLine, int generatedColumn) {
     var sourceIndex = sources.indexOf(source);
     if (sourceIndex == -1) {
-      sourceIndex = sources.length;
+      sourceIndex = sources.size();
       sources.push(source);
     }
     mappings.push(SourceMapping(sourceIndex, originalLine, originalColumn, generatedLine, generatedColumn));
@@ -24,7 +24,7 @@ class SourceMapGenerator {
     List<string> sourceNames = [];
     List<string> sourceContents = [];
 
-    for (var i = 0; i < sources.length; i++) {
+    for (var i = 0; i < sources.size(); i++) {
       Source source = sources.get(i);
       sourceNames.push(quoteString(source.name, '"'));
       sourceContents.push(quoteString(source.contents, '"'));
@@ -46,7 +46,7 @@ class SourceMapGenerator {
     var previousSourceIndex = 0;
 
     // Generate the base64 VLQ encoded mappings
-    for (var i = 0; i < mappings.length; i++) {
+    for (var i = 0; i < mappings.size(); i++) {
       var mapping = mappings.get(i);
       var generatedLine = mapping.generatedLine;
 

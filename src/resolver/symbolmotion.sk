@@ -4,7 +4,7 @@ class SymbolMotionPass {
 
   static void run(Resolver resolver) {
     var pass = SymbolMotionPass(resolver);
-    for (var i = 0; i < resolver.allSymbols.length; i++) {
+    for (var i = 0; i < resolver.allSymbols.size(); i++) {
       pass.moveSymbol(resolver.allSymbols.get(i));
     }
   }
@@ -28,7 +28,7 @@ class SymbolMotionPass {
       var node = symbol.node.remove();
       if (parent.kind == .VARIABLE_CLUSTER) {
         node = Node.createVariableCluster(Node.createType(symbol.type), [node]);
-        if (parent.children.length == 1) {
+        if (parent.children.size() == 1) {
           parent.remove();
         }
       }

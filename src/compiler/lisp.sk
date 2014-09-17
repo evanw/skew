@@ -16,7 +16,7 @@ export namespace lisp {
       if (options.outputDirectory == "") {
         outputs.push(Source(options.outputFile, dump(program) + "\n"));
       } else {
-        for (var i = 0; i < program.children.length; i++) {
+        for (var i = 0; i < program.children.size(); i++) {
           var file = program.children.get(i);
           outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".lisp"), dump(file) + "\n"));
         }
@@ -46,7 +46,7 @@ export namespace lisp {
       if (node.hasChildren()) {
         var old = indent;
         indent += "  ";
-        for (var i = 0; i < node.children.length; i++) {
+        for (var i = 0; i < node.children.size(); i++) {
           result += "\n" + indent;
           visit(node.children.get(i));
         }

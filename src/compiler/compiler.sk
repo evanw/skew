@@ -122,7 +122,7 @@ export class Compiler {
 
   static int totalLineCount(List<Source> sources) {
     var lineCount = 0;
-    for (var i = 0; i < sources.length; i++) {
+    for (var i = 0; i < sources.size(); i++) {
       lineCount += sources.get(i).lineCount();
     }
     return lineCount;
@@ -130,13 +130,13 @@ export class Compiler {
 
   static string sourceStatistics(string name, List<Source> sources) {
     var total = 0;
-    for (var i = 0; i < sources.length; i++) {
-      total += sources.get(i).contents.length;
+    for (var i = 0; i < sources.size(); i++) {
+      total += sources.get(i).contents.size();
     }
-    var text = "\n" + name + ": " + sources.length + " (" + bytesToString(total) + " total)";
-    for (var i = 0; i < sources.length; i++) {
+    var text = "\n" + name + ": " + sources.size() + " (" + bytesToString(total) + " total)";
+    for (var i = 0; i < sources.size(); i++) {
       var source = sources.get(i);
-      text += "\n  " + source.name + ": " + bytesToString(source.contents.length);
+      text += "\n  " + source.name + ": " + bytesToString(source.contents.size());
     }
     return text;
   }
@@ -157,7 +157,7 @@ export class Compiler {
       case .JAVASCRIPT { program.appendChild(nativeLibraryJS.compile(this, options)); }
       default { program.appendChild(nativeLibrary.compile(this, options)); }
     }
-    for (var i = 1; i < options.inputs.length; i++) {
+    for (var i = 1; i < options.inputs.size(); i++) {
       processInput(program, options.inputs.get(i));
     }
 

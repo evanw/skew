@@ -1,6 +1,6 @@
 namespace InstanceToStaticPass {
   void run(CallGraph graph, Resolver resolver) {
-    for (var i = 0; i < graph.callInfo.length; i++) {
+    for (var i = 0; i < graph.callInfo.size(); i++) {
       var info = graph.callInfo.get(i);
       var symbol = info.symbol;
       var enclosingSymbol = symbol.enclosingSymbol;
@@ -31,7 +31,7 @@ namespace InstanceToStaticPass {
         }
 
         // Update all call sites
-        for (var j = 0; j < info.callSites.length; j++) {
+        for (var j = 0; j < info.callSites.size(); j++) {
           var callSite = info.callSites.get(j);
           var value = callSite.callValue();
           Node target;
@@ -77,7 +77,7 @@ namespace InstanceToStaticPass {
 
     var replacedThis = false;
     if (node.hasChildren()) {
-      for (var i = 0; i < node.children.length; i++) {
+      for (var i = 0; i < node.children.size(); i++) {
         var child = node.children.get(i);
         if (child != null && recursivelyReplaceThis(child, symbol)) {
           replacedThis = true;

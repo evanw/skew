@@ -382,7 +382,7 @@ bool checkAllNodeListKinds(Node node, NodeKindCheck check) {
 
 bool checkAllNodeKinds(List<Node> nodes, NodeKindCheck check) {
   assert nodes != null;
-  for (var i = 0; i < nodes.length; i++) {
+  for (var i = 0; i < nodes.size(); i++) {
     if (!check(nodes.get(i))) {
       return false;
     }

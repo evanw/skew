@@ -36,8 +36,8 @@ namespace js {
       // function. Also create a quick way of getting from a symbol to its
       // union/find index.
       if (options.jsMangle) {
-        localVariableUnionFind = UnionFind(resolver.allSymbols.length);
-        for (var i = 0; i < resolver.allSymbols.length; i++) {
+        localVariableUnionFind = UnionFind(resolver.allSymbols.size());
+        for (var i = 0; i < resolver.allSymbols.size(); i++) {
           var symbol = resolver.allSymbols.get(i);
           namingGroupIndexForSymbol.set(symbol.uniqueID, i);
         }
@@ -60,7 +60,7 @@ namespace js {
       if (options.jsMangle) {
         // This holds the groups used for naming. Unioning two labels using
         // this object will cause both groups of symbols to have the same name.
-        var namingGroupsUnionFind = UnionFind(resolver.allSymbols.length);
+        var namingGroupsUnionFind = UnionFind(resolver.allSymbols.size());
 
         // These are optional and only reduce the number of generated names
         List<int> order = [];
@@ -69,14 +69,14 @@ namespace js {
 
         // Ensure all overridden symbols have the same generated name. This is
         // manditory for correctness, otherwise virtual functions break.
-        for (var i = 0; i < resolver.allSymbols.length; i++) {
+        for (var i = 0; i < resolver.allSymbols.size(); i++) {
           var symbol = resolver.allSymbols.get(i);
           if (symbol.overriddenMember != null) {
             var overridden = symbol.overriddenMember.symbol;
             var index = namingGroupIndexForSymbol.get(symbol.uniqueID);
             namingGroupsUnionFind.union(index, namingGroupIndexForSymbol.get(overridden.uniqueID));
             if (overridden.identicalMembers != null) {
-              for (var j = 0; j < overridden.identicalMembers.length; j++) {
+              for (var j = 0; j < overridden.identicalMembers.size(); j++) {
                 namingGroupsUnionFind.union(index, namingGroupIndexForSymbol.get(overridden.identicalMembers.get(j).symbol.uniqueID));
               }
             }
@@ -86,7 +86,7 @@ namespace js {
         // Collect all reserved names together into one big set for querying
         reservedNames = Emitter.isKeyword.clone();
         var members = cache.globalType.members.values();
-        for (var i = 0; i < members.length; i++) {
+        for (var i = 0; i < members.size(); i++) {
           var member = members.get(i);
           if (!canRename(member.symbol)) {
             reservedNames.set(member.symbol.name, true);
@@ -98,10 +98,10 @@ namespace js {
         // names for more frequently used symbols.
         var namingGroups = extractGroups(namingGroupsUnionFind, null);
         List<GroupWithCount> sortedGroups = [];
-        for (var i = 0; i < namingGroups.length; i++) {
+        for (var i = 0; i < namingGroups.size(); i++) {
           var group = namingGroups.get(i);
           var count = 0;
-          for (var j = 0; j < group.length; j++) {
+          for (var j = 0; j < group.size(); j++) {
             var symbol = group.get(j);
             if (canRename(symbol)) {
               count += symbolCounts.getOrDefault(symbol.uniqueID, 0);
@@ -110,10 +110,10 @@ namespace js {
           sortedGroups.push(GroupWithCount(group, count));
         }
         sortedGroups.sort((a, b) => b.count - a.count);
-        for (var i = 0; i < sortedGroups.length; i++) {
+        for (var i = 0; i < sortedGroups.size(); i++) {
           var group = sortedGroups.get(i).group;
           var name = "";
-          for (var j = 0; j < group.length; j++) {
+          for (var j = 0; j < group.size(); j++) {
             var symbol = group.get(j);
             if (canRename(symbol)) {
               if (name == "") {
@@ -144,19 +144,29 @@ namespace js {
     // will be unique within a subclass hierarchy allowing names to be
     // duplicated in separate subclass hierarchies.
     void aliasUnrelatedProperties(UnionFind unionFind, List<int> order) {
-      var relatedTypesUnionFind = UnionFind(resolver.allSymbols.length);
-      for (var i = 0; i < resolver.allSymbols.length; i++) {
+      var relatedTypesUnionFind = UnionFind(resolver.allSymbols.size());
+      for (var i = 0; i < resolver.allSymbols.size(); i++) {
         var symbol = resolver.allSymbols.get(i);
         if (symbol.kind.isType()) {
           if (symbol.type.hasRelevantTypes()) {
             var types = symbol.type.relevantTypes;
-            for (var j = 0; j < types.length; j++) {
+            for (var j = 0; j < types.size(); j++) {
               relatedTypesUnionFind.union(i, namingGroupIndexForSymbol.get(types.get(j).symbol.uniqueID));
             }
           }
           var members = symbol.type.members.values();
-          for (var j = 0; j < members.length; j++) {
-            relatedTypesUnionFind.union(i, namingGroupIndexForSymbol.get(members.get(j).symbol.uniqueID));
+          for (var j = 0; j < members.size(); j++) {
+            var index = namingGroupIndexForSymbol.getOrDefault(members.get(j).symbol.uniqueID, -1);
+
+            // Guard against observing symbols that have been removed from
+            // resolver.allSymbols by DeadCodeRemovalPass but that are still
+            // reachable because DeadCodeRemovalPass only removes the symbol
+            // from the unparameterized type, not from parameterized types.
+            // It really should remove the symbol from all parameterized types
+            // too but this guard fixes compilation issues until then.
+            if (index != -1) {
+              relatedTypesUnionFind.union(i, index);
+            }
           }
         }
       }
@@ -164,15 +174,15 @@ namespace js {
     }
 
     void zipTogetherInOrder(UnionFind unionFind, List<int> order, List<List<Symbol>> groups) {
-      for (var i = 0; i < groups.length; i++) {
+      for (var i = 0; i < groups.size(); i++) {
         var group = groups.get(i);
-        if (group.length > 1) {
+        if (group.size() > 1) {
           group.sort((a, b) => a.node.range.start - b.node.range.start);
         }
-        for (var j = 0; j < group.length; j++) {
+        for (var j = 0; j < group.size(); j++) {
           var symbol = group.get(j);
           var index = namingGroupIndexForSymbol.get(symbol.uniqueID);
-          if (order.length <= j) {
+          if (order.size() <= j) {
             order.push(index);
           }
           unionFind.union(index, order.get(j));
@@ -182,7 +192,7 @@ namespace js {
 
     List<List<Symbol>> extractGroups(UnionFind unionFind, bool fn(Symbol) filter) {
       var labelToGroup = IntMap<List<Symbol>>();
-      for (var i = 0; i < resolver.allSymbols.length; i++) {
+      for (var i = 0; i < resolver.allSymbols.size(); i++) {
         var symbol = resolver.allSymbols.get(i);
         if (filter != null && !filter(symbol)) {
           continue;
@@ -232,7 +242,7 @@ namespace js {
       }
 
       if (node.hasChildren()) {
-        for (var i = 0; i < node.children.length; i++) {
+        for (var i = 0; i < node.children.size(); i++) {
           var child = node.children.get(i);
           if (child != null) {
             patchNode(child);
@@ -424,19 +434,19 @@ namespace js {
         return;
       }
 
-      for (var i = 0; i < node.children.length; i++) {
+      for (var i = 0; i < node.children.size(); i++) {
         var child = node.children.get(i);
         var kind = child.kind;
 
         // "var a = 0; var b = 1;" => "var a = 0, b = 1;"
         if (kind == .VARIABLE_CLUSTER) {
-          while (i + 1 < node.children.length) {
+          while (i + 1 < node.children.size()) {
             var next = node.children.get(i + 1);
             if (next.kind != .VARIABLE_CLUSTER) {
               break;
             }
             var variables = next.remove().clusterVariables();
-            for (var j = 0; j < variables.length; j++) {
+            for (var j = 0; j < variables.size(); j++) {
               child.appendChild(variables.get(j).replaceWith(null));
             }
           }
@@ -445,7 +455,7 @@ namespace js {
         // "a; b; c;" => "a, b, c;"
         else if (kind == .EXPRESSION) {
           List<Node> nodes;
-          while (i + 1 < node.children.length) {
+          while (i + 1 < node.children.size()) {
             var next = node.children.get(i + 1);
             if (next.kind != .EXPRESSION) {
               break;
@@ -486,7 +496,7 @@ namespace js {
               }
 
               // Move the rest of this block into the block for the if statement
-              while (i + 1 < node.children.length) {
+              while (i + 1 < node.children.size()) {
                 block.appendChild(node.children.get(i + 1).remove());
               }
               peepholeMangleBlock(block);
@@ -557,7 +567,7 @@ namespace js {
       assert node.kind == .SEQUENCE;
 
       // "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
-      for (var i = node.children.length - 1; i > 0; i--) {
+      for (var i = node.children.size() - 1; i > 0; i--) {
         var current = node.children.get(i);
         var currentRight = assignSourceIfNoSideEffects(current);
         if (currentRight != null) {
@@ -736,7 +746,7 @@ namespace js {
         block.insertChild(index++, Node.createExpression(superInitializer.replaceWith(null)));
       }
       if (memberInitializers != null) {
-        for (var i = 0; i < memberInitializers.children.length; i++) {
+        for (var i = 0; i < memberInitializers.children.size(); i++) {
           var child = memberInitializers.children.get(i);
           var name = child.memberInitializerName();
           var value = child.memberInitializerValue();
@@ -793,7 +803,7 @@ namespace js {
       if (!parent.kind.isExpression()) {
         return false;
       }
-      if (parent.kind == .SEQUENCE && (!isExpressionUsed(parent) || parent.children.indexOf(node) < parent.children.length - 1)) {
+      if (parent.kind == .SEQUENCE && (!isExpressionUsed(parent) || parent.children.indexOf(node) < parent.children.size() - 1)) {
         return false;
       }
       return true;

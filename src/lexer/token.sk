@@ -7,22 +7,22 @@ class Token {
 void prepareTokens(List<Token> tokens) {
   List<int> stack = [];
 
-  for (var i = 0; i < tokens.length; i++) {
+  for (var i = 0; i < tokens.size(); i++) {
     var token = tokens.get(i);
     var tokenKind = token.kind;
 
-    // The check for "token.text.length > 0" is very important. Without it,
+    // The check for "token.text.size() > 0" is very important. Without it,
     // V8 will continue to deoptimize on codeUnitAt(0) until it hits its
     // deoptimization threshold and then this function will be permanently
     // deoptimized. This isn't so bad by itself but Google Closure Compiler
     // inlines this along with all other tokenizing functions into a single
     // function. Permanent deoptimization inside this inlined function causes
     // tokenizing to be twice as slow.
-    var tokenStartsWithGreaterThan = token.text.length > 0 && token.text.codeUnitAt(0) == '>';
+    var tokenStartsWithGreaterThan = token.text.size() > 0 && token.text.codeUnitAt(0) == '>';
 
     // Retokens on the stack if they aren't working out
-    while (stack.length > 0) {
-      var top = tokens.get(stack.get(stack.length - 1));
+    while (stack.size() > 0) {
+      var top = tokens.get(stack.get(stack.size() - 1));
       var topKind = top.kind;
 
       // Stop parsing a type if we find a token that no type expression uses
@@ -47,8 +47,8 @@ void prepareTokens(List<Token> tokens) {
     // Group close
     if (tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan) {
       // Search for a matching opposite token
-      while (stack.length > 0) {
-        var top = tokens.get(stack.get(stack.length - 1));
+      while (stack.size() > 0) {
+        var top = tokens.get(stack.get(stack.size() - 1));
         var topKind = top.kind;
 
         // Don't match closing angle brackets that don't work since they are just operators
@@ -71,7 +71,7 @@ void prepareTokens(List<Token> tokens) {
           if (tokenKind != .GREATER_THAN) {
             var range = token.range;
             var start = range.start;
-            var text = token.text.slice(1, token.text.length);
+            var text = token.text.slice(1, token.text.size());
             TokenKind kind =
               tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
               tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :

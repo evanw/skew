@@ -15,7 +15,7 @@ class Type {
   List<Type> relevantTypes = null;
 
   // Types that have been substituted for the type parameters of this symbol.
-  // If non-null, the length must equal symbol.parameters.length.
+  // If non-null, the length must equal symbol.parameters.size().
   List<Type> substitutions = null;
 
   // Give each type a unique integer as a hash code
@@ -39,7 +39,7 @@ class Type {
       return true;
     }
     if (relevantTypes != null) {
-      for (var i = 0; i < relevantTypes.length; i++) {
+      for (var i = 0; i < relevantTypes.size(); i++) {
         if (relevantTypes.get(i).hasBaseType(type)) {
           return true;
         }
@@ -54,7 +54,7 @@ class Type {
 
   void copyMembersFrom(Type other) {
     var otherMembers = other.members.values();
-    for (var i = 0; i < otherMembers.length; i++) {
+    for (var i = 0; i < otherMembers.size(); i++) {
       var member = otherMembers.get(i);
       if (!members.has(member.symbol.name)) {
         members.set(member.symbol.name, member);
@@ -67,9 +67,9 @@ class Type {
   }
 
   static string environmentToString(List<Symbol> parameters, List<Type> substitutions) {
-    assert parameters.length == substitutions.length;
+    assert parameters.size() == substitutions.size();
     var text = "[";
-    for (var i = 0; i < parameters.length; i++) {
+    for (var i = 0; i < parameters.size(); i++) {
       if (i > 0) text += ", ";
       text += parameters.get(i).name + " => " + substitutions.get(i);
     }
@@ -77,13 +77,13 @@ class Type {
   }
 
   string toString() {
-    assert substitutions == null || substitutions.length == symbol.parameters.length;
+    assert substitutions == null || substitutions.size() == symbol.parameters.size();
 
     // Special-case generic types
     var parameterText = "";
     if (hasParameters()) {
       parameterText = "<";
-      for (var i = 0; i < symbol.parameters.length; i++) {
+      for (var i = 0; i < symbol.parameters.size(); i++) {
         if (i > 0) parameterText += ", ";
         parameterText += isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name;
       }
@@ -94,7 +94,7 @@ class Type {
     if (isFunction()) {
       var text = resultType() + " fn" + parameterText + "(";
       var arguments = argumentTypes();
-      for (var i = 0; i < arguments.length; i++) {
+      for (var i = 0; i < arguments.size(); i++) {
         if (i > 0) text += ", ";
         text += arguments.get(i);
       }
@@ -113,7 +113,7 @@ class Type {
   }
 
   bool hasRelevantTypes() {
-    return relevantTypes != null && relevantTypes.length > 0;
+    return relevantTypes != null && relevantTypes.size() > 0;
   }
 
   Type baseClass() {
@@ -135,7 +135,7 @@ class Type {
       return true;
     }
     if (hasRelevantTypes()) {
-      for (var i = 0; i < relevantTypes.length; i++) {
+      for (var i = 0; i < relevantTypes.size(); i++) {
         var type = relevantTypes.get(i);
         if (type.dependsOnParameter(parameter)) {
           return true;
@@ -154,7 +154,7 @@ class Type {
   List<Type> argumentTypes() {
     assert isFunction();
     assert hasRelevantTypes();
-    return relevantTypes.slice(1, relevantTypes.length);
+    return relevantTypes.slice(1, relevantTypes.size());
   }
 
   bool isVoid(TypeCache cache) {

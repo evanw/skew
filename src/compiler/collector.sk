@@ -38,7 +38,7 @@ class Collector {
 
       case .VARIABLE_CLUSTER {
         var variables = node.clusterVariables();
-        for (var i = 0; i < variables.length; i++) {
+        for (var i = 0; i < variables.size(); i++) {
           var symbol = variables.get(i).symbol;
           if (!symbol.kind.isInstance()) {
             freeVariableSymbols.push(symbol);
@@ -53,16 +53,16 @@ class Collector {
       return;
     }
 
-    for (var i = 0; i < typeSymbols.length; i++) {
+    for (var i = 0; i < typeSymbols.size(); i++) {
       var j = i;
 
       // Select a type that comes before all other types
-      for (; j < typeSymbols.length; j++) {
+      for (; j < typeSymbols.size(); j++) {
         var type = typeSymbols.get(j).type;
         var k = i;
 
         // Check to see if this comes before all other types
-        for (; k < typeSymbols.length; k++) {
+        for (; k < typeSymbols.size(); k++) {
           if (j == k) {
             continue;
           }
@@ -71,13 +71,13 @@ class Collector {
             break;
           }
         }
-        if (k == typeSymbols.length) {
+        if (k == typeSymbols.size()) {
           break;
         }
       }
 
       // Swap the type into the correct order
-      if (j < typeSymbols.length) {
+      if (j < typeSymbols.size()) {
         typeSymbols.swap(i, j);
       }
     }
@@ -86,7 +86,7 @@ class Collector {
   bool hasMemberOfType(Type typeWithMembers, Type typeOfMember) {
     var members = typeWithMembers.members.values();
     if (members != null) {
-      for (var i = 0; i < members.length; i++) {
+      for (var i = 0; i < members.size(); i++) {
         if (members.get(i).type == typeOfMember) {
           return true;
         }
@@ -110,7 +110,7 @@ class Collector {
 
   void collectChildStatements(Node node) {
     if (node.hasChildren()) {
-      for (var i = 0; i < node.children.length; i++) {
+      for (var i = 0; i < node.children.size(); i++) {
         var child = node.children.get(i);
         if (child != null) {
           collectStatements(child);

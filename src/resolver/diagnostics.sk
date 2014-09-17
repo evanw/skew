@@ -204,13 +204,13 @@ void semanticErrorDuplicateBaseType(Log log, Range range, Type type) {
 }
 
 void semanticErrorAmbiguousSymbol(Log log, Range range, string name, List<string> names) {
-  for (var i = 0; i < names.length; i++) names.set(i, simpleQuote(names.get(i)));
+  for (var i = 0; i < names.size(); i++) names.set(i, simpleQuote(names.get(i)));
   log.error(range, "Reference to " + simpleQuote(name) + " is ambiguous, could be " + " or ".join(names));
 }
 
 void semanticErrorUnmergedSymbol(Log log, Range range, string name, List<Type> types) {
   List<string> names = [];
-  for (var i = 0; i < types.length; i++) names.push(typeToText(types.get(i)));
+  for (var i = 0; i < types.size(); i++) names.push(typeToText(types.get(i)));
   log.error(range, "Member " + simpleQuote(name) + " has an ambiguous inherited type, could be " + " or ".join(names));
 }
 

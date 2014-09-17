@@ -33,7 +33,7 @@ struct Range {
   int singleLineLength() {
     var start = source.indexToLineColumn(this.start);
     var end = source.indexToLineColumn(this.end);
-    return (start.line == end.line ? end.column : source.contentsOfLine(start.line).length) - start.column;
+    return (start.line == end.line ? end.column : source.contentsOfLine(start.line).size()) - start.column;
   }
 
   FormattedRange format(int maxLength) {
@@ -41,7 +41,7 @@ struct Range {
     var start = source.indexToLineColumn(this.start);
     var end = source.indexToLineColumn(this.end);
     var line = source.contentsOfLine(start.line);
-    var length = line.length;
+    var length = line.size();
     var a = start.column;
     var b = end.line == start.line ? end.column : length;
 

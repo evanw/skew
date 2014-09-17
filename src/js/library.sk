@@ -13,7 +13,7 @@ import class Object {
 }
 
 import struct string {
-  import final int length;
+  inline int size() { return untyped(this).length; }
   import string slice(int start, int end);
   import int indexOf(string value);
   import int lastIndexOf(string value);
@@ -23,14 +23,14 @@ import struct string {
   inline string get(int index) { return untyped(this)[index]; }
   inline string join(List<string> values) { return untyped(values).join(this); }
   inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }
-  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }
-  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }
+  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }
+  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }
   string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }
 }
 
 import class List<T> {
   new();
-  import final int length;
+  inline int size() { return untyped(this).length; }
   import void push(T value);
   import void unshift(T value);
   import List<T> slice(int start, int end);

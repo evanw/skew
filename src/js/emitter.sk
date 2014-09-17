@@ -56,7 +56,7 @@ namespace js {
       currentSource = Source(options.outputFile, "");
 
       // Prepend inputs
-      for (var i = 0; i < options.prepend.length; i++) {
+      for (var i = 0; i < options.prepend.size(); i++) {
         appendSource(options.prepend.get(i));
       }
 
@@ -89,7 +89,7 @@ namespace js {
       }
 
       // Emit types
-      for (var i = 0; i < collector.typeSymbols.length; i++) {
+      for (var i = 0; i < collector.typeSymbols.size(); i++) {
         var type = collector.typeSymbols.get(i).type;
         if (type.isNamespace()) {
           if (!type.symbol.isImport()) {
@@ -109,7 +109,7 @@ namespace js {
           }
         }
         var members = type.members.values();
-        for (var j = 0; j < members.length; j++) {
+        for (var j = 0; j < members.size(); j++) {
           var symbol = members.get(j).symbol;
           if (symbol.enclosingSymbol == type.symbol && symbol.node != null && symbol.kind.isFunction() && !symbol.kind.isConstructor()) {
             emitNode(symbol.node);
@@ -118,13 +118,13 @@ namespace js {
       }
 
       // Emit free functions
-      for (var i = 0; i < collector.freeFunctionSymbols.length; i++) {
+      for (var i = 0; i < collector.freeFunctionSymbols.size(); i++) {
         emitNode(collector.freeFunctionSymbols.get(i).node);
       }
 
       // Emit free variables
       List<Node> variables = [];
-      for (var i = 0; i < collector.freeVariableSymbols.length; i++) {
+      for (var i = 0; i < collector.freeVariableSymbols.size(); i++) {
         var variable = collector.freeVariableSymbols.get(i).node;
         if (options.jsMinify) variables.push(variable);
         else emitVariables([variable]);
@@ -136,7 +136,7 @@ namespace js {
       emit(indent + "}());\n");
 
       // Append inputs
-      for (var i = 0; i < options.append.length; i++) {
+      for (var i = 0; i < options.append.size(); i++) {
         appendSource(options.append.get(i));
       }
 
@@ -175,7 +175,7 @@ namespace js {
           generator.addMapping(source, i, 0, currentLine++, 0);
         }
       }
-      if (source.contents.codeUnitAt(source.contents.length - 1) != '\n') {
+      if (source.contents.codeUnitAt(source.contents.size() - 1) != '\n') {
         emit("\n");
       }
     }
@@ -198,13 +198,13 @@ namespace js {
 
     void decreaseIndent() {
       if (!options.jsMinify) {
-        indent = indent.slice(2, indent.length);
+        indent = indent.slice(2, indent.size());
       }
     }
 
     void emit(string text) {
       if (options.jsMinify || options.jsSourceMap) {
-        for (var i = 0; i < text.length; i++) {
+        for (var i = 0; i < text.size(); i++) {
           var c = text.codeUnitAt(i);
           if (c == '\n') {
             currentColumn = 0;
@@ -241,7 +241,7 @@ namespace js {
     }
 
     void emitStatements(List<Node> nodes) {
-      for (var i = 0; i < nodes.length; i++) {
+      for (var i = 0; i < nodes.size(); i++) {
         emitSemicolonIfNeeded();
         maybeEmitMinifedNewline();
         emitNode(nodes.get(i));
@@ -249,14 +249,14 @@ namespace js {
     }
 
     void emitCommaSeparatedNodes(List<Node> nodes) {
-      for (var i = 0; i < nodes.length; i++) {
+      for (var i = 0; i < nodes.size(); i++) {
         if (i > 0) emit("," + space);
         emitNode(nodes.get(i));
       }
     }
 
     void emitCommaSeparatedExpressions(List<Node> nodes) {
-      for (var i = 0; i < nodes.length; i++) {
+      for (var i = 0; i < nodes.size(); i++) {
         if (i > 0) {
           emit("," + space);
           maybeEmitMinifedNewline();
@@ -330,7 +330,7 @@ namespace js {
       addMapping(node);
       if (shouldMinify && !node.hasChildren()) {
         emit(";");
-      } else if (shouldMinify && node.children.length == 1) {
+      } else if (shouldMinify && node.children.size() == 1) {
         if (after == .AFTER_KEYWORD) emit(" ");
         emitNode(node.children.get(0));
       } else {
@@ -349,13 +349,13 @@ namespace js {
       var values = node.caseValues();
       var block = node.caseBlock();
       emitSemicolonIfNeeded();
-      for (var i = 0; i < values.length; i++) {
+      for (var i = 0; i < values.size(); i++) {
         emit(indent + "case ");
         emitExpression(values.get(i), .LOWEST);
         emit(":" + newline);
         maybeEmitMinifedNewline();
       }
-      if (values.length == 0) {
+      if (values.size() == 0) {
         emit(indent + "default:" + newline);
       }
       increaseIndent();
@@ -372,7 +372,7 @@ namespace js {
 
     void emitVariables(List<Node> variables) {
       var state = ClusterState.NONE;
-      for (var i = 0; i < variables.length; i++) {
+      for (var i = 0; i < variables.size(); i++) {
         var variable = variables.get(i);
         var symbol = variable.symbol;
         var isCompoundName = symbol != null && (hasCompoundName(symbol) || symbol.isExport());
@@ -432,10 +432,10 @@ namespace js {
       }
       emit(fullName(symbol) + space + "=" + space + "{" + newline);
       increaseIndent();
-      for (var i = 0; i < block.children.length; i++) {
+      for (var i = 0; i < block.children.size(); i++) {
         var child = block.children.get(i).symbol;
         emit(indent + mangleName(child) + ":" + space + child.constant.asInt());
-        if (i != block.children.length - 1) {
+        if (i != block.children.size() - 1) {
           emit("," + newline);
           maybeEmitMinifedNewline();
         } else {
@@ -728,7 +728,7 @@ namespace js {
       var arguments = node.superCallArguments();
       emit(fullName(node.symbol));
       emit(".call(this");
-      for (var i = 0; i < arguments.length; i++) {
+      for (var i = 0; i < arguments.size(); i++) {
         emit("," + space);
         emitExpression(arguments.get(i), .COMMA);
       }
@@ -772,7 +772,7 @@ namespace js {
     bool isToStringCall(Node node) {
       if (node.kind == .CALL) {
         var value = node.callValue();
-        return value.kind == .DOT && value.symbol != null && value.symbol.name == "toString" && node.callArguments().length == 0;
+        return value.kind == .DOT && value.symbol != null && value.symbol.name == "toString" && node.callArguments().size() == 0;
       }
       return false;
     }
@@ -811,13 +811,13 @@ namespace js {
     bool isIdentifierString(Node node) {
       if (node.kind == .STRING) {
         var value = node.asString();
-        for (var i = 0; i < value.length; i++) {
+        for (var i = 0; i < value.size(); i++) {
           var c = value.codeUnitAt(i);
           if ((c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && c != '_' && c != '$' && (i == 0 || c < '0' || c > '9')) {
             return false;
           }
         }
-        return value.length > 0 && !isKeyword.has(value);
+        return value.size() > 0 && !isKeyword.has(value);
       }
       return false;
     }
@@ -849,7 +849,7 @@ namespace js {
     string quoteStringJS(string text) {
       var doubleCount = 0;
       var singleCount = 0;
-      for (var i = 0; i < text.length; i++) {
+      for (var i = 0; i < text.size(); i++) {
         var c = text.codeUnitAt(i);
         if (c == '"') doubleCount++;
         else if (c == '\'') singleCount++;

@@ -5,7 +5,7 @@ import struct float { import string toString(); }
 import struct double { import string toString(); }
 
 import struct string {
-  import final int length;
+  import int size();
   import string slice(int start, int end);
   import int indexOf(string value);
   import int lastIndexOf(string value);
@@ -22,7 +22,7 @@ import struct string {
 
 import class List<T> {
   new();
-  import final int length;
+  import int size();
   import void push(T value);
   import void unshift(T value);
   import List<T> slice(int start, int end);

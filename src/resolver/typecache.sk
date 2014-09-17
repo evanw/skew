@@ -41,15 +41,15 @@ class TypeCache {
 
   static int computeHashCode(Symbol symbol, List<Type> relevantTypes) {
     var seed = symbol == null ? -1 : symbol.type.uniqueID;
-    for (var i = 0; i < relevantTypes.length; i++) {
+    for (var i = 0; i < relevantTypes.size(); i++) {
       seed = hashCombine(seed, relevantTypes.get(i).uniqueID);
     }
     return seed;
   }
 
   static bool areTypeListsEqual(List<Type> left, List<Type> right) {
-    var n = left.length;
-    if (n != right.length) {
+    var n = left.size();
+    if (n != right.size()) {
       return false;
     }
     for (var i = 0; i < n; i++) {
@@ -61,7 +61,7 @@ class TypeCache {
   }
 
   Type substitute(Type type, List<Symbol> parameters, List<Type> substitutions) {
-    assert parameters.length == substitutions.length;
+    assert parameters.size() == substitutions.size();
     if (trace.GENERICS) {
       trace.log("substitute " + type + " with " + Type.environmentToString(parameters, substitutions));
       trace.indent();
@@ -86,9 +86,9 @@ class TypeCache {
   }
 
   List<Type> substituteAll(List<Type> types, List<Symbol> parameters, List<Type> substitutions) {
-    assert parameters.length == substitutions.length;
+    assert parameters.size() == substitutions.size();
     List<Type> results = [];
-    for (var i = 0; i < types.length; i++) {
+    for (var i = 0; i < types.size(); i++) {
       results.push(substitute(types.get(i), parameters, substitutions));
     }
     return results;
@@ -100,7 +100,7 @@ class TypeCache {
     if (symbol != null) {
       assert symbol.hasParameters();
       assert !symbol.type.isParameterized();
-      assert symbol.parameters.length == substitutions.length;
+      assert symbol.parameters.size() == substitutions.size();
     }
 
     // Hash the symbol along with all types
@@ -109,9 +109,9 @@ class TypeCache {
 
     // Check existing types in that hash bucket for a match
     if (existingTypes != null) {
-      for (var i = 0; i < existingTypes.length; i++) {
+      for (var i = 0; i < existingTypes.size(); i++) {
         var existing = existingTypes.get(i);
-        assert symbol != existing.symbol || symbol == null || substitutions.length == existing.substitutions.length;
+        assert symbol != existing.symbol || symbol == null || substitutions.size() == existing.substitutions.size();
         if (symbol == existing.symbol && (
             symbol == null && areTypeListsEqual(substitutions, existing.relevantTypes) ||
             symbol != null && areTypeListsEqual(substitutions, existing.substitutions))) {
@@ -139,7 +139,7 @@ class TypeCache {
       type.relevantTypes = substituteAll(unparameterized.relevantTypes, symbol.parameters, substitutions);
 
       var members = unparameterized.members.values();
-      for (var i = 0; i < members.length; i++) {
+      for (var i = 0; i < members.size(); i++) {
         var member = members.get(i);
         var clone = Member(member.symbol);
         clone.dependency = member.dependency != null ? member.dependency : member;
@@ -163,7 +163,7 @@ class TypeCache {
         var parameterizedType = member.parameterizedType;
         if (parameterizedType != null) {
           List<Type> merged = [];
-          for (var j = 0; j < parameterizedType.substitutions.length; j++) {
+          for (var j = 0; j < parameterizedType.substitutions.size(); j++) {
             var parameter = parameterizedType.symbol.parameters.get(j);
             var index = symbol.parameters.indexOf(parameter);
             merged.push(index >= 0 ? substitutions.get(index) : substitute(parameterizedType.substitutions.get(j), symbol.parameters, substitutions));

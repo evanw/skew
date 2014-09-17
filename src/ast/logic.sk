@@ -57,7 +57,8 @@ in Node {
       //   NAN >= NAN  |  false
       //
       case .LESS_THAN, .GREATER_THAN, .LESS_THAN_OR_EQUAL, .GREATER_THAN_OR_EQUAL {
-        if (!cache.commonImplicitType(binaryLeft().type, binaryRight().type).isReal(cache)) {
+        var commonType = cache.commonImplicitType(binaryLeft().type, binaryRight().type);
+        if (commonType != null && !commonType.isReal(cache)) {
           switch (kind) {
             case .LESS_THAN { kind = .GREATER_THAN_OR_EQUAL; }
             case .GREATER_THAN { kind = .LESS_THAN_OR_EQUAL; }
@@ -80,7 +81,7 @@ in Node {
       return false;
     }
 
-    for (var i = children.length - 1; i >= 0; i--) {
+    for (var i = children.size() - 1; i >= 0; i--) {
       var child = children.get(i);
       switch (child.kind) {
         case .RETURN, .IMPLICIT_RETURN {
@@ -99,12 +100,12 @@ in Node {
           var value = child.switchValue();
           var cases = child.switchCases();
           var foundDefault = false;
-          for (var j = 0; j < cases.length; j++) {
+          for (var j = 0; j < cases.size(); j++) {
             var node = cases.get(j);
             if (!node.caseBlock().blockAlwaysEndsWithReturn()) {
               return false;
             }
-            if (node.caseValues().length == 0) {
+            if (node.caseValues().size() == 0) {
               foundDefault = true;
             }
           }
@@ -145,6 +146,6 @@ in Node {
 
   Node singleStatement() {
     assert kind == .BLOCK;
-    return hasChildren() && children.length == 1 ? children.get(0) : null;
+    return hasChildren() && children.size() == 1 ? children.get(0) : null;
   }
 }

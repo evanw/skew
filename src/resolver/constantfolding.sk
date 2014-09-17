@@ -39,7 +39,7 @@ class ConstantFolder {
   static bool blockContainsVariableCluster(Node node) {
     assert node.kind == .BLOCK;
     if (node.hasChildren()) {
-      for (var i = 0; i < node.children.length; i++) {
+      for (var i = 0; i < node.children.size(); i++) {
         if (node.children.get(i).kind == .VARIABLE_CLUSTER) {
           return true;
         }
@@ -58,7 +58,7 @@ class ConstantFolder {
 
     // Fold operands before folding this node
     if (node.hasChildren()) {
-      for (var i = 0; i < node.children.length; i++) {
+      for (var i = 0; i < node.children.size(); i++) {
         var child = node.children.get(i);
         if (child != null) {
           foldConstants(child);
@@ -128,13 +128,13 @@ class ConstantFolder {
   }
 
   void foldBlock(Node node) {
-    for (var i = 0; i < node.children.length; i++) {
+    for (var i = 0; i < node.children.size(); i++) {
       var child = node.children.get(i);
       var kind = child.kind;
 
       // Remove everything after a jump
       if (kind.isJump()) {
-        for (var j = node.children.length - 1; j > i; j--) {
+        for (var j = node.children.size() - 1; j > i; j--) {
           node.removeChildAtIndex(j);
         }
         break;
@@ -199,7 +199,7 @@ class ConstantFolder {
           if (!blockContainsVariableCluster(trueBlock)) {
             var replacements = trueBlock.removeChildren();
             child.replaceWithNodes(replacements);
-            i += replacements.length - 1;
+            i += replacements.size() - 1;
           }
         }
 
@@ -216,7 +216,7 @@ class ConstantFolder {
           else if (!blockContainsVariableCluster(falseBlock)) {
             var replacements = falseBlock.removeChildren();
             child.replaceWithNodes(replacements);
-            i += replacements.length - 1;
+            i += replacements.size() - 1;
           }
 
           // Otherwise, transform to an "if (true) { ... }" statement
@@ -435,7 +435,7 @@ class ConstantFolder {
   void foldSequence(Node node) {
     // Remove all children without side effects that aren't the result
     var i = 0;
-    while (i + 1 < node.children.length) {
+    while (i + 1 < node.children.size()) {
       if (node.children.get(i).hasNoSideEffects()) {
         node.removeChildAtIndex(i);
       } else {
@@ -444,7 +444,7 @@ class ConstantFolder {
     }
 
     // Replace a single-element sequence with the single element
-    if (node.children.length == 1) {
+    if (node.children.size() == 1) {
       node.become(node.children.get(0).remove());
     }
 

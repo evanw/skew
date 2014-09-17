@@ -176,11 +176,11 @@ class Symbol {
 
   void sortParametersByDependencies() {
     sortedParameters = parameters.clone();
-    for (var i = 0; i < sortedParameters.length; i++) {
+    for (var i = 0; i < sortedParameters.size(); i++) {
       var j = i;
 
       // Select a parameter that doesn't depend on any unchecked parameter
-      for (; j < sortedParameters.length; j++) {
+      for (; j < sortedParameters.size(); j++) {
         var k = i;
 
         // Find bounded type parameters
@@ -194,7 +194,7 @@ class Symbol {
         }
 
         // Check to see if this depends on any other unchecked parameters
-        for (; k < sortedParameters.length; k++) {
+        for (; k < sortedParameters.size(); k++) {
           var other = sortedParameters.get(k);
           if (parameter == other || !other.type.isParameter()) {
             continue;
@@ -203,13 +203,13 @@ class Symbol {
             break;
           }
         }
-        if (k == sortedParameters.length) {
+        if (k == sortedParameters.size()) {
           break;
         }
       }
 
       // Swap the parameter into the correct order
-      if (j < sortedParameters.length) {
+      if (j < sortedParameters.size()) {
         sortedParameters.swap(i, j);
       }
     }
@@ -221,7 +221,7 @@ class Symbol {
   }
 
   bool hasParameters() {
-    return parameters != null && parameters.length > 0;
+    return parameters != null && parameters.size() > 0;
   }
 
   bool isEnumValue() {

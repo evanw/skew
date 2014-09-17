@@ -173,7 +173,7 @@ Node parseArgumentVariables(ParserContext context) {
   List<Node> arguments = [];
   if (!context.expect(.LEFT_PARENTHESIS)) return null;
   while (!context.peek(.RIGHT_PARENTHESIS)) {
-    if (arguments.length > 0 && !context.expect(.COMMA)) break;
+    if (arguments.size() > 0 && !context.expect(.COMMA)) break;
     var type = parseType(context);
     var name = parseName(context); if (name == null) break;
     arguments.push(Node.createVariable(name, type, null).withRange(Range.span(type.range, name.range)));
@@ -203,8 +203,8 @@ Node parseParameters(ParserContext context) {
   var token = context.current();
   List<Node> parameters = [];
   if (!context.eat(.START_PARAMETER_LIST)) return null;
-  while (parameters.length == 0 || !context.peek(.END_PARAMETER_LIST)) {
-    if (parameters.length > 0 && !context.expect(.COMMA)) break;
+  while (parameters.size() == 0 || !context.peek(.END_PARAMETER_LIST)) {
+    if (parameters.size() > 0 && !context.expect(.COMMA)) break;
     var parameter = parseParameter(context); if (parameter == null) break;
     parameters.push(parameter);
   }
@@ -221,7 +221,7 @@ List<Node> parseArgumentList(ParserContext context, TokenKind left, TokenKind ri
   List<Node> values = [];
   if (!context.expect(left)) return values;
   while (!context.peek(right)) {
-    if (comma == .NO_TRAILING_COMMA && values.length > 0 && !context.expect(.COMMA)) break;
+    if (comma == .NO_TRAILING_COMMA && values.size() > 0 && !context.expect(.COMMA)) break;
     var value = pratt.parse(context, Precedence.COMMA);
     values.push(value);
     if (value.kind.isError() || comma == .TRAILING_COMMA && !context.peek(right) && !context.expect(.COMMA)) break;
@@ -233,7 +233,7 @@ List<Node> parseArgumentList(ParserContext context, TokenKind left, TokenKind ri
 List<Node> parseTypeList(ParserContext context, TokenKind end) {
   var token = context.current();
   List<Node> types = [];
-  while (types.length == 0 || !context.peek(end)) {
+  while (types.size() == 0 || !context.peek(end)) {
     // Make sure we don't parse an initializer expression. The user is likely
     // in the middle of typing an object base type list and trying to parse an
     // initializer expression will generate many confusing errors as the parser
@@ -244,7 +244,7 @@ List<Node> parseTypeList(ParserContext context, TokenKind end) {
     }
 
     // Commas must come between types
-    if (types.length > 0 && !context.eat(.COMMA)) {
+    if (types.size() > 0 && !context.eat(.COMMA)) {
       context.expect(end); // Expecting the end token here makes more sense than a comma
       break;
     }
@@ -443,8 +443,8 @@ Node parseEnum(ParserContext context) {
 Node parseVariableCluster(ParserContext context, Node type, Node name) {
   List<Node> variables = [];
   var start = type;
-  while (variables.length == 0 || !context.peek(.SEMICOLON) && !context.peek(.IN)) {
-    if (variables.length > 0 && !context.eat(.COMMA)) {
+  while (variables.size() == 0 || !context.peek(.SEMICOLON) && !context.peek(.IN)) {
+    if (variables.size() > 0 && !context.eat(.COMMA)) {
       context.expect(.SEMICOLON); // Expecting a semicolon here makes more sense than a comma
       break;
     }
@@ -473,7 +473,7 @@ Node parseFor(ParserContext context) {
           scanForToken(context, .RIGHT_PARENTHESIS, .NORMAL);
           var body = parseBlockOrStatement(context, .NORMAL); if (body == null) return null;
           var variables = setup.clusterVariables();
-          if (variables.length > 1) syntaxErrorBadForEach(context.log, setup.range);
+          if (variables.size() > 1) syntaxErrorBadForEach(context.log, setup.range);
           var name = variables.get(0).declarationName().remove();
           var value = Node.createVariable(name, setup.clusterType().remove(), null).withRange(name.range);
           return Node.createForEach(value, values, body).withRange(context.spanSince(token.range));
@@ -552,7 +552,7 @@ Node parseAlias(ParserContext context) {
 
 bool looksLikeLambdaArguments(Node node) {
   if (node.kind == .SEQUENCE) {
-    for (var i = 0; i < node.children.length; i++) {
+    for (var i = 0; i < node.children.size(); i++) {
       if (node.children.get(i).kind != .NAME) {
         return false;
       }
@@ -563,7 +563,7 @@ bool looksLikeLambdaArguments(Node node) {
 }
 
 Node createLambdaFromNames(List<Node> names, Node block) {
-  for (var i = 0; i < names.length; i++) {
+  for (var i = 0; i < names.size(); i++) {
     var name = names.get(i);
     assert name.kind == .NAME;
     names.set(i, Node.createVariable(name, null, null).withRange(name.range));
@@ -672,7 +672,7 @@ void createParser() {
   pratt.literal(.INT_BINARY, intLiteral(2));
   pratt.literal(.INT_OCTAL, intLiteral(8));
   pratt.literal(.INT_HEX, intLiteral(16));
-  pratt.literal(.FLOAT, (context, token) => Node.createFloat(parseDoubleLiteral(token.text.slice(0, token.text.length - 1))).withRange(token.range));
+  pratt.literal(.FLOAT, (context, token) => Node.createFloat(parseDoubleLiteral(token.text.slice(0, token.text.size() - 1))).withRange(token.range));
   pratt.literal(.DOUBLE, (context, token) => Node.createDouble(parseDoubleLiteral(token.text)).withRange(token.range));
   pratt.literal(.VAR, (context, token) => Node.createVar().withRange(token.range));
   pratt.literal(.STRING, (context, token) => {
@@ -685,7 +685,7 @@ void createParser() {
     var result = parseStringLiteral(context.log, token.range, token.text);
 
     // TODO: Do true unicode code point parsing
-    if (result != null && result.value.length != 1) {
+    if (result != null && result.value.size() != 1) {
       syntaxErrorInvalidCharacter(context.log, token.range, token.text);
       result = null;
     }

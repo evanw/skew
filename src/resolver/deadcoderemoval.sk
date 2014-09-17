@@ -7,7 +7,7 @@ class DeadCodeRemovalPass {
 
     // Include all exported symbols
     var symbols = resolver.allSymbols;
-    for (var i = 0; i < symbols.length; i++) {
+    for (var i = 0; i < symbols.size(); i++) {
       var symbol = symbols.get(i);
       if (symbol.isExport() || symbol.isVirtual()) {
         pass.includeSymbol(symbol);
@@ -15,7 +15,7 @@ class DeadCodeRemovalPass {
     }
 
     // Remove symbols that aren't included
-    for (var i = 0; i < symbols.length; i++) {
+    for (var i = 0; i < symbols.size(); i++) {
       var symbol = symbols.get(i);
       var node = symbol.node;
       if (node != null && !pass.includedSymbols.has(symbol.uniqueID)) {
@@ -54,7 +54,7 @@ class DeadCodeRemovalPass {
       // This symbol depends on all other relevant types
       if (symbol.type.hasRelevantTypes()) {
         var types = symbol.type.relevantTypes;
-        for (var i = 0; i < types.length; i++) {
+        for (var i = 0; i < types.size(); i++) {
           var relevantSymbol = types.get(i).symbol;
 
           // Function types don't have a symbol
@@ -78,7 +78,7 @@ class DeadCodeRemovalPass {
     }
 
     if (node.hasChildren()) {
-      for (var i = 0; i < node.children.length; i++) {
+      for (var i = 0; i < node.children.size(); i++) {
         var child = node.children.get(i);
         if (child != null) {
           visit(child);

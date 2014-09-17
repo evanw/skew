@@ -43,9 +43,9 @@ void testHelperJS(CompilerOptions options, string expected) {
   options.targetFormat = .JAVASCRIPT;
   var compiler = Compiler();
   var result = compiler.compile(options);
-  if (result.outputs.length > 0) {
+  if (result.outputs.size() > 0) {
     var output = "";
-    for (var i = 0; i < result.outputs.length; i++) {
+    for (var i = 0; i < result.outputs.size(); i++) {
       output += result.outputs.get(i).contents + "\n";
     }
     expect(output, expected);

@@ -18,7 +18,7 @@ class ParserContext {
 
   Token next() {
     var token = current();
-    if (index + 1 < tokens.length) {
+    if (index + 1 < tokens.size()) {
       index++;
     }
     return token;

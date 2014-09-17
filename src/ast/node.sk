@@ -227,7 +227,7 @@ class Node {
   Content content = null;
 
   bool hasChildren() {
-    return children != null && children.length > 0;
+    return children != null && children.size() > 0;
   }
 
   bool isLastChild() {
@@ -235,7 +235,7 @@ class Node {
   }
 
   Node lastChild() {
-    return children.get(children.length - 1);
+    return children.get(children.size() - 1);
   }
 
   int indexInParent() {
@@ -252,11 +252,11 @@ class Node {
   }
 
   void appendChild(Node node) {
-    insertChild(children == null ? 0 : children.length, node);
+    insertChild(children == null ? 0 : children.size(), node);
   }
 
   void appendChildren(List<Node> nodes) {
-    insertChildren(children == null ? 0 : children.length, nodes);
+    insertChildren(children == null ? 0 : children.size(), nodes);
   }
 
   void insertSiblingBefore(Node node) {
@@ -268,7 +268,7 @@ class Node {
   }
 
   Node removeChildAtIndex(int index) {
-    assert index >= 0 && index < children.length;
+    assert index >= 0 && index < children.size();
     var child = children.get(index);
     if (child != null) {
       child.parent = null;
@@ -287,7 +287,7 @@ class Node {
   List<Node> removeChildren() {
     if (children == null) return [];
     var result = children;
-    for (var i = 0; i < children.length; i++) {
+    for (var i = 0; i < children.size(); i++) {
       var child = children.get(i);
       if (child != null) {
         child.parent = null;
@@ -331,7 +331,7 @@ class Node {
 
   Node replaceWithNodes(List<Node> nodes) {
     var index = indexInParent();
-    for (var i = 0; i < nodes.length; i++) {
+    for (var i = 0; i < nodes.size(); i++) {
       parent.insertChild(index + i + 1, nodes.get(i));
     }
     parent.removeChildAtIndex(index);
@@ -340,7 +340,7 @@ class Node {
 
   void replaceChild(int index, Node node) {
     assert children != null;
-    assert index >= 0 && index <= children.length;
+    assert index >= 0 && index <= children.size();
     updateParent(node, this);
     var old = children.get(index);
     if (old != null) old.parent = null;
@@ -349,15 +349,15 @@ class Node {
 
   void insertChild(int index, Node node) {
     if (children == null) children = [];
-    assert index >= 0 && index <= children.length;
+    assert index >= 0 && index <= children.size();
     updateParent(node, this);
     children.insert(index, node);
   }
 
   void insertChildren(int index, List<Node> nodes) {
     if (children == null) children = [];
-    assert index >= 0 && index <= children.length;
-    for (var i = 0; i < nodes.length; i++) {
+    assert index >= 0 && index <= children.size();
+    for (var i = 0; i < nodes.size(); i++) {
       var node = nodes.get(i);
       updateParent(node, this);
       children.insert(index++, node);
@@ -372,7 +372,7 @@ class Node {
     node.content = content;
     if (children != null) {
       node.children = [];
-      for (var i = 0; i < children.length; i++) {
+      for (var i = 0; i < children.size(); i++) {
         var child = children.get(i);
         node.appendChild(child != null ? child.clone() : null);
       }
@@ -402,7 +402,7 @@ class Node {
 
   Node withChildren(List<Node> nodes) {
     assert children == null;
-    for (var i = 0; i < nodes.length; i++) {
+    for (var i = 0; i < nodes.size(); i++) {
       updateParent(nodes.get(i), this);
     }
     children = nodes;

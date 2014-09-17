@@ -20,7 +20,7 @@ namespace cs {
 
       // Prepend inputs
       var prepend = resolver.options.prepend;
-      for (var i = 0; i < prepend.length; i++) {
+      for (var i = 0; i < prepend.size(); i++) {
         currentSource.contents += prepend.get(i).contents;
       }
 
@@ -29,7 +29,7 @@ namespace cs {
       emit(indent + "using System.Collections.Generic;\n"); // For "List"
 
       // Emit types
-      for (var i = 0; i < collector.typeSymbols.length; i++) {
+      for (var i = 0; i < collector.typeSymbols.size(); i++) {
         var type = collector.typeSymbols.get(i).type;
         if (!type.symbol.isImport()) {
           emitNode(type.symbol.node.firstNonExtensionSibling());
@@ -39,11 +39,11 @@ namespace cs {
       // Emit free symbols on a global object
       var functions = collector.freeFunctionSymbols;
       var variables = collector.freeVariableSymbols;
-      if (functions.length + variables.length > 0) {
-        for (var i = 0; i < functions.length; i++) {
+      if (functions.size() + variables.size() > 0) {
+        for (var i = 0; i < functions.size(); i++) {
           emitNode(functions.get(i).node);
         }
-        for (var i = 0; i < variables.length; i++) {
+        for (var i = 0; i < variables.size(); i++) {
           emitVariableStatement(variables.get(i).node);
         }
       }
@@ -53,7 +53,7 @@ namespace cs {
 
       // Append inputs
       var append = resolver.options.append;
-      for (var i = 0; i < append.length; i++) {
+      for (var i = 0; i < append.size(); i++) {
         currentSource.contents += append.get(i).contents;
       }
 
@@ -65,7 +65,7 @@ namespace cs {
     }
 
     void decreaseIndent() {
-      indent = indent.slice(2, indent.length);
+      indent = indent.slice(2, indent.size());
     }
 
     void emit(string text) {
@@ -73,7 +73,7 @@ namespace cs {
     }
 
     void emitCommaSeparatedExpressions(List<Node> nodes) {
-      for (var i = 0; i < nodes.length; i++) {
+      for (var i = 0; i < nodes.size(); i++) {
         if (i > 0) emit(", ");
         emitExpression(nodes.get(i), .COMMA);
       }
@@ -100,20 +100,20 @@ namespace cs {
 
       // Skip past the names that match
       var same = 0;
-      while (same < target.length && same < namespaceStack.length && target.get(same) == namespaceStack.get(same)) {
+      while (same < target.size() && same < namespaceStack.size() && target.get(same) == namespaceStack.get(same)) {
         same++;
       }
 
       // Remove old names
-      while (namespaceStack.length > same) {
+      while (namespaceStack.size() > same) {
         decreaseIndent();
         emit(indent + "}\n");
         namespaceStack.pop();
       }
 
       // Add new names
-      while (namespaceStack.length < target.length) {
-        symbol = target.get(namespaceStack.length);
+      while (namespaceStack.size() < target.size()) {
+        symbol = target.get(namespaceStack.size());
         namespaceStack.push(symbol);
         if (symbol != null) {
           emit(indent + "namespace " + mangleName(symbol) + " {\n");
@@ -160,7 +160,7 @@ namespace cs {
       emit(mangleName(symbol));
       if (symbol.hasParameters()) {
         emit("<");
-        for (var i = 0; i < symbol.parameters.length; i++) {
+        for (var i = 0; i < symbol.parameters.size(); i++) {
           if (i > 0) emit(", ");
           emit(mangleName(symbol.parameters.get(i)));
         }
@@ -179,7 +179,7 @@ namespace cs {
       emit(symbol.kind == .CLASS ? "class " : symbol.kind == .STRUCT ? "struct " : "interface ");
       emitNameWithParameters(symbol);
       if (type.hasRelevantTypes()) {
-        for (var i = 0; i < type.relevantTypes.length; i++) {
+        for (var i = 0; i < type.relevantTypes.size(); i++) {
           emit(i == 0 ? " : " : ", ");
           emit(mangleName(type.relevantTypes.get(i).symbol));
         }
@@ -187,7 +187,7 @@ namespace cs {
       emit(" {\n");
       increaseIndent();
       var members = type.members.values();
-      for (var i = 0; i < members.length; i++) {
+      for (var i = 0; i < members.size(); i++) {
         var symbol = members.get(i).symbol;
         if (symbol.enclosingSymbol == type.symbol && symbol.node != null) {
           emitNode(symbol.node);
@@ -215,7 +215,7 @@ namespace cs {
 
     void emitArgumentVariables(List<Node> nodes) {
       emit("(");
-      for (var i = 0; i < nodes.length; i++) {
+      for (var i = 0; i < nodes.size(); i++) {
         var argument = nodes.get(i).symbol;
         if (i > 0) emit(", ");
         emitType(argument.type);
@@ -261,7 +261,7 @@ namespace cs {
         if (node.kind == .CONSTRUCTOR) {
           var memberInitializers = node.memberInitializers();
           if (memberInitializers != null) {
-            for (var i = 0; i < memberInitializers.children.length; i++) {
+            for (var i = 0; i < memberInitializers.children.size(); i++) {
               var child = memberInitializers.children.get(i);
               emit(indent);
               emit(mangleName(child.memberInitializerName().symbol) + " = ");
@@ -271,7 +271,7 @@ namespace cs {
           }
         }
         if (block.hasChildren()) {
-          for (var i = 0; i < block.children.length; i++) {
+          for (var i = 0; i < block.children.size(); i++) {
             emitNode(block.children.get(i));
           }
         }
@@ -285,16 +285,16 @@ namespace cs {
         var resultType = type.resultType();
         var argumentTypes = type.argumentTypes();
         var returnsVoid = resultType.isVoid(resolver.cache);
-        if (returnsVoid && argumentTypes.length == 0) {
+        if (returnsVoid && argumentTypes.size() == 0) {
           emit("Action");
         } else {
           emit(returnsVoid ? "Action<" : "Func<");
-          for (var i = 0; i < argumentTypes.length; i++) {
+          for (var i = 0; i < argumentTypes.size(); i++) {
             if (i > 0) emit(", ");
             emitType(argumentTypes.get(i));
           }
           if (!returnsVoid) {
-            if (argumentTypes.length > 0) emit(", ");
+            if (argumentTypes.size() > 0) emit(", ");
             emitType(resultType);
           }
           emit(">");
@@ -303,7 +303,7 @@ namespace cs {
         emit(fullName(type.symbol));
         if (type.hasParameters()) {
           emit("<");
-          for (var i = 0; i < type.symbol.parameters.length; i++) {
+          for (var i = 0; i < type.symbol.parameters.size(); i++) {
             if (i > 0) emit(",");
             emitType(type.substitutions.get(i));
           }
@@ -316,7 +316,7 @@ namespace cs {
       emit("{\n");
       if (node.hasChildren()) {
         increaseIndent();
-        for (var i = 0; i < node.children.length; i++) {
+        for (var i = 0; i < node.children.size(); i++) {
           emitNode(node.children.get(i));
         }
         decreaseIndent();
@@ -397,7 +397,7 @@ namespace cs {
 
     void emitVariableCluster(Node node) {
       var variables = node.clusterVariables();
-      for (var i = 0; i < variables.length; i++) {
+      for (var i = 0; i < variables.size(); i++) {
         emitVariableStatement(variables.get(i));
       }
     }
@@ -466,7 +466,7 @@ namespace cs {
       var values = node.listValues();
       emit("new ");
       emitType(node.type);
-      if (values.length > 0) {
+      if (values.size() > 0) {
         emit(" { ");
         emitCommaSeparatedExpressions(values);
         emit(" }");

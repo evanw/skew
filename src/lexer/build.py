@@ -30,7 +30,7 @@ enum TokenKind {
 List<Token> tokenize(Log log, Source source) {
   List<Token> tokens = [];
   var text = source.contents;
-  var text_length = text.length;
+  var text_length = text.size();
 
   // For backing up
   var yy_last_accepting_state = 0;

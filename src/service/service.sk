@@ -28,7 +28,7 @@ export class LanguageService {
 
   export LanguageServiceTypeResult typeFromPosition(int line, int column) {
     if (previousResult != null && previousResult.program != null && previousSource != null && column >= 0 &&
-        column < previousSource.contentsOfLine(line).length && previousResult.program.children.length == 2) {
+        column < previousSource.contentsOfLine(line).size() && previousResult.program.children.size() == 2) {
       var index = previousSource.lineOffsets.get(line) + column;
       var previousFile = previousResult.program.children.get(1);
       assert previousFile.range.source == previousSource;
@@ -47,7 +47,7 @@ export class LanguageService {
 
     // Construct diagnostics
     List<LanguageServiceDiagnostic> diagnostics = [];
-    for (var i = 0; i < compiler.log.diagnostics.length; i++) {
+    for (var i = 0; i < compiler.log.diagnostics.size(); i++) {
       var diagnostic = compiler.log.diagnostics.get(i);
       var range = diagnostic.range;
       if (range.source == previousSource) {
@@ -72,7 +72,7 @@ export class LanguageService {
     previousResult = compiler.compile(options);
 
     // Construct completions
-    if (previousResult.program != null && column >= 0 && column <= previousSource.contentsOfLine(line).length && previousResult.program.children.length == 2) {
+    if (previousResult.program != null && column >= 0 && column <= previousSource.contentsOfLine(line).size() && previousResult.program.children.size() == 2) {
       var index = previousSource.lineOffsets.get(line) + column;
       var previousFile = previousResult.program.children.get(1);
       assert previousFile.range.source == previousSource;
@@ -90,7 +90,7 @@ namespace service {
       // turned into call expressions where the target of the call spans the
       // entire range of the initializer expression and hides the arguments
       int i;
-      for (i = node.children.length - 1; i >= 0; i--) {
+      for (i = node.children.size() - 1; i >= 0; i--) {
         var child = node.children.get(i);
         if (child != null && child.range.source == source && child.range.touches(index)) {
           node = child;
@@ -130,7 +130,7 @@ namespace service {
         case .CLASS, .STRUCT, .INTERFACE {
           var text = symbol.kind.toString().toLowerCase() + " " + type;
           if (type.hasRelevantTypes()) {
-            for (var i = 0; i < type.relevantTypes.length; i++) {
+            for (var i = 0; i < type.relevantTypes.size(); i++) {
               text += (i == 0 ? " : " : ", ") + type.relevantTypes.get(i);
             }
           }
@@ -149,7 +149,7 @@ namespace service {
           var text = type.resultType() + " " + symbol.name + "(";
           var arguments = symbol.node.functionArguments().children;
           var argumentTypes = type.argumentTypes();
-          for (var i = 0; i < arguments.length; i++) {
+          for (var i = 0; i < arguments.size(); i++) {
             if (i > 0) text += ", ";
             text += argumentTypes.get(i) + " " + arguments.get(i).symbol.name;
           }
@@ -184,7 +184,7 @@ namespace service {
       if (target.type != null) {
         var isInstance = !target.kind.isType();
         var members = target.type.members.values();
-        for (var i = 0; i < members.length; i++) {
+        for (var i = 0; i < members.size(); i++) {
           var member = members.get(i);
           resolver.initializeMember(member);
           if (member.symbol.kind.isInstance() == isInstance) {
@@ -207,7 +207,7 @@ namespace service {
       collectAllMembers(node.scope, allMembers);
       var members = allMembers.values();
 
-      for (var i = 0; i < members.length; i++) {
+      for (var i = 0; i < members.size(); i++) {
         var member = members.get(i);
         resolver.initializeMember(member);
         addCompletion(completions, member);
@@ -225,7 +225,7 @@ namespace service {
       var text = name;
       if (type.isFunction()) {
         var semicolon = type.resultType().toString() == "void";
-        text += type.argumentTypes().length == 0
+        text += type.argumentTypes().size() == 0
           ? semicolon ? "();$" : "()$"
           : semicolon ? "($);" : "($)";
       } else {
@@ -237,7 +237,7 @@ namespace service {
 
   void addAllMembers(StringMap<Member> allMembers, StringMap<Member> membersToAdd) {
     var members = membersToAdd.values();
-    for (var i = 0; i < members.length; i++) {
+    for (var i = 0; i < members.size(); i++) {
       var member = members.get(i);
       if (!allMembers.has(member.symbol.name)) {
         allMembers.set(member.symbol.name, member);

@@ -30,7 +30,7 @@ export class Log {
 
   void note(Range range, string text) {
     assert !range.isEmpty();
-    var last = diagnostics.get(diagnostics.length - 1);
+    var last = diagnostics.get(diagnostics.size() - 1);
     last.noteRange = range;
     last.noteText = text;
   }
@@ -39,7 +39,7 @@ export class Log {
     var result = "";
 
     // Emit the log assuming an infinite terminal width
-    for (var i = 0; i < diagnostics.length; i++) {
+    for (var i = 0; i < diagnostics.size(); i++) {
       var diagnostic = diagnostics.get(i);
       var formatted = diagnostic.range.format(0);
       result = result + diagnostic.range.locationString() + (diagnostic.kind == .ERROR ? ": error: " : ": warning: ")

@@ -1,7 +1,7 @@
 namespace FunctionInliningPass {
   void run(CallGraph callGraph, CompilerOptions options) {
     var graph = InliningGraph(callGraph, options);
-    for (var i = 0; i < graph.inliningInfo.length; i++) {
+    for (var i = 0; i < graph.inliningInfo.size(); i++) {
       inlineSymbol(graph, graph.inliningInfo.get(i));
     }
   }
@@ -14,11 +14,11 @@ namespace FunctionInliningPass {
     // Inlining nested functions first is more efficient because it results in
     // fewer inlining operations. This won't enter an infinite loop because
     // inlining for all such functions has already been disabled.
-    for (var i = 0; i < info.bodyCalls.length; i++) {
+    for (var i = 0; i < info.bodyCalls.size(); i++) {
       inlineSymbol(graph, info.bodyCalls.get(i));
     }
 
-    for (var i = 0; i < info.callSites.length; i++) {
+    for (var i = 0; i < info.callSites.size(); i++) {
       var callSite = info.callSites.get(i);
       if (callSite != null && callSite.kind == .CALL) {
         // Make sure each call site is inlined once by setting the call site to
@@ -28,7 +28,7 @@ namespace FunctionInliningPass {
         info.callSites.set(i, null);
         var clone = info.inlineValue.clone();
         var values = callSite.removeChildren();
-        assert values.length == info.arguments.length + 1;
+        assert values.size() == info.arguments.size() + 1;
         var value = values.shift();
         assert value.kind == .NAME && value.symbol == info.symbol;
 
@@ -44,9 +44,9 @@ namespace FunctionInliningPass {
         //
         //   var baz = (foo(), 1);
         //
-        if (info.unusedArguments.length > 0) {
+        if (info.unusedArguments.size() > 0) {
           List<Node> sequence = null;
-          for (var j = 0; j < info.unusedArguments.length; j++) {
+          for (var j = 0; j < info.unusedArguments.size(); j++) {
             var index = info.arguments.indexOf(info.unusedArguments.get(j));
             assert index >= 0;
             var replacement = values.get(index);
@@ -72,7 +72,7 @@ namespace FunctionInliningPass {
   void recursivelyInlineFunctionCalls(InliningGraph graph, Node node) {
     // Recursively inline child nodes first
     if (node.hasChildren()) {
-      for (var i = 0; i < node.children.length; i++) {
+      for (var i = 0; i < node.children.size(); i++) {
         var child = node.children.get(i);
         if (child != null) {
           recursivelyInlineFunctionCalls(graph, child);
@@ -104,7 +104,7 @@ namespace FunctionInliningPass {
 
     // Otherwise, recursively search for substitutions in all child nodes
     if (node.hasChildren()) {
-      for (var i = 0; i < node.children.length; i++) {
+      for (var i = 0; i < node.children.size(); i++) {
         var child = node.children.get(i);
         if (child != null) {
           recursivelySubstituteArguments(child, arguments, values);
@@ -135,19 +135,19 @@ class InliningGraph {
 
   new(CallGraph graph, CompilerOptions options) {
     // Create the nodes in the graph
-    for (var i = 0; i < graph.callInfo.length; i++) {
+    for (var i = 0; i < graph.callInfo.size(); i++) {
       var info = createInliningInfo(graph.callInfo.get(i), options);
       if (info != null) {
-        symbolToInfoIndex.set(info.symbol.uniqueID, inliningInfo.length);
+        symbolToInfoIndex.set(info.symbol.uniqueID, inliningInfo.size());
         inliningInfo.push(info);
       }
     }
 
     // Create the edges in the graph
-    for (var i = 0; i < inliningInfo.length; i++) {
+    for (var i = 0; i < inliningInfo.size(); i++) {
       var info = inliningInfo.get(i);
       var callSites = graph.callInfo.get(graph.symbolToInfoIndex.get(info.symbol.uniqueID)).callSites;
-      for (var j = 0; j < callSites.length; j++) {
+      for (var j = 0; j < callSites.size(); j++) {
         var callSite = callSites.get(j);
         for (var node = callSite.parent; node != null; node = node.parent) {
           if (node.kind == .FUNCTION && node.symbol.kind == .GLOBAL_FUNCTION) {
@@ -162,7 +162,7 @@ class InliningGraph {
     }
 
     // Detect and disable infinitely expanding inline operations
-    for (var i = 0; i < inliningInfo.length; i++) {
+    for (var i = 0; i < inliningInfo.size(); i++) {
       var info = inliningInfo.get(i);
       info.shouldInline = !containsInfiniteExpansion(info, []);
     }
@@ -177,7 +177,7 @@ class InliningGraph {
 
     // Do a depth-first search on the graph and check for cycles
     symbols.push(info.symbol);
-    for (var i = 0; i < info.bodyCalls.length; i++) {
+    for (var i = 0; i < info.bodyCalls.size(); i++) {
       if (containsInfiniteExpansion(info.bodyCalls.get(i), symbols)) {
         return true;
       }
@@ -203,7 +203,7 @@ class InliningGraph {
         if (options.foldAllConstants) {
           List<Symbol> arguments = [];
           var argumentVariables = symbol.node.functionArguments().children;
-          for (var i = 0; i < argumentVariables.length; i++) {
+          for (var i = 0; i < argumentVariables.size(); i++) {
             arguments.push(argumentVariables.get(i).symbol);
           }
           return InliningInfo(symbol, Node.createNull().withType(symbol.type.resultType()), info.callSites, arguments, arguments);
@@ -222,7 +222,7 @@ class InliningGraph {
       }
 
       // Otherwise, this statement must be a lone expression statement
-      else if (first.kind == .EXPRESSION && block.children.length == 1) {
+      else if (first.kind == .EXPRESSION && block.children.size() == 1) {
         inlineValue = first.expressionValue();
       }
 
@@ -237,7 +237,7 @@ class InliningGraph {
           List<Symbol> arguments = [];
           var argumentVariables = symbol.node.functionArguments().children;
           var isSimpleSubstitution = true;
-          for (var i = 0; i < argumentVariables.length; i++) {
+          for (var i = 0; i < argumentVariables.size(); i++) {
             var argument = argumentVariables.get(i).symbol;
             assert argument != null;
             var count = symbolCounts.getOrDefault(argument.uniqueID, 0);
@@ -262,7 +262,7 @@ class InliningGraph {
   // This returns false if inlining is impossible
   static bool recursivelyCountArgumentUses(Node node, IntMap<int> symbolCounts) {
     if (node.hasChildren()) {
-      for (var i = 0; i < node.children.length; i++) {
+      for (var i = 0; i < node.children.size(); i++) {
         var child = node.children.get(i);
         if (child != null && !recursivelyCountArgumentUses(child, symbolCounts)) {
           return false;
