@@ -94,6 +94,22 @@ class TypeCache {
     return results;
   }
 
+  // Parameterize the provided type by its own parameters if possible. This is
+  // the difference between the unparameterized type "Foo" and the parameterized
+  // type "Foo<T>".
+  Type ensureTypeIsParameterized(Type unparameterized) {
+    assert !unparameterized.isParameterized();
+    if (unparameterized.hasParameters()) {
+      var parameters = unparameterized.symbol.parameters;
+      List<Type> substitutions = [];
+      for (var i = 0; i < parameters.size(); i++) {
+        substitutions.push(parameters.get(i).type);
+      }
+      return parameterize(unparameterized, substitutions);
+    }
+    return unparameterized;
+  }
+
   Type parameterize(Type unparameterized, List<Type> substitutions) {
     var symbol = unparameterized != null ? unparameterized.symbol : null;
 

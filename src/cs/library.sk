@@ -1,0 +1,94 @@
+const var NATIVE_LIBRARY_CS = "
+import struct int { import string toString(); }
+import struct bool { import string toString(); }
+import struct float { import string toString(); }
+import struct double { import string toString(); }
+
+import struct string {
+  inline int size() { return untyped(this).Length; }
+  import string slice(int start, int end);
+  inline int indexOf(string value) { return untyped(this).IndexOf(value); }
+  inline int lastIndexOf(string value) { return untyped(this).LastIndexOf(value); }
+  inline string toLowerCase() { return untyped(this).ToLower(); }
+  inline string toUpperCase() { return untyped(this).ToUpper(); }
+  import static string fromCodeUnit(int value);
+  inline string get(int index) { return untyped(this)[index]; }
+  import string join(List<string> values);
+  import int codeUnitAt(int index);
+  import bool startsWith(string prefix);
+  import bool endsWith(string suffix);
+  import string repeat(int count);
+}
+
+import class List<T> {
+  new();
+  inline int size() { return untyped(this).Count; }
+  inline void push(T value) { untyped(this).Add(value); }
+  import void unshift(T value);
+  import List<T> slice(int start, int end);
+  import int indexOf(T value);
+  import int lastIndexOf(T value);
+  import T shift();
+  import T pop();
+  import void reverse();
+  import void sort(int fn(T, T) callback);
+  import List<T> clone();
+  inline T remove(int index) { var value = get(index); untyped(this).RemoveAt(index); return value; }
+  inline void insert(int index, T value) { untyped(this).Insert(index, value); }
+  inline T get(int index) { return untyped(this)[index]; }
+  inline void set(int index, T value) { untyped(this)[index] = value; }
+  import void swap(int a, int b);
+}
+
+class StringMap<T> {
+  import T get(string key);
+  import T getOrDefault(string key, T defaultValue);
+  import void set(string key, T value);
+  import bool has(string key);
+  import void remove(string key);
+  import List<string> keys();
+  import List<T> values();
+  import StringMap<T> clone();
+}
+
+class IntMap<T> {
+  import T get(int key);
+  import T getOrDefault(int key, T defaultValue);
+  import void set(int key, T value);
+  import bool has(int key);
+  import void remove(int key);
+  import List<int> keys();
+  import List<T> values();
+  import IntMap<T> clone();
+}
+
+// TODO: Rename this to \"math\" since namespaces should be lower case
+import namespace Math {
+  import final double E;
+  import final double PI;
+  import final double NAN;
+  import final double INFINITY;
+  import double random();
+  import double abs(double n);
+  import double sin(double n);
+  import double cos(double n);
+  import double tan(double n);
+  import double asin(double n);
+  import double acos(double n);
+  import double atan(double n);
+  import double round(double n);
+  import double floor(double n);
+  import double ceil(double n);
+  import double exp(double n);
+  import double log(double n);
+  import double sqrt(double n);
+  import bool isNaN(double n);
+  import bool isFinite(double n);
+  import double atan2(double y, double x);
+  import double pow(double base, double exponent);
+  import double min(double a, double b);
+  import double max(double a, double b);
+  import int imin(int a, int b);
+  import int imax(int a, int b);
+}
+";

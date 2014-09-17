@@ -46,14 +46,14 @@ int hashCombine(int left, int right) {
 
 // Returns the log2(value) or -1 if log2(value) is not an integer
 int logBase2(int value) {
-  if (value > 0 && (value & (value - 1)) == 0) {
-    var result = 0;
-    while ((value >>= 1) > 0) {
-      result++;
-    }
-    return result;
+  if (value < 1 || (value & (value - 1)) != 0) {
+    return -1;
   }
-  return -1;
+  var result = 0;
+  while ((value >>= 1) > 0) {
+    result++;
+  }
+  return result;
 }
 
 int parseHexCharacter(int c) {

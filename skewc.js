@@ -727,6 +727,9 @@
     case 1:
       Node.appendChild(program, CachedSource.compile(Compiler.nativeLibraryJS, this, options));
       break;
+    case 2:
+      Node.appendChild(program, CachedSource.compile(Compiler.nativeLibraryCS, this, options));
+      break;
     default:
       Node.appendChild(program, CachedSource.compile(Compiler.nativeLibrary, this, options));
       break;
@@ -1450,7 +1453,7 @@
       }
     } else {
       cs.Emitter.emit($this, cs.Emitter.fullName(type.symbol));
-      if (Type.hasParameters(type)) {
+      if (type.substitutions !== null) {
         cs.Emitter.emit($this, '<');
         for (var i = 0; i < type.symbol.parameters.length; i = i + 1 | 0) {
           if (i > 0) {
@@ -5303,14 +5306,7 @@
       Resolver.checkIsValidFunctionReturnType($this, result);
       resultType = result.type;
     } else {
-      resultType = enclosingSymbol.type;
-      if (Type.hasParameters(resultType)) {
-        var substitutions = [];
-        for (var i = 0; i < enclosingSymbol.parameters.length; i = i + 1 | 0) {
-          substitutions.push(enclosingSymbol.parameters[i].type);
-        }
-        resultType = TypeCache.parameterize($this.cache, resultType, substitutions);
-      }
+      resultType = TypeCache.ensureTypeIsParameterized($this.cache, enclosingSymbol.type);
       var members = StringMap.values(enclosingSymbol.type.members);
       for (var i = 0; i < members.length; i = i + 1 | 0) {
         var member = members[i].symbol;
@@ -6301,15 +6297,7 @@
       var symbol = $this.context.symbolForThis;
       Resolver.initializeSymbol($this, symbol);
       node.symbol = symbol;
-      if (Type.hasParameters(symbol.type)) {
-        var types = [];
-        for (var i = 0; i < symbol.parameters.length; i = i + 1 | 0) {
-          types.push(symbol.parameters[i].type);
-        }
-        node.type = TypeCache.parameterize($this.cache, symbol.type, types);
-      } else {
-        node.type = symbol.type;
-      }
+      node.type = TypeCache.ensureTypeIsParameterized($this.cache, symbol.type);
     }
   };
   Resolver.resolveHook = function($this, node) {
@@ -7240,6 +7228,17 @@
     }
     return results;
   };
+  TypeCache.ensureTypeIsParameterized = function($this, unparameterized) {
+    if (Type.hasParameters(unparameterized)) {
+      var parameters = unparameterized.symbol.parameters;
+      var substitutions = [];
+      for (var i = 0; i < parameters.length; i = i + 1 | 0) {
+        substitutions.push(parameters[i].type);
+      }
+      return TypeCache.parameterize($this, unparameterized, substitutions);
+    }
+    return unparameterized;
+  };
   TypeCache.parameterize = function($this, unparameterized, substitutions) {
     var symbol = unparameterized !== null ? unparameterized.symbol : null;
     var hash = TypeCache.computeHashCode(symbol, substitutions);
@@ -8061,14 +8060,14 @@
     return left ^ ((right - 1640531527 | 0) + (left << 6) | 0) + (left >> 2);
   }
   function logBase2(value) {
-    if (value > 0 && (value & value - 1) === 0) {
-      var result = 0;
-      while ((value >>= 1) > 0) {
-        result = result + 1 | 0;
-      }
-      return result;
+    if (value < 1 || (value & value - 1) !== 0) {
+      return -1;
     }
-    return -1;
+    var result = 0;
+    while ((value >>= 1) > 0) {
+      result = result + 1 | 0;
+    }
+    return result;
   }
   function parseHexCharacter(c) {
     if (c >= 48 && c <= 57) {
@@ -9558,7 +9557,7 @@
       var enclosingSymbol = symbol.enclosingSymbol;
       if (symbol.kind === 16 && (symbol.flags & 8192) === 0 && symbol.node.children[2] !== null && ((enclosingSymbol.flags & 8192) !== 0 || $in.SymbolKind.isEnum(enclosingSymbol.kind) || resolver.options.convertAllInstanceToStatic && (symbol.flags & 4096) === 0 && (symbol.flags & 128) === 0)) {
         var thisSymbol = new Symbol('this', 18);
-        thisSymbol.type = enclosingSymbol.type;
+        thisSymbol.type = TypeCache.ensureTypeIsParameterized(resolver.cache, enclosingSymbol.type);
         var replacedThis = InstanceToStaticPass.recursivelyReplaceThis(symbol.node.children[2], thisSymbol);
         symbol.kind = 15;
         symbol.flags |= 64;
@@ -9806,6 +9805,7 @@
   var operatorInfo = null;
   Compiler.nativeLibrary = new CachedSource('\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct string {\n  import int size();\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  import static string fromCodeUnit(int value);\n  import string get(int index);\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(int fn(T, T) callback);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nclass IntMap<T> {\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n');
   Compiler.nativeLibraryJS = new CachedSource('\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct String {\n  import static string fromCharCode(int value);\n}\n\nimport class Object {\n  import static Object create(Object prototype);\n}\n\nimport struct string {\n  inline int size() { return untyped(this).length; }\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).length; }\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(int fn(T, T) callback);\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n\n  void swap(int a, int b) {\n    var temp = get(a);\n    set(a, get(b));\n    set(b, temp);\n  }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n  inline T get(string key) { return untyped(table)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(string key, T value) { untyped(table)[key] = value; }\n  inline bool has(string key) { return key in untyped(table); }\n  inline void remove(string key) { delete(untyped(table)[key]); }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n  inline T get(int key) { return untyped(table)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(int key, T value) { untyped(table)[key] = value; }\n  inline bool has(int key) { return key in untyped(table); }\n  inline void remove(int key) { delete untyped(table)[key]; }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n');
+  Compiler.nativeLibraryCS = new CachedSource('\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct string {\n  inline int size() { return untyped(this).Length; }\n  import string slice(int start, int end);\n  inline int indexOf(string value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(string value) { return untyped(this).LastIndexOf(value); }\n  inline string toLowerCase() { return untyped(this).ToLower(); }\n  inline string toUpperCase() { return untyped(this).ToUpper(); }\n  import static string fromCodeUnit(int value);\n  inline string get(int index) { return untyped(this)[index]; }\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).Count; }\n  inline void push(T value) { untyped(this).Add(value); }\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(int fn(T, T) callback);\n  import List<T> clone();\n  inline T remove(int index) { var value = get(index); untyped(this).RemoveAt(index); return value; }\n  inline void insert(int index, T value) { untyped(this).Insert(index, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  import void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nclass IntMap<T> {\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n');
   Range.EMPTY = new Range(null, 0, 0);
   var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   var HEX = '0123456789ABCDEF';

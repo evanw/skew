@@ -1065,16 +1065,7 @@ class Resolver {
     // Constructors get a return type of the object that they create
     else {
       assert node.kind == .CONSTRUCTOR;
-      resultType = enclosingSymbol.type;
-
-      // Make sure the return type is parameterized
-      if (resultType.hasParameters()) {
-        List<Type> substitutions = [];
-        for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
-          substitutions.push(enclosingSymbol.parameters.get(i).type);
-        }
-        resultType = cache.parameterize(resultType, substitutions);
-      }
+      resultType = cache.ensureTypeIsParameterized(enclosingSymbol.type);
 
       // Mark the class as abstract if it contains any abstract symbols. This
       // is done here since the constructor must be initialized before being
@@ -2447,19 +2438,7 @@ class Resolver {
       var symbol = context.symbolForThis;
       initializeSymbol(symbol);
       node.symbol = symbol;
-
-      // Make sure to substitute the type parameters for themselves for generic
-      // object types. This is used to distinguish between parameterized and
-      // unparameterized types.
-      if (symbol.type.hasParameters()) {
-        List<Type> types = [];
-        for (var i = 0; i < symbol.parameters.size(); i++) {
-          types.push(symbol.parameters.get(i).type);
-        }
-        node.type = cache.parameterize(symbol.type, types);
-      } else {
-        node.type = symbol.type;
-      }
+      node.type = cache.ensureTypeIsParameterized(symbol.type);
     }
   }
 

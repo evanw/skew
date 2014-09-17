@@ -65,6 +65,7 @@ export class Compiler {
   // Cache the standard library for a small speed boost
   static CachedSource nativeLibrary = CachedSource(NATIVE_LIBRARY);
   static CachedSource nativeLibraryJS = CachedSource(NATIVE_LIBRARY_JS);
+  static CachedSource nativeLibraryCS = CachedSource(NATIVE_LIBRARY_CS);
 
   var tokenizingTime = 0.0;
   var parsingTime = 0.0;
@@ -155,6 +156,7 @@ export class Compiler {
     // Tokenize and parse each module individually
     switch (options.targetFormat) {
       case .JAVASCRIPT { program.appendChild(nativeLibraryJS.compile(this, options)); }
+      case .CSHARP { program.appendChild(nativeLibraryCS.compile(this, options)); }
       default { program.appendChild(nativeLibrary.compile(this, options)); }
     }
     for (var i = 1; i < options.inputs.size(); i++) {
