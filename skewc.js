@@ -1181,16 +1181,12 @@
     var functions = collector.freeFunctionSymbols;
     var variables = collector.freeVariableSymbols;
     if ((functions.length + variables.length | 0) > 0) {
-      cs.Emitter.emit(this, this.indent + 'class Global {\n');
-      this.indent += '  ';
       for (var i = 0; i < functions.length; i = i + 1 | 0) {
         cs.Emitter.emitNode(this, functions[i].node);
       }
       for (var i = 0; i < variables.length; i = i + 1 | 0) {
         cs.Emitter.emitVariableStatement(this, variables[i].node);
       }
-      cs.Emitter.decreaseIndent(this);
-      cs.Emitter.emit(this, this.indent + '}\n');
     }
     cs.Emitter.adjustNamespace(this, null);
     var append = this.resolver.options.append;
@@ -1215,6 +1211,9 @@
   };
   cs.Emitter.adjustNamespace = function($this, symbol) {
     var target = [];
+    if (symbol !== null && $in.SymbolKind.isGlobal(symbol.kind) && !Symbol.isObjectMember(symbol)) {
+      target.push(null);
+    }
     while (symbol !== null) {
       if (symbol.kind === 9) {
         target.unshift(symbol);
@@ -1233,7 +1232,11 @@
     while ($this.namespaceStack.length < target.length) {
       symbol = target[$this.namespaceStack.length];
       $this.namespaceStack.push(symbol);
-      cs.Emitter.emit($this, $this.indent + 'namespace ' + cs.Emitter.mangleName(symbol) + ' {\n');
+      if (symbol !== null) {
+        cs.Emitter.emit($this, $this.indent + 'namespace ' + cs.Emitter.mangleName(symbol) + ' {\n');
+      } else {
+        cs.Emitter.emit($this, $this.indent + 'partial class Global {\n');
+      }
       $this.indent += '  ';
     }
   };
@@ -1356,6 +1359,7 @@
     var block = node.children[2];
     var symbol = node.symbol;
     var isInterface = symbol.enclosingSymbol.kind === 14;
+    cs.Emitter.adjustNamespace($this, symbol);
     cs.Emitter.emit($this, $this.indent);
     if (!isInterface) {
       cs.Emitter.emit($this, 'public ');
@@ -1568,7 +1572,7 @@
     if ((symbol.flags & 64) !== 0 || symbol.kind === 19) {
       cs.Emitter.emit($this, 'static ');
     }
-    if (symbol.enclosingSymbol !== null && $in.SymbolKind.isObject(symbol.enclosingSymbol.kind)) {
+    if (Symbol.isObjectMember(symbol)) {
       cs.Emitter.emit($this, 'public ');
     }
     cs.Emitter.emitType($this, symbol.type);
@@ -1579,6 +1583,9 @@
     }
   };
   cs.Emitter.emitVariableStatement = function($this, node) {
+    if ($in.SymbolKind.isGlobal(node.symbol.kind)) {
+      cs.Emitter.adjustNamespace($this, node.symbol);
+    }
     cs.Emitter.emit($this, $this.indent);
     cs.Emitter.emitVariable($this, node);
     cs.Emitter.emit($this, ';\n');
@@ -6459,7 +6466,7 @@
   };
   Resolver.resolveSuperCall = function($this, node) {
     var $arguments = node.children;
-    if ($this.context.functionSymbol === null || $this.context.functionSymbol.enclosingSymbol === null || !$in.SymbolKind.isObject($this.context.functionSymbol.enclosingSymbol.kind) || $this.context.functionSymbol.overriddenMember === null) {
+    if ($this.context.functionSymbol === null || !Symbol.isObjectMember($this.context.functionSymbol) || $this.context.functionSymbol.overriddenMember === null) {
       Log.error($this.log, node.range, 'Cannot use "super" here');
       Resolver.resolveNodesAsExpressions($this, $arguments);
     } else {
@@ -7701,6 +7708,9 @@
   };
   $in.SymbolKind.isVariable = function($this) {
     return $this >= 18 && $this <= 20;
+  };
+  $in.SymbolKind.isGlobal = function($this) {
+    return $this === 15 || $this === 19;
   };
   $in.SymbolKind.isInstance = function($this) {
     return $this === 16 || $this === 20 || $this === 17;

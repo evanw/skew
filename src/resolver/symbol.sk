@@ -75,6 +75,10 @@ in SymbolKind {
     return this >= LOCAL_VARIABLE && this <= INSTANCE_VARIABLE;
   }
 
+  bool isGlobal() {
+    return this == GLOBAL_FUNCTION || this == GLOBAL_VARIABLE;
+  }
+
   bool isInstance() {
     return this == INSTANCE_FUNCTION || this == INSTANCE_VARIABLE || this == CONSTRUCTOR_FUNCTION;
   }

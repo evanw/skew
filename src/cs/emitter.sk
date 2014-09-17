@@ -40,16 +40,12 @@ namespace cs {
       var functions = collector.freeFunctionSymbols;
       var variables = collector.freeVariableSymbols;
       if (functions.length + variables.length > 0) {
-        emit(indent + "class Global {\n");
-        increaseIndent();
         for (var i = 0; i < functions.length; i++) {
           emitNode(functions.get(i).node);
         }
         for (var i = 0; i < variables.length; i++) {
           emitVariableStatement(variables.get(i).node);
         }
-        decreaseIndent();
-        emit(indent + "}\n");
       }
 
       // Clear the namespace stack
@@ -84,8 +80,17 @@ namespace cs {
     }
 
     void adjustNamespace(Symbol symbol) {
-      // Compute the namespaces for this symbol
       List<Symbol> target = [];
+
+      // Free-floating global symbols must be wrapped in a class because C#
+      // doesn't have top-level variable or function declarations. Use null
+      // as a sentinel value for this global class. Luckily, C# has partial
+      // classes so we don't need to deal with collecting these symbols.
+      if (symbol != null && symbol.kind.isGlobal() && !symbol.isObjectMember()) {
+        target.push(null);
+      }
+
+      // Compute the namespaces for this symbol
       while (symbol != null) {
         if (symbol.kind == .NAMESPACE) {
           target.unshift(symbol);
@@ -110,7 +115,11 @@ namespace cs {
       while (namespaceStack.length < target.length) {
         symbol = target.get(namespaceStack.length);
         namespaceStack.push(symbol);
-        emit(indent + "namespace " + mangleName(symbol) + " {\n");
+        if (symbol != null) {
+          emit(indent + "namespace " + mangleName(symbol) + " {\n");
+        } else {
+          emit(indent + "partial class Global {\n");
+        }
         increaseIndent();
       }
     }
@@ -220,6 +229,7 @@ namespace cs {
       var block = node.functionBlock();
       var symbol = node.symbol;
       var isInterface = symbol.enclosingSymbol.kind == .INTERFACE;
+      adjustNamespace(symbol);
       emit(indent);
       if (!isInterface) {
         emit("public ");
@@ -365,7 +375,7 @@ namespace cs {
       if (symbol.isStatic() || symbol.kind == .GLOBAL_VARIABLE) {
         emit("static ");
       }
-      if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind.isObject()) {
+      if (symbol.isObjectMember()) {
         emit("public ");
       }
       emitType(symbol.type);
@@ -377,6 +387,9 @@ namespace cs {
     }
 
     void emitVariableStatement(Node node) {
+      if (node.symbol.kind.isGlobal()) {
+        adjustNamespace(node.symbol);
+      }
       emit(indent);
       emitVariable(node);
       emit(";\n");
