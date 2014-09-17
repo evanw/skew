@@ -12,6 +12,10 @@ import class Object {
   import static Object create(Object prototype);
 }
 
+import namespace operators {
+  import void delete(int value);
+}
+
 import struct string {
   inline int size() { return untyped(this).length; }
   import string slice(int start, int end);
@@ -45,12 +49,7 @@ import class List<T> {
   inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }
   inline T get(int index) { return untyped(this)[index]; }
   inline void set(int index, T value) { untyped(this)[index] = value; }
-
-  void swap(int a, int b) {
-    var temp = get(a);
-    set(a, get(b));
-    set(b, temp);
-  }
+  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }
 }
 
 class StringMap<T> {
@@ -59,7 +58,7 @@ class StringMap<T> {
   inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }
   inline void set(string key, T value) { untyped(table)[key] = value; }
   inline bool has(string key) { return key in untyped(table); }
-  inline void remove(string key) { delete(untyped(table)[key]); }
+  inline void remove(string key) { operators.delete(untyped(table)[key]); }
 
   List<string> keys() {
     List<string> keys = [];
@@ -86,7 +85,7 @@ class IntMap<T> {
   inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }
   inline void set(int key, T value) { untyped(table)[key] = value; }
   inline bool has(int key) { return key in untyped(table); }
-  inline void remove(int key) { delete untyped(table)[key]; }
+  inline void remove(int key) { operators.delete(untyped(table)[key]); }
 
   List<int> keys() {
     List<int> keys = [];

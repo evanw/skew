@@ -15,7 +15,6 @@ void createOperatorMap() {
   operatorInfo = IntMap<OperatorInfo>();
 
   operatorInfo.set(NodeKind.NOT,                   OperatorInfo("!", .UNARY_PREFIX, .NONE));
-  operatorInfo.set(NodeKind.DELETE,                OperatorInfo("delete", .UNARY_PREFIX, .NONE));
   operatorInfo.set(NodeKind.POSITIVE,              OperatorInfo("+", .UNARY_PREFIX, .NONE));
   operatorInfo.set(NodeKind.NEGATIVE,              OperatorInfo("-", .UNARY_PREFIX, .NONE));
   operatorInfo.set(NodeKind.COMPLEMENT,            OperatorInfo("~", .UNARY_PREFIX, .NONE));

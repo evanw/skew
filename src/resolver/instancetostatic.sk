@@ -7,11 +7,15 @@ namespace InstanceToStaticPass {
       if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() != null && (
           enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() || resolver.options.convertAllInstanceToStatic && !symbol.isExport() && !symbol.isVirtual())) {
 
+        // TODO: Add one type parameters to this method for each type parameter
+        // on the enclosing symbol and make sure to fully parameterize all call
+        // sites
+
         // Recursively replace "this" with the new explicit argument. This must
         // be done after all call sites are updated in case that step introduced
         // more "this" expressions.
         var thisSymbol = Symbol("this", .LOCAL_VARIABLE);
-        thisSymbol.type = resolver.cache.ensureTypeIsParameterized(enclosingSymbol.type);
+        thisSymbol.type = enclosingSymbol.type;
         var replacedThis = recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
 
         // Change the instance function to a static function

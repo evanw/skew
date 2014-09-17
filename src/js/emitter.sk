@@ -643,7 +643,7 @@ namespace js {
         case .CAST, .IMPLICIT_CAST { isStartOfExpression = wasStartOfExpression; emitExpression(node.castValue(), precedence); }
 
         case
-          .NOT, .DELETE, .POSITIVE, .NEGATIVE, .COMPLEMENT,
+          .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT,
           .PREFIX_INCREMENT, .PREFIX_DECREMENT,
           .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
           emitUnary(node, precedence);
@@ -717,11 +717,16 @@ namespace js {
 
     void emitCall(Node node) {
       var value = node.callValue();
-      if (value.kind.isType()) emit("new ");
-      emitExpression(value, .UNARY_POSTFIX);
-      emit("(");
-      emitCommaSeparatedExpressions(node.callArguments());
-      emit(")");
+      if (value.kind == .NAME && value.symbol != null && value.symbol.isOperator()) {
+        emit(value.asString() + " ");
+        emitExpression(node.callArguments().get(0), .UNARY_POSTFIX);
+      } else {
+        if (value.kind.isType()) emit("new ");
+        emitExpression(value, .UNARY_POSTFIX);
+        emit("(");
+        emitCommaSeparatedExpressions(node.callArguments());
+        emit(")");
+      }
     }
 
     void emitSuperCall(Node node) {
@@ -758,8 +763,7 @@ namespace js {
         emit(info.text);
 
         // Prevent "- -1" from becoming "--1"
-        if (node.kind == .DELETE ||
-            node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
+        if (node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
             node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT || value.kind == .INT && value.asInt() < 0)) {
           emit(" ");
         }

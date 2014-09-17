@@ -236,6 +236,12 @@ class Symbol {
     return enclosingSymbol != null && enclosingSymbol.kind.isEnum();
   }
 
+  // Target-specific operators are special-cased in a few targets as functions
+  // under the "operators" namespace, which emitters explicitly check for
+  bool isOperator() {
+    return enclosingSymbol != null && enclosingSymbol.name == "operators" && enclosingSymbol.enclosingSymbol.kind == .GLOBAL_NAMESPACE;
+  }
+
   bool isPublic() {
     return (flags & .PUBLIC) != 0;
   }

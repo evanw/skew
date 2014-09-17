@@ -131,6 +131,10 @@ namespace cs {
         case .RETURN, .IMPLICIT_RETURN { emitReturn(node); }
         case .EXPRESSION { emitExpressionStatement(node); }
         case .IF { emitIf(node); }
+        case .FOR { emitFor(node); }
+        case .FOR_EACH { emitForEach(node); }
+        case .WHILE { emitWhile(node); }
+        case .DO_WHILE { emitDoWhile(node); }
         case .VARIABLE_CLUSTER { emitVariableCluster(node); }
         case .VARIABLE { emitVariableStatement(node); }
       }
@@ -154,6 +158,76 @@ namespace cs {
       emit(indent);
       recursiveEmitIfStatement(node);
       emit("\n");
+    }
+
+    void emitFor(Node node) {
+      var setup = node.forSetup();
+      var test = node.forTest();
+      var update = node.forUpdate();
+      emit(indent + "for (");
+      if (setup != null) {
+        if (setup.kind == .VARIABLE_CLUSTER) {
+          emit("var ");
+          var nodes = setup.clusterVariables();
+          for (var i = 0; i < nodes.size(); i++) {
+            if (i > 0) emit(", ");
+            emitExpression(nodes.get(i), .COMMA);
+          }
+        } else {
+          emitExpression(setup, .LOWEST);
+        }
+      }
+      if (test != null) {
+        emit("; ");
+        emitExpression(test, .LOWEST);
+      } else {
+        emit(";");
+      }
+      if (update != null) {
+        emit("; ");
+        emitExpression(update, .LOWEST);
+      } else {
+        emit(";");
+      }
+      emit(")");
+      emitBlock(node.forBlock());
+      emit("\n");
+    }
+
+    void emitForEach(Node node) {
+      var variable = node.forEachVariable();
+      var value = node.forEachValue();
+      emit(indent + "for (var ");
+      emitNode(variable);
+      emit(" in ");
+      emitExpression(value, .LOWEST);
+      emit(")");
+      emitBlock(node.forEachBlock());
+      emit("\n");
+    }
+
+    void emitWhile(Node node) {
+      emit(indent + "while (");
+      emitExpression(node.whileTest(), .LOWEST);
+      emit(")");
+      emitBlock(node.whileBlock());
+      emit("\n");
+    }
+
+    void emitDoWhile(Node node) {
+      emit(indent + "do");
+      emitBlock(node.whileBlock());
+      emit(" while (");
+      emitExpression(node.whileTest(), .LOWEST);
+      emit(");\n");
+    }
+
+    void emitBreak(Node node) {
+      emit(indent + "break;\n");
+    }
+
+    void emitContinue(Node node) {
+      emit(indent + "continue;\n");
     }
 
     void emitNameWithParameters(Symbol symbol) {
@@ -347,7 +421,7 @@ namespace cs {
         case .CAST, .IMPLICIT_CAST { emitCast(node, precedence); }
 
         case
-          .NOT, .DELETE, .POSITIVE, .NEGATIVE, .COMPLEMENT,
+          .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT,
           .PREFIX_INCREMENT, .PREFIX_DECREMENT,
           .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
           emitUnary(node, precedence);
@@ -493,11 +567,16 @@ namespace cs {
 
     void emitCall(Node node) {
       var value = node.callValue();
-      if (value.kind.isType()) emit("new ");
-      emitExpression(value, .UNARY_POSTFIX);
-      emit("(");
-      emitCommaSeparatedExpressions(node.callArguments());
-      emit(")");
+      if (value.kind == .NAME && value.symbol != null && value.symbol.isOperator()) {
+        emit(value.asString() + " ");
+        emitExpression(node.callArguments().get(0), .UNARY_POSTFIX);
+      } else {
+        if (value.kind.isType()) emit("new ");
+        emitExpression(value, .UNARY_POSTFIX);
+        emit("(");
+        emitCommaSeparatedExpressions(node.callArguments());
+        emit(")");
+      }
     }
 
     void emitCast(Node node, Precedence precedence) {

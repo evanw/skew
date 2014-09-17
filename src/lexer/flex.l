@@ -11,7 +11,6 @@
 "const"                       CONST;
 "continue"                    CONTINUE;
 "default"                     DEFAULT;
-"delete"                      DELETE;
 "do"                          DO;
 "else"                        ELSE;
 "enum"                        ENUM;

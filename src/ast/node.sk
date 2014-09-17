@@ -69,7 +69,6 @@ enum NodeKind {
 
   // Unary operators
   NOT,
-  DELETE,
   POSITIVE,
   NEGATIVE,
   COMPLEMENT,

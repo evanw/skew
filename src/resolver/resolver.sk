@@ -538,7 +538,7 @@ class Resolver {
       case .VAR { resolveVar(node); }
       case .FUNCTION_TYPE { resolveFunctionType(node); }
 
-      case .NOT, .DELETE, .POSITIVE, .NEGATIVE, .COMPLEMENT, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
+      case .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
         resolveUnaryOperator(node);
       }
 

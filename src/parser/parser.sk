@@ -705,7 +705,6 @@ void createParser() {
   pratt.prefix(.PLUS, Precedence.UNARY_PREFIX, unaryPrefix(.POSITIVE));
   pratt.prefix(.MINUS, Precedence.UNARY_PREFIX, unaryPrefix(.NEGATIVE));
   pratt.prefix(.NOT, Precedence.UNARY_PREFIX, unaryPrefix(.NOT));
-  pratt.prefix(.DELETE, Precedence.UNARY_PREFIX, unaryPrefix(.DELETE));
   pratt.prefix(.TILDE, Precedence.UNARY_PREFIX, unaryPrefix(.COMPLEMENT));
 
   ////////////////////////////////////////////////////////////////////////////////
