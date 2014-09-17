@@ -44,9 +44,27 @@ export class CompilerResult {
   export Resolver resolver;
 }
 
+class CachedSource {
+  string contents;
+  Source source = null;
+  Node file = null;
+
+  Node compile(Compiler compiler, CompilerOptions options) {
+    if (file == null) {
+      var program = Node.createProgram([]);
+      source = Source("<native>", contents);
+      compiler.processInput(program, source);
+      file = program.children.get(0);
+    }
+    options.inputs.unshift(source);
+    return file.clone();
+  }
+}
+
 export class Compiler {
-  static Source nativeLibrarySource = null;
-  static Node nativeLibraryFile = null;
+  // Cache the standard library for a small speed boost
+  static CachedSource nativeLibrary = CachedSource(NATIVE_LIBRARY);
+  static CachedSource nativeLibraryJS = CachedSource(NATIVE_LIBRARY_JS);
 
   var tokenizingTime = 0.0;
   var parsingTime = 0.0;
@@ -134,17 +152,11 @@ export class Compiler {
     createNameToSymbolFlag();
     createSymbolFlagToName();
 
-    // Cache the standard library for a small speed increase
-    if (nativeLibrarySource != null) {
-      program.appendChild(nativeLibraryFile.clone());
-    } else {
-      nativeLibrarySource = Source("<native>", NATIVE_LIBRARY);
-      processInput(program, nativeLibrarySource);
-      nativeLibraryFile = program.children.get(0).clone();
-    }
-    options.inputs.unshift(nativeLibrarySource);
-
     // Tokenize and parse each module individually
+    switch (options.targetFormat) {
+      case .JAVASCRIPT { program.appendChild(nativeLibraryJS.compile(this, options)); }
+      default { program.appendChild(nativeLibrary.compile(this, options)); }
+    }
     for (var i = 1; i < options.inputs.length; i++) {
       processInput(program, options.inputs.get(i));
     }

@@ -1,16 +1,8 @@
-final var NATIVE_LIBRARY = "
+const var NATIVE_LIBRARY = "
 import struct int { import string toString(); }
 import struct bool { import string toString(); }
 import struct float { import string toString(); }
 import struct double { import string toString(); }
-
-import struct String {
-  import static string fromCharCode(int value);
-}
-
-import class Object {
-  import static Object create(Object prototype);
-}
 
 import struct string {
   import final int length;
@@ -19,13 +11,13 @@ import struct string {
   import int lastIndexOf(string value);
   import string toLowerCase();
   import string toUpperCase();
-  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }
-  inline string get(int index) { return untyped(this)[index]; }
-  inline string join(List<string> values) { return untyped(values).join(this); }
-  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }
-  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }
-  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }
-  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }
+  import static string fromCodeUnit(int value);
+  import string get(int index);
+  import string join(List<string> values);
+  import int codeUnitAt(int index);
+  import bool startsWith(string prefix);
+  import bool endsWith(string suffix);
+  import string repeat(int count);
 }
 
 import class List<T> {
@@ -40,71 +32,34 @@ import class List<T> {
   import T pop();
   import void reverse();
   import void sort(int fn(T, T) callback);
-  inline List<T> clone() { return untyped(this).slice(); }
-  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }
-  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }
-  inline T get(int index) { return untyped(this)[index]; }
-  inline void set(int index, T value) { untyped(this)[index] = value; }
-
-  void swap(int a, int b) {
-    var temp = get(a);
-    set(a, get(b));
-    set(b, temp);
-  }
+  import List<T> clone();
+  import T remove(int index);
+  import void insert(int index, T value);
+  import T get(int index);
+  import void set(int index, T value);
+  import void swap(int a, int b);
 }
 
 class StringMap<T> {
-  Object table = Object.create(null);
-  inline T get(string key) { return untyped(table)[key]; }
-  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }
-  inline void set(string key, T value) { untyped(table)[key] = value; }
-  inline bool has(string key) { return key in untyped(table); }
-  inline void remove(string key) { delete(untyped(table)[key]); }
-
-  List<string> keys() {
-    List<string> keys = [];
-    for (string key in untyped(table)) keys.push(key);
-    return keys;
-  }
-
-  List<T> values() {
-    List<T> values = [];
-    for (string key in untyped(table)) values.push(get(key));
-    return values;
-  }
-
-  StringMap<T> clone() {
-    var clone = StringMap<T>();
-    for (string key in untyped(table)) clone.set(key, get(key));
-    return clone;
-  }
+  import T get(string key);
+  import T getOrDefault(string key, T defaultValue);
+  import void set(string key, T value);
+  import bool has(string key);
+  import void remove(string key);
+  import List<string> keys();
+  import List<T> values();
+  import StringMap<T> clone();
 }
 
 class IntMap<T> {
-  Object table = Object.create(null);
-  inline T get(int key) { return untyped(table)[key]; }
-  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }
-  inline void set(int key, T value) { untyped(table)[key] = value; }
-  inline bool has(int key) { return key in untyped(table); }
-  inline void remove(int key) { delete untyped(table)[key]; }
-
-  List<int> keys() {
-    List<int> keys = [];
-    for (double key in untyped(table)) keys.push((int)key);
-    return keys;
-  }
-
-  List<T> values() {
-    List<T> values = [];
-    for (int key in untyped(table)) values.push(get(key));
-    return values;
-  }
-
-  IntMap<T> clone() {
-    var clone = IntMap<T>();
-    for (int key in untyped(table)) clone.set(key, get(key));
-    return clone;
-  }
+  import T get(int key);
+  import T getOrDefault(int key, T defaultValue);
+  import void set(int key, T value);
+  import bool has(int key);
+  import void remove(int key);
+  import List<int> keys();
+  import List<T> values();
+  import IntMap<T> clone();
 }
 
 // TODO: Rename this to \"math\" since namespaces should be lower case
@@ -133,7 +88,7 @@ import namespace Math {
   import double pow(double base, double exponent);
   import double min(double a, double b);
   import double max(double a, double b);
-  inline int imin(int a, int b) { return untyped(min)(a, b); }
-  inline int imax(int a, int b) { return untyped(max)(a, b); }
+  import int imin(int a, int b);
+  import int imax(int a, int b);
 }
 ";

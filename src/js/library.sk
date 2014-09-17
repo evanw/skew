@@ -1,0 +1,138 @@
+const var NATIVE_LIBRARY_JS = "
+import struct int { import string toString(); }
+import struct bool { import string toString(); }
+import struct float { import string toString(); }
+import struct double { import string toString(); }
+
+import struct String {
+  import static string fromCharCode(int value);
+}
+
+import class Object {
+  import static Object create(Object prototype);
+}
+
+import struct string {
+  import final int length;
+  import string slice(int start, int end);
+  import int indexOf(string value);
+  import int lastIndexOf(string value);
+  import string toLowerCase();
+  import string toUpperCase();
+  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }
+  inline string get(int index) { return untyped(this)[index]; }
+  inline string join(List<string> values) { return untyped(values).join(this); }
+  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }
+  bool startsWith(string prefix) { return length >= prefix.length && slice(0, prefix.length) == prefix; }
+  bool endsWith(string suffix) { return length >= suffix.length && slice(length - suffix.length, length) == suffix; }
+  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }
+}
+
+import class List<T> {
+  new();
+  import final int length;
+  import void push(T value);
+  import void unshift(T value);
+  import List<T> slice(int start, int end);
+  import int indexOf(T value);
+  import int lastIndexOf(T value);
+  import T shift();
+  import T pop();
+  import void reverse();
+  import void sort(int fn(T, T) callback);
+  inline List<T> clone() { return untyped(this).slice(); }
+  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }
+  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }
+  inline T get(int index) { return untyped(this)[index]; }
+  inline void set(int index, T value) { untyped(this)[index] = value; }
+
+  void swap(int a, int b) {
+    var temp = get(a);
+    set(a, get(b));
+    set(b, temp);
+  }
+}
+
+class StringMap<T> {
+  Object table = Object.create(null);
+  inline T get(string key) { return untyped(table)[key]; }
+  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }
+  inline void set(string key, T value) { untyped(table)[key] = value; }
+  inline bool has(string key) { return key in untyped(table); }
+  inline void remove(string key) { delete(untyped(table)[key]); }
+
+  List<string> keys() {
+    List<string> keys = [];
+    for (string key in untyped(table)) keys.push(key);
+    return keys;
+  }
+
+  List<T> values() {
+    List<T> values = [];
+    for (string key in untyped(table)) values.push(get(key));
+    return values;
+  }
+
+  StringMap<T> clone() {
+    var clone = StringMap<T>();
+    for (string key in untyped(table)) clone.set(key, get(key));
+    return clone;
+  }
+}
+
+class IntMap<T> {
+  Object table = Object.create(null);
+  inline T get(int key) { return untyped(table)[key]; }
+  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }
+  inline void set(int key, T value) { untyped(table)[key] = value; }
+  inline bool has(int key) { return key in untyped(table); }
+  inline void remove(int key) { delete untyped(table)[key]; }
+
+  List<int> keys() {
+    List<int> keys = [];
+    for (double key in untyped(table)) keys.push((int)key);
+    return keys;
+  }
+
+  List<T> values() {
+    List<T> values = [];
+    for (int key in untyped(table)) values.push(get(key));
+    return values;
+  }
+
+  IntMap<T> clone() {
+    var clone = IntMap<T>();
+    for (int key in untyped(table)) clone.set(key, get(key));
+    return clone;
+  }
+}
+
+import namespace Math {
+  import final double E;
+  import final double PI;
+  import final double NAN;
+  import final double INFINITY;
+  import double random();
+  import double abs(double n);
+  import double sin(double n);
+  import double cos(double n);
+  import double tan(double n);
+  import double asin(double n);
+  import double acos(double n);
+  import double atan(double n);
+  import double round(double n);
+  import double floor(double n);
+  import double ceil(double n);
+  import double exp(double n);
+  import double log(double n);
+  import double sqrt(double n);
+  import bool isNaN(double n);
+  import bool isFinite(double n);
+  import double atan2(double y, double x);
+  import double pow(double base, double exponent);
+  import double min(double a, double b);
+  import double max(double a, double b);
+  inline int imin(int a, int b) { return untyped(min)(a, b); }
+  inline int imax(int a, int b) { return untyped(max)(a, b); }
+}
+";
