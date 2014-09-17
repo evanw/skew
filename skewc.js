@@ -1292,6 +1292,15 @@
     case 23:
       cs.Emitter.emitDoWhile($this, node);
       break;
+    case 26:
+      cs.Emitter.emitBreak($this, node);
+      break;
+    case 27:
+      cs.Emitter.emitContinue($this, node);
+      break;
+    case 28:
+      cs.Emitter.emitAssert($this, node);
+      break;
     case 6:
       cs.Emitter.emitVariableCluster($this, node);
       break;
@@ -1377,6 +1386,18 @@
     cs.Emitter.emit($this, ' while (');
     cs.Emitter.emitExpression($this, node.children[0], 0);
     cs.Emitter.emit($this, ');\n');
+  };
+  cs.Emitter.emitBreak = function($this, node) {
+    cs.Emitter.emit($this, $this.indent + 'break;\n');
+  };
+  cs.Emitter.emitContinue = function($this, node) {
+    cs.Emitter.emit($this, $this.indent + 'continue;\n');
+  };
+  cs.Emitter.emitAssert = function($this, node) {
+    var value = node.children[0];
+    cs.Emitter.emit($this, $this.indent + 'Debug.Assert(');
+    cs.Emitter.emitExpression($this, value, 1);
+    cs.Emitter.emit($this, ', ' + quoteString(Range.toString(node.range) + ' (' + Range.locationString(node.range) + ')', 34) + ');\n');
   };
   cs.Emitter.emitNameWithParameters = function($this, symbol) {
     cs.Emitter.emit($this, cs.Emitter.mangleName(symbol));

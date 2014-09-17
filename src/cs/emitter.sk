@@ -135,6 +135,9 @@ namespace cs {
         case .FOR_EACH { emitForEach(node); }
         case .WHILE { emitWhile(node); }
         case .DO_WHILE { emitDoWhile(node); }
+        case .BREAK { emitBreak(node); }
+        case .CONTINUE { emitContinue(node); }
+        case .ASSERT { emitAssert(node); }
         case .VARIABLE_CLUSTER { emitVariableCluster(node); }
         case .VARIABLE { emitVariableStatement(node); }
       }
@@ -228,6 +231,13 @@ namespace cs {
 
     void emitContinue(Node node) {
       emit(indent + "continue;\n");
+    }
+
+    void emitAssert(Node node) {
+      var value = node.assertValue();
+      emit(indent + "Debug.Assert(");
+      emitExpression(value, .COMMA);
+      emit(", " + quoteString(node.range + " (" + node.range.locationString() + ")", '"') + ");\n");
     }
 
     void emitNameWithParameters(Symbol symbol) {
