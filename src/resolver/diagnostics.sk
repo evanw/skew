@@ -358,3 +358,7 @@ void semanticErrorAbstractSuperCall(Log log, Range range, Range overridden) {
   log.error(range, "Cannot call abstract member in base class");
   if (!overridden.isEmpty()) log.note(overridden, "The overridden member is here");
 }
+
+void semanticErrorNestedStorageOperator(Log log, Range range) {
+  log.error(range, "Assignment expressions are not allowed inside other expressions");
+}

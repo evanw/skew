@@ -688,8 +688,6 @@ namespace js {
 
     void patchAssign(Node node) {
       if (node.type.isInt(cache)) {
-        var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
-        var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
         var left = node.binaryLeft();
         var right = node.binaryRight();
         NodeKind kind =
@@ -704,12 +702,8 @@ namespace js {
 
     void patchUnary(Node node) {
       if (node.type.isInt(cache)) {
-        var isPostfix = node.kind == .POSTFIX_INCREMENT || node.kind == .POSTFIX_DECREMENT;
         var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
         var result = createBinaryIntAssignment(isIncrement ? .ADD : .SUBTRACT, node.unaryValue().replaceWith(null), Node.createInt(1));
-        if (isPostfix && isExpressionUsed(node)) {
-          result = createBinaryInt(isIncrement ? .SUBTRACT : .ADD, result, Node.createInt(1));
-        }
         node.become(result.withRange(node.range).withType(node.type));
       }
     }
@@ -743,14 +737,16 @@ namespace js {
       var memberInitializers = node.memberInitializers();
       var index = 0;
       if (superInitializer != null) {
-        block.insertChild(index++, Node.createExpression(superInitializer.replaceWith(null)));
+        block.insertChild(index, Node.createExpression(superInitializer.replaceWith(null)));
+        index++;
       }
       if (memberInitializers != null) {
         for (var i = 0; i < memberInitializers.children.size(); i++) {
           var child = memberInitializers.children.get(i);
           var name = child.memberInitializerName();
           var value = child.memberInitializerValue();
-          block.insertChild(index++, Node.createExpression(Node.createBinary(.ASSIGN, name.replaceWith(null), value.replaceWith(null))));
+          block.insertChild(index, Node.createExpression(Node.createBinary(.ASSIGN, name.replaceWith(null), value.replaceWith(null))));
+          index++;
         }
       }
     }
@@ -797,18 +793,6 @@ namespace js {
       }
     }
 
-    static bool isExpressionUsed(Node node) {
-      assert node.kind.isExpression();
-      var parent = node.parent;
-      if (!parent.kind.isExpression()) {
-        return false;
-      }
-      if (parent.kind == .SEQUENCE && (!isExpressionUsed(parent) || parent.children.indexOf(node) < parent.children.size() - 1)) {
-        return false;
-      }
-      return true;
-    }
-
     void setCurrentFunction(Symbol symbol) {
       currentFunction = symbol;
       createdThisAlias = false;
@@ -836,7 +820,8 @@ namespace js {
     string generateSymbolName() {
       string name;
       do {
-        name = numberToName(nextSymbolName++);
+        name = numberToName(nextSymbolName);
+        nextSymbolName++;
       } while (reservedNames.has(name));
       return name;
     }

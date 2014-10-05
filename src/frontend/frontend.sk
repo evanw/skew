@@ -159,11 +159,16 @@ export namespace frontend {
 
     // Translate frontend flags to compiler options
     var options = CompilerOptions();
+    var optimizeJS = flags.optimize && target == .JAVASCRIPT;
+    var minifyJS = flags.jsMinify && target == .JAVASCRIPT;
     options.targetFormat = target;
     options.removeAsserts = flags.optimize;
     options.outputFile = flags.outputFile;
-    options.foldAllConstants = options.inlineAllFunctions = options.convertAllInstanceToStatic = flags.optimize && target == .JAVASCRIPT;
-    options.jsMinify = options.jsMangle = flags.jsMinify && target == .JAVASCRIPT;
+    options.foldAllConstants = optimizeJS;
+    options.inlineAllFunctions = optimizeJS;
+    options.convertAllInstanceToStatic = optimizeJS;
+    options.jsMinify = minifyJS;
+    options.jsMangle = minifyJS;
     options.jsSourceMap = flags.jsSourceMap && target == .JAVASCRIPT;
     options.inputs = readSources(inputs); if (options.inputs == null) return 1;
     options.prepend = readSources(prepend); if (options.prepend == null) return 1;

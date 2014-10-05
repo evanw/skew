@@ -275,11 +275,13 @@ class InliningGraph {
     // substitution would lead to incorrect code:
     //
     //   inline int fn() foo(int x) {
-    //     return => x;
+    //     return => { x++; return x; };
     //   }
-    //   var x = 0;
-    //   var y = foo(x++);
-    //   var z = foo(x++);
+    //   export void test() {
+    //     var x = 0;
+    //     var y = foo(x); y();
+    //     var z = foo(x);
+    //   }
     //
     if (node.kind == .LAMBDA) {
       return false;
@@ -292,10 +294,12 @@ class InliningGraph {
       // Prevent inlining of functions that modify their arguments locally. For
       // example, inlining this would lead to incorrect code:
       //
-      //   inline int foo(int x, int y) {
-      //     return x += y;
+      //   inline void foo(int x, int y) {
+      //     x += y;
       //   }
-      //   foo(1, 2);
+      //   export void test() {
+      //     foo(1, 2);
+      //   }
       //
       if (node.isStorage()) {
         return false;

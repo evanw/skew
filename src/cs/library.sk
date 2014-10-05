@@ -26,8 +26,8 @@ import class List<T> {
   inline void push(T value) { untyped(this).Add(value); }
   inline void unshift(T value) { insert(0, value); }
   inline List<T> slice(int start, int end) { return untyped(this).Take(end).Skip(start).ToList(); }
-  inline int indexOf(string value) { return untyped(this).IndexOf(value); }
-  inline int lastIndexOf(string value) { return untyped(this).LastIndexOf(value); }
+  inline int indexOf(T value) { return untyped(this).IndexOf(value); }
+  inline int lastIndexOf(T value) { return untyped(this).LastIndexOf(value); }
   inline T shift() { return remove(0); }
   inline T pop() { return remove(size() - 1); }
   inline void reverse() { untyped(this).Reverse(); }

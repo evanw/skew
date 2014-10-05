@@ -86,25 +86,26 @@ export void test() {
 ");
 
 testJS("
-inline int fn() foo(int x) {
-  return => x;
+inline void fn() foo(int x) {
+  return => x++;
 }
 export void test() {
   var x = 0;
-  var y = foo(x++);
-  var z = foo(x++);
+  var y = foo(x); y();
+  var z = foo(x);
 }
 ", "
 (function() {
   function foo(x) {
     return function() {
-      return x;
+      x = x + 1 | 0;
     };
   }
   test = function() {
     var x = 0;
-    var y = foo((x = x + 1 | 0) - 1 | 0);
-    var z = foo((x = x + 1 | 0) - 1 | 0);
+    var y = foo(x);
+    y();
+    var z = foo(x);
   };
 }());
 ");

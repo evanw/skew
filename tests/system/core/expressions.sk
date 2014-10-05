@@ -1,0 +1,81 @@
+namespace core { void testExpressions() {
+
+test("
+void foo() {
+  int x;
+  x++;
+  x--;
+  ++x;
+  --x;
+  x = x++;
+  x = x--;
+  x = ++x;
+  x = --x;
+}
+", "
+<stdin>:7:7: error: Assignment expressions are not allowed inside other expressions
+  x = x++;
+      ~~~
+<stdin>:8:7: error: Assignment expressions are not allowed inside other expressions
+  x = x--;
+      ~~~
+<stdin>:9:7: error: Assignment expressions are not allowed inside other expressions
+  x = ++x;
+      ~~~
+<stdin>:10:7: error: Assignment expressions are not allowed inside other expressions
+  x = --x;
+      ~~~
+");
+
+test("
+void foo() {
+  int x;
+  x = (x = 1);
+  x = (x += 1);
+  x = (x -= 1);
+  x = (x *= 1);
+  x = (x /= 1);
+  x = (x %= 1);
+  x = (x <<= 1);
+  x = (x >>= 1);
+  x = (x &= 1);
+  x = (x |= 1);
+  x = (x ^= 1);
+}
+", "
+<stdin>:3:8: error: Assignment expressions are not allowed inside other expressions
+  x = (x = 1);
+       ~~~~~
+<stdin>:4:8: error: Assignment expressions are not allowed inside other expressions
+  x = (x += 1);
+       ~~~~~~
+<stdin>:5:8: error: Assignment expressions are not allowed inside other expressions
+  x = (x -= 1);
+       ~~~~~~
+<stdin>:6:8: error: Assignment expressions are not allowed inside other expressions
+  x = (x *= 1);
+       ~~~~~~
+<stdin>:7:8: error: Assignment expressions are not allowed inside other expressions
+  x = (x /= 1);
+       ~~~~~~
+<stdin>:8:8: error: Assignment expressions are not allowed inside other expressions
+  x = (x %= 1);
+       ~~~~~~
+<stdin>:9:8: error: Assignment expressions are not allowed inside other expressions
+  x = (x <<= 1);
+       ~~~~~~~
+<stdin>:10:8: error: Assignment expressions are not allowed inside other expressions
+  x = (x >>= 1);
+       ~~~~~~~
+<stdin>:11:8: error: Assignment expressions are not allowed inside other expressions
+  x = (x &= 1);
+       ~~~~~~
+<stdin>:12:8: error: Assignment expressions are not allowed inside other expressions
+  x = (x |= 1);
+       ~~~~~~
+<stdin>:13:8: error: Assignment expressions are not allowed inside other expressions
+  x = (x ^= 1);
+       ~~~~~~
+");
+
+}}

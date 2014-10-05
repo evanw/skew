@@ -53,7 +53,8 @@ class SymbolMotionPass {
     } else {
       var inSymbol = resolver.createSymbol("in", .NAMESPACE);
       inSymbol.enclosingSymbol = enclosingSymbol;
-      inType = inSymbol.type = Type(inSymbol);
+      inType = Type(inSymbol);
+      inSymbol.type = inType;
       inMember = Member(inSymbol);
       inMember.type = inType;
       enclosingType.addMember(inMember);
@@ -62,15 +63,15 @@ class SymbolMotionPass {
     }
 
     // Create a namespace with the same name as this symbol
-    var shadowSymbol = resolver.createSymbol(symbol.name, .NAMESPACE);
+    var shadowSymbol = resolver.createSymbol("_" + symbol.name + "_", .NAMESPACE);
     var shadowType = shadowSymbol.type = Type(shadowSymbol);
     var shadowMember = Member(shadowSymbol);
     shadowSymbol.enclosingSymbol = inType.symbol;
     shadowMember.type = shadowType;
-    assert inType.findMember(symbol.name) == null;
+    assert inType.findMember(shadowSymbol.name) == null;
     inType.addMember(shadowMember);
     shadowForSymbol.set(symbol.uniqueID, shadowType);
-    shadowSymbol.node = Node.createNamespace(Node.createName(symbol.name).withSymbol(shadowSymbol), Node.createBlock([])).withSymbol(shadowSymbol);
+    shadowSymbol.node = Node.createNamespace(Node.createName(shadowSymbol.name).withSymbol(shadowSymbol), Node.createBlock([])).withSymbol(shadowSymbol);
     inType.symbol.node.declarationBlock().appendChild(shadowSymbol.node);
     return shadowType;
   }

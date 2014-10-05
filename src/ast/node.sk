@@ -359,7 +359,8 @@ class Node {
     for (var i = 0; i < nodes.size(); i++) {
       var node = nodes.get(i);
       updateParent(node, this);
-      children.insert(index++, node);
+      children.insert(index, node);
+      index++;
     }
   }
 

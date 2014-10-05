@@ -44,7 +44,10 @@ namespace cs {
           emitNode(functions.get(i).node);
         }
         for (var i = 0; i < variables.size(); i++) {
-          emitVariableStatement(variables.get(i).node);
+          var symbol = variables.get(i);
+          if (!symbol.isObjectMember()) {
+            emitVariableStatement(symbol.node);
+          }
         }
       }
 
@@ -86,7 +89,7 @@ namespace cs {
       // doesn't have top-level variable or function declarations. Use null
       // as a sentinel value for this global class. Luckily, C# has partial
       // classes so we don't need to deal with collecting these symbols.
-      if (symbol != null && symbol.kind.isGlobal() && !symbol.isObjectMember()) {
+      if (symbol != null && putInGlobalNamespace(symbol)) {
         target.push(null);
       }
 
@@ -126,6 +129,7 @@ namespace cs {
 
     void emitNode(Node node) {
       switch (node.kind) {
+        case .ENUM, .ENUM_FLAGS { emitEnum(node); }
         case .CLASS, .STRUCT, .INTERFACE { emitObject(node); }
         case .CONSTRUCTOR, .FUNCTION { emitFunction(node); }
         case .RETURN, .IMPLICIT_RETURN { emitReturn(node); }
@@ -173,8 +177,11 @@ namespace cs {
           emit("var ");
           var nodes = setup.clusterVariables();
           for (var i = 0; i < nodes.size(); i++) {
+            var variable = nodes.get(i);
             if (i > 0) emit(", ");
-            emitExpression(nodes.get(i), .COMMA);
+            emit(mangleName(variable.symbol));
+            emit(" = ");
+            emitExpression(variable.variableValue(), .COMMA);
           }
         } else {
           emitExpression(setup, .LOWEST);
@@ -252,6 +259,23 @@ namespace cs {
       }
     }
 
+    void emitEnum(Node node) {
+      var symbol = node.symbol;
+      var type = symbol.type;
+      adjustNamespace(symbol);
+      emit(indent + "public enum " + mangleName(symbol) + " {\n");
+      increaseIndent();
+      var members = type.members.values();
+      for (var i = 0; i < members.size(); i++) {
+        var symbol = members.get(i).symbol;
+        if (symbol.isEnumValue()) {
+          emit(indent + mangleName(symbol) + " = " + symbol.constant.asInt() + ",\n");
+        }
+      }
+      decreaseIndent();
+      emit(indent + "}\n");
+    }
+
     void emitObject(Node node) {
       var symbol = node.symbol;
       var type = symbol.type;
@@ -310,8 +334,11 @@ namespace cs {
     }
 
     void emitFunction(Node node) {
-      var block = node.functionBlock();
       var symbol = node.symbol;
+      if (symbol.isOperator()) {
+        return;
+      }
+      var block = node.functionBlock();
       var isInterface = symbol.enclosingSymbol.kind == .INTERFACE;
       adjustNamespace(symbol);
       emit(indent);
@@ -322,7 +349,7 @@ namespace cs {
         emit("static ");
       }
       if (symbol.isVirtual() && !isInterface) {
-        emit(symbol.isOverride() ? "override " : block == null ? "abstract " : "virtual ");
+        emit(symbol.isOverride() && symbol.overriddenMember.symbol.enclosingSymbol.kind != .INTERFACE ? "override " : block == null ? "abstract " : "virtual ");
       }
       if (!symbol.kind.isConstructor()) {
         emitType(symbol.type.resultType());
@@ -388,7 +415,7 @@ namespace cs {
         if (type.isParameterized()) {
           emit("<");
           for (var i = 0; i < type.symbol.parameters.size(); i++) {
-            if (i > 0) emit(",");
+            if (i > 0) emit(", ");
             emitType(type.substitutions.get(i));
           }
           emit(">");
@@ -701,10 +728,18 @@ namespace cs {
 
     static string fullName(Symbol symbol) {
       var enclosingSymbol = symbol.enclosingSymbol;
-      if (!symbol.kind.isInstance() && !symbol.kind.isParameter() && enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace()) {
-        return fullName(enclosingSymbol) + "." + mangleName(symbol);
+      var name = mangleName(symbol);
+      if (putInGlobalNamespace(symbol)) {
+        name = "Global." + name;
       }
-      return mangleName(symbol);
+      if (!symbol.kind.isInstance() && !symbol.kind.isParameter() && enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace()) {
+        return fullName(enclosingSymbol) + "." + name;
+      }
+      return name;
+    }
+
+    static bool putInGlobalNamespace(Symbol symbol) {
+      return symbol.kind.isGlobal() && !symbol.isObjectMember();
     }
   }
 }

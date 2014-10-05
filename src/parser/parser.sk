@@ -448,7 +448,10 @@ Node parseVariableCluster(ParserContext context, Node type, Node name) {
       context.expect(.SEMICOLON); // Expecting a semicolon here makes more sense than a comma
       break;
     }
-    if (name == null) name = start = parseName(context); if (name == null) break;
+    if (name == null) {
+      name = parseName(context); if (name == null) break;
+      start = name;
+    }
     var value = context.eat(.ASSIGN) ? pratt.parse(context, Precedence.COMMA) : null;
     variables.push(Node.createVariable(name, null, value).withRange(context.spanSince(start.range)));
     name = null;

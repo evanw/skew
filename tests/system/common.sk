@@ -61,6 +61,7 @@ export void start() {
   core.testConversions();
   core.testCyclic();
   core.testEnums();
+  core.testExpressions();
   core.testFunctions();
   core.testGenerics();
   core.testLambdas();

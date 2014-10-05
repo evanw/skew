@@ -17,10 +17,6 @@ export void test() {
   + +1;
   - +1;
   + -1;
-  - --x;
-  + ++x;
-  - ++x;
-  + --x;
 }
 ", "
 (function() {
@@ -30,10 +26,6 @@ export void test() {
     + +1;
     -+1;
     +-1;
-    - --x;
-    + ++x;
-    -++x;
-    +--x;
   };
 }());
 ");
@@ -57,7 +49,6 @@ export void test() {
   (1.0 / 2.0) * 3.0;
   1.0 - (2.0 - 3.0);
   1.0 / (2.0 * 3.0);
-  x = (x = x);
 }
 ", "
 (function() {
@@ -67,7 +58,6 @@ export void test() {
     1 / 2 * 3;
     1 - (2 - 3);
     1 / (2 * 3);
-    x = x = x;
   };
 }());
 ");
@@ -198,26 +188,18 @@ export void foo(int foo, bool bar) {
 
 testJS("
 export void foo(int bar) {
-  bar++, bar++;
-  bar--, bar--;
-  ++bar, ++bar;
-  --bar, --bar;
-  foo((bar++, bar++));
-  foo((bar--, bar--));
-  foo((++bar, ++bar));
-  foo((--bar, --bar));
+  bar++;
+  bar--;
+  ++bar;
+  --bar;
 }
 ", "
 (function() {
   foo = function(bar) {
-    bar = bar + 1 | 0, bar = bar + 1 | 0;
-    bar = bar - 1 | 0, bar = bar - 1 | 0;
-    bar = bar + 1 | 0, bar = bar + 1 | 0;
-    bar = bar - 1 | 0, bar = bar - 1 | 0;
-    foo((bar = bar + 1 | 0, (bar = bar + 1 | 0) - 1 | 0));
-    foo((bar = bar - 1 | 0, (bar = bar - 1 | 0) + 1 | 0));
-    foo((bar = bar + 1 | 0, bar = bar + 1 | 0));
-    foo((bar = bar - 1 | 0, bar = bar - 1 | 0));
+    bar = bar + 1 | 0;
+    bar = bar - 1 | 0;
+    bar = bar + 1 | 0;
+    bar = bar - 1 | 0;
   };
 }());
 ");
@@ -225,17 +207,11 @@ export void foo(int bar) {
 testJS("
 export class Foo {
   int bar;
-  void foo(int foo) {
-  }
   export void baz() {
-    bar++, bar++;
-    bar--, bar--;
-    ++bar, ++bar;
-    --bar, --bar;
-    foo((bar++, bar++));
-    foo((bar--, bar--));
-    foo((++bar, ++bar));
-    foo((--bar, --bar));
+    bar++;
+    bar--;
+    ++bar;
+    --bar;
   }
 }
 ", "
@@ -243,17 +219,11 @@ export class Foo {
   Foo = function(_0) {
     this.bar = _0;
   };
-  Foo.prototype.foo = function(foo) {
-  };
   Foo.prototype.baz = function() {
-    this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0;
-    this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0;
-    this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0;
-    this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0;
-    this.foo((this.bar = this.bar + 1 | 0, (this.bar = this.bar + 1 | 0) - 1 | 0));
-    this.foo((this.bar = this.bar - 1 | 0, (this.bar = this.bar - 1 | 0) + 1 | 0));
-    this.foo((this.bar = this.bar + 1 | 0, this.bar = this.bar + 1 | 0));
-    this.foo((this.bar = this.bar - 1 | 0, this.bar = this.bar - 1 | 0));
+    this.bar = this.bar + 1 | 0;
+    this.bar = this.bar - 1 | 0;
+    this.bar = this.bar + 1 | 0;
+    this.bar = this.bar - 1 | 0;
   };
 }());
 ");
@@ -263,14 +233,10 @@ class Foo {
   int foo = 0;
 }
 export void foo(int baz) {
-  bar().foo++, bar().foo++;
-  bar().foo--, bar().foo--;
-  ++bar().foo, ++bar().foo;
-  --bar().foo, --bar().foo;
-  foo((bar().foo++, bar().foo++));
-  foo((bar().foo--, bar().foo--));
-  foo((++bar().foo, ++bar().foo));
-  foo((--bar().foo, --bar().foo));
+  bar().foo++;
+  bar().foo--;
+  ++bar().foo;
+  --bar().foo;
 }
 Foo bar() {
   return Foo();
@@ -283,44 +249,16 @@ Foo bar() {
   foo = function(baz) {
     (function($temp) {
       return $temp.foo = $temp.foo + 1 | 0;
-    })(bar()), function($temp) {
-      return $temp.foo = $temp.foo + 1 | 0;
-    }(bar());
+    })(bar());
     (function($temp) {
       return $temp.foo = $temp.foo - 1 | 0;
-    })(bar()), function($temp) {
-      return $temp.foo = $temp.foo - 1 | 0;
-    }(bar());
+    })(bar());
     (function($temp) {
       return $temp.foo = $temp.foo + 1 | 0;
-    })(bar()), function($temp) {
-      return $temp.foo = $temp.foo + 1 | 0;
-    }(bar());
+    })(bar());
     (function($temp) {
       return $temp.foo = $temp.foo - 1 | 0;
-    })(bar()), function($temp) {
-      return $temp.foo = $temp.foo - 1 | 0;
-    }(bar());
-    foo((function($temp) {
-      return $temp.foo = $temp.foo + 1 | 0;
-    }(bar()), function($temp) {
-      return $temp.foo = $temp.foo + 1 | 0;
-    }(bar()) - 1 | 0));
-    foo((function($temp) {
-      return $temp.foo = $temp.foo - 1 | 0;
-    }(bar()), function($temp) {
-      return $temp.foo = $temp.foo - 1 | 0;
-    }(bar()) + 1 | 0));
-    foo((function($temp) {
-      return $temp.foo = $temp.foo + 1 | 0;
-    }(bar()), function($temp) {
-      return $temp.foo = $temp.foo + 1 | 0;
-    }(bar())));
-    foo((function($temp) {
-      return $temp.foo = $temp.foo - 1 | 0;
-    }(bar()), function($temp) {
-      return $temp.foo = $temp.foo - 1 | 0;
-    }(bar())));
+    })(bar());
   };
   function bar() {
     return new Foo();
@@ -335,11 +273,6 @@ export void foo(int bar) {
   bar *= 1;
   bar /= 1;
   bar %= 1;
-  foo(bar += 1);
-  foo(bar -= 1);
-  foo(bar *= 1);
-  foo(bar /= 1);
-  foo(bar %= 1);
 }
 ", "
 (function() {
@@ -353,11 +286,6 @@ export void foo(int bar) {
     bar = $imul(bar, 1);
     bar = bar / 1 | 0;
     bar = bar % 1 | 0;
-    foo(bar = bar + 1 | 0);
-    foo(bar = bar - 1 | 0);
-    foo(bar = $imul(bar, 1));
-    foo(bar = bar / 1 | 0);
-    foo(bar = bar % 1 | 0);
   };
 }());
 ");
@@ -365,19 +293,12 @@ export void foo(int bar) {
 testJS("
 export class Foo {
   int bar;
-  void foo(int foo) {
-  }
   export void baz() {
     bar += 1;
     bar -= 1;
     bar *= 1;
     bar /= 1;
     bar %= 1;
-    foo(bar += 1);
-    foo(bar -= 1);
-    foo(bar *= 1);
-    foo(bar /= 1);
-    foo(bar %= 1);
   }
 }
 ", "
@@ -389,19 +310,12 @@ export class Foo {
   Foo = function(_0) {
     this.bar = _0;
   };
-  Foo.prototype.foo = function(foo) {
-  };
   Foo.prototype.baz = function() {
     this.bar = this.bar + 1 | 0;
     this.bar = this.bar - 1 | 0;
     this.bar = $imul(this.bar, 1);
     this.bar = this.bar / 1 | 0;
     this.bar = this.bar % 1 | 0;
-    this.foo(this.bar = this.bar + 1 | 0);
-    this.foo(this.bar = this.bar - 1 | 0);
-    this.foo(this.bar = $imul(this.bar, 1));
-    this.foo(this.bar = this.bar / 1 | 0);
-    this.foo(this.bar = this.bar % 1 | 0);
   };
 }());
 ");
@@ -415,11 +329,6 @@ export class Foo {
     baz().foo *= foo;
     baz().foo /= foo;
     baz().foo %= foo;
-    foo = baz().foo += foo;
-    foo = baz().foo -= foo;
-    foo = baz().foo *= foo;
-    foo = baz().foo /= foo;
-    foo = baz().foo %= foo;
   }
 }
 Foo baz() {
@@ -451,21 +360,6 @@ Foo baz() {
     (function($temp) {
       return $temp.foo = $temp.foo % $this.foo | 0;
     })(baz());
-    this.foo = function($temp) {
-      return $temp.foo = $temp.foo + $this.foo | 0;
-    }(baz());
-    this.foo = function($temp) {
-      return $temp.foo = $temp.foo - $this.foo | 0;
-    }(baz());
-    this.foo = function($temp) {
-      return $temp.foo = $imul($temp.foo, $this.foo);
-    }(baz());
-    this.foo = function($temp) {
-      return $temp.foo = $temp.foo / $this.foo | 0;
-    }(baz());
-    this.foo = function($temp) {
-      return $temp.foo = $temp.foo % $this.foo | 0;
-    }(baz());
   };
   function baz() {
     return new Foo();
@@ -477,7 +371,6 @@ testJS("
 export void test() {
   int foo = (1, 2);
   foo = (1, 2);
-  foo = 1, 2;
   (1, 2), (3, 4);
 }
 ", "
@@ -485,7 +378,6 @@ export void test() {
   test = function() {
     var foo = (1, 2);
     foo = (1, 2);
-    foo = 1, 2;
     (1, 2), (3, 4);
   };
 }());

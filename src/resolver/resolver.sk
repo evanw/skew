@@ -164,7 +164,8 @@ class Resolver {
     // Also introduce a scope on object declarations for the type parameters
     // and on function declarations and lambda expressions for the arguments
     if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == .LAMBDA || node.kind.isLoop() || node.kind == .LET) {
-      node.scope = scope = Scope(scope);
+      scope = Scope(scope);
+      node.scope = scope;
     }
 
     // Automatically traverse the children of all nodes, even though this pass
@@ -820,7 +821,8 @@ class Resolver {
             var baseType = types.children.get(i);
             resolveAsParameterizedType(baseType);
             if (isObject) {
-              baseTypes.insert(index++, baseType);
+              baseTypes.insert(index, baseType);
+              index++;
             } else if (baseType.type.isClass()) {
               semanticErrorBaseClassInExtension(log, baseType.range);
             } else {
@@ -1420,7 +1422,8 @@ class Resolver {
         names.push(symbol.identicalMembers.get(i).symbol.fullName());
       }
       semanticErrorAmbiguousSymbol(log, range, symbol.name, names);
-      member.type = symbol.type = cache.errorType;
+      member.type = cache.errorType;
+      symbol.type = cache.errorType;
       return;
     }
 
@@ -2068,8 +2071,9 @@ class Resolver {
               context.scope = oldScope;
 
               // Move the value from the variable to a member initializer
-              memberInitializers.insertChild(index++, Node.createMemberInitializer(
+              memberInitializers.insertChild(index, Node.createMemberInitializer(
                 Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type), value.replaceWith(null)));
+              index++;
             }
 
             // Automatically add an initializer if one is missing
@@ -2082,9 +2086,10 @@ class Resolver {
               }
               if (j == memberInitializers.children.size()) {
                 initializeMember(member);
-                memberInitializers.insertChild(index++, Node.createMemberInitializer(
+                memberInitializers.insertChild(index, Node.createMemberInitializer(
                   Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type),
                   createDefaultValue(member.type, memberSymbol.node.declarationName().range)));
+                index++;
               }
             }
           }
@@ -2567,7 +2572,8 @@ class Resolver {
       semanticErrorUnknownMemberSymbol(log, dotName.range, name, type);
       return;
     }
-    node.symbol = dotName.symbol = member.symbol;
+    node.symbol = member.symbol;
+    dotName.symbol = member.symbol;
     initializePotentiallyDuplicatedMember(member, dotName.range);
 
     // Check the instance/static status of the member
@@ -2588,9 +2594,14 @@ class Resolver {
     }
 
     // Update this node using the member member
-    if (symbolIsType) node.become(Node.createType(member.type).withRange(node.range).withSymbol(member.symbol));
-    else if (targetIsType) node.become(Node.createName(member.symbol.name).withRange(node.range).withSymbol(member.symbol).withType(member.type));
-    else node.type = dotName.type = member.type;
+    if (symbolIsType) {
+      node.become(Node.createType(member.type).withRange(node.range).withSymbol(member.symbol));
+    } else if (targetIsType) {
+      node.become(Node.createName(member.symbol.name).withRange(node.range).withSymbol(member.symbol).withType(member.type));
+    } else {
+      node.type = member.type;
+      dotName.type = member.type;
+    }
   }
 
   void resolveLet(Node node) {
@@ -2961,6 +2972,9 @@ class Resolver {
     }
 
     else if (kind.isUnaryStorageOperator()) {
+      if (node.parent.kind.isExpression()) {
+        semanticErrorNestedStorageOperator(log, node.range);
+      }
       if (!type.isEnum() && type.isNumeric(cache)) {
         checkStorage(value);
         node.type = type;
@@ -3015,7 +3029,8 @@ class Resolver {
     var name = Node.createName("toString");
     var target = Node.createDot(node.clone().withChildren(children), name);
     var call = Node.createCall(target, []);
-    target.symbol = name.symbol = toString.symbol;
+    name.symbol = toString.symbol;
+    target.symbol = toString.symbol;
     target.type = cache.toStringType;
     call.type = cache.stringType;
     node.become(call);
@@ -3040,6 +3055,9 @@ class Resolver {
     // Special-case assignment logic
     if (kind.isBinaryStorageOperator()) {
       resolveAsParameterizedExpression(left);
+      if (!left.type.isError(cache) && node.parent.kind.isExpression()) {
+        semanticErrorNestedStorageOperator(log, node.range);
+      }
 
       if (kind == .ASSIGN || left.type.isNumeric(cache)) {
         resolveAsExpressionWithConversion(right, left.type, .IMPLICIT_CAST);
@@ -3098,17 +3116,20 @@ class Resolver {
 
     else if (kind == .ADD || kind == .SUBTRACT || kind == .MULTIPLY || kind == .DIVIDE) {
       if (leftType.isNumeric(cache) && rightType.isNumeric(cache)) {
-        node.type = commonType = cache.commonImplicitType(leftType, rightType);
+        commonType = cache.commonImplicitType(leftType, rightType);
+        node.type = commonType;
       }
 
       else if (kind == .ADD) {
         if (leftType.isString(cache) && rightType.isString(cache)) {
-          node.type = commonType = cache.stringType;
+          commonType = cache.stringType;
+          node.type = commonType;
         }
 
         else if (leftType.isString(cache)) {
           if (wrapWithToStringCall(right)) {
-            node.type = commonType = cache.stringType;
+            commonType = cache.stringType;
+            node.type = commonType;
           } else {
             return;
           }
@@ -3116,7 +3137,8 @@ class Resolver {
 
         else if (rightType.isString(cache)) {
           if (wrapWithToStringCall(left)) {
-            node.type = commonType = cache.stringType;
+            commonType = cache.stringType;
+            node.type = commonType;
           } else {
             return;
           }
@@ -3126,21 +3148,25 @@ class Resolver {
 
     else if (kind == .REMAINDER || kind == .SHIFT_LEFT || kind == .SHIFT_RIGHT) {
       if (leftType.isInteger(cache) && rightType.isInteger(cache)) {
-        node.type = commonType = cache.intType;
+        commonType = cache.intType;
+        node.type = commonType;
       }
     }
 
     else if (kind == .BITWISE_AND || kind == .BITWISE_OR || kind == .BITWISE_XOR) {
       if (leftType == rightType && leftType.isEnumFlags()) {
-        node.type = commonType = leftType;
+        commonType = leftType;
+        node.type = commonType;
       } else if (leftType.isInteger(cache) && rightType.isInteger(cache)) {
-        node.type = commonType = cache.intType;
+        commonType = cache.intType;
+        node.type = commonType;
       }
     }
 
     else if (kind == .LOGICAL_AND || kind == .LOGICAL_OR) {
       if (leftType.isBool(cache) && rightType.isBool(cache)) {
-        node.type = commonType = cache.boolType;
+        commonType = cache.boolType;
+        node.type = commonType;
       }
     }
 

@@ -172,7 +172,8 @@ namespace js {
       currentSource.contents += source.contents;
       if (options.jsSourceMap) {
         for (var i = 0, n = source.lineCount(); i < n; i++) {
-          generator.addMapping(source, i, 0, currentLine++, 0);
+          generator.addMapping(source, i, 0, currentLine, 0);
+          currentLine++;
         }
       }
       if (source.contents.codeUnitAt(source.contents.size() - 1) != '\n') {
