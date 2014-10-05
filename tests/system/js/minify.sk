@@ -572,4 +572,30 @@ export void foo(bool x, bool y, void fn() z) {
 (function(){foo=function(b,c,a){while(b)c?a():(a(),a())}}());
 ");
 
+testMinifyJS("
+class Foo {
+  int foo = 0;
+}
+export void foo() {
+  Foo().foo++;
+  Foo().foo++;
+}
+", "
+(function(){function c(){this.a=0}foo=function(){var a;a=new c(),a.a=a.a+1|0;var b;b=new c(),b.a=b.a+1|0}}());
+");
+
+testMinifyJS("
+export class Foo {
+  export Foo fn() foo() { return => this; }
+}
+", "
+(function(){Foo=function(){};Foo.prototype.foo=function(){var $this=this;return function(){return $this}}}());
+");
+
+testMinifyJS("
+export int foo(int a, int b) { return a * b; }
+", "
+(function(){var $i=Math.imul||function(a,b){var ah=a>>>16,al=a&65535,bh=b>>>16,bl=b&65535;return al*bl+(ah*bl+al*bh<<16)|0};foo=function(a,b){return $i(a,b)}}());
+");
+
 }}

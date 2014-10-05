@@ -1,6 +1,6 @@
 (function() {
   var $imul = Math.imul || function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
   function $extends(derived, base) {
@@ -2018,7 +2018,7 @@
     if (this.patcher.needMathImul) {
       js.Emitter.emit(this, this.indent + 'var ' + this.patcher.imul + $in._string_.replace(' = Math.imul || function(a, b) {', ' ', this.space) + this.newline);
       js.Emitter.increaseIndent(this);
-      js.Emitter.emit(this, this.indent + 'var ' + $in._string_.replace('ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;', ' ', this.space) + this.newline);
+      js.Emitter.emit(this, this.indent + 'var ' + $in._string_.replace('ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;', ' ', this.space) + this.newline);
       js.Emitter.emit(this, this.indent + 'return ' + $in._string_.replace('al * bl + (ah * bl + al * bh << 16) | 0', ' ', this.space));
       js.Emitter.emitSemicolonAfterStatement(this);
       js.Emitter.decreaseIndent(this);

@@ -109,7 +109,7 @@ export void foo(bool foo) {
 ", "
 (function() {
   var $imul = Math.imul || function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
   foo = function(foo) {
@@ -139,7 +139,7 @@ export void foo(int foo) {
 ", "
 (function() {
   var $imul = Math.imul || function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
   foo = function(foo) {
@@ -168,7 +168,7 @@ export void foo(int foo, bool bar) {
 ", "
 (function() {
   var $imul = Math.imul || function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
   foo = function(foo, bar) {
@@ -273,7 +273,7 @@ export void foo(int bar) {
 ", "
 (function() {
   var $imul = Math.imul || function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
   foo = function(bar) {
@@ -300,7 +300,7 @@ export class Foo {
 ", "
 (function() {
   var $imul = Math.imul || function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
   Foo = function(_0) {
@@ -333,7 +333,7 @@ Foo baz() {
 ", "
 (function() {
   var $imul = Math.imul || function(a, b) {
-    var ah = a >>> 16, al = a & 0xFFFF, bh = b >>> 16, bl = b & 0xFFFF;
+    var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
   Foo = function() {
