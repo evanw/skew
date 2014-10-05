@@ -64,9 +64,10 @@ class SymbolMotionPass {
 
     // Create a namespace with the same name as this symbol
     var shadowSymbol = resolver.createSymbol("_" + symbol.name + "_", .NAMESPACE);
-    var shadowType = shadowSymbol.type = Type(shadowSymbol);
+    var shadowType = Type(shadowSymbol);
     var shadowMember = Member(shadowSymbol);
     shadowSymbol.enclosingSymbol = inType.symbol;
+    shadowSymbol.type = shadowType;
     shadowMember.type = shadowType;
     assert inType.findMember(shadowSymbol.name) == null;
     inType.addMember(shadowMember);

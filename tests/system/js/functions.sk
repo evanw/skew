@@ -100,15 +100,15 @@ export void test() {
 ", "
 (function() {
   var $in = {};
-  $in.Foo = {};
+  $in._Foo_ = {};
   var Foo = {
     A: 0
   };
-  $in.Foo.foo = function($this) {
+  $in._Foo_.foo = function($this) {
     return $this;
   };
   test = function() {
-    $in.Foo.foo(Foo.A);
+    $in._Foo_.foo(Foo.A);
   };
 }());
 ");
@@ -121,14 +121,14 @@ export in Foo {
 ", "
 (function() {
   var $in = {};
-  $in.Foo = {};
+  $in._Foo_ = {};
   Foo = {
     FOO: 0
   };
-  $in.Foo.foo = function($this) {
-    return $in.Foo.toString($this);
+  $in._Foo_.foo = function($this) {
+    return $in._Foo_.toString($this);
   };
-  $in.Foo.toString = function($this) {
+  $in._Foo_.toString = function($this) {
     switch ($this) {
     case 0:
       return 'FOO';
@@ -150,11 +150,11 @@ export void test() {
 ", "
 (function() {
   var $in = {};
-  $in.Foo = {};
-  $in.Foo.foo = function() {
+  $in._Foo_ = {};
+  $in._Foo_.foo = function() {
   };
   test = function() {
-    new Foo(), $in.Foo.foo();
+    new Foo(), $in._Foo_.foo();
   };
 }());
 ");

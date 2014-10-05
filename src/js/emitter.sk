@@ -24,11 +24,11 @@ namespace js {
     var currentColumn = 0;
     var needsSemicolon = false;
     var isStartOfExpression = false;
-    var generator = SourceMapGenerator();
     Source currentSource = null;
     Patcher patcher = null;
     CompilerOptions options = null;
-    Resolver resolver;
+    final var generator = SourceMapGenerator();
+    final Resolver resolver;
 
     // Numbers normally need to be wrapped in parentheses when toString() is
     // called on them because "1.toString()" is a syntax error in JavaScript.

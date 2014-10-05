@@ -1,5 +1,5 @@
 class Type {
-  var members = StringMap<Member>();
+  final var members = StringMap<Member>();
 
   // The symbol that declared this type, if any. Non-generic function types
   // don't have a declaring symbol, so this will be null for those types.
@@ -19,8 +19,13 @@ class Type {
   List<Type> substitutions = null;
 
   // Give each type a unique integer as a hash code
-  static var nextUniqueID = 0;
-  var uniqueID = nextUniqueID++;
+  static var nextUniqueID = -1;
+  var uniqueID = generateUniqueID();
+
+  static int generateUniqueID() {
+    nextUniqueID++;
+    return nextUniqueID;
+  }
 
   Member constructor() {
     if (symbol == null) return null;

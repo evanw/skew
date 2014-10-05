@@ -11,23 +11,25 @@ namespace js {
 
   class Patcher {
     var lambdaCount = 0;
+    var nextTempID = 0;
     var createdThisAlias = false;
     Symbol currentFunction = null;
     var imul = "$imul";
     var extends = "$extends";
     var needExtends = false;
     var needMathImul = false;
-    var namingGroupIndexForSymbol = IntMap<int>();
     var nextSymbolName = 0;
-    var symbolCounts = IntMap<int>();
-    StringMap<bool> reservedNames = null;
     CompilerOptions options = null;
     UnionFind localVariableUnionFind = null;
     TypeCache cache = null;
-    Resolver resolver;
+    final var reservedNames = Emitter.isKeyword.clone();
+    final var symbolCounts = IntMap<int>();
+    final var namingGroupIndexForSymbol = IntMap<int>();
+    final Resolver resolver;
 
     void run(Node program) {
       assert program.kind == .PROGRAM;
+      var allSymbols = resolver.allSymbols;
       options = resolver.options;
       cache = resolver.cache;
 
@@ -36,9 +38,9 @@ namespace js {
       // function. Also create a quick way of getting from a symbol to its
       // union/find index.
       if (options.jsMangle) {
-        localVariableUnionFind = UnionFind(resolver.allSymbols.size());
-        for (var i = 0; i < resolver.allSymbols.size(); i++) {
-          var symbol = resolver.allSymbols.get(i);
+        localVariableUnionFind = UnionFind(allSymbols.size());
+        for (var i = 0; i < allSymbols.size(); i++) {
+          var symbol = allSymbols.get(i);
           namingGroupIndexForSymbol.set(symbol.uniqueID, i);
         }
 
@@ -60,7 +62,7 @@ namespace js {
       if (options.jsMangle) {
         // This holds the groups used for naming. Unioning two labels using
         // this object will cause both groups of symbols to have the same name.
-        var namingGroupsUnionFind = UnionFind(resolver.allSymbols.size());
+        var namingGroupsUnionFind = UnionFind(allSymbols.size());
 
         // These are optional and only reduce the number of generated names
         List<int> order = [];
@@ -69,8 +71,8 @@ namespace js {
 
         // Ensure all overridden symbols have the same generated name. This is
         // manditory for correctness, otherwise virtual functions break.
-        for (var i = 0; i < resolver.allSymbols.size(); i++) {
-          var symbol = resolver.allSymbols.get(i);
+        for (var i = 0; i < allSymbols.size(); i++) {
+          var symbol = allSymbols.get(i);
           if (symbol.overriddenMember != null) {
             var overridden = symbol.overriddenMember.symbol;
             var index = namingGroupIndexForSymbol.get(symbol.uniqueID);
@@ -84,7 +86,6 @@ namespace js {
         }
 
         // Collect all reserved names together into one big set for querying
-        reservedNames = Emitter.isKeyword.clone();
         var members = cache.globalType.members.values();
         for (var i = 0; i < members.size(); i++) {
           var member = members.get(i);
@@ -144,9 +145,10 @@ namespace js {
     // will be unique within a subclass hierarchy allowing names to be
     // duplicated in separate subclass hierarchies.
     void aliasUnrelatedProperties(UnionFind unionFind, List<int> order) {
-      var relatedTypesUnionFind = UnionFind(resolver.allSymbols.size());
-      for (var i = 0; i < resolver.allSymbols.size(); i++) {
-        var symbol = resolver.allSymbols.get(i);
+      var allSymbols = resolver.allSymbols;
+      var relatedTypesUnionFind = UnionFind(allSymbols.size());
+      for (var i = 0; i < allSymbols.size(); i++) {
+        var symbol = allSymbols.get(i);
         if (symbol.kind.isType()) {
           if (symbol.type.hasRelevantTypes()) {
             var types = symbol.type.relevantTypes;
@@ -159,7 +161,7 @@ namespace js {
             var index = namingGroupIndexForSymbol.getOrDefault(members.get(j).symbol.uniqueID, -1);
 
             // Guard against observing symbols that have been removed from
-            // resolver.allSymbols by DeadCodeRemovalPass but that are still
+            // cache.allSymbols by DeadCodeRemovalPass but that are still
             // reachable because DeadCodeRemovalPass only removes the symbol
             // from the unparameterized type, not from parameterized types.
             // It really should remove the symbol from all parameterized types
@@ -192,8 +194,9 @@ namespace js {
 
     List<List<Symbol>> extractGroups(UnionFind unionFind, bool fn(Symbol) filter) {
       var labelToGroup = IntMap<List<Symbol>>();
-      for (var i = 0; i < resolver.allSymbols.size(); i++) {
-        var symbol = resolver.allSymbols.get(i);
+      var allSymbols = resolver.allSymbols;
+      for (var i = 0; i < allSymbols.size(); i++) {
+        var symbol = allSymbols.get(i);
         if (filter != null && !filter(symbol)) {
           continue;
         }
@@ -233,12 +236,6 @@ namespace js {
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinary(node); }
         case .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node); }
         case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER { patchAssign(node); }
-      }
-
-      // This is not inside the switch statement above because one of the other
-      // case clauses may have introduced a let statement
-      if (node.kind == .LET) {
-        patchLet(node);
       }
 
       if (node.hasChildren()) {
@@ -680,12 +677,6 @@ namespace js {
       }
     }
 
-    void patchLet(Node node) {
-      var value = node.letValue().replaceWith(null);
-      var variable = node.letVariable().replaceWith(null);
-      node.become(Node.createCall(Node.createLambda([variable], Node.createBlock([Node.createReturn(value)])), [variable.variableValue().replaceWith(null)]));
-    }
-
     void patchAssign(Node node) {
       if (node.type.isInt(cache)) {
         var left = node.binaryLeft();
@@ -696,15 +687,14 @@ namespace js {
           node.kind == .ASSIGN_MULTIPLY ? .MULTIPLY :
           node.kind == .ASSIGN_DIVIDE ? .DIVIDE :
           .REMAINDER;
-        node.become(createBinaryIntAssignment(kind, left.replaceWith(null), right.replaceWith(null)).withRange(node.range));
+        createBinaryIntAssignment(node, kind, left.replaceWith(null), right.replaceWith(null));
       }
     }
 
     void patchUnary(Node node) {
       if (node.type.isInt(cache)) {
         var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
-        var result = createBinaryIntAssignment(isIncrement ? .ADD : .SUBTRACT, node.unaryValue().replaceWith(null), Node.createInt(1));
-        node.become(result.withRange(node.range).withType(node.type));
+        createBinaryIntAssignment(node, isIncrement ? .ADD : .SUBTRACT, node.unaryValue().replaceWith(null), Node.createInt(1));
       }
     }
 
@@ -763,18 +753,31 @@ namespace js {
       return node.kind == .NAME || node.kind == .THIS || node.kind == .DOT && isSimpleNameAccess(node.dotTarget());
     }
 
-    Node createBinaryIntAssignment(NodeKind kind, Node left, Node right) {
+    void createBinaryIntAssignment(Node target, NodeKind kind, Node left, Node right) {
       if (isSimpleNameAccess(left)) {
-        return Node.createBinary(.ASSIGN, left.clone(), createBinaryInt(kind, left, right));
+        target.become(Node.createBinary(.ASSIGN, left.clone(), createBinaryInt(kind, left, right)).withRange(target.range));
+        return;
       }
       assert left.kind == .DOT;
-      var target = left.dotTarget();
-      var name = left.dotName();
-      var temporaryName = Node.createName("$temp");
-      var dot = Node.createDot(temporaryName, name.replaceWith(null));
-      return Node.createLet(
-        Node.createVariable(temporaryName.clone(), null, target.replaceWith(null)),
-        Node.createBinary(.ASSIGN, dot, createBinaryInt(kind, dot.clone(), right)).withType(cache.intType)).withType(cache.intType);
+      var current = target;
+      var parent = current.parent;
+      while (parent.kind != .BLOCK) {
+        current = parent;
+        parent = parent.parent;
+      }
+      var name = "$temp" + nextTempID; nextTempID++;
+      var symbol = resolver.createSymbol(name, .LOCAL_VARIABLE);
+      var reference = Node.createName(name).withSymbol(symbol);
+      var property = Node.createDot(reference, left.dotName().replaceWith(null));
+      symbol.node = Node.createVariable(reference.clone(), Node.createType(cache.intType), null).withSymbol(symbol);
+      parent.insertChild(parent.children.indexOf(current), Node.createVariableCluster(Node.createType(cache.intType), [symbol.node]));
+      target.become(Node.createSequence([
+        Node.createBinary(.ASSIGN, reference.clone(), left.dotTarget().replaceWith(null)),
+        Node.createBinary(.ASSIGN, property.clone(), createBinaryInt(kind, property, right))]).withRange(target.range));
+      if (options.jsMangle) {
+        namingGroupIndexForSymbol.set(symbol.uniqueID, localVariableUnionFind.allocate());
+        unionVariableWithFunction(reference);
+      }
     }
 
     bool alwaysConvertsOperandsToInt(NodeKind kind) {

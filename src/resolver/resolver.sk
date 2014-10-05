@@ -38,16 +38,16 @@ class ResolveContext {
 }
 
 class Resolver {
-  var cache = TypeCache();
   var context = ResolveContext();
   ConstantFolder constantFolder = null;
-  List<Symbol> allSymbols = [];
   List<Node> parsedDeclarations = null;
   List<Node> parsedBlocks = null;
   Type typeContext = null;
   Type resultType = null;
-  Log log;
-  CompilerOptions options;
+  final List<Symbol> allSymbols = [];
+  final var cache = TypeCache();
+  final Log log;
+  final CompilerOptions options;
 
   void run(Node program) {
     assert program.kind == .PROGRAM;
@@ -163,7 +163,7 @@ class Resolver {
 
     // Also introduce a scope on object declarations for the type parameters
     // and on function declarations and lambda expressions for the arguments
-    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == .LAMBDA || node.kind.isLoop() || node.kind == .LET) {
+    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == .LAMBDA || node.kind.isLoop()) {
       scope = Scope(scope);
       node.scope = scope;
     }
@@ -284,7 +284,8 @@ class Resolver {
       var previous = node;
       for (var sibling = node.sibling; sibling != null; sibling = sibling.sibling) {
         if (sibling.kind == .VARIABLE || sibling.kind.isFunction()) {
-          Symbol disconnected = sibling.symbol = createSymbol(symbol.name, .OTHER);
+          Symbol disconnected = createSymbol(symbol.name, .OTHER);
+          sibling.symbol = disconnected;
           disconnected.enclosingSymbol = symbol.enclosingSymbol;
           disconnected.node = sibling;
           previous.sibling = sibling.sibling;
@@ -527,7 +528,6 @@ class Resolver {
       case .STRING { node.type = cache.stringType; }
       case .LIST { resolveList(node); }
       case .DOT { resolveDot(node); }
-      case .LET { resolveLet(node); }
       case .CALL { resolveCall(node); }
       case .SUPER_CALL { resolveSuperCall(node); }
       case .ERROR {} // Ignore parse errors
@@ -608,8 +608,6 @@ class Resolver {
       if (node.hasChildren()) {
         checkUnusedExpression(node.lastChild());
       }
-    } else if (kind == .LET) {
-      checkUnusedExpression(node.letValue());
     } else if (!node.type.isError(cache) && !kind.isCall() && !kind.isUnaryStorageOperator() && !kind.isBinaryStorageOperator()) {
       semanticWarningUnusedExpression(log, node.range);
     }
@@ -631,6 +629,16 @@ class Resolver {
       semanticErrorStorageToProtectedSymbol(log, node.range, "const");
     } else if (node.symbol.isFinal()) {
       semanticErrorStorageToProtectedSymbol(log, node.range, "final");
+    }
+  }
+
+  void checkStorageOperator(Node node) {
+    var parent = node.parent;
+    while (parent.kind == .SEQUENCE) {
+      parent = parent.parent;
+    }
+    if (parent.kind != .EXPRESSION && parent.kind != .FOR) {
+      semanticErrorNestedStorageOperator(log, node.range);
     }
   }
 
@@ -1262,14 +1270,7 @@ class Resolver {
         semanticErrorVarMissingValue(log, node.declarationName().range);
         symbol.type = cache.errorType;
       } else {
-        if (node.parent.kind == .LET) {
-          var oldScope = context.scope;
-          context.scope = oldScope.lexicalParent;
-          resolveAsParameterizedExpression(value);
-          context.scope = oldScope;
-        } else {
-          resolveAsParameterizedExpression(value);
-        }
+        resolveAsParameterizedExpression(value);
         var type = value.type;
         if (type.isNull(cache) || type.isVoid(cache)) {
           semanticErrorVarBadType(log, node.declarationName().range, type);
@@ -1323,8 +1324,9 @@ class Resolver {
   }
 
   void initializeParameter(Symbol symbol) {
-    var type = symbol.type = Type(symbol);
+    var type = Type(symbol);
     var bound = symbol.node.parameterBound();
+    symbol.type = type;
 
     // Type parameters can optionally have a single interface as an upper bound.
     // This forces all parameterizations to implement that interface and allows
@@ -2618,13 +2620,6 @@ class Resolver {
     }
   }
 
-  void resolveLet(Node node) {
-    var value = node.letValue();
-    resolve(node.letVariable(), null);
-    resolveAsExpressionWithTypeContext(value, typeContext);
-    node.type = value.type;
-  }
-
   void resolveCall(Node node) {
     var value = node.callValue();
     var arguments = node.callArguments();
@@ -2986,9 +2981,7 @@ class Resolver {
     }
 
     else if (kind.isUnaryStorageOperator()) {
-      if (node.parent.kind.isExpression()) {
-        semanticErrorNestedStorageOperator(log, node.range);
-      }
+      checkStorageOperator(node);
       if (!type.isEnum() && type.isNumeric(cache)) {
         checkStorage(value);
         node.type = type;
@@ -3069,8 +3062,8 @@ class Resolver {
     // Special-case assignment logic
     if (kind.isBinaryStorageOperator()) {
       resolveAsParameterizedExpression(left);
-      if (!left.type.isError(cache) && node.parent.kind.isExpression()) {
-        semanticErrorNestedStorageOperator(log, node.range);
+      if (!left.type.isError(cache)) {
+        checkStorageOperator(node);
       }
 
       if (kind == .ASSIGN || left.type.isNumeric(cache)) {

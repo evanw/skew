@@ -247,18 +247,14 @@ Foo bar() {
     this.foo = 0;
   }
   foo = function(baz) {
-    (function($temp) {
-      return $temp.foo = $temp.foo + 1 | 0;
-    })(bar());
-    (function($temp) {
-      return $temp.foo = $temp.foo - 1 | 0;
-    })(bar());
-    (function($temp) {
-      return $temp.foo = $temp.foo + 1 | 0;
-    })(bar());
-    (function($temp) {
-      return $temp.foo = $temp.foo - 1 | 0;
-    })(bar());
+    var $temp0;
+    $temp0 = bar(), $temp0.foo = $temp0.foo + 1 | 0;
+    var $temp1;
+    $temp1 = bar(), $temp1.foo = $temp1.foo - 1 | 0;
+    var $temp2;
+    $temp2 = bar(), $temp2.foo = $temp2.foo + 1 | 0;
+    var $temp3;
+    $temp3 = bar(), $temp3.foo = $temp3.foo - 1 | 0;
   };
   function bar() {
     return new Foo();
@@ -344,22 +340,16 @@ Foo baz() {
     this.foo = 0;
   };
   Foo.prototype.bar = function() {
-    var $this = this;
-    (function($temp) {
-      return $temp.foo = $temp.foo + $this.foo | 0;
-    })(baz());
-    (function($temp) {
-      return $temp.foo = $temp.foo - $this.foo | 0;
-    })(baz());
-    (function($temp) {
-      return $temp.foo = $imul($temp.foo, $this.foo);
-    })(baz());
-    (function($temp) {
-      return $temp.foo = $temp.foo / $this.foo | 0;
-    })(baz());
-    (function($temp) {
-      return $temp.foo = $temp.foo % $this.foo | 0;
-    })(baz());
+    var $temp0;
+    $temp0 = baz(), $temp0.foo = $temp0.foo + this.foo | 0;
+    var $temp1;
+    $temp1 = baz(), $temp1.foo = $temp1.foo - this.foo | 0;
+    var $temp2;
+    $temp2 = baz(), $temp2.foo = $imul($temp2.foo, this.foo);
+    var $temp3;
+    $temp3 = baz(), $temp3.foo = $temp3.foo / this.foo | 0;
+    var $temp4;
+    $temp4 = baz(), $temp4.foo = $temp4.foo % this.foo | 0;
   };
   function baz() {
     return new Foo();
@@ -379,44 +369,6 @@ export void test() {
     var foo = (1, 2);
     foo = (1, 2);
     (1, 2), (3, 4);
-  };
-}());
-");
-
-testJS("
-export void test() {
-  int y = let x = 1 in let x = x + 1 in x + 1;
-}
-", "
-(function() {
-  test = function() {
-    var y = function(x) {
-      return function(x) {
-        return x + 1 | 0;
-      }(x + 1 | 0);
-    }(1);
-  };
-}());
-");
-
-testJS("
-export void test() {
-  let x = 0 in x;
-  let x = 0 in x, 1;
-  1, let x = 0 in x, 1;
-}
-", "
-(function() {
-  test = function() {
-    (function(x) {
-      return x;
-    })(0);
-    (function(x) {
-      return x;
-    })(0), 1;
-    1, function(x) {
-      return x;
-    }(0), 1;
   };
 }());
 ");
@@ -468,27 +420,6 @@ export class Foo {
     this.bar = function() {
       return $this.foo;
     };
-  };
-}());
-");
-
-testJS("
-export class Foo {
-  int foo;
-  export int bar() {
-    return let x = foo in x + foo;
-  }
-}
-", "
-(function() {
-  Foo = function(_0) {
-    this.foo = _0;
-  };
-  Foo.prototype.bar = function() {
-    var $this = this;
-    return function(x) {
-      return x + $this.foo | 0;
-    }(this.foo);
   };
 }());
 ");

@@ -878,23 +878,6 @@ void createParser() {
     return parseType(context);
   };
 
-  // Let expressions
-  var inParselet = pratt.parselet(.IN, 0);
-  pratt.parselet(.LET, Precedence.LOWEST).prefix = context => {
-    var token = context.next();
-    var name = parseName(context);
-    if (name == null || !context.expect(.ASSIGN)) {
-      return Node.createError().withRange(context.spanSince(token.range));
-    }
-    var initial = pratt.parseIgnoringParselet(context, Precedence.LOWEST, inParselet);
-    var variable = Node.createVariable(name, Node.createVar(), initial).withRange(context.spanSince(token.range));
-    if (initial.kind.isError() || !context.expect(.IN)) {
-      return Node.createError().withRange(context.spanSince(token.range));
-    }
-    var value = pratt.parse(context, Precedence.COMMA);
-    return Node.createLet(variable, value).withRange(context.spanSince(token.range));
-  };
-
   // Super call expressions
   pratt.parselet(.SUPER, Precedence.LOWEST).prefix = context => parseSuperCall(context);
 }

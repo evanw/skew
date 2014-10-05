@@ -25,7 +25,6 @@
 "inline"                      INLINE;
 "interface"                   INTERFACE;
 "is"                          IS;
-"let"                         LET;
 "namespace"                   NAMESPACE;
 "new"                         NEW;
 "null"                        NULL;

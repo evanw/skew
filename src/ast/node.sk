@@ -54,7 +54,6 @@ enum NodeKind {
   STRING,
   LIST,
   DOT,
-  LET,
   CALL,
   SUPER_CALL,
   ERROR,

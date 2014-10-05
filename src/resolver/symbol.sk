@@ -170,9 +170,14 @@ class Symbol {
   //
   List<Symbol> sortedParameters = null;
 
-  // Give each symbol a unique integer as a hash code
-  static var nextUniqueID = 0;
-  var uniqueID = nextUniqueID++;
+  // Give each type a unique integer as a hash code
+  static var nextUniqueID = -1;
+  var uniqueID = generateUniqueID();
+
+  static int generateUniqueID() {
+    nextUniqueID++;
+    return nextUniqueID;
+  }
 
   void sortParametersByDependencies() {
     sortedParameters = parameters.clone();

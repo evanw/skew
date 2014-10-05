@@ -14,7 +14,7 @@ namespace InstanceToStaticPass {
         // Recursively replace "this" with the new explicit argument. This must
         // be done after all call sites are updated in case that step introduced
         // more "this" expressions.
-        var thisSymbol = Symbol("this", .LOCAL_VARIABLE);
+        var thisSymbol = resolver.createSymbol("this", .LOCAL_VARIABLE);
         thisSymbol.type = enclosingSymbol.type;
         var replacedThis = recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
 
@@ -31,7 +31,6 @@ namespace InstanceToStaticPass {
           symbol.type = resolver.cache.functionType(symbol.type.resultType(), arguments);
           thisSymbol.node = Node.createVariable(Node.createName("this").withSymbol(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol);
           symbol.node.functionArguments().insertChild(0, thisSymbol.node);
-          resolver.allSymbols.push(thisSymbol);
         }
 
         // Update all call sites

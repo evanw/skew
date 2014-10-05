@@ -101,13 +101,13 @@ export namespace frontend {
   }
 
   export int main(List<string> args) {
-    List<string> inputs = [];
-    List<string> prepend = [];
-    List<string> append = [];
-    var flags = Flags();
+    final List<string> inputs = [];
+    final List<string> prepend = [];
+    final List<string> append = [];
+    final var flags = Flags();
 
     for (var i = 0; i < args.size(); i++) {
-      var arg = args.get(i);
+      final var arg = args.get(i);
 
       // Ignore empty arguments
       if (arg.size() == 0) continue;
@@ -158,9 +158,9 @@ export namespace frontend {
     }
 
     // Translate frontend flags to compiler options
-    var options = CompilerOptions();
-    var optimizeJS = flags.optimize && target == .JAVASCRIPT;
-    var minifyJS = flags.jsMinify && target == .JAVASCRIPT;
+    final var options = CompilerOptions();
+    final var optimizeJS = flags.optimize && target == .JAVASCRIPT;
+    final var minifyJS = flags.jsMinify && target == .JAVASCRIPT;
     options.targetFormat = target;
     options.removeAsserts = flags.optimize;
     options.outputFile = flags.outputFile;
@@ -175,11 +175,11 @@ export namespace frontend {
     options.append = readSources(append); if (options.append == null) return 1;
 
     // Run the compilation
-    var compiler = Compiler();
-    var result = compiler.compile(options);
+    final var compiler = Compiler();
+    final var result = compiler.compile(options);
+    final var log = compiler.log;
 
     // Print any errors and warnings
-    var log = compiler.log;
     for (var i = 0; i < log.diagnostics.size(); i++) {
       var diagnostic = log.diagnostics.get(i);
       if (!diagnostic.range.isEmpty()) {

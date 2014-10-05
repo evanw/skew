@@ -1,14 +1,14 @@
 class TypeCache {
-  var globalType = createType(Symbol("<global>", .GLOBAL_NAMESPACE), 0);
-  var nullType = createType(Symbol("null", .OTHER), 0);
-  var voidType = createType(Symbol("void", .OTHER_TYPE), .IMPORT);
+  final var globalType = createType(Symbol("<global>", .GLOBAL_NAMESPACE), 0);
+  final var nullType = createType(Symbol("null", .OTHER), 0);
+  final var voidType = createType(Symbol("void", .OTHER_TYPE), .IMPORT);
 
   // All expressions that have syntax and/or semantic errors have this type,
   // which silences all further errors related to that expression. When the
   // compiler comes a cross a symbol or expression of this type, it just skips
   // over it because an error has already been logged and further errors will
   // most likely just be noise.
-  var errorType = createType(Symbol("<error>", .OTHER), 0);
+  final var errorType = createType(Symbol("<error>", .OTHER), 0);
 
   // These are defined in the standard library
   Type intType = null;
@@ -19,7 +19,7 @@ class TypeCache {
   Type listType = null;
   Type toStringType = null;
 
-  var hashTable = IntMap<List<Type>>();
+  final var hashTable = IntMap<List<Type>>();
 
   static Type createType(Symbol symbol, SymbolFlag flags) {
     var type = Type(symbol);

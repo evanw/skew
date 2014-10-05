@@ -257,12 +257,6 @@ in Node {
     return Node(.DOT).withChildren([value, name]);
   }
 
-  static Node createLet(Node variable, Node value) {
-    assert variable.kind == .VARIABLE;
-    assert value.kind.isExpression();
-    return Node(.LET).withChildren([variable, value]);
-  }
-
   static Node createCall(Node value, List<Node> arguments) {
     assert value.kind.isExpression();
     assert checkAllNodeKinds(arguments, nodeKindIsExpression);

@@ -4,25 +4,25 @@ class DeadCodeRemovalPass {
 
   static void run(Node program, CompilerOptions options, Resolver resolver) {
     var pass = DeadCodeRemovalPass(options);
+    var allSymbols = resolver.allSymbols;
 
     // Include all exported symbols
-    var symbols = resolver.allSymbols;
-    for (var i = 0; i < symbols.size(); i++) {
-      var symbol = symbols.get(i);
+    for (var i = 0; i < allSymbols.size(); i++) {
+      var symbol = allSymbols.get(i);
       if (symbol.isExport() || symbol.isVirtual()) {
         pass.includeSymbol(symbol);
       }
     }
 
     // Remove symbols that aren't included
-    for (var i = 0; i < symbols.size(); i++) {
-      var symbol = symbols.get(i);
+    for (var i = 0; i < allSymbols.size(); i++) {
+      var symbol = allSymbols.get(i);
       var node = symbol.node;
       if (node != null && !pass.includedSymbols.has(symbol.uniqueID)) {
         if (symbol.enclosingSymbol != null) {
           symbol.enclosingSymbol.type.members.remove(symbol.name);
         }
-        symbols.remove(i);
+        allSymbols.remove(i);
         node.remove();
         i--;
       }

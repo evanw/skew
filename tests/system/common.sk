@@ -65,7 +65,6 @@ export void start() {
   core.testFunctions();
   core.testGenerics();
   core.testLambdas();
-  core.testLet();
   core.testLists();
   core.testMerging();
   core.testModifiers();
