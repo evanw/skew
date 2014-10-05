@@ -4900,7 +4900,7 @@
       Resolver.resolveVariable($this, node);
       break;
     case 6:
-      Resolver.resolveNodes($this, Node.clusterVariables(node));
+      Resolver.resolveVariableCluster($this, node);
       break;
     case 17:
       Resolver.initializeSymbol($this, node.symbol);
@@ -6250,6 +6250,20 @@
       }
     } else if (symbol.type !== $this.cache.errorType && node.parent.kind === 6 && symbol.kind !== 20) {
       Node.replaceChild(node, 2, Node.withType(Resolver.createDefaultValue($this, symbol.type, node.children[0].range), symbol.type));
+    }
+  };
+  Resolver.resolveVariableCluster = function($this, node) {
+    var variables = Node.clusterVariables(node);
+    Resolver.resolveNodes($this, variables);
+    if (node.parent.kind === 20) {
+      var first = variables[0].symbol;
+      for (var i = 1; i < variables.length; i = i + 1 | 0) {
+        var current = variables[i].symbol;
+        if (first.type !== $this.cache.errorType && current.type !== $this.cache.errorType && first.type !== current.type) {
+          Log.error($this.log, node.range, 'All for loop variables must have the same type ("' + first.name + '" has type "' + Type.toString(first.type) + '" but "' + current.name + '" has type "' + Type.toString(current.type) + '")');
+          break;
+        }
+      }
     }
   };
   Resolver.resolveAlias = function($this, node) {

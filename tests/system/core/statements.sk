@@ -463,4 +463,14 @@ assert const bar;
              ~~~
 ");
 
+test("
+void foo() {
+  for (var a = 0, b = false;;) {}
+}
+", "
+<stdin>:2:8: error: All for loop variables must have the same type (\"a\" has type \"int\" but \"b\" has type \"bool\")
+  for (var a = 0, b = false;;) {}
+       ~~~~~~~~~~~~~~~~~~~~
+");
+
 }}

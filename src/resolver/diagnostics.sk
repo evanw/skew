@@ -362,3 +362,9 @@ void semanticErrorAbstractSuperCall(Log log, Range range, Range overridden) {
 void semanticErrorNestedStorageOperator(Log log, Range range) {
   log.error(range, "Assignment expressions are not allowed inside other expressions");
 }
+
+void semanticErrorForVariablesMustBeSameType(Log log, Range range, string firstName, Type firstType, string secondName, Type secondType) {
+  log.error(range, "All for loop variables must have the same type (" +
+    simpleQuote(firstName) + " has " + typeToText(firstType) + " but " +
+    simpleQuote(secondName) + " has " + typeToText(secondType) + ")");
+}

@@ -2221,9 +2221,23 @@ class Resolver {
   }
 
   void resolveVariableCluster(Node node) {
+    var variables = node.clusterVariables();
+
     // This must not initialize node.clusterType() here for circular declaration
     // detection to work correctly ("foo foo;" is a circular declaration)
-    resolveNodes(node.clusterVariables());
+    resolveNodes(variables);
+
+    // Some code emission targets require identical types for loop variables
+    if (node.parent.kind == .FOR) {
+      var first = variables.get(0).symbol;
+      for (var i = 1; i < variables.size(); i++) {
+        var current = variables.get(i).symbol;
+        if (!first.type.isError(cache) && !current.type.isError(cache) && first.type != current.type) {
+          semanticErrorForVariablesMustBeSameType(log, node.range, first.name, first.type, current.name, current.type);
+          break;
+        }
+      }
+    }
   }
 
   void resolveParameter(Node node) {
