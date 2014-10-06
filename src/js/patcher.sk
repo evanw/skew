@@ -256,7 +256,7 @@ namespace js {
       if (options.jsMangle) {
         switch (node.kind) {
           case .IF { peepholeMangleIf(node); }
-          case .FOR { peepholeMangleBoolean(node.forTest(), .NO_SWAP); }
+          case .FOR { peepholeMangleFor(node); }
           case .GREATER_THAN_OR_EQUAL, .LESS_THAN_OR_EQUAL { peepholeMangleBinaryRelational(node); }
           case .WHILE, .DO_WHILE { peepholeMangleBoolean(node.whileTest(), .NO_SWAP); }
           case .BLOCK { peepholeMangleBlock(node); }
@@ -409,6 +409,13 @@ namespace js {
 
         // "if (a) b;" => "a && b;"
         else node.become(Node.createExpression(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), value)));
+      }
+    }
+
+    void peepholeMangleFor(Node node) {
+      var test = node.forTest();
+      if (test != null) {
+        peepholeMangleBoolean(test, .NO_SWAP);
       }
     }
 

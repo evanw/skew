@@ -3175,7 +3175,7 @@
         js.Patcher.peepholeMangleIf($this, node);
         break;
       case 20:
-        js.Patcher.peepholeMangleBoolean($this, node.children[1], 1);
+        js.Patcher.peepholeMangleFor($this, node);
         break;
       case 72:
       case 76:
@@ -3300,6 +3300,12 @@
       } else {
         Node.become(node, Node.withChildren(new Node(30), [Node.createBinary(77, Node.replaceWith(test, null), value)]));
       }
+    }
+  };
+  js.Patcher.peepholeMangleFor = function($this, node) {
+    var test = node.children[1];
+    if (test !== null) {
+      js.Patcher.peepholeMangleBoolean($this, test, 1);
     }
   };
   js.Patcher.isJumpImplied = function($this, node, kind) {

@@ -1,6 +1,14 @@
 namespace js { void testMinify() {
 
 testMinifyJS("
+export void foo() {
+  for (;;) {}
+}
+", "
+(function(){foo=function(){for(;;);}}());
+");
+
+testMinifyJS("
 export class Foo {
   Foo foo = null;
   Foo bar = null;
