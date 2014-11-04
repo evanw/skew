@@ -270,23 +270,6 @@ class InliningGraph {
       }
     }
 
-    // Prevent inlining of functions containing lambda expressions. These
-    // functions may end up capturing their arguments, which means that direct
-    // substitution would lead to incorrect code:
-    //
-    //   inline int fn() foo(int x) {
-    //     return => { x++; return x; };
-    //   }
-    //   export void test() {
-    //     var x = 0;
-    //     var y = foo(x); y();
-    //     var z = foo(x);
-    //   }
-    //
-    if (node.kind == .LAMBDA) {
-      return false;
-    }
-
     var symbol = node.symbol;
     if (symbol != null) {
       symbolCounts.set(symbol.uniqueID, symbolCounts.getOrDefault(symbol.uniqueID, 0) + 1);

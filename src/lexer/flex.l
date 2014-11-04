@@ -17,7 +17,6 @@
 "export"                      EXPORT;
 "false"                       FALSE;
 "final"                       FINAL;
-"fn"                          FN;
 "for"                         FOR;
 "if"                          IF;
 "import"                      IMPORT;
@@ -88,7 +87,6 @@
 "<"                           LESS_THAN;
 ">"                           GREATER_THAN;
 "!"                           NOT;
-"=>"                          LAMBDA;
 "="                           ASSIGN;
 
 ['](\\.|[^\\'])*[']           CHARACTER;

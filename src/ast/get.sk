@@ -301,19 +301,6 @@ in Node {
     return children.get(1);
   }
 
-  List<Node> lambdaArguments() {
-    assert kind == .LAMBDA;
-    assert children.size() >= 1;
-    return children.slice(0, children.size() - 1);
-  }
-
-  Node lambdaBlock() {
-    assert kind == .LAMBDA;
-    assert children.size() >= 1;
-    assert children.get(children.size() - 1).kind == .BLOCK;
-    return children.get(children.size() - 1);
-  }
-
   Node assertValue() {
     assert kind.isAssert();
     assert children.size() == 1;
@@ -328,18 +315,6 @@ in Node {
 
   List<Node> parameterizeTypes() {
     assert kind == .PARAMETERIZE;
-    assert children.size() >= 1;
-    return children.slice(1, children.size());
-  }
-
-  Node functionTypeResult() {
-    assert kind == .FUNCTION_TYPE;
-    assert children.size() >= 1;
-    return children.get(0);
-  }
-
-  List<Node> functionTypeArguments() {
-    assert kind == .FUNCTION_TYPE;
     assert children.size() >= 1;
     return children.slice(1, children.size());
   }
@@ -373,7 +348,7 @@ in Node {
   }
 
   Node returnValue() {
-    assert kind.isReturn();
+    assert kind == .RETURN;
     assert children.size() == 1;
     return children.get(0);
   }

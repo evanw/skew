@@ -40,11 +40,6 @@ enum TokenScan {
   STOP_BEFORE_NEXT_STATEMENT,
 }
 
-enum AllowLambda {
-  LAMBDA_NOT_ALLOWED,
-  LAMBDA_ALLOWED,
-}
-
 // Parser recovery is done by skipping to the next closing token after an error
 bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
   if (context.expect(kind)) {
@@ -81,19 +76,12 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
   return false;
 }
 
-Node parseGroup(ParserContext context, AllowLambda allowLambda) {
+Node parseGroup(ParserContext context) {
   var token = context.current();
   if (!context.expect(.LEFT_PARENTHESIS)) return null;
-  if (allowLambda == .LAMBDA_NOT_ALLOWED || !context.eat(.RIGHT_PARENTHESIS)) {
-    var value = pratt.parse(context, Precedence.LOWEST);
-    scanForToken(context, .RIGHT_PARENTHESIS, .STOP_BEFORE_NEXT_STATEMENT);
-    return value;
-  }
-  if (!context.peek(.LAMBDA)) {
-    context.expect(.LAMBDA);
-    return Node.createError().withRange(context.spanSince(token.range));
-  }
-  return Node.createSequence([]).withRange(context.spanSince(token.range));
+  var value = pratt.parse(context, Precedence.LOWEST);
+  scanForToken(context, .RIGHT_PARENTHESIS, .STOP_BEFORE_NEXT_STATEMENT);
+  return value;
 }
 
 Node parseName(ParserContext context) {
@@ -113,19 +101,6 @@ Node parseBlockOrStatement(ParserContext context, StatementHint hint) {
   if (context.peek(.LEFT_BRACE)) return parseBlock(context, hint);
   var statement = parseStatement(context, hint); if (statement == null) return null;
   return Node.createBlock([statement]).withRange(statement.range);
-}
-
-Node parseLambdaBlock(ParserContext context) {
-  if (context.peek(.LEFT_BRACE)) {
-    return parseBlock(context, .NORMAL);
-  }
-  if (context.peek(.RIGHT_PARENTHESIS) ||
-      context.peek(.COMMA) ||
-      context.peek(.SEMICOLON)) {
-    return Node.createBlock([]);
-  }
-  var value = pratt.parse(context, Precedence.COMMA);
-  return Node.createBlock([Node.createImplicitReturn(value).withRange(value.range)]).withRange(value.range);
 }
 
 Node parseCaseStatement(ParserContext context) {
@@ -388,14 +363,14 @@ Node parseAssert(ParserContext context) {
 
 Node parseSwitch(ParserContext context) {
   var token = context.next();
-  var value = parseGroup(context, .LAMBDA_NOT_ALLOWED); if (value == null) return null;
+  var value = parseGroup(context); if (value == null) return null;
   var block = parseBlock(context, .IN_SWITCH); if (block == null) return null;
   return Node.createSwitch(value, block.removeChildren()).withRange(context.spanSince(token.range));
 }
 
 Node parseWhile(ParserContext context) {
   var token = context.next();
-  var value = parseGroup(context, .LAMBDA_NOT_ALLOWED); if (value == null) return null;
+  var value = parseGroup(context); if (value == null) return null;
   var block = parseBlockOrStatement(context, .NORMAL); if (block == null) return null;
   return Node.createWhile(value, block).withRange(context.spanSince(token.range));
 }
@@ -404,14 +379,14 @@ Node parseDoWhile(ParserContext context) {
   var token = context.next();
   var block = parseBlockOrStatement(context, .NORMAL); if (block == null) return null;
   if (!context.expect(.WHILE)) return null;
-  var value = parseGroup(context, .LAMBDA_NOT_ALLOWED);
+  var value = parseGroup(context);
   scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
   return Node.createDoWhile(block, value).withRange(context.spanSince(token.range));
 }
 
 Node parseIf(ParserContext context) {
   var token = context.next();
-  var value = parseGroup(context, .LAMBDA_NOT_ALLOWED); if (value == null) return null;
+  var value = parseGroup(context); if (value == null) return null;
   var trueBlock = parseBlockOrStatement(context, .NORMAL); if (trueBlock == null) return null;
   Node falseBlock = null;
   if (context.eat(.ELSE)) {
@@ -553,34 +528,13 @@ Node parseAlias(ParserContext context) {
   return Node.createAlias(name, value).withRange(context.spanSince(token.range));
 }
 
-bool looksLikeLambdaArguments(Node node) {
-  if (node.kind == .SEQUENCE) {
-    for (var i = 0; i < node.children.size(); i++) {
-      if (node.children.get(i).kind != .NAME) {
-        return false;
-      }
-    }
-    return true;
-  }
-  return false;
-}
-
-Node createLambdaFromNames(List<Node> names, Node block) {
-  for (var i = 0; i < names.size(); i++) {
-    var name = names.get(i);
-    assert name.kind == .NAME;
-    names.set(i, Node.createVariable(name, null, null).withRange(name.range));
-  }
-  return Node.createLambda(names, block);
-}
-
 bool looksLikeType(Node node) {
   switch (node.kind) {
     case .DOT {
       var target = node.dotTarget();
       return target != null && looksLikeType(target);
     }
-    case .NAME, .PARAMETERIZE, .FUNCTION_TYPE { return true; }
+    case .NAME, .PARAMETERIZE { return true; }
     default { return false; }
   }
 }
@@ -744,25 +698,11 @@ class ListParselet : IPrefixParselet {
 class ParenthesisParselet : IPrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.current();
-    var type = parseGroup(context, .LAMBDA_ALLOWED);
-
-    // Lambda
-    if (type.kind == .NAME && context.eat(.LAMBDA)) {
-      var block = parseLambdaBlock(context);
-      return createLambdaFromNames([type], block).withRange(context.spanSince(token.range));
-    }
-    if (looksLikeLambdaArguments(type) && context.eat(.LAMBDA)) {
-      var block = parseLambdaBlock(context);
-      return createLambdaFromNames(type.removeChildren(), block).withRange(context.spanSince(token.range));
-    }
-
-    // Cast
+    var type = parseGroup(context);
     if (looksLikeType(type)) {
       var value = pratt.parse(context, Precedence.UNARY_PREFIX);
       return Node.createCast(type, value).withRange(context.spanSince(token.range));
     }
-
-    // Group
     return type;
   }
 }
@@ -833,7 +773,7 @@ class ParameterizeParselet : IInfixParselet {
 class UntypedParselet : IPrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.next();
-    var value = parseGroup(context, .LAMBDA_NOT_ALLOWED);
+    var value = parseGroup(context);
     return (value == null ? Node.createError() : Node.createUntyped(value)).withRange(context.spanSince(token.range));
   }
 }

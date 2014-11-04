@@ -164,11 +164,6 @@ in Node {
     return Node(.RETURN).withChildren([value]);
   }
 
-  static Node createImplicitReturn(Node value) {
-    assert value == null || value.kind.isExpression();
-    return Node(.IMPLICIT_RETURN).withChildren([value]);
-  }
-
   static Node createBreak() {
     return Node(.BREAK);
   }
@@ -300,13 +295,6 @@ in Node {
     return Node(.IMPLICIT_CAST).withChildren([type, value]);
   }
 
-  static Node createLambda(List<Node> arguments, Node block) {
-    assert checkAllNodeKinds(arguments, NodeKindIs(.VARIABLE));
-    assert block.kind == .BLOCK;
-    arguments.push(block);
-    return Node(.LAMBDA).withChildren(arguments);
-  }
-
   // Untyped nodes use the error type but don't report an error, thus silently
   // allowing the value to be used in any way. This is useful for writing the
   // binding layer for native code generation.
@@ -317,13 +305,6 @@ in Node {
 
   static Node createVar() {
     return Node(.VAR);
-  }
-
-  static Node createFunctionType(Node result, List<Node> arguments) {
-    assert result.kind.isExpression();
-    assert checkAllNodeKinds(arguments, NodeKindIsExpression());
-    arguments.unshift(result);
-    return Node(.FUNCTION_TYPE).withChildren(arguments);
   }
 
   static Node createUnary(NodeKind kind, Node value) {

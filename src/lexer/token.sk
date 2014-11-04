@@ -29,8 +29,6 @@ void prepareTokens(List<Token> tokens) {
       if (topKind == .LESS_THAN && tokenKind != .LESS_THAN &&
           tokenKind != .IDENTIFIER && tokenKind != .IS &&
           tokenKind != .COMMA && tokenKind != .DOT &&
-          tokenKind != .FN && tokenKind != .LEFT_PARENTHESIS &&
-          tokenKind != .RIGHT_PARENTHESIS &&
           !tokenStartsWithGreaterThan) {
         stack.pop();
       } else {

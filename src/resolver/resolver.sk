@@ -169,16 +169,16 @@ class Resolver {
     }
 
     // Also introduce a scope on object declarations for the type parameters
-    // and on function declarations and lambda expressions for the arguments
-    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind == .LAMBDA || node.kind.isLoop()) {
+    // and on function declarations for the arguments
+    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind.isLoop()) {
       scope = Scope(scope);
       node.scope = scope;
     }
 
-    // Automatically traverse the children of all nodes, even though this pass
-    // only initializing scopes. There will be scopes with statements inside
-    // some expressions due to lambda expressions.
-    if (node.hasChildren()) {
+    // Automatically traverse the children of all nodes. There can't be any
+    // statements inside expressions since we currently don't have lambda
+    // expressions.
+    if (node.hasChildren() && !node.kind.isExpression()) {
       for (var i = 0; i < node.children.size(); i++) {
         var child = node.children.get(i);
         if (child != null) setupScopesAndSymbols(child, scope);
@@ -516,7 +516,7 @@ class Resolver {
       case .FOR_EACH { resolveForEach(node); }
       case .WHILE { resolveWhile(node); }
       case .DO_WHILE { resolveWhile(node); }
-      case .RETURN, .IMPLICIT_RETURN { resolveReturn(node); }
+      case .RETURN { resolveReturn(node); }
       case .BREAK { resolveBreak(node); }
       case .CONTINUE { resolveContinue(node); }
       case .ASSERT, .ASSERT_CONST { resolveAssert(node); }
@@ -541,10 +541,8 @@ class Resolver {
       case .SEQUENCE { resolveSequence(node); }
       case .PARAMETERIZE { resolveParameterize(node); }
       case .CAST { resolveCast(node); }
-      case .LAMBDA { resolveLambda(node); }
       case .UNTYPED { resolveUntyped(node); }
       case .VAR { resolveVar(node); }
-      case .FUNCTION_TYPE { resolveFunctionType(node); }
 
       case .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
         resolveUnaryOperator(node);
@@ -1208,7 +1206,7 @@ class Resolver {
       }
 
       // Take the variable type from the surrounding context
-      else if (symbol.enclosingSymbol != null) {
+      else {
         assert symbol.isEnumValue();
         var type = symbol.enclosingSymbol.type;
         variableType = Node.createType(type).withSymbol(symbol.enclosingSymbol);
@@ -1256,14 +1254,6 @@ class Resolver {
             symbol.constant = IntContent(type.isEnumFlags() ? 1 : 0);
           }
         }
-      }
-
-      // If there is still no variable type, assume an error has been logged
-      // already and just use the error type. This is the case when a lambda
-      // expression lacks type context.
-      else {
-        assert node.parent.kind == .LAMBDA;
-        variableType = Node.createType(cache.errorType);
       }
 
       assert variableType != null;
@@ -2186,7 +2176,7 @@ class Resolver {
     }
 
     // Literals are always pure
-    return kind.isConstant() || kind == .LAMBDA;
+    return kind.isConstant();
   }
 
   void resolveVariable(Node node) {
@@ -2324,19 +2314,7 @@ class Resolver {
 
     // Check the return value
     if (value != null) {
-      // Automatically convert implicit return statements inside lambda
-      // expressions that return void into expression statements. This
-      // prevents type errors here:
-      //
-      //   void foo() {}
-      //   void fn() bar = () => foo();
-      //
-      if (node.kind == .IMPLICIT_RETURN && resultType.isVoid(cache)) {
-        node.become(Node.createExpression(value.remove()));
-        resolve(node, null);
-      } else {
-        resolveAsExpressionWithConversion(value, resultType, .IMPLICIT_CAST);
-      }
+      resolveAsExpressionWithConversion(value, resultType, .IMPLICIT_CAST);
     }
 
     // The return value may be missing only when the return type is void
@@ -2631,81 +2609,55 @@ class Resolver {
     var value = node.callValue();
     var arguments = node.callArguments();
 
-    // Special-case immediately-invoked lambdas to provide type context from the arguments
-    if (value.kind == .LAMBDA && typeContext != null) {
-      resolveNodesAsExpressions(arguments);
+    assert value.kind.isExpression();
+    resolve(value, null);
+    checkIsParameterized(value);
+    var valueType = value.type;
 
-      // Avoid reporting further errors
-      if (typeContext.isError(cache)) {
-        resolveAsParameterizedExpression(value);
+    // Avoid reporting further errors
+    if (valueType.isError(cache)) {
+      resolveNodesAsExpressions(arguments);
+      return;
+    }
+
+    // Types are constructed by calling the type, which forwards to the constructor
+    if (value.kind.isType()) {
+      var member = valueType.constructor();
+      if (member == null) {
+        semanticErrorUnconstructableType(log, value.range, valueType);
+        resolveNodesAsExpressions(arguments);
         return;
       }
 
-      // Use the argument types as type context for the value being called
-      List<Type> argumentTypes = [];
-      for (var i = 0; i < arguments.size(); i++) {
-        var type = arguments.get(i).type;
-        if (type.isError(cache)) {
-          resolveAsParameterizedExpression(value);
-          return;
-        }
-        argumentTypes.push(type);
+      // Cannot instantiate abstract types
+      if (valueType.symbol.isAbstract()) {
+        var reason = valueType.symbol.reasonForAbstract;
+        semanticErrorAbstractNew(log, value.range, valueType, reason.node.declarationName().range, reason.fullName());
+        resolveNodesAsExpressions(arguments);
+        return;
       }
-      resolveAsExpressionWithConversion(value, cache.functionType(typeContext, argumentTypes), .IMPLICIT_CAST);
-    }
 
-    // Otherwise, resolve the value and use that to provide type context to the arguments
-    else {
-      assert value.kind.isExpression();
-      resolve(value, null);
-      checkIsParameterized(value);
-      var valueType = value.type;
+      initializeMember(member);
+      node.symbol = member.symbol;
+      valueType = member.type;
 
       // Avoid reporting further errors
       if (valueType.isError(cache)) {
         resolveNodesAsExpressions(arguments);
         return;
       }
-
-      // Types are constructed by calling the type, which forwards to the constructor
-      if (value.kind.isType()) {
-        var member = valueType.constructor();
-        if (member == null) {
-          semanticErrorUnconstructableType(log, value.range, valueType);
-          resolveNodesAsExpressions(arguments);
-          return;
-        }
-
-        // Cannot instantiate abstract types
-        if (valueType.symbol.isAbstract()) {
-          var reason = valueType.symbol.reasonForAbstract;
-          semanticErrorAbstractNew(log, value.range, valueType, reason.node.declarationName().range, reason.fullName());
-          resolveNodesAsExpressions(arguments);
-          return;
-        }
-
-        initializeMember(member);
-        node.symbol = member.symbol;
-        valueType = member.type;
-
-        // Avoid reporting further errors
-        if (valueType.isError(cache)) {
-          resolveNodesAsExpressions(arguments);
-          return;
-        }
-      }
-
-      // Can only call an instance of a function type
-      if (!valueType.isFunction()) {
-        semanticErrorInvalidCall(log, value.range, valueType);
-        resolveNodesAsExpressions(arguments);
-        return;
-      }
-
-      // Set the result type now even if the arguments are incorrect
-      node.type = valueType.resultType();
-      resolveArguments(arguments, valueType.argumentTypes(), node.range, value.range);
     }
+
+    // Can only call an instance of a function type
+    if (!valueType.isFunction()) {
+      semanticErrorInvalidCall(log, value.range, valueType);
+      resolveNodesAsExpressions(arguments);
+      return;
+    }
+
+    // Set the result type now even if the arguments are incorrect
+    node.type = valueType.resultType();
+    resolveArguments(arguments, valueType.argumentTypes(), node.range, value.range);
   }
 
   void resolveSuperCall(Node node) {
@@ -2819,108 +2771,12 @@ class Resolver {
     node.type = type.type;
   }
 
-  void resolveLambda(Node node) {
-    var oldResultType = resultType;
-    var oldLoop = context.loop;
-    resultType = cache.errorType;
-    context.loop = null;
-
-    var arguments = node.lambdaArguments();
-    var block = node.lambdaBlock();
-    var inferReturnType = false;
-
-    // If there are no arguments, attempt type inference for the return type
-    if (typeContext == null) {
-      if (arguments.size() == 0) {
-        typeContext = cache.functionType(cache.errorType, []);
-      } else {
-        semanticErrorMissingTypeContext(log, node.range);
-      }
-    }
-
-    // Set the argument types using the type context
-    if (typeContext != null && !typeContext.isError(cache)) {
-      if (!typeContext.isFunction()) {
-        semanticErrorBadLambdaTypeContext(log, node.range, typeContext);
-      } else {
-        // Set the expression type now even if the arguments are incorrect
-        var argumentTypes = typeContext.argumentTypes();
-        resultType = typeContext.resultType();
-        node.type = typeContext;
-
-        // Validate the argument count
-        if (argumentTypes.size() != arguments.size()) {
-          semanticErrorArgumentCount(log, node.range, argumentTypes.size(), arguments.size());
-        }
-
-        // Give each argument variable the corresponding type from the function signature
-        else {
-          for (var i = 0; i < arguments.size(); i++) {
-            assert arguments.get(i).variableType() == null;
-            arguments.get(i).replaceChild(1, Node.createType(argumentTypes.get(i)));
-          }
-        }
-
-        // Missing a return statement is an error
-        if (resultType.isError(cache)) {
-          inferReturnType = true;
-        } else if (!resultType.isVoid(cache) && !block.blockAlwaysEndsWithReturn()) {
-          semanticErrorLambdaMissingReturn(log, node.range, resultType);
-        }
-      }
-    }
-
-    resolveNodes(arguments);
-    resolve(block, null);
-
-    // Attempt to infer the return type after the body has been processed. To
-    // implement return type inference, the type of the lambda is set to a
-    // function type with valid arguments and an error return type. That way
-    // return statements don't try to convert their values and we can collect
-    // and merge the types of all return statements now.
-    if (inferReturnType) {
-      List<Node> returnStatements = [];
-      collectReturnStatements(block, returnStatements);
-
-      // Try to merge all types into a common return type
-      Type commonType = returnStatements.size() == 0 ? cache.voidType : null;
-      for (var i = 0; i < returnStatements.size(); i++) {
-        var value = returnStatements.get(i).returnValue();
-        var type = value != null ? value.type : cache.voidType;
-        if (type.isError(cache)) {
-          commonType = null;
-          break;
-        }
-        if (commonType == null) {
-          commonType = type;
-        } else {
-          var merged = cache.commonImplicitType(commonType, type);
-          if (merged == null) {
-            semanticErrorLambdaReturnTypeInferenceFailed(log, node.range, value.range, commonType, type);
-            commonType = null;
-            break;
-          }
-          commonType = merged;
-        }
-      }
-
-      // Either update the return type or completely remove the function type.
-      // Don't leave a function type around with an error return type.
-      node.type = commonType != null ? cache.functionType(commonType, node.type.argumentTypes()) : cache.errorType;
-    }
-
-    resultType = oldResultType;
-    context.loop = oldLoop;
-  }
-
   static void collectReturnStatements(Node node, List<Node> returnStatements) {
-    if (node.kind.isReturn()) {
+    if (node.kind == .RETURN) {
       returnStatements.push(node);
     }
 
-    // Be careful not to traverse into nested lambdas. Those return statements
-    // aren't the ones we want.
-    else if (node.kind != .LAMBDA && node.hasChildren()) {
+    else if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
         var child = node.children.get(i);
         if (child != null) {
@@ -2936,24 +2792,6 @@ class Resolver {
 
   void resolveVar(Node node) {
     semanticErrorUnexpectedNode(log, node.range, node.kind);
-  }
-
-  void resolveFunctionType(Node node) {
-    var result = node.functionTypeResult();
-    var arguments = node.functionTypeArguments();
-    resolveAsParameterizedType(result);
-    resolveNodesAsVariableTypes(arguments);
-    if (!result.type.isError(cache)) {
-      List<Type> argumentTypes = [];
-      for (var i = 0; i < arguments.size(); i++) {
-        var argumentType = arguments.get(i).type;
-        if (argumentType.isError(cache)) {
-          return;
-        }
-        argumentTypes.push(argumentType);
-      }
-      node.become(Node.createType(cache.functionType(result.type, argumentTypes)).withRange(node.range));
-    }
   }
 
   void resolveUnaryOperator(Node node) {

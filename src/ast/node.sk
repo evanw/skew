@@ -31,7 +31,6 @@ enum NodeKind {
   WHILE,
   DO_WHILE,
   RETURN,
-  IMPLICIT_RETURN,
   BREAK,
   CONTINUE,
   ASSERT,
@@ -61,10 +60,8 @@ enum NodeKind {
   PARAMETERIZE,
   CAST,
   IMPLICIT_CAST,
-  LAMBDA,
   UNTYPED,
   VAR,
-  FUNCTION_TYPE,
 
   // Unary operators
   NOT,
@@ -154,10 +151,6 @@ in NodeKind {
 
   bool isCall() {
     return this >= CALL && this <= SUPER_CALL;
-  }
-
-  bool isReturn() {
-    return this >= RETURN && this <= IMPLICIT_RETURN;
   }
 
   bool isUnaryOperator() {

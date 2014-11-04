@@ -23,7 +23,6 @@ namespace js {
     var currentLine = 0;
     var currentColumn = 0;
     var needsSemicolon = false;
-    var isStartOfExpression = false;
     Source currentSource = null;
     Patcher patcher = null;
     CompilerOptions options = null;
@@ -298,7 +297,6 @@ namespace js {
     }
 
     void emitNode(Node node) {
-      isStartOfExpression = false;
       addMapping(node);
 
       // Separating the case bodies into separate functions makes the JavaScript JIT go faster
@@ -314,7 +312,7 @@ namespace js {
         case .FOR_EACH { emitForEach(node); }
         case .WHILE { emitWhile(node); }
         case .DO_WHILE { emitDoWhile(node); }
-        case .RETURN, .IMPLICIT_RETURN { emitReturn(node); }
+        case .RETURN { emitReturn(node); }
         case .BREAK { emitBreak(node); }
         case .CONTINUE { emitContinue(node); }
         case .ASSERT { emitAssert(node); }
@@ -599,7 +597,6 @@ namespace js {
 
     void emitExpressionStatement(Node node) {
       emit(indent);
-      isStartOfExpression = true;
       emitExpression(node.expressionValue(), .LOWEST);
       emitSemicolonAfterStatement();
     }
@@ -618,8 +615,6 @@ namespace js {
     }
 
     void emitExpression(Node node, Precedence precedence) {
-      var wasStartOfExpression = isStartOfExpression;
-      isStartOfExpression = false;
       addMapping(node);
 
       switch (node.kind) {
@@ -634,14 +629,13 @@ namespace js {
         case .STRING { emit(quoteStringJS(node.asString())); }
         case .LIST { emitList(node); }
         case .DOT { emitDot(node); }
-        case .CALL { isStartOfExpression = wasStartOfExpression; emitCall(node); }
+        case .CALL { emitCall(node); }
         case .SUPER_CALL { emitSuperCall(node); }
-        case .SEQUENCE { isStartOfExpression = wasStartOfExpression; emitSequence(node, precedence); }
-        case .LAMBDA { emitLambda(node, wasStartOfExpression); }
+        case .SEQUENCE { emitSequence(node, precedence); }
         case .UNTYPED { emitExpression(node.untypedValue(), precedence); }
         case .INDEX { emitIndex(node, precedence); }
         case .ASSIGN_INDEX { emitTertiary(node, precedence); }
-        case .CAST, .IMPLICIT_CAST { isStartOfExpression = wasStartOfExpression; emitExpression(node.castValue(), precedence); }
+        case .CAST, .IMPLICIT_CAST { emitExpression(node.castValue(), precedence); }
 
         case
           .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT,
@@ -753,14 +747,6 @@ namespace js {
       if (.COMMA <= precedence) emit("(");
       emitCommaSeparatedExpressions(node.children);
       if (.COMMA <= precedence) emit(")");
-    }
-
-    void emitLambda(Node node, bool wasStartOfExpression) {
-      if (wasStartOfExpression) emit("(");
-      emit("function");
-      emitArgumentVariables(node.lambdaArguments());
-      emitBlock(node.lambdaBlock(), .AFTER_PARENTHESIS, .MUST_KEEP_BRACES);
-      if (wasStartOfExpression) emit(")");
     }
 
     void emitUnary(Node node, Precedence precedence) {

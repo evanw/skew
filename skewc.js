@@ -436,12 +436,6 @@
     }
     return new Node(NodeKind.RETURN).withChildren([value]);
   };
-  Node.createImplicitReturn = function(value) {
-    if (value !== null && !$in._NodeKind_.isExpression(value.kind)) {
-      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:168:5)');
-    }
-    return new Node(NodeKind.IMPLICIT_RETURN).withChildren([value]);
-  };
   Node.createBreak = function() {
     return new Node(NodeKind.BREAK);
   };
@@ -450,35 +444,35 @@
   };
   Node.createAssert = function(kind, value) {
     if (kind !== NodeKind.ASSERT && kind !== NodeKind.ASSERT_CONST) {
-      throw new Error('assert kind == .ASSERT || kind == .ASSERT_CONST; (src/ast/create.sk:181:5)');
+      throw new Error('assert kind == .ASSERT || kind == .ASSERT_CONST; (src/ast/create.sk:176:5)');
     }
     if (!$in._NodeKind_.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:182:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:177:5)');
     }
     return new Node(kind).withChildren([value]);
   };
   Node.createExpression = function(value) {
     if (!$in._NodeKind_.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:187:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:182:5)');
     }
     return new Node(NodeKind.EXPRESSION).withChildren([value]);
   };
   Node.createModifier = function(name, statements) {
     if (name.kind !== NodeKind.NAME) {
-      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:192:5)');
+      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:187:5)');
     }
     if (!checkAllNodeKinds(statements, new NodeKindIsStatement())) {
-      throw new Error('assert checkAllNodeKinds(statements, NodeKindIsStatement()); (src/ast/create.sk:193:5)');
+      throw new Error('assert checkAllNodeKinds(statements, NodeKindIsStatement()); (src/ast/create.sk:188:5)');
     }
     statements.unshift(name);
     return new Node(NodeKind.MODIFIER).withChildren(statements);
   };
   Node.createSwitch = function(value, cases) {
     if (!$in._NodeKind_.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:199:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:194:5)');
     }
     if (!checkAllNodeKinds(cases, new NodeKindIs(NodeKind.CASE))) {
-      throw new Error('assert checkAllNodeKinds(cases, NodeKindIs(.CASE)); (src/ast/create.sk:200:5)');
+      throw new Error('assert checkAllNodeKinds(cases, NodeKindIs(.CASE)); (src/ast/create.sk:195:5)');
     }
     cases.unshift(value);
     return new Node(NodeKind.SWITCH).withChildren(cases);
@@ -488,7 +482,7 @@
   };
   Node.createType = function(type) {
     if (type === null) {
-      throw new Error('assert type != null; (src/ast/create.sk:210:5)');
+      throw new Error('assert type != null; (src/ast/create.sk:205:5)');
     }
     return new Node(NodeKind.TYPE).withType(type);
   };
@@ -500,13 +494,13 @@
   };
   Node.createHook = function(test, trueNode, falseNode) {
     if (!$in._NodeKind_.isExpression(test.kind)) {
-      throw new Error('assert test.kind.isExpression(); (src/ast/create.sk:223:5)');
+      throw new Error('assert test.kind.isExpression(); (src/ast/create.sk:218:5)');
     }
     if (!$in._NodeKind_.isExpression(trueNode.kind)) {
-      throw new Error('assert trueNode.kind.isExpression(); (src/ast/create.sk:224:5)');
+      throw new Error('assert trueNode.kind.isExpression(); (src/ast/create.sk:219:5)');
     }
     if (!$in._NodeKind_.isExpression(falseNode.kind)) {
-      throw new Error('assert falseNode.kind.isExpression(); (src/ast/create.sk:225:5)');
+      throw new Error('assert falseNode.kind.isExpression(); (src/ast/create.sk:220:5)');
     }
     return new Node(NodeKind.HOOK).withChildren([test, trueNode, falseNode]);
   };
@@ -527,32 +521,32 @@
   };
   Node.createList = function(values) {
     if (!checkAllNodeKinds(values, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:250:5)');
+      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:245:5)');
     }
     return new Node(NodeKind.LIST).withChildren(values);
   };
   Node.createDot = function(value, name) {
     if (value !== null && !$in._NodeKind_.isExpression(value.kind)) {
-      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:255:5)');
+      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:250:5)');
     }
     if (name !== null && name.kind !== NodeKind.NAME) {
-      throw new Error('assert name == null || name.kind == .NAME; (src/ast/create.sk:256:5)');
+      throw new Error('assert name == null || name.kind == .NAME; (src/ast/create.sk:251:5)');
     }
     return new Node(NodeKind.DOT).withChildren([value, name]);
   };
   Node.createCall = function(value, $arguments) {
     if (!$in._NodeKind_.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:261:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:256:5)');
     }
     if (!checkAllNodeKinds($arguments, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:262:5)');
+      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:257:5)');
     }
     $arguments.unshift(value);
     return new Node(NodeKind.CALL).withChildren($arguments);
   };
   Node.createSuperCall = function($arguments) {
     if (!checkAllNodeKinds($arguments, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:268:5)');
+      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:263:5)');
     }
     return new Node(NodeKind.SUPER_CALL).withChildren($arguments);
   };
@@ -561,51 +555,41 @@
   };
   Node.createSequence = function(values) {
     if (!checkAllNodeKinds(values, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:280:5)');
+      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:275:5)');
     }
     return new Node(NodeKind.SEQUENCE).withChildren(values);
   };
   Node.createParameterize = function(type, types) {
     if (!$in._NodeKind_.isExpression(type.kind)) {
-      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:285:5)');
+      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:280:5)');
     }
     if (!checkAllNodeKinds(types, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(types, NodeKindIsExpression()); (src/ast/create.sk:286:5)');
+      throw new Error('assert checkAllNodeKinds(types, NodeKindIsExpression()); (src/ast/create.sk:281:5)');
     }
     types.unshift(type);
     return new Node(NodeKind.PARAMETERIZE).withChildren(types);
   };
   Node.createCast = function(type, value) {
     if (!$in._NodeKind_.isExpression(type.kind)) {
-      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:292:5)');
+      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:287:5)');
     }
     if (!$in._NodeKind_.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:293:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:288:5)');
     }
     return new Node(NodeKind.CAST).withChildren([type, value]);
   };
   Node.createImplicitCast = function(type, value) {
     if (!$in._NodeKind_.isExpression(type.kind)) {
-      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:298:5)');
+      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:293:5)');
     }
     if (!$in._NodeKind_.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:299:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:294:5)');
     }
     return new Node(NodeKind.IMPLICIT_CAST).withChildren([type, value]);
   };
-  Node.createLambda = function($arguments, block) {
-    if (!checkAllNodeKinds($arguments, new NodeKindIs(NodeKind.VARIABLE))) {
-      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIs(.VARIABLE)); (src/ast/create.sk:304:5)');
-    }
-    if (block.kind !== NodeKind.BLOCK) {
-      throw new Error('assert block.kind == .BLOCK; (src/ast/create.sk:305:5)');
-    }
-    $arguments.push(block);
-    return new Node(NodeKind.LAMBDA).withChildren($arguments);
-  };
   Node.createUntyped = function(type) {
     if (!$in._NodeKind_.isExpression(type.kind)) {
-      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:314:5)');
+      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:302:5)');
     }
     return new Node(NodeKind.UNTYPED).withChildren([type]);
   };
@@ -614,22 +598,22 @@
   };
   Node.createUnary = function(kind, value) {
     if (!$in._NodeKind_.isUnaryOperator(kind)) {
-      throw new Error('assert kind.isUnaryOperator(); (src/ast/create.sk:330:5)');
+      throw new Error('assert kind.isUnaryOperator(); (src/ast/create.sk:311:5)');
     }
     if (!$in._NodeKind_.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:331:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:312:5)');
     }
     return new Node(kind).withChildren([value]);
   };
   Node.createBinary = function(kind, left, right) {
     if (!$in._NodeKind_.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/ast/create.sk:340:5)');
+      throw new Error('assert kind.isBinaryOperator(); (src/ast/create.sk:321:5)');
     }
     if (!$in._NodeKind_.isExpression(left.kind)) {
-      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:341:5)');
+      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:322:5)');
     }
     if (!$in._NodeKind_.isExpression(right.kind)) {
-      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:342:5)');
+      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:323:5)');
     }
     if (kind === NodeKind.ASSIGN && left.kind === NodeKind.INDEX) {
       var target = left.binaryLeft();
@@ -640,16 +624,16 @@
   };
   Node.createTertiary = function(kind, left, middle, right) {
     if (!$in._NodeKind_.isTertiaryOperator(kind)) {
-      throw new Error('assert kind.isTertiaryOperator(); (src/ast/create.sk:355:5)');
+      throw new Error('assert kind.isTertiaryOperator(); (src/ast/create.sk:336:5)');
     }
     if (!$in._NodeKind_.isExpression(left.kind)) {
-      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:356:5)');
+      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:337:5)');
     }
     if (!$in._NodeKind_.isExpression(middle.kind)) {
-      throw new Error('assert middle.kind.isExpression(); (src/ast/create.sk:357:5)');
+      throw new Error('assert middle.kind.isExpression(); (src/ast/create.sk:338:5)');
     }
     if (!$in._NodeKind_.isExpression(right.kind)) {
-      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:358:5)');
+      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:339:5)');
     }
     return new Node(kind).withChildren([left, middle, right]);
   };
@@ -1127,156 +1111,117 @@
     }
     return this.children[1];
   };
-  Node.prototype.lambdaArguments = function() {
-    if (this.kind !== NodeKind.LAMBDA) {
-      throw new Error('assert kind == .LAMBDA; (src/ast/get.sk:305:5)');
-    }
-    if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:306:5)');
-    }
-    return this.children.slice(0, this.children.length - 1 | 0);
-  };
-  Node.prototype.lambdaBlock = function() {
-    if (this.kind !== NodeKind.LAMBDA) {
-      throw new Error('assert kind == .LAMBDA; (src/ast/get.sk:311:5)');
-    }
-    if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:312:5)');
-    }
-    if (this.children[this.children.length - 1 | 0].kind !== NodeKind.BLOCK) {
-      throw new Error('assert children.get(children.size() - 1).kind == .BLOCK; (src/ast/get.sk:313:5)');
-    }
-    return this.children[this.children.length - 1 | 0];
-  };
   Node.prototype.assertValue = function() {
     if (!$in._NodeKind_.isAssert(this.kind)) {
-      throw new Error('assert kind.isAssert(); (src/ast/get.sk:318:5)');
+      throw new Error('assert kind.isAssert(); (src/ast/get.sk:305:5)');
     }
     if (this.children.length !== 1) {
-      throw new Error('assert children.size() == 1; (src/ast/get.sk:319:5)');
+      throw new Error('assert children.size() == 1; (src/ast/get.sk:306:5)');
     }
     return this.children[0];
   };
   Node.prototype.parameterizeValue = function() {
     if (this.kind !== NodeKind.PARAMETERIZE) {
-      throw new Error('assert kind == .PARAMETERIZE; (src/ast/get.sk:324:5)');
+      throw new Error('assert kind == .PARAMETERIZE; (src/ast/get.sk:311:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:325:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:312:5)');
     }
     return this.children[0];
   };
   Node.prototype.parameterizeTypes = function() {
     if (this.kind !== NodeKind.PARAMETERIZE) {
-      throw new Error('assert kind == .PARAMETERIZE; (src/ast/get.sk:330:5)');
+      throw new Error('assert kind == .PARAMETERIZE; (src/ast/get.sk:317:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:331:5)');
-    }
-    return this.children.slice(1, this.children.length);
-  };
-  Node.prototype.functionTypeResult = function() {
-    if (this.kind !== NodeKind.FUNCTION_TYPE) {
-      throw new Error('assert kind == .FUNCTION_TYPE; (src/ast/get.sk:336:5)');
-    }
-    if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:337:5)');
-    }
-    return this.children[0];
-  };
-  Node.prototype.functionTypeArguments = function() {
-    if (this.kind !== NodeKind.FUNCTION_TYPE) {
-      throw new Error('assert kind == .FUNCTION_TYPE; (src/ast/get.sk:342:5)');
-    }
-    if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:343:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:318:5)');
     }
     return this.children.slice(1, this.children.length);
   };
   Node.prototype.callValue = function() {
     if (this.kind !== NodeKind.CALL) {
-      throw new Error('assert kind == .CALL; (src/ast/get.sk:348:5)');
+      throw new Error('assert kind == .CALL; (src/ast/get.sk:323:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:349:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:324:5)');
     }
     return this.children[0];
   };
   Node.prototype.callArguments = function() {
     if (this.kind !== NodeKind.CALL) {
-      throw new Error('assert kind == .CALL; (src/ast/get.sk:354:5)');
+      throw new Error('assert kind == .CALL; (src/ast/get.sk:329:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:355:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:330:5)');
     }
     return this.children.slice(1, this.children.length);
   };
   Node.prototype.superCallArguments = function() {
     if (this.kind !== NodeKind.SUPER_CALL) {
-      throw new Error('assert kind == .SUPER_CALL; (src/ast/get.sk:360:5)');
+      throw new Error('assert kind == .SUPER_CALL; (src/ast/get.sk:335:5)');
     }
     return this.children;
   };
   Node.prototype.listValues = function() {
     if (this.kind !== NodeKind.LIST) {
-      throw new Error('assert kind == .LIST; (src/ast/get.sk:365:5)');
+      throw new Error('assert kind == .LIST; (src/ast/get.sk:340:5)');
     }
     return this.children;
   };
   Node.prototype.parameterBound = function() {
     if (this.kind !== NodeKind.PARAMETER) {
-      throw new Error('assert kind == .PARAMETER; (src/ast/get.sk:370:5)');
+      throw new Error('assert kind == .PARAMETER; (src/ast/get.sk:345:5)');
     }
     if (this.children.length !== 2) {
-      throw new Error('assert children.size() == 2; (src/ast/get.sk:371:5)');
+      throw new Error('assert children.size() == 2; (src/ast/get.sk:346:5)');
     }
     return this.children[1];
   };
   Node.prototype.returnValue = function() {
-    if (!$in._NodeKind_.isReturn(this.kind)) {
-      throw new Error('assert kind.isReturn(); (src/ast/get.sk:376:5)');
+    if (this.kind !== NodeKind.RETURN) {
+      throw new Error('assert kind == .RETURN; (src/ast/get.sk:351:5)');
     }
     if (this.children.length !== 1) {
-      throw new Error('assert children.size() == 1; (src/ast/get.sk:377:5)');
+      throw new Error('assert children.size() == 1; (src/ast/get.sk:352:5)');
     }
     return this.children[0];
   };
   Node.prototype.switchValue = function() {
     if (this.kind !== NodeKind.SWITCH) {
-      throw new Error('assert kind == .SWITCH; (src/ast/get.sk:382:5)');
+      throw new Error('assert kind == .SWITCH; (src/ast/get.sk:357:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:383:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:358:5)');
     }
     return this.children[0];
   };
   Node.prototype.switchCases = function() {
     if (this.kind !== NodeKind.SWITCH) {
-      throw new Error('assert kind == .SWITCH; (src/ast/get.sk:388:5)');
+      throw new Error('assert kind == .SWITCH; (src/ast/get.sk:363:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:389:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:364:5)');
     }
     return this.children.slice(1, this.children.length);
   };
   Node.prototype.caseValues = function() {
     if (this.kind !== NodeKind.CASE) {
-      throw new Error('assert kind == .CASE; (src/ast/get.sk:394:5)');
+      throw new Error('assert kind == .CASE; (src/ast/get.sk:369:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:395:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:370:5)');
     }
     return this.children.slice(0, this.children.length - 1 | 0);
   };
   Node.prototype.caseBlock = function() {
     if (this.kind !== NodeKind.CASE) {
-      throw new Error('assert kind == .CASE; (src/ast/get.sk:400:5)');
+      throw new Error('assert kind == .CASE; (src/ast/get.sk:375:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:401:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:376:5)');
     }
     if (this.lastChild().kind !== NodeKind.BLOCK) {
-      throw new Error('assert lastChild().kind == .BLOCK; (src/ast/get.sk:402:5)');
+      throw new Error('assert lastChild().kind == .BLOCK; (src/ast/get.sk:377:5)');
     }
     return this.lastChild();
   };
@@ -1285,45 +1230,45 @@
       throw new Error('assert kind.isExpression(); (src/ast/logic.sk:3:5)');
     }
     switch (this.kind) {
-    case 39:
+    case 38:
       this.content = new BoolContent(!this.asBool());
       return;
-    case 57:
+    case 54:
       this.become(this.unaryValue().remove());
       return;
-    case 70:
+    case 67:
       this.kind = NodeKind.NOT_EQUAL;
       return;
-    case 80:
+    case 77:
       this.kind = NodeKind.EQUAL;
       return;
-    case 78:
+    case 75:
       this.kind = NodeKind.LOGICAL_AND;
       this.binaryLeft().invertBooleanCondition(cache);
       this.binaryRight().invertBooleanCondition(cache);
       return;
-    case 77:
+    case 74:
       this.kind = NodeKind.LOGICAL_OR;
       this.binaryLeft().invertBooleanCondition(cache);
       this.binaryRight().invertBooleanCondition(cache);
       return;
-    case 75:
-    case 71:
-    case 76:
     case 72:
+    case 68:
+    case 73:
+    case 69:
       var commonType = cache.commonImplicitType(this.binaryLeft().type, this.binaryRight().type);
       if (commonType !== null && !commonType.isReal(cache)) {
         switch (this.kind) {
-        case 75:
+        case 72:
           this.kind = NodeKind.GREATER_THAN_OR_EQUAL;
           break;
-        case 71:
+        case 68:
           this.kind = NodeKind.LESS_THAN_OR_EQUAL;
           break;
-        case 76:
+        case 73:
           this.kind = NodeKind.GREATER_THAN;
           break;
-        case 72:
+        case 69:
           this.kind = NodeKind.LESS_THAN;
           break;
         }
@@ -1345,7 +1290,6 @@
       var child = this.children[i];
       switch (child.kind) {
       case 24:
-      case 25:
         return true;
       case 19:
         var trueBlock = child.ifTrue();
@@ -1354,7 +1298,7 @@
           return true;
         }
         break;
-      case 31:
+      case 30:
         var value = child.switchValue();
         var cases = child.switchCases();
         var foundDefault = false;
@@ -1383,23 +1327,23 @@
   };
   Node.prototype.hasNoSideEffects = function() {
     switch (this.kind) {
-    case 34:
-    case 36:
+    case 33:
+    case 35:
+    case 38:
     case 39:
     case 40:
     case 41:
     case 42:
-    case 43:
-    case 38:
-      return true;
-    case 51:
-    case 52:
-      return this.castValue().hasNoSideEffects();
     case 37:
+      return true;
+    case 50:
+    case 51:
+      return this.castValue().hasNoSideEffects();
+    case 36:
       return this.hookTest().hasNoSideEffects() && this.hookTrue().hasNoSideEffects() && this.hookFalse().hasNoSideEffects();
-    case 45:
+    case 44:
       return this.dotTarget().hasNoSideEffects();
-    case 54:
+    case 52:
       return this.untypedValue().hasNoSideEffects();
     default:
       if ($in._NodeKind_.isBinaryOperator(this.kind) && !$in._NodeKind_.isBinaryStorageOperator(this.kind)) {
@@ -1428,7 +1372,7 @@
   };
   Node.prototype.indexInParent = function() {
     if (this.parent === null) {
-      throw new Error('assert parent != null; (src/ast/node.sk:240:5)');
+      throw new Error('assert parent != null; (src/ast/node.sk:233:5)');
     }
     return this.parent.children.indexOf(this);
   };
@@ -1440,7 +1384,7 @@
   };
   Node.prototype.removeChildAtIndex = function(index) {
     if (index < 0 || !(index < this.children.length)) {
-      throw new Error('assert index >= 0 && index < children.size(); (src/ast/node.sk:269:5)');
+      throw new Error('assert index >= 0 && index < children.size(); (src/ast/node.sk:262:5)');
     }
     var child = this.children[index];
     if (child !== null) {
@@ -1504,10 +1448,10 @@
   };
   Node.prototype.replaceChild = function(index, node) {
     if (this.children === null) {
-      throw new Error('assert children != null; (src/ast/node.sk:340:5)');
+      throw new Error('assert children != null; (src/ast/node.sk:333:5)');
     }
     if (index < 0 || !(index <= this.children.length)) {
-      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:341:5)');
+      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:334:5)');
     }
     Node.updateParent(node, this);
     var old = this.children[index];
@@ -1521,7 +1465,7 @@
       this.children = [];
     }
     if (index < 0 || !(index <= this.children.length)) {
-      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:350:5)');
+      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:343:5)');
     }
     Node.updateParent(node, this);
     this.children.splice(index, 0, node);
@@ -1559,7 +1503,7 @@
   };
   Node.prototype.withChildren = function(nodes) {
     if (this.children !== null) {
-      throw new Error('assert children == null; (src/ast/node.sk:403:5)');
+      throw new Error('assert children == null; (src/ast/node.sk:396:5)');
     }
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
       Node.updateParent(nodes[i], this);
@@ -1584,7 +1528,7 @@
   Node.updateParent = function(node, parent) {
     if (node !== null) {
       if (node.parent !== null) {
-        throw new Error('assert node.parent == null; (src/ast/node.sk:429:7)');
+        throw new Error('assert node.parent == null; (src/ast/node.sk:422:7)');
       }
       node.parent = parent;
     }
@@ -1631,78 +1575,75 @@
     WHILE: 22,
     DO_WHILE: 23,
     RETURN: 24,
-    IMPLICIT_RETURN: 25,
-    BREAK: 26,
-    CONTINUE: 27,
-    ASSERT: 28,
-    ASSERT_CONST: 29,
-    EXPRESSION: 30,
-    SWITCH: 31,
-    MODIFIER: 32,
-    USING: 33,
-    NAME: 34,
-    TYPE: 35,
-    THIS: 36,
-    HOOK: 37,
-    NULL: 38,
-    BOOL: 39,
-    INT: 40,
-    FLOAT: 41,
-    DOUBLE: 42,
-    STRING: 43,
-    LIST: 44,
-    DOT: 45,
-    CALL: 46,
-    SUPER_CALL: 47,
-    ERROR: 48,
-    SEQUENCE: 49,
-    PARAMETERIZE: 50,
-    CAST: 51,
-    IMPLICIT_CAST: 52,
-    LAMBDA: 53,
-    UNTYPED: 54,
-    VAR: 55,
-    FUNCTION_TYPE: 56,
-    NOT: 57,
-    POSITIVE: 58,
-    NEGATIVE: 59,
-    COMPLEMENT: 60,
-    PREFIX_INCREMENT: 61,
-    PREFIX_DECREMENT: 62,
-    POSTFIX_INCREMENT: 63,
-    POSTFIX_DECREMENT: 64,
-    ADD: 65,
-    BITWISE_AND: 66,
-    BITWISE_OR: 67,
-    BITWISE_XOR: 68,
-    DIVIDE: 69,
-    EQUAL: 70,
-    GREATER_THAN: 71,
-    GREATER_THAN_OR_EQUAL: 72,
-    IN: 73,
-    INDEX: 74,
-    LESS_THAN: 75,
-    LESS_THAN_OR_EQUAL: 76,
-    LOGICAL_AND: 77,
-    LOGICAL_OR: 78,
-    MULTIPLY: 79,
-    NOT_EQUAL: 80,
-    REMAINDER: 81,
-    SHIFT_LEFT: 82,
-    SHIFT_RIGHT: 83,
-    SUBTRACT: 84,
-    ASSIGN: 85,
-    ASSIGN_ADD: 86,
-    ASSIGN_BITWISE_AND: 87,
-    ASSIGN_BITWISE_OR: 88,
-    ASSIGN_BITWISE_XOR: 89,
-    ASSIGN_DIVIDE: 90,
-    ASSIGN_MULTIPLY: 91,
-    ASSIGN_REMAINDER: 92,
-    ASSIGN_SHIFT_LEFT: 93,
-    ASSIGN_SHIFT_RIGHT: 94,
-    ASSIGN_SUBTRACT: 95,
-    ASSIGN_INDEX: 96
+    BREAK: 25,
+    CONTINUE: 26,
+    ASSERT: 27,
+    ASSERT_CONST: 28,
+    EXPRESSION: 29,
+    SWITCH: 30,
+    MODIFIER: 31,
+    USING: 32,
+    NAME: 33,
+    TYPE: 34,
+    THIS: 35,
+    HOOK: 36,
+    NULL: 37,
+    BOOL: 38,
+    INT: 39,
+    FLOAT: 40,
+    DOUBLE: 41,
+    STRING: 42,
+    LIST: 43,
+    DOT: 44,
+    CALL: 45,
+    SUPER_CALL: 46,
+    ERROR: 47,
+    SEQUENCE: 48,
+    PARAMETERIZE: 49,
+    CAST: 50,
+    IMPLICIT_CAST: 51,
+    UNTYPED: 52,
+    VAR: 53,
+    NOT: 54,
+    POSITIVE: 55,
+    NEGATIVE: 56,
+    COMPLEMENT: 57,
+    PREFIX_INCREMENT: 58,
+    PREFIX_DECREMENT: 59,
+    POSTFIX_INCREMENT: 60,
+    POSTFIX_DECREMENT: 61,
+    ADD: 62,
+    BITWISE_AND: 63,
+    BITWISE_OR: 64,
+    BITWISE_XOR: 65,
+    DIVIDE: 66,
+    EQUAL: 67,
+    GREATER_THAN: 68,
+    GREATER_THAN_OR_EQUAL: 69,
+    IN: 70,
+    INDEX: 71,
+    LESS_THAN: 72,
+    LESS_THAN_OR_EQUAL: 73,
+    LOGICAL_AND: 74,
+    LOGICAL_OR: 75,
+    MULTIPLY: 76,
+    NOT_EQUAL: 77,
+    REMAINDER: 78,
+    SHIFT_LEFT: 79,
+    SHIFT_RIGHT: 80,
+    SUBTRACT: 81,
+    ASSIGN: 82,
+    ASSIGN_ADD: 83,
+    ASSIGN_BITWISE_AND: 84,
+    ASSIGN_BITWISE_OR: 85,
+    ASSIGN_BITWISE_XOR: 86,
+    ASSIGN_DIVIDE: 87,
+    ASSIGN_MULTIPLY: 88,
+    ASSIGN_REMAINDER: 89,
+    ASSIGN_SHIFT_LEFT: 90,
+    ASSIGN_SHIFT_RIGHT: 91,
+    ASSIGN_SUBTRACT: 92,
+    ASSIGN_INDEX: 93
   };
   var Associativity = {
     NONE: 0,
@@ -1734,7 +1675,7 @@
     switch (node.kind) {
     case 0:
     case 1:
-    case 32:
+    case 31:
     case 2:
       this.collectChildStatements(node);
       break;
@@ -2551,10 +2492,9 @@
       this.emitFunction(node);
       break;
     case 24:
-    case 25:
       this.emitReturn(node);
       break;
-    case 30:
+    case 29:
       this.emitExpressionStatement(node);
       break;
     case 19:
@@ -2572,13 +2512,13 @@
     case 23:
       this.emitDoWhile(node);
       break;
-    case 26:
+    case 25:
       this.emitBreak(node);
       break;
-    case 27:
+    case 26:
       this.emitContinue(node);
       break;
-    case 28:
+    case 27:
       this.emitAssert(node);
       break;
     case 6:
@@ -2873,76 +2813,76 @@
   };
   cs.Emitter.prototype.emitExpression = function(node, precedence) {
     switch (node.kind) {
-    case 34:
+    case 33:
       this.emit(node.symbol === null ? node.asString() : cs.Emitter.fullName(node.symbol));
       break;
-    case 35:
+    case 34:
       this.emitType(node.type);
       break;
-    case 36:
+    case 35:
       this.emit('this');
       break;
-    case 37:
+    case 36:
       this.emitHook(node, precedence);
       break;
-    case 38:
+    case 37:
       this.emit('null');
       break;
-    case 39:
+    case 38:
       this.emit(node.asBool().toString());
       break;
-    case 40:
+    case 39:
       this.emit(node.asInt().toString());
       break;
+    case 40:
     case 41:
-    case 42:
       this.emit(node.asDouble().toString());
       break;
-    case 43:
+    case 42:
       this.emit(quoteString(node.asString(), 34));
       break;
-    case 44:
+    case 43:
       this.emitList(node);
       break;
-    case 45:
+    case 44:
       this.emitDot(node);
       break;
-    case 46:
+    case 45:
       this.emitCall(node);
       break;
-    case 47:
+    case 46:
       this.emitSuperCall(node);
       break;
-    case 49:
+    case 48:
       this.emitSequence(node, precedence);
       break;
-    case 53:
-      this.emitLambda(node);
-      break;
-    case 54:
+    case 52:
       this.emitExpression(node.untypedValue(), precedence);
       break;
-    case 74:
+    case 71:
       this.emitIndex(node, precedence);
       break;
-    case 96:
+    case 93:
       this.emitTertiary(node, precedence);
       break;
+    case 50:
     case 51:
-    case 52:
       this.emitCast(node, precedence);
       break;
+    case 54:
+    case 55:
+    case 56:
     case 57:
     case 58:
     case 59:
     case 60:
     case 61:
-    case 62:
-    case 63:
-    case 64:
       this.emitUnary(node, precedence);
       break;
-    case 65:
+    case 62:
+    case 82:
+    case 83:
+    case 84:
     case 85:
     case 86:
     case 87:
@@ -2951,17 +2891,17 @@
     case 90:
     case 91:
     case 92:
-    case 93:
-    case 94:
-    case 95:
+    case 63:
+    case 64:
+    case 65:
     case 66:
     case 67:
     case 68:
     case 69:
     case 70:
-    case 71:
     case 72:
     case 73:
+    case 74:
     case 75:
     case 76:
     case 77:
@@ -2969,9 +2909,6 @@
     case 79:
     case 80:
     case 81:
-    case 82:
-    case 83:
-    case 84:
       this.emitBinary(node, precedence);
       break;
     default:
@@ -3017,11 +2954,6 @@
     if (Precedence.COMMA <= precedence) {
       this.emit(')');
     }
-  };
-  cs.Emitter.prototype.emitLambda = function(node) {
-    this.emitArgumentVariables(node.lambdaArguments());
-    this.emit(' => ');
-    this.emitBlock(node.lambdaBlock());
   };
   cs.Emitter.prototype.emitUnary = function(node, precedence) {
     var value = node.unaryValue();
@@ -3270,7 +3202,6 @@
     this.currentLine = 0;
     this.currentColumn = 0;
     this.needsSemicolon = false;
-    this.isStartOfExpression = false;
     this.currentSource = null;
     this.patcher = null;
     this.options = null;
@@ -3494,7 +3425,6 @@
     }
   };
   js.Emitter.prototype.emitNode = function(node) {
-    this.isStartOfExpression = false;
     this.addMapping(node);
     switch (node.kind) {
     case 4:
@@ -3533,33 +3463,32 @@
       this.emitDoWhile(node);
       break;
     case 24:
-    case 25:
       this.emitReturn(node);
       break;
-    case 26:
+    case 25:
       this.emitBreak(node);
       break;
-    case 27:
+    case 26:
       this.emitContinue(node);
       break;
-    case 28:
+    case 27:
       this.emitAssert(node);
       break;
-    case 30:
+    case 29:
       this.emitExpressionStatement(node);
       break;
-    case 31:
+    case 30:
       this.emitSwitch(node);
       break;
-    case 32:
+    case 31:
       this.emitModifier(node);
       break;
     case 17:
     case 18:
-    case 33:
+    case 32:
       break;
     default:
-      throw new Error('assert false; (src/js/emitter.sk:325:19)');
+      throw new Error('assert false; (src/js/emitter.sk:323:19)');
       break;
     }
   };
@@ -3818,7 +3747,6 @@
   };
   js.Emitter.prototype.emitExpressionStatement = function(node) {
     this.emit(this.indent);
-    this.isStartOfExpression = true;
     this.emitExpression(node.expressionValue(), Precedence.LOWEST);
     this.emitSemicolonAfterStatement();
   };
@@ -3834,83 +3762,78 @@
     this.emitStatements(node.modifierStatements());
   };
   js.Emitter.prototype.emitExpression = function(node, precedence) {
-    var wasStartOfExpression = this.isStartOfExpression;
-    this.isStartOfExpression = false;
     this.addMapping(node);
     switch (node.kind) {
-    case 34:
+    case 33:
       this.emit(node.symbol === null ? node.asString() : js.Emitter.fullName(node.symbol));
       break;
-    case 35:
+    case 34:
       this.emit(js.Emitter.fullName(node.type.symbol));
       break;
-    case 36:
+    case 35:
       this.emit('this');
       break;
-    case 37:
+    case 36:
       this.emitHook(node, precedence);
       break;
-    case 38:
+    case 37:
       this.emit('null');
       break;
-    case 39:
+    case 38:
       this.emitBool(node);
       break;
-    case 40:
+    case 39:
       this.emitInt(node);
       break;
+    case 40:
     case 41:
-    case 42:
       this.emitDouble(node);
       break;
-    case 43:
+    case 42:
       this.emit(this.quoteStringJS(node.asString()));
       break;
-    case 44:
+    case 43:
       this.emitList(node);
       break;
-    case 45:
+    case 44:
       this.emitDot(node);
       break;
-    case 46:
-      this.isStartOfExpression = wasStartOfExpression;
+    case 45:
       this.emitCall(node);
       break;
-    case 47:
+    case 46:
       this.emitSuperCall(node);
       break;
-    case 49:
-      this.isStartOfExpression = wasStartOfExpression;
+    case 48:
       this.emitSequence(node, precedence);
       break;
-    case 53:
-      this.emitLambda(node, wasStartOfExpression);
-      break;
-    case 54:
+    case 52:
       this.emitExpression(node.untypedValue(), precedence);
       break;
-    case 74:
+    case 71:
       this.emitIndex(node, precedence);
       break;
-    case 96:
+    case 93:
       this.emitTertiary(node, precedence);
       break;
+    case 50:
     case 51:
-    case 52:
-      this.isStartOfExpression = wasStartOfExpression;
       this.emitExpression(node.castValue(), precedence);
       break;
+    case 54:
+    case 55:
+    case 56:
     case 57:
     case 58:
     case 59:
     case 60:
     case 61:
-    case 62:
-    case 63:
-    case 64:
       this.emitUnary(node, precedence);
       break;
-    case 65:
+    case 62:
+    case 82:
+    case 83:
+    case 84:
     case 85:
     case 86:
     case 87:
@@ -3919,17 +3842,17 @@
     case 90:
     case 91:
     case 92:
-    case 93:
-    case 94:
-    case 95:
+    case 63:
+    case 64:
+    case 65:
     case 66:
     case 67:
     case 68:
     case 69:
     case 70:
-    case 71:
     case 72:
     case 73:
+    case 74:
     case 75:
     case 76:
     case 77:
@@ -3937,13 +3860,10 @@
     case 79:
     case 80:
     case 81:
-    case 82:
-    case 83:
-    case 84:
       this.emitBinary(node, precedence);
       break;
     default:
-      throw new Error('assert false; (src/js/emitter.sk:666:11)');
+      throw new Error('assert false; (src/js/emitter.sk:660:11)');
       break;
     }
   };
@@ -4037,17 +3957,6 @@
     }
     this.emitCommaSeparatedExpressions(node.children);
     if (Precedence.COMMA <= precedence) {
-      this.emit(')');
-    }
-  };
-  js.Emitter.prototype.emitLambda = function(node, wasStartOfExpression) {
-    if (wasStartOfExpression) {
-      this.emit('(');
-    }
-    this.emit('function');
-    this.emitArgumentVariables(node.lambdaArguments());
-    this.emitBlock(node.lambdaBlock(), js.AfterToken.AFTER_PARENTHESIS, js.BracesMode.MUST_KEEP_BRACES);
-    if (wasStartOfExpression) {
       this.emit(')');
     }
   };
@@ -4228,7 +4137,6 @@
     return js.Emitter.mangleName(symbol);
   };
   js.Patcher = function(_0) {
-    this.lambdaCount = 0;
     this.nextTempID = 0;
     this.createdThisAlias = false;
     this.currentFunction = null;
@@ -4246,7 +4154,7 @@
   };
   js.Patcher.prototype.run = function(program) {
     if (program.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert program.kind == .PROGRAM; (src/js/patcher.sk:30:7)');
+      throw new Error('assert program.kind == .PROGRAM; (src/js/patcher.sk:29:7)');
     }
     var allSymbols = this.resolver.allSymbols;
     this.options = this.resolver.options;
@@ -4262,9 +4170,6 @@
   js.Patcher.prototype.patchNode = function(node) {
     this.trackSymbolCount(node);
     switch (node.kind) {
-    case 53:
-      this.lambdaCount = this.lambdaCount + 1 | 0;
-      break;
     case 14:
       this.patchConstructor(node);
       this.setCurrentFunction(node.symbol);
@@ -4272,36 +4177,33 @@
     case 15:
       this.setCurrentFunction(node.symbol);
       break;
-    case 51:
+    case 50:
       this.patchCast(node);
       break;
     case 10:
       this.patchClass(node);
       break;
-    case 36:
-      this.patchThis(node);
-      break;
-    case 34:
+    case 33:
       this.patchName(node);
       break;
-    case 65:
-    case 84:
-    case 79:
-    case 69:
+    case 62:
     case 81:
+    case 76:
+    case 66:
+    case 78:
       this.patchBinary(node);
       break;
+    case 58:
+    case 59:
     case 61:
-    case 62:
-    case 64:
-    case 63:
+    case 60:
       this.patchUnary(node);
       break;
-    case 86:
-    case 95:
-    case 91:
-    case 90:
+    case 83:
     case 92:
+    case 88:
+    case 87:
+    case 89:
       this.patchAssign(node);
       break;
     }
@@ -4314,18 +4216,10 @@
       }
     }
     switch (node.kind) {
-    case 53:
-      this.lambdaCount = this.lambdaCount - 1 | 0;
-      break;
     case 14:
     case 15:
       this.setCurrentFunction(null);
       break;
-    }
-  };
-  js.Patcher.prototype.patchThis = function(node) {
-    if (this.lambdaCount > 0) {
-      node.become(this.thisAlias());
     }
   };
   js.Patcher.prototype.patchClass = function(node) {
@@ -4406,7 +4300,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:254:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:244:7)');
     }
     var current = target;
     var parent = current.parent;
@@ -4425,16 +4319,16 @@
   };
   js.Patcher.prototype.alwaysConvertsOperandsToInt = function(kind) {
     switch (kind) {
-    case 67:
-    case 66:
-    case 68:
-    case 82:
-    case 83:
-    case 88:
-    case 87:
-    case 89:
-    case 93:
-    case 94:
+    case 64:
+    case 63:
+    case 65:
+    case 79:
+    case 80:
+    case 85:
+    case 84:
+    case 86:
+    case 90:
+    case 91:
       return true;
     default:
       return false;
@@ -4443,13 +4337,6 @@
   js.Patcher.prototype.setCurrentFunction = function(symbol) {
     this.currentFunction = symbol;
     this.createdThisAlias = false;
-  };
-  js.Patcher.prototype.thisAlias = function() {
-    if (!this.createdThisAlias) {
-      this.createdThisAlias = true;
-      this.currentFunction.node.functionBlock().insertChild(0, Node.createVariableCluster(Node.createError(), [Node.createVariable(Node.createName('$this'), null, Node.createThis())]));
-    }
-    return Node.createName('$this');
   };
   function SourceMapping(_0, _1, _2, _3, _4) {
     this.sourceIndex = _0;
@@ -4570,68 +4457,66 @@
     FALSE: 36,
     FINAL: 37,
     FLOAT: 38,
-    FN: 39,
-    FOR: 40,
-    GREATER_THAN: 41,
-    GREATER_THAN_OR_EQUAL: 42,
-    IDENTIFIER: 43,
-    IF: 44,
-    IMPORT: 45,
-    IN: 46,
-    INCREMENT: 47,
-    INLINE: 48,
-    INTERFACE: 49,
-    INT_BINARY: 50,
-    INT_DECIMAL: 51,
-    INT_HEX: 52,
-    INT_OCTAL: 53,
-    IS: 54,
-    LAMBDA: 55,
-    LEFT_BRACE: 56,
-    LEFT_BRACKET: 57,
-    LEFT_PARENTHESIS: 58,
-    LESS_THAN: 59,
-    LESS_THAN_OR_EQUAL: 60,
-    LOGICAL_AND: 61,
-    LOGICAL_OR: 62,
-    MINUS: 63,
-    MULTIPLY: 64,
-    NAMESPACE: 65,
-    NEW: 66,
-    NOT: 67,
-    NOT_EQUAL: 68,
-    NULL: 69,
-    OVERRIDE: 70,
-    PLUS: 71,
-    PRIVATE: 72,
-    PROTECTED: 73,
-    PUBLIC: 74,
-    QUESTION_MARK: 75,
-    REMAINDER: 76,
-    RETURN: 77,
-    RIGHT_BRACE: 78,
-    RIGHT_BRACKET: 79,
-    RIGHT_PARENTHESIS: 80,
-    SEMICOLON: 81,
-    SHIFT_LEFT: 82,
-    SHIFT_RIGHT: 83,
-    STATIC: 84,
-    STRING: 85,
-    STRUCT: 86,
-    SUPER: 87,
-    SWITCH: 88,
-    THIS: 89,
-    TILDE: 90,
-    TRUE: 91,
-    UNTYPED: 92,
-    USING: 93,
-    VAR: 94,
-    VIRTUAL: 95,
-    WHILE: 96,
-    WHITESPACE: 97,
-    YY_INVALID_ACTION: 98,
-    START_PARAMETER_LIST: 99,
-    END_PARAMETER_LIST: 100
+    FOR: 39,
+    GREATER_THAN: 40,
+    GREATER_THAN_OR_EQUAL: 41,
+    IDENTIFIER: 42,
+    IF: 43,
+    IMPORT: 44,
+    IN: 45,
+    INCREMENT: 46,
+    INLINE: 47,
+    INTERFACE: 48,
+    INT_BINARY: 49,
+    INT_DECIMAL: 50,
+    INT_HEX: 51,
+    INT_OCTAL: 52,
+    IS: 53,
+    LEFT_BRACE: 54,
+    LEFT_BRACKET: 55,
+    LEFT_PARENTHESIS: 56,
+    LESS_THAN: 57,
+    LESS_THAN_OR_EQUAL: 58,
+    LOGICAL_AND: 59,
+    LOGICAL_OR: 60,
+    MINUS: 61,
+    MULTIPLY: 62,
+    NAMESPACE: 63,
+    NEW: 64,
+    NOT: 65,
+    NOT_EQUAL: 66,
+    NULL: 67,
+    OVERRIDE: 68,
+    PLUS: 69,
+    PRIVATE: 70,
+    PROTECTED: 71,
+    PUBLIC: 72,
+    QUESTION_MARK: 73,
+    REMAINDER: 74,
+    RETURN: 75,
+    RIGHT_BRACE: 76,
+    RIGHT_BRACKET: 77,
+    RIGHT_PARENTHESIS: 78,
+    SEMICOLON: 79,
+    SHIFT_LEFT: 80,
+    SHIFT_RIGHT: 81,
+    STATIC: 82,
+    STRING: 83,
+    STRUCT: 84,
+    SUPER: 85,
+    SWITCH: 86,
+    THIS: 87,
+    TILDE: 88,
+    TRUE: 89,
+    UNTYPED: 90,
+    USING: 91,
+    VAR: 92,
+    VIRTUAL: 93,
+    WHILE: 94,
+    WHITESPACE: 95,
+    YY_INVALID_ACTION: 96,
+    START_PARAMETER_LIST: 97,
+    END_PARAMETER_LIST: 98
   };
   function Token(_0, _1, _2) {
     this.range = _0;
@@ -4665,10 +4550,6 @@
   var TokenScan = {
     NORMAL: 0,
     STOP_BEFORE_NEXT_STATEMENT: 1
-  };
-  var AllowLambda = {
-    LAMBDA_NOT_ALLOWED: 0,
-    LAMBDA_ALLOWED: 1
   };
   var AllowTrailingComma = {
     NO_TRAILING_COMMA: 0,
@@ -4738,15 +4619,7 @@
   }
   ParenthesisParselet.prototype.parse = function(context) {
     var token = context.current();
-    var type = parseGroup(context, AllowLambda.LAMBDA_ALLOWED);
-    if (type.kind === NodeKind.NAME && context.eat(TokenKind.LAMBDA)) {
-      var block = parseLambdaBlock(context);
-      return createLambdaFromNames([type], block).withRange(context.spanSince(token.range));
-    }
-    if (looksLikeLambdaArguments(type) && context.eat(TokenKind.LAMBDA)) {
-      var block = parseLambdaBlock(context);
-      return createLambdaFromNames(type.removeChildren(), block).withRange(context.spanSince(token.range));
-    }
+    var type = parseGroup(context);
     if (looksLikeType(type)) {
       var value = pratt.parse(context, Precedence.UNARY_PREFIX);
       return Node.createCast(type, value).withRange(context.spanSince(token.range));
@@ -4764,7 +4637,7 @@
   }
   UntypedParselet.prototype.parse = function(context) {
     var token = context.next();
-    var value = parseGroup(context, AllowLambda.LAMBDA_NOT_ALLOWED);
+    var value = parseGroup(context);
     return (value === null ? Node.createError() : Node.createUntyped(value)).withRange(context.spanSince(token.range));
   };
   function NewParselet() {
@@ -5320,15 +5193,15 @@
       }
     } else if (kind === NodeKind.NOT) {
       switch (valueKind) {
-      case 57:
-      case 70:
-      case 80:
-      case 78:
+      case 54:
+      case 67:
       case 77:
       case 75:
-      case 71:
-      case 76:
+      case 74:
       case 72:
+      case 68:
+      case 73:
+      case 69:
         value.invertBooleanCondition(this.cache);
         node.become(value);
         break;
@@ -5358,21 +5231,21 @@
   };
   ConstantFolder.prototype.foldBinaryOperatorWithConstant = function(node, left, right) {
     switch (node.kind) {
-    case 77:
+    case 74:
       if (left.isFalse() || right.isTrue()) {
         node.become(left.remove());
       } else if (left.isTrue()) {
         node.become(right.remove());
       }
       break;
-    case 78:
+    case 75:
       if (left.isTrue() || right.isFalse()) {
         node.become(left.remove());
       } else if (left.isFalse()) {
         node.become(right.remove());
       }
       break;
-    case 79:
+    case 76:
       if (left.kind === NodeKind.INT) {
         this.foldMultiply(node, right, left);
       } else if (right.kind === NodeKind.INT) {
@@ -5394,100 +5267,100 @@
     }
     if (left.kind === NodeKind.BOOL) {
       switch (kind) {
-      case 77:
+      case 74:
         this.flattenBool(node, left.asBool() && right.asBool());
         break;
-      case 78:
+      case 75:
         this.flattenBool(node, left.asBool() || right.asBool());
         break;
-      case 70:
+      case 67:
         this.flattenBool(node, left.asBool() === right.asBool());
         break;
-      case 80:
+      case 77:
         this.flattenBool(node, left.asBool() !== right.asBool());
         break;
       }
     } else if (left.kind === NodeKind.INT) {
       switch (kind) {
-      case 65:
+      case 62:
         this.flattenInt(node, left.asInt() + right.asInt() | 0);
         break;
-      case 84:
+      case 81:
         this.flattenInt(node, left.asInt() - right.asInt() | 0);
         break;
-      case 79:
+      case 76:
         this.flattenInt(node, $imul(left.asInt(), right.asInt()));
         break;
-      case 69:
+      case 66:
         this.flattenInt(node, left.asInt() / right.asInt() | 0);
         break;
-      case 81:
+      case 78:
         this.flattenInt(node, left.asInt() % right.asInt() | 0);
         break;
-      case 82:
+      case 79:
         this.flattenInt(node, left.asInt() << right.asInt());
         break;
-      case 83:
+      case 80:
         this.flattenInt(node, left.asInt() >> right.asInt());
         break;
-      case 66:
+      case 63:
         this.flattenInt(node, left.asInt() & right.asInt());
         break;
-      case 67:
+      case 64:
         this.flattenInt(node, left.asInt() | right.asInt());
         break;
-      case 68:
+      case 65:
         this.flattenInt(node, left.asInt() ^ right.asInt());
         break;
-      case 70:
+      case 67:
         this.flattenBool(node, left.asInt() === right.asInt());
         break;
-      case 80:
+      case 77:
         this.flattenBool(node, left.asInt() !== right.asInt());
         break;
-      case 75:
+      case 72:
         this.flattenBool(node, left.asInt() < right.asInt());
         break;
-      case 71:
+      case 68:
         this.flattenBool(node, left.asInt() > right.asInt());
         break;
-      case 76:
+      case 73:
         this.flattenBool(node, left.asInt() <= right.asInt());
         break;
-      case 72:
+      case 69:
         this.flattenBool(node, left.asInt() >= right.asInt());
         break;
       }
     } else if ($in._NodeKind_.isReal(left.kind)) {
       switch (kind) {
-      case 65:
+      case 62:
         this.flattenReal(node, left.asDouble() + right.asDouble());
         break;
-      case 84:
+      case 81:
         this.flattenReal(node, left.asDouble() - right.asDouble());
         break;
-      case 79:
+      case 76:
         this.flattenReal(node, left.asDouble() * right.asDouble());
         break;
-      case 69:
+      case 66:
         this.flattenReal(node, left.asDouble() / right.asDouble());
         break;
-      case 70:
+      case 67:
         this.flattenBool(node, left.asDouble() === right.asDouble());
         break;
-      case 80:
+      case 77:
         this.flattenBool(node, left.asDouble() !== right.asDouble());
         break;
-      case 75:
+      case 72:
         this.flattenBool(node, left.asDouble() < right.asDouble());
         break;
-      case 71:
+      case 68:
         this.flattenBool(node, left.asDouble() > right.asDouble());
         break;
-      case 76:
+      case 73:
         this.flattenBool(node, left.asDouble() <= right.asDouble());
         break;
-      case 72:
+      case 69:
         this.flattenBool(node, left.asDouble() >= right.asDouble());
         break;
       }
@@ -5705,9 +5578,6 @@
         }
       }
     }
-    if (node.kind === NodeKind.LAMBDA) {
-      return false;
-    }
     var symbol = node.symbol;
     if (symbol !== null) {
       symbolCounts.set(symbol.uniqueID, symbolCounts.getOrDefault(symbol.uniqueID, 0) + 1 | 0);
@@ -5864,11 +5734,11 @@
     if ($in._NodeKind_.isNamedDeclaration(node.kind)) {
       this.setupNamedDeclaration(node, scope);
     }
-    if ($in._NodeKind_.isNamedBlockDeclaration(node.kind) || $in._NodeKind_.isFunction(node.kind) || node.kind === NodeKind.LAMBDA || $in._NodeKind_.isLoop(node.kind)) {
+    if ($in._NodeKind_.isNamedBlockDeclaration(node.kind) || $in._NodeKind_.isFunction(node.kind) || $in._NodeKind_.isLoop(node.kind)) {
       scope = new Scope(scope);
       node.scope = scope;
     }
-    if (node.hasChildren()) {
+    if (node.hasChildren() && !$in._NodeKind_.isExpression(node.kind)) {
       for (var i = 0; i < node.children.length; i = i + 1 | 0) {
         var child = node.children[i];
         if (child !== null) {
@@ -6141,7 +6011,7 @@
     case 4:
       this.resolveCase(node);
       break;
-    case 33:
+    case 32:
       this.resolveUsing(node);
       break;
     case 7:
@@ -6191,100 +6061,96 @@
       this.resolveWhile(node);
       break;
     case 24:
-    case 25:
       this.resolveReturn(node);
       break;
-    case 26:
+    case 25:
       this.resolveBreak(node);
       break;
-    case 27:
+    case 26:
       this.resolveContinue(node);
       break;
+    case 27:
     case 28:
-    case 29:
       this.resolveAssert(node);
       break;
-    case 30:
+    case 29:
       this.resolveExpression(node);
       break;
-    case 31:
+    case 30:
       this.resolveSwitch(node);
       break;
-    case 32:
+    case 31:
       this.resolveModifier(node);
       break;
-    case 34:
+    case 33:
       this.resolveName(node);
       break;
-    case 38:
+    case 37:
       node.type = this.cache.nullType;
       break;
-    case 36:
+    case 35:
       this.resolveThis(node);
       break;
-    case 39:
+    case 38:
       node.type = this.cache.boolType;
       break;
-    case 37:
+    case 36:
       this.resolveHook(node);
       break;
-    case 40:
+    case 39:
       this.resolveInt(node);
       break;
-    case 41:
+    case 40:
       node.type = this.cache.floatType;
       break;
-    case 42:
+    case 41:
       node.type = this.cache.doubleType;
       break;
-    case 43:
+    case 42:
       node.type = this.cache.stringType;
       break;
-    case 44:
+    case 43:
       this.resolveList(node);
       break;
-    case 45:
+    case 44:
       this.resolveDot(node);
       break;
-    case 46:
+    case 45:
       this.resolveCall(node);
       break;
-    case 47:
+    case 46:
       this.resolveSuperCall(node);
       break;
-    case 48:
+    case 47:
       break;
-    case 49:
+    case 48:
       this.resolveSequence(node);
       break;
-    case 50:
+    case 49:
       this.resolveParameterize(node);
       break;
-    case 51:
+    case 50:
       this.resolveCast(node);
       break;
-    case 53:
-      this.resolveLambda(node);
-      break;
-    case 54:
+    case 52:
       this.resolveUntyped(node);
       break;
-    case 55:
+    case 53:
       this.resolveVar(node);
       break;
+    case 54:
+    case 55:
     case 56:
-      this.resolveFunctionType(node);
-      break;
     case 57:
     case 58:
     case 59:
     case 60:
     case 61:
+      this.resolveUnaryOperator(node);
+      break;
     case 62:
     case 63:
     case 64:
-      this.resolveUnaryOperator(node);
-      break;
     case 65:
     case 66:
     case 67:
@@ -6313,22 +6179,19 @@
     case 90:
     case 91:
     case 92:
-    case 93:
-    case 94:
-    case 95:
       this.resolveBinaryOperator(node);
       break;
-    case 96:
+    case 93:
       this.resolveTertiaryOperator(node);
       break;
     default:
-      throw new Error('assert false; (src/resolver/resolver.sk:566:9)');
+      throw new Error('assert false; (src/resolver/resolver.sk:564:9)');
       break;
     }
     this.context.scope = oldScope;
     this.typeContext = oldType;
     if (node.type === null) {
-      throw new Error('assert node.type != null; (src/resolver/resolver.sk:572:5)');
+      throw new Error('assert node.type != null; (src/resolver/resolver.sk:570:5)');
     }
   };
   Resolver.prototype.checkIsParameterized = function(node) {
@@ -6399,10 +6262,10 @@
   Resolver.prototype.checkConversion = function(to, node, kind) {
     var from = node.type;
     if (from === null) {
-      throw new Error('assert from != null; (src/resolver/resolver.sk:654:5)');
+      throw new Error('assert from != null; (src/resolver/resolver.sk:652:5)');
     }
     if (to === null) {
-      throw new Error('assert to != null; (src/resolver/resolver.sk:655:5)');
+      throw new Error('assert to != null; (src/resolver/resolver.sk:653:5)');
     }
     if (from.isError(this.cache) || to.isError(this.cache)) {
       return;
@@ -6443,7 +6306,7 @@
   };
   Resolver.prototype.checkInsideBlock = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:718:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:716:5)');
     }
     if (node.parent.kind !== NodeKind.BLOCK) {
       this.unexpectedStatement(node);
@@ -6451,7 +6314,7 @@
   };
   Resolver.prototype.checkDeclarationLocation = function(node, allowDeclaration) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:731:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:729:5)');
     }
     var parent = null;
     for (parent = node.parent; parent !== null; parent = parent.parent) {
@@ -6470,7 +6333,7 @@
   };
   Resolver.prototype.checkStatementLocation = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:753:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:751:5)');
     }
     for (var parent = node.parent; parent !== null; parent = parent.parent) {
       var kind = parent.kind;
@@ -6602,14 +6465,14 @@
   };
   Resolver.prototype.initializeNamespace = function(symbol) {
     if (!symbol.type.isNamespace()) {
-      throw new Error('assert symbol.type.isNamespace(); (src/resolver/resolver.sk:899:5)');
+      throw new Error('assert symbol.type.isNamespace(); (src/resolver/resolver.sk:897:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on a namespace declaration');
     this.checkNoBaseTypes(symbol, 'A namespace');
   };
   Resolver.prototype.initializeEnum = function(symbol) {
     if (!symbol.type.isEnum()) {
-      throw new Error('assert symbol.type.isEnum(); (src/resolver/resolver.sk:905:5)');
+      throw new Error('assert symbol.type.isEnum(); (src/resolver/resolver.sk:903:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on an enum declaration');
     this.checkNoBaseTypes(symbol, 'An enum');
@@ -6623,7 +6486,7 @@
     var baseTypes = this.collectAndResolveBaseTypes(symbol);
     var unmergedMembers = new StringMap();
     if (type.relevantTypes !== null) {
-      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:920:5)');
+      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:918:5)');
     }
     type.relevantTypes = [];
     if (symbol.kind === SymbolKind.STRUCT) {
@@ -6650,7 +6513,7 @@
         continue;
       }
       if (baseType.hasBaseType(type)) {
-        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:958:7)');
+        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:956:7)');
       }
       type.relevantTypes.push(baseType);
       var members = baseType.members.values();
@@ -6667,7 +6530,7 @@
           unmergedMembers.set(memberSymbol.name, new Member(combined));
         } else {
           if (unmerged.symbol.kind !== SymbolKind.UNMERGED) {
-            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:976:11)');
+            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:974:11)');
           }
           unmerged.symbol.identicalMembers.push(member);
         }
@@ -6679,7 +6542,7 @@
       var existing = type.findMember(member.symbol.name);
       if (existing !== null) {
         if (existing.symbol.overriddenMember !== null) {
-          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:991:9)');
+          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:989:9)');
         }
         existing.symbol.overriddenMember = member;
       } else if (member.symbol.name !== 'new') {
@@ -6699,7 +6562,7 @@
   };
   Resolver.prototype.initializeObject = function(symbol) {
     if (!symbol.type.isObject()) {
-      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:1016:5)');
+      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:1014:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on an object declaration');
     var node = symbol.node.firstNonExtensionSibling();
@@ -6713,7 +6576,7 @@
   Resolver.prototype.initializeFunction = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     if (enclosingSymbol !== null && $in._SymbolKind_.isTypeWithInstances(enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== enclosingSymbol)) {
-      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1035:5)');
+      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1033:5)');
     }
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.CONST, 'on a function declaration');
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, 'on a function declaration');
@@ -6748,7 +6611,7 @@
       resultType = result.type;
     } else {
       if (node.kind !== NodeKind.CONSTRUCTOR) {
-        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1084:7)');
+        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1082:7)');
       }
       resultType = this.cache.ensureTypeIsParameterized(enclosingSymbol.type);
       var members = enclosingSymbol.type.members.values();
@@ -6836,9 +6699,9 @@
     if (variableType === null) {
       if (node.parent.kind === NodeKind.VARIABLE_CLUSTER) {
         variableType = node.parent.clusterType().clone();
-      } else if (symbol.enclosingSymbol !== null) {
+      } else {
         if (!symbol.isEnumValue()) {
-          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1212:9)');
+          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1210:9)');
         }
         var type = symbol.enclosingSymbol.type;
         variableType = Node.createType(type).withSymbol(symbol.enclosingSymbol);
@@ -6876,14 +6739,9 @@
             symbol.constant = new IntContent(type.isEnumFlags() ? 1 : 0);
           }
         }
-      } else {
-        if (node.parent.kind !== NodeKind.LAMBDA) {
-          throw new Error('assert node.parent.kind == .LAMBDA; (src/resolver/resolver.sk:1265:9)');
-        }
-        variableType = Node.createType(this.cache.errorType);
       }
       if (variableType === null) {
-        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1269:7)');
+        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1259:7)');
       }
       node.replaceChild(1, variableType);
     }
@@ -6948,7 +6806,7 @@
         semanticErrorBadTypeParameterBound(this.log, bound.range, boundType);
       } else {
         if (type.relevantTypes !== null) {
-          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1360:9)');
+          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1350:9)');
         }
         type.relevantTypes = [boundType];
         type.copyMembersFrom(boundType);
@@ -6963,7 +6821,7 @@
   Resolver.prototype.initializeDeclaration = function(node) {
     var symbol = node.symbol;
     if (symbol === null) {
-      throw new Error('assert symbol != null; (src/resolver/resolver.sk:1376:5)');
+      throw new Error('assert symbol != null; (src/resolver/resolver.sk:1366:5)');
     }
     if (symbol.isUninitialized()) {
       symbol.flags |= SymbolFlag.INITIALIZING;
@@ -7006,20 +6864,20 @@
       case 0:
         break;
       default:
-        throw new Error('assert false; (src/resolver/resolver.sk:1403:19)');
+        throw new Error('assert false; (src/resolver/resolver.sk:1393:19)');
         break;
       }
       this.context = oldContext;
       this.typeContext = oldTypeContext;
       this.resultType = oldResultType;
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1410:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1400:7)');
       }
       if (!symbol.isInitializing()) {
-        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1411:7)');
+        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1401:7)');
       }
       if (symbol.isInitialized()) {
-        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1412:7)');
+        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1402:7)');
       }
       symbol.flags = symbol.flags & ~SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED;
       while (node !== null) {
@@ -7054,7 +6912,7 @@
     }
     if (member.dependency !== null) {
       if (member.dependency.symbol !== member.symbol) {
-        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1462:7)');
+        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1452:7)');
       }
       this.initializeMember(member.dependency);
       member.type = member.dependency.type;
@@ -7136,7 +6994,7 @@
           }
         } else {
           if (!$constructor.type.isError(this.cache)) {
-            throw new Error('assert constructor.type.isError(cache); (src/resolver/resolver.sk:1556:11)');
+            throw new Error('assert constructor.type.isError(cache); (src/resolver/resolver.sk:1546:11)');
           }
           symbol.flags |= SymbolFlag.INITIALIZED;
           symbol.type = this.cache.errorType;
@@ -7177,7 +7035,7 @@
     symbol.node = Node.createConstructor(Node.createName(symbol.name), Node.createNodeList($arguments), Node.createBlock([]), superArguments !== null ? Node.createSuperCall(superArguments) : null, memberInitializers !== null ? Node.createNodeList(memberInitializers) : null);
     enclosingSymbol.node.declarationBlock().appendChild(symbol.node);
     if (enclosingSymbol.node.scope === null) {
-      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:1625:5)');
+      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:1615:5)');
     }
     var scope = new Scope(enclosingSymbol.node.scope);
     symbol.node.symbol = symbol;
@@ -7191,7 +7049,7 @@
   };
   Resolver.prototype.generateDefaultToString = function(symbol) {
     if (!symbol.isEnumMember()) {
-      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:1640:5)');
+      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:1630:5)');
     }
     var enclosingSymbol = symbol.enclosingSymbol;
     var enclosingNode = enclosingSymbol.node;
@@ -7256,7 +7114,7 @@
         this.generateDefaultToString(symbol);
         break;
       default:
-        throw new Error('assert false; (src/resolver/resolver.sk:1723:19)');
+        throw new Error('assert false; (src/resolver/resolver.sk:1713:19)');
         break;
       }
       if (symbol.node !== null) {
@@ -7290,17 +7148,17 @@
     }
     if (symbol.isUninitialized()) {
       if (symbol.node === null) {
-        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1760:7)');
+        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1750:7)');
       }
       this.initializeDeclaration(symbol.node);
       if (symbol.isInitializing()) {
-        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1762:7)');
+        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1752:7)');
       }
       if (!symbol.isInitialized()) {
-        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1763:7)');
+        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1753:7)');
       }
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1764:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1754:7)');
       }
     } else if (symbol.isInitializing()) {
       semanticErrorCyclicDeclaration(this.log, symbol.node.firstNonExtensionSibling().declarationName().range, symbol.name);
@@ -7320,7 +7178,7 @@
   };
   Resolver.prototype.resolveAsType = function(node) {
     if (!$in._NodeKind_.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1790:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1780:5)');
     }
     this.resolve(node, null);
     this.checkIsType(node);
@@ -7331,7 +7189,7 @@
   };
   Resolver.prototype.resolveAsParameterizedExpression = function(node) {
     if (!$in._NodeKind_.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1801:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1791:5)');
     }
     this.resolve(node, null);
     this.checkIsInstance(node);
@@ -7339,14 +7197,14 @@
   };
   Resolver.prototype.resolveAsExpressionWithTypeContext = function(node, type) {
     if (!$in._NodeKind_.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1808:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1798:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
   };
   Resolver.prototype.resolveAsExpressionWithConversion = function(node, type, kind) {
     if (!$in._NodeKind_.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1814:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1804:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
@@ -7378,16 +7236,16 @@
   };
   Resolver.prototype.resolveProgram = function(node) {
     if (node.parent !== null) {
-      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1847:5)');
+      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1837:5)');
     }
     this.resolveChildren(node);
   };
   Resolver.prototype.resolveFile = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1852:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1842:5)');
     }
     if (node.parent.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1853:5)');
+      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1843:5)');
     }
     this.resolve(node.fileBlock(), null);
   };
@@ -7406,16 +7264,16 @@
   };
   Resolver.prototype.resolveCase = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1875:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1865:5)');
     }
     if (node.parent.kind !== NodeKind.SWITCH) {
-      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1876:5)');
+      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1866:5)');
     }
     if (this.context.switchValue === null) {
-      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1877:5)');
+      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1867:5)');
     }
     if (this.context.switchValue.type === null) {
-      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1878:5)');
+      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1868:5)');
     }
     var values = node.caseValues();
     var block = node.caseBlock();
@@ -7477,7 +7335,7 @@
   Resolver.prototype.resolveFunction = function(node) {
     var symbol = node.symbol;
     if (symbol.enclosingSymbol !== null && $in._SymbolKind_.isTypeWithInstances(symbol.enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== symbol.enclosingSymbol)) {
-      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1962:5)');
+      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1952:5)');
     }
     this.checkDeclarationLocation(node, AllowDeclaration.ALLOW_TOP_OR_OBJECT_LEVEL);
     this.initializeSymbol(symbol);
@@ -7529,7 +7387,7 @@
           this.resolveNodesAsExpressions($arguments);
         } else {
           if (!overriddenType.isFunction()) {
-            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2031:11)');
+            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2021:11)');
           }
           this.resolveArguments($arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
         }
@@ -7638,7 +7496,7 @@
     if ($in._NodeKind_.isCast(kind)) {
       return this.isPureValue(node.castValue());
     }
-    return $in._NodeKind_.isConstant(kind) || kind === NodeKind.LAMBDA;
+    return $in._NodeKind_.isConstant(kind);
   };
   Resolver.prototype.resolveVariable = function(node) {
     var symbol = node.symbol;
@@ -7754,12 +7612,7 @@
       return;
     }
     if (value !== null) {
-      if (node.kind === NodeKind.IMPLICIT_RETURN && this.resultType.isVoid(this.cache)) {
-        node.become(Node.createExpression(value.remove()));
-        this.resolve(node, null);
-      } else {
-        this.resolveAsExpressionWithConversion(value, this.resultType, CastKind.IMPLICIT_CAST);
-      }
+      this.resolveAsExpressionWithConversion(value, this.resultType, CastKind.IMPLICIT_CAST);
     } else if (!this.resultType.isError(this.cache) && !this.resultType.isVoid(this.cache)) {
       semanticErrorExpectedReturnValue(this.log, node.range, this.resultType);
     }
@@ -7821,7 +7674,7 @@
           continue;
         }
         if (!$in._NodeKind_.isConstant(caseValue.kind)) {
-          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2416:9)');
+          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2394:9)');
         }
         var k = 0;
         for (k = 0; k < uniqueValues.length; k = k + 1 | 0) {
@@ -7862,7 +7715,7 @@
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2465:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2443:7)');
       }
       var symbol = this.context.symbolForThis;
       this.initializeSymbol(symbol);
@@ -7984,62 +7837,44 @@
   Resolver.prototype.resolveCall = function(node) {
     var value = node.callValue();
     var $arguments = node.callArguments();
-    if (value.kind === NodeKind.LAMBDA && this.typeContext !== null) {
+    if (!$in._NodeKind_.isExpression(value.kind)) {
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2612:5)');
+    }
+    this.resolve(value, null);
+    this.checkIsParameterized(value);
+    var valueType = value.type;
+    if (valueType.isError(this.cache)) {
       this.resolveNodesAsExpressions($arguments);
-      if (this.typeContext.isError(this.cache)) {
-        this.resolveAsParameterizedExpression(value);
+      return;
+    }
+    if ($in._NodeKind_.isType(value.kind)) {
+      var member = valueType.$constructor();
+      if (member === null) {
+        semanticErrorUnconstructableType(this.log, value.range, valueType);
+        this.resolveNodesAsExpressions($arguments);
         return;
       }
-      var argumentTypes = [];
-      for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-        var type = $arguments[i].type;
-        if (type.isError(this.cache)) {
-          this.resolveAsParameterizedExpression(value);
-          return;
-        }
-        argumentTypes.push(type);
+      if (valueType.symbol.isAbstract()) {
+        var reason = valueType.symbol.reasonForAbstract;
+        semanticErrorAbstractNew(this.log, value.range, valueType, reason.node.declarationName().range, reason.fullName());
+        this.resolveNodesAsExpressions($arguments);
+        return;
       }
-      this.resolveAsExpressionWithConversion(value, this.cache.functionType(this.typeContext, argumentTypes), CastKind.IMPLICIT_CAST);
-    } else {
-      if (!$in._NodeKind_.isExpression(value.kind)) {
-        throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2659:7)');
-      }
-      this.resolve(value, null);
-      this.checkIsParameterized(value);
-      var valueType = value.type;
+      this.initializeMember(member);
+      node.symbol = member.symbol;
+      valueType = member.type;
       if (valueType.isError(this.cache)) {
         this.resolveNodesAsExpressions($arguments);
         return;
       }
-      if ($in._NodeKind_.isType(value.kind)) {
-        var member = valueType.$constructor();
-        if (member === null) {
-          semanticErrorUnconstructableType(this.log, value.range, valueType);
-          this.resolveNodesAsExpressions($arguments);
-          return;
-        }
-        if (valueType.symbol.isAbstract()) {
-          var reason = valueType.symbol.reasonForAbstract;
-          semanticErrorAbstractNew(this.log, value.range, valueType, reason.node.declarationName().range, reason.fullName());
-          this.resolveNodesAsExpressions($arguments);
-          return;
-        }
-        this.initializeMember(member);
-        node.symbol = member.symbol;
-        valueType = member.type;
-        if (valueType.isError(this.cache)) {
-          this.resolveNodesAsExpressions($arguments);
-          return;
-        }
-      }
-      if (!valueType.isFunction()) {
-        semanticErrorInvalidCall(this.log, value.range, valueType);
-        this.resolveNodesAsExpressions($arguments);
-        return;
-      }
-      node.type = valueType.resultType();
-      this.resolveArguments($arguments, valueType.argumentTypes(), node.range, value.range);
     }
+    if (!valueType.isFunction()) {
+      semanticErrorInvalidCall(this.log, value.range, valueType);
+      this.resolveNodesAsExpressions($arguments);
+      return;
+    }
+    node.type = valueType.resultType();
+    this.resolveArguments($arguments, valueType.argumentTypes(), node.range, value.range);
   };
   Resolver.prototype.resolveSuperCall = function(node) {
     var $arguments = node.superCallArguments();
@@ -8066,7 +7901,7 @@
   };
   Resolver.prototype.resolveSequence = function(node) {
     if (!node.hasChildren()) {
-      throw new Error('assert node.hasChildren(); (src/resolver/resolver.sk:2746:5)');
+      throw new Error('assert node.hasChildren(); (src/resolver/resolver.sk:2698:5)');
     }
     for (var i = 0, n = node.children.length; i < n; i = i + 1 | 0) {
       var child = node.children[i];
@@ -8098,7 +7933,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2783:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2735:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -8134,109 +7969,11 @@
     this.resolveAsExpressionWithConversion(node.castValue(), type.type, CastKind.EXPLICIT_CAST);
     node.type = type.type;
   };
-  Resolver.prototype.resolveLambda = function(node) {
-    var oldResultType = this.resultType;
-    var oldLoop = this.context.loop;
-    this.resultType = this.cache.errorType;
-    this.context.loop = null;
-    var $arguments = node.lambdaArguments();
-    var block = node.lambdaBlock();
-    var inferReturnType = false;
-    if (this.typeContext === null) {
-      if ($arguments.length === 0) {
-        this.typeContext = this.cache.functionType(this.cache.errorType, []);
-      } else {
-        semanticErrorMissingTypeContext(this.log, node.range);
-      }
-    }
-    if (this.typeContext !== null && !this.typeContext.isError(this.cache)) {
-      if (!this.typeContext.isFunction()) {
-        semanticErrorBadLambdaTypeContext(this.log, node.range, this.typeContext);
-      } else {
-        var argumentTypes = this.typeContext.argumentTypes();
-        this.resultType = this.typeContext.resultType();
-        node.type = this.typeContext;
-        if (argumentTypes.length !== $arguments.length) {
-          semanticErrorArgumentCount(this.log, node.range, argumentTypes.length, $arguments.length);
-        } else {
-          for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-            if ($arguments[i].variableType() !== null) {
-              throw new Error('assert arguments.get(i).variableType() == null; (src/resolver/resolver.sk:2859:13)');
-            }
-            $arguments[i].replaceChild(1, Node.createType(argumentTypes[i]));
-          }
-        }
-        if (this.resultType.isError(this.cache)) {
-          inferReturnType = true;
-        } else if (!this.resultType.isVoid(this.cache) && !block.blockAlwaysEndsWithReturn()) {
-          semanticErrorLambdaMissingReturn(this.log, node.range, this.resultType);
-        }
-      }
-    }
-    this.resolveNodes($arguments);
-    this.resolve(block, null);
-    if (inferReturnType) {
-      var returnStatements = [];
-      Resolver.collectReturnStatements(block, returnStatements);
-      var commonType = returnStatements.length === 0 ? this.cache.voidType : null;
-      for (var i = 0; i < returnStatements.length; i = i + 1 | 0) {
-        var value = returnStatements[i].returnValue();
-        var type = value !== null ? value.type : this.cache.voidType;
-        if (type.isError(this.cache)) {
-          commonType = null;
-          break;
-        }
-        if (commonType === null) {
-          commonType = type;
-        } else {
-          var merged = this.cache.commonImplicitType(commonType, type);
-          if (merged === null) {
-            semanticErrorLambdaReturnTypeInferenceFailed(this.log, node.range, value.range, commonType, type);
-            commonType = null;
-            break;
-          }
-          commonType = merged;
-        }
-      }
-      node.type = commonType !== null ? this.cache.functionType(commonType, node.type.argumentTypes()) : this.cache.errorType;
-    }
-    this.resultType = oldResultType;
-    this.context.loop = oldLoop;
-  };
-  Resolver.collectReturnStatements = function(node, returnStatements) {
-    if ($in._NodeKind_.isReturn(node.kind)) {
-      returnStatements.push(node);
-    } else if (node.kind !== NodeKind.LAMBDA && node.hasChildren()) {
-      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        var child = node.children[i];
-        if (child !== null) {
-          Resolver.collectReturnStatements(child, returnStatements);
-        }
-      }
-    }
-  };
   Resolver.prototype.resolveUntyped = function(node) {
     this.resolveAsParameterizedExpression(node.untypedValue());
   };
   Resolver.prototype.resolveVar = function(node) {
     semanticErrorUnexpectedNode(this.log, node.range, node.kind);
-  };
-  Resolver.prototype.resolveFunctionType = function(node) {
-    var result = node.functionTypeResult();
-    var $arguments = node.functionTypeArguments();
-    this.resolveAsParameterizedType(result);
-    this.resolveNodesAsVariableTypes($arguments);
-    if (!result.type.isError(this.cache)) {
-      var argumentTypes = [];
-      for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-        var argumentType = $arguments[i].type;
-        if (argumentType.isError(this.cache)) {
-          return;
-        }
-        argumentTypes.push(argumentType);
-      }
-      node.become(Node.createType(this.cache.functionType(result.type, argumentTypes)).withRange(node.range));
-    }
   };
   Resolver.prototype.resolveUnaryOperator = function(node) {
     var kind = node.kind;
@@ -9311,9 +9048,6 @@
   $in._NodeKind_.isCall = function($this) {
     return $this >= NodeKind.CALL && $this <= NodeKind.SUPER_CALL;
   };
-  $in._NodeKind_.isReturn = function($this) {
-    return $this >= NodeKind.RETURN && $this <= NodeKind.IMPLICIT_RETURN;
-  };
   $in._NodeKind_.isUnaryOperator = function($this) {
     return $this >= NodeKind.NOT && $this <= NodeKind.POSTFIX_DECREMENT;
   };
@@ -9406,148 +9140,142 @@
     case 24:
       return 'RETURN';
     case 25:
-      return 'IMPLICIT_RETURN';
-    case 26:
       return 'BREAK';
-    case 27:
+    case 26:
       return 'CONTINUE';
-    case 28:
+    case 27:
       return 'ASSERT';
-    case 29:
+    case 28:
       return 'ASSERT_CONST';
-    case 30:
+    case 29:
       return 'EXPRESSION';
-    case 31:
+    case 30:
       return 'SWITCH';
-    case 32:
+    case 31:
       return 'MODIFIER';
-    case 33:
+    case 32:
       return 'USING';
-    case 34:
+    case 33:
       return 'NAME';
-    case 35:
+    case 34:
       return 'TYPE';
-    case 36:
+    case 35:
       return 'THIS';
-    case 37:
+    case 36:
       return 'HOOK';
-    case 38:
+    case 37:
       return 'NULL';
-    case 39:
+    case 38:
       return 'BOOL';
-    case 40:
+    case 39:
       return 'INT';
-    case 41:
+    case 40:
       return 'FLOAT';
-    case 42:
+    case 41:
       return 'DOUBLE';
-    case 43:
+    case 42:
       return 'STRING';
-    case 44:
+    case 43:
       return 'LIST';
-    case 45:
+    case 44:
       return 'DOT';
-    case 46:
+    case 45:
       return 'CALL';
-    case 47:
+    case 46:
       return 'SUPER_CALL';
-    case 48:
+    case 47:
       return 'ERROR';
-    case 49:
+    case 48:
       return 'SEQUENCE';
-    case 50:
+    case 49:
       return 'PARAMETERIZE';
-    case 51:
+    case 50:
       return 'CAST';
-    case 52:
+    case 51:
       return 'IMPLICIT_CAST';
-    case 53:
-      return 'LAMBDA';
-    case 54:
+    case 52:
       return 'UNTYPED';
-    case 55:
+    case 53:
       return 'VAR';
-    case 56:
-      return 'FUNCTION_TYPE';
-    case 57:
+    case 54:
       return 'NOT';
-    case 58:
+    case 55:
       return 'POSITIVE';
-    case 59:
+    case 56:
       return 'NEGATIVE';
-    case 60:
+    case 57:
       return 'COMPLEMENT';
-    case 61:
+    case 58:
       return 'PREFIX_INCREMENT';
-    case 62:
+    case 59:
       return 'PREFIX_DECREMENT';
-    case 63:
+    case 60:
       return 'POSTFIX_INCREMENT';
-    case 64:
+    case 61:
       return 'POSTFIX_DECREMENT';
-    case 65:
+    case 62:
       return 'ADD';
-    case 66:
+    case 63:
       return 'BITWISE_AND';
-    case 67:
+    case 64:
       return 'BITWISE_OR';
-    case 68:
+    case 65:
       return 'BITWISE_XOR';
-    case 69:
+    case 66:
       return 'DIVIDE';
-    case 70:
+    case 67:
       return 'EQUAL';
-    case 71:
+    case 68:
       return 'GREATER_THAN';
-    case 72:
+    case 69:
       return 'GREATER_THAN_OR_EQUAL';
-    case 73:
+    case 70:
       return 'IN';
-    case 74:
+    case 71:
       return 'INDEX';
-    case 75:
+    case 72:
       return 'LESS_THAN';
-    case 76:
+    case 73:
       return 'LESS_THAN_OR_EQUAL';
-    case 77:
+    case 74:
       return 'LOGICAL_AND';
-    case 78:
+    case 75:
       return 'LOGICAL_OR';
-    case 79:
+    case 76:
       return 'MULTIPLY';
-    case 80:
+    case 77:
       return 'NOT_EQUAL';
-    case 81:
+    case 78:
       return 'REMAINDER';
-    case 82:
+    case 79:
       return 'SHIFT_LEFT';
-    case 83:
+    case 80:
       return 'SHIFT_RIGHT';
-    case 84:
+    case 81:
       return 'SUBTRACT';
-    case 85:
+    case 82:
       return 'ASSIGN';
-    case 86:
+    case 83:
       return 'ASSIGN_ADD';
-    case 87:
+    case 84:
       return 'ASSIGN_BITWISE_AND';
-    case 88:
+    case 85:
       return 'ASSIGN_BITWISE_OR';
-    case 89:
+    case 86:
       return 'ASSIGN_BITWISE_XOR';
-    case 90:
+    case 87:
       return 'ASSIGN_DIVIDE';
-    case 91:
+    case 88:
       return 'ASSIGN_MULTIPLY';
-    case 92:
+    case 89:
       return 'ASSIGN_REMAINDER';
-    case 93:
+    case 90:
       return 'ASSIGN_SHIFT_LEFT';
-    case 94:
+    case 91:
       return 'ASSIGN_SHIFT_RIGHT';
-    case 95:
+    case 92:
       return 'ASSIGN_SUBTRACT';
-    case 96:
+    case 93:
       return 'ASSIGN_INDEX';
     default:
       return '';
@@ -9732,128 +9460,124 @@
     case 38:
       return 'FLOAT';
     case 39:
-      return 'FN';
-    case 40:
       return 'FOR';
-    case 41:
+    case 40:
       return 'GREATER_THAN';
-    case 42:
+    case 41:
       return 'GREATER_THAN_OR_EQUAL';
-    case 43:
+    case 42:
       return 'IDENTIFIER';
-    case 44:
+    case 43:
       return 'IF';
-    case 45:
+    case 44:
       return 'IMPORT';
-    case 46:
+    case 45:
       return 'IN';
-    case 47:
+    case 46:
       return 'INCREMENT';
-    case 48:
+    case 47:
       return 'INLINE';
-    case 49:
+    case 48:
       return 'INTERFACE';
-    case 50:
+    case 49:
       return 'INT_BINARY';
-    case 51:
+    case 50:
       return 'INT_DECIMAL';
-    case 52:
+    case 51:
       return 'INT_HEX';
-    case 53:
+    case 52:
       return 'INT_OCTAL';
-    case 54:
+    case 53:
       return 'IS';
-    case 55:
-      return 'LAMBDA';
-    case 56:
+    case 54:
       return 'LEFT_BRACE';
-    case 57:
+    case 55:
       return 'LEFT_BRACKET';
-    case 58:
+    case 56:
       return 'LEFT_PARENTHESIS';
-    case 59:
+    case 57:
       return 'LESS_THAN';
-    case 60:
+    case 58:
       return 'LESS_THAN_OR_EQUAL';
-    case 61:
+    case 59:
       return 'LOGICAL_AND';
-    case 62:
+    case 60:
       return 'LOGICAL_OR';
-    case 63:
+    case 61:
       return 'MINUS';
-    case 64:
+    case 62:
       return 'MULTIPLY';
-    case 65:
+    case 63:
       return 'NAMESPACE';
-    case 66:
+    case 64:
       return 'NEW';
-    case 67:
+    case 65:
       return 'NOT';
-    case 68:
+    case 66:
       return 'NOT_EQUAL';
-    case 69:
+    case 67:
       return 'NULL';
-    case 70:
+    case 68:
       return 'OVERRIDE';
-    case 71:
+    case 69:
       return 'PLUS';
-    case 72:
+    case 70:
       return 'PRIVATE';
-    case 73:
+    case 71:
       return 'PROTECTED';
-    case 74:
+    case 72:
       return 'PUBLIC';
-    case 75:
+    case 73:
       return 'QUESTION_MARK';
-    case 76:
+    case 74:
       return 'REMAINDER';
-    case 77:
+    case 75:
       return 'RETURN';
-    case 78:
+    case 76:
       return 'RIGHT_BRACE';
-    case 79:
+    case 77:
       return 'RIGHT_BRACKET';
-    case 80:
+    case 78:
       return 'RIGHT_PARENTHESIS';
-    case 81:
+    case 79:
       return 'SEMICOLON';
-    case 82:
+    case 80:
       return 'SHIFT_LEFT';
-    case 83:
+    case 81:
       return 'SHIFT_RIGHT';
-    case 84:
+    case 82:
       return 'STATIC';
-    case 85:
+    case 83:
       return 'STRING';
-    case 86:
+    case 84:
       return 'STRUCT';
-    case 87:
+    case 85:
       return 'SUPER';
-    case 88:
+    case 86:
       return 'SWITCH';
-    case 89:
+    case 87:
       return 'THIS';
-    case 90:
+    case 88:
       return 'TILDE';
-    case 91:
+    case 89:
       return 'TRUE';
-    case 92:
+    case 90:
       return 'UNTYPED';
-    case 93:
+    case 91:
       return 'USING';
-    case 94:
+    case 92:
       return 'VAR';
-    case 95:
+    case 93:
       return 'VIRTUAL';
-    case 96:
+    case 94:
       return 'WHILE';
-    case 97:
+    case 95:
       return 'WHITESPACE';
-    case 98:
+    case 96:
       return 'YY_INVALID_ACTION';
-    case 99:
+    case 97:
       return 'START_PARAMETER_LIST';
-    case 100:
+    case 98:
       return 'END_PARAMETER_LIST';
     default:
       return '';
@@ -9861,19 +9585,19 @@
   };
   function checkAllNodeListKinds(node, checker) {
     if (node === null) {
-      throw new Error('assert node != null; (src/ast/create.sk:388:3)');
+      throw new Error('assert node != null; (src/ast/create.sk:369:3)');
     }
     if (node.kind !== NodeKind.NODE_LIST) {
-      throw new Error('assert node.kind == .NODE_LIST; (src/ast/create.sk:389:3)');
+      throw new Error('assert node.kind == .NODE_LIST; (src/ast/create.sk:370:3)');
     }
     if (node.children === null) {
-      throw new Error('assert node.children != null; (src/ast/create.sk:390:3)');
+      throw new Error('assert node.children != null; (src/ast/create.sk:371:3)');
     }
     return checkAllNodeKinds(node.children, checker);
   }
   function checkAllNodeKinds(nodes, checker) {
     if (nodes === null) {
-      throw new Error('assert nodes != null; (src/ast/create.sk:395:3)');
+      throw new Error('assert nodes != null; (src/ast/create.sk:376:3)');
     }
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
       if (!checker.check(nodes[i])) {
@@ -10293,7 +10017,7 @@
     while (yy_cp < text_length) {
       var yy_current_state = 1;
       var yy_bp = yy_cp;
-      while (yy_current_state !== 259) {
+      while (yy_current_state !== 257) {
         if (yy_cp >= text_length) {
           break;
         }
@@ -10306,7 +10030,7 @@
         }
         while (yy_chk[yy_base[yy_current_state] + yy_c | 0] !== yy_current_state) {
           yy_current_state = yy_def[yy_current_state];
-          if (yy_current_state >= 260) {
+          if (yy_current_state >= 258) {
             yy_c = yy_meta[yy_c];
           }
         }
@@ -10341,7 +10065,7 @@
       while (stack.length > 0) {
         var top = tokens[stack[stack.length - 1 | 0]];
         var topKind = top.kind;
-        if (topKind === TokenKind.LESS_THAN && tokenKind !== TokenKind.LESS_THAN && tokenKind !== TokenKind.IDENTIFIER && tokenKind !== TokenKind.IS && tokenKind !== TokenKind.COMMA && tokenKind !== TokenKind.DOT && tokenKind !== TokenKind.FN && tokenKind !== TokenKind.LEFT_PARENTHESIS && tokenKind !== TokenKind.RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan) {
+        if (topKind === TokenKind.LESS_THAN && tokenKind !== TokenKind.LESS_THAN && tokenKind !== TokenKind.IDENTIFIER && tokenKind !== TokenKind.IS && tokenKind !== TokenKind.COMMA && tokenKind !== TokenKind.DOT && !tokenStartsWithGreaterThan) {
           stack.pop();
         } else {
           break;
@@ -10369,7 +10093,7 @@
               var text = token.text.slice(1, token.text.length);
               var kind = tokenKind === TokenKind.SHIFT_RIGHT ? TokenKind.GREATER_THAN : tokenKind === TokenKind.GREATER_THAN_OR_EQUAL ? TokenKind.ASSIGN : tokenKind === TokenKind.ASSIGN_SHIFT_RIGHT ? TokenKind.GREATER_THAN_OR_EQUAL : TokenKind.ERROR;
               if (kind === TokenKind.ERROR) {
-                throw new Error('assert kind != .ERROR; (src/lexer/token.sk:80:13)');
+                throw new Error('assert kind != .ERROR; (src/lexer/token.sk:78:13)');
               }
               tokens.splice(i + 1 | 0, 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind, text));
               token.range = new Range(range.source, start, start + 1 | 0);
@@ -10420,11 +10144,11 @@
     }
     while (!context.peek(TokenKind.END_OF_FILE)) {
       switch (context.current().kind) {
-      case 80:
-      case 79:
       case 78:
+      case 77:
+      case 76:
         return context.eat(kind);
-      case 81:
+      case 79:
         if (tokenScan === TokenScan.STOP_BEFORE_NEXT_STATEMENT) {
           return context.eat(kind);
         }
@@ -10438,23 +10162,23 @@
       case 32:
       case 35:
       case 37:
-      case 40:
+      case 39:
+      case 43:
       case 44:
-      case 45:
+      case 47:
       case 48:
-      case 49:
-      case 65:
+      case 63:
+      case 68:
       case 70:
+      case 71:
       case 72:
-      case 73:
-      case 74:
-      case 77:
+      case 75:
+      case 82:
       case 84:
       case 86:
-      case 88:
+      case 91:
       case 93:
-      case 95:
-      case 96:
+      case 94:
         if (tokenScan === TokenScan.STOP_BEFORE_NEXT_STATEMENT) {
           return true;
         }
@@ -10464,21 +10188,14 @@
     }
     return false;
   }
-  function parseGroup(context, allowLambda) {
+  function parseGroup(context) {
     var token = context.current();
     if (!context.expect(TokenKind.LEFT_PARENTHESIS)) {
       return null;
     }
-    if (allowLambda === AllowLambda.LAMBDA_NOT_ALLOWED || !context.eat(TokenKind.RIGHT_PARENTHESIS)) {
-      var value = pratt.parse(context, Precedence.LOWEST);
-      scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-      return value;
-    }
-    if (!context.peek(TokenKind.LAMBDA)) {
-      context.expect(TokenKind.LAMBDA);
-      return Node.createError().withRange(context.spanSince(token.range));
-    }
-    return Node.createSequence([]).withRange(context.spanSince(token.range));
+    var value = pratt.parse(context, Precedence.LOWEST);
+    scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+    return value;
   }
   function parseName(context) {
     var token = context.current();
@@ -10505,16 +10222,6 @@
       return null;
     }
     return Node.createBlock([statement]).withRange(statement.range);
-  }
-  function parseLambdaBlock(context) {
-    if (context.peek(TokenKind.LEFT_BRACE)) {
-      return parseBlock(context, StatementHint.NORMAL);
-    }
-    if (context.peek(TokenKind.RIGHT_PARENTHESIS) || context.peek(TokenKind.COMMA) || context.peek(TokenKind.SEMICOLON)) {
-      return Node.createBlock([]);
-    }
-    var value = pratt.parse(context, Precedence.COMMA);
-    return Node.createBlock([Node.createImplicitReturn(value).withRange(value.range)]).withRange(value.range);
   }
   function parseCaseStatement(context) {
     var token = context.current();
@@ -10749,7 +10456,7 @@
       context.next();
     }
     if (context.current().range.start < token.range.end) {
-      throw new Error('assert context.current().range.start >= token.range.end; (src/parser/parser.sk:348:3)');
+      throw new Error('assert context.current().range.start >= token.range.end; (src/parser/parser.sk:323:3)');
     }
     return Node.createExpression(value).withRange(context.spanSince(token.range));
   }
@@ -10790,7 +10497,7 @@
   }
   function parseSwitch(context) {
     var token = context.next();
-    var value = parseGroup(context, AllowLambda.LAMBDA_NOT_ALLOWED);
+    var value = parseGroup(context);
     if (value === null) {
       return null;
     }
@@ -10802,7 +10509,7 @@
   }
   function parseWhile(context) {
     var token = context.next();
-    var value = parseGroup(context, AllowLambda.LAMBDA_NOT_ALLOWED);
+    var value = parseGroup(context);
     if (value === null) {
       return null;
     }
@@ -10821,13 +10528,13 @@
     if (!context.expect(TokenKind.WHILE)) {
       return null;
     }
-    var value = parseGroup(context, AllowLambda.LAMBDA_NOT_ALLOWED);
+    var value = parseGroup(context);
     scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
     return Node.createDoWhile(block, value).withRange(context.spanSince(token.range));
   }
   function parseIf(context) {
     var token = context.next();
-    var value = parseGroup(context, AllowLambda.LAMBDA_NOT_ALLOWED);
+    var value = parseGroup(context);
     if (value === null) {
       return null;
     }
@@ -11003,35 +10710,13 @@
     scanForToken(context, TokenKind.SEMICOLON, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
     return Node.createAlias(name, value).withRange(context.spanSince(token.range));
   }
-  function looksLikeLambdaArguments(node) {
-    if (node.kind === NodeKind.SEQUENCE) {
-      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        if (node.children[i].kind !== NodeKind.NAME) {
-          return false;
-        }
-      }
-      return true;
-    }
-    return false;
-  }
-  function createLambdaFromNames(names, block) {
-    for (var i = 0; i < names.length; i = i + 1 | 0) {
-      var name = names[i];
-      if (name.kind !== NodeKind.NAME) {
-        throw new Error('assert name.kind == .NAME; (src/parser/parser.sk:571:5)');
-      }
-      names[i] = Node.createVariable(name, null, null).withRange(name.range);
-    }
-    return Node.createLambda(names, block);
-  }
   function looksLikeType(node) {
     switch (node.kind) {
-    case 45:
+    case 44:
       var target = node.dotTarget();
       return target !== null && looksLikeType(target);
-    case 34:
-    case 50:
-    case 56:
+    case 33:
+    case 49:
       return true;
     default:
       return false;
@@ -11059,46 +10744,46 @@
       return parseModifier(context, hint, SymbolFlag.EXPORT);
     case 37:
       return parseModifier(context, hint, SymbolFlag.FINAL);
-    case 40:
+    case 39:
       return parseFor(context);
-    case 43:
-    case 94:
+    case 42:
+    case 92:
       return parsePossibleTypedDeclaration(context, hint);
-    case 44:
+    case 43:
       return parseIf(context);
-    case 45:
+    case 44:
       return parseModifier(context, hint, SymbolFlag.IMPORT);
-    case 46:
+    case 45:
       return parseExtension(context);
-    case 48:
+    case 47:
       return parseModifier(context, hint, SymbolFlag.INLINE);
-    case 49:
+    case 48:
       return parseObject(context, NodeKind.INTERFACE);
-    case 65:
+    case 63:
       return parseNamespace(context);
-    case 66:
+    case 64:
       return parseConstructor(context, hint);
-    case 70:
+    case 68:
       return parseModifier(context, hint, SymbolFlag.OVERRIDE);
-    case 72:
+    case 70:
       return parseModifier(context, hint, SymbolFlag.PRIVATE);
-    case 73:
+    case 71:
       return parseModifier(context, hint, SymbolFlag.PROTECTED);
-    case 74:
+    case 72:
       return parseModifier(context, hint, SymbolFlag.PUBLIC);
-    case 77:
+    case 75:
       return parseReturn(context);
-    case 84:
+    case 82:
       return parseModifier(context, hint, SymbolFlag.STATIC);
-    case 86:
+    case 84:
       return parseObject(context, NodeKind.STRUCT);
-    case 88:
+    case 86:
       return parseSwitch(context);
-    case 93:
+    case 91:
       return parseUsing(context);
-    case 95:
+    case 93:
       return parseModifier(context, hint, SymbolFlag.VIRTUAL);
-    case 96:
+    case 94:
       return parseWhile(context);
     default:
       return parseExpression(context);
@@ -11259,12 +10944,6 @@
   function semanticErrorNoCommonType(log, range, left, right) {
     log.error(range, 'No common type for ' + typeToText(left) + ' and ' + typeToText(right));
   }
-  function semanticErrorLambdaReturnTypeInferenceFailed(log, range, failed, left, right) {
-    log.error(range, 'Could not infer return type of lambda expression');
-    if (!failed.isEmpty()) {
-      log.note(failed, 'No common type for ' + typeToText(left) + ' and ' + typeToText(right));
-    }
-  }
   function semanticErrorBadType(log, range, type) {
     log.error(range, 'Cannot use ' + typeToText(type) + ' here');
   }
@@ -11309,9 +10988,6 @@
   }
   function semanticErrorExpectedReturnValue(log, range, type) {
     log.error(range, 'Return statement must return ' + typeToText(type));
-  }
-  function semanticErrorBadLambdaTypeContext(log, range, type) {
-    log.error(range, 'Cannot use a lambda expression with ' + typeToText(type));
   }
   function semanticErrorNonConstantCaseValue(log, range) {
     log.error(range, 'Non-constant case value');
@@ -11436,9 +11112,6 @@
   }
   function semanticErrorMissingReturn(log, range, name, type) {
     log.error(range, 'All control paths for ' + simpleQuote(name) + ' must return a value of ' + typeToText(type));
-  }
-  function semanticErrorLambdaMissingReturn(log, range, type) {
-    log.error(range, 'All control paths for lambda expression must return a value of ' + typeToText(type));
   }
   function semanticErrorBaseClassInExtension(log, range) {
     log.error(range, 'The base class must be set from the class declaration, not from an extension block');
@@ -11835,13 +11508,13 @@
   js.Emitter.isKeyword = null;
   var NATIVE_LIBRARY_JS = '\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct String {\n  import static string fromCharCode(int value);\n}\n\nimport class Object {\n  import static Object create(Object prototype);\n}\n\nimport namespace operators {\n  import void delete(int value);\n  import void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport struct string {\n  inline int size() { return untyped(this).length; }\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).length; }\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  inline void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n  inline T get(string key) { return untyped(table)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(string key, T value) { untyped(table)[key] = value; }\n  inline bool has(string key) { return key in untyped(table); }\n  inline void remove(string key) { operators.delete(untyped(table)[key]); }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n  inline T get(int key) { return untyped(table)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(int key, T value) { untyped(table)[key] = value; }\n  inline bool has(int key) { return key in untyped(table); }\n  inline void remove(int key) { operators.delete(untyped(table)[key]); }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n';
   SourceMapGenerator.comparison = new SourceMappingComparison();
-  var yy_accept = [98, 98, 98, 31, 34, 97, 67, 34, 76, 13, 34, 58, 80, 64, 71, 21, 63, 28, 26, 51, 51, 20, 81, 59, 2, 41, 75, 43, 57, 79, 15, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 56, 14, 78, 90, 97, 68, 98, 85, 98, 10, 61, 3, 98, 18, 98, 8, 47, 9, 24, 7, 97, 6, 98, 51, 98, 38, 98, 98, 82, 60, 33, 55, 42, 83, 43, 5, 43, 43, 43, 43, 43, 43, 43, 27, 43, 43, 43, 43, 43, 39, 43, 44, 43, 46, 54, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 4, 62, 97, 29, 50, 53, 52, 11, 12, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 40, 43, 43, 43, 43, 66, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 94, 43, 43, 38, 43, 43, 43, 17, 43, 43, 43, 43, 30, 32, 43, 43, 43, 43, 43, 43, 43, 69, 43, 43, 43, 43, 43, 43, 43, 43, 43, 89, 91, 43, 43, 43, 43, 0, 43, 16, 19, 22, 43, 43, 43, 36, 37, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 87, 43, 43, 93, 43, 96, 1, 43, 43, 35, 45, 48, 43, 43, 43, 43, 43, 74, 77, 84, 86, 88, 43, 43, 43, 25, 43, 43, 43, 72, 43, 92, 95, 23, 43, 43, 70, 43, 49, 65, 73, 98];
+  var yy_accept = [96, 96, 96, 31, 34, 95, 65, 34, 74, 13, 34, 56, 78, 62, 69, 21, 61, 28, 26, 50, 50, 20, 79, 57, 2, 40, 73, 42, 55, 77, 15, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 54, 14, 76, 88, 95, 66, 96, 83, 96, 10, 59, 3, 96, 18, 96, 8, 46, 9, 24, 7, 95, 6, 96, 50, 96, 38, 96, 96, 80, 58, 33, 41, 81, 42, 5, 42, 42, 42, 42, 42, 42, 42, 27, 42, 42, 42, 42, 42, 42, 43, 42, 45, 53, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 4, 60, 95, 29, 49, 52, 51, 11, 12, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 39, 42, 42, 42, 42, 64, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 92, 42, 42, 38, 42, 42, 42, 17, 42, 42, 42, 42, 30, 32, 42, 42, 42, 42, 42, 42, 42, 67, 42, 42, 42, 42, 42, 42, 42, 42, 42, 87, 89, 42, 42, 42, 42, 0, 42, 16, 19, 22, 42, 42, 42, 36, 37, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 85, 42, 42, 91, 42, 94, 1, 42, 42, 35, 44, 47, 42, 42, 42, 42, 42, 72, 75, 82, 84, 86, 42, 42, 42, 25, 42, 42, 42, 70, 42, 90, 93, 23, 42, 42, 68, 42, 48, 63, 71, 96];
   var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 1, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 32, 28, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 28, 42, 43, 44, 45, 46, 47, 28, 48, 49, 50, 51, 52, 53, 54, 55, 28, 56, 57, 58, 59, 1];
   var yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1];
-  var yy_base = [0, 0, 0, 316, 317, 58, 291, 57, 290, 56, 56, 317, 317, 289, 53, 317, 52, 317, 51, 73, 64, 317, 317, 45, 46, 48, 317, 0, 317, 317, 288, 46, 263, 63, 48, 54, 71, 76, 85, 258, 50, 272, 73, 65, 29, 96, 268, 317, 76, 317, 317, 128, 317, 98, 317, 304, 317, 317, 317, 102, 317, 303, 317, 317, 317, 317, 317, 0, 317, 121, 127, 117, 317, 131, 0, 281, 317, 317, 317, 317, 280, 0, 317, 262, 253, 264, 251, 266, 253, 259, 0, 247, 244, 247, 250, 247, 0, 243, 0, 243, 108, 0, 245, 235, 244, 249, 111, 251, 234, 120, 236, 241, 240, 229, 229, 237, 229, 228, 234, 317, 317, 0, 142, 137, 152, 0, 317, 317, 241, 236, 239, 234, 221, 114, 236, 231, 223, 220, 216, 231, 0, 217, 221, 224, 223, 0, 216, 210, 205, 206, 212, 203, 203, 201, 214, 200, 200, 211, 192, 201, 0, 195, 201, 317, 194, 194, 199, 0, 191, 189, 197, 186, 0, 0, 188, 198, 191, 185, 187, 183, 181, 0, 181, 195, 190, 185, 177, 183, 188, 174, 186, 0, 0, 173, 180, 167, 180, 0, 166, 0, 0, 0, 170, 171, 163, 0, 0, 162, 174, 172, 162, 167, 157, 171, 170, 159, 168, 152, 0, 161, 163, 0, 166, 0, 0, 147, 147, 0, 0, 0, 163, 162, 156, 142, 128, 0, 0, 0, 0, 0, 141, 133, 138, 0, 139, 138, 135, 0, 130, 0, 0, 0, 129, 119, 0, 107, 0, 0, 0, 317, 180, 184, 186, 190, 112];
-  var yy_def = [0, 259, 1, 259, 259, 259, 259, 260, 259, 259, 261, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 262, 259, 259, 259, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 259, 259, 259, 259, 259, 259, 260, 259, 260, 259, 259, 259, 261, 259, 261, 259, 259, 259, 259, 259, 263, 259, 259, 259, 259, 259, 259, 264, 259, 259, 259, 259, 259, 259, 262, 259, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 259, 259, 263, 259, 259, 259, 264, 259, 259, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 259, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 262, 0, 259, 259, 259, 259, 259];
-  var yy_nxt = [0, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 21, 22, 23, 24, 25, 26, 27, 27, 28, 4, 29, 30, 31, 32, 33, 34, 35, 36, 27, 27, 37, 27, 27, 27, 38, 39, 40, 41, 42, 43, 44, 45, 46, 27, 27, 47, 48, 49, 50, 51, 51, 54, 57, 60, 63, 65, 67, 75, 76, 77, 78, 79, 80, 114, 68, 66, 64, 115, 69, 58, 70, 70, 70, 70, 89, 61, 55, 69, 83, 70, 70, 70, 70, 90, 84, 86, 91, 106, 92, 119, 107, 72, 54, 94, 112, 87, 71, 93, 88, 60, 72, 95, 113, 98, 125, 96, 97, 102, 73, 99, 100, 103, 109, 110, 101, 111, 74, 55, 116, 51, 51, 61, 120, 123, 123, 104, 117, 122, 122, 122, 122, 69, 258, 70, 70, 70, 70, 124, 124, 124, 142, 148, 152, 123, 123, 257, 149, 143, 122, 122, 122, 122, 169, 170, 72, 256, 255, 153, 124, 124, 124, 254, 253, 252, 251, 250, 249, 248, 247, 163, 53, 53, 53, 53, 59, 59, 59, 59, 81, 81, 121, 246, 121, 121, 245, 244, 243, 242, 241, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 168, 167, 166, 165, 164, 162, 161, 160, 159, 158, 157, 156, 155, 154, 151, 150, 147, 146, 145, 144, 141, 140, 139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 128, 127, 126, 259, 259, 118, 108, 105, 85, 82, 62, 56, 52, 259, 3, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259];
-  var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 7, 9, 10, 14, 16, 18, 23, 23, 24, 24, 25, 25, 44, 18, 16, 14, 44, 20, 9, 20, 20, 20, 20, 34, 10, 7, 19, 31, 19, 19, 19, 19, 34, 31, 33, 35, 40, 35, 48, 40, 20, 53, 36, 43, 33, 19, 35, 33, 59, 19, 36, 43, 37, 264, 36, 36, 38, 19, 37, 37, 38, 42, 42, 37, 42, 19, 53, 45, 51, 51, 59, 48, 71, 71, 38, 45, 69, 69, 69, 69, 70, 255, 70, 70, 70, 70, 73, 73, 73, 100, 106, 109, 123, 123, 253, 106, 100, 122, 122, 122, 122, 133, 133, 70, 252, 248, 109, 124, 124, 124, 246, 245, 244, 242, 241, 240, 234, 233, 122, 260, 260, 260, 260, 261, 261, 261, 261, 262, 262, 263, 232, 263, 263, 231, 230, 226, 225, 222, 220, 219, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 204, 203, 202, 198, 196, 195, 194, 193, 190, 189, 188, 187, 186, 185, 184, 183, 182, 180, 179, 178, 177, 176, 175, 174, 171, 170, 169, 168, 166, 165, 164, 162, 161, 159, 158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 148, 147, 146, 144, 143, 142, 141, 139, 138, 137, 136, 135, 134, 132, 131, 130, 129, 128, 118, 117, 116, 115, 114, 113, 112, 111, 110, 108, 107, 105, 104, 103, 102, 99, 97, 95, 94, 93, 92, 91, 89, 88, 87, 86, 85, 84, 83, 80, 75, 61, 55, 46, 41, 39, 32, 30, 13, 8, 6, 3, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259, 259];
+  var yy_base = [0, 0, 0, 314, 315, 58, 289, 57, 288, 56, 56, 315, 315, 287, 53, 315, 52, 315, 51, 73, 64, 315, 315, 45, 286, 46, 315, 0, 315, 315, 285, 29, 260, 52, 57, 54, 63, 68, 77, 255, 67, 269, 70, 76, 56, 89, 265, 315, 76, 315, 315, 71, 315, 120, 315, 301, 315, 315, 315, 118, 315, 300, 315, 315, 315, 315, 315, 0, 315, 117, 123, 114, 315, 127, 0, 278, 315, 315, 315, 277, 0, 315, 259, 250, 261, 248, 263, 250, 256, 0, 244, 241, 244, 247, 244, 240, 0, 240, 104, 0, 242, 232, 241, 246, 110, 248, 231, 116, 233, 238, 237, 226, 226, 234, 226, 225, 231, 315, 315, 0, 140, 135, 148, 0, 315, 315, 238, 233, 236, 231, 218, 113, 233, 228, 220, 217, 213, 228, 0, 214, 218, 221, 220, 0, 213, 207, 202, 203, 209, 200, 200, 198, 211, 197, 197, 208, 189, 198, 0, 192, 198, 315, 191, 191, 196, 0, 188, 186, 194, 183, 0, 0, 185, 195, 188, 182, 184, 180, 178, 0, 178, 192, 187, 182, 174, 180, 185, 171, 183, 0, 0, 170, 177, 164, 177, 0, 163, 0, 0, 0, 167, 168, 160, 0, 0, 159, 171, 169, 159, 164, 154, 168, 167, 156, 165, 149, 0, 158, 160, 0, 163, 0, 0, 144, 144, 0, 0, 0, 160, 157, 141, 139, 125, 0, 0, 0, 0, 0, 138, 130, 135, 0, 136, 135, 132, 0, 131, 0, 0, 0, 118, 102, 0, 93, 0, 0, 0, 315, 178, 182, 184, 188, 86];
+  var yy_def = [0, 257, 1, 257, 257, 257, 257, 258, 257, 257, 259, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 260, 257, 257, 257, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 257, 257, 257, 257, 257, 257, 258, 257, 258, 257, 257, 257, 259, 257, 259, 257, 257, 257, 257, 257, 261, 257, 257, 257, 257, 257, 257, 262, 257, 257, 257, 257, 257, 260, 257, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 257, 257, 261, 257, 257, 257, 262, 257, 257, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 257, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 0, 257, 257, 257, 257, 257];
+  var yy_nxt = [0, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 21, 22, 23, 24, 25, 26, 27, 27, 28, 4, 29, 30, 31, 32, 33, 34, 35, 36, 27, 27, 37, 27, 27, 27, 38, 39, 40, 41, 42, 43, 44, 45, 46, 27, 27, 47, 48, 49, 50, 51, 51, 54, 57, 60, 63, 65, 67, 75, 76, 78, 79, 82, 51, 51, 68, 66, 64, 83, 69, 58, 70, 70, 70, 70, 85, 61, 55, 69, 123, 70, 70, 70, 70, 88, 86, 93, 90, 87, 91, 117, 112, 72, 89, 94, 113, 96, 71, 92, 95, 100, 72, 97, 98, 101, 104, 110, 99, 105, 73, 107, 108, 114, 109, 111, 54, 60, 74, 102, 256, 115, 121, 121, 118, 120, 120, 120, 120, 69, 255, 70, 70, 70, 70, 122, 122, 122, 140, 61, 150, 55, 146, 121, 121, 141, 254, 147, 120, 120, 120, 120, 72, 167, 168, 151, 122, 122, 122, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 161, 53, 53, 53, 53, 59, 59, 59, 59, 80, 80, 119, 243, 119, 119, 242, 241, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, 166, 165, 164, 163, 162, 160, 159, 158, 157, 156, 155, 154, 153, 152, 149, 148, 145, 144, 143, 142, 139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 128, 127, 126, 125, 124, 257, 257, 116, 106, 103, 84, 81, 77, 62, 56, 52, 257, 3, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257];
+  var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 7, 9, 10, 14, 16, 18, 23, 23, 25, 25, 31, 51, 51, 18, 16, 14, 31, 20, 9, 20, 20, 20, 20, 33, 10, 7, 19, 262, 19, 19, 19, 19, 34, 33, 36, 35, 33, 35, 48, 44, 20, 34, 36, 44, 37, 19, 35, 36, 38, 19, 37, 37, 38, 40, 43, 37, 40, 19, 42, 42, 45, 42, 43, 53, 59, 19, 38, 253, 45, 71, 71, 48, 69, 69, 69, 69, 70, 251, 70, 70, 70, 70, 73, 73, 73, 98, 59, 107, 53, 104, 121, 121, 98, 250, 104, 120, 120, 120, 120, 70, 131, 131, 107, 122, 122, 122, 246, 244, 243, 242, 240, 239, 238, 232, 231, 230, 120, 258, 258, 258, 258, 259, 259, 259, 259, 260, 260, 261, 229, 261, 261, 228, 224, 223, 220, 218, 217, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 202, 201, 200, 196, 194, 193, 192, 191, 188, 187, 186, 185, 184, 183, 182, 181, 180, 178, 177, 176, 175, 174, 173, 172, 169, 168, 167, 166, 164, 163, 162, 160, 159, 157, 156, 155, 154, 153, 152, 151, 150, 149, 148, 147, 146, 145, 144, 142, 141, 140, 139, 137, 136, 135, 134, 133, 132, 130, 129, 128, 127, 126, 116, 115, 114, 113, 112, 111, 110, 109, 108, 106, 105, 103, 102, 101, 100, 97, 95, 94, 93, 92, 91, 90, 88, 87, 86, 85, 84, 83, 82, 79, 75, 61, 55, 46, 41, 39, 32, 30, 24, 13, 8, 6, 3, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257];
   var pratt = null;
   Resolver.comparison = new MemberRangeComparison();
   var nameToSymbolFlag = null;

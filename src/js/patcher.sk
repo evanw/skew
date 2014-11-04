@@ -10,7 +10,6 @@ namespace js {
   }
 
   class Patcher {
-    var lambdaCount = 0;
     var nextTempID = 0;
     var createdThisAlias = false;
     Symbol currentFunction = null;
@@ -56,12 +55,10 @@ namespace js {
       trackSymbolCount(node);
 
       switch (node.kind) {
-        case .LAMBDA { lambdaCount++; }
         case .CONSTRUCTOR { patchConstructor(node); setCurrentFunction(node.symbol); }
         case .FUNCTION { setCurrentFunction(node.symbol); }
         case .CAST { patchCast(node); }
         case .CLASS { patchClass(node); }
-        case .THIS { patchThis(node); }
         case .NAME { patchName(node); }
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinary(node); }
         case .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node); }
@@ -78,7 +75,6 @@ namespace js {
       }
 
       switch (node.kind) {
-        case .LAMBDA { lambdaCount--; }
         case .CONSTRUCTOR, .FUNCTION { setCurrentFunction(null); }
       }
     }
@@ -144,12 +140,6 @@ namespace js {
       if (left.kind == .IMPLICIT_CAST) return looksTheSame(left.castValue(), right);
       if (right.kind == .IMPLICIT_CAST) return looksTheSame(left, right.castValue());
       return false;
-    }
-
-    void patchThis(Node node) {
-      if (lambdaCount > 0) {
-        node.become(thisAlias());
-      }
     }
 
     void patchClass(Node node) {

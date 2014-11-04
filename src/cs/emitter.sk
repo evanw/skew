@@ -132,7 +132,7 @@ namespace cs {
         case .ENUM, .ENUM_FLAGS { emitEnum(node); }
         case .CLASS, .STRUCT, .INTERFACE { emitObject(node); }
         case .CONSTRUCTOR, .FUNCTION { emitFunction(node); }
-        case .RETURN, .IMPLICIT_RETURN { emitReturn(node); }
+        case .RETURN { emitReturn(node); }
         case .EXPRESSION { emitExpressionStatement(node); }
         case .IF { emitIf(node); }
         case .FOR { emitFor(node); }
@@ -451,7 +451,6 @@ namespace cs {
         case .CALL { emitCall(node); }
         case .SUPER_CALL { emitSuperCall(node); }
         case .SEQUENCE { emitSequence(node, precedence); }
-        case .LAMBDA { emitLambda(node); }
         case .UNTYPED { emitExpression(node.untypedValue(), precedence); }
         case .INDEX { emitIndex(node, precedence); }
         case .ASSIGN_INDEX { emitTertiary(node, precedence); }
@@ -517,12 +516,6 @@ namespace cs {
       if (.COMMA <= precedence) emit("(");
       emitCommaSeparatedExpressions(node.children);
       if (.COMMA <= precedence) emit(")");
-    }
-
-    void emitLambda(Node node) {
-      emitArgumentVariables(node.lambdaArguments());
-      emit(" => ");
-      emitBlock(node.lambdaBlock());
     }
 
     void emitUnary(Node node, Precedence precedence) {
