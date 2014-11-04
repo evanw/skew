@@ -37,7 +37,14 @@ class ResolveContext {
   }
 }
 
+class MemberRangeComparison : IComparison<Member> {
+  override int compare(Member left, Member right) {
+    return left.symbol.node.range.start - right.symbol.node.range.start;
+  }
+}
+
 class Resolver {
+  static var comparison = MemberRangeComparison();
   var context = ResolveContext();
   ConstantFolder constantFolder = null;
   List<Node> parsedDeclarations = null;
@@ -1591,7 +1598,7 @@ class Resolver {
     }
 
     // Sort the uninitialized members by source location
-    uninitializedMembers.sort((a, b) => a.symbol.node.range.start - b.symbol.node.range.start);
+    uninitializedMembers.sort(comparison);
 
     // Append each uninitialized member argument now that they are sorted
     for (var i = 0; i < uninitializedMembers.size(); i++) {

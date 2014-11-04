@@ -20,6 +20,10 @@ import struct string {
   import string repeat(int count);
 }
 
+interface IComparison<T> {
+  virtual int compare(T left, T right);
+}
+
 import class List<T> {
   new();
   inline int size() { return untyped(this).Count; }
@@ -31,7 +35,7 @@ import class List<T> {
   inline T shift() { return remove(0); }
   inline T pop() { return remove(size() - 1); }
   inline void reverse() { untyped(this).Reverse(); }
-  inline void sort(int fn(T, T) callback) { untyped(this).Sort(callback); }
+  import void sort(IComparison<T> comparison);
   inline List<T> clone() { return untyped(this).ToList(); }
   inline T remove(int index) { var value = get(index); untyped(this).RemoveAt(index); return value; }
   inline void insert(int index, T value) { untyped(this).Insert(index, value); }

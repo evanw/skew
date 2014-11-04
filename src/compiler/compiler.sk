@@ -54,6 +54,7 @@ class CachedSource {
       var program = Node.createProgram([]);
       source = Source("<native>", contents);
       compiler.processInput(program, source);
+      assert program.children.size() > 0;
       file = program.children.get(0);
     }
     options.inputs.unshift(source);

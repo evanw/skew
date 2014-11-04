@@ -719,8 +719,16 @@ namespace js {
     void emitCall(Node node) {
       var value = node.callValue();
       if (value.kind == .NAME && value.symbol != null && value.symbol.isOperator()) {
-        emit(value.asString() + " ");
-        emitExpression(node.callArguments().get(0), .UNARY_POSTFIX);
+        var name = value.asString();
+        if (name == "sort") {
+          emitExpression(node.callArguments().get(0), .UNARY_POSTFIX);
+          emit(".sort(function(comparison) { return function(a, b) { return comparison.compare(a, b); }; }(");
+          emitExpression(node.callArguments().get(1), .UNARY_POSTFIX);
+          emit("))");
+        } else {
+          emit(name + " ");
+          emitExpression(node.callArguments().get(0), .UNARY_POSTFIX);
+        }
       } else {
         if (value.kind.isType()) emit("new ");
         emitExpression(value, .UNARY_POSTFIX);

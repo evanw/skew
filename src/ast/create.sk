@@ -1,6 +1,6 @@
 in Node {
   static Node createProgram(List<Node> files) {
-    assert checkAllNodeKinds(files, nodeKindCheck(.FILE));
+    assert checkAllNodeKinds(files, NodeKindIs(.FILE));
     return Node(.PROGRAM).withChildren(files);
   }
 
@@ -18,7 +18,7 @@ in Node {
   }
 
   static Node createCase(List<Node> values, Node block) {
-    assert checkAllNodeKinds(values, nodeKindIsExpression);
+    assert checkAllNodeKinds(values, NodeKindIsExpression());
     assert block.kind == .BLOCK;
     values.push(block);
     return Node(.CASE).withChildren(values);
@@ -26,7 +26,7 @@ in Node {
 
   static Node createVariableCluster(Node type, List<Node> variables) {
     assert type.kind.isExpression();
-    assert checkAllNodeKinds(variables, nodeKindCheck(.VARIABLE));
+    assert checkAllNodeKinds(variables, NodeKindIs(.VARIABLE));
     variables.unshift(type);
     return Node(.VARIABLE_CLUSTER).withChildren(variables);
   }
@@ -58,8 +58,8 @@ in Node {
   static Node createObject(NodeKind kind, Node name, Node parameters, Node bases, Node block) {
     assert kind.isObject();
     assert name.kind == .NAME;
-    assert parameters == null || checkAllNodeListKinds(parameters, nodeKindCheck(.PARAMETER));
-    assert bases == null || checkAllNodeListKinds(bases, nodeKindIsExpression);
+    assert parameters == null || checkAllNodeListKinds(parameters, NodeKindIs(.PARAMETER));
+    assert bases == null || checkAllNodeListKinds(bases, NodeKindIsExpression());
     assert block.kind == .BLOCK;
     return Node(kind).withChildren([name, block, bases, parameters]);
   }
@@ -78,26 +78,26 @@ in Node {
 
   static Node createExtension(Node name, Node bases, Node block) {
     assert name.kind == .NAME;
-    assert bases == null || checkAllNodeListKinds(bases, nodeKindIsExpression);
+    assert bases == null || checkAllNodeListKinds(bases, NodeKindIsExpression());
     assert block.kind == .BLOCK;
     return Node(.EXTENSION).withChildren([name, block, bases]);
   }
 
   static Node createConstructor(Node name, Node arguments, Node block, Node superInitializer, Node memberInitializers) {
     assert name.kind == .NAME;
-    assert checkAllNodeListKinds(arguments, nodeKindCheck(.VARIABLE));
+    assert checkAllNodeListKinds(arguments, NodeKindIs(.VARIABLE));
     assert block == null || block.kind == .BLOCK;
     assert superInitializer == null || superInitializer.kind == .SUPER_CALL;
-    assert memberInitializers == null || checkAllNodeListKinds(memberInitializers, nodeKindCheck(.MEMBER_INITIALIZER));
+    assert memberInitializers == null || checkAllNodeListKinds(memberInitializers, NodeKindIs(.MEMBER_INITIALIZER));
     return Node(.CONSTRUCTOR).withChildren([name, arguments, block, superInitializer, memberInitializers]);
   }
 
   static Node createFunction(Node name, Node arguments, Node block, Node result, Node parameters) {
     assert name.kind == .NAME;
-    assert checkAllNodeListKinds(arguments, nodeKindCheck(.VARIABLE));
+    assert checkAllNodeListKinds(arguments, NodeKindIs(.VARIABLE));
     assert block == null || block.kind == .BLOCK;
     assert result.kind.isExpression();
-    assert parameters == null || checkAllNodeListKinds(parameters, nodeKindCheck(.PARAMETER));
+    assert parameters == null || checkAllNodeListKinds(parameters, NodeKindIs(.PARAMETER));
     return Node(.FUNCTION).withChildren([name, arguments, block, result, parameters]);
   }
 
@@ -190,14 +190,14 @@ in Node {
 
   static Node createModifier(Node name, List<Node> statements) {
     assert name.kind == .NAME;
-    assert checkAllNodeKinds(statements, node => node.kind.isStatement());
+    assert checkAllNodeKinds(statements, NodeKindIsStatement());
     statements.unshift(name);
     return Node(.MODIFIER).withChildren(statements);
   }
 
   static Node createSwitch(Node value, List<Node> cases) {
     assert value.kind.isExpression();
-    assert checkAllNodeKinds(cases, node => node.kind == .CASE);
+    assert checkAllNodeKinds(cases, NodeKindIs(.CASE));
     cases.unshift(value);
     return Node(.SWITCH).withChildren(cases);
   }
@@ -247,7 +247,7 @@ in Node {
   }
 
   static Node createList(List<Node> values) {
-    assert checkAllNodeKinds(values, nodeKindIsExpression);
+    assert checkAllNodeKinds(values, NodeKindIsExpression());
     return Node(.LIST).withChildren(values);
   }
 
@@ -259,13 +259,13 @@ in Node {
 
   static Node createCall(Node value, List<Node> arguments) {
     assert value.kind.isExpression();
-    assert checkAllNodeKinds(arguments, nodeKindIsExpression);
+    assert checkAllNodeKinds(arguments, NodeKindIsExpression());
     arguments.unshift(value);
     return Node(.CALL).withChildren(arguments);
   }
 
   static Node createSuperCall(List<Node> arguments) {
-    assert checkAllNodeKinds(arguments, nodeKindIsExpression);
+    assert checkAllNodeKinds(arguments, NodeKindIsExpression());
     return Node(.SUPER_CALL).withChildren(arguments);
   }
 
@@ -277,13 +277,13 @@ in Node {
   }
 
   static Node createSequence(List<Node> values) {
-    assert checkAllNodeKinds(values, nodeKindIsExpression);
+    assert checkAllNodeKinds(values, NodeKindIsExpression());
     return Node(.SEQUENCE).withChildren(values);
   }
 
   static Node createParameterize(Node type, List<Node> types) {
     assert type.kind.isExpression();
-    assert checkAllNodeKinds(types, nodeKindIsExpression);
+    assert checkAllNodeKinds(types, NodeKindIsExpression());
     types.unshift(type);
     return Node(.PARAMETERIZE).withChildren(types);
   }
@@ -301,7 +301,7 @@ in Node {
   }
 
   static Node createLambda(List<Node> arguments, Node block) {
-    assert checkAllNodeKinds(arguments, nodeKindCheck(.VARIABLE));
+    assert checkAllNodeKinds(arguments, NodeKindIs(.VARIABLE));
     assert block.kind == .BLOCK;
     arguments.push(block);
     return Node(.LAMBDA).withChildren(arguments);
@@ -321,7 +321,7 @@ in Node {
 
   static Node createFunctionType(Node result, List<Node> arguments) {
     assert result.kind.isExpression();
-    assert checkAllNodeKinds(arguments, nodeKindIsExpression);
+    assert checkAllNodeKinds(arguments, NodeKindIsExpression());
     arguments.unshift(result);
     return Node(.FUNCTION_TYPE).withChildren(arguments);
   }
@@ -360,24 +360,41 @@ in Node {
   }
 }
 
-alias NodeKindCheck = bool fn(Node);
-final NodeKindCheck nodeKindIsExpression = node => node.kind.isExpression();
-
-NodeKindCheck nodeKindCheck(NodeKind kind) {
-  return node => node.kind == kind;
+interface INodeKindChecker {
+  virtual bool check(Node node);
 }
 
-bool checkAllNodeListKinds(Node node, NodeKindCheck check) {
+class NodeKindIs : INodeKindChecker {
+  NodeKind kind;
+
+  override bool check(Node node) {
+    return node.kind == kind;
+  }
+}
+
+class NodeKindIsExpression : INodeKindChecker {
+  override bool check(Node node) {
+    return node.kind.isExpression();
+  }
+}
+
+class NodeKindIsStatement : INodeKindChecker {
+  override bool check(Node node) {
+    return node.kind.isStatement();
+  }
+}
+
+bool checkAllNodeListKinds(Node node, INodeKindChecker checker) {
   assert node != null;
   assert node.kind == .NODE_LIST;
   assert node.children != null;
-  return checkAllNodeKinds(node.children, check);
+  return checkAllNodeKinds(node.children, checker);
 }
 
-bool checkAllNodeKinds(List<Node> nodes, NodeKindCheck check) {
+bool checkAllNodeKinds(List<Node> nodes, INodeKindChecker checker) {
   assert nodes != null;
   for (var i = 0; i < nodes.size(); i++) {
-    if (!check(nodes.get(i))) {
+    if (!checker.check(nodes.get(i))) {
       return false;
     }
   }

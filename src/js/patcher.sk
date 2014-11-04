@@ -20,7 +20,6 @@ namespace js {
     var needMathImul = false;
     var nextSymbolName = 0;
     CompilerOptions options = null;
-    UnionFind localVariableUnionFind = null;
     TypeCache cache = null;
     final var reservedNames = Emitter.isKeyword.clone();
     final var symbolCounts = IntMap<int>();
@@ -33,23 +32,6 @@ namespace js {
       options = resolver.options;
       cache = resolver.cache;
 
-      // A union-find data structure is used to quickly merge symbols into
-      // groups. All local variables inside a function are merged with that
-      // function. Also create a quick way of getting from a symbol to its
-      // union/find index.
-      if (options.jsMangle) {
-        localVariableUnionFind = UnionFind(allSymbols.size());
-        for (var i = 0; i < allSymbols.size(); i++) {
-          var symbol = allSymbols.get(i);
-          namingGroupIndexForSymbol.set(symbol.uniqueID, i);
-        }
-
-        // Shorten the library function names while still avoiding needing to
-        // do conflict detection with user-defined symbol names
-        imul = "$i";
-        extends = "$e";
-      }
-
       // Traverse the tree of nodes, fixing up everything for emission in one
       // pass. Local variables will be grouped during the traversal of the node
       // tree for speed. It should be faster because we can access the top-
@@ -57,158 +39,6 @@ namespace js {
       // the function from every local variable symbol, which we would have to
       // do if we just looped over symbols.
       patchNode(program);
-
-      // Rename all internal symbols
-      if (options.jsMangle) {
-        // This holds the groups used for naming. Unioning two labels using
-        // this object will cause both groups of symbols to have the same name.
-        var namingGroupsUnionFind = UnionFind(allSymbols.size());
-
-        // These are optional and only reduce the number of generated names
-        List<int> order = [];
-        aliasLocalVariables(namingGroupsUnionFind, order);
-        aliasUnrelatedProperties(namingGroupsUnionFind, order);
-
-        // Ensure all overridden symbols have the same generated name. This is
-        // manditory for correctness, otherwise virtual functions break.
-        for (var i = 0; i < allSymbols.size(); i++) {
-          var symbol = allSymbols.get(i);
-          if (symbol.overriddenMember != null) {
-            var overridden = symbol.overriddenMember.symbol;
-            var index = namingGroupIndexForSymbol.get(symbol.uniqueID);
-            namingGroupsUnionFind.union(index, namingGroupIndexForSymbol.get(overridden.uniqueID));
-            if (overridden.identicalMembers != null) {
-              for (var j = 0; j < overridden.identicalMembers.size(); j++) {
-                namingGroupsUnionFind.union(index, namingGroupIndexForSymbol.get(overridden.identicalMembers.get(j).symbol.uniqueID));
-              }
-            }
-          }
-        }
-
-        // Collect all reserved names together into one big set for querying
-        var members = cache.globalType.members.values();
-        for (var i = 0; i < members.size(); i++) {
-          var member = members.get(i);
-          if (!canRename(member.symbol)) {
-            reservedNames.set(member.symbol.name, true);
-          }
-        }
-
-        // Everything that should have the same name is now grouped together.
-        // Generate and assign names to all internal symbols, but use shorter
-        // names for more frequently used symbols.
-        var namingGroups = extractGroups(namingGroupsUnionFind, null);
-        List<GroupWithCount> sortedGroups = [];
-        for (var i = 0; i < namingGroups.size(); i++) {
-          var group = namingGroups.get(i);
-          var count = 0;
-          for (var j = 0; j < group.size(); j++) {
-            var symbol = group.get(j);
-            if (canRename(symbol)) {
-              count += symbolCounts.getOrDefault(symbol.uniqueID, 0);
-            }
-          }
-          sortedGroups.push(GroupWithCount(group, count));
-        }
-        sortedGroups.sort((a, b) => b.count - a.count);
-        for (var i = 0; i < sortedGroups.size(); i++) {
-          var group = sortedGroups.get(i).group;
-          var name = "";
-          for (var j = 0; j < group.size(); j++) {
-            var symbol = group.get(j);
-            if (canRename(symbol)) {
-              if (name == "") {
-                name = generateSymbolName();
-              }
-              if (symbol.kind != .INSTANCE_FUNCTION) {
-                symbol.enclosingSymbol = cache.globalType.symbol;
-              }
-              symbol.name = name;
-            }
-          }
-        }
-      }
-    }
-
-    // Merge local variables from different functions together in the order
-    // they were declared. This will cause every argument list to use the same
-    // variables in the same order, which should offer better gzip:
-    //
-    //   function d(a, b) {}
-    //   function e(a, b, c) {}
-    //
-    void aliasLocalVariables(UnionFind unionFind, List<int> order) {
-      zipTogetherInOrder(unionFind, order, extractGroups(localVariableUnionFind, symbol => symbol.kind == .LOCAL_VARIABLE));
-    }
-
-    // Merge all related types together into naming groups. This ensures names
-    // will be unique within a subclass hierarchy allowing names to be
-    // duplicated in separate subclass hierarchies.
-    void aliasUnrelatedProperties(UnionFind unionFind, List<int> order) {
-      var allSymbols = resolver.allSymbols;
-      var relatedTypesUnionFind = UnionFind(allSymbols.size());
-      for (var i = 0; i < allSymbols.size(); i++) {
-        var symbol = allSymbols.get(i);
-        if (symbol.kind.isType()) {
-          if (symbol.type.hasRelevantTypes()) {
-            var types = symbol.type.relevantTypes;
-            for (var j = 0; j < types.size(); j++) {
-              relatedTypesUnionFind.union(i, namingGroupIndexForSymbol.get(types.get(j).symbol.uniqueID));
-            }
-          }
-          var members = symbol.type.members.values();
-          for (var j = 0; j < members.size(); j++) {
-            var index = namingGroupIndexForSymbol.getOrDefault(members.get(j).symbol.uniqueID, -1);
-
-            // Guard against observing symbols that have been removed from
-            // cache.allSymbols by DeadCodeRemovalPass but that are still
-            // reachable because DeadCodeRemovalPass only removes the symbol
-            // from the unparameterized type, not from parameterized types.
-            // It really should remove the symbol from all parameterized types
-            // too but this guard fixes compilation issues until then.
-            if (index != -1) {
-              relatedTypesUnionFind.union(i, index);
-            }
-          }
-        }
-      }
-      zipTogetherInOrder(unionFind, order, extractGroups(relatedTypesUnionFind, symbol => symbol.kind == .INSTANCE_VARIABLE));
-    }
-
-    void zipTogetherInOrder(UnionFind unionFind, List<int> order, List<List<Symbol>> groups) {
-      for (var i = 0; i < groups.size(); i++) {
-        var group = groups.get(i);
-        if (group.size() > 1) {
-          group.sort((a, b) => a.node.range.start - b.node.range.start);
-        }
-        for (var j = 0; j < group.size(); j++) {
-          var symbol = group.get(j);
-          var index = namingGroupIndexForSymbol.get(symbol.uniqueID);
-          if (order.size() <= j) {
-            order.push(index);
-          }
-          unionFind.union(index, order.get(j));
-        }
-      }
-    }
-
-    List<List<Symbol>> extractGroups(UnionFind unionFind, bool fn(Symbol) filter) {
-      var labelToGroup = IntMap<List<Symbol>>();
-      var allSymbols = resolver.allSymbols;
-      for (var i = 0; i < allSymbols.size(); i++) {
-        var symbol = allSymbols.get(i);
-        if (filter != null && !filter(symbol)) {
-          continue;
-        }
-        var label = unionFind.find(namingGroupIndexForSymbol.get(symbol.uniqueID));
-        var group = labelToGroup.getOrDefault(label, null);
-        if (group == null) {
-          group = [];
-          labelToGroup.set(label, group);
-        }
-        group.push(symbol);
-      }
-      return labelToGroup.values();
     }
 
     bool canRename(Symbol symbol) {
@@ -250,55 +80,6 @@ namespace js {
       switch (node.kind) {
         case .LAMBDA { lambdaCount--; }
         case .CONSTRUCTOR, .FUNCTION { setCurrentFunction(null); }
-        case .VARIABLE { if (options.jsMangle) unionVariableWithFunction(node); }
-      }
-
-      if (options.jsMangle) {
-        switch (node.kind) {
-          case .IF { peepholeMangleIf(node); }
-          case .FOR { peepholeMangleFor(node); }
-          case .GREATER_THAN_OR_EQUAL, .LESS_THAN_OR_EQUAL { peepholeMangleBinaryRelational(node); }
-          case .WHILE, .DO_WHILE { peepholeMangleBoolean(node.whileTest(), .NO_SWAP); }
-          case .BLOCK { peepholeMangleBlock(node); }
-          case .HOOK { peepholeMangleHook(node); }
-        }
-      }
-    }
-
-    void peepholeMangleBinaryRelational(Node node) {
-      assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL;
-      var left = node.binaryLeft();
-      var right = node.binaryRight();
-      if (left.type != null && left.type.isInteger(cache) && right.type != null && right.type.isInteger(cache)) {
-        if (left.kind == .INT) {
-          var value = left.asInt();
-
-          // "2 >= a" => "3 > a"
-          if (node.kind == .GREATER_THAN_OR_EQUAL && value.canIncrement()) {
-            left.content = IntContent(value + 1);
-            node.kind = .GREATER_THAN;
-          }
-
-          // "2 <= a" => "1 < a"
-          else if (node.kind == .LESS_THAN_OR_EQUAL && value.canDecrement()) {
-            left.content = IntContent(value - 1);
-            node.kind = .LESS_THAN;
-          }
-        } else if (right.kind == .INT) {
-          var value = right.asInt();
-
-          // "a >= 2" => "a > 1"
-          if (node.kind == .GREATER_THAN_OR_EQUAL && value.canDecrement()) {
-            right.content = IntContent(value - 1);
-            node.kind = .GREATER_THAN;
-          }
-
-          // "a <= 2" => "a < 3"
-          else if (node.kind == .LESS_THAN_OR_EQUAL && value.canIncrement()) {
-            right.content = IntContent(value + 1);
-            node.kind = .LESS_THAN;
-          }
-        }
       }
     }
 
@@ -310,113 +91,6 @@ namespace js {
       else if (kind == .STRING) return node.asString() == "";
       else if (kind.isCast()) return isFalsy(node.castValue());
       else return false;
-    }
-
-    BooleanSwap peepholeMangleBoolean(Node node, BooleanSwap canSwap) {
-      var kind = node.kind;
-
-      if (kind == .EQUAL || kind == .NOT_EQUAL) {
-        var left = node.binaryLeft();
-        var right = node.binaryRight();
-        var replacement = isFalsy(right) ? left : isFalsy(left) ? right : null;
-
-        // "if (a != 0) b;" => "if (a) b;"
-        if (replacement != null) {
-
-          // This minification is not valid for floating-point values because
-          // of NaN, since NaN != 0 but NaN is falsy in JavaScript
-          if (left.type != null && !left.type.isReal(cache) && right.type != null && !right.type.isReal(cache)) {
-            replacement.replaceWith(null);
-            node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement);
-          }
-        }
-
-        else if (left.type != null && left.type.isInteger(cache) && right.type != null && right.type.isInteger(cache)) {
-
-          // "if (a != b) c;" => "if (a ^ b) c;"
-          if (kind == .NOT_EQUAL) {
-            node.kind = .BITWISE_XOR;
-          }
-
-          // "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
-          else if (kind == .EQUAL && canSwap == .SWAP) {
-            node.kind = .BITWISE_XOR;
-            return .SWAP;
-          }
-        }
-      }
-
-      // "if (a != 0 || b != 0) c;" => "if (a || b) c;"
-      else if (kind == .LOGICAL_AND || kind == .LOGICAL_OR) {
-        peepholeMangleBoolean(node.binaryLeft(), .NO_SWAP);
-        peepholeMangleBoolean(node.binaryRight(), .NO_SWAP);
-      }
-
-      // "if (!a) b; else c;" => "if (a) c; else b;"
-      // "a == 0 ? b : c;" => "a ? c : b;" (NOT must come after EQUAL since EQUAL may turn into NOT)
-      if (node.kind == .NOT && canSwap == .SWAP) {
-        node.become(node.unaryValue().replaceWith(null));
-        return .SWAP;
-      }
-
-      return .NO_SWAP;
-    }
-
-    void peepholeMangleIf(Node node) {
-      var test = node.ifTest();
-      var trueBlock = node.ifTrue();
-      var falseBlock = node.ifFalse();
-      var swapped = peepholeMangleBoolean(test, falseBlock != null ? .SWAP : .NO_SWAP);
-
-      // "if (!a) b; else c;" => "if (a) c; else b;"
-      if (swapped == .SWAP) {
-        var temp = trueBlock;
-        trueBlock = falseBlock;
-        falseBlock = temp;
-        trueBlock.swapWith(falseBlock);
-      }
-
-      var trueStatement = trueBlock.singleStatement();
-      if (falseBlock != null) {
-        var falseStatement = falseBlock.singleStatement();
-        if (trueStatement != null && falseStatement != null) {
-
-          // "if (a) b; else c;" => "a ? b : c;"
-          if (trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION) {
-            var hook = Node.createHook(test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null));
-            peepholeMangleHook(hook);
-            node.become(Node.createExpression(hook));
-          }
-
-          // "if (a) return b; else return c;" => "return a ? b : c;"
-          else if (trueStatement.kind == .RETURN && falseStatement.kind == .RETURN) {
-            var trueValue = trueStatement.returnValue();
-            var falseValue = falseStatement.returnValue();
-            if (trueValue != null && falseValue != null) {
-              var hook = Node.createHook(test.replaceWith(null), trueValue.replaceWith(null), falseValue.replaceWith(null));
-              peepholeMangleHook(hook);
-              node.become(Node.createReturn(hook));
-            }
-          }
-        }
-      }
-
-      else if (trueStatement != null && trueStatement.kind == .EXPRESSION) {
-        var value = trueStatement.expressionValue().replaceWith(null);
-
-        // "if (!a) b;" => "a || b;"
-        if (test.kind == .NOT) node.become(Node.createExpression(Node.createBinary(.LOGICAL_OR, test.unaryValue().replaceWith(null), value)));
-
-        // "if (a) b;" => "a && b;"
-        else node.become(Node.createExpression(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), value)));
-      }
-    }
-
-    void peepholeMangleFor(Node node) {
-      var test = node.forTest();
-      if (test != null) {
-        peepholeMangleBoolean(test, .NO_SWAP);
-      }
     }
 
     bool isJumpImplied(Node node, NodeKind kind) {
@@ -433,126 +107,6 @@ namespace js {
       return false;
     }
 
-    void peepholeMangleBlock(Node node) {
-      if (!node.hasChildren()) {
-        return;
-      }
-
-      for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
-        var kind = child.kind;
-
-        // "var a = 0; var b = 1;" => "var a = 0, b = 1;"
-        if (kind == .VARIABLE_CLUSTER) {
-          while (i + 1 < node.children.size()) {
-            var next = node.children.get(i + 1);
-            if (next.kind != .VARIABLE_CLUSTER) {
-              break;
-            }
-            var variables = next.remove().clusterVariables();
-            for (var j = 0; j < variables.size(); j++) {
-              child.appendChild(variables.get(j).replaceWith(null));
-            }
-          }
-        }
-
-        // "a; b; c;" => "a, b, c;"
-        else if (kind == .EXPRESSION) {
-          List<Node> nodes;
-          while (i + 1 < node.children.size()) {
-            var next = node.children.get(i + 1);
-            if (next.kind != .EXPRESSION) {
-              break;
-            }
-            var combined = Node.createExpression(joinExpressions(child.expressionValue().replaceWith(null), next.remove().expressionValue().replaceWith(null)));
-            child.replaceWith(combined);
-            child = combined;
-          }
-          var value = child.expressionValue();
-          if (value.kind == .SEQUENCE) {
-            peepholeMangleSequence(value);
-          }
-        }
-
-        // "void foo() { if (a) return; b(); c(); }" => "void foo() { if (!a) { b(); c(); } }"
-        // "while (a) { if (b) continue; c(); d(); }" => "while (a) { if (!b) { c(); d(); } }"
-        else if (kind == .IF && child.ifFalse() == null) {
-          var trueBlock = child.ifTrue();
-          if (trueBlock.hasChildren()) {
-            var statement = trueBlock.lastChild();
-            if ((statement.kind == .RETURN && statement.returnValue() == null || statement.kind == .CONTINUE) && isJumpImplied(node, statement.kind)) {
-              Node block;
-
-              // If the if statement block without the jump is empty, then flip
-              // the condition of the if statement and reuse the block. Otherwise,
-              // create an else branch for the if statement and use that block.
-              statement.remove();
-              if (!trueBlock.hasChildren()) {
-                child.ifTest().invertBooleanCondition(cache);
-                block = trueBlock;
-              } else if (!child.isLastChild()) {
-                block = Node.createBlock([]);
-                child.replaceChild(2, block);
-                assert block == child.ifFalse();
-              } else {
-                peepholeMangleIf(child);
-                return;
-              }
-
-              // Move the rest of this block into the block for the if statement
-              while (i + 1 < node.children.size()) {
-                block.appendChild(node.children.get(i + 1).remove());
-              }
-              peepholeMangleBlock(block);
-              peepholeMangleIf(child);
-
-              // "a(); if (b) return; c();" => "a(); if (!b) c();" => "a(); !b && c();" => "a(), !b && c();"
-              if (child.kind == .EXPRESSION && i > 0) {
-                var previous = node.children.get(i - 1);
-                if (previous.kind == .EXPRESSION) {
-                  previous.replaceWith(Node.createExpression(joinExpressions(previous.expressionValue().replaceWith(null), child.remove().expressionValue().replaceWith(null))));
-                }
-              }
-              return;
-            }
-          }
-        }
-
-        else if (kind == .RETURN && child.returnValue() != null) {
-          while (i > 0) {
-            var previous = node.children.get(i - 1);
-
-            // "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
-            if (previous.kind == .IF && previous.ifFalse() == null) {
-              var statement = previous.ifTrue().singleStatement();
-              if (statement != null && statement.kind == .RETURN && statement.returnValue() != null) {
-                var hook = Node.createHook(previous.ifTest().replaceWith(null), statement.returnValue().replaceWith(null), child.returnValue().replaceWith(null));
-                peepholeMangleHook(hook);
-                child.remove();
-                child = Node.createReturn(hook);
-                previous.replaceWith(child);
-              } else {
-                break;
-              }
-            }
-
-            // "a(); return b;" => "return a(), b;"
-            else if (previous.kind == .EXPRESSION) {
-              var combined = Node.createReturn(joinExpressions(previous.remove().expressionValue().replaceWith(null), child.returnValue().replaceWith(null)));
-              child.replaceWith(combined);
-              child = combined;
-            }
-
-            else {
-              break;
-            }
-
-            i--;
-          }
-        }
-      }
-    }
-
     Node assignSourceIfNoSideEffects(Node node) {
       if (node.kind == .ASSIGN && node.binaryLeft().hasNoSideEffects()) {
         var right = node.binaryRight();
@@ -565,28 +119,6 @@ namespace js {
       }
 
       return null;
-    }
-
-    void peepholeMangleSequence(Node node) {
-      assert node.kind == .SEQUENCE;
-
-      // "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
-      for (var i = node.children.size() - 1; i > 0; i--) {
-        var current = node.children.get(i);
-        var currentRight = assignSourceIfNoSideEffects(current);
-        if (currentRight != null) {
-          while (i > 0) {
-            var previous = node.children.get(i - 1);
-            var previousRight = assignSourceIfNoSideEffects(previous);
-            if (previousRight == null || !looksTheSame(previousRight, currentRight)) {
-              break;
-            }
-            previousRight.replaceWith(current.remove());
-            current = previous;
-            i--;
-          }
-        }
-      }
     }
 
     Node joinExpressions(Node left, Node right) {
@@ -614,43 +146,6 @@ namespace js {
       return false;
     }
 
-    void peepholeMangleHook(Node node) {
-      var test = node.hookTest();
-      var trueValue = node.hookTrue();
-      var falseValue = node.hookFalse();
-      var swapped = peepholeMangleBoolean(test, .SWAP);
-
-      // "!a ? b : c;" => "a ? c : b;"
-      if (swapped == .SWAP) {
-        var temp = trueValue;
-        trueValue = falseValue;
-        falseValue = temp;
-        trueValue.swapWith(falseValue);
-      }
-
-      // Collapse partially-identical binary expressions
-      if (trueValue.kind == falseValue.kind && trueValue.kind.isBinaryOperator()) {
-        var trueLeft = trueValue.binaryLeft();
-        var trueRight = trueValue.binaryRight();
-        var falseLeft = falseValue.binaryLeft();
-        var falseRight = falseValue.binaryRight();
-
-        // "a ? b = c : b = d;" => "b = a ? c : d;"
-        if (looksTheSame(trueLeft, falseLeft)) {
-          var hook = Node.createHook(test.replaceWith(null), trueRight.replaceWith(null), falseRight.replaceWith(null));
-          peepholeMangleHook(hook);
-          node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWith(null), hook));
-        }
-
-        // "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
-        else if (looksTheSame(trueRight, falseRight) && !trueValue.kind.isBinaryStorageOperator()) {
-          var hook = Node.createHook(test.replaceWith(null), trueLeft.replaceWith(null), falseLeft.replaceWith(null));
-          peepholeMangleHook(hook);
-          node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWith(null)));
-        }
-      }
-    }
-
     void patchThis(Node node) {
       if (lambdaCount > 0) {
         node.become(thisAlias());
@@ -666,15 +161,6 @@ namespace js {
     void patchName(Node node) {
       if (node.symbol != null && node.symbol.kind.isInstance() && node.isNameExpression()) {
         node.become(Node.createDot(Node.createThis(), node.clone()));
-      }
-    }
-
-    void unionVariableWithFunction(Node node) {
-      assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null);
-      if (currentFunction != null) {
-        var left = namingGroupIndexForSymbol.get(currentFunction.uniqueID);
-        var right = namingGroupIndexForSymbol.get(node.symbol.uniqueID);
-        localVariableUnionFind.union(left, right);
       }
     }
 
@@ -781,10 +267,6 @@ namespace js {
       target.become(Node.createSequence([
         Node.createBinary(.ASSIGN, reference.clone(), left.dotTarget().replaceWith(null)),
         Node.createBinary(.ASSIGN, property.clone(), createBinaryInt(kind, property, right))]).withRange(target.range));
-      if (options.jsMangle) {
-        namingGroupIndexForSymbol.set(symbol.uniqueID, localVariableUnionFind.allocate());
-        unionVariableWithFunction(reference);
-      }
     }
 
     bool alwaysConvertsOperandsToInt(NodeKind kind) {

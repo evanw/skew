@@ -179,7 +179,7 @@ string bytesToString(int bytes) {
 }
 
 namespace trace {
-  const bool GENERICS = false;
+  const var GENERICS = false;
 
   void indent() {}
   void dedent() {}

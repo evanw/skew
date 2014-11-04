@@ -47,8 +47,11 @@ clean:
 # INSTALL
 ################################################################################
 
-install: check-release
-	cp $(RELEASE_DIR)/skewc.js .
+# install: check-release
+# 	cp $(RELEASE_DIR)/skewc.js .
+
+install: check
+	cp $(DEBUG_DIR)/skewc.js .
 
 check: | $(DEBUG_DIR)
 	node skewc.js $(FRONTEND_FLAGS) --output-file=$(DEBUG_DIR)/skewc.js --js-source-map

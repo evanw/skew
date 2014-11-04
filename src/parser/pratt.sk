@@ -64,12 +64,17 @@ class ParserContext {
 
 class Parselet {
   int precedence;
-  PrefixParselet prefix = null;
-  InfixParselet infix = null;
+  IPrefixParselet prefix = null;
+  IInfixParselet infix = null;
 }
 
-alias PrefixParselet = Node fn(ParserContext);
-alias InfixParselet = Node fn(ParserContext, Node);
+interface IPrefixParselet {
+  virtual Node parse(ParserContext context);
+}
+
+interface IInfixParselet {
+  virtual Node parse(ParserContext context, Node left);
+}
 
 // A Pratt parser is a parser that associates up to two operations per token,
 // each with its own precedence. Pratt parsers excel at parsing expression
@@ -107,7 +112,7 @@ class Pratt {
       context.unexpectedToken();
       return Node.createError().withRange(context.spanSince(token.range));
     }
-    var node = resumeIgnoringParselet(context, precedence, parselet.prefix(context), parseletToIgnore);
+    var node = resumeIgnoringParselet(context, precedence, parselet.prefix.parse(context), parseletToIgnore);
     assert node != null; // Parselets must return Node.createError() instead of null
     assert !node.range.isEmpty(); // Parselets must set the range of every node
     return node;
@@ -121,47 +126,84 @@ class Pratt {
       if (parselet == null || parselet == parseletToIgnore || parselet.infix == null || parselet.precedence <= precedence) {
         break;
       }
-      left = parselet.infix(context, left);
+      left = parselet.infix.parse(context, left);
       assert left != null; // Parselets must return Node.createError() instead of null
       assert !left.range.isEmpty(); // Parselets must set the range of every node
     }
     return left;
   }
 
-  void literal(TokenKind kind, LiteralCallback callback) {
-    parselet(kind, 0).prefix = context => callback(context, context.next());
+  void literal(TokenKind kind, ILiteralCallback callback) {
+    parselet(kind, 0).prefix = LiteralParselet(callback);
   }
 
-  void prefix(TokenKind kind, int precedence, PrefixCallback callback) {
-    parselet(kind, 0).prefix = context => {
-      var token = context.next();
-      var value = pratt.parse(context, precedence);
-      return value != null ? callback(context, token, value) : null;
-    };
+  void prefix(TokenKind kind, int precedence, IPrefixCallback callback) {
+    parselet(kind, 0).prefix = PrefixParselet(callback, precedence);
   }
 
-  void postfix(TokenKind kind, int precedence, PostfixCallback callback) {
-    parselet(kind, precedence).infix = (context, left) => callback(context, left, context.next());
+  void postfix(TokenKind kind, int precedence, IPostfixCallback callback) {
+    parselet(kind, precedence).infix = PostfixParselet(callback);
   }
 
-  void infix(TokenKind kind, int precedence, InfixCallback callback) {
-    parselet(kind, precedence).infix = (context, left) => {
-      var token = context.next();
-      var right = pratt.parse(context, precedence);
-      return right != null ? callback(context, left, token, right) : null;
-    };
+  void infix(TokenKind kind, int precedence, IInfixCallback callback) {
+    parselet(kind, precedence).infix = InfixParselet(callback, precedence);
   }
 
-  void infixRight(TokenKind kind, int precedence, InfixCallback callback) {
-    parselet(kind, precedence).infix = (context, left) => {
-      var token = context.next();
-      var right = pratt.parse(context, precedence - 1); // Subtract 1 for right-associativity
-      return right != null ? callback(context, left, token, right) : null;
-    };
+  void infixRight(TokenKind kind, int precedence, IInfixCallback callback) {
+    parselet(kind, precedence).infix = InfixParselet(callback, precedence - 1); // Subtract 1 for right-associativity
   }
 }
 
-alias LiteralCallback = Node fn(ParserContext, Token);
-alias PrefixCallback = Node fn(ParserContext, Token, Node);
-alias PostfixCallback = Node fn(ParserContext, Node, Token);
-alias InfixCallback = Node fn(ParserContext, Node, Token, Node);
+interface ILiteralCallback {
+  virtual Node parse(ParserContext context, Token token);
+}
+
+class LiteralParselet : IPrefixParselet {
+  ILiteralCallback callback;
+
+  override Node parse(ParserContext context) {
+    return callback.parse(context, context.next());
+  }
+}
+
+interface IPrefixCallback {
+  virtual Node parse(ParserContext context, Token token, Node value);
+}
+
+class PrefixParselet : IPrefixParselet {
+  IPrefixCallback callback;
+  int precedence;
+
+  override Node parse(ParserContext context) {
+    var token = context.next();
+    var value = pratt.parse(context, precedence);
+    return value != null ? callback.parse(context, token, value) : null;
+  }
+}
+
+interface IPostfixCallback {
+  virtual Node parse(ParserContext context, Node value, Token token);
+}
+
+class PostfixParselet : IInfixParselet {
+  IPostfixCallback callback;
+
+  override Node parse(ParserContext context, Node left) {
+    return callback.parse(context, left, context.next());
+  }
+}
+
+interface IInfixCallback {
+  virtual Node parse(ParserContext context, Node left, Token token, Node right);
+}
+
+class InfixParselet : IInfixParselet {
+  IInfixCallback callback;
+  int precedence;
+
+  override Node parse(ParserContext context, Node left) {
+    var token = context.next();
+    var right = pratt.parse(context, precedence);
+    return right != null ? callback.parse(context, left, token, right) : null;
+  }
+}

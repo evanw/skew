@@ -6,8 +6,16 @@ class SourceMapping {
   int generatedColumn; // 0-based
 }
 
+class SourceMappingComparison : IComparison<SourceMapping> {
+  override int compare(SourceMapping left, SourceMapping right) {
+    var delta = left.generatedLine - right.generatedLine;
+    return delta != 0 ? delta : left.generatedColumn - right.generatedColumn;
+  }
+}
+
 // Based on: https://github.com/mozilla/source-map
 class SourceMapGenerator {
+  static var comparison = SourceMappingComparison();
   List<SourceMapping> mappings = [];
   List<Source> sources = [];
 
@@ -34,10 +42,7 @@ class SourceMapGenerator {
       "],\"sourcesContent\":[" + ",".join(sourceContents) + "],\"names\":[],\"mappings\":\"";
 
     // Sort the mappings in increasing order by generated location
-    mappings.sort((left, right) => {
-      var delta = left.generatedLine - right.generatedLine;
-      return delta != 0 ? delta : left.generatedColumn - right.generatedColumn;
-    });
+    mappings.sort(comparison);
 
     var previousGeneratedColumn = 0;
     var previousGeneratedLine = 0;

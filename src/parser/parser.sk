@@ -631,12 +631,26 @@ Node parseFile(Log log, List<Token> tokens) {
   return Node.createFile(Node.createBlock(statements).withRange(range)).withRange(range);
 }
 
-LiteralCallback tokenLiteral(NodeKind kind) {
-  return (context, token) => Node(kind).withRange(token.range);
+class TokenLiteral : ILiteralCallback {
+  NodeKind kind;
+
+  override Node parse(ParserContext context, Token token) {
+    return Node(kind).withRange(token.range);
+  }
 }
 
-LiteralCallback intLiteral(int base) {
-  return (context, token) => {
+class BoolLiteral : ILiteralCallback {
+  bool value;
+
+  override Node parse(ParserContext context, Token token) {
+    return Node.createBool(value).withRange(token.range);
+  }
+}
+
+class IntLiteral : ILiteralCallback {
+  int base;
+
+  override Node parse(ParserContext context, Token token) {
     var value = parseIntLiteral(token.text, base);
     if (value != value) {
       syntaxErrorInvalidInteger(context.log, token.range, token.text);
@@ -644,47 +658,38 @@ LiteralCallback intLiteral(int base) {
       syntaxWarningOctal(context.log, token.range);
     }
     return Node.createInt((int)value).withRange(token.range);
-  };
+  }
 }
 
-PostfixCallback unaryPostfix(NodeKind kind) {
-  return (context, value, token) => Node.createUnary(kind, value).withRange(Range.span(value.range, token.range));
+class FloatLiteral : ILiteralCallback {
+  override Node parse(ParserContext context, Token token) {
+    return Node.createFloat(parseDoubleLiteral(token.text.slice(0, token.text.size() - 1))).withRange(token.range);
+  }
 }
 
-PrefixCallback unaryPrefix(NodeKind kind) {
-  return (context, token, value) => Node.createUnary(kind, value).withRange(Range.span(token.range, value.range));
+class DoubleLiteral : ILiteralCallback {
+  override Node parse(ParserContext context, Token token) {
+    return Node.createDouble(parseDoubleLiteral(token.text)).withRange(token.range);
+  }
 }
 
-InfixCallback binaryInfix(NodeKind kind) {
-  return (context, left, token, right) => Node.createBinary(kind, left, right).withRange(Range.span(left.range, right.range));
+class VarLiteral : ILiteralCallback {
+  override Node parse(ParserContext context, Token token) {
+    return Node.createVar().withRange(token.range);
+  }
 }
 
-void createParser() {
-  if (pratt != null) return;
-  pratt = Pratt();
-
-  ////////////////////////////////////////////////////////////////////////////////
-  // Literals
-  ////////////////////////////////////////////////////////////////////////////////
-
-  pratt.literal(.NULL, tokenLiteral(.NULL));
-  pratt.literal(.THIS, tokenLiteral(.THIS));
-  pratt.literal(.TRUE, (context, token) => Node.createBool(true).withRange(token.range));
-  pratt.literal(.FALSE, (context, token) => Node.createBool(false).withRange(token.range));
-  pratt.literal(.INT_DECIMAL, intLiteral(10));
-  pratt.literal(.INT_BINARY, intLiteral(2));
-  pratt.literal(.INT_OCTAL, intLiteral(8));
-  pratt.literal(.INT_HEX, intLiteral(16));
-  pratt.literal(.FLOAT, (context, token) => Node.createFloat(parseDoubleLiteral(token.text.slice(0, token.text.size() - 1))).withRange(token.range));
-  pratt.literal(.DOUBLE, (context, token) => Node.createDouble(parseDoubleLiteral(token.text)).withRange(token.range));
-  pratt.literal(.VAR, (context, token) => Node.createVar().withRange(token.range));
-  pratt.literal(.STRING, (context, token) => {
+class StringLiteral : ILiteralCallback {
+  override Node parse(ParserContext context, Token token) {
     var result = parseStringLiteral(context.log, token.range, token.text);
 
     // Don't return null on failure because this doesn't affect the rest of the compilation
     return Node.createString(result != null ? result.value : "").withRange(token.range);
-  });
-  pratt.literal(.CHARACTER, (context, token) => {
+  }
+}
+
+class CharacterLiteral : ILiteralCallback {
+  override Node parse(ParserContext context, Token token) {
     var result = parseStringLiteral(context.log, token.range, token.text);
 
     // TODO: Do true unicode code point parsing
@@ -695,76 +700,53 @@ void createParser() {
 
     // Don't return null on failure because this doesn't affect the rest of the compilation
     return Node.createInt(result != null ? result.value.codeUnitAt(0) : 0).withRange(token.range);
-  });
+  }
+}
 
-  ////////////////////////////////////////////////////////////////////////////////
-  // Unary expressions
-  ////////////////////////////////////////////////////////////////////////////////
+class NameLiteral : ILiteralCallback {
+  override Node parse(ParserContext context, Token token) {
+    return Node.createName(token.text).withRange(token.range);
+  }
+}
 
-  pratt.postfix(.INCREMENT, Precedence.UNARY_POSTFIX, unaryPostfix(.POSTFIX_INCREMENT));
-  pratt.postfix(.DECREMENT, Precedence.UNARY_POSTFIX, unaryPostfix(.POSTFIX_DECREMENT));
-  pratt.prefix(.INCREMENT, Precedence.UNARY_PREFIX, unaryPrefix(.PREFIX_INCREMENT));
-  pratt.prefix(.DECREMENT, Precedence.UNARY_PREFIX, unaryPrefix(.PREFIX_DECREMENT));
-  pratt.prefix(.PLUS, Precedence.UNARY_PREFIX, unaryPrefix(.POSITIVE));
-  pratt.prefix(.MINUS, Precedence.UNARY_PREFIX, unaryPrefix(.NEGATIVE));
-  pratt.prefix(.NOT, Precedence.UNARY_PREFIX, unaryPrefix(.NOT));
-  pratt.prefix(.TILDE, Precedence.UNARY_PREFIX, unaryPrefix(.COMPLEMENT));
+class UnaryPostfix : IPostfixCallback {
+  NodeKind kind;
 
-  ////////////////////////////////////////////////////////////////////////////////
-  // Binary expressions
-  ////////////////////////////////////////////////////////////////////////////////
+  override Node parse(ParserContext context, Node value, Token token) {
+    return Node.createUnary(kind, value).withRange(Range.span(value.range, token.range));
+  }
+}
 
-  pratt.infix(.BITWISE_AND, Precedence.BITWISE_AND, binaryInfix(.BITWISE_AND));
-  pratt.infix(.BITWISE_OR, Precedence.BITWISE_OR, binaryInfix(.BITWISE_OR));
-  pratt.infix(.BITWISE_XOR, Precedence.BITWISE_XOR, binaryInfix(.BITWISE_XOR));
-  pratt.infix(.DIVIDE, Precedence.MULTIPLY, binaryInfix(.DIVIDE));
-  pratt.infix(.EQUAL, Precedence.EQUAL, binaryInfix(.EQUAL));
-  pratt.infix(.GREATER_THAN, Precedence.COMPARE, binaryInfix(.GREATER_THAN));
-  pratt.infix(.GREATER_THAN_OR_EQUAL, Precedence.COMPARE, binaryInfix(.GREATER_THAN_OR_EQUAL));
-  pratt.infix(.IN, Precedence.COMPARE, binaryInfix(.IN));
-  pratt.infix(.LESS_THAN, Precedence.COMPARE, binaryInfix(.LESS_THAN));
-  pratt.infix(.LESS_THAN_OR_EQUAL, Precedence.COMPARE, binaryInfix(.LESS_THAN_OR_EQUAL));
-  pratt.infix(.LOGICAL_AND, Precedence.LOGICAL_AND, binaryInfix(.LOGICAL_AND));
-  pratt.infix(.LOGICAL_OR, Precedence.LOGICAL_OR, binaryInfix(.LOGICAL_OR));
-  pratt.infix(.MINUS, Precedence.ADD, binaryInfix(.SUBTRACT));
-  pratt.infix(.MULTIPLY, Precedence.MULTIPLY, binaryInfix(.MULTIPLY));
-  pratt.infix(.NOT_EQUAL, Precedence.EQUAL, binaryInfix(.NOT_EQUAL));
-  pratt.infix(.PLUS, Precedence.ADD, binaryInfix(.ADD));
-  pratt.infix(.REMAINDER, Precedence.MULTIPLY, binaryInfix(.REMAINDER));
-  pratt.infix(.SHIFT_LEFT, Precedence.SHIFT, binaryInfix(.SHIFT_LEFT));
-  pratt.infix(.SHIFT_RIGHT, Precedence.SHIFT, binaryInfix(.SHIFT_RIGHT));
+class UnaryPrefix : IPrefixCallback {
+  NodeKind kind;
 
-  ////////////////////////////////////////////////////////////////////////////////
-  // Assignment expressions
-  ////////////////////////////////////////////////////////////////////////////////
+  override Node parse(ParserContext context, Token token, Node value) {
+    return Node.createUnary(kind, value).withRange(Range.span(token.range, value.range));
+  }
+}
 
-  pratt.infixRight(.ASSIGN, Precedence.ASSIGN, binaryInfix(.ASSIGN));
-  pratt.infixRight(.ASSIGN_PLUS, Precedence.ASSIGN, binaryInfix(.ASSIGN_ADD));
-  pratt.infixRight(.ASSIGN_BITWISE_AND, Precedence.ASSIGN, binaryInfix(.ASSIGN_BITWISE_AND));
-  pratt.infixRight(.ASSIGN_BITWISE_OR, Precedence.ASSIGN, binaryInfix(.ASSIGN_BITWISE_OR));
-  pratt.infixRight(.ASSIGN_BITWISE_XOR, Precedence.ASSIGN, binaryInfix(.ASSIGN_BITWISE_XOR));
-  pratt.infixRight(.ASSIGN_DIVIDE, Precedence.ASSIGN, binaryInfix(.ASSIGN_DIVIDE));
-  pratt.infixRight(.ASSIGN_MULTIPLY, Precedence.ASSIGN, binaryInfix(.ASSIGN_MULTIPLY));
-  pratt.infixRight(.ASSIGN_REMAINDER, Precedence.ASSIGN, binaryInfix(.ASSIGN_REMAINDER));
-  pratt.infixRight(.ASSIGN_SHIFT_LEFT, Precedence.ASSIGN, binaryInfix(.ASSIGN_SHIFT_LEFT));
-  pratt.infixRight(.ASSIGN_SHIFT_RIGHT, Precedence.ASSIGN, binaryInfix(.ASSIGN_SHIFT_RIGHT));
-  pratt.infixRight(.ASSIGN_MINUS, Precedence.ASSIGN, binaryInfix(.ASSIGN_SUBTRACT));
+class BinaryInfix : IInfixCallback {
+  NodeKind kind;
 
-  ////////////////////////////////////////////////////////////////////////////////
-  // Other expressions
-  ////////////////////////////////////////////////////////////////////////////////
+  override Node parse(ParserContext context, Node left, Token token, Node right) {
+    return Node.createBinary(kind, left, right).withRange(Range.span(left.range, right.range));
+  }
+}
 
-  // Initializer expressions
-  pratt.parselet(.LEFT_BRACKET, Precedence.LOWEST).prefix = context => {
+class ListParselet : IPrefixParselet {
+  override Node parse(ParserContext context) {
     var token = context.current();
     var arguments = parseArgumentList(context, .LEFT_BRACKET, .RIGHT_BRACKET, .TRAILING_COMMA);
     return Node.createList(arguments).withRange(context.spanSince(token.range));
-  };
+  }
+}
 
-  // Group, cast, and lambda expressions
-  pratt.parselet(.LEFT_PARENTHESIS, Precedence.LOWEST).prefix = context => {
+class ParenthesisParselet : IPrefixParselet {
+  override Node parse(ParserContext context) {
     var token = context.current();
     var type = parseGroup(context, .LAMBDA_ALLOWED);
+
+    // Lambda
     if (type.kind == .NAME && context.eat(.LAMBDA)) {
       var block = parseLambdaBlock(context);
       return createLambdaFromNames([type], block).withRange(context.spanSince(token.range));
@@ -773,70 +755,71 @@ void createParser() {
       var block = parseLambdaBlock(context);
       return createLambdaFromNames(type.removeChildren(), block).withRange(context.spanSince(token.range));
     }
+
+    // Cast
     if (looksLikeType(type)) {
       var value = pratt.parse(context, Precedence.UNARY_PREFIX);
       return Node.createCast(type, value).withRange(context.spanSince(token.range));
     }
-    return type;
-  };
 
-  // Hook expressions
-  pratt.parselet(.QUESTION_MARK, Precedence.ASSIGN).infix = (context, left) => {
+    // Group
+    return type;
+  }
+}
+
+class HookParselet : IInfixParselet {
+  override Node parse(ParserContext context, Node left) {
     context.next();
     var middle = pratt.parse(context, Precedence.ASSIGN - 1);
     var right = context.expect(.COLON) ? pratt.parse(context, Precedence.ASSIGN - 1) : Node.createError().withRange(context.spanSince(context.current().range));
     return Node.createHook(left, middle, right).withRange(context.spanSince(left.range));
-  };
+  }
+}
 
-  // Sequence expressions
-  pratt.parselet(.COMMA, Precedence.COMMA).infix = (context, left) => {
+class SequenceParselet : IInfixParselet {
+  override Node parse(ParserContext context, Node left) {
     var values = [left];
     while (context.eat(.COMMA)) {
       values.push(pratt.parse(context, Precedence.COMMA));
     }
     return Node.createSequence(values).withRange(context.spanSince(left.range));
-  };
+  }
+}
 
-  // Dot expressions
-  pratt.parselet(.DOT, Precedence.MEMBER).infix = (context, left) => {
+class DotInfixParselet : IInfixParselet {
+  override Node parse(ParserContext context, Node left) {
     context.next();
     var name = parseName(context); // Allow this to be null for autocomplete
     return Node.createDot(left, name).withRange(context.spanSince(left.range));
-  };
-  pratt.parselet(.DOT, Precedence.LOWEST).prefix = context => {
+  }
+}
+
+class DotPrefixParselet : IPrefixParselet {
+  override Node parse(ParserContext context) {
     var token = context.next();
     var name = parseName(context); // Allow this to be null for autocomplete
     return Node.createDot(null, name).withRange(context.spanSince(token.range));
-  };
+  }
+}
 
-  // Function type expressions
-  pratt.parselet(.FN, Precedence.MEMBER).infix = (context, left) => {
-    if (!looksLikeType(left)) {
-      context.unexpectedToken();
-      context.next();
-      return Node.createError().withRange(context.spanSince(left.range));
-    }
-    context.next();
-    var arguments = parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .TRAILING_COMMA);
-    return Node.createFunctionType(left, arguments).withRange(context.spanSince(left.range));
-  };
-
-  // Call expressions
-  pratt.parselet(.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = (context, left) => {
+class CallParselet : IInfixParselet {
+  override Node parse(ParserContext context, Node left) {
     var arguments = parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
     return Node.createCall(left, arguments).withRange(context.spanSince(left.range));
-  };
+  }
+}
 
-  // Index expressions
-  pratt.parselet(.LEFT_BRACKET, Precedence.UNARY_POSTFIX).infix = (context, left) => {
+class IndexParselet : IInfixParselet {
+  override Node parse(ParserContext context, Node left) {
     context.next();
     var index = pratt.parse(context, Precedence.LOWEST);
     scanForToken(context, .RIGHT_BRACKET, .STOP_BEFORE_NEXT_STATEMENT);
     return Node.createBinary(.INDEX, left, index).withRange(context.spanSince(left.range));
-  };
+  }
+}
 
-  // Type parameterization expressions
-  pratt.parselet(.START_PARAMETER_LIST, Precedence.MEMBER).infix = (context, left) => {
+class ParameterizeParselet : IInfixParselet {
+  override Node parse(ParserContext context, Node left) {
     var token = context.next();
     var substitutions = parseTypeList(context, .END_PARAMETER_LIST);
     if (!context.expect(.END_PARAMETER_LIST)) {
@@ -844,42 +827,123 @@ void createParser() {
       return Node.createError().withRange(context.spanSince(token.range));
     }
     return Node.createParameterize(left, substitutions).withRange(context.spanSince(left.range));
-  };
+  }
+}
 
-  // Untyped expressions
-  pratt.parselet(.UNTYPED, Precedence.UNARY_PREFIX).prefix = context => {
+class UntypedParselet : IPrefixParselet {
+  override Node parse(ParserContext context) {
     var token = context.next();
     var value = parseGroup(context, .LAMBDA_NOT_ALLOWED);
     return (value == null ? Node.createError() : Node.createUntyped(value)).withRange(context.spanSince(token.range));
-  };
+  }
+}
 
-  // Name and lambda expressions
-  pratt.parselet(.IDENTIFIER, Precedence.LOWEST).prefix = context => {
-    var token = context.next();
-    var name = Node.createName(token.text).withRange(token.range);
-    if (context.eat(.LAMBDA)) {
-      var block = parseLambdaBlock(context);
-      return createLambdaFromNames([name], block).withRange(context.spanSince(token.range));
-    }
-    return name;
-  };
-
-  // Lambda expressions
-  pratt.parselet(.LAMBDA, Precedence.LOWEST).prefix = context => {
-    var token = context.next();
-    var block = parseLambdaBlock(context);
-    return Node.createLambda([], block).withRange(context.spanSince(token.range));
-  };
-
-  // New expressions
-  pratt.parselet(.NEW, Precedence.LOWEST).prefix = context => {
+class NewParselet : IPrefixParselet {
+  override Node parse(ParserContext context) {
     context.unexpectedToken();
-    context.next(); // Provide nicer error messages for Java-style by just ignoring it
+    context.next(); // Provide nicer error messages for Java-style constructor usage by just ignoring the new and continuing to parse
     return parseType(context);
-  };
+  }
+}
 
-  // Super call expressions
-  pratt.parselet(.SUPER, Precedence.LOWEST).prefix = context => parseSuperCall(context);
+class SuperParselet : IPrefixParselet {
+  override Node parse(ParserContext context) {
+    return parseSuperCall(context);
+  }
+}
+
+void createParser() {
+  if (pratt != null) return;
+  pratt = Pratt();
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Literals
+  ////////////////////////////////////////////////////////////////////////////////
+
+  pratt.literal(.NULL, TokenLiteral(.NULL));
+  pratt.literal(.THIS, TokenLiteral(.THIS));
+  pratt.literal(.TRUE, BoolLiteral(true));
+  pratt.literal(.FALSE, BoolLiteral(false));
+  pratt.literal(.INT_DECIMAL, IntLiteral(10));
+  pratt.literal(.INT_BINARY, IntLiteral(2));
+  pratt.literal(.INT_OCTAL, IntLiteral(8));
+  pratt.literal(.INT_HEX, IntLiteral(16));
+  pratt.literal(.FLOAT, FloatLiteral());
+  pratt.literal(.DOUBLE, DoubleLiteral());
+  pratt.literal(.VAR, VarLiteral());
+  pratt.literal(.STRING, StringLiteral());
+  pratt.literal(.CHARACTER, CharacterLiteral());
+  pratt.literal(.IDENTIFIER, NameLiteral());
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Unary expressions
+  ////////////////////////////////////////////////////////////////////////////////
+
+  pratt.postfix(.INCREMENT, Precedence.UNARY_POSTFIX, UnaryPostfix(.POSTFIX_INCREMENT));
+  pratt.postfix(.DECREMENT, Precedence.UNARY_POSTFIX, UnaryPostfix(.POSTFIX_DECREMENT));
+  pratt.prefix(.INCREMENT, Precedence.UNARY_PREFIX, UnaryPrefix(.PREFIX_INCREMENT));
+  pratt.prefix(.DECREMENT, Precedence.UNARY_PREFIX, UnaryPrefix(.PREFIX_DECREMENT));
+  pratt.prefix(.PLUS, Precedence.UNARY_PREFIX, UnaryPrefix(.POSITIVE));
+  pratt.prefix(.MINUS, Precedence.UNARY_PREFIX, UnaryPrefix(.NEGATIVE));
+  pratt.prefix(.NOT, Precedence.UNARY_PREFIX, UnaryPrefix(.NOT));
+  pratt.prefix(.TILDE, Precedence.UNARY_PREFIX, UnaryPrefix(.COMPLEMENT));
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Binary expressions
+  ////////////////////////////////////////////////////////////////////////////////
+
+  pratt.infix(.BITWISE_AND, Precedence.BITWISE_AND, BinaryInfix(.BITWISE_AND));
+  pratt.infix(.BITWISE_OR, Precedence.BITWISE_OR, BinaryInfix(.BITWISE_OR));
+  pratt.infix(.BITWISE_XOR, Precedence.BITWISE_XOR, BinaryInfix(.BITWISE_XOR));
+  pratt.infix(.DIVIDE, Precedence.MULTIPLY, BinaryInfix(.DIVIDE));
+  pratt.infix(.EQUAL, Precedence.EQUAL, BinaryInfix(.EQUAL));
+  pratt.infix(.GREATER_THAN, Precedence.COMPARE, BinaryInfix(.GREATER_THAN));
+  pratt.infix(.GREATER_THAN_OR_EQUAL, Precedence.COMPARE, BinaryInfix(.GREATER_THAN_OR_EQUAL));
+  pratt.infix(.IN, Precedence.COMPARE, BinaryInfix(.IN));
+  pratt.infix(.LESS_THAN, Precedence.COMPARE, BinaryInfix(.LESS_THAN));
+  pratt.infix(.LESS_THAN_OR_EQUAL, Precedence.COMPARE, BinaryInfix(.LESS_THAN_OR_EQUAL));
+  pratt.infix(.LOGICAL_AND, Precedence.LOGICAL_AND, BinaryInfix(.LOGICAL_AND));
+  pratt.infix(.LOGICAL_OR, Precedence.LOGICAL_OR, BinaryInfix(.LOGICAL_OR));
+  pratt.infix(.MINUS, Precedence.ADD, BinaryInfix(.SUBTRACT));
+  pratt.infix(.MULTIPLY, Precedence.MULTIPLY, BinaryInfix(.MULTIPLY));
+  pratt.infix(.NOT_EQUAL, Precedence.EQUAL, BinaryInfix(.NOT_EQUAL));
+  pratt.infix(.PLUS, Precedence.ADD, BinaryInfix(.ADD));
+  pratt.infix(.REMAINDER, Precedence.MULTIPLY, BinaryInfix(.REMAINDER));
+  pratt.infix(.SHIFT_LEFT, Precedence.SHIFT, BinaryInfix(.SHIFT_LEFT));
+  pratt.infix(.SHIFT_RIGHT, Precedence.SHIFT, BinaryInfix(.SHIFT_RIGHT));
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Assignment expressions
+  ////////////////////////////////////////////////////////////////////////////////
+
+  pratt.infixRight(.ASSIGN, Precedence.ASSIGN, BinaryInfix(.ASSIGN));
+  pratt.infixRight(.ASSIGN_PLUS, Precedence.ASSIGN, BinaryInfix(.ASSIGN_ADD));
+  pratt.infixRight(.ASSIGN_BITWISE_AND, Precedence.ASSIGN, BinaryInfix(.ASSIGN_BITWISE_AND));
+  pratt.infixRight(.ASSIGN_BITWISE_OR, Precedence.ASSIGN, BinaryInfix(.ASSIGN_BITWISE_OR));
+  pratt.infixRight(.ASSIGN_BITWISE_XOR, Precedence.ASSIGN, BinaryInfix(.ASSIGN_BITWISE_XOR));
+  pratt.infixRight(.ASSIGN_DIVIDE, Precedence.ASSIGN, BinaryInfix(.ASSIGN_DIVIDE));
+  pratt.infixRight(.ASSIGN_MULTIPLY, Precedence.ASSIGN, BinaryInfix(.ASSIGN_MULTIPLY));
+  pratt.infixRight(.ASSIGN_REMAINDER, Precedence.ASSIGN, BinaryInfix(.ASSIGN_REMAINDER));
+  pratt.infixRight(.ASSIGN_SHIFT_LEFT, Precedence.ASSIGN, BinaryInfix(.ASSIGN_SHIFT_LEFT));
+  pratt.infixRight(.ASSIGN_SHIFT_RIGHT, Precedence.ASSIGN, BinaryInfix(.ASSIGN_SHIFT_RIGHT));
+  pratt.infixRight(.ASSIGN_MINUS, Precedence.ASSIGN, BinaryInfix(.ASSIGN_SUBTRACT));
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Other expressions
+  ////////////////////////////////////////////////////////////////////////////////
+
+  pratt.parselet(.LEFT_BRACKET, Precedence.LOWEST).prefix = ListParselet();
+  pratt.parselet(.LEFT_PARENTHESIS, Precedence.LOWEST).prefix = ParenthesisParselet();
+  pratt.parselet(.QUESTION_MARK, Precedence.ASSIGN).infix = HookParselet();
+  pratt.parselet(.COMMA, Precedence.COMMA).infix = SequenceParselet();
+  pratt.parselet(.DOT, Precedence.MEMBER).infix = DotInfixParselet();
+  pratt.parselet(.DOT, Precedence.LOWEST).prefix = DotPrefixParselet();
+  pratt.parselet(.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = CallParselet();
+  pratt.parselet(.LEFT_BRACKET, Precedence.UNARY_POSTFIX).infix = IndexParselet();
+  pratt.parselet(.START_PARAMETER_LIST, Precedence.MEMBER).infix = ParameterizeParselet();
+  pratt.parselet(.UNTYPED, Precedence.UNARY_PREFIX).prefix = UntypedParselet();
+  pratt.parselet(.NEW, Precedence.LOWEST).prefix = NewParselet();
+  pratt.parselet(.SUPER, Precedence.LOWEST).prefix = SuperParselet();
 }
 
 Pratt pratt;

@@ -14,6 +14,7 @@ import class Object {
 
 import namespace operators {
   import void delete(int value);
+  import void sort<T>(List<T> list, IComparison<T> comparison);
 }
 
 import struct string {
@@ -32,6 +33,10 @@ import struct string {
   string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }
 }
 
+export interface IComparison<T> {
+  export virtual int compare(T left, T right);
+}
+
 import class List<T> {
   new();
   inline int size() { return untyped(this).length; }
@@ -43,7 +48,7 @@ import class List<T> {
   import T shift();
   import T pop();
   import void reverse();
-  import void sort(int fn(T, T) callback);
+  inline void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }
   inline List<T> clone() { return untyped(this).slice(); }
   inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }
   inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }
