@@ -1,6 +1,5 @@
 class SymbolMotionPass {
   Resolver resolver;
-  var shadowForSymbol = IntMap<Type>();
 
   static void run(Resolver resolver) {
     var pass = SymbolMotionPass(resolver);
@@ -37,43 +36,24 @@ class SymbolMotionPass {
   }
 
   Type createShadowForSymbol(Symbol symbol) {
-    // Shortcut past the shadow setup code for speed
-    var existing = shadowForSymbol.getOrDefault(symbol.uniqueID, null);
-    if (existing != null) {
-      return existing;
-    }
-
-    // Get or create a namespace called "in", which must be free since it's a keyword
+    // Get the namespace for the extension if it exists
+    var inName = "in_" + symbol.name;
     var enclosingSymbol = symbol.enclosingSymbol;
-    var enclosingType = enclosingSymbol.type;
-    var inMember = enclosingType.findMember("in");
-    Type inType;
+    var inMember = enclosingSymbol.type.findMember(inName);
     if (inMember != null) {
-      inType = inMember.type;
-    } else {
-      var inSymbol = resolver.createSymbol("in", .NAMESPACE);
-      inSymbol.enclosingSymbol = enclosingSymbol;
-      inType = Type(inSymbol);
-      inSymbol.type = inType;
-      inMember = Member(inSymbol);
-      inMember.type = inType;
-      enclosingType.addMember(inMember);
-      inSymbol.node = Node.createNamespace(Node.createName("in").withSymbol(inSymbol), Node.createBlock([])).withSymbol(inSymbol);
-      symbol.node.insertSiblingAfter(inSymbol.node);
+      return inMember.type;
     }
 
-    // Create a namespace with the same name as this symbol
-    var shadowSymbol = resolver.createSymbol("_" + symbol.name + "_", .NAMESPACE);
-    var shadowType = Type(shadowSymbol);
-    var shadowMember = Member(shadowSymbol);
-    shadowSymbol.enclosingSymbol = inType.symbol;
-    shadowSymbol.type = shadowType;
-    shadowMember.type = shadowType;
-    assert inType.findMember(shadowSymbol.name) == null;
-    inType.addMember(shadowMember);
-    shadowForSymbol.set(symbol.uniqueID, shadowType);
-    shadowSymbol.node = Node.createNamespace(Node.createName(shadowSymbol.name).withSymbol(shadowSymbol), Node.createBlock([])).withSymbol(shadowSymbol);
-    inType.symbol.node.declarationBlock().appendChild(shadowSymbol.node);
-    return shadowType;
+    // Create a namespace for the extension if it doesn't exist
+    var inSymbol = resolver.createSymbol(inName, .NAMESPACE);
+    inSymbol.enclosingSymbol = enclosingSymbol;
+    var inType = Type(inSymbol);
+    inSymbol.type = inType;
+    inMember = Member(inSymbol);
+    inMember.type = inType;
+    enclosingSymbol.type.addMember(inMember);
+    inSymbol.node = Node.createNamespace(Node.createName(inName).withSymbol(inSymbol), Node.createBlock([])).withSymbol(inSymbol);
+    symbol.node.insertSiblingAfter(inSymbol.node);
+    return inType;
   }
 }
