@@ -603,13 +603,13 @@
     if (kind === NodeKind.ASSIGN && left.kind === NodeKind.INDEX) {
       var target = left.binaryLeft();
       var index = left.binaryRight();
-      return Node.createTertiary(NodeKind.ASSIGN_INDEX, target.remove(), index.remove(), right);
+      return Node.createTernary(NodeKind.ASSIGN_INDEX, target.remove(), index.remove(), right);
     }
     return new Node(kind).withChildren([left, right]);
   };
-  Node.createTertiary = function(kind, left, middle, right) {
-    if (!in_NodeKind.isTertiaryOperator(kind)) {
-      throw new Error('assert kind.isTertiaryOperator(); (src/ast/create.sk:336:5)');
+  Node.createTernary = function(kind, left, middle, right) {
+    if (!in_NodeKind.isTernaryOperator(kind)) {
+      throw new Error('assert kind.isTernaryOperator(); (src/ast/create.sk:336:5)');
     }
     if (!in_NodeKind.isExpression(left.kind)) {
       throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:337:5)');
@@ -679,27 +679,27 @@
     }
     return this.children[1];
   };
-  Node.prototype.tertiaryLeft = function() {
-    if (!in_NodeKind.isTertiaryOperator(this.kind)) {
-      throw new Error('assert kind.isTertiaryOperator(); (src/ast/get.sk:40:5)');
+  Node.prototype.ternaryLeft = function() {
+    if (!in_NodeKind.isTernaryOperator(this.kind)) {
+      throw new Error('assert kind.isTernaryOperator(); (src/ast/get.sk:40:5)');
     }
     if (this.children.length !== 3) {
       throw new Error('assert children.size() == 3; (src/ast/get.sk:41:5)');
     }
     return this.children[0];
   };
-  Node.prototype.tertiaryMiddle = function() {
-    if (!in_NodeKind.isTertiaryOperator(this.kind)) {
-      throw new Error('assert kind.isTertiaryOperator(); (src/ast/get.sk:46:5)');
+  Node.prototype.ternaryMiddle = function() {
+    if (!in_NodeKind.isTernaryOperator(this.kind)) {
+      throw new Error('assert kind.isTernaryOperator(); (src/ast/get.sk:46:5)');
     }
     if (this.children.length !== 3) {
       throw new Error('assert children.size() == 3; (src/ast/get.sk:47:5)');
     }
     return this.children[1];
   };
-  Node.prototype.tertiaryRight = function() {
-    if (!in_NodeKind.isTertiaryOperator(this.kind)) {
-      throw new Error('assert kind.isTertiaryOperator(); (src/ast/get.sk:52:5)');
+  Node.prototype.ternaryRight = function() {
+    if (!in_NodeKind.isTernaryOperator(this.kind)) {
+      throw new Error('assert kind.isTernaryOperator(); (src/ast/get.sk:52:5)');
     }
     if (this.children.length !== 3) {
       throw new Error('assert children.size() == 3; (src/ast/get.sk:53:5)');
@@ -2850,7 +2850,7 @@
       this.emitIndex(node, precedence);
       break;
     case 93:
-      this.emitTertiary(node, precedence);
+      this.emitTernary(node, precedence);
       break;
     case 50:
     case 51:
@@ -2984,15 +2984,15 @@
     this.emitExpression(node.binaryRight(), Precedence.LOWEST);
     this.emit(']');
   };
-  cs.Emitter.prototype.emitTertiary = function(node, precedence) {
+  cs.Emitter.prototype.emitTernary = function(node, precedence) {
     if (Precedence.ASSIGN < precedence) {
       this.emit('(');
     }
-    this.emitExpression(node.tertiaryLeft(), Precedence.MEMBER);
+    this.emitExpression(node.ternaryLeft(), Precedence.MEMBER);
     this.emit('[');
-    this.emitExpression(node.tertiaryMiddle(), Precedence.LOWEST);
+    this.emitExpression(node.ternaryMiddle(), Precedence.LOWEST);
     this.emit('] = ');
-    this.emitExpression(node.tertiaryRight(), Precedence.ASSIGN);
+    this.emitExpression(node.ternaryRight(), Precedence.ASSIGN);
     if (Precedence.ASSIGN < precedence) {
       this.emit(')');
     }
@@ -3810,7 +3810,7 @@
       this.emitIndex(node, precedence);
       break;
     case 93:
-      this.emitTertiary(node, precedence);
+      this.emitTernary(node, precedence);
       break;
     case 50:
     case 51:
@@ -4035,14 +4035,14 @@
     this.emitExpression(node.binaryLeft(), Precedence.MEMBER);
     this.emitIndexProperty(node.binaryRight());
   };
-  js.Emitter.prototype.emitTertiary = function(node, precedence) {
+  js.Emitter.prototype.emitTernary = function(node, precedence) {
     if (Precedence.ASSIGN < precedence) {
       this.emit('(');
     }
-    this.emitExpression(node.tertiaryLeft(), Precedence.MEMBER);
-    this.emitIndexProperty(node.tertiaryMiddle());
+    this.emitExpression(node.ternaryLeft(), Precedence.MEMBER);
+    this.emitIndexProperty(node.ternaryMiddle());
     this.emit(this.space + '=' + this.space);
-    this.emitExpression(node.tertiaryRight(), Precedence.ASSIGN);
+    this.emitExpression(node.ternaryRight(), Precedence.ASSIGN);
     if (Precedence.ASSIGN < precedence) {
       this.emit(')');
     }
@@ -6180,7 +6180,7 @@
       this.resolveBinaryOperator(node);
       break;
     case 93:
-      this.resolveTertiaryOperator(node);
+      this.resolveTernaryOperator(node);
       break;
     default:
       throw new Error('assert false; (src/resolver/resolver.sk:564:9)');
@@ -8158,15 +8158,15 @@
       this.checkConversion(commonType, right, CastKind.IMPLICIT_CAST);
     }
   };
-  Resolver.prototype.resolveTertiaryOperator = function(node) {
-    var left = node.tertiaryLeft();
-    var middle = node.tertiaryMiddle();
-    var right = node.tertiaryRight();
+  Resolver.prototype.resolveTernaryOperator = function(node) {
+    var left = node.ternaryLeft();
+    var middle = node.ternaryMiddle();
+    var right = node.ternaryRight();
     this.resolveAsParameterizedExpression(left);
     this.resolveAsParameterizedExpression(middle);
     this.resolveAsParameterizedExpression(right);
     if (!left.type.isError(this.cache) && !middle.type.isError(this.cache) && !right.type.isError(this.cache)) {
-      semanticErrorNoTertiaryOperator(this.log, node.range, node.kind, left.type, middle.type, right.type);
+      semanticErrorNoTernaryOperator(this.log, node.range, node.kind, left.type, middle.type, right.type);
     }
   };
   function Scope(_0) {
@@ -9062,7 +9062,7 @@
   in_NodeKind.isBinaryStorageOperator = function($this) {
     return $this >= NodeKind.ASSIGN && $this <= NodeKind.ASSIGN_SUBTRACT;
   };
-  in_NodeKind.isTertiaryOperator = function($this) {
+  in_NodeKind.isTernaryOperator = function($this) {
     return $this === NodeKind.ASSIGN_INDEX;
   };
   in_NodeKind.isCast = function($this) {
@@ -10972,11 +10972,11 @@
     }
     log.error(range, 'No binary operator ' + operatorInfo.get(kind).text + ' for ' + typeToText(left) + ' and ' + typeToText(right));
   }
-  function semanticErrorNoTertiaryOperator(log, range, kind, left, middle, right) {
-    if (!in_NodeKind.isTertiaryOperator(kind)) {
-      throw new Error('assert kind.isTertiaryOperator(); (src/resolver/diagnostics.sk:253:3)');
+  function semanticErrorNoTernaryOperator(log, range, kind, left, middle, right) {
+    if (!in_NodeKind.isTernaryOperator(kind)) {
+      throw new Error('assert kind.isTernaryOperator(); (src/resolver/diagnostics.sk:253:3)');
     }
-    log.error(range, 'No tertiary operator ' + operatorInfo.get(kind).text + ' for ' + typeToText(left) + ', ' + typeToText(middle) + ', and ' + typeToText(right));
+    log.error(range, 'No ternary operator ' + operatorInfo.get(kind).text + ' for ' + typeToText(left) + ', ' + typeToText(middle) + ', and ' + typeToText(right));
   }
   function semanticErrorBadStorage(log, range) {
     log.error(range, 'Cannot store to this location');

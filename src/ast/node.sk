@@ -108,7 +108,7 @@ enum NodeKind {
   ASSIGN_SHIFT_RIGHT,
   ASSIGN_SUBTRACT,
 
-  // Tertiary assignment operators
+  // Ternary assignment operators
   ASSIGN_INDEX,
 }
 
@@ -169,7 +169,7 @@ in NodeKind {
     return this >= ASSIGN && this <= ASSIGN_SUBTRACT;
   }
 
-  bool isTertiaryOperator() {
+  bool isTernaryOperator() {
     return this == ASSIGN_INDEX;
   }
 

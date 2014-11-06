@@ -634,7 +634,7 @@ namespace js {
         case .SEQUENCE { emitSequence(node, precedence); }
         case .UNTYPED { emitExpression(node.untypedValue(), precedence); }
         case .INDEX { emitIndex(node, precedence); }
-        case .ASSIGN_INDEX { emitTertiary(node, precedence); }
+        case .ASSIGN_INDEX { emitTernary(node, precedence); }
         case .CAST, .IMPLICIT_CAST { emitExpression(node.castValue(), precedence); }
 
         case
@@ -836,12 +836,12 @@ namespace js {
       emitIndexProperty(node.binaryRight());
     }
 
-    void emitTertiary(Node node, Precedence precedence) {
+    void emitTernary(Node node, Precedence precedence) {
       if (.ASSIGN < precedence) emit("(");
-      emitExpression(node.tertiaryLeft(), .MEMBER);
-      emitIndexProperty(node.tertiaryMiddle());
+      emitExpression(node.ternaryLeft(), .MEMBER);
+      emitIndexProperty(node.ternaryMiddle());
       emit(space + "=" + space);
-      emitExpression(node.tertiaryRight(), .ASSIGN);
+      emitExpression(node.ternaryRight(), .ASSIGN);
       if (.ASSIGN < precedence) emit(")");
     }
 

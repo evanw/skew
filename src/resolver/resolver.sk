@@ -557,7 +557,7 @@ class Resolver {
       }
 
       case .ASSIGN_INDEX {
-        resolveTertiaryOperator(node);
+        resolveTernaryOperator(node);
       }
 
       default {
@@ -3043,10 +3043,10 @@ class Resolver {
     }
   }
 
-  void resolveTertiaryOperator(Node node) {
-    var left = node.tertiaryLeft();
-    var middle = node.tertiaryMiddle();
-    var right = node.tertiaryRight();
+  void resolveTernaryOperator(Node node) {
+    var left = node.ternaryLeft();
+    var middle = node.ternaryMiddle();
+    var right = node.ternaryRight();
 
     resolveAsParameterizedExpression(left);
     resolveAsParameterizedExpression(middle);
@@ -3054,7 +3054,7 @@ class Resolver {
 
     // User-defined operators aren't working yet
     if (!left.type.isError(cache) && !middle.type.isError(cache) && !right.type.isError(cache)) {
-      semanticErrorNoTertiaryOperator(log, node.range, node.kind, left.type, middle.type, right.type);
+      semanticErrorNoTernaryOperator(log, node.range, node.kind, left.type, middle.type, right.type);
     }
   }
 }

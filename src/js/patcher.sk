@@ -109,8 +109,8 @@ namespace js {
         return right.hasNoSideEffects() ? right : null;
       }
 
-      if (node.kind == .ASSIGN_INDEX && node.tertiaryLeft().hasNoSideEffects() && node.tertiaryMiddle().hasNoSideEffects()) {
-        var right = node.tertiaryRight();
+      if (node.kind == .ASSIGN_INDEX && node.ternaryLeft().hasNoSideEffects() && node.ternaryMiddle().hasNoSideEffects()) {
+        var right = node.ternaryRight();
         return right.hasNoSideEffects() ? right : null;
       }
 

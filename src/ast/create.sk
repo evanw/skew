@@ -326,14 +326,14 @@ in Node {
     if (kind == .ASSIGN && left.kind == .INDEX) {
       var target = left.binaryLeft();
       var index = left.binaryRight();
-      return createTertiary(.ASSIGN_INDEX, target.remove(), index.remove(), right);
+      return createTernary(.ASSIGN_INDEX, target.remove(), index.remove(), right);
     }
 
     return Node(kind).withChildren([left, right]);
   }
 
-  static Node createTertiary(NodeKind kind, Node left, Node middle, Node right) {
-    assert kind.isTertiaryOperator();
+  static Node createTernary(NodeKind kind, Node left, Node middle, Node right) {
+    assert kind.isTernaryOperator();
     assert left.kind.isExpression();
     assert middle.kind.isExpression();
     assert right.kind.isExpression();

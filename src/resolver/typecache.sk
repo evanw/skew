@@ -174,7 +174,9 @@ class TypeCache {
         //   }
         //   class Bar<T> : Foo<int, T> {}
         //   class Baz : Bar<bool> {}
-        //   bool bar = Baz(0).foo(0);
+        //   export int foo() {
+        //     return Baz(0).foo(false);
+        //   }
         //
         var parameterizedType = member.parameterizedType;
         if (parameterizedType != null) {

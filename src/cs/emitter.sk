@@ -453,7 +453,7 @@ namespace cs {
         case .SEQUENCE { emitSequence(node, precedence); }
         case .UNTYPED { emitExpression(node.untypedValue(), precedence); }
         case .INDEX { emitIndex(node, precedence); }
-        case .ASSIGN_INDEX { emitTertiary(node, precedence); }
+        case .ASSIGN_INDEX { emitTernary(node, precedence); }
         case .CAST, .IMPLICIT_CAST { emitCast(node, precedence); }
 
         case
@@ -556,13 +556,13 @@ namespace cs {
       emit("]");
     }
 
-    void emitTertiary(Node node, Precedence precedence) {
+    void emitTernary(Node node, Precedence precedence) {
       if (.ASSIGN < precedence) emit("(");
-      emitExpression(node.tertiaryLeft(), .MEMBER);
+      emitExpression(node.ternaryLeft(), .MEMBER);
       emit("[");
-      emitExpression(node.tertiaryMiddle(), .LOWEST);
+      emitExpression(node.ternaryMiddle(), .LOWEST);
       emit("] = ");
-      emitExpression(node.tertiaryRight(), .ASSIGN);
+      emitExpression(node.ternaryRight(), .ASSIGN);
       if (.ASSIGN < precedence) emit(")");
     }
 
