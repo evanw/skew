@@ -4,7 +4,7 @@ namespace js {
     NO_SWAP,
   }
 
-  struct GroupWithCount {
+  class GroupWithCount {
     final List<Symbol> group;
     final int count;
   }

@@ -10,7 +10,8 @@ class TypeCache {
   // most likely just be noise.
   final var errorType = createType(Symbol("<error>", .OTHER), 0);
 
-  // These are defined in the standard library
+  // These are defined in the standard library source code, and not by the type
+  // cache. That way error messages can have nice sensible line numbers.
   Type intType = null;
   Type boolType = null;
   Type floatType = null;
@@ -20,6 +21,27 @@ class TypeCache {
   Type toStringType = null;
 
   final var hashTable = IntMap<List<Type>>();
+
+  void insertGlobals(Scope scope) {
+    scope.type = globalType;
+    scope.insert(Member(voidType.symbol));
+  }
+
+  void linkGlobals(Scope scope) {
+    intType = findType(scope, "int", .PRIMITIVE);
+    boolType = findType(scope, "bool", .PRIMITIVE);
+    floatType = findType(scope, "float", .PRIMITIVE);
+    doubleType = findType(scope, "double", .PRIMITIVE);
+    stringType = findType(scope, "string", .PRIMITIVE);
+    listType = findType(scope, "List", 0);
+    toStringType = functionType(stringType, []);
+  }
+
+  static Type findType(Scope scope, string name, SymbolFlag flags) {
+    var symbol = scope.findLocal(name).symbol;
+    symbol.flags |= flags;
+    return symbol.type;
+  }
 
   static Type createType(Symbol symbol, SymbolFlag flags) {
     var type = Type(symbol);

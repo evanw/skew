@@ -68,10 +68,6 @@ in Node {
     return createObject(.CLASS, name, parameters, bases, block);
   }
 
-  static Node createStruct(Node name, Node parameters, Node bases, Node block) {
-    return createObject(.STRUCT, name, parameters, bases, block);
-  }
-
   static Node createInterface(Node name, Node parameters, Node bases, Node block) {
     return createObject(.INTERFACE, name, parameters, bases, block);
   }

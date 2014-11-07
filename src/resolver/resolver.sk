@@ -59,10 +59,10 @@ class Resolver {
   void run(Node program) {
     assert program.kind == .PROGRAM;
     var globalScope = Scope(null);
-    globalScope.insertGlobals(cache);
+    cache.insertGlobals(globalScope);
     constantFolder = ConstantFolder(cache);
     prepareNode(program, globalScope);
-    globalScope.linkGlobals(cache);
+    cache.linkGlobals(globalScope);
     resolve(program, null);
   }
 
@@ -307,7 +307,6 @@ class Resolver {
         case .ENUM { symbol.kind = .ENUM; }
         case .ENUM_FLAGS { symbol.kind = .ENUM_FLAGS; }
         case .CLASS { symbol.kind = .CLASS; }
-        case .STRUCT { symbol.kind = .STRUCT; }
         case .INTERFACE { symbol.kind = .INTERFACE; }
         case .FUNCTION { symbol.kind = .GLOBAL_FUNCTION; }
         case .CONSTRUCTOR { symbol.kind = .CONSTRUCTOR_FUNCTION; }
@@ -502,7 +501,7 @@ class Resolver {
 
       case .NAMESPACE { resolveNamespace(node); }
       case .ENUM, .ENUM_FLAGS { resolveEnum(node); }
-      case .CLASS, .STRUCT, .INTERFACE { resolveObject(node); }
+      case .CLASS, .INTERFACE { resolveObject(node); }
 
       case .EXTENSION { resolveExtension(node); }
       case .CONSTRUCTOR, .FUNCTION { resolveFunction(node); }
@@ -918,12 +917,6 @@ class Resolver {
     assert type.relevantTypes == null;
     type.relevantTypes = [];
 
-    // A struct has no base type because it's meant to be a named tuple type
-    if (symbol.kind == .STRUCT) {
-      checkNoBaseTypes(symbol, "A struct");
-      return;
-    }
-
     for (var i = 0; i < baseTypes.size(); i++) {
       var base = baseTypes.get(i);
       var baseType = base.type;
@@ -1171,8 +1164,7 @@ class Resolver {
 
     // Validate modifiers when nothing is being overridden
     else {
-      if (enclosingSymbol.kind == .STRUCT) unexpectedModifierIfPresent(symbol, .VIRTUAL, "inside a struct");
-      else if (!symbol.kind.isInstance()) unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a non-instance function");
+      if (!symbol.kind.isInstance()) unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a non-instance function");
       unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a function that doesn't override anything");
 
       // If "override" is used, imply "virtual" to mask further errors
@@ -1189,8 +1181,6 @@ class Resolver {
     }
     if (symbol.isConst()) {
       redundantModifierIfPresent(symbol, .FINAL, "on a const variable declaration");
-    } else if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind == .STRUCT && !symbol.isStatic()) {
-      expectedModifierIfAbsent(symbol, .FINAL, "on a variable declaration inside a struct");
     }
     if (symbol.isImport()) {
       unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
@@ -1384,7 +1374,7 @@ class Resolver {
       switch (symbol.kind) {
         case .NAMESPACE { initializeNamespace(symbol); }
         case .ENUM, .ENUM_FLAGS { initializeEnum(symbol); }
-        case .CLASS, .STRUCT, .INTERFACE { initializeObject(symbol); }
+        case .CLASS, .INTERFACE { initializeObject(symbol); }
         case .GLOBAL_FUNCTION, .INSTANCE_FUNCTION, .CONSTRUCTOR_FUNCTION { initializeFunction(symbol); }
         case .LOCAL_VARIABLE, .GLOBAL_VARIABLE, .INSTANCE_VARIABLE { initializeVariable(symbol); }
         case .OBJECT_PARAMETER, .FUNCTION_PARAMETER { initializeParameter(symbol); }
@@ -1507,12 +1497,6 @@ class Resolver {
     }
   }
 
-  void expectedModifierIfAbsent(Symbol symbol, SymbolFlag flag, string where) {
-    if ((symbol.flags & flag) == 0 && !symbol.hasModifierErrors() && findModifierName(symbol, flag) == null) {
-      semanticErrorExpectedModifier(log, symbol.node.declarationName().range, symbolFlagToName.get(flag), where);
-    }
-  }
-
   void generateDefaultConstructor(Symbol symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     var members = enclosingSymbol.type.members.values();
@@ -1521,7 +1505,7 @@ class Resolver {
     List<Node> memberInitializers = [];
 
     // Compute a very conservative definition of pure for now. This is mostly
-    // just to allow struct literals to work as top-level variable initializers.
+    // just to allow constructors to work as top-level variable initializers.
     var isPure = true;
 
     // Add arguments for each base constructor argument
@@ -2961,7 +2945,7 @@ class Resolver {
 
     if (kind == .EQUAL || kind == .NOT_EQUAL) {
       commonType = cache.commonImplicitType(leftType, rightType);
-      if (commonType != null && commonType.isEqualityComparable(cache)) {
+      if (commonType != null) {
         node.type = cache.boolType;
       }
     }

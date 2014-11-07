@@ -62,7 +62,7 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
       case
         .ALIAS, .ASSERT, .BREAK, .CLASS, .CONTINUE, .DO, .ENUM, .EXPORT, .FINAL, .FOR,
         .IF, .IMPORT, .INLINE, .INTERFACE, .NAMESPACE, .OVERRIDE, .PRIVATE, .PROTECTED,
-        .PUBLIC, .RETURN, .STATIC, .STRUCT, .SWITCH, .USING, .VIRTUAL, .WHILE {
+        .PUBLIC, .RETURN, .STATIC, .SWITCH, .USING, .VIRTUAL, .WHILE {
 
         // Optionally recover parsing before the next statement if it's unambiguous
         if (tokenScan == .STOP_BEFORE_NEXT_STATEMENT) {
@@ -567,7 +567,6 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case .PUBLIC { return parseModifier(context, hint, .PUBLIC); }
     case .RETURN { return parseReturn(context); }
     case .STATIC { return parseModifier(context, hint, .STATIC); }
-    case .STRUCT { return parseObject(context, .STRUCT); }
     case .SWITCH { return parseSwitch(context); }
     case .USING { return parseUsing(context); }
     case .VIRTUAL { return parseModifier(context, hint, .VIRTUAL); }

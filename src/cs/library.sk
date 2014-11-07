@@ -1,10 +1,10 @@
 const var NATIVE_LIBRARY_CS = "
-import struct int { import string toString(); }
-import struct bool { import string toString(); }
-import struct float { import string toString(); }
-import struct double { import string toString(); }
+import class int { import string toString(); }
+import class bool { import string toString(); }
+import class float { import string toString(); }
+import class double { import string toString(); }
 
-import struct string {
+import class string {
   inline int size() { return untyped(this).Length; }
   import string slice(int start, int end);
   inline int indexOf(string value) { return untyped(this).IndexOf(value); }

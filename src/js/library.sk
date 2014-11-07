@@ -1,10 +1,10 @@
 const var NATIVE_LIBRARY_JS = "
-import struct int { import string toString(); }
-import struct bool { import string toString(); }
-import struct float { import string toString(); }
-import struct double { import string toString(); }
+import class int { import string toString(); }
+import class bool { import string toString(); }
+import class float { import string toString(); }
+import class double { import string toString(); }
 
-import struct String {
+import class String {
   import static string fromCharCode(int value);
 }
 
@@ -17,7 +17,7 @@ import namespace operators {
   import void sort<T>(List<T> list, IComparison<T> comparison);
 }
 
-import struct string {
+import class string {
   inline int size() { return untyped(this).length; }
   import string slice(int start, int end);
   import int indexOf(string value);

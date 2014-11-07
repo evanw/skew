@@ -1,7 +1,6 @@
 enum SortTypes {
   DO_NOT_SORT,
   SORT_BY_INHERITANCE,
-  SORT_BY_INHERITANCE_AND_VALUE,
   SORT_BY_INHERITANCE_AND_CONTAINMENT,
 }
 
@@ -23,7 +22,7 @@ class Collector {
         collectChildStatements(node);
       }
 
-      case .NAMESPACE, .CLASS, .STRUCT, .INTERFACE, .EXTENSION, .ENUM, .ENUM_FLAGS {
+      case .NAMESPACE, .CLASS, .INTERFACE, .EXTENSION, .ENUM, .ENUM_FLAGS {
         if (node == node.symbol.node) {
           typeSymbols.push(node.symbol);
         }
@@ -83,18 +82,6 @@ class Collector {
     }
   }
 
-  bool hasMemberOfType(Type typeWithMembers, Type typeOfMember) {
-    var members = typeWithMembers.members.values();
-    if (members != null) {
-      for (var i = 0; i < members.size(); i++) {
-        if (members.get(i).type == typeOfMember) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   bool isContainedBy(Symbol inner, Symbol outer) {
     if (inner.enclosingSymbol == null) return false;
     if (inner.enclosingSymbol == outer) return true;
@@ -103,7 +90,6 @@ class Collector {
 
   bool typeComesBefore(Type before, Type after) {
     if (after.hasBaseType(before)) return true;
-    if (sort == .SORT_BY_INHERITANCE_AND_VALUE && before.isStruct() && hasMemberOfType(after, before)) return true;
     if (sort == .SORT_BY_INHERITANCE_AND_CONTAINMENT && isContainedBy(after.symbol, before.symbol)) return true;
     return false;
   }

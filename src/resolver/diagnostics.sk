@@ -75,7 +75,7 @@ void semanticErrorCyclicDeclaration(Log log, Range range, string name) {
 }
 
 void semanticErrorUnexpectedThis(Log log, Range range, string name) {
-  log.error(range, "Cannot use " + simpleQuote(name) + " outside a class or struct");
+  log.error(range, "Cannot use " + simpleQuote(name) + " outside a class");
 }
 
 void semanticErrorStaticThis(Log log, Range range, string name) {

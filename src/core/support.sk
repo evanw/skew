@@ -144,7 +144,7 @@ string plural(int value, string singular, string plural) {
   return value == 1 ? singular : plural;
 }
 
-struct SplitPath {
+class SplitPath {
   final string directory;
   final string entry;
 }

@@ -33,7 +33,6 @@
 "public"                      PUBLIC;
 "return"                      RETURN;
 "static"                      STATIC;
-"struct"                      STRUCT;
 "super"                       SUPER;
 "switch"                      SWITCH;
 "this"                        THIS;

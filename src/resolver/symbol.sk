@@ -20,7 +20,6 @@ enum SymbolKind {
 
   // Object kinds
   CLASS,
-  STRUCT,
   INTERFACE,
 
   // Function kinds
@@ -114,6 +113,7 @@ enum flags SymbolFlag {
   INITIALIZED,
 
   // Other flags
+  PRIMITIVE,
   HAS_LOCATION_ERROR,
   HAS_MODIFIER_ERRORS,
 
@@ -320,6 +320,10 @@ class Symbol {
   bool isInitialized() {
     assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK;
     return (flags & .INITIALIZED) != 0;
+  }
+
+  bool isPrimitive() {
+    return (flags & .PRIMITIVE) != 0;
   }
 
   bool hasLocationError() {

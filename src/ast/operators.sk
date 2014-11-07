@@ -4,7 +4,7 @@ enum Associativity {
   RIGHT,
 }
 
-struct OperatorInfo {
+class OperatorInfo {
   final string text;
   final Precedence precedence;
   final Associativity associativity;

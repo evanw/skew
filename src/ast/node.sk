@@ -13,7 +13,6 @@ enum NodeKind {
   ENUM,
   ENUM_FLAGS,
   CLASS,
-  STRUCT,
   INTERFACE,
 
   // Other declarations

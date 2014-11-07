@@ -11,25 +11,6 @@ class Scope {
   // local symbols since those scopes don't have a type.
   StringMap<Member> locals = null;
 
-  void insertGlobals(TypeCache cache) {
-    type = cache.globalType;
-    insert(Member(cache.voidType.symbol));
-  }
-
-  void linkGlobals(TypeCache cache) {
-    cache.intType = findType("int");
-    cache.boolType = findType("bool");
-    cache.floatType = findType("float");
-    cache.doubleType = findType("double");
-    cache.stringType = findType("string");
-    cache.listType = findType("List");
-    cache.toStringType = cache.functionType(cache.stringType, []);
-  }
-
-  Type findType(string name) {
-    return findLocal(name).symbol.type;
-  }
-
   void insert(Member member) {
     if (type != null) {
       type.addMember(member);

@@ -1,9 +1,9 @@
-struct FormattedRange {
+class FormattedRange {
   final string line;
   final string range;
 }
 
-struct Range {
+class Range {
   static final var EMPTY = Range(null, 0, 0);
 
   final Source source;

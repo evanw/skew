@@ -276,148 +276,148 @@
   };
   Node.createExtension = function(name, bases, block) {
     if (name.kind !== NodeKind.NAME) {
-      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:80:5)');
+      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:76:5)');
     }
     if (bases !== null && !checkAllNodeListKinds(bases, new NodeKindIsExpression())) {
-      throw new Error('assert bases == null || checkAllNodeListKinds(bases, NodeKindIsExpression()); (src/ast/create.sk:81:5)');
+      throw new Error('assert bases == null || checkAllNodeListKinds(bases, NodeKindIsExpression()); (src/ast/create.sk:77:5)');
     }
     if (block.kind !== NodeKind.BLOCK) {
-      throw new Error('assert block.kind == .BLOCK; (src/ast/create.sk:82:5)');
+      throw new Error('assert block.kind == .BLOCK; (src/ast/create.sk:78:5)');
     }
     return new Node(NodeKind.EXTENSION).withChildren([name, block, bases]);
   };
   Node.createConstructor = function(name, $arguments, block, superInitializer, memberInitializers) {
     if (name.kind !== NodeKind.NAME) {
-      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:87:5)');
+      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:83:5)');
     }
     if (!checkAllNodeListKinds($arguments, new NodeKindIs(NodeKind.VARIABLE))) {
-      throw new Error('assert checkAllNodeListKinds(arguments, NodeKindIs(.VARIABLE)); (src/ast/create.sk:88:5)');
+      throw new Error('assert checkAllNodeListKinds(arguments, NodeKindIs(.VARIABLE)); (src/ast/create.sk:84:5)');
     }
     if (block !== null && block.kind !== NodeKind.BLOCK) {
-      throw new Error('assert block == null || block.kind == .BLOCK; (src/ast/create.sk:89:5)');
+      throw new Error('assert block == null || block.kind == .BLOCK; (src/ast/create.sk:85:5)');
     }
     if (superInitializer !== null && superInitializer.kind !== NodeKind.SUPER_CALL) {
-      throw new Error('assert superInitializer == null || superInitializer.kind == .SUPER_CALL; (src/ast/create.sk:90:5)');
+      throw new Error('assert superInitializer == null || superInitializer.kind == .SUPER_CALL; (src/ast/create.sk:86:5)');
     }
     if (memberInitializers !== null && !checkAllNodeListKinds(memberInitializers, new NodeKindIs(NodeKind.MEMBER_INITIALIZER))) {
-      throw new Error('assert memberInitializers == null || checkAllNodeListKinds(memberInitializers, NodeKindIs(.MEMBER_INITIALIZER)); (src/ast/create.sk:91:5)');
+      throw new Error('assert memberInitializers == null || checkAllNodeListKinds(memberInitializers, NodeKindIs(.MEMBER_INITIALIZER)); (src/ast/create.sk:87:5)');
     }
     return new Node(NodeKind.CONSTRUCTOR).withChildren([name, $arguments, block, superInitializer, memberInitializers]);
   };
   Node.createFunction = function(name, $arguments, block, result, parameters) {
     if (name.kind !== NodeKind.NAME) {
-      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:96:5)');
+      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:92:5)');
     }
     if (!checkAllNodeListKinds($arguments, new NodeKindIs(NodeKind.VARIABLE))) {
-      throw new Error('assert checkAllNodeListKinds(arguments, NodeKindIs(.VARIABLE)); (src/ast/create.sk:97:5)');
+      throw new Error('assert checkAllNodeListKinds(arguments, NodeKindIs(.VARIABLE)); (src/ast/create.sk:93:5)');
     }
     if (block !== null && block.kind !== NodeKind.BLOCK) {
-      throw new Error('assert block == null || block.kind == .BLOCK; (src/ast/create.sk:98:5)');
+      throw new Error('assert block == null || block.kind == .BLOCK; (src/ast/create.sk:94:5)');
     }
     if (!in_NodeKind.isExpression(result.kind)) {
-      throw new Error('assert result.kind.isExpression(); (src/ast/create.sk:99:5)');
+      throw new Error('assert result.kind.isExpression(); (src/ast/create.sk:95:5)');
     }
     if (parameters !== null && !checkAllNodeListKinds(parameters, new NodeKindIs(NodeKind.PARAMETER))) {
-      throw new Error('assert parameters == null || checkAllNodeListKinds(parameters, NodeKindIs(.PARAMETER)); (src/ast/create.sk:100:5)');
+      throw new Error('assert parameters == null || checkAllNodeListKinds(parameters, NodeKindIs(.PARAMETER)); (src/ast/create.sk:96:5)');
     }
     return new Node(NodeKind.FUNCTION).withChildren([name, $arguments, block, result, parameters]);
   };
   Node.createVariable = function(name, type, value) {
     if (name.kind !== NodeKind.NAME) {
-      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:105:5)');
+      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:101:5)');
     }
     if (type !== null && !in_NodeKind.isExpression(type.kind)) {
-      throw new Error('assert type == null || type.kind.isExpression(); (src/ast/create.sk:106:5)');
+      throw new Error('assert type == null || type.kind.isExpression(); (src/ast/create.sk:102:5)');
     }
     if (value !== null && !in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:107:5)');
+      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:103:5)');
     }
     return new Node(NodeKind.VARIABLE).withChildren([name, type, value]);
   };
   Node.createParameter = function(name, bound) {
     if (name.kind !== NodeKind.NAME) {
-      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:112:5)');
+      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:108:5)');
     }
     if (bound !== null && !in_NodeKind.isExpression(bound.kind)) {
-      throw new Error('assert bound == null || bound.kind.isExpression(); (src/ast/create.sk:113:5)');
+      throw new Error('assert bound == null || bound.kind.isExpression(); (src/ast/create.sk:109:5)');
     }
     return new Node(NodeKind.PARAMETER).withChildren([name, bound]);
   };
   Node.createAlias = function(name, value) {
     if (name.kind !== NodeKind.NAME) {
-      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:118:5)');
+      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:114:5)');
     }
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:119:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:115:5)');
     }
     return new Node(NodeKind.ALIAS).withChildren([name, value]);
   };
   Node.createUsing = function(value) {
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:124:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:120:5)');
     }
     return new Node(NodeKind.USING).withChildren([value]);
   };
   Node.createIf = function(test, trueNode, falseNode) {
     if (!in_NodeKind.isExpression(test.kind)) {
-      throw new Error('assert test.kind.isExpression(); (src/ast/create.sk:129:5)');
+      throw new Error('assert test.kind.isExpression(); (src/ast/create.sk:125:5)');
     }
     if (trueNode.kind !== NodeKind.BLOCK) {
-      throw new Error('assert trueNode.kind == .BLOCK; (src/ast/create.sk:130:5)');
+      throw new Error('assert trueNode.kind == .BLOCK; (src/ast/create.sk:126:5)');
     }
     if (falseNode !== null && falseNode.kind !== NodeKind.BLOCK) {
-      throw new Error('assert falseNode == null || falseNode.kind == .BLOCK; (src/ast/create.sk:131:5)');
+      throw new Error('assert falseNode == null || falseNode.kind == .BLOCK; (src/ast/create.sk:127:5)');
     }
     return new Node(NodeKind.IF).withChildren([test, trueNode, falseNode]);
   };
   Node.createFor = function(setup, test, update, block) {
     if (setup !== null && !in_NodeKind.isExpression(setup.kind) && setup.kind !== NodeKind.VARIABLE_CLUSTER) {
-      throw new Error('assert setup == null || setup.kind.isExpression() || setup.kind == .VARIABLE_CLUSTER; (src/ast/create.sk:136:5)');
+      throw new Error('assert setup == null || setup.kind.isExpression() || setup.kind == .VARIABLE_CLUSTER; (src/ast/create.sk:132:5)');
     }
     if (test !== null && !in_NodeKind.isExpression(test.kind)) {
-      throw new Error('assert test == null || test.kind.isExpression(); (src/ast/create.sk:137:5)');
+      throw new Error('assert test == null || test.kind.isExpression(); (src/ast/create.sk:133:5)');
     }
     if (update !== null && !in_NodeKind.isExpression(update.kind)) {
-      throw new Error('assert update == null || update.kind.isExpression(); (src/ast/create.sk:138:5)');
+      throw new Error('assert update == null || update.kind.isExpression(); (src/ast/create.sk:134:5)');
     }
     if (block.kind !== NodeKind.BLOCK) {
-      throw new Error('assert block.kind == .BLOCK; (src/ast/create.sk:139:5)');
+      throw new Error('assert block.kind == .BLOCK; (src/ast/create.sk:135:5)');
     }
     return new Node(NodeKind.FOR).withChildren([setup, test, update, block]);
   };
   Node.createForEach = function(variable, value, block) {
     if (variable.kind !== NodeKind.VARIABLE) {
-      throw new Error('assert variable.kind == .VARIABLE; (src/ast/create.sk:144:5)');
+      throw new Error('assert variable.kind == .VARIABLE; (src/ast/create.sk:140:5)');
     }
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:145:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:141:5)');
     }
     if (block.kind !== NodeKind.BLOCK) {
-      throw new Error('assert block.kind == .BLOCK; (src/ast/create.sk:146:5)');
+      throw new Error('assert block.kind == .BLOCK; (src/ast/create.sk:142:5)');
     }
     return new Node(NodeKind.FOR_EACH).withChildren([variable, value, block]);
   };
   Node.createWhile = function(test, block) {
     if (!in_NodeKind.isExpression(test.kind)) {
-      throw new Error('assert test.kind.isExpression(); (src/ast/create.sk:151:5)');
+      throw new Error('assert test.kind.isExpression(); (src/ast/create.sk:147:5)');
     }
     if (block.kind !== NodeKind.BLOCK) {
-      throw new Error('assert block.kind == .BLOCK; (src/ast/create.sk:152:5)');
+      throw new Error('assert block.kind == .BLOCK; (src/ast/create.sk:148:5)');
     }
     return new Node(NodeKind.WHILE).withChildren([test, block]);
   };
   Node.createDoWhile = function(block, test) {
     if (test !== null && !in_NodeKind.isExpression(test.kind)) {
-      throw new Error('assert test == null || test.kind.isExpression(); (src/ast/create.sk:157:5)');
+      throw new Error('assert test == null || test.kind.isExpression(); (src/ast/create.sk:153:5)');
     }
     if (block.kind !== NodeKind.BLOCK) {
-      throw new Error('assert block.kind == .BLOCK; (src/ast/create.sk:158:5)');
+      throw new Error('assert block.kind == .BLOCK; (src/ast/create.sk:154:5)');
     }
     return new Node(NodeKind.DO_WHILE).withChildren([test, block]);
   };
   Node.createReturn = function(value) {
     if (value !== null && !in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:163:5)');
+      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:159:5)');
     }
     return new Node(NodeKind.RETURN).withChildren([value]);
   };
@@ -429,35 +429,35 @@
   };
   Node.createAssert = function(kind, value) {
     if (kind !== NodeKind.ASSERT && kind !== NodeKind.ASSERT_CONST) {
-      throw new Error('assert kind == .ASSERT || kind == .ASSERT_CONST; (src/ast/create.sk:176:5)');
+      throw new Error('assert kind == .ASSERT || kind == .ASSERT_CONST; (src/ast/create.sk:172:5)');
     }
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:177:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:173:5)');
     }
     return new Node(kind).withChildren([value]);
   };
   Node.createExpression = function(value) {
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:182:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:178:5)');
     }
     return new Node(NodeKind.EXPRESSION).withChildren([value]);
   };
   Node.createModifier = function(name, statements) {
     if (name.kind !== NodeKind.NAME) {
-      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:187:5)');
+      throw new Error('assert name.kind == .NAME; (src/ast/create.sk:183:5)');
     }
     if (!checkAllNodeKinds(statements, new NodeKindIsStatement())) {
-      throw new Error('assert checkAllNodeKinds(statements, NodeKindIsStatement()); (src/ast/create.sk:188:5)');
+      throw new Error('assert checkAllNodeKinds(statements, NodeKindIsStatement()); (src/ast/create.sk:184:5)');
     }
     statements.unshift(name);
     return new Node(NodeKind.MODIFIER).withChildren(statements);
   };
   Node.createSwitch = function(value, cases) {
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:194:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:190:5)');
     }
     if (!checkAllNodeKinds(cases, new NodeKindIs(NodeKind.CASE))) {
-      throw new Error('assert checkAllNodeKinds(cases, NodeKindIs(.CASE)); (src/ast/create.sk:195:5)');
+      throw new Error('assert checkAllNodeKinds(cases, NodeKindIs(.CASE)); (src/ast/create.sk:191:5)');
     }
     cases.unshift(value);
     return new Node(NodeKind.SWITCH).withChildren(cases);
@@ -467,7 +467,7 @@
   };
   Node.createType = function(type) {
     if (type === null) {
-      throw new Error('assert type != null; (src/ast/create.sk:205:5)');
+      throw new Error('assert type != null; (src/ast/create.sk:201:5)');
     }
     return new Node(NodeKind.TYPE).withType(type);
   };
@@ -479,13 +479,13 @@
   };
   Node.createHook = function(test, trueNode, falseNode) {
     if (!in_NodeKind.isExpression(test.kind)) {
-      throw new Error('assert test.kind.isExpression(); (src/ast/create.sk:218:5)');
+      throw new Error('assert test.kind.isExpression(); (src/ast/create.sk:214:5)');
     }
     if (!in_NodeKind.isExpression(trueNode.kind)) {
-      throw new Error('assert trueNode.kind.isExpression(); (src/ast/create.sk:219:5)');
+      throw new Error('assert trueNode.kind.isExpression(); (src/ast/create.sk:215:5)');
     }
     if (!in_NodeKind.isExpression(falseNode.kind)) {
-      throw new Error('assert falseNode.kind.isExpression(); (src/ast/create.sk:220:5)');
+      throw new Error('assert falseNode.kind.isExpression(); (src/ast/create.sk:216:5)');
     }
     return new Node(NodeKind.HOOK).withChildren([test, trueNode, falseNode]);
   };
@@ -506,32 +506,32 @@
   };
   Node.createList = function(values) {
     if (!checkAllNodeKinds(values, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:245:5)');
+      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:241:5)');
     }
     return new Node(NodeKind.LIST).withChildren(values);
   };
   Node.createDot = function(value, name) {
     if (value !== null && !in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:250:5)');
+      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:246:5)');
     }
     if (name !== null && name.kind !== NodeKind.NAME) {
-      throw new Error('assert name == null || name.kind == .NAME; (src/ast/create.sk:251:5)');
+      throw new Error('assert name == null || name.kind == .NAME; (src/ast/create.sk:247:5)');
     }
     return new Node(NodeKind.DOT).withChildren([value, name]);
   };
   Node.createCall = function(value, $arguments) {
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:256:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:252:5)');
     }
     if (!checkAllNodeKinds($arguments, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:257:5)');
+      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:253:5)');
     }
     $arguments.unshift(value);
     return new Node(NodeKind.CALL).withChildren($arguments);
   };
   Node.createSuperCall = function($arguments) {
     if (!checkAllNodeKinds($arguments, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:263:5)');
+      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:259:5)');
     }
     return new Node(NodeKind.SUPER_CALL).withChildren($arguments);
   };
@@ -540,41 +540,41 @@
   };
   Node.createSequence = function(values) {
     if (!checkAllNodeKinds(values, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:275:5)');
+      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:271:5)');
     }
     return new Node(NodeKind.SEQUENCE).withChildren(values);
   };
   Node.createParameterize = function(type, types) {
     if (!in_NodeKind.isExpression(type.kind)) {
-      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:280:5)');
+      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:276:5)');
     }
     if (!checkAllNodeKinds(types, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(types, NodeKindIsExpression()); (src/ast/create.sk:281:5)');
+      throw new Error('assert checkAllNodeKinds(types, NodeKindIsExpression()); (src/ast/create.sk:277:5)');
     }
     types.unshift(type);
     return new Node(NodeKind.PARAMETERIZE).withChildren(types);
   };
   Node.createCast = function(type, value) {
     if (!in_NodeKind.isExpression(type.kind)) {
-      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:287:5)');
+      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:283:5)');
     }
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:288:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:284:5)');
     }
     return new Node(NodeKind.CAST).withChildren([type, value]);
   };
   Node.createImplicitCast = function(type, value) {
     if (!in_NodeKind.isExpression(type.kind)) {
-      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:293:5)');
+      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:289:5)');
     }
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:294:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:290:5)');
     }
     return new Node(NodeKind.IMPLICIT_CAST).withChildren([type, value]);
   };
   Node.createUntyped = function(type) {
     if (!in_NodeKind.isExpression(type.kind)) {
-      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:302:5)');
+      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:298:5)');
     }
     return new Node(NodeKind.UNTYPED).withChildren([type]);
   };
@@ -583,22 +583,22 @@
   };
   Node.createUnary = function(kind, value) {
     if (!in_NodeKind.isUnaryOperator(kind)) {
-      throw new Error('assert kind.isUnaryOperator(); (src/ast/create.sk:311:5)');
+      throw new Error('assert kind.isUnaryOperator(); (src/ast/create.sk:307:5)');
     }
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:312:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:308:5)');
     }
     return new Node(kind).withChildren([value]);
   };
   Node.createBinary = function(kind, left, right) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/ast/create.sk:321:5)');
+      throw new Error('assert kind.isBinaryOperator(); (src/ast/create.sk:317:5)');
     }
     if (!in_NodeKind.isExpression(left.kind)) {
-      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:322:5)');
+      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:318:5)');
     }
     if (!in_NodeKind.isExpression(right.kind)) {
-      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:323:5)');
+      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:319:5)');
     }
     if (kind === NodeKind.ASSIGN && left.kind === NodeKind.INDEX) {
       var target = left.binaryLeft();
@@ -609,16 +609,16 @@
   };
   Node.createTernary = function(kind, left, middle, right) {
     if (!in_NodeKind.isTernaryOperator(kind)) {
-      throw new Error('assert kind.isTernaryOperator(); (src/ast/create.sk:336:5)');
+      throw new Error('assert kind.isTernaryOperator(); (src/ast/create.sk:332:5)');
     }
     if (!in_NodeKind.isExpression(left.kind)) {
-      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:337:5)');
+      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:333:5)');
     }
     if (!in_NodeKind.isExpression(middle.kind)) {
-      throw new Error('assert middle.kind.isExpression(); (src/ast/create.sk:338:5)');
+      throw new Error('assert middle.kind.isExpression(); (src/ast/create.sk:334:5)');
     }
     if (!in_NodeKind.isExpression(right.kind)) {
-      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:339:5)');
+      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:335:5)');
     }
     return new Node(kind).withChildren([left, middle, right]);
   };
@@ -1215,45 +1215,45 @@
       throw new Error('assert kind.isExpression(); (src/ast/logic.sk:3:5)');
     }
     switch (this.kind) {
-    case 38:
+    case 37:
       this.content = new BoolContent(!this.asBool());
       return;
-    case 54:
+    case 53:
       this.become(this.unaryValue().remove());
       return;
-    case 67:
+    case 66:
       this.kind = NodeKind.NOT_EQUAL;
       return;
-    case 77:
+    case 76:
       this.kind = NodeKind.EQUAL;
       return;
-    case 75:
+    case 74:
       this.kind = NodeKind.LOGICAL_AND;
       this.binaryLeft().invertBooleanCondition(cache);
       this.binaryRight().invertBooleanCondition(cache);
       return;
-    case 74:
+    case 73:
       this.kind = NodeKind.LOGICAL_OR;
       this.binaryLeft().invertBooleanCondition(cache);
       this.binaryRight().invertBooleanCondition(cache);
       return;
+    case 71:
+    case 67:
     case 72:
     case 68:
-    case 73:
-    case 69:
       var commonType = cache.commonImplicitType(this.binaryLeft().type, this.binaryRight().type);
       if (commonType !== null && !commonType.isReal(cache)) {
         switch (this.kind) {
-        case 72:
+        case 71:
           this.kind = NodeKind.GREATER_THAN_OR_EQUAL;
           break;
-        case 68:
+        case 67:
           this.kind = NodeKind.LESS_THAN_OR_EQUAL;
           break;
-        case 73:
+        case 72:
           this.kind = NodeKind.GREATER_THAN;
           break;
-        case 69:
+        case 68:
           this.kind = NodeKind.LESS_THAN;
           break;
         }
@@ -1274,16 +1274,16 @@
     for (var i = this.children.length - 1 | 0; i >= 0; i = i - 1 | 0) {
       var child = this.children[i];
       switch (child.kind) {
-      case 24:
+      case 23:
         return true;
-      case 19:
+      case 18:
         var trueBlock = child.ifTrue();
         var falseBlock = child.ifFalse();
         if (falseBlock !== null && trueBlock.blockAlwaysEndsWithReturn() && falseBlock.blockAlwaysEndsWithReturn()) {
           return true;
         }
         break;
-      case 30:
+      case 29:
         var value = child.switchValue();
         var cases = child.switchCases();
         var foundDefault = false;
@@ -1312,23 +1312,23 @@
   };
   Node.prototype.hasNoSideEffects = function() {
     switch (this.kind) {
-    case 33:
-    case 35:
+    case 32:
+    case 34:
+    case 37:
     case 38:
     case 39:
     case 40:
     case 41:
-    case 42:
-    case 37:
-      return true;
-    case 50:
-    case 51:
-      return this.castValue().hasNoSideEffects();
     case 36:
+      return true;
+    case 49:
+    case 50:
+      return this.castValue().hasNoSideEffects();
+    case 35:
       return this.hookTest().hasNoSideEffects() && this.hookTrue().hasNoSideEffects() && this.hookFalse().hasNoSideEffects();
-    case 44:
+    case 43:
       return this.dotTarget().hasNoSideEffects();
-    case 52:
+    case 51:
       return this.untypedValue().hasNoSideEffects();
     default:
       if (in_NodeKind.isBinaryOperator(this.kind) && !in_NodeKind.isBinaryStorageOperator(this.kind)) {
@@ -1357,7 +1357,7 @@
   };
   Node.prototype.indexInParent = function() {
     if (this.parent === null) {
-      throw new Error('assert parent != null; (src/ast/node.sk:233:5)');
+      throw new Error('assert parent != null; (src/ast/node.sk:232:5)');
     }
     return this.parent.children.indexOf(this);
   };
@@ -1369,7 +1369,7 @@
   };
   Node.prototype.removeChildAtIndex = function(index) {
     if (index < 0 || !(index < this.children.length)) {
-      throw new Error('assert index >= 0 && index < children.size(); (src/ast/node.sk:262:5)');
+      throw new Error('assert index >= 0 && index < children.size(); (src/ast/node.sk:261:5)');
     }
     var child = this.children[index];
     if (child !== null) {
@@ -1433,10 +1433,10 @@
   };
   Node.prototype.replaceChild = function(index, node) {
     if (this.children === null) {
-      throw new Error('assert children != null; (src/ast/node.sk:333:5)');
+      throw new Error('assert children != null; (src/ast/node.sk:332:5)');
     }
     if (index < 0 || !(index <= this.children.length)) {
-      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:334:5)');
+      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:333:5)');
     }
     Node.updateParent(node, this);
     var old = this.children[index];
@@ -1450,7 +1450,7 @@
       this.children = [];
     }
     if (index < 0 || !(index <= this.children.length)) {
-      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:343:5)');
+      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:342:5)');
     }
     Node.updateParent(node, this);
     this.children.splice(index, 0, node);
@@ -1488,7 +1488,7 @@
   };
   Node.prototype.withChildren = function(nodes) {
     if (this.children !== null) {
-      throw new Error('assert children == null; (src/ast/node.sk:396:5)');
+      throw new Error('assert children == null; (src/ast/node.sk:395:5)');
     }
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
       Node.updateParent(nodes[i], this);
@@ -1513,7 +1513,7 @@
   Node.updateParent = function(node, parent) {
     if (node !== null) {
       if (node.parent !== null) {
-        throw new Error('assert node.parent == null; (src/ast/node.sk:422:7)');
+        throw new Error('assert node.parent == null; (src/ast/node.sk:421:7)');
       }
       node.parent = parent;
     }
@@ -1546,89 +1546,88 @@
     ENUM: 8,
     ENUM_FLAGS: 9,
     CLASS: 10,
-    STRUCT: 11,
-    INTERFACE: 12,
-    EXTENSION: 13,
-    CONSTRUCTOR: 14,
-    FUNCTION: 15,
-    VARIABLE: 16,
-    PARAMETER: 17,
-    ALIAS: 18,
-    IF: 19,
-    FOR: 20,
-    FOR_EACH: 21,
-    WHILE: 22,
-    DO_WHILE: 23,
-    RETURN: 24,
-    BREAK: 25,
-    CONTINUE: 26,
-    ASSERT: 27,
-    ASSERT_CONST: 28,
-    EXPRESSION: 29,
-    SWITCH: 30,
-    MODIFIER: 31,
-    USING: 32,
-    NAME: 33,
-    TYPE: 34,
-    THIS: 35,
-    HOOK: 36,
-    NULL: 37,
-    BOOL: 38,
-    INT: 39,
-    FLOAT: 40,
-    DOUBLE: 41,
-    STRING: 42,
-    LIST: 43,
-    DOT: 44,
-    CALL: 45,
-    SUPER_CALL: 46,
-    ERROR: 47,
-    SEQUENCE: 48,
-    PARAMETERIZE: 49,
-    CAST: 50,
-    IMPLICIT_CAST: 51,
-    UNTYPED: 52,
-    VAR: 53,
-    NOT: 54,
-    POSITIVE: 55,
-    NEGATIVE: 56,
-    COMPLEMENT: 57,
-    PREFIX_INCREMENT: 58,
-    PREFIX_DECREMENT: 59,
-    POSTFIX_INCREMENT: 60,
-    POSTFIX_DECREMENT: 61,
-    ADD: 62,
-    BITWISE_AND: 63,
-    BITWISE_OR: 64,
-    BITWISE_XOR: 65,
-    DIVIDE: 66,
-    EQUAL: 67,
-    GREATER_THAN: 68,
-    GREATER_THAN_OR_EQUAL: 69,
-    IN: 70,
-    INDEX: 71,
-    LESS_THAN: 72,
-    LESS_THAN_OR_EQUAL: 73,
-    LOGICAL_AND: 74,
-    LOGICAL_OR: 75,
-    MULTIPLY: 76,
-    NOT_EQUAL: 77,
-    REMAINDER: 78,
-    SHIFT_LEFT: 79,
-    SHIFT_RIGHT: 80,
-    SUBTRACT: 81,
-    ASSIGN: 82,
-    ASSIGN_ADD: 83,
-    ASSIGN_BITWISE_AND: 84,
-    ASSIGN_BITWISE_OR: 85,
-    ASSIGN_BITWISE_XOR: 86,
-    ASSIGN_DIVIDE: 87,
-    ASSIGN_MULTIPLY: 88,
-    ASSIGN_REMAINDER: 89,
-    ASSIGN_SHIFT_LEFT: 90,
-    ASSIGN_SHIFT_RIGHT: 91,
-    ASSIGN_SUBTRACT: 92,
-    ASSIGN_INDEX: 93
+    INTERFACE: 11,
+    EXTENSION: 12,
+    CONSTRUCTOR: 13,
+    FUNCTION: 14,
+    VARIABLE: 15,
+    PARAMETER: 16,
+    ALIAS: 17,
+    IF: 18,
+    FOR: 19,
+    FOR_EACH: 20,
+    WHILE: 21,
+    DO_WHILE: 22,
+    RETURN: 23,
+    BREAK: 24,
+    CONTINUE: 25,
+    ASSERT: 26,
+    ASSERT_CONST: 27,
+    EXPRESSION: 28,
+    SWITCH: 29,
+    MODIFIER: 30,
+    USING: 31,
+    NAME: 32,
+    TYPE: 33,
+    THIS: 34,
+    HOOK: 35,
+    NULL: 36,
+    BOOL: 37,
+    INT: 38,
+    FLOAT: 39,
+    DOUBLE: 40,
+    STRING: 41,
+    LIST: 42,
+    DOT: 43,
+    CALL: 44,
+    SUPER_CALL: 45,
+    ERROR: 46,
+    SEQUENCE: 47,
+    PARAMETERIZE: 48,
+    CAST: 49,
+    IMPLICIT_CAST: 50,
+    UNTYPED: 51,
+    VAR: 52,
+    NOT: 53,
+    POSITIVE: 54,
+    NEGATIVE: 55,
+    COMPLEMENT: 56,
+    PREFIX_INCREMENT: 57,
+    PREFIX_DECREMENT: 58,
+    POSTFIX_INCREMENT: 59,
+    POSTFIX_DECREMENT: 60,
+    ADD: 61,
+    BITWISE_AND: 62,
+    BITWISE_OR: 63,
+    BITWISE_XOR: 64,
+    DIVIDE: 65,
+    EQUAL: 66,
+    GREATER_THAN: 67,
+    GREATER_THAN_OR_EQUAL: 68,
+    IN: 69,
+    INDEX: 70,
+    LESS_THAN: 71,
+    LESS_THAN_OR_EQUAL: 72,
+    LOGICAL_AND: 73,
+    LOGICAL_OR: 74,
+    MULTIPLY: 75,
+    NOT_EQUAL: 76,
+    REMAINDER: 77,
+    SHIFT_LEFT: 78,
+    SHIFT_RIGHT: 79,
+    SUBTRACT: 80,
+    ASSIGN: 81,
+    ASSIGN_ADD: 82,
+    ASSIGN_BITWISE_AND: 83,
+    ASSIGN_BITWISE_OR: 84,
+    ASSIGN_BITWISE_XOR: 85,
+    ASSIGN_DIVIDE: 86,
+    ASSIGN_MULTIPLY: 87,
+    ASSIGN_REMAINDER: 88,
+    ASSIGN_SHIFT_LEFT: 89,
+    ASSIGN_SHIFT_RIGHT: 90,
+    ASSIGN_SUBTRACT: 91,
+    ASSIGN_INDEX: 92
   };
   var in_NodeKind = {};
   var Associativity = {
@@ -1643,8 +1642,7 @@
   }
   var SortTypes = {
     DO_NOT_SORT: 0,
-    SORT_BY_INHERITANCE_AND_VALUE: 2,
-    SORT_BY_INHERITANCE_AND_CONTAINMENT: 3
+    SORT_BY_INHERITANCE_AND_CONTAINMENT: 2
   };
   function Collector(program, sort) {
     this.typeSymbols = [];
@@ -1652,7 +1650,7 @@
     this.freeVariableSymbols = [];
     this.sort = sort;
     if (program.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert program.kind == .PROGRAM; (src/compiler/collector.sk:15:5)');
+      throw new Error('assert program.kind == .PROGRAM; (src/compiler/collector.sk:14:5)');
     }
     this.collectStatements(program);
     this.sortTypeSymbols();
@@ -1661,7 +1659,7 @@
     switch (node.kind) {
     case 0:
     case 1:
-    case 31:
+    case 30:
     case 2:
       this.collectChildStatements(node);
       break;
@@ -1669,7 +1667,6 @@
     case 10:
     case 11:
     case 12:
-    case 13:
     case 8:
     case 9:
       if (node === node.symbol.node) {
@@ -1677,8 +1674,8 @@
       }
       this.collectChildStatements(node);
       break;
+    case 13:
     case 14:
-    case 15:
       if (!in_SymbolKind.isTypeWithInstances(node.symbol.enclosingSymbol.kind)) {
         this.freeFunctionSymbols.push(node.symbol);
       }
@@ -1721,17 +1718,6 @@
       }
     }
   };
-  Collector.prototype.hasMemberOfType = function(typeWithMembers, typeOfMember) {
-    var members = typeWithMembers.members.values();
-    if (members !== null) {
-      for (var i = 0; i < members.length; i = i + 1 | 0) {
-        if (members[i].type === typeOfMember) {
-          return true;
-        }
-      }
-    }
-    return false;
-  };
   Collector.prototype.isContainedBy = function(inner, outer) {
     if (inner.enclosingSymbol === null) {
       return false;
@@ -1743,9 +1729,6 @@
   };
   Collector.prototype.typeComesBefore = function(before, after) {
     if (after.hasBaseType(before)) {
-      return true;
-    }
-    if (this.sort === SortTypes.SORT_BY_INHERITANCE_AND_VALUE && before.isStruct() && this.hasMemberOfType(after, before)) {
       return true;
     }
     if (this.sort === SortTypes.SORT_BY_INHERITANCE_AND_CONTAINMENT && this.isContainedBy(after.symbol, before.symbol)) {
@@ -2471,47 +2454,46 @@
       break;
     case 10:
     case 11:
-    case 12:
       this.emitObject(node);
       break;
+    case 13:
     case 14:
-    case 15:
       this.emitFunction(node);
       break;
-    case 24:
+    case 23:
       this.emitReturn(node);
       break;
-    case 29:
+    case 28:
       this.emitExpressionStatement(node);
       break;
-    case 19:
+    case 18:
       this.emitIf(node);
       break;
-    case 20:
+    case 19:
       this.emitFor(node);
       break;
-    case 21:
+    case 20:
       this.emitForEach(node);
       break;
-    case 22:
+    case 21:
       this.emitWhile(node);
       break;
-    case 23:
+    case 22:
       this.emitDoWhile(node);
       break;
-    case 25:
+    case 24:
       this.emitBreak(node);
       break;
-    case 26:
+    case 25:
       this.emitContinue(node);
       break;
-    case 27:
+    case 26:
       this.emitAssert(node);
       break;
     case 6:
       this.emitVariableCluster(node);
       break;
-    case 16:
+    case 15:
       this.emitVariableStatement(node);
       break;
     }
@@ -2646,7 +2628,7 @@
     if (symbol.isAbstract()) {
       this.emit('abstract ');
     }
-    this.emit(symbol.kind === SymbolKind.CLASS ? 'class ' : symbol.kind === SymbolKind.STRUCT ? 'struct ' : 'interface ');
+    this.emit(symbol.kind === SymbolKind.CLASS ? 'class ' : 'interface ');
     this.emitNameWithParameters(symbol);
     if (type.hasRelevantTypes()) {
       for (var i = 0; i < type.relevantTypes.length; i = i + 1 | 0) {
@@ -2800,62 +2782,63 @@
   };
   cs.Emitter.prototype.emitExpression = function(node, precedence) {
     switch (node.kind) {
-    case 33:
+    case 32:
       this.emit(node.symbol === null ? node.asString() : cs.Emitter.fullName(node.symbol));
       break;
-    case 34:
+    case 33:
       this.emitType(node.type);
       break;
-    case 35:
+    case 34:
       this.emit('this');
       break;
-    case 36:
+    case 35:
       this.emitHook(node, precedence);
       break;
-    case 37:
+    case 36:
       this.emit('null');
       break;
-    case 38:
+    case 37:
       this.emit(node.asBool().toString());
       break;
-    case 39:
+    case 38:
       this.emit(node.asInt().toString());
       break;
+    case 39:
     case 40:
-    case 41:
       this.emit(node.asDouble().toString());
       break;
-    case 42:
+    case 41:
       this.emit(quoteString(node.asString(), 34));
       break;
-    case 43:
+    case 42:
       this.emitList(node);
       break;
-    case 44:
+    case 43:
       this.emitDot(node);
       break;
-    case 45:
+    case 44:
       this.emitCall(node);
       break;
-    case 46:
+    case 45:
       this.emitSuperCall(node);
       break;
-    case 48:
+    case 47:
       this.emitSequence(node, precedence);
       break;
-    case 52:
+    case 51:
       this.emitExpression(node.untypedValue(), precedence);
       break;
-    case 71:
+    case 70:
       this.emitIndex(node, precedence);
       break;
-    case 93:
+    case 92:
       this.emitTernary(node, precedence);
       break;
+    case 49:
     case 50:
-    case 51:
       this.emitCast(node, precedence);
       break;
+    case 53:
     case 54:
     case 55:
     case 56:
@@ -2863,10 +2846,10 @@
     case 58:
     case 59:
     case 60:
-    case 61:
       this.emitUnary(node, precedence);
       break;
-    case 62:
+    case 61:
+    case 81:
     case 82:
     case 83:
     case 84:
@@ -2877,7 +2860,7 @@
     case 89:
     case 90:
     case 91:
-    case 92:
+    case 62:
     case 63:
     case 64:
     case 65:
@@ -2885,7 +2868,7 @@
     case 67:
     case 68:
     case 69:
-    case 70:
+    case 71:
     case 72:
     case 73:
     case 74:
@@ -2895,7 +2878,6 @@
     case 78:
     case 79:
     case 80:
-    case 81:
       this.emitBinary(node, precedence);
       break;
     default:
@@ -3436,52 +3418,52 @@
     case 9:
       this.emitEnum(node);
       break;
+    case 13:
     case 14:
-    case 15:
       this.emitFunction(node);
       break;
-    case 16:
+    case 15:
       this.emitVariable(node);
       break;
-    case 19:
+    case 18:
       this.emitIf(node);
       break;
-    case 20:
+    case 19:
       this.emitFor(node);
       break;
-    case 21:
+    case 20:
       this.emitForEach(node);
       break;
-    case 22:
+    case 21:
       this.emitWhile(node);
       break;
-    case 23:
+    case 22:
       this.emitDoWhile(node);
       break;
-    case 24:
+    case 23:
       this.emitReturn(node);
       break;
-    case 25:
+    case 24:
       this.emitBreak(node);
       break;
-    case 26:
+    case 25:
       this.emitContinue(node);
       break;
-    case 27:
+    case 26:
       this.emitAssert(node);
       break;
-    case 29:
+    case 28:
       this.emitExpressionStatement(node);
       break;
-    case 30:
+    case 29:
       this.emitSwitch(node);
       break;
-    case 31:
+    case 30:
       this.emitModifier(node);
       break;
+    case 16:
     case 17:
-    case 18:
-    case 32:
+    case 31:
       break;
     default:
       throw new Error('assert false; (src/js/emitter.sk:323:19)');
@@ -3760,62 +3742,63 @@
   js.Emitter.prototype.emitExpression = function(node, precedence) {
     this.addMapping(node);
     switch (node.kind) {
-    case 33:
+    case 32:
       this.emit(node.symbol === null ? node.asString() : js.Emitter.fullName(node.symbol));
       break;
-    case 34:
+    case 33:
       this.emit(js.Emitter.fullName(node.type.symbol));
       break;
-    case 35:
+    case 34:
       this.emit('this');
       break;
-    case 36:
+    case 35:
       this.emitHook(node, precedence);
       break;
-    case 37:
+    case 36:
       this.emit('null');
       break;
-    case 38:
+    case 37:
       this.emitBool(node);
       break;
-    case 39:
+    case 38:
       this.emitInt(node);
       break;
+    case 39:
     case 40:
-    case 41:
       this.emitDouble(node);
       break;
-    case 42:
+    case 41:
       this.emit(this.quoteStringJS(node.asString()));
       break;
-    case 43:
+    case 42:
       this.emitList(node);
       break;
-    case 44:
+    case 43:
       this.emitDot(node);
       break;
-    case 45:
+    case 44:
       this.emitCall(node);
       break;
-    case 46:
+    case 45:
       this.emitSuperCall(node);
       break;
-    case 48:
+    case 47:
       this.emitSequence(node, precedence);
       break;
-    case 52:
+    case 51:
       this.emitExpression(node.untypedValue(), precedence);
       break;
-    case 71:
+    case 70:
       this.emitIndex(node, precedence);
       break;
-    case 93:
+    case 92:
       this.emitTernary(node, precedence);
       break;
+    case 49:
     case 50:
-    case 51:
       this.emitExpression(node.castValue(), precedence);
       break;
+    case 53:
     case 54:
     case 55:
     case 56:
@@ -3823,10 +3806,10 @@
     case 58:
     case 59:
     case 60:
-    case 61:
       this.emitUnary(node, precedence);
       break;
-    case 62:
+    case 61:
+    case 81:
     case 82:
     case 83:
     case 84:
@@ -3837,7 +3820,7 @@
     case 89:
     case 90:
     case 91:
-    case 92:
+    case 62:
     case 63:
     case 64:
     case 65:
@@ -3845,7 +3828,7 @@
     case 67:
     case 68:
     case 69:
-    case 70:
+    case 71:
     case 72:
     case 73:
     case 74:
@@ -3855,7 +3838,6 @@
     case 78:
     case 79:
     case 80:
-    case 81:
       this.emitBinary(node, precedence);
       break;
     default:
@@ -4166,40 +4148,40 @@
   js.Patcher.prototype.patchNode = function(node) {
     this.trackSymbolCount(node);
     switch (node.kind) {
-    case 14:
+    case 13:
       this.patchConstructor(node);
       this.setCurrentFunction(node.symbol);
       break;
-    case 15:
+    case 14:
       this.setCurrentFunction(node.symbol);
       break;
-    case 50:
+    case 49:
       this.patchCast(node);
       break;
     case 10:
       this.patchClass(node);
       break;
-    case 33:
+    case 32:
       this.patchName(node);
       break;
-    case 62:
-    case 81:
-    case 76:
-    case 66:
-    case 78:
+    case 61:
+    case 80:
+    case 75:
+    case 65:
+    case 77:
       this.patchBinary(node);
       break;
+    case 57:
     case 58:
-    case 59:
-    case 61:
     case 60:
+    case 59:
       this.patchUnary(node);
       break;
-    case 83:
-    case 92:
-    case 88:
+    case 82:
+    case 91:
     case 87:
-    case 89:
+    case 86:
+    case 88:
       this.patchAssign(node);
       break;
     }
@@ -4212,8 +4194,8 @@
       }
     }
     switch (node.kind) {
+    case 13:
     case 14:
-    case 15:
       this.setCurrentFunction(null);
       break;
     }
@@ -4315,16 +4297,16 @@
   };
   js.Patcher.prototype.alwaysConvertsOperandsToInt = function(kind) {
     switch (kind) {
-    case 64:
     case 63:
-    case 65:
+    case 62:
+    case 64:
+    case 78:
     case 79:
-    case 80:
-    case 85:
     case 84:
-    case 86:
+    case 83:
+    case 85:
+    case 89:
     case 90:
-    case 91:
       return true;
     default:
       return false;
@@ -4498,21 +4480,20 @@
     SHIFT_RIGHT: 81,
     STATIC: 82,
     STRING: 83,
-    STRUCT: 84,
-    SUPER: 85,
-    SWITCH: 86,
-    THIS: 87,
-    TILDE: 88,
-    TRUE: 89,
-    UNTYPED: 90,
-    USING: 91,
-    VAR: 92,
-    VIRTUAL: 93,
-    WHILE: 94,
-    WHITESPACE: 95,
-    YY_INVALID_ACTION: 96,
-    START_PARAMETER_LIST: 97,
-    END_PARAMETER_LIST: 98
+    SUPER: 84,
+    SWITCH: 85,
+    THIS: 86,
+    TILDE: 87,
+    TRUE: 88,
+    UNTYPED: 89,
+    USING: 90,
+    VAR: 91,
+    VIRTUAL: 92,
+    WHILE: 93,
+    WHITESPACE: 94,
+    YY_INVALID_ACTION: 95,
+    START_PARAMETER_LIST: 96,
+    END_PARAMETER_LIST: 97
   };
   var in_TokenKind = {};
   function Token(_0, _1, _2) {
@@ -5191,15 +5172,15 @@
       }
     } else if (kind === NodeKind.NOT) {
       switch (valueKind) {
-      case 54:
-      case 67:
-      case 77:
-      case 75:
+      case 53:
+      case 66:
+      case 76:
       case 74:
+      case 73:
+      case 71:
+      case 67:
       case 72:
       case 68:
-      case 73:
-      case 69:
         value.invertBooleanCondition(this.cache);
         node.become(value);
         break;
@@ -5229,21 +5210,21 @@
   };
   ConstantFolder.prototype.foldBinaryOperatorWithConstant = function(node, left, right) {
     switch (node.kind) {
-    case 74:
+    case 73:
       if (left.isFalse() || right.isTrue()) {
         node.become(left.remove());
       } else if (left.isTrue()) {
         node.become(right.remove());
       }
       break;
-    case 75:
+    case 74:
       if (left.isTrue() || right.isFalse()) {
         node.become(left.remove());
       } else if (left.isFalse()) {
         node.become(right.remove());
       }
       break;
-    case 76:
+    case 75:
       if (left.kind === NodeKind.INT) {
         this.foldMultiply(node, right, left);
       } else if (right.kind === NodeKind.INT) {
@@ -5265,100 +5246,100 @@
     }
     if (left.kind === NodeKind.BOOL) {
       switch (kind) {
-      case 74:
+      case 73:
         this.flattenBool(node, left.asBool() && right.asBool());
         break;
-      case 75:
+      case 74:
         this.flattenBool(node, left.asBool() || right.asBool());
         break;
-      case 67:
+      case 66:
         this.flattenBool(node, left.asBool() === right.asBool());
         break;
-      case 77:
+      case 76:
         this.flattenBool(node, left.asBool() !== right.asBool());
         break;
       }
     } else if (left.kind === NodeKind.INT) {
       switch (kind) {
-      case 62:
+      case 61:
         this.flattenInt(node, left.asInt() + right.asInt() | 0);
         break;
-      case 81:
+      case 80:
         this.flattenInt(node, left.asInt() - right.asInt() | 0);
         break;
-      case 76:
+      case 75:
         this.flattenInt(node, $imul(left.asInt(), right.asInt()));
         break;
-      case 66:
+      case 65:
         this.flattenInt(node, left.asInt() / right.asInt() | 0);
         break;
-      case 78:
+      case 77:
         this.flattenInt(node, left.asInt() % right.asInt() | 0);
         break;
-      case 79:
+      case 78:
         this.flattenInt(node, left.asInt() << right.asInt());
         break;
-      case 80:
+      case 79:
         this.flattenInt(node, left.asInt() >> right.asInt());
         break;
-      case 63:
+      case 62:
         this.flattenInt(node, left.asInt() & right.asInt());
         break;
-      case 64:
+      case 63:
         this.flattenInt(node, left.asInt() | right.asInt());
         break;
-      case 65:
+      case 64:
         this.flattenInt(node, left.asInt() ^ right.asInt());
         break;
-      case 67:
+      case 66:
         this.flattenBool(node, left.asInt() === right.asInt());
         break;
-      case 77:
+      case 76:
         this.flattenBool(node, left.asInt() !== right.asInt());
         break;
-      case 72:
+      case 71:
         this.flattenBool(node, left.asInt() < right.asInt());
         break;
-      case 68:
+      case 67:
         this.flattenBool(node, left.asInt() > right.asInt());
         break;
-      case 73:
+      case 72:
         this.flattenBool(node, left.asInt() <= right.asInt());
         break;
-      case 69:
+      case 68:
         this.flattenBool(node, left.asInt() >= right.asInt());
         break;
       }
     } else if (in_NodeKind.isReal(left.kind)) {
       switch (kind) {
-      case 62:
+      case 61:
         this.flattenReal(node, left.asDouble() + right.asDouble());
         break;
-      case 81:
+      case 80:
         this.flattenReal(node, left.asDouble() - right.asDouble());
         break;
-      case 76:
+      case 75:
         this.flattenReal(node, left.asDouble() * right.asDouble());
         break;
-      case 66:
+      case 65:
         this.flattenReal(node, left.asDouble() / right.asDouble());
         break;
-      case 67:
+      case 66:
         this.flattenBool(node, left.asDouble() === right.asDouble());
         break;
-      case 77:
+      case 76:
         this.flattenBool(node, left.asDouble() !== right.asDouble());
         break;
-      case 72:
+      case 71:
         this.flattenBool(node, left.asDouble() < right.asDouble());
         break;
-      case 68:
+      case 67:
         this.flattenBool(node, left.asDouble() > right.asDouble());
         break;
-      case 73:
+      case 72:
         this.flattenBool(node, left.asDouble() <= right.asDouble());
         break;
-      case 69:
+      case 68:
         this.flattenBool(node, left.asDouble() >= right.asDouble());
         break;
       }
@@ -5661,10 +5642,10 @@
       throw new Error('assert program.kind == .PROGRAM; (src/resolver/resolver.sk:60:5)');
     }
     var globalScope = new Scope(null);
-    globalScope.insertGlobals(this.cache);
+    this.cache.insertGlobals(globalScope);
     this.constantFolder = new ConstantFolder(this.cache);
     this.prepareNode(program, globalScope);
-    globalScope.linkGlobals(this.cache);
+    this.cache.linkGlobals(globalScope);
     this.resolve(program, null);
   };
   Resolver.prototype.prepareNode = function(node, scope) {
@@ -5841,31 +5822,28 @@
         symbol.kind = SymbolKind.CLASS;
         break;
       case 11:
-        symbol.kind = SymbolKind.STRUCT;
-        break;
-      case 12:
         symbol.kind = SymbolKind.INTERFACE;
         break;
-      case 15:
+      case 14:
         symbol.kind = SymbolKind.GLOBAL_FUNCTION;
         break;
-      case 14:
+      case 13:
         symbol.kind = SymbolKind.CONSTRUCTOR_FUNCTION;
         break;
-      case 16:
+      case 15:
         symbol.kind = SymbolKind.GLOBAL_VARIABLE;
         break;
-      case 17:
+      case 16:
         symbol.kind = symbol.enclosingSymbol !== null ? SymbolKind.OBJECT_PARAMETER : SymbolKind.FUNCTION_PARAMETER;
         break;
-      case 18:
+      case 17:
         symbol.kind = SymbolKind.ALIAS;
         break;
-      case 13:
+      case 12:
         semanticErrorExtensionMissingTarget(this.log, declarationName.range, declarationName.asString());
         break;
       default:
-        throw new Error('assert false; (src/resolver/resolver.sk:318:19)');
+        throw new Error('assert false; (src/resolver/resolver.sk:317:19)');
         break;
       }
     }
@@ -5976,7 +5954,7 @@
     }
     node.become(Node.createType(member.symbol.type).withRange(node.range).withSymbol(member.symbol));
     if (node.type === null) {
-      throw new Error('assert node.type != null; (src/resolver/resolver.sk:475:5)');
+      throw new Error('assert node.type != null; (src/resolver/resolver.sk:474:5)');
     }
   };
   Resolver.prototype.resolve = function(node, expectedType) {
@@ -5985,7 +5963,7 @@
     }
     node.type = this.cache.errorType;
     if (this.context.scope === null && node.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert context.scope != null || node.kind == .PROGRAM; (src/resolver/resolver.sk:486:5)');
+      throw new Error('assert context.scope != null || node.kind == .PROGRAM; (src/resolver/resolver.sk:485:5)');
     }
     var oldScope = this.context.scope;
     if (node.scope !== null) {
@@ -6009,7 +5987,7 @@
     case 4:
       this.resolveCase(node);
       break;
-    case 32:
+    case 31:
       this.resolveUsing(node);
       break;
     case 7:
@@ -6021,121 +5999,121 @@
       break;
     case 10:
     case 11:
-    case 12:
       this.resolveObject(node);
       break;
-    case 13:
+    case 12:
       this.resolveExtension(node);
       break;
+    case 13:
     case 14:
-    case 15:
       this.resolveFunction(node);
       break;
-    case 16:
+    case 15:
       this.resolveVariable(node);
       break;
     case 6:
       this.resolveVariableCluster(node);
       break;
-    case 17:
+    case 16:
       this.resolveParameter(node);
       break;
-    case 18:
+    case 17:
       this.resolveAlias(node);
       break;
-    case 19:
+    case 18:
       this.resolveIf(node);
       break;
-    case 20:
+    case 19:
       this.resolveFor(node);
       break;
-    case 21:
+    case 20:
       this.resolveForEach(node);
+      break;
+    case 21:
+      this.resolveWhile(node);
       break;
     case 22:
       this.resolveWhile(node);
       break;
     case 23:
-      this.resolveWhile(node);
-      break;
-    case 24:
       this.resolveReturn(node);
       break;
-    case 25:
+    case 24:
       this.resolveBreak(node);
       break;
-    case 26:
+    case 25:
       this.resolveContinue(node);
       break;
+    case 26:
     case 27:
-    case 28:
       this.resolveAssert(node);
       break;
-    case 29:
+    case 28:
       this.resolveExpression(node);
       break;
-    case 30:
+    case 29:
       this.resolveSwitch(node);
       break;
-    case 31:
+    case 30:
       this.resolveModifier(node);
       break;
-    case 33:
+    case 32:
       this.resolveName(node);
       break;
-    case 37:
+    case 36:
       node.type = this.cache.nullType;
       break;
-    case 35:
+    case 34:
       this.resolveThis(node);
       break;
-    case 38:
+    case 37:
       node.type = this.cache.boolType;
       break;
-    case 36:
+    case 35:
       this.resolveHook(node);
       break;
-    case 39:
+    case 38:
       this.resolveInt(node);
       break;
-    case 40:
+    case 39:
       node.type = this.cache.floatType;
       break;
-    case 41:
+    case 40:
       node.type = this.cache.doubleType;
       break;
-    case 42:
+    case 41:
       node.type = this.cache.stringType;
       break;
-    case 43:
+    case 42:
       this.resolveList(node);
       break;
-    case 44:
+    case 43:
       this.resolveDot(node);
       break;
-    case 45:
+    case 44:
       this.resolveCall(node);
       break;
-    case 46:
+    case 45:
       this.resolveSuperCall(node);
       break;
-    case 47:
+    case 46:
       break;
-    case 48:
+    case 47:
       this.resolveSequence(node);
       break;
-    case 49:
+    case 48:
       this.resolveParameterize(node);
       break;
-    case 50:
+    case 49:
       this.resolveCast(node);
       break;
-    case 52:
+    case 51:
       this.resolveUntyped(node);
       break;
-    case 53:
+    case 52:
       this.resolveVar(node);
       break;
+    case 53:
     case 54:
     case 55:
     case 56:
@@ -6143,9 +6121,9 @@
     case 58:
     case 59:
     case 60:
-    case 61:
       this.resolveUnaryOperator(node);
       break;
+    case 61:
     case 62:
     case 63:
     case 64:
@@ -6176,20 +6154,19 @@
     case 89:
     case 90:
     case 91:
-    case 92:
       this.resolveBinaryOperator(node);
       break;
-    case 93:
+    case 92:
       this.resolveTernaryOperator(node);
       break;
     default:
-      throw new Error('assert false; (src/resolver/resolver.sk:564:9)');
+      throw new Error('assert false; (src/resolver/resolver.sk:563:9)');
       break;
     }
     this.context.scope = oldScope;
     this.typeContext = oldType;
     if (node.type === null) {
-      throw new Error('assert node.type != null; (src/resolver/resolver.sk:570:5)');
+      throw new Error('assert node.type != null; (src/resolver/resolver.sk:569:5)');
     }
   };
   Resolver.prototype.checkIsParameterized = function(node) {
@@ -6260,10 +6237,10 @@
   Resolver.prototype.checkConversion = function(to, node, kind) {
     var from = node.type;
     if (from === null) {
-      throw new Error('assert from != null; (src/resolver/resolver.sk:652:5)');
+      throw new Error('assert from != null; (src/resolver/resolver.sk:651:5)');
     }
     if (to === null) {
-      throw new Error('assert to != null; (src/resolver/resolver.sk:653:5)');
+      throw new Error('assert to != null; (src/resolver/resolver.sk:652:5)');
     }
     if (from.isError(this.cache) || to.isError(this.cache)) {
       return;
@@ -6304,7 +6281,7 @@
   };
   Resolver.prototype.checkInsideBlock = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:716:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:715:5)');
     }
     if (node.parent.kind !== NodeKind.BLOCK) {
       this.unexpectedStatement(node);
@@ -6312,7 +6289,7 @@
   };
   Resolver.prototype.checkDeclarationLocation = function(node, allowDeclaration) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:729:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:728:5)');
     }
     var parent = null;
     for (parent = node.parent; parent !== null; parent = parent.parent) {
@@ -6331,7 +6308,7 @@
   };
   Resolver.prototype.checkStatementLocation = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:751:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:750:5)');
     }
     for (var parent = node.parent; parent !== null; parent = parent.parent) {
       var kind = parent.kind;
@@ -6463,14 +6440,14 @@
   };
   Resolver.prototype.initializeNamespace = function(symbol) {
     if (!symbol.type.isNamespace()) {
-      throw new Error('assert symbol.type.isNamespace(); (src/resolver/resolver.sk:897:5)');
+      throw new Error('assert symbol.type.isNamespace(); (src/resolver/resolver.sk:896:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on a namespace declaration');
     this.checkNoBaseTypes(symbol, 'A namespace');
   };
   Resolver.prototype.initializeEnum = function(symbol) {
     if (!symbol.type.isEnum()) {
-      throw new Error('assert symbol.type.isEnum(); (src/resolver/resolver.sk:903:5)');
+      throw new Error('assert symbol.type.isEnum(); (src/resolver/resolver.sk:902:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on an enum declaration');
     this.checkNoBaseTypes(symbol, 'An enum');
@@ -6484,13 +6461,9 @@
     var baseTypes = this.collectAndResolveBaseTypes(symbol);
     var unmergedMembers = new StringMap();
     if (type.relevantTypes !== null) {
-      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:918:5)');
+      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:917:5)');
     }
     type.relevantTypes = [];
-    if (symbol.kind === SymbolKind.STRUCT) {
-      this.checkNoBaseTypes(symbol, 'A struct');
-      return;
-    }
     for (var i = 0; i < baseTypes.length; i = i + 1 | 0) {
       var base = baseTypes[i];
       var baseType = base.type;
@@ -6511,7 +6484,7 @@
         continue;
       }
       if (baseType.hasBaseType(type)) {
-        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:956:7)');
+        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:949:7)');
       }
       type.relevantTypes.push(baseType);
       var members = baseType.members.values();
@@ -6528,7 +6501,7 @@
           unmergedMembers.set(memberSymbol.name, new Member(combined));
         } else {
           if (unmerged.symbol.kind !== SymbolKind.UNMERGED) {
-            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:974:11)');
+            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:967:11)');
           }
           unmerged.symbol.identicalMembers.push(member);
         }
@@ -6540,7 +6513,7 @@
       var existing = type.findMember(member.symbol.name);
       if (existing !== null) {
         if (existing.symbol.overriddenMember !== null) {
-          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:989:9)');
+          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:982:9)');
         }
         existing.symbol.overriddenMember = member;
       } else if (member.symbol.name !== 'new') {
@@ -6560,7 +6533,7 @@
   };
   Resolver.prototype.initializeObject = function(symbol) {
     if (!symbol.type.isObject()) {
-      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:1014:5)');
+      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:1007:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on an object declaration');
     var node = symbol.node.firstNonExtensionSibling();
@@ -6574,7 +6547,7 @@
   Resolver.prototype.initializeFunction = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     if (enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== enclosingSymbol)) {
-      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1033:5)');
+      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1026:5)');
     }
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.CONST, 'on a function declaration');
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, 'on a function declaration');
@@ -6609,7 +6582,7 @@
       resultType = result.type;
     } else {
       if (node.kind !== NodeKind.CONSTRUCTOR) {
-        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1082:7)');
+        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1075:7)');
       }
       resultType = this.cache.ensureTypeIsParameterized(enclosingSymbol.type);
       var members = enclosingSymbol.type.members.values();
@@ -6666,9 +6639,7 @@
       this.unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, 'outside an object declaration');
       this.unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, 'outside an object declaration');
     } else {
-      if (enclosingSymbol.kind === SymbolKind.STRUCT) {
-        this.unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, 'inside a struct');
-      } else if (!in_SymbolKind.isInstance(symbol.kind)) {
+      if (!in_SymbolKind.isInstance(symbol.kind)) {
         this.unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, 'on a non-instance function');
       }
       this.unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, "on a function that doesn't override anything");
@@ -6686,8 +6657,6 @@
     }
     if (symbol.isConst()) {
       this.redundantModifierIfPresent(symbol, SymbolFlag.FINAL, 'on a const variable declaration');
-    } else if (symbol.enclosingSymbol !== null && symbol.enclosingSymbol.kind === SymbolKind.STRUCT && !symbol.isStatic()) {
-      this.expectedModifierIfAbsent(symbol, SymbolFlag.FINAL, 'on a variable declaration inside a struct');
     }
     if (symbol.isImport()) {
       this.unexpectedModifierIfPresent(symbol, SymbolFlag.EXPORT, 'on an imported declaration');
@@ -6699,7 +6668,7 @@
         variableType = node.parent.clusterType().clone();
       } else {
         if (!symbol.isEnumValue()) {
-          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1210:9)');
+          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1200:9)');
         }
         var type = symbol.enclosingSymbol.type;
         variableType = Node.createType(type).withSymbol(symbol.enclosingSymbol);
@@ -6739,7 +6708,7 @@
         }
       }
       if (variableType === null) {
-        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1259:7)');
+        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1249:7)');
       }
       node.replaceChild(1, variableType);
     }
@@ -6804,7 +6773,7 @@
         semanticErrorBadTypeParameterBound(this.log, bound.range, boundType);
       } else {
         if (type.relevantTypes !== null) {
-          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1350:9)');
+          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1340:9)');
         }
         type.relevantTypes = [boundType];
         type.copyMembersFrom(boundType);
@@ -6819,7 +6788,7 @@
   Resolver.prototype.initializeDeclaration = function(node) {
     var symbol = node.symbol;
     if (symbol === null) {
-      throw new Error('assert symbol != null; (src/resolver/resolver.sk:1366:5)');
+      throw new Error('assert symbol != null; (src/resolver/resolver.sk:1356:5)');
     }
     if (symbol.isUninitialized()) {
       symbol.flags |= SymbolFlag.INITIALIZING;
@@ -6839,17 +6808,16 @@
         break;
       case 12:
       case 13:
-      case 14:
         this.initializeObject(symbol);
         break;
+      case 14:
       case 15:
       case 16:
-      case 17:
         this.initializeFunction(symbol);
         break;
+      case 17:
       case 18:
       case 19:
-      case 20:
         this.initializeVariable(symbol);
         break;
       case 6:
@@ -6862,20 +6830,20 @@
       case 0:
         break;
       default:
-        throw new Error('assert false; (src/resolver/resolver.sk:1393:19)');
+        throw new Error('assert false; (src/resolver/resolver.sk:1383:19)');
         break;
       }
       this.context = oldContext;
       this.typeContext = oldTypeContext;
       this.resultType = oldResultType;
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1400:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1390:7)');
       }
       if (!symbol.isInitializing()) {
-        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1401:7)');
+        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1391:7)');
       }
       if (symbol.isInitialized()) {
-        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1402:7)');
+        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1392:7)');
       }
       symbol.flags = symbol.flags & ~SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED;
       while (node !== null) {
@@ -6910,7 +6878,7 @@
     }
     if (member.dependency !== null) {
       if (member.dependency.symbol !== member.symbol) {
-        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1452:7)');
+        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1442:7)');
       }
       this.initializeMember(member.dependency);
       member.type = member.dependency.type;
@@ -6961,11 +6929,6 @@
       }
     }
   };
-  Resolver.prototype.expectedModifierIfAbsent = function(symbol, flag, where) {
-    if ((symbol.flags & flag) === 0 && !symbol.hasModifierErrors() && this.findModifierName(symbol, flag) === null) {
-      semanticErrorExpectedModifier(this.log, symbol.node.declarationName().range, symbolFlagToName.get(flag), where);
-    }
-  };
   Resolver.prototype.generateDefaultConstructor = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     var members = enclosingSymbol.type.members.values();
@@ -6992,7 +6955,7 @@
           }
         } else {
           if (!$constructor.type.isError(this.cache)) {
-            throw new Error('assert constructor.type.isError(cache); (src/resolver/resolver.sk:1546:11)');
+            throw new Error('assert constructor.type.isError(cache); (src/resolver/resolver.sk:1530:11)');
           }
           symbol.flags |= SymbolFlag.INITIALIZED;
           symbol.type = this.cache.errorType;
@@ -7033,7 +6996,7 @@
     symbol.node = Node.createConstructor(Node.createName(symbol.name), Node.createNodeList($arguments), Node.createBlock([]), superArguments !== null ? Node.createSuperCall(superArguments) : null, memberInitializers !== null ? Node.createNodeList(memberInitializers) : null);
     enclosingSymbol.node.declarationBlock().appendChild(symbol.node);
     if (enclosingSymbol.node.scope === null) {
-      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:1615:5)');
+      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:1599:5)');
     }
     var scope = new Scope(enclosingSymbol.node.scope);
     symbol.node.symbol = symbol;
@@ -7047,7 +7010,7 @@
   };
   Resolver.prototype.generateDefaultToString = function(symbol) {
     if (!symbol.isEnumMember()) {
-      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:1630:5)');
+      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:1614:5)');
     }
     var enclosingSymbol = symbol.enclosingSymbol;
     var enclosingNode = enclosingSymbol.node;
@@ -7112,7 +7075,7 @@
         this.generateDefaultToString(symbol);
         break;
       default:
-        throw new Error('assert false; (src/resolver/resolver.sk:1713:19)');
+        throw new Error('assert false; (src/resolver/resolver.sk:1697:19)');
         break;
       }
       if (symbol.node !== null) {
@@ -7146,17 +7109,17 @@
     }
     if (symbol.isUninitialized()) {
       if (symbol.node === null) {
-        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1750:7)');
+        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1734:7)');
       }
       this.initializeDeclaration(symbol.node);
       if (symbol.isInitializing()) {
-        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1752:7)');
+        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1736:7)');
       }
       if (!symbol.isInitialized()) {
-        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1753:7)');
+        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1737:7)');
       }
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1754:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1738:7)');
       }
     } else if (symbol.isInitializing()) {
       semanticErrorCyclicDeclaration(this.log, symbol.node.firstNonExtensionSibling().declarationName().range, symbol.name);
@@ -7176,7 +7139,7 @@
   };
   Resolver.prototype.resolveAsType = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1780:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1764:5)');
     }
     this.resolve(node, null);
     this.checkIsType(node);
@@ -7187,7 +7150,7 @@
   };
   Resolver.prototype.resolveAsParameterizedExpression = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1791:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1775:5)');
     }
     this.resolve(node, null);
     this.checkIsInstance(node);
@@ -7195,14 +7158,14 @@
   };
   Resolver.prototype.resolveAsExpressionWithTypeContext = function(node, type) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1798:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1782:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
   };
   Resolver.prototype.resolveAsExpressionWithConversion = function(node, type, kind) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1804:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1788:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
@@ -7234,16 +7197,16 @@
   };
   Resolver.prototype.resolveProgram = function(node) {
     if (node.parent !== null) {
-      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1837:5)');
+      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1821:5)');
     }
     this.resolveChildren(node);
   };
   Resolver.prototype.resolveFile = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1842:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1826:5)');
     }
     if (node.parent.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1843:5)');
+      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1827:5)');
     }
     this.resolve(node.fileBlock(), null);
   };
@@ -7262,16 +7225,16 @@
   };
   Resolver.prototype.resolveCase = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1865:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1849:5)');
     }
     if (node.parent.kind !== NodeKind.SWITCH) {
-      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1866:5)');
+      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1850:5)');
     }
     if (this.context.switchValue === null) {
-      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1867:5)');
+      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1851:5)');
     }
     if (this.context.switchValue.type === null) {
-      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1868:5)');
+      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1852:5)');
     }
     var values = node.caseValues();
     var block = node.caseBlock();
@@ -7333,7 +7296,7 @@
   Resolver.prototype.resolveFunction = function(node) {
     var symbol = node.symbol;
     if (symbol.enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(symbol.enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== symbol.enclosingSymbol)) {
-      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1952:5)');
+      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1936:5)');
     }
     this.checkDeclarationLocation(node, AllowDeclaration.ALLOW_TOP_OR_OBJECT_LEVEL);
     this.initializeSymbol(symbol);
@@ -7385,7 +7348,7 @@
           this.resolveNodesAsExpressions($arguments);
         } else {
           if (!overriddenType.isFunction()) {
-            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2021:11)');
+            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2005:11)');
           }
           this.resolveArguments($arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
         }
@@ -7672,7 +7635,7 @@
           continue;
         }
         if (!in_NodeKind.isConstant(caseValue.kind)) {
-          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2394:9)');
+          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2378:9)');
         }
         var k = 0;
         for (k = 0; k < uniqueValues.length; k = k + 1 | 0) {
@@ -7713,7 +7676,7 @@
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2443:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2427:7)');
       }
       var symbol = this.context.symbolForThis;
       this.initializeSymbol(symbol);
@@ -7836,7 +7799,7 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2612:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2596:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -7899,7 +7862,7 @@
   };
   Resolver.prototype.resolveSequence = function(node) {
     if (!node.hasChildren()) {
-      throw new Error('assert node.hasChildren(); (src/resolver/resolver.sk:2698:5)');
+      throw new Error('assert node.hasChildren(); (src/resolver/resolver.sk:2682:5)');
     }
     for (var i = 0, n = node.children.length; i < n; i = i + 1 | 0) {
       var child = node.children[i];
@@ -7931,7 +7894,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2735:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2719:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -8098,7 +8061,7 @@
     }
     if (kind === NodeKind.EQUAL || kind === NodeKind.NOT_EQUAL) {
       commonType = this.cache.commonImplicitType(leftType, rightType);
-      if (commonType !== null && commonType.isEqualityComparable(this.cache)) {
+      if (commonType !== null) {
         node.type = this.cache.boolType;
       }
     } else if (kind === NodeKind.ADD || kind === NodeKind.SUBTRACT || kind === NodeKind.MULTIPLY || kind === NodeKind.DIVIDE) {
@@ -8174,22 +8137,6 @@
     this.locals = null;
     this.lexicalParent = _0;
   }
-  Scope.prototype.insertGlobals = function(cache) {
-    this.type = cache.globalType;
-    this.insert(new Member(cache.voidType.symbol));
-  };
-  Scope.prototype.linkGlobals = function(cache) {
-    cache.intType = this.findType('int');
-    cache.boolType = this.findType('bool');
-    cache.floatType = this.findType('float');
-    cache.doubleType = this.findType('double');
-    cache.stringType = this.findType('string');
-    cache.listType = this.findType('List');
-    cache.toStringType = cache.functionType(cache.stringType, []);
-  };
-  Scope.prototype.findType = function(name) {
-    return this.findLocal(name).symbol.type;
-  };
   Scope.prototype.insert = function(member) {
     if (this.type !== null) {
       this.type.addMember(member);
@@ -8202,7 +8149,7 @@
       this.locals = new StringMap();
     }
     if (this.locals.has(member.symbol.name)) {
-      throw new Error('assert !locals.has(member.symbol.name); (src/resolver/scope.sk:45:5)');
+      throw new Error('assert !locals.has(member.symbol.name); (src/resolver/scope.sk:26:5)');
     }
     this.locals.set(member.symbol.name, member);
   };
@@ -8239,14 +8186,13 @@
     ENUM: 10,
     ENUM_FLAGS: 11,
     CLASS: 12,
-    STRUCT: 13,
-    INTERFACE: 14,
-    GLOBAL_FUNCTION: 15,
-    INSTANCE_FUNCTION: 16,
-    CONSTRUCTOR_FUNCTION: 17,
-    LOCAL_VARIABLE: 18,
-    GLOBAL_VARIABLE: 19,
-    INSTANCE_VARIABLE: 20
+    INTERFACE: 13,
+    GLOBAL_FUNCTION: 14,
+    INSTANCE_FUNCTION: 15,
+    CONSTRUCTOR_FUNCTION: 16,
+    LOCAL_VARIABLE: 17,
+    GLOBAL_VARIABLE: 18,
+    INSTANCE_VARIABLE: 19
   };
   var in_SymbolKind = {};
   var SymbolFlag = {
@@ -8266,8 +8212,9 @@
     IMPORT: 8192,
     INITIALIZING: 16384,
     INITIALIZED: 32768,
-    HAS_LOCATION_ERROR: 65536,
-    HAS_MODIFIER_ERRORS: 131072,
+    PRIMITIVE: 65536,
+    HAS_LOCATION_ERROR: 131072,
+    HAS_MODIFIER_ERRORS: 262144,
     INITIALIZE_MASK: 49152,
     KEYWORD_MASK: 14311
   };
@@ -8393,6 +8340,9 @@
       throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:321:5)');
     }
     return (this.flags & SymbolFlag.INITIALIZED) !== 0;
+  };
+  Symbol.prototype.isPrimitive = function() {
+    return (this.flags & SymbolFlag.PRIMITIVE) !== 0;
   };
   Symbol.prototype.hasLocationError = function() {
     return (this.flags & SymbolFlag.HAS_LOCATION_ERROR) !== 0;
@@ -8625,8 +8575,8 @@
   Type.prototype.isString = function(cache) {
     return this === cache.stringType;
   };
-  Type.prototype.isPrimitive = function(cache) {
-    return this.isInt(cache) || this.isBool(cache) || this.isFloat(cache) || this.isDouble(cache) || this.isString(cache);
+  Type.prototype.isPrimitive = function() {
+    return this.symbol !== null && this.symbol.isPrimitive();
   };
   Type.prototype.isList = function(cache) {
     return this.symbol === cache.listType.symbol;
@@ -8655,17 +8605,14 @@
   Type.prototype.isClass = function() {
     return this.symbol !== null && this.symbol.kind === SymbolKind.CLASS;
   };
-  Type.prototype.isStruct = function() {
-    return this.symbol !== null && this.symbol.kind === SymbolKind.STRUCT;
-  };
   Type.prototype.isInterface = function() {
     return this.symbol !== null && this.symbol.kind === SymbolKind.INTERFACE;
   };
   Type.prototype.isReference = function() {
-    return this.isClass() || this.isInterface() || this.isFunction() || this.isParameter() && this.bound() !== null;
-  };
-  Type.prototype.isEqualityComparable = function(cache) {
-    return this.isPrimitive(cache) || !this.isStruct() && (!this.isParameter() || this.bound() !== null);
+    if (this.isClass()) {
+      return !this.isPrimitive();
+    }
+    return this.isInterface() || this.isFunction() || this.isParameter() && this.bound() !== null;
   };
   Type.prototype.isInteger = function(cache) {
     return this.isInt(cache) || this.isEnum();
@@ -8690,6 +8637,24 @@
     this.toStringType = null;
     this.hashTable = new IntMap();
   }
+  TypeCache.prototype.insertGlobals = function(scope) {
+    scope.type = this.globalType;
+    scope.insert(new Member(this.voidType.symbol));
+  };
+  TypeCache.prototype.linkGlobals = function(scope) {
+    this.intType = TypeCache.findType(scope, 'int', SymbolFlag.PRIMITIVE);
+    this.boolType = TypeCache.findType(scope, 'bool', SymbolFlag.PRIMITIVE);
+    this.floatType = TypeCache.findType(scope, 'float', SymbolFlag.PRIMITIVE);
+    this.doubleType = TypeCache.findType(scope, 'double', SymbolFlag.PRIMITIVE);
+    this.stringType = TypeCache.findType(scope, 'string', SymbolFlag.PRIMITIVE);
+    this.listType = TypeCache.findType(scope, 'List', 0);
+    this.toStringType = this.functionType(this.stringType, []);
+  };
+  TypeCache.findType = function(scope, name, flags) {
+    var symbol = scope.findLocal(name).symbol;
+    symbol.flags |= flags;
+    return symbol.type;
+  };
   TypeCache.createType = function(symbol, flags) {
     var type = new Type(symbol);
     symbol.type = type;
@@ -8727,7 +8692,7 @@
   };
   TypeCache.prototype.substitute = function(type, parameters, substitutions) {
     if (parameters.length !== substitutions.length) {
-      throw new Error('assert parameters.size() == substitutions.size(); (src/resolver/typecache.sk:64:5)');
+      throw new Error('assert parameters.size() == substitutions.size(); (src/resolver/typecache.sk:86:5)');
     }
     if (trace.GENERICS) {
       trace.log('substitute ' + type + ' with ' + Type.environmentToString(parameters, substitutions));
@@ -8741,7 +8706,7 @@
       result = index >= 0 ? substitutions[index] : type;
     } else {
       if (type.substitutions === null) {
-        throw new Error('assert type.substitutions != null; (src/resolver/typecache.sk:77:7)');
+        throw new Error('assert type.substitutions != null; (src/resolver/typecache.sk:99:7)');
       }
       result = this.parameterize(type, this.substituteAll(type.substitutions, parameters, substitutions));
     }
@@ -8753,7 +8718,7 @@
   };
   TypeCache.prototype.substituteAll = function(types, parameters, substitutions) {
     if (parameters.length !== substitutions.length) {
-      throw new Error('assert parameters.size() == substitutions.size(); (src/resolver/typecache.sk:89:5)');
+      throw new Error('assert parameters.size() == substitutions.size(); (src/resolver/typecache.sk:111:5)');
     }
     var results = [];
     for (var i = 0; i < types.length; i = i + 1 | 0) {
@@ -8763,7 +8728,7 @@
   };
   TypeCache.prototype.ensureTypeIsParameterized = function(unparameterized) {
     if (unparameterized.isParameterized()) {
-      throw new Error('assert !unparameterized.isParameterized(); (src/resolver/typecache.sk:101:5)');
+      throw new Error('assert !unparameterized.isParameterized(); (src/resolver/typecache.sk:123:5)');
     }
     if (unparameterized.hasParameters()) {
       var parameters = unparameterized.symbol.parameters;
@@ -8779,13 +8744,13 @@
     var symbol = unparameterized !== null ? unparameterized.symbol : null;
     if (symbol !== null) {
       if (!symbol.hasParameters()) {
-        throw new Error('assert symbol.hasParameters(); (src/resolver/typecache.sk:117:7)');
+        throw new Error('assert symbol.hasParameters(); (src/resolver/typecache.sk:139:7)');
       }
       if (symbol.type.isParameterized()) {
-        throw new Error('assert !symbol.type.isParameterized(); (src/resolver/typecache.sk:118:7)');
+        throw new Error('assert !symbol.type.isParameterized(); (src/resolver/typecache.sk:140:7)');
       }
       if (symbol.parameters.length !== substitutions.length) {
-        throw new Error('assert symbol.parameters.size() == substitutions.size(); (src/resolver/typecache.sk:119:7)');
+        throw new Error('assert symbol.parameters.size() == substitutions.size(); (src/resolver/typecache.sk:141:7)');
       }
     }
     var hash = TypeCache.computeHashCode(symbol, substitutions);
@@ -8794,7 +8759,7 @@
       for (var i = 0; i < existingTypes.length; i = i + 1 | 0) {
         var existing = existingTypes[i];
         if (symbol === existing.symbol && symbol !== null && substitutions.length !== existing.substitutions.length) {
-          throw new Error('assert symbol != existing.symbol || symbol == null || substitutions.size() == existing.substitutions.size(); (src/resolver/typecache.sk:130:9)');
+          throw new Error('assert symbol != existing.symbol || symbol == null || substitutions.size() == existing.substitutions.size(); (src/resolver/typecache.sk:152:9)');
         }
         if (symbol === existing.symbol && (symbol === null && TypeCache.areTypeListsEqual(substitutions, existing.relevantTypes) || symbol !== null && TypeCache.areTypeListsEqual(substitutions, existing.substitutions))) {
           return existing;
@@ -9002,19 +8967,19 @@
   };
   function checkAllNodeListKinds(node, checker) {
     if (node === null) {
-      throw new Error('assert node != null; (src/ast/create.sk:369:3)');
+      throw new Error('assert node != null; (src/ast/create.sk:365:3)');
     }
     if (node.kind !== NodeKind.NODE_LIST) {
-      throw new Error('assert node.kind == .NODE_LIST; (src/ast/create.sk:370:3)');
+      throw new Error('assert node.kind == .NODE_LIST; (src/ast/create.sk:366:3)');
     }
     if (node.children === null) {
-      throw new Error('assert node.children != null; (src/ast/create.sk:371:3)');
+      throw new Error('assert node.children != null; (src/ast/create.sk:367:3)');
     }
     return checkAllNodeKinds(node.children, checker);
   }
   function checkAllNodeKinds(nodes, checker) {
     if (nodes === null) {
-      throw new Error('assert nodes != null; (src/ast/create.sk:376:3)');
+      throw new Error('assert nodes != null; (src/ast/create.sk:372:3)');
     }
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
       if (!checker.check(nodes[i])) {
@@ -9114,170 +9079,168 @@
     case 10:
       return 'CLASS';
     case 11:
-      return 'STRUCT';
-    case 12:
       return 'INTERFACE';
-    case 13:
+    case 12:
       return 'EXTENSION';
-    case 14:
+    case 13:
       return 'CONSTRUCTOR';
-    case 15:
+    case 14:
       return 'FUNCTION';
-    case 16:
+    case 15:
       return 'VARIABLE';
-    case 17:
+    case 16:
       return 'PARAMETER';
-    case 18:
+    case 17:
       return 'ALIAS';
-    case 19:
+    case 18:
       return 'IF';
-    case 20:
+    case 19:
       return 'FOR';
-    case 21:
+    case 20:
       return 'FOR_EACH';
-    case 22:
+    case 21:
       return 'WHILE';
-    case 23:
+    case 22:
       return 'DO_WHILE';
-    case 24:
+    case 23:
       return 'RETURN';
-    case 25:
+    case 24:
       return 'BREAK';
-    case 26:
+    case 25:
       return 'CONTINUE';
-    case 27:
+    case 26:
       return 'ASSERT';
-    case 28:
+    case 27:
       return 'ASSERT_CONST';
-    case 29:
+    case 28:
       return 'EXPRESSION';
-    case 30:
+    case 29:
       return 'SWITCH';
-    case 31:
+    case 30:
       return 'MODIFIER';
-    case 32:
+    case 31:
       return 'USING';
-    case 33:
+    case 32:
       return 'NAME';
-    case 34:
+    case 33:
       return 'TYPE';
-    case 35:
+    case 34:
       return 'THIS';
-    case 36:
+    case 35:
       return 'HOOK';
-    case 37:
+    case 36:
       return 'NULL';
-    case 38:
+    case 37:
       return 'BOOL';
-    case 39:
+    case 38:
       return 'INT';
-    case 40:
+    case 39:
       return 'FLOAT';
-    case 41:
+    case 40:
       return 'DOUBLE';
-    case 42:
+    case 41:
       return 'STRING';
-    case 43:
+    case 42:
       return 'LIST';
-    case 44:
+    case 43:
       return 'DOT';
-    case 45:
+    case 44:
       return 'CALL';
-    case 46:
+    case 45:
       return 'SUPER_CALL';
-    case 47:
+    case 46:
       return 'ERROR';
-    case 48:
+    case 47:
       return 'SEQUENCE';
-    case 49:
+    case 48:
       return 'PARAMETERIZE';
-    case 50:
+    case 49:
       return 'CAST';
-    case 51:
+    case 50:
       return 'IMPLICIT_CAST';
-    case 52:
+    case 51:
       return 'UNTYPED';
-    case 53:
+    case 52:
       return 'VAR';
-    case 54:
+    case 53:
       return 'NOT';
-    case 55:
+    case 54:
       return 'POSITIVE';
-    case 56:
+    case 55:
       return 'NEGATIVE';
-    case 57:
+    case 56:
       return 'COMPLEMENT';
-    case 58:
+    case 57:
       return 'PREFIX_INCREMENT';
-    case 59:
+    case 58:
       return 'PREFIX_DECREMENT';
-    case 60:
+    case 59:
       return 'POSTFIX_INCREMENT';
-    case 61:
+    case 60:
       return 'POSTFIX_DECREMENT';
-    case 62:
+    case 61:
       return 'ADD';
-    case 63:
+    case 62:
       return 'BITWISE_AND';
-    case 64:
+    case 63:
       return 'BITWISE_OR';
-    case 65:
+    case 64:
       return 'BITWISE_XOR';
-    case 66:
+    case 65:
       return 'DIVIDE';
-    case 67:
+    case 66:
       return 'EQUAL';
-    case 68:
+    case 67:
       return 'GREATER_THAN';
-    case 69:
+    case 68:
       return 'GREATER_THAN_OR_EQUAL';
-    case 70:
+    case 69:
       return 'IN';
-    case 71:
+    case 70:
       return 'INDEX';
-    case 72:
+    case 71:
       return 'LESS_THAN';
-    case 73:
+    case 72:
       return 'LESS_THAN_OR_EQUAL';
-    case 74:
+    case 73:
       return 'LOGICAL_AND';
-    case 75:
+    case 74:
       return 'LOGICAL_OR';
-    case 76:
+    case 75:
       return 'MULTIPLY';
-    case 77:
+    case 76:
       return 'NOT_EQUAL';
-    case 78:
+    case 77:
       return 'REMAINDER';
-    case 79:
+    case 78:
       return 'SHIFT_LEFT';
-    case 80:
+    case 79:
       return 'SHIFT_RIGHT';
-    case 81:
+    case 80:
       return 'SUBTRACT';
-    case 82:
+    case 81:
       return 'ASSIGN';
-    case 83:
+    case 82:
       return 'ASSIGN_ADD';
-    case 84:
+    case 83:
       return 'ASSIGN_BITWISE_AND';
-    case 85:
+    case 84:
       return 'ASSIGN_BITWISE_OR';
-    case 86:
+    case 85:
       return 'ASSIGN_BITWISE_XOR';
-    case 87:
+    case 86:
       return 'ASSIGN_DIVIDE';
-    case 88:
+    case 87:
       return 'ASSIGN_MULTIPLY';
-    case 89:
+    case 88:
       return 'ASSIGN_REMAINDER';
-    case 90:
+    case 89:
       return 'ASSIGN_SHIFT_LEFT';
-    case 91:
+    case 90:
       return 'ASSIGN_SHIFT_RIGHT';
-    case 92:
+    case 91:
       return 'ASSIGN_SUBTRACT';
-    case 93:
+    case 92:
       return 'ASSIGN_INDEX';
     default:
       return '';
@@ -9863,34 +9826,32 @@
     case 83:
       return 'STRING';
     case 84:
-      return 'STRUCT';
-    case 85:
       return 'SUPER';
-    case 86:
+    case 85:
       return 'SWITCH';
-    case 87:
+    case 86:
       return 'THIS';
-    case 88:
+    case 87:
       return 'TILDE';
-    case 89:
+    case 88:
       return 'TRUE';
-    case 90:
+    case 89:
       return 'UNTYPED';
-    case 91:
+    case 90:
       return 'USING';
-    case 92:
+    case 91:
       return 'VAR';
-    case 93:
+    case 92:
       return 'VIRTUAL';
-    case 94:
+    case 93:
       return 'WHILE';
-    case 95:
+    case 94:
       return 'WHITESPACE';
-    case 96:
+    case 95:
       return 'YY_INVALID_ACTION';
-    case 97:
+    case 96:
       return 'START_PARAMETER_LIST';
-    case 98:
+    case 97:
       return 'END_PARAMETER_LIST';
     default:
       return '';
@@ -9906,7 +9867,7 @@
     while (yy_cp < text_length) {
       var yy_current_state = 1;
       var yy_bp = yy_cp;
-      while (yy_current_state !== 257) {
+      while (yy_current_state !== 253) {
         if (yy_cp >= text_length) {
           break;
         }
@@ -9919,7 +9880,7 @@
         }
         while (yy_chk[yy_base[yy_current_state] + yy_c | 0] !== yy_current_state) {
           yy_current_state = yy_def[yy_current_state];
-          if (yy_current_state >= 258) {
+          if (yy_current_state >= 254) {
             yy_c = yy_meta[yy_c];
           }
         }
@@ -10069,11 +10030,10 @@
       case 72:
       case 75:
       case 82:
-      case 84:
-      case 86:
-      case 91:
+      case 85:
+      case 90:
+      case 92:
       case 93:
-      case 94:
         if (tokenScan === TokenScan.STOP_BEFORE_NEXT_STATEMENT) {
           return true;
         }
@@ -10607,11 +10567,11 @@
   }
   function looksLikeType(node) {
     switch (node.kind) {
-    case 44:
+    case 43:
       var target = node.dotTarget();
       return target !== null && looksLikeType(target);
-    case 33:
-    case 49:
+    case 32:
+    case 48:
       return true;
     default:
       return false;
@@ -10642,7 +10602,7 @@
     case 39:
       return parseFor(context);
     case 42:
-    case 92:
+    case 91:
       return parsePossibleTypedDeclaration(context, hint);
     case 43:
       return parseIf(context);
@@ -10670,15 +10630,13 @@
       return parseReturn(context);
     case 82:
       return parseModifier(context, hint, SymbolFlag.STATIC);
-    case 84:
-      return parseObject(context, NodeKind.STRUCT);
-    case 86:
+    case 85:
       return parseSwitch(context);
-    case 91:
+    case 90:
       return parseUsing(context);
-    case 93:
+    case 92:
       return parseModifier(context, hint, SymbolFlag.VIRTUAL);
-    case 94:
+    case 93:
       return parseWhile(context);
     default:
       return parseExpression(context);
@@ -10782,9 +10740,6 @@
   function semanticErrorUnexpectedModifier(log, range, modifier, where) {
     log.error(range, 'Cannot use the ' + simpleQuote(modifier) + ' modifier ' + where);
   }
-  function semanticErrorExpectedModifier(log, range, modifier, where) {
-    log.error(range, 'Expected the ' + simpleQuote(modifier) + ' modifier ' + where);
-  }
   function semanticErrorDuplicateSymbol(log, range, name, previous) {
     log.error(range, simpleQuote(name) + ' is already declared');
     if (!previous.isEmpty()) {
@@ -10828,7 +10783,7 @@
     log.error(range, 'Cyclic declaration of ' + simpleQuote(name));
   }
   function semanticErrorUnexpectedThis(log, range, name) {
-    log.error(range, 'Cannot use ' + simpleQuote(name) + ' outside a class or struct');
+    log.error(range, 'Cannot use ' + simpleQuote(name) + ' outside a class');
   }
   function semanticErrorStaticThis(log, range, name) {
     log.error(range, 'Cannot access ' + simpleQuote(name) + ' from a static context');
@@ -11302,20 +11257,18 @@
     case 12:
       return 'CLASS';
     case 13:
-      return 'STRUCT';
-    case 14:
       return 'INTERFACE';
-    case 15:
+    case 14:
       return 'GLOBAL_FUNCTION';
-    case 16:
+    case 15:
       return 'INSTANCE_FUNCTION';
-    case 17:
+    case 16:
       return 'CONSTRUCTOR_FUNCTION';
-    case 18:
+    case 17:
       return 'LOCAL_VARIABLE';
-    case 19:
+    case 18:
       return 'GLOBAL_VARIABLE';
-    case 20:
+    case 19:
       return 'INSTANCE_VARIABLE';
     default:
       return '';
@@ -11359,7 +11312,6 @@
         break;
       case 12:
       case 13:
-      case 14:
         var text = in_SymbolKind.toString(symbol.kind).toLowerCase() + ' ' + type;
         if (type.hasRelevantTypes()) {
           for (var i = 0; i < type.relevantTypes.length; i = i + 1 | 0) {
@@ -11374,9 +11326,9 @@
       case 11:
         result.declaration = 'enum flags ' + symbol.fullName();
         break;
+      case 14:
       case 15:
       case 16:
-      case 17:
         var text = type.resultType() + ' ' + symbol.name + '(';
         var $arguments = symbol.node.functionArguments().children;
         var argumentTypes = type.argumentTypes();
@@ -11388,9 +11340,9 @@
         }
         result.declaration = text + ')';
         break;
+      case 17:
       case 18:
       case 19:
-      case 20:
         var text = type + ' ' + symbol.name;
         if (symbol.isEnumValue()) {
           text += ' = ' + symbol.constant.asInt();
@@ -11474,26 +11426,26 @@
     }
   };
   var operatorInfo = null;
-  Compiler.nativeLibrary = new CachedSource('\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct string {\n  import int size();\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  import static string fromCodeUnit(int value);\n  import string get(int index);\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nclass IntMap<T> {\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n');
-  Compiler.nativeLibraryJS = new CachedSource('\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct String {\n  import static string fromCharCode(int value);\n}\n\nimport class Object {\n  import static Object create(Object prototype);\n}\n\nimport namespace operators {\n  import void delete(int value);\n  import void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport struct string {\n  inline int size() { return untyped(this).length; }\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).length; }\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  inline void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n  inline T get(string key) { return untyped(table)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(string key, T value) { untyped(table)[key] = value; }\n  inline bool has(string key) { return key in untyped(table); }\n  inline void remove(string key) { operators.delete(untyped(table)[key]); }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n  inline T get(int key) { return untyped(table)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(int key, T value) { untyped(table)[key] = value; }\n  inline bool has(int key) { return key in untyped(table); }\n  inline void remove(int key) { operators.delete(untyped(table)[key]); }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n');
-  Compiler.nativeLibraryCS = new CachedSource('\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct string {\n  inline int size() { return untyped(this).Length; }\n  import string slice(int start, int end);\n  inline int indexOf(string value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(string value) { return untyped(this).LastIndexOf(value); }\n  inline string toLowerCase() { return untyped(this).ToLower(); }\n  inline string toUpperCase() { return untyped(this).ToUpper(); }\n  import static string fromCodeUnit(int value);\n  inline string get(int index) { return untyped(this)[index]; }\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).Count; }\n  inline void push(T value) { untyped(this).Add(value); }\n  inline void unshift(T value) { insert(0, value); }\n  inline List<T> slice(int start, int end) { return untyped(this).Take(end).Skip(start).ToList(); }\n  inline int indexOf(T value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(T value) { return untyped(this).LastIndexOf(value); }\n  inline T shift() { return remove(0); }\n  inline T pop() { return remove(size() - 1); }\n  inline void reverse() { untyped(this).Reverse(); }\n  import void sort(IComparison<T> comparison);\n  inline List<T> clone() { return untyped(this).ToList(); }\n  inline T remove(int index) { var value = get(index); untyped(this).RemoveAt(index); return value; }\n  inline void insert(int index, T value) { untyped(this).Insert(index, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nimport namespace operators {\n  import void out(int value);\n}\n\nimport class Dictionary<K, V> {\n  new();\n}\n\nclass StringMap<T> {\n  var map = Dictionary<string, T>();\n  inline T get(string key) { return untyped(map)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(string key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(string key) { return untyped(map).ContainsKey(key); }\n  inline void remove(string key) { return untyped(map).Remove(key); }\n  inline List<string> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline StringMap<T> clone() {\n    var clone = StringMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var map = Dictionary<int, T>();\n  inline T get(int key) { return untyped(map)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(int key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(int key) { return untyped(map).ContainsKey(key); }\n  inline void remove(int key) { return untyped(map).Remove(key); }\n  inline List<int> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline IntMap<T> clone() {\n    var clone = IntMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n');
-  var NATIVE_LIBRARY = '\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct string {\n  import int size();\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  import static string fromCodeUnit(int value);\n  import string get(int index);\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nclass IntMap<T> {\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n';
+  Compiler.nativeLibrary = new CachedSource('\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class string {\n  import int size();\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  import static string fromCodeUnit(int value);\n  import string get(int index);\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nclass IntMap<T> {\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n');
+  Compiler.nativeLibraryJS = new CachedSource('\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class String {\n  import static string fromCharCode(int value);\n}\n\nimport class Object {\n  import static Object create(Object prototype);\n}\n\nimport namespace operators {\n  import void delete(int value);\n  import void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport class string {\n  inline int size() { return untyped(this).length; }\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).length; }\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  inline void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n  inline T get(string key) { return untyped(table)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(string key, T value) { untyped(table)[key] = value; }\n  inline bool has(string key) { return key in untyped(table); }\n  inline void remove(string key) { operators.delete(untyped(table)[key]); }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n  inline T get(int key) { return untyped(table)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(int key, T value) { untyped(table)[key] = value; }\n  inline bool has(int key) { return key in untyped(table); }\n  inline void remove(int key) { operators.delete(untyped(table)[key]); }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n');
+  Compiler.nativeLibraryCS = new CachedSource('\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class string {\n  inline int size() { return untyped(this).Length; }\n  import string slice(int start, int end);\n  inline int indexOf(string value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(string value) { return untyped(this).LastIndexOf(value); }\n  inline string toLowerCase() { return untyped(this).ToLower(); }\n  inline string toUpperCase() { return untyped(this).ToUpper(); }\n  import static string fromCodeUnit(int value);\n  inline string get(int index) { return untyped(this)[index]; }\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).Count; }\n  inline void push(T value) { untyped(this).Add(value); }\n  inline void unshift(T value) { insert(0, value); }\n  inline List<T> slice(int start, int end) { return untyped(this).Take(end).Skip(start).ToList(); }\n  inline int indexOf(T value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(T value) { return untyped(this).LastIndexOf(value); }\n  inline T shift() { return remove(0); }\n  inline T pop() { return remove(size() - 1); }\n  inline void reverse() { untyped(this).Reverse(); }\n  import void sort(IComparison<T> comparison);\n  inline List<T> clone() { return untyped(this).ToList(); }\n  inline T remove(int index) { var value = get(index); untyped(this).RemoveAt(index); return value; }\n  inline void insert(int index, T value) { untyped(this).Insert(index, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nimport namespace operators {\n  import void out(int value);\n}\n\nimport class Dictionary<K, V> {\n  new();\n}\n\nclass StringMap<T> {\n  var map = Dictionary<string, T>();\n  inline T get(string key) { return untyped(map)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(string key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(string key) { return untyped(map).ContainsKey(key); }\n  inline void remove(string key) { return untyped(map).Remove(key); }\n  inline List<string> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline StringMap<T> clone() {\n    var clone = StringMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var map = Dictionary<int, T>();\n  inline T get(int key) { return untyped(map)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(int key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(int key) { return untyped(map).ContainsKey(key); }\n  inline void remove(int key) { return untyped(map).Remove(key); }\n  inline List<int> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline IntMap<T> clone() {\n    var clone = IntMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n');
+  var NATIVE_LIBRARY = '\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class string {\n  import int size();\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  import static string fromCodeUnit(int value);\n  import string get(int index);\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nclass IntMap<T> {\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n';
   Range.EMPTY = new Range(null, 0, 0);
   var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   var HEX = '0123456789ABCDEF';
   trace.GENERICS = false;
   cs.Emitter.isKeyword = null;
-  var NATIVE_LIBRARY_CS = '\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct string {\n  inline int size() { return untyped(this).Length; }\n  import string slice(int start, int end);\n  inline int indexOf(string value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(string value) { return untyped(this).LastIndexOf(value); }\n  inline string toLowerCase() { return untyped(this).ToLower(); }\n  inline string toUpperCase() { return untyped(this).ToUpper(); }\n  import static string fromCodeUnit(int value);\n  inline string get(int index) { return untyped(this)[index]; }\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).Count; }\n  inline void push(T value) { untyped(this).Add(value); }\n  inline void unshift(T value) { insert(0, value); }\n  inline List<T> slice(int start, int end) { return untyped(this).Take(end).Skip(start).ToList(); }\n  inline int indexOf(T value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(T value) { return untyped(this).LastIndexOf(value); }\n  inline T shift() { return remove(0); }\n  inline T pop() { return remove(size() - 1); }\n  inline void reverse() { untyped(this).Reverse(); }\n  import void sort(IComparison<T> comparison);\n  inline List<T> clone() { return untyped(this).ToList(); }\n  inline T remove(int index) { var value = get(index); untyped(this).RemoveAt(index); return value; }\n  inline void insert(int index, T value) { untyped(this).Insert(index, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nimport namespace operators {\n  import void out(int value);\n}\n\nimport class Dictionary<K, V> {\n  new();\n}\n\nclass StringMap<T> {\n  var map = Dictionary<string, T>();\n  inline T get(string key) { return untyped(map)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(string key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(string key) { return untyped(map).ContainsKey(key); }\n  inline void remove(string key) { return untyped(map).Remove(key); }\n  inline List<string> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline StringMap<T> clone() {\n    var clone = StringMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var map = Dictionary<int, T>();\n  inline T get(int key) { return untyped(map)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(int key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(int key) { return untyped(map).ContainsKey(key); }\n  inline void remove(int key) { return untyped(map).Remove(key); }\n  inline List<int> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline IntMap<T> clone() {\n    var clone = IntMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n';
+  var NATIVE_LIBRARY_CS = '\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class string {\n  inline int size() { return untyped(this).Length; }\n  import string slice(int start, int end);\n  inline int indexOf(string value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(string value) { return untyped(this).LastIndexOf(value); }\n  inline string toLowerCase() { return untyped(this).ToLower(); }\n  inline string toUpperCase() { return untyped(this).ToUpper(); }\n  import static string fromCodeUnit(int value);\n  inline string get(int index) { return untyped(this)[index]; }\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).Count; }\n  inline void push(T value) { untyped(this).Add(value); }\n  inline void unshift(T value) { insert(0, value); }\n  inline List<T> slice(int start, int end) { return untyped(this).Take(end).Skip(start).ToList(); }\n  inline int indexOf(T value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(T value) { return untyped(this).LastIndexOf(value); }\n  inline T shift() { return remove(0); }\n  inline T pop() { return remove(size() - 1); }\n  inline void reverse() { untyped(this).Reverse(); }\n  import void sort(IComparison<T> comparison);\n  inline List<T> clone() { return untyped(this).ToList(); }\n  inline T remove(int index) { var value = get(index); untyped(this).RemoveAt(index); return value; }\n  inline void insert(int index, T value) { untyped(this).Insert(index, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nimport namespace operators {\n  import void out(int value);\n}\n\nimport class Dictionary<K, V> {\n  new();\n}\n\nclass StringMap<T> {\n  var map = Dictionary<string, T>();\n  inline T get(string key) { return untyped(map)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(string key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(string key) { return untyped(map).ContainsKey(key); }\n  inline void remove(string key) { return untyped(map).Remove(key); }\n  inline List<string> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline StringMap<T> clone() {\n    var clone = StringMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var map = Dictionary<int, T>();\n  inline T get(int key) { return untyped(map)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(int key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(int key) { return untyped(map).ContainsKey(key); }\n  inline void remove(int key) { return untyped(map).Remove(key); }\n  inline List<int> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline IntMap<T> clone() {\n    var clone = IntMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n';
   js.Emitter.isKeyword = null;
-  var NATIVE_LIBRARY_JS = '\nimport struct int { import string toString(); }\nimport struct bool { import string toString(); }\nimport struct float { import string toString(); }\nimport struct double { import string toString(); }\n\nimport struct String {\n  import static string fromCharCode(int value);\n}\n\nimport class Object {\n  import static Object create(Object prototype);\n}\n\nimport namespace operators {\n  import void delete(int value);\n  import void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport struct string {\n  inline int size() { return untyped(this).length; }\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).length; }\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  inline void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n  inline T get(string key) { return untyped(table)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(string key, T value) { untyped(table)[key] = value; }\n  inline bool has(string key) { return key in untyped(table); }\n  inline void remove(string key) { operators.delete(untyped(table)[key]); }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n  inline T get(int key) { return untyped(table)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(int key, T value) { untyped(table)[key] = value; }\n  inline bool has(int key) { return key in untyped(table); }\n  inline void remove(int key) { operators.delete(untyped(table)[key]); }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n';
+  var NATIVE_LIBRARY_JS = '\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class String {\n  import static string fromCharCode(int value);\n}\n\nimport class Object {\n  import static Object create(Object prototype);\n}\n\nimport namespace operators {\n  import void delete(int value);\n  import void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport class string {\n  inline int size() { return untyped(this).length; }\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).length; }\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  inline void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n  inline T get(string key) { return untyped(table)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(string key, T value) { untyped(table)[key] = value; }\n  inline bool has(string key) { return key in untyped(table); }\n  inline void remove(string key) { operators.delete(untyped(table)[key]); }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n  inline T get(int key) { return untyped(table)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(int key, T value) { untyped(table)[key] = value; }\n  inline bool has(int key) { return key in untyped(table); }\n  inline void remove(int key) { operators.delete(untyped(table)[key]); }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n';
   SourceMapGenerator.comparison = new SourceMappingComparison();
-  var yy_accept = [96, 96, 96, 31, 34, 95, 65, 34, 74, 13, 34, 56, 78, 62, 69, 21, 61, 28, 26, 50, 50, 20, 79, 57, 2, 40, 73, 42, 55, 77, 15, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 54, 14, 76, 88, 95, 66, 96, 83, 96, 10, 59, 3, 96, 18, 96, 8, 46, 9, 24, 7, 95, 6, 96, 50, 96, 38, 96, 96, 80, 58, 33, 41, 81, 42, 5, 42, 42, 42, 42, 42, 42, 42, 27, 42, 42, 42, 42, 42, 42, 43, 42, 45, 53, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 4, 60, 95, 29, 49, 52, 51, 11, 12, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 39, 42, 42, 42, 42, 64, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 92, 42, 42, 38, 42, 42, 42, 17, 42, 42, 42, 42, 30, 32, 42, 42, 42, 42, 42, 42, 42, 67, 42, 42, 42, 42, 42, 42, 42, 42, 42, 87, 89, 42, 42, 42, 42, 0, 42, 16, 19, 22, 42, 42, 42, 36, 37, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 85, 42, 42, 91, 42, 94, 1, 42, 42, 35, 44, 47, 42, 42, 42, 42, 42, 72, 75, 82, 84, 86, 42, 42, 42, 25, 42, 42, 42, 70, 42, 90, 93, 23, 42, 42, 68, 42, 48, 63, 71, 96];
+  var yy_accept = [95, 95, 95, 31, 34, 94, 65, 34, 74, 13, 34, 56, 78, 62, 69, 21, 61, 28, 26, 50, 50, 20, 79, 57, 2, 40, 73, 42, 55, 77, 15, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 54, 14, 76, 87, 94, 66, 95, 83, 95, 10, 59, 3, 95, 18, 95, 8, 46, 9, 24, 7, 94, 6, 95, 50, 95, 38, 95, 95, 80, 58, 33, 41, 81, 42, 5, 42, 42, 42, 42, 42, 42, 42, 27, 42, 42, 42, 42, 42, 42, 43, 42, 45, 53, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 4, 60, 94, 29, 49, 52, 51, 11, 12, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 39, 42, 42, 42, 42, 64, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 91, 42, 42, 38, 42, 42, 42, 17, 42, 42, 42, 42, 30, 32, 42, 42, 42, 42, 42, 42, 42, 67, 42, 42, 42, 42, 42, 42, 42, 42, 86, 88, 42, 42, 42, 42, 0, 42, 16, 19, 22, 42, 42, 42, 36, 37, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 84, 42, 42, 90, 42, 93, 1, 42, 42, 35, 44, 47, 42, 42, 42, 42, 42, 72, 75, 82, 85, 42, 42, 42, 25, 42, 42, 42, 70, 42, 89, 92, 23, 42, 42, 68, 42, 48, 63, 71, 95];
   var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 1, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 32, 28, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 28, 42, 43, 44, 45, 46, 47, 28, 48, 49, 50, 51, 52, 53, 54, 55, 28, 56, 57, 58, 59, 1];
   var yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1];
-  var yy_base = [0, 0, 0, 314, 315, 58, 289, 57, 288, 56, 56, 315, 315, 287, 53, 315, 52, 315, 51, 73, 64, 315, 315, 45, 286, 46, 315, 0, 315, 315, 285, 29, 260, 52, 57, 54, 63, 68, 77, 255, 67, 269, 70, 76, 56, 89, 265, 315, 76, 315, 315, 71, 315, 120, 315, 301, 315, 315, 315, 118, 315, 300, 315, 315, 315, 315, 315, 0, 315, 117, 123, 114, 315, 127, 0, 278, 315, 315, 315, 277, 0, 315, 259, 250, 261, 248, 263, 250, 256, 0, 244, 241, 244, 247, 244, 240, 0, 240, 104, 0, 242, 232, 241, 246, 110, 248, 231, 116, 233, 238, 237, 226, 226, 234, 226, 225, 231, 315, 315, 0, 140, 135, 148, 0, 315, 315, 238, 233, 236, 231, 218, 113, 233, 228, 220, 217, 213, 228, 0, 214, 218, 221, 220, 0, 213, 207, 202, 203, 209, 200, 200, 198, 211, 197, 197, 208, 189, 198, 0, 192, 198, 315, 191, 191, 196, 0, 188, 186, 194, 183, 0, 0, 185, 195, 188, 182, 184, 180, 178, 0, 178, 192, 187, 182, 174, 180, 185, 171, 183, 0, 0, 170, 177, 164, 177, 0, 163, 0, 0, 0, 167, 168, 160, 0, 0, 159, 171, 169, 159, 164, 154, 168, 167, 156, 165, 149, 0, 158, 160, 0, 163, 0, 0, 144, 144, 0, 0, 0, 160, 157, 141, 139, 125, 0, 0, 0, 0, 0, 138, 130, 135, 0, 136, 135, 132, 0, 131, 0, 0, 0, 118, 102, 0, 93, 0, 0, 0, 315, 178, 182, 184, 188, 86];
-  var yy_def = [0, 257, 1, 257, 257, 257, 257, 258, 257, 257, 259, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 260, 257, 257, 257, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 257, 257, 257, 257, 257, 257, 258, 257, 258, 257, 257, 257, 259, 257, 259, 257, 257, 257, 257, 257, 261, 257, 257, 257, 257, 257, 257, 262, 257, 257, 257, 257, 257, 260, 257, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 257, 257, 261, 257, 257, 257, 262, 257, 257, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 257, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 0, 257, 257, 257, 257, 257];
-  var yy_nxt = [0, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 21, 22, 23, 24, 25, 26, 27, 27, 28, 4, 29, 30, 31, 32, 33, 34, 35, 36, 27, 27, 37, 27, 27, 27, 38, 39, 40, 41, 42, 43, 44, 45, 46, 27, 27, 47, 48, 49, 50, 51, 51, 54, 57, 60, 63, 65, 67, 75, 76, 78, 79, 82, 51, 51, 68, 66, 64, 83, 69, 58, 70, 70, 70, 70, 85, 61, 55, 69, 123, 70, 70, 70, 70, 88, 86, 93, 90, 87, 91, 117, 112, 72, 89, 94, 113, 96, 71, 92, 95, 100, 72, 97, 98, 101, 104, 110, 99, 105, 73, 107, 108, 114, 109, 111, 54, 60, 74, 102, 256, 115, 121, 121, 118, 120, 120, 120, 120, 69, 255, 70, 70, 70, 70, 122, 122, 122, 140, 61, 150, 55, 146, 121, 121, 141, 254, 147, 120, 120, 120, 120, 72, 167, 168, 151, 122, 122, 122, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 161, 53, 53, 53, 53, 59, 59, 59, 59, 80, 80, 119, 243, 119, 119, 242, 241, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, 166, 165, 164, 163, 162, 160, 159, 158, 157, 156, 155, 154, 153, 152, 149, 148, 145, 144, 143, 142, 139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 128, 127, 126, 125, 124, 257, 257, 116, 106, 103, 84, 81, 77, 62, 56, 52, 257, 3, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257];
-  var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 7, 9, 10, 14, 16, 18, 23, 23, 25, 25, 31, 51, 51, 18, 16, 14, 31, 20, 9, 20, 20, 20, 20, 33, 10, 7, 19, 262, 19, 19, 19, 19, 34, 33, 36, 35, 33, 35, 48, 44, 20, 34, 36, 44, 37, 19, 35, 36, 38, 19, 37, 37, 38, 40, 43, 37, 40, 19, 42, 42, 45, 42, 43, 53, 59, 19, 38, 253, 45, 71, 71, 48, 69, 69, 69, 69, 70, 251, 70, 70, 70, 70, 73, 73, 73, 98, 59, 107, 53, 104, 121, 121, 98, 250, 104, 120, 120, 120, 120, 70, 131, 131, 107, 122, 122, 122, 246, 244, 243, 242, 240, 239, 238, 232, 231, 230, 120, 258, 258, 258, 258, 259, 259, 259, 259, 260, 260, 261, 229, 261, 261, 228, 224, 223, 220, 218, 217, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 202, 201, 200, 196, 194, 193, 192, 191, 188, 187, 186, 185, 184, 183, 182, 181, 180, 178, 177, 176, 175, 174, 173, 172, 169, 168, 167, 166, 164, 163, 162, 160, 159, 157, 156, 155, 154, 153, 152, 151, 150, 149, 148, 147, 146, 145, 144, 142, 141, 140, 139, 137, 136, 135, 134, 133, 132, 130, 129, 128, 127, 126, 116, 115, 114, 113, 112, 111, 110, 109, 108, 106, 105, 103, 102, 101, 100, 97, 95, 94, 93, 92, 91, 90, 88, 87, 86, 85, 84, 83, 82, 79, 75, 61, 55, 46, 41, 39, 32, 30, 24, 13, 8, 6, 3, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257];
+  var yy_base = [0, 0, 0, 310, 311, 58, 285, 57, 284, 56, 56, 311, 311, 283, 53, 311, 52, 311, 51, 73, 64, 311, 311, 45, 282, 46, 311, 0, 311, 311, 281, 29, 256, 52, 57, 54, 63, 68, 77, 251, 67, 265, 70, 76, 56, 89, 261, 311, 76, 311, 311, 71, 311, 120, 311, 297, 311, 311, 311, 118, 311, 296, 311, 311, 311, 311, 311, 0, 311, 117, 123, 114, 311, 127, 0, 274, 311, 311, 311, 273, 0, 311, 255, 246, 257, 244, 259, 246, 252, 0, 240, 237, 240, 243, 240, 236, 0, 236, 104, 0, 238, 228, 237, 242, 110, 244, 227, 243, 228, 233, 232, 221, 221, 229, 221, 220, 226, 311, 311, 0, 140, 135, 145, 0, 311, 311, 233, 228, 231, 226, 213, 116, 228, 223, 215, 212, 208, 223, 0, 209, 213, 216, 215, 0, 208, 202, 197, 198, 204, 195, 195, 207, 193, 193, 204, 185, 194, 0, 188, 194, 311, 187, 187, 192, 0, 184, 182, 190, 179, 0, 0, 181, 191, 184, 178, 180, 176, 174, 0, 174, 188, 183, 178, 170, 176, 168, 180, 0, 0, 167, 174, 161, 174, 0, 160, 0, 0, 0, 164, 165, 157, 0, 0, 156, 168, 166, 156, 161, 151, 165, 164, 153, 162, 0, 156, 158, 0, 161, 0, 0, 142, 140, 0, 0, 0, 144, 143, 139, 137, 123, 0, 0, 0, 0, 136, 128, 133, 0, 134, 133, 130, 0, 118, 0, 0, 0, 112, 102, 0, 93, 0, 0, 0, 311, 178, 182, 184, 188, 86];
+  var yy_def = [0, 253, 1, 253, 253, 253, 253, 254, 253, 253, 255, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 256, 253, 253, 253, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 253, 253, 253, 253, 253, 253, 254, 253, 254, 253, 253, 253, 255, 253, 255, 253, 253, 253, 253, 253, 257, 253, 253, 253, 253, 253, 253, 258, 253, 253, 253, 253, 253, 256, 253, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 253, 253, 257, 253, 253, 253, 258, 253, 253, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 253, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 0, 253, 253, 253, 253, 253];
+  var yy_nxt = [0, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 21, 22, 23, 24, 25, 26, 27, 27, 28, 4, 29, 30, 31, 32, 33, 34, 35, 36, 27, 27, 37, 27, 27, 27, 38, 39, 40, 41, 42, 43, 44, 45, 46, 27, 27, 47, 48, 49, 50, 51, 51, 54, 57, 60, 63, 65, 67, 75, 76, 78, 79, 82, 51, 51, 68, 66, 64, 83, 69, 58, 70, 70, 70, 70, 85, 61, 55, 69, 123, 70, 70, 70, 70, 88, 86, 93, 90, 87, 91, 117, 112, 72, 89, 94, 113, 96, 71, 92, 95, 100, 72, 97, 98, 101, 104, 110, 99, 105, 73, 107, 108, 114, 109, 111, 54, 60, 74, 102, 252, 115, 121, 121, 118, 120, 120, 120, 120, 69, 251, 70, 70, 70, 70, 122, 122, 122, 140, 61, 250, 55, 146, 121, 121, 141, 249, 147, 120, 120, 120, 120, 72, 122, 122, 122, 166, 167, 248, 247, 246, 245, 244, 243, 242, 241, 240, 239, 238, 160, 53, 53, 53, 53, 59, 59, 59, 59, 80, 80, 119, 237, 119, 119, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, 168, 165, 164, 163, 162, 161, 159, 158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 148, 145, 144, 143, 142, 139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 128, 127, 126, 125, 124, 253, 253, 116, 106, 103, 84, 81, 77, 62, 56, 52, 253, 3, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253];
+  var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 7, 9, 10, 14, 16, 18, 23, 23, 25, 25, 31, 51, 51, 18, 16, 14, 31, 20, 9, 20, 20, 20, 20, 33, 10, 7, 19, 258, 19, 19, 19, 19, 34, 33, 36, 35, 33, 35, 48, 44, 20, 34, 36, 44, 37, 19, 35, 36, 38, 19, 37, 37, 38, 40, 43, 37, 40, 19, 42, 42, 45, 42, 43, 53, 59, 19, 38, 249, 45, 71, 71, 48, 69, 69, 69, 69, 70, 247, 70, 70, 70, 70, 73, 73, 73, 98, 59, 246, 53, 104, 121, 121, 98, 242, 104, 120, 120, 120, 120, 70, 122, 122, 122, 131, 131, 240, 239, 238, 236, 235, 234, 229, 228, 227, 226, 225, 120, 254, 254, 254, 254, 255, 255, 255, 255, 256, 256, 257, 221, 257, 257, 220, 217, 215, 214, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 200, 199, 198, 194, 192, 191, 190, 189, 186, 185, 184, 183, 182, 181, 180, 179, 177, 176, 175, 174, 173, 172, 171, 168, 167, 166, 165, 163, 162, 161, 159, 158, 156, 155, 154, 153, 152, 151, 150, 149, 148, 147, 146, 145, 144, 142, 141, 140, 139, 137, 136, 135, 134, 133, 132, 130, 129, 128, 127, 126, 116, 115, 114, 113, 112, 111, 110, 109, 108, 107, 106, 105, 103, 102, 101, 100, 97, 95, 94, 93, 92, 91, 90, 88, 87, 86, 85, 84, 83, 82, 79, 75, 61, 55, 46, 41, 39, 32, 30, 24, 13, 8, 6, 3, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253];
   var pratt = null;
   Resolver.comparison = new MemberRangeComparison();
   var nameToSymbolFlag = null;

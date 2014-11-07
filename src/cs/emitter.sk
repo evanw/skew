@@ -130,7 +130,7 @@ namespace cs {
     void emitNode(Node node) {
       switch (node.kind) {
         case .ENUM, .ENUM_FLAGS { emitEnum(node); }
-        case .CLASS, .STRUCT, .INTERFACE { emitObject(node); }
+        case .CLASS, .INTERFACE { emitObject(node); }
         case .CONSTRUCTOR, .FUNCTION { emitFunction(node); }
         case .RETURN { emitReturn(node); }
         case .EXPRESSION { emitExpressionStatement(node); }
@@ -284,7 +284,7 @@ namespace cs {
       if (symbol.isAbstract()) {
         emit("abstract ");
       }
-      emit(symbol.kind == .CLASS ? "class " : symbol.kind == .STRUCT ? "struct " : "interface ");
+      emit(symbol.kind == .CLASS ? "class " : "interface ");
       emitNameWithParameters(symbol);
       if (type.hasRelevantTypes()) {
         for (var i = 0; i < type.relevantTypes.size(); i++) {

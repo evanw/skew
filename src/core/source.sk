@@ -1,4 +1,4 @@
-struct LineColumn {
+class LineColumn {
   final int line; // 0-based index
   final int column; // 0-based index
 }
