@@ -1,7 +1,9 @@
 var assert = require('assert');
 
-function registerTest(input, callback) {
-  it(input.replace(/\s+/g, ' '), callback);
+function registerTest(test) {
+  it(test.input.replace(/\s+/g, ' '), function() {
+    test.run();
+  });
 }
 
 function expect(output, expected) {
