@@ -150,7 +150,6 @@ export namespace frontend {
     switch (flags.target) {
       case "none" { target = .NONE; }
       case "js" { target = .JAVASCRIPT; }
-      case "c#" { target = .CSHARP; }
       case "lisp-ast" { target = .LISP_AST; }
       case "json-ast" { target = .JSON_AST; }
       case "xml-ast" { target = .XML_AST; }

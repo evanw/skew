@@ -1,4 +1,4 @@
-export namespace xml {
+export namespace lisp {
   export string dump(Node node) {
     var visitor = DumpVisitor();
     visitor.visit(node);
@@ -8,9 +8,6 @@ export namespace xml {
   class Emitter : IEmitter {
     CompilerOptions options;
 
-    override void patchProgram(Node program) {
-    }
-
     override List<Source> emitProgram(Node program) {
       List<Source> outputs = [];
       if (options.outputDirectory == "") {
@@ -18,7 +15,7 @@ export namespace xml {
       } else {
         for (var i = 0; i < program.children.size(); i++) {
           var file = program.children.get(i);
-          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".xml"), dump(file) + "\n"));
+          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".lisp"), dump(file) + "\n"));
         }
       }
       return outputs;
@@ -31,32 +28,28 @@ export namespace xml {
 
     void visit(Node node) {
       if (node == null) {
-        result += "<null/>";
+        result += "nil";
         return;
       }
-      result += "<" + node.kind.prettyPrint();
+      result += "(" + node.kind.prettyPrint();
       if (node.content != null) {
-        result += " content=";
         switch (node.content.type()) {
-          case .INT { result += simpleQuote(node.asInt().toString()); }
-          case .BOOL { result += simpleQuote(node.asBool().toString()); }
-          case .DOUBLE { result += simpleQuote(node.asDouble().toString()); }
-          case .STRING { result += quoteString(node.asString(), '"'); }
+          case .INT { result += " " + node.asInt(); }
+          case .BOOL { result += " " + node.asBool(); }
+          case .DOUBLE { result += " " + node.asDouble(); }
+          case .STRING { result += " " + quoteString(node.asString(), '"'); }
         }
       }
       if (node.hasChildren()) {
-        result += ">";
-        var inner = indent;
+        var old = indent;
         indent += "  ";
         for (var i = 0; i < node.children.size(); i++) {
           result += "\n" + indent;
           visit(node.children.get(i));
         }
-        indent = inner;
-        result += "\n" + indent + "</" + node.kind.prettyPrint() + ">";
-      } else {
-        result += "/>";
+        indent = old;
       }
+      result += ")";
     }
   }
 }

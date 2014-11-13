@@ -8,9 +8,6 @@ export namespace json {
   class Emitter : IEmitter {
     CompilerOptions options;
 
-    override void patchProgram(Node program) {
-    }
-
     override List<Source> emitProgram(Node program) {
       List<Source> outputs = [];
       if (options.outputDirectory == "") {

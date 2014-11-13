@@ -1749,10 +1749,9 @@
   TargetFormat = {
     NONE: 0,
     JAVASCRIPT: 1,
-    CSHARP: 2,
-    LISP_AST: 3,
-    JSON_AST: 4,
-    XML_AST: 5
+    LISP_AST: 2,
+    JSON_AST: 3,
+    XML_AST: 4
   };
   var in_TargetFormat = {};
   CompilerOptions = function() {
@@ -1787,7 +1786,7 @@
       this.source = new Source('<native>', this.contents);
       compiler.processInput(program, this.source);
       if (!(program.children.length > 0)) {
-        throw new Error('assert program.children.size() > 0; (src/compiler/compiler.sk:57:7)');
+        throw new Error('assert program.children.size() > 0; (src/compiler/compiler.sk:55:7)');
       }
       this.file = program.children[0];
     }
@@ -1804,7 +1803,6 @@
     this.functionInliningTime = 0;
     this.constantFoldingTime = 0;
     this.deadCodeRemovalTime = 0;
-    this.patchTime = 0;
     this.emitTime = 0;
     this.lineCountingTime = 0;
     this.totalTime = 0;
@@ -1837,9 +1835,6 @@
       text += '\n    Function inlining: ' + formatNumber(this.functionInliningTime) + 'ms';
       text += '\n    Constant folding: ' + formatNumber(this.constantFoldingTime) + 'ms';
       text += '\n    Dead code removal: ' + formatNumber(this.deadCodeRemovalTime) + 'ms';
-    }
-    if (this.patchTime > 0) {
-      text += '\n  Patch: ' + formatNumber(this.patchTime) + 'ms';
     }
     if (this.emitTime > 0) {
       text += '\n  Emit: ' + formatNumber(this.emitTime) + 'ms';
@@ -1883,9 +1878,6 @@
     switch (options.targetFormat) {
     case 1:
       program.appendChild(Compiler.nativeLibraryJS.compile(this, options));
-      break;
-    case 2:
-      program.appendChild(Compiler.nativeLibraryCS.compile(this, options));
       break;
     default:
       program.appendChild(Compiler.nativeLibrary.compile(this, options));
@@ -1932,25 +1924,19 @@
         emitter = new js.Emitter(resolver);
         break;
       case 2:
-        emitter = new cs.Emitter(resolver);
-        break;
-      case 3:
         emitter = new lisp.Emitter(options);
         break;
-      case 4:
+      case 3:
         emitter = new json.Emitter(options);
         break;
-      case 5:
+      case 4:
         emitter = new xml.Emitter(options);
         break;
       default:
-        throw new Error('assert false; (src/compiler/compiler.sk:221:19)');
+        throw new Error('assert false; (src/compiler/compiler.sk:214:19)');
         break;
       }
       if (emitter !== null) {
-        var patchStart = now();
-        emitter.patchProgram(program);
-        this.patchTime += now() - patchStart;
         var emitStart = now();
         outputs = emitter.emitProgram(program);
         this.emitTime += now() - emitStart;
@@ -1971,184 +1957,6 @@
       if (file !== null) {
         program.appendChild(file);
       }
-    }
-  };
-  json = {};
-  json.Emitter = function(_0) {
-    this.options = _0;
-  };
-  json.Emitter.prototype.patchProgram = function(program) {
-  };
-  json.Emitter.prototype.emitProgram = function(program) {
-    var outputs = [];
-    if (this.options.outputDirectory === '') {
-      outputs.push(new Source(this.options.outputFile, json.dump(program) + '\n'));
-    } else {
-      for (var i = 0; i < program.children.length; i = i + 1 | 0) {
-        var file = program.children[i];
-        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.json'), json.dump(file) + '\n'));
-      }
-    }
-    return outputs;
-  };
-  json.DumpVisitor = function() {
-    this.result = '';
-    this.indent = '';
-  };
-  json.DumpVisitor.prototype.visit = function(node) {
-    if (node === null) {
-      this.result += 'null';
-      return;
-    }
-    var outer = this.indent;
-    this.indent += '  ';
-    this.result += '{\n' + this.indent + '"kind": ' + simpleQuote(in_NodeKind.prettyPrint(node.kind));
-    if (node.content !== null) {
-      this.result += ',\n' + this.indent + '"content": ';
-      switch (node.content.type()) {
-      case 1:
-        this.result += node.asInt().toString();
-        break;
-      case 0:
-        this.result += node.asBool().toString();
-        break;
-      case 2:
-        this.result += node.asDouble().toString();
-        break;
-      case 3:
-        this.result += quoteString(node.asString(), 34);
-        break;
-      }
-    }
-    if (node.hasChildren()) {
-      this.result += ',\n' + this.indent + '"children": [';
-      var inner = this.indent;
-      this.indent += '  ';
-      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        if (i > 0) {
-          this.result += ',';
-        }
-        this.result += '\n' + this.indent;
-        this.visit(node.children[i]);
-      }
-      this.indent = inner;
-      this.result += '\n' + this.indent + ']';
-    }
-    this.indent = outer;
-    this.result += '\n' + this.indent + '}';
-  };
-  lisp = {};
-  lisp.Emitter = function(_0) {
-    this.options = _0;
-  };
-  lisp.Emitter.prototype.patchProgram = function(program) {
-  };
-  lisp.Emitter.prototype.emitProgram = function(program) {
-    var outputs = [];
-    if (this.options.outputDirectory === '') {
-      outputs.push(new Source(this.options.outputFile, lisp.dump(program) + '\n'));
-    } else {
-      for (var i = 0; i < program.children.length; i = i + 1 | 0) {
-        var file = program.children[i];
-        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.lisp'), lisp.dump(file) + '\n'));
-      }
-    }
-    return outputs;
-  };
-  lisp.DumpVisitor = function() {
-    this.result = '';
-    this.indent = '';
-  };
-  lisp.DumpVisitor.prototype.visit = function(node) {
-    if (node === null) {
-      this.result += 'nil';
-      return;
-    }
-    this.result += '(' + in_NodeKind.prettyPrint(node.kind);
-    if (node.content !== null) {
-      switch (node.content.type()) {
-      case 1:
-        this.result += ' ' + node.asInt();
-        break;
-      case 0:
-        this.result += ' ' + node.asBool();
-        break;
-      case 2:
-        this.result += ' ' + node.asDouble();
-        break;
-      case 3:
-        this.result += ' ' + quoteString(node.asString(), 34);
-        break;
-      }
-    }
-    if (node.hasChildren()) {
-      var old = this.indent;
-      this.indent += '  ';
-      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        this.result += '\n' + this.indent;
-        this.visit(node.children[i]);
-      }
-      this.indent = old;
-    }
-    this.result += ')';
-  };
-  xml = {};
-  xml.Emitter = function(_0) {
-    this.options = _0;
-  };
-  xml.Emitter.prototype.patchProgram = function(program) {
-  };
-  xml.Emitter.prototype.emitProgram = function(program) {
-    var outputs = [];
-    if (this.options.outputDirectory === '') {
-      outputs.push(new Source(this.options.outputFile, xml.dump(program) + '\n'));
-    } else {
-      for (var i = 0; i < program.children.length; i = i + 1 | 0) {
-        var file = program.children[i];
-        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.xml'), xml.dump(file) + '\n'));
-      }
-    }
-    return outputs;
-  };
-  xml.DumpVisitor = function() {
-    this.result = '';
-    this.indent = '';
-  };
-  xml.DumpVisitor.prototype.visit = function(node) {
-    if (node === null) {
-      this.result += '<null/>';
-      return;
-    }
-    this.result += '<' + in_NodeKind.prettyPrint(node.kind);
-    if (node.content !== null) {
-      this.result += ' content=';
-      switch (node.content.type()) {
-      case 1:
-        this.result += simpleQuote(node.asInt().toString());
-        break;
-      case 0:
-        this.result += simpleQuote(node.asBool().toString());
-        break;
-      case 2:
-        this.result += simpleQuote(node.asDouble().toString());
-        break;
-      case 3:
-        this.result += quoteString(node.asString(), 34);
-        break;
-      }
-    }
-    if (node.hasChildren()) {
-      this.result += '>';
-      var inner = this.indent;
-      this.indent += '  ';
-      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        this.result += '\n' + this.indent;
-        this.visit(node.children[i]);
-      }
-      this.indent = inner;
-      this.result += '\n' + this.indent + '</' + in_NodeKind.prettyPrint(node.kind) + '>';
-    } else {
-      this.result += '/>';
     }
   };
   var DiagnosticKind = {
@@ -2351,794 +2159,177 @@
     GB: 1073741824
   };
   var trace = {};
-  var cs = {};
-  cs.Emitter = function(_0) {
+  json = {};
+  json.Emitter = function(_0) {
+    this.options = _0;
+  };
+  json.Emitter.prototype.emitProgram = function(program) {
+    var outputs = [];
+    if (this.options.outputDirectory === '') {
+      outputs.push(new Source(this.options.outputFile, json.dump(program) + '\n'));
+    } else {
+      for (var i = 0; i < program.children.length; i = i + 1 | 0) {
+        var file = program.children[i];
+        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.json'), json.dump(file) + '\n'));
+      }
+    }
+    return outputs;
+  };
+  json.DumpVisitor = function() {
+    this.result = '';
     this.indent = '';
-    this.namespaceStack = [];
-    this.currentSource = null;
-    this.resolver = _0;
   };
-  cs.Emitter.prototype.patchProgram = function(program) {
-  };
-  cs.Emitter.prototype.emitProgram = function(program) {
-    if (cs.Emitter.isKeyword === null) {
-      cs.Emitter.isKeyword = cs.Emitter.createIsKeyword();
-    }
-    var collector = new Collector(program, SortTypes.DO_NOT_SORT);
-    this.currentSource = new Source(this.resolver.options.outputFile, '');
-    var prepend = this.resolver.options.prepend;
-    for (var i = 0; i < prepend.length; i = i + 1 | 0) {
-      this.currentSource.contents += prepend[i].contents;
-    }
-    this.emit(this.indent + 'using System;\n');
-    this.emit(this.indent + 'using System.Collections.Generic;\n');
-    for (var i = 0; i < collector.typeSymbols.length; i = i + 1 | 0) {
-      var type = collector.typeSymbols[i].type;
-      if (!type.symbol.isImport()) {
-        this.emitNode(type.symbol.node.firstNonExtensionSibling());
-      }
-    }
-    var functions = collector.freeFunctionSymbols;
-    var variables = collector.freeVariableSymbols;
-    if ((functions.length + variables.length | 0) > 0) {
-      for (var i = 0; i < functions.length; i = i + 1 | 0) {
-        this.emitNode(functions[i].node);
-      }
-      for (var i = 0; i < variables.length; i = i + 1 | 0) {
-        var symbol = variables[i];
-        if (!symbol.isObjectMember()) {
-          this.emitVariableStatement(symbol.node);
-        }
-      }
-    }
-    this.adjustNamespace(null);
-    var append = this.resolver.options.append;
-    for (var i = 0; i < append.length; i = i + 1 | 0) {
-      this.currentSource.contents += append[i].contents;
-    }
-    return [this.currentSource];
-  };
-  cs.Emitter.prototype.increaseIndent = function() {
-    this.indent += '  ';
-  };
-  cs.Emitter.prototype.decreaseIndent = function() {
-    this.indent = this.indent.slice(2, this.indent.length);
-  };
-  cs.Emitter.prototype.emit = function(text) {
-    this.currentSource.contents += text;
-  };
-  cs.Emitter.prototype.emitCommaSeparatedExpressions = function(nodes) {
-    for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-      if (i > 0) {
-        this.emit(', ');
-      }
-      this.emitExpression(nodes[i], Precedence.COMMA);
-    }
-  };
-  cs.Emitter.prototype.adjustNamespace = function(symbol) {
-    var target = [];
-    if (symbol !== null && cs.Emitter.putInGlobalNamespace(symbol)) {
-      target.push(null);
-    }
-    while (symbol !== null) {
-      if (symbol.kind === SymbolKind.NAMESPACE) {
-        target.unshift(symbol);
-      }
-      symbol = symbol.enclosingSymbol;
-    }
-    var same = 0;
-    while (same < target.length && same < this.namespaceStack.length && target[same] === this.namespaceStack[same]) {
-      same = same + 1 | 0;
-    }
-    while (this.namespaceStack.length > same) {
-      this.decreaseIndent();
-      this.emit(this.indent + '}\n');
-      this.namespaceStack.pop();
-    }
-    while (this.namespaceStack.length < target.length) {
-      symbol = target[this.namespaceStack.length];
-      this.namespaceStack.push(symbol);
-      if (symbol !== null) {
-        this.emit(this.indent + 'namespace ' + cs.Emitter.mangleName(symbol) + ' {\n');
-      } else {
-        this.emit(this.indent + 'partial class Global {\n');
-      }
-      this.increaseIndent();
-    }
-  };
-  cs.Emitter.prototype.emitNode = function(node) {
-    switch (node.kind) {
-    case 8:
-    case 9:
-      this.emitEnum(node);
-      break;
-    case 10:
-    case 11:
-      this.emitObject(node);
-      break;
-    case 13:
-    case 14:
-      this.emitFunction(node);
-      break;
-    case 23:
-      this.emitReturn(node);
-      break;
-    case 28:
-      this.emitExpressionStatement(node);
-      break;
-    case 18:
-      this.emitIf(node);
-      break;
-    case 19:
-      this.emitFor(node);
-      break;
-    case 20:
-      this.emitForEach(node);
-      break;
-    case 21:
-      this.emitWhile(node);
-      break;
-    case 22:
-      this.emitDoWhile(node);
-      break;
-    case 24:
-      this.emitBreak(node);
-      break;
-    case 25:
-      this.emitContinue(node);
-      break;
-    case 26:
-      this.emitAssert(node);
-      break;
-    case 6:
-      this.emitVariableCluster(node);
-      break;
-    case 15:
-      this.emitVariableStatement(node);
-      break;
-    }
-  };
-  cs.Emitter.prototype.recursiveEmitIfStatement = function(node) {
-    var trueBlock = node.ifTrue();
-    var falseBlock = node.ifFalse();
-    var trueStatement = trueBlock.singleStatement();
-    this.emit('if (');
-    this.emitExpression(node.ifTest(), Precedence.LOWEST);
-    this.emit(') ');
-    this.emitBlock(trueBlock);
-    if (falseBlock !== null) {
-      this.emit(' else ');
-      this.emitBlock(falseBlock);
-    }
-  };
-  cs.Emitter.prototype.emitIf = function(node) {
-    this.emit(this.indent);
-    this.recursiveEmitIfStatement(node);
-    this.emit('\n');
-  };
-  cs.Emitter.prototype.emitFor = function(node) {
-    var setup = node.forSetup();
-    var test = node.forTest();
-    var update = node.forUpdate();
-    this.emit(this.indent + 'for (');
-    if (setup !== null) {
-      if (setup.kind === NodeKind.VARIABLE_CLUSTER) {
-        this.emit('var ');
-        var nodes = setup.clusterVariables();
-        for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-          var variable = nodes[i];
-          if (i > 0) {
-            this.emit(', ');
-          }
-          this.emit(cs.Emitter.mangleName(variable.symbol));
-          this.emit(' = ');
-          this.emitExpression(variable.variableValue(), Precedence.COMMA);
-        }
-      } else {
-        this.emitExpression(setup, Precedence.LOWEST);
-      }
-    }
-    if (test !== null) {
-      this.emit('; ');
-      this.emitExpression(test, Precedence.LOWEST);
-    } else {
-      this.emit(';');
-    }
-    if (update !== null) {
-      this.emit('; ');
-      this.emitExpression(update, Precedence.LOWEST);
-    } else {
-      this.emit(';');
-    }
-    this.emit(')');
-    this.emitBlock(node.forBlock());
-    this.emit('\n');
-  };
-  cs.Emitter.prototype.emitForEach = function(node) {
-    var variable = node.forEachVariable();
-    var value = node.forEachValue();
-    this.emit(this.indent + 'for (var ');
-    this.emitNode(variable);
-    this.emit(' in ');
-    this.emitExpression(value, Precedence.LOWEST);
-    this.emit(')');
-    this.emitBlock(node.forEachBlock());
-    this.emit('\n');
-  };
-  cs.Emitter.prototype.emitWhile = function(node) {
-    this.emit(this.indent + 'while (');
-    this.emitExpression(node.whileTest(), Precedence.LOWEST);
-    this.emit(')');
-    this.emitBlock(node.whileBlock());
-    this.emit('\n');
-  };
-  cs.Emitter.prototype.emitDoWhile = function(node) {
-    this.emit(this.indent + 'do');
-    this.emitBlock(node.whileBlock());
-    this.emit(' while (');
-    this.emitExpression(node.whileTest(), Precedence.LOWEST);
-    this.emit(');\n');
-  };
-  cs.Emitter.prototype.emitBreak = function(node) {
-    this.emit(this.indent + 'break;\n');
-  };
-  cs.Emitter.prototype.emitContinue = function(node) {
-    this.emit(this.indent + 'continue;\n');
-  };
-  cs.Emitter.prototype.emitAssert = function(node) {
-    var value = node.assertValue();
-    this.emit(this.indent + 'Debug.Assert(');
-    this.emitExpression(value, Precedence.COMMA);
-    this.emit(', ' + quoteString(node.range + ' (' + node.range.locationString() + ')', 34) + ');\n');
-  };
-  cs.Emitter.prototype.emitNameWithParameters = function(symbol) {
-    this.emit(cs.Emitter.mangleName(symbol));
-    if (symbol.hasParameters()) {
-      this.emit('<');
-      for (var i = 0; i < symbol.parameters.length; i = i + 1 | 0) {
-        if (i > 0) {
-          this.emit(', ');
-        }
-        this.emit(cs.Emitter.mangleName(symbol.parameters[i]));
-      }
-      this.emit('>');
-    }
-  };
-  cs.Emitter.prototype.emitEnum = function(node) {
-    var symbol = node.symbol;
-    var type = symbol.type;
-    this.adjustNamespace(symbol);
-    this.emit(this.indent + 'public enum ' + cs.Emitter.mangleName(symbol) + ' {\n');
-    this.increaseIndent();
-    var members = type.members.values();
-    for (var i = 0; i < members.length; i = i + 1 | 0) {
-      var symbol = members[i].symbol;
-      if (symbol.isEnumValue()) {
-        this.emit(this.indent + cs.Emitter.mangleName(symbol) + ' = ' + symbol.constant.asInt() + ',\n');
-      }
-    }
-    this.decreaseIndent();
-    this.emit(this.indent + '}\n');
-  };
-  cs.Emitter.prototype.emitObject = function(node) {
-    var symbol = node.symbol;
-    var type = symbol.type;
-    this.adjustNamespace(symbol);
-    this.emit(this.indent + 'public ');
-    if (symbol.isAbstract()) {
-      this.emit('abstract ');
-    }
-    this.emit(symbol.kind === SymbolKind.CLASS ? 'class ' : 'interface ');
-    this.emitNameWithParameters(symbol);
-    if (type.hasRelevantTypes()) {
-      for (var i = 0; i < type.relevantTypes.length; i = i + 1 | 0) {
-        this.emit(i === 0 ? ' : ' : ', ');
-        this.emit(cs.Emitter.mangleName(type.relevantTypes[i].symbol));
-      }
-    }
-    this.emit(' {\n');
-    this.increaseIndent();
-    var members = type.members.values();
-    for (var i = 0; i < members.length; i = i + 1 | 0) {
-      var symbol = members[i].symbol;
-      if (symbol.enclosingSymbol === type.symbol && symbol.node !== null) {
-        this.emitNode(symbol.node);
-      }
-    }
-    this.decreaseIndent();
-    this.emit(this.indent + '}\n');
-  };
-  cs.Emitter.prototype.emitExpressionStatement = function(node) {
-    this.emit(this.indent);
-    this.emitExpression(node.expressionValue(), Precedence.LOWEST);
-    this.emit(';\n');
-  };
-  cs.Emitter.prototype.emitReturn = function(node) {
-    var value = node.returnValue();
-    this.emit(this.indent + 'return');
-    if (value !== null) {
-      this.emit(' ');
-      this.emitExpression(value, Precedence.LOWEST);
-    }
-    this.emit(';\n');
-  };
-  cs.Emitter.prototype.emitArgumentVariables = function(nodes) {
-    this.emit('(');
-    for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-      var argument = nodes[i].symbol;
-      if (i > 0) {
-        this.emit(', ');
-      }
-      this.emitType(argument.type);
-      this.emit(' ');
-      this.emit(cs.Emitter.mangleName(argument));
-    }
-    this.emit(')');
-  };
-  cs.Emitter.prototype.emitFunction = function(node) {
-    var symbol = node.symbol;
-    if (symbol.isOperator()) {
+  json.DumpVisitor.prototype.visit = function(node) {
+    if (node === null) {
+      this.result += 'null';
       return;
     }
-    var block = node.functionBlock();
-    var isInterface = symbol.enclosingSymbol.kind === SymbolKind.INTERFACE;
-    this.adjustNamespace(symbol);
-    this.emit(this.indent);
-    if (!isInterface) {
-      this.emit('public ');
-    }
-    if (symbol.isStatic() || symbol.kind === SymbolKind.GLOBAL_FUNCTION) {
-      this.emit('static ');
-    }
-    if (symbol.isVirtual() && !isInterface) {
-      this.emit(symbol.isOverride() && symbol.overriddenMember.symbol.enclosingSymbol.kind !== SymbolKind.INTERFACE ? 'override ' : block === null ? 'abstract ' : 'virtual ');
-    }
-    if (!in_SymbolKind.isConstructor(symbol.kind)) {
-      this.emitType(symbol.type.resultType());
-      this.emit(' ');
-    }
-    this.emitNameWithParameters(symbol);
-    this.emitArgumentVariables(node.functionArguments().children);
-    if (node.kind === NodeKind.CONSTRUCTOR) {
-      var superInitializer = node.superInitializer();
-      if (superInitializer !== null) {
-        this.emit(' : ');
-        this.emitExpression(superInitializer, Precedence.LOWEST);
+    var outer = this.indent;
+    this.indent += '  ';
+    this.result += '{\n' + this.indent + '"kind": ' + simpleQuote(in_NodeKind.prettyPrint(node.kind));
+    if (node.content !== null) {
+      this.result += ',\n' + this.indent + '"content": ';
+      switch (node.content.type()) {
+      case 1:
+        this.result += node.asInt().toString();
+        break;
+      case 0:
+        this.result += node.asBool().toString();
+        break;
+      case 2:
+        this.result += node.asDouble().toString();
+        break;
+      case 3:
+        this.result += quoteString(node.asString(), 34);
+        break;
       }
     }
-    if (block === null) {
-      this.emit(';\n');
-    } else {
-      this.emit(' {\n');
-      this.increaseIndent();
-      if (node.kind === NodeKind.CONSTRUCTOR) {
-        var memberInitializers = node.memberInitializers();
-        if (memberInitializers !== null) {
-          for (var i = 0; i < memberInitializers.children.length; i = i + 1 | 0) {
-            var child = memberInitializers.children[i];
-            this.emit(this.indent);
-            this.emit(cs.Emitter.mangleName(child.memberInitializerName().symbol) + ' = ');
-            this.emitExpression(child.memberInitializerValue(), Precedence.ASSIGN);
-            this.emit(';\n');
-          }
-        }
-      }
-      if (block.hasChildren()) {
-        for (var i = 0; i < block.children.length; i = i + 1 | 0) {
-          this.emitNode(block.children[i]);
-        }
-      }
-      this.decreaseIndent();
-      this.emit(this.indent + '}\n');
-    }
-  };
-  cs.Emitter.prototype.emitType = function(type) {
-    if (type.isFunction()) {
-      var resultType = type.resultType();
-      var argumentTypes = type.argumentTypes();
-      var returnsVoid = resultType.isVoid(this.resolver.cache);
-      if (returnsVoid && argumentTypes.length === 0) {
-        this.emit('Action');
-      } else {
-        this.emit(returnsVoid ? 'Action<' : 'Func<');
-        for (var i = 0; i < argumentTypes.length; i = i + 1 | 0) {
-          if (i > 0) {
-            this.emit(', ');
-          }
-          this.emitType(argumentTypes[i]);
-        }
-        if (!returnsVoid) {
-          if (argumentTypes.length > 0) {
-            this.emit(', ');
-          }
-          this.emitType(resultType);
-        }
-        this.emit('>');
-      }
-    } else {
-      this.emit(cs.Emitter.fullName(type.symbol));
-      if (type.isParameterized()) {
-        this.emit('<');
-        for (var i = 0; i < type.symbol.parameters.length; i = i + 1 | 0) {
-          if (i > 0) {
-            this.emit(', ');
-          }
-          this.emitType(type.substitutions[i]);
-        }
-        this.emit('>');
-      }
-    }
-  };
-  cs.Emitter.prototype.emitBlock = function(node) {
-    this.emit('{\n');
     if (node.hasChildren()) {
-      this.increaseIndent();
+      this.result += ',\n' + this.indent + '"children": [';
+      var inner = this.indent;
+      this.indent += '  ';
       for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        this.emitNode(node.children[i]);
+        if (i > 0) {
+          this.result += ',';
+        }
+        this.result += '\n' + this.indent;
+        this.visit(node.children[i]);
       }
-      this.decreaseIndent();
+      this.indent = inner;
+      this.result += '\n' + this.indent + ']';
     }
-    this.emit(this.indent + '}');
+    this.indent = outer;
+    this.result += '\n' + this.indent + '}';
   };
-  cs.Emitter.prototype.emitExpression = function(node, precedence) {
-    switch (node.kind) {
-    case 32:
-      this.emit(node.symbol === null ? node.asString() : cs.Emitter.fullName(node.symbol));
-      break;
-    case 33:
-      this.emitType(node.type);
-      break;
-    case 34:
-      this.emit('this');
-      break;
-    case 35:
-      this.emitHook(node, precedence);
-      break;
-    case 36:
-      this.emit('null');
-      break;
-    case 37:
-      this.emit(node.asBool().toString());
-      break;
-    case 38:
-      this.emit(node.asInt().toString());
-      break;
-    case 39:
-    case 40:
-      this.emit(node.asDouble().toString());
-      break;
-    case 41:
-      this.emit(quoteString(node.asString(), 34));
-      break;
-    case 42:
-      this.emitList(node);
-      break;
-    case 43:
-      this.emitDot(node);
-      break;
-    case 44:
-      this.emitCall(node);
-      break;
-    case 45:
-      this.emitSuperCall(node);
-      break;
-    case 47:
-      this.emitSequence(node, precedence);
-      break;
-    case 51:
-      this.emitExpression(node.untypedValue(), precedence);
-      break;
-    case 70:
-      this.emitIndex(node, precedence);
-      break;
-    case 92:
-      this.emitTernary(node, precedence);
-      break;
-    case 49:
-    case 50:
-      this.emitCast(node, precedence);
-      break;
-    case 53:
-    case 54:
-    case 55:
-    case 56:
-    case 57:
-    case 58:
-    case 59:
-    case 60:
-      this.emitUnary(node, precedence);
-      break;
-    case 61:
-    case 81:
-    case 82:
-    case 83:
-    case 84:
-    case 85:
-    case 86:
-    case 87:
-    case 88:
-    case 89:
-    case 90:
-    case 91:
-    case 62:
-    case 63:
-    case 64:
-    case 65:
-    case 66:
-    case 67:
-    case 68:
-    case 69:
-    case 71:
-    case 72:
-    case 73:
-    case 74:
-    case 75:
-    case 76:
-    case 77:
-    case 78:
-    case 79:
-    case 80:
-      this.emitBinary(node, precedence);
-      break;
-    default:
-      this.emit('<' + in_NodeKind.toString(node.kind) + '>');
-      break;
-    }
+  lisp = {};
+  lisp.Emitter = function(_0) {
+    this.options = _0;
   };
-  cs.Emitter.prototype.emitVariable = function(node) {
-    var value = node.variableValue();
-    var symbol = node.symbol;
-    if (symbol.isStatic() || symbol.kind === SymbolKind.GLOBAL_VARIABLE) {
-      this.emit('static ');
-    }
-    if (symbol.isObjectMember()) {
-      this.emit('public ');
-    }
-    this.emitType(symbol.type);
-    this.emit(' ' + cs.Emitter.mangleName(symbol));
-    if (value !== null) {
-      this.emit(' = ');
-      this.emitExpression(value, Precedence.COMMA);
-    }
-  };
-  cs.Emitter.prototype.emitVariableStatement = function(node) {
-    if (in_SymbolKind.isGlobal(node.symbol.kind)) {
-      this.adjustNamespace(node.symbol);
-    }
-    this.emit(this.indent);
-    this.emitVariable(node);
-    this.emit(';\n');
-  };
-  cs.Emitter.prototype.emitVariableCluster = function(node) {
-    var variables = node.clusterVariables();
-    for (var i = 0; i < variables.length; i = i + 1 | 0) {
-      this.emitVariableStatement(variables[i]);
-    }
-  };
-  cs.Emitter.prototype.emitSequence = function(node, precedence) {
-    if (Precedence.COMMA <= precedence) {
-      this.emit('(');
-    }
-    this.emitCommaSeparatedExpressions(node.children);
-    if (Precedence.COMMA <= precedence) {
-      this.emit(')');
-    }
-  };
-  cs.Emitter.prototype.emitUnary = function(node, precedence) {
-    var value = node.unaryValue();
-    var info = operatorInfo.get(node.kind);
-    if (info.precedence < precedence) {
-      this.emit('(');
-    }
-    var isPostfix = info.precedence === Precedence.UNARY_POSTFIX;
-    if (!isPostfix) {
-      this.emit(info.text);
-      if (node.kind === NodeKind.POSITIVE && (value.kind === NodeKind.POSITIVE || value.kind === NodeKind.PREFIX_INCREMENT) || node.kind === NodeKind.NEGATIVE && (value.kind === NodeKind.NEGATIVE || value.kind === NodeKind.PREFIX_DECREMENT || value.kind === NodeKind.INT && value.asInt() < 0)) {
-        this.emit(' ');
-      }
-    }
-    this.emitExpression(value, info.precedence);
-    if (isPostfix) {
-      this.emit(info.text);
-    }
-    if (info.precedence < precedence) {
-      this.emit(')');
-    }
-  };
-  cs.Emitter.prototype.emitBinary = function(node, precedence) {
-    var kind = node.kind;
-    var left = node.binaryLeft();
-    var right = node.binaryRight();
-    var info = operatorInfo.get(kind);
-    if (info.precedence < precedence) {
-      this.emit('(');
-    }
-    this.emitExpression(left, in_Precedence.incrementIfRightAssociative(info.precedence, info.associativity));
-    this.emit(' ' + info.text + ' ');
-    this.emitExpression(right, in_Precedence.incrementIfLeftAssociative(info.precedence, info.associativity));
-    if (info.precedence < precedence) {
-      this.emit(')');
-    }
-  };
-  cs.Emitter.prototype.emitIndex = function(node, precedence) {
-    this.emitExpression(node.binaryLeft(), Precedence.MEMBER);
-    this.emit('[');
-    this.emitExpression(node.binaryRight(), Precedence.LOWEST);
-    this.emit(']');
-  };
-  cs.Emitter.prototype.emitTernary = function(node, precedence) {
-    if (Precedence.ASSIGN < precedence) {
-      this.emit('(');
-    }
-    this.emitExpression(node.ternaryLeft(), Precedence.MEMBER);
-    this.emit('[');
-    this.emitExpression(node.ternaryMiddle(), Precedence.LOWEST);
-    this.emit('] = ');
-    this.emitExpression(node.ternaryRight(), Precedence.ASSIGN);
-    if (Precedence.ASSIGN < precedence) {
-      this.emit(')');
-    }
-  };
-  cs.Emitter.prototype.emitList = function(node) {
-    var values = node.listValues();
-    this.emit('new ');
-    this.emitType(node.type);
-    if (values.length > 0) {
-      this.emit(' { ');
-      this.emitCommaSeparatedExpressions(values);
-      this.emit(' }');
+  lisp.Emitter.prototype.emitProgram = function(program) {
+    var outputs = [];
+    if (this.options.outputDirectory === '') {
+      outputs.push(new Source(this.options.outputFile, lisp.dump(program) + '\n'));
     } else {
-      this.emit('()');
-    }
-  };
-  cs.Emitter.prototype.emitDot = function(node) {
-    this.emitExpression(node.dotTarget(), Precedence.MEMBER);
-    this.emit('.');
-    var name = node.dotName();
-    this.emit(name.symbol === null ? name.asString() : in_SymbolKind.isInstance(name.symbol.kind) ? cs.Emitter.mangleName(name.symbol) : cs.Emitter.fullName(name.symbol));
-  };
-  cs.Emitter.prototype.emitSuperCall = function(node) {
-    this.emit('base(');
-    this.emitCommaSeparatedExpressions(node.superCallArguments());
-    this.emit(')');
-  };
-  cs.Emitter.prototype.emitCall = function(node) {
-    var value = node.callValue();
-    if (value.kind === NodeKind.NAME && value.symbol !== null && value.symbol.isOperator()) {
-      this.emit(value.asString() + ' ');
-      this.emitExpression(node.callArguments()[0], Precedence.UNARY_POSTFIX);
-    } else {
-      if (in_NodeKind.isType(value.kind)) {
-        this.emit('new ');
+      for (var i = 0; i < program.children.length; i = i + 1 | 0) {
+        var file = program.children[i];
+        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.lisp'), lisp.dump(file) + '\n'));
       }
-      this.emitExpression(value, Precedence.UNARY_POSTFIX);
-      this.emit('(');
-      this.emitCommaSeparatedExpressions(node.callArguments());
-      this.emit(')');
     }
+    return outputs;
   };
-  cs.Emitter.prototype.emitCast = function(node, precedence) {
-    this.emitExpression(node.castValue(), precedence);
+  lisp.DumpVisitor = function() {
+    this.result = '';
+    this.indent = '';
   };
-  cs.Emitter.prototype.emitHook = function(node, precedence) {
-    if (Precedence.ASSIGN < precedence) {
-      this.emit('(');
+  lisp.DumpVisitor.prototype.visit = function(node) {
+    if (node === null) {
+      this.result += 'nil';
+      return;
     }
-    this.emitExpression(node.hookTest(), Precedence.LOGICAL_OR);
-    this.emit(' ? ');
-    this.emitExpression(node.hookTrue(), Precedence.ASSIGN);
-    this.emit(' : ');
-    this.emitExpression(node.hookFalse(), Precedence.ASSIGN);
-    if (Precedence.ASSIGN < precedence) {
-      this.emit(')');
+    this.result += '(' + in_NodeKind.prettyPrint(node.kind);
+    if (node.content !== null) {
+      switch (node.content.type()) {
+      case 1:
+        this.result += ' ' + node.asInt();
+        break;
+      case 0:
+        this.result += ' ' + node.asBool();
+        break;
+      case 2:
+        this.result += ' ' + node.asDouble();
+        break;
+      case 3:
+        this.result += ' ' + quoteString(node.asString(), 34);
+        break;
+      }
     }
+    if (node.hasChildren()) {
+      var old = this.indent;
+      this.indent += '  ';
+      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+        this.result += '\n' + this.indent;
+        this.visit(node.children[i]);
+      }
+      this.indent = old;
+    }
+    this.result += ')';
   };
-  cs.Emitter.createIsKeyword = function() {
-    var result = new StringMap();
-    result.set('abstract', true);
-    result.set('as', true);
-    result.set('base', true);
-    result.set('bool', true);
-    result.set('break', true);
-    result.set('byte', true);
-    result.set('case', true);
-    result.set('catch', true);
-    result.set('char', true);
-    result.set('checked', true);
-    result.set('class', true);
-    result.set('const', true);
-    result.set('continue', true);
-    result.set('decimal', true);
-    result.set('default', true);
-    result.set('delegate', true);
-    result.set('do', true);
-    result.set('double', true);
-    result.set('else', true);
-    result.set('enum', true);
-    result.set('event', true);
-    result.set('explicit', true);
-    result.set('extern', true);
-    result.set('false', true);
-    result.set('finally', true);
-    result.set('fixed', true);
-    result.set('float', true);
-    result.set('for', true);
-    result.set('foreach', true);
-    result.set('goto', true);
-    result.set('if', true);
-    result.set('implicit', true);
-    result.set('in', true);
-    result.set('int', true);
-    result.set('interface', true);
-    result.set('internal', true);
-    result.set('is', true);
-    result.set('lock', true);
-    result.set('long', true);
-    result.set('namespace', true);
-    result.set('new', true);
-    result.set('null', true);
-    result.set('object', true);
-    result.set('operator', true);
-    result.set('out', true);
-    result.set('override', true);
-    result.set('params', true);
-    result.set('private', true);
-    result.set('protected', true);
-    result.set('public', true);
-    result.set('readonly', true);
-    result.set('ref', true);
-    result.set('return', true);
-    result.set('sbyte', true);
-    result.set('sealed', true);
-    result.set('short', true);
-    result.set('sizeof', true);
-    result.set('stackalloc', true);
-    result.set('static', true);
-    result.set('string', true);
-    result.set('struct', true);
-    result.set('switch', true);
-    result.set('this', true);
-    result.set('throw', true);
-    result.set('true', true);
-    result.set('try', true);
-    result.set('typeof', true);
-    result.set('uint', true);
-    result.set('ulong', true);
-    result.set('unchecked', true);
-    result.set('unsafe', true);
-    result.set('ushort', true);
-    result.set('using', true);
-    result.set('virtual', true);
-    result.set('void', true);
-    result.set('volatile', true);
-    result.set('while', true);
-    return result;
+  xml = {};
+  xml.Emitter = function(_0) {
+    this.options = _0;
   };
-  cs.Emitter.mangleName = function(symbol) {
-    if (in_SymbolKind.isConstructor(symbol.kind)) {
-      return cs.Emitter.mangleName(symbol.enclosingSymbol);
+  xml.Emitter.prototype.emitProgram = function(program) {
+    var outputs = [];
+    if (this.options.outputDirectory === '') {
+      outputs.push(new Source(this.options.outputFile, xml.dump(program) + '\n'));
+    } else {
+      for (var i = 0; i < program.children.length; i = i + 1 | 0) {
+        var file = program.children[i];
+        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.xml'), xml.dump(file) + '\n'));
+      }
     }
-    if (symbol.isImportOrExport()) {
-      return symbol.name;
-    }
-    if (cs.Emitter.isKeyword.has(symbol.name)) {
-      return '_' + symbol.name + '_';
-    }
-    return symbol.name;
+    return outputs;
   };
-  cs.Emitter.fullName = function(symbol) {
-    var enclosingSymbol = symbol.enclosingSymbol;
-    var name = cs.Emitter.mangleName(symbol);
-    if (cs.Emitter.putInGlobalNamespace(symbol)) {
-      name = 'Global.' + name;
-    }
-    if (!in_SymbolKind.isInstance(symbol.kind) && !in_SymbolKind.isParameter(symbol.kind) && enclosingSymbol !== null && !in_SymbolKind.isGlobalNamespace(enclosingSymbol.kind)) {
-      return cs.Emitter.fullName(enclosingSymbol) + '.' + name;
-    }
-    return name;
+  xml.DumpVisitor = function() {
+    this.result = '';
+    this.indent = '';
   };
-  cs.Emitter.putInGlobalNamespace = function(symbol) {
-    return in_SymbolKind.isGlobal(symbol.kind) && !symbol.isObjectMember();
+  xml.DumpVisitor.prototype.visit = function(node) {
+    if (node === null) {
+      this.result += '<null/>';
+      return;
+    }
+    this.result += '<' + in_NodeKind.prettyPrint(node.kind);
+    if (node.content !== null) {
+      this.result += ' content=';
+      switch (node.content.type()) {
+      case 1:
+        this.result += simpleQuote(node.asInt().toString());
+        break;
+      case 0:
+        this.result += simpleQuote(node.asBool().toString());
+        break;
+      case 2:
+        this.result += simpleQuote(node.asDouble().toString());
+        break;
+      case 3:
+        this.result += quoteString(node.asString(), 34);
+        break;
+      }
+    }
+    if (node.hasChildren()) {
+      this.result += '>';
+      var inner = this.indent;
+      this.indent += '  ';
+      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+        this.result += '\n' + this.indent;
+        this.visit(node.children[i]);
+      }
+      this.indent = inner;
+      this.result += '\n' + this.indent + '</' + in_NodeKind.prettyPrint(node.kind) + '>';
+    } else {
+      this.result += '/>';
+    }
   };
   var in_io = {};
   in_io.Color = {
@@ -3200,6 +2391,7 @@
     this.patcher.run(program);
   };
   js.Emitter.prototype.emitProgram = function(program) {
+    this.patchProgram(program);
     var collector = new Collector(program, SortTypes.SORT_BY_INHERITANCE_AND_CONTAINMENT);
     this.currentSource = new Source(this.options.outputFile, '');
     for (var i = 0; i < this.options.prepend.length; i = i + 1 | 0) {
@@ -3466,7 +2658,7 @@
     case 31:
       break;
     default:
-      throw new Error('assert false; (src/js/emitter.sk:323:19)');
+      throw new Error('assert false; (src/js/emitter.sk:325:19)');
       break;
     }
   };
@@ -3841,7 +3033,7 @@
       this.emitBinary(node, precedence);
       break;
     default:
-      throw new Error('assert false; (src/js/emitter.sk:660:11)');
+      throw new Error('assert false; (src/js/emitter.sk:662:11)');
       break;
     }
   };
@@ -9293,22 +8485,7 @@
     operatorInfo.set(NodeKind.ASSIGN_INDEX, new OperatorInfo('[]=', Precedence.ASSIGN, Associativity.RIGHT));
   }
   in_TargetFormat.shouldRunResolver = function($this) {
-    return $this >= TargetFormat.NONE && $this <= TargetFormat.CSHARP;
-  };
-  json.dump = function(node) {
-    var visitor = new json.DumpVisitor();
-    visitor.visit(node);
-    return visitor.result;
-  };
-  lisp.dump = function(node) {
-    var visitor = new lisp.DumpVisitor();
-    visitor.visit(node);
-    return visitor.result;
-  };
-  xml.dump = function(node) {
-    var visitor = new xml.DumpVisitor();
-    visitor.visit(node);
-    return visitor.result;
+    return $this >= TargetFormat.NONE && $this <= TargetFormat.JAVASCRIPT;
   };
   function hashCombine(left, right) {
     return left ^ ((right - 1640531527 | 0) + (left << 6) | 0) + (left >> 2);
@@ -9457,6 +8634,21 @@
   };
   trace.log = function(text) {
   };
+  json.dump = function(node) {
+    var visitor = new json.DumpVisitor();
+    visitor.visit(node);
+    return visitor.result;
+  };
+  lisp.dump = function(node) {
+    var visitor = new lisp.DumpVisitor();
+    visitor.visit(node);
+    return visitor.result;
+  };
+  xml.dump = function(node) {
+    var visitor = new xml.DumpVisitor();
+    visitor.visit(node);
+    return visitor.result;
+  };
   in_io.printWithColor = function(color, text) {
     io.setColor(color);
     io.print(text);
@@ -9551,9 +8743,6 @@
       break;
     case 'js':
       target = TargetFormat.JAVASCRIPT;
-      break;
-    case 'c#':
-      target = TargetFormat.CSHARP;
       break;
     case 'lisp-ast':
       target = TargetFormat.LISP_AST;
@@ -11222,9 +10411,6 @@
   in_SymbolKind.isVariable = function($this) {
     return $this >= SymbolKind.LOCAL_VARIABLE && $this <= SymbolKind.INSTANCE_VARIABLE;
   };
-  in_SymbolKind.isGlobal = function($this) {
-    return $this === SymbolKind.GLOBAL_FUNCTION || $this === SymbolKind.GLOBAL_VARIABLE;
-  };
   in_SymbolKind.isInstance = function($this) {
     return $this === SymbolKind.INSTANCE_FUNCTION || $this === SymbolKind.INSTANCE_VARIABLE || $this === SymbolKind.CONSTRUCTOR_FUNCTION;
   };
@@ -11428,14 +10614,11 @@
   var operatorInfo = null;
   Compiler.nativeLibrary = new CachedSource('\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class string {\n  import int size();\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  import static string fromCodeUnit(int value);\n  import string get(int index);\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nclass IntMap<T> {\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n');
   Compiler.nativeLibraryJS = new CachedSource('\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class String {\n  import static string fromCharCode(int value);\n}\n\nimport class Object {\n  import static Object create(Object prototype);\n}\n\nimport namespace operators {\n  import void delete(int value);\n  import void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport class string {\n  inline int size() { return untyped(this).length; }\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).length; }\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  inline void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n  inline T get(string key) { return untyped(table)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(string key, T value) { untyped(table)[key] = value; }\n  inline bool has(string key) { return key in untyped(table); }\n  inline void remove(string key) { operators.delete(untyped(table)[key]); }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n  inline T get(int key) { return untyped(table)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(int key, T value) { untyped(table)[key] = value; }\n  inline bool has(int key) { return key in untyped(table); }\n  inline void remove(int key) { operators.delete(untyped(table)[key]); }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n');
-  Compiler.nativeLibraryCS = new CachedSource('\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class string {\n  inline int size() { return untyped(this).Length; }\n  import string slice(int start, int end);\n  inline int indexOf(string value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(string value) { return untyped(this).LastIndexOf(value); }\n  inline string toLowerCase() { return untyped(this).ToLower(); }\n  inline string toUpperCase() { return untyped(this).ToUpper(); }\n  import static string fromCodeUnit(int value);\n  inline string get(int index) { return untyped(this)[index]; }\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).Count; }\n  inline void push(T value) { untyped(this).Add(value); }\n  inline void unshift(T value) { insert(0, value); }\n  inline List<T> slice(int start, int end) { return untyped(this).Take(end).Skip(start).ToList(); }\n  inline int indexOf(T value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(T value) { return untyped(this).LastIndexOf(value); }\n  inline T shift() { return remove(0); }\n  inline T pop() { return remove(size() - 1); }\n  inline void reverse() { untyped(this).Reverse(); }\n  import void sort(IComparison<T> comparison);\n  inline List<T> clone() { return untyped(this).ToList(); }\n  inline T remove(int index) { var value = get(index); untyped(this).RemoveAt(index); return value; }\n  inline void insert(int index, T value) { untyped(this).Insert(index, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nimport namespace operators {\n  import void out(int value);\n}\n\nimport class Dictionary<K, V> {\n  new();\n}\n\nclass StringMap<T> {\n  var map = Dictionary<string, T>();\n  inline T get(string key) { return untyped(map)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(string key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(string key) { return untyped(map).ContainsKey(key); }\n  inline void remove(string key) { return untyped(map).Remove(key); }\n  inline List<string> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline StringMap<T> clone() {\n    var clone = StringMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var map = Dictionary<int, T>();\n  inline T get(int key) { return untyped(map)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(int key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(int key) { return untyped(map).ContainsKey(key); }\n  inline void remove(int key) { return untyped(map).Remove(key); }\n  inline List<int> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline IntMap<T> clone() {\n    var clone = IntMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n');
   var NATIVE_LIBRARY = '\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class string {\n  import int size();\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  import static string fromCodeUnit(int value);\n  import string get(int index);\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nclass IntMap<T> {\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n';
   Range.EMPTY = new Range(null, 0, 0);
   var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   var HEX = '0123456789ABCDEF';
   trace.GENERICS = false;
-  cs.Emitter.isKeyword = null;
-  var NATIVE_LIBRARY_CS = '\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class string {\n  inline int size() { return untyped(this).Length; }\n  import string slice(int start, int end);\n  inline int indexOf(string value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(string value) { return untyped(this).LastIndexOf(value); }\n  inline string toLowerCase() { return untyped(this).ToLower(); }\n  inline string toUpperCase() { return untyped(this).ToUpper(); }\n  import static string fromCodeUnit(int value);\n  inline string get(int index) { return untyped(this)[index]; }\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).Count; }\n  inline void push(T value) { untyped(this).Add(value); }\n  inline void unshift(T value) { insert(0, value); }\n  inline List<T> slice(int start, int end) { return untyped(this).Take(end).Skip(start).ToList(); }\n  inline int indexOf(T value) { return untyped(this).IndexOf(value); }\n  inline int lastIndexOf(T value) { return untyped(this).LastIndexOf(value); }\n  inline T shift() { return remove(0); }\n  inline T pop() { return remove(size() - 1); }\n  inline void reverse() { untyped(this).Reverse(); }\n  import void sort(IComparison<T> comparison);\n  inline List<T> clone() { return untyped(this).ToList(); }\n  inline T remove(int index) { var value = get(index); untyped(this).RemoveAt(index); return value; }\n  inline void insert(int index, T value) { untyped(this).Insert(index, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nimport namespace operators {\n  import void out(int value);\n}\n\nimport class Dictionary<K, V> {\n  new();\n}\n\nclass StringMap<T> {\n  var map = Dictionary<string, T>();\n  inline T get(string key) { return untyped(map)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(string key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(string key) { return untyped(map).ContainsKey(key); }\n  inline void remove(string key) { return untyped(map).Remove(key); }\n  inline List<string> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline StringMap<T> clone() {\n    var clone = StringMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var map = Dictionary<int, T>();\n  inline T get(int key) { return untyped(map)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { untyped(map).TryGetValue(key, operators.out(untyped(defaultValue))); return defaultValue; }\n  inline void set(int key, T value) { return untyped(map).Add(key, value); }\n  inline bool has(int key) { return untyped(map).ContainsKey(key); }\n  inline void remove(int key) { return untyped(map).Remove(key); }\n  inline List<int> keys() { return untyped(map).Keys.ToList(); }\n  inline List<T> values() { return untyped(map).Keys.ToList(); }\n  inline IntMap<T> clone() {\n    var clone = IntMap<T>(), list = keys();\n    for (var i = 0; i < list.size(); i++) {\n      var key = list.get(i);\n      clone.set(key, get(key));\n    }\n    return clone;\n  }\n}\n\n// TODO: Rename this to "math" since namespaces should be lower case\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  import int imin(int a, int b);\n  import int imax(int a, int b);\n}\n';
   js.Emitter.isKeyword = null;
   var NATIVE_LIBRARY_JS = '\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class String {\n  import static string fromCharCode(int value);\n}\n\nimport class Object {\n  import static Object create(Object prototype);\n}\n\nimport namespace operators {\n  import void delete(int value);\n  import void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport class string {\n  inline int size() { return untyped(this).length; }\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).length; }\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  inline void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n  inline T get(string key) { return untyped(table)[key]; }\n  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(string key, T value) { untyped(table)[key] = value; }\n  inline bool has(string key) { return key in untyped(table); }\n  inline void remove(string key) { operators.delete(untyped(table)[key]); }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n  inline T get(int key) { return untyped(table)[key]; }\n  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }\n  inline void set(int key, T value) { untyped(table)[key] = value; }\n  inline bool has(int key) { return key in untyped(table); }\n  inline void remove(int key) { operators.delete(untyped(table)[key]); }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace Math {\n  import final double E;\n  import final double PI;\n  import final double NAN;\n  import final double INFINITY;\n  import double random();\n  import double abs(double n);\n  import double sin(double n);\n  import double cos(double n);\n  import double tan(double n);\n  import double asin(double n);\n  import double acos(double n);\n  import double atan(double n);\n  import double round(double n);\n  import double floor(double n);\n  import double ceil(double n);\n  import double exp(double n);\n  import double log(double n);\n  import double sqrt(double n);\n  import bool isNaN(double n);\n  import bool isFinite(double n);\n  import double atan2(double y, double x);\n  import double pow(double base, double exponent);\n  import double min(double a, double b);\n  import double max(double a, double b);\n  inline int imin(int a, int b) { return untyped(min)(a, b); }\n  inline int imax(int a, int b) { return untyped(max)(a, b); }\n}\n';
   SourceMapGenerator.comparison = new SourceMappingComparison();

@@ -36,7 +36,7 @@ namespace js {
     // toString() call has been elided.
     Node toStringTarget = null;
 
-    override void patchProgram(Node program) {
+    void patchProgram(Node program) {
       if (isKeyword == null) {
         isKeyword = createIsKeyword();
       }
@@ -50,6 +50,8 @@ namespace js {
     }
 
     override List<Source> emitProgram(Node program) {
+      patchProgram(program);
+
       // Collect all interesting nodes for easy access
       var collector = Collector(program, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
       currentSource = Source(options.outputFile, "");

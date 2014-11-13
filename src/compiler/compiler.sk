@@ -1,5 +1,4 @@
 interface IEmitter {
-  virtual void patchProgram(Node program);
   virtual List<Source> emitProgram(Node program);
 }
 
@@ -7,7 +6,6 @@ export enum TargetFormat {
   // Target languages that run the resolver
   NONE,
   JAVASCRIPT,
-  CSHARP,
 
   // AST-only targets
   LISP_AST,
@@ -17,7 +15,7 @@ export enum TargetFormat {
 
 export in TargetFormat {
   bool shouldRunResolver() {
-    return this >= NONE && this <= CSHARP;
+    return this >= NONE && this <= JAVASCRIPT;
   }
 }
 
@@ -66,7 +64,6 @@ export class Compiler {
   // Cache the standard library for a small speed boost
   static CachedSource nativeLibrary = CachedSource(NATIVE_LIBRARY);
   static CachedSource nativeLibraryJS = CachedSource(NATIVE_LIBRARY_JS);
-  static CachedSource nativeLibraryCS = CachedSource(NATIVE_LIBRARY_CS);
 
   var tokenizingTime = 0.0;
   var parsingTime = 0.0;
@@ -77,7 +74,6 @@ export class Compiler {
   var functionInliningTime = 0.0;
   var constantFoldingTime = 0.0;
   var deadCodeRemovalTime = 0.0;
-  var patchTime = 0.0;
   var emitTime = 0.0;
   var lineCountingTime = 0.0;
   var totalTime = 0.0;
@@ -110,7 +106,6 @@ export class Compiler {
       text += "\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms";
       text += "\n    Dead code removal: " + formatNumber(deadCodeRemovalTime) + "ms";
     }
-    if (patchTime > 0) text += "\n  Patch: " + formatNumber(patchTime) + "ms";
     if (emitTime > 0) text += "\n  Emit: " + formatNumber(emitTime) + "ms";
     if (lineCountingTime > 0) text += "\n  Counting lines: " + formatNumber(lineCountingTime) + "ms";
 
@@ -157,7 +152,6 @@ export class Compiler {
     // Tokenize and parse each module individually
     switch (options.targetFormat) {
       case .JAVASCRIPT { program.appendChild(nativeLibraryJS.compile(this, options)); }
-      case .CSHARP { program.appendChild(nativeLibraryCS.compile(this, options)); }
       default { program.appendChild(nativeLibrary.compile(this, options)); }
     }
     for (var i = 1; i < options.inputs.size(); i++) {
@@ -214,17 +208,12 @@ export class Compiler {
       switch (options.targetFormat) {
         case .NONE {}
         case .JAVASCRIPT { emitter = js.Emitter(resolver); }
-        case .CSHARP { emitter = cs.Emitter(resolver); }
         case .LISP_AST { emitter = lisp.Emitter(options); }
         case .JSON_AST { emitter = json.Emitter(options); }
         case .XML_AST { emitter = xml.Emitter(options); }
         default { assert false; }
       }
       if (emitter != null) {
-        var patchStart = now();
-        emitter.patchProgram(program);
-        patchTime += now() - patchStart;
-
         var emitStart = now();
         outputs = emitter.emitProgram(program);
         emitTime += now() - emitStart;
