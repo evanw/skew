@@ -7007,13 +7007,13 @@
         this.resolveNodesAsExpressions($arguments);
         return;
       }
+      this.initializeMember(member);
       if (valueType.symbol.isAbstract()) {
         var reason = valueType.symbol.reasonForAbstract;
         semanticErrorAbstractNew(this.log, value.range, valueType, reason.node.declarationName().range, reason.fullName());
         this.resolveNodesAsExpressions($arguments);
         return;
       }
-      this.initializeMember(member);
       node.symbol = member.symbol;
       valueType = member.type;
       if (valueType.isError(this.cache)) {

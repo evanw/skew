@@ -2612,6 +2612,7 @@ class Resolver {
         resolveNodesAsExpressions(arguments);
         return;
       }
+      initializeMember(member);
 
       // Cannot instantiate abstract types
       if (valueType.symbol.isAbstract()) {
@@ -2621,7 +2622,6 @@ class Resolver {
         return;
       }
 
-      initializeMember(member);
       node.symbol = member.symbol;
       valueType = member.type;
 
