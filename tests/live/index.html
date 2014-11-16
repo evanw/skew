@@ -31,12 +31,7 @@ label {
   <textarea id="input" rows="10" cols="80" spellcheck="false" autofocus></textarea>
   <p>
     <span id="compileTime">Loading...</span>
-    Target:
-    <label><input type="radio" name="target" id="targetJS" checked> JavaScript</label>
-    <label><input type="radio" name="target" id="targetCS"> C#</label>
-    <br>
-    <label><input type="checkbox" id="optimize"> Optimize</label>
-    <label><input type="checkbox" id="minify"> Minify</label>
+    Target: JavaScript
   </p>
 </div>
 <div>
@@ -56,33 +51,15 @@ label {
 
 function compile() {
   var start = now();
-  var target =
-    targetJS.checked ? 'js' :
-    targetCS.checked ? 'cs' :
-    null;
-  if (input.value === oldInput &&
-      optimize.checked === oldOptimize &&
-      minify.checked === oldMinify &&
-      target === oldTarget) {
+  if (input.value === oldInput) {
     return;
   }
   oldInput = input.value;
-  localStorage.optimize = oldOptimize = optimize.checked;
-  localStorage.minify = oldMinify = minify.checked;
-  localStorage.target = oldTarget = target;
   outputLog.value = outputTree.value = outputCode.value = '';
   try {
     var compiler = new Compiler();
     var options = new CompilerOptions();
-    options.jsMinify = options.jsMangle = oldMinify;
-    options.removeAsserts = oldOptimize;
-    options.foldAllConstants = oldOptimize;
-    options.inlineAllFunctions = oldOptimize;
-    options.convertAllInstanceToStatic = oldOptimize;
-    options.targetFormat =
-      oldTarget === 'js' ? TargetFormat.JAVASCRIPT :
-      oldTarget === 'cs' ? TargetFormat.CSHARP :
-      null;
+    options.targetFormat = TargetFormat.JAVASCRIPT;
     options.inputs.push(new Source('<stdin>', oldInput));
     var result = compiler.compile(options);
     outputLog.value = compiler.log.toString();
@@ -101,14 +78,7 @@ var now = this.performance && performance.now
   : function() { return +new Date; };
 
 var oldInput = null;
-var oldOptimize = null;
-var oldMinify = null;
-var oldTarget = null;
-optimize.checked = localStorage.optimize === 'true';
-minify.checked = localStorage.minify === 'true';
-targetJS.checked = localStorage.target === 'js' || !localStorage.target;
-targetCS.checked = localStorage.target === 'cs';
-input.oninput = input.onchange = optimize.onchange = minify.onchange = targetJS.onchange = targetCS.onchange = compile;
+input.oninput = input.onchange = compile;
 compile();
 
 </script>
