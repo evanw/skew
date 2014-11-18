@@ -6510,7 +6510,7 @@
         }
         var type = symbol.enclosingSymbol.type;
         variableType = Node.createType(type).withSymbol(symbol.enclosingSymbol);
-        symbol.flags |= SymbolFlag.FINAL | symbol.enclosingSymbol.flags & (SymbolFlag.IMPORT | SymbolFlag.EXPORT);
+        symbol.flags |= SymbolFlag.FINAL | SymbolFlag.STATIC | symbol.enclosingSymbol.flags & (SymbolFlag.IMPORT | SymbolFlag.EXPORT);
         var variableValue = node.variableValue();
         if (variableValue !== null) {
           this.resolveAsExpressionWithConversion(variableValue, this.cache.intType, CastKind.IMPLICIT_CAST);
@@ -7616,7 +7616,7 @@
     this.initializePotentiallyDuplicatedMember(member, dotName.range);
     var symbolIsType = in_SymbolKind.isType(member.symbol.kind);
     var targetIsType = target === null || in_NodeKind.isType(target.kind);
-    if (!type.isNamespace() && (!type.isEnum() || member.symbol.isFromExtension())) {
+    if (!type.isNamespace()) {
       var isStatic = symbolIsType || member.symbol.isStatic();
       if (isStatic && !targetIsType) {
         semanticErrorMemberUnexpectedStatic(this.log, dotName.range, name);

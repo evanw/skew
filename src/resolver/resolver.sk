@@ -1203,7 +1203,7 @@ class Resolver {
         variableType = Node.createType(type).withSymbol(symbol.enclosingSymbol);
 
         // All enum values are final and always transfer the import/export flags
-        symbol.flags |= .FINAL | symbol.enclosingSymbol.flags & (.IMPORT | .EXPORT);
+        symbol.flags |= .FINAL | .STATIC | symbol.enclosingSymbol.flags & (.IMPORT | .EXPORT);
 
         // Look at the initializer now
         var variableValue = node.variableValue();
@@ -2565,7 +2565,7 @@ class Resolver {
     // Check the instance/static status of the member
     var symbolIsType = member.symbol.kind.isType();
     var targetIsType = target == null || target.kind.isType();
-    if (!type.isNamespace() && (!type.isEnum() || member.symbol.isFromExtension())) {
+    if (!type.isNamespace()) {
       var isStatic = symbolIsType || member.symbol.isStatic();
 
       // Static members can only be accessed from a type

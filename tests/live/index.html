@@ -31,7 +31,7 @@ label {
   <textarea id="input" rows="10" cols="80" spellcheck="false" autofocus></textarea>
   <p>
     <span id="compileTime">Loading...</span>
-    Target: C++
+    Target: <span id="targetArea"></span>
   </p>
 </div>
 <div>
@@ -51,15 +51,21 @@ label {
 
 function compile() {
   var start = now();
-  if (input.value === oldInput) {
+  for (var target = 0; target < targets.length; target++) {
+    if (targets[target].element.checked) {
+      break;
+    }
+  }
+  if (input.value === oldInput && target === oldTarget) {
     return;
   }
   oldInput = input.value;
+  oldTarget = target;
   outputLog.value = outputTree.value = outputCode.value = '';
   try {
     var compiler = new Compiler();
     var options = new CompilerOptions();
-    options.targetFormat = TargetFormat.CPP;
+    options.targetFormat = targets[oldTarget].format;
     options.inputs.push(new Source('<stdin>', oldInput));
     var result = compiler.compile(options);
     outputLog.value = compiler.log.toString();
@@ -77,7 +83,25 @@ var now = this.performance && performance.now
   ? function() { return performance.now(); }
   : function() { return +new Date; };
 
+var targets = [
+  { format: TargetFormat.JAVASCRIPT, name: 'JavaScript' },
+  { format: TargetFormat.CPP, name: 'C++' },
+];
+
+targets.forEach(function(target) {
+  var element = document.createElement('label');
+  element.innerHTML = '<input name="target" type="radio"> ' + target.name + ' ';
+  element.onchange = compile;
+  targetArea.appendChild(element);
+  target.element = element.firstChild;
+});
+
 var oldInput = null;
+var oldTarget = localStorage.target | 0;
+if (oldTarget < 0 || oldTarget >= targets.length) {
+  oldTarget = 0;
+}
+targets[oldTarget].element.checked = true;
 input.oninput = input.onchange = compile;
 compile();
 
