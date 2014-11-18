@@ -215,6 +215,10 @@ class Type {
     return symbol != null && symbol.kind.isEnum();
   }
 
+  bool isRegularEnum() {
+    return symbol != null && symbol.kind == .ENUM;
+  }
+
   bool isEnumFlags() {
     return symbol != null && symbol.kind == .ENUM_FLAGS;
   }

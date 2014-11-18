@@ -41,11 +41,9 @@ namespace cpp {
 
     override bool shouldEmitExtraNewlineBetween(NodeKind before, NodeKind after) {
       if (pass == .FORWARD_DECLARE_TYPES) {
-        return before == .NAMESPACE || after == .NAMESPACE;
+        return before == .NAMESPACE || after == .NAMESPACE || before.isEnum() || after.isEnum();
       }
-      return
-        (before != .VARIABLE || after != .VARIABLE) &&
-        (pass != .FORWARD_DECLARE_CODE || !before.isFunction() || !after.isFunction());
+      return super(before, after) && (pass != .FORWARD_DECLARE_CODE || !before.isFunction() || !after.isFunction());
     }
 
     override void emitTypeParameter(Symbol symbol) {
@@ -82,23 +80,19 @@ namespace cpp {
       }
 
       else if (symbol.kind == .ENUM) {
-        if (pass != .IMPLEMENT_CODE) {
+        if (pass == .FORWARD_DECLARE_TYPES) {
           adjustNamespace(symbol);
           emitExtraNewlineBefore(.ENUM);
-          emit(indent + "enum struct " + mangleName(symbol));
-          if (pass == .FORWARD_DECLARE_CODE) {
-            emit(" {\n");
-            increaseIndent();
-            decreaseIndent();
-            emit(indent + "}");
-          }
-          emit(";\n");
+          emit(indent + "enum struct " + mangleName(symbol) + " {\n");
+          increaseIndent();
+          decreaseIndent();
+          emit(indent + "};\n");
           emitExtraNewlineAfter(.ENUM);
         }
       }
 
       else if (symbol.kind == .ENUM_FLAGS) {
-        if (pass == .FORWARD_DECLARE_CODE) {
+        if (pass == .FORWARD_DECLARE_TYPES) {
           adjustNamespace(symbol);
           emitExtraNewlineBefore(.ENUM_FLAGS);
           emit(indent + "namespace " + mangleName(symbol) + " {\n");
@@ -181,6 +175,35 @@ namespace cpp {
       emitExpression(node.dotTarget(), .MEMBER);
       emit("->");
       emit(mangleName(node.symbol));
+    }
+
+    override void emitCast(Node node, Precedence precedence) {
+      var value = node.castValue();
+
+      // C++11 doesn't auto-convert enums to ints for some reason
+      if (node.kind == .CAST || node.type.isInt(cache) && value.type.isRegularEnum()) {
+        emitParenthesizedCast(node, precedence);
+      } else {
+        emitExpression(value, precedence);
+      }
+    }
+
+    override void emitList(Node node) {
+      var values = node.listValues();
+      if (values.size() > 0) {
+        emit("new List { ");
+        emitCommaSeparatedExpressions(values);
+        emit(" }");
+      } else {
+        emit("new List()");
+      }
+    }
+
+    override void emitSuperCall(Node node) {
+      emit(fullName(node.symbol));
+      emit("(");
+      emitCommaSeparatedExpressions(node.superCallArguments());
+      emit(")");
     }
 
     void emitPossibleReferenceType(Type type) {

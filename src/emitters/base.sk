@@ -1,3 +1,7 @@
+import class console {
+  import static void log(string text);
+}
+
 namespace base {
   class Emitter : IEmitter {
     NodeKind previousKind = .NULL;
@@ -48,11 +52,13 @@ namespace base {
     void emitTypeMembers(Symbol symbol) {
       var members = symbol.type.members.values();
       for (var i = 0; i < members.size(); i++) {
-        var symbol = members.get(i).symbol;
-        if (symbol.kind.isFunction()) {
-          emitFunction(symbol);
-        } else if (symbol.kind.isVariable()) {
-          emitVariable(symbol);
+        var member = members.get(i).symbol;
+        if (!member.isImport() && member.enclosingSymbol == symbol) {
+          if (member.kind.isFunction()) {
+            emitFunction(member);
+          } else if (member.kind.isVariable()) {
+            emitVariable(member);
+          }
         }
       }
     }
@@ -94,7 +100,7 @@ namespace base {
     }
 
     virtual bool shouldEmitExtraNewlineBetween(NodeKind before, NodeKind after) {
-      return before != .VARIABLE || after != .VARIABLE;
+      return (before != .VARIABLE || after != .VARIABLE) && (before != .EXPRESSION || after != .EXPRESSION);
     }
 
     void emitExtraNewlineBefore(NodeKind kind) {
@@ -261,6 +267,8 @@ namespace base {
         case .INDEX { emitIndex(node, precedence); }
         case .ASSIGN_INDEX { emitTernary(node, precedence); }
         case .CAST, .IMPLICIT_CAST { emitCast(node, precedence); }
+        case .LIST { emitList(node); }
+        case .SUPER_CALL { emitSuperCall(node); }
         default {
           if (kind.isUnaryOperator()) emitUnary(node, precedence);
           else if (kind.isBinaryOperator()) emitBinary(node, precedence);
@@ -365,17 +373,33 @@ namespace base {
       emit(")");
     }
 
+    void emitParenthesizedCast(Node node, Precedence precedence) {
+      if (.UNARY_PREFIX < precedence) emit("(");
+      emit("(");
+      emitType(node.castType().type);
+      emit(")");
+      emitExpression(node.castValue(), .UNARY_PREFIX);
+      if (.UNARY_PREFIX < precedence) emit(")");
+    }
+
     virtual void emitCast(Node node, Precedence precedence) {
       if (node.kind == .CAST) {
-        if (.UNARY_PREFIX < precedence) emit("(");
-        emit("(");
-        emitType(node.castType().type);
-        emit(")");
-        emitExpression(node.castValue(), .UNARY_PREFIX);
-        if (.UNARY_PREFIX < precedence) emit(")");
+        emitParenthesizedCast(node, precedence);
       } else {
         emitExpression(node.castValue(), precedence);
       }
+    }
+
+    virtual void emitList(Node node) {
+      emit("[");
+      emitCommaSeparatedExpressions(node.listValues());
+      emit("]");
+    }
+
+    virtual void emitSuperCall(Node node) {
+      emit("super(");
+      emitCommaSeparatedExpressions(node.superCallArguments());
+      emit(")");
     }
 
     virtual void emitName(Node node) {
@@ -416,6 +440,14 @@ namespace base {
     void emitType(Type type) {
       assert !type.isFunction();
       emit(fullName(type.symbol));
+      if (type.isParameterized()) {
+        emit("<");
+        for (var i = 0; i < type.substitutions.size(); i++) {
+          if (i > 0) emit(", ");
+          emit(type.substitutions.get(i).toString());
+        }
+        emit(">");
+      }
     }
 
     virtual string mangleName(Symbol symbol) {

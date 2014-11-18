@@ -2228,11 +2228,13 @@
   base.Emitter.prototype.emitTypeMembers = function(symbol) {
     var members = symbol.type.members.values();
     for (var i = 0; i < members.length; i = i + 1 | 0) {
-      var symbol = members[i].symbol;
-      if (in_SymbolKind.isFunction(symbol.kind)) {
-        this.emitFunction(symbol);
-      } else if (in_SymbolKind.isVariable(symbol.kind)) {
-        this.emitVariable(symbol);
+      var member = members[i].symbol;
+      if (!member.isImport() && member.enclosingSymbol === symbol) {
+        if (in_SymbolKind.isFunction(member.kind)) {
+          this.emitFunction(member);
+        } else if (in_SymbolKind.isVariable(member.kind)) {
+          this.emitVariable(member);
+        }
       }
     }
   };
@@ -2268,7 +2270,7 @@
     this.previousKind = NodeKind.NULL;
   };
   base.Emitter.prototype.shouldEmitExtraNewlineBetween = function(before, after) {
-    return before !== NodeKind.VARIABLE || after !== NodeKind.VARIABLE;
+    return (before !== NodeKind.VARIABLE || after !== NodeKind.VARIABLE) && (before !== NodeKind.EXPRESSION || after !== NodeKind.EXPRESSION);
   };
   base.Emitter.prototype.emitExtraNewlineBefore = function(kind) {
     if (this.previousKind !== NodeKind.NULL && this.shouldEmitExtraNewlineBetween(this.previousKind, kind)) {
@@ -2471,13 +2473,19 @@
     case 50:
       this.emitCast(node, precedence);
       break;
+    case 42:
+      this.emitList(node);
+      break;
+    case 45:
+      this.emitSuperCall(node);
+      break;
     default:
       if (in_NodeKind.isUnaryOperator(kind)) {
         this.emitUnary(node, precedence);
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/emitters/base.sk:267:16)');
+        throw new Error('assert false; (src/emitters/base.sk:275:16)');
       }
       break;
     }
@@ -2493,10 +2501,10 @@
   base.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
     if (!(values.length > 1)) {
-      throw new Error('assert values.size() > 1; (src/emitters/base.sk:281:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/base.sk:289:7)');
     }
     if (node.parent.kind !== NodeKind.EXPRESSION && node.parent.kind !== NodeKind.FOR) {
-      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:282:7)');
+      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:290:7)');
     }
     if (Precedence.COMMA <= precedence) {
       this.emit('(');
@@ -2594,21 +2602,34 @@
     this.emitCommaSeparatedExpressions(node.callArguments());
     this.emit(')');
   };
+  base.Emitter.prototype.emitParenthesizedCast = function(node, precedence) {
+    if (Precedence.UNARY_PREFIX < precedence) {
+      this.emit('(');
+    }
+    this.emit('(');
+    this.emitType(node.castType().type);
+    this.emit(')');
+    this.emitExpression(node.castValue(), Precedence.UNARY_PREFIX);
+    if (Precedence.UNARY_PREFIX < precedence) {
+      this.emit(')');
+    }
+  };
   base.Emitter.prototype.emitCast = function(node, precedence) {
     if (node.kind === NodeKind.CAST) {
-      if (Precedence.UNARY_PREFIX < precedence) {
-        this.emit('(');
-      }
-      this.emit('(');
-      this.emitType(node.castType().type);
-      this.emit(')');
-      this.emitExpression(node.castValue(), Precedence.UNARY_PREFIX);
-      if (Precedence.UNARY_PREFIX < precedence) {
-        this.emit(')');
-      }
+      this.emitParenthesizedCast(node, precedence);
     } else {
       this.emitExpression(node.castValue(), precedence);
     }
+  };
+  base.Emitter.prototype.emitList = function(node) {
+    this.emit('[');
+    this.emitCommaSeparatedExpressions(node.listValues());
+    this.emit(']');
+  };
+  base.Emitter.prototype.emitSuperCall = function(node) {
+    this.emit('super(');
+    this.emitCommaSeparatedExpressions(node.superCallArguments());
+    this.emit(')');
   };
   base.Emitter.prototype.emitName = function(node) {
     var symbol = node.symbol;
@@ -2644,9 +2665,19 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:417:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:441:7)');
     }
     this.emit(this.fullName(type.symbol));
+    if (type.isParameterized()) {
+      this.emit('<');
+      for (var i = 0; i < type.substitutions.length; i = i + 1 | 0) {
+        if (i > 0) {
+          this.emit(', ');
+        }
+        this.emit(type.substitutions[i].toString());
+      }
+      this.emit('>');
+    }
   };
   base.Emitter.prototype.mangleName = function(symbol) {
     if (symbol.kind === SymbolKind.CONSTRUCTOR_FUNCTION) {
@@ -2707,9 +2738,9 @@
   };
   cpp.Emitter.prototype.shouldEmitExtraNewlineBetween = function(before, after) {
     if (this.pass === cpp.Pass.FORWARD_DECLARE_TYPES) {
-      return before === NodeKind.NAMESPACE || after === NodeKind.NAMESPACE;
+      return before === NodeKind.NAMESPACE || after === NodeKind.NAMESPACE || in_NodeKind.isEnum(before) || in_NodeKind.isEnum(after);
     }
-    return (before !== NodeKind.VARIABLE || after !== NodeKind.VARIABLE) && (this.pass !== cpp.Pass.FORWARD_DECLARE_CODE || !in_NodeKind.isFunction(before) || !in_NodeKind.isFunction(after));
+    return base.Emitter.prototype.shouldEmitExtraNewlineBetween.call(this, before, after) && (this.pass !== cpp.Pass.FORWARD_DECLARE_CODE || !in_NodeKind.isFunction(before) || !in_NodeKind.isFunction(after));
   };
   cpp.Emitter.prototype.emitTypeParameter = function(symbol) {
     this.emit('typename ' + this.mangleName(symbol));
@@ -2741,21 +2772,17 @@
         this.emitTypeMembers(symbol);
       }
     } else if (symbol.kind === SymbolKind.ENUM) {
-      if (this.pass !== cpp.Pass.IMPLEMENT_CODE) {
+      if (this.pass === cpp.Pass.FORWARD_DECLARE_TYPES) {
         this.adjustNamespace(symbol);
         this.emitExtraNewlineBefore(NodeKind.ENUM);
-        this.emit(this.indent + 'enum struct ' + this.mangleName(symbol));
-        if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
-          this.emit(' {\n');
-          this.increaseIndent();
-          this.decreaseIndent();
-          this.emit(this.indent + '}');
-        }
-        this.emit(';\n');
+        this.emit(this.indent + 'enum struct ' + this.mangleName(symbol) + ' {\n');
+        this.increaseIndent();
+        this.decreaseIndent();
+        this.emit(this.indent + '};\n');
         this.emitExtraNewlineAfter(NodeKind.ENUM);
       }
     } else if (symbol.kind === SymbolKind.ENUM_FLAGS) {
-      if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
+      if (this.pass === cpp.Pass.FORWARD_DECLARE_TYPES) {
         this.adjustNamespace(symbol);
         this.emitExtraNewlineBefore(NodeKind.ENUM_FLAGS);
         this.emit(this.indent + 'namespace ' + this.mangleName(symbol) + ' {\n');
@@ -2840,6 +2867,30 @@
     this.emitExpression(node.dotTarget(), Precedence.MEMBER);
     this.emit('->');
     this.emit(this.mangleName(node.symbol));
+  };
+  cpp.Emitter.prototype.emitCast = function(node, precedence) {
+    var value = node.castValue();
+    if (node.kind === NodeKind.CAST || node.type.isInt(this.cache) && value.type.isRegularEnum()) {
+      this.emitParenthesizedCast(node, precedence);
+    } else {
+      this.emitExpression(value, precedence);
+    }
+  };
+  cpp.Emitter.prototype.emitList = function(node) {
+    var values = node.listValues();
+    if (values.length > 0) {
+      this.emit('new List { ');
+      this.emitCommaSeparatedExpressions(values);
+      this.emit(' }');
+    } else {
+      this.emit('new List()');
+    }
+  };
+  cpp.Emitter.prototype.emitSuperCall = function(node) {
+    this.emit(this.fullName(node.symbol));
+    this.emit('(');
+    this.emitCommaSeparatedExpressions(node.superCallArguments());
+    this.emit(')');
   };
   cpp.Emitter.prototype.emitPossibleReferenceType = function(type) {
     this.emitType(type);
@@ -8588,6 +8639,9 @@
   Type.prototype.isEnum = function() {
     return this.symbol !== null && in_SymbolKind.isEnum(this.symbol.kind);
   };
+  Type.prototype.isRegularEnum = function() {
+    return this.symbol !== null && this.symbol.kind === SymbolKind.ENUM;
+  };
   Type.prototype.isEnumFlags = function() {
     return this.symbol !== null && this.symbol.kind === SymbolKind.ENUM_FLAGS;
   };
@@ -8991,6 +9045,9 @@
   };
   in_NodeKind.isNamedDeclaration = function($this) {
     return $this >= NodeKind.NAMESPACE && $this <= NodeKind.ALIAS;
+  };
+  in_NodeKind.isEnum = function($this) {
+    return $this >= NodeKind.ENUM && $this <= NodeKind.ENUM_FLAGS;
   };
   in_NodeKind.isObject = function($this) {
     return $this >= NodeKind.CLASS && $this <= NodeKind.INTERFACE;
@@ -9546,6 +9603,9 @@
       break;
     case 'js':
       target = TargetFormat.JAVASCRIPT;
+      break;
+    case 'cpp':
+      target = TargetFormat.CPP;
       break;
     case 'lisp-ast':
       target = TargetFormat.LISP_AST;
