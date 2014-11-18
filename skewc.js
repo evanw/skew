@@ -2269,8 +2269,11 @@
     }
     this.previousKind = NodeKind.NULL;
   };
+  base.Emitter.prototype.isFlowNodeKind = function(kind) {
+    return kind === NodeKind.EXPRESSION || kind === NodeKind.VARIABLE || kind === NodeKind.VARIABLE_CLUSTER || in_NodeKind.isJump(kind) || kind === NodeKind.ASSERT;
+  };
   base.Emitter.prototype.shouldEmitExtraNewlineBetween = function(before, after) {
-    return (before !== NodeKind.VARIABLE || after !== NodeKind.VARIABLE) && (before !== NodeKind.EXPRESSION || after !== NodeKind.EXPRESSION);
+    return !this.isFlowNodeKind(before) || !this.isFlowNodeKind(after) || before !== NodeKind.VARIABLE_CLUSTER && after === NodeKind.VARIABLE_CLUSTER;
   };
   base.Emitter.prototype.emitExtraNewlineBefore = function(kind) {
     if (this.previousKind !== NodeKind.NULL && this.shouldEmitExtraNewlineBetween(this.previousKind, kind)) {
@@ -2359,6 +2362,12 @@
     case 30:
       this.emitStatements(node.modifierStatements());
       break;
+    case 15:
+      this.emitVariable(node.symbol);
+      break;
+    default:
+      throw new Error('assert false; (src/emitters/base.sk:174:19)');
+      break;
     }
   };
   base.Emitter.prototype.endStatement = function() {
@@ -2415,8 +2424,6 @@
   base.Emitter.prototype.emitContinue = function(node) {
     this.emit(this.indent + 'continue');
     this.endStatement();
-  };
-  base.Emitter.prototype.emitAssert = function(node) {
   };
   base.Emitter.prototype.emitExpressionStatement = function(node) {
     this.emit(this.indent);
@@ -2485,7 +2492,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/emitters/base.sk:275:16)');
+        throw new Error('assert false; (src/emitters/base.sk:276:16)');
       }
       break;
     }
@@ -2501,10 +2508,10 @@
   base.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
     if (!(values.length > 1)) {
-      throw new Error('assert values.size() > 1; (src/emitters/base.sk:289:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/base.sk:290:7)');
     }
     if (node.parent.kind !== NodeKind.EXPRESSION && node.parent.kind !== NodeKind.FOR) {
-      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:290:7)');
+      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:291:7)');
     }
     if (Precedence.COMMA <= precedence) {
       this.emit('(');
@@ -2665,7 +2672,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:441:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:442:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -2853,6 +2860,12 @@
     this.emitPossibleReferenceType(symbol.type);
     this.emit(this.mangleName(symbol));
     this.emitAfterVariable(symbol.node);
+  };
+  cpp.Emitter.prototype.emitAssert = function(node) {
+    this.emit(this.indent + 'assert(');
+    this.emitExpression(node.assertValue(), Precedence.LOWEST);
+    this.emit(');\n');
+    this.usedAssert = true;
   };
   cpp.Emitter.prototype.emitNull = function() {
     this.emit('nullptr');

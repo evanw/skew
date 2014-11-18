@@ -160,6 +160,13 @@ namespace cpp {
       emitAfterVariable(symbol.node);
     }
 
+    override void emitAssert(Node node) {
+      emit(indent + "assert(");
+      emitExpression(node.assertValue(), .LOWEST);
+      emit(");\n");
+      usedAssert = true;
+    }
+
     override void emitNull() {
       emit("nullptr");
     }
