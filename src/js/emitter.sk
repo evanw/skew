@@ -112,7 +112,7 @@ namespace js {
         var members = type.members.values();
         for (var j = 0; j < members.size(); j++) {
           var symbol = members.get(j).symbol;
-          if (symbol.enclosingSymbol == type.symbol && symbol.node != null && symbol.kind.isFunction() && !symbol.kind.isConstructor()) {
+          if (symbol.enclosingSymbol == type.symbol && symbol.node != null && symbol.kind.isFunction() && symbol.kind != .CONSTRUCTOR_FUNCTION) {
             emitNode(symbol.node);
           }
         }
@@ -747,7 +747,7 @@ namespace js {
 
     void emitSequence(Node node, Precedence precedence) {
       if (.COMMA <= precedence) emit("(");
-      emitCommaSeparatedExpressions(node.children);
+      emitCommaSeparatedExpressions(node.sequenceValues());
       if (.COMMA <= precedence) emit(")");
     }
 
@@ -860,8 +860,8 @@ namespace js {
 
     static bool hasCompoundName(Symbol symbol) {
       var enclosingSymbol = symbol.enclosingSymbol;
-      return enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace() && (
-        !symbol.kind.isConstructor() || hasCompoundName(enclosingSymbol));
+      return enclosingSymbol != null && enclosingSymbol.kind != .GLOBAL_NAMESPACE && (
+        symbol.kind != .CONSTRUCTOR_FUNCTION || hasCompoundName(enclosingSymbol));
     }
 
     static StringMap<bool> createIsKeyword() {
@@ -908,7 +908,7 @@ namespace js {
     }
 
     static string mangleName(Symbol symbol) {
-      if (symbol.kind.isConstructor()) {
+      if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
         return mangleName(symbol.enclosingSymbol);
       }
       if (symbol.isImportOrExport()) {
@@ -922,9 +922,9 @@ namespace js {
 
     static string fullName(Symbol symbol) {
       var enclosingSymbol = symbol.enclosingSymbol;
-      if (enclosingSymbol != null && !enclosingSymbol.kind.isGlobalNamespace()) {
+      if (enclosingSymbol != null && enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
         var enclosingName = fullName(enclosingSymbol);
-        if (symbol.kind.isConstructor()) {
+        if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
           return enclosingName;
         }
         if (symbol.kind.isInstance()) {

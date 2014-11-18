@@ -5,6 +5,7 @@ interface IEmitter {
 export enum TargetFormat {
   // Target languages that run the resolver
   NONE,
+  CPP,
   JAVASCRIPT,
 
   // AST-only targets
@@ -207,6 +208,7 @@ export class Compiler {
       IEmitter emitter = null;
       switch (options.targetFormat) {
         case .NONE {}
+        case .CPP { emitter = cpp.Emitter(resolver); }
         case .JAVASCRIPT { emitter = js.Emitter(resolver); }
         case .LISP_AST { emitter = lisp.Emitter(options); }
         case .JSON_AST { emitter = json.Emitter(options); }

@@ -34,10 +34,6 @@ enum SymbolKind {
 }
 
 in SymbolKind {
-  bool isGlobalNamespace() {
-    return this == GLOBAL_NAMESPACE;
-  }
-
   bool isParameter() {
     return this >= OBJECT_PARAMETER && this <= FUNCTION_PARAMETER;
   }
@@ -60,10 +56,6 @@ in SymbolKind {
 
   bool isType() {
     return this >= OTHER_TYPE && this <= INTERFACE;
-  }
-
-  bool isConstructor() {
-    return this == CONSTRUCTOR_FUNCTION;
   }
 
   bool isFunction() {
@@ -221,7 +213,7 @@ class Symbol {
   }
 
   string fullName() {
-    return enclosingSymbol != null && !kind.isParameter() && !enclosingSymbol.kind.isGlobalNamespace()
+    return enclosingSymbol != null && !kind.isParameter() && enclosingSymbol.kind != .GLOBAL_NAMESPACE
       ? enclosingSymbol.fullName() + "." + name : name;
   }
 

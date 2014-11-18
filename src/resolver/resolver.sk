@@ -983,9 +983,10 @@ class Resolver {
         existing.symbol.overriddenMember = member;
       }
 
-      // Note that member.symbol.kind.isConstructor() will miss automatically
-      // generated constructors that haven't been initialized yet, but checking
-      // the name against "new" will always be correct since "new" is a keyword
+      // Note that member.symbol.kind == .CONSTRUCTOR_FUNCTION will miss
+      // automatically generated constructors that haven't been initialized yet,
+      // but checking the name against "new" will always be correct since "new"
+      // is a keyword
       else if (member.symbol.name != "new") {
         type.addMember(member);
       }
@@ -1034,7 +1035,7 @@ class Resolver {
       }
 
       // Constructors for imported/exported object types are automatically imported/exported
-      if (symbol.kind.isConstructor()) {
+      if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
         if (enclosingSymbol.isExport()) {
           unexpectedModifierIfPresent(symbol, .IMPORT, "on an exported declaration");
           symbol.flags = (symbol.flags & ~.IMPORT) | .EXPORT;
@@ -1048,7 +1049,7 @@ class Resolver {
 
       // Exporting a function on an object or namespace automatically exports
       // all enclosing symbols
-      else if (symbol.isExport() && !enclosingSymbol.isExport() && !enclosingSymbol.kind.isGlobalNamespace()) {
+      else if (symbol.isExport() && !enclosingSymbol.isExport() && enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
         unexpectedModifierIfPresent(symbol, .EXPORT, "on a non-exported type");
       }
     }
@@ -1115,7 +1116,7 @@ class Resolver {
 
     // Functions must not have a different type than the symbol they override
     var overriddenMember = symbol.overriddenMember;
-    if (overriddenMember != null && !symbol.kind.isConstructor()) {
+    if (overriddenMember != null && symbol.kind != .CONSTRUCTOR_FUNCTION) {
       initializeMember(overriddenMember);
       var base = overriddenMember.type;
       var derived = symbol.type;
@@ -1955,7 +1956,7 @@ class Resolver {
       // Special-case the return type of constructors to void for the purpose
       // of type conversions in return statements inside the constructor
       if (symbol.type.isError(cache)) resultType = cache.errorType;
-      else if (symbol.kind.isConstructor()) resultType = cache.voidType;
+      else if (symbol.kind == .CONSTRUCTOR_FUNCTION) resultType = cache.voidType;
       else resultType = symbol.type.resultType();
       resolve(block, null);
 
@@ -2679,9 +2680,9 @@ class Resolver {
   }
 
   void resolveSequence(Node node) {
-    assert node.hasChildren();
-    for (var i = 0, n = node.children.size(); i < n; i++) {
-      var child = node.children.get(i);
+    var values = node.sequenceValues();
+    for (var i = 0, n = values.size(); i < n; i++) {
+      var child = values.get(i);
       if (i < n - 1) {
         resolveAsParameterizedExpression(child);
         checkUnusedExpression(child);

@@ -41,7 +41,7 @@ namespace js {
     }
 
     bool canRename(Symbol symbol) {
-      return !symbol.isImportOrExport() && !symbol.kind.isConstructor();
+      return !symbol.isImportOrExport() && symbol.kind != .CONSTRUCTOR_FUNCTION;
     }
 
     void trackSymbolCount(Node node) {

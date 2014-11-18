@@ -1,0 +1,324 @@
+namespace base {
+  class Emitter : IEmitter {
+    NodeKind previousKind = .NULL;
+    StringMap<bool> isKeyword = null;
+    List<Source> outputs = [];
+    Source output = null;
+    var indent = "";
+    TypeCache cache = null;
+    Resolver resolver;
+
+    virtual string extension();
+    virtual StringMap<bool> createIsKeyword();
+
+    override List<Source> emitProgram(Node program) {
+      cache = resolver.cache;
+      isKeyword = createIsKeyword();
+      output = Source("output." + extension(), "");
+      outputs.push(output);
+      visitProgram(program);
+      return outputs;
+    }
+
+    virtual void visitProgram(Node node) {
+      visitCollector(Collector(node, .SORT_BY_INHERITANCE_AND_CONTAINMENT));
+    }
+
+    void visitCollector(Collector collector) {
+      for (var i = 0; i < collector.typeSymbols.size(); i++) {
+        var symbol = collector.typeSymbols.get(i);
+        if (!symbol.isImport()) {
+          visitType(symbol);
+        }
+      }
+      for (var i = 0; i < collector.freeFunctionSymbols.size(); i++) {
+        var symbol = collector.freeFunctionSymbols.get(i);
+        if (!symbol.isImport()) {
+          visitFunction(symbol);
+        }
+      }
+      for (var i = 0; i < collector.freeVariableSymbols.size(); i++) {
+        var symbol = collector.freeVariableSymbols.get(i);
+        if (!symbol.isImport()) {
+          visitVariable(symbol);
+        }
+      }
+    }
+
+    void visitTypeMembers(Symbol symbol) {
+      var members = symbol.type.members.values();
+      for (var i = 0; i < members.size(); i++) {
+        var symbol = members.get(i).symbol;
+        if (symbol.kind.isFunction()) {
+          visitFunction(symbol);
+        } else if (symbol.kind.isVariable()) {
+          visitVariable(symbol);
+        }
+      }
+    }
+
+    virtual void visitType(Symbol symbol);
+    virtual void visitFunction(Symbol symbol);
+    virtual void visitVariable(Symbol symbol);
+
+    void forceEmitExtraNewline() {
+      if (previousKind != .NULL) {
+        emit("\n");
+      }
+      previousKind = .NULL;
+    }
+
+    virtual bool shouldEmitExtraNewlineBetween(NodeKind before, NodeKind after) {
+      return before != .VARIABLE || after != .VARIABLE;
+    }
+
+    void emitExtraNewlineBefore(NodeKind kind) {
+      if (previousKind != .NULL && shouldEmitExtraNewlineBetween(previousKind, kind)) {
+        emit("\n");
+      }
+      previousKind = .NULL;
+    }
+
+    void emitExtraNewlineAfter(NodeKind kind) {
+      previousKind = kind;
+    }
+
+    void emitAfterVariable(Node node) {
+      var value = node.variableValue();
+      if (value != null) {
+        emit(" = ");
+        emitExpression(value, .COMMA);
+      }
+    }
+
+    void increaseIndent() {
+      previousKind = .NULL;
+      indent += "  ";
+    }
+
+    void decreaseIndent() {
+      indent = indent.slice(2, indent.size());
+    }
+
+    void emit(string text) {
+      output.contents += text;
+    }
+
+    virtual void emitBlock(Node node) {
+      emit(" {\n");
+      increaseIndent();
+      if (node.hasChildren()) {
+        previousKind = .NULL;
+        for (var i = 0; i < node.children.size(); i++) {
+          var child = node.children.get(i);
+          emitExtraNewlineBefore(child.kind);
+          emitStatement(child);
+          emitExtraNewlineAfter(child.kind);
+        }
+      }
+      decreaseIndent();
+      emit(indent + "}\n");
+      previousKind = .NULL;
+    }
+
+    void emitStatement(Node node) {
+    }
+
+    void emitExpression(Node node, Precedence precedence) {
+      var kind = node.kind;
+      switch (kind) {
+        case .NAME { emitName(node); }
+        case .TYPE { emitType(node.type); }
+        case .THIS { emitThis(); }
+        case .HOOK { emitHook(node, precedence); }
+        case .NULL { emitNull(); }
+        case .BOOL { emitBool(node); }
+        case .INT { emit(node.asInt().toString()); }
+        case .FLOAT, .DOUBLE { emitReal(node); }
+        case .STRING { emitString(node); }
+        case .DOT { emitDot(node); }
+        case .CALL { emitCall(node); }
+        case .SEQUENCE { emitSequence(node, precedence); }
+        case .INDEX { emitIndex(node, precedence); }
+        case .ASSIGN_INDEX { emitTernary(node, precedence); }
+        case .CAST, .IMPLICIT_CAST { emitCast(node, precedence); }
+        default {
+          if (kind.isUnaryOperator()) emitUnary(node, precedence);
+          else if (kind.isBinaryOperator()) emitBinary(node, precedence);
+          else assert false;
+        }
+      }
+    }
+
+    void emitCommaSeparatedExpressions(List<Node> nodes) {
+      for (var i = 0; i < nodes.size(); i++) {
+        if (i > 0) emit(", ");
+        emitExpression(nodes.get(i), .COMMA);
+      }
+    }
+
+    void emitSequence(Node node, Precedence precedence) {
+      var values = node.sequenceValues();
+      assert values.size() > 1;
+      assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR;
+      if (.COMMA <= precedence) emit("(");
+      emitCommaSeparatedExpressions(node.sequenceValues());
+      if (.COMMA <= precedence) emit(")");
+    }
+
+    virtual bool hasUnaryStorageOperators() {
+      return true;
+    }
+
+    virtual void emitUnaryPrefixOperator(Node node) {
+      emit(operatorInfo.get(node.kind).text);
+
+      // Prevent "- -1" from becoming "--1"
+      var value = node.unaryValue();
+      if (node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
+          node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT || value.kind == .INT && value.asInt() < 0)) {
+        emit(" ");
+      }
+    }
+
+    void emitUnary(Node node, Precedence precedence) {
+      var value = node.unaryValue();
+      if (node.kind.isUnaryStorageOperator() && !hasUnaryStorageOperators()) {
+        if (.ASSIGN < precedence) emit("(");
+        emitExpression(value, .ASSIGN);
+        emit(node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT ? " += 1" : " -= 1");
+        if (.ASSIGN < precedence) emit(")");
+        return;
+      }
+      var info = operatorInfo.get(node.kind);
+      if (info.precedence < precedence) emit("(");
+      var isPostfix = info.precedence == .UNARY_POSTFIX;
+      if (!isPostfix) emitUnaryPrefixOperator(node);
+      emitExpression(value, info.precedence);
+      if (isPostfix) emit(info.text);
+      if (info.precedence < precedence) emit(")");
+    }
+
+    virtual void emitBinaryOperator(Node node) {
+      emit(" " + operatorInfo.get(node.kind).text + " ");
+    }
+
+    void emitBinary(Node node, Precedence precedence) {
+      var info = operatorInfo.get(node.kind);
+      if (info.precedence < precedence) emit("(");
+      emitExpression(node.binaryLeft(), info.precedence.incrementIfRightAssociative(info.associativity));
+      emitBinaryOperator(node);
+      emitExpression(node.binaryRight(), info.precedence.incrementIfLeftAssociative(info.associativity));
+      if (info.precedence < precedence) emit(")");
+    }
+
+    void emitIndex(Node node, Precedence precedence) {
+      emitExpression(node.binaryLeft(), .MEMBER);
+      emit("[");
+      emitExpression(node.binaryRight(), .LOWEST);
+      emit("]");
+    }
+
+    void emitTernary(Node node, Precedence precedence) {
+      if (.ASSIGN < precedence) emit("(");
+      emitExpression(node.ternaryLeft(), .MEMBER);
+      emit("[");
+      emitExpression(node.ternaryMiddle(), .LOWEST);
+      emit("] = ");
+      emitExpression(node.ternaryRight(), .ASSIGN);
+      if (.ASSIGN < precedence) emit(")");
+    }
+
+    virtual void emitDot(Node node) {
+      emitExpression(node.dotTarget(), .MEMBER);
+      emit(".");
+      emit(mangleName(node.symbol));
+    }
+
+    virtual void emitCall(Node node) {
+      var value = node.callValue();
+      if (value.kind == .TYPE) {
+        emit("new ");
+      }
+      emitExpression(value, .UNARY_POSTFIX);
+      emit("(");
+      emitCommaSeparatedExpressions(node.callArguments());
+      emit(")");
+    }
+
+    virtual void emitCast(Node node, Precedence precedence) {
+      if (node.kind == .CAST) {
+        if (.UNARY_PREFIX < precedence) emit("(");
+        emit("(");
+        emitType(node.castType().type);
+        emit(")");
+        emitExpression(node.castValue(), .UNARY_PREFIX);
+        if (.UNARY_PREFIX < precedence) emit(")");
+      } else {
+        emitExpression(node.castValue(), precedence);
+      }
+    }
+
+    virtual void emitName(Node node) {
+      var symbol = node.symbol;
+      emit(symbol != null ? symbol.kind.isInstance() ? mangleName(symbol) : fullName(symbol) : node.asString());
+    }
+
+    virtual void emitThis() {
+      emit("this");
+    }
+
+    virtual void emitHook(Node node, Precedence precedence) {
+      if (.ASSIGN < precedence) emit("(");
+      emitExpression(node.hookTest(), .LOGICAL_OR);
+      emit(" ? ");
+      emitExpression(node.hookTrue(), .ASSIGN);
+      emit(" : ");
+      emitExpression(node.hookFalse(), .ASSIGN);
+      if (.ASSIGN < precedence) emit(")");
+    }
+
+    virtual void emitNull() {
+      emit("null");
+    }
+
+    virtual void emitBool(Node node) {
+      emit(node.asBool().toString());
+    }
+
+    virtual void emitReal(Node node) {
+      emit(node.asDouble().toString());
+    }
+
+    virtual void emitString(Node node) {
+      emit(quoteString(node.asString(), '"'));
+    }
+
+    void emitType(Type type) {
+      assert !type.isFunction();
+      emit(fullName(type.symbol));
+    }
+
+    virtual string mangleName(Symbol symbol) {
+      if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
+        return mangleName(symbol.enclosingSymbol);
+      }
+      if (isKeyword.has(symbol.name) && !symbol.isImport()) {
+        return "_" + symbol.name + "_";
+      }
+      return symbol.name;
+    }
+
+    virtual bool useDoubleColonForEnclosingSymbols() {
+      return false;
+    }
+
+    virtual string fullName(Symbol symbol) {
+      var name = mangleName(symbol);
+      if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
+        return fullName(symbol.enclosingSymbol) + (useDoubleColonForEnclosingSymbols() ? "::" : ".") + name;
+      }
+      return name;
+    }
+  }
+}

@@ -1,0 +1,310 @@
+namespace cpp {
+  enum Pass {
+    NONE,
+    FORWARD_DECLARE_TYPES,
+    FORWARD_DECLARE_CODE,
+    IMPLEMENT_CODE,
+  }
+
+  class Emitter : base.Emitter {
+    List<string> namespaceStack = [];
+    var usedAssert = false;
+    Pass pass = .NONE;
+
+    override string extension() {
+      return "cpp";
+    }
+
+    override void visitProgram(Node node) {
+      // Emit code in three passes
+      var collector = Collector(node, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
+
+      pass = .FORWARD_DECLARE_TYPES;
+      visitCollector(collector);
+      adjustNamespace(null);
+      forceEmitExtraNewline();
+
+      pass = .FORWARD_DECLARE_CODE;
+      visitCollector(collector);
+      adjustNamespace(null);
+      forceEmitExtraNewline();
+
+      pass = .IMPLEMENT_CODE;
+      visitCollector(collector);
+      adjustNamespace(null);
+
+      // Prepend the necessary headers after all code has been emitted
+      var headers = "";
+      if (usedAssert) headers += "#include <cassert>\n";
+      if (headers != "") output.contents = headers + "\n" + output.contents;
+    }
+
+    override bool shouldEmitExtraNewlineBetween(NodeKind before, NodeKind after) {
+      if (pass == .FORWARD_DECLARE_TYPES) {
+        return before == .NAMESPACE || after == .NAMESPACE;
+      }
+      return
+        (before != .VARIABLE || after != .VARIABLE) &&
+        (pass != .FORWARD_DECLARE_CODE || !before.isFunction() || !after.isFunction());
+    }
+
+    override void visitType(Symbol symbol) {
+      if (symbol.kind.isObject()) {
+        if (pass != .IMPLEMENT_CODE) {
+          adjustNamespace(symbol);
+          emitExtraNewlineBefore(symbol.node.kind);
+          emit(indent + "struct " + mangleName(symbol));
+          if (pass == .FORWARD_DECLARE_CODE) {
+            emit(" {\n");
+            increaseIndent();
+            visitTypeMembers(symbol);
+            decreaseIndent();
+            emit(indent + "}");
+          }
+          emit(";\n");
+          emitExtraNewlineAfter(symbol.node.kind);
+        } else {
+          visitTypeMembers(symbol);
+        }
+      }
+
+      else if (symbol.kind == .ENUM) {
+        if (pass != .IMPLEMENT_CODE) {
+          adjustNamespace(symbol);
+          emitExtraNewlineBefore(.ENUM);
+          emit(indent + "enum struct " + mangleName(symbol));
+          if (pass == .FORWARD_DECLARE_CODE) {
+            emit(" {\n");
+            increaseIndent();
+            decreaseIndent();
+            emit(indent + "}");
+          }
+          emit(";\n");
+          emitExtraNewlineAfter(.ENUM);
+        }
+      }
+
+      else if (symbol.kind == .ENUM_FLAGS) {
+        if (pass == .FORWARD_DECLARE_CODE) {
+          adjustNamespace(symbol);
+          emitExtraNewlineBefore(.ENUM_FLAGS);
+          emit(indent + "namespace " + mangleName(symbol) + " {\n");
+          increaseIndent();
+          emit(indent + "enum {\n");
+          increaseIndent();
+          decreaseIndent();
+          emit(indent + "};\n");
+          decreaseIndent();
+          emit(indent + "}\n");
+          emitExtraNewlineAfter(.ENUM_FLAGS);
+        }
+      }
+    }
+
+    override void visitFunction(Symbol symbol) {
+      if (pass != .FORWARD_DECLARE_TYPES) {
+        var block = symbol.node.functionBlock();
+        if (block != null || pass == .FORWARD_DECLARE_CODE) {
+          adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null);
+          emitExtraNewlineBefore(symbol.node.kind);
+          emit(indent);
+          if (pass == .FORWARD_DECLARE_CODE) {
+            if (symbol.isStatic()) emit("static ");
+            if (symbol.isVirtual()) emit("virtual ");
+          }
+          if (symbol.kind != .CONSTRUCTOR_FUNCTION) {
+            emitPossibleReferenceType(symbol.type.resultType());
+          }
+          emit(pass == .FORWARD_DECLARE_CODE ? mangleName(symbol) : fullName(symbol));
+
+          // Emit arguments
+          var arguments = symbol.node.functionArguments();
+          emit("(");
+          emit(")");
+
+          // Emit body
+          if (block == null) {
+            emit(" = 0;\n");
+          } else if (pass == .FORWARD_DECLARE_CODE) {
+            emit(";\n");
+          } else {
+            emitBlock(block);
+          }
+          emitExtraNewlineAfter(symbol.node.kind);
+        }
+      }
+    }
+
+    override void visitVariable(Symbol symbol) {
+      if (pass != .FORWARD_DECLARE_TYPES) {
+        adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null);
+        emitExtraNewlineBefore(symbol.node.kind);
+        emit(indent);
+        if (pass == .FORWARD_DECLARE_CODE) {
+          emit(symbol.isStatic() ? "static " : "extern ");
+        }
+        emitPossibleReferenceType(symbol.type);
+        if (pass == .FORWARD_DECLARE_CODE) {
+          emit(mangleName(symbol));
+        } else {
+          emit(fullName(symbol));
+          emitAfterVariable(symbol.node);
+        }
+        emit(";\n");
+        emitExtraNewlineAfter(symbol.node.kind);
+      }
+    }
+
+    override void emitNull() {
+      emit("nullptr");
+    }
+
+    override void emitReal(Node node) {
+      super(node);
+      if (node.kind == .FLOAT) {
+        emit("f");
+      }
+    }
+
+    override void emitDot(Node node) {
+      emitExpression(node.dotTarget(), .MEMBER);
+      emit("->");
+      emit(mangleName(node.symbol));
+    }
+
+    void emitPossibleReferenceType(Type type) {
+      emitType(type);
+      emit(type.isReference() ? " *" : " ");
+    }
+
+    override bool useDoubleColonForEnclosingSymbols() {
+      return true;
+    }
+
+    void adjustNamespace(Symbol symbol) {
+      // Get the namespace chain for this symbol
+      List<string> names = [];
+      while (symbol != null && symbol.kind != .GLOBAL_NAMESPACE) {
+        if (symbol.kind == .NAMESPACE) {
+          names.unshift(mangleName(symbol));
+        }
+        symbol = symbol.enclosingSymbol;
+      }
+
+      // Find the intersection
+      var n = namespaceStack.size() < names.size() ? namespaceStack.size() : names.size();
+      int i;
+      for (i = 0; i < n; i++) {
+        if (namespaceStack.get(i) != names.get(i)) {
+          break;
+        }
+      }
+
+      // Leave the old namespace
+      while (namespaceStack.size() > i) {
+        namespaceStack.pop();
+        decreaseIndent();
+        emit(indent + "}\n");
+        emitExtraNewlineAfter(.NAMESPACE);
+      }
+
+      // Enter the new namespace
+      while (namespaceStack.size() < names.size()) {
+        var name = names.get(namespaceStack.size());
+        emitExtraNewlineBefore(.NAMESPACE);
+        emit(indent + "namespace " + name + " {\n");
+        increaseIndent();
+        namespaceStack.push(name);
+      }
+    }
+
+    override StringMap<bool> createIsKeyword() {
+      var result = StringMap<bool>();
+      result.set("alignas", true);
+      result.set("alignof", true);
+      result.set("and", true);
+      result.set("and_eq", true);
+      result.set("asm", true);
+      result.set("auto", true);
+      result.set("bitand", true);
+      result.set("bitor", true);
+      result.set("bool", true);
+      result.set("break", true);
+      result.set("case", true);
+      result.set("catch", true);
+      result.set("char", true);
+      result.set("char16_t", true);
+      result.set("char32_t", true);
+      result.set("class", true);
+      result.set("compl", true);
+      result.set("const", true);
+      result.set("const_cast", true);
+      result.set("constexpr", true);
+      result.set("continue", true);
+      result.set("decltype", true);
+      result.set("default", true);
+      result.set("delete", true);
+      result.set("do", true);
+      result.set("double", true);
+      result.set("dynamic_cast", true);
+      result.set("else", true);
+      result.set("enum", true);
+      result.set("explicit", true);
+      result.set("export", true);
+      result.set("extern", true);
+      result.set("false", true);
+      result.set("float", true);
+      result.set("for", true);
+      result.set("friend", true);
+      result.set("goto", true);
+      result.set("if", true);
+      result.set("inline", true);
+      result.set("int", true);
+      result.set("long", true);
+      result.set("mutable", true);
+      result.set("namespace", true);
+      result.set("new", true);
+      result.set("noexcept", true);
+      result.set("not", true);
+      result.set("not_eq", true);
+      result.set("nullptr", true);
+      result.set("operator", true);
+      result.set("or", true);
+      result.set("or_eq", true);
+      result.set("private", true);
+      result.set("protected", true);
+      result.set("public", true);
+      result.set("register", true);
+      result.set("reinterpret_cast", true);
+      result.set("return", true);
+      result.set("short", true);
+      result.set("signed", true);
+      result.set("sizeof", true);
+      result.set("static", true);
+      result.set("static_assert", true);
+      result.set("static_cast", true);
+      result.set("struct", true);
+      result.set("switch", true);
+      result.set("template", true);
+      result.set("this", true);
+      result.set("thread_local", true);
+      result.set("throw", true);
+      result.set("true", true);
+      result.set("try", true);
+      result.set("typedef", true);
+      result.set("typeid", true);
+      result.set("typename", true);
+      result.set("union", true);
+      result.set("unsigned", true);
+      result.set("using", true);
+      result.set("virtual", true);
+      result.set("void", true);
+      result.set("volatile", true);
+      result.set("wchar_t", true);
+      result.set("while", true);
+      result.set("xor", true);
+      result.set("xor_eq", true);
+      return result;
+    }
+  }
+}

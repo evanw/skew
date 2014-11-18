@@ -135,6 +135,12 @@ in Node {
     return children.slice(1, children.size());
   }
 
+  List<Node> sequenceValues() {
+    assert kind == .SEQUENCE;
+    assert children != null;
+    return children;
+  }
+
   Node castType() {
     assert kind.isCast();
     assert children.size() == 2;

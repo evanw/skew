@@ -13,7 +13,7 @@ class SymbolMotionPass {
     if (!symbol.isImport() && enclosingSymbol != null && !symbol.kind.isParameter() && (enclosingSymbol.isImport() || symbol.kind.isFunction() && enclosingSymbol.kind.isEnum())) {
       // Move the symbol to an automatically-generated namespace
       var enclosingType = symbol.enclosingSymbol.type;
-      var shadow = createShadowForSymbol(enclosingSymbol);
+      var shadow = shadowForSymbol(enclosingSymbol);
       var member = enclosingType.members.get(symbol.name);
       assert member.symbol == symbol;
       enclosingType.members.remove(symbol.name);
@@ -35,7 +35,7 @@ class SymbolMotionPass {
     }
   }
 
-  Type createShadowForSymbol(Symbol symbol) {
+  Type shadowForSymbol(Symbol symbol) {
     // Get the namespace for the extension if it exists
     var inName = "in_" + symbol.name;
     var enclosingSymbol = symbol.enclosingSymbol;
