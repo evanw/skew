@@ -60,7 +60,7 @@ function compile() {
     return;
   }
   oldInput = input.value;
-  oldTarget = target;
+  oldTarget = localStorage.target = target;
   outputLog.value = outputTree.value = outputCode.value = '';
   try {
     var compiler = new Compiler();

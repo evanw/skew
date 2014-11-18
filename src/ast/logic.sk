@@ -143,9 +143,4 @@ in Node {
       }
     }
   }
-
-  Node singleStatement() {
-    assert kind == .BLOCK;
-    return hasChildren() && children.size() == 1 ? children.get(0) : null;
-  }
 }

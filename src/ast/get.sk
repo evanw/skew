@@ -1,4 +1,16 @@
 in Node {
+  List<Node> blockStatements() {
+    assert kind == .BLOCK;
+    assert children != null;
+    return children;
+  }
+
+  Node blockStatement() {
+    assert kind == .BLOCK;
+    assert children != null;
+    return children.size() == 1 ? children.get(0) : null;
+  }
+
   Node fileBlock() {
     assert kind == .FILE;
     assert children.size() == 1;

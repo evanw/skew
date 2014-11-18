@@ -28,38 +28,63 @@ namespace base {
       for (var i = 0; i < collector.typeSymbols.size(); i++) {
         var symbol = collector.typeSymbols.get(i);
         if (!symbol.isImport()) {
-          visitType(symbol);
+          emitTypeDeclaration(symbol);
         }
       }
       for (var i = 0; i < collector.freeFunctionSymbols.size(); i++) {
         var symbol = collector.freeFunctionSymbols.get(i);
         if (!symbol.isImport()) {
-          visitFunction(symbol);
+          emitFunction(symbol);
         }
       }
       for (var i = 0; i < collector.freeVariableSymbols.size(); i++) {
         var symbol = collector.freeVariableSymbols.get(i);
         if (!symbol.isImport()) {
-          visitVariable(symbol);
+          emitVariable(symbol);
         }
       }
     }
 
-    void visitTypeMembers(Symbol symbol) {
+    void emitTypeMembers(Symbol symbol) {
       var members = symbol.type.members.values();
       for (var i = 0; i < members.size(); i++) {
         var symbol = members.get(i).symbol;
         if (symbol.kind.isFunction()) {
-          visitFunction(symbol);
+          emitFunction(symbol);
         } else if (symbol.kind.isVariable()) {
-          visitVariable(symbol);
+          emitVariable(symbol);
         }
       }
     }
 
-    virtual void visitType(Symbol symbol);
-    virtual void visitFunction(Symbol symbol);
-    virtual void visitVariable(Symbol symbol);
+    virtual void emitTypeDeclaration(Symbol symbol);
+    virtual void emitFunction(Symbol symbol);
+    virtual void emitVariable(Symbol symbol);
+    virtual void emitFunctionArgument(Symbol symbol);
+    virtual void emitTypeParameter(Symbol symbol);
+
+    void emitFunctionArguments(Symbol symbol) {
+      var arguments = symbol.node.functionArguments();
+      emit("(");
+      if (arguments.hasChildren()) {
+        for (var i = 0; i < arguments.children.size(); i++) {
+          if (i > 0) emit(", ");
+          emitFunctionArgument(arguments.children.get(i).symbol);
+        }
+      }
+      emit(")");
+    }
+
+    virtual void emitTypeParameters(Symbol symbol) {
+      if (symbol.hasParameters()) {
+        emit("<");
+        for (var i = 0; i < symbol.parameters.size(); i++) {
+          if (i > 0) emit(", ");
+          emitTypeParameter(symbol.parameters.get(i));
+        }
+        emit(">");
+      }
+    }
 
     void forceEmitExtraNewline() {
       if (previousKind != .NULL) {
@@ -107,21 +132,115 @@ namespace base {
     virtual void emitBlock(Node node) {
       emit(" {\n");
       increaseIndent();
-      if (node.hasChildren()) {
-        previousKind = .NULL;
-        for (var i = 0; i < node.children.size(); i++) {
-          var child = node.children.get(i);
-          emitExtraNewlineBefore(child.kind);
-          emitStatement(child);
-          emitExtraNewlineAfter(child.kind);
-        }
-      }
+      previousKind = .NULL;
+      emitStatements(node.blockStatements());
       decreaseIndent();
-      emit(indent + "}\n");
+      emit(indent + "}");
       previousKind = .NULL;
     }
 
+    void emitStatements(List<Node> nodes) {
+      for (var i = 0; i < nodes.size(); i++) {
+        var child = nodes.get(i);
+        emitExtraNewlineBefore(child.kind);
+        emitStatement(child);
+        emitExtraNewlineAfter(child.kind);
+      }
+    }
+
     void emitStatement(Node node) {
+      switch (node.kind) {
+        case .CASE { emitCase(node); }
+        case .VARIABLE_CLUSTER { emitStatements(node.clusterVariables()); }
+        case .IF { emitIf(node); }
+        case .FOR { emitFor(node); }
+        case .FOR_EACH { emitForEach(node); }
+        case .WHILE { emitWhile(node); }
+        case .DO_WHILE { emitDoWhile(node); }
+        case .RETURN { emitReturn(node); }
+        case .BREAK { emitBreak(node); }
+        case .CONTINUE { emitContinue(node); }
+        case .ASSERT { emitAssert(node); }
+        case .EXPRESSION { emitExpressionStatement(node); }
+        case .SWITCH { emitSwitch(node); }
+        case .MODIFIER { emitStatements(node.modifierStatements()); }
+      }
+    }
+
+    virtual void endStatement() {
+      emit(";\n");
+    }
+
+    void emitCase(Node node) {
+    }
+
+    void emitSwitch(Node node) {
+    }
+
+    void recursiveEmitIfStatement(Node node) {
+      var falseBlock = node.ifFalse();
+      emit("if (");
+      emitExpression(node.ifTest(), .LOWEST);
+      emit(")");
+      emitBlock(node.ifTrue());
+      if (falseBlock != null) {
+        var falseStatement = falseBlock.blockStatement();
+        if (falseStatement != null && falseStatement.kind == .IF) {
+          emit(" else ");
+          recursiveEmitIfStatement(falseStatement);
+        } else {
+          emit(" else");
+          emitBlock(falseBlock);
+        }
+      }
+    }
+
+    virtual void emitIf(Node node) {
+      emit(indent);
+      recursiveEmitIfStatement(node);
+      emit("\n");
+    }
+
+    void emitFor(Node node) {
+    }
+
+    void emitForEach(Node node) {
+    }
+
+    void emitWhile(Node node) {
+    }
+
+    void emitDoWhile(Node node) {
+    }
+
+    void emitReturn(Node node) {
+      var value = node.returnValue();
+      if (value != null) {
+        emit(indent + "return ");
+        emitExpression(value, .LOWEST);
+      } else {
+        emit(indent + "return");
+      }
+      endStatement();
+    }
+
+    void emitBreak(Node node) {
+      emit(indent + "break");
+      endStatement();
+    }
+
+    void emitContinue(Node node) {
+      emit(indent + "continue");
+      endStatement();
+    }
+
+    void emitAssert(Node node) {
+    }
+
+    void emitExpressionStatement(Node node) {
+      emit(indent);
+      emitExpression(node.expressionValue(), .LOWEST);
+      emit(";\n");
     }
 
     void emitExpression(Node node, Precedence precedence) {
@@ -315,7 +434,7 @@ namespace base {
 
     virtual string fullName(Symbol symbol) {
       var name = mangleName(symbol);
-      if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
+      if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind != .GLOBAL_NAMESPACE && !symbol.kind.isParameter()) {
         return fullName(symbol.enclosingSymbol) + (useDoubleColonForEnclosingSymbols() ? "::" : ".") + name;
       }
       return name;

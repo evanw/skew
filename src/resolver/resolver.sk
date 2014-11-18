@@ -1834,14 +1834,13 @@ class Resolver {
 
     // Remove asserts here since they will all be in blocks. Each assert should
     // still be resolved to check for compile errors, however.
-    if (node.hasChildren()) {
-      for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
-        var kind = child.kind;
-        if (kind == .ASSERT_CONST || kind == .ASSERT && options.removeAsserts) {
-          node.removeChildAtIndex(i);
-          i--;
-        }
+    var statements = node.blockStatements();
+    for (var i = 0; i < statements.size(); i++) {
+      var child = statements.get(i);
+      var kind = child.kind;
+      if (kind == .ASSERT_CONST || kind == .ASSERT && options.removeAsserts) {
+        node.removeChildAtIndex(i);
+        i--;
       }
     }
   }

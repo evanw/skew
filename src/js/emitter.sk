@@ -276,7 +276,7 @@ namespace js {
     void recursiveEmitIfStatement(Node node) {
       var trueBlock = node.ifTrue();
       var falseBlock = node.ifFalse();
-      var trueStatement = trueBlock.singleStatement();
+      var trueStatement = trueBlock.blockStatement();
       emit("if" + space + "(");
       emitExpression(node.ifTest(), .LOWEST);
       emit(")");
@@ -287,7 +287,7 @@ namespace js {
       if (falseBlock != null) {
         emitSemicolonIfNeeded();
         emit(space + "else");
-        var falseStatement = falseBlock.singleStatement();
+        var falseStatement = falseBlock.blockStatement();
         if (falseStatement != null && falseStatement.kind == .IF) {
           emit(" ");
           addMapping(falseStatement);

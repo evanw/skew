@@ -48,23 +48,36 @@ namespace cpp {
         (pass != .FORWARD_DECLARE_CODE || !before.isFunction() || !after.isFunction());
     }
 
-    override void visitType(Symbol symbol) {
+    override void emitTypeParameter(Symbol symbol) {
+      emit("typename " + mangleName(symbol));
+    }
+
+    override void emitTypeParameters(Symbol symbol) {
+      if (symbol.hasParameters()) {
+        emit(indent + "template ");
+        super(symbol);
+        emit("\n");
+      }
+    }
+
+    override void emitTypeDeclaration(Symbol symbol) {
       if (symbol.kind.isObject()) {
         if (pass != .IMPLEMENT_CODE) {
           adjustNamespace(symbol);
           emitExtraNewlineBefore(symbol.node.kind);
+          emitTypeParameters(symbol);
           emit(indent + "struct " + mangleName(symbol));
           if (pass == .FORWARD_DECLARE_CODE) {
             emit(" {\n");
             increaseIndent();
-            visitTypeMembers(symbol);
+            emitTypeMembers(symbol);
             decreaseIndent();
             emit(indent + "}");
           }
           emit(";\n");
           emitExtraNewlineAfter(symbol.node.kind);
         } else {
-          visitTypeMembers(symbol);
+          emitTypeMembers(symbol);
         }
       }
 
@@ -101,12 +114,13 @@ namespace cpp {
       }
     }
 
-    override void visitFunction(Symbol symbol) {
+    override void emitFunction(Symbol symbol) {
       if (pass != .FORWARD_DECLARE_TYPES) {
         var block = symbol.node.functionBlock();
         if (block != null || pass == .FORWARD_DECLARE_CODE) {
           adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null);
           emitExtraNewlineBefore(symbol.node.kind);
+          emitTypeParameters(symbol);
           emit(indent);
           if (pass == .FORWARD_DECLARE_CODE) {
             if (symbol.isStatic()) emit("static ");
@@ -116,26 +130,17 @@ namespace cpp {
             emitPossibleReferenceType(symbol.type.resultType());
           }
           emit(pass == .FORWARD_DECLARE_CODE ? mangleName(symbol) : fullName(symbol));
-
-          // Emit arguments
-          var arguments = symbol.node.functionArguments();
-          emit("(");
-          emit(")");
-
-          // Emit body
-          if (block == null) {
-            emit(" = 0;\n");
-          } else if (pass == .FORWARD_DECLARE_CODE) {
-            emit(";\n");
-          } else {
-            emitBlock(block);
-          }
+          emitFunctionArguments(symbol);
+          if (block == null) emit(" = 0;");
+          else if (pass == .FORWARD_DECLARE_CODE) emit(";");
+          else emitBlock(block);
+          emit("\n");
           emitExtraNewlineAfter(symbol.node.kind);
         }
       }
     }
 
-    override void visitVariable(Symbol symbol) {
+    override void emitVariable(Symbol symbol) {
       if (pass != .FORWARD_DECLARE_TYPES) {
         adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null);
         emitExtraNewlineBefore(symbol.node.kind);
@@ -153,6 +158,12 @@ namespace cpp {
         emit(";\n");
         emitExtraNewlineAfter(symbol.node.kind);
       }
+    }
+
+    override void emitFunctionArgument(Symbol symbol) {
+      emitPossibleReferenceType(symbol.type);
+      emit(mangleName(symbol));
+      emitAfterVariable(symbol.node);
     }
 
     override void emitNull() {
