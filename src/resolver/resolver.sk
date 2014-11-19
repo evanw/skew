@@ -2098,6 +2098,7 @@ class Resolver {
         context.scope = node.scope.lexicalParent;
         resolve(name, null);
         context.scope = oldScope;
+        memberInitializer.symbol = name.symbol;
 
         // Resolve the value and check for duplicate initializations
         if (name.symbol != null) {
@@ -2247,11 +2248,20 @@ class Resolver {
     var test = node.forTest();
     var update = node.forUpdate();
     if (setup != null) {
-      if (setup.kind == .VARIABLE_CLUSTER) resolve(setup, null);
-      else resolveAsParameterizedExpression(setup);
+      if (setup.kind == .VARIABLE_CLUSTER) {
+        resolve(setup, null);
+      } else {
+        resolveAsParameterizedExpression(setup);
+        checkUnusedExpression(setup);
+      }
     }
-    if (test != null) resolveAsExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
-    if (update != null) resolveAsParameterizedExpression(update);
+    if (test != null) {
+      resolveAsExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
+    }
+    if (update != null) {
+      resolveAsParameterizedExpression(update);
+      checkUnusedExpression(update);
+    }
 
     var oldLoop = context.loop;
     context.loop = node;

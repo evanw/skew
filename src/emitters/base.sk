@@ -59,11 +59,19 @@ namespace base {
       }
     }
 
+    virtual void emitTypeBeforeVariable(Symbol symbol) {
+      emitType(symbol.type);
+      emit(" ");
+    }
+
     virtual void emitTypeDeclaration(Symbol symbol);
     virtual void emitFunction(Symbol symbol);
     virtual void emitVariable(Symbol symbol);
     virtual void emitFunctionArgument(Symbol symbol);
-    virtual void emitTypeParameter(Symbol symbol);
+
+    virtual void emitTypeParameter(Symbol symbol) {
+      emit(mangleName(symbol));
+    }
 
     void emitFunctionArguments(Symbol symbol) {
       var arguments = symbol.node.functionArguments();
@@ -180,9 +188,43 @@ namespace base {
     }
 
     void emitCase(Node node) {
+      var values = node.caseValues();
+      var block = node.caseBlock();
+      if (values.size() > 0) {
+        for (var i = 0; i < values.size(); i++) {
+          if (i > 0) emit("\n");
+          emit(indent + "case ");
+          emitExpression(values.get(i), .LOWEST);
+          emit(":");
+        }
+      } else {
+        emit(indent + "default:");
+      }
+      emit(" {\n");
+      increaseIndent();
+      emitStatements(block.blockStatements());
+      if (!block.blockAlwaysEndsWithReturn()) {
+        emit(indent + "break;\n");
+      }
+      decreaseIndent();
+      emit(indent + "}\n");
     }
 
     void emitSwitch(Node node) {
+      var cases = node.switchCases();
+      emit(indent + "switch (");
+      emitExpression(node.switchValue(), .LOWEST);
+      emit(") {\n");
+      increaseIndent();
+      previousKind = .NULL;
+      for (var i = 0; i < cases.size(); i++) {
+        var child = cases.get(i);
+        emitExtraNewlineBefore(child.kind);
+        emitCase(child);
+        emitExtraNewlineAfter(child.kind);
+      }
+      decreaseIndent();
+      emit(indent + "}\n");
     }
 
     void recursiveEmitIfStatement(Node node) {
@@ -209,16 +251,64 @@ namespace base {
       emit("\n");
     }
 
+    virtual void emitForVariables(List<Node> nodes) {
+      emitTypeBeforeVariable(nodes.get(0).symbol);
+      for (var i = 0; i < nodes.size(); i++) {
+        if (i > 0) emit(", ");
+        var node = nodes.get(i);
+        var value = node.variableValue();
+        emit(mangleName(node.symbol));
+        emitAfterVariable(node);
+      }
+    }
+
     void emitFor(Node node) {
+      var setup = node.forSetup();
+      var test = node.forTest();
+      var update = node.forUpdate();
+      emit(indent + "for (");
+      if (setup != null) {
+        if (setup.kind == .VARIABLE_CLUSTER) {
+          emitForVariables(setup.clusterVariables());
+        } else {
+          emitExpression(setup, .LOWEST);
+        }
+      }
+      if (test != null) {
+        emit("; ");
+        emitExpression(test, .LOWEST);
+      } else {
+        emit(";");
+      }
+      if (update != null) {
+        emit("; ");
+        emitExpression(update, .LOWEST);
+      } else {
+        emit(";");
+      }
+      emit(")");
+      emitBlock(node.forBlock());
+      emit("\n");
     }
 
     void emitForEach(Node node) {
     }
 
     void emitWhile(Node node) {
+      emit(indent + "while (");
+      emitExpression(node.whileTest(), .LOWEST);
+      emit(")");
+      emitBlock(node.whileBlock());
+      emit("\n");
     }
 
     void emitDoWhile(Node node) {
+      emit(indent + "do");
+      emitBlock(node.whileBlock());
+      emit(" while (");
+      emitExpression(node.whileTest(), .LOWEST);
+      emit(")");
+      endStatement();
     }
 
     void emitReturn(Node node) {
@@ -247,7 +337,7 @@ namespace base {
     void emitExpressionStatement(Node node) {
       emit(indent);
       emitExpression(node.expressionValue(), .LOWEST);
-      emit(";\n");
+      endStatement();
     }
 
     void emitExpression(Node node, Precedence precedence) {

@@ -110,10 +110,11 @@ namespace cpp {
 
     override void emitFunction(Symbol symbol) {
       if (pass != .FORWARD_DECLARE_TYPES) {
-        var block = symbol.node.functionBlock();
+        var node = symbol.node;
+        var block = node.functionBlock();
         if (block != null || pass == .FORWARD_DECLARE_CODE) {
           adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null);
-          emitExtraNewlineBefore(symbol.node.kind);
+          emitExtraNewlineBefore(node.kind);
           emitTypeParameters(symbol);
           emit(indent);
           if (pass == .FORWARD_DECLARE_CODE) {
@@ -125,13 +126,46 @@ namespace cpp {
           }
           emit(pass == .FORWARD_DECLARE_CODE ? mangleName(symbol) : fullName(symbol));
           emitFunctionArguments(symbol);
-          if (block == null) emit(" = 0;");
-          else if (pass == .FORWARD_DECLARE_CODE) emit(";");
-          else emitBlock(block);
+          if (block == null) {
+            emit(" = 0;");
+          } else if (pass == .FORWARD_DECLARE_CODE) {
+            emit(";");
+          } else {
+            if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
+              var superInitializer = node.superInitializer();
+              var memberInitializers = node.memberInitializers();
+              var superCallArguments = superInitializer != null ? superInitializer.superCallArguments() : null;
+              if (superInitializer != null && superCallArguments.size() > 0 || memberInitializers != null && memberInitializers.hasChildren()) {
+                emit(" : ");
+                if (superInitializer != null && superCallArguments.size() > 0) {
+                  emit(mangleName(superInitializer.symbol) + "(");
+                  emitCommaSeparatedExpressions(superInitializer.superCallArguments());
+                  emit(")");
+                  if (memberInitializers != null) {
+                    emit(", ");
+                  }
+                }
+                if (memberInitializers != null) {
+                  for (var i = 0; i < memberInitializers.children.size(); i++) {
+                    var initializer = memberInitializers.children.get(i);
+                    if (i > 0) emit(", ");
+                    emit(mangleName(initializer.symbol) + "(");
+                    emitExpression(initializer.memberInitializerValue(), .LOWEST);
+                    emit(")");
+                  }
+                }
+              }
+            }
+            emitBlock(block);
+          }
           emit("\n");
-          emitExtraNewlineAfter(symbol.node.kind);
+          emitExtraNewlineAfter(node.kind);
         }
       }
+    }
+
+    override void emitTypeBeforeVariable(Symbol symbol) {
+      emitPossibleReferenceType(symbol.type);
     }
 
     override void emitVariable(Symbol symbol) {
@@ -139,10 +173,10 @@ namespace cpp {
         adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null);
         emitExtraNewlineBefore(symbol.node.kind);
         emit(indent);
-        if (pass == .FORWARD_DECLARE_CODE) {
+        if (pass == .FORWARD_DECLARE_CODE && symbol.kind.isGlobal()) {
           emit(symbol.isStatic() ? "static " : "extern ");
         }
-        emitPossibleReferenceType(symbol.type);
+        emitTypeBeforeVariable(symbol);
         if (pass == .FORWARD_DECLARE_CODE) {
           emit(mangleName(symbol));
         } else {
@@ -308,6 +342,7 @@ namespace cpp {
       result.set("noexcept", true);
       result.set("not", true);
       result.set("not_eq", true);
+      result.set("NULL", true);
       result.set("nullptr", true);
       result.set("operator", true);
       result.set("or", true);

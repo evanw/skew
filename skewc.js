@@ -2238,6 +2238,13 @@
       }
     }
   };
+  base.Emitter.prototype.emitTypeBeforeVariable = function(symbol) {
+    this.emitType(symbol.type);
+    this.emit(' ');
+  };
+  base.Emitter.prototype.emitTypeParameter = function(symbol) {
+    this.emit(this.mangleName(symbol));
+  };
   base.Emitter.prototype.emitFunctionArguments = function(symbol) {
     var $arguments = symbol.node.functionArguments();
     this.emit('(');
@@ -2366,7 +2373,7 @@
       this.emitVariable(node.symbol);
       break;
     default:
-      throw new Error('assert false; (src/emitters/base.sk:174:19)');
+      throw new Error('assert false; (src/emitters/base.sk:182:19)');
       break;
     }
   };
@@ -2374,8 +2381,44 @@
     this.emit(';\n');
   };
   base.Emitter.prototype.emitCase = function(node) {
+    var values = node.caseValues();
+    var block = node.caseBlock();
+    if (values.length > 0) {
+      for (var i = 0; i < values.length; i = i + 1 | 0) {
+        if (i > 0) {
+          this.emit('\n');
+        }
+        this.emit(this.indent + 'case ');
+        this.emitExpression(values[i], Precedence.LOWEST);
+        this.emit(':');
+      }
+    } else {
+      this.emit(this.indent + 'default:');
+    }
+    this.emit(' {\n');
+    this.increaseIndent();
+    this.emitStatements(block.blockStatements());
+    if (!block.blockAlwaysEndsWithReturn()) {
+      this.emit(this.indent + 'break;\n');
+    }
+    this.decreaseIndent();
+    this.emit(this.indent + '}\n');
   };
   base.Emitter.prototype.emitSwitch = function(node) {
+    var cases = node.switchCases();
+    this.emit(this.indent + 'switch (');
+    this.emitExpression(node.switchValue(), Precedence.LOWEST);
+    this.emit(') {\n');
+    this.increaseIndent();
+    this.previousKind = NodeKind.NULL;
+    for (var i = 0; i < cases.length; i = i + 1 | 0) {
+      var child = cases[i];
+      this.emitExtraNewlineBefore(child.kind);
+      this.emitCase(child);
+      this.emitExtraNewlineAfter(child.kind);
+    }
+    this.decreaseIndent();
+    this.emit(this.indent + '}\n');
   };
   base.Emitter.prototype.recursiveEmitIfStatement = function(node) {
     var falseBlock = node.ifFalse();
@@ -2399,13 +2442,62 @@
     this.recursiveEmitIfStatement(node);
     this.emit('\n');
   };
+  base.Emitter.prototype.emitForVariables = function(nodes) {
+    this.emitTypeBeforeVariable(nodes[0].symbol);
+    for (var i = 0; i < nodes.length; i = i + 1 | 0) {
+      if (i > 0) {
+        this.emit(', ');
+      }
+      var node = nodes[i];
+      var value = node.variableValue();
+      this.emit(this.mangleName(node.symbol));
+      this.emitAfterVariable(node);
+    }
+  };
   base.Emitter.prototype.emitFor = function(node) {
+    var setup = node.forSetup();
+    var test = node.forTest();
+    var update = node.forUpdate();
+    this.emit(this.indent + 'for (');
+    if (setup !== null) {
+      if (setup.kind === NodeKind.VARIABLE_CLUSTER) {
+        this.emitForVariables(setup.clusterVariables());
+      } else {
+        this.emitExpression(setup, Precedence.LOWEST);
+      }
+    }
+    if (test !== null) {
+      this.emit('; ');
+      this.emitExpression(test, Precedence.LOWEST);
+    } else {
+      this.emit(';');
+    }
+    if (update !== null) {
+      this.emit('; ');
+      this.emitExpression(update, Precedence.LOWEST);
+    } else {
+      this.emit(';');
+    }
+    this.emit(')');
+    this.emitBlock(node.forBlock());
+    this.emit('\n');
   };
   base.Emitter.prototype.emitForEach = function(node) {
   };
   base.Emitter.prototype.emitWhile = function(node) {
+    this.emit(this.indent + 'while (');
+    this.emitExpression(node.whileTest(), Precedence.LOWEST);
+    this.emit(')');
+    this.emitBlock(node.whileBlock());
+    this.emit('\n');
   };
   base.Emitter.prototype.emitDoWhile = function(node) {
+    this.emit(this.indent + 'do');
+    this.emitBlock(node.whileBlock());
+    this.emit(' while (');
+    this.emitExpression(node.whileTest(), Precedence.LOWEST);
+    this.emit(')');
+    this.endStatement();
   };
   base.Emitter.prototype.emitReturn = function(node) {
     var value = node.returnValue();
@@ -2428,7 +2520,7 @@
   base.Emitter.prototype.emitExpressionStatement = function(node) {
     this.emit(this.indent);
     this.emitExpression(node.expressionValue(), Precedence.LOWEST);
-    this.emit(';\n');
+    this.endStatement();
   };
   base.Emitter.prototype.emitExpression = function(node, precedence) {
     var kind = node.kind;
@@ -2492,7 +2584,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/emitters/base.sk:276:16)');
+        throw new Error('assert false; (src/emitters/base.sk:366:16)');
       }
       break;
     }
@@ -2508,10 +2600,10 @@
   base.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
     if (!(values.length > 1)) {
-      throw new Error('assert values.size() > 1; (src/emitters/base.sk:290:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/base.sk:380:7)');
     }
     if (node.parent.kind !== NodeKind.EXPRESSION && node.parent.kind !== NodeKind.FOR) {
-      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:291:7)');
+      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:381:7)');
     }
     if (Precedence.COMMA <= precedence) {
       this.emit('(');
@@ -2672,7 +2764,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:442:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:532:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -2806,10 +2898,11 @@
   };
   cpp.Emitter.prototype.emitFunction = function(symbol) {
     if (this.pass !== cpp.Pass.FORWARD_DECLARE_TYPES) {
-      var block = symbol.node.functionBlock();
+      var node = symbol.node;
+      var block = node.functionBlock();
       if (block !== null || this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
         this.adjustNamespace(this.pass === cpp.Pass.FORWARD_DECLARE_CODE ? symbol : null);
-        this.emitExtraNewlineBefore(symbol.node.kind);
+        this.emitExtraNewlineBefore(node.kind);
         this.emitTypeParameters(symbol);
         this.emit(this.indent);
         if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
@@ -2830,22 +2923,52 @@
         } else if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
           this.emit(';');
         } else {
+          if (symbol.kind === SymbolKind.CONSTRUCTOR_FUNCTION) {
+            var superInitializer = node.superInitializer();
+            var memberInitializers = node.memberInitializers();
+            var superCallArguments = superInitializer !== null ? superInitializer.superCallArguments() : null;
+            if (superInitializer !== null && superCallArguments.length > 0 || memberInitializers !== null && memberInitializers.hasChildren()) {
+              this.emit(' : ');
+              if (superInitializer !== null && superCallArguments.length > 0) {
+                this.emit(this.mangleName(superInitializer.symbol) + '(');
+                this.emitCommaSeparatedExpressions(superInitializer.superCallArguments());
+                this.emit(')');
+                if (memberInitializers !== null) {
+                  this.emit(', ');
+                }
+              }
+              if (memberInitializers !== null) {
+                for (var i = 0; i < memberInitializers.children.length; i = i + 1 | 0) {
+                  var initializer = memberInitializers.children[i];
+                  if (i > 0) {
+                    this.emit(', ');
+                  }
+                  this.emit(this.mangleName(initializer.symbol) + '(');
+                  this.emitExpression(initializer.memberInitializerValue(), Precedence.LOWEST);
+                  this.emit(')');
+                }
+              }
+            }
+          }
           this.emitBlock(block);
         }
         this.emit('\n');
-        this.emitExtraNewlineAfter(symbol.node.kind);
+        this.emitExtraNewlineAfter(node.kind);
       }
     }
+  };
+  cpp.Emitter.prototype.emitTypeBeforeVariable = function(symbol) {
+    this.emitPossibleReferenceType(symbol.type);
   };
   cpp.Emitter.prototype.emitVariable = function(symbol) {
     if (this.pass !== cpp.Pass.FORWARD_DECLARE_TYPES) {
       this.adjustNamespace(this.pass === cpp.Pass.FORWARD_DECLARE_CODE ? symbol : null);
       this.emitExtraNewlineBefore(symbol.node.kind);
       this.emit(this.indent);
-      if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
+      if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE && in_SymbolKind.isGlobal(symbol.kind)) {
         this.emit(symbol.isStatic() ? 'static ' : 'extern ');
       }
-      this.emitPossibleReferenceType(symbol.type);
+      this.emitTypeBeforeVariable(symbol);
       if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
         this.emit(this.mangleName(symbol));
       } else {
@@ -2990,6 +3113,7 @@
     result.set('noexcept', true);
     result.set('not', true);
     result.set('not_eq', true);
+    result.set('NULL', true);
     result.set('nullptr', true);
     result.set('operator', true);
     result.set('or', true);
@@ -7471,6 +7595,7 @@
         this.context.scope = node.scope.lexicalParent;
         this.resolve(name, null);
         this.context.scope = oldScope;
+        memberInitializer.symbol = name.symbol;
         if (name.symbol !== null) {
           this.resolveAsExpressionWithConversion(value, name.symbol.type, CastKind.IMPLICIT_CAST);
           for (var j = 0; j < i; j = j + 1 | 0) {
@@ -7587,6 +7712,7 @@
         this.resolve(setup, null);
       } else {
         this.resolveAsParameterizedExpression(setup);
+        this.checkUnusedExpression(setup);
       }
     }
     if (test !== null) {
@@ -7594,6 +7720,7 @@
     }
     if (update !== null) {
       this.resolveAsParameterizedExpression(update);
+      this.checkUnusedExpression(update);
     }
     var oldLoop = this.context.loop;
     this.context.loop = node;
@@ -7696,7 +7823,7 @@
           continue;
         }
         if (!in_NodeKind.isConstant(caseValue.kind)) {
-          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2378:9)');
+          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2388:9)');
         }
         var k = 0;
         for (k = 0; k < uniqueValues.length; k = k + 1 | 0) {
@@ -7737,7 +7864,7 @@
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2427:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2437:7)');
       }
       var symbol = this.context.symbolForThis;
       this.initializeSymbol(symbol);
@@ -7860,7 +7987,7 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2596:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2606:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -7953,7 +8080,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2719:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2729:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -11280,6 +11407,9 @@
   };
   in_SymbolKind.isVariable = function($this) {
     return $this >= SymbolKind.LOCAL_VARIABLE && $this <= SymbolKind.INSTANCE_VARIABLE;
+  };
+  in_SymbolKind.isGlobal = function($this) {
+    return $this === SymbolKind.GLOBAL_FUNCTION || $this === SymbolKind.GLOBAL_VARIABLE;
   };
   in_SymbolKind.isInstance = function($this) {
     return $this === SymbolKind.INSTANCE_FUNCTION || $this === SymbolKind.INSTANCE_VARIABLE || $this === SymbolKind.CONSTRUCTOR_FUNCTION;
