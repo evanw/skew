@@ -39,7 +39,7 @@ class Collector {
         var variables = node.clusterVariables();
         for (var i = 0; i < variables.size(); i++) {
           var symbol = variables.get(i).symbol;
-          if (!symbol.kind.isInstance()) {
+          if (symbol.kind == .GLOBAL_VARIABLE && symbol.enclosingSymbol.kind.isNamespace()) {
             freeVariableSymbols.push(symbol);
           }
         }

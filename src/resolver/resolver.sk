@@ -2963,6 +2963,9 @@ class Resolver {
     else if (kind == .ADD || kind == .SUBTRACT || kind == .MULTIPLY || kind == .DIVIDE) {
       if (leftType.isNumeric(cache) && rightType.isNumeric(cache)) {
         commonType = cache.commonImplicitType(leftType, rightType);
+        if (commonType.isEnum()) {
+          commonType = cache.intType;
+        }
         node.type = commonType;
       }
 

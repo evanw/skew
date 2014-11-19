@@ -6,6 +6,12 @@ namespace cpp {
     IMPLEMENT_CODE,
   }
 
+  enum CppEmitType {
+    BARE,
+    NORMAL,
+    DECLARATION,
+  }
+
   class Emitter : base.Emitter {
     List<string> namespaceStack = [];
     var usedAssert = false;
@@ -58,6 +64,32 @@ namespace cpp {
       }
     }
 
+    void emitEnumValues(Symbol symbol) {
+      var members = symbol.type.members.values();
+      var isEnumFlags = symbol.kind == .ENUM_FLAGS;
+      var isFirst = true;
+      var previous = -1;
+      for (var i = 0; i < members.size(); i++) {
+        var member = members.get(i).symbol;
+        if (member.isEnumValue()) {
+          if (isFirst) {
+            isFirst = false;
+          } else {
+            emit(",\n");
+          }
+          var value = member.constant.asInt();
+          emit(indent + mangleName(member));
+          if (isEnumFlags || value != previous + 1) {
+            emit(" = " + value);
+          }
+          previous = value;
+        }
+      }
+      if (!isFirst) {
+        emit("\n");
+      }
+    }
+
     override void emitTypeDeclaration(Symbol symbol) {
       if (symbol.kind.isObject()) {
         if (pass != .IMPLEMENT_CODE) {
@@ -66,6 +98,14 @@ namespace cpp {
           emitTypeParameters(symbol);
           emit(indent + "struct " + mangleName(symbol));
           if (pass == .FORWARD_DECLARE_CODE) {
+            if (symbol.type.hasRelevantTypes()) {
+              var types = symbol.type.relevantTypes;
+              emit(" : ");
+              for (var i = 0; i < types.size(); i++) {
+                if (i > 0) emit(", ");
+                emitCppType(types.get(i), .BARE);
+              }
+            }
             emit(" {\n");
             increaseIndent();
             emitTypeMembers(symbol);
@@ -85,6 +125,7 @@ namespace cpp {
           emitExtraNewlineBefore(.ENUM);
           emit(indent + "enum struct " + mangleName(symbol) + " {\n");
           increaseIndent();
+          emitEnumValues(symbol);
           decreaseIndent();
           emit(indent + "};\n");
           emitExtraNewlineAfter(.ENUM);
@@ -99,6 +140,7 @@ namespace cpp {
           increaseIndent();
           emit(indent + "enum {\n");
           increaseIndent();
+          emitEnumValues(symbol);
           decreaseIndent();
           emit(indent + "};\n");
           decreaseIndent();
@@ -122,7 +164,7 @@ namespace cpp {
             if (symbol.isVirtual()) emit("virtual ");
           }
           if (symbol.kind != .CONSTRUCTOR_FUNCTION) {
-            emitPossibleReferenceType(symbol.type.resultType());
+            emitCppType(symbol.type.resultType(), .DECLARATION);
           }
           emit(pass == .FORWARD_DECLARE_CODE ? mangleName(symbol) : fullName(symbol));
           emitFunctionArguments(symbol);
@@ -141,7 +183,7 @@ namespace cpp {
                   emit(mangleName(superInitializer.symbol) + "(");
                   emitCommaSeparatedExpressions(superInitializer.superCallArguments());
                   emit(")");
-                  if (memberInitializers != null) {
+                  if (memberInitializers != null && memberInitializers.hasChildren()) {
                     emit(", ");
                   }
                 }
@@ -165,11 +207,11 @@ namespace cpp {
     }
 
     override void emitTypeBeforeVariable(Symbol symbol) {
-      emitPossibleReferenceType(symbol.type);
+      emitCppType(symbol.type, .DECLARATION);
     }
 
     override void emitVariable(Symbol symbol) {
-      if (pass != .FORWARD_DECLARE_TYPES) {
+      if (pass != .FORWARD_DECLARE_TYPES && (pass == .FORWARD_DECLARE_CODE || symbol.kind != .INSTANCE_VARIABLE)) {
         adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null);
         emitExtraNewlineBefore(symbol.node.kind);
         emit(indent);
@@ -189,7 +231,7 @@ namespace cpp {
     }
 
     override void emitFunctionArgument(Symbol symbol) {
-      emitPossibleReferenceType(symbol.type);
+      emitCppType(symbol.type, .DECLARATION);
       emit(mangleName(symbol));
       emitAfterVariable(symbol.node);
     }
@@ -218,25 +260,34 @@ namespace cpp {
       emit(mangleName(node.symbol));
     }
 
-    override void emitCast(Node node, Precedence precedence) {
-      var value = node.castValue();
+    override void emitCall(Node node, Precedence precedence) {
+      var wrap = node.callValue().kind == .TYPE && precedence == .MEMBER;
+      if (wrap) emit("(");
+      super(node, precedence);
+      if (wrap) emit(")");
+    }
 
+    override void emitCast(Node node, Precedence precedence) {
       // C++11 doesn't auto-convert enums to ints for some reason
-      if (node.kind == .CAST || node.type.isInt(cache) && value.type.isRegularEnum()) {
+      if (node.type.isInt(cache) && node.castValue().type.isRegularEnum()) {
         emitParenthesizedCast(node, precedence);
       } else {
-        emitExpression(value, precedence);
+        super(node, precedence);
       }
     }
 
     override void emitList(Node node) {
       var values = node.listValues();
       if (values.size() > 0) {
-        emit("new List { ");
+        emit("new ");
+        emitCppType(node.type, .BARE);
+        emit(" { ");
         emitCommaSeparatedExpressions(values);
         emit(" }");
       } else {
-        emit("new List()");
+        emit("new ");
+        emitCppType(node.type, .BARE);
+        emit("()");
       }
     }
 
@@ -247,9 +298,21 @@ namespace cpp {
       emit(")");
     }
 
-    void emitPossibleReferenceType(Type type) {
-      emitType(type);
-      emit(type.isReference() ? " *" : " ");
+    override void emitNormalType(Type type) {
+      emitCppType(type, .NORMAL);
+    }
+
+    void emitCppType(Type type, CppEmitType mode) {
+      if (type.isEnumFlags()) {
+        emit("int");
+      } else {
+        emitType(type);
+      }
+      if (type.isReference() && mode != .BARE) {
+        emit(" *");
+      } else if (mode == .DECLARATION) {
+        emit(" ");
+      }
     }
 
     override bool useDoubleColonForEnclosingSymbols() {

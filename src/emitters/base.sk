@@ -353,7 +353,7 @@ namespace base {
         case .FLOAT, .DOUBLE { emitReal(node); }
         case .STRING { emitString(node); }
         case .DOT { emitDot(node); }
-        case .CALL { emitCall(node); }
+        case .CALL { emitCall(node, precedence); }
         case .SEQUENCE { emitSequence(node, precedence); }
         case .INDEX { emitIndex(node, precedence); }
         case .ASSIGN_INDEX { emitTernary(node, precedence); }
@@ -453,7 +453,7 @@ namespace base {
       emit(mangleName(node.symbol));
     }
 
-    virtual void emitCall(Node node) {
+    virtual void emitCall(Node node, Precedence precedence) {
       var value = node.callValue();
       if (value.kind == .TYPE) {
         emit("new ");
@@ -467,7 +467,7 @@ namespace base {
     void emitParenthesizedCast(Node node, Precedence precedence) {
       if (.UNARY_PREFIX < precedence) emit("(");
       emit("(");
-      emitType(node.castType().type);
+      emitNormalType(node.castType().type);
       emit(")");
       emitExpression(node.castValue(), .UNARY_PREFIX);
       if (.UNARY_PREFIX < precedence) emit(")");
@@ -528,6 +528,10 @@ namespace base {
       emit(quoteString(node.asString(), '"'));
     }
 
+    virtual void emitNormalType(Type type) {
+      emitType(type);
+    }
+
     void emitType(Type type) {
       assert !type.isFunction();
       emit(fullName(type.symbol));
@@ -535,7 +539,7 @@ namespace base {
         emit("<");
         for (var i = 0; i < type.substitutions.size(); i++) {
           if (i > 0) emit(", ");
-          emit(type.substitutions.get(i).toString());
+          emitNormalType(type.substitutions.get(i));
         }
         emit(">");
       }

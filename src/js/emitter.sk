@@ -112,8 +112,12 @@ namespace js {
         var members = type.members.values();
         for (var j = 0; j < members.size(); j++) {
           var symbol = members.get(j).symbol;
-          if (symbol.enclosingSymbol == type.symbol && symbol.node != null && symbol.kind.isFunction() && symbol.kind != .CONSTRUCTOR_FUNCTION) {
-            emitNode(symbol.node);
+          if (symbol.enclosingSymbol == type.symbol && symbol.node != null) {
+            if (symbol.kind.isFunction() && symbol.kind != .CONSTRUCTOR_FUNCTION) {
+              emitNode(symbol.node);
+            } else if (symbol.kind == .GLOBAL_VARIABLE) {
+              collector.freeVariableSymbols.push(symbol);
+            }
           }
         }
       }
