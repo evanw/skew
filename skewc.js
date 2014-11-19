@@ -2652,16 +2652,13 @@
       this.emit(')');
     }
   };
-  base.Emitter.prototype.emitBinaryOperator = function(node) {
-    this.emit(' ' + operatorInfo.get(node.kind).text + ' ');
-  };
   base.Emitter.prototype.emitBinary = function(node, precedence) {
     var info = operatorInfo.get(node.kind);
     if (info.precedence < precedence) {
       this.emit('(');
     }
     this.emitExpression(node.binaryLeft(), in_Precedence.incrementIfRightAssociative(info.precedence, info.associativity));
-    this.emitBinaryOperator(node);
+    this.emit(' ' + info.text + ' ');
     this.emitExpression(node.binaryRight(), in_Precedence.incrementIfLeftAssociative(info.precedence, info.associativity));
     if (info.precedence < precedence) {
       this.emit(')');
@@ -2767,7 +2764,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:536:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:532:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -2975,7 +2972,7 @@
             if (superInitializer !== null && superCallArguments.length > 0 || memberInitializers !== null && memberInitializers.hasChildren()) {
               this.emit(' : ');
               if (superInitializer !== null && superCallArguments.length > 0) {
-                this.emit(this.mangleName(superInitializer.symbol) + '(');
+                this.emit(this.fullName(superInitializer.symbol) + '(');
                 this.emitCommaSeparatedExpressions(superInitializer.superCallArguments());
                 this.emit(')');
                 if (memberInitializers !== null && memberInitializers.hasChildren()) {
@@ -3035,6 +3032,12 @@
     this.emit(');\n');
     this.usedAssert = true;
   };
+  cpp.Emitter.prototype.emitBinary = function(node, precedence) {
+    if (node.parent.kind === NodeKind.LOGICAL_OR && node.kind === NodeKind.LOGICAL_AND || node.parent.kind === NodeKind.BITWISE_OR && node.kind === NodeKind.BITWISE_AND) {
+      precedence = Precedence.MEMBER;
+    }
+    base.Emitter.prototype.emitBinary.call(this, node, precedence);
+  };
   cpp.Emitter.prototype.emitNull = function() {
     this.emit('nullptr');
   };
@@ -3045,8 +3048,9 @@
     }
   };
   cpp.Emitter.prototype.emitDot = function(node) {
-    this.emitExpression(node.dotTarget(), Precedence.MEMBER);
-    this.emit('->');
+    var target = node.dotTarget();
+    this.emitExpression(target, Precedence.MEMBER);
+    this.emit(target.type.isReference() ? '->' : '.');
     this.emit(this.mangleName(node.symbol));
   };
   cpp.Emitter.prototype.emitCall = function(node, precedence) {

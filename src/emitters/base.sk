@@ -417,15 +417,11 @@ namespace base {
       if (info.precedence < precedence) emit(")");
     }
 
-    virtual void emitBinaryOperator(Node node) {
-      emit(" " + operatorInfo.get(node.kind).text + " ");
-    }
-
-    void emitBinary(Node node, Precedence precedence) {
+    virtual void emitBinary(Node node, Precedence precedence) {
       var info = operatorInfo.get(node.kind);
       if (info.precedence < precedence) emit("(");
       emitExpression(node.binaryLeft(), info.precedence.incrementIfRightAssociative(info.associativity));
-      emitBinaryOperator(node);
+      emit(" " + info.text + " ");
       emitExpression(node.binaryRight(), info.precedence.incrementIfLeftAssociative(info.associativity));
       if (info.precedence < precedence) emit(")");
     }

@@ -180,7 +180,7 @@ namespace cpp {
               if (superInitializer != null && superCallArguments.size() > 0 || memberInitializers != null && memberInitializers.hasChildren()) {
                 emit(" : ");
                 if (superInitializer != null && superCallArguments.size() > 0) {
-                  emit(mangleName(superInitializer.symbol) + "(");
+                  emit(fullName(superInitializer.symbol) + "(");
                   emitCommaSeparatedExpressions(superInitializer.superCallArguments());
                   emit(")");
                   if (memberInitializers != null && memberInitializers.hasChildren()) {
@@ -243,6 +243,16 @@ namespace cpp {
       usedAssert = true;
     }
 
+    override void emitBinary(Node node, Precedence precedence) {
+      // Clang warns about && inside || or & inside | without parentheses
+      if (node.parent.kind == .LOGICAL_OR && node.kind == .LOGICAL_AND ||
+          node.parent.kind == .BITWISE_OR && node.kind == .BITWISE_AND) {
+        precedence = .MEMBER;
+      }
+
+      super(node, precedence);
+    }
+
     override void emitNull() {
       emit("nullptr");
     }
@@ -255,8 +265,9 @@ namespace cpp {
     }
 
     override void emitDot(Node node) {
-      emitExpression(node.dotTarget(), .MEMBER);
-      emit("->");
+      var target = node.dotTarget();
+      emitExpression(target, .MEMBER);
+      emit(target.type.isReference() ? "->" : ".");
       emit(mangleName(node.symbol));
     }
 
