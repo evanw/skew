@@ -156,9 +156,10 @@ namespace base {
     void emitStatements(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
         var child = nodes.get(i);
-        emitExtraNewlineBefore(child.kind);
+        var kind = child.kind;
+        if (kind != .MODIFIER) emitExtraNewlineBefore(kind);
         emitStatement(child);
-        emitExtraNewlineAfter(child.kind);
+        if (kind != .MODIFIER) emitExtraNewlineAfter(kind);
       }
     }
 
@@ -349,7 +350,7 @@ namespace base {
         case .HOOK { emitHook(node, precedence); }
         case .NULL { emitNull(); }
         case .BOOL { emitBool(node); }
-        case .INT { emit(node.asInt().toString()); }
+        case .INT { emitInt(node, precedence); }
         case .FLOAT, .DOUBLE { emitReal(node); }
         case .STRING { emitString(node); }
         case .DOT { emitDot(node); }
@@ -514,6 +515,14 @@ namespace base {
 
     virtual void emitBool(Node node) {
       emit(node.asBool().toString());
+    }
+
+    virtual void emitInt(Node node, Precedence precedence) {
+      if (node.type.isEnum() && node.symbol != null) {
+        emitName(node);
+      } else {
+        emit(node.asInt().toString());
+      }
     }
 
     virtual void emitReal(Node node) {

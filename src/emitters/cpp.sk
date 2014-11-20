@@ -287,6 +287,21 @@ namespace cpp {
       }
     }
 
+    override void emitInt(Node node, Precedence precedence) {
+      if (node.type.isEnum() && node.symbol != null) {
+        emitName(node);
+      } else if (node.type.isRegularEnum()) {
+        if (.UNARY_PREFIX < precedence) emit("(");
+        emit("(");
+        emitNormalType(node.type);
+        emit(")");
+        emit(node.asInt().toString());
+        if (.UNARY_PREFIX < precedence) emit(")");
+      } else {
+        emit(node.asInt().toString());
+      }
+    }
+
     override void emitList(Node node) {
       var values = node.listValues();
       if (values.size() > 0) {
