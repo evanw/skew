@@ -1,8 +1,18 @@
-const var NATIVE_LIBRARY = "
-import class int { import string toString(); }
-import class bool { import string toString(); }
-import class float { import string toString(); }
-import class double { import string toString(); }
+const var NATIVE_LIBRARY_CPP = "
+import void cpp_toString();
+
+import class int {
+  inline string toString() { return untyped(cpp_toString)(this); }
+}
+import class bool {
+  inline string toString() { return untyped(cpp_toString)(this); }
+}
+import class float {
+  inline string toString() { return untyped(cpp_toString)(this); }
+}
+import class double {
+  inline string toString() { return untyped(cpp_toString)(this); }
+}
 
 import class string {
   import int size();
@@ -13,15 +23,15 @@ import class string {
   import string toUpperCase();
   import static string fromCodeUnit(int value);
   import string get(int index);
-  import string join(List<string> values);
   import int codeUnitAt(int index);
-  import bool startsWith(string prefix);
-  import bool endsWith(string suffix);
-  import string repeat(int count);
+  string join(List<string> values) { var result = \"\"; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }
+  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }
+  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }
+  string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }
 }
 
-interface IComparison<T> {
-  virtual int compare(T left, T right);
+export interface IComparison<T> {
+  export virtual int compare(T left, T right);
 }
 
 import class List<T> {
@@ -44,7 +54,8 @@ import class List<T> {
   import void swap(int a, int b);
 }
 
-class StringMap<T> {
+import class StringMap<T> {
+  new();
   import T get(string key);
   import T getOrDefault(string key, T defaultValue);
   import void set(string key, T value);
@@ -55,7 +66,8 @@ class StringMap<T> {
   import StringMap<T> clone();
 }
 
-class IntMap<T> {
+import class IntMap<T> {
+  new();
   import T get(int key);
   import T getOrDefault(int key, T defaultValue);
   import void set(int key, T value);

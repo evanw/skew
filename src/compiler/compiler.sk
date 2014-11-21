@@ -65,6 +65,7 @@ export class Compiler {
   // Cache the standard library for a small speed boost
   static CachedSource nativeLibrary = CachedSource(NATIVE_LIBRARY);
   static CachedSource nativeLibraryJS = CachedSource(NATIVE_LIBRARY_JS);
+  static CachedSource nativeLibraryCPP = CachedSource(NATIVE_LIBRARY_CPP);
 
   var tokenizingTime = 0.0;
   var parsingTime = 0.0;
@@ -94,21 +95,21 @@ export class Compiler {
 
     // Compilation time
     var optimizingTime = callGraphTime + instanceToStaticTime + symbolMotionTime + functionInliningTime + constantFoldingTime + deadCodeRemovalTime;
-    text += "\nTotal compile time: " + formatNumber(totalTime + lineCountingTime) + "ms";
-    if (tokenizingTime > 0) text += "\n  Tokenizing: " + formatNumber(tokenizingTime) + "ms";
-    if (parsingTime > 0) text += "\n  Parsing: " + formatNumber(parsingTime) + "ms";
-    if (resolvingTime > 0) text += "\n  Resolving: " + formatNumber(resolvingTime) + "ms";
+    text += "\nTotal compile time: " + formatPositiveNumber(totalTime + lineCountingTime) + "ms";
+    if (tokenizingTime > 0) text += "\n  Tokenizing: " + formatPositiveNumber(tokenizingTime) + "ms";
+    if (parsingTime > 0) text += "\n  Parsing: " + formatPositiveNumber(parsingTime) + "ms";
+    if (resolvingTime > 0) text += "\n  Resolving: " + formatPositiveNumber(resolvingTime) + "ms";
     if (optimizingTime > 0) {
-      text += "\n  Optimizing: " + formatNumber(optimizingTime) + "ms";
-      text += "\n    Building call graph: " + formatNumber(callGraphTime) + "ms";
-      text += "\n    Instance to static: " + formatNumber(instanceToStaticTime) + "ms";
-      text += "\n    Symbol motion: " + formatNumber(symbolMotionTime) + "ms";
-      text += "\n    Function inlining: " + formatNumber(functionInliningTime) + "ms";
-      text += "\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms";
-      text += "\n    Dead code removal: " + formatNumber(deadCodeRemovalTime) + "ms";
+      text += "\n  Optimizing: " + formatPositiveNumber(optimizingTime) + "ms";
+      text += "\n    Building call graph: " + formatPositiveNumber(callGraphTime) + "ms";
+      text += "\n    Instance to static: " + formatPositiveNumber(instanceToStaticTime) + "ms";
+      text += "\n    Symbol motion: " + formatPositiveNumber(symbolMotionTime) + "ms";
+      text += "\n    Function inlining: " + formatPositiveNumber(functionInliningTime) + "ms";
+      text += "\n    Constant folding: " + formatPositiveNumber(constantFoldingTime) + "ms";
+      text += "\n    Dead code removal: " + formatPositiveNumber(deadCodeRemovalTime) + "ms";
     }
-    if (emitTime > 0) text += "\n  Emit: " + formatNumber(emitTime) + "ms";
-    if (lineCountingTime > 0) text += "\n  Counting lines: " + formatNumber(lineCountingTime) + "ms";
+    if (emitTime > 0) text += "\n  Emit: " + formatPositiveNumber(emitTime) + "ms";
+    if (lineCountingTime > 0) text += "\n  Counting lines: " + formatPositiveNumber(lineCountingTime) + "ms";
 
     // Sources
     text += sourceStatistics("Prepend", result.options.prepend);
@@ -153,6 +154,7 @@ export class Compiler {
     // Tokenize and parse each module individually
     switch (options.targetFormat) {
       case .JAVASCRIPT { program.appendChild(nativeLibraryJS.compile(this, options)); }
+      case .CPP { program.appendChild(nativeLibraryCPP.compile(this, options)); }
       default { program.appendChild(nativeLibrary.compile(this, options)); }
     }
     for (var i = 1; i < options.inputs.size(); i++) {

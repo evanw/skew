@@ -74,7 +74,7 @@ namespace InstanceToStaticPass {
     }
 
     if (node.isNameExpression() && (node.symbol.kind == .INSTANCE_FUNCTION || node.symbol.kind == .INSTANCE_VARIABLE)) {
-      node.become(Node.createDot(createThis(symbol), node.clone()).withType(node.type).withRange(node.range));
+      node.become(Node.createDot(createThis(symbol), node.clone()).withType(node.type).withRange(node.range).withSymbol(node.symbol));
       return true;
     }
 

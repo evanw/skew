@@ -150,7 +150,9 @@ class SplitPath {
 }
 
 SplitPath splitPath(string path) {
-  var slashIndex = Math.imax(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  var forwardSlash = path.lastIndexOf("/");
+  var backwardSlash = path.lastIndexOf("\\");
+  var slashIndex = forwardSlash > backwardSlash ? forwardSlash : backwardSlash;
   return slashIndex == -1
     ? SplitPath(".", path)
     : SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1, path.size()));
@@ -160,8 +162,8 @@ string joinPath(string directory, string entry) {
   return directory + "/" + entry;
 }
 
-string formatNumber(double number) {
-  return (Math.round(number * 10) / 10).toString();
+string formatPositiveNumber(double number) {
+  return ((int)(number * 10 + 0.5) / 10).toString();
 }
 
 enum ByteSize {
@@ -173,9 +175,9 @@ enum ByteSize {
 string bytesToString(int bytes) {
   if (bytes == 1) return "1 byte";
   if (bytes < ByteSize.KB) return bytes + " bytes";
-  if (bytes < ByteSize.MB) return formatNumber(bytes / (double)ByteSize.KB) + "kb";
-  if (bytes < ByteSize.GB) return formatNumber(bytes / (double)ByteSize.MB) + "mb";
-  return formatNumber(bytes / (double)ByteSize.GB) + "gb";
+  if (bytes < ByteSize.MB) return formatPositiveNumber(bytes / (double)ByteSize.KB) + "kb";
+  if (bytes < ByteSize.GB) return formatPositiveNumber(bytes / (double)ByteSize.MB) + "mb";
+  return formatPositiveNumber(bytes / (double)ByteSize.GB) + "gb";
 }
 
 namespace trace {

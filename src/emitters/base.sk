@@ -361,6 +361,7 @@ namespace base {
         case .CAST, .IMPLICIT_CAST { emitCast(node, precedence); }
         case .LIST { emitList(node); }
         case .SUPER_CALL { emitSuperCall(node); }
+        case .UNTYPED { emitExpression(node.untypedValue(), precedence); }
         default {
           if (kind.isUnaryOperator()) emitUnary(node, precedence);
           else if (kind.isBinaryOperator()) emitBinary(node, precedence);
