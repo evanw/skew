@@ -169,6 +169,10 @@ void semanticErrorBadDefaultCase(Log log, Range range) {
   log.error(range, "Only the last case can be a default case");
 }
 
+void semanticErrorNonIntegerSwitch(Log log, Range range, Type type) {
+  log.error(range, "Expected an integer type but got " + typeToText(type));
+}
+
 void semanticErrorDuplicateCase(Log log, Range range, Range previous) {
   log.error(range, "Duplicate case value");
   if (!previous.isEmpty()) log.note(previous, "The first occurrence is here");

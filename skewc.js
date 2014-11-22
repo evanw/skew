@@ -7366,16 +7366,12 @@
   };
   Resolver.prototype.initializeSymbol = function(symbol) {
     if (symbol.kind === SymbolKind.AUTOMATIC) {
-      switch (symbol.name) {
-      case 'new':
+      if (symbol.name === 'new') {
         this.generateDefaultConstructor(symbol);
-        break;
-      case 'toString':
+      } else if (symbol.name === 'toString') {
         this.generateDefaultToString(symbol);
-        break;
-      default:
-        throw new Error('assert false; (src/resolver/resolver.sk:1698:19)');
-        break;
+      } else {
+        throw new Error('assert false; (src/resolver/resolver.sk:1697:12)');
       }
       if (symbol.node !== null) {
         var oldContext = this.context;
@@ -7408,17 +7404,17 @@
     }
     if (symbol.isUninitialized()) {
       if (symbol.node === null) {
-        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1735:7)');
+        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1733:7)');
       }
       this.initializeDeclaration(symbol.node);
       if (symbol.isInitializing()) {
-        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1737:7)');
+        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1735:7)');
       }
       if (!symbol.isInitialized()) {
-        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1738:7)');
+        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1736:7)');
       }
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1739:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1737:7)');
       }
     } else if (symbol.isInitializing()) {
       semanticErrorCyclicDeclaration(this.log, symbol.node.firstNonExtensionSibling().declarationName().range, symbol.name);
@@ -7438,7 +7434,7 @@
   };
   Resolver.prototype.resolveAsType = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1765:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1763:5)');
     }
     this.resolve(node, null);
     this.checkIsType(node);
@@ -7449,7 +7445,7 @@
   };
   Resolver.prototype.resolveAsParameterizedExpression = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1776:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1774:5)');
     }
     this.resolve(node, null);
     this.checkIsInstance(node);
@@ -7457,14 +7453,14 @@
   };
   Resolver.prototype.resolveAsExpressionWithTypeContext = function(node, type) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1783:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1781:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
   };
   Resolver.prototype.resolveAsExpressionWithConversion = function(node, type, kind) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1789:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1787:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
@@ -7496,16 +7492,16 @@
   };
   Resolver.prototype.resolveProgram = function(node) {
     if (node.parent !== null) {
-      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1822:5)');
+      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1820:5)');
     }
     this.resolveChildren(node);
   };
   Resolver.prototype.resolveFile = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1827:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1825:5)');
     }
     if (node.parent.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1828:5)');
+      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1826:5)');
     }
     this.resolve(node.fileBlock(), null);
   };
@@ -7523,16 +7519,16 @@
   };
   Resolver.prototype.resolveCase = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1849:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1847:5)');
     }
     if (node.parent.kind !== NodeKind.SWITCH) {
-      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1850:5)');
+      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1848:5)');
     }
     if (this.context.switchValue === null) {
-      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1851:5)');
+      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1849:5)');
     }
     if (this.context.switchValue.type === null) {
-      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1852:5)');
+      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1850:5)');
     }
     var values = node.caseValues();
     var block = node.caseBlock();
@@ -7594,7 +7590,7 @@
   Resolver.prototype.resolveFunction = function(node) {
     var symbol = node.symbol;
     if (symbol.enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(symbol.enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== symbol.enclosingSymbol)) {
-      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1936:5)');
+      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1934:5)');
     }
     this.checkDeclarationLocation(node, AllowDeclaration.ALLOW_TOP_OR_OBJECT_LEVEL);
     this.initializeSymbol(symbol);
@@ -7646,7 +7642,7 @@
           this.resolveNodesAsExpressions($arguments);
         } else {
           if (!overriddenType.isFunction()) {
-            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2005:11)');
+            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2003:11)');
           }
           this.resolveArguments($arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
         }
@@ -7919,6 +7915,10 @@
     var value = node.switchValue();
     var cases = node.switchCases();
     this.resolveAsParameterizedExpression(value);
+    if (!value.type.isError(this.cache) && !value.type.isInteger(this.cache)) {
+      semanticErrorNonIntegerSwitch(this.log, value.range, value.type);
+      value.type = this.cache.errorType;
+    }
     var oldSwitchValue = this.context.switchValue;
     this.context.switchValue = value;
     this.resolveNodes(cases);
@@ -7936,7 +7936,7 @@
           continue;
         }
         if (!in_NodeKind.isConstant(caseValue.kind)) {
-          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2388:9)');
+          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2392:9)');
         }
         var k = 0;
         for (k = 0; k < uniqueValues.length; k = k + 1 | 0) {
@@ -7977,7 +7977,7 @@
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2437:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2441:7)');
       }
       var symbol = this.context.symbolForThis;
       this.initializeSymbol(symbol);
@@ -8100,7 +8100,7 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2606:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2610:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -8193,7 +8193,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2729:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2733:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -9854,27 +9854,19 @@
     if (flags.target === '') {
       frontend.printError('Set the target language with "--target=___"');
       return 1;
-    }
-    switch (flags.target) {
-    case 'none':
+    } else if (flags.target === 'none') {
       target = TargetFormat.NONE;
-      break;
-    case 'js':
+    } else if (flags.target === 'js') {
       target = TargetFormat.JAVASCRIPT;
-      break;
-    case 'cpp':
+    } else if (flags.target === 'cpp') {
       target = TargetFormat.CPP;
-      break;
-    case 'lisp-ast':
+    } else if (flags.target === 'lisp-ast') {
       target = TargetFormat.LISP_AST;
-      break;
-    case 'json-ast':
+    } else if (flags.target === 'json-ast') {
       target = TargetFormat.JSON_AST;
-      break;
-    case 'xml-ast':
+    } else if (flags.target === 'xml-ast') {
       target = TargetFormat.XML_AST;
-      break;
-    default:
+    } else {
       frontend.printError('Unknown target language ' + quoteString(flags.target, 34));
       return 1;
     }
@@ -11155,6 +11147,9 @@
   function semanticErrorBadDefaultCase(log, range) {
     log.error(range, 'Only the last case can be a default case');
   }
+  function semanticErrorNonIntegerSwitch(log, range, type) {
+    log.error(range, 'Expected an integer type but got ' + typeToText(type));
+  }
   function semanticErrorDuplicateCase(log, range, previous) {
     log.error(range, 'Duplicate case value');
     if (!previous.isEmpty()) {
@@ -11227,19 +11222,19 @@
   }
   function semanticErrorNoUnaryOperator(log, range, kind, type) {
     if (!in_NodeKind.isUnaryOperator(kind)) {
-      throw new Error('assert kind.isUnaryOperator(); (src/resolver/diagnostics.sk:243:3)');
+      throw new Error('assert kind.isUnaryOperator(); (src/resolver/diagnostics.sk:247:3)');
     }
     log.error(range, 'No unary operator ' + operatorInfo.get(kind).text + ' for ' + typeToText(type));
   }
   function semanticErrorNoBinaryOperator(log, range, kind, left, right) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/resolver/diagnostics.sk:248:3)');
+      throw new Error('assert kind.isBinaryOperator(); (src/resolver/diagnostics.sk:252:3)');
     }
     log.error(range, 'No binary operator ' + operatorInfo.get(kind).text + ' for ' + typeToText(left) + ' and ' + typeToText(right));
   }
   function semanticErrorNoTernaryOperator(log, range, kind, left, middle, right) {
     if (!in_NodeKind.isTernaryOperator(kind)) {
-      throw new Error('assert kind.isTernaryOperator(); (src/resolver/diagnostics.sk:253:3)');
+      throw new Error('assert kind.isTernaryOperator(); (src/resolver/diagnostics.sk:257:3)');
     }
     log.error(range, 'No ternary operator ' + operatorInfo.get(kind).text + ' for ' + typeToText(left) + ', ' + typeToText(middle) + ', and ' + typeToText(right));
   }

@@ -1692,11 +1692,9 @@ class Resolver {
   void initializeSymbol(Symbol symbol) {
     // Handle auto-generated symbols now
     if (symbol.kind == .AUTOMATIC) {
-      switch (symbol.name) {
-        case "new" { generateDefaultConstructor(symbol); }
-        case "toString" { generateDefaultToString(symbol); }
-        default { assert false; }
-      }
+      if (symbol.name == "new") generateDefaultConstructor(symbol);
+      else if (symbol.name == "toString") generateDefaultToString(symbol);
+      else assert false;
 
       // Automatically generated symbols need to be explicitly resolved because
       // they aren't reachable from the parse tree, only from the type cache
@@ -2363,6 +2361,12 @@ class Resolver {
     var value = node.switchValue();
     var cases = node.switchCases();
     resolveAsParameterizedExpression(value);
+
+    // Can only switch on integer types for now
+    if (!value.type.isError(cache) && !value.type.isInteger(cache)) {
+      semanticErrorNonIntegerSwitch(log, value.range, value.type);
+      value.type = cache.errorType;
+    }
 
     var oldSwitchValue = context.switchValue;
     context.switchValue = value;
