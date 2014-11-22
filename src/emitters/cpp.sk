@@ -268,7 +268,7 @@ namespace cpp {
       var target = node.dotTarget();
       emitExpression(target, .MEMBER);
       emit(target.type.isReference() ? "->" : ".");
-      emit(mangleName(node.symbol));
+      emit(node.symbol != null ? mangleName(node.symbol) : node.dotName().asString());
     }
 
     override void emitCall(Node node, Precedence precedence) {

@@ -346,9 +346,9 @@ class Resolver {
         continue;
       }
 
-      // Add symbols from using statements. These must be added after using
-      // aliases because using statements only import symbols from their
-      // namespace if there isn't already an existing symbol:
+      // Add symbols from using statements. These must be added after symbols
+      // have finished being registered because using statements only import
+      // symbols from their namespace if there isn't already an existing symbol:
       //
       //   namespace Foo { class Bar {} }
       //   using Foo;
@@ -927,13 +927,13 @@ class Resolver {
       }
 
       // Ensure there is one base class and everything else is an interface
-      if (symbol.kind == .CLASS && baseType.isClass()) {
+      if (symbol.kind == .CLASS && baseType.isClass() && !baseType.isPrimitive()) {
         if (baseTypes.indexOf(base) != 0) {
           semanticErrorClassBaseNotFirst(log, base.range, baseType);
           continue;
         }
       } else if (!baseType.isInterface()) {
-        semanticErrorBaseTypeNotInterface(log, base.range, baseType);
+        semanticErrorBadBaseType(log, base.range, baseType);
         continue;
       }
 

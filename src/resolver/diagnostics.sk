@@ -199,8 +199,8 @@ void semanticErrorClassBaseNotFirst(Log log, Range range, Type type) {
   log.error(range, "Base " + typeToText(type) + " must come first in a class declaration");
 }
 
-void semanticErrorBaseTypeNotInterface(Log log, Range range, Type type) {
-  log.error(range, "Base " + typeToText(type) + " must be an interface");
+void semanticErrorBadBaseType(Log log, Range range, Type type) {
+  log.error(range, "Invalid base " + typeToText(type));
 }
 
 void semanticErrorDuplicateBaseType(Log log, Range range, Type type) {

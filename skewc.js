@@ -3069,7 +3069,7 @@
     var target = node.dotTarget();
     this.emitExpression(target, Precedence.MEMBER);
     this.emit(target.type.isReference() ? '->' : '.');
-    this.emit(this.mangleName(node.symbol));
+    this.emit(node.symbol !== null ? this.mangleName(node.symbol) : node.dotName().asString());
   };
   cpp.Emitter.prototype.emitCall = function(node, precedence) {
     var wrap = node.callValue().kind === NodeKind.TYPE && precedence === Precedence.MEMBER;
@@ -6769,13 +6769,13 @@
       if (baseType.isError(this.cache)) {
         continue;
       }
-      if (symbol.kind === SymbolKind.CLASS && baseType.isClass()) {
+      if (symbol.kind === SymbolKind.CLASS && baseType.isClass() && !baseType.isPrimitive()) {
         if (baseTypes.indexOf(base) !== 0) {
           semanticErrorClassBaseNotFirst(this.log, base.range, baseType);
           continue;
         }
       } else if (!baseType.isInterface()) {
-        semanticErrorBaseTypeNotInterface(this.log, base.range, baseType);
+        semanticErrorBadBaseType(this.log, base.range, baseType);
         continue;
       }
       if (type.relevantTypes.indexOf(baseType) >= 0) {
@@ -11174,8 +11174,8 @@
   function semanticErrorClassBaseNotFirst(log, range, type) {
     log.error(range, 'Base ' + typeToText(type) + ' must come first in a class declaration');
   }
-  function semanticErrorBaseTypeNotInterface(log, range, type) {
-    log.error(range, 'Base ' + typeToText(type) + ' must be an interface');
+  function semanticErrorBadBaseType(log, range, type) {
+    log.error(range, 'Invalid base ' + typeToText(type));
   }
   function semanticErrorDuplicateBaseType(log, range, type) {
     log.error(range, 'Duplicate base ' + typeToText(type));
