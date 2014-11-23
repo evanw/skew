@@ -60,10 +60,13 @@ import class List<T> {
 class StringMap<T> {
   Object table = Object.create(null);
   inline T get(string key) { return untyped(table)[key]; }
-  inline T getOrDefault(string key, T defaultValue) { return untyped(table)[key] || defaultValue; }
   inline void set(string key, T value) { untyped(table)[key] = value; }
   inline bool has(string key) { return key in untyped(table); }
   inline void remove(string key) { operators.delete(untyped(table)[key]); }
+
+  T getOrDefault(string key, T defaultValue) {
+    return has(key) ? get(key) : defaultValue;
+  }
 
   List<string> keys() {
     List<string> keys = [];
@@ -87,10 +90,13 @@ class StringMap<T> {
 class IntMap<T> {
   Object table = Object.create(null);
   inline T get(int key) { return untyped(table)[key]; }
-  inline T getOrDefault(int key, T defaultValue) { return untyped(table)[key] || defaultValue; }
   inline void set(int key, T value) { untyped(table)[key] = value; }
   inline bool has(int key) { return key in untyped(table); }
   inline void remove(int key) { operators.delete(untyped(table)[key]); }
+
+  T getOrDefault(int key, T defaultValue) {
+    return has(key) ? get(key) : defaultValue;
+  }
 
   List<int> keys() {
     List<int> keys = [];

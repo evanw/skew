@@ -5,7 +5,8 @@ namespace InstanceToStaticPass {
       var symbol = info.symbol;
       var enclosingSymbol = symbol.enclosingSymbol;
       if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() != null && (
-          enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() || resolver.options.convertAllInstanceToStatic && !symbol.isExport() && !symbol.isVirtual())) {
+          enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() ||
+          (resolver.options.convertAllInstanceToStatic || symbol.isInline()) && !symbol.isExport() && !symbol.isVirtual())) {
 
         // TODO: Add one type parameters to this method for each type parameter
         // on the enclosing symbol and make sure to fully parameterize all call
@@ -44,7 +45,7 @@ namespace InstanceToStaticPass {
             name = value.dotName().replaceWith(null);
           } else {
             assert value.kind == .NAME;
-            target = Node.createThis();
+            target = Node.createThis().withType(enclosingSymbol.type);
             name = value.replaceWith(null);
           }
           callSite.replaceChild(0, name);

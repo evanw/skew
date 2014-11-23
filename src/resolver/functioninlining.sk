@@ -231,16 +231,18 @@ class InliningGraph {
         // variables that are used more than once may need a let statement
         // to avoid changing the semantics of the call site. For now, just
         // only inline functions where each argument is used exactly once.
-        var symbolCounts = IntMap<int>();
-        if (recursivelyCountArgumentUses(inlineValue, symbolCounts)) {
+        var argumentVariables = symbol.node.functionArguments().children;
+        var argumentCounts = IntMap<int>();
+        for (var i = 0; i < argumentVariables.size(); i++) {
+          argumentCounts.set(argumentVariables.get(i).symbol.uniqueID, 0);
+        }
+        if (recursivelyCountArgumentUses(inlineValue, argumentCounts)) {
           List<Symbol> unusedArguments = [];
           List<Symbol> arguments = [];
-          var argumentVariables = symbol.node.functionArguments().children;
           var isSimpleSubstitution = true;
           for (var i = 0; i < argumentVariables.size(); i++) {
             var argument = argumentVariables.get(i).symbol;
-            assert argument != null;
-            var count = symbolCounts.getOrDefault(argument.uniqueID, 0);
+            var count = argumentCounts.get(argument.uniqueID);
             if (count == 0) {
               unusedArguments.push(argument);
             } else if (count != 1) {
@@ -260,11 +262,11 @@ class InliningGraph {
   }
 
   // This returns false if inlining is impossible
-  static bool recursivelyCountArgumentUses(Node node, IntMap<int> symbolCounts) {
+  static bool recursivelyCountArgumentUses(Node node, IntMap<int> argumentCounts) {
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
         var child = node.children.get(i);
-        if (child != null && !recursivelyCountArgumentUses(child, symbolCounts)) {
+        if (child != null && !recursivelyCountArgumentUses(child, argumentCounts)) {
           return false;
         }
       }
@@ -272,20 +274,23 @@ class InliningGraph {
 
     var symbol = node.symbol;
     if (symbol != null) {
-      symbolCounts.set(symbol.uniqueID, symbolCounts.getOrDefault(symbol.uniqueID, 0) + 1);
+      var count = argumentCounts.getOrDefault(symbol.uniqueID, -1);
+      if (count >= 0) {
+        argumentCounts.set(symbol.uniqueID, count + 1);
 
-      // Prevent inlining of functions that modify their arguments locally. For
-      // example, inlining this would lead to incorrect code:
-      //
-      //   inline void foo(int x, int y) {
-      //     x += y;
-      //   }
-      //   export void test() {
-      //     foo(1, 2);
-      //   }
-      //
-      if (node.isStorage()) {
-        return false;
+        // Prevent inlining of functions that modify their arguments locally. For
+        // example, inlining this would lead to incorrect code:
+        //
+        //   inline void foo(int x, int y) {
+        //     x += y;
+        //   }
+        //   export void test() {
+        //     foo(1, 2);
+        //   }
+        //
+        if (node.isStorage()) {
+          return false;
+        }
       }
     }
 
