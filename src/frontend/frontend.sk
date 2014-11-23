@@ -1,5 +1,5 @@
 import namespace io {
-  enum Color {
+  export enum Color {
     DEFAULT = 0,
     BOLD = 1,
     GRAY = 90,

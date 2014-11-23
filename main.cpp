@@ -80,12 +80,10 @@ string encodeBase64(string text);
 double parseDoubleLiteral(string text);
 double parseIntLiteral(string text, int base);
 string cpp_toString(int value);
-string cpp_toString(bool value);
 string cpp_toString(double value);
 string cpp_fromCodeUnit(int value);
 string cpp_toLowerCase(string value);
 string cpp_toUpperCase(string value);
-string cpp_slice(const string &value, int start, int end);
 
 struct Source;
 
@@ -182,12 +180,6 @@ string cpp_toString(int value) {
   return ss.str();
 }
 
-string cpp_toString(bool value) {
-  std::stringstream ss;
-  ss << value;
-  return ss.str();
-}
-
 string cpp_toString(double value) {
   std::stringstream ss;
   ss << value;
@@ -208,10 +200,6 @@ string cpp_toUpperCase(string value) {
   return value;
 }
 
-string cpp_slice(const string &value, int start, int end) {
-  return value.substr(start, end - start);
-}
-
 int io::terminalWidth = 0;
 
 #if _WIN32
@@ -229,7 +217,10 @@ void io::setColor(in_io::Color color) {
       case in_io::Color::GRAY: SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE); break;
       case in_io::Color::RED: SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_INTENSITY); break;
       case in_io::Color::GREEN: SetConsoleTextAttribute(handle, FOREGROUND_GREEN | FOREGROUND_INTENSITY); break;
+      case in_io::Color::BLUE: SetConsoleTextAttribute(handle, FOREGROUND_BLUE | FOREGROUND_INTENSITY); break;
+      case in_io::Color::YELLOW: SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY); break;
       case in_io::Color::MAGENTA: SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY); break;
+      case in_io::Color::CYAN: SetConsoleTextAttribute(handle, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY); break;
     }
   #else
     if (isTTY) std::cout << "\e[" << (int)color << 'm';

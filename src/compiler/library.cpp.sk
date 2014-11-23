@@ -3,13 +3,12 @@ import void cpp_toString();
 import string cpp_fromCodeUnit(int value);
 import string cpp_toLowerCase(string value);
 import string cpp_toUpperCase(string value);
-import string cpp_slice(string value, int start, int end);
 
 import class int {
   inline string toString() { return untyped(cpp_toString)(this); }
 }
 import class bool {
-  inline string toString() { return untyped(cpp_toString)(this); }
+  inline string toString() { return this ? \"true\" : \"false\"; }
 }
 import class float {
   inline string toString() { return untyped(cpp_toString)(this); }
@@ -22,8 +21,8 @@ import class string {
 }
 
 import in string {
-  inline int size() { return untyped(this).size(); }
-  inline string slice(int start, int end) { return cpp_slice(this, start, end); }
+  inline int size() { return (int)untyped(this).size(); }
+  inline string slice(int start, int end) { return untyped(this).substr(start, end - start); }
   inline int indexOf(string value) { return (int)untyped(this).find(value); }
   inline int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }
   inline string toLowerCase() { return cpp_toLowerCase(this); }
