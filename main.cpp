@@ -103,18 +103,35 @@ namespace io {
 
 #include "output.cpp"
 
+#include <cstdint>
 #include <sstream>
 #include <iostream>
 #include <fstream>
-#include <sys/ioctl.h>
-#include <unistd.h>
-#include <sys/time.h>
+#include <algorithm>
+#ifdef _WIN32
+  #include <windows.h>
+#else
+  #include <sys/ioctl.h>
+  #include <unistd.h>
+  #include <sys/time.h>
+  #include <sys/mman.h>
+#endif
 #include <iomanip>
 
 double now() {
-  timeval data;
-  gettimeofday(&data, NULL);
-  return data.tv_sec * 1.0e3 + data.tv_usec / 1.0e3;
+  #ifdef _WIN32
+    static LARGE_INTEGER frequency;
+    LARGE_INTEGER counter;
+    if (!frequency.QuadPart) {
+      QueryPerformanceFrequency(&frequency);
+    }
+    QueryPerformanceCounter(&counter);
+    return counter.QuadPart * 1000.0 / frequency.QuadPart;
+  #else
+    timeval data;
+    gettimeofday(&data, NULL);
+    return data.tv_sec * 1000.0 + data.tv_usec / 1000.0;
+  #endif
 }
 
 string encodeBase64(string text) {
@@ -195,11 +212,28 @@ string cpp_slice(const string &value, int start, int end) {
   return value.substr(start, end - start);
 }
 
-bool isTTY = false;
 int io::terminalWidth = 0;
 
+#if _WIN32
+  auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
+  CONSOLE_SCREEN_BUFFER_INFO info;
+#else
+  bool isTTY = false;
+#endif
+
 void io::setColor(in_io::Color color) {
-  if (isTTY) std::cout << "\e[" << (int)color << 'm';
+  #if _WIN32
+    switch (color) {
+      case in_io::Color::DEFAULT: SetConsoleTextAttribute(handle, info.wAttributes); break;
+      case in_io::Color::BOLD: SetConsoleTextAttribute(handle, info.wAttributes | FOREGROUND_INTENSITY); break;
+      case in_io::Color::GRAY: SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE); break;
+      case in_io::Color::RED: SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_INTENSITY); break;
+      case in_io::Color::GREEN: SetConsoleTextAttribute(handle, FOREGROUND_GREEN | FOREGROUND_INTENSITY); break;
+      case in_io::Color::MAGENTA: SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY); break;
+    }
+  #else
+    if (isTTY) std::cout << "\e[" << (int)color << 'm';
+  #endif
 }
 
 void io::print(string text) {
@@ -224,20 +258,25 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     args->push(argv[i]);
   }
-  winsize size;
-  if (!ioctl(2, TIOCGWINSZ, &size)) {
-    io::terminalWidth = size.ws_col;
-  }
-  isTTY = isatty(STDOUT_FILENO);
+
+  #if _WIN32
+    GetConsoleScreenBufferInfo(handle, &info);
+    io::terminalWidth = info.dwSize.X - 1;
+  #else
+    winsize size;
+    if (!ioctl(2, TIOCGWINSZ, &size)) {
+      io::terminalWidth = size.ws_col;
+    }
+    isTTY = isatty(STDOUT_FILENO);
+  #endif
+
   return frontend::main(args);
 }
-
-#include <sys/mman.h>
 
 // Replace the standard malloc() implementation with a bump allocator for
 // speed. Never freeing anything is totally fine for a short-lived process.
 // This gives a significant speedup.
-extern "C" void *malloc(size_t size) {
+void *allocate(size_t size) {
   enum { CHUNK_SIZE = 1 << 20 };
 
   static void *next;
@@ -246,8 +285,13 @@ extern "C" void *malloc(size_t size) {
   if (available < size) {
     size_t chunk = (size + CHUNK_SIZE - 1) / CHUNK_SIZE * CHUNK_SIZE;
     assert(size <= chunk);
-    next = mmap(NULL, chunk, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
-    assert(next != MAP_FAILED);
+    #if _WIN32
+      next = VirtualAlloc(nullptr, chunk, MEM_COMMIT, PAGE_READWRITE);
+      assert(next != nullptr);
+    #else
+      next = mmap(nullptr, chunk, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+      assert(next != MAP_FAILED);
+    #endif
     available = chunk;
   }
 
@@ -257,8 +301,15 @@ extern "C" void *malloc(size_t size) {
   return data;
 }
 
-extern "C" void free(void *data) {}
-void *operator new (size_t size) { return malloc(size); }
-void *operator new [] (size_t size) { return malloc(size); }
+// Overriding malloc() and free() is really hard on Windows for some reason
+#if !_WIN32
+  extern "C" {
+    void *malloc(size_t size) { return allocate(size); }
+    void free(void *data) {}
+  }
+#endif
+
+void *operator new (size_t size){ return allocate(size); }
+void *operator new [](size_t size) { return allocate(size); }
 void operator delete (void *data) throw() {}
 void operator delete [] (void *data) throw() {}
