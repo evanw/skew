@@ -211,17 +211,19 @@ int io::terminalWidth = 0;
 
 void io::setColor(in_io::Color color) {
   #if _WIN32
+    WORD value;
     switch (color) {
-      case in_io::Color::DEFAULT: SetConsoleTextAttribute(handle, info.wAttributes); break;
-      case in_io::Color::BOLD: SetConsoleTextAttribute(handle, info.wAttributes | FOREGROUND_INTENSITY); break;
-      case in_io::Color::GRAY: SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE); break;
-      case in_io::Color::RED: SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_INTENSITY); break;
-      case in_io::Color::GREEN: SetConsoleTextAttribute(handle, FOREGROUND_GREEN | FOREGROUND_INTENSITY); break;
-      case in_io::Color::BLUE: SetConsoleTextAttribute(handle, FOREGROUND_BLUE | FOREGROUND_INTENSITY); break;
-      case in_io::Color::YELLOW: SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY); break;
-      case in_io::Color::MAGENTA: SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY); break;
-      case in_io::Color::CYAN: SetConsoleTextAttribute(handle, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY); break;
+      case in_io::Color::DEFAULT: value = info.wAttributes; break;
+      case in_io::Color::BOLD: value = info.wAttributes | FOREGROUND_INTENSITY; break;
+      case in_io::Color::GRAY: value = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; break;
+      case in_io::Color::RED: value = FOREGROUND_RED | FOREGROUND_INTENSITY; break;
+      case in_io::Color::GREEN: value = FOREGROUND_GREEN | FOREGROUND_INTENSITY; break;
+      case in_io::Color::BLUE: value = FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
+      case in_io::Color::YELLOW: value = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY; break;
+      case in_io::Color::MAGENTA: value = FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
+      case in_io::Color::CYAN: value = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
     }
+    SetConsoleTextAttribute(handle, value);
   #else
     if (isTTY) std::cout << "\e[" << (int)color << 'm';
   #endif
@@ -268,11 +270,12 @@ int main(int argc, char *argv[]) {
 // speed. Never freeing anything is totally fine for a short-lived process.
 // This gives a significant speedup.
 void *allocate(size_t size) {
-  enum { CHUNK_SIZE = 1 << 20 };
+  enum { CHUNK_SIZE = 1 << 20, ALIGN = 8 };
 
   static void *next;
   static size_t available;
 
+  size = (size + ALIGN - 1) / ALIGN * ALIGN;
   if (available < size) {
     size_t chunk = (size + CHUNK_SIZE - 1) / CHUNK_SIZE * CHUNK_SIZE;
     assert(size <= chunk);
