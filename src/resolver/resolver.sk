@@ -123,14 +123,8 @@ class Resolver {
         if (scope.type != null) {
           symbol.enclosingSymbol = scope.type.symbol;
         }
-
-        // Type parameters should not be accessable as members of their type
         member = Member(symbol);
-        if (node.kind == .PARAMETER) {
-          scope.insertLocal(member);
-        } else {
-          scope.insert(member);
-        }
+        scope.insert(member);
       }
 
       // Link the node with its symbol
@@ -788,6 +782,8 @@ class Resolver {
 
   bool checkAccessToInstanceSymbol(Node node) {
     var symbol = node.symbol;
+    var enclosingSymbol = symbol.enclosingSymbol;
+    var functionSymbol = context.functionSymbol;
 
     // No need to check for static symbols
     if (!symbol.kind.isInstance() && symbol.kind != .OBJECT_PARAMETER) {
@@ -795,9 +791,9 @@ class Resolver {
     }
 
     // Allow instance access inside instance functions
-    if (context.functionSymbol != null && context.functionSymbol.kind.isInstance() && (
-        context.functionSymbol.enclosingSymbol == symbol.enclosingSymbol ||
-        context.functionSymbol.enclosingSymbol.type.hasBaseType(symbol.enclosingSymbol.type))) {
+    if (functionSymbol != null && functionSymbol.kind.isInstance() && (
+        functionSymbol.enclosingSymbol == enclosingSymbol ||
+        functionSymbol.enclosingSymbol.type.hasBaseType(enclosingSymbol.type))) {
       return true;
     }
 
@@ -808,11 +804,10 @@ class Resolver {
     }
 
     // The cases where type parameters may appear are more complicated
-    if (symbol.kind == .OBJECT_PARAMETER && context.symbolForThis == symbol.enclosingSymbol) {
-      var enclosingNode = symbol.enclosingSymbol.node;
-      for (var parent = node.parent; parent != enclosingNode; parent = parent.parent) {
-        if (parent.kind == .NODE_LIST && parent.parent == enclosingNode &&
-            (parent == parent.parent.objectParameters() || parent == parent.parent.baseTypes())) {
+    if (symbol.kind == .OBJECT_PARAMETER && context.symbolForThis == enclosingSymbol) {
+      for (var parent = node.parent; !parent.kind.isNamedBlockDeclaration() || parent.symbol != enclosingSymbol; parent = parent.parent) {
+        if (parent.kind == .NODE_LIST && parent.kind.isNamedBlockDeclaration() && parent.symbol == enclosingSymbol &&
+            (parent == enclosingSymbol.node.objectParameters() || parent == enclosingSymbol.node.baseTypes())) {
           return true;
         }
         if ((parent.kind == .VARIABLE || parent.kind.isFunction()) && parent.symbol.kind.isInstance()) {

@@ -10,7 +10,7 @@ namespace InstanceToStaticPass {
 
         // TODO: Add one type parameters to this method for each type parameter
         // on the enclosing symbol and make sure to fully parameterize all call
-        // sites
+        // sites. Be careful in case this function has type parameters itself.
 
         // Recursively replace "this" with the new explicit argument. This must
         // be done after all call sites are updated in case that step introduced
@@ -30,7 +30,7 @@ namespace InstanceToStaticPass {
           var arguments = symbol.type.argumentTypes();
           arguments.unshift(enclosingSymbol.type);
           symbol.type = resolver.cache.functionType(symbol.type.resultType(), arguments);
-          thisSymbol.node = Node.createVariable(Node.createName("this").withSymbol(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol);
+          thisSymbol.node = Node.createVariable(createThis(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol);
           symbol.node.functionArguments().insertChild(0, thisSymbol.node);
         }
 
