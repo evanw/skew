@@ -20,7 +20,7 @@ import class double {
 import class string {
 }
 
-import in string {
+in string {
   inline int size() { return (int)untyped(this).size(); }
   inline string slice(int start, int end) { return untyped(this).substr(start, end - start); }
   inline int indexOf(string value) { return (int)untyped(this).find(value); }

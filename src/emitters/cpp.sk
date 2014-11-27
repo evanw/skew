@@ -232,7 +232,7 @@ namespace cpp {
 
     override void emitFunctionArgument(Symbol symbol) {
       // Make sure to avoid copies for std::string methods
-      var useConstReference = symbol.name == "this" && symbol.type.isPrimitive();
+      var useConstReference = symbol.name == "this" && symbol.type.isString(cache);
       if (useConstReference) emit("const ");
       emitCppType(symbol.type, .DECLARATION);
       if (useConstReference) emit("&");

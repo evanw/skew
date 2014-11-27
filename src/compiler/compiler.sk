@@ -14,7 +14,7 @@ export enum TargetFormat {
   XML_AST,
 }
 
-export in TargetFormat {
+in TargetFormat {
   bool shouldRunResolver() {
     return this >= NONE && this <= JAVASCRIPT;
   }

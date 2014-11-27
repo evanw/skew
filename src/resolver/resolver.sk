@@ -199,9 +199,13 @@ class Resolver {
     while (parent != null && parent.kind == .MODIFIER) {
       var modifierName = parent.modifierName();
       var name = modifierName.asString();
-      var flag = nameToSymbolFlag.get(name);
-      if ((flags & flag) != 0) semanticWarningDuplicateModifier(log, modifierName.range, name);
-      flags |= flag;
+      if (node.kind == .EXTENSION) {
+        semanticErrorUnexpectedModifier(log, modifierName.range, name, "on an extension block");
+      } else {
+        var flag = nameToSymbolFlag.get(name);
+        if ((flags & flag) != 0) semanticWarningDuplicateModifier(log, modifierName.range, name);
+        flags |= flag;
+      }
       parent = parent.parent;
     }
 
@@ -230,7 +234,7 @@ class Resolver {
         var siblingFlags = symbolFlagsForNode(sibling);
 
         // Don't count non-keyword modifiers
-        if ((flags & .KEYWORD_MASK) != (siblingFlags & .KEYWORD_MASK)) {
+        if ((flags & .KEYWORD_MASK) != (siblingFlags & .KEYWORD_MASK) && sibling.kind != .EXTENSION) {
           semanticErrorDifferentModifiers(log, sibling.declarationName().range, declarationName.asString(), declarationName.range);
           siblingFlags |= .HAS_MODIFIER_ERRORS;
         }

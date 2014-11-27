@@ -3019,7 +3019,7 @@
     }
   };
   cpp.Emitter.prototype.emitFunctionArgument = function(symbol) {
-    var useConstReference = symbol.name === 'this' && symbol.type.isPrimitive();
+    var useConstReference = symbol.name === 'this' && symbol.type.isString(this.cache);
     if (useConstReference) {
       this.emit('const ');
     }
@@ -6060,11 +6060,15 @@
     while (parent !== null && parent.kind === NodeKind.MODIFIER) {
       var modifierName = parent.modifierName();
       var name = modifierName.asString();
-      var flag = nameToSymbolFlag.table[name];
-      if ((flags & flag) !== 0) {
-        semanticWarningDuplicateModifier(this.log, modifierName.range, name);
+      if (node.kind === NodeKind.EXTENSION) {
+        semanticErrorUnexpectedModifier(this.log, modifierName.range, name, 'on an extension block');
+      } else {
+        var flag = nameToSymbolFlag.table[name];
+        if ((flags & flag) !== 0) {
+          semanticWarningDuplicateModifier(this.log, modifierName.range, name);
+        }
+        flags |= flag;
       }
-      flags |= flag;
       parent = parent.parent;
     }
     if (parent !== null && parent.kind === NodeKind.BLOCK && parent.parent.kind === NodeKind.EXTENSION) {
@@ -6082,7 +6086,7 @@
       var flags = this.symbolFlagsForNode(node);
       for (var sibling = node.sibling; sibling !== null; sibling = sibling.sibling) {
         var siblingFlags = this.symbolFlagsForNode(sibling);
-        if ((flags & SymbolFlag.KEYWORD_MASK) !== (siblingFlags & SymbolFlag.KEYWORD_MASK)) {
+        if ((flags & SymbolFlag.KEYWORD_MASK) !== (siblingFlags & SymbolFlag.KEYWORD_MASK) && sibling.kind !== NodeKind.EXTENSION) {
           semanticErrorDifferentModifiers(this.log, sibling.declarationName().range, declarationName.asString(), declarationName.range);
           siblingFlags |= SymbolFlag.HAS_MODIFIER_ERRORS;
         }
@@ -6168,7 +6172,7 @@
         semanticErrorExtensionMissingTarget(this.log, declarationName.range, declarationName.asString());
         break;
       default:
-        throw new Error('assert false; (src/resolver/resolver.sk:317:19)');
+        throw new Error('assert false; (src/resolver/resolver.sk:321:19)');
         break;
       }
     }
@@ -6279,7 +6283,7 @@
     }
     node.become(Node.createType(member.symbol.type).withRange(node.range).withSymbol(member.symbol));
     if (node.type === null) {
-      throw new Error('assert node.type != null; (src/resolver/resolver.sk:474:5)');
+      throw new Error('assert node.type != null; (src/resolver/resolver.sk:478:5)');
     }
   };
   Resolver.prototype.resolve = function(node, expectedType) {
@@ -6288,7 +6292,7 @@
     }
     node.type = this.cache.errorType;
     if (this.context.scope === null && node.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert context.scope != null || node.kind == .PROGRAM; (src/resolver/resolver.sk:485:5)');
+      throw new Error('assert context.scope != null || node.kind == .PROGRAM; (src/resolver/resolver.sk:489:5)');
     }
     var oldScope = this.context.scope;
     if (node.scope !== null) {
@@ -6485,13 +6489,13 @@
       this.resolveTernaryOperator(node);
       break;
     default:
-      throw new Error('assert false; (src/resolver/resolver.sk:563:9)');
+      throw new Error('assert false; (src/resolver/resolver.sk:567:9)');
       break;
     }
     this.context.scope = oldScope;
     this.typeContext = oldType;
     if (node.type === null) {
-      throw new Error('assert node.type != null; (src/resolver/resolver.sk:569:5)');
+      throw new Error('assert node.type != null; (src/resolver/resolver.sk:573:5)');
     }
   };
   Resolver.prototype.checkIsParameterized = function(node) {
@@ -6562,10 +6566,10 @@
   Resolver.prototype.checkConversion = function(to, node, kind) {
     var from = node.type;
     if (from === null) {
-      throw new Error('assert from != null; (src/resolver/resolver.sk:651:5)');
+      throw new Error('assert from != null; (src/resolver/resolver.sk:655:5)');
     }
     if (to === null) {
-      throw new Error('assert to != null; (src/resolver/resolver.sk:652:5)');
+      throw new Error('assert to != null; (src/resolver/resolver.sk:656:5)');
     }
     if (from.isError(this.cache) || to.isError(this.cache)) {
       return;
@@ -6606,7 +6610,7 @@
   };
   Resolver.prototype.checkInsideBlock = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:715:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:719:5)');
     }
     if (node.parent.kind !== NodeKind.BLOCK) {
       this.unexpectedStatement(node);
@@ -6614,7 +6618,7 @@
   };
   Resolver.prototype.checkDeclarationLocation = function(node, allowDeclaration) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:728:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:732:5)');
     }
     var parent = null;
     for (parent = node.parent; parent !== null; parent = parent.parent) {
@@ -6633,7 +6637,7 @@
   };
   Resolver.prototype.checkStatementLocation = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:750:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:754:5)');
     }
     for (var parent = node.parent; parent !== null; parent = parent.parent) {
       var kind = parent.kind;
@@ -6765,14 +6769,14 @@
   };
   Resolver.prototype.initializeNamespace = function(symbol) {
     if (!symbol.type.isNamespace()) {
-      throw new Error('assert symbol.type.isNamespace(); (src/resolver/resolver.sk:896:5)');
+      throw new Error('assert symbol.type.isNamespace(); (src/resolver/resolver.sk:900:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on a namespace declaration');
     this.checkNoBaseTypes(symbol, 'A namespace');
   };
   Resolver.prototype.initializeEnum = function(symbol) {
     if (!symbol.type.isEnum()) {
-      throw new Error('assert symbol.type.isEnum(); (src/resolver/resolver.sk:902:5)');
+      throw new Error('assert symbol.type.isEnum(); (src/resolver/resolver.sk:906:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on an enum declaration');
     this.checkNoBaseTypes(symbol, 'An enum');
@@ -6786,7 +6790,7 @@
     var baseTypes = this.collectAndResolveBaseTypes(symbol);
     var unmergedMembers = new StringMap();
     if (type.relevantTypes !== null) {
-      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:917:5)');
+      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:921:5)');
     }
     type.relevantTypes = [];
     for (var i = 0; i < baseTypes.length; i = i + 1 | 0) {
@@ -6809,7 +6813,7 @@
         continue;
       }
       if (baseType.hasBaseType(type)) {
-        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:949:7)');
+        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:953:7)');
       }
       type.relevantTypes.push(baseType);
       var members = baseType.members.values();
@@ -6826,7 +6830,7 @@
           unmergedMembers.table[memberSymbol.name] = new Member(combined);
         } else {
           if (unmerged.symbol.kind !== SymbolKind.UNMERGED) {
-            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:967:11)');
+            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:971:11)');
           }
           unmerged.symbol.identicalMembers.push(member);
         }
@@ -6838,7 +6842,7 @@
       var existing = type.findMember(member.symbol.name);
       if (existing !== null) {
         if (existing.symbol.overriddenMember !== null) {
-          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:982:9)');
+          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:986:9)');
         }
         existing.symbol.overriddenMember = member;
       } else if (member.symbol.name !== 'new') {
@@ -6858,7 +6862,7 @@
   };
   Resolver.prototype.initializeObject = function(symbol) {
     if (!symbol.type.isObject()) {
-      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:1008:5)');
+      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:1012:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on an object declaration');
     var node = symbol.node.firstNonExtensionSibling();
@@ -6872,7 +6876,7 @@
   Resolver.prototype.initializeFunction = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     if (enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== enclosingSymbol)) {
-      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1027:5)');
+      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1031:5)');
     }
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.CONST, 'on a function declaration');
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, 'on a function declaration');
@@ -6907,7 +6911,7 @@
       resultType = result.type;
     } else {
       if (node.kind !== NodeKind.CONSTRUCTOR) {
-        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1076:7)');
+        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1080:7)');
       }
       resultType = this.cache.ensureTypeIsParameterized(enclosingSymbol.type);
       var members = enclosingSymbol.type.members.values();
@@ -6993,7 +6997,7 @@
         variableType = node.parent.clusterType().clone();
       } else {
         if (!symbol.isEnumValue()) {
-          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1201:9)');
+          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1205:9)');
         }
         var type = symbol.enclosingSymbol.type;
         variableType = Node.createType(type).withSymbol(symbol.enclosingSymbol);
@@ -7033,7 +7037,7 @@
         }
       }
       if (variableType === null) {
-        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1250:7)');
+        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1254:7)');
       }
       node.replaceChild(1, variableType);
     }
@@ -7098,7 +7102,7 @@
         semanticErrorBadTypeParameterBound(this.log, bound.range, boundType);
       } else {
         if (type.relevantTypes !== null) {
-          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1341:9)');
+          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1345:9)');
         }
         type.relevantTypes = [boundType];
         type.copyMembersFrom(boundType);
@@ -7113,7 +7117,7 @@
   Resolver.prototype.initializeDeclaration = function(node) {
     var symbol = node.symbol;
     if (symbol === null) {
-      throw new Error('assert symbol != null; (src/resolver/resolver.sk:1357:5)');
+      throw new Error('assert symbol != null; (src/resolver/resolver.sk:1361:5)');
     }
     if (symbol.isUninitialized()) {
       symbol.flags |= SymbolFlag.INITIALIZING;
@@ -7155,20 +7159,20 @@
       case 0:
         break;
       default:
-        throw new Error('assert false; (src/resolver/resolver.sk:1384:19)');
+        throw new Error('assert false; (src/resolver/resolver.sk:1388:19)');
         break;
       }
       this.context = oldContext;
       this.typeContext = oldTypeContext;
       this.resultType = oldResultType;
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1391:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1395:7)');
       }
       if (!symbol.isInitializing()) {
-        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1392:7)');
+        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1396:7)');
       }
       if (symbol.isInitialized()) {
-        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1393:7)');
+        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1397:7)');
       }
       symbol.flags = symbol.flags & ~SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED;
       while (node !== null) {
@@ -7203,7 +7207,7 @@
     }
     if (member.dependency !== null) {
       if (member.dependency.symbol !== member.symbol) {
-        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1443:7)');
+        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1447:7)');
       }
       this.initializeMember(member.dependency);
       member.type = member.dependency.type;
@@ -7280,7 +7284,7 @@
           }
         } else {
           if (!$constructor.type.isError(this.cache)) {
-            throw new Error('assert constructor.type.isError(cache); (src/resolver/resolver.sk:1531:11)');
+            throw new Error('assert constructor.type.isError(cache); (src/resolver/resolver.sk:1535:11)');
           }
           symbol.flags |= SymbolFlag.INITIALIZED;
           symbol.type = this.cache.errorType;
@@ -7321,7 +7325,7 @@
     symbol.node = Node.createConstructor(Node.createName(symbol.name), Node.createNodeList($arguments), Node.createBlock([]), superArguments !== null ? Node.createSuperCall(superArguments) : null, memberInitializers !== null ? Node.createNodeList(memberInitializers) : null);
     enclosingSymbol.node.declarationBlock().appendChild(symbol.node);
     if (enclosingSymbol.node.scope === null) {
-      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:1600:5)');
+      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:1604:5)');
     }
     var scope = new Scope(enclosingSymbol.node.scope);
     symbol.node.symbol = symbol;
@@ -7335,7 +7339,7 @@
   };
   Resolver.prototype.generateDefaultToString = function(symbol) {
     if (!symbol.isEnumMember()) {
-      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:1615:5)');
+      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:1619:5)');
     }
     var enclosingSymbol = symbol.enclosingSymbol;
     var enclosingNode = enclosingSymbol.node;
@@ -7397,7 +7401,7 @@
       } else if (symbol.name === 'toString') {
         this.generateDefaultToString(symbol);
       } else {
-        throw new Error('assert false; (src/resolver/resolver.sk:1697:12)');
+        throw new Error('assert false; (src/resolver/resolver.sk:1701:12)');
       }
       if (symbol.node !== null) {
         var oldContext = this.context;
@@ -7430,17 +7434,17 @@
     }
     if (symbol.isUninitialized()) {
       if (symbol.node === null) {
-        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1733:7)');
+        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1737:7)');
       }
       this.initializeDeclaration(symbol.node);
       if (symbol.isInitializing()) {
-        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1735:7)');
+        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1739:7)');
       }
       if (!symbol.isInitialized()) {
-        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1736:7)');
+        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1740:7)');
       }
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1737:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1741:7)');
       }
     } else if (symbol.isInitializing()) {
       semanticErrorCyclicDeclaration(this.log, symbol.node.firstNonExtensionSibling().declarationName().range, symbol.name);
@@ -7460,7 +7464,7 @@
   };
   Resolver.prototype.resolveAsType = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1763:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1767:5)');
     }
     this.resolve(node, null);
     this.checkIsType(node);
@@ -7471,7 +7475,7 @@
   };
   Resolver.prototype.resolveAsParameterizedExpression = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1774:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1778:5)');
     }
     this.resolve(node, null);
     this.checkIsInstance(node);
@@ -7479,14 +7483,14 @@
   };
   Resolver.prototype.resolveAsExpressionWithTypeContext = function(node, type) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1781:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1785:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
   };
   Resolver.prototype.resolveAsExpressionWithConversion = function(node, type, kind) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1787:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1791:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
@@ -7518,16 +7522,16 @@
   };
   Resolver.prototype.resolveProgram = function(node) {
     if (node.parent !== null) {
-      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1820:5)');
+      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1824:5)');
     }
     this.resolveChildren(node);
   };
   Resolver.prototype.resolveFile = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1825:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1829:5)');
     }
     if (node.parent.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1826:5)');
+      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1830:5)');
     }
     this.resolve(node.fileBlock(), null);
   };
@@ -7545,16 +7549,16 @@
   };
   Resolver.prototype.resolveCase = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1847:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1851:5)');
     }
     if (node.parent.kind !== NodeKind.SWITCH) {
-      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1848:5)');
+      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1852:5)');
     }
     if (this.context.switchValue === null) {
-      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1849:5)');
+      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1853:5)');
     }
     if (this.context.switchValue.type === null) {
-      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1850:5)');
+      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1854:5)');
     }
     var values = node.caseValues();
     var block = node.caseBlock();
@@ -7616,7 +7620,7 @@
   Resolver.prototype.resolveFunction = function(node) {
     var symbol = node.symbol;
     if (symbol.enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(symbol.enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== symbol.enclosingSymbol)) {
-      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1934:5)');
+      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1938:5)');
     }
     this.checkDeclarationLocation(node, AllowDeclaration.ALLOW_TOP_OR_OBJECT_LEVEL);
     this.initializeSymbol(symbol);
@@ -7668,7 +7672,7 @@
           this.resolveNodesAsExpressions($arguments);
         } else {
           if (!overriddenType.isFunction()) {
-            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2003:11)');
+            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2007:11)');
           }
           this.resolveArguments($arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
         }
@@ -7962,7 +7966,7 @@
           continue;
         }
         if (!in_NodeKind.isConstant(caseValue.kind)) {
-          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2392:9)');
+          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2396:9)');
         }
         var k = 0;
         for (k = 0; k < uniqueValues.length; k = k + 1 | 0) {
@@ -8003,7 +8007,7 @@
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2441:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2445:7)');
       }
       var symbol = this.context.symbolForThis;
       this.initializeSymbol(symbol);
@@ -8126,7 +8130,7 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2610:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2614:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -8219,7 +8223,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2733:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2737:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -11751,7 +11755,7 @@
     }
   };
   var operatorInfo = null;
-  var NATIVE_LIBRARY_CPP = '\nimport void cpp_toString();\nimport string cpp_fromCodeUnit(int value);\nimport string cpp_toLowerCase(string value);\nimport string cpp_toUpperCase(string value);\n\nimport class int {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\nimport class bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\nimport class float {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\nimport class double {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nimport class string {\n}\n\nimport in string {\n  inline int size() { return (int)untyped(this).size(); }\n  inline string slice(int start, int end) { return untyped(this).substr(start, end - start); }\n  inline int indexOf(string value) { return (int)untyped(this).find(value); }\n  inline int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }\n  inline string toLowerCase() { return cpp_toLowerCase(this); }\n  inline string toUpperCase() { return cpp_toUpperCase(this); }\n  inline static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }\n  inline string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n  inline int codeUnitAt(int index) { return untyped(this)[index]; }\n  string join(List<string> values) { var result = ""; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n';
+  var NATIVE_LIBRARY_CPP = '\nimport void cpp_toString();\nimport string cpp_fromCodeUnit(int value);\nimport string cpp_toLowerCase(string value);\nimport string cpp_toUpperCase(string value);\n\nimport class int {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\nimport class bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\nimport class float {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\nimport class double {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nimport class string {\n}\n\nin string {\n  inline int size() { return (int)untyped(this).size(); }\n  inline string slice(int start, int end) { return untyped(this).substr(start, end - start); }\n  inline int indexOf(string value) { return (int)untyped(this).find(value); }\n  inline int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }\n  inline string toLowerCase() { return cpp_toLowerCase(this); }\n  inline string toUpperCase() { return cpp_toUpperCase(this); }\n  inline static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }\n  inline string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n  inline int codeUnitAt(int index) { return untyped(this)[index]; }\n  string join(List<string> values) { var result = ""; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n';
   var NATIVE_LIBRARY = '\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class string {\n  import int size();\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  import static string fromCodeUnit(int value);\n  import string get(int index);\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nclass IntMap<T> {\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n';
   var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   var HEX = '0123456789ABCDEF';
@@ -11769,7 +11773,7 @@
   var symbolFlagToName = null;
   Compiler.nativeLibrary = new CachedSource('\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class string {\n  import int size();\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  import static string fromCodeUnit(int value);\n  import string get(int index);\n  import string join(List<string> values);\n  import int codeUnitAt(int index);\n  import bool startsWith(string prefix);\n  import bool endsWith(string suffix);\n  import string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nclass IntMap<T> {\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n');
   Compiler.nativeLibraryJS = new CachedSource('\nimport class int { import string toString(); }\nimport class bool { import string toString(); }\nimport class float { import string toString(); }\nimport class double { import string toString(); }\n\nimport class String {\n  import static string fromCharCode(int value);\n}\n\nimport class Object {\n  import static Object create(Object prototype);\n}\n\nimport namespace operators {\n  import void delete(int value);\n  import void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport class string {\n  inline int size() { return untyped(this).length; }\n  import string slice(int start, int end);\n  import int indexOf(string value);\n  import int lastIndexOf(string value);\n  import string toLowerCase();\n  import string toUpperCase();\n  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n  inline string get(int index) { return untyped(this)[index]; }\n  inline string join(List<string> values) { return untyped(values).join(this); }\n  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  inline int size() { return untyped(this).length; }\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  inline void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n  inline List<T> clone() { return untyped(this).slice(); }\n  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n  inline T get(int index) { return untyped(this)[index]; }\n  inline void set(int index, T value) { untyped(this)[index] = value; }\n  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n  inline T get(string key) { return untyped(table)[key]; }\n  inline void set(string key, T value) { untyped(table)[key] = value; }\n  inline bool has(string key) { return key in untyped(table); }\n  inline void remove(string key) { operators.delete(untyped(table)[key]); }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n  inline T get(int key) { return untyped(table)[key]; }\n  inline void set(int key, T value) { untyped(table)[key] = value; }\n  inline bool has(int key) { return key in untyped(table); }\n  inline void remove(int key) { operators.delete(untyped(table)[key]); }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n');
-  Compiler.nativeLibraryCPP = new CachedSource('\nimport void cpp_toString();\nimport string cpp_fromCodeUnit(int value);\nimport string cpp_toLowerCase(string value);\nimport string cpp_toUpperCase(string value);\n\nimport class int {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\nimport class bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\nimport class float {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\nimport class double {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nimport class string {\n}\n\nimport in string {\n  inline int size() { return (int)untyped(this).size(); }\n  inline string slice(int start, int end) { return untyped(this).substr(start, end - start); }\n  inline int indexOf(string value) { return (int)untyped(this).find(value); }\n  inline int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }\n  inline string toLowerCase() { return cpp_toLowerCase(this); }\n  inline string toUpperCase() { return cpp_toUpperCase(this); }\n  inline static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }\n  inline string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n  inline int codeUnitAt(int index) { return untyped(this)[index]; }\n  string join(List<string> values) { var result = ""; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n');
+  Compiler.nativeLibraryCPP = new CachedSource('\nimport void cpp_toString();\nimport string cpp_fromCodeUnit(int value);\nimport string cpp_toLowerCase(string value);\nimport string cpp_toUpperCase(string value);\n\nimport class int {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\nimport class bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\nimport class float {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\nimport class double {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nimport class string {\n}\n\nin string {\n  inline int size() { return (int)untyped(this).size(); }\n  inline string slice(int start, int end) { return untyped(this).substr(start, end - start); }\n  inline int indexOf(string value) { return (int)untyped(this).find(value); }\n  inline int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }\n  inline string toLowerCase() { return cpp_toLowerCase(this); }\n  inline string toUpperCase() { return cpp_toUpperCase(this); }\n  inline static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }\n  inline string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n  inline int codeUnitAt(int index) { return untyped(this)[index]; }\n  string join(List<string> values) { var result = ""; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  export virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  import int size();\n  import void push(T value);\n  import void unshift(T value);\n  import List<T> slice(int start, int end);\n  import int indexOf(T value);\n  import int lastIndexOf(T value);\n  import T shift();\n  import T pop();\n  import void reverse();\n  import void sort(IComparison<T> comparison);\n  import List<T> clone();\n  import T remove(int index);\n  import void insert(int index, T value);\n  import T get(int index);\n  import void set(int index, T value);\n  import void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  import T get(string key);\n  import T getOrDefault(string key, T defaultValue);\n  import void set(string key, T value);\n  import bool has(string key);\n  import void remove(string key);\n  import List<string> keys();\n  import List<T> values();\n  import StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  import T get(int key);\n  import T getOrDefault(int key, T defaultValue);\n  import void set(int key, T value);\n  import bool has(int key);\n  import void remove(int key);\n  import List<int> keys();\n  import List<T> values();\n  import IntMap<T> clone();\n}\n');
   Range.EMPTY = new Range(null, 0, 0);
   ByteSize.KB = 1024;
   ByteSize.MB = 1048576;

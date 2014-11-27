@@ -36,7 +36,7 @@ class UnionFind {
   }
 }
 
-import in int {
+in int {
   bool canIncrement() {
     return this + 1 == ((double)this + 1);
   }
@@ -126,7 +126,7 @@ string quoteString(string text, int quote) {
 }
 
 // TODO: Move this into the standard library
-import in string {
+in string {
   string replace(string before, string after) {
     var text = this;
     var result = "";
