@@ -953,14 +953,28 @@ class Resolver {
         var member = members.get(j);
         var memberSymbol = member.symbol;
         var unmerged = unmergedMembers.getOrDefault(memberSymbol.name, null);
+
+        // Skip type parameters since base types should not have access:
+        //
+        //   class Foo<T> { void foo(T foo) {} }
+        //   class Bar : Foo<int> { void foo(T foo) {} }
+        //
+        if (memberSymbol.kind == .OBJECT_PARAMETER) {
+          continue;
+        }
+
         if (unmerged == null) {
           unmergedMembers.set(memberSymbol.name, member);
-        } else if (unmerged.symbol.enclosingSymbol != memberSymbol) {
+        }
+
+        else if (unmerged.symbol.enclosingSymbol != memberSymbol) {
           var combined = createSymbol(memberSymbol.name, .UNMERGED);
           combined.enclosingSymbol = symbol;
           combined.identicalMembers = [unmerged, member];
           unmergedMembers.set(memberSymbol.name, Member(combined));
-        } else {
+        }
+
+        else {
           assert unmerged.symbol.kind == .UNMERGED;
           unmerged.symbol.identicalMembers.push(member);
         }

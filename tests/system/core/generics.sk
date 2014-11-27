@@ -171,6 +171,15 @@ class Foo : IFoo<int>, IFoo<float> {}
 ");
 
 test("
+class Foo<T> { void foo(T foo) {} }
+class Bar : Foo<int> { void foo(T foo) {} }
+", "
+<stdin>:2:33: error: \"T\" is not declared
+class Bar : Foo<int> { void foo(T foo) {} }
+                                ^
+");
+
+test("
 class Foo<T> { virtual T foo(); }
 bool foo = Foo.foo();
 ", "
