@@ -834,7 +834,7 @@ class Resolver {
             if (isObject) {
               baseTypes.insert(index, baseType);
               index++;
-            } else if (baseType.type.isClass()) {
+            } else if (symbol.type.isClass() && baseType.type.isClass()) {
               semanticErrorBaseClassInExtension(log, baseType.range);
             } else {
               baseTypes.push(baseType);
