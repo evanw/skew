@@ -7,10 +7,8 @@ bool b;
 float c;
 double d;
 string e;
-void fn() f;
-Foo g;
-Foo h = Foo();
-void fn() i = => {};
+Foo f;
+Foo g = Foo();
 ", "
 ");
 
@@ -108,19 +106,14 @@ void foo() {}
 ");
 
 test("
-void fn() foo;
+void foo(void foo, void bar) {}
 ", "
-");
-
-test("
-void fn(void, void) foo;
-", "
-<stdin>:1:9: error: Cannot use type \"void\" here
-void fn(void, void) foo;
-        ~~~~
-<stdin>:1:15: error: Cannot use type \"void\" here
-void fn(void, void) foo;
-              ~~~~
+<stdin>:1:10: error: Cannot use type \"void\" here
+void foo(void foo, void bar) {}
+         ~~~~
+<stdin>:1:20: error: Cannot use type \"void\" here
+void foo(void foo, void bar) {}
+                   ~~~~
 ");
 
 test("
@@ -136,15 +129,6 @@ ns foo(ns bar, ns baz) {}
 <stdin>:1:16: error: Cannot use type \"ns\" here
 ns foo(ns bar, ns baz) {}
                ~~
-");
-
-test("
-struct Foo {}
-Foo foo;
-", "
-<stdin>:2:5: error: Cannot create a default value for type \"Foo\"
-Foo foo;
-    ~~~
 ");
 
 test("
@@ -170,26 +154,12 @@ class Foo<T is IFoo> {
 ");
 
 test("
-struct Foo {}
-bool foo(Foo a, Foo b) {
-  return a == b;
-}
-", "
-<stdin>:3:10: error: No binary operator == for type \"Foo\" and type \"Foo\"
-  return a == b;
-         ~~~~~~
-");
-
-test("
 class Foo<T> {
   bool foo(T a, T b) {
     return a == b;
   }
 }
 ", "
-<stdin>:3:12: error: No binary operator == for type \"T\" and type \"T\"
-    return a == b;
-           ~~~~~~
 ");
 
 test("
@@ -207,9 +177,6 @@ bool foo<T>(T a, T b) {
   return a == b;
 }
 ", "
-<stdin>:2:10: error: No binary operator == for type \"T\" and type \"T\"
-  return a == b;
-         ~~~~~~
 ");
 
 test("

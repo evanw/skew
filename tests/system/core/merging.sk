@@ -8,12 +8,6 @@ class Foo {}
 
 test("
 in Foo {}
-struct Foo {}
-", "
-");
-
-test("
-in Foo {}
 interface Foo {}
 ", "
 ");
@@ -134,26 +128,14 @@ class Foo {}
 
 test("
 class Foo {}
-struct Foo {}
-", "
-<stdin>:2:8: error: \"Foo\" is already declared
-struct Foo {}
-       ~~~
-<stdin>:1:7: note: The previous declaration is here
-class Foo {}
-      ~~~
-");
-
-test("
-struct Foo {}
 interface Foo {}
 ", "
 <stdin>:2:11: error: \"Foo\" is already declared
 interface Foo {}
           ~~~
-<stdin>:1:8: note: The previous declaration is here
-struct Foo {}
-       ~~~
+<stdin>:1:7: note: The previous declaration is here
+class Foo {}
+      ~~~
 ");
 
 test("

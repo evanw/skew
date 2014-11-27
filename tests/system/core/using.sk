@@ -141,15 +141,6 @@ Int foo = false;
 ");
 
 test("
-Callback foo = false;
-alias Callback = void fn();
-", "
-<stdin>:1:16: error: Cannot convert from type \"bool\" to type \"void fn()\"
-Callback foo = false;
-               ~~~~~
-");
-
-test("
 namespace ns1 {
   Foo bar = 0;
   alias Foo = ns2.Foo;
@@ -348,7 +339,6 @@ ns.bar foo = false;
 ");
 
 test("
-alias Foo = void fn();
 enum Bar {}
 in Bar {
   string foo() {

@@ -1,7 +1,7 @@
 import void registerTest(TestBase test);
 import void expect(string output, string expected);
 
-import in string {
+in string {
   import string trim();
 }
 
@@ -78,7 +78,6 @@ export void start() {
   core.testExpressions();
   core.testFunctions();
   core.testGenerics();
-  core.testLambdas();
   core.testLists();
   core.testMerging();
   core.testModifiers();
@@ -91,10 +90,11 @@ export void start() {
   core.testUsing();
   core.testVar();
 
-  js.testExpressions();
-  js.testFunctions();
-  js.testInlining();
-  js.testMinify();
-  js.testObjects();
-  js.testStatements();
+  // Disable JS tests for now
+  // js.testExpressions();
+  // js.testFunctions();
+  // js.testInlining();
+  // js.testMinify();
+  // js.testObjects();
+  // js.testStatements();
 }

@@ -18,11 +18,11 @@ List<int> foo = [1, false, 2, 2.5];
 
 test("
 var foo = [1, 1.5f, 2, 2.5];
-bool fn() bar = => foo.get(0);
+bool bar() { return foo.get(0); }
 ", "
-<stdin>:2:20: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-bool fn() bar = => foo.get(0);
-                   ~~~~~~~~~~
+<stdin>:2:21: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool bar() { return foo.get(0); }
+                    ~~~~~~~~~~
 ");
 
 test("
@@ -43,7 +43,7 @@ var foo = [];
 
 test("
 var foo = [1, 2, x, false];
-bool fn() bar = => foo.get(0);
+bool bar() { return foo.get(0); }
 ", "
 <stdin>:1:18: error: \"x\" is not declared
 var foo = [1, 2, x, false];
@@ -52,7 +52,7 @@ var foo = [1, 2, x, false];
 
 test("
 List<Foo> foo = [1, 2, x, false];
-bool fn() bar = => foo.get(0);
+bool bar() { return foo.get(0); }
 ", "
 <stdin>:1:6: error: \"Foo\" is not declared
 List<Foo> foo = [1, 2, x, false];

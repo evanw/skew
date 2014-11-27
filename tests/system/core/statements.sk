@@ -4,7 +4,6 @@ test("
 return;
 in Foo { return; }
 class Foo { return; }
-struct Bar { return; }
 interface Baz { return; }
 ", "
 <stdin>:1:1: error: Cannot use this statement here
@@ -16,10 +15,7 @@ in Foo { return; }
 <stdin>:3:13: error: Cannot use this statement here
 class Foo { return; }
             ~~~~~~~
-<stdin>:4:14: error: Cannot use this statement here
-struct Bar { return; }
-             ~~~~~~~
-<stdin>:5:17: error: Cannot use this statement here
+<stdin>:4:17: error: Cannot use this statement here
 interface Baz { return; }
                 ~~~~~~~
 ");
@@ -42,7 +38,6 @@ void foo() { alias bar = int; }
 
 test("
 if (true) class Foo {}
-if (true) struct Foo {}
 if (true) interface Foo {}
 ", "
 <stdin>:1:1: error: Cannot use this statement here
@@ -52,15 +47,9 @@ if (true) class Foo {}
 if (true) class Foo {}
           ~~~~~~~~~~~~
 <stdin>:2:1: error: Cannot use this statement here
-if (true) struct Foo {}
-~~~~~~~~~~~~~~~~~~~~~~~
-<stdin>:2:11: error: Cannot use this statement here
-if (true) struct Foo {}
-          ~~~~~~~~~~~~~
-<stdin>:3:1: error: Cannot use this statement here
 if (true) interface Foo {}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-<stdin>:3:11: error: Cannot use this statement here
+<stdin>:2:11: error: Cannot use this statement here
 if (true) interface Foo {}
           ~~~~~~~~~~~~~~~~
 ");
@@ -68,7 +57,6 @@ if (true) interface Foo {}
 test("
 void test() {
   if (true) class Foo {}
-  if (true) struct Foo {}
   if (true) interface Foo {}
 }
 ", "
@@ -76,9 +64,6 @@ void test() {
   if (true) class Foo {}
             ~~~~~~~~~~~~
 <stdin>:3:13: error: Cannot use this statement here
-  if (true) struct Foo {}
-            ~~~~~~~~~~~~~
-<stdin>:4:13: error: Cannot use this statement here
   if (true) interface Foo {}
             ~~~~~~~~~~~~~~~~
 ");
@@ -99,27 +84,9 @@ void bar() { void bar() {} }
 ");
 
 test("
-void fn() foo = => {
-  void fn() bar() {
-    return => {
-      void baz() {}
-    };
-  }
-};
-", "
-<stdin>:2:3: error: Cannot use this statement here
-  void fn() bar() {
-  ~~~~~~~~~~~~~~~~~
-<stdin>:4:7: error: Cannot use this statement here
-      void baz() {}
-      ~~~~~~~~~~~~~
-");
-
-test("
 void foo() {
   class Foo {}
   interface Bar {}
-  struct Baz {}
 }
 ", "
 <stdin>:2:3: error: Cannot use this statement here
@@ -128,19 +95,15 @@ void foo() {
 <stdin>:3:3: error: Cannot use this statement here
   interface Bar {}
   ~~~~~~~~~~~~~~~~
-<stdin>:4:3: error: Cannot use this statement here
-  struct Baz {}
-  ~~~~~~~~~~~~~
 ");
 
 test("
-class Foo { final int foo; }
-struct Bar { final int foo; }
-interface Baz { final int foo; }
+class Foo { int foo; }
+interface Baz { int foo; }
 ", "
-<stdin>:3:23: error: Cannot use this statement here
-interface Baz { final int foo; }
-                      ~~~~~~~~
+<stdin>:2:17: error: Cannot use this statement here
+interface Baz { int foo; }
+                ~~~~~~~~
 ");
 
 test("
@@ -175,23 +138,6 @@ in Foo {
 <stdin>:4:3: error: Cannot use this statement here
   int b;
   ~~~~~~
-");
-
-test("
-struct Foo {}
-in Foo {
-  final int a = 0;
-  final int b, foo;
-  static int c = 0;
-  static int d;
-}
-", "
-<stdin>:4:13: error: Instance variables in extension blocks must be initialized
-  final int b, foo;
-            ^
-<stdin>:4:16: error: Instance variables in extension blocks must be initialized
-  final int b, foo;
-               ~~~
 ");
 
 test("
@@ -232,7 +178,6 @@ test("
 break; continue;
 in Foo { break; continue; }
 class Foo { break; continue; }
-struct Bar { break; continue; }
 interface Baz { break; continue; }
 void foo() { break; continue; }
 ", "
@@ -254,22 +199,16 @@ class Foo { break; continue; }
 <stdin>:3:20: error: Cannot use this statement here
 class Foo { break; continue; }
                    ~~~~~~~~~
-<stdin>:4:14: error: Cannot use this statement here
-struct Bar { break; continue; }
-             ~~~~~~
-<stdin>:4:21: error: Cannot use this statement here
-struct Bar { break; continue; }
-                    ~~~~~~~~~
-<stdin>:5:17: error: Cannot use this statement here
+<stdin>:4:17: error: Cannot use this statement here
 interface Baz { break; continue; }
                 ~~~~~~
-<stdin>:5:24: error: Cannot use this statement here
+<stdin>:4:24: error: Cannot use this statement here
 interface Baz { break; continue; }
                        ~~~~~~~~~
-<stdin>:6:14: error: Cannot use this statement here
+<stdin>:5:14: error: Cannot use this statement here
 void foo() { break; continue; }
              ~~~~~~
-<stdin>:6:21: error: Cannot use this statement here
+<stdin>:5:21: error: Cannot use this statement here
 void foo() { break; continue; }
                     ~~~~~~~~~
 ");
@@ -290,30 +229,6 @@ void foo() {
 <stdin>:7:3: error: Cannot use this statement here
   continue;
   ~~~~~~~~~
-");
-
-test("
-void foo() {
-  while (true) {
-    break;
-    void fn() foo = => {
-      break;
-      while (true) {
-        break;
-        continue;
-      }
-      continue;
-    };
-    continue;
-  }
-}
-", "
-<stdin>:5:7: error: Cannot use this statement here
-      break;
-      ~~~~~~
-<stdin>:10:7: error: Cannot use this statement here
-      continue;
-      ~~~~~~~~~
 ");
 
 test("

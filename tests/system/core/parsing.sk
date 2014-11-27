@@ -264,117 +264,6 @@ void test() {
 ");
 
 test("
-void test() {
-  (null) =>;
-}
-", "
-<stdin>:2:10: error: Expected SEMICOLON but found LAMBDA
-  (null) =>;
-         ~~
-<stdin>:2:4: warning: Unused expression
-  (null) =>;
-   ~~~~
-");
-
-test("
-void fn() a0 = =>;
-bool fn() a1 = => false;
-void fn() a2 = => {};
-void fn() a3 = => { return; };
-
-void fn() b0 = () =>;
-bool fn() b1 = () => false;
-void fn() b2 = () => {};
-void fn() b3 = () => { return; };
-
-void fn(int) c0 = x =>;
-bool fn(int) c1 = x => false;
-void fn(int) c2 = x => {};
-void fn(int) c3 = x => { return; };
-
-void fn(int) d0 = (x) =>;
-bool fn(int) d1 = (x) => false;
-void fn(int) d2 = (x) => {};
-void fn(int) d3 = (x) => { return; };
-
-void fn(int, int) e0 = (x, y) =>;
-bool fn(int, int) e1 = (x, y) => false;
-void fn(int, int) e2 = (x, y) => {};
-void fn(int, int) e3 = (x, y) => { return; };
-", "
-");
-
-test("
-int fn(int, float) foo = null, bar = null;
-", "
-");
-
-test("
-int fn(int, float) fn(int fn(int, float), float fn(int, float)) foo = null, bar = null;
-", "
-");
-
-test("
-void test() {
-  (int) fn(int, float) foo = null, bar = null;
-}
-", "
-<stdin>:2:9: error: Unexpected FN
-  (int) fn(int, float) foo = null, bar = null;
-        ~~
-<stdin>:2:11: error: Expected SEMICOLON but found LEFT_PARENTHESIS
-  (int) fn(int, float) foo = null, bar = null;
-          ^
-<stdin>:2:22: error: Unexpected RIGHT_PARENTHESIS
-  (int) fn(int, float) foo = null, bar = null;
-                     ^
-<stdin>:2:24: error: \"foo\" is not declared
-  (int) fn(int, float) foo = null, bar = null;
-                       ~~~
-<stdin>:2:36: error: \"bar\" is not declared
-  (int) fn(int, float) foo = null, bar = null;
-                                   ~~~
-");
-
-test("
-int fn(int x, float y) foo = null, bar = null;
-", "
-<stdin>:1:12: error: Expected COMMA but found IDENTIFIER
-int fn(int x, float y) foo = null, bar = null;
-           ^
-");
-
-test("
-int. fn() foo = null, bar = null;
-", "
-<stdin>:1:6: error: Expected IDENTIFIER but found FN
-int. fn() foo = null, bar = null;
-     ~~
-");
-
-test("
-void test() {
-  100 fn() foo = null, bar = null;
-}
-", "
-<stdin>:2:7: error: Unexpected FN
-  100 fn() foo = null, bar = null;
-      ~~
-<stdin>:2:9: error: Expected SEMICOLON but found LEFT_PARENTHESIS
-  100 fn() foo = null, bar = null;
-        ^
-<stdin>:2:10: error: Unexpected RIGHT_PARENTHESIS
-  100 fn() foo = null, bar = null;
-         ^
-<stdin>:2:12: error: \"foo\" is not declared
-  100 fn() foo = null, bar = null;
-           ~~~
-<stdin>:2:24: error: \"bar\" is not declared
-  100 fn() foo = null, bar = null;
-                       ~~~
-");
-
-test("
 Foo<Bar Baz> foo;
 Foo<Bar Baz> bar;
 ", "
@@ -450,27 +339,52 @@ void test() {
 ");
 
 test("
-class Foo<T> {}
-int y() { return 0; }
-Foo<void fn()> z;
 void test() {
   int x;
   (x < x) > x;
-  x < y() > x;
+  x < (x > x);
 }
 ", "
-<stdin>:7:8: error: Expected END_PARAMETER_LIST but found LEFT_PARENTHESIS
-  x < y() > x;
-       ^
-<stdin>:7:9: error: Expected SEMICOLON but found RIGHT_PARENTHESIS
-  x < y() > x;
-        ^
-<stdin>:7:11: error: Unexpected END_PARAMETER_LIST
-  x < y() > x;
-          ^
-<stdin>:6:4: error: No binary operator > for type \"bool\" and type \"int\"
+<stdin>:3:4: error: No binary operator > for type \"bool\" and type \"int\"
   (x < x) > x;
    ~~~~~~~~~~
+<stdin>:4:3: error: No binary operator < for type \"int\" and type \"bool\"
+  x < (x > x);
+  ~~~~~~~~~~
+");
+
+test("
+void test() {
+  int x;
+  x < (x) > x;
+}
+", "
+<stdin>:3:11: error: Unexpected GREATER_THAN
+  x < (x) > x;
+          ^
+<stdin>:3:8: error: Unexpected expression of type \"int\"
+  x < (x) > x;
+       ^
+");
+
+test("
+void test() {
+  int x;
+  x < x > x;
+}
+", "
+<stdin>:3:11: error: \"x\" is already declared
+  x < x > x;
+          ^
+<stdin>:2:7: note: The previous declaration is here
+  int x;
+      ^
+<stdin>:3:7: error: Unexpected expression of type \"int\"
+  x < x > x;
+      ^
+<stdin>:3:3: error: Cannot parameterize type \"int\" because it has no type parameters
+  x < x > x;
+  ^
 ");
 
 test("

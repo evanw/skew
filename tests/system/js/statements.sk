@@ -9,7 +9,6 @@ import int foo;
 
 testJS("
 int foo = 0;
-void fn() bar = =>;
 class Foo {}
 class Bar : Foo {}
 ", "

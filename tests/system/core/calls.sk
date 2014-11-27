@@ -11,18 +11,6 @@ void test() {
 ");
 
 test("
-void fn() foo = null;
-int bar = foo(100);
-", "
-<stdin>:2:14: error: Expected 0 arguments but found 1 argument
-int bar = foo(100);
-             ~~~~~
-<stdin>:2:11: error: Cannot convert from type \"void\" to type \"int\"
-int bar = foo(100);
-          ~~~~~~~~
-");
-
-test("
 void foo() {}
 int bar = foo(100);
 ", "
@@ -47,26 +35,6 @@ int bar = foo(false, 100);
 <stdin>:2:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 int bar = foo(false, 100);
           ~~~~~~~~~~~~~~~
-");
-
-test("
-export void test() {
-  void fn() fn(void fn()) foo = null;
-  void fn() bar = foo(bar);
-}
-", "
-");
-
-test("
-void fn() fn(void fn()) foo = null;
-int fn() bar = foo(bar);
-", "
-<stdin>:2:20: error: Cannot convert from type \"int fn()\" to type \"void fn()\"
-int fn() bar = foo(bar);
-                   ~~~
-<stdin>:2:16: error: Cannot convert from type \"void fn()\" to type \"int fn()\"
-int fn() bar = foo(bar);
-               ~~~~~~~~
 ");
 
 test("

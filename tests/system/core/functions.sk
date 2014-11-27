@@ -124,15 +124,6 @@ int foo() {
 ");
 
 test("
-int fn() foo = =>;
-int fn() bar = => 0;
-", "
-<stdin>:1:16: error: All control paths for lambda expression must return a value of type \"int\"
-int fn() foo = =>;
-               ~~
-");
-
-test("
 void foo();
 ", "
 <stdin>:1:6: error: Use the \"import\" modifier to import functions
@@ -142,28 +133,20 @@ void foo();
 
 test("
 class Foo { void foo(); }
-struct Bar { void foo(); }
 interface Baz { void foo(); }
 ", "
 <stdin>:1:18: error: Abstract functions must use the \"virtual\" modifier
 class Foo { void foo(); }
                  ~~~
-<stdin>:2:19: error: Abstract functions must use the \"virtual\" modifier
-struct Bar { void foo(); }
-                  ~~~
-<stdin>:3:22: error: Abstract functions must use the \"virtual\" modifier
+<stdin>:2:22: error: Abstract functions must use the \"virtual\" modifier
 interface Baz { void foo(); }
                      ~~~
 ");
 
 test("
 class Foo { virtual void foo(); }
-struct Bar { virtual void foo(); }
 interface Baz { virtual void foo(); }
 ", "
-<stdin>:2:14: error: Cannot use the \"virtual\" modifier inside a struct
-struct Bar { virtual void foo(); }
-             ~~~~~~~
 ");
 
 test("
@@ -171,10 +154,10 @@ import class A { new(); }
 import class B { import new(); }
 import class C { export new(); }
 ", "
-<stdin>:2:18: error: Redundant modifier \"import\" on an constructor for an imported object
+<stdin>:2:18: error: Redundant modifier \"import\" inside an imported type
 import class B { import new(); }
                  ~~~~~~
-<stdin>:3:18: error: Cannot use the \"export\" modifier on an imported declaration
+<stdin>:3:18: error: Cannot use the \"export\" modifier on a non-exported type
 import class C { export new(); }
                  ~~~~~~
 ");

@@ -67,8 +67,8 @@ void foo(var bar) {}
 test("
 export void test() {
   var foo = bar();
-  void fn() bar = null;
 }
+void bar() {}
 ", "
 <stdin>:2:7: error: Implicitly typed variables cannot be of type \"void\"
   var foo = bar();

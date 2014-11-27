@@ -73,14 +73,10 @@ class Foo<T is IFoo> {
 
 test("
 int<int> foo = 0;
-void fn()<int> bar = 0;
 ", "
 <stdin>:1:1: error: Cannot parameterize type \"int\" because it has no type parameters
 int<int> foo = 0;
 ~~~
-<stdin>:2:1: error: Cannot parameterize type \"void fn()\" because it has no type parameters
-void fn()<int> bar = 0;
-~~~~~~~~~
 ");
 
 test("
