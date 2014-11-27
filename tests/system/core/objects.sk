@@ -3,7 +3,7 @@ namespace core { void testObjects() {
 test("
 class Foo<T> : T {}
 ", "
-<stdin>:1:16: error: Base type \"T\" must be an interface
+<stdin>:1:16: error: Invalid base type \"T\"
 class Foo<T> : T {}
                ^
 ");
@@ -34,7 +34,7 @@ test("
 interface IFoo : Bar {}
 class Bar {}
 ", "
-<stdin>:1:18: error: Base type \"Bar\" must be an interface
+<stdin>:1:18: error: Invalid base type \"Bar\"
 interface IFoo : Bar {}
                  ~~~
 ");
