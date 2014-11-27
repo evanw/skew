@@ -551,4 +551,16 @@ export void test() {
 ", "
 ");
 
+test("
+in Foo {}
+export class Foo {}
+", "
+");
+
+test("
+export class Foo {}
+in Foo {}
+", "
+");
+
 }}

@@ -307,13 +307,12 @@ namespace cpp {
 
     override void emitCall(Node node, Precedence precedence) {
       var value = node.callValue();
-      var wrap = value.kind == .TYPE && precedence == .MEMBER;
+      var isNew = value.kind == .TYPE;
+      var wrap = isNew && precedence == .MEMBER;
       if (wrap) emit("(");
-      if (value.kind == .TYPE) {
-        emit("new ");
-      }
+      if (isNew) emit("new ");
       emitExpression(value, .UNARY_POSTFIX);
-      if (value.type != null && value.type.isParameterized()) {
+      if (!isNew && value.type != null && value.type.isParameterized()) {
         var substitutions = value.type.substitutions;
         emit("<");
         for (var i = 0; i < substitutions.size(); i++) {

@@ -184,4 +184,15 @@ export class C { export new(); }
                         ~~~
 ");
 
+test("
+import class Foo {
+  new();
+  void foo();
+}
+export void foo() {
+  Foo();
+}
+", "
+");
+
 }}

@@ -442,4 +442,29 @@ void baz() { foo<int>(false); }
                       ~~~~~
 ");
 
+test("
+class Foo {}
+in Foo {
+  void foo<T>() {}
+}
+export void bar() {
+  Foo().foo();
+}
+", "
+<stdin>:6:3: error: Cannot use unparameterized type \"void fn<T>()\"
+  Foo().foo();
+  ~~~~~~~~~
+");
+
+test("
+class Foo<X> {}
+in Foo {
+  void foo<T>() {}
+}
+export void bar() {
+  Foo<int>().foo<float>();
+}
+", "
+");
+
 }}
