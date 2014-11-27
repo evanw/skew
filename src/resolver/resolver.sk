@@ -1020,6 +1020,17 @@ class Resolver {
     resolveBaseTypes(symbol);
   }
 
+  void createFunctionType(Symbol symbol, Type resultType, List<Type> argumentTypes) {
+    // Generic functions get their own type
+    if (symbol.hasParameters()) {
+      symbol.type = Type(symbol);
+      argumentTypes.unshift(resultType);
+      symbol.type.relevantTypes = argumentTypes;
+    } else {
+      symbol.type = cache.functionType(resultType, argumentTypes);
+    }
+  }
+
   void initializeFunction(Symbol symbol) {
     // Sanity check
     var enclosingSymbol = symbol.enclosingSymbol;
@@ -1106,15 +1117,7 @@ class Resolver {
         if (type.isError(cache)) return;
         argumentTypes.push(type);
       }
-
-      // Generic functions get their own type
-      if (symbol.hasParameters()) {
-        symbol.type = Type(symbol);
-        argumentTypes.unshift(resultType);
-        symbol.type.relevantTypes = argumentTypes;
-      } else {
-        symbol.type = cache.functionType(resultType, argumentTypes);
-      }
+      createFunctionType(symbol, resultType, argumentTypes);
     }
 
     var overriddenMember = symbol.overriddenMember;
