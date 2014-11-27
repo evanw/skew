@@ -8708,14 +8708,15 @@
       var shadow = this.shadowForSymbol(enclosingSymbol);
       var member = enclosingType.members.table[symbol.name];
       if (member.symbol !== symbol) {
-        throw new Error('assert member.symbol == symbol; (src/resolver/symbolmotion.sk:18:7)');
+        throw new Error('assert member.symbol == symbol; (src/resolver/symbolmotion.sk:19:7)');
       }
       delete enclosingType.members.table[symbol.name];
       if (shadow.findMember(symbol.name) !== null) {
-        throw new Error('assert shadow.findMember(symbol.name) == null; (src/resolver/symbolmotion.sk:20:7)');
+        throw new Error('assert shadow.findMember(symbol.name) == null; (src/resolver/symbolmotion.sk:21:7)');
       }
       shadow.addMember(member);
       symbol.enclosingSymbol = shadow.symbol;
+      symbol.flags &= ~SymbolFlag.STATIC;
       var block = shadow.symbol.node.declarationBlock();
       var parent = symbol.node.parent;
       var node = symbol.node.remove();

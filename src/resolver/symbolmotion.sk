@@ -11,6 +11,7 @@ class SymbolMotionPass {
   void moveSymbol(Symbol symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     if (!symbol.isImport() && enclosingSymbol != null && !symbol.kind.isParameter() && (enclosingSymbol.isImport() || symbol.kind.isFunction() && enclosingSymbol.kind.isEnum())) {
+
       // Move the symbol to an automatically-generated namespace
       var enclosingType = symbol.enclosingSymbol.type;
       var shadow = shadowForSymbol(enclosingSymbol);
@@ -20,6 +21,9 @@ class SymbolMotionPass {
       assert shadow.findMember(symbol.name) == null;
       shadow.addMember(member);
       symbol.enclosingSymbol = shadow.symbol;
+
+      // This should no longer be marked static because the enclosing symbol is now a namespace
+      symbol.flags &= ~.STATIC;
 
       // Move the node for this symbol inside the namespace node
       var block = shadow.symbol.node.declarationBlock();
