@@ -26,11 +26,14 @@ import class string {
 }
 
 in string {
-  inline int size() { return untyped(this).length; }
-  inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }
-  inline string get(int index) { return untyped(this)[index]; }
-  inline string join(List<string> values) { return untyped(values).join(this); }
-  inline int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }
+  inline {
+    int size() { return untyped(this).length; }
+    static string fromCodeUnit(int value) { return String.fromCharCode(value); }
+    string get(int index) { return untyped(this)[index]; }
+    string join(List<string> values) { return untyped(values).join(this); }
+    int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }
+  }
+
   bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }
   bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }
   string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }
@@ -53,14 +56,16 @@ import class List<T> {
 }
 
 in List {
-  inline int size() { return untyped(this).length; }
-  inline void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }
-  inline List<T> clone() { return untyped(this).slice(); }
-  inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }
-  inline void insert(int index, T value) { untyped(this).splice(index, 0, value); }
-  inline T get(int index) { return untyped(this)[index]; }
-  inline void set(int index, T value) { untyped(this)[index] = value; }
-  inline void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }
+  inline {
+    int size() { return untyped(this).length; }
+    void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }
+    List<T> clone() { return untyped(this).slice(); }
+    T remove(int index) { return untyped(this).splice(index, 1)[0]; }
+    void insert(int index, T value) { untyped(this).splice(index, 0, value); }
+    T get(int index) { return untyped(this)[index]; }
+    void set(int index, T value) { untyped(this)[index] = value; }
+    void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }
+  }
 }
 
 class StringMap<T> {
@@ -68,10 +73,12 @@ class StringMap<T> {
 }
 
 in StringMap {
-  inline T get(string key) { return untyped(table)[key]; }
-  inline void set(string key, T value) { untyped(table)[key] = value; }
-  inline bool has(string key) { return key in untyped(table); }
-  inline void remove(string key) { operators.delete(untyped(table)[key]); }
+  inline {
+    T get(string key) { return untyped(table)[key]; }
+    void set(string key, T value) { untyped(table)[key] = value; }
+    bool has(string key) { return key in untyped(table); }
+    void remove(string key) { operators.delete(untyped(table)[key]); }
+  }
 
   T getOrDefault(string key, T defaultValue) {
     return has(key) ? get(key) : defaultValue;
@@ -101,10 +108,12 @@ class IntMap<T> {
 }
 
 in IntMap {
-  inline T get(int key) { return untyped(table)[key]; }
-  inline void set(int key, T value) { untyped(table)[key] = value; }
-  inline bool has(int key) { return key in untyped(table); }
-  inline void remove(int key) { operators.delete(untyped(table)[key]); }
+  inline {
+    T get(int key) { return untyped(table)[key]; }
+    void set(int key, T value) { untyped(table)[key] = value; }
+    bool has(int key) { return key in untyped(table); }
+    void remove(int key) { operators.delete(untyped(table)[key]); }
+  }
 
   T getOrDefault(int key, T defaultValue) {
     return has(key) ? get(key) : defaultValue;

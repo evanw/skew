@@ -27,15 +27,17 @@ in double {
 }
 
 in string {
-  inline int size() { return (int)untyped(this).size(); }
-  inline string slice(int start, int end) { return untyped(this).substr(start, end - start); }
-  inline int indexOf(string value) { return (int)untyped(this).find(value); }
-  inline int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }
-  inline string toLowerCase() { return cpp_toLowerCase(this); }
-  inline string toUpperCase() { return cpp_toUpperCase(this); }
-  inline static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }
-  inline string get(int index) { return fromCodeUnit(codeUnitAt(index)); }
-  inline int codeUnitAt(int index) { return untyped(this)[index]; }
+  inline {
+    int size() { return (int)untyped(this).size(); }
+    string slice(int start, int end) { return untyped(this).substr(start, end - start); }
+    int indexOf(string value) { return (int)untyped(this).find(value); }
+    int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }
+    string toLowerCase() { return cpp_toLowerCase(this); }
+    string toUpperCase() { return cpp_toUpperCase(this); }
+    static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }
+    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }
+    int codeUnitAt(int index) { return untyped(this)[index]; }
+  }
   string join(List<string> values) { var result = \"\"; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }
   bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }
   bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }

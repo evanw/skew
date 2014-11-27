@@ -136,7 +136,7 @@ in Node {
 
   Node modifierName() {
     assert kind == .MODIFIER;
-    assert children.size() == 2;
+    assert children.size() >= 1;
     assert children.get(0).kind == .NAME;
     return children.get(0);
   }
