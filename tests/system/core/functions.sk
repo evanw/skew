@@ -157,7 +157,7 @@ import class C { export new(); }
 <stdin>:2:18: error: Redundant modifier \"import\" inside an imported type
 import class B { import new(); }
                  ~~~~~~
-<stdin>:3:18: error: Cannot use the \"export\" modifier on a non-exported type
+<stdin>:3:18: error: Cannot use the \"export\" modifier inside a non-exported type
 import class C { export new(); }
                  ~~~~~~
 ");
@@ -170,13 +170,13 @@ export class C { export new(); }
 <stdin>:1:18: error: Every constructor must have an implementation
 export class A { new(); }
                  ~~~
-<stdin>:2:18: error: Cannot use the \"import\" modifier on an exported declaration
+<stdin>:2:18: error: Cannot use the \"import\" modifier inside a non-imported type
 export class B { import new(); }
                  ~~~~~~
 <stdin>:2:25: error: Every constructor must have an implementation
 export class B { import new(); }
                         ~~~
-<stdin>:3:18: error: Redundant modifier \"export\" on an constructor for an exported object
+<stdin>:3:18: error: Redundant modifier \"export\" inside an exported type
 export class C { export new(); }
                  ~~~~~~
 <stdin>:3:25: error: Every constructor must have an implementation

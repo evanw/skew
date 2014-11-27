@@ -1143,10 +1143,11 @@ class Resolver {
     // Validate modifiers when nothing is being overridden
     else {
       if (!symbol.kind.isInstance()) unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a non-instance function");
-      unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a function that doesn't override anything");
 
       // If "override" is used, imply "virtual" to mask further errors
       if (symbol.isOverride()) symbol.flags |= .VIRTUAL;
+
+      unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a function that doesn't override anything");
     }
   }
 
@@ -1476,9 +1477,14 @@ class Resolver {
         }
       }
 
-      // Refuse to export a member of a non-exported type
-      if (symbol.isExport() && !enclosingSymbol.isExport() && enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
-        unexpectedModifierIfPresent(symbol, .EXPORT, "on a non-exported type");
+      // Refuse to import/export a member of a type without a matching modifier
+      if (enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
+        if (symbol.isImport() && !enclosingSymbol.isImport()) {
+          unexpectedModifierIfPresent(symbol, .IMPORT, "inside a non-imported type");
+        }
+        if (symbol.isExport() && !enclosingSymbol.isExport()) {
+          unexpectedModifierIfPresent(symbol, .EXPORT, "inside a non-exported type");
+        }
       }
     }
   }
