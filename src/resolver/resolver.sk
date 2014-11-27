@@ -214,29 +214,7 @@ class Resolver {
   void accumulateSymbolFlags() {
     for (var i = 0; i < parsedDeclarations.size(); i++) {
       var node = parsedDeclarations.get(i);
-
-      // Skip all nodes in a sibling chain other than the first node
-      if (node.symbol.node != node) {
-        continue;
-      }
-
-      var declarationName = node.declarationName();
-      var flags = symbolFlagsForNode(node);
-
-      // Make sure all siblings have the same modifiers
-      for (var sibling = node.sibling; sibling != null; sibling = sibling.sibling) {
-        var siblingFlags = symbolFlagsForNode(sibling);
-
-        // Don't count non-keyword modifiers
-        if ((flags & .KEYWORD_MASK) != (siblingFlags & .KEYWORD_MASK) && sibling.kind != .EXTENSION) {
-          semanticErrorDifferentModifiers(log, sibling.declarationName().range, declarationName.asString(), declarationName.range);
-          siblingFlags |= .HAS_MODIFIER_ERRORS;
-        }
-
-        flags |= siblingFlags;
-      }
-
-      node.symbol.flags |= flags;
+      node.symbol.flags |= symbolFlagsForNode(node);
     }
   }
 
@@ -1513,7 +1491,7 @@ class Resolver {
   }
 
   void redundantModifierIfPresent(Symbol symbol, SymbolFlag flag, string where) {
-    if ((symbol.flags & flag) != 0 && !symbol.hasModifierErrors()) {
+    if ((symbol.flags & flag) != 0) {
       var modifierName = findModifierName(symbol, flag);
       if (modifierName != null) {
         semanticErrorRedundantModifier(log, modifierName.range, modifierName.asString(), where);
@@ -1522,7 +1500,7 @@ class Resolver {
   }
 
   void unexpectedModifierIfPresent(Symbol symbol, SymbolFlag flag, string where) {
-    if ((symbol.flags & flag) != 0 && !symbol.hasModifierErrors()) {
+    if ((symbol.flags & flag) != 0) {
       var modifierName = findModifierName(symbol, flag);
       if (modifierName != null) {
         semanticErrorUnexpectedModifier(log, modifierName.range, modifierName.asString(), where);

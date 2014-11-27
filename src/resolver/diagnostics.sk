@@ -53,11 +53,6 @@ void semanticErrorExtensionMissingTarget(Log log, Range range, string name) {
   log.error(range, "No type named " + simpleQuote(name) + " to extend");
 }
 
-void semanticErrorDifferentModifiers(Log log, Range range, string name, Range previous) {
-  log.error(range, "Cannot merge multiple declarations for " + simpleQuote(name) + " with different modifiers");
-  if (!previous.isEmpty()) log.note(previous, "The conflicting declaration is here");
-}
-
 void semanticErrorBadUsingValue(Log log, Range range) {
   log.error(range, "Expected a type here");
 }

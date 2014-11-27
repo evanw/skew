@@ -180,15 +180,21 @@ namespace Foo { in Bar { class Baz {} } }
 ");
 
 test("
+export class Foo {}
+import in Foo {}
+", "
+<stdin>:2:1: error: Cannot use the \"import\" modifier on an extension block
+import in Foo {}
+~~~~~~
+");
+
+test("
 import class Foo {}
 export in Foo {}
 ", "
-<stdin>:2:11: error: Cannot merge multiple declarations for \"Foo\" with different modifiers
+<stdin>:2:1: error: Cannot use the \"export\" modifier on an extension block
 export in Foo {}
-          ~~~
-<stdin>:1:14: note: The conflicting declaration is here
-import class Foo {}
-             ~~~
+~~~~~~
 ");
 
 test("

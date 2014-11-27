@@ -107,11 +107,9 @@ enum flags SymbolFlag {
   // Other flags
   PRIMITIVE,
   HAS_LOCATION_ERROR,
-  HAS_MODIFIER_ERRORS,
 
   // Masks
   INITIALIZE_MASK = INITIALIZING | INITIALIZED,
-  KEYWORD_MASK = PUBLIC | PRIVATE | PROTECTED | OVERRIDE | STATIC | VIRTUAL | FINAL | INLINE | CONST | IMPORT | EXPORT,
 }
 
 class Symbol {
@@ -320,9 +318,5 @@ class Symbol {
 
   bool hasLocationError() {
     return (flags & .HAS_LOCATION_ERROR) != 0;
-  }
-
-  bool hasModifierErrors() {
-    return (flags & .HAS_MODIFIER_ERRORS) != 0;
   }
 }

@@ -450,18 +450,12 @@ virtual in Foo {}
 override in Bar {}
 class Bar {}
 ", "
-<stdin>:2:12: error: Cannot merge multiple declarations for \"Foo\" with different modifiers
+<stdin>:2:1: error: Cannot use the \"virtual\" modifier on an extension block
 virtual in Foo {}
-           ~~~
-<stdin>:1:7: note: The conflicting declaration is here
-class Foo {}
-      ~~~
-<stdin>:4:7: error: Cannot merge multiple declarations for \"Bar\" with different modifiers
-class Bar {}
-      ~~~
-<stdin>:3:13: note: The conflicting declaration is here
+~~~~~~~
+<stdin>:3:1: error: Cannot use the \"override\" modifier on an extension block
 override in Bar {}
-            ~~~
+~~~~~~~~
 ");
 
 test("
@@ -470,6 +464,12 @@ virtual in Foo {}
 override in Bar {}
 override class Bar {}
 ", "
+<stdin>:2:1: error: Cannot use the \"virtual\" modifier on an extension block
+virtual in Foo {}
+~~~~~~~
+<stdin>:3:1: error: Cannot use the \"override\" modifier on an extension block
+override in Bar {}
+~~~~~~~~
 <stdin>:1:1: error: Cannot use the \"virtual\" modifier on an object declaration
 virtual class Foo {}
 ~~~~~~~
