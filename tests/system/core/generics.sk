@@ -457,6 +457,16 @@ export void bar() {
 ");
 
 test("
+class Foo<X> {
+  void foo<T>() {}
+}
+export void bar() {
+  Foo<int>().foo<float>();
+}
+", "
+");
+
+test("
 class Foo<X> {}
 in Foo {
   void foo<T>() {}

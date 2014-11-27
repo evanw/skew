@@ -16,29 +16,24 @@ namespace InstanceToStaticPass {
 
         // Make sure to handle types with type parameters
         if (enclosingSymbol.hasParameters()) {
-          List<Type> types = [];
 
           // This method may also have type parameters itself
           if (symbol.parameters == null) {
             symbol.parameters = [];
           }
 
+          // Add any type parameters from the enclosing type to the end of
+          // the type parameter list for this function (this function may
+          // also have type parameters of its own)
           for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
             var parameter = enclosingSymbol.parameters.get(i);
-            types.push(parameter.type);
-
-            // Add any type parameters from the enclosing type to the end of
-            // the type parameter list for this function (this function may
-            // also have type parameters of its own)
             var clone = resolver.createSymbol(parameter.name, .FUNCTION_PARAMETER);
             clone.type = Type(clone);
             symbol.parameters.push(clone);
           }
-
-          // Make sure the type is parameterized
-          thisSymbol.type = resolver.cache.parameterize(thisSymbol.type, types);
         }
 
+        thisSymbol.type = resolver.cache.ensureTypeIsParameterized(thisSymbol.type);
         recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
 
         // Change the instance function to a static function

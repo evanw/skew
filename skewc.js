@@ -11359,19 +11359,17 @@
         var thisSymbol = resolver.createSymbol('this', SymbolKind.LOCAL_VARIABLE);
         thisSymbol.type = enclosingSymbol.type;
         if (enclosingSymbol.hasParameters()) {
-          var types = [];
           if (symbol.parameters === null) {
             symbol.parameters = [];
           }
           for (var i = 0; i < enclosingSymbol.parameters.length; i = i + 1 | 0) {
             var parameter = enclosingSymbol.parameters[i];
-            types.push(parameter.type);
             var clone = resolver.createSymbol(parameter.name, SymbolKind.FUNCTION_PARAMETER);
             clone.type = new Type(clone);
             symbol.parameters.push(clone);
           }
-          thisSymbol.type = resolver.cache.parameterize(thisSymbol.type, types);
         }
+        thisSymbol.type = resolver.cache.ensureTypeIsParameterized(thisSymbol.type);
         InstanceToStaticPass.recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
         symbol.kind = SymbolKind.GLOBAL_FUNCTION;
         symbol.flags |= SymbolFlag.STATIC;
@@ -11390,7 +11388,7 @@
             name = value.dotName().replaceWith(null);
           } else {
             if (value.kind !== NodeKind.NAME) {
-              throw new Error('assert value.kind == .NAME; (src/resolver/instancetostatic.sk:65:13)');
+              throw new Error('assert value.kind == .NAME; (src/resolver/instancetostatic.sk:60:13)');
             }
             target = Node.createThis().withType(thisSymbol.type);
             name = value.replaceWith(null);
