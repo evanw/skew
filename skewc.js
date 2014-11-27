@@ -6685,8 +6685,8 @@
       return false;
     }
     if (symbol.kind === SymbolKind.OBJECT_PARAMETER && this.context.symbolForThis === enclosingSymbol) {
-      for (var parent = node.parent; !in_NodeKind.isNamedBlockDeclaration(parent.kind) || parent.symbol !== enclosingSymbol; parent = parent.parent) {
-        if (parent.kind === NodeKind.NODE_LIST && in_NodeKind.isNamedBlockDeclaration(parent.kind) && parent.symbol === enclosingSymbol && (parent === enclosingSymbol.node.objectParameters() || parent === enclosingSymbol.node.baseTypes())) {
+      for (var parent = node.parent; !in_NodeKind.isNamedBlockDeclaration(parent.kind); parent = parent.parent) {
+        if (parent.kind === NodeKind.NODE_LIST && in_NodeKind.isNamedBlockDeclaration(parent.parent.kind) && parent.parent.symbol === enclosingSymbol && (parent === enclosingSymbol.node.objectParameters() || parent === enclosingSymbol.node.baseTypes())) {
           return true;
         }
         if ((parent.kind === NodeKind.VARIABLE || in_NodeKind.isFunction(parent.kind)) && in_SymbolKind.isInstance(parent.symbol.kind)) {

@@ -805,8 +805,8 @@ class Resolver {
 
     // The cases where type parameters may appear are more complicated
     if (symbol.kind == .OBJECT_PARAMETER && context.symbolForThis == enclosingSymbol) {
-      for (var parent = node.parent; !parent.kind.isNamedBlockDeclaration() || parent.symbol != enclosingSymbol; parent = parent.parent) {
-        if (parent.kind == .NODE_LIST && parent.kind.isNamedBlockDeclaration() && parent.symbol == enclosingSymbol &&
+      for (var parent = node.parent; !parent.kind.isNamedBlockDeclaration(); parent = parent.parent) {
+        if (parent.kind == .NODE_LIST && parent.parent.kind.isNamedBlockDeclaration() && parent.parent.symbol == enclosingSymbol &&
             (parent == enclosingSymbol.node.objectParameters() || parent == enclosingSymbol.node.baseTypes())) {
           return true;
         }
