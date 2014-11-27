@@ -1,29 +1,32 @@
 const var NATIVE_LIBRARY_JS = "
-import class int { import string toString(); }
-import class bool { import string toString(); }
-import class float { import string toString(); }
-import class double { import string toString(); }
+import class int { string toString(); }
+import class bool { string toString(); }
+import class float { string toString(); }
+import class double { string toString(); }
 
 import class String {
-  import static string fromCharCode(int value);
+  static string fromCharCode(int value);
 }
 
 import class Object {
-  import static Object create(Object prototype);
+  static Object create(Object prototype);
 }
 
 import namespace operators {
-  import void delete(int value);
-  import void sort<T>(List<T> list, IComparison<T> comparison);
+  void delete(int value);
+  void sort<T>(List<T> list, IComparison<T> comparison);
 }
 
 import class string {
+  string slice(int start, int end);
+  int indexOf(string value);
+  int lastIndexOf(string value);
+  string toLowerCase();
+  string toUpperCase();
+}
+
+in string {
   inline int size() { return untyped(this).length; }
-  import string slice(int start, int end);
-  import int indexOf(string value);
-  import int lastIndexOf(string value);
-  import string toLowerCase();
-  import string toUpperCase();
   inline static string fromCodeUnit(int value) { return String.fromCharCode(value); }
   inline string get(int index) { return untyped(this)[index]; }
   inline string join(List<string> values) { return untyped(values).join(this); }
@@ -34,20 +37,23 @@ import class string {
 }
 
 export interface IComparison<T> {
-  export virtual int compare(T left, T right);
+  virtual int compare(T left, T right);
 }
 
 import class List<T> {
   new();
+  void push(T value);
+  void unshift(T value);
+  List<T> slice(int start, int end);
+  int indexOf(T value);
+  int lastIndexOf(T value);
+  T shift();
+  T pop();
+  void reverse();
+}
+
+in List {
   inline int size() { return untyped(this).length; }
-  import void push(T value);
-  import void unshift(T value);
-  import List<T> slice(int start, int end);
-  import int indexOf(T value);
-  import int lastIndexOf(T value);
-  import T shift();
-  import T pop();
-  import void reverse();
   inline void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }
   inline List<T> clone() { return untyped(this).slice(); }
   inline T remove(int index) { return untyped(this).splice(index, 1)[0]; }
@@ -59,6 +65,9 @@ import class List<T> {
 
 class StringMap<T> {
   Object table = Object.create(null);
+}
+
+in StringMap {
   inline T get(string key) { return untyped(table)[key]; }
   inline void set(string key, T value) { untyped(table)[key] = value; }
   inline bool has(string key) { return key in untyped(table); }
@@ -89,6 +98,9 @@ class StringMap<T> {
 
 class IntMap<T> {
   Object table = Object.create(null);
+}
+
+in IntMap {
   inline T get(int key) { return untyped(table)[key]; }
   inline void set(int key, T value) { untyped(table)[key] = value; }
   inline bool has(int key) { return key in untyped(table); }

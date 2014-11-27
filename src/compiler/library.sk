@@ -1,23 +1,23 @@
 const var NATIVE_LIBRARY = "
-import class int { import string toString(); }
-import class bool { import string toString(); }
-import class float { import string toString(); }
-import class double { import string toString(); }
+import class int { string toString(); }
+import class bool { string toString(); }
+import class float { string toString(); }
+import class double { string toString(); }
 
 import class string {
-  import int size();
-  import string slice(int start, int end);
-  import int indexOf(string value);
-  import int lastIndexOf(string value);
-  import string toLowerCase();
-  import string toUpperCase();
-  import static string fromCodeUnit(int value);
-  import string get(int index);
-  import string join(List<string> values);
-  import int codeUnitAt(int index);
-  import bool startsWith(string prefix);
-  import bool endsWith(string suffix);
-  import string repeat(int count);
+  int size();
+  string slice(int start, int end);
+  int indexOf(string value);
+  int lastIndexOf(string value);
+  string toLowerCase();
+  string toUpperCase();
+  static string fromCodeUnit(int value);
+  string get(int index);
+  string join(List<string> values);
+  int codeUnitAt(int index);
+  bool startsWith(string prefix);
+  bool endsWith(string suffix);
+  string repeat(int count);
 }
 
 interface IComparison<T> {
@@ -26,43 +26,45 @@ interface IComparison<T> {
 
 import class List<T> {
   new();
-  import int size();
-  import void push(T value);
-  import void unshift(T value);
-  import List<T> slice(int start, int end);
-  import int indexOf(T value);
-  import int lastIndexOf(T value);
-  import T shift();
-  import T pop();
-  import void reverse();
-  import void sort(IComparison<T> comparison);
-  import List<T> clone();
-  import T remove(int index);
-  import void insert(int index, T value);
-  import T get(int index);
-  import void set(int index, T value);
-  import void swap(int a, int b);
+  int size();
+  void push(T value);
+  void unshift(T value);
+  List<T> slice(int start, int end);
+  int indexOf(T value);
+  int lastIndexOf(T value);
+  T shift();
+  T pop();
+  void reverse();
+  void sort(IComparison<T> comparison);
+  List<T> clone();
+  T remove(int index);
+  void insert(int index, T value);
+  T get(int index);
+  void set(int index, T value);
+  void swap(int a, int b);
 }
 
-class StringMap<T> {
-  import T get(string key);
-  import T getOrDefault(string key, T defaultValue);
-  import void set(string key, T value);
-  import bool has(string key);
-  import void remove(string key);
-  import List<string> keys();
-  import List<T> values();
-  import StringMap<T> clone();
+import class StringMap<T> {
+  new();
+  T get(string key);
+  T getOrDefault(string key, T defaultValue);
+  void set(string key, T value);
+  bool has(string key);
+  void remove(string key);
+  List<string> keys();
+  List<T> values();
+  StringMap<T> clone();
 }
 
-class IntMap<T> {
-  import T get(int key);
-  import T getOrDefault(int key, T defaultValue);
-  import void set(int key, T value);
-  import bool has(int key);
-  import void remove(int key);
-  import List<int> keys();
-  import List<T> values();
-  import IntMap<T> clone();
+import class IntMap<T> {
+  new();
+  T get(int key);
+  T getOrDefault(int key, T defaultValue);
+  void set(int key, T value);
+  bool has(int key);
+  void remove(int key);
+  List<int> keys();
+  List<T> values();
+  IntMap<T> clone();
 }
 ";

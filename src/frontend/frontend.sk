@@ -1,4 +1,12 @@
 import namespace io {
+  int terminalWidth;
+  void setColor(Color color);
+  void print(string text);
+  bool writeFile(string path, string contents);
+  Source readFile(string path);
+}
+
+in io {
   export enum Color {
     DEFAULT = 0,
     BOLD = 1,
@@ -11,12 +19,6 @@ import namespace io {
     CYAN = 96,
   }
 
-  import int terminalWidth;
-  import void setColor(Color color);
-  import void print(string text);
-  import bool writeFile(string path, string contents);
-  import Source readFile(string path);
-
   void printWithColor(Color color, string text) {
     setColor(color);
     print(text);
@@ -25,82 +27,7 @@ import namespace io {
 }
 
 export namespace frontend {
-  void printError(string text) {
-    io.printWithColor(.RED, "error: ");
-    io.printWithColor(.BOLD, text + "\n");
-  }
-
-  void printNote(string text) {
-    io.printWithColor(.GRAY, "note: ");
-    io.printWithColor(.BOLD, text + "\n");
-  }
-
-  void printWarning(string text) {
-    io.printWithColor(.MAGENTA, "warning: ");
-    io.printWithColor(.BOLD, text + "\n");
-  }
-
-  void printUsage() {
-    io.printWithColor(.GREEN, "\nusage: ");
-    io.printWithColor(.BOLD, "skewc [flags] [inputs]\n");
-    io.print("
-  --help (-h)        Print this message.
-
-  --verbose          Print out useful information about the compilation.
-
-  --target=___       Set the target language. Valid target languages: none, js,
-                     c#, lisp-ast, json-ast, and xml-ast.
-
-  --output-file=___  Combines all output into a single file.
-
-  --prepend-file=___ Prepend the contents of this file to the output. Provide
-                     this flag multiple times to prepend multiple files.
-
-  --append-file=___  Append the contents of this file to the output. Provide
-                     this flag multiple times to append multiple files.
-
-  --js-minify        Transform the emitted JavaScript so that it takes up less
-                     space. Make sure to use the \"export\" modifier on code
-                     that shouldn't be minifed.
-
-  --js-source-map    Generate a source map when targeting JavaScript. The source
-                     map will be saved with the \".map\" extension in the same
-                     directory as the main output file.
-
-");
-  }
-
-  class Flags {
-    var help = false;
-    var verbose = false;
-    var target = "";
-    var outputFile = "";
-    var jsMinify = false;
-    var jsSourceMap = false;
-    var optimize = false;
-  }
-
-  string afterEquals(string text) {
-    var equals = text.indexOf("=");
-    assert equals >= 0;
-    return text.slice(equals + 1, text.size());
-  }
-
-  List<Source> readSources(List<string> files) {
-    List<Source> result = [];
-    for (var i = 0; i < files.size(); i++) {
-      var file = files.get(i);
-      var source = io.readFile(file);
-      if (source == null) {
-        printError("Could not read from " + quoteString(file, '"'));
-        return null;
-      }
-      result.push(source);
-    }
-    return result;
-  }
-
-  export int main(List<string> args) {
+  int main(List<string> args) {
     final List<string> inputs = [];
     final List<string> prepend = [];
     final List<string> append = [];
@@ -225,5 +152,82 @@ export namespace frontend {
     }
 
     return 0;
+  }
+}
+
+in frontend {
+  void printError(string text) {
+    io.printWithColor(.RED, "error: ");
+    io.printWithColor(.BOLD, text + "\n");
+  }
+
+  void printNote(string text) {
+    io.printWithColor(.GRAY, "note: ");
+    io.printWithColor(.BOLD, text + "\n");
+  }
+
+  void printWarning(string text) {
+    io.printWithColor(.MAGENTA, "warning: ");
+    io.printWithColor(.BOLD, text + "\n");
+  }
+
+  void printUsage() {
+    io.printWithColor(.GREEN, "\nusage: ");
+    io.printWithColor(.BOLD, "skewc [flags] [inputs]\n");
+    io.print("
+  --help (-h)        Print this message.
+
+  --verbose          Print out useful information about the compilation.
+
+  --target=___       Set the target language. Valid target languages: none, js,
+                     c#, lisp-ast, json-ast, and xml-ast.
+
+  --output-file=___  Combines all output into a single file.
+
+  --prepend-file=___ Prepend the contents of this file to the output. Provide
+                     this flag multiple times to prepend multiple files.
+
+  --append-file=___  Append the contents of this file to the output. Provide
+                     this flag multiple times to append multiple files.
+
+  --js-minify        Transform the emitted JavaScript so that it takes up less
+                     space. Make sure to use the \"export\" modifier on code
+                     that shouldn't be minifed.
+
+  --js-source-map    Generate a source map when targeting JavaScript. The source
+                     map will be saved with the \".map\" extension in the same
+                     directory as the main output file.
+
+");
+  }
+
+  class Flags {
+    var help = false;
+    var verbose = false;
+    var target = "";
+    var outputFile = "";
+    var jsMinify = false;
+    var jsSourceMap = false;
+    var optimize = false;
+  }
+
+  string afterEquals(string text) {
+    var equals = text.indexOf("=");
+    assert equals >= 0;
+    return text.slice(equals + 1, text.size());
+  }
+
+  List<Source> readSources(List<string> files) {
+    List<Source> result = [];
+    for (var i = 0; i < files.size(); i++) {
+      var file = files.get(i);
+      var source = io.readFile(file);
+      if (source == null) {
+        printError("Could not read from " + quoteString(file, '"'));
+        return null;
+      }
+      result.push(source);
+    }
+    return result;
   }
 }

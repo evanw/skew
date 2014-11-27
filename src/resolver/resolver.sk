@@ -886,9 +886,7 @@ class Resolver {
     unexpectedModifierIfPresent(symbol, .STATIC, where);
     unexpectedModifierIfPresent(symbol, .VIRTUAL, where);
     unexpectedModifierIfPresent(symbol, .OVERRIDE, where);
-    if (symbol.isImport()) {
-      unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
-    }
+    forbidImportAndExportTogether(symbol);
   }
 
   void initializeNamespace(Symbol symbol) {
@@ -1032,41 +1030,15 @@ class Resolver {
   }
 
   void initializeFunction(Symbol symbol) {
-    // Sanity check
     var enclosingSymbol = symbol.enclosingSymbol;
+
+    // Sanity check
     assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||
       context.symbolForThis != null && context.symbolForThis == enclosingSymbol;
 
     unexpectedModifierIfPresent(symbol, .CONST, "on a function declaration");
     unexpectedModifierIfPresent(symbol, .FINAL, "on a function declaration");
-
-    if (!enclosingSymbol.kind.isTypeWithInstances()) {
-      unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
-    }
-
-    // Constructors for imported/exported object types are automatically imported/exported
-    if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
-      if (enclosingSymbol.isExport()) {
-        unexpectedModifierIfPresent(symbol, .IMPORT, "on an exported declaration");
-        symbol.flags = (symbol.flags & ~.IMPORT) | .EXPORT;
-        redundantModifierIfPresent(symbol, .EXPORT, "on an constructor for an exported object");
-      } else if (enclosingSymbol.isImport()) {
-        unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
-        symbol.flags = (symbol.flags & ~.EXPORT) | .IMPORT;
-        redundantModifierIfPresent(symbol, .IMPORT, "on an constructor for an imported object");
-      }
-    }
-
-    // Exporting a function on an object or namespace automatically exports
-    // all enclosing symbols
-    else if (symbol.isExport() && !enclosingSymbol.isExport() && enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
-      unexpectedModifierIfPresent(symbol, .EXPORT, "on a non-exported type");
-    }
-
-    // The import/export modifiers are mutually exclusive
-    if (symbol.isImport()) {
-      unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
-    }
+    checkMemberSymbol(symbol);
 
     var node = symbol.node;
     Type resultType;
@@ -1123,7 +1095,7 @@ class Resolver {
     var overriddenMember = symbol.overriddenMember;
 
     // Non-imported methods on imported types cannot be virtual
-    if (!symbol.isImport() && symbol.enclosingSymbol.isImport()) {
+    if (!symbol.isImport() && enclosingSymbol != null && enclosingSymbol.isImport()) {
       unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a non-imported method for an imported type");
       unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a non-imported method for an imported type");
     }
@@ -1190,14 +1162,10 @@ class Resolver {
     unexpectedModifierIfPresent(symbol, .INLINE, "on a variable declaration");
     unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a variable declaration");
     unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a variable declaration");
-    if (symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances()) {
-      unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
-    }
+    checkMemberSymbol(symbol);
+
     if (symbol.isConst()) {
       redundantModifierIfPresent(symbol, .FINAL, "on a const variable declaration");
-    }
-    if (symbol.isImport()) {
-      unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
     }
 
     var node = symbol.node;
@@ -1212,11 +1180,12 @@ class Resolver {
       // Take the variable type from the surrounding context
       else {
         assert symbol.isEnumValue();
-        var type = symbol.enclosingSymbol.type;
-        variableType = Node.createType(type).withSymbol(symbol.enclosingSymbol);
+        var enclosingSymbol = symbol.enclosingSymbol;
+        var type = enclosingSymbol.type;
+        variableType = Node.createType(type).withSymbol(enclosingSymbol);
 
         // All enum values are final and always transfer the import/export flags
-        symbol.flags |= .FINAL | .STATIC | symbol.enclosingSymbol.flags & (.IMPORT | .EXPORT);
+        symbol.flags |= .FINAL | .STATIC | enclosingSymbol.flags & (.IMPORT | .EXPORT);
 
         // Look at the initializer now
         var variableValue = node.variableValue();
@@ -1491,6 +1460,42 @@ class Resolver {
       node = node.parent;
     }
     return null;
+  }
+
+  void checkMemberSymbol(Symbol symbol) {
+    forbidImportAndExportTogether(symbol);
+
+    var enclosingSymbol = symbol.enclosingSymbol;
+    if (enclosingSymbol != null) {
+      if (!enclosingSymbol.kind.isTypeWithInstances()) {
+        unexpectedModifierIfPresent(symbol, .STATIC, "outside an object declaration");
+      }
+
+      // The import/export modifiers are automatically implied for declarations
+      // inside the type declaration, but not for those inside an extension
+      if (!symbol.isFromExtension()) {
+        if (enclosingSymbol.isImport()) {
+          redundantModifierIfPresent(symbol, .IMPORT, "inside an imported type");
+          symbol.flags |= .IMPORT;
+        }
+        if (enclosingSymbol.isExport()) {
+          redundantModifierIfPresent(symbol, .EXPORT, "inside an exported type");
+          symbol.flags |= .EXPORT;
+        }
+      }
+
+      // Refuse to export a member of a non-exported type
+      if (symbol.isExport() && !enclosingSymbol.isExport() && enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
+        unexpectedModifierIfPresent(symbol, .EXPORT, "on a non-exported type");
+      }
+    }
+  }
+
+  void forbidImportAndExportTogether(Symbol symbol) {
+    // The import/export modifiers are mutually exclusive
+    if (symbol.isImport()) {
+      unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
+    }
   }
 
   void redundantModifierIfPresent(Symbol symbol, SymbolFlag flag, string where) {

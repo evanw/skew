@@ -4,20 +4,26 @@ import string cpp_fromCodeUnit(int value);
 import string cpp_toLowerCase(string value);
 import string cpp_toUpperCase(string value);
 
-import class int {
-  inline string toString() { return untyped(cpp_toString)(this); }
-}
-import class bool {
-  inline string toString() { return this ? \"true\" : \"false\"; }
-}
-import class float {
-  inline string toString() { return untyped(cpp_toString)(this); }
-}
-import class double {
+import class int {}
+import class bool {}
+import class float {}
+import class double {}
+import class string {}
+
+in int {
   inline string toString() { return untyped(cpp_toString)(this); }
 }
 
-import class string {
+in bool {
+  inline string toString() { return this ? \"true\" : \"false\"; }
+}
+
+in float {
+  inline string toString() { return untyped(cpp_toString)(this); }
+}
+
+in double {
+  inline string toString() { return untyped(cpp_toString)(this); }
 }
 
 in string {
@@ -37,50 +43,50 @@ in string {
 }
 
 export interface IComparison<T> {
-  export virtual int compare(T left, T right);
+  virtual int compare(T left, T right);
 }
 
 import class List<T> {
   new();
-  import int size();
-  import void push(T value);
-  import void unshift(T value);
-  import List<T> slice(int start, int end);
-  import int indexOf(T value);
-  import int lastIndexOf(T value);
-  import T shift();
-  import T pop();
-  import void reverse();
-  import void sort(IComparison<T> comparison);
-  import List<T> clone();
-  import T remove(int index);
-  import void insert(int index, T value);
-  import T get(int index);
-  import void set(int index, T value);
-  import void swap(int a, int b);
+  int size();
+  void push(T value);
+  void unshift(T value);
+  List<T> slice(int start, int end);
+  int indexOf(T value);
+  int lastIndexOf(T value);
+  T shift();
+  T pop();
+  void reverse();
+  void sort(IComparison<T> comparison);
+  List<T> clone();
+  T remove(int index);
+  void insert(int index, T value);
+  T get(int index);
+  void set(int index, T value);
+  void swap(int a, int b);
 }
 
 import class StringMap<T> {
   new();
-  import T get(string key);
-  import T getOrDefault(string key, T defaultValue);
-  import void set(string key, T value);
-  import bool has(string key);
-  import void remove(string key);
-  import List<string> keys();
-  import List<T> values();
-  import StringMap<T> clone();
+  T get(string key);
+  T getOrDefault(string key, T defaultValue);
+  void set(string key, T value);
+  bool has(string key);
+  void remove(string key);
+  List<string> keys();
+  List<T> values();
+  StringMap<T> clone();
 }
 
 import class IntMap<T> {
   new();
-  import T get(int key);
-  import T getOrDefault(int key, T defaultValue);
-  import void set(int key, T value);
-  import bool has(int key);
-  import void remove(int key);
-  import List<int> keys();
-  import List<T> values();
-  import IntMap<T> clone();
+  T get(int key);
+  T getOrDefault(int key, T defaultValue);
+  void set(int key, T value);
+  bool has(int key);
+  void remove(int key);
+  List<int> keys();
+  List<T> values();
+  IntMap<T> clone();
 }
 ";

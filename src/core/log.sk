@@ -12,6 +12,29 @@ class Diagnostic {
 }
 
 export class Log {
+  string toString() {
+    var result = "";
+
+    // Emit the log assuming an infinite terminal width
+    for (var i = 0; i < diagnostics.size(); i++) {
+      var diagnostic = diagnostics.get(i);
+      var formatted = diagnostic.range.format(0);
+      result = result + diagnostic.range.locationString() + (diagnostic.kind == .ERROR ? ": error: " : ": warning: ")
+         + diagnostic.text + "\n" + formatted.line + "\n" + formatted.range + "\n";
+
+      // Append notes after the diagnostic they apply to
+      if (!diagnostic.noteRange.isEmpty()) {
+        formatted = diagnostic.noteRange.format(0);
+        result = result + diagnostic.noteRange.locationString() + ": note: " + diagnostic.noteText + "\n"
+           + formatted.line + "\n" + formatted.range + "\n";
+      }
+    }
+
+    return result;
+  }
+}
+
+in Log {
   List<Diagnostic> diagnostics = [];
   var warningCount = 0;
   var errorCount = 0;
@@ -33,26 +56,5 @@ export class Log {
     var last = diagnostics.get(diagnostics.size() - 1);
     last.noteRange = range;
     last.noteText = text;
-  }
-
-  export string toString() {
-    var result = "";
-
-    // Emit the log assuming an infinite terminal width
-    for (var i = 0; i < diagnostics.size(); i++) {
-      var diagnostic = diagnostics.get(i);
-      var formatted = diagnostic.range.format(0);
-      result = result + diagnostic.range.locationString() + (diagnostic.kind == .ERROR ? ": error: " : ": warning: ")
-         + diagnostic.text + "\n" + formatted.line + "\n" + formatted.range + "\n";
-
-      // Append notes after the diagnostic they apply to
-      if (!diagnostic.noteRange.isEmpty()) {
-        formatted = diagnostic.noteRange.format(0);
-        result = result + diagnostic.noteRange.locationString() + ": note: " + diagnostic.noteText + "\n"
-           + formatted.line + "\n" + formatted.range + "\n";
-      }
-    }
-
-    return result;
   }
 }
