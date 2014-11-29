@@ -498,4 +498,23 @@ export void bar() {
 ", "
 ");
 
+test("
+interface IFoo<T> {}
+class Foo {}
+class Bar<T> { void foo(IFoo<T> foo) {} }
+class Baz : IFoo<Foo> {}
+export void bar() { Bar<Foo>().foo(Baz()); }
+", "
+");
+
+test("
+export void bar() { Bar<Foo>().foo(Baz()); }
+class Baz : IFoo<Foo> {}
+class Bar<T> { void foo(IFoo<T> foo) {} }
+class Foo {}
+interface IFoo<T> {}
+", "
+TODO
+");
+
 }}
