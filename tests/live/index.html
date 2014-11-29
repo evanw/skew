@@ -32,6 +32,8 @@ label {
   <p>
     <span id="compileTime">Loading...</span>
     Target: <span id="targetArea"></span>
+    <br>
+    <span id="optionArea"></span>
   </p>
 </div>
 <div>
@@ -46,63 +48,170 @@ label {
   <h2>Code</h2>
   <textarea id="outputCode" rows="20" cols="80" spellcheck="false" readonly></textarea>
 </div>
-<script src="../../build/debug/skewc.js"></script>
 <script>
 
-function compile() {
-  var start = now();
-  for (var target = 0; target < targets.length; target++) {
-    if (targets[target].element.checked) {
-      break;
+function webWorker() {
+  onmessage = function(e) {
+    var message = {};
+    try {
+      var compiler = new Compiler();
+      var options = new CompilerOptions();
+      switch (e.data.format) {
+        case 'js': {
+          options.targetFormat = TargetFormat.JAVASCRIPT;
+          options.jsMinify = options.jsMangle = e.data.js.minify;
+          options.jsSourceMap = e.data.js.sourceMap;
+          break;
+        }
+        case 'cpp': {
+          options.targetFormat = TargetFormat.CPP;
+          break;
+        }
+      }
+      options.inputs.push(new Source('<stdin>', e.data.input));
+      var result = compiler.compile(options);
+      message.log = compiler.log.toString();
+      if (result.program !== null && result.program.children.length === 2) {
+        message.tree = lisp.dump(result.program.children[1]);
+      }
+      message.code = result.outputs.map(function(output) { return output.contents; }).join('');
+    } catch (e) {
+      var text = e + '';
+      if (e && e.stack) {
+        var stackText = e.stack + '';
+        text = stackText.indexOf(text) === 0 ? stackText : text + '\n' + stackText;
+      }
+      message.error = text;
     }
-  }
-  if (input.value === oldInput && target === oldTarget) {
-    return;
-  }
-  oldInput = input.value;
-  oldTarget = localStorage.target = target;
-  outputLog.value = outputTree.value = outputCode.value = '';
-  try {
-    var compiler = new Compiler();
-    var options = new CompilerOptions();
-    options.targetFormat = targets[oldTarget].format;
-    options.inputs.push(new Source('<stdin>', oldInput));
-    var result = compiler.compile(options);
-    outputLog.value = compiler.log.toString();
-    if (result.program !== null && result.program.children.length === 2) {
-      outputTree.value = lisp.dump(result.program.children[1]);
-    }
-    outputCode.value = result.outputs.map(function(output) { return output.contents; }).join('');
-  } catch (e) {
-    outputLog.value = e.stack || e;
-  }
-  compileTime.innerHTML = 'Compile time: ' + +(now() - start).toFixed(1) + 'ms';
+    postMessage(message);
+  };
 }
 
-var now = this.performance && performance.now
-  ? function() { return performance.now(); }
-  : function() { return +new Date; };
+function ajax(url, callback) {
+  var xhr = new XMLHttpRequest;
+  xhr.onload = function() { callback(xhr.response); };
+  xhr.open('GET', url);
+  xhr.send();
+}
+
+function gatherSettings() {
+  var result = {};
+  targets.forEach(function(target) {
+    if (target.element.checked) {
+      result.format = target.name;
+    }
+    var json = result[target.name] = {};
+    target.options.forEach(function(option) {
+      json[option.name] = option.element.checked;
+    });
+  });
+  result.input = input.value || '';
+  return result;
+}
+
+function ui(compile) {
+  targets.forEach(function(target, i) {
+    var element = document.createElement('label');
+    element.innerHTML = '<input name="target" type="radio"' + (i === 0 ? ' checked' : '') + '> ' + target.text + ' ';
+    element.onchange = compile;
+    targetArea.appendChild(element);
+    target.element = element.firstChild;
+    target.options.forEach(function(option) {
+      var element = document.createElement('label');
+      element.innerHTML = '<input type="checkbox"> ' + option.text + ' ';
+      element.onchange = compile;
+      optionArea.appendChild(element);
+      option.element = element.firstChild;
+    });
+  });
+
+  // Try to restore settings from the previous session
+  try {
+    var settings = JSON.parse(localStorage.settings);
+    targets.forEach(function(target) {
+      if (settings.format === target.name) {
+        target.element.checked;
+      }
+      var json = settings[target.name];
+      if (json) {
+        target.options.forEach(function(option) {
+          if (json[option.name]) {
+            option.element.checked = true;
+          }
+        });
+      }
+    });
+    input.value = settings.input;
+  } catch (e) {
+  }
+}
+
+function update(result, timeInMS) {
+  outputLog.value = result.error || result.log || '';
+  outputTree.value = result.tree || '';
+  outputCode.value = result.code || '';
+  compileTime.textContent = +timeInMS.toFixed(1) + 'ms';
+}
+
+function start() {
+  ajax('../../build/debug/skewc.js', function(content) {
+    var code = content + '\n' + webWorker + '\nwebWorker()';
+    var worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
+    var busyCompiling = false;
+    var outOfDate = false;
+    var startTime = null;
+    var oldSettings = null;
+    var now = this.performance && performance.now
+      ? function() { return performance.now(); }
+      : function() { return +new Date; };
+
+    function compile() {
+      var settings = gatherSettings();
+      var newSettings = JSON.stringify(settings);
+      if (oldSettings !== newSettings) {
+        localStorage.settings = newSettings;
+        if (busyCompiling) {
+          outOfDate = true;
+        } else {
+          busyCompiling = true;
+          startTime = now();
+          worker.postMessage(settings);
+        }
+      }
+    }
+
+    worker.onmessage = function(e) {
+      busyCompiling = false;
+      if (outOfDate) {
+        outOfDate = false;
+        compile();
+      } else {
+        update(e.data, now() - startTime);
+      }
+    };
+
+    input.oninput = input.onchange = compile;
+    ui(compile);
+    compile();
+  });
+}
 
 var targets = [
-  { format: TargetFormat.JAVASCRIPT, name: 'JavaScript' },
-  { format: TargetFormat.CPP, name: 'C++' },
+  {
+    name: 'js',
+    text: 'JavaScript',
+    options: [
+      { name: 'minify', text: 'Minify', value: false },
+      { name: 'sourceMap', text: 'Source Map', value: false }
+    ]
+  },
+  {
+    name: 'cpp',
+    text: 'C++',
+    options: []
+  },
 ];
 
-targets.forEach(function(target) {
-  var element = document.createElement('label');
-  element.innerHTML = '<input name="target" type="radio"> ' + target.name + ' ';
-  element.onchange = compile;
-  targetArea.appendChild(element);
-  target.element = element.firstChild;
-});
-
-var oldInput = null;
-var oldTarget = localStorage.target | 0;
-if (oldTarget < 0 || oldTarget >= targets.length) {
-  oldTarget = 0;
-}
-targets[oldTarget].element.checked = true;
-input.oninput = input.onchange = compile;
-compile();
+start();
 
 </script>
