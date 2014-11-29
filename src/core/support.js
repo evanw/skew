@@ -1,7 +1,6 @@
 function parseIntLiteral(value, base) {
   if (base !== 10) value = value.slice(2);
-  var result = parseInt(value, base);
-  return result === (result | 0) || result === 0x80000000 ? result | 0 : NaN;
+  return parseInt(value, base) | 0;
 }
 
 function parseDoubleLiteral(value) {
@@ -16,3 +15,5 @@ var encodeBase64 =
 var now = typeof performance !== 'undefined' && performance['now']
   ? function() { return performance['now'](); }
   : function() { return +new Date; };
+
+Error.stackTraceLimit = Infinity;

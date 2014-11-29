@@ -605,12 +605,10 @@ class IntLiteral : ILiteralCallback {
 
   override Node parse(ParserContext context, Token token) {
     var value = parseIntLiteral(token.text, base);
-    if (value != value) {
-      syntaxErrorInvalidInteger(context.log, token.range, token.text);
-    } else if (base == 10 && value != 0 && token.text.codeUnitAt(0) == '0') {
+    if (base == 10 && value != 0 && token.text.codeUnitAt(0) == '0') {
       syntaxWarningOctal(context.log, token.range);
     }
-    return Node.createInt((int)value).withRange(token.range);
+    return Node.createInt(value).withRange(token.range);
   }
 }
 

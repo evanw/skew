@@ -61,7 +61,7 @@ namespace js {
         case .CLASS { patchClass(node); }
         case .NAME { patchName(node); }
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinary(node); }
-        case .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node); }
+        case .POSITIVE, .NEGATIVE, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node); }
         case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER { patchAssign(node); }
       }
 
@@ -176,8 +176,35 @@ namespace js {
 
     void patchUnary(Node node) {
       if (node.type.isInt(cache)) {
-        var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
-        createBinaryIntAssignment(node, isIncrement ? .ADD : .SUBTRACT, node.unaryValue().replaceWith(null), Node.createInt(1));
+        var value = node.unaryValue();
+        if (node.kind.isUnaryStorageOperator()) {
+          var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
+          createBinaryIntAssignment(node, isIncrement ? .ADD : .SUBTRACT, value.replaceWith(null), Node.createInt(1));
+        } else if (!alwaysConvertsOperandsToInt(node.parent.kind)) {
+          assert node.kind == .POSITIVE || node.kind == .NEGATIVE;
+
+          // Don't need a bitwise or with zero for constant values
+          if (value.kind == .INT) {
+            var constant = value.asInt();
+            node.become(Node.createInt(node.kind == .NEGATIVE ? -constant : constant).withType(cache.intType));
+          }
+
+          // Make sure that negating an integer doesn't exceed integer range:
+          //
+          //   export void foo() {
+          //     int result = bar(-0x80000000);
+          //     assert result >= -0x80000000 && result <= 0x7FFFFFFF;
+          //   }
+          //   int bar(int foo) {
+          //     return -foo;
+          //   }
+          //
+          else {
+            node.become(Node.createBinary(.BITWISE_OR,
+              Node.createUnary(node.kind, value.replaceWith(null)).withType(cache.intType),
+              Node.createInt(0).withType(cache.intType)).withType(cache.intType));
+          }
+        }
       }
     }
 

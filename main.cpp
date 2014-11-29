@@ -78,7 +78,7 @@ private:
 double now();
 string encodeBase64(string text);
 double parseDoubleLiteral(string text);
-double parseIntLiteral(string text, int base);
+int parseIntLiteral(string text, int base);
 string cpp_toString(int value);
 string cpp_toString(double value);
 string cpp_fromCodeUnit(int value);
@@ -167,7 +167,7 @@ double parseDoubleLiteral(string text) {
   return value;
 }
 
-double parseIntLiteral(string text, int base) {
+int parseIntLiteral(string text, int base) {
   int value = 0;
   std::stringstream ss(base == 10 ? text : text.substr(2));
   ss >> std::setbase(base) >> value;

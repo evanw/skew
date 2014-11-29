@@ -4491,6 +4491,8 @@
     case 77:
       this.patchBinary(node);
       break;
+    case 54:
+    case 55:
     case 57:
     case 58:
     case 60:
@@ -4545,8 +4547,21 @@
   };
   js.Patcher.prototype.patchUnary = function(node) {
     if (node.type.isInt(this.cache)) {
-      var isIncrement = node.kind === NodeKind.PREFIX_INCREMENT || node.kind === NodeKind.POSTFIX_INCREMENT;
-      this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, node.unaryValue().replaceWith(null), Node.createInt(1));
+      var value = node.unaryValue();
+      if (in_NodeKind.isUnaryStorageOperator(node.kind)) {
+        var isIncrement = node.kind === NodeKind.PREFIX_INCREMENT || node.kind === NodeKind.POSTFIX_INCREMENT;
+        this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
+      } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
+        if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:184:11)');
+        }
+        if (value.kind === NodeKind.INT) {
+          var constant = value.asInt();
+          node.become(Node.createInt(node.kind === NodeKind.NEGATIVE ? -constant | 0 : constant).withType(this.cache.intType));
+        } else {
+          node.become(Node.createBinary(NodeKind.BITWISE_OR, Node.createUnary(node.kind, value.replaceWith(null)).withType(this.cache.intType), Node.createInt(0).withType(this.cache.intType)).withType(this.cache.intType));
+        }
+      }
     }
   };
   js.Patcher.prototype.patchCast = function(node) {
@@ -4598,7 +4613,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:244:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:271:7)');
     }
     var current = target;
     var parent = current.parent;
@@ -5079,12 +5094,10 @@
   }
   IntLiteral.prototype.parse = function(context, token) {
     var value = parseIntLiteral(token.text, this.base);
-    if (value !== value) {
-      syntaxErrorInvalidInteger(context.log, token.range, token.text);
-    } else if (this.base === 10 && value !== 0 && token.text.charCodeAt(0) === 48) {
+    if (this.base === 10 && value !== 0 && token.text.charCodeAt(0) === 48) {
       syntaxWarningOctal(context.log, token.range);
     }
-    return Node.createInt(value | 0).withRange(token.range);
+    return Node.createInt(value).withRange(token.range);
   };
   function FloatLiteral() {
   }
@@ -5476,9 +5489,9 @@
       }
     } else if (valueKind === NodeKind.INT) {
       if (kind === NodeKind.POSITIVE) {
-        this.flattenInt(node, +value.asInt());
+        this.flattenInt(node, +value.asInt() | 0);
       } else if (kind === NodeKind.NEGATIVE) {
-        this.flattenInt(node, -value.asInt());
+        this.flattenInt(node, -value.asInt() | 0);
       } else if (kind === NodeKind.COMPLEMENT) {
         this.flattenInt(node, ~value.asInt());
       }
@@ -8044,9 +8057,6 @@
     node.type = commonType;
   };
   Resolver.prototype.resolveInt = function(node) {
-    if (node.asInt() === -2147483648) {
-      syntaxErrorInvalidInteger(this.log, node.range, node.range.toString());
-    }
     node.type = this.cache.intType;
   };
   Resolver.prototype.resolveList = function(node) {
@@ -8135,7 +8145,7 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2628:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2623:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -8228,7 +8238,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2751:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2746:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -8273,10 +8283,6 @@
   Resolver.prototype.resolveUnaryOperator = function(node) {
     var kind = node.kind;
     var value = node.unaryValue();
-    if (kind === NodeKind.NEGATIVE && value.kind === NodeKind.INT && value.asInt() === -2147483648) {
-      node.become(value.withRange(node.range).withType(this.cache.intType));
-      return;
-    }
     if (kind === NodeKind.COMPLEMENT && this.typeContext !== null && this.typeContext.isEnumFlags()) {
       this.resolveAsExpressionWithTypeContext(value, this.typeContext);
     } else {
@@ -9857,9 +9863,6 @@
   }
   function syntaxErrorInvalidCharacter(log, range, text) {
     log.error(range, 'Invalid character literal ' + firstLineOf(text));
-  }
-  function syntaxErrorInvalidInteger(log, range, text) {
-    log.error(range, 'Invalid integer literal ' + text);
   }
   function syntaxErrorExtraData(log, range, text) {
     log.error(range, 'Syntax error ' + quoteString(text, 34));
@@ -11561,8 +11564,7 @@
 }());
 function parseIntLiteral(value, base) {
   if (base !== 10) value = value.slice(2);
-  var result = parseInt(value, base);
-  return result === (result | 0) || result === 0x80000000 ? result | 0 : NaN;
+  return parseInt(value, base) | 0;
 }
 
 function parseDoubleLiteral(value) {
@@ -11577,6 +11579,8 @@ var encodeBase64 =
 var now = typeof performance !== 'undefined' && performance['now']
   ? function() { return performance['now'](); }
   : function() { return +new Date; };
+
+Error.stackTraceLimit = Infinity;
 // Run this when run with node but not when run with mocha
 if (typeof process !== 'undefined' && typeof it === 'undefined') {
   var fs = require('fs');

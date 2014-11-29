@@ -1,4 +1,4 @@
-import double parseIntLiteral(string value, int base); // Returns NaN on error
+import int parseIntLiteral(string value, int base);
 import double parseDoubleLiteral(string value);
 import string encodeBase64(string data);
 import double now(); // The current time in seconds
