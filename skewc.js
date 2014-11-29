@@ -9057,7 +9057,7 @@
       result = this.parameterize(type, this.substituteAll(type.substitutions, parameters, substitutions));
     }
     if (trace.GENERICS) {
-      trace.log('substitution gave ' + result);
+      trace.log('substitute gave ' + result);
       trace.dedent();
     }
     return result;
@@ -9130,7 +9130,7 @@
         clone.dependency = member.dependency !== null ? member.dependency : member;
         clone.parameterizedType = type;
         var parameterizedType = member.parameterizedType;
-        if (parameterizedType !== null) {
+        if (parameterizedType !== null && parameterizedType !== unparameterized) {
           var merged = [];
           for (var j = 0; j < parameterizedType.substitutions.length; j = j + 1 | 0) {
             var parameter = parameterizedType.symbol.parameters[j];

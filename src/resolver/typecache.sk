@@ -101,7 +101,7 @@ class TypeCache {
     }
 
     if (trace.GENERICS) {
-      trace.log("substitution gave " + result);
+      trace.log("substitute gave " + result);
       trace.dedent();
     }
     return result;
@@ -201,7 +201,7 @@ class TypeCache {
         //   }
         //
         var parameterizedType = member.parameterizedType;
-        if (parameterizedType != null) {
+        if (parameterizedType != null && parameterizedType != unparameterized) {
           List<Type> merged = [];
           for (var j = 0; j < parameterizedType.substitutions.size(); j++) {
             var parameter = parameterizedType.symbol.parameters.get(j);

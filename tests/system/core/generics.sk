@@ -514,7 +514,6 @@ class Bar<T> { void foo(IFoo<T> foo) {} }
 class Foo {}
 interface IFoo<T> {}
 ", "
-TODO
 ");
 
 }}
