@@ -1,4 +1,4 @@
-// node skewc.js src/*/*.sk --verbose --target=cpp
+// node skewc.js src/*/*.sk --verbose --target=c++
 // clang++ -O3 main.cpp -std=c++11 -ferror-limit=0 -DNDEBUG
 
 #include <string>

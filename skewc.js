@@ -9615,13 +9615,13 @@
       target = TargetFormat.NONE;
     } else if (flags.target === 'js') {
       target = TargetFormat.JAVASCRIPT;
-    } else if (flags.target === 'cpp') {
+    } else if (flags.target === 'c++') {
       target = TargetFormat.CPP;
-    } else if (flags.target === 'lisp-ast') {
+    } else if (flags.target === 'lisp') {
       target = TargetFormat.LISP_AST;
-    } else if (flags.target === 'json-ast') {
+    } else if (flags.target === 'json') {
       target = TargetFormat.JSON_AST;
-    } else if (flags.target === 'xml-ast') {
+    } else if (flags.target === 'xml') {
       target = TargetFormat.XML_AST;
     } else {
       frontend.printError('Unknown target language ' + quoteString(flags.target, 34));
@@ -9729,7 +9729,7 @@
   frontend.printUsage = function() {
     in_io.printWithColor(in_io.Color.GREEN, '\nusage: ');
     in_io.printWithColor(in_io.Color.BOLD, 'skewc [flags] [inputs]\n');
-    io.print('\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     c#, lisp-ast, json-ast, and xml-ast.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-minify        Transform the emitted JavaScript so that it takes up less\n                     space. Make sure to use the "export" modifier on code\n                     that shouldn\'t be minifed.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the ".map" extension in the same\n                     directory as the main output file.\n\n');
+    io.print('\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     c++, lisp, json, and xml.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-minify        Transform the emitted JavaScript so that it takes up less\n                     space. Make sure to use the "export" modifier on code\n                     that shouldn\'t be minifed.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the ".map" extension in the same\n                     directory as the main output file.\n\n');
   };
   frontend.afterEquals = function(text) {
     var equals = text.indexOf('=');

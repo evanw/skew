@@ -73,10 +73,10 @@ export namespace frontend {
     if (flags.target == "") { printError("Set the target language with \"--target=___\""); return 1; }
     else if (flags.target == "none") target = .NONE;
     else if (flags.target == "js") target = .JAVASCRIPT;
-    else if (flags.target == "cpp") target = .CPP;
-    else if (flags.target == "lisp-ast") target = .LISP_AST;
-    else if (flags.target == "json-ast") target = .JSON_AST;
-    else if (flags.target == "xml-ast") target = .XML_AST;
+    else if (flags.target == "c++") target = .CPP;
+    else if (flags.target == "lisp") target = .LISP_AST;
+    else if (flags.target == "json") target = .JSON_AST;
+    else if (flags.target == "xml") target = .XML_AST;
     else { printError("Unknown target language " + quoteString(flags.target, '"')); return 1; }
 
     // Translate frontend flags to compiler options
@@ -180,7 +180,7 @@ in frontend {
   --verbose          Print out useful information about the compilation.
 
   --target=___       Set the target language. Valid target languages: none, js,
-                     c#, lisp-ast, json-ast, and xml-ast.
+                     c++, lisp, json, and xml.
 
   --output-file=___  Combines all output into a single file.
 
