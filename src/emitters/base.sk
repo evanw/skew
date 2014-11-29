@@ -46,7 +46,7 @@ namespace base {
     }
 
     void emitTypeMembers(Symbol symbol) {
-      var members = symbol.type.members.values();
+      var members = symbol.type.sortedMembers();
       for (var i = 0; i < members.size(); i++) {
         var member = members.get(i).symbol;
         if (!member.isImport() && member.enclosingSymbol == symbol) {

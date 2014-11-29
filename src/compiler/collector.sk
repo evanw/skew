@@ -13,6 +13,12 @@ class Collector {
   new(Node program, SortTypes sort) : sort = sort {
     assert program.kind == .PROGRAM;
     collectStatements(program);
+
+    // Enforce a consistent symbol iteration order
+    typeSymbols.sort(SymbolComparison.INSTANCE);
+    freeFunctionSymbols.sort(SymbolComparison.INSTANCE);
+    freeVariableSymbols.sort(SymbolComparison.INSTANCE);
+
     sortTypeSymbols();
   }
 

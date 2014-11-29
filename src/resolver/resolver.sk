@@ -364,7 +364,7 @@ class Resolver {
         // Copy each non-namespace symbol into this namespace if not already
         // present. If a symbol is already present but was due to another
         // using namespace statement, then mark the symbol as ambiguous.
-        var members = symbol.type.members.values();
+        var members = symbol.type.sortedMembers();
         for (var k = 0; k < members.size(); k++) {
           var member = members.get(k);
           var memberSymbol = member.symbol;
@@ -926,7 +926,7 @@ class Resolver {
       type.relevantTypes.push(baseType);
 
       // Collect all base type members
-      var members = baseType.members.values();
+      var members = baseType.sortedMembers();
       for (var j = 0; j < members.size(); j++) {
         var member = members.get(j);
         var memberSymbol = member.symbol;
@@ -1052,7 +1052,7 @@ class Resolver {
       // Mark the class as abstract if it contains any abstract symbols. This
       // is done here since the constructor must be initialized before being
       // invoked, which ensures that the abstract flag will be set correctly.
-      var members = enclosingSymbol.type.members.values();
+      var members = enclosingSymbol.type.sortedMembers();
       for (var i = 0; i < members.size(); i++) {
         var memberSymbol = members.get(i).symbol;
         var isImport = memberSymbol.isImport() || enclosingSymbol.isImport() && !memberSymbol.isFromExtension();
@@ -1518,7 +1518,7 @@ class Resolver {
 
   void generateDefaultConstructor(Symbol symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
-    var members = enclosingSymbol.type.members.values();
+    var members = enclosingSymbol.type.sortedMembers();
     List<Node> arguments = [];
     List<Node> superArguments = null;
     List<Node> memberInitializers = [];
@@ -1633,7 +1633,7 @@ class Resolver {
     assert symbol.isEnumMember();
     var enclosingSymbol = symbol.enclosingSymbol;
     var enclosingNode = enclosingSymbol.node;
-    var members = enclosingSymbol.type.members.values();
+    var members = enclosingSymbol.type.sortedMembers();
     List<Symbol> fields = [];
 
     // Gather the fields corresponding to enum values
@@ -1912,7 +1912,7 @@ class Resolver {
     //   interface Bar { int foo(); }
     //   interface Baz : Foo, Bar {}
     //
-    var members = node.symbol.type.members.values();
+    var members = node.symbol.type.sortedMembers();
     for (var i = 0; i < members.size(); i++) {
       var member = members.get(i);
       if (member.symbol.kind == .UNMERGED) {
@@ -2051,7 +2051,7 @@ class Resolver {
       // variables as long as they are initialized, but those are unordered.
       var enclosingSymbol = symbol.enclosingSymbol;
       if (!enclosingSymbol.isImport()) {
-        var members = enclosingSymbol.type.members.values();
+        var members = enclosingSymbol.type.sortedMembers();
         var index = 0;
         for (var i = 0; i < members.size(); i++) {
           var member = members.get(i);

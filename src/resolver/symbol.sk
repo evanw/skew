@@ -320,3 +320,11 @@ class Symbol {
     return (flags & .HAS_LOCATION_ERROR) != 0;
   }
 }
+
+class SymbolComparison : IComparison<Symbol> {
+  static var INSTANCE = SymbolComparison();
+
+  override int compare(Symbol left, Symbol right) {
+    return left.uniqueID - right.uniqueID;
+  }
+}

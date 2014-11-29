@@ -109,7 +109,7 @@ namespace js {
             }
           }
         }
-        var members = type.members.values();
+        var members = type.sortedMembers();
         for (var j = 0; j < members.size(); j++) {
           var symbol = members.get(j).symbol;
           if (symbol.enclosingSymbol == type.symbol && symbol.node != null) {

@@ -20,3 +20,11 @@ class Member {
   Member dependency = null;
   Type parameterizedType = null;
 }
+
+class MemberComparison : IComparison<Member> {
+  static var INSTANCE = MemberComparison();
+
+  override int compare(Member left, Member right) {
+    return left.symbol.uniqueID - right.symbol.uniqueID;
+  }
+}

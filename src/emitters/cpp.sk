@@ -65,7 +65,7 @@ namespace cpp {
     }
 
     void emitEnumValues(Symbol symbol) {
-      var members = symbol.type.members.values();
+      var members = symbol.type.sortedMembers();
       var isEnumFlags = symbol.kind == .ENUM_FLAGS;
       var isFirst = true;
       var previous = -1;

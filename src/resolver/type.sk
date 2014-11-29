@@ -27,6 +27,13 @@ class Type {
     return nextUniqueID;
   }
 
+  // Enforce a consistent symbol iteration order
+  List<Member> sortedMembers() {
+    var result = members.values();
+    result.sort(MemberComparison.INSTANCE);
+    return result;
+  }
+
   Member constructor() {
     if (symbol == null) return null;
     return members.getOrDefault("new", null);
