@@ -1288,7 +1288,6 @@
         }
         break;
       case 29:
-        var value = child.switchValue();
         var cases = child.switchCases();
         var foundDefault = false;
         for (var j = 0; j < cases.length; j = j + 1 | 0) {
@@ -1704,7 +1703,6 @@
           if (j === k) {
             continue;
           }
-          var other = this.typeSymbols[k];
           if (this.typeComesBefore(this.typeSymbols[k].type, type)) {
             break;
           }
@@ -2427,7 +2425,6 @@
         this.emit(', ');
       }
       var node = nodes[i];
-      var value = node.variableValue();
       this.emit(this.mangleName(node.symbol));
       this.emitAfterVariable(node);
     }
@@ -2565,7 +2562,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/emitters/base.sk:368:16)');
+        throw new Error('assert false; (src/emitters/base.sk:367:16)');
       }
       break;
     }
@@ -2581,15 +2578,15 @@
   base.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
     if (!(values.length > 1)) {
-      throw new Error('assert values.size() > 1; (src/emitters/base.sk:382:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/base.sk:381:7)');
     }
     if (node.parent.kind !== NodeKind.EXPRESSION && node.parent.kind !== NodeKind.FOR) {
-      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:383:7)');
+      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:382:7)');
     }
     if (Precedence.COMMA <= precedence) {
       this.emit('(');
     }
-    this.emitCommaSeparatedExpressions(node.sequenceValues());
+    this.emitCommaSeparatedExpressions(values);
     if (Precedence.COMMA <= precedence) {
       this.emit(')');
     }
@@ -2752,7 +2749,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:542:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:541:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -4454,7 +4451,6 @@
     if (program.kind !== NodeKind.PROGRAM) {
       throw new Error('assert program.kind == .PROGRAM; (src/js/patcher.sk:29:7)');
     }
-    var allSymbols = this.resolver.allSymbols;
     this.options = this.resolver.options;
     this.cache = this.resolver.cache;
     this.patchNode(program);
@@ -4553,7 +4549,7 @@
         this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
       } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
         if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
-          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:184:11)');
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:183:11)');
         }
         if (value.kind === NodeKind.INT) {
           var constant = value.asInt();
@@ -4613,7 +4609,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:271:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:270:7)');
     }
     var current = target;
     var parent = current.parent;
@@ -6781,12 +6777,11 @@
     }
   };
   Resolver.prototype.resolveBaseTypes = function(symbol) {
-    var node = symbol.node;
     var type = symbol.type;
     var baseTypes = this.collectAndResolveBaseTypes(symbol);
     var unmergedMembers = new StringMap();
     if (type.relevantTypes !== null) {
-      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:892:5)');
+      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:891:5)');
     }
     type.relevantTypes = [];
     for (var i = 0; i < baseTypes.length; i = i + 1 | 0) {
@@ -6809,7 +6804,7 @@
         continue;
       }
       if (baseType.hasBaseType(type)) {
-        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:924:7)');
+        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:923:7)');
       }
       type.relevantTypes.push(baseType);
       var members = baseType.sortedMembers();
@@ -6829,7 +6824,7 @@
           unmergedMembers.table[memberSymbol.name] = new Member(combined);
         } else {
           if (unmerged.symbol.kind !== SymbolKind.UNMERGED) {
-            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:956:11)');
+            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:955:11)');
           }
           unmerged.symbol.identicalMembers.push(member);
         }
@@ -6841,7 +6836,7 @@
       var existing = type.findMember(member.symbol.name);
       if (existing !== null) {
         if (existing.symbol.overriddenMember !== null) {
-          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:971:9)');
+          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:970:9)');
         }
         existing.symbol.overriddenMember = member;
       } else if (member.symbol.name !== 'new') {
@@ -6861,7 +6856,7 @@
   };
   Resolver.prototype.initializeObject = function(symbol) {
     if (!symbol.type.isObject()) {
-      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:997:5)');
+      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:996:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on an object declaration');
     var node = symbol.node.firstNonExtensionSibling();
@@ -6884,7 +6879,7 @@
   Resolver.prototype.initializeFunction = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     if (enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== enclosingSymbol)) {
-      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1028:5)');
+      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1027:5)');
     }
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.CONST, 'on a function declaration');
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, 'on a function declaration');
@@ -6899,7 +6894,7 @@
       resultType = result.type;
     } else {
       if (node.kind !== NodeKind.CONSTRUCTOR) {
-        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1049:7)');
+        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1048:7)');
       }
       resultType = this.cache.ensureTypeIsParameterized(enclosingSymbol.type);
       var members = enclosingSymbol.type.sortedMembers();
@@ -6981,7 +6976,7 @@
         variableType = node.parent.clusterType().clone();
       } else {
         if (!symbol.isEnumValue()) {
-          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1176:9)');
+          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1175:9)');
         }
         var enclosingSymbol = symbol.enclosingSymbol;
         var type = enclosingSymbol.type;
@@ -7022,7 +7017,7 @@
         }
       }
       if (variableType === null) {
-        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1226:7)');
+        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1225:7)');
       }
       node.replaceChild(1, variableType);
     }
@@ -7087,7 +7082,7 @@
         semanticErrorBadTypeParameterBound(this.log, bound.range, boundType);
       } else {
         if (type.relevantTypes !== null) {
-          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1317:9)');
+          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1316:9)');
         }
         type.relevantTypes = [boundType];
         type.copyMembersFrom(boundType);
@@ -7102,7 +7097,7 @@
   Resolver.prototype.initializeDeclaration = function(node) {
     var symbol = node.symbol;
     if (symbol === null) {
-      throw new Error('assert symbol != null; (src/resolver/resolver.sk:1333:5)');
+      throw new Error('assert symbol != null; (src/resolver/resolver.sk:1332:5)');
     }
     if (symbol.isUninitialized()) {
       symbol.flags |= SymbolFlag.INITIALIZING;
@@ -7144,20 +7139,20 @@
       case 0:
         break;
       default:
-        throw new Error('assert false; (src/resolver/resolver.sk:1360:19)');
+        throw new Error('assert false; (src/resolver/resolver.sk:1359:19)');
         break;
       }
       this.context = oldContext;
       this.typeContext = oldTypeContext;
       this.resultType = oldResultType;
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1367:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1366:7)');
       }
       if (!symbol.isInitializing()) {
-        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1368:7)');
+        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1367:7)');
       }
       if (symbol.isInitialized()) {
-        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1369:7)');
+        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1368:7)');
       }
       symbol.flags = symbol.flags & ~SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED;
       while (node !== null) {
@@ -7192,7 +7187,7 @@
     }
     if (member.dependency !== null) {
       if (member.dependency.symbol !== member.symbol) {
-        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1419:7)');
+        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1418:7)');
       }
       this.initializeMember(member.dependency);
       member.type = member.dependency.type;
@@ -7302,7 +7297,7 @@
           }
         } else {
           if (!$constructor.type.isError(this.cache)) {
-            throw new Error('assert constructor.type.isError(cache); (src/resolver/resolver.sk:1549:11)');
+            throw new Error('assert constructor.type.isError(cache); (src/resolver/resolver.sk:1548:11)');
           }
           symbol.flags |= SymbolFlag.INITIALIZED;
           symbol.type = this.cache.errorType;
@@ -7343,7 +7338,7 @@
     symbol.node = Node.createConstructor(Node.createName(symbol.name), Node.createNodeList($arguments), Node.createBlock([]), superArguments !== null ? Node.createSuperCall(superArguments) : null, memberInitializers !== null ? Node.createNodeList(memberInitializers) : null);
     enclosingSymbol.node.declarationBlock().appendChild(symbol.node);
     if (enclosingSymbol.node.scope === null) {
-      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:1618:5)');
+      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:1617:5)');
     }
     var scope = new Scope(enclosingSymbol.node.scope);
     symbol.node.symbol = symbol;
@@ -7357,7 +7352,7 @@
   };
   Resolver.prototype.generateDefaultToString = function(symbol) {
     if (!symbol.isEnumMember()) {
-      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:1633:5)');
+      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:1632:5)');
     }
     var enclosingSymbol = symbol.enclosingSymbol;
     var enclosingNode = enclosingSymbol.node;
@@ -7419,7 +7414,7 @@
       } else if (symbol.name === 'toString') {
         this.generateDefaultToString(symbol);
       } else {
-        throw new Error('assert false; (src/resolver/resolver.sk:1715:12)');
+        throw new Error('assert false; (src/resolver/resolver.sk:1714:12)');
       }
       if (symbol.node !== null) {
         var oldContext = this.context;
@@ -7452,17 +7447,17 @@
     }
     if (symbol.isUninitialized()) {
       if (symbol.node === null) {
-        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1751:7)');
+        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1750:7)');
       }
       this.initializeDeclaration(symbol.node);
       if (symbol.isInitializing()) {
-        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1753:7)');
+        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1752:7)');
       }
       if (!symbol.isInitialized()) {
-        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1754:7)');
+        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1753:7)');
       }
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1755:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1754:7)');
       }
     } else if (symbol.isInitializing()) {
       semanticErrorCyclicDeclaration(this.log, symbol.node.firstNonExtensionSibling().declarationName().range, symbol.name);
@@ -7482,7 +7477,7 @@
   };
   Resolver.prototype.resolveAsType = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1781:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1780:5)');
     }
     this.resolve(node, null);
     this.checkIsType(node);
@@ -7493,7 +7488,7 @@
   };
   Resolver.prototype.resolveAsParameterizedExpression = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1792:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1791:5)');
     }
     this.resolve(node, null);
     this.checkIsInstance(node);
@@ -7501,14 +7496,14 @@
   };
   Resolver.prototype.resolveAsExpressionWithTypeContext = function(node, type) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1799:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1798:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
   };
   Resolver.prototype.resolveAsExpressionWithConversion = function(node, type, kind) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1805:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1804:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
@@ -7540,16 +7535,16 @@
   };
   Resolver.prototype.resolveProgram = function(node) {
     if (node.parent !== null) {
-      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1838:5)');
+      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1837:5)');
     }
     this.resolveChildren(node);
   };
   Resolver.prototype.resolveFile = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1843:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1842:5)');
     }
     if (node.parent.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1844:5)');
+      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1843:5)');
     }
     this.resolve(node.fileBlock(), null);
   };
@@ -7567,16 +7562,16 @@
   };
   Resolver.prototype.resolveCase = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1865:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1864:5)');
     }
     if (node.parent.kind !== NodeKind.SWITCH) {
-      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1866:5)');
+      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1865:5)');
     }
     if (this.context.switchValue === null) {
-      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1867:5)');
+      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1866:5)');
     }
     if (this.context.switchValue.type === null) {
-      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1868:5)');
+      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1867:5)');
     }
     var values = node.caseValues();
     var block = node.caseBlock();
@@ -7638,7 +7633,7 @@
   Resolver.prototype.resolveFunction = function(node) {
     var symbol = node.symbol;
     if (symbol.enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(symbol.enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== symbol.enclosingSymbol)) {
-      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1952:5)');
+      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1951:5)');
     }
     this.checkDeclarationLocation(node, AllowDeclaration.ALLOW_TOP_OR_OBJECT_LEVEL);
     this.initializeSymbol(symbol);
@@ -7690,7 +7685,7 @@
           this.resolveNodesAsExpressions($arguments);
         } else {
           if (!overriddenType.isFunction()) {
-            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2021:11)');
+            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2020:11)');
           }
           this.resolveArguments($arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
         }
@@ -7984,7 +7979,7 @@
           continue;
         }
         if (!in_NodeKind.isConstant(caseValue.kind)) {
-          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2410:9)');
+          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2409:9)');
         }
         var k = 0;
         for (k = 0; k < uniqueValues.length; k = k + 1 | 0) {
@@ -8025,7 +8020,7 @@
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2459:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2458:7)');
       }
       var symbol = this.context.symbolForThis;
       this.initializeSymbol(symbol);
@@ -8145,7 +8140,7 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2623:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2622:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -8238,7 +8233,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2746:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2745:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -9935,7 +9930,6 @@
     return false;
   }
   function parseGroup(context) {
-    var token = context.current();
     if (!context.expect(TokenKind.LEFT_PARENTHESIS)) {
       return null;
     }
@@ -10091,7 +10085,6 @@
     return values;
   }
   function parseTypeList(context, end) {
-    var token = context.current();
     var types = [];
     while (types.length === 0 || !context.peek(end)) {
       if (context.peek(TokenKind.LEFT_BRACE)) {
@@ -10202,7 +10195,7 @@
       context.next();
     }
     if (context.current().range.start < token.range.end) {
-      throw new Error('assert context.current().range.start >= token.range.end; (src/parser/parser.sk:323:3)');
+      throw new Error('assert context.current().range.start >= token.range.end; (src/parser/parser.sk:321:3)');
     }
     return Node.createExpression(value).withRange(context.spanSince(token.range));
   }

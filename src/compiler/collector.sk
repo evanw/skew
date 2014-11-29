@@ -71,7 +71,6 @@ class Collector {
           if (j == k) {
             continue;
           }
-          var other = typeSymbols.get(k);
           if (typeComesBefore(typeSymbols.get(k).type, type)) {
             break;
           }

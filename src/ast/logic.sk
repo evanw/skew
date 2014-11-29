@@ -97,7 +97,6 @@ in Node {
         }
 
         case .SWITCH {
-          var value = child.switchValue();
           var cases = child.switchCases();
           var foundDefault = false;
           for (var j = 0; j < cases.size(); j++) {

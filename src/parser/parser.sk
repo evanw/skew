@@ -77,7 +77,6 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
 }
 
 Node parseGroup(ParserContext context) {
-  var token = context.current();
   if (!context.expect(.LEFT_PARENTHESIS)) return null;
   var value = pratt.parse(context, Precedence.LOWEST);
   scanForToken(context, .RIGHT_PARENTHESIS, .STOP_BEFORE_NEXT_STATEMENT);
@@ -206,7 +205,6 @@ List<Node> parseArgumentList(ParserContext context, TokenKind left, TokenKind ri
 }
 
 List<Node> parseTypeList(ParserContext context, TokenKind end) {
-  var token = context.current();
   List<Node> types = [];
   while (types.size() == 0 || !context.peek(end)) {
     // Make sure we don't parse an initializer expression. The user is likely

@@ -1,5 +1,9 @@
-// node skewc.js src/*/*.sk --verbose --target=c++
-// clang++ -O3 main.cpp -std=c++11 -ferror-limit=0 -DNDEBUG
+// output.cpp:
+//   node skewc.js src/*/*.sk --verbose --target=c++
+// debug:
+//   clang++ main.cpp -std=c++11 -ferror-limit=0
+// release:
+//   clang++ -O3 main.cpp -std=c++11 -ferror-limit=0 -DNDEBUG -fomit-frame-pointer -fvisibility=hidden -fno-exceptions -fno-rtti -Wall -Wextra -Wno-switch -Wno-unused-parameter -Wno-reorder && strip a.out
 
 #include <string>
 #include <vector>
@@ -200,13 +204,13 @@ string cpp_toUpperCase(string value) {
   return value;
 }
 
-int io::terminalWidth = 0;
+auto io::terminalWidth = 0;
 
 #if _WIN32
   auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
   CONSOLE_SCREEN_BUFFER_INFO info;
 #else
-  bool isTTY = false;
+  auto isTTY = false;
 #endif
 
 void io::setColor(in_io::Color color) {
@@ -248,7 +252,7 @@ Source *io::readFile(string path) {
 
 int main(int argc, char *argv[]) {
   auto args = new List<string>();
-  for (int i = 1; i < argc; i++) {
+  for (auto i = 1; i < argc; i++) {
     args->push(argv[i]);
   }
 
@@ -275,9 +279,9 @@ void *allocate(size_t size) {
   static void *next;
   static size_t available;
 
-  size = (size + ALIGN - 1) / ALIGN * ALIGN;
+  size = (size + ALIGN - 1) & ~(ALIGN - 1);
   if (available < size) {
-    size_t chunk = (size + CHUNK_SIZE - 1) / CHUNK_SIZE * CHUNK_SIZE;
+    auto chunk = (size + CHUNK_SIZE - 1) & ~(CHUNK_SIZE - 1);
     assert(size <= chunk);
     #if _WIN32
       next = VirtualAlloc(nullptr, chunk, MEM_COMMIT, PAGE_READWRITE);
@@ -289,7 +293,7 @@ void *allocate(size_t size) {
     available = chunk;
   }
 
-  void *data = next;
+  auto data = next;
   next = (uint8_t *)next + size;
   available -= size;
   return data;

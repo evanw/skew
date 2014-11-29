@@ -257,7 +257,6 @@ namespace base {
       for (var i = 0; i < nodes.size(); i++) {
         if (i > 0) emit(", ");
         var node = nodes.get(i);
-        var value = node.variableValue();
         emit(mangleName(node.symbol));
         emitAfterVariable(node);
       }
@@ -382,7 +381,7 @@ namespace base {
       assert values.size() > 1;
       assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR;
       if (.COMMA <= precedence) emit("(");
-      emitCommaSeparatedExpressions(node.sequenceValues());
+      emitCommaSeparatedExpressions(values);
       if (.COMMA <= precedence) emit(")");
     }
 

@@ -27,7 +27,6 @@ namespace js {
 
     void run(Node program) {
       assert program.kind == .PROGRAM;
-      var allSymbols = resolver.allSymbols;
       options = resolver.options;
       cache = resolver.cache;
 

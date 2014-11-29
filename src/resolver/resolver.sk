@@ -885,7 +885,6 @@ class Resolver {
   }
 
   void resolveBaseTypes(Symbol symbol) {
-    var node = symbol.node;
     var type = symbol.type;
     var baseTypes = collectAndResolveBaseTypes(symbol);
     var unmergedMembers = StringMap<Member>();
