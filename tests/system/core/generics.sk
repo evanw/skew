@@ -461,6 +461,17 @@ class Foo<X> {
   void foo<T>() {}
 }
 export void bar() {
+  Foo<int>().foo();
+}
+", "
+TODO
+");
+
+test("
+class Foo<X> {
+  void foo<T>() {}
+}
+export void bar() {
   Foo<int>().foo<float>();
 }
 ", "
@@ -473,6 +484,16 @@ in Foo {
 }
 export void bar() {
   Foo<int>().foo<float>();
+}
+", "
+");
+
+test("
+class Foo<X> {
+  void foo<T>(X x, T t) {}
+}
+export void bar() {
+  Foo<int>().foo<float>(false, false);
 }
 ", "
 ");
