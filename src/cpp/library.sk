@@ -1,4 +1,5 @@
-const var NATIVE_LIBRARY_CPP = "
+namespace cpp {
+  const var NATIVE_LIBRARY = "
 import void cpp_toString();
 import string cpp_fromCodeUnit(int value);
 import string cpp_toLowerCase(string value);
@@ -92,3 +93,4 @@ import class IntMap<T> {
   IntMap<T> clone();
 }
 ";
+}

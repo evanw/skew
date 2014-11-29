@@ -154,8 +154,8 @@ export class Compiler {
 in Compiler {
   // Cache the standard library for a small speed boost
   static CachedSource nativeLibrary = CachedSource(NATIVE_LIBRARY);
-  static CachedSource nativeLibraryJS = CachedSource(NATIVE_LIBRARY_JS);
-  static CachedSource nativeLibraryCPP = CachedSource(NATIVE_LIBRARY_CPP);
+  static CachedSource nativeLibraryJS = CachedSource(js.NATIVE_LIBRARY);
+  static CachedSource nativeLibraryCPP = CachedSource(cpp.NATIVE_LIBRARY);
 
   var tokenizingTime = 0.0;
   var parsingTime = 0.0;

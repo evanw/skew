@@ -1,4 +1,5 @@
-const var NATIVE_LIBRARY_JS = "
+namespace js {
+  const var NATIVE_LIBRARY = "
 import class int { string toString(); }
 import class bool { string toString(); }
 import class float { string toString(); }
@@ -138,3 +139,4 @@ in IntMap {
   }
 }
 ";
+}
