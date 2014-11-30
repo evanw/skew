@@ -37,7 +37,7 @@ class ResolveContext {
   }
 }
 
-class MemberRangeComparison : IComparison<Member> {
+class MemberRangeComparison : Comparison<Member> {
   override int compare(Member left, Member right) {
     return left.symbol.node.range.start - right.symbol.node.range.start;
   }

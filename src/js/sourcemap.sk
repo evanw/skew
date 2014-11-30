@@ -6,7 +6,7 @@ class SourceMapping {
   int generatedColumn; // 0-based
 }
 
-class SourceMappingComparison : IComparison<SourceMapping> {
+class SourceMappingComparison : Comparison<SourceMapping> {
   override int compare(SourceMapping left, SourceMapping right) {
     var delta = left.generatedLine - right.generatedLine;
     return delta != 0 ? delta : left.generatedColumn - right.generatedColumn;

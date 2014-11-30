@@ -15,7 +15,7 @@ namespace js {
     final int count;
   }
 
-  class SymbolComparison : IComparison<Symbol> {
+  class SymbolComparison : Comparison<Symbol> {
     static var INSTANCE = SymbolComparison();
 
     override int compare(Symbol left, Symbol right) {
@@ -23,7 +23,7 @@ namespace js {
     }
   }
 
-  class SymbolGroupComparison : IComparison<SymbolGroup> {
+  class SymbolGroupComparison : Comparison<SymbolGroup> {
     static var INSTANCE = SymbolGroupComparison();
 
     override int compare(SymbolGroup left, SymbolGroup right) {

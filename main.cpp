@@ -13,15 +13,15 @@
 using string = std::string;
 
 template <typename T>
-struct IComparison {
+struct Comparison {
   virtual int compare(T left, T right) = 0;
 };
 
 template <typename T>
 struct ListCompare {
-  ListCompare(IComparison<T> *comparison) : comparison(comparison) {}
+  ListCompare(Comparison<T> *comparison) : comparison(comparison) {}
   bool operator () (T left, T right) const { return comparison->compare(left, right) < 0; }
-  IComparison<T> *comparison;
+  Comparison<T> *comparison;
 };
 
 template <typename T>
@@ -37,7 +37,7 @@ struct List {
   T shift() { T value = data.front(); data.erase(data.begin()); return value; }
   T pop() { T value = data.back(); data.pop_back(); return value; }
   void reverse() { std::reverse(data.begin(), data.end()); }
-  void sort(IComparison<T> *comparison) { std::sort(data.begin(), data.end(), ListCompare<T>(comparison)); }
+  void sort(Comparison<T> *comparison) { std::sort(data.begin(), data.end(), ListCompare<T>(comparison)); }
   List<T> *clone() { return slice(0, size()); }
   T remove(int index) { T value = data[index]; data.erase(data.begin() + index); return value; }
   void insert(int index, T value) { data.insert(data.begin() + index, value); }

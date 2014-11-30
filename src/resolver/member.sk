@@ -21,7 +21,7 @@ class Member {
   Type parameterizedType = null;
 }
 
-class MemberComparison : IComparison<Member> {
+class MemberComparison : Comparison<Member> {
   static var INSTANCE = MemberComparison();
 
   override int compare(Member left, Member right) {

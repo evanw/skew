@@ -20,7 +20,7 @@ import class string {
   string repeat(int count);
 }
 
-import interface IComparison<T> {
+import interface Comparison<T> {
   virtual int compare(T left, T right);
 }
 
@@ -35,7 +35,7 @@ import class List<T> {
   T shift();
   T pop();
   void reverse();
-  void sort(IComparison<T> comparison);
+  void sort(Comparison<T> comparison);
   List<T> clone();
   T remove(int index);
   void insert(int index, T value);
@@ -69,6 +69,7 @@ import class IntMap<T> {
 }
 
 import namespace math {
+  double abs(double x);
   double sin(double x);
   double cos(double x);
   double tan(double x);

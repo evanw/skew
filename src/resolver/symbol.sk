@@ -321,7 +321,7 @@ class Symbol {
   }
 }
 
-class SymbolComparison : IComparison<Symbol> {
+class SymbolComparison : Comparison<Symbol> {
   static var INSTANCE = SymbolComparison();
 
   override int compare(Symbol left, Symbol right) {

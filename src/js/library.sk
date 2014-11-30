@@ -15,7 +15,7 @@ import class Object {
 
 import namespace operators {
   void delete(int value);
-  void sort<T>(List<T> list, IComparison<T> comparison);
+  void sort<T>(List<T> list, Comparison<T> comparison);
 }
 
 import class string {
@@ -40,7 +40,7 @@ in string {
   string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }
 }
 
-export interface IComparison<T> {
+export interface Comparison<T> {
   virtual int compare(T left, T right);
 }
 
@@ -59,7 +59,7 @@ import class List<T> {
 in List {
   inline {
     int size() { return untyped(this).length; }
-    void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }
+    void sort(Comparison<T> comparison) { operators.sort<T>(this, comparison); }
     List<T> clone() { return untyped(this).slice(); }
     T remove(int index) { return untyped(this).splice(index, 1)[0]; }
     void insert(int index, T value) { untyped(this).splice(index, 0, value); }
@@ -143,6 +143,7 @@ import namespace Math {}
 import namespace math {}
 
 in math {
+  inline double abs(double x) { return untyped(Math).abs(x); }
   inline double sin(double x) { return untyped(Math).sin(x); }
   inline double cos(double x) { return untyped(Math).cos(x); }
   inline double tan(double x) { return untyped(Math).tan(x); }

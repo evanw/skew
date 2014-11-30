@@ -16,7 +16,7 @@ namespace base {
       cache = resolver.cache;
       options = resolver.options;
       isKeyword = createIsKeyword();
-      output = Source(options.outputFile, "");
+      output = Source("output." + extension(), "");
       outputs.push(output);
       visitProgram(program);
       return outputs;
