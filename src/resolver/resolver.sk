@@ -2680,7 +2680,10 @@ class Resolver {
     var arguments = node.superCallArguments();
 
     // Make sure a super call even makes sense here
-    if (context.functionSymbol == null || !context.functionSymbol.isObjectMember() || context.functionSymbol.overriddenMember == null) {
+    if (context.functionSymbol == null ||
+        !context.functionSymbol.isObjectMember() ||
+        context.functionSymbol.overriddenMember == null ||
+        context.functionSymbol.kind == .CONSTRUCTOR_FUNCTION) {
       semanticErrorBadSuperCall(log, node.range);
       resolveNodesAsExpressions(arguments);
     }

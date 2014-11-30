@@ -213,4 +213,20 @@ in Foo { export void foo() {} }
          ~~~~~~
 ");
 
+test("
+class Foo {
+  new() {}
+}
+class Bar : Foo {
+  new() : super() {}
+}
+class Baz : Foo {
+  new() { super(); }
+}
+", "
+<stdin>:8:11: error: Cannot use \"super\" here
+  new() { super(); }
+          ~~~~~~~
+");
+
 }}
