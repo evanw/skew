@@ -5,7 +5,7 @@ in string {
   import string trim();
 }
 
-class TestBase {
+export class TestBase {
   string input;
   string expected;
   var options = CompilerOptions();

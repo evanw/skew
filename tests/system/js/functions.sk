@@ -157,4 +157,173 @@ export void test() {
 }());
 ");
 
+testJS("
+class Foo {
+  virtual void foo() {}
+}
+class Bar : Foo {
+  override void foo() {}
+}
+class Baz : Foo {
+  override void foo() {}
+}
+export void test() {
+  Bar().foo();
+}
+", "
+(function() {
+  function $extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+  function Foo() {
+  }
+  function Bar() {
+    Foo.call(this);
+  }
+  $extends(Bar, Foo);
+  Bar.prototype.foo = function() {
+  };
+  test = function() {
+    new Bar().foo();
+  };
+}());
+");
+
+testJS("
+interface IFoo {
+  virtual void foo();
+}
+class Bar : IFoo {
+  override void foo() {}
+}
+class Baz : IFoo {
+  override void foo() {}
+}
+export void test() {
+  ((IFoo)Bar()).foo();
+}
+", "
+(function() {
+  function Bar() {
+  }
+  Bar.prototype.foo = function() {
+  };
+  test = function() {
+    new Bar().foo();
+  };
+}());
+");
+
+testJS("
+interface IFoo {
+  virtual void foo();
+}
+interface IBar {
+  virtual void bar();
+}
+class Foo : IFoo {
+  override void foo() {}
+}
+class Foo2 : IFoo {
+  override void foo() {}
+}
+class Bar : IBar {
+  IFoo foo;
+  override void bar() {
+    foo.foo();
+  }
+}
+class Bar2 : IBar {
+  override void bar() {}
+}
+export void foo() {
+  bar(Bar(Foo()));
+}
+void bar(IBar bar) {
+  bar.bar();
+}
+", "
+(function() {
+  function Foo() {
+  }
+  Foo.prototype.foo = function() {
+  };
+  function Bar(_0) {
+    this.foo = _0;
+  }
+  Bar.prototype.bar = function() {
+    this.foo.foo();
+  };
+  foo = function() {
+    bar(new Bar(new Foo()));
+  };
+  function bar(bar) {
+    bar.bar();
+  }
+}());
+");
+
+testJS("
+interface IFoo {
+  virtual void foo();
+}
+interface IBar {
+  virtual void bar();
+}
+class Bar : IBar {
+  IFoo foo;
+  override void bar() {
+    foo.foo();
+  }
+}
+class Bar2 : IBar {
+  override void bar() {}
+}
+class Foo : IFoo {
+  override void foo() {}
+}
+class Foo2 : IFoo {
+  override void foo() {}
+}
+export void foo() {
+  bar(Bar(Foo()));
+}
+void bar(IBar bar) {
+  bar.bar();
+}
+", "
+(function() {
+  function Bar(_0) {
+    this.foo = _0;
+  }
+  Bar.prototype.bar = function() {
+    this.foo.foo();
+  };
+  function Foo() {
+  }
+  Foo.prototype.foo = function() {
+  };
+  foo = function() {
+    bar(new Bar(new Foo()));
+  };
+  function bar(bar) {
+    bar.bar();
+  }
+}());
+");
+
+testJS("
+import interface IFoo {
+  virtual void foo();
+}
+class Foo : IFoo {
+  override void foo() {}
+}
+export IFoo foo() {
+  return Foo();
+}
+", "
+");
+
 }}

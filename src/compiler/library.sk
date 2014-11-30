@@ -20,7 +20,7 @@ import class string {
   string repeat(int count);
 }
 
-interface IComparison<T> {
+import interface IComparison<T> {
   virtual int compare(T left, T right);
 }
 

@@ -13,7 +13,9 @@
 using string = std::string;
 
 template <typename T>
-struct IComparison;
+struct IComparison {
+  virtual int compare(T left, T right) = 0;
+};
 
 template <typename T>
 struct ListCompare {

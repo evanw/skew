@@ -15,7 +15,7 @@ in Foo {
   Foo bar = null;
 }
 ", "
-(function(){Foo=function(){this.a=this.b=null}}());
+(function(){Foo=function(){this.b=this.a=null}}());
 ");
 
 testMinifyJS("
@@ -147,7 +147,7 @@ export void foo(int foo) { int bar, baz; }
 export void bar(int foo, int bar) { int baz; }
 export void baz(int foo, int bar, int baz) {}
 ", "
-(function(){foo=function(c){var a=0,b=0};bar=function(c,a){var b=0};baz=function(c,a,b){}}());
+(function(){foo=function(c){var b=0,a=0};bar=function(c,b){var a=0};baz=function(c,b,a){}}());
 ");
 
 testMinifyJS("
@@ -235,7 +235,7 @@ export int foo() {
   return foo + bar;
 }
 ", "
-(function(){foo=function(){var a=0,b=0;return a+b|0}}());
+(function(){foo=function(){var b=0,a=0;return b+a|0}}());
 ");
 
 testMinifyJS("
@@ -277,7 +277,7 @@ export int foo(int x, int y) {
   return y;
 }
 ", "
-(function(){foo=function(a,b){return a<0?(a=a+1|0,b=b-1|0):b<0?a=a-b|0:(a=a-1|0,b=b+1|0),b}}());
+(function(){foo=function(b,a){return b<0?(b=b+1|0,a=a-1|0):a<0?b=b-a|0:(b=b-1|0,a=a+1|0),a}}());
 ");
 
 testMinifyJS("
@@ -297,7 +297,7 @@ export bool foo(float x, double y) {
   else return bar;
 }
 ", "
-(function(){foo=function(c,a){var b=c===0&&a!==0;return c===0&&a!==0?!0:b}}());
+(function(){foo=function(b,a){var c=b===0&&a!==0;return b===0&&a!==0?!0:c}}());
 ");
 
 testMinifyJS("
@@ -343,7 +343,7 @@ export int foo(int a, int b) {
   return a != b ? 1 : 2;
 }
 ", "
-(function(){foo=function(a,b){return a^b?1:2}}());
+(function(){foo=function(b,a){return b^a?1:2}}());
 ");
 
 testMinifyJS("
@@ -405,7 +405,7 @@ export void foo(Foo a, Foo b) {
 }
 enum Foo {}
 ", "
-(function(){foo=function(a,b){a^b?d():c()}}());
+(function(){foo=function(b,a){b^a?d():c()}}());
 ");
 
 testMinifyJS("
@@ -477,7 +477,7 @@ export void foo(bool x, bool y) {
   }
 }
 ", "
-(function(){foo=function(a,b){a&&(b||(z(),z()))}}());
+(function(){foo=function(b,a){b&&(a||(z(),z()))}}());
 ");
 
 testMinifyJS("
@@ -491,7 +491,7 @@ export void foo(bool x, bool y) {
   z();
 }
 ", "
-(function(){foo=function(a,b){if(a){if(b)return;z(),z()}z()}}());
+(function(){foo=function(b,a){if(b){if(a)return;z(),z()}z()}}());
 ");
 
 testMinifyJS("
@@ -519,7 +519,7 @@ export void foo(bool x, bool y) {
   }
 }
 ", "
-(function(){foo=function(a,b){while(a)b&&z()}}());
+(function(){foo=function(b,a){while(b)a&&z()}}());
 ");
 
 testMinifyJS("
@@ -532,7 +532,7 @@ export void foo(bool x, bool y) {
   }
 }
 ", "
-(function(){foo=function(a,b){while(a){if(b)return;z(),z()}}}());
+(function(){foo=function(b,a){while(b){if(a)return;z(),z()}}}());
 ");
 
 testMinifyJS("
@@ -545,7 +545,7 @@ export void foo(bool x, bool y) {
   }
 }
 ", "
-(function(){foo=function(a,b){while(a)b||(z(),z())}}());
+(function(){foo=function(b,a){while(b)a||(z(),z())}}());
 ");
 
 testMinifyJS("
@@ -608,7 +608,7 @@ export void foo(bool x, bool y) {
   }
 }
 ", "
-(function(){foo=function(a,b){while(a)b?z():(z(),z())}}());
+(function(){foo=function(b,a){while(b)a?z():(z(),z())}}());
 ");
 
 testMinifyJS("
@@ -626,7 +626,41 @@ export void foo() {
 testMinifyJS("
 export int foo(int a, int b) { return a * b; }
 ", "
-(function(){var $i=Math.imul||function(a,b){var ah=a>>>16,al=a&65535,bh=b>>>16,bl=b&65535;return al*bl+(ah*bl+al*bh<<16)|0};foo=function(a,b){return $i(a,b)}}());
+(function(){var $i=Math.imul||function(a,b){var ah=a>>>16,al=a&65535,bh=b>>>16,bl=b&65535;return al*bl+(ah*bl+al*bh<<16)|0};foo=function(b,a){return $i(b,a)}}());
+");
+
+testMinifyJS("
+class Foo {
+  virtual void foo() {}
+}
+class Bar : Foo {
+  override void foo() {}
+}
+class Baz : Foo {
+  override void foo() {}
+}
+export void test() {
+  Bar().foo();
+}
+", "
+(function(){function $e(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function e(){}function f(){e.call(this)}$e(f,e);f.prototype.a=function(){};test=function(){new f().a()}}());
+");
+
+testMinifyJS("
+interface IFoo {
+  virtual void foo();
+}
+class Bar : IFoo {
+  override void foo() {}
+}
+class Baz : IFoo {
+  override void foo() {}
+}
+export void test() {
+  ((IFoo)Bar()).foo();
+}
+", "
+(function(){function f(){}f.prototype.a=function(){};test=function(){new f().a()}}());
 ");
 
 }}

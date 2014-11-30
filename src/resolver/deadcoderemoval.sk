@@ -9,21 +9,45 @@ class DeadCodeRemovalPass {
     // Include all exported symbols
     for (var i = 0; i < allSymbols.size(); i++) {
       var symbol = allSymbols.get(i);
-      if (symbol.isExport() || symbol.isVirtual()) {
+      if (symbol.isExport()) {
         pass.includeSymbol(symbol);
+      }
+    }
+
+    // For each included symbol, also include any overriding symbols if the
+    // enclosing type is also included. In the example below, the use of
+    // IFoo.foo() will cause Bar.foo() to be included because Bar() is used
+    // but will not cause Baz.foo() to be included because Baz() isn't used.
+    //
+    //   class IFoo { virtual void foo(); }
+    //   class Bar : IFoo { override void foo() {} }
+    //   class Baz : IFoo { override void foo() {} }
+    //   export void test() { ((IFoo)Bar()).foo(); }
+    //
+    // This iterates until a fixed point is reached because there may be
+    // complex dependency issues. The work list is narrowed down before the
+    // fixed point loop to reduce overhead.
+    List<Symbol> deadSymbolsWithOverrides = [];
+    var isFixedPoint = false;
+    for (var i = 0; i < allSymbols.size(); i++) {
+      var symbol = allSymbols.get(i);
+      if (!pass.includedSymbols.has(symbol.uniqueID) && symbol.overriddenMember != null) {
+        deadSymbolsWithOverrides.push(symbol);
+      }
+    }
+    while (!isFixedPoint) {
+      isFixedPoint = true;
+      for (var i = 0; i < deadSymbolsWithOverrides.size(); i++) {
+        if (pass.includeDueToOverriddenMember(deadSymbolsWithOverrides.get(i))) {
+          isFixedPoint = false;
+        }
       }
     }
 
     // Remove symbols that aren't included
     for (var i = 0; i < allSymbols.size(); i++) {
-      var symbol = allSymbols.get(i);
-      var node = symbol.node;
-      if (node != null && !pass.includedSymbols.has(symbol.uniqueID)) {
-        if (symbol.enclosingSymbol != null) {
-          symbol.enclosingSymbol.type.members.remove(symbol.name);
-        }
+      if (pass.removeSymbolIfDead(allSymbols.get(i))) {
         allSymbols.remove(i);
-        node.remove();
         i--;
       }
     }
@@ -85,5 +109,42 @@ class DeadCodeRemovalPass {
         }
       }
     }
+  }
+
+  bool includeDueToOverriddenMember(Symbol symbol) {
+    assert symbol.overriddenMember != null;
+    assert symbol.enclosingSymbol != null;
+
+    if (!includedSymbols.has(symbol.uniqueID) && (symbol.overriddenMember.symbol.isImport() ||
+        includedSymbols.has(symbol.enclosingSymbol.uniqueID) && includedSymbols.has(symbol.overriddenMember.symbol.uniqueID))) {
+      includeSymbol(symbol);
+      return true;
+    }
+
+    return false;
+  }
+
+  bool removeSymbolIfDead(Symbol symbol) {
+    // Ignore irrelevant symbols
+    if (symbol.kind == .LOCAL_VARIABLE) {
+      return false;
+    }
+
+    // Remove symbols that aren't included
+    if (!includedSymbols.has(symbol.uniqueID)) {
+      if (symbol.enclosingSymbol != null) {
+        symbol.enclosingSymbol.type.members.remove(symbol.name);
+      }
+      if (symbol.node != null) {
+        symbol.node.remove();
+      }
+      return true;
+    }
+
+    // Disconnect symbols that are included from overridden symbols that aren't included
+    if (symbol.overriddenMember != null && !includedSymbols.has(symbol.overriddenMember.symbol.uniqueID)) {
+      symbol.overriddenMember = null;
+    }
+    return false;
   }
 }

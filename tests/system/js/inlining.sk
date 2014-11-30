@@ -103,8 +103,6 @@ export void test() {
   }
   function Foo() {
   }
-  Foo.prototype.foo = function() {
-  };
   function Bar() {
     Foo.call(this);
   }

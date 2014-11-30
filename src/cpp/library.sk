@@ -45,7 +45,7 @@ in string {
   string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }
 }
 
-export interface IComparison<T> {
+import interface IComparison<T> {
   virtual int compare(T left, T right);
 }
 
