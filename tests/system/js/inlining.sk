@@ -86,31 +86,6 @@ export void test() {
 ");
 
 testJS("
-inline void fn() foo(int x) {
-  return => x++;
-}
-export void test() {
-  var x = 0;
-  var y = foo(x); y();
-  var z = foo(x);
-}
-", "
-(function() {
-  function foo(x) {
-    return function() {
-      x = x + 1 | 0;
-    };
-  }
-  test = function() {
-    var x = 0;
-    var y = foo(x);
-    y();
-    var z = foo(x);
-  };
-}());
-");
-
-testJS("
 class Foo {
   inline virtual void foo() {}
 }
@@ -305,11 +280,8 @@ export void test() {
 }
 ", "
 (function() {
-  function foo() {
-    x = 0;
-  }
   test = function() {
-    foo();
+    x = 0;
   };
   var x = 0;
 }());
@@ -324,11 +296,8 @@ export void test() {
 }
 ", "
 (function() {
-  function bar() {
-    x = 0;
-  }
   test = function() {
-    bar();
+    x = 0;
   };
   var x = 0;
 }());
@@ -344,11 +313,8 @@ export void test() {
 }
 ", "
 (function() {
-  function baz() {
-    x = 0;
-  }
   test = function() {
-    baz();
+    x = 0;
   };
   var x = 0;
 }());

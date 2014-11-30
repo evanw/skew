@@ -294,6 +294,7 @@ namespace js {
 
       if (falseBlock != null) {
         emitSemicolonIfNeeded();
+        maybeEmitMinifedNewline();
         emit(space + "else");
         var falseStatement = falseBlock.blockStatement();
         if (falseStatement != null && falseStatement.kind == .IF) {

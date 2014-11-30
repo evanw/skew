@@ -1491,8 +1491,14 @@ class Resolver {
 
   void forbidImportAndExportTogether(Symbol symbol) {
     // The import/export modifiers are mutually exclusive
-    if (symbol.isImport() || symbol.enclosingSymbol != null && symbol.enclosingSymbol.isImport()) {
+    if (symbol.isImport()) {
       unexpectedModifierIfPresent(symbol, .EXPORT, "on an imported declaration");
+    }
+
+    // Also prevent exporting something added in an extension block on an
+    // imported type
+    else if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.isImport()) {
+      unexpectedModifierIfPresent(symbol, .EXPORT, "inside an imported type");
     }
   }
 

@@ -90,11 +90,10 @@ export void start() {
   core.testUsing();
   core.testVar();
 
-  // Disable JS tests for now
-  // js.testExpressions();
-  // js.testFunctions();
-  // js.testInlining();
-  // js.testMinify();
-  // js.testObjects();
-  // js.testStatements();
+  js.testExpressions();
+  js.testFunctions();
+  js.testInlining();
+  js.testMinify();
+  js.testObjects();
+  js.testStatements();
 }

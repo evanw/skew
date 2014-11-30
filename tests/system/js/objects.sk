@@ -1,7 +1,7 @@
 namespace js { void testObjects() {
 
 testJS("
-export in Foo {}
+in Foo {}
 export class Foo {}
 ", "
 (function() {
@@ -12,7 +12,7 @@ export class Foo {}
 
 testJS("
 export class Foo {}
-export in Foo {}
+in Foo {}
 ", "
 (function() {
   Foo = function() {
@@ -100,17 +100,14 @@ testJS("
 namespace ns {
   interface IFoo {}
   export class Foo : IFoo {}
-  export struct Bar {}
-  export enum Baz { A, B, C }
+  export enum Bar { A, B, C }
 }
 ", "
 (function() {
   var ns = {};
   ns.Foo = function() {
   };
-  ns.Bar = function() {
-  };
-  ns.Baz = {
+  ns.Bar = {
     A: 0,
     B: 1,
     C: 2
@@ -122,8 +119,7 @@ testJS("
 import namespace ns {
   import interface IFoo {}
   import class Foo : IFoo {}
-  import struct Bar {}
-  import enum Baz { A, B, C }
+  import enum Bar { A, B, C }
 }
 ", "
 (function() {
@@ -132,7 +128,7 @@ import namespace ns {
 
 testJS("
 export class Foo {
-  export void foo() {}
+  void foo() {}
 }
 export class Bar : Foo {}
 ", "
@@ -149,6 +145,28 @@ export class Bar : Foo {}
     Foo.call(this);
   };
   $extends(Bar, Foo);
+}());
+");
+
+testJS("
+class Foo {}
+export class Bar : Foo {
+  void foo() {}
+}
+", "
+(function() {
+  function $extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+  function Foo() {
+  }
+  Bar = function() {
+    Foo.call(this);
+  };
+  $extends(Bar, Foo);
+  Bar.prototype.foo = function() {
+  };
 }());
 ");
 

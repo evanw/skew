@@ -157,7 +157,7 @@ import class C { export new(); }
 <stdin>:2:18: error: Redundant modifier \"import\" inside an imported type
 import class B { import new(); }
                  ~~~~~~
-<stdin>:3:18: error: Cannot use the \"export\" modifier inside a non-exported type
+<stdin>:3:18: error: Cannot use the \"export\" modifier inside an imported type
 import class C { export new(); }
                  ~~~~~~
 ");
@@ -193,6 +193,24 @@ export void foo() {
   Foo();
 }
 ", "
+");
+
+test("
+import class Foo {}
+in Foo { export void foo() {} }
+", "
+<stdin>:2:10: error: Cannot use the \"export\" modifier inside an imported type
+in Foo { export void foo() {} }
+         ~~~~~~
+");
+
+test("
+import namespace Foo {}
+in Foo { export void foo() {} }
+", "
+<stdin>:2:10: error: Cannot use the \"export\" modifier inside an imported type
+in Foo { export void foo() {} }
+         ~~~~~~
 ");
 
 }}

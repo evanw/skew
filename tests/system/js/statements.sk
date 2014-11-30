@@ -17,28 +17,6 @@ class Bar : Foo {}
 ");
 
 testJS("
-class Foo {}
-export class Bar : Foo {
-  export void foo() {}
-}
-", "
-(function() {
-  function $extends(derived, base) {
-    derived.prototype = Object.create(base.prototype);
-    derived.prototype.constructor = derived;
-  }
-  function Foo() {
-  }
-  Bar = function() {
-    Foo.call(this);
-  };
-  $extends(Bar, Foo);
-  Bar.prototype.foo = function() {
-  };
-}());
-");
-
-testJS("
 enum Foo { A, B, C }
 export Foo foo() { return .A; }
 export Foo bar() { return .C; }
@@ -86,7 +64,7 @@ export int foo(int x) {
 testJS("
 interface IFoo {}
 export class Foo<T is IFoo> {
-  export T foo() {
+  T foo() {
     T foo;
     return foo;
   }

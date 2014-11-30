@@ -22,7 +22,7 @@ export void test() {
 testJS("
 export class Foo {
   Foo foo;
-  export void bar() {
+  void bar() {
     foo.bar();
   }
 }
@@ -33,41 +33,6 @@ export class Foo {
   };
   Foo.prototype.bar = function() {
     this.foo.bar();
-  };
-}());
-");
-
-testJS("
-export void test() {
-  (void fn())(=>);
-}
-", "
-(function() {
-  test = function() {
-    (function() {
-    });
-  };
-}());
-");
-
-testJS("
-export void test() {
-  ((void fn())=>)();
-}
-", "
-(function() {
-  test = function() {
-    (function() {
-    })();
-  };
-}());
-");
-
-testJS("
-export void fn() foo = =>;
-", "
-(function() {
-  foo = function() {
   };
 }());
 ");
@@ -99,36 +64,34 @@ export void test() {
 }
 ", "
 (function() {
-  var $in = {};
-  $in._Foo_ = {};
   var Foo = {
     A: 0
   };
-  $in._Foo_.foo = function($this) {
+  var in_Foo = {};
+  in_Foo.foo = function($this) {
     return $this;
   };
   test = function() {
-    $in._Foo_.foo(Foo.A);
+    in_Foo.foo(Foo.A);
   };
 }());
 ");
 
 testJS("
 export enum Foo { FOO }
-export in Foo {
+in Foo {
   export string foo() { return toString(); }
 }
 ", "
 (function() {
-  var $in = {};
-  $in._Foo_ = {};
   Foo = {
     FOO: 0
   };
-  $in._Foo_.foo = function($this) {
-    return $in._Foo_.toString($this);
+  var in_Foo = {};
+  in_Foo.foo = function($this) {
+    return in_Foo.toString($this);
   };
-  $in._Foo_.toString = function($this) {
+  in_Foo.toString = function($this) {
     switch ($this) {
     case 0:
       return 'FOO';
@@ -142,6 +105,8 @@ export in Foo {
 testJS("
 import class Foo {
   new();
+}
+in Foo {
   void foo() {}
 }
 export void test() {
@@ -149,12 +114,11 @@ export void test() {
 }
 ", "
 (function() {
-  var $in = {};
-  $in._Foo_ = {};
-  $in._Foo_.foo = function() {
+  var in_Foo = {};
+  in_Foo.foo = function($this) {
   };
   test = function() {
-    new Foo(), $in._Foo_.foo();
+    in_Foo.foo(new Foo());
   };
 }());
 ");

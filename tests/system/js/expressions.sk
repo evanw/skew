@@ -22,10 +22,10 @@ export void test() {
 (function() {
   test = function() {
     var x = 0;
-    - -1;
-    + +1;
-    -+1;
-    +-1;
+    - -1 | 0;
+    +1 | 0;
+    -1 | 0;
+    +-1 | 0;
   };
 }());
 ");
@@ -37,7 +37,7 @@ export void test() {
 ", "
 (function() {
   test = function() {
-    - -2147483648;
+    - -2147483648 | 0;
   };
 }());
 ");
@@ -207,7 +207,7 @@ export void foo(int bar) {
 testJS("
 export class Foo {
   int bar;
-  export void baz() {
+  void baz() {
     bar++;
     bar--;
     ++bar;
@@ -289,7 +289,7 @@ export void foo(int bar) {
 testJS("
 export class Foo {
   int bar;
-  export void baz() {
+  void baz() {
     bar += 1;
     bar -= 1;
     bar *= 1;
@@ -319,7 +319,7 @@ export class Foo {
 testJS("
 export class Foo {
   int foo = 0;
-  export void bar() {
+  void bar() {
     baz().foo += foo;
     baz().foo -= foo;
     baz().foo *= foo;
@@ -369,57 +369,6 @@ export void test() {
     var foo = (1, 2);
     foo = (1, 2);
     (1, 2), (3, 4);
-  };
-}());
-");
-
-testJS("
-export class Foo {
-  int foo;
-  export int fn() bar() {
-    foo;
-    int fn() bar = => foo;
-    foo;
-    int fn() baz = => foo;
-    foo;
-    return bar;
-  }
-}
-", "
-(function() {
-  Foo = function(_0) {
-    this.foo = _0;
-  };
-  Foo.prototype.bar = function() {
-    var $this = this;
-    this.foo;
-    var bar = function() {
-      return $this.foo;
-    };
-    this.foo;
-    var baz = function() {
-      return $this.foo;
-    };
-    this.foo;
-    return bar;
-  };
-}());
-");
-
-testJS("
-export class Foo {
-  int foo;
-  int fn() bar;
-  new() : bar = () => foo {}
-}
-", "
-(function() {
-  Foo = function() {
-    var $this = this;
-    this.foo = 0;
-    this.bar = function() {
-      return $this.foo;
-    };
   };
 }());
 ");
