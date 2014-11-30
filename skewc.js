@@ -4950,7 +4950,6 @@
           }
         }
       } else if (kind === NodeKind.EXPRESSION) {
-        var nodes = null;
         while ((i + 1 | 0) < node.children.length) {
           var next = node.children[i + 1 | 0];
           if (next.kind !== NodeKind.EXPRESSION) {
@@ -4978,7 +4977,7 @@
               block = Node.createBlock([]);
               child.replaceChild(2, block);
               if (block !== child.ifFalse()) {
-                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:521:17)');
+                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:520:17)');
               }
             } else {
               this.peepholeMangleIf(child);
@@ -5037,7 +5036,7 @@
   };
   js.Patcher.prototype.peepholeMangleSequence = function(node) {
     if (node.kind !== NodeKind.SEQUENCE) {
-      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:596:7)');
+      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:595:7)');
     }
     for (var i = node.children.length - 1 | 0; i > 0; i = i - 1 | 0) {
       var current = node.children[i];
@@ -5129,7 +5128,7 @@
   };
   js.Patcher.prototype.unionVariableWithFunction = function(node) {
     if (node.symbol.kind === SymbolKind.LOCAL_VARIABLE !== (this.currentFunction !== null)) {
-      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:692:7)');
+      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:691:7)');
     }
     if (this.currentFunction !== null) {
       var left = this.namingGroupIndexForSymbol.table[this.currentFunction.uniqueID];
@@ -5158,7 +5157,7 @@
         this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
       } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
         if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
-          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:727:11)');
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:726:11)');
         }
         if (value.kind === NodeKind.INT) {
           var constant = value.asInt();
@@ -5218,7 +5217,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:814:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:813:7)');
     }
     var current = target;
     var parent = current.parent;

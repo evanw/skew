@@ -483,7 +483,6 @@ namespace js {
 
         // "a; b; c;" => "a, b, c;"
         else if (kind == .EXPRESSION) {
-          List<Node> nodes;
           while (i + 1 < node.children.size()) {
             var next = node.children.get(i + 1);
             if (next.kind != .EXPRESSION) {
