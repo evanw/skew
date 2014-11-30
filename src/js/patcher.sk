@@ -19,7 +19,7 @@ namespace js {
     static var INSTANCE = SymbolComparison();
 
     override int compare(Symbol left, Symbol right) {
-      return right.node.range.start - left.node.range.start;
+      return right.uniqueID - left.uniqueID;
     }
   }
 
@@ -27,7 +27,17 @@ namespace js {
     static var INSTANCE = SymbolGroupComparison();
 
     override int compare(SymbolGroup left, SymbolGroup right) {
-      return right.count - left.count;
+      var difference = right.count - left.count;
+
+      // Create a total order to make builds deterministic
+      if (difference == 0) {
+        difference = right.group.size() - left.group.size();
+        for (var i = 0; difference == 0 && i < left.group.size(); i++) {
+          difference = right.group.get(i).uniqueID - left.group.get(i).uniqueID;
+        }
+      }
+
+      return difference;
     }
   }
 
@@ -199,9 +209,6 @@ namespace js {
     void zipTogetherInOrder(UnionFind unionFind, List<int> order, List<List<Symbol>> groups) {
       for (var i = 0; i < groups.size(); i++) {
         var group = groups.get(i);
-        if (group.size() > 1) {
-          group.sort(SymbolComparison.INSTANCE);
-        }
         for (var j = 0; j < group.size(); j++) {
           var symbol = group.get(j);
           var index = namingGroupIndexForSymbol.get(symbol.uniqueID);
@@ -230,7 +237,16 @@ namespace js {
         }
         group.push(symbol);
       }
-      return labelToGroup.values();
+
+      // Sort each resulting group to make builds deterministic
+      var groups = labelToGroup.values();
+      for (var i = 0; i < groups.size(); i++) {
+        var group = groups.get(i);
+        if (group.size() > 1) {
+          group.sort(SymbolComparison.INSTANCE);
+        }
+      }
+      return groups;
     }
 
     bool canRename(Symbol symbol) {

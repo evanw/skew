@@ -4531,12 +4531,19 @@
   js.SymbolComparison = function() {
   };
   js.SymbolComparison.prototype.compare = function(left, right) {
-    return right.node.range.start - left.node.range.start | 0;
+    return right.uniqueID - left.uniqueID | 0;
   };
   js.SymbolGroupComparison = function() {
   };
   js.SymbolGroupComparison.prototype.compare = function(left, right) {
-    return right.count - left.count | 0;
+    var difference = right.count - left.count | 0;
+    if (difference === 0) {
+      difference = right.group.length - left.group.length | 0;
+      for (var i = 0; difference === 0 && i < left.group.length; i = i + 1 | 0) {
+        difference = right.group[i].uniqueID - left.group[i].uniqueID | 0;
+      }
+    }
+    return difference;
   };
   js.Patcher = function(_0) {
     this.nextTempID = 0;
@@ -4557,7 +4564,7 @@
   };
   js.Patcher.prototype.run = function(program) {
     if (program.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert program.kind == .PROGRAM; (src/js/patcher.sk:52:7)');
+      throw new Error('assert program.kind == .PROGRAM; (src/js/patcher.sk:62:7)');
     }
     var allSymbols = this.resolver.allSymbols;
     this.options = this.resolver.options;
@@ -4662,13 +4669,6 @@
   js.Patcher.prototype.zipTogetherInOrder = function(unionFind, order, groups) {
     for (var i = 0; i < groups.length; i = i + 1 | 0) {
       var group = groups[i];
-      if (group.length > 1) {
-        group.sort(function(c) {
-          return function(a, b) {
-            return c.compare(a, b);
-          };
-        }(js.SymbolComparison.INSTANCE));
-      }
       for (var j = 0; j < group.length; j = j + 1 | 0) {
         var symbol = group[j];
         var index = this.namingGroupIndexForSymbol.table[symbol.uniqueID];
@@ -4695,7 +4695,18 @@
       }
       group.push(symbol);
     }
-    return labelToGroup.values();
+    var groups = labelToGroup.values();
+    for (var i = 0; i < groups.length; i = i + 1 | 0) {
+      var group = groups[i];
+      if (group.length > 1) {
+        group.sort(function(c) {
+          return function(a, b) {
+            return c.compare(a, b);
+          };
+        }(js.SymbolComparison.INSTANCE));
+      }
+    }
+    return groups;
   };
   js.Patcher.prototype.canRename = function(symbol) {
     if (!symbol.isImportOrExport() && symbol.kind !== SymbolKind.CONSTRUCTOR_FUNCTION) {
@@ -4800,7 +4811,7 @@
   };
   js.Patcher.prototype.peepholeMangleBinaryRelational = function(node) {
     if (node.kind !== NodeKind.GREATER_THAN_OR_EQUAL && node.kind !== NodeKind.LESS_THAN_OR_EQUAL) {
-      throw new Error('assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL; (src/js/patcher.sk:294:7)');
+      throw new Error('assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL; (src/js/patcher.sk:310:7)');
     }
     var left = node.binaryLeft();
     var right = node.binaryRight();
@@ -4917,10 +4928,10 @@
   };
   js.Patcher.prototype.isJumpImplied = function(node, kind) {
     if (node.kind !== NodeKind.BLOCK) {
-      throw new Error('assert node.kind == .BLOCK; (src/js/patcher.sk:448:7)');
+      throw new Error('assert node.kind == .BLOCK; (src/js/patcher.sk:464:7)');
     }
     if (kind !== NodeKind.RETURN && kind !== NodeKind.CONTINUE) {
-      throw new Error('assert kind == .RETURN || kind == .CONTINUE; (src/js/patcher.sk:449:7)');
+      throw new Error('assert kind == .RETURN || kind == .CONTINUE; (src/js/patcher.sk:465:7)');
     }
     var parent = node.parent;
     var parentKind = parent.kind;
@@ -4978,7 +4989,7 @@
               block = Node.createBlock([]);
               child.replaceChild(2, block);
               if (block !== child.ifFalse()) {
-                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:520:17)');
+                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:536:17)');
               }
             } else {
               this.peepholeMangleIf(child);
@@ -5037,7 +5048,7 @@
   };
   js.Patcher.prototype.peepholeMangleSequence = function(node) {
     if (node.kind !== NodeKind.SEQUENCE) {
-      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:595:7)');
+      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:611:7)');
     }
     for (var i = node.children.length - 1 | 0; i > 0; i = i - 1 | 0) {
       var current = node.children[i];
@@ -5129,7 +5140,7 @@
   };
   js.Patcher.prototype.unionVariableWithFunction = function(node) {
     if (node.symbol.kind === SymbolKind.LOCAL_VARIABLE !== (this.currentFunction !== null)) {
-      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:691:7)');
+      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:707:7)');
     }
     if (this.currentFunction !== null) {
       var left = this.namingGroupIndexForSymbol.table[this.currentFunction.uniqueID];
@@ -5158,7 +5169,7 @@
         this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
       } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
         if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
-          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:726:11)');
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:742:11)');
         }
         if (value.kind === NodeKind.INT) {
           var constant = value.asInt();
@@ -5218,7 +5229,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:813:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:829:7)');
     }
     var current = target;
     var parent = current.parent;
@@ -12194,7 +12205,7 @@
     }
   };
   var operatorInfo = null;
-  var NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n';
+  var NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\nimport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n';
   var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   var HEX = '0123456789ABCDEF';
   trace.GENERICS = false;
@@ -12210,7 +12221,7 @@
   var pratt = null;
   var nameToSymbolFlag = null;
   var symbolFlagToName = null;
-  Compiler.nativeLibrary = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\ninterface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n');
+  Compiler.nativeLibrary = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\nimport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n');
   Compiler.nativeLibraryJS = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class String {\n  static string fromCharCode(int value);\n}\n\nimport class Object {\n  static Object create(Object prototype);\n}\n\nimport namespace operators {\n  void delete(int value);\n  void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return untyped(this).length; }\n    static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n    string get(int index) { return untyped(this)[index]; }\n    string join(List<string> values) { return untyped(values).join(this); }\n    int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return untyped(this).length; }\n    void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n    List<T> clone() { return untyped(this).slice(); }\n    T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n    void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n    T get(int index) { return untyped(this)[index]; }\n    void set(int index, T value) { untyped(this)[index] = value; }\n    void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n  }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n}\n\nin StringMap {\n  inline {\n    T get(string key) { return untyped(table)[key]; }\n    void set(string key, T value) { untyped(table)[key] = value; }\n    bool has(string key) { return key in untyped(table); }\n    void remove(string key) { operators.delete(untyped(table)[key]); }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n}\n\nin IntMap {\n  inline {\n    T get(int key) { return untyped(table)[key]; }\n    void set(int key, T value) { untyped(table)[key] = value; }\n    bool has(int key) { return key in untyped(table); }\n    void remove(int key) { operators.delete(untyped(table)[key]); }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n');
   Compiler.nativeLibraryCPP = new CachedSource('\nimport void cpp_toString();\nimport string cpp_fromCodeUnit(int value);\nimport string cpp_toLowerCase(string value);\nimport string cpp_toUpperCase(string value);\n\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin double {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin string {\n  inline {\n    int size() { return (int)untyped(this).size(); }\n    string slice(int start, int end) { return untyped(this).substr(start, end - start); }\n    int indexOf(string value) { return (int)untyped(this).find(value); }\n    int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }\n    string toLowerCase() { return cpp_toLowerCase(this); }\n    string toUpperCase() { return cpp_toUpperCase(this); }\n    static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return untyped(this)[index]; }\n  }\n  string join(List<string> values) { var result = ""; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n');
   Range.EMPTY = new Range(null, 0, 0);
