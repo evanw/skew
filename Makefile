@@ -90,7 +90,7 @@ $(RELEASE_DIR)/skewc.min.js: $(FRONTEND_DEPS) | $(RELEASE_DIR)
 	node skewc.js $(FRONTEND_FLAGS) --output-file=$(RELEASE_DIR)/skewc.min.js --optimize --js-minify
 
 $(RELEASE_DIR)/skewc.min.js.gz: $(RELEASE_DIR)/skewc.min.js
-	gzip --stdout --best $(RELEASE_DIR)/skewc.min.js > $(RELEASE_DIR)/skewc.min.js.gz
+	zopfli -c $(RELEASE_DIR)/skewc.min.js > $(RELEASE_DIR)/skewc.min.js.gz || gzip --stdout --best $(RELEASE_DIR)/skewc.min.js > $(RELEASE_DIR)/skewc.min.js.gz
 
 ################################################################################
 # TEST
