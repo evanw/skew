@@ -4531,7 +4531,7 @@
   js.SymbolComparison = function() {
   };
   js.SymbolComparison.prototype.compare = function(left, right) {
-    return right.uniqueID - left.uniqueID | 0;
+    return left.uniqueID - right.uniqueID | 0;
   };
   js.SymbolGroupComparison = function() {
   };
@@ -4540,7 +4540,7 @@
     if (difference === 0) {
       difference = right.group.length - left.group.length | 0;
       for (var i = 0; difference === 0 && i < left.group.length; i = i + 1 | 0) {
-        difference = right.group[i].uniqueID - left.group[i].uniqueID | 0;
+        difference = left.group[i].uniqueID - right.group[i].uniqueID | 0;
       }
     }
     return difference;

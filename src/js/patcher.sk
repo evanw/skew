@@ -19,7 +19,7 @@ namespace js {
     static var INSTANCE = SymbolComparison();
 
     override int compare(Symbol left, Symbol right) {
-      return right.uniqueID - left.uniqueID;
+      return left.uniqueID - right.uniqueID;
     }
   }
 
@@ -33,7 +33,7 @@ namespace js {
       if (difference == 0) {
         difference = right.group.size() - left.group.size();
         for (var i = 0; difference == 0 && i < left.group.size(); i++) {
-          difference = right.group.get(i).uniqueID - left.group.get(i).uniqueID;
+          difference = left.group.get(i).uniqueID - right.group.get(i).uniqueID;
         }
       }
 

@@ -324,6 +324,38 @@ export IFoo foo() {
   return Foo();
 }
 ", "
+(function() {
+  function Foo() {
+  }
+  Foo.prototype.foo = function() {
+  };
+  foo = function() {
+    return new Foo();
+  };
+}());
+");
+
+testJS("
+import interface IFoo {
+  virtual void foo();
+}
+class Foo : IFoo {
+  override void foo() {}
+}
+export void foo() {
+  bar(Foo());
+}
+import void bar(IFoo foo);
+", "
+(function() {
+  function Foo() {
+  }
+  Foo.prototype.foo = function() {
+  };
+  foo = function() {
+    bar(new Foo());
+  };
+}());
 ");
 
 }}
