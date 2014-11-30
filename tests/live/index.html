@@ -59,8 +59,13 @@ function webWorker() {
       switch (e.data.format) {
         case 'js': {
           options.targetFormat = TargetFormat.JAVASCRIPT;
-          options.jsMinify = options.jsMangle = e.data.js.minify;
+          options.jsMinify = e.data.js.minify;
+          options.jsMangle = e.data.js.mangle;
           options.jsSourceMap = e.data.js.sourceMap;
+          options.removeAsserts = e.data.js.optimize;
+          options.foldAllConstants = e.data.js.optimize;
+          options.inlineAllFunctions = e.data.js.optimize;
+          options.convertAllInstanceToStatic = e.data.js.optimize;
           break;
         }
         case 'cpp': {
@@ -202,6 +207,8 @@ var targets = [
     text: 'JavaScript',
     options: [
       { name: 'minify', text: 'Minify', value: false },
+      { name: 'mangle', text: 'Mangle', value: false },
+      { name: 'optimize', text: 'Optimize', value: false },
       { name: 'sourceMap', text: 'Source Map', value: false }
     ]
   },

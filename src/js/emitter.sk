@@ -62,15 +62,15 @@ namespace js {
       }
 
       // The entire body of code is wrapped in a closure for safety
-      emit(indent + "(function()" + space + "{" + newline);
+      emit(indent + minifySpaces("(function() {" + newline));
       increaseIndent();
 
       // Emit helper functions
       if (patcher.needMathImul) {
-        emit(indent + "var " + patcher.imul + " = Math.imul || function(a, b) {".replace(" ", space) + newline);
+        emit(indent + "var " + patcher.imul + minifySpaces(" = Math.imul || function(a, b) {" + newline));
         increaseIndent();
-        emit(indent + "var " + "ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;".replace(" ", space) + newline);
-        emit(indent + "return " + "al * bl + (ah * bl + al * bh << 16) | 0".replace(" ", space));
+        emit(indent + "var " + minifySpaces("ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;" + newline));
+        emit(indent + "return " + minifySpaces("al * bl + (ah * bl + al * bh << 16) | 0"));
         emitSemicolonAfterStatement();
         decreaseIndent();
         emit(indent + "};" + newline);
@@ -79,10 +79,10 @@ namespace js {
       if (patcher.needExtends) {
         var derived = options.jsMangle ? "d" : "derived";
         var base = options.jsMangle ? "b" : "base";
-        emit(indent + "function " + patcher.extends + "(" + derived + "," + space + base + ")" + space + "{" + newline);
+        emit(indent + "function " + minifySpaces(patcher.extends + "(" + derived + ", " + base + ") {" + newline));
         increaseIndent();
-        emit(indent + derived + ".prototype" + space + "=" + space + "Object.create(" + base + ".prototype);" + newline);
-        emit(indent + derived + ".prototype.constructor" + space + "=" + space + derived);
+        emit(indent + derived + minifySpaces(".prototype = Object.create(" + base + ".prototype);" + newline));
+        emit(indent + derived + minifySpaces(".prototype.constructor = " + derived));
         emitSemicolonAfterStatement();
         decreaseIndent();
         emit(indent + "}" + newline);
@@ -221,6 +221,10 @@ namespace js {
         }
       }
       currentSource.contents += text;
+    }
+
+    string minifySpaces(string text) {
+      return text.replace(" ", space);
     }
 
     // Lots of text editors choke up on long lines, so add a newline every now
@@ -722,7 +726,18 @@ namespace js {
         var name = value.asString();
         if (name == "sort") {
           emitExpression(node.callArguments().get(0), .UNARY_POSTFIX);
-          emit(".sort(function(comparison) { return function(a, b) { return comparison.compare(a, b); }; }(");
+          emit(minifySpaces(".sort(function(c) {" + newline));
+          increaseIndent();
+          emit(indent + "return " + minifySpaces("function(a, b) {" + newline));
+          increaseIndent();
+          emit(indent + "return " + minifySpaces("c.compare(a, b)"));
+          emitSemicolonAfterStatement();
+          decreaseIndent();
+          emit(indent + "}");
+          emitSemicolonAfterStatement();
+          decreaseIndent();
+          needsSemicolon = false;
+          emit(indent + "}(");
           emitExpression(node.callArguments().get(1), .UNARY_POSTFIX);
           emit("))");
         } else {

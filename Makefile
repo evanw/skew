@@ -47,9 +47,6 @@ clean:
 # INSTALL
 ################################################################################
 
-# install: check-release
-# 	cp $(RELEASE_DIR)/skewc.js .
-
 install: check
 	cp $(DEBUG_DIR)/skewc.js .
 
@@ -60,10 +57,9 @@ check: | $(DEBUG_DIR)
 
 check-release: | $(DEBUG_DIR) $(RELEASE_DIR)
 	node skewc.js $(FRONTEND_FLAGS) --output-file=$(DEBUG_DIR)/skewc.js --js-source-map
-	node $(DEBUG_DIR)/skewc.js $(FRONTEND_FLAGS) --output-file=$(RELEASE_DIR)/skewc.js --optimize --js-minify
-	node $(RELEASE_DIR)/skewc.js $(FRONTEND_FLAGS) --output-file=$(RELEASE_DIR)/skewc.js --optimize --js-minify
-	cp $(RELEASE_DIR)/skewc.js $(RELEASE_DIR)/skewc.min.js
-	node $(RELEASE_DIR)/skewc.js $(FRONTEND_FLAGS) --output-file=$(RELEASE_DIR)/skewc.js --optimize
+	node $(DEBUG_DIR)/skewc.js $(FRONTEND_FLAGS) --output-file=$(RELEASE_DIR)/skewc.min.js --optimize --js-minify
+	node $(RELEASE_DIR)/skewc.min.js $(FRONTEND_FLAGS) --output-file=$(RELEASE_DIR)/skewc.min.js --optimize --js-minify
+	node $(RELEASE_DIR)/skewc.min.js $(FRONTEND_FLAGS) --output-file=$(RELEASE_DIR)/skewc.js --optimize
 
 ################################################################################
 # DEBUG
@@ -81,13 +77,20 @@ $(DEBUG_DIR)/skewc.js: $(FRONTEND_DEPS) | $(DEBUG_DIR)
 # RELEASE
 ################################################################################
 
-release: $(RELEASE_DIR)/skewc.js
+release: $(RELEASE_DIR)/skewc.js $(RELEASE_DIR)/skewc.min.js.gz
+	ls -l $(RELEASE_DIR)/skewc.js $(RELEASE_DIR)/skewc.min.js $(RELEASE_DIR)/skewc.min.js.gz
 
 $(RELEASE_DIR):
 	mkdir -p $(RELEASE_DIR)
 
 $(RELEASE_DIR)/skewc.js: $(FRONTEND_DEPS) | $(RELEASE_DIR)
 	node skewc.js $(FRONTEND_FLAGS) --output-file=$(RELEASE_DIR)/skewc.js --optimize
+
+$(RELEASE_DIR)/skewc.min.js: $(FRONTEND_DEPS) | $(RELEASE_DIR)
+	node skewc.js $(FRONTEND_FLAGS) --output-file=$(RELEASE_DIR)/skewc.min.js --optimize --js-minify
+
+$(RELEASE_DIR)/skewc.min.js.gz: $(RELEASE_DIR)/skewc.min.js
+	gzip --stdout --best $(RELEASE_DIR)/skewc.min.js > $(RELEASE_DIR)/skewc.min.js.gz
 
 ################################################################################
 # TEST

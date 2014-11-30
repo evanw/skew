@@ -1,29 +1,9 @@
 import namespace io {
   int terminalWidth;
-  void setColor(Color color);
+  void setColor(int color);
   void print(string text);
   bool writeFile(string path, string contents);
   Source readFile(string path);
-}
-
-in io {
-  export enum Color {
-    DEFAULT = 0,
-    BOLD = 1,
-    GRAY = 90,
-    RED = 91,
-    GREEN = 92,
-    YELLOW = 93,
-    BLUE = 94,
-    MAGENTA = 95,
-    CYAN = 96,
-  }
-
-  void printWithColor(Color color, string text) {
-    setColor(color);
-    print(text);
-    setColor(.DEFAULT);
-  }
 }
 
 export namespace frontend {
@@ -105,7 +85,7 @@ export namespace frontend {
     for (var i = 0; i < log.diagnostics.size(); i++) {
       var diagnostic = log.diagnostics.get(i);
       if (!diagnostic.range.isEmpty()) {
-        io.printWithColor(.BOLD, diagnostic.range.locationString() + ": ");
+        printWithColor(.BOLD, diagnostic.range.locationString() + ": ");
       }
       switch (diagnostic.kind) {
         case .WARNING { printWarning(diagnostic.text); }
@@ -114,14 +94,14 @@ export namespace frontend {
       if (!diagnostic.range.isEmpty()) {
         var formatted = diagnostic.range.format(io.terminalWidth);
         io.print(formatted.line + "\n");
-        io.printWithColor(.GREEN, formatted.range + "\n");
+        printWithColor(.GREEN, formatted.range + "\n");
       }
       if (!diagnostic.noteRange.isEmpty()) {
-        io.printWithColor(.BOLD, diagnostic.noteRange.locationString() + ": ");
+        printWithColor(.BOLD, diagnostic.noteRange.locationString() + ": ");
         printNote(diagnostic.noteText);
         var formatted = diagnostic.noteRange.format(io.terminalWidth);
         io.print(formatted.line + "\n");
-        io.printWithColor(.GREEN, formatted.range + "\n");
+        printWithColor(.GREEN, formatted.range + "\n");
       }
     }
 
@@ -156,24 +136,44 @@ export namespace frontend {
 }
 
 in frontend {
+  enum Color {
+    DEFAULT = 0,
+    BOLD = 1,
+    GRAY = 90,
+    RED = 91,
+    GREEN = 92,
+    YELLOW = 93,
+    BLUE = 94,
+    MAGENTA = 95,
+    CYAN = 96,
+  }
+
+  void printWithColor(Color color, string text) {
+    io.setColor(color);
+    io.print(text);
+    io.setColor(Color.DEFAULT);
+  }
+}
+
+in frontend {
   void printError(string text) {
-    io.printWithColor(.RED, "error: ");
-    io.printWithColor(.BOLD, text + "\n");
+    printWithColor(.RED, "error: ");
+    printWithColor(.BOLD, text + "\n");
   }
 
   void printNote(string text) {
-    io.printWithColor(.GRAY, "note: ");
-    io.printWithColor(.BOLD, text + "\n");
+    printWithColor(.GRAY, "note: ");
+    printWithColor(.BOLD, text + "\n");
   }
 
   void printWarning(string text) {
-    io.printWithColor(.MAGENTA, "warning: ");
-    io.printWithColor(.BOLD, text + "\n");
+    printWithColor(.MAGENTA, "warning: ");
+    printWithColor(.BOLD, text + "\n");
   }
 
   void printUsage() {
-    io.printWithColor(.GREEN, "\nusage: ");
-    io.printWithColor(.BOLD, "skewc [flags] [inputs]\n");
+    printWithColor(.GREEN, "\nusage: ");
+    printWithColor(.BOLD, "skewc [flags] [inputs]\n");
     io.print("
   --help (-h)        Print this message.
 

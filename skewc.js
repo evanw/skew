@@ -33,6 +33,13 @@
   IntMap.prototype.getOrDefault = function(key, defaultValue) {
     return key in this.table ? this.table[key] : defaultValue;
   };
+  IntMap.prototype.values = function() {
+    var values = [];
+    for (var key in this.table) {
+      values.push(this.table[key]);
+    }
+    return values;
+  };
   var ContentType = {
     BOOL: 0,
     INT: 1,
@@ -1361,6 +1368,9 @@
   Node.prototype.appendChild = function(node) {
     this.insertChild(this.children === null ? 0 : this.children.length, node);
   };
+  Node.prototype.appendChildren = function(nodes) {
+    this.insertChildren(this.children === null ? 0 : this.children.length, nodes);
+  };
   Node.prototype.insertSiblingAfter = function(node) {
     this.parent.insertChild(this.indexInParent() + 1 | 0, node);
   };
@@ -1451,6 +1461,20 @@
     }
     Node.updateParent(node, this);
     this.children.splice(index, 0, node);
+  };
+  Node.prototype.insertChildren = function(index, nodes) {
+    if (this.children === null) {
+      this.children = [];
+    }
+    if (index < 0 || !(index <= this.children.length)) {
+      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:349:5)');
+    }
+    for (var i = 0; i < nodes.length; i = i + 1 | 0) {
+      var node = nodes[i];
+      Node.updateParent(node, this);
+      this.children.splice(index, 0, node);
+      index = index + 1 | 0;
+    }
   };
   Node.prototype.clone = function() {
     var node = new Node(this.kind);
@@ -1649,9 +1673,21 @@
       throw new Error('assert program.kind == .PROGRAM; (src/compiler/collector.sk:14:5)');
     }
     this.collectStatements(program);
-    this.typeSymbols.sort(function(comparison) { return function(a, b) { return comparison.compare(a, b); }; }(SymbolComparison.INSTANCE));
-    this.freeFunctionSymbols.sort(function(comparison) { return function(a, b) { return comparison.compare(a, b); }; }(SymbolComparison.INSTANCE));
-    this.freeVariableSymbols.sort(function(comparison) { return function(a, b) { return comparison.compare(a, b); }; }(SymbolComparison.INSTANCE));
+    this.typeSymbols.sort(function(c) {
+      return function(a, b) {
+        return c.compare(a, b);
+      };
+    }(SymbolComparison.INSTANCE));
+    this.freeFunctionSymbols.sort(function(c) {
+      return function(a, b) {
+        return c.compare(a, b);
+      };
+    }(SymbolComparison.INSTANCE));
+    this.freeVariableSymbols.sort(function(c) {
+      return function(a, b) {
+        return c.compare(a, b);
+      };
+    }(SymbolComparison.INSTANCE));
     this.sortTypeSymbols();
   }
   Collector.prototype.collectStatements = function(node) {
@@ -2144,6 +2180,31 @@
     }
     var column = line > 0 ? index - this.lineOffsets[line - 1 | 0] | 0 : index;
     return new LineColumn(line - 1 | 0, column);
+  };
+  function UnionFind(count) {
+    this.parents = [];
+    for (var i = 0; i < count; i = i + 1 | 0) {
+      this.parents.push(i);
+    }
+  }
+  UnionFind.prototype.allocate = function() {
+    var index = this.parents.length;
+    this.parents.push(index);
+    return index;
+  };
+  UnionFind.prototype.union = function(left, right) {
+    this.parents[this.find(left)] = this.find(right);
+  };
+  UnionFind.prototype.find = function(index) {
+    if (index < 0 || !(index < this.parents.length)) {
+      throw new Error('assert index >= 0 && index < parents.size(); (src/core/support.sk:29:5)');
+    }
+    var parent = this.parents[index];
+    if (parent !== index) {
+      parent = this.find(parent);
+      this.parents[index] = parent;
+    }
+    return parent;
   };
   function SplitPath(_0, _1) {
     this.directory = _0;
@@ -3462,6 +3523,14 @@
     }
   };
   frontend = {};
+  frontend.Color = {
+    DEFAULT: 0,
+    BOLD: 1,
+    GRAY: 90,
+    RED: 91,
+    GREEN: 92,
+    MAGENTA: 95
+  };
   frontend.Flags = function() {
     this.help = false;
     this.verbose = false;
@@ -3518,13 +3587,13 @@
     for (var i = 0; i < this.options.prepend.length; i = i + 1 | 0) {
       this.appendSource(this.options.prepend[i]);
     }
-    this.emit(this.indent + '(function()' + this.space + '{' + this.newline);
+    this.emit(this.indent + this.minifySpaces('(function() {' + this.newline));
     this.increaseIndent();
     if (this.patcher.needMathImul) {
-      this.emit(this.indent + 'var ' + this.patcher.imul + in_string.replace(' = Math.imul || function(a, b) {', ' ', this.space) + this.newline);
+      this.emit(this.indent + 'var ' + this.patcher.imul + this.minifySpaces(' = Math.imul || function(a, b) {' + this.newline));
       this.increaseIndent();
-      this.emit(this.indent + 'var ' + in_string.replace('ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;', ' ', this.space) + this.newline);
-      this.emit(this.indent + 'return ' + in_string.replace('al * bl + (ah * bl + al * bh << 16) | 0', ' ', this.space));
+      this.emit(this.indent + 'var ' + this.minifySpaces('ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;' + this.newline));
+      this.emit(this.indent + 'return ' + this.minifySpaces('al * bl + (ah * bl + al * bh << 16) | 0'));
       this.emitSemicolonAfterStatement();
       this.decreaseIndent();
       this.emit(this.indent + '};' + this.newline);
@@ -3533,10 +3602,10 @@
     if (this.patcher.needExtends) {
       var derived = this.options.jsMangle ? 'd' : 'derived';
       var base = this.options.jsMangle ? 'b' : 'base';
-      this.emit(this.indent + 'function ' + this.patcher.$extends + '(' + derived + ',' + this.space + base + ')' + this.space + '{' + this.newline);
+      this.emit(this.indent + 'function ' + this.minifySpaces(this.patcher.$extends + '(' + derived + ', ' + base + ') {' + this.newline));
       this.increaseIndent();
-      this.emit(this.indent + derived + '.prototype' + this.space + '=' + this.space + 'Object.create(' + base + '.prototype);' + this.newline);
-      this.emit(this.indent + derived + '.prototype.constructor' + this.space + '=' + this.space + derived);
+      this.emit(this.indent + derived + this.minifySpaces('.prototype = Object.create(' + base + '.prototype);' + this.newline));
+      this.emit(this.indent + derived + this.minifySpaces('.prototype.constructor = ' + derived));
       this.emitSemicolonAfterStatement();
       this.decreaseIndent();
       this.emit(this.indent + '}' + this.newline);
@@ -3650,6 +3719,9 @@
       }
     }
     this.currentSource.contents += text;
+  };
+  js.Emitter.prototype.minifySpaces = function(text) {
+    return in_string.replace(text, ' ', this.space);
   };
   js.Emitter.prototype.maybeEmitMinifedNewline = function() {
     if (this.newline === '' && this.currentColumn > 1024) {
@@ -3783,7 +3855,7 @@
     case 31:
       break;
     default:
-      throw new Error('assert false; (src/js/emitter.sk:329:19)');
+      throw new Error('assert false; (src/js/emitter.sk:333:19)');
       break;
     }
   };
@@ -4158,7 +4230,7 @@
       this.emitBinary(node, precedence);
       break;
     default:
-      throw new Error('assert false; (src/js/emitter.sk:666:11)');
+      throw new Error('assert false; (src/js/emitter.sk:670:11)');
       break;
     }
   };
@@ -4219,7 +4291,18 @@
       var name = value.asString();
       if (name === 'sort') {
         this.emitExpression(node.callArguments()[0], Precedence.UNARY_POSTFIX);
-        this.emit('.sort(function(comparison) { return function(a, b) { return comparison.compare(a, b); }; }(');
+        this.emit(this.minifySpaces('.sort(function(c) {' + this.newline));
+        this.increaseIndent();
+        this.emit(this.indent + 'return ' + this.minifySpaces('function(a, b) {' + this.newline));
+        this.increaseIndent();
+        this.emit(this.indent + 'return ' + this.minifySpaces('c.compare(a, b)'));
+        this.emitSemicolonAfterStatement();
+        this.decreaseIndent();
+        this.emit(this.indent + '}');
+        this.emitSemicolonAfterStatement();
+        this.decreaseIndent();
+        this.needsSemicolon = false;
+        this.emit(this.indent + '}(');
         this.emitExpression(node.callArguments()[1], Precedence.UNARY_POSTFIX);
         this.emit('))');
       } else {
@@ -4431,6 +4514,29 @@
     }
     return js.Emitter.mangleName(symbol);
   };
+  js.BooleanSwap = {
+    SWAP: 0,
+    NO_SWAP: 1
+  };
+  js.ExtractGroupsMode = {
+    ALL_SYMBOLS: 0,
+    ONLY_LOCAL_VARIABLES: 1,
+    ONLY_INSTANCE_VARIABLES: 2
+  };
+  js.SymbolGroup = function(_0, _1) {
+    this.group = _0;
+    this.count = _1;
+  };
+  js.SymbolComparison = function() {
+  };
+  js.SymbolComparison.prototype.compare = function(left, right) {
+    return right.node.range.start - left.node.range.start | 0;
+  };
+  js.SymbolGroupComparison = function() {
+  };
+  js.SymbolGroupComparison.prototype.compare = function(left, right) {
+    return right.count - left.count | 0;
+  };
   js.Patcher = function(_0) {
     this.nextTempID = 0;
     this.createdThisAlias = false;
@@ -4441,6 +4547,7 @@
     this.needMathImul = false;
     this.nextSymbolName = 0;
     this.options = null;
+    this.localVariableUnionFind = null;
     this.cache = null;
     this.reservedNames = js.Emitter.isKeyword.clone();
     this.symbolCounts = new IntMap();
@@ -4449,11 +4556,154 @@
   };
   js.Patcher.prototype.run = function(program) {
     if (program.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert program.kind == .PROGRAM; (src/js/patcher.sk:29:7)');
+      throw new Error('assert program.kind == .PROGRAM; (src/js/patcher.sk:52:7)');
     }
+    var allSymbols = this.resolver.allSymbols;
     this.options = this.resolver.options;
     this.cache = this.resolver.cache;
+    if (this.options.jsMangle) {
+      this.localVariableUnionFind = new UnionFind(allSymbols.length);
+      for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
+        var symbol = allSymbols[i];
+        this.namingGroupIndexForSymbol.table[symbol.uniqueID] = i;
+      }
+      this.imul = '$i';
+      this.$extends = '$e';
+    }
     this.patchNode(program);
+    if (this.options.jsMangle) {
+      var namingGroupsUnionFind = new UnionFind(allSymbols.length);
+      var order = [];
+      this.aliasLocalVariables(namingGroupsUnionFind, order);
+      this.aliasUnrelatedProperties(namingGroupsUnionFind, order);
+      for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
+        var symbol = allSymbols[i];
+        if (symbol.overriddenMember !== null) {
+          var overridden = symbol.overriddenMember.symbol;
+          var index = this.namingGroupIndexForSymbol.table[symbol.uniqueID];
+          namingGroupsUnionFind.union(index, this.namingGroupIndexForSymbol.table[overridden.uniqueID]);
+          if (overridden.identicalMembers !== null) {
+            for (var j = 0; j < overridden.identicalMembers.length; j = j + 1 | 0) {
+              namingGroupsUnionFind.union(index, this.namingGroupIndexForSymbol.table[overridden.identicalMembers[j].symbol.uniqueID]);
+            }
+          }
+        }
+      }
+      var members = this.cache.globalType.members.values();
+      for (var i = 0; i < members.length; i = i + 1 | 0) {
+        var member = members[i];
+        if (!this.canRename(member.symbol)) {
+          this.reservedNames.table[member.symbol.name] = true;
+        }
+      }
+      var namingGroups = this.extractGroups(namingGroupsUnionFind, js.ExtractGroupsMode.ALL_SYMBOLS);
+      var sortedGroups = [];
+      for (var i = 0; i < namingGroups.length; i = i + 1 | 0) {
+        var group = namingGroups[i];
+        var count = 0;
+        for (var j = 0; j < group.length; j = j + 1 | 0) {
+          var symbol = group[j];
+          if (this.canRename(symbol)) {
+            count = count + this.symbolCounts.getOrDefault(symbol.uniqueID, 0) | 0;
+          }
+        }
+        sortedGroups.push(new js.SymbolGroup(group, count));
+      }
+      sortedGroups.sort(function(c) {
+        return function(a, b) {
+          return c.compare(a, b);
+        };
+      }(js.SymbolGroupComparison.INSTANCE));
+      for (var i = 0; i < sortedGroups.length; i = i + 1 | 0) {
+        var group = sortedGroups[i].group;
+        var name = '';
+        for (var j = 0; j < group.length; j = j + 1 | 0) {
+          var symbol = group[j];
+          if (this.canRename(symbol)) {
+            if (name === '') {
+              name = this.generateSymbolName();
+            }
+            if (symbol.kind !== SymbolKind.INSTANCE_FUNCTION) {
+              symbol.enclosingSymbol = this.cache.globalType.symbol;
+            }
+            symbol.name = name;
+          }
+        }
+      }
+    }
+  };
+  js.Patcher.prototype.aliasLocalVariables = function(unionFind, order) {
+    this.zipTogetherInOrder(unionFind, order, this.extractGroups(this.localVariableUnionFind, js.ExtractGroupsMode.ONLY_LOCAL_VARIABLES));
+  };
+  js.Patcher.prototype.aliasUnrelatedProperties = function(unionFind, order) {
+    var allSymbols = this.resolver.allSymbols;
+    var relatedTypesUnionFind = new UnionFind(allSymbols.length);
+    for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
+      var symbol = allSymbols[i];
+      if (in_SymbolKind.isType(symbol.kind)) {
+        if (symbol.type.hasRelevantTypes()) {
+          var types = symbol.type.relevantTypes;
+          for (var j = 0; j < types.length; j = j + 1 | 0) {
+            relatedTypesUnionFind.union(i, this.namingGroupIndexForSymbol.table[types[j].symbol.uniqueID]);
+          }
+        }
+        var members = symbol.type.members.values();
+        for (var j = 0; j < members.length; j = j + 1 | 0) {
+          var index = this.namingGroupIndexForSymbol.getOrDefault(members[j].symbol.uniqueID, -1);
+          if (index !== -1) {
+            relatedTypesUnionFind.union(i, index);
+          }
+        }
+      }
+    }
+    this.zipTogetherInOrder(unionFind, order, this.extractGroups(relatedTypesUnionFind, js.ExtractGroupsMode.ONLY_INSTANCE_VARIABLES));
+  };
+  js.Patcher.prototype.zipTogetherInOrder = function(unionFind, order, groups) {
+    for (var i = 0; i < groups.length; i = i + 1 | 0) {
+      var group = groups[i];
+      if (group.length > 1) {
+        group.sort(function(c) {
+          return function(a, b) {
+            return c.compare(a, b);
+          };
+        }(js.SymbolComparison.INSTANCE));
+      }
+      for (var j = 0; j < group.length; j = j + 1 | 0) {
+        var symbol = group[j];
+        var index = this.namingGroupIndexForSymbol.table[symbol.uniqueID];
+        if (order.length <= j) {
+          order.push(index);
+        }
+        unionFind.union(index, order[j]);
+      }
+    }
+  };
+  js.Patcher.prototype.extractGroups = function(unionFind, mode) {
+    var labelToGroup = new IntMap();
+    var allSymbols = this.resolver.allSymbols;
+    for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
+      var symbol = allSymbols[i];
+      if (mode === js.ExtractGroupsMode.ONLY_LOCAL_VARIABLES && symbol.kind !== SymbolKind.LOCAL_VARIABLE || mode === js.ExtractGroupsMode.ONLY_INSTANCE_VARIABLES && symbol.kind !== SymbolKind.INSTANCE_VARIABLE) {
+        continue;
+      }
+      var label = unionFind.find(this.namingGroupIndexForSymbol.table[symbol.uniqueID]);
+      var group = labelToGroup.getOrDefault(label, null);
+      if (group === null) {
+        group = [];
+        labelToGroup.table[label] = group;
+      }
+      group.push(symbol);
+    }
+    return labelToGroup.values();
+  };
+  js.Patcher.prototype.canRename = function(symbol) {
+    if (!symbol.isImportOrExport() && symbol.kind !== SymbolKind.CONSTRUCTOR_FUNCTION) {
+      if (symbol.overriddenMember !== null) {
+        return this.canRename(symbol.overriddenMember.symbol);
+      }
+      return true;
+    }
+    return false;
   };
   js.Patcher.prototype.trackSymbolCount = function(node) {
     var symbol = node.symbol;
@@ -4516,6 +4766,355 @@
     case 14:
       this.setCurrentFunction(null);
       break;
+    case 15:
+      if (this.options.jsMangle) {
+        this.unionVariableWithFunction(node);
+      }
+      break;
+    }
+    if (this.options.jsMangle) {
+      switch (node.kind) {
+      case 18:
+        this.peepholeMangleIf(node);
+        break;
+      case 19:
+        this.peepholeMangleFor(node);
+        break;
+      case 68:
+      case 72:
+        this.peepholeMangleBinaryRelational(node);
+        break;
+      case 21:
+      case 22:
+        this.peepholeMangleBoolean(node.whileTest(), js.BooleanSwap.NO_SWAP);
+        break;
+      case 2:
+        this.peepholeMangleBlock(node);
+        break;
+      case 35:
+        this.peepholeMangleHook(node);
+        break;
+      }
+    }
+  };
+  js.Patcher.prototype.peepholeMangleBinaryRelational = function(node) {
+    if (node.kind !== NodeKind.GREATER_THAN_OR_EQUAL && node.kind !== NodeKind.LESS_THAN_OR_EQUAL) {
+      throw new Error('assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL; (src/js/patcher.sk:294:7)');
+    }
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+    if (left.type !== null && left.type.isInteger(this.cache) && right.type !== null && right.type.isInteger(this.cache)) {
+      if (left.kind === NodeKind.INT) {
+        var value = left.asInt();
+        if (node.kind === NodeKind.GREATER_THAN_OR_EQUAL && in_int.canIncrement(value)) {
+          left.content = new IntContent(value + 1 | 0);
+          node.kind = NodeKind.GREATER_THAN;
+        } else if (node.kind === NodeKind.LESS_THAN_OR_EQUAL && in_int.canDecrement(value)) {
+          left.content = new IntContent(value - 1 | 0);
+          node.kind = NodeKind.LESS_THAN;
+        }
+      } else if (right.kind === NodeKind.INT) {
+        var value = right.asInt();
+        if (node.kind === NodeKind.GREATER_THAN_OR_EQUAL && in_int.canDecrement(value)) {
+          right.content = new IntContent(value - 1 | 0);
+          node.kind = NodeKind.GREATER_THAN;
+        } else if (node.kind === NodeKind.LESS_THAN_OR_EQUAL && in_int.canIncrement(value)) {
+          right.content = new IntContent(value + 1 | 0);
+          node.kind = NodeKind.LESS_THAN;
+        }
+      }
+    }
+  };
+  js.Patcher.prototype.isFalsy = function(node) {
+    var kind = node.kind;
+    if (kind === NodeKind.NULL) {
+      return true;
+    } else if (kind === NodeKind.INT) {
+      return node.asInt() === 0;
+    } else if (in_NodeKind.isReal(kind)) {
+      return node.asDouble() === 0;
+    } else if (kind === NodeKind.STRING) {
+      return node.asString() === '';
+    } else if (in_NodeKind.isCast(kind)) {
+      return this.isFalsy(node.castValue());
+    } else {
+      return false;
+    }
+  };
+  js.Patcher.prototype.peepholeMangleBoolean = function(node, canSwap) {
+    var kind = node.kind;
+    if (kind === NodeKind.EQUAL || kind === NodeKind.NOT_EQUAL) {
+      var left = node.binaryLeft();
+      var right = node.binaryRight();
+      var replacement = this.isFalsy(right) ? left : this.isFalsy(left) ? right : null;
+      if (replacement !== null) {
+        if (left.type !== null && !left.type.isReal(this.cache) && right.type !== null && !right.type.isReal(this.cache)) {
+          replacement.replaceWith(null);
+          node.become(kind === NodeKind.EQUAL ? Node.createUnary(NodeKind.NOT, replacement) : replacement);
+        }
+      } else if (left.type !== null && left.type.isInteger(this.cache) && right.type !== null && right.type.isInteger(this.cache)) {
+        if (kind === NodeKind.NOT_EQUAL) {
+          node.kind = NodeKind.BITWISE_XOR;
+        } else if (kind === NodeKind.EQUAL && canSwap === js.BooleanSwap.SWAP) {
+          node.kind = NodeKind.BITWISE_XOR;
+          return js.BooleanSwap.SWAP;
+        }
+      }
+    } else if (kind === NodeKind.LOGICAL_AND || kind === NodeKind.LOGICAL_OR) {
+      this.peepholeMangleBoolean(node.binaryLeft(), js.BooleanSwap.NO_SWAP);
+      this.peepholeMangleBoolean(node.binaryRight(), js.BooleanSwap.NO_SWAP);
+    }
+    if (node.kind === NodeKind.NOT && canSwap === js.BooleanSwap.SWAP) {
+      node.become(node.unaryValue().replaceWith(null));
+      return js.BooleanSwap.SWAP;
+    }
+    return js.BooleanSwap.NO_SWAP;
+  };
+  js.Patcher.prototype.peepholeMangleIf = function(node) {
+    var test = node.ifTest();
+    var trueBlock = node.ifTrue();
+    var falseBlock = node.ifFalse();
+    var swapped = this.peepholeMangleBoolean(test, falseBlock !== null ? js.BooleanSwap.SWAP : js.BooleanSwap.NO_SWAP);
+    if (swapped === js.BooleanSwap.SWAP) {
+      var temp = trueBlock;
+      trueBlock = falseBlock;
+      falseBlock = temp;
+      trueBlock.swapWith(falseBlock);
+    }
+    var trueStatement = trueBlock.blockStatement();
+    if (falseBlock !== null) {
+      var falseStatement = falseBlock.blockStatement();
+      if (trueStatement !== null && falseStatement !== null) {
+        if (trueStatement.kind === NodeKind.EXPRESSION && falseStatement.kind === NodeKind.EXPRESSION) {
+          var hook = Node.createHook(test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null));
+          this.peepholeMangleHook(hook);
+          node.become(Node.createExpression(hook));
+        } else if (trueStatement.kind === NodeKind.RETURN && falseStatement.kind === NodeKind.RETURN) {
+          var trueValue = trueStatement.returnValue();
+          var falseValue = falseStatement.returnValue();
+          if (trueValue !== null && falseValue !== null) {
+            var hook = Node.createHook(test.replaceWith(null), trueValue.replaceWith(null), falseValue.replaceWith(null));
+            this.peepholeMangleHook(hook);
+            node.become(Node.createReturn(hook));
+          }
+        }
+      }
+    } else if (trueStatement !== null && trueStatement.kind === NodeKind.EXPRESSION) {
+      var value = trueStatement.expressionValue().replaceWith(null);
+      if (test.kind === NodeKind.NOT) {
+        node.become(Node.createExpression(Node.createBinary(NodeKind.LOGICAL_OR, test.unaryValue().replaceWith(null), value)));
+      } else {
+        node.become(Node.createExpression(Node.createBinary(NodeKind.LOGICAL_AND, test.replaceWith(null), value)));
+      }
+    }
+  };
+  js.Patcher.prototype.peepholeMangleFor = function(node) {
+    var test = node.forTest();
+    if (test !== null) {
+      this.peepholeMangleBoolean(test, js.BooleanSwap.NO_SWAP);
+    }
+  };
+  js.Patcher.prototype.isJumpImplied = function(node, kind) {
+    if (node.kind !== NodeKind.BLOCK) {
+      throw new Error('assert node.kind == .BLOCK; (src/js/patcher.sk:448:7)');
+    }
+    if (kind !== NodeKind.RETURN && kind !== NodeKind.CONTINUE) {
+      throw new Error('assert kind == .RETURN || kind == .CONTINUE; (src/js/patcher.sk:449:7)');
+    }
+    var parent = node.parent;
+    var parentKind = parent.kind;
+    if (kind === NodeKind.RETURN && parentKind === NodeKind.FUNCTION || kind === NodeKind.CONTINUE && in_NodeKind.isLoop(parentKind)) {
+      return true;
+    }
+    if (parentKind === NodeKind.IF && parent.isLastChild()) {
+      return this.isJumpImplied(parent.parent, kind);
+    }
+    return false;
+  };
+  js.Patcher.prototype.peepholeMangleBlock = function(node) {
+    if (!node.hasChildren()) {
+      return;
+    }
+    for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+      var child = node.children[i];
+      var kind = child.kind;
+      if (kind === NodeKind.VARIABLE_CLUSTER) {
+        while ((i + 1 | 0) < node.children.length) {
+          var next = node.children[i + 1 | 0];
+          if (next.kind !== NodeKind.VARIABLE_CLUSTER) {
+            break;
+          }
+          var variables = next.remove().clusterVariables();
+          for (var j = 0; j < variables.length; j = j + 1 | 0) {
+            child.appendChild(variables[j].replaceWith(null));
+          }
+        }
+      } else if (kind === NodeKind.EXPRESSION) {
+        var nodes = null;
+        while ((i + 1 | 0) < node.children.length) {
+          var next = node.children[i + 1 | 0];
+          if (next.kind !== NodeKind.EXPRESSION) {
+            break;
+          }
+          var combined = Node.createExpression(this.joinExpressions(child.expressionValue().replaceWith(null), next.remove().expressionValue().replaceWith(null)));
+          child.replaceWith(combined);
+          child = combined;
+        }
+        var value = child.expressionValue();
+        if (value.kind === NodeKind.SEQUENCE) {
+          this.peepholeMangleSequence(value);
+        }
+      } else if (kind === NodeKind.IF && child.ifFalse() === null) {
+        var trueBlock = child.ifTrue();
+        if (trueBlock.hasChildren()) {
+          var statement = trueBlock.lastChild();
+          if ((statement.kind === NodeKind.RETURN && statement.returnValue() === null || statement.kind === NodeKind.CONTINUE) && this.isJumpImplied(node, statement.kind)) {
+            var block = null;
+            statement.remove();
+            if (!trueBlock.hasChildren()) {
+              child.ifTest().invertBooleanCondition(this.cache);
+              block = trueBlock;
+            } else if (!child.isLastChild()) {
+              block = Node.createBlock([]);
+              child.replaceChild(2, block);
+              if (block !== child.ifFalse()) {
+                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:521:17)');
+              }
+            } else {
+              this.peepholeMangleIf(child);
+              return;
+            }
+            while ((i + 1 | 0) < node.children.length) {
+              block.appendChild(node.children[i + 1 | 0].remove());
+            }
+            this.peepholeMangleBlock(block);
+            this.peepholeMangleIf(child);
+            if (child.kind === NodeKind.EXPRESSION && i > 0) {
+              var previous = node.children[i - 1 | 0];
+              if (previous.kind === NodeKind.EXPRESSION) {
+                previous.replaceWith(Node.createExpression(this.joinExpressions(previous.expressionValue().replaceWith(null), child.remove().expressionValue().replaceWith(null))));
+              }
+            }
+            return;
+          }
+        }
+      } else if (kind === NodeKind.RETURN && child.returnValue() !== null) {
+        while (i > 0) {
+          var previous = node.children[i - 1 | 0];
+          if (previous.kind === NodeKind.IF && previous.ifFalse() === null) {
+            var statement = previous.ifTrue().blockStatement();
+            if (statement !== null && statement.kind === NodeKind.RETURN && statement.returnValue() !== null) {
+              var hook = Node.createHook(previous.ifTest().replaceWith(null), statement.returnValue().replaceWith(null), child.returnValue().replaceWith(null));
+              this.peepholeMangleHook(hook);
+              child.remove();
+              child = Node.createReturn(hook);
+              previous.replaceWith(child);
+            } else {
+              break;
+            }
+          } else if (previous.kind === NodeKind.EXPRESSION) {
+            var combined = Node.createReturn(this.joinExpressions(previous.remove().expressionValue().replaceWith(null), child.returnValue().replaceWith(null)));
+            child.replaceWith(combined);
+            child = combined;
+          } else {
+            break;
+          }
+          i = i - 1 | 0;
+        }
+      }
+    }
+  };
+  js.Patcher.prototype.assignSourceIfNoSideEffects = function(node) {
+    if (node.kind === NodeKind.ASSIGN && node.binaryLeft().hasNoSideEffects()) {
+      var right = node.binaryRight();
+      return right.hasNoSideEffects() ? right : null;
+    }
+    if (node.kind === NodeKind.ASSIGN_INDEX && node.ternaryLeft().hasNoSideEffects() && node.ternaryMiddle().hasNoSideEffects()) {
+      var right = node.ternaryRight();
+      return right.hasNoSideEffects() ? right : null;
+    }
+    return null;
+  };
+  js.Patcher.prototype.peepholeMangleSequence = function(node) {
+    if (node.kind !== NodeKind.SEQUENCE) {
+      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:596:7)');
+    }
+    for (var i = node.children.length - 1 | 0; i > 0; i = i - 1 | 0) {
+      var current = node.children[i];
+      var currentRight = this.assignSourceIfNoSideEffects(current);
+      if (currentRight !== null) {
+        while (i > 0) {
+          var previous = node.children[i - 1 | 0];
+          var previousRight = this.assignSourceIfNoSideEffects(previous);
+          if (previousRight === null || !this.looksTheSame(previousRight, currentRight)) {
+            break;
+          }
+          previousRight.replaceWith(current.remove());
+          current = previous;
+          i = i - 1 | 0;
+        }
+      }
+    }
+  };
+  js.Patcher.prototype.joinExpressions = function(left, right) {
+    var sequence = Node.createSequence(left.kind === NodeKind.SEQUENCE ? left.removeChildren() : [left]);
+    sequence.appendChildren(right.kind === NodeKind.SEQUENCE ? right.removeChildren() : [right]);
+    return sequence;
+  };
+  js.Patcher.prototype.looksTheSame = function(left, right) {
+    if (left.kind === right.kind) {
+      switch (left.kind) {
+      case 36:
+      case 34:
+        return true;
+      case 38:
+        return left.asInt() === right.asInt();
+      case 37:
+        return left.asBool() === right.asBool();
+      case 39:
+      case 40:
+        return left.asDouble() === right.asDouble();
+      case 41:
+        return left.asString() === right.asString();
+      case 32:
+        return left.symbol !== null && left.symbol === right.symbol || left.asString() === right.asString();
+      case 43:
+        return left.symbol === right.symbol && left.dotName().asString() === right.dotName().asString() && this.looksTheSame(left.dotTarget(), right.dotTarget());
+      }
+    }
+    if (left.kind === NodeKind.IMPLICIT_CAST) {
+      return this.looksTheSame(left.castValue(), right);
+    }
+    if (right.kind === NodeKind.IMPLICIT_CAST) {
+      return this.looksTheSame(left, right.castValue());
+    }
+    return false;
+  };
+  js.Patcher.prototype.peepholeMangleHook = function(node) {
+    var test = node.hookTest();
+    var trueValue = node.hookTrue();
+    var falseValue = node.hookFalse();
+    var swapped = this.peepholeMangleBoolean(test, js.BooleanSwap.SWAP);
+    if (swapped === js.BooleanSwap.SWAP) {
+      var temp = trueValue;
+      trueValue = falseValue;
+      falseValue = temp;
+      trueValue.swapWith(falseValue);
+    }
+    if (trueValue.kind === falseValue.kind && in_NodeKind.isBinaryOperator(trueValue.kind)) {
+      var trueLeft = trueValue.binaryLeft();
+      var trueRight = trueValue.binaryRight();
+      var falseLeft = falseValue.binaryLeft();
+      var falseRight = falseValue.binaryRight();
+      if (this.looksTheSame(trueLeft, falseLeft)) {
+        var hook = Node.createHook(test.replaceWith(null), trueRight.replaceWith(null), falseRight.replaceWith(null));
+        this.peepholeMangleHook(hook);
+        node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWith(null), hook));
+      } else if (this.looksTheSame(trueRight, falseRight) && !in_NodeKind.isBinaryStorageOperator(trueValue.kind)) {
+        var hook = Node.createHook(test.replaceWith(null), trueLeft.replaceWith(null), falseLeft.replaceWith(null));
+        this.peepholeMangleHook(hook);
+        node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWith(null)));
+      }
     }
   };
   js.Patcher.prototype.patchClass = function(node) {
@@ -4526,6 +5125,16 @@
   js.Patcher.prototype.patchName = function(node) {
     if (node.symbol !== null && in_SymbolKind.isInstance(node.symbol.kind) && node.isNameExpression()) {
       node.become(Node.createDot(Node.createThis(), node.clone()));
+    }
+  };
+  js.Patcher.prototype.unionVariableWithFunction = function(node) {
+    if (node.symbol.kind === SymbolKind.LOCAL_VARIABLE !== (this.currentFunction !== null)) {
+      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:692:7)');
+    }
+    if (this.currentFunction !== null) {
+      var left = this.namingGroupIndexForSymbol.table[this.currentFunction.uniqueID];
+      var right = this.namingGroupIndexForSymbol.table[node.symbol.uniqueID];
+      this.localVariableUnionFind.union(left, right);
     }
   };
   js.Patcher.prototype.patchBinary = function(node) {
@@ -4549,7 +5158,7 @@
         this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
       } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
         if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
-          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:183:11)');
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:727:11)');
         }
         if (value.kind === NodeKind.INT) {
           var constant = value.asInt();
@@ -4609,7 +5218,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:270:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:814:7)');
     }
     var current = target;
     var parent = current.parent;
@@ -4625,6 +5234,10 @@
     symbol.node = Node.createVariable(reference.clone(), Node.createType(this.cache.intType), null).withSymbol(symbol);
     parent.insertChild(parent.children.indexOf(current), Node.createVariableCluster(Node.createType(this.cache.intType), [symbol.node]));
     target.become(Node.createSequence([Node.createBinary(NodeKind.ASSIGN, reference.clone(), left.dotTarget().replaceWith(null)), Node.createBinary(NodeKind.ASSIGN, property.clone(), this.createBinaryInt(kind, property, right))]).withRange(target.range));
+    if (this.options.jsMangle) {
+      this.namingGroupIndexForSymbol.table[symbol.uniqueID] = this.localVariableUnionFind.allocate();
+      this.unionVariableWithFunction(reference);
+    }
   };
   js.Patcher.prototype.alwaysConvertsOperandsToInt = function(kind) {
     switch (kind) {
@@ -4646,6 +5259,23 @@
   js.Patcher.prototype.setCurrentFunction = function(symbol) {
     this.currentFunction = symbol;
     this.createdThisAlias = false;
+  };
+  js.Patcher.numberToName = function(number) {
+    var name = '';
+    if (number >= 52) {
+      name = js.Patcher.numberToName((number / 52 | 0) - 1 | 0);
+      number = number % 52 | 0;
+    }
+    name += String.fromCharCode(number + (number < 26 ? 97 : 39) | 0);
+    return name;
+  };
+  js.Patcher.prototype.generateSymbolName = function() {
+    var name = '';
+    do {
+      name = js.Patcher.numberToName(this.nextSymbolName);
+      this.nextSymbolName = this.nextSymbolName + 1 | 0;
+    } while (name in this.reservedNames.table);
+    return name;
   };
   function SourceMapping(_0, _1, _2, _3, _4) {
     this.sourceIndex = _0;
@@ -4681,7 +5311,11 @@
       sourceContents.push(quoteString(source.contents, 34));
     }
     var result = '{"version":3,"sources":[' + sourceNames.join(',') + '],"sourcesContent":[' + sourceContents.join(',') + '],"names":[],"mappings":"';
-    this.mappings.sort(function(comparison) { return function(a, b) { return comparison.compare(a, b); }; }(SourceMapGenerator.comparison));
+    this.mappings.sort(function(c) {
+      return function(a, b) {
+        return c.compare(a, b);
+      };
+    }(SourceMapGenerator.comparison));
     var previousGeneratedColumn = 0;
     var previousGeneratedLine = 0;
     var previousOriginalColumn = 0;
@@ -5085,6 +5719,39 @@
   DoubleLiteral.prototype.parse = function(context, token) {
     return Node.createDouble(parseDoubleLiteral(token.text)).withRange(token.range);
   };
+  function StringLiteral() {
+  }
+  StringLiteral.prototype.parse = function(context, token) {
+    var result = parseStringLiteral(context.log, token.range, token.text);
+    return Node.createString(result !== null ? result.value : '').withRange(token.range);
+  };
+  function CharacterLiteral() {
+  }
+  CharacterLiteral.prototype.parse = function(context, token) {
+    var result = parseStringLiteral(context.log, token.range, token.text);
+    if (result !== null && result.value.length !== 1) {
+      syntaxErrorInvalidCharacter(context.log, token.range, token.text);
+      result = null;
+    }
+    return Node.createInt(result !== null ? result.value.charCodeAt(0) : 0).withRange(token.range);
+  };
+  function NameLiteral() {
+  }
+  NameLiteral.prototype.parse = function(context, token) {
+    return Node.createName(token.text).withRange(token.range);
+  };
+  function TokenLiteral(_0) {
+    this.kind = _0;
+  }
+  TokenLiteral.prototype.parse = function(context, token) {
+    return new Node(this.kind).withRange(token.range);
+  };
+  function BoolLiteral(_0) {
+    this.value = _0;
+  }
+  BoolLiteral.prototype.parse = function(context, token) {
+    return Node.createBool(this.value).withRange(token.range);
+  };
   function IntLiteral(_0) {
     this.base = _0;
   }
@@ -5104,39 +5771,6 @@
   }
   VarLiteral.prototype.parse = function(context, token) {
     return Node.createVar().withRange(token.range);
-  };
-  function StringLiteral() {
-  }
-  StringLiteral.prototype.parse = function(context, token) {
-    var result = parseStringLiteral(context.log, token.range, token.text);
-    return Node.createString(result !== null ? result.value : '').withRange(token.range);
-  };
-  function CharacterLiteral() {
-  }
-  CharacterLiteral.prototype.parse = function(context, token) {
-    var result = parseStringLiteral(context.log, token.range, token.text);
-    if (result !== null && result.value.length !== 1) {
-      syntaxErrorInvalidCharacter(context.log, token.range, token.text);
-      result = null;
-    }
-    return Node.createInt(result !== null ? result.value.charCodeAt(0) : 0).withRange(token.range);
-  };
-  function TokenLiteral(_0) {
-    this.kind = _0;
-  }
-  TokenLiteral.prototype.parse = function(context, token) {
-    return new Node(this.kind).withRange(token.range);
-  };
-  function BoolLiteral(_0) {
-    this.value = _0;
-  }
-  BoolLiteral.prototype.parse = function(context, token) {
-    return Node.createBool(this.value).withRange(token.range);
-  };
-  function NameLiteral() {
-  }
-  NameLiteral.prototype.parse = function(context, token) {
-    return Node.createName(token.text).withRange(token.range);
   };
   function LiteralParselet(_0) {
     this.callback = _0;
@@ -7250,7 +7884,7 @@
     }
   };
   Resolver.prototype.forbidImportAndExportTogether = function(symbol) {
-    if (symbol.isImport()) {
+    if (symbol.isImport() || symbol.enclosingSymbol !== null && symbol.enclosingSymbol.isImport()) {
       this.unexpectedModifierIfPresent(symbol, SymbolFlag.EXPORT, 'on an imported declaration');
     }
   };
@@ -7324,7 +7958,11 @@
         }
       }
     }
-    uninitializedMembers.sort(function(comparison) { return function(a, b) { return comparison.compare(a, b); }; }(Resolver.comparison));
+    uninitializedMembers.sort(function(c) {
+      return function(a, b) {
+        return c.compare(a, b);
+      };
+    }(Resolver.comparison));
     for (var i = 0; i < uninitializedMembers.length; i = i + 1 | 0) {
       var member = uninitializedMembers[i];
       var name = '_' + $arguments.length;
@@ -8755,7 +9393,11 @@
   };
   Type.prototype.sortedMembers = function() {
     var result = this.members.values();
-    result.sort(function(comparison) { return function(a, b) { return comparison.compare(a, b); }; }(MemberComparison.INSTANCE));
+    result.sort(function(c) {
+      return function(a, b) {
+        return c.compare(a, b);
+      };
+    }(MemberComparison.INSTANCE));
     return result;
   };
   Type.prototype.$constructor = function() {
@@ -9210,18 +9852,7 @@
   var in_List = {};
   var in_NodeKind = {};
   var in_TargetFormat = {};
-  var in_io = {};
-  in_io.Color = {
-    DEFAULT: 0,
-    BOLD: 1,
-    GRAY: 90,
-    RED: 91,
-    GREEN: 92,
-    YELLOW: 93,
-    BLUE: 94,
-    MAGENTA: 95,
-    CYAN: 96
-  };
+  var in_int = {};
   var in_Precedence = {};
   var in_SymbolKind = {};
   var in_TokenKind = {};
@@ -9380,6 +10011,12 @@
   }
   in_TargetFormat.shouldRunResolver = function($this) {
     return $this >= TargetFormat.NONE && $this <= TargetFormat.JAVASCRIPT;
+  };
+  in_int.canIncrement = function($this) {
+    return ($this + 1 | 0) === $this + 1;
+  };
+  in_int.canDecrement = function($this) {
+    return ($this - 1 | 0) === $this - 1;
   };
   function hashCombine(left, right) {
     return left ^ ((right - 1640531527 | 0) + (left << 6) | 0) + (left >> 2);
@@ -9556,11 +10193,6 @@
     visitor.visit(node);
     return visitor.result;
   };
-  in_io.printWithColor = function(color, text) {
-    io.setColor(color);
-    io.print(text);
-    io.setColor(in_io.Color.DEFAULT);
-  };
   frontend.main = function(args) {
     var inputs = [];
     var prepend = [];
@@ -9652,7 +10284,7 @@
     for (var i = 0; i < log.diagnostics.length; i = i + 1 | 0) {
       var diagnostic = log.diagnostics[i];
       if (!diagnostic.range.isEmpty()) {
-        in_io.printWithColor(in_io.Color.BOLD, diagnostic.range.locationString() + ': ');
+        frontend.printWithColor(frontend.Color.BOLD, diagnostic.range.locationString() + ': ');
       }
       switch (diagnostic.kind) {
       case 1:
@@ -9665,14 +10297,14 @@
       if (!diagnostic.range.isEmpty()) {
         var formatted = diagnostic.range.format(io.terminalWidth);
         io.print(formatted.line + '\n');
-        in_io.printWithColor(in_io.Color.GREEN, formatted.range + '\n');
+        frontend.printWithColor(frontend.Color.GREEN, formatted.range + '\n');
       }
       if (!diagnostic.noteRange.isEmpty()) {
-        in_io.printWithColor(in_io.Color.BOLD, diagnostic.noteRange.locationString() + ': ');
+        frontend.printWithColor(frontend.Color.BOLD, diagnostic.noteRange.locationString() + ': ');
         frontend.printNote(diagnostic.noteText);
         var formatted = diagnostic.noteRange.format(io.terminalWidth);
         io.print(formatted.line + '\n');
-        in_io.printWithColor(in_io.Color.GREEN, formatted.range + '\n');
+        frontend.printWithColor(frontend.Color.GREEN, formatted.range + '\n');
       }
     }
     var hasErrors = log.errorCount > 0;
@@ -9709,21 +10341,26 @@
     }
     return 0;
   };
+  frontend.printWithColor = function(color, text) {
+    io.setColor(color);
+    io.print(text);
+    io.setColor(frontend.Color.DEFAULT);
+  };
   frontend.printError = function(text) {
-    in_io.printWithColor(in_io.Color.RED, 'error: ');
-    in_io.printWithColor(in_io.Color.BOLD, text + '\n');
+    frontend.printWithColor(frontend.Color.RED, 'error: ');
+    frontend.printWithColor(frontend.Color.BOLD, text + '\n');
   };
   frontend.printNote = function(text) {
-    in_io.printWithColor(in_io.Color.GRAY, 'note: ');
-    in_io.printWithColor(in_io.Color.BOLD, text + '\n');
+    frontend.printWithColor(frontend.Color.GRAY, 'note: ');
+    frontend.printWithColor(frontend.Color.BOLD, text + '\n');
   };
   frontend.printWarning = function(text) {
-    in_io.printWithColor(in_io.Color.MAGENTA, 'warning: ');
-    in_io.printWithColor(in_io.Color.BOLD, text + '\n');
+    frontend.printWithColor(frontend.Color.MAGENTA, 'warning: ');
+    frontend.printWithColor(frontend.Color.BOLD, text + '\n');
   };
   frontend.printUsage = function() {
-    in_io.printWithColor(in_io.Color.GREEN, '\nusage: ');
-    in_io.printWithColor(in_io.Color.BOLD, 'skewc [flags] [inputs]\n');
+    frontend.printWithColor(frontend.Color.GREEN, '\nusage: ');
+    frontend.printWithColor(frontend.Color.BOLD, 'skewc [flags] [inputs]\n');
     io.print('\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     c++, lisp, json, and xml.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-minify        Transform the emitted JavaScript so that it takes up less\n                     space. Make sure to use the "export" modifier on code\n                     that shouldn\'t be minifed.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the ".map" extension in the same\n                     directory as the main output file.\n\n');
   };
   frontend.afterEquals = function(text) {
@@ -11537,7 +12174,15 @@
   ByteSize.KB = 1024;
   ByteSize.MB = 1048576;
   ByteSize.GB = 1073741824;
+  frontend.Color.DEFAULT = 0;
+  frontend.Color.BOLD = 1;
+  frontend.Color.GRAY = 90;
+  frontend.Color.RED = 91;
+  frontend.Color.GREEN = 92;
+  frontend.Color.MAGENTA = 95;
   js.Emitter.isKeyword = null;
+  js.SymbolComparison.INSTANCE = new js.SymbolComparison();
+  js.SymbolGroupComparison.INSTANCE = new js.SymbolGroupComparison();
   SourceMapGenerator.comparison = new SourceMappingComparison();
   MemberComparison.INSTANCE = new MemberComparison();
   Resolver.comparison = new MemberRangeComparison();
@@ -11545,15 +12190,6 @@
   Symbol.nextUniqueID = -1;
   SymbolComparison.INSTANCE = new SymbolComparison();
   Type.nextUniqueID = -1;
-  in_io.Color.DEFAULT = 0;
-  in_io.Color.BOLD = 1;
-  in_io.Color.GRAY = 90;
-  in_io.Color.RED = 91;
-  in_io.Color.GREEN = 92;
-  in_io.Color.YELLOW = 93;
-  in_io.Color.BLUE = 94;
-  in_io.Color.MAGENTA = 95;
-  in_io.Color.CYAN = 96;
 }());
 function parseIntLiteral(value, base) {
   if (base !== 10) value = value.slice(2);

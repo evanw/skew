@@ -91,13 +91,9 @@ string cpp_toUpperCase(string value);
 
 struct Source;
 
-namespace in_io {
-  enum class Color;
-}
-
 namespace io {
   extern int terminalWidth;
-  void setColor(in_io::Color color);
+  void setColor(int color);
   void print(string text);
   bool writeFile(string path, string contents);
   Source *readFile(string path);
@@ -213,19 +209,19 @@ auto io::terminalWidth = 0;
   auto isTTY = false;
 #endif
 
-void io::setColor(in_io::Color color) {
+void io::setColor(int color) {
   #if _WIN32
     WORD value;
     switch (color) {
-      case in_io::Color::DEFAULT: value = info.wAttributes; break;
-      case in_io::Color::BOLD: value = info.wAttributes | FOREGROUND_INTENSITY; break;
-      case in_io::Color::GRAY: value = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; break;
-      case in_io::Color::RED: value = FOREGROUND_RED | FOREGROUND_INTENSITY; break;
-      case in_io::Color::GREEN: value = FOREGROUND_GREEN | FOREGROUND_INTENSITY; break;
-      case in_io::Color::BLUE: value = FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
-      case in_io::Color::YELLOW: value = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY; break;
-      case in_io::Color::MAGENTA: value = FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
-      case in_io::Color::CYAN: value = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
+      case 0: value = info.wAttributes; break;
+      case 1: value = info.wAttributes | FOREGROUND_INTENSITY; break;
+      case 90: value = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; break;
+      case 91: value = FOREGROUND_RED | FOREGROUND_INTENSITY; break;
+      case 92: value = FOREGROUND_GREEN | FOREGROUND_INTENSITY; break;
+      case 93: value = FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
+      case 94: value = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY; break;
+      case 95: value = FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
+      case 96: value = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
     }
     SetConsoleTextAttribute(handle, value);
   #else
