@@ -3323,11 +3323,13 @@
     result.table['friend'] = true;
     result.table['goto'] = true;
     result.table['if'] = true;
+    result.table['INFINITY'] = true;
     result.table['inline'] = true;
     result.table['int'] = true;
     result.table['long'] = true;
     result.table['mutable'] = true;
     result.table['namespace'] = true;
+    result.table['NAN'] = true;
     result.table['new'] = true;
     result.table['noexcept'] = true;
     result.table['not'] = true;
@@ -4482,6 +4484,7 @@
     var result = new StringMap();
     result.table['apply'] = true;
     result.table['arguments'] = true;
+    result.table['Boolean'] = true;
     result.table['break'] = true;
     result.table['call'] = true;
     result.table['case'] = true;
@@ -4490,6 +4493,7 @@
     result.table['const'] = true;
     result.table['constructor'] = true;
     result.table['continue'] = true;
+    result.table['Date'] = true;
     result.table['debugger'] = true;
     result.table['default'] = true;
     result.table['delete'] = true;
@@ -4502,6 +4506,7 @@
     result.table['finally'] = true;
     result.table['float'] = true;
     result.table['for'] = true;
+    result.table['Function'] = true;
     result.table['function'] = true;
     result.table['if'] = true;
     result.table['import'] = true;
@@ -4511,7 +4516,10 @@
     result.table['let'] = true;
     result.table['new'] = true;
     result.table['null'] = true;
+    result.table['Number'] = true;
+    result.table['Object'] = true;
     result.table['return'] = true;
+    result.table['String'] = true;
     result.table['super'] = true;
     result.table['this'] = true;
     result.table['throw'] = true;

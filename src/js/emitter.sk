@@ -892,6 +892,7 @@ namespace js {
       var result = StringMap<bool>();
       result.set("apply", true);
       result.set("arguments", true);
+      result.set("Boolean", true);
       result.set("break", true);
       result.set("call", true);
       result.set("case", true);
@@ -900,6 +901,7 @@ namespace js {
       result.set("const", true);
       result.set("constructor", true);
       result.set("continue", true);
+      result.set("Date", true);
       result.set("debugger", true);
       result.set("default", true);
       result.set("delete", true);
@@ -912,6 +914,7 @@ namespace js {
       result.set("finally", true);
       result.set("float", true);
       result.set("for", true);
+      result.set("Function", true);
       result.set("function", true);
       result.set("if", true);
       result.set("import", true);
@@ -921,7 +924,10 @@ namespace js {
       result.set("let", true);
       result.set("new", true);
       result.set("null", true);
+      result.set("Number", true);
+      result.set("Object", true);
       result.set("return", true);
+      result.set("String", true);
       result.set("super", true);
       result.set("this", true);
       result.set("throw", true);

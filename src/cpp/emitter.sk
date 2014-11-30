@@ -485,11 +485,13 @@ namespace cpp {
       result.set("friend", true);
       result.set("goto", true);
       result.set("if", true);
+      result.set("INFINITY", true);
       result.set("inline", true);
       result.set("int", true);
       result.set("long", true);
       result.set("mutable", true);
       result.set("namespace", true);
+      result.set("NAN", true);
       result.set("new", true);
       result.set("noexcept", true);
       result.set("not", true);
