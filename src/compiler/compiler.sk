@@ -39,6 +39,7 @@ export class CompilerOptions {
 export class CompilerResult {
   CompilerOptions options;
   List<Source> outputs;
+  List<Node> files;
   Node program;
   Resolver resolver;
 }
@@ -62,10 +63,63 @@ class CachedSource {
 }
 
 export class Compiler {
+  var tokenizingTime = 0.0;
+  var parsingTime = 0.0;
+  var resolvingTime = 0.0;
+  var callGraphTime = 0.0;
+  var instanceToStaticTime = 0.0;
+  var symbolMotionTime = 0.0;
+  var functionInliningTime = 0.0;
+  var constantFoldingTime = 0.0;
+  var deadCodeRemovalTime = 0.0;
+  var emitTime = 0.0;
+  var lineCountingTime = 0.0;
+  var totalTime = 0.0;
+  var log = Log();
+
+  string statistics(CompilerResult result) {
+    // Line count
+    var lineCountingStart = now();
+    var lineCount = 0;
+    lineCount += totalLineCount(result.options.prepend);
+    lineCount += totalLineCount(result.options.inputs);
+    lineCount += totalLineCount(result.options.append);
+    var text =
+      "Input line count: " + lineCount +
+      "\nOutput line count: " + totalLineCount(result.outputs);
+    lineCountingTime += now() - lineCountingStart;
+
+    // Compilation time
+    var optimizingTime = callGraphTime + instanceToStaticTime + symbolMotionTime + functionInliningTime + constantFoldingTime + deadCodeRemovalTime;
+    text += "\nTotal compile time: " + formatNumber(totalTime + lineCountingTime) + "ms";
+    if (tokenizingTime > 0) text += "\n  Tokenizing: " + formatNumber(tokenizingTime) + "ms";
+    if (parsingTime > 0) text += "\n  Parsing: " + formatNumber(parsingTime) + "ms";
+    if (resolvingTime > 0) text += "\n  Resolving: " + formatNumber(resolvingTime) + "ms";
+    if (optimizingTime > 0) {
+      text += "\n  Optimizing: " + formatNumber(optimizingTime) + "ms";
+      text += "\n    Building call graph: " + formatNumber(callGraphTime) + "ms";
+      text += "\n    Instance to static: " + formatNumber(instanceToStaticTime) + "ms";
+      text += "\n    Symbol motion: " + formatNumber(symbolMotionTime) + "ms";
+      text += "\n    Function inlining: " + formatNumber(functionInliningTime) + "ms";
+      text += "\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms";
+      text += "\n    Dead code removal: " + formatNumber(deadCodeRemovalTime) + "ms";
+    }
+    if (emitTime > 0) text += "\n  Emit: " + formatNumber(emitTime) + "ms";
+    if (lineCountingTime > 0) text += "\n  Counting lines: " + formatNumber(lineCountingTime) + "ms";
+
+    // Sources
+    text += sourceStatistics("Prepend", result.options.prepend);
+    text += sourceStatistics("Inputs", result.options.inputs);
+    text += sourceStatistics("Append", result.options.append);
+    text += sourceStatistics("Outputs", result.outputs);
+    return text;
+  }
+
   CompilerResult compile(CompilerOptions options) {
     var totalStart = now();
     var program = Node.createProgram([]);
     List<Source> outputs = [];
+    List<Node> files = [];
 
     // Initialize global state
     createOperatorMap();
@@ -80,7 +134,10 @@ export class Compiler {
       default { program.appendChild(nativeLibrary.compile(this, options)); }
     }
     for (var i = 1; i < options.inputs.size(); i++) {
-      processInput(program, options.inputs.get(i));
+      var file = processInput(program, options.inputs.get(i));
+      if (file != null) {
+        files.push(file);
+      }
     }
 
     // Resolve everything together
@@ -147,7 +204,7 @@ export class Compiler {
     }
 
     totalTime += now() - totalStart;
-    return CompilerResult(options, outputs, program, resolver);
+    return CompilerResult(options, outputs, files, program, resolver);
   }
 }
 
@@ -156,58 +213,6 @@ in Compiler {
   static CachedSource nativeLibrary = CachedSource(NATIVE_LIBRARY);
   static CachedSource nativeLibraryJS = CachedSource(js.NATIVE_LIBRARY);
   static CachedSource nativeLibraryCPP = CachedSource(cpp.NATIVE_LIBRARY);
-
-  var tokenizingTime = 0.0;
-  var parsingTime = 0.0;
-  var resolvingTime = 0.0;
-  var callGraphTime = 0.0;
-  var instanceToStaticTime = 0.0;
-  var symbolMotionTime = 0.0;
-  var functionInliningTime = 0.0;
-  var constantFoldingTime = 0.0;
-  var deadCodeRemovalTime = 0.0;
-  var emitTime = 0.0;
-  var lineCountingTime = 0.0;
-  var totalTime = 0.0;
-  var log = Log();
-
-  string statistics(CompilerResult result) {
-    // Line count
-    var lineCountingStart = now();
-    var lineCount = 0;
-    lineCount += totalLineCount(result.options.prepend);
-    lineCount += totalLineCount(result.options.inputs);
-    lineCount += totalLineCount(result.options.append);
-    var text =
-      "Input line count: " + lineCount +
-      "\nOutput line count: " + totalLineCount(result.outputs);
-    lineCountingTime += now() - lineCountingStart;
-
-    // Compilation time
-    var optimizingTime = callGraphTime + instanceToStaticTime + symbolMotionTime + functionInliningTime + constantFoldingTime + deadCodeRemovalTime;
-    text += "\nTotal compile time: " + formatPositiveNumber(totalTime + lineCountingTime) + "ms";
-    if (tokenizingTime > 0) text += "\n  Tokenizing: " + formatPositiveNumber(tokenizingTime) + "ms";
-    if (parsingTime > 0) text += "\n  Parsing: " + formatPositiveNumber(parsingTime) + "ms";
-    if (resolvingTime > 0) text += "\n  Resolving: " + formatPositiveNumber(resolvingTime) + "ms";
-    if (optimizingTime > 0) {
-      text += "\n  Optimizing: " + formatPositiveNumber(optimizingTime) + "ms";
-      text += "\n    Building call graph: " + formatPositiveNumber(callGraphTime) + "ms";
-      text += "\n    Instance to static: " + formatPositiveNumber(instanceToStaticTime) + "ms";
-      text += "\n    Symbol motion: " + formatPositiveNumber(symbolMotionTime) + "ms";
-      text += "\n    Function inlining: " + formatPositiveNumber(functionInliningTime) + "ms";
-      text += "\n    Constant folding: " + formatPositiveNumber(constantFoldingTime) + "ms";
-      text += "\n    Dead code removal: " + formatPositiveNumber(deadCodeRemovalTime) + "ms";
-    }
-    if (emitTime > 0) text += "\n  Emit: " + formatPositiveNumber(emitTime) + "ms";
-    if (lineCountingTime > 0) text += "\n  Counting lines: " + formatPositiveNumber(lineCountingTime) + "ms";
-
-    // Sources
-    text += sourceStatistics("Prepend", result.options.prepend);
-    text += sourceStatistics("Inputs", result.options.inputs);
-    text += sourceStatistics("Append", result.options.append);
-    text += sourceStatistics("Outputs", result.outputs);
-    return text;
-  }
 
   static int totalLineCount(List<Source> sources) {
     var lineCount = 0;
@@ -230,7 +235,7 @@ in Compiler {
     return text;
   }
 
-  void processInput(Node program, Source source) {
+  Node processInput(Node program, Source source) {
     var errorCount = log.errorCount;
 
     // Tokenize the source
@@ -245,7 +250,10 @@ in Compiler {
       parsingTime += now() - parseStart;
       if (file != null) {
         program.appendChild(file);
+        return file;
       }
     }
+
+    return null;
   }
 }

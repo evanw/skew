@@ -92,5 +92,33 @@ import class IntMap<T> {
   List<T> values();
   IntMap<T> clone();
 }
+
+import namespace std {}
+import namespace math {}
+
+in math {
+  inline double sin(double x) { return untyped(std).sin(x); }
+  inline double cos(double x) { return untyped(std).cos(x); }
+  inline double tan(double x) { return untyped(std).tan(x); }
+  inline double asin(double x) { return untyped(std).asin(x); }
+  inline double acos(double x) { return untyped(std).acos(x); }
+  inline double atan(double x) { return untyped(std).atan(x); }
+  inline double atan2(double y, double x) { return untyped(std).atan2(y, x); }
+  inline double sqrt(double x) { return untyped(std).sqrt(x); }
+  inline double exp(double x) { return untyped(std).exp(x); }
+  inline double log(double x) { return untyped(std).log(x); }
+  inline double pow(double x, double y) { return untyped(std).pow(x, y); }
+  inline double floor(double x) { return untyped(std).floor(x); }
+  inline double round(double x) { return untyped(std).round(x); }
+  inline double ceil(double x) { return untyped(std).ceil(x); }
+  inline double min(double x, double y) { return untyped(std).fmin(x, y); }
+  inline double max(double x, double y) { return untyped(std).fmax(x, y); }
+
+  const double SQRT2 = 1.414213562373095;
+  const double PI = 3.141592653589793;
+  const double E = 2.718281828459045;
+  const double INFINITY = 1 / 0.0;
+  const double NAN = 0 / 0.0;
+}
 ";
 }

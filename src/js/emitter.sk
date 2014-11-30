@@ -700,8 +700,12 @@ namespace js {
 
     void emitDouble(Node node) {
       var wrap = node.parent.kind == .DOT && node != toStringTarget;
+      var value = node.asDouble();
       if (wrap) emit("(");
-      emit(node.asDouble().toString());
+      if (value == math.INFINITY) emit("Infinity");
+      else if (value == -math.INFINITY) emit("-Infinity");
+      else if (value != value) emit("NaN");
+      else emit(value.toString());
       if (wrap) emit(")");
     }
 

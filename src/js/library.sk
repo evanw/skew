@@ -138,5 +138,33 @@ in IntMap {
     return clone;
   }
 }
+
+import namespace Math {}
+import namespace math {}
+
+in math {
+  inline double sin(double x) { return untyped(Math).sin(x); }
+  inline double cos(double x) { return untyped(Math).cos(x); }
+  inline double tan(double x) { return untyped(Math).tan(x); }
+  inline double asin(double x) { return untyped(Math).asin(x); }
+  inline double acos(double x) { return untyped(Math).acos(x); }
+  inline double atan(double x) { return untyped(Math).atan(x); }
+  inline double atan2(double y, double x) { return untyped(Math).atan2(y, x); }
+  inline double sqrt(double x) { return untyped(Math).sqrt(x); }
+  inline double exp(double x) { return untyped(Math).exp(x); }
+  inline double log(double x) { return untyped(Math).log(x); }
+  inline double pow(double x, double y) { return untyped(Math).pow(x, y); }
+  inline double floor(double x) { return untyped(Math).floor(x); }
+  inline double round(double x) { return untyped(Math).round(x); }
+  inline double ceil(double x) { return untyped(Math).ceil(x); }
+  inline double min(double x, double y) { return untyped(Math).min(x, y); }
+  inline double max(double x, double y) { return untyped(Math).max(x, y); }
+
+  const double SQRT2 = 1.414213562373095;
+  const double PI = 3.141592653589793;
+  const double E = 2.718281828459045;
+  const double INFINITY = 1 / 0.0;
+  const double NAN = 0 / 0.0;
+}
 ";
 }

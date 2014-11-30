@@ -2806,7 +2806,7 @@ class Resolver {
   }
 
   void resolveUntyped(Node node) {
-    resolveAsParameterizedExpression(node.untypedValue());
+    resolve(node.untypedValue(), null);
   }
 
   void resolveVar(Node node) {

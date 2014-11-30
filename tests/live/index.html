@@ -15,7 +15,12 @@ div {
   margin: 20px;
 }
 
-#compileTime {
+select {
+  width: 100px;
+}
+
+#compileTime, #examples {
+  font: 12px/15px 'Lucida Grande', sans-serif;
   float: right;
 }
 
@@ -33,7 +38,7 @@ label {
 
 </style>
 <div>
-  <h2>Input</h2>
+  <h2>Input <span id="examples">Examples: <select id="exampleSelect"></select></span></h2>
   <textarea id="input" rows="10" cols="80" spellcheck="false" autofocus></textarea>
   <p>
     <span id="compileTime">Loading...</span>
@@ -64,6 +69,7 @@ function webWorker() {
       switch (e.data.format) {
         case 'js': {
           options.targetFormat = TargetFormat.JAVASCRIPT;
+          options.outputFile = e.data.js.singleFile ? '' : 'output.js';
           options.jsMinify = e.data.js.minify;
           options.jsMangle = e.data.js.mangle;
           options.jsSourceMap = e.data.js.sourceMap;
@@ -81,10 +87,10 @@ function webWorker() {
       options.inputs.push(new Source('<stdin>', e.data.input));
       var result = compiler.compile(options);
       message.log = compiler.log.toString();
-      if (result.program !== null && result.program.children.length === 2) {
-        message.tree = lisp.dump(result.program.children[1]);
-      }
-      message.code = result.outputs.map(function(output) { return output.contents; }).join('');
+      message.tree = result.files.map(lisp.dump).join('\n');
+      message.code = result.outputs.map(function(output) {
+        return output.name ? '[' + output.name + ']\n' + output.contents : output.contents;
+      }).join('\n');
     } catch (e) {
       var text = e + '';
       if (e && e.stack) {
@@ -129,12 +135,26 @@ function ui(compile) {
     target.element = element.firstChild;
     target.options.forEach(function(option) {
       var element = document.createElement('label');
-      element.innerHTML = '<input type="checkbox"> ' + option.text + ' ';
+      element.innerHTML = '<input type="checkbox"' + (option.value ? ' checked' : '') + '> ' + option.text + ' ';
       element.onchange = compile;
       optionArea.appendChild(element);
       option.element = element.firstChild;
     });
   });
+
+  examples.forEach(function(example) {
+    var element = document.createElement('option');
+    element.textContent = example.name;
+    exampleSelect.appendChild(element);
+  });
+  exampleSelect.selectedIndex = -1;
+  exampleSelect.onchange = function() {
+    if (exampleSelect.selectedIndex !== -1) {
+      input.value = examples[exampleSelect.selectedIndex].content.join('\n') + '\n';
+      input.onchange();
+    }
+    exampleSelect.selectedIndex = -1;
+  };
 
   // Try to restore settings from the previous session
   try {
@@ -146,8 +166,8 @@ function ui(compile) {
       var json = settings[target.name];
       if (json) {
         target.options.forEach(function(option) {
-          if (json[option.name]) {
-            option.element.checked = true;
+          if (option.name in json) {
+            option.element.checked = json[option.name];
           }
         });
       }
@@ -215,13 +235,100 @@ var targets = [
       { name: 'minify', text: 'Minify', value: false },
       { name: 'mangle', text: 'Mangle', value: false },
       { name: 'optimize', text: 'Optimize', value: false },
-      { name: 'sourceMap', text: 'Source Map', value: false }
-    ]
+      { name: 'sourceMap', text: 'Source Map', value: false },
+      { name: 'singleFile', text: 'Single File', value: true },
+    ],
   },
   {
     name: 'cpp',
     text: 'C++',
-    options: []
+    options: [
+      { name: 'singleFile', text: 'Single File', value: true },
+    ],
+  },
+];
+
+var examples = [
+  {
+    name: '99 bottles',
+    content: [
+      'import void print(string text);',
+      '',
+      'export void countdown() {',
+      '  for (var count = 99; count > 0; count--) {',
+      '    println(',
+      '      bottles(count) + " on the wall, " + bottles(count) + ". Take one " +',
+      '      "down and pass it around, " + bottles(count - 1) + " on the wall.");',
+      '  }',
+      '}',
+      '',
+      'void println(string text) {',
+      '  print(text + "\n");',
+      '}',
+      '',
+      'string bottles(int count) {',
+      '  return count + " bottle" + (count == 1 ? "" : "s") + " of beer";',
+      '}',
+    ],
+  },
+  {
+    name: 'Raytracer',
+    content: [
+      'export void render(int width, int height, List<int> pixels) {',
+      '  const var fov = 60;',
+      '  var origin = Vector(0, 2, 0);',
+      '  var scale = math.tan(fov / 2 * math.PI / 180) / width;',
+      '  for (var y = 0, i = 0; y < height; y++) {',
+      '    var rayY = (y * 2 + 1 - height) * scale;',
+      '    for (var x = 0; x < width; x++, i++) {',
+      '      var rayX = (x * 2 + 1 - width) * scale;',
+      '      pixels.set(i, traceRay(origin, Vector(rayX, -rayY, -1)));',
+      '    }',
+      '  }',
+      '}',
+      '',
+      'class Vector {',
+      '  double x, y, z;',
+      '  Vector scale(double s) { return Vector(x * s, y * s, z * s); }',
+      '  Vector add(Vector v) { return Vector(x + v.x, y + v.y, z + v.z); }',
+      '  Vector subtract(Vector v) { return Vector(x - v.x, y - v.y, z - v.z); }',
+      '  double dot(Vector v) { return x * v.x + y * v.y + z * v.z; }',
+      '}',
+      '',
+      'int traceRay(Vector origin, Vector ray) {',
+      '  var center = Vector(0, 1, -5);',
+      '  var radius = 1;',
+      '  var planeT = ray.y < 0 ? -origin.y / ray.y : math.INFINITY;',
+      '  var sphereT = intersectSphere(origin, ray, center, radius);',
+      '  var t = math.min(planeT, sphereT);',
+      '  if (t < math.INFINITY) {',
+      '    if (t == planeT) {',
+      '      var hit = ray.scale(planeT).add(origin);',
+      '      return (((int)math.floor(hit.x) ^ (int)math.floor(hit.z)) & 1) != 0',
+      '        ? rgb(255, 255, 255) : rgb(0, 0, 0);',
+      '    } else {',
+      '      return rgb(255, 0, 0);',
+      '    }',
+      '  }',
+      '  return rgb(0, 127, 255);',
+      '}',
+      '',
+      'double intersectSphere(Vector origin, Vector ray, Vector center, double r) {',
+      '  var offset = origin.subtract(center);',
+      '  var a = ray.dot(ray);',
+      '  var b = 2 * ray.dot(offset);',
+      '  var c = offset.dot(offset) - r * r;',
+      '  var discriminant = b * b - 4 * a * c;',
+      '  if (discriminant > 0) {',
+      '    return (-b - math.sqrt(discriminant)) / (2 * a);',
+      '  }',
+      '  return math.INFINITY;',
+      '}',
+      '',
+      'int rgb(int r, int g, int b) {',
+      '  return r | g << 8 | b << 16 | 0xFF000000;',
+      '}',
+    ],
   },
 ];
 

@@ -15,6 +15,7 @@ namespace cpp {
   class Emitter : base.Emitter {
     List<string> namespaceStack = [];
     var usedAssert = false;
+    var usedMath = false;
     Pass pass = .NONE;
 
     override string extension() {
@@ -42,6 +43,7 @@ namespace cpp {
       // Prepend the necessary headers after all code has been emitted
       var headers = "";
       if (usedAssert) headers += "#include <cassert>\n";
+      if (usedMath) headers += "#include <cmath>\n";
       if (headers != "") output.contents = headers + "\n" + output.contents;
     }
 
@@ -262,9 +264,21 @@ namespace cpp {
     }
 
     override void emitReal(Node node) {
-      super(node);
-      if (node.kind == .FLOAT) {
-        emit("f");
+      var value = node.asDouble();
+      if (value == math.INFINITY) {
+        usedMath = true;
+        emit("INFINITY");
+      } else if (value == -math.INFINITY) {
+        usedMath = true;
+        emit("-INFINITY");
+      } else if (value != value) {
+        usedMath = true;
+        emit("NAN");
+      } else {
+        super(node);
+        if (node.kind == .FLOAT) {
+          emit("f");
+        }
       }
     }
 

@@ -162,8 +162,8 @@ string joinPath(string directory, string entry) {
   return directory + "/" + entry;
 }
 
-string formatPositiveNumber(double number) {
-  return ((int)(number * 10 + 0.5) / 10).toString();
+string formatNumber(double number) {
+  return (math.round(number * 10) / 10).toString();
 }
 
 enum ByteSize {
@@ -175,9 +175,9 @@ enum ByteSize {
 string bytesToString(int bytes) {
   if (bytes == 1) return "1 byte";
   if (bytes < ByteSize.KB) return bytes + " bytes";
-  if (bytes < ByteSize.MB) return formatPositiveNumber(bytes / (double)ByteSize.KB) + "kb";
-  if (bytes < ByteSize.GB) return formatPositiveNumber(bytes / (double)ByteSize.MB) + "mb";
-  return formatPositiveNumber(bytes / (double)ByteSize.GB) + "gb";
+  if (bytes < ByteSize.MB) return formatNumber(bytes / (double)ByteSize.KB) + "kb";
+  if (bytes < ByteSize.GB) return formatNumber(bytes / (double)ByteSize.MB) + "mb";
+  return formatNumber(bytes / (double)ByteSize.GB) + "gb";
 }
 
 namespace trace {

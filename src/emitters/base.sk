@@ -1,5 +1,6 @@
 namespace base {
   class Emitter : IEmitter {
+    CompilerOptions options = null;
     NodeKind previousKind = .NULL;
     StringMap<bool> isKeyword = null;
     List<Source> outputs = [];
@@ -13,8 +14,9 @@ namespace base {
 
     override List<Source> emitProgram(Node program) {
       cache = resolver.cache;
+      options = resolver.options;
       isKeyword = createIsKeyword();
-      output = Source("output." + extension(), "");
+      output = Source(options.outputFile, "");
       outputs.push(output);
       visitProgram(program);
       return outputs;

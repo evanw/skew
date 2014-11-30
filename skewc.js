@@ -1803,11 +1803,12 @@
     this.inlineAllFunctions = false;
     this.convertAllInstanceToStatic = false;
   };
-  CompilerResult = function(_0, _1, _2, _3) {
+  CompilerResult = function(_0, _1, _2, _3, _4) {
     this.options = _0;
     this.outputs = _1;
-    this.program = _2;
-    this.resolver = _3;
+    this.files = _2;
+    this.program = _3;
+    this.resolver = _4;
   };
   function CachedSource(_0) {
     this.source = null;
@@ -1820,7 +1821,7 @@
       this.source = new Source('<native>', this.contents);
       compiler.processInput(program, this.source);
       if (!(program.children.length > 0)) {
-        throw new Error('assert program.children.size() > 0; (src/compiler/compiler.sk:56:7)');
+        throw new Error('assert program.children.size() > 0; (src/compiler/compiler.sk:57:7)');
       }
       this.file = program.children[0];
     }
@@ -1842,10 +1843,51 @@
     this.totalTime = 0;
     this.log = new Log();
   };
+  Compiler.prototype.statistics = function(result) {
+    var lineCountingStart = now();
+    var lineCount = 0;
+    lineCount = lineCount + Compiler.totalLineCount(result.options.prepend) | 0;
+    lineCount = lineCount + Compiler.totalLineCount(result.options.inputs) | 0;
+    lineCount = lineCount + Compiler.totalLineCount(result.options.append) | 0;
+    var text = 'Input line count: ' + lineCount + '\nOutput line count: ' + Compiler.totalLineCount(result.outputs);
+    this.lineCountingTime += now() - lineCountingStart;
+    var optimizingTime = this.callGraphTime + this.instanceToStaticTime + this.symbolMotionTime + this.functionInliningTime + this.constantFoldingTime + this.deadCodeRemovalTime;
+    text += '\nTotal compile time: ' + formatNumber(this.totalTime + this.lineCountingTime) + 'ms';
+    if (this.tokenizingTime > 0) {
+      text += '\n  Tokenizing: ' + formatNumber(this.tokenizingTime) + 'ms';
+    }
+    if (this.parsingTime > 0) {
+      text += '\n  Parsing: ' + formatNumber(this.parsingTime) + 'ms';
+    }
+    if (this.resolvingTime > 0) {
+      text += '\n  Resolving: ' + formatNumber(this.resolvingTime) + 'ms';
+    }
+    if (optimizingTime > 0) {
+      text += '\n  Optimizing: ' + formatNumber(optimizingTime) + 'ms';
+      text += '\n    Building call graph: ' + formatNumber(this.callGraphTime) + 'ms';
+      text += '\n    Instance to static: ' + formatNumber(this.instanceToStaticTime) + 'ms';
+      text += '\n    Symbol motion: ' + formatNumber(this.symbolMotionTime) + 'ms';
+      text += '\n    Function inlining: ' + formatNumber(this.functionInliningTime) + 'ms';
+      text += '\n    Constant folding: ' + formatNumber(this.constantFoldingTime) + 'ms';
+      text += '\n    Dead code removal: ' + formatNumber(this.deadCodeRemovalTime) + 'ms';
+    }
+    if (this.emitTime > 0) {
+      text += '\n  Emit: ' + formatNumber(this.emitTime) + 'ms';
+    }
+    if (this.lineCountingTime > 0) {
+      text += '\n  Counting lines: ' + formatNumber(this.lineCountingTime) + 'ms';
+    }
+    text += Compiler.sourceStatistics('Prepend', result.options.prepend);
+    text += Compiler.sourceStatistics('Inputs', result.options.inputs);
+    text += Compiler.sourceStatistics('Append', result.options.append);
+    text += Compiler.sourceStatistics('Outputs', result.outputs);
+    return text;
+  };
   Compiler.prototype.compile = function(options) {
     var totalStart = now();
     var program = Node.createProgram([]);
     var outputs = [];
+    var files = [];
     createOperatorMap();
     createParser();
     createNameToSymbolFlag();
@@ -1862,7 +1904,10 @@
       break;
     }
     for (var i = 1; i < options.inputs.length; i = i + 1 | 0) {
-      this.processInput(program, options.inputs[i]);
+      var file = this.processInput(program, options.inputs[i]);
+      if (file !== null) {
+        files.push(file);
+      }
     }
     var resolver = null;
     if (in_TargetFormat.shouldRunResolver(options.targetFormat)) {
@@ -1914,7 +1959,7 @@
         emitter = new xml.Emitter(options);
         break;
       default:
-        throw new Error('assert false; (src/compiler/compiler.sk:140:19)');
+        throw new Error('assert false; (src/compiler/compiler.sk:197:19)');
         break;
       }
       if (emitter !== null) {
@@ -1924,47 +1969,7 @@
       }
     }
     this.totalTime += now() - totalStart;
-    return new CompilerResult(options, outputs, program, resolver);
-  };
-  Compiler.prototype.statistics = function(result) {
-    var lineCountingStart = now();
-    var lineCount = 0;
-    lineCount = lineCount + Compiler.totalLineCount(result.options.prepend) | 0;
-    lineCount = lineCount + Compiler.totalLineCount(result.options.inputs) | 0;
-    lineCount = lineCount + Compiler.totalLineCount(result.options.append) | 0;
-    var text = 'Input line count: ' + lineCount + '\nOutput line count: ' + Compiler.totalLineCount(result.outputs);
-    this.lineCountingTime += now() - lineCountingStart;
-    var optimizingTime = this.callGraphTime + this.instanceToStaticTime + this.symbolMotionTime + this.functionInliningTime + this.constantFoldingTime + this.deadCodeRemovalTime;
-    text += '\nTotal compile time: ' + formatPositiveNumber(this.totalTime + this.lineCountingTime) + 'ms';
-    if (this.tokenizingTime > 0) {
-      text += '\n  Tokenizing: ' + formatPositiveNumber(this.tokenizingTime) + 'ms';
-    }
-    if (this.parsingTime > 0) {
-      text += '\n  Parsing: ' + formatPositiveNumber(this.parsingTime) + 'ms';
-    }
-    if (this.resolvingTime > 0) {
-      text += '\n  Resolving: ' + formatPositiveNumber(this.resolvingTime) + 'ms';
-    }
-    if (optimizingTime > 0) {
-      text += '\n  Optimizing: ' + formatPositiveNumber(optimizingTime) + 'ms';
-      text += '\n    Building call graph: ' + formatPositiveNumber(this.callGraphTime) + 'ms';
-      text += '\n    Instance to static: ' + formatPositiveNumber(this.instanceToStaticTime) + 'ms';
-      text += '\n    Symbol motion: ' + formatPositiveNumber(this.symbolMotionTime) + 'ms';
-      text += '\n    Function inlining: ' + formatPositiveNumber(this.functionInliningTime) + 'ms';
-      text += '\n    Constant folding: ' + formatPositiveNumber(this.constantFoldingTime) + 'ms';
-      text += '\n    Dead code removal: ' + formatPositiveNumber(this.deadCodeRemovalTime) + 'ms';
-    }
-    if (this.emitTime > 0) {
-      text += '\n  Emit: ' + formatPositiveNumber(this.emitTime) + 'ms';
-    }
-    if (this.lineCountingTime > 0) {
-      text += '\n  Counting lines: ' + formatPositiveNumber(this.lineCountingTime) + 'ms';
-    }
-    text += Compiler.sourceStatistics('Prepend', result.options.prepend);
-    text += Compiler.sourceStatistics('Inputs', result.options.inputs);
-    text += Compiler.sourceStatistics('Append', result.options.append);
-    text += Compiler.sourceStatistics('Outputs', result.outputs);
-    return text;
+    return new CompilerResult(options, outputs, files, program, resolver);
   };
   Compiler.totalLineCount = function(sources) {
     var lineCount = 0;
@@ -1996,8 +2001,10 @@
       this.parsingTime += now() - parseStart;
       if (file !== null) {
         program.appendChild(file);
+        return file;
       }
     }
+    return null;
   };
   var DiagnosticKind = {
     ERROR: 0,
@@ -2230,6 +2237,7 @@
   };
   var base = {};
   base.Emitter = function(_0) {
+    this.options = null;
     this.previousKind = NodeKind.NULL;
     this.isKeyword = null;
     this.outputs = [];
@@ -2240,8 +2248,9 @@
   };
   base.Emitter.prototype.emitProgram = function(program) {
     this.cache = this.resolver.cache;
+    this.options = this.resolver.options;
     this.isKeyword = this.createIsKeyword();
-    this.output = new Source('output.' + this.extension(), '');
+    this.output = new Source(this.options.outputFile, '');
     this.outputs.push(this.output);
     this.visitProgram(program);
     return this.outputs;
@@ -2422,7 +2431,7 @@
       this.emitVariable(node.symbol);
       break;
     default:
-      throw new Error('assert false; (src/emitters/base.sk:183:19)');
+      throw new Error('assert false; (src/emitters/base.sk:185:19)');
       break;
     }
   };
@@ -2635,7 +2644,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/emitters/base.sk:367:16)');
+        throw new Error('assert false; (src/emitters/base.sk:369:16)');
       }
       break;
     }
@@ -2651,10 +2660,10 @@
   base.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
     if (!(values.length > 1)) {
-      throw new Error('assert values.size() > 1; (src/emitters/base.sk:381:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/base.sk:383:7)');
     }
     if (node.parent.kind !== NodeKind.EXPRESSION && node.parent.kind !== NodeKind.FOR) {
-      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:382:7)');
+      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:384:7)');
     }
     if (Precedence.COMMA <= precedence) {
       this.emit('(');
@@ -2822,7 +2831,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:541:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:543:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -2859,12 +2868,10 @@
     base.Emitter.call(this, _0);
     this.namespaceStack = [];
     this.usedAssert = false;
+    this.usedMath = false;
     this.pass = cpp.Pass.NONE;
   };
   $extends(cpp.Emitter, base.Emitter);
-  cpp.Emitter.prototype.extension = function() {
-    return 'cpp';
-  };
   cpp.Emitter.prototype.visitProgram = function(node) {
     var collector = new Collector(node, SortTypes.SORT_BY_INHERITANCE_AND_CONTAINMENT);
     this.pass = cpp.Pass.FORWARD_DECLARE_TYPES;
@@ -2881,6 +2888,9 @@
     var headers = '';
     if (this.usedAssert) {
       headers += '#include <cassert>\n';
+    }
+    if (this.usedMath) {
+      headers += '#include <cmath>\n';
     }
     if (headers !== '') {
       this.output.contents = headers + '\n' + this.output.contents;
@@ -3095,9 +3105,21 @@
     this.emit('nullptr');
   };
   cpp.Emitter.prototype.emitReal = function(node) {
-    base.Emitter.prototype.emitReal.call(this, node);
-    if (node.kind === NodeKind.FLOAT) {
-      this.emit('f');
+    var value = node.asDouble();
+    if (value === in_math.INFINITY) {
+      this.usedMath = true;
+      this.emit('INFINITY');
+    } else if (value === -in_math.INFINITY) {
+      this.usedMath = true;
+      this.emit('-INFINITY');
+    } else if (value !== value) {
+      this.usedMath = true;
+      this.emit('NAN');
+    } else {
+      base.Emitter.prototype.emitReal.call(this, node);
+      if (node.kind === NodeKind.FLOAT) {
+        this.emit('f');
+      }
     }
   };
   cpp.Emitter.needsWrappedStringConstructor = function(node) {
@@ -4267,10 +4289,19 @@
   };
   js.Emitter.prototype.emitDouble = function(node) {
     var wrap = node.parent.kind === NodeKind.DOT && node !== this.toStringTarget;
+    var value = node.asDouble();
     if (wrap) {
       this.emit('(');
     }
-    this.emit(node.asDouble().toString());
+    if (value === in_math.INFINITY) {
+      this.emit('Infinity');
+    } else if (value === -in_math.INFINITY) {
+      this.emit('-Infinity');
+    } else if (value !== value) {
+      this.emit('NaN');
+    } else {
+      this.emit(value.toString());
+    }
     if (wrap) {
       this.emit(')');
     }
@@ -8962,7 +8993,7 @@
     node.type = type.type;
   };
   Resolver.prototype.resolveUntyped = function(node) {
-    this.resolveAsParameterizedExpression(node.untypedValue());
+    this.resolve(node.untypedValue(), null);
   };
   Resolver.prototype.resolveVar = function(node) {
     semanticErrorUnexpectedNode(this.log, node.range, node.kind);
@@ -9904,6 +9935,7 @@
   };
   var in_string = {};
   var in_List = {};
+  var in_math = {};
   var in_NodeKind = {};
   var in_TargetFormat = {};
   var in_int = {};
@@ -10208,8 +10240,8 @@
   function joinPath(directory, entry) {
     return directory + '/' + entry;
   }
-  function formatPositiveNumber(number) {
-    return ((number * 10 + 0.5 | 0) / 10 | 0).toString();
+  function formatNumber(number) {
+    return (Math.round(number * 10) / 10).toString();
   }
   function bytesToString(bytes) {
     if (bytes === 1) {
@@ -10219,12 +10251,12 @@
       return bytes + ' bytes';
     }
     if (bytes < ByteSize.MB) {
-      return formatPositiveNumber(bytes / ByteSize.KB) + 'kb';
+      return formatNumber(bytes / ByteSize.KB) + 'kb';
     }
     if (bytes < ByteSize.GB) {
-      return formatPositiveNumber(bytes / ByteSize.MB) + 'mb';
+      return formatNumber(bytes / ByteSize.MB) + 'mb';
     }
-    return formatPositiveNumber(bytes / ByteSize.GB) + 'gb';
+    return formatNumber(bytes / ByteSize.GB) + 'gb';
   }
   trace.indent = function() {
   };
@@ -12204,13 +12236,14 @@
       return '';
     }
   };
+  in_math.INFINITY = Infinity;
   var operatorInfo = null;
-  var NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\nimport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n';
+  var NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\nimport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nimport namespace math {\n  double sin(double x);\n  double cos(double x);\n  double tan(double x);\n  double asin(double x);\n  double acos(double x);\n  double atan(double x);\n  double atan2(double y, double x);\n  double sqrt(double x);\n  double exp(double x);\n  double log(double x);\n  double pow(double x, double y);\n  double floor(double x);\n  double round(double x);\n  double ceil(double x);\n  double min(double x, double y);\n  double max(double x, double y);\n}\n\nin math {\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n';
   var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   var HEX = '0123456789ABCDEF';
   trace.GENERICS = false;
-  cpp.NATIVE_LIBRARY = '\nimport void cpp_toString();\nimport string cpp_fromCodeUnit(int value);\nimport string cpp_toLowerCase(string value);\nimport string cpp_toUpperCase(string value);\n\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin double {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin string {\n  inline {\n    int size() { return (int)untyped(this).size(); }\n    string slice(int start, int end) { return untyped(this).substr(start, end - start); }\n    int indexOf(string value) { return (int)untyped(this).find(value); }\n    int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }\n    string toLowerCase() { return cpp_toLowerCase(this); }\n    string toUpperCase() { return cpp_toUpperCase(this); }\n    static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return untyped(this)[index]; }\n  }\n  string join(List<string> values) { var result = ""; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n';
-  js.NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class String {\n  static string fromCharCode(int value);\n}\n\nimport class Object {\n  static Object create(Object prototype);\n}\n\nimport namespace operators {\n  void delete(int value);\n  void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return untyped(this).length; }\n    static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n    string get(int index) { return untyped(this)[index]; }\n    string join(List<string> values) { return untyped(values).join(this); }\n    int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return untyped(this).length; }\n    void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n    List<T> clone() { return untyped(this).slice(); }\n    T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n    void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n    T get(int index) { return untyped(this)[index]; }\n    void set(int index, T value) { untyped(this)[index] = value; }\n    void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n  }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n}\n\nin StringMap {\n  inline {\n    T get(string key) { return untyped(table)[key]; }\n    void set(string key, T value) { untyped(table)[key] = value; }\n    bool has(string key) { return key in untyped(table); }\n    void remove(string key) { operators.delete(untyped(table)[key]); }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n}\n\nin IntMap {\n  inline {\n    T get(int key) { return untyped(table)[key]; }\n    void set(int key, T value) { untyped(table)[key] = value; }\n    bool has(int key) { return key in untyped(table); }\n    void remove(int key) { operators.delete(untyped(table)[key]); }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n';
+  cpp.NATIVE_LIBRARY = '\nimport void cpp_toString();\nimport string cpp_fromCodeUnit(int value);\nimport string cpp_toLowerCase(string value);\nimport string cpp_toUpperCase(string value);\n\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin double {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin string {\n  inline {\n    int size() { return (int)untyped(this).size(); }\n    string slice(int start, int end) { return untyped(this).substr(start, end - start); }\n    int indexOf(string value) { return (int)untyped(this).find(value); }\n    int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }\n    string toLowerCase() { return cpp_toLowerCase(this); }\n    string toUpperCase() { return cpp_toUpperCase(this); }\n    static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return untyped(this)[index]; }\n  }\n  string join(List<string> values) { var result = ""; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nimport namespace std {}\nimport namespace math {}\n\nin math {\n  inline double sin(double x) { return untyped(std).sin(x); }\n  inline double cos(double x) { return untyped(std).cos(x); }\n  inline double tan(double x) { return untyped(std).tan(x); }\n  inline double asin(double x) { return untyped(std).asin(x); }\n  inline double acos(double x) { return untyped(std).acos(x); }\n  inline double atan(double x) { return untyped(std).atan(x); }\n  inline double atan2(double y, double x) { return untyped(std).atan2(y, x); }\n  inline double sqrt(double x) { return untyped(std).sqrt(x); }\n  inline double exp(double x) { return untyped(std).exp(x); }\n  inline double log(double x) { return untyped(std).log(x); }\n  inline double pow(double x, double y) { return untyped(std).pow(x, y); }\n  inline double floor(double x) { return untyped(std).floor(x); }\n  inline double round(double x) { return untyped(std).round(x); }\n  inline double ceil(double x) { return untyped(std).ceil(x); }\n  inline double min(double x, double y) { return untyped(std).fmin(x, y); }\n  inline double max(double x, double y) { return untyped(std).fmax(x, y); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n';
+  js.NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class String {\n  static string fromCharCode(int value);\n}\n\nimport class Object {\n  static Object create(Object prototype);\n}\n\nimport namespace operators {\n  void delete(int value);\n  void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return untyped(this).length; }\n    static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n    string get(int index) { return untyped(this)[index]; }\n    string join(List<string> values) { return untyped(values).join(this); }\n    int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return untyped(this).length; }\n    void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n    List<T> clone() { return untyped(this).slice(); }\n    T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n    void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n    T get(int index) { return untyped(this)[index]; }\n    void set(int index, T value) { untyped(this)[index] = value; }\n    void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n  }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n}\n\nin StringMap {\n  inline {\n    T get(string key) { return untyped(table)[key]; }\n    void set(string key, T value) { untyped(table)[key] = value; }\n    bool has(string key) { return key in untyped(table); }\n    void remove(string key) { operators.delete(untyped(table)[key]); }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n}\n\nin IntMap {\n  inline {\n    T get(int key) { return untyped(table)[key]; }\n    void set(int key, T value) { untyped(table)[key] = value; }\n    bool has(int key) { return key in untyped(table); }\n    void remove(int key) { operators.delete(untyped(table)[key]); }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace Math {}\nimport namespace math {}\n\nin math {\n  inline double sin(double x) { return untyped(Math).sin(x); }\n  inline double cos(double x) { return untyped(Math).cos(x); }\n  inline double tan(double x) { return untyped(Math).tan(x); }\n  inline double asin(double x) { return untyped(Math).asin(x); }\n  inline double acos(double x) { return untyped(Math).acos(x); }\n  inline double atan(double x) { return untyped(Math).atan(x); }\n  inline double atan2(double y, double x) { return untyped(Math).atan2(y, x); }\n  inline double sqrt(double x) { return untyped(Math).sqrt(x); }\n  inline double exp(double x) { return untyped(Math).exp(x); }\n  inline double log(double x) { return untyped(Math).log(x); }\n  inline double pow(double x, double y) { return untyped(Math).pow(x, y); }\n  inline double floor(double x) { return untyped(Math).floor(x); }\n  inline double round(double x) { return untyped(Math).round(x); }\n  inline double ceil(double x) { return untyped(Math).ceil(x); }\n  inline double min(double x, double y) { return untyped(Math).min(x, y); }\n  inline double max(double x, double y) { return untyped(Math).max(x, y); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n';
   var yy_accept = [95, 95, 95, 31, 34, 94, 65, 34, 74, 13, 34, 56, 78, 62, 69, 21, 61, 28, 26, 50, 50, 20, 79, 57, 2, 40, 73, 42, 55, 77, 15, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 54, 14, 76, 87, 94, 66, 95, 83, 95, 10, 59, 3, 95, 18, 95, 8, 46, 9, 24, 7, 94, 6, 95, 50, 95, 38, 95, 95, 80, 58, 33, 41, 81, 42, 5, 42, 42, 42, 42, 42, 42, 42, 27, 42, 42, 42, 42, 42, 42, 43, 42, 45, 53, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 4, 60, 94, 29, 49, 52, 51, 11, 12, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 39, 42, 42, 42, 42, 64, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 91, 42, 42, 38, 42, 42, 42, 17, 42, 42, 42, 42, 30, 32, 42, 42, 42, 42, 42, 42, 42, 67, 42, 42, 42, 42, 42, 42, 42, 42, 86, 88, 42, 42, 42, 42, 0, 42, 16, 19, 22, 42, 42, 42, 36, 37, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 84, 42, 42, 90, 42, 93, 1, 42, 42, 35, 44, 47, 42, 42, 42, 42, 42, 72, 75, 82, 85, 42, 42, 42, 25, 42, 42, 42, 70, 42, 89, 92, 23, 42, 42, 68, 42, 48, 63, 71, 95];
   var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 1, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 32, 28, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 28, 42, 43, 44, 45, 46, 47, 28, 48, 49, 50, 51, 52, 53, 54, 55, 28, 56, 57, 58, 59, 1];
   var yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1];
@@ -12221,9 +12254,9 @@
   var pratt = null;
   var nameToSymbolFlag = null;
   var symbolFlagToName = null;
-  Compiler.nativeLibrary = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\nimport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n');
-  Compiler.nativeLibraryJS = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class String {\n  static string fromCharCode(int value);\n}\n\nimport class Object {\n  static Object create(Object prototype);\n}\n\nimport namespace operators {\n  void delete(int value);\n  void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return untyped(this).length; }\n    static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n    string get(int index) { return untyped(this)[index]; }\n    string join(List<string> values) { return untyped(values).join(this); }\n    int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return untyped(this).length; }\n    void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n    List<T> clone() { return untyped(this).slice(); }\n    T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n    void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n    T get(int index) { return untyped(this)[index]; }\n    void set(int index, T value) { untyped(this)[index] = value; }\n    void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n  }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n}\n\nin StringMap {\n  inline {\n    T get(string key) { return untyped(table)[key]; }\n    void set(string key, T value) { untyped(table)[key] = value; }\n    bool has(string key) { return key in untyped(table); }\n    void remove(string key) { operators.delete(untyped(table)[key]); }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n}\n\nin IntMap {\n  inline {\n    T get(int key) { return untyped(table)[key]; }\n    void set(int key, T value) { untyped(table)[key] = value; }\n    bool has(int key) { return key in untyped(table); }\n    void remove(int key) { operators.delete(untyped(table)[key]); }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n');
-  Compiler.nativeLibraryCPP = new CachedSource('\nimport void cpp_toString();\nimport string cpp_fromCodeUnit(int value);\nimport string cpp_toLowerCase(string value);\nimport string cpp_toUpperCase(string value);\n\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin double {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin string {\n  inline {\n    int size() { return (int)untyped(this).size(); }\n    string slice(int start, int end) { return untyped(this).substr(start, end - start); }\n    int indexOf(string value) { return (int)untyped(this).find(value); }\n    int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }\n    string toLowerCase() { return cpp_toLowerCase(this); }\n    string toUpperCase() { return cpp_toUpperCase(this); }\n    static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return untyped(this)[index]; }\n  }\n  string join(List<string> values) { var result = ""; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n');
+  Compiler.nativeLibrary = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\nimport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nimport namespace math {\n  double sin(double x);\n  double cos(double x);\n  double tan(double x);\n  double asin(double x);\n  double acos(double x);\n  double atan(double x);\n  double atan2(double y, double x);\n  double sqrt(double x);\n  double exp(double x);\n  double log(double x);\n  double pow(double x, double y);\n  double floor(double x);\n  double round(double x);\n  double ceil(double x);\n  double min(double x, double y);\n  double max(double x, double y);\n}\n\nin math {\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n');
+  Compiler.nativeLibraryJS = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class String {\n  static string fromCharCode(int value);\n}\n\nimport class Object {\n  static Object create(Object prototype);\n}\n\nimport namespace operators {\n  void delete(int value);\n  void sort<T>(List<T> list, IComparison<T> comparison);\n}\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return untyped(this).length; }\n    static string fromCodeUnit(int value) { return String.fromCharCode(value); }\n    string get(int index) { return untyped(this)[index]; }\n    string join(List<string> values) { return untyped(values).join(this); }\n    int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return untyped(this).length; }\n    void sort(IComparison<T> comparison) { operators.sort<T>(this, comparison); }\n    List<T> clone() { return untyped(this).slice(); }\n    T remove(int index) { return untyped(this).splice(index, 1)[0]; }\n    void insert(int index, T value) { untyped(this).splice(index, 0, value); }\n    T get(int index) { return untyped(this)[index]; }\n    void set(int index, T value) { untyped(this)[index] = value; }\n    void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n  }\n}\n\nclass StringMap<T> {\n  Object table = Object.create(null);\n}\n\nin StringMap {\n  inline {\n    T get(string key) { return untyped(table)[key]; }\n    void set(string key, T value) { untyped(table)[key] = value; }\n    bool has(string key) { return key in untyped(table); }\n    void remove(string key) { operators.delete(untyped(table)[key]); }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(table)) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  Object table = Object.create(null);\n}\n\nin IntMap {\n  inline {\n    T get(int key) { return untyped(table)[key]; }\n    void set(int key, T value) { untyped(table)[key] = value; }\n    bool has(int key) { return key in untyped(table); }\n    void remove(int key) { operators.delete(untyped(table)[key]); }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(table)) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(table)) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(table)) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace Math {}\nimport namespace math {}\n\nin math {\n  inline double sin(double x) { return untyped(Math).sin(x); }\n  inline double cos(double x) { return untyped(Math).cos(x); }\n  inline double tan(double x) { return untyped(Math).tan(x); }\n  inline double asin(double x) { return untyped(Math).asin(x); }\n  inline double acos(double x) { return untyped(Math).acos(x); }\n  inline double atan(double x) { return untyped(Math).atan(x); }\n  inline double atan2(double y, double x) { return untyped(Math).atan2(y, x); }\n  inline double sqrt(double x) { return untyped(Math).sqrt(x); }\n  inline double exp(double x) { return untyped(Math).exp(x); }\n  inline double log(double x) { return untyped(Math).log(x); }\n  inline double pow(double x, double y) { return untyped(Math).pow(x, y); }\n  inline double floor(double x) { return untyped(Math).floor(x); }\n  inline double round(double x) { return untyped(Math).round(x); }\n  inline double ceil(double x) { return untyped(Math).ceil(x); }\n  inline double min(double x, double y) { return untyped(Math).min(x, y); }\n  inline double max(double x, double y) { return untyped(Math).max(x, y); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n');
+  Compiler.nativeLibraryCPP = new CachedSource('\nimport void cpp_toString();\nimport string cpp_fromCodeUnit(int value);\nimport string cpp_toLowerCase(string value);\nimport string cpp_toUpperCase(string value);\n\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin double {\n  inline string toString() { return untyped(cpp_toString)(this); }\n}\n\nin string {\n  inline {\n    int size() { return (int)untyped(this).size(); }\n    string slice(int start, int end) { return untyped(this).substr(start, end - start); }\n    int indexOf(string value) { return (int)untyped(this).find(value); }\n    int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }\n    string toLowerCase() { return cpp_toLowerCase(this); }\n    string toUpperCase() { return cpp_toUpperCase(this); }\n    static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return untyped(this)[index]; }\n  }\n  string join(List<string> values) { var result = ""; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport interface IComparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(IComparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nimport namespace std {}\nimport namespace math {}\n\nin math {\n  inline double sin(double x) { return untyped(std).sin(x); }\n  inline double cos(double x) { return untyped(std).cos(x); }\n  inline double tan(double x) { return untyped(std).tan(x); }\n  inline double asin(double x) { return untyped(std).asin(x); }\n  inline double acos(double x) { return untyped(std).acos(x); }\n  inline double atan(double x) { return untyped(std).atan(x); }\n  inline double atan2(double y, double x) { return untyped(std).atan2(y, x); }\n  inline double sqrt(double x) { return untyped(std).sqrt(x); }\n  inline double exp(double x) { return untyped(std).exp(x); }\n  inline double log(double x) { return untyped(std).log(x); }\n  inline double pow(double x, double y) { return untyped(std).pow(x, y); }\n  inline double floor(double x) { return untyped(std).floor(x); }\n  inline double round(double x) { return untyped(std).round(x); }\n  inline double ceil(double x) { return untyped(std).ceil(x); }\n  inline double min(double x, double y) { return untyped(std).fmin(x, y); }\n  inline double max(double x, double y) { return untyped(std).fmax(x, y); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n');
   Range.EMPTY = new Range(null, 0, 0);
   ByteSize.KB = 1024;
   ByteSize.MB = 1048576;
