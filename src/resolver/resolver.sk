@@ -340,7 +340,7 @@ class Resolver {
         // Resolve the namespace as an absolute name
         var value = statement.usingValue();
         resolveGlobalUsingValue(value);
-        if (value.type.isError(cache)) {
+        if (value.type.isIgnored(cache)) {
           continue;
         }
         var symbol = value.type.symbol;
@@ -548,21 +548,29 @@ class Resolver {
   }
 
   void checkIsParameterized(Node node) {
-    if (!node.type.isError(cache) && node.type.hasParameters() && !node.type.isParameterized()) {
+    if (!node.type.isIgnored(cache) && node.type.hasParameters() && !node.type.isParameterized()) {
       semanticErrorUnparameterizedType(log, node.range, node.type);
       node.type = cache.errorType;
     }
   }
 
   void checkIsType(Node node) {
-    if (!node.type.isError(cache) && !node.kind.isType()) {
+    if (node.kind == .UNTYPED) {
+      var symbol = createSymbol("<untyped>", .UNTYPED);
+      symbol.node = node.typeHoleValue();
+      symbol.type = Type(symbol);
+      node.kind = .TYPE;
+      node.type = symbol.type;
+    }
+
+    else if (!node.type.isIgnored(cache) && !node.kind.isType()) {
       semanticErrorUnexpectedExpression(log, node.range, node.type);
       node.type = cache.errorType;
     }
   }
 
   void checkIsInstance(Node node) {
-    if (!node.type.isError(cache) && node.kind.isType()) {
+    if (!node.type.isIgnored(cache) && node.kind.isType()) {
       semanticErrorUnexpectedType(log, node.range, node.type);
       node.type = cache.errorType;
     }
@@ -590,13 +598,13 @@ class Resolver {
       if (node.hasChildren()) {
         checkUnusedExpression(node.lastChild());
       }
-    } else if (!node.type.isError(cache) && !kind.isCall() && !kind.isUnaryStorageOperator() && !kind.isBinaryStorageOperator()) {
+    } else if (!node.type.isIgnored(cache) && !kind.isCall() && !kind.isUnaryStorageOperator() && !kind.isBinaryStorageOperator()) {
       semanticWarningUnusedExpression(log, node.range);
     }
   }
 
   void checkStorage(Node node) {
-    if (node.type.isError(cache)) {
+    if (node.type.isIgnored(cache)) {
       return;
     }
 
@@ -630,7 +638,7 @@ class Resolver {
     assert to != null;
 
     // Avoid reporting further errors
-    if (from.isError(cache) || to.isError(cache)) {
+    if (from.isIgnored(cache) || to.isIgnored(cache)) {
       return;
     }
 
@@ -841,7 +849,7 @@ class Resolver {
     if (type.isDouble(cache)) return Node.createDouble(0.0).withType(type);
     if (type.isString(cache)) return Node.createString("").withType(type);
     if (type.isEnum()) return Node.createInt(0).withType(type);
-    if (!type.isError(cache)) semanticErrorNoDefaultValue(log, range, type);
+    if (!type.isIgnored(cache)) semanticErrorNoDefaultValue(log, range, type);
     return Node.createError().withType(cache.errorType);
   }
 
@@ -898,7 +906,7 @@ class Resolver {
       var baseType = base.type;
 
       // Avoid reporting further errors
-      if (baseType.isError(cache)) {
+      if (baseType.isIgnored(cache)) {
         continue;
       }
 
@@ -1099,7 +1107,7 @@ class Resolver {
       initializeMember(overriddenMember);
       var base = overriddenMember.type;
       var derived = symbol.type;
-      if (!base.isError(cache) && !derived.isError(cache)) {
+      if (!base.isIgnored(cache) && !derived.isIgnored(cache)) {
         var overriddenSymbol = overriddenMember.symbol;
 
         // Functions can only override other functions
@@ -1191,7 +1199,7 @@ class Resolver {
             symbol.constant = variableValue.content;
           } else {
             variableType = Node.createType(cache.errorType);
-            if (!variableValue.type.isError(cache)) {
+            if (!variableValue.type.isIgnored(cache)) {
               semanticErrorBadIntegerConstant(log, variableValue.range, variableValue.type);
             }
           }
@@ -1203,7 +1211,7 @@ class Resolver {
           if (index > 0) {
             var previous = node.parent.children.get(index - 1).symbol;
             initializeSymbol(previous);
-            if (!previous.type.isError(cache)) {
+            if (!previous.type.isIgnored(cache)) {
               var constant = previous.constant.asInt();
               var value = type.isEnumFlags() ? constant * 2.0 : constant + 1.0;
               if (value == (int)value) {
@@ -1264,7 +1272,7 @@ class Resolver {
       initializeMember(overriddenMember);
       var base = overriddenMember.type;
       var derived = symbol.type;
-      if (!base.isError(cache) && !derived.isError(cache)) {
+      if (!base.isIgnored(cache) && !derived.isIgnored(cache)) {
         semanticErrorBadOverride(log, node.declarationName().range, symbol.name,
           overriddenMember.symbol.enclosingSymbol.type, overriddenMember.symbol.node.declarationName().range);
       }
@@ -1280,7 +1288,7 @@ class Resolver {
         constantFolder.foldConstants(value);
         if (value.kind.isConstant()) {
           symbol.constant = value.content;
-        } else if (!value.type.isError(cache) && !symbol.type.isError(cache)) {
+        } else if (!value.type.isIgnored(cache) && !symbol.type.isIgnored(cache)) {
           semanticErrorNonConstantConstValue(log, value.range);
           value.type = cache.errorType;
         }
@@ -1310,7 +1318,7 @@ class Resolver {
     if (bound != null) {
       resolveAsParameterizedType(bound);
       var boundType = bound.type;
-      if (boundType.isError(cache)) {
+      if (boundType.isIgnored(cache)) {
         symbol.type = cache.errorType;
       } else if (!boundType.isInterface()) {
         semanticErrorBadTypeParameterBound(log, bound.range, boundType);
@@ -1553,7 +1561,7 @@ class Resolver {
             superArguments.push(Node.createName(name));
           }
         } else {
-          assert constructor.type.isError(cache);
+          assert constructor.type.isIgnored(cache);
           symbol.flags |= .INITIALIZED;
           symbol.type = cache.errorType;
           return;
@@ -1572,7 +1580,7 @@ class Resolver {
         // Uninitialized variables need an argument to provide the value
         if (value == null) {
           initializeMember(member);
-          if (member.type.isError(cache)) {
+          if (member.type.isIgnored(cache)) {
             symbol.flags |= .INITIALIZED;
             symbol.type = cache.errorType;
             return;
@@ -1656,7 +1664,7 @@ class Resolver {
     for (i = 0; i < fields.size(); i++) {
       var field = fields.get(i);
       initializeSymbol(field);
-      if (field.type.isError(cache)) {
+      if (field.type.isIgnored(cache)) {
         break;
       }
       var value = field.constant.asInt();
@@ -1881,7 +1889,7 @@ class Resolver {
       constantFolder.foldConstants(value);
 
       // All case values must be constants but can include enum values
-      if (!value.type.isError(cache) && !value.kind.isConstant()) {
+      if (!value.type.isIgnored(cache) && !value.kind.isConstant()) {
         semanticErrorNonConstantCaseValue(log, value.range);
         value.type = cache.errorType;
       }
@@ -1977,13 +1985,13 @@ class Resolver {
 
       // Special-case the return type of constructors to void for the purpose
       // of type conversions in return statements inside the constructor
-      if (symbol.type.isError(cache)) resultType = cache.errorType;
+      if (symbol.type.isIgnored(cache)) resultType = cache.errorType;
       else if (symbol.kind == .CONSTRUCTOR_FUNCTION) resultType = cache.voidType;
       else resultType = symbol.type.resultType();
       resolve(block, null);
 
       // Missing a return statement is an error
-      if (!resultType.isError(cache) && !resultType.isVoid(cache) && !block.blockAlwaysEndsWithReturn()) {
+      if (!resultType.isIgnored(cache) && !resultType.isVoid(cache) && !block.blockAlwaysEndsWithReturn()) {
         semanticErrorMissingReturn(log, node.declarationName().range, symbol.name, resultType);
       }
 
@@ -2022,7 +2030,7 @@ class Resolver {
 
         // Resolve the arguments
         var arguments = superInitializer.superCallArguments();
-        if (overriddenType.isError(cache)) {
+        if (overriddenType.isIgnored(cache)) {
           resolveNodesAsExpressions(arguments);
         } else {
           assert overriddenType.isFunction();
@@ -2147,7 +2155,7 @@ class Resolver {
     var kind = node.kind;
 
     // Treat errors as pure to avoid further errors
-    if (node.type.isError(cache)) {
+    if (node.type.isIgnored(cache)) {
       return true;
     }
 
@@ -2214,7 +2222,7 @@ class Resolver {
       // since that ensures there aren't any initialization ordering issues
       if (symbol.kind == .GLOBAL_VARIABLE) {
         constantFolder.foldConstants(value);
-        if (!isPureValue(value) && !symbol.type.isError(cache)) {
+        if (!isPureValue(value) && !symbol.type.isIgnored(cache)) {
           semanticErrorNonPureGlobalVariable(log, value.range);
           value.type = cache.errorType;
         }
@@ -2222,7 +2230,7 @@ class Resolver {
     }
 
     // Automatically initialize uninitialized variables to their default value
-    else if (!symbol.type.isError(cache) && node.parent.kind == .VARIABLE_CLUSTER && symbol.kind != .INSTANCE_VARIABLE) {
+    else if (!symbol.type.isIgnored(cache) && node.parent.kind == .VARIABLE_CLUSTER && symbol.kind != .INSTANCE_VARIABLE) {
       node.replaceChild(2, createDefaultValue(symbol.type, node.declarationName().range).withType(symbol.type));
     }
   }
@@ -2239,7 +2247,7 @@ class Resolver {
       var first = variables.get(0).symbol;
       for (var i = 1; i < variables.size(); i++) {
         var current = variables.get(i).symbol;
-        if (!first.type.isError(cache) && !current.type.isError(cache) && first.type != current.type) {
+        if (!first.type.isIgnored(cache) && !current.type.isIgnored(cache) && first.type != current.type) {
           semanticErrorForVariablesMustBeSameType(log, node.range, first.name, first.type, current.name, current.type);
           break;
         }
@@ -2298,7 +2306,7 @@ class Resolver {
     resolve(node.forEachVariable(), null);
     resolve(value, null);
 
-    if (!value.type.isError(cache)) {
+    if (!value.type.isIgnored(cache)) {
       log.error(node.range, "TODO: implement for-each statement");
     }
 
@@ -2335,7 +2343,7 @@ class Resolver {
     }
 
     // The return value may be missing only when the return type is void
-    else if (!resultType.isError(cache) && !resultType.isVoid(cache)) {
+    else if (!resultType.isIgnored(cache) && !resultType.isVoid(cache)) {
       semanticErrorExpectedReturnValue(log, node.range, resultType);
     }
   }
@@ -2362,7 +2370,7 @@ class Resolver {
     // Constant asserts are evaluated at compile time
     if (node.kind == .ASSERT_CONST) {
       constantFolder.foldConstants(value);
-      if (!value.type.isError(cache)) {
+      if (!value.type.isIgnored(cache)) {
         if (!value.kind.isConstant()) {
           semanticErrorNonConstantAssert(log, value.range);
         } else if (!value.isTrue()) {
@@ -2388,7 +2396,7 @@ class Resolver {
     resolveAsParameterizedExpression(value);
 
     // Can only switch on integer types for now
-    if (!value.type.isError(cache) && !value.type.isInteger(cache)) {
+    if (!value.type.isIgnored(cache) && !value.type.isInteger(cache)) {
       semanticErrorNonIntegerSwitch(log, value.range, value.type);
       value.type = cache.errorType;
     }
@@ -2413,7 +2421,7 @@ class Resolver {
       var caseValues = child.caseValues();
       for (var j = 0; j < caseValues.size(); j++) {
         var caseValue = caseValues.get(j);
-        if (caseValue.type.isError(cache)) continue;
+        if (caseValue.type.isIgnored(cache)) continue;
         assert caseValue.kind.isConstant();
 
         int k;
@@ -2484,7 +2492,7 @@ class Resolver {
     // Avoid reporting further errors
     var trueType = trueNode.type;
     var falseType = falseNode.type;
-    if (trueType.isError(cache) || falseType.isError(cache)) {
+    if (trueType.isIgnored(cache) || falseType.isIgnored(cache)) {
       return;
     }
 
@@ -2515,7 +2523,7 @@ class Resolver {
     var values = node.listValues();
 
     // Avoid reporting further errors
-    if (typeContext != null && typeContext.isError(cache)) {
+    if (typeContext != null && typeContext.isIgnored(cache)) {
       resolveNodesAsExpressions(values);
       return;
     }
@@ -2535,9 +2543,9 @@ class Resolver {
     for (var i = 0; i < values.size(); i++) {
       var value = values.get(i);
       resolveAsParameterizedExpression(value);
-      if (commonType == null || value.type.isError(cache)) {
+      if (commonType == null || value.type.isIgnored(cache)) {
         commonType = value.type;
-      } else if (!commonType.isError(cache)) {
+      } else if (!commonType.isIgnored(cache)) {
         commonType = cache.commonImplicitType(commonType, value.type);
         if (commonType == null) {
           semanticErrorListTypeInferenceFailed(log, node.range);
@@ -2547,7 +2555,7 @@ class Resolver {
     }
 
     // Avoid reporting further errors
-    if (commonType != null && commonType.isError(cache)) {
+    if (commonType != null && commonType.isIgnored(cache)) {
       return;
     }
 
@@ -2586,7 +2594,7 @@ class Resolver {
       semanticErrorMissingTypeContext(log, node.range);
       return;
     }
-    if (type.isError(cache)) {
+    if (type.isIgnored(cache)) {
       return;
     }
 
@@ -2644,7 +2652,7 @@ class Resolver {
     var valueType = value.type;
 
     // Avoid reporting further errors
-    if (valueType.isError(cache)) {
+    if (valueType.isIgnored(cache)) {
       resolveNodesAsExpressions(arguments);
       return;
     }
@@ -2671,7 +2679,7 @@ class Resolver {
       valueType = member.type;
 
       // Avoid reporting further errors
-      if (valueType.isError(cache)) {
+      if (valueType.isIgnored(cache)) {
         resolveNodesAsExpressions(arguments);
         return;
       }
@@ -2707,7 +2715,7 @@ class Resolver {
 
       // Avoid reporting further errors
       var type = member.type;
-      if (type.isError(cache) || !type.isFunction()) {
+      if (type.isIgnored(cache) || !type.isFunction()) {
         resolveNodesAsExpressions(arguments);
         return;
       }
@@ -2747,7 +2755,7 @@ class Resolver {
 
     // Avoid reporting further errors
     var unparameterized = value.type;
-    if (unparameterized.isError(cache)) {
+    if (unparameterized.isIgnored(cache)) {
       return;
     }
 
@@ -2774,13 +2782,13 @@ class Resolver {
       var parameter = sortedParameters.get(i);
       var index = parameters.indexOf(parameter);
       var substitution = substitutions.get(index);
-      if (parameter.type.isError(cache)) return;
+      if (parameter.type.isIgnored(cache)) return;
       var bound = parameter.type.bound();
       if (bound != null) {
         if (i > 0) bound = cache.substitute(bound, sortedParameters.slice(0, i), sortedTypes.slice(0, i));
         checkConversion(bound, substitution, .IMPLICIT_CAST);
       }
-      if (substitution.type.isError(cache)) return;
+      if (substitution.type.isIgnored(cache)) return;
       sortedTypes.push(substitution.type);
     }
 
@@ -2830,7 +2838,10 @@ class Resolver {
     else {
       if (node.hasChildren()) {
         for (var i = 0; i < node.children.size(); i++) {
-          resolveUntyped(node.children.get(i));
+          var child = node.children.get(i);
+          if (child != null) {
+            resolveUntyped(child);
+          }
         }
       }
       node.type = cache.errorType;
@@ -2858,7 +2869,7 @@ class Resolver {
 
     // Avoid reporting further errors
     var type = value.type;
-    if (type.isError(cache)) {
+    if (type.isIgnored(cache)) {
       return;
     }
 
@@ -2893,7 +2904,7 @@ class Resolver {
     }
 
     // Report an error if no match is found
-    if (node.type.isError(cache)) {
+    if (node.type.isIgnored(cache)) {
       semanticErrorNoUnaryOperator(log, node.range, kind, type);
       return;
     }
@@ -2903,7 +2914,7 @@ class Resolver {
   }
 
   bool wrapWithToStringCall(Node node) {
-    if (node.type.isError(cache)) {
+    if (node.type.isIgnored(cache)) {
       return false;
     }
     var toString = node.type.findMember("toString");
@@ -2913,7 +2924,7 @@ class Resolver {
     }
 
     initializeMember(toString);
-    if (toString.type.isError(cache)) {
+    if (toString.type.isIgnored(cache)) {
       return false;
     }
 
@@ -2952,7 +2963,7 @@ class Resolver {
     // Special-case assignment logic
     if (kind.isBinaryStorageOperator()) {
       resolveAsParameterizedExpression(left);
-      if (!left.type.isError(cache)) {
+      if (!left.type.isIgnored(cache)) {
         checkStorageOperator(node);
       }
 
@@ -3000,7 +3011,7 @@ class Resolver {
     var leftType = left.type;
     var rightType = right.type;
     Type commonType = null;
-    if (leftType.isError(cache) || rightType.isError(cache)) {
+    if (leftType.isIgnored(cache) || rightType.isIgnored(cache)) {
       return;
     }
 
@@ -3079,7 +3090,7 @@ class Resolver {
     }
 
     // Report an error if no match is found
-    if (node.type.isError(cache)) {
+    if (node.type.isIgnored(cache)) {
       semanticErrorNoBinaryOperator(log, node.range, kind, leftType, rightType);
       return;
     }
@@ -3101,7 +3112,7 @@ class Resolver {
     resolveAsParameterizedExpression(right);
 
     // User-defined operators aren't working yet
-    if (!left.type.isError(cache) && !middle.type.isError(cache) && !right.type.isError(cache)) {
+    if (!left.type.isIgnored(cache) && !middle.type.isIgnored(cache) && !right.type.isIgnored(cache)) {
       semanticErrorNoTernaryOperator(log, node.range, node.kind, left.type, middle.type, right.type);
     }
   }

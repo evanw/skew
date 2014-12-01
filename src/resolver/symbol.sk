@@ -3,6 +3,7 @@ enum SymbolKind {
   AUTOMATIC,
   AMBIGUOUS,
   UNMERGED,
+  UNTYPED,
   OTHER_TYPE,
   ALIAS,
 
@@ -55,7 +56,7 @@ in SymbolKind {
   }
 
   bool isType() {
-    return this >= OTHER_TYPE && this <= INTERFACE;
+    return this >= UNTYPED && this <= INTERFACE;
   }
 
   bool isFunction() {

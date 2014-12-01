@@ -22,8 +22,8 @@ void createOperatorMap() {
   operatorInfo.set(NodeKind.PREFIX_DECREMENT,      OperatorInfo("--", .UNARY_PREFIX, .NONE));
   operatorInfo.set(NodeKind.POSTFIX_INCREMENT,     OperatorInfo("++", .UNARY_POSTFIX, .NONE));
   operatorInfo.set(NodeKind.POSTFIX_DECREMENT,     OperatorInfo("--", .UNARY_POSTFIX, .NONE));
-  operatorInfo.set(NodeKind.DEREFERENCE,           OperatorInfo("*", .UNARY_POSTFIX, .NONE));
-  operatorInfo.set(NodeKind.ADDRESS_OF,            OperatorInfo("&", .UNARY_POSTFIX, .NONE));
+  operatorInfo.set(NodeKind.DEREFERENCE,           OperatorInfo("*", .UNARY_PREFIX, .NONE));
+  operatorInfo.set(NodeKind.ADDRESS_OF,            OperatorInfo("&", .UNARY_PREFIX, .NONE));
 
   operatorInfo.set(NodeKind.ADD,                   OperatorInfo("+", .ADD, .LEFT));
   operatorInfo.set(NodeKind.BITWISE_AND,           OperatorInfo("&", .BITWISE_AND, .LEFT));

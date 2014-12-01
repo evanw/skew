@@ -161,7 +161,7 @@ function ui(compile) {
     var settings = JSON.parse(localStorage.settings);
     targets.forEach(function(target) {
       if (settings.format === target.name) {
-        target.element.checked;
+        target.element.checked = true;
       }
       var json = settings[target.name];
       if (json) {

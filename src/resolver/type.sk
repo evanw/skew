@@ -209,6 +209,14 @@ class Type {
     return this == cache.errorType;
   }
 
+  bool isIgnored(TypeCache cache) {
+    return isError(cache) || isUntyped();
+  }
+
+  bool isUntyped() {
+    return symbol != null && symbol.kind == .UNTYPED;
+  }
+
   bool isFunction() {
     // Generic function types have a symbol but non-generic function types don't
     return symbol == null || symbol.kind.isFunction();

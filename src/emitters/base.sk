@@ -359,6 +359,7 @@ namespace base {
         case .SEQUENCE { emitSequence(node, precedence); }
         case .INDEX { emitIndex(node, precedence); }
         case .ASSIGN_INDEX { emitTernary(node, precedence); }
+        case .PARAMETERIZE { emitParameterize(node); }
         case .CAST, .IMPLICIT_CAST { emitCast(node, precedence); }
         case .LIST { emitList(node); }
         case .SUPER_CALL { emitSuperCall(node); }
@@ -444,6 +445,13 @@ namespace base {
       emit("] = ");
       emitExpression(node.ternaryRight(), .ASSIGN);
       if (.ASSIGN < precedence) emit(")");
+    }
+
+    void emitParameterize(Node node) {
+      emitExpression(node.parameterizeValue(), .MEMBER);
+      emit("<");
+      emitCommaSeparatedExpressions(node.parameterizeTypes());
+      emit(">");
     }
 
     virtual void emitDot(Node node) {

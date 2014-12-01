@@ -551,7 +551,7 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case .EXPORT { return parseModifier(context, hint, .EXPORT); }
     case .FINAL { return parseModifier(context, hint, .FINAL); }
     case .FOR { return parseFor(context); }
-    case .IDENTIFIER, .VAR { return parsePossibleTypedDeclaration(context, hint); }
+    case .IDENTIFIER, .VAR, .UNTYPED { return parsePossibleTypedDeclaration(context, hint); }
     case .IF { return parseIf(context); }
     case .IMPORT { return parseModifier(context, hint, .IMPORT); }
     case .IN { return parseExtension(context); }

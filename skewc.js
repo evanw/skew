@@ -2669,6 +2669,9 @@
     case 97:
       this.emitTernary(node, precedence);
       break;
+    case 50:
+      this.emitParameterize(node);
+      break;
     case 51:
     case 52:
       this.emitCast(node, precedence);
@@ -2689,7 +2692,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/emitters/base.sk:369:16)');
+        throw new Error('assert false; (src/emitters/base.sk:370:16)');
       }
       break;
     }
@@ -2705,10 +2708,10 @@
   base.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
     if (!(values.length > 1)) {
-      throw new Error('assert values.size() > 1; (src/emitters/base.sk:383:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/base.sk:384:7)');
     }
     if (node.parent.kind !== NodeKind.EXPRESSION && node.parent.kind !== NodeKind.FOR) {
-      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:384:7)');
+      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:385:7)');
     }
     if (Precedence.COMMA <= precedence) {
       this.emit('(');
@@ -2787,6 +2790,12 @@
     if (Precedence.ASSIGN < precedence) {
       this.emit(')');
     }
+  };
+  base.Emitter.prototype.emitParameterize = function(node) {
+    this.emitExpression(node.parameterizeValue(), Precedence.MEMBER);
+    this.emit('<');
+    this.emitCommaSeparatedExpressions(node.parameterizeTypes());
+    this.emit('>');
   };
   base.Emitter.prototype.emitDot = function(node) {
     this.emitExpression(node.dotTarget(), Precedence.MEMBER);
@@ -2876,7 +2885,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:543:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:551:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -3206,8 +3215,10 @@
   };
   cpp.Emitter.prototype.emitDot = function(node) {
     var target = node.dotTarget();
-    this.emitExpression(target, Precedence.MEMBER);
-    this.emit(node.kind === NodeKind.DOT_COLON ? '::' : node.kind === NodeKind.DOT_ARROW || target.type.isReference() ? '->' : '.');
+    if (target !== null) {
+      this.emitExpression(target, Precedence.MEMBER);
+    }
+    this.emit(node.kind === NodeKind.DOT_COLON ? '::' : node.kind === NodeKind.DOT_ARROW || target !== null && target.type.isReference() ? '->' : '.');
     this.emit(node.symbol !== null ? this.mangleName(node.symbol) : node.dotName().asString());
   };
   cpp.Emitter.prototype.emitCall = function(node, precedence) {
@@ -3290,6 +3301,8 @@
   cpp.Emitter.prototype.emitCppType = function(type, mode) {
     if (type.isEnumFlags()) {
       this.emit('int');
+    } else if (type.isUntyped()) {
+      this.emitExpression(type.symbol.node, Precedence.LOWEST);
     } else {
       this.emitType(type);
     }
@@ -5993,26 +6006,26 @@
     node.content = content;
   };
   ConstantFolder.prototype.flattenBool = function(node, value) {
-    if (!node.type.isError(this.cache) && !node.type.isBool(this.cache)) {
-      throw new Error('assert node.type.isError(cache) || node.type.isBool(cache); (src/resolver/constantfolding.sk:17:5)');
+    if (!node.type.isIgnored(this.cache) && !node.type.isBool(this.cache)) {
+      throw new Error('assert node.type.isIgnored(cache) || node.type.isBool(cache); (src/resolver/constantfolding.sk:17:5)');
     }
     this.flatten(node, new BoolContent(value));
   };
   ConstantFolder.prototype.flattenInt = function(node, value) {
-    if (!node.type.isError(this.cache) && !node.type.isInteger(this.cache)) {
-      throw new Error('assert node.type.isError(cache) || node.type.isInteger(cache); (src/resolver/constantfolding.sk:23:5)');
+    if (!node.type.isIgnored(this.cache) && !node.type.isInteger(this.cache)) {
+      throw new Error('assert node.type.isIgnored(cache) || node.type.isInteger(cache); (src/resolver/constantfolding.sk:23:5)');
     }
     this.flatten(node, new IntContent(value));
   };
   ConstantFolder.prototype.flattenReal = function(node, value) {
-    if (!node.type.isError(this.cache) && !node.type.isReal(this.cache)) {
-      throw new Error('assert node.type.isError(cache) || node.type.isReal(cache); (src/resolver/constantfolding.sk:29:5)');
+    if (!node.type.isIgnored(this.cache) && !node.type.isReal(this.cache)) {
+      throw new Error('assert node.type.isIgnored(cache) || node.type.isReal(cache); (src/resolver/constantfolding.sk:29:5)');
     }
     this.flatten(node, new DoubleContent(value));
   };
   ConstantFolder.prototype.flattenString = function(node, value) {
-    if (!node.type.isError(this.cache) && !node.type.isString(this.cache)) {
-      throw new Error('assert node.type.isError(cache) || node.type.isString(cache); (src/resolver/constantfolding.sk:35:5)');
+    if (!node.type.isIgnored(this.cache) && !node.type.isString(this.cache)) {
+      throw new Error('assert node.type.isIgnored(cache) || node.type.isString(cache); (src/resolver/constantfolding.sk:35:5)');
     }
     this.flatten(node, new StringContent(value));
   };
@@ -6064,20 +6077,20 @@
   ConstantFolder.prototype.rotateStringConcatenation = function(node) {
     var left = node.binaryLeft();
     var right = node.binaryRight();
-    if (!left.type.isString(this.cache) && !left.type.isError(this.cache)) {
-      throw new Error('assert left.type.isString(cache) || left.type.isError(cache); (src/resolver/constantfolding.sk:89:5)');
+    if (!left.type.isString(this.cache) && !left.type.isIgnored(this.cache)) {
+      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:89:5)');
     }
-    if (!right.type.isString(this.cache) && !right.type.isError(this.cache)) {
-      throw new Error('assert right.type.isString(cache) || right.type.isError(cache); (src/resolver/constantfolding.sk:90:5)');
+    if (!right.type.isString(this.cache) && !right.type.isIgnored(this.cache)) {
+      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:90:5)');
     }
     if (right.kind === NodeKind.ADD) {
       var rightLeft = right.binaryLeft();
       var rightRight = right.binaryRight();
-      if (!rightLeft.type.isString(this.cache) && !rightLeft.type.isError(this.cache)) {
-        throw new Error('assert rightLeft.type.isString(cache) || rightLeft.type.isError(cache); (src/resolver/constantfolding.sk:95:7)');
+      if (!rightLeft.type.isString(this.cache) && !rightLeft.type.isIgnored(this.cache)) {
+        throw new Error('assert rightLeft.type.isString(cache) || rightLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:95:7)');
       }
-      if (!rightRight.type.isString(this.cache) && !rightRight.type.isError(this.cache)) {
-        throw new Error('assert rightRight.type.isString(cache) || rightRight.type.isError(cache); (src/resolver/constantfolding.sk:96:7)');
+      if (!rightRight.type.isString(this.cache) && !rightRight.type.isIgnored(this.cache)) {
+        throw new Error('assert rightRight.type.isString(cache) || rightRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:96:7)');
       }
       left.swapWith(right);
       left.swapWith(rightRight);
@@ -6087,11 +6100,11 @@
   ConstantFolder.prototype.foldStringConcatenation = function(node) {
     var left = node.binaryLeft();
     var right = node.binaryRight();
-    if (!left.type.isString(this.cache) && !left.type.isError(this.cache)) {
-      throw new Error('assert left.type.isString(cache) || left.type.isError(cache); (src/resolver/constantfolding.sk:106:5)');
+    if (!left.type.isString(this.cache) && !left.type.isIgnored(this.cache)) {
+      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:106:5)');
     }
-    if (!right.type.isString(this.cache) && !right.type.isError(this.cache)) {
-      throw new Error('assert right.type.isString(cache) || right.type.isError(cache); (src/resolver/constantfolding.sk:107:5)');
+    if (!right.type.isString(this.cache) && !right.type.isIgnored(this.cache)) {
+      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:107:5)');
     }
     if (right.kind === NodeKind.STRING) {
       if (left.kind === NodeKind.STRING) {
@@ -6099,11 +6112,11 @@
       } else if (left.kind === NodeKind.ADD) {
         var leftLeft = left.binaryLeft();
         var leftRight = left.binaryRight();
-        if (!leftLeft.type.isString(this.cache) && !leftLeft.type.isError(this.cache)) {
-          throw new Error('assert leftLeft.type.isString(cache) || leftLeft.type.isError(cache); (src/resolver/constantfolding.sk:118:9)');
+        if (!leftLeft.type.isString(this.cache) && !leftLeft.type.isIgnored(this.cache)) {
+          throw new Error('assert leftLeft.type.isString(cache) || leftLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:118:9)');
         }
-        if (!leftRight.type.isString(this.cache) && !leftRight.type.isError(this.cache)) {
-          throw new Error('assert leftRight.type.isString(cache) || leftRight.type.isError(cache); (src/resolver/constantfolding.sk:119:9)');
+        if (!leftRight.type.isString(this.cache) && !leftRight.type.isIgnored(this.cache)) {
+          throw new Error('assert leftRight.type.isString(cache) || leftRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:119:9)');
         }
         if (leftRight.kind === NodeKind.STRING) {
           this.flattenString(leftRight, leftRight.asString() + right.asString());
@@ -6979,7 +6992,7 @@
         }
         var value = statement.usingValue();
         this.resolveGlobalUsingValue(value);
-        if (value.type.isError(this.cache)) {
+        if (value.type.isIgnored(this.cache)) {
           continue;
         }
         var symbol = value.type.symbol;
@@ -7281,19 +7294,25 @@
     }
   };
   Resolver.prototype.checkIsParameterized = function(node) {
-    if (!node.type.isError(this.cache) && node.type.hasParameters() && !node.type.isParameterized()) {
+    if (!node.type.isIgnored(this.cache) && node.type.hasParameters() && !node.type.isParameterized()) {
       semanticErrorUnparameterizedType(this.log, node.range, node.type);
       node.type = this.cache.errorType;
     }
   };
   Resolver.prototype.checkIsType = function(node) {
-    if (!node.type.isError(this.cache) && !in_NodeKind.isType(node.kind)) {
+    if (node.kind === NodeKind.UNTYPED) {
+      var symbol = this.createSymbol('<untyped>', SymbolKind.UNTYPED);
+      symbol.node = node.typeHoleValue();
+      symbol.type = new Type(symbol);
+      node.kind = NodeKind.TYPE;
+      node.type = symbol.type;
+    } else if (!node.type.isIgnored(this.cache) && !in_NodeKind.isType(node.kind)) {
       semanticErrorUnexpectedExpression(this.log, node.range, node.type);
       node.type = this.cache.errorType;
     }
   };
   Resolver.prototype.checkIsInstance = function(node) {
-    if (!node.type.isError(this.cache) && in_NodeKind.isType(node.kind)) {
+    if (!node.type.isIgnored(this.cache) && in_NodeKind.isType(node.kind)) {
       semanticErrorUnexpectedType(this.log, node.range, node.type);
       node.type = this.cache.errorType;
     }
@@ -7318,12 +7337,12 @@
       if (node.hasChildren()) {
         this.checkUnusedExpression(node.lastChild());
       }
-    } else if (!node.type.isError(this.cache) && !in_NodeKind.isCall(kind) && !in_NodeKind.isUnaryStorageOperator(kind) && !in_NodeKind.isBinaryStorageOperator(kind)) {
+    } else if (!node.type.isIgnored(this.cache) && !in_NodeKind.isCall(kind) && !in_NodeKind.isUnaryStorageOperator(kind) && !in_NodeKind.isBinaryStorageOperator(kind)) {
       semanticWarningUnusedExpression(this.log, node.range);
     }
   };
   Resolver.prototype.checkStorage = function(node) {
-    if (node.type.isError(this.cache)) {
+    if (node.type.isIgnored(this.cache)) {
       return;
     }
     if (!in_NodeKind.isStorage(node.kind)) {
@@ -7348,12 +7367,12 @@
   Resolver.prototype.checkConversion = function(to, node, kind) {
     var from = node.type;
     if (from === null) {
-      throw new Error('assert from != null; (src/resolver/resolver.sk:629:5)');
+      throw new Error('assert from != null; (src/resolver/resolver.sk:637:5)');
     }
     if (to === null) {
-      throw new Error('assert to != null; (src/resolver/resolver.sk:630:5)');
+      throw new Error('assert to != null; (src/resolver/resolver.sk:638:5)');
     }
-    if (from.isError(this.cache) || to.isError(this.cache)) {
+    if (from.isIgnored(this.cache) || to.isIgnored(this.cache)) {
       return;
     }
     if (from.isVoid(this.cache) && to.isVoid(this.cache)) {
@@ -7392,7 +7411,7 @@
   };
   Resolver.prototype.checkInsideBlock = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:693:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:701:5)');
     }
     if (node.parent.kind !== NodeKind.BLOCK) {
       this.unexpectedStatement(node);
@@ -7400,7 +7419,7 @@
   };
   Resolver.prototype.checkDeclarationLocation = function(node, allowDeclaration) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:706:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:714:5)');
     }
     var parent = null;
     for (parent = node.parent; parent !== null; parent = parent.parent) {
@@ -7419,7 +7438,7 @@
   };
   Resolver.prototype.checkStatementLocation = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:728:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:736:5)');
     }
     for (var parent = node.parent; parent !== null; parent = parent.parent) {
       var kind = parent.kind;
@@ -7526,7 +7545,7 @@
     if (type.isEnum()) {
       return Node.createInt(0).withType(type);
     }
-    if (!type.isError(this.cache)) {
+    if (!type.isIgnored(this.cache)) {
       semanticErrorNoDefaultValue(this.log, range, type);
     }
     return Node.createError().withType(this.cache.errorType);
@@ -7550,14 +7569,14 @@
   };
   Resolver.prototype.initializeNamespace = function(symbol) {
     if (!symbol.type.isNamespace()) {
-      throw new Error('assert symbol.type.isNamespace(); (src/resolver/resolver.sk:873:5)');
+      throw new Error('assert symbol.type.isNamespace(); (src/resolver/resolver.sk:881:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on a namespace declaration');
     this.checkNoBaseTypes(symbol, 'A namespace');
   };
   Resolver.prototype.initializeEnum = function(symbol) {
     if (!symbol.type.isEnum()) {
-      throw new Error('assert symbol.type.isEnum(); (src/resolver/resolver.sk:879:5)');
+      throw new Error('assert symbol.type.isEnum(); (src/resolver/resolver.sk:887:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on an enum declaration');
     this.checkNoBaseTypes(symbol, 'An enum');
@@ -7570,13 +7589,13 @@
     var baseTypes = this.collectAndResolveBaseTypes(symbol);
     var unmergedMembers = new StringMap();
     if (type.relevantTypes !== null) {
-      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:893:5)');
+      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:901:5)');
     }
     type.relevantTypes = [];
     for (var i = 0; i < baseTypes.length; i = i + 1 | 0) {
       var base = baseTypes[i];
       var baseType = base.type;
-      if (baseType.isError(this.cache)) {
+      if (baseType.isIgnored(this.cache)) {
         continue;
       }
       if (symbol.kind === SymbolKind.CLASS && baseType.isClass() && !baseType.isPrimitive()) {
@@ -7593,7 +7612,7 @@
         continue;
       }
       if (baseType.hasBaseType(type)) {
-        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:925:7)');
+        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:933:7)');
       }
       type.relevantTypes.push(baseType);
       var members = baseType.sortedMembers();
@@ -7613,7 +7632,7 @@
           unmergedMembers.table[memberSymbol.name] = new Member(combined);
         } else {
           if (unmerged.symbol.kind !== SymbolKind.UNMERGED) {
-            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:957:11)');
+            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:965:11)');
           }
           unmerged.symbol.identicalMembers.push(member);
         }
@@ -7625,7 +7644,7 @@
       var existing = type.findMember(member.symbol.name);
       if (existing !== null) {
         if (existing.symbol.overriddenMember !== null) {
-          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:972:9)');
+          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:980:9)');
         }
         existing.symbol.overriddenMember = member;
       } else if (member.symbol.name !== 'new') {
@@ -7645,7 +7664,7 @@
   };
   Resolver.prototype.initializeObject = function(symbol) {
     if (!symbol.type.isObject()) {
-      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:998:5)');
+      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:1006:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on an object declaration');
     var node = symbol.node.firstNonExtensionSibling();
@@ -7668,7 +7687,7 @@
   Resolver.prototype.initializeFunction = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     if (enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== enclosingSymbol)) {
-      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1029:5)');
+      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1037:5)');
     }
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.CONST, 'on a function declaration');
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, 'on a function declaration');
@@ -7683,7 +7702,7 @@
       resultType = result.type;
     } else {
       if (node.kind !== NodeKind.CONSTRUCTOR) {
-        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1050:7)');
+        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1058:7)');
       }
       resultType = this.cache.ensureTypeIsParameterized(enclosingSymbol.type);
       var members = enclosingSymbol.type.sortedMembers();
@@ -7722,7 +7741,7 @@
       this.initializeMember(overriddenMember);
       var base = overriddenMember.type;
       var derived = symbol.type;
-      if (!base.isError(this.cache) && !derived.isError(this.cache)) {
+      if (!base.isIgnored(this.cache) && !derived.isIgnored(this.cache)) {
         var overriddenSymbol = overriddenMember.symbol;
         if (!base.isFunction() || !in_SymbolKind.isInstance(overriddenSymbol.kind) || !in_SymbolKind.isInstance(symbol.kind)) {
           semanticErrorBadOverride(this.log, node.declarationName().range, symbol.name, overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.declarationName().range);
@@ -7765,7 +7784,7 @@
         variableType = node.parent.clusterType().clone();
       } else {
         if (!symbol.isEnumValue()) {
-          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1177:9)');
+          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1185:9)');
         }
         var enclosingSymbol = symbol.enclosingSymbol;
         var type = enclosingSymbol.type;
@@ -7779,7 +7798,7 @@
             symbol.constant = variableValue.content;
           } else {
             variableType = Node.createType(this.cache.errorType);
-            if (!variableValue.type.isError(this.cache)) {
+            if (!variableValue.type.isIgnored(this.cache)) {
               semanticErrorBadIntegerConstant(this.log, variableValue.range, variableValue.type);
             }
           }
@@ -7788,7 +7807,7 @@
           if (index > 0) {
             var previous = node.parent.children[index - 1 | 0].symbol;
             this.initializeSymbol(previous);
-            if (!previous.type.isError(this.cache)) {
+            if (!previous.type.isIgnored(this.cache)) {
               var constant = previous.constant.asInt();
               var value = type.isEnumFlags() ? constant * 2 : constant + 1;
               if (value === (value | 0)) {
@@ -7806,7 +7825,7 @@
         }
       }
       if (variableType === null) {
-        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1227:7)');
+        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1235:7)');
       }
       node.replaceChild(1, variableType);
     }
@@ -7838,7 +7857,7 @@
       this.initializeMember(overriddenMember);
       var base = overriddenMember.type;
       var derived = symbol.type;
-      if (!base.isError(this.cache) && !derived.isError(this.cache)) {
+      if (!base.isIgnored(this.cache) && !derived.isIgnored(this.cache)) {
         semanticErrorBadOverride(this.log, node.declarationName().range, symbol.name, overriddenMember.symbol.enclosingSymbol.type, overriddenMember.symbol.node.declarationName().range);
       }
     }
@@ -7851,7 +7870,7 @@
         this.constantFolder.foldConstants(value);
         if (in_NodeKind.isConstant(value.kind)) {
           symbol.constant = value.content;
-        } else if (!value.type.isError(this.cache) && !symbol.type.isError(this.cache)) {
+        } else if (!value.type.isIgnored(this.cache) && !symbol.type.isIgnored(this.cache)) {
           semanticErrorNonConstantConstValue(this.log, value.range);
           value.type = this.cache.errorType;
         }
@@ -7865,13 +7884,13 @@
     if (bound !== null) {
       this.resolveAsParameterizedType(bound);
       var boundType = bound.type;
-      if (boundType.isError(this.cache)) {
+      if (boundType.isIgnored(this.cache)) {
         symbol.type = this.cache.errorType;
       } else if (!boundType.isInterface()) {
         semanticErrorBadTypeParameterBound(this.log, bound.range, boundType);
       } else {
         if (type.relevantTypes !== null) {
-          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1318:9)');
+          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1326:9)');
         }
         type.relevantTypes = [boundType];
         type.copyMembersFrom(boundType);
@@ -7886,7 +7905,7 @@
   Resolver.prototype.initializeDeclaration = function(node) {
     var symbol = node.symbol;
     if (symbol === null) {
-      throw new Error('assert symbol != null; (src/resolver/resolver.sk:1334:5)');
+      throw new Error('assert symbol != null; (src/resolver/resolver.sk:1342:5)');
     }
     if (symbol.isUninitialized()) {
       symbol.flags |= SymbolFlag.INITIALIZING;
@@ -7897,51 +7916,51 @@
       this.typeContext = null;
       this.resultType = null;
       switch (symbol.kind) {
-      case 9:
+      case 10:
         this.initializeNamespace(symbol);
         break;
-      case 10:
       case 11:
+      case 12:
         this.initializeEnum(symbol);
         break;
-      case 12:
       case 13:
+      case 14:
         this.initializeObject(symbol);
         break;
-      case 14:
       case 15:
       case 16:
+      case 17:
         this.initializeFunction(symbol);
         break;
-      case 17:
       case 18:
       case 19:
+      case 20:
         this.initializeVariable(symbol);
         break;
-      case 6:
       case 7:
+      case 8:
         this.initializeParameter(symbol);
         break;
-      case 5:
+      case 6:
         this.initializeAlias(symbol);
         break;
       case 0:
         break;
       default:
-        throw new Error('assert false; (src/resolver/resolver.sk:1361:19)');
+        throw new Error('assert false; (src/resolver/resolver.sk:1369:19)');
         break;
       }
       this.context = oldContext;
       this.typeContext = oldTypeContext;
       this.resultType = oldResultType;
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1368:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1376:7)');
       }
       if (!symbol.isInitializing()) {
-        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1369:7)');
+        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1377:7)');
       }
       if (symbol.isInitialized()) {
-        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1370:7)');
+        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1378:7)');
       }
       symbol.flags = symbol.flags & ~SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED;
       while (node !== null) {
@@ -7976,7 +7995,7 @@
     }
     if (member.dependency !== null) {
       if (member.dependency.symbol !== member.symbol) {
-        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1420:7)');
+        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1428:7)');
       }
       this.initializeMember(member.dependency);
       member.type = member.dependency.type;
@@ -8087,8 +8106,8 @@
             superArguments.push(Node.createName(name));
           }
         } else {
-          if (!$constructor.type.isError(this.cache)) {
-            throw new Error('assert constructor.type.isError(cache); (src/resolver/resolver.sk:1556:11)');
+          if (!$constructor.type.isIgnored(this.cache)) {
+            throw new Error('assert constructor.type.isIgnored(cache); (src/resolver/resolver.sk:1564:11)');
           }
           symbol.flags |= SymbolFlag.INITIALIZED;
           symbol.type = this.cache.errorType;
@@ -8104,7 +8123,7 @@
         var value = memberSymbol.node.variableValue();
         if (value === null) {
           this.initializeMember(member);
-          if (member.type.isError(this.cache)) {
+          if (member.type.isIgnored(this.cache)) {
             symbol.flags |= SymbolFlag.INITIALIZED;
             symbol.type = this.cache.errorType;
             return;
@@ -8133,7 +8152,7 @@
     symbol.node = Node.createConstructor(Node.createName(symbol.name), Node.createNodeList($arguments), Node.createBlock([]), superArguments !== null ? Node.createSuperCall(superArguments) : null, memberInitializers !== null ? Node.createNodeList(memberInitializers) : null);
     enclosingSymbol.node.declarationBlock().appendChild(symbol.node);
     if (enclosingSymbol.node.scope === null) {
-      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:1625:5)');
+      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:1633:5)');
     }
     var scope = new Scope(enclosingSymbol.node.scope);
     symbol.node.symbol = symbol;
@@ -8147,7 +8166,7 @@
   };
   Resolver.prototype.generateDefaultToString = function(symbol) {
     if (!symbol.isEnumMember()) {
-      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:1640:5)');
+      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:1648:5)');
     }
     var enclosingSymbol = symbol.enclosingSymbol;
     var enclosingNode = enclosingSymbol.node;
@@ -8163,7 +8182,7 @@
     for (i = 0; i < fields.length; i = i + 1 | 0) {
       var field = fields[i];
       this.initializeSymbol(field);
-      if (field.type.isError(this.cache)) {
+      if (field.type.isIgnored(this.cache)) {
         break;
       }
       var value = field.constant.asInt();
@@ -8209,7 +8228,7 @@
       } else if (symbol.name === 'toString') {
         this.generateDefaultToString(symbol);
       } else {
-        throw new Error('assert false; (src/resolver/resolver.sk:1722:12)');
+        throw new Error('assert false; (src/resolver/resolver.sk:1730:12)');
       }
       if (symbol.node !== null) {
         var oldContext = this.context;
@@ -8242,17 +8261,17 @@
     }
     if (symbol.isUninitialized()) {
       if (symbol.node === null) {
-        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1758:7)');
+        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:1766:7)');
       }
       this.initializeDeclaration(symbol.node);
       if (symbol.isInitializing()) {
-        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1760:7)');
+        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:1768:7)');
       }
       if (!symbol.isInitialized()) {
-        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1761:7)');
+        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:1769:7)');
       }
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1762:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1770:7)');
       }
     } else if (symbol.isInitializing()) {
       semanticErrorCyclicDeclaration(this.log, symbol.node.firstNonExtensionSibling().declarationName().range, symbol.name);
@@ -8272,7 +8291,7 @@
   };
   Resolver.prototype.resolveAsType = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1788:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1796:5)');
     }
     this.resolve(node, null);
     this.checkIsType(node);
@@ -8283,7 +8302,7 @@
   };
   Resolver.prototype.resolveAsParameterizedExpression = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1799:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1807:5)');
     }
     this.resolve(node, null);
     this.checkIsInstance(node);
@@ -8291,14 +8310,14 @@
   };
   Resolver.prototype.resolveAsExpressionWithTypeContext = function(node, type) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1806:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1814:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
   };
   Resolver.prototype.resolveAsExpressionWithConversion = function(node, type, kind) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1812:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:1820:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
@@ -8330,16 +8349,16 @@
   };
   Resolver.prototype.resolveProgram = function(node) {
     if (node.parent !== null) {
-      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1845:5)');
+      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:1853:5)');
     }
     this.resolveChildren(node);
   };
   Resolver.prototype.resolveFile = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1850:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1858:5)');
     }
     if (node.parent.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1851:5)');
+      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:1859:5)');
     }
     this.resolve(node.fileBlock(), null);
   };
@@ -8357,16 +8376,16 @@
   };
   Resolver.prototype.resolveCase = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1872:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:1880:5)');
     }
     if (node.parent.kind !== NodeKind.SWITCH) {
-      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1873:5)');
+      throw new Error('assert node.parent.kind == .SWITCH; (src/resolver/resolver.sk:1881:5)');
     }
     if (this.context.switchValue === null) {
-      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1874:5)');
+      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:1882:5)');
     }
     if (this.context.switchValue.type === null) {
-      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1875:5)');
+      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:1883:5)');
     }
     var values = node.caseValues();
     var block = node.caseBlock();
@@ -8374,7 +8393,7 @@
       var value = values[i];
       this.resolveAsExpressionWithConversion(value, this.context.switchValue.type, CastKind.IMPLICIT_CAST);
       this.constantFolder.foldConstants(value);
-      if (!value.type.isError(this.cache) && !in_NodeKind.isConstant(value.kind)) {
+      if (!value.type.isIgnored(this.cache) && !in_NodeKind.isConstant(value.kind)) {
         semanticErrorNonConstantCaseValue(this.log, value.range);
         value.type = this.cache.errorType;
       }
@@ -8428,7 +8447,7 @@
   Resolver.prototype.resolveFunction = function(node) {
     var symbol = node.symbol;
     if (symbol.enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(symbol.enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== symbol.enclosingSymbol)) {
-      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1959:5)');
+      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:1967:5)');
     }
     this.checkDeclarationLocation(node, AllowDeclaration.ALLOW_TOP_OR_OBJECT_LEVEL);
     this.initializeSymbol(symbol);
@@ -8440,7 +8459,7 @@
       if (symbol.isImport()) {
         semanticErrorCannotImplementImportedFunction(this.log, block.range);
       }
-      if (symbol.type.isError(this.cache)) {
+      if (symbol.type.isIgnored(this.cache)) {
         this.resultType = this.cache.errorType;
       } else if (symbol.kind === SymbolKind.CONSTRUCTOR_FUNCTION) {
         this.resultType = this.cache.voidType;
@@ -8448,7 +8467,7 @@
         this.resultType = symbol.type.resultType();
       }
       this.resolve(block, null);
-      if (!this.resultType.isError(this.cache) && !this.resultType.isVoid(this.cache) && !block.blockAlwaysEndsWithReturn()) {
+      if (!this.resultType.isIgnored(this.cache) && !this.resultType.isVoid(this.cache) && !block.blockAlwaysEndsWithReturn()) {
         semanticErrorMissingReturn(this.log, node.declarationName().range, symbol.name, this.resultType);
       }
       this.resultType = oldResultType;
@@ -8476,11 +8495,11 @@
           semanticErrorBadSuperInitializer(this.log, superInitializer.range);
         }
         var $arguments = superInitializer.superCallArguments();
-        if (overriddenType.isError(this.cache)) {
+        if (overriddenType.isIgnored(this.cache)) {
           this.resolveNodesAsExpressions($arguments);
         } else {
           if (!overriddenType.isFunction()) {
-            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2028:11)');
+            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2036:11)');
           }
           this.resolveArguments($arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
         }
@@ -8561,7 +8580,7 @@
   };
   Resolver.prototype.isPureValue = function(node) {
     var kind = node.kind;
-    if (node.type.isError(this.cache)) {
+    if (node.type.isIgnored(this.cache)) {
       return true;
     }
     if (kind === NodeKind.LIST) {
@@ -8609,12 +8628,12 @@
       this.resolveAsExpressionWithConversion(value, symbol.isEnumValue() ? this.cache.intType : symbol.type, CastKind.IMPLICIT_CAST);
       if (symbol.kind === SymbolKind.GLOBAL_VARIABLE) {
         this.constantFolder.foldConstants(value);
-        if (!this.isPureValue(value) && !symbol.type.isError(this.cache)) {
+        if (!this.isPureValue(value) && !symbol.type.isIgnored(this.cache)) {
           semanticErrorNonPureGlobalVariable(this.log, value.range);
           value.type = this.cache.errorType;
         }
       }
-    } else if (!symbol.type.isError(this.cache) && node.parent.kind === NodeKind.VARIABLE_CLUSTER && symbol.kind !== SymbolKind.INSTANCE_VARIABLE) {
+    } else if (!symbol.type.isIgnored(this.cache) && node.parent.kind === NodeKind.VARIABLE_CLUSTER && symbol.kind !== SymbolKind.INSTANCE_VARIABLE) {
       node.replaceChild(2, this.createDefaultValue(symbol.type, node.declarationName().range).withType(symbol.type));
     }
   };
@@ -8625,7 +8644,7 @@
       var first = variables[0].symbol;
       for (var i = 1; i < variables.length; i = i + 1 | 0) {
         var current = variables[i].symbol;
-        if (!first.type.isError(this.cache) && !current.type.isError(this.cache) && first.type !== current.type) {
+        if (!first.type.isIgnored(this.cache) && !current.type.isIgnored(this.cache) && first.type !== current.type) {
           semanticErrorForVariablesMustBeSameType(this.log, node.range, first.name, first.type, current.name, current.type);
           break;
         }
@@ -8679,7 +8698,7 @@
     this.checkStatementLocation(node);
     this.resolve(node.forEachVariable(), null);
     this.resolve(value, null);
-    if (!value.type.isError(this.cache)) {
+    if (!value.type.isIgnored(this.cache)) {
       this.log.error(node.range, 'TODO: implement for-each statement');
     }
     var oldLoop = this.context.loop;
@@ -8709,7 +8728,7 @@
     }
     if (value !== null) {
       this.resolveAsExpressionWithConversion(value, this.resultType, CastKind.IMPLICIT_CAST);
-    } else if (!this.resultType.isError(this.cache) && !this.resultType.isVoid(this.cache)) {
+    } else if (!this.resultType.isIgnored(this.cache) && !this.resultType.isVoid(this.cache)) {
       semanticErrorExpectedReturnValue(this.log, node.range, this.resultType);
     }
   };
@@ -8731,7 +8750,7 @@
     this.resolveAsExpressionWithConversion(value, this.cache.boolType, CastKind.IMPLICIT_CAST);
     if (node.kind === NodeKind.ASSERT_CONST) {
       this.constantFolder.foldConstants(value);
-      if (!value.type.isError(this.cache)) {
+      if (!value.type.isIgnored(this.cache)) {
         if (!in_NodeKind.isConstant(value.kind)) {
           semanticErrorNonConstantAssert(this.log, value.range);
         } else if (!value.isTrue()) {
@@ -8753,7 +8772,7 @@
     var value = node.switchValue();
     var cases = node.switchCases();
     this.resolveAsParameterizedExpression(value);
-    if (!value.type.isError(this.cache) && !value.type.isInteger(this.cache)) {
+    if (!value.type.isIgnored(this.cache) && !value.type.isInteger(this.cache)) {
       semanticErrorNonIntegerSwitch(this.log, value.range, value.type);
       value.type = this.cache.errorType;
     }
@@ -8770,11 +8789,11 @@
       var caseValues = child.caseValues();
       for (var j = 0; j < caseValues.length; j = j + 1 | 0) {
         var caseValue = caseValues[j];
-        if (caseValue.type.isError(this.cache)) {
+        if (caseValue.type.isIgnored(this.cache)) {
           continue;
         }
         if (!in_NodeKind.isConstant(caseValue.kind)) {
-          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2417:9)');
+          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2425:9)');
         }
         var k = 0;
         for (k = 0; k < uniqueValues.length; k = k + 1 | 0) {
@@ -8815,7 +8834,7 @@
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2466:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2474:7)');
       }
       var symbol = this.context.symbolForThis;
       this.initializeSymbol(symbol);
@@ -8831,7 +8850,7 @@
     this.resolveAsExpressionWithTypeContext(falseNode, this.typeContext);
     var trueType = trueNode.type;
     var falseType = falseNode.type;
-    if (trueType.isError(this.cache) || falseType.isError(this.cache)) {
+    if (trueType.isIgnored(this.cache) || falseType.isIgnored(this.cache)) {
       return;
     }
     var commonType = this.cache.commonImplicitType(trueType, falseType);
@@ -8851,7 +8870,7 @@
   };
   Resolver.prototype.resolveList = function(node) {
     var values = node.listValues();
-    if (this.typeContext !== null && this.typeContext.isError(this.cache)) {
+    if (this.typeContext !== null && this.typeContext.isIgnored(this.cache)) {
       this.resolveNodesAsExpressions(values);
       return;
     }
@@ -8867,9 +8886,9 @@
     for (var i = 0; i < values.length; i = i + 1 | 0) {
       var value = values[i];
       this.resolveAsParameterizedExpression(value);
-      if (commonType === null || value.type.isError(this.cache)) {
+      if (commonType === null || value.type.isIgnored(this.cache)) {
         commonType = value.type;
-      } else if (!commonType.isError(this.cache)) {
+      } else if (!commonType.isIgnored(this.cache)) {
         commonType = this.cache.commonImplicitType(commonType, value.type);
         if (commonType === null) {
           semanticErrorListTypeInferenceFailed(this.log, node.range);
@@ -8877,7 +8896,7 @@
         }
       }
     }
-    if (commonType !== null && commonType.isError(this.cache)) {
+    if (commonType !== null && commonType.isIgnored(this.cache)) {
       return;
     }
     if (commonType === null) {
@@ -8901,7 +8920,7 @@
       semanticErrorMissingTypeContext(this.log, node.range);
       return;
     }
-    if (type.isError(this.cache)) {
+    if (type.isIgnored(this.cache)) {
       return;
     }
     if (dotName === null) {
@@ -8939,12 +8958,12 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2641:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2649:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
     var valueType = value.type;
-    if (valueType.isError(this.cache)) {
+    if (valueType.isIgnored(this.cache)) {
       this.resolveNodesAsExpressions($arguments);
       return;
     }
@@ -8964,7 +8983,7 @@
       }
       node.symbol = member.symbol;
       valueType = member.type;
-      if (valueType.isError(this.cache)) {
+      if (valueType.isIgnored(this.cache)) {
         this.resolveNodesAsExpressions($arguments);
         return;
       }
@@ -8986,7 +9005,7 @@
       var member = this.context.functionSymbol.overriddenMember;
       this.initializeMember(member);
       var type = member.type;
-      if (type.isError(this.cache) || !type.isFunction()) {
+      if (type.isIgnored(this.cache) || !type.isFunction()) {
         this.resolveNodesAsExpressions($arguments);
         return;
       }
@@ -9018,7 +9037,7 @@
     this.resolve(value, null);
     this.resolveNodesAsVariableTypes(substitutions);
     var unparameterized = value.type;
-    if (unparameterized.isError(this.cache)) {
+    if (unparameterized.isIgnored(this.cache)) {
       return;
     }
     if (!unparameterized.hasParameters() || unparameterized.isParameterized()) {
@@ -9032,14 +9051,14 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2767:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2775:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
       var parameter = sortedParameters[i];
       var index = parameters.indexOf(parameter);
       var substitution = substitutions[index];
-      if (parameter.type.isError(this.cache)) {
+      if (parameter.type.isIgnored(this.cache)) {
         return;
       }
       var bound = parameter.type.bound();
@@ -9049,7 +9068,7 @@
         }
         this.checkConversion(bound, substitution, CastKind.IMPLICIT_CAST);
       }
-      if (substitution.type.isError(this.cache)) {
+      if (substitution.type.isIgnored(this.cache)) {
         return;
       }
       sortedTypes.push(substitution.type);
@@ -9076,7 +9095,10 @@
     } else {
       if (node.hasChildren()) {
         for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-          this.resolveUntyped(node.children[i]);
+          var child = node.children[i];
+          if (child !== null) {
+            this.resolveUntyped(child);
+          }
         }
       }
       node.type = this.cache.errorType;
@@ -9097,7 +9119,7 @@
       this.resolveAsParameterizedExpression(value);
     }
     var type = value.type;
-    if (type.isError(this.cache)) {
+    if (type.isIgnored(this.cache)) {
       return;
     }
     if (kind === NodeKind.POSITIVE || kind === NodeKind.NEGATIVE) {
@@ -9123,14 +9145,14 @@
         node.type = this.cache.intType;
       }
     }
-    if (node.type.isError(this.cache)) {
+    if (node.type.isIgnored(this.cache)) {
       semanticErrorNoUnaryOperator(this.log, node.range, kind, type);
       return;
     }
     this.checkConversion(node.type, value, CastKind.IMPLICIT_CAST);
   };
   Resolver.prototype.wrapWithToStringCall = function(node) {
-    if (node.type.isError(this.cache)) {
+    if (node.type.isIgnored(this.cache)) {
       return false;
     }
     var toString = node.type.findMember('toString');
@@ -9139,7 +9161,7 @@
       return false;
     }
     this.initializeMember(toString);
-    if (toString.type.isError(this.cache)) {
+    if (toString.type.isIgnored(this.cache)) {
       return false;
     }
     if (toString.type !== this.cache.toStringType) {
@@ -9172,7 +9194,7 @@
     var right = node.binaryRight();
     if (in_NodeKind.isBinaryStorageOperator(kind)) {
       this.resolveAsParameterizedExpression(left);
-      if (!left.type.isError(this.cache)) {
+      if (!left.type.isIgnored(this.cache)) {
         this.checkStorageOperator(node);
       }
       if (kind === NodeKind.ASSIGN || left.type.isNumeric(this.cache)) {
@@ -9204,7 +9226,7 @@
     var leftType = left.type;
     var rightType = right.type;
     var commonType = null;
-    if (leftType.isError(this.cache) || rightType.isError(this.cache)) {
+    if (leftType.isIgnored(this.cache) || rightType.isIgnored(this.cache)) {
       return;
     }
     if (kind === NodeKind.EQUAL || kind === NodeKind.NOT_EQUAL) {
@@ -9263,7 +9285,7 @@
         node.type = this.cache.boolType;
       }
     }
-    if (node.type.isError(this.cache)) {
+    if (node.type.isIgnored(this.cache)) {
       semanticErrorNoBinaryOperator(this.log, node.range, kind, leftType, rightType);
       return;
     }
@@ -9279,7 +9301,7 @@
     this.resolveAsParameterizedExpression(left);
     this.resolveAsParameterizedExpression(middle);
     this.resolveAsParameterizedExpression(right);
-    if (!left.type.isError(this.cache) && !middle.type.isError(this.cache) && !right.type.isError(this.cache)) {
+    if (!left.type.isIgnored(this.cache) && !middle.type.isIgnored(this.cache) && !right.type.isIgnored(this.cache)) {
       semanticErrorNoTernaryOperator(this.log, node.range, node.kind, left.type, middle.type, right.type);
     }
   };
@@ -9328,22 +9350,23 @@
     AUTOMATIC: 1,
     AMBIGUOUS: 2,
     UNMERGED: 3,
-    OTHER_TYPE: 4,
-    ALIAS: 5,
-    OBJECT_PARAMETER: 6,
-    FUNCTION_PARAMETER: 7,
-    GLOBAL_NAMESPACE: 8,
-    NAMESPACE: 9,
-    ENUM: 10,
-    ENUM_FLAGS: 11,
-    CLASS: 12,
-    INTERFACE: 13,
-    GLOBAL_FUNCTION: 14,
-    INSTANCE_FUNCTION: 15,
-    CONSTRUCTOR_FUNCTION: 16,
-    LOCAL_VARIABLE: 17,
-    GLOBAL_VARIABLE: 18,
-    INSTANCE_VARIABLE: 19
+    UNTYPED: 4,
+    OTHER_TYPE: 5,
+    ALIAS: 6,
+    OBJECT_PARAMETER: 7,
+    FUNCTION_PARAMETER: 8,
+    GLOBAL_NAMESPACE: 9,
+    NAMESPACE: 10,
+    ENUM: 11,
+    ENUM_FLAGS: 12,
+    CLASS: 13,
+    INTERFACE: 14,
+    GLOBAL_FUNCTION: 15,
+    INSTANCE_FUNCTION: 16,
+    CONSTRUCTOR_FUNCTION: 17,
+    LOCAL_VARIABLE: 18,
+    GLOBAL_VARIABLE: 19,
+    INSTANCE_VARIABLE: 20
   };
   var SymbolFlag = {
     PUBLIC: 1,
@@ -9473,19 +9496,19 @@
   };
   Symbol.prototype.isUninitialized = function() {
     if ((this.flags & SymbolFlag.INITIALIZE_MASK) === SymbolFlag.INITIALIZE_MASK) {
-      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:301:5)');
+      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:302:5)');
     }
     return (this.flags & SymbolFlag.INITIALIZE_MASK) === 0;
   };
   Symbol.prototype.isInitializing = function() {
     if ((this.flags & SymbolFlag.INITIALIZE_MASK) === SymbolFlag.INITIALIZE_MASK) {
-      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:306:5)');
+      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:307:5)');
     }
     return (this.flags & SymbolFlag.INITIALIZING) !== 0;
   };
   Symbol.prototype.isInitialized = function() {
     if ((this.flags & SymbolFlag.INITIALIZE_MASK) === SymbolFlag.INITIALIZE_MASK) {
-      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:311:5)');
+      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:312:5)');
     }
     return (this.flags & SymbolFlag.INITIALIZED) !== 0;
   };
@@ -9743,6 +9766,12 @@
   };
   Type.prototype.isError = function(cache) {
     return this === cache.errorType;
+  };
+  Type.prototype.isIgnored = function(cache) {
+    return this.isError(cache) || this.isUntyped();
+  };
+  Type.prototype.isUntyped = function() {
+    return this.symbol !== null && this.symbol.kind === SymbolKind.UNTYPED;
   };
   Type.prototype.isFunction = function() {
     return this.symbol === null || in_SymbolKind.isFunction(this.symbol.kind);
@@ -10158,8 +10187,8 @@
     operatorInfo.table[NodeKind.PREFIX_DECREMENT] = new OperatorInfo('--', Precedence.UNARY_PREFIX, Associativity.NONE);
     operatorInfo.table[NodeKind.POSTFIX_INCREMENT] = new OperatorInfo('++', Precedence.UNARY_POSTFIX, Associativity.NONE);
     operatorInfo.table[NodeKind.POSTFIX_DECREMENT] = new OperatorInfo('--', Precedence.UNARY_POSTFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.DEREFERENCE] = new OperatorInfo('*', Precedence.UNARY_POSTFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.ADDRESS_OF] = new OperatorInfo('&', Precedence.UNARY_POSTFIX, Associativity.NONE);
+    operatorInfo.table[NodeKind.DEREFERENCE] = new OperatorInfo('*', Precedence.UNARY_PREFIX, Associativity.NONE);
+    operatorInfo.table[NodeKind.ADDRESS_OF] = new OperatorInfo('&', Precedence.UNARY_PREFIX, Associativity.NONE);
     operatorInfo.table[NodeKind.ADD] = new OperatorInfo('+', Precedence.ADD, Associativity.LEFT);
     operatorInfo.table[NodeKind.BITWISE_AND] = new OperatorInfo('&', Precedence.BITWISE_AND, Associativity.LEFT);
     operatorInfo.table[NodeKind.BITWISE_OR] = new OperatorInfo('|', Precedence.BITWISE_OR, Associativity.LEFT);
@@ -11308,6 +11337,7 @@
       return parseFor(context);
     case 44:
     case 94:
+    case 92:
       return parsePossibleTypedDeclaration(context, hint);
     case 45:
       return parseIf(context);
@@ -11938,7 +11968,7 @@
     return $this >= SymbolKind.CLASS && $this <= SymbolKind.INTERFACE;
   };
   in_SymbolKind.isType = function($this) {
-    return $this >= SymbolKind.OTHER_TYPE && $this <= SymbolKind.INTERFACE;
+    return $this >= SymbolKind.UNTYPED && $this <= SymbolKind.INTERFACE;
   };
   in_SymbolKind.isFunction = function($this) {
     return $this >= SymbolKind.GLOBAL_FUNCTION && $this <= SymbolKind.CONSTRUCTOR_FUNCTION;
@@ -12368,7 +12398,7 @@
   var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   var HEX = '0123456789ABCDEF';
   trace.GENERICS = false;
-  cpp.NATIVE_LIBRARY = '\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  inline string toString() { return untyped(cpp_toString(this)); }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return untyped(cpp_toString(this)); }\n}\n\nin double {\n  inline string toString() { return untyped(cpp_toString(this)); }\n}\n\nin string {\n  inline {\n    int size() { return (int)untyped(this.size()); }\n    string slice(int start, int end) { return untyped(this.substr(typed(start), typed(end) - typed(start))); }\n    int indexOf(string value) { return (int)untyped(this.find(typed(value))); }\n    int lastIndexOf(string value) { return (int)untyped(this.rfind(typed(value))); }\n    string toLowerCase() { return untyped(cpp_toLowerCase(this)); }\n    string toUpperCase() { return untyped(cpp_toUpperCase(this)); }\n    static string fromCodeUnit(int value) { return untyped(string(1, typed(value))); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return untyped(this[typed(index)]); }\n  }\n  string join(List<string> values) { var result = ""; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nimport namespace math {}\n\nin math {\n  inline double abs(double x) { return untyped(std::abs(typed(x))); }\n  inline double sin(double x) { return untyped(std::sin(typed(x))); }\n  inline double cos(double x) { return untyped(std::cos(typed(x))); }\n  inline double tan(double x) { return untyped(std::tan(typed(x))); }\n  inline double asin(double x) { return untyped(std::asin(typed(x))); }\n  inline double acos(double x) { return untyped(std::acos(typed(x))); }\n  inline double atan(double x) { return untyped(std::atan(typed(x))); }\n  inline double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }\n  inline double sqrt(double x) { return untyped(std::sqrt(typed(x))); }\n  inline double exp(double x) { return untyped(std::exp(typed(x))); }\n  inline double log(double x) { return untyped(std::log(typed(x))); }\n  inline double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }\n  inline double floor(double x) { return untyped(std::floor(typed(x))); }\n  inline double round(double x) { return untyped(std::round(typed(x))); }\n  inline double ceil(double x) { return untyped(std::ceil(typed(x))); }\n  inline double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }\n  inline double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n';
+  cpp.NATIVE_LIBRARY = '\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  string toString() {\n    untyped(std::stringstream) ss;\n    ss << this;\n    return ss.str();\n  }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return ((double)this).toString(); }\n}\n\nin double {\n  inline string toString() {\n    untyped(std::stringstream) ss;\n    untyped(ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::fixed) << this;\n    string result = ss.str();\n    while (untyped(result.back()) == \'0\') untyped(result.pop_back());\n    if (untyped(result.back()) == \'.\') untyped(result.pop_back());\n    return result;\n  }\n}\n\nin string {\n  inline {\n    int size() {\n      return (int)untyped(this.size());\n    }\n\n    string slice(int start, int end) {\n      return untyped(this.substr(typed(start), typed(end) - typed(start)));\n    }\n\n    int indexOf(string value) {\n      return (int)untyped(this.find(typed(value)));\n    }\n\n    int lastIndexOf(string value) {\n      return (int)untyped(this.rfind(typed(value)));\n    }\n\n    string toLowerCase() {\n      var clone = this;\n      untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower));\n      return clone;\n    }\n\n    string toUpperCase() {\n      var clone = this;\n      untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper));\n      return clone;\n    }\n\n    static string fromCodeUnit(int value) {\n      return untyped(string(1, typed(value)));\n    }\n\n    string get(int index) {\n      return fromCodeUnit(codeUnitAt(index));\n    }\n\n    int codeUnitAt(int index) {\n      return untyped(this[typed(index)]);\n    }\n  }\n\n  string join(List<string> values) {\n    var result = "";\n    for (var i = 0; i < values.size(); i++) {\n      if (i > 0) result += this;\n      result += values.get(i);\n    }\n    return result;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nimport namespace math {}\n\nin math {\n  inline double abs(double x) { return untyped(std::abs(typed(x))); }\n  inline double sin(double x) { return untyped(std::sin(typed(x))); }\n  inline double cos(double x) { return untyped(std::cos(typed(x))); }\n  inline double tan(double x) { return untyped(std::tan(typed(x))); }\n  inline double asin(double x) { return untyped(std::asin(typed(x))); }\n  inline double acos(double x) { return untyped(std::acos(typed(x))); }\n  inline double atan(double x) { return untyped(std::atan(typed(x))); }\n  inline double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }\n  inline double sqrt(double x) { return untyped(std::sqrt(typed(x))); }\n  inline double exp(double x) { return untyped(std::exp(typed(x))); }\n  inline double log(double x) { return untyped(std::log(typed(x))); }\n  inline double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }\n  inline double floor(double x) { return untyped(std::floor(typed(x))); }\n  inline double round(double x) { return untyped(std::round(typed(x))); }\n  inline double ceil(double x) { return untyped(std::ceil(typed(x))); }\n  inline double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }\n  inline double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n';
   js.NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport namespace operators {\n  void delete(int value);\n  void sort<T>(List<T> list, Comparison<T> comparison);\n}\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return untyped(this.length); }\n    static string fromCodeUnit(int value) { return untyped(String.fromCharCode(typed(value))); }\n    string get(int index) { return untyped(this[typed(index)]); }\n    string join(List<string> values) { return untyped(typed(values).join(this)); }\n    int codeUnitAt(int index) { return untyped(this.charCodeAt(typed(index))); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return untyped(this.length); }\n    void sort(Comparison<T> comparison) { operators.sort<T>(this, comparison); }\n    List<T> clone() { return untyped(this.slice()); }\n    T remove(int index) { return untyped(this.splice(typed(index), 1)[0]); }\n    void insert(int index, T value) { untyped(this.splice(typed(index), 0, typed(value))); }\n    T get(int index) { return untyped(this[typed(index)]); }\n    void set(int index, T value) { untyped(this[typed(index)] = typed(value)); }\n  }\n  void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  var table = untyped(Object.create(null));\n}\n\nin StringMap {\n  inline {\n    T get(string key) { return untyped(typed(table)[typed(key)]); }\n    void set(string key, T value) { untyped(typed(table)[typed(key)] = typed(value)); }\n    bool has(string key) { return untyped(typed(key) in typed(table)); }\n    void remove(string key) { operators.delete(untyped(typed(table)[typed(key)])); }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(typed(table))) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(typed(table))) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(typed(table))) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var table = untyped(Object.create(null));\n}\n\nin IntMap {\n  inline {\n    T get(int key) { return untyped(typed(table)[typed(key)]); }\n    void set(int key, T value) { untyped(typed(table)[typed(key)] = typed(value)); }\n    bool has(int key) { return untyped(typed(key) in typed(table)); }\n    void remove(int key) { operators.delete(untyped(typed(table)[typed(key)])); }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(typed(table))) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(typed(table))) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(typed(table))) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace math {}\n\nin math {\n  inline double abs(double x) { return untyped(Math.abs(typed(x))); }\n  inline double sin(double x) { return untyped(Math.sin(typed(x))); }\n  inline double cos(double x) { return untyped(Math.cos(typed(x))); }\n  inline double tan(double x) { return untyped(Math.tan(typed(x))); }\n  inline double asin(double x) { return untyped(Math.asin(typed(x))); }\n  inline double acos(double x) { return untyped(Math.acos(typed(x))); }\n  inline double atan(double x) { return untyped(Math.atan(typed(x))); }\n  inline double atan2(double y, double x) { return untyped(Math.atan2(typed(y), typed(x))); }\n  inline double sqrt(double x) { return untyped(Math.sqrt(typed(x))); }\n  inline double exp(double x) { return untyped(Math.exp(typed(x))); }\n  inline double log(double x) { return untyped(Math.log(typed(x))); }\n  inline double pow(double x, double y) { return untyped(Math.pow(typed(x), typed(y))); }\n  inline double floor(double x) { return untyped(Math.floor(typed(x))); }\n  inline double round(double x) { return untyped(Math.round(typed(x))); }\n  inline double ceil(double x) { return untyped(Math.ceil(typed(x))); }\n  inline double min(double x, double y) { return untyped(Math.min(typed(x), typed(y))); }\n  inline double max(double x, double y) { return untyped(Math.max(typed(x), typed(y))); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n';
   var yy_accept = [98, 98, 98, 33, 36, 97, 67, 36, 76, 14, 36, 58, 80, 64, 71, 22, 63, 29, 27, 52, 52, 21, 81, 59, 3, 42, 75, 44, 57, 79, 16, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 56, 15, 78, 89, 97, 68, 98, 85, 98, 11, 61, 4, 98, 19, 98, 9, 48, 10, 25, 8, 1, 97, 7, 98, 52, 98, 40, 98, 98, 31, 82, 60, 35, 43, 83, 44, 6, 44, 44, 44, 44, 44, 44, 44, 28, 44, 44, 44, 44, 44, 44, 45, 44, 47, 55, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 5, 62, 97, 30, 51, 54, 53, 12, 13, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 41, 44, 44, 44, 44, 66, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 94, 44, 44, 40, 44, 44, 44, 18, 44, 44, 44, 44, 32, 34, 44, 44, 44, 44, 44, 44, 44, 69, 44, 44, 44, 44, 44, 44, 44, 44, 88, 90, 44, 44, 44, 44, 44, 0, 44, 17, 20, 23, 44, 44, 44, 38, 39, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 86, 44, 91, 44, 93, 44, 96, 2, 44, 44, 37, 46, 49, 44, 44, 44, 44, 44, 74, 77, 84, 87, 44, 44, 44, 26, 44, 44, 44, 72, 44, 92, 95, 24, 44, 44, 70, 44, 50, 65, 73, 98];
   var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 1, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 32, 28, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 28, 42, 43, 44, 45, 46, 47, 28, 48, 49, 50, 51, 52, 53, 54, 55, 28, 56, 57, 58, 59, 1];
@@ -12382,7 +12412,7 @@
   var symbolFlagToName = null;
   Compiler.nativeLibrary = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nimport namespace math {\n  double abs(double x);\n  double sin(double x);\n  double cos(double x);\n  double tan(double x);\n  double asin(double x);\n  double acos(double x);\n  double atan(double x);\n  double atan2(double y, double x);\n  double sqrt(double x);\n  double exp(double x);\n  double log(double x);\n  double pow(double x, double y);\n  double floor(double x);\n  double round(double x);\n  double ceil(double x);\n  double min(double x, double y);\n  double max(double x, double y);\n}\n\nin math {\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n');
   Compiler.nativeLibraryJS = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport namespace operators {\n  void delete(int value);\n  void sort<T>(List<T> list, Comparison<T> comparison);\n}\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return untyped(this.length); }\n    static string fromCodeUnit(int value) { return untyped(String.fromCharCode(typed(value))); }\n    string get(int index) { return untyped(this[typed(index)]); }\n    string join(List<string> values) { return untyped(typed(values).join(this)); }\n    int codeUnitAt(int index) { return untyped(this.charCodeAt(typed(index))); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return untyped(this.length); }\n    void sort(Comparison<T> comparison) { operators.sort<T>(this, comparison); }\n    List<T> clone() { return untyped(this.slice()); }\n    T remove(int index) { return untyped(this.splice(typed(index), 1)[0]); }\n    void insert(int index, T value) { untyped(this.splice(typed(index), 0, typed(value))); }\n    T get(int index) { return untyped(this[typed(index)]); }\n    void set(int index, T value) { untyped(this[typed(index)] = typed(value)); }\n  }\n  void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  var table = untyped(Object.create(null));\n}\n\nin StringMap {\n  inline {\n    T get(string key) { return untyped(typed(table)[typed(key)]); }\n    void set(string key, T value) { untyped(typed(table)[typed(key)] = typed(value)); }\n    bool has(string key) { return untyped(typed(key) in typed(table)); }\n    void remove(string key) { operators.delete(untyped(typed(table)[typed(key)])); }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(typed(table))) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(typed(table))) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(typed(table))) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var table = untyped(Object.create(null));\n}\n\nin IntMap {\n  inline {\n    T get(int key) { return untyped(typed(table)[typed(key)]); }\n    void set(int key, T value) { untyped(typed(table)[typed(key)] = typed(value)); }\n    bool has(int key) { return untyped(typed(key) in typed(table)); }\n    void remove(int key) { operators.delete(untyped(typed(table)[typed(key)])); }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(typed(table))) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(typed(table))) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(typed(table))) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nimport namespace math {}\n\nin math {\n  inline double abs(double x) { return untyped(Math.abs(typed(x))); }\n  inline double sin(double x) { return untyped(Math.sin(typed(x))); }\n  inline double cos(double x) { return untyped(Math.cos(typed(x))); }\n  inline double tan(double x) { return untyped(Math.tan(typed(x))); }\n  inline double asin(double x) { return untyped(Math.asin(typed(x))); }\n  inline double acos(double x) { return untyped(Math.acos(typed(x))); }\n  inline double atan(double x) { return untyped(Math.atan(typed(x))); }\n  inline double atan2(double y, double x) { return untyped(Math.atan2(typed(y), typed(x))); }\n  inline double sqrt(double x) { return untyped(Math.sqrt(typed(x))); }\n  inline double exp(double x) { return untyped(Math.exp(typed(x))); }\n  inline double log(double x) { return untyped(Math.log(typed(x))); }\n  inline double pow(double x, double y) { return untyped(Math.pow(typed(x), typed(y))); }\n  inline double floor(double x) { return untyped(Math.floor(typed(x))); }\n  inline double round(double x) { return untyped(Math.round(typed(x))); }\n  inline double ceil(double x) { return untyped(Math.ceil(typed(x))); }\n  inline double min(double x, double y) { return untyped(Math.min(typed(x), typed(y))); }\n  inline double max(double x, double y) { return untyped(Math.max(typed(x), typed(y))); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n');
-  Compiler.nativeLibraryCPP = new CachedSource('\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  inline string toString() { return untyped(cpp_toString(this)); }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return untyped(cpp_toString(this)); }\n}\n\nin double {\n  inline string toString() { return untyped(cpp_toString(this)); }\n}\n\nin string {\n  inline {\n    int size() { return (int)untyped(this.size()); }\n    string slice(int start, int end) { return untyped(this.substr(typed(start), typed(end) - typed(start))); }\n    int indexOf(string value) { return (int)untyped(this.find(typed(value))); }\n    int lastIndexOf(string value) { return (int)untyped(this.rfind(typed(value))); }\n    string toLowerCase() { return untyped(cpp_toLowerCase(this)); }\n    string toUpperCase() { return untyped(cpp_toUpperCase(this)); }\n    static string fromCodeUnit(int value) { return untyped(string(1, typed(value))); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return untyped(this[typed(index)]); }\n  }\n  string join(List<string> values) { var result = ""; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nimport namespace math {}\n\nin math {\n  inline double abs(double x) { return untyped(std::abs(typed(x))); }\n  inline double sin(double x) { return untyped(std::sin(typed(x))); }\n  inline double cos(double x) { return untyped(std::cos(typed(x))); }\n  inline double tan(double x) { return untyped(std::tan(typed(x))); }\n  inline double asin(double x) { return untyped(std::asin(typed(x))); }\n  inline double acos(double x) { return untyped(std::acos(typed(x))); }\n  inline double atan(double x) { return untyped(std::atan(typed(x))); }\n  inline double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }\n  inline double sqrt(double x) { return untyped(std::sqrt(typed(x))); }\n  inline double exp(double x) { return untyped(std::exp(typed(x))); }\n  inline double log(double x) { return untyped(std::log(typed(x))); }\n  inline double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }\n  inline double floor(double x) { return untyped(std::floor(typed(x))); }\n  inline double round(double x) { return untyped(std::round(typed(x))); }\n  inline double ceil(double x) { return untyped(std::ceil(typed(x))); }\n  inline double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }\n  inline double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n');
+  Compiler.nativeLibraryCPP = new CachedSource('\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  string toString() {\n    untyped(std::stringstream) ss;\n    ss << this;\n    return ss.str();\n  }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return ((double)this).toString(); }\n}\n\nin double {\n  inline string toString() {\n    untyped(std::stringstream) ss;\n    untyped(ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::fixed) << this;\n    string result = ss.str();\n    while (untyped(result.back()) == \'0\') untyped(result.pop_back());\n    if (untyped(result.back()) == \'.\') untyped(result.pop_back());\n    return result;\n  }\n}\n\nin string {\n  inline {\n    int size() {\n      return (int)untyped(this.size());\n    }\n\n    string slice(int start, int end) {\n      return untyped(this.substr(typed(start), typed(end) - typed(start)));\n    }\n\n    int indexOf(string value) {\n      return (int)untyped(this.find(typed(value)));\n    }\n\n    int lastIndexOf(string value) {\n      return (int)untyped(this.rfind(typed(value)));\n    }\n\n    string toLowerCase() {\n      var clone = this;\n      untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower));\n      return clone;\n    }\n\n    string toUpperCase() {\n      var clone = this;\n      untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper));\n      return clone;\n    }\n\n    static string fromCodeUnit(int value) {\n      return untyped(string(1, typed(value)));\n    }\n\n    string get(int index) {\n      return fromCodeUnit(codeUnitAt(index));\n    }\n\n    int codeUnitAt(int index) {\n      return untyped(this[typed(index)]);\n    }\n  }\n\n  string join(List<string> values) {\n    var result = "";\n    for (var i = 0; i < values.size(); i++) {\n      if (i > 0) result += this;\n      result += values.get(i);\n    }\n    return result;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nimport namespace math {}\n\nin math {\n  inline double abs(double x) { return untyped(std::abs(typed(x))); }\n  inline double sin(double x) { return untyped(std::sin(typed(x))); }\n  inline double cos(double x) { return untyped(std::cos(typed(x))); }\n  inline double tan(double x) { return untyped(std::tan(typed(x))); }\n  inline double asin(double x) { return untyped(std::asin(typed(x))); }\n  inline double acos(double x) { return untyped(std::acos(typed(x))); }\n  inline double atan(double x) { return untyped(std::atan(typed(x))); }\n  inline double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }\n  inline double sqrt(double x) { return untyped(std::sqrt(typed(x))); }\n  inline double exp(double x) { return untyped(std::exp(typed(x))); }\n  inline double log(double x) { return untyped(std::log(typed(x))); }\n  inline double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }\n  inline double floor(double x) { return untyped(std::floor(typed(x))); }\n  inline double round(double x) { return untyped(std::round(typed(x))); }\n  inline double ceil(double x) { return untyped(std::ceil(typed(x))); }\n  inline double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }\n  inline double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n');
   Range.EMPTY = new Range(null, 0, 0);
   ByteSize.KB = 1024;
   ByteSize.MB = 1048576;

@@ -314,8 +314,10 @@ namespace cpp {
 
     override void emitDot(Node node) {
       var target = node.dotTarget();
-      emitExpression(target, .MEMBER);
-      emit(node.kind == .DOT_COLON ? "::" : node.kind == .DOT_ARROW || target.type.isReference() ? "->" : ".");
+      if (target != null) {
+        emitExpression(target, .MEMBER);
+      }
+      emit(node.kind == .DOT_COLON ? "::" : node.kind == .DOT_ARROW || target != null && target.type.isReference() ? "->" : ".");
       emit(node.symbol != null ? mangleName(node.symbol) : node.dotName().asString());
     }
 
@@ -394,6 +396,8 @@ namespace cpp {
     void emitCppType(Type type, CppEmitType mode) {
       if (type.isEnumFlags()) {
         emit("int");
+      } else if (type.isUntyped()) {
+        emitExpression(type.symbol.node, .LOWEST);
       } else {
         emitType(type);
       }

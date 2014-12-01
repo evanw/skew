@@ -7,6 +7,8 @@
 
 #include <string>
 #include <vector>
+#include <sstream>
+#include <iomanip>
 #include <unordered_map>
 #include <initializer_list>
 
@@ -85,10 +87,6 @@ double now();
 string encodeBase64(string text);
 double parseDoubleLiteral(string text);
 int parseIntLiteral(string text, int base);
-string cpp_toString(int value);
-string cpp_toString(double value);
-string cpp_toLowerCase(string value);
-string cpp_toUpperCase(string value);
 
 struct Source;
 
@@ -103,11 +101,9 @@ namespace io {
 #include "output.cpp"
 
 #include <cstdint>
-#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-#include <iomanip>
 #ifdef _WIN32
   #include <windows.h>
 #else
@@ -172,31 +168,6 @@ int parseIntLiteral(string text, int base) {
   int value = 0;
   std::stringstream ss(base == 10 ? text : text.substr(2));
   ss >> std::setbase(base) >> value;
-  return value;
-}
-
-string cpp_toString(int value) {
-  std::stringstream ss;
-  ss << value;
-  return ss.str();
-}
-
-string cpp_toString(double value) {
-  std::stringstream ss;
-  ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::fixed << value;
-  string result = ss.str();
-  while (result.back() == '0') result.pop_back();
-  if (result.back() == '.') result.pop_back();
-  return result;
-}
-
-string cpp_toLowerCase(string value) {
-  std::transform(value.begin(), value.end(), value.begin(), tolower);
-  return value;
-}
-
-string cpp_toUpperCase(string value) {
-  std::transform(value.begin(), value.end(), value.begin(), toupper);
   return value;
 }
 
