@@ -5110,6 +5110,18 @@
             child.appendChild(variables[j].replaceWith(null));
           }
         }
+      } else if (kind === NodeKind.FOR && i > 0) {
+        var previous = node.children[i - 1 | 0];
+        var setup = child.forSetup();
+        if (setup !== null && previous.kind === NodeKind.VARIABLE_CLUSTER && setup.kind === NodeKind.VARIABLE_CLUSTER) {
+          var variables = previous.clusterVariables();
+          for (var j = 0; j < variables.length; j = j + 1 | 0) {
+            variables[j].replaceWith(null);
+          }
+          setup.insertChildren(1, variables);
+          previous.remove();
+          i = i - 1 | 0;
+        }
       } else if (kind === NodeKind.EXPRESSION) {
         while ((i + 1 | 0) < node.children.length) {
           var next = node.children[i + 1 | 0];
@@ -5138,7 +5150,7 @@
               block = Node.createBlock([]);
               child.replaceChild(2, block);
               if (block !== child.ifFalse()) {
-                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:536:17)');
+                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:551:17)');
               }
             } else {
               this.peepholeMangleIf(child);
@@ -5197,7 +5209,7 @@
   };
   js.Patcher.prototype.peepholeMangleSequence = function(node) {
     if (node.kind !== NodeKind.SEQUENCE) {
-      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:611:7)');
+      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:626:7)');
     }
     for (var i = node.children.length - 1 | 0; i > 0; i = i - 1 | 0) {
       var current = node.children[i];
@@ -5289,7 +5301,7 @@
   };
   js.Patcher.prototype.unionVariableWithFunction = function(node) {
     if (node.symbol.kind === SymbolKind.LOCAL_VARIABLE !== (this.currentFunction !== null)) {
-      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:707:7)');
+      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:722:7)');
     }
     if (this.currentFunction !== null) {
       var left = this.namingGroupIndexForSymbol._table[this.currentFunction.uniqueID];
@@ -5318,7 +5330,7 @@
         this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
       } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
         if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
-          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:742:11)');
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:757:11)');
         }
         if (value.kind === NodeKind.INT) {
           var constant = value.asInt();
@@ -5378,7 +5390,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:829:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:844:7)');
     }
     var current = target;
     var parent = current.parent;

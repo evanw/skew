@@ -497,6 +497,21 @@ namespace js {
           }
         }
 
+        // "var a = 0, b = 1; for (var c = 2;;) {}" => "for (var a = 0, b = 1, c = 2;;) {}"
+        else if (kind == .FOR && i > 0) {
+          var previous = node.children.get(i - 1);
+          var setup = child.forSetup();
+          if (setup != null && previous.kind == .VARIABLE_CLUSTER && setup.kind == .VARIABLE_CLUSTER) {
+            var variables = previous.clusterVariables();
+            for (var j = 0; j < variables.size(); j++) {
+              variables.get(j).replaceWith(null);
+            }
+            setup.insertChildren(1, variables);
+            previous.remove();
+            i--;
+          }
+        }
+
         // "a; b; c;" => "a, b, c;"
         else if (kind == .EXPRESSION) {
           while (i + 1 < node.children.size()) {

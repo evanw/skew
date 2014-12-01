@@ -39,7 +39,7 @@ export int foo(StringMap<int> map) {
   return map.get(\"x\") + map.get(\"_\") + map.get(\"x\") + map.get(\"0\") + map.get(\"x0\") + map.get(\"if\");
 }
 ", "
-(function(){function b(){this.a=Object.create(null)}foo=function(a){return ((((a.a.x+a.a._|0)+a.a.x|0)+a.a['0']|0)+a.a.x0|0)+a.a['if']|0}}());
+(function(){function d(){this.a=Object.create(null)}foo=function(a){return ((((a.a.x+a.a._|0)+a.a.x|0)+a.a['0']|0)+a.a.x0|0)+a.a['if']|0}}());
 ");
 
 testMinifyJS("
@@ -52,7 +52,7 @@ export void foo(StringMap<int> map) {
   map.set(\"if\", 0);
 }
 ", "
-(function(){function b(){this.a=Object.create(null)}foo=function(a){a.a.x=a.a._=a.a.x=a.a['0']=a.a.x0=a.a['if']=0}}());
+(function(){function d(){this.a=Object.create(null)}foo=function(a){a.a.x=a.a._=a.a.x=a.a['0']=a.a.x0=a.a['if']=0}}());
 ");
 
 testMinifyJS("
@@ -65,7 +65,7 @@ export void foo() {
   map.set(\"a\", true);
 }
 ", "
-(function(){function c(){this.a=Object.create(null)}foo=function(){var a=new c(),b=!1;b=a.a.a=!1,b=a.a.a=!0}}());
+(function(){function d(){this.a=Object.create(null)}foo=function(){var a=new d(),b=!1;b=a.a.a=!1,b=a.a.a=!0}}());
 ");
 
 testMinifyJS("
@@ -661,6 +661,18 @@ export void test() {
 }
 ", "
 (function(){function f(){}f.prototype.a=function(){};test=function(){new f().a()}}());
+");
+
+testMinifyJS("
+import void bar(int foo);
+export void foo() {
+  var n = 10;
+  for (var i = 0; i < n; i++) {
+    bar(i);
+  }
+}
+", "
+(function(){foo=function(){for(var b=10,a=0;a<b;a=a+1|0)bar(a)}}());
 ");
 
 }}
