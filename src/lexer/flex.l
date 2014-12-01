@@ -37,8 +37,6 @@
 "switch"                             SWITCH;
 "this"                               THIS;
 "true"                               TRUE;
-"typed"                              TYPED;
-"untyped"                            UNTYPED;
 "using"                              USING;
 "var"                                VAR;
 "virtual"                            VIRTUAL;
@@ -90,6 +88,7 @@
 ">"                                  GREATER_THAN;
 "!"                                  NOT;
 "="                                  ASSIGN;
+"`"                                  TICK;
 
 ['](\\.|[^\\'])*[']                  CHARACTER;
 ["](\\.|[^\\"])*["]                  STRING;

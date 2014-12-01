@@ -61,8 +61,7 @@ enum NodeKind {
   PARAMETERIZE,
   CAST,
   IMPLICIT_CAST,
-  UNTYPED,
-  TYPED,
+  QUOTED,
   VAR,
 
   // Unary operators
@@ -185,10 +184,6 @@ in NodeKind {
 
   bool isCast() {
     return this >= CAST && this <= IMPLICIT_CAST;
-  }
-
-  bool isTypeHole() {
-    return this >= UNTYPED && this <= TYPED;
   }
 
   bool isType() {

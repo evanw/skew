@@ -152,7 +152,7 @@ export void baz(int foo, int bar, int baz) {}
 
 testMinifyJS("
 export int foo() {
-  return untyped(0) in 1;
+  return `0` in 1;
 }
 ", "
 (function(){foo=function(){return 0 in 1}}());

@@ -516,8 +516,7 @@ class Resolver {
       case .SEQUENCE { resolveSequence(node); }
       case .PARAMETERIZE { resolveParameterize(node); }
       case .CAST { resolveCast(node); }
-      case .UNTYPED { resolveUntyped(node); }
-      case .TYPED { resolveTyped(node); }
+      case .QUOTED { resolveQuoted(node); }
       case .VAR { resolveVar(node); }
 
       case .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT,
@@ -556,9 +555,9 @@ class Resolver {
   }
 
   void checkIsType(Node node) {
-    if (node.kind == .UNTYPED) {
-      var symbol = createSymbol("<untyped>", .UNTYPED);
-      symbol.node = node.typeHoleValue();
+    if (node.kind == .QUOTED) {
+      var symbol = createSymbol("<quoted>", .QUOTED_TYPE);
+      symbol.node = node.quotedValue();
       symbol.type = Type(symbol);
       node.kind = .TYPE;
       node.type = symbol.type;
@@ -2589,7 +2588,7 @@ class Resolver {
       return;
     }
 
-    // The "->" and "::" tokens should only be used inside an untyped expression
+    // The "->" and "::" tokens should only be used inside a quoted expression
     if (node.kind == .DOT_ARROW || node.kind == .DOT_COLON) {
       semanticErrorBadDotToken(log, target != null ? dotName != null
         ? Range.inner(target.range, dotName.range)
@@ -2827,30 +2826,30 @@ class Resolver {
     }
   }
 
-  void resolveUntyped(Node node) {
-    // Typed nodes can be used inside untyped nodes to get typing back
-    if (node.kind == .TYPED) {
-      var value = node.typeHoleValue();
+  void traverseQuotedContent(Node node) {
+    // Nested quotes can be used to get typing back
+    if (node.kind == .QUOTED) {
+      var value = node.quotedValue();
       resolve(value, null);
       node.become(value);
+      return;
     }
 
     // Recursively mark everything with the error type
-    else {
-      if (node.hasChildren()) {
-        for (var i = 0; i < node.children.size(); i++) {
-          var child = node.children.get(i);
-          if (child != null) {
-            resolveUntyped(child);
-          }
+    if (node.hasChildren()) {
+      for (var i = 0; i < node.children.size(); i++) {
+        var child = node.children.get(i);
+        if (child != null) {
+          traverseQuotedContent(child);
         }
       }
-      node.type = cache.errorType;
     }
+
+    node.type = cache.errorType;
   }
 
-  void resolveTyped(Node node) {
-    semanticErrorUnexpectedTyped(log, node.range);
+  void resolveQuoted(Node node) {
+    traverseQuotedContent(node.quotedValue());
   }
 
   void resolveVar(Node node) {

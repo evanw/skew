@@ -20,11 +20,11 @@ import class string {
 
 in string {
   inline {
-    int size() { return untyped(this.length); }
-    static string fromCodeUnit(int value) { return untyped(String).fromCharCode(value); }
-    string get(int index) { return untyped(this)[index]; }
-    string join(List<string> values) { return untyped(typed(values)).join(this); }
-    int codeUnitAt(int index) { return untyped(this).charCodeAt(index); }
+    int size() { return `this`.length; }
+    static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }
+    string get(int index) { return `this`[index]; }
+    string join(List<string> values) { return ``values``.join(this); }
+    int codeUnitAt(int index) { return `this`.charCodeAt(index); }
   }
 
   bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }
@@ -50,20 +50,20 @@ import class List<T> {
 
 in List {
   inline {
-    int size() { return untyped(this).length; }
+    int size() { return `this`.length; }
     void sort(Comparison<T> comparison) { operators.sort<T>(this, comparison); }
-    List<T> clone() { return untyped(this).slice(); }
-    T remove(int index) { return untyped(this).splice(index, 1)[0]; }
-    void insert(int index, T value) { untyped(this).splice(index, 0, value); }
-    T get(int index) { return untyped(this)[index]; }
-    void set(int index, T value) { untyped(this)[index] = value; }
+    List<T> clone() { return `this`.slice(); }
+    T remove(int index) { return `this`.splice(index, 1)[0]; }
+    void insert(int index, T value) { `this`.splice(index, 0, value); }
+    T get(int index) { return `this`[index]; }
+    void set(int index, T value) { `this`[index] = value; }
   }
 
   void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }
 }
 
 class StringMap<T> {
-  var _table = untyped(Object).create(null);
+  var _table = `Object`.create(null);
 
   inline {
     T get(string key) { return _table[key]; }
@@ -96,7 +96,7 @@ class StringMap<T> {
 }
 
 class IntMap<T> {
-  var _table = untyped(Object).create(null);
+  var _table = `Object`.create(null);
 
   inline {
     T get(int key) { return _table[key]; }
@@ -130,23 +130,23 @@ class IntMap<T> {
 
 namespace math {
   inline {
-    double abs(double x) { return untyped(Math).abs(x); }
-    double sin(double x) { return untyped(Math).sin(x); }
-    double cos(double x) { return untyped(Math).cos(x); }
-    double tan(double x) { return untyped(Math).tan(x); }
-    double asin(double x) { return untyped(Math).asin(x); }
-    double acos(double x) { return untyped(Math).acos(x); }
-    double atan(double x) { return untyped(Math).atan(x); }
-    double atan2(double y, double x) { return untyped(Math).atan2(y, x); }
-    double sqrt(double x) { return untyped(Math).sqrt(x); }
-    double exp(double x) { return untyped(Math).exp(x); }
-    double log(double x) { return untyped(Math).log(x); }
-    double pow(double x, double y) { return untyped(Math).pow(x, y); }
-    double floor(double x) { return untyped(Math).floor(x); }
-    double round(double x) { return untyped(Math).round(x); }
-    double ceil(double x) { return untyped(Math).ceil(x); }
-    double min(double x, double y) { return untyped(Math).min(x, y); }
-    double max(double x, double y) { return untyped(Math).max(x, y); }
+    double abs(double x) { return `Math`.abs(x); }
+    double sin(double x) { return `Math`.sin(x); }
+    double cos(double x) { return `Math`.cos(x); }
+    double tan(double x) { return `Math`.tan(x); }
+    double asin(double x) { return `Math`.asin(x); }
+    double acos(double x) { return `Math`.acos(x); }
+    double atan(double x) { return `Math`.atan(x); }
+    double atan2(double y, double x) { return `Math`.atan2(y, x); }
+    double sqrt(double x) { return `Math`.sqrt(x); }
+    double exp(double x) { return `Math`.exp(x); }
+    double log(double x) { return `Math`.log(x); }
+    double pow(double x, double y) { return `Math`.pow(x, y); }
+    double floor(double x) { return `Math`.floor(x); }
+    double round(double x) { return `Math`.round(x); }
+    double ceil(double x) { return `Math`.ceil(x); }
+    double min(double x, double y) { return `Math`.min(x, y); }
+    double max(double x, double y) { return `Math`.max(x, y); }
   }
 
   const {

@@ -8,7 +8,7 @@ import class string {}
 
 in int {
   string toString() {
-    untyped(std::stringstream) ss;
+    `std::stringstream` ss;
     ss << this;
     return ss.str();
   }
@@ -20,7 +20,7 @@ in bool {
 
 in float {
   inline string toString() {
-    untyped(std::stringstream) ss;
+    `std::stringstream` ss;
     ss << this;
     return ss.str();
   }
@@ -28,7 +28,7 @@ in float {
 
 in double {
   inline string toString() {
-    untyped(std::stringstream) ss;
+    `std::stringstream` ss;
     ss << this;
     return ss.str();
   }
@@ -36,24 +36,24 @@ in double {
 
 in string {
   inline {
-    int size() { return (int)untyped(this).size(); }
-    string slice(int start, int end) { return untyped(this).substr(start, end - start); }
-    int indexOf(string value) { return (int)untyped(this).find(value); }
-    int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }
-    static string fromCodeUnit(int value) { return untyped(string)(1, value); }
+    int size() { return (int)`this`.size(); }
+    string slice(int start, int end) { return `this`.substr(start, end - start); }
+    int indexOf(string value) { return (int)`this`.find(value); }
+    int lastIndexOf(string value) { return (int)`this`.rfind(value); }
+    static string fromCodeUnit(int value) { return `string`(1, value); }
     string get(int index) { return fromCodeUnit(codeUnitAt(index)); }
-    int codeUnitAt(int index) { return untyped(this)[index]; }
+    int codeUnitAt(int index) { return `this`[index]; }
   }
 
   string toLowerCase() {
     var clone = this;
-    untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower));
+    `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;
     return clone;
   }
 
   string toUpperCase() {
     var clone = this;
-    untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper));
+    `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;
     return clone;
   }
 
@@ -108,50 +108,50 @@ import class List<T> {
 class StringMap<T> {
   new() {}
   T get(string key) { return _table[key]; }
-  T getOrDefault(string key, T defaultValue) { untyped(auto) it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
+  T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
   void set(string key, T value) { _table[key] = value; }
   bool has(string key) { return _table.count(key); }
   void remove(string key) { _table.erase(key); }
-  List<string> keys() { var keys = List<string>(); for (untyped(auto &) it in _table) keys.push(it.first); return keys; }
-  List<T> values() { var values = List<T>(); for (untyped(auto &) it in _table) values.push(it.second); return values; }
+  List<string> keys() { var keys = List<string>(); for (`(auto &)` it in _table) keys.push(it.first); return keys; }
+  List<T> values() { var values = List<T>(); for (`(auto &)` it in _table) values.push(it.second); return values; }
   StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }
 
-  untyped(std::unordered_map<string, T>) _table;
+  `std::unordered_map<string, T>` _table;
 }
 
 class IntMap<T> {
   new() {}
   T get(int key) { return _table[key]; }
-  T getOrDefault(int key, T defaultValue) { untyped(auto) it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
+  T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
   void set(int key, T value) { _table[key] = value; }
   bool has(int key) { return _table.count(key); }
   void remove(int key) { _table.erase(key); }
-  List<int> keys() { var keys = List<int>(); for (untyped(auto &) it in _table) keys.push(it.first); return keys; }
-  List<T> values() { var values = List<T>(); for (untyped(auto &) it in _table) values.push(it.second); return values; }
+  List<int> keys() { var keys = List<int>(); for (`(auto &)` it in _table) keys.push(it.first); return keys; }
+  List<T> values() { var values = List<T>(); for (`(auto &)` it in _table) values.push(it.second); return values; }
   StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }
 
-  untyped(std::unordered_map<int, T>) _table;
+  `std::unordered_map<int, T>` _table;
 }
 
 namespace math {
   inline {
-    double abs(double x) { return untyped(std)::abs(x); }
-    double sin(double x) { return untyped(std)::sin(x); }
-    double cos(double x) { return untyped(std)::cos(x); }
-    double tan(double x) { return untyped(std)::tan(x); }
-    double asin(double x) { return untyped(std)::asin(x); }
-    double acos(double x) { return untyped(std)::acos(x); }
-    double atan(double x) { return untyped(std)::atan(x); }
-    double atan2(double y, double x) { return untyped(std)::atan2(y, x); }
-    double sqrt(double x) { return untyped(std)::sqrt(x); }
-    double exp(double x) { return untyped(std)::exp(x); }
-    double log(double x) { return untyped(std)::log(x); }
-    double pow(double x, double y) { return untyped(std)::pow(x, y); }
-    double floor(double x) { return untyped(std)::floor(x); }
-    double round(double x) { return untyped(std)::round(x); }
-    double ceil(double x) { return untyped(std)::ceil(x); }
-    double min(double x, double y) { return untyped(std)::fmin(x, y); }
-    double max(double x, double y) { return untyped(std)::fmax(x, y); }
+    double abs(double x) { return `std`::abs(x); }
+    double sin(double x) { return `std`::sin(x); }
+    double cos(double x) { return `std`::cos(x); }
+    double tan(double x) { return `std`::tan(x); }
+    double asin(double x) { return `std`::asin(x); }
+    double acos(double x) { return `std`::acos(x); }
+    double atan(double x) { return `std`::atan(x); }
+    double atan2(double y, double x) { return `std`::atan2(y, x); }
+    double sqrt(double x) { return `std`::sqrt(x); }
+    double exp(double x) { return `std`::exp(x); }
+    double log(double x) { return `std`::log(x); }
+    double pow(double x, double y) { return `std`::pow(x, y); }
+    double floor(double x) { return `std`::floor(x); }
+    double round(double x) { return `std`::round(x); }
+    double ceil(double x) { return `std`::ceil(x); }
+    double min(double x, double y) { return `std`::fmin(x, y); }
+    double max(double x, double y) { return `std`::fmax(x, y); }
   }
 
   const {

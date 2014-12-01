@@ -444,14 +444,14 @@ namespace cpp {
     void emitCppType(Type type, CppEmitType mode) {
       if (type.isEnumFlags()) {
         emit("int");
-      } else if (type.isUntyped()) {
+      } else if (type.isQuoted()) {
         emitExpression(type.symbol.node, .LOWEST);
       } else {
         emitType(type);
       }
       if (type.isReference() && mode != .BARE) {
         emit(" *");
-      } else if (mode == .DECLARATION && (!type.isUntyped() || !type.symbol.node.kind.isUnaryTypeOperator())) {
+      } else if (mode == .DECLARATION && (!type.isQuoted() || !type.symbol.node.kind.isUnaryTypeOperator())) {
         emit(" ");
       }
     }

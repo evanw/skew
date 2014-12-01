@@ -628,7 +628,8 @@ namespace js {
     void emitExpression(Node node, Precedence precedence) {
       addMapping(node);
 
-      switch (node.kind) {
+      var kind = node.kind;
+      switch (kind) {
         case .NAME { emit(node.symbol == null ? node.asString() : fullName(node.symbol)); }
         case .TYPE { emit(fullName(node.type.symbol)); }
         case .THIS { emit("this"); }
@@ -643,32 +644,14 @@ namespace js {
         case .CALL { emitCall(node); }
         case .SUPER_CALL { emitSuperCall(node); }
         case .SEQUENCE { emitSequence(node, precedence); }
-        case .UNTYPED, .TYPED { emitExpression(node.typeHoleValue(), precedence); }
+        case .QUOTED { emitExpression(node.quotedValue(), precedence); }
         case .INDEX { emitIndex(node, precedence); }
         case .ASSIGN_INDEX { emitTernary(node, precedence); }
         case .CAST, .IMPLICIT_CAST { emitExpression(node.castValue(), precedence); }
-
-        case
-          .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT,
-          .PREFIX_INCREMENT, .PREFIX_DECREMENT,
-          .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
-          emitUnary(node, precedence);
-        }
-
-        case
-          .ADD, .ASSIGN, .ASSIGN_ADD, .ASSIGN_BITWISE_AND,
-          .ASSIGN_BITWISE_OR, .ASSIGN_BITWISE_XOR, .ASSIGN_DIVIDE,
-          .ASSIGN_MULTIPLY, .ASSIGN_REMAINDER, .ASSIGN_SHIFT_LEFT,
-          .ASSIGN_SHIFT_RIGHT, .ASSIGN_SUBTRACT, .BITWISE_AND,
-          .BITWISE_OR, .BITWISE_XOR, .DIVIDE, .EQUAL, .GREATER_THAN,
-          .GREATER_THAN_OR_EQUAL, .IN, .LESS_THAN, .LESS_THAN_OR_EQUAL,
-          .LOGICAL_AND, .LOGICAL_OR, .MULTIPLY, .NOT_EQUAL, .REMAINDER,
-          .SHIFT_LEFT, .SHIFT_RIGHT, .SUBTRACT {
-          emitBinary(node, precedence);
-        }
-
         default {
-          assert false;
+          if (kind.isUnaryOperator()) emitUnary(node, precedence);
+          else if (kind.isBinaryOperator()) emitBinary(node, precedence);
+          else assert false;
         }
       }
     }

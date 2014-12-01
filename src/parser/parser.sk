@@ -551,7 +551,7 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case .EXPORT { return parseModifier(context, hint, .EXPORT); }
     case .FINAL { return parseModifier(context, hint, .FINAL); }
     case .FOR { return parseFor(context); }
-    case .IDENTIFIER, .VAR, .UNTYPED { return parsePossibleTypedDeclaration(context, hint); }
+    case .IDENTIFIER, .VAR, .TICK { return parsePossibleTypedDeclaration(context, hint); }
     case .IF { return parseIf(context); }
     case .IMPORT { return parseModifier(context, hint, .IMPORT); }
     case .IN { return parseExtension(context); }
@@ -782,13 +782,12 @@ class ParameterizeParselet : IInfixParselet {
   }
 }
 
-class TypeHoleParselet : IPrefixParselet {
-  NodeKind kind;
-
+class QuotedParselet : IPrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.next();
-    var value = parseGroup(context);
-    return (value == null ? Node.createError() : Node.createTypeHole(kind, value)).withRange(context.spanSince(token.range));
+    var value = pratt.parse(context, .LOWEST);
+    if (value == null || !context.expect(.TICK)) return Node.createError().withRange(context.spanSince(token.range));
+    return Node.createQuoted(value).withRange(context.spanSince(token.range));
   }
 }
 
@@ -898,8 +897,7 @@ void createParser() {
   pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet();
   pratt.parselet(.LEFT_BRACKET, .UNARY_POSTFIX).infix = IndexParselet();
   pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizeParselet();
-  pratt.parselet(.UNTYPED, .UNARY_PREFIX).prefix = TypeHoleParselet(.UNTYPED);
-  pratt.parselet(.TYPED, .UNARY_PREFIX).prefix = TypeHoleParselet(.TYPED);
+  pratt.parselet(.TICK, .UNARY_PREFIX).prefix = QuotedParselet();
   pratt.parselet(.NEW, .LOWEST).prefix = NewParselet();
   pratt.parselet(.SUPER, .LOWEST).prefix = SuperParselet();
   pratt.parselet(.BITWISE_AND, .BITWISE_AND).infix = BinaryInfixOrUnaryPostfix(.BITWISE_AND, .POSTFIX_REFERENCE, .BITWISE_AND);

@@ -210,11 +210,11 @@ class Type {
   }
 
   bool isIgnored(TypeCache cache) {
-    return isError(cache) || isUntyped();
+    return isError(cache) || isQuoted();
   }
 
-  bool isUntyped() {
-    return symbol != null && symbol.kind == .UNTYPED;
+  bool isQuoted() {
+    return symbol != null && symbol.kind == .QUOTED_TYPE;
   }
 
   bool isFunction() {

@@ -249,8 +249,8 @@ in Node {
     return children.get(1);
   }
 
-  Node typeHoleValue() {
-    assert kind.isTypeHole();
+  Node quotedValue() {
+    assert kind == .QUOTED;
     assert children.size() == 1;
     return children.get(0);
   }

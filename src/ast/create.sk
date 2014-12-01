@@ -298,15 +298,9 @@ in Node {
     return Node(.IMPLICIT_CAST).withChildren([type, value]);
   }
 
-  static Node createTypeHole(NodeKind kind, Node type) {
-    assert kind.isTypeHole();
-    assert type.kind.isExpression();
-    return Node(kind).withChildren([type]);
-  }
-
-  static Node createTyped(Node type) {
-    assert type.kind.isExpression();
-    return Node(.TYPED).withChildren([type]);
+  static Node createQuoted(Node value) {
+    assert value.kind.isExpression();
+    return Node(.QUOTED).withChildren([value]);
   }
 
   static Node createVar() {
