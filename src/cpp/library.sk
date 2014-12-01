@@ -36,10 +36,10 @@ in double {
 
 in string {
   inline {
-    int size() { return (int)`this`.size(); }
-    string slice(int start, int end) { return `this`.substr(start, end - start); }
-    int indexOf(string value) { return (int)`this`.find(value); }
-    int lastIndexOf(string value) { return (int)`this`.rfind(value); }
+    int size() { return (int)this.`size`(); }
+    string slice(int start, int end) { return this.`substr`(start, end - start); }
+    int indexOf(string value) { return (int)this.`find`(value); }
+    int lastIndexOf(string value) { return (int)this.`rfind`(value); }
     static string fromCodeUnit(int value) { return `string`(1, value); }
     string get(int index) { return fromCodeUnit(codeUnitAt(index)); }
     int codeUnitAt(int index) { return `this`[index]; }
