@@ -59,10 +59,24 @@ namespace cpp {
     }
 
     override void emitTypeParameters(Symbol symbol) {
-      if (symbol.hasParameters()) {
-        emit(indent + "template ");
-        super(symbol);
-        emit("\n");
+      var enclosingSymbol = symbol.enclosingSymbol;
+      var selfParameters = symbol.hasParameters();
+      var enclosingParameters = pass == .IMPLEMENT_CODE && enclosingSymbol.hasParameters();
+      if (selfParameters || enclosingParameters) {
+        emit(indent + "template <");
+        if (selfParameters) {
+          for (var i = 0; i < symbol.parameters.size(); i++) {
+            if (i > 0) emit(", ");
+            emitTypeParameter(symbol.parameters.get(i));
+          }
+        }
+        if (enclosingParameters) {
+          for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
+            if (i > 0 || selfParameters) emit(", ");
+            emitTypeParameter(enclosingSymbol.parameters.get(i));
+          }
+        }
+        emit(">\n");
       }
     }
 
@@ -168,7 +182,22 @@ namespace cpp {
           if (symbol.kind != .CONSTRUCTOR_FUNCTION) {
             emitCppType(symbol.type.resultType(), .DECLARATION);
           }
-          emit(pass == .FORWARD_DECLARE_CODE ? mangleName(symbol) : fullName(symbol));
+          if (pass == .IMPLEMENT_CODE) {
+            var enclosingSymbol = symbol.enclosingSymbol;
+            if (enclosingSymbol != null && enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
+              emit(fullName(enclosingSymbol));
+              if (enclosingSymbol.hasParameters()) {
+                emit("<");
+                for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
+                  if (i > 0) emit(", ");
+                  emit(mangleName(enclosingSymbol.parameters.get(i)));
+                }
+                emit(">");
+              }
+              emit("::");
+            }
+          }
+          emit(mangleName(symbol));
           emitFunctionArguments(symbol);
           if (block == null) {
             emit(" = 0;");

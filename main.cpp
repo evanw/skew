@@ -51,38 +51,6 @@ private:
   std::vector<T> data;
 };
 
-template <typename T>
-struct StringMap {
-  StringMap() {}
-  T get(string key) { return data[key]; }
-  T getOrDefault(string key, T defaultValue) { auto it = data.find(key); return it != data.end() ? it->second : defaultValue; }
-  void set(string key, T value) { data[key] = value; }
-  bool has(string key) { return data.count(key); }
-  void remove(string key) { data.erase(key); }
-  List<string> *keys() { auto keys = new List<string>(); for (auto &it : data) keys->push(it.first); return keys; }
-  List<T> *values() { auto values = new List<T>(); for (auto &it : data) values->push(it.second); return values; }
-  StringMap<T> *clone() { auto clone = new StringMap<T>(); clone->data = data; return clone; }
-
-private:
-  std::unordered_map<string, T> data;
-};
-
-template <typename T>
-struct IntMap {
-  IntMap() {}
-  T get(int key) { return data[key]; }
-  T getOrDefault(int key, T defaultValue) { auto it = data.find(key); return it != data.end() ? it->second : defaultValue; }
-  void set(int key, T value) { data[key] = value; }
-  bool has(int key) { return data.count(key); }
-  void remove(int key) { data.erase(key); }
-  List<int> *keys() { auto keys = new List<int>(); for (auto &it : data) keys->push(it.first); return keys; }
-  List<T> *values() { auto values = new List<T>(); for (auto &it : data) values->push(it.second); return values; }
-  IntMap<T> *clone() { auto clone = new IntMap<T>(); clone->data = data; return clone; }
-
-private:
-  std::unordered_map<int, T> data;
-};
-
 double now();
 string encodeBase64(string text);
 double parseDoubleLiteral(string text);

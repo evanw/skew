@@ -89,10 +89,12 @@ namespace math {
     double max(double x, double y);
   }
 
-  const double SQRT2 = 1.414213562373095;
-  const double PI = 3.141592653589793;
-  const double E = 2.718281828459045;
-  const double INFINITY = 1 / 0.0;
-  const double NAN = 0 / 0.0;
+  const {
+    double SQRT2 = 1.414213562373095;
+    double PI = 3.141592653589793;
+    double E = 2.718281828459045;
+    double INFINITY = 1 / 0.0;
+    double NAN = 0 / 0.0;
+  }
 }
 ";

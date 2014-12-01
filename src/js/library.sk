@@ -58,19 +58,18 @@ in List {
     T get(int index) { return untyped(this[typed(index)]); }
     void set(int index, T value) { untyped(this[typed(index)] = typed(value)); }
   }
+
   void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }
 }
 
 class StringMap<T> {
-  var table = untyped(Object.create(null));
-}
+  var _table = untyped(Object.create(null));
 
-in StringMap {
   inline {
-    T get(string key) { return untyped(typed(table)[typed(key)]); }
-    void set(string key, T value) { untyped(typed(table)[typed(key)] = typed(value)); }
-    bool has(string key) { return untyped(typed(key) in typed(table)); }
-    void remove(string key) { operators.delete(untyped(typed(table)[typed(key)])); }
+    T get(string key) { return _table[key]; }
+    void set(string key, T value) { _table[key] = value; }
+    bool has(string key) { return key in _table; }
+    void remove(string key) { operators.delete(_table[key]); }
   }
 
   T getOrDefault(string key, T defaultValue) {
@@ -79,33 +78,31 @@ in StringMap {
 
   List<string> keys() {
     List<string> keys = [];
-    for (string key in untyped(typed(table))) keys.push(key);
+    for (string key in _table) keys.push(key);
     return keys;
   }
 
   List<T> values() {
     List<T> values = [];
-    for (string key in untyped(typed(table))) values.push(get(key));
+    for (string key in _table) values.push(get(key));
     return values;
   }
 
   StringMap<T> clone() {
     var clone = StringMap<T>();
-    for (string key in untyped(typed(table))) clone.set(key, get(key));
+    for (string key in _table) clone.set(key, get(key));
     return clone;
   }
 }
 
 class IntMap<T> {
-  var table = untyped(Object.create(null));
-}
+  var _table = untyped(Object.create(null));
 
-in IntMap {
   inline {
-    T get(int key) { return untyped(typed(table)[typed(key)]); }
-    void set(int key, T value) { untyped(typed(table)[typed(key)] = typed(value)); }
-    bool has(int key) { return untyped(typed(key) in typed(table)); }
-    void remove(int key) { operators.delete(untyped(typed(table)[typed(key)])); }
+    T get(int key) { return _table[key]; }
+    void set(int key, T value) { _table[key] = value; }
+    bool has(int key) { return key in _table; }
+    void remove(int key) { operators.delete(_table[key]); }
   }
 
   T getOrDefault(int key, T defaultValue) {
@@ -114,47 +111,51 @@ in IntMap {
 
   List<int> keys() {
     List<int> keys = [];
-    for (double key in untyped(typed(table))) keys.push((int)key);
+    for (double key in _table) keys.push((int)key);
     return keys;
   }
 
   List<T> values() {
     List<T> values = [];
-    for (int key in untyped(typed(table))) values.push(get(key));
+    for (int key in _table) values.push(get(key));
     return values;
   }
 
   IntMap<T> clone() {
     var clone = IntMap<T>();
-    for (int key in untyped(typed(table))) clone.set(key, get(key));
+    for (int key in _table) clone.set(key, get(key));
     return clone;
   }
 }
 
 namespace math {
-  inline double abs(double x) { return untyped(Math.abs(typed(x))); }
-  inline double sin(double x) { return untyped(Math.sin(typed(x))); }
-  inline double cos(double x) { return untyped(Math.cos(typed(x))); }
-  inline double tan(double x) { return untyped(Math.tan(typed(x))); }
-  inline double asin(double x) { return untyped(Math.asin(typed(x))); }
-  inline double acos(double x) { return untyped(Math.acos(typed(x))); }
-  inline double atan(double x) { return untyped(Math.atan(typed(x))); }
-  inline double atan2(double y, double x) { return untyped(Math.atan2(typed(y), typed(x))); }
-  inline double sqrt(double x) { return untyped(Math.sqrt(typed(x))); }
-  inline double exp(double x) { return untyped(Math.exp(typed(x))); }
-  inline double log(double x) { return untyped(Math.log(typed(x))); }
-  inline double pow(double x, double y) { return untyped(Math.pow(typed(x), typed(y))); }
-  inline double floor(double x) { return untyped(Math.floor(typed(x))); }
-  inline double round(double x) { return untyped(Math.round(typed(x))); }
-  inline double ceil(double x) { return untyped(Math.ceil(typed(x))); }
-  inline double min(double x, double y) { return untyped(Math.min(typed(x), typed(y))); }
-  inline double max(double x, double y) { return untyped(Math.max(typed(x), typed(y))); }
+  inline {
+    double abs(double x) { return untyped(Math.abs(typed(x))); }
+    double sin(double x) { return untyped(Math.sin(typed(x))); }
+    double cos(double x) { return untyped(Math.cos(typed(x))); }
+    double tan(double x) { return untyped(Math.tan(typed(x))); }
+    double asin(double x) { return untyped(Math.asin(typed(x))); }
+    double acos(double x) { return untyped(Math.acos(typed(x))); }
+    double atan(double x) { return untyped(Math.atan(typed(x))); }
+    double atan2(double y, double x) { return untyped(Math.atan2(typed(y), typed(x))); }
+    double sqrt(double x) { return untyped(Math.sqrt(typed(x))); }
+    double exp(double x) { return untyped(Math.exp(typed(x))); }
+    double log(double x) { return untyped(Math.log(typed(x))); }
+    double pow(double x, double y) { return untyped(Math.pow(typed(x), typed(y))); }
+    double floor(double x) { return untyped(Math.floor(typed(x))); }
+    double round(double x) { return untyped(Math.round(typed(x))); }
+    double ceil(double x) { return untyped(Math.ceil(typed(x))); }
+    double min(double x, double y) { return untyped(Math.min(typed(x), typed(y))); }
+    double max(double x, double y) { return untyped(Math.max(typed(x), typed(y))); }
+  }
 
-  const double SQRT2 = 1.414213562373095;
-  const double PI = 3.141592653589793;
-  const double E = 2.718281828459045;
-  const double INFINITY = 1 / 0.0;
-  const double NAN = 0 / 0.0;
+  const {
+    double SQRT2 = 1.414213562373095;
+    double PI = 3.141592653589793;
+    double E = 2.718281828459045;
+    double INFINITY = 1 / 0.0;
+    double NAN = 0 / 0.0;
+  }
 }
 ";
 }

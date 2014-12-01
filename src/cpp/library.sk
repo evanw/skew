@@ -104,54 +104,62 @@ import class List<T> {
   void swap(int a, int b);
 }
 
-import class StringMap<T> {
-  new();
-  T get(string key);
-  T getOrDefault(string key, T defaultValue);
-  void set(string key, T value);
-  bool has(string key);
-  void remove(string key);
-  List<string> keys();
-  List<T> values();
-  StringMap<T> clone();
+class StringMap<T> {
+  new() {}
+  T get(string key) { return _table[key]; }
+  T getOrDefault(string key, T defaultValue) { untyped(auto) it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
+  void set(string key, T value) { _table[key] = value; }
+  bool has(string key) { return _table.count(key); }
+  void remove(string key) { _table.erase(key); }
+  List<string> keys() { var keys = List<string>(); for (untyped(auto &) it in _table) keys.push(it.first); return keys; }
+  List<T> values() { var values = List<T>(); for (untyped(auto &) it in _table) values.push(it.second); return values; }
+  StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }
+
+  untyped(std::unordered_map<string, T>) _table;
 }
 
-import class IntMap<T> {
-  new();
-  T get(int key);
-  T getOrDefault(int key, T defaultValue);
-  void set(int key, T value);
-  bool has(int key);
-  void remove(int key);
-  List<int> keys();
-  List<T> values();
-  IntMap<T> clone();
+class IntMap<T> {
+  new() {}
+  T get(int key) { return _table[key]; }
+  T getOrDefault(int key, T defaultValue) { untyped(auto) it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
+  void set(int key, T value) { _table[key] = value; }
+  bool has(int key) { return _table.count(key); }
+  void remove(int key) { _table.erase(key); }
+  List<int> keys() { var keys = List<int>(); for (untyped(auto &) it in _table) keys.push(it.first); return keys; }
+  List<T> values() { var values = List<T>(); for (untyped(auto &) it in _table) values.push(it.second); return values; }
+  StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }
+
+  untyped(std::unordered_map<int, T>) _table;
 }
 
 namespace math {
-  inline double abs(double x) { return untyped(std::abs(typed(x))); }
-  inline double sin(double x) { return untyped(std::sin(typed(x))); }
-  inline double cos(double x) { return untyped(std::cos(typed(x))); }
-  inline double tan(double x) { return untyped(std::tan(typed(x))); }
-  inline double asin(double x) { return untyped(std::asin(typed(x))); }
-  inline double acos(double x) { return untyped(std::acos(typed(x))); }
-  inline double atan(double x) { return untyped(std::atan(typed(x))); }
-  inline double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }
-  inline double sqrt(double x) { return untyped(std::sqrt(typed(x))); }
-  inline double exp(double x) { return untyped(std::exp(typed(x))); }
-  inline double log(double x) { return untyped(std::log(typed(x))); }
-  inline double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }
-  inline double floor(double x) { return untyped(std::floor(typed(x))); }
-  inline double round(double x) { return untyped(std::round(typed(x))); }
-  inline double ceil(double x) { return untyped(std::ceil(typed(x))); }
-  inline double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }
-  inline double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }
+  inline {
+    double abs(double x) { return untyped(std::abs(typed(x))); }
+    double sin(double x) { return untyped(std::sin(typed(x))); }
+    double cos(double x) { return untyped(std::cos(typed(x))); }
+    double tan(double x) { return untyped(std::tan(typed(x))); }
+    double asin(double x) { return untyped(std::asin(typed(x))); }
+    double acos(double x) { return untyped(std::acos(typed(x))); }
+    double atan(double x) { return untyped(std::atan(typed(x))); }
+    double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }
+    double sqrt(double x) { return untyped(std::sqrt(typed(x))); }
+    double exp(double x) { return untyped(std::exp(typed(x))); }
+    double log(double x) { return untyped(std::log(typed(x))); }
+    double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }
+    double floor(double x) { return untyped(std::floor(typed(x))); }
+    double round(double x) { return untyped(std::round(typed(x))); }
+    double ceil(double x) { return untyped(std::ceil(typed(x))); }
+    double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }
+    double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }
+  }
 
-  const double SQRT2 = 1.414213562373095;
-  const double PI = 3.141592653589793;
-  const double E = 2.718281828459045;
-  const double INFINITY = 1 / 0.0;
-  const double NAN = 0 / 0.0;
+  const {
+    double SQRT2 = 1.414213562373095;
+    double PI = 3.141592653589793;
+    double E = 2.718281828459045;
+    double INFINITY = 1 / 0.0;
+    double NAN = 0 / 0.0;
+  }
 }
 ";
 }

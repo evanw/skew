@@ -2574,16 +2574,6 @@ class Resolver {
     var target = node.dotTarget();
     var dotName = node.dotName();
 
-    // The "->" and "::" tokens should only be used inside an untyped expression
-    if (node.kind == .DOT_ARROW || node.kind == .DOT_COLON) {
-      semanticErrorBadDotToken(log, target != null ? dotName != null
-        ? Range.inner(target.range, dotName.range)
-        : Range.after(node.range, target.range) : dotName != null
-        ? Range.before(node.range, dotName.range)
-        : node.range);
-      node.kind = .DOT;
-    }
-
     // The target may be null, which means to use the type context instead
     if (target != null) {
       resolve(target, null);
@@ -2597,6 +2587,16 @@ class Resolver {
     }
     if (type.isIgnored(cache)) {
       return;
+    }
+
+    // The "->" and "::" tokens should only be used inside an untyped expression
+    if (node.kind == .DOT_ARROW || node.kind == .DOT_COLON) {
+      semanticErrorBadDotToken(log, target != null ? dotName != null
+        ? Range.inner(target.range, dotName.range)
+        : Range.after(node.range, target.range) : dotName != null
+        ? Range.before(node.range, dotName.range)
+        : node.range);
+      node.kind = .DOT;
     }
 
     // The name allowed to be null for autocomplete

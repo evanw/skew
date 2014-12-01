@@ -8,35 +8,35 @@
     derived.prototype.constructor = derived;
   }
   function StringMap() {
-    this.table = Object.create(null);
+    this._table = Object.create(null);
   }
   StringMap.prototype.getOrDefault = function(key, defaultValue) {
-    return key in this.table ? this.table[key] : defaultValue;
+    return key in this._table ? this._table[key] : defaultValue;
   };
   StringMap.prototype.values = function() {
     var values = [];
-    for (var key in this.table) {
-      values.push(this.table[key]);
+    for (var key in this._table) {
+      values.push(this._table[key]);
     }
     return values;
   };
   StringMap.prototype.clone = function() {
     var clone = new StringMap();
-    for (var key in this.table) {
-      clone.table[key] = this.table[key];
+    for (var key in this._table) {
+      clone._table[key] = this._table[key];
     }
     return clone;
   };
   function IntMap() {
-    this.table = Object.create(null);
+    this._table = Object.create(null);
   }
   IntMap.prototype.getOrDefault = function(key, defaultValue) {
-    return key in this.table ? this.table[key] : defaultValue;
+    return key in this._table ? this._table[key] : defaultValue;
   };
   IntMap.prototype.values = function() {
     var values = [];
-    for (var key in this.table) {
-      values.push(this.table[key]);
+    for (var key in this._table) {
+      values.push(this._table[key]);
     }
     return values;
   };
@@ -2340,9 +2340,6 @@
     this.emitType(symbol.type);
     this.emit(' ');
   };
-  base.Emitter.prototype.emitTypeParameter = function(symbol) {
-    this.emit(this.mangleName(symbol));
-  };
   base.Emitter.prototype.emitFunctionArguments = function(symbol) {
     var $arguments = symbol.node.functionArguments();
     this.emit('(');
@@ -2355,18 +2352,6 @@
       }
     }
     this.emit(')');
-  };
-  base.Emitter.prototype.emitTypeParameters = function(symbol) {
-    if (symbol.hasParameters()) {
-      this.emit('<');
-      for (var i = 0; i < symbol.parameters.length; i = i + 1 | 0) {
-        if (i > 0) {
-          this.emit(', ');
-        }
-        this.emitTypeParameter(symbol.parameters[i]);
-      }
-      this.emit('>');
-    }
   };
   base.Emitter.prototype.forceEmitExtraNewline = function() {
     if (this.previousKind !== NodeKind.NULL) {
@@ -2747,7 +2732,7 @@
       }
       return;
     }
-    var info = operatorInfo.table[node.kind];
+    var info = operatorInfo._table[node.kind];
     if (info.precedence < precedence) {
       this.emit('(');
     }
@@ -2770,7 +2755,7 @@
     }
   };
   base.Emitter.prototype.emitBinary = function(node, precedence) {
-    var info = operatorInfo.table[node.kind];
+    var info = operatorInfo._table[node.kind];
     if (info.precedence < precedence) {
       this.emit('(');
     }
@@ -2912,7 +2897,7 @@
     if (symbol.kind === SymbolKind.CONSTRUCTOR_FUNCTION) {
       return this.mangleName(symbol.enclosingSymbol);
     }
-    if (symbol.name in this.isKeyword.table && !symbol.isImport()) {
+    if (symbol.name in this.isKeyword._table && !symbol.isImport()) {
       return '_' + symbol.name + '_';
     }
     return symbol.name;
@@ -2972,10 +2957,28 @@
     this.emit('typename ' + this.mangleName(symbol));
   };
   cpp.Emitter.prototype.emitTypeParameters = function(symbol) {
-    if (symbol.hasParameters()) {
-      this.emit(this.indent + 'template ');
-      base.Emitter.prototype.emitTypeParameters.call(this, symbol);
-      this.emit('\n');
+    var enclosingSymbol = symbol.enclosingSymbol;
+    var selfParameters = symbol.hasParameters();
+    var enclosingParameters = this.pass === cpp.Pass.IMPLEMENT_CODE && enclosingSymbol.hasParameters();
+    if (selfParameters || enclosingParameters) {
+      this.emit(this.indent + 'template <');
+      if (selfParameters) {
+        for (var i = 0; i < symbol.parameters.length; i = i + 1 | 0) {
+          if (i > 0) {
+            this.emit(', ');
+          }
+          this.emitTypeParameter(symbol.parameters[i]);
+        }
+      }
+      if (enclosingParameters) {
+        for (var i = 0; i < enclosingSymbol.parameters.length; i = i + 1 | 0) {
+          if (i > 0 || selfParameters) {
+            this.emit(', ');
+          }
+          this.emitTypeParameter(enclosingSymbol.parameters[i]);
+        }
+      }
+      this.emit('>\n');
     }
   };
   cpp.Emitter.prototype.emitEnumValues = function(symbol) {
@@ -3080,7 +3083,24 @@
         if (symbol.kind !== SymbolKind.CONSTRUCTOR_FUNCTION) {
           this.emitCppType(symbol.type.resultType(), cpp.CppEmitType.DECLARATION);
         }
-        this.emit(this.pass === cpp.Pass.FORWARD_DECLARE_CODE ? this.mangleName(symbol) : this.fullName(symbol));
+        if (this.pass === cpp.Pass.IMPLEMENT_CODE) {
+          var enclosingSymbol = symbol.enclosingSymbol;
+          if (enclosingSymbol !== null && enclosingSymbol.kind !== SymbolKind.GLOBAL_NAMESPACE) {
+            this.emit(this.fullName(enclosingSymbol));
+            if (enclosingSymbol.hasParameters()) {
+              this.emit('<');
+              for (var i = 0; i < enclosingSymbol.parameters.length; i = i + 1 | 0) {
+                if (i > 0) {
+                  this.emit(', ');
+                }
+                this.emit(this.mangleName(enclosingSymbol.parameters[i]));
+              }
+              this.emit('>');
+            }
+            this.emit('::');
+          }
+        }
+        this.emit(this.mangleName(symbol));
         this.emitFunctionArguments(symbol);
         if (block === null) {
           this.emit(' = 0;');
@@ -3372,93 +3392,93 @@
   };
   cpp.Emitter.prototype.createIsKeyword = function() {
     var result = new StringMap();
-    result.table['alignas'] = true;
-    result.table['alignof'] = true;
-    result.table['and'] = true;
-    result.table['and_eq'] = true;
-    result.table['asm'] = true;
-    result.table['auto'] = true;
-    result.table['bitand'] = true;
-    result.table['bitor'] = true;
-    result.table['bool'] = true;
-    result.table['break'] = true;
-    result.table['case'] = true;
-    result.table['catch'] = true;
-    result.table['char'] = true;
-    result.table['char16_t'] = true;
-    result.table['char32_t'] = true;
-    result.table['class'] = true;
-    result.table['compl'] = true;
-    result.table['const'] = true;
-    result.table['const_cast'] = true;
-    result.table['constexpr'] = true;
-    result.table['continue'] = true;
-    result.table['decltype'] = true;
-    result.table['default'] = true;
-    result.table['delete'] = true;
-    result.table['do'] = true;
-    result.table['double'] = true;
-    result.table['dynamic_cast'] = true;
-    result.table['else'] = true;
-    result.table['enum'] = true;
-    result.table['explicit'] = true;
-    result.table['export'] = true;
-    result.table['extern'] = true;
-    result.table['false'] = true;
-    result.table['float'] = true;
-    result.table['for'] = true;
-    result.table['friend'] = true;
-    result.table['goto'] = true;
-    result.table['if'] = true;
-    result.table['INFINITY'] = true;
-    result.table['inline'] = true;
-    result.table['int'] = true;
-    result.table['long'] = true;
-    result.table['mutable'] = true;
-    result.table['namespace'] = true;
-    result.table['NAN'] = true;
-    result.table['new'] = true;
-    result.table['noexcept'] = true;
-    result.table['not'] = true;
-    result.table['not_eq'] = true;
-    result.table['NULL'] = true;
-    result.table['nullptr'] = true;
-    result.table['operator'] = true;
-    result.table['or'] = true;
-    result.table['or_eq'] = true;
-    result.table['private'] = true;
-    result.table['protected'] = true;
-    result.table['public'] = true;
-    result.table['register'] = true;
-    result.table['reinterpret_cast'] = true;
-    result.table['return'] = true;
-    result.table['short'] = true;
-    result.table['signed'] = true;
-    result.table['sizeof'] = true;
-    result.table['static'] = true;
-    result.table['static_assert'] = true;
-    result.table['static_cast'] = true;
-    result.table['struct'] = true;
-    result.table['switch'] = true;
-    result.table['template'] = true;
-    result.table['this'] = true;
-    result.table['thread_local'] = true;
-    result.table['throw'] = true;
-    result.table['true'] = true;
-    result.table['try'] = true;
-    result.table['typedef'] = true;
-    result.table['typeid'] = true;
-    result.table['typename'] = true;
-    result.table['union'] = true;
-    result.table['unsigned'] = true;
-    result.table['using'] = true;
-    result.table['virtual'] = true;
-    result.table['void'] = true;
-    result.table['volatile'] = true;
-    result.table['wchar_t'] = true;
-    result.table['while'] = true;
-    result.table['xor'] = true;
-    result.table['xor_eq'] = true;
+    result._table['alignas'] = true;
+    result._table['alignof'] = true;
+    result._table['and'] = true;
+    result._table['and_eq'] = true;
+    result._table['asm'] = true;
+    result._table['auto'] = true;
+    result._table['bitand'] = true;
+    result._table['bitor'] = true;
+    result._table['bool'] = true;
+    result._table['break'] = true;
+    result._table['case'] = true;
+    result._table['catch'] = true;
+    result._table['char'] = true;
+    result._table['char16_t'] = true;
+    result._table['char32_t'] = true;
+    result._table['class'] = true;
+    result._table['compl'] = true;
+    result._table['const'] = true;
+    result._table['const_cast'] = true;
+    result._table['constexpr'] = true;
+    result._table['continue'] = true;
+    result._table['decltype'] = true;
+    result._table['default'] = true;
+    result._table['delete'] = true;
+    result._table['do'] = true;
+    result._table['double'] = true;
+    result._table['dynamic_cast'] = true;
+    result._table['else'] = true;
+    result._table['enum'] = true;
+    result._table['explicit'] = true;
+    result._table['export'] = true;
+    result._table['extern'] = true;
+    result._table['false'] = true;
+    result._table['float'] = true;
+    result._table['for'] = true;
+    result._table['friend'] = true;
+    result._table['goto'] = true;
+    result._table['if'] = true;
+    result._table['INFINITY'] = true;
+    result._table['inline'] = true;
+    result._table['int'] = true;
+    result._table['long'] = true;
+    result._table['mutable'] = true;
+    result._table['namespace'] = true;
+    result._table['NAN'] = true;
+    result._table['new'] = true;
+    result._table['noexcept'] = true;
+    result._table['not'] = true;
+    result._table['not_eq'] = true;
+    result._table['NULL'] = true;
+    result._table['nullptr'] = true;
+    result._table['operator'] = true;
+    result._table['or'] = true;
+    result._table['or_eq'] = true;
+    result._table['private'] = true;
+    result._table['protected'] = true;
+    result._table['public'] = true;
+    result._table['register'] = true;
+    result._table['reinterpret_cast'] = true;
+    result._table['return'] = true;
+    result._table['short'] = true;
+    result._table['signed'] = true;
+    result._table['sizeof'] = true;
+    result._table['static'] = true;
+    result._table['static_assert'] = true;
+    result._table['static_cast'] = true;
+    result._table['struct'] = true;
+    result._table['switch'] = true;
+    result._table['template'] = true;
+    result._table['this'] = true;
+    result._table['thread_local'] = true;
+    result._table['throw'] = true;
+    result._table['true'] = true;
+    result._table['try'] = true;
+    result._table['typedef'] = true;
+    result._table['typeid'] = true;
+    result._table['typename'] = true;
+    result._table['union'] = true;
+    result._table['unsigned'] = true;
+    result._table['using'] = true;
+    result._table['virtual'] = true;
+    result._table['void'] = true;
+    result._table['volatile'] = true;
+    result._table['wchar_t'] = true;
+    result._table['while'] = true;
+    result._table['xor'] = true;
+    result._table['xor_eq'] = true;
     return result;
   };
   json = {};
@@ -4464,7 +4484,7 @@
   };
   js.Emitter.prototype.emitUnary = function(node, precedence) {
     var value = node.unaryValue();
-    var info = operatorInfo.table[node.kind];
+    var info = operatorInfo._table[node.kind];
     if (info.precedence < precedence) {
       this.emit('(');
     }
@@ -4494,7 +4514,7 @@
     var kind = node.kind;
     var left = node.binaryLeft();
     var right = node.binaryRight();
-    var info = operatorInfo.table[kind];
+    var info = operatorInfo._table[kind];
     if (info.precedence < precedence) {
       this.emit('(');
     }
@@ -4524,7 +4544,7 @@
           return false;
         }
       }
-      return value.length > 0 && !(value in js.Emitter.isKeyword.table);
+      return value.length > 0 && !(value in js.Emitter.isKeyword._table);
     }
     return false;
   };
@@ -4572,50 +4592,50 @@
   };
   js.Emitter.createIsKeyword = function() {
     var result = new StringMap();
-    result.table['apply'] = true;
-    result.table['arguments'] = true;
-    result.table['Boolean'] = true;
-    result.table['break'] = true;
-    result.table['call'] = true;
-    result.table['case'] = true;
-    result.table['catch'] = true;
-    result.table['class'] = true;
-    result.table['const'] = true;
-    result.table['constructor'] = true;
-    result.table['continue'] = true;
-    result.table['Date'] = true;
-    result.table['debugger'] = true;
-    result.table['default'] = true;
-    result.table['delete'] = true;
-    result.table['do'] = true;
-    result.table['double'] = true;
-    result.table['else'] = true;
-    result.table['export'] = true;
-    result.table['extends'] = true;
-    result.table['false'] = true;
-    result.table['finally'] = true;
-    result.table['float'] = true;
-    result.table['for'] = true;
-    result.table['Function'] = true;
-    result.table['function'] = true;
-    result.table['if'] = true;
-    result.table['import'] = true;
-    result.table['in'] = true;
-    result.table['instanceof'] = true;
-    result.table['int'] = true;
-    result.table['let'] = true;
-    result.table['new'] = true;
-    result.table['null'] = true;
-    result.table['Number'] = true;
-    result.table['Object'] = true;
-    result.table['return'] = true;
-    result.table['String'] = true;
-    result.table['super'] = true;
-    result.table['this'] = true;
-    result.table['throw'] = true;
-    result.table['true'] = true;
-    result.table['try'] = true;
-    result.table['var'] = true;
+    result._table['apply'] = true;
+    result._table['arguments'] = true;
+    result._table['Boolean'] = true;
+    result._table['break'] = true;
+    result._table['call'] = true;
+    result._table['case'] = true;
+    result._table['catch'] = true;
+    result._table['class'] = true;
+    result._table['const'] = true;
+    result._table['constructor'] = true;
+    result._table['continue'] = true;
+    result._table['Date'] = true;
+    result._table['debugger'] = true;
+    result._table['default'] = true;
+    result._table['delete'] = true;
+    result._table['do'] = true;
+    result._table['double'] = true;
+    result._table['else'] = true;
+    result._table['export'] = true;
+    result._table['extends'] = true;
+    result._table['false'] = true;
+    result._table['finally'] = true;
+    result._table['float'] = true;
+    result._table['for'] = true;
+    result._table['Function'] = true;
+    result._table['function'] = true;
+    result._table['if'] = true;
+    result._table['import'] = true;
+    result._table['in'] = true;
+    result._table['instanceof'] = true;
+    result._table['int'] = true;
+    result._table['let'] = true;
+    result._table['new'] = true;
+    result._table['null'] = true;
+    result._table['Number'] = true;
+    result._table['Object'] = true;
+    result._table['return'] = true;
+    result._table['String'] = true;
+    result._table['super'] = true;
+    result._table['this'] = true;
+    result._table['throw'] = true;
+    result._table['true'] = true;
+    result._table['try'] = true;
+    result._table['var'] = true;
     return result;
   };
   js.Emitter.mangleName = function(symbol) {
@@ -4625,7 +4645,7 @@
     if (symbol.isImportOrExport()) {
       return symbol.name;
     }
-    if (symbol.name in js.Emitter.isKeyword.table) {
+    if (symbol.name in js.Emitter.isKeyword._table) {
       return '$' + symbol.name;
     }
     return symbol.name;
@@ -4702,7 +4722,7 @@
       this.localVariableUnionFind = new UnionFind(allSymbols.length);
       for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
         var symbol = allSymbols[i];
-        this.namingGroupIndexForSymbol.table[symbol.uniqueID] = i;
+        this.namingGroupIndexForSymbol._table[symbol.uniqueID] = i;
       }
       this.imul = '$i';
       this.$extends = '$e';
@@ -4717,11 +4737,11 @@
         var symbol = allSymbols[i];
         if (symbol.overriddenMember !== null) {
           var overridden = symbol.overriddenMember.symbol;
-          var index = this.namingGroupIndexForSymbol.table[symbol.uniqueID];
-          namingGroupsUnionFind.union(index, this.namingGroupIndexForSymbol.table[overridden.uniqueID]);
+          var index = this.namingGroupIndexForSymbol._table[symbol.uniqueID];
+          namingGroupsUnionFind.union(index, this.namingGroupIndexForSymbol._table[overridden.uniqueID]);
           if (overridden.identicalMembers !== null) {
             for (var j = 0; j < overridden.identicalMembers.length; j = j + 1 | 0) {
-              namingGroupsUnionFind.union(index, this.namingGroupIndexForSymbol.table[overridden.identicalMembers[j].symbol.uniqueID]);
+              namingGroupsUnionFind.union(index, this.namingGroupIndexForSymbol._table[overridden.identicalMembers[j].symbol.uniqueID]);
             }
           }
         }
@@ -4730,7 +4750,7 @@
       for (var i = 0; i < members.length; i = i + 1 | 0) {
         var member = members[i];
         if (!this.canRename(member.symbol)) {
-          this.reservedNames.table[member.symbol.name] = true;
+          this.reservedNames._table[member.symbol.name] = true;
         }
       }
       var namingGroups = this.extractGroups(namingGroupsUnionFind, js.ExtractGroupsMode.ALL_SYMBOLS);
@@ -4781,7 +4801,7 @@
         if (symbol.type.hasRelevantTypes()) {
           var types = symbol.type.relevantTypes;
           for (var j = 0; j < types.length; j = j + 1 | 0) {
-            relatedTypesUnionFind.union(i, this.namingGroupIndexForSymbol.table[types[j].symbol.uniqueID]);
+            relatedTypesUnionFind.union(i, this.namingGroupIndexForSymbol._table[types[j].symbol.uniqueID]);
           }
         }
         var members = symbol.type.members.values();
@@ -4800,7 +4820,7 @@
       var group = groups[i];
       for (var j = 0; j < group.length; j = j + 1 | 0) {
         var symbol = group[j];
-        var index = this.namingGroupIndexForSymbol.table[symbol.uniqueID];
+        var index = this.namingGroupIndexForSymbol._table[symbol.uniqueID];
         if (order.length <= j) {
           order.push(index);
         }
@@ -4816,11 +4836,11 @@
       if (mode === js.ExtractGroupsMode.ONLY_LOCAL_VARIABLES && symbol.kind !== SymbolKind.LOCAL_VARIABLE || mode === js.ExtractGroupsMode.ONLY_INSTANCE_VARIABLES && symbol.kind !== SymbolKind.INSTANCE_VARIABLE) {
         continue;
       }
-      var label = unionFind.find(this.namingGroupIndexForSymbol.table[symbol.uniqueID]);
+      var label = unionFind.find(this.namingGroupIndexForSymbol._table[symbol.uniqueID]);
       var group = labelToGroup.getOrDefault(label, null);
       if (group === null) {
         group = [];
-        labelToGroup.table[label] = group;
+        labelToGroup._table[label] = group;
       }
       group.push(symbol);
     }
@@ -4849,7 +4869,7 @@
   js.Patcher.prototype.trackSymbolCount = function(node) {
     var symbol = node.symbol;
     if (symbol !== null && node.kind !== NodeKind.TYPE && !node.isDeclarationName()) {
-      this.symbolCounts.table[symbol.uniqueID] = this.symbolCounts.getOrDefault(symbol.uniqueID, 0) + 1 | 0;
+      this.symbolCounts._table[symbol.uniqueID] = this.symbolCounts.getOrDefault(symbol.uniqueID, 0) + 1 | 0;
     }
   };
   js.Patcher.prototype.patchNode = function(node) {
@@ -5272,8 +5292,8 @@
       throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:707:7)');
     }
     if (this.currentFunction !== null) {
-      var left = this.namingGroupIndexForSymbol.table[this.currentFunction.uniqueID];
-      var right = this.namingGroupIndexForSymbol.table[node.symbol.uniqueID];
+      var left = this.namingGroupIndexForSymbol._table[this.currentFunction.uniqueID];
+      var right = this.namingGroupIndexForSymbol._table[node.symbol.uniqueID];
       this.localVariableUnionFind.union(left, right);
     }
   };
@@ -5375,7 +5395,7 @@
     parent.insertChild(parent.children.indexOf(current), Node.createVariableCluster(Node.createType(this.cache.intType), [symbol.node]));
     target.become(Node.createSequence([Node.createBinary(NodeKind.ASSIGN, reference.clone(), left.dotTarget().replaceWith(null)), Node.createBinary(NodeKind.ASSIGN, property.clone(), this.createBinaryInt(kind, property, right))]).withRange(target.range));
     if (this.options.jsMangle) {
-      this.namingGroupIndexForSymbol.table[symbol.uniqueID] = this.localVariableUnionFind.allocate();
+      this.namingGroupIndexForSymbol._table[symbol.uniqueID] = this.localVariableUnionFind.allocate();
       this.unionVariableWithFunction(reference);
     }
   };
@@ -5414,7 +5434,7 @@
     do {
       name = js.Patcher.numberToName(this.nextSymbolName);
       this.nextSymbolName = this.nextSymbolName + 1 | 0;
-    } while (name in this.reservedNames.table);
+    } while (name in this.reservedNames._table);
     return name;
   };
   function SourceMapping(_0, _1, _2, _3, _4) {
@@ -5810,7 +5830,7 @@
     if (parselet === null) {
       var created = new Parselet(precedence);
       parselet = created;
-      this.table.table[kind] = created;
+      this.table._table[kind] = created;
     } else if (precedence > parselet.precedence) {
       parselet.precedence = precedence;
     }
@@ -6014,7 +6034,7 @@
     var index = this.symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
     var info = index < 0 ? new CallInfo(symbol) : this.callInfo[index];
     if (index < 0) {
-      this.symbolToInfoIndex.table[symbol.uniqueID] = this.callInfo.length;
+      this.symbolToInfoIndex._table[symbol.uniqueID] = this.callInfo.length;
       this.callInfo.push(info);
     }
     if (node !== null) {
@@ -6506,7 +6526,7 @@
     var isFixedPoint = false;
     for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
       var symbol = allSymbols[i];
-      if (!(symbol.uniqueID in pass.includedSymbols.table) && symbol.overriddenMember !== null) {
+      if (!(symbol.uniqueID in pass.includedSymbols._table) && symbol.overriddenMember !== null) {
         deadSymbolsWithOverrides.push(symbol);
       }
     }
@@ -6529,8 +6549,8 @@
     if (symbol.kind === SymbolKind.GLOBAL_VARIABLE && symbol.isConst() && this.options.foldAllConstants) {
       return;
     }
-    if (!(symbol.uniqueID in this.includedSymbols.table)) {
-      this.includedSymbols.table[symbol.uniqueID] = true;
+    if (!(symbol.uniqueID in this.includedSymbols._table)) {
+      this.includedSymbols._table[symbol.uniqueID] = true;
       if (symbol.enclosingSymbol !== null && symbol.kind !== SymbolKind.INSTANCE_VARIABLE) {
         this.includeSymbol(symbol.enclosingSymbol);
       }
@@ -6575,7 +6595,7 @@
     if (symbol.enclosingSymbol === null) {
       throw new Error('assert symbol.enclosingSymbol != null; (src/resolver/deadcoderemoval.sk:116:5)');
     }
-    if (!(symbol.uniqueID in this.includedSymbols.table) && (symbol.overriddenMember.symbol.isImport() || symbol.enclosingSymbol.uniqueID in this.includedSymbols.table && symbol.overriddenMember.symbol.uniqueID in this.includedSymbols.table)) {
+    if (!(symbol.uniqueID in this.includedSymbols._table) && (symbol.overriddenMember.symbol.isImport() || symbol.enclosingSymbol.uniqueID in this.includedSymbols._table && symbol.overriddenMember.symbol.uniqueID in this.includedSymbols._table)) {
       this.includeSymbol(symbol);
       return true;
     }
@@ -6585,16 +6605,16 @@
     if (symbol.kind === SymbolKind.LOCAL_VARIABLE) {
       return false;
     }
-    if (!(symbol.uniqueID in this.includedSymbols.table)) {
+    if (!(symbol.uniqueID in this.includedSymbols._table)) {
       if (symbol.enclosingSymbol !== null) {
-        delete symbol.enclosingSymbol.type.members.table[symbol.name];
+        delete symbol.enclosingSymbol.type.members._table[symbol.name];
       }
       if (symbol.node !== null) {
         symbol.node.remove();
       }
       return true;
     }
-    if (symbol.overriddenMember !== null && !(symbol.overriddenMember.symbol.uniqueID in this.includedSymbols.table)) {
+    if (symbol.overriddenMember !== null && !(symbol.overriddenMember.symbol.uniqueID in this.includedSymbols._table)) {
       symbol.overriddenMember = null;
     }
     return false;
@@ -6615,13 +6635,13 @@
     for (var i = 0; i < graph.callInfo.length; i = i + 1 | 0) {
       var info = InliningGraph.createInliningInfo(graph.callInfo[i], options);
       if (info !== null) {
-        this.symbolToInfoIndex.table[info.symbol.uniqueID] = this.inliningInfo.length;
+        this.symbolToInfoIndex._table[info.symbol.uniqueID] = this.inliningInfo.length;
         this.inliningInfo.push(info);
       }
     }
     for (var i = 0; i < this.inliningInfo.length; i = i + 1 | 0) {
       var info = this.inliningInfo[i];
-      var callSites = graph.callInfo[graph.symbolToInfoIndex.table[info.symbol.uniqueID]].callSites;
+      var callSites = graph.callInfo[graph.symbolToInfoIndex._table[info.symbol.uniqueID]].callSites;
       for (var j = 0; j < callSites.length; j = j + 1 | 0) {
         var callSite = callSites[j];
         for (var node = callSite.parent; node !== null; node = node.parent) {
@@ -6682,7 +6702,7 @@
         var argumentVariables = symbol.node.functionArguments().children;
         var argumentCounts = new IntMap();
         for (var i = 0; i < argumentVariables.length; i = i + 1 | 0) {
-          argumentCounts.table[argumentVariables[i].symbol.uniqueID] = 0;
+          argumentCounts._table[argumentVariables[i].symbol.uniqueID] = 0;
         }
         if (InliningGraph.recursivelyCountArgumentUses(inlineValue, argumentCounts)) {
           var unusedArguments = [];
@@ -6690,7 +6710,7 @@
           var isSimpleSubstitution = true;
           for (var i = 0; i < argumentVariables.length; i = i + 1 | 0) {
             var argument = argumentVariables[i].symbol;
-            var count = argumentCounts.table[argument.uniqueID];
+            var count = argumentCounts._table[argument.uniqueID];
             if (count === 0) {
               unusedArguments.push(argument);
             } else if (count !== 1) {
@@ -6720,7 +6740,7 @@
     if (symbol !== null) {
       var count = argumentCounts.getOrDefault(symbol.uniqueID, -1);
       if (count >= 0) {
-        argumentCounts.table[symbol.uniqueID] = count + 1 | 0;
+        argumentCounts._table[symbol.uniqueID] = count + 1 | 0;
         if (node.isStorage()) {
           return false;
         }
@@ -6901,7 +6921,7 @@
       if (node.kind === NodeKind.EXTENSION) {
         semanticErrorUnexpectedModifier(this.log, modifierName.range, name, 'on an extension block');
       } else {
-        var flag = nameToSymbolFlag.table[name];
+        var flag = nameToSymbolFlag._table[name];
         if ((flags & flag) !== 0) {
           semanticWarningDuplicateModifier(this.log, modifierName.range, name);
         }
@@ -7064,7 +7084,7 @@
             if (memberSymbol !== currentSymbol) {
               var collision = this.createSymbol(memberSymbol.name, SymbolKind.AMBIGUOUS);
               collision.identicalMembers = [current, member];
-              block.scope.locals.table[memberSymbol.name] = new Member(collision);
+              block.scope.locals._table[memberSymbol.name] = new Member(collision);
               insertedSymbols.push(collision);
             }
           } else if (currentSymbol.identicalMembers.indexOf(member) < 0) {
@@ -7663,12 +7683,12 @@
           continue;
         }
         if (unmerged === null) {
-          unmergedMembers.table[memberSymbol.name] = member;
+          unmergedMembers._table[memberSymbol.name] = member;
         } else if (unmerged.symbol.enclosingSymbol !== memberSymbol) {
           var combined = this.createSymbol(memberSymbol.name, SymbolKind.UNMERGED);
           combined.enclosingSymbol = symbol;
           combined.identicalMembers = [unmerged, member];
-          unmergedMembers.table[memberSymbol.name] = new Member(combined);
+          unmergedMembers._table[memberSymbol.name] = new Member(combined);
         } else {
           if (unmerged.symbol.kind !== SymbolKind.UNMERGED) {
             throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:966:11)');
@@ -8062,7 +8082,7 @@
     }
     while (node !== null && node.kind === NodeKind.MODIFIER) {
       var modifierName = node.modifierName();
-      if (nameToSymbolFlag.table[modifierName.asString()] === flag) {
+      if (nameToSymbolFlag._table[modifierName.asString()] === flag) {
         return modifierName;
       }
       node = node.parent;
@@ -8947,10 +8967,6 @@
   Resolver.prototype.resolveDot = function(node) {
     var target = node.dotTarget();
     var dotName = node.dotName();
-    if (node.kind === NodeKind.DOT_ARROW || node.kind === NodeKind.DOT_COLON) {
-      semanticErrorBadDotToken(this.log, target !== null ? dotName !== null ? Range.inner(target.range, dotName.range) : Range.after(node.range, target.range) : dotName !== null ? Range.before(node.range, dotName.range) : node.range);
-      node.kind = NodeKind.DOT;
-    }
     if (target !== null) {
       this.resolve(target, null);
     }
@@ -8961,6 +8977,10 @@
     }
     if (type.isIgnored(this.cache)) {
       return;
+    }
+    if (node.kind === NodeKind.DOT_ARROW || node.kind === NodeKind.DOT_COLON) {
+      semanticErrorBadDotToken(this.log, target !== null ? dotName !== null ? Range.inner(target.range, dotName.range) : Range.after(node.range, target.range) : dotName !== null ? Range.before(node.range, dotName.range) : node.range);
+      node.kind = NodeKind.DOT;
     }
     if (dotName === null) {
       return;
@@ -9360,10 +9380,10 @@
     if (this.locals === null) {
       this.locals = new StringMap();
     }
-    if (member.symbol.name in this.locals.table) {
+    if (member.symbol.name in this.locals._table) {
       throw new Error('assert !locals.has(member.symbol.name); (src/resolver/scope.sk:26:5)');
     }
-    this.locals.table[member.symbol.name] = member;
+    this.locals._table[member.symbol.name] = member;
   };
   Scope.prototype.find = function(name) {
     var member = this.findLocal(name);
@@ -9576,11 +9596,11 @@
     if (!symbol.isImport() && enclosingSymbol !== null && !in_SymbolKind.isParameter(symbol.kind) && (enclosingSymbol.isImport() || in_SymbolKind.isFunction(symbol.kind) && in_SymbolKind.isEnum(enclosingSymbol.kind))) {
       var enclosingType = symbol.enclosingSymbol.type;
       var shadow = this.shadowForSymbol(enclosingSymbol);
-      var member = enclosingType.members.table[symbol.name];
+      var member = enclosingType.members._table[symbol.name];
       if (member.symbol !== symbol) {
         throw new Error('assert member.symbol == symbol; (src/resolver/symbolmotion.sk:19:7)');
       }
-      delete enclosingType.members.table[symbol.name];
+      delete enclosingType.members._table[symbol.name];
       if (shadow.findMember(symbol.name) !== null) {
         throw new Error('assert shadow.findMember(symbol.name) == null; (src/resolver/symbolmotion.sk:21:7)');
       }
@@ -9664,14 +9684,14 @@
     return false;
   };
   Type.prototype.addMember = function(member) {
-    this.members.table[member.symbol.name] = member;
+    this.members._table[member.symbol.name] = member;
   };
   Type.prototype.copyMembersFrom = function(other) {
     var otherMembers = other.members.values();
     for (var i = 0; i < otherMembers.length; i = i + 1 | 0) {
       var member = otherMembers[i];
-      if (!(member.symbol.name in this.members.table)) {
-        this.members.table[member.symbol.name] = member;
+      if (!(member.symbol.name in this.members._table)) {
+        this.members._table[member.symbol.name] = member;
       }
     }
   };
@@ -9998,7 +10018,7 @@
       }
     } else {
       existingTypes = [];
-      this.hashTable.table[hash] = existingTypes;
+      this.hashTable._table[hash] = existingTypes;
     }
     if (trace.GENERICS && symbol !== null && substitutions !== null) {
       trace.log('parameterize ' + (unparameterized !== null ? unparameterized.toString() : 'null') + ' with ' + Type.environmentToString(symbol.parameters, substitutions));
@@ -10220,50 +10240,50 @@
       return;
     }
     operatorInfo = new IntMap();
-    operatorInfo.table[NodeKind.NOT] = new OperatorInfo('!', Precedence.UNARY_PREFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.POSITIVE] = new OperatorInfo('+', Precedence.UNARY_PREFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.NEGATIVE] = new OperatorInfo('-', Precedence.UNARY_PREFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.COMPLEMENT] = new OperatorInfo('~', Precedence.UNARY_PREFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.PREFIX_INCREMENT] = new OperatorInfo('++', Precedence.UNARY_PREFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.PREFIX_DECREMENT] = new OperatorInfo('--', Precedence.UNARY_PREFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.POSTFIX_INCREMENT] = new OperatorInfo('++', Precedence.UNARY_POSTFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.POSTFIX_DECREMENT] = new OperatorInfo('--', Precedence.UNARY_POSTFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.PREFIX_DEREFERENCE] = new OperatorInfo('*', Precedence.UNARY_PREFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.PREFIX_REFERENCE] = new OperatorInfo('&', Precedence.UNARY_PREFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.POSTFIX_DEREFERENCE] = new OperatorInfo('*', Precedence.UNARY_POSTFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.POSTFIX_REFERENCE] = new OperatorInfo('&', Precedence.UNARY_POSTFIX, Associativity.NONE);
-    operatorInfo.table[NodeKind.ADD] = new OperatorInfo('+', Precedence.ADD, Associativity.LEFT);
-    operatorInfo.table[NodeKind.BITWISE_AND] = new OperatorInfo('&', Precedence.BITWISE_AND, Associativity.LEFT);
-    operatorInfo.table[NodeKind.BITWISE_OR] = new OperatorInfo('|', Precedence.BITWISE_OR, Associativity.LEFT);
-    operatorInfo.table[NodeKind.BITWISE_XOR] = new OperatorInfo('^', Precedence.BITWISE_XOR, Associativity.LEFT);
-    operatorInfo.table[NodeKind.DIVIDE] = new OperatorInfo('/', Precedence.MULTIPLY, Associativity.LEFT);
-    operatorInfo.table[NodeKind.EQUAL] = new OperatorInfo('==', Precedence.EQUAL, Associativity.LEFT);
-    operatorInfo.table[NodeKind.GREATER_THAN] = new OperatorInfo('>', Precedence.COMPARE, Associativity.LEFT);
-    operatorInfo.table[NodeKind.GREATER_THAN_OR_EQUAL] = new OperatorInfo('>=', Precedence.COMPARE, Associativity.LEFT);
-    operatorInfo.table[NodeKind.IN] = new OperatorInfo('in', Precedence.COMPARE, Associativity.LEFT);
-    operatorInfo.table[NodeKind.INDEX] = new OperatorInfo('[]', Precedence.MEMBER, Associativity.LEFT);
-    operatorInfo.table[NodeKind.LESS_THAN] = new OperatorInfo('<', Precedence.COMPARE, Associativity.LEFT);
-    operatorInfo.table[NodeKind.LESS_THAN_OR_EQUAL] = new OperatorInfo('<=', Precedence.COMPARE, Associativity.LEFT);
-    operatorInfo.table[NodeKind.LOGICAL_AND] = new OperatorInfo('&&', Precedence.LOGICAL_AND, Associativity.LEFT);
-    operatorInfo.table[NodeKind.LOGICAL_OR] = new OperatorInfo('||', Precedence.LOGICAL_OR, Associativity.LEFT);
-    operatorInfo.table[NodeKind.MULTIPLY] = new OperatorInfo('*', Precedence.MULTIPLY, Associativity.LEFT);
-    operatorInfo.table[NodeKind.NOT_EQUAL] = new OperatorInfo('!=', Precedence.EQUAL, Associativity.LEFT);
-    operatorInfo.table[NodeKind.REMAINDER] = new OperatorInfo('%', Precedence.MULTIPLY, Associativity.LEFT);
-    operatorInfo.table[NodeKind.SHIFT_LEFT] = new OperatorInfo('<<', Precedence.SHIFT, Associativity.LEFT);
-    operatorInfo.table[NodeKind.SHIFT_RIGHT] = new OperatorInfo('>>', Precedence.SHIFT, Associativity.LEFT);
-    operatorInfo.table[NodeKind.SUBTRACT] = new OperatorInfo('-', Precedence.ADD, Associativity.LEFT);
-    operatorInfo.table[NodeKind.ASSIGN] = new OperatorInfo('=', Precedence.ASSIGN, Associativity.RIGHT);
-    operatorInfo.table[NodeKind.ASSIGN_ADD] = new OperatorInfo('+=', Precedence.ASSIGN, Associativity.RIGHT);
-    operatorInfo.table[NodeKind.ASSIGN_BITWISE_AND] = new OperatorInfo('&=', Precedence.ASSIGN, Associativity.RIGHT);
-    operatorInfo.table[NodeKind.ASSIGN_BITWISE_OR] = new OperatorInfo('|=', Precedence.ASSIGN, Associativity.RIGHT);
-    operatorInfo.table[NodeKind.ASSIGN_BITWISE_XOR] = new OperatorInfo('^=', Precedence.ASSIGN, Associativity.RIGHT);
-    operatorInfo.table[NodeKind.ASSIGN_DIVIDE] = new OperatorInfo('/=', Precedence.ASSIGN, Associativity.RIGHT);
-    operatorInfo.table[NodeKind.ASSIGN_MULTIPLY] = new OperatorInfo('*=', Precedence.ASSIGN, Associativity.RIGHT);
-    operatorInfo.table[NodeKind.ASSIGN_REMAINDER] = new OperatorInfo('%=', Precedence.ASSIGN, Associativity.RIGHT);
-    operatorInfo.table[NodeKind.ASSIGN_SHIFT_LEFT] = new OperatorInfo('<<=', Precedence.ASSIGN, Associativity.RIGHT);
-    operatorInfo.table[NodeKind.ASSIGN_SHIFT_RIGHT] = new OperatorInfo('>>=', Precedence.ASSIGN, Associativity.RIGHT);
-    operatorInfo.table[NodeKind.ASSIGN_SUBTRACT] = new OperatorInfo('-=', Precedence.ASSIGN, Associativity.RIGHT);
-    operatorInfo.table[NodeKind.ASSIGN_INDEX] = new OperatorInfo('[]=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.NOT] = new OperatorInfo('!', Precedence.UNARY_PREFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.POSITIVE] = new OperatorInfo('+', Precedence.UNARY_PREFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.NEGATIVE] = new OperatorInfo('-', Precedence.UNARY_PREFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.COMPLEMENT] = new OperatorInfo('~', Precedence.UNARY_PREFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.PREFIX_INCREMENT] = new OperatorInfo('++', Precedence.UNARY_PREFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.PREFIX_DECREMENT] = new OperatorInfo('--', Precedence.UNARY_PREFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.POSTFIX_INCREMENT] = new OperatorInfo('++', Precedence.UNARY_POSTFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.POSTFIX_DECREMENT] = new OperatorInfo('--', Precedence.UNARY_POSTFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.PREFIX_DEREFERENCE] = new OperatorInfo('*', Precedence.UNARY_PREFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.PREFIX_REFERENCE] = new OperatorInfo('&', Precedence.UNARY_PREFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.POSTFIX_DEREFERENCE] = new OperatorInfo('*', Precedence.UNARY_POSTFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.POSTFIX_REFERENCE] = new OperatorInfo('&', Precedence.UNARY_POSTFIX, Associativity.NONE);
+    operatorInfo._table[NodeKind.ADD] = new OperatorInfo('+', Precedence.ADD, Associativity.LEFT);
+    operatorInfo._table[NodeKind.BITWISE_AND] = new OperatorInfo('&', Precedence.BITWISE_AND, Associativity.LEFT);
+    operatorInfo._table[NodeKind.BITWISE_OR] = new OperatorInfo('|', Precedence.BITWISE_OR, Associativity.LEFT);
+    operatorInfo._table[NodeKind.BITWISE_XOR] = new OperatorInfo('^', Precedence.BITWISE_XOR, Associativity.LEFT);
+    operatorInfo._table[NodeKind.DIVIDE] = new OperatorInfo('/', Precedence.MULTIPLY, Associativity.LEFT);
+    operatorInfo._table[NodeKind.EQUAL] = new OperatorInfo('==', Precedence.EQUAL, Associativity.LEFT);
+    operatorInfo._table[NodeKind.GREATER_THAN] = new OperatorInfo('>', Precedence.COMPARE, Associativity.LEFT);
+    operatorInfo._table[NodeKind.GREATER_THAN_OR_EQUAL] = new OperatorInfo('>=', Precedence.COMPARE, Associativity.LEFT);
+    operatorInfo._table[NodeKind.IN] = new OperatorInfo('in', Precedence.COMPARE, Associativity.LEFT);
+    operatorInfo._table[NodeKind.INDEX] = new OperatorInfo('[]', Precedence.MEMBER, Associativity.LEFT);
+    operatorInfo._table[NodeKind.LESS_THAN] = new OperatorInfo('<', Precedence.COMPARE, Associativity.LEFT);
+    operatorInfo._table[NodeKind.LESS_THAN_OR_EQUAL] = new OperatorInfo('<=', Precedence.COMPARE, Associativity.LEFT);
+    operatorInfo._table[NodeKind.LOGICAL_AND] = new OperatorInfo('&&', Precedence.LOGICAL_AND, Associativity.LEFT);
+    operatorInfo._table[NodeKind.LOGICAL_OR] = new OperatorInfo('||', Precedence.LOGICAL_OR, Associativity.LEFT);
+    operatorInfo._table[NodeKind.MULTIPLY] = new OperatorInfo('*', Precedence.MULTIPLY, Associativity.LEFT);
+    operatorInfo._table[NodeKind.NOT_EQUAL] = new OperatorInfo('!=', Precedence.EQUAL, Associativity.LEFT);
+    operatorInfo._table[NodeKind.REMAINDER] = new OperatorInfo('%', Precedence.MULTIPLY, Associativity.LEFT);
+    operatorInfo._table[NodeKind.SHIFT_LEFT] = new OperatorInfo('<<', Precedence.SHIFT, Associativity.LEFT);
+    operatorInfo._table[NodeKind.SHIFT_RIGHT] = new OperatorInfo('>>', Precedence.SHIFT, Associativity.LEFT);
+    operatorInfo._table[NodeKind.SUBTRACT] = new OperatorInfo('-', Precedence.ADD, Associativity.LEFT);
+    operatorInfo._table[NodeKind.ASSIGN] = new OperatorInfo('=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.ASSIGN_ADD] = new OperatorInfo('+=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.ASSIGN_BITWISE_AND] = new OperatorInfo('&=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.ASSIGN_BITWISE_OR] = new OperatorInfo('|=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.ASSIGN_BITWISE_XOR] = new OperatorInfo('^=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.ASSIGN_DIVIDE] = new OperatorInfo('/=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.ASSIGN_MULTIPLY] = new OperatorInfo('*=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.ASSIGN_REMAINDER] = new OperatorInfo('%=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.ASSIGN_SHIFT_LEFT] = new OperatorInfo('<<=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.ASSIGN_SHIFT_RIGHT] = new OperatorInfo('>>=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.ASSIGN_SUBTRACT] = new OperatorInfo('-=', Precedence.ASSIGN, Associativity.RIGHT);
+    operatorInfo._table[NodeKind.ASSIGN_INDEX] = new OperatorInfo('[]=', Precedence.ASSIGN, Associativity.RIGHT);
   }
   in_TargetFormat.shouldRunResolver = function($this) {
     return $this >= TargetFormat.NONE && $this <= TargetFormat.JAVASCRIPT;
@@ -11703,19 +11723,19 @@
     if (!in_NodeKind.isUnaryOperator(kind)) {
       throw new Error('assert kind.isUnaryOperator(); (src/resolver/diagnostics.sk:246:3)');
     }
-    log.error(range, 'No unary operator ' + operatorInfo.table[kind].text + ' for ' + typeToText(type));
+    log.error(range, 'No unary operator ' + operatorInfo._table[kind].text + ' for ' + typeToText(type));
   }
   function semanticErrorNoBinaryOperator(log, range, kind, left, right) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
       throw new Error('assert kind.isBinaryOperator(); (src/resolver/diagnostics.sk:251:3)');
     }
-    log.error(range, 'No binary operator ' + operatorInfo.table[kind].text + ' for ' + typeToText(left) + ' and ' + typeToText(right));
+    log.error(range, 'No binary operator ' + operatorInfo._table[kind].text + ' for ' + typeToText(left) + ' and ' + typeToText(right));
   }
   function semanticErrorNoTernaryOperator(log, range, kind, left, middle, right) {
     if (!in_NodeKind.isTernaryOperator(kind)) {
       throw new Error('assert kind.isTernaryOperator(); (src/resolver/diagnostics.sk:256:3)');
     }
-    log.error(range, 'No ternary operator ' + operatorInfo.table[kind].text + ' for ' + typeToText(left) + ', ' + typeToText(middle) + ', and ' + typeToText(right));
+    log.error(range, 'No ternary operator ' + operatorInfo._table[kind].text + ' for ' + typeToText(left) + ', ' + typeToText(middle) + ', and ' + typeToText(right));
   }
   function semanticErrorBadStorage(log, range) {
     log.error(range, 'Cannot store to this location');
@@ -11966,34 +11986,34 @@
       return;
     }
     nameToSymbolFlag = new StringMap();
-    nameToSymbolFlag.table['const'] = SymbolFlag.CONST;
-    nameToSymbolFlag.table['export'] = SymbolFlag.EXPORT;
-    nameToSymbolFlag.table['final'] = SymbolFlag.FINAL;
-    nameToSymbolFlag.table['import'] = SymbolFlag.IMPORT;
-    nameToSymbolFlag.table['inline'] = SymbolFlag.INLINE;
-    nameToSymbolFlag.table['override'] = SymbolFlag.OVERRIDE;
-    nameToSymbolFlag.table['private'] = SymbolFlag.PRIVATE;
-    nameToSymbolFlag.table['protected'] = SymbolFlag.PROTECTED;
-    nameToSymbolFlag.table['public'] = SymbolFlag.PUBLIC;
-    nameToSymbolFlag.table['static'] = SymbolFlag.STATIC;
-    nameToSymbolFlag.table['virtual'] = SymbolFlag.VIRTUAL;
+    nameToSymbolFlag._table['const'] = SymbolFlag.CONST;
+    nameToSymbolFlag._table['export'] = SymbolFlag.EXPORT;
+    nameToSymbolFlag._table['final'] = SymbolFlag.FINAL;
+    nameToSymbolFlag._table['import'] = SymbolFlag.IMPORT;
+    nameToSymbolFlag._table['inline'] = SymbolFlag.INLINE;
+    nameToSymbolFlag._table['override'] = SymbolFlag.OVERRIDE;
+    nameToSymbolFlag._table['private'] = SymbolFlag.PRIVATE;
+    nameToSymbolFlag._table['protected'] = SymbolFlag.PROTECTED;
+    nameToSymbolFlag._table['public'] = SymbolFlag.PUBLIC;
+    nameToSymbolFlag._table['static'] = SymbolFlag.STATIC;
+    nameToSymbolFlag._table['virtual'] = SymbolFlag.VIRTUAL;
   }
   function createSymbolFlagToName() {
     if (symbolFlagToName !== null) {
       return;
     }
     symbolFlagToName = new IntMap();
-    symbolFlagToName.table[SymbolFlag.CONST] = 'const';
-    symbolFlagToName.table[SymbolFlag.EXPORT] = 'export';
-    symbolFlagToName.table[SymbolFlag.FINAL] = 'final';
-    symbolFlagToName.table[SymbolFlag.IMPORT] = 'import';
-    symbolFlagToName.table[SymbolFlag.INLINE] = 'inline';
-    symbolFlagToName.table[SymbolFlag.OVERRIDE] = 'override';
-    symbolFlagToName.table[SymbolFlag.PRIVATE] = 'private';
-    symbolFlagToName.table[SymbolFlag.PROTECTED] = 'protected';
-    symbolFlagToName.table[SymbolFlag.PUBLIC] = 'public';
-    symbolFlagToName.table[SymbolFlag.STATIC] = 'static';
-    symbolFlagToName.table[SymbolFlag.VIRTUAL] = 'virtual';
+    symbolFlagToName._table[SymbolFlag.CONST] = 'const';
+    symbolFlagToName._table[SymbolFlag.EXPORT] = 'export';
+    symbolFlagToName._table[SymbolFlag.FINAL] = 'final';
+    symbolFlagToName._table[SymbolFlag.IMPORT] = 'import';
+    symbolFlagToName._table[SymbolFlag.INLINE] = 'inline';
+    symbolFlagToName._table[SymbolFlag.OVERRIDE] = 'override';
+    symbolFlagToName._table[SymbolFlag.PRIVATE] = 'private';
+    symbolFlagToName._table[SymbolFlag.PROTECTED] = 'protected';
+    symbolFlagToName._table[SymbolFlag.PUBLIC] = 'public';
+    symbolFlagToName._table[SymbolFlag.STATIC] = 'static';
+    symbolFlagToName._table[SymbolFlag.VIRTUAL] = 'virtual';
   }
   in_SymbolKind.isParameter = function($this) {
     return $this >= SymbolKind.OBJECT_PARAMETER && $this <= SymbolKind.FUNCTION_PARAMETER;
@@ -12441,12 +12461,12 @@
   };
   math.INFINITY = Infinity;
   var operatorInfo = null;
-  var NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nnamespace math {\n  import {\n    double abs(double x);\n    double sin(double x);\n    double cos(double x);\n    double tan(double x);\n    double asin(double x);\n    double acos(double x);\n    double atan(double x);\n    double atan2(double y, double x);\n    double sqrt(double x);\n    double exp(double x);\n    double log(double x);\n    double pow(double x, double y);\n    double floor(double x);\n    double round(double x);\n    double ceil(double x);\n    double min(double x, double y);\n    double max(double x, double y);\n  }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n';
+  var NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nnamespace math {\n  import {\n    double abs(double x);\n    double sin(double x);\n    double cos(double x);\n    double tan(double x);\n    double asin(double x);\n    double acos(double x);\n    double atan(double x);\n    double atan2(double y, double x);\n    double sqrt(double x);\n    double exp(double x);\n    double log(double x);\n    double pow(double x, double y);\n    double floor(double x);\n    double round(double x);\n    double ceil(double x);\n    double min(double x, double y);\n    double max(double x, double y);\n  }\n\n  const {\n    double SQRT2 = 1.414213562373095;\n    double PI = 3.141592653589793;\n    double E = 2.718281828459045;\n    double INFINITY = 1 / 0.0;\n    double NAN = 0 / 0.0;\n  }\n}\n';
   var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   var HEX = '0123456789ABCDEF';
   trace.GENERICS = false;
-  cpp.NATIVE_LIBRARY = '\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  string toString() {\n    untyped(std::stringstream) ss;\n    ss << this;\n    return ss.str();\n  }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return ((double)this).toString(); }\n}\n\nin double {\n  inline string toString() {\n    untyped(std::stringstream) ss;\n    untyped(ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::fixed) << this;\n    string result = ss.str();\n    while (untyped(result.back()) == \'0\') untyped(result.pop_back());\n    if (untyped(result.back()) == \'.\') untyped(result.pop_back());\n    return result;\n  }\n}\n\nin string {\n  inline {\n    int size() { return (int)untyped(this.size()); }\n    string slice(int start, int end) { return untyped(this.substr(typed(start), typed(end) - typed(start))); }\n    int indexOf(string value) { return (int)untyped(this.find(typed(value))); }\n    int lastIndexOf(string value) { return (int)untyped(this.rfind(typed(value))); }\n    static string fromCodeUnit(int value) { return untyped(string(1, typed(value))); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return untyped(this[typed(index)]); }\n  }\n\n  string toLowerCase() {\n    var clone = this;\n    untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower));\n    return clone;\n  }\n\n  string toUpperCase() {\n    var clone = this;\n    untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper));\n    return clone;\n  }\n\n  string join(List<string> values) {\n    var result = "";\n    for (var i = 0; i < values.size(); i++) {\n      if (i > 0) result += this;\n      result += values.get(i);\n    }\n    return result;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nnamespace math {\n  inline double abs(double x) { return untyped(std::abs(typed(x))); }\n  inline double sin(double x) { return untyped(std::sin(typed(x))); }\n  inline double cos(double x) { return untyped(std::cos(typed(x))); }\n  inline double tan(double x) { return untyped(std::tan(typed(x))); }\n  inline double asin(double x) { return untyped(std::asin(typed(x))); }\n  inline double acos(double x) { return untyped(std::acos(typed(x))); }\n  inline double atan(double x) { return untyped(std::atan(typed(x))); }\n  inline double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }\n  inline double sqrt(double x) { return untyped(std::sqrt(typed(x))); }\n  inline double exp(double x) { return untyped(std::exp(typed(x))); }\n  inline double log(double x) { return untyped(std::log(typed(x))); }\n  inline double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }\n  inline double floor(double x) { return untyped(std::floor(typed(x))); }\n  inline double round(double x) { return untyped(std::round(typed(x))); }\n  inline double ceil(double x) { return untyped(std::ceil(typed(x))); }\n  inline double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }\n  inline double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n';
-  js.NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport namespace operators {\n  void delete(int value);\n  void sort<T>(List<T> list, Comparison<T> comparison);\n}\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return untyped(this.length); }\n    static string fromCodeUnit(int value) { return untyped(String.fromCharCode(typed(value))); }\n    string get(int index) { return untyped(this[typed(index)]); }\n    string join(List<string> values) { return untyped(typed(values).join(this)); }\n    int codeUnitAt(int index) { return untyped(this.charCodeAt(typed(index))); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return untyped(this.length); }\n    void sort(Comparison<T> comparison) { operators.sort<T>(this, comparison); }\n    List<T> clone() { return untyped(this.slice()); }\n    T remove(int index) { return untyped(this.splice(typed(index), 1)[0]); }\n    void insert(int index, T value) { untyped(this.splice(typed(index), 0, typed(value))); }\n    T get(int index) { return untyped(this[typed(index)]); }\n    void set(int index, T value) { untyped(this[typed(index)] = typed(value)); }\n  }\n  void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  var table = untyped(Object.create(null));\n}\n\nin StringMap {\n  inline {\n    T get(string key) { return untyped(typed(table)[typed(key)]); }\n    void set(string key, T value) { untyped(typed(table)[typed(key)] = typed(value)); }\n    bool has(string key) { return untyped(typed(key) in typed(table)); }\n    void remove(string key) { operators.delete(untyped(typed(table)[typed(key)])); }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(typed(table))) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(typed(table))) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(typed(table))) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var table = untyped(Object.create(null));\n}\n\nin IntMap {\n  inline {\n    T get(int key) { return untyped(typed(table)[typed(key)]); }\n    void set(int key, T value) { untyped(typed(table)[typed(key)] = typed(value)); }\n    bool has(int key) { return untyped(typed(key) in typed(table)); }\n    void remove(int key) { operators.delete(untyped(typed(table)[typed(key)])); }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(typed(table))) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(typed(table))) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(typed(table))) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nnamespace math {\n  inline double abs(double x) { return untyped(Math.abs(typed(x))); }\n  inline double sin(double x) { return untyped(Math.sin(typed(x))); }\n  inline double cos(double x) { return untyped(Math.cos(typed(x))); }\n  inline double tan(double x) { return untyped(Math.tan(typed(x))); }\n  inline double asin(double x) { return untyped(Math.asin(typed(x))); }\n  inline double acos(double x) { return untyped(Math.acos(typed(x))); }\n  inline double atan(double x) { return untyped(Math.atan(typed(x))); }\n  inline double atan2(double y, double x) { return untyped(Math.atan2(typed(y), typed(x))); }\n  inline double sqrt(double x) { return untyped(Math.sqrt(typed(x))); }\n  inline double exp(double x) { return untyped(Math.exp(typed(x))); }\n  inline double log(double x) { return untyped(Math.log(typed(x))); }\n  inline double pow(double x, double y) { return untyped(Math.pow(typed(x), typed(y))); }\n  inline double floor(double x) { return untyped(Math.floor(typed(x))); }\n  inline double round(double x) { return untyped(Math.round(typed(x))); }\n  inline double ceil(double x) { return untyped(Math.ceil(typed(x))); }\n  inline double min(double x, double y) { return untyped(Math.min(typed(x), typed(y))); }\n  inline double max(double x, double y) { return untyped(Math.max(typed(x), typed(y))); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n';
+  cpp.NATIVE_LIBRARY = '\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  string toString() {\n    untyped(std::stringstream) ss;\n    ss << this;\n    return ss.str();\n  }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return ((double)this).toString(); }\n}\n\nin double {\n  inline string toString() {\n    untyped(std::stringstream) ss;\n    untyped(ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::fixed) << this;\n    string result = ss.str();\n    while (untyped(result.back()) == \'0\') untyped(result.pop_back());\n    if (untyped(result.back()) == \'.\') untyped(result.pop_back());\n    return result;\n  }\n}\n\nin string {\n  inline {\n    int size() { return (int)untyped(this.size()); }\n    string slice(int start, int end) { return untyped(this.substr(typed(start), typed(end) - typed(start))); }\n    int indexOf(string value) { return (int)untyped(this.find(typed(value))); }\n    int lastIndexOf(string value) { return (int)untyped(this.rfind(typed(value))); }\n    static string fromCodeUnit(int value) { return untyped(string(1, typed(value))); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return untyped(this[typed(index)]); }\n  }\n\n  string toLowerCase() {\n    var clone = this;\n    untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower));\n    return clone;\n  }\n\n  string toUpperCase() {\n    var clone = this;\n    untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper));\n    return clone;\n  }\n\n  string join(List<string> values) {\n    var result = "";\n    for (var i = 0; i < values.size(); i++) {\n      if (i > 0) result += this;\n      result += values.get(i);\n    }\n    return result;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  new() {}\n  T get(string key) { return _table[key]; }\n  T getOrDefault(string key, T defaultValue) { untyped(auto) it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n  void set(string key, T value) { _table[key] = value; }\n  bool has(string key) { return _table.count(key); }\n  void remove(string key) { _table.erase(key); }\n  List<string> keys() { var keys = List<string>(); for (untyped(auto &) it in _table) keys.push(it.first); return keys; }\n  List<T> values() { var values = List<T>(); for (untyped(auto &) it in _table) values.push(it.second); return values; }\n  StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n  untyped(std::unordered_map<string, T>) _table;\n}\n\nclass IntMap<T> {\n  new() {}\n  T get(int key) { return _table[key]; }\n  T getOrDefault(int key, T defaultValue) { untyped(auto) it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n  void set(int key, T value) { _table[key] = value; }\n  bool has(int key) { return _table.count(key); }\n  void remove(int key) { _table.erase(key); }\n  List<int> keys() { var keys = List<int>(); for (untyped(auto &) it in _table) keys.push(it.first); return keys; }\n  List<T> values() { var values = List<T>(); for (untyped(auto &) it in _table) values.push(it.second); return values; }\n  StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n  untyped(std::unordered_map<int, T>) _table;\n}\n\nnamespace math {\n  inline {\n    double abs(double x) { return untyped(std::abs(typed(x))); }\n    double sin(double x) { return untyped(std::sin(typed(x))); }\n    double cos(double x) { return untyped(std::cos(typed(x))); }\n    double tan(double x) { return untyped(std::tan(typed(x))); }\n    double asin(double x) { return untyped(std::asin(typed(x))); }\n    double acos(double x) { return untyped(std::acos(typed(x))); }\n    double atan(double x) { return untyped(std::atan(typed(x))); }\n    double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }\n    double sqrt(double x) { return untyped(std::sqrt(typed(x))); }\n    double exp(double x) { return untyped(std::exp(typed(x))); }\n    double log(double x) { return untyped(std::log(typed(x))); }\n    double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }\n    double floor(double x) { return untyped(std::floor(typed(x))); }\n    double round(double x) { return untyped(std::round(typed(x))); }\n    double ceil(double x) { return untyped(std::ceil(typed(x))); }\n    double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }\n    double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }\n  }\n\n  const {\n    double SQRT2 = 1.414213562373095;\n    double PI = 3.141592653589793;\n    double E = 2.718281828459045;\n    double INFINITY = 1 / 0.0;\n    double NAN = 0 / 0.0;\n  }\n}\n';
+  js.NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport namespace operators {\n  void delete(int value);\n  void sort<T>(List<T> list, Comparison<T> comparison);\n}\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return untyped(this.length); }\n    static string fromCodeUnit(int value) { return untyped(String.fromCharCode(typed(value))); }\n    string get(int index) { return untyped(this[typed(index)]); }\n    string join(List<string> values) { return untyped(typed(values).join(this)); }\n    int codeUnitAt(int index) { return untyped(this.charCodeAt(typed(index))); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return untyped(this.length); }\n    void sort(Comparison<T> comparison) { operators.sort<T>(this, comparison); }\n    List<T> clone() { return untyped(this.slice()); }\n    T remove(int index) { return untyped(this.splice(typed(index), 1)[0]); }\n    void insert(int index, T value) { untyped(this.splice(typed(index), 0, typed(value))); }\n    T get(int index) { return untyped(this[typed(index)]); }\n    void set(int index, T value) { untyped(this[typed(index)] = typed(value)); }\n  }\n\n  void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  var _table = untyped(Object.create(null));\n\n  inline {\n    T get(string key) { return _table[key]; }\n    void set(string key, T value) { _table[key] = value; }\n    bool has(string key) { return key in _table; }\n    void remove(string key) { operators.delete(_table[key]); }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in _table) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in _table) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in _table) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var _table = untyped(Object.create(null));\n\n  inline {\n    T get(int key) { return _table[key]; }\n    void set(int key, T value) { _table[key] = value; }\n    bool has(int key) { return key in _table; }\n    void remove(int key) { operators.delete(_table[key]); }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in _table) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in _table) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in _table) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nnamespace math {\n  inline {\n    double abs(double x) { return untyped(Math.abs(typed(x))); }\n    double sin(double x) { return untyped(Math.sin(typed(x))); }\n    double cos(double x) { return untyped(Math.cos(typed(x))); }\n    double tan(double x) { return untyped(Math.tan(typed(x))); }\n    double asin(double x) { return untyped(Math.asin(typed(x))); }\n    double acos(double x) { return untyped(Math.acos(typed(x))); }\n    double atan(double x) { return untyped(Math.atan(typed(x))); }\n    double atan2(double y, double x) { return untyped(Math.atan2(typed(y), typed(x))); }\n    double sqrt(double x) { return untyped(Math.sqrt(typed(x))); }\n    double exp(double x) { return untyped(Math.exp(typed(x))); }\n    double log(double x) { return untyped(Math.log(typed(x))); }\n    double pow(double x, double y) { return untyped(Math.pow(typed(x), typed(y))); }\n    double floor(double x) { return untyped(Math.floor(typed(x))); }\n    double round(double x) { return untyped(Math.round(typed(x))); }\n    double ceil(double x) { return untyped(Math.ceil(typed(x))); }\n    double min(double x, double y) { return untyped(Math.min(typed(x), typed(y))); }\n    double max(double x, double y) { return untyped(Math.max(typed(x), typed(y))); }\n  }\n\n  const {\n    double SQRT2 = 1.414213562373095;\n    double PI = 3.141592653589793;\n    double E = 2.718281828459045;\n    double INFINITY = 1 / 0.0;\n    double NAN = 0 / 0.0;\n  }\n}\n';
   var yy_accept = [98, 98, 98, 33, 36, 97, 67, 36, 76, 14, 36, 58, 80, 64, 71, 22, 63, 29, 27, 52, 52, 21, 81, 59, 3, 42, 75, 44, 57, 79, 16, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 56, 15, 78, 89, 97, 68, 98, 85, 98, 11, 61, 4, 98, 19, 98, 9, 48, 10, 25, 8, 1, 97, 7, 98, 52, 98, 40, 98, 98, 31, 82, 60, 35, 43, 83, 44, 6, 44, 44, 44, 44, 44, 44, 44, 28, 44, 44, 44, 44, 44, 44, 45, 44, 47, 55, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 5, 62, 97, 30, 51, 54, 53, 12, 13, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 41, 44, 44, 44, 44, 66, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 94, 44, 44, 40, 44, 44, 44, 18, 44, 44, 44, 44, 32, 34, 44, 44, 44, 44, 44, 44, 44, 69, 44, 44, 44, 44, 44, 44, 44, 44, 88, 90, 44, 44, 44, 44, 44, 0, 44, 17, 20, 23, 44, 44, 44, 38, 39, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 86, 44, 91, 44, 93, 44, 96, 2, 44, 44, 37, 46, 49, 44, 44, 44, 44, 44, 74, 77, 84, 87, 44, 44, 44, 26, 44, 44, 44, 72, 44, 92, 95, 24, 44, 44, 70, 44, 50, 65, 73, 98];
   var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 1, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 32, 28, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 28, 42, 43, 44, 45, 46, 47, 28, 48, 49, 50, 51, 52, 53, 54, 55, 28, 56, 57, 58, 59, 1];
   var yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1];
@@ -12457,9 +12477,9 @@
   var pratt = null;
   var nameToSymbolFlag = null;
   var symbolFlagToName = null;
-  Compiler.nativeLibrary = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nnamespace math {\n  import {\n    double abs(double x);\n    double sin(double x);\n    double cos(double x);\n    double tan(double x);\n    double asin(double x);\n    double acos(double x);\n    double atan(double x);\n    double atan2(double y, double x);\n    double sqrt(double x);\n    double exp(double x);\n    double log(double x);\n    double pow(double x, double y);\n    double floor(double x);\n    double round(double x);\n    double ceil(double x);\n    double min(double x, double y);\n    double max(double x, double y);\n  }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n');
-  Compiler.nativeLibraryJS = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport namespace operators {\n  void delete(int value);\n  void sort<T>(List<T> list, Comparison<T> comparison);\n}\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return untyped(this.length); }\n    static string fromCodeUnit(int value) { return untyped(String.fromCharCode(typed(value))); }\n    string get(int index) { return untyped(this[typed(index)]); }\n    string join(List<string> values) { return untyped(typed(values).join(this)); }\n    int codeUnitAt(int index) { return untyped(this.charCodeAt(typed(index))); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return untyped(this.length); }\n    void sort(Comparison<T> comparison) { operators.sort<T>(this, comparison); }\n    List<T> clone() { return untyped(this.slice()); }\n    T remove(int index) { return untyped(this.splice(typed(index), 1)[0]); }\n    void insert(int index, T value) { untyped(this.splice(typed(index), 0, typed(value))); }\n    T get(int index) { return untyped(this[typed(index)]); }\n    void set(int index, T value) { untyped(this[typed(index)] = typed(value)); }\n  }\n  void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  var table = untyped(Object.create(null));\n}\n\nin StringMap {\n  inline {\n    T get(string key) { return untyped(typed(table)[typed(key)]); }\n    void set(string key, T value) { untyped(typed(table)[typed(key)] = typed(value)); }\n    bool has(string key) { return untyped(typed(key) in typed(table)); }\n    void remove(string key) { operators.delete(untyped(typed(table)[typed(key)])); }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in untyped(typed(table))) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in untyped(typed(table))) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in untyped(typed(table))) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var table = untyped(Object.create(null));\n}\n\nin IntMap {\n  inline {\n    T get(int key) { return untyped(typed(table)[typed(key)]); }\n    void set(int key, T value) { untyped(typed(table)[typed(key)] = typed(value)); }\n    bool has(int key) { return untyped(typed(key) in typed(table)); }\n    void remove(int key) { operators.delete(untyped(typed(table)[typed(key)])); }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in untyped(typed(table))) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in untyped(typed(table))) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in untyped(typed(table))) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nnamespace math {\n  inline double abs(double x) { return untyped(Math.abs(typed(x))); }\n  inline double sin(double x) { return untyped(Math.sin(typed(x))); }\n  inline double cos(double x) { return untyped(Math.cos(typed(x))); }\n  inline double tan(double x) { return untyped(Math.tan(typed(x))); }\n  inline double asin(double x) { return untyped(Math.asin(typed(x))); }\n  inline double acos(double x) { return untyped(Math.acos(typed(x))); }\n  inline double atan(double x) { return untyped(Math.atan(typed(x))); }\n  inline double atan2(double y, double x) { return untyped(Math.atan2(typed(y), typed(x))); }\n  inline double sqrt(double x) { return untyped(Math.sqrt(typed(x))); }\n  inline double exp(double x) { return untyped(Math.exp(typed(x))); }\n  inline double log(double x) { return untyped(Math.log(typed(x))); }\n  inline double pow(double x, double y) { return untyped(Math.pow(typed(x), typed(y))); }\n  inline double floor(double x) { return untyped(Math.floor(typed(x))); }\n  inline double round(double x) { return untyped(Math.round(typed(x))); }\n  inline double ceil(double x) { return untyped(Math.ceil(typed(x))); }\n  inline double min(double x, double y) { return untyped(Math.min(typed(x), typed(y))); }\n  inline double max(double x, double y) { return untyped(Math.max(typed(x), typed(y))); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n');
-  Compiler.nativeLibraryCPP = new CachedSource('\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  string toString() {\n    untyped(std::stringstream) ss;\n    ss << this;\n    return ss.str();\n  }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return ((double)this).toString(); }\n}\n\nin double {\n  inline string toString() {\n    untyped(std::stringstream) ss;\n    untyped(ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::fixed) << this;\n    string result = ss.str();\n    while (untyped(result.back()) == \'0\') untyped(result.pop_back());\n    if (untyped(result.back()) == \'.\') untyped(result.pop_back());\n    return result;\n  }\n}\n\nin string {\n  inline {\n    int size() { return (int)untyped(this.size()); }\n    string slice(int start, int end) { return untyped(this.substr(typed(start), typed(end) - typed(start))); }\n    int indexOf(string value) { return (int)untyped(this.find(typed(value))); }\n    int lastIndexOf(string value) { return (int)untyped(this.rfind(typed(value))); }\n    static string fromCodeUnit(int value) { return untyped(string(1, typed(value))); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return untyped(this[typed(index)]); }\n  }\n\n  string toLowerCase() {\n    var clone = this;\n    untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower));\n    return clone;\n  }\n\n  string toUpperCase() {\n    var clone = this;\n    untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper));\n    return clone;\n  }\n\n  string join(List<string> values) {\n    var result = "";\n    for (var i = 0; i < values.size(); i++) {\n      if (i > 0) result += this;\n      result += values.get(i);\n    }\n    return result;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nnamespace math {\n  inline double abs(double x) { return untyped(std::abs(typed(x))); }\n  inline double sin(double x) { return untyped(std::sin(typed(x))); }\n  inline double cos(double x) { return untyped(std::cos(typed(x))); }\n  inline double tan(double x) { return untyped(std::tan(typed(x))); }\n  inline double asin(double x) { return untyped(std::asin(typed(x))); }\n  inline double acos(double x) { return untyped(std::acos(typed(x))); }\n  inline double atan(double x) { return untyped(std::atan(typed(x))); }\n  inline double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }\n  inline double sqrt(double x) { return untyped(std::sqrt(typed(x))); }\n  inline double exp(double x) { return untyped(std::exp(typed(x))); }\n  inline double log(double x) { return untyped(std::log(typed(x))); }\n  inline double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }\n  inline double floor(double x) { return untyped(std::floor(typed(x))); }\n  inline double round(double x) { return untyped(std::round(typed(x))); }\n  inline double ceil(double x) { return untyped(std::ceil(typed(x))); }\n  inline double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }\n  inline double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }\n\n  const double SQRT2 = 1.414213562373095;\n  const double PI = 3.141592653589793;\n  const double E = 2.718281828459045;\n  const double INFINITY = 1 / 0.0;\n  const double NAN = 0 / 0.0;\n}\n');
+  Compiler.nativeLibrary = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  int size();\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n  static string fromCodeUnit(int value);\n  string get(int index);\n  string join(List<string> values);\n  int codeUnitAt(int index);\n  bool startsWith(string prefix);\n  bool endsWith(string suffix);\n  string repeat(int count);\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nimport class StringMap<T> {\n  new();\n  T get(string key);\n  T getOrDefault(string key, T defaultValue);\n  void set(string key, T value);\n  bool has(string key);\n  void remove(string key);\n  List<string> keys();\n  List<T> values();\n  StringMap<T> clone();\n}\n\nimport class IntMap<T> {\n  new();\n  T get(int key);\n  T getOrDefault(int key, T defaultValue);\n  void set(int key, T value);\n  bool has(int key);\n  void remove(int key);\n  List<int> keys();\n  List<T> values();\n  IntMap<T> clone();\n}\n\nnamespace math {\n  import {\n    double abs(double x);\n    double sin(double x);\n    double cos(double x);\n    double tan(double x);\n    double asin(double x);\n    double acos(double x);\n    double atan(double x);\n    double atan2(double y, double x);\n    double sqrt(double x);\n    double exp(double x);\n    double log(double x);\n    double pow(double x, double y);\n    double floor(double x);\n    double round(double x);\n    double ceil(double x);\n    double min(double x, double y);\n    double max(double x, double y);\n  }\n\n  const {\n    double SQRT2 = 1.414213562373095;\n    double PI = 3.141592653589793;\n    double E = 2.718281828459045;\n    double INFINITY = 1 / 0.0;\n    double NAN = 0 / 0.0;\n  }\n}\n');
+  Compiler.nativeLibraryJS = new CachedSource('\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport namespace operators {\n  void delete(int value);\n  void sort<T>(List<T> list, Comparison<T> comparison);\n}\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return untyped(this.length); }\n    static string fromCodeUnit(int value) { return untyped(String.fromCharCode(typed(value))); }\n    string get(int index) { return untyped(this[typed(index)]); }\n    string join(List<string> values) { return untyped(typed(values).join(this)); }\n    int codeUnitAt(int index) { return untyped(this.charCodeAt(typed(index))); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\nexport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return untyped(this.length); }\n    void sort(Comparison<T> comparison) { operators.sort<T>(this, comparison); }\n    List<T> clone() { return untyped(this.slice()); }\n    T remove(int index) { return untyped(this.splice(typed(index), 1)[0]); }\n    void insert(int index, T value) { untyped(this.splice(typed(index), 0, typed(value))); }\n    T get(int index) { return untyped(this[typed(index)]); }\n    void set(int index, T value) { untyped(this[typed(index)] = typed(value)); }\n  }\n\n  void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  var _table = untyped(Object.create(null));\n\n  inline {\n    T get(string key) { return _table[key]; }\n    void set(string key, T value) { _table[key] = value; }\n    bool has(string key) { return key in _table; }\n    void remove(string key) { operators.delete(_table[key]); }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in _table) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in _table) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in _table) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var _table = untyped(Object.create(null));\n\n  inline {\n    T get(int key) { return _table[key]; }\n    void set(int key, T value) { _table[key] = value; }\n    bool has(int key) { return key in _table; }\n    void remove(int key) { operators.delete(_table[key]); }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in _table) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in _table) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in _table) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nnamespace math {\n  inline {\n    double abs(double x) { return untyped(Math.abs(typed(x))); }\n    double sin(double x) { return untyped(Math.sin(typed(x))); }\n    double cos(double x) { return untyped(Math.cos(typed(x))); }\n    double tan(double x) { return untyped(Math.tan(typed(x))); }\n    double asin(double x) { return untyped(Math.asin(typed(x))); }\n    double acos(double x) { return untyped(Math.acos(typed(x))); }\n    double atan(double x) { return untyped(Math.atan(typed(x))); }\n    double atan2(double y, double x) { return untyped(Math.atan2(typed(y), typed(x))); }\n    double sqrt(double x) { return untyped(Math.sqrt(typed(x))); }\n    double exp(double x) { return untyped(Math.exp(typed(x))); }\n    double log(double x) { return untyped(Math.log(typed(x))); }\n    double pow(double x, double y) { return untyped(Math.pow(typed(x), typed(y))); }\n    double floor(double x) { return untyped(Math.floor(typed(x))); }\n    double round(double x) { return untyped(Math.round(typed(x))); }\n    double ceil(double x) { return untyped(Math.ceil(typed(x))); }\n    double min(double x, double y) { return untyped(Math.min(typed(x), typed(y))); }\n    double max(double x, double y) { return untyped(Math.max(typed(x), typed(y))); }\n  }\n\n  const {\n    double SQRT2 = 1.414213562373095;\n    double PI = 3.141592653589793;\n    double E = 2.718281828459045;\n    double INFINITY = 1 / 0.0;\n    double NAN = 0 / 0.0;\n  }\n}\n');
+  Compiler.nativeLibraryCPP = new CachedSource('\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  string toString() {\n    untyped(std::stringstream) ss;\n    ss << this;\n    return ss.str();\n  }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() { return ((double)this).toString(); }\n}\n\nin double {\n  inline string toString() {\n    untyped(std::stringstream) ss;\n    untyped(ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::fixed) << this;\n    string result = ss.str();\n    while (untyped(result.back()) == \'0\') untyped(result.pop_back());\n    if (untyped(result.back()) == \'.\') untyped(result.pop_back());\n    return result;\n  }\n}\n\nin string {\n  inline {\n    int size() { return (int)untyped(this.size()); }\n    string slice(int start, int end) { return untyped(this.substr(typed(start), typed(end) - typed(start))); }\n    int indexOf(string value) { return (int)untyped(this.find(typed(value))); }\n    int lastIndexOf(string value) { return (int)untyped(this.rfind(typed(value))); }\n    static string fromCodeUnit(int value) { return untyped(string(1, typed(value))); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return untyped(this[typed(index)]); }\n  }\n\n  string toLowerCase() {\n    var clone = this;\n    untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower));\n    return clone;\n  }\n\n  string toUpperCase() {\n    var clone = this;\n    untyped(std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper));\n    return clone;\n  }\n\n  string join(List<string> values) {\n    var result = "";\n    for (var i = 0; i < values.size(); i++) {\n      if (i > 0) result += this;\n      result += values.get(i);\n    }\n    return result;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n}\n\nimport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nimport class List<T> {\n  new();\n  int size();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n  void sort(Comparison<T> comparison);\n  List<T> clone();\n  T remove(int index);\n  void insert(int index, T value);\n  T get(int index);\n  void set(int index, T value);\n  void swap(int a, int b);\n}\n\nclass StringMap<T> {\n  new() {}\n  T get(string key) { return _table[key]; }\n  T getOrDefault(string key, T defaultValue) { untyped(auto) it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n  void set(string key, T value) { _table[key] = value; }\n  bool has(string key) { return _table.count(key); }\n  void remove(string key) { _table.erase(key); }\n  List<string> keys() { var keys = List<string>(); for (untyped(auto &) it in _table) keys.push(it.first); return keys; }\n  List<T> values() { var values = List<T>(); for (untyped(auto &) it in _table) values.push(it.second); return values; }\n  StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n  untyped(std::unordered_map<string, T>) _table;\n}\n\nclass IntMap<T> {\n  new() {}\n  T get(int key) { return _table[key]; }\n  T getOrDefault(int key, T defaultValue) { untyped(auto) it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n  void set(int key, T value) { _table[key] = value; }\n  bool has(int key) { return _table.count(key); }\n  void remove(int key) { _table.erase(key); }\n  List<int> keys() { var keys = List<int>(); for (untyped(auto &) it in _table) keys.push(it.first); return keys; }\n  List<T> values() { var values = List<T>(); for (untyped(auto &) it in _table) values.push(it.second); return values; }\n  StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n  untyped(std::unordered_map<int, T>) _table;\n}\n\nnamespace math {\n  inline {\n    double abs(double x) { return untyped(std::abs(typed(x))); }\n    double sin(double x) { return untyped(std::sin(typed(x))); }\n    double cos(double x) { return untyped(std::cos(typed(x))); }\n    double tan(double x) { return untyped(std::tan(typed(x))); }\n    double asin(double x) { return untyped(std::asin(typed(x))); }\n    double acos(double x) { return untyped(std::acos(typed(x))); }\n    double atan(double x) { return untyped(std::atan(typed(x))); }\n    double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }\n    double sqrt(double x) { return untyped(std::sqrt(typed(x))); }\n    double exp(double x) { return untyped(std::exp(typed(x))); }\n    double log(double x) { return untyped(std::log(typed(x))); }\n    double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }\n    double floor(double x) { return untyped(std::floor(typed(x))); }\n    double round(double x) { return untyped(std::round(typed(x))); }\n    double ceil(double x) { return untyped(std::ceil(typed(x))); }\n    double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }\n    double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }\n  }\n\n  const {\n    double SQRT2 = 1.414213562373095;\n    double PI = 3.141592653589793;\n    double E = 2.718281828459045;\n    double INFINITY = 1 / 0.0;\n    double NAN = 0 / 0.0;\n  }\n}\n');
   Range.EMPTY = new Range(null, 0, 0);
   ByteSize.KB = 1024;
   ByteSize.MB = 1048576;
