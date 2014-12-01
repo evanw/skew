@@ -362,11 +362,15 @@ namespace cpp {
 
     override void emitDot(Node node) {
       var target = node.dotTarget();
+      var dotName = node.dotName();
       if (target != null) {
         emitExpression(target, .MEMBER);
       }
+      if (dotName.kind == .QUOTED) {
+        dotName = dotName.quotedValue();
+      }
       emit(node.kind == .DOT_COLON ? "::" : node.kind == .DOT_ARROW || target != null && target.type.isReference() ? "->" : ".");
-      emit(node.symbol != null ? mangleName(node.symbol) : node.dotName().asString());
+      emit(node.symbol != null ? mangleName(node.symbol) : dotName.asString());
     }
 
     override void emitCall(Node node, Precedence precedence) {

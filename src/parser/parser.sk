@@ -84,8 +84,19 @@ Node parseGroup(ParserContext context) {
 }
 
 Node parseName(ParserContext context) {
-  var token = context.current(); if (!context.expect(.IDENTIFIER)) return null;
+  var token = context.current();
+  if (!context.expect(.IDENTIFIER)) return null;
   return Node.createName(token.text).withRange(token.range);
+}
+
+Node parseQuotedName(ParserContext context) {
+  var token = context.current();
+  if (context.eat(.TICK)) {
+    var name = parseName(context);
+    if (name == null || !context.expect(.TICK)) return null;
+    return Node.createQuoted(name).withRange(context.spanSince(token.range));
+  }
+  return parseName(context);
 }
 
 Node parseBlock(ParserContext context, StatementHint hint) {
@@ -739,7 +750,7 @@ class DotInfixParselet : IInfixParselet {
 
   override Node parse(ParserContext context, Node left) {
     context.next();
-    var name = parseName(context); // Allow this to be null for autocomplete
+    var name = parseQuotedName(context); // Allow this to be null for autocomplete
     return Node.createDotWithKind(kind, left, name).withRange(context.spanSince(left.range));
   }
 }
@@ -749,7 +760,7 @@ class DotPrefixParselet : IPrefixParselet {
 
   override Node parse(ParserContext context) {
     var token = context.next();
-    var name = parseName(context); // Allow this to be null for autocomplete
+    var name = parseQuotedName(context); // Allow this to be null for autocomplete
     return Node.createDotWithKind(kind, null, name).withRange(context.spanSince(token.range));
   }
 }

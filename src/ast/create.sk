@@ -251,7 +251,7 @@ in Node {
   static Node createDotWithKind(NodeKind kind, Node value, Node name) {
     assert kind.isDot();
     assert value == null || value.kind.isExpression();
-    assert name == null || name.kind == .NAME;
+    assert name == null || name.kind == .NAME || name.kind == .QUOTED && name.quotedValue().kind == .NAME;
     return Node(kind).withChildren([value, name]);
   }
 

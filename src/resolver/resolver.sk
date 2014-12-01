@@ -2602,6 +2602,12 @@ class Resolver {
     if (dotName == null) {
       return;
     }
+
+    // The name is allowed to be quoted
+    if (dotName.kind == .QUOTED) {
+      return;
+    }
+
     var name = dotName.asString();
 
     // Search for the member symbol

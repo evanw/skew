@@ -23,7 +23,7 @@ in string {
     int size() { return `this`.length; }
     static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }
     string get(int index) { return `this`[index]; }
-    string join(List<string> values) { return ``values``.join(this); }
+    string join(List<string> values) { return values.`join`(this); }
     int codeUnitAt(int index) { return `this`.charCodeAt(index); }
   }
 
