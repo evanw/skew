@@ -639,11 +639,11 @@ namespace js {
         case .FLOAT, .DOUBLE { emitDouble(node); }
         case .STRING { emit(quoteStringJS(node.asString())); }
         case .LIST { emitList(node); }
-        case .DOT { emitDot(node); }
+        case .DOT, .DOT_ARROW, .DOT_COLON { emitDot(node); }
         case .CALL { emitCall(node); }
         case .SUPER_CALL { emitSuperCall(node); }
         case .SEQUENCE { emitSequence(node, precedence); }
-        case .UNTYPED { emitExpression(node.untypedValue(), precedence); }
+        case .UNTYPED, .TYPED { emitExpression(node.typeHoleValue(), precedence); }
         case .INDEX { emitIndex(node, precedence); }
         case .ASSIGN_INDEX { emitTernary(node, precedence); }
         case .CAST, .IMPLICIT_CAST { emitExpression(node.castValue(), precedence); }

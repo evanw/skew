@@ -722,18 +722,22 @@ class SequenceParselet : IInfixParselet {
 }
 
 class DotInfixParselet : IInfixParselet {
+  NodeKind kind;
+
   override Node parse(ParserContext context, Node left) {
     context.next();
     var name = parseName(context); // Allow this to be null for autocomplete
-    return Node.createDot(left, name).withRange(context.spanSince(left.range));
+    return Node.createDotWithKind(kind, left, name).withRange(context.spanSince(left.range));
   }
 }
 
 class DotPrefixParselet : IPrefixParselet {
+  NodeKind kind;
+
   override Node parse(ParserContext context) {
     var token = context.next();
     var name = parseName(context); // Allow this to be null for autocomplete
-    return Node.createDot(null, name).withRange(context.spanSince(token.range));
+    return Node.createDotWithKind(kind, null, name).withRange(context.spanSince(token.range));
   }
 }
 
@@ -765,11 +769,13 @@ class ParameterizeParselet : IInfixParselet {
   }
 }
 
-class UntypedParselet : IPrefixParselet {
+class TypeHoleParselet : IPrefixParselet {
+  NodeKind kind;
+
   override Node parse(ParserContext context) {
     var token = context.next();
     var value = parseGroup(context);
-    return (value == null ? Node.createError() : Node.createUntyped(value)).withRange(context.spanSince(token.range));
+    return (value == null ? Node.createError() : Node.createTypeHole(kind, value)).withRange(context.spanSince(token.range));
   }
 }
 
@@ -822,6 +828,8 @@ void createParser() {
   pratt.prefix(.MINUS, Precedence.UNARY_PREFIX, UnaryPrefix(.NEGATIVE));
   pratt.prefix(.NOT, Precedence.UNARY_PREFIX, UnaryPrefix(.NOT));
   pratt.prefix(.TILDE, Precedence.UNARY_PREFIX, UnaryPrefix(.COMPLEMENT));
+  pratt.prefix(.MULTIPLY, Precedence.UNARY_PREFIX, UnaryPrefix(.DEREFERENCE));
+  pratt.prefix(.BITWISE_AND, Precedence.UNARY_PREFIX, UnaryPrefix(.ADDRESS_OF));
 
   ////////////////////////////////////////////////////////////////////////////////
   // Binary expressions
@@ -871,12 +879,16 @@ void createParser() {
   pratt.parselet(.LEFT_PARENTHESIS, Precedence.LOWEST).prefix = ParenthesisParselet();
   pratt.parselet(.QUESTION_MARK, Precedence.ASSIGN).infix = HookParselet();
   pratt.parselet(.COMMA, Precedence.COMMA).infix = SequenceParselet();
-  pratt.parselet(.DOT, Precedence.MEMBER).infix = DotInfixParselet();
-  pratt.parselet(.DOT, Precedence.LOWEST).prefix = DotPrefixParselet();
+  pratt.parselet(.DOT, Precedence.MEMBER).infix = DotInfixParselet(.DOT);
+  pratt.parselet(.ARROW, Precedence.MEMBER).infix = DotInfixParselet(.DOT_ARROW);
+  pratt.parselet(.DOUBLE_COLON, Precedence.MEMBER).infix = DotInfixParselet(.DOT_COLON);
+  pratt.parselet(.DOT, Precedence.LOWEST).prefix = DotPrefixParselet(.DOT);
+  pratt.parselet(.DOUBLE_COLON, Precedence.LOWEST).prefix = DotPrefixParselet(.DOT_COLON);
   pratt.parselet(.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = CallParselet();
   pratt.parselet(.LEFT_BRACKET, Precedence.UNARY_POSTFIX).infix = IndexParselet();
   pratt.parselet(.START_PARAMETER_LIST, Precedence.MEMBER).infix = ParameterizeParselet();
-  pratt.parselet(.UNTYPED, Precedence.UNARY_PREFIX).prefix = UntypedParselet();
+  pratt.parselet(.UNTYPED, Precedence.UNARY_PREFIX).prefix = TypeHoleParselet(.UNTYPED);
+  pratt.parselet(.TYPED, Precedence.UNARY_PREFIX).prefix = TypeHoleParselet(.TYPED);
   pratt.parselet(.NEW, Precedence.LOWEST).prefix = NewParselet();
   pratt.parselet(.SUPER, Precedence.LOWEST).prefix = SuperParselet();
 }

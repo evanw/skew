@@ -49,6 +49,10 @@ void semanticErrorUnknownMemberSymbol(Log log, Range range, string name, Type ty
   log.error(range, simpleQuote(name) + " is not declared on " + typeToText(type));
 }
 
+void semanticErrorBadDotToken(Log log, Range range) {
+  log.error(range, "Use the \".\" operator for member access");
+}
+
 void semanticErrorExtensionMissingTarget(Log log, Range range, string name) {
   log.error(range, "No type named " + simpleQuote(name) + " to extend");
 }
@@ -366,4 +370,8 @@ void semanticErrorForVariablesMustBeSameType(Log log, Range range, string firstN
   log.error(range, "All for loop variables must have the same type (" +
     simpleQuote(firstName) + " has " + typeToText(firstType) + " but " +
     simpleQuote(secondName) + " has " + typeToText(secondType) + ")");
+}
+
+void semanticErrorUnexpectedTyped(Log log, Range range) {
+  log.error(range, "Each \"typed\" expression must appear inside an \"untyped\" expression");
 }

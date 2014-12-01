@@ -52,6 +52,8 @@ enum NodeKind {
   STRING,
   LIST,
   DOT,
+  DOT_ARROW, // Used for C++ interop
+  DOT_COLON, // Used for C++ interop
   CALL,
   SUPER_CALL,
   ERROR,
@@ -60,6 +62,7 @@ enum NodeKind {
   CAST,
   IMPLICIT_CAST,
   UNTYPED,
+  TYPED,
   VAR,
 
   // Unary operators
@@ -71,6 +74,8 @@ enum NodeKind {
   PREFIX_DECREMENT,
   POSTFIX_INCREMENT,
   POSTFIX_DECREMENT,
+  DEREFERENCE, // Used for C++ interop
+  ADDRESS_OF, // Used for C++ interop
 
   // Binary operators
   ADD,
@@ -153,7 +158,7 @@ in NodeKind {
   }
 
   bool isUnaryOperator() {
-    return this >= NOT && this <= POSTFIX_DECREMENT;
+    return this >= NOT && this <= ADDRESS_OF;
   }
 
   bool isUnaryStorageOperator() {
@@ -176,6 +181,10 @@ in NodeKind {
     return this >= CAST && this <= IMPLICIT_CAST;
   }
 
+  bool isTypeHole() {
+    return this >= UNTYPED && this <= TYPED;
+  }
+
   bool isType() {
     return this == TYPE;
   }
@@ -190,6 +199,10 @@ in NodeKind {
 
   bool isJump() {
     return this >= RETURN && this <= CONTINUE;
+  }
+
+  bool isDot() {
+    return this >= DOT && this <= DOT_COLON;
   }
 
   bool isLoop() {

@@ -18,13 +18,13 @@ in Node {
   }
 
   Node dotTarget() {
-    assert kind == .DOT;
+    assert kind.isDot();
     assert children.size() == 2;
     return children.get(0);
   }
 
   Node dotName() {
-    assert kind == .DOT;
+    assert kind.isDot();
     assert children.size() == 2;
     assert children.get(1) == null || children.get(1).kind == .NAME;
     return children.get(1);
@@ -249,8 +249,8 @@ in Node {
     return children.get(1);
   }
 
-  Node untypedValue() {
-    assert kind == .UNTYPED;
+  Node typeHoleValue() {
+    assert kind.isTypeHole();
     assert children.size() == 1;
     return children.get(0);
   }

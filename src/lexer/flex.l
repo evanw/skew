@@ -37,6 +37,7 @@
 "switch"                      SWITCH;
 "this"                        THIS;
 "true"                        TRUE;
+"typed"                       TYPED;
 "untyped"                     UNTYPED;
 "using"                       USING;
 "var"                         VAR;
@@ -54,6 +55,7 @@
 ","                           COMMA;
 ";"                           SEMICOLON;
 "?"                           QUESTION_MARK;
+"::"                          DOUBLE_COLON;
 ":"                           COLON;
 "++"                          INCREMENT;
 "--"                          DECREMENT;
@@ -69,6 +71,7 @@
 "^="                          ASSIGN_BITWISE_XOR;
 "<<="                         ASSIGN_SHIFT_LEFT;
 ">>="                         ASSIGN_SHIFT_RIGHT;
+"->"                          ARROW;
 "+"                           PLUS;
 "-"                           MINUS;
 "*"                           MULTIPLY;

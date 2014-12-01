@@ -354,7 +354,7 @@ namespace base {
         case .INT { emitInt(node, precedence); }
         case .FLOAT, .DOUBLE { emitReal(node); }
         case .STRING { emitString(node); }
-        case .DOT { emitDot(node); }
+        case .DOT, .DOT_ARROW, .DOT_COLON { emitDot(node); }
         case .CALL { emitCall(node, precedence); }
         case .SEQUENCE { emitSequence(node, precedence); }
         case .INDEX { emitIndex(node, precedence); }
@@ -362,7 +362,7 @@ namespace base {
         case .CAST, .IMPLICIT_CAST { emitCast(node, precedence); }
         case .LIST { emitList(node); }
         case .SUPER_CALL { emitSuperCall(node); }
-        case .UNTYPED { emitExpression(node.untypedValue(), precedence); }
+        case .UNTYPED, .TYPED { emitExpression(node.typeHoleValue(), precedence); }
         default {
           if (kind.isUnaryOperator()) emitUnary(node, precedence);
           else if (kind.isBinaryOperator()) emitBinary(node, precedence);

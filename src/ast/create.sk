@@ -248,6 +248,13 @@ in Node {
     return Node(.DOT).withChildren([value, name]);
   }
 
+  static Node createDotWithKind(NodeKind kind, Node value, Node name) {
+    assert kind.isDot();
+    assert value == null || value.kind.isExpression();
+    assert name == null || name.kind == .NAME;
+    return Node(kind).withChildren([value, name]);
+  }
+
   static Node createCall(Node value, List<Node> arguments) {
     assert value.kind.isExpression();
     assert checkAllNodeKinds(arguments, NodeKindIsExpression());
@@ -291,12 +298,15 @@ in Node {
     return Node(.IMPLICIT_CAST).withChildren([type, value]);
   }
 
-  // Untyped nodes use the error type but don't report an error, thus silently
-  // allowing the value to be used in any way. This is useful for writing the
-  // binding layer for native code generation.
-  static Node createUntyped(Node type) {
+  static Node createTypeHole(NodeKind kind, Node type) {
+    assert kind.isTypeHole();
     assert type.kind.isExpression();
-    return Node(.UNTYPED).withChildren([type]);
+    return Node(kind).withChildren([type]);
+  }
+
+  static Node createTyped(Node type) {
+    assert type.kind.isExpression();
+    return Node(.TYPED).withChildren([type]);
   }
 
   static Node createVar() {

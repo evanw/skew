@@ -117,7 +117,7 @@ in Node {
   }
 
   bool isNameExpression() {
-    return kind == .NAME && (parent.kind != .DOT || this != parent.dotName()) && (!parent.kind.isNamedDeclaration() || this != parent.declarationName());
+    return kind == .NAME && (!parent.kind.isDot() || this != parent.dotName()) && (!parent.kind.isNamedDeclaration() || this != parent.declarationName());
   }
 
   bool isDeclarationName() {
@@ -134,7 +134,7 @@ in Node {
       case .CAST, .IMPLICIT_CAST { return castValue().hasNoSideEffects(); }
       case .HOOK { return hookTest().hasNoSideEffects() && hookTrue().hasNoSideEffects() && hookFalse().hasNoSideEffects(); }
       case .DOT { return dotTarget().hasNoSideEffects(); }
-      case .UNTYPED { return untypedValue().hasNoSideEffects(); }
+      case .UNTYPED, .TYPED { return typeHoleValue().hasNoSideEffects(); }
       default {
         if (kind.isBinaryOperator() && !kind.isBinaryStorageOperator()) return binaryLeft().hasNoSideEffects() && binaryRight().hasNoSideEffects();
         if (kind.isUnaryOperator() && !kind.isUnaryStorageOperator()) return unaryValue().hasNoSideEffects();

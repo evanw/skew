@@ -87,7 +87,6 @@ double parseDoubleLiteral(string text);
 int parseIntLiteral(string text, int base);
 string cpp_toString(int value);
 string cpp_toString(double value);
-string cpp_fromCodeUnit(int value);
 string cpp_toLowerCase(string value);
 string cpp_toUpperCase(string value);
 
@@ -189,10 +188,6 @@ string cpp_toString(double value) {
   while (result.back() == '0') result.pop_back();
   if (result.back() == '.') result.pop_back();
   return result;
-}
-
-string cpp_fromCodeUnit(int value) {
-  return string(1, value);
 }
 
 string cpp_toLowerCase(string value) {

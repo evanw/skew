@@ -1,10 +1,5 @@
 namespace cpp {
   const var NATIVE_LIBRARY = "
-import void cpp_toString();
-import string cpp_fromCodeUnit(int value);
-import string cpp_toLowerCase(string value);
-import string cpp_toUpperCase(string value);
-
 import class int {}
 import class bool {}
 import class float {}
@@ -12,7 +7,7 @@ import class double {}
 import class string {}
 
 in int {
-  inline string toString() { return untyped(cpp_toString)(this); }
+  inline string toString() { return untyped(cpp_toString(this)); }
 }
 
 in bool {
@@ -20,24 +15,24 @@ in bool {
 }
 
 in float {
-  inline string toString() { return untyped(cpp_toString)(this); }
+  inline string toString() { return untyped(cpp_toString(this)); }
 }
 
 in double {
-  inline string toString() { return untyped(cpp_toString)(this); }
+  inline string toString() { return untyped(cpp_toString(this)); }
 }
 
 in string {
   inline {
-    int size() { return (int)untyped(this).size(); }
-    string slice(int start, int end) { return untyped(this).substr(start, end - start); }
-    int indexOf(string value) { return (int)untyped(this).find(value); }
-    int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }
-    string toLowerCase() { return cpp_toLowerCase(this); }
-    string toUpperCase() { return cpp_toUpperCase(this); }
-    static string fromCodeUnit(int value) { return cpp_fromCodeUnit(value); }
+    int size() { return (int)untyped(this.size()); }
+    string slice(int start, int end) { return untyped(this.substr(typed(start), typed(end) - typed(start))); }
+    int indexOf(string value) { return (int)untyped(this.find(typed(value))); }
+    int lastIndexOf(string value) { return (int)untyped(this.rfind(typed(value))); }
+    string toLowerCase() { return untyped(cpp_toLowerCase(this)); }
+    string toUpperCase() { return untyped(cpp_toUpperCase(this)); }
+    static string fromCodeUnit(int value) { return untyped(string(1, typed(value))); }
     string get(int index) { return fromCodeUnit(codeUnitAt(index)); }
-    int codeUnitAt(int index) { return untyped(this)[index]; }
+    int codeUnitAt(int index) { return untyped(this[typed(index)]); }
   }
   string join(List<string> values) { var result = \"\"; for (var i = 0; i < values.size(); i++) { if (i > 0) result += this; result += values.get(i); } return result; }
   bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }
@@ -93,46 +88,26 @@ import class IntMap<T> {
   IntMap<T> clone();
 }
 
-import namespace std {
-  double abs(double x);
-  double sin(double x);
-  double cos(double x);
-  double tan(double x);
-  double asin(double x);
-  double acos(double x);
-  double atan(double x);
-  double atan2(double y, double x);
-  double sqrt(double x);
-  double exp(double x);
-  double log(double x);
-  double pow(double x, double y);
-  double floor(double x);
-  double round(double x);
-  double ceil(double x);
-  double fmin(double x, double y);
-  double fmax(double x, double y);
-}
-
 import namespace math {}
 
 in math {
-  inline double abs(double x) { return std.abs(x); }
-  inline double sin(double x) { return std.sin(x); }
-  inline double cos(double x) { return std.cos(x); }
-  inline double tan(double x) { return std.tan(x); }
-  inline double asin(double x) { return std.asin(x); }
-  inline double acos(double x) { return std.acos(x); }
-  inline double atan(double x) { return std.atan(x); }
-  inline double atan2(double y, double x) { return std.atan2(y, x); }
-  inline double sqrt(double x) { return std.sqrt(x); }
-  inline double exp(double x) { return std.exp(x); }
-  inline double log(double x) { return std.log(x); }
-  inline double pow(double x, double y) { return std.pow(x, y); }
-  inline double floor(double x) { return std.floor(x); }
-  inline double round(double x) { return std.round(x); }
-  inline double ceil(double x) { return std.ceil(x); }
-  inline double min(double x, double y) { return std.fmin(x, y); }
-  inline double max(double x, double y) { return std.fmax(x, y); }
+  inline double abs(double x) { return untyped(std::abs(typed(x))); }
+  inline double sin(double x) { return untyped(std::sin(typed(x))); }
+  inline double cos(double x) { return untyped(std::cos(typed(x))); }
+  inline double tan(double x) { return untyped(std::tan(typed(x))); }
+  inline double asin(double x) { return untyped(std::asin(typed(x))); }
+  inline double acos(double x) { return untyped(std::acos(typed(x))); }
+  inline double atan(double x) { return untyped(std::atan(typed(x))); }
+  inline double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }
+  inline double sqrt(double x) { return untyped(std::sqrt(typed(x))); }
+  inline double exp(double x) { return untyped(std::exp(typed(x))); }
+  inline double log(double x) { return untyped(std::log(typed(x))); }
+  inline double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }
+  inline double floor(double x) { return untyped(std::floor(typed(x))); }
+  inline double round(double x) { return untyped(std::round(typed(x))); }
+  inline double ceil(double x) { return untyped(std::ceil(typed(x))); }
+  inline double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }
+  inline double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }
 
   const double SQRT2 = 1.414213562373095;
   const double PI = 3.141592653589793;

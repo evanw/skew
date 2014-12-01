@@ -509,7 +509,7 @@ class Resolver {
       case .DOUBLE { node.type = cache.doubleType; }
       case .STRING { node.type = cache.stringType; }
       case .LIST { resolveList(node); }
-      case .DOT { resolveDot(node); }
+      case .DOT, .DOT_ARROW, .DOT_COLON { resolveDot(node); }
       case .CALL { resolveCall(node); }
       case .SUPER_CALL { resolveSuperCall(node); }
       case .ERROR {} // Ignore parse errors
@@ -517,9 +517,11 @@ class Resolver {
       case .PARAMETERIZE { resolveParameterize(node); }
       case .CAST { resolveCast(node); }
       case .UNTYPED { resolveUntyped(node); }
+      case .TYPED { resolveTyped(node); }
       case .VAR { resolveVar(node); }
 
-      case .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
+      case .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT, .DEREFERENCE, .ADDRESS_OF,
+        .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
         resolveUnaryOperator(node);
       }
 
@@ -2560,8 +2562,20 @@ class Resolver {
   }
 
   void resolveDot(Node node) {
-    // The target may be null, which means to use the type context instead
     var target = node.dotTarget();
+    var dotName = node.dotName();
+
+    // The "->" and "::" tokens should only be used inside an untyped expression
+    if (node.kind == .DOT_ARROW || node.kind == .DOT_COLON) {
+      semanticErrorBadDotToken(log, target != null ? dotName != null
+        ? Range.inner(target.range, dotName.range)
+        : Range.after(node.range, target.range) : dotName != null
+        ? Range.before(node.range, dotName.range)
+        : node.range);
+      node.kind = .DOT;
+    }
+
+    // The target may be null, which means to use the type context instead
     if (target != null) {
       resolve(target, null);
     }
@@ -2577,7 +2591,6 @@ class Resolver {
     }
 
     // The name allowed to be null for autocomplete
-    var dotName = node.dotName();
     if (dotName == null) {
       return;
     }
@@ -2806,7 +2819,26 @@ class Resolver {
   }
 
   void resolveUntyped(Node node) {
-    resolve(node.untypedValue(), null);
+    // Typed nodes can be used inside untyped nodes to get typing back
+    if (node.kind == .TYPED) {
+      var value = node.typeHoleValue();
+      resolve(value, null);
+      node.become(value);
+    }
+
+    // Recursively mark everything with the error type
+    else {
+      if (node.hasChildren()) {
+        for (var i = 0; i < node.children.size(); i++) {
+          resolveUntyped(node.children.get(i));
+        }
+      }
+      node.type = cache.errorType;
+    }
+  }
+
+  void resolveTyped(Node node) {
+    semanticErrorUnexpectedTyped(log, node.range);
   }
 
   void resolveVar(Node node) {

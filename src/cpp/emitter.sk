@@ -315,7 +315,7 @@ namespace cpp {
     override void emitDot(Node node) {
       var target = node.dotTarget();
       emitExpression(target, .MEMBER);
-      emit(target.type.isReference() ? "->" : ".");
+      emit(node.kind == .DOT_COLON ? "::" : node.kind == .DOT_ARROW || target.type.isReference() ? "->" : ".");
       emit(node.symbol != null ? mangleName(node.symbol) : node.dotName().asString());
     }
 

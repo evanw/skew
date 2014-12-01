@@ -104,7 +104,7 @@ namespace InstanceToStaticPass {
       node.become(createThis(symbol).withRange(node.range));
     }
 
-    else if (node.isNameExpression() && (node.symbol.kind == .INSTANCE_FUNCTION || node.symbol.kind == .INSTANCE_VARIABLE)) {
+    else if (node.isNameExpression() && node.symbol != null && (node.symbol.kind == .INSTANCE_FUNCTION || node.symbol.kind == .INSTANCE_VARIABLE)) {
       node.become(Node.createDot(createThis(symbol), node.clone()).withType(node.type).withRange(node.range).withSymbol(node.symbol));
     }
 
