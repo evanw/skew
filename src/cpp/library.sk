@@ -25,23 +25,23 @@ in float {
 in double {
   inline string toString() {
     untyped(std::stringstream) ss;
-    untyped(ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::fixed) << this;
+    untyped(ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::fixed << this);
     string result = ss.str();
-    while (untyped(result.back()) == '0') untyped(result.pop_back());
-    if (untyped(result.back()) == '.') untyped(result.pop_back());
+    while (untyped(result).back() == '0') untyped(result).pop_back();
+    if (untyped(result).back() == '.') untyped(result).pop_back();
     return result;
   }
 }
 
 in string {
   inline {
-    int size() { return (int)untyped(this.size()); }
-    string slice(int start, int end) { return untyped(this.substr(typed(start), typed(end) - typed(start))); }
-    int indexOf(string value) { return (int)untyped(this.find(typed(value))); }
-    int lastIndexOf(string value) { return (int)untyped(this.rfind(typed(value))); }
-    static string fromCodeUnit(int value) { return untyped(string(1, typed(value))); }
+    int size() { return (int)untyped(this).size(); }
+    string slice(int start, int end) { return untyped(this).substr(start, end - start); }
+    int indexOf(string value) { return (int)untyped(this).find(value); }
+    int lastIndexOf(string value) { return (int)untyped(this).rfind(value); }
+    static string fromCodeUnit(int value) { return untyped(string)(1, value); }
     string get(int index) { return fromCodeUnit(codeUnitAt(index)); }
-    int codeUnitAt(int index) { return untyped(this[typed(index)]); }
+    int codeUnitAt(int index) { return untyped(this)[index]; }
   }
 
   string toLowerCase() {
@@ -134,23 +134,23 @@ class IntMap<T> {
 
 namespace math {
   inline {
-    double abs(double x) { return untyped(std::abs(typed(x))); }
-    double sin(double x) { return untyped(std::sin(typed(x))); }
-    double cos(double x) { return untyped(std::cos(typed(x))); }
-    double tan(double x) { return untyped(std::tan(typed(x))); }
-    double asin(double x) { return untyped(std::asin(typed(x))); }
-    double acos(double x) { return untyped(std::acos(typed(x))); }
-    double atan(double x) { return untyped(std::atan(typed(x))); }
-    double atan2(double y, double x) { return untyped(std::atan2(typed(y), typed(x))); }
-    double sqrt(double x) { return untyped(std::sqrt(typed(x))); }
-    double exp(double x) { return untyped(std::exp(typed(x))); }
-    double log(double x) { return untyped(std::log(typed(x))); }
-    double pow(double x, double y) { return untyped(std::pow(typed(x), typed(y))); }
-    double floor(double x) { return untyped(std::floor(typed(x))); }
-    double round(double x) { return untyped(std::round(typed(x))); }
-    double ceil(double x) { return untyped(std::ceil(typed(x))); }
-    double min(double x, double y) { return untyped(std::fmin(typed(x), typed(y))); }
-    double max(double x, double y) { return untyped(std::fmax(typed(x), typed(y))); }
+    double abs(double x) { return untyped(std)::abs(x); }
+    double sin(double x) { return untyped(std)::sin(x); }
+    double cos(double x) { return untyped(std)::cos(x); }
+    double tan(double x) { return untyped(std)::tan(x); }
+    double asin(double x) { return untyped(std)::asin(x); }
+    double acos(double x) { return untyped(std)::acos(x); }
+    double atan(double x) { return untyped(std)::atan(x); }
+    double atan2(double y, double x) { return untyped(std)::atan2(y, x); }
+    double sqrt(double x) { return untyped(std)::sqrt(x); }
+    double exp(double x) { return untyped(std)::exp(x); }
+    double log(double x) { return untyped(std)::log(x); }
+    double pow(double x, double y) { return untyped(std)::pow(x, y); }
+    double floor(double x) { return untyped(std)::floor(x); }
+    double round(double x) { return untyped(std)::round(x); }
+    double ceil(double x) { return untyped(std)::ceil(x); }
+    double min(double x, double y) { return untyped(std)::fmin(x, y); }
+    double max(double x, double y) { return untyped(std)::fmax(x, y); }
   }
 
   const {
