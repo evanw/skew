@@ -19,17 +19,18 @@ in bool {
 }
 
 in float {
-  inline string toString() { return ((double)this).toString(); }
+  inline string toString() {
+    untyped(std::stringstream) ss;
+    ss << this;
+    return ss.str();
+  }
 }
 
 in double {
   inline string toString() {
     untyped(std::stringstream) ss;
-    untyped(ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::fixed << this);
-    string result = ss.str();
-    while (untyped(result).back() == '0') untyped(result).pop_back();
-    if (untyped(result).back() == '.') untyped(result).pop_back();
-    return result;
+    ss << this;
+    return ss.str();
   }
 }
 
