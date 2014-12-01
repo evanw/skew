@@ -5889,10 +5889,10 @@
     return parselet !== null && parselet.prefix !== null;
   };
   Pratt.prototype.literal = function(kind, callback) {
-    this.parselet(kind, 0).prefix = new LiteralParselet(callback);
+    this.parselet(kind, Precedence.LOWEST).prefix = new LiteralParselet(callback);
   };
   Pratt.prototype.prefix = function(kind, precedence, callback) {
-    this.parselet(kind, 0).prefix = new PrefixParselet(callback, precedence);
+    this.parselet(kind, Precedence.LOWEST).prefix = new PrefixParselet(callback, precedence);
   };
   Pratt.prototype.postfix = function(kind, precedence, callback) {
     this.parselet(kind, precedence).infix = new PostfixParselet(callback);

@@ -157,7 +157,7 @@ Node parseArgumentVariables(ParserContext context) {
 }
 
 Node parseType(ParserContext context) {
-  return pratt.parse(context, Precedence.MEMBER - 1);
+  return pratt.parse(context, (Precedence)(Precedence.MEMBER - 1));
 }
 
 Node parseEnumValueDeclaration(ParserContext context) {
@@ -718,8 +718,8 @@ class ParenthesisParselet : IPrefixParselet {
 class HookParselet : IInfixParselet {
   override Node parse(ParserContext context, Node left) {
     context.next();
-    var middle = pratt.parse(context, Precedence.ASSIGN - 1);
-    var right = context.expect(.COLON) ? pratt.parse(context, Precedence.ASSIGN - 1) : Node.createError().withRange(context.spanSince(context.current().range));
+    var middle = pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1));
+    var right = context.expect(.COLON) ? pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1)) : Node.createError().withRange(context.spanSince(context.current().range));
     return Node.createHook(left, middle, right).withRange(context.spanSince(left.range));
   }
 }
@@ -833,77 +833,77 @@ void createParser() {
   // Unary expressions
   ////////////////////////////////////////////////////////////////////////////////
 
-  pratt.postfix(.INCREMENT, Precedence.UNARY_POSTFIX, UnaryPostfix(.POSTFIX_INCREMENT));
-  pratt.postfix(.DECREMENT, Precedence.UNARY_POSTFIX, UnaryPostfix(.POSTFIX_DECREMENT));
-  pratt.prefix(.INCREMENT, Precedence.UNARY_PREFIX, UnaryPrefix(.PREFIX_INCREMENT));
-  pratt.prefix(.DECREMENT, Precedence.UNARY_PREFIX, UnaryPrefix(.PREFIX_DECREMENT));
-  pratt.prefix(.PLUS, Precedence.UNARY_PREFIX, UnaryPrefix(.POSITIVE));
-  pratt.prefix(.MINUS, Precedence.UNARY_PREFIX, UnaryPrefix(.NEGATIVE));
-  pratt.prefix(.NOT, Precedence.UNARY_PREFIX, UnaryPrefix(.NOT));
-  pratt.prefix(.TILDE, Precedence.UNARY_PREFIX, UnaryPrefix(.COMPLEMENT));
-  pratt.prefix(.MULTIPLY, Precedence.UNARY_PREFIX, UnaryPrefix(.PREFIX_DEREFERENCE));
-  pratt.prefix(.BITWISE_AND, Precedence.UNARY_PREFIX, UnaryPrefix(.PREFIX_REFERENCE));
+  pratt.postfix(.INCREMENT, .UNARY_POSTFIX, UnaryPostfix(.POSTFIX_INCREMENT));
+  pratt.postfix(.DECREMENT, .UNARY_POSTFIX, UnaryPostfix(.POSTFIX_DECREMENT));
+  pratt.prefix(.INCREMENT, .UNARY_PREFIX, UnaryPrefix(.PREFIX_INCREMENT));
+  pratt.prefix(.DECREMENT, .UNARY_PREFIX, UnaryPrefix(.PREFIX_DECREMENT));
+  pratt.prefix(.PLUS, .UNARY_PREFIX, UnaryPrefix(.POSITIVE));
+  pratt.prefix(.MINUS, .UNARY_PREFIX, UnaryPrefix(.NEGATIVE));
+  pratt.prefix(.NOT, .UNARY_PREFIX, UnaryPrefix(.NOT));
+  pratt.prefix(.TILDE, .UNARY_PREFIX, UnaryPrefix(.COMPLEMENT));
+  pratt.prefix(.MULTIPLY, .UNARY_PREFIX, UnaryPrefix(.PREFIX_DEREFERENCE));
+  pratt.prefix(.BITWISE_AND, .UNARY_PREFIX, UnaryPrefix(.PREFIX_REFERENCE));
 
   ////////////////////////////////////////////////////////////////////////////////
   // Binary expressions
   ////////////////////////////////////////////////////////////////////////////////
 
-  pratt.infix(.BITWISE_OR, Precedence.BITWISE_OR, BinaryInfix(.BITWISE_OR));
-  pratt.infix(.BITWISE_XOR, Precedence.BITWISE_XOR, BinaryInfix(.BITWISE_XOR));
-  pratt.infix(.DIVIDE, Precedence.MULTIPLY, BinaryInfix(.DIVIDE));
-  pratt.infix(.EQUAL, Precedence.EQUAL, BinaryInfix(.EQUAL));
-  pratt.infix(.GREATER_THAN, Precedence.COMPARE, BinaryInfix(.GREATER_THAN));
-  pratt.infix(.GREATER_THAN_OR_EQUAL, Precedence.COMPARE, BinaryInfix(.GREATER_THAN_OR_EQUAL));
-  pratt.infix(.IN, Precedence.COMPARE, BinaryInfix(.IN));
-  pratt.infix(.LESS_THAN, Precedence.COMPARE, BinaryInfix(.LESS_THAN));
-  pratt.infix(.LESS_THAN_OR_EQUAL, Precedence.COMPARE, BinaryInfix(.LESS_THAN_OR_EQUAL));
-  pratt.infix(.LOGICAL_AND, Precedence.LOGICAL_AND, BinaryInfix(.LOGICAL_AND));
-  pratt.infix(.LOGICAL_OR, Precedence.LOGICAL_OR, BinaryInfix(.LOGICAL_OR));
-  pratt.infix(.MINUS, Precedence.ADD, BinaryInfix(.SUBTRACT));
-  pratt.infix(.NOT_EQUAL, Precedence.EQUAL, BinaryInfix(.NOT_EQUAL));
-  pratt.infix(.PLUS, Precedence.ADD, BinaryInfix(.ADD));
-  pratt.infix(.REMAINDER, Precedence.MULTIPLY, BinaryInfix(.REMAINDER));
-  pratt.infix(.SHIFT_LEFT, Precedence.SHIFT, BinaryInfix(.SHIFT_LEFT));
-  pratt.infix(.SHIFT_RIGHT, Precedence.SHIFT, BinaryInfix(.SHIFT_RIGHT));
+  pratt.infix(.BITWISE_OR, .BITWISE_OR, BinaryInfix(.BITWISE_OR));
+  pratt.infix(.BITWISE_XOR, .BITWISE_XOR, BinaryInfix(.BITWISE_XOR));
+  pratt.infix(.DIVIDE, .MULTIPLY, BinaryInfix(.DIVIDE));
+  pratt.infix(.EQUAL, .EQUAL, BinaryInfix(.EQUAL));
+  pratt.infix(.GREATER_THAN, .COMPARE, BinaryInfix(.GREATER_THAN));
+  pratt.infix(.GREATER_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.GREATER_THAN_OR_EQUAL));
+  pratt.infix(.IN, .COMPARE, BinaryInfix(.IN));
+  pratt.infix(.LESS_THAN, .COMPARE, BinaryInfix(.LESS_THAN));
+  pratt.infix(.LESS_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.LESS_THAN_OR_EQUAL));
+  pratt.infix(.LOGICAL_AND, .LOGICAL_AND, BinaryInfix(.LOGICAL_AND));
+  pratt.infix(.LOGICAL_OR, .LOGICAL_OR, BinaryInfix(.LOGICAL_OR));
+  pratt.infix(.MINUS, .ADD, BinaryInfix(.SUBTRACT));
+  pratt.infix(.NOT_EQUAL, .EQUAL, BinaryInfix(.NOT_EQUAL));
+  pratt.infix(.PLUS, .ADD, BinaryInfix(.ADD));
+  pratt.infix(.REMAINDER, .MULTIPLY, BinaryInfix(.REMAINDER));
+  pratt.infix(.SHIFT_LEFT, .SHIFT, BinaryInfix(.SHIFT_LEFT));
+  pratt.infix(.SHIFT_RIGHT, .SHIFT, BinaryInfix(.SHIFT_RIGHT));
 
   ////////////////////////////////////////////////////////////////////////////////
   // Assignment expressions
   ////////////////////////////////////////////////////////////////////////////////
 
-  pratt.infixRight(.ASSIGN, Precedence.ASSIGN, BinaryInfix(.ASSIGN));
-  pratt.infixRight(.ASSIGN_PLUS, Precedence.ASSIGN, BinaryInfix(.ASSIGN_ADD));
-  pratt.infixRight(.ASSIGN_BITWISE_AND, Precedence.ASSIGN, BinaryInfix(.ASSIGN_BITWISE_AND));
-  pratt.infixRight(.ASSIGN_BITWISE_OR, Precedence.ASSIGN, BinaryInfix(.ASSIGN_BITWISE_OR));
-  pratt.infixRight(.ASSIGN_BITWISE_XOR, Precedence.ASSIGN, BinaryInfix(.ASSIGN_BITWISE_XOR));
-  pratt.infixRight(.ASSIGN_DIVIDE, Precedence.ASSIGN, BinaryInfix(.ASSIGN_DIVIDE));
-  pratt.infixRight(.ASSIGN_MULTIPLY, Precedence.ASSIGN, BinaryInfix(.ASSIGN_MULTIPLY));
-  pratt.infixRight(.ASSIGN_REMAINDER, Precedence.ASSIGN, BinaryInfix(.ASSIGN_REMAINDER));
-  pratt.infixRight(.ASSIGN_SHIFT_LEFT, Precedence.ASSIGN, BinaryInfix(.ASSIGN_SHIFT_LEFT));
-  pratt.infixRight(.ASSIGN_SHIFT_RIGHT, Precedence.ASSIGN, BinaryInfix(.ASSIGN_SHIFT_RIGHT));
-  pratt.infixRight(.ASSIGN_MINUS, Precedence.ASSIGN, BinaryInfix(.ASSIGN_SUBTRACT));
+  pratt.infixRight(.ASSIGN, .ASSIGN, BinaryInfix(.ASSIGN));
+  pratt.infixRight(.ASSIGN_PLUS, .ASSIGN, BinaryInfix(.ASSIGN_ADD));
+  pratt.infixRight(.ASSIGN_BITWISE_AND, .ASSIGN, BinaryInfix(.ASSIGN_BITWISE_AND));
+  pratt.infixRight(.ASSIGN_BITWISE_OR, .ASSIGN, BinaryInfix(.ASSIGN_BITWISE_OR));
+  pratt.infixRight(.ASSIGN_BITWISE_XOR, .ASSIGN, BinaryInfix(.ASSIGN_BITWISE_XOR));
+  pratt.infixRight(.ASSIGN_DIVIDE, .ASSIGN, BinaryInfix(.ASSIGN_DIVIDE));
+  pratt.infixRight(.ASSIGN_MULTIPLY, .ASSIGN, BinaryInfix(.ASSIGN_MULTIPLY));
+  pratt.infixRight(.ASSIGN_REMAINDER, .ASSIGN, BinaryInfix(.ASSIGN_REMAINDER));
+  pratt.infixRight(.ASSIGN_SHIFT_LEFT, .ASSIGN, BinaryInfix(.ASSIGN_SHIFT_LEFT));
+  pratt.infixRight(.ASSIGN_SHIFT_RIGHT, .ASSIGN, BinaryInfix(.ASSIGN_SHIFT_RIGHT));
+  pratt.infixRight(.ASSIGN_MINUS, .ASSIGN, BinaryInfix(.ASSIGN_SUBTRACT));
 
   ////////////////////////////////////////////////////////////////////////////////
   // Other expressions
   ////////////////////////////////////////////////////////////////////////////////
 
-  pratt.parselet(.LEFT_BRACKET, Precedence.LOWEST).prefix = ListParselet();
-  pratt.parselet(.LEFT_PARENTHESIS, Precedence.LOWEST).prefix = ParenthesisParselet();
-  pratt.parselet(.QUESTION_MARK, Precedence.ASSIGN).infix = HookParselet();
-  pratt.parselet(.COMMA, Precedence.COMMA).infix = SequenceParselet();
-  pratt.parselet(.DOT, Precedence.MEMBER).infix = DotInfixParselet(.DOT);
-  pratt.parselet(.ARROW, Precedence.MEMBER).infix = DotInfixParselet(.DOT_ARROW);
-  pratt.parselet(.DOUBLE_COLON, Precedence.MEMBER).infix = DotInfixParselet(.DOT_COLON);
-  pratt.parselet(.DOT, Precedence.LOWEST).prefix = DotPrefixParselet(.DOT);
-  pratt.parselet(.DOUBLE_COLON, Precedence.LOWEST).prefix = DotPrefixParselet(.DOT_COLON);
-  pratt.parselet(.LEFT_PARENTHESIS, Precedence.UNARY_POSTFIX).infix = CallParselet();
-  pratt.parselet(.LEFT_BRACKET, Precedence.UNARY_POSTFIX).infix = IndexParselet();
-  pratt.parselet(.START_PARAMETER_LIST, Precedence.MEMBER).infix = ParameterizeParselet();
-  pratt.parselet(.UNTYPED, Precedence.UNARY_PREFIX).prefix = TypeHoleParselet(.UNTYPED);
-  pratt.parselet(.TYPED, Precedence.UNARY_PREFIX).prefix = TypeHoleParselet(.TYPED);
-  pratt.parselet(.NEW, Precedence.LOWEST).prefix = NewParselet();
-  pratt.parselet(.SUPER, Precedence.LOWEST).prefix = SuperParselet();
-  pratt.parselet(.BITWISE_AND, Precedence.BITWISE_AND).infix = BinaryInfixOrUnaryPostfix(.BITWISE_AND, .POSTFIX_REFERENCE, .BITWISE_AND);
-  pratt.parselet(.MULTIPLY, Precedence.MULTIPLY).infix = BinaryInfixOrUnaryPostfix(.MULTIPLY, .POSTFIX_DEREFERENCE, .MULTIPLY);
+  pratt.parselet(.LEFT_BRACKET, .LOWEST).prefix = ListParselet();
+  pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet();
+  pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet();
+  pratt.parselet(.COMMA, .COMMA).infix = SequenceParselet();
+  pratt.parselet(.DOT, .MEMBER).infix = DotInfixParselet(.DOT);
+  pratt.parselet(.ARROW, .MEMBER).infix = DotInfixParselet(.DOT_ARROW);
+  pratt.parselet(.DOUBLE_COLON, .MEMBER).infix = DotInfixParselet(.DOT_COLON);
+  pratt.parselet(.DOT, .LOWEST).prefix = DotPrefixParselet(.DOT);
+  pratt.parselet(.DOUBLE_COLON, .LOWEST).prefix = DotPrefixParselet(.DOT_COLON);
+  pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet();
+  pratt.parselet(.LEFT_BRACKET, .UNARY_POSTFIX).infix = IndexParselet();
+  pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizeParselet();
+  pratt.parselet(.UNTYPED, .UNARY_PREFIX).prefix = TypeHoleParselet(.UNTYPED);
+  pratt.parselet(.TYPED, .UNARY_PREFIX).prefix = TypeHoleParselet(.TYPED);
+  pratt.parselet(.NEW, .LOWEST).prefix = NewParselet();
+  pratt.parselet(.SUPER, .LOWEST).prefix = SuperParselet();
+  pratt.parselet(.BITWISE_AND, .BITWISE_AND).infix = BinaryInfixOrUnaryPostfix(.BITWISE_AND, .POSTFIX_REFERENCE, .BITWISE_AND);
+  pratt.parselet(.MULTIPLY, .MULTIPLY).infix = BinaryInfixOrUnaryPostfix(.MULTIPLY, .POSTFIX_DEREFERENCE, .MULTIPLY);
 }
 
 Pratt pratt;
