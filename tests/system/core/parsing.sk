@@ -359,12 +359,9 @@ void test() {
   x < (x) > x;
 }
 ", "
-<stdin>:3:11: error: Unexpected GREATER_THAN
+<stdin>:3:3: error: No binary operator > for type \"bool\" and type \"int\"
   x < (x) > x;
-          ^
-<stdin>:3:8: error: Unexpected expression of type \"int\"
-  x < (x) > x;
-       ^
+  ~~~~~~~~~~~
 ");
 
 test("

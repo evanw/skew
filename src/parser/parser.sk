@@ -707,7 +707,7 @@ class ParenthesisParselet : IPrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.current();
     var type = parseGroup(context);
-    if (looksLikeType(type)) {
+    if (looksLikeType(type) && pratt.hasPrefixParselet(context)) {
       var value = pratt.parse(context, Precedence.UNARY_PREFIX);
       return Node.createCast(type, value).withRange(context.spanSince(token.range));
     }

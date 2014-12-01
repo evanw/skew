@@ -68,27 +68,27 @@ import class IntMap<T> {
   IntMap<T> clone();
 }
 
-namespace math {
-  import {
-    double abs(double x);
-    double sin(double x);
-    double cos(double x);
-    double tan(double x);
-    double asin(double x);
-    double acos(double x);
-    double atan(double x);
-    double atan2(double y, double x);
-    double sqrt(double x);
-    double exp(double x);
-    double log(double x);
-    double pow(double x, double y);
-    double floor(double x);
-    double round(double x);
-    double ceil(double x);
-    double min(double x, double y);
-    double max(double x, double y);
-  }
+import namespace math {
+  double abs(double x);
+  double sin(double x);
+  double cos(double x);
+  double tan(double x);
+  double asin(double x);
+  double acos(double x);
+  double atan(double x);
+  double atan2(double y, double x);
+  double sqrt(double x);
+  double exp(double x);
+  double log(double x);
+  double pow(double x, double y);
+  double floor(double x);
+  double round(double x);
+  double ceil(double x);
+  double min(double x, double y);
+  double max(double x, double y);
+}
 
+in math {
   const {
     double SQRT2 = 1.414213562373095;
     double PI = 3.141592653589793;
