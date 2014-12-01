@@ -14,6 +14,18 @@ var x = \"π\";
 ");
 
 test("
+var x = [0, 0.0, .0, 0.];
+var y = [0f, 0.0f, .0f, 0.f];
+", "
+<stdin>:1:24: error: Expected IDENTIFIER but found RIGHT_BRACKET
+var x = [0, 0.0, .0, 0.];
+                       ^
+<stdin>:2:27: error: \"f\" is not declared on type \"int\"
+var y = [0f, 0.0f, .0f, 0.f];
+                          ^
+");
+
+test("
 int foo = 0123;
 ", "
 <stdin>:1:11: warning: Use the prefix \"0o\" for octal numbers
@@ -67,15 +79,24 @@ bool a = 0b11.01;
 bool b = 0xFF.01;
 bool c = 0o70.71;
 ", "
-<stdin>:1:15: error: Expected IDENTIFIER but found INT_DECIMAL
+<stdin>:1:14: error: Expected SEMICOLON but found DOUBLE
 bool a = 0b11.01;
-              ~~
-<stdin>:2:15: error: Expected IDENTIFIER but found INT_DECIMAL
+             ~~~
+<stdin>:2:14: error: Expected SEMICOLON but found DOUBLE
 bool b = 0xFF.01;
-              ~~
-<stdin>:3:15: error: Expected IDENTIFIER but found INT_DECIMAL
+             ~~~
+<stdin>:3:14: error: Expected SEMICOLON but found DOUBLE
 bool c = 0o70.71;
-              ~~
+             ~~~
+<stdin>:1:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool a = 0b11.01;
+         ~~~~
+<stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool b = 0xFF.01;
+         ~~~~
+<stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool c = 0o70.71;
+         ~~~~
 ");
 
 test("
@@ -83,15 +104,78 @@ bool a = 0b11.01f;
 bool b = 0xFF.01f;
 bool c = 0o70.71f;
 ", "
-<stdin>:1:15: error: Expected IDENTIFIER but found FLOAT
+<stdin>:1:14: error: Expected SEMICOLON but found FLOAT
 bool a = 0b11.01f;
-              ~~~
-<stdin>:2:15: error: Expected IDENTIFIER but found FLOAT
+             ~~~~
+<stdin>:2:14: error: Expected SEMICOLON but found FLOAT
 bool b = 0xFF.01f;
-              ~~~
-<stdin>:3:15: error: Expected IDENTIFIER but found FLOAT
+             ~~~~
+<stdin>:3:14: error: Expected SEMICOLON but found FLOAT
 bool c = 0o70.71f;
-              ~~~
+             ~~~~
+<stdin>:1:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool a = 0b11.01f;
+         ~~~~
+<stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool b = 0xFF.01f;
+         ~~~~
+<stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+bool c = 0o70.71f;
+         ~~~~
+");
+
+test("
+bool a = 1e+6;
+bool b = 1e-6;
+bool c = 1.5e+6;
+bool d = 1.5e-6;
+bool e = 1e-6.2;
+", "
+<stdin>:5:14: error: Expected SEMICOLON but found DOUBLE
+bool e = 1e-6.2;
+             ~~
+<stdin>:1:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool a = 1e+6;
+         ~~~~
+<stdin>:2:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool b = 1e-6;
+         ~~~~
+<stdin>:3:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool c = 1.5e+6;
+         ~~~~~~
+<stdin>:4:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool d = 1.5e-6;
+         ~~~~~~
+<stdin>:5:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool e = 1e-6.2;
+         ~~~~
+");
+
+test("
+bool a = 1e+6f;
+bool b = 1e-6f;
+bool c = 1.5e+6f;
+bool d = 1.5e-6f;
+bool e = 1e-6.2f;
+", "
+<stdin>:5:14: error: Expected SEMICOLON but found FLOAT
+bool e = 1e-6.2f;
+             ~~~
+<stdin>:1:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
+bool a = 1e+6f;
+         ~~~~~
+<stdin>:2:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
+bool b = 1e-6f;
+         ~~~~~
+<stdin>:3:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
+bool c = 1.5e+6f;
+         ~~~~~~~
+<stdin>:4:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
+bool d = 1.5e-6f;
+         ~~~~~~~
+<stdin>:5:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool e = 1e-6.2f;
+         ~~~~
 ");
 
 test("
