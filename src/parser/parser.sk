@@ -682,6 +682,19 @@ class BinaryInfix : IInfixCallback {
   }
 }
 
+class BinaryInfixOrUnaryPostfix : IInfixParselet {
+  NodeKind binary;
+  NodeKind unary;
+  Precedence precedence;
+
+  override Node parse(ParserContext context, Node left) {
+    var token = context.next();
+    if (!pratt.hasPrefixParselet(context)) return Node.createUnary(unary, left).withRange(context.spanSince(left.range));
+    var right = pratt.parse(context, precedence);
+    return right != null ? Node.createBinary(binary, left, right).withRange(context.spanSince(left.range)) : null;
+  }
+}
+
 class ListParselet : IPrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.current();
@@ -828,14 +841,13 @@ void createParser() {
   pratt.prefix(.MINUS, Precedence.UNARY_PREFIX, UnaryPrefix(.NEGATIVE));
   pratt.prefix(.NOT, Precedence.UNARY_PREFIX, UnaryPrefix(.NOT));
   pratt.prefix(.TILDE, Precedence.UNARY_PREFIX, UnaryPrefix(.COMPLEMENT));
-  pratt.prefix(.MULTIPLY, Precedence.UNARY_PREFIX, UnaryPrefix(.DEREFERENCE));
-  pratt.prefix(.BITWISE_AND, Precedence.UNARY_PREFIX, UnaryPrefix(.ADDRESS_OF));
+  pratt.prefix(.MULTIPLY, Precedence.UNARY_PREFIX, UnaryPrefix(.PREFIX_DEREFERENCE));
+  pratt.prefix(.BITWISE_AND, Precedence.UNARY_PREFIX, UnaryPrefix(.PREFIX_REFERENCE));
 
   ////////////////////////////////////////////////////////////////////////////////
   // Binary expressions
   ////////////////////////////////////////////////////////////////////////////////
 
-  pratt.infix(.BITWISE_AND, Precedence.BITWISE_AND, BinaryInfix(.BITWISE_AND));
   pratt.infix(.BITWISE_OR, Precedence.BITWISE_OR, BinaryInfix(.BITWISE_OR));
   pratt.infix(.BITWISE_XOR, Precedence.BITWISE_XOR, BinaryInfix(.BITWISE_XOR));
   pratt.infix(.DIVIDE, Precedence.MULTIPLY, BinaryInfix(.DIVIDE));
@@ -848,7 +860,6 @@ void createParser() {
   pratt.infix(.LOGICAL_AND, Precedence.LOGICAL_AND, BinaryInfix(.LOGICAL_AND));
   pratt.infix(.LOGICAL_OR, Precedence.LOGICAL_OR, BinaryInfix(.LOGICAL_OR));
   pratt.infix(.MINUS, Precedence.ADD, BinaryInfix(.SUBTRACT));
-  pratt.infix(.MULTIPLY, Precedence.MULTIPLY, BinaryInfix(.MULTIPLY));
   pratt.infix(.NOT_EQUAL, Precedence.EQUAL, BinaryInfix(.NOT_EQUAL));
   pratt.infix(.PLUS, Precedence.ADD, BinaryInfix(.ADD));
   pratt.infix(.REMAINDER, Precedence.MULTIPLY, BinaryInfix(.REMAINDER));
@@ -891,6 +902,8 @@ void createParser() {
   pratt.parselet(.TYPED, Precedence.UNARY_PREFIX).prefix = TypeHoleParselet(.TYPED);
   pratt.parselet(.NEW, Precedence.LOWEST).prefix = NewParselet();
   pratt.parselet(.SUPER, Precedence.LOWEST).prefix = SuperParselet();
+  pratt.parselet(.BITWISE_AND, Precedence.BITWISE_AND).infix = BinaryInfixOrUnaryPostfix(.BITWISE_AND, .POSTFIX_REFERENCE, .BITWISE_AND);
+  pratt.parselet(.MULTIPLY, Precedence.MULTIPLY).infix = BinaryInfixOrUnaryPostfix(.MULTIPLY, .POSTFIX_DEREFERENCE, .MULTIPLY);
 }
 
 Pratt pratt;

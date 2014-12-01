@@ -248,13 +248,13 @@ namespace base {
       }
     }
 
-    virtual void emitIf(Node node) {
+    void emitIf(Node node) {
       emit(indent);
       recursiveEmitIfStatement(node);
       emit("\n");
     }
 
-    virtual void emitForVariables(List<Node> nodes) {
+    void emitForVariables(List<Node> nodes) {
       emitTypeBeforeVariable(nodes.get(0).symbol);
       for (var i = 0; i < nodes.size(); i++) {
         if (i > 0) emit(", ");
@@ -293,7 +293,7 @@ namespace base {
       emit("\n");
     }
 
-    void emitForEach(Node node) {
+    virtual void emitForEach(Node node) {
     }
 
     void emitWhile(Node node) {
@@ -392,15 +392,13 @@ namespace base {
       return true;
     }
 
-    virtual void emitUnaryPrefixOperator(Node node) {
-      emit(operatorInfo.get(node.kind).text);
-
-      // Prevent "- -1" from becoming "--1"
+    virtual bool shouldEmitSpaceForUnaryOperator(Node node) {
       var value = node.unaryValue();
       if (node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
-          node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT || value.kind == .INT && value.asInt() < 0)) {
-        emit(" ");
+          node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT)) {
+        return true; // Prevent "- -1" from becoming "--1"
       }
+      return false;
     }
 
     void emitUnary(Node node, Precedence precedence) {
@@ -415,9 +413,15 @@ namespace base {
       var info = operatorInfo.get(node.kind);
       if (info.precedence < precedence) emit("(");
       var isPostfix = info.precedence == .UNARY_POSTFIX;
-      if (!isPostfix) emitUnaryPrefixOperator(node);
+      if (!isPostfix) {
+        emit(info.text);
+        if (shouldEmitSpaceForUnaryOperator(node)) emit(" ");
+      }
       emitExpression(value, info.precedence);
-      if (isPostfix) emit(info.text);
+      if (isPostfix) {
+        if (shouldEmitSpaceForUnaryOperator(node)) emit(" ");
+        emit(info.text);
+      }
       if (info.precedence < precedence) emit(")");
     }
 

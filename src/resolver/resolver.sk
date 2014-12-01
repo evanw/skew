@@ -520,7 +520,8 @@ class Resolver {
       case .TYPED { resolveTyped(node); }
       case .VAR { resolveVar(node); }
 
-      case .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT, .DEREFERENCE, .ADDRESS_OF,
+      case .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT,
+        .PREFIX_DEREFERENCE, .PREFIX_REFERENCE, .POSTFIX_DEREFERENCE, .POSTFIX_REFERENCE,
         .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
         resolveUnaryOperator(node);
       }

@@ -98,32 +98,24 @@ class Pratt {
   }
 
   Node parse(ParserContext context, int precedence) {
-    return parseIgnoringParselet(context, precedence, null);
-  }
-
-  Node resume(ParserContext context, int precedence, Node left) {
-    return resumeIgnoringParselet(context, precedence, left, null);
-  }
-
-  Node parseIgnoringParselet(ParserContext context, int precedence, Parselet parseletToIgnore) {
     var token = context.current();
     var parselet = table.getOrDefault(token.kind, null);
-    if (parselet == null || parselet == parseletToIgnore || parselet.prefix == null) {
+    if (parselet == null || parselet.prefix == null) {
       context.unexpectedToken();
       return Node.createError().withRange(context.spanSince(token.range));
     }
-    var node = resumeIgnoringParselet(context, precedence, parselet.prefix.parse(context), parseletToIgnore);
+    var node = resume(context, precedence, parselet.prefix.parse(context));
     assert node != null; // Parselets must return Node.createError() instead of null
     assert !node.range.isEmpty(); // Parselets must set the range of every node
     return node;
   }
 
-  Node resumeIgnoringParselet(ParserContext context, int precedence, Node left, Parselet parseletToIgnore) {
+  Node resume(ParserContext context, int precedence, Node left) {
     assert left != null;
     while (!left.kind.isError()) {
       var kind = context.current().kind;
       var parselet = table.getOrDefault(kind, null);
-      if (parselet == null || parselet == parseletToIgnore || parselet.infix == null || parselet.precedence <= precedence) {
+      if (parselet == null || parselet.infix == null || parselet.precedence <= precedence) {
         break;
       }
       left = parselet.infix.parse(context, left);
@@ -131,6 +123,11 @@ class Pratt {
       assert !left.range.isEmpty(); // Parselets must set the range of every node
     }
     return left;
+  }
+
+  bool hasPrefixParselet(ParserContext context) {
+    var parselet = table.getOrDefault(context.current().kind, null);
+    return parselet != null && parselet.prefix != null;
   }
 
   void literal(TokenKind kind, ILiteralCallback callback) {

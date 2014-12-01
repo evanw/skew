@@ -128,9 +128,7 @@ import class IntMap<T> {
   IntMap<T> clone();
 }
 
-import namespace math {}
-
-in math {
+namespace math {
   inline double abs(double x) { return untyped(std::abs(typed(x))); }
   inline double sin(double x) { return untyped(std::sin(typed(x))); }
   inline double cos(double x) { return untyped(std::cos(typed(x))); }

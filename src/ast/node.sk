@@ -74,8 +74,10 @@ enum NodeKind {
   PREFIX_DECREMENT,
   POSTFIX_INCREMENT,
   POSTFIX_DECREMENT,
-  DEREFERENCE, // Used for C++ interop
-  ADDRESS_OF, // Used for C++ interop
+  PREFIX_DEREFERENCE,  // Used for C++ interop
+  PREFIX_REFERENCE,    // Used for C++ interop
+  POSTFIX_DEREFERENCE, // Used for C++ interop
+  POSTFIX_REFERENCE,   // Used for C++ interop
 
   // Binary operators
   ADD,
@@ -158,7 +160,11 @@ in NodeKind {
   }
 
   bool isUnaryOperator() {
-    return this >= NOT && this <= ADDRESS_OF;
+    return this >= NOT && this <= POSTFIX_REFERENCE;
+  }
+
+  bool isUnaryTypeOperator() {
+    return this >= POSTFIX_DEREFERENCE && this <= POSTFIX_REFERENCE;
   }
 
   bool isUnaryStorageOperator() {

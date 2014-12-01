@@ -192,9 +192,12 @@ namespace cpp {
                 if (memberInitializers != null) {
                   for (var i = 0; i < memberInitializers.children.size(); i++) {
                     var initializer = memberInitializers.children.get(i);
+                    var value = initializer.memberInitializerValue();
                     if (i > 0) emit(", ");
                     emit(mangleName(initializer.symbol) + "(");
-                    emitExpression(initializer.memberInitializerValue(), .LOWEST);
+                    if (value.kind != .ERROR) {
+                      emitExpression(value, .LOWEST);
+                    }
                     emit(")");
                   }
                 }
@@ -206,6 +209,10 @@ namespace cpp {
           emitExtraNewlineAfter(node.kind);
         }
       }
+    }
+
+    override bool shouldEmitSpaceForUnaryOperator(Node node) {
+      return node.kind.isUnaryTypeOperator() ? true : super(node);
     }
 
     override void emitTypeBeforeVariable(Symbol symbol) {
@@ -240,6 +247,18 @@ namespace cpp {
       if (useConstReference) emit("&");
       emit(mangleName(symbol));
       emitAfterVariable(symbol.node);
+    }
+
+    override void emitForEach(Node node) {
+      var symbol = node.forEachVariable().symbol;
+      emit(indent + "for (");
+      emitTypeBeforeVariable(symbol);
+      emit(mangleName(symbol));
+      emit(" : ");
+      emitExpression(node.forEachValue(), .LOWEST);
+      emit(")");
+      emitBlock(node.forEachBlock());
+      emit("\n");
     }
 
     override void emitAssert(Node node) {
@@ -403,7 +422,7 @@ namespace cpp {
       }
       if (type.isReference() && mode != .BARE) {
         emit(" *");
-      } else if (mode == .DECLARATION) {
+      } else if (mode == .DECLARATION && (!type.isUntyped() || !type.symbol.node.kind.isUnaryTypeOperator())) {
         emit(" ");
       }
     }
