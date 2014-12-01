@@ -569,7 +569,7 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case .INLINE { return parseModifier(context, hint, .INLINE); }
     case .INTERFACE { return parseObject(context, .INTERFACE); }
     case .NAMESPACE { return parseNamespace(context); }
-    case .NEW { return parseConstructor(context, hint); }
+    case .NEW { if (hint == .IN_OBJECT) return parseConstructor(context, hint); }
     case .OVERRIDE { return parseModifier(context, hint, .OVERRIDE); }
     case .PRIVATE { return parseModifier(context, hint, .PRIVATE); }
     case .PROTECTED { return parseModifier(context, hint, .PROTECTED); }
@@ -580,8 +580,8 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case .USING { return parseUsing(context); }
     case .VIRTUAL { return parseModifier(context, hint, .VIRTUAL); }
     case .WHILE { return parseWhile(context); }
-    default { return parseExpression(context); }
   }
+ return parseExpression(context);
 }
 
 Node parseFile(Log log, List<Token> tokens) {
@@ -802,14 +802,6 @@ class QuotedParselet : IPrefixParselet {
   }
 }
 
-class NewParselet : IPrefixParselet {
-  override Node parse(ParserContext context) {
-    context.unexpectedToken();
-    context.next(); // Provide nicer error messages for Java-style constructor usage by just ignoring the new and continuing to parse
-    return parseType(context);
-  }
-}
-
 class SuperParselet : IPrefixParselet {
   override Node parse(ParserContext context) {
     return parseSuperCall(context);
@@ -853,6 +845,8 @@ void createParser() {
   pratt.prefix(.TILDE, .UNARY_PREFIX, UnaryPrefix(.COMPLEMENT));
   pratt.prefix(.MULTIPLY, .UNARY_PREFIX, UnaryPrefix(.PREFIX_DEREFERENCE));
   pratt.prefix(.BITWISE_AND, .UNARY_PREFIX, UnaryPrefix(.PREFIX_REFERENCE));
+  pratt.prefix(.NEW, .UNARY_PREFIX, UnaryPrefix(.NEW));
+  pratt.prefix(.DELETE, .UNARY_PREFIX, UnaryPrefix(.DELETE));
 
   ////////////////////////////////////////////////////////////////////////////////
   // Binary expressions
@@ -909,7 +903,6 @@ void createParser() {
   pratt.parselet(.LEFT_BRACKET, .UNARY_POSTFIX).infix = IndexParselet();
   pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizeParselet();
   pratt.parselet(.TICK, .UNARY_PREFIX).prefix = QuotedParselet();
-  pratt.parselet(.NEW, .LOWEST).prefix = NewParselet();
   pratt.parselet(.SUPER, .LOWEST).prefix = SuperParselet();
   pratt.parselet(.BITWISE_AND, .BITWISE_AND).infix = BinaryInfixOrUnaryPostfix(.BITWISE_AND, .POSTFIX_REFERENCE, .BITWISE_AND);
   pratt.parselet(.MULTIPLY, .MULTIPLY).infix = BinaryInfixOrUnaryPostfix(.MULTIPLY, .POSTFIX_DEREFERENCE, .MULTIPLY);

@@ -460,14 +460,15 @@ class Resolver {
     // Use the current scope for all child nodes
     assert context.scope != null || node.kind == .PROGRAM;
     var oldScope = context.scope;
+    var oldType = typeContext;
+    var kind = node.kind;
     if (node.scope != null) context.scope = node.scope;
 
     // Track the type from the context this node is used in
-    var oldType = typeContext;
     typeContext = expectedType;
 
     // Separating the case bodies into separate functions makes the JavaScript JIT go faster
-    switch (node.kind) {
+    switch (kind) {
       case .PROGRAM { resolveProgram(node); }
       case .FILE { resolveFile(node); }
       case .BLOCK { resolveBlock(node); }
@@ -518,27 +519,11 @@ class Resolver {
       case .CAST { resolveCast(node); }
       case .QUOTED { resolveQuoted(node); }
       case .VAR { resolveVar(node); }
-
-      case .NOT, .POSITIVE, .NEGATIVE, .COMPLEMENT,
-        .PREFIX_DEREFERENCE, .PREFIX_REFERENCE, .POSTFIX_DEREFERENCE, .POSTFIX_REFERENCE,
-        .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_INCREMENT, .POSTFIX_DECREMENT {
-        resolveUnaryOperator(node);
-      }
-
-      case
-        .ADD, .BITWISE_AND, .BITWISE_OR, .BITWISE_XOR, .DIVIDE, .EQUAL, .GREATER_THAN, .GREATER_THAN_OR_EQUAL, .IN,
-        .INDEX, .LESS_THAN, .LESS_THAN_OR_EQUAL, .LOGICAL_AND, .LOGICAL_OR, .MULTIPLY, .NOT_EQUAL, .REMAINDER,
-        .SHIFT_LEFT, .SHIFT_RIGHT, .SUBTRACT, .ASSIGN, .ASSIGN_ADD, .ASSIGN_BITWISE_AND, .ASSIGN_BITWISE_OR,
-        .ASSIGN_BITWISE_XOR, .ASSIGN_DIVIDE, .ASSIGN_MULTIPLY, .ASSIGN_REMAINDER, .ASSIGN_SHIFT_LEFT, .ASSIGN_SHIFT_RIGHT, .ASSIGN_SUBTRACT {
-        resolveBinaryOperator(node);
-      }
-
-      case .ASSIGN_INDEX {
-        resolveTernaryOperator(node);
-      }
-
       default {
-        assert false;
+        if (kind.isUnaryOperator()) resolveUnary(node);
+        else if (kind.isBinaryOperator()) resolveBinary(node);
+        else if (kind.isTernaryOperator()) resolveTernary(node);
+        else assert false;
       }
     }
 
@@ -2862,7 +2847,7 @@ class Resolver {
     semanticErrorUnexpectedNode(log, node.range, node.kind);
   }
 
-  void resolveUnaryOperator(Node node) {
+  void resolveUnary(Node node) {
     var kind = node.kind;
     var value = node.unaryValue();
 
@@ -2961,7 +2946,7 @@ class Resolver {
     }
   }
 
-  void resolveBinaryOperator(Node node) {
+  void resolveBinary(Node node) {
     var kind = node.kind;
     var left = node.binaryLeft();
     var right = node.binaryRight();
@@ -3108,7 +3093,7 @@ class Resolver {
     }
   }
 
-  void resolveTernaryOperator(Node node) {
+  void resolveTernary(Node node) {
     var left = node.ternaryLeft();
     var middle = node.ternaryMiddle();
     var right = node.ternaryRight();

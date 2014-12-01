@@ -394,8 +394,11 @@ namespace base {
 
     virtual bool shouldEmitSpaceForUnaryOperator(Node node) {
       var value = node.unaryValue();
-      if (node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
-          node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT)) {
+      var kind = node.kind;
+      var valueKind = value.kind;
+      if (kind == .NEW || kind == .DELETE ||
+          kind == .POSITIVE && (kind == .POSITIVE || kind == .PREFIX_INCREMENT) ||
+          kind == .NEGATIVE && (kind == .NEGATIVE || kind == .PREFIX_DECREMENT)) {
         return true; // Prevent "- -1" from becoming "--1"
       }
       return false;

@@ -6,7 +6,6 @@ import class float { string toString(); }
 import class double { string toString(); }
 
 import namespace operators {
-  void delete(int value);
   void sort<T>(List<T> list, Comparison<T> comparison);
 }
 
@@ -69,7 +68,7 @@ class StringMap<T> {
     T get(string key) { return _table[key]; }
     void set(string key, T value) { _table[key] = value; }
     bool has(string key) { return key in _table; }
-    void remove(string key) { operators.delete(_table[key]); }
+    void remove(string key) { delete _table[key]; }
   }
 
   T getOrDefault(string key, T defaultValue) {
@@ -102,7 +101,7 @@ class IntMap<T> {
     T get(int key) { return _table[key]; }
     void set(int key, T value) { _table[key] = value; }
     bool has(int key) { return key in _table; }
-    void remove(int key) { operators.delete(_table[key]); }
+    void remove(int key) { delete _table[key]; }
   }
 
   T getOrDefault(int key, T defaultValue) {

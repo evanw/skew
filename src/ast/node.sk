@@ -52,8 +52,8 @@ enum NodeKind {
   STRING,
   LIST,
   DOT,
-  DOT_ARROW, // Used for C++ interop
-  DOT_COLON, // Used for C++ interop
+  DOT_ARROW, // Used for C++ binding
+  DOT_COLON, // Used for C++ binding
   CALL,
   SUPER_CALL,
   ERROR,
@@ -73,10 +73,12 @@ enum NodeKind {
   PREFIX_DECREMENT,
   POSTFIX_INCREMENT,
   POSTFIX_DECREMENT,
-  PREFIX_DEREFERENCE,  // Used for C++ interop
-  PREFIX_REFERENCE,    // Used for C++ interop
-  POSTFIX_DEREFERENCE, // Used for C++ interop
-  POSTFIX_REFERENCE,   // Used for C++ interop
+  NEW,                 // Used for binding
+  DELETE,              // Used for binding
+  PREFIX_DEREFERENCE,  // Used for C++ binding
+  PREFIX_REFERENCE,    // Used for C++ binding
+  POSTFIX_DEREFERENCE, // Used for C++ binding
+  POSTFIX_REFERENCE,   // Used for C++ binding
 
   // Binary operators
   ADD,

@@ -769,10 +769,12 @@ namespace js {
       if (!isPostfix) {
         emit(info.text);
 
-        // Prevent "- -1" from becoming "--1"
-        if (node.kind == .POSITIVE && (value.kind == .POSITIVE || value.kind == .PREFIX_INCREMENT) ||
-            node.kind == .NEGATIVE && (value.kind == .NEGATIVE || value.kind == .PREFIX_DECREMENT || value.kind == .INT && value.asInt() < 0)) {
-          emit(" ");
+        var kind = node.kind;
+        var valueKind = value.kind;
+        if (kind == .NEW || kind == .DELETE ||
+            kind == .POSITIVE && (valueKind == .POSITIVE || valueKind == .PREFIX_INCREMENT) ||
+            kind == .NEGATIVE && (valueKind == .NEGATIVE || valueKind == .PREFIX_DECREMENT || valueKind == .INT && value.asInt() < 0)) {
+          emit(" "); // Prevent "- -1" from becoming "--1"
         }
       }
       emitExpression(value, info.precedence);
