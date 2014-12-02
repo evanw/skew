@@ -699,7 +699,7 @@ class BinaryInfixOrUnaryPostfix : IInfixParselet {
   Precedence precedence;
 
   override Node parse(ParserContext context, Node left) {
-    var token = context.next();
+    context.next();
     if (!pratt.hasPrefixParselet(context)) return Node.createUnary(unary, left).withRange(context.spanSince(left.range));
     var right = pratt.parse(context, precedence);
     return right != null ? Node.createBinary(binary, left, right).withRange(context.spanSince(left.range)) : null;

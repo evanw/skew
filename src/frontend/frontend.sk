@@ -153,9 +153,7 @@ in frontend {
     io.print(text);
     io.setColor(Color.DEFAULT);
   }
-}
 
-in frontend {
   void printError(string text) {
     printWithColor(.RED, "error: ");
     printWithColor(.BOLD, text + "\n");

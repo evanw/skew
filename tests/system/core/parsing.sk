@@ -483,15 +483,12 @@ class Foo {
 }
 int foo = new Foo(false);
 ", "
-<stdin>:4:11: error: Unexpected NEW
-int foo = new Foo(false);
-          ~~~
 <stdin>:4:19: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 int foo = new Foo(false);
                   ~~~~~
-<stdin>:4:15: error: Cannot convert from type \"Foo\" to type \"int\"
+<stdin>:4:11: error: No unary operator new for type \"Foo\"
 int foo = new Foo(false);
-              ~~~~~~~~~~
+          ~~~~~~~~~~~~~~
 ");
 
 test("

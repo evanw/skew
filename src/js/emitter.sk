@@ -115,7 +115,7 @@ namespace js {
           if (symbol.enclosingSymbol == type.symbol && symbol.node != null) {
             if (symbol.kind.isFunction() && symbol.kind != .CONSTRUCTOR_FUNCTION) {
               emitNode(symbol.node);
-            } else if (symbol.kind == .GLOBAL_VARIABLE) {
+            } else if (symbol.kind == .GLOBAL_VARIABLE && !symbol.isEnumValue()) {
               collector.freeVariableSymbols.push(symbol);
             }
           }
@@ -713,35 +713,11 @@ namespace js {
 
     void emitCall(Node node) {
       var value = node.callValue();
-      if (value.kind == .NAME && value.symbol != null && value.symbol.isOperator()) {
-        var name = value.asString();
-        if (name == "sort") {
-          emitExpression(node.callArguments().get(0), .UNARY_POSTFIX);
-          emit(minifySpaces(".sort(function(c) {" + newline));
-          increaseIndent();
-          emit(indent + "return " + minifySpaces("function(a, b) {" + newline));
-          increaseIndent();
-          emit(indent + "return " + minifySpaces("c.compare(a, b)"));
-          emitSemicolonAfterStatement();
-          decreaseIndent();
-          emit(indent + "}");
-          emitSemicolonAfterStatement();
-          decreaseIndent();
-          needsSemicolon = false;
-          emit(indent + "}(");
-          emitExpression(node.callArguments().get(1), .UNARY_POSTFIX);
-          emit("))");
-        } else {
-          emit(name + " ");
-          emitExpression(node.callArguments().get(0), .UNARY_POSTFIX);
-        }
-      } else {
-        if (value.kind.isType()) emit("new ");
-        emitExpression(value, .UNARY_POSTFIX);
-        emit("(");
-        emitCommaSeparatedExpressions(node.callArguments());
-        emit(")");
-      }
+      if (value.kind.isType()) emit("new ");
+      emitExpression(value, .UNARY_POSTFIX);
+      emit("(");
+      emitCommaSeparatedExpressions(node.callArguments());
+      emit(")");
     }
 
     void emitSuperCall(Node node) {

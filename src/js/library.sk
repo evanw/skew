@@ -5,10 +5,6 @@ import class bool { string toString(); }
 import class float { string toString(); }
 import class double { string toString(); }
 
-import namespace operators {
-  void sort<T>(List<T> list, Comparison<T> comparison);
-}
-
 import class string {
   string slice(int start, int end);
   int indexOf(string value);
@@ -31,8 +27,12 @@ in string {
   string repeat(int count) { var result = \"\"; for (var i = 0; i < count; i++) result += this; return result; }
 }
 
-export interface Comparison<T> {
+interface Comparison<T> {
   virtual int compare(T left, T right);
+}
+
+void bindCompare<T>(Comparison<T> comparison) {
+  return comparison.compare.`bind`(comparison);
 }
 
 import class List<T> {
@@ -50,7 +50,7 @@ import class List<T> {
 in List {
   inline {
     int size() { return this.`length`; }
-    void sort(Comparison<T> comparison) { operators.sort<T>(this, comparison); }
+    void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }
     List<T> clone() { return this.`slice`(); }
     T remove(int index) { return this.`splice`(index, 1)[0]; }
     void insert(int index, T value) { this.`splice`(index, 0, value); }
