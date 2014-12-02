@@ -6541,6 +6541,7 @@
       }
       if (symbol.node !== null) {
         symbol.node.remove();
+        symbol.node = null;
       }
       return true;
     }
