@@ -1,7 +1,8 @@
 %%
 
 [ \t\r\n]+                           WHITESPACE;
-[/][/].*                             WHITESPACE;
+"//".*                               WHITESPACE;
+"/""*"([^*]|"*"*[^*/])*"*"+"/"       WHITESPACE;
 
 "alias"                              ALIAS;
 "assert"                             ASSERT;
