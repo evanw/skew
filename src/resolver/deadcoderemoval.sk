@@ -135,7 +135,9 @@ class DeadCodeRemovalPass {
       if (symbol.enclosingSymbol != null) {
         symbol.enclosingSymbol.type.members.remove(symbol.name);
       }
-      if (symbol.node != null) {
+
+      // Quoted types need their original node kept around for printing later
+      if (symbol.node != null && symbol.kind != .QUOTED_TYPE) {
         symbol.node.remove();
         symbol.node = null;
       }

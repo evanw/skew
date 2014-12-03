@@ -542,7 +542,7 @@ class Resolver {
   void checkIsType(Node node) {
     if (node.kind == .QUOTED) {
       var symbol = createSymbol("<quoted>", .QUOTED_TYPE);
-      symbol.node = node.quotedValue();
+      symbol.node = node.quotedValue().remove();
       symbol.type = Type(symbol);
       node.kind = .TYPE;
       node.type = symbol.type;
