@@ -81,28 +81,100 @@ in string {
   }
 }
 
-import interface Comparison<T> {
+interface Comparison<T> {
   virtual int compare(T left, T right);
 }
 
-import class List<T> {
-  new();
-  int size();
-  void push(T value);
-  void unshift(T value);
-  List<T> slice(int start, int end);
-  int indexOf(T value);
-  int lastIndexOf(T value);
-  T shift();
-  T pop();
-  void reverse();
-  void sort(Comparison<T> comparison);
-  List<T> clone();
-  T remove(int index);
-  void insert(int index, T value);
-  T get(int index);
-  void set(int index, T value);
-  void swap(int a, int b);
+bool bindCompare<T>(Comparison<T> comparison, T left, T right) {
+  return comparison.compare(left, right) < 0;
+}
+
+class List<T> {
+  new(`std::initializer_list<T>` list) : _data = list {}
+
+  int size() {
+    return _data.size();
+  }
+
+  void push(T value) {
+    _data.push_back(value);
+  }
+
+  void unshift(T value) {
+    insert(0, value);
+  }
+
+  List<T> slice(int start, int end) {
+    assert start >= 0 && start <= end && end <= size();
+    List<T> slice = [];
+    slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);
+    return slice;
+  }
+
+  int indexOf(T value) {
+    int index = `std`::find(_data.begin(), _data.end(), value) - _data.begin();
+    return index == size() ? -1 : index;
+  }
+
+  int lastIndexOf(T value) {
+    int index = `std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin();
+    return size() - index - 1;
+  }
+
+  T shift() {
+    T value = get(0);
+    remove(0);
+    return value;
+  }
+
+  T pop() {
+    T value = get(size() - 1);
+    _data.pop_back();
+    return value;
+  }
+
+  void reverse() {
+    `std`::reverse(_data.begin(), _data.end());
+  }
+
+  void sort(Comparison<T> comparison) {
+    `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));
+  }
+
+  List<T> clone() {
+    List<T> clone = [];
+    clone._data = _data;
+    return clone;
+  }
+
+  T remove(int index) {
+    T value = get(index);
+    _data.erase(_data.begin() + index);
+    return value;
+  }
+
+  void insert(int index, T value) {
+    assert index >= 0 && index <= size();
+    _data.insert(_data.begin() + index, value);
+  }
+
+  T get(int index) {
+    assert index >= 0 && index < size();
+    return _data[index];
+  }
+
+  void set(int index, T value) {
+    assert index >= 0 && index < size();
+    _data[index] = value;
+  }
+
+  void swap(int a, int b) {
+    assert a >= 0 && a < size();
+    assert b >= 0 && b < size();
+    `std`::swap(_data[a], _data[b]);
+  }
+
+  `std::vector<T>` _data;
 }
 
 class StringMap<T> {
@@ -112,8 +184,8 @@ class StringMap<T> {
   void set(string key, T value) { _table[key] = value; }
   bool has(string key) { return _table.count(key); }
   void remove(string key) { _table.erase(key); }
-  List<string> keys() { var keys = List<string>(); for (`(auto &)` it in _table) keys.push(it.first); return keys; }
-  List<T> values() { var values = List<T>(); for (`(auto &)` it in _table) values.push(it.second); return values; }
+  List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
+  List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }
   StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }
 
   `std::unordered_map<string, T>` _table;
@@ -126,8 +198,8 @@ class IntMap<T> {
   void set(int key, T value) { _table[key] = value; }
   bool has(int key) { return _table.count(key); }
   void remove(int key) { _table.erase(key); }
-  List<int> keys() { var keys = List<int>(); for (`(auto &)` it in _table) keys.push(it.first); return keys; }
-  List<T> values() { var values = List<T>(); for (`(auto &)` it in _table) values.push(it.second); return values; }
+  List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
+  List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }
   StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }
 
   `std::unordered_map<int, T>` _table;

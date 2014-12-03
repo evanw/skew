@@ -419,19 +419,20 @@ namespace cpp {
       }
     }
 
-    override void emitList(Node node) {
+    override void emitList(Node node, Precedence precedence) {
       var values = node.listValues();
+      var wrap = precedence == .MEMBER;
+      if (wrap) emit("(");
+      emit("new ");
+      emitCppType(node.type, .BARE);
       if (values.size() > 0) {
-        emit("new ");
-        emitCppType(node.type, .BARE);
         emit(" { ");
         emitCommaSeparatedExpressions(values);
         emit(" }");
       } else {
-        emit("new ");
-        emitCppType(node.type, .BARE);
-        emit("()");
+        emit(" {}");
       }
+      if (wrap) emit(")");
     }
 
     override void emitSuperCall(Node node) {

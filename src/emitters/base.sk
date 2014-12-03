@@ -361,7 +361,7 @@ namespace base {
         case .ASSIGN_INDEX { emitTernary(node, precedence); }
         case .PARAMETERIZE { emitParameterize(node); }
         case .CAST, .IMPLICIT_CAST { emitCast(node, precedence); }
-        case .LIST { emitList(node); }
+        case .LIST { emitList(node, precedence); }
         case .SUPER_CALL { emitSuperCall(node); }
         case .QUOTED { emitExpression(node.quotedValue(), precedence); }
         default {
@@ -495,7 +495,7 @@ namespace base {
       }
     }
 
-    virtual void emitList(Node node) {
+    virtual void emitList(Node node, Precedence precedence) {
       emit("[");
       emitCommaSeparatedExpressions(node.listValues());
       emit("]");

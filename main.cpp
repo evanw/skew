@@ -14,43 +14,6 @@
 
 using string = std::string;
 
-template <typename T>
-struct Comparison {
-  virtual int compare(T left, T right) = 0;
-};
-
-template <typename T>
-struct ListCompare {
-  ListCompare(Comparison<T> *comparison) : comparison(comparison) {}
-  bool operator () (T left, T right) const { return comparison->compare(left, right) < 0; }
-  Comparison<T> *comparison;
-};
-
-template <typename T>
-struct List {
-  List() {}
-  List(std::initializer_list<T> list) : data(std::move(list)) {}
-  int size() { return data.size(); }
-  void push(T value) { data.push_back(value); }
-  void unshift(T value) { data.insert(data.begin(), value); }
-  List<T> *slice(int start, int end) { auto value = new List<T>(); if (start < end) value->data.insert(value->data.begin(), data.begin() + start, data.begin() + end); return value; }
-  int indexOf(T value) { auto it = std::find(data.begin(), data.end(), value); return it != data.end() ? it - data.begin() : -1; }
-  int lastIndexOf(T value) { auto it = std::find(data.rbegin(), data.rend(), value); return data.size() - 1 - (it - data.rbegin()); }
-  T shift() { T value = data.front(); data.erase(data.begin()); return value; }
-  T pop() { T value = data.back(); data.pop_back(); return value; }
-  void reverse() { std::reverse(data.begin(), data.end()); }
-  void sort(Comparison<T> *comparison) { std::sort(data.begin(), data.end(), ListCompare<T>(comparison)); }
-  List<T> *clone() { return slice(0, size()); }
-  T remove(int index) { T value = data[index]; data.erase(data.begin() + index); return value; }
-  void insert(int index, T value) { data.insert(data.begin() + index, value); }
-  T get(int index) { return data[index]; }
-  void set(int index, T value) { data[index] = value; }
-  void swap(int a, int b) { std::swap(data[a], data[b]); }
-
-private:
-  std::vector<T> data;
-};
-
 double now();
 string encodeBase64(string text);
 double parseDoubleLiteral(string text);
@@ -187,7 +150,7 @@ Source *io::readFile(string path) {
 }
 
 int main(int argc, char *argv[]) {
-  auto args = new List<string>();
+  auto args = new List<string> {};
   for (auto i = 1; i < argc; i++) {
     args->push(argv[i]);
   }
