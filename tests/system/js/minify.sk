@@ -675,4 +675,20 @@ export void foo() {
 (function(){foo=function(){for(var b=10,a=0;a<b;a=a+1|0)bar(a)}}());
 ");
 
+testMinifyJS("
+export List<double> foo(float x) {
+  return [
+    - -x,
+    x - -2,
+    x - -2.0,
+    x - -2.5,
+    x - -2.0f,
+    x - -2.5f,
+    x - -math.INFINITY,
+  ];
+}
+", "
+(function(){foo=function(a){return [- -a,a- -2,a- -2,a- -2.5,a- -2,a- -2.5,a- -Infinity]}}());
+");
+
 }}

@@ -4420,6 +4420,9 @@
       this.emit(')');
     }
   };
+  js.Emitter.prototype.isNumberLessThanZero = function(node) {
+    return node.kind === NodeKind.INT && node.asInt() < 0 || in_NodeKind.isReal(node.kind) && node.asDouble() < 0;
+  };
   js.Emitter.prototype.emitUnary = function(node, precedence) {
     var value = node.unaryValue();
     var info = operatorInfo._table[node.kind];
@@ -4431,7 +4434,7 @@
       this.emit(info.text);
       var kind = node.kind;
       var valueKind = value.kind;
-      if (kind === NodeKind.NEW || kind === NodeKind.DELETE || kind === NodeKind.POSITIVE && (valueKind === NodeKind.POSITIVE || valueKind === NodeKind.PREFIX_INCREMENT) || kind === NodeKind.NEGATIVE && (valueKind === NodeKind.NEGATIVE || valueKind === NodeKind.PREFIX_DECREMENT || valueKind === NodeKind.INT && value.asInt() < 0)) {
+      if (kind === NodeKind.NEW || kind === NodeKind.DELETE || kind === NodeKind.POSITIVE && (valueKind === NodeKind.POSITIVE || valueKind === NodeKind.PREFIX_INCREMENT) || kind === NodeKind.NEGATIVE && (valueKind === NodeKind.NEGATIVE || valueKind === NodeKind.PREFIX_DECREMENT || this.isNumberLessThanZero(value))) {
         this.emit(' ');
       }
     }
@@ -4466,7 +4469,7 @@
     this.toStringTarget = left;
     this.emitExpression(left, in_Precedence.incrementIfRightAssociative(info.precedence, info.associativity));
     this.emit(kind === NodeKind.IN ? ' in ' : this.space + (kind === NodeKind.EQUAL ? '===' : kind === NodeKind.NOT_EQUAL ? '!==' : info.text) + this.space);
-    if (this.space === '' && (kind === NodeKind.ADD && (right.kind === NodeKind.POSITIVE || right.kind === NodeKind.PREFIX_INCREMENT) || kind === NodeKind.SUBTRACT && (right.kind === NodeKind.NEGATIVE || right.kind === NodeKind.PREFIX_DECREMENT || right.kind === NodeKind.INT && right.asInt() < 0))) {
+    if (this.space === '' && (kind === NodeKind.ADD && (right.kind === NodeKind.POSITIVE || right.kind === NodeKind.PREFIX_INCREMENT) || kind === NodeKind.SUBTRACT && (right.kind === NodeKind.NEGATIVE || right.kind === NodeKind.PREFIX_DECREMENT || this.isNumberLessThanZero(right)))) {
       this.emit(' ');
     }
     this.toStringTarget = right;
