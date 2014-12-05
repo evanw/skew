@@ -107,6 +107,7 @@ enum flags SymbolFlag {
 
   // Other flags
   PRIMITIVE,
+  HAS_ANNOTATIONS,
   HAS_LOCATION_ERROR,
 
   // Masks
@@ -161,6 +162,10 @@ class Symbol {
   //
   List<Symbol> sortedParameters = null;
 
+  // Operator overloading information is held here when present. This maps
+  // members of the NodeKind enum to lists of members on this type.
+  IntMap<List<Symbol>> operatorOverloads = null;
+
   // Give each type a unique integer as a hash code
   static var nextUniqueID = -1;
   var uniqueID = generateUniqueID();
@@ -209,6 +214,18 @@ class Symbol {
         sortedParameters.swap(i, j);
       }
     }
+  }
+
+  List<Symbol> operatorOverloadsForKind(NodeKind kind) {
+    if (operatorOverloads == null) {
+      operatorOverloads = IntMap<List<Symbol>>();
+    }
+    var symbols = operatorOverloads.getOrDefault(kind, null);
+    if (symbols == null) {
+      symbols = [];
+      operatorOverloads.set(kind, symbols);
+    }
+    return symbols;
   }
 
   string fullName() {
@@ -309,6 +326,10 @@ class Symbol {
 
   bool isPrimitive() {
     return (flags & .PRIMITIVE) != 0;
+  }
+
+  bool hasAnnotations() {
+    return (flags & .HAS_ANNOTATIONS) != 0;
   }
 
   bool hasLocationError() {

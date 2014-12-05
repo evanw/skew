@@ -1,3 +1,9 @@
+enum MatchKind {
+  NONE,
+  INEXACT,
+  EXACT,
+}
+
 enum CastKind {
   IMPLICIT_CAST,
   EXPLICIT_CAST,
@@ -196,8 +202,12 @@ class Resolver {
       if (node.kind == .EXTENSION) {
         semanticErrorUnexpectedModifier(log, modifierName.range, name, "on an extension block");
       } else {
-        var flag = nameToSymbolFlag.get(name);
-        if ((flags & flag) != 0) semanticWarningDuplicateModifier(log, modifierName.range, name);
+        var flag = nameToSymbolFlag.getOrDefault(name, 0);
+        if (flag == 0) {
+          flag = .HAS_ANNOTATIONS;
+        } else if ((flags & flag) != 0) {
+          semanticWarningDuplicateModifier(log, modifierName.range, name);
+        }
         flags |= flag;
       }
       parent = parent.parent;
@@ -1178,7 +1188,7 @@ class Resolver {
         // Look at the initializer now
         var variableValue = node.variableValue();
         if (variableValue != null) {
-          resolveAsExpressionWithConversion(variableValue, cache.intType, .IMPLICIT_CAST);
+          resolveAsParamterizedExpressionWithConversion(variableValue, cache.intType, .IMPLICIT_CAST);
           constantFolder.foldConstants(variableValue);
           if (variableValue.kind == .INT) {
             symbol.constant = variableValue.content;
@@ -1269,7 +1279,7 @@ class Resolver {
       if (value == null) {
         semanticErrorConstMissingValue(log, node.declarationName().range);
       } else {
-        resolveAsExpressionWithConversion(value, symbol.type, .IMPLICIT_CAST);
+        resolveAsParamterizedExpressionWithConversion(value, symbol.type, .IMPLICIT_CAST);
         constantFolder.foldConstants(value);
         if (value.kind.isConstant()) {
           symbol.constant = value.content;
@@ -1370,6 +1380,9 @@ class Resolver {
         name.type = symbol.type;
         node = node.sibling;
       }
+
+      // Initialize annotations last
+      checkAnnotations(symbol);
     }
   }
 
@@ -1427,6 +1440,67 @@ class Resolver {
     if (trace.GENERICS) {
       trace.dedent();
     }
+  }
+
+  void checkAnnotations(Symbol symbol) {
+    if (!symbol.hasAnnotations()) {
+      return;
+    }
+
+    for (var node = symbol.node.parent; node.kind == .MODIFIER; node = node.parent) {
+      var modifierName = node.modifierName();
+      var name = modifierName.asString();
+
+      if (name == "@OperatorAdd") registerOperatorOverload(symbol, node, .ADD);
+      else if (name == "@OperatorSubtract") registerOperatorOverload(symbol, node, .SUBTRACT);
+      else if (name == "@OperatorMultiply") registerOperatorOverload(symbol, node, .MULTIPLY);
+      else if (name == "@OperatorDivide") registerOperatorOverload(symbol, node, .DIVIDE);
+      else if (name == "@OperatorRemainder") registerOperatorOverload(symbol, node, .REMAINDER);
+      else if (name == "@OperatorAnd") registerOperatorOverload(symbol, node, .BITWISE_AND);
+      else if (name == "@OperatorOr") registerOperatorOverload(symbol, node, .BITWISE_OR);
+      else if (name == "@OperatorXor") registerOperatorOverload(symbol, node, .BITWISE_XOR);
+      else if (name == "@OperatorGet") registerOperatorOverload(symbol, node, .INDEX);
+      else if (name == "@OperatorSet") registerOperatorOverload(symbol, node, .ASSIGN_INDEX);
+      else if (name == "@OperatorComplement") registerOperatorOverload(symbol, node, .COMPLEMENT);
+      else if (name == "@OperatorNegative") registerOperatorOverload(symbol, node, .NEGATIVE);
+      else if (name == "@OperatorShiftLeft") registerOperatorOverload(symbol, node, .SHIFT_LEFT);
+      else if (name == "@OperatorShiftRight") registerOperatorOverload(symbol, node, .SHIFT_RIGHT);
+      else if (name.startsWith("@")) semanticErrorUnknownAnnotation(log, modifierName.range, name);
+    }
+  }
+
+  void forbidAnnotationArguments(Node node) {
+    var arguments = node.modifierArguments();
+    if (arguments != null) {
+      var modifierName = node.modifierName();
+      semanticErrorUnexpectedAnnotationArguments(log, Range.after(node.range, modifierName.range), modifierName.asString());
+    }
+  }
+
+  void registerOperatorOverload(Symbol symbol, Node node, NodeKind kind) {
+    // In theory we could support operator overloads using arbitrary functions,
+    // but keep things simple for now and see if the complexity is needed
+    if (symbol.kind != .INSTANCE_FUNCTION) {
+      semanticErrorOperatorOnNonInstanceFunction(log, node.modifierName().range);
+      return;
+    }
+
+    // The required argument count depends on the operator
+    var functionArguments = symbol.node.functionArguments();
+    var argumentCount = functionArguments.children.size();
+    var expectedCount = kind.isUnaryOperator() ? 0 : kind.isBinaryOperator() ? 1 : 2;
+    if (argumentCount != expectedCount) {
+      semanticErrorOperatorArgumentCount(log, functionArguments.range, expectedCount, argumentCount, node.modifierName().asString());
+      return;
+    }
+
+    forbidAnnotationArguments(node);
+
+    // Ensure all operator overloads have function type to simplify things
+    if (symbol.type.isIgnored(cache)) return;
+    assert symbol.type.isFunction();
+
+    symbol.enclosingSymbol.operatorOverloadsForKind(kind).push(symbol);
   }
 
   Symbol createSymbol(string name, SymbolKind kind) {
@@ -1773,7 +1847,7 @@ class Resolver {
 
     // Validate the arguments and provide type context
     for (var i = 0; i < arguments.size(); i++) {
-      resolveAsExpressionWithConversion(arguments.get(i), argumentTypes.get(i), .IMPLICIT_CAST);
+      resolveAsParamterizedExpressionWithConversion(arguments.get(i), argumentTypes.get(i), .IMPLICIT_CAST);
     }
   }
 
@@ -1795,16 +1869,18 @@ class Resolver {
     checkIsParameterized(node);
   }
 
-  void resolveAsExpressionWithTypeContext(Node node, Type type) {
+  void resolveAsParameterizedExpressionWithTypeContext(Node node, Type type) {
     assert node.kind.isExpression();
     resolve(node, type);
     checkIsInstance(node);
+    checkIsParameterized(node);
   }
 
-  void resolveAsExpressionWithConversion(Node node, Type type, CastKind kind) {
+  void resolveAsParamterizedExpressionWithConversion(Node node, Type type, CastKind kind) {
     assert node.kind.isExpression();
     resolve(node, type);
     checkIsInstance(node);
+    checkIsParameterized(node);
     if (type != null) checkConversion(type, node, kind);
   }
 
@@ -1870,7 +1946,7 @@ class Resolver {
     var block = node.caseBlock();
     for (var i = 0; i < values.size(); i++) {
       var value = values.get(i);
-      resolveAsExpressionWithConversion(value, context.switchValue.type, .IMPLICIT_CAST);
+      resolveAsParamterizedExpressionWithConversion(value, context.switchValue.type, .IMPLICIT_CAST);
       constantFolder.foldConstants(value);
 
       // All case values must be constants but can include enum values
@@ -2118,7 +2194,7 @@ class Resolver {
 
         // Resolve the value and check for duplicate initializations
         if (name.symbol != null) {
-          resolveAsExpressionWithConversion(value, name.symbol.type, .IMPLICIT_CAST);
+          resolveAsParamterizedExpressionWithConversion(value, name.symbol.type, .IMPLICIT_CAST);
           for (var j = 0; j < i; j++) {
             var other = memberInitializers.children.get(j);
             if (other.memberInitializerName().symbol == name.symbol) {
@@ -2201,7 +2277,7 @@ class Resolver {
     // Enum values are resolved as ints instead of as the enum type because ints
     // don't implicitly convert to enums.
     if (value != null) {
-      resolveAsExpressionWithConversion(value, symbol.isEnumValue() ? cache.intType : symbol.type, .IMPLICIT_CAST);
+      resolveAsParamterizedExpressionWithConversion(value, symbol.isEnumValue() ? cache.intType : symbol.type, .IMPLICIT_CAST);
 
       // Global variables must be initialized to a value without side effects
       // since that ensures there aren't any initialization ordering issues
@@ -2253,7 +2329,7 @@ class Resolver {
 
   void resolveIf(Node node) {
     checkStatementLocation(node);
-    resolveAsExpressionWithConversion(node.ifTest(), cache.boolType, .IMPLICIT_CAST);
+    resolveAsParamterizedExpressionWithConversion(node.ifTest(), cache.boolType, .IMPLICIT_CAST);
     resolve(node.ifTrue(), null);
     if (node.ifFalse() != null) resolve(node.ifFalse(), null);
   }
@@ -2272,7 +2348,7 @@ class Resolver {
       }
     }
     if (test != null) {
-      resolveAsExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
+      resolveAsParamterizedExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
     }
     if (update != null) {
       resolveAsParameterizedExpression(update);
@@ -2304,7 +2380,7 @@ class Resolver {
   void resolveWhile(Node node) {
     checkStatementLocation(node);
     var test = node.whileTest();
-    if (test != null) resolveAsExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
+    if (test != null) resolveAsParamterizedExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
 
     var oldLoop = context.loop;
     context.loop = node;
@@ -2324,7 +2400,7 @@ class Resolver {
 
     // Check the return value
     if (value != null) {
-      resolveAsExpressionWithConversion(value, resultType, .IMPLICIT_CAST);
+      resolveAsParamterizedExpressionWithConversion(value, resultType, .IMPLICIT_CAST);
     }
 
     // The return value may be missing only when the return type is void
@@ -2350,7 +2426,7 @@ class Resolver {
       checkStatementLocation(node);
     }
     var value = node.assertValue();
-    resolveAsExpressionWithConversion(value, cache.boolType, .IMPLICIT_CAST);
+    resolveAsParamterizedExpressionWithConversion(value, cache.boolType, .IMPLICIT_CAST);
 
     // Constant asserts are evaluated at compile time
     if (node.kind == .ASSERT_CONST) {
@@ -2426,14 +2502,6 @@ class Resolver {
   }
 
   void resolveModifier(Node node) {
-    var name = node.modifierName();
-    var arguments = node.modifierArguments();
-
-    // All annotations are unknown for now
-    if (name.asString().startsWith("@")) {
-      semanticErrorUnknownAnnotation(log, name.range, name.asString());
-    }
-
     resolveNodes(node.modifierStatements());
   }
 
@@ -2475,12 +2543,12 @@ class Resolver {
   void resolveHook(Node node) {
     var trueNode = node.hookTrue();
     var falseNode = node.hookFalse();
-    resolveAsExpressionWithConversion(node.hookTest(), cache.boolType, .IMPLICIT_CAST);
+    resolveAsParamterizedExpressionWithConversion(node.hookTest(), cache.boolType, .IMPLICIT_CAST);
 
     // Resolve both branches with type context but don't warn about type
     // conversion problems yet (warning later gives better error messages)
-    resolveAsExpressionWithTypeContext(trueNode, typeContext);
-    resolveAsExpressionWithTypeContext(falseNode, typeContext);
+    resolveAsParameterizedExpressionWithTypeContext(trueNode, typeContext);
+    resolveAsParameterizedExpressionWithTypeContext(falseNode, typeContext);
 
     // Avoid reporting further errors
     var trueType = trueNode.type;
@@ -2525,7 +2593,7 @@ class Resolver {
     if (typeContext != null && typeContext.isList(cache)) {
       var itemType = typeContext.substitutions.get(0);
       for (var i = 0; i < values.size(); i++) {
-        resolveAsExpressionWithConversion(values.get(i), itemType, .IMPLICIT_CAST);
+        resolveAsParamterizedExpressionWithConversion(values.get(i), itemType, .IMPLICIT_CAST);
       }
       node.type = typeContext;
       return;
@@ -2741,7 +2809,7 @@ class Resolver {
         resolveAsParameterizedExpression(child);
         checkUnusedExpression(child);
       } else {
-        resolveAsExpressionWithConversion(child, typeContext, node.parent.kind == .CAST ? .EXPLICIT_CAST : .IMPLICIT_CAST);
+        resolveAsParamterizedExpressionWithConversion(child, typeContext, node.parent.kind == .CAST ? .EXPLICIT_CAST : .IMPLICIT_CAST);
       }
     }
   }
@@ -2806,7 +2874,7 @@ class Resolver {
     var type = node.castType();
     resolveAsParameterizedType(type);
     checkIsValidVariableType(type);
-    resolveAsExpressionWithConversion(node.castValue(), type.type, .EXPLICIT_CAST);
+    resolveAsParamterizedExpressionWithConversion(node.castValue(), type.type, .EXPLICIT_CAST);
     node.type = type.type;
   }
 
@@ -2861,7 +2929,7 @@ class Resolver {
 
     // Make sure enum flags type context transfers into the value
     if (kind == .COMPLEMENT && typeContext != null && typeContext.isEnumFlags()) {
-      resolveAsExpressionWithTypeContext(value, typeContext);
+      resolveAsParameterizedExpressionWithTypeContext(value, typeContext);
     } else {
       resolveAsParameterizedExpression(value);
     }
@@ -2902,14 +2970,15 @@ class Resolver {
       }
     }
 
-    // Report an error if no match is found
+    // Fall back to user operators if nothing matched
     if (node.type.isIgnored(cache)) {
-      semanticErrorNoUnaryOperator(log, node.range, kind, type);
-      return;
+      checkForOperatorOverload(node);
     }
 
     // Insert an implicit cast if necessary
-    checkConversion(node.type, value, .IMPLICIT_CAST);
+    else {
+      checkConversion(node.type, value, .IMPLICIT_CAST);
+    }
   }
 
   bool wrapWithToStringCall(Node node) {
@@ -2947,10 +3016,10 @@ class Resolver {
   void resolveWithTypeContextTransfer(Node left, Node right) {
     if (!needsTypeContext(left)) {
       resolveAsParameterizedExpression(left);
-      resolveAsExpressionWithTypeContext(right, left.type);
+      resolveAsParameterizedExpressionWithTypeContext(right, left.type);
     } else if (!needsTypeContext(right)) {
       resolveAsParameterizedExpression(right);
-      resolveAsExpressionWithTypeContext(left, right.type);
+      resolveAsParameterizedExpressionWithTypeContext(left, right.type);
     }
   }
 
@@ -2967,7 +3036,7 @@ class Resolver {
       }
 
       if (kind == .ASSIGN || left.type.isNumeric(cache)) {
-        resolveAsExpressionWithConversion(right, left.type, .IMPLICIT_CAST);
+        resolveAsParamterizedExpressionWithConversion(right, left.type, .IMPLICIT_CAST);
         checkStorage(left);
         node.type = left.type;
         return;
@@ -2995,8 +3064,8 @@ class Resolver {
     // Special-case bitwise operators on enum flags types
     else if (kind == .BITWISE_AND || kind == .BITWISE_OR || kind == .BITWISE_XOR) {
       if (typeContext != null && typeContext.isEnumFlags()) {
-        resolveAsExpressionWithTypeContext(left, typeContext);
-        resolveAsExpressionWithTypeContext(right, typeContext);
+        resolveAsParameterizedExpressionWithTypeContext(left, typeContext);
+        resolveAsParameterizedExpressionWithTypeContext(right, typeContext);
       } else {
         resolveWithTypeContextTransfer(left, right);
       }
@@ -3088,14 +3157,13 @@ class Resolver {
       }
     }
 
-    // Report an error if no match is found
+    // Fall back to user operators if nothing matched
     if (node.type.isIgnored(cache)) {
-      semanticErrorNoBinaryOperator(log, node.range, kind, leftType, rightType);
-      return;
+      checkForOperatorOverload(node);
     }
 
     // Insert implicit casts if necessary
-    if (commonType != null) {
+    else if (commonType != null) {
       checkConversion(commonType, left, .IMPLICIT_CAST);
       checkConversion(commonType, right, .IMPLICIT_CAST);
     }
@@ -3109,10 +3177,90 @@ class Resolver {
     resolveAsParameterizedExpression(left);
     resolveAsParameterizedExpression(middle);
     resolveAsParameterizedExpression(right);
+    checkForOperatorOverload(node);
+  }
 
-    // User-defined operators aren't working yet
-    if (!left.type.isIgnored(cache) && !middle.type.isIgnored(cache) && !right.type.isIgnored(cache)) {
-      semanticErrorNoTernaryOperator(log, node.range, node.kind, left.type, middle.type, right.type);
+  MatchKind assessOperatorOverloadMatch(List<Type> nodeTypes, Type targetType, List<Type> argumentTypes) {
+    assert nodeTypes.size() == 1 + argumentTypes.size();
+    var foundImplicitConversion = false;
+    for (var i = 0; i < nodeTypes.size(); i++) {
+      var a = nodeTypes.get(i);
+      var b = i == 0 ? targetType : argumentTypes.get(i - 1);
+      if (a != b) {
+        if (cache.canImplicitlyConvert(a, b)) {
+          foundImplicitConversion = true;
+        } else {
+          return .NONE;
+        }
+      }
+    }
+    return foundImplicitConversion ? .INEXACT : .EXACT;
+  }
+
+  void applyOperatorOverload(Node node, Symbol symbol) {
+    var argumentTypes = symbol.type.argumentTypes();
+    var dotTarget = node.children.get(0).replaceWith(null);
+    var dotName = Node.createName(symbol.name).withSymbol(symbol).withType(symbol.type);
+    var value = Node.createDot(dotTarget, dotName).withSymbol(symbol).withType(symbol.type);
+    List<Node> arguments = [];
+    for (var i = 0; i < argumentTypes.size(); i++) {
+      var argument = node.children.get(i + 1).replaceWith(null);
+      checkConversion(argumentTypes.get(i), argument, .IMPLICIT_CAST);
+      arguments.push(argument);
+    }
+    node.become(Node.createCall(value, arguments).withRange(node.range).withType(symbol.type.resultType()));
+  }
+
+  void checkForOperatorOverload(Node node) {
+    var children = node.children;
+    List<Type> types = [];
+
+    // Check argument types and only proceed if all types are present
+    for (var i = 0; i < children.size(); i++) {
+      var type = children.get(i).type;
+      if (type.isIgnored(cache)) {
+        return;
+      }
+      types.push(type);
+    }
+
+    // The value for "this" determines the operator overload set to search
+    var targetType = types.get(0);
+    var overloads = targetType.symbol.operatorOverloadsForKind(node.kind);
+    MatchKind matchKind = .INEXACT;
+    List<Symbol> matches = [];
+
+    // Pick the best overload
+    for (var i = 0; i < overloads.size(); i++) {
+      var overload = overloads.get(i);
+      assert overload.type.isFunction();
+      assert overload.type.argumentTypes().size() + 1 == children.size();
+      var kind = assessOperatorOverloadMatch(types, targetType, overload.type.argumentTypes());
+      if (kind > matchKind) {
+        matchKind = kind;
+        matches = [overload];
+      } else if (kind == matchKind) {
+        matches.push(overload);
+      }
+    }
+
+    // If there are no matches but one overload, then use that overload anyway
+    // to prefer type mismatch errors instead of operator overload errors
+    if (matches.size() == 0 && overloads.size() == 1) {
+      matches.push(overloads.get(0));
+    }
+
+    // Use the matches
+    if (matches.size() == 0) {
+      semanticErrorNoMatchingOperator(log, node.range, node.kind, types);
+    } else if (matches.size() == 1) {
+      applyOperatorOverload(node, matches.get(0));
+    } else {
+      List<string> names = [];
+      for (var i = 0; i < matches.size(); i++) {
+        names.push(matches.get(i).fullName());
+      }
+      semanticErrorAmbiguousOperator(log, node.range, node.kind, names);
     }
   }
 }

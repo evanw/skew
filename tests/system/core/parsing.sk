@@ -429,10 +429,10 @@ void test() {
   x < (x > x);
 }
 ", "
-<stdin>:3:4: error: No binary operator > for type \"bool\" and type \"int\"
+<stdin>:3:4: error: No binary operator \">\" for type \"bool\" and type \"int\"
   (x < x) > x;
    ~~~~~~~~~~
-<stdin>:4:3: error: No binary operator < for type \"int\" and type \"bool\"
+<stdin>:4:3: error: No binary operator \"<\" for type \"int\" and type \"bool\"
   x < (x > x);
   ~~~~~~~~~~
 ");
@@ -443,7 +443,7 @@ void test() {
   x < (x) > x;
 }
 ", "
-<stdin>:3:3: error: No binary operator > for type \"bool\" and type \"int\"
+<stdin>:3:3: error: No binary operator \">\" for type \"bool\" and type \"int\"
   x < (x) > x;
   ~~~~~~~~~~~
 ");
@@ -486,7 +486,7 @@ int foo = new Foo(false);
 <stdin>:4:19: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 int foo = new Foo(false);
                   ~~~~~
-<stdin>:4:11: error: No unary operator new for type \"Foo\"
+<stdin>:4:11: error: No unary operator \"new\" for type \"Foo\"
 int foo = new Foo(false);
           ~~~~~~~~~~~~~~
 ");
