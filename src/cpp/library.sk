@@ -61,7 +61,7 @@ in string {
     var result = \"\";
     for (var i = 0; i < values.size(); i++) {
       if (i > 0) result += this;
-      result += values.get(i);
+      result += values[i];
     }
     return result;
   }

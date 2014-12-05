@@ -145,28 +145,28 @@ List<Token> tokenize(Log log, Source source) {
       }
       var c = text.codeUnitAt(yy_cp);
       var index = c < 127 ? c : 127;
-      var yy_c = yy_ec.get(index);
-      if (yy_accept.get(yy_current_state) != .YY_INVALID_ACTION) {
+      var yy_c = yy_ec[index];
+      if (yy_accept[yy_current_state] != .YY_INVALID_ACTION) {
         yy_last_accepting_state = yy_current_state;
         yy_last_accepting_cpos = yy_cp;
       }
-      while (yy_chk.get(yy_base.get(yy_current_state) + yy_c) != yy_current_state) {
-        yy_current_state = yy_def.get(yy_current_state);
+      while (yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state) {
+        yy_current_state = yy_def[yy_current_state];
         if (yy_current_state >= 269) {
-          yy_c = yy_meta.get(yy_c);
+          yy_c = yy_meta[yy_c];
         }
       }
-      yy_current_state = yy_nxt.get(yy_base.get(yy_current_state) + yy_c);
+      yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
       yy_cp++;
     }
 
     // Find the action
-    TokenKind yy_act = yy_accept.get(yy_current_state);
+    TokenKind yy_act = yy_accept[yy_current_state];
     while (yy_act == .YY_INVALID_ACTION) {
       // Have to back up
       yy_cp = yy_last_accepting_cpos;
       yy_current_state = yy_last_accepting_state;
-      yy_act = yy_accept.get(yy_current_state);
+      yy_act = yy_accept[yy_current_state];
     }
 
     // Ignore whitespace

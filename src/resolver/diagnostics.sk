@@ -3,13 +3,13 @@ string typeToText(Type type) {
 }
 
 string namesToText(List<string> names, string separator) {
-  for (var i = 0; i < names.size(); i++) names.set(i, simpleQuote(names.get(i)));
+  for (var i = 0; i < names.size(); i++) names[i] = simpleQuote(names[i]);
   return separator.join(names);
 }
 
 string typesToText(List<Type> types, string separator) {
   List<string> names = [];
-  for (var i = 0; i < types.size(); i++) names.push(typeToText(types.get(i)));
+  for (var i = 0; i < types.size(); i++) names.push(typeToText(types[i]));
   return separator.join(names);
 }
 
@@ -374,11 +374,11 @@ void semanticErrorOperatorArgumentCount(Log log, Range range, int expected, int 
 void semanticErrorNoMatchingOperator(Log log, Range range, NodeKind kind, List<Type> types) {
   assert operatorInfo.has(kind);
   log.error(range, "No " + (types.size() == 1 ? "unary" : types.size() == 2 ? "binary" : "ternary") +
-    " operator \"" + operatorInfo.get(kind).text + "\" for " + typesToText(types, " and "));
+    " operator \"" + operatorInfo[kind].text + "\" for " + typesToText(types, " and "));
 }
 
 void semanticErrorAmbiguousOperator(Log log, Range range, NodeKind kind, List<string> names) {
   assert operatorInfo.has(kind);
   log.error(range, (names.size() == 1 ? "Unary" : names.size() == 2 ? "Binary" : "Ternary") +
-    " operator \"" + operatorInfo.get(kind).text + "\" is ambiguous, could be " + namesToText(names, " or "));
+    " operator \"" + operatorInfo[kind].text + "\" is ambiguous, could be " + namesToText(names, " or "));
 }

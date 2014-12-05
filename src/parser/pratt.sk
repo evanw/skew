@@ -13,7 +13,7 @@ class ParserContext {
   Token previousSyntaxError = null;
 
   Token current() {
-    return tokens.get(index);
+    return tokens[index];
   }
 
   Token next() {
@@ -25,7 +25,7 @@ class ParserContext {
   }
 
   Range spanSince(Range range) {
-    var previous = tokens.get(index > 0 ? index - 1 : 0);
+    var previous = tokens[index > 0 ? index - 1 : 0];
     return previous.range.end < range.start ? range : Range.span(range, previous.range);
   }
 
@@ -90,7 +90,7 @@ class Pratt {
     if (parselet == null) {
       var created = Parselet(precedence);
       parselet = created;
-      table.set(kind, created);
+      table[kind] = created;
     } else if (precedence > parselet.precedence) {
       parselet.precedence = precedence;
     }

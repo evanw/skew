@@ -44,7 +44,7 @@ class Collector {
       case .VARIABLE_CLUSTER {
         var variables = node.clusterVariables();
         for (var i = 0; i < variables.size(); i++) {
-          var symbol = variables.get(i).symbol;
+          var symbol = variables[i].symbol;
           if (symbol.kind == .GLOBAL_VARIABLE && symbol.enclosingSymbol.kind.isNamespace()) {
             freeVariableSymbols.push(symbol);
           }
@@ -63,7 +63,7 @@ class Collector {
 
       // Select a type that comes before all other types
       for (; j < typeSymbols.size(); j++) {
-        var type = typeSymbols.get(j).type;
+        var type = typeSymbols[j].type;
         var k = i;
 
         // Check to see if this comes before all other types
@@ -71,7 +71,7 @@ class Collector {
           if (j == k) {
             continue;
           }
-          if (typeComesBefore(typeSymbols.get(k).type, type)) {
+          if (typeComesBefore(typeSymbols[k].type, type)) {
             break;
           }
         }
@@ -102,7 +102,7 @@ class Collector {
   void collectChildStatements(Node node) {
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
+        var child = node.children[i];
         if (child != null) {
           collectStatements(child);
         }

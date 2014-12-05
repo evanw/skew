@@ -469,7 +469,7 @@ Node parseFor(ParserContext context) {
           var body = parseBlockOrStatement(context, .NORMAL); if (body == null) return null;
           var variables = setup.clusterVariables();
           if (variables.size() > 1) syntaxErrorBadForEach(context.log, setup.range);
-          var name = variables.get(0).declarationName().remove();
+          var name = variables[0].declarationName().remove();
           var value = Node.createVariable(name, setup.clusterType().remove(), null).withRange(name.range);
           return Node.createForEach(value, values, body).withRange(context.spanSince(token.range));
         }

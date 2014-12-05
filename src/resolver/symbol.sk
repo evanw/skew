@@ -185,7 +185,7 @@ class Symbol {
         var k = i;
 
         // Find bounded type parameters
-        var parameter = sortedParameters.get(j);
+        var parameter = sortedParameters[j];
         if (!parameter.type.isParameter()) {
           continue;
         }
@@ -196,7 +196,7 @@ class Symbol {
 
         // Check to see if this depends on any other unchecked parameters
         for (; k < sortedParameters.size(); k++) {
-          var other = sortedParameters.get(k);
+          var other = sortedParameters[k];
           if (parameter == other || !other.type.isParameter()) {
             continue;
           }
@@ -223,7 +223,7 @@ class Symbol {
     var symbols = operatorOverloads.getOrDefault(kind, null);
     if (symbols == null) {
       symbols = [];
-      operatorOverloads.set(kind, symbols);
+      operatorOverloads[kind] = symbols;
     }
     return symbols;
   }

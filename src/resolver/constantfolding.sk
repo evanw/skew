@@ -40,7 +40,7 @@ class ConstantFolder {
     assert node.kind == .BLOCK;
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        if (node.children.get(i).kind == .VARIABLE_CLUSTER) {
+        if (node.children[i].kind == .VARIABLE_CLUSTER) {
           return true;
         }
       }
@@ -59,7 +59,7 @@ class ConstantFolder {
     // Fold operands before folding this node
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
+        var child = node.children[i];
         if (child != null) {
           foldConstants(child);
         }
@@ -129,7 +129,7 @@ class ConstantFolder {
 
   void foldBlock(Node node) {
     for (var i = 0; i < node.children.size(); i++) {
-      var child = node.children.get(i);
+      var child = node.children[i];
       var kind = child.kind;
 
       // Remove everything after a jump
@@ -436,7 +436,7 @@ class ConstantFolder {
     // Remove all children without side effects that aren't the result
     var i = 0;
     while (i + 1 < node.children.size()) {
-      if (node.children.get(i).hasNoSideEffects()) {
+      if (node.children[i].hasNoSideEffects()) {
         node.removeChildAtIndex(i);
       } else {
         i++;
@@ -445,12 +445,12 @@ class ConstantFolder {
 
     // Replace a single-element sequence with the single element
     if (node.children.size() == 1) {
-      node.become(node.children.get(0).remove());
+      node.become(node.children[0].remove());
     }
 
     // Otherwise, try to drop the result if it has no side effects
     else {
-      var last = node.children.get(i);
+      var last = node.children[i];
       if (last.hasNoSideEffects() && node.parent.kind == .EXPRESSION) {
         last.remove();
       }

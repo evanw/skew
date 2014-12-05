@@ -2,7 +2,7 @@ namespace FunctionInliningPass {
   void run(CallGraph callGraph, CompilerOptions options) {
     var graph = InliningGraph(callGraph, options);
     for (var i = 0; i < graph.inliningInfo.size(); i++) {
-      inlineSymbol(graph, graph.inliningInfo.get(i));
+      inlineSymbol(graph, graph.inliningInfo[i]);
     }
   }
 
@@ -15,17 +15,17 @@ namespace FunctionInliningPass {
     // fewer inlining operations. This won't enter an infinite loop because
     // inlining for all such functions has already been disabled.
     for (var i = 0; i < info.bodyCalls.size(); i++) {
-      inlineSymbol(graph, info.bodyCalls.get(i));
+      inlineSymbol(graph, info.bodyCalls[i]);
     }
 
     for (var i = 0; i < info.callSites.size(); i++) {
-      var callSite = info.callSites.get(i);
+      var callSite = info.callSites[i];
       if (callSite != null && callSite.kind == .CALL) {
         // Make sure each call site is inlined once by setting the call site to
         // null. The call site isn't removed from the list since we don't want
         // to mess up the indices of another call to inlineSymbol() further up
         // the call stack.
-        info.callSites.set(i, null);
+        info.callSites[i] = null;
         var clone = info.inlineValue.clone();
         var values = callSite.removeChildren();
         assert values.size() == info.arguments.size() + 1;
@@ -47,9 +47,9 @@ namespace FunctionInliningPass {
         if (info.unusedArguments.size() > 0) {
           List<Node> sequence = null;
           for (var j = 0; j < info.unusedArguments.size(); j++) {
-            var index = info.arguments.indexOf(info.unusedArguments.get(j));
+            var index = info.arguments.indexOf(info.unusedArguments[j]);
             assert index >= 0;
-            var replacement = values.get(index);
+            var replacement = values[index];
             if (!replacement.hasNoSideEffects()) {
               if (sequence == null) sequence = []; // Save on allocations
               sequence.push(replacement);
@@ -73,7 +73,7 @@ namespace FunctionInliningPass {
     // Recursively inline child nodes first
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
+        var child = node.children[i];
         if (child != null) {
           recursivelyInlineFunctionCalls(graph, child);
         }
@@ -86,7 +86,7 @@ namespace FunctionInliningPass {
       if (symbol != null) {
         var index = graph.symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
         if (index >= 0) {
-          inlineSymbol(graph, graph.inliningInfo.get(index));
+          inlineSymbol(graph, graph.inliningInfo[index]);
         }
       }
     }
@@ -97,7 +97,7 @@ namespace FunctionInliningPass {
     if (node.symbol != null) {
       var index = arguments.indexOf(node.symbol);
       if (index >= 0) {
-        node.replaceWith(values.get(index));
+        node.replaceWith(values[index]);
         return;
       }
     }
@@ -105,7 +105,7 @@ namespace FunctionInliningPass {
     // Otherwise, recursively search for substitutions in all child nodes
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
+        var child = node.children[i];
         if (child != null) {
           recursivelySubstituteArguments(child, arguments, values);
         }
@@ -136,24 +136,24 @@ class InliningGraph {
   new(CallGraph graph, CompilerOptions options) {
     // Create the nodes in the graph
     for (var i = 0; i < graph.callInfo.size(); i++) {
-      var info = createInliningInfo(graph.callInfo.get(i), options);
+      var info = createInliningInfo(graph.callInfo[i], options);
       if (info != null) {
-        symbolToInfoIndex.set(info.symbol.uniqueID, inliningInfo.size());
+        symbolToInfoIndex[info.symbol.uniqueID] = inliningInfo.size();
         inliningInfo.push(info);
       }
     }
 
     // Create the edges in the graph
     for (var i = 0; i < inliningInfo.size(); i++) {
-      var info = inliningInfo.get(i);
-      var callSites = graph.callInfo.get(graph.symbolToInfoIndex.get(info.symbol.uniqueID)).callSites;
+      var info = inliningInfo[i];
+      var callSites = graph.callInfo[graph.symbolToInfoIndex[info.symbol.uniqueID]].callSites;
       for (var j = 0; j < callSites.size(); j++) {
-        var callSite = callSites.get(j);
+        var callSite = callSites[j];
         for (var node = callSite.parent; node != null; node = node.parent) {
           if (node.kind == .FUNCTION && node.symbol.kind == .GLOBAL_FUNCTION) {
             var index = symbolToInfoIndex.getOrDefault(node.symbol.uniqueID, -1);
             if (index >= 0) {
-              var other = inliningInfo.get(index);
+              var other = inliningInfo[index];
               other.bodyCalls.push(info);
             }
           }
@@ -163,7 +163,7 @@ class InliningGraph {
 
     // Detect and disable infinitely expanding inline operations
     for (var i = 0; i < inliningInfo.size(); i++) {
-      var info = inliningInfo.get(i);
+      var info = inliningInfo[i];
       info.shouldInline = !containsInfiniteExpansion(info, []);
     }
 
@@ -178,7 +178,7 @@ class InliningGraph {
     // Do a depth-first search on the graph and check for cycles
     symbols.push(info.symbol);
     for (var i = 0; i < info.bodyCalls.size(); i++) {
-      if (containsInfiniteExpansion(info.bodyCalls.get(i), symbols)) {
+      if (containsInfiniteExpansion(info.bodyCalls[i], symbols)) {
         return true;
       }
     }
@@ -204,14 +204,14 @@ class InliningGraph {
           List<Symbol> arguments = [];
           var argumentVariables = symbol.node.functionArguments().children;
           for (var i = 0; i < argumentVariables.size(); i++) {
-            arguments.push(argumentVariables.get(i).symbol);
+            arguments.push(argumentVariables[i].symbol);
           }
           return InliningInfo(symbol, Node.createNull().withType(symbol.type.resultType()), info.callSites, arguments, arguments);
         }
         return null;
       }
 
-      var first = block.children.get(0);
+      var first = block.children[0];
       Node inlineValue = null;
 
       // If the first value in the function is a return statement, then the
@@ -234,15 +234,15 @@ class InliningGraph {
         var argumentVariables = symbol.node.functionArguments().children;
         var argumentCounts = IntMap<int>();
         for (var i = 0; i < argumentVariables.size(); i++) {
-          argumentCounts.set(argumentVariables.get(i).symbol.uniqueID, 0);
+          argumentCounts[argumentVariables[i].symbol.uniqueID] = 0;
         }
         if (recursivelyCountArgumentUses(inlineValue, argumentCounts)) {
           List<Symbol> unusedArguments = [];
           List<Symbol> arguments = [];
           var isSimpleSubstitution = true;
           for (var i = 0; i < argumentVariables.size(); i++) {
-            var argument = argumentVariables.get(i).symbol;
-            var count = argumentCounts.get(argument.uniqueID);
+            var argument = argumentVariables[i].symbol;
+            var count = argumentCounts[argument.uniqueID];
             if (count == 0) {
               unusedArguments.push(argument);
             } else if (count != 1) {
@@ -265,7 +265,7 @@ class InliningGraph {
   static bool recursivelyCountArgumentUses(Node node, IntMap<int> argumentCounts) {
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
+        var child = node.children[i];
         if (child != null && !recursivelyCountArgumentUses(child, argumentCounts)) {
           return false;
         }
@@ -276,7 +276,7 @@ class InliningGraph {
     if (symbol != null) {
       var count = argumentCounts.getOrDefault(symbol.uniqueID, -1);
       if (count >= 0) {
-        argumentCounts.set(symbol.uniqueID, count + 1);
+        argumentCounts[symbol.uniqueID] = count + 1;
 
         // Prevent inlining of functions that modify their arguments locally. For
         // example, inlining this would lead to incorrect code:

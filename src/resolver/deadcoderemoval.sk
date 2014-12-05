@@ -8,7 +8,7 @@ class DeadCodeRemovalPass {
 
     // Include all exported symbols
     for (var i = 0; i < allSymbols.size(); i++) {
-      var symbol = allSymbols.get(i);
+      var symbol = allSymbols[i];
       if (symbol.isExport()) {
         pass.includeSymbol(symbol);
       }
@@ -30,7 +30,7 @@ class DeadCodeRemovalPass {
     List<Symbol> deadSymbolsWithOverrides = [];
     var isFixedPoint = false;
     for (var i = 0; i < allSymbols.size(); i++) {
-      var symbol = allSymbols.get(i);
+      var symbol = allSymbols[i];
       if (!pass.includedSymbols.has(symbol.uniqueID) && symbol.overriddenMember != null) {
         deadSymbolsWithOverrides.push(symbol);
       }
@@ -38,7 +38,7 @@ class DeadCodeRemovalPass {
     while (!isFixedPoint) {
       isFixedPoint = true;
       for (var i = 0; i < deadSymbolsWithOverrides.size(); i++) {
-        if (pass.includeDueToOverriddenMember(deadSymbolsWithOverrides.get(i))) {
+        if (pass.includeDueToOverriddenMember(deadSymbolsWithOverrides[i])) {
           isFixedPoint = false;
         }
       }
@@ -46,7 +46,7 @@ class DeadCodeRemovalPass {
 
     // Remove symbols that aren't included
     for (var i = 0; i < allSymbols.size(); i++) {
-      if (pass.removeSymbolIfDead(allSymbols.get(i))) {
+      if (pass.removeSymbolIfDead(allSymbols[i])) {
         allSymbols.remove(i);
         i--;
       }
@@ -60,7 +60,7 @@ class DeadCodeRemovalPass {
     }
 
     if (!includedSymbols.has(symbol.uniqueID)) {
-      includedSymbols.set(symbol.uniqueID, true);
+      includedSymbols[symbol.uniqueID] = true;
 
       // This symbol depends on the enclosing symbol being present
       if (symbol.enclosingSymbol != null && symbol.kind != .INSTANCE_VARIABLE) {
@@ -79,7 +79,7 @@ class DeadCodeRemovalPass {
       if (symbol.type.hasRelevantTypes()) {
         var types = symbol.type.relevantTypes;
         for (var i = 0; i < types.size(); i++) {
-          var relevantSymbol = types.get(i).symbol;
+          var relevantSymbol = types[i].symbol;
 
           // Function types don't have a symbol
           if (relevantSymbol != null) {
@@ -103,7 +103,7 @@ class DeadCodeRemovalPass {
 
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
+        var child = node.children[i];
         if (child != null) {
           visit(child);
         }

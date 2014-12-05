@@ -16,7 +16,7 @@ in xml {
         outputs.push(Source(options.outputFile, dump(program) + "\n"));
       } else {
         for (var i = 0; i < program.children.size(); i++) {
-          var file = program.children.get(i);
+          var file = program.children[i];
           outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".xml"), dump(file) + "\n"));
         }
       }
@@ -49,7 +49,7 @@ in xml {
         indent += "  ";
         for (var i = 0; i < node.children.size(); i++) {
           result += "\n" + indent;
-          visit(node.children.get(i));
+          visit(node.children[i]);
         }
         indent = inner;
         result += "\n" + indent + "</" + node.kind.prettyPrint() + ">";

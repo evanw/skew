@@ -24,7 +24,7 @@ class Scope {
       locals = StringMap<Member>();
     }
     assert !locals.has(member.symbol.name);
-    locals.set(member.symbol.name, member);
+    locals[member.symbol.name] = member;
   }
 
   Member find(string name) {

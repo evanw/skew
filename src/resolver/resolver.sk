@@ -180,7 +180,7 @@ class Resolver {
     // expressions.
     if (node.hasChildren() && !node.kind.isExpression()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
+        var child = node.children[i];
         if (child != null) setupScopesAndSymbols(child, scope);
       }
     }
@@ -223,7 +223,7 @@ class Resolver {
 
   void accumulateSymbolFlags() {
     for (var i = 0; i < parsedDeclarations.size(); i++) {
-      var node = parsedDeclarations.get(i);
+      var node = parsedDeclarations[i];
       node.symbol.flags |= symbolFlagsForNode(node);
     }
   }
@@ -239,7 +239,7 @@ class Resolver {
 
   void setSymbolKindsAndMergeSiblings() {
     for (var i = 0; i < parsedDeclarations.size(); i++) {
-      var node = parsedDeclarations.get(i);
+      var node = parsedDeclarations[i];
       var symbol = node.symbol;
 
       // Skip all node in a sibling chain other than the first node
@@ -307,7 +307,7 @@ class Resolver {
     // Distinguish between global and instance functions and variables now that
     // all symbols have a kind associated with them
     for (var i = 0; i < parsedDeclarations.size(); i++) {
-      var node = parsedDeclarations.get(i);
+      var node = parsedDeclarations[i];
       var symbol = node.symbol;
 
       // Change non-static global functions/variables to instance
@@ -325,7 +325,7 @@ class Resolver {
 
   void processUsingStatements() {
     for (var i = 0; i < parsedBlocks.size(); i++) {
-      var block = parsedBlocks.get(i);
+      var block = parsedBlocks[i];
 
       // Empty blocks will have a children array of null
       if (!block.hasChildren()) {
@@ -342,7 +342,7 @@ class Resolver {
       //
       List<Symbol> insertedSymbols = null;
       for (var j = 0; j < block.children.size(); j++) {
-        var statement = block.children.get(j);
+        var statement = block.children[j];
         if (statement.kind != .USING) {
           continue;
         }
@@ -376,7 +376,7 @@ class Resolver {
         // using namespace statement, then mark the symbol as ambiguous.
         var members = symbol.type.sortedMembers();
         for (var k = 0; k < members.size(); k++) {
-          var member = members.get(k);
+          var member = members[k];
           var memberSymbol = member.symbol;
           if (memberSymbol.kind == .NAMESPACE) {
             continue;
@@ -401,7 +401,7 @@ class Resolver {
             if (memberSymbol != currentSymbol) {
               var collision = createSymbol(memberSymbol.name, .AMBIGUOUS);
               collision.identicalMembers = [current, member];
-              block.scope.locals.set(memberSymbol.name, Member(collision));
+              block.scope.locals[memberSymbol.name] = Member(collision);
               insertedSymbols.push(collision);
             }
           } else if (currentSymbol.identicalMembers.indexOf(member) < 0) {
@@ -812,7 +812,7 @@ class Resolver {
         if (types != null && types.hasChildren()) {
           var index = 0;
           for (var i = 0; i < types.children.size(); i++) {
-            var baseType = types.children.get(i);
+            var baseType = types.children[i];
             resolveAsParameterizedType(baseType);
             if (isObject) {
               baseTypes.insert(index, baseType);
@@ -832,7 +832,7 @@ class Resolver {
   void checkNoBaseTypes(Symbol symbol, string what) {
     var baseTypes = collectAndResolveBaseTypes(symbol);
     for (var i = 0; i < baseTypes.size(); i++) {
-      semanticErrorUnexpectedBaseType(log, baseTypes.get(i).range, what);
+      semanticErrorUnexpectedBaseType(log, baseTypes[i].range, what);
     }
   }
 
@@ -897,7 +897,7 @@ class Resolver {
     type.relevantTypes = [];
 
     for (var i = 0; i < baseTypes.size(); i++) {
-      var base = baseTypes.get(i);
+      var base = baseTypes[i];
       var baseType = base.type;
 
       // Avoid reporting further errors
@@ -932,7 +932,7 @@ class Resolver {
       // Collect all base type members
       var members = baseType.sortedMembers();
       for (var j = 0; j < members.size(); j++) {
-        var member = members.get(j);
+        var member = members[j];
         var memberSymbol = member.symbol;
         var unmerged = unmergedMembers.getOrDefault(memberSymbol.name, null);
 
@@ -946,14 +946,14 @@ class Resolver {
         }
 
         if (unmerged == null) {
-          unmergedMembers.set(memberSymbol.name, member);
+          unmergedMembers[memberSymbol.name] = member;
         }
 
         else if (unmerged.symbol.enclosingSymbol != memberSymbol) {
           var combined = createSymbol(memberSymbol.name, .UNMERGED);
           combined.enclosingSymbol = symbol;
           combined.identicalMembers = [unmerged, member];
-          unmergedMembers.set(memberSymbol.name, Member(combined));
+          unmergedMembers[memberSymbol.name] = Member(combined);
         }
 
         else {
@@ -967,7 +967,7 @@ class Resolver {
     // member symbols that are already there
     var baseMembers = unmergedMembers.values();
     for (var i = 0; i < baseMembers.size(); i++) {
-      var member = baseMembers.get(i);
+      var member = baseMembers[i];
       var existing = type.findMember(member.symbol.name);
 
       // Link existing members with the member they override
@@ -991,7 +991,7 @@ class Resolver {
       symbol.parameters = [];
       resolveNodes(node.children);
       for (var i = 0; i < node.children.size(); i++) {
-        symbol.parameters.push(node.children.get(i).symbol);
+        symbol.parameters.push(node.children[i].symbol);
       }
       symbol.sortParametersByDependencies();
     }
@@ -1058,7 +1058,7 @@ class Resolver {
       // invoked, which ensures that the abstract flag will be set correctly.
       var members = enclosingSymbol.type.sortedMembers();
       for (var i = 0; i < members.size(); i++) {
-        var memberSymbol = members.get(i).symbol;
+        var memberSymbol = members[i].symbol;
         var isImport = memberSymbol.isImport() || enclosingSymbol.isImport() && !memberSymbol.isFromExtension();
         if (!isImport && memberSymbol.kind.isFunction() && memberSymbol.node.functionBlock() == null) {
           enclosingSymbol.reasonForAbstract = memberSymbol;
@@ -1082,7 +1082,7 @@ class Resolver {
     if (!resultType.isError(cache)) {
       List<Type> argumentTypes = [];
       for (var i = 0; i < arguments.children.size(); i++) {
-        var type = arguments.children.get(i).symbol.type;
+        var type = arguments.children[i].symbol.type;
         if (type.isError(cache)) return;
         argumentTypes.push(type);
       }
@@ -1204,7 +1204,7 @@ class Resolver {
         else {
           var index = node.parent.children.indexOf(node);
           if (index > 0) {
-            var previous = node.parent.children.get(index - 1).symbol;
+            var previous = node.parent.children[index - 1].symbol;
             initializeSymbol(previous);
             if (!previous.type.isIgnored(cache)) {
               var constant = previous.constant.asInt();
@@ -1392,7 +1392,7 @@ class Resolver {
     if (symbol.kind == .AMBIGUOUS) {
       List<string> names = [];
       for (var i = 0; i < symbol.identicalMembers.size(); i++) {
-        names.push(symbol.identicalMembers.get(i).symbol.fullName());
+        names.push(symbol.identicalMembers[i].symbol.fullName());
       }
       semanticErrorAmbiguousSymbol(log, range, symbol.name, names);
       member.type = cache.errorType;
@@ -1459,7 +1459,7 @@ class Resolver {
       if (symbol.kind.isTypeWithInstances()) {
         var members = symbol.type.sortedMembers();
         for (var i = 0; i < members.size(); i++) {
-          var member = members.get(i);
+          var member = members[i];
           var symbol = member.symbol;
           if (symbol.kind == .INSTANCE_FUNCTION && symbol.hasAnnotations()) {
             initializeMember(member);
@@ -1538,7 +1538,7 @@ class Resolver {
     }
     while (node != null && node.kind == .MODIFIER) {
       var modifierName = node.modifierName();
-      if (nameToSymbolFlag.get(modifierName.asString()) == flag) {
+      if (nameToSymbolFlag[modifierName.asString()] == flag) {
         return modifierName;
       }
       node = node.parent;
@@ -1633,9 +1633,9 @@ class Resolver {
         if (constructor.type.isFunction()) {
           var argumentTypes = constructor.type.argumentTypes();
           superArguments = [];
-          for (var j = 0; j < argumentTypes.size(); j++) {
+          for (var i = 0; i < argumentTypes.size(); i++) {
             var name = "_" + arguments.size();
-            var argument = Node.createVariable(Node.createName(name), Node.createType(argumentTypes.get(j)), null);
+            var argument = Node.createVariable(Node.createName(name), Node.createType(argumentTypes[i]), null);
             argument.symbol = createSymbol(name, .LOCAL_VARIABLE);
             argument.symbol.node = argument;
             arguments.push(argument);
@@ -1653,7 +1653,7 @@ class Resolver {
     // Add arguments for each uninitialized instance variable
     List<Member> uninitializedMembers = [];
     for (var i = 0; i < members.size(); i++) {
-      var member = members.get(i);
+      var member = members[i];
       var memberSymbol = member.symbol;
       if (memberSymbol.kind == .INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
         var value = memberSymbol.node.variableValue();
@@ -1691,7 +1691,7 @@ class Resolver {
 
     // Append each uninitialized member argument now that they are sorted
     for (var i = 0; i < uninitializedMembers.size(); i++) {
-      var member = uninitializedMembers.get(i);
+      var member = uninitializedMembers[i];
       var name = "_" + arguments.size();
       var argument = Node.createVariable(Node.createName(name), Node.createType(member.type), null);
       argument.symbol = createSymbol(name, .LOCAL_VARIABLE);
@@ -1716,7 +1716,7 @@ class Resolver {
     symbol.node.symbol = symbol;
     symbol.node.scope = scope;
     for (var i = 0; i < arguments.size(); i++) {
-      scope.insert(Member(arguments.get(i).symbol));
+      scope.insert(Member(arguments[i].symbol));
     }
 
     // Infer the pure modifier if all sanity checks passed
@@ -1735,7 +1735,7 @@ class Resolver {
     // Gather the fields corresponding to enum values
     int i;
     for (i = 0; i < members.size(); i++) {
-      var field = members.get(i).symbol;
+      var field = members[i].symbol;
       if (field.kind == .GLOBAL_VARIABLE && !field.isFromExtension()) {
         fields.push(field);
       }
@@ -1743,7 +1743,7 @@ class Resolver {
 
     // Check the fields for duplicates and sequential layout
     for (i = 0; i < fields.size(); i++) {
-      var field = fields.get(i);
+      var field = fields[i];
       initializeSymbol(field);
       if (field.type.isIgnored(cache)) {
         break;
@@ -1751,7 +1751,7 @@ class Resolver {
       var value = field.constant.asInt();
       int j;
       for (j = 0; j < i; j++) {
-        Symbol other = fields.get(j);
+        Symbol other = fields[j];
         if (value == other.constant.asInt()) {
           semanticErrorBadEnumToString(log, enclosingNode.declarationName().range, enclosingSymbol.name, field.name, other.name, value);
           break;
@@ -1778,7 +1778,7 @@ class Resolver {
     else {
       List<Node> cases = [];
       for (i = 0; i < fields.size(); i++) {
-        var field = fields.get(i);
+        var field = fields[i];
         cases.push(Node.createCase(
           [Node.createDot(null, Node.createName(field.name))],
           Node.createBlock([Node.createReturn(Node.createString(field.name))])));
@@ -1827,7 +1827,7 @@ class Resolver {
       }
       List<Type> types = [];
       for (var i = 0; i < symbol.identicalMembers.size(); i++) {
-        var identical = symbol.identicalMembers.get(i);
+        var identical = symbol.identicalMembers[i];
         initializeMember(identical);
         var type = identical.type;
         var index = types.indexOf(type);
@@ -1837,7 +1837,7 @@ class Resolver {
         semanticErrorUnmergedSymbol(log, symbol.enclosingSymbol.node.declarationName().range, symbol.fullName(), types);
         symbol.type = cache.errorType;
       } else {
-        symbol.type = types.get(0);
+        symbol.type = types[0];
       }
       return;
     }
@@ -1869,7 +1869,7 @@ class Resolver {
 
     // Validate the arguments and provide type context
     for (var i = 0; i < arguments.size(); i++) {
-      resolveAsParamterizedExpressionWithConversion(arguments.get(i), argumentTypes.get(i), .IMPLICIT_CAST);
+      resolveAsParamterizedExpressionWithConversion(arguments[i], argumentTypes[i], .IMPLICIT_CAST);
     }
   }
 
@@ -1908,19 +1908,19 @@ class Resolver {
 
   void resolveNodes(List<Node> nodes) {
     for (var i = 0; i < nodes.size(); i++) {
-      resolve(nodes.get(i), null);
+      resolve(nodes[i], null);
     }
   }
 
   void resolveNodesAsExpressions(List<Node> nodes) {
     for (var i = 0; i < nodes.size(); i++) {
-      resolveAsParameterizedExpression(nodes.get(i));
+      resolveAsParameterizedExpression(nodes[i]);
     }
   }
 
   void resolveNodesAsVariableTypes(List<Node> nodes) {
     for (var i = 0; i < nodes.size(); i++) {
-      Node node = nodes.get(i);
+      Node node = nodes[i];
       resolveAsParameterizedType(node);
       checkIsValidVariableType(node);
     }
@@ -1950,7 +1950,7 @@ class Resolver {
     // still be resolved to check for compile errors, however.
     var statements = node.blockStatements();
     for (var i = 0; i < statements.size(); i++) {
-      var child = statements.get(i);
+      var child = statements[i];
       var kind = child.kind;
       if (kind == .ASSERT_CONST || kind == .ASSERT && options.removeAsserts) {
         node.removeChildAtIndex(i);
@@ -1967,7 +1967,7 @@ class Resolver {
     var values = node.caseValues();
     var block = node.caseBlock();
     for (var i = 0; i < values.size(); i++) {
-      var value = values.get(i);
+      var value = values[i];
       resolveAsParamterizedExpressionWithConversion(value, context.switchValue.type, .IMPLICIT_CAST);
       constantFolder.foldConstants(value);
 
@@ -2012,7 +2012,7 @@ class Resolver {
     //
     var members = node.symbol.type.sortedMembers();
     for (var i = 0; i < members.size(); i++) {
-      var member = members.get(i);
+      var member = members[i];
       if (member.symbol.kind == .UNMERGED) {
         initializeMember(member);
       }
@@ -2140,7 +2140,7 @@ class Resolver {
       // Abstract constructors cannot have initializer lists
       if ((superInitializer != null || memberInitializers.children.size() > 0) && block == null) {
         semanticErrorAbstractConstructorInitializer(log, Range.span(
-          (superInitializer != null ? superInitializer : memberInitializers.children.get(0)).range,
+          (superInitializer != null ? superInitializer : memberInitializers.children[0]).range,
           (memberInitializers.children.size() < 1 ? superInitializer : memberInitializers.lastChild()).range));
       }
 
@@ -2152,7 +2152,7 @@ class Resolver {
         var members = enclosingSymbol.type.sortedMembers();
         var index = 0;
         for (var i = 0; i < members.size(); i++) {
-          var member = members.get(i);
+          var member = members[i];
           var memberSymbol = member.symbol;
           if (memberSymbol.kind == .INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
             var value = memberSymbol.node.variableValue();
@@ -2177,7 +2177,7 @@ class Resolver {
             else {
               int j;
               for (j = 0; j < memberInitializers.children.size(); j++) {
-                if (memberInitializers.children.get(j).memberInitializerName().asString() == memberSymbol.name) {
+                if (memberInitializers.children[j].memberInitializerName().asString() == memberSymbol.name) {
                   break;
                 }
               }
@@ -2195,7 +2195,7 @@ class Resolver {
 
       // Resolve the member initializers
       for (var i = 0; i < memberInitializers.children.size(); i++) {
-        var memberInitializer = memberInitializers.children.get(i);
+        var memberInitializer = memberInitializers.children[i];
         var name = memberInitializer.memberInitializerName();
         var value = memberInitializer.memberInitializerValue();
 
@@ -2218,7 +2218,7 @@ class Resolver {
         if (name.symbol != null) {
           resolveAsParamterizedExpressionWithConversion(value, name.symbol.type, .IMPLICIT_CAST);
           for (var j = 0; j < i; j++) {
-            var other = memberInitializers.children.get(j);
+            var other = memberInitializers.children[j];
             if (other.memberInitializerName().symbol == name.symbol) {
               semanticErrorAlreadyInitialized(log, value.range, name.symbol.name, other.memberInitializerValue().range);
               break;
@@ -2246,7 +2246,7 @@ class Resolver {
     if (kind == .LIST) {
       if (node.hasChildren()) {
         for (var i = 0; i < node.children.size(); i++) {
-          if (!isPureValue(node.children.get(i))) {
+          if (!isPureValue(node.children[i])) {
             return false;
           }
         }
@@ -2262,7 +2262,7 @@ class Resolver {
         return false;
       }
       for (var i = 0; i < arguments.size(); i++) {
-        if (!isPureValue(arguments.get(i))) {
+        if (!isPureValue(arguments[i])) {
           return false;
         }
       }
@@ -2327,9 +2327,9 @@ class Resolver {
 
     // Some code emission targets require identical types for loop variables
     if (node.parent.kind == .FOR) {
-      var first = variables.get(0).symbol;
+      var first = variables[0].symbol;
       for (var i = 1; i < variables.size(); i++) {
-        var current = variables.get(i).symbol;
+        var current = variables[i].symbol;
         if (!first.type.isIgnored(cache) && !current.type.isIgnored(cache) && first.type != current.type) {
           semanticErrorForVariablesMustBeSameType(log, node.range, first.name, first.type, current.name, current.type);
           break;
@@ -2491,7 +2491,7 @@ class Resolver {
 
     List<Node> uniqueValues = [];
     for (var i = 0; i < cases.size(); i++) {
-      var child = cases.get(i);
+      var child = cases[i];
 
       // Require only one default case and make sure it's last. That way this
       // switch statement can be converted to an if-else chain without moving
@@ -2503,13 +2503,13 @@ class Resolver {
       // Check previous values for duplicates
       var caseValues = child.caseValues();
       for (var j = 0; j < caseValues.size(); j++) {
-        var caseValue = caseValues.get(j);
+        var caseValue = caseValues[j];
         if (caseValue.type.isIgnored(cache)) continue;
         assert caseValue.kind.isConstant();
 
         int k;
         for (k = 0; k < uniqueValues.size(); k++) {
-          var original = uniqueValues.get(k);
+          var original = uniqueValues[k];
           if (original.kind == caseValue.kind && Content.equal(original.content, caseValue.content)) {
             semanticErrorDuplicateCase(log, caseValue.range, original.range);
             break;
@@ -2613,9 +2613,9 @@ class Resolver {
 
     // The type of the literal comes from how it's used
     if (typeContext != null && typeContext.isList(cache)) {
-      var itemType = typeContext.substitutions.get(0);
+      var itemType = typeContext.substitutions[0];
       for (var i = 0; i < values.size(); i++) {
-        resolveAsParamterizedExpressionWithConversion(values.get(i), itemType, .IMPLICIT_CAST);
+        resolveAsParamterizedExpressionWithConversion(values[i], itemType, .IMPLICIT_CAST);
       }
       node.type = typeContext;
       return;
@@ -2624,7 +2624,7 @@ class Resolver {
     // Try to infer the type
     Type commonType;
     for (var i = 0; i < values.size(); i++) {
-      var value = values.get(i);
+      var value = values[i];
       resolveAsParameterizedExpression(value);
       if (commonType == null || value.type.isIgnored(cache)) {
         commonType = value.type;
@@ -2826,7 +2826,7 @@ class Resolver {
   void resolveSequence(Node node) {
     var values = node.sequenceValues();
     for (var i = 0, n = values.size(); i < n; i++) {
-      var child = values.get(i);
+      var child = values[i];
       if (i < n - 1) {
         resolveAsParameterizedExpression(child);
         checkUnusedExpression(child);
@@ -2868,9 +2868,9 @@ class Resolver {
     // can still form a DAG of dependencies.
     List<Type> sortedTypes = [];
     for (var i = 0; i < sortedParameters.size(); i++) {
-      var parameter = sortedParameters.get(i);
+      var parameter = sortedParameters[i];
       var index = parameters.indexOf(parameter);
-      var substitution = substitutions.get(index);
+      var substitution = substitutions[index];
       if (parameter.type.isIgnored(cache)) return;
       var bound = parameter.type.bound();
       if (bound != null) {
@@ -2884,7 +2884,7 @@ class Resolver {
     // Only parameterize the type if no errors were found in the type parameters
     List<Type> types = [];
     for (var i = 0; i < substitutions.size(); i++) {
-      types.push(substitutions.get(i).type);
+      types.push(substitutions[i].type);
     }
     var parameterized = cache.parameterize(unparameterized, types);
     node.become(value.kind.isType()
@@ -2907,7 +2907,7 @@ class Resolver {
 
     else if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
+        var child = node.children[i];
         if (child != null) {
           collectReturnStatements(child, returnStatements);
         }
@@ -2927,7 +2927,7 @@ class Resolver {
     // Recursively mark everything with the error type
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
+        var child = node.children[i];
         if (child != null) {
           traverseQuotedContent(child);
         }
@@ -3206,8 +3206,8 @@ class Resolver {
     assert nodeTypes.size() == 1 + argumentTypes.size();
     var foundImplicitConversion = false;
     for (var i = 0; i < nodeTypes.size(); i++) {
-      var a = nodeTypes.get(i);
-      var b = i == 0 ? targetType : argumentTypes.get(i - 1);
+      var a = nodeTypes[i];
+      var b = i == 0 ? targetType : argumentTypes[i - 1];
       if (a != b) {
         if (cache.canImplicitlyConvert(a, b)) {
           foundImplicitConversion = true;
@@ -3222,13 +3222,13 @@ class Resolver {
   void applyOperatorOverload(Node node, Member member) {
     var symbol = member.symbol;
     var argumentTypes = member.type.argumentTypes();
-    var dotTarget = node.children.get(0).replaceWith(null);
+    var dotTarget = node.children[0].replaceWith(null);
     var dotName = Node.createName(symbol.name).withSymbol(symbol).withType(member.type);
     var value = Node.createDot(dotTarget, dotName).withSymbol(symbol).withType(member.type);
     List<Node> arguments = [];
     for (var i = 0; i < argumentTypes.size(); i++) {
-      var argument = node.children.get(i + 1).replaceWith(null);
-      checkConversion(argumentTypes.get(i), argument, .IMPLICIT_CAST);
+      var argument = node.children[i + 1].replaceWith(null);
+      checkConversion(argumentTypes[i], argument, .IMPLICIT_CAST);
       arguments.push(argument);
     }
     node.become(Node.createCall(value, arguments).withRange(node.range).withType(member.type.resultType()));
@@ -3240,7 +3240,7 @@ class Resolver {
 
     // Check argument types and only proceed if all types are present
     for (var i = 0; i < children.size(); i++) {
-      var type = children.get(i).type;
+      var type = children[i].type;
       if (type.isIgnored(cache)) {
         return;
       }
@@ -3248,7 +3248,7 @@ class Resolver {
     }
 
     // The value for "this" determines the operator overload set to search
-    var targetType = types.get(0);
+    var targetType = types[0];
     var overloads = targetType.symbol.operatorOverloadsForKind(node.kind);
     MatchKind matchKind = .INEXACT;
     List<Member> matches = [];
@@ -3256,7 +3256,7 @@ class Resolver {
 
     // Pick the best overload
     for (var i = 0; i < overloads.size(); i++) {
-      var overload = overloads.get(i);
+      var overload = overloads[i];
       assert overload.type.isFunction();
       assert overload.type.argumentTypes().size() + 1 == children.size();
       var member = targetType.findOperatorOverload(overload);
@@ -3284,11 +3284,11 @@ class Resolver {
     if (matches.size() == 0) {
       semanticErrorNoMatchingOperator(log, node.range, node.kind, types);
     } else if (matches.size() == 1) {
-      applyOperatorOverload(node, matches.get(0));
+      applyOperatorOverload(node, matches[0]);
     } else {
       List<string> names = [];
       for (var i = 0; i < matches.size(); i++) {
-        names.push(matches.get(i).symbol.fullName());
+        names.push(matches[i].symbol.fullName());
       }
       semanticErrorAmbiguousOperator(log, node.range, node.kind, names);
     }
@@ -3298,33 +3298,33 @@ class Resolver {
 void createNameToSymbolFlag() {
   if (nameToSymbolFlag != null) return;
   nameToSymbolFlag = StringMap<SymbolFlag>();
-  nameToSymbolFlag.set("const", .CONST);
-  nameToSymbolFlag.set("export", .EXPORT);
-  nameToSymbolFlag.set("final", .FINAL);
-  nameToSymbolFlag.set("import", .IMPORT);
-  nameToSymbolFlag.set("inline", .INLINE);
-  nameToSymbolFlag.set("override", .OVERRIDE);
-  nameToSymbolFlag.set("private", .PRIVATE);
-  nameToSymbolFlag.set("protected", .PROTECTED);
-  nameToSymbolFlag.set("public", .PUBLIC);
-  nameToSymbolFlag.set("static", .STATIC);
-  nameToSymbolFlag.set("virtual", .VIRTUAL);
+  nameToSymbolFlag["const"] = SymbolFlag.CONST;
+  nameToSymbolFlag["export"] = SymbolFlag.EXPORT;
+  nameToSymbolFlag["final"] = SymbolFlag.FINAL;
+  nameToSymbolFlag["import"] = SymbolFlag.IMPORT;
+  nameToSymbolFlag["inline"] = SymbolFlag.INLINE;
+  nameToSymbolFlag["override"] = SymbolFlag.OVERRIDE;
+  nameToSymbolFlag["private"] = SymbolFlag.PRIVATE;
+  nameToSymbolFlag["protected"] = SymbolFlag.PROTECTED;
+  nameToSymbolFlag["public"] = SymbolFlag.PUBLIC;
+  nameToSymbolFlag["static"] = SymbolFlag.STATIC;
+  nameToSymbolFlag["virtual"] = SymbolFlag.VIRTUAL;
 }
 
 void createSymbolFlagToName() {
   if (symbolFlagToName != null) return;
   symbolFlagToName = IntMap<string>();
-  symbolFlagToName.set(SymbolFlag.CONST, "const");
-  symbolFlagToName.set(SymbolFlag.EXPORT, "export");
-  symbolFlagToName.set(SymbolFlag.FINAL, "final");
-  symbolFlagToName.set(SymbolFlag.IMPORT, "import");
-  symbolFlagToName.set(SymbolFlag.INLINE, "inline");
-  symbolFlagToName.set(SymbolFlag.OVERRIDE, "override");
-  symbolFlagToName.set(SymbolFlag.PRIVATE, "private");
-  symbolFlagToName.set(SymbolFlag.PROTECTED, "protected");
-  symbolFlagToName.set(SymbolFlag.PUBLIC, "public");
-  symbolFlagToName.set(SymbolFlag.STATIC, "static");
-  symbolFlagToName.set(SymbolFlag.VIRTUAL, "virtual");
+  symbolFlagToName[SymbolFlag.CONST] = "const";
+  symbolFlagToName[SymbolFlag.EXPORT] = "export";
+  symbolFlagToName[SymbolFlag.FINAL] = "final";
+  symbolFlagToName[SymbolFlag.IMPORT] = "import";
+  symbolFlagToName[SymbolFlag.INLINE] = "inline";
+  symbolFlagToName[SymbolFlag.OVERRIDE] = "override";
+  symbolFlagToName[SymbolFlag.PRIVATE] = "private";
+  symbolFlagToName[SymbolFlag.PROTECTED] = "protected";
+  symbolFlagToName[SymbolFlag.PUBLIC] = "public";
+  symbolFlagToName[SymbolFlag.STATIC] = "static";
+  symbolFlagToName[SymbolFlag.VIRTUAL] = "virtual";
 }
 
 StringMap<SymbolFlag> nameToSymbolFlag;

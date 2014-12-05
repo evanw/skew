@@ -30,8 +30,8 @@ export class Source {
     if (line < 0 || line >= lineOffsets.size()) {
       return "";
     }
-    var start = lineOffsets.get(line);
-    var end = line + 1 < lineOffsets.size() ? lineOffsets.get(line + 1) - 1 : contents.size();
+    var start = lineOffsets[line];
+    var end = line + 1 < lineOffsets.size() ? lineOffsets[line + 1] - 1 : contents.size();
     return contents.slice(start, end);
   }
 
@@ -44,7 +44,7 @@ export class Source {
     while (count > 0) {
       var step = count / 2;
       var i = line + step;
-      if (lineOffsets.get(i) <= index) {
+      if (lineOffsets[i] <= index) {
         line = i + 1;
         count = count - step - 1;
       } else {
@@ -53,7 +53,7 @@ export class Source {
     }
 
     // Use the line to compute the column
-    var column = line > 0 ? index - lineOffsets.get(line - 1) : index;
+    var column = line > 0 ? index - lineOffsets[line - 1] : index;
     return LineColumn(line - 1, column);
   }
 }

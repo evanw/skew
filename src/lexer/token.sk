@@ -8,7 +8,7 @@ void prepareTokens(List<Token> tokens) {
   List<int> stack = [];
 
   for (var i = 0; i < tokens.size(); i++) {
-    var token = tokens.get(i);
+    var token = tokens[i];
     var tokenKind = token.kind;
 
     // The check for "token.text.size() > 0" is very important. Without it,
@@ -22,7 +22,7 @@ void prepareTokens(List<Token> tokens) {
 
     // Retokens on the stack if they aren't working out
     while (stack.size() > 0) {
-      var top = tokens.get(stack.get(stack.size() - 1));
+      var top = tokens[stack[stack.size() - 1]];
       var topKind = top.kind;
 
       // Stop parsing a type if we find a token that no type expression uses
@@ -46,7 +46,7 @@ void prepareTokens(List<Token> tokens) {
     if (tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan) {
       // Search for a matching opposite token
       while (stack.size() > 0) {
-        var top = tokens.get(stack.get(stack.size() - 1));
+        var top = tokens[stack[stack.size() - 1]];
         var topKind = top.kind;
 
         // Don't match closing angle brackets that don't work since they are just operators

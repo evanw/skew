@@ -67,13 +67,13 @@ namespace cpp {
         if (selfParameters) {
           for (var i = 0; i < symbol.parameters.size(); i++) {
             if (i > 0) emit(", ");
-            emitTypeParameter(symbol.parameters.get(i));
+            emitTypeParameter(symbol.parameters[i]);
           }
         }
         if (enclosingParameters) {
           for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
             if (i > 0 || selfParameters) emit(", ");
-            emitTypeParameter(enclosingSymbol.parameters.get(i));
+            emitTypeParameter(enclosingSymbol.parameters[i]);
           }
         }
         emit(">\n");
@@ -86,7 +86,7 @@ namespace cpp {
       var isFirst = true;
       var previous = -1;
       for (var i = 0; i < members.size(); i++) {
-        var member = members.get(i).symbol;
+        var member = members[i].symbol;
         if (member.isEnumValue()) {
           if (isFirst) {
             isFirst = false;
@@ -119,7 +119,7 @@ namespace cpp {
               emit(" : ");
               for (var i = 0; i < types.size(); i++) {
                 if (i > 0) emit(", ");
-                emitCppType(types.get(i), .BARE);
+                emitCppType(types[i], .BARE);
               }
             }
             emit(" {\n");
@@ -190,7 +190,7 @@ namespace cpp {
                 emit("<");
                 for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
                   if (i > 0) emit(", ");
-                  emit(mangleName(enclosingSymbol.parameters.get(i)));
+                  emit(mangleName(enclosingSymbol.parameters[i]));
                 }
                 emit(">");
               }
@@ -220,7 +220,7 @@ namespace cpp {
                 }
                 if (memberInitializers != null) {
                   for (var i = 0; i < memberInitializers.children.size(); i++) {
-                    var initializer = memberInitializers.children.get(i);
+                    var initializer = memberInitializers.children[i];
                     var value = initializer.memberInitializerValue();
                     if (i > 0) emit(", ");
                     emit(mangleName(initializer.symbol) + "(");
@@ -385,7 +385,7 @@ namespace cpp {
         emit("<");
         for (var i = 0; i < substitutions.size(); i++) {
           if (i > 0) emit(", ");
-          emitCppType(substitutions.get(i), .NORMAL);
+          emitCppType(substitutions[i], .NORMAL);
         }
         emit(">");
       }
@@ -479,7 +479,7 @@ namespace cpp {
       var n = namespaceStack.size() < names.size() ? namespaceStack.size() : names.size();
       int i;
       for (i = 0; i < n; i++) {
-        if (namespaceStack.get(i) != names.get(i)) {
+        if (namespaceStack[i] != names[i]) {
           break;
         }
       }
@@ -494,7 +494,7 @@ namespace cpp {
 
       // Enter the new namespace
       while (namespaceStack.size() < names.size()) {
-        var name = names.get(namespaceStack.size());
+        var name = names[namespaceStack.size()];
         emitExtraNewlineBefore(.NAMESPACE);
         emit(indent + "namespace " + name + " {\n");
         increaseIndent();
@@ -504,93 +504,93 @@ namespace cpp {
 
     override StringMap<bool> createIsKeyword() {
       var result = StringMap<bool>();
-      result.set("alignas", true);
-      result.set("alignof", true);
-      result.set("and", true);
-      result.set("and_eq", true);
-      result.set("asm", true);
-      result.set("auto", true);
-      result.set("bitand", true);
-      result.set("bitor", true);
-      result.set("bool", true);
-      result.set("break", true);
-      result.set("case", true);
-      result.set("catch", true);
-      result.set("char", true);
-      result.set("char16_t", true);
-      result.set("char32_t", true);
-      result.set("class", true);
-      result.set("compl", true);
-      result.set("const", true);
-      result.set("const_cast", true);
-      result.set("constexpr", true);
-      result.set("continue", true);
-      result.set("decltype", true);
-      result.set("default", true);
-      result.set("delete", true);
-      result.set("do", true);
-      result.set("double", true);
-      result.set("dynamic_cast", true);
-      result.set("else", true);
-      result.set("enum", true);
-      result.set("explicit", true);
-      result.set("export", true);
-      result.set("extern", true);
-      result.set("false", true);
-      result.set("float", true);
-      result.set("for", true);
-      result.set("friend", true);
-      result.set("goto", true);
-      result.set("if", true);
-      result.set("INFINITY", true);
-      result.set("inline", true);
-      result.set("int", true);
-      result.set("long", true);
-      result.set("mutable", true);
-      result.set("namespace", true);
-      result.set("NAN", true);
-      result.set("new", true);
-      result.set("noexcept", true);
-      result.set("not", true);
-      result.set("not_eq", true);
-      result.set("NULL", true);
-      result.set("nullptr", true);
-      result.set("operator", true);
-      result.set("or", true);
-      result.set("or_eq", true);
-      result.set("private", true);
-      result.set("protected", true);
-      result.set("public", true);
-      result.set("register", true);
-      result.set("reinterpret_cast", true);
-      result.set("return", true);
-      result.set("short", true);
-      result.set("signed", true);
-      result.set("sizeof", true);
-      result.set("static", true);
-      result.set("static_assert", true);
-      result.set("static_cast", true);
-      result.set("struct", true);
-      result.set("switch", true);
-      result.set("template", true);
-      result.set("this", true);
-      result.set("thread_local", true);
-      result.set("throw", true);
-      result.set("true", true);
-      result.set("try", true);
-      result.set("typedef", true);
-      result.set("typeid", true);
-      result.set("typename", true);
-      result.set("union", true);
-      result.set("unsigned", true);
-      result.set("using", true);
-      result.set("virtual", true);
-      result.set("void", true);
-      result.set("volatile", true);
-      result.set("wchar_t", true);
-      result.set("while", true);
-      result.set("xor", true);
-      result.set("xor_eq", true);
+      result["alignas"] = true;
+      result["alignof"] = true;
+      result["and"] = true;
+      result["and_eq"] = true;
+      result["asm"] = true;
+      result["auto"] = true;
+      result["bitand"] = true;
+      result["bitor"] = true;
+      result["bool"] = true;
+      result["break"] = true;
+      result["case"] = true;
+      result["catch"] = true;
+      result["char"] = true;
+      result["char16_t"] = true;
+      result["char32_t"] = true;
+      result["class"] = true;
+      result["compl"] = true;
+      result["const"] = true;
+      result["const_cast"] = true;
+      result["constexpr"] = true;
+      result["continue"] = true;
+      result["decltype"] = true;
+      result["default"] = true;
+      result["delete"] = true;
+      result["do"] = true;
+      result["double"] = true;
+      result["dynamic_cast"] = true;
+      result["else"] = true;
+      result["enum"] = true;
+      result["explicit"] = true;
+      result["export"] = true;
+      result["extern"] = true;
+      result["false"] = true;
+      result["float"] = true;
+      result["for"] = true;
+      result["friend"] = true;
+      result["goto"] = true;
+      result["if"] = true;
+      result["INFINITY"] = true;
+      result["inline"] = true;
+      result["int"] = true;
+      result["long"] = true;
+      result["mutable"] = true;
+      result["namespace"] = true;
+      result["NAN"] = true;
+      result["new"] = true;
+      result["noexcept"] = true;
+      result["not"] = true;
+      result["not_eq"] = true;
+      result["NULL"] = true;
+      result["nullptr"] = true;
+      result["operator"] = true;
+      result["or"] = true;
+      result["or_eq"] = true;
+      result["private"] = true;
+      result["protected"] = true;
+      result["public"] = true;
+      result["register"] = true;
+      result["reinterpret_cast"] = true;
+      result["return"] = true;
+      result["short"] = true;
+      result["signed"] = true;
+      result["sizeof"] = true;
+      result["static"] = true;
+      result["static_assert"] = true;
+      result["static_cast"] = true;
+      result["struct"] = true;
+      result["switch"] = true;
+      result["template"] = true;
+      result["this"] = true;
+      result["thread_local"] = true;
+      result["throw"] = true;
+      result["true"] = true;
+      result["try"] = true;
+      result["typedef"] = true;
+      result["typeid"] = true;
+      result["typename"] = true;
+      result["union"] = true;
+      result["unsigned"] = true;
+      result["using"] = true;
+      result["virtual"] = true;
+      result["void"] = true;
+      result["volatile"] = true;
+      result["wchar_t"] = true;
+      result["while"] = true;
+      result["xor"] = true;
+      result["xor_eq"] = true;
       return result;
     }
   }

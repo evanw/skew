@@ -58,7 +58,7 @@ in List {
     @OperatorSet void set(int index, T value) { `this`[index] = value; }
   }
 
-  void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }
+  void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }
 }
 
 class StringMap<T> {
@@ -72,7 +72,7 @@ class StringMap<T> {
   }
 
   T getOrDefault(string key, T defaultValue) {
-    return has(key) ? get(key) : defaultValue;
+    return has(key) ? this[key] : defaultValue;
   }
 
   List<string> keys() {
@@ -83,13 +83,13 @@ class StringMap<T> {
 
   List<T> values() {
     List<T> values = [];
-    for (string key in _table) values.push(get(key));
+    for (string key in _table) values.push(this[key]);
     return values;
   }
 
   StringMap<T> clone() {
     var clone = StringMap<T>();
-    for (string key in _table) clone.set(key, get(key));
+    for (string key in _table) clone[key] = this[key];
     return clone;
   }
 }
@@ -105,7 +105,7 @@ class IntMap<T> {
   }
 
   T getOrDefault(int key, T defaultValue) {
-    return has(key) ? get(key) : defaultValue;
+    return has(key) ? this[key] : defaultValue;
   }
 
   List<int> keys() {
@@ -116,13 +116,13 @@ class IntMap<T> {
 
   List<T> values() {
     List<T> values = [];
-    for (int key in _table) values.push(get(key));
+    for (int key in _table) values.push(this[key]);
     return values;
   }
 
   IntMap<T> clone() {
     var clone = IntMap<T>();
-    for (int key in _table) clone.set(key, get(key));
+    for (int key in _table) clone[key] = this[key];
     return clone;
   }
 }

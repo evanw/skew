@@ -55,7 +55,7 @@ class CachedSource {
       source = Source("<native>", contents);
       compiler.processInput(program, source);
       assert program.children.size() > 0;
-      file = program.children.get(0);
+      file = program.children[0];
     }
     options.inputs.unshift(source);
     return file.clone();
@@ -134,7 +134,7 @@ export class Compiler {
       default { program.appendChild(nativeLibrary.compile(this, options)); }
     }
     for (var i = 1; i < options.inputs.size(); i++) {
-      var file = processInput(program, options.inputs.get(i));
+      var file = processInput(program, options.inputs[i]);
       if (file != null) {
         files.push(file);
       }
@@ -217,7 +217,7 @@ in Compiler {
   static int totalLineCount(List<Source> sources) {
     var lineCount = 0;
     for (var i = 0; i < sources.size(); i++) {
-      lineCount += sources.get(i).lineCount();
+      lineCount += sources[i].lineCount();
     }
     return lineCount;
   }
@@ -225,11 +225,11 @@ in Compiler {
   static string sourceStatistics(string name, List<Source> sources) {
     var total = 0;
     for (var i = 0; i < sources.size(); i++) {
-      total += sources.get(i).contents.size();
+      total += sources[i].contents.size();
     }
     var text = "\n" + name + ": " + sources.size() + " (" + bytesToString(total) + " total)";
     for (var i = 0; i < sources.size(); i++) {
-      var source = sources.get(i);
+      var source = sources[i];
       text += "\n  " + source.name + ": " + bytesToString(source.contents.size());
     }
     return text;

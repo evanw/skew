@@ -22,15 +22,15 @@ class UnionFind {
   }
 
   void union(int left, int right) {
-    parents.set(find(left), find(right));
+    parents[find(left)] = find(right);
   }
 
   int find(int index) {
     assert index >= 0 && index < parents.size();
-    var parent = parents.get(index);
+    var parent = parents[index];
     if (parent != index) {
       parent = find(parent);
-      parents.set(index, parent);
+      parents[index] = parent;
     }
     return parent;
   }

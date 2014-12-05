@@ -16,7 +16,7 @@ in json {
         outputs.push(Source(options.outputFile, dump(program) + "\n"));
       } else {
         for (var i = 0; i < program.children.size(); i++) {
-          var file = program.children.get(i);
+          var file = program.children[i];
           outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".json"), dump(file) + "\n"));
         }
       }
@@ -52,7 +52,7 @@ in json {
         for (var i = 0; i < node.children.size(); i++) {
           if (i > 0) result += ",";
           result += "\n" + indent;
-          visit(node.children.get(i));
+          visit(node.children[i]);
         }
         indent = inner;
         result += "\n" + indent + "]";

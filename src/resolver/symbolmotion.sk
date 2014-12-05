@@ -4,7 +4,7 @@ class SymbolMotionPass {
   static void run(Resolver resolver) {
     var pass = SymbolMotionPass(resolver);
     for (var i = 0; i < resolver.allSymbols.size(); i++) {
-      pass.moveSymbol(resolver.allSymbols.get(i));
+      pass.moveSymbol(resolver.allSymbols[i]);
     }
   }
 
@@ -15,7 +15,7 @@ class SymbolMotionPass {
       // Move the symbol to an automatically-generated namespace
       var enclosingType = symbol.enclosingSymbol.type;
       var shadow = shadowForSymbol(enclosingSymbol);
-      var member = enclosingType.members.get(symbol.name);
+      var member = enclosingType.members[symbol.name];
       assert member.symbol == symbol;
       enclosingType.members.remove(symbol.name);
       assert shadow.findMember(symbol.name) == null;

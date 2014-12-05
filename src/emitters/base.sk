@@ -28,19 +28,19 @@ namespace base {
 
     void visitCollector(Collector collector) {
       for (var i = 0; i < collector.typeSymbols.size(); i++) {
-        var symbol = collector.typeSymbols.get(i);
+        var symbol = collector.typeSymbols[i];
         if (!symbol.isImport()) {
           emitTypeDeclaration(symbol);
         }
       }
       for (var i = 0; i < collector.freeFunctionSymbols.size(); i++) {
-        var symbol = collector.freeFunctionSymbols.get(i);
+        var symbol = collector.freeFunctionSymbols[i];
         if (!symbol.isImport()) {
           emitFunction(symbol);
         }
       }
       for (var i = 0; i < collector.freeVariableSymbols.size(); i++) {
-        var symbol = collector.freeVariableSymbols.get(i);
+        var symbol = collector.freeVariableSymbols[i];
         if (!symbol.isImport()) {
           emitVariable(symbol);
         }
@@ -50,7 +50,7 @@ namespace base {
     void emitTypeMembers(Symbol symbol) {
       var members = symbol.type.sortedMembers();
       for (var i = 0; i < members.size(); i++) {
-        var member = members.get(i).symbol;
+        var member = members[i].symbol;
         if (!member.isImport() && member.enclosingSymbol == symbol) {
           if (member.kind.isFunction()) {
             emitFunction(member);
@@ -81,7 +81,7 @@ namespace base {
       if (arguments.hasChildren()) {
         for (var i = 0; i < arguments.children.size(); i++) {
           if (i > 0) emit(", ");
-          emitFunctionArgument(arguments.children.get(i).symbol);
+          emitFunctionArgument(arguments.children[i].symbol);
         }
       }
       emit(")");
@@ -92,7 +92,7 @@ namespace base {
         emit("<");
         for (var i = 0; i < symbol.parameters.size(); i++) {
           if (i > 0) emit(", ");
-          emitTypeParameter(symbol.parameters.get(i));
+          emitTypeParameter(symbol.parameters[i]);
         }
         emit(">");
       }
@@ -157,7 +157,7 @@ namespace base {
 
     void emitStatements(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
-        var child = nodes.get(i);
+        var child = nodes[i];
         var kind = child.kind;
         if (kind != .MODIFIER) emitExtraNewlineBefore(kind);
         emitStatement(child);
@@ -197,7 +197,7 @@ namespace base {
         for (var i = 0; i < values.size(); i++) {
           if (i > 0) emit("\n");
           emit(indent + "case ");
-          emitExpression(values.get(i), .LOWEST);
+          emitExpression(values[i], .LOWEST);
           emit(":");
         }
       } else {
@@ -221,7 +221,7 @@ namespace base {
       increaseIndent();
       previousKind = .NULL;
       for (var i = 0; i < cases.size(); i++) {
-        var child = cases.get(i);
+        var child = cases[i];
         emitExtraNewlineBefore(child.kind);
         emitCase(child);
         emitExtraNewlineAfter(child.kind);
@@ -255,10 +255,10 @@ namespace base {
     }
 
     void emitForVariables(List<Node> nodes) {
-      emitTypeBeforeVariable(nodes.get(0).symbol);
+      emitTypeBeforeVariable(nodes[0].symbol);
       for (var i = 0; i < nodes.size(); i++) {
         if (i > 0) emit(", ");
-        var node = nodes.get(i);
+        var node = nodes[i];
         emit(mangleName(node.symbol));
         emitAfterVariable(node);
       }
@@ -375,7 +375,7 @@ namespace base {
     void emitCommaSeparatedExpressions(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
         if (i > 0) emit(", ");
-        emitExpression(nodes.get(i), .COMMA);
+        emitExpression(nodes[i], .COMMA);
       }
     }
 
@@ -413,7 +413,7 @@ namespace base {
         if (.ASSIGN < precedence) emit(")");
         return;
       }
-      var info = operatorInfo.get(node.kind);
+      var info = operatorInfo[node.kind];
       if (info.precedence < precedence) emit("(");
       var isPostfix = info.precedence == .UNARY_POSTFIX;
       if (!isPostfix) {
@@ -429,7 +429,7 @@ namespace base {
     }
 
     virtual void emitBinary(Node node, Precedence precedence) {
-      var info = operatorInfo.get(node.kind);
+      var info = operatorInfo[node.kind];
       if (info.precedence < precedence) emit("(");
       emitExpression(node.binaryLeft(), info.precedence.incrementIfRightAssociative(info.associativity));
       emit(" " + info.text + " ");
@@ -561,7 +561,7 @@ namespace base {
         emit("<");
         for (var i = 0; i < type.substitutions.size(); i++) {
           if (i > 0) emit(", ");
-          emitNormalType(type.substitutions.get(i));
+          emitNormalType(type.substitutions[i]);
         }
         emit(">");
       }

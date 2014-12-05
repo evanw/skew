@@ -377,7 +377,7 @@ bool checkAllNodeListKinds(Node node, INodeKindChecker checker) {
 bool checkAllNodeKinds(List<Node> nodes, INodeKindChecker checker) {
   assert nodes != null;
   for (var i = 0; i < nodes.size(); i++) {
-    if (!checker.check(nodes.get(i))) {
+    if (!checker.check(nodes[i])) {
       return false;
     }
   }

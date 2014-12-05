@@ -1,7 +1,7 @@
 namespace InstanceToStaticPass {
   void run(CallGraph graph, Resolver resolver) {
     for (var i = 0; i < graph.callInfo.size(); i++) {
-      var info = graph.callInfo.get(i);
+      var info = graph.callInfo[i];
       var symbol = info.symbol;
       var enclosingSymbol = symbol.enclosingSymbol;
       if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() != null && (
@@ -26,7 +26,7 @@ namespace InstanceToStaticPass {
           // the type parameter list for this function (this function may
           // also have type parameters of its own)
           for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
-            var parameter = enclosingSymbol.parameters.get(i);
+            var parameter = enclosingSymbol.parameters[i];
             var clone = resolver.createSymbol(parameter.name, .FUNCTION_PARAMETER);
             clone.type = Type(clone);
             symbol.parameters.push(clone);
@@ -49,7 +49,7 @@ namespace InstanceToStaticPass {
 
         // Update all call sites
         for (var j = 0; j < info.callSites.size(); j++) {
-          var callSite = info.callSites.get(j);
+          var callSite = info.callSites[j];
           var value = callSite.callValue();
           Node target;
           Node name;
@@ -71,14 +71,14 @@ namespace InstanceToStaticPass {
             // This function's original type parameters, if any, come first
             if (nameSubstitutions != null) {
               for (var i = 0; i < nameSubstitutions.size(); i++) {
-                types.push(nameSubstitutions.get(i));
+                types.push(nameSubstitutions[i]);
               }
             }
 
             // The enclosing symbol's type parameters have just been added after
             if (targetSubstitutions != null) {
               for (var i = 0; i < targetSubstitutions.size(); i++) {
-                types.push(targetSubstitutions.get(i));
+                types.push(targetSubstitutions[i]);
               }
             }
 
@@ -110,7 +110,7 @@ namespace InstanceToStaticPass {
 
     else if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children.get(i);
+        var child = node.children[i];
         if (child != null) {
           recursivelyReplaceThis(child, symbol);
         }

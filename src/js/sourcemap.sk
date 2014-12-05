@@ -33,7 +33,7 @@ class SourceMapGenerator {
     List<string> sourceContents = [];
 
     for (var i = 0; i < sources.size(); i++) {
-      Source source = sources.get(i);
+      Source source = sources[i];
       sourceNames.push(quoteString(source.name, '"'));
       sourceContents.push(quoteString(source.contents, '"'));
     }
@@ -52,7 +52,7 @@ class SourceMapGenerator {
 
     // Generate the base64 VLQ encoded mappings
     for (var i = 0; i < mappings.size(); i++) {
-      var mapping = mappings.get(i);
+      var mapping = mappings[i];
       var generatedLine = mapping.generatedLine;
 
       // Insert ',' for the same line and ';' for a line

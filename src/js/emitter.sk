@@ -58,7 +58,7 @@ namespace js {
 
       // Prepend inputs
       for (var i = 0; i < options.prepend.size(); i++) {
-        appendSource(options.prepend.get(i));
+        appendSource(options.prepend[i]);
       }
 
       // The entire body of code is wrapped in a closure for safety
@@ -91,7 +91,7 @@ namespace js {
 
       // Emit types
       for (var i = 0; i < collector.typeSymbols.size(); i++) {
-        var type = collector.typeSymbols.get(i).type;
+        var type = collector.typeSymbols[i].type;
         if (type.isNamespace()) {
           if (!type.symbol.isImport()) {
             maybeEmitMinifedNewline();
@@ -111,7 +111,7 @@ namespace js {
         }
         var members = type.sortedMembers();
         for (var j = 0; j < members.size(); j++) {
-          var symbol = members.get(j).symbol;
+          var symbol = members[j].symbol;
           if (symbol.enclosingSymbol == type.symbol && symbol.node != null) {
             if (symbol.kind.isFunction() && symbol.kind != .CONSTRUCTOR_FUNCTION) {
               emitNode(symbol.node);
@@ -124,13 +124,13 @@ namespace js {
 
       // Emit free functions
       for (var i = 0; i < collector.freeFunctionSymbols.size(); i++) {
-        emitNode(collector.freeFunctionSymbols.get(i).node);
+        emitNode(collector.freeFunctionSymbols[i].node);
       }
 
       // Emit free variables
       List<Node> variables = [];
       for (var i = 0; i < collector.freeVariableSymbols.size(); i++) {
-        var variable = collector.freeVariableSymbols.get(i).node;
+        var variable = collector.freeVariableSymbols[i].node;
         if (options.jsMinify) variables.push(variable);
         else emitVariables([variable]);
       }
@@ -142,7 +142,7 @@ namespace js {
 
       // Append inputs
       for (var i = 0; i < options.append.size(); i++) {
-        appendSource(options.append.get(i));
+        appendSource(options.append[i]);
       }
 
       // Create the source map
@@ -254,14 +254,14 @@ namespace js {
       for (var i = 0; i < nodes.size(); i++) {
         emitSemicolonIfNeeded();
         maybeEmitMinifedNewline();
-        emitNode(nodes.get(i));
+        emitNode(nodes[i]);
       }
     }
 
     void emitCommaSeparatedNodes(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
         if (i > 0) emit("," + space);
-        emitNode(nodes.get(i));
+        emitNode(nodes[i]);
       }
     }
 
@@ -271,7 +271,7 @@ namespace js {
           emit("," + space);
           maybeEmitMinifedNewline();
         }
-        emitExpression(nodes.get(i), .COMMA);
+        emitExpression(nodes[i], .COMMA);
       }
     }
 
@@ -342,7 +342,7 @@ namespace js {
         emit(";");
       } else if (shouldMinify && node.children.size() == 1) {
         if (after == .AFTER_KEYWORD) emit(" ");
-        emitNode(node.children.get(0));
+        emitNode(node.children[0]);
       } else {
         emit(space + "{" + newline);
         if (node.hasChildren()) {
@@ -361,7 +361,7 @@ namespace js {
       emitSemicolonIfNeeded();
       for (var i = 0; i < values.size(); i++) {
         emit(indent + "case ");
-        emitExpression(values.get(i), .LOWEST);
+        emitExpression(values[i], .LOWEST);
         emit(":" + newline);
         maybeEmitMinifedNewline();
       }
@@ -383,7 +383,7 @@ namespace js {
     void emitVariables(List<Node> variables) {
       var state = ClusterState.NONE;
       for (var i = 0; i < variables.size(); i++) {
-        var variable = variables.get(i);
+        var variable = variables[i];
         var symbol = variable.symbol;
         var isCompoundName = symbol != null && (hasCompoundName(symbol) || symbol.isExport());
         if (symbol != null && (symbol.kind.isInstance() || symbol.isImport()) || isCompoundName && variable.variableValue() == null) {
@@ -443,7 +443,7 @@ namespace js {
       emit(fullName(symbol) + space + "=" + space + "{" + newline);
       increaseIndent();
       for (var i = 0; i < block.children.size(); i++) {
-        var child = block.children.get(i).symbol;
+        var child = block.children[i].symbol;
         emit(indent + mangleName(child) + ":" + space + child.constant.asInt());
         if (i != block.children.size() - 1) {
           emit("," + newline);
@@ -726,7 +726,7 @@ namespace js {
       emit(".call(this");
       for (var i = 0; i < arguments.size(); i++) {
         emit("," + space);
-        emitExpression(arguments.get(i), .COMMA);
+        emitExpression(arguments[i], .COMMA);
       }
       emit(")");
     }
@@ -743,7 +743,7 @@ namespace js {
 
     void emitUnary(Node node, Precedence precedence) {
       var value = node.unaryValue();
-      var info = operatorInfo.get(node.kind);
+      var info = operatorInfo[node.kind];
       if (info.precedence < precedence) emit("(");
       var isPostfix = info.precedence == .UNARY_POSTFIX;
       if (!isPostfix) {
@@ -774,7 +774,7 @@ namespace js {
       var kind = node.kind;
       var left = node.binaryLeft();
       var right = node.binaryRight();
-      var info = operatorInfo.get(kind);
+      var info = operatorInfo[kind];
       if (info.precedence < precedence) emit("(");
 
       // Special case adding a string with the result of calling toString()
@@ -858,50 +858,50 @@ namespace js {
 
     static StringMap<bool> createIsKeyword() {
       var result = StringMap<bool>();
-      result.set("apply", true);
-      result.set("arguments", true);
-      result.set("Boolean", true);
-      result.set("break", true);
-      result.set("call", true);
-      result.set("case", true);
-      result.set("catch", true);
-      result.set("class", true);
-      result.set("const", true);
-      result.set("constructor", true);
-      result.set("continue", true);
-      result.set("Date", true);
-      result.set("debugger", true);
-      result.set("default", true);
-      result.set("delete", true);
-      result.set("do", true);
-      result.set("double", true);
-      result.set("else", true);
-      result.set("export", true);
-      result.set("extends", true);
-      result.set("false", true);
-      result.set("finally", true);
-      result.set("float", true);
-      result.set("for", true);
-      result.set("Function", true);
-      result.set("function", true);
-      result.set("if", true);
-      result.set("import", true);
-      result.set("in", true);
-      result.set("instanceof", true);
-      result.set("int", true);
-      result.set("let", true);
-      result.set("new", true);
-      result.set("null", true);
-      result.set("Number", true);
-      result.set("Object", true);
-      result.set("return", true);
-      result.set("String", true);
-      result.set("super", true);
-      result.set("this", true);
-      result.set("throw", true);
-      result.set("true", true);
-      result.set("try", true);
-      result.set("var", true);
+      result["apply"] = true;
+      result["arguments"] = true;
+      result["Boolean"] = true;
+      result["break"] = true;
+      result["call"] = true;
+      result["case"] = true;
+      result["catch"] = true;
+      result["class"] = true;
+      result["const"] = true;
+      result["constructor"] = true;
+      result["continue"] = true;
+      result["Date"] = true;
+      result["debugger"] = true;
+      result["default"] = true;
+      result["delete"] = true;
+      result["do"] = true;
+      result["double"] = true;
+      result["else"] = true;
+      result["export"] = true;
+      result["extends"] = true;
+      result["false"] = true;
+      result["finally"] = true;
+      result["float"] = true;
+      result["for"] = true;
+      result["Function"] = true;
+      result["function"] = true;
+      result["if"] = true;
+      result["import"] = true;
+      result["in"] = true;
+      result["instanceof"] = true;
+      result["int"] = true;
+      result["let"] = true;
+      result["new"] = true;
+      result["null"] = true;
+      result["Number"] = true;
+      result["Object"] = true;
+      result["return"] = true;
+      result["String"] = true;
+      result["super"] = true;
+      result["this"] = true;
+      result["throw"] = true;
+      result["true"] = true;
+      result["try"] = true;
+      result["var"] = true;
       return result;
     }
 

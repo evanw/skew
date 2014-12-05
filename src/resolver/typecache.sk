@@ -64,7 +64,7 @@ class TypeCache {
   static int computeHashCode(Symbol symbol, List<Type> relevantTypes) {
     var seed = symbol == null ? -1 : symbol.type.uniqueID;
     for (var i = 0; i < relevantTypes.size(); i++) {
-      seed = hashCombine(seed, relevantTypes.get(i).uniqueID);
+      seed = hashCombine(seed, relevantTypes[i].uniqueID);
     }
     return seed;
   }
@@ -75,7 +75,7 @@ class TypeCache {
       return false;
     }
     for (var i = 0; i < n; i++) {
-      if (left.get(i) != right.get(i)) {
+      if (left[i] != right[i]) {
         return false;
       }
     }
@@ -94,7 +94,7 @@ class TypeCache {
       result = parameterize(null, substituteAll(type.relevantTypes, parameters, substitutions));
     } else if (!type.hasParameters()) {
       var index = parameters.indexOf(type.symbol);
-      result = index >= 0 ? substitutions.get(index) : type;
+      result = index >= 0 ? substitutions[index] : type;
     } else {
       assert type.substitutions != null; // Unparameterized types should become errorType immediately and not get here
       result = parameterize(type, substituteAll(type.substitutions, parameters, substitutions));
@@ -111,7 +111,7 @@ class TypeCache {
     assert parameters.size() == substitutions.size();
     List<Type> results = [];
     for (var i = 0; i < types.size(); i++) {
-      results.push(substitute(types.get(i), parameters, substitutions));
+      results.push(substitute(types[i], parameters, substitutions));
     }
     return results;
   }
@@ -125,7 +125,7 @@ class TypeCache {
       var parameters = unparameterized.symbol.parameters;
       List<Type> substitutions = [];
       for (var i = 0; i < parameters.size(); i++) {
-        substitutions.push(parameters.get(i).type);
+        substitutions.push(parameters[i].type);
       }
       return parameterize(unparameterized, substitutions);
     }
@@ -148,7 +148,7 @@ class TypeCache {
     // Check existing types in that hash bucket for a match
     if (existingTypes != null) {
       for (var i = 0; i < existingTypes.size(); i++) {
-        var existing = existingTypes.get(i);
+        var existing = existingTypes[i];
         assert symbol != existing.symbol || symbol == null || substitutions.size() == existing.substitutions.size();
         if (symbol == existing.symbol && (
             symbol == null && areTypeListsEqual(substitutions, existing.relevantTypes) ||
@@ -161,7 +161,7 @@ class TypeCache {
     // Make a hash bucket
     else {
       existingTypes = [];
-      hashTable.set(hash, existingTypes);
+      hashTable[hash] = existingTypes;
     }
 
     if (trace.GENERICS && symbol != null && substitutions != null) {
@@ -178,7 +178,7 @@ class TypeCache {
 
       var members = unparameterized.members.values();
       for (var i = 0; i < members.size(); i++) {
-        var member = members.get(i);
+        var member = members[i];
         var clone = Member(member.symbol);
         clone.dependency = member.dependency != null ? member.dependency : member;
         clone.parameterizedType = type;
@@ -204,9 +204,9 @@ class TypeCache {
         if (parameterizedType != null && parameterizedType != unparameterized) {
           List<Type> merged = [];
           for (var j = 0; j < parameterizedType.substitutions.size(); j++) {
-            var parameter = parameterizedType.symbol.parameters.get(j);
+            var parameter = parameterizedType.symbol.parameters[j];
             var index = symbol.parameters.indexOf(parameter);
-            merged.push(index >= 0 ? substitutions.get(index) : substitute(parameterizedType.substitutions.get(j), symbol.parameters, substitutions));
+            merged.push(index >= 0 ? substitutions[index] : substitute(parameterizedType.substitutions[j], symbol.parameters, substitutions));
           }
           clone.parameterizedType = parameterize(parameterizedType.symbol.type, merged);
         }

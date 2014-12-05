@@ -82,7 +82,7 @@ in Node {
     }
 
     for (var i = children.size() - 1; i >= 0; i--) {
-      var child = children.get(i);
+      var child = children[i];
       switch (child.kind) {
         case .RETURN {
           return true;
@@ -100,7 +100,7 @@ in Node {
           var cases = child.switchCases();
           var foundDefault = false;
           for (var j = 0; j < cases.size(); j++) {
-            var node = cases.get(j);
+            var node = cases[j];
             if (!node.caseBlock().blockAlwaysEndsWithReturn()) {
               return false;
             }

@@ -39,13 +39,13 @@ class Type {
     if (member == null) {
       var list = members.values();
       for (var i = 0; i < list.size(); i++) {
-        if (list.get(i).symbol == symbol) {
-          member = list.get(i);
+        if (list[i].symbol == symbol) {
+          member = list[i];
           break;
         }
       }
     }
-    operatorOverloadCache.set(symbol.uniqueID, member);
+    operatorOverloadCache[symbol.uniqueID] = member;
     return member;
   }
 
@@ -74,7 +74,7 @@ class Type {
     }
     if (relevantTypes != null) {
       for (var i = 0; i < relevantTypes.size(); i++) {
-        if (relevantTypes.get(i).hasBaseType(type)) {
+        if (relevantTypes[i].hasBaseType(type)) {
           return true;
         }
       }
@@ -83,15 +83,15 @@ class Type {
   }
 
   void addMember(Member member) {
-    members.set(member.symbol.name, member);
+    members[member.symbol.name] = member;
   }
 
   void copyMembersFrom(Type other) {
     var otherMembers = other.members.values();
     for (var i = 0; i < otherMembers.size(); i++) {
-      var member = otherMembers.get(i);
+      var member = otherMembers[i];
       if (!members.has(member.symbol.name)) {
-        members.set(member.symbol.name, member);
+        members[member.symbol.name] = member;
       }
     }
   }
@@ -105,7 +105,7 @@ class Type {
     var text = "[";
     for (var i = 0; i < parameters.size(); i++) {
       if (i > 0) text += ", ";
-      text += parameters.get(i).name + " => " + substitutions.get(i);
+      text += parameters[i].name + " => " + substitutions[i];
     }
     return text + "]";
   }
@@ -119,7 +119,7 @@ class Type {
       parameterText = "<";
       for (var i = 0; i < symbol.parameters.size(); i++) {
         if (i > 0) parameterText += ", ";
-        parameterText += isParameterized() ? substitutions.get(i).toString() : symbol.parameters.get(i).name;
+        parameterText += isParameterized() ? substitutions[i].toString() : symbol.parameters[i].name;
       }
       parameterText += ">";
     }
@@ -130,7 +130,7 @@ class Type {
       var arguments = argumentTypes();
       for (var i = 0; i < arguments.size(); i++) {
         if (i > 0) text += ", ";
-        text += arguments.get(i);
+        text += arguments[i];
       }
       return text + ")";
     }
@@ -153,13 +153,13 @@ class Type {
   Type baseClass() {
     assert isClass();
     if (!hasRelevantTypes()) return null;
-    var first = relevantTypes.get(0);
+    var first = relevantTypes[0];
     return first.isClass() ? first : null;
   }
 
   Type bound() {
     assert isParameter();
-    return hasRelevantTypes() ? relevantTypes.get(0) : null;
+    return hasRelevantTypes() ? relevantTypes[0] : null;
   }
 
   bool dependsOnParameter(Symbol parameter) {
@@ -170,7 +170,7 @@ class Type {
     }
     if (hasRelevantTypes()) {
       for (var i = 0; i < relevantTypes.size(); i++) {
-        var type = relevantTypes.get(i);
+        var type = relevantTypes[i];
         if (type.dependsOnParameter(parameter)) {
           return true;
         }
@@ -182,7 +182,7 @@ class Type {
   Type resultType() {
     assert isFunction();
     assert hasRelevantTypes();
-    return relevantTypes.get(0);
+    return relevantTypes[0];
   }
 
   List<Type> argumentTypes() {
