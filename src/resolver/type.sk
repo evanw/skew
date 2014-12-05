@@ -18,6 +18,10 @@ class Type {
   // If non-null, the length must equal symbol.parameters.size().
   List<Type> substitutions = null;
 
+  // Maps the Symbol uniqueID for an overload to a Member on this type. The
+  // member will store the symbol type parameterized for this type.
+  IntMap<Member> operatorOverloadCache = null;
+
   // Give each type a unique integer as a hash code
   static var nextUniqueID = -1;
   var uniqueID = generateUniqueID();
@@ -25,6 +29,24 @@ class Type {
   static int generateUniqueID() {
     nextUniqueID++;
     return nextUniqueID;
+  }
+
+  Member findOperatorOverload(Symbol symbol) {
+    if (operatorOverloadCache == null) {
+      operatorOverloadCache = IntMap<Member>();
+    }
+    var member = operatorOverloadCache.getOrDefault(symbol.uniqueID, null);
+    if (member == null) {
+      var list = members.values();
+      for (var i = 0; i < list.size(); i++) {
+        if (list.get(i).symbol == symbol) {
+          member = list.get(i);
+          break;
+        }
+      }
+    }
+    operatorOverloadCache.set(symbol.uniqueID, member);
+    return member;
   }
 
   // Enforce a consistent symbol iteration order

@@ -54,8 +54,8 @@ in List {
     List<T> clone() { return this.`slice`(); }
     T remove(int index) { return this.`splice`(index, 1)[0]; }
     void insert(int index, T value) { this.`splice`(index, 0, value); }
-    T get(int index) { return `this`[index]; }
-    void set(int index, T value) { `this`[index] = value; }
+    @OperatorGet T get(int index) { return `this`[index]; }
+    @OperatorSet void set(int index, T value) { `this`[index] = value; }
   }
 
   void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }
@@ -65,8 +65,8 @@ class StringMap<T> {
   var _table = `Object`.create(null);
 
   inline {
-    T get(string key) { return _table[key]; }
-    void set(string key, T value) { _table[key] = value; }
+    @OperatorGet T get(string key) { return _table[key]; }
+    @OperatorSet void set(string key, T value) { _table[key] = value; }
     bool has(string key) { return key in _table; }
     void remove(string key) { delete _table[key]; }
   }
@@ -98,8 +98,8 @@ class IntMap<T> {
   var _table = `Object`.create(null);
 
   inline {
-    T get(int key) { return _table[key]; }
-    void set(int key, T value) { _table[key] = value; }
+    @OperatorGet T get(int key) { return _table[key]; }
+    @OperatorSet void set(int key, T value) { _table[key] = value; }
     bool has(int key) { return key in _table; }
     void remove(int key) { delete _table[key]; }
   }

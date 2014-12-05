@@ -39,16 +39,16 @@ import class List<T> {
   List<T> clone();
   T remove(int index);
   void insert(int index, T value);
-  T get(int index);
-  void set(int index, T value);
+  @OperatorGet T get(int index);
+  @OperatorSet void set(int index, T value);
   void swap(int a, int b);
 }
 
 import class StringMap<T> {
   new();
-  T get(string key);
+  @OperatorGet T get(string key);
   T getOrDefault(string key, T defaultValue);
-  void set(string key, T value);
+  @OperatorSet void set(string key, T value);
   bool has(string key);
   void remove(string key);
   List<string> keys();
@@ -58,9 +58,9 @@ import class StringMap<T> {
 
 import class IntMap<T> {
   new();
-  T get(int key);
+  @OperatorGet T get(int key);
   T getOrDefault(int key, T defaultValue);
-  void set(int key, T value);
+  @OperatorSet void set(int key, T value);
   bool has(int key);
   void remove(int key);
   List<int> keys();
