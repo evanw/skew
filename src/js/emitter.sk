@@ -181,7 +181,7 @@ namespace js {
           currentLine++;
         }
       }
-      if (source.contents.codeUnitAt(source.contents.size() - 1) != '\n') {
+      if (source.contents[source.contents.size() - 1] != '\n') {
         emit("\n");
       }
     }
@@ -211,7 +211,7 @@ namespace js {
     void emit(string text) {
       if (options.jsMinify || options.jsSourceMap) {
         for (var i = 0; i < text.size(); i++) {
-          var c = text.codeUnitAt(i);
+          var c = text[i];
           if (c == '\n') {
             currentColumn = 0;
             currentLine++;
@@ -805,7 +805,7 @@ namespace js {
       if (node.kind == .STRING) {
         var value = node.asString();
         for (var i = 0; i < value.size(); i++) {
-          var c = value.codeUnitAt(i);
+          var c = value[i];
           if ((c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && c != '_' && c != '$' && (i == 0 || c < '0' || c > '9')) {
             return false;
           }
@@ -843,7 +843,7 @@ namespace js {
       var doubleCount = 0;
       var singleCount = 0;
       for (var i = 0; i < text.size(); i++) {
-        var c = text.codeUnitAt(i);
+        var c = text[i];
         if (c == '"') doubleCount++;
         else if (c == '\'') singleCount++;
       }

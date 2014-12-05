@@ -7,14 +7,14 @@ import class double { string toString(); }
 import class string {
   int size();
   string slice(int start, int end);
+  string sliceOne(int index);
   int indexOf(string value);
   int lastIndexOf(string value);
   string toLowerCase();
   string toUpperCase();
   static string fromCodeUnit(int value);
-  string get(int index);
   string join(List<string> values);
-  int codeUnitAt(int index);
+  @OperatorGet int codeUnitAt(int index);
   bool startsWith(string prefix);
   bool endsWith(string suffix);
   string repeat(int count);

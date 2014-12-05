@@ -14,7 +14,7 @@ export class Source {
     if (lineOffsets != null) return;
     lineOffsets = [0];
     for (var i = 0; i < contents.size(); i++) {
-      if (contents.codeUnitAt(i) == '\n') {
+      if (contents[i] == '\n') {
         lineOffsets.push(i + 1);
       }
     }

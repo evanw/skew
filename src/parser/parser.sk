@@ -613,7 +613,7 @@ class IntLiteral : ILiteralCallback {
 
   override Node parse(ParserContext context, Token token) {
     var value = parseIntLiteral(token.text, base);
-    if (base == 10 && value != 0 && token.text.codeUnitAt(0) == '0') {
+    if (base == 10 && value != 0 && token.text[0] == '0') {
       syntaxWarningOctal(context.log, token.range);
     }
     return Node.createInt(value).withRange(token.range);
@@ -658,7 +658,7 @@ class CharacterLiteral : ILiteralCallback {
     }
 
     // Don't return null on failure because this doesn't affect the rest of the compilation
-    return Node.createInt(result != null ? result.value.codeUnitAt(0) : 0).withRange(token.range);
+    return Node.createInt(result != null ? result.value[0] : 0).withRange(token.range);
   }
 }
 

@@ -38,11 +38,11 @@ in string {
   inline {
     int size() { return (int)this.`size`(); }
     string slice(int start, int end) { return this.`substr`(start, end - start); }
+    string sliceOne(int index) { return fromCodeUnit(codeUnitAt(index)); }
     int indexOf(string value) { return (int)this.`find`(value); }
     int lastIndexOf(string value) { return (int)this.`rfind`(value); }
     static string fromCodeUnit(int value) { return `string`(1, value); }
-    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }
-    int codeUnitAt(int index) { return `this`[index]; }
+    @OperatorGet int codeUnitAt(int index) { return `this`[index]; }
   }
 
   string toLowerCase() {
@@ -122,13 +122,13 @@ class List<T> {
   }
 
   T shift() {
-    T value = get(0);
+    T value = this[0];
     remove(0);
     return value;
   }
 
   T pop() {
-    T value = get(size() - 1);
+    T value = this[size() - 1];
     _data.pop_back();
     return value;
   }
@@ -148,7 +148,7 @@ class List<T> {
   }
 
   T remove(int index) {
-    T value = get(index);
+    T value = this[index];
     _data.erase(_data.begin() + index);
     return value;
   }
@@ -158,11 +158,13 @@ class List<T> {
     _data.insert(_data.begin() + index, value);
   }
 
+  @OperatorGet
   T get(int index) {
     assert index >= 0 && index < size();
     return _data[index];
   }
 
+  @OperatorSet
   void set(int index, T value) {
     assert index >= 0 && index < size();
     _data[index] = value;
@@ -179,9 +181,9 @@ class List<T> {
 
 class StringMap<T> {
   new() {}
-  T get(string key) { return _table[key]; }
+  @OperatorGet T get(string key) { return _table[key]; }
   T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
-  void set(string key, T value) { _table[key] = value; }
+  @OperatorSet void set(string key, T value) { _table[key] = value; }
   bool has(string key) { return _table.count(key); }
   void remove(string key) { _table.erase(key); }
   List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
@@ -193,9 +195,9 @@ class StringMap<T> {
 
 class IntMap<T> {
   new() {}
-  T get(int key) { return _table[key]; }
+  @OperatorGet T get(int key) { return _table[key]; }
   T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
-  void set(int key, T value) { _table[key] = value; }
+  @OperatorSet void set(int key, T value) { _table[key] = value; }
   bool has(int key) { return _table.count(key); }
   void remove(int key) { _table.erase(key); }
   List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }

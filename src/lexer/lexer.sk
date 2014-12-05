@@ -143,7 +143,7 @@ List<Token> tokenize(Log log, Source source) {
       if (yy_cp >= text_length) {
         break; // This prevents syntax errors from causing infinite loops
       }
-      var c = text.codeUnitAt(yy_cp);
+      var c = text[yy_cp];
       var index = c < 127 ? c : 127;
       var yy_c = yy_ec[index];
       if (yy_accept[yy_current_state] != .YY_INVALID_ACTION) {

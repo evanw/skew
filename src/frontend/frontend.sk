@@ -20,7 +20,7 @@ export namespace frontend {
       if (arg.size() == 0) continue;
 
       // Remember file paths
-      if (arg.codeUnitAt(0) != '-') inputs.push(arg);
+      if (arg[0] != '-') inputs.push(arg);
 
       // Check flags
       else if (arg == "-help" || arg == "--help" || arg == "-h") { printUsage(); return 0; }
