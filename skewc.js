@@ -427,22 +427,26 @@
     }
     return new Node(NodeKind.EXPRESSION).withChildren([value]);
   };
-  Node.createModifier = function(name, statements) {
+  Node.createModifier = function(name, $arguments, statements) {
     if (name.kind !== NodeKind.NAME) {
       throw new Error('assert name.kind == .NAME; (src/ast/create.sk:183:5)');
     }
-    if (!checkAllNodeKinds(statements, new NodeKindIsStatement())) {
-      throw new Error('assert checkAllNodeKinds(statements, NodeKindIsStatement()); (src/ast/create.sk:184:5)');
+    if ($arguments !== null && !checkAllNodeKinds($arguments, new NodeKindIsExpression())) {
+      throw new Error('assert arguments == null || checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:184:5)');
     }
+    if (!checkAllNodeKinds(statements, new NodeKindIsStatement())) {
+      throw new Error('assert checkAllNodeKinds(statements, NodeKindIsStatement()); (src/ast/create.sk:185:5)');
+    }
+    statements.unshift($arguments !== null ? Node.createNodeList($arguments) : null);
     statements.unshift(name);
     return new Node(NodeKind.MODIFIER).withChildren(statements);
   };
   Node.createSwitch = function(value, cases) {
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:190:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:192:5)');
     }
     if (!checkAllNodeKinds(cases, new NodeKindIs(NodeKind.CASE))) {
-      throw new Error('assert checkAllNodeKinds(cases, NodeKindIs(.CASE)); (src/ast/create.sk:191:5)');
+      throw new Error('assert checkAllNodeKinds(cases, NodeKindIs(.CASE)); (src/ast/create.sk:193:5)');
     }
     cases.unshift(value);
     return new Node(NodeKind.SWITCH).withChildren(cases);
@@ -452,7 +456,7 @@
   };
   Node.createType = function(type) {
     if (type === null) {
-      throw new Error('assert type != null; (src/ast/create.sk:201:5)');
+      throw new Error('assert type != null; (src/ast/create.sk:203:5)');
     }
     return new Node(NodeKind.TYPE).withType(type);
   };
@@ -464,13 +468,13 @@
   };
   Node.createHook = function(test, trueNode, falseNode) {
     if (!in_NodeKind.isExpression(test.kind)) {
-      throw new Error('assert test.kind.isExpression(); (src/ast/create.sk:214:5)');
+      throw new Error('assert test.kind.isExpression(); (src/ast/create.sk:216:5)');
     }
     if (!in_NodeKind.isExpression(trueNode.kind)) {
-      throw new Error('assert trueNode.kind.isExpression(); (src/ast/create.sk:215:5)');
+      throw new Error('assert trueNode.kind.isExpression(); (src/ast/create.sk:217:5)');
     }
     if (!in_NodeKind.isExpression(falseNode.kind)) {
-      throw new Error('assert falseNode.kind.isExpression(); (src/ast/create.sk:216:5)');
+      throw new Error('assert falseNode.kind.isExpression(); (src/ast/create.sk:218:5)');
     }
     return new Node(NodeKind.HOOK).withChildren([test, trueNode, falseNode]);
   };
@@ -491,44 +495,44 @@
   };
   Node.createList = function(values) {
     if (!checkAllNodeKinds(values, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:241:5)');
+      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:243:5)');
     }
     return new Node(NodeKind.LIST).withChildren(values);
   };
   Node.createDot = function(value, name) {
     if (value !== null && !in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:246:5)');
+      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:248:5)');
     }
     if (name !== null && name.kind !== NodeKind.NAME) {
-      throw new Error('assert name == null || name.kind == .NAME; (src/ast/create.sk:247:5)');
+      throw new Error('assert name == null || name.kind == .NAME; (src/ast/create.sk:249:5)');
     }
     return new Node(NodeKind.DOT).withChildren([value, name]);
   };
   Node.createDotWithKind = function(kind, value, name) {
     if (!in_NodeKind.isDot(kind)) {
-      throw new Error('assert kind.isDot(); (src/ast/create.sk:252:5)');
+      throw new Error('assert kind.isDot(); (src/ast/create.sk:254:5)');
     }
     if (value !== null && !in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:253:5)');
+      throw new Error('assert value == null || value.kind.isExpression(); (src/ast/create.sk:255:5)');
     }
     if (name !== null && name.kind !== NodeKind.NAME && (name.kind !== NodeKind.QUOTED || name.quotedValue().kind !== NodeKind.NAME)) {
-      throw new Error('assert name == null || name.kind == .NAME || name.kind == .QUOTED && name.quotedValue().kind == .NAME; (src/ast/create.sk:254:5)');
+      throw new Error('assert name == null || name.kind == .NAME || name.kind == .QUOTED && name.quotedValue().kind == .NAME; (src/ast/create.sk:256:5)');
     }
     return new Node(kind).withChildren([value, name]);
   };
   Node.createCall = function(value, $arguments) {
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:259:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:261:5)');
     }
     if (!checkAllNodeKinds($arguments, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:260:5)');
+      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:262:5)');
     }
     $arguments.unshift(value);
     return new Node(NodeKind.CALL).withChildren($arguments);
   };
   Node.createSuperCall = function($arguments) {
     if (!checkAllNodeKinds($arguments, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:266:5)');
+      throw new Error('assert checkAllNodeKinds(arguments, NodeKindIsExpression()); (src/ast/create.sk:268:5)');
     }
     return new Node(NodeKind.SUPER_CALL).withChildren($arguments);
   };
@@ -537,41 +541,41 @@
   };
   Node.createSequence = function(values) {
     if (!checkAllNodeKinds(values, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:278:5)');
+      throw new Error('assert checkAllNodeKinds(values, NodeKindIsExpression()); (src/ast/create.sk:280:5)');
     }
     return new Node(NodeKind.SEQUENCE).withChildren(values);
   };
   Node.createParameterize = function(type, types) {
     if (!in_NodeKind.isExpression(type.kind)) {
-      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:283:5)');
+      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:285:5)');
     }
     if (!checkAllNodeKinds(types, new NodeKindIsExpression())) {
-      throw new Error('assert checkAllNodeKinds(types, NodeKindIsExpression()); (src/ast/create.sk:284:5)');
+      throw new Error('assert checkAllNodeKinds(types, NodeKindIsExpression()); (src/ast/create.sk:286:5)');
     }
     types.unshift(type);
     return new Node(NodeKind.PARAMETERIZE).withChildren(types);
   };
   Node.createCast = function(type, value) {
     if (!in_NodeKind.isExpression(type.kind)) {
-      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:290:5)');
+      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:292:5)');
     }
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:291:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:293:5)');
     }
     return new Node(NodeKind.CAST).withChildren([type, value]);
   };
   Node.createImplicitCast = function(type, value) {
     if (!in_NodeKind.isExpression(type.kind)) {
-      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:296:5)');
+      throw new Error('assert type.kind.isExpression(); (src/ast/create.sk:298:5)');
     }
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:297:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:299:5)');
     }
     return new Node(NodeKind.IMPLICIT_CAST).withChildren([type, value]);
   };
   Node.createQuoted = function(value) {
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:302:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:304:5)');
     }
     return new Node(NodeKind.QUOTED).withChildren([value]);
   };
@@ -580,22 +584,22 @@
   };
   Node.createUnary = function(kind, value) {
     if (!in_NodeKind.isUnaryOperator(kind)) {
-      throw new Error('assert kind.isUnaryOperator(); (src/ast/create.sk:311:5)');
+      throw new Error('assert kind.isUnaryOperator(); (src/ast/create.sk:313:5)');
     }
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:312:5)');
+      throw new Error('assert value.kind.isExpression(); (src/ast/create.sk:314:5)');
     }
     return new Node(kind).withChildren([value]);
   };
   Node.createBinary = function(kind, left, right) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/ast/create.sk:321:5)');
+      throw new Error('assert kind.isBinaryOperator(); (src/ast/create.sk:323:5)');
     }
     if (!in_NodeKind.isExpression(left.kind)) {
-      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:322:5)');
+      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:324:5)');
     }
     if (!in_NodeKind.isExpression(right.kind)) {
-      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:323:5)');
+      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:325:5)');
     }
     if (kind === NodeKind.ASSIGN && left.kind === NodeKind.INDEX) {
       var target = left.binaryLeft();
@@ -606,16 +610,16 @@
   };
   Node.createTernary = function(kind, left, middle, right) {
     if (!in_NodeKind.isTernaryOperator(kind)) {
-      throw new Error('assert kind.isTernaryOperator(); (src/ast/create.sk:336:5)');
+      throw new Error('assert kind.isTernaryOperator(); (src/ast/create.sk:338:5)');
     }
     if (!in_NodeKind.isExpression(left.kind)) {
-      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:337:5)');
+      throw new Error('assert left.kind.isExpression(); (src/ast/create.sk:339:5)');
     }
     if (!in_NodeKind.isExpression(middle.kind)) {
-      throw new Error('assert middle.kind.isExpression(); (src/ast/create.sk:338:5)');
+      throw new Error('assert middle.kind.isExpression(); (src/ast/create.sk:340:5)');
     }
     if (!in_NodeKind.isExpression(right.kind)) {
-      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:339:5)');
+      throw new Error('assert right.kind.isExpression(); (src/ast/create.sk:341:5)');
     }
     return new Node(kind).withChildren([left, middle, right]);
   };
@@ -830,407 +834,419 @@
     if (this.kind !== NodeKind.MODIFIER) {
       throw new Error('assert kind == .MODIFIER; (src/ast/get.sk:138:5)');
     }
-    if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:139:5)');
+    if (!(this.children.length >= 2)) {
+      throw new Error('assert children.size() >= 2; (src/ast/get.sk:139:5)');
     }
     if (this.children[0].kind !== NodeKind.NAME) {
       throw new Error('assert children.get(0).kind == .NAME; (src/ast/get.sk:140:5)');
     }
     return this.children[0];
   };
-  Node.prototype.modifierStatements = function() {
+  Node.prototype.modifierArguments = function() {
     if (this.kind !== NodeKind.MODIFIER) {
       throw new Error('assert kind == .MODIFIER; (src/ast/get.sk:145:5)');
     }
-    if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:146:5)');
+    if (!(this.children.length >= 2)) {
+      throw new Error('assert children.size() >= 2; (src/ast/get.sk:146:5)');
     }
-    return this.children.slice(1, this.children.length);
+    if (this.children[1] !== null && this.children[1].kind !== NodeKind.NODE_LIST) {
+      throw new Error('assert children.get(1) == null || children.get(1).kind == .NODE_LIST; (src/ast/get.sk:147:5)');
+    }
+    return this.children[1];
+  };
+  Node.prototype.modifierStatements = function() {
+    if (this.kind !== NodeKind.MODIFIER) {
+      throw new Error('assert kind == .MODIFIER; (src/ast/get.sk:152:5)');
+    }
+    if (!(this.children.length >= 2)) {
+      throw new Error('assert children.size() >= 2; (src/ast/get.sk:153:5)');
+    }
+    return this.children.slice(2, this.children.length);
   };
   Node.prototype.sequenceValues = function() {
     if (this.kind !== NodeKind.SEQUENCE) {
-      throw new Error('assert kind == .SEQUENCE; (src/ast/get.sk:151:5)');
+      throw new Error('assert kind == .SEQUENCE; (src/ast/get.sk:158:5)');
     }
     if (this.children === null) {
-      throw new Error('assert children != null; (src/ast/get.sk:152:5)');
+      throw new Error('assert children != null; (src/ast/get.sk:159:5)');
     }
     return this.children;
   };
   Node.prototype.castType = function() {
     if (!in_NodeKind.isCast(this.kind)) {
-      throw new Error('assert kind.isCast(); (src/ast/get.sk:157:5)');
+      throw new Error('assert kind.isCast(); (src/ast/get.sk:164:5)');
     }
     if (this.children.length !== 2) {
-      throw new Error('assert children.size() == 2; (src/ast/get.sk:158:5)');
+      throw new Error('assert children.size() == 2; (src/ast/get.sk:165:5)');
     }
     return this.children[0];
   };
   Node.prototype.castValue = function() {
     if (!in_NodeKind.isCast(this.kind)) {
-      throw new Error('assert kind.isCast(); (src/ast/get.sk:163:5)');
+      throw new Error('assert kind.isCast(); (src/ast/get.sk:170:5)');
     }
     if (this.children.length !== 2) {
-      throw new Error('assert children.size() == 2; (src/ast/get.sk:164:5)');
+      throw new Error('assert children.size() == 2; (src/ast/get.sk:171:5)');
     }
     return this.children[1];
   };
   Node.prototype.expressionValue = function() {
     if (this.kind !== NodeKind.EXPRESSION) {
-      throw new Error('assert kind == .EXPRESSION; (src/ast/get.sk:169:5)');
+      throw new Error('assert kind == .EXPRESSION; (src/ast/get.sk:176:5)');
     }
     if (this.children.length !== 1) {
-      throw new Error('assert children.size() == 1; (src/ast/get.sk:170:5)');
+      throw new Error('assert children.size() == 1; (src/ast/get.sk:177:5)');
     }
     return this.children[0];
   };
   Node.prototype.ifTest = function() {
     if (this.kind !== NodeKind.IF) {
-      throw new Error('assert kind == .IF; (src/ast/get.sk:175:5)');
+      throw new Error('assert kind == .IF; (src/ast/get.sk:182:5)');
     }
     if (this.children.length !== 3) {
-      throw new Error('assert children.size() == 3; (src/ast/get.sk:176:5)');
+      throw new Error('assert children.size() == 3; (src/ast/get.sk:183:5)');
     }
     return this.children[0];
   };
   Node.prototype.ifTrue = function() {
-    if (this.kind !== NodeKind.IF) {
-      throw new Error('assert kind == .IF; (src/ast/get.sk:181:5)');
-    }
-    if (this.children.length !== 3) {
-      throw new Error('assert children.size() == 3; (src/ast/get.sk:182:5)');
-    }
-    if (this.children[1] !== null && this.children[1].kind !== NodeKind.BLOCK) {
-      throw new Error('assert children.get(1) == null || children.get(1).kind == .BLOCK; (src/ast/get.sk:183:5)');
-    }
-    return this.children[1];
-  };
-  Node.prototype.ifFalse = function() {
     if (this.kind !== NodeKind.IF) {
       throw new Error('assert kind == .IF; (src/ast/get.sk:188:5)');
     }
     if (this.children.length !== 3) {
       throw new Error('assert children.size() == 3; (src/ast/get.sk:189:5)');
     }
+    if (this.children[1] !== null && this.children[1].kind !== NodeKind.BLOCK) {
+      throw new Error('assert children.get(1) == null || children.get(1).kind == .BLOCK; (src/ast/get.sk:190:5)');
+    }
+    return this.children[1];
+  };
+  Node.prototype.ifFalse = function() {
+    if (this.kind !== NodeKind.IF) {
+      throw new Error('assert kind == .IF; (src/ast/get.sk:195:5)');
+    }
+    if (this.children.length !== 3) {
+      throw new Error('assert children.size() == 3; (src/ast/get.sk:196:5)');
+    }
     if (this.children[2] !== null && this.children[2].kind !== NodeKind.BLOCK) {
-      throw new Error('assert children.get(2) == null || children.get(2).kind == .BLOCK; (src/ast/get.sk:190:5)');
+      throw new Error('assert children.get(2) == null || children.get(2).kind == .BLOCK; (src/ast/get.sk:197:5)');
     }
     return this.children[2];
   };
   Node.prototype.forSetup = function() {
     if (this.kind !== NodeKind.FOR) {
-      throw new Error('assert kind == .FOR; (src/ast/get.sk:195:5)');
+      throw new Error('assert kind == .FOR; (src/ast/get.sk:202:5)');
     }
     if (this.children.length !== 4) {
-      throw new Error('assert children.size() == 4; (src/ast/get.sk:196:5)');
+      throw new Error('assert children.size() == 4; (src/ast/get.sk:203:5)');
     }
     return this.children[0];
   };
   Node.prototype.forTest = function() {
     if (this.kind !== NodeKind.FOR) {
-      throw new Error('assert kind == .FOR; (src/ast/get.sk:201:5)');
+      throw new Error('assert kind == .FOR; (src/ast/get.sk:208:5)');
     }
     if (this.children.length !== 4) {
-      throw new Error('assert children.size() == 4; (src/ast/get.sk:202:5)');
+      throw new Error('assert children.size() == 4; (src/ast/get.sk:209:5)');
     }
     return this.children[1];
   };
   Node.prototype.forUpdate = function() {
     if (this.kind !== NodeKind.FOR) {
-      throw new Error('assert kind == .FOR; (src/ast/get.sk:207:5)');
+      throw new Error('assert kind == .FOR; (src/ast/get.sk:214:5)');
     }
     if (this.children.length !== 4) {
-      throw new Error('assert children.size() == 4; (src/ast/get.sk:208:5)');
+      throw new Error('assert children.size() == 4; (src/ast/get.sk:215:5)');
     }
     return this.children[2];
   };
   Node.prototype.forBlock = function() {
     if (this.kind !== NodeKind.FOR) {
-      throw new Error('assert kind == .FOR; (src/ast/get.sk:213:5)');
+      throw new Error('assert kind == .FOR; (src/ast/get.sk:220:5)');
     }
     if (this.children.length !== 4) {
-      throw new Error('assert children.size() == 4; (src/ast/get.sk:214:5)');
+      throw new Error('assert children.size() == 4; (src/ast/get.sk:221:5)');
     }
     if (this.children[3].kind !== NodeKind.BLOCK) {
-      throw new Error('assert children.get(3).kind == .BLOCK; (src/ast/get.sk:215:5)');
+      throw new Error('assert children.get(3).kind == .BLOCK; (src/ast/get.sk:222:5)');
     }
     return this.children[3];
   };
   Node.prototype.forEachVariable = function() {
-    if (this.kind !== NodeKind.FOR_EACH) {
-      throw new Error('assert kind == .FOR_EACH; (src/ast/get.sk:220:5)');
-    }
-    if (this.children.length !== 3) {
-      throw new Error('assert children.size() == 3; (src/ast/get.sk:221:5)');
-    }
-    if (this.children[0].kind !== NodeKind.VARIABLE) {
-      throw new Error('assert children.get(0).kind == .VARIABLE; (src/ast/get.sk:222:5)');
-    }
-    return this.children[0];
-  };
-  Node.prototype.forEachValue = function() {
     if (this.kind !== NodeKind.FOR_EACH) {
       throw new Error('assert kind == .FOR_EACH; (src/ast/get.sk:227:5)');
     }
     if (this.children.length !== 3) {
       throw new Error('assert children.size() == 3; (src/ast/get.sk:228:5)');
     }
+    if (this.children[0].kind !== NodeKind.VARIABLE) {
+      throw new Error('assert children.get(0).kind == .VARIABLE; (src/ast/get.sk:229:5)');
+    }
+    return this.children[0];
+  };
+  Node.prototype.forEachValue = function() {
+    if (this.kind !== NodeKind.FOR_EACH) {
+      throw new Error('assert kind == .FOR_EACH; (src/ast/get.sk:234:5)');
+    }
+    if (this.children.length !== 3) {
+      throw new Error('assert children.size() == 3; (src/ast/get.sk:235:5)');
+    }
     return this.children[1];
   };
   Node.prototype.forEachBlock = function() {
     if (this.kind !== NodeKind.FOR_EACH) {
-      throw new Error('assert kind == .FOR_EACH; (src/ast/get.sk:233:5)');
+      throw new Error('assert kind == .FOR_EACH; (src/ast/get.sk:240:5)');
     }
     if (this.children.length !== 3) {
-      throw new Error('assert children.size() == 3; (src/ast/get.sk:234:5)');
+      throw new Error('assert children.size() == 3; (src/ast/get.sk:241:5)');
     }
     if (this.children[2].kind !== NodeKind.BLOCK) {
-      throw new Error('assert children.get(2).kind == .BLOCK; (src/ast/get.sk:235:5)');
+      throw new Error('assert children.get(2).kind == .BLOCK; (src/ast/get.sk:242:5)');
     }
     return this.children[2];
   };
   Node.prototype.whileTest = function() {
     if (this.kind !== NodeKind.WHILE && this.kind !== NodeKind.DO_WHILE) {
-      throw new Error('assert kind == .WHILE || kind == .DO_WHILE; (src/ast/get.sk:240:5)');
+      throw new Error('assert kind == .WHILE || kind == .DO_WHILE; (src/ast/get.sk:247:5)');
     }
     if (this.children.length !== 2) {
-      throw new Error('assert children.size() == 2; (src/ast/get.sk:241:5)');
+      throw new Error('assert children.size() == 2; (src/ast/get.sk:248:5)');
     }
     return this.children[0];
   };
   Node.prototype.whileBlock = function() {
     if (this.kind !== NodeKind.WHILE && this.kind !== NodeKind.DO_WHILE) {
-      throw new Error('assert kind == .WHILE || kind == .DO_WHILE; (src/ast/get.sk:246:5)');
+      throw new Error('assert kind == .WHILE || kind == .DO_WHILE; (src/ast/get.sk:253:5)');
     }
     if (this.children.length !== 2) {
-      throw new Error('assert children.size() == 2; (src/ast/get.sk:247:5)');
+      throw new Error('assert children.size() == 2; (src/ast/get.sk:254:5)');
     }
     if (this.children[1].kind !== NodeKind.BLOCK) {
-      throw new Error('assert children.get(1).kind == .BLOCK; (src/ast/get.sk:248:5)');
+      throw new Error('assert children.get(1).kind == .BLOCK; (src/ast/get.sk:255:5)');
     }
     return this.children[1];
   };
   Node.prototype.quotedValue = function() {
     if (this.kind !== NodeKind.QUOTED) {
-      throw new Error('assert kind == .QUOTED; (src/ast/get.sk:253:5)');
+      throw new Error('assert kind == .QUOTED; (src/ast/get.sk:260:5)');
     }
     if (this.children.length !== 1) {
-      throw new Error('assert children.size() == 1; (src/ast/get.sk:254:5)');
+      throw new Error('assert children.size() == 1; (src/ast/get.sk:261:5)');
     }
     return this.children[0];
   };
   Node.prototype.baseTypes = function() {
     if (!in_NodeKind.isObject(this.kind) && this.kind !== NodeKind.EXTENSION) {
-      throw new Error('assert kind.isObject() || kind == .EXTENSION; (src/ast/get.sk:259:5)');
+      throw new Error('assert kind.isObject() || kind == .EXTENSION; (src/ast/get.sk:266:5)');
     }
     if (!(this.children.length >= 3)) {
-      throw new Error('assert children.size() >= 3; (src/ast/get.sk:260:5)');
+      throw new Error('assert children.size() >= 3; (src/ast/get.sk:267:5)');
     }
     if (this.children[2] !== null && this.children[2].kind !== NodeKind.NODE_LIST) {
-      throw new Error('assert children.get(2) == null || children.get(2).kind == .NODE_LIST; (src/ast/get.sk:261:5)');
+      throw new Error('assert children.get(2) == null || children.get(2).kind == .NODE_LIST; (src/ast/get.sk:268:5)');
     }
     return this.children[2];
   };
   Node.prototype.objectParameters = function() {
     if (!in_NodeKind.isObject(this.kind)) {
-      throw new Error('assert kind.isObject(); (src/ast/get.sk:266:5)');
+      throw new Error('assert kind.isObject(); (src/ast/get.sk:273:5)');
     }
     if (this.children.length !== 4) {
-      throw new Error('assert children.size() == 4; (src/ast/get.sk:267:5)');
+      throw new Error('assert children.size() == 4; (src/ast/get.sk:274:5)');
     }
     if (this.children[3] !== null && this.children[3].kind !== NodeKind.NODE_LIST) {
-      throw new Error('assert children.get(3) == null || children.get(3).kind == .NODE_LIST; (src/ast/get.sk:268:5)');
+      throw new Error('assert children.get(3) == null || children.get(3).kind == .NODE_LIST; (src/ast/get.sk:275:5)');
     }
     return this.children[3];
   };
   Node.prototype.functionArguments = function() {
-    if (!in_NodeKind.isFunction(this.kind)) {
-      throw new Error('assert kind.isFunction(); (src/ast/get.sk:273:5)');
-    }
-    if (this.children.length !== 5) {
-      throw new Error('assert children.size() == 5; (src/ast/get.sk:274:5)');
-    }
-    if (this.children[1].kind !== NodeKind.NODE_LIST) {
-      throw new Error('assert children.get(1).kind == .NODE_LIST; (src/ast/get.sk:275:5)');
-    }
-    return this.children[1];
-  };
-  Node.prototype.functionBlock = function() {
     if (!in_NodeKind.isFunction(this.kind)) {
       throw new Error('assert kind.isFunction(); (src/ast/get.sk:280:5)');
     }
     if (this.children.length !== 5) {
       throw new Error('assert children.size() == 5; (src/ast/get.sk:281:5)');
     }
+    if (this.children[1].kind !== NodeKind.NODE_LIST) {
+      throw new Error('assert children.get(1).kind == .NODE_LIST; (src/ast/get.sk:282:5)');
+    }
+    return this.children[1];
+  };
+  Node.prototype.functionBlock = function() {
+    if (!in_NodeKind.isFunction(this.kind)) {
+      throw new Error('assert kind.isFunction(); (src/ast/get.sk:287:5)');
+    }
+    if (this.children.length !== 5) {
+      throw new Error('assert children.size() == 5; (src/ast/get.sk:288:5)');
+    }
     if (this.children[2] !== null && this.children[2].kind !== NodeKind.BLOCK) {
-      throw new Error('assert children.get(2) == null || children.get(2).kind == .BLOCK; (src/ast/get.sk:282:5)');
+      throw new Error('assert children.get(2) == null || children.get(2).kind == .BLOCK; (src/ast/get.sk:289:5)');
     }
     return this.children[2];
   };
   Node.prototype.functionResult = function() {
     if (this.kind !== NodeKind.FUNCTION) {
-      throw new Error('assert kind == .FUNCTION; (src/ast/get.sk:287:5)');
+      throw new Error('assert kind == .FUNCTION; (src/ast/get.sk:294:5)');
     }
     if (this.children.length !== 5) {
-      throw new Error('assert children.size() == 5; (src/ast/get.sk:288:5)');
+      throw new Error('assert children.size() == 5; (src/ast/get.sk:295:5)');
     }
     return this.children[3];
   };
   Node.prototype.functionParameters = function() {
     if (this.kind !== NodeKind.FUNCTION) {
-      throw new Error('assert kind == .FUNCTION; (src/ast/get.sk:293:5)');
+      throw new Error('assert kind == .FUNCTION; (src/ast/get.sk:300:5)');
     }
     if (this.children.length !== 5) {
-      throw new Error('assert children.size() == 5; (src/ast/get.sk:294:5)');
+      throw new Error('assert children.size() == 5; (src/ast/get.sk:301:5)');
     }
     return this.children[4];
   };
   Node.prototype.superInitializer = function() {
     if (this.kind !== NodeKind.CONSTRUCTOR) {
-      throw new Error('assert kind == .CONSTRUCTOR; (src/ast/get.sk:299:5)');
+      throw new Error('assert kind == .CONSTRUCTOR; (src/ast/get.sk:306:5)');
     }
     if (this.children.length !== 5) {
-      throw new Error('assert children.size() == 5; (src/ast/get.sk:300:5)');
+      throw new Error('assert children.size() == 5; (src/ast/get.sk:307:5)');
     }
     return this.children[3];
   };
   Node.prototype.memberInitializers = function() {
     if (this.kind !== NodeKind.CONSTRUCTOR) {
-      throw new Error('assert kind == .CONSTRUCTOR; (src/ast/get.sk:305:5)');
+      throw new Error('assert kind == .CONSTRUCTOR; (src/ast/get.sk:312:5)');
     }
     if (this.children.length !== 5) {
-      throw new Error('assert children.size() == 5; (src/ast/get.sk:306:5)');
+      throw new Error('assert children.size() == 5; (src/ast/get.sk:313:5)');
     }
     return this.children[4];
   };
   Node.prototype.memberInitializerName = function() {
     if (this.kind !== NodeKind.MEMBER_INITIALIZER) {
-      throw new Error('assert kind == .MEMBER_INITIALIZER; (src/ast/get.sk:311:5)');
+      throw new Error('assert kind == .MEMBER_INITIALIZER; (src/ast/get.sk:318:5)');
     }
     if (this.children.length !== 2) {
-      throw new Error('assert children.size() == 2; (src/ast/get.sk:312:5)');
+      throw new Error('assert children.size() == 2; (src/ast/get.sk:319:5)');
     }
     return this.children[0];
   };
   Node.prototype.memberInitializerValue = function() {
     if (this.kind !== NodeKind.MEMBER_INITIALIZER) {
-      throw new Error('assert kind == .MEMBER_INITIALIZER; (src/ast/get.sk:317:5)');
+      throw new Error('assert kind == .MEMBER_INITIALIZER; (src/ast/get.sk:324:5)');
     }
     if (this.children.length !== 2) {
-      throw new Error('assert children.size() == 2; (src/ast/get.sk:318:5)');
+      throw new Error('assert children.size() == 2; (src/ast/get.sk:325:5)');
     }
     return this.children[1];
   };
   Node.prototype.assertValue = function() {
     if (!in_NodeKind.isAssert(this.kind)) {
-      throw new Error('assert kind.isAssert(); (src/ast/get.sk:323:5)');
+      throw new Error('assert kind.isAssert(); (src/ast/get.sk:330:5)');
     }
     if (this.children.length !== 1) {
-      throw new Error('assert children.size() == 1; (src/ast/get.sk:324:5)');
+      throw new Error('assert children.size() == 1; (src/ast/get.sk:331:5)');
     }
     return this.children[0];
   };
   Node.prototype.parameterizeValue = function() {
     if (this.kind !== NodeKind.PARAMETERIZE) {
-      throw new Error('assert kind == .PARAMETERIZE; (src/ast/get.sk:329:5)');
+      throw new Error('assert kind == .PARAMETERIZE; (src/ast/get.sk:336:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:330:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:337:5)');
     }
     return this.children[0];
   };
   Node.prototype.parameterizeTypes = function() {
     if (this.kind !== NodeKind.PARAMETERIZE) {
-      throw new Error('assert kind == .PARAMETERIZE; (src/ast/get.sk:335:5)');
+      throw new Error('assert kind == .PARAMETERIZE; (src/ast/get.sk:342:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:336:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:343:5)');
     }
     return this.children.slice(1, this.children.length);
   };
   Node.prototype.callValue = function() {
     if (this.kind !== NodeKind.CALL) {
-      throw new Error('assert kind == .CALL; (src/ast/get.sk:341:5)');
+      throw new Error('assert kind == .CALL; (src/ast/get.sk:348:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:342:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:349:5)');
     }
     return this.children[0];
   };
   Node.prototype.callArguments = function() {
     if (this.kind !== NodeKind.CALL) {
-      throw new Error('assert kind == .CALL; (src/ast/get.sk:347:5)');
+      throw new Error('assert kind == .CALL; (src/ast/get.sk:354:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:348:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:355:5)');
     }
     return this.children.slice(1, this.children.length);
   };
   Node.prototype.superCallArguments = function() {
     if (this.kind !== NodeKind.SUPER_CALL) {
-      throw new Error('assert kind == .SUPER_CALL; (src/ast/get.sk:353:5)');
+      throw new Error('assert kind == .SUPER_CALL; (src/ast/get.sk:360:5)');
     }
     return this.children;
   };
   Node.prototype.listValues = function() {
     if (this.kind !== NodeKind.LIST) {
-      throw new Error('assert kind == .LIST; (src/ast/get.sk:358:5)');
+      throw new Error('assert kind == .LIST; (src/ast/get.sk:365:5)');
     }
     return this.children;
   };
   Node.prototype.parameterBound = function() {
     if (this.kind !== NodeKind.PARAMETER) {
-      throw new Error('assert kind == .PARAMETER; (src/ast/get.sk:363:5)');
+      throw new Error('assert kind == .PARAMETER; (src/ast/get.sk:370:5)');
     }
     if (this.children.length !== 2) {
-      throw new Error('assert children.size() == 2; (src/ast/get.sk:364:5)');
+      throw new Error('assert children.size() == 2; (src/ast/get.sk:371:5)');
     }
     return this.children[1];
   };
   Node.prototype.returnValue = function() {
     if (this.kind !== NodeKind.RETURN) {
-      throw new Error('assert kind == .RETURN; (src/ast/get.sk:369:5)');
+      throw new Error('assert kind == .RETURN; (src/ast/get.sk:376:5)');
     }
     if (this.children.length !== 1) {
-      throw new Error('assert children.size() == 1; (src/ast/get.sk:370:5)');
+      throw new Error('assert children.size() == 1; (src/ast/get.sk:377:5)');
     }
     return this.children[0];
   };
   Node.prototype.switchValue = function() {
     if (this.kind !== NodeKind.SWITCH) {
-      throw new Error('assert kind == .SWITCH; (src/ast/get.sk:375:5)');
+      throw new Error('assert kind == .SWITCH; (src/ast/get.sk:382:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:376:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:383:5)');
     }
     return this.children[0];
   };
   Node.prototype.switchCases = function() {
     if (this.kind !== NodeKind.SWITCH) {
-      throw new Error('assert kind == .SWITCH; (src/ast/get.sk:381:5)');
+      throw new Error('assert kind == .SWITCH; (src/ast/get.sk:388:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:382:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:389:5)');
     }
     return this.children.slice(1, this.children.length);
   };
   Node.prototype.caseValues = function() {
     if (this.kind !== NodeKind.CASE) {
-      throw new Error('assert kind == .CASE; (src/ast/get.sk:387:5)');
+      throw new Error('assert kind == .CASE; (src/ast/get.sk:394:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:388:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:395:5)');
     }
     return this.children.slice(0, this.children.length - 1 | 0);
   };
   Node.prototype.caseBlock = function() {
     if (this.kind !== NodeKind.CASE) {
-      throw new Error('assert kind == .CASE; (src/ast/get.sk:393:5)');
+      throw new Error('assert kind == .CASE; (src/ast/get.sk:400:5)');
     }
     if (!(this.children.length >= 1)) {
-      throw new Error('assert children.size() >= 1; (src/ast/get.sk:394:5)');
+      throw new Error('assert children.size() >= 1; (src/ast/get.sk:401:5)');
     }
     if (this.lastChild().kind !== NodeKind.BLOCK) {
-      throw new Error('assert lastChild().kind == .BLOCK; (src/ast/get.sk:395:5)');
+      throw new Error('assert lastChild().kind == .BLOCK; (src/ast/get.sk:402:5)');
     }
     return this.lastChild();
   };
@@ -5465,106 +5481,107 @@
   };
   var TokenKind = {
     ALIAS: 0,
-    ARROW: 1,
-    ASSERT: 2,
-    ASSIGN: 3,
-    ASSIGN_BITWISE_AND: 4,
-    ASSIGN_BITWISE_OR: 5,
-    ASSIGN_BITWISE_XOR: 6,
-    ASSIGN_DIVIDE: 7,
-    ASSIGN_MINUS: 8,
-    ASSIGN_MULTIPLY: 9,
-    ASSIGN_PLUS: 10,
-    ASSIGN_REMAINDER: 11,
-    ASSIGN_SHIFT_LEFT: 12,
-    ASSIGN_SHIFT_RIGHT: 13,
-    BITWISE_AND: 14,
-    BITWISE_OR: 15,
-    BITWISE_XOR: 16,
-    BREAK: 17,
-    CASE: 18,
-    CHARACTER: 19,
-    CLASS: 20,
-    COLON: 21,
-    COMMA: 22,
-    CONST: 23,
-    CONTINUE: 24,
-    DECREMENT: 25,
-    DEFAULT: 26,
-    DELETE: 27,
-    DIVIDE: 28,
-    DO: 29,
-    DOT: 30,
-    DOUBLE: 31,
-    DOUBLE_COLON: 32,
-    ELSE: 33,
-    END_OF_FILE: 34,
-    ENUM: 35,
-    EQUAL: 36,
-    ERROR: 37,
-    EXPORT: 38,
-    FALSE: 39,
-    FINAL: 40,
-    FLOAT: 41,
-    FOR: 42,
-    GREATER_THAN: 43,
-    GREATER_THAN_OR_EQUAL: 44,
-    IDENTIFIER: 45,
-    IF: 46,
-    IMPORT: 47,
-    IN: 48,
-    INCREMENT: 49,
-    INLINE: 50,
-    INTERFACE: 51,
-    INT_BINARY: 52,
-    INT_DECIMAL: 53,
-    INT_HEX: 54,
-    INT_OCTAL: 55,
-    IS: 56,
-    LEFT_BRACE: 57,
-    LEFT_BRACKET: 58,
-    LEFT_PARENTHESIS: 59,
-    LESS_THAN: 60,
-    LESS_THAN_OR_EQUAL: 61,
-    LOGICAL_AND: 62,
-    LOGICAL_OR: 63,
-    MINUS: 64,
-    MULTIPLY: 65,
-    NAMESPACE: 66,
-    NEW: 67,
-    NOT: 68,
-    NOT_EQUAL: 69,
-    NULL: 70,
-    OVERRIDE: 71,
-    PLUS: 72,
-    PRIVATE: 73,
-    PROTECTED: 74,
-    PUBLIC: 75,
-    QUESTION_MARK: 76,
-    REMAINDER: 77,
-    RETURN: 78,
-    RIGHT_BRACE: 79,
-    RIGHT_BRACKET: 80,
-    RIGHT_PARENTHESIS: 81,
-    SEMICOLON: 82,
-    SHIFT_LEFT: 83,
-    SHIFT_RIGHT: 84,
-    STATIC: 85,
-    STRING: 86,
-    SUPER: 87,
-    SWITCH: 88,
-    THIS: 89,
-    TICK: 90,
-    TILDE: 91,
-    TRUE: 92,
-    USING: 93,
-    VAR: 94,
-    VIRTUAL: 95,
-    WHILE: 96,
-    WHITESPACE: 97,
-    YY_INVALID_ACTION: 98,
-    START_PARAMETER_LIST: 99,
-    END_PARAMETER_LIST: 100
+    ANNOTATION: 1,
+    ARROW: 2,
+    ASSERT: 3,
+    ASSIGN: 4,
+    ASSIGN_BITWISE_AND: 5,
+    ASSIGN_BITWISE_OR: 6,
+    ASSIGN_BITWISE_XOR: 7,
+    ASSIGN_DIVIDE: 8,
+    ASSIGN_MINUS: 9,
+    ASSIGN_MULTIPLY: 10,
+    ASSIGN_PLUS: 11,
+    ASSIGN_REMAINDER: 12,
+    ASSIGN_SHIFT_LEFT: 13,
+    ASSIGN_SHIFT_RIGHT: 14,
+    BITWISE_AND: 15,
+    BITWISE_OR: 16,
+    BITWISE_XOR: 17,
+    BREAK: 18,
+    CASE: 19,
+    CHARACTER: 20,
+    CLASS: 21,
+    COLON: 22,
+    COMMA: 23,
+    CONST: 24,
+    CONTINUE: 25,
+    DECREMENT: 26,
+    DEFAULT: 27,
+    DELETE: 28,
+    DIVIDE: 29,
+    DO: 30,
+    DOT: 31,
+    DOUBLE: 32,
+    DOUBLE_COLON: 33,
+    ELSE: 34,
+    END_OF_FILE: 35,
+    ENUM: 36,
+    EQUAL: 37,
+    ERROR: 38,
+    EXPORT: 39,
+    FALSE: 40,
+    FINAL: 41,
+    FLOAT: 42,
+    FOR: 43,
+    GREATER_THAN: 44,
+    GREATER_THAN_OR_EQUAL: 45,
+    IDENTIFIER: 46,
+    IF: 47,
+    IMPORT: 48,
+    IN: 49,
+    INCREMENT: 50,
+    INLINE: 51,
+    INTERFACE: 52,
+    INT_BINARY: 53,
+    INT_DECIMAL: 54,
+    INT_HEX: 55,
+    INT_OCTAL: 56,
+    IS: 57,
+    LEFT_BRACE: 58,
+    LEFT_BRACKET: 59,
+    LEFT_PARENTHESIS: 60,
+    LESS_THAN: 61,
+    LESS_THAN_OR_EQUAL: 62,
+    LOGICAL_AND: 63,
+    LOGICAL_OR: 64,
+    MINUS: 65,
+    MULTIPLY: 66,
+    NAMESPACE: 67,
+    NEW: 68,
+    NOT: 69,
+    NOT_EQUAL: 70,
+    NULL: 71,
+    OVERRIDE: 72,
+    PLUS: 73,
+    PRIVATE: 74,
+    PROTECTED: 75,
+    PUBLIC: 76,
+    QUESTION_MARK: 77,
+    REMAINDER: 78,
+    RETURN: 79,
+    RIGHT_BRACE: 80,
+    RIGHT_BRACKET: 81,
+    RIGHT_PARENTHESIS: 82,
+    SEMICOLON: 83,
+    SHIFT_LEFT: 84,
+    SHIFT_RIGHT: 85,
+    STATIC: 86,
+    STRING: 87,
+    SUPER: 88,
+    SWITCH: 89,
+    THIS: 90,
+    TICK: 91,
+    TILDE: 92,
+    TRUE: 93,
+    USING: 94,
+    VAR: 95,
+    VIRTUAL: 96,
+    WHILE: 97,
+    WHITESPACE: 98,
+    YY_INVALID_ACTION: 99,
+    START_PARAMETER_LIST: 100,
+    END_PARAMETER_LIST: 101
   };
   function Token(_0, _1, _2) {
     this.range = _0;
@@ -8760,6 +8777,11 @@
     }
   };
   Resolver.prototype.resolveModifier = function(node) {
+    var name = node.modifierName();
+    var $arguments = node.modifierArguments();
+    if (in_string.startsWith(name.asString(), '@')) {
+      semanticErrorUnknownAnnotation(this.log, name.range, name.asString());
+    }
     this.resolveNodes(node.modifierStatements());
   };
   Resolver.prototype.resolveName = function(node) {
@@ -8784,7 +8806,7 @@
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2459:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2467:7)');
       }
       var symbol = this.context.symbolForThis;
       this.initializeSymbol(symbol);
@@ -8911,7 +8933,7 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2640:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2648:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -9004,7 +9026,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2766:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2774:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -10026,19 +10048,19 @@
   };
   function checkAllNodeListKinds(node, checker) {
     if (node === null) {
-      throw new Error('assert node != null; (src/ast/create.sk:369:3)');
+      throw new Error('assert node != null; (src/ast/create.sk:371:3)');
     }
     if (node.kind !== NodeKind.NODE_LIST) {
-      throw new Error('assert node.kind == .NODE_LIST; (src/ast/create.sk:370:3)');
+      throw new Error('assert node.kind == .NODE_LIST; (src/ast/create.sk:372:3)');
     }
     if (node.children === null) {
-      throw new Error('assert node.children != null; (src/ast/create.sk:371:3)');
+      throw new Error('assert node.children != null; (src/ast/create.sk:373:3)');
     }
     return checkAllNodeKinds(node.children, checker);
   }
   function checkAllNodeKinds(nodes, checker) {
     if (nodes === null) {
-      throw new Error('assert nodes != null; (src/ast/create.sk:376:3)');
+      throw new Error('assert nodes != null; (src/ast/create.sk:378:3)');
     }
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
       if (!checker.check(nodes[i])) {
@@ -10558,7 +10580,7 @@
     while (yy_cp < text_length) {
       var yy_current_state = 1;
       var yy_bp = yy_cp;
-      while (yy_current_state !== 265) {
+      while (yy_current_state !== 268) {
         if (yy_cp >= text_length) {
           break;
         }
@@ -10571,7 +10593,7 @@
         }
         while (yy_chk[yy_base[yy_current_state] + yy_c | 0] !== yy_current_state) {
           yy_current_state = yy_def[yy_current_state];
-          if (yy_current_state >= 266) {
+          if (yy_current_state >= 269) {
             yy_c = yy_meta[yy_c];
           }
         }
@@ -10688,40 +10710,41 @@
     }
     while (!context.peek(TokenKind.END_OF_FILE)) {
       switch (context.current().kind) {
+      case 82:
       case 81:
       case 80:
-      case 79:
         return context.eat(kind);
-      case 82:
+      case 83:
         if (tokenScan === TokenScan.STOP_BEFORE_NEXT_STATEMENT) {
           return context.eat(kind);
         }
         break;
       case 0:
-      case 2:
-      case 17:
-      case 20:
-      case 24:
-      case 29:
-      case 35:
-      case 38:
-      case 40:
-      case 42:
-      case 46:
+      case 1:
+      case 3:
+      case 18:
+      case 21:
+      case 25:
+      case 30:
+      case 36:
+      case 39:
+      case 41:
+      case 43:
       case 47:
-      case 50:
+      case 48:
       case 51:
-      case 66:
-      case 71:
-      case 73:
+      case 52:
+      case 67:
+      case 72:
       case 74:
       case 75:
-      case 78:
-      case 85:
-      case 88:
-      case 93:
-      case 95:
+      case 76:
+      case 79:
+      case 86:
+      case 89:
+      case 94:
       case 96:
+      case 97:
         if (tokenScan === TokenScan.STOP_BEFORE_NEXT_STATEMENT) {
           return true;
         }
@@ -11012,14 +11035,24 @@
     }
     return Node.createExpression(value).withRange(context.spanSince(token.range));
   }
-  function parseModifier(context, hint, flag) {
+  function parseModifier(context, hint) {
     var token = context.next();
     var name = Node.createName(token.text).withRange(token.range);
     var block = parseBlockOrStatement(context, hint);
     if (block === null) {
       return null;
     }
-    return Node.createModifier(name, block.removeChildren()).withRange(context.spanSince(token.range));
+    return Node.createModifier(name, null, block.removeChildren()).withRange(context.spanSince(token.range));
+  }
+  function parseAnnotation(context, hint) {
+    var token = context.next();
+    var name = Node.createName(token.text).withRange(token.range);
+    var $arguments = context.peek(TokenKind.LEFT_PARENTHESIS) ? parseArgumentList(context, TokenKind.LEFT_PARENTHESIS, TokenKind.RIGHT_PARENTHESIS, AllowTrailingComma.NO_TRAILING_COMMA) : null;
+    var block = parseBlockOrStatement(context, hint);
+    if (block === null) {
+      return null;
+    }
+    return Node.createModifier(name, $arguments, block.removeChildren()).withRange(context.spanSince(token.range));
   }
   function parseReturn(context) {
     var token = context.next();
@@ -11278,66 +11311,58 @@
     switch (context.current().kind) {
     case 0:
       return parseAlias(context);
-    case 2:
+    case 1:
+      return parseAnnotation(context, hint);
+    case 3:
       return parseAssert(context);
-    case 17:
+    case 18:
       return parseBreak(context);
-    case 20:
+    case 21:
       return parseObject(context, NodeKind.CLASS);
-    case 23:
-      return parseModifier(context, hint, SymbolFlag.CONST);
     case 24:
-      return parseContinue(context);
-    case 29:
-      return parseDoWhile(context);
-    case 35:
-      return parseEnum(context);
-    case 38:
-      return parseModifier(context, hint, SymbolFlag.EXPORT);
-    case 40:
-      return parseModifier(context, hint, SymbolFlag.FINAL);
-    case 42:
-      return parseFor(context);
-    case 45:
-    case 94:
-    case 90:
-      return parsePossibleTypedDeclaration(context, hint);
-    case 46:
-      return parseIf(context);
-    case 47:
-      return parseModifier(context, hint, SymbolFlag.IMPORT);
+    case 39:
+    case 41:
     case 48:
-      return parseExtension(context);
-    case 50:
-      return parseModifier(context, hint, SymbolFlag.INLINE);
     case 51:
+    case 72:
+    case 74:
+    case 75:
+    case 76:
+    case 86:
+    case 96:
+      return parseModifier(context, hint);
+    case 25:
+      return parseContinue(context);
+    case 30:
+      return parseDoWhile(context);
+    case 36:
+      return parseEnum(context);
+    case 43:
+      return parseFor(context);
+    case 46:
+    case 95:
+    case 91:
+      return parsePossibleTypedDeclaration(context, hint);
+    case 47:
+      return parseIf(context);
+    case 49:
+      return parseExtension(context);
+    case 52:
       return parseObject(context, NodeKind.INTERFACE);
-    case 66:
-      return parseNamespace(context);
     case 67:
+      return parseNamespace(context);
+    case 68:
       if (hint === StatementHint.IN_OBJECT) {
         return parseConstructor(context, hint);
       }
       break;
-    case 71:
-      return parseModifier(context, hint, SymbolFlag.OVERRIDE);
-    case 73:
-      return parseModifier(context, hint, SymbolFlag.PRIVATE);
-    case 74:
-      return parseModifier(context, hint, SymbolFlag.PROTECTED);
-    case 75:
-      return parseModifier(context, hint, SymbolFlag.PUBLIC);
-    case 78:
+    case 79:
       return parseReturn(context);
-    case 85:
-      return parseModifier(context, hint, SymbolFlag.STATIC);
-    case 88:
+    case 89:
       return parseSwitch(context);
-    case 93:
+    case 94:
       return parseUsing(context);
-    case 95:
-      return parseModifier(context, hint, SymbolFlag.VIRTUAL);
-    case 96:
+    case 97:
       return parseWhile(context);
     }
     return parseExpression(context);
@@ -11725,6 +11750,9 @@
   }
   function semanticErrorForVariablesMustBeSameType(log, range, firstName, firstType, secondName, secondType) {
     log.error(range, 'All for loop variables must have the same type (' + simpleQuote(firstName) + ' has ' + typeToText(firstType) + ' but ' + simpleQuote(secondName) + ' has ' + typeToText(secondType) + ')');
+  }
+  function semanticErrorUnknownAnnotation(log, range, name) {
+    log.error(range, 'Unknown annotation ' + simpleQuote(name));
   }
   FunctionInliningPass.run = function(callGraph, options) {
     var graph = new InliningGraph(callGraph, options);
@@ -12157,204 +12185,206 @@
     case 0:
       return 'ALIAS';
     case 1:
-      return 'ARROW';
+      return 'ANNOTATION';
     case 2:
-      return 'ASSERT';
+      return 'ARROW';
     case 3:
-      return 'ASSIGN';
+      return 'ASSERT';
     case 4:
-      return 'ASSIGN_BITWISE_AND';
+      return 'ASSIGN';
     case 5:
-      return 'ASSIGN_BITWISE_OR';
+      return 'ASSIGN_BITWISE_AND';
     case 6:
-      return 'ASSIGN_BITWISE_XOR';
+      return 'ASSIGN_BITWISE_OR';
     case 7:
-      return 'ASSIGN_DIVIDE';
+      return 'ASSIGN_BITWISE_XOR';
     case 8:
-      return 'ASSIGN_MINUS';
+      return 'ASSIGN_DIVIDE';
     case 9:
-      return 'ASSIGN_MULTIPLY';
+      return 'ASSIGN_MINUS';
     case 10:
-      return 'ASSIGN_PLUS';
+      return 'ASSIGN_MULTIPLY';
     case 11:
-      return 'ASSIGN_REMAINDER';
+      return 'ASSIGN_PLUS';
     case 12:
-      return 'ASSIGN_SHIFT_LEFT';
+      return 'ASSIGN_REMAINDER';
     case 13:
-      return 'ASSIGN_SHIFT_RIGHT';
+      return 'ASSIGN_SHIFT_LEFT';
     case 14:
-      return 'BITWISE_AND';
+      return 'ASSIGN_SHIFT_RIGHT';
     case 15:
-      return 'BITWISE_OR';
+      return 'BITWISE_AND';
     case 16:
-      return 'BITWISE_XOR';
+      return 'BITWISE_OR';
     case 17:
-      return 'BREAK';
+      return 'BITWISE_XOR';
     case 18:
-      return 'CASE';
+      return 'BREAK';
     case 19:
-      return 'CHARACTER';
+      return 'CASE';
     case 20:
-      return 'CLASS';
+      return 'CHARACTER';
     case 21:
-      return 'COLON';
+      return 'CLASS';
     case 22:
-      return 'COMMA';
+      return 'COLON';
     case 23:
-      return 'CONST';
+      return 'COMMA';
     case 24:
-      return 'CONTINUE';
+      return 'CONST';
     case 25:
-      return 'DECREMENT';
+      return 'CONTINUE';
     case 26:
-      return 'DEFAULT';
+      return 'DECREMENT';
     case 27:
-      return 'DELETE';
+      return 'DEFAULT';
     case 28:
-      return 'DIVIDE';
+      return 'DELETE';
     case 29:
-      return 'DO';
+      return 'DIVIDE';
     case 30:
-      return 'DOT';
+      return 'DO';
     case 31:
-      return 'DOUBLE';
+      return 'DOT';
     case 32:
-      return 'DOUBLE_COLON';
+      return 'DOUBLE';
     case 33:
-      return 'ELSE';
+      return 'DOUBLE_COLON';
     case 34:
-      return 'END_OF_FILE';
+      return 'ELSE';
     case 35:
-      return 'ENUM';
+      return 'END_OF_FILE';
     case 36:
-      return 'EQUAL';
+      return 'ENUM';
     case 37:
-      return 'ERROR';
+      return 'EQUAL';
     case 38:
-      return 'EXPORT';
+      return 'ERROR';
     case 39:
-      return 'FALSE';
+      return 'EXPORT';
     case 40:
-      return 'FINAL';
+      return 'FALSE';
     case 41:
-      return 'FLOAT';
+      return 'FINAL';
     case 42:
-      return 'FOR';
+      return 'FLOAT';
     case 43:
-      return 'GREATER_THAN';
+      return 'FOR';
     case 44:
-      return 'GREATER_THAN_OR_EQUAL';
+      return 'GREATER_THAN';
     case 45:
-      return 'IDENTIFIER';
+      return 'GREATER_THAN_OR_EQUAL';
     case 46:
-      return 'IF';
+      return 'IDENTIFIER';
     case 47:
-      return 'IMPORT';
+      return 'IF';
     case 48:
-      return 'IN';
+      return 'IMPORT';
     case 49:
-      return 'INCREMENT';
+      return 'IN';
     case 50:
-      return 'INLINE';
+      return 'INCREMENT';
     case 51:
-      return 'INTERFACE';
+      return 'INLINE';
     case 52:
-      return 'INT_BINARY';
+      return 'INTERFACE';
     case 53:
-      return 'INT_DECIMAL';
+      return 'INT_BINARY';
     case 54:
-      return 'INT_HEX';
+      return 'INT_DECIMAL';
     case 55:
-      return 'INT_OCTAL';
+      return 'INT_HEX';
     case 56:
-      return 'IS';
+      return 'INT_OCTAL';
     case 57:
-      return 'LEFT_BRACE';
+      return 'IS';
     case 58:
-      return 'LEFT_BRACKET';
+      return 'LEFT_BRACE';
     case 59:
-      return 'LEFT_PARENTHESIS';
+      return 'LEFT_BRACKET';
     case 60:
-      return 'LESS_THAN';
+      return 'LEFT_PARENTHESIS';
     case 61:
-      return 'LESS_THAN_OR_EQUAL';
+      return 'LESS_THAN';
     case 62:
-      return 'LOGICAL_AND';
+      return 'LESS_THAN_OR_EQUAL';
     case 63:
-      return 'LOGICAL_OR';
+      return 'LOGICAL_AND';
     case 64:
-      return 'MINUS';
+      return 'LOGICAL_OR';
     case 65:
-      return 'MULTIPLY';
+      return 'MINUS';
     case 66:
-      return 'NAMESPACE';
+      return 'MULTIPLY';
     case 67:
-      return 'NEW';
+      return 'NAMESPACE';
     case 68:
-      return 'NOT';
+      return 'NEW';
     case 69:
-      return 'NOT_EQUAL';
+      return 'NOT';
     case 70:
-      return 'NULL';
+      return 'NOT_EQUAL';
     case 71:
-      return 'OVERRIDE';
+      return 'NULL';
     case 72:
-      return 'PLUS';
+      return 'OVERRIDE';
     case 73:
-      return 'PRIVATE';
+      return 'PLUS';
     case 74:
-      return 'PROTECTED';
+      return 'PRIVATE';
     case 75:
-      return 'PUBLIC';
+      return 'PROTECTED';
     case 76:
-      return 'QUESTION_MARK';
+      return 'PUBLIC';
     case 77:
-      return 'REMAINDER';
+      return 'QUESTION_MARK';
     case 78:
-      return 'RETURN';
+      return 'REMAINDER';
     case 79:
-      return 'RIGHT_BRACE';
+      return 'RETURN';
     case 80:
-      return 'RIGHT_BRACKET';
+      return 'RIGHT_BRACE';
     case 81:
-      return 'RIGHT_PARENTHESIS';
+      return 'RIGHT_BRACKET';
     case 82:
-      return 'SEMICOLON';
+      return 'RIGHT_PARENTHESIS';
     case 83:
-      return 'SHIFT_LEFT';
+      return 'SEMICOLON';
     case 84:
-      return 'SHIFT_RIGHT';
+      return 'SHIFT_LEFT';
     case 85:
-      return 'STATIC';
+      return 'SHIFT_RIGHT';
     case 86:
-      return 'STRING';
+      return 'STATIC';
     case 87:
-      return 'SUPER';
+      return 'STRING';
     case 88:
-      return 'SWITCH';
+      return 'SUPER';
     case 89:
-      return 'THIS';
+      return 'SWITCH';
     case 90:
-      return 'TICK';
+      return 'THIS';
     case 91:
-      return 'TILDE';
+      return 'TICK';
     case 92:
-      return 'TRUE';
+      return 'TILDE';
     case 93:
-      return 'USING';
+      return 'TRUE';
     case 94:
-      return 'VAR';
+      return 'USING';
     case 95:
-      return 'VIRTUAL';
+      return 'VAR';
     case 96:
-      return 'WHILE';
+      return 'VIRTUAL';
     case 97:
-      return 'WHITESPACE';
+      return 'WHILE';
     case 98:
-      return 'YY_INVALID_ACTION';
+      return 'WHITESPACE';
     case 99:
-      return 'START_PARAMETER_LIST';
+      return 'YY_INVALID_ACTION';
     case 100:
+      return 'START_PARAMETER_LIST';
+    case 101:
       return 'END_PARAMETER_LIST';
     default:
       return '';
@@ -12368,13 +12398,13 @@
   trace.GENERICS = false;
   cpp.NATIVE_LIBRARY = '\nimport class int {}\nimport class bool {}\nimport class float {}\nimport class double {}\nimport class string {}\n\nin int {\n  string toString() {\n    `std::stringstream` ss;\n    ss << this;\n    return ss.str();\n  }\n}\n\nin bool {\n  inline string toString() { return this ? "true" : "false"; }\n}\n\nin float {\n  inline string toString() {\n    `std::stringstream` ss;\n    ss << this;\n    return ss.str();\n  }\n}\n\nin double {\n  inline string toString() {\n    `std::stringstream` ss;\n    ss << this;\n    return ss.str();\n  }\n}\n\nin string {\n  inline {\n    int size() { return (int)this.`size`(); }\n    string slice(int start, int end) { return this.`substr`(start, end - start); }\n    int indexOf(string value) { return (int)this.`find`(value); }\n    int lastIndexOf(string value) { return (int)this.`rfind`(value); }\n    static string fromCodeUnit(int value) { return `string`(1, value); }\n    string get(int index) { return fromCodeUnit(codeUnitAt(index)); }\n    int codeUnitAt(int index) { return `this`[index]; }\n  }\n\n  string toLowerCase() {\n    var clone = this;\n    `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;\n    return clone;\n  }\n\n  string toUpperCase() {\n    var clone = this;\n    `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;\n    return clone;\n  }\n\n  string join(List<string> values) {\n    var result = "";\n    for (var i = 0; i < values.size(); i++) {\n      if (i > 0) result += this;\n      result += values.get(i);\n    }\n    return result;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n}\n\ninterface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nbool bindCompare<T>(Comparison<T> comparison, T left, T right) {\n  return comparison.compare(left, right) < 0;\n}\n\nclass List<T> {\n  new(`std::initializer_list<T>` list) : _data = list {}\n\n  int size() {\n    return _data.size();\n  }\n\n  void push(T value) {\n    _data.push_back(value);\n  }\n\n  void unshift(T value) {\n    insert(0, value);\n  }\n\n  List<T> slice(int start, int end) {\n    assert start >= 0 && start <= end && end <= size();\n    List<T> slice = [];\n    slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);\n    return slice;\n  }\n\n  int indexOf(T value) {\n    int index = `std`::find(_data.begin(), _data.end(), value) - _data.begin();\n    return index == size() ? -1 : index;\n  }\n\n  int lastIndexOf(T value) {\n    int index = `std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin();\n    return size() - index - 1;\n  }\n\n  T shift() {\n    T value = get(0);\n    remove(0);\n    return value;\n  }\n\n  T pop() {\n    T value = get(size() - 1);\n    _data.pop_back();\n    return value;\n  }\n\n  void reverse() {\n    `std`::reverse(_data.begin(), _data.end());\n  }\n\n  void sort(Comparison<T> comparison) {\n    `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));\n  }\n\n  List<T> clone() {\n    List<T> clone = [];\n    clone._data = _data;\n    return clone;\n  }\n\n  T remove(int index) {\n    T value = get(index);\n    _data.erase(_data.begin() + index);\n    return value;\n  }\n\n  void insert(int index, T value) {\n    assert index >= 0 && index <= size();\n    _data.insert(_data.begin() + index, value);\n  }\n\n  T get(int index) {\n    assert index >= 0 && index < size();\n    return _data[index];\n  }\n\n  void set(int index, T value) {\n    assert index >= 0 && index < size();\n    _data[index] = value;\n  }\n\n  void swap(int a, int b) {\n    assert a >= 0 && a < size();\n    assert b >= 0 && b < size();\n    `std`::swap(_data[a], _data[b]);\n  }\n\n  `std::vector<T>` _data;\n}\n\nclass StringMap<T> {\n  new() {}\n  T get(string key) { return _table[key]; }\n  T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n  void set(string key, T value) { _table[key] = value; }\n  bool has(string key) { return _table.count(key); }\n  void remove(string key) { _table.erase(key); }\n  List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n  List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n  StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n  `std::unordered_map<string, T>` _table;\n}\n\nclass IntMap<T> {\n  new() {}\n  T get(int key) { return _table[key]; }\n  T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n  void set(int key, T value) { _table[key] = value; }\n  bool has(int key) { return _table.count(key); }\n  void remove(int key) { _table.erase(key); }\n  List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n  List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n  StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n  `std::unordered_map<int, T>` _table;\n}\n\nnamespace math {\n  inline {\n    double abs(double x) { return `std`::abs(x); }\n    double sin(double x) { return `std`::sin(x); }\n    double cos(double x) { return `std`::cos(x); }\n    double tan(double x) { return `std`::tan(x); }\n    double asin(double x) { return `std`::asin(x); }\n    double acos(double x) { return `std`::acos(x); }\n    double atan(double x) { return `std`::atan(x); }\n    double atan2(double y, double x) { return `std`::atan2(y, x); }\n    double sqrt(double x) { return `std`::sqrt(x); }\n    double exp(double x) { return `std`::exp(x); }\n    double log(double x) { return `std`::log(x); }\n    double pow(double x, double y) { return `std`::pow(x, y); }\n    double floor(double x) { return `std`::floor(x); }\n    double round(double x) { return `std`::round(x); }\n    double ceil(double x) { return `std`::ceil(x); }\n    double min(double x, double y) { return `std`::fmin(x, y); }\n    double max(double x, double y) { return `std`::fmax(x, y); }\n  }\n\n  const {\n    double SQRT2 = 1.414213562373095;\n    double PI = 3.141592653589793;\n    double E = 2.718281828459045;\n    double INFINITY = 1 / 0.0;\n    double NAN = 0 / 0.0;\n  }\n}\n';
   js.NATIVE_LIBRARY = '\nimport class int { string toString(); }\nimport class bool { string toString(); }\nimport class float { string toString(); }\nimport class double { string toString(); }\n\nimport class string {\n  string slice(int start, int end);\n  int indexOf(string value);\n  int lastIndexOf(string value);\n  string toLowerCase();\n  string toUpperCase();\n}\n\nin string {\n  inline {\n    int size() { return this.`length`; }\n    static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }\n    string get(int index) { return `this`[index]; }\n    string join(List<string> values) { return values.`join`(this); }\n    int codeUnitAt(int index) { return this.`charCodeAt`(index); }\n  }\n\n  bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }\n  bool endsWith(string suffix) { return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix; }\n  string repeat(int count) { var result = ""; for (var i = 0; i < count; i++) result += this; return result; }\n}\n\ninterface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\nvoid bindCompare<T>(Comparison<T> comparison) {\n  return comparison.compare.`bind`(comparison);\n}\n\nimport class List<T> {\n  new();\n  void push(T value);\n  void unshift(T value);\n  List<T> slice(int start, int end);\n  int indexOf(T value);\n  int lastIndexOf(T value);\n  T shift();\n  T pop();\n  void reverse();\n}\n\nin List {\n  inline {\n    int size() { return this.`length`; }\n    void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }\n    List<T> clone() { return this.`slice`(); }\n    T remove(int index) { return this.`splice`(index, 1)[0]; }\n    void insert(int index, T value) { this.`splice`(index, 0, value); }\n    T get(int index) { return `this`[index]; }\n    void set(int index, T value) { `this`[index] = value; }\n  }\n\n  void swap(int a, int b) { var temp = get(a); set(a, get(b)); set(b, temp); }\n}\n\nclass StringMap<T> {\n  var _table = `Object`.create(null);\n\n  inline {\n    T get(string key) { return _table[key]; }\n    void set(string key, T value) { _table[key] = value; }\n    bool has(string key) { return key in _table; }\n    void remove(string key) { delete _table[key]; }\n  }\n\n  T getOrDefault(string key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<string> keys() {\n    List<string> keys = [];\n    for (string key in _table) keys.push(key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (string key in _table) values.push(get(key));\n    return values;\n  }\n\n  StringMap<T> clone() {\n    var clone = StringMap<T>();\n    for (string key in _table) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nclass IntMap<T> {\n  var _table = `Object`.create(null);\n\n  inline {\n    T get(int key) { return _table[key]; }\n    void set(int key, T value) { _table[key] = value; }\n    bool has(int key) { return key in _table; }\n    void remove(int key) { delete _table[key]; }\n  }\n\n  T getOrDefault(int key, T defaultValue) {\n    return has(key) ? get(key) : defaultValue;\n  }\n\n  List<int> keys() {\n    List<int> keys = [];\n    for (double key in _table) keys.push((int)key);\n    return keys;\n  }\n\n  List<T> values() {\n    List<T> values = [];\n    for (int key in _table) values.push(get(key));\n    return values;\n  }\n\n  IntMap<T> clone() {\n    var clone = IntMap<T>();\n    for (int key in _table) clone.set(key, get(key));\n    return clone;\n  }\n}\n\nnamespace math {\n  inline {\n    double abs(double x) { return `Math`.abs(x); }\n    double sin(double x) { return `Math`.sin(x); }\n    double cos(double x) { return `Math`.cos(x); }\n    double tan(double x) { return `Math`.tan(x); }\n    double asin(double x) { return `Math`.asin(x); }\n    double acos(double x) { return `Math`.acos(x); }\n    double atan(double x) { return `Math`.atan(x); }\n    double atan2(double y, double x) { return `Math`.atan2(y, x); }\n    double sqrt(double x) { return `Math`.sqrt(x); }\n    double exp(double x) { return `Math`.exp(x); }\n    double log(double x) { return `Math`.log(x); }\n    double pow(double x, double y) { return `Math`.pow(x, y); }\n    double floor(double x) { return `Math`.floor(x); }\n    double round(double x) { return `Math`.round(x); }\n    double ceil(double x) { return `Math`.ceil(x); }\n    double min(double x, double y) { return `Math`.min(x, y); }\n    double max(double x, double y) { return `Math`.max(x, y); }\n  }\n\n  const {\n    double SQRT2 = 1.414213562373095;\n    double PI = 3.141592653589793;\n    double E = 2.718281828459045;\n    double INFINITY = 1 / 0.0;\n    double NAN = 0 / 0.0;\n  }\n}\n';
-  var yy_accept = [98, 98, 98, 34, 37, 97, 68, 37, 77, 14, 37, 59, 81, 65, 72, 22, 64, 30, 28, 53, 53, 21, 82, 60, 3, 43, 76, 45, 58, 80, 16, 90, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 57, 15, 79, 91, 97, 69, 98, 86, 98, 11, 62, 4, 98, 19, 98, 9, 49, 10, 25, 8, 1, 31, 98, 97, 7, 98, 53, 98, 98, 41, 98, 98, 32, 83, 61, 36, 44, 84, 45, 6, 45, 45, 45, 45, 45, 45, 45, 29, 45, 45, 45, 45, 45, 45, 46, 45, 48, 56, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 5, 63, 98, 41, 98, 98, 98, 97, 98, 52, 55, 54, 12, 13, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 42, 45, 45, 45, 45, 67, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 94, 45, 45, 98, 97, 31, 45, 45, 45, 18, 45, 45, 45, 45, 45, 33, 35, 45, 45, 45, 45, 45, 45, 45, 70, 45, 45, 45, 45, 45, 45, 45, 45, 89, 92, 45, 45, 45, 31, 0, 45, 17, 20, 23, 45, 45, 45, 45, 39, 40, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 87, 45, 93, 45, 96, 2, 45, 45, 27, 38, 47, 50, 45, 45, 45, 45, 45, 75, 78, 85, 88, 45, 45, 26, 45, 45, 45, 73, 45, 95, 24, 45, 45, 71, 45, 51, 66, 74, 98];
-  var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 1, 27, 27, 27, 27, 28, 27, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 30, 31, 32, 33, 29, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 29, 44, 45, 46, 47, 48, 49, 29, 50, 51, 52, 53, 54, 55, 56, 29, 29, 57, 58, 59, 60, 1];
-  var yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 3, 3, 4, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1];
-  var yy_base = [0, 0, 0, 362, 363, 59, 337, 58, 336, 57, 57, 363, 363, 335, 54, 363, 55, 53, 66, 76, 82, 337, 363, 44, 333, 50, 363, 0, 363, 363, 332, 363, 41, 305, 63, 37, 58, 82, 80, 84, 300, 34, 314, 54, 86, 301, 98, 309, 363, 89, 363, 363, 132, 363, 113, 363, 347, 363, 363, 363, 121, 363, 346, 363, 363, 363, 363, 363, 363, 131, 127, 0, 363, 136, 145, 128, 128, 363, 149, 0, 363, 324, 363, 363, 363, 323, 0, 363, 303, 294, 305, 292, 307, 294, 129, 0, 289, 286, 289, 292, 289, 285, 0, 285, 127, 0, 287, 277, 286, 291, 132, 293, 276, 292, 277, 282, 281, 270, 279, 271, 270, 276, 363, 363, 164, 363, 166, 170, 172, 0, 172, 140, 176, 0, 363, 363, 283, 278, 281, 276, 263, 145, 278, 273, 272, 264, 261, 257, 272, 0, 258, 262, 265, 264, 0, 257, 251, 246, 247, 253, 244, 244, 256, 242, 242, 253, 244, 0, 238, 244, 181, 363, 185, 237, 237, 242, 0, 234, 232, 240, 229, 229, 0, 0, 230, 240, 233, 227, 229, 225, 223, 0, 223, 237, 232, 227, 219, 225, 217, 229, 0, 0, 224, 211, 224, 189, 0, 210, 0, 0, 0, 214, 215, 220, 206, 0, 0, 205, 217, 215, 205, 210, 200, 208, 191, 180, 189, 0, 182, 0, 188, 0, 0, 169, 169, 0, 0, 0, 0, 185, 184, 180, 178, 164, 0, 0, 0, 0, 170, 175, 0, 176, 175, 172, 0, 171, 0, 0, 148, 122, 0, 101, 0, 0, 0, 363, 229, 233, 235, 239, 243, 80, 247];
-  var yy_def = [0, 265, 1, 265, 265, 265, 265, 266, 265, 265, 267, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 268, 265, 265, 265, 265, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 265, 265, 265, 265, 265, 265, 266, 265, 266, 265, 265, 265, 267, 265, 267, 265, 265, 265, 265, 265, 265, 265, 269, 270, 265, 265, 265, 265, 265, 265, 265, 271, 265, 265, 265, 265, 265, 265, 268, 265, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 265, 265, 265, 265, 269, 272, 269, 270, 265, 265, 265, 271, 265, 265, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 265, 265, 265, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 265, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 0, 265, 265, 265, 265, 265, 265, 265];
-  var yy_nxt = [0, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 21, 22, 23, 24, 25, 26, 27, 27, 27, 28, 4, 29, 30, 31, 32, 33, 34, 35, 36, 37, 27, 27, 38, 27, 27, 27, 39, 40, 41, 42, 43, 44, 45, 46, 47, 27, 48, 49, 50, 51, 52, 52, 55, 58, 61, 64, 81, 82, 66, 69, 69, 69, 69, 84, 85, 94, 70, 65, 67, 68, 59, 71, 133, 110, 95, 88, 111, 62, 56, 72, 73, 89, 74, 74, 74, 74, 73, 91, 74, 74, 74, 74, 96, 75, 97, 113, 114, 92, 115, 75, 93, 76, 122, 98, 75, 77, 99, 55, 106, 102, 75, 77, 107, 78, 100, 103, 104, 116, 61, 101, 105, 79, 119, 52, 52, 117, 108, 127, 264, 130, 120, 130, 128, 56, 131, 131, 123, 69, 69, 69, 69, 62, 69, 69, 69, 69, 131, 131, 124, 73, 263, 74, 74, 74, 74, 132, 132, 132, 142, 124, 125, 151, 75, 143, 157, 170, 127, 170, 152, 158, 127, 128, 127, 75, 77, 171, 262, 128, 172, 172, 172, 172, 132, 132, 132, 178, 179, 205, 205, 205, 205, 172, 172, 172, 172, 205, 205, 205, 205, 261, 260, 259, 258, 257, 256, 255, 254, 253, 252, 251, 250, 249, 248, 247, 77, 246, 245, 244, 125, 54, 54, 54, 54, 60, 60, 60, 60, 86, 86, 126, 126, 126, 126, 129, 243, 129, 129, 128, 128, 128, 128, 242, 241, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 177, 176, 175, 174, 173, 169, 168, 167, 166, 165, 164, 163, 162, 161, 160, 159, 156, 155, 154, 153, 150, 149, 148, 147, 146, 145, 144, 141, 140, 139, 138, 137, 136, 135, 134, 265, 265, 121, 118, 112, 109, 90, 87, 83, 80, 63, 57, 53, 265, 3, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265];
-  var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 7, 9, 10, 14, 23, 23, 16, 17, 17, 17, 17, 25, 25, 35, 18, 14, 16, 16, 9, 18, 271, 41, 35, 32, 41, 10, 7, 18, 19, 32, 19, 19, 19, 19, 20, 34, 20, 20, 20, 20, 36, 19, 36, 43, 43, 34, 43, 20, 34, 19, 49, 36, 19, 19, 37, 54, 39, 38, 20, 20, 39, 19, 37, 38, 38, 44, 60, 37, 38, 19, 46, 52, 52, 44, 39, 70, 261, 75, 46, 75, 70, 54, 76, 76, 49, 69, 69, 69, 69, 60, 73, 73, 73, 73, 131, 131, 69, 74, 259, 74, 74, 74, 74, 78, 78, 78, 94, 69, 69, 104, 74, 94, 110, 124, 126, 124, 104, 110, 127, 126, 128, 74, 74, 127, 258, 128, 130, 130, 130, 130, 132, 132, 132, 141, 141, 170, 170, 170, 170, 172, 172, 172, 172, 205, 205, 205, 205, 255, 253, 252, 251, 249, 248, 243, 242, 241, 240, 239, 234, 233, 230, 228, 172, 226, 225, 224, 205, 266, 266, 266, 266, 267, 267, 267, 267, 268, 268, 269, 269, 269, 269, 270, 223, 270, 270, 272, 272, 272, 272, 222, 221, 220, 219, 218, 217, 214, 213, 212, 211, 207, 204, 203, 202, 199, 198, 197, 196, 195, 194, 193, 192, 190, 189, 188, 187, 186, 185, 184, 181, 180, 179, 178, 177, 175, 174, 173, 169, 168, 166, 165, 164, 163, 162, 161, 160, 159, 158, 157, 156, 155, 153, 152, 151, 150, 148, 147, 146, 145, 144, 143, 142, 140, 139, 138, 137, 136, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 109, 108, 107, 106, 103, 101, 100, 99, 98, 97, 96, 93, 92, 91, 90, 89, 88, 85, 81, 62, 56, 47, 45, 42, 40, 33, 30, 24, 21, 13, 8, 6, 3, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265, 265];
+  var yy_accept = [99, 99, 99, 35, 38, 98, 69, 38, 78, 15, 38, 60, 82, 66, 73, 23, 65, 31, 29, 54, 54, 22, 83, 61, 4, 44, 77, 38, 46, 59, 81, 17, 91, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 58, 16, 80, 92, 98, 70, 99, 87, 99, 12, 63, 5, 99, 20, 99, 10, 50, 11, 26, 9, 2, 32, 99, 98, 8, 99, 54, 99, 99, 42, 99, 99, 33, 84, 62, 37, 45, 85, 1, 46, 7, 46, 46, 46, 46, 46, 46, 46, 30, 46, 46, 46, 46, 46, 46, 47, 46, 49, 57, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 6, 64, 99, 42, 99, 99, 99, 98, 99, 53, 56, 55, 13, 14, 1, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 43, 46, 46, 46, 46, 68, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 95, 46, 46, 99, 98, 32, 46, 46, 46, 19, 46, 46, 46, 46, 46, 34, 36, 46, 46, 46, 46, 46, 46, 46, 71, 46, 46, 46, 46, 46, 46, 46, 46, 90, 93, 46, 46, 46, 32, 0, 46, 18, 21, 24, 46, 46, 46, 46, 40, 41, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 88, 46, 94, 46, 97, 3, 46, 46, 28, 39, 48, 51, 46, 46, 46, 46, 46, 76, 79, 86, 89, 46, 46, 27, 46, 46, 46, 74, 46, 96, 25, 46, 46, 72, 46, 52, 67, 75, 99];
+  var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 1, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19, 19, 19, 19, 20, 20, 21, 22, 23, 24, 25, 26, 27, 28, 28, 28, 28, 29, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 31, 32, 33, 34, 30, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 30, 45, 46, 47, 48, 49, 50, 30, 51, 52, 53, 54, 55, 56, 57, 30, 30, 58, 59, 60, 61, 1];
+  var yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 4, 4, 5, 1, 1, 1, 1, 1, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 1, 1, 1];
+  var yy_base = [0, 0, 0, 375, 376, 60, 350, 59, 349, 58, 58, 376, 376, 348, 55, 376, 56, 54, 72, 82, 88, 350, 376, 45, 346, 51, 376, 0, 0, 376, 376, 345, 376, 32, 317, 49, 37, 64, 88, 68, 90, 312, 38, 326, 80, 84, 313, 102, 321, 376, 89, 376, 376, 91, 376, 82, 376, 360, 376, 376, 376, 110, 376, 359, 376, 376, 376, 376, 376, 376, 132, 129, 0, 376, 136, 145, 129, 140, 376, 149, 0, 376, 337, 376, 376, 376, 336, 0, 0, 376, 315, 306, 317, 304, 319, 306, 129, 0, 301, 298, 301, 304, 301, 297, 0, 297, 123, 0, 299, 289, 298, 303, 133, 305, 288, 304, 289, 294, 293, 282, 291, 283, 282, 288, 376, 376, 166, 376, 168, 172, 176, 0, 176, 172, 180, 0, 376, 376, 0, 295, 290, 293, 288, 275, 148, 290, 285, 284, 276, 273, 269, 284, 0, 270, 274, 277, 276, 0, 269, 263, 258, 259, 265, 256, 256, 268, 254, 254, 265, 256, 0, 250, 256, 185, 376, 189, 249, 249, 254, 0, 246, 244, 252, 241, 241, 0, 0, 242, 252, 245, 239, 241, 237, 235, 0, 235, 249, 244, 239, 231, 237, 229, 241, 0, 0, 236, 223, 236, 193, 0, 222, 0, 0, 0, 226, 227, 232, 218, 0, 0, 217, 216, 192, 182, 187, 176, 190, 189, 178, 187, 0, 181, 0, 187, 0, 0, 168, 168, 0, 0, 0, 0, 184, 183, 179, 177, 163, 0, 0, 0, 0, 169, 174, 0, 153, 143, 131, 0, 119, 0, 0, 107, 85, 0, 65, 0, 0, 0, 376, 234, 239, 241, 244, 249, 254, 257, 259, 264];
+  var yy_def = [0, 268, 1, 268, 268, 268, 268, 269, 268, 268, 270, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 271, 272, 268, 268, 268, 268, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 268, 268, 268, 268, 268, 268, 269, 268, 269, 268, 268, 268, 270, 268, 270, 268, 268, 268, 268, 268, 268, 268, 273, 274, 268, 268, 268, 268, 268, 268, 268, 275, 268, 268, 268, 268, 268, 268, 276, 272, 268, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 268, 268, 268, 268, 273, 277, 273, 274, 268, 268, 268, 275, 268, 268, 276, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 268, 268, 268, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 268, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 272, 0, 268, 268, 268, 268, 268, 268, 268, 268, 268];
+  var yy_nxt = [0, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 21, 22, 23, 24, 25, 26, 27, 28, 28, 28, 29, 4, 30, 31, 32, 33, 34, 35, 36, 37, 38, 28, 28, 39, 28, 28, 28, 40, 41, 42, 43, 44, 45, 46, 47, 48, 28, 49, 50, 51, 52, 53, 53, 56, 59, 62, 65, 82, 83, 67, 70, 70, 70, 70, 85, 86, 96, 90, 66, 68, 69, 60, 71, 91, 93, 97, 56, 72, 112, 63, 57, 113, 53, 53, 94, 73, 74, 95, 75, 75, 75, 75, 74, 267, 75, 75, 75, 75, 104, 98, 76, 99, 124, 57, 105, 106, 76, 62, 77, 107, 100, 76, 78, 101, 266, 108, 118, 76, 78, 109, 79, 102, 115, 116, 119, 117, 103, 121, 80, 129, 132, 63, 132, 110, 130, 122, 265, 125, 70, 70, 70, 70, 70, 70, 70, 70, 133, 133, 264, 74, 126, 75, 75, 75, 75, 134, 134, 134, 154, 145, 263, 126, 127, 76, 146, 155, 160, 173, 129, 173, 262, 161, 129, 130, 76, 78, 129, 174, 133, 133, 261, 130, 175, 175, 175, 175, 134, 134, 134, 181, 182, 208, 208, 208, 208, 175, 175, 175, 175, 208, 208, 208, 208, 260, 259, 258, 257, 256, 255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 78, 244, 243, 242, 127, 55, 55, 55, 55, 55, 61, 61, 61, 61, 61, 87, 87, 88, 88, 88, 128, 128, 128, 128, 128, 131, 241, 131, 131, 131, 135, 135, 138, 138, 138, 130, 130, 130, 130, 130, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 180, 179, 178, 177, 176, 172, 171, 170, 169, 168, 167, 166, 165, 164, 163, 162, 159, 158, 157, 156, 153, 152, 151, 150, 149, 148, 147, 144, 143, 142, 141, 140, 139, 137, 136, 268, 268, 123, 120, 114, 111, 92, 89, 84, 81, 64, 58, 54, 268, 3, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268];
+  var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 7, 9, 10, 14, 23, 23, 16, 17, 17, 17, 17, 25, 25, 36, 33, 14, 16, 16, 9, 18, 33, 35, 36, 55, 18, 42, 10, 7, 42, 53, 53, 35, 18, 19, 35, 19, 19, 19, 19, 20, 264, 20, 20, 20, 20, 39, 37, 19, 37, 50, 55, 39, 39, 20, 61, 19, 39, 37, 19, 19, 38, 262, 40, 45, 20, 20, 40, 19, 38, 44, 44, 45, 44, 38, 47, 19, 71, 76, 61, 76, 40, 71, 47, 261, 50, 70, 70, 70, 70, 74, 74, 74, 74, 77, 77, 258, 75, 70, 75, 75, 75, 75, 79, 79, 79, 106, 96, 256, 70, 70, 75, 96, 106, 112, 126, 128, 126, 255, 112, 129, 128, 75, 75, 130, 129, 133, 133, 254, 130, 132, 132, 132, 132, 134, 134, 134, 144, 144, 173, 173, 173, 173, 175, 175, 175, 175, 208, 208, 208, 208, 252, 251, 246, 245, 244, 243, 242, 237, 236, 233, 231, 229, 228, 227, 226, 225, 175, 224, 223, 222, 208, 269, 269, 269, 269, 269, 270, 270, 270, 270, 270, 271, 271, 272, 272, 272, 273, 273, 273, 273, 273, 274, 221, 274, 274, 274, 275, 275, 276, 276, 276, 277, 277, 277, 277, 277, 220, 217, 216, 215, 214, 210, 207, 206, 205, 202, 201, 200, 199, 198, 197, 196, 195, 193, 192, 191, 190, 189, 188, 187, 184, 183, 182, 181, 180, 178, 177, 176, 172, 171, 169, 168, 167, 166, 165, 164, 163, 162, 161, 160, 159, 158, 156, 155, 154, 153, 151, 150, 149, 148, 147, 146, 145, 143, 142, 141, 140, 139, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 111, 110, 109, 108, 105, 103, 102, 101, 100, 99, 98, 95, 94, 93, 92, 91, 90, 86, 82, 63, 57, 48, 46, 43, 41, 34, 31, 24, 21, 13, 8, 6, 3, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268, 268];
   var pratt = null;
   var nameToSymbolFlag = null;
   var symbolFlagToName = null;

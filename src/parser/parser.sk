@@ -60,9 +60,9 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
       }
 
       case
-        .ALIAS, .ASSERT, .BREAK, .CLASS, .CONTINUE, .DO, .ENUM, .EXPORT, .FINAL, .FOR,
-        .IF, .IMPORT, .INLINE, .INTERFACE, .NAMESPACE, .OVERRIDE, .PRIVATE, .PROTECTED,
-        .PUBLIC, .RETURN, .STATIC, .SWITCH, .USING, .VIRTUAL, .WHILE {
+        .ALIAS, .ANNOTATION, .ASSERT, .BREAK, .CLASS, .CONTINUE, .DO, .ENUM, .EXPORT,
+        .FINAL, .FOR, .IF, .IMPORT, .INLINE, .INTERFACE, .NAMESPACE, .OVERRIDE, .PRIVATE,
+        .PROTECTED, .PUBLIC, .RETURN, .STATIC, .SWITCH, .USING, .VIRTUAL, .WHILE {
 
         // Optionally recover parsing before the next statement if it's unambiguous
         if (tokenScan == .STOP_BEFORE_NEXT_STATEMENT) {
@@ -333,11 +333,19 @@ Node parseExpression(ParserContext context) {
   return Node.createExpression(value).withRange(context.spanSince(token.range));
 }
 
-Node parseModifier(ParserContext context, StatementHint hint, SymbolFlag flag) {
+Node parseModifier(ParserContext context, StatementHint hint) {
   var token = context.next();
   var name = Node.createName(token.text).withRange(token.range);
   var block = parseBlockOrStatement(context, hint); if (block == null) return null;
-  return Node.createModifier(name, block.removeChildren()).withRange(context.spanSince(token.range));
+  return Node.createModifier(name, null, block.removeChildren()).withRange(context.spanSince(token.range));
+}
+
+Node parseAnnotation(ParserContext context, StatementHint hint) {
+  var token = context.next();
+  var name = Node.createName(token.text).withRange(token.range);
+  var arguments = context.peek(.LEFT_PARENTHESIS) ? parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA) : null;
+  var block = parseBlockOrStatement(context, hint); if (block == null) return null;
+  return Node.createModifier(name, arguments, block.removeChildren()).withRange(context.spanSince(token.range));
 }
 
 Node parseReturn(ParserContext context) {
@@ -552,33 +560,24 @@ Node parseStatement(ParserContext context, StatementHint hint) {
   // Separating the case bodies into separate functions makes the JavaScript JIT go faster
   switch (context.current().kind) {
     case .ALIAS { return parseAlias(context); }
+    case .ANNOTATION { return parseAnnotation(context, hint); }
     case .ASSERT { return parseAssert(context); }
     case .BREAK { return parseBreak(context); }
     case .CLASS { return parseObject(context, .CLASS); }
-    case .CONST { return parseModifier(context, hint, .CONST); }
+    case .CONST, .EXPORT, .FINAL, .IMPORT, .INLINE, .OVERRIDE, .PRIVATE, .PROTECTED, .PUBLIC, .STATIC, .VIRTUAL { return parseModifier(context, hint); }
     case .CONTINUE { return parseContinue(context); }
     case .DO { return parseDoWhile(context); }
     case .ENUM { return parseEnum(context); }
-    case .EXPORT { return parseModifier(context, hint, .EXPORT); }
-    case .FINAL { return parseModifier(context, hint, .FINAL); }
     case .FOR { return parseFor(context); }
     case .IDENTIFIER, .VAR, .TICK { return parsePossibleTypedDeclaration(context, hint); }
     case .IF { return parseIf(context); }
-    case .IMPORT { return parseModifier(context, hint, .IMPORT); }
     case .IN { return parseExtension(context); }
-    case .INLINE { return parseModifier(context, hint, .INLINE); }
     case .INTERFACE { return parseObject(context, .INTERFACE); }
     case .NAMESPACE { return parseNamespace(context); }
     case .NEW { if (hint == .IN_OBJECT) return parseConstructor(context, hint); }
-    case .OVERRIDE { return parseModifier(context, hint, .OVERRIDE); }
-    case .PRIVATE { return parseModifier(context, hint, .PRIVATE); }
-    case .PROTECTED { return parseModifier(context, hint, .PROTECTED); }
-    case .PUBLIC { return parseModifier(context, hint, .PUBLIC); }
     case .RETURN { return parseReturn(context); }
-    case .STATIC { return parseModifier(context, hint, .STATIC); }
     case .SWITCH { return parseSwitch(context); }
     case .USING { return parseUsing(context); }
-    case .VIRTUAL { return parseModifier(context, hint, .VIRTUAL); }
     case .WHILE { return parseWhile(context); }
   }
  return parseExpression(context);

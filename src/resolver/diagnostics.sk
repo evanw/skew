@@ -371,3 +371,7 @@ void semanticErrorForVariablesMustBeSameType(Log log, Range range, string firstN
     simpleQuote(firstName) + " has " + typeToText(firstType) + " but " +
     simpleQuote(secondName) + " has " + typeToText(secondType) + ")");
 }
+
+void semanticErrorUnknownAnnotation(Log log, Range range, string name) {
+  log.error(range, "Unknown annotation " + simpleQuote(name));
+}

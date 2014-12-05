@@ -136,15 +136,22 @@ in Node {
 
   Node modifierName() {
     assert kind == .MODIFIER;
-    assert children.size() >= 1;
+    assert children.size() >= 2;
     assert children.get(0).kind == .NAME;
     return children.get(0);
   }
 
+  Node modifierArguments() {
+    assert kind == .MODIFIER;
+    assert children.size() >= 2;
+    assert children.get(1) == null || children.get(1).kind == .NODE_LIST;
+    return children.get(1);
+  }
+
   List<Node> modifierStatements() {
     assert kind == .MODIFIER;
-    assert children.size() >= 1;
-    return children.slice(1, children.size());
+    assert children.size() >= 2;
+    return children.slice(2, children.size());
   }
 
   List<Node> sequenceValues() {

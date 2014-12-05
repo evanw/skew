@@ -2426,6 +2426,14 @@ class Resolver {
   }
 
   void resolveModifier(Node node) {
+    var name = node.modifierName();
+    var arguments = node.modifierArguments();
+
+    // All annotations are unknown for now
+    if (name.asString().startsWith("@")) {
+      semanticErrorUnknownAnnotation(log, name.range, name.asString());
+    }
+
     resolveNodes(node.modifierStatements());
   }
 
