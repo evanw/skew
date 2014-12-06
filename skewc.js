@@ -1390,7 +1390,7 @@
   };
   Node.prototype.indexInParent = function() {
     if (this.parent === null) {
-      throw new Error('assert parent != null; (src/ast/node.sk:249:5)');
+      throw new Error('assert parent != null; (src/ast/node.sk:255:5)');
     }
     return this.parent.children.indexOf(this);
   };
@@ -1405,7 +1405,7 @@
   };
   Node.prototype.removeChildAtIndex = function(index) {
     if (index < 0 || !(index < this.children.length)) {
-      throw new Error('assert index >= 0 && index < children.size(); (src/ast/node.sk:278:5)');
+      throw new Error('assert index >= 0 && index < children.size(); (src/ast/node.sk:284:5)');
     }
     var child = this.children[index];
     if (child !== null) {
@@ -1469,10 +1469,10 @@
   };
   Node.prototype.replaceChild = function(index, node) {
     if (this.children === null) {
-      throw new Error('assert children != null; (src/ast/node.sk:349:5)');
+      throw new Error('assert children != null; (src/ast/node.sk:355:5)');
     }
     if (index < 0 || !(index <= this.children.length)) {
-      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:350:5)');
+      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:356:5)');
     }
     Node.updateParent(node, this);
     var old = this.children[index];
@@ -1486,7 +1486,7 @@
       this.children = [];
     }
     if (index < 0 || !(index <= this.children.length)) {
-      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:359:5)');
+      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:365:5)');
     }
     Node.updateParent(node, this);
     this.children.splice(index, 0, node);
@@ -1496,7 +1496,7 @@
       this.children = [];
     }
     if (index < 0 || !(index <= this.children.length)) {
-      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:366:5)');
+      throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:372:5)');
     }
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
       var node = nodes[i];
@@ -1538,7 +1538,7 @@
   };
   Node.prototype.withChildren = function(nodes) {
     if (this.children !== null) {
-      throw new Error('assert children == null; (src/ast/node.sk:412:5)');
+      throw new Error('assert children == null; (src/ast/node.sk:418:5)');
     }
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
       Node.updateParent(nodes[i], this);
@@ -1563,7 +1563,7 @@
   Node.updateParent = function(node, parent) {
     if (node !== null) {
       if (node.parent !== null) {
-        throw new Error('assert node.parent == null; (src/ast/node.sk:438:7)');
+        throw new Error('assert node.parent == null; (src/ast/node.sk:444:7)');
       }
       node.parent = parent;
     }
@@ -1677,15 +1677,15 @@
     SUBTRACT: 89,
     ASSIGN: 90,
     ASSIGN_ADD: 91,
-    ASSIGN_BITWISE_AND: 92,
-    ASSIGN_BITWISE_OR: 93,
-    ASSIGN_BITWISE_XOR: 94,
-    ASSIGN_DIVIDE: 95,
-    ASSIGN_MULTIPLY: 96,
-    ASSIGN_REMAINDER: 97,
-    ASSIGN_SHIFT_LEFT: 98,
-    ASSIGN_SHIFT_RIGHT: 99,
-    ASSIGN_SUBTRACT: 100,
+    ASSIGN_DIVIDE: 92,
+    ASSIGN_MULTIPLY: 93,
+    ASSIGN_REMAINDER: 94,
+    ASSIGN_SUBTRACT: 95,
+    ASSIGN_BITWISE_AND: 96,
+    ASSIGN_BITWISE_OR: 97,
+    ASSIGN_BITWISE_XOR: 98,
+    ASSIGN_SHIFT_LEFT: 99,
+    ASSIGN_SHIFT_RIGHT: 100,
     ASSIGN_INDEX: 101
   };
   var Associativity = {
@@ -4858,10 +4858,10 @@
       this.patchUnary(node);
       break;
     case 91:
-    case 100:
-    case 96:
     case 95:
-    case 97:
+    case 93:
+    case 92:
+    case 94:
       this.patchAssign(node);
       break;
     }
@@ -5369,11 +5369,11 @@
     case 72:
     case 87:
     case 88:
-    case 93:
-    case 92:
-    case 94:
+    case 97:
+    case 96:
     case 98:
     case 99:
+    case 100:
       return true;
     default:
       return false;
@@ -9280,7 +9280,7 @@
       if (!left.type.isIgnored(this.cache)) {
         this.checkStorageOperator(node);
       }
-      if (kind === NodeKind.ASSIGN || left.type.isNumeric(this.cache)) {
+      if (kind === NodeKind.ASSIGN || left.type.isInteger(this.cache) || left.type.isNumeric(this.cache) && !in_NodeKind.isBinaryBitwiseStorageOperator(kind)) {
         this.resolveAsParamterizedExpressionWithConversion(right, left.type, CastKind.IMPLICIT_CAST);
         this.checkStorage(left);
         node.type = left.type;
@@ -10343,10 +10343,13 @@
     return $this >= NodeKind.PREFIX_INCREMENT && $this <= NodeKind.POSTFIX_DECREMENT;
   };
   in_NodeKind.isBinaryOperator = function($this) {
-    return $this >= NodeKind.ADD && $this <= NodeKind.ASSIGN_SUBTRACT;
+    return $this >= NodeKind.ADD && $this <= NodeKind.ASSIGN_SHIFT_RIGHT;
   };
   in_NodeKind.isBinaryStorageOperator = function($this) {
-    return $this >= NodeKind.ASSIGN && $this <= NodeKind.ASSIGN_SUBTRACT;
+    return $this >= NodeKind.ASSIGN && $this <= NodeKind.ASSIGN_SHIFT_RIGHT;
+  };
+  in_NodeKind.isBinaryBitwiseStorageOperator = function($this) {
+    return $this >= NodeKind.ASSIGN_BITWISE_AND && $this <= NodeKind.ASSIGN_SHIFT_RIGHT;
   };
   in_NodeKind.isTernaryOperator = function($this) {
     return $this === NodeKind.ASSIGN_INDEX;
@@ -12405,23 +12408,23 @@
     case 91:
       return 'ASSIGN_ADD';
     case 92:
-      return 'ASSIGN_BITWISE_AND';
-    case 93:
-      return 'ASSIGN_BITWISE_OR';
-    case 94:
-      return 'ASSIGN_BITWISE_XOR';
-    case 95:
       return 'ASSIGN_DIVIDE';
-    case 96:
+    case 93:
       return 'ASSIGN_MULTIPLY';
-    case 97:
+    case 94:
       return 'ASSIGN_REMAINDER';
-    case 98:
-      return 'ASSIGN_SHIFT_LEFT';
-    case 99:
-      return 'ASSIGN_SHIFT_RIGHT';
-    case 100:
+    case 95:
       return 'ASSIGN_SUBTRACT';
+    case 96:
+      return 'ASSIGN_BITWISE_AND';
+    case 97:
+      return 'ASSIGN_BITWISE_OR';
+    case 98:
+      return 'ASSIGN_BITWISE_XOR';
+    case 99:
+      return 'ASSIGN_SHIFT_LEFT';
+    case 100:
+      return 'ASSIGN_SHIFT_RIGHT';
     case 101:
       return 'ASSIGN_INDEX';
     default:

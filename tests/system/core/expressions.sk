@@ -78,4 +78,97 @@ void foo() {
        ~~~~~~
 ");
 
+test("
+void foo(int x) {
+  x += 1;
+  x -= 1;
+  x *= 1;
+  x /= 1;
+  x %= 1;
+  x <<= 1;
+  x >>= 1;
+  x &= 1;
+  x |= 1;
+  x ^= 1;
+}
+", "
+");
+
+test("
+void foo(float x) {
+  x += 1;
+  x -= 1;
+  x *= 1;
+  x /= 1;
+  x %= 1;
+  x <<= 1;
+  x >>= 1;
+  x &= 1;
+  x |= 1;
+  x ^= 1;
+}
+", "
+<stdin>:2:8: error: Cannot convert from type \"int\" to type \"float\" without a cast
+  x += 1;
+       ^
+<stdin>:3:8: error: Cannot convert from type \"int\" to type \"float\" without a cast
+  x -= 1;
+       ^
+<stdin>:4:8: error: Cannot convert from type \"int\" to type \"float\" without a cast
+  x *= 1;
+       ^
+<stdin>:5:8: error: Cannot convert from type \"int\" to type \"float\" without a cast
+  x /= 1;
+       ^
+<stdin>:6:8: error: Cannot convert from type \"int\" to type \"float\" without a cast
+  x %= 1;
+       ^
+<stdin>:7:3: error: No binary operator \"<<=\" for type \"float\" and type \"int\"
+  x <<= 1;
+  ~~~~~~~
+<stdin>:8:3: error: No binary operator \">>=\" for type \"float\" and type \"int\"
+  x >>= 1;
+  ~~~~~~~
+<stdin>:9:3: error: No binary operator \"&=\" for type \"float\" and type \"int\"
+  x &= 1;
+  ~~~~~~
+<stdin>:10:3: error: No binary operator \"|=\" for type \"float\" and type \"int\"
+  x |= 1;
+  ~~~~~~
+<stdin>:11:3: error: No binary operator \"^=\" for type \"float\" and type \"int\"
+  x ^= 1;
+  ~~~~~~
+");
+
+test("
+void foo(double x) {
+  x += 1;
+  x -= 1;
+  x *= 1;
+  x /= 1;
+  x %= 1;
+  x <<= 1;
+  x >>= 1;
+  x &= 1;
+  x |= 1;
+  x ^= 1;
+}
+", "
+<stdin>:7:3: error: No binary operator \"<<=\" for type \"double\" and type \"int\"
+  x <<= 1;
+  ~~~~~~~
+<stdin>:8:3: error: No binary operator \">>=\" for type \"double\" and type \"int\"
+  x >>= 1;
+  ~~~~~~~
+<stdin>:9:3: error: No binary operator \"&=\" for type \"double\" and type \"int\"
+  x &= 1;
+  ~~~~~~
+<stdin>:10:3: error: No binary operator \"|=\" for type \"double\" and type \"int\"
+  x |= 1;
+  ~~~~~~
+<stdin>:11:3: error: No binary operator \"^=\" for type \"double\" and type \"int\"
+  x ^= 1;
+  ~~~~~~
+");
+
 }}

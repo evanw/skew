@@ -106,15 +106,17 @@ enum NodeKind {
   // Binary assignment operators
   ASSIGN,
   ASSIGN_ADD,
-  ASSIGN_BITWISE_AND,
-  ASSIGN_BITWISE_OR,
-  ASSIGN_BITWISE_XOR,
   ASSIGN_DIVIDE,
   ASSIGN_MULTIPLY,
   ASSIGN_REMAINDER,
+  ASSIGN_SUBTRACT,
+
+  // Binary bitwise assignment operators
+  ASSIGN_BITWISE_AND,
+  ASSIGN_BITWISE_OR,
+  ASSIGN_BITWISE_XOR,
   ASSIGN_SHIFT_LEFT,
   ASSIGN_SHIFT_RIGHT,
-  ASSIGN_SUBTRACT,
 
   // Ternary assignment operators
   ASSIGN_INDEX,
@@ -174,11 +176,15 @@ in NodeKind {
   }
 
   bool isBinaryOperator() {
-    return this >= ADD && this <= ASSIGN_SUBTRACT;
+    return this >= ADD && this <= ASSIGN_SHIFT_RIGHT;
   }
 
   bool isBinaryStorageOperator() {
-    return this >= ASSIGN && this <= ASSIGN_SUBTRACT;
+    return this >= ASSIGN && this <= ASSIGN_SHIFT_RIGHT;
+  }
+
+  bool isBinaryBitwiseStorageOperator() {
+    return this >= ASSIGN_BITWISE_AND && this <= ASSIGN_SHIFT_RIGHT;
   }
 
   bool isTernaryOperator() {

@@ -3083,7 +3083,7 @@ class Resolver {
         checkStorageOperator(node);
       }
 
-      if (kind == .ASSIGN || left.type.isNumeric(cache)) {
+      if (kind == .ASSIGN || left.type.isInteger(cache) || left.type.isNumeric(cache) && !kind.isBinaryBitwiseStorageOperator()) {
         resolveAsParamterizedExpressionWithConversion(right, left.type, .IMPLICIT_CAST);
         checkStorage(left);
         node.type = left.type;
