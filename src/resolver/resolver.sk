@@ -1188,7 +1188,8 @@ class Resolver {
         // Look at the initializer now
         var variableValue = node.variableValue();
         if (variableValue != null) {
-          resolveAsParamterizedExpressionWithConversion(variableValue, cache.intType, .IMPLICIT_CAST);
+          resolveAsParameterizedExpressionWithTypeContext(variableValue, type);
+          checkConversion(cache.intType, variableValue, .IMPLICIT_CAST);
           constantFolder.foldConstants(variableValue);
           if (variableValue.kind == .INT) {
             symbol.constant = variableValue.content;

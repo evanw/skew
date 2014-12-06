@@ -259,4 +259,13 @@ enum flags Foo {
        ~~~
 ");
 
+test("
+enum flags Foo {
+  A,
+  B,
+  C = .A | .B,
+}
+", "
+");
+
 }}
