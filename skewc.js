@@ -8918,6 +8918,8 @@
         semanticErrorNoCommonType(this.log, Range.span(trueNode.range, falseNode.range), trueType, falseType);
         return;
       }
+    } else if (commonType === this.cache.intType && this.typeContext !== null && this.typeContext.isEnumFlags()) {
+      commonType = this.typeContext;
     }
     this.checkConversion(commonType, trueNode, CastKind.IMPLICIT_CAST);
     this.checkConversion(commonType, falseNode, CastKind.IMPLICIT_CAST);
@@ -9019,7 +9021,7 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2740:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:2745:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -9112,7 +9114,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2866:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:2871:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -9364,7 +9366,7 @@
   };
   Resolver.prototype.assessOperatorOverloadMatch = function(nodeTypes, targetType, argumentTypes) {
     if (nodeTypes.length !== (1 + argumentTypes.length | 0)) {
-      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3208:5)');
+      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3213:5)');
     }
     var foundImplicitConversion = false;
     for (var i = 0; i < nodeTypes.length; i = i + 1 | 0) {
@@ -9416,15 +9418,15 @@
     for (var i = 0; i < overloads.length; i = i + 1 | 0) {
       var overload = overloads[i];
       if (!overload.type.isFunction()) {
-        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3269:7)');
+        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3274:7)');
       }
       if ((overload.type.argumentTypes().length + 1 | 0) !== children.length) {
-        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3270:7)');
+        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3275:7)');
       }
       var member = targetType.findOperatorOverload(overload);
       this.initializeMember(member);
       if (!member.type.isFunction()) {
-        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3273:7)');
+        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3278:7)');
       }
       var matchKind = this.assessOperatorOverloadMatch(types, targetType, member.type.argumentTypes());
       if (matchKind > matchKind) {

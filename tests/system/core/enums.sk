@@ -268,4 +268,10 @@ enum flags Foo {
 ", "
 ");
 
+test("
+enum flags Foo { FOO }
+Foo foo(bool b) { return b ? .FOO : 0; }
+", "
+");
+
 }}

@@ -2593,6 +2593,11 @@ class Resolver {
       }
     }
 
+    // Make sure "a ? .FOO : 0" works for an enum flags type
+    else if (commonType == cache.intType && typeContext != null && typeContext.isEnumFlags()) {
+      commonType = typeContext;
+    }
+
     // Finally, check that the conversion works. This check must be done
     // even when using the common type because it inserts implicit casts.
     checkConversion(commonType, trueNode, .IMPLICIT_CAST);
