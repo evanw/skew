@@ -1487,6 +1487,7 @@ class Resolver {
       else if (name == "@OperatorNegative") registerOperatorOverload(symbol, node, .NEGATIVE);
       else if (name == "@OperatorShiftLeft") registerOperatorOverload(symbol, node, .SHIFT_LEFT);
       else if (name == "@OperatorShiftRight") registerOperatorOverload(symbol, node, .SHIFT_RIGHT);
+      else if (name == "@OperatorCompare") registerOperatorOverload(symbol, node, .COMPARE);
       else if (name.startsWith("@")) semanticErrorUnknownAnnotation(log, modifierName.range, name);
     }
   }
@@ -3247,9 +3248,16 @@ class Resolver {
       types.push(type);
     }
 
+    // Use the compare operator for relational operators
+    var kind = node.kind;
+    if (kind == .LESS_THAN || kind == .LESS_THAN_OR_EQUAL ||
+        kind == .GREATER_THAN || kind == .GREATER_THAN_OR_EQUAL) {
+      kind = .COMPARE;
+    }
+
     // The value for "this" determines the operator overload set to search
     var targetType = types[0];
-    var overloads = targetType.symbol.operatorOverloadsForKind(node.kind);
+    var overloads = targetType.symbol.operatorOverloadsForKind(kind);
     MatchKind matchKind = .INEXACT;
     List<Member> matches = [];
     Member first = null;
@@ -3262,11 +3270,11 @@ class Resolver {
       var member = targetType.findOperatorOverload(overload);
       initializeMember(member);
       assert member.type.isFunction();
-      var kind = assessOperatorOverloadMatch(types, targetType, member.type.argumentTypes());
-      if (kind > matchKind) {
-        matchKind = kind;
+      var matchKind = assessOperatorOverloadMatch(types, targetType, member.type.argumentTypes());
+      if (matchKind > matchKind) {
+        matchKind = matchKind;
         matches = [member];
-      } else if (kind == matchKind) {
+      } else if (matchKind == matchKind) {
         matches.push(member);
       }
       if (i == 0) {
@@ -3280,17 +3288,31 @@ class Resolver {
       matches.push(first);
     }
 
-    // Use the matches
+    // Fail if no matches
     if (matches.size() == 0) {
       semanticErrorNoMatchingOperator(log, node.range, node.kind, types);
-    } else if (matches.size() == 1) {
-      applyOperatorOverload(node, matches[0]);
-    } else {
+    }
+
+    // Fail if multiple matches
+    else if (matches.size() > 1) {
       List<string> names = [];
       for (var i = 0; i < matches.size(); i++) {
         names.push(matches[i].symbol.fullName());
       }
       semanticErrorAmbiguousOperator(log, node.range, node.kind, names);
+    }
+
+    // Apply the match
+    else {
+      var originalKind = node.kind;
+      applyOperatorOverload(node, matches[0]);
+
+      // Wrap comparisons with a relational operator
+      if (kind == .COMPARE) {
+        var children = node.removeChildren();
+        var clone = node.clone().withChildren(children);
+        node.become(Node.createBinary(originalKind, clone, Node.createInt(0).withType(cache.intType)).withType(cache.boolType));
+      }
     }
   }
 }

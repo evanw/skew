@@ -85,6 +85,7 @@ enum NodeKind {
   BITWISE_AND,
   BITWISE_OR,
   BITWISE_XOR,
+  COMPARE, // Used for operator overloading
   DIVIDE,
   EQUAL,
   GREATER_THAN,
