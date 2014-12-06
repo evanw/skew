@@ -1474,7 +1474,13 @@ class Resolver {
       var modifierName = node.modifierName();
       var name = modifierName.asString();
 
-      if (name == "@OperatorAdd") registerOperatorOverload(symbol, node, .ADD);
+      // Other operators
+      if (name == "@OperatorGet") registerOperatorOverload(symbol, node, .INDEX);
+      else if (name == "@OperatorSet") registerOperatorOverload(symbol, node, .ASSIGN_INDEX);
+
+      // Binary operators
+      else if (name == "@OperatorCompare") registerOperatorOverload(symbol, node, .COMPARE);
+      else if (name == "@OperatorAdd") registerOperatorOverload(symbol, node, .ADD);
       else if (name == "@OperatorSubtract") registerOperatorOverload(symbol, node, .SUBTRACT);
       else if (name == "@OperatorMultiply") registerOperatorOverload(symbol, node, .MULTIPLY);
       else if (name == "@OperatorDivide") registerOperatorOverload(symbol, node, .DIVIDE);
@@ -1482,13 +1488,26 @@ class Resolver {
       else if (name == "@OperatorAnd") registerOperatorOverload(symbol, node, .BITWISE_AND);
       else if (name == "@OperatorOr") registerOperatorOverload(symbol, node, .BITWISE_OR);
       else if (name == "@OperatorXor") registerOperatorOverload(symbol, node, .BITWISE_XOR);
-      else if (name == "@OperatorGet") registerOperatorOverload(symbol, node, .INDEX);
-      else if (name == "@OperatorSet") registerOperatorOverload(symbol, node, .ASSIGN_INDEX);
-      else if (name == "@OperatorComplement") registerOperatorOverload(symbol, node, .COMPLEMENT);
-      else if (name == "@OperatorNegative") registerOperatorOverload(symbol, node, .NEGATIVE);
       else if (name == "@OperatorShiftLeft") registerOperatorOverload(symbol, node, .SHIFT_LEFT);
       else if (name == "@OperatorShiftRight") registerOperatorOverload(symbol, node, .SHIFT_RIGHT);
-      else if (name == "@OperatorCompare") registerOperatorOverload(symbol, node, .COMPARE);
+
+      // Binary storage operators
+      else if (name == "@OperatorAddAssign") registerOperatorOverload(symbol, node, .ASSIGN_ADD);
+      else if (name == "@OperatorSubtractAssign") registerOperatorOverload(symbol, node, .ASSIGN_SUBTRACT);
+      else if (name == "@OperatorMultiplyAssign") registerOperatorOverload(symbol, node, .ASSIGN_MULTIPLY);
+      else if (name == "@OperatorDivideAssign") registerOperatorOverload(symbol, node, .ASSIGN_DIVIDE);
+      else if (name == "@OperatorRemainderAssign") registerOperatorOverload(symbol, node, .ASSIGN_REMAINDER);
+      else if (name == "@OperatorAndAssign") registerOperatorOverload(symbol, node, .ASSIGN_BITWISE_AND);
+      else if (name == "@OperatorOrAssign") registerOperatorOverload(symbol, node, .ASSIGN_BITWISE_OR);
+      else if (name == "@OperatorXorAssign") registerOperatorOverload(symbol, node, .ASSIGN_BITWISE_XOR);
+      else if (name == "@OperatorShiftLeftAssign") registerOperatorOverload(symbol, node, .ASSIGN_SHIFT_LEFT);
+      else if (name == "@OperatorShiftRightAssign") registerOperatorOverload(symbol, node, .ASSIGN_SHIFT_RIGHT);
+
+      // Unary operators
+      else if (name == "@OperatorNegative") registerOperatorOverload(symbol, node, .NEGATIVE);
+      else if (name == "@OperatorComplement") registerOperatorOverload(symbol, node, .COMPLEMENT);
+
+      // No other annotations at the moment
       else if (name.startsWith("@")) semanticErrorUnknownAnnotation(log, modifierName.range, name);
     }
   }
