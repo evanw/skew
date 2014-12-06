@@ -9384,14 +9384,14 @@
     this.resolveAsParameterizedExpression(right);
     this.checkForOperatorOverload(node);
   };
-  Resolver.prototype.assessOperatorOverloadMatch = function(nodeTypes, targetType, argumentTypes) {
+  Resolver.prototype.assessOperatorOverloadMatch = function(nodeTypes, argumentTypes) {
     if (nodeTypes.length !== (1 + argumentTypes.length | 0)) {
       throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3232:5)');
     }
     var foundImplicitConversion = false;
-    for (var i = 0; i < nodeTypes.length; i = i + 1 | 0) {
-      var a = nodeTypes[i];
-      var b = i === 0 ? targetType : argumentTypes[i - 1 | 0];
+    for (var i = 0; i < argumentTypes.length; i = i + 1 | 0) {
+      var a = nodeTypes[i + 1 | 0];
+      var b = argumentTypes[i];
       if (a !== b) {
         if (this.cache.canImplicitlyConvert(a, b)) {
           foundImplicitConversion = true;
@@ -9432,7 +9432,7 @@
     }
     var targetType = types[0];
     var overloads = targetType.symbol.operatorOverloadsForKind(kind);
-    var matchKind = MatchKind.INEXACT;
+    var bestMatch = MatchKind.INEXACT;
     var matches = [];
     var first = null;
     for (var i = 0; i < overloads.length; i = i + 1 | 0) {
@@ -9448,11 +9448,11 @@
       if (!member.type.isFunction()) {
         throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3297:7)');
       }
-      var matchKind = this.assessOperatorOverloadMatch(types, targetType, member.type.argumentTypes());
-      if (matchKind > matchKind) {
-        matchKind = matchKind;
+      var match = this.assessOperatorOverloadMatch(types, member.type.argumentTypes());
+      if (match > bestMatch) {
+        bestMatch = match;
         matches = [member];
-      } else if (matchKind === matchKind) {
+      } else if (match === bestMatch) {
         matches.push(member);
       }
       if (i === 0) {

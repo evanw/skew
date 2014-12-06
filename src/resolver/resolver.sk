@@ -3228,12 +3228,12 @@ class Resolver {
     checkForOperatorOverload(node);
   }
 
-  MatchKind assessOperatorOverloadMatch(List<Type> nodeTypes, Type targetType, List<Type> argumentTypes) {
+  MatchKind assessOperatorOverloadMatch(List<Type> nodeTypes, List<Type> argumentTypes) {
     assert nodeTypes.size() == 1 + argumentTypes.size();
     var foundImplicitConversion = false;
-    for (var i = 0; i < nodeTypes.size(); i++) {
-      var a = nodeTypes[i];
-      var b = i == 0 ? targetType : argumentTypes[i - 1];
+    for (var i = 0; i < argumentTypes.size(); i++) {
+      var a = nodeTypes[i + 1];
+      var b = argumentTypes[i];
       if (a != b) {
         if (cache.canImplicitlyConvert(a, b)) {
           foundImplicitConversion = true;
@@ -3283,7 +3283,7 @@ class Resolver {
     // The value for "this" determines the operator overload set to search
     var targetType = types[0];
     var overloads = targetType.symbol.operatorOverloadsForKind(kind);
-    MatchKind matchKind = .INEXACT;
+    MatchKind bestMatch = .INEXACT;
     List<Member> matches = [];
     Member first = null;
 
@@ -3295,11 +3295,11 @@ class Resolver {
       var member = targetType.findOperatorOverload(overload);
       initializeMember(member);
       assert member.type.isFunction();
-      var matchKind = assessOperatorOverloadMatch(types, targetType, member.type.argumentTypes());
-      if (matchKind > matchKind) {
-        matchKind = matchKind;
+      var match = assessOperatorOverloadMatch(types, member.type.argumentTypes());
+      if (match > bestMatch) {
+        bestMatch = match;
         matches = [member];
-      } else if (matchKind == matchKind) {
+      } else if (match == bestMatch) {
         matches.push(member);
       }
       if (i == 0) {
