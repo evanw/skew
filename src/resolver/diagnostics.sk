@@ -13,9 +13,9 @@ string typesToText(List<Type> types, string separator) {
   return separator.join(names);
 }
 
-string expectedCountText(string singular, int expected, int found) {
+string expectedCountText(string singular, int expected, int found, string because) {
   return "Expected " + expected + " " + singular + plural(expected, "", "s") +
-    " but found " + found + " " + singular + plural(found, "", "s");
+    because + " but found " + found + " " + singular + plural(found, "", "s");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -154,11 +154,11 @@ void semanticErrorInvalidCall(Log log, Range range, Type type) {
 }
 
 void semanticErrorParameterCount(Log log, Range range, int expected, int found) {
-  log.error(range, expectedCountText("type parameter", expected, found));
+  log.error(range, expectedCountText("type parameter", expected, found, ""));
 }
 
 void semanticErrorArgumentCount(Log log, Range range, int expected, int found) {
-  log.error(range, expectedCountText("argument", expected, found));
+  log.error(range, expectedCountText("argument", expected, found, ""));
 }
 
 void semanticErrorExpectedReturnValue(Log log, Range range, Type type) {
@@ -368,7 +368,7 @@ void semanticErrorOperatorOnNonInstanceFunction(Log log, Range range) {
 }
 
 void semanticErrorOperatorArgumentCount(Log log, Range range, int expected, int found, string name) {
-  log.error(range, expectedCountText("argument", expected, found) + ", required by operator annotation " + simpleQuote(name));
+  log.error(range, expectedCountText("argument", expected, found, " because of " + simpleQuote(name)));
 }
 
 void semanticErrorNoMatchingOperator(Log log, Range range, NodeKind kind, List<Type> types) {

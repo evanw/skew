@@ -593,7 +593,7 @@ class Resolver {
       if (node.hasChildren()) {
         checkUnusedExpression(node.lastChild());
       }
-    } else if (!node.type.isIgnored(cache) && !kind.isCall() && !kind.isUnaryStorageOperator() && !kind.isBinaryStorageOperator()) {
+    } else if (!node.range.isEmpty() && !node.type.isIgnored(cache) && !kind.isCall() && !kind.isUnaryStorageOperator() && !kind.isBinaryStorageOperator()) {
       semanticWarningUnusedExpression(log, node.range);
     }
   }

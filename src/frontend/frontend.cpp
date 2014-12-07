@@ -109,7 +109,7 @@ void io::setColor(int color) {
   #if _WIN32
     WORD value;
     switch (color) {
-      case 0: value = info.wAttributes; break;
+      default: value = info.wAttributes; break;
       case 1: value = info.wAttributes | FOREGROUND_INTENSITY; break;
       case 90: value = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; break;
       case 91: value = FOREGROUND_RED | FOREGROUND_INTENSITY; break;

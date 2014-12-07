@@ -7312,7 +7312,7 @@
       if (node.hasChildren()) {
         this.checkUnusedExpression(node.lastChild());
       }
-    } else if (!node.type.isIgnored(this.cache) && !in_NodeKind.isCall(kind) && !in_NodeKind.isUnaryStorageOperator(kind) && !in_NodeKind.isBinaryStorageOperator(kind)) {
+    } else if (!node.range.isEmpty() && !node.type.isIgnored(this.cache) && !in_NodeKind.isCall(kind) && !in_NodeKind.isUnaryStorageOperator(kind) && !in_NodeKind.isBinaryStorageOperator(kind)) {
       semanticWarningUnusedExpression(this.log, node.range);
     }
   };
@@ -11717,8 +11717,8 @@
     }
     return names.join(separator);
   }
-  function expectedCountText(singular, expected, found) {
-    return 'Expected ' + expected + ' ' + singular + plural(expected, '', 's') + ' but found ' + found + ' ' + singular + plural(found, '', 's');
+  function expectedCountText(singular, expected, found, because) {
+    return 'Expected ' + expected + ' ' + singular + plural(expected, '', 's') + because + ' but found ' + found + ' ' + singular + plural(found, '', 's');
   }
   function semanticWarningUnusedExpression(log, range) {
     log.warning(range, 'Unused expression');
@@ -11820,10 +11820,10 @@
     log.error(range, 'Cannot call ' + typeToText(type));
   }
   function semanticErrorParameterCount(log, range, expected, found) {
-    log.error(range, expectedCountText('type parameter', expected, found));
+    log.error(range, expectedCountText('type parameter', expected, found, ''));
   }
   function semanticErrorArgumentCount(log, range, expected, found) {
-    log.error(range, expectedCountText('argument', expected, found));
+    log.error(range, expectedCountText('argument', expected, found, ''));
   }
   function semanticErrorExpectedReturnValue(log, range, type) {
     log.error(range, 'Return statement must return ' + typeToText(type));
@@ -11997,7 +11997,7 @@
     log.error(range, 'Operator overloading only applies to instance functions');
   }
   function semanticErrorOperatorArgumentCount(log, range, expected, found, name) {
-    log.error(range, expectedCountText('argument', expected, found) + ', required by operator annotation ' + simpleQuote(name));
+    log.error(range, expectedCountText('argument', expected, found, ' because of ' + simpleQuote(name)));
   }
   function semanticErrorNoMatchingOperator(log, range, kind, types) {
     if (!(kind in operatorInfo._table)) {

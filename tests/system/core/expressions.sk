@@ -171,4 +171,72 @@ void foo(double x) {
   ~~~~~~
 ");
 
+test("
+class Foo {
+  @OperatorNegative void foo() {}
+  @OperatorNegative void bar() {}
+  @OperatorNegative void baz(int x) {}
+}
+void foo(Foo foo) {
+  -foo;
+}
+", "
+<stdin>:4:29: error: Expected 0 arguments because of \"@OperatorNegative\" but found 1 argument
+  @OperatorNegative void baz(int x) {}
+                            ~~~~~~~
+<stdin>:7:3: error: Binary operator \"-\" is ambiguous, could be \"Foo.foo\" or \"Foo.bar\"
+  -foo;
+  ~~~~
+");
+
+test("
+class Foo {
+  @OperatorAdd void foo() {}
+  @OperatorAdd void bar(int x) {}
+  @OperatorAdd void baz(int x, int y) {}
+}
+void foo(Foo foo) {
+  foo + 0;
+}
+", "
+<stdin>:2:24: error: Expected 1 argument because of \"@OperatorAdd\" but found 0 arguments
+  @OperatorAdd void foo() {}
+                       ~~
+<stdin>:4:24: error: Expected 1 argument because of \"@OperatorAdd\" but found 2 arguments
+  @OperatorAdd void baz(int x, int y) {}
+                       ~~~~~~~~~~~~~~
+");
+
+test("
+class Foo {
+  @OperatorAdd void foo(int x) {}
+  @OperatorAdd void bar(double x) {}
+}
+enum Bar { FOO }
+void foo(Foo foo) {
+  foo + Bar.FOO;
+  foo + (int)Bar.FOO;
+  foo + (double)Bar.FOO;
+}
+", "
+<stdin>:7:3: error: Binary operator \"+\" is ambiguous, could be \"Foo.foo\" or \"Foo.bar\"
+  foo + Bar.FOO;
+  ~~~~~~~~~~~~~
+");
+
+test("
+class Foo {
+  @OperatorAdd void foo(int x) {}
+  @OperatorAdd void bar(double x) {}
+  @OperatorAdd void baz(Bar x) {}
+}
+enum Bar { FOO }
+void foo(Foo foo) {
+  foo + Bar.FOO;
+  foo + (int)Bar.FOO;
+  foo + (double)Bar.FOO;
+}
+", "
+");
+
 }}

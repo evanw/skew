@@ -437,4 +437,160 @@ export string foo() {
 }());
 ");
 
+testJS("
+class Foo {
+  @OperatorNegative void negative() {}
+  @OperatorComplement void complement() {}
+
+  @OperatorAdd void add(int x) {}
+  @OperatorSubtract void subtract(int x) {}
+  @OperatorMultiply void multiply(int x) {}
+  @OperatorDivide void divide(int x) {}
+  @OperatorRemainder void remainder(int x) {}
+  @OperatorAnd void and(int x) {}
+  @OperatorOr void or(int x) {}
+  @OperatorXor void xor(int x) {}
+  @OperatorShiftLeft void shiftLeft(int x) {}
+  @OperatorShiftRight void shiftRight(int x) {}
+  @OperatorIn void contains(int x) {}
+  @OperatorCompare void compare(int x) {}
+
+  @OperatorAddAssign void addAssign(int x) {}
+  @OperatorSubtractAssign void subtractAssign(int x) {}
+  @OperatorMultiplyAssign void multiplyAssign(int x) {}
+  @OperatorDivideAssign void divideAssign(int x) {}
+  @OperatorRemainderAssign void remainderAssign(int x) {}
+  @OperatorAndAssign void andAssign(int x) {}
+  @OperatorOrAssign void orAssign(int x) {}
+  @OperatorXorAssign void xorAssign(int x) {}
+  @OperatorShiftLeftAssign void shiftLeftAssign(int x) {}
+  @OperatorShiftRightAssign void shiftRightAssign(int x) {}
+
+  @OperatorGet void get(int x) {}
+  @OperatorSet void set(int x, int y) {}
+}
+export void foo(Foo foo) {
+  -foo;
+  ~foo;
+
+  foo + 0;
+  foo - 0;
+  foo * 0;
+  foo / 0;
+  foo % 0;
+  foo & 0;
+  foo | 0;
+  foo ^ 0;
+  foo << 0;
+  foo >> 0;
+  0 in foo;
+  foo < 0;
+  foo <= 0;
+  foo > 0;
+  foo >= 0;
+
+  foo += 0;
+  foo -= 0;
+  foo *= 0;
+  foo /= 0;
+  foo %= 0;
+  foo &= 0;
+  foo |= 0;
+  foo ^= 0;
+  foo <<= 0;
+  foo >>= 0;
+
+  foo[0];
+  foo[0] = 1;
+}
+", "
+(function() {
+  function Foo() {
+  }
+  Foo.prototype.negative = function() {
+  };
+  Foo.prototype.complement = function() {
+  };
+  Foo.prototype.add = function(x) {
+  };
+  Foo.prototype.subtract = function(x) {
+  };
+  Foo.prototype.multiply = function(x) {
+  };
+  Foo.prototype.divide = function(x) {
+  };
+  Foo.prototype.remainder = function(x) {
+  };
+  Foo.prototype.and = function(x) {
+  };
+  Foo.prototype.or = function(x) {
+  };
+  Foo.prototype.xor = function(x) {
+  };
+  Foo.prototype.shiftLeft = function(x) {
+  };
+  Foo.prototype.shiftRight = function(x) {
+  };
+  Foo.prototype.contains = function(x) {
+  };
+  Foo.prototype.compare = function(x) {
+  };
+  Foo.prototype.addAssign = function(x) {
+  };
+  Foo.prototype.subtractAssign = function(x) {
+  };
+  Foo.prototype.multiplyAssign = function(x) {
+  };
+  Foo.prototype.divideAssign = function(x) {
+  };
+  Foo.prototype.remainderAssign = function(x) {
+  };
+  Foo.prototype.andAssign = function(x) {
+  };
+  Foo.prototype.orAssign = function(x) {
+  };
+  Foo.prototype.xorAssign = function(x) {
+  };
+  Foo.prototype.shiftLeftAssign = function(x) {
+  };
+  Foo.prototype.shiftRightAssign = function(x) {
+  };
+  Foo.prototype.get = function(x) {
+  };
+  Foo.prototype.set = function(x, y) {
+  };
+  foo = function(foo) {
+    foo.negative();
+    foo.complement();
+    foo.add(0);
+    foo.subtract(0);
+    foo.multiply(0);
+    foo.divide(0);
+    foo.remainder(0);
+    foo.and(0);
+    foo.or(0);
+    foo.xor(0);
+    foo.shiftLeft(0);
+    foo.shiftRight(0);
+    foo.contains(0);
+    foo.compare(0) < 0;
+    foo.compare(0) <= 0;
+    foo.compare(0) > 0;
+    foo.compare(0) >= 0;
+    foo.addAssign(0);
+    foo.subtractAssign(0);
+    foo.multiplyAssign(0);
+    foo.divideAssign(0);
+    foo.remainderAssign(0);
+    foo.andAssign(0);
+    foo.orAssign(0);
+    foo.xorAssign(0);
+    foo.shiftLeftAssign(0);
+    foo.shiftRightAssign(0);
+    foo.get(0);
+    foo.set(0, 1);
+  };
+}());
+");
+
 }}
