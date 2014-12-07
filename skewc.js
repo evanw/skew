@@ -2297,7 +2297,7 @@
     this.cache = this.resolver.cache;
     this.options = this.resolver.options;
     this.isKeyword = this.createIsKeyword();
-    this.output = new Source('output.' + this.extension(), '');
+    this.output = new Source(this.options.outputFile, '');
     this.outputs.push(this.output);
     this.visitProgram(program);
     return this.outputs;
@@ -2923,9 +2923,6 @@
     this.pass = cpp.Pass.NONE;
   };
   $extends(cpp.Emitter, base.Emitter);
-  cpp.Emitter.prototype.extension = function() {
-    return 'cpp';
-  };
   cpp.Emitter.prototype.visitProgram = function(node) {
     var collector = new Collector(node, SortTypes.SORT_BY_INHERITANCE_AND_CONTAINMENT);
     this.pass = cpp.Pass.FORWARD_DECLARE_TYPES;

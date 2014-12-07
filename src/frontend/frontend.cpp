@@ -1,10 +1,3 @@
-// output.cpp:
-//   node skewc.js src/*/*.sk --verbose --target=c++
-// debug:
-//   clang++ main.cpp -std=c++11 -ferror-limit=0
-// release:
-//   clang++ -O3 main.cpp -std=c++11 -ferror-limit=0 -DNDEBUG -fomit-frame-pointer -fvisibility=hidden -fno-exceptions -fno-rtti -Wall -Wextra -Wno-switch -Wno-unused-parameter -Wno-reorder
-
 #include <string>
 #include <vector>
 #include <sstream>
@@ -29,7 +22,7 @@ namespace io {
   Source *readFile(string path);
 }
 
-#include "output.cpp"
+#include "skewc.cpp"
 
 #include <cstdint>
 #include <iostream>

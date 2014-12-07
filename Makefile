@@ -34,6 +34,8 @@ TEST_FLAGS += $(TEST_SOURCES)
 TEST_FLAGS += $(FLAGS)
 TEST_FLAGS += --append-file=tests/system/common.js
 
+CPP_FLAGS = -std=c++11 -ferror-limit=0 -fno-exceptions -fno-rtti -Wall -Wextra -Wno-switch -Wno-unused-parameter -Wno-reorder
+
 ################################################################################
 # DEFAULT
 ################################################################################
@@ -73,6 +75,14 @@ $(DEBUG_DIR):
 $(DEBUG_DIR)/skewc.js: $(FRONTEND_DEPS) | $(DEBUG_DIR)
 	node skewc.js $(FRONTEND_FLAGS) --output-file=$(DEBUG_DIR)/skewc.js --js-source-map
 
+debug-binary: $(DEBUG_DIR)/skewc
+
+$(DEBUG_DIR)/skewc.cpp: $(FRONTEND_DEPS) | $(DEBUG_DIR)
+	node skewc.js src/*/*.sk --verbose --target=c++ --output-file=$(DEBUG_DIR)/skewc.cpp
+
+$(DEBUG_DIR)/skewc: src/frontend/frontend.cpp $(DEBUG_DIR)/skewc.cpp
+	clang++ src/frontend/frontend.cpp $(CPP_FLAGS) -I$(DEBUG_DIR) -std=c++11 -ferror-limit=0 -o $(DEBUG_DIR)/skewc
+
 ################################################################################
 # RELEASE
 ################################################################################
@@ -91,6 +101,14 @@ $(RELEASE_DIR)/skewc.min.js: $(FRONTEND_DEPS) | $(RELEASE_DIR)
 
 $(RELEASE_DIR)/skewc.min.js.gz: $(RELEASE_DIR)/skewc.min.js
 	zopfli -c $(RELEASE_DIR)/skewc.min.js > $(RELEASE_DIR)/skewc.min.js.gz || gzip --stdout --best $(RELEASE_DIR)/skewc.min.js > $(RELEASE_DIR)/skewc.min.js.gz
+
+release-binary: $(RELEASE_DIR)/skewc
+
+$(RELEASE_DIR)/skewc.cpp: $(FRONTEND_DEPS) | $(RELEASE_DIR)
+	node skewc.js src/*/*.sk --verbose --target=c++ --output-file=$(RELEASE_DIR)/skewc.cpp
+
+$(RELEASE_DIR)/skewc: src/frontend/frontend.cpp $(RELEASE_DIR)/skewc.cpp
+	clang++ src/frontend/frontend.cpp $(CPP_FLAGS) -O3 -DNDEBUG -fomit-frame-pointer -fvisibility=hidden -I$(RELEASE_DIR) -std=c++11 -ferror-limit=0 -o $(RELEASE_DIR)/skewc
 
 ################################################################################
 # TEST
