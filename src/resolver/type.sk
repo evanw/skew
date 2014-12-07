@@ -90,7 +90,7 @@ class Type {
     var otherMembers = other.members.values();
     for (var i = 0; i < otherMembers.size(); i++) {
       var member = otherMembers[i];
-      if (!members.has(member.symbol.name)) {
+      if (!(member.symbol.name in members)) {
         members[member.symbol.name] = member;
       }
     }
@@ -164,8 +164,8 @@ class Type {
 
   bool dependsOnParameter(Symbol parameter) {
     if (symbol == parameter ||
-        hasParameters() && symbol.parameters.indexOf(parameter) >= 0 ||
-        isParameterized() && substitutions.indexOf(parameter.type) >= 0) {
+        hasParameters() && parameter in symbol.parameters ||
+        isParameterized() && parameter.type in substitutions) {
       return true;
     }
     if (hasRelevantTypes()) {

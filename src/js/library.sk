@@ -20,6 +20,7 @@ in string {
     string sliceOne(int index) { return `this`[index]; }
     string join(List<string> values) { return values.`join`(this); }
     @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }
+    @OperatorIn bool contains(string value) { return indexOf(value) >= 0; }
   }
 
   bool startsWith(string prefix) { return size() >= prefix.size() && slice(0, prefix.size()) == prefix; }
@@ -56,6 +57,7 @@ in List {
     void insert(int index, T value) { this.`splice`(index, 0, value); }
     @OperatorGet T get(int index) { return `this`[index]; }
     @OperatorSet void set(int index, T value) { `this`[index] = value; }
+    @OperatorIn bool contains(T value) { return indexOf(value) >= 0; }
   }
 
   void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }
@@ -67,12 +69,12 @@ class StringMap<T> {
   inline {
     @OperatorGet T get(string key) { return _table[key]; }
     @OperatorSet void set(string key, T value) { _table[key] = value; }
-    bool has(string key) { return key in _table; }
+    @OperatorIn bool has(string key) { return key in _table; }
     void remove(string key) { delete _table[key]; }
   }
 
   T getOrDefault(string key, T defaultValue) {
-    return has(key) ? this[key] : defaultValue;
+    return key in this ? this[key] : defaultValue;
   }
 
   List<string> keys() {
@@ -100,12 +102,12 @@ class IntMap<T> {
   inline {
     @OperatorGet T get(int key) { return _table[key]; }
     @OperatorSet void set(int key, T value) { _table[key] = value; }
-    bool has(int key) { return key in _table; }
+    @OperatorIn bool has(int key) { return key in _table; }
     void remove(int key) { delete _table[key]; }
   }
 
   T getOrDefault(int key, T defaultValue) {
-    return has(key) ? this[key] : defaultValue;
+    return key in this ? this[key] : defaultValue;
   }
 
   List<int> keys() {

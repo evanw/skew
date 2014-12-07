@@ -171,7 +171,7 @@ class InliningGraph {
 
   static bool containsInfiniteExpansion(InliningInfo info, List<Symbol> symbols) {
     // This shouldn't get very long in normal programs so O(n) here is fine
-    if (symbols.indexOf(info.symbol) >= 0) {
+    if (info.symbol in symbols) {
       return true;
     }
 

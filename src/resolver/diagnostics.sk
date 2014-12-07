@@ -372,13 +372,13 @@ void semanticErrorOperatorArgumentCount(Log log, Range range, int expected, int 
 }
 
 void semanticErrorNoMatchingOperator(Log log, Range range, NodeKind kind, List<Type> types) {
-  assert operatorInfo.has(kind);
+  assert kind in operatorInfo;
   log.error(range, "No " + (types.size() == 1 ? "unary" : types.size() == 2 ? "binary" : "ternary") +
     " operator \"" + operatorInfo[kind].text + "\" for " + typesToText(types, " and "));
 }
 
 void semanticErrorAmbiguousOperator(Log log, Range range, NodeKind kind, List<string> names) {
-  assert operatorInfo.has(kind);
+  assert kind in operatorInfo;
   log.error(range, (names.size() == 1 ? "Unary" : names.size() == 2 ? "Binary" : "Ternary") +
     " operator \"" + operatorInfo[kind].text + "\" is ambiguous, could be " + namesToText(names, " or "));
 }

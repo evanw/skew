@@ -392,7 +392,7 @@ class Resolver {
 
           // Only merge with other symbols that were also inserted by this pass
           var currentSymbol = current.symbol;
-          if (insertedSymbols.indexOf(currentSymbol) < 0) {
+          if (!(currentSymbol in insertedSymbols)) {
             continue;
           }
 
@@ -404,7 +404,7 @@ class Resolver {
               block.scope.locals[memberSymbol.name] = Member(collision);
               insertedSymbols.push(collision);
             }
-          } else if (currentSymbol.identicalMembers.indexOf(member) < 0) {
+          } else if (!(member in currentSymbol.identicalMembers)) {
             currentSymbol.identicalMembers.push(member);
           }
         }
@@ -918,7 +918,7 @@ class Resolver {
 
       // Prevent duplicates, but only within this type (duplicates among base
       // types are fine)
-      if (type.relevantTypes.indexOf(baseType) >= 0) {
+      if (baseType in type.relevantTypes) {
         semanticErrorDuplicateBaseType(log, base.range, baseType);
         continue;
       }
@@ -1490,6 +1490,7 @@ class Resolver {
       else if (name == "@OperatorXor") registerOperatorOverload(symbol, node, .BITWISE_XOR);
       else if (name == "@OperatorShiftLeft") registerOperatorOverload(symbol, node, .SHIFT_LEFT);
       else if (name == "@OperatorShiftRight") registerOperatorOverload(symbol, node, .SHIFT_RIGHT);
+      else if (name == "@OperatorIn") registerOperatorOverload(symbol, node, .IN);
 
       // Binary storage operators
       else if (name == "@OperatorAddAssign") registerOperatorOverload(symbol, node, .ASSIGN_ADD);
@@ -3231,6 +3232,7 @@ class Resolver {
   MatchKind assessOperatorOverloadMatch(List<Type> nodeTypes, List<Type> argumentTypes) {
     assert nodeTypes.size() == 1 + argumentTypes.size();
     var foundImplicitConversion = false;
+
     for (var i = 0; i < argumentTypes.size(); i++) {
       var a = nodeTypes[i + 1];
       var b = argumentTypes[i];
@@ -3242,21 +3244,31 @@ class Resolver {
         }
       }
     }
+
     return foundImplicitConversion ? .INEXACT : .EXACT;
   }
 
   void applyOperatorOverload(Node node, Member member) {
     var symbol = member.symbol;
     var argumentTypes = member.type.argumentTypes();
-    var dotTarget = node.children[0].replaceWith(null);
+    var children = node.removeChildren();
+
+    // Reverse operand order for the "in" operator
+    if (node.kind == .IN) {
+      children.reverse();
+    }
+
+    var dotTarget = children[0];
     var dotName = Node.createName(symbol.name).withSymbol(symbol).withType(member.type);
     var value = Node.createDot(dotTarget, dotName).withSymbol(symbol).withType(member.type);
     List<Node> arguments = [];
+
     for (var i = 0; i < argumentTypes.size(); i++) {
-      var argument = node.children[i + 1].replaceWith(null);
+      var argument = children[i + 1];
       checkConversion(argumentTypes[i], argument, .IMPLICIT_CAST);
       arguments.push(argument);
     }
+
     node.become(Node.createCall(value, arguments).withRange(node.range).withType(member.type.resultType()));
   }
 
@@ -3280,8 +3292,15 @@ class Resolver {
       kind = .COMPARE;
     }
 
+    // Reverse operand order for the "in" operator
+    var typeForMatching = types;
+    if (kind == .IN) {
+      typeForMatching = types.clone();
+      typeForMatching.reverse();
+    }
+
     // The value for "this" determines the operator overload set to search
-    var targetType = types[0];
+    var targetType = typeForMatching[0];
     var overloads = targetType.symbol.operatorOverloadsForKind(kind);
     MatchKind bestMatch = .INEXACT;
     List<Member> matches = [];
@@ -3295,7 +3314,7 @@ class Resolver {
       var member = targetType.findOperatorOverload(overload);
       initializeMember(member);
       assert member.type.isFunction();
-      var match = assessOperatorOverloadMatch(types, member.type.argumentTypes());
+      var match = assessOperatorOverloadMatch(typeForMatching, member.type.argumentTypes());
       if (match > bestMatch) {
         bestMatch = match;
         matches = [member];

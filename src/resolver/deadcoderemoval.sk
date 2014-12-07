@@ -31,7 +31,7 @@ class DeadCodeRemovalPass {
     var isFixedPoint = false;
     for (var i = 0; i < allSymbols.size(); i++) {
       var symbol = allSymbols[i];
-      if (!pass.includedSymbols.has(symbol.uniqueID) && symbol.overriddenMember != null) {
+      if (!(symbol.uniqueID in pass.includedSymbols) && symbol.overriddenMember != null) {
         deadSymbolsWithOverrides.push(symbol);
       }
     }
@@ -59,7 +59,7 @@ class DeadCodeRemovalPass {
       return;
     }
 
-    if (!includedSymbols.has(symbol.uniqueID)) {
+    if (!(symbol.uniqueID in includedSymbols)) {
       includedSymbols[symbol.uniqueID] = true;
 
       // This symbol depends on the enclosing symbol being present
@@ -115,8 +115,8 @@ class DeadCodeRemovalPass {
     assert symbol.overriddenMember != null;
     assert symbol.enclosingSymbol != null;
 
-    if (!includedSymbols.has(symbol.uniqueID) && (symbol.overriddenMember.symbol.isImport() ||
-        includedSymbols.has(symbol.enclosingSymbol.uniqueID) && includedSymbols.has(symbol.overriddenMember.symbol.uniqueID))) {
+    if (!(symbol.uniqueID in includedSymbols) && (symbol.overriddenMember.symbol.isImport() ||
+        symbol.enclosingSymbol.uniqueID in includedSymbols && symbol.overriddenMember.symbol.uniqueID in includedSymbols)) {
       includeSymbol(symbol);
       return true;
     }
@@ -131,7 +131,7 @@ class DeadCodeRemovalPass {
     }
 
     // Remove symbols that aren't included
-    if (!includedSymbols.has(symbol.uniqueID)) {
+    if (!(symbol.uniqueID in includedSymbols)) {
       if (symbol.enclosingSymbol != null) {
         symbol.enclosingSymbol.type.members.remove(symbol.name);
       }
@@ -145,7 +145,7 @@ class DeadCodeRemovalPass {
     }
 
     // Disconnect symbols that are included from overridden symbols that aren't included
-    if (symbol.overriddenMember != null && !includedSymbols.has(symbol.overriddenMember.symbol.uniqueID)) {
+    if (symbol.overriddenMember != null && !(symbol.overriddenMember.symbol.uniqueID in includedSymbols)) {
       symbol.overriddenMember = null;
     }
     return false;

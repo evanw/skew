@@ -345,7 +345,7 @@ namespace cpp {
 
     override void emitString(Node node) {
       var content = node.asString();
-      var needsLength = content.indexOf("\0") >= 0;
+      var needsLength = "\0" in content;
       var needsWrap = needsLength || needsWrappedStringConstructor(node);
 
       if (needsWrap) {

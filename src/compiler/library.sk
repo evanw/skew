@@ -15,6 +15,7 @@ import class string {
   static string fromCodeUnit(int value);
   string join(List<string> values);
   @OperatorGet int codeUnitAt(int index);
+  @OperatorIn bool contains(string value);
   bool startsWith(string prefix);
   bool endsWith(string suffix);
   string repeat(int count);
@@ -41,6 +42,7 @@ import class List<T> {
   void insert(int index, T value);
   @OperatorGet T get(int index);
   @OperatorSet void set(int index, T value);
+  @OperatorIn bool contains(T value);
   void swap(int a, int b);
 }
 
@@ -49,7 +51,7 @@ import class StringMap<T> {
   @OperatorGet T get(string key);
   T getOrDefault(string key, T defaultValue);
   @OperatorSet void set(string key, T value);
-  bool has(string key);
+  @OperatorIn bool has(string key);
   void remove(string key);
   List<string> keys();
   List<T> values();
@@ -61,7 +63,7 @@ import class IntMap<T> {
   @OperatorGet T get(int key);
   T getOrDefault(int key, T defaultValue);
   @OperatorSet void set(int key, T value);
-  bool has(int key);
+  @OperatorIn bool has(int key);
   void remove(int key);
   List<int> keys();
   List<T> values();

@@ -571,7 +571,7 @@ namespace base {
       if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
         return mangleName(symbol.enclosingSymbol);
       }
-      if (isKeyword.has(symbol.name) && !symbol.isImport()) {
+      if (symbol.name in isKeyword && !symbol.isImport()) {
         return "_" + symbol.name + "_";
       }
       return symbol.name;

@@ -907,7 +907,7 @@ namespace js {
       do {
         name = numberToName(nextSymbolName);
         nextSymbolName++;
-      } while (reservedNames.has(name));
+      } while (name in reservedNames);
       return name;
     }
   }

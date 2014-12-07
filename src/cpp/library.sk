@@ -43,6 +43,7 @@ in string {
     int lastIndexOf(string value) { return (int)this.`rfind`(value); }
     static string fromCodeUnit(int value) { return `string`(1, value); }
     @OperatorGet int codeUnitAt(int index) { return `this`[index]; }
+    @OperatorIn bool contains(string value) { return indexOf(value) >= 0; }
   }
 
   string toLowerCase() {
@@ -170,6 +171,11 @@ class List<T> {
     _data[index] = value;
   }
 
+  @OperatorIn
+  bool contains(T value) {
+    return indexOf(value) >= 0;
+  }
+
   void swap(int a, int b) {
     assert a >= 0 && a < size();
     assert b >= 0 && b < size();
@@ -184,7 +190,7 @@ class StringMap<T> {
   @OperatorGet T get(string key) { return _table[key]; }
   T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
   @OperatorSet void set(string key, T value) { _table[key] = value; }
-  bool has(string key) { return _table.count(key); }
+  @OperatorIn bool has(string key) { return _table.count(key); }
   void remove(string key) { _table.erase(key); }
   List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
   List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }
@@ -198,7 +204,7 @@ class IntMap<T> {
   @OperatorGet T get(int key) { return _table[key]; }
   T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
   @OperatorSet void set(int key, T value) { _table[key] = value; }
-  bool has(int key) { return _table.count(key); }
+  @OperatorIn bool has(int key) { return _table.count(key); }
   void remove(int key) { _table.erase(key); }
   List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
   List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }

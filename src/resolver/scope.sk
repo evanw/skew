@@ -23,7 +23,7 @@ class Scope {
     if (locals == null) {
       locals = StringMap<Member>();
     }
-    assert !locals.has(member.symbol.name);
+    assert !(member.symbol.name in locals);
     locals[member.symbol.name] = member;
   }
 

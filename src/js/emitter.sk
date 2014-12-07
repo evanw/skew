@@ -810,7 +810,7 @@ namespace js {
             return false;
           }
         }
-        return value.size() > 0 && !isKeyword.has(value);
+        return value.size() > 0 && !(value in isKeyword);
       }
       return false;
     }
@@ -912,7 +912,7 @@ namespace js {
       if (symbol.isImportOrExport()) {
         return symbol.name;
       }
-      if (isKeyword.has(symbol.name)) {
+      if (symbol.name in isKeyword) {
         return "$" + symbol.name;
       }
       return symbol.name;
