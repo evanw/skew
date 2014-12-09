@@ -1,0 +1,63 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+var path = require('path');
+var child_process = require('child_process');
+
+function run(command, args, options, callback) {
+  var process = child_process.spawn(command, args, options);
+  process.on('error', function(error) { callback(1); });
+  process.on('close', function(code) { callback(code); });
+}
+
+function frontend() {
+  require('./compiled');
+}
+
+function install() {
+  var sentinelPath = path.join(__dirname, 'sentinel');
+
+  if (fs.existsSync(sentinelPath)) {
+    frontend();
+    return;
+  }
+
+  console.log('installing...');
+  fs.writeFileSync(sentinelPath, '');
+
+  if (!fs.existsSync(sentinelPath)) {
+    frontend();
+    return;
+  }
+
+  var binaryPath = path.join(__dirname, 'binary');
+  var args = [
+    'c++',
+    'frontend.cpp',
+    '-o', binaryPath,
+    '-O3',
+    '-DNDEBUG',
+    '-std=c++11',
+    '-Wno-switch',
+    '-ferror-limit=0',
+    '-fno-exceptions',
+    '-fno-rtti',
+    '-ferror-limit=0',
+    '-fomit-frame-pointer',
+    '-fvisibility=hidden',
+  ];
+
+  run(args.shift(), args, { cwd: __dirname, stdio: 'inherit' }, function(code) {
+    if (code || !fs.existsSync(binaryPath)) {
+      frontend();
+      return;
+    }
+
+    run(binaryPath, process.argv.slice(2), { stdio: 'inherit' }, function(code) {
+      if (!code) try { fs.rename(binaryPath, __filename); } catch (e) {}
+      process.exit(code);
+    });
+  });
+}
+
+install();
