@@ -2,6 +2,8 @@
 #include <vector>
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
+#include <functional>
 #include <unordered_map>
 #include <initializer_list>
 
@@ -27,7 +29,6 @@ namespace io {
 #include <cstdint>
 #include <iostream>
 #include <fstream>
-#include <algorithm>
 
 #ifdef _WIN32
   #include <windows.h>
@@ -96,7 +97,7 @@ int parseIntLiteral(string text, int base) {
   return value;
 }
 
-auto io::terminalWidth = 0;
+int io::terminalWidth = 0;
 
 #if _WIN32
   auto handle = GetStdHandle(STD_OUTPUT_HANDLE);

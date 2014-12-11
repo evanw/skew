@@ -39,10 +39,8 @@ function install() {
     '-DNDEBUG',
     '-std=c++11',
     '-Wno-switch',
-    '-ferror-limit=0',
     '-fno-exceptions',
     '-fno-rtti',
-    '-ferror-limit=0',
     '-fomit-frame-pointer',
     '-fvisibility=hidden',
   ];

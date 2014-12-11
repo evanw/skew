@@ -1,6 +1,6 @@
 {
   "name": "skew",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "author": "Evan Wallace",
   "description": "A compiler for the Skew programming language",
   "license": "MIT",
@@ -8,7 +8,7 @@
     "skewc": "skewc"
   },
   "scripts": {
-    "install": "node skewc -h"
+    "install": "node skewc -h || nodejs skewc -h"
   },
   "preferGlobal": true,
   "repository": {
