@@ -5,18 +5,17 @@ var path = require('path');
 var child_process = require('child_process');
 
 function run(command, args, options, callback) {
-  var process = child_process.spawn(command, args, options);
-  process.on('error', function(error) { callback(1); });
-  process.on('close', function(code) { callback(code); });
+  var child = child_process.spawn(command, args, options);
+  child.on('error', function(error) { callback(1); });
+  child.on('close', function(code) { callback(code); });
 }
 
 function frontend() {
   require('./compiled');
 }
 
-function install() {
+function installUnix() {
   var sentinelPath = path.join(__dirname, 'sentinel');
-
   if (fs.existsSync(sentinelPath)) {
     frontend();
     return;
@@ -24,7 +23,6 @@ function install() {
 
   console.log('installing...');
   fs.writeFileSync(sentinelPath, '');
-
   if (!fs.existsSync(sentinelPath)) {
     frontend();
     return;
@@ -58,4 +56,75 @@ function install() {
   });
 }
 
-install();
+function installWindows() {
+  var binaryPath = path.join(__dirname, 'binary.exe');
+  if (fs.existsSync(binaryPath)) {
+    run(binaryPath, process.argv.slice(2), { stdio: 'inherit' }, function(code) {
+      process.exit(code);
+    });
+    return;
+  }
+
+  var sentinelPath = path.join(__dirname, 'sentinel');
+  if (fs.existsSync(sentinelPath)) {
+    frontend();
+    return;
+  }
+
+  console.log('installing...');
+  fs.writeFileSync(sentinelPath, '');
+  if (!fs.existsSync(sentinelPath)) {
+    frontend();
+    return;
+  }
+
+  // Find all installed Visual Studio versions
+  var versions = [];
+  Object.keys(process.env).forEach(function(key) {
+    var match = /^VS(\d+)COMNTOOLS$/.exec(key);
+    if (match) {
+      var version = match[1] | 0;
+      if (version >= 120) { // Versions before 12 don't have std::initializer_list
+        versions.push(version);
+      }
+    }
+  });
+
+  // Try the compilers in descending order
+  versions.sort(function(a, b) {
+    return b - a;
+  });
+  next();
+
+  function next() {
+    if (!versions.length) {
+      frontend();
+      return;
+    }
+
+    var version = versions.shift();
+    var folder = process.env['VS' + version + 'COMNTOOLS'];
+    var child = child_process.spawn('cmd.exe', [], { cwd: __dirname });
+    child.stdin.write('"' + path.join(folder, '..', '..', 'VC', 'bin', 'vcvars32.bat') + '"\n');
+    child.stdin.write('cl.exe /O2 frontend.cpp /Fe"' + binaryPath + '"\n');
+    child.stdin.end();
+    child.stdout.pipe(process.stdout);
+    child.stderr.pipe(process.stderr);
+    child.on('close', function(code) {
+      if (code || !fs.existsSync(binaryPath)) {
+        next();
+        return;
+      }
+
+      run(binaryPath, process.argv.slice(2), { stdio: 'inherit' }, function(code) {
+        process.exit(code);
+      });
+    });
+  }
+}
+
+if (process.platform === 'win32') {
+  installWindows();
+} else {
+  installUnix();
+}

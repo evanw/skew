@@ -127,7 +127,11 @@ void io::setColor(int color) {
 }
 
 void io::print(string text) {
-  std::cout << text;
+  #if _WIN32
+    WriteConsoleA(handle, text.c_str(), text.size(), nullptr, nullptr);
+  #else
+    std::cout << text;
+  #endif
 }
 
 bool io::writeFile(string path, string contents) {
