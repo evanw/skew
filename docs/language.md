@@ -201,6 +201,22 @@ in int {
 }
 ```
 
+## Import and Export
+
+Interacting with external code is done using the import and export modifiers. Import means "assume this already exists" and export means "make sure this is emitted and accessible by external code".
+
+```
+import class console {
+  static void log(string text);
+}
+
+export void main() {
+  console.log("Hello, world!");
+}
+```
+
+All compiler output is run through tree shaking which will omit all code not reachable from an exported declaration. If you don't export anything, then the output will be empty.
+
 ## Generics
 
 Generics are available for classes, interfaces, and functions. They are implemented using type erasure to ensure a compact and readable implementation. They are more than capable for simple type substitution but lack certain advanced features like covariant and contravariant conversions.
@@ -226,7 +242,7 @@ void bulkSet<K, V, HC is HashCode<K>>(HashMap<K, V, HC> map, K key, List<V> valu
 
 ## Asserts
 
-Asserts are currently implemented using a special assert statment. They are compiled away into nothing when turned off, so make sure the condition has no side effects.
+Asserts are currently implemented using a special assert statement. They are compiled away into nothing when turned off, so make sure the condition has no side effects.
 
 ```
 void signup(DB db, User user) {
@@ -275,3 +291,53 @@ class Player {
   }
 }
 ```
+
+## Casting
+
+Casting is done using C-style casts. These are useful for converting between primitive types and also for downcasting from a base class to a derived class. Downcasts are unchecked and have no performance impact in dynamic language targets, where they disappear entirely.
+
+```
+in double {
+  int asInt() {
+    return (int)this;
+  }
+}
+```
+
+## Function Inlining + Quoting
+
+The inline keyword requests function inlining. Functions will currently only be inlined if the body consists of a single statement and each argument is used at most once. The compiler also has a flag to pretend all functions have the inline keyword so normally the inline keyword isn't needed. However, the inline keyword can be used with quoting to create a basic macro system.
+
+An expression can be quoted by surrounding it with backtick characters. Quoting is a way to bypass the type checker and quote syntax trees directly, which are then replicated verbatim in the generated code. For example, this is the definition for string.fromCodeUnit() in the JavaScript target. It uses quoting to avoid needing to import the String class and the fromCharCode() function.
+
+```
+in string {
+  static inline string fromCodeUnit(int value) {
+    return `String`.fromCharCode(value);
+  }
+}
+```
+
+The type of a quoted expression is the error type, which causes type checking to be ignored for all uses of that expression. Use of quoting should be limited as much as possible since it avoids the type checker. It is very useful for library binding code, however. Property names can be quoted too:
+
+```
+in List {
+  inline void insert(int index, T value) {
+    this.`splice`(index, 0, value);
+  }
+}
+```
+
+Type names can also be quoted. This gives the ability to quickly reference external types without needing to define them. It also allows for the use of value types in C++ code. Since heavy use of C++ requires raw pointer access, Skew contains several C++-specific operators (binary :: and ->, unary * and &) exclusively for use with quoting. They fail to compile when used outside quotes.
+
+```
+in int {
+  string asHex() {
+    `std::stringstream` ss;
+    ss << `std::hex` << this;
+    return ss.str();
+  }
+}
+```
+
+Finally, a quoted expression inside another quoted expression can be used to get type checking back. The type checker does symbol binding which is necessary for correct minification and inlining. Unbound symbols are quoted verbatim and do not undergo value substitution during inlining.
