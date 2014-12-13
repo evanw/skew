@@ -80,4 +80,28 @@ export class Foo<T is IFoo> {
 }());
 ");
 
+testJS("
+class Foo {
+  var bar = 0;
+  void foo() { assert bar > 0; }
+}
+export void foo() {
+  Foo().foo();
+}
+", "
+(function() {
+  function Foo() {
+    this.bar = 0;
+  }
+  Foo.prototype.foo = function() {
+    if (this.bar <= 0) {
+      throw new Error('assert bar > 0; (<stdin>:3:16)');
+    }
+  };
+  foo = function() {
+    new Foo().foo();
+  };
+}());
+");
+
 }}
