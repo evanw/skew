@@ -1683,7 +1683,7 @@ class Resolver {
         // Uninitialized variables need an argument to provide the value
         if (value == null) {
           initializeMember(member);
-          if (member.type.isIgnored(cache)) {
+          if (member.type.isError(cache)) {
             symbol.flags |= .INITIALIZED;
             symbol.type = cache.errorType;
             return;

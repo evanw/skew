@@ -817,8 +817,10 @@ namespace js {
           var child = memberInitializers.children[i];
           var name = child.memberInitializerName();
           var value = child.memberInitializerValue();
-          block.insertChild(index, Node.createExpression(Node.createBinary(.ASSIGN, name.replaceWith(null), value.replaceWith(null))));
-          index++;
+          if (value.kind != .ERROR) {
+            block.insertChild(index, Node.createExpression(Node.createBinary(.ASSIGN, name.replaceWith(null), value.replaceWith(null))));
+            index++;
+          }
         }
       }
     }

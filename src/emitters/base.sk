@@ -364,6 +364,7 @@ namespace base {
         case .LIST { emitList(node, precedence); }
         case .SUPER_CALL { emitSuperCall(node); }
         case .QUOTED { emitExpression(node.quotedValue(), precedence); }
+        case .VAR { emit("var"); }
         default {
           if (kind.isUnaryOperator()) emitUnary(node, precedence);
           else if (kind.isBinaryOperator()) emitBinary(node, precedence);

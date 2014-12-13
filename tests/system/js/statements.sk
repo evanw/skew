@@ -104,4 +104,16 @@ export void foo() {
 }());
 ");
 
+testJS("
+export class Foo {
+  `var` foo;
+}
+", "
+(function() {
+  Foo = function(_0) {
+    this.foo = _0;
+  };
+}());
+");
+
 }}

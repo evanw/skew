@@ -2675,13 +2675,16 @@
     case 53:
       this.emitExpression(node.quotedValue(), precedence);
       break;
+    case 54:
+      this.emit('var');
+      break;
     default:
       if (in_NodeKind.isUnaryOperator(kind)) {
         this.emitUnary(node, precedence);
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/emitters/base.sk:370:16)');
+        throw new Error('assert false; (src/emitters/base.sk:371:16)');
       }
       break;
     }
@@ -2697,10 +2700,10 @@
   base.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
     if (!(values.length > 1)) {
-      throw new Error('assert values.size() > 1; (src/emitters/base.sk:384:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/base.sk:385:7)');
     }
     if (node.parent.kind !== NodeKind.EXPRESSION && node.parent.kind !== NodeKind.FOR) {
-      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:385:7)');
+      throw new Error('assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR; (src/emitters/base.sk:386:7)');
     }
     if (Precedence.COMMA <= precedence) {
       this.emit('(');
@@ -2882,7 +2885,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:558:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:559:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -3522,13 +3525,13 @@
       this.result += ',\n' + this.indent + '"content": ';
       switch (node.content.type()) {
       case 1:
-        this.result += node.asInt().toString();
+        this.result += node.asInt();
         break;
       case 0:
-        this.result += node.asBool().toString();
+        this.result += node.asBool();
         break;
       case 2:
-        this.result += node.asDouble().toString();
+        this.result += node.asDouble();
         break;
       case 3:
         this.result += quoteString(node.asString(), 34);
@@ -5244,7 +5247,7 @@
   };
   js.Patcher.prototype.patchName = function(node) {
     if (node.symbol !== null && in_SymbolKind.isInstance(node.symbol.kind) && node.isNameExpression()) {
-      node.become(Node.createDot(Node.createThis(), node.clone()));
+      node.become(Node.createDot(Node.createThis(), node.clone()).withType(node.type));
     }
   };
   js.Patcher.prototype.unionVariableWithFunction = function(node) {
@@ -5317,8 +5320,10 @@
         var child = memberInitializers.children[i];
         var name = child.memberInitializerName();
         var value = child.memberInitializerValue();
-        block.insertChild(index, Node.createExpression(Node.createBinary(NodeKind.ASSIGN, name.replaceWith(null), value.replaceWith(null))));
-        index = index + 1 | 0;
+        if (value.kind !== NodeKind.ERROR) {
+          block.insertChild(index, Node.createExpression(Node.createBinary(NodeKind.ASSIGN, name.replaceWith(null), value.replaceWith(null))));
+          index = index + 1 | 0;
+        }
       }
     }
   };
@@ -5338,7 +5343,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:843:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:845:7)');
     }
     var current = target;
     var parent = current.parent;
@@ -8202,7 +8207,7 @@
         var value = memberSymbol.node.variableValue();
         if (value === null) {
           this.initializeMember(member);
-          if (member.type.isIgnored(this.cache)) {
+          if (member.type.isError(this.cache)) {
             symbol.flags |= SymbolFlag.INITIALIZED;
             symbol.type = this.cache.errorType;
             return;
