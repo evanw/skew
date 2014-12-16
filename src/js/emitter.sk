@@ -136,6 +136,16 @@ namespace js {
       }
       emitVariables(variables);
 
+      // Emit entry point
+      var entryPointSymbol = resolver.entryPointSymbol;
+      if (entryPointSymbol != null) {
+        var type = entryPointSymbol.type;
+        var callText = fullName(entryPointSymbol) + (type.argumentTypes().size() > 0 ? "(process.argv.slice(2))" : "()");
+        emitSemicolonIfNeeded();
+        emit(indent + (type.resultType() == resolver.cache.intType ? "process.exit(" + callText + ")" : callText));
+        emitSemicolonAfterStatement();
+      }
+
       // End the closure wrapping everything
       decreaseIndent();
       emit(indent + "}());\n");
