@@ -57,6 +57,7 @@ class Resolver {
   List<Node> parsedBlocks = null;
   Type typeContext = null;
   Type resultType = null;
+  Symbol entryPointSymbol = null;
   final List<Symbol> allSymbols = [];
   final var cache = TypeCache();
   final Log log;
@@ -1474,8 +1475,9 @@ class Resolver {
       var modifierName = node.modifierName();
       var name = modifierName.asString();
 
-      // Other operators
-      if (name == "@OperatorGet") registerOperatorOverload(symbol, node, .INDEX);
+      // Other annotations
+      if (name == "@EntryPoint") symbol.flags |= .ENTRY_POINT;
+      else if (name == "@OperatorGet") registerOperatorOverload(symbol, node, .INDEX);
       else if (name == "@OperatorSet") registerOperatorOverload(symbol, node, .ASSIGN_INDEX);
 
       // Binary operators
@@ -1871,12 +1873,53 @@ class Resolver {
       assert !symbol.isInitializing();
       assert symbol.isInitialized();
       assert symbol.type != null;
+
+      if (symbol.isEntryPoint()) {
+        validateEntryPoint(symbol);
+      }
     }
 
     // Detect cyclic symbol references such as "foo foo;"
     else if (symbol.isInitializing()) {
       semanticErrorCyclicDeclaration(log, symbol.node.firstNonExtensionSibling().declarationName().range, symbol.name);
       symbol.type = cache.errorType;
+    }
+  }
+
+  void validateEntryPoint(Symbol symbol) {
+    var modifierName = symbol.node.declarationName();
+
+    // Detect duplicate entry points
+    if (entryPointSymbol != null) {
+      semanticErrorDuplicateEntryPoint(log, modifierName.range, entryPointSymbol.node.declarationName().range);
+      return;
+    }
+
+    entryPointSymbol = symbol;
+
+    // Entry points must be usable without an instance
+    if (symbol.kind != .GLOBAL_FUNCTION) {
+      semanticErrorEntryPointOnNonGlobalFunction(log, modifierName.range);
+      return;
+    }
+
+    // Importing an entry point doesn't make sense
+    if (symbol.isImport()) {
+      semanticErrorEntryPointOnImportedSymbol(log, modifierName.range);
+      return;
+    }
+
+    var stringListType = cache.parameterize(cache.listType, [cache.stringType]);
+    var validTypes = [
+      cache.functionType(cache.voidType, []),
+      cache.functionType(cache.intType, []),
+      cache.functionType(cache.voidType, [stringListType]),
+      cache.functionType(cache.intType, [stringListType]),
+    ];
+
+    // Only recognize a few entry point types
+    if (!symbol.type.isError(cache) && validTypes.indexOf(symbol.type) < 0) {
+      semanticErrorInvalidEntryPointType(log, modifierName.range, symbol.type, validTypes);
     }
   }
 

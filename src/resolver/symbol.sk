@@ -107,6 +107,7 @@ enum flags SymbolFlag {
 
   // Other flags
   PRIMITIVE,
+  ENTRY_POINT,
   HAS_ANNOTATIONS,
   HAS_LOCATION_ERROR,
 
@@ -326,6 +327,10 @@ class Symbol {
 
   bool isPrimitive() {
     return (flags & .PRIMITIVE) != 0;
+  }
+
+  bool isEntryPoint() {
+    return (flags & .ENTRY_POINT) != 0;
   }
 
   bool hasAnnotations() {

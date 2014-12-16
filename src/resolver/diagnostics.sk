@@ -382,3 +382,20 @@ void semanticErrorAmbiguousOperator(Log log, Range range, NodeKind kind, List<st
   log.error(range, (names.size() == 1 ? "Unary" : names.size() == 2 ? "Binary" : "Ternary") +
     " operator \"" + operatorInfo[kind].text + "\" is ambiguous, could be " + namesToText(names, " or "));
 }
+
+void semanticErrorDuplicateEntryPoint(Log log, Range range, Range previous) {
+  log.error(range, "Multiple entry points are declared");
+  log.note(previous, "The first entry point is here");
+}
+
+void semanticErrorInvalidEntryPointType(Log log, Range range, Type found, List<Type> expected) {
+  log.error(range, "Unexpected entry point " + typeToText(found) + ", expected " + typesToText(expected, " or "));
+}
+
+void semanticErrorEntryPointOnImportedSymbol(Log log, Range range) {
+  log.error(range, "The entry point cannot be imported");
+}
+
+void semanticErrorEntryPointOnNonGlobalFunction(Log log, Range range) {
+  log.error(range, "The entry point must be a global function");
+}

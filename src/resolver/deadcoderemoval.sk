@@ -9,7 +9,7 @@ class DeadCodeRemovalPass {
     // Include all exported symbols
     for (var i = 0; i < allSymbols.size(); i++) {
       var symbol = allSymbols[i];
-      if (symbol.isExport()) {
+      if (symbol.isExport() || symbol.isEntryPoint()) {
         pass.includeSymbol(symbol);
       }
     }
