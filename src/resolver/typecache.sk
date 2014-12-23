@@ -260,7 +260,7 @@ class TypeCache {
   bool canImplicitlyConvert(Type from, Type to) {
     if (from == to) return true;
     if (from.isNull(this) && to.isReference()) return true;
-    if ((from.isInteger(this) || from.isFloat(this)) && to.isDouble(this)) return true;
+    if ((from.isInteger(this) || from.isReal(this)) && to.isReal(this)) return true;
     if (from.isEnum() && (to.isInt(this) || to.isDouble(this))) return true;
     if (from.hasBaseType(to)) return true;
     return false;

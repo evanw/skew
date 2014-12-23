@@ -10287,7 +10287,7 @@
     if (from.isNull(this) && to.isReference()) {
       return true;
     }
-    if ((from.isInteger(this) || from.isFloat(this)) && to.isDouble(this)) {
+    if ((from.isInteger(this) || from.isReal(this)) && to.isReal(this)) {
       return true;
     }
     if (from.isEnum() && (to.isInt(this) || to.isDouble(this))) {

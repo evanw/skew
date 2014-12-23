@@ -106,15 +106,9 @@ float d = 0.0;
 float e = null;
 float f = \"\";
 ", "
-<stdin>:1:11: error: Cannot convert from type \"int\" to type \"float\" without a cast
-float a = 0;
-          ^
 <stdin>:2:11: error: Cannot convert from type \"bool\" to type \"float\" without a cast
 float b = false;
           ~~~~~
-<stdin>:4:11: error: Cannot convert from type \"double\" to type \"float\" without a cast
-float d = 0.0;
-          ~~~
 <stdin>:5:11: error: Cannot convert from type \"null\" to type \"float\"
 float e = null;
           ~~~~
@@ -275,7 +269,7 @@ int x = true ? true : false;
 test("
 bool x = true ? 0 : 1.0f;
 ", "
-<stdin>:1:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+<stdin>:1:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
 bool x = true ? 0 : 1.0f;
          ~~~~~~~~~~~~~~~
 ");
