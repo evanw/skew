@@ -3344,6 +3344,10 @@ class Resolver {
 
     // The value for "this" determines the operator overload set to search
     var targetType = typeForMatching[0];
+    if (targetType.symbol == null) {
+      semanticErrorNoMatchingOperator(log, node.range, node.kind, types);
+      return;
+    }
     var overloads = targetType.symbol.operatorOverloadsForKind(kind);
     MatchKind bestMatch = .INEXACT;
     List<Member> matches = [];

@@ -9479,6 +9479,10 @@
       typeForMatching.reverse();
     }
     var targetType = typeForMatching[0];
+    if (targetType.symbol === null) {
+      semanticErrorNoMatchingOperator(this.log, node.range, node.kind, types);
+      return;
+    }
     var overloads = targetType.symbol.operatorOverloadsForKind(kind);
     var bestMatch = MatchKind.INEXACT;
     var matches = [];
@@ -9486,15 +9490,15 @@
     for (var i = 0; i < overloads.length; i = i + 1 | 0) {
       var overload = overloads[i];
       if (!overload.type.isFunction()) {
-        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3355:7)');
+        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3359:7)');
       }
       if ((overload.type.argumentTypes().length + 1 | 0) !== children.length) {
-        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3356:7)');
+        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3360:7)');
       }
       var member = targetType.findOperatorOverload(overload);
       this.initializeMember(member);
       if (!member.type.isFunction()) {
-        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3359:7)');
+        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3363:7)');
       }
       var match = this.assessOperatorOverloadMatch(typeForMatching, member.type.argumentTypes());
       if (match > bestMatch) {

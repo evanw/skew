@@ -239,4 +239,18 @@ void foo(Foo foo) {
 ", "
 ");
 
+test("
+namespace ns {
+  interface Foo { virtual Bar foo(); }
+  interface Bar {}
+}
+class Bar : ns.Foo {
+  bool bar(ns.Bar bar) { return foo != bar; }
+}
+", "
+<stdin>:6:33: error: No binary operator \"!=\" for type \"ns.Bar fn()\" and type \"ns.Bar\"
+  bool bar(ns.Bar bar) { return foo != bar; }
+                                ~~~~~~~~~~
+");
+
 }}
