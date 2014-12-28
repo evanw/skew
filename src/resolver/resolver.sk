@@ -1471,55 +1471,79 @@ class Resolver {
       return;
     }
 
-    for (var node = symbol.node.parent; node.kind == .MODIFIER; node = node.parent) {
+    // Walk up the parent chain looking for modifiers
+    var node = symbol.node.parent;
+    if (node.kind == .VARIABLE_CLUSTER) {
+      node = node.parent;
+    }
+    for (; node.kind == .MODIFIER; node = node.parent) {
       var modifierName = node.modifierName();
       var name = modifierName.asString();
+      if (name[0] != '@') {
+        continue;
+      }
+      NodeKind operatorKind = .NULL;
 
       // Other annotations
-      if (name == "@EntryPoint") symbol.flags |= .ENTRY_POINT;
-      else if (name == "@OperatorGet") registerOperatorOverload(symbol, node, .INDEX);
-      else if (name == "@OperatorSet") registerOperatorOverload(symbol, node, .ASSIGN_INDEX);
+      if (name == "@EntryPoint") registerEntryPoint(symbol, node);
+      else if (name == "@OperatorGet") operatorKind = .INDEX;
+      else if (name == "@OperatorSet") operatorKind = .ASSIGN_INDEX;
 
       // Binary operators
-      else if (name == "@OperatorCompare") registerOperatorOverload(symbol, node, .COMPARE);
-      else if (name == "@OperatorAdd") registerOperatorOverload(symbol, node, .ADD);
-      else if (name == "@OperatorSubtract") registerOperatorOverload(symbol, node, .SUBTRACT);
-      else if (name == "@OperatorMultiply") registerOperatorOverload(symbol, node, .MULTIPLY);
-      else if (name == "@OperatorDivide") registerOperatorOverload(symbol, node, .DIVIDE);
-      else if (name == "@OperatorRemainder") registerOperatorOverload(symbol, node, .REMAINDER);
-      else if (name == "@OperatorAnd") registerOperatorOverload(symbol, node, .BITWISE_AND);
-      else if (name == "@OperatorOr") registerOperatorOverload(symbol, node, .BITWISE_OR);
-      else if (name == "@OperatorXor") registerOperatorOverload(symbol, node, .BITWISE_XOR);
-      else if (name == "@OperatorShiftLeft") registerOperatorOverload(symbol, node, .SHIFT_LEFT);
-      else if (name == "@OperatorShiftRight") registerOperatorOverload(symbol, node, .SHIFT_RIGHT);
-      else if (name == "@OperatorIn") registerOperatorOverload(symbol, node, .IN);
+      else if (name == "@OperatorCompare") operatorKind = .COMPARE;
+      else if (name == "@OperatorAdd") operatorKind = .ADD;
+      else if (name == "@OperatorSubtract") operatorKind = .SUBTRACT;
+      else if (name == "@OperatorMultiply") operatorKind = .MULTIPLY;
+      else if (name == "@OperatorDivide") operatorKind = .DIVIDE;
+      else if (name == "@OperatorRemainder") operatorKind = .REMAINDER;
+      else if (name == "@OperatorAnd") operatorKind = .BITWISE_AND;
+      else if (name == "@OperatorOr") operatorKind = .BITWISE_OR;
+      else if (name == "@OperatorXor") operatorKind = .BITWISE_XOR;
+      else if (name == "@OperatorShiftLeft") operatorKind = .SHIFT_LEFT;
+      else if (name == "@OperatorShiftRight") operatorKind = .SHIFT_RIGHT;
+      else if (name == "@OperatorIn") operatorKind = .IN;
 
       // Binary storage operators
-      else if (name == "@OperatorAddAssign") registerOperatorOverload(symbol, node, .ASSIGN_ADD);
-      else if (name == "@OperatorSubtractAssign") registerOperatorOverload(symbol, node, .ASSIGN_SUBTRACT);
-      else if (name == "@OperatorMultiplyAssign") registerOperatorOverload(symbol, node, .ASSIGN_MULTIPLY);
-      else if (name == "@OperatorDivideAssign") registerOperatorOverload(symbol, node, .ASSIGN_DIVIDE);
-      else if (name == "@OperatorRemainderAssign") registerOperatorOverload(symbol, node, .ASSIGN_REMAINDER);
-      else if (name == "@OperatorAndAssign") registerOperatorOverload(symbol, node, .ASSIGN_BITWISE_AND);
-      else if (name == "@OperatorOrAssign") registerOperatorOverload(symbol, node, .ASSIGN_BITWISE_OR);
-      else if (name == "@OperatorXorAssign") registerOperatorOverload(symbol, node, .ASSIGN_BITWISE_XOR);
-      else if (name == "@OperatorShiftLeftAssign") registerOperatorOverload(symbol, node, .ASSIGN_SHIFT_LEFT);
-      else if (name == "@OperatorShiftRightAssign") registerOperatorOverload(symbol, node, .ASSIGN_SHIFT_RIGHT);
+      else if (name == "@OperatorAddAssign") operatorKind = .ASSIGN_ADD;
+      else if (name == "@OperatorSubtractAssign") operatorKind = .ASSIGN_SUBTRACT;
+      else if (name == "@OperatorMultiplyAssign") operatorKind = .ASSIGN_MULTIPLY;
+      else if (name == "@OperatorDivideAssign") operatorKind = .ASSIGN_DIVIDE;
+      else if (name == "@OperatorRemainderAssign") operatorKind = .ASSIGN_REMAINDER;
+      else if (name == "@OperatorAndAssign") operatorKind = .ASSIGN_BITWISE_AND;
+      else if (name == "@OperatorOrAssign") operatorKind = .ASSIGN_BITWISE_OR;
+      else if (name == "@OperatorXorAssign") operatorKind = .ASSIGN_BITWISE_XOR;
+      else if (name == "@OperatorShiftLeftAssign") operatorKind = .ASSIGN_SHIFT_LEFT;
+      else if (name == "@OperatorShiftRightAssign") operatorKind = .ASSIGN_SHIFT_RIGHT;
 
       // Unary operators
-      else if (name == "@OperatorNegative") registerOperatorOverload(symbol, node, .NEGATIVE);
-      else if (name == "@OperatorComplement") registerOperatorOverload(symbol, node, .COMPLEMENT);
+      else if (name == "@OperatorNegative") operatorKind = .NEGATIVE;
+      else if (name == "@OperatorComplement") operatorKind = .COMPLEMENT;
 
       // No other annotations at the moment
-      else if (name.startsWith("@")) semanticErrorUnknownAnnotation(log, modifierName.range, name);
+      else semanticErrorUnknownAnnotation(log, modifierName.range, name);
+
+      // Register operator overloads in one place to generate less code
+      if (operatorKind != .NULL) registerOperatorOverload(symbol, node, operatorKind);
     }
+  }
+
+  void registerEntryPoint(Symbol symbol, Node node) {
+    // The entry point must be a global function since it will be the first
+    // thing executed after static initializers
+    if (symbol.kind != .GLOBAL_FUNCTION) {
+      semanticErrorNonGlobalEntryPoint(log, node.modifierName().range);
+      return;
+    }
+
+    forbidAnnotationArguments(node);
+    symbol.flags |= .ENTRY_POINT;
   }
 
   void forbidAnnotationArguments(Node node) {
     var arguments = node.modifierArguments();
     if (arguments != null) {
       var modifierName = node.modifierName();
-      semanticErrorUnexpectedAnnotationArguments(log, Range.after(node.range, modifierName.range), modifierName.asString());
+      semanticErrorUnexpectedAnnotationArguments(log, arguments.range, modifierName.asString());
     }
   }
 

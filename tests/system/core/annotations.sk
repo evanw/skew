@@ -1,0 +1,119 @@
+namespace core { void testAnnotations() {
+
+test("
+@OperatorGet int foo;
+@OperatorGet void bar() {}
+@OperatorGet class Foo {}
+@OperatorGet enum Bar {}
+@OperatorGet namespace ns {}
+", "
+<stdin>:1:1: error: Operator overloading only applies to instance functions
+@OperatorGet int foo;
+~~~~~~~~~~~~
+<stdin>:2:1: error: Operator overloading only applies to instance functions
+@OperatorGet void bar() {}
+~~~~~~~~~~~~
+<stdin>:3:1: error: Operator overloading only applies to instance functions
+@OperatorGet class Foo {}
+~~~~~~~~~~~~
+<stdin>:4:1: error: Operator overloading only applies to instance functions
+@OperatorGet enum Bar {}
+~~~~~~~~~~~~
+<stdin>:5:1: error: Operator overloading only applies to instance functions
+@OperatorGet namespace ns {}
+~~~~~~~~~~~~
+");
+
+test("
+class Foo {
+  @OperatorNegative() void foo() {}
+}
+", "
+<stdin>:2:20: error: The annotation \"@OperatorNegative\" cannot take arguments
+  @OperatorNegative() void foo() {}
+                   ~~
+");
+
+test("
+@EntryPoint int foo;
+@EntryPoint void bar() {}
+@EntryPoint class Foo {
+  @EntryPoint void foo() {}
+}
+@EntryPoint enum Bar {}
+@EntryPoint namespace ns {}
+", "
+<stdin>:1:1: error: The entry point must be a global function
+@EntryPoint int foo;
+~~~~~~~~~~~
+<stdin>:3:1: error: The entry point must be a global function
+@EntryPoint class Foo {
+~~~~~~~~~~~
+<stdin>:4:3: error: The entry point must be a global function
+  @EntryPoint void foo() {}
+  ~~~~~~~~~~~
+<stdin>:6:1: error: The entry point must be a global function
+@EntryPoint enum Bar {}
+~~~~~~~~~~~
+<stdin>:7:1: error: The entry point must be a global function
+@EntryPoint namespace ns {}
+~~~~~~~~~~~
+");
+
+test("
+@EntryPoint() void foo() {}
+", "
+<stdin>:1:12: error: The annotation \"@EntryPoint\" cannot take arguments
+@EntryPoint() void foo() {}
+           ~~
+");
+
+test("
+@EntryPoint void foo() {}
+@EntryPoint void bar() {}
+", "
+<stdin>:2:18: error: Multiple entry points are declared
+@EntryPoint void bar() {}
+                 ~~~
+<stdin>:1:18: note: The first entry point is here
+@EntryPoint void foo() {}
+                 ~~~
+");
+
+test("
+@EntryPoint void foo() {
+}
+", "
+");
+
+test("
+@EntryPoint int foo() {
+  return 0;
+}
+", "
+");
+
+test("
+@EntryPoint void foo(List<string> args) {
+}
+", "
+");
+
+test("
+@EntryPoint int foo(List<string> args) {
+  return 0;
+}
+", "
+");
+
+test("
+@EntryPoint float foo() {
+  return 0;
+}
+", "
+<stdin>:1:19: error: Unexpected entry point type \"float fn()\", expected type \"void fn()\" or type \"int fn()\" or type \"void fn(List<string>)\" or type \"int fn(List<string>)\"
+@EntryPoint float foo() {
+                  ~~~
+");
+
+}}

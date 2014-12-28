@@ -69,6 +69,7 @@ void testHelperJS(CompilerOptions options, string expected) {
 }
 
 export void start() {
+  core.testAnnotations();
   core.testCalls();
   core.testConst();
   core.testConstructors();

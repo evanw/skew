@@ -360,11 +360,15 @@ void semanticErrorUnknownAnnotation(Log log, Range range, string name) {
 }
 
 void semanticErrorUnexpectedAnnotationArguments(Log log, Range range, string name) {
-  log.error(range, "Unexpected arguments for annotation " + simpleQuote(name));
+  log.error(range, "The annotation " + simpleQuote(name) + " cannot take arguments");
 }
 
 void semanticErrorOperatorOnNonInstanceFunction(Log log, Range range) {
   log.error(range, "Operator overloading only applies to instance functions");
+}
+
+void semanticErrorNonGlobalEntryPoint(Log log, Range range) {
+  log.error(range, "The entry point must be a global function");
 }
 
 void semanticErrorOperatorArgumentCount(Log log, Range range, int expected, int found, string name) {

@@ -343,7 +343,12 @@ Node parseModifier(ParserContext context, StatementHint hint) {
 Node parseAnnotation(ParserContext context, StatementHint hint) {
   var token = context.next();
   var name = Node.createName(token.text).withRange(token.range);
-  var arguments = context.peek(.LEFT_PARENTHESIS) ? parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA) : null;
+  Node arguments = null;
+  if (context.peek(.LEFT_PARENTHESIS)) {
+    var token = context.current();
+    var values = parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
+    arguments = Node.createNodeList(values).withRange(context.spanSince(token.range));
+  }
   var block = parseBlockOrStatement(context, hint); if (block == null) return null;
   return Node.createModifier(name, arguments, block.removeChildren()).withRange(context.spanSince(token.range));
 }

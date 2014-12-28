@@ -179,11 +179,11 @@ in Node {
     return Node(.EXPRESSION).withChildren([value]);
   }
 
-  static Node createModifier(Node name, List<Node> arguments, List<Node> statements) {
+  static Node createModifier(Node name, Node arguments, List<Node> statements) {
     assert name.kind == .NAME;
-    assert arguments == null || checkAllNodeKinds(arguments, NodeKindIsExpression());
+    assert arguments == null || checkAllNodeListKinds(arguments, NodeKindIsExpression());
     assert checkAllNodeKinds(statements, NodeKindIsStatement());
-    statements.unshift(arguments != null ? createNodeList(arguments) : null);
+    statements.unshift(arguments);
     statements.unshift(name);
     return Node(.MODIFIER).withChildren(statements);
   }
