@@ -238,4 +238,16 @@ class Bar : ns.Foo {
                                 ~~~~~~~~~~
 ");
 
+test("
+var foo = null + \"\";
+var bar = null.toString() + \"\";
+", "
+<stdin>:1:11: error: Expression of type \"null\" has no toString() member to call
+var foo = null + \"\";
+          ~~~~
+<stdin>:2:16: error: \"toString\" is not declared on type \"null\"
+var bar = null.toString() + \"\";
+               ~~~~~~~~
+");
+
 }}

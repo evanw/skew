@@ -36,6 +36,7 @@ in double {
 
 in string {
   inline {
+    string toString() { return this; }
     int size() { return (int)this.`size`(); }
     string slice(int start, int end) { return this.`substr`(start, end - start); }
     string sliceOne(int index) { return fromCodeUnit(codeUnitAt(index)); }

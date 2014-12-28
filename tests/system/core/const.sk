@@ -61,4 +61,65 @@ void test() {
          ~~~
 ");
 
+test("
+assert const true;
+assert const false;
+assert const 2 + 2 == 4;
+assert const 2 + 2 != 4;
+assert const foo;
+assert const bar;
+import bool bar;
+", "
+<stdin>:2:14: error: Assertion failed
+assert const false;
+             ~~~~~
+<stdin>:4:14: error: Assertion failed
+assert const 2 + 2 != 4;
+             ~~~~~~~~~~
+<stdin>:5:14: error: \"foo\" is not declared
+assert const foo;
+             ~~~
+<stdin>:6:14: error: The argument to a compile-time assert must be a constant
+assert const bar;
+             ~~~
+");
+
+test("
+const string a = false + \"\";
+const string b = 1 + \"\";
+const string c = 1.0f + \"\";
+const string d = 1.0 + \"\";
+const string e = \"x\" + \"\";
+
+assert const a == \"false\";
+assert const b == \"1\";
+assert const c == \"1\";
+assert const d == \"1\";
+assert const e == \"x\";
+", "
+");
+
+test("
+const string a = false.toString() + \"\";
+const string b = 1.toString() + \"\";
+const string c = 1.0f.toString() + \"\";
+const string d = 1.0.toString() + \"\";
+const string e = \"x\".toString() + \"\";
+
+assert const a == \"false\";
+assert const b == \"1\";
+assert const c == \"1\";
+assert const d == \"1\";
+assert const e == \"x\";
+", "
+");
+
+test("
+const var foo = bar + \"\";
+const var bar = (int)baz;
+const var baz = true;
+assert const foo == \"1\";
+", "
+");
+
 }}

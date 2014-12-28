@@ -100,11 +100,36 @@ class ConstantFolder {
     }
   }
 
+  void foldToString(Node node) {
+    if (node.kind == .CALL) {
+      var value = node.callValue();
+      if (value.kind == .DOT) {
+        var target = value.dotTarget();
+        var name = value.dotName();
+        if (target != null && target.kind.isConstant() && name != null && name.kind == .NAME && name.asString() == "toString") {
+          string text;
+          switch (target.kind) {
+            case .BOOL { text = target.asBool().toString(); }
+            case .INT { text = target.asInt().toString(); }
+            case .FLOAT, .DOUBLE { text = target.asDouble().toString(); }
+            case .STRING { text = target.asString(); }
+            default { return; }
+          }
+          flattenString(node, text);
+        }
+      }
+    }
+  }
+
   void foldStringConcatenation(Node node) {
     var left = node.binaryLeft();
     var right = node.binaryRight();
     assert left.type.isString(cache) || left.type.isIgnored(cache);
     assert right.type.isString(cache) || right.type.isIgnored(cache);
+
+    // Inline calls to "toString()" on constant values
+    foldToString(left);
+    foldToString(right);
 
     if (right.kind == .STRING) {
       // "a" + "b" => "ab"
@@ -374,8 +399,20 @@ class ConstantFolder {
       return;
     }
 
+    // Fold equality operators
+    if (left.kind == .STRING) {
+      switch (kind) {
+        case .EQUAL { flattenBool(node, left.asString() == right.asString()); }
+        case .NOT_EQUAL { flattenBool(node, left.asString() != right.asString()); }
+        case .LESS_THAN { flattenBool(node, left.asString() < right.asString()); }
+        case .GREATER_THAN { flattenBool(node, left.asString() > right.asString()); }
+        case .LESS_THAN_OR_EQUAL { flattenBool(node, left.asString() <= right.asString()); }
+        case .GREATER_THAN_OR_EQUAL { flattenBool(node, left.asString() >= right.asString()); }
+      }
+    }
+
     // Fold "bool" values
-    if (left.kind == .BOOL) {
+    else if (left.kind == .BOOL) {
       switch (kind) {
         case .LOGICAL_AND { flattenBool(node, left.asBool() && right.asBool()); }
         case .LOGICAL_OR { flattenBool(node, left.asBool() || right.asBool()); }

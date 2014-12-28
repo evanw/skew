@@ -2546,7 +2546,7 @@ class Resolver {
         if (!value.kind.isConstant()) {
           semanticErrorNonConstantAssert(log, value.range);
         } else if (!value.isTrue()) {
-          semanticErrorFalseAssert(log, node.range);
+          semanticErrorFalseAssert(log, value.range);
         }
       }
     }

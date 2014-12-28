@@ -15,6 +15,7 @@ import class string {
 
 in string {
   inline {
+    string toString() { return this; }
     int size() { return this.`length`; }
     static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }
     string sliceOne(int index) { return `this`[index]; }

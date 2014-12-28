@@ -5,6 +5,7 @@ import class float { string toString(); }
 import class double { string toString(); }
 
 import class string {
+  string toString();
   int size();
   string slice(int start, int end);
   string sliceOne(int index);
