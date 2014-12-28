@@ -51,6 +51,7 @@ class MemberRangeComparison : Comparison<Member> {
 
 class Resolver {
   static var comparison = MemberRangeComparison();
+  var operatorAnnotationMap = createOperatorAnnotationMap();
   var context = ResolveContext();
   ConstantFolder constantFolder = null;
   List<Node> parsedDeclarations = null;
@@ -1472,7 +1473,7 @@ class Resolver {
       return;
     }
 
-    // Walk up the parent chain looking for modifiers
+    // Walk up the parent chain looking for annotation modifiers
     var node = symbol.node.parent;
     if (node.kind == .VARIABLE_CLUSTER) {
       node = node.parent;
@@ -1480,53 +1481,53 @@ class Resolver {
     for (; node.kind == .MODIFIER; node = node.parent) {
       var modifierName = node.modifierName();
       var name = modifierName.asString();
-      if (name[0] != '@') {
-        continue;
+      if (name[0] == '@') {
+        if (name in operatorAnnotationMap) registerOperatorOverload(symbol, node, operatorAnnotationMap[name]);
+        else if (name == "@NeedsInclude") registerNeedsInclude(symbol, node);
+        else if (name == "@EntryPoint") registerEntryPoint(symbol, node);
+        else semanticErrorUnknownAnnotation(log, modifierName.range, name);
       }
-      NodeKind operatorKind = .NULL;
-
-      // Other annotations
-      if (name == "@EntryPoint") registerEntryPoint(symbol, node);
-      else if (name == "@NeedsInclude") registerNeedsInclude(symbol, node);
-      else if (name == "@OperatorGet") operatorKind = .INDEX;
-      else if (name == "@OperatorSet") operatorKind = .ASSIGN_INDEX;
-
-      // Binary operators
-      else if (name == "@OperatorCompare") operatorKind = .COMPARE;
-      else if (name == "@OperatorAdd") operatorKind = .ADD;
-      else if (name == "@OperatorSubtract") operatorKind = .SUBTRACT;
-      else if (name == "@OperatorMultiply") operatorKind = .MULTIPLY;
-      else if (name == "@OperatorDivide") operatorKind = .DIVIDE;
-      else if (name == "@OperatorRemainder") operatorKind = .REMAINDER;
-      else if (name == "@OperatorAnd") operatorKind = .BITWISE_AND;
-      else if (name == "@OperatorOr") operatorKind = .BITWISE_OR;
-      else if (name == "@OperatorXor") operatorKind = .BITWISE_XOR;
-      else if (name == "@OperatorShiftLeft") operatorKind = .SHIFT_LEFT;
-      else if (name == "@OperatorShiftRight") operatorKind = .SHIFT_RIGHT;
-      else if (name == "@OperatorIn") operatorKind = .IN;
-
-      // Binary storage operators
-      else if (name == "@OperatorAddAssign") operatorKind = .ASSIGN_ADD;
-      else if (name == "@OperatorSubtractAssign") operatorKind = .ASSIGN_SUBTRACT;
-      else if (name == "@OperatorMultiplyAssign") operatorKind = .ASSIGN_MULTIPLY;
-      else if (name == "@OperatorDivideAssign") operatorKind = .ASSIGN_DIVIDE;
-      else if (name == "@OperatorRemainderAssign") operatorKind = .ASSIGN_REMAINDER;
-      else if (name == "@OperatorAndAssign") operatorKind = .ASSIGN_BITWISE_AND;
-      else if (name == "@OperatorOrAssign") operatorKind = .ASSIGN_BITWISE_OR;
-      else if (name == "@OperatorXorAssign") operatorKind = .ASSIGN_BITWISE_XOR;
-      else if (name == "@OperatorShiftLeftAssign") operatorKind = .ASSIGN_SHIFT_LEFT;
-      else if (name == "@OperatorShiftRightAssign") operatorKind = .ASSIGN_SHIFT_RIGHT;
-
-      // Unary operators
-      else if (name == "@OperatorNegative") operatorKind = .NEGATIVE;
-      else if (name == "@OperatorComplement") operatorKind = .COMPLEMENT;
-
-      // No other annotations at the moment
-      else semanticErrorUnknownAnnotation(log, modifierName.range, name);
-
-      // Register operator overloads in one place to generate less code
-      if (operatorKind != .NULL) registerOperatorOverload(symbol, node, operatorKind);
     }
+  }
+
+  static StringMap<NodeKind> createOperatorAnnotationMap() {
+    var result = StringMap<NodeKind>();
+
+    // Other operators
+    result["@OperatorGet"] = NodeKind.INDEX;
+    result["@OperatorSet"] = NodeKind.ASSIGN_INDEX;
+
+    // Binary operators
+    result["@OperatorCompare"] = NodeKind.COMPARE;
+    result["@OperatorAdd"] = NodeKind.ADD;
+    result["@OperatorSubtract"] = NodeKind.SUBTRACT;
+    result["@OperatorMultiply"] = NodeKind.MULTIPLY;
+    result["@OperatorDivide"] = NodeKind.DIVIDE;
+    result["@OperatorRemainder"] = NodeKind.REMAINDER;
+    result["@OperatorAnd"] = NodeKind.BITWISE_AND;
+    result["@OperatorOr"] = NodeKind.BITWISE_OR;
+    result["@OperatorXor"] = NodeKind.BITWISE_XOR;
+    result["@OperatorShiftLeft"] = NodeKind.SHIFT_LEFT;
+    result["@OperatorShiftRight"] = NodeKind.SHIFT_RIGHT;
+    result["@OperatorIn"] = NodeKind.IN;
+
+    // Binary storage operators
+    result["@OperatorAddAssign"] = NodeKind.ASSIGN_ADD;
+    result["@OperatorSubtractAssign"] = NodeKind.ASSIGN_SUBTRACT;
+    result["@OperatorMultiplyAssign"] = NodeKind.ASSIGN_MULTIPLY;
+    result["@OperatorDivideAssign"] = NodeKind.ASSIGN_DIVIDE;
+    result["@OperatorRemainderAssign"] = NodeKind.ASSIGN_REMAINDER;
+    result["@OperatorAndAssign"] = NodeKind.ASSIGN_BITWISE_AND;
+    result["@OperatorOrAssign"] = NodeKind.ASSIGN_BITWISE_OR;
+    result["@OperatorXorAssign"] = NodeKind.ASSIGN_BITWISE_XOR;
+    result["@OperatorShiftLeftAssign"] = NodeKind.ASSIGN_SHIFT_LEFT;
+    result["@OperatorShiftRightAssign"] = NodeKind.ASSIGN_SHIFT_RIGHT;
+
+    // Unary operators
+    result["@OperatorNegative"] = NodeKind.NEGATIVE;
+    result["@OperatorComplement"] = NodeKind.COMPLEMENT;
+
+    return result;
   }
 
   void registerEntryPoint(Symbol symbol, Node node) {

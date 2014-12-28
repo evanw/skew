@@ -46,12 +46,12 @@ test("
 <stdin>:1:1: error: The entry point must be a global function
 @EntryPoint int foo;
 ~~~~~~~~~~~
-<stdin>:3:1: error: The entry point must be a global function
-@EntryPoint class Foo {
-~~~~~~~~~~~
 <stdin>:4:3: error: The entry point must be a global function
   @EntryPoint void foo() {}
   ~~~~~~~~~~~
+<stdin>:3:1: error: The entry point must be a global function
+@EntryPoint class Foo {
+~~~~~~~~~~~
 <stdin>:6:1: error: The entry point must be a global function
 @EntryPoint enum Bar {}
 ~~~~~~~~~~~
