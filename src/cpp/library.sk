@@ -4,6 +4,9 @@ import class int {}
 import class bool {}
 import class float {}
 import class double {}
+
+@NeedsInclude(\"<string>\")
+@EmitAs(\"std::string\")
 import class string {}
 
 in int {
@@ -45,7 +48,7 @@ in string {
     string sliceOne(int index) { return fromCodeUnit(codeUnitAt(index)); }
     int indexOf(string value) { return (int)this.`find`(value); }
     int lastIndexOf(string value) { return (int)this.`rfind`(value); }
-    static string fromCodeUnit(int value) { return `string`(1, value); }
+    static string fromCodeUnit(int value) { return ``string``(1, value); }
     @OperatorGet int codeUnitAt(int index) { return `this`[index]; }
     @OperatorIn bool contains(string value) { return indexOf(value) >= 0; }
   }

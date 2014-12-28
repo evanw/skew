@@ -1484,6 +1484,7 @@ class Resolver {
       if (name[0] == '@') {
         if (name in operatorAnnotationMap) registerOperatorOverload(symbol, node, operatorAnnotationMap[name]);
         else if (name == "@NeedsInclude") registerNeedsInclude(symbol, node);
+        else if (name == "@EmitAs") registerEmitAs(symbol, node);
         else if (name == "@EntryPoint") registerEntryPoint(symbol, node);
         else semanticErrorUnknownAnnotation(log, modifierName.range, name);
       }
@@ -1530,6 +1531,17 @@ class Resolver {
     return result;
   }
 
+  void registerEmitAs(Symbol symbol, Node node) {
+    var content = requireSingleStringLiteral(symbol, node);
+    if (content != null) {
+      if (symbol.emitAs != null) {
+        semanticErrorDuplicateEmitAs(log, Range.span(node.modifierName().range, node.modifierArguments().range));
+      } else {
+        symbol.emitAs = content;
+      }
+    }
+  }
+
   void registerEntryPoint(Symbol symbol, Node node) {
     // The entry point must be a global function since it will be the first
     // thing executed after static initializers
@@ -1542,13 +1554,13 @@ class Resolver {
     symbol.flags |= .ENTRY_POINT;
   }
 
-  void registerNeedsInclude(Symbol symbol, Node node) {
+  StringContent requireSingleStringLiteral(Symbol symbol, Node node) {
     var arguments = node.modifierArguments();
     if (arguments == null || arguments.children.size() != 1) {
       var modifierName = node.modifierName();
       var range = arguments == null ? modifierName.range : arguments.range;
       semanticErrorUnexpectedAnnotationArgumentCount(log, range, modifierName.asString(), 1);
-      return;
+      return null;
     }
 
     // The value must be a constant string, but does not necessarily need to be
@@ -1556,9 +1568,7 @@ class Resolver {
     //
     //   const var VERSION = 1;
     //   const var COMMON_H = "<lib/v" + VERSION + "/common.h>";
-    //
-    //   @NeedsInclude(COMMON_H)
-    //   export void foo() {}
+    //   @NeedsInclude(COMMON_H) export void foo() {}
     //
     var value = arguments.children[0];
     resolveAsParamterizedExpressionWithConversion(value, cache.stringType, .IMPLICIT_CAST);
@@ -1566,17 +1576,23 @@ class Resolver {
 
     // Avoid reporting further errors
     if (value.type.isError(cache)) {
-      return;
+      return null;
     }
 
     // The value must be a constant string since we grab the value below
     if (value.kind != .STRING) {
       semanticErrorNonConstantAnnotationString(log, value.range);
-      return;
+      return null;
     }
 
-    // Track this header at the symbol level for easy access
-    symbol.addNeededInclude(value.asString());
+    return StringContent(value.asString());
+  }
+
+  void registerNeedsInclude(Symbol symbol, Node node) {
+    var content = requireSingleStringLiteral(symbol, node);
+    if (content != null) {
+      symbol.addNeededInclude(content.value);
+    }
   }
 
   void forbidAnnotationArguments(Node node) {

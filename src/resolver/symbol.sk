@@ -170,6 +170,9 @@ class Symbol {
   // This tracks headers referenced by the @NeedsInclude annotation
   List<string> neededIncludes = null;
 
+  // This tracks the name set by the @EmitAs annotation
+  StringContent emitAs = null;
+
   // Give each type a unique integer as a hash code
   static var nextUniqueID = -1;
   var uniqueID = generateUniqueID();

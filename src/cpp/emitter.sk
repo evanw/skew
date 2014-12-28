@@ -377,7 +377,7 @@ namespace cpp {
       var needsWrap = needsLength || needsWrappedStringConstructor(node);
 
       if (needsWrap) {
-        emit("string(");
+        emit(mangleName(cache.stringType.symbol) + "(");
       }
       super(node);
       if (needsWrap) {

@@ -141,4 +141,37 @@ test("
               ^
 ");
 
+test("
+@EmitAs int a;
+@EmitAs(1) string b;
+@EmitAs(1, 2) const string c = \"\";
+@EmitAs(a) int d;
+@EmitAs(b) int e;
+@EmitAs(c) int f;
+", "
+<stdin>:1:1: error: The annotation \"@EmitAs\" must take 1 argument
+@EmitAs int a;
+~~~~~~~
+<stdin>:2:9: error: Cannot convert from type \"int\" to type \"string\"
+@EmitAs(1) string b;
+        ^
+<stdin>:3:8: error: The annotation \"@EmitAs\" must take 1 argument
+@EmitAs(1, 2) const string c = \"\";
+       ~~~~~~
+<stdin>:4:9: error: Cannot convert from type \"int\" to type \"string\"
+@EmitAs(a) int d;
+        ^
+<stdin>:5:9: error: This value must be a compile-time constant string
+@EmitAs(b) int e;
+        ^
+");
+
+test("
+@EmitAs(\"x\") @EmitAs(\"y\") export void foo() {}
+", "
+<stdin>:1:1: error: Duplicate @EmitAs annotation
+@EmitAs(\"x\") @EmitAs(\"y\") export void foo() {}
+~~~~~~~~~~~~
+");
+
 }}

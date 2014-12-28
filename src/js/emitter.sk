@@ -916,6 +916,9 @@ namespace js {
     }
 
     static string mangleName(Symbol symbol) {
+      if (symbol.emitAs != null) {
+        return symbol.emitAs.value;
+      }
       if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
         return mangleName(symbol.enclosingSymbol);
       }

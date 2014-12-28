@@ -408,3 +408,7 @@ void semanticErrorEntryPointOnImportedSymbol(Log log, Range range) {
 void semanticErrorEntryPointOnNonGlobalFunction(Log log, Range range) {
   log.error(range, "The entry point must be a global function");
 }
+
+void semanticErrorDuplicateEmitAs(Log log, Range range) {
+  log.error(range, "Duplicate @EmitAs annotation");
+}
