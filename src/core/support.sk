@@ -187,3 +187,11 @@ namespace trace {
   void dedent() {}
   void log(string text) {}
 }
+
+class StringComparison : Comparison<string> {
+  static final var INSTANCE = StringComparison();
+
+  override int compare(string a, string b) {
+    return (int)(a > b) - (int)(a < b);
+  }
+}

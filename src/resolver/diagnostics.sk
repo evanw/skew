@@ -137,6 +137,10 @@ void semanticErrorNonConstantConstValue(Log log, Range range) {
   log.error(range, "Variables with the \"const\" modifier must be initialized to a compile-time constant");
 }
 
+void semanticErrorNonConstantAnnotationString(Log log, Range range) {
+  log.error(range, "This value must be a compile-time constant string");
+}
+
 void semanticErrorConstMissingValue(Log log, Range range) {
   log.error(range, "Variables with the \"const\" modifier must be initialized");
 }
@@ -359,8 +363,9 @@ void semanticErrorUnknownAnnotation(Log log, Range range, string name) {
   log.error(range, "Unknown annotation " + simpleQuote(name));
 }
 
-void semanticErrorUnexpectedAnnotationArguments(Log log, Range range, string name) {
-  log.error(range, "The annotation " + simpleQuote(name) + " cannot take arguments");
+void semanticErrorUnexpectedAnnotationArgumentCount(Log log, Range range, string name, int expected) {
+  log.error(range, "The annotation " + simpleQuote(name) + (expected == 0 ? " cannot take arguments" :
+    " must take " + expected + " argument" + plural(expected, "", "s")));
 }
 
 void semanticErrorOperatorOnNonInstanceFunction(Log log, Range range) {

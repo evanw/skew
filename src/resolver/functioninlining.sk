@@ -21,6 +21,11 @@ namespace FunctionInliningPass {
     for (var i = 0; i < info.callSites.size(); i++) {
       var callSite = info.callSites[i];
       if (callSite != null && callSite.kind == .CALL) {
+        // Propagate needed includes to ensure they are preserved through inlining
+        if (info.symbol.neededIncludes != null) {
+          propagateNeededIncludes(info.symbol, callSite);
+        }
+
         // Make sure each call site is inlined once by setting the call site to
         // null. The call site isn't removed from the list since we don't want
         // to mess up the indices of another call to inlineSymbol() further up
@@ -66,6 +71,22 @@ namespace FunctionInliningPass {
         callSite.become(clone);
         recursivelySubstituteArguments(callSite, info.arguments, values);
       }
+    }
+  }
+
+  void propagateNeededIncludes(Symbol symbol, Node node) {
+    assert symbol.neededIncludes != null;
+    while (node != null) {
+      if (node.kind.isNamedDeclaration() && node.symbol != null) {
+        var kind = node.symbol.kind;
+        if (kind.isGlobal() || kind.isInstance()) {
+          for (var i = 0; i < symbol.neededIncludes.size(); i++) {
+            node.symbol.addNeededInclude(symbol.neededIncludes[i]);
+          }
+          break;
+        }
+      }
+      node = node.parent;
     }
   }
 

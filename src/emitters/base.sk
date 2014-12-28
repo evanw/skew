@@ -26,21 +26,27 @@ namespace base {
       visitCollector(Collector(node, .SORT_BY_INHERITANCE_AND_CONTAINMENT));
     }
 
+    virtual void handleSymbol(Symbol symbol) {
+    }
+
     void visitCollector(Collector collector) {
       for (var i = 0; i < collector.typeSymbols.size(); i++) {
         var symbol = collector.typeSymbols[i];
+        handleSymbol(symbol);
         if (!symbol.isImport()) {
           emitTypeDeclaration(symbol);
         }
       }
       for (var i = 0; i < collector.freeFunctionSymbols.size(); i++) {
         var symbol = collector.freeFunctionSymbols[i];
+        handleSymbol(symbol);
         if (!symbol.isImport()) {
           emitFunction(symbol);
         }
       }
       for (var i = 0; i < collector.freeVariableSymbols.size(); i++) {
         var symbol = collector.freeVariableSymbols[i];
+        handleSymbol(symbol);
         if (!symbol.isImport()) {
           emitVariable(symbol);
         }
@@ -51,6 +57,7 @@ namespace base {
       var members = symbol.type.sortedMembers();
       for (var i = 0; i < members.size(); i++) {
         var member = members[i].symbol;
+        handleSymbol(member);
         if (!member.isImport() && member.enclosingSymbol == symbol) {
           if (member.kind.isFunction()) {
             emitFunction(member);

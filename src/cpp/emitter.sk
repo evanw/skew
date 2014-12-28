@@ -14,6 +14,7 @@ namespace cpp {
 
   class Emitter : base.Emitter {
     List<string> namespaceStack = [];
+    var includes = StringMap<bool>();
     var usedAssert = false;
     var usedMath = false;
     Pass pass = .NONE;
@@ -40,11 +41,37 @@ namespace cpp {
       visitCollector(collector);
       adjustNamespace(null);
 
-      // Prepend the necessary headers after all code has been emitted
-      var headers = "";
-      if (usedAssert) headers += "#include <cassert>\n";
-      if (usedMath) headers += "#include <cmath>\n";
-      if (headers != "") output.contents = headers + "\n" + output.contents;
+      prependHeaders();
+    }
+
+    void prependHeaders() {
+      // Some headers need to be force-included for floating-point literals and
+      // assert statements
+      if (usedAssert) includes["<cassert>"] = true;
+      if (usedMath) includes["<cmath>"] = true;
+
+      // Sort headers for deterministic output
+      var headers = includes.keys();
+      headers.sort(StringComparison.INSTANCE);
+
+      // Prepend headers if needed
+      if (headers.size() > 0) {
+        var text = "";
+        for (var i = 0; i < headers.size(); i++) {
+          var name = headers[i];
+          var size = name.size();
+          text += "#include " + (size == 0 || name[0] != '<' || name[size - 1] != '>' ? "\"" + name + "\"" : name) + "\n";
+        }
+        output.contents = text + "\n" + output.contents;
+      }
+    }
+
+    override void handleSymbol(Symbol symbol) {
+      if (symbol.neededIncludes != null) {
+        for (var i = 0; i < symbol.neededIncludes.size(); i++) {
+          includes[symbol.neededIncludes[i]] = true;
+        }
+      }
     }
 
     override bool shouldEmitExtraNewlineBetween(NodeKind before, NodeKind after) {
@@ -87,6 +114,7 @@ namespace cpp {
       var previous = -1;
       for (var i = 0; i < members.size(); i++) {
         var member = members[i].symbol;
+        handleSymbol(member);
         if (member.isEnumValue()) {
           if (isFirst) {
             isFirst = false;

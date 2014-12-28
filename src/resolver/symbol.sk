@@ -167,6 +167,9 @@ class Symbol {
   // members of the NodeKind enum to lists of members on this type.
   IntMap<List<Symbol>> operatorOverloads = null;
 
+  // This tracks headers referenced by the @NeedsInclude annotation
+  List<string> neededIncludes = null;
+
   // Give each type a unique integer as a hash code
   static var nextUniqueID = -1;
   var uniqueID = generateUniqueID();
@@ -214,6 +217,15 @@ class Symbol {
       if (j < sortedParameters.size()) {
         sortedParameters.swap(i, j);
       }
+    }
+  }
+
+  void addNeededInclude(string name) {
+    if (neededIncludes == null) {
+      neededIncludes = [];
+    }
+    if (!(name in neededIncludes)) {
+      neededIncludes.push(name);
     }
   }
 
@@ -343,7 +355,7 @@ class Symbol {
 }
 
 class SymbolComparison : Comparison<Symbol> {
-  static var INSTANCE = SymbolComparison();
+  static final var INSTANCE = SymbolComparison();
 
   override int compare(Symbol left, Symbol right) {
     return left.uniqueID - right.uniqueID;

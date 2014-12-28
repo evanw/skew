@@ -1445,29 +1445,30 @@ class Resolver {
   }
 
   void checkAnnotations(Symbol symbol) {
-    if (!symbol.hasAnnotations()) {
-      // Eagerly initialize member functions with annotations since these
-      // members are added to this type on initialization. Otherwise operator
-      // overloading wouldn't be order independent:
-      //
-      //   class Foo { @OperatorGet void get(int i) {} }
-      //   export void foo() { Foo()[0]; }
-      //
-      // vs
-      //
-      //   export void foo() { Foo()[0]; }
-      //   class Foo { @OperatorGet void get(int i) {} }
-      //
-      if (symbol.kind.isTypeWithInstances()) {
-        var members = symbol.type.sortedMembers();
-        for (var i = 0; i < members.size(); i++) {
-          var member = members[i];
-          var symbol = member.symbol;
-          if (symbol.kind == .INSTANCE_FUNCTION && symbol.hasAnnotations()) {
-            initializeMember(member);
-          }
+    // Eagerly initialize member functions with annotations since these
+    // members are added to this type on initialization. Otherwise operator
+    // overloading wouldn't be order independent:
+    //
+    //   class Foo { @OperatorGet void get(int i) {} }
+    //   export void foo() { Foo()[0]; }
+    //
+    // vs
+    //
+    //   export void foo() { Foo()[0]; }
+    //   class Foo { @OperatorGet void get(int i) {} }
+    //
+    if (symbol.kind.isTypeWithInstances()) {
+      var members = symbol.type.sortedMembers();
+      for (var i = 0; i < members.size(); i++) {
+        var member = members[i];
+        if (member.symbol.kind == .INSTANCE_FUNCTION && member.symbol.hasAnnotations()) {
+          initializeMember(member);
         }
       }
+    }
+
+    // Don't bother searching for annotations if there aren't any (the common case)
+    if (!symbol.hasAnnotations()) {
       return;
     }
 
@@ -1486,6 +1487,7 @@ class Resolver {
 
       // Other annotations
       if (name == "@EntryPoint") registerEntryPoint(symbol, node);
+      else if (name == "@NeedsInclude") registerNeedsInclude(symbol, node);
       else if (name == "@OperatorGet") operatorKind = .INDEX;
       else if (name == "@OperatorSet") operatorKind = .ASSIGN_INDEX;
 
@@ -1539,11 +1541,48 @@ class Resolver {
     symbol.flags |= .ENTRY_POINT;
   }
 
+  void registerNeedsInclude(Symbol symbol, Node node) {
+    var arguments = node.modifierArguments();
+    if (arguments == null || arguments.children.size() != 1) {
+      var modifierName = node.modifierName();
+      var range = arguments == null ? modifierName.range : arguments.range;
+      semanticErrorUnexpectedAnnotationArgumentCount(log, range, modifierName.asString(), 1);
+      return;
+    }
+
+    // The value must be a constant string, but does not necessarily need to be
+    // a literal. For example:
+    //
+    //   const var VERSION = 1;
+    //   const var COMMON_H = "<lib/v" + VERSION + "/common.h>";
+    //
+    //   @NeedsInclude(COMMON_H)
+    //   export void foo() {}
+    //
+    var value = arguments.children[0];
+    resolveAsParamterizedExpressionWithConversion(value, cache.stringType, .IMPLICIT_CAST);
+    constantFolder.foldConstants(value);
+
+    // Avoid reporting further errors
+    if (value.type.isError(cache)) {
+      return;
+    }
+
+    // The value must be a constant string since we grab the value below
+    if (value.kind != .STRING) {
+      semanticErrorNonConstantAnnotationString(log, value.range);
+      return;
+    }
+
+    // Track this header at the symbol level for easy access
+    symbol.addNeededInclude(value.asString());
+  }
+
   void forbidAnnotationArguments(Node node) {
     var arguments = node.modifierArguments();
     if (arguments != null) {
       var modifierName = node.modifierName();
-      semanticErrorUnexpectedAnnotationArguments(log, arguments.range, modifierName.asString());
+      semanticErrorUnexpectedAnnotationArgumentCount(log, arguments.range, modifierName.asString(), 0);
     }
   }
 
@@ -1878,8 +1917,9 @@ class Resolver {
         var identical = symbol.identicalMembers[i];
         initializeMember(identical);
         var type = identical.type;
-        var index = types.indexOf(type);
-        if (index < 0) types.push(type);
+        if (!(type in types)) {
+          types.push(type);
+        }
       }
       if (types.size() != 1) {
         semanticErrorUnmergedSymbol(log, symbol.enclosingSymbol.node.declarationName().range, symbol.fullName(), types);
@@ -1942,7 +1982,7 @@ class Resolver {
     ];
 
     // Only recognize a few entry point types
-    if (!symbol.type.isError(cache) && validTypes.indexOf(symbol.type) < 0) {
+    if (!symbol.type.isError(cache) && !(symbol.type in validTypes)) {
       semanticErrorInvalidEntryPointType(log, modifierName.range, symbol.type, validTypes);
     }
   }

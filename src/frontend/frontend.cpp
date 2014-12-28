@@ -1,11 +1,4 @@
 #include <string>
-#include <vector>
-#include <sstream>
-#include <iomanip>
-#include <algorithm>
-#include <functional>
-#include <unordered_map>
-#include <initializer_list>
 
 using string = std::string;
 
@@ -27,8 +20,9 @@ namespace io {
 #include "skewc.cpp"
 
 #include <cstdint>
-#include <iostream>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
 
 #ifdef _WIN32
   #include <windows.h>

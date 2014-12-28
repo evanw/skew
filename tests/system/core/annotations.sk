@@ -116,4 +116,29 @@ test("
                   ~~~
 ");
 
+test("
+@NeedsInclude int a;
+@NeedsInclude(1) string b;
+@NeedsInclude(1, 2) const string c = \"\";
+@NeedsInclude(a) int d;
+@NeedsInclude(b) int e;
+@NeedsInclude(c) int f;
+", "
+<stdin>:1:1: error: The annotation \"@NeedsInclude\" must take 1 argument
+@NeedsInclude int a;
+~~~~~~~~~~~~~
+<stdin>:2:15: error: Cannot convert from type \"int\" to type \"string\"
+@NeedsInclude(1) string b;
+              ^
+<stdin>:3:14: error: The annotation \"@NeedsInclude\" must take 1 argument
+@NeedsInclude(1, 2) const string c = \"\";
+             ~~~~~~
+<stdin>:4:15: error: Cannot convert from type \"int\" to type \"string\"
+@NeedsInclude(a) int d;
+              ^
+<stdin>:5:15: error: This value must be a compile-time constant string
+@NeedsInclude(b) int e;
+              ^
+");
+
 }}

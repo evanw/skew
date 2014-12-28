@@ -7,6 +7,7 @@ import class double {}
 import class string {}
 
 in int {
+  @NeedsInclude(\"<sstream>\")
   string toString() {
     `std::stringstream` ss;
     ss << this;
@@ -19,6 +20,7 @@ in bool {
 }
 
 in float {
+  @NeedsInclude(\"<sstream>\")
   inline string toString() {
     `std::stringstream` ss;
     ss << this;
@@ -27,6 +29,7 @@ in float {
 }
 
 in double {
+  @NeedsInclude(\"<sstream>\")
   inline string toString() {
     `std::stringstream` ss;
     ss << this;
@@ -47,16 +50,19 @@ in string {
     @OperatorIn bool contains(string value) { return indexOf(value) >= 0; }
   }
 
-  string toLowerCase() {
-    var clone = this;
-    `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;
-    return clone;
-  }
+  @NeedsInclude(\"<algorithm>\")
+  @NeedsInclude(\"<ctype.h>\") {
+    string toLowerCase() {
+      var clone = this;
+      `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;
+      return clone;
+    }
 
-  string toUpperCase() {
-    var clone = this;
-    `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;
-    return clone;
+    string toUpperCase() {
+      var clone = this;
+      `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;
+      return clone;
+    }
   }
 
   string join(List<string> values) {
@@ -91,6 +97,8 @@ bool bindCompare<T>(Comparison<T> comparison, T left, T right) {
   return comparison.compare(left, right) < 0;
 }
 
+@NeedsInclude(\"<initializer_list>\")
+@NeedsInclude(\"<vector>\")
 class List<T> {
   new(`std::initializer_list<T>` list) : _data = list {}
 
@@ -113,16 +121,6 @@ class List<T> {
     return slice;
   }
 
-  int indexOf(T value) {
-    int index = `std`::find(_data.begin(), _data.end(), value) - _data.begin();
-    return index == size() ? -1 : index;
-  }
-
-  int lastIndexOf(T value) {
-    int index = `std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin();
-    return size() - index - 1;
-  }
-
   T shift() {
     T value = this[0];
     remove(0);
@@ -133,14 +131,6 @@ class List<T> {
     T value = this[size() - 1];
     _data.pop_back();
     return value;
-  }
-
-  void reverse() {
-    `std`::reverse(_data.begin(), _data.end());
-  }
-
-  void sort(Comparison<T> comparison) {
-    `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));
   }
 
   List<T> clone() {
@@ -177,15 +167,37 @@ class List<T> {
     return indexOf(value) >= 0;
   }
 
-  void swap(int a, int b) {
-    assert a >= 0 && a < size();
-    assert b >= 0 && b < size();
-    `std`::swap(_data[a], _data[b]);
+  @NeedsInclude(\"<algorithm>\") {
+    int indexOf(T value) {
+      int index = `std`::find(_data.begin(), _data.end(), value) - _data.begin();
+      return index == size() ? -1 : index;
+    }
+
+    int lastIndexOf(T value) {
+      int index = `std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin();
+      return size() - index - 1;
+    }
+
+    void swap(int a, int b) {
+      assert a >= 0 && a < size();
+      assert b >= 0 && b < size();
+      `std`::swap(_data[a], _data[b]);
+    }
+
+    void reverse() {
+      `std`::reverse(_data.begin(), _data.end());
+    }
+
+    @NeedsInclude(\"<functional>\")
+    void sort(Comparison<T> comparison) {
+      `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));
+    }
   }
 
   `std::vector<T>` _data;
 }
 
+@NeedsInclude(\"<unordered_map>\")
 class StringMap<T> {
   new() {}
   @OperatorGet T get(string key) { return _table[key]; }
@@ -200,6 +212,7 @@ class StringMap<T> {
   `std::unordered_map<string, T>` _table;
 }
 
+@NeedsInclude(\"<unordered_map>\")
 class IntMap<T> {
   new() {}
   @OperatorGet T get(int key) { return _table[key]; }
@@ -215,6 +228,7 @@ class IntMap<T> {
 }
 
 namespace math {
+  @NeedsInclude(\"<cmath>\")
   inline {
     double abs(double x) { return `std`::abs(x); }
     double sin(double x) { return `std`::sin(x); }
