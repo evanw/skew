@@ -187,6 +187,27 @@ export void foo(int foo, bool bar) {
 ");
 
 testJS("
+enum Foo {}
+export int foo(bool x) { return (int)x; }
+export Foo bar(bool x) { return (Foo)x; }
+export Foo baz(bool x) { return (Foo)(int)x; }
+", "
+(function() {
+  var Foo = {
+  };
+  foo = function(x) {
+    return x | 0;
+  };
+  bar = function(x) {
+    return x | 0;
+  };
+  baz = function(x) {
+    return x | 0;
+  };
+}());
+");
+
+testJS("
 export void foo(int bar) {
   bar++;
   bar--;

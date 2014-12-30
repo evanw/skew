@@ -5348,7 +5348,7 @@
     if (node.type.isBool(this.cache) && !value.type.isBool(this.cache)) {
       value = Node.createUnary(NodeKind.NOT, value.replaceWith(null)).withRange(node.range).withType(node.type);
       node.become(Node.createUnary(NodeKind.NOT, value).withRange(node.range).withType(node.type));
-    } else if (node.type.isInt(this.cache) && !value.type.isInteger(this.cache) && !this.alwaysConvertsOperandsToInt(node.parent.kind)) {
+    } else if (node.type.isInteger(this.cache) && !value.type.isInteger(this.cache) && !this.alwaysConvertsOperandsToInt(node.parent.kind)) {
       node.become(Node.createBinary(NodeKind.BITWISE_OR, value.replaceWith(null), Node.createInt(0)).withRange(node.range).withType(node.type));
     } else if (node.type.isReal(this.cache) && !value.type.isNumeric(this.cache)) {
       node.become(Node.createUnary(NodeKind.POSITIVE, value.replaceWith(null)).withRange(node.range).withType(node.type));
