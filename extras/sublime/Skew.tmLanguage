@@ -19,6 +19,14 @@
       <string>comment.skew</string>
     </dict>
     <dict>
+      <key>begin</key>
+      <string>/\*</string>
+      <key>end</key>
+      <string>\*/</string>
+      <key>name</key>
+      <string>comment.skew</string>
+    </dict>
+    <dict>
       <key>match</key>
       <string>\b(?:alias|assert|break|case|class|const|continue|default|do|else|enum(?:\s+flags)?|export|final|for|if|import|in|inline|interface|is|namespace|new|override|private|protected|public|return|static|super|switch|using|virtual|while)\b</string>
       <key>name</key>
