@@ -71,6 +71,9 @@ int parseHexCharacter(int c) {
 }
 
 StringContent parseStringLiteral(Log log, Range range, string text) {
+  assert text.size() >= 2;
+  assert text[0] == '"' || text[0] == '\'';
+  assert text[text.size() - 1] == '"' || text[text.size() - 1] == '\'';
   var isValidString = true;
   var result = "";
   var start = 1; // Append long runs of unescaped characters using a single slice() for speed
@@ -83,20 +86,26 @@ StringContent parseStringLiteral(Log log, Range range, string text) {
       result += text.slice(start, escape);
       if (i + 1 < text.size()) {
         c = text[i]; i++;
-        if (c == 'n') { result += "\n"; start = i; continue; }
-        else if (c == 'r') { result += "\r"; start = i; continue; }
-        else if (c == 't') { result += "\t"; start = i; continue; }
-        else if (c == 'e') { result += "\e"; start = i; continue; }
-        else if (c == '0') { result += "\0"; start = i; continue; }
-        else if (c == '\\' || c == '"' || c == '\'') { result += string.fromCodeUnit(c); start = i; continue; }
+        if (c == 'n') { result += "\n"; start = i; }
+        else if (c == 'r') { result += "\r"; start = i; }
+        else if (c == 't') { result += "\t"; start = i; }
+        else if (c == 'e') { result += "\e"; start = i; }
+        else if (c == '0') { result += "\0"; start = i; }
+        else if (c == '\\' || c == '"' || c == '\'') { result += string.fromCodeUnit(c); start = i; }
         else if (c == 'x') {
-          var c0 = i + 1 < text.size() ? parseHexCharacter(text[i]) : -1; i++;
-          var c1 = i + 1 < text.size() ? parseHexCharacter(text[i]) : -1; i++;
-          if (c0 != -1 && c1 != -1) { result += string.fromCodeUnit(c0 << 4 | c1); start = i; continue; }
+          if (i + 1 < text.size()) {
+            var c0 = parseHexCharacter(text[i]); i++;
+            if (i + 1 < text.size()) {
+              var c1 = parseHexCharacter(text[i]); i++;
+              if (c0 != -1 && c1 != -1) { result += string.fromCodeUnit(c0 << 4 | c1); start = i; }
+            }
+          }
         }
       }
-      syntaxErrorInvalidEscapeSequence(log, Range(range.source, range.start + escape, range.start + i), text.slice(escape, i));
-      isValidString = false;
+      if (start < i) {
+        syntaxErrorInvalidEscapeSequence(log, Range(range.source, range.start + escape, range.start + i), text.slice(escape, i));
+        isValidString = false;
+      }
     }
   }
   result += text.slice(start, i);

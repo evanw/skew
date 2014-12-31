@@ -4,6 +4,12 @@
 "//".*                               WHITESPACE;
 "/""*"([^*]|"*"*[^*/])*"*"+"/"       WHITESPACE;
 
+"#elif"                              PREPROCESSOR_ELIF;
+"#else"                              PREPROCESSOR_ELSE;
+"#endif"                             PREPROCESSOR_ENDIF;
+"#error"                             PREPROCESSOR_ERROR;
+"#if"                                PREPROCESSOR_IF;
+"#warning"                           PREPROCESSOR_WARNING;
 "alias"                              ALIAS;
 "assert"                             ASSERT;
 "break"                              BREAK;
@@ -95,6 +101,7 @@
 ['](\\.|[^\\'])*[']                  CHARACTER;
 ["](\\.|[^\\"])*["]                  STRING;
 [A-Za-z_][A-Za-z0-9_]*               IDENTIFIER;
+#[A-Za-z_][A-Za-z0-9_]*              INVALID_PREPROCESSOR_DIRECTIVE;
 @[A-Za-z_][A-Za-z0-9_]*              ANNOTATION;
 [0-9]+?\.[0-9]+([eE][-+][0-9]+)?f    FLOAT;
 [0-9]+?\.[0-9]+([eE][-+][0-9]+)?     DOUBLE;

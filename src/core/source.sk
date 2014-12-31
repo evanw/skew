@@ -7,19 +7,6 @@ export class Source {
   string name;
   string contents;
 
-  // This maps line numbers to indices within contents
-  List<int> lineOffsets = null;
-
-  void computeLineOffsets() {
-    if (lineOffsets != null) return;
-    lineOffsets = [0];
-    for (var i = 0; i < contents.size(); i++) {
-      if (contents[i] == '\n') {
-        lineOffsets.push(i + 1);
-      }
-    }
-  }
-
   int lineCount() {
     computeLineOffsets();
     return lineOffsets.size() - 1; // Ignore the line offset at 0
@@ -55,5 +42,20 @@ export class Source {
     // Use the line to compute the column
     var column = line > 0 ? index - lineOffsets[line - 1] : index;
     return LineColumn(line - 1, column);
+  }
+}
+
+in Source {
+  // This maps line numbers to indices within contents
+  List<int> lineOffsets = null;
+
+  void computeLineOffsets() {
+    if (lineOffsets != null) return;
+    lineOffsets = [0];
+    for (var i = 0; i < contents.size(); i++) {
+      if (contents[i] == '\n') {
+        lineOffsets.push(i + 1);
+      }
+    }
   }
 }

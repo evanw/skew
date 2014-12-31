@@ -179,6 +179,31 @@ bool e = 1e-6.2f;
 ");
 
 test("
+int foo = \"\\x\";
+int bar = \"\\xx\";
+int baz = \"\\xxx\";
+", "
+<stdin>:1:12: error: Invalid escape sequence \"\\x\"
+int foo = \"\\x\";
+           ~~
+<stdin>:2:12: error: Invalid escape sequence \"\\xx\"
+int bar = \"\\xx\";
+           ~~~
+<stdin>:3:12: error: Invalid escape sequence \"\\xxx\"
+int baz = \"\\xxx\";
+           ~~~~
+<stdin>:1:11: error: Cannot convert from type \"string\" to type \"int\"
+int foo = \"\\x\";
+          ~~~~
+<stdin>:2:11: error: Cannot convert from type \"string\" to type \"int\"
+int bar = \"\\xx\";
+          ~~~~~
+<stdin>:3:11: error: Cannot convert from type \"string\" to type \"int\"
+int baz = \"\\xxx\";
+          ~~~~~~
+");
+
+test("
 int x = (in)1.5;
 ", "
 <stdin>:1:10: error: Unexpected IN

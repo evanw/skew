@@ -40,6 +40,7 @@ import class List<T> {
   void sort(Comparison<T> comparison);
   List<T> clone();
   T remove(int index);
+  void removeRange(int start, int end);
   void insert(int index, T value);
   @OperatorGet T get(int index);
   @OperatorSet void set(int index, T value);

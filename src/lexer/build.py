@@ -15,6 +15,12 @@ enum TokenKind {
   START_PARAMETER_LIST,
   END_PARAMETER_LIST,
 }
+
+class TokenizeResult {
+  List<Token> tokens;
+  bool needsPreprocessor;
+}
+
 %(yy_accept)s
 %(yy_ec)s
 %(yy_meta)s
@@ -27,8 +33,9 @@ enum TokenKind {
 // of flex is pretty bad (obfuscated variable names and the opposite of modular
 // code) but it's fast and somewhat standard for compiler design. The code below
 // replaces a simple hand-coded lexer and offers much better performance.
-List<Token> tokenize(Log log, Source source) {
+TokenizeResult tokenize(Log log, Source source) {
   List<Token> tokens = [];
+  var needsPreprocessor = false;
   var text = source.contents;
   var text_length = text.size();
 
@@ -66,7 +73,7 @@ List<Token> tokenize(Log log, Source source) {
     }
 
     // Find the action
-    TokenKind yy_act = yy_accept[yy_current_state];
+    var yy_act = yy_accept[yy_current_state];
     while (yy_act == .YY_INVALID_ACTION) {
       // Have to back up
       yy_cp = yy_last_accepting_cpos;
@@ -88,15 +95,25 @@ List<Token> tokenize(Log log, Source source) {
     // Ignore END_OF_FILE since this loop must still perform the last action
     else if (yy_act != .END_OF_FILE) {
       tokens.push(Token(Range(source, yy_bp, yy_cp), yy_act, text.slice(yy_bp, yy_cp)));
+
+      // Track the presence of preprocessor tokens
+      if (yy_act == .PREPROCESSOR_IF ||
+          yy_act == .PREPROCESSOR_ELIF ||
+          yy_act == .PREPROCESSOR_ELSE ||
+          yy_act == .PREPROCESSOR_ENDIF ||
+          yy_act == .PREPROCESSOR_ERROR ||
+          yy_act == .PREPROCESSOR_WARNING ||
+          yy_act == .INVALID_PREPROCESSOR_DIRECTIVE) {
+        needsPreprocessor = true;
+      }
     }
   }
 
   // Every token stream ends in END_OF_FILE
   tokens.push(Token(Range(source, text_length, text_length), .END_OF_FILE, ""));
 
-  // Do a single post-processing pass on the token list
-  prepareTokens(tokens);
-  return tokens;
+  // Also return preprocessor token presence so the preprocessor can be avoided
+  return TokenizeResult(tokens, needsPreprocessor);
 }
 '''
 

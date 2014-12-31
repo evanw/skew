@@ -148,6 +148,11 @@ class List<T> {
     return value;
   }
 
+  void removeRange(int start, int end) {
+    assert 0 <= start && start <= end && end <= size();
+    _data.erase(_data.begin() + start, _data.begin() + end);
+  }
+
   void insert(int index, T value) {
     assert index >= 0 && index <= size();
     _data.insert(_data.begin() + index, value);

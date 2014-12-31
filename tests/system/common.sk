@@ -84,6 +84,7 @@ export void start() {
   core.testModifiers();
   core.testObjects();
   core.testParsing();
+  core.testPreprocessor();
   core.testStatements();
   core.testStatic();
   core.testSwitch();

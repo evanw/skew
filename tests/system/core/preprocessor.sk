@@ -1,0 +1,264 @@
+namespace core { void testPreprocessor() {
+
+test("
+#if
+", "
+<stdin>:1:4: error: Unexpected END_OF_FILE
+#if
+   ^
+");
+
+test("
+#if true
+", "
+<stdin>:1:9: error: Expected PREPROCESSOR_ENDIF but found END_OF_FILE
+#if true
+        ^
+");
+
+test("
+#if true
+#else
+", "
+<stdin>:2:6: error: Expected PREPROCESSOR_ENDIF but found END_OF_FILE
+#else
+     ^
+");
+
+test("
+#warning 0
+#error 0
+#warning x
+#error x
+#warning \"\\x\"
+#error \"\\x\"
+", "
+<stdin>:1:10: error: Expected STRING but found INT_DECIMAL
+#warning 0
+         ^
+<stdin>:2:8: error: Expected STRING but found INT_DECIMAL
+#error 0
+       ^
+<stdin>:3:10: error: Expected STRING but found IDENTIFIER
+#warning x
+         ^
+<stdin>:4:8: error: Expected STRING but found IDENTIFIER
+#error x
+       ^
+<stdin>:5:11: error: Invalid escape sequence \"\\x\"
+#warning \"\\x\"
+          ~~
+<stdin>:6:9: error: Invalid escape sequence \"\\x\"
+#error \"\\x\"
+        ~~
+");
+
+test("
+#if false
+  #warning 0
+  #error 0
+  #warning x
+  #error x
+  #warning \"\\x\"
+  #error \"\\x\"
+#endif
+", "
+<stdin>:2:12: error: Expected STRING but found INT_DECIMAL
+  #warning 0
+           ^
+<stdin>:3:10: error: Expected STRING but found INT_DECIMAL
+  #error 0
+         ^
+<stdin>:4:12: error: Expected STRING but found IDENTIFIER
+  #warning x
+           ^
+<stdin>:5:10: error: Expected STRING but found IDENTIFIER
+  #error x
+         ^
+<stdin>:6:13: error: Invalid escape sequence \"\\x\"
+  #warning \"\\x\"
+            ~~
+<stdin>:7:11: error: Invalid escape sequence \"\\x\"
+  #error \"\\x\"
+          ~~
+");
+
+test("
+#warning \"A test warning\"
+#error \"A test error\"
+", "
+<stdin>:1:1: warning: A test warning
+#warning \"A test warning\"
+~~~~~~~~~~~~~~~~~~~~~~~~~
+<stdin>:2:1: error: A test error
+#error \"A test error\"
+~~~~~~~~~~~~~~~~~~~~~
+");
+
+test("
+#if true
+  #warning \"A\"
+#endif
+#if false
+  #warning \"B\"
+#endif
+", "
+<stdin>:2:3: warning: A
+  #warning \"A\"
+  ~~~~~~~~~~~~
+");
+
+test("
+#if true
+  #warning \"A\"
+#else
+  #warning \"B\"
+#endif
+", "
+<stdin>:2:3: warning: A
+  #warning \"A\"
+  ~~~~~~~~~~~~
+");
+
+test("
+#if false
+  #warning \"A\"
+#else
+  #warning \"B\"
+#endif
+", "
+<stdin>:4:3: warning: B
+  #warning \"B\"
+  ~~~~~~~~~~~~
+");
+
+test("
+#if true
+  #warning \"A\"
+#elif true
+  #warning \"B\"
+#else
+  #warning \"C\"
+#endif
+", "
+<stdin>:2:3: warning: A
+  #warning \"A\"
+  ~~~~~~~~~~~~
+");
+
+test("
+#if false
+  #warning \"A\"
+#elif true
+  #warning \"B\"
+#else
+  #warning \"C\"
+#endif
+", "
+<stdin>:4:3: warning: B
+  #warning \"B\"
+  ~~~~~~~~~~~~
+");
+
+test("
+#if true
+  #warning \"A\"
+#elif false
+  #warning \"B\"
+#else
+  #warning \"C\"
+#endif
+", "
+<stdin>:2:3: warning: A
+  #warning \"A\"
+  ~~~~~~~~~~~~
+");
+
+test("
+#if false
+  #warning \"A\"
+#elif false
+  #warning \"B\"
+#else
+  #warning \"C\"
+#endif
+", "
+<stdin>:6:3: warning: C
+  #warning \"C\"
+  ~~~~~~~~~~~~
+");
+
+test("
+#if false || true && false
+  #warning \"A\"
+#endif
+#if (false || true) && false
+  #warning \"B\"
+#endif
+#if (false || true) && !false
+  #warning \"C\"
+#endif
+", "
+<stdin>:8:3: warning: C
+  #warning \"C\"
+  ~~~~~~~~~~~~
+");
+
+test("
+#if true
+  #warning \"A\"
+  #if true
+    #warning \"B\"
+  #else
+    #warning \"C\"
+  #endif
+  #warning \"D\"
+#else
+  #warning \"E\"
+  #if false
+    #warning \"F\"
+  #else
+    #warning \"G\"
+  #endif
+  #warning \"H\"
+#endif
+", "
+<stdin>:2:3: warning: A
+  #warning \"A\"
+  ~~~~~~~~~~~~
+<stdin>:4:5: warning: B
+    #warning \"B\"
+    ~~~~~~~~~~~~
+<stdin>:8:3: warning: D
+  #warning \"D\"
+  ~~~~~~~~~~~~
+");
+
+test("
+#if true
+  #warning \"A\"
+#elseif
+  #warning \"B\"
+#endif
+", "
+<stdin>:2:3: warning: A
+  #warning \"A\"
+  ~~~~~~~~~~~~
+<stdin>:3:1: error: Unexpected INVALID_PREPROCESSOR_DIRECTIVE
+#elseif
+~~~~~~~
+");
+
+test("
+#if false
+  #warning \"A\"
+#elseif
+  #warning \"B\"
+#endif
+", "
+<stdin>:3:1: error: Unexpected INVALID_PREPROCESSOR_DIRECTIVE
+#elseif
+~~~~~~~
+");
+
+}}

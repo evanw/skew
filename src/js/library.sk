@@ -55,6 +55,7 @@ in List {
     void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }
     List<T> clone() { return this.`slice`(); }
     T remove(int index) { return this.`splice`(index, 1)[0]; }
+    void removeRange(int start, int end) { this.`splice`(start, end - start); }
     void insert(int index, T value) { this.`splice`(index, 0, value); }
     @OperatorGet T get(int index) { return `this`[index]; }
     @OperatorSet void set(int index, T value) { `this`[index] = value; }

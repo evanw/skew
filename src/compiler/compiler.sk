@@ -76,6 +76,11 @@ export class Compiler {
   var lineCountingTime = 0.0;
   var totalTime = 0.0;
   var log = Log();
+  var defines = StringMap<bool>();
+
+  void define(string name, bool value) {
+    defines[name] = value;
+  }
 
   string statistics(CompilerResult result) {
     // Line count
@@ -240,13 +245,19 @@ in Compiler {
 
     // Tokenize the source
     var tokenizeStart = now();
-    var sourceTokens = tokenize(log, source);
+    var result = tokenize(log, source);
+    if (result.needsPreprocessor) {
+      preprocessor.prepareTokens(log, result.tokens, defines);
+    }
+    if (log.errorCount == errorCount) {
+      prepareTokens(result.tokens);
+    }
     tokenizingTime += now() - tokenizeStart;
 
     // Parse the source if the tokenize was successful
     if (log.errorCount == errorCount) {
       var parseStart = now();
-      var file = parseFile(log, sourceTokens);
+      var file = parseFile(log, result.tokens);
       parsingTime += now() - parseStart;
       if (file != null) {
         program.appendChild(file);
