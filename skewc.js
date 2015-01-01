@@ -5802,7 +5802,7 @@
   preprocessor.ParenthesisParselet = function() {
   };
   preprocessor.ParenthesisParselet.prototype.parse = function(context) {
-    var token = context.next();
+    context.next();
     var value = preprocessor.pratt.parse(context, Precedence.LOWEST);
     scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
     return value;

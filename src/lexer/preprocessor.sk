@@ -209,7 +209,7 @@ namespace preprocessor {
 
   class ParenthesisParselet : IPrefixParselet {
     override Node parse(ParserContext context) {
-      var token = context.next();
+      context.next();
       var value = pratt.parse(context, .LOWEST);
       scanForToken(context, .RIGHT_PARENTHESIS, .STOP_BEFORE_NEXT_STATEMENT);
       return value;
