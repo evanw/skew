@@ -97,13 +97,7 @@ TokenizeResult tokenize(Log log, Source source) {
       tokens.push(Token(Range(source, yy_bp, yy_cp), yy_act, text.slice(yy_bp, yy_cp)));
 
       // Track the presence of preprocessor tokens
-      if (yy_act == .PREPROCESSOR_IF ||
-          yy_act == .PREPROCESSOR_ELIF ||
-          yy_act == .PREPROCESSOR_ELSE ||
-          yy_act == .PREPROCESSOR_ENDIF ||
-          yy_act == .PREPROCESSOR_ERROR ||
-          yy_act == .PREPROCESSOR_WARNING ||
-          yy_act == .INVALID_PREPROCESSOR_DIRECTIVE) {
+      if (yy_act >= .%(pp_start)s && yy_act <= .%(pp_end)s || yy_act == .INVALID_PREPROCESSOR_DIRECTIVE) {
         needsPreprocessor = true;
       }
     }
@@ -144,7 +138,8 @@ if result['yy_end_of_buffer'] != len(result['actions']) + 1:
 # Patch the results
 result['actions'] = dict((k, v if v != 'ECHO' else 'ERROR') for k, v in result['actions'] + [(0, 'YY_INVALID_ACTION'), (result['yy_end_of_buffer'], 'END_OF_FILE')])
 result['yy_accept'] = ['.%s' % result['actions'][x] for x in result['yy_accept']]
-result['actions'] = '\n'.join('  %s,' % x for x in sorted(set(result['actions'].values())))
+actions = sorted(set(result['actions'].values()))
+result['actions'] = '\n'.join('  %s,' % x for x in actions)
 result['yy_accept_length'] = len(result['yy_accept'])
 result['yy_accept'] = create_table(result, 'yy_accept', type='List<TokenKind>')
 result['yy_ec'] = create_table(result, 'yy_ec')
@@ -153,6 +148,11 @@ result['yy_base'] = create_table(result, 'yy_base')
 result['yy_def'] = create_table(result, 'yy_def')
 result['yy_nxt'] = create_table(result, 'yy_nxt')
 result['yy_chk'] = create_table(result, 'yy_chk')
+for x in actions:
+  if x.startswith('PREPROCESSOR_'):
+    if 'pp_start' not in result:
+      result['pp_start'] = x
+    result['pp_end'] = x
 
 # Write the output
 open(os.path.join(path, 'lexer.sk'), 'w').write(template.strip() % result + '\n')

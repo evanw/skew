@@ -11099,7 +11099,7 @@
         break;
       } else if (yy_act !== TokenKind.END_OF_FILE) {
         tokens.push(new Token(new Range(source, yy_bp, yy_cp), yy_act, text.slice(yy_bp, yy_cp)));
-        if (yy_act === TokenKind.PREPROCESSOR_IF || yy_act === TokenKind.PREPROCESSOR_ELIF || yy_act === TokenKind.PREPROCESSOR_ELSE || yy_act === TokenKind.PREPROCESSOR_ENDIF || yy_act === TokenKind.PREPROCESSOR_ERROR || yy_act === TokenKind.PREPROCESSOR_WARNING || yy_act === TokenKind.INVALID_PREPROCESSOR_DIRECTIVE) {
+        if (yy_act >= TokenKind.PREPROCESSOR_ELIF && yy_act <= TokenKind.PREPROCESSOR_WARNING || yy_act === TokenKind.INVALID_PREPROCESSOR_DIRECTIVE) {
           needsPreprocessor = true;
         }
       }

@@ -199,13 +199,7 @@ TokenizeResult tokenize(Log log, Source source) {
       tokens.push(Token(Range(source, yy_bp, yy_cp), yy_act, text.slice(yy_bp, yy_cp)));
 
       // Track the presence of preprocessor tokens
-      if (yy_act == .PREPROCESSOR_IF ||
-          yy_act == .PREPROCESSOR_ELIF ||
-          yy_act == .PREPROCESSOR_ELSE ||
-          yy_act == .PREPROCESSOR_ENDIF ||
-          yy_act == .PREPROCESSOR_ERROR ||
-          yy_act == .PREPROCESSOR_WARNING ||
-          yy_act == .INVALID_PREPROCESSOR_DIRECTIVE) {
+      if (yy_act >= .PREPROCESSOR_ELIF && yy_act <= .PREPROCESSOR_WARNING || yy_act == .INVALID_PREPROCESSOR_DIRECTIVE) {
         needsPreprocessor = true;
       }
     }
