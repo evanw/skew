@@ -420,7 +420,3 @@ void semanticErrorPreprocessorInvalidValue(Log log, Range range) {
 void semanticErrorPreprocessorInvalidSymbol(Log log, Range range, string name) {
   log.error(range, simpleQuote(name) + " is not a valid preprocessor symbol");
 }
-
-void semanticErrorPreprocessorTestNotConstant(Log log, Range range) {
-  log.error(range, "Non-constant preprocessor conditional value");
-}

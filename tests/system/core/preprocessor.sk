@@ -265,6 +265,80 @@ test("
 ");
 
 test("
+void foo() {
+  #define bar true
+}
+class Foo {
+  #define baz true
+}
+", "
+<stdin>:2:3: error: Cannot use this statement here
+  #define bar true
+  ~~~~~~~~~~~~~~~~
+<stdin>:5:3: error: Cannot use this statement here
+  #define baz true
+  ~~~~~~~~~~~~~~~~
+");
+
+test("
+int foo(bool bar) {
+  return
+    #if bar
+      0
+    #else
+      1
+    #endif;
+}
+", "
+<stdin>:3:9: error: \"bar\" is not a valid preprocessor symbol
+    #if bar
+        ~~~
+");
+
+test("
+int foo(bool bar) {
+  return
+    #if bar
+      0
+    #else
+      1
+    #endif;
+}
+namespace ns {
+  #define bar true
+}
+", "
+");
+
+test("
+List<int> foo(bool bar) {
+  return [
+    #if bar
+      0
+    #endif
+  ];
+}
+", "
+<stdin>:3:9: error: \"bar\" is not a valid preprocessor symbol
+    #if bar
+        ~~~
+");
+
+test("
+List<int> foo(bool bar) {
+  return [
+    #if bar
+      0
+    #endif
+  ];
+}
+namespace ns {
+  #define bar true
+}
+", "
+");
+
+test("
 bool foo = [
   #if true
     1, false,

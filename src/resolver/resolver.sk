@@ -641,7 +641,7 @@ class Resolver {
       case .VARIABLE { resolveVariable(node); }
       case .VARIABLE_CLUSTER { resolveVariableCluster(node); }
       case .PARAMETER { resolveParameter(node); }
-      case .PREPROCESSOR_DEFINE {} // These should already be resolved
+      case .PREPROCESSOR_DEFINE { resolveDefine(node); }
       case .ALIAS { resolveAlias(node); }
 
       case .IF { resolveIf(node); }
@@ -2220,24 +2220,17 @@ class Resolver {
     var falseNodes = node.sequenceFalse();
 
     // Check the test first
-    resolveAsParamterizedExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
-    constantFolder.foldConstants(test);
-    if (test.type.isError(cache)) {
-      node.become(Node.createError());
-      return;
-    }
-    if (test.kind != .BOOL) {
-      semanticErrorPreprocessorTestNotConstant(log, test.range);
+    var result = evaluatePreprocessorValue(test, .LOG_ERRORS);
+    if (result == .ERROR) {
       node.become(Node.createError());
       return;
     }
 
     // Only resolve the selected branch and drop the other branch completely
-    var result = test.asBool();
-    if (!result && falseNodes == null) {
+    if (result == .FALSE && falseNodes == null) {
       node.remove();
     } else {
-      var selected = result ? trueNodes : falseNodes;
+      var selected = result != .FALSE ? trueNodes : falseNodes;
       expandPreprocessorSequences(selected);
       node.replaceWithNodes(selected.removeChildren());
     }
@@ -2679,6 +2672,12 @@ class Resolver {
     initializeSymbol(node.symbol);
   }
 
+  void resolveDefine(Node node) {
+    assert node.symbol != null;
+    assert node.symbol.isInitialized();
+    checkDeclarationLocation(node, .ALLOW_TOP_LEVEL);
+  }
+
   void resolveAlias(Node node) {
     checkInsideBlock(node);
     if (node.symbol != null) {
@@ -2956,18 +2955,13 @@ class Resolver {
     var falseNode = node.hookFalse();
 
     // Check the test first
-    resolveAsParamterizedExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
-    constantFolder.foldConstants(test);
-    if (test.type.isError(cache)) {
-      return;
-    }
-    if (test.kind != .BOOL) {
-      semanticErrorPreprocessorTestNotConstant(log, test.range);
+    var result = evaluatePreprocessorValue(test, .LOG_ERRORS);
+    if (result == .ERROR) {
       return;
     }
 
     // Only resolve the selected branch
-    var value = test.asBool() ? trueNode : falseNode;
+    var value = result != .FALSE ? trueNode : falseNode;
     resolveAsParameterizedExpressionWithTypeContext(value, typeContext);
     node.become(value);
   }
