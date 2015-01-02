@@ -423,7 +423,7 @@ namespace js {
 
           // "if (a) b; else c;" => "a ? b : c;"
           if (trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION) {
-            var hook = Node.createHook(test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null));
+            var hook = Node.createHook(.HOOK, test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null));
             peepholeMangleHook(hook);
             node.become(Node.createExpression(hook));
           }
@@ -433,7 +433,7 @@ namespace js {
             var trueValue = trueStatement.returnValue();
             var falseValue = falseStatement.returnValue();
             if (trueValue != null && falseValue != null) {
-              var hook = Node.createHook(test.replaceWith(null), trueValue.replaceWith(null), falseValue.replaceWith(null));
+              var hook = Node.createHook(.HOOK, test.replaceWith(null), trueValue.replaceWith(null), falseValue.replaceWith(null));
               peepholeMangleHook(hook);
               node.become(Node.createReturn(hook));
             }
@@ -580,7 +580,7 @@ namespace js {
             if (previous.kind == .IF && previous.ifFalse() == null) {
               var statement = previous.ifTrue().blockStatement();
               if (statement != null && statement.kind == .RETURN && statement.returnValue() != null) {
-                var hook = Node.createHook(previous.ifTest().replaceWith(null), statement.returnValue().replaceWith(null), child.returnValue().replaceWith(null));
+                var hook = Node.createHook(.HOOK, previous.ifTest().replaceWith(null), statement.returnValue().replaceWith(null), child.returnValue().replaceWith(null));
                 peepholeMangleHook(hook);
                 child.remove();
                 child = Node.createReturn(hook);
@@ -691,14 +691,14 @@ namespace js {
 
         // "a ? b = c : b = d;" => "b = a ? c : d;"
         if (looksTheSame(trueLeft, falseLeft)) {
-          var hook = Node.createHook(test.replaceWith(null), trueRight.replaceWith(null), falseRight.replaceWith(null));
+          var hook = Node.createHook(.HOOK, test.replaceWith(null), trueRight.replaceWith(null), falseRight.replaceWith(null));
           peepholeMangleHook(hook);
           node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWith(null), hook));
         }
 
         // "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
         else if (looksTheSame(trueRight, falseRight) && !trueValue.kind.isBinaryStorageOperator()) {
-          var hook = Node.createHook(test.replaceWith(null), trueLeft.replaceWith(null), falseLeft.replaceWith(null));
+          var hook = Node.createHook(.HOOK, test.replaceWith(null), trueLeft.replaceWith(null), falseLeft.replaceWith(null));
           peepholeMangleHook(hook);
           node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWith(null)));
         }

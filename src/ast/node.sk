@@ -38,6 +38,10 @@ enum NodeKind {
   SWITCH,
   MODIFIER,
   USING,
+  PREPROCESSOR_DEFINE,
+  PREPROCESSOR_WARNING,
+  PREPROCESSOR_ERROR,
+  PREPROCESSOR_IF,
 
   // Expressions
   NAME,
@@ -63,6 +67,8 @@ enum NodeKind {
   IMPLICIT_CAST,
   QUOTED,
   VAR,
+  PREPROCESSOR_HOOK,
+  PREPROCESSOR_SEQUENCE,
 
   // Unary operators
   NOT,
@@ -124,7 +130,7 @@ enum NodeKind {
 
 in NodeKind {
   bool isStatement() {
-    return this >= VARIABLE_CLUSTER && this <= USING;
+    return this >= VARIABLE_CLUSTER && this <= PREPROCESSOR_IF;
   }
 
   bool isNamedBlockDeclaration() {

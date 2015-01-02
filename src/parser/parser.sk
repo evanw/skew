@@ -61,8 +61,10 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
 
       case
         .ALIAS, .ANNOTATION, .ASSERT, .BREAK, .CLASS, .CONTINUE, .DO, .ENUM, .EXPORT,
-        .FINAL, .FOR, .IF, .IMPORT, .INLINE, .INTERFACE, .NAMESPACE, .OVERRIDE, .PRIVATE,
-        .PROTECTED, .PUBLIC, .RETURN, .STATIC, .SWITCH, .USING, .VIRTUAL, .WHILE {
+        .FINAL, .FOR, .IF, .IMPORT, .INLINE, .INTERFACE, .NAMESPACE, .OVERRIDE,
+        .PREPROCESSOR_DEFINE, .PREPROCESSOR_ELIF, .PREPROCESSOR_ELSE, .PREPROCESSOR_ENDIF,
+        .PREPROCESSOR_ERROR, .PREPROCESSOR_IF, .PREPROCESSOR_WARNING, .PRIVATE, .PROTECTED,
+        .PUBLIC, .RETURN, .STATIC, .SWITCH, .USING, .VIRTUAL, .WHILE {
 
         // Optionally recover parsing before the next statement if it's unambiguous
         if (tokenScan == .STOP_BEFORE_NEXT_STATEMENT) {
@@ -119,18 +121,6 @@ Node parseCaseStatement(ParserContext context) {
   if (!context.eat(.DEFAULT)) {
     if (!context.expect(.CASE)) return null;
     do {
-      // Make sure we don't parse an initializer expression here. The user is
-      // likely in the middle of typing a case statement and trying to parse an
-      // initializer expression will generate many confusing errors as the
-      // parser tries to interpret the case block as an initializer expression.
-      // An initializer expression here will still work if it's wrapped in
-      // parentheses.
-      if (context.peek(.LEFT_BRACE)) {
-        context.unexpectedToken();
-        values.push(Node.createError()); // Make sure this case doesn't look like a default case
-        break;
-      }
-
       values.push(pratt.parse(context, .COMMA));
     } while (context.eat(.COMMA));
   }
@@ -140,7 +130,15 @@ Node parseCaseStatement(ParserContext context) {
 
 List<Node> parseStatements(ParserContext context, StatementHint hint) {
   List<Node> statements = [];
-  while (!context.peek(.RIGHT_BRACE) && !context.peek(.END_OF_FILE)) {
+  while (true) {
+    var kind = context.current().kind;
+    if (kind == .RIGHT_BRACE ||
+        kind == .PREPROCESSOR_ELIF ||
+        kind == .PREPROCESSOR_ELSE ||
+        kind == .PREPROCESSOR_ENDIF ||
+        kind == .END_OF_FILE) {
+      break;
+    }
     if (hint == .IN_ENUM) {
       var declaration = parseEnumValueDeclaration(context); if (declaration == null) break;
       statements.push(declaration);
@@ -197,20 +195,62 @@ Node parseParameters(ParserContext context) {
   return Node.createNodeList(parameters).withRange(context.spanSince(token.range));
 }
 
+Node parsePreprocessorSequence(ParserContext context) {
+  context.needsPreprocessor = true;
+  var token = context.next();
+  var value = pratt.parse(context, .COMMA);
+  var trueNodes = parseCommaSeparatedNodeList(context, .TRAILING_COMMA);
+  Node falseNodes;
+  if (context.peek(.PREPROCESSOR_ELIF)) {
+    var node = parsePreprocessorSequence(context);
+    falseNodes = Node.createNodeList([node]).withRange(node.range);
+  } else {
+    if (context.eat(.PREPROCESSOR_ELSE)) {
+      falseNodes = parseCommaSeparatedNodeList(context, .TRAILING_COMMA);
+    }
+    if (!context.expect(.PREPROCESSOR_ENDIF)) {
+      return errorExpressionSinceToken(context, token);
+    }
+  }
+  return Node.createPreprocessorSequence(value, trueNodes, falseNodes).withRange(context.spanSince(token.range));
+}
+
 enum AllowTrailingComma {
   NO_TRAILING_COMMA,
   TRAILING_COMMA,
 }
 
-List<Node> parseArgumentList(ParserContext context, TokenKind left, TokenKind right, AllowTrailingComma comma) {
+bool isEndOfCommaSeparatedList(ParserContext context) {
+  var kind = context.current().kind;
+  return
+    kind == .RIGHT_PARENTHESIS ||
+    kind == .RIGHT_BRACKET ||
+    kind == .PREPROCESSOR_ELIF ||
+    kind == .PREPROCESSOR_ELSE ||
+    kind == .PREPROCESSOR_ENDIF;
+}
+
+List<Node> parseCommaSeparatedList(ParserContext context, AllowTrailingComma comma) {
   List<Node> values = [];
-  if (!context.expect(left)) return values;
-  while (!context.peek(right)) {
-    if (comma == .NO_TRAILING_COMMA && values.size() > 0 && !context.expect(.COMMA)) break;
-    var value = pratt.parse(context, .COMMA);
+  while (true) {
+    if (isEndOfCommaSeparatedList(context) || comma == .NO_TRAILING_COMMA && values.size() > 0 && !context.expect(.COMMA)) break;
+    var isPreprocessorSequence = comma == .TRAILING_COMMA && context.peek(.PREPROCESSOR_IF);
+    var value = isPreprocessorSequence ? parsePreprocessorSequence(context) : pratt.parse(context, .COMMA);
     values.push(value);
-    if (value.kind.isError() || comma == .TRAILING_COMMA && !context.peek(right) && !context.expect(.COMMA)) break;
+    if (value.kind.isError() || comma == .TRAILING_COMMA && !isPreprocessorSequence && !isEndOfCommaSeparatedList(context) && !context.expect(.COMMA)) break;
   }
+  return values;
+}
+
+Node parseCommaSeparatedNodeList(ParserContext context, AllowTrailingComma comma) {
+  var token = context.current();
+  var values = parseCommaSeparatedList(context, comma);
+  return Node.createNodeList(values).withRange(context.spanSince(token.range));
+}
+
+List<Node> parseWrappedCommaSeparatedList(ParserContext context, TokenKind left, TokenKind right, AllowTrailingComma comma) {
+  if (!context.expect(left)) return [];
+  var values = parseCommaSeparatedList(context, comma);
   scanForToken(context, right, .STOP_BEFORE_NEXT_STATEMENT);
   return values;
 }
@@ -346,7 +386,7 @@ Node parseAnnotation(ParserContext context, StatementHint hint) {
   Node arguments = null;
   if (context.peek(.LEFT_PARENTHESIS)) {
     var token = context.current();
-    var values = parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
+    var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
     arguments = Node.createNodeList(values).withRange(context.spanSince(token.range));
   }
   var block = parseBlockOrStatement(context, hint); if (block == null) return null;
@@ -414,7 +454,7 @@ Node parseIf(ParserContext context) {
   if (context.eat(.ELSE)) {
     falseBlock = parseBlockOrStatement(context, .NORMAL); if (falseBlock == null) return null;
   }
-  return Node.createIf(value, trueBlock, falseBlock).withRange(context.spanSince(token.range));
+  return Node.createIf(.IF, value, trueBlock, falseBlock).withRange(context.spanSince(token.range));
 }
 
 Node parseExtension(ParserContext context) {
@@ -494,7 +534,7 @@ Node parseFor(ParserContext context) {
 
 Node parseSuperCall(ParserContext context) {
   var token = context.next();
-  var values = parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
+  var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
   return Node.createSuperCall(values).withRange(context.spanSince(token.range));
 }
 
@@ -542,8 +582,7 @@ Node parseAlias(ParserContext context) {
   var name = parseName(context);
   if (name == null || !context.expect(.ASSIGN)) {
     scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-    var range = context.spanSince(token.range);
-    return Node.createExpression(Node.createError().withRange(range)).withRange(range);
+    return errorStatementSinceToken(context, token);
   }
   var value = pratt.parse(context, .LOWEST);
   scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
@@ -556,9 +595,67 @@ bool looksLikeType(Node node) {
       var target = node.dotTarget();
       return target != null && looksLikeType(target);
     }
-    case .NAME, .PARAMETERIZE { return true; }
-    default { return false; }
+    case .NAME, .PARAMETERIZE {
+      return true;
+    }
   }
+  return false;
+}
+
+Node parseStringToken(ParserContext context, Token token) {
+  var result = parseStringLiteral(context.log, token.range, token.text);
+
+  // Don't return null on failure because this doesn't affect the rest of the compilation
+  return Node.createString(result != null ? result.value : "").withRange(token.range);
+}
+
+Node parsePreprocessorDefine(ParserContext context) {
+  context.needsPreprocessor = true;
+  var token = context.next();
+  var name = parseName(context);
+  if (name == null) {
+    scanForToken(context, .END_OF_FILE, .STOP_BEFORE_NEXT_STATEMENT);
+    return errorStatementSinceToken(context, token);
+  }
+  var value = pratt.parse(context, .COMMA);
+  return Node.createPreprocessorDefine(name, value);
+}
+
+Node parsePreprocessorDiagnostic(ParserContext context, NodeKind kind) {
+  context.needsPreprocessor = true;
+  var token = context.next();
+  var stringToken = context.current();
+  if (!context.expect(.STRING)) {
+    scanForToken(context, .END_OF_FILE, .STOP_BEFORE_NEXT_STATEMENT);
+    return errorStatementSinceToken(context, token);
+  }
+  return Node.createPreprocessorDiagnostic(kind, parseStringToken(context, stringToken)).withRange(context.spanSince(token.range));
+}
+
+Node parsePreprocessorBlock(ParserContext context, StatementHint hint) {
+  var token = context.current();
+  var statements = parseStatements(context, hint);
+  return Node.createBlock(statements).withRange(context.spanSince(token.range));
+}
+
+Node parsePreprocessorIf(ParserContext context, StatementHint hint) {
+  context.needsPreprocessor = true;
+  var token = context.next();
+  var value = pratt.parse(context, .COMMA);
+  var trueNode = parsePreprocessorBlock(context, hint);
+  Node falseNode = null;
+  if (context.peek(.PREPROCESSOR_ELIF)) {
+    var node = parsePreprocessorIf(context, hint);
+    falseNode = Node.createBlock([node]).withRange(node.range);
+  } else {
+    if (context.eat(.PREPROCESSOR_ELSE)) {
+      falseNode = parsePreprocessorBlock(context, hint);
+    }
+    if (!context.expect(.PREPROCESSOR_ENDIF)) {
+      return null;
+    }
+  }
+  return Node.createIf(.PREPROCESSOR_IF, value, trueNode, falseNode).withRange(context.spanSince(token.range));
 }
 
 Node parseStatement(ParserContext context, StatementHint hint) {
@@ -580,12 +677,16 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case .INTERFACE { return parseObject(context, .INTERFACE); }
     case .NAMESPACE { return parseNamespace(context); }
     case .NEW { if (hint == .IN_OBJECT) return parseConstructor(context, hint); }
+    case .PREPROCESSOR_DEFINE { return parsePreprocessorDefine(context); }
+    case .PREPROCESSOR_ERROR { return parsePreprocessorDiagnostic(context, .PREPROCESSOR_ERROR); }
+    case .PREPROCESSOR_IF { return parsePreprocessorIf(context, hint); }
+    case .PREPROCESSOR_WARNING { return parsePreprocessorDiagnostic(context, .PREPROCESSOR_WARNING); }
     case .RETURN { return parseReturn(context); }
     case .SWITCH { return parseSwitch(context); }
     case .USING { return parseUsing(context); }
     case .WHILE { return parseWhile(context); }
   }
- return parseExpression(context);
+  return parseExpression(context);
 }
 
 Node parseFile(Log log, List<Token> tokens) {
@@ -595,6 +696,15 @@ Node parseFile(Log log, List<Token> tokens) {
   if (!context.expect(.END_OF_FILE)) return null;
   var range = context.spanSince(token.range);
   return Node.createFile(Node.createBlock(statements).withRange(range)).withRange(range);
+}
+
+Node errorStatementSinceToken(ParserContext context, Token token) {
+  var range = context.spanSince(token.range);
+  return Node.createExpression(Node.createError().withRange(range)).withRange(range);
+}
+
+Node errorExpressionSinceToken(ParserContext context, Token token) {
+  return Node.createError().withRange(context.spanSince(token.range));
 }
 
 class TokenLiteral : ILiteralCallback {
@@ -645,10 +755,7 @@ class VarLiteral : ILiteralCallback {
 
 class StringLiteral : ILiteralCallback {
   override Node parse(ParserContext context, Token token) {
-    var result = parseStringLiteral(context.log, token.range, token.text);
-
-    // Don't return null on failure because this doesn't affect the rest of the compilation
-    return Node.createString(result != null ? result.value : "").withRange(token.range);
+    return parseStringToken(context, token);
   }
 }
 
@@ -713,7 +820,7 @@ class BinaryInfixOrUnaryPostfix : IInfixParselet {
 class ListParselet : IPrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.current();
-    var arguments = parseArgumentList(context, .LEFT_BRACKET, .RIGHT_BRACKET, .TRAILING_COMMA);
+    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_BRACKET, .RIGHT_BRACKET, .TRAILING_COMMA);
     return Node.createList(arguments).withRange(context.spanSince(token.range));
   }
 }
@@ -734,8 +841,8 @@ class HookParselet : IInfixParselet {
   override Node parse(ParserContext context, Node left) {
     context.next();
     var middle = pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1));
-    var right = context.expect(.COLON) ? pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1)) : Node.createError().withRange(context.spanSince(context.current().range));
-    return Node.createHook(left, middle, right).withRange(context.spanSince(left.range));
+    var right = context.expect(.COLON) ? pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1)) : Node.createError().withRange(context.current().range);
+    return Node.createHook(.HOOK, left, middle, right).withRange(context.spanSince(left.range));
   }
 }
 
@@ -771,7 +878,7 @@ class DotPrefixParselet : IPrefixParselet {
 
 class CallParselet : IInfixParselet {
   override Node parse(ParserContext context, Node left) {
-    var arguments = parseArgumentList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
+    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
     return Node.createCall(left, arguments).withRange(context.spanSince(left.range));
   }
 }
@@ -791,7 +898,7 @@ class ParameterizeParselet : IInfixParselet {
     var substitutions = parseTypeList(context, .END_PARAMETER_LIST);
     if (!context.expect(.END_PARAMETER_LIST)) {
       scanForToken(context, .END_PARAMETER_LIST, .STOP_BEFORE_NEXT_STATEMENT);
-      return Node.createError().withRange(context.spanSince(token.range));
+      return errorExpressionSinceToken(context, token);
     }
     return Node.createParameterize(left, substitutions).withRange(context.spanSince(left.range));
   }
@@ -801,7 +908,7 @@ class QuotedParselet : IPrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.next();
     var value = pratt.parse(context, .LOWEST);
-    if (value == null || !context.expect(.TICK)) return Node.createError().withRange(context.spanSince(token.range));
+    if (value == null || !context.expect(.TICK)) return errorExpressionSinceToken(context, token);
     return Node.createQuoted(value).withRange(context.spanSince(token.range));
   }
 }
@@ -809,6 +916,24 @@ class QuotedParselet : IPrefixParselet {
 class SuperParselet : IPrefixParselet {
   override Node parse(ParserContext context) {
     return parseSuperCall(context);
+  }
+}
+
+class IfParselet : IPrefixParselet {
+  override Node parse(ParserContext context) {
+    context.needsPreprocessor = true;
+    var token = context.next();
+    var value = pratt.parse(context, .COMMA);
+    var trueNode = pratt.parse(context, .LOWEST);
+    Node falseNode = null;
+    if (context.peek(.PREPROCESSOR_ELIF)) {
+      falseNode = parse(context);
+    } else {
+      if (!context.expect(.PREPROCESSOR_ELSE)) return errorExpressionSinceToken(context, token);
+      falseNode = pratt.parse(context, .LOWEST);
+      if (!context.expect(.PREPROCESSOR_ENDIF)) return errorExpressionSinceToken(context, token);
+    }
+    return Node.createHook(.PREPROCESSOR_HOOK, value, trueNode, falseNode).withRange(context.spanSince(token.range));
   }
 }
 
@@ -894,6 +1019,7 @@ void createParser() {
   // Other expressions
   ////////////////////////////////////////////////////////////////////////////////
 
+  pratt.parselet(.PREPROCESSOR_IF, .LOWEST).prefix = IfParselet();
   pratt.parselet(.LEFT_BRACKET, .LOWEST).prefix = ListParselet();
   pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet();
   pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet();

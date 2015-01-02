@@ -245,19 +245,16 @@ in Compiler {
 
     // Tokenize the source
     var tokenizeStart = now();
-    var result = tokenize(log, source);
-    if (result.needsPreprocessor) {
-      preprocessor.prepareTokens(log, result.tokens, defines);
-    }
+    var tokens = tokenize(log, source);
     if (log.errorCount == errorCount) {
-      prepareTokens(result.tokens);
+      prepareTokens(tokens);
     }
     tokenizingTime += now() - tokenizeStart;
 
     // Parse the source if the tokenize was successful
     if (log.errorCount == errorCount) {
       var parseStart = now();
-      var file = parseFile(log, result.tokens);
+      var file = parseFile(log, tokens);
       parsingTime += now() - parseStart;
       if (file != null) {
         program.appendChild(file);

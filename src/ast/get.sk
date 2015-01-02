@@ -67,19 +67,19 @@ in Node {
   }
 
   Node hookTest() {
-    assert kind == .HOOK;
+    assert kind == .HOOK || kind == .PREPROCESSOR_HOOK;
     assert children.size() == 3;
     return children[0];
   }
 
   Node hookTrue() {
-    assert kind == .HOOK;
+    assert kind == .HOOK || kind == .PREPROCESSOR_HOOK;
     assert children.size() == 3;
     return children[1];
   }
 
   Node hookFalse() {
-    assert kind == .HOOK;
+    assert kind == .HOOK || kind == .PREPROCESSOR_HOOK;
     assert children.size() == 3;
     return children[2];
   }
@@ -134,6 +134,24 @@ in Node {
     return children[0];
   }
 
+  Node defineName() {
+    assert kind == .PREPROCESSOR_DEFINE;
+    assert children.size() == 2;
+    return children[0];
+  }
+
+  Node defineValue() {
+    assert kind == .PREPROCESSOR_DEFINE;
+    assert children.size() == 2;
+    return children[1];
+  }
+
+  Node diagnosticValue() {
+    assert kind == .PREPROCESSOR_WARNING || kind == .PREPROCESSOR_ERROR;
+    assert children.size() == 1;
+    return children[0];
+  }
+
   Node modifierName() {
     assert kind == .MODIFIER;
     assert children.size() >= 2;
@@ -160,6 +178,24 @@ in Node {
     return children;
   }
 
+  Node sequenceTest() {
+    assert kind == .PREPROCESSOR_SEQUENCE;
+    assert children.size() == 3;
+    return children[0];
+  }
+
+  Node sequenceTrue() {
+    assert kind == .PREPROCESSOR_SEQUENCE;
+    assert children.size() == 3;
+    return children[1];
+  }
+
+  Node sequenceFalse() {
+    assert kind == .PREPROCESSOR_SEQUENCE;
+    assert children.size() == 3;
+    return children[2];
+  }
+
   Node castType() {
     assert kind.isCast();
     assert children.size() == 2;
@@ -179,22 +215,20 @@ in Node {
   }
 
   Node ifTest() {
-    assert kind == .IF;
+    assert kind == .IF || kind == .PREPROCESSOR_IF;
     assert children.size() == 3;
     return children[0];
   }
 
   Node ifTrue() {
-    assert kind == .IF;
+    assert kind == .IF || kind == .PREPROCESSOR_IF;
     assert children.size() == 3;
-    assert children[1] == null || children[1].kind == .BLOCK;
     return children[1];
   }
 
   Node ifFalse() {
-    assert kind == .IF;
+    assert kind == .IF || kind == .PREPROCESSOR_IF;
     assert children.size() == 3;
-    assert children[2] == null || children[2].kind == .BLOCK;
     return children[2];
   }
 

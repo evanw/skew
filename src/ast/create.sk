@@ -121,11 +121,24 @@ in Node {
     return Node(.USING).withChildren([value]);
   }
 
-  static Node createIf(Node test, Node trueNode, Node falseNode) {
+  static Node createPreprocessorDefine(Node name, Node value) {
+    assert name.kind == .NAME;
+    assert value.kind.isExpression();
+    return Node(.PREPROCESSOR_DEFINE).withChildren([name, value]);
+  }
+
+  static Node createPreprocessorDiagnostic(NodeKind kind, Node value) {
+    assert kind == .PREPROCESSOR_ERROR || kind == .PREPROCESSOR_WARNING;
+    assert value.kind == .STRING;
+    return Node(kind).withChildren([value]);
+  }
+
+  static Node createIf(NodeKind kind, Node test, Node trueNode, Node falseNode) {
+    assert kind == .IF || kind == .PREPROCESSOR_IF;
     assert test.kind.isExpression();
     assert trueNode.kind == .BLOCK;
     assert falseNode == null || falseNode.kind == .BLOCK;
-    return Node(.IF).withChildren([test, trueNode, falseNode]);
+    return Node(kind).withChildren([test, trueNode, falseNode]);
   }
 
   static Node createFor(Node setup, Node test, Node update, Node block) {
@@ -212,11 +225,19 @@ in Node {
     return Node(.THIS);
   }
 
-  static Node createHook(Node test, Node trueNode, Node falseNode) {
+  static Node createHook(NodeKind kind, Node test, Node trueNode, Node falseNode) {
+    assert kind == .HOOK || kind == .PREPROCESSOR_HOOK;
     assert test.kind.isExpression();
     assert trueNode.kind.isExpression();
     assert falseNode.kind.isExpression();
-    return Node(.HOOK).withChildren([test, trueNode, falseNode]);
+    return Node(kind).withChildren([test, trueNode, falseNode]);
+  }
+
+  static Node createPreprocessorSequence(Node test, Node trueNodes, Node falseNodes) {
+    assert test.kind.isExpression();
+    assert checkAllNodeListKinds(trueNodes, NodeKindIsExpression());
+    assert falseNodes == null || checkAllNodeListKinds(falseNodes, NodeKindIsExpression());
+    return Node(.PREPROCESSOR_SEQUENCE).withChildren([test, trueNodes, falseNodes]);
   }
 
   static Node createBool(bool value) {

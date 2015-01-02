@@ -4,6 +4,7 @@
 "//".*                               WHITESPACE;
 "/""*"([^*]|"*"*[^*/])*"*"+"/"       WHITESPACE;
 
+"#define"                            PREPROCESSOR_DEFINE;
 "#elif"                              PREPROCESSOR_ELIF;
 "#else"                              PREPROCESSOR_ELSE;
 "#endif"                             PREPROCESSOR_ENDIF;

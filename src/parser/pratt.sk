@@ -1,6 +1,7 @@
 class ParserContext {
   Log log;
   List<Token> tokens;
+  var needsPreprocessor = false;
   var index = 0;
 
   // Keep track of the previous syntax error so only one syntax error is emitted
