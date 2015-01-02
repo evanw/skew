@@ -21,6 +21,7 @@ enum NodeKind {
   FUNCTION,
   VARIABLE,
   PARAMETER,
+  PREPROCESSOR_DEFINE,
   ALIAS,
 
   // Statements
@@ -38,7 +39,6 @@ enum NodeKind {
   SWITCH,
   MODIFIER,
   USING,
-  PREPROCESSOR_DEFINE,
   PREPROCESSOR_WARNING,
   PREPROCESSOR_ERROR,
   PREPROCESSOR_IF,
@@ -226,8 +226,12 @@ in NodeKind {
   }
 }
 
+enum flags NodeFlags {
+  NEEDS_PREPROCESSOR,
+}
+
 class Node {
-  var range = Range.EMPTY;
+  Range range = .EMPTY;
   NodeKind kind;
   Node parent = null;
   Node sibling = null; // Adjacent declarations with the same name
@@ -236,9 +240,14 @@ class Node {
   Scope scope = null; // The scope that this node introduces, if any
   Symbol symbol = null;
   Content content = null;
+  NodeFlags flags = 0;
 
   bool hasChildren() {
     return children != null && children.size() > 0;
+  }
+
+  bool needsPreprocessor() {
+    return (flags & .NEEDS_PREPROCESSOR) != 0;
   }
 
   bool isLastChild() {
@@ -322,6 +331,7 @@ class Node {
     scope = node.scope;
     symbol = node.symbol;
     content = node.content;
+    flags = node.flags;
   }
 
   Node replaceWith(Node node) {

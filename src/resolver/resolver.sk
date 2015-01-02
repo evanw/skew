@@ -14,6 +14,17 @@ enum AllowDeclaration {
   ALLOW_TOP_OR_OBJECT_LEVEL,
 }
 
+enum PreprocessorResult {
+  FALSE,
+  TRUE,
+  ERROR,
+}
+
+enum LogErrors {
+  SILENT_ERRORS,
+  LOG_ERRORS,
+}
+
 class ResolveContext {
   Scope scope = null;
 
@@ -71,7 +82,137 @@ class Resolver {
     constantFolder = ConstantFolder(cache);
     prepareNode(program, globalScope);
     cache.linkGlobals(globalScope);
+    runPreprocessor(program, globalScope);
     resolve(program, null);
+  }
+
+  void findPreprocessorNodes(Node node, List<Node> nodes, Scope globalScope) {
+    var kind = node.kind;
+
+    if (kind == .PREPROCESSOR_IF) {
+      nodes.push(node);
+    }
+
+    else if (kind == .PREPROCESSOR_DEFINE) {
+      var declarationName = node.declarationName();
+      var symbol = createSymbol(declarationName.asString(), .DEFINE);
+      symbol.node = node;
+      symbol.flags |= .CONST | .INITIALIZED;
+      symbol.type = cache.errorType;
+      node.symbol = symbol;
+      nodes.push(node);
+      var existing = globalScope.findLocal(symbol.name);
+      if (existing != null) {
+        semanticErrorDuplicateSymbol(log, declarationName.range, symbol.name, existing.symbol.node.declarationName().range);
+      } else {
+        globalScope.insert(Member(symbol));
+      }
+    }
+
+    else if (node.hasChildren()) {
+      for (var i = 0; i < node.children.size(); i++) {
+        var child = node.children[i];
+        if (child != null) {
+          findPreprocessorNodes(child, nodes, globalScope);
+        }
+      }
+    }
+  }
+
+  void runPreprocessor(Node program, Scope globalScope) {
+    assert program.kind == .PROGRAM;
+    List<Node> workList = [];
+
+    // Populate the initial work list
+    for (var i = 0; i < program.children.size(); i++) {
+      var file = program.children[i];
+      assert file.kind == .FILE;
+      if (file.needsPreprocessor()) {
+        findPreprocessorNodes(file, workList, globalScope);
+      }
+    }
+
+    // Iterate until a fixed point is reached
+    bool done;
+    do {
+      done = true;
+      for (var i = 0; i < workList.size(); i++) {
+        var node = workList[i];
+        if (node.kind == .PREPROCESSOR_DEFINE) {
+          var result = evaluatePreprocessorValue(node.defineValue(), .SILENT_ERRORS);
+          if (result != .ERROR) {
+            var value = (bool)result;
+            var symbol = node.symbol;
+            symbol.type = cache.boolType;
+            symbol.constant = BoolContent(value);
+            options.defines[symbol.name] = value;
+            workList.remove(i);
+            i--;
+            done = false;
+          }
+        } else {
+          assert node.kind == .PREPROCESSOR_IF;
+          var result = evaluatePreprocessorValue(node.ifTest(), .SILENT_ERRORS);
+          if (result != .ERROR) {
+            var branch = result != .FALSE ? node.ifTrue() : node.ifFalse();
+            if (branch != null) {
+              findPreprocessorNodes(branch, workList, globalScope);
+              node.replaceWithNodes(branch.removeChildren());
+            } else {
+              node.remove();
+            }
+            workList.remove(i);
+            i--;
+            done = false;
+          }
+        }
+      }
+    } while (!done);
+
+    // Log errors for remaining nodes
+    for (var i = 0; i < workList.size(); i++) {
+      var node = workList[i];
+      evaluatePreprocessorValue(node.kind == .PREPROCESSOR_DEFINE ? node.defineValue() : node.ifTest(), .LOG_ERRORS);
+    }
+  }
+
+  PreprocessorResult evaluatePreprocessorValue(Node node, LogErrors mode) {
+    switch (node.kind) {
+      case .BOOL {
+        return (PreprocessorResult)node.asBool();
+      }
+
+      case .NAME {
+        var name = node.asString();
+        if (name in options.defines) {
+          return (PreprocessorResult)options.defines[name];
+        } else if (mode == .LOG_ERRORS) {
+          semanticErrorPreprocessorInvalidSymbol(log, node.range, name);
+        }
+      }
+
+      case .NOT {
+        var value = evaluatePreprocessorValue(node.unaryValue(), mode);
+        return value == .ERROR ? .ERROR : (PreprocessorResult)(1 - value);
+      }
+
+      case .LOGICAL_OR, .LOGICAL_AND {
+        var left = evaluatePreprocessorValue(node.binaryLeft(), mode);
+        var right = evaluatePreprocessorValue(node.binaryRight(), mode);
+        return left != .ERROR && right != .ERROR ? (PreprocessorResult)(node.kind == .LOGICAL_OR ? left | right : left & right) : .ERROR;
+      }
+
+      case .ERROR {
+      }
+
+      default {
+        if (mode == .LOG_ERRORS) {
+          semanticErrorPreprocessorInvalidValue(log, node.range);
+        }
+      }
+    }
+
+    return .ERROR;
   }
 
   void prepareNode(Node node, Scope scope) {
@@ -109,7 +250,9 @@ class Resolver {
 
   void setupNamedDeclaration(Node node, Scope scope) {
     var declarationName = node.declarationName();
-    if (declarationName != null && node.symbol == null) {
+
+    // Preprocessor defines always go in the global scope
+    if (declarationName != null && node.symbol == null && node.kind != .PREPROCESSOR_DEFINE) {
       var name = declarationName.asString();
       var member = scope.findLocal(name);
       Symbol symbol;
@@ -302,6 +445,7 @@ class Resolver {
         case .PARAMETER { symbol.kind = symbol.enclosingSymbol != null ? .OBJECT_PARAMETER : .FUNCTION_PARAMETER; }
         case .ALIAS { symbol.kind = .ALIAS; }
         case .EXTENSION { semanticErrorExtensionMissingTarget(log, declarationName.range, declarationName.asString()); }
+        case .PREPROCESSOR_DEFINE {}
         default { assert false; }
       }
     }
@@ -497,6 +641,7 @@ class Resolver {
       case .VARIABLE { resolveVariable(node); }
       case .VARIABLE_CLUSTER { resolveVariableCluster(node); }
       case .PARAMETER { resolveParameter(node); }
+      case .PREPROCESSOR_DEFINE {} // These should already be resolved
       case .ALIAS { resolveAlias(node); }
 
       case .IF { resolveIf(node); }
@@ -512,6 +657,7 @@ class Resolver {
       case .SWITCH { resolveSwitch(node); }
       case .MODIFIER { resolveModifier(node); }
       case .PREPROCESSOR_WARNING, .PREPROCESSOR_ERROR { resolvePreprocessorDiagnostic(node); }
+      case .PREPROCESSOR_IF {} // If this is still here, the errors have already been logged
 
       case .NAME { resolveName(node); }
       case .NULL { node.type = cache.nullType; }
@@ -1366,7 +1512,7 @@ class Resolver {
         case .OBJECT_PARAMETER, .FUNCTION_PARAMETER { initializeParameter(symbol); }
         case .ALIAS { initializeAlias(symbol); }
         case .OTHER {}
-        default { assert false; }
+        default { assert false; } // PREPROCESSOR_DEFINE nodes should already be initialized
       }
       context = oldContext;
       typeContext = oldTypeContext;

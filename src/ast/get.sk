@@ -134,12 +134,6 @@ in Node {
     return children[0];
   }
 
-  Node defineName() {
-    assert kind == .PREPROCESSOR_DEFINE;
-    assert children.size() == 2;
-    return children[0];
-  }
-
   Node defineValue() {
     assert kind == .PREPROCESSOR_DEFINE;
     assert children.size() == 2;

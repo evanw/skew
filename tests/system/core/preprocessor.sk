@@ -241,12 +241,15 @@ test("
   #warning \"B\"
 #endif
 ", "
-<stdin>:2:3: warning: A
-  #warning \"A\"
-  ~~~~~~~~~~~~
 <stdin>:3:1: error: Unexpected INVALID_PREPROCESSOR_DIRECTIVE
 #elseif
 ~~~~~~~
+<stdin>:2:3: warning: A
+  #warning \"A\"
+  ~~~~~~~~~~~~
+<stdin>:4:3: warning: B
+  #warning \"B\"
+  ~~~~~~~~~~~~
 ");
 
 test("
@@ -345,6 +348,133 @@ void bar() {
 <stdin>:5:13: error: Cannot convert from type \"bool\" to type \"int\" without a cast
       true, false
             ~~~~~
+");
+
+test("
+#if foo
+  #warning \"A\"
+#else
+  #warning \"B\"
+#endif
+#define foo true
+", "
+<stdin>:2:3: warning: A
+  #warning \"A\"
+  ~~~~~~~~~~~~
+");
+
+test("
+#if foo
+  #warning \"A\"
+#else
+  #warning \"B\"
+#endif
+#define foo false
+", "
+<stdin>:4:3: warning: B
+  #warning \"B\"
+  ~~~~~~~~~~~~
+");
+
+test("
+#if foo
+  #warning \"A\"
+#else
+  #warning \"B\"
+#endif
+#define foo 0
+", "
+<stdin>:1:5: error: \"foo\" is not a valid preprocessor symbol
+#if foo
+    ~~~
+<stdin>:6:13: error: Unexpected expression in preprocessor value
+#define foo 0
+            ^
+");
+
+test("
+#define foo true
+#define foo false
+", "
+<stdin>:2:9: error: \"foo\" is already declared
+#define foo false
+        ~~~
+<stdin>:1:9: note: The previous declaration is here
+#define foo true
+        ~~~
+");
+
+test("
+var foo = foo;
+#define foo true
+", "
+<stdin>:2:9: error: \"foo\" is already declared
+#define foo true
+        ~~~
+<stdin>:1:5: note: The previous declaration is here
+var foo = foo;
+    ~~~
+<stdin>:1:5: error: Cyclic declaration of \"foo\"
+var foo = foo;
+    ~~~
+");
+
+test("
+#define foo true
+var foo = foo;
+", "
+<stdin>:1:9: error: \"foo\" is already declared
+#define foo true
+        ~~~
+<stdin>:2:5: note: The previous declaration is here
+var foo = foo;
+    ~~~
+<stdin>:2:5: error: Cyclic declaration of \"foo\"
+var foo = foo;
+    ~~~
+");
+
+test("
+int x = baz;
+#if foo
+  #define bar true
+#endif
+#if bar
+  #define baz true
+#endif
+#define foo true
+", "
+<stdin>:1:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+int x = baz;
+        ~~~
+");
+
+test("
+#define foo bar
+#define bar foo
+", "
+<stdin>:1:13: error: \"bar\" is not a valid preprocessor symbol
+#define foo bar
+            ~~~
+<stdin>:2:13: error: \"foo\" is not a valid preprocessor symbol
+#define bar foo
+            ~~~
+");
+
+test("
+#if foo
+  #define bar true
+#endif
+#if bar
+  #define foo true
+#endif
+", "
+<stdin>:1:5: error: \"foo\" is not a valid preprocessor symbol
+#if foo
+    ~~~
+<stdin>:4:5: error: \"bar\" is not a valid preprocessor symbol
+#if bar
+    ~~~
 ");
 
 }}

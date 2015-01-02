@@ -610,7 +610,7 @@ Node parsePreprocessorDefine(ParserContext context) {
     return errorStatementSinceToken(context, token);
   }
   var value = pratt.parse(context, .COMMA);
-  return Node.createPreprocessorDefine(name, value);
+  return Node.createPreprocessorDefine(name, value).withRange(context.spanSince(token.range));
 }
 
 Node parsePreprocessorDiagnostic(ParserContext context, NodeKind kind) {
@@ -689,7 +689,9 @@ Node parseFile(Log log, List<Token> tokens) {
   var statements = parseStatements(context, .NORMAL); if (statements == null) return null;
   if (!context.expect(.END_OF_FILE)) return null;
   var range = context.spanSince(token.range);
-  return Node.createFile(Node.createBlock(statements).withRange(range)).withRange(range);
+  var file = Node.createFile(Node.createBlock(statements).withRange(range)).withRange(range);
+  if (context.needsPreprocessor) file.flags |= .NEEDS_PREPROCESSOR;
+  return file;
 }
 
 Node errorStatementSinceToken(ParserContext context, Token token) {
