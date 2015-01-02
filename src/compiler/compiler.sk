@@ -25,6 +25,7 @@ export class CompilerOptions {
   List<Source> inputs = [];
   List<Source> prepend = [];
   List<Source> append = [];
+  var defines = StringMap<bool>();
   var outputDirectory = "";
   var outputFile = "";
   var jsMinify = false; // Removes whitespace
@@ -76,11 +77,6 @@ export class Compiler {
   var lineCountingTime = 0.0;
   var totalTime = 0.0;
   var log = Log();
-  var defines = StringMap<bool>();
-
-  void define(string name, bool value) {
-    defines[name] = value;
-  }
 
   string statistics(CompilerResult result) {
     // Line count

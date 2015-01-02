@@ -199,25 +199,20 @@ Node parsePreprocessorSequence(ParserContext context) {
   context.needsPreprocessor = true;
   var token = context.next();
   var value = pratt.parse(context, .COMMA);
-  var trueNodes = parseCommaSeparatedNodeList(context, .TRAILING_COMMA);
+  var trueNodes = parseCommaSeparatedNodeList(context);
   Node falseNodes;
   if (context.peek(.PREPROCESSOR_ELIF)) {
     var node = parsePreprocessorSequence(context);
     falseNodes = Node.createNodeList([node]).withRange(node.range);
   } else {
     if (context.eat(.PREPROCESSOR_ELSE)) {
-      falseNodes = parseCommaSeparatedNodeList(context, .TRAILING_COMMA);
+      falseNodes = parseCommaSeparatedNodeList(context);
     }
     if (!context.expect(.PREPROCESSOR_ENDIF)) {
       return errorExpressionSinceToken(context, token);
     }
   }
   return Node.createPreprocessorSequence(value, trueNodes, falseNodes).withRange(context.spanSince(token.range));
-}
-
-enum AllowTrailingComma {
-  NO_TRAILING_COMMA,
-  TRAILING_COMMA,
 }
 
 bool isEndOfCommaSeparatedList(ParserContext context) {
@@ -230,27 +225,26 @@ bool isEndOfCommaSeparatedList(ParserContext context) {
     kind == .PREPROCESSOR_ENDIF;
 }
 
-List<Node> parseCommaSeparatedList(ParserContext context, AllowTrailingComma comma) {
+List<Node> parseCommaSeparatedList(ParserContext context) {
   List<Node> values = [];
-  while (true) {
-    if (isEndOfCommaSeparatedList(context) || comma == .NO_TRAILING_COMMA && values.size() > 0 && !context.expect(.COMMA)) break;
-    var isPreprocessorSequence = comma == .TRAILING_COMMA && context.peek(.PREPROCESSOR_IF);
+  while (!isEndOfCommaSeparatedList(context)) {
+    var isPreprocessorSequence = context.peek(.PREPROCESSOR_IF);
     var value = isPreprocessorSequence ? parsePreprocessorSequence(context) : pratt.parse(context, .COMMA);
     values.push(value);
-    if (value.kind.isError() || comma == .TRAILING_COMMA && !isPreprocessorSequence && !isEndOfCommaSeparatedList(context) && !context.expect(.COMMA)) break;
+    if (value.kind.isError() || !isPreprocessorSequence && !isEndOfCommaSeparatedList(context) && !context.expect(.COMMA)) break;
   }
   return values;
 }
 
-Node parseCommaSeparatedNodeList(ParserContext context, AllowTrailingComma comma) {
+Node parseCommaSeparatedNodeList(ParserContext context) {
   var token = context.current();
-  var values = parseCommaSeparatedList(context, comma);
+  var values = parseCommaSeparatedList(context);
   return Node.createNodeList(values).withRange(context.spanSince(token.range));
 }
 
-List<Node> parseWrappedCommaSeparatedList(ParserContext context, TokenKind left, TokenKind right, AllowTrailingComma comma) {
+List<Node> parseWrappedCommaSeparatedList(ParserContext context, TokenKind left, TokenKind right) {
   if (!context.expect(left)) return [];
-  var values = parseCommaSeparatedList(context, comma);
+  var values = parseCommaSeparatedList(context);
   scanForToken(context, right, .STOP_BEFORE_NEXT_STATEMENT);
   return values;
 }
@@ -386,7 +380,7 @@ Node parseAnnotation(ParserContext context, StatementHint hint) {
   Node arguments = null;
   if (context.peek(.LEFT_PARENTHESIS)) {
     var token = context.current();
-    var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
+    var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS);
     arguments = Node.createNodeList(values).withRange(context.spanSince(token.range));
   }
   var block = parseBlockOrStatement(context, hint); if (block == null) return null;
@@ -534,7 +528,7 @@ Node parseFor(ParserContext context) {
 
 Node parseSuperCall(ParserContext context) {
   var token = context.next();
-  var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
+  var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS);
   return Node.createSuperCall(values).withRange(context.spanSince(token.range));
 }
 
@@ -820,7 +814,7 @@ class BinaryInfixOrUnaryPostfix : IInfixParselet {
 class ListParselet : IPrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.current();
-    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_BRACKET, .RIGHT_BRACKET, .TRAILING_COMMA);
+    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_BRACKET, .RIGHT_BRACKET);
     return Node.createList(arguments).withRange(context.spanSince(token.range));
   }
 }
@@ -878,7 +872,7 @@ class DotPrefixParselet : IPrefixParselet {
 
 class CallParselet : IInfixParselet {
   override Node parse(ParserContext context, Node left) {
-    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NO_TRAILING_COMMA);
+    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS);
     return Node.createCall(left, arguments).withRange(context.spanSince(left.range));
   }
 }

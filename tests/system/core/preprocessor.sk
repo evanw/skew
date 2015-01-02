@@ -261,4 +261,90 @@ test("
 ~~~~~~~
 ");
 
+test("
+bool foo = [
+  #if true
+    1, false,
+  #endif
+];
+", "
+<stdin>:1:12: error: Cannot infer a common element type for this list literal
+bool foo = [
+           ^
+");
+
+test("
+bool foo = [
+  1,
+  #if true
+    2, false,
+  #endif
+  3,
+];
+", "
+<stdin>:1:12: error: Cannot infer a common element type for this list literal
+bool foo = [
+           ^
+");
+
+test("
+bool foo = [
+  1,
+  #if true
+  #endif
+  3,
+];
+", "
+<stdin>:1:12: error: Cannot convert from type \"List<int>\" to type \"bool\"
+bool foo = [
+           ^
+");
+
+test("
+bool foo = [
+  1,
+  #if false
+    2, false,
+  #endif
+  3,
+];
+", "
+<stdin>:1:12: error: Cannot convert from type \"List<int>\" to type \"bool\"
+bool foo = [
+           ^
+");
+
+test("
+bool foo = [
+  1,
+  #if false
+  #else
+    2, false,
+  #endif
+  3,
+];
+", "
+<stdin>:1:12: error: Cannot infer a common element type for this list literal
+bool foo = [
+           ^
+");
+
+test("
+import void foo(int x, int y);
+void bar() {
+  foo(
+    #if true
+      true, false
+    #endif
+  );
+}
+", "
+<stdin>:5:7: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+      true, false
+      ~~~~
+<stdin>:5:13: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+      true, false
+            ~~~~~
+");
+
 }}

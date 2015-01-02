@@ -517,6 +517,7 @@ class Resolver {
       case .THIS { resolveThis(node); }
       case .BOOL { node.type = cache.boolType; }
       case .HOOK { resolveHook(node); }
+      case .PREPROCESSOR_HOOK { resolvePreprocessorHook(node); }
       case .INT { resolveInt(node); }
       case .FLOAT { node.type = cache.floatType; }
       case .DOUBLE { node.type = cache.doubleType; }
@@ -2052,6 +2053,49 @@ class Resolver {
     if (type != null) checkConversion(type, node, kind);
   }
 
+  void expandPreprocessorSequences(Node parent) {
+    var nodes = parent.children;
+    for (var i = 0; i < nodes.size(); i++) {
+      var node = nodes[i];
+
+      // Be careful since the sequence can replace itself with any number of nodes
+      if (node.kind == .PREPROCESSOR_SEQUENCE) {
+        var distanceFromEnd = nodes.size() - i;
+        expandPreprocessorSequence(node);
+        i = nodes.size() - distanceFromEnd;
+      }
+    }
+  }
+
+  void expandPreprocessorSequence(Node node) {
+    var test = node.sequenceTest();
+    var trueNodes = node.sequenceTrue();
+    var falseNodes = node.sequenceFalse();
+
+    // Check the test first
+    resolveAsParamterizedExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
+    constantFolder.foldConstants(test);
+    if (test.type.isError(cache)) {
+      node.become(Node.createError());
+      return;
+    }
+    if (test.kind != .BOOL) {
+      semanticErrorPreprocessorTestNotConstant(log, test.range);
+      node.become(Node.createError());
+      return;
+    }
+
+    // Only resolve the selected branch and drop the other branch completely
+    var result = test.asBool();
+    if (!result && falseNodes == null) {
+      node.remove();
+    } else {
+      var selected = result ? trueNodes : falseNodes;
+      expandPreprocessorSequences(selected);
+      node.replaceWithNodes(selected.removeChildren());
+    }
+  }
+
   void resolveNodes(List<Node> nodes) {
     for (var i = 0; i < nodes.size(); i++) {
       resolve(nodes[i], null);
@@ -2749,11 +2793,34 @@ class Resolver {
     node.type = commonType;
   }
 
+  void resolvePreprocessorHook(Node node) {
+    var test = node.hookTest();
+    var trueNode = node.hookTrue();
+    var falseNode = node.hookFalse();
+
+    // Check the test first
+    resolveAsParamterizedExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
+    constantFolder.foldConstants(test);
+    if (test.type.isError(cache)) {
+      return;
+    }
+    if (test.kind != .BOOL) {
+      semanticErrorPreprocessorTestNotConstant(log, test.range);
+      return;
+    }
+
+    // Only resolve the selected branch
+    var value = test.asBool() ? trueNode : falseNode;
+    resolveAsParameterizedExpressionWithTypeContext(value, typeContext);
+    node.become(value);
+  }
+
   void resolveInt(Node node) {
     node.type = cache.intType;
   }
 
   void resolveList(Node node) {
+    expandPreprocessorSequences(node);
     var values = node.listValues();
 
     // Avoid reporting further errors
@@ -2883,6 +2950,7 @@ class Resolver {
   }
 
   void resolveCall(Node node) {
+    expandPreprocessorSequences(node);
     var value = node.callValue();
     var arguments = node.callArguments();
 
