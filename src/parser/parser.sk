@@ -231,7 +231,7 @@ List<Node> parseCommaSeparatedList(ParserContext context) {
     var isPreprocessorSequence = context.peek(.PREPROCESSOR_IF);
     var value = isPreprocessorSequence ? parsePreprocessorSequence(context) : pratt.parse(context, .COMMA);
     values.push(value);
-    if (value.kind.isError() || !isPreprocessorSequence && !isEndOfCommaSeparatedList(context) && !context.expect(.COMMA)) break;
+    if (value.kind == .ERROR || !isPreprocessorSequence && !isEndOfCommaSeparatedList(context) && !context.expect(.COMMA)) break;
   }
   return values;
 }
@@ -598,9 +598,7 @@ bool looksLikeType(Node node) {
 
 Node parseStringToken(ParserContext context, Token token) {
   var result = parseStringLiteral(context.log, token.range, token.text);
-
-  // Don't return null on failure because this doesn't affect the rest of the compilation
-  return Node.createString(result != null ? result.value : "").withRange(token.range);
+  return (result != null ? Node.createString(result.value) : Node.createError()).withRange(token.range);
 }
 
 Node parsePreprocessorDefine(ParserContext context) {
@@ -623,7 +621,9 @@ Node parsePreprocessorDiagnostic(ParserContext context, NodeKind kind) {
     scanForToken(context, .END_OF_FILE, .STOP_BEFORE_NEXT_STATEMENT);
     return errorStatementSinceToken(context, token);
   }
-  return Node.createPreprocessorDiagnostic(kind, parseStringToken(context, stringToken)).withRange(context.spanSince(token.range));
+  var value = parseStringToken(context, stringToken);
+  if (value.kind == .ERROR) return Node.createExpression(value).withRange(value.range);
+  return Node.createPreprocessorDiagnostic(kind, value).withRange(context.spanSince(token.range));
 }
 
 Node parsePreprocessorBlock(ParserContext context, StatementHint hint) {

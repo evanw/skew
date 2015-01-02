@@ -201,16 +201,8 @@ in NodeKind {
     return this >= CAST && this <= IMPLICIT_CAST;
   }
 
-  bool isType() {
-    return this == TYPE;
-  }
-
   bool isReal() {
     return this >= FLOAT && this <= DOUBLE;
-  }
-
-  bool isError() {
-    return this == ERROR;
   }
 
   bool isJump() {

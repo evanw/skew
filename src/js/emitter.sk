@@ -723,7 +723,7 @@ namespace js {
 
     void emitCall(Node node) {
       var value = node.callValue();
-      if (value.kind.isType()) emit("new ");
+      if (value.kind == .TYPE) emit("new ");
       emitExpression(value, .UNARY_POSTFIX);
       emit("(");
       emitCommaSeparatedExpressions(node.callArguments());

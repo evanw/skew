@@ -192,15 +192,6 @@ int bar = \"\\xx\";
 <stdin>:3:12: error: Invalid escape sequence \"\\xxx\"
 int baz = \"\\xxx\";
            ~~~~
-<stdin>:1:11: error: Cannot convert from type \"string\" to type \"int\"
-int foo = \"\\x\";
-          ~~~~
-<stdin>:2:11: error: Cannot convert from type \"string\" to type \"int\"
-int bar = \"\\xx\";
-          ~~~~~
-<stdin>:3:11: error: Cannot convert from type \"string\" to type \"int\"
-int baz = \"\\xxx\";
-          ~~~~~~
 ");
 
 test("

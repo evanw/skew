@@ -113,7 +113,7 @@ class Pratt {
 
   Node resume(ParserContext context, Precedence precedence, Node left) {
     assert left != null;
-    while (!left.kind.isError()) {
+    while (left.kind != .ERROR) {
       var kind = context.current().kind;
       var parselet = table.getOrDefault(kind, null);
       if (parselet == null || parselet.infix == null || parselet.precedence <= precedence) {

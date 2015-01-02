@@ -511,6 +511,7 @@ class Resolver {
       case .EXPRESSION { resolveExpression(node); }
       case .SWITCH { resolveSwitch(node); }
       case .MODIFIER { resolveModifier(node); }
+      case .PREPROCESSOR_WARNING, .PREPROCESSOR_ERROR { resolvePreprocessorDiagnostic(node); }
 
       case .NAME { resolveName(node); }
       case .NULL { node.type = cache.nullType; }
@@ -561,14 +562,14 @@ class Resolver {
       node.type = symbol.type;
     }
 
-    else if (!node.type.isIgnored(cache) && !node.kind.isType()) {
+    else if (!node.type.isIgnored(cache) && node.kind != .TYPE) {
       semanticErrorUnexpectedExpression(log, node.range, node.type);
       node.type = cache.errorType;
     }
   }
 
   void checkIsInstance(Node node) {
-    if (!node.type.isIgnored(cache) && node.kind.isType()) {
+    if (!node.type.isIgnored(cache) && node.kind == .TYPE) {
       semanticErrorUnexpectedType(log, node.range, node.type);
       node.type = cache.errorType;
     }
@@ -681,7 +682,7 @@ class Resolver {
 
     // Make the implicit conversion explicit for convenience later on
     if (kind == .IMPLICIT_CAST) {
-      if (node.kind.isType()) return;
+      if (node.kind == .TYPE) return;
       var value = Node(.NULL);
       value.become(node);
       node.become(Node.createImplicitCast(Node.createType(to), value).withType(to).withRange(node.range));
@@ -2713,6 +2714,16 @@ class Resolver {
     }
   }
 
+  void resolvePreprocessorDiagnostic(Node node) {
+    var value = node.diagnosticValue();
+    if (node.kind == .PREPROCESSOR_WARNING) {
+      log.warning(node.range, value.asString());
+    } else {
+      assert node.kind == .PREPROCESSOR_ERROR;
+      log.error(node.range, value.asString());
+    }
+  }
+
   void resolveModifier(Node node) {
     resolveNodes(node.modifierStatements());
   }
@@ -2923,7 +2934,7 @@ class Resolver {
 
     // Check the instance/static status of the member
     var symbolIsType = member.symbol.kind.isType();
-    var targetIsType = target == null || target.kind.isType();
+    var targetIsType = target == null || target.kind == .TYPE;
     if (!type.isNamespace()) {
       var isStatic = symbolIsType || member.symbol.isStatic();
 
@@ -2966,7 +2977,7 @@ class Resolver {
     }
 
     // Types are constructed by calling the type, which forwards to the constructor
-    if (value.kind.isType()) {
+    if (value.kind == .TYPE) {
       var member = valueType.constructor();
       if (member == null) {
         semanticErrorUnconstructableType(log, value.range, valueType);
@@ -3106,7 +3117,7 @@ class Resolver {
       types.push(substitutions[i].type);
     }
     var parameterized = cache.parameterize(unparameterized, types);
-    node.become(value.kind.isType()
+    node.become(value.kind == .TYPE
       ? Node.createType(parameterized).withRange(node.range).withSymbol(value.symbol)
       : value.replaceWith(null).withRange(node.range).withType(parameterized));
   }
