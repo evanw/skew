@@ -63,6 +63,7 @@ class MemberRangeComparison : Comparison<Member> {
 class Resolver {
   static var comparison = MemberRangeComparison();
   var operatorAnnotationMap = createOperatorAnnotationMap();
+  var defines = StringMap<bool>();
   var context = ResolveContext();
   ConstantFolder constantFolder = null;
   List<Node> parsedDeclarations = null;
@@ -141,11 +142,15 @@ class Resolver {
         if (node.kind == .PREPROCESSOR_DEFINE) {
           var result = evaluatePreprocessorValue(node.defineValue(), .SILENT_ERRORS);
           if (result != .ERROR) {
-            var value = (bool)result;
             var symbol = node.symbol;
+            var value = (bool)result;
+            if (symbol.name in options.overriddenDefines) {
+              value = options.overriddenDefines[symbol.name].value;
+              options.overriddenDefines.remove(symbol.name);
+            }
             symbol.type = cache.boolType;
             symbol.constant = BoolContent(value);
-            options.defines[symbol.name] = value;
+            defines[symbol.name] = value;
             workList.remove(i);
             i--;
             done = false;
@@ -174,6 +179,13 @@ class Resolver {
       var node = workList[i];
       evaluatePreprocessorValue(node.kind == .PREPROCESSOR_DEFINE ? node.defineValue() : node.ifTest(), .LOG_ERRORS);
     }
+
+    // Log errors for remaining overrides without a matching define
+    var keys = options.overriddenDefines.keys();
+    for (var i = 0; i < keys.size(); i++) {
+      var key = keys[i];
+      semanticErrorPreprocessorInvalidOverriddenDefine(log, options.overriddenDefines[key].range, key);
+    }
   }
 
   PreprocessorResult evaluatePreprocessorValue(Node node, LogErrors mode) {
@@ -184,8 +196,8 @@ class Resolver {
 
       case .NAME {
         var name = node.asString();
-        if (name in options.defines) {
-          return (PreprocessorResult)options.defines[name];
+        if (name in defines) {
+          return (PreprocessorResult)defines[name];
         } else if (mode == .LOG_ERRORS) {
           semanticErrorPreprocessorInvalidSymbol(log, node.range, name);
         }

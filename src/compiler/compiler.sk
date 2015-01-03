@@ -20,12 +20,17 @@ in TargetFormat {
   }
 }
 
+export class OverriddenDefine {
+  bool value;
+  Range range;
+}
+
 export class CompilerOptions {
   TargetFormat targetFormat = .NONE;
   List<Source> inputs = [];
   List<Source> prepend = [];
   List<Source> append = [];
-  var defines = StringMap<bool>();
+  var overriddenDefines = StringMap<OverriddenDefine>();
   var outputDirectory = "";
   var outputFile = "";
   var jsMinify = false; // Removes whitespace

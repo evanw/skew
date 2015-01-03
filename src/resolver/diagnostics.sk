@@ -420,3 +420,7 @@ void semanticErrorPreprocessorInvalidValue(Log log, Range range) {
 void semanticErrorPreprocessorInvalidSymbol(Log log, Range range, string name) {
   log.error(range, simpleQuote(name) + " is not a valid preprocessor symbol");
 }
+
+void semanticErrorPreprocessorInvalidOverriddenDefine(Log log, Range range, string name) {
+  log.error(range, "Could not find a #define named " + simpleQuote(name) + " to override");
+}
