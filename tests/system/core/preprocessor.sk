@@ -339,6 +339,21 @@ namespace ns {
 ");
 
 test("
+namespace ns {
+  #if true
+    int foo;
+  #endif
+}
+bool foo() {
+  return ns.foo;
+}
+", "
+<stdin>:7:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  return ns.foo;
+         ~~~~~~
+");
+
+test("
 bool foo = [
   #if true
     1, false,
@@ -482,30 +497,24 @@ test("
 var foo = foo;
 #define foo true
 ", "
-<stdin>:2:9: error: \"foo\" is already declared
+<stdin>:1:5: error: \"foo\" is already declared
+var foo = foo;
+    ~~~
+<stdin>:2:9: note: The previous declaration is here
 #define foo true
         ~~~
-<stdin>:1:5: note: The previous declaration is here
-var foo = foo;
-    ~~~
-<stdin>:1:5: error: Cyclic declaration of \"foo\"
-var foo = foo;
-    ~~~
 ");
 
 test("
 #define foo true
 var foo = foo;
 ", "
-<stdin>:1:9: error: \"foo\" is already declared
+<stdin>:2:5: error: \"foo\" is already declared
+var foo = foo;
+    ~~~
+<stdin>:1:9: note: The previous declaration is here
 #define foo true
         ~~~
-<stdin>:2:5: note: The previous declaration is here
-var foo = foo;
-    ~~~
-<stdin>:2:5: error: Cyclic declaration of \"foo\"
-var foo = foo;
-    ~~~
 ");
 
 test("

@@ -66,8 +66,8 @@ class Resolver {
   var defines = StringMap<bool>();
   var context = ResolveContext();
   ConstantFolder constantFolder = null;
-  List<Node> parsedDeclarations = null;
-  List<Node> parsedBlocks = null;
+  List<Node> parsedDeclarations = [];
+  List<Node> parsedBlocks = [];
   Type typeContext = null;
   Type resultType = null;
   Symbol entryPointSymbol = null;
@@ -81,9 +81,9 @@ class Resolver {
     var globalScope = Scope(null);
     cache.insertGlobals(globalScope);
     constantFolder = ConstantFolder(cache);
+    runPreprocessor(program, globalScope);
     prepareNode(program, globalScope);
     cache.linkGlobals(globalScope);
-    runPreprocessor(program, globalScope);
     resolve(program, null);
   }
 
@@ -97,11 +97,13 @@ class Resolver {
     else if (kind == .PREPROCESSOR_DEFINE) {
       var declarationName = node.declarationName();
       var symbol = createSymbol(declarationName.asString(), .DEFINE);
-      symbol.node = node;
-      symbol.flags |= .CONST | .INITIALIZED;
+      symbol.flags |= .CONST;
       symbol.type = cache.errorType;
+      symbol.enclosingSymbol = cache.globalType.symbol;
+      symbol.node = node;
       node.symbol = symbol;
       nodes.push(node);
+      parsedDeclarations.push(node);
       var existing = globalScope.findLocal(symbol.name);
       if (existing != null) {
         semanticErrorDuplicateSymbol(log, declarationName.range, symbol.name, existing.symbol.node.declarationName().range);
@@ -148,7 +150,6 @@ class Resolver {
               value = options.overriddenDefines[symbol.name].value;
               options.overriddenDefines.remove(symbol.name);
             }
-            symbol.type = cache.boolType;
             symbol.constant = BoolContent(value);
             defines[symbol.name] = value;
             workList.remove(i);
@@ -228,12 +229,12 @@ class Resolver {
   }
 
   void prepareNode(Node node, Scope scope) {
-    parsedDeclarations = [];
-    parsedBlocks = [];
     setupScopesAndSymbols(node, scope);
     accumulateSymbolFlags();
     setSymbolKindsAndMergeSiblings();
     processUsingStatements();
+    parsedDeclarations = [];
+    parsedBlocks = [];
   }
 
   Scope setupBlock(Node node, Scope scope) {
@@ -262,9 +263,7 @@ class Resolver {
 
   void setupNamedDeclaration(Node node, Scope scope) {
     var declarationName = node.declarationName();
-
-    // Preprocessor defines always go in the global scope
-    if (declarationName != null && node.symbol == null && node.kind != .PREPROCESSOR_DEFINE) {
+    if (declarationName != null && node.symbol == null) {
       var name = declarationName.asString();
       var member = scope.findLocal(name);
       Symbol symbol;
@@ -286,8 +285,7 @@ class Resolver {
         if (scope.type != null) {
           symbol.enclosingSymbol = scope.type.symbol;
         }
-        member = Member(symbol);
-        scope.insert(member);
+        scope.insert(Member(symbol));
       }
 
       // Link the node with its symbol
@@ -310,24 +308,26 @@ class Resolver {
   }
 
   void setupScopesAndSymbols(Node node, Scope scope) {
+    var kind = node.kind;
+
     // The root program introduces the global scope
-    if (node.kind == .PROGRAM) {
+    if (kind == .PROGRAM) {
       node.scope = scope;
     }
 
     // Remember each scope on the node that introduced that scope
-    else if (node.kind == .BLOCK) {
+    else if (kind == .BLOCK) {
       scope = setupBlock(node, scope); // Outlined for JIT performance
     }
 
     // Declare this node if needed
-    if (node.kind.isNamedDeclaration()) {
+    if (kind.isNamedDeclaration()) {
       setupNamedDeclaration(node, scope); // Outlined for JIT performance
     }
 
     // Also introduce a scope on object declarations for the type parameters
     // and on function declarations for the arguments
-    if (node.kind.isNamedBlockDeclaration() || node.kind.isFunction() || node.kind.isLoop()) {
+    if (kind.isNamedBlockDeclaration() || kind.isFunction() || kind.isLoop()) {
       scope = Scope(scope);
       node.scope = scope;
     }
@@ -1494,6 +1494,10 @@ class Resolver {
     symbol.type = value.type;
   }
 
+  void initializeDefine(Symbol symbol) {
+    symbol.type = cache.boolType;
+  }
+
   void initializeDeclaration(Node node) {
     // The symbol should already have been set
     var symbol = node.symbol;
@@ -1523,8 +1527,9 @@ class Resolver {
         case .LOCAL_VARIABLE, .GLOBAL_VARIABLE, .INSTANCE_VARIABLE { initializeVariable(symbol); }
         case .OBJECT_PARAMETER, .FUNCTION_PARAMETER { initializeParameter(symbol); }
         case .ALIAS { initializeAlias(symbol); }
+        case .DEFINE { initializeDefine(symbol); }
         case .OTHER {}
-        default { assert false; } // PREPROCESSOR_DEFINE nodes should already be initialized
+        default { assert false; }
       }
       context = oldContext;
       typeContext = oldTypeContext;
@@ -2288,13 +2293,14 @@ class Resolver {
   void resolveBlock(Node node) {
     resolveChildren(node);
 
-    // Remove asserts here since they will all be in blocks. Each assert should
-    // still be resolved to check for compile errors, however.
+    // Remove unwanted children now that they are resolved
     var statements = node.blockStatements();
     for (var i = 0; i < statements.size(); i++) {
       var child = statements[i];
       var kind = child.kind;
-      if (kind == .ASSERT_CONST || kind == .ASSERT && options.removeAsserts) {
+      if (kind == .ASSERT_CONST ||
+          kind == .PREPROCESSOR_DEFINE ||
+          kind == .ASSERT && options.removeAsserts) {
         node.removeChildAtIndex(i);
         i--;
       }
@@ -2685,8 +2691,7 @@ class Resolver {
   }
 
   void resolveDefine(Node node) {
-    assert node.symbol != null;
-    assert node.symbol.isInitialized();
+    initializeDefine(node.symbol);
     checkDeclarationLocation(node, .ALLOW_TOP_LEVEL);
   }
 
