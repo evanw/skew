@@ -553,6 +553,13 @@ namespace cpp {
       }
     }
 
+    override string mangleName(Symbol symbol) {
+      if (symbol.name == "main" && symbol.fullName() == "main") {
+        return "_main_";
+      }
+      return super(symbol);
+    }
+
     override StringMap<bool> createIsKeyword() {
       var result = StringMap<bool>();
       result["alignas"] = true;
@@ -597,7 +604,6 @@ namespace cpp {
       result["inline"] = true;
       result["int"] = true;
       result["long"] = true;
-      result["main"] = true;
       result["mutable"] = true;
       result["namespace"] = true;
       result["NAN"] = true;

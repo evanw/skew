@@ -3563,6 +3563,12 @@
       this.namespaceStack.push(name);
     }
   };
+  cpp.Emitter.prototype.mangleName = function(symbol) {
+    if (symbol.name === 'main' && symbol.fullName() === 'main') {
+      return '_main_';
+    }
+    return base.Emitter.prototype.mangleName.call(this, symbol);
+  };
   cpp.Emitter.prototype.createIsKeyword = function() {
     var result = new StringMap();
     result._table['alignas'] = true;
@@ -3607,7 +3613,6 @@
     result._table['inline'] = true;
     result._table['int'] = true;
     result._table['long'] = true;
-    result._table['main'] = true;
     result._table['mutable'] = true;
     result._table['namespace'] = true;
     result._table['NAN'] = true;
