@@ -152,6 +152,122 @@ class ConstantFolder {
     }
   }
 
+  int foldFor(Node node) {
+    var test = node.forTest();
+    if (test != null && test.isFalse()) {
+      var setup = node.forSetup();
+
+      // Remove "for (; false; c) d;" entirely
+      if (setup == null || setup.hasNoSideEffects()) {
+        node.remove();
+        return -1;
+      }
+
+      // Replace "for (a; false; c) d;" with "a;"
+      else if (setup.kind != .VARIABLE_CLUSTER) {
+        node.replaceWith(Node.createExpression(setup.remove()));
+      }
+
+      // The code "for (var a = 0; false; c) d;" can't be folded
+      // completely because that would pollute the enclosing scope
+      else {
+        var update = node.forUpdate();
+        if (update != null) {
+          update.replaceWith(null);
+        }
+        node.forBlock().removeChildren();
+      }
+    }
+    return 0;
+  }
+
+  int foldIf(Node node) {
+    var test = node.ifTest();
+    var trueBlock = node.ifTrue();
+    var falseBlock = node.ifFalse();
+
+    // No reason to keep an empty "else" block
+    if (falseBlock != null && !falseBlock.hasChildren()) {
+      falseBlock.replaceWith(null);
+      falseBlock = null;
+    }
+
+    // Always true if statement
+    if (test.isTrue()) {
+      // Remove dead code in the "else" block
+      if (falseBlock != null) {
+        falseBlock.replaceWith(null);
+      }
+
+      // Be careful not to pollute the enclosing scope
+      if (!blockContainsVariableCluster(trueBlock)) {
+        var replacements = trueBlock.removeChildren();
+        node.replaceWithNodes(replacements);
+        return replacements.size() - 1;
+      }
+    }
+
+    // Always false if statement
+    else if (test.isFalse()) {
+
+      // Remove entirely
+      if (falseBlock == null) {
+        node.remove();
+        return -1;
+      }
+
+      // Be careful not to pollute the enclosing scope
+      if (!blockContainsVariableCluster(falseBlock)) {
+        var replacements = falseBlock.removeChildren();
+        node.replaceWithNodes(replacements);
+        return replacements.size() - 1;
+      }
+
+      // Otherwise, transform to an "if (true) { ... }" statement
+      test.replaceWith(Node.createBool(true).withType(test.type));
+      trueBlock.replaceWith(falseBlock.replaceWith(null));
+    }
+
+    // Remove if statements with empty blocks
+    else if (!trueBlock.hasChildren()) {
+      if (test.hasNoSideEffects()) {
+        node.remove();
+        return -1;
+      }
+      node.become(Node.createExpression(test.remove()));
+    }
+
+    return 0;
+  }
+
+  int foldSwitch(Node node) {
+    // Remove the default case if it's empty
+    var cases = node.switchCases();
+    if (cases.hasChildren()) {
+      var last = cases.lastChild();
+      if (!last.caseValues().hasChildren() && !last.caseBlock().hasChildren()) {
+        last.remove();
+
+        // If the default case is empty, all other empty cases can be removed too
+        for (var i = cases.children.size() - 1; i >= 0; i--) {
+          var statement = cases.children[i];
+          if (!statement.caseBlock().hasChildren()) {
+            statement.remove();
+          }
+        }
+      }
+    }
+
+    // Replace "switch (foo) {}" with "foo;"
+    if (!cases.hasChildren()) {
+      var value = node.switchValue();
+      node.replaceWith(Node.createExpression(value.remove()).withRange(node.range));
+      return -1;
+    }
+
+    return 0;
+  }
+
   void foldBlock(Node node) {
     for (var i = 0; i < node.children.size(); i++) {
       var child = node.children[i];
@@ -174,119 +290,17 @@ class ConstantFolder {
 
       // Reduce for loops that will never execute
       else if (kind == .FOR) {
-        var test = child.forTest();
-        if (test != null && test.isFalse()) {
-          var setup = child.forSetup();
-
-          // Remove "for (; false; c) d;" entirely
-          if (setup == null || setup.hasNoSideEffects()) {
-            node.removeChildAtIndex(i);
-            i--;
-          }
-
-          // Replace "for (a; false; c) d;" with "a;"
-          else if (setup.kind != .VARIABLE_CLUSTER) {
-            child.replaceWith(Node.createExpression(setup.remove()));
-          }
-
-          // The code "for (var a = 0; false; c) d;" can't be folded
-          // completely because that would pollute the enclosing scope
-          else {
-            var update = child.forUpdate();
-            if (update != null) {
-              update.replaceWith(null);
-            }
-            child.forBlock().removeChildren();
-          }
-        }
+        i += foldFor(child);
       }
 
       // Statically evaluate if statements where possible
       else if (kind == .IF) {
-        var test = child.ifTest();
-        var trueBlock = child.ifTrue();
-        var falseBlock = child.ifFalse();
-
-        // No reason to keep an empty "else" block
-        if (falseBlock != null && !falseBlock.hasChildren()) {
-          falseBlock.replaceWith(null);
-          falseBlock = null;
-        }
-
-        // Always true if statement
-        if (test.isTrue()) {
-          // Remove dead code in the "else" block
-          if (falseBlock != null) {
-            falseBlock.replaceWith(null);
-          }
-
-          // Be careful not to pollute the enclosing scope
-          if (!blockContainsVariableCluster(trueBlock)) {
-            var replacements = trueBlock.removeChildren();
-            child.replaceWithNodes(replacements);
-            i += replacements.size() - 1;
-          }
-        }
-
-        // Always false if statement
-        else if (test.isFalse()) {
-
-          // Remove entirely
-          if (falseBlock == null) {
-            node.removeChildAtIndex(i);
-            i--;
-          }
-
-          // Be careful not to pollute the enclosing scope
-          else if (!blockContainsVariableCluster(falseBlock)) {
-            var replacements = falseBlock.removeChildren();
-            child.replaceWithNodes(replacements);
-            i += replacements.size() - 1;
-          }
-
-          // Otherwise, transform to an "if (true) { ... }" statement
-          else {
-            test.replaceWith(Node.createBool(true).withType(test.type));
-            trueBlock.replaceWith(falseBlock.replaceWith(null));
-          }
-        }
-
-        // Remove if statements with empty blocks
-        else if (!trueBlock.hasChildren()) {
-          if (test.hasNoSideEffects()) {
-            node.removeChildAtIndex(i);
-            i--;
-          } else {
-            child.become(Node.createExpression(test.remove()));
-          }
-        }
+        i += foldIf(child);
       }
 
       // Fold switch statements
       else if (kind == .SWITCH) {
-        // Remove the default case if it's empty
-        var cases = child.switchCases();
-        if (cases.hasChildren()) {
-          var last = cases.lastChild();
-          if (!last.caseValues().hasChildren() && !last.caseBlock().hasChildren()) {
-            last.remove();
-
-            // If the default case is empty, all other empty cases can be removed too
-            for (var j = cases.children.size() - 1; j >= 0; j--) {
-              var statement = cases.children[j];
-              if (!statement.caseBlock().hasChildren()) {
-                statement.remove();
-              }
-            }
-          }
-        }
-
-        // Replace "switch (foo) {}" with "foo;"
-        if (!cases.hasChildren()) {
-          var value = child.switchValue();
-          child.replaceWith(Node.createExpression(value.remove()).withRange(child.range));
-          i--;
-        }
+        i += foldSwitch(child);
       }
     }
   }

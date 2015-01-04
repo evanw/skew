@@ -6380,6 +6380,84 @@
       }
     }
   };
+  ConstantFolder.prototype.foldFor = function(node) {
+    var test = node.forTest();
+    if (test !== null && test.isFalse()) {
+      var setup = node.forSetup();
+      if (setup === null || setup.hasNoSideEffects()) {
+        node.remove();
+        return -1;
+      } else if (setup.kind !== NodeKind.VARIABLE_CLUSTER) {
+        node.replaceWith(Node.createExpression(setup.remove()));
+      } else {
+        var update = node.forUpdate();
+        if (update !== null) {
+          update.replaceWith(null);
+        }
+        node.forBlock().removeChildren();
+      }
+    }
+    return 0;
+  };
+  ConstantFolder.prototype.foldIf = function(node) {
+    var test = node.ifTest();
+    var trueBlock = node.ifTrue();
+    var falseBlock = node.ifFalse();
+    if (falseBlock !== null && !falseBlock.hasChildren()) {
+      falseBlock.replaceWith(null);
+      falseBlock = null;
+    }
+    if (test.isTrue()) {
+      if (falseBlock !== null) {
+        falseBlock.replaceWith(null);
+      }
+      if (!ConstantFolder.blockContainsVariableCluster(trueBlock)) {
+        var replacements = trueBlock.removeChildren();
+        node.replaceWithNodes(replacements);
+        return replacements.length - 1 | 0;
+      }
+    } else if (test.isFalse()) {
+      if (falseBlock === null) {
+        node.remove();
+        return -1;
+      }
+      if (!ConstantFolder.blockContainsVariableCluster(falseBlock)) {
+        var replacements = falseBlock.removeChildren();
+        node.replaceWithNodes(replacements);
+        return replacements.length - 1 | 0;
+      }
+      test.replaceWith(Node.createBool(true).withType(test.type));
+      trueBlock.replaceWith(falseBlock.replaceWith(null));
+    } else if (!trueBlock.hasChildren()) {
+      if (test.hasNoSideEffects()) {
+        node.remove();
+        return -1;
+      }
+      node.become(Node.createExpression(test.remove()));
+    }
+    return 0;
+  };
+  ConstantFolder.prototype.foldSwitch = function(node) {
+    var cases = node.switchCases();
+    if (cases.hasChildren()) {
+      var last = cases.lastChild();
+      if (!last.caseValues().hasChildren() && !last.caseBlock().hasChildren()) {
+        last.remove();
+        for (var i = cases.children.length - 1 | 0; i >= 0; i = i - 1 | 0) {
+          var statement = cases.children[i];
+          if (!statement.caseBlock().hasChildren()) {
+            statement.remove();
+          }
+        }
+      }
+    }
+    if (!cases.hasChildren()) {
+      var value = node.switchValue();
+      node.replaceWith(Node.createExpression(value.remove()).withRange(node.range));
+      return -1;
+    }
+    return 0;
+  };
   ConstantFolder.prototype.foldBlock = function(node) {
     for (var i = 0; i < node.children.length; i = i + 1 | 0) {
       var child = node.children[i];
@@ -6394,78 +6472,11 @@
         node.removeChildAtIndex(i);
         i = i - 1 | 0;
       } else if (kind === NodeKind.FOR) {
-        var test = child.forTest();
-        if (test !== null && test.isFalse()) {
-          var setup = child.forSetup();
-          if (setup === null || setup.hasNoSideEffects()) {
-            node.removeChildAtIndex(i);
-            i = i - 1 | 0;
-          } else if (setup.kind !== NodeKind.VARIABLE_CLUSTER) {
-            child.replaceWith(Node.createExpression(setup.remove()));
-          } else {
-            var update = child.forUpdate();
-            if (update !== null) {
-              update.replaceWith(null);
-            }
-            child.forBlock().removeChildren();
-          }
-        }
+        i = i + this.foldFor(child) | 0;
       } else if (kind === NodeKind.IF) {
-        var test = child.ifTest();
-        var trueBlock = child.ifTrue();
-        var falseBlock = child.ifFalse();
-        if (falseBlock !== null && !falseBlock.hasChildren()) {
-          falseBlock.replaceWith(null);
-          falseBlock = null;
-        }
-        if (test.isTrue()) {
-          if (falseBlock !== null) {
-            falseBlock.replaceWith(null);
-          }
-          if (!ConstantFolder.blockContainsVariableCluster(trueBlock)) {
-            var replacements = trueBlock.removeChildren();
-            child.replaceWithNodes(replacements);
-            i = i + (replacements.length - 1 | 0) | 0;
-          }
-        } else if (test.isFalse()) {
-          if (falseBlock === null) {
-            node.removeChildAtIndex(i);
-            i = i - 1 | 0;
-          } else if (!ConstantFolder.blockContainsVariableCluster(falseBlock)) {
-            var replacements = falseBlock.removeChildren();
-            child.replaceWithNodes(replacements);
-            i = i + (replacements.length - 1 | 0) | 0;
-          } else {
-            test.replaceWith(Node.createBool(true).withType(test.type));
-            trueBlock.replaceWith(falseBlock.replaceWith(null));
-          }
-        } else if (!trueBlock.hasChildren()) {
-          if (test.hasNoSideEffects()) {
-            node.removeChildAtIndex(i);
-            i = i - 1 | 0;
-          } else {
-            child.become(Node.createExpression(test.remove()));
-          }
-        }
+        i = i + this.foldIf(child) | 0;
       } else if (kind === NodeKind.SWITCH) {
-        var cases = child.switchCases();
-        if (cases.hasChildren()) {
-          var last = cases.lastChild();
-          if (!last.caseValues().hasChildren() && !last.caseBlock().hasChildren()) {
-            last.remove();
-            for (var j = cases.children.length - 1 | 0; j >= 0; j = j - 1 | 0) {
-              var statement = cases.children[j];
-              if (!statement.caseBlock().hasChildren()) {
-                statement.remove();
-              }
-            }
-          }
-        }
-        if (!cases.hasChildren()) {
-          var value = child.switchValue();
-          child.replaceWith(Node.createExpression(value.remove()).withRange(child.range));
-          i = i - 1 | 0;
-        }
+        i = i + this.foldSwitch(child) | 0;
       }
     }
   };
