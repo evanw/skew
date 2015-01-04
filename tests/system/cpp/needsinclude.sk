@@ -1,0 +1,184 @@
+namespace cpp { void testNeedsInclude() {
+
+testCPP("
+export void foo() { var baz = bar(); }
+@NeedsInclude(\"<test>\") inline int bar() { return 0; }
+", "
+#include <test>
+
+void foo();
+
+void foo() {
+  int baz = 0;
+}
+");
+
+testCPP("
+export Foo foo;
+@NeedsInclude(\"<test>\") import class Foo {}
+", "
+#include <test>
+
+extern Foo *foo;
+
+Foo *foo = nullptr;
+");
+
+testCPP("
+export Foo foo;
+@NeedsInclude(\"<test>\") class Foo {}
+", "
+#include <test>
+
+struct Foo;
+
+struct Foo {
+  Foo();
+};
+
+extern Foo *foo;
+
+Foo::Foo() {
+}
+
+Foo *foo = nullptr;
+");
+
+testCPP("
+export Foo<Bar> foo;
+import class Foo<T> {}
+@NeedsInclude(\"<test>\") import class Bar {}
+", "
+#include <test>
+
+extern Foo<Bar *> *foo;
+
+Foo<Bar *> *foo = nullptr;
+");
+
+testCPP("
+export Foo<Bar> foo;
+class Foo<T> {}
+@NeedsInclude(\"<test>\") class Bar {}
+", "
+#include <test>
+
+template <typename T>
+struct Foo;
+struct Bar;
+
+template <typename T>
+struct Foo {
+  Foo();
+};
+
+struct Bar {
+  Bar();
+};
+
+extern Foo<Bar *> *foo;
+
+template <typename T>
+Foo<T>::Foo() {
+}
+
+Bar::Bar() {
+}
+
+Foo<Bar *> *foo = nullptr;
+");
+
+testCPP("
+export void foo(Foo<Bar> bar) {}
+import class Foo<T> {}
+@NeedsInclude(\"<test>\") import class Bar {}
+", "
+#include <test>
+
+void foo(Foo<Bar *> *bar);
+
+void foo(Foo<Bar *> *bar) {
+}
+");
+
+testCPP("
+export void foo(Foo<Bar> bar) {}
+class Foo<T> {}
+@NeedsInclude(\"<test>\") class Bar {}
+", "
+#include <test>
+
+template <typename T>
+struct Foo;
+struct Bar;
+
+template <typename T>
+struct Foo {
+  Foo();
+};
+
+struct Bar {
+  Bar();
+};
+
+void foo(Foo<Bar *> *bar);
+
+template <typename T>
+Foo<T>::Foo() {
+}
+
+Bar::Bar() {
+}
+
+void foo(Foo<Bar *> *bar) {
+}
+");
+
+testCPP("
+export var foo = \"\";
+", "
+#include <string>
+
+extern std::string foo;
+
+std::string foo = \"\";
+");
+
+testCPP("
+export void foo() { var bar = string.fromCodeUnit('a'); }
+", "
+#include <string>
+
+void foo();
+
+void foo() {
+  std::string bar = std::string(1, 97);
+}
+");
+
+testCPP("
+export var foo = [0];
+", "
+#include <initializer_list>
+#include <vector>
+
+template <typename T>
+struct List;
+
+template <typename T>
+struct List {
+  List(std::initializer_list<T> list);
+
+  std::vector<T> _data;
+};
+
+extern List<int> *foo;
+
+template <typename T>
+List<T>::List(std::initializer_list<T> list) : _data(list) {
+}
+
+List<int> *foo = new List<int> { 0 };
+");
+
+}}

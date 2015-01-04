@@ -1,0 +1,237 @@
+namespace cpp { void testFunctions() {
+
+testCPP("
+class Foo {
+  void foo() {}
+}
+export void test() {
+  Foo().foo();
+}
+", "
+struct Foo;
+
+struct Foo {
+  void foo();
+  Foo();
+};
+
+void test();
+
+void Foo::foo() {
+}
+
+Foo::Foo() {
+}
+
+void test() {
+  (new Foo())->foo();
+}
+");
+
+testCPP("
+export class Foo {
+  Foo foo;
+  void bar() {
+    foo.bar();
+  }
+}
+", "
+struct Foo;
+
+struct Foo {
+  Foo *foo;
+
+  void bar();
+  Foo(Foo *_0);
+};
+
+void Foo::bar() {
+  foo->bar();
+}
+
+Foo::Foo(Foo *_0) : foo(_0) {
+}
+");
+
+testCPP("
+void foo(int foo) {}
+export void test() {
+  foo((1, 2));
+}
+", "
+void foo(int foo);
+void test();
+
+void foo(int foo) {
+}
+
+void test() {
+  foo((1, 2));
+}
+");
+
+testCPP("
+enum Foo { A, B, C }
+in Foo {
+  int foo() {
+    return this;
+  }
+}
+export void test() {
+  Foo.A.foo();
+}
+", "
+enum struct Foo {
+  A
+};
+
+namespace in_Foo {
+  int foo(Foo _this_);
+}
+
+void test();
+
+int in_Foo::foo(Foo _this_) {
+  return (int)_this_;
+}
+
+void test() {
+  in_Foo::foo(Foo::A);
+}
+");
+
+testCPP("
+export enum Foo { FOO }
+in Foo {
+  export string foo() { return toString(); }
+}
+", "
+#include <string>
+
+enum struct Foo {
+  FOO
+};
+
+namespace in_Foo {
+  std::string foo(Foo _this_);
+  std::string toString(Foo _this_);
+}
+
+std::string in_Foo::foo(Foo _this_) {
+  return in_Foo::toString(_this_);
+}
+
+std::string in_Foo::toString(Foo _this_) {
+  switch (_this_) {
+    case Foo::FOO: {
+      return \"FOO\";
+    }
+
+    default: {
+      return \"\";
+    }
+  }
+}
+");
+
+testCPP("
+import class Foo {
+  new();
+}
+in Foo {
+  void foo() {}
+}
+export void test() {
+  Foo().foo();
+}
+", "
+namespace in_Foo {
+  void foo(Foo *_this_);
+}
+
+void test();
+
+void in_Foo::foo(Foo *_this_) {
+}
+
+void test() {
+  in_Foo::foo(new Foo());
+}
+");
+
+// Calls off of new objects must be wrapped with parentheses to avoid syntax errors
+testCPP("
+class Foo {
+  virtual void foo() {}
+}
+class Bar : Foo {
+  override void foo() {}
+}
+class Baz : Foo {
+  override void foo() {}
+}
+export void test() {
+  Bar().foo();
+}
+", "
+struct Foo;
+struct Bar;
+
+struct Foo {
+  Foo();
+};
+
+struct Bar : Foo {
+  virtual void foo();
+  Bar();
+};
+
+void test();
+
+Foo::Foo() {
+}
+
+void Bar::foo() {
+}
+
+Bar::Bar() {
+}
+
+void test() {
+  (new Bar())->foo();
+}
+");
+
+// This must not generate "Foo::Foo(int _0) : ns::Foo::Foo(_0) {}" because MSVC will choke on it
+testCPP("
+namespace ns {
+  class Foo { int foo; }
+}
+export class Foo : ns.Foo {}
+", "
+namespace ns {
+  struct Foo;
+}
+
+struct Foo;
+
+namespace ns {
+  struct Foo {
+    int foo;
+
+    Foo(int _0);
+  };
+}
+
+struct Foo : ns::Foo {
+  Foo(int _0);
+};
+
+ns::Foo::Foo(int _0) : foo(_0) {
+}
+
+Foo::Foo(int _0) : ns::Foo(_0) {
+}
+");
+
+}}

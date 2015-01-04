@@ -32,23 +32,26 @@ namespace base {
     void visitCollector(Collector collector) {
       for (var i = 0; i < collector.typeSymbols.size(); i++) {
         var symbol = collector.typeSymbols[i];
-        handleSymbol(symbol);
         if (!symbol.isImport()) {
           emitTypeDeclaration(symbol);
+        } else {
+          handleSymbol(symbol);
         }
       }
       for (var i = 0; i < collector.freeFunctionSymbols.size(); i++) {
         var symbol = collector.freeFunctionSymbols[i];
-        handleSymbol(symbol);
         if (!symbol.isImport()) {
           emitFunction(symbol);
+        } else {
+          handleSymbol(symbol);
         }
       }
       for (var i = 0; i < collector.freeVariableSymbols.size(); i++) {
         var symbol = collector.freeVariableSymbols[i];
-        handleSymbol(symbol);
         if (!symbol.isImport()) {
           emitVariable(symbol);
+        } else {
+          handleSymbol(symbol);
         }
       }
     }
@@ -57,13 +60,16 @@ namespace base {
       var members = symbol.type.sortedMembers();
       for (var i = 0; i < members.size(); i++) {
         var member = members[i].symbol;
-        handleSymbol(member);
         if (!member.isImport() && member.enclosingSymbol == symbol) {
           if (member.kind.isFunction()) {
             emitFunction(member);
           } else if (member.kind.isVariable()) {
             emitVariable(member);
+          } else {
+            handleSymbol(member);
           }
+        } else {
+          handleSymbol(member);
         }
       }
     }
@@ -390,7 +396,6 @@ namespace base {
     void emitSequence(Node node, Precedence precedence) {
       var values = node.sequenceValues();
       assert values.size() > 1;
-      assert node.parent.kind == .EXPRESSION || node.parent.kind == .FOR;
       if (.COMMA <= precedence) emit("(");
       emitCommaSeparatedExpressions(values);
       if (.COMMA <= precedence) emit(")");

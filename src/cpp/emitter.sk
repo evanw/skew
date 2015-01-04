@@ -94,6 +94,15 @@ namespace cpp {
           includes[symbol.neededIncludes[i]] = true;
         }
       }
+      if (!symbol.kind.isType()) {
+        handleSymbolType(symbol.type);
+      }
+    }
+
+    void handleSymbolType(Type type) {
+      if (type.symbol != null) {
+        handleSymbol(type.symbol);
+      }
     }
 
     override bool shouldEmitExtraNewlineBetween(NodeKind before, NodeKind after) {
@@ -157,6 +166,7 @@ namespace cpp {
     }
 
     override void emitTypeDeclaration(Symbol symbol) {
+      handleSymbol(symbol);
       if (symbol.kind.isObject()) {
         if (pass != .IMPLEMENT_CODE) {
           adjustNamespace(symbol);
@@ -217,6 +227,7 @@ namespace cpp {
     }
 
     override void emitFunction(Symbol symbol) {
+      handleSymbol(symbol);
       if (pass != .FORWARD_DECLARE_TYPES) {
         var node = symbol.node;
         var block = node.functionBlock();
@@ -299,6 +310,7 @@ namespace cpp {
     }
 
     override void emitVariable(Symbol symbol) {
+      handleSymbol(symbol);
       if (pass != .FORWARD_DECLARE_TYPES && (pass == .FORWARD_DECLARE_CODE || symbol.kind != .INSTANCE_VARIABLE)) {
         adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null);
         emitExtraNewlineBefore(symbol.node.kind);
@@ -319,7 +331,7 @@ namespace cpp {
     }
 
     override void emitFunctionArgument(Symbol symbol) {
-      // Make sure to avoid copies for std::string methods
+      // Make sure to avoid copies for std::string extension methods
       var useConstReference = symbol.name == "this" && symbol.type.isString(cache);
       if (useConstReference) emit("const ");
       emitCppType(symbol.type, .DECLARATION);
@@ -476,6 +488,7 @@ namespace cpp {
       if (wrap) emit("(");
       emit("new ");
       emitCppType(node.type, .BARE);
+      handleSymbolType(node.type);
       if (values.size() > 0) {
         emit(" { ");
         emitCommaSeparatedExpressions(values);

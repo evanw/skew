@@ -1,0 +1,262 @@
+namespace cpp { void testObjects() {
+
+testCPP("
+export class Foo : Bar {}
+class Bar {}
+", "
+struct Bar;
+struct Foo;
+
+struct Bar {
+  Bar();
+};
+
+struct Foo : Bar {
+  Foo();
+};
+
+Bar::Bar() {
+}
+
+Foo::Foo() {
+}
+");
+
+testCPP("
+export class Foo : Bar {}
+class Bar { int x; }
+", "
+struct Bar;
+struct Foo;
+
+struct Bar {
+  int x;
+
+  Bar(int _0);
+};
+
+struct Foo : Bar {
+  Foo(int _0);
+};
+
+Bar::Bar(int _0) : x(_0) {
+}
+
+Foo::Foo(int _0) : Bar(_0) {
+}
+");
+
+testCPP("
+export class Foo : Bar { int y; }
+class Bar {}
+", "
+struct Bar;
+struct Foo;
+
+struct Bar {
+  Bar();
+};
+
+struct Foo : Bar {
+  int y;
+
+  Foo(int _0);
+};
+
+Bar::Bar() {
+}
+
+Foo::Foo(int _0) : y(_0) {
+}
+");
+
+testCPP("
+export class Foo : Bar { int y; }
+class Bar { int x; }
+", "
+struct Bar;
+struct Foo;
+
+struct Bar {
+  int x;
+
+  Bar(int _0);
+};
+
+struct Foo : Bar {
+  int y;
+
+  Foo(int _0, int _1);
+};
+
+Bar::Bar(int _0) : x(_0) {
+}
+
+Foo::Foo(int _0, int _1) : Bar(_0), y(_1) {
+}
+");
+
+testCPP("
+namespace ns {
+  interface IFoo {}
+  export class Foo : IFoo {}
+  export enum Bar { A, B, C }
+}
+", "
+namespace ns {
+  struct IFoo;
+  struct Foo;
+
+  enum struct Bar {
+    A,
+    B,
+    C
+  };
+}
+
+namespace ns {
+  struct IFoo {
+  };
+
+  struct Foo : ns::IFoo {
+    Foo();
+  };
+}
+
+ns::Foo::Foo() {
+}
+");
+
+testCPP("
+import namespace ns {
+  import interface IFoo {}
+  import class Foo : IFoo {}
+  import enum Bar { A, B, C }
+}
+", "
+");
+
+testCPP("
+export class Foo {
+  void foo() {}
+}
+export class Bar : Foo {}
+", "
+struct Foo;
+struct Bar;
+
+struct Foo {
+  void foo();
+  Foo();
+};
+
+struct Bar : Foo {
+  Bar();
+};
+
+void Foo::foo() {
+}
+
+Foo::Foo() {
+}
+
+Bar::Bar() {
+}
+");
+
+testCPP("
+class Foo {}
+export class Bar : Foo {
+  void foo() {}
+}
+", "
+struct Foo;
+struct Bar;
+
+struct Foo {
+  Foo();
+};
+
+struct Bar : Foo {
+  void foo();
+  Bar();
+};
+
+Foo::Foo() {
+}
+
+void Bar::foo() {
+}
+
+Bar::Bar() {
+}
+");
+
+testCPP("
+export class Foo {
+  int foo;
+  new() {}
+}
+", "
+struct Foo;
+
+struct Foo {
+  int foo;
+
+  Foo();
+};
+
+Foo::Foo() : foo(0) {
+}
+");
+
+testCPP("
+namespace x {
+  export class c : y.b {}
+  export class a {}
+}
+namespace y {
+  export class b : x.a {}
+}
+", "
+namespace x {
+  struct a;
+}
+
+namespace y {
+  struct b;
+}
+
+namespace x {
+  struct c;
+}
+
+namespace x {
+  struct a {
+    a();
+  };
+}
+
+namespace y {
+  struct b : x::a {
+    b();
+  };
+}
+
+namespace x {
+  struct c : y::b {
+    c();
+  };
+}
+
+x::a::a() {
+}
+
+y::b::b() {
+}
+
+x::c::c() {
+}
+");
+
+}}

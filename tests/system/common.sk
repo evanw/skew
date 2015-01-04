@@ -25,19 +25,29 @@ class Test : TestBase {
 class TestJS : TestBase {
   override void run() {
     options.inputs = [Source("<stdin>", input)];
-    testHelperJS(options, expected);
+    options.targetFormat = .JAVASCRIPT;
+    testHelper(options, expected);
   }
 }
 
 class TestMinifyJS : TestBase {
   override void run() {
     options.inputs = [Source("<stdin>", input)];
+    options.targetFormat = .JAVASCRIPT;
     options.jsMinify = true;
     options.jsMangle = true;
     options.foldAllConstants = true;
     options.inlineAllFunctions = true;
     options.convertAllInstanceToStatic = true;
-    testHelperJS(options, expected);
+    testHelper(options, expected);
+  }
+}
+
+class TestCPP : TestBase {
+  override void run() {
+    options.inputs = [Source("<stdin>", input)];
+    options.targetFormat = .CPP;
+    testHelper(options, expected);
   }
 }
 
@@ -49,12 +59,15 @@ void testJS(string input, string expected) {
   registerTest(TestJS(input.trim(), expected));
 }
 
+void testCPP(string input, string expected) {
+  registerTest(TestCPP(input.trim(), expected));
+}
+
 void testMinifyJS(string input, string expected) {
   registerTest(TestMinifyJS(input.trim(), expected));
 }
 
-void testHelperJS(CompilerOptions options, string expected) {
-  options.targetFormat = .JAVASCRIPT;
+void testHelper(CompilerOptions options, string expected) {
   var compiler = Compiler();
   var result = compiler.compile(options);
   if (result.outputs.size() > 0) {
@@ -98,4 +111,8 @@ export void start() {
   js.testMinify();
   js.testObjects();
   js.testStatements();
+
+  cpp.testFunctions();
+  cpp.testNeedsInclude();
+  cpp.testObjects();
 }
