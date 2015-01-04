@@ -1964,7 +1964,7 @@
     this.symbolMotionTime = 0;
     this.functionInliningTime = 0;
     this.constantFoldingTime = 0;
-    this.deadCodeRemovalTime = 0;
+    this.treeShakingTime = 0;
     this.emitTime = 0;
     this.lineCountingTime = 0;
     this.totalTime = 0;
@@ -1978,7 +1978,7 @@
     lineCount = lineCount + Compiler.totalLineCount(result.options.append) | 0;
     var text = 'Input line count: ' + lineCount + '\nOutput line count: ' + Compiler.totalLineCount(result.outputs);
     this.lineCountingTime += now() - lineCountingStart;
-    var optimizingTime = this.callGraphTime + this.instanceToStaticTime + this.symbolMotionTime + this.functionInliningTime + this.constantFoldingTime + this.deadCodeRemovalTime;
+    var optimizingTime = this.callGraphTime + this.instanceToStaticTime + this.symbolMotionTime + this.functionInliningTime + this.constantFoldingTime + this.treeShakingTime;
     text += '\nTotal compile time: ' + formatNumber(this.totalTime + this.lineCountingTime) + 'ms';
     if (this.tokenizingTime > 0) {
       text += '\n  Tokenizing: ' + formatNumber(this.tokenizingTime) + 'ms';
@@ -1996,7 +1996,7 @@
       text += '\n    Symbol motion: ' + formatNumber(this.symbolMotionTime) + 'ms';
       text += '\n    Function inlining: ' + formatNumber(this.functionInliningTime) + 'ms';
       text += '\n    Constant folding: ' + formatNumber(this.constantFoldingTime) + 'ms';
-      text += '\n    Dead code removal: ' + formatNumber(this.deadCodeRemovalTime) + 'ms';
+      text += '\n    Tree shaking: ' + formatNumber(this.treeShakingTime) + 'ms';
     }
     if (this.emitTime > 0) {
       text += '\n  Emit: ' + formatNumber(this.emitTime) + 'ms';
@@ -2062,9 +2062,9 @@
           resolver.constantFolder.foldConstants(program);
           this.constantFoldingTime += now() - constantFoldingStart;
         }
-        var deadCodeRemovalStart = now();
-        DeadCodeRemovalPass.run(program, options, resolver);
-        this.deadCodeRemovalTime += now() - deadCodeRemovalStart;
+        var treeShakingStart = now();
+        TreeShakingPass.run(program, options, resolver);
+        this.treeShakingTime += now() - treeShakingStart;
       }
       var emitter = null;
       switch (options.targetFormat) {
@@ -6719,117 +6719,6 @@
       }
     }
   };
-  function DeadCodeRemovalPass(_0) {
-    this.includedSymbols = new IntMap();
-    this.options = _0;
-  }
-  DeadCodeRemovalPass.run = function(program, options, resolver) {
-    var pass = new DeadCodeRemovalPass(options);
-    var allSymbols = resolver.allSymbols;
-    for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
-      var symbol = allSymbols[i];
-      if (symbol.isExport() || symbol.isEntryPoint()) {
-        pass.includeSymbol(symbol);
-      }
-    }
-    var deadSymbolsWithOverrides = [];
-    var isFixedPoint = false;
-    for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
-      var symbol = allSymbols[i];
-      if (!(symbol.uniqueID in pass.includedSymbols._table) && symbol.overriddenMember !== null) {
-        deadSymbolsWithOverrides.push(symbol);
-      }
-    }
-    while (!isFixedPoint) {
-      isFixedPoint = true;
-      for (var i = 0; i < deadSymbolsWithOverrides.length; i = i + 1 | 0) {
-        if (pass.includeDueToOverriddenMember(deadSymbolsWithOverrides[i])) {
-          isFixedPoint = false;
-        }
-      }
-    }
-    for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
-      if (pass.removeSymbolIfDead(allSymbols[i])) {
-        allSymbols.splice(i, 1)[0];
-        i = i - 1 | 0;
-      }
-    }
-  };
-  DeadCodeRemovalPass.prototype.includeSymbol = function(symbol) {
-    if (symbol.kind === SymbolKind.GLOBAL_VARIABLE && symbol.isConst() && this.options.foldAllConstants) {
-      return;
-    }
-    if (!(symbol.uniqueID in this.includedSymbols._table)) {
-      this.includedSymbols._table[symbol.uniqueID] = true;
-      if (symbol.enclosingSymbol !== null && symbol.kind !== SymbolKind.INSTANCE_VARIABLE) {
-        this.includeSymbol(symbol.enclosingSymbol);
-      }
-      if (in_SymbolKind.isObject(symbol.kind)) {
-        var $constructor = symbol.type.$constructor();
-        if ($constructor !== null) {
-          this.includeSymbol($constructor.symbol);
-        }
-      }
-      if (symbol.type.hasRelevantTypes()) {
-        var types = symbol.type.relevantTypes;
-        for (var i = 0; i < types.length; i = i + 1 | 0) {
-          var relevantSymbol = types[i].symbol;
-          if (relevantSymbol !== null) {
-            this.includeSymbol(relevantSymbol);
-          }
-        }
-      }
-      var node = symbol.node;
-      if (node !== null && !in_NodeKind.isNamedBlockDeclaration(node.kind)) {
-        this.visit(node);
-      }
-    }
-  };
-  DeadCodeRemovalPass.prototype.visit = function(node) {
-    if (node.symbol !== null) {
-      this.includeSymbol(node.symbol);
-    }
-    if (node.hasChildren()) {
-      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        var child = node.children[i];
-        if (child !== null) {
-          this.visit(child);
-        }
-      }
-    }
-  };
-  DeadCodeRemovalPass.prototype.includeDueToOverriddenMember = function(symbol) {
-    if (symbol.overriddenMember === null) {
-      throw new Error('assert symbol.overriddenMember != null; (src/resolver/deadcoderemoval.sk:115:5)');
-    }
-    if (symbol.enclosingSymbol === null) {
-      throw new Error('assert symbol.enclosingSymbol != null; (src/resolver/deadcoderemoval.sk:116:5)');
-    }
-    if (!(symbol.uniqueID in this.includedSymbols._table) && (symbol.overriddenMember.symbol.isImport() || symbol.enclosingSymbol.uniqueID in this.includedSymbols._table && symbol.overriddenMember.symbol.uniqueID in this.includedSymbols._table)) {
-      this.includeSymbol(symbol);
-      return true;
-    }
-    return false;
-  };
-  DeadCodeRemovalPass.prototype.removeSymbolIfDead = function(symbol) {
-    if (symbol.kind === SymbolKind.LOCAL_VARIABLE) {
-      return false;
-    }
-    if (!(symbol.uniqueID in this.includedSymbols._table)) {
-      if (symbol.enclosingSymbol !== null) {
-        delete symbol.enclosingSymbol.type.members._table[symbol.name];
-      }
-      if (symbol.node !== null && symbol.kind !== SymbolKind.QUOTED_TYPE) {
-        symbol.node.remove();
-        symbol.node = null;
-      }
-      return true;
-    }
-    if (symbol.overriddenMember !== null && !(symbol.overriddenMember.symbol.uniqueID in this.includedSymbols._table)) {
-      symbol.overriddenMember = null;
-    }
-    return false;
-  };
   var FunctionInliningPass = {};
   function InliningInfo(_0, _1, _2, _3, _4) {
     this.shouldInline = true;
@@ -10320,6 +10209,117 @@
     inSymbol.node = Node.createNamespace(Node.createName(inName).withSymbol(inSymbol), Node.createBlock([])).withSymbol(inSymbol);
     symbol.node.insertSiblingAfter(inSymbol.node);
     return inType;
+  };
+  function TreeShakingPass(_0) {
+    this.includedSymbols = new IntMap();
+    this.options = _0;
+  }
+  TreeShakingPass.run = function(program, options, resolver) {
+    var pass = new TreeShakingPass(options);
+    var allSymbols = resolver.allSymbols;
+    for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
+      var symbol = allSymbols[i];
+      if (symbol.isExport() || symbol.isEntryPoint()) {
+        pass.includeSymbol(symbol);
+      }
+    }
+    var deadSymbolsWithOverrides = [];
+    var isFixedPoint = false;
+    for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
+      var symbol = allSymbols[i];
+      if (!(symbol.uniqueID in pass.includedSymbols._table) && symbol.overriddenMember !== null) {
+        deadSymbolsWithOverrides.push(symbol);
+      }
+    }
+    while (!isFixedPoint) {
+      isFixedPoint = true;
+      for (var i = 0; i < deadSymbolsWithOverrides.length; i = i + 1 | 0) {
+        if (pass.includeDueToOverriddenMember(deadSymbolsWithOverrides[i])) {
+          isFixedPoint = false;
+        }
+      }
+    }
+    for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
+      if (pass.removeSymbolIfDead(allSymbols[i])) {
+        allSymbols.splice(i, 1)[0];
+        i = i - 1 | 0;
+      }
+    }
+  };
+  TreeShakingPass.prototype.includeSymbol = function(symbol) {
+    if (symbol.kind === SymbolKind.GLOBAL_VARIABLE && symbol.isConst() && this.options.foldAllConstants) {
+      return;
+    }
+    if (!(symbol.uniqueID in this.includedSymbols._table)) {
+      this.includedSymbols._table[symbol.uniqueID] = true;
+      if (symbol.enclosingSymbol !== null && symbol.kind !== SymbolKind.INSTANCE_VARIABLE) {
+        this.includeSymbol(symbol.enclosingSymbol);
+      }
+      if (in_SymbolKind.isObject(symbol.kind)) {
+        var $constructor = symbol.type.$constructor();
+        if ($constructor !== null) {
+          this.includeSymbol($constructor.symbol);
+        }
+      }
+      if (symbol.type.hasRelevantTypes()) {
+        var types = symbol.type.relevantTypes;
+        for (var i = 0; i < types.length; i = i + 1 | 0) {
+          var relevantSymbol = types[i].symbol;
+          if (relevantSymbol !== null) {
+            this.includeSymbol(relevantSymbol);
+          }
+        }
+      }
+      var node = symbol.node;
+      if (node !== null && !in_NodeKind.isNamedBlockDeclaration(node.kind)) {
+        this.visit(node);
+      }
+    }
+  };
+  TreeShakingPass.prototype.visit = function(node) {
+    if (node.symbol !== null) {
+      this.includeSymbol(node.symbol);
+    }
+    if (node.hasChildren()) {
+      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+        var child = node.children[i];
+        if (child !== null) {
+          this.visit(child);
+        }
+      }
+    }
+  };
+  TreeShakingPass.prototype.includeDueToOverriddenMember = function(symbol) {
+    if (symbol.overriddenMember === null) {
+      throw new Error('assert symbol.overriddenMember != null; (src/resolver/treeshaking.sk:115:5)');
+    }
+    if (symbol.enclosingSymbol === null) {
+      throw new Error('assert symbol.enclosingSymbol != null; (src/resolver/treeshaking.sk:116:5)');
+    }
+    if (!(symbol.uniqueID in this.includedSymbols._table) && (symbol.overriddenMember.symbol.isImport() || symbol.enclosingSymbol.uniqueID in this.includedSymbols._table && symbol.overriddenMember.symbol.uniqueID in this.includedSymbols._table)) {
+      this.includeSymbol(symbol);
+      return true;
+    }
+    return false;
+  };
+  TreeShakingPass.prototype.removeSymbolIfDead = function(symbol) {
+    if (symbol.kind === SymbolKind.LOCAL_VARIABLE) {
+      return false;
+    }
+    if (!(symbol.uniqueID in this.includedSymbols._table)) {
+      if (symbol.enclosingSymbol !== null) {
+        delete symbol.enclosingSymbol.type.members._table[symbol.name];
+      }
+      if (symbol.node !== null && symbol.kind !== SymbolKind.QUOTED_TYPE) {
+        symbol.node.remove();
+        symbol.node = null;
+      }
+      return true;
+    }
+    if (symbol.overriddenMember !== null && !(symbol.overriddenMember.symbol.uniqueID in this.includedSymbols._table)) {
+      symbol.overriddenMember = null;
+    }
+    return false;
   };
   function Type(_0) {
     this.members = new StringMap();

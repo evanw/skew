@@ -1,9 +1,9 @@
-class DeadCodeRemovalPass {
+class TreeShakingPass {
   CompilerOptions options;
   var includedSymbols = IntMap<bool>();
 
   static void run(Node program, CompilerOptions options, Resolver resolver) {
-    var pass = DeadCodeRemovalPass(options);
+    var pass = TreeShakingPass(options);
     var allSymbols = resolver.allSymbols;
 
     // Include all exported symbols
