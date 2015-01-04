@@ -640,6 +640,7 @@ Node parsePreprocessorIf(ParserContext context, StatementHint hint) {
   Node falseNode = null;
   if (context.peek(.PREPROCESSOR_ELIF)) {
     var node = parsePreprocessorIf(context, hint);
+    if (node == null) return null;
     falseNode = Node.createBlock([node]).withRange(node.range);
   } else {
     if (context.eat(.PREPROCESSOR_ELSE)) {

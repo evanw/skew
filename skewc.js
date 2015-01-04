@@ -12156,6 +12156,9 @@
     var falseNode = null;
     if (context.peek(TokenKind.PREPROCESSOR_ELIF)) {
       var node = parsePreprocessorIf(context, hint);
+      if (node === null) {
+        return null;
+      }
       falseNode = Node.createBlock([node]).withRange(node.range);
     } else {
       if (context.eat(TokenKind.PREPROCESSOR_ELSE)) {

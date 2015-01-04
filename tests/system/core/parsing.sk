@@ -558,4 +558,18 @@ namespace foo.bar. {
           ~~~
 ");
 
+test("
+#if A
+#elif B
+  foo() {}
+#endif
+", "
+<stdin>:3:9: error: Expected SEMICOLON but found LEFT_BRACE
+  foo() {}
+        ^
+<stdin>:3:10: error: Expected PREPROCESSOR_ENDIF but found RIGHT_BRACE
+  foo() {}
+         ^
+");
+
 }}
