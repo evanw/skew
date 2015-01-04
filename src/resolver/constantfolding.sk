@@ -261,6 +261,33 @@ class ConstantFolder {
           }
         }
       }
+
+      // Fold switch statements
+      else if (kind == .SWITCH) {
+        // Remove the default case if it's empty
+        var cases = child.switchCases();
+        if (cases.hasChildren()) {
+          var last = cases.lastChild();
+          if (!last.caseValues().hasChildren() && !last.caseBlock().hasChildren()) {
+            last.remove();
+
+            // If the default case is empty, all other empty cases can be removed too
+            for (var j = cases.children.size() - 1; j >= 0; j--) {
+              var statement = cases.children[j];
+              if (!statement.caseBlock().hasChildren()) {
+                statement.remove();
+              }
+            }
+          }
+        }
+
+        // Replace "switch (foo) {}" with "foo;"
+        if (!cases.hasChildren()) {
+          var value = child.switchValue();
+          child.replaceWith(Node.createExpression(value.remove()).withRange(child.range));
+          i--;
+        }
+      }
     }
   }
 

@@ -366,7 +366,7 @@ namespace js {
     }
 
     void emitCase(Node node) {
-      var values = node.caseValues();
+      var values = node.caseValues().children;
       var block = node.caseBlock();
       emitSemicolonIfNeeded();
       for (var i = 0; i < values.size(); i++) {
@@ -626,7 +626,7 @@ namespace js {
       emit(indent + "switch" + space + "(");
       emitExpression(node.switchValue(), .LOWEST);
       emit(")" + space + "{" + newline);
-      emitStatements(node.switchCases());
+      emitStatements(node.switchCases().children);
       emit(indent + "}" + newline);
       needsSemicolon = false;
     }

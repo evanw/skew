@@ -691,4 +691,51 @@ export List<double> foo(float x) {
 (function(){foo=function(a){return [- -a,a- -2,a- -2,a- -2.5,a- -2,a- -2.5,a- -Infinity]}}());
 ");
 
+testMinifyJS("
+import void bar();
+export void foo(int x) {
+  switch (x) {
+    case 0 {}
+    default { bar(); }
+  }
+}
+", "
+(function(){foo=function(a){switch(a){case 0:break;default:bar()}}}());
+");
+
+testMinifyJS("
+export void foo(int x) {
+  switch (x) {
+    case 0 {}
+    default {}
+  }
+}
+", "
+(function(){foo=function(a){}}());
+");
+
+testMinifyJS("
+import int bar();
+export void foo() {
+  switch (bar()) {
+    case 0 {}
+    default {}
+  }
+}
+", "
+(function(){foo=function(){bar()}}());
+");
+
+testMinifyJS("
+import void bar();
+export void foo(int x) {
+  switch (x) {
+    case 0 { bar(); }
+    default {}
+  }
+}
+", "
+(function(){foo=function(a){switch(a){case 0:bar()}}}());
+");
+
 }}

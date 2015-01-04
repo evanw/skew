@@ -198,7 +198,7 @@ namespace base {
     }
 
     void emitCase(Node node) {
-      var values = node.caseValues();
+      var values = node.caseValues().children;
       var block = node.caseBlock();
       if (values.size() > 0) {
         for (var i = 0; i < values.size(); i++) {
@@ -221,7 +221,7 @@ namespace base {
     }
 
     void emitSwitch(Node node) {
-      var cases = node.switchCases();
+      var cases = node.switchCases().children;
       emit(indent + "switch (");
       emitExpression(node.switchValue(), .LOWEST);
       emit(") {\n");

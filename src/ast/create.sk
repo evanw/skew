@@ -20,8 +20,7 @@ in Node {
   static Node createCase(List<Node> values, Node block) {
     assert checkAllNodeKinds(values, NodeKindIsExpression());
     assert block.kind == .BLOCK;
-    values.push(block);
-    return Node(.CASE).withChildren(values);
+    return Node(.CASE).withChildren([createNodeList(values), block]);
   }
 
   static Node createVariableCluster(Node type, List<Node> variables) {
@@ -204,8 +203,7 @@ in Node {
   static Node createSwitch(Node value, List<Node> cases) {
     assert value.kind.isExpression();
     assert checkAllNodeKinds(cases, NodeKindIs(.CASE));
-    cases.unshift(value);
-    return Node(.SWITCH).withChildren(cases);
+    return Node(.SWITCH).withChildren([value, createNodeList(cases)]);
   }
 
   static Node createName(string name) {

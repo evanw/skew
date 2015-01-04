@@ -408,26 +408,28 @@ in Node {
 
   Node switchValue() {
     assert kind == .SWITCH;
-    assert children.size() >= 1;
+    assert children.size() == 2;
     return children[0];
   }
 
-  List<Node> switchCases() {
+  Node switchCases() {
     assert kind == .SWITCH;
-    assert children.size() >= 1;
-    return children.slice(1, children.size());
+    assert children.size() == 2;
+    assert children[1].kind == .NODE_LIST;
+    return children[1];
   }
 
-  List<Node> caseValues() {
+  Node caseValues() {
     assert kind == .CASE;
-    assert children.size() >= 1;
-    return children.slice(0, children.size() - 1);
+    assert children.size() == 2;
+    assert children[0].kind == .NODE_LIST;
+    return children[0];
   }
 
   Node caseBlock() {
     assert kind == .CASE;
-    assert children.size() >= 1;
-    assert lastChild().kind == .BLOCK;
-    return lastChild();
+    assert children.size() == 2;
+    assert children[1].kind == .BLOCK;
+    return children[1];
   }
 }

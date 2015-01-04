@@ -97,14 +97,14 @@ in Node {
         }
 
         case .SWITCH {
-          var cases = child.switchCases();
+          var cases = child.switchCases().children;
           var foundDefault = false;
           for (var j = 0; j < cases.size(); j++) {
             var node = cases[j];
             if (!node.caseBlock().blockAlwaysEndsWithReturn()) {
               return false;
             }
-            if (node.caseValues().size() == 0) {
+            if (!node.caseValues().hasChildren()) {
               foundDefault = true;
             }
           }

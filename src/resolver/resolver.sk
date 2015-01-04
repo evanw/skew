@@ -2308,11 +2308,11 @@ class Resolver {
   }
 
   void resolveCase(Node node) {
-    assert node.parent != null;
-    assert node.parent.kind == .SWITCH;
+    assert node.parent.kind == .NODE_LIST;
+    assert node.parent.parent.kind == .SWITCH;
     assert context.switchValue != null;
     assert context.switchValue.type != null;
-    var values = node.caseValues();
+    var values = node.caseValues().children;
     var block = node.caseBlock();
     for (var i = 0; i < values.size(); i++) {
       var value = values[i];
@@ -2828,7 +2828,7 @@ class Resolver {
   void resolveSwitch(Node node) {
     checkStatementLocation(node);
     var value = node.switchValue();
-    var cases = node.switchCases();
+    var cases = node.switchCases().children;
     resolveAsParameterizedExpression(value);
 
     // Can only switch on integer types for now
@@ -2837,6 +2837,7 @@ class Resolver {
       value.type = cache.errorType;
     }
 
+    // Push and pop the switch value
     var oldSwitchValue = context.switchValue;
     context.switchValue = value;
     resolveNodes(cases);
@@ -2845,16 +2846,16 @@ class Resolver {
     List<Node> uniqueValues = [];
     for (var i = 0; i < cases.size(); i++) {
       var child = cases[i];
+      var caseValues = child.caseValues().children;
 
       // Require only one default case and make sure it's last. That way this
       // switch statement can be converted to an if-else chain without moving
       // the user's code around.
-      if (child.children.size() == 1 && i < cases.size() - 1) {
+      if (caseValues.size() == 0 && i < cases.size() - 1) {
         semanticErrorBadDefaultCase(log, child.range);
       }
 
       // Check previous values for duplicates
-      var caseValues = child.caseValues();
       for (var j = 0; j < caseValues.size(); j++) {
         var caseValue = caseValues[j];
         if (caseValue.type.isIgnored(cache)) continue;
