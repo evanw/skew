@@ -419,14 +419,24 @@ namespace base {
 
     void emitUnary(Node node, Precedence precedence) {
       var value = node.unaryValue();
-      if (node.kind.isUnaryStorageOperator() && !hasUnaryStorageOperators()) {
+      var kind = node.kind;
+      if (kind.isUnaryStorageOperator() && !hasUnaryStorageOperators()) {
         if (.ASSIGN < precedence) emit("(");
         emitExpression(value, .ASSIGN);
-        emit(node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT ? " += 1" : " -= 1");
+        emit(kind == .PREFIX_INCREMENT || kind == .POSTFIX_INCREMENT ? " += 1" : " -= 1");
         if (.ASSIGN < precedence) emit(")");
         return;
       }
-      var info = operatorInfo[node.kind];
+
+      // This is necessary to avoid trouble with always-negative integers. The
+      // integer "-0x80000000" should not be emitted as "--0x80000000".
+      if (kind == .NEGATIVE && value.isNumberLessThanZero()) {
+        value.content = value.kind == .INT ? IntContent(-value.asInt()) : DoubleContent(-value.asDouble());
+        emitExpression(value, precedence);
+        return;
+      }
+
+      var info = operatorInfo[kind];
       if (info.precedence < precedence) emit("(");
       var isPostfix = info.precedence == .UNARY_POSTFIX;
       if (!isPostfix) {

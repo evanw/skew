@@ -747,10 +747,6 @@ namespace js {
       if (.COMMA <= precedence) emit(")");
     }
 
-    bool isNumberLessThanZero(Node node) {
-      return node.kind == .INT && node.asInt() < 0 || node.kind.isReal() && node.asDouble() < 0;
-    }
-
     void emitUnary(Node node, Precedence precedence) {
       var value = node.unaryValue();
       var info = operatorInfo[node.kind];
@@ -763,7 +759,7 @@ namespace js {
         var valueKind = value.kind;
         if (kind == .NEW || kind == .DELETE ||
             kind == .POSITIVE && (valueKind == .POSITIVE || valueKind == .PREFIX_INCREMENT) ||
-            kind == .NEGATIVE && (valueKind == .NEGATIVE || valueKind == .PREFIX_DECREMENT || isNumberLessThanZero(value))) {
+            kind == .NEGATIVE && (valueKind == .NEGATIVE || valueKind == .PREFIX_DECREMENT || value.isNumberLessThanZero())) {
           emit(" "); // Prevent "- -1" from becoming "--1"
         }
       }
@@ -802,7 +798,7 @@ namespace js {
       // Prevent "x - -1" from becoming "x--1"
       if (space == "" && (
           kind == .ADD && (right.kind == .POSITIVE || right.kind == .PREFIX_INCREMENT) ||
-          kind == .SUBTRACT && (right.kind == .NEGATIVE || right.kind == .PREFIX_DECREMENT || isNumberLessThanZero(right)))) {
+          kind == .SUBTRACT && (right.kind == .NEGATIVE || right.kind == .PREFIX_DECREMENT || right.isNumberLessThanZero()))) {
         emit(" ");
       }
 

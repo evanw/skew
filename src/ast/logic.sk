@@ -142,4 +142,8 @@ in Node {
       }
     }
   }
+
+  bool isNumberLessThanZero() {
+    return kind == .INT && asInt() < 0 || kind.isReal() && asDouble() < 0;
+  }
 }

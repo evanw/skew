@@ -1466,6 +1466,9 @@
       return false;
     }
   };
+  Node.prototype.isNumberLessThanZero = function() {
+    return this.kind === NodeKind.INT && this.asInt() < 0 || in_NodeKind.isReal(this.kind) && this.asDouble() < 0;
+  };
   Node.prototype.hasChildren = function() {
     return this.children !== null && this.children.length > 0;
   };
@@ -2849,18 +2852,24 @@
   };
   base.Emitter.prototype.emitUnary = function(node, precedence) {
     var value = node.unaryValue();
-    if (in_NodeKind.isUnaryStorageOperator(node.kind) && !this.hasUnaryStorageOperators()) {
+    var kind = node.kind;
+    if (in_NodeKind.isUnaryStorageOperator(kind) && !this.hasUnaryStorageOperators()) {
       if (Precedence.ASSIGN < precedence) {
         this.emit('(');
       }
       this.emitExpression(value, Precedence.ASSIGN);
-      this.emit(node.kind === NodeKind.PREFIX_INCREMENT || node.kind === NodeKind.POSTFIX_INCREMENT ? ' += 1' : ' -= 1');
+      this.emit(kind === NodeKind.PREFIX_INCREMENT || kind === NodeKind.POSTFIX_INCREMENT ? ' += 1' : ' -= 1');
       if (Precedence.ASSIGN < precedence) {
         this.emit(')');
       }
       return;
     }
-    var info = operatorInfo._table[node.kind];
+    if (kind === NodeKind.NEGATIVE && value.isNumberLessThanZero()) {
+      value.content = value.kind === NodeKind.INT ? new IntContent(-value.asInt() | 0) : new DoubleContent(-value.asDouble());
+      this.emitExpression(value, precedence);
+      return;
+    }
+    var info = operatorInfo._table[kind];
     if (info.precedence < precedence) {
       this.emit('(');
     }
@@ -3007,7 +3016,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:571:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:581:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -4631,9 +4640,6 @@
       this.emit(')');
     }
   };
-  js.Emitter.prototype.isNumberLessThanZero = function(node) {
-    return node.kind === NodeKind.INT && node.asInt() < 0 || in_NodeKind.isReal(node.kind) && node.asDouble() < 0;
-  };
   js.Emitter.prototype.emitUnary = function(node, precedence) {
     var value = node.unaryValue();
     var info = operatorInfo._table[node.kind];
@@ -4645,7 +4651,7 @@
       this.emit(info.text);
       var kind = node.kind;
       var valueKind = value.kind;
-      if (kind === NodeKind.NEW || kind === NodeKind.DELETE || kind === NodeKind.POSITIVE && (valueKind === NodeKind.POSITIVE || valueKind === NodeKind.PREFIX_INCREMENT) || kind === NodeKind.NEGATIVE && (valueKind === NodeKind.NEGATIVE || valueKind === NodeKind.PREFIX_DECREMENT || this.isNumberLessThanZero(value))) {
+      if (kind === NodeKind.NEW || kind === NodeKind.DELETE || kind === NodeKind.POSITIVE && (valueKind === NodeKind.POSITIVE || valueKind === NodeKind.PREFIX_INCREMENT) || kind === NodeKind.NEGATIVE && (valueKind === NodeKind.NEGATIVE || valueKind === NodeKind.PREFIX_DECREMENT || value.isNumberLessThanZero())) {
         this.emit(' ');
       }
     }
@@ -4680,7 +4686,7 @@
     this.toStringTarget = left;
     this.emitExpression(left, in_Precedence.incrementIfRightAssociative(info.precedence, info.associativity));
     this.emit(kind === NodeKind.IN ? ' in ' : this.space + (kind === NodeKind.EQUAL ? '===' : kind === NodeKind.NOT_EQUAL ? '!==' : info.text) + this.space);
-    if (this.space === '' && (kind === NodeKind.ADD && (right.kind === NodeKind.POSITIVE || right.kind === NodeKind.PREFIX_INCREMENT) || kind === NodeKind.SUBTRACT && (right.kind === NodeKind.NEGATIVE || right.kind === NodeKind.PREFIX_DECREMENT || this.isNumberLessThanZero(right)))) {
+    if (this.space === '' && (kind === NodeKind.ADD && (right.kind === NodeKind.POSITIVE || right.kind === NodeKind.PREFIX_INCREMENT) || kind === NodeKind.SUBTRACT && (right.kind === NodeKind.NEGATIVE || right.kind === NodeKind.PREFIX_DECREMENT || right.isNumberLessThanZero()))) {
       this.emit(' ');
     }
     this.toStringTarget = right;
