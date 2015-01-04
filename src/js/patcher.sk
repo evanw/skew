@@ -191,11 +191,11 @@ namespace js {
             var index = namingGroupIndexForSymbol.getOrDefault(members[j].symbol.uniqueID, -1);
 
             // Guard against observing symbols that have been removed from
-            // cache.allSymbols by DeadCodeRemovalPass but that are still
-            // reachable because DeadCodeRemovalPass only removes the symbol
-            // from the unparameterized type, not from parameterized types.
-            // It really should remove the symbol from all parameterized types
-            // too but this guard fixes compilation issues until then.
+            // cache.allSymbols by TreeShakingPass but that are still reachable
+            // because TreeShakingPass only removes the symbol from the
+            // unparameterized type, not from parameterized types. It really
+            // should remove the symbol from all parameterized types too but
+            // this guard fixes compilation issues until then.
             if (index != -1) {
               relatedTypesUnionFind.union(i, index);
             }

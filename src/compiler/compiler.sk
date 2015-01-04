@@ -185,7 +185,7 @@ export class Compiler {
           constantFoldingTime += now() - constantFoldingStart;
         }
 
-        // Dead code elimination
+        // Tree shaking
         var treeShakingStart = now();
         TreeShakingPass.run(program, options, resolver);
         treeShakingTime += now() - treeShakingStart;
