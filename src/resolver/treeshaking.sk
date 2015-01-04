@@ -1,6 +1,7 @@
 class TreeShakingPass {
   CompilerOptions options;
   var includedSymbols = IntMap<bool>();
+  var includedTypes = IntMap<bool>();
 
   static void run(Node program, CompilerOptions options, Resolver resolver) {
     var pass = TreeShakingPass(options);
@@ -96,9 +97,27 @@ class TreeShakingPass {
     }
   }
 
+  void includeType(Type type) {
+    if (!(type.uniqueID in includedTypes)) {
+      includedTypes[type.uniqueID] = true;
+      if (type.symbol != null) {
+        includeSymbol(type.symbol);
+        if (type.isParameterized()) {
+          for (var i = 0; i < type.substitutions.size(); i++) {
+            includeType(type.substitutions[i]);
+          }
+        }
+      }
+    }
+  }
+
   void visit(Node node) {
     if (node.symbol != null) {
       includeSymbol(node.symbol);
+    }
+
+    if (node.type != null) {
+      includeType(node.type);
     }
 
     if (node.hasChildren()) {

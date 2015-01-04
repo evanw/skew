@@ -3127,14 +3127,6 @@
         this.includes._table[symbol.neededIncludes[i]] = true;
       }
     }
-    if (!in_SymbolKind.isType(symbol.kind) && symbol.type.symbol !== symbol) {
-      this.handleSymbolType(symbol.type);
-    }
-  };
-  cpp.Emitter.prototype.handleSymbolType = function(type) {
-    if (type.symbol !== null) {
-      this.handleSymbol(type.symbol);
-    }
   };
   cpp.Emitter.prototype.shouldEmitExtraNewlineBetween = function(before, after) {
     if (this.pass === cpp.Pass.FORWARD_DECLARE_TYPES) {
@@ -3533,7 +3525,6 @@
     }
     this.emit('new ');
     this.emitCppType(node.type, cpp.CppEmitType.BARE);
-    this.handleSymbolType(node.type);
     if (values.length > 0) {
       this.emit(' { ');
       this.emitCommaSeparatedExpressions(values);
@@ -10287,6 +10278,7 @@
   };
   function TreeShakingPass(_0) {
     this.includedSymbols = new IntMap();
+    this.includedTypes = new IntMap();
     this.options = _0;
   }
   TreeShakingPass.run = function(program, options, resolver) {
@@ -10351,9 +10343,25 @@
       }
     }
   };
+  TreeShakingPass.prototype.includeType = function(type) {
+    if (!(type.uniqueID in this.includedTypes._table)) {
+      this.includedTypes._table[type.uniqueID] = true;
+      if (type.symbol !== null) {
+        this.includeSymbol(type.symbol);
+        if (type.isParameterized()) {
+          for (var i = 0; i < type.substitutions.length; i = i + 1 | 0) {
+            this.includeType(type.substitutions[i]);
+          }
+        }
+      }
+    }
+  };
   TreeShakingPass.prototype.visit = function(node) {
     if (node.symbol !== null) {
       this.includeSymbol(node.symbol);
+    }
+    if (node.type !== null) {
+      this.includeType(node.type);
     }
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.length; i = i + 1 | 0) {
@@ -10366,10 +10374,10 @@
   };
   TreeShakingPass.prototype.includeDueToOverriddenMember = function(symbol) {
     if (symbol.overriddenMember === null) {
-      throw new Error('assert symbol.overriddenMember != null; (src/resolver/treeshaking.sk:115:5)');
+      throw new Error('assert symbol.overriddenMember != null; (src/resolver/treeshaking.sk:134:5)');
     }
     if (symbol.enclosingSymbol === null) {
-      throw new Error('assert symbol.enclosingSymbol != null; (src/resolver/treeshaking.sk:116:5)');
+      throw new Error('assert symbol.enclosingSymbol != null; (src/resolver/treeshaking.sk:135:5)');
     }
     if (!(symbol.uniqueID in this.includedSymbols._table) && (symbol.overriddenMember.symbol.isImport() || symbol.enclosingSymbol.uniqueID in this.includedSymbols._table && symbol.overriddenMember.symbol.uniqueID in this.includedSymbols._table)) {
       this.includeSymbol(symbol);

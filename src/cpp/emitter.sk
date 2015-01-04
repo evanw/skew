@@ -94,15 +94,6 @@ namespace cpp {
           includes[symbol.neededIncludes[i]] = true;
         }
       }
-      if (!symbol.kind.isType() && symbol.type.symbol != symbol) {
-        handleSymbolType(symbol.type);
-      }
-    }
-
-    void handleSymbolType(Type type) {
-      if (type.symbol != null) {
-        handleSymbol(type.symbol);
-      }
     }
 
     override bool shouldEmitExtraNewlineBetween(NodeKind before, NodeKind after) {
@@ -508,7 +499,6 @@ namespace cpp {
       if (wrap) emit("(");
       emit("new ");
       emitCppType(node.type, .BARE);
-      handleSymbolType(node.type);
       if (values.size() > 0) {
         emit(" { ");
         emitCommaSeparatedExpressions(values);
