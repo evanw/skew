@@ -658,7 +658,7 @@ namespace js {
           case .FLOAT, .DOUBLE { return left.asDouble() == right.asDouble(); }
           case .STRING { return left.asString() == right.asString(); }
           case .NAME { return left.symbol != null && left.symbol == right.symbol || left.asString() == right.asString(); }
-          case .DOT { return left.symbol == right.symbol && left.dotName().asString() == right.dotName().asString() && looksTheSame(left.dotTarget(), right.dotTarget()); }
+          case .DOT { return left.symbol == right.symbol && looksTheSame(left.dotTarget(), right.dotTarget()) && looksTheSame(left.dotName(), right.dotName()); }
         }
       }
 
@@ -680,6 +680,28 @@ namespace js {
         trueValue = falseValue;
         falseValue = temp;
         trueValue.swapWith(falseValue);
+      }
+
+      // "a ? b : b" => "a, b"
+      if (looksTheSame(trueValue, falseValue)) {
+        node.become(test.hasNoSideEffects() ? trueValue.replaceWith(null) : Node.createSequence([test.replaceWith(null), trueValue.replaceWith(null)]));
+        return;
+      }
+
+      // Collapse partially-identical hook expressions
+      if (falseValue.kind == .HOOK) {
+        var falseTest = falseValue.hookTest();
+        var falseTrueValue = falseValue.hookTrue();
+        var falseFalseValue = falseValue.hookFalse();
+
+        // "a ? b : c ? b : d" => "a || c ? b : d"
+        if (looksTheSame(trueValue, falseTrueValue)) {
+          var or = Node.createBinary(.LOGICAL_OR, Node.createNull(), falseTest.replaceWith(null));
+          or.binaryLeft().replaceWith(test.replaceWith(or));
+          falseValue.replaceWith(falseFalseValue.replaceWith(null));
+          peepholeMangleHook(node);
+          return;
+        }
       }
 
       // Collapse partially-identical binary expressions

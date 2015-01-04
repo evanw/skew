@@ -5405,7 +5405,7 @@
       case 36:
         return left.symbol !== null && left.symbol === right.symbol || left.asString() === right.asString();
       case 47:
-        return left.symbol === right.symbol && left.dotName().asString() === right.dotName().asString() && this.looksTheSame(left.dotTarget(), right.dotTarget());
+        return left.symbol === right.symbol && this.looksTheSame(left.dotTarget(), right.dotTarget()) && this.looksTheSame(left.dotName(), right.dotName());
       }
     }
     if (left.kind === NodeKind.IMPLICIT_CAST) {
@@ -5426,6 +5426,22 @@
       trueValue = falseValue;
       falseValue = temp;
       trueValue.swapWith(falseValue);
+    }
+    if (this.looksTheSame(trueValue, falseValue)) {
+      node.become(test.hasNoSideEffects() ? trueValue.replaceWith(null) : Node.createSequence([test.replaceWith(null), trueValue.replaceWith(null)]));
+      return;
+    }
+    if (falseValue.kind === NodeKind.HOOK) {
+      var falseTest = falseValue.hookTest();
+      var falseTrueValue = falseValue.hookTrue();
+      var falseFalseValue = falseValue.hookFalse();
+      if (this.looksTheSame(trueValue, falseTrueValue)) {
+        var or = Node.createBinary(NodeKind.LOGICAL_OR, Node.createNull(), falseTest.replaceWith(null));
+        or.binaryLeft().replaceWith(test.replaceWith(or));
+        falseValue.replaceWith(falseFalseValue.replaceWith(null));
+        this.peepholeMangleHook(node);
+        return;
+      }
     }
     if (trueValue.kind === falseValue.kind && in_NodeKind.isBinaryOperator(trueValue.kind)) {
       var trueLeft = trueValue.binaryLeft();
@@ -5455,7 +5471,7 @@
   };
   js.Patcher.prototype.unionVariableWithFunction = function(node) {
     if (node.symbol.kind === SymbolKind.LOCAL_VARIABLE !== (this.currentFunction !== null)) {
-      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:721:7)');
+      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:743:7)');
     }
     if (this.currentFunction !== null) {
       var left = this.namingGroupIndexForSymbol._table[this.currentFunction.uniqueID];
@@ -5484,7 +5500,7 @@
         this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
       } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
         if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
-          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:756:11)');
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:778:11)');
         }
         if (value.kind === NodeKind.INT) {
           var constant = value.asInt();
@@ -5546,7 +5562,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:845:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:867:7)');
     }
     var current = target;
     var parent = current.parent;
