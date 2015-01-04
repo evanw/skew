@@ -85,10 +85,14 @@ Node parseGroup(ParserContext context) {
   return value;
 }
 
+Node createNameFromToken(Token token) {
+  return Node.createName(token.text()).withRange(token.range);
+}
+
 Node parseName(ParserContext context) {
   var token = context.current();
   if (!context.expect(.IDENTIFIER)) return null;
-  return Node.createName(token.text).withRange(token.range);
+  return createNameFromToken(token);
 }
 
 Node parseQuotedName(ParserContext context) {
@@ -312,7 +316,7 @@ Node parseConstructor(ParserContext context, StatementHint hint) {
 
   // Parse a constructor
   var token = context.next();
-  var name = Node.createName(token.text).withRange(token.range);
+  var name = createNameFromToken(token);
   var arguments = parseArgumentVariables(context); if (arguments == null) return null;
   Node superInitializer = null;
   Node memberInitializers = null;
@@ -369,14 +373,14 @@ Node parseExpression(ParserContext context) {
 
 Node parseModifier(ParserContext context, StatementHint hint) {
   var token = context.next();
-  var name = Node.createName(token.text).withRange(token.range);
+  var name = createNameFromToken(token);
   var block = parseBlockOrStatement(context, hint); if (block == null) return null;
   return Node.createModifier(name, null, block.removeChildren()).withRange(context.spanSince(token.range));
 }
 
 Node parseAnnotation(ParserContext context, StatementHint hint) {
   var token = context.next();
-  var name = Node.createName(token.text).withRange(token.range);
+  var name = createNameFromToken(token);
   Node arguments = null;
   if (context.peek(.LEFT_PARENTHESIS)) {
     var token = context.current();
@@ -462,7 +466,7 @@ Node parseExtension(ParserContext context) {
 Node parseEnum(ParserContext context) {
   var token = context.next();
   var isFlags = false;
-  if (context.peek(.IDENTIFIER) && context.current().text == "flags") {
+  if (context.peek(.IDENTIFIER) && context.current().text() == "flags") {
     isFlags = true;
     context.next();
   }
@@ -597,7 +601,7 @@ bool looksLikeType(Node node) {
 }
 
 Node parseStringToken(ParserContext context, Token token) {
-  var result = parseStringLiteral(context.log, token.range, token.text);
+  var result = parseStringLiteral(context.log, token.range, token.text());
   return (result != null ? Node.createString(result.value) : Node.createError()).withRange(token.range);
 }
 
@@ -724,8 +728,8 @@ class IntLiteral : ILiteralCallback {
   int base;
 
   override Node parse(ParserContext context, Token token) {
-    var value = parseIntLiteral(token.text, base);
-    if (base == 10 && value != 0 && token.text[0] == '0') {
+    var value = parseIntLiteral(token.text(), base);
+    if (base == 10 && value != 0 && token.firstCharacter() == '0') {
       syntaxWarningOctal(context.log, token.range);
     }
     return Node.createInt(value).withRange(token.range);
@@ -734,13 +738,14 @@ class IntLiteral : ILiteralCallback {
 
 class FloatLiteral : ILiteralCallback {
   override Node parse(ParserContext context, Token token) {
-    return Node.createFloat(parseDoubleLiteral(token.text.slice(0, token.text.size() - 1))).withRange(token.range);
+    var range = token.range;
+    return Node.createFloat(parseDoubleLiteral(range.source.contents.slice(range.start, range.end - 1))).withRange(range);
   }
 }
 
 class DoubleLiteral : ILiteralCallback {
   override Node parse(ParserContext context, Token token) {
-    return Node.createDouble(parseDoubleLiteral(token.text)).withRange(token.range);
+    return Node.createDouble(parseDoubleLiteral(token.text())).withRange(token.range);
   }
 }
 
@@ -758,11 +763,11 @@ class StringLiteral : ILiteralCallback {
 
 class CharacterLiteral : ILiteralCallback {
   override Node parse(ParserContext context, Token token) {
-    var result = parseStringLiteral(context.log, token.range, token.text);
+    var result = parseStringLiteral(context.log, token.range, token.text());
 
     // TODO: Do true unicode code point parsing
     if (result != null && result.value.size() != 1) {
-      syntaxErrorInvalidCharacter(context.log, token.range, token.text);
+      syntaxErrorInvalidCharacter(context.log, token.range, token.text());
       result = null;
     }
 
@@ -773,7 +778,7 @@ class CharacterLiteral : ILiteralCallback {
 
 class NameLiteral : ILiteralCallback {
   override Node parse(ParserContext context, Token token) {
-    return Node.createName(token.text).withRange(token.range);
+    return createNameFromToken(token);
   }
 }
 

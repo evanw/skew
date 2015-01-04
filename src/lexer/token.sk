@@ -1,7 +1,14 @@
 class Token {
   Range range;
   TokenKind kind;
-  string text;
+
+  int firstCharacter() {
+    return range.source.contents[range.start];
+  }
+
+  string text() {
+    return range.toString();
+  }
 }
 
 void prepareTokens(List<Token> tokens) {
@@ -10,12 +17,7 @@ void prepareTokens(List<Token> tokens) {
   for (var i = 0, n = tokens.size(); i < n; i++) {
     var token = tokens[i];
     var tokenKind = token.kind;
-
-    // The check for "token.text.size() > 0" is very important. Without it,
-    // V8 will continue to deoptimize on codeUnitAt(0) until it hits its
-    // deoptimization threshold and then this function will be permanently
-    // deoptimized. No idea why.
-    var tokenStartsWithGreaterThan = token.text.size() > 0 && token.text[0] == '>';
+    var tokenStartsWithGreaterThan = token.firstCharacter() == '>';
 
     // Retokens on the stack if they aren't working out
     while (stack.size() > 0) {
@@ -66,16 +68,14 @@ void prepareTokens(List<Token> tokens) {
           if (tokenKind != .GREATER_THAN) {
             var range = token.range;
             var start = range.start;
-            var text = token.text.slice(1, token.text.size());
             TokenKind kind =
               tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
               tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :
               tokenKind == .ASSIGN_SHIFT_RIGHT ? .GREATER_THAN_OR_EQUAL :
               .ERROR;
             assert kind != .ERROR;
-            tokens.insert(i + 1, Token(Range(range.source, start + 1, range.end), kind, text));
+            tokens.insert(i + 1, Token(Range(range.source, start + 1, range.end), kind));
             token.range = Range(range.source, start, start + 1);
-            token.text = ">";
           }
 
           // Convert < and > into bounds for type parameter lists

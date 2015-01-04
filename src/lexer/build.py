@@ -82,18 +82,19 @@ List<Token> tokenize(Log log, Source source) {
 
     // This is the default action in flex, which is usually called ECHO
     else if (yy_act == .ERROR) {
-      syntaxErrorExtraData(log, Range(source, yy_bp, yy_cp), text.slice(yy_bp, yy_cp));
+      var range = Range(source, yy_bp, yy_cp);
+      syntaxErrorExtraData(log, range, range.toString());
       break;
     }
 
     // Ignore END_OF_FILE since this loop must still perform the last action
     else if (yy_act != .END_OF_FILE) {
-      tokens.push(Token(Range(source, yy_bp, yy_cp), yy_act, text.slice(yy_bp, yy_cp)));
+      tokens.push(Token(Range(source, yy_bp, yy_cp), yy_act));
     }
   }
 
   // Every token stream ends in END_OF_FILE
-  tokens.push(Token(Range(source, text_length, text_length), .END_OF_FILE, ""));
+  tokens.push(Token(Range(source, text_length, text_length), .END_OF_FILE));
 
   // Also return preprocessor token presence so the preprocessor can be avoided
   return tokens;

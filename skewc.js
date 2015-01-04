@@ -5775,11 +5775,16 @@
     START_PARAMETER_LIST: 108,
     END_PARAMETER_LIST: 109
   };
-  function Token(_0, _1, _2) {
+  function Token(_0, _1) {
     this.range = _0;
     this.kind = _1;
-    this.text = _2;
   }
+  Token.prototype.firstCharacter = function() {
+    return this.range.source.contents.charCodeAt(this.range.start);
+  };
+  Token.prototype.text = function() {
+    return this.range.toString();
+  };
   var Precedence = {
     LOWEST: 0,
     COMMA: 1,
@@ -6059,7 +6064,7 @@
   function DoubleLiteral() {
   }
   DoubleLiteral.prototype.parse = function(context, token) {
-    return Node.createDouble(parseDoubleLiteral(token.text)).withRange(token.range);
+    return Node.createDouble(parseDoubleLiteral(token.text())).withRange(token.range);
   };
   function StringLiteral() {
   }
@@ -6069,9 +6074,9 @@
   function CharacterLiteral() {
   }
   CharacterLiteral.prototype.parse = function(context, token) {
-    var result = parseStringLiteral(context.log, token.range, token.text);
+    var result = parseStringLiteral(context.log, token.range, token.text());
     if (result !== null && result.value.length !== 1) {
-      syntaxErrorInvalidCharacter(context.log, token.range, token.text);
+      syntaxErrorInvalidCharacter(context.log, token.range, token.text());
       result = null;
     }
     return Node.createInt(result !== null ? result.value.charCodeAt(0) : 0).withRange(token.range);
@@ -6079,7 +6084,7 @@
   function NameLiteral() {
   }
   NameLiteral.prototype.parse = function(context, token) {
-    return Node.createName(token.text).withRange(token.range);
+    return createNameFromToken(token);
   };
   function TokenLiteral(_0) {
     this.kind = _0;
@@ -6097,8 +6102,8 @@
     this.base = _0;
   }
   IntLiteral.prototype.parse = function(context, token) {
-    var value = parseIntLiteral(token.text, this.base);
-    if (this.base === 10 && value !== 0 && token.text.charCodeAt(0) === 48) {
+    var value = parseIntLiteral(token.text(), this.base);
+    if (this.base === 10 && value !== 0 && token.firstCharacter() === 48) {
       syntaxWarningOctal(context.log, token.range);
     }
     return Node.createInt(value).withRange(token.range);
@@ -6106,7 +6111,8 @@
   function FloatLiteral() {
   }
   FloatLiteral.prototype.parse = function(context, token) {
-    return Node.createFloat(parseDoubleLiteral(token.text.slice(0, token.text.length - 1 | 0))).withRange(token.range);
+    var range = token.range;
+    return Node.createFloat(parseDoubleLiteral(range.source.contents.slice(range.start, range.end - 1 | 0))).withRange(range);
   };
   function VarLiteral() {
   }
@@ -11442,13 +11448,14 @@
       if (yy_act === TokenKind.WHITESPACE) {
         continue;
       } else if (yy_act === TokenKind.ERROR) {
-        syntaxErrorExtraData(log, new Range(source, yy_bp, yy_cp), text.slice(yy_bp, yy_cp));
+        var range = new Range(source, yy_bp, yy_cp);
+        syntaxErrorExtraData(log, range, range.toString());
         break;
       } else if (yy_act !== TokenKind.END_OF_FILE) {
-        tokens.push(new Token(new Range(source, yy_bp, yy_cp), yy_act, text.slice(yy_bp, yy_cp)));
+        tokens.push(new Token(new Range(source, yy_bp, yy_cp), yy_act));
       }
     }
-    tokens.push(new Token(new Range(source, text_length, text_length), TokenKind.END_OF_FILE, ''));
+    tokens.push(new Token(new Range(source, text_length, text_length), TokenKind.END_OF_FILE));
     return tokens;
   }
   function prepareTokens(tokens) {
@@ -11456,7 +11463,7 @@
     for (var i = 0, n = tokens.length; i < n; i = i + 1 | 0) {
       var token = tokens[i];
       var tokenKind = token.kind;
-      var tokenStartsWithGreaterThan = token.text.length > 0 && token.text.charCodeAt(0) === 62;
+      var tokenStartsWithGreaterThan = token.firstCharacter() === 62;
       while (stack.length > 0) {
         var top = tokens[stack[stack.length - 1 | 0]];
         var topKind = top.kind;
@@ -11485,14 +11492,12 @@
             if (tokenKind !== TokenKind.GREATER_THAN) {
               var range = token.range;
               var start = range.start;
-              var text = token.text.slice(1, token.text.length);
               var kind = tokenKind === TokenKind.SHIFT_RIGHT ? TokenKind.GREATER_THAN : tokenKind === TokenKind.GREATER_THAN_OR_EQUAL ? TokenKind.ASSIGN : tokenKind === TokenKind.ASSIGN_SHIFT_RIGHT ? TokenKind.GREATER_THAN_OR_EQUAL : TokenKind.ERROR;
               if (kind === TokenKind.ERROR) {
-                throw new Error('assert kind != .ERROR; (src/lexer/token.sk:75:13)');
+                throw new Error('assert kind != .ERROR; (src/lexer/token.sk:76:13)');
               }
-              tokens.splice(i + 1 | 0, 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind, text));
+              tokens.splice(i + 1 | 0, 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind));
               token.range = new Range(range.source, start, start + 1 | 0);
-              token.text = '>';
             }
             top.kind = TokenKind.START_PARAMETER_LIST;
             token.kind = TokenKind.END_PARAMETER_LIST;
@@ -11601,12 +11606,15 @@
     scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
     return value;
   }
+  function createNameFromToken(token) {
+    return Node.createName(token.text()).withRange(token.range);
+  }
   function parseName(context) {
     var token = context.current();
     if (!context.expect(TokenKind.IDENTIFIER)) {
       return null;
     }
-    return Node.createName(token.text).withRange(token.range);
+    return createNameFromToken(token);
   }
   function parseQuotedName(context) {
     var token = context.current();
@@ -11851,7 +11859,7 @@
       return null;
     }
     var token = context.next();
-    var name = Node.createName(token.text).withRange(token.range);
+    var name = createNameFromToken(token);
     var $arguments = parseArgumentVariables(context);
     if ($arguments === null) {
       return null;
@@ -11899,13 +11907,13 @@
       context.next();
     }
     if (context.current().range.start < token.range.end) {
-      throw new Error('assert context.current().range.start >= token.range.end; (src/parser/parser.sk:366:3)');
+      throw new Error('assert context.current().range.start >= token.range.end; (src/parser/parser.sk:370:3)');
     }
     return Node.createExpression(value).withRange(context.spanSince(token.range));
   }
   function parseModifier(context, hint) {
     var token = context.next();
-    var name = Node.createName(token.text).withRange(token.range);
+    var name = createNameFromToken(token);
     var block = parseBlockOrStatement(context, hint);
     if (block === null) {
       return null;
@@ -11914,7 +11922,7 @@
   }
   function parseAnnotation(context, hint) {
     var token = context.next();
-    var name = Node.createName(token.text).withRange(token.range);
+    var name = createNameFromToken(token);
     var $arguments = null;
     if (context.peek(TokenKind.LEFT_PARENTHESIS)) {
       var token = context.current();
@@ -12025,7 +12033,7 @@
   function parseEnum(context) {
     var token = context.next();
     var isFlags = false;
-    if (context.peek(TokenKind.IDENTIFIER) && context.current().text === 'flags') {
+    if (context.peek(TokenKind.IDENTIFIER) && context.current().text() === 'flags') {
       isFlags = true;
       context.next();
     }
@@ -12179,7 +12187,7 @@
     return false;
   }
   function parseStringToken(context, token) {
-    var result = parseStringLiteral(context.log, token.range, token.text);
+    var result = parseStringLiteral(context.log, token.range, token.text());
     return (result !== null ? Node.createString(result.value) : Node.createError()).withRange(token.range);
   }
   function parsePreprocessorDefine(context) {
