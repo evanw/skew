@@ -3058,7 +3058,30 @@
     this.pass = cpp.Pass.IMPLEMENT_CODE;
     this.visitCollector(collector);
     this.adjustNamespace(null);
+    this.emitEntryPoint();
     this.prependHeaders();
+  };
+  cpp.Emitter.prototype.emitEntryPoint = function() {
+    var entryPointSymbol = this.resolver.entryPointSymbol;
+    if (entryPointSymbol !== null) {
+      var type = entryPointSymbol.type;
+      var hasArguments = type.argumentTypes().length > 0;
+      var hasReturnValue = type.resultType() === this.cache.intType;
+      this.emitExtraNewlineBefore(NodeKind.NULL);
+      this.emit(this.indent + 'int main(' + (hasArguments ? 'int argc, char **argv' : '') + ') {\n');
+      this.increaseIndent();
+      if (hasArguments) {
+        if (!('<string>' in this.includes._table)) {
+          throw new Error('assert "<string>" in includes; (src/cpp/emitter.sk:58:11)');
+        }
+        var name = this.mangleName(this.cache.stringType.symbol);
+        this.emit(this.indent + 'List<' + name + '> *args = new List<' + name + '> {};\n');
+        this.emit(this.indent + 'args->_data.insert(args->_data.begin(), argv + 1, argv + argc);\n');
+      }
+      this.emit(this.indent + (hasReturnValue ? 'return ' : '') + this.fullName(entryPointSymbol) + '(' + (hasArguments ? 'args' : '') + ');\n');
+      this.decreaseIndent();
+      this.emit(this.indent + '}\n');
+    }
   };
   cpp.Emitter.prototype.prependHeaders = function() {
     if (this.usedAssert) {
@@ -3389,6 +3412,7 @@
     var needsLength = content.indexOf('\0') >= 0;
     var needsWrap = needsLength || cpp.Emitter.needsWrappedStringConstructor(node);
     if (needsWrap) {
+      this.handleSymbol(this.cache.stringType.symbol);
       this.emit(this.mangleName(this.cache.stringType.symbol) + '(');
     }
     base.Emitter.prototype.emitString.call(this, node);
@@ -3583,6 +3607,7 @@
     result._table['inline'] = true;
     result._table['int'] = true;
     result._table['long'] = true;
+    result._table['main'] = true;
     result._table['mutable'] = true;
     result._table['namespace'] = true;
     result._table['NAN'] = true;
