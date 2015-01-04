@@ -18,7 +18,7 @@ in string {
     string toString() { return this; }
     int size() { return this.`length`; }
     static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }
-    string sliceOne(int index) { return `this`[index]; }
+    string sliceCodeUnit(int index) { return `this`[index]; }
     string join(List<string> values) { return values.`join`(this); }
     @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }
     @OperatorIn bool contains(string value) { return indexOf(value) >= 0; }

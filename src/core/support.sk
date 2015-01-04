@@ -126,7 +126,7 @@ string quoteString(string text, int quote) {
     else if (c == '\t') result += text.slice(start, i) + "\\t";
     else if (c == '\0') result += text.slice(start, i) + "\\0";
     else if (c == '\\') result += text.slice(start, i) + "\\\\";
-    else if (c < ' ' || c >= 0x7F && c <= 0xFF) result += text.slice(start, i) + "\\x" + HEX.sliceOne(c >> 4) + HEX.sliceOne(c & 15);
+    else if (c < ' ' || c >= 0x7F && c <= 0xFF) result += text.slice(start, i) + "\\x" + HEX.sliceCodeUnit(c >> 4) + HEX.sliceCodeUnit(c & 15);
     else continue;
     start = i + 1;
   }

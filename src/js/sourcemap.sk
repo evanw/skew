@@ -113,7 +113,7 @@ class SourceMapGenerator {
       // continuation bit is marked
       if (vlq > 0) digit |= 32;
 
-      encoded += BASE64.sliceOne(digit);
+      encoded += BASE64.sliceCodeUnit(digit);
     } while (vlq > 0);
     return encoded;
   }

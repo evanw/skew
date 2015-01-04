@@ -1,0 +1,272 @@
+namespace cpp { void testExpressions() {
+
+testCPP("
+export var foo = \"'\";
+export var bar = \"\\\"\";
+export var baz = \"\\0\";
+", "
+#include <string>
+
+extern std::string foo;
+extern std::string bar;
+extern std::string baz;
+
+std::string foo = \"'\";
+std::string bar = \"\\\"\";
+std::string baz = std::string(\"\\0\", 1);
+");
+
+testCPP("
+export void test() {
+  double x = 0;
+  - -1;
+  + +1;
+  - +1;
+  + -1;
+}
+", "
+void test();
+
+void test() {
+  double x = 0;
+  - -1;
+  + +1;
+  -+1;
+  +-1;
+}
+");
+
+testCPP("
+export void test() {
+  - -0x80000000;
+}
+", "
+void test();
+
+void test() {
+  - -2147483648;
+}
+");
+
+testCPP("
+export void test() {
+  float x = 0;
+  (1.0f - 2.0f) - 3.0f;
+  (1.0f / 2.0f) * 3.0f;
+  1.0f - (2.0f - 3.0f);
+  1.0f / (2.0f * 3.0f);
+}
+", "
+void test();
+
+void test() {
+  float x = 0;
+  1.0f - 2.0f - 3.0f;
+  1.0f / 2.0f * 3.0f;
+  1.0f - (2.0f - 3.0f);
+  1.0f / (2.0f * 3.0f);
+}
+");
+
+testCPP("
+export void test() {
+  double x = 0;
+  (1.0 - 2.0) - 3.0;
+  (1.0 / 2.0) * 3.0;
+  1.0 - (2.0 - 3.0);
+  1.0 / (2.0 * 3.0);
+}
+", "
+void test();
+
+void test() {
+  double x = 0;
+  1.0 - 2.0 - 3.0;
+  1.0 / 2.0 * 3.0;
+  1.0 - (2.0 - 3.0);
+  1.0 / (2.0 * 3.0);
+}
+");
+
+testCPP("
+export void test() {
+  (bool)1;
+  (int)false;
+  (float)false;
+}
+", "
+void test();
+
+void test() {
+  (bool)1;
+  (int)false;
+  (float)false;
+}
+");
+
+testCPP("
+export void test() {
+  assert (bool)1;
+}
+", "
+#include <cassert>
+
+void test();
+
+void test() {
+  assert((bool)1);
+}
+");
+
+testCPP("
+enum Foo {}
+export int a(Foo x) { return (int)x; }
+export Foo b(int x) { return (Foo)x; }
+export int c(int x) { return (int)(Foo)x; }
+export Foo d(Foo x) { return (Foo)(int)x; }
+", "
+enum struct Foo {
+};
+
+int a(Foo x);
+Foo b(int x);
+int c(int x);
+Foo d(Foo x);
+
+int a(Foo x) {
+  return (int)x;
+}
+
+Foo b(int x) {
+  return (Foo)x;
+}
+
+int c(int x) {
+  return (int)(Foo)x;
+}
+
+Foo d(Foo x) {
+  return (Foo)(int)x;
+}
+");
+
+testCPP("
+enum flags Foo {}
+export int a(Foo x) { return (int)x; }
+export Foo b(int x) { return (Foo)x; }
+export int c(int x) { return (int)(Foo)x; }
+export Foo d(Foo x) { return (Foo)(int)x; }
+", "
+namespace Foo {
+  enum {
+  };
+}
+
+int a(int x);
+int b(int x);
+int c(int x);
+int d(int x);
+
+int a(int x) {
+  return (int)x;
+}
+
+int b(int x) {
+  return (int)x;
+}
+
+int c(int x) {
+  return (int)(int)x;
+}
+
+int d(int x) {
+  return (int)(int)x;
+}
+");
+
+testCPP("
+enum flags Foo {}
+export int a(Foo x) { return x; }
+", "
+namespace Foo {
+  enum {
+  };
+}
+
+int a(int x);
+
+int a(int x) {
+  return x;
+}
+");
+
+testCPP("
+export void test() {
+  int foo = (1, 2);
+  foo = (1, 2);
+  (1, 2), (3, 4);
+}
+", "
+void test();
+
+void test() {
+  int foo = (1, 2);
+  foo = (1, 2);
+  (1, 2), (3, 4);
+}
+");
+
+testCPP("
+export void test() {
+  0.toString();
+  0.0f.toString();
+  0.5.toString();
+}
+", "
+#include <sstream>
+#include <string>
+
+namespace in_int {
+  std::string toString(int _this_);
+}
+
+namespace in_double {
+  std::string toString(double _this_);
+}
+
+void test();
+
+std::string in_int::toString(int _this_) {
+  std::stringstream ss;
+  ss << _this_;
+  return ss.str();
+}
+
+std::string in_double::toString(double _this_) {
+  std::stringstream ss;
+  ss << _this_;
+  return ss.str();
+}
+
+void test() {
+  in_int::toString(0);
+  in_double::toString(0.0f);
+  in_double::toString(0.5);
+}
+");
+
+testCPP("
+export void test(bool a) {
+  var b = a ? \"1\" : \"2\";
+}
+", "
+#include <string>
+
+void test(bool a);
+
+void test(bool a) {
+  std::string b = a ? std::string(\"1\") : \"2\";
+}
+");
+
+}}

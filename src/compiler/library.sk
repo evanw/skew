@@ -8,7 +8,7 @@ import class string {
   string toString();
   int size();
   string slice(int start, int end);
-  string sliceOne(int index);
+  string sliceCodeUnit(int index);
   int indexOf(string value);
   int lastIndexOf(string value);
   string toLowerCase();

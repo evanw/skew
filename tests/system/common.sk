@@ -112,6 +112,7 @@ export void start() {
   js.testObjects();
   js.testStatements();
 
+  cpp.testExpressions();
   cpp.testFunctions();
   cpp.testNeedsInclude();
   cpp.testObjects();

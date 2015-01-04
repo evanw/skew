@@ -45,7 +45,7 @@ in string {
     string toString() { return this; }
     int size() { return (int)this.`size`(); }
     string slice(int start, int end) { return this.`substr`(start, end - start); }
-    string sliceOne(int index) { return fromCodeUnit(codeUnitAt(index)); }
+    string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }
     int indexOf(string value) { return (int)this.`find`(value); }
     int lastIndexOf(string value) { return (int)this.`rfind`(value); }
     static string fromCodeUnit(int value) { return ``string``(1, value); }
