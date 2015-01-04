@@ -2955,8 +2955,11 @@
       this.emit(')');
     }
   };
+  base.Emitter.prototype.shouldEmitCast = function(node) {
+    return node.kind === NodeKind.CAST;
+  };
   base.Emitter.prototype.emitCast = function(node, precedence) {
-    if (node.kind === NodeKind.CAST) {
+    if (this.shouldEmitCast(node)) {
       this.emitParenthesizedCast(node, precedence);
     } else {
       this.emitExpression(node.castValue(), precedence);
@@ -3016,7 +3019,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:581:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:585:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -3124,7 +3127,7 @@
         this.includes._table[symbol.neededIncludes[i]] = true;
       }
     }
-    if (!in_SymbolKind.isType(symbol.kind)) {
+    if (!in_SymbolKind.isType(symbol.kind) && symbol.type.symbol !== symbol) {
       this.handleSymbolType(symbol.type);
     }
   };
@@ -3409,10 +3412,7 @@
       this.usedMath = true;
       this.emit('NAN');
     } else {
-      base.Emitter.prototype.emitReal.call(this, node);
-      if (node.kind === NodeKind.FLOAT) {
-        this.emit('f');
-      }
+      this.emit(doubleToStringWithDot(value) + (node.kind === NodeKind.FLOAT ? 'f' : ''));
     }
   };
   cpp.Emitter.needsWrappedStringConstructor = function(node) {
@@ -3491,12 +3491,21 @@
       this.emit(')');
     }
   };
-  cpp.Emitter.prototype.emitCast = function(node, precedence) {
+  cpp.Emitter.prototype.emitParenthesizedCast = function(node, precedence) {
+    this.emit('static_cast<');
+    this.emitNormalType(node.castType().type);
+    this.emit('>(');
+    this.emitExpression(node.castValue(), Precedence.LOWEST);
+    this.emit(')');
+  };
+  cpp.Emitter.prototype.shouldEmitCast = function(node) {
     if (node.type.isInt(this.cache) && node.castValue().type.isRegularEnum()) {
-      this.emitParenthesizedCast(node, precedence);
-    } else {
-      base.Emitter.prototype.emitCast.call(this, node, precedence);
+      return true;
     }
+    if (node.type.isReference() && node.parent.kind === NodeKind.HOOK && node.castValue().kind !== NodeKind.NULL && node === node.parent.hookTrue()) {
+      return true;
+    }
+    return base.Emitter.prototype.shouldEmitCast.call(this, node);
   };
   cpp.Emitter.prototype.emitInt = function(node, precedence) {
     if (node.type.isEnum() && node.symbol !== null) {
@@ -11083,15 +11092,25 @@
     }
     return -1;
   }
+  function doubleToStringWithDot(value) {
+    var text = value.toString();
+    if (!(text.indexOf('.') >= 0)) {
+      if (text.indexOf('e') >= 0 || text.indexOf('E') >= 0) {
+        throw new Error('assert !("e" in text) && !("E" in text); (src/core/support.sk:76:5)');
+      }
+      text += '.0';
+    }
+    return text;
+  }
   function parseStringLiteral(log, range, text) {
     if (!(text.length >= 2)) {
-      throw new Error('assert text.size() >= 2; (src/core/support.sk:74:3)');
+      throw new Error('assert text.size() >= 2; (src/core/support.sk:83:3)');
     }
     if (text.charCodeAt(0) !== 34 && text.charCodeAt(0) !== 39) {
-      throw new Error("assert text[0] == '\"' || text[0] == '\\''; (src/core/support.sk:75:3)");
+      throw new Error("assert text[0] == '\"' || text[0] == '\\''; (src/core/support.sk:84:3)");
     }
     if (text.charCodeAt(text.length - 1 | 0) !== 34 && text.charCodeAt(text.length - 1 | 0) !== 39) {
-      throw new Error("assert text[text.size() - 1] == '\"' || text[text.size() - 1] == '\\''; (src/core/support.sk:76:3)");
+      throw new Error("assert text[text.size() - 1] == '\"' || text[text.size() - 1] == '\\''; (src/core/support.sk:85:3)");
     }
     var isValidString = true;
     var result = '';

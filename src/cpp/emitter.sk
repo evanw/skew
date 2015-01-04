@@ -94,7 +94,7 @@ namespace cpp {
           includes[symbol.neededIncludes[i]] = true;
         }
       }
-      if (!symbol.kind.isType()) {
+      if (!symbol.kind.isType() && symbol.type.symbol != symbol) {
         handleSymbolType(symbol.type);
       }
     }
@@ -385,10 +385,7 @@ namespace cpp {
         usedMath = true;
         emit("NAN");
       } else {
-        super(node);
-        if (node.kind == .FLOAT) {
-          emit("f");
-        }
+        emit(doubleToStringWithDot(value) + (node.kind == .FLOAT ? "f" : ""));
       }
     }
 
@@ -458,13 +455,36 @@ namespace cpp {
       if (wrap) emit(")");
     }
 
-    override void emitCast(Node node, Precedence precedence) {
-      // C++11 doesn't auto-convert enums to ints for some reason
+    override void emitParenthesizedCast(Node node, Precedence precedence) {
+      emit("static_cast<");
+      emitNormalType(node.castType().type);
+      emit(">(");
+      emitExpression(node.castValue(), .LOWEST);
+      emit(")");
+    }
+
+    override bool shouldEmitCast(Node node) {
+        // C++11 doesn't auto-convert enums to ints for some reason
       if (node.type.isInt(cache) && node.castValue().type.isRegularEnum()) {
-        emitParenthesizedCast(node, precedence);
-      } else {
-        super(node, precedence);
+        return true;
       }
+
+      // C++ doesn't find common types for some reason, so this is an error:
+      //
+      //   struct Foo {};
+      //   struct Bar : Foo {};
+      //   struct Baz : Foo {};
+      //   Foo *foo = ... ? new Bar : new Baz;
+      //
+      // This must be used instead:
+      //
+      //   Foo *foo = ... ? static_cast<Foo *>(new Bar) : new Baz;
+      //
+      if (node.type.isReference() && node.parent.kind == .HOOK && node.castValue().kind != .NULL && node == node.parent.hookTrue()) {
+        return true;
+      }
+
+      return super(node);
     }
 
     override void emitInt(Node node, Precedence precedence) {

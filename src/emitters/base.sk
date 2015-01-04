@@ -501,7 +501,7 @@ namespace base {
       emit(")");
     }
 
-    void emitParenthesizedCast(Node node, Precedence precedence) {
+    virtual void emitParenthesizedCast(Node node, Precedence precedence) {
       if (.UNARY_PREFIX < precedence) emit("(");
       emit("(");
       emitNormalType(node.castType().type);
@@ -510,8 +510,12 @@ namespace base {
       if (.UNARY_PREFIX < precedence) emit(")");
     }
 
-    virtual void emitCast(Node node, Precedence precedence) {
-      if (node.kind == .CAST) {
+    virtual bool shouldEmitCast(Node node) {
+      return node.kind == .CAST;
+    }
+
+    void emitCast(Node node, Precedence precedence) {
+      if (shouldEmitCast(node)) {
         emitParenthesizedCast(node, precedence);
       } else {
         emitExpression(node.castValue(), precedence);

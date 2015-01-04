@@ -70,6 +70,15 @@ int parseHexCharacter(int c) {
   return -1;
 }
 
+string doubleToStringWithDot(double value) {
+  var text = value.toString();
+  if (!("." in text)) {
+    assert !("e" in text) && !("E" in text); // TODO: Deal with C++'s awful floating-point output support
+    text += ".0";
+  }
+  return text;
+}
+
 StringContent parseStringLiteral(Log log, Range range, string text) {
   assert text.size() >= 2;
   assert text[0] == '"' || text[0] == '\'';

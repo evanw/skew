@@ -92,7 +92,7 @@ namespace in_Foo {
 void test();
 
 int in_Foo::foo(Foo _this_) {
-  return (int)_this_;
+  return static_cast<int>(_this_);
 }
 
 void test() {

@@ -1,9 +1,10 @@
 namespace cpp { void testExpressions() {
 
+// Need to special-case strings with '\0' in them to avoid truncation
 testCPP("
 export var foo = \"'\";
 export var bar = \"\\\"\";
-export var baz = \"\\0\";
+export var baz = \"abc \\0 def\";
 ", "
 #include <string>
 
@@ -13,7 +14,7 @@ extern std::string baz;
 
 std::string foo = \"'\";
 std::string bar = \"\\\"\";
-std::string baz = std::string(\"\\0\", 1);
+std::string baz = std::string(\"abc \\0 def\", 9);
 ");
 
 testCPP("
@@ -51,10 +52,10 @@ void test() {
 testCPP("
 export void test() {
   float x = 0;
-  (1.0f - 2.0f) - 3.0f;
-  (1.0f / 2.0f) * 3.0f;
-  1.0f - (2.0f - 3.0f);
-  1.0f / (2.0f * 3.0f);
+  (1f - 2f) - 3f;
+  (1f / 2f) * 3f;
+  1f - (2f - 3f);
+  1f / (2f * 3f);
 }
 ", "
 void test();
@@ -98,9 +99,9 @@ export void test() {
 void test();
 
 void test() {
-  (bool)1;
-  (int)false;
-  (float)false;
+  static_cast<bool>(1);
+  static_cast<int>(false);
+  static_cast<float>(false);
 }
 ");
 
@@ -114,7 +115,7 @@ export void test() {
 void test();
 
 void test() {
-  assert((bool)1);
+  assert(static_cast<bool>(1));
 }
 ");
 
@@ -134,19 +135,19 @@ int c(int x);
 Foo d(Foo x);
 
 int a(Foo x) {
-  return (int)x;
+  return static_cast<int>(x);
 }
 
 Foo b(int x) {
-  return (Foo)x;
+  return static_cast<Foo>(x);
 }
 
 int c(int x) {
-  return (int)(Foo)x;
+  return static_cast<int>(static_cast<Foo>(x));
 }
 
 Foo d(Foo x) {
-  return (Foo)(int)x;
+  return static_cast<Foo>(static_cast<int>(x));
 }
 ");
 
@@ -168,19 +169,19 @@ int c(int x);
 int d(int x);
 
 int a(int x) {
-  return (int)x;
+  return static_cast<int>(x);
 }
 
 int b(int x) {
-  return (int)x;
+  return static_cast<int>(x);
 }
 
 int c(int x) {
-  return (int)(int)x;
+  return static_cast<int>(static_cast<int>(x));
 }
 
 int d(int x) {
-  return (int)(int)x;
+  return static_cast<int>(static_cast<int>(x));
 }
 ");
 
@@ -276,6 +277,59 @@ void test(bool a);
 
 void test(bool a) {
   std::string b = a ? std::string(\"1\") : \"2\";
+}
+");
+
+// Need to make implicit casts explicit here to avoid compile errors
+testCPP("
+class Foo {}
+class Bar : Foo {}
+class Baz : Foo {}
+export void foo(Foo foo) {
+  foo = true ? Foo() : Foo();
+  foo = true ? Foo() : Baz();
+  foo = true ? Bar() : Foo();
+  foo = true ? Bar() : Baz();
+  foo = true ? Bar() : null;
+  foo = true ? null : Baz();
+  foo = true ? null : null;
+}
+", "
+struct Foo;
+struct Bar;
+struct Baz;
+
+struct Foo {
+  Foo();
+};
+
+struct Bar : Foo {
+  Bar();
+};
+
+struct Baz : Foo {
+  Baz();
+};
+
+void foo(Foo *foo);
+
+Foo::Foo() {
+}
+
+Bar::Bar() {
+}
+
+Baz::Baz() {
+}
+
+void foo(Foo *foo) {
+  foo = true ? new Foo() : new Foo();
+  foo = true ? new Foo() : new Baz();
+  foo = true ? static_cast<Foo *>(new Bar()) : new Foo();
+  foo = true ? static_cast<Foo *>(new Bar()) : new Baz();
+  foo = true ? new Bar() : nullptr;
+  foo = true ? nullptr : new Baz();
+  foo = true ? nullptr : nullptr;
 }
 ");
 
