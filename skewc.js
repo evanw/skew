@@ -9724,7 +9724,7 @@
         }
         this.checkConversion(bound, substitution, CastKind.IMPLICIT_CAST);
       }
-      if (substitution.type.isIgnored(this.cache)) {
+      if (substitution.type.isError(this.cache)) {
         return;
       }
       sortedTypes.push(substitution.type);
@@ -11610,7 +11610,7 @@
       while (stack.length > 0) {
         var top = tokens[stack[stack.length - 1 | 0]];
         var topKind = top.kind;
-        if (topKind === TokenKind.LESS_THAN && tokenKind !== TokenKind.LESS_THAN && tokenKind !== TokenKind.IDENTIFIER && tokenKind !== TokenKind.IS && tokenKind !== TokenKind.COMMA && tokenKind !== TokenKind.DOT && !tokenStartsWithGreaterThan) {
+        if (topKind === TokenKind.LESS_THAN && tokenKind !== TokenKind.LESS_THAN && tokenKind !== TokenKind.IDENTIFIER && tokenKind !== TokenKind.IS && tokenKind !== TokenKind.COMMA && tokenKind !== TokenKind.DOT && tokenKind !== TokenKind.TICK && !tokenStartsWithGreaterThan) {
           stack.pop();
         } else {
           break;
@@ -11637,7 +11637,7 @@
               var start = range.start;
               var kind = tokenKind === TokenKind.SHIFT_RIGHT ? TokenKind.GREATER_THAN : tokenKind === TokenKind.GREATER_THAN_OR_EQUAL ? TokenKind.ASSIGN : tokenKind === TokenKind.ASSIGN_SHIFT_RIGHT ? TokenKind.GREATER_THAN_OR_EQUAL : TokenKind.ERROR;
               if (kind === TokenKind.ERROR) {
-                throw new Error('assert kind != .ERROR; (src/lexer/token.sk:76:13)');
+                throw new Error('assert kind != .ERROR; (src/lexer/token.sk:74:13)');
               }
               tokens.splice(i + 1 | 0, 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind));
               token.range = new Range(range.source, start, start + 1 | 0);

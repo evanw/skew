@@ -566,4 +566,12 @@ test("
 ~~~~~~~~~
 ");
 
+test("
+export Foo<`foo`> bar;
+", "
+<stdin>:1:8: error: \"Foo\" is not declared
+export Foo<`foo`> bar;
+       ~~~
+");
+
 }}

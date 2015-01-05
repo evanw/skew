@@ -3254,7 +3254,7 @@ class Resolver {
         if (i > 0) bound = cache.substitute(bound, sortedParameters.slice(0, i), sortedTypes.slice(0, i));
         checkConversion(bound, substitution, .IMPLICIT_CAST);
       }
-      if (substitution.type.isIgnored(cache)) return;
+      if (substitution.type.isError(cache)) return;
       sortedTypes.push(substitution.type);
     }
 

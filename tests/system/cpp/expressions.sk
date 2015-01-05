@@ -344,4 +344,25 @@ void bar() {
 }
 ");
 
+testCPP("
+class Foo<T> {}
+export Foo<`foo`> bar;
+", "
+template <typename T>
+struct Foo;
+
+template <typename T>
+struct Foo {
+  Foo();
+};
+
+extern Foo<foo> *bar;
+
+template <typename T>
+Foo<T>::Foo() {
+}
+
+Foo<foo> *bar = nullptr;
+");
+
 }}
