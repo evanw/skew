@@ -12325,6 +12325,7 @@
       return target !== null && looksLikeType(target);
     case 36:
     case 54:
+    case 57:
       return true;
     }
     return false;

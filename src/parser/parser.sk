@@ -593,7 +593,7 @@ bool looksLikeType(Node node) {
       var target = node.dotTarget();
       return target != null && looksLikeType(target);
     }
-    case .NAME, .PARAMETERIZE {
+    case .NAME, .PARAMETERIZE, .QUOTED {
       return true;
     }
   }
