@@ -1651,6 +1651,7 @@ class Resolver {
         else if (name == "@NeedsInclude") registerNeedsInclude(symbol, node);
         else if (name == "@EmitAs") registerEmitAs(symbol, node);
         else if (name == "@EntryPoint") registerEntryPoint(symbol, node);
+        else if (name == "@ExternC") registerExternC(symbol, node);
         else semanticErrorUnknownAnnotation(log, modifierName.range, name);
       }
     }
@@ -1717,6 +1718,17 @@ class Resolver {
 
     forbidAnnotationArguments(node);
     symbol.flags |= .ENTRY_POINT;
+  }
+
+  void registerExternC(Symbol symbol, Node node) {
+    // All 'extern "C"' symbols must be C-style globals
+    if (symbol.kind != .GLOBAL_FUNCTION && symbol.kind != .GLOBAL_VARIABLE || symbol.enclosingSymbol != cache.globalType.symbol) {
+      semanticErrorNonTopLevelExternC(log, node.modifierName().range);
+      return;
+    }
+
+    forbidAnnotationArguments(node);
+    symbol.flags |= .EXTERN_C;
   }
 
   StringContent requireSingleStringLiteral(Symbol symbol, Node node) {
@@ -2142,12 +2154,6 @@ class Resolver {
     }
 
     entryPointSymbol = symbol;
-
-    // Entry points must be usable without an instance
-    if (symbol.kind != .GLOBAL_FUNCTION) {
-      semanticErrorEntryPointOnNonGlobalFunction(log, modifierName.range);
-      return;
-    }
 
     // Importing an entry point doesn't make sense
     if (symbol.isImport()) {

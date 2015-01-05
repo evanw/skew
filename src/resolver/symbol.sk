@@ -107,6 +107,7 @@ enum flags SymbolFlag {
   INITIALIZED,
 
   // Other flags
+  EXTERN_C,
   PRIMITIVE,
   ENTRY_POINT,
   HAS_ANNOTATIONS,
@@ -343,6 +344,10 @@ class Symbol {
 
   bool isPrimitive() {
     return (flags & .PRIMITIVE) != 0;
+  }
+
+  bool isExternC() {
+    return (flags & .EXTERN_C) != 0;
   }
 
   bool isEntryPoint() {

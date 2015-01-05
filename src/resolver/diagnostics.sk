@@ -376,6 +376,10 @@ void semanticErrorNonGlobalEntryPoint(Log log, Range range) {
   log.error(range, "The entry point must be a global function");
 }
 
+void semanticErrorNonTopLevelExternC(Log log, Range range) {
+  log.error(range, "An external C-style symbol must be a top-level function or variable");
+}
+
 void semanticErrorOperatorArgumentCount(Log log, Range range, int expected, int found, string name) {
   log.error(range, expectedCountText("argument", expected, found, " because of " + simpleQuote(name)));
 }
@@ -403,10 +407,6 @@ void semanticErrorInvalidEntryPointType(Log log, Range range, Type found, List<T
 
 void semanticErrorEntryPointOnImportedSymbol(Log log, Range range) {
   log.error(range, "The entry point cannot be imported");
-}
-
-void semanticErrorEntryPointOnNonGlobalFunction(Log log, Range range) {
-  log.error(range, "The entry point must be a global function");
 }
 
 void semanticErrorDuplicateEmitAs(Log log, Range range) {

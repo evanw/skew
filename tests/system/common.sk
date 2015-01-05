@@ -105,6 +105,7 @@ export void start() {
   core.testUsing();
   core.testVar();
 
+  js.testAnnotations();
   js.testExpressions();
   js.testFunctions();
   js.testInlining();
@@ -112,6 +113,7 @@ export void start() {
   js.testObjects();
   js.testStatements();
 
+  cpp.testAnnotations();
   cpp.testExpressions();
   cpp.testFunctions();
   cpp.testNeedsInclude();

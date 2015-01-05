@@ -1,0 +1,53 @@
+namespace js { void testAnnotations() {
+
+testJS("
+@EntryPoint
+void foo() {}
+", "
+(function() {
+  function foo() {
+  }
+  foo();
+}());
+");
+
+testJS("
+@EntryPoint
+int foo() {
+  return 0;
+}
+", "
+(function() {
+  function foo() {
+    return 0;
+  }
+  process.exit(foo());
+}());
+");
+
+testJS("
+@EntryPoint
+void foo(List<string> args) {}
+", "
+(function() {
+  function foo(args) {
+  }
+  foo(process.argv.slice(2));
+}());
+");
+
+testJS("
+@EntryPoint
+int foo(List<string> args) {
+  return 0;
+}
+", "
+(function() {
+  function foo(args) {
+    return 0;
+  }
+  process.exit(foo(process.argv.slice(2)));
+}());
+");
+
+}}

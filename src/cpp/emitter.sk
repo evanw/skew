@@ -227,6 +227,9 @@ namespace cpp {
           emitExtraNewlineBefore(node.kind);
           emitTypeParameters(symbol);
           emit(indent);
+          if (symbol.isExternC() && (pass == .FORWARD_DECLARE_CODE || pass == .IMPLEMENT_CODE)) {
+            emit("extern \"C\" ");
+          }
           if (pass == .FORWARD_DECLARE_CODE) {
             if (symbol.isStatic()) emit("static ");
             if (symbol.isVirtual()) emit("virtual ");
@@ -306,7 +309,9 @@ namespace cpp {
         adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null);
         emitExtraNewlineBefore(symbol.node.kind);
         emit(indent);
-        if (pass == .FORWARD_DECLARE_CODE && symbol.kind.isGlobal()) {
+        if (symbol.isExternC() && (pass == .FORWARD_DECLARE_CODE || pass == .IMPLEMENT_CODE)) {
+          emit("extern \"C\" ");
+        } else if (pass == .FORWARD_DECLARE_CODE && symbol.kind.isGlobal()) {
           emit(symbol.isStatic() ? "static " : "extern ");
         }
         emitTypeBeforeVariable(symbol);

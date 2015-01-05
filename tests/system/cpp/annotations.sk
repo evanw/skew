@@ -1,0 +1,121 @@
+namespace cpp { void testAnnotations() {
+
+testCPP("
+@ExternC export {
+  int foo;
+  void bar() {}
+}
+", "
+extern \"C\" void bar();
+
+extern \"C\" int foo;
+
+extern \"C\" void bar() {
+}
+
+extern \"C\" int foo = 0;
+");
+
+testCPP("
+@EntryPoint
+void foo() {}
+", "
+void foo();
+
+void foo() {
+}
+
+int main() {
+  foo();
+}
+");
+
+testCPP("
+@EntryPoint
+int foo() {
+  return 0;
+}
+", "
+int foo();
+
+int foo() {
+  return 0;
+}
+
+int main() {
+  return foo();
+}
+");
+
+testCPP("
+@EntryPoint
+void foo(List<string> args) {}
+", "
+#include <initializer_list>
+#include <string>
+#include <vector>
+
+template <typename T>
+struct List;
+
+template <typename T>
+struct List {
+  List(std::initializer_list<T> list);
+
+  std::vector<T> _data;
+};
+
+void foo(List<std::string> *args);
+
+template <typename T>
+List<T>::List(std::initializer_list<T> list) : _data(list) {
+}
+
+void foo(List<std::string> *args) {
+}
+
+int main(int argc, char **argv) {
+  List<std::string> *args = new List<std::string> {};
+  args->_data.insert(args->_data.begin(), argv + 1, argv + argc);
+  foo(args);
+}
+");
+
+testCPP("
+@EntryPoint
+int foo(List<string> args) {
+  return 0;
+}
+", "
+#include <initializer_list>
+#include <string>
+#include <vector>
+
+template <typename T>
+struct List;
+
+template <typename T>
+struct List {
+  List(std::initializer_list<T> list);
+
+  std::vector<T> _data;
+};
+
+int foo(List<std::string> *args);
+
+template <typename T>
+List<T>::List(std::initializer_list<T> list) : _data(list) {
+}
+
+int foo(List<std::string> *args) {
+  return 0;
+}
+
+int main(int argc, char **argv) {
+  List<std::string> *args = new List<std::string> {};
+  args->_data.insert(args->_data.begin(), argv + 1, argv + argc);
+  return foo(args);
+}
+");
+
+}}
