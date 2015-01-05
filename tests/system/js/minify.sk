@@ -171,7 +171,7 @@ export int foo(int foo) {
   return foo - -1;
 }
 ", "
-(function(){foo=function(a){return a- -1|0}}());
+(function(){foo=function(a){return a+1|0}}());
 ");
 
 testMinifyJS("
@@ -780,6 +780,37 @@ export bool foo() {
 }
 ", "
 (function(){foo=function(){return bar()?!0:(baz(),!0)}}());
+");
+
+testMinifyJS("
+export List<int> foo(int x) {
+  return [
+    x + 0,
+    0 + x,
+
+    x + -2,
+    2 + -x,
+    -x + 2,
+    -2 + x,
+
+    x + 1 + 2,
+    x + 1 - 2,
+    x - 1 + 2,
+    x - 1 - 2,
+
+    1 + x + 2,
+    1 + x - 2,
+    1 - x + 2,
+    1 - x - 2,
+
+    1 + 2 + x,
+    1 + 2 - x,
+    1 - 2 + x,
+    1 - 2 - x,
+  ];
+}
+", "
+(function(){foo=function(a){return [a,a,a-2|0,2-a|0,2-a|0,a-2|0,a+3|0,a-1|0,a+1|0,a-3|0,3+a|0,a-1|0,3-a|0,-1-a|0,3+a|0,3-a|0,a-1|0,-1-a|0]}}());
 ");
 
 }}

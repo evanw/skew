@@ -371,7 +371,97 @@ class ConstantFolder {
     }
   }
 
-  void foldMultiply(Node node, Node variable, Node constant) {
+  void foldConstantAddOrSubtract(Node node, Node variable, Node constant, int delta) {
+    var isAdd = node.kind == .ADD;
+    var needsContentUpdate = delta != 0;
+    var isRightConstant = constant == node.binaryRight();
+    var shouldNegateConstant = !isAdd && isRightConstant;
+    var value = constant.asInt();
+
+    // Make this an add for simplicity
+    if (shouldNegateConstant) {
+      value = -value;
+    }
+
+    // Include the delta from the parent node if present
+    value += delta;
+
+    // Apply addition identities
+    if (value == 0) {
+      node.become(variable.remove());
+      return;
+    }
+
+    // Check for nested addition or subtraction
+    if (variable.kind == .ADD || variable.kind == .SUBTRACT) {
+      var left = variable.binaryLeft();
+      var right = variable.binaryRight();
+      assert left.type.isInt(cache) || left.type.isIgnored(cache);
+      assert right.type.isInt(cache) || right.type.isIgnored(cache);
+
+      // (a + 1) + 2 => a + 3
+      var isLeftConstant = left.kind == .INT;
+      if (isLeftConstant || right.kind == .INT) {
+        foldConstantAddOrSubtract(variable, isLeftConstant ? right : left, isLeftConstant ? left : right, value);
+        node.become(variable);
+        return;
+      }
+    }
+
+    // Adjust the value so it has the correct sign
+    if (shouldNegateConstant) {
+      value = -value;
+    }
+
+    // The negative sign can often be removed by code transformation
+    if (value < 0) {
+      // a + -1 => a - 1
+      // a - -1 => a + 1
+      if (isRightConstant) {
+        node.kind = isAdd ? .SUBTRACT : .ADD;
+        value = -value;
+        needsContentUpdate = true;
+      }
+
+      // -1 + a => a - 1
+      else if (isAdd) {
+        node.kind = .SUBTRACT;
+        value = -value;
+        variable.swapWith(constant);
+        needsContentUpdate = true;
+      }
+    }
+
+    // Avoid extra allocations
+    if (needsContentUpdate) {
+      constant.content = IntContent(value);
+    }
+
+    // Also handle unary negation on "variable"
+    foldAddOrSubtract(node);
+  }
+
+  void foldAddOrSubtract(Node node) {
+    var isAdd = node.kind == .ADD;
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+
+    // -a + b => b - a
+    if (left.kind == .NEGATIVE && isAdd) {
+      left.become(left.unaryValue().replaceWith(null));
+      left.swapWith(right);
+      node.kind = .SUBTRACT;
+    }
+
+    // a + -b => a - b
+    // a - -b => a + b
+    else if (right.kind == .NEGATIVE) {
+      right.become(right.unaryValue().replaceWith(null));
+      node.kind = isAdd ? .SUBTRACT : .ADD;
+    }
+  }
+
+  void foldConstantMultiply(Node node, Node variable, Node constant) {
     // Canonicalize multiplication order
     if (node.binaryLeft() == constant) {
       variable.swapWith(constant);
@@ -402,6 +492,10 @@ class ConstantFolder {
   }
 
   void foldBinaryOperatorWithConstant(Node node, Node left, Node right) {
+    // There are lots of other folding opportunities for most binary operators
+    // here but those usually have a negligible performance and/or size impact
+    // on the generated code and instead slow the compiler down. Only certain
+    // ones are implemented below.
     switch (node.kind) {
       // These are important for dead code elimination
       case .LOGICAL_AND {
@@ -413,16 +507,21 @@ class ConstantFolder {
         else if (left.isFalse()) node.become(right.remove());
       }
 
+      // Constants are often added up in compound expressions. Folding
+      // addition/subtraction improves minification in JavaScript and often
+      // helps with readability.
+      case .ADD, .SUBTRACT {
+        if (left.kind == .INT) foldConstantAddOrSubtract(node, right, left, 0);
+        else if (right.kind == .INT) foldConstantAddOrSubtract(node, left, right, 0);
+        else foldAddOrSubtract(node);
+      }
+
       // Multiplication is special-cased here because in JavaScript, optimizing
       // away the general-purpose Math.imul() function may result in large
       // speedups when it's implemented with a polyfill.
-      //
-      // There are lots of other folding opportunities for other binary
-      // operators here but those usually have a negligible performance impact
-      // on the generated code and instead slow the compiler down.
       case .MULTIPLY {
-        if (left.kind == .INT) foldMultiply(node, right, left);
-        else if (right.kind == .INT) foldMultiply(node, left, right);
+        if (left.kind == .INT) foldConstantMultiply(node, right, left);
+        else if (right.kind == .INT) foldConstantMultiply(node, left, right);
       }
     }
   }

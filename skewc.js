@@ -6604,7 +6604,70 @@
       }
     }
   };
-  ConstantFolder.prototype.foldMultiply = function(node, variable, constant) {
+  ConstantFolder.prototype.foldConstantAddOrSubtract = function(node, variable, constant, delta) {
+    var isAdd = node.kind === NodeKind.ADD;
+    var needsContentUpdate = delta !== 0;
+    var isRightConstant = constant === node.binaryRight();
+    var shouldNegateConstant = !isAdd && isRightConstant;
+    var value = constant.asInt();
+    if (shouldNegateConstant) {
+      value = -value | 0;
+    }
+    value = value + delta | 0;
+    if (value === 0) {
+      node.become(variable.remove());
+      return;
+    }
+    if (variable.kind === NodeKind.ADD || variable.kind === NodeKind.SUBTRACT) {
+      var left = variable.binaryLeft();
+      var right = variable.binaryRight();
+      if (!left.type.isInt(this.cache) && !left.type.isIgnored(this.cache)) {
+        throw new Error('assert left.type.isInt(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:399:7)');
+      }
+      if (!right.type.isInt(this.cache) && !right.type.isIgnored(this.cache)) {
+        throw new Error('assert right.type.isInt(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:400:7)');
+      }
+      var isLeftConstant = left.kind === NodeKind.INT;
+      if (isLeftConstant || right.kind === NodeKind.INT) {
+        this.foldConstantAddOrSubtract(variable, isLeftConstant ? right : left, isLeftConstant ? left : right, value);
+        node.become(variable);
+        return;
+      }
+    }
+    if (shouldNegateConstant) {
+      value = -value | 0;
+    }
+    if (value < 0) {
+      if (isRightConstant) {
+        node.kind = isAdd ? NodeKind.SUBTRACT : NodeKind.ADD;
+        value = -value | 0;
+        needsContentUpdate = true;
+      } else if (isAdd) {
+        node.kind = NodeKind.SUBTRACT;
+        value = -value | 0;
+        variable.swapWith(constant);
+        needsContentUpdate = true;
+      }
+    }
+    if (needsContentUpdate) {
+      constant.content = new IntContent(value);
+    }
+    this.foldAddOrSubtract(node);
+  };
+  ConstantFolder.prototype.foldAddOrSubtract = function(node) {
+    var isAdd = node.kind === NodeKind.ADD;
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+    if (left.kind === NodeKind.NEGATIVE && isAdd) {
+      left.become(left.unaryValue().replaceWith(null));
+      left.swapWith(right);
+      node.kind = NodeKind.SUBTRACT;
+    } else if (right.kind === NodeKind.NEGATIVE) {
+      right.become(right.unaryValue().replaceWith(null));
+      node.kind = isAdd ? NodeKind.SUBTRACT : NodeKind.ADD;
+    }
+  };
+  ConstantFolder.prototype.foldConstantMultiply = function(node, variable, constant) {
     if (node.binaryLeft() === constant) {
       variable.swapWith(constant);
     }
@@ -6641,11 +6704,21 @@
         node.become(right.remove());
       }
       break;
+    case 75:
+    case 95:
+      if (left.kind === NodeKind.INT) {
+        this.foldConstantAddOrSubtract(node, right, left, 0);
+      } else if (right.kind === NodeKind.INT) {
+        this.foldConstantAddOrSubtract(node, left, right, 0);
+      } else {
+        this.foldAddOrSubtract(node);
+      }
+      break;
     case 90:
       if (left.kind === NodeKind.INT) {
-        this.foldMultiply(node, right, left);
+        this.foldConstantMultiply(node, right, left);
       } else if (right.kind === NodeKind.INT) {
-        this.foldMultiply(node, left, right);
+        this.foldConstantMultiply(node, left, right);
       }
       break;
     }
