@@ -333,4 +333,15 @@ void foo(Foo *foo) {
 }
 ");
 
+testCPP("
+alias foo = `foo`;
+export void bar() { foo(); }
+", "
+void bar();
+
+void bar() {
+  new foo();
+}
+");
+
 }}

@@ -28,7 +28,7 @@ class Collector {
         collectChildStatements(node);
       }
 
-      case .NAMESPACE, .CLASS, .INTERFACE, .EXTENSION, .ENUM, .ENUM_FLAGS {
+      case .NAMESPACE, .CLASS, .INTERFACE, .EXTENSION, .ENUM, .ENUM_FLAGS, .ALIAS {
         if (node == node.symbol.node) {
           typeSymbols.push(node.symbol);
         }

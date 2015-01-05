@@ -21,14 +21,15 @@ interface Baz { return; }
 ");
 
 test("
-inline alias bar = foo;
+bar foo = false;
+inline alias bar = int;
 ", "
-<stdin>:1:8: error: Cannot use this statement here
-inline alias bar = foo;
-       ~~~~~~~~~~~~~~~~
-<stdin>:1:20: error: \"foo\" is not declared
-inline alias bar = foo;
-                   ~~~
+<stdin>:2:1: error: Cannot use the \"inline\" modifier on an alias declaration
+inline alias bar = int;
+~~~~~~
+<stdin>:1:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+bar foo = false;
+          ~~~~~
 ");
 
 test("

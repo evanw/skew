@@ -642,7 +642,7 @@ class Resolver {
       case .BLOCK { resolveBlock(node); }
       case .NODE_LIST { resolveChildren(node); }
       case .CASE { resolveCase(node); }
-      case .USING { resolveUsing(node); }
+      case .USING {}
 
       case .NAMESPACE { resolveNamespace(node); }
       case .ENUM, .ENUM_FLAGS { resolveEnum(node); }
@@ -851,19 +851,6 @@ class Resolver {
     // Don't warn about compiler-generated statements
     if (!node.range.isEmpty()) {
       semanticErrorUnexpectedStatement(log, node.range);
-    }
-  }
-
-  void checkInsideBlock(Node node) {
-    assert node.parent != null;
-
-    // This will detect statements inside modifier "blocks", which aren't real
-    // blocks and don't have their own scope:
-    //
-    //   inline { alias bar = foo; }
-    //
-    if (node.parent.kind != .BLOCK) {
-      unexpectedStatement(node);
     }
   }
 
@@ -1489,6 +1476,7 @@ class Resolver {
   }
 
   void initializeAlias(Symbol symbol) {
+    forbidBlockDeclarationModifiers(symbol, "on an alias declaration");
     var value = symbol.node.aliasValue();
     resolveAsType(value);
     symbol.type = value.type;
@@ -2334,10 +2322,6 @@ class Resolver {
     resolve(block, null);
   }
 
-  void resolveUsing(Node node) {
-    checkInsideBlock(node);
-  }
-
   void resolveNamespace(Node node) {
     checkDeclarationLocation(node, .ALLOW_TOP_LEVEL);
     if (node.symbol != null) {
@@ -2702,7 +2686,6 @@ class Resolver {
   }
 
   void resolveAlias(Node node) {
-    checkInsideBlock(node);
     if (node.symbol != null) {
       initializeSymbol(node.symbol);
     }

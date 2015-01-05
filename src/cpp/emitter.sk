@@ -434,8 +434,12 @@ namespace cpp {
       var isNew = value.kind == .TYPE;
       var wrap = isNew && precedence == .MEMBER;
       if (wrap) emit("(");
-      if (isNew) emit("new ");
-      emitExpression(value, .UNARY_POSTFIX);
+      if (isNew) {
+        emit("new ");
+        emitCppType(value.type, .BARE);
+      } else {
+        emitExpression(value, .UNARY_POSTFIX);
+      }
       if (!isNew && value.type != null && value.type.isParameterized()) {
         var substitutions = value.type.substitutions;
         emit("<");

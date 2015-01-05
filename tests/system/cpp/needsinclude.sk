@@ -135,6 +135,18 @@ void foo(Foo<Bar *> *bar) {
 ");
 
 testCPP("
+@NeedsInclude(\"<test>\")
+alias foo = `foo`;
+export foo bar;
+", "
+#include <test>
+
+extern foo bar;
+
+foo bar;
+");
+
+testCPP("
 export var foo = \"\";
 ", "
 #include <string>
