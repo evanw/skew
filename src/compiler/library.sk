@@ -90,6 +90,7 @@ import namespace math {
   double ceil(double x);
   double min(double x, double y);
   double max(double x, double y);
+  double random();
 }
 
 in math {

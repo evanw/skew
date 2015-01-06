@@ -256,6 +256,18 @@ namespace math {
     double max(double x, double y) { return `std`::fmax(x, y); }
   }
 
+  @NeedsInclude(\"<random>\") {
+    `(std::mt19937 *)` _generator_ = null;
+    `std::uniform_real_distribution<double>` _distribution_;
+  }
+
+  double random() {
+    if (_generator_ == null) {
+      _generator_ = new `std`::mt19937(`std`::random_device()());
+    }
+    return _distribution_(*_generator_);
+  }
+
   const {
     double SQRT2 = 1.414213562373095;
     double PI = 3.141592653589793;

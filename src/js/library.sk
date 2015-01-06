@@ -150,6 +150,7 @@ namespace math {
     double ceil(double x) { return `Math`.ceil(x); }
     double min(double x, double y) { return `Math`.min(x, y); }
     double max(double x, double y) { return `Math`.max(x, y); }
+    double random() { return `Math`.random(); }
   }
 
   const {
