@@ -10,12 +10,7 @@ import class double {}
 import class string {}
 
 in int {
-  @NeedsInclude(\"<sstream>\")
-  string toString() {
-    `std::stringstream` ss;
-    ss << this;
-    return ss.str();
-  }
+  inline string toString() { return `std`::to_string(this); }
 }
 
 in bool {
@@ -24,18 +19,22 @@ in bool {
 
 in float {
   @NeedsInclude(\"<sstream>\")
-  inline string toString() {
+  @NeedsInclude(\"<iomanip>\")
+  @NeedsInclude(\"<limits>\")
+  string toString() {
     `std::stringstream` ss;
-    ss << this;
+    ss << `std::setprecision(std::numeric_limits<float>::max_digits10)` << this; // Ensure that all values round-trip correctly
     return ss.str();
   }
 }
 
 in double {
   @NeedsInclude(\"<sstream>\")
-  inline string toString() {
+  @NeedsInclude(\"<iomanip>\")
+  @NeedsInclude(\"<limits>\")
+  string toString() {
     `std::stringstream` ss;
-    ss << this;
+    ss << `std::setprecision(std::numeric_limits<double>::max_digits10)` << this; // Ensure that all values round-trip correctly
     return ss.str();
   }
 }
