@@ -747,16 +747,34 @@ namespace js {
       if (.COMMA <= precedence) emit(")");
     }
 
+    bool isRightChildOfBinaryExpression(Node node, NodeKind kind) {
+      assert kind.isBinaryOperator();
+      while (node.parent.kind.isExpression()) {
+        if (node.parent.kind.isBinaryOperator() && node.parent.binaryRight() == node) {
+          return node.parent.kind == kind;
+        }
+        node = node.parent;
+      }
+      return false;
+    }
+
     void emitUnary(Node node, Precedence precedence) {
       var value = node.unaryValue();
       var info = operatorInfo[node.kind];
       if (info.precedence < precedence) emit("(");
       var isPostfix = info.precedence == .UNARY_POSTFIX;
       if (!isPostfix) {
-        emit(info.text);
-
         var kind = node.kind;
         var valueKind = value.kind;
+
+        if (options.jsMinify && (
+            kind == .POSITIVE && isRightChildOfBinaryExpression(node, .ADD) ||
+            kind == .NEGATIVE && isRightChildOfBinaryExpression(node, .SUBTRACT))) {
+          emit(" "); // Prevent "- -1" from becoming "--1"
+        }
+
+        emit(info.text);
+
         if (kind == .NEW || kind == .DELETE ||
             kind == .POSITIVE && (valueKind == .POSITIVE || valueKind == .PREFIX_INCREMENT) ||
             kind == .NEGATIVE && (valueKind == .NEGATIVE || valueKind == .PREFIX_DECREMENT || value.isNumberLessThanZero())) {

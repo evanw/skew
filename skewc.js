@@ -4648,6 +4648,18 @@
       this.emit(')');
     }
   };
+  js.Emitter.prototype.isRightChildOfBinaryExpression = function(node, kind) {
+    if (!in_NodeKind.isBinaryOperator(kind)) {
+      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:751:7)');
+    }
+    while (in_NodeKind.isExpression(node.parent.kind)) {
+      if (in_NodeKind.isBinaryOperator(node.parent.kind) && node.parent.binaryRight() === node) {
+        return node.parent.kind === kind;
+      }
+      node = node.parent;
+    }
+    return false;
+  };
   js.Emitter.prototype.emitUnary = function(node, precedence) {
     var value = node.unaryValue();
     var info = operatorInfo._table[node.kind];
@@ -4656,9 +4668,12 @@
     }
     var isPostfix = info.precedence === Precedence.UNARY_POSTFIX;
     if (!isPostfix) {
-      this.emit(info.text);
       var kind = node.kind;
       var valueKind = value.kind;
+      if (this.options.jsMinify && (kind === NodeKind.POSITIVE && this.isRightChildOfBinaryExpression(node, NodeKind.ADD) || kind === NodeKind.NEGATIVE && this.isRightChildOfBinaryExpression(node, NodeKind.SUBTRACT))) {
+        this.emit(' ');
+      }
+      this.emit(info.text);
       if (kind === NodeKind.NEW || kind === NodeKind.DELETE || kind === NodeKind.POSITIVE && (valueKind === NodeKind.POSITIVE || valueKind === NodeKind.PREFIX_INCREMENT) || kind === NodeKind.NEGATIVE && (valueKind === NodeKind.NEGATIVE || valueKind === NodeKind.PREFIX_DECREMENT || value.isNumberLessThanZero())) {
         this.emit(' ');
       }

@@ -813,4 +813,28 @@ export List<int> foo(int x) {
 (function(){foo=function(a){return [a,a,a-2|0,2-a|0,2-a|0,a-2|0,a+3|0,a-1|0,a+1|0,a-3|0,3+a|0,a-1|0,3-a|0,-1-a|0,3+a|0,3-a|0,a-1|0,-1-a|0]}}());
 ");
 
+testMinifyJS("
+export List<double> foo(double x, bool y) {
+  return [
+    // These need spaces
+    1 - (-x) * 2,
+    1 + (+x) * 2,
+    1 + (double)y * 2,
+    1 - (-x) * 2 / 3,
+    1 + (+x) * 2 / 3,
+    1 + (double)y * 2 / 3,
+
+    // These should not have spaces
+    (-x) * 2 - 1,
+    (+x) * 2 + 1,
+    (double)y * 2 + 1,
+     1 - 2 * (-x),
+    1 + 2 * (+x),
+    1 + 2 * (double)y,
+ ];
+}
+", "
+(function(){foo=function(a,b){return [1- -a*2,1+ +a*2,1+ +b*2,1- -a*2/3,1+ +a*2/3,1+ +b*2/3,-a*2-1,+a*2+1,+b*2+1,1-2*-a,1+2*+a,1+2*+b]}}());
+");
+
 }}
