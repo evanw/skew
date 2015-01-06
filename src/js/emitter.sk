@@ -749,8 +749,8 @@ namespace js {
 
     bool isRightChildOfBinaryExpression(Node node, NodeKind kind) {
       assert kind.isBinaryOperator();
-      while (node.parent.kind.isExpression()) {
-        if (node.parent.kind.isBinaryOperator() && node.parent.binaryRight() == node) {
+      while (node.parent.kind.isBinaryOperator()) {
+        if (node.parent.binaryRight() == node) {
           return node.parent.kind == kind;
         }
         node = node.parent;

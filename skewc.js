@@ -4652,8 +4652,8 @@
     if (!in_NodeKind.isBinaryOperator(kind)) {
       throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:751:7)');
     }
-    while (in_NodeKind.isExpression(node.parent.kind)) {
-      if (in_NodeKind.isBinaryOperator(node.parent.kind) && node.parent.binaryRight() === node) {
+    while (in_NodeKind.isBinaryOperator(node.parent.kind)) {
+      if (node.parent.binaryRight() === node) {
         return node.parent.kind === kind;
       }
       node = node.parent;
