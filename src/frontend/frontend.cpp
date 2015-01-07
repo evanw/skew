@@ -23,6 +23,7 @@ namespace io {
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 
 #ifdef _WIN32
   #include <windows.h>

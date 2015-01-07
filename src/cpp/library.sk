@@ -18,25 +18,11 @@ in bool {
 }
 
 in float {
-  @NeedsInclude(\"<sstream>\")
-  @NeedsInclude(\"<iomanip>\")
-  @NeedsInclude(\"<limits>\")
-  string toString() {
-    `std::stringstream` ss;
-    ss << `std::setprecision(std::numeric_limits<float>::max_digits10)` << this; // Ensure that all values round-trip correctly
-    return ss.str();
-  }
+  inline string toString() { return math._format_(this); }
 }
 
 in double {
-  @NeedsInclude(\"<sstream>\")
-  @NeedsInclude(\"<iomanip>\")
-  @NeedsInclude(\"<limits>\")
-  string toString() {
-    `std::stringstream` ss;
-    ss << `std::setprecision(std::numeric_limits<double>::max_digits10)` << this; // Ensure that all values round-trip correctly
-    return ss.str();
-  }
+  inline string toString() { return math._format_(this); }
 }
 
 in string {
@@ -254,6 +240,20 @@ namespace math {
     double ceil(double x) { return `std`::ceil(x); }
     double min(double x, double y) { return `std`::fmin(x, y); }
     double max(double x, double y) { return `std`::fmax(x, y); }
+  }
+
+  // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0
+  string _format_(double value) {
+    string buffer;
+    `buffer.resize(64)`;
+    `std::sprintf(&buffer[0], \"%.15g\", value)`;
+    if (`std::stod(&buffer[0]) != value`) {
+      `std::sprintf(&buffer[0], \"%.16g\", value)`;
+      if (`std::stod(&buffer[0]) != value`) {
+        `std::sprintf(&buffer[0], \"%.17g\", value)`;
+      }
+    }
+    return `buffer.c_str()`;
   }
 
   @NeedsInclude(\"<random>\") {
