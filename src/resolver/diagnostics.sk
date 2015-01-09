@@ -368,6 +368,14 @@ void semanticErrorUnexpectedAnnotationArgumentCount(Log log, Range range, string
     " must take " + expected + " argument" + plural(expected, "", "s")));
 }
 
+void semanticErrorNoFileAccess(Log log, Range range) {
+  log.error(range, "The compiler does not have file access");
+}
+
+void semanticErrorCannotFindFile(Log log, Range range, string relativePath) {
+  log.error(range, "The file " + simpleQuote(relativePath) + " could not be found");
+}
+
 void semanticErrorOperatorOnNonInstanceFunction(Log log, Range range) {
   log.error(range, "Operator overloading only applies to instance functions");
 }

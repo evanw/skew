@@ -1,3 +1,6 @@
+// These extension methods serve as constructors for individual node kinds.
+// They validate their arguments and enforce the convention for each node kind
+// but are completely inlined and compiled away in releaase.
 in Node {
   static Node createProgram(List<Node> files) {
     assert checkAllNodeKinds(files, NodeKindIs(.FILE));
@@ -326,6 +329,12 @@ in Node {
 
   static Node createVar() {
     return Node(.VAR);
+  }
+
+  static Node createAnnotation(Node name, Node arguments) {
+    assert name.kind == .NAME;
+    assert arguments == null || checkAllNodeListKinds(arguments, NodeKindIsExpression());
+    return Node(.ANNOTATION).withChildren([name, arguments]);
   }
 
   static Node createUnary(NodeKind kind, Node value) {

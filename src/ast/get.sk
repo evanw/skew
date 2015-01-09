@@ -1,3 +1,6 @@
+// These extension methods serve as getters for individual node kinds. They
+// enforce the convention for each node kind but are completely inlined and
+// compiled away in releaase.
 in Node {
   List<Node> blockStatements() {
     assert kind == .BLOCK;
@@ -155,6 +158,20 @@ in Node {
 
   Node modifierArguments() {
     assert kind == .MODIFIER;
+    assert children.size() >= 2;
+    assert children[1] == null || children[1].kind == .NODE_LIST;
+    return children[1];
+  }
+
+  Node annotationName() {
+    assert kind == .MODIFIER || kind == .ANNOTATION;
+    assert children.size() >= 2;
+    assert children[0].kind == .NAME;
+    return children[0];
+  }
+
+  Node annotationArguments() {
+    assert kind == .MODIFIER || kind == .ANNOTATION;
     assert children.size() >= 2;
     assert children[1] == null || children[1].kind == .NODE_LIST;
     return children[1];

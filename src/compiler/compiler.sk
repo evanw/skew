@@ -25,7 +25,12 @@ export class OverriddenDefine {
   Range range;
 }
 
+export interface FileAccess {
+  virtual Source contentsOfFile(string sourcePath, string relativePath);
+}
+
 export class CompilerOptions {
+  FileAccess fileAccess = null;
   TargetFormat targetFormat = .NONE;
   List<Source> inputs = [];
   List<Source> prepend = [];

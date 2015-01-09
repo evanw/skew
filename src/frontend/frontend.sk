@@ -6,6 +6,12 @@ import namespace io {
   Source readFile(string path);
 }
 
+class FrontendFileAccess : FileAccess {
+  override Source contentsOfFile(string sourcePath, string relativePath) {
+    return io.readFile(joinPath(splitPath(sourcePath).directory, relativePath));
+  }
+}
+
 export namespace frontend {
   int main(List<string> args) {
     final List<string> inputs = [];
@@ -63,6 +69,7 @@ export namespace frontend {
     final var options = CompilerOptions();
     final var optimizeJS = flags.optimize && target == .JAVASCRIPT;
     final var minifyJS = flags.jsMinify && target == .JAVASCRIPT;
+    options.fileAccess = FrontendFileAccess();
     options.targetFormat = target;
     options.removeAsserts = flags.optimize;
     options.outputFile = flags.outputFile;

@@ -383,9 +383,9 @@ Node parseAnnotation(ParserContext context, StatementHint hint) {
   var name = createNameFromToken(token);
   Node arguments = null;
   if (context.peek(.LEFT_PARENTHESIS)) {
-    var token = context.current();
+    var parenthesis = context.current();
     var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS);
-    arguments = Node.createNodeList(values).withRange(context.spanSince(token.range));
+    arguments = Node.createNodeList(values).withRange(context.spanSince(parenthesis.range));
   }
   var block = parseBlockOrStatement(context, hint); if (block == null) return null;
   return Node.createModifier(name, arguments, block.removeChildren()).withRange(context.spanSince(token.range));
@@ -939,6 +939,20 @@ class IfParselet : IPrefixParselet {
   }
 }
 
+class AnnotationParselet : IPrefixParselet {
+  override Node parse(ParserContext context) {
+    var token = context.next();
+    var name = createNameFromToken(token);
+    Node arguments = null;
+    if (context.peek(.LEFT_PARENTHESIS)) {
+      var parenthesis = context.current();
+      var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS);
+      arguments = Node.createNodeList(values).withRange(context.spanSince(parenthesis.range));
+    }
+    return Node.createAnnotation(name, arguments).withRange(context.spanSince(token.range));
+  }
+}
+
 void createParser() {
   if (pratt != null) return;
   pratt = Pratt();
@@ -1021,6 +1035,7 @@ void createParser() {
   // Other expressions
   ////////////////////////////////////////////////////////////////////////////////
 
+  pratt.parselet(.ANNOTATION, .LOWEST).prefix = AnnotationParselet();
   pratt.parselet(.PREPROCESSOR_IF, .LOWEST).prefix = IfParselet();
   pratt.parselet(.LEFT_BRACKET, .LOWEST).prefix = ListParselet();
   pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet();

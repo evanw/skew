@@ -674,6 +674,7 @@ class Resolver {
       case .NAME { resolveName(node); }
       case .NULL { node.type = cache.nullType; }
       case .THIS { resolveThis(node); }
+      case .ANNOTATION { resolveAnnotation(node); }
       case .BOOL { node.type = cache.boolType; }
       case .HOOK { resolveHook(node); }
       case .PREPROCESSOR_HOOK { resolvePreprocessorHook(node); }
@@ -1686,7 +1687,7 @@ class Resolver {
   }
 
   void registerEmitAs(Symbol symbol, Node node) {
-    var content = requireSingleStringLiteral(symbol, node);
+    var content = requireSingleStringLiteral(node);
     if (content != null) {
       if (symbol.emitAs != null) {
         semanticErrorDuplicateEmitAs(log, Range.span(node.modifierName().range, node.modifierArguments().range));
@@ -1719,12 +1720,12 @@ class Resolver {
     symbol.flags |= .EXTERN_C;
   }
 
-  StringContent requireSingleStringLiteral(Symbol symbol, Node node) {
-    var arguments = node.modifierArguments();
+  StringContent requireSingleStringLiteral(Node node) {
+    var arguments = node.annotationArguments();
     if (arguments == null || arguments.children.size() != 1) {
-      var modifierName = node.modifierName();
-      var range = arguments == null ? modifierName.range : arguments.range;
-      semanticErrorUnexpectedAnnotationArgumentCount(log, range, modifierName.asString(), 1);
+      var annotationName = node.annotationName();
+      var range = arguments == null ? annotationName.range : arguments.range;
+      semanticErrorUnexpectedAnnotationArgumentCount(log, range, annotationName.asString(), 1);
       return null;
     }
 
@@ -1754,17 +1755,16 @@ class Resolver {
   }
 
   void registerNeedsInclude(Symbol symbol, Node node) {
-    var content = requireSingleStringLiteral(symbol, node);
+    var content = requireSingleStringLiteral(node);
     if (content != null) {
       symbol.addNeededInclude(content.value);
     }
   }
 
   void forbidAnnotationArguments(Node node) {
-    var arguments = node.modifierArguments();
+    var arguments = node.annotationArguments();
     if (arguments != null) {
-      var modifierName = node.modifierName();
-      semanticErrorUnexpectedAnnotationArgumentCount(log, arguments.range, modifierName.asString(), 0);
+      semanticErrorUnexpectedAnnotationArgumentCount(log, arguments.range, node.annotationName().asString(), 0);
     }
   }
 
@@ -2912,6 +2912,30 @@ class Resolver {
       initializeSymbol(symbol);
       node.symbol = symbol;
       node.type = cache.ensureTypeIsParameterized(symbol.type);
+    }
+  }
+
+  void resolveAnnotation(Node node) {
+    var annotationName = node.annotationName();
+    var name = annotationName.asString();
+
+    if (name == "@ContentsOfFile") resolveContentsOfFile(node);
+    else semanticErrorUnknownAnnotation(log, annotationName.range, name);
+  }
+
+  void resolveContentsOfFile(Node node) {
+    var content = requireSingleStringLiteral(node);
+    if (content != null) {
+      if (options.fileAccess == null) {
+        semanticErrorNoFileAccess(log, node.range);
+      } else {
+        var source = options.fileAccess.contentsOfFile(node.range.source.name, content.value);
+        if (source == null) {
+          semanticErrorCannotFindFile(log, node.annotationArguments().children[0].range, content.value);
+        } else {
+          node.become(Node.createString(source.contents).withType(cache.stringType).withRange(node.range));
+        }
+      }
     }
   }
 
