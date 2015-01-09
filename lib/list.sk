@@ -1,0 +1,174 @@
+interface Comparison<T> {
+  virtual int compare(T left, T right);
+}
+
+#if TARGET_JS
+
+  void bindCompare<T>(Comparison<T> comparison) {
+    return comparison.compare.`bind`(comparison);
+  }
+
+  import class List<T> {
+    new();
+    void push(T value);
+    void unshift(T value);
+    List<T> slice(int start, int end);
+    int indexOf(T value);
+    int lastIndexOf(T value);
+    T shift();
+    T pop();
+    void reverse();
+  }
+
+  in List {
+    inline {
+      int size() { return this.`length`; }
+      void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }
+      List<T> clone() { return this.`slice`(); }
+      T remove(int index) { return this.`splice`(index, 1)[0]; }
+      void removeRange(int start, int end) { this.`splice`(start, end - start); }
+      void insert(int index, T value) { this.`splice`(index, 0, value); }
+      @OperatorGet T get(int index) { return `this`[index]; }
+      @OperatorSet void set(int index, T value) { `this`[index] = value; }
+      @OperatorIn bool contains(T value) { return indexOf(value) >= 0; }
+    }
+
+    void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }
+  }
+
+#elif TARGET_CPP
+
+  bool bindCompare<T>(Comparison<T> comparison, T left, T right) {
+    return comparison.compare(left, right) < 0;
+  }
+
+  @NeedsInclude("<initializer_list>")
+  @NeedsInclude("<vector>")
+  class List<T> {
+    new(`std::initializer_list<T>` list) : _data = list {}
+
+    int size() {
+      return _data.size();
+    }
+
+    void push(T value) {
+      _data.push_back(value);
+    }
+
+    void unshift(T value) {
+      insert(0, value);
+    }
+
+    List<T> slice(int start, int end) {
+      assert start >= 0 && start <= end && end <= size();
+      List<T> slice = [];
+      slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);
+      return slice;
+    }
+
+    T shift() {
+      T value = this[0];
+      remove(0);
+      return value;
+    }
+
+    T pop() {
+      T value = this[size() - 1];
+      _data.pop_back();
+      return value;
+    }
+
+    List<T> clone() {
+      List<T> clone = [];
+      clone._data = _data;
+      return clone;
+    }
+
+    T remove(int index) {
+      T value = this[index];
+      _data.erase(_data.begin() + index);
+      return value;
+    }
+
+    void removeRange(int start, int end) {
+      assert 0 <= start && start <= end && end <= size();
+      _data.erase(_data.begin() + start, _data.begin() + end);
+    }
+
+    void insert(int index, T value) {
+      assert index >= 0 && index <= size();
+      _data.insert(_data.begin() + index, value);
+    }
+
+    @OperatorGet
+    T get(int index) {
+      assert index >= 0 && index < size();
+      return _data[index];
+    }
+
+    @OperatorSet
+    void set(int index, T value) {
+      assert index >= 0 && index < size();
+      _data[index] = value;
+    }
+
+    @OperatorIn
+    bool contains(T value) {
+      return indexOf(value) >= 0;
+    }
+
+    @NeedsInclude("<algorithm>") {
+      int indexOf(T value) {
+        int index = `std`::find(_data.begin(), _data.end(), value) - _data.begin();
+        return index == size() ? -1 : index;
+      }
+
+      int lastIndexOf(T value) {
+        int index = `std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin();
+        return size() - index - 1;
+      }
+
+      void swap(int a, int b) {
+        assert a >= 0 && a < size();
+        assert b >= 0 && b < size();
+        `std`::swap(_data[a], _data[b]);
+      }
+
+      void reverse() {
+        `std`::reverse(_data.begin(), _data.end());
+      }
+
+      @NeedsInclude("<functional>")
+      void sort(Comparison<T> comparison) {
+        `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));
+      }
+    }
+
+    `std::vector<T>` _data;
+  }
+
+#else
+
+  import class List<T> {
+    new();
+    int size();
+    void push(T value);
+    void unshift(T value);
+    List<T> slice(int start, int end);
+    int indexOf(T value);
+    int lastIndexOf(T value);
+    T shift();
+    T pop();
+    void reverse();
+    void sort(Comparison<T> comparison);
+    List<T> clone();
+    T remove(int index);
+    void removeRange(int start, int end);
+    void insert(int index, T value);
+    @OperatorGet T get(int index);
+    @OperatorSet void set(int index, T value);
+    @OperatorIn bool contains(T value);
+    void swap(int a, int b);
+  }
+
+#endif

@@ -1,0 +1,67 @@
+#if TARGET_JS
+
+  class IntMap<T> {
+    var _table = `Object`.create(null);
+
+    inline {
+      @OperatorGet T get(int key) { return _table[key]; }
+      @OperatorSet void set(int key, T value) { _table[key] = value; }
+      @OperatorIn bool has(int key) { return key in _table; }
+      void remove(int key) { delete _table[key]; }
+    }
+
+    T getOrDefault(int key, T defaultValue) {
+      return key in this ? this[key] : defaultValue;
+    }
+
+    List<int> keys() {
+      List<int> keys = [];
+      for (double key in _table) keys.push((int)key);
+      return keys;
+    }
+
+    List<T> values() {
+      List<T> values = [];
+      for (int key in _table) values.push(this[key]);
+      return values;
+    }
+
+    IntMap<T> clone() {
+      var clone = IntMap<T>();
+      for (int key in _table) clone[key] = this[key];
+      return clone;
+    }
+  }
+
+#elif TARGET_CPP
+
+  @NeedsInclude("<unordered_map>")
+  class IntMap<T> {
+    new() {}
+    @OperatorGet T get(int key) { return _table[key]; }
+    T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
+    @OperatorSet void set(int key, T value) { _table[key] = value; }
+    @OperatorIn bool has(int key) { return _table.count(key); }
+    void remove(int key) { _table.erase(key); }
+    List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
+    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }
+    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }
+
+    `std::unordered_map<int, T>` _table;
+  }
+
+#else
+
+  import class IntMap<T> {
+    new();
+    @OperatorGet T get(int key);
+    T getOrDefault(int key, T defaultValue);
+    @OperatorSet void set(int key, T value);
+    @OperatorIn bool has(int key);
+    void remove(int key);
+    List<int> keys();
+    List<T> values();
+    IntMap<T> clone();
+  }
+
+#endif

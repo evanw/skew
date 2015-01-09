@@ -393,6 +393,7 @@ class Node {
     node.type = type;
     node.symbol = symbol;
     node.content = content;
+    node.flags = flags;
     if (children != null) {
       node.children = [];
       for (var i = 0; i < children.size(); i++) {

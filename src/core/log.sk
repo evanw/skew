@@ -9,6 +9,12 @@ class Diagnostic {
   string text;
   var noteRange = Range.EMPTY;
   var noteText = "";
+
+  static string format(string kind, Range range, string text) {
+    if (range == null) return kind + ": " + text + "\n";
+    var formatted = range.format(0);
+    return range.locationString() + ": " + kind + ": " + text + "\n" + formatted.line + "\n" + formatted.range + "\n";
+  }
 }
 
 export class Log {
@@ -18,15 +24,11 @@ export class Log {
     // Emit the log assuming an infinite terminal width
     for (var i = 0; i < diagnostics.size(); i++) {
       var diagnostic = diagnostics[i];
-      var formatted = diagnostic.range.format(0);
-      result = result + diagnostic.range.locationString() + (diagnostic.kind == .ERROR ? ": error: " : ": warning: ")
-         + diagnostic.text + "\n" + formatted.line + "\n" + formatted.range + "\n";
+      result += Diagnostic.format(diagnostic.kind == .ERROR ? "error" : "warning", diagnostic.range, diagnostic.text);
 
       // Append notes after the diagnostic they apply to
       if (!diagnostic.noteRange.isEmpty()) {
-        formatted = diagnostic.noteRange.format(0);
-        result = result + diagnostic.noteRange.locationString() + ": note: " + diagnostic.noteText + "\n"
-           + formatted.line + "\n" + formatted.range + "\n";
+        result += Diagnostic.format("note", diagnostic.noteRange, diagnostic.noteText);
       }
     }
 
@@ -40,19 +42,16 @@ in Log {
   var errorCount = 0;
 
   void error(Range range, string text) {
-    assert !range.isEmpty();
     diagnostics.push(Diagnostic(.ERROR, range, text));
     errorCount++;
   }
 
   void warning(Range range, string text) {
-    assert !range.isEmpty();
     diagnostics.push(Diagnostic(.WARNING, range, text));
     warningCount++;
   }
 
   void note(Range range, string text) {
-    assert !range.isEmpty();
     var last = diagnostics[diagnostics.size() - 1];
     last.noteRange = range;
     last.noteText = text;

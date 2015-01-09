@@ -45,6 +45,10 @@ export class CompilerOptions {
   var foldAllConstants = false;
   var inlineAllFunctions = false;
   var convertAllInstanceToStatic = false;
+
+  void overrideDefine(string name, bool value) {
+    overriddenDefines[name] = OverriddenDefine(value, null);
+  }
 }
 
 export class CompilerResult {
@@ -55,21 +59,19 @@ export class CompilerResult {
   Resolver resolver;
 }
 
+// This caches the parse tree for a bundled source file to speed up recompilation
 class CachedSource {
+  string name;
   string contents;
   Source source = null;
   Node file = null;
 
   Node compile(Compiler compiler, CompilerOptions options) {
-    if (file == null) {
-      var program = Node.createProgram([]);
-      source = Source("<native>", contents);
-      compiler.processInput(program, source);
-      assert program.children.size() > 0;
-      file = program.children[0];
+    if (source == null) {
+      source = Source(joinPath("<compiler>", name), contents);
+      file = compiler.tokenizeAndParseFile(source);
     }
-    options.inputs.unshift(source);
-    return file.clone();
+    return file != null ? file.clone() : null;
   }
 }
 
@@ -138,15 +140,22 @@ export class Compiler {
     createNameToSymbolFlag();
     createSymbolFlagToName();
 
+    // Prepare native #define overrides
+    options.overrideDefine("TARGET_JS", options.targetFormat == .JAVASCRIPT);
+    options.overrideDefine("TARGET_CPP", options.targetFormat == .CPP);
+
     // Tokenize and parse each module individually
-    switch (options.targetFormat) {
-      case .JAVASCRIPT { program.appendChild(nativeLibraryJS.compile(this, options)); }
-      case .CPP { program.appendChild(nativeLibraryCPP.compile(this, options)); }
-      default { program.appendChild(nativeLibrary.compile(this, options)); }
-    }
-    for (var i = 1; i < options.inputs.size(); i++) {
-      var file = processInput(program, options.inputs[i]);
+    for (var i = 0; i < cachedLibraries.size(); i++) {
+      var file = cachedLibraries[i].compile(this, options);
       if (file != null) {
+        program.appendChild(file);
+        files.push(file);
+      }
+    }
+    for (var i = 0; i < options.inputs.size(); i++) {
+      var file = tokenizeAndParseFile(options.inputs[i]);
+      if (file != null) {
+        program.appendChild(file);
         files.push(file);
       }
     }
@@ -220,10 +229,14 @@ export class Compiler {
 }
 
 in Compiler {
-  // Cache the standard library for a small speed boost
-  static CachedSource nativeLibrary = CachedSource(NATIVE_LIBRARY);
-  static CachedSource nativeLibraryJS = CachedSource(js.NATIVE_LIBRARY);
-  static CachedSource nativeLibraryCPP = CachedSource(cpp.NATIVE_LIBRARY);
+  // Cache the parsed standard libraries for a speed boost during recompilation
+  static List<CachedSource> cachedLibraries = [
+    CachedSource("support.sk", @ContentsOfFile("../../lib/support.sk")),
+    CachedSource("math.sk", @ContentsOfFile("../../lib/math.sk")),
+    CachedSource("list.sk", @ContentsOfFile("../../lib/list.sk")),
+    CachedSource("stringmap.sk", @ContentsOfFile("../../lib/stringmap.sk")),
+    CachedSource("intmap.sk", @ContentsOfFile("../../lib/intmap.sk")),
+  ];
 
   static int totalLineCount(List<Source> sources) {
     var lineCount = 0;
@@ -246,7 +259,7 @@ in Compiler {
     return text;
   }
 
-  Node processInput(Node program, Source source) {
+  Node tokenizeAndParseFile(Source source) {
     var errorCount = log.errorCount;
 
     // Tokenize the source
@@ -263,7 +276,6 @@ in Compiler {
       var file = parseFile(log, tokens);
       parsingTime += now() - parseStart;
       if (file != null) {
-        program.appendChild(file);
         return file;
       }
     }

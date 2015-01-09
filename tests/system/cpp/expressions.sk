@@ -226,13 +226,13 @@ export void test() {
 ", "
 #include <string>
 
-namespace math {
+namespace in_double {
   std::string _format_(double value);
 }
 
 void test();
 
-std::string math::_format_(double value) {
+std::string in_double::_format_(double value) {
   std::string buffer = \"\";
   buffer.resize(64);
   std::sprintf(&buffer[0], \"%.15g\", value);
@@ -250,8 +250,8 @@ std::string math::_format_(double value) {
 
 void test() {
   std::to_string(0);
-  math::_format_(0.0f);
-  math::_format_(0.0);
+  in_double::_format_(0.0f);
+  in_double::_format_(0.0);
 }
 ");
 
