@@ -1,0 +1,4 @@
+// These will be overridden by the compiler with the current language target
+#define TARGET_JS   false
+#define TARGET_CPP  false
+#define TARGET_NONE !TARGET_JS && !TARGET_CPP

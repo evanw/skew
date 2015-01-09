@@ -1,7 +1,3 @@
-#define TARGET_JS   false
-#define TARGET_CPP  false
-#define TARGET_NONE !TARGET_JS && !TARGET_CPP
-
 #if TARGET_JS
 
   import class int { string toString(); }

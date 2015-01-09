@@ -231,7 +231,8 @@ export class Compiler {
 in Compiler {
   // Cache the parsed standard libraries for a speed boost during recompilation
   static List<CachedSource> cachedLibraries = [
-    CachedSource("support.sk", @ContentsOfFile("../../lib/support.sk")),
+    CachedSource("defines.sk", @ContentsOfFile("../../lib/defines.sk")),
+    CachedSource("primitives.sk", @ContentsOfFile("../../lib/primitives.sk")),
     CachedSource("math.sk", @ContentsOfFile("../../lib/math.sk")),
     CachedSource("list.sk", @ContentsOfFile("../../lib/list.sk")),
     CachedSource("stringmap.sk", @ContentsOfFile("../../lib/stringmap.sk")),
