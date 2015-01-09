@@ -224,37 +224,34 @@ export void test() {
   0.0.toString();
 }
 ", "
-#include <iomanip>
-#include <limits>
-#include <sstream>
 #include <string>
 
-namespace in_float {
-  std::string toString(float _this_);
-}
-
-namespace in_double {
-  std::string toString(double _this_);
+namespace math {
+  std::string _format_(double value);
 }
 
 void test();
 
-std::string in_float::toString(float _this_) {
-  std::stringstream ss;
-  ss << std::setprecision(std::numeric_limits<float>::max_digits10) << _this_;
-  return ss.str();
-}
+std::string math::_format_(double value) {
+  std::string buffer = \"\";
+  buffer.resize(64);
+  std::sprintf(&buffer[0], \"%.15g\", value);
 
-std::string in_double::toString(double _this_) {
-  std::stringstream ss;
-  ss << std::setprecision(std::numeric_limits<double>::max_digits10) << _this_;
-  return ss.str();
+  if (std::stod(&buffer[0]) != value) {
+    std::sprintf(&buffer[0], \"%.16g\", value);
+
+    if (std::stod(&buffer[0]) != value) {
+      std::sprintf(&buffer[0], \"%.17g\", value);
+    }
+  }
+
+  return buffer.c_str();
 }
 
 void test() {
   std::to_string(0);
-  in_float::toString(0.0f);
-  in_double::toString(0.0);
+  math::_format_(0.0f);
+  math::_format_(0.0);
 }
 ");
 
