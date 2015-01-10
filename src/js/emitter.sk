@@ -234,7 +234,7 @@ namespace js {
     }
 
     string minifySpaces(string text) {
-      return text.replace(" ", space);
+      return text.replaceAll(" ", space);
     }
 
     // Lots of text editors choke up on long lines, so add a newline every now

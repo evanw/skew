@@ -223,7 +223,7 @@ in NodeKind {
   }
 
   string prettyPrint() {
-    return toString().toLowerCase().replace("_", "-");
+    return toString().toLowerCase().replaceAll("_", "-");
   }
 }
 

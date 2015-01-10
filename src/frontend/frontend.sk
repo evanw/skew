@@ -89,41 +89,9 @@ export namespace frontend {
     final var log = compiler.log;
 
     // Print any errors and warnings
-    for (var i = 0; i < log.diagnostics.size(); i++) {
-      var diagnostic = log.diagnostics[i];
-      if (!diagnostic.range.isEmpty()) {
-        printWithColor(.BOLD, diagnostic.range.locationString() + ": ");
-      }
-      switch (diagnostic.kind) {
-        case .WARNING { printWarning(diagnostic.text); }
-        case .ERROR { printError(diagnostic.text); }
-      }
-      if (!diagnostic.range.isEmpty()) {
-        var formatted = diagnostic.range.format(io.terminalWidth);
-        io.print(formatted.line + "\n");
-        printWithColor(.GREEN, formatted.range + "\n");
-      }
-      if (!diagnostic.noteRange.isEmpty()) {
-        printWithColor(.BOLD, diagnostic.noteRange.locationString() + ": ");
-        printNote(diagnostic.noteText);
-        var formatted = diagnostic.noteRange.format(io.terminalWidth);
-        io.print(formatted.line + "\n");
-        printWithColor(.GREEN, formatted.range + "\n");
-      }
-    }
-
-    // Print the summary
-    var hasErrors = log.errorCount > 0;
-    var hasWarnings = log.warningCount > 0;
-    var summary = "";
-    if (hasWarnings) {
-      summary += log.warningCount + (plural(log.warningCount, " warning", " warnings"));
-      if (hasErrors) summary += " and ";
-    }
-    if (hasErrors) summary += log.errorCount + (plural(log.errorCount, " error", " errors"));
-    if (hasWarnings || hasErrors) io.print(summary + " generated\n");
+    printLogInColor(log);
     if (flags.verbose) io.print(compiler.statistics(result) + "\n");
-    if (hasErrors) return 1;
+    if (log.errorCount > 0) return 1;
 
     // Write all outputs
     for (var i = 0; i < result.outputs.size(); i++) {
@@ -204,6 +172,42 @@ in frontend {
                      directory as the main output file.
 
 ");
+  }
+
+  void printLogInColor(Log log) {
+    for (var i = 0; i < log.diagnostics.size(); i++) {
+      var diagnostic = log.diagnostics[i];
+      if (!diagnostic.range.isEmpty()) {
+        printWithColor(.BOLD, diagnostic.range.locationString() + ": ");
+      }
+      switch (diagnostic.kind) {
+        case .WARNING { printWarning(diagnostic.text); }
+        case .ERROR { printError(diagnostic.text); }
+      }
+      if (!diagnostic.range.isEmpty()) {
+        var formatted = diagnostic.range.format(io.terminalWidth);
+        io.print(formatted.line + "\n");
+        printWithColor(.GREEN, formatted.range + "\n");
+      }
+      if (!diagnostic.noteRange.isEmpty()) {
+        printWithColor(.BOLD, diagnostic.noteRange.locationString() + ": ");
+        printNote(diagnostic.noteText);
+        var formatted = diagnostic.noteRange.format(io.terminalWidth);
+        io.print(formatted.line + "\n");
+        printWithColor(.GREEN, formatted.range + "\n");
+      }
+    }
+
+    // Print the summary
+    var hasErrors = log.errorCount > 0;
+    var hasWarnings = log.warningCount > 0;
+    var summary = "";
+    if (hasWarnings) {
+      summary += log.warningCount + plural(log.warningCount, " warning", " warnings");
+      if (hasErrors) summary += " and ";
+    }
+    if (hasErrors) summary += log.errorCount + plural(log.errorCount, " error", " errors");
+    if (hasWarnings || hasErrors) io.print(summary + " generated\n");
   }
 
   class Flags {

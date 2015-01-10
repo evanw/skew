@@ -7,6 +7,7 @@
 
   import class string {
     string slice(int start, int end);
+    List<string> split(string separator);
     int indexOf(string value);
     int lastIndexOf(string value);
     string toLowerCase();
@@ -16,6 +17,8 @@
   in string {
     inline {
       int size() { return this.`length`; }
+      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }
+      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }
       string sliceCodeUnit(int index) { return `this`[index]; }
       string join(List<string> values) { return values.`join`(this); }
       @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }
@@ -70,7 +73,9 @@
       string slice(int start, int end) { return this.`substr`(start, end - start); }
       string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }
       int indexOf(string value) { return (int)this.`find`(value); }
+      int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }
       int lastIndexOf(string value) { return (int)this.`rfind`(value); }
+      int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }
       @OperatorGet int codeUnitAt(int index) { return `this`[index]; }
       static string fromCodeUnit(int value) { return ``string``(1, value); }
     }
@@ -98,6 +103,19 @@
       }
       return result;
     }
+
+    List<string> split(string separator) {
+      List<string> values = [];
+      var start = 0;
+      while (true) {
+        var end = indexOfFrom(separator, start);
+        if (end == -1) break;
+        values.push(slice(start, end));
+        start = end + separator.size();
+      }
+      values.push(slice(start, size()));
+      return values;
+    }
   }
 
 #else
@@ -109,10 +127,13 @@
 
   import class string {
     int size();
+    List<string> split(string separator);
     string slice(int start, int end);
     string sliceCodeUnit(int index);
     int indexOf(string value);
+    int indexOfFrom(string value, int fromIndex);
     int lastIndexOf(string value);
+    int lastIndexOfFrom(string value, int fromIndex);
     string toLowerCase();
     string toUpperCase();
     string join(List<string> values);
@@ -144,5 +165,17 @@ in string {
     var result = "";
     for (var i = 0; i < count; i++) result += this;
     return result;
+  }
+
+  string replaceAll(string before, string after) {
+    var result = "";
+    var start = 0;
+    while (true) {
+      var end = indexOfFrom(before, start);
+      if (end == -1) break;
+      result += slice(start, end) + after;
+      start = end + before.size();
+    }
+    return result + slice(start, size());
   }
 }

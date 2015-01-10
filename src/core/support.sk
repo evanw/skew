@@ -143,21 +143,6 @@ string quoteString(string text, int quote) {
   return result;
 }
 
-// TODO: Move this into the standard library
-in string {
-  string replace(string before, string after) {
-    var text = this;
-    var result = "";
-    var index = text.indexOf(before);
-    while (index != -1) {
-      result += text.slice(0, index) + after;
-      text = text.slice(index + before.size(), text.size());
-      index = text.indexOf(before);
-    }
-    return result + text;
-  }
-}
-
 string plural(int value, string singular, string plural) {
   return value == 1 ? singular : plural;
 }
