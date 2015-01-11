@@ -1,14 +1,3 @@
-string simpleQuote(string name) {
-  return "\"" + name + "\"";
-}
-
-string firstLineOf(string text) {
-  var index = text.indexOf("\n");
-  return index < 0 ? text : text.slice(0, index);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
 void syntaxErrorInvalidEscapeSequence(Log log, Range range, string text) {
   log.error(range, "Invalid escape sequence " + firstLineOf(simpleQuote(text)));
 }

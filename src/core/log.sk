@@ -7,11 +7,11 @@ class Diagnostic {
   DiagnosticKind kind;
   Range range;
   string text;
-  var noteRange = Range.EMPTY;
+  Range noteRange = .EMPTY;
   var noteText = "";
 
   static string format(string kind, Range range, string text) {
-    if (range == null) return kind + ": " + text + "\n";
+    if (range.isEmpty()) return kind + ": " + text + "\n";
     var formatted = range.format(0);
     return range.locationString() + ": " + kind + ": " + text + "\n" + formatted.line + "\n" + formatted.range + "\n";
   }
@@ -41,17 +41,28 @@ in Log {
   var warningCount = 0;
   var errorCount = 0;
 
+  bool hasErrors() {
+    return errorCount > 0;
+  }
+
+  bool hasWarnings() {
+    return warningCount > 0;
+  }
+
   void error(Range range, string text) {
+    assert range != null; // Use Range.EMPTY instead of null
     diagnostics.push(Diagnostic(.ERROR, range, text));
     errorCount++;
   }
 
   void warning(Range range, string text) {
+    assert range != null; // Use Range.EMPTY instead of null
     diagnostics.push(Diagnostic(.WARNING, range, text));
     warningCount++;
   }
 
   void note(Range range, string text) {
+    assert range != null; // Use Range.EMPTY instead of null
     var last = diagnostics[diagnostics.size() - 1];
     last.noteRange = range;
     last.noteText = text;

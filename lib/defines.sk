@@ -1,3 +1,7 @@
+// The "--release" flag automatically overrides BUILD_RELEASE with true
+#define BUILD_DEBUG   !BUILD_RELEASE
+#define BUILD_RELEASE false
+
 // These will be overridden by the compiler with the current language target
 #define TARGET_JS   false
 #define TARGET_CPP  false

@@ -143,8 +143,85 @@ string quoteString(string text, int quote) {
   return result;
 }
 
-string plural(int value, string singular, string plural) {
-  return value == 1 ? singular : plural;
+namespace prettyPrint {
+  string plural(int value, string singular, string plural) {
+    return value == 1 ? singular : plural;
+  }
+
+  string join(List<string> parts, string trailing) {
+    if (parts.size() < 3) {
+      return (" " + trailing + " ").join(parts);
+    }
+    var text = "";
+    for (var i = 0; i < parts.size(); i++) {
+      if (i > 0) {
+        text += ", ";
+        if (i + 1 == parts.size()) {
+          text += trailing + " ";
+        }
+      }
+      text += parts[i];
+    }
+    return text;
+  }
+
+  List<string> wrapWords(string text, int width) {
+    // An invalid length means wrapping is disabled
+    if (width < 1) {
+      return [text];
+    }
+
+    var words = text.split(" ");
+    List<string> lines = [];
+    var line = "";
+
+    // Run the word wrapping algorithm
+    for (var i = 0; i < words.size(); i++) {
+      var word = words[i];
+      var lineLength = line.size();
+      var wordLength = word.size();
+      var estimatedLength = lineLength + 1 + wordLength;
+
+      // Collapse adjacent spaces
+      if (word == "") {
+        continue;
+      }
+
+      // Start the line
+      if (line == "") {
+        while (word.size() > width) {
+          lines.push(word.slice(0, width));
+          word = word.slice(width, word.size());
+        }
+        line = word;
+      }
+
+      // Continue line
+      else if (estimatedLength < width) {
+        line += " " + word;
+      }
+
+      // Continue and wrap
+      else if (estimatedLength == width) {
+        lines.push(line + " " + word);
+        line = "";
+      }
+
+      // Wrap and try again
+      else {
+        lines.push(line);
+        line = "";
+        i--;
+      }
+    }
+
+    // Don't add an empty trailing line unless there are no other lines
+    if (line != "" || lines.size() == 0) {
+      lines.push(line);
+    }
+
+    return lines;
+  }
 }
 
 class SplitPath {
@@ -197,4 +274,41 @@ class StringComparison : Comparison<string> {
   override int compare(string a, string b) {
     return (int)(a > b) - (int)(a < b);
   }
+}
+
+string simpleQuote(string name) {
+  return "\"" + name + "\"";
+}
+
+List<string> simpleQuoteAll(List<string> names) {
+  List<string> quoted = [];
+  for (var i = 0; i < names.size(); i++) {
+    quoted.push(simpleQuote(names[i]));
+  }
+  return quoted;
+}
+
+string firstLineOf(string text) {
+  var index = text.indexOf("\n");
+  return index < 0 ? text : text.slice(0, index);
+}
+string typeToText(Type type) {
+  return "type \"" + type + "\"";
+}
+
+string namesToText(List<string> names) {
+  return prettyPrint.join(simpleQuoteAll(names), "or");
+}
+
+string typesToText(List<Type> types, string separator) {
+  List<string> names = [];
+  for (var i = 0; i < types.size(); i++) {
+    names.push(typeToText(types[i]));
+  }
+  return prettyPrint.join(names, separator);
+}
+
+string expectedCountText(string singular, int expected, int found, string because) {
+  return "Expected " + expected + " " + singular + prettyPrint.plural(expected, "", "s") +
+    because + " but found " + found + " " + singular + prettyPrint.plural(found, "", "s");
 }

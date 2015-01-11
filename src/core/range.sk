@@ -77,6 +77,21 @@ class Range {
     return FormattedRange(line, " ".repeat(a) + (b - a < 2 ? "^" : "~".repeat(b - a)));
   }
 
+  Range fromStart(int count) {
+    assert count >= 0 && count <= end - start;
+    return Range(source, start, start + count);
+  }
+
+  Range fromEnd(int count) {
+    assert count >= 0 && count <= end - start;
+    return Range(source, end - count, end);
+  }
+
+  Range slice(int offsetStart, int offsetEnd) {
+    assert offsetStart >= 0 && offsetStart <= offsetEnd && offsetEnd <= end - start;
+    return Range(source, start + offsetStart, start + offsetEnd);
+  }
+
   static Range span(Range start, Range end) {
     assert start.source == end.source;
     assert start.start <= end.end;

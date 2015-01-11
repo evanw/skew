@@ -12,105 +12,188 @@ class FrontendFileAccess : FileAccess {
   }
 }
 
+enum Option {
+  APPEND_FILE,
+  DEFINE,
+  FOLD_CONSTANTS,
+  GLOBALIZE,
+  HELP,
+  INLINE,
+  MANGLE,
+  MINIFY,
+  OUTPUT_DIRECTORY,
+  OUTPUT_FILE,
+  PREPEND_FILE,
+  RELEASE,
+  REMOVE_ASSERTS,
+  SOURCE_MAP,
+  TARGET,
+  VERBOSE,
+}
+
 export namespace frontend {
-  int main(List<string> args) {
-    final List<string> inputs = [];
-    final List<string> prepend = [];
-    final List<string> append = [];
-    final var flags = Flags();
-
-    for (var i = 0; i < args.size(); i++) {
-      final var arg = args[i];
-
-      // Ignore empty arguments
-      if (arg.size() == 0) continue;
-
-      // Remember file paths
-      if (arg[0] != '-') inputs.push(arg);
-
-      // Check flags
-      else if (arg == "-help" || arg == "--help" || arg == "-h") { printUsage(); return 0; }
-      else if (arg == "-verbose" || arg == "--verbose") flags.verbose = true;
-      else if (arg == "-optimize" || arg == "--optimize") flags.optimize = true;
-      else if (arg == "-js-minify" || arg == "--js-minify") flags.jsMinify = true;
-      else if (arg == "-js-source-map" || arg == "--js-source-map") flags.jsSourceMap = true;
-      else if (arg.startsWith("-target=") || arg.startsWith("--target=")) flags.target = afterEquals(arg);
-      else if (arg.startsWith("-output-file=") || arg.startsWith("--output-file=")) flags.outputFile = afterEquals(arg);
-      else if (arg.startsWith("-prepend-file=") || arg.startsWith("--prepend-file=")) prepend.push(afterEquals(arg));
-      else if (arg.startsWith("-append-file=") || arg.startsWith("--append-file=")) append.push(afterEquals(arg));
-
-      // An unknown argument is an error
-      else {
-        printError("Unknown flag " + quoteString(arg, '"'));
-        return 1;
-      }
-
-      continue;
-    }
-
-    // Input files are required
-    if (inputs.size() == 0) {
-      printError("Missing input files");
-      return 1;
-    }
-
-    // The target language is required
-    TargetFormat target;
-    if (flags.target == "") { printError("Set the target language with \"--target=___\""); return 1; }
-    else if (flags.target == "none") target = .NONE;
-    else if (flags.target == "js") target = .JAVASCRIPT;
-    else if (flags.target == "c++") target = .CPP;
-    else if (flags.target == "lisp") target = .LISP_AST;
-    else if (flags.target == "json") target = .JSON_AST;
-    else if (flags.target == "xml") target = .XML_AST;
-    else { printError("Unknown target language " + quoteString(flags.target, '"')); return 1; }
-
+  int main(List<string> arguments) {
     // Translate frontend flags to compiler options
-    final var options = CompilerOptions();
-    final var optimizeJS = flags.optimize && target == .JAVASCRIPT;
-    final var minifyJS = flags.jsMinify && target == .JAVASCRIPT;
-    options.fileAccess = FrontendFileAccess();
-    options.targetFormat = target;
-    options.removeAsserts = flags.optimize;
-    options.outputFile = flags.outputFile;
-    options.foldAllConstants = optimizeJS;
-    options.inlineAllFunctions = optimizeJS;
-    options.convertAllInstanceToStatic = optimizeJS;
-    options.jsMinify = minifyJS;
-    options.jsMangle = minifyJS;
-    options.jsSourceMap = flags.jsSourceMap && target == .JAVASCRIPT;
-    options.inputs = readSources(inputs); if (options.inputs == null) return 1;
-    options.prepend = readSources(prepend); if (options.prepend == null) return 1;
-    options.append = readSources(append); if (options.append == null) return 1;
+    var log = Log();
+    var parser = OptionParser();
+    var options = parseOptions(log, parser, arguments);
 
     // Run the compilation
-    final var compiler = Compiler();
-    final var result = compiler.compile(options);
-    final var log = compiler.log;
+    if (!log.hasErrors() && options != null) {
+      var compiler = Compiler();
+      compiler.log = log;
+      var result = compiler.compile(options);
 
-    // Print any errors and warnings
-    printLogInColor(log);
-    if (flags.verbose) io.print(compiler.statistics(result) + "\n");
-    if (log.errorCount > 0) return 1;
+      // Write all outputs
+      if (!log.hasErrors()) {
+        for (var i = 0; i < result.outputs.size(); i++) {
+          var output = result.outputs[i];
+          if (!io.writeFile(output.name, output.contents)) {
+            commandLineErrorUnwritableFile(log, parser.source.rangeContainingEverything(), output.name);
+            break;
+          }
+        }
 
-    // Write all outputs
-    for (var i = 0; i < result.outputs.size(); i++) {
-      var output = result.outputs[i];
-      if (output.name == "") {
-        io.print(output.contents);
-        continue;
-      }
-      if (!io.writeFile(output.name, output.contents)) {
-        printError("Could not write to " + quoteString(output.name, '"'));
-        return 1;
+        // Print compilation statistics
+        if (!log.hasErrors() && options.verbose) {
+          io.print(compiler.statistics(result) + "\n");
+        }
       }
     }
 
-    return 0;
+    // Print any errors and warnings
+    printLogWithColor(log);
+    return log.hasErrors() ? 1 : 0;
   }
 }
 
 in frontend {
+  CompilerOptions parseOptions(Log log, OptionParser parser, List<string> arguments) {
+    // Configure the parser
+    parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"]);
+    parser.define(.STRING, .TARGET, "--target", "Sets the target format. Valid targets are " + prettyPrint.join(VALID_TARGETS, "and") + ".");
+    parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.");
+    parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.");
+    parser.define(.STRING_LIST, .DEFINE, "--define", "Overrides the value of a #define statement. Example: --define:UNIT_TESTS=true.");
+    parser.define(.BOOL, .RELEASE, "--release", "Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE=true.");
+    parser.define(.BOOL, .VERBOSE, "--verbose", "Prints out information about the compilation.");
+    parser.define(.BOOL, .SOURCE_MAP, "--source-map", "Generates a source map when targeting JavaScript. The source map is saved with the \".map\" extension in the same directory as the main output file.");
+    parser.define(.BOOL, .INLINE, "--inline", "Uses heuristics to automatically inline simple functions.");
+    parser.define(.BOOL, .GLOBALIZE, "--globalize", "Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.");
+    parser.define(.BOOL, .REMOVE_ASSERTS, "--remove-asserts", "Removes all assert statements prior to compilation.");
+    parser.define(.BOOL, .FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.");
+    parser.define(.BOOL, .MINIFY, "--minify", "Omits whitespace so the emitted JavaScript takes up less space.");
+    parser.define(.BOOL, .MANGLE, "--mangle", "Transforms your JavaScript code to be as small as possible. The \"export\" modifier prevents renaming a symbol.");
+    parser.define(.STRING_LIST, .APPEND_FILE, "--append-file", "Append the contents of this file to the output. Provide this flag multiple times to append multiple files.");
+    parser.define(.STRING_LIST, .PREPEND_FILE, "--prepend-file", "Prepend the contents of this file to the output. Provide this flag multiple times to prepend multiple files.");
+
+    // Parse the command line arguments
+    parser.parse(log, arguments);
+    if (log.hasErrors()) {
+      return null;
+    }
+
+    // Early-out when printing the usage text
+    if (parser.boolForOption(.HELP, arguments.size() == 0)) {
+      printUsage(parser);
+      return null;
+    }
+
+    // Set up the options for the compiler
+    var options = CompilerOptions();
+    var releaseFlag = parser.boolForOption(.RELEASE, false);
+    options.fileAccess = FrontendFileAccess();
+    options.verbose = parser.boolForOption(.VERBOSE, false);
+    options.jsSourceMap = parser.boolForOption(.SOURCE_MAP, false);
+    options.jsMinify = parser.boolForOption(.MINIFY, releaseFlag);
+    options.jsMangle = parser.boolForOption(.MANGLE, releaseFlag);
+    options.removeAsserts = parser.boolForOption(.REMOVE_ASSERTS, releaseFlag);
+    options.foldAllConstants = parser.boolForOption(.FOLD_CONSTANTS, releaseFlag);
+    options.inlineAllFunctions = parser.boolForOption(.INLINE, releaseFlag);
+    options.convertAllInstanceToStatic = parser.boolForOption(.GLOBALIZE, releaseFlag);
+
+    // Prepare the defines
+    if (releaseFlag) {
+      options.overrideDefine("BUILD_RELEASE", true);
+    }
+    var defines = parser.stringRangeListForOption(.DEFINE);
+    if (defines != null) {
+      for (var i = 0; i < defines.size(); i++) {
+        var range = defines[i];
+        var text = range.toString();
+        var equals = text.indexOf("=");
+        var value = true;
+        var name = text;
+        if (equals >= 0) {
+          name = text.slice(0, equals);
+          var boolean = text.slice(equals + 1, text.size());
+          if (boolean != "true" && boolean != "false") {
+            commandLineErrorNonBooleanValue(log, range.fromEnd(boolean.size()), boolean, text);
+            continue;
+          }
+          value = boolean == "true";
+          range = range.fromStart(name.size());
+        }
+        options.overriddenDefines[name] = OverriddenDefine(value, range);
+      }
+    }
+
+    // There must be at least one source file
+    var everything = parser.source.rangeContainingEverything();
+    if (parser.normalArguments.size() == 0) {
+      commandLineErrorNoInputFiles(log, everything);
+    }
+
+    // Check the format
+    var target = parser.stringRangeForOption(.TARGET);
+    if (target == null) {
+      commandLineErrorMissingTarget(log, everything, "--target");
+    } else {
+      var name = target.toString();
+      if (name == "js") options.targetFormat = .JAVASCRIPT;
+      else if (name == "cpp") options.targetFormat = .CPP;
+      else if (name == "lisp-ast") options.targetFormat = .LISP_AST;
+      else if (name == "json-ast") options.targetFormat = .JSON_AST;
+      else if (name == "xml-ast") options.targetFormat = .XML_AST;
+      else commandLineErrorInvalidTarget(log, target, name, VALID_TARGETS);
+    }
+
+    // Parse the output location
+    var outputFile = parser.stringRangeForOption(.OUTPUT_FILE);
+    var outputDirectory = parser.stringRangeForOption(.OUTPUT_DIRECTORY);
+    if (outputFile == null && outputDirectory == null) {
+      commandLineErrorMissingOutput(log, everything, "--output-file", "--output-dir");
+    } else if (outputFile != null && outputDirectory != null) {
+      commandLineErrorDuplicateOutput(log, outputFile.start > outputDirectory.start ? outputFile : outputDirectory, "--output-file", "--output-dir");
+    } else if (outputFile != null) {
+      options.outputFile = outputFile.toString();
+    } else {
+      options.outputDirectory = outputDirectory.toString();
+    }
+
+    // Read the source files
+    options.inputs = readSources(log, parser.normalArguments);
+    options.append = readSources(log, parser.stringRangeListForOption(.APPEND_FILE));
+    options.prepend = readSources(log, parser.stringRangeListForOption(.PREPEND_FILE));
+    return options;
+  }
+
+  List<Source> readSources(Log log, List<Range> files) {
+    List<Source> result = [];
+    var error = false;
+    for (var i = 0; i < files.size(); i++) {
+      var file = files[i];
+      var name = file.toString();
+      var source = io.readFile(name);
+      if (source == null) {
+        commandLineErrorUnreadableFile(log, file, name);
+      } else {
+        result.push(source);
+      }
+    }
+    return error ? null : result;
+  }
+
   enum Color {
     DEFAULT = 0,
     BOLD = 1,
@@ -144,37 +227,13 @@ in frontend {
     printWithColor(.BOLD, text + "\n");
   }
 
-  void printUsage() {
+  void printUsage(OptionParser parser) {
     printWithColor(.GREEN, "\nusage: ");
     printWithColor(.BOLD, "skewc [flags] [inputs]\n");
-    io.print("
-  --help (-h)        Print this message.
-
-  --verbose          Print out useful information about the compilation.
-
-  --target=___       Set the target language. Valid target languages: none, js,
-                     c++, lisp, json, and xml.
-
-  --output-file=___  Combines all output into a single file.
-
-  --prepend-file=___ Prepend the contents of this file to the output. Provide
-                     this flag multiple times to prepend multiple files.
-
-  --append-file=___  Append the contents of this file to the output. Provide
-                     this flag multiple times to append multiple files.
-
-  --js-minify        Transform the emitted JavaScript so that it takes up less
-                     space. Make sure to use the \"export\" modifier on code
-                     that shouldn't be minifed.
-
-  --js-source-map    Generate a source map when targeting JavaScript. The source
-                     map will be saved with the \".map\" extension in the same
-                     directory as the main output file.
-
-");
+    io.print(parser.usageText(80));
   }
 
-  void printLogInColor(Log log) {
+  void printLogWithColor(Log log) {
     for (var i = 0; i < log.diagnostics.size(); i++) {
       var diagnostic = log.diagnostics[i];
       if (!diagnostic.range.isEmpty()) {
@@ -199,44 +258,26 @@ in frontend {
     }
 
     // Print the summary
-    var hasErrors = log.errorCount > 0;
-    var hasWarnings = log.warningCount > 0;
+    var hasErrors = log.hasErrors();
+    var hasWarnings = log.hasWarnings();
     var summary = "";
     if (hasWarnings) {
-      summary += log.warningCount + plural(log.warningCount, " warning", " warnings");
+      summary += log.warningCount + prettyPrint.plural(log.warningCount, " warning", " warnings");
       if (hasErrors) summary += " and ";
     }
-    if (hasErrors) summary += log.errorCount + plural(log.errorCount, " error", " errors");
-    if (hasWarnings || hasErrors) io.print(summary + " generated\n");
-  }
-
-  class Flags {
-    var help = false;
-    var verbose = false;
-    var target = "";
-    var outputFile = "";
-    var jsMinify = false;
-    var jsSourceMap = false;
-    var optimize = false;
-  }
-
-  string afterEquals(string text) {
-    var equals = text.indexOf("=");
-    assert equals >= 0;
-    return text.slice(equals + 1, text.size());
-  }
-
-  List<Source> readSources(List<string> files) {
-    List<Source> result = [];
-    for (var i = 0; i < files.size(); i++) {
-      var file = files[i];
-      var source = io.readFile(file);
-      if (source == null) {
-        printError("Could not read from " + quoteString(file, '"'));
-        return null;
-      }
-      result.push(source);
+    if (hasErrors) {
+      summary += log.errorCount + prettyPrint.plural(log.errorCount, " error", " errors");
     }
-    return result;
+    if (hasWarnings || hasErrors) {
+      io.print(summary + " generated\n");
+    }
   }
+
+  final var VALID_TARGETS = [
+    "js",
+    "cpp",
+    "lisp-ast",
+    "json-ast",
+    "xml-ast",
+  ];
 }

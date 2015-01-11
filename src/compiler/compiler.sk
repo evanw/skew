@@ -38,6 +38,7 @@ export class CompilerOptions {
   var overriddenDefines = StringMap<OverriddenDefine>();
   var outputDirectory = "";
   var outputFile = "";
+  var verbose = false;
   var jsMinify = false; // Removes whitespace
   var jsMangle = false; // Changes the code structure to save space
   var jsSourceMap = false;
@@ -47,7 +48,7 @@ export class CompilerOptions {
   var convertAllInstanceToStatic = false;
 
   void overrideDefine(string name, bool value) {
-    overriddenDefines[name] = OverriddenDefine(value, null);
+    overriddenDefines[name] = OverriddenDefine(value, .EMPTY);
   }
 }
 

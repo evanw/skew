@@ -1489,6 +1489,9 @@
       return this.dotTarget().hasNoSideEffects();
     case 57:
       return this.quotedValue().hasNoSideEffects();
+    case 70:
+    case 71:
+      return false;
     default:
       if (in_NodeKind.isBinaryOperator(this.kind) && !in_NodeKind.isBinaryStorageOperator(this.kind)) {
         return this.binaryLeft().hasNoSideEffects() && this.binaryRight().hasNoSideEffects();
@@ -1966,6 +1969,7 @@
     this.overriddenDefines = new StringMap();
     this.outputDirectory = '';
     this.outputFile = '';
+    this.verbose = false;
     this.jsMinify = false;
     this.jsMangle = false;
     this.jsSourceMap = false;
@@ -1975,7 +1979,7 @@
     this.convertAllInstanceToStatic = false;
   };
   CompilerOptions.prototype.overrideDefine = function(name, value) {
-    this.overriddenDefines._table[name] = new OverriddenDefine(value, null);
+    this.overriddenDefines._table[name] = new OverriddenDefine(value, Range.EMPTY);
   };
   CompilerResult = function(_0, _1, _2, _3, _4) {
     this.options = _0;
@@ -2127,7 +2131,7 @@
         emitter = new xml.Emitter(options);
         break;
       default:
-        throw new Error('assert false; (src/compiler/compiler.sk:217:19)');
+        throw new Error('assert false; (src/compiler/compiler.sk:218:19)');
         break;
       }
       if (emitter !== null) {
@@ -2188,7 +2192,7 @@
     this.text = _2;
   }
   Diagnostic.format = function(kind, range, text) {
-    if (range === null) {
+    if (range.isEmpty()) {
       return kind + ': ' + text + '\n';
     }
     var formatted = range.format(0);
@@ -2210,15 +2214,30 @@
     }
     return result;
   };
+  Log.prototype.hasErrors = function() {
+    return this.errorCount > 0;
+  };
+  Log.prototype.hasWarnings = function() {
+    return this.warningCount > 0;
+  };
   Log.prototype.error = function(range, text) {
+    if (range === null) {
+      throw new Error('assert range != null; (src/core/log.sk:53:5)');
+    }
     this.diagnostics.push(new Diagnostic(DiagnosticKind.ERROR, range, text));
     this.errorCount = this.errorCount + 1 | 0;
   };
   Log.prototype.warning = function(range, text) {
+    if (range === null) {
+      throw new Error('assert range != null; (src/core/log.sk:59:5)');
+    }
     this.diagnostics.push(new Diagnostic(DiagnosticKind.WARNING, range, text));
     this.warningCount = this.warningCount + 1 | 0;
   };
   Log.prototype.note = function(range, text) {
+    if (range === null) {
+      throw new Error('assert range != null; (src/core/log.sk:65:5)');
+    }
     var last = this.diagnostics[this.diagnostics.length - 1 | 0];
     last.noteRange = range;
     last.noteText = text;
@@ -2280,45 +2299,63 @@
     }
     return new FormattedRange(line, in_string.repeat(' ', a) + ((b - a | 0) < 2 ? '^' : in_string.repeat('~', b - a | 0)));
   };
+  Range.prototype.fromStart = function(count) {
+    if (count < 0 || count > (this.end - this.start | 0)) {
+      throw new Error('assert count >= 0 && count <= end - start; (src/core/range.sk:81:5)');
+    }
+    return new Range(this.source, this.start, this.start + count | 0);
+  };
+  Range.prototype.fromEnd = function(count) {
+    if (count < 0 || count > (this.end - this.start | 0)) {
+      throw new Error('assert count >= 0 && count <= end - start; (src/core/range.sk:86:5)');
+    }
+    return new Range(this.source, this.end - count | 0, this.end);
+  };
+  Range.prototype.slice = function(offsetStart, offsetEnd) {
+    if (offsetStart < 0 || offsetStart > offsetEnd || offsetEnd > (this.end - this.start | 0)) {
+      throw new Error('assert offsetStart >= 0 && offsetStart <= offsetEnd && offsetEnd <= end - start; (src/core/range.sk:91:5)');
+    }
+    return new Range(this.source, this.start + offsetStart | 0, this.start + offsetEnd | 0);
+  };
   Range.span = function(start, end) {
     if (start.source !== end.source) {
-      throw new Error('assert start.source == end.source; (src/core/range.sk:81:5)');
+      throw new Error('assert start.source == end.source; (src/core/range.sk:96:5)');
     }
     if (start.start > end.end) {
-      throw new Error('assert start.start <= end.end; (src/core/range.sk:82:5)');
+      throw new Error('assert start.start <= end.end; (src/core/range.sk:97:5)');
     }
     return new Range(start.source, start.start, end.end);
   };
   Range.inner = function(start, end) {
     if (start.source !== end.source) {
-      throw new Error('assert start.source == end.source; (src/core/range.sk:87:5)');
+      throw new Error('assert start.source == end.source; (src/core/range.sk:102:5)');
     }
     if (start.end > end.start) {
-      throw new Error('assert start.end <= end.start; (src/core/range.sk:88:5)');
+      throw new Error('assert start.end <= end.start; (src/core/range.sk:103:5)');
     }
     return new Range(start.source, start.end, end.start);
   };
   Range.before = function(outer, inner) {
     if (outer.source !== inner.source) {
-      throw new Error('assert outer.source == inner.source; (src/core/range.sk:93:5)');
+      throw new Error('assert outer.source == inner.source; (src/core/range.sk:108:5)');
     }
     if (outer.start > inner.start) {
-      throw new Error('assert outer.start <= inner.start; (src/core/range.sk:94:5)');
+      throw new Error('assert outer.start <= inner.start; (src/core/range.sk:109:5)');
     }
     if (outer.end < inner.end) {
-      throw new Error('assert outer.end >= inner.end; (src/core/range.sk:95:5)');
+      throw new Error('assert outer.end >= inner.end; (src/core/range.sk:110:5)');
     }
     return new Range(outer.source, outer.start, inner.start);
   };
   Range.after = function(outer, inner) {
     if (outer.source !== inner.source) {
-      throw new Error('assert outer.source == inner.source; (src/core/range.sk:100:5)');
+      throw new Error('assert outer.source == inner.source; (src/core/range.sk:115:5)');
     }
     if (outer.start > inner.start) {
-      throw new Error('assert outer.start <= inner.start; (src/core/range.sk:101:5)');
+      throw new Error('assert outer.start <= inner.start; (src/core/range.sk:116:5)');
     }
     if (outer.end < inner.end) {
-      throw new Error('assert outer.end >= inner.end; (src/core/range.sk:102:5)');
+      throw new Error('assert outer.end >= inner.end; (src/core/range.sk:117:5)');
     }
     return new Range(outer.source, inner.end, outer.end);
   };
@@ -2364,14 +2401,16 @@
     var column = line > 0 ? index - this.lineOffsets[line - 1 | 0] | 0 : index;
     return new LineColumn(line - 1 | 0, column);
   };
+  Source.prototype.rangeContainingEverything = function() {
+    return new Range(this, 0, this.contents.length);
+  };
   Source.prototype.computeLineOffsets = function() {
-    if (this.lineOffsets !== null) {
-      return;
-    }
-    this.lineOffsets = [0];
-    for (var i = 0; i < this.contents.length; i = i + 1 | 0) {
-      if (this.contents.charCodeAt(i) === 10) {
-        this.lineOffsets.push(i + 1 | 0);
+    if (this.lineOffsets === null) {
+      this.lineOffsets = [0];
+      for (var i = 0; i < this.contents.length; i = i + 1 | 0) {
+        if (this.contents.charCodeAt(i) === 10) {
+          this.lineOffsets.push(i + 1 | 0);
+        }
       }
     }
   };
@@ -2400,6 +2439,7 @@
     }
     return parent;
   };
+  var prettyPrint = {};
   function SplitPath(_0, _1) {
     this.directory = _0;
     this.entry = _1;
@@ -3901,6 +3941,24 @@
   FrontendFileAccess.prototype.contentsOfFile = function(sourcePath, relativePath) {
     return io.readFile(joinPath(splitPath(sourcePath).directory, relativePath));
   };
+  var Option = {
+    APPEND_FILE: 0,
+    DEFINE: 1,
+    FOLD_CONSTANTS: 2,
+    GLOBALIZE: 3,
+    HELP: 4,
+    INLINE: 5,
+    MANGLE: 6,
+    MINIFY: 7,
+    OUTPUT_DIRECTORY: 8,
+    OUTPUT_FILE: 9,
+    PREPEND_FILE: 10,
+    RELEASE: 11,
+    REMOVE_ASSERTS: 12,
+    SOURCE_MAP: 13,
+    TARGET: 14,
+    VERBOSE: 15
+  };
   frontend = {};
   frontend.Color = {
     DEFAULT: 0,
@@ -3910,14 +3968,161 @@
     GREEN: 92,
     MAGENTA: 95
   };
-  frontend.Flags = function() {
-    this.help = false;
-    this.verbose = false;
-    this.target = '';
-    this.outputFile = '';
-    this.jsMinify = false;
-    this.jsSourceMap = false;
-    this.optimize = false;
+  var OptionType = {
+    BOOL: 0,
+    STRING: 1,
+    STRING_LIST: 2
+  };
+  function OptionData(_0, _1, _2, _3, _4) {
+    this.parser = _0;
+    this.type = _1;
+    this.option = _2;
+    this.name = _3;
+    this.description = _4;
+  }
+  OptionData.prototype.nameText = function() {
+    return this.name + (this.type === OptionType.STRING ? '=___' : this.type === OptionType.STRING_LIST ? ':___' : '');
+  };
+  OptionData.prototype.aliases = function(names) {
+    for (var i = 0; i < names.length; i = i + 1 | 0) {
+      this.parser.map._table[names[i]] = this;
+    }
+    return this;
+  };
+  function OptionParser() {
+    this.options = [];
+    this.map = new StringMap();
+    this.optionalArguments = new IntMap();
+    this.normalArguments = [];
+    this.source = null;
+  }
+  OptionParser.prototype.define = function(type, option, name, description) {
+    var data = new OptionData(this, type, option, name, description);
+    this.map._table[name] = data;
+    this.options.push(data);
+    return data;
+  };
+  OptionParser.prototype.nodeForOption = function(option) {
+    return this.optionalArguments.getOrDefault(option, null);
+  };
+  OptionParser.prototype.boolForOption = function(option, defaultValue) {
+    var node = this.nodeForOption(option);
+    return node !== null ? node.asBool() : defaultValue;
+  };
+  OptionParser.prototype.stringRangeForOption = function(option) {
+    var node = this.nodeForOption(option);
+    return node !== null ? node.range : null;
+  };
+  OptionParser.prototype.stringRangeListForOption = function(option) {
+    var node = this.nodeForOption(option);
+    var ranges = [];
+    if (node !== null) {
+      for (var i = 0; i < node.children.length; i = i + 1 | 0) {
+        ranges.push(node.children[i].range);
+      }
+    }
+    return ranges;
+  };
+  OptionParser.prototype.parse = function(log, $arguments) {
+    this.source = new Source('<arguments>', '');
+    var ranges = [];
+    for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
+      if (i > 0) {
+        this.source.contents += ' ';
+      }
+      var argument = $arguments[i];
+      var needsQuotes = argument.indexOf(' ') >= 0;
+      var start = this.source.contents.length + (needsQuotes | 0) | 0;
+      ranges.push(new Range(this.source, start, start + argument.length | 0));
+      this.source.contents += needsQuotes ? "'" + argument + "'" : argument;
+    }
+    for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
+      var argument = $arguments[i];
+      var range = ranges[i];
+      if (argument === '' || argument.charCodeAt(0) !== 45 && !(argument in this.map._table)) {
+        this.normalArguments.push(range);
+        continue;
+      }
+      var equals = argument.indexOf('=');
+      var colon = argument.indexOf(':');
+      var separator = equals >= 0 && (colon < 0 || equals < colon) ? equals : colon;
+      var name = separator >= 0 ? argument.slice(0, separator) : argument;
+      var data = this.map.getOrDefault(name, null);
+      if (data === null) {
+        commandLineErrorBadFlag(log, range.fromStart(name.length), name);
+        continue;
+      }
+      var text = argument.slice(separator + 1 | 0, argument.length);
+      var separatorRange = separator < 0 ? Range.EMPTY : range.slice(separator, separator + 1 | 0);
+      var textRange = range.fromEnd(text.length);
+      switch (data.type) {
+      case 0:
+        if (separator < 0) {
+          text = 'true';
+        } else if (argument.charCodeAt(separator) !== 61) {
+          commandLineErrorExpectedToken(log, separatorRange, '=', argument[separator], argument);
+          continue;
+        } else if (text !== 'true' && text !== 'false') {
+          commandLineErrorNonBooleanValue(log, textRange, text, argument);
+          continue;
+        }
+        if (data.option in this.optionalArguments._table) {
+          commandLineWarningDuplicateFlagValue(log, textRange, name, this.optionalArguments._table[data.option].range);
+        }
+        this.optionalArguments._table[data.option] = Node.createBool(text === 'true').withRange(textRange);
+        break;
+      case 1:
+        if (separator < 0) {
+          commandLineErrorMissingStringValue(log, textRange, data.nameText());
+        } else if (argument.charCodeAt(separator) !== 61) {
+          commandLineErrorExpectedToken(log, separatorRange, '=', argument[separator], argument);
+        } else {
+          if (data.option in this.optionalArguments._table) {
+            commandLineWarningDuplicateFlagValue(log, textRange, name, this.optionalArguments._table[data.option].range);
+          }
+          this.optionalArguments._table[data.option] = Node.createString(text).withRange(textRange);
+        }
+        break;
+      case 2:
+        if (separator < 0) {
+          commandLineErrorMissingStringValue(log, textRange, data.nameText());
+        } else if (argument.charCodeAt(separator) !== 58) {
+          commandLineErrorExpectedToken(log, separatorRange, ':', argument[separator], argument);
+          continue;
+        } else {
+          var node = null;
+          if (data.option in this.optionalArguments._table) {
+            node = this.optionalArguments._table[data.option];
+          } else {
+            node = Node.createList([]);
+            this.optionalArguments._table[data.option] = node;
+          }
+          node.appendChild(Node.createString(text).withRange(textRange));
+        }
+        break;
+      }
+    }
+  };
+  OptionParser.prototype.usageText = function(wrapWidth) {
+    var text = '';
+    var columnWidth = 0;
+    for (var i = 0; i < this.options.length; i = i + 1 | 0) {
+      var width = this.options[i].nameText().length + 4 | 0;
+      if (columnWidth < width) {
+        columnWidth = width;
+      }
+    }
+    var columnText = in_string.repeat(' ', columnWidth);
+    for (var i = 0; i < this.options.length; i = i + 1 | 0) {
+      var option = this.options[i];
+      var nameText = option.nameText();
+      text += '\n  ' + nameText + in_string.repeat(' ', (columnWidth - nameText.length | 0) - 2 | 0);
+      var lines = prettyPrint.wrapWords(option.description, wrapWidth - columnWidth | 0);
+      for (var j = 0; j < lines.length; j = j + 1 | 0) {
+        text += (j > 0 ? columnText : '') + lines[j] + '\n';
+      }
+    }
+    return text + '\n';
   };
   var js = {};
   js.ClusterState = {
@@ -11082,9 +11287,6 @@
   var in_Precedence = {};
   var in_SymbolKind = {};
   var in_TokenKind = {};
-  in_string.startsWith = function($this, prefix) {
-    return $this.length >= prefix.length && $this.slice(0, prefix.length) === prefix;
-  };
   in_string.repeat = function($this, count) {
     var result = '';
     for (var i = 0; i < count; i = i + 1 | 0) {
@@ -11400,9 +11602,62 @@
     result += text.slice(start, i) + quoteString;
     return result;
   }
-  function plural(value, singular, plural) {
+  prettyPrint.plural = function(value, singular, plural) {
     return value === 1 ? singular : plural;
-  }
+  };
+  prettyPrint.join = function(parts, trailing) {
+    if (parts.length < 3) {
+      return parts.join(' ' + trailing + ' ');
+    }
+    var text = '';
+    for (var i = 0; i < parts.length; i = i + 1 | 0) {
+      if (i > 0) {
+        text += ', ';
+        if ((i + 1 | 0) === parts.length) {
+          text += trailing + ' ';
+        }
+      }
+      text += parts[i];
+    }
+    return text;
+  };
+  prettyPrint.wrapWords = function(text, width) {
+    if (width < 1) {
+      return [text];
+    }
+    var words = text.split(' ');
+    var lines = [];
+    var line = '';
+    for (var i = 0; i < words.length; i = i + 1 | 0) {
+      var word = words[i];
+      var lineLength = line.length;
+      var wordLength = word.length;
+      var estimatedLength = (lineLength + 1 | 0) + wordLength | 0;
+      if (word === '') {
+        continue;
+      }
+      if (line === '') {
+        while (word.length > width) {
+          lines.push(word.slice(0, width));
+          word = word.slice(width, word.length);
+        }
+        line = word;
+      } else if (estimatedLength < width) {
+        line += ' ' + word;
+      } else if (estimatedLength === width) {
+        lines.push(line + ' ' + word);
+        line = '';
+      } else {
+        lines.push(line);
+        line = '';
+        i = i - 1 | 0;
+      }
+    }
+    if (line !== '' || lines.length === 0) {
+      lines.push(line);
+    }
+    return lines;
+  };
   function splitPath(path) {
     var forwardSlash = path.lastIndexOf('/');
     var backwardSlash = path.lastIndexOf('\\');
@@ -11436,6 +11691,36 @@
   };
   trace.log = function(text) {
   };
+  function simpleQuote(name) {
+    return '"' + name + '"';
+  }
+  function simpleQuoteAll(names) {
+    var quoted = [];
+    for (var i = 0; i < names.length; i = i + 1 | 0) {
+      quoted.push(simpleQuote(names[i]));
+    }
+    return quoted;
+  }
+  function firstLineOf(text) {
+    var index = text.indexOf('\n');
+    return index < 0 ? text : text.slice(0, index);
+  }
+  function typeToText(type) {
+    return 'type "' + type + '"';
+  }
+  function namesToText(names) {
+    return prettyPrint.join(simpleQuoteAll(names), 'or');
+  }
+  function typesToText(types, separator) {
+    var names = [];
+    for (var i = 0; i < types.length; i = i + 1 | 0) {
+      names.push(typeToText(types[i]));
+    }
+    return prettyPrint.join(names, separator);
+  }
+  function expectedCountText(singular, expected, found, because) {
+    return 'Expected ' + expected + ' ' + singular + prettyPrint.plural(expected, '', 's') + because + ' but found ' + found + ' ' + singular + prettyPrint.plural(found, '', 's');
+  }
   json.dump = function(node) {
     var visitor = new json.DumpVisitor();
     visitor.visit(node);
@@ -11451,114 +11736,182 @@
     visitor.visit(node);
     return visitor.result;
   };
-  frontend.main = function(args) {
-    var inputs = [];
-    var prepend = [];
-    var append = [];
-    var flags = new frontend.Flags();
-    for (var i = 0; i < args.length; i = i + 1 | 0) {
-      var arg = args[i];
-      if (arg.length === 0) {
-        continue;
-      }
-      if (arg.charCodeAt(0) !== 45) {
-        inputs.push(arg);
-      } else if (arg === '-help' || arg === '--help' || arg === '-h') {
-        frontend.printUsage();
-        return 0;
-      } else if (arg === '-verbose' || arg === '--verbose') {
-        flags.verbose = true;
-      } else if (arg === '-optimize' || arg === '--optimize') {
-        flags.optimize = true;
-      } else if (arg === '-js-minify' || arg === '--js-minify') {
-        flags.jsMinify = true;
-      } else if (arg === '-js-source-map' || arg === '--js-source-map') {
-        flags.jsSourceMap = true;
-      } else if (in_string.startsWith(arg, '-target=') || in_string.startsWith(arg, '--target=')) {
-        flags.target = frontend.afterEquals(arg);
-      } else if (in_string.startsWith(arg, '-output-file=') || in_string.startsWith(arg, '--output-file=')) {
-        flags.outputFile = frontend.afterEquals(arg);
-      } else if (in_string.startsWith(arg, '-prepend-file=') || in_string.startsWith(arg, '--prepend-file=')) {
-        prepend.push(frontend.afterEquals(arg));
-      } else if (in_string.startsWith(arg, '-append-file=') || in_string.startsWith(arg, '--append-file=')) {
-        append.push(frontend.afterEquals(arg));
-      } else {
-        frontend.printError('Unknown flag ' + quoteString(arg, 34));
-        return 1;
-      }
-      continue;
+  function commandLineWarningDuplicateFlagValue(log, range, name, previous) {
+    log.warning(range, 'Multiple values are specified for ' + simpleQuote(name) + ', using the later value');
+    if (!previous.isEmpty()) {
+      log.note(previous, 'Ignoring the value from the previous use');
     }
-    if (inputs.length === 0) {
-      frontend.printError('Missing input files');
-      return 1;
+  }
+  function commandLineErrorBadFlag(log, range, name) {
+    log.error(range, 'Unknown command line flag ' + simpleQuote(name));
+  }
+  function commandLineErrorMissingTarget(log, range, name) {
+    log.error(range, 'Specify the target format using ' + simpleQuote(name));
+  }
+  function commandLineErrorMissingOutput(log, range, first, second) {
+    log.error(range, 'Specify the output location using either ' + simpleQuote(first) + ' or ' + simpleQuote(second));
+  }
+  function commandLineErrorDuplicateOutput(log, range, first, second) {
+    log.error(range, 'Cannot specify both ' + simpleQuote(first) + ' and ' + simpleQuote(second));
+  }
+  function commandLineErrorNonBooleanValue(log, range, value, text) {
+    log.error(range, 'Expected "true" or "false" but found ' + simpleQuote(value) + ' in ' + simpleQuote(text));
+  }
+  function commandLineErrorMissingStringValue(log, range, text) {
+    log.error(range, 'Use ' + simpleQuote(text) + ' to provide a value');
+  }
+  function commandLineErrorExpectedToken(log, range, expected, found, text) {
+    log.error(range, 'Expected ' + simpleQuote(expected) + ' but found ' + simpleQuote(found) + ' in ' + simpleQuote(text));
+  }
+  function commandLineErrorInvalidTarget(log, range, found, expected) {
+    log.error(range, 'Invalid target ' + simpleQuote(found) + ', must be either ' + prettyPrint.join(expected, 'or'));
+  }
+  function commandLineErrorUnreadableFile(log, range, name) {
+    log.error(range, 'Could not read from ' + simpleQuote(name));
+  }
+  function commandLineErrorUnwritableFile(log, range, name) {
+    log.error(range, 'Could not write to ' + simpleQuote(name));
+  }
+  function commandLineErrorNoInputFiles(log, range) {
+    log.error(range, 'Missing input files');
+  }
+  frontend.main = function($arguments) {
+    var log = new Log();
+    var parser = new OptionParser();
+    var options = frontend.parseOptions(log, parser, $arguments);
+    if (!log.hasErrors() && options !== null) {
+      var compiler = new Compiler();
+      compiler.log = log;
+      var result = compiler.compile(options);
+      if (!log.hasErrors()) {
+        for (var i = 0; i < result.outputs.length; i = i + 1 | 0) {
+          var output = result.outputs[i];
+          if (!io.writeFile(output.name, output.contents)) {
+            commandLineErrorUnwritableFile(log, parser.source.rangeContainingEverything(), output.name);
+            break;
+          }
+        }
+        if (!log.hasErrors() && options.verbose) {
+          io.print(compiler.statistics(result) + '\n');
+        }
+      }
     }
-    var target = 0;
-    if (flags.target === '') {
-      frontend.printError('Set the target language with "--target=___"');
-      return 1;
-    } else if (flags.target === 'none') {
-      target = TargetFormat.NONE;
-    } else if (flags.target === 'js') {
-      target = TargetFormat.JAVASCRIPT;
-    } else if (flags.target === 'c++') {
-      target = TargetFormat.CPP;
-    } else if (flags.target === 'lisp') {
-      target = TargetFormat.LISP_AST;
-    } else if (flags.target === 'json') {
-      target = TargetFormat.JSON_AST;
-    } else if (flags.target === 'xml') {
-      target = TargetFormat.XML_AST;
-    } else {
-      frontend.printError('Unknown target language ' + quoteString(flags.target, 34));
-      return 1;
+    frontend.printLogWithColor(log);
+    return log.hasErrors() ? 1 : 0;
+  };
+  frontend.parseOptions = function(log, parser, $arguments) {
+    parser.define(OptionType.BOOL, Option.HELP, '--help', 'Prints this message.').aliases(['-help', '?', '-?', '-h', '-H', '/?', '/h', '/H']);
+    parser.define(OptionType.STRING, Option.TARGET, '--target', 'Sets the target format. Valid targets are ' + prettyPrint.join(frontend.VALID_TARGETS, 'and') + '.');
+    parser.define(OptionType.STRING, Option.OUTPUT_FILE, '--output-file', 'Combines all output into a single file. Mutually exclusive with --output-dir.');
+    parser.define(OptionType.STRING, Option.OUTPUT_DIRECTORY, '--output-dir', 'Places all output files in the specified directory. Mutually exclusive with --output-file.');
+    parser.define(OptionType.STRING_LIST, Option.DEFINE, '--define', 'Overrides the value of a #define statement. Example: --define:UNIT_TESTS=true.');
+    parser.define(OptionType.BOOL, Option.RELEASE, '--release', 'Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE=true.');
+    parser.define(OptionType.BOOL, Option.VERBOSE, '--verbose', 'Prints out information about the compilation.');
+    parser.define(OptionType.BOOL, Option.SOURCE_MAP, '--source-map', 'Generates a source map when targeting JavaScript. The source map is saved with the ".map" extension in the same directory as the main output file.');
+    parser.define(OptionType.BOOL, Option.INLINE, '--inline', 'Uses heuristics to automatically inline simple functions.');
+    parser.define(OptionType.BOOL, Option.GLOBALIZE, '--globalize', 'Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.');
+    parser.define(OptionType.BOOL, Option.REMOVE_ASSERTS, '--remove-asserts', 'Removes all assert statements prior to compilation.');
+    parser.define(OptionType.BOOL, Option.FOLD_CONSTANTS, '--fold-constants', 'Evaluates constants at compile time and removes dead code inside functions.');
+    parser.define(OptionType.BOOL, Option.MINIFY, '--minify', 'Omits whitespace so the emitted JavaScript takes up less space.');
+    parser.define(OptionType.BOOL, Option.MANGLE, '--mangle', 'Transforms your JavaScript code to be as small as possible. The "export" modifier prevents renaming a symbol.');
+    parser.define(OptionType.STRING_LIST, Option.APPEND_FILE, '--append-file', 'Append the contents of this file to the output. Provide this flag multiple times to append multiple files.');
+    parser.define(OptionType.STRING_LIST, Option.PREPEND_FILE, '--prepend-file', 'Prepend the contents of this file to the output. Provide this flag multiple times to prepend multiple files.');
+    parser.parse(log, $arguments);
+    if (log.hasErrors()) {
+      return null;
+    }
+    if (parser.boolForOption(Option.HELP, $arguments.length === 0)) {
+      frontend.printUsage(parser);
+      return null;
     }
     var options = new CompilerOptions();
-    var optimizeJS = flags.optimize && target === TargetFormat.JAVASCRIPT;
-    var minifyJS = flags.jsMinify && target === TargetFormat.JAVASCRIPT;
+    var releaseFlag = parser.boolForOption(Option.RELEASE, false);
     options.fileAccess = new FrontendFileAccess();
-    options.targetFormat = target;
-    options.removeAsserts = flags.optimize;
-    options.outputFile = flags.outputFile;
-    options.foldAllConstants = optimizeJS;
-    options.inlineAllFunctions = optimizeJS;
-    options.convertAllInstanceToStatic = optimizeJS;
-    options.jsMinify = minifyJS;
-    options.jsMangle = minifyJS;
-    options.jsSourceMap = flags.jsSourceMap && target === TargetFormat.JAVASCRIPT;
-    options.inputs = frontend.readSources(inputs);
-    if (options.inputs === null) {
-      return 1;
+    options.verbose = parser.boolForOption(Option.VERBOSE, false);
+    options.jsSourceMap = parser.boolForOption(Option.SOURCE_MAP, false);
+    options.jsMinify = parser.boolForOption(Option.MINIFY, releaseFlag);
+    options.jsMangle = parser.boolForOption(Option.MANGLE, releaseFlag);
+    options.removeAsserts = parser.boolForOption(Option.REMOVE_ASSERTS, releaseFlag);
+    options.foldAllConstants = parser.boolForOption(Option.FOLD_CONSTANTS, releaseFlag);
+    options.inlineAllFunctions = parser.boolForOption(Option.INLINE, releaseFlag);
+    options.convertAllInstanceToStatic = parser.boolForOption(Option.GLOBALIZE, releaseFlag);
+    if (releaseFlag) {
+      options.overrideDefine('BUILD_RELEASE', true);
     }
-    options.prepend = frontend.readSources(prepend);
-    if (options.prepend === null) {
-      return 1;
-    }
-    options.append = frontend.readSources(append);
-    if (options.append === null) {
-      return 1;
-    }
-    var compiler = new Compiler();
-    var result = compiler.compile(options);
-    var log = compiler.log;
-    frontend.printLogInColor(log);
-    if (flags.verbose) {
-      io.print(compiler.statistics(result) + '\n');
-    }
-    if (log.errorCount > 0) {
-      return 1;
-    }
-    for (var i = 0; i < result.outputs.length; i = i + 1 | 0) {
-      var output = result.outputs[i];
-      if (output.name === '') {
-        io.print(output.contents);
-        continue;
-      }
-      if (!io.writeFile(output.name, output.contents)) {
-        frontend.printError('Could not write to ' + quoteString(output.name, 34));
-        return 1;
+    var defines = parser.stringRangeListForOption(Option.DEFINE);
+    if (defines !== null) {
+      for (var i = 0; i < defines.length; i = i + 1 | 0) {
+        var range = defines[i];
+        var text = range.toString();
+        var equals = text.indexOf('=');
+        var value = true;
+        var name = text;
+        if (equals >= 0) {
+          name = text.slice(0, equals);
+          var boolean = text.slice(equals + 1 | 0, text.length);
+          if (boolean !== 'true' && boolean !== 'false') {
+            commandLineErrorNonBooleanValue(log, range.fromEnd(boolean.length), boolean, text);
+            continue;
+          }
+          value = boolean === 'true';
+          range = range.fromStart(name.length);
+        }
+        options.overriddenDefines._table[name] = new OverriddenDefine(value, range);
       }
     }
-    return 0;
+    var everything = parser.source.rangeContainingEverything();
+    if (parser.normalArguments.length === 0) {
+      commandLineErrorNoInputFiles(log, everything);
+    }
+    var target = parser.stringRangeForOption(Option.TARGET);
+    if (target === null) {
+      commandLineErrorMissingTarget(log, everything, '--target');
+    } else {
+      var name = target.toString();
+      if (name === 'js') {
+        options.targetFormat = TargetFormat.JAVASCRIPT;
+      } else if (name === 'cpp') {
+        options.targetFormat = TargetFormat.CPP;
+      } else if (name === 'lisp-ast') {
+        options.targetFormat = TargetFormat.LISP_AST;
+      } else if (name === 'json-ast') {
+        options.targetFormat = TargetFormat.JSON_AST;
+      } else if (name === 'xml-ast') {
+        options.targetFormat = TargetFormat.XML_AST;
+      } else {
+        commandLineErrorInvalidTarget(log, target, name, frontend.VALID_TARGETS);
+      }
+    }
+    var outputFile = parser.stringRangeForOption(Option.OUTPUT_FILE);
+    var outputDirectory = parser.stringRangeForOption(Option.OUTPUT_DIRECTORY);
+    if (outputFile === null && outputDirectory === null) {
+      commandLineErrorMissingOutput(log, everything, '--output-file', '--output-dir');
+    } else if (outputFile !== null && outputDirectory !== null) {
+      commandLineErrorDuplicateOutput(log, outputFile.start > outputDirectory.start ? outputFile : outputDirectory, '--output-file', '--output-dir');
+    } else if (outputFile !== null) {
+      options.outputFile = outputFile.toString();
+    } else {
+      options.outputDirectory = outputDirectory.toString();
+    }
+    options.inputs = frontend.readSources(log, parser.normalArguments);
+    options.append = frontend.readSources(log, parser.stringRangeListForOption(Option.APPEND_FILE));
+    options.prepend = frontend.readSources(log, parser.stringRangeListForOption(Option.PREPEND_FILE));
+    return options;
+  };
+  frontend.readSources = function(log, files) {
+    var result = [];
+    var error = false;
+    for (var i = 0; i < files.length; i = i + 1 | 0) {
+      var file = files[i];
+      var name = file.toString();
+      var source = io.readFile(name);
+      if (source === null) {
+        commandLineErrorUnreadableFile(log, file, name);
+      } else {
+        result.push(source);
+      }
+    }
+    return error ? null : result;
   };
   frontend.printWithColor = function(color, text) {
     io.setColor(color);
@@ -11577,12 +11930,12 @@
     frontend.printWithColor(frontend.Color.MAGENTA, 'warning: ');
     frontend.printWithColor(frontend.Color.BOLD, text + '\n');
   };
-  frontend.printUsage = function() {
+  frontend.printUsage = function(parser) {
     frontend.printWithColor(frontend.Color.GREEN, '\nusage: ');
     frontend.printWithColor(frontend.Color.BOLD, 'skewc [flags] [inputs]\n');
-    io.print('\n  --help (-h)        Print this message.\n\n  --verbose          Print out useful information about the compilation.\n\n  --target=___       Set the target language. Valid target languages: none, js,\n                     c++, lisp, json, and xml.\n\n  --output-file=___  Combines all output into a single file.\n\n  --prepend-file=___ Prepend the contents of this file to the output. Provide\n                     this flag multiple times to prepend multiple files.\n\n  --append-file=___  Append the contents of this file to the output. Provide\n                     this flag multiple times to append multiple files.\n\n  --js-minify        Transform the emitted JavaScript so that it takes up less\n                     space. Make sure to use the "export" modifier on code\n                     that shouldn\'t be minifed.\n\n  --js-source-map    Generate a source map when targeting JavaScript. The source\n                     map will be saved with the ".map" extension in the same\n                     directory as the main output file.\n\n');
+    io.print(parser.usageText(80));
   };
-  frontend.printLogInColor = function(log) {
+  frontend.printLogWithColor = function(log) {
     for (var i = 0; i < log.diagnostics.length; i = i + 1 | 0) {
       var diagnostic = log.diagnostics[i];
       if (!diagnostic.range.isEmpty()) {
@@ -11609,41 +11962,21 @@
         frontend.printWithColor(frontend.Color.GREEN, formatted.range + '\n');
       }
     }
-    var hasErrors = log.errorCount > 0;
-    var hasWarnings = log.warningCount > 0;
+    var hasErrors = log.hasErrors();
+    var hasWarnings = log.hasWarnings();
     var summary = '';
     if (hasWarnings) {
-      summary += log.warningCount + plural(log.warningCount, ' warning', ' warnings');
+      summary += log.warningCount + prettyPrint.plural(log.warningCount, ' warning', ' warnings');
       if (hasErrors) {
         summary += ' and ';
       }
     }
     if (hasErrors) {
-      summary += log.errorCount + plural(log.errorCount, ' error', ' errors');
+      summary += log.errorCount + prettyPrint.plural(log.errorCount, ' error', ' errors');
     }
     if (hasWarnings || hasErrors) {
       io.print(summary + ' generated\n');
     }
-  };
-  frontend.afterEquals = function(text) {
-    var equals = text.indexOf('=');
-    if (equals < 0) {
-      throw new Error('assert equals >= 0; (src/frontend/frontend.sk:225:5)');
-    }
-    return text.slice(equals + 1 | 0, text.length);
-  };
-  frontend.readSources = function(files) {
-    var result = [];
-    for (var i = 0; i < files.length; i = i + 1 | 0) {
-      var file = files[i];
-      var source = io.readFile(file);
-      if (source === null) {
-        frontend.printError('Could not read from ' + quoteString(file, 34));
-        return null;
-      }
-      result.push(source);
-    }
-    return result;
   };
   function tokenize(log, source) {
     var tokens = [];
@@ -11742,13 +12075,6 @@
         }
       }
     }
-  }
-  function simpleQuote(name) {
-    return '"' + name + '"';
-  }
-  function firstLineOf(text) {
-    var index = text.indexOf('\n');
-    return index < 0 ? text : text.slice(0, index);
   }
   function syntaxErrorInvalidEscapeSequence(log, range, text) {
     log.error(range, 'Invalid escape sequence ' + firstLineOf(simpleQuote(text)));
@@ -12649,25 +12975,6 @@
     pratt.parselet(TokenKind.BITWISE_AND, Precedence.BITWISE_AND).infix = new BinaryInfixOrUnaryPostfix(NodeKind.BITWISE_AND, NodeKind.POSTFIX_REFERENCE, Precedence.BITWISE_AND);
     pratt.parselet(TokenKind.MULTIPLY, Precedence.MULTIPLY).infix = new BinaryInfixOrUnaryPostfix(NodeKind.MULTIPLY, NodeKind.POSTFIX_DEREFERENCE, Precedence.MULTIPLY);
   }
-  function typeToText(type) {
-    return 'type "' + type + '"';
-  }
-  function namesToText(names, separator) {
-    for (var i = 0; i < names.length; i = i + 1 | 0) {
-      names[i] = simpleQuote(names[i]);
-    }
-    return names.join(separator);
-  }
-  function typesToText(types, separator) {
-    var names = [];
-    for (var i = 0; i < types.length; i = i + 1 | 0) {
-      names.push(typeToText(types[i]));
-    }
-    return names.join(separator);
-  }
-  function expectedCountText(singular, expected, found, because) {
-    return 'Expected ' + expected + ' ' + singular + plural(expected, '', 's') + because + ' but found ' + found + ' ' + singular + plural(found, '', 's');
-  }
   function semanticWarningUnusedExpression(log, range) {
     log.warning(range, 'Unused expression');
   }
@@ -12819,10 +13126,10 @@
     log.error(range, 'Duplicate base ' + typeToText(type));
   }
   function semanticErrorAmbiguousSymbol(log, range, name, names) {
-    log.error(range, 'Reference to ' + simpleQuote(name) + ' is ambiguous, could be ' + namesToText(names, ' or '));
+    log.error(range, 'Reference to ' + simpleQuote(name) + ' is ambiguous, could be ' + namesToText(names));
   }
   function semanticErrorUnmergedSymbol(log, range, name, types) {
-    log.error(range, 'Member ' + simpleQuote(name) + ' has an ambiguous inherited type, could be ' + typesToText(types, ' or '));
+    log.error(range, 'Member ' + simpleQuote(name) + ' has an ambiguous inherited type, could be ' + typesToText(types, 'or'));
   }
   function semanticErrorBadOverride(log, range, name, base, overridden) {
     log.error(range, simpleQuote(name) + ' overrides another declaration with the same name in base ' + typeToText(base));
@@ -12942,7 +13249,7 @@
     log.error(range, 'Unknown annotation ' + simpleQuote(name));
   }
   function semanticErrorUnexpectedAnnotationArgumentCount(log, range, name, expected) {
-    log.error(range, 'The annotation ' + simpleQuote(name) + (expected === 0 ? ' cannot take arguments' : ' must take ' + expected + ' argument' + plural(expected, '', 's')));
+    log.error(range, 'The annotation ' + simpleQuote(name) + (expected === 0 ? ' cannot take arguments' : ' must take ' + expected + ' argument' + prettyPrint.plural(expected, '', 's')));
   }
   function semanticErrorNoFileAccess(log, range) {
     log.error(range, 'The compiler does not have file access');
@@ -12964,22 +13271,22 @@
   }
   function semanticErrorNoMatchingOperator(log, range, kind, types) {
     if (!(kind in operatorInfo._table)) {
-      throw new Error('assert kind in operatorInfo; (src/resolver/diagnostics.sk:396:3)');
+      throw new Error('assert kind in operatorInfo; (src/resolver/diagnostics.sk:374:3)');
     }
-    log.error(range, 'No ' + (types.length === 1 ? 'unary' : types.length === 2 ? 'binary' : 'ternary') + ' operator "' + operatorInfo._table[kind].text + '" for ' + typesToText(types, ' and '));
+    log.error(range, 'No ' + (types.length === 1 ? 'unary' : types.length === 2 ? 'binary' : 'ternary') + ' operator "' + operatorInfo._table[kind].text + '" for ' + typesToText(types, 'and'));
   }
   function semanticErrorAmbiguousOperator(log, range, kind, names) {
     if (!(kind in operatorInfo._table)) {
-      throw new Error('assert kind in operatorInfo; (src/resolver/diagnostics.sk:402:3)');
+      throw new Error('assert kind in operatorInfo; (src/resolver/diagnostics.sk:380:3)');
     }
-    log.error(range, (names.length === 1 ? 'Unary' : names.length === 2 ? 'Binary' : 'Ternary') + ' operator "' + operatorInfo._table[kind].text + '" is ambiguous, could be ' + namesToText(names, ' or '));
+    log.error(range, (names.length === 1 ? 'Unary' : names.length === 2 ? 'Binary' : 'Ternary') + ' operator "' + operatorInfo._table[kind].text + '" is ambiguous, could be ' + namesToText(names));
   }
   function semanticErrorDuplicateEntryPoint(log, range, previous) {
     log.error(range, 'Multiple entry points are declared');
     log.note(previous, 'The first entry point is here');
   }
   function semanticErrorInvalidEntryPointType(log, range, found, expected) {
-    log.error(range, 'Unexpected entry point ' + typeToText(found) + ', expected ' + typesToText(expected, ' or '));
+    log.error(range, 'Unexpected entry point ' + typeToText(found) + ', expected ' + typesToText(expected, 'or'));
   }
   function semanticErrorEntryPointOnImportedSymbol(log, range) {
     log.error(range, 'The entry point cannot be imported');
@@ -13689,6 +13996,7 @@
   var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   var HEX = '0123456789ABCDEF';
   trace.GENERICS = false;
+  frontend.VALID_TARGETS = ['js', 'cpp', 'lisp-ast', 'json-ast', 'xml-ast'];
   var yy_accept = [107, 107, 107, 35, 38, 106, 70, 38, 38, 86, 15, 38, 61, 90, 67, 74, 23, 66, 31, 29, 54, 54, 22, 91, 62, 4, 44, 85, 38, 46, 60, 89, 17, 99, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 59, 16, 88, 100, 106, 71, 107, 95, 107, 57, 57, 57, 57, 57, 12, 64, 5, 107, 20, 107, 10, 50, 11, 26, 9, 2, 32, 107, 106, 8, 107, 54, 107, 107, 42, 107, 107, 33, 92, 63, 37, 45, 93, 1, 46, 7, 46, 46, 46, 46, 46, 46, 46, 30, 46, 46, 46, 46, 46, 46, 47, 46, 49, 58, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 6, 65, 57, 57, 57, 57, 57, 80, 57, 107, 42, 107, 107, 107, 106, 107, 53, 56, 55, 13, 14, 1, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 43, 46, 46, 46, 46, 69, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 103, 46, 46, 57, 57, 57, 57, 57, 57, 107, 106, 32, 46, 46, 46, 19, 46, 46, 46, 46, 46, 34, 36, 46, 46, 46, 46, 46, 46, 46, 72, 46, 46, 46, 46, 46, 46, 46, 46, 98, 101, 46, 46, 46, 57, 76, 77, 57, 57, 57, 32, 0, 46, 18, 21, 24, 46, 46, 46, 46, 40, 41, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 96, 46, 102, 46, 105, 57, 78, 79, 57, 3, 46, 46, 28, 39, 48, 51, 46, 46, 46, 46, 46, 84, 87, 94, 97, 46, 75, 57, 46, 27, 46, 46, 46, 82, 46, 104, 81, 25, 46, 46, 73, 46, 52, 68, 83, 107];
   var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 6, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 20, 20, 20, 21, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29, 29, 29, 30, 29, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 32, 33, 34, 35, 31, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 31, 46, 47, 48, 49, 50, 51, 31, 52, 53, 54, 55, 56, 57, 58, 31, 31, 59, 60, 61, 62, 1];
   var yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 4, 4, 5, 1, 1, 1, 1, 1, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 1, 1, 1];
@@ -13699,7 +14007,7 @@
   var pratt = null;
   var nameToSymbolFlag = null;
   var symbolFlagToName = null;
-  Compiler.cachedLibraries = [new CachedSource('defines.sk', '// These will be overridden by the compiler with the current language target\n#define TARGET_JS   false\n#define TARGET_CPP  false\n#define TARGET_NONE !TARGET_JS && !TARGET_CPP\n'), new CachedSource('primitives.sk', '#if TARGET_JS\n\n  import class int { string toString(); }\n  import class bool { string toString(); }\n  import class float { string toString(); }\n  import class double { string toString(); }\n\n  import class string {\n    string slice(int start, int end);\n    List<string> split(string separator);\n    int indexOf(string value);\n    int lastIndexOf(string value);\n    string toLowerCase();\n    string toUpperCase();\n  }\n\n  in string {\n    inline {\n      int size() { return this.`length`; }\n      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }\n      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      string join(List<string> values) { return values.`join`(this); }\n      @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }\n      static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  import class int {}\n  import class bool {}\n  import class float {}\n  import class double {}\n\n  @NeedsInclude("<string>")\n  @EmitAs("std::string")\n  import class string {}\n\n  in int {\n    inline string toString() { return `std`::to_string(this); }\n  }\n\n  in bool {\n    inline string toString() { return this ? "true" : "false"; }\n  }\n\n  in float {\n    inline string toString() { return double._format_(this); }\n  }\n\n  in double {\n    inline string toString() { return _format_(this); }\n\n    // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0\n    static string _format_(double value) {\n      string buffer;\n      `buffer.resize(64)`;\n      `std::sprintf(&buffer[0], "%.15g", value)`;\n      if (`std::stod(&buffer[0]) != value`) {\n        `std::sprintf(&buffer[0], "%.16g", value)`;\n        if (`std::stod(&buffer[0]) != value`) {\n          `std::sprintf(&buffer[0], "%.17g", value)`;\n        }\n      }\n      return `buffer.c_str()`;\n    }\n  }\n\n  in string {\n    inline {\n      int size() { return (int)this.`size`(); }\n      string slice(int start, int end) { return this.`substr`(start, end - start); }\n      string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }\n      int indexOf(string value) { return (int)this.`find`(value); }\n      int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }\n      int lastIndexOf(string value) { return (int)this.`rfind`(value); }\n      int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }\n      @OperatorGet int codeUnitAt(int index) { return `this`[index]; }\n      static string fromCodeUnit(int value) { return ``string``(1, value); }\n    }\n\n    @NeedsInclude("<algorithm>")\n    @NeedsInclude("<ctype.h>") {\n      string toLowerCase() {\n        var clone = this;\n        `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;\n        return clone;\n      }\n\n      string toUpperCase() {\n        var clone = this;\n        `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;\n        return clone;\n      }\n    }\n\n    string join(List<string> values) {\n      var result = "";\n      for (var i = 0; i < values.size(); i++) {\n        if (i > 0) result += this;\n        result += values[i];\n      }\n      return result;\n    }\n\n    List<string> split(string separator) {\n      List<string> values = [];\n      var start = 0;\n      while (true) {\n        var end = indexOfFrom(separator, start);\n        if (end == -1) break;\n        values.push(slice(start, end));\n        start = end + separator.size();\n      }\n      values.push(slice(start, size()));\n      return values;\n    }\n  }\n\n#else\n\n  import class int { string toString(); }\n  import class bool { string toString(); }\n  import class float { string toString(); }\n  import class double { string toString(); }\n\n  import class string {\n    int size();\n    List<string> split(string separator);\n    string slice(int start, int end);\n    string sliceCodeUnit(int index);\n    int indexOf(string value);\n    int indexOfFrom(string value, int fromIndex);\n    int lastIndexOf(string value);\n    int lastIndexOfFrom(string value, int fromIndex);\n    string toLowerCase();\n    string toUpperCase();\n    string join(List<string> values);\n    @OperatorGet int codeUnitAt(int index);\n    static string fromCodeUnit(int value);\n  }\n\n#endif\n\nin string {\n  @OperatorIn\n  inline bool contains(string value) {\n    return indexOf(value) >= 0;\n  }\n\n  inline string toString() {\n    return this;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n\n  string replaceAll(string before, string after) {\n    var result = "";\n    var start = 0;\n    while (true) {\n      var end = indexOfFrom(before, start);\n      if (end == -1) break;\n      result += slice(start, end) + after;\n      start = end + before.size();\n    }\n    return result + slice(start, size());\n  }\n}\n'), new CachedSource('math.sk', '#if TARGET_JS\n\n  namespace math {\n    inline {\n      double abs(double x) { return `Math`.abs(x); }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return `Math`.pow(x, y); }\n      double floor(double x) { return `Math`.floor(x); }\n      double round(double x) { return `Math`.round(x); }\n      double ceil(double x) { return `Math`.ceil(x); }\n      double min(double x, double y) { return `Math`.min(x, y); }\n      double max(double x, double y) { return `Math`.max(x, y); }\n      double random() { return `Math`.random(); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  namespace math {\n    inline @NeedsInclude("<cmath>") {\n      double abs(double x) { return `std`::abs(x); }\n      double sin(double x) { return `std`::sin(x); }\n      double cos(double x) { return `std`::cos(x); }\n      double tan(double x) { return `std`::tan(x); }\n      double asin(double x) { return `std`::asin(x); }\n      double acos(double x) { return `std`::acos(x); }\n      double atan(double x) { return `std`::atan(x); }\n      double atan2(double y, double x) { return `std`::atan2(y, x); }\n      double sqrt(double x) { return `std`::sqrt(x); }\n      double exp(double x) { return `std`::exp(x); }\n      double log(double x) { return `std`::log(x); }\n      double pow(double x, double y) { return `std`::pow(x, y); }\n      double floor(double x) { return `std`::floor(x); }\n      double round(double x) { return `std`::round(x); }\n      double ceil(double x) { return `std`::ceil(x); }\n      double min(double x, double y) { return `std`::fmin(x, y); }\n      double max(double x, double y) { return `std`::fmax(x, y); }\n    }\n\n    @NeedsInclude("<random>") {\n      `std::uniform_real_distribution<double>` _distribution_;\n      `(std::mt19937 *)` _generator_ = null;\n\n      double random() {\n        if (_generator_ == null) {\n          _generator_ = new `std`::mt19937(`std`::random_device()());\n        }\n        return _distribution_(*_generator_);\n      }\n    }\n  }\n\n#else\n\n  import namespace math {\n    double abs(double x);\n    double sin(double x);\n    double cos(double x);\n    double tan(double x);\n    double asin(double x);\n    double acos(double x);\n    double atan(double x);\n    double atan2(double y, double x);\n    double sqrt(double x);\n    double exp(double x);\n    double log(double x);\n    double pow(double x, double y);\n    double floor(double x);\n    double round(double x);\n    double ceil(double x);\n    double min(double x, double y);\n    double max(double x, double y);\n    double random();\n  }\n\n#endif\n\nin math {\n  const {\n    var SQRT2 = 1.414213562373095;\n    var PI = 3.141592653589793;\n    var TWOPI = 2 * PI;\n    var E = 2.718281828459045;\n    var INFINITY = 1 / 0.0;\n    var NAN = 0 / 0.0;\n  }\n}\n'), new CachedSource('list.sk', 'interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\n#if TARGET_JS\n\n  void bindCompare<T>(Comparison<T> comparison) {\n    return comparison.compare.`bind`(comparison);\n  }\n\n  import class List<T> {\n    new();\n    void push(T value);\n    void unshift(T value);\n    List<T> slice(int start, int end);\n    int indexOf(T value);\n    int lastIndexOf(T value);\n    T shift();\n    T pop();\n    void reverse();\n  }\n\n  in List {\n    inline {\n      int size() { return this.`length`; }\n      void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }\n      List<T> clone() { return this.`slice`(); }\n      T remove(int index) { return this.`splice`(index, 1)[0]; }\n      void removeRange(int start, int end) { this.`splice`(start, end - start); }\n      void insert(int index, T value) { this.`splice`(index, 0, value); }\n      @OperatorGet T get(int index) { return `this`[index]; }\n      @OperatorSet void set(int index, T value) { `this`[index] = value; }\n      @OperatorIn bool contains(T value) { return indexOf(value) >= 0; }\n    }\n\n    void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }\n  }\n\n#elif TARGET_CPP\n\n  bool bindCompare<T>(Comparison<T> comparison, T left, T right) {\n    return comparison.compare(left, right) < 0;\n  }\n\n  @NeedsInclude("<initializer_list>")\n  @NeedsInclude("<vector>")\n  class List<T> {\n    new(`std::initializer_list<T>` list) : _data = list {}\n\n    int size() {\n      return _data.size();\n    }\n\n    void push(T value) {\n      _data.push_back(value);\n    }\n\n    void unshift(T value) {\n      insert(0, value);\n    }\n\n    List<T> slice(int start, int end) {\n      assert start >= 0 && start <= end && end <= size();\n      List<T> slice = [];\n      slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);\n      return slice;\n    }\n\n    T shift() {\n      T value = this[0];\n      remove(0);\n      return value;\n    }\n\n    T pop() {\n      T value = this[size() - 1];\n      _data.pop_back();\n      return value;\n    }\n\n    List<T> clone() {\n      List<T> clone = [];\n      clone._data = _data;\n      return clone;\n    }\n\n    T remove(int index) {\n      T value = this[index];\n      _data.erase(_data.begin() + index);\n      return value;\n    }\n\n    void removeRange(int start, int end) {\n      assert 0 <= start && start <= end && end <= size();\n      _data.erase(_data.begin() + start, _data.begin() + end);\n    }\n\n    void insert(int index, T value) {\n      assert index >= 0 && index <= size();\n      _data.insert(_data.begin() + index, value);\n    }\n\n    @OperatorGet\n    T get(int index) {\n      assert index >= 0 && index < size();\n      return _data[index];\n    }\n\n    @OperatorSet\n    void set(int index, T value) {\n      assert index >= 0 && index < size();\n      _data[index] = value;\n    }\n\n    @OperatorIn\n    bool contains(T value) {\n      return indexOf(value) >= 0;\n    }\n\n    @NeedsInclude("<algorithm>") {\n      int indexOf(T value) {\n        int index = `std`::find(_data.begin(), _data.end(), value) - _data.begin();\n        return index == size() ? -1 : index;\n      }\n\n      int lastIndexOf(T value) {\n        int index = `std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin();\n        return size() - index - 1;\n      }\n\n      void swap(int a, int b) {\n        assert a >= 0 && a < size();\n        assert b >= 0 && b < size();\n        `std`::swap(_data[a], _data[b]);\n      }\n\n      void reverse() {\n        `std`::reverse(_data.begin(), _data.end());\n      }\n\n      @NeedsInclude("<functional>")\n      void sort(Comparison<T> comparison) {\n        `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));\n      }\n    }\n\n    `std::vector<T>` _data;\n  }\n\n#else\n\n  import class List<T> {\n    new();\n    int size();\n    void push(T value);\n    void unshift(T value);\n    List<T> slice(int start, int end);\n    int indexOf(T value);\n    int lastIndexOf(T value);\n    T shift();\n    T pop();\n    void reverse();\n    void sort(Comparison<T> comparison);\n    List<T> clone();\n    T remove(int index);\n    void removeRange(int start, int end);\n    void insert(int index, T value);\n    @OperatorGet T get(int index);\n    @OperatorSet void set(int index, T value);\n    @OperatorIn bool contains(T value);\n    void swap(int a, int b);\n  }\n\n#endif\n'), new CachedSource('stringmap.sk', '#if TARGET_JS\n\n  class StringMap<T> {\n    var _table = `Object`.create(null);\n\n    inline {\n      @OperatorGet T get(string key) { return _table[key]; }\n      @OperatorSet void set(string key, T value) { _table[key] = value; }\n      @OperatorIn bool has(string key) { return key in _table; }\n      void remove(string key) { delete _table[key]; }\n    }\n\n    T getOrDefault(string key, T defaultValue) {\n      return key in this ? this[key] : defaultValue;\n    }\n\n    List<string> keys() {\n      List<string> keys = [];\n      for (string key in _table) keys.push(key);\n      return keys;\n    }\n\n    List<T> values() {\n      List<T> values = [];\n      for (string key in _table) values.push(this[key]);\n      return values;\n    }\n\n    StringMap<T> clone() {\n      var clone = StringMap<T>();\n      for (string key in _table) clone[key] = this[key];\n      return clone;\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class StringMap<T> {\n    new() {}\n    @OperatorGet T get(string key) { return _table[key]; }\n    T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n    @OperatorSet void set(string key, T value) { _table[key] = value; }\n    @OperatorIn bool has(string key) { return _table.count(key); }\n    void remove(string key) { _table.erase(key); }\n    List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n    `std::unordered_map<string, T>` _table;\n  }\n\n#else\n\n  import class StringMap<T> {\n    new();\n    @OperatorGet T get(string key);\n    T getOrDefault(string key, T defaultValue);\n    @OperatorSet void set(string key, T value);\n    @OperatorIn bool has(string key);\n    void remove(string key);\n    List<string> keys();\n    List<T> values();\n    StringMap<T> clone();\n  }\n\n#endif\n'), new CachedSource('intmap.sk', '#if TARGET_JS\n\n  class IntMap<T> {\n    var _table = `Object`.create(null);\n\n    inline {\n      @OperatorGet T get(int key) { return _table[key]; }\n      @OperatorSet void set(int key, T value) { _table[key] = value; }\n      @OperatorIn bool has(int key) { return key in _table; }\n      void remove(int key) { delete _table[key]; }\n    }\n\n    T getOrDefault(int key, T defaultValue) {\n      return key in this ? this[key] : defaultValue;\n    }\n\n    List<int> keys() {\n      List<int> keys = [];\n      for (double key in _table) keys.push((int)key);\n      return keys;\n    }\n\n    List<T> values() {\n      List<T> values = [];\n      for (int key in _table) values.push(this[key]);\n      return values;\n    }\n\n    IntMap<T> clone() {\n      var clone = IntMap<T>();\n      for (int key in _table) clone[key] = this[key];\n      return clone;\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class IntMap<T> {\n    new() {}\n    @OperatorGet T get(int key) { return _table[key]; }\n    T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n    @OperatorSet void set(int key, T value) { _table[key] = value; }\n    @OperatorIn bool has(int key) { return _table.count(key); }\n    void remove(int key) { _table.erase(key); }\n    List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n    `std::unordered_map<int, T>` _table;\n  }\n\n#else\n\n  import class IntMap<T> {\n    new();\n    @OperatorGet T get(int key);\n    T getOrDefault(int key, T defaultValue);\n    @OperatorSet void set(int key, T value);\n    @OperatorIn bool has(int key);\n    void remove(int key);\n    List<int> keys();\n    List<T> values();\n    IntMap<T> clone();\n  }\n\n#endif\n')];
+  Compiler.cachedLibraries = [new CachedSource('defines.sk', '// The "--release" flag automatically overrides BUILD_RELEASE with true\n#define BUILD_DEBUG   !BUILD_RELEASE\n#define BUILD_RELEASE false\n\n// These will be overridden by the compiler with the current language target\n#define TARGET_JS   false\n#define TARGET_CPP  false\n#define TARGET_NONE !TARGET_JS && !TARGET_CPP\n'), new CachedSource('primitives.sk', '#if TARGET_JS\n\n  import class int { string toString(); }\n  import class bool { string toString(); }\n  import class float { string toString(); }\n  import class double { string toString(); }\n\n  import class string {\n    string slice(int start, int end);\n    List<string> split(string separator);\n    int indexOf(string value);\n    int lastIndexOf(string value);\n    string toLowerCase();\n    string toUpperCase();\n  }\n\n  in string {\n    inline {\n      int size() { return this.`length`; }\n      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }\n      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      string join(List<string> values) { return values.`join`(this); }\n      @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }\n      static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  import class int {}\n  import class bool {}\n  import class float {}\n  import class double {}\n\n  @NeedsInclude("<string>")\n  @EmitAs("std::string")\n  import class string {}\n\n  in int {\n    inline string toString() { return `std`::to_string(this); }\n  }\n\n  in bool {\n    inline string toString() { return this ? "true" : "false"; }\n  }\n\n  in float {\n    inline string toString() { return double._format_(this); }\n  }\n\n  in double {\n    inline string toString() { return _format_(this); }\n\n    // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0\n    static string _format_(double value) {\n      string buffer;\n      `buffer.resize(64)`;\n      `std::sprintf(&buffer[0], "%.15g", value)`;\n      if (`std::stod(&buffer[0]) != value`) {\n        `std::sprintf(&buffer[0], "%.16g", value)`;\n        if (`std::stod(&buffer[0]) != value`) {\n          `std::sprintf(&buffer[0], "%.17g", value)`;\n        }\n      }\n      return `buffer.c_str()`;\n    }\n  }\n\n  in string {\n    inline {\n      int size() { return (int)this.`size`(); }\n      string slice(int start, int end) { return this.`substr`(start, end - start); }\n      string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }\n      int indexOf(string value) { return (int)this.`find`(value); }\n      int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }\n      int lastIndexOf(string value) { return (int)this.`rfind`(value); }\n      int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }\n      @OperatorGet int codeUnitAt(int index) { return `this`[index]; }\n      static string fromCodeUnit(int value) { return ``string``(1, value); }\n    }\n\n    @NeedsInclude("<algorithm>")\n    @NeedsInclude("<ctype.h>") {\n      string toLowerCase() {\n        var clone = this;\n        `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;\n        return clone;\n      }\n\n      string toUpperCase() {\n        var clone = this;\n        `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;\n        return clone;\n      }\n    }\n\n    string join(List<string> values) {\n      var result = "";\n      for (var i = 0; i < values.size(); i++) {\n        if (i > 0) result += this;\n        result += values[i];\n      }\n      return result;\n    }\n\n    List<string> split(string separator) {\n      List<string> values = [];\n      var start = 0;\n      while (true) {\n        var end = indexOfFrom(separator, start);\n        if (end == -1) break;\n        values.push(slice(start, end));\n        start = end + separator.size();\n      }\n      values.push(slice(start, size()));\n      return values;\n    }\n  }\n\n#else\n\n  import class int { string toString(); }\n  import class bool { string toString(); }\n  import class float { string toString(); }\n  import class double { string toString(); }\n\n  import class string {\n    int size();\n    List<string> split(string separator);\n    string slice(int start, int end);\n    string sliceCodeUnit(int index);\n    int indexOf(string value);\n    int indexOfFrom(string value, int fromIndex);\n    int lastIndexOf(string value);\n    int lastIndexOfFrom(string value, int fromIndex);\n    string toLowerCase();\n    string toUpperCase();\n    string join(List<string> values);\n    @OperatorGet int codeUnitAt(int index);\n    static string fromCodeUnit(int value);\n  }\n\n#endif\n\nin string {\n  @OperatorIn\n  inline bool contains(string value) {\n    return indexOf(value) >= 0;\n  }\n\n  inline string toString() {\n    return this;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n\n  string replaceAll(string before, string after) {\n    var result = "";\n    var start = 0;\n    while (true) {\n      var end = indexOfFrom(before, start);\n      if (end == -1) break;\n      result += slice(start, end) + after;\n      start = end + before.size();\n    }\n    return result + slice(start, size());\n  }\n}\n'), new CachedSource('math.sk', '#if TARGET_JS\n\n  namespace math {\n    inline {\n      double abs(double x) { return `Math`.abs(x); }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return `Math`.pow(x, y); }\n      double floor(double x) { return `Math`.floor(x); }\n      double round(double x) { return `Math`.round(x); }\n      double ceil(double x) { return `Math`.ceil(x); }\n      double min(double x, double y) { return `Math`.min(x, y); }\n      double max(double x, double y) { return `Math`.max(x, y); }\n      double random() { return `Math`.random(); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  namespace math {\n    inline @NeedsInclude("<cmath>") {\n      double abs(double x) { return `std`::abs(x); }\n      double sin(double x) { return `std`::sin(x); }\n      double cos(double x) { return `std`::cos(x); }\n      double tan(double x) { return `std`::tan(x); }\n      double asin(double x) { return `std`::asin(x); }\n      double acos(double x) { return `std`::acos(x); }\n      double atan(double x) { return `std`::atan(x); }\n      double atan2(double y, double x) { return `std`::atan2(y, x); }\n      double sqrt(double x) { return `std`::sqrt(x); }\n      double exp(double x) { return `std`::exp(x); }\n      double log(double x) { return `std`::log(x); }\n      double pow(double x, double y) { return `std`::pow(x, y); }\n      double floor(double x) { return `std`::floor(x); }\n      double round(double x) { return `std`::round(x); }\n      double ceil(double x) { return `std`::ceil(x); }\n      double min(double x, double y) { return `std`::fmin(x, y); }\n      double max(double x, double y) { return `std`::fmax(x, y); }\n    }\n\n    @NeedsInclude("<random>") {\n      `std::uniform_real_distribution<double>` _distribution_;\n      `(std::mt19937 *)` _generator_ = null;\n\n      double random() {\n        if (_generator_ == null) {\n          _generator_ = new `std`::mt19937(`std`::random_device()());\n        }\n        return _distribution_(*_generator_);\n      }\n    }\n  }\n\n#else\n\n  import namespace math {\n    double abs(double x);\n    double sin(double x);\n    double cos(double x);\n    double tan(double x);\n    double asin(double x);\n    double acos(double x);\n    double atan(double x);\n    double atan2(double y, double x);\n    double sqrt(double x);\n    double exp(double x);\n    double log(double x);\n    double pow(double x, double y);\n    double floor(double x);\n    double round(double x);\n    double ceil(double x);\n    double min(double x, double y);\n    double max(double x, double y);\n    double random();\n  }\n\n#endif\n\nin math {\n  const {\n    var SQRT2 = 1.414213562373095;\n    var PI = 3.141592653589793;\n    var TWOPI = 2 * PI;\n    var E = 2.718281828459045;\n    var INFINITY = 1 / 0.0;\n    var NAN = 0 / 0.0;\n  }\n}\n'), new CachedSource('list.sk', 'interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\n#if TARGET_JS\n\n  void bindCompare<T>(Comparison<T> comparison) {\n    return comparison.compare.`bind`(comparison);\n  }\n\n  import class List<T> {\n    new();\n    void push(T value);\n    void unshift(T value);\n    List<T> slice(int start, int end);\n    int indexOf(T value);\n    int lastIndexOf(T value);\n    T shift();\n    T pop();\n    void reverse();\n  }\n\n  in List {\n    inline {\n      int size() { return this.`length`; }\n      void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }\n      List<T> clone() { return this.`slice`(); }\n      T remove(int index) { return this.`splice`(index, 1)[0]; }\n      void removeRange(int start, int end) { this.`splice`(start, end - start); }\n      void insert(int index, T value) { this.`splice`(index, 0, value); }\n      @OperatorGet T get(int index) { return `this`[index]; }\n      @OperatorSet void set(int index, T value) { `this`[index] = value; }\n      @OperatorIn bool contains(T value) { return indexOf(value) >= 0; }\n    }\n\n    void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }\n  }\n\n#elif TARGET_CPP\n\n  bool bindCompare<T>(Comparison<T> comparison, T left, T right) {\n    return comparison.compare(left, right) < 0;\n  }\n\n  @NeedsInclude("<initializer_list>")\n  @NeedsInclude("<vector>")\n  class List<T> {\n    new(`std::initializer_list<T>` list) : _data = list {}\n\n    int size() {\n      return _data.size();\n    }\n\n    void push(T value) {\n      _data.push_back(value);\n    }\n\n    void unshift(T value) {\n      insert(0, value);\n    }\n\n    List<T> slice(int start, int end) {\n      assert start >= 0 && start <= end && end <= size();\n      List<T> slice = [];\n      slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);\n      return slice;\n    }\n\n    T shift() {\n      T value = this[0];\n      remove(0);\n      return value;\n    }\n\n    T pop() {\n      T value = this[size() - 1];\n      _data.pop_back();\n      return value;\n    }\n\n    List<T> clone() {\n      List<T> clone = [];\n      clone._data = _data;\n      return clone;\n    }\n\n    T remove(int index) {\n      T value = this[index];\n      _data.erase(_data.begin() + index);\n      return value;\n    }\n\n    void removeRange(int start, int end) {\n      assert 0 <= start && start <= end && end <= size();\n      _data.erase(_data.begin() + start, _data.begin() + end);\n    }\n\n    void insert(int index, T value) {\n      assert index >= 0 && index <= size();\n      _data.insert(_data.begin() + index, value);\n    }\n\n    @OperatorGet\n    T get(int index) {\n      assert index >= 0 && index < size();\n      return _data[index];\n    }\n\n    @OperatorSet\n    void set(int index, T value) {\n      assert index >= 0 && index < size();\n      _data[index] = value;\n    }\n\n    @OperatorIn\n    bool contains(T value) {\n      return indexOf(value) >= 0;\n    }\n\n    @NeedsInclude("<algorithm>") {\n      int indexOf(T value) {\n        int index = `std`::find(_data.begin(), _data.end(), value) - _data.begin();\n        return index == size() ? -1 : index;\n      }\n\n      int lastIndexOf(T value) {\n        int index = `std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin();\n        return size() - index - 1;\n      }\n\n      void swap(int a, int b) {\n        assert a >= 0 && a < size();\n        assert b >= 0 && b < size();\n        `std`::swap(_data[a], _data[b]);\n      }\n\n      void reverse() {\n        `std`::reverse(_data.begin(), _data.end());\n      }\n\n      @NeedsInclude("<functional>")\n      void sort(Comparison<T> comparison) {\n        `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));\n      }\n    }\n\n    `std::vector<T>` _data;\n  }\n\n#else\n\n  import class List<T> {\n    new();\n    int size();\n    void push(T value);\n    void unshift(T value);\n    List<T> slice(int start, int end);\n    int indexOf(T value);\n    int lastIndexOf(T value);\n    T shift();\n    T pop();\n    void reverse();\n    void sort(Comparison<T> comparison);\n    List<T> clone();\n    T remove(int index);\n    void removeRange(int start, int end);\n    void insert(int index, T value);\n    @OperatorGet T get(int index);\n    @OperatorSet void set(int index, T value);\n    @OperatorIn bool contains(T value);\n    void swap(int a, int b);\n  }\n\n#endif\n'), new CachedSource('stringmap.sk', '#if TARGET_JS\n\n  class StringMap<T> {\n    var _table = `Object`.create(null);\n\n    inline {\n      @OperatorGet T get(string key) { return _table[key]; }\n      @OperatorSet void set(string key, T value) { _table[key] = value; }\n      @OperatorIn bool has(string key) { return key in _table; }\n      void remove(string key) { delete _table[key]; }\n    }\n\n    T getOrDefault(string key, T defaultValue) {\n      return key in this ? this[key] : defaultValue;\n    }\n\n    List<string> keys() {\n      List<string> keys = [];\n      for (string key in _table) keys.push(key);\n      return keys;\n    }\n\n    List<T> values() {\n      List<T> values = [];\n      for (string key in _table) values.push(this[key]);\n      return values;\n    }\n\n    StringMap<T> clone() {\n      var clone = StringMap<T>();\n      for (string key in _table) clone[key] = this[key];\n      return clone;\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class StringMap<T> {\n    new() {}\n    @OperatorGet T get(string key) { return _table[key]; }\n    T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n    @OperatorSet void set(string key, T value) { _table[key] = value; }\n    @OperatorIn bool has(string key) { return _table.count(key); }\n    void remove(string key) { _table.erase(key); }\n    List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n    `std::unordered_map<string, T>` _table;\n  }\n\n#else\n\n  import class StringMap<T> {\n    new();\n    @OperatorGet T get(string key);\n    T getOrDefault(string key, T defaultValue);\n    @OperatorSet void set(string key, T value);\n    @OperatorIn bool has(string key);\n    void remove(string key);\n    List<string> keys();\n    List<T> values();\n    StringMap<T> clone();\n  }\n\n#endif\n'), new CachedSource('intmap.sk', '#if TARGET_JS\n\n  class IntMap<T> {\n    var _table = `Object`.create(null);\n\n    inline {\n      @OperatorGet T get(int key) { return _table[key]; }\n      @OperatorSet void set(int key, T value) { _table[key] = value; }\n      @OperatorIn bool has(int key) { return key in _table; }\n      void remove(int key) { delete _table[key]; }\n    }\n\n    T getOrDefault(int key, T defaultValue) {\n      return key in this ? this[key] : defaultValue;\n    }\n\n    List<int> keys() {\n      List<int> keys = [];\n      for (double key in _table) keys.push((int)key);\n      return keys;\n    }\n\n    List<T> values() {\n      List<T> values = [];\n      for (int key in _table) values.push(this[key]);\n      return values;\n    }\n\n    IntMap<T> clone() {\n      var clone = IntMap<T>();\n      for (int key in _table) clone[key] = this[key];\n      return clone;\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class IntMap<T> {\n    new() {}\n    @OperatorGet T get(int key) { return _table[key]; }\n    T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n    @OperatorSet void set(int key, T value) { _table[key] = value; }\n    @OperatorIn bool has(int key) { return _table.count(key); }\n    void remove(int key) { _table.erase(key); }\n    List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n    `std::unordered_map<int, T>` _table;\n  }\n\n#else\n\n  import class IntMap<T> {\n    new();\n    @OperatorGet T get(int key);\n    T getOrDefault(int key, T defaultValue);\n    @OperatorSet void set(int key, T value);\n    @OperatorIn bool has(int key);\n    void remove(int key);\n    List<int> keys();\n    List<T> values();\n    IntMap<T> clone();\n  }\n\n#endif\n')];
   Range.EMPTY = new Range(null, 0, 0);
   StringComparison.INSTANCE = new StringComparison();
   js.Emitter.isKeyword = null;

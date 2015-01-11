@@ -247,7 +247,7 @@ namespace ns1 { class Foo {} }
 namespace ns2 { class Foo {} }
 namespace ns3 { class Foo {} }
 ", "
-<stdin>:4:1: error: Reference to \"Foo\" is ambiguous, could be \"ns1.Foo\" or \"ns2.Foo\" or \"ns3.Foo\"
+<stdin>:4:1: error: Reference to \"Foo\" is ambiguous, could be \"ns1.Foo\", \"ns2.Foo\", or \"ns3.Foo\"
 Foo foo = 0;
 ~~~
 ");

@@ -49,12 +49,17 @@ in Source {
   // This maps line numbers to indices within contents
   List<int> lineOffsets = null;
 
+  Range rangeContainingEverything() {
+    return Range(this, 0, contents.size());
+  }
+
   void computeLineOffsets() {
-    if (lineOffsets != null) return;
-    lineOffsets = [0];
-    for (var i = 0; i < contents.size(); i++) {
-      if (contents[i] == '\n') {
-        lineOffsets.push(i + 1);
+    if (lineOffsets == null) {
+      lineOffsets = [0];
+      for (var i = 0; i < contents.size(); i++) {
+        if (contents[i] == '\n') {
+          lineOffsets.push(i + 1);
+        }
       }
     }
   }

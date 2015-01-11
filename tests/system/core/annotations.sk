@@ -111,7 +111,7 @@ test("
   return 0;
 }
 ", "
-<stdin>:1:19: error: Unexpected entry point type \"float fn()\", expected type \"void fn()\" or type \"int fn()\" or type \"void fn(List<string>)\" or type \"int fn(List<string>)\"
+<stdin>:1:19: error: Unexpected entry point type \"float fn()\", expected type \"void fn()\", type \"int fn()\", type \"void fn(List<string>)\", or type \"int fn(List<string>)\"
 @EntryPoint float foo() {
                   ~~~
 ");

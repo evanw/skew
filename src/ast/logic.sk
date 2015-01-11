@@ -135,6 +135,7 @@ in Node {
       case .HOOK { return hookTest().hasNoSideEffects() && hookTrue().hasNoSideEffects() && hookFalse().hasNoSideEffects(); }
       case .DOT { return dotTarget().hasNoSideEffects(); }
       case .QUOTED { return quotedValue().hasNoSideEffects(); }
+      case .NEW, .DELETE { return false; } // These are only used with quoting and should never be removed
       default {
         if (kind.isBinaryOperator() && !kind.isBinaryStorageOperator()) return binaryLeft().hasNoSideEffects() && binaryRight().hasNoSideEffects();
         if (kind.isUnaryOperator() && !kind.isUnaryStorageOperator()) return unaryValue().hasNoSideEffects();
