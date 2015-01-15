@@ -13,6 +13,7 @@ JS_SOURCES += src/core/support.js
 
 FLAGS += --verbose
 FLAGS += --target=js
+FLAGS += --config=node
 FLAGS += --append-file:src/core/support.js
 
 FRONTEND_DEPS += Makefile

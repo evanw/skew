@@ -1,0 +1,79 @@
+enum OperatingSystem {
+  ANDROID,
+  IOS,
+  LINUX,
+  OSX,
+  UNKNOWN,
+  WINDOWS,
+}
+
+in OperatingSystem {
+  static OperatingSystem current() {
+    #if CONFIG_ANDROID
+
+      return .ANDROID;
+
+    #elif CONFIG_IOS
+
+      return .IOS;
+
+    #elif CONFIG_LINUX
+
+      return .LINUX;
+
+    #elif CONFIG_OSX
+
+      return .OSX;
+
+    #elif CONFIG_WINDOWS
+
+      return .WINDOWS;
+
+    #elif CONFIG_NODE
+
+      string platform = `process.platform`;
+      return
+        // Presumably this also means iOS but there's no way to check
+        platform == "darwin" ? .OSX :
+
+        // Official documentation says this will never contain "win64"
+        platform == "win32" ? .WINDOWS :
+
+        // Presumably this also means Android but there's no way to check
+        platform == "linux" ? .LINUX :
+
+        // This may also be "freebsd" or "sunos"
+        .UNKNOWN;
+
+    #elif CONFIG_BROWSER
+
+      string platform = `navigator.platform`;
+      string userAgent = `navigator.userAgent`;
+      return
+        // OS X encodes the architecture into the platform
+        platform == "MacIntel" || platform == "MacPPC" ? .OSX :
+
+        // MSDN sources say Win64 is used, unlike node
+        platform == "Win32" || platform == "Win64" ? .WINDOWS :
+
+        // Assume the user is using Mobile Safari or Chrome and not some random
+        // browser with a strange platform (Opera apparently messes with this)
+        platform == "iPhone" || platform == "iPad" ? .IOS :
+
+        // Apparently most Android devices have a platform of "Linux" instead
+        // of "Android", so check the user agent instead. Also make sure to test
+        // for Android before Linux for this reason.
+        "Android" in userAgent ? .ANDROID :
+        "Linux" in platform ? .LINUX :
+
+        // The platform string has no specification and can be literally anything.
+        // Other examples: "BlackBerry", "Nintendo 3DS", "PlayStation 4", etc.
+        .UNKNOWN;
+
+    #else
+
+      return .UNKNOWN;
+
+    #endif
+  }
+}

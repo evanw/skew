@@ -29,9 +29,21 @@ export interface FileAccess {
   virtual Source contentsOfFile(string sourcePath, string relativePath);
 }
 
+export enum CompilerConfig {
+  NONE,
+  ANDROID,
+  BROWSER,
+  IOS,
+  LINUX,
+  NODE,
+  OSX,
+  WINDOWS,
+}
+
 export class CompilerOptions {
   FileAccess fileAccess = null;
   TargetFormat targetFormat = .NONE;
+  CompilerConfig targetConfig = .NONE;
   List<Source> inputs = [];
   List<Source> prepend = [];
   List<Source> append = [];
@@ -131,6 +143,8 @@ export class Compiler {
 
   CompilerResult compile(CompilerOptions options) {
     var totalStart = now();
+    var targetFormat = options.targetFormat;
+    var targetConfig = options.targetConfig;
     var program = Node.createProgram([]);
     List<Source> outputs = [];
     List<Node> files = [];
@@ -142,8 +156,15 @@ export class Compiler {
     createSymbolFlagToName();
 
     // Prepare native #define overrides
-    options.overrideDefine("TARGET_JS", options.targetFormat == .JAVASCRIPT);
-    options.overrideDefine("TARGET_CPP", options.targetFormat == .CPP);
+    options.overrideDefine("TARGET_JS", targetFormat == .JAVASCRIPT);
+    options.overrideDefine("TARGET_CPP", targetFormat == .CPP);
+    options.overrideDefine("CONFIG_ANDROID", targetConfig == .ANDROID);
+    options.overrideDefine("CONFIG_BROWSER", targetConfig == .BROWSER);
+    options.overrideDefine("CONFIG_IOS", targetConfig == .IOS);
+    options.overrideDefine("CONFIG_LINUX", targetConfig == .LINUX);
+    options.overrideDefine("CONFIG_NODE", targetConfig == .NODE);
+    options.overrideDefine("CONFIG_OSX", targetConfig == .OSX);
+    options.overrideDefine("CONFIG_WINDOWS", targetConfig == .WINDOWS);
 
     // Tokenize and parse each module individually
     for (var i = 0; i < cachedLibraries.size(); i++) {
@@ -238,6 +259,7 @@ in Compiler {
     CachedSource("list.sk", @ContentsOfFile("../../lib/list.sk")),
     CachedSource("stringmap.sk", @ContentsOfFile("../../lib/stringmap.sk")),
     CachedSource("intmap.sk", @ContentsOfFile("../../lib/intmap.sk")),
+    CachedSource("os.sk", @ContentsOfFile("../../lib/os.sk")),
   ];
 
   static int totalLineCount(List<Source> sources) {

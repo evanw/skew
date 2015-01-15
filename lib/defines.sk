@@ -6,3 +6,15 @@
 #define TARGET_JS   false
 #define TARGET_CPP  false
 #define TARGET_NONE !TARGET_JS && !TARGET_CPP
+
+// The "--config" flag can be used to override these (example: "--config=node").
+// Using "--target=js" defaults to "--config=browser" and using "--target=cpp"
+// defaults to the config for the current operating system.
+#define CONFIG_IOS     false
+#define CONFIG_OSX     false
+#define CONFIG_LINUX   false
+#define CONFIG_ANDROID false
+#define CONFIG_WINDOWS false
+#define CONFIG_NODE    false
+#define CONFIG_BROWSER false
+#define CONFIG_UNKNOWN !CONFIG_IOS && !CONFIG_OSX && !CONFIG_LINUX && !CONFIG_ANDROID && !CONFIG_WINDOWS && !CONFIG_NODE && !CONFIG_BROWSER

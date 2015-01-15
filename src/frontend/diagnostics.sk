@@ -32,7 +32,15 @@ void commandLineErrorExpectedToken(Log log, Range range, string expected, string
 }
 
 void commandLineErrorInvalidTarget(Log log, Range range, string found, List<string> expected) {
-  log.error(range, "Invalid target " + simpleQuote(found) + ", must be either " + prettyPrint.join(expected, "or"));
+  log.error(range, "Invalid target " + simpleQuote(found) + ", must be either " + prettyPrint.join(simpleQuoteAll(expected), "or"));
+}
+
+void commandLineErrorInvalidConfiguration(Log log, Range range, string found, List<string> expected) {
+  log.error(range, "Invalid configuration " + simpleQuote(found) + ", must be either " + prettyPrint.join(simpleQuoteAll(expected), "or"));
+}
+
+void commandLineErrorUnexpectedConfiguration(Log log, Range range, string config, string target) {
+  log.error(range, "Unexpected configuration " + simpleQuote(config) + " for target " + simpleQuote(target));
 }
 
 void commandLineErrorUnreadableFile(Log log, Range range, string name) {
