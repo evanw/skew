@@ -47,7 +47,7 @@
     List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }
     StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }
 
-    `std::unordered_map<int, T>` _table;
+    `std::unordered_map<`int`, T>` _table;
   }
 
 #else

@@ -117,4 +117,6 @@ class SourceMapGenerator {
     } while (vlq > 0);
     return encoded;
   }
+
+  static final string BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 }

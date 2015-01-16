@@ -1,9 +1,3 @@
-import int parseIntLiteral(string value, int base);
-import double parseDoubleLiteral(string value);
-import string encodeBase64(string data);
-import double now(); // The current time in seconds
-
-final string BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 final string HEX = "0123456789ABCDEF";
 
 class UnionFind {

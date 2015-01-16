@@ -9,15 +9,11 @@ RELEASE_DIR = build/release
 TESTS_DIR = build/tests
 NPM_DIR = skew-npm
 
-JS_SOURCES += src/core/support.js
-
 FLAGS += --verbose
 FLAGS += --target=js
-FLAGS += --append-file:src/core/support.js
 
 FRONTEND_DEPS += Makefile
 FRONTEND_DEPS += $(SOURCES)
-FRONTEND_DEPS += $(JS_SOURCES)
 FRONTEND_DEPS += src/frontend/frontend.js
 
 FRONTEND_FLAGS += $(SOURCES)
@@ -27,7 +23,6 @@ FRONTEND_FLAGS += --append-file:src/frontend/frontend.js
 
 TEST_DEPS += Makefile
 TEST_DEPS += $(SOURCES)
-TEST_DEPS += $(JS_SOURCES)
 TEST_DEPS += $(TEST_SOURCES)
 TEST_DEPS += tests/system/common.js
 

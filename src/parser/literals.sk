@@ -1,0 +1,42 @@
+#if TARGET_JS
+
+  int parseIntLiteral(string text, int base) {
+    if (base != 10) {
+      text = text.slice(2, text.size());
+    }
+    return `parseInt`(text, base) | 0;
+  }
+
+  double parseDoubleLiteral(string text) {
+    return `+`text``;
+  }
+
+#elif TARGET_CPP
+
+  @NeedsInclude("<sstream>")
+  @NeedsInclude("<iomanip>") {
+    int parseIntLiteral(string text, int base) {
+      var value = 0;
+      `std::stringstream` ss;
+      ss.str(base == 10 ? text : text.slice(2, text.size()));
+      ss >> `std`::setbase(base) >> value;
+      return value;
+    }
+
+    double parseDoubleLiteral(string text) {
+      var value = 0.0;
+      `std::stringstream` ss;
+      ss.str(text);
+      ss >> value;
+      return value;
+    }
+  }
+
+#else
+
+  import {
+    int parseIntLiteral(string value, int base);
+    double parseDoubleLiteral(string value);
+  }
+
+#endif

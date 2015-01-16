@@ -161,20 +161,11 @@ namespace js {
         // the sourceMappingURL for the compiled JavaScript compiler file
         currentSource.contents = currentSource.contents + "/";
 
-        // Append the source map inline with the compiled output
-        if (options.outputFile == "") {
-          currentSource.contents = currentSource.contents +
-            "/# sourceMappingURL=data:application/json;base64," +
-            encodeBase64(generator.toString()) + "\n";
-        }
-
         // Create the source map as another file alongside the output
-        else {
-          var name = options.outputFile + ".map";
-          currentSource.contents = currentSource.contents +
-            "/# sourceMappingURL=" + splitPath(name).entry + "\n";
-          return [currentSource, Source(name, generator.toString())];
-        }
+        var name = options.outputFile + ".map";
+        currentSource.contents = currentSource.contents +
+          "/# sourceMappingURL=" + splitPath(name).entry + "\n";
+        return [currentSource, Source(name, generator.toString())];
       }
 
       return [currentSource];
