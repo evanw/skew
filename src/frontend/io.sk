@@ -1,0 +1,50 @@
+#if TARGET_JS && CONFIG_NODE
+
+  namespace io {
+    Box<string> readFile(string path) {
+      try {
+        return Box<string>(`require`("fs").readFileSync(path, "utf8"));
+      } catch {
+        return null;
+      }
+    }
+
+    bool writeFile(string path, string contents) {
+      try {
+        `require`("fs").writeFileSync(path, contents);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+#elif TARGET_CPP
+
+  namespace io {
+    @NeedsInclude("<fstream>") {
+      bool writeFile(string path, string contents) {
+        `std::ofstream` file;
+        file.open(path.`c_str`());
+        if (!file) return false;
+        file << contents;
+        return true;
+      }
+
+      Box<string> readFile(string path) {
+        `std::ifstream` file;
+        file.open(path.`c_str`());
+        if (!file) return null;
+        return Box<string>(`std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>())`);
+      }
+    }
+  }
+
+#else
+
+  import namespace io {
+    bool writeFile(string path, string contents);
+    Box<string> readFile(string path);
+  }
+
+#endif

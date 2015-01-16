@@ -657,6 +657,7 @@ class Resolver {
       case .ALIAS { resolveAlias(node); }
 
       case .IF { resolveIf(node); }
+      case .TRY { resolveTry(node); }
       case .FOR { resolveFor(node); }
       case .FOR_EACH { resolveForEach(node); }
       case .WHILE { resolveWhile(node); }
@@ -2696,6 +2697,12 @@ class Resolver {
     resolveAsParamterizedExpressionWithConversion(node.ifTest(), cache.boolType, .IMPLICIT_CAST);
     resolve(node.ifTrue(), null);
     if (node.ifFalse() != null) resolve(node.ifFalse(), null);
+  }
+
+  void resolveTry(Node node) {
+    checkStatementLocation(node);
+    resolve(node.tryBlock(), null);
+    resolve(node.catchBlock(), null);
   }
 
   void resolveFor(Node node) {

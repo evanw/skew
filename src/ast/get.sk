@@ -243,6 +243,18 @@ in Node {
     return children[2];
   }
 
+  Node tryBlock() {
+    assert kind == .TRY;
+    assert children.size() == 2;
+    return children[0];
+  }
+
+  Node catchBlock() {
+    assert kind == .TRY;
+    assert children.size() == 2;
+    return children[1];
+  }
+
   Node forSetup() {
     assert kind == .FOR;
     assert children.size() == 4;

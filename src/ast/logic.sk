@@ -96,6 +96,12 @@ in Node {
           }
         }
 
+        case .TRY {
+          if (child.tryBlock().blockAlwaysEndsWithReturn() && child.catchBlock().blockAlwaysEndsWithReturn()) {
+            return true;
+          }
+        }
+
         case .SWITCH {
           var cases = child.switchCases().children;
           var foundDefault = false;

@@ -64,7 +64,7 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
         .FINAL, .FOR, .IF, .IMPORT, .INLINE, .INTERFACE, .NAMESPACE, .OVERRIDE,
         .PREPROCESSOR_DEFINE, .PREPROCESSOR_ELIF, .PREPROCESSOR_ELSE, .PREPROCESSOR_ENDIF,
         .PREPROCESSOR_ERROR, .PREPROCESSOR_IF, .PREPROCESSOR_WARNING, .PRIVATE, .PROTECTED,
-        .PUBLIC, .RETURN, .STATIC, .SWITCH, .USING, .VIRTUAL, .WHILE {
+        .PUBLIC, .RETURN, .STATIC, .SWITCH, .TRY, .USING, .VIRTUAL, .WHILE {
 
         // Optionally recover parsing before the next statement if it's unambiguous
         if (tokenScan == .STOP_BEFORE_NEXT_STATEMENT) {
@@ -568,6 +568,14 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
   return cluster;
 }
 
+Node parseTry(ParserContext context) {
+  var token = context.next();
+  var tryBlock = parseBlock(context, .NORMAL); if (tryBlock == null) return null;
+  if (!context.expect(.CATCH)) return null;
+  var catchBlock = parseBlock(context, .NORMAL); if (catchBlock == null) return null;
+  return Node.createTry(tryBlock, catchBlock).withRange(context.spanSince(token.range));
+}
+
 Node parseUsing(ParserContext context) {
   var token = context.next();
   var value = parseType(context);
@@ -682,6 +690,7 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case .PREPROCESSOR_WARNING { return parsePreprocessorDiagnostic(context, .PREPROCESSOR_WARNING); }
     case .RETURN { return parseReturn(context); }
     case .SWITCH { return parseSwitch(context); }
+    case .TRY { return parseTry(context); }
     case .USING { return parseUsing(context); }
     case .WHILE { return parseWhile(context); }
   }

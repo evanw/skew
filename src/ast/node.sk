@@ -26,6 +26,7 @@ enum NodeKind {
 
   // Statements
   IF,
+  TRY,
   FOR,
   FOR_EACH,
   WHILE,

@@ -1,36 +1,4 @@
-#include <string>
-
-struct Source;
-
-namespace io {
-  bool writeFile(std::string path, std::string contents);
-  Source *readFile(std::string path);
-}
-
 #include "skewc.cpp"
-
-int main(int argc, char *argv[]) {
-  auto args = new List<std::string> {};
-  for (auto i = 1; i < argc; i++) {
-    args->push(argv[i]);
-  }
-  return frontend::main(args);
-}
-
-#include <fstream>
-
-bool io::writeFile(std::string path, std::string contents) {
-  std::ofstream file(path.c_str());
-  if (!file) return false;
-  file << contents;
-  return true;
-}
-
-Source *io::readFile(std::string path) {
-  std::ifstream file(path.c_str());
-  if (!file) return nullptr;
-  return new Source(path, std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>()));
-}
 
 #ifdef _WIN32
   #include <windows.h>

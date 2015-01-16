@@ -1,11 +1,8 @@
-import namespace io {
-  bool writeFile(string path, string contents);
-  Source readFile(string path);
-}
-
 class FrontendFileAccess : FileAccess {
   override Source contentsOfFile(string sourcePath, string relativePath) {
-    return io.readFile(joinPath(splitPath(sourcePath).directory, relativePath));
+    var path = joinPath(splitPath(sourcePath).directory, relativePath);
+    var contents = io.readFile(path);
+    return contents != null ? Source(path, contents.value) : null;
   }
 }
 
@@ -29,7 +26,8 @@ enum Option {
   VERBOSE,
 }
 
-export namespace frontend {
+namespace frontend {
+  @EntryPoint
   int main(List<string> arguments) {
     // Translate frontend flags to compiler options
     var log = Log();
@@ -63,9 +61,7 @@ export namespace frontend {
     printLogWithColor(log);
     return log.hasErrors() ? 1 : 0;
   }
-}
 
-in frontend {
   CompilerOptions parseOptions(Log log, OptionParser parser, List<string> arguments) {
     // Configure the parser
     parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"]);
@@ -103,9 +99,9 @@ in frontend {
     var releaseFlag = parser.boolForOption(.RELEASE, false);
     options.fileAccess = FrontendFileAccess();
     options.verbose = parser.boolForOption(.VERBOSE, false);
-    options.jsSourceMap = parser.boolForOption(.SOURCE_MAP, false);
-    options.jsMinify = parser.boolForOption(.MINIFY, releaseFlag);
-    options.jsMangle = parser.boolForOption(.MANGLE, releaseFlag);
+    options.sourceMap = parser.boolForOption(.SOURCE_MAP, false);
+    options.minify = parser.boolForOption(.MINIFY, releaseFlag);
+    options.mangle = parser.boolForOption(.MANGLE, releaseFlag);
     options.removeAsserts = parser.boolForOption(.REMOVE_ASSERTS, releaseFlag);
     options.foldAllConstants = parser.boolForOption(.FOLD_CONSTANTS, releaseFlag);
     options.inlineAllFunctions = parser.boolForOption(.INLINE, releaseFlag);
@@ -208,12 +204,12 @@ in frontend {
     var error = false;
     for (var i = 0; i < files.size(); i++) {
       var file = files[i];
-      var name = file.toString();
-      var source = io.readFile(name);
-      if (source == null) {
-        commandLineErrorUnreadableFile(log, file, name);
+      var path = file.toString();
+      var contents = io.readFile(path);
+      if (contents == null) {
+        commandLineErrorUnreadableFile(log, file, path);
       } else {
-        result.push(source);
+        result.push(Source(path, contents.value));
       }
     }
     return error ? null : result;

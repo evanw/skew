@@ -41,7 +41,7 @@ namespace js {
         isKeyword = createIsKeyword();
       }
       options = resolver.options;
-      if (options.jsMinify) {
+      if (options.minify) {
         newline = "";
         space = "";
       }
@@ -77,8 +77,8 @@ namespace js {
         needsSemicolon = false;
       }
       if (patcher.needExtends) {
-        var derived = options.jsMangle ? "d" : "derived";
-        var base = options.jsMangle ? "b" : "base";
+        var derived = options.mangle ? "d" : "derived";
+        var base = options.mangle ? "b" : "base";
         emit(indent + "function " + minifySpaces(patcher.extends + "(" + derived + ", " + base + ") {" + newline));
         increaseIndent();
         emit(indent + derived + minifySpaces(".prototype = Object.create(" + base + ".prototype);" + newline));
@@ -131,7 +131,7 @@ namespace js {
       List<Node> variables = [];
       for (var i = 0; i < collector.freeVariableSymbols.size(); i++) {
         var variable = collector.freeVariableSymbols[i].node;
-        if (options.jsMinify) variables.push(variable);
+        if (options.minify) variables.push(variable);
         else emitVariables([variable]);
       }
       emitVariables(variables);
@@ -156,7 +156,7 @@ namespace js {
       }
 
       // Create the source map
-      if (options.jsSourceMap) {
+      if (options.sourceMap) {
         // Obfuscate the sourceMappingURL so it's not incorrectly picked up as
         // the sourceMappingURL for the compiled JavaScript compiler file
         currentSource.contents = currentSource.contents + "/";
@@ -176,7 +176,7 @@ namespace js {
         emit("\n");
       }
       currentSource.contents += source.contents;
-      if (options.jsSourceMap) {
+      if (options.sourceMap) {
         for (var i = 0, n = source.lineCount(); i < n; i++) {
           generator.addMapping(source, i, 0, currentLine, 0);
           currentLine++;
@@ -188,7 +188,7 @@ namespace js {
     }
 
     void addMapping(Node node) {
-      if (options.jsSourceMap) {
+      if (options.sourceMap) {
         var range = node.range;
         if (range.source != null) {
           var location = range.source.indexToLineColumn(range.start);
@@ -198,19 +198,19 @@ namespace js {
     }
 
     void increaseIndent() {
-      if (!options.jsMinify) {
+      if (!options.minify) {
         indent += "  ";
       }
     }
 
     void decreaseIndent() {
-      if (!options.jsMinify) {
+      if (!options.minify) {
         indent = indent.slice(2, indent.size());
       }
     }
 
     void emit(string text) {
-      if (options.jsMinify || options.jsSourceMap) {
+      if (options.minify || options.sourceMap) {
         for (var i = 0; i < text.size(); i++) {
           var c = text[i];
           if (c == '\n') {
@@ -237,7 +237,7 @@ namespace js {
     }
 
     void emitSemicolonAfterStatement() {
-      if (!options.jsMinify) {
+      if (!options.minify) {
         emit(";\n");
       } else {
         needsSemicolon = true;
@@ -320,6 +320,7 @@ namespace js {
         case .CONSTRUCTOR, .FUNCTION { emitFunction(node); }
         case .VARIABLE { emitVariable(node); }
         case .IF { emitIf(node); }
+        case .TRY { emitTry(node); }
         case .FOR { emitFor(node); }
         case .FOR_EACH { emitForEach(node); }
         case .WHILE { emitWhile(node); }
@@ -337,7 +338,7 @@ namespace js {
     }
 
     void emitBlock(Node node, AfterToken after, BracesMode mode) {
-      var shouldMinify = mode == .CAN_OMIT_BRACES && options.jsMinify;
+      var shouldMinify = mode == .CAN_OMIT_BRACES && options.minify;
       addMapping(node);
       if (shouldMinify && !node.hasChildren()) {
         emit(";");
@@ -373,7 +374,7 @@ namespace js {
       if (block.hasChildren()) {
         emitStatements(block.children);
       }
-      if (!block.blockAlwaysEndsWithReturn() && (!options.jsMinify || !node.isLastChild())) {
+      if (!block.blockAlwaysEndsWithReturn() && (!options.minify || !node.isLastChild())) {
         emitSemicolonIfNeeded();
         emit(indent + "break");
         emitSemicolonAfterStatement();
@@ -418,7 +419,7 @@ namespace js {
 
     void emitNamespace(Node node) {
       var symbol = node.symbol;
-      if (options.jsMangle && !symbol.isImportOrExport()) {
+      if (options.mangle && !symbol.isImportOrExport()) {
         return;
       }
       emitSemicolonIfNeeded();
@@ -498,6 +499,14 @@ namespace js {
     void emitIf(Node node) {
       emit(indent);
       recursiveEmitIfStatement(node);
+      emit(newline);
+    }
+
+    void emitTry(Node node) {
+      emit(indent + "try");
+      emitBlock(node.tryBlock(), .AFTER_KEYWORD, .MUST_KEEP_BRACES);
+      emit(space + "catch" + space + "(" + (options.minify ? "$x" : "$exception") + ")");
+      emitBlock(node.catchBlock(), .AFTER_PARENTHESIS, .MUST_KEEP_BRACES);
       emit(newline);
     }
 
@@ -592,7 +601,7 @@ namespace js {
           emit(indent + "if" + space + "(");
           emitExpression(value, .LOWEST);
           emit(")");
-          if (!options.jsMinify) {
+          if (!options.minify) {
             emit(" {\n");
             increaseIndent();
           }
@@ -600,7 +609,7 @@ namespace js {
         var text = node.range + " (" + node.range.locationString() + ")";
         emit(indent + "throw new Error(" + quoteStringJS(text) + ")");
         emitSemicolonAfterStatement();
-        if (couldBeFalse && !options.jsMinify) {
+        if (couldBeFalse && !options.minify) {
           decreaseIndent();
           emit(indent + "}\n");
         }
@@ -668,7 +677,7 @@ namespace js {
     }
 
     void emitBool(Node node) {
-      if (options.jsMangle) {
+      if (options.mangle) {
         emit(node.asBool() ? "!0" : "!1");
       } else {
         emit(node.asBool() ? "true" : "false");
@@ -758,7 +767,7 @@ namespace js {
         var kind = node.kind;
         var valueKind = value.kind;
 
-        if (options.jsMinify && (
+        if (options.minify && (
             kind == .POSITIVE && isRightChildOfBinaryExpression(node, .ADD) ||
             kind == .NEGATIVE && isRightChildOfBinaryExpression(node, .SUBTRACT))) {
           emit(" "); // Prevent "- -1" from becoming "--1"
@@ -831,7 +840,7 @@ namespace js {
     }
 
     void emitIndexProperty(Node node) {
-      if (options.jsMangle && isIdentifierString(node)) {
+      if (options.mangle && isIdentifierString(node)) {
         emit("." + node.asString());
       } else {
         emit("[");

@@ -143,6 +143,12 @@ in Node {
     return Node(kind).withChildren([test, trueNode, falseNode]);
   }
 
+  static Node createTry(Node tryBlock, Node catchBlock) {
+    assert tryBlock.kind == .BLOCK;
+    assert catchBlock.kind == .BLOCK;
+    return Node(.TRY).withChildren([tryBlock, catchBlock]);
+  }
+
   static Node createFor(Node setup, Node test, Node update, Node block) {
     assert setup == null || setup.kind.isExpression() || setup.kind == .VARIABLE_CLUSTER;
     assert test == null || test.kind.isExpression();

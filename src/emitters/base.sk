@@ -183,6 +183,7 @@ namespace base {
         case .CASE { emitCase(node); }
         case .VARIABLE_CLUSTER { emitStatements(node.clusterVariables()); }
         case .IF { emitIf(node); }
+        case .TRY { emitTry(node); }
         case .FOR { emitFor(node); }
         case .FOR_EACH { emitForEach(node); }
         case .WHILE { emitWhile(node); }
@@ -260,6 +261,8 @@ namespace base {
         }
       }
     }
+
+    virtual void emitTry(Node node);
 
     void emitIf(Node node) {
       emit(indent);

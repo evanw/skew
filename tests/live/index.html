@@ -70,9 +70,9 @@ function webWorker() {
         case 'js': {
           options.targetFormat = TargetFormat.JAVASCRIPT;
           options.outputFile = e.data.js.singleFile ? '' : 'output.js';
-          options.jsMinify = e.data.js.minify;
-          options.jsMangle = e.data.js.mangle;
-          options.jsSourceMap = e.data.js.sourceMap;
+          options.minify = e.data.js.minify;
+          options.mangle = e.data.js.mangle;
+          options.sourceMap = e.data.js.sourceMap;
           options.removeAsserts = e.data.js.optimize;
           options.foldAllConstants = e.data.js.optimize;
           options.inlineAllFunctions = e.data.js.optimize;

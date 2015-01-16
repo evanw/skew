@@ -181,6 +181,16 @@ class ConstantFolder {
     return 0;
   }
 
+  int foldTry(Node node) {
+    // A try block without any statements cannot possibly throw
+    if (node.tryBlock().blockStatements().size() == 0) {
+      node.remove();
+      return -1;
+    }
+
+    return 0;
+  }
+
   int foldIf(Node node) {
     var test = node.ifTest();
     var trueBlock = node.ifTrue();
@@ -291,6 +301,11 @@ class ConstantFolder {
       // Reduce for loops that will never execute
       else if (kind == .FOR) {
         i += foldFor(child);
+      }
+
+      // Remove unused try statements since they can cause deoptimizations
+      else if (kind == .TRY) {
+        i += foldTry(child);
       }
 
       // Statically evaluate if statements where possible

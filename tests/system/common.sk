@@ -34,8 +34,8 @@ class TestMinifyJS : TestBase {
   override void run() {
     options.inputs = [Source("<stdin>", input)];
     options.targetFormat = .JAVASCRIPT;
-    options.jsMinify = true;
-    options.jsMangle = true;
+    options.minify = true;
+    options.mangle = true;
     options.foldAllConstants = true;
     options.inlineAllFunctions = true;
     options.globalizeAllFunctions = true;

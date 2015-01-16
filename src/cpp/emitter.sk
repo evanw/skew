@@ -336,6 +336,14 @@ namespace cpp {
       emitAfterVariable(symbol.node);
     }
 
+    override void emitTry(Node node) {
+      emit(indent + "try");
+      emitBlock(node.tryBlock());
+      emit(" catch (...)");
+      emitBlock(node.catchBlock());
+      emit("\n");
+    }
+
     override void emitForEach(Node node) {
       var symbol = node.forEachVariable().symbol;
       emit(indent + "for (");

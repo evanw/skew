@@ -51,9 +51,9 @@ export class CompilerOptions {
   var outputDirectory = "";
   var outputFile = "";
   var verbose = false;
-  var jsMinify = false; // Removes whitespace
-  var jsMangle = false; // Changes the code structure to save space
-  var jsSourceMap = false;
+  var minify = false; // Removes whitespace
+  var mangle = false; // Changes the code structure to save space
+  var sourceMap = false;
   var removeAsserts = false;
   var foldAllConstants = false;
   var inlineAllFunctions = false;

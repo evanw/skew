@@ -179,3 +179,7 @@ in string {
     return result + slice(start, size());
   }
 }
+
+class Box<T> {
+  final T value;
+}

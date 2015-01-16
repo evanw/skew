@@ -15,6 +15,7 @@
 "assert"                             ASSERT;
 "break"                              BREAK;
 "case"                               CASE;
+"catch"                              CATCH;
 "class"                              CLASS;
 "const"                              CONST;
 "continue"                           CONTINUE;
@@ -46,6 +47,7 @@
 "switch"                             SWITCH;
 "this"                               THIS;
 "true"                               TRUE;
+"try"                                TRY;
 "using"                              USING;
 "var"                                VAR;
 "virtual"                            VIRTUAL;

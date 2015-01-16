@@ -68,7 +68,7 @@ namespace js {
       // groups. All local variables inside a function are merged with that
       // function. Also create a quick way of getting from a symbol to its
       // union/find index.
-      if (options.jsMangle) {
+      if (options.mangle) {
         localVariableUnionFind = UnionFind(allSymbols.size());
         for (var i = 0; i < allSymbols.size(); i++) {
           namingGroupIndexForSymbol[allSymbols[i].uniqueID] = i;
@@ -89,7 +89,7 @@ namespace js {
       patchNode(program);
 
       // Rename all internal symbols
-      if (options.jsMangle) {
+      if (options.mangle) {
         // This holds the groups used for naming. Unioning two labels using
         // this object will cause both groups of symbols to have the same name.
         var namingGroupsUnionFind = UnionFind(allSymbols.size());
@@ -290,10 +290,10 @@ namespace js {
 
       switch (node.kind) {
         case .CONSTRUCTOR, .FUNCTION { setCurrentFunction(null); }
-        case .VARIABLE { if (options.jsMangle) unionVariableWithFunction(node); }
+        case .VARIABLE { if (options.mangle) unionVariableWithFunction(node); }
       }
 
-      if (options.jsMangle) {
+      if (options.mangle) {
         switch (node.kind) {
           case .IF { peepholeMangleIf(node); }
           case .FOR { peepholeMangleFor(node); }
@@ -880,7 +880,7 @@ namespace js {
       target.become(Node.createSequence([
         Node.createBinary(.ASSIGN, reference.clone(), left.dotTarget().replaceWith(null)),
         Node.createBinary(.ASSIGN, property.clone(), createBinaryInt(kind, property, right))]).withRange(target.range));
-      if (options.jsMangle) {
+      if (options.mangle) {
         namingGroupIndexForSymbol[symbol.uniqueID] = localVariableUnionFind.allocate();
         unionVariableWithFunction(reference);
       }
