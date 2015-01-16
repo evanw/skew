@@ -57,7 +57,7 @@ export class CompilerOptions {
   var removeAsserts = false;
   var foldAllConstants = false;
   var inlineAllFunctions = false;
-  var convertAllInstanceToStatic = false;
+  var globalizeAllFunctions = false;
 
   void overrideDefine(string name, bool value) {
     overriddenDefines[name] = OverriddenDefine(value, .EMPTY);
@@ -93,7 +93,7 @@ export class Compiler {
   var parsingTime = 0.0;
   var resolvingTime = 0.0;
   var callGraphTime = 0.0;
-  var instanceToStaticTime = 0.0;
+  var globalizeTime = 0.0;
   var symbolMotionTime = 0.0;
   var functionInliningTime = 0.0;
   var constantFoldingTime = 0.0;
@@ -116,7 +116,7 @@ export class Compiler {
     lineCountingTime += now() - lineCountingStart;
 
     // Compilation time
-    var optimizingTime = callGraphTime + instanceToStaticTime + symbolMotionTime + functionInliningTime + constantFoldingTime + treeShakingTime;
+    var optimizingTime = callGraphTime + globalizeTime + symbolMotionTime + functionInliningTime + constantFoldingTime + treeShakingTime;
     text += "\nTotal compile time: " + formatNumber(totalTime + lineCountingTime) + "ms";
     if (tokenizingTime > 0) text += "\n  Tokenizing: " + formatNumber(tokenizingTime) + "ms";
     if (parsingTime > 0) text += "\n  Parsing: " + formatNumber(parsingTime) + "ms";
@@ -124,7 +124,7 @@ export class Compiler {
     if (optimizingTime > 0) {
       text += "\n  Optimizing: " + formatNumber(optimizingTime) + "ms";
       text += "\n    Building call graph: " + formatNumber(callGraphTime) + "ms";
-      text += "\n    Instance to static: " + formatNumber(instanceToStaticTime) + "ms";
+      text += "\n    Globalize: " + formatNumber(globalizeTime) + "ms";
       text += "\n    Symbol motion: " + formatNumber(symbolMotionTime) + "ms";
       text += "\n    Function inlining: " + formatNumber(functionInliningTime) + "ms";
       text += "\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms";
@@ -217,9 +217,9 @@ export class Compiler {
         callGraphTime += now() - callGraphStart;
 
         // Convert instance functions to static functions
-        var instanceToStaticStart = now();
-        InstanceToStaticPass.run(graph, resolver);
-        instanceToStaticTime += now() - instanceToStaticStart;
+        var globalizeStart = now();
+        GlobalizePass.run(graph, resolver);
+        globalizeTime += now() - globalizeStart;
 
         // Move functions
         var symbolMotionStart = now();

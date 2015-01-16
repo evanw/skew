@@ -38,7 +38,7 @@ class TestMinifyJS : TestBase {
     options.jsMangle = true;
     options.foldAllConstants = true;
     options.inlineAllFunctions = true;
-    options.convertAllInstanceToStatic = true;
+    options.globalizeAllFunctions = true;
     testHelper(options, expected);
   }
 }

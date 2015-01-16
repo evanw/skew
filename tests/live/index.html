@@ -76,7 +76,7 @@ function webWorker() {
           options.removeAsserts = e.data.js.optimize;
           options.foldAllConstants = e.data.js.optimize;
           options.inlineAllFunctions = e.data.js.optimize;
-          options.convertAllInstanceToStatic = e.data.js.optimize;
+          options.globalizeAllFunctions = e.data.js.optimize;
           break;
         }
         case 'cpp': {

@@ -109,7 +109,7 @@ in frontend {
     options.removeAsserts = parser.boolForOption(.REMOVE_ASSERTS, releaseFlag);
     options.foldAllConstants = parser.boolForOption(.FOLD_CONSTANTS, releaseFlag);
     options.inlineAllFunctions = parser.boolForOption(.INLINE, releaseFlag);
-    options.convertAllInstanceToStatic = parser.boolForOption(.GLOBALIZE, releaseFlag);
+    options.globalizeAllFunctions = parser.boolForOption(.GLOBALIZE, releaseFlag);
 
     // Prepare the defines
     if (releaseFlag) {

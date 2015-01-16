@@ -1,4 +1,4 @@
-namespace InstanceToStaticPass {
+namespace GlobalizePass {
   void run(CallGraph graph, Resolver resolver) {
     for (var i = 0; i < graph.callInfo.size(); i++) {
       var info = graph.callInfo[i];
@@ -6,7 +6,7 @@ namespace InstanceToStaticPass {
       var enclosingSymbol = symbol.enclosingSymbol;
       if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() != null && (
           enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() ||
-          (resolver.options.convertAllInstanceToStatic || symbol.isInline()) && !symbol.isExport() && !symbol.isVirtual())) {
+          (resolver.options.globalizeAllFunctions || symbol.isInline()) && !symbol.isExport() && !symbol.isVirtual())) {
 
         // Recursively replace "this" with the new explicit argument. This must
         // be done after all call sites are updated in case that step introduced

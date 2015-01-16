@@ -2004,7 +2004,7 @@
     this.removeAsserts = false;
     this.foldAllConstants = false;
     this.inlineAllFunctions = false;
-    this.convertAllInstanceToStatic = false;
+    this.globalizeAllFunctions = false;
   };
   CompilerOptions.prototype.overrideDefine = function(name, value) {
     this.overriddenDefines._table[name] = new OverriddenDefine(value, Range.EMPTY);
@@ -2034,7 +2034,7 @@
     this.parsingTime = 0;
     this.resolvingTime = 0;
     this.callGraphTime = 0;
-    this.instanceToStaticTime = 0;
+    this.globalizeTime = 0;
     this.symbolMotionTime = 0;
     this.functionInliningTime = 0;
     this.constantFoldingTime = 0;
@@ -2052,7 +2052,7 @@
     lineCount = lineCount + Compiler.totalLineCount(result.options.append) | 0;
     var text = 'Input line count: ' + lineCount + '\nOutput line count: ' + Compiler.totalLineCount(result.outputs);
     this.lineCountingTime += now() - lineCountingStart;
-    var optimizingTime = this.callGraphTime + this.instanceToStaticTime + this.symbolMotionTime + this.functionInliningTime + this.constantFoldingTime + this.treeShakingTime;
+    var optimizingTime = this.callGraphTime + this.globalizeTime + this.symbolMotionTime + this.functionInliningTime + this.constantFoldingTime + this.treeShakingTime;
     text += '\nTotal compile time: ' + formatNumber(this.totalTime + this.lineCountingTime) + 'ms';
     if (this.tokenizingTime > 0) {
       text += '\n  Tokenizing: ' + formatNumber(this.tokenizingTime) + 'ms';
@@ -2066,7 +2066,7 @@
     if (optimizingTime > 0) {
       text += '\n  Optimizing: ' + formatNumber(optimizingTime) + 'ms';
       text += '\n    Building call graph: ' + formatNumber(this.callGraphTime) + 'ms';
-      text += '\n    Instance to static: ' + formatNumber(this.instanceToStaticTime) + 'ms';
+      text += '\n    Globalize: ' + formatNumber(this.globalizeTime) + 'ms';
       text += '\n    Symbol motion: ' + formatNumber(this.symbolMotionTime) + 'ms';
       text += '\n    Function inlining: ' + formatNumber(this.functionInliningTime) + 'ms';
       text += '\n    Constant folding: ' + formatNumber(this.constantFoldingTime) + 'ms';
@@ -2139,9 +2139,9 @@
         var callGraphStart = now();
         var graph = new CallGraph(program);
         this.callGraphTime += now() - callGraphStart;
-        var instanceToStaticStart = now();
-        InstanceToStaticPass.run(graph, resolver);
-        this.instanceToStaticTime += now() - instanceToStaticStart;
+        var globalizeStart = now();
+        GlobalizePass.run(graph, resolver);
+        this.globalizeTime += now() - globalizeStart;
         var symbolMotionStart = now();
         SymbolMotionPass.run(resolver);
         this.symbolMotionTime += now() - symbolMotionStart;
@@ -7312,7 +7312,7 @@
     }
     return true;
   };
-  var InstanceToStaticPass = {};
+  var GlobalizePass = {};
   function Member(_0) {
     this.type = null;
     this.dependency = null;
@@ -11886,7 +11886,7 @@
     options.removeAsserts = parser.boolForOption(Option.REMOVE_ASSERTS, releaseFlag);
     options.foldAllConstants = parser.boolForOption(Option.FOLD_CONSTANTS, releaseFlag);
     options.inlineAllFunctions = parser.boolForOption(Option.INLINE, releaseFlag);
-    options.convertAllInstanceToStatic = parser.boolForOption(Option.GLOBALIZE, releaseFlag);
+    options.globalizeAllFunctions = parser.boolForOption(Option.GLOBALIZE, releaseFlag);
     if (releaseFlag) {
       options.overrideDefine('BUILD_RELEASE', true);
     }
@@ -13492,12 +13492,12 @@
       }
     }
   };
-  InstanceToStaticPass.run = function(graph, resolver) {
+  GlobalizePass.run = function(graph, resolver) {
     for (var i = 0; i < graph.callInfo.length; i = i + 1 | 0) {
       var info = graph.callInfo[i];
       var symbol = info.symbol;
       var enclosingSymbol = symbol.enclosingSymbol;
-      if (symbol.kind === SymbolKind.INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() !== null && (enclosingSymbol.isImport() || in_SymbolKind.isEnum(enclosingSymbol.kind) || (resolver.options.convertAllInstanceToStatic || symbol.isInline()) && !symbol.isExport() && !symbol.isVirtual())) {
+      if (symbol.kind === SymbolKind.INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() !== null && (enclosingSymbol.isImport() || in_SymbolKind.isEnum(enclosingSymbol.kind) || (resolver.options.globalizeAllFunctions || symbol.isInline()) && !symbol.isExport() && !symbol.isVirtual())) {
         var thisSymbol = resolver.createSymbol('this', SymbolKind.LOCAL_VARIABLE);
         thisSymbol.type = enclosingSymbol.type;
         if (enclosingSymbol.hasParameters()) {
@@ -13512,13 +13512,13 @@
           }
         }
         thisSymbol.type = resolver.cache.ensureTypeIsParameterized(thisSymbol.type);
-        InstanceToStaticPass.recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
+        GlobalizePass.recursivelyReplaceThis(symbol.node.functionBlock(), thisSymbol);
         symbol.kind = SymbolKind.GLOBAL_FUNCTION;
         symbol.flags |= SymbolFlag.STATIC;
         var $arguments = symbol.type.argumentTypes();
         $arguments.unshift(thisSymbol.type);
         resolver.createFunctionType(symbol, symbol.type.resultType(), $arguments);
-        thisSymbol.node = Node.createVariable(InstanceToStaticPass.createThis(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol);
+        thisSymbol.node = Node.createVariable(GlobalizePass.createThis(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol);
         symbol.node.functionArguments().insertChild(0, thisSymbol.node);
         for (var j = 0; j < info.callSites.length; j = j + 1 | 0) {
           var callSite = info.callSites[j];
@@ -13530,7 +13530,7 @@
             name = value.dotName().replaceWith(null);
           } else {
             if (value.kind !== NodeKind.NAME) {
-              throw new Error('assert value.kind == .NAME; (src/resolver/instancetostatic.sk:60:13)');
+              throw new Error('assert value.kind == .NAME; (src/resolver/globalize.sk:60:13)');
             }
             target = Node.createThis().withType(thisSymbol.type);
             name = value.replaceWith(null);
@@ -13559,19 +13559,19 @@
       }
     }
   };
-  InstanceToStaticPass.createThis = function(symbol) {
+  GlobalizePass.createThis = function(symbol) {
     return Node.createName(symbol.name).withSymbol(symbol).withType(symbol.type);
   };
-  InstanceToStaticPass.recursivelyReplaceThis = function(node, symbol) {
+  GlobalizePass.recursivelyReplaceThis = function(node, symbol) {
     if (node.kind === NodeKind.THIS) {
-      node.become(InstanceToStaticPass.createThis(symbol).withRange(node.range));
+      node.become(GlobalizePass.createThis(symbol).withRange(node.range));
     } else if (node.isNameExpression() && node.symbol !== null && (node.symbol.kind === SymbolKind.INSTANCE_FUNCTION || node.symbol.kind === SymbolKind.INSTANCE_VARIABLE)) {
-      node.become(Node.createDot(InstanceToStaticPass.createThis(symbol), node.clone()).withType(node.type).withRange(node.range).withSymbol(node.symbol));
+      node.become(Node.createDot(GlobalizePass.createThis(symbol), node.clone()).withType(node.type).withRange(node.range).withSymbol(node.symbol));
     } else if (node.hasChildren()) {
       for (var i = 0; i < node.children.length; i = i + 1 | 0) {
         var child = node.children[i];
         if (child !== null) {
-          InstanceToStaticPass.recursivelyReplaceThis(child, symbol);
+          GlobalizePass.recursivelyReplaceThis(child, symbol);
         }
       }
     }
