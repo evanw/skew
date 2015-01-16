@@ -1,7 +1,4 @@
 import namespace io {
-  int terminalWidth;
-  void setColor(int color);
-  void print(string text);
   bool writeFile(string path, string contents);
   Source readFile(string path);
 }
@@ -57,7 +54,7 @@ export namespace frontend {
 
         // Print compilation statistics
         if (!log.hasErrors() && options.verbose) {
-          io.print(compiler.statistics(result) + "\n");
+          terminal.print(compiler.statistics(result));
         }
       }
     }
@@ -177,22 +174,9 @@ in frontend {
 
     // Check the configuration
     if (targetFormat != .NONE) {
-      CompilerConfig targetConfig = .NONE;
       var config = parser.stringRangeForOption(.CONFIG);
-      if (config == null) {
-        var os = OperatingSystem.current();
-        targetConfig =
-          targetFormat == .CPP ?
-            os == .ANDROID ? .ANDROID :
-            os == .IOS ? .IOS :
-            os == .LINUX ? .LINUX :
-            os == .OSX ? .OSX :
-            os == .WINDOWS ? .WINDOWS :
-            .NONE :
-          targetFormat == .JAVASCRIPT ?
-            .BROWSER :
-          .NONE;
-      } else {
+      if (config != null) {
+        CompilerConfig targetConfig = .AUTOMATIC;
         var name = config.toString();
         if (targetFormat == .JAVASCRIPT) {
           if (name == "browser") targetConfig = .BROWSER;
@@ -208,8 +192,8 @@ in frontend {
         } else {
           commandLineErrorUnexpectedConfiguration(log, config, name, target.toString());
         }
+        options.targetConfig = targetConfig;
       }
-      options.targetConfig = targetConfig;
     }
 
     // Read the source files
@@ -235,22 +219,10 @@ in frontend {
     return error ? null : result;
   }
 
-  enum Color {
-    DEFAULT = 0,
-    BOLD = 1,
-    GRAY = 90,
-    RED = 91,
-    GREEN = 92,
-    YELLOW = 93,
-    BLUE = 94,
-    MAGENTA = 95,
-    CYAN = 96,
-  }
-
-  void printWithColor(Color color, string text) {
-    io.setColor(color);
-    io.print(text);
-    io.setColor(Color.DEFAULT);
+  void printWithColor(terminal.Color color, string text) {
+    terminal.setColor(color);
+    terminal.write(text);
+    terminal.setColor(.DEFAULT);
   }
 
   void printError(string text) {
@@ -271,7 +243,7 @@ in frontend {
   void printUsage(OptionParser parser) {
     printWithColor(.GREEN, "\nusage: ");
     printWithColor(.BOLD, "skewc [flags] [inputs]\n");
-    io.print(parser.usageText(80));
+    terminal.write(parser.usageText(80));
   }
 
   void printLogWithColor(Log log) {
@@ -285,15 +257,15 @@ in frontend {
         case .ERROR { printError(diagnostic.text); }
       }
       if (!diagnostic.range.isEmpty()) {
-        var formatted = diagnostic.range.format(io.terminalWidth);
-        io.print(formatted.line + "\n");
+        var formatted = diagnostic.range.format(terminal.width());
+        terminal.print(formatted.line);
         printWithColor(.GREEN, formatted.range + "\n");
       }
       if (!diagnostic.noteRange.isEmpty()) {
         printWithColor(.BOLD, diagnostic.noteRange.locationString() + ": ");
         printNote(diagnostic.noteText);
-        var formatted = diagnostic.noteRange.format(io.terminalWidth);
-        io.print(formatted.line + "\n");
+        var formatted = diagnostic.noteRange.format(terminal.width());
+        terminal.print(formatted.line);
         printWithColor(.GREEN, formatted.range + "\n");
       }
     }
@@ -310,7 +282,7 @@ in frontend {
       summary += log.errorCount + prettyPrint.plural(log.errorCount, " error", " errors");
     }
     if (hasWarnings || hasErrors) {
-      io.print(summary + " generated\n");
+      terminal.print(summary + " generated");
     }
   }
 

@@ -30,7 +30,7 @@ export interface FileAccess {
 }
 
 export enum CompilerConfig {
-  NONE,
+  AUTOMATIC,
   ANDROID,
   BROWSER,
   IOS,
@@ -43,7 +43,7 @@ export enum CompilerConfig {
 export class CompilerOptions {
   FileAccess fileAccess = null;
   TargetFormat targetFormat = .NONE;
-  CompilerConfig targetConfig = .NONE;
+  CompilerConfig targetConfig = .AUTOMATIC;
   List<Source> inputs = [];
   List<Source> prepend = [];
   List<Source> append = [];
@@ -155,6 +155,23 @@ export class Compiler {
     createNameToSymbolFlag();
     createSymbolFlagToName();
 
+    // Automatically set the current configuration if it's not explicitly set
+    if (targetConfig == .AUTOMATIC) {
+      if (targetFormat == .JAVASCRIPT) {
+        targetConfig = .BROWSER;
+      } else if (targetFormat == .CPP) {
+        var os = OperatingSystem.current();
+        targetConfig =
+          os == .ANDROID ? .ANDROID :
+          os == .IOS ? .IOS :
+          os == .LINUX ? .LINUX :
+          os == .OSX ? .OSX :
+          os == .WINDOWS ? .WINDOWS :
+          .AUTOMATIC;
+      }
+      options.targetConfig = targetConfig;
+    }
+
     // Prepare native #define overrides
     options.overrideDefine("TARGET_JS", targetFormat == .JAVASCRIPT);
     options.overrideDefine("TARGET_CPP", targetFormat == .CPP);
@@ -260,6 +277,7 @@ in Compiler {
     CachedSource("stringmap.sk", @ContentsOfFile("../../lib/stringmap.sk")),
     CachedSource("intmap.sk", @ContentsOfFile("../../lib/intmap.sk")),
     CachedSource("os.sk", @ContentsOfFile("../../lib/os.sk")),
+    CachedSource("terminal.sk", @ContentsOfFile("../../lib/terminal.sk")),
   ];
 
   static int totalLineCount(List<Source> sources) {

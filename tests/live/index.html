@@ -185,7 +185,7 @@ function update(result, timeInMS) {
 }
 
 function start() {
-  ajax('../../build/debug/skewc.js', function(content) {
+  ajax('../../build/tests/live.js', function(content) {
     var code = content + '\n' + webWorker + '\nwebWorker()';
     var worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
     var busyCompiling = false;
@@ -252,7 +252,7 @@ var examples = [
   {
     name: 'FizzBuzz',
     content: [
-      'import void print(string text);',
+      'using terminal;',
       '',
       'string mod(int i, int n, string text) {',
       '  return i % n == 0 ? text : "";',
@@ -270,7 +270,7 @@ var examples = [
   {
     name: 'Mandelbrot',
     content: [
-      'import void print(string text);',
+      'using terminal;',
       '',
       '@EntryPoint',
       'void mandelbrotFractal() {',

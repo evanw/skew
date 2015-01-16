@@ -13,7 +13,6 @@ JS_SOURCES += src/core/support.js
 
 FLAGS += --verbose
 FLAGS += --target=js
-FLAGS += --config=node
 FLAGS += --append-file:src/core/support.js
 
 FRONTEND_DEPS += Makefile
@@ -23,6 +22,7 @@ FRONTEND_DEPS += src/frontend/frontend.js
 
 FRONTEND_FLAGS += $(SOURCES)
 FRONTEND_FLAGS += $(FLAGS)
+FRONTEND_FLAGS += --config=node
 FRONTEND_FLAGS += --append-file:src/frontend/frontend.js
 
 TEST_DEPS += Makefile
@@ -34,6 +34,7 @@ TEST_DEPS += tests/system/common.js
 TEST_FLAGS += $(SOURCES)
 TEST_FLAGS += $(TEST_SOURCES)
 TEST_FLAGS += $(FLAGS)
+TEST_FLAGS += --config=node
 TEST_FLAGS += --append-file:tests/system/common.js
 
 CPP_FLAGS = -std=c++11 -ferror-limit=0 -fno-exceptions -fno-rtti -Wall -Wextra -Wno-switch -Wno-unused-parameter -Wno-reorder -ferror-limit=0
@@ -111,6 +112,15 @@ $(RELEASE_DIR)/skewc.cpp: $(FRONTEND_DEPS) | $(RELEASE_DIR)
 
 $(RELEASE_DIR)/skewc: src/frontend/frontend.cpp $(RELEASE_DIR)/skewc.cpp
 	clang++ src/frontend/frontend.cpp $(CPP_FLAGS) -O3 -DNDEBUG -fomit-frame-pointer -fvisibility=hidden -I$(RELEASE_DIR) -o $(RELEASE_DIR)/skewc
+
+################################################################################
+# LIVE
+################################################################################
+
+live: $(TESTS_DIR)/live.js
+
+$(TESTS_DIR)/live.js: $(FRONTEND_DEPS) | $(TESTS_DIR)
+	node skewc.js $(SOURCES) $(FLAGS) --output-file=$(TESTS_DIR)/live.js --source-map
 
 ################################################################################
 # TEST
