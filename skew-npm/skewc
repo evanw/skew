@@ -32,6 +32,7 @@ function installUnix() {
   var args = [
     'c++',
     'frontend.cpp',
+    'skewc.unix.cpp',
     '-o', binaryPath,
     '-O3',
     '-DNDEBUG',
@@ -106,7 +107,7 @@ function installWindows() {
     var folder = process.env['VS' + version + 'COMNTOOLS'];
     var child = child_process.spawn('cmd.exe', [], { cwd: __dirname });
     child.stdin.write('"' + path.join(folder, '..', '..', 'VC', 'bin', 'vcvars32.bat') + '"\n');
-    child.stdin.write('cl.exe /O2 frontend.cpp /Fe"' + binaryPath + '"\n');
+    child.stdin.write('cl.exe /O2 frontend.cpp skewc.windows.cpp /Fe"' + binaryPath + '"\n');
     child.stdin.end();
     child.stdout.pipe(process.stdout);
     child.stderr.pipe(process.stderr);

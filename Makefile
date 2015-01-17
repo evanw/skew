@@ -96,7 +96,7 @@ $(DEBUG_DIR)/skewc.cpp: $(FRONTEND_DEPS) | $(DEBUG_DIR)
 	node skewc.js $(FRONTEND_SOURCES) --verbose --target=cpp --output-file=$(DEBUG_DIR)/skewc.cpp
 
 $(DEBUG_DIR)/skewc: src/frontend/frontend.cpp $(DEBUG_DIR)/skewc.cpp
-	clang++ src/frontend/frontend.cpp $(CPP_FLAGS) -I$(DEBUG_DIR) -std=c++11 -ferror-limit=0 -o $(DEBUG_DIR)/skewc
+	clang++ src/frontend/frontend.cpp $(DEBUG_DIR)/skewc.cpp $(CPP_FLAGS) -I$(DEBUG_DIR) -std=c++11 -ferror-limit=0 -o $(DEBUG_DIR)/skewc
 
 ################################################################################
 # RELEASE
@@ -123,7 +123,7 @@ $(RELEASE_DIR)/skewc.cpp: $(FRONTEND_DEPS) | $(RELEASE_DIR)
 	node skewc.js $(FRONTEND_SOURCES) --verbose --target=cpp --output-file=$(RELEASE_DIR)/skewc.cpp
 
 $(RELEASE_DIR)/skewc: src/frontend/frontend.cpp $(RELEASE_DIR)/skewc.cpp
-	clang++ src/frontend/frontend.cpp $(CPP_FLAGS) -O3 -DNDEBUG -fomit-frame-pointer -fvisibility=hidden -I$(RELEASE_DIR) -o $(RELEASE_DIR)/skewc
+	clang++ src/frontend/frontend.cpp $(RELEASE_DIR)/skewc.cpp $(CPP_FLAGS) -O3 -DNDEBUG -fomit-frame-pointer -fvisibility=hidden -I$(RELEASE_DIR) -o $(RELEASE_DIR)/skewc
 
 ################################################################################
 # LIVE
@@ -161,5 +161,6 @@ publish:
 	(cd $(NPM_DIR) && npm version patch)
 	cp src/frontend/frontend.cpp $(NPM_DIR)
 	node skewc.js $(FRONTEND_FLAGS) --output-file=$(NPM_DIR)/compiled.js
-	node skewc.js $(FRONTEND_SOURCES) --verbose --target=cpp --output-file=$(NPM_DIR)/skewc.cpp
+	node skewc.js $(FRONTEND_SOURCES) --verbose --target=cpp --config=osx --output-file=$(NPM_DIR)/skewc.unix.cpp
+	node skewc.js $(FRONTEND_SOURCES) --verbose --target=cpp --config=windows --output-file=$(NPM_DIR)/skewc.windows.cpp
 	(cd $(NPM_DIR) && npm publish)

@@ -1,4 +1,4 @@
-#include "skewc.cpp"
+#include <assert.h>
 
 #ifdef _WIN32
   #include <windows.h>
@@ -30,7 +30,7 @@ void *allocate(size_t size) {
   }
 
   auto data = next;
-  next = (uint8_t *)next + size;
+  next = (char *)next + size;
   available -= size;
   return data;
 }

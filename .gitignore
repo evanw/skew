@@ -1,6 +1,7 @@
-.DS_Store
 *.pyc
+.DS_Store
 /build/
 skew-npm/compiled.js
 skew-npm/frontend.cpp
-skew-npm/skewc.cpp
+skew-npm/skewc.unix.cpp
+skew-npm/skewc.windows.cpp

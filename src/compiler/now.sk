@@ -21,7 +21,7 @@
     if (`!_frequency.QuadPart`) {
       `QueryPerformanceFrequency(&_frequency)`;
     }
-    QueryPerformanceCounter(&counter);
+    `QueryPerformanceCounter(&counter)`;
     return `counter.QuadPart * 1000.0 / _frequency.QuadPart`;
   }
 
