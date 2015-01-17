@@ -41,7 +41,7 @@
     @OperatorGet T get(string key) { return _table[key]; }
     T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
     @OperatorSet void set(string key, T value) { _table[key] = value; }
-    @OperatorIn bool has(string key) { return _table.count(key); }
+    @OperatorIn bool has(string key) { return _table.count(key) > 0; }
     void remove(string key) { _table.erase(key); }
     List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
     List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }

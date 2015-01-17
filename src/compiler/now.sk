@@ -18,11 +18,11 @@
   @NeedsInclude("<windows.h>")
   double now() {
     `LARGE_INTEGER` counter;
-    if (`!_frequency.QuadPart`) {
-      `QueryPerformanceFrequency(&_frequency)`;
+    if (!_frequency.QuadPart) {
+      `QueryPerformanceFrequency`(&_frequency);
     }
-    `QueryPerformanceCounter(&counter)`;
-    return `counter.QuadPart * 1000.0 / _frequency.QuadPart`;
+    `QueryPerformanceCounter`(&counter);
+    return counter.QuadPart * 1000.0 / _frequency.QuadPart;
   }
 
 #elif TARGET_CPP && (CONFIG_OSX || CONFIG_LINUX)
@@ -30,8 +30,8 @@
   @NeedsInclude("<sys/time.h>")
   double now() {
     `timeval` data;
-    `gettimeofday(&data, null)`;
-    return `data.tv_sec * 1000.0 + data.tv_usec / 1000.0`;
+    `gettimeofday`(&data, null);
+    return data.tv_sec * 1000.0 + data.tv_usec / 1000.0;
   }
 
 #else

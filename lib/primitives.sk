@@ -52,19 +52,41 @@
   in double {
     inline string toString() { return _format_(this); }
 
-    // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0
-    static string _format_(double value) {
-      string buffer;
-      `buffer.resize(64)`;
-      `std::sprintf(&buffer[0], "%.15g", value)`;
-      if (`std::stod(&buffer[0]) != value`) {
-        `std::sprintf(&buffer[0], "%.16g", value)`;
+    #if !CONFIG_WINDOWS
+
+      // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0
+      @NeedsInclude("<cstdio>")
+      static string _format_(double value) {
+        string buffer;
+        `buffer.resize(64)`;
+        `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;
         if (`std::stod(&buffer[0]) != value`) {
-          `std::sprintf(&buffer[0], "%.17g", value)`;
+          `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;
+          if (`std::stod(&buffer[0]) != value`) {
+            `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;
+          }
         }
+        return `buffer.c_str()`;
       }
-      return `buffer.c_str()`;
-    }
+
+    #else
+
+      // MSVC won't allow std::sprintf() even though it's in the C++11 standard
+      @NeedsInclude("<stdio.h>")
+      static string _format_(double value) {
+        string buffer;
+        `buffer.resize(64)`;
+        `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;
+        if (`std::stod(&buffer[0]) != value`) {
+          `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;
+          if (`std::stod(&buffer[0]) != value`) {
+            `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;
+          }
+        }
+        return `buffer.c_str()`;
+      }
+
+    #endif
   }
 
   in string {

@@ -78,6 +78,7 @@ namespace terminal {
     }
 
     void setColor(Color color) {
+      _setup();
       int value = _info.wAttributes;
       switch (color) {
         case .BOLD { value |= `FOREGROUND_INTENSITY`; }

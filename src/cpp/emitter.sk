@@ -57,7 +57,7 @@ namespace cpp {
         if (hasArguments) {
           assert "<string>" in includes;
           var name = mangleName(cache.stringType.symbol);
-          emit(indent + "List<" + name + "> *args = new List<" + name + "> {};\n");
+          emit(indent + "List<" + name + "> *args = new List<" + name + ">({});\n");
           emit(indent + "args->_data.insert(args->_data.begin(), argv + 1, argv + argc);\n"); // The method push() may not have been emitted
         }
         emit(indent + (hasReturnValue ? "return " : "") + fullName(entryPointSymbol) + "(" + (hasArguments ? "args" : "") + ");\n");
@@ -464,11 +464,37 @@ namespace cpp {
     }
 
     override void emitParenthesizedCast(Node node, Precedence precedence) {
-      emit("static_cast<");
-      emitNormalType(node.castType().type);
-      emit(">(");
-      emitExpression(node.castValue(), .LOWEST);
-      emit(")");
+      var target = node.castType().type;
+
+      // MSVC has a warning that indicates converting numeric types to bool is
+      // slow. I have no idea why their compiler can't do this efficiently but
+      // the warning is really stupid because all it does is encourage code
+      // obfuscation. The warning is "forcing value to bool 'true' or 'false'
+      // (performance warning)". The "!!x" boolean-cast trick works in almost
+      // all cases but fails for strongly-typed enums, which are missing a
+      // unary not operator.
+      if (options.targetConfig == .WINDOWS && target.isBool(cache)) {
+        var source = node.castValue().type;
+        if (.UNARY_PREFIX < precedence) emit("(");
+        emit("!!");
+        if (source.isPrimitive()) {
+          emitExpression(node.castValue(), .UNARY_PREFIX);
+        } else {
+          emit("static_cast<int>(");
+          emitExpression(node.castValue(), .UNARY_PREFIX);
+          emit(")");
+        }
+        if (.UNARY_PREFIX < precedence) emit(")");
+      }
+
+      // Emit a normal cast
+      else {
+        emit("static_cast<");
+        emitNormalType(target);
+        emit(">(");
+        emitExpression(node.castValue(), .LOWEST);
+        emit(")");
+      }
     }
 
     override bool shouldEmitCast(Node node) {
@@ -521,7 +547,7 @@ namespace cpp {
         emitCommaSeparatedExpressions(values);
         emit(" }");
       } else {
-        emit(" {}");
+        emit("({})"); // Can't just use "{}" because MSVC chokes on it
       }
       if (wrap) emit(")");
     }
@@ -602,6 +628,22 @@ namespace cpp {
 
     override StringMap<bool> createIsKeyword() {
       var result = StringMap<bool>();
+
+      // The windows.h header has an excellent selection of very poorly chosen #define names
+      if (options.targetConfig == .WINDOWS) {
+        result["CONST"] = true;
+        result["DELETE"] = true;
+        result["ERROR"] = true;
+        result["EXTERN_C"] = true;
+        result["FALSE"] = true;
+        result["IN"] = true;
+        result["INTERFACE"] = true;
+        result["OUT"] = true;
+        result["PURE"] = true;
+        result["THIS"] = true;
+        result["TRUE"] = true;
+      }
+
       result["alignas"] = true;
       result["alignof"] = true;
       result["and"] = true;
@@ -689,6 +731,7 @@ namespace cpp {
       result["while"] = true;
       result["xor"] = true;
       result["xor_eq"] = true;
+
       return result;
     }
   }

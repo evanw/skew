@@ -69,7 +69,7 @@ namespace frontend {
     parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.");
     parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.");
     parser.define(.STRING_LIST, .DEFINE, "--define", "Overrides the value of a #define statement. Example: --define:UNIT_TESTS=true.");
-    parser.define(.BOOL, .RELEASE, "--release", "Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE=true.");
+    parser.define(.BOOL, .RELEASE, "--release", "Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE.");
     parser.define(.STRING, .CONFIG, "--config", "Provides the configuration for the target format. Valid configurations are " + prettyPrint.join(simpleQuoteAll(VALID_JS_CONFIGS), "and") + " for JavaScript and " + prettyPrint.join(simpleQuoteAll(VALID_CPP_CONFIGS), "and") + " for C++. The default configuration is \"browser\" for JavaScript and the current operating system for C++.");
     parser.define(.BOOL, .VERBOSE, "--verbose", "Prints out information about the compilation.");
     parser.define(.BOOL, .SOURCE_MAP, "--source-map", "Generates a source map when targeting JavaScript. The source map is saved with the \".map\" extension in the same directory as the main output file.");
@@ -239,10 +239,11 @@ namespace frontend {
   void printUsage(OptionParser parser) {
     printWithColor(.GREEN, "\nusage: ");
     printWithColor(.BOLD, "skewc [flags] [inputs]\n");
-    terminal.write(parser.usageText(80));
+    terminal.write(parser.usageText(80 - terminalWidthPadding()));
   }
 
   void printLogWithColor(Log log) {
+    var terminalWidth = terminal.width() - terminalWidthPadding();
     for (var i = 0; i < log.diagnostics.size(); i++) {
       var diagnostic = log.diagnostics[i];
       if (!diagnostic.range.isEmpty()) {
@@ -253,14 +254,14 @@ namespace frontend {
         case .ERROR { printError(diagnostic.text); }
       }
       if (!diagnostic.range.isEmpty()) {
-        var formatted = diagnostic.range.format(terminal.width());
+        var formatted = diagnostic.range.format(terminalWidth);
         terminal.print(formatted.line);
         printWithColor(.GREEN, formatted.range + "\n");
       }
       if (!diagnostic.noteRange.isEmpty()) {
         printWithColor(.BOLD, diagnostic.noteRange.locationString() + ": ");
         printNote(diagnostic.noteText);
-        var formatted = diagnostic.noteRange.format(terminal.width());
+        var formatted = diagnostic.noteRange.format(terminalWidth);
         terminal.print(formatted.line);
         printWithColor(.GREEN, formatted.range + "\n");
       }
@@ -280,6 +281,12 @@ namespace frontend {
     if (hasWarnings || hasErrors) {
       terminal.print(summary + " generated");
     }
+  }
+
+  // The windows command prompt inserts an extra line break if text is present
+  // in the last column of a row, so don't put any text there just to be safe
+  int terminalWidthPadding() {
+    return OperatingSystem.current() == .WINDOWS ? 1 : 0;
   }
 
   final var VALID_TARGETS = [

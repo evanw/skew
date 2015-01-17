@@ -75,7 +75,7 @@ void foo(List<std::string> *args) {
 }
 
 int main(int argc, char **argv) {
-  List<std::string> *args = new List<std::string> {};
+  List<std::string> *args = new List<std::string>({});
   args->_data.insert(args->_data.begin(), argv + 1, argv + argc);
   foo(args);
 }
@@ -112,7 +112,7 @@ int foo(List<std::string> *args) {
 }
 
 int main(int argc, char **argv) {
-  List<std::string> *args = new List<std::string> {};
+  List<std::string> *args = new List<std::string>({});
   args->_data.insert(args->_data.begin(), argv + 1, argv + argc);
   return foo(args);
 }

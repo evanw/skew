@@ -224,6 +224,7 @@ export void test() {
   0.0.toString();
 }
 ", "
+#include <cstdio>
 #include <string>
 
 namespace in_double {
@@ -235,13 +236,13 @@ void test();
 std::string in_double::_format_(double value) {
   std::string buffer = \"\";
   buffer.resize(64);
-  std::sprintf(&buffer[0], \"%.15g\", value);
+  std::snprintf(&buffer[0], buffer.size(), \"%.15g\", value);
 
   if (std::stod(&buffer[0]) != value) {
-    std::sprintf(&buffer[0], \"%.16g\", value);
+    std::snprintf(&buffer[0], buffer.size(), \"%.16g\", value);
 
     if (std::stod(&buffer[0]) != value) {
-      std::sprintf(&buffer[0], \"%.17g\", value);
+      std::snprintf(&buffer[0], buffer.size(), \"%.17g\", value);
     }
   }
 
