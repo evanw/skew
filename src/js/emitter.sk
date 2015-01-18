@@ -636,6 +636,8 @@ namespace js {
         case .FLOAT, .DOUBLE { emitDouble(node); }
         case .STRING { emit(quoteStringJS(node.asString())); }
         case .LIST { emitList(node); }
+        case .KEY_VALUE { emitKeyValue(node); }
+        case .MAP { emitMap(node); }
         case .DOT, .DOT_ARROW, .DOT_COLON { emitDot(node); }
         case .CALL { emitCall(node); }
         case .SUPER_CALL { emitSuperCall(node); }
@@ -692,6 +694,30 @@ namespace js {
       emit("[");
       emitCommaSeparatedExpressions(node.listValues());
       emit("]");
+    }
+
+    void emitKeyValue(Node node) {
+      var key = node.itemKey();
+      if (options.minify && key.kind == .STRING) {
+        var value = key.asString();
+        if (isValidIdentifier(value) || parseIntLiteral(value, 10).toString() == value) {
+          emit(value);
+        } else {
+          emitExpression(key, .COMMA);
+        }
+      } else {
+        emitExpression(key, .COMMA);
+      }
+      emit(":" + space);
+      emitExpression(node.itemValue(), .COMMA);
+    }
+
+    void emitMap(Node node) {
+      var items = node.mapItems();
+      var padding = items.size() != 0 ? space : "";
+      emit("{" + padding);
+      emitCommaSeparatedExpressions(items);
+      emit(padding + "}");
     }
 
     void emitDot(Node node) {
@@ -867,52 +893,52 @@ namespace js {
     }
 
     static StringMap<bool> createIsKeyword() {
-      var result = StringMap<bool>();
-      result["apply"] = true;
-      result["arguments"] = true;
-      result["Boolean"] = true;
-      result["break"] = true;
-      result["call"] = true;
-      result["case"] = true;
-      result["catch"] = true;
-      result["class"] = true;
-      result["const"] = true;
-      result["constructor"] = true;
-      result["continue"] = true;
-      result["Date"] = true;
-      result["debugger"] = true;
-      result["default"] = true;
-      result["delete"] = true;
-      result["do"] = true;
-      result["double"] = true;
-      result["else"] = true;
-      result["export"] = true;
-      result["extends"] = true;
-      result["false"] = true;
-      result["finally"] = true;
-      result["float"] = true;
-      result["for"] = true;
-      result["Function"] = true;
-      result["function"] = true;
-      result["if"] = true;
-      result["import"] = true;
-      result["in"] = true;
-      result["instanceof"] = true;
-      result["int"] = true;
-      result["let"] = true;
-      result["new"] = true;
-      result["null"] = true;
-      result["Number"] = true;
-      result["Object"] = true;
-      result["return"] = true;
-      result["String"] = true;
-      result["super"] = true;
-      result["this"] = true;
-      result["throw"] = true;
-      result["true"] = true;
-      result["try"] = true;
-      result["var"] = true;
-      return result;
+      return {
+        "apply": true,
+        "arguments": true,
+        "Boolean": true,
+        "break": true,
+        "call": true,
+        "case": true,
+        "catch": true,
+        "class": true,
+        "const": true,
+        "constructor": true,
+        "continue": true,
+        "Date": true,
+        "debugger": true,
+        "default": true,
+        "delete": true,
+        "do": true,
+        "double": true,
+        "else": true,
+        "export": true,
+        "extends": true,
+        "false": true,
+        "finally": true,
+        "float": true,
+        "for": true,
+        "Function": true,
+        "function": true,
+        "if": true,
+        "import": true,
+        "in": true,
+        "instanceof": true,
+        "int": true,
+        "let": true,
+        "new": true,
+        "null": true,
+        "Number": true,
+        "Object": true,
+        "return": true,
+        "String": true,
+        "super": true,
+        "this": true,
+        "throw": true,
+        "true": true,
+        "try": true,
+        "var": true,
+      };
     }
 
     static string mangleName(Symbol symbol) {
@@ -945,5 +971,15 @@ namespace js {
       }
       return mangleName(symbol);
     }
-  }
+
+    static bool isValidIdentifier(string text) {
+      for (var i = 0; i < text.size(); i++) {
+        var c = text[i];
+        if (((c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && c != '_' && c != '$') && (i == 0 || c < '0' || c > '9')) {
+          return false;
+        }
+      }
+      return text != "";
+    }
+}
 }

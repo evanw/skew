@@ -8,16 +8,11 @@
       @OperatorSet void set(string key, T value) { _table[key] = value; }
       @OperatorIn bool has(string key) { return key in _table; }
       void remove(string key) { delete _table[key]; }
+      List<string> keys() { return `Object`.keys(_table); }
     }
 
     T getOrDefault(string key, T defaultValue) {
       return key in this ? this[key] : defaultValue;
-    }
-
-    List<string> keys() {
-      List<string> keys = [];
-      for (string key in _table) keys.push(key);
-      return keys;
     }
 
     List<T> values() {
@@ -65,3 +60,14 @@
   }
 
 #endif
+
+in StringMap {
+  static StringMap<X> literal<X>(List<string> keys, List<X> values) {
+    var map = StringMap<X>();
+    assert keys.size() == values.size();
+    for (var i = 0; i < keys.size(); i++) {
+      map[keys[i]] = values[i];
+    }
+    return map;
+  }
+}

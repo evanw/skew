@@ -838,6 +838,22 @@ export List<double> foo(double x, bool y) {
 ").release();
 
 testJS("
+export `var` foo() {
+  return {
+    \"abc\": 0,
+    \"456\": 0,
+    \"x y\": 0,
+    \"-1\": 0,
+    \"01\": 0,
+    \"$\": 0,
+    \"_\": 0,
+  };
+}
+", "
+(function(){foo=function(){return {abc:0,456:0,'x y':0,-1:0,'01':0,$:0,_:0}}}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }

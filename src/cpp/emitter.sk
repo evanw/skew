@@ -103,27 +103,15 @@ namespace cpp {
       return super(before, after) && (pass != .FORWARD_DECLARE_CODE || !before.isFunction() || !after.isFunction());
     }
 
-    override void emitTypeParameter(Symbol symbol) {
-      emit("typename " + mangleName(symbol));
-    }
-
     override void emitTypeParameters(Symbol symbol) {
-      var enclosingSymbol = symbol.enclosingSymbol;
-      var selfParameters = symbol.hasParameters();
-      var enclosingParameters = pass == .IMPLEMENT_CODE && enclosingSymbol.hasParameters();
-      if (selfParameters || enclosingParameters) {
+      if (pass == .IMPLEMENT_CODE && symbol.enclosingSymbol.hasParameters()) {
+        emitTypeParameters(symbol.enclosingSymbol);
+      }
+      if (symbol.hasParameters()) {
         emit(indent + "template <");
-        if (selfParameters) {
-          for (var i = 0; i < symbol.parameters.size(); i++) {
-            if (i != 0) emit(", ");
-            emitTypeParameter(symbol.parameters[i]);
-          }
-        }
-        if (enclosingParameters) {
-          for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
-            if (i > 0 || selfParameters) emit(", ");
-            emitTypeParameter(enclosingSymbol.parameters[i]);
-          }
+        for (var i = 0; i < symbol.parameters.size(); i++) {
+          if (i != 0) emit(", ");
+          emit("typename " + mangleName(symbol.parameters[i]));
         }
         emit(">\n");
       }
@@ -635,7 +623,95 @@ namespace cpp {
     }
 
     override StringMap<bool> createIsKeyword() {
-      var result = StringMap<bool>();
+      var result = {
+        "alignas": true,
+        "alignof": true,
+        "and": true,
+        "and_eq": true,
+        "asm": true,
+        "auto": true,
+        "bitand": true,
+        "bitor": true,
+        "bool": true,
+        "break": true,
+        "case": true,
+        "catch": true,
+        "char": true,
+        "char16_t": true,
+        "char32_t": true,
+        "class": true,
+        "compl": true,
+        "const": true,
+        "const_cast": true,
+        "constexpr": true,
+        "continue": true,
+        "decltype": true,
+        "default": true,
+        "delete": true,
+        "do": true,
+        "double": true,
+        "dynamic_cast": true,
+        "else": true,
+        "enum": true,
+        "explicit": true,
+        "export": true,
+        "extern": true,
+        "false": true,
+        "float": true,
+        "for": true,
+        "friend": true,
+        "goto": true,
+        "if": true,
+        "INFINITY": true,
+        "inline": true,
+        "int": true,
+        "long": true,
+        "mutable": true,
+        "namespace": true,
+        "NAN": true,
+        "new": true,
+        "noexcept": true,
+        "not": true,
+        "not_eq": true,
+        "NULL": true,
+        "nullptr": true,
+        "operator": true,
+        "or": true,
+        "or_eq": true,
+        "private": true,
+        "protected": true,
+        "public": true,
+        "register": true,
+        "reinterpret_cast": true,
+        "return": true,
+        "short": true,
+        "signed": true,
+        "sizeof": true,
+        "static": true,
+        "static_assert": true,
+        "static_cast": true,
+        "struct": true,
+        "switch": true,
+        "template": true,
+        "this": true,
+        "thread_local": true,
+        "throw": true,
+        "true": true,
+        "try": true,
+        "typedef": true,
+        "typeid": true,
+        "typename": true,
+        "union": true,
+        "unsigned": true,
+        "using": true,
+        "virtual": true,
+        "void": true,
+        "volatile": true,
+        "wchar_t": true,
+        "while": true,
+        "xor": true,
+        "xor_eq": true,
+      };
 
       // The windows.h header has an excellent selection of very poorly chosen #define names
       if (options.targetConfig == .WINDOWS) {
@@ -651,94 +727,6 @@ namespace cpp {
         result["THIS"] = true;
         result["TRUE"] = true;
       }
-
-      result["alignas"] = true;
-      result["alignof"] = true;
-      result["and"] = true;
-      result["and_eq"] = true;
-      result["asm"] = true;
-      result["auto"] = true;
-      result["bitand"] = true;
-      result["bitor"] = true;
-      result["bool"] = true;
-      result["break"] = true;
-      result["case"] = true;
-      result["catch"] = true;
-      result["char"] = true;
-      result["char16_t"] = true;
-      result["char32_t"] = true;
-      result["class"] = true;
-      result["compl"] = true;
-      result["const"] = true;
-      result["const_cast"] = true;
-      result["constexpr"] = true;
-      result["continue"] = true;
-      result["decltype"] = true;
-      result["default"] = true;
-      result["delete"] = true;
-      result["do"] = true;
-      result["double"] = true;
-      result["dynamic_cast"] = true;
-      result["else"] = true;
-      result["enum"] = true;
-      result["explicit"] = true;
-      result["export"] = true;
-      result["extern"] = true;
-      result["false"] = true;
-      result["float"] = true;
-      result["for"] = true;
-      result["friend"] = true;
-      result["goto"] = true;
-      result["if"] = true;
-      result["INFINITY"] = true;
-      result["inline"] = true;
-      result["int"] = true;
-      result["long"] = true;
-      result["mutable"] = true;
-      result["namespace"] = true;
-      result["NAN"] = true;
-      result["new"] = true;
-      result["noexcept"] = true;
-      result["not"] = true;
-      result["not_eq"] = true;
-      result["NULL"] = true;
-      result["nullptr"] = true;
-      result["operator"] = true;
-      result["or"] = true;
-      result["or_eq"] = true;
-      result["private"] = true;
-      result["protected"] = true;
-      result["public"] = true;
-      result["register"] = true;
-      result["reinterpret_cast"] = true;
-      result["return"] = true;
-      result["short"] = true;
-      result["signed"] = true;
-      result["sizeof"] = true;
-      result["static"] = true;
-      result["static_assert"] = true;
-      result["static_cast"] = true;
-      result["struct"] = true;
-      result["switch"] = true;
-      result["template"] = true;
-      result["this"] = true;
-      result["thread_local"] = true;
-      result["throw"] = true;
-      result["true"] = true;
-      result["try"] = true;
-      result["typedef"] = true;
-      result["typeid"] = true;
-      result["typename"] = true;
-      result["union"] = true;
-      result["unsigned"] = true;
-      result["using"] = true;
-      result["virtual"] = true;
-      result["void"] = true;
-      result["volatile"] = true;
-      result["wchar_t"] = true;
-      result["while"] = true;
-      result["xor"] = true;
-      result["xor_eq"] = true;
 
       return result;
     }

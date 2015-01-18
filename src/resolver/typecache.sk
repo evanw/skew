@@ -18,6 +18,8 @@ class TypeCache {
   Type doubleType = null;
   Type stringType = null;
   Type listType = null;
+  Type stringMapType = null;
+  Type intMapType = null;
   Type toStringType = null;
 
   final var hashTable = IntMap<List<Type>>();
@@ -34,6 +36,8 @@ class TypeCache {
     doubleType = findType(scope, "double", .PRIMITIVE);
     stringType = findType(scope, "string", .PRIMITIVE);
     listType = findType(scope, "List", 0);
+    stringMapType = findType(scope, "StringMap", 0);
+    intMapType = findType(scope, "IntMap", 0);
     toStringType = functionType(stringType, []);
   }
 
@@ -223,6 +227,10 @@ class TypeCache {
     }
     existingTypes.push(type);
     return type;
+  }
+
+  Type parameterizeListType(Type itemType) {
+    return parameterize(listType, [itemType]);
   }
 
   Type functionType(Type result, List<Type> arguments) {

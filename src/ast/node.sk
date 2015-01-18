@@ -56,6 +56,8 @@ enum NodeKind {
   DOUBLE,
   STRING,
   LIST,
+  MAP,
+  KEY_VALUE,
   DOT,
   DOT_ARROW, // Used for C++ binding
   DOT_COLON, // Used for C++ binding

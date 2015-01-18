@@ -250,4 +250,75 @@ var bar = null.toString() + \"\";
                ~~~~~~~~
 ");
 
+test("
+void foo() {
+  var foo = {};
+}
+", "
+<stdin>:2:13: error: Cannot infer a common key type for this map literal
+  var foo = {};
+            ~~
+");
+
+test("
+enum Foo { FOO, BAR }
+void foo() {
+  var foo = { 0: false, 1: true };
+  var bar = { \"a\": false, \"b\": true };
+  var baz = { Foo.FOO: false, Foo.BAR: true };
+}
+", "
+");
+
+test("
+void foo() {
+  StringMap<bool> foo = { 0: 0, 1: 1 };
+}
+", "
+<stdin>:2:27: error: Cannot convert from type \"int\" to type \"string\"
+  StringMap<bool> foo = { 0: 0, 1: 1 };
+                          ^
+<stdin>:2:30: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  StringMap<bool> foo = { 0: 0, 1: 1 };
+                             ^
+<stdin>:2:33: error: Cannot convert from type \"int\" to type \"string\"
+  StringMap<bool> foo = { 0: 0, 1: 1 };
+                                ^
+<stdin>:2:36: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  StringMap<bool> foo = { 0: 0, 1: 1 };
+                                   ^
+");
+
+test("
+void foo() {
+  IntMap<bool> foo = { false: 0, true: 1 };
+}
+", "
+<stdin>:2:24: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  IntMap<bool> foo = { false: 0, true: 1 };
+                       ~~~~~
+<stdin>:2:31: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  IntMap<bool> foo = { false: 0, true: 1 };
+                              ^
+<stdin>:2:34: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  IntMap<bool> foo = { false: 0, true: 1 };
+                                 ~~~~
+<stdin>:2:40: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  IntMap<bool> foo = { false: 0, true: 1 };
+                                       ^
+");
+
+test("
+void foo() {
+  var foo = { 0: false, true: 1 };
+}
+", "
+<stdin>:2:13: error: Cannot infer a common key type for this map literal
+  var foo = { 0: false, true: 1 };
+            ~~~~~~~~~~~~~~~~~~~~~
+<stdin>:2:13: error: Cannot infer a common value type for this map literal
+  var foo = { 0: false, true: 1 };
+            ~~~~~~~~~~~~~~~~~~~~~
+");
+
 }}

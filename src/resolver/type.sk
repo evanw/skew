@@ -227,6 +227,14 @@ class Type {
     return symbol == cache.listType.symbol;
   }
 
+  bool isStringMap(TypeCache cache) {
+    return symbol == cache.stringMapType.symbol;
+  }
+
+  bool isIntMap(TypeCache cache) {
+    return symbol == cache.intMapType.symbol;
+  }
+
   bool isError(TypeCache cache) {
     return this == cache.errorType;
   }

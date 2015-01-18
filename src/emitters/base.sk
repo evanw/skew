@@ -84,10 +84,6 @@ namespace base {
     virtual void emitVariable(Symbol symbol);
     virtual void emitFunctionArgument(Symbol symbol);
 
-    virtual void emitTypeParameter(Symbol symbol) {
-      emit(mangleName(symbol));
-    }
-
     void emitFunctionArguments(Symbol symbol) {
       var arguments = symbol.node.functionArguments();
       emit("(");
@@ -105,7 +101,7 @@ namespace base {
         emit("<");
         for (var i = 0; i < symbol.parameters.size(); i++) {
           if (i != 0) emit(", ");
-          emitTypeParameter(symbol.parameters[i]);
+          emit(mangleName(symbol.parameters[i]));
         }
         emit(">");
       }

@@ -423,6 +423,23 @@ in Node {
     return children;
   }
 
+  List<Node> mapItems() {
+    assert kind == .MAP;
+    return children;
+  }
+
+  Node itemKey() {
+    assert kind == .KEY_VALUE;
+    assert children.size() == 2;
+    return children[0];
+  }
+
+  Node itemValue() {
+    assert kind == .KEY_VALUE;
+    assert children.size() == 2;
+    return children[1];
+  }
+
   Node parameterBound() {
     assert kind == .PARAMETER;
     assert children.size() == 2;

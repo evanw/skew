@@ -306,8 +306,16 @@ void semanticErrorFalseAssert(Log log, Range range) {
   log.error(range, "Assertion failed");
 }
 
-void semanticErrorListTypeInferenceFailed(Log log, Range range) {
+void semanticErrorListLiteralCommonTypeInferenceFailed(Log log, Range range) {
   log.error(range, "Cannot infer a common element type for this list literal");
+}
+
+void semanticErrorMapLiteralCommonTypeInferenceFailed(Log log, Range range, string where) {
+  log.error(range, "Cannot infer a common " + where + " type for this map literal");
+}
+
+void semanticErrorMapLiteralBadKeyType(Log log, Range range, Type type) {
+  log.error(range, "No support for maps with keys of " + typeToText(type));
 }
 
 void semanticErrorNoDefaultValue(Log log, Range range, Type type) {

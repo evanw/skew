@@ -142,6 +142,9 @@ $(TESTS_DIR)/live.js: $(FRONTEND_DEPS) | $(TESTS_DIR)
 test: $(TESTS_DIR)/skewc.js
 	node $(TESTS_DIR)/skewc.js
 
+test-release: $(TESTS_DIR)/skewc.min.js
+	node $(TESTS_DIR)/skewc.min.js
+
 test-binary: $(TESTS_DIR)/skewc
 	$(TESTS_DIR)/skewc
 
@@ -150,6 +153,9 @@ $(TESTS_DIR):
 
 $(TESTS_DIR)/skewc.js: $(TEST_DEPS) | $(TESTS_DIR)
 	node skewc.js $(TEST_SOURCES) $(JS_FLAGS) --config=node --output-file=$(TESTS_DIR)/skewc.js
+
+$(TESTS_DIR)/skewc.min.js: $(TEST_DEPS) | $(TESTS_DIR)
+	node skewc.js $(TEST_SOURCES) $(JS_FLAGS) --config=node --output-file=$(TESTS_DIR)/skewc.min.js --release
 
 $(TESTS_DIR)/skewc.cpp: $(TEST_DEPS) | $(TESTS_DIR)
 	node skewc.js $(TEST_SOURCES) $(CPP_FLAGS) --output-file=$(TESTS_DIR)/skewc.cpp

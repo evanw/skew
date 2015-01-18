@@ -39,6 +39,12 @@ in Node {
     return Node(.MEMBER_INITIALIZER).withChildren([name, value]);
   }
 
+  static Node createKeyValue(Node key, Node value) {
+    assert key.kind.isExpression();
+    assert value.kind.isExpression();
+    return Node(.KEY_VALUE).withChildren([key, value]);
+  }
+
   static Node createNamespace(Node name, Node block) {
     assert name == null || name.kind == .NAME;
     assert block.kind == .BLOCK;
@@ -272,6 +278,11 @@ in Node {
     return Node(.LIST).withChildren(values);
   }
 
+  static Node createMap(List<Node> items) {
+    assert checkAllNodeKinds(items, NodeKindIsExpression());
+    return Node(.MAP).withChildren(items);
+  }
+
   static Node createDot(Node value, Node name) {
     assert value == null || value.kind.isExpression();
     assert name == null || name.kind == .NAME;
@@ -377,41 +388,41 @@ in Node {
   }
 }
 
-interface INodeKindChecker {
-  virtual bool check(Node node);
+interface NodeKindChecker {
+  virtual bool check(NodeKind target);
 }
 
-class NodeKindIs : INodeKindChecker {
-  NodeKind kind;
+class NodeKindIs : NodeKindChecker {
+  NodeKind expected;
 
-  override bool check(Node node) {
-    return node.kind == kind;
+  override bool check(NodeKind kind) {
+    return kind == expected;
   }
 }
 
-class NodeKindIsExpression : INodeKindChecker {
-  override bool check(Node node) {
-    return node.kind.isExpression();
+class NodeKindIsExpression : NodeKindChecker {
+  override bool check(NodeKind kind) {
+    return kind.isExpression();
   }
 }
 
-class NodeKindIsStatement : INodeKindChecker {
-  override bool check(Node node) {
-    return node.kind.isStatement();
+class NodeKindIsStatement : NodeKindChecker {
+  override bool check(NodeKind kind) {
+    return kind.isStatement();
   }
 }
 
-bool checkAllNodeListKinds(Node node, INodeKindChecker checker) {
+bool checkAllNodeListKinds(Node node, NodeKindChecker checker) {
   assert node != null;
   assert node.kind == .NODE_LIST;
   assert node.children != null;
   return checkAllNodeKinds(node.children, checker);
 }
 
-bool checkAllNodeKinds(List<Node> nodes, INodeKindChecker checker) {
+bool checkAllNodeKinds(List<Node> nodes, NodeKindChecker checker) {
   assert nodes != null;
   for (var i = 0; i < nodes.size(); i++) {
-    if (!checker.check(nodes[i])) {
+    if (!checker.check(nodes[i].kind)) {
       return false;
     }
   }

@@ -684,6 +684,8 @@ class Resolver {
       case .DOUBLE { node.type = cache.doubleType; }
       case .STRING { node.type = cache.stringType; }
       case .LIST { resolveList(node); }
+      case .MAP { resolveMap(node); }
+      case .KEY_VALUE { resolveKeyValue(node); }
       case .DOT, .DOT_ARROW, .DOT_COLON { resolveDot(node); }
       case .CALL { resolveCall(node); }
       case .SUPER_CALL { resolveSuperCall(node); }
@@ -1002,6 +1004,7 @@ class Resolver {
   bool needsTypeContext(Node node) {
     return
       node.kind == .LIST ||
+      node.kind == .MAP ||
       node.kind == .DOT && node.dotTarget() == null ||
       node.kind == .COMPLEMENT && needsTypeContext(node.unaryValue()) ||
       node.kind == .HOOK && needsTypeContext(node.hookTrue()) && needsTypeContext(node.hookFalse());
@@ -2054,7 +2057,7 @@ class Resolver {
       // Generate an array lookup
       if (consecutive != null) {
         // Generate the array initializer
-        var stringListType = cache.parameterize(cache.listType, [cache.stringType]);
+        var stringListType = cache.parameterizeListType(cache.stringType);
         var array = createSymbol("_toString_", .GLOBAL_VARIABLE);
         array.enclosingSymbol = enclosingSymbol;
         array.flags = .FROM_EXTENSION | .STATIC;
@@ -2190,7 +2193,7 @@ class Resolver {
       return;
     }
 
-    var stringListType = cache.parameterize(cache.listType, [cache.stringType]);
+    var stringListType = cache.parameterizeListType(cache.stringType);
     var validTypes = [
       cache.functionType(cache.voidType, []),
       cache.functionType(cache.intType, []),
@@ -2209,7 +2212,7 @@ class Resolver {
     if (argumentTypes.size() != arguments.size()) {
       var range = Range.equal(outer, inner) ? outer : Range.after(outer, inner);
       semanticErrorArgumentCount(log, range, argumentTypes.size(), arguments.size());
-      resolveNodesAsExpressions(arguments);
+      resolveNodesAsParameterizedExpressions(arguments);
       return;
     }
 
@@ -2294,7 +2297,7 @@ class Resolver {
     }
   }
 
-  void resolveNodesAsExpressions(List<Node> nodes) {
+  void resolveNodesAsParameterizedExpressions(List<Node> nodes) {
     for (var i = 0; i < nodes.size(); i++) {
       resolveAsParameterizedExpression(nodes[i]);
     }
@@ -2493,7 +2496,7 @@ class Resolver {
         // Resolve the arguments
         var arguments = superInitializer.superCallArguments();
         if (overriddenType.isIgnored(cache)) {
-          resolveNodesAsExpressions(arguments);
+          resolveNodesAsParameterizedExpressions(arguments);
         } else {
           assert overriddenType.isFunction();
           resolveArguments(arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
@@ -2621,8 +2624,8 @@ class Resolver {
       return true;
     }
 
-    // List literals are only pure if their elements are pure
-    if (kind == .LIST) {
+    // List and map literals are only pure if their elements are pure
+    if (kind == .LIST || kind == .MAP) {
       if (node.hasChildren()) {
         for (var i = 0; i < node.children.size(); i++) {
           if (!isPureValue(node.children[i])) {
@@ -2631,6 +2634,11 @@ class Resolver {
         }
       }
       return true;
+    }
+
+    // Key-value pairs are only pure if both key and value are pure
+    if (kind == .KEY_VALUE) {
+      return isPureValue(node.itemKey()) && isPureValue(node.itemValue());
     }
 
     // Calls are pure if the function and all arguments are pure
@@ -3060,7 +3068,7 @@ class Resolver {
 
     // Avoid reporting further errors
     if (typeContext != null && typeContext.isIgnored(cache)) {
-      resolveNodesAsExpressions(values);
+      resolveNodesAsParameterizedExpressions(values);
       return;
     }
 
@@ -3079,15 +3087,7 @@ class Resolver {
     for (var i = 0; i < values.size(); i++) {
       var value = values[i];
       resolveAsParameterizedExpression(value);
-      if (commonType == null || value.type.isIgnored(cache)) {
-        commonType = value.type;
-      } else if (!commonType.isIgnored(cache)) {
-        commonType = cache.commonImplicitType(commonType, value.type);
-        if (commonType == null) {
-          semanticErrorListTypeInferenceFailed(log, node.range);
-          commonType = cache.errorType;
-        }
-      }
+      commonType = mergeCommonLiteralType(commonType, value, node);
     }
 
     // Avoid reporting further errors
@@ -3097,12 +3097,132 @@ class Resolver {
 
     // Make sure an empty list literal without type context is an error
     if (commonType == null) {
-      semanticErrorListTypeInferenceFailed(log, node.range);
+      semanticErrorListLiteralCommonTypeInferenceFailed(log, node.range);
       return;
     }
 
     // Finally, set the type of the list
-    node.type = cache.parameterize(cache.listType, [commonType]);
+    node.type = cache.parameterizeListType(commonType);
+  }
+
+  void resolveMap(Node node) {
+    expandPreprocessorSequences(node);
+    var items = node.mapItems();
+    Type keyType;
+    Type valueType;
+
+    // Avoid reporting further errors
+    if (typeContext != null && typeContext.isIgnored(cache)) {
+      resolveNodesAsParameterizedExpressions(items);
+      return;
+    }
+
+    // The type of the literal comes from how it's used
+    if (typeContext != null && (typeContext.isStringMap(cache) || typeContext.isIntMap(cache))) {
+      // Just call the constructor for an empty map literal
+      if (items.size() == 0) {
+        node.become(Node.createCall(Node.createType(typeContext), []).withRange(node.range).withType(node.type));
+        resolveAsParameterizedExpression(node);
+        return;
+      }
+
+      // Otherwise, pass the type context on to the map items
+      keyType = typeContext.isStringMap(cache) ? cache.stringType : cache.intType;
+      valueType = typeContext.substitutions[0];
+      for (var i = 0; i < items.size(); i++) {
+        var item = items[i];
+        if (item.kind != .KEY_VALUE) {
+          assert item.kind == .ERROR;
+          continue;
+        }
+        resolveAsParamterizedExpressionWithConversion(item.itemKey(), keyType, .IMPLICIT_CAST);
+        resolveAsParamterizedExpressionWithConversion(item.itemValue(), valueType, .IMPLICIT_CAST);
+        item.type = cache.errorType;
+      }
+      node.type = typeContext;
+    }
+
+    else {
+      // Don't try to infer type context if there were any parse erorrs
+      for (var i = 0; i < items.size(); i++) {
+        if (items[i].kind != .KEY_VALUE) {
+          assert items[i].kind == .ERROR;
+          resolveNodesAsParameterizedExpressions(items);
+          return;
+        }
+      }
+
+      // Try to infer the type
+      for (var i = 0; i < items.size(); i++) {
+        var item = items[i];
+        var key = item.itemKey();
+        var value = item.itemValue();
+        resolveAsParameterizedExpression(key);
+        resolveAsParameterizedExpression(value);
+        keyType = mergeCommonLiteralType(keyType, key, node);
+        valueType = mergeCommonLiteralType(valueType, value, node);
+        item.type = cache.errorType;
+      }
+
+      // Avoid reporting further errors
+      if (keyType != null && keyType.isIgnored(cache) ||
+          valueType != null && valueType.isIgnored(cache)) {
+        return;
+      }
+
+      // Make sure an empty map literal without type context is an error
+      if (keyType == null) {
+        semanticErrorMapLiteralCommonTypeInferenceFailed(log, node.range, "key");
+        return;
+      }
+
+      // Emit an error for a map literal with keys that aren't strings or ints
+      var isString = keyType.isString(cache);
+      if (!isString && !keyType.isInteger(cache)) {
+        semanticErrorMapLiteralBadKeyType(log, node.range, keyType);
+        return;
+      }
+
+      // The map is either a StringMap or an IntMap
+      node.type = cache.parameterize(isString ? cache.stringMapType : cache.intMapType, [valueType]);
+    }
+
+    // Call the factory function
+    var literal = node.type.findMember("literal").symbol;
+    List<Node> keys = [];
+    List<Node> values = [];
+    for (var i = 0; i < items.size(); i++) {
+      var item = items[i];
+      keys.push(item.itemKey().replaceWith(null));
+      values.push(item.itemValue().replaceWith(null));
+    }
+    node.become(Node.createCall(
+      Node.createName(literal.name).withSymbol(literal).withType(cache.parameterize(literal.type, [valueType])), [
+      Node.createList(keys).withType(cache.parameterizeListType(keyType)),
+      Node.createList(values).withType(cache.parameterizeListType(valueType))
+    ]).withRange(node.range).withType(node.type));
+  }
+
+  Type mergeCommonLiteralType(Type commonType, Node child, Node parent) {
+    if (commonType == null || child.type.isIgnored(cache)) {
+      commonType = child.type;
+    } else if (!commonType.isIgnored(cache)) {
+      commonType = cache.commonImplicitType(commonType, child.type);
+      if (commonType == null) {
+        if (parent.kind == .LIST) {
+          semanticErrorListLiteralCommonTypeInferenceFailed(log, parent.range);
+        } else {
+          semanticErrorMapLiteralCommonTypeInferenceFailed(log, parent.range, child == child.parent.itemKey() ? "key" : "value");
+        }
+        commonType = cache.errorType;
+      }
+    }
+    return commonType;
+  }
+
+  void resolveKeyValue(Node node) {
+    resolveAsParameterizedExpression(node.itemKey());
+    resolveAsParameterizedExpression(node.itemValue());
   }
 
   void resolveDot(Node node) {
@@ -3196,7 +3316,7 @@ class Resolver {
 
     // Avoid reporting further errors
     if (valueType.isIgnored(cache)) {
-      resolveNodesAsExpressions(arguments);
+      resolveNodesAsParameterizedExpressions(arguments);
       return;
     }
 
@@ -3212,7 +3332,7 @@ class Resolver {
       var member = valueType.constructor();
       if (member == null) {
         semanticErrorUnconstructableType(log, value.range, valueType);
-        resolveNodesAsExpressions(arguments);
+        resolveNodesAsParameterizedExpressions(arguments);
         return;
       }
       initializeMember(member);
@@ -3221,7 +3341,7 @@ class Resolver {
       if (valueType.symbol.isAbstract()) {
         var reason = valueType.symbol.reasonForAbstract;
         semanticErrorAbstractNew(log, value.range, valueType, reason.node.declarationName().range, reason.fullName());
-        resolveNodesAsExpressions(arguments);
+        resolveNodesAsParameterizedExpressions(arguments);
         return;
       }
 
@@ -3230,7 +3350,7 @@ class Resolver {
 
       // Avoid reporting further errors
       if (valueType.isIgnored(cache)) {
-        resolveNodesAsExpressions(arguments);
+        resolveNodesAsParameterizedExpressions(arguments);
         return;
       }
     }
@@ -3238,7 +3358,7 @@ class Resolver {
     // Can only call an instance of a function type
     if (!valueType.isFunction()) {
       semanticErrorInvalidCall(log, value.range, valueType);
-      resolveNodesAsExpressions(arguments);
+      resolveNodesAsParameterizedExpressions(arguments);
       return;
     }
 
@@ -3256,7 +3376,7 @@ class Resolver {
         context.functionSymbol.overriddenMember == null ||
         context.functionSymbol.kind == .CONSTRUCTOR_FUNCTION) {
       semanticErrorBadSuperCall(log, node.range);
-      resolveNodesAsExpressions(arguments);
+      resolveNodesAsParameterizedExpressions(arguments);
     }
 
     else {
@@ -3266,14 +3386,14 @@ class Resolver {
       // Avoid reporting further errors
       var type = member.type;
       if (type.isIgnored(cache) || !type.isFunction()) {
-        resolveNodesAsExpressions(arguments);
+        resolveNodesAsParameterizedExpressions(arguments);
         return;
       }
 
       // Super calls are statically resolved, so the symbol must not be abstract
       if (member.symbol.node.functionBlock() == null) {
         semanticErrorAbstractSuperCall(log, node.range, member.symbol.node.declarationName().range);
-        resolveNodesAsExpressions(arguments);
+        resolveNodesAsParameterizedExpressions(arguments);
         return;
       }
 
@@ -3801,34 +3921,36 @@ class Resolver {
 
 void createNameToSymbolFlag() {
   if (nameToSymbolFlag != null) return;
-  nameToSymbolFlag = StringMap<SymbolFlag>();
-  nameToSymbolFlag["const"] = SymbolFlag.CONST;
-  nameToSymbolFlag["export"] = SymbolFlag.EXPORT;
-  nameToSymbolFlag["final"] = SymbolFlag.FINAL;
-  nameToSymbolFlag["import"] = SymbolFlag.IMPORT;
-  nameToSymbolFlag["inline"] = SymbolFlag.INLINE;
-  nameToSymbolFlag["override"] = SymbolFlag.OVERRIDE;
-  nameToSymbolFlag["private"] = SymbolFlag.PRIVATE;
-  nameToSymbolFlag["protected"] = SymbolFlag.PROTECTED;
-  nameToSymbolFlag["public"] = SymbolFlag.PUBLIC;
-  nameToSymbolFlag["static"] = SymbolFlag.STATIC;
-  nameToSymbolFlag["virtual"] = SymbolFlag.VIRTUAL;
+  nameToSymbolFlag = {
+    "const": .CONST,
+    "export": .EXPORT,
+    "final": .FINAL,
+    "import": .IMPORT,
+    "inline": .INLINE,
+    "override": .OVERRIDE,
+    "private": .PRIVATE,
+    "protected": .PROTECTED,
+    "public": .PUBLIC,
+    "static": .STATIC,
+    "virtual": .VIRTUAL,
+  };
 }
 
 void createSymbolFlagToName() {
   if (symbolFlagToName != null) return;
-  symbolFlagToName = IntMap<string>();
-  symbolFlagToName[SymbolFlag.CONST] = "const";
-  symbolFlagToName[SymbolFlag.EXPORT] = "export";
-  symbolFlagToName[SymbolFlag.FINAL] = "final";
-  symbolFlagToName[SymbolFlag.IMPORT] = "import";
-  symbolFlagToName[SymbolFlag.INLINE] = "inline";
-  symbolFlagToName[SymbolFlag.OVERRIDE] = "override";
-  symbolFlagToName[SymbolFlag.PRIVATE] = "private";
-  symbolFlagToName[SymbolFlag.PROTECTED] = "protected";
-  symbolFlagToName[SymbolFlag.PUBLIC] = "public";
-  symbolFlagToName[SymbolFlag.STATIC] = "static";
-  symbolFlagToName[SymbolFlag.VIRTUAL] = "virtual";
+  symbolFlagToName = {
+    SymbolFlag.CONST: "const",
+    SymbolFlag.EXPORT: "export",
+    SymbolFlag.FINAL: "final",
+    SymbolFlag.IMPORT: "import",
+    SymbolFlag.INLINE: "inline",
+    SymbolFlag.OVERRIDE: "override",
+    SymbolFlag.PRIVATE: "private",
+    SymbolFlag.PROTECTED: "protected",
+    SymbolFlag.PUBLIC: "public",
+    SymbolFlag.STATIC: "static",
+    SymbolFlag.VIRTUAL: "virtual",
+  };
 }
 
 StringMap<SymbolFlag> nameToSymbolFlag;

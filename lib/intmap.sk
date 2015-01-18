@@ -65,3 +65,14 @@
   }
 
 #endif
+
+in IntMap {
+  static IntMap<X> literal<X>(List<int> keys, List<X> values) {
+    var map = IntMap<X>();
+    assert keys.size() == values.size();
+    for (var i = 0; i < keys.size(); i++) {
+      map[keys[i]] = values[i];
+    }
+    return map;
+  }
+}

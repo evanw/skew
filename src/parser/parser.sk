@@ -35,6 +35,11 @@ enum StatementHint {
   IN_SWITCH,
 }
 
+enum ListMode {
+  NORMAL,
+  KEY_VALUE,
+}
+
 enum TokenScan {
   NORMAL,
   STOP_BEFORE_NEXT_STATEMENT,
@@ -125,6 +130,17 @@ Node parseCaseStatement(ParserContext context) {
   if (!context.eat(.DEFAULT)) {
     if (!context.expect(.CASE)) return null;
     do {
+      // Make sure we don't parse a map expression here. The user is likely in
+      // the middle of typing a case statement and trying to parse a map
+      // expression will generate many confusing errors as the parser tries to
+      // interpret the case block as a map expression. Map expressions cannot
+      // be used in a case statement anyway so this isn't a problem.
+      if (context.peek(.LEFT_BRACE)) {
+        context.unexpectedToken();
+        values.push(Node.createError()); // Make sure this case doesn't look like a default case
+        break;
+      }
+
       values.push(pratt.parse(context, .COMMA));
     } while (context.eat(.COMMA));
   }
@@ -199,18 +215,25 @@ Node parseParameters(ParserContext context) {
   return Node.createNodeList(parameters).withRange(context.spanSince(token.range));
 }
 
-Node parsePreprocessorSequence(ParserContext context) {
+Node parseMapKeyValuePair(ParserContext context) {
+  var key = pratt.parse(context, .COMMA);
+  if (!context.expect(.COLON)) return Node.createError().withRange(key.range);
+  var value = pratt.parse(context, .COMMA);
+  return Node.createKeyValue(key, value).withRange(Range.span(key.range, value.range));
+}
+
+Node parsePreprocessorSequence(ParserContext context, ListMode mode) {
   context.needsPreprocessor = true;
   var token = context.next();
   var value = pratt.parse(context, .COMMA);
-  var trueNodes = parseCommaSeparatedNodeList(context);
+  var trueNodes = parseCommaSeparatedNodeList(context, mode);
   Node falseNodes;
   if (context.peek(.PREPROCESSOR_ELIF)) {
-    var node = parsePreprocessorSequence(context);
+    var node = parsePreprocessorSequence(context, mode);
     falseNodes = Node.createNodeList([node]).withRange(node.range);
   } else {
     if (context.eat(.PREPROCESSOR_ELSE)) {
-      falseNodes = parseCommaSeparatedNodeList(context);
+      falseNodes = parseCommaSeparatedNodeList(context, mode);
     }
     if (!context.expect(.PREPROCESSOR_ENDIF)) {
       return errorExpressionSinceToken(context, token);
@@ -224,31 +247,35 @@ bool isEndOfCommaSeparatedList(ParserContext context) {
   return
     kind == .RIGHT_PARENTHESIS ||
     kind == .RIGHT_BRACKET ||
+    kind == .RIGHT_BRACE ||
     kind == .PREPROCESSOR_ELIF ||
     kind == .PREPROCESSOR_ELSE ||
     kind == .PREPROCESSOR_ENDIF;
 }
 
-List<Node> parseCommaSeparatedList(ParserContext context) {
+List<Node> parseCommaSeparatedList(ParserContext context, ListMode mode) {
   List<Node> values = [];
   while (!isEndOfCommaSeparatedList(context)) {
     var isPreprocessorSequence = context.peek(.PREPROCESSOR_IF);
-    var value = isPreprocessorSequence ? parsePreprocessorSequence(context) : pratt.parse(context, .COMMA);
+    var value =
+      isPreprocessorSequence ? parsePreprocessorSequence(context, mode) :
+      mode == .KEY_VALUE ? parseMapKeyValuePair(context) :
+      pratt.parse(context, .COMMA);
     values.push(value);
     if (value.kind == .ERROR || !isPreprocessorSequence && !isEndOfCommaSeparatedList(context) && !context.expect(.COMMA)) break;
   }
   return values;
 }
 
-Node parseCommaSeparatedNodeList(ParserContext context) {
+Node parseCommaSeparatedNodeList(ParserContext context, ListMode mode) {
   var token = context.current();
-  var values = parseCommaSeparatedList(context);
+  var values = parseCommaSeparatedList(context, mode);
   return Node.createNodeList(values).withRange(context.spanSince(token.range));
 }
 
-List<Node> parseWrappedCommaSeparatedList(ParserContext context, TokenKind left, TokenKind right) {
+List<Node> parseWrappedCommaSeparatedList(ParserContext context, TokenKind left, TokenKind right, ListMode mode) {
   if (!context.expect(left)) return [];
-  var values = parseCommaSeparatedList(context);
+  var values = parseCommaSeparatedList(context, mode);
   scanForToken(context, right, .STOP_BEFORE_NEXT_STATEMENT);
   return values;
 }
@@ -384,7 +411,7 @@ Node parseAnnotation(ParserContext context, StatementHint hint) {
   Node arguments = null;
   if (context.peek(.LEFT_PARENTHESIS)) {
     var parenthesis = context.current();
-    var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS);
+    var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL);
     arguments = Node.createNodeList(values).withRange(context.spanSince(parenthesis.range));
   }
   var block = parseBlockOrStatement(context, hint); if (block == null) return null;
@@ -532,7 +559,7 @@ Node parseFor(ParserContext context) {
 
 Node parseSuperCall(ParserContext context) {
   var token = context.next();
-  var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS);
+  var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL);
   return Node.createSuperCall(values).withRange(context.spanSince(token.range));
 }
 
@@ -831,8 +858,16 @@ class BinaryInfixOrUnaryPostfix : IInfixParselet {
 class ListParselet : IPrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.current();
-    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_BRACKET, .RIGHT_BRACKET);
-    return Node.createList(arguments).withRange(context.spanSince(token.range));
+    var values = parseWrappedCommaSeparatedList(context, .LEFT_BRACKET, .RIGHT_BRACKET, .NORMAL);
+    return Node.createList(values).withRange(context.spanSince(token.range));
+  }
+}
+
+class MapParselet : IPrefixParselet {
+  override Node parse(ParserContext context) {
+    var token = context.current();
+    var values = parseWrappedCommaSeparatedList(context, .LEFT_BRACE, .RIGHT_BRACE, .KEY_VALUE);
+    return Node.createMap(values).withRange(context.spanSince(token.range));
   }
 }
 
@@ -889,7 +924,7 @@ class DotPrefixParselet : IPrefixParselet {
 
 class CallParselet : IInfixParselet {
   override Node parse(ParserContext context, Node left) {
-    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS);
+    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL);
     return Node.createCall(left, arguments).withRange(context.spanSince(left.range));
   }
 }
@@ -955,7 +990,7 @@ class AnnotationParselet : IPrefixParselet {
     Node arguments = null;
     if (context.peek(.LEFT_PARENTHESIS)) {
       var parenthesis = context.current();
-      var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS);
+      var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL);
       arguments = Node.createNodeList(values).withRange(context.spanSince(parenthesis.range));
     }
     return Node.createAnnotation(name, arguments).withRange(context.spanSince(token.range));
@@ -1047,6 +1082,7 @@ void createParser() {
   pratt.parselet(.ANNOTATION, .LOWEST).prefix = AnnotationParselet();
   pratt.parselet(.PREPROCESSOR_IF, .LOWEST).prefix = IfParselet();
   pratt.parselet(.LEFT_BRACKET, .LOWEST).prefix = ListParselet();
+  pratt.parselet(.LEFT_BRACE, .LOWEST).prefix = MapParselet();
   pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet();
   pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet();
   pratt.parselet(.COMMA, .COMMA).infix = SequenceParselet();
