@@ -346,6 +346,14 @@ namespace cpp {
       emit("\n");
     }
 
+    override void emitBeforeSubsequentForVariable(Node node) {
+      var type = node.symbol.type;
+      emit(
+        type.isReference() || type.isQuoted() && type.symbol.node.kind == .POSTFIX_DEREFERENCE ? ", *" :
+        type.isQuoted() && type.symbol.node.kind == .POSTFIX_REFERENCE ? ", &" :
+        ", ");
+    }
+
     override void emitForEach(Node node) {
       var symbol = node.forEachVariable().symbol;
       emit(indent + "for (");

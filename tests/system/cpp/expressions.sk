@@ -355,4 +355,35 @@ Foo<T>::Foo() {
 Foo<foo> *bar = nullptr;
 ");
 
+testCPP("
+class Foo {}
+export void foo(int foo, int bar) {
+  for (Foo x = null, y = null; x == y; x = y) {}
+  for (`(void *)` x = null, y = null; x == y; x = y) {}
+  for (`(int &)` x = foo, y = bar; foo == bar; foo++, bar--) {}
+}
+", "
+struct Foo;
+
+struct Foo {
+  Foo();
+};
+
+void foo(int foo, int bar);
+
+Foo::Foo() {
+}
+
+void foo(int foo, int bar) {
+  for (Foo *x = nullptr, *y = nullptr; x == y; x = y) {
+  }
+
+  for (void *x = nullptr, *y = nullptr; x == y; x = y) {
+  }
+
+  for (int &x = foo, &y = bar; foo == bar; foo++, bar--) {
+  }
+}
+");
+
 }}

@@ -2801,13 +2801,16 @@
     this.recursiveEmitIfStatement(node);
     this.emit('\n');
   };
+  base.Emitter.prototype.emitBeforeSubsequentForVariable = function(node) {
+    this.emit(', ');
+  };
   base.Emitter.prototype.emitForVariables = function(nodes) {
     this.emitTypeBeforeVariable(nodes[0].symbol);
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-      if (i !== 0) {
-        this.emit(', ');
-      }
       var node = nodes[i];
+      if (i !== 0) {
+        this.emitBeforeSubsequentForVariable(node);
+      }
       this.emit(this.mangleName(node.symbol));
       this.emitAfterVariable(node);
     }
@@ -2953,7 +2956,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/emitters/base.sk:387:16)');
+        throw new Error('assert false; (src/emitters/base.sk:391:16)');
       }
       break;
     }
@@ -2969,7 +2972,7 @@
   base.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
     if (!(values.length > 1)) {
-      throw new Error('assert values.size() > 1; (src/emitters/base.sk:401:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/base.sk:405:7)');
     }
     if (Precedence.COMMA <= precedence) {
       this.emit('(');
@@ -3160,7 +3163,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:588:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:592:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -3520,6 +3523,10 @@
     this.emit(' catch (...)');
     this.emitBlock(node.catchBlock());
     this.emit('\n');
+  };
+  cpp.Emitter.prototype.emitBeforeSubsequentForVariable = function(node) {
+    var type = node.symbol.type;
+    this.emit(type.isReference() || type.isQuoted() && type.symbol.node.kind === NodeKind.POSTFIX_DEREFERENCE ? ', *' : type.isQuoted() && type.symbol.node.kind === NodeKind.POSTFIX_REFERENCE ? ', &' : ', ');
   };
   cpp.Emitter.prototype.emitForEach = function(node) {
     var symbol = node.forEachVariable().symbol;

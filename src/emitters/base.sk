@@ -270,11 +270,15 @@ namespace base {
       emit("\n");
     }
 
+    virtual void emitBeforeSubsequentForVariable(Node node) {
+      emit(", ");
+    }
+
     void emitForVariables(List<Node> nodes) {
       emitTypeBeforeVariable(nodes[0].symbol);
       for (var i = 0; i < nodes.size(); i++) {
-        if (i != 0) emit(", ");
         var node = nodes[i];
+        if (i != 0) emitBeforeSubsequentForVariable(node);
         emit(mangleName(node.symbol));
         emitAfterVariable(node);
       }
