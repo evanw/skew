@@ -50,6 +50,7 @@ CXX_FLAGS += -Wextra
 CXX_FLAGS += -Wno-switch
 CXX_FLAGS += -Wno-unused-parameter
 CXX_FLAGS += -Wno-reorder
+CXX_FLAGS += -Wshorten-64-to-32
 CXX_FLAGS += -ferror-limit=0
 
 ################################################################################

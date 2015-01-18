@@ -48,7 +48,7 @@ interface Comparison<T> {
     new() {}
 
     int size() {
-      return _data.size();
+      return (int)_data.size();
     }
 
     void push(T value) {
@@ -124,12 +124,12 @@ interface Comparison<T> {
 
     @NeedsInclude("<algorithm>") {
       int indexOf(T value) {
-        int index = `std`::find(_data.begin(), _data.end(), value) - _data.begin();
+        int index = (int)(`std`::find(_data.begin(), _data.end(), value) - _data.begin());
         return index == size() ? -1 : index;
       }
 
       int lastIndexOf(T value) {
-        int index = `std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin();
+        int index = (int)(`std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin());
         return size() - index - 1;
       }
 
