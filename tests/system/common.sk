@@ -150,14 +150,14 @@ namespace tests {
       }
 
       // Removal
-      else if (j >= 0 && (i < 0 || matrix[ij - 1] > matrix[ij - n])) {
+      else if (j >= 0 && (i < 0 || (j > 0 ? matrix[ij - 1] : 0) > (i > 0 ? matrix[ij - n] : 0))) {
         reversed.push("-" + output[j]);
         j--;
       }
 
       // Insertion
       else {
-        assert i >= 0 && (j < 0 || matrix[ij - 1] <= matrix[ij - n]);
+        assert i >= 0 && (j < 0 || (j > 0 ? matrix[ij - 1] : 0) <= (i > 0 ? matrix[ij - n] : 0));
         reversed.push("+" + expected[i]);
         i--;
       }
