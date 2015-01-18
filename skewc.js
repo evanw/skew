@@ -4463,20 +4463,30 @@
     if (!js.Emitter.hasCompoundName(symbol) && !symbol.isExport()) {
       this.emit('var ');
     }
-    this.emit(js.Emitter.fullName(symbol) + this.space + '=' + this.space + '{' + this.newline);
-    this.increaseIndent();
-    for (var i = 0; i < block.children.length; i = i + 1 | 0) {
-      var child = block.children[i].symbol;
-      this.emit(this.indent + js.Emitter.mangleName(child) + ':' + this.space + child.constant.asInt());
-      if (i !== (block.children.length - 1 | 0)) {
-        this.emit(',' + this.newline);
-        this.maybeEmitMinifedNewline();
-      } else {
-        this.emit(this.newline);
+    if (this.options.mangle) {
+      for (var i = 0; i < block.children.length; i = i + 1 | 0) {
+        var child = block.children[i].symbol;
+        if (i !== 0) {
+          this.emit(',' + this.space);
+        }
+        this.emit(js.Emitter.mangleName(child) + this.space + '=' + this.space + child.constant.asInt());
       }
+    } else {
+      this.emit(js.Emitter.fullName(symbol) + this.space + '=' + this.space + '{' + this.newline);
+      this.increaseIndent();
+      for (var i = 0; i < block.children.length; i = i + 1 | 0) {
+        var child = block.children[i].symbol;
+        this.emit(this.indent + js.Emitter.mangleName(child) + ':' + this.space + child.constant.asInt());
+        if (i !== (block.children.length - 1 | 0)) {
+          this.emit(',' + this.newline);
+          this.maybeEmitMinifedNewline();
+        } else {
+          this.emit(this.newline);
+        }
+      }
+      this.decreaseIndent();
+      this.emit(this.indent + '}');
     }
-    this.decreaseIndent();
-    this.emit(this.indent + '}');
     this.emitSemicolonAfterStatement();
   };
   js.Emitter.prototype.emitFunction = function(node) {
@@ -4706,7 +4716,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/js/emitter.sk:638:16)');
+        throw new Error('assert false; (src/js/emitter.sk:646:16)');
       }
       break;
     }
@@ -4805,7 +4815,7 @@
   };
   js.Emitter.prototype.isRightChildOfBinaryExpression = function(node, kind) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:725:7)');
+      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:733:7)');
     }
     while (in_NodeKind.isBinaryOperator(node.parent.kind)) {
       if (node.parent.binaryRight() === node) {

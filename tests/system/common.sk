@@ -49,6 +49,16 @@ namespace tests {
       options.globalizeAllFunctions = true;
       return this;
     }
+
+    Test minify() {
+      options.minify = true;
+      return this;
+    }
+
+    Test mangle() {
+      options.mangle = true;
+      return this;
+    }
   }
 
   List<Test> registeredTests = [];
@@ -189,20 +199,18 @@ namespace tests {
   }
 }
 
-void test(string input, string expected) {
-  registeredTests.push(Test(trim(input), expected));
+Test test(string input, string expected) {
+  var test = Test(trim(input), expected);
+  registeredTests.push(test);
+  return test;
 }
 
-void testJS(string input, string expected) {
-  registeredTests.push(Test(trim(input), expected).js());
+Test testJS(string input, string expected) {
+  return test(input, expected).js();
 }
 
-void testCPP(string input, string expected) {
-  registeredTests.push(Test(trim(input), expected).cpp());
-}
-
-void testMinifyJS(string input, string expected) {
-  registeredTests.push(Test(trim(input), expected).js().release());
+Test testCPP(string input, string expected) {
+  return test(input, expected).cpp();
 }
 
 @EntryPoint

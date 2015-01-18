@@ -1,14 +1,14 @@
 namespace js { void testMinify() {
 
-testMinifyJS("
+testJS("
 export void foo() {
   for (;;) {}
 }
 ", "
 (function(){foo=function(){for(;;);}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export class Foo {}
 in Foo {
   Foo foo = null;
@@ -16,9 +16,9 @@ in Foo {
 }
 ", "
 (function(){Foo=function(){this.a=this.b=null}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export class Foo {}
 in Foo {
   var xa = 0;
@@ -32,17 +32,17 @@ in Foo {
 }
 ", "
 (function(){Foo=function(){this.a=0,this.b=!1,this.c=this.d=this.e=0,this.f=this.g=!1,this.h=0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo(StringMap<int> map) {
   return map.get(\"x\") + map.get(\"_\") + map.get(\"x\") + map.get(\"0\") + map.get(\"x0\") + map.get(\"if\");
 }
 ", "
 (function(){function b(){this.a=Object.create(null)}foo=function(a){return ((((a.a.x+a.a._|0)+a.a.x|0)+a.a['0']|0)+a.a.x0|0)+a.a['if']|0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export void foo(StringMap<int> map) {
   map.set(\"x\", 0);
   map.set(\"_\", 0);
@@ -53,9 +53,9 @@ export void foo(StringMap<int> map) {
 }
 ", "
 (function(){function b(){this.a=Object.create(null)}foo=function(a){a.a.x=a.a._=a.a.x=a.a['0']=a.a.x0=a.a['if']=0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export void foo() {
   var map = StringMap<bool>();
   bool a;
@@ -66,35 +66,35 @@ export void foo() {
 }
 ", "
 (function(){function c(){this.a=Object.create(null)}foo=function(){var a=new c(),b=!1;b=a.a.a=!1,b=a.a.a=!0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export void foo() {
   do {} while (true);
 }
 ", "
 (function(){foo=function(){do;while(!0)}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void x();
 export void foo() {
   do { x(); } while (true);
 }
 ", "
 (function(){foo=function(){do x();while(!0)}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void x();
 export void foo() {
   do { x(); break; } while (true);
 }
 ", "
 (function(){foo=function(){do{x();break}while(!0)}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 class Foo {
   int foo;
 }
@@ -106,9 +106,9 @@ export int foo() {
 }
 ", "
 (function(){function b(a){this.a=a}function c(a){this.a=a}foo=function(){return new b(100).a+new c(200).a|0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 class Foo {
   int foo;
 }
@@ -120,18 +120,18 @@ export int foo() {
 }
 ", "
 (function(){function $e(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function c(a){this.a=a}function d(a,b){c.call(this,a),this.b=b}$e(d,c);foo=function(){return new c(100).a+new d(200,300).a|0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import int a();
 export int foo(int x) {
   return a() + x;
 }
 ", "
 (function(){foo=function(b){return a()+b|0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import namespace a {
   int b();
 }
@@ -140,41 +140,41 @@ export int foo(int b) {
 }
 ", "
 (function(){foo=function(b){return a.b()+b|0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export void foo(int foo) { int bar, baz; }
 export void bar(int foo, int bar) { int baz; }
 export void baz(int foo, int bar, int baz) {}
 ", "
 (function(){foo=function(a){var b=0,c=0};bar=function(a,b){var c=0};baz=function(a,b,c){}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo() {
   return `0` in 1;
 }
 ", "
 (function(){foo=function(){return 0 in 1}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo(int foo) {
   return foo + +1;
 }
 ", "
 (function(){foo=function(a){return a+1|0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo(int foo) {
   return foo - -1;
 }
 ", "
 (function(){foo=function(a){return a+1|0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void x();
 export int foo() {
   x();
@@ -182,9 +182,9 @@ export int foo() {
 }
 ", "
 (function(){foo=function(){return x(),1}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void x();
 export int foo() {
   x();
@@ -193,9 +193,9 @@ export int foo() {
 }
 ", "
 (function(){foo=function(){return x(),x(),1}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo(int foo) {
   if (foo < 0) return -1;
   else if (foo > 0) return 1;
@@ -203,9 +203,9 @@ export int foo(int foo) {
 }
 ", "
 (function(){foo=function(a){return a<0?-1:a>0?1:0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo(int foo) {
   if (foo < 0) return -1;
   if (foo > 0) return 1;
@@ -213,9 +213,9 @@ export int foo(int foo) {
 }
 ", "
 (function(){foo=function(a){return a<0?-1:a>0?1:0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void y();
 export int foo(int x) {
   if (x < 0) {
@@ -226,9 +226,9 @@ export int foo(int x) {
 }
 ", "
 (function(){foo=function(a){return a<0?(y(),1):2}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo() {
   int foo;
   int bar;
@@ -236,9 +236,9 @@ export int foo() {
 }
 ", "
 (function(){foo=function(){var a=0,b=0;return a+b|0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 const bool bar = false;
 export int foo(int y) {
   if (y < 0) {
@@ -250,9 +250,9 @@ export int foo(int y) {
 }
 ", "
 (function(){foo=function(a){return a<0?-a|0:a}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo(int y) {
   if (y > 0) y++;
   else if (y < 0) y += 2;
@@ -261,9 +261,9 @@ export int foo(int y) {
 }
 ", "
 (function(){foo=function(a){return a=(a>0?a+1:a<0?a+2:a-1)|0,a}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo(int x, int y) {
   if (x < 0) {
     x++;
@@ -278,9 +278,9 @@ export int foo(int x, int y) {
 }
 ", "
 (function(){foo=function(a,b){return a<0?(a=a+1|0,b=b-1|0):b<0?a=a-b|0:(a=a-1|0,b=b+1|0),b}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export bool foo(int x, int y) {
   var bar = x == 0 && y != 0;
   if (x == 0 && y != 0) return true;
@@ -288,9 +288,9 @@ export bool foo(int x, int y) {
 }
 ", "
 (function(){foo=function(a,b){var c=a===0&&b!==0;return !a&&b?!0:c}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export bool foo(float x, double y) {
   var bar = x == 0 && y != 0;
   if (x == 0 && y != 0) return true;
@@ -298,9 +298,9 @@ export bool foo(float x, double y) {
 }
 ", "
 (function(){foo=function(a,b){var c=a===0&&b!==0;return a===0&&b!==0?!0:c}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import class Foo { Foo y(); }
 import Foo x;
 export bool foo() {
@@ -310,9 +310,9 @@ export bool foo() {
 }
 ", "
 (function(){foo=function(){var a=x!==null&&x.y()===null;return x&&!x.y()?!0:a}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export bool foo(string x) {
   var bar = x == \"\" || x.slice(1, 2) == \"\";
   if (x == \"\" || x.slice(1, 2) == \"\") return true;
@@ -320,9 +320,9 @@ export bool foo(string x) {
 }
 ", "
 (function(){foo=function(a){var b=a===''||a.slice(1,2)==='';return !a||!a.slice(1,2)?!0:b}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import bool x();
 import void y();
 export void foo() {
@@ -336,35 +336,35 @@ export void foo() {
 }
 ", "
 (function(){foo=function(){x()&&(y(),x()&&(y(),x()&&y()))}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo(int a, int b) {
   return a != b ? 1 : 2;
 }
 ", "
 (function(){foo=function(a,b){return a^b?1:2}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void b();
 export void foo(bool a) {
   if (a) b();
 }
 ", "
 (function(){foo=function(a){a&&b()}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void b();
 export void foo(bool a) {
   if (!a) b();
 }
 ", "
 (function(){foo=function(a){a||b()}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void b();
 export int foo(bool a) {
   if (!a) {
@@ -376,17 +376,17 @@ export int foo(bool a) {
 }
 ", "
 (function(){foo=function(a){return a?2:(b(),1)}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo(bool a) {
   return !a ? 1 : 2;
 }
 ", "
 (function(){foo=function(a){return a?2:1}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import int y();
 import int z();
 export int foo(int x) {
@@ -394,9 +394,9 @@ export int foo(int x) {
 }
 ", "
 (function(){foo=function(a){return a?z():y()}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void c();
 import void d();
 export void foo(Foo a, Foo b) {
@@ -406,9 +406,9 @@ export void foo(Foo a, Foo b) {
 enum Foo {}
 ", "
 (function(){foo=function(a,b){a^b?d():c()}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo(int x) {
   int y;
   switch (x) {
@@ -419,9 +419,9 @@ export int foo(int x) {
 }
 ", "
 (function(){foo=function(b){var a=0;switch(b){case 1:a=1;break;case 2:a=2}return a}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export bool foo(int a) {
   return a >= 5 && a <= 8;
 }
@@ -430,9 +430,9 @@ export bool bar(int a) {
 }
 ", "
 (function(){foo=function(a){return a>4&&a<9};bar=function(a){return 4<a&&9>a}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void y();
 export void foo(bool x) {
   if (x) {
@@ -442,9 +442,9 @@ export void foo(bool x) {
 }
 ", "
 (function(){foo=function(a){a&&y()}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void y();
 export void foo(bool x) {
   if (x) return;
@@ -453,9 +453,9 @@ export void foo(bool x) {
 }
 ", "
 (function(){foo=function(a){a||(y(),y())}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void y();
 export void foo(bool x) {
   if (x) return;
@@ -465,9 +465,9 @@ export void foo(bool x) {
 }
 ", "
 (function(){foo=function(a){a||(y(),a||y())}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void z();
 export void foo(bool x, bool y) {
   if (x) {
@@ -478,9 +478,9 @@ export void foo(bool x, bool y) {
 }
 ", "
 (function(){foo=function(a,b){a&&(b||(z(),z()))}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void z();
 export void foo(bool x, bool y) {
   if (x) {
@@ -492,9 +492,9 @@ export void foo(bool x, bool y) {
 }
 ", "
 (function(){foo=function(a,b){if(a){if(b)return;z(),z()}z()}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void y();
 export void foo(bool x) {
   if (x) {
@@ -506,9 +506,9 @@ export void foo(bool x) {
 }
 ", "
 (function(){foo=function(a){a?y():(y(),y())}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void z();
 export void foo(bool x, bool y) {
   while (x) {
@@ -520,9 +520,9 @@ export void foo(bool x, bool y) {
 }
 ", "
 (function(){foo=function(a,b){while(a)b&&z()}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void z();
 export void foo(bool x, bool y) {
   while (x) {
@@ -533,9 +533,9 @@ export void foo(bool x, bool y) {
 }
 ", "
 (function(){foo=function(a,b){while(a){if(b)return;z(),z()}}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void z();
 export void foo(bool x, bool y) {
   while (x) {
@@ -546,9 +546,9 @@ export void foo(bool x, bool y) {
 }
 ", "
 (function(){foo=function(a,b){while(a)b||(z(),z())}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void z();
 export void foo(bool x, bool y) {
   while (x) {
@@ -560,9 +560,9 @@ export void foo(bool x, bool y) {
 }
 ", "
 (function(){foo=function(b,a){while(b)a||(z(),a||z())}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void z();
 export void foo(bool x, bool y) {
   while (x) {
@@ -576,9 +576,9 @@ export void foo(bool x, bool y) {
 }
 ", "
 (function(){foo=function(b,a){while(b)a&&(z(),a||(z(),z()))}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void z();
 export void foo(bool x, bool y) {
   while (x) {
@@ -593,9 +593,9 @@ export void foo(bool x, bool y) {
 }
 ", "
 (function(){foo=function(b,a){while(b){if(a){z();if(a)continue;z(),z()}z()}}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void z();
 export void foo(bool x, bool y) {
   while (x) {
@@ -609,9 +609,9 @@ export void foo(bool x, bool y) {
 }
 ", "
 (function(){foo=function(a,b){while(a)b?z():(z(),z())}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 class Foo {
   int foo = 0;
 }
@@ -621,15 +621,15 @@ export void foo() {
 }
 ", "
 (function(){function c(){this.a=0}foo=function(){var a;a=new c(),a.a=a.a+1|0;var b;b=new c(),b.a=b.a+1|0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export int foo(int a, int b) { return a * b; }
 ", "
 (function(){var $i=Math.imul||function(a,b){var ah=a>>>16,al=a&65535,bh=b>>>16,bl=b&65535;return al*bl+(ah*bl+al*bh<<16)|0};foo=function(a,b){return $i(a,b)}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 class Foo {
   virtual void foo() {}
 }
@@ -644,9 +644,9 @@ export void test() {
 }
 ", "
 (function(){function $e(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function b(){}function c(){b.call(this)}$e(c,b);c.prototype.a=function(){};test=function(){new c().a()}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 interface IFoo {
   virtual void foo();
 }
@@ -661,9 +661,9 @@ export void test() {
 }
 ", "
 (function(){function c(){}c.prototype.a=function(){};test=function(){new c().a()}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void bar(int foo);
 export void foo() {
   var n = 10;
@@ -673,9 +673,9 @@ export void foo() {
 }
 ", "
 (function(){foo=function(){for(var b=10,a=0;a<b;a=a+1|0)bar(a)}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export List<double> foo(float x) {
   return [
     - -x,
@@ -689,9 +689,9 @@ export List<double> foo(float x) {
 }
 ", "
 (function(){foo=function(a){return [- -a,a- -2,a- -2,a- -2.5,a- -2,a- -2.5,a- -Infinity]}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void bar();
 export void foo(int x) {
   switch (x) {
@@ -701,9 +701,9 @@ export void foo(int x) {
 }
 ", "
 (function(){foo=function(a){switch(a){case 0:break;default:bar()}}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export void foo(int x) {
   switch (x) {
     case 0 {}
@@ -712,9 +712,9 @@ export void foo(int x) {
 }
 ", "
 (function(){foo=function(a){}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import int bar();
 export void foo() {
   switch (bar()) {
@@ -724,9 +724,9 @@ export void foo() {
 }
 ", "
 (function(){foo=function(){bar()}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import void bar();
 export void foo(int x) {
   switch (x) {
@@ -736,9 +736,9 @@ export void foo(int x) {
 }
 ", "
 (function(){foo=function(a){switch(a){case 0:bar()}}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import bool bar();
 import bool baz();
 export bool foo() {
@@ -748,9 +748,9 @@ export bool foo() {
 }
 ", "
 (function(){foo=function(){return bar()||baz()?!0:!1}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export bool foo(bool bar, bool baz) {
   if (bar) return true;
   if (baz) return true;
@@ -758,9 +758,9 @@ export bool foo(bool bar, bool baz) {
 }
 ", "
 (function(){foo=function(a,b){return a||b?!0:!1}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export bool foo(bool bar, bool baz) {
   if (bar) return true;
   if (baz) return true;
@@ -768,9 +768,9 @@ export bool foo(bool bar, bool baz) {
 }
 ", "
 (function(){foo=function(a,b){return !0}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 import bool bar();
 import bool baz();
 export bool foo() {
@@ -780,9 +780,9 @@ export bool foo() {
 }
 ", "
 (function(){foo=function(){return bar()?!0:(baz(),!0)}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export List<int> foo(int x) {
   return [
     x + 0,
@@ -811,9 +811,9 @@ export List<int> foo(int x) {
 }
 ", "
 (function(){foo=function(a){return [a,a,a-2|0,2-a|0,2-a|0,a-2|0,a+3|0,a-1|0,a+1|0,a-3|0,3+a|0,a-1|0,3-a|0,-1-a|0,3+a|0,3-a|0,a-1|0,-1-a|0]}}());
-");
+").release();
 
-testMinifyJS("
+testJS("
 export List<double> foo(double x, bool y) {
   return [
     // These need spaces
@@ -835,6 +835,38 @@ export List<double> foo(double x, bool y) {
 }
 ", "
 (function(){foo=function(a,b){return [1- -a*2,1+ +a*2,1+ +b*2,1- -a*2/3,1+ +a*2/3,1+ +b*2/3,-a*2-1,+a*2+1,+b*2+1,1-2*-a,1+2*+a,1+2*+b]}}());
-");
+").release();
+
+testJS("
+enum Foo { FOO }
+class Bar { static var foo = 0; }
+export int foo() { return Foo.FOO + Bar.foo; }
+", "
+(function(){var Foo={FOO:0};function Bar(){}foo=function(){return Foo.FOO+Bar.foo|0};Bar.foo=0}());
+").minify();
+
+testJS("
+enum Foo { FOO }
+class Bar { static var foo = 0; }
+export int foo() { return Foo.FOO + Bar.foo; }
+", "
+(function() {
+  var a = 0;
+  function d() {
+  }
+  foo = function() {
+    return a + b | 0;
+  };
+  var b = 0;
+}());
+").mangle();
+
+testJS("
+enum Foo { FOO }
+class Bar { static var foo = 0; }
+export int foo() { return Foo.FOO + Bar.foo; }
+", "
+(function(){var a=0;function d(){}foo=function(){return a+b|0};var b=0}());
+").minify().mangle();
 
 }}

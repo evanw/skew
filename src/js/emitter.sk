@@ -416,20 +416,28 @@ namespace js {
       if (!hasCompoundName(symbol) && !symbol.isExport()) {
         emit("var ");
       }
-      emit(fullName(symbol) + space + "=" + space + "{" + newline);
-      increaseIndent();
-      for (var i = 0; i < block.children.size(); i++) {
-        var child = block.children[i].symbol;
-        emit(indent + mangleName(child) + ":" + space + child.constant.asInt());
-        if (i != block.children.size() - 1) {
-          emit("," + newline);
-          maybeEmitMinifedNewline();
-        } else {
-          emit(newline);
+      if (options.mangle) {
+        for (var i = 0; i < block.children.size(); i++) {
+          var child = block.children[i].symbol;
+          if (i != 0) emit("," + space);
+          emit(mangleName(child) + space + "=" + space + child.constant.asInt());
         }
+      } else {
+        emit(fullName(symbol) + space + "=" + space + "{" + newline);
+        increaseIndent();
+        for (var i = 0; i < block.children.size(); i++) {
+          var child = block.children[i].symbol;
+          emit(indent + mangleName(child) + ":" + space + child.constant.asInt());
+          if (i != block.children.size() - 1) {
+            emit("," + newline);
+            maybeEmitMinifedNewline();
+          } else {
+            emit(newline);
+          }
+        }
+        decreaseIndent();
+        emit(indent + "}");
       }
-      decreaseIndent();
-      emit(indent + "}");
       emitSemicolonAfterStatement();
     }
 
