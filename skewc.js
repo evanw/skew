@@ -9751,8 +9751,12 @@
     var trueNode = node.hookTrue();
     var falseNode = node.hookFalse();
     this.resolveAsParamterizedExpressionWithConversion(node.hookTest(), this.cache.boolType, CastKind.IMPLICIT_CAST);
-    this.resolveAsParameterizedExpressionWithTypeContext(trueNode, this.typeContext);
-    this.resolveAsParameterizedExpressionWithTypeContext(falseNode, this.typeContext);
+    if (this.typeContext !== null || this.needsTypeContext(trueNode) === this.needsTypeContext(falseNode)) {
+      this.resolveAsParameterizedExpressionWithTypeContext(trueNode, this.typeContext);
+      this.resolveAsParameterizedExpressionWithTypeContext(falseNode, this.typeContext);
+    } else {
+      this.resolveWithTypeContextTransfer(trueNode, falseNode);
+    }
     var trueType = trueNode.type;
     var falseType = falseNode.type;
     if (trueType.isIgnored(this.cache) || falseType.isIgnored(this.cache)) {
@@ -9882,7 +9886,7 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3186:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3192:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -9975,7 +9979,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3312:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3318:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -10227,7 +10231,7 @@
   };
   Resolver.prototype.assessOperatorOverloadMatch = function(nodeTypes, argumentTypes) {
     if (nodeTypes.length !== (1 + argumentTypes.length | 0)) {
-      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3654:5)');
+      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3660:5)');
     }
     var foundImplicitConversion = false;
     for (var i = 0; i < argumentTypes.length; i = i + 1 | 0) {
@@ -10292,15 +10296,15 @@
     for (var i = 0; i < overloads.length; i = i + 1 | 0) {
       var overload = overloads[i];
       if (!overload.type.isFunction()) {
-        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3737:7)');
+        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3743:7)');
       }
       if ((overload.type.argumentTypes().length + 1 | 0) !== children.length) {
-        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3738:7)');
+        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3744:7)');
       }
       var member = targetType.findOperatorOverload(overload);
       this.initializeMember(member);
       if (!member.type.isFunction()) {
-        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3741:7)');
+        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3747:7)');
       }
       var match = this.assessOperatorOverloadMatch(typeForMatching, member.type.argumentTypes());
       if (match > bestMatch) {

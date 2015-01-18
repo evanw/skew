@@ -2992,9 +2992,15 @@ class Resolver {
     resolveAsParamterizedExpressionWithConversion(node.hookTest(), cache.boolType, .IMPLICIT_CAST);
 
     // Resolve both branches with type context but don't warn about type
-    // conversion problems yet (warning later gives better error messages)
-    resolveAsParameterizedExpressionWithTypeContext(trueNode, typeContext);
-    resolveAsParameterizedExpressionWithTypeContext(falseNode, typeContext);
+    // conversion problems yet (warning later gives better error messages). If
+    // type context is missing, try to take the type context from the branch
+    // that needs it from the branch that doesn't need it.
+    if (typeContext != null || needsTypeContext(trueNode) == needsTypeContext(falseNode)) {
+      resolveAsParameterizedExpressionWithTypeContext(trueNode, typeContext);
+      resolveAsParameterizedExpressionWithTypeContext(falseNode, typeContext);
+    } else {
+      resolveWithTypeContextTransfer(trueNode, falseNode);
+    }
 
     // Avoid reporting further errors
     var trueType = trueNode.type;

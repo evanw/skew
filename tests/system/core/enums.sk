@@ -274,4 +274,14 @@ Foo foo(bool b) { return b ? .FOO : 0; }
 ", "
 ");
 
+test("
+enum flags Foo { FOO }
+bool foo(Foo foo) {
+  var bar = foo > 0 ? foo : .FOO;
+  var baz = foo > 0 ? .FOO : foo;
+  return bar == baz;
+}
+", "
+");
+
 }}
