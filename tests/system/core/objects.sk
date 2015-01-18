@@ -473,8 +473,8 @@ override in Bar {}
 <stdin>:1:1: error: Cannot use the \"virtual\" modifier on an object declaration
 virtual class Foo {}
 ~~~~~~~
-<stdin>:3:1: error: Cannot use the \"override\" modifier on an object declaration
-override in Bar {}
+<stdin>:4:1: error: Cannot use the \"override\" modifier on an object declaration
+override class Bar {}
 ~~~~~~~~
 ");
 

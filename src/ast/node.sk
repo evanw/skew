@@ -434,14 +434,6 @@ class Node {
     return this;
   }
 
-  Node firstNonExtensionSibling() {
-    var node = this;
-    while (node != null && node.kind == .EXTENSION) {
-      node = node.sibling;
-    }
-    return node;
-  }
-
   void appendToSiblingChain(Node node) {
     var last = this;
     while (last.sibling != null) {

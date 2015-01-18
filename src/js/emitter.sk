@@ -90,13 +90,13 @@ namespace js {
         if (type.isNamespace()) {
           if (!type.symbol.isImport()) {
             maybeEmitMinifedNewline();
-            emitNode(type.symbol.node.firstNonExtensionSibling());
+            emitNode(type.symbol.node);
           }
           continue;
         }
         if (!type.symbol.isImport()) {
           if (type.isEnum()) {
-            emitNode(type.symbol.node.firstNonExtensionSibling());
+            emitNode(type.symbol.node);
           } else {
             var constructor = type.constructor();
             if (constructor != null) {

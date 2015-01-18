@@ -1152,7 +1152,7 @@ class Resolver {
     assert symbol.type.isObject();
     forbidBlockDeclarationModifiers(symbol, "on an object declaration");
 
-    var node = symbol.node.firstNonExtensionSibling();
+    var node = symbol.node;
     var type = symbol.type;
     resolveTypeParameters(symbol, node.objectParameters());
 
@@ -2155,6 +2155,7 @@ class Resolver {
     // Only initialize the symbol once
     if (symbol.isUninitialized()) {
       assert symbol.node != null; // Internal symbols have no node but should already have a type
+      symbol.canonicalizeSiblingChain();
       initializeDeclaration(symbol.node);
       assert !symbol.isInitializing();
       assert symbol.isInitialized();
@@ -2167,7 +2168,7 @@ class Resolver {
 
     // Detect cyclic symbol references such as "foo foo;"
     else if (symbol.isInitializing()) {
-      semanticErrorCyclicDeclaration(log, symbol.node.firstNonExtensionSibling().declarationName().range, symbol.name);
+      semanticErrorCyclicDeclaration(log, symbol.node.declarationName().range, symbol.name);
       symbol.type = cache.errorType;
     }
   }

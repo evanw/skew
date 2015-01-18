@@ -246,6 +246,20 @@ class Symbol {
     return symbols;
   }
 
+  // Move the first non-extension node in the sibling chain to the front
+  void canonicalizeSiblingChain() {
+    for (Node previous = null, current = node; current != null; previous = current, current = current.sibling) {
+      if (current.kind != .EXTENSION) {
+        if (previous != null) {
+          previous.sibling = current.sibling;
+          current.sibling = node;
+          node = current;
+        }
+        break;
+      }
+    }
+  }
+
   string fullName() {
     return enclosingSymbol != null && !kind.isParameter() && enclosingSymbol.kind != .GLOBAL_NAMESPACE
       ? enclosingSymbol.fullName() + "." + name : name;
