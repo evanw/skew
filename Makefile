@@ -11,8 +11,10 @@ SOURCES += src/js/*.sk
 SOURCES += src/lexer/*.sk
 SOURCES += src/parser/*.sk
 SOURCES += src/resolver/*.sk
+
 TEST_SOURCES += $(SOURCES)
 TEST_SOURCES += tests/system/*.sk tests/system/*/*.sk
+
 FRONTEND_SOURCES += $(SOURCES)
 FRONTEND_SOURCES += src/frontend/*.sk
 
@@ -29,6 +31,7 @@ CPP_FLAGS += --target=cpp
 
 FRONTEND_DEPS += Makefile
 FRONTEND_DEPS += $(FRONTEND_SOURCES)
+FRONTEND_DEPS += lib/*.sk
 
 FRONTEND_FLAGS += $(FRONTEND_SOURCES)
 FRONTEND_FLAGS += $(JS_FLAGS)
@@ -36,6 +39,7 @@ FRONTEND_FLAGS += --config=node
 
 TEST_DEPS += Makefile
 TEST_DEPS += $(TEST_SOURCES)
+TEST_DEPS += lib/*.sk
 
 CXX_FLAGS += -std=c++11
 CXX_FLAGS += -ferror-limit=0

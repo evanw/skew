@@ -57,7 +57,7 @@ namespace cpp {
         if (hasArguments) {
           assert "<string>" in includes;
           var name = mangleName(cache.stringType.symbol);
-          emit(indent + "List<" + name + "> *args = new List<" + name + ">({});\n");
+          emit(indent + "List<" + name + "> *args = new List<" + name + ">();\n");
           emit(indent + "args->_data.insert(args->_data.begin(), argv + 1, argv + argc);\n"); // The method push() may not have been emitted
         }
         emit(indent + (hasReturnValue ? "return " : "") + fullName(entryPointSymbol) + "(" + (hasArguments ? "args" : "") + ");\n");
@@ -548,18 +548,16 @@ namespace cpp {
 
     override void emitList(Node node, Precedence precedence) {
       var values = node.listValues();
-      var wrap = precedence == .MEMBER;
+      var wrap = values.size() > 0;
       if (wrap) emit("(");
       emit("new ");
       emitCppType(node.type, .BARE);
-      if (values.size() != 0) {
-        emit(" { ");
+      emit("()");
+      if (wrap) {
+        emit(")->_literal_({ ");
         emitCommaSeparatedExpressions(values);
-        emit(" }");
-      } else {
-        emit("({})"); // Can't just use "{}" because MSVC chokes on it
+        emit(" })");
       }
-      if (wrap) emit(")");
     }
 
     override void emitSuperCall(Node node) {

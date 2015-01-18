@@ -1,5 +1,6 @@
 class TreeShakingPass {
   CompilerOptions options;
+  var isFirstList = true;
   var includedSymbols = IntMap<bool>();
   var includedTypes = IntMap<bool>();
 
@@ -118,6 +119,14 @@ class TreeShakingPass {
 
     if (node.type != null) {
       includeType(node.type);
+    }
+
+    // Make sure the "_literal_" method is kept around
+    if (options.targetFormat == .CPP && node.kind == .LIST && isFirstList) {
+      var literal = node.type.findMember("_literal_");
+      assert literal != null;
+      includeSymbol(literal.symbol);
+      isFirstList = false;
     }
 
     if (node.hasChildren()) {

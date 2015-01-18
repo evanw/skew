@@ -43,10 +43,9 @@ interface Comparison<T> {
     return comparison.compare(left, right) < 0;
   }
 
-  @NeedsInclude("<initializer_list>")
   @NeedsInclude("<vector>")
   class List<T> {
-    new(`std::initializer_list<T>` list) : _data = list {}
+    new() {}
 
     int size() {
       return _data.size();
@@ -148,6 +147,16 @@ interface Comparison<T> {
       void sort(Comparison<T> comparison) {
         `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));
       }
+    }
+
+    // Normally this would be in a constructor but clang has a bug that
+    // sometimes emits incorrect code for a constructor taking an empty
+    // initializer list. See http://llvm.org/bugs/show_bug.cgi?id=22256
+    // for details.
+    @NeedsInclude("<initializer_list>")
+    List<T> _literal_(`std::initializer_list<T>` list) {
+      _data.insert(_data.end(), list.begin(), list.end());
+      return this;
     }
 
     `std::vector<T>` _data;

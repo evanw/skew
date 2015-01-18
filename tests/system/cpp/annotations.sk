@@ -51,7 +51,6 @@ testCPP("
 @EntryPoint
 void foo(List<string> args) {}
 ", "
-#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -60,7 +59,7 @@ struct List;
 
 template <typename T>
 struct List {
-  List(std::initializer_list<T> list);
+  List();
 
   std::vector<T> _data;
 };
@@ -68,14 +67,14 @@ struct List {
 void foo(List<std::string> *args);
 
 template <typename T>
-List<T>::List(std::initializer_list<T> list) : _data(list) {
+List<T>::List() : _data() {
 }
 
 void foo(List<std::string> *args) {
 }
 
 int main(int argc, char **argv) {
-  List<std::string> *args = new List<std::string>({});
+  List<std::string> *args = new List<std::string>();
   args->_data.insert(args->_data.begin(), argv + 1, argv + argc);
   foo(args);
 }
@@ -87,7 +86,6 @@ int foo(List<string> args) {
   return 0;
 }
 ", "
-#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -96,7 +94,7 @@ struct List;
 
 template <typename T>
 struct List {
-  List(std::initializer_list<T> list);
+  List();
 
   std::vector<T> _data;
 };
@@ -104,7 +102,7 @@ struct List {
 int foo(List<std::string> *args);
 
 template <typename T>
-List<T>::List(std::initializer_list<T> list) : _data(list) {
+List<T>::List() : _data() {
 }
 
 int foo(List<std::string> *args) {
@@ -112,7 +110,7 @@ int foo(List<std::string> *args) {
 }
 
 int main(int argc, char **argv) {
-  List<std::string> *args = new List<std::string>({});
+  List<std::string> *args = new List<std::string>();
   args->_data.insert(args->_data.begin(), argv + 1, argv + argc);
   return foo(args);
 }

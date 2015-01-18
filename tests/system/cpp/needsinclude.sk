@@ -170,6 +170,8 @@ void foo() {
 
 testCPP("
 export var foo = [0];
+export var bar = List<int>();
+export List<int> baz = [];
 ", "
 #include <initializer_list>
 #include <vector>
@@ -179,18 +181,29 @@ struct List;
 
 template <typename T>
 struct List {
-  List(std::initializer_list<T> list);
+  List();
+  List<T> *_literal_(std::initializer_list<T> list);
 
   std::vector<T> _data;
 };
 
 extern List<int> *foo;
+extern List<int> *bar;
+extern List<int> *baz;
 
 template <typename T>
-List<T>::List(std::initializer_list<T> list) : _data(list) {
+List<T>::List() : _data() {
 }
 
-List<int> *foo = new List<int> { 0 };
+template <typename T>
+List<T> *List<T>::_literal_(std::initializer_list<T> list) {
+  _data.insert(_data.end(), list.begin(), list.end());
+  return this;
+}
+
+List<int> *foo = (new List<int>())->_literal_({ 0 });
+List<int> *bar = new List<int>();
+List<int> *baz = new List<int>();
 ");
 
 }}

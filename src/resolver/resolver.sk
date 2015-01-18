@@ -3202,6 +3202,13 @@ class Resolver {
 
     // Types are constructed by calling the type, which forwards to the constructor
     if (value.kind == .TYPE) {
+      // Use a list node instead of a constructor call
+      if (valueType.isList(cache)) {
+        node.become(Node.createList([]).withRange(node.range).withType(valueType));
+        return;
+      }
+
+      // Find the constructor
       var member = valueType.constructor();
       if (member == null) {
         semanticErrorUnconstructableType(log, value.range, valueType);
