@@ -14,7 +14,7 @@ namespace tests {
     var options = CompilerOptions();
     Status status = .PENDING;
 
-    virtual void run() {
+    void run() {
       options.inputs = [Source("<stdin>", input)];
       var compiler = Compiler();
       var result = compiler.compile(options);
@@ -29,31 +29,25 @@ namespace tests {
       expected = trim(expected);
       status = output == expected ? .SUCCEEDED : .FAILED;
     }
-  }
 
-  class JavaScriptTest : Test {
-    override void run() {
+    Test js() {
       options.targetFormat = .JAVASCRIPT;
-      super();
+      return this;
     }
-  }
 
-  class JavaScriptMinifyTest : Test {
-    override void run() {
-      options.targetFormat = .JAVASCRIPT;
+    Test cpp() {
+      options.targetFormat = .CPP;
+      return this;
+    }
+
+    Test release() {
       options.minify = true;
       options.mangle = true;
+      options.removeAsserts = true;
       options.foldAllConstants = true;
       options.inlineAllFunctions = true;
       options.globalizeAllFunctions = true;
-      super();
-    }
-  }
-
-  class CppTest : Test {
-    override void run() {
-      options.targetFormat = .CPP;
-      super();
+      return this;
     }
   }
 
@@ -68,14 +62,15 @@ namespace tests {
     for (var i = 0; i < registeredTests.size(); i++) {
       var test = registeredTests[i];
       test.run();
-      terminal.setColor(test.status == .FAILED ? .RED : .GREEN);
-      terminal.write(".");
+      var failed = test.status == .FAILED;
+      terminal.setColor(failed ? .RED : .GREEN);
+      terminal.write(failed ? "x" : ".");
       if (i + 1 < registeredTests.size() && width != 0 && i % width == width - 1) {
         terminal.write("\n  ");
       }
       terminal.setColor(.DEFAULT);
       terminal.flush();
-      if (test.status == .FAILED) {
+      if (failed) {
         failing.push(test);
       }
     }
@@ -192,15 +187,15 @@ void test(string input, string expected) {
 }
 
 void testJS(string input, string expected) {
-  registeredTests.push(JavaScriptTest(trim(input), expected));
+  registeredTests.push(Test(trim(input), expected).js());
 }
 
 void testCPP(string input, string expected) {
-  registeredTests.push(CppTest(trim(input), expected));
+  registeredTests.push(Test(trim(input), expected).cpp());
 }
 
 void testMinifyJS(string input, string expected) {
-  registeredTests.push(JavaScriptMinifyTest(trim(input), expected));
+  registeredTests.push(Test(trim(input), expected).js().release());
 }
 
 @EntryPoint

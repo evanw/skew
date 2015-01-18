@@ -4,6 +4,8 @@ namespace GlobalizePass {
       var info = graph.callInfo[i];
       var symbol = info.symbol;
       var enclosingSymbol = symbol.enclosingSymbol;
+
+      // Change instance methods into static methods
       if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() != null && (
           enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() ||
           (resolver.options.globalizeAllFunctions || symbol.isInline()) && !symbol.isExport() && !symbol.isVirtual())) {
@@ -25,8 +27,8 @@ namespace GlobalizePass {
           // Add any type parameters from the enclosing type to the end of
           // the type parameter list for this function (this function may
           // also have type parameters of its own)
-          for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
-            var parameter = enclosingSymbol.parameters[i];
+          for (var j = 0; j < enclosingSymbol.parameters.size(); j++) {
+            var parameter = enclosingSymbol.parameters[j];
             var clone = resolver.createSymbol(parameter.name, .FUNCTION_PARAMETER);
             clone.type = Type(clone);
             symbol.parameters.push(clone);
@@ -47,51 +49,57 @@ namespace GlobalizePass {
         thisSymbol.node = Node.createVariable(createThis(thisSymbol), Node.createType(thisSymbol.type), null).withSymbol(thisSymbol);
         symbol.node.functionArguments().insertChild(0, thisSymbol.node);
 
-        // Update all call sites
-        for (var j = 0; j < info.callSites.size(); j++) {
-          var callSite = info.callSites[j];
-          var value = callSite.callValue();
-          Node target;
-          Node name;
-          if (value.kind == .DOT) {
-            target = value.dotTarget().replaceWith(null);
-            name = value.dotName().replaceWith(null);
-          } else {
-            assert value.kind == .NAME;
-            target = Node.createThis().withType(thisSymbol.type);
-            name = value.replaceWith(null);
-          }
-
-          // Make sure to parameterize the new symbol type
-          var targetSubstitutions = target.type != null ? target.type.substitutions : null;
-          var nameSubstitutions = name.type != null ? name.type.substitutions : null;
-          if (targetSubstitutions != null || nameSubstitutions != null) {
-            List<Type> types = [];
-
-            // This function's original type parameters, if any, come first
-            if (nameSubstitutions != null) {
-              for (var i = 0; i < nameSubstitutions.size(); i++) {
-                types.push(nameSubstitutions[i]);
-              }
-            }
-
-            // The enclosing symbol's type parameters have just been added after
-            if (targetSubstitutions != null) {
-              for (var i = 0; i < targetSubstitutions.size(); i++) {
-                types.push(targetSubstitutions[i]);
-              }
-            }
-
-            name.type = resolver.cache.parameterize(symbol.type, types);
-          } else {
-            name.type = symbol.type;
-          }
-
-          // Inject the argument for "this" at the call site
-          callSite.replaceChild(0, name);
-          callSite.insertChild(1, target);
-        }
+        // Update call sites in a separate function for JIT speed
+        updateAllCallSites(info.callSites, symbol, thisSymbol, resolver);
       }
+    }
+  }
+
+  void updateAllCallSites(List<Node> callSites, Symbol symbol, Symbol thisSymbol, Resolver resolver) {
+    for (var i = 0; i < callSites.size(); i++) {
+      var callSite = callSites[i];
+      var value = callSite.callValue();
+      Node target;
+      Node name;
+
+      // Handle both function and method calls
+      if (value.kind == .DOT) {
+        target = value.dotTarget().replaceWith(null);
+        name = value.dotName().replaceWith(null);
+      } else {
+        assert value.kind == .NAME;
+        target = Node.createThis().withType(thisSymbol.type);
+        name = value.replaceWith(null);
+      }
+
+      // Make sure to parameterize the new symbol type
+      var targetSubstitutions = target.type != null ? target.type.substitutions : null;
+      var nameSubstitutions = name.type != null ? name.type.substitutions : null;
+      if (targetSubstitutions != null || nameSubstitutions != null) {
+        List<Type> types = [];
+
+        // This function's original type parameters, if any, come first
+        if (nameSubstitutions != null) {
+          for (var j = 0; j < nameSubstitutions.size(); j++) {
+            types.push(nameSubstitutions[j]);
+          }
+        }
+
+        // The enclosing symbol's type parameters have just been added after
+        if (targetSubstitutions != null) {
+          for (var j = 0; j < targetSubstitutions.size(); j++) {
+            types.push(targetSubstitutions[j]);
+          }
+        }
+
+        name.type = resolver.cache.parameterize(symbol.type, types);
+      } else {
+        name.type = symbol.type;
+      }
+
+      // Inject the argument for "this" at the call site
+      callSite.replaceChild(0, name);
+      callSite.insertChild(1, target);
     }
   }
 
@@ -100,14 +108,17 @@ namespace GlobalizePass {
   }
 
   void recursivelyReplaceThis(Node node, Symbol symbol) {
+    // This expressions
     if (node.kind == .THIS) {
       node.become(createThis(symbol).withRange(node.range));
     }
 
+    // Name expressions
     else if (node.isNameExpression() && node.symbol != null && (node.symbol.kind == .INSTANCE_FUNCTION || node.symbol.kind == .INSTANCE_VARIABLE)) {
       node.become(Node.createDot(createThis(symbol), node.clone()).withType(node.type).withRange(node.range).withSymbol(node.symbol));
     }
 
+    // Other expressions
     else if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
         var child = node.children[i];

@@ -83,7 +83,16 @@ in Foo {
   export string foo() { return toString(); }
 }
 ", "
-TODO
+(function() {
+  Foo = {
+    FOO: 0
+  };
+  var in_Foo = {};
+  in_Foo.foo = function($this) {
+    return in_Foo._toString_[$this];
+  };
+  in_Foo._toString_ = ['FOO'];
+}());
 ");
 
 testJS("

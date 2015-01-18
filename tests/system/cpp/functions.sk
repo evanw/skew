@@ -106,7 +106,53 @@ in Foo {
   export string foo() { return toString(); }
 }
 ", "
-TODO
+#include <cassert>
+#include <initializer_list>
+#include <string>
+#include <vector>
+
+template <typename T>
+struct List;
+
+enum struct Foo {
+  FOO
+};
+
+template <typename T>
+struct List {
+  List(std::initializer_list<T> list);
+  int size();
+  T get(int index);
+
+  std::vector<T> _data;
+};
+
+namespace in_Foo {
+  std::string foo(Foo _this_);
+
+  extern List<std::string> *_toString_;
+}
+
+template <typename T>
+List<T>::List(std::initializer_list<T> list) : _data(list) {
+}
+
+template <typename T>
+int List<T>::size() {
+  return _data.size();
+}
+
+template <typename T>
+T List<T>::get(int index) {
+  assert(index >= 0 && index < size());
+  return _data[index];
+}
+
+std::string in_Foo::foo(Foo _this_) {
+  return in_Foo::_toString_->get(static_cast<int>(_this_));
+}
+
+List<std::string> *in_Foo::_toString_ = new List<std::string> { std::string(\"FOO\") };
 ");
 
 testCPP("
