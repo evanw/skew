@@ -21,7 +21,7 @@ FRONTEND_SOURCES += src/frontend/*.sk
 DEBUG_DIR = build/debug
 RELEASE_DIR = build/release
 TESTS_DIR = build/tests
-NPM_DIR = skew-npm
+NPM_DIR = npm
 
 JS_FLAGS += --verbose
 JS_FLAGS += --target=js
