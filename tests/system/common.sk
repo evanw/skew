@@ -94,15 +94,9 @@ namespace tests {
     for (var i = 0; i < failing.size(); i++) {
       var test = failing[i];
       var text = "  " + (i + 1) + ")";
-      var lines = test.input.split("\n");
       terminal.setColor(.BOLD);
-      terminal.print(text + " ".repeat(indent.size() - text.size()) + "Test:\n");
-      terminal.setColor(.GRAY);
-      for (var j = 0; j < lines.size(); j++) {
-        terminal.print(indent + "  " + lines[j]);
-      }
-      terminal.print("\n" + indent + "Output:\n");
-      printDiff(indent + " ",
+      terminal.print(text + " ".repeat(indent.size() - text.size()) + compactWhitespace(test.input) + "\n");
+      printDiff(indent,
         test.expected == "" ? [] : test.expected.split("\n"),
         test.output == "" ? [] : test.output.split("\n"));
       terminal.setColor(.DEFAULT);
@@ -177,6 +171,21 @@ namespace tests {
       end--;
     }
     return text.slice(start, end);
+  }
+
+  string compactWhitespace(string text) {
+    var wasSpace = false;
+    var result = "";
+    for (var i = 0; i < text.size(); i++) {
+      if (!isSpace(text[i])) {
+        result += text.sliceCodeUnit(i);
+        wasSpace = false;
+      } else if (!wasSpace) {
+        result += " ";
+        wasSpace = true;
+      }
+    }
+    return result;
   }
 }
 
