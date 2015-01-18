@@ -869,4 +869,12 @@ export int foo() { return Foo.FOO + Bar.foo; }
 (function(){var a=0;function d(){}foo=function(){return a+b|0};var b=0}());
 ").minify().mangle();
 
+testJS("
+export enum Foo { FOO }
+class Bar { static var foo = 0; }
+export int foo() { return Foo.FOO + Bar.foo; }
+", "
+(function(){Foo={FOO:0};function b(){}foo=function(){return Foo.FOO+a|0};var a=0}());
+").minify().mangle();
+
 }}

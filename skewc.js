@@ -4467,7 +4467,7 @@
     if (!js.Emitter.hasCompoundName(symbol) && !symbol.isExport()) {
       this.emit('var ');
     }
-    if (this.options.mangle) {
+    if (this.options.mangle && !symbol.isImportOrExport()) {
       for (var i = 0; i < block.children.length; i = i + 1 | 0) {
         var child = block.children[i].symbol;
         if (i !== 0) {

@@ -420,7 +420,7 @@ namespace js {
       if (!hasCompoundName(symbol) && !symbol.isExport()) {
         emit("var ");
       }
-      if (options.mangle) {
+      if (options.mangle && !symbol.isImportOrExport()) {
         for (var i = 0; i < block.children.size(); i++) {
           var child = block.children[i].symbol;
           if (i != 0) emit("," + space);
