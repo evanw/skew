@@ -33,6 +33,7 @@ interface Comparison<T> {
       @OperatorIn bool contains(T value) { return indexOf(value) >= 0; }
     }
 
+    T last() { return this[size() - 1]; }
     void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }
   }
 
@@ -76,6 +77,11 @@ interface Comparison<T> {
       T value = this[size() - 1];
       _data.pop_back();
       return value;
+    }
+
+    T last() {
+      assert size() > 0;
+      return _data.back();
     }
 
     List<T> clone() {
@@ -159,6 +165,7 @@ interface Comparison<T> {
     int lastIndexOf(T value);
     T shift();
     T pop();
+    T last();
     void reverse();
     void sort(Comparison<T> comparison);
     List<T> clone();

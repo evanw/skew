@@ -63,7 +63,7 @@ in Log {
 
   void note(Range range, string text) {
     assert range != null; // Use Range.EMPTY instead of null
-    var last = diagnostics[diagnostics.size() - 1];
+    var last = diagnostics.last();
     last.noteRange = range;
     last.noteText = text;
   }

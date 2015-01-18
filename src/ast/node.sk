@@ -257,7 +257,7 @@ class Node {
   }
 
   Node lastChild() {
-    return children[children.size() - 1];
+    return children.last();
   }
 
   int indexInParent() {
