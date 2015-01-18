@@ -2028,8 +2028,6 @@
     this.targetFormat = TargetFormat.NONE;
     this.targetConfig = CompilerConfig.AUTOMATIC;
     this.inputs = [];
-    this.prepend = [];
-    this.append = [];
     this.overriddenDefines = new StringMap();
     this.outputDirectory = '';
     this.outputFile = '';
@@ -2083,9 +2081,7 @@
   Compiler.prototype.statistics = function(result) {
     var lineCountingStart = now();
     var lineCount = 0;
-    lineCount = lineCount + Compiler.totalLineCount(result.options.prepend) | 0;
     lineCount = lineCount + Compiler.totalLineCount(result.options.inputs) | 0;
-    lineCount = lineCount + Compiler.totalLineCount(result.options.append) | 0;
     var text = 'Input line count: ' + lineCount + '\nOutput line count: ' + Compiler.totalLineCount(result.outputs);
     this.lineCountingTime += now() - lineCountingStart;
     var optimizingTime = this.callGraphTime + this.globalizeTime + this.symbolMotionTime + this.functionInliningTime + this.constantFoldingTime + this.treeShakingTime;
@@ -2114,9 +2110,7 @@
     if (this.lineCountingTime > 0) {
       text += '\n  Counting lines: ' + formatNumber(this.lineCountingTime) + 'ms';
     }
-    text += Compiler.sourceStatistics('Prepend', result.options.prepend);
     text += Compiler.sourceStatistics('Inputs', result.options.inputs);
-    text += Compiler.sourceStatistics('Append', result.options.append);
     text += Compiler.sourceStatistics('Outputs', result.outputs);
     return text;
   };
@@ -2213,7 +2207,7 @@
         emitter = new xml.Emitter(options);
         break;
       default:
-        throw new Error('assert false; (src/compiler/compiler.sk:256:19)');
+        throw new Error('assert false; (src/compiler/compiler.sk:250:19)');
         break;
       }
       if (emitter !== null) {
@@ -4104,9 +4098,6 @@
     this.patchProgram(program);
     var collector = new Collector(program, SortTypes.SORT_BY_INHERITANCE_AND_CONTAINMENT);
     this.currentSource = new Source(this.options.outputFile, '');
-    for (var i = 0; i < this.options.prepend.length; i = i + 1 | 0) {
-      this.appendSource(this.options.prepend[i]);
-    }
     this.emit(this.indent + this.minifySpaces('(function() {' + this.newline));
     this.increaseIndent();
     if (this.patcher.needMathImul) {
@@ -4185,9 +4176,6 @@
     }
     this.decreaseIndent();
     this.emit(this.indent + '}());\n');
-    for (var i = 0; i < this.options.append.length; i = i + 1 | 0) {
-      this.appendSource(this.options.append[i]);
-    }
     if (this.options.sourceMap) {
       this.currentSource.contents = this.currentSource.contents + '/';
       var name = this.options.outputFile + '.map';
@@ -4195,21 +4183,6 @@
       return [this.currentSource, new Source(name, this.generator.toString())];
     }
     return [this.currentSource];
-  };
-  js.Emitter.prototype.appendSource = function(source) {
-    if (this.currentColumn > 0) {
-      this.emit('\n');
-    }
-    this.currentSource.contents += source.contents;
-    if (this.options.sourceMap) {
-      for (var i = 0, n = source.lineCount(); i < n; i = i + 1 | 0) {
-        this.generator.addMapping(source, i, 0, this.currentLine, 0);
-        this.currentLine = this.currentLine + 1 | 0;
-      }
-    }
-    if (source.contents.charCodeAt(source.contents.length - 1 | 0) !== 10) {
-      this.emit('\n');
-    }
   };
   js.Emitter.prototype.addMapping = function(node) {
     if (this.options.sourceMap) {
@@ -4383,7 +4356,7 @@
     case 33:
       break;
     default:
-      throw new Error('assert false; (src/js/emitter.sk:336:19)');
+      throw new Error('assert false; (src/js/emitter.sk:310:19)');
       break;
     }
   };
@@ -4731,7 +4704,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/js/emitter.sk:664:16)');
+        throw new Error('assert false; (src/js/emitter.sk:638:16)');
       }
       break;
     }
@@ -4830,7 +4803,7 @@
   };
   js.Emitter.prototype.isRightChildOfBinaryExpression = function(node, kind) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:751:7)');
+      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:725:7)');
     }
     while (in_NodeKind.isBinaryOperator(node.parent.kind)) {
       if (node.parent.binaryRight() === node) {
@@ -11248,23 +11221,21 @@
     return contents !== null ? new Source(path, contents.value) : null;
   };
   var Option = {
-    APPEND_FILE: 0,
-    CONFIG: 1,
-    DEFINE: 2,
-    FOLD_CONSTANTS: 3,
-    GLOBALIZE: 4,
-    HELP: 5,
-    INLINE: 6,
-    MANGLE: 7,
-    MINIFY: 8,
-    OUTPUT_DIRECTORY: 9,
-    OUTPUT_FILE: 10,
-    PREPEND_FILE: 11,
-    RELEASE: 12,
-    REMOVE_ASSERTS: 13,
-    SOURCE_MAP: 14,
-    TARGET: 15,
-    VERBOSE: 16
+    CONFIG: 0,
+    DEFINE: 1,
+    FOLD_CONSTANTS: 2,
+    GLOBALIZE: 3,
+    HELP: 4,
+    INLINE: 5,
+    MANGLE: 6,
+    MINIFY: 7,
+    OUTPUT_DIRECTORY: 8,
+    OUTPUT_FILE: 9,
+    RELEASE: 10,
+    REMOVE_ASSERTS: 11,
+    SOURCE_MAP: 12,
+    TARGET: 13,
+    VERBOSE: 14
   };
   var frontend = {};
   var io = {};
@@ -13569,8 +13540,6 @@
     parser.define(OptionType.BOOL, Option.FOLD_CONSTANTS, '--fold-constants', 'Evaluates constants at compile time and removes dead code inside functions.');
     parser.define(OptionType.BOOL, Option.MINIFY, '--minify', 'Omits whitespace so the emitted JavaScript takes up less space.');
     parser.define(OptionType.BOOL, Option.MANGLE, '--mangle', 'Transforms your JavaScript code to be as small as possible. The "export" modifier prevents renaming a symbol.');
-    parser.define(OptionType.STRING_LIST, Option.APPEND_FILE, '--append-file', 'Append the contents of this file to the output. Provide this flag multiple times to append multiple files.');
-    parser.define(OptionType.STRING_LIST, Option.PREPEND_FILE, '--prepend-file', 'Prepend the contents of this file to the output. Provide this flag multiple times to prepend multiple files.');
     parser.parse(log, $arguments);
     if (log.hasErrors()) {
       return null;
@@ -13684,8 +13653,6 @@
       }
     }
     options.inputs = frontend.readSources(log, parser.normalArguments);
-    options.append = frontend.readSources(log, parser.stringRangeListForOption(Option.APPEND_FILE));
-    options.prepend = frontend.readSources(log, parser.stringRangeListForOption(Option.PREPEND_FILE));
     return options;
   };
   frontend.readSources = function(log, files) {

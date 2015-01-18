@@ -56,11 +56,6 @@ namespace js {
       var collector = Collector(program, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
       currentSource = Source(options.outputFile, "");
 
-      // Prepend inputs
-      for (var i = 0; i < options.prepend.size(); i++) {
-        appendSource(options.prepend[i]);
-      }
-
       // The entire body of code is wrapped in a closure for safety
       emit(indent + minifySpaces("(function() {" + newline));
       increaseIndent();
@@ -150,11 +145,6 @@ namespace js {
       decreaseIndent();
       emit(indent + "}());\n");
 
-      // Append inputs
-      for (var i = 0; i < options.append.size(); i++) {
-        appendSource(options.append[i]);
-      }
-
       // Create the source map
       if (options.sourceMap) {
         // Obfuscate the sourceMappingURL so it's not incorrectly picked up as
@@ -169,22 +159,6 @@ namespace js {
       }
 
       return [currentSource];
-    }
-
-    void appendSource(Source source) {
-      if (currentColumn > 0) {
-        emit("\n");
-      }
-      currentSource.contents += source.contents;
-      if (options.sourceMap) {
-        for (var i = 0, n = source.lineCount(); i < n; i++) {
-          generator.addMapping(source, i, 0, currentLine, 0);
-          currentLine++;
-        }
-      }
-      if (source.contents[source.contents.size() - 1] != '\n') {
-        emit("\n");
-      }
     }
 
     void addMapping(Node node) {

@@ -45,8 +45,6 @@ export class CompilerOptions {
   TargetFormat targetFormat = .NONE;
   CompilerConfig targetConfig = .AUTOMATIC;
   List<Source> inputs = [];
-  List<Source> prepend = [];
-  List<Source> append = [];
   var overriddenDefines = StringMap<OverriddenDefine>();
   var outputDirectory = "";
   var outputFile = "";
@@ -107,9 +105,7 @@ export class Compiler {
     // Line count
     var lineCountingStart = now();
     var lineCount = 0;
-    lineCount += totalLineCount(result.options.prepend);
     lineCount += totalLineCount(result.options.inputs);
-    lineCount += totalLineCount(result.options.append);
     var text =
       "Input line count: " + lineCount +
       "\nOutput line count: " + totalLineCount(result.outputs);
@@ -134,9 +130,7 @@ export class Compiler {
     if (lineCountingTime > 0) text += "\n  Counting lines: " + formatNumber(lineCountingTime) + "ms";
 
     // Sources
-    text += sourceStatistics("Prepend", result.options.prepend);
     text += sourceStatistics("Inputs", result.options.inputs);
-    text += sourceStatistics("Append", result.options.append);
     text += sourceStatistics("Outputs", result.outputs);
     return text;
   }

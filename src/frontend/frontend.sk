@@ -7,7 +7,6 @@ class FrontendFileAccess : FileAccess {
 }
 
 enum Option {
-  APPEND_FILE,
   CONFIG,
   DEFINE,
   FOLD_CONSTANTS,
@@ -18,7 +17,6 @@ enum Option {
   MINIFY,
   OUTPUT_DIRECTORY,
   OUTPUT_FILE,
-  PREPEND_FILE,
   RELEASE,
   REMOVE_ASSERTS,
   SOURCE_MAP,
@@ -79,8 +77,6 @@ namespace frontend {
     parser.define(.BOOL, .FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.");
     parser.define(.BOOL, .MINIFY, "--minify", "Omits whitespace so the emitted JavaScript takes up less space.");
     parser.define(.BOOL, .MANGLE, "--mangle", "Transforms your JavaScript code to be as small as possible. The \"export\" modifier prevents renaming a symbol.");
-    parser.define(.STRING_LIST, .APPEND_FILE, "--append-file", "Append the contents of this file to the output. Provide this flag multiple times to append multiple files.");
-    parser.define(.STRING_LIST, .PREPEND_FILE, "--prepend-file", "Prepend the contents of this file to the output. Provide this flag multiple times to prepend multiple files.");
 
     // Parse the command line arguments
     parser.parse(log, arguments);
@@ -194,8 +190,6 @@ namespace frontend {
 
     // Read the source files
     options.inputs = readSources(log, parser.normalArguments);
-    options.append = readSources(log, parser.stringRangeListForOption(.APPEND_FILE));
-    options.prepend = readSources(log, parser.stringRangeListForOption(.PREPEND_FILE));
     return options;
   }
 
