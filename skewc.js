@@ -2995,6 +2995,12 @@
     case 47:
       this.emitList(node, precedence);
       break;
+    case 49:
+      this.emitKeyValue(node);
+      break;
+    case 48:
+      this.emitMap(node, precedence);
+      break;
     case 54:
       this.emitSuperCall(node);
       break;
@@ -3010,7 +3016,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/emitters/base.sk:387:16)');
+        throw new Error('assert false; (src/emitters/base.sk:389:16)');
       }
       break;
     }
@@ -3026,7 +3032,7 @@
   base.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
     if (!(values.length > 1)) {
-      throw new Error('assert values.size() > 1; (src/emitters/base.sk:401:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/base.sk:403:7)');
     }
     if (Precedence.COMMA <= precedence) {
       this.emit('(');
@@ -3168,6 +3174,18 @@
     this.emitCommaSeparatedExpressions(node.listValues());
     this.emit(']');
   };
+  base.Emitter.prototype.emitKeyValue = function(node) {
+    this.emitExpression(node.itemKey(), Precedence.COMMA);
+    this.emit(': ');
+    this.emitExpression(node.itemValue(), Precedence.COMMA);
+  };
+  base.Emitter.prototype.emitMap = function(node, precedence) {
+    var items = node.mapItems();
+    var space = items.length > 0 ? ' ' : '';
+    this.emit('{' + space);
+    this.emitCommaSeparatedExpressions(items);
+    this.emit(space + '}');
+  };
   base.Emitter.prototype.emitSuperCall = function(node) {
     this.emit('super(');
     this.emitCommaSeparatedExpressions(node.superCallArguments());
@@ -3217,7 +3235,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:588:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:604:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -3743,7 +3761,7 @@
   };
   cpp.Emitter.prototype.emitList = function(node, precedence) {
     var values = node.listValues();
-    var wrap = values.length > 0;
+    var wrap = values.length > 0 || precedence === Precedence.MEMBER;
     if (wrap) {
       this.emit('(');
     }
@@ -3751,7 +3769,10 @@
     this.emitCppType(node.type, cpp.CppEmitType.BARE);
     this.emit('()');
     if (wrap) {
-      this.emit(')->_literal_({ ');
+      this.emit(')');
+    }
+    if (values.length !== 0) {
+      this.emit('->_literal_({ ');
       this.emitCommaSeparatedExpressions(values);
       this.emit(' })');
     }

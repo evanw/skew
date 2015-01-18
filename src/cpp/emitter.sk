@@ -536,13 +536,14 @@ namespace cpp {
 
     override void emitList(Node node, Precedence precedence) {
       var values = node.listValues();
-      var wrap = values.size() > 0;
+      var wrap = values.size() > 0 || precedence == .MEMBER;
       if (wrap) emit("(");
       emit("new ");
       emitCppType(node.type, .BARE);
       emit("()");
-      if (wrap) {
-        emit(")->_literal_({ ");
+      if (wrap) emit(")");
+      if (values.size() != 0) {
+        emit("->_literal_({ ");
         emitCommaSeparatedExpressions(values);
         emit(" })");
       }

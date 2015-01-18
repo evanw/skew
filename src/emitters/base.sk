@@ -378,6 +378,8 @@ namespace base {
         case .PARAMETERIZE { emitParameterize(node); }
         case .CAST, .IMPLICIT_CAST { emitCast(node, precedence); }
         case .LIST { emitList(node, precedence); }
+        case .KEY_VALUE { emitKeyValue(node); }
+        case .MAP { emitMap(node, precedence); }
         case .SUPER_CALL { emitSuperCall(node); }
         case .QUOTED { emitExpression(node.quotedValue(), precedence); }
         case .VAR { emit("var"); }
@@ -529,6 +531,20 @@ namespace base {
       emit("[");
       emitCommaSeparatedExpressions(node.listValues());
       emit("]");
+    }
+
+    void emitKeyValue(Node node) {
+      emitExpression(node.itemKey(), .COMMA);
+      emit(": ");
+      emitExpression(node.itemValue(), .COMMA);
+    }
+
+    virtual void emitMap(Node node, Precedence precedence) {
+      var items = node.mapItems();
+      var space = items.size() > 0 ? " " : "";
+      emit("{" + space);
+      emitCommaSeparatedExpressions(items);
+      emit(space + "}");
     }
 
     virtual void emitSuperCall(Node node) {

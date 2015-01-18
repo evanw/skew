@@ -355,4 +355,46 @@ Foo<T>::Foo() {
 Foo<foo> *bar = nullptr;
 ");
 
+testCPP("
+export int foo() {
+  return List<int>().size(); // The constructor call must be wrapped in parentheses
+}
+", "
+#include <initializer_list>
+#include <vector>
+
+template <typename T>
+struct List;
+
+template <typename T>
+struct List {
+  List();
+  int size();
+  List<T> *_literal_(std::initializer_list<T> list);
+
+  std::vector<T> _data;
+};
+
+int foo();
+
+template <typename T>
+List<T>::List() : _data() {
+}
+
+template <typename T>
+int List<T>::size() {
+  return _data.size();
+}
+
+template <typename T>
+List<T> *List<T>::_literal_(std::initializer_list<T> list) {
+  _data.insert(_data.end(), list.begin(), list.end());
+  return this;
+}
+
+int foo() {
+  return (new List<int>())->size();
+}
+");
+
 }}
