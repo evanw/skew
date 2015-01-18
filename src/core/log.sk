@@ -42,11 +42,11 @@ in Log {
   var errorCount = 0;
 
   bool hasErrors() {
-    return errorCount > 0;
+    return errorCount != 0;
   }
 
   bool hasWarnings() {
-    return warningCount > 0;
+    return warningCount != 0;
   }
 
   void error(Range range, string text) {

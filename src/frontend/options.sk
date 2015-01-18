@@ -68,7 +68,7 @@ class OptionParser {
 
     // Create a source for the arguments to work with the log system
     for (var i = 0; i < arguments.size(); i++) {
-      if (i > 0) source.contents += " ";
+      if (i != 0) source.contents += " ";
       var argument = arguments[i];
       var needsQuotes = " " in argument;
       var start = source.contents.size() + (int)needsQuotes;

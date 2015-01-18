@@ -20,7 +20,7 @@ void prepareTokens(List<Token> tokens) {
     var tokenStartsWithGreaterThan = token.firstCharacter() == '>';
 
     // Remove tokens from the stack if they aren't working out
-    while (stack.size() > 0) {
+    while (stack.size() != 0) {
       var top = tokens[stack[stack.size() - 1]];
       var topKind = top.kind;
 
@@ -42,7 +42,7 @@ void prepareTokens(List<Token> tokens) {
     // Group close
     if (tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan) {
       // Search for a matching opposite token
-      while (stack.size() > 0) {
+      while (stack.size() != 0) {
         var top = tokens[stack[stack.size() - 1]];
         var topKind = top.kind;
 

@@ -58,7 +58,7 @@ class SourceMapGenerator {
       // Insert ',' for the same line and ';' for a line
       if (previousGeneratedLine == generatedLine) {
         if (previousGeneratedColumn == mapping.generatedColumn && (
-            previousGeneratedLine > 0 || previousGeneratedColumn > 0)) {
+            previousGeneratedLine != 0 || previousGeneratedColumn != 0)) {
           continue;
         }
         result += ",";
@@ -111,10 +111,10 @@ class SourceMapGenerator {
 
       // If there are still more digits in this value, we must make sure the
       // continuation bit is marked
-      if (vlq > 0) digit |= 32;
+      if (vlq != 0) digit |= 32;
 
       encoded += BASE64.sliceCodeUnit(digit);
-    } while (vlq > 0);
+    } while (vlq != 0);
     return encoded;
   }
 

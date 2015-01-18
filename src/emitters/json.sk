@@ -50,7 +50,7 @@ in json {
         var inner = indent;
         indent += "  ";
         for (var i = 0; i < node.children.size(); i++) {
-          if (i > 0) result += ",";
+          if (i != 0) result += ",";
           result += "\n" + indent;
           visit(node.children[i]);
         }

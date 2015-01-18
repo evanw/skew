@@ -160,7 +160,7 @@ Node parseArgumentVariables(ParserContext context) {
   List<Node> arguments = [];
   if (!context.expect(.LEFT_PARENTHESIS)) return null;
   while (!context.peek(.RIGHT_PARENTHESIS)) {
-    if (arguments.size() > 0 && !context.expect(.COMMA)) break;
+    if (arguments.size() != 0 && !context.expect(.COMMA)) break;
     var type = parseType(context);
     var name = parseName(context); if (name == null) break;
     arguments.push(Node.createVariable(name, type, null).withRange(Range.span(type.range, name.range)));
@@ -191,7 +191,7 @@ Node parseParameters(ParserContext context) {
   List<Node> parameters = [];
   if (!context.eat(.START_PARAMETER_LIST)) return null;
   while (parameters.size() == 0 || !context.peek(.END_PARAMETER_LIST)) {
-    if (parameters.size() > 0 && !context.expect(.COMMA)) break;
+    if (parameters.size() != 0 && !context.expect(.COMMA)) break;
     var parameter = parseParameter(context); if (parameter == null) break;
     parameters.push(parameter);
   }
@@ -266,7 +266,7 @@ List<Node> parseTypeList(ParserContext context, TokenKind end) {
     }
 
     // Commas must come between types
-    if (types.size() > 0 && !context.eat(.COMMA)) {
+    if (types.size() != 0 && !context.eat(.COMMA)) {
       context.expect(end); // Expecting the end token here makes more sense than a comma
       break;
     }
@@ -479,7 +479,7 @@ Node parseVariableCluster(ParserContext context, Node type, Node name) {
   List<Node> variables = [];
   var start = type;
   while (variables.size() == 0 || !context.peek(.SEMICOLON) && !context.peek(.IN)) {
-    if (variables.size() > 0 && !context.eat(.COMMA)) {
+    if (variables.size() != 0 && !context.eat(.COMMA)) {
       context.expect(.SEMICOLON); // Expecting a semicolon here makes more sense than a comma
       break;
     }

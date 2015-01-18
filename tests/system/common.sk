@@ -18,7 +18,7 @@ namespace tests {
       options.inputs = [Source("<stdin>", input)];
       var compiler = Compiler();
       var result = compiler.compile(options);
-      if (result.outputs.size() > 0) {
+      if (result.outputs.size() != 0) {
         for (var i = 0; i < result.outputs.size(); i++) {
           output += result.outputs[i].contents + "\n";
         }

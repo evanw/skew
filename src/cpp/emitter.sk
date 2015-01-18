@@ -77,7 +77,7 @@ namespace cpp {
       headers.sort(StringComparison.INSTANCE);
 
       // Prepend headers if needed
-      if (headers.size() > 0) {
+      if (headers.size() != 0) {
         var text = "";
         for (var i = 0; i < headers.size(); i++) {
           var name = headers[i];
@@ -115,7 +115,7 @@ namespace cpp {
         emit(indent + "template <");
         if (selfParameters) {
           for (var i = 0; i < symbol.parameters.size(); i++) {
-            if (i > 0) emit(", ");
+            if (i != 0) emit(", ");
             emitTypeParameter(symbol.parameters[i]);
           }
         }
@@ -169,7 +169,7 @@ namespace cpp {
               var types = symbol.type.relevantTypes;
               emit(" : ");
               for (var i = 0; i < types.size(); i++) {
-                if (i > 0) emit(", ");
+                if (i != 0) emit(", ");
                 emitCppType(types[i], .BARE);
               }
             }
@@ -244,7 +244,7 @@ namespace cpp {
               if (enclosingSymbol.hasParameters()) {
                 emit("<");
                 for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
-                  if (i > 0) emit(", ");
+                  if (i != 0) emit(", ");
                   emit(mangleName(enclosingSymbol.parameters[i]));
                 }
                 emit(">");
@@ -263,21 +263,23 @@ namespace cpp {
               var superInitializer = node.superInitializer();
               var memberInitializers = node.memberInitializers();
               var superCallArguments = superInitializer != null ? superInitializer.superCallArguments() : null;
-              if (superInitializer != null && superCallArguments.size() > 0 || memberInitializers != null && memberInitializers.hasChildren()) {
+              var hasSuperInitializer = superInitializer != null && superCallArguments.size() > 0;
+              var hasMemberInitializers = memberInitializers != null && memberInitializers.hasChildren();
+              if (hasSuperInitializer || hasMemberInitializers) {
                 emit(" : ");
-                if (superInitializer != null && superCallArguments.size() > 0) {
+                if (hasSuperInitializer) {
                   emit(fullName(superInitializer.symbol.enclosingSymbol) + "(");
                   emitCommaSeparatedExpressions(superInitializer.superCallArguments());
                   emit(")");
-                  if (memberInitializers != null && memberInitializers.hasChildren()) {
+                  if (hasMemberInitializers) {
                     emit(", ");
                   }
                 }
-                if (memberInitializers != null) {
+                if (hasMemberInitializers) {
                   for (var i = 0; i < memberInitializers.children.size(); i++) {
                     var initializer = memberInitializers.children[i];
                     var value = initializer.memberInitializerValue();
-                    if (i > 0) emit(", ");
+                    if (i != 0) emit(", ");
                     emit(mangleName(initializer.symbol) + "(");
                     if (value.kind != .ERROR) {
                       emitExpression(value, .LOWEST);
@@ -452,7 +454,7 @@ namespace cpp {
         var substitutions = value.type.substitutions;
         emit("<");
         for (var i = 0; i < substitutions.size(); i++) {
-          if (i > 0) emit(", ");
+          if (i != 0) emit(", ");
           emitCppType(substitutions[i], .NORMAL);
         }
         emit(">");
@@ -542,7 +544,7 @@ namespace cpp {
       if (wrap) emit("(");
       emit("new ");
       emitCppType(node.type, .BARE);
-      if (values.size() > 0) {
+      if (values.size() != 0) {
         emit(" { ");
         emitCommaSeparatedExpressions(values);
         emit(" }");

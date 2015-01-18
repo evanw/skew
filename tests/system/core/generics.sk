@@ -516,4 +516,24 @@ interface IFoo<T> {}
 ", "
 ");
 
+test("
+class Foo<T> : IFoo<T> {}
+interface IFoo<X> {}
+", "
+");
+
+test("
+class Foo<T> {}
+in Foo : IFoo<T> {}
+interface IFoo<X> {}
+", "
+");
+
+test("
+in Foo : IFoo<T> {}
+class Foo<T> {}
+interface IFoo<X> {}
+", "
+");
+
 }}

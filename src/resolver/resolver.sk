@@ -2501,7 +2501,7 @@ class Resolver {
 
       // Automatically insert a call to the base constructor if possible
       else if (overriddenType.isFunction()) {
-        if (overriddenType.argumentTypes().size() > 0) {
+        if (overriddenType.argumentTypes().size() != 0) {
           semanticErrorMissingSuperInitializer(log, node.declarationName().range);
         } else {
           node.replaceChild(3, Node.createSuperCall([]).withSymbol(overriddenMember.symbol));
@@ -2516,7 +2516,7 @@ class Resolver {
       }
 
       // Abstract constructors cannot have initializer lists
-      if ((superInitializer != null || memberInitializers.children.size() > 0) && block == null) {
+      if ((superInitializer != null || memberInitializers.children.size() != 0) && block == null) {
         semanticErrorAbstractConstructorInitializer(log, Range.span(
           (superInitializer != null ? superInitializer : memberInitializers.children[0]).range,
           (memberInitializers.children.size() < 1 ? superInitializer : memberInitializers.lastChild()).range));
@@ -3321,7 +3321,7 @@ class Resolver {
       if (parameter.type.isIgnored(cache)) return;
       var bound = parameter.type.bound();
       if (bound != null) {
-        if (i > 0) bound = cache.substitute(bound, sortedParameters.slice(0, i), sortedTypes.slice(0, i));
+        if (i != 0) bound = cache.substitute(bound, sortedParameters.slice(0, i), sortedTypes.slice(0, i));
         checkConversion(bound, substitution, .IMPLICIT_CAST);
       }
       if (substitution.type.isError(cache)) return;

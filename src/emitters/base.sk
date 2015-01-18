@@ -93,7 +93,7 @@ namespace base {
       emit("(");
       if (arguments.hasChildren()) {
         for (var i = 0; i < arguments.children.size(); i++) {
-          if (i > 0) emit(", ");
+          if (i != 0) emit(", ");
           emitFunctionArgument(arguments.children[i].symbol);
         }
       }
@@ -104,7 +104,7 @@ namespace base {
       if (symbol.hasParameters()) {
         emit("<");
         for (var i = 0; i < symbol.parameters.size(); i++) {
-          if (i > 0) emit(", ");
+          if (i != 0) emit(", ");
           emitTypeParameter(symbol.parameters[i]);
         }
         emit(">");
@@ -207,9 +207,9 @@ namespace base {
     void emitCase(Node node) {
       var values = node.caseValues().children;
       var block = node.caseBlock();
-      if (values.size() > 0) {
+      if (values.size() != 0) {
         for (var i = 0; i < values.size(); i++) {
-          if (i > 0) emit("\n");
+          if (i != 0) emit("\n");
           emit(indent + "case ");
           emitExpression(values[i], .LOWEST);
           emit(":");
@@ -273,7 +273,7 @@ namespace base {
     void emitForVariables(List<Node> nodes) {
       emitTypeBeforeVariable(nodes[0].symbol);
       for (var i = 0; i < nodes.size(); i++) {
-        if (i > 0) emit(", ");
+        if (i != 0) emit(", ");
         var node = nodes[i];
         emit(mangleName(node.symbol));
         emitAfterVariable(node);
@@ -391,7 +391,7 @@ namespace base {
 
     void emitCommaSeparatedExpressions(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
-        if (i > 0) emit(", ");
+        if (i != 0) emit(", ");
         emitExpression(nodes[i], .COMMA);
       }
     }
@@ -590,7 +590,7 @@ namespace base {
       if (type.isParameterized()) {
         emit("<");
         for (var i = 0; i < type.substitutions.size(); i++) {
-          if (i > 0) emit(", ");
+          if (i != 0) emit(", ");
           emitNormalType(type.substitutions[i]);
         }
         emit(">");

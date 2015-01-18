@@ -497,7 +497,7 @@ namespace js {
         }
 
         // "var a = 0, b = 1; for (var c = 2;;) {}" => "for (var a = 0, b = 1, c = 2;;) {}"
-        else if (kind == .FOR && i > 0) {
+        else if (kind == .FOR && i != 0) {
           var previous = node.children[i - 1];
           var setup = child.forSetup();
           if (setup != null && previous.kind == .VARIABLE_CLUSTER && setup.kind == .VARIABLE_CLUSTER) {
@@ -561,7 +561,7 @@ namespace js {
               peepholeMangleIf(child);
 
               // "a(); if (b) return; c();" => "a(); if (!b) c();" => "a(); !b && c();" => "a(), !b && c();"
-              if (child.kind == .EXPRESSION && i > 0) {
+              if (child.kind == .EXPRESSION && i != 0) {
                 var previous = node.children[i - 1];
                 if (previous.kind == .EXPRESSION) {
                   previous.replaceWith(Node.createExpression(joinExpressions(previous.expressionValue().replaceWith(null), child.remove().expressionValue().replaceWith(null))));
@@ -573,7 +573,7 @@ namespace js {
         }
 
         else if (kind == .RETURN && child.returnValue() != null) {
-          while (i > 0) {
+          while (i != 0) {
             var previous = node.children[i - 1];
 
             // "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
@@ -629,7 +629,7 @@ namespace js {
         var current = node.children[i];
         var currentRight = assignSourceIfNoSideEffects(current);
         if (currentRight != null) {
-          while (i > 0) {
+          while (i != 0) {
             var previous = node.children[i - 1];
             var previousRight = assignSourceIfNoSideEffects(previous);
             if (previousRight == null || !looksTheSame(previousRight, currentRight)) {

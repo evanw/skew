@@ -49,7 +49,7 @@ namespace FunctionInliningPass {
         //
         //   var baz = (foo(), 1);
         //
-        if (info.unusedArguments.size() > 0) {
+        if (info.unusedArguments.size() != 0) {
           List<Node> sequence = null;
           for (var j = 0; j < info.unusedArguments.size(); j++) {
             var index = info.arguments.indexOf(info.unusedArguments[j]);

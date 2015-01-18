@@ -2291,10 +2291,10 @@
     return result;
   };
   Log.prototype.hasErrors = function() {
-    return this.errorCount > 0;
+    return this.errorCount !== 0;
   };
   Log.prototype.hasWarnings = function() {
-    return this.warningCount > 0;
+    return this.warningCount !== 0;
   };
   Log.prototype.error = function(range, text) {
     if (range === null) {
@@ -2620,7 +2620,7 @@
     this.emit('(');
     if ($arguments.hasChildren()) {
       for (var i = 0; i < $arguments.children.length; i = i + 1 | 0) {
-        if (i > 0) {
+        if (i !== 0) {
           this.emit(', ');
         }
         this.emitFunctionArgument($arguments.children[i].symbol);
@@ -2749,9 +2749,9 @@
   base.Emitter.prototype.emitCase = function(node) {
     var values = node.caseValues().children;
     var block = node.caseBlock();
-    if (values.length > 0) {
+    if (values.length !== 0) {
       for (var i = 0; i < values.length; i = i + 1 | 0) {
-        if (i > 0) {
+        if (i !== 0) {
           this.emit('\n');
         }
         this.emit(this.indent + 'case ');
@@ -2811,7 +2811,7 @@
   base.Emitter.prototype.emitForVariables = function(nodes) {
     this.emitTypeBeforeVariable(nodes[0].symbol);
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-      if (i > 0) {
+      if (i !== 0) {
         this.emit(', ');
       }
       var node = nodes[i];
@@ -2967,7 +2967,7 @@
   };
   base.Emitter.prototype.emitCommaSeparatedExpressions = function(nodes) {
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-      if (i > 0) {
+      if (i !== 0) {
         this.emit(', ');
       }
       this.emitExpression(nodes[i], Precedence.COMMA);
@@ -3173,7 +3173,7 @@
     if (type.isParameterized()) {
       this.emit('<');
       for (var i = 0; i < type.substitutions.length; i = i + 1 | 0) {
-        if (i > 0) {
+        if (i !== 0) {
           this.emit(', ');
         }
         this.emitNormalType(type.substitutions[i]);
@@ -3259,7 +3259,7 @@
     }
     var headers = this.includes.keys();
     headers.sort(bindCompare(StringComparison.INSTANCE));
-    if (headers.length > 0) {
+    if (headers.length !== 0) {
       var text = '';
       for (var i = 0; i < headers.length; i = i + 1 | 0) {
         var name = headers[i];
@@ -3293,7 +3293,7 @@
       this.emit(this.indent + 'template <');
       if (selfParameters) {
         for (var i = 0; i < symbol.parameters.length; i = i + 1 | 0) {
-          if (i > 0) {
+          if (i !== 0) {
             this.emit(', ');
           }
           this.emitTypeParameter(symbol.parameters[i]);
@@ -3349,7 +3349,7 @@
             var types = symbol.type.relevantTypes;
             this.emit(' : ');
             for (var i = 0; i < types.length; i = i + 1 | 0) {
-              if (i > 0) {
+              if (i !== 0) {
                 this.emit(', ');
               }
               this.emitCppType(types[i], cpp.CppEmitType.BARE);
@@ -3425,7 +3425,7 @@
             if (enclosingSymbol.hasParameters()) {
               this.emit('<');
               for (var i = 0; i < enclosingSymbol.parameters.length; i = i + 1 | 0) {
-                if (i > 0) {
+                if (i !== 0) {
                   this.emit(', ');
                 }
                 this.emit(this.mangleName(enclosingSymbol.parameters[i]));
@@ -3446,21 +3446,23 @@
             var superInitializer = node.superInitializer();
             var memberInitializers = node.memberInitializers();
             var superCallArguments = superInitializer !== null ? superInitializer.superCallArguments() : null;
-            if (superInitializer !== null && superCallArguments.length > 0 || memberInitializers !== null && memberInitializers.hasChildren()) {
+            var hasSuperInitializer = superInitializer !== null && superCallArguments.length > 0;
+            var hasMemberInitializers = memberInitializers !== null && memberInitializers.hasChildren();
+            if (hasSuperInitializer || hasMemberInitializers) {
               this.emit(' : ');
-              if (superInitializer !== null && superCallArguments.length > 0) {
+              if (hasSuperInitializer) {
                 this.emit(this.fullName(superInitializer.symbol.enclosingSymbol) + '(');
                 this.emitCommaSeparatedExpressions(superInitializer.superCallArguments());
                 this.emit(')');
-                if (memberInitializers !== null && memberInitializers.hasChildren()) {
+                if (hasMemberInitializers) {
                   this.emit(', ');
                 }
               }
-              if (memberInitializers !== null) {
+              if (hasMemberInitializers) {
                 for (var i = 0; i < memberInitializers.children.length; i = i + 1 | 0) {
                   var initializer = memberInitializers.children[i];
                   var value = initializer.memberInitializerValue();
-                  if (i > 0) {
+                  if (i !== 0) {
                     this.emit(', ');
                   }
                   this.emit(this.mangleName(initializer.symbol) + '(');
@@ -3631,7 +3633,7 @@
       var substitutions = value.type.substitutions;
       this.emit('<');
       for (var i = 0; i < substitutions.length; i = i + 1 | 0) {
-        if (i > 0) {
+        if (i !== 0) {
           this.emit(', ');
         }
         this.emitCppType(substitutions[i], cpp.CppEmitType.NORMAL);
@@ -3706,7 +3708,7 @@
     }
     this.emit('new ');
     this.emitCppType(node.type, cpp.CppEmitType.BARE);
-    if (values.length > 0) {
+    if (values.length !== 0) {
       this.emit(' { ');
       this.emitCommaSeparatedExpressions(values);
       this.emit(' }');
@@ -3932,7 +3934,7 @@
       var inner = this.indent;
       this.indent += '  ';
       for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        if (i > 0) {
+        if (i !== 0) {
           this.result += ',';
         }
         this.result += '\n' + this.indent;
@@ -4169,7 +4171,7 @@
     var entryPointSymbol = this.resolver.entryPointSymbol;
     if (entryPointSymbol !== null) {
       var type = entryPointSymbol.type;
-      var callText = js.Emitter.fullName(entryPointSymbol) + (type.argumentTypes().length > 0 ? '(process.argv.slice(2))' : '()');
+      var callText = js.Emitter.fullName(entryPointSymbol) + (type.argumentTypes().length !== 0 ? '(process.argv.slice(2))' : '()');
       this.emitSemicolonIfNeeded();
       this.emit(this.indent + (type.resultType() === this.resolver.cache.intType ? 'process.exit(' + callText + ')' : callText));
       this.emitSemicolonAfterStatement();
@@ -4247,7 +4249,7 @@
   };
   js.Emitter.prototype.emitCommaSeparatedNodes = function(nodes) {
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-      if (i > 0) {
+      if (i !== 0) {
         this.emit(',' + this.space);
       }
       this.emitNode(nodes[i]);
@@ -4255,7 +4257,7 @@
   };
   js.Emitter.prototype.emitCommaSeparatedExpressions = function(nodes) {
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-      if (i > 0) {
+      if (i !== 0) {
         this.emit(',' + this.space);
         this.maybeEmitMinifedNewline();
       }
@@ -5440,7 +5442,7 @@
             child.appendChild(variables[j].replaceWith(null));
           }
         }
-      } else if (kind === NodeKind.FOR && i > 0) {
+      } else if (kind === NodeKind.FOR && i !== 0) {
         var previous = node.children[i - 1 | 0];
         var setup = child.forSetup();
         if (setup !== null && previous.kind === NodeKind.VARIABLE_CLUSTER && setup.kind === NodeKind.VARIABLE_CLUSTER) {
@@ -5491,7 +5493,7 @@
             }
             this.peepholeMangleBlock(block);
             this.peepholeMangleIf(child);
-            if (child.kind === NodeKind.EXPRESSION && i > 0) {
+            if (child.kind === NodeKind.EXPRESSION && i !== 0) {
               var previous = node.children[i - 1 | 0];
               if (previous.kind === NodeKind.EXPRESSION) {
                 previous.replaceWith(Node.createExpression(this.joinExpressions(previous.expressionValue().replaceWith(null), child.remove().expressionValue().replaceWith(null))));
@@ -5501,7 +5503,7 @@
           }
         }
       } else if (kind === NodeKind.RETURN && child.returnValue() !== null) {
-        while (i > 0) {
+        while (i !== 0) {
           var previous = node.children[i - 1 | 0];
           if (previous.kind === NodeKind.IF && previous.ifFalse() === null) {
             var statement = previous.ifTrue().blockStatement();
@@ -5545,7 +5547,7 @@
       var current = node.children[i];
       var currentRight = this.assignSourceIfNoSideEffects(current);
       if (currentRight !== null) {
-        while (i > 0) {
+        while (i !== 0) {
           var previous = node.children[i - 1 | 0];
           var previousRight = this.assignSourceIfNoSideEffects(previous);
           if (previousRight === null || !this.looksTheSame(previousRight, currentRight)) {
@@ -5841,7 +5843,7 @@
       var mapping = this.mappings[i];
       var generatedLine = mapping.generatedLine;
       if (previousGeneratedLine === generatedLine) {
-        if (previousGeneratedColumn === mapping.generatedColumn && (previousGeneratedLine > 0 || previousGeneratedColumn > 0)) {
+        if (previousGeneratedColumn === mapping.generatedColumn && (previousGeneratedLine !== 0 || previousGeneratedColumn !== 0)) {
           continue;
         }
         result += ',';
@@ -5869,11 +5871,11 @@
     do {
       var digit = vlq & 31;
       vlq >>= 5;
-      if (vlq > 0) {
+      if (vlq !== 0) {
         digit |= 32;
       }
       encoded += SourceMapGenerator.BASE64[digit];
-    } while (vlq > 0);
+    } while (vlq !== 0);
     return encoded;
   };
   var TokenKind = {
@@ -9353,7 +9355,7 @@
           this.resolveArguments($arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
         }
       } else if (overriddenType.isFunction()) {
-        if (overriddenType.argumentTypes().length > 0) {
+        if (overriddenType.argumentTypes().length !== 0) {
           semanticErrorMissingSuperInitializer(this.log, node.declarationName().range);
         } else {
           node.replaceChild(3, Node.createSuperCall([]).withSymbol(overriddenMember.symbol));
@@ -9364,7 +9366,7 @@
         memberInitializers = Node.createNodeList([]);
         node.replaceChild(4, memberInitializers);
       }
-      if ((superInitializer !== null || memberInitializers.children.length > 0) && block === null) {
+      if ((superInitializer !== null || memberInitializers.children.length !== 0) && block === null) {
         semanticErrorAbstractConstructorInitializer(this.log, Range.span((superInitializer !== null ? superInitializer : memberInitializers.children[0]).range, (memberInitializers.children.length < 1 ? superInitializer : memberInitializers.lastChild()).range));
       }
       var enclosingSymbol = symbol.enclosingSymbol;
@@ -9974,7 +9976,7 @@
       }
       var bound = parameter.type.bound();
       if (bound !== null) {
-        if (i > 0) {
+        if (i !== 0) {
           bound = this.cache.substitute(bound, sortedParameters.slice(0, i), sortedTypes.slice(0, i));
         }
         this.checkConversion(bound, substitution, CastKind.IMPLICIT_CAST);
@@ -10835,7 +10837,7 @@
     }
     var text = '[';
     for (var i = 0; i < parameters.length; i = i + 1 | 0) {
-      if (i > 0) {
+      if (i !== 0) {
         text += ', ';
       }
       text += parameters[i].name + ' => ' + substitutions[i];
@@ -10850,7 +10852,7 @@
     if (this.hasParameters()) {
       parameterText = '<';
       for (var i = 0; i < this.symbol.parameters.length; i = i + 1 | 0) {
-        if (i > 0) {
+        if (i !== 0) {
           parameterText += ', ';
         }
         parameterText += this.isParameterized() ? this.substitutions[i].toString() : this.symbol.parameters[i].name;
@@ -10861,7 +10863,7 @@
       var text = this.resultType() + ' fn' + parameterText + '(';
       var $arguments = this.argumentTypes();
       for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-        if (i > 0) {
+        if (i !== 0) {
           text += ', ';
         }
         text += $arguments[i];
@@ -11327,7 +11329,7 @@
     this.source = new Source('<arguments>', '');
     var ranges = [];
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-      if (i > 0) {
+      if (i !== 0) {
         this.source.contents += ' ';
       }
       var argument = $arguments[i];
@@ -11769,7 +11771,7 @@
     }
     var text = '';
     for (var i = 0; i < parts.length; i = i + 1 | 0) {
-      if (i > 0) {
+      if (i !== 0) {
         text += ', ';
         if ((i + 1 | 0) === parts.length) {
           text += trailing + ' ';
@@ -11949,7 +11951,7 @@
       var token = tokens[i];
       var tokenKind = token.kind;
       var tokenStartsWithGreaterThan = token.firstCharacter() === 62;
-      while (stack.length > 0) {
+      while (stack.length !== 0) {
         var top = tokens[stack[stack.length - 1 | 0]];
         var topKind = top.kind;
         if (topKind === TokenKind.LESS_THAN && tokenKind !== TokenKind.LESS_THAN && tokenKind !== TokenKind.IDENTIFIER && tokenKind !== TokenKind.IS && tokenKind !== TokenKind.COMMA && tokenKind !== TokenKind.DOT && tokenKind !== TokenKind.TICK && !tokenStartsWithGreaterThan) {
@@ -11963,7 +11965,7 @@
         continue;
       }
       if (tokenKind === TokenKind.RIGHT_PARENTHESIS || tokenKind === TokenKind.RIGHT_BRACE || tokenKind === TokenKind.RIGHT_BRACKET || tokenStartsWithGreaterThan) {
-        while (stack.length > 0) {
+        while (stack.length !== 0) {
           var top = tokens[stack[stack.length - 1 | 0]];
           var topKind = top.kind;
           if (tokenStartsWithGreaterThan && topKind !== TokenKind.LESS_THAN) {
@@ -12184,7 +12186,7 @@
       return null;
     }
     while (!context.peek(TokenKind.RIGHT_PARENTHESIS)) {
-      if ($arguments.length > 0 && !context.expect(TokenKind.COMMA)) {
+      if ($arguments.length !== 0 && !context.expect(TokenKind.COMMA)) {
         break;
       }
       var type = parseType(context);
@@ -12224,7 +12226,7 @@
       return null;
     }
     while (parameters.length === 0 || !context.peek(TokenKind.END_PARAMETER_LIST)) {
-      if (parameters.length > 0 && !context.expect(TokenKind.COMMA)) {
+      if (parameters.length !== 0 && !context.expect(TokenKind.COMMA)) {
         break;
       }
       var parameter = parseParameter(context);
@@ -12291,7 +12293,7 @@
         context.unexpectedToken();
         break;
       }
-      if (types.length > 0 && !context.eat(TokenKind.COMMA)) {
+      if (types.length !== 0 && !context.eat(TokenKind.COMMA)) {
         context.expect(end);
         break;
       }
@@ -12539,7 +12541,7 @@
     var variables = [];
     var start = type;
     while (variables.length === 0 || !context.peek(TokenKind.SEMICOLON) && !context.peek(TokenKind.IN)) {
-      if (variables.length > 0 && !context.eat(TokenKind.COMMA)) {
+      if (variables.length !== 0 && !context.eat(TokenKind.COMMA)) {
         context.expect(TokenKind.SEMICOLON);
         break;
       }
@@ -13275,7 +13277,7 @@
         if (value.kind !== NodeKind.NAME || value.symbol !== info.symbol) {
           throw new Error('assert value.kind == .NAME && value.symbol == info.symbol; (src/resolver/functioninlining.sk:38:9)');
         }
-        if (info.unusedArguments.length > 0) {
+        if (info.unusedArguments.length !== 0) {
           var sequence = null;
           for (var j = 0; j < info.unusedArguments.length; j = j + 1 | 0) {
             var index = info.$arguments.indexOf(info.unusedArguments[j]);

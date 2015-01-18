@@ -104,7 +104,7 @@ class Type {
     assert parameters.size() == substitutions.size();
     var text = "[";
     for (var i = 0; i < parameters.size(); i++) {
-      if (i > 0) text += ", ";
+      if (i != 0) text += ", ";
       text += parameters[i].name + " => " + substitutions[i];
     }
     return text + "]";
@@ -118,7 +118,7 @@ class Type {
     if (hasParameters()) {
       parameterText = "<";
       for (var i = 0; i < symbol.parameters.size(); i++) {
-        if (i > 0) parameterText += ", ";
+        if (i != 0) parameterText += ", ";
         parameterText += isParameterized() ? substitutions[i].toString() : symbol.parameters[i].name;
       }
       parameterText += ">";
@@ -129,7 +129,7 @@ class Type {
       var text = resultType() + " fn" + parameterText + "(";
       var arguments = argumentTypes();
       for (var i = 0; i < arguments.size(); i++) {
-        if (i > 0) text += ", ";
+        if (i != 0) text += ", ";
         text += arguments[i];
       }
       return text + ")";
