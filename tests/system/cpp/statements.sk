@@ -1,0 +1,58 @@
+namespace cpp { void testStatements() {
+
+testCPP("
+class Foo {}
+export void foo(int foo, int bar) {
+  `(void *)` a = null, b = null;
+  for (Foo x = null, y = null; x == y; x = y) {}
+  for (`(void *)` x = null, y = null; x == y; x = y) {}
+  for (`(int &)` x = foo, y = bar; foo == bar; foo++, bar--) {}
+}
+", "
+struct Foo;
+
+struct Foo {
+  Foo();
+};
+
+void foo(int foo, int bar);
+
+Foo::Foo() {
+}
+
+void foo(int foo, int bar) {
+  void *a = nullptr;
+  void *b = nullptr;
+
+  for (Foo *x = nullptr, *y = nullptr; x == y; x = y) {
+  }
+
+  for (void *x = nullptr, *y = nullptr; x == y; x = y) {
+  }
+
+  for (int &x = foo, &y = bar; foo == bar; foo++, bar--) {
+  }
+}
+");
+
+testCPP("
+export enum Foo {
+  FOO,
+}
+export Bar foo() {
+  return .FOO;
+}
+alias Bar = Foo;
+", "
+enum struct Foo {
+  FOO
+};
+
+Foo foo();
+
+Foo foo() {
+  return Foo::FOO;
+}
+");
+
+}}

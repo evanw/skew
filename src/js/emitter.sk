@@ -86,17 +86,21 @@ namespace js {
 
       // Emit types
       for (var i = 0; i < collector.typeSymbols.size(); i++) {
-        var type = collector.typeSymbols[i].type;
+        var symbol = collector.typeSymbols[i];
+        var type = symbol.type;
+        if (symbol.kind == .ALIAS) {
+          continue;
+        }
         if (type.isNamespace()) {
-          if (!type.symbol.isImport()) {
+          if (!symbol.isImport()) {
             maybeEmitMinifedNewline();
-            emitNode(type.symbol.node);
+            emitNode(symbol.node);
           }
           continue;
         }
-        if (!type.symbol.isImport()) {
+        if (!symbol.isImport()) {
           if (type.isEnum()) {
-            emitNode(type.symbol.node);
+            emitNode(symbol.node);
           } else {
             var constructor = type.constructor();
             if (constructor != null) {
@@ -106,12 +110,12 @@ namespace js {
         }
         var members = type.sortedMembers();
         for (var j = 0; j < members.size(); j++) {
-          var symbol = members[j].symbol;
-          if (symbol.enclosingSymbol == type.symbol && symbol.node != null) {
-            if (symbol.kind.isFunction() && symbol.kind != .CONSTRUCTOR_FUNCTION) {
-              emitNode(symbol.node);
-            } else if (symbol.kind == .GLOBAL_VARIABLE && !symbol.isEnumValue()) {
-              collector.freeVariableSymbols.push(symbol);
+          var member = members[j].symbol;
+          if (member.enclosingSymbol == symbol && member.node != null) {
+            if (member.kind.isFunction() && member.kind != .CONSTRUCTOR_FUNCTION) {
+              emitNode(member.node);
+            } else if (member.kind == .GLOBAL_VARIABLE && !member.isEnumValue()) {
+              collector.freeVariableSymbols.push(member);
             }
           }
         }

@@ -4125,17 +4125,21 @@
       this.needsSemicolon = false;
     }
     for (var i = 0; i < collector.typeSymbols.length; i = i + 1 | 0) {
-      var type = collector.typeSymbols[i].type;
+      var symbol = collector.typeSymbols[i];
+      var type = symbol.type;
+      if (symbol.kind === SymbolKind.ALIAS) {
+        continue;
+      }
       if (type.isNamespace()) {
-        if (!type.symbol.isImport()) {
+        if (!symbol.isImport()) {
           this.maybeEmitMinifedNewline();
-          this.emitNode(type.symbol.node);
+          this.emitNode(symbol.node);
         }
         continue;
       }
-      if (!type.symbol.isImport()) {
+      if (!symbol.isImport()) {
         if (type.isEnum()) {
-          this.emitNode(type.symbol.node);
+          this.emitNode(symbol.node);
         } else {
           var $constructor = type.$constructor();
           if ($constructor !== null) {
@@ -4145,12 +4149,12 @@
       }
       var members = type.sortedMembers();
       for (var j = 0; j < members.length; j = j + 1 | 0) {
-        var symbol = members[j].symbol;
-        if (symbol.enclosingSymbol === type.symbol && symbol.node !== null) {
-          if (in_SymbolKind.isFunction(symbol.kind) && symbol.kind !== SymbolKind.CONSTRUCTOR_FUNCTION) {
-            this.emitNode(symbol.node);
-          } else if (symbol.kind === SymbolKind.GLOBAL_VARIABLE && !symbol.isEnumValue()) {
-            collector.freeVariableSymbols.push(symbol);
+        var member = members[j].symbol;
+        if (member.enclosingSymbol === symbol && member.node !== null) {
+          if (in_SymbolKind.isFunction(member.kind) && member.kind !== SymbolKind.CONSTRUCTOR_FUNCTION) {
+            this.emitNode(member.node);
+          } else if (member.kind === SymbolKind.GLOBAL_VARIABLE && !member.isEnumValue()) {
+            collector.freeVariableSymbols.push(member);
           }
         }
       }
@@ -4358,7 +4362,7 @@
     case 33:
       break;
     default:
-      throw new Error('assert false; (src/js/emitter.sk:310:19)');
+      throw new Error('assert false; (src/js/emitter.sk:314:19)');
       break;
     }
   };
@@ -4716,7 +4720,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/js/emitter.sk:646:16)');
+        throw new Error('assert false; (src/js/emitter.sk:650:16)');
       }
       break;
     }
@@ -4815,7 +4819,7 @@
   };
   js.Emitter.prototype.isRightChildOfBinaryExpression = function(node, kind) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:733:7)');
+      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:737:7)');
     }
     while (in_NodeKind.isBinaryOperator(node.parent.kind)) {
       if (node.parent.binaryRight() === node) {

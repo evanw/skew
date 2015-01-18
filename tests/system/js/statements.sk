@@ -116,4 +116,23 @@ export class Foo {
 }());
 ");
 
+testJS("
+export enum Foo {
+  FOO,
+}
+export Bar foo() {
+  return .FOO;
+}
+alias Bar = Foo;
+", "
+(function() {
+  Foo = {
+    FOO: 0
+  };
+  foo = function() {
+    return Foo.FOO;
+  };
+}());
+");
+
 }}

@@ -251,6 +251,7 @@ int start() {
   cpp.testFunctions();
   cpp.testNeedsInclude();
   cpp.testObjects();
+  cpp.testStatements();
 
   return runAllTests();
 }
