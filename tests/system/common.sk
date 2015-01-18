@@ -37,6 +37,12 @@ namespace tests {
 
     Test cpp() {
       options.targetFormat = .CPP;
+      options.targetConfig = .OSX;
+      return this;
+    }
+
+    Test windows() {
+      options.targetConfig = .WINDOWS;
       return this;
     }
 

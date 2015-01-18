@@ -107,6 +107,18 @@ void test() {
 
 testCPP("
 export void test() {
+  (bool)1;
+}
+", "
+void test();
+
+void test() {
+  !!1;
+}
+").windows();
+
+testCPP("
+export void test() {
   assert (bool)1;
 }
 ", "
@@ -255,6 +267,45 @@ void test() {
   in_double::_format_(0.0);
 }
 ");
+
+testCPP("
+export void test() {
+  0.toString();
+  0.0f.toString();
+  0.0.toString();
+}
+", "
+#include <stdio.h>
+#include <string>
+
+namespace in_double {
+  std::string _format_(double value);
+}
+
+void test();
+
+std::string in_double::_format_(double value) {
+  std::string buffer = \"\";
+  buffer.resize(64);
+  sprintf_s(&buffer[0], buffer.size(), \"%.15g\", value);
+
+  if (std::stod(&buffer[0]) != value) {
+    sprintf_s(&buffer[0], buffer.size(), \"%.16g\", value);
+
+    if (std::stod(&buffer[0]) != value) {
+      sprintf_s(&buffer[0], buffer.size(), \"%.17g\", value);
+    }
+  }
+
+  return buffer.c_str();
+}
+
+void test() {
+  std::to_string(0);
+  in_double::_format_(0.0f);
+  in_double::_format_(0.0);
+}
+").windows();
 
 testCPP("
 export void test(bool a) {
