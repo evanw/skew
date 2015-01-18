@@ -21,35 +21,32 @@ RELEASE_DIR = build/release
 TESTS_DIR = build/tests
 NPM_DIR = skew-npm
 
-FLAGS += --verbose
-FLAGS += --target=js
+JS_FLAGS += --verbose
+JS_FLAGS += --target=js
+
+CPP_FLAGS += --verbose
+CPP_FLAGS += --target=cpp
 
 FRONTEND_DEPS += Makefile
 FRONTEND_DEPS += $(FRONTEND_SOURCES)
 
 FRONTEND_FLAGS += $(FRONTEND_SOURCES)
-FRONTEND_FLAGS += $(FLAGS)
+FRONTEND_FLAGS += $(JS_FLAGS)
 FRONTEND_FLAGS += --config=node
 
 TEST_DEPS += Makefile
 TEST_DEPS += $(TEST_SOURCES)
-TEST_DEPS += tests/system/common.js
 
-TEST_FLAGS += $(TEST_SOURCES)
-TEST_FLAGS += $(FLAGS)
-TEST_FLAGS += --config=node
-TEST_FLAGS += --append-file:tests/system/common.js
-
-CPP_FLAGS += -std=c++11
-CPP_FLAGS += -ferror-limit=0
-CPP_FLAGS += -fno-exceptions
-CPP_FLAGS += -fno-rtti
-CPP_FLAGS += -Wall
-CPP_FLAGS += -Wextra
-CPP_FLAGS += -Wno-switch
-CPP_FLAGS += -Wno-unused-parameter
-CPP_FLAGS += -Wno-reorder
-CPP_FLAGS += -ferror-limit=0
+CXX_FLAGS += -std=c++11
+CXX_FLAGS += -ferror-limit=0
+CXX_FLAGS += -fno-exceptions
+CXX_FLAGS += -fno-rtti
+CXX_FLAGS += -Wall
+CXX_FLAGS += -Wextra
+CXX_FLAGS += -Wno-switch
+CXX_FLAGS += -Wno-unused-parameter
+CXX_FLAGS += -Wno-reorder
+CXX_FLAGS += -ferror-limit=0
 
 ################################################################################
 # DEFAULT
@@ -93,10 +90,10 @@ $(DEBUG_DIR)/skewc.js: $(FRONTEND_DEPS) | $(DEBUG_DIR)
 debug-binary: $(DEBUG_DIR)/skewc
 
 $(DEBUG_DIR)/skewc.cpp: $(FRONTEND_DEPS) | $(DEBUG_DIR)
-	node skewc.js $(FRONTEND_SOURCES) --verbose --target=cpp --output-file=$(DEBUG_DIR)/skewc.cpp
+	node skewc.js $(FRONTEND_SOURCES) $(CPP_FLAGS) --output-file=$(DEBUG_DIR)/skewc.cpp
 
 $(DEBUG_DIR)/skewc: src/frontend/frontend.cpp $(DEBUG_DIR)/skewc.cpp
-	clang++ src/frontend/frontend.cpp $(DEBUG_DIR)/skewc.cpp $(CPP_FLAGS) -I$(DEBUG_DIR) -std=c++11 -ferror-limit=0 -o $(DEBUG_DIR)/skewc
+	c++ src/frontend/frontend.cpp $(DEBUG_DIR)/skewc.cpp $(CXX_FLAGS) -o $(DEBUG_DIR)/skewc
 
 ################################################################################
 # RELEASE
@@ -120,10 +117,10 @@ $(RELEASE_DIR)/skewc.min.js.gz: $(RELEASE_DIR)/skewc.min.js
 release-binary: $(RELEASE_DIR)/skewc
 
 $(RELEASE_DIR)/skewc.cpp: $(FRONTEND_DEPS) | $(RELEASE_DIR)
-	node skewc.js $(FRONTEND_SOURCES) --verbose --target=cpp --output-file=$(RELEASE_DIR)/skewc.cpp
+	node skewc.js $(FRONTEND_SOURCES) $(CPP_FLAGS) --output-file=$(RELEASE_DIR)/skewc.cpp
 
 $(RELEASE_DIR)/skewc: src/frontend/frontend.cpp $(RELEASE_DIR)/skewc.cpp
-	clang++ src/frontend/frontend.cpp $(RELEASE_DIR)/skewc.cpp $(CPP_FLAGS) -O3 -DNDEBUG -fomit-frame-pointer -fvisibility=hidden -I$(RELEASE_DIR) -o $(RELEASE_DIR)/skewc
+	c++ src/frontend/frontend.cpp $(RELEASE_DIR)/skewc.cpp $(CXX_FLAGS) -O3 -DNDEBUG -fomit-frame-pointer -fvisibility=hidden -o $(RELEASE_DIR)/skewc
 
 ################################################################################
 # LIVE
@@ -132,26 +129,29 @@ $(RELEASE_DIR)/skewc: src/frontend/frontend.cpp $(RELEASE_DIR)/skewc.cpp
 live: $(TESTS_DIR)/live.js
 
 $(TESTS_DIR)/live.js: $(FRONTEND_DEPS) | $(TESTS_DIR)
-	node skewc.js $(SOURCES) $(FLAGS) --output-file=$(TESTS_DIR)/live.js --source-map
+	node skewc.js $(SOURCES) $(JS_FLAGS) --output-file=$(TESTS_DIR)/live.js --source-map
 
 ################################################################################
 # TEST
 ################################################################################
 
-test: $(TESTS_DIR)/skewc.js | $(TESTS_DIR)/node_modules/mocha
-	$(TESTS_DIR)/node_modules/mocha/bin/mocha $(TESTS_DIR)/skewc.js
+test: $(TESTS_DIR)/skewc.js
+	node $(TESTS_DIR)/skewc.js
+
+test-binary: $(TESTS_DIR)/skewc
+	$(TESTS_DIR)/skewc
 
 $(TESTS_DIR):
 	mkdir -p $(TESTS_DIR)
 
 $(TESTS_DIR)/skewc.js: $(TEST_DEPS) | $(TESTS_DIR)
-	node skewc.js $(TEST_FLAGS) --output-file=$(TESTS_DIR)/skewc.js
+	node skewc.js $(TEST_SOURCES) $(JS_FLAGS) --config=node --output-file=$(TESTS_DIR)/skewc.js
 
-$(TESTS_DIR)/package.json: tests/system/package.json | $(TESTS_DIR)
-	cp tests/system/package.json $(TESTS_DIR)/package.json
+$(TESTS_DIR)/skewc.cpp: $(TEST_DEPS) | $(TESTS_DIR)
+	node skewc.js $(TEST_SOURCES) $(CPP_FLAGS) --output-file=$(TESTS_DIR)/skewc.cpp
 
-$(TESTS_DIR)/node_modules/mocha: | $(TESTS_DIR)/package.json
-	cd $(TESTS_DIR) && npm install
+$(TESTS_DIR)/skewc: $(TESTS_DIR)/skewc.cpp
+	c++ $(TESTS_DIR)/skewc.cpp $(CXX_FLAGS) -o $(TESTS_DIR)/skewc
 
 ################################################################################
 # PUBLISH
@@ -161,6 +161,6 @@ publish:
 	(cd $(NPM_DIR) && npm version patch)
 	cp src/frontend/frontend.cpp $(NPM_DIR)
 	node skewc.js $(FRONTEND_FLAGS) --output-file=$(NPM_DIR)/compiled.js
-	node skewc.js $(FRONTEND_SOURCES) --verbose --target=cpp --config=osx --output-file=$(NPM_DIR)/skewc.unix.cpp
-	node skewc.js $(FRONTEND_SOURCES) --verbose --target=cpp --config=windows --output-file=$(NPM_DIR)/skewc.windows.cpp
+	node skewc.js $(FRONTEND_SOURCES) $(CPP_FLAGS) --config=osx --output-file=$(NPM_DIR)/skewc.unix.cpp
+	node skewc.js $(FRONTEND_SOURCES) $(CPP_FLAGS) --config=windows --output-file=$(NPM_DIR)/skewc.windows.cpp
 	(cd $(NPM_DIR) && npm publish)

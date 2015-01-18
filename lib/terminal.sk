@@ -17,6 +17,7 @@ namespace terminal {
       int width() { return 0; }
       int height() { return 0; }
       void setColor(Color color) {}
+      void flush() {}
 
       void print(string text) {
         `console`.log(text);
@@ -32,7 +33,7 @@ namespace terminal {
 
     void setColor(Color color) {
       if (`process`.stdout.isTTY) {
-        write("\x1B[" + (int)color + "m");
+        write("\x1B[0;" + (int)color + "m");
       }
     }
 
@@ -43,6 +44,9 @@ namespace terminal {
 
       int height() {
         return `process`.stdout.rows;
+      }
+
+      void flush() {
       }
 
       void print(string text) {
@@ -93,6 +97,9 @@ namespace terminal {
       `SetConsoleTextAttribute`(_handle, value);
     }
 
+    void flush() {
+    }
+
     void print(string text) {
       write(text + "\n");
     }
@@ -138,8 +145,12 @@ namespace terminal {
     void setColor(Color color) {
       _setup();
       if (_isTTY) {
-        write("\x1B[" + (int)color + "m");
+        write("\x1B[0;" + (int)color + "m");
       }
+    }
+
+    void flush() {
+      `std`::cout.flush();
     }
 
     @NeedsInclude("<iostream>")
@@ -157,6 +168,7 @@ namespace terminal {
     int width() { return 0; }
     int height() { return 0; }
     void setColor(Color color) {}
+    void flush() {}
     void print(string text) {}
     void write(string text) {}
 

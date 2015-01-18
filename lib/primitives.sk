@@ -98,7 +98,7 @@
       int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }
       int lastIndexOf(string value) { return (int)this.`rfind`(value); }
       int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }
-      @OperatorGet int codeUnitAt(int index) { return `this`[index]; }
+      @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values
       static string fromCodeUnit(int value) { return ``string``(1, value); }
     }
 

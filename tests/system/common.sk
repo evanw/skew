@@ -1,87 +1,219 @@
-import void registerTest(TestBase test);
-import void expect(string output, string expected);
+using tests;
 
-in string {
-  import string trim();
-}
-
-export class TestBase {
-  string input;
-  string expected;
-  var options = CompilerOptions();
-
-  virtual void run();
-}
-
-class Test : TestBase {
-  override void run() {
-    options.inputs = [Source("<stdin>", input)];
-    var compiler = Compiler();
-    var result = compiler.compile(options);
-    expect(compiler.log.toString(), expected);
+namespace tests {
+  enum Status {
+    PENDING,
+    FAILED,
+    SUCCEEDED,
   }
-}
 
-class TestJS : TestBase {
-  override void run() {
-    options.inputs = [Source("<stdin>", input)];
-    options.targetFormat = .JAVASCRIPT;
-    testHelper(options, expected);
+  class Test {
+    string input;
+    string expected;
+    var output = "";
+    var options = CompilerOptions();
+    Status status = .PENDING;
+
+    virtual void run() {
+      options.inputs = [Source("<stdin>", input)];
+      var compiler = Compiler();
+      var result = compiler.compile(options);
+      if (result.outputs.size() > 0) {
+        for (var i = 0; i < result.outputs.size(); i++) {
+          output += result.outputs.get(i).contents + "\n";
+        }
+      } else {
+        output = compiler.log.toString();
+      }
+      output = trim(output);
+      expected = trim(expected);
+      status = output == expected ? .SUCCEEDED : .FAILED;
+    }
   }
-}
 
-class TestMinifyJS : TestBase {
-  override void run() {
-    options.inputs = [Source("<stdin>", input)];
-    options.targetFormat = .JAVASCRIPT;
-    options.minify = true;
-    options.mangle = true;
-    options.foldAllConstants = true;
-    options.inlineAllFunctions = true;
-    options.globalizeAllFunctions = true;
-    testHelper(options, expected);
+  class JavaScriptTest : Test {
+    override void run() {
+      options.targetFormat = .JAVASCRIPT;
+      super();
+    }
   }
-}
 
-class TestCPP : TestBase {
-  override void run() {
-    options.inputs = [Source("<stdin>", input)];
-    options.targetFormat = .CPP;
-    testHelper(options, expected);
+  class JavaScriptMinifyTest : Test {
+    override void run() {
+      options.targetFormat = .JAVASCRIPT;
+      options.minify = true;
+      options.mangle = true;
+      options.foldAllConstants = true;
+      options.inlineAllFunctions = true;
+      options.globalizeAllFunctions = true;
+      super();
+    }
+  }
+
+  class CppTest : Test {
+    override void run() {
+      options.targetFormat = .CPP;
+      super();
+    }
+  }
+
+  List<Test> registeredTests = [];
+
+  void runAllTests() {
+    // Run the tests
+    List<Test> failing = [];
+    var width = terminal.width() * 3 / 4;
+    var startTime = now();
+    terminal.write("\n  ");
+    for (var i = 0; i < registeredTests.size(); i++) {
+      var test = registeredTests[i];
+      test.run();
+      terminal.setColor(test.status == .FAILED ? .RED : .GREEN);
+      terminal.write(".");
+      if (i + 1 < registeredTests.size() && width != 0 && i % width == width - 1) {
+        terminal.write("\n  ");
+      }
+      terminal.setColor(.DEFAULT);
+      terminal.flush();
+      if (test.status == .FAILED) {
+        failing.push(test);
+      }
+    }
+    terminal.print("\n");
+
+    // Print the summary
+    var totalTime = now() - startTime;
+    terminal.setColor(.GREEN);
+    terminal.write("  " + (registeredTests.size() - failing.size()) + " passing");
+    terminal.setColor(.GRAY);
+    terminal.print("  (" + formatNumber(totalTime) + "ms)");
+    if (failing.size() != 0) {
+      terminal.setColor(.RED);
+      terminal.print("  " + failing.size() + " failing");
+    }
+    terminal.setColor(.DEFAULT);
+    terminal.print("");
+
+    // Print the failed tests
+    var indent = " ".repeat(failing.size().toString().size() + 5);
+    for (var i = 0; i < failing.size(); i++) {
+      var test = failing[i];
+      var text = "  " + (i + 1) + ")";
+      var lines = test.input.split("\n");
+      terminal.write(text + " ".repeat(indent.size() - text.size()));
+      terminal.setColor(.BOLD);
+      terminal.print("Test:\n");
+      terminal.setColor(.GRAY);
+      for (var j = 0; j < lines.size(); j++) {
+        terminal.print(indent + lines[j]);
+      }
+      terminal.setColor(.BOLD);
+      terminal.print("\n" + indent + "Output:\n");
+      printDiff(indent,
+        test.expected == "" ? [] : test.expected.split("\n"),
+        test.output == "" ? [] : test.output.split("\n"));
+      terminal.setColor(.DEFAULT);
+      terminal.print("");
+    }
+  }
+
+  void printDiff(string indent, List<string> expected, List<string> output) {
+    var sequence = longestCommonSubsequence(expected, output);
+
+    while (sequence.size() > 0) {
+      var common = sequence.shift();
+
+      // Insertions
+      while (expected.size() > 0) {
+        var inserted = expected.shift();
+        if (common == inserted) break;
+        terminal.setColor(.GREEN);
+        terminal.print(indent + "+" + inserted);
+      }
+
+      // Removals
+      while (output.size() > 0) {
+        var removed = output.shift();
+        if (common == removed) break;
+        terminal.setColor(.RED);
+        terminal.print(indent + "-" + removed);
+      }
+
+      // Common
+      terminal.setColor(.GRAY);
+      terminal.print(indent + " " + common);
+    }
+
+    // Insertions
+    while (expected.size() > 0) {
+      terminal.setColor(.GREEN);
+      terminal.print(indent + "+" + expected.shift());
+    }
+
+    // Removals
+    while (output.size() > 0) {
+      terminal.setColor(.RED);
+      terminal.print(indent + "-" + output.shift());
+    }
+  }
+
+  List<string> longestCommonSubsequence(List<string> a, List<string> b) {
+    if (a.size() == 0 || b.size() == 0) {
+      return [];
+    }
+
+    var a0 = a[0];
+    var b0 = b[0];
+    var an = a.slice(1, a.size());
+    var bn = b.slice(1, b.size());
+
+    if (a0 == b0) {
+      var s = longestCommonSubsequence(an, bn);
+      s.unshift(a0);
+      return s;
+    }
+
+    var as = longestCommonSubsequence(an, b);
+    var bs = longestCommonSubsequence(a, bn);
+    return as.size() > bs.size() ? as : bs;
+  }
+
+  bool isSpace(int c) {
+    return c == ' ' || c == '\n';
+  }
+
+  string trim(string text) {
+    var length = text.size();
+    var start = 0;
+    var end = length;
+    while (start < length && isSpace(text[start])) {
+      start++;
+    }
+    while (start < end && isSpace(text[end - 1])) {
+      end--;
+    }
+    return text.slice(start, end);
   }
 }
 
 void test(string input, string expected) {
-  registerTest(Test(input.trim(), expected));
+  registeredTests.push(Test(trim(input), expected));
 }
 
 void testJS(string input, string expected) {
-  registerTest(TestJS(input.trim(), expected));
+  registeredTests.push(JavaScriptTest(trim(input), expected));
 }
 
 void testCPP(string input, string expected) {
-  registerTest(TestCPP(input.trim(), expected));
+  registeredTests.push(CppTest(trim(input), expected));
 }
 
 void testMinifyJS(string input, string expected) {
-  registerTest(TestMinifyJS(input.trim(), expected));
+  registeredTests.push(JavaScriptMinifyTest(trim(input), expected));
 }
 
-void testHelper(CompilerOptions options, string expected) {
-  var compiler = Compiler();
-  var result = compiler.compile(options);
-  if (result.outputs.size() > 0) {
-    var output = "";
-    for (var i = 0; i < result.outputs.size(); i++) {
-      output += result.outputs.get(i).contents + "\n";
-    }
-    expect(output, expected);
-  } else {
-    expect(compiler.log.toString(), expected);
-  }
-}
-
-export void start() {
+@EntryPoint
+void start() {
   core.testAnnotations();
   core.testCalls();
   core.testConst();
@@ -118,4 +250,6 @@ export void start() {
   cpp.testFunctions();
   cpp.testNeedsInclude();
   cpp.testObjects();
+
+  runAllTests();
 }
