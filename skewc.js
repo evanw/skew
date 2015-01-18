@@ -8946,54 +8946,83 @@
     var enclosingNode = enclosingSymbol.node;
     var members = enclosingSymbol.type.sortedMembers();
     var fields = [];
-    var i = 0;
-    for (i = 0; i < members.length; i = i + 1 | 0) {
+    for (var i = 0; i < members.length; i = i + 1 | 0) {
       var field = members[i].symbol;
       if (field.kind === SymbolKind.GLOBAL_VARIABLE && !field.isFromExtension()) {
         fields.push(field);
       }
     }
-    for (i = 0; i < fields.length; i = i + 1 | 0) {
+    var fieldsSize = fields.length;
+    var values = new IntMap();
+    var problem = false;
+    var lowest = 0;
+    for (var i = 0; i < fieldsSize; i = i + 1 | 0) {
       var field = fields[i];
       this.initializeSymbol(field);
       if (field.type.isIgnored(this.cache)) {
+        problem = true;
         break;
       }
       var value = field.constant.asInt();
-      var j = 0;
-      for (j = 0; j < i; j = j + 1 | 0) {
-        var other = fields[j];
-        if (value === other.constant.asInt()) {
-          semanticErrorBadEnumToString(this.log, enclosingNode.declarationName().range, enclosingSymbol.name, field.name, other.name, value);
-          break;
-        }
-      }
-      if (j < i) {
+      var other = values.getOrDefault(value, null);
+      if (other !== null) {
+        semanticErrorBadEnumToString(this.log, enclosingNode.declarationName().range, enclosingSymbol.name, field.name, other.name, value);
+        problem = true;
         break;
       }
+      if (i === 0 || value < lowest) {
+        lowest = value;
+      }
+      values._table[value] = field;
     }
     var block = Node.createBlock([]);
     var extension = Node.createExtension(Node.createName(enclosingSymbol.name), null, block).withSymbol(enclosingSymbol);
     enclosingNode.insertSiblingAfter(extension);
     enclosingNode.appendToSiblingChain(extension);
     var statement = null;
-    if (fields.length === 0 || i < fields.length) {
+    if (problem || fieldsSize === 0) {
       statement = Node.createReturn(Node.createString(''));
     } else {
-      var cases = [];
-      for (i = 0; i < fields.length; i = i + 1 | 0) {
-        var field = fields[i];
-        cases.push(Node.createCase([Node.createDot(null, Node.createName(field.name))], Node.createBlock([Node.createReturn(Node.createString(field.name))])));
+      var consecutive = this.extractConsecutiveRange(values, lowest, fieldsSize);
+      if (consecutive !== null) {
+        var stringListType = this.cache.parameterize(this.cache.listType, [this.cache.stringType]);
+        var array = this.createSymbol('_toString_', SymbolKind.GLOBAL_VARIABLE);
+        array.enclosingSymbol = enclosingSymbol;
+        array.flags = SymbolFlag.FROM_EXTENSION | SymbolFlag.STATIC;
+        array.node = Node.createVariable(Node.createName(array.name), null, Node.createList(consecutive));
+        array.node.symbol = array;
+        block.appendChild(Node.createVariableCluster(Node.createType(stringListType), [array.node]));
+        enclosingSymbol.type.addMember(new Member(array));
+        symbol.flags |= SymbolFlag.INLINE;
+        var index = Node.createThis();
+        statement = Node.createReturn(Node.createBinary(NodeKind.INDEX, Node.createName(array.name), lowest !== 0 ? Node.createBinary(NodeKind.SUBTRACT, index, Node.createInt(lowest)) : index));
+      } else {
+        var cases = [];
+        for (var i = 0; i < fieldsSize; i = i + 1 | 0) {
+          var field = fields[i];
+          cases.push(Node.createCase([Node.createDot(null, Node.createName(field.name))], Node.createBlock([Node.createReturn(Node.createString(field.name))])));
+        }
+        cases.push(Node.createCase([], Node.createBlock([Node.createReturn(Node.createString(''))])));
+        statement = Node.createSwitch(Node.createThis(), cases);
       }
-      cases.push(Node.createCase([], Node.createBlock([Node.createReturn(Node.createString(''))])));
-      statement = Node.createSwitch(Node.createThis(), cases);
     }
     symbol.kind = SymbolKind.INSTANCE_FUNCTION;
-    symbol.flags = SymbolFlag.FROM_EXTENSION;
+    symbol.flags |= SymbolFlag.FROM_EXTENSION;
     symbol.node = Node.createFunction(Node.createName(symbol.name), Node.createNodeList([]), Node.createBlock([statement]), Node.createType(this.cache.stringType), null).withSymbol(symbol);
     block.appendChild(symbol.node);
     this.prepareNode(extension, enclosingNode.parent.scope);
     this.resolve(extension, null);
+  };
+  Resolver.prototype.extractConsecutiveRange = function(values, lowest, count) {
+    var consecutive = [];
+    for (var i = 0; i < count; i = i + 1 | 0) {
+      var value = values.getOrDefault(lowest + i | 0, null);
+      if (value === null) {
+        return null;
+      }
+      consecutive.push(Node.createString(value.name));
+    }
+    return consecutive;
   };
   Resolver.prototype.initializeSymbol = function(symbol) {
     if (symbol.kind === SymbolKind.AUTOMATIC) {
@@ -9002,7 +9031,7 @@
       } else if (symbol.name === 'toString') {
         this.generateDefaultToString(symbol);
       } else {
-        throw new Error('assert false; (src/resolver/resolver.sk:2081:12)');
+        throw new Error('assert false; (src/resolver/resolver.sk:2120:12)');
       }
       if (symbol.node !== null) {
         var oldContext = this.context;
@@ -9034,17 +9063,17 @@
     }
     if (symbol.isUninitialized()) {
       if (symbol.node === null) {
-        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:2118:7)');
+        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:2157:7)');
       }
       this.initializeDeclaration(symbol.node);
       if (symbol.isInitializing()) {
-        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:2120:7)');
+        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:2159:7)');
       }
       if (!symbol.isInitialized()) {
-        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:2121:7)');
+        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:2160:7)');
       }
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:2122:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:2161:7)');
       }
       if (symbol.isEntryPoint()) {
         this.validateEntryPoint(symbol);
@@ -9084,7 +9113,7 @@
   };
   Resolver.prototype.resolveAsType = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2183:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2222:5)');
     }
     this.resolve(node, null);
     this.checkIsType(node);
@@ -9095,7 +9124,7 @@
   };
   Resolver.prototype.resolveAsParameterizedExpression = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2194:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2233:5)');
     }
     this.resolve(node, null);
     this.checkIsInstance(node);
@@ -9103,7 +9132,7 @@
   };
   Resolver.prototype.resolveAsParameterizedExpressionWithTypeContext = function(node, type) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2201:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2240:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
@@ -9111,7 +9140,7 @@
   };
   Resolver.prototype.resolveAsParamterizedExpressionWithConversion = function(node, type, kind) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2208:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2247:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
@@ -9172,16 +9201,16 @@
   };
   Resolver.prototype.resolveProgram = function(node) {
     if (node.parent !== null) {
-      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:2278:5)');
+      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:2317:5)');
     }
     this.resolveChildren(node);
   };
   Resolver.prototype.resolveFile = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:2283:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:2322:5)');
     }
     if (node.parent.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:2284:5)');
+      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:2323:5)');
     }
     this.resolve(node.fileBlock(), null);
   };
@@ -9199,16 +9228,16 @@
   };
   Resolver.prototype.resolveCase = function(node) {
     if (node.parent.kind !== NodeKind.NODE_LIST) {
-      throw new Error('assert node.parent.kind == .NODE_LIST; (src/resolver/resolver.sk:2306:5)');
+      throw new Error('assert node.parent.kind == .NODE_LIST; (src/resolver/resolver.sk:2345:5)');
     }
     if (node.parent.parent.kind !== NodeKind.SWITCH) {
-      throw new Error('assert node.parent.parent.kind == .SWITCH; (src/resolver/resolver.sk:2307:5)');
+      throw new Error('assert node.parent.parent.kind == .SWITCH; (src/resolver/resolver.sk:2346:5)');
     }
     if (this.context.switchValue === null) {
-      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:2308:5)');
+      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:2347:5)');
     }
     if (this.context.switchValue.type === null) {
-      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:2309:5)');
+      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:2348:5)');
     }
     var values = node.caseValues().children;
     var block = node.caseBlock();
@@ -9267,7 +9296,7 @@
   Resolver.prototype.resolveFunction = function(node) {
     var symbol = node.symbol;
     if (symbol.enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(symbol.enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== symbol.enclosingSymbol)) {
-      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:2389:5)');
+      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:2428:5)');
     }
     this.checkDeclarationLocation(node, AllowDeclaration.ALLOW_TOP_OR_OBJECT_LEVEL);
     this.initializeSymbol(symbol);
@@ -9319,7 +9348,7 @@
           this.resolveNodesAsExpressions($arguments);
         } else {
           if (!overriddenType.isFunction()) {
-            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2458:11)');
+            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2497:11)');
           }
           this.resolveArguments($arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
         }
@@ -9621,7 +9650,7 @@
           continue;
         }
         if (!in_NodeKind.isConstant(caseValue.kind)) {
-          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2858:9)');
+          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2897:9)');
         }
         var k = 0;
         for (k = 0; k < uniqueValues.length; k = k + 1 | 0) {
@@ -9643,7 +9672,7 @@
       this.log.warning(node.range, value.asString());
     } else {
       if (node.kind !== NodeKind.PREPROCESSOR_ERROR) {
-        throw new Error('assert node.kind == .PREPROCESSOR_ERROR; (src/resolver/resolver.sk:2881:7)');
+        throw new Error('assert node.kind == .PREPROCESSOR_ERROR; (src/resolver/resolver.sk:2920:7)');
       }
       this.log.error(node.range, value.asString());
     }
@@ -9673,7 +9702,7 @@
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2917:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2956:7)');
       }
       var symbol = this.context.symbolForThis;
       this.initializeSymbol(symbol);
@@ -9840,7 +9869,7 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3146:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3185:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -9933,7 +9962,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3272:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3311:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -10185,7 +10214,7 @@
   };
   Resolver.prototype.assessOperatorOverloadMatch = function(nodeTypes, argumentTypes) {
     if (nodeTypes.length !== (1 + argumentTypes.length | 0)) {
-      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3614:5)');
+      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3653:5)');
     }
     var foundImplicitConversion = false;
     for (var i = 0; i < argumentTypes.length; i = i + 1 | 0) {
@@ -10250,15 +10279,15 @@
     for (var i = 0; i < overloads.length; i = i + 1 | 0) {
       var overload = overloads[i];
       if (!overload.type.isFunction()) {
-        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3697:7)');
+        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3736:7)');
       }
       if ((overload.type.argumentTypes().length + 1 | 0) !== children.length) {
-        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3698:7)');
+        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3737:7)');
       }
       var member = targetType.findOperatorOverload(overload);
       this.initializeMember(member);
       if (!member.type.isFunction()) {
-        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3701:7)');
+        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3740:7)');
       }
       var match = this.assessOperatorOverloadMatch(typeForMatching, member.type.argumentTypes());
       if (match > bestMatch) {
@@ -11403,7 +11432,6 @@
   var in_int = {};
   var in_Precedence = {};
   var in_SymbolKind = {};
-  var in_TokenKind = {};
   in_string.repeat = function($this, count) {
     var result = '';
     for (var i = 0; i < count; i = i + 1 | 0) {
@@ -11534,7 +11562,7 @@
     return $this === NodeKind.NAME || $this === NodeKind.DOT;
   };
   in_NodeKind.prettyPrint = function($this) {
-    return in_string.replaceAll(in_NodeKind.toString($this).toLowerCase(), '_', '-');
+    return in_string.replaceAll(NodeKind._toString_[$this].toLowerCase(), '_', '-');
   };
   function createOperatorMap() {
     if (operatorInfo !== null) {
@@ -11973,10 +12001,10 @@
     log.error(range, 'Syntax error ' + quoteString(text, 34));
   }
   function syntaxErrorUnexpectedToken(log, token) {
-    log.error(token.range, 'Unexpected ' + in_TokenKind.toString(token.kind));
+    log.error(token.range, 'Unexpected ' + TokenKind._toString_[token.kind]);
   }
   function syntaxErrorExpectedToken(log, found, expected) {
-    log.error(found.range, 'Expected ' + in_TokenKind.toString(expected) + ' but found ' + in_TokenKind.toString(found.kind));
+    log.error(found.range, 'Expected ' + TokenKind._toString_[expected] + ' but found ' + TokenKind._toString_[found.kind]);
   }
   function syntaxErrorBadForEach(log, range) {
     log.error(range, 'More than one variable inside a for-each loop');
@@ -12908,7 +12936,7 @@
     }
   }
   function semanticErrorUnexpectedNode(log, range, kind) {
-    log.error(range, 'Unexpected ' + in_NodeKind.toString(kind));
+    log.error(range, 'Unexpected ' + NodeKind._toString_[kind]);
   }
   function semanticErrorUnexpectedExpression(log, range, type) {
     log.error(range, 'Unexpected expression of ' + typeToText(type));
@@ -13754,462 +13782,6 @@
       return false;
     }
   };
-  in_NodeKind.toString = function($this) {
-    switch ($this) {
-    case 0:
-      return 'PROGRAM';
-    case 1:
-      return 'FILE';
-    case 2:
-      return 'BLOCK';
-    case 3:
-      return 'NODE_LIST';
-    case 4:
-      return 'CASE';
-    case 5:
-      return 'MEMBER_INITIALIZER';
-    case 6:
-      return 'VARIABLE_CLUSTER';
-    case 7:
-      return 'NAMESPACE';
-    case 8:
-      return 'ENUM';
-    case 9:
-      return 'ENUM_FLAGS';
-    case 10:
-      return 'CLASS';
-    case 11:
-      return 'INTERFACE';
-    case 12:
-      return 'EXTENSION';
-    case 13:
-      return 'CONSTRUCTOR';
-    case 14:
-      return 'FUNCTION';
-    case 15:
-      return 'VARIABLE';
-    case 16:
-      return 'PARAMETER';
-    case 17:
-      return 'PREPROCESSOR_DEFINE';
-    case 18:
-      return 'ALIAS';
-    case 19:
-      return 'IF';
-    case 20:
-      return 'TRY';
-    case 21:
-      return 'FOR';
-    case 22:
-      return 'FOR_EACH';
-    case 23:
-      return 'WHILE';
-    case 24:
-      return 'DO_WHILE';
-    case 25:
-      return 'RETURN';
-    case 26:
-      return 'BREAK';
-    case 27:
-      return 'CONTINUE';
-    case 28:
-      return 'ASSERT';
-    case 29:
-      return 'ASSERT_CONST';
-    case 30:
-      return 'EXPRESSION';
-    case 31:
-      return 'SWITCH';
-    case 32:
-      return 'MODIFIER';
-    case 33:
-      return 'USING';
-    case 34:
-      return 'PREPROCESSOR_WARNING';
-    case 35:
-      return 'PREPROCESSOR_ERROR';
-    case 36:
-      return 'PREPROCESSOR_IF';
-    case 37:
-      return 'NAME';
-    case 38:
-      return 'TYPE';
-    case 39:
-      return 'THIS';
-    case 40:
-      return 'HOOK';
-    case 41:
-      return 'NULL';
-    case 42:
-      return 'BOOL';
-    case 43:
-      return 'INT';
-    case 44:
-      return 'FLOAT';
-    case 45:
-      return 'DOUBLE';
-    case 46:
-      return 'STRING';
-    case 47:
-      return 'LIST';
-    case 48:
-      return 'DOT';
-    case 49:
-      return 'DOT_ARROW';
-    case 50:
-      return 'DOT_COLON';
-    case 51:
-      return 'CALL';
-    case 52:
-      return 'SUPER_CALL';
-    case 53:
-      return 'ERROR';
-    case 54:
-      return 'SEQUENCE';
-    case 55:
-      return 'PARAMETERIZE';
-    case 56:
-      return 'CAST';
-    case 57:
-      return 'IMPLICIT_CAST';
-    case 58:
-      return 'QUOTED';
-    case 59:
-      return 'VAR';
-    case 60:
-      return 'ANNOTATION';
-    case 61:
-      return 'PREPROCESSOR_HOOK';
-    case 62:
-      return 'PREPROCESSOR_SEQUENCE';
-    case 63:
-      return 'NOT';
-    case 64:
-      return 'POSITIVE';
-    case 65:
-      return 'NEGATIVE';
-    case 66:
-      return 'COMPLEMENT';
-    case 67:
-      return 'PREFIX_INCREMENT';
-    case 68:
-      return 'PREFIX_DECREMENT';
-    case 69:
-      return 'POSTFIX_INCREMENT';
-    case 70:
-      return 'POSTFIX_DECREMENT';
-    case 71:
-      return 'NEW';
-    case 72:
-      return 'DELETE';
-    case 73:
-      return 'PREFIX_DEREFERENCE';
-    case 74:
-      return 'PREFIX_REFERENCE';
-    case 75:
-      return 'POSTFIX_DEREFERENCE';
-    case 76:
-      return 'POSTFIX_REFERENCE';
-    case 77:
-      return 'ADD';
-    case 78:
-      return 'BITWISE_AND';
-    case 79:
-      return 'BITWISE_OR';
-    case 80:
-      return 'BITWISE_XOR';
-    case 81:
-      return 'COMPARE';
-    case 82:
-      return 'DIVIDE';
-    case 83:
-      return 'EQUAL';
-    case 84:
-      return 'GREATER_THAN';
-    case 85:
-      return 'GREATER_THAN_OR_EQUAL';
-    case 86:
-      return 'IN';
-    case 87:
-      return 'INDEX';
-    case 88:
-      return 'LESS_THAN';
-    case 89:
-      return 'LESS_THAN_OR_EQUAL';
-    case 90:
-      return 'LOGICAL_AND';
-    case 91:
-      return 'LOGICAL_OR';
-    case 92:
-      return 'MULTIPLY';
-    case 93:
-      return 'NOT_EQUAL';
-    case 94:
-      return 'REMAINDER';
-    case 95:
-      return 'SHIFT_LEFT';
-    case 96:
-      return 'SHIFT_RIGHT';
-    case 97:
-      return 'SUBTRACT';
-    case 98:
-      return 'ASSIGN';
-    case 99:
-      return 'ASSIGN_ADD';
-    case 100:
-      return 'ASSIGN_DIVIDE';
-    case 101:
-      return 'ASSIGN_MULTIPLY';
-    case 102:
-      return 'ASSIGN_REMAINDER';
-    case 103:
-      return 'ASSIGN_SUBTRACT';
-    case 104:
-      return 'ASSIGN_BITWISE_AND';
-    case 105:
-      return 'ASSIGN_BITWISE_OR';
-    case 106:
-      return 'ASSIGN_BITWISE_XOR';
-    case 107:
-      return 'ASSIGN_SHIFT_LEFT';
-    case 108:
-      return 'ASSIGN_SHIFT_RIGHT';
-    case 109:
-      return 'ASSIGN_INDEX';
-    default:
-      return '';
-    }
-  };
-  in_TokenKind.toString = function($this) {
-    switch ($this) {
-    case 0:
-      return 'ALIAS';
-    case 1:
-      return 'ANNOTATION';
-    case 2:
-      return 'ARROW';
-    case 3:
-      return 'ASSERT';
-    case 4:
-      return 'ASSIGN';
-    case 5:
-      return 'ASSIGN_BITWISE_AND';
-    case 6:
-      return 'ASSIGN_BITWISE_OR';
-    case 7:
-      return 'ASSIGN_BITWISE_XOR';
-    case 8:
-      return 'ASSIGN_DIVIDE';
-    case 9:
-      return 'ASSIGN_MINUS';
-    case 10:
-      return 'ASSIGN_MULTIPLY';
-    case 11:
-      return 'ASSIGN_PLUS';
-    case 12:
-      return 'ASSIGN_REMAINDER';
-    case 13:
-      return 'ASSIGN_SHIFT_LEFT';
-    case 14:
-      return 'ASSIGN_SHIFT_RIGHT';
-    case 15:
-      return 'BITWISE_AND';
-    case 16:
-      return 'BITWISE_OR';
-    case 17:
-      return 'BITWISE_XOR';
-    case 18:
-      return 'BREAK';
-    case 19:
-      return 'CASE';
-    case 20:
-      return 'CATCH';
-    case 21:
-      return 'CHARACTER';
-    case 22:
-      return 'CLASS';
-    case 23:
-      return 'COLON';
-    case 24:
-      return 'COMMA';
-    case 25:
-      return 'CONST';
-    case 26:
-      return 'CONTINUE';
-    case 27:
-      return 'DECREMENT';
-    case 28:
-      return 'DEFAULT';
-    case 29:
-      return 'DELETE';
-    case 30:
-      return 'DIVIDE';
-    case 31:
-      return 'DO';
-    case 32:
-      return 'DOT';
-    case 33:
-      return 'DOUBLE';
-    case 34:
-      return 'DOUBLE_COLON';
-    case 35:
-      return 'ELSE';
-    case 36:
-      return 'END_OF_FILE';
-    case 37:
-      return 'ENUM';
-    case 38:
-      return 'EQUAL';
-    case 39:
-      return 'ERROR';
-    case 40:
-      return 'EXPORT';
-    case 41:
-      return 'FALSE';
-    case 42:
-      return 'FINAL';
-    case 43:
-      return 'FLOAT';
-    case 44:
-      return 'FOR';
-    case 45:
-      return 'GREATER_THAN';
-    case 46:
-      return 'GREATER_THAN_OR_EQUAL';
-    case 47:
-      return 'IDENTIFIER';
-    case 48:
-      return 'IF';
-    case 49:
-      return 'IMPORT';
-    case 50:
-      return 'IN';
-    case 51:
-      return 'INCREMENT';
-    case 52:
-      return 'INLINE';
-    case 53:
-      return 'INTERFACE';
-    case 54:
-      return 'INT_BINARY';
-    case 55:
-      return 'INT_DECIMAL';
-    case 56:
-      return 'INT_HEX';
-    case 57:
-      return 'INT_OCTAL';
-    case 58:
-      return 'INVALID_PREPROCESSOR_DIRECTIVE';
-    case 59:
-      return 'IS';
-    case 60:
-      return 'LEFT_BRACE';
-    case 61:
-      return 'LEFT_BRACKET';
-    case 62:
-      return 'LEFT_PARENTHESIS';
-    case 63:
-      return 'LESS_THAN';
-    case 64:
-      return 'LESS_THAN_OR_EQUAL';
-    case 65:
-      return 'LOGICAL_AND';
-    case 66:
-      return 'LOGICAL_OR';
-    case 67:
-      return 'MINUS';
-    case 68:
-      return 'MULTIPLY';
-    case 69:
-      return 'NAMESPACE';
-    case 70:
-      return 'NEW';
-    case 71:
-      return 'NOT';
-    case 72:
-      return 'NOT_EQUAL';
-    case 73:
-      return 'NULL';
-    case 74:
-      return 'OVERRIDE';
-    case 75:
-      return 'PLUS';
-    case 76:
-      return 'PREPROCESSOR_DEFINE';
-    case 77:
-      return 'PREPROCESSOR_ELIF';
-    case 78:
-      return 'PREPROCESSOR_ELSE';
-    case 79:
-      return 'PREPROCESSOR_ENDIF';
-    case 80:
-      return 'PREPROCESSOR_ERROR';
-    case 81:
-      return 'PREPROCESSOR_IF';
-    case 82:
-      return 'PREPROCESSOR_WARNING';
-    case 83:
-      return 'PRIVATE';
-    case 84:
-      return 'PROTECTED';
-    case 85:
-      return 'PUBLIC';
-    case 86:
-      return 'QUESTION_MARK';
-    case 87:
-      return 'REMAINDER';
-    case 88:
-      return 'RETURN';
-    case 89:
-      return 'RIGHT_BRACE';
-    case 90:
-      return 'RIGHT_BRACKET';
-    case 91:
-      return 'RIGHT_PARENTHESIS';
-    case 92:
-      return 'SEMICOLON';
-    case 93:
-      return 'SHIFT_LEFT';
-    case 94:
-      return 'SHIFT_RIGHT';
-    case 95:
-      return 'STATIC';
-    case 96:
-      return 'STRING';
-    case 97:
-      return 'SUPER';
-    case 98:
-      return 'SWITCH';
-    case 99:
-      return 'THIS';
-    case 100:
-      return 'TICK';
-    case 101:
-      return 'TILDE';
-    case 102:
-      return 'TRUE';
-    case 103:
-      return 'TRY';
-    case 104:
-      return 'USING';
-    case 105:
-      return 'VAR';
-    case 106:
-      return 'VIRTUAL';
-    case 107:
-      return 'WHILE';
-    case 108:
-      return 'WHITESPACE';
-    case 109:
-      return 'YY_INVALID_ACTION';
-    case 110:
-      return 'START_PARAMETER_LIST';
-    case 111:
-      return 'END_PARAMETER_LIST';
-    default:
-      return '';
-    }
-  };
   math.INFINITY = Infinity;
   var operatorInfo = null;
   var HEX = '0123456789ABCDEF';
@@ -14227,6 +13799,7 @@
   frontend.VALID_TARGETS = ['js', 'cpp', 'lisp-ast', 'json-ast', 'xml-ast'];
   frontend.VALID_JS_CONFIGS = ['browser', 'node'];
   frontend.VALID_CPP_CONFIGS = ['android', 'ios', 'linux', 'osx', 'windows'];
+  NodeKind._toString_ = ['PROGRAM', 'FILE', 'BLOCK', 'NODE_LIST', 'CASE', 'MEMBER_INITIALIZER', 'VARIABLE_CLUSTER', 'NAMESPACE', 'ENUM', 'ENUM_FLAGS', 'CLASS', 'INTERFACE', 'EXTENSION', 'CONSTRUCTOR', 'FUNCTION', 'VARIABLE', 'PARAMETER', 'PREPROCESSOR_DEFINE', 'ALIAS', 'IF', 'TRY', 'FOR', 'FOR_EACH', 'WHILE', 'DO_WHILE', 'RETURN', 'BREAK', 'CONTINUE', 'ASSERT', 'ASSERT_CONST', 'EXPRESSION', 'SWITCH', 'MODIFIER', 'USING', 'PREPROCESSOR_WARNING', 'PREPROCESSOR_ERROR', 'PREPROCESSOR_IF', 'NAME', 'TYPE', 'THIS', 'HOOK', 'NULL', 'BOOL', 'INT', 'FLOAT', 'DOUBLE', 'STRING', 'LIST', 'DOT', 'DOT_ARROW', 'DOT_COLON', 'CALL', 'SUPER_CALL', 'ERROR', 'SEQUENCE', 'PARAMETERIZE', 'CAST', 'IMPLICIT_CAST', 'QUOTED', 'VAR', 'ANNOTATION', 'PREPROCESSOR_HOOK', 'PREPROCESSOR_SEQUENCE', 'NOT', 'POSITIVE', 'NEGATIVE', 'COMPLEMENT', 'PREFIX_INCREMENT', 'PREFIX_DECREMENT', 'POSTFIX_INCREMENT', 'POSTFIX_DECREMENT', 'NEW', 'DELETE', 'PREFIX_DEREFERENCE', 'PREFIX_REFERENCE', 'POSTFIX_DEREFERENCE', 'POSTFIX_REFERENCE', 'ADD', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'COMPARE', 'DIVIDE', 'EQUAL', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'IN', 'INDEX', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'LOGICAL_AND', 'LOGICAL_OR', 'MULTIPLY', 'NOT_EQUAL', 'REMAINDER', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SUBTRACT', 'ASSIGN', 'ASSIGN_ADD', 'ASSIGN_DIVIDE', 'ASSIGN_MULTIPLY', 'ASSIGN_REMAINDER', 'ASSIGN_SUBTRACT', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'ASSIGN_INDEX'];
   Compiler.cachedLibraries = [new CachedSource('defines.sk', '// The "--release" flag automatically overrides BUILD_RELEASE with true\n#define BUILD_DEBUG   !BUILD_RELEASE\n#define BUILD_RELEASE false\n\n// These will be overridden by the compiler with the current language target\n#define TARGET_JS   false\n#define TARGET_CPP  false\n#define TARGET_NONE !TARGET_JS && !TARGET_CPP\n\n// The "--config" flag can be used to override these (example: "--config=node").\n// Using "--target=js" defaults to "--config=browser" and using "--target=cpp"\n// defaults to the config for the current operating system.\n#define CONFIG_IOS     false\n#define CONFIG_OSX     false\n#define CONFIG_LINUX   false\n#define CONFIG_ANDROID false\n#define CONFIG_WINDOWS false\n#define CONFIG_NODE    false\n#define CONFIG_BROWSER false\n#define CONFIG_UNKNOWN !CONFIG_IOS && !CONFIG_OSX && !CONFIG_LINUX && !CONFIG_ANDROID && !CONFIG_WINDOWS && !CONFIG_NODE && !CONFIG_BROWSER\n'), new CachedSource('primitives.sk', '#if TARGET_JS\n\n  import class int { string toString(); }\n  import class bool { string toString(); }\n  import class float { string toString(); }\n  import class double { string toString(); }\n\n  import class string {\n    string slice(int start, int end);\n    List<string> split(string separator);\n    int indexOf(string value);\n    int lastIndexOf(string value);\n    string toLowerCase();\n    string toUpperCase();\n  }\n\n  in string {\n    inline {\n      int size() { return this.`length`; }\n      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }\n      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      string join(List<string> values) { return values.`join`(this); }\n      @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }\n      static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  import class int {}\n  import class bool {}\n  import class float {}\n  import class double {}\n\n  @NeedsInclude("<string>")\n  @EmitAs("std::string")\n  import class string {}\n\n  in int {\n    inline string toString() { return `std`::to_string(this); }\n  }\n\n  in bool {\n    inline string toString() { return this ? "true" : "false"; }\n  }\n\n  in float {\n    inline string toString() { return double._format_(this); }\n  }\n\n  in double {\n    inline string toString() { return _format_(this); }\n\n    #if !CONFIG_WINDOWS\n\n      // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0\n      @NeedsInclude("<cstdio>")\n      static string _format_(double value) {\n        string buffer;\n        `buffer.resize(64)`;\n        `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;\n        if (`std::stod(&buffer[0]) != value`) {\n          `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;\n          }\n        }\n        return `buffer.c_str()`;\n      }\n\n    #else\n\n      // MSVC won\'t allow std::sprintf() even though it\'s in the C++11 standard\n      @NeedsInclude("<stdio.h>")\n      static string _format_(double value) {\n        string buffer;\n        `buffer.resize(64)`;\n        `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;\n        if (`std::stod(&buffer[0]) != value`) {\n          `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;\n          }\n        }\n        return `buffer.c_str()`;\n      }\n\n    #endif\n  }\n\n  in string {\n    inline {\n      int size() { return (int)this.`size`(); }\n      string slice(int start, int end) { return this.`substr`(start, end - start); }\n      string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }\n      int indexOf(string value) { return (int)this.`find`(value); }\n      int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }\n      int lastIndexOf(string value) { return (int)this.`rfind`(value); }\n      int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }\n      @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values\n      static string fromCodeUnit(int value) { return ``string``(1, value); }\n    }\n\n    @NeedsInclude("<algorithm>")\n    @NeedsInclude("<ctype.h>") {\n      string toLowerCase() {\n        var clone = this;\n        `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;\n        return clone;\n      }\n\n      string toUpperCase() {\n        var clone = this;\n        `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;\n        return clone;\n      }\n    }\n\n    string join(List<string> values) {\n      var result = "";\n      for (var i = 0; i < values.size(); i++) {\n        if (i > 0) result += this;\n        result += values[i];\n      }\n      return result;\n    }\n\n    List<string> split(string separator) {\n      List<string> values = [];\n      var start = 0;\n      while (true) {\n        var end = indexOfFrom(separator, start);\n        if (end == -1) break;\n        values.push(slice(start, end));\n        start = end + separator.size();\n      }\n      values.push(slice(start, size()));\n      return values;\n    }\n  }\n\n#else\n\n  import class int { string toString(); }\n  import class bool { string toString(); }\n  import class float { string toString(); }\n  import class double { string toString(); }\n\n  import class string {\n    int size();\n    List<string> split(string separator);\n    string slice(int start, int end);\n    string sliceCodeUnit(int index);\n    int indexOf(string value);\n    int indexOfFrom(string value, int fromIndex);\n    int lastIndexOf(string value);\n    int lastIndexOfFrom(string value, int fromIndex);\n    string toLowerCase();\n    string toUpperCase();\n    string join(List<string> values);\n    @OperatorGet int codeUnitAt(int index);\n    static string fromCodeUnit(int value);\n  }\n\n#endif\n\nin string {\n  @OperatorIn\n  inline bool contains(string value) {\n    return indexOf(value) >= 0;\n  }\n\n  inline string toString() {\n    return this;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n\n  string replaceAll(string before, string after) {\n    var result = "";\n    var start = 0;\n    while (true) {\n      var end = indexOfFrom(before, start);\n      if (end == -1) break;\n      result += slice(start, end) + after;\n      start = end + before.size();\n    }\n    return result + slice(start, size());\n  }\n}\n\nclass Box<T> {\n  final T value;\n}\n'), new CachedSource('math.sk', '#if TARGET_JS\n\n  namespace math {\n    inline {\n      double abs(double x) { return `Math`.abs(x); }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return `Math`.pow(x, y); }\n      double floor(double x) { return `Math`.floor(x); }\n      double round(double x) { return `Math`.round(x); }\n      double ceil(double x) { return `Math`.ceil(x); }\n      double min(double x, double y) { return `Math`.min(x, y); }\n      double max(double x, double y) { return `Math`.max(x, y); }\n      double random() { return `Math`.random(); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  namespace math {\n    inline @NeedsInclude("<cmath>") {\n      double abs(double x) { return `std`::abs(x); }\n      double sin(double x) { return `std`::sin(x); }\n      double cos(double x) { return `std`::cos(x); }\n      double tan(double x) { return `std`::tan(x); }\n      double asin(double x) { return `std`::asin(x); }\n      double acos(double x) { return `std`::acos(x); }\n      double atan(double x) { return `std`::atan(x); }\n      double atan2(double y, double x) { return `std`::atan2(y, x); }\n      double sqrt(double x) { return `std`::sqrt(x); }\n      double exp(double x) { return `std`::exp(x); }\n      double log(double x) { return `std`::log(x); }\n      double pow(double x, double y) { return `std`::pow(x, y); }\n      double floor(double x) { return `std`::floor(x); }\n      double round(double x) { return `std`::round(x); }\n      double ceil(double x) { return `std`::ceil(x); }\n      double min(double x, double y) { return `std`::fmin(x, y); }\n      double max(double x, double y) { return `std`::fmax(x, y); }\n    }\n\n    @NeedsInclude("<random>") {\n      `std::uniform_real_distribution<double>` _distribution_;\n      `(std::mt19937 *)` _generator_ = null;\n\n      double random() {\n        if (_generator_ == null) {\n          _generator_ = new `std`::mt19937(`std`::random_device()());\n        }\n        return _distribution_(*_generator_);\n      }\n    }\n  }\n\n#else\n\n  import namespace math {\n    double abs(double x);\n    double sin(double x);\n    double cos(double x);\n    double tan(double x);\n    double asin(double x);\n    double acos(double x);\n    double atan(double x);\n    double atan2(double y, double x);\n    double sqrt(double x);\n    double exp(double x);\n    double log(double x);\n    double pow(double x, double y);\n    double floor(double x);\n    double round(double x);\n    double ceil(double x);\n    double min(double x, double y);\n    double max(double x, double y);\n    double random();\n  }\n\n#endif\n\nin math {\n  const {\n    var SQRT2 = 1.414213562373095;\n    var PI = 3.141592653589793;\n    var TWOPI = 2 * PI;\n    var E = 2.718281828459045;\n    var INFINITY = 1 / 0.0;\n    var NAN = 0 / 0.0;\n  }\n}\n'), new CachedSource('list.sk', 'interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\n#if TARGET_JS\n\n  void bindCompare<T>(Comparison<T> comparison) {\n    return comparison.compare.`bind`(comparison);\n  }\n\n  import class List<T> {\n    new();\n    void push(T value);\n    void unshift(T value);\n    List<T> slice(int start, int end);\n    int indexOf(T value);\n    int lastIndexOf(T value);\n    T shift();\n    T pop();\n    void reverse();\n  }\n\n  in List {\n    inline {\n      int size() { return this.`length`; }\n      void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }\n      List<T> clone() { return this.`slice`(); }\n      T remove(int index) { return this.`splice`(index, 1)[0]; }\n      void removeRange(int start, int end) { this.`splice`(start, end - start); }\n      void insert(int index, T value) { this.`splice`(index, 0, value); }\n      @OperatorGet T get(int index) { return `this`[index]; }\n      @OperatorSet void set(int index, T value) { `this`[index] = value; }\n      @OperatorIn bool contains(T value) { return indexOf(value) >= 0; }\n    }\n\n    void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }\n  }\n\n#elif TARGET_CPP\n\n  bool bindCompare<T>(Comparison<T> comparison, T left, T right) {\n    return comparison.compare(left, right) < 0;\n  }\n\n  @NeedsInclude("<initializer_list>")\n  @NeedsInclude("<vector>")\n  class List<T> {\n    new(`std::initializer_list<T>` list) : _data = list {}\n\n    int size() {\n      return _data.size();\n    }\n\n    void push(T value) {\n      _data.push_back(value);\n    }\n\n    void unshift(T value) {\n      insert(0, value);\n    }\n\n    List<T> slice(int start, int end) {\n      assert start >= 0 && start <= end && end <= size();\n      List<T> slice = [];\n      slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);\n      return slice;\n    }\n\n    T shift() {\n      T value = this[0];\n      remove(0);\n      return value;\n    }\n\n    T pop() {\n      T value = this[size() - 1];\n      _data.pop_back();\n      return value;\n    }\n\n    List<T> clone() {\n      List<T> clone = [];\n      clone._data = _data;\n      return clone;\n    }\n\n    T remove(int index) {\n      T value = this[index];\n      _data.erase(_data.begin() + index);\n      return value;\n    }\n\n    void removeRange(int start, int end) {\n      assert 0 <= start && start <= end && end <= size();\n      _data.erase(_data.begin() + start, _data.begin() + end);\n    }\n\n    void insert(int index, T value) {\n      assert index >= 0 && index <= size();\n      _data.insert(_data.begin() + index, value);\n    }\n\n    @OperatorGet\n    T get(int index) {\n      assert index >= 0 && index < size();\n      return _data[index];\n    }\n\n    @OperatorSet\n    void set(int index, T value) {\n      assert index >= 0 && index < size();\n      _data[index] = value;\n    }\n\n    @OperatorIn\n    bool contains(T value) {\n      return indexOf(value) >= 0;\n    }\n\n    @NeedsInclude("<algorithm>") {\n      int indexOf(T value) {\n        int index = `std`::find(_data.begin(), _data.end(), value) - _data.begin();\n        return index == size() ? -1 : index;\n      }\n\n      int lastIndexOf(T value) {\n        int index = `std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin();\n        return size() - index - 1;\n      }\n\n      void swap(int a, int b) {\n        assert a >= 0 && a < size();\n        assert b >= 0 && b < size();\n        `std`::swap(_data[a], _data[b]);\n      }\n\n      void reverse() {\n        `std`::reverse(_data.begin(), _data.end());\n      }\n\n      @NeedsInclude("<functional>")\n      void sort(Comparison<T> comparison) {\n        `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));\n      }\n    }\n\n    `std::vector<T>` _data;\n  }\n\n#else\n\n  import class List<T> {\n    new();\n    int size();\n    void push(T value);\n    void unshift(T value);\n    List<T> slice(int start, int end);\n    int indexOf(T value);\n    int lastIndexOf(T value);\n    T shift();\n    T pop();\n    void reverse();\n    void sort(Comparison<T> comparison);\n    List<T> clone();\n    T remove(int index);\n    void removeRange(int start, int end);\n    void insert(int index, T value);\n    @OperatorGet T get(int index);\n    @OperatorSet void set(int index, T value);\n    @OperatorIn bool contains(T value);\n    void swap(int a, int b);\n  }\n\n#endif\n'), new CachedSource('stringmap.sk', '#if TARGET_JS\n\n  class StringMap<T> {\n    var _table = `Object`.create(null);\n\n    inline {\n      @OperatorGet T get(string key) { return _table[key]; }\n      @OperatorSet void set(string key, T value) { _table[key] = value; }\n      @OperatorIn bool has(string key) { return key in _table; }\n      void remove(string key) { delete _table[key]; }\n    }\n\n    T getOrDefault(string key, T defaultValue) {\n      return key in this ? this[key] : defaultValue;\n    }\n\n    List<string> keys() {\n      List<string> keys = [];\n      for (string key in _table) keys.push(key);\n      return keys;\n    }\n\n    List<T> values() {\n      List<T> values = [];\n      for (string key in _table) values.push(this[key]);\n      return values;\n    }\n\n    StringMap<T> clone() {\n      var clone = StringMap<T>();\n      for (string key in _table) clone[key] = this[key];\n      return clone;\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class StringMap<T> {\n    new() {}\n    @OperatorGet T get(string key) { return _table[key]; }\n    T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n    @OperatorSet void set(string key, T value) { _table[key] = value; }\n    @OperatorIn bool has(string key) { return _table.count(key) > 0; }\n    void remove(string key) { _table.erase(key); }\n    List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n    `std::unordered_map<`string`, T>` _table;\n  }\n\n#else\n\n  import class StringMap<T> {\n    new();\n    @OperatorGet T get(string key);\n    T getOrDefault(string key, T defaultValue);\n    @OperatorSet void set(string key, T value);\n    @OperatorIn bool has(string key);\n    void remove(string key);\n    List<string> keys();\n    List<T> values();\n    StringMap<T> clone();\n  }\n\n#endif\n'), new CachedSource('intmap.sk', '#if TARGET_JS\n\n  class IntMap<T> {\n    var _table = `Object`.create(null);\n\n    inline {\n      @OperatorGet T get(int key) { return _table[key]; }\n      @OperatorSet void set(int key, T value) { _table[key] = value; }\n      @OperatorIn bool has(int key) { return key in _table; }\n      void remove(int key) { delete _table[key]; }\n    }\n\n    T getOrDefault(int key, T defaultValue) {\n      return key in this ? this[key] : defaultValue;\n    }\n\n    List<int> keys() {\n      List<int> keys = [];\n      for (double key in _table) keys.push((int)key);\n      return keys;\n    }\n\n    List<T> values() {\n      List<T> values = [];\n      for (int key in _table) values.push(this[key]);\n      return values;\n    }\n\n    IntMap<T> clone() {\n      var clone = IntMap<T>();\n      for (int key in _table) clone[key] = this[key];\n      return clone;\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class IntMap<T> {\n    new() {}\n    @OperatorGet T get(int key) { return _table[key]; }\n    T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n    @OperatorSet void set(int key, T value) { _table[key] = value; }\n    @OperatorIn bool has(int key) { return _table.count(key) > 0; }\n    void remove(int key) { _table.erase(key); }\n    List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n    `std::unordered_map<`int`, T>` _table;\n  }\n\n#else\n\n  import class IntMap<T> {\n    new();\n    @OperatorGet T get(int key);\n    T getOrDefault(int key, T defaultValue);\n    @OperatorSet void set(int key, T value);\n    @OperatorIn bool has(int key);\n    void remove(int key);\n    List<int> keys();\n    List<T> values();\n    IntMap<T> clone();\n  }\n\n#endif\n'), new CachedSource('os.sk', 'enum OperatingSystem {\n  ANDROID,\n  IOS,\n  LINUX,\n  OSX,\n  UNKNOWN,\n  WINDOWS,\n}\n\nin OperatingSystem {\n  static OperatingSystem current() {\n    #if CONFIG_ANDROID\n\n      return .ANDROID;\n\n    #elif CONFIG_IOS\n\n      return .IOS;\n\n    #elif CONFIG_LINUX\n\n      return .LINUX;\n\n    #elif CONFIG_OSX\n\n      return .OSX;\n\n    #elif CONFIG_WINDOWS\n\n      return .WINDOWS;\n\n    #elif CONFIG_NODE\n\n      string platform = `process.platform`;\n      return\n        // Presumably this also means iOS but there\'s no way to check\n        platform == "darwin" ? .OSX :\n\n        // Official documentation says this will never contain "win64"\n        platform == "win32" ? .WINDOWS :\n\n        // Presumably this also means Android but there\'s no way to check\n        platform == "linux" ? .LINUX :\n\n        // This may also be "freebsd" or "sunos"\n        .UNKNOWN;\n\n    #elif CONFIG_BROWSER\n\n      string platform = `navigator.platform`;\n      string userAgent = `navigator.userAgent`;\n      return\n        // OS X encodes the architecture into the platform\n        platform == "MacIntel" || platform == "MacPPC" ? .OSX :\n\n        // MSDN sources say Win64 is used, unlike node\n        platform == "Win32" || platform == "Win64" ? .WINDOWS :\n\n        // Assume the user is using Mobile Safari or Chrome and not some random\n        // browser with a strange platform (Opera apparently messes with this)\n        platform == "iPhone" || platform == "iPad" ? .IOS :\n\n        // Apparently most Android devices have a platform of "Linux" instead\n        // of "Android", so check the user agent instead. Also make sure to test\n        // for Android before Linux for this reason.\n        "Android" in userAgent ? .ANDROID :\n        "Linux" in platform ? .LINUX :\n\n        // The platform string has no specification and can be literally anything.\n        // Other examples: "BlackBerry", "Nintendo 3DS", "PlayStation 4", etc.\n        .UNKNOWN;\n\n    #else\n\n      return .UNKNOWN;\n\n    #endif\n  }\n}\n'), new CachedSource('terminal.sk', 'namespace terminal {\n  enum Color {\n    DEFAULT = 0,\n    BOLD = 1,\n    GRAY = 90,\n    RED = 91,\n    GREEN = 92,\n    YELLOW = 93,\n    BLUE = 94,\n    MAGENTA = 95,\n    CYAN = 96,\n  }\n\n  #if TARGET_JS && CONFIG_BROWSER\n\n    inline {\n      int width() { return 0; }\n      int height() { return 0; }\n      void setColor(Color color) {}\n      void flush() {}\n\n      void print(string text) {\n        `console`.log(text);\n      }\n\n      // Browser logs are so varied that buffering standard output doesn\'t make much sense\n      void write(string text) {\n        `console`.log(text);\n      }\n    }\n\n  #elif TARGET_JS && CONFIG_NODE\n\n    void setColor(Color color) {\n      if (`process`.stdout.isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        return `process`.stdout.columns;\n      }\n\n      int height() {\n        return `process`.stdout.rows;\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        write(text + "\\n");\n      }\n\n      void write(string text) {\n        `process`.stdout.write(text);\n      }\n    }\n\n  #elif TARGET_CPP && CONFIG_WINDOWS\n\n    `HANDLE` _handle = `INVALID_HANDLE_VALUE`;\n    `CONSOLE_SCREEN_BUFFER_INFO` _info;\n\n    @NeedsInclude("<windows.h>")\n    void _setup() {\n      if (_handle == `INVALID_HANDLE_VALUE`) {\n        _handle = `GetStdHandle(STD_OUTPUT_HANDLE)`;\n        `GetConsoleScreenBufferInfo`(_handle, &_info);\n      }\n    }\n\n    int width() {\n      _setup();\n      return _info.dwSize.X;\n    }\n\n    int height() {\n      _setup();\n      return _info.dwSize.Y;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      int value = _info.wAttributes;\n      switch (color) {\n        case .BOLD { value |= `FOREGROUND_INTENSITY`; }\n        case .GRAY { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE`; }\n        case .RED { value = `FOREGROUND_RED | FOREGROUND_INTENSITY`; }\n        case .GREEN { value = `FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .YELLOW { value = `FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .BLUE { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .MAGENTA { value = `FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .CYAN { value = `FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n      }\n      `SetConsoleTextAttribute`(_handle, value);\n    }\n\n    void flush() {\n    }\n\n    void print(string text) {\n      write(text + "\\n");\n    }\n\n    void write(string text) {\n      _setup();\n\n      // Use WriteConsoleA() instead of std::cout for a huge performance boost\n      `WriteConsoleA`(_handle, `text`.c_str(), `text`.size(), null, null);\n    }\n\n  #elif TARGET_CPP && (CONFIG_OSX || CONFIG_LINUX)\n\n    int _width;\n    int _height;\n    bool _isTTY;\n    bool _isSetup;\n\n    @NeedsInclude("<sys/ioctl.h>")\n    @NeedsInclude("<unistd.h>")\n    void _setup() {\n      if (!_isSetup) {\n        `winsize` size;\n        if (!`ioctl`(2, `TIOCGWINSZ`, &size)) {\n          _width = size.ws_col;\n          _height = size.ws_row;\n        }\n        _isTTY = `isatty(STDOUT_FILENO)`;\n        _isSetup = true;\n      }\n    }\n\n    int width() {\n      _setup();\n      return _width;\n    }\n\n    int height() {\n      _setup();\n      return _height;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      if (_isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    void flush() {\n      `std`::cout.flush();\n    }\n\n    @NeedsInclude("<iostream>")\n    inline void print(string text) {\n      `std`::cout << text << `std`::endl;\n    }\n\n    @NeedsInclude("<iostream>")\n    inline void write(string text) {\n      `std`::cout << text;\n    }\n\n  #else\n\n    int width() { return 0; }\n    int height() { return 0; }\n    void setColor(Color color) {}\n    void flush() {}\n    void print(string text) {}\n    void write(string text) {}\n\n  #endif\n}\n')];
   Range.EMPTY = new Range(null, 0, 0);
   StringComparison.INSTANCE = new StringComparison();
@@ -14235,6 +13808,7 @@
   js.SymbolGroupComparison.INSTANCE = new js.SymbolGroupComparison();
   SourceMapGenerator.comparison = new SourceMappingComparison();
   SourceMapGenerator.BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  TokenKind._toString_ = ['ALIAS', 'ANNOTATION', 'ARROW', 'ASSERT', 'ASSIGN', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MINUS', 'ASSIGN_MULTIPLY', 'ASSIGN_PLUS', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'BREAK', 'CASE', 'CATCH', 'CHARACTER', 'CLASS', 'COLON', 'COMMA', 'CONST', 'CONTINUE', 'DECREMENT', 'DEFAULT', 'DELETE', 'DIVIDE', 'DO', 'DOT', 'DOUBLE', 'DOUBLE_COLON', 'ELSE', 'END_OF_FILE', 'ENUM', 'EQUAL', 'ERROR', 'EXPORT', 'FALSE', 'FINAL', 'FLOAT', 'FOR', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'IDENTIFIER', 'IF', 'IMPORT', 'IN', 'INCREMENT', 'INLINE', 'INTERFACE', 'INT_BINARY', 'INT_DECIMAL', 'INT_HEX', 'INT_OCTAL', 'INVALID_PREPROCESSOR_DIRECTIVE', 'IS', 'LEFT_BRACE', 'LEFT_BRACKET', 'LEFT_PARENTHESIS', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'LOGICAL_AND', 'LOGICAL_OR', 'MINUS', 'MULTIPLY', 'NAMESPACE', 'NEW', 'NOT', 'NOT_EQUAL', 'NULL', 'OVERRIDE', 'PLUS', 'PREPROCESSOR_DEFINE', 'PREPROCESSOR_ELIF', 'PREPROCESSOR_ELSE', 'PREPROCESSOR_ENDIF', 'PREPROCESSOR_ERROR', 'PREPROCESSOR_IF', 'PREPROCESSOR_WARNING', 'PRIVATE', 'PROTECTED', 'PUBLIC', 'QUESTION_MARK', 'REMAINDER', 'RETURN', 'RIGHT_BRACE', 'RIGHT_BRACKET', 'RIGHT_PARENTHESIS', 'SEMICOLON', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'STATIC', 'STRING', 'SUPER', 'SWITCH', 'THIS', 'TICK', 'TILDE', 'TRUE', 'TRY', 'USING', 'VAR', 'VIRTUAL', 'WHILE', 'WHITESPACE', 'YY_INVALID_ACTION', 'START_PARAMETER_LIST', 'END_PARAMETER_LIST'];
   MemberComparison.INSTANCE = new MemberComparison();
   Resolver.comparison = new MemberRangeComparison();
   Symbol.nextUniqueID = -1;

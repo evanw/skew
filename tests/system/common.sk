@@ -20,7 +20,7 @@ namespace tests {
       var result = compiler.compile(options);
       if (result.outputs.size() > 0) {
         for (var i = 0; i < result.outputs.size(); i++) {
-          output += result.outputs.get(i).contents + "\n";
+          output += result.outputs[i].contents + "\n";
         }
       } else {
         output = compiler.log.toString();
@@ -59,7 +59,7 @@ namespace tests {
 
   List<Test> registeredTests = [];
 
-  void runAllTests() {
+  int runAllTests() {
     // Run the tests
     List<Test> failing = [];
     var width = terminal.width() * 3 / 4;
@@ -105,77 +105,68 @@ namespace tests {
       terminal.print("Test:\n");
       terminal.setColor(.GRAY);
       for (var j = 0; j < lines.size(); j++) {
-        terminal.print(indent + lines[j]);
+        terminal.print(indent + "  " + lines[j]);
       }
       terminal.setColor(.BOLD);
       terminal.print("\n" + indent + "Output:\n");
-      printDiff(indent,
+      printDiff(indent + " ",
         test.expected == "" ? [] : test.expected.split("\n"),
         test.output == "" ? [] : test.output.split("\n"));
       terminal.setColor(.DEFAULT);
       terminal.print("");
     }
+    return failing.size();
   }
 
   void printDiff(string indent, List<string> expected, List<string> output) {
-    var sequence = longestCommonSubsequence(expected, output);
+    var m = expected.size();
+    var n = output.size();
+    List<int> matrix = [];
 
-    while (sequence.size() > 0) {
-      var common = sequence.shift();
-
-      // Insertions
-      while (expected.size() > 0) {
-        var inserted = expected.shift();
-        if (common == inserted) break;
-        terminal.setColor(.GREEN);
-        terminal.print(indent + "+" + inserted);
+    // Solve for the lowest common subsequence length
+    for (var i = 0, ij = 0; i < m; i++) {
+      for (var j = 0; j < n; j++, ij++) {
+        matrix.push(expected[i] == output[j]
+          ? i > 0 && j > 0 ? matrix[ij - n - 1] + 1 : 1
+          : imax(i > 0 ? matrix[ij - n] : 0, j > 0 ? matrix[ij - 1] : 0));
       }
+    }
 
-      // Removals
-      while (output.size() > 0) {
-        var removed = output.shift();
-        if (common == removed) break;
-        terminal.setColor(.RED);
-        terminal.print(indent + "-" + removed);
-      }
+    // Extract the diff in reverse
+    List<string> reversed = [];
+    var i = m - 1;
+    var j = n - 1;
+    while (i >= 0 || j >= 0) {
+      var ij = i * n + j;
 
       // Common
-      terminal.setColor(.GRAY);
-      terminal.print(indent + " " + common);
+      if (i >= 0 && j >= 0 && expected[i] == output[j]) {
+        reversed.push(" " + expected[i]);
+        i--;
+        j--;
+      }
+
+      // Removal
+      else if (j >= 0 && (i < 0 || matrix[ij - 1] > matrix[ij - n])) {
+        reversed.push("-" + output[j]);
+        j--;
+      }
+
+      // Insertion
+      else {
+        assert i >= 0 && (j < 0 || matrix[ij - 1] <= matrix[ij - n]);
+        reversed.push("+" + expected[i]);
+        i--;
+      }
     }
 
-    // Insertions
-    while (expected.size() > 0) {
-      terminal.setColor(.GREEN);
-      terminal.print(indent + "+" + expected.shift());
+    // Print out the diff
+    for (var i = reversed.size() - 1; i >= 0; i--) {
+      var text = reversed[i];
+      var c = text[0];
+      terminal.setColor(c == '+' ? .GREEN : c == '-' ? .RED : .GRAY);
+      terminal.print(indent + text);
     }
-
-    // Removals
-    while (output.size() > 0) {
-      terminal.setColor(.RED);
-      terminal.print(indent + "-" + output.shift());
-    }
-  }
-
-  List<string> longestCommonSubsequence(List<string> a, List<string> b) {
-    if (a.size() == 0 || b.size() == 0) {
-      return [];
-    }
-
-    var a0 = a[0];
-    var b0 = b[0];
-    var an = a.slice(1, a.size());
-    var bn = b.slice(1, b.size());
-
-    if (a0 == b0) {
-      var s = longestCommonSubsequence(an, bn);
-      s.unshift(a0);
-      return s;
-    }
-
-    var as = longestCommonSubsequence(an, b);
-    var bs = longestCommonSubsequence(a, bn);
-    return as.size() > bs.size() ? as : bs;
   }
 
   bool isSpace(int c) {
@@ -213,7 +204,7 @@ void testMinifyJS(string input, string expected) {
 }
 
 @EntryPoint
-void start() {
+int start() {
   core.testAnnotations();
   core.testCalls();
   core.testConst();
@@ -251,5 +242,5 @@ void start() {
   cpp.testNeedsInclude();
   cpp.testObjects();
 
-  runAllTests();
+  return runAllTests();
 }

@@ -83,23 +83,7 @@ in Foo {
   export string foo() { return toString(); }
 }
 ", "
-(function() {
-  Foo = {
-    FOO: 0
-  };
-  var in_Foo = {};
-  in_Foo.foo = function($this) {
-    return in_Foo.toString($this);
-  };
-  in_Foo.toString = function($this) {
-    switch ($this) {
-    case 0:
-      return 'FOO';
-    default:
-      return '';
-    }
-  };
-}());
+TODO
 ");
 
 testJS("

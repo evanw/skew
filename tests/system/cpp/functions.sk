@@ -106,32 +106,7 @@ in Foo {
   export string foo() { return toString(); }
 }
 ", "
-#include <string>
-
-enum struct Foo {
-  FOO
-};
-
-namespace in_Foo {
-  std::string foo(Foo _this_);
-  std::string toString(Foo _this_);
-}
-
-std::string in_Foo::foo(Foo _this_) {
-  return in_Foo::toString(_this_);
-}
-
-std::string in_Foo::toString(Foo _this_) {
-  switch (_this_) {
-    case Foo::FOO: {
-      return \"FOO\";
-    }
-
-    default: {
-      return \"\";
-    }
-  }
-}
+TODO
 ");
 
 testCPP("

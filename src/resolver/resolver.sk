@@ -2003,8 +2003,7 @@ class Resolver {
     List<Symbol> fields = [];
 
     // Gather the fields corresponding to enum values
-    int i;
-    for (i = 0; i < members.size(); i++) {
+    for (var i = 0; i < members.size(); i++) {
       var field = members[i].symbol;
       if (field.kind == .GLOBAL_VARIABLE && !field.isFromExtension()) {
         fields.push(field);
@@ -2012,24 +2011,28 @@ class Resolver {
     }
 
     // Check the fields for duplicates and sequential layout
-    for (i = 0; i < fields.size(); i++) {
+    var fieldsSize = fields.size();
+    var values = IntMap<Symbol>();
+    var problem = false;
+    var lowest = 0;
+    for (var i = 0; i < fieldsSize; i++) {
       var field = fields[i];
       initializeSymbol(field);
       if (field.type.isIgnored(cache)) {
+        problem = true;
         break;
       }
       var value = field.constant.asInt();
-      int j;
-      for (j = 0; j < i; j++) {
-        Symbol other = fields[j];
-        if (value == other.constant.asInt()) {
-          semanticErrorBadEnumToString(log, enclosingNode.declarationName().range, enclosingSymbol.name, field.name, other.name, value);
-          break;
-        }
-      }
-      if (j < i) {
+      var other = values.getOrDefault(value, null);
+      if (other != null) {
+        semanticErrorBadEnumToString(log, enclosingNode.declarationName().range, enclosingSymbol.name, field.name, other.name, value);
+        problem = true;
         break;
       }
+      if (i == 0 || value < lowest) {
+        lowest = value;
+      }
+      values[value] = field;
     }
 
     // Generate an extension block next to the enum declaration
@@ -2040,26 +2043,50 @@ class Resolver {
 
     // Generate an empty function body if an error was emitted
     Node statement;
-    if (fields.size() == 0 || i < fields.size()) {
+    if (problem || fieldsSize == 0) {
       statement = Node.createReturn(Node.createString(""));
     }
 
-    // Generate a string switch statment
+    // Generate a function body that returns the string
     else {
-      List<Node> cases = [];
-      for (i = 0; i < fields.size(); i++) {
-        var field = fields[i];
-        cases.push(Node.createCase(
-          [Node.createDot(null, Node.createName(field.name))],
-          Node.createBlock([Node.createReturn(Node.createString(field.name))])));
+      var consecutive = extractConsecutiveRange(values, lowest, fieldsSize);
+
+      // Generate an array lookup
+      if (consecutive != null) {
+        // Generate the array initializer
+        var stringListType = cache.parameterize(cache.listType, [cache.stringType]);
+        var array = createSymbol("_toString_", .GLOBAL_VARIABLE);
+        array.enclosingSymbol = enclosingSymbol;
+        array.flags = .FROM_EXTENSION | .STATIC;
+        array.node = Node.createVariable(Node.createName(array.name), null, Node.createList(consecutive));
+        array.node.symbol = array;
+        block.appendChild(Node.createVariableCluster(Node.createType(stringListType), [array.node]));
+        enclosingSymbol.type.addMember(Member(array));
+        symbol.flags |= .INLINE;
+
+        // Generate "return _toString_[this];"
+        var index = Node.createThis();
+        statement = Node.createReturn(Node.createBinary(.INDEX, Node.createName(array.name),
+          lowest != 0 ? Node.createBinary(.SUBTRACT, index, Node.createInt(lowest)) : index));
       }
-      cases.push(Node.createCase([], Node.createBlock([Node.createReturn(Node.createString(""))])));
-      statement = Node.createSwitch(Node.createThis(), cases);
+
+      // Generate a string switch statment
+      else {
+        List<Node> cases = [];
+        for (var i = 0; i < fieldsSize; i++) {
+          var field = fields[i];
+          cases.push(Node.createCase(
+            [Node.createDot(null, Node.createName(field.name))],
+            Node.createBlock([Node.createReturn(Node.createString(field.name))])));
+        }
+        cases.push(Node.createCase([], Node.createBlock([Node.createReturn(Node.createString(""))])));
+        statement = Node.createSwitch(Node.createThis(), cases);
+      }
     }
 
     // Change the automatic symbol into an instance function
     symbol.kind = .INSTANCE_FUNCTION;
-    symbol.flags = .FROM_EXTENSION;
+    symbol.flags |= .FROM_EXTENSION;
     symbol.node = Node.createFunction(
       Node.createName(symbol.name),
       Node.createNodeList([]),
@@ -2071,6 +2098,18 @@ class Resolver {
     // Resolve it now since it otherwise may never be resolved
     prepareNode(extension, enclosingNode.parent.scope);
     resolve(extension, null);
+  }
+
+  List<Node> extractConsecutiveRange(IntMap<Symbol> values, int lowest, int count) {
+    List<Node> consecutive = [];
+    for (var i = 0; i < count; i++) {
+      var value = values.getOrDefault(lowest + i, null);
+      if (value == null) {
+        return null;
+      }
+      consecutive.push(Node.createString(value.name));
+    }
+    return consecutive;
   }
 
   void initializeSymbol(Symbol symbol) {

@@ -236,6 +236,10 @@ string joinPath(string directory, string entry) {
   return directory + "/" + entry;
 }
 
+int imax(int a, int b) {
+  return a > b ? a : b;
+}
+
 string formatNumber(double number) {
   return (math.round(number * 10) / 10).toString();
 }
