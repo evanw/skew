@@ -140,7 +140,7 @@ List<T>::List() : _data() {
 
 template <typename T>
 int List<T>::size() {
-  return _data.size();
+  return static_cast<int>(_data.size());
 }
 
 template <typename T>

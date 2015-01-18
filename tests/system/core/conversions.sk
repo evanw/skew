@@ -355,4 +355,29 @@ void foo() {
       ~~~~~~~~
 ");
 
+test("
+var foo = null + \"\";
+var bar = null.toString() + \"\";
+", "
+<stdin>:1:11: error: Expression of type \"null\" has no toString() member to call
+var foo = null + \"\";
+          ~~~~
+<stdin>:2:16: error: \"toString\" is not declared on type \"null\"
+var bar = null.toString() + \"\";
+               ~~~~~~~~
+");
+
+test("
+class Foo {
+  static string toString() { return \"nope\"; }
+}
+string foo(Foo foo) {
+  return foo + \"!\";
+}
+", "
+<stdin>:5:10: error: Expression of type \"Foo\" has no toString() member to call
+  return foo + \"!\";
+         ~~~
+");
+
 }}

@@ -3588,22 +3588,34 @@ class Resolver {
     if (node.type.isIgnored(cache)) {
       return false;
     }
+
+    // Look for the toString() method
     var toString = node.type.findMember("toString");
     if (toString == null) {
       semanticErrorMissingToString(log, node.range, node.type);
       return false;
     }
 
+    // Make sure the member has a type. This will also attempt to automatically
+    // generate a toString() method if node.type is an enum type.
     initializeMember(toString);
     if (toString.type.isIgnored(cache)) {
       return false;
     }
 
+    // This doesn't work with static "toString" functions
+    if (toString.symbol.kind != .INSTANCE_FUNCTION) {
+      semanticErrorMissingToString(log, node.range, node.type);
+      return false;
+    }
+
+    // The function must take no arguments and return a string
     if (toString.type != cache.toStringType) {
       semanticErrorToStringWrongType(log, node.range, cache.toStringType, toString.type, toString.symbol.node.declarationName().range);
       return false;
     }
 
+    // Automatically insert a call to toString()
     var children = node.removeChildren();
     var name = Node.createName("toString");
     var target = Node.createDot(node.clone().withChildren(children), name);
