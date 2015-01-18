@@ -13860,7 +13860,8 @@
   };
   io.readFile = function(path) {
     try {
-      return new Box(require('fs').readFileSync(path, 'utf8'));
+      var contents = require('fs').readFileSync(path, 'utf8');
+      return new Box(in_string.replaceAll(contents, '\r\n', '\n'));
     } catch ($exception) {
       return null;
     }

@@ -3,7 +3,8 @@
   namespace io {
     Box<string> readFile(string path) {
       try {
-        return Box<string>(`require`("fs").readFileSync(path, "utf8"));
+        string contents = `require`("fs").readFileSync(path, "utf8");
+        return Box<string>(contents.replaceAll("\r\n", "\n"));
       } catch {
         return null;
       }
@@ -23,6 +24,15 @@
 
   namespace io {
     @NeedsInclude("<fstream>") {
+      Box<string> readFile(string path) {
+        `std::ifstream` file;
+        file.open(path.`c_str`());
+        if (!file) return null;
+        var contents = "";
+        `contents.append(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>())`;
+        return Box<string>(contents.replaceAll("\r\n", "\n"));
+      }
+
       bool writeFile(string path, string contents) {
         `std::ofstream` file;
         file.open(path.`c_str`());
@@ -30,21 +40,14 @@
         file << contents;
         return true;
       }
-
-      Box<string> readFile(string path) {
-        `std::ifstream` file;
-        file.open(path.`c_str`());
-        if (!file) return null;
-        return Box<string>(`std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>())`);
-      }
     }
   }
 
 #else
 
   import namespace io {
-    bool writeFile(string path, string contents);
     Box<string> readFile(string path);
+    bool writeFile(string path, string contents);
   }
 
 #endif
