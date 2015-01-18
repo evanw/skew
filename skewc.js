@@ -8099,7 +8099,7 @@
     }
     if (symbol.kind === SymbolKind.OBJECT_PARAMETER && this.context.symbolForThis === enclosingSymbol) {
       for (var parent = node.parent; !in_NodeKind.isNamedBlockDeclaration(parent.kind); parent = parent.parent) {
-        if (parent.kind === NodeKind.NODE_LIST && in_NodeKind.isNamedBlockDeclaration(parent.parent.kind) && parent.parent.symbol === enclosingSymbol && (parent === enclosingSymbol.node.objectParameters() || parent === enclosingSymbol.node.baseTypes())) {
+        if (parent.kind === NodeKind.NODE_LIST && (in_NodeKind.isObject(parent.parent.kind) || parent.parent.kind === NodeKind.EXTENSION) && parent.parent.symbol === enclosingSymbol && (parent === enclosingSymbol.node.objectParameters() || parent === parent.parent.baseTypes())) {
           return true;
         }
         if ((parent.kind === NodeKind.VARIABLE || in_NodeKind.isFunction(parent.kind)) && in_SymbolKind.isInstance(parent.symbol.kind)) {

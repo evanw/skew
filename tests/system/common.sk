@@ -95,14 +95,12 @@ namespace tests {
       var test = failing[i];
       var text = "  " + (i + 1) + ")";
       var lines = test.input.split("\n");
-      terminal.write(text + " ".repeat(indent.size() - text.size()));
       terminal.setColor(.BOLD);
-      terminal.print("Test:\n");
+      terminal.print(text + " ".repeat(indent.size() - text.size()) + "Test:\n");
       terminal.setColor(.GRAY);
       for (var j = 0; j < lines.size(); j++) {
         terminal.print(indent + "  " + lines[j]);
       }
-      terminal.setColor(.BOLD);
       terminal.print("\n" + indent + "Output:\n");
       printDiff(indent + " ",
         test.expected == "" ? [] : test.expected.split("\n"),
