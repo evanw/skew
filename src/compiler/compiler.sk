@@ -40,10 +40,17 @@ export enum CompilerConfig {
   WINDOWS,
 }
 
+export enum MemoryManagement {
+  NONE,
+  NONE_FAST,
+  MARK_SWEEP,
+}
+
 export class CompilerOptions {
   FileAccess fileAccess = null;
   TargetFormat targetFormat = .NONE;
   CompilerConfig targetConfig = .AUTOMATIC;
+  MemoryManagement memoryManagement = .NONE;
   List<Source> inputs = [];
   var overriddenDefines = StringMap<OverriddenDefine>();
   var outputDirectory = "";

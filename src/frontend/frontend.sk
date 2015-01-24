@@ -10,6 +10,7 @@ enum Option {
   CONFIG,
   DEFINE,
   FOLD_CONSTANTS,
+  GC,
   GLOBALIZE,
   HELP,
   INLINE,
@@ -60,16 +61,55 @@ namespace frontend {
     return log.hasErrors() ? 1 : 0;
   }
 
+  string joinKeys(List<string> keys) {
+    keys.sort(StringComparison.INSTANCE);
+    return prettyPrint.join(simpleQuoteAll(keys), "and");
+  }
+
+  T parseEnum<T>(Log log, string name, StringMap<T> map, Range range, T defaultValue) {
+    var key = range.toString();
+    if (key in map) return map[key];
+    var keys = map.keys();
+    keys.sort(StringComparison.INSTANCE);
+    commandLineErrorInvalidEnum(log, range, name, key, keys);
+    return defaultValue;
+  }
+
   CompilerOptions parseOptions(Log log, OptionParser parser, List<string> arguments) {
+    StringMap<TargetFormat> VALID_TARGETS = {
+      "cpp": .CPP,
+      "js": .JAVASCRIPT,
+      "json-ast": .JSON_AST,
+      "lisp-ast": .LISP_AST,
+      "xml-ast": .XML_AST,
+    };
+    StringMap<CompilerConfig> VALID_JS_CONFIGS = {
+      "browser": .BROWSER,
+      "node": .NODE,
+    };
+    StringMap<CompilerConfig> VALID_CPP_CONFIGS = {
+      "android": .ANDROID,
+      "ios": .IOS,
+      "linux": .LINUX,
+      "osx": .OSX,
+      "windows": .WINDOWS,
+    };
+    StringMap<MemoryManagement> VALID_GC_STRATEGIES = {
+      "mark-sweep": .MARK_SWEEP,
+      "none": .NONE,
+      "none-fast": .NONE_FAST,
+    };
+
     // Configure the parser
     parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"]);
-    parser.define(.STRING, .TARGET, "--target", "Sets the target format. Valid targets are " + prettyPrint.join(simpleQuoteAll(VALID_TARGETS), "and") + ".");
+    parser.define(.STRING, .TARGET, "--target", "Sets the target format. Valid targets are " + joinKeys(VALID_TARGETS.keys()) + ".");
     parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.");
     parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.");
     parser.define(.STRING_LIST, .DEFINE, "--define", "Overrides the value of a #define statement. Example: --define:UNIT_TESTS=true.");
     parser.define(.BOOL, .RELEASE, "--release", "Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE.");
-    parser.define(.STRING, .CONFIG, "--config", "Provides the configuration for the target format. Valid configurations are " + prettyPrint.join(simpleQuoteAll(VALID_JS_CONFIGS), "and") + " for JavaScript and " + prettyPrint.join(simpleQuoteAll(VALID_CPP_CONFIGS), "and") + " for C++. The default configuration is \"browser\" for JavaScript and the current operating system for C++.");
+    parser.define(.STRING, .CONFIG, "--config", "Provides the configuration for the target format. Valid configurations are " + joinKeys(VALID_JS_CONFIGS.keys()) + " for JavaScript and " + joinKeys(VALID_CPP_CONFIGS.keys()) + " for C++. Defaults to \"browser\" for JavaScript and the current operating system for C++.");
     parser.define(.BOOL, .VERBOSE, "--verbose", "Prints out information about the compilation.");
+    parser.define(.STRING, .GC, "--gc", "Setsthe garbage collection strategy when targeting C++. Valid strategies are " + joinKeys(VALID_GC_STRATEGIES.keys()) + ". Defaults to \"none\".");
     parser.define(.BOOL, .SOURCE_MAP, "--source-map", "Generates a source map when targeting JavaScript. The source map is saved with the \".map\" extension in the same directory as the main output file.");
     parser.define(.BOOL, .INLINE, "--inline", "Uses heuristics to automatically inline simple functions.");
     parser.define(.BOOL, .GLOBALIZE, "--globalize", "Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.");
@@ -130,32 +170,25 @@ namespace frontend {
     }
 
     // There must be at least one source file
-    var everything = parser.source.rangeContainingEverything();
+    var end = parser.source.contents.size();
+    var trailingSpace = Range(parser.source, end - 1, end);
     if (parser.normalArguments.size() == 0) {
-      commandLineErrorNoInputFiles(log, everything);
+      commandLineErrorNoInputFiles(log, trailingSpace);
     }
 
-    // Check the format
-    TargetFormat targetFormat = .NONE;
+    // Check the target format
     var target = parser.stringRangeForOption(.TARGET);
-    if (target == null) {
-      commandLineErrorMissingTarget(log, everything, "--target");
+    if (target != null) {
+      options.targetFormat = parseEnum<TargetFormat>(log, "target", VALID_TARGETS, target, .NONE);
     } else {
-      var name = target.toString();
-      if (name == "js") targetFormat = .JAVASCRIPT;
-      else if (name == "cpp") targetFormat = .CPP;
-      else if (name == "lisp-ast") targetFormat = .LISP_AST;
-      else if (name == "json-ast") targetFormat = .JSON_AST;
-      else if (name == "xml-ast") targetFormat = .XML_AST;
-      else commandLineErrorInvalidTarget(log, target, name, VALID_TARGETS);
+      commandLineErrorMissingTarget(log, trailingSpace, "--target");
     }
-    options.targetFormat = targetFormat;
 
     // Parse the output location
     var outputFile = parser.stringRangeForOption(.OUTPUT_FILE);
     var outputDirectory = parser.stringRangeForOption(.OUTPUT_DIRECTORY);
     if (outputFile == null && outputDirectory == null) {
-      commandLineErrorMissingOutput(log, everything, "--output-file", "--output-dir");
+      commandLineErrorMissingOutput(log, trailingSpace, "--output-file", "--output-dir");
     } else if (outputFile != null && outputDirectory != null) {
       commandLineErrorDuplicateOutput(log, outputFile.start > outputDirectory.start ? outputFile : outputDirectory, "--output-file", "--output-dir");
     } else if (outputFile != null) {
@@ -164,27 +197,23 @@ namespace frontend {
       options.outputDirectory = outputDirectory.toString();
     }
 
-    // Check the configuration
-    if (targetFormat != .NONE) {
-      var config = parser.stringRangeForOption(.CONFIG);
-      if (config != null) {
-        CompilerConfig targetConfig = .AUTOMATIC;
-        var name = config.toString();
-        if (targetFormat == .JAVASCRIPT) {
-          if (name == "browser") targetConfig = .BROWSER;
-          else if (name == "node") targetConfig = .NODE;
-          else commandLineErrorInvalidConfiguration(log, config, name, VALID_JS_CONFIGS);
-        } else if (targetFormat == .CPP) {
-          if (name == "android") targetConfig = .ANDROID;
-          else if (name == "ios") targetConfig = .IOS;
-          else if (name == "linux") targetConfig = .LINUX;
-          else if (name == "osx") targetConfig = .OSX;
-          else if (name == "windows") targetConfig = .WINDOWS;
-          else commandLineErrorInvalidConfiguration(log, config, name, VALID_CPP_CONFIGS);
-        } else {
-          commandLineErrorUnexpectedConfiguration(log, config, name, target.toString());
-        }
-        options.targetConfig = targetConfig;
+    // Parse the configuration
+    var config = parser.stringRangeForOption(.CONFIG);
+    if (options.targetFormat != .NONE && config != null) {
+      if (options.targetFormat == .JAVASCRIPT || options.targetFormat == .CPP) {
+        options.targetConfig = parseEnum<CompilerConfig>(log, "configuration", options.targetFormat == .JAVASCRIPT ? VALID_JS_CONFIGS : VALID_CPP_CONFIGS, config, .AUTOMATIC);
+      } else {
+        commandLineErrorUnexpectedConfiguration(log, config, config.toString(), target.toString());
+      }
+    }
+
+    // Parse the garbage collection strategy
+    var gc = parser.stringRangeForOption(.GC);
+    if (gc != null) {
+      if (options.targetFormat == .CPP) {
+        options.memoryManagement = parseEnum<MemoryManagement>(log, "garbage collection strategy", VALID_GC_STRATEGIES, gc, .NONE);
+      } else if (options.targetFormat != .NONE) {
+        commandLineErrorUnexpectedGarbageCollectionStrategy(log, gc, target.toString());
       }
     }
 
@@ -282,25 +311,4 @@ namespace frontend {
   int terminalWidthPadding() {
     return OperatingSystem.current() == .WINDOWS ? 1 : 0;
   }
-
-  final var VALID_TARGETS = [
-    "js",
-    "cpp",
-    "lisp-ast",
-    "json-ast",
-    "xml-ast",
-  ];
-
-  final var VALID_JS_CONFIGS = [
-    "browser",
-    "node",
-  ];
-
-  final var VALID_CPP_CONFIGS = [
-    "android",
-    "ios",
-    "linux",
-    "osx",
-    "windows",
-  ];
 }

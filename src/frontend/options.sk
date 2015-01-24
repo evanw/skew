@@ -66,14 +66,15 @@ class OptionParser {
     source = Source("<arguments>", "");
     List<Range> ranges = [];
 
-    // Create a source for the arguments to work with the log system
+    // Create a source for the arguments to work with the log system. The
+    // trailing space is needed to be able to point to the character after
+    // the last argument without wrapping onto the next line.
     for (var i = 0; i < arguments.size(); i++) {
-      if (i != 0) source.contents += " ";
       var argument = arguments[i];
       var needsQuotes = " " in argument;
       var start = source.contents.size() + (int)needsQuotes;
       ranges.push(Range(source, start, start + argument.size()));
-      source.contents += needsQuotes ? "'" + argument + "'" : argument;
+      source.contents += needsQuotes ? "'" + argument + "' " : argument + " ";
     }
 
     // Parse each argument

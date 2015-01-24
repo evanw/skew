@@ -31,16 +31,16 @@ void commandLineErrorExpectedToken(Log log, Range range, string expected, string
   log.error(range, "Expected " + simpleQuote(expected) + " but found " + simpleQuote(found) + " in " + simpleQuote(text));
 }
 
-void commandLineErrorInvalidTarget(Log log, Range range, string found, List<string> expected) {
-  log.error(range, "Invalid target " + simpleQuote(found) + ", must be either " + prettyPrint.join(simpleQuoteAll(expected), "or"));
-}
-
-void commandLineErrorInvalidConfiguration(Log log, Range range, string found, List<string> expected) {
-  log.error(range, "Invalid configuration " + simpleQuote(found) + ", must be either " + prettyPrint.join(simpleQuoteAll(expected), "or"));
+void commandLineErrorInvalidEnum(Log log, Range range, string name, string found, List<string> expected) {
+  log.error(range, "Invalid " + name + " " + simpleQuote(found) + ", must be either " + prettyPrint.join(simpleQuoteAll(expected), "or"));
 }
 
 void commandLineErrorUnexpectedConfiguration(Log log, Range range, string config, string target) {
   log.error(range, "Unexpected configuration " + simpleQuote(config) + " for target " + simpleQuote(target));
+}
+
+void commandLineErrorUnexpectedGarbageCollectionStrategy(Log log, Range range, string target) {
+  log.error(range, "The " + simpleQuote(target) + " target does not have a configurable garbage collection strategy");
 }
 
 void commandLineErrorUnreadableFile(Log log, Range range, string name) {

@@ -2070,10 +2070,16 @@
     OSX: 6,
     WINDOWS: 7
   };
+  MemoryManagement = {
+    NONE: 0,
+    NONE_FAST: 1,
+    MARK_SWEEP: 2
+  };
   CompilerOptions = function() {
     this.fileAccess = null;
     this.targetFormat = TargetFormat.NONE;
     this.targetConfig = CompilerConfig.AUTOMATIC;
+    this.memoryManagement = MemoryManagement.NONE;
     this.inputs = [];
     this.overriddenDefines = new StringMap();
     this.outputDirectory = '';
@@ -2254,7 +2260,7 @@
         emitter = new xml.Emitter(options);
         break;
       default:
-        throw new Error('assert false; (src/compiler/compiler.sk:250:19)');
+        throw new Error('assert false; (src/compiler/compiler.sk:257:19)');
         break;
       }
       if (emitter !== null) {
@@ -3147,14 +3153,14 @@
     this.emitCommaSeparatedExpressions(node.callArguments());
     this.emit(')');
   };
-  base.Emitter.prototype.emitParenthesizedCast = function(node, precedence) {
+  base.Emitter.prototype.emitParenthesizedCast = function(type, node, precedence) {
     if (Precedence.UNARY_PREFIX < precedence) {
       this.emit('(');
     }
     this.emit('(');
-    this.emitNormalType(node.castType().type);
+    this.emitNormalType(type);
     this.emit(')');
-    this.emitExpression(node.castValue(), Precedence.UNARY_PREFIX);
+    this.emitExpression(node, Precedence.UNARY_PREFIX);
     if (Precedence.UNARY_PREFIX < precedence) {
       this.emit(')');
     }
@@ -3164,7 +3170,7 @@
   };
   base.Emitter.prototype.emitCast = function(node, precedence) {
     if (this.shouldEmitCast(node)) {
-      this.emitParenthesizedCast(node, precedence);
+      this.emitParenthesizedCast(node.castType().type, node.castValue(), precedence);
     } else {
       this.emitExpression(node.castValue(), precedence);
     }
@@ -3198,13 +3204,21 @@
   base.Emitter.prototype.emitThis = function() {
     this.emit('this');
   };
+  base.Emitter.prototype.hookNeedsExplicitCast = function(node) {
+    return false;
+  };
   base.Emitter.prototype.emitHook = function(node, precedence) {
+    var trueValue = node.hookTrue();
     if (Precedence.ASSIGN < precedence) {
       this.emit('(');
     }
     this.emitExpression(node.hookTest(), Precedence.LOGICAL_OR);
     this.emit(' ? ');
-    this.emitExpression(node.hookTrue(), Precedence.ASSIGN);
+    if (this.hookNeedsExplicitCast(trueValue)) {
+      this.emitParenthesizedCast(node.type, trueValue, precedence);
+    } else {
+      this.emitExpression(trueValue, Precedence.ASSIGN);
+    }
     this.emit(' : ');
     this.emitExpression(node.hookFalse(), Precedence.ASSIGN);
     if (Precedence.ASSIGN < precedence) {
@@ -3235,7 +3249,7 @@
   };
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:604:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:613:7)');
     }
     this.emit(this.fullName(type.symbol));
     if (type.isParameterized()) {
@@ -3277,11 +3291,13 @@
     this.includes = new StringMap();
     this.usedAssert = false;
     this.usedMath = false;
+    this.isMarkSweep = false;
     this.pass = cpp.Pass.NONE;
   };
   $extends(cpp.Emitter, base.Emitter);
   cpp.Emitter.prototype.visitProgram = function(node) {
     var collector = new Collector(node, SortTypes.SORT_BY_INHERITANCE_AND_CONTAINMENT);
+    this.isMarkSweep = this.options.memoryManagement === MemoryManagement.MARK_SWEEP;
     this.pass = cpp.Pass.FORWARD_DECLARE_TYPES;
     this.visitCollector(collector);
     this.adjustNamespace(null);
@@ -3294,7 +3310,7 @@
     this.visitCollector(collector);
     this.adjustNamespace(null);
     this.emitEntryPoint();
-    this.prependHeaders();
+    this.wrapEmittedCode();
   };
   cpp.Emitter.prototype.emitEntryPoint = function() {
     var entryPointSymbol = this.resolver.entryPointSymbol;
@@ -3307,10 +3323,10 @@
       this.increaseIndent();
       if (hasArguments) {
         if (!('<string>' in this.includes._table)) {
-          throw new Error('assert "<string>" in includes; (src/cpp/emitter.sk:58:11)');
+          throw new Error('assert "<string>" in includes; (src/cpp/emitter.sk:60:11)');
         }
-        var name = this.mangleName(this.cache.stringType.symbol);
-        this.emit(this.indent + 'List<' + name + '> *args = new List<' + name + '>();\n');
+        var listType = 'List<' + this.mangleName(this.cache.stringType.symbol) + '>';
+        this.emit(this.indent + (this.isMarkSweep ? 'gc::Root<' + listType + '> ' : listType + ' *') + 'args = new ' + listType + '();\n');
         this.emit(this.indent + 'args->_data.insert(args->_data.begin(), argv + 1, argv + argc);\n');
       }
       this.emit(this.indent + (hasReturnValue ? 'return ' : '') + this.fullName(entryPointSymbol) + '(' + (hasArguments ? 'args' : '') + ');\n');
@@ -3318,23 +3334,45 @@
       this.emit(this.indent + '}\n');
     }
   };
-  cpp.Emitter.prototype.prependHeaders = function() {
-    if (this.usedAssert) {
+  cpp.Emitter.prototype.wrapEmittedCode = function() {
+    var useFastHack = this.options.memoryManagement === MemoryManagement.NONE_FAST;
+    if (this.usedAssert || useFastHack) {
       this.includes._table['<cassert>'] = true;
+    }
+    if (useFastHack) {
+      this.includes._table[this.options.targetConfig === CompilerConfig.WINDOWS ? '<windows.h>' : '<sys/mman.h>'] = true;
+      this.includes._table['<new>'] = true;
+    }
+    if (this.isMarkSweep) {
+      this.includes._table['<unordered_map>'] = true;
+      this.includes._table['<unordered_set>'] = true;
+      this.includes._table['<vector>'] = true;
     }
     if (this.usedMath) {
       this.includes._table['<cmath>'] = true;
     }
     var headers = Object.keys(this.includes._table);
     headers.sort(bindCompare(StringComparison.INSTANCE));
+    var text = '';
     if (headers.length !== 0) {
-      var text = '';
       for (var i = 0; i < headers.length; i = i + 1 | 0) {
         var name = headers[i];
         var size = name.length;
         text += '#include ' + (size === 0 || name.charCodeAt(0) !== 60 || name.charCodeAt(size - 1 | 0) !== 62 ? '"' + name + '"' : name) + '\n';
       }
-      this.output.contents = text + '\n' + this.output.contents;
+      text += '\n';
+    }
+    if (this.isMarkSweep) {
+      text += 'namespace gc {\n  struct GC;\n\n  struct Object {\n    Object();\n    virtual ~Object() {}\n\n  private:\n    friend GC;\n    Object *__gc_next = nullptr; // GC space overhead is one pointer per object\n    virtual void __gc_mark() = 0; // Recursively marks all child objects\n    Object(const Object &); // Prevent copying\n    Object &operator = (const Object &); // Prevent copying\n  };\n\n  struct UntypedRoot {\n    ~UntypedRoot();\n\n  protected:\n    friend GC;\n    UntypedRoot &operator = (const UntypedRoot &root) { _object = root._object; return *this; }\n    UntypedRoot(const UntypedRoot &root) : UntypedRoot(root._object) {}\n    UntypedRoot() : _previous(this), _next(this), _object() {}\n    UntypedRoot(Object *object);\n    UntypedRoot *_previous;\n    UntypedRoot *_next;\n    Object *_object;\n  };\n\n  template <typename T>\n  struct Root : UntypedRoot {\n    Root(T *object = nullptr) : UntypedRoot(object) {}\n    operator T * () const { return dynamic_cast<T *>(_object); }\n    T *operator -> () const { return dynamic_cast<T *>(_object); }\n    Root<T> &operator = (T *value) { _object = value; return *this; }\n  };\n\n  void collect();\n  void mark(Object *object);\n\n  template <typename T> inline void mark(const T &value);\n  template <typename T> inline void mark(const std::vector<T> &values);\n  template <typename K, typename V> inline void mark(const std::unordered_map<K, V> &values);\n\n  template <typename T>\n  inline void mark(const T &value) {}\n\n  template <typename T>\n  inline void mark(const std::vector<T> &values) {\n    for (const auto &value : values) {\n      gc::mark(value);\n    }\n  }\n\n  template <typename K, typename V>\n  inline void mark(const std::unordered_map<K, V> &values) {\n    for (const auto &value : values) {\n      gc::mark(value.second);\n    }\n  }\n}\n' + '\n';
+    }
+    if (text !== '') {
+      this.output.contents = text + this.output.contents;
+    }
+    if (this.isMarkSweep) {
+      this.output.contents += '\n' + 'namespace gc {\n  static std::unordered_set<Object *> marked;\n  static Object *latest;\n\n  struct GC {\n    static UntypedRoot *start() {\n      static UntypedRoot start;\n      return &start;\n    }\n\n    static void mark() {\n      for (auto first = start(), root = first->_next; root != first; root = root->_next) {\n        mark(root->_object);\n      }\n    }\n\n    static void sweep() {\n      for (Object *previous = nullptr, *current = latest, *next; current; current = next) {\n        next = current->__gc_next;\n        if (!marked.count(current)) {\n          (previous ? previous->__gc_next : latest) = current->__gc_next;\n          delete current;\n        } else {\n          previous = current;\n        }\n      }\n      marked.clear();\n    }\n\n    static void mark(Object *object) {\n      if (object && !marked.count(object)) {\n        marked.insert(object);\n        object->__gc_mark();\n      }\n    }\n  };\n\n  UntypedRoot::UntypedRoot(Object *object) : _previous(GC::start()), _next(_previous->_next), _object(object) {\n    _previous->_next = this;\n    _next->_previous = this;\n  }\n\n  UntypedRoot::~UntypedRoot() {\n    _previous->_next = _next;\n    _next->_previous = _previous;\n  }\n\n  Object::Object() : __gc_next(latest) {\n    latest = this;\n  }\n\n  void collect() {\n    GC::mark();\n    GC::sweep();\n  }\n\n  void mark(Object *object) {\n    GC::mark(object);\n  }\n}\n';
+    }
+    if (useFastHack) {
+      this.output.contents += '\n' + 'static void *_fast_next_;\nstatic size_t _fast_available_;\n\nstatic void *_fast_allocate_(size_t size) {\n  enum {\n    CHUNK_SIZE = 1 << 20,\n    ALIGN = 8,\n  };\n  size = (size + ALIGN - 1) & ~(ALIGN - 1);\n  if (_fast_available_ < size) {\n    size_t chunk = (size + CHUNK_SIZE - 1) & ~(CHUNK_SIZE - 1);\n    assert(size <= chunk);\n    #if _WIN32\n      _fast_next_ = VirtualAlloc(nullptr, chunk, MEM_COMMIT, PAGE_READWRITE);\n      assert(_fast_next_ != nullptr);\n    #else\n      _fast_next_ = mmap(nullptr, chunk, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);\n      assert(_fast_next_ != MAP_FAILED);\n    #endif\n    _fast_available_ = chunk;\n  }\n  void *data = _fast_next_;\n  _fast_next_ = (char *)_fast_next_ + size;\n  _fast_available_ -= size;\n  return data;\n}\n\nvoid *operator new (size_t size) { return _fast_allocate_(size); }\nvoid *operator new [] (size_t size) { return _fast_allocate_(size); }\nvoid operator delete (void *data) noexcept {}\nvoid operator delete [] (void *data) noexcept {}\n\n// Overriding malloc() and free() is really hard on Windows for some reason\n#if !_WIN32\n  extern "C" void *malloc(size_t size) { return _fast_allocate_(size); }\n  extern "C" void free(void *data) {}\n#endif\n';
     }
   };
   cpp.Emitter.prototype.handleSymbol = function(symbol) {
@@ -3392,6 +3430,7 @@
     }
   };
   cpp.Emitter.prototype.emitTypeDeclaration = function(symbol) {
+    var needsMark = this.isMarkSweep && symbol.kind === SymbolKind.CLASS;
     this.handleSymbol(symbol);
     if (in_SymbolKind.isObject(symbol.kind)) {
       if (this.pass !== cpp.Pass.IMPLEMENT_CODE) {
@@ -3400,11 +3439,17 @@
         this.emitTypeParameters(symbol);
         this.emit(this.indent + 'struct ' + this.mangleName(symbol));
         if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
+          var needsObject = this.isMarkSweep && (symbol.kind === SymbolKind.INTERFACE || symbol.type.baseClass() === null);
+          if (needsObject) {
+            this.emit(' : virtual gc::Object');
+          }
           if (symbol.type.hasRelevantTypes()) {
             var types = symbol.type.relevantTypes;
-            this.emit(' : ');
+            if (!needsObject) {
+              this.emit(' : ');
+            }
             for (var i = 0; i < types.length; i = i + 1 | 0) {
-              if (i !== 0) {
+              if (i !== 0 || needsObject) {
                 this.emit(', ');
               }
               this.emitCppType(types[i], cpp.CppEmitType.BARE);
@@ -3413,6 +3458,9 @@
           this.emit(' {\n');
           this.increaseIndent();
           this.emitTypeMembers(symbol);
+          if (needsMark) {
+            this.emitMarkFunction(symbol);
+          }
           this.decreaseIndent();
           this.emit(this.indent + '}');
         }
@@ -3420,6 +3468,9 @@
         this.emitExtraNewlineAfter(symbol.node.kind);
       } else {
         this.emitTypeMembers(symbol);
+        if (needsMark) {
+          this.emitMarkFunction(symbol);
+        }
       }
     } else if (symbol.kind === SymbolKind.ENUM) {
       if (this.pass === cpp.Pass.FORWARD_DECLARE_TYPES) {
@@ -3449,6 +3500,52 @@
       }
     }
   };
+  cpp.Emitter.prototype.emitMarkFunction = function(symbol) {
+    if (this.isMarkSweep && symbol.kind === SymbolKind.CLASS) {
+      if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
+        this.emitExtraNewlineBefore(NodeKind.FUNCTION);
+        this.emit(this.indent + 'virtual void __gc_mark();\n');
+        this.emitExtraNewlineAfter(NodeKind.FUNCTION);
+      } else if (this.pass === cpp.Pass.IMPLEMENT_CODE) {
+        this.emitExtraNewlineBefore(NodeKind.FUNCTION);
+        this.emitTypeParameters(symbol);
+        this.emit(this.indent + 'void ');
+        this.emitEnclosingSymbolPrefix(symbol);
+        this.emit('__gc_mark() {\n');
+        this.increaseIndent();
+        var baseClass = symbol.type.baseClass();
+        if (baseClass !== null) {
+          this.emit(this.indent + this.mangleName(baseClass.symbol) + '::__gc_mark();\n');
+        }
+        var members = symbol.type.sortedMembers();
+        for (var i = 0; i < members.length; i = i + 1 | 0) {
+          var member = members[i].symbol;
+          if (member.kind === SymbolKind.INSTANCE_VARIABLE && member.enclosingSymbol === symbol && !member.type.isPrimitive() && !member.type.isEnum()) {
+            this.emit(this.indent + 'gc::mark(' + this.mangleName(member) + ');\n');
+          }
+        }
+        this.decreaseIndent();
+        this.emit(this.indent + '}\n');
+        this.emitExtraNewlineAfter(NodeKind.FUNCTION);
+      }
+    }
+  };
+  cpp.Emitter.prototype.emitEnclosingSymbolPrefix = function(enclosingSymbol) {
+    if (enclosingSymbol !== null && enclosingSymbol.kind !== SymbolKind.GLOBAL_NAMESPACE) {
+      this.emit(this.fullName(enclosingSymbol));
+      if (enclosingSymbol.hasParameters()) {
+        this.emit('<');
+        for (var i = 0; i < enclosingSymbol.parameters.length; i = i + 1 | 0) {
+          if (i !== 0) {
+            this.emit(', ');
+          }
+          this.emit(this.mangleName(enclosingSymbol.parameters[i]));
+        }
+        this.emit('>');
+      }
+      this.emit('::');
+    }
+  };
   cpp.Emitter.prototype.emitFunction = function(symbol) {
     this.handleSymbol(symbol);
     if (this.pass !== cpp.Pass.FORWARD_DECLARE_TYPES) {
@@ -3474,21 +3571,7 @@
           this.emitCppType(symbol.type.resultType(), cpp.CppEmitType.DECLARATION);
         }
         if (this.pass === cpp.Pass.IMPLEMENT_CODE) {
-          var enclosingSymbol = symbol.enclosingSymbol;
-          if (enclosingSymbol !== null && enclosingSymbol.kind !== SymbolKind.GLOBAL_NAMESPACE) {
-            this.emit(this.fullName(enclosingSymbol));
-            if (enclosingSymbol.hasParameters()) {
-              this.emit('<');
-              for (var i = 0; i < enclosingSymbol.parameters.length; i = i + 1 | 0) {
-                if (i !== 0) {
-                  this.emit(', ');
-                }
-                this.emit(this.mangleName(enclosingSymbol.parameters[i]));
-              }
-              this.emit('>');
-            }
-            this.emit('::');
-          }
+          this.emitEnclosingSymbolPrefix(symbol.enclosingSymbol);
         }
         this.emit(this.mangleName(symbol));
         this.emitFunctionArguments(symbol);
@@ -3540,7 +3623,13 @@
     return in_NodeKind.isUnaryTypeOperator(node.kind) ? true : base.Emitter.prototype.shouldEmitSpaceForUnaryOperator.call(this, node);
   };
   cpp.Emitter.prototype.emitTypeBeforeVariable = function(symbol) {
-    this.emitCppType(symbol.type, cpp.CppEmitType.DECLARATION);
+    if (this.isMarkSweep && symbol.kind === SymbolKind.GLOBAL_VARIABLE && symbol.type.isReference()) {
+      this.emit('gc::Root<');
+      this.emitCppType(symbol.type, cpp.CppEmitType.BARE);
+      this.emit('> ');
+    } else {
+      this.emitCppType(symbol.type, cpp.CppEmitType.DECLARATION);
+    }
   };
   cpp.Emitter.prototype.emitVariable = function(symbol) {
     this.handleSymbol(symbol);
@@ -3706,19 +3795,17 @@
       this.emit(')');
     }
   };
-  cpp.Emitter.prototype.emitParenthesizedCast = function(node, precedence) {
-    var target = node.castType().type;
-    if (this.options.targetConfig === CompilerConfig.WINDOWS && target.isBool(this.cache)) {
-      var source = node.castValue().type;
+  cpp.Emitter.prototype.emitParenthesizedCast = function(type, node, precedence) {
+    if (this.options.targetConfig === CompilerConfig.WINDOWS && type.isBool(this.cache)) {
       if (Precedence.UNARY_PREFIX < precedence) {
         this.emit('(');
       }
       this.emit('!!');
-      if (source.isPrimitive()) {
-        this.emitExpression(node.castValue(), Precedence.UNARY_PREFIX);
+      if (node.type.isPrimitive()) {
+        this.emitExpression(node, Precedence.UNARY_PREFIX);
       } else {
         this.emit('static_cast<int>(');
-        this.emitExpression(node.castValue(), Precedence.UNARY_PREFIX);
+        this.emitExpression(node, Precedence.UNARY_PREFIX);
         this.emit(')');
       }
       if (Precedence.UNARY_PREFIX < precedence) {
@@ -3726,9 +3813,9 @@
       }
     } else {
       this.emit('static_cast<');
-      this.emitNormalType(target);
+      this.emitNormalType(type);
       this.emit('>(');
-      this.emitExpression(node.castValue(), Precedence.LOWEST);
+      this.emitExpression(node, Precedence.LOWEST);
       this.emit(')');
     }
   };
@@ -3782,6 +3869,9 @@
     this.emit('(');
     this.emitCommaSeparatedExpressions(node.superCallArguments());
     this.emit(')');
+  };
+  cpp.Emitter.prototype.hookNeedsExplicitCast = function(node) {
+    return this.isMarkSweep && node.type.isReference();
   };
   cpp.Emitter.prototype.emitNormalType = function(type) {
     this.emitCppType(type, cpp.CppEmitType.NORMAL);
@@ -11385,18 +11475,19 @@
     CONFIG: 0,
     DEFINE: 1,
     FOLD_CONSTANTS: 2,
-    GLOBALIZE: 3,
-    HELP: 4,
-    INLINE: 5,
-    MANGLE: 6,
-    MINIFY: 7,
-    OUTPUT_DIRECTORY: 8,
-    OUTPUT_FILE: 9,
-    RELEASE: 10,
-    REMOVE_ASSERTS: 11,
-    SOURCE_MAP: 12,
-    TARGET: 13,
-    VERBOSE: 14
+    GC: 3,
+    GLOBALIZE: 4,
+    HELP: 5,
+    INLINE: 6,
+    MANGLE: 7,
+    MINIFY: 8,
+    OUTPUT_DIRECTORY: 9,
+    OUTPUT_FILE: 10,
+    RELEASE: 11,
+    REMOVE_ASSERTS: 12,
+    SOURCE_MAP: 13,
+    TARGET: 14,
+    VERBOSE: 15
   };
   var frontend = {};
   var io = {};
@@ -11459,14 +11550,11 @@
     this.source = new Source('<arguments>', '');
     var ranges = [];
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-      if (i !== 0) {
-        this.source.contents += ' ';
-      }
       var argument = $arguments[i];
       var needsQuotes = argument.indexOf(' ') >= 0;
       var start = this.source.contents.length + (needsQuotes | 0) | 0;
       ranges.push(new Range(this.source, start, start + argument.length | 0));
-      this.source.contents += needsQuotes ? "'" + argument + "'" : argument;
+      this.source.contents += needsQuotes ? "'" + argument + "' " : argument + ' ';
     }
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
       var argument = $arguments[i];
@@ -13601,14 +13689,14 @@
   function commandLineErrorExpectedToken(log, range, expected, found, text) {
     log.error(range, 'Expected ' + simpleQuote(expected) + ' but found ' + simpleQuote(found) + ' in ' + simpleQuote(text));
   }
-  function commandLineErrorInvalidTarget(log, range, found, expected) {
-    log.error(range, 'Invalid target ' + simpleQuote(found) + ', must be either ' + prettyPrint.join(simpleQuoteAll(expected), 'or'));
-  }
-  function commandLineErrorInvalidConfiguration(log, range, found, expected) {
-    log.error(range, 'Invalid configuration ' + simpleQuote(found) + ', must be either ' + prettyPrint.join(simpleQuoteAll(expected), 'or'));
+  function commandLineErrorInvalidEnum(log, range, name, found, expected) {
+    log.error(range, 'Invalid ' + name + ' ' + simpleQuote(found) + ', must be either ' + prettyPrint.join(simpleQuoteAll(expected), 'or'));
   }
   function commandLineErrorUnexpectedConfiguration(log, range, config, target) {
     log.error(range, 'Unexpected configuration ' + simpleQuote(config) + ' for target ' + simpleQuote(target));
+  }
+  function commandLineErrorUnexpectedGarbageCollectionStrategy(log, range, target) {
+    log.error(range, 'The ' + simpleQuote(target) + ' target does not have a configurable garbage collection strategy');
   }
   function commandLineErrorUnreadableFile(log, range, name) {
     log.error(range, 'Could not read from ' + simpleQuote(name));
@@ -13643,15 +13731,34 @@
     frontend.printLogWithColor(log);
     return log.hasErrors() ? 1 : 0;
   };
+  frontend.joinKeys = function(keys) {
+    keys.sort(bindCompare(StringComparison.INSTANCE));
+    return prettyPrint.join(simpleQuoteAll(keys), 'and');
+  };
+  frontend.parseEnum = function(log, name, map, range, defaultValue) {
+    var key = range.toString();
+    if (key in map._table) {
+      return map._table[key];
+    }
+    var keys = Object.keys(map._table);
+    keys.sort(bindCompare(StringComparison.INSTANCE));
+    commandLineErrorInvalidEnum(log, range, name, key, keys);
+    return defaultValue;
+  };
   frontend.parseOptions = function(log, parser, $arguments) {
+    var VALID_TARGETS = StringMap.literal(['cpp', 'js', 'json-ast', 'lisp-ast', 'xml-ast'], [TargetFormat.CPP, TargetFormat.JAVASCRIPT, TargetFormat.JSON_AST, TargetFormat.LISP_AST, TargetFormat.XML_AST]);
+    var VALID_JS_CONFIGS = StringMap.literal(['browser', 'node'], [CompilerConfig.BROWSER, CompilerConfig.NODE]);
+    var VALID_CPP_CONFIGS = StringMap.literal(['android', 'ios', 'linux', 'osx', 'windows'], [CompilerConfig.ANDROID, CompilerConfig.IOS, CompilerConfig.LINUX, CompilerConfig.OSX, CompilerConfig.WINDOWS]);
+    var VALID_GC_STRATEGIES = StringMap.literal(['mark-sweep', 'none', 'none-fast'], [MemoryManagement.MARK_SWEEP, MemoryManagement.NONE, MemoryManagement.NONE_FAST]);
     parser.define(OptionType.BOOL, Option.HELP, '--help', 'Prints this message.').aliases(['-help', '?', '-?', '-h', '-H', '/?', '/h', '/H']);
-    parser.define(OptionType.STRING, Option.TARGET, '--target', 'Sets the target format. Valid targets are ' + prettyPrint.join(simpleQuoteAll(frontend.VALID_TARGETS), 'and') + '.');
+    parser.define(OptionType.STRING, Option.TARGET, '--target', 'Sets the target format. Valid targets are ' + frontend.joinKeys(Object.keys(VALID_TARGETS._table)) + '.');
     parser.define(OptionType.STRING, Option.OUTPUT_FILE, '--output-file', 'Combines all output into a single file. Mutually exclusive with --output-dir.');
     parser.define(OptionType.STRING, Option.OUTPUT_DIRECTORY, '--output-dir', 'Places all output files in the specified directory. Mutually exclusive with --output-file.');
     parser.define(OptionType.STRING_LIST, Option.DEFINE, '--define', 'Overrides the value of a #define statement. Example: --define:UNIT_TESTS=true.');
     parser.define(OptionType.BOOL, Option.RELEASE, '--release', 'Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE.');
-    parser.define(OptionType.STRING, Option.CONFIG, '--config', 'Provides the configuration for the target format. Valid configurations are ' + prettyPrint.join(simpleQuoteAll(frontend.VALID_JS_CONFIGS), 'and') + ' for JavaScript and ' + prettyPrint.join(simpleQuoteAll(frontend.VALID_CPP_CONFIGS), 'and') + ' for C++. The default configuration is "browser" for JavaScript and the current operating system for C++.');
+    parser.define(OptionType.STRING, Option.CONFIG, '--config', 'Provides the configuration for the target format. Valid configurations are ' + frontend.joinKeys(Object.keys(VALID_JS_CONFIGS._table)) + ' for JavaScript and ' + frontend.joinKeys(Object.keys(VALID_CPP_CONFIGS._table)) + ' for C++. Defaults to "browser" for JavaScript and the current operating system for C++.');
     parser.define(OptionType.BOOL, Option.VERBOSE, '--verbose', 'Prints out information about the compilation.');
+    parser.define(OptionType.STRING, Option.GC, '--gc', 'Setsthe garbage collection strategy when targeting C++. Valid strategies are ' + frontend.joinKeys(Object.keys(VALID_GC_STRATEGIES._table)) + '. Defaults to "none".');
     parser.define(OptionType.BOOL, Option.SOURCE_MAP, '--source-map', 'Generates a source map when targeting JavaScript. The source map is saved with the ".map" extension in the same directory as the main output file.');
     parser.define(OptionType.BOOL, Option.INLINE, '--inline', 'Uses heuristics to automatically inline simple functions.');
     parser.define(OptionType.BOOL, Option.GLOBALIZE, '--globalize', 'Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.');
@@ -13702,35 +13809,21 @@
         options.overriddenDefines._table[name] = new OverriddenDefine(value, range);
       }
     }
-    var everything = parser.source.rangeContainingEverything();
+    var end = parser.source.contents.length;
+    var trailingSpace = new Range(parser.source, end - 1 | 0, end);
     if (parser.normalArguments.length === 0) {
-      commandLineErrorNoInputFiles(log, everything);
+      commandLineErrorNoInputFiles(log, trailingSpace);
     }
-    var targetFormat = TargetFormat.NONE;
     var target = parser.stringRangeForOption(Option.TARGET);
-    if (target === null) {
-      commandLineErrorMissingTarget(log, everything, '--target');
+    if (target !== null) {
+      options.targetFormat = frontend.parseEnum(log, 'target', VALID_TARGETS, target, TargetFormat.NONE);
     } else {
-      var name = target.toString();
-      if (name === 'js') {
-        targetFormat = TargetFormat.JAVASCRIPT;
-      } else if (name === 'cpp') {
-        targetFormat = TargetFormat.CPP;
-      } else if (name === 'lisp-ast') {
-        targetFormat = TargetFormat.LISP_AST;
-      } else if (name === 'json-ast') {
-        targetFormat = TargetFormat.JSON_AST;
-      } else if (name === 'xml-ast') {
-        targetFormat = TargetFormat.XML_AST;
-      } else {
-        commandLineErrorInvalidTarget(log, target, name, frontend.VALID_TARGETS);
-      }
+      commandLineErrorMissingTarget(log, trailingSpace, '--target');
     }
-    options.targetFormat = targetFormat;
     var outputFile = parser.stringRangeForOption(Option.OUTPUT_FILE);
     var outputDirectory = parser.stringRangeForOption(Option.OUTPUT_DIRECTORY);
     if (outputFile === null && outputDirectory === null) {
-      commandLineErrorMissingOutput(log, everything, '--output-file', '--output-dir');
+      commandLineErrorMissingOutput(log, trailingSpace, '--output-file', '--output-dir');
     } else if (outputFile !== null && outputDirectory !== null) {
       commandLineErrorDuplicateOutput(log, outputFile.start > outputDirectory.start ? outputFile : outputDirectory, '--output-file', '--output-dir');
     } else if (outputFile !== null) {
@@ -13738,37 +13831,20 @@
     } else {
       options.outputDirectory = outputDirectory.toString();
     }
-    if (targetFormat !== TargetFormat.NONE) {
-      var config = parser.stringRangeForOption(Option.CONFIG);
-      if (config !== null) {
-        var targetConfig = CompilerConfig.AUTOMATIC;
-        var name = config.toString();
-        if (targetFormat === TargetFormat.JAVASCRIPT) {
-          if (name === 'browser') {
-            targetConfig = CompilerConfig.BROWSER;
-          } else if (name === 'node') {
-            targetConfig = CompilerConfig.NODE;
-          } else {
-            commandLineErrorInvalidConfiguration(log, config, name, frontend.VALID_JS_CONFIGS);
-          }
-        } else if (targetFormat === TargetFormat.CPP) {
-          if (name === 'android') {
-            targetConfig = CompilerConfig.ANDROID;
-          } else if (name === 'ios') {
-            targetConfig = CompilerConfig.IOS;
-          } else if (name === 'linux') {
-            targetConfig = CompilerConfig.LINUX;
-          } else if (name === 'osx') {
-            targetConfig = CompilerConfig.OSX;
-          } else if (name === 'windows') {
-            targetConfig = CompilerConfig.WINDOWS;
-          } else {
-            commandLineErrorInvalidConfiguration(log, config, name, frontend.VALID_CPP_CONFIGS);
-          }
-        } else {
-          commandLineErrorUnexpectedConfiguration(log, config, name, target.toString());
-        }
-        options.targetConfig = targetConfig;
+    var config = parser.stringRangeForOption(Option.CONFIG);
+    if (options.targetFormat !== TargetFormat.NONE && config !== null) {
+      if (options.targetFormat === TargetFormat.JAVASCRIPT || options.targetFormat === TargetFormat.CPP) {
+        options.targetConfig = frontend.parseEnum(log, 'configuration', options.targetFormat === TargetFormat.JAVASCRIPT ? VALID_JS_CONFIGS : VALID_CPP_CONFIGS, config, CompilerConfig.AUTOMATIC);
+      } else {
+        commandLineErrorUnexpectedConfiguration(log, config, config.toString(), target.toString());
+      }
+    }
+    var gc = parser.stringRangeForOption(Option.GC);
+    if (gc !== null) {
+      if (options.targetFormat === TargetFormat.CPP) {
+        options.memoryManagement = frontend.parseEnum(log, 'garbage collection strategy', VALID_GC_STRATEGIES, gc, MemoryManagement.NONE);
+      } else if (options.targetFormat !== TargetFormat.NONE) {
+        commandLineErrorUnexpectedGarbageCollectionStrategy(log, gc, target.toString());
       }
     }
     options.inputs = frontend.readSources(log, parser.normalArguments);
@@ -13888,9 +13964,6 @@
   var pratt = null;
   var nameToSymbolFlag = null;
   var symbolFlagToName = null;
-  frontend.VALID_TARGETS = ['js', 'cpp', 'lisp-ast', 'json-ast', 'xml-ast'];
-  frontend.VALID_JS_CONFIGS = ['browser', 'node'];
-  frontend.VALID_CPP_CONFIGS = ['android', 'ios', 'linux', 'osx', 'windows'];
   in_NodeKind._toString_ = ['PROGRAM', 'FILE', 'BLOCK', 'NODE_LIST', 'CASE', 'MEMBER_INITIALIZER', 'VARIABLE_CLUSTER', 'NAMESPACE', 'ENUM', 'ENUM_FLAGS', 'CLASS', 'INTERFACE', 'EXTENSION', 'CONSTRUCTOR', 'FUNCTION', 'VARIABLE', 'PARAMETER', 'PREPROCESSOR_DEFINE', 'ALIAS', 'IF', 'TRY', 'FOR', 'FOR_EACH', 'WHILE', 'DO_WHILE', 'RETURN', 'BREAK', 'CONTINUE', 'ASSERT', 'ASSERT_CONST', 'EXPRESSION', 'SWITCH', 'MODIFIER', 'USING', 'PREPROCESSOR_WARNING', 'PREPROCESSOR_ERROR', 'PREPROCESSOR_IF', 'NAME', 'TYPE', 'THIS', 'HOOK', 'NULL', 'BOOL', 'INT', 'FLOAT', 'DOUBLE', 'STRING', 'LIST', 'MAP', 'KEY_VALUE', 'DOT', 'DOT_ARROW', 'DOT_COLON', 'CALL', 'SUPER_CALL', 'ERROR', 'SEQUENCE', 'PARAMETERIZE', 'CAST', 'IMPLICIT_CAST', 'QUOTED', 'VAR', 'ANNOTATION', 'PREPROCESSOR_HOOK', 'PREPROCESSOR_SEQUENCE', 'NOT', 'POSITIVE', 'NEGATIVE', 'COMPLEMENT', 'PREFIX_INCREMENT', 'PREFIX_DECREMENT', 'POSTFIX_INCREMENT', 'POSTFIX_DECREMENT', 'NEW', 'DELETE', 'PREFIX_DEREFERENCE', 'PREFIX_REFERENCE', 'POSTFIX_DEREFERENCE', 'POSTFIX_REFERENCE', 'ADD', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'COMPARE', 'DIVIDE', 'EQUAL', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'IN', 'INDEX', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'LOGICAL_AND', 'LOGICAL_OR', 'MULTIPLY', 'NOT_EQUAL', 'REMAINDER', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SUBTRACT', 'ASSIGN', 'ASSIGN_ADD', 'ASSIGN_DIVIDE', 'ASSIGN_MULTIPLY', 'ASSIGN_REMAINDER', 'ASSIGN_SUBTRACT', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'ASSIGN_INDEX'];
   in_TokenKind._toString_ = ['ALIAS', 'ANNOTATION', 'ARROW', 'ASSERT', 'ASSIGN', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MINUS', 'ASSIGN_MULTIPLY', 'ASSIGN_PLUS', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'BREAK', 'CASE', 'CATCH', 'CHARACTER', 'CLASS', 'COLON', 'COMMA', 'CONST', 'CONTINUE', 'DECREMENT', 'DEFAULT', 'DELETE', 'DIVIDE', 'DO', 'DOT', 'DOUBLE', 'DOUBLE_COLON', 'ELSE', 'END_OF_FILE', 'ENUM', 'EQUAL', 'ERROR', 'EXPORT', 'FALSE', 'FINAL', 'FLOAT', 'FOR', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'IDENTIFIER', 'IF', 'IMPORT', 'IN', 'INCREMENT', 'INLINE', 'INTERFACE', 'INT_BINARY', 'INT_DECIMAL', 'INT_HEX', 'INT_OCTAL', 'INVALID_PREPROCESSOR_DIRECTIVE', 'IS', 'LEFT_BRACE', 'LEFT_BRACKET', 'LEFT_PARENTHESIS', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'LOGICAL_AND', 'LOGICAL_OR', 'MINUS', 'MULTIPLY', 'NAMESPACE', 'NEW', 'NOT', 'NOT_EQUAL', 'NULL', 'OVERRIDE', 'PLUS', 'PREPROCESSOR_DEFINE', 'PREPROCESSOR_ELIF', 'PREPROCESSOR_ELSE', 'PREPROCESSOR_ENDIF', 'PREPROCESSOR_ERROR', 'PREPROCESSOR_IF', 'PREPROCESSOR_WARNING', 'PRIVATE', 'PROTECTED', 'PUBLIC', 'QUESTION_MARK', 'REMAINDER', 'RETURN', 'RIGHT_BRACE', 'RIGHT_BRACKET', 'RIGHT_PARENTHESIS', 'SEMICOLON', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'STATIC', 'STRING', 'SUPER', 'SWITCH', 'THIS', 'TICK', 'TILDE', 'TRUE', 'TRY', 'USING', 'VAR', 'VIRTUAL', 'WHILE', 'WHITESPACE', 'YY_INVALID_ACTION', 'START_PARAMETER_LIST', 'END_PARAMETER_LIST'];
   Compiler.cachedLibraries = [new CachedSource('defines.sk', '// The "--release" flag automatically overrides BUILD_RELEASE with true\n#define BUILD_DEBUG   !BUILD_RELEASE\n#define BUILD_RELEASE false\n\n// These will be overridden by the compiler with the current language target\n#define TARGET_JS   false\n#define TARGET_CPP  false\n#define TARGET_NONE !TARGET_JS && !TARGET_CPP\n\n// The "--config" flag can be used to override these (example: "--config=node").\n// Using "--target=js" defaults to "--config=browser" and using "--target=cpp"\n// defaults to the config for the current operating system.\n#define CONFIG_IOS     false\n#define CONFIG_OSX     false\n#define CONFIG_LINUX   false\n#define CONFIG_ANDROID false\n#define CONFIG_WINDOWS false\n#define CONFIG_NODE    false\n#define CONFIG_BROWSER false\n#define CONFIG_UNKNOWN !CONFIG_IOS && !CONFIG_OSX && !CONFIG_LINUX && !CONFIG_ANDROID && !CONFIG_WINDOWS && !CONFIG_NODE && !CONFIG_BROWSER\n'), new CachedSource('primitives.sk', '#if TARGET_JS\n\n  import class int { string toString(); }\n  import class bool { string toString(); }\n  import class float { string toString(); }\n  import class double { string toString(); }\n\n  import class string {\n    string slice(int start, int end);\n    List<string> split(string separator);\n    int indexOf(string value);\n    int lastIndexOf(string value);\n    string toLowerCase();\n    string toUpperCase();\n  }\n\n  in string {\n    inline {\n      int size() { return this.`length`; }\n      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }\n      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      string join(List<string> values) { return values.`join`(this); }\n      @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }\n      static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  import class int {}\n  import class bool {}\n  import class float {}\n  import class double {}\n\n  @NeedsInclude("<string>")\n  @EmitAs("std::string")\n  import class string {}\n\n  in int {\n    inline string toString() { return `std`::to_string(this); }\n  }\n\n  in bool {\n    inline string toString() { return this ? "true" : "false"; }\n  }\n\n  in float {\n    inline string toString() { return double._format_(this); }\n  }\n\n  in double {\n    inline string toString() { return _format_(this); }\n\n    #if !CONFIG_WINDOWS\n\n      // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0\n      @NeedsInclude("<cstdio>")\n      static string _format_(double value) {\n        string buffer;\n        `buffer.resize(64)`;\n        `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;\n        if (`std::stod(&buffer[0]) != value`) {\n          `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;\n          }\n        }\n        return `buffer.c_str()`;\n      }\n\n    #else\n\n      // MSVC won\'t allow std::sprintf() even though it\'s in the C++11 standard\n      @NeedsInclude("<stdio.h>")\n      static string _format_(double value) {\n        string buffer;\n        `buffer.resize(64)`;\n        `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;\n        if (`std::stod(&buffer[0]) != value`) {\n          `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;\n          }\n        }\n        return `buffer.c_str()`;\n      }\n\n    #endif\n  }\n\n  in string {\n    inline {\n      int size() { return (int)this.`size`(); }\n      string slice(int start, int end) { return this.`substr`(start, end - start); }\n      string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }\n      int indexOf(string value) { return (int)this.`find`(value); }\n      int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }\n      int lastIndexOf(string value) { return (int)this.`rfind`(value); }\n      int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }\n      @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values\n      static string fromCodeUnit(int value) { return ``string``(1, value); }\n    }\n\n    @NeedsInclude("<algorithm>")\n    @NeedsInclude("<ctype.h>") {\n      string toLowerCase() {\n        var clone = this;\n        `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;\n        return clone;\n      }\n\n      string toUpperCase() {\n        var clone = this;\n        `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;\n        return clone;\n      }\n    }\n\n    string join(List<string> values) {\n      var result = "";\n      for (var i = 0; i < values.size(); i++) {\n        if (i > 0) result += this;\n        result += values[i];\n      }\n      return result;\n    }\n\n    List<string> split(string separator) {\n      List<string> values = [];\n      var start = 0;\n      while (true) {\n        var end = indexOfFrom(separator, start);\n        if (end == -1) break;\n        values.push(slice(start, end));\n        start = end + separator.size();\n      }\n      values.push(slice(start, size()));\n      return values;\n    }\n  }\n\n#else\n\n  import class int { string toString(); }\n  import class bool { string toString(); }\n  import class float { string toString(); }\n  import class double { string toString(); }\n\n  import class string {\n    int size();\n    List<string> split(string separator);\n    string slice(int start, int end);\n    string sliceCodeUnit(int index);\n    int indexOf(string value);\n    int indexOfFrom(string value, int fromIndex);\n    int lastIndexOf(string value);\n    int lastIndexOfFrom(string value, int fromIndex);\n    string toLowerCase();\n    string toUpperCase();\n    string join(List<string> values);\n    @OperatorGet int codeUnitAt(int index);\n    static string fromCodeUnit(int value);\n  }\n\n#endif\n\nin string {\n  @OperatorIn\n  inline bool contains(string value) {\n    return indexOf(value) >= 0;\n  }\n\n  inline string toString() {\n    return this;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n\n  string replaceAll(string before, string after) {\n    var result = "";\n    var start = 0;\n    while (true) {\n      var end = indexOfFrom(before, start);\n      if (end == -1) break;\n      result += slice(start, end) + after;\n      start = end + before.size();\n    }\n    return result + slice(start, size());\n  }\n}\n\nclass Box<T> {\n  final T value;\n}\n'), new CachedSource('math.sk', '#if TARGET_JS\n\n  namespace math {\n    inline {\n      double abs(double x) { return `Math`.abs(x); }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return `Math`.pow(x, y); }\n      double floor(double x) { return `Math`.floor(x); }\n      double round(double x) { return `Math`.round(x); }\n      double ceil(double x) { return `Math`.ceil(x); }\n      double min(double x, double y) { return `Math`.min(x, y); }\n      double max(double x, double y) { return `Math`.max(x, y); }\n      double random() { return `Math`.random(); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  namespace math {\n    inline @NeedsInclude("<cmath>") {\n      double abs(double x) { return `std`::abs(x); }\n      double sin(double x) { return `std`::sin(x); }\n      double cos(double x) { return `std`::cos(x); }\n      double tan(double x) { return `std`::tan(x); }\n      double asin(double x) { return `std`::asin(x); }\n      double acos(double x) { return `std`::acos(x); }\n      double atan(double x) { return `std`::atan(x); }\n      double atan2(double y, double x) { return `std`::atan2(y, x); }\n      double sqrt(double x) { return `std`::sqrt(x); }\n      double exp(double x) { return `std`::exp(x); }\n      double log(double x) { return `std`::log(x); }\n      double pow(double x, double y) { return `std`::pow(x, y); }\n      double floor(double x) { return `std`::floor(x); }\n      double round(double x) { return `std`::round(x); }\n      double ceil(double x) { return `std`::ceil(x); }\n      double min(double x, double y) { return `std`::fmin(x, y); }\n      double max(double x, double y) { return `std`::fmax(x, y); }\n    }\n\n    @NeedsInclude("<random>") {\n      `std::uniform_real_distribution<double>` _distribution_;\n      `(std::mt19937 *)` _generator_ = null;\n\n      double random() {\n        if (_generator_ == null) {\n          _generator_ = new `std`::mt19937(`std`::random_device()());\n        }\n        return _distribution_(*_generator_);\n      }\n    }\n  }\n\n#else\n\n  import namespace math {\n    double abs(double x);\n    double sin(double x);\n    double cos(double x);\n    double tan(double x);\n    double asin(double x);\n    double acos(double x);\n    double atan(double x);\n    double atan2(double y, double x);\n    double sqrt(double x);\n    double exp(double x);\n    double log(double x);\n    double pow(double x, double y);\n    double floor(double x);\n    double round(double x);\n    double ceil(double x);\n    double min(double x, double y);\n    double max(double x, double y);\n    double random();\n  }\n\n#endif\n\nin math {\n  const {\n    var SQRT2 = 1.414213562373095;\n    var PI = 3.141592653589793;\n    var TWOPI = 2 * PI;\n    var E = 2.718281828459045;\n    var INFINITY = 1 / 0.0;\n    var NAN = 0 / 0.0;\n  }\n}\n'), new CachedSource('list.sk', 'interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\n#if TARGET_JS\n\n  void bindCompare<T>(Comparison<T> comparison) {\n    return comparison.compare.`bind`(comparison);\n  }\n\n  import class List<T> {\n    new();\n    void push(T value);\n    void unshift(T value);\n    List<T> slice(int start, int end);\n    int indexOf(T value);\n    int lastIndexOf(T value);\n    T shift();\n    T pop();\n    void reverse();\n  }\n\n  in List {\n    inline {\n      int size() { return this.`length`; }\n      void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }\n      List<T> clone() { return this.`slice`(); }\n      T remove(int index) { return this.`splice`(index, 1)[0]; }\n      void removeRange(int start, int end) { this.`splice`(start, end - start); }\n      void insert(int index, T value) { this.`splice`(index, 0, value); }\n      @OperatorGet T get(int index) { return `this`[index]; }\n      @OperatorSet void set(int index, T value) { `this`[index] = value; }\n      @OperatorIn bool contains(T value) { return indexOf(value) >= 0; }\n    }\n\n    T last() { return this[size() - 1]; }\n    void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }\n  }\n\n#elif TARGET_CPP\n\n  bool bindCompare<T>(Comparison<T> comparison, T left, T right) {\n    return comparison.compare(left, right) < 0;\n  }\n\n  @NeedsInclude("<vector>")\n  class List<T> {\n    new() {}\n\n    int size() {\n      return (int)_data.size();\n    }\n\n    void push(T value) {\n      _data.push_back(value);\n    }\n\n    void unshift(T value) {\n      insert(0, value);\n    }\n\n    List<T> slice(int start, int end) {\n      assert start >= 0 && start <= end && end <= size();\n      List<T> slice = [];\n      slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);\n      return slice;\n    }\n\n    T shift() {\n      T value = this[0];\n      remove(0);\n      return value;\n    }\n\n    T pop() {\n      T value = this[size() - 1];\n      _data.pop_back();\n      return value;\n    }\n\n    T last() {\n      assert size() > 0;\n      return _data.back();\n    }\n\n    List<T> clone() {\n      List<T> clone = [];\n      clone._data = _data;\n      return clone;\n    }\n\n    T remove(int index) {\n      T value = this[index];\n      _data.erase(_data.begin() + index);\n      return value;\n    }\n\n    void removeRange(int start, int end) {\n      assert 0 <= start && start <= end && end <= size();\n      _data.erase(_data.begin() + start, _data.begin() + end);\n    }\n\n    void insert(int index, T value) {\n      assert index >= 0 && index <= size();\n      _data.insert(_data.begin() + index, value);\n    }\n\n    @OperatorGet\n    T get(int index) {\n      assert index >= 0 && index < size();\n      return _data[index];\n    }\n\n    @OperatorSet\n    void set(int index, T value) {\n      assert index >= 0 && index < size();\n      _data[index] = value;\n    }\n\n    @OperatorIn\n    bool contains(T value) {\n      return indexOf(value) >= 0;\n    }\n\n    @NeedsInclude("<algorithm>") {\n      int indexOf(T value) {\n        int index = (int)(`std`::find(_data.begin(), _data.end(), value) - _data.begin());\n        return index == size() ? -1 : index;\n      }\n\n      int lastIndexOf(T value) {\n        int index = (int)(`std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin());\n        return size() - index - 1;\n      }\n\n      void swap(int a, int b) {\n        assert a >= 0 && a < size();\n        assert b >= 0 && b < size();\n        `std`::swap(_data[a], _data[b]);\n      }\n\n      void reverse() {\n        `std`::reverse(_data.begin(), _data.end());\n      }\n\n      @NeedsInclude("<functional>")\n      void sort(Comparison<T> comparison) {\n        `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));\n      }\n    }\n\n    // Normally this would be in a constructor but clang has a bug that\n    // sometimes emits incorrect code for a constructor taking an empty\n    // initializer list. See http://llvm.org/bugs/show_bug.cgi?id=22256\n    // for details.\n    @NeedsInclude("<initializer_list>")\n    List<T> _literal_(`std::initializer_list<T>` list) {\n      _data.insert(_data.end(), list.begin(), list.end());\n      return this;\n    }\n\n    `std::vector<T>` _data;\n  }\n\n#else\n\n  import class List<T> {\n    new();\n    int size();\n    void push(T value);\n    void unshift(T value);\n    List<T> slice(int start, int end);\n    int indexOf(T value);\n    int lastIndexOf(T value);\n    T shift();\n    T pop();\n    T last();\n    void reverse();\n    void sort(Comparison<T> comparison);\n    List<T> clone();\n    T remove(int index);\n    void removeRange(int start, int end);\n    void insert(int index, T value);\n    @OperatorGet T get(int index);\n    @OperatorSet void set(int index, T value);\n    @OperatorIn bool contains(T value);\n    void swap(int a, int b);\n  }\n\n#endif\n'), new CachedSource('stringmap.sk', '#if TARGET_JS\n\n  class StringMap<T> {\n    var _table = `Object`.create(null);\n\n    inline {\n      @OperatorGet T get(string key) { return _table[key]; }\n      @OperatorSet void set(string key, T value) { _table[key] = value; }\n      @OperatorIn bool has(string key) { return key in _table; }\n      void remove(string key) { delete _table[key]; }\n      List<string> keys() { return `Object`.keys(_table); }\n    }\n\n    T getOrDefault(string key, T defaultValue) {\n      return key in this ? this[key] : defaultValue;\n    }\n\n    List<T> values() {\n      List<T> values = [];\n      for (string key in _table) values.push(this[key]);\n      return values;\n    }\n\n    StringMap<T> clone() {\n      var clone = StringMap<T>();\n      for (string key in _table) clone[key] = this[key];\n      return clone;\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class StringMap<T> {\n    new() {}\n    @OperatorGet T get(string key) { return _table[key]; }\n    T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n    @OperatorSet void set(string key, T value) { _table[key] = value; }\n    @OperatorIn bool has(string key) { return _table.count(key) > 0; }\n    void remove(string key) { _table.erase(key); }\n    List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n    `std::unordered_map<`string`, T>` _table;\n  }\n\n#else\n\n  import class StringMap<T> {\n    new();\n    @OperatorGet T get(string key);\n    T getOrDefault(string key, T defaultValue);\n    @OperatorSet void set(string key, T value);\n    @OperatorIn bool has(string key);\n    void remove(string key);\n    List<string> keys();\n    List<T> values();\n    StringMap<T> clone();\n  }\n\n#endif\n\nin StringMap {\n  static StringMap<X> literal<X>(List<string> keys, List<X> values) {\n    var map = StringMap<X>();\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedSource('intmap.sk', '#if TARGET_JS\n\n  class IntMap<T> {\n    var _table = `Object`.create(null);\n\n    inline {\n      @OperatorGet T get(int key) { return _table[key]; }\n      @OperatorSet void set(int key, T value) { _table[key] = value; }\n      @OperatorIn bool has(int key) { return key in _table; }\n      void remove(int key) { delete _table[key]; }\n    }\n\n    T getOrDefault(int key, T defaultValue) {\n      return key in this ? this[key] : defaultValue;\n    }\n\n    List<int> keys() {\n      List<int> keys = [];\n      for (double key in _table) keys.push((int)key);\n      return keys;\n    }\n\n    List<T> values() {\n      List<T> values = [];\n      for (int key in _table) values.push(this[key]);\n      return values;\n    }\n\n    IntMap<T> clone() {\n      var clone = IntMap<T>();\n      for (int key in _table) clone[key] = this[key];\n      return clone;\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class IntMap<T> {\n    new() {}\n    @OperatorGet T get(int key) { return _table[key]; }\n    T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n    @OperatorSet void set(int key, T value) { _table[key] = value; }\n    @OperatorIn bool has(int key) { return _table.count(key) > 0; }\n    void remove(int key) { _table.erase(key); }\n    List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n    `std::unordered_map<`int`, T>` _table;\n  }\n\n#else\n\n  import class IntMap<T> {\n    new();\n    @OperatorGet T get(int key);\n    T getOrDefault(int key, T defaultValue);\n    @OperatorSet void set(int key, T value);\n    @OperatorIn bool has(int key);\n    void remove(int key);\n    List<int> keys();\n    List<T> values();\n    IntMap<T> clone();\n  }\n\n#endif\n\nin IntMap {\n  static IntMap<X> literal<X>(List<int> keys, List<X> values) {\n    var map = IntMap<X>();\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedSource('os.sk', 'enum OperatingSystem {\n  ANDROID,\n  IOS,\n  LINUX,\n  OSX,\n  UNKNOWN,\n  WINDOWS,\n}\n\nin OperatingSystem {\n  static OperatingSystem current() {\n    #if CONFIG_ANDROID\n\n      return .ANDROID;\n\n    #elif CONFIG_IOS\n\n      return .IOS;\n\n    #elif CONFIG_LINUX\n\n      return .LINUX;\n\n    #elif CONFIG_OSX\n\n      return .OSX;\n\n    #elif CONFIG_WINDOWS\n\n      return .WINDOWS;\n\n    #elif CONFIG_NODE\n\n      string platform = `process.platform`;\n      return\n        // Presumably this also means iOS but there\'s no way to check\n        platform == "darwin" ? .OSX :\n\n        // Official documentation says this will never contain "win64"\n        platform == "win32" ? .WINDOWS :\n\n        // Presumably this also means Android but there\'s no way to check\n        platform == "linux" ? .LINUX :\n\n        // This may also be "freebsd" or "sunos"\n        .UNKNOWN;\n\n    #elif CONFIG_BROWSER\n\n      string platform = `navigator.platform`;\n      string userAgent = `navigator.userAgent`;\n      return\n        // OS X encodes the architecture into the platform\n        platform == "MacIntel" || platform == "MacPPC" ? .OSX :\n\n        // MSDN sources say Win64 is used, unlike node\n        platform == "Win32" || platform == "Win64" ? .WINDOWS :\n\n        // Assume the user is using Mobile Safari or Chrome and not some random\n        // browser with a strange platform (Opera apparently messes with this)\n        platform == "iPhone" || platform == "iPad" ? .IOS :\n\n        // Apparently most Android devices have a platform of "Linux" instead\n        // of "Android", so check the user agent instead. Also make sure to test\n        // for Android before Linux for this reason.\n        "Android" in userAgent ? .ANDROID :\n        "Linux" in platform ? .LINUX :\n\n        // The platform string has no specification and can be literally anything.\n        // Other examples: "BlackBerry", "Nintendo 3DS", "PlayStation 4", etc.\n        .UNKNOWN;\n\n    #else\n\n      return .UNKNOWN;\n\n    #endif\n  }\n}\n'), new CachedSource('terminal.sk', 'namespace terminal {\n  enum Color {\n    DEFAULT = 0,\n    BOLD = 1,\n    GRAY = 90,\n    RED = 91,\n    GREEN = 92,\n    YELLOW = 93,\n    BLUE = 94,\n    MAGENTA = 95,\n    CYAN = 96,\n  }\n\n  #if TARGET_JS && CONFIG_BROWSER\n\n    inline {\n      int width() { return 0; }\n      int height() { return 0; }\n      void setColor(Color color) {}\n      void flush() {}\n\n      void print(string text) {\n        `console`.log(text);\n      }\n\n      // Browser logs are so varied that buffering standard output doesn\'t make much sense\n      void write(string text) {\n        `console`.log(text);\n      }\n    }\n\n  #elif TARGET_JS && CONFIG_NODE\n\n    void setColor(Color color) {\n      if (`process`.stdout.isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        return `process`.stdout.columns;\n      }\n\n      int height() {\n        return `process`.stdout.rows;\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        write(text + "\\n");\n      }\n\n      void write(string text) {\n        `process`.stdout.write(text);\n      }\n    }\n\n  #elif TARGET_CPP && CONFIG_WINDOWS\n\n    `HANDLE` _handle = `INVALID_HANDLE_VALUE`;\n    `CONSOLE_SCREEN_BUFFER_INFO` _info;\n\n    @NeedsInclude("<windows.h>")\n    void _setup() {\n      if (_handle == `INVALID_HANDLE_VALUE`) {\n        _handle = `GetStdHandle(STD_OUTPUT_HANDLE)`;\n        `GetConsoleScreenBufferInfo`(_handle, &_info);\n      }\n    }\n\n    int width() {\n      _setup();\n      return _info.dwSize.X;\n    }\n\n    int height() {\n      _setup();\n      return _info.dwSize.Y;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      int value = _info.wAttributes;\n      switch (color) {\n        case .BOLD { value |= `FOREGROUND_INTENSITY`; }\n        case .GRAY { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE`; }\n        case .RED { value = `FOREGROUND_RED | FOREGROUND_INTENSITY`; }\n        case .GREEN { value = `FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .YELLOW { value = `FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .BLUE { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .MAGENTA { value = `FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .CYAN { value = `FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n      }\n      `SetConsoleTextAttribute`(_handle, value);\n    }\n\n    void flush() {\n    }\n\n    void print(string text) {\n      write(text + "\\n");\n    }\n\n    void write(string text) {\n      _setup();\n\n      // Use WriteConsoleA() instead of std::cout for a huge performance boost\n      `WriteConsoleA`(_handle, `text`.c_str(), `text`.size(), null, null);\n    }\n\n  #elif TARGET_CPP && (CONFIG_OSX || CONFIG_LINUX)\n\n    int _width;\n    int _height;\n    bool _isTTY;\n    bool _isSetup;\n\n    @NeedsInclude("<sys/ioctl.h>")\n    @NeedsInclude("<unistd.h>")\n    void _setup() {\n      if (!_isSetup) {\n        `winsize` size;\n        if (!`ioctl`(2, `TIOCGWINSZ`, &size)) {\n          _width = size.ws_col;\n          _height = size.ws_row;\n        }\n        _isTTY = `isatty(STDOUT_FILENO)`;\n        _isSetup = true;\n      }\n    }\n\n    int width() {\n      _setup();\n      return _width;\n    }\n\n    int height() {\n      _setup();\n      return _height;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      if (_isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    void flush() {\n      `std`::cout.flush();\n    }\n\n    @NeedsInclude("<iostream>")\n    inline void print(string text) {\n      `std`::cout << text << `std`::endl;\n    }\n\n    @NeedsInclude("<iostream>")\n    inline void write(string text) {\n      `std`::cout << text;\n    }\n\n  #else\n\n    int width() { return 0; }\n    int height() { return 0; }\n    void setColor(Color color) {}\n    void flush() {}\n    void print(string text) {}\n    void write(string text) {}\n\n  #endif\n}\n')];

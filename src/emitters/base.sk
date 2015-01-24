@@ -506,12 +506,12 @@ namespace base {
       emit(")");
     }
 
-    virtual void emitParenthesizedCast(Node node, Precedence precedence) {
+    virtual void emitParenthesizedCast(Type type, Node node, Precedence precedence) {
       if (.UNARY_PREFIX < precedence) emit("(");
       emit("(");
-      emitNormalType(node.castType().type);
+      emitNormalType(type);
       emit(")");
-      emitExpression(node.castValue(), .UNARY_PREFIX);
+      emitExpression(node, .UNARY_PREFIX);
       if (.UNARY_PREFIX < precedence) emit(")");
     }
 
@@ -521,7 +521,7 @@ namespace base {
 
     void emitCast(Node node, Precedence precedence) {
       if (shouldEmitCast(node)) {
-        emitParenthesizedCast(node, precedence);
+        emitParenthesizedCast(node.castType().type, node.castValue(), precedence);
       } else {
         emitExpression(node.castValue(), precedence);
       }
@@ -562,11 +562,20 @@ namespace base {
       emit("this");
     }
 
+    virtual bool hookNeedsExplicitCast(Node node) {
+      return false;
+    }
+
     virtual void emitHook(Node node, Precedence precedence) {
+      var trueValue = node.hookTrue();
       if (.ASSIGN < precedence) emit("(");
       emitExpression(node.hookTest(), .LOGICAL_OR);
       emit(" ? ");
-      emitExpression(node.hookTrue(), .ASSIGN);
+      if (hookNeedsExplicitCast(trueValue)) {
+        emitParenthesizedCast(node.type, trueValue, precedence);
+      } else {
+        emitExpression(trueValue, .ASSIGN);
+      }
       emit(" : ");
       emitExpression(node.hookFalse(), .ASSIGN);
       if (.ASSIGN < precedence) emit(")");

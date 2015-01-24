@@ -17,6 +17,7 @@ namespace cpp {
     var includes = StringMap<bool>();
     var usedAssert = false;
     var usedMath = false;
+    var isMarkSweep = false;
     Pass pass = .NONE;
 
     override string extension() {
@@ -26,6 +27,7 @@ namespace cpp {
     override void visitProgram(Node node) {
       // Emit code in three passes
       var collector = Collector(node, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
+      isMarkSweep = options.memoryManagement == .MARK_SWEEP;
 
       pass = .FORWARD_DECLARE_TYPES;
       visitCollector(collector);
@@ -42,7 +44,7 @@ namespace cpp {
       adjustNamespace(null);
 
       emitEntryPoint();
-      prependHeaders();
+      wrapEmittedCode();
     }
 
     void emitEntryPoint() {
@@ -56,8 +58,8 @@ namespace cpp {
         increaseIndent();
         if (hasArguments) {
           assert "<string>" in includes;
-          var name = mangleName(cache.stringType.symbol);
-          emit(indent + "List<" + name + "> *args = new List<" + name + ">();\n");
+          var listType = "List<" + mangleName(cache.stringType.symbol) + ">";
+          emit(indent + (isMarkSweep ? "gc::Root<" + listType + "> " : listType + " *") + "args = new " + listType + "();\n");
           emit(indent + "args->_data.insert(args->_data.begin(), argv + 1, argv + argc);\n"); // The method push() may not have been emitted
         }
         emit(indent + (hasReturnValue ? "return " : "") + fullName(entryPointSymbol) + "(" + (hasArguments ? "args" : "") + ");\n");
@@ -66,10 +68,20 @@ namespace cpp {
       }
     }
 
-    void prependHeaders() {
-      // Some headers need to be force-included for floating-point literals and
-      // assert statements
-      if (usedAssert) includes["<cassert>"] = true;
+    void wrapEmittedCode() {
+      var useFastHack = options.memoryManagement == .NONE_FAST;
+
+      // Some headers need to be force-included
+      if (usedAssert || useFastHack) includes["<cassert>"] = true;
+      if (useFastHack) {
+        includes[options.targetConfig == .WINDOWS ? "<windows.h>" : "<sys/mman.h>"] = true;
+        includes["<new>"] = true;
+      }
+      if (isMarkSweep) {
+        includes["<unordered_map>"] = true;
+        includes["<unordered_set>"] = true;
+        includes["<vector>"] = true;
+      }
       if (usedMath) includes["<cmath>"] = true;
 
       // Sort headers for deterministic output
@@ -77,15 +89,19 @@ namespace cpp {
       headers.sort(StringComparison.INSTANCE);
 
       // Prepend headers if needed
+      var text = "";
       if (headers.size() != 0) {
-        var text = "";
         for (var i = 0; i < headers.size(); i++) {
           var name = headers[i];
           var size = name.size();
           text += "#include " + (size == 0 || name[0] != '<' || name[size - 1] != '>' ? "\"" + name + "\"" : name) + "\n";
         }
-        output.contents = text + "\n" + output.contents;
+        text += "\n";
       }
+      if (isMarkSweep) text += @ContentsOfFile("../../lib/mark-sweep.h") + "\n";
+      if (text != "") output.contents = text + output.contents;
+      if (isMarkSweep) output.contents += "\n" + @ContentsOfFile("../../lib/mark-sweep.cpp");
+      if (useFastHack) output.contents += "\n" + @ContentsOfFile("../../lib/fast.cpp");
     }
 
     override void handleSymbol(Symbol symbol) {
@@ -110,7 +126,9 @@ namespace cpp {
       if (symbol.hasParameters()) {
         emit(indent + "template <");
         for (var i = 0; i < symbol.parameters.size(); i++) {
-          if (i != 0) emit(", ");
+          if (i != 0) {
+            emit(", ");
+          }
           emit("typename " + mangleName(symbol.parameters[i]));
         }
         emit(">\n");
@@ -145,6 +163,7 @@ namespace cpp {
     }
 
     override void emitTypeDeclaration(Symbol symbol) {
+      var needsMark = isMarkSweep && symbol.kind == .CLASS;
       handleSymbol(symbol);
       if (symbol.kind.isObject()) {
         if (pass != .IMPLEMENT_CODE) {
@@ -153,17 +172,28 @@ namespace cpp {
           emitTypeParameters(symbol);
           emit(indent + "struct " + mangleName(symbol));
           if (pass == .FORWARD_DECLARE_CODE) {
+            var needsObject = isMarkSweep && (symbol.kind == .INTERFACE || symbol.type.baseClass() == null);
+            if (needsObject) {
+              emit(" : virtual gc::Object");
+            }
             if (symbol.type.hasRelevantTypes()) {
               var types = symbol.type.relevantTypes;
-              emit(" : ");
+              if (!needsObject) {
+                emit(" : ");
+              }
               for (var i = 0; i < types.size(); i++) {
-                if (i != 0) emit(", ");
+                if (i != 0 || needsObject) {
+                  emit(", ");
+                }
                 emitCppType(types[i], .BARE);
               }
             }
             emit(" {\n");
             increaseIndent();
             emitTypeMembers(symbol);
+            if (needsMark) {
+              emitMarkFunction(symbol);
+            }
             decreaseIndent();
             emit(indent + "}");
           }
@@ -171,6 +201,9 @@ namespace cpp {
           emitExtraNewlineAfter(symbol.node.kind);
         } else {
           emitTypeMembers(symbol);
+          if (needsMark) {
+            emitMarkFunction(symbol);
+          }
         }
       }
 
@@ -205,6 +238,59 @@ namespace cpp {
       }
     }
 
+    void emitMarkFunction(Symbol symbol) {
+      if (isMarkSweep && symbol.kind == .CLASS) {
+        if (pass == .FORWARD_DECLARE_CODE) {
+          emitExtraNewlineBefore(.FUNCTION);
+          emit(indent + "virtual void __gc_mark();\n");
+          emitExtraNewlineAfter(.FUNCTION);
+        }
+
+        else if (pass == .IMPLEMENT_CODE) {
+          emitExtraNewlineBefore(.FUNCTION);
+          emitTypeParameters(symbol);
+          emit(indent + "void ");
+          emitEnclosingSymbolPrefix(symbol);
+          emit("__gc_mark() {\n");
+          increaseIndent();
+
+          var baseClass = symbol.type.baseClass();
+          if (baseClass != null) {
+            emit(indent + mangleName(baseClass.symbol) + "::__gc_mark();\n");
+          }
+
+          var members = symbol.type.sortedMembers();
+          for (var i = 0; i < members.size(); i++) {
+            var member = members[i].symbol;
+            if (member.kind == .INSTANCE_VARIABLE && member.enclosingSymbol == symbol && !member.type.isPrimitive() && !member.type.isEnum()) {
+              emit(indent + "gc::mark(" + mangleName(member) + ");\n");
+            }
+          }
+
+          decreaseIndent();
+          emit(indent + "}\n");
+          emitExtraNewlineAfter(.FUNCTION);
+        }
+      }
+    }
+
+    void emitEnclosingSymbolPrefix(Symbol enclosingSymbol) {
+      if (enclosingSymbol != null && enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
+        emit(fullName(enclosingSymbol));
+        if (enclosingSymbol.hasParameters()) {
+          emit("<");
+          for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
+            if (i != 0) {
+              emit(", ");
+            }
+            emit(mangleName(enclosingSymbol.parameters[i]));
+          }
+          emit(">");
+        }
+        emit("::");
+      }
+    }
+
     override void emitFunction(Symbol symbol) {
       handleSymbol(symbol);
       if (pass != .FORWARD_DECLARE_TYPES) {
@@ -226,19 +312,7 @@ namespace cpp {
             emitCppType(symbol.type.resultType(), .DECLARATION);
           }
           if (pass == .IMPLEMENT_CODE) {
-            var enclosingSymbol = symbol.enclosingSymbol;
-            if (enclosingSymbol != null && enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
-              emit(fullName(enclosingSymbol));
-              if (enclosingSymbol.hasParameters()) {
-                emit("<");
-                for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
-                  if (i != 0) emit(", ");
-                  emit(mangleName(enclosingSymbol.parameters[i]));
-                }
-                emit(">");
-              }
-              emit("::");
-            }
+            emitEnclosingSymbolPrefix(symbol.enclosingSymbol);
           }
           emit(mangleName(symbol));
           emitFunctionArguments(symbol);
@@ -267,7 +341,9 @@ namespace cpp {
                   for (var i = 0; i < memberInitializers.children.size(); i++) {
                     var initializer = memberInitializers.children[i];
                     var value = initializer.memberInitializerValue();
-                    if (i != 0) emit(", ");
+                    if (i != 0) {
+                      emit(", ");
+                    }
                     emit(mangleName(initializer.symbol) + "(");
                     if (value.kind != .ERROR) {
                       emitExpression(value, .LOWEST);
@@ -290,7 +366,13 @@ namespace cpp {
     }
 
     override void emitTypeBeforeVariable(Symbol symbol) {
-      emitCppType(symbol.type, .DECLARATION);
+      if (isMarkSweep && symbol.kind == .GLOBAL_VARIABLE && symbol.type.isReference()) {
+        emit("gc::Root<");
+        emitCppType(symbol.type, .BARE);
+        emit("> ");
+      } else {
+        emitCppType(symbol.type, .DECLARATION);
+      }
     }
 
     override void emitVariable(Symbol symbol) {
@@ -450,7 +532,9 @@ namespace cpp {
         var substitutions = value.type.substitutions;
         emit("<");
         for (var i = 0; i < substitutions.size(); i++) {
-          if (i != 0) emit(", ");
+          if (i != 0) {
+            emit(", ");
+          }
           emitCppType(substitutions[i], .NORMAL);
         }
         emit(">");
@@ -461,9 +545,7 @@ namespace cpp {
       if (wrap) emit(")");
     }
 
-    override void emitParenthesizedCast(Node node, Precedence precedence) {
-      var target = node.castType().type;
-
+    override void emitParenthesizedCast(Type type, Node node, Precedence precedence) {
       // MSVC has a warning that indicates converting numeric types to bool is
       // slow. I have no idea why their compiler can't do this efficiently but
       // the warning is really stupid because all it does is encourage code
@@ -471,15 +553,14 @@ namespace cpp {
       // (performance warning)". The "!!x" boolean-cast trick works in almost
       // all cases but fails for strongly-typed enums, which are missing a
       // unary not operator.
-      if (options.targetConfig == .WINDOWS && target.isBool(cache)) {
-        var source = node.castValue().type;
+      if (options.targetConfig == .WINDOWS && type.isBool(cache)) {
         if (.UNARY_PREFIX < precedence) emit("(");
         emit("!!");
-        if (source.isPrimitive()) {
-          emitExpression(node.castValue(), .UNARY_PREFIX);
+        if (node.type.isPrimitive()) {
+          emitExpression(node, .UNARY_PREFIX);
         } else {
           emit("static_cast<int>(");
-          emitExpression(node.castValue(), .UNARY_PREFIX);
+          emitExpression(node, .UNARY_PREFIX);
           emit(")");
         }
         if (.UNARY_PREFIX < precedence) emit(")");
@@ -488,9 +569,9 @@ namespace cpp {
       // Emit a normal cast
       else {
         emit("static_cast<");
-        emitNormalType(target);
+        emitNormalType(type);
         emit(">(");
-        emitExpression(node.castValue(), .LOWEST);
+        emitExpression(node, .LOWEST);
         emit(")");
       }
     }
@@ -554,6 +635,10 @@ namespace cpp {
       emit("(");
       emitCommaSeparatedExpressions(node.superCallArguments());
       emit(")");
+    }
+
+    override bool hookNeedsExplicitCast(Node node) {
+      return isMarkSweep && node.type.isReference();
     }
 
     override void emitNormalType(Type type) {

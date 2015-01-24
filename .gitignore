@@ -2,6 +2,5 @@
 .DS_Store
 /build/
 /npm/compiled.js
-/npm/frontend.cpp
 /npm/skewc.unix.cpp
 /npm/skewc.windows.cpp
