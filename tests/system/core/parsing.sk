@@ -1,6 +1,26 @@
 namespace core { void testParsing() {
 
 test("
+assert const 1.0e1 == 10.0;
+assert const 1.0e+1 == 10.0;
+assert const 1.0e-1 == 0.1;
+assert const 1e1 == 10.0;
+assert const 1e+1 == 10.0;
+assert const 1e-1 == 0.1;
+", "
+");
+
+test("
+assert const 1.0e1f == 10.0f;
+assert const 1.0e+1f == 10.0f;
+assert const 1.0e-1f == 0.1f;
+assert const 1e1f == 10.0f;
+assert const 1e+1f == 10.0f;
+assert const 1e-1f == 0.1f;
+", "
+");
+
+test("
 var π = Math.PI;
 ", "
 <stdin>:1:5: error: Syntax error \"π\"

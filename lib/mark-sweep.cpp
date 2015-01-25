@@ -18,7 +18,7 @@ namespace gc {
       for (Object *previous = nullptr, *current = latest, *next; current; current = next) {
         next = current->__gc_next;
         if (!marked.count(current)) {
-          (previous ? previous->__gc_next : latest) = current->__gc_next;
+          (previous ? previous->__gc_next : latest) = next;
           delete current;
         } else {
           previous = current;

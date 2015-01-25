@@ -106,11 +106,11 @@
 [A-Za-z_][A-Za-z0-9_]*               IDENTIFIER;
 #[A-Za-z_][A-Za-z0-9_]*              INVALID_PREPROCESSOR_DIRECTIVE;
 @[A-Za-z_][A-Za-z0-9_]*              ANNOTATION;
-[0-9]+?\.[0-9]+([eE][-+][0-9]+)?f    FLOAT;
-[0-9]+?\.[0-9]+([eE][-+][0-9]+)?     DOUBLE;
+[0-9]+?\.[0-9]+([eE][-+]?[0-9]+)?f   FLOAT;
+[0-9]+?\.[0-9]+([eE][-+]?[0-9]+)?    DOUBLE;
 0b[0-1]+                             INT_BINARY;
 0o[0-7]+                             INT_OCTAL;
 0x[A-Fa-f0-9]+                       INT_HEX;
-[0-9]+([eE][-+][0-9]+)?f             FLOAT;
-[0-9]+[eE][-+][0-9]+                 DOUBLE;
+[0-9]+([eE][-+]?[0-9]+)?f            FLOAT;
+[0-9]+[eE][-+]?[0-9]+                DOUBLE;
 [0-9]+                               INT_DECIMAL;
