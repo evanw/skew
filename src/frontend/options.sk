@@ -1,5 +1,6 @@
 enum OptionType {
   BOOL,
+  INT,
   STRING,
   STRING_LIST,
 }
@@ -12,7 +13,7 @@ class OptionData {
   string description;
 
   string nameText() {
-    return name + (type == .STRING ? "=___" : type == .STRING_LIST ? ":___" : "");
+    return name + (type == .BOOL ? "" : type == .STRING_LIST ? ":___" : "=___");
   }
 
   OptionData aliases(List<string> names) {
@@ -44,6 +45,11 @@ class OptionParser {
   bool boolForOption(Option option, bool defaultValue) {
     var node = nodeForOption(option);
     return node != null ? node.asBool() : defaultValue;
+  }
+
+  int intForOption(Option option, int defaultValue) {
+    var node = nodeForOption(option);
+    return node != null ? node.asInt() : defaultValue;
   }
 
   Range stringRangeForOption(Option option) {
@@ -124,10 +130,26 @@ class OptionParser {
           optionalArguments[data.option] = Node.createBool(text == "true").withRange(textRange);
         }
 
+        // Parse a single int value
+        case .INT {
+          if (separator < 0) {
+            commandLineErrorMissingValue(log, textRange, data.nameText());
+          } else if (argument[separator] != '=') {
+            commandLineErrorExpectedToken(log, separatorRange, "=", argument.sliceCodeUnit(separator), argument);
+          } else if (!isInteger(text)) {
+            commandLineErrorNonIntegerValue(log, textRange, text, argument);
+          } else {
+            if (data.option in optionalArguments) {
+              commandLineWarningDuplicateFlagValue(log, textRange, name, optionalArguments[data.option].range);
+            }
+            optionalArguments[data.option] = Node.createInt(parseIntLiteral(text, 10)).withRange(textRange);
+          }
+        }
+
         // Parse a single string value
         case .STRING {
           if (separator < 0) {
-            commandLineErrorMissingStringValue(log, textRange, data.nameText());
+            commandLineErrorMissingValue(log, textRange, data.nameText());
           } else if (argument[separator] != '=') {
             commandLineErrorExpectedToken(log, separatorRange, "=", argument.sliceCodeUnit(separator), argument);
           } else {
@@ -141,7 +163,7 @@ class OptionParser {
         // Parse an item in a list of string values
         case .STRING_LIST {
           if (separator < 0) {
-            commandLineErrorMissingStringValue(log, textRange, data.nameText());
+            commandLineErrorMissingValue(log, textRange, data.nameText());
           } else if (argument[separator] != ':') {
             commandLineErrorExpectedToken(log, separatorRange, ":", argument.sliceCodeUnit(separator), argument);
             continue;
@@ -185,5 +207,17 @@ class OptionParser {
     }
 
     return text + "\n";
+  }
+
+  static bool isInteger(string text) {
+    var found = false;
+    for (var i = text.startsWith("-") ? 1 : 0; i < text.size(); i++) {
+      var c = text[i];
+      if (c < '0' || c > '9') {
+        return false;
+      }
+      found = true;
+    }
+    return found;
   }
 }

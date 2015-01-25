@@ -9,6 +9,7 @@ class FrontendFileAccess : FileAccess {
 enum Option {
   CONFIG,
   DEFINE,
+  ERROR_LIMIT,
   FOLD_CONSTANTS,
   GC,
   GLOBALIZE,
@@ -26,6 +27,8 @@ enum Option {
 }
 
 namespace frontend {
+  const var DEFAULT_ERROR_LIMIT = 20;
+
   @EntryPoint
   int main(List<string> arguments) {
     // Translate frontend flags to compiler options
@@ -57,7 +60,7 @@ namespace frontend {
     }
 
     // Print any errors and warnings
-    printLogWithColor(log);
+    printLogWithColor(log, parser.intForOption(.ERROR_LIMIT, DEFAULT_ERROR_LIMIT));
     return log.hasErrors() ? 1 : 0;
   }
 
@@ -117,6 +120,7 @@ namespace frontend {
     parser.define(.BOOL, .FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.");
     parser.define(.BOOL, .MINIFY, "--minify", "Omits whitespace so the emitted JavaScript takes up less space.");
     parser.define(.BOOL, .MANGLE, "--mangle", "Transforms your JavaScript code to be as small as possible. The \"export\" modifier prevents renaming a symbol.");
+    parser.define(.INT, .ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is 20.");
 
     // Parse the command line arguments
     parser.parse(log, arguments);
@@ -265,16 +269,21 @@ namespace frontend {
     terminal.write(parser.usageText(80 - terminalWidthPadding()));
   }
 
-  void printLogWithColor(Log log) {
+  void printLogWithColor(Log log, int errorLimit) {
     var terminalWidth = terminal.width() - terminalWidthPadding();
+    var errorCount = 0;
+
     for (var i = 0; i < log.diagnostics.size(); i++) {
       var diagnostic = log.diagnostics[i];
+      if (diagnostic.kind == .ERROR && errorLimit > 0 && errorCount == errorLimit) {
+        break;
+      }
       if (!diagnostic.range.isEmpty()) {
         printWithColor(.BOLD, diagnostic.range.locationString() + ": ");
       }
       switch (diagnostic.kind) {
         case .WARNING { printWarning(diagnostic.text); }
-        case .ERROR { printError(diagnostic.text); }
+        case .ERROR { printError(diagnostic.text); errorCount++; }
       }
       if (!diagnostic.range.isEmpty()) {
         var formatted = diagnostic.range.format(terminalWidth);
@@ -295,14 +304,15 @@ namespace frontend {
     var hasWarnings = log.hasWarnings();
     var summary = "";
     if (hasWarnings) {
-      summary += log.warningCount + prettyPrint.plural(log.warningCount, " warning", " warnings");
+      summary += log.warningCount + " warning" + prettyPrint.plural(log.warningCount);
       if (hasErrors) summary += " and ";
     }
     if (hasErrors) {
-      summary += log.errorCount + prettyPrint.plural(log.errorCount, " error", " errors");
+      summary += log.errorCount + " error" + prettyPrint.plural(log.errorCount);
     }
     if (hasWarnings || hasErrors) {
-      terminal.print(summary + " generated");
+      terminal.write(summary + " generated");
+      printWithColor(.GRAY, errorCount < log.errorCount ? " (only showing " + errorLimit + " error" + prettyPrint.plural(errorLimit) + ", use \"--error-limit=0\" to see all)\n" : "\n");
     }
   }
 

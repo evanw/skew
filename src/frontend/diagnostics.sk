@@ -23,7 +23,11 @@ void commandLineErrorNonBooleanValue(Log log, Range range, string value, string 
   log.error(range, "Expected \"true\" or \"false\" but found " + simpleQuote(value) + " in " + simpleQuote(text));
 }
 
-void commandLineErrorMissingStringValue(Log log, Range range, string text) {
+void commandLineErrorNonIntegerValue(Log log, Range range, string value, string text) {
+  log.error(range, "Expected integer constant but found " + simpleQuote(value) + " in " + simpleQuote(text));
+}
+
+void commandLineErrorMissingValue(Log log, Range range, string text) {
   log.error(range, "Use " + simpleQuote(text) + " to provide a value");
 }
 

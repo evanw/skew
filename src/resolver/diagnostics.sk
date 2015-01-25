@@ -351,7 +351,7 @@ void semanticErrorUnknownAnnotation(Log log, Range range, string name) {
 
 void semanticErrorUnexpectedAnnotationArgumentCount(Log log, Range range, string name, int expected) {
   log.error(range, "The annotation " + simpleQuote(name) + (expected == 0 ? " cannot take arguments" :
-    " must take " + expected + " argument" + prettyPrint.plural(expected, "", "s")));
+    " must take " + expected + " argument" + prettyPrint.plural(expected)));
 }
 
 void semanticErrorNoFileAccess(Log log, Range range) {
