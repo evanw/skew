@@ -27,8 +27,8 @@ static void *_fast_allocate_(size_t size) {
 
 void *operator new (size_t size) { return _fast_allocate_(size); }
 void *operator new [] (size_t size) { return _fast_allocate_(size); }
-void operator delete (void *data) noexcept {}
-void operator delete [] (void *data) noexcept {}
+void operator delete (void *data) throw() {}
+void operator delete [] (void *data) throw() {}
 
 // Overriding malloc() and free() is really hard on Windows for some reason
 #if !_WIN32
