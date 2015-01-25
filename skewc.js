@@ -11834,23 +11834,20 @@
   }
   function doubleToStringWithDot(value) {
     var text = value.toString();
-    if (!(text.indexOf('.') >= 0)) {
-      if (text.indexOf('e') >= 0 || text.indexOf('E') >= 0) {
-        throw new Error('assert !("e" in text) && !("E" in text); (src/core/support.sk:70:5)');
-      }
+    if (!(text.indexOf('.') >= 0) && !(text.indexOf('e') >= 0) && !(text.indexOf('E') >= 0)) {
       text += '.0';
     }
     return text;
   }
   function parseStringLiteral(log, range, text) {
     if (!(text.length >= 2)) {
-      throw new Error('assert text.size() >= 2; (src/core/support.sk:77:3)');
+      throw new Error('assert text.size() >= 2; (src/core/support.sk:79:3)');
     }
     if (text.charCodeAt(0) !== 34 && text.charCodeAt(0) !== 39) {
-      throw new Error("assert text[0] == '\"' || text[0] == '\\''; (src/core/support.sk:78:3)");
+      throw new Error("assert text[0] == '\"' || text[0] == '\\''; (src/core/support.sk:80:3)");
     }
     if (text.charCodeAt(text.length - 1 | 0) !== 34 && text.charCodeAt(text.length - 1 | 0) !== 39) {
-      throw new Error("assert text[text.size() - 1] == '\"' || text[text.size() - 1] == '\\''; (src/core/support.sk:79:3)");
+      throw new Error("assert text[text.size() - 1] == '\"' || text[text.size() - 1] == '\\''; (src/core/support.sk:81:3)");
     }
     var isValidString = true;
     var result = '';

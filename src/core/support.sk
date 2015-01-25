@@ -66,10 +66,12 @@ int parseHexCharacter(int c) {
 
 string doubleToStringWithDot(double value) {
   var text = value.toString();
-  if (!("." in text)) {
-    assert !("e" in text) && !("E" in text); // TODO: Deal with C++'s awful floating-point output support
+
+  // Make sure the generated code treats this number as a double
+  if (!("." in text) && !("e" in text) && !("E" in text)) {
     text += ".0";
   }
+
   return text;
 }
 
