@@ -38,12 +38,11 @@ namespace gc {
   void collect();
   void mark(Object *object);
 
-  template <typename T> inline void mark(const T &value);
-  template <typename T> inline void mark(const std::vector<T> &values);
-  template <typename K, typename V> inline void mark(const std::unordered_map<K, V> &values);
+  template <typename T>
+  using VoidIfNotObject = typename std::enable_if<!std::is_base_of<Object, typename std::remove_pointer<T>::type>::value, void>::type;
 
   template <typename T>
-  inline void mark(const T &value) {}
+  inline VoidIfNotObject<T> mark(const T &value) {}
 
   template <typename T>
   inline void mark(const std::vector<T> &values) {
