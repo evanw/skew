@@ -36,12 +36,6 @@ class ResolveContext {
 
   static ResolveContext fromNode(Node node) {
     var context = ResolveContext();
-    if (node.parent == null && node.symbol.enclosingSymbol != null) {
-      assert node.symbol.enclosingSymbol.kind.isTypeWithInstances();
-      context.symbolForThis = node.symbol.enclosingSymbol;
-      context.scope = context.symbolForThis.node.scope;
-      assert context.scope != null;
-    }
     while (node != null) {
       if (context.scope == null) context.scope = node.scope;
       if (context.loop == null && node.kind.isLoop()) context.loop = node;

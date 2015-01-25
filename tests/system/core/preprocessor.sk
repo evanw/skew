@@ -560,4 +560,11 @@ test("
     ~~~
 ");
 
+test("
+assert const TARGET_NONE == true;
+assert const foo == true;
+const var foo = TARGET_NONE;
+", "
+");
+
 }}
