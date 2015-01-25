@@ -3,13 +3,16 @@ namespace gc {
   static Object *latest;
 
   struct GC {
+    // The first root is the start of a doubly-linked list of roots. It's returned as
+    // a static local variable to avoid trouble from C++ initialization order. Roots
+    // are global variables and initialization order of global variables is undefined.
     static UntypedRoot *start() {
       static UntypedRoot start;
       return &start;
     }
 
     static void mark() {
-      for (auto first = start(), root = first->_next; root != first; root = root->_next) {
+      for (auto end = start(), root = end->_next; root != end; root = root->_next) {
         mark(root->_object);
       }
     }

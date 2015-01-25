@@ -2,7 +2,7 @@ namespace gc {
   struct GC;
 
   struct Object {
-    Object();
+    Object(); // Adds this object to the global linked list of objects
     virtual ~Object() {}
 
   private:
@@ -20,8 +20,8 @@ namespace gc {
     friend GC;
     UntypedRoot &operator = (const UntypedRoot &root) { _object = root._object; return *this; }
     UntypedRoot(const UntypedRoot &root) : UntypedRoot(root._object) {}
-    UntypedRoot() : _previous(this), _next(this), _object() {}
-    UntypedRoot(Object *object);
+    UntypedRoot() : _previous(this), _next(this), _object() {} // Only used for the first root
+    UntypedRoot(Object *object); // Adds this root to the circular doubly-linked list of roots
     UntypedRoot *_previous;
     UntypedRoot *_next;
     Object *_object;
@@ -42,7 +42,7 @@ namespace gc {
   using VoidIfNotObject = typename std::enable_if<!std::is_base_of<Object, typename std::remove_pointer<T>::type>::value, void>::type;
 
   template <typename T>
-  inline VoidIfNotObject<T> mark(const T &value) {}
+  inline VoidIfNotObject<T> mark(const T &value) {} // Don't mark anything that's not an object
 
   template <typename T>
   inline void mark(const std::vector<T> &values) {
