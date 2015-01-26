@@ -1,5 +1,6 @@
 namespace gc {
   static std::unordered_set<Object *> marked;
+  static std::stack<Object *> stack;
   static Object *latest;
 
   struct GC {
@@ -11,12 +12,19 @@ namespace gc {
       return &start;
     }
 
+    // Marking must be done with an explicit stack to avoid call stack overflow
     static void mark() {
       for (auto end = start(), root = end->_next; root != end; root = root->_next) {
-        mark(root->_object);
+        gc::mark(root->_object);
+      }
+      while (!stack.empty()) {
+        auto object = stack.top();
+        stack.pop();
+        object->__gc_mark();
       }
     }
 
+    // Sweeping removes unmarked objects from the linked list and deletes them
     static void sweep() {
       for (Object *previous = nullptr, *current = latest, *next; current; current = next) {
         next = current->__gc_next;
@@ -28,13 +36,6 @@ namespace gc {
         }
       }
       marked.clear();
-    }
-
-    static void mark(Object *object) {
-      if (object && !marked.count(object)) {
-        marked.insert(object);
-        object->__gc_mark();
-      }
     }
   };
 
@@ -58,6 +59,9 @@ namespace gc {
   }
 
   void mark(Object *object) {
-    GC::mark(object);
+    if (object && !marked.count(object)) {
+      marked.insert(object);
+      stack.push(object);
+    }
   }
 }

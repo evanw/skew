@@ -72,14 +72,16 @@ namespace cpp {
       var useFastHack = options.memoryManagement == .NONE_FAST;
 
       // Some headers need to be force-included
-      if (usedAssert || useFastHack) {
+      if (usedAssert) {
         includes["<cassert>"] = true;
       }
       if (useFastHack) {
-        includes[options.targetConfig == .WINDOWS ? "<windows.h>" : "<sys/mman.h>"] = true;
+        includes["<cassert>"] = true;
         includes["<new>"] = true;
+        includes[options.targetConfig == .WINDOWS ? "<windows.h>" : "<sys/mman.h>"] = true;
       }
       if (isMarkSweep) {
+        includes["<stack>"] = true;
         includes["<type_traits>"] = true;
         includes["<unordered_map>"] = true;
         includes["<unordered_set>"] = true;
