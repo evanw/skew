@@ -150,12 +150,6 @@ export class Compiler {
     List<Source> outputs = [];
     List<Node> files = [];
 
-    // Initialize global state
-    createOperatorMap();
-    createParser();
-    createNameToSymbolFlag();
-    createSymbolFlagToName();
-
     // Automatically set the current configuration if it's not explicitly set
     if (targetConfig == .AUTOMATIC) {
       if (targetFormat == .JAVASCRIPT) {

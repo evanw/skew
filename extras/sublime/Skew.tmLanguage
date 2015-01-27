@@ -28,7 +28,7 @@
     </dict>
     <dict>
       <key>match</key>
-      <string>\b(?:alias|assert|break|case|catch|class|const|continue|default|do|else|enum(?:\s+flags)?|export|final|for|if|import|in|inline|interface|is|namespace|new|override|private|protected|public|return|static|super|switch|try|using|virtual|while)\b</string>
+      <string>\b(?:alias|assert|break|case|catch|class|const|continue|default|do|else|enum(?:\s+flags)?|export|final|for|if|import|in|inline|interface|is|namespace|new|override|private|protected|public|pure|return|static|super|switch|try|using|virtual|while)\b</string>
       <key>name</key>
       <string>keyword.skew</string>
     </dict>

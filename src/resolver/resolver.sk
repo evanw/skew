@@ -3953,41 +3953,32 @@ class Resolver {
   }
 }
 
-void createNameToSymbolFlag() {
-  if (nameToSymbolFlag != null) return;
-  nameToSymbolFlag = {
-    "const": .CONST,
-    "export": .EXPORT,
-    "final": .FINAL,
-    "import": .IMPORT,
-    "inline": .INLINE,
-    "override": .OVERRIDE,
-    "private": .PRIVATE,
-    "protected": .PROTECTED,
-    "public": .PUBLIC,
-    "pure": .PURE,
-    "static": .STATIC,
-    "virtual": .VIRTUAL,
-  };
-}
+StringMap<SymbolFlag> nameToSymbolFlag = {
+  "const": .CONST,
+  "export": .EXPORT,
+  "final": .FINAL,
+  "import": .IMPORT,
+  "inline": .INLINE,
+  "override": .OVERRIDE,
+  "private": .PRIVATE,
+  "protected": .PROTECTED,
+  "public": .PUBLIC,
+  "pure": .PURE,
+  "static": .STATIC,
+  "virtual": .VIRTUAL,
+};
 
-void createSymbolFlagToName() {
-  if (symbolFlagToName != null) return;
-  symbolFlagToName = {
-    SymbolFlag.CONST: "const",
-    SymbolFlag.EXPORT: "export",
-    SymbolFlag.FINAL: "final",
-    SymbolFlag.IMPORT: "import",
-    SymbolFlag.INLINE: "inline",
-    SymbolFlag.OVERRIDE: "override",
-    SymbolFlag.PRIVATE: "private",
-    SymbolFlag.PROTECTED: "protected",
-    SymbolFlag.PUBLIC: "public",
-    SymbolFlag.PURE: "pure",
-    SymbolFlag.STATIC: "static",
-    SymbolFlag.VIRTUAL: "virtual",
-  };
-}
-
-StringMap<SymbolFlag> nameToSymbolFlag;
-IntMap<string> symbolFlagToName;
+IntMap<string> symbolFlagToName = {
+  SymbolFlag.CONST: "const",
+  SymbolFlag.EXPORT: "export",
+  SymbolFlag.FINAL: "final",
+  SymbolFlag.IMPORT: "import",
+  SymbolFlag.INLINE: "inline",
+  SymbolFlag.OVERRIDE: "override",
+  SymbolFlag.PRIVATE: "private",
+  SymbolFlag.PROTECTED: "protected",
+  SymbolFlag.PUBLIC: "public",
+  SymbolFlag.PURE: "pure",
+  SymbolFlag.STATIC: "static",
+  SymbolFlag.VIRTUAL: "virtual",
+};

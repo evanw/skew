@@ -997,9 +997,8 @@ class AnnotationParselet : IPrefixParselet {
   }
 }
 
-void createParser() {
-  if (pratt != null) return;
-  pratt = Pratt();
+pure Pratt createParser() {
+  var pratt = Pratt();
 
   ////////////////////////////////////////////////////////////////////////////////
   // Literals
@@ -1098,6 +1097,8 @@ void createParser() {
   pratt.parselet(.SUPER, .LOWEST).prefix = SuperParselet();
   pratt.parselet(.BITWISE_AND, .BITWISE_AND).infix = BinaryInfixOrUnaryPostfix(.BITWISE_AND, .POSTFIX_REFERENCE, .BITWISE_AND);
   pratt.parselet(.MULTIPLY, .MULTIPLY).infix = BinaryInfixOrUnaryPostfix(.MULTIPLY, .POSTFIX_DEREFERENCE, .MULTIPLY);
+
+  return pratt;
 }
 
-Pratt pratt;
+var pratt = createParser();

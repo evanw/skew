@@ -3,28 +3,30 @@
   class StringMap<T> {
     var _table = `Object`.create(null);
 
-    inline {
-      @OperatorGet T get(string key) { return _table[key]; }
-      @OperatorSet void set(string key, T value) { _table[key] = value; }
-      @OperatorIn bool has(string key) { return key in _table; }
-      void remove(string key) { delete _table[key]; }
-      List<string> keys() { return `Object`.keys(_table); }
-    }
+    pure {
+      inline {
+        @OperatorGet T get(string key) { return _table[key]; }
+        @OperatorSet void set(string key, T value) { _table[key] = value; }
+        @OperatorIn bool has(string key) { return key in _table; }
+        void remove(string key) { delete _table[key]; }
+        List<string> keys() { return `Object`.keys(_table); }
+      }
 
-    T getOrDefault(string key, T defaultValue) {
-      return key in this ? this[key] : defaultValue;
-    }
+      T getOrDefault(string key, T defaultValue) {
+        return key in this ? this[key] : defaultValue;
+      }
 
-    List<T> values() {
-      List<T> values = [];
-      for (string key in _table) values.push(this[key]);
-      return values;
-    }
+      List<T> values() {
+        List<T> values = [];
+        for (string key in _table) values.push(this[key]);
+        return values;
+      }
 
-    StringMap<T> clone() {
-      var clone = StringMap<T>();
-      for (string key in _table) clone[key] = this[key];
-      return clone;
+      StringMap<T> clone() {
+        var clone = StringMap<T>();
+        for (string key in _table) clone[key] = this[key];
+        return clone;
+      }
     }
   }
 
@@ -32,15 +34,17 @@
 
   @NeedsInclude("<unordered_map>")
   class StringMap<T> {
-    new() {}
-    @OperatorGet T get(string key) { return _table[key]; }
-    T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
-    @OperatorSet void set(string key, T value) { _table[key] = value; }
-    @OperatorIn bool has(string key) { return _table.count(key) > 0; }
-    void remove(string key) { _table.erase(key); }
-    List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
-    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }
-    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }
+    pure {
+      new() {}
+      @OperatorGet T get(string key) { return _table[key]; }
+      T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
+      @OperatorSet void set(string key, T value) { _table[key] = value; }
+      @OperatorIn bool has(string key) { return _table.count(key) > 0; }
+      void remove(string key) { _table.erase(key); }
+      List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
+      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }
+      StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }
+    }
 
     `std::unordered_map<`string`, T>` _table;
   }
@@ -48,21 +52,23 @@
 #else
 
   import class StringMap<T> {
-    new();
-    @OperatorGet T get(string key);
-    T getOrDefault(string key, T defaultValue);
-    @OperatorSet void set(string key, T value);
-    @OperatorIn bool has(string key);
-    void remove(string key);
-    List<string> keys();
-    List<T> values();
-    StringMap<T> clone();
+    pure {
+      new();
+      @OperatorGet T get(string key);
+      T getOrDefault(string key, T defaultValue);
+      @OperatorSet void set(string key, T value);
+      @OperatorIn bool has(string key);
+      void remove(string key);
+      List<string> keys();
+      List<T> values();
+      StringMap<T> clone();
+    }
   }
 
 #endif
 
 in StringMap {
-  static StringMap<X> literal<X>(List<string> keys, List<X> values) {
+  static pure StringMap<X> literal<X>(List<string> keys, List<X> values) {
     var map = StringMap<X>();
     assert keys.size() == values.size();
     for (var i = 0; i < keys.size(); i++) {

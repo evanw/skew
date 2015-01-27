@@ -16,7 +16,6 @@ namespace js {
   }
 
   class Emitter : IEmitter {
-    static StringMap<bool> isKeyword;
     var newline = "\n";
     var space = " ";
     var indent = "";
@@ -37,9 +36,6 @@ namespace js {
     Node toStringTarget = null;
 
     void patchProgram(Node program) {
-      if (isKeyword == null) {
-        isKeyword = createIsKeyword();
-      }
       options = resolver.options;
       if (options.minify) {
         newline = "";
@@ -892,55 +888,6 @@ namespace js {
         symbol.kind != .CONSTRUCTOR_FUNCTION || hasCompoundName(enclosingSymbol));
     }
 
-    static StringMap<bool> createIsKeyword() {
-      return {
-        "apply": true,
-        "arguments": true,
-        "Boolean": true,
-        "break": true,
-        "call": true,
-        "case": true,
-        "catch": true,
-        "class": true,
-        "const": true,
-        "constructor": true,
-        "continue": true,
-        "Date": true,
-        "debugger": true,
-        "default": true,
-        "delete": true,
-        "do": true,
-        "double": true,
-        "else": true,
-        "export": true,
-        "extends": true,
-        "false": true,
-        "finally": true,
-        "float": true,
-        "for": true,
-        "Function": true,
-        "function": true,
-        "if": true,
-        "import": true,
-        "in": true,
-        "instanceof": true,
-        "int": true,
-        "let": true,
-        "new": true,
-        "null": true,
-        "Number": true,
-        "Object": true,
-        "return": true,
-        "String": true,
-        "super": true,
-        "this": true,
-        "throw": true,
-        "true": true,
-        "try": true,
-        "var": true,
-      };
-    }
-
     static string mangleName(Symbol symbol) {
       if (symbol.emitAs != null) {
         return symbol.emitAs.value;
@@ -981,5 +928,52 @@ namespace js {
       }
       return text != "";
     }
-}
+
+    static StringMap<bool> isKeyword = {
+      "apply": true,
+      "arguments": true,
+      "Boolean": true,
+      "break": true,
+      "call": true,
+      "case": true,
+      "catch": true,
+      "class": true,
+      "const": true,
+      "constructor": true,
+      "continue": true,
+      "Date": true,
+      "debugger": true,
+      "default": true,
+      "delete": true,
+      "do": true,
+      "double": true,
+      "else": true,
+      "export": true,
+      "extends": true,
+      "false": true,
+      "finally": true,
+      "float": true,
+      "for": true,
+      "Function": true,
+      "function": true,
+      "if": true,
+      "import": true,
+      "in": true,
+      "instanceof": true,
+      "int": true,
+      "let": true,
+      "new": true,
+      "null": true,
+      "Number": true,
+      "Object": true,
+      "return": true,
+      "String": true,
+      "super": true,
+      "this": true,
+      "throw": true,
+      "true": true,
+      "try": true,
+      "var": true,
+    };
+  }
 }

@@ -1,21 +1,23 @@
 #if TARGET_JS
 
-  import class int { string toString(); }
-  import class bool { string toString(); }
-  import class float { string toString(); }
-  import class double { string toString(); }
+  import class int { pure string toString(); }
+  import class bool { pure string toString(); }
+  import class float { pure string toString(); }
+  import class double { pure string toString(); }
 
   import class string {
-    string slice(int start, int end);
-    List<string> split(string separator);
-    int indexOf(string value);
-    int lastIndexOf(string value);
-    string toLowerCase();
-    string toUpperCase();
+    pure {
+      string slice(int start, int end);
+      List<string> split(string separator);
+      int indexOf(string value);
+      int lastIndexOf(string value);
+      string toLowerCase();
+      string toUpperCase();
+    }
   }
 
   in string {
-    inline {
+    inline pure {
       int size() { return this.`length`; }
       int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }
       int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }
@@ -38,167 +40,175 @@
   import class string {}
 
   in int {
-    inline string toString() { return `std`::to_string(this); }
+    inline pure string toString() { return `std`::to_string(this); }
   }
 
   in bool {
-    inline string toString() { return this ? "true" : "false"; }
+    inline pure string toString() { return this ? "true" : "false"; }
   }
 
   in float {
-    inline string toString() { return double._format_(this); }
+    inline pure string toString() { return double._format_(this); }
   }
 
   in double {
-    inline string toString() { return _format_(this); }
+    pure {
+      inline string toString() { return _format_(this); }
 
-    #if !CONFIG_WINDOWS
+      #if !CONFIG_WINDOWS
 
-      // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0
-      @NeedsInclude("<cstdio>")
-      static string _format_(double value) {
-        string buffer;
-        `buffer.resize(64)`;
-        `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;
-        if (`std::stod(&buffer[0]) != value`) {
-          `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;
+        // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0
+        @NeedsInclude("<cstdio>")
+        static string _format_(double value) {
+          string buffer;
+          `buffer.resize(64)`;
+          `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;
           if (`std::stod(&buffer[0]) != value`) {
-            `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;
+            `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;
+            if (`std::stod(&buffer[0]) != value`) {
+              `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;
+            }
           }
+          return `buffer.c_str()`;
         }
-        return `buffer.c_str()`;
-      }
 
-    #else
+      #else
 
-      // MSVC won't allow std::sprintf() even though it's in the C++11 standard
-      @NeedsInclude("<stdio.h>")
-      static string _format_(double value) {
-        string buffer;
-        `buffer.resize(64)`;
-        `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;
-        if (`std::stod(&buffer[0]) != value`) {
-          `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;
+        // MSVC won't allow std::sprintf() even though it's in the C++11 standard
+        @NeedsInclude("<stdio.h>")
+        static string _format_(double value) {
+          string buffer;
+          `buffer.resize(64)`;
+          `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;
           if (`std::stod(&buffer[0]) != value`) {
-            `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;
+            `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;
+            if (`std::stod(&buffer[0]) != value`) {
+              `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;
+            }
           }
+          return `buffer.c_str()`;
         }
-        return `buffer.c_str()`;
-      }
 
-    #endif
+      #endif
+    }
   }
 
   in string {
-    inline {
-      int size() { return (int)this.`size`(); }
-      string slice(int start, int end) { return this.`substr`(start, end - start); }
-      string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }
-      int indexOf(string value) { return (int)this.`find`(value); }
-      int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }
-      int lastIndexOf(string value) { return (int)this.`rfind`(value); }
-      int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }
-      @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values
-      static string fromCodeUnit(int value) { return ``string``(1, value); }
-    }
-
-    @NeedsInclude("<algorithm>")
-    @NeedsInclude("<ctype.h>") {
-      string toLowerCase() {
-        var clone = this;
-        `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;
-        return clone;
+    pure {
+      inline {
+        int size() { return (int)this.`size`(); }
+        string slice(int start, int end) { return this.`substr`(start, end - start); }
+        string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }
+        int indexOf(string value) { return (int)this.`find`(value); }
+        int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }
+        int lastIndexOf(string value) { return (int)this.`rfind`(value); }
+        int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }
+        @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values
+        static string fromCodeUnit(int value) { return ``string``(1, value); }
       }
 
-      string toUpperCase() {
-        var clone = this;
-        `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;
-        return clone;
-      }
-    }
+      @NeedsInclude("<algorithm>")
+      @NeedsInclude("<ctype.h>") {
+        string toLowerCase() {
+          var clone = this;
+          `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;
+          return clone;
+        }
 
-    string join(List<string> values) {
-      var result = "";
-      for (var i = 0; i < values.size(); i++) {
-        if (i > 0) result += this;
-        result += values[i];
+        string toUpperCase() {
+          var clone = this;
+          `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;
+          return clone;
+        }
       }
-      return result;
-    }
 
-    List<string> split(string separator) {
-      List<string> values = [];
-      var start = 0;
-      while (true) {
-        var end = indexOfFrom(separator, start);
-        if (end == -1) break;
-        values.push(slice(start, end));
-        start = end + separator.size();
+      string join(List<string> values) {
+        var result = "";
+        for (var i = 0; i < values.size(); i++) {
+          if (i > 0) result += this;
+          result += values[i];
+        }
+        return result;
       }
-      values.push(slice(start, size()));
-      return values;
+
+      List<string> split(string separator) {
+        List<string> values = [];
+        var start = 0;
+        while (true) {
+          var end = indexOfFrom(separator, start);
+          if (end == -1) break;
+          values.push(slice(start, end));
+          start = end + separator.size();
+        }
+        values.push(slice(start, size()));
+        return values;
+      }
     }
   }
 
 #else
 
-  import class int { string toString(); }
-  import class bool { string toString(); }
-  import class float { string toString(); }
-  import class double { string toString(); }
+  import class int { pure string toString(); }
+  import class bool { pure string toString(); }
+  import class float { pure string toString(); }
+  import class double { pure string toString(); }
 
   import class string {
-    int size();
-    List<string> split(string separator);
-    string slice(int start, int end);
-    string sliceCodeUnit(int index);
-    int indexOf(string value);
-    int indexOfFrom(string value, int fromIndex);
-    int lastIndexOf(string value);
-    int lastIndexOfFrom(string value, int fromIndex);
-    string toLowerCase();
-    string toUpperCase();
-    string join(List<string> values);
-    @OperatorGet int codeUnitAt(int index);
-    static string fromCodeUnit(int value);
+    pure {
+      int size();
+      List<string> split(string separator);
+      string slice(int start, int end);
+      string sliceCodeUnit(int index);
+      int indexOf(string value);
+      int indexOfFrom(string value, int fromIndex);
+      int lastIndexOf(string value);
+      int lastIndexOfFrom(string value, int fromIndex);
+      string toLowerCase();
+      string toUpperCase();
+      string join(List<string> values);
+      @OperatorGet int codeUnitAt(int index);
+      static string fromCodeUnit(int value);
+    }
   }
 
 #endif
 
 in string {
-  @OperatorIn
-  inline bool contains(string value) {
-    return indexOf(value) >= 0;
-  }
-
-  inline string toString() {
-    return this;
-  }
-
-  bool startsWith(string prefix) {
-    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;
-  }
-
-  bool endsWith(string suffix) {
-    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;
-  }
-
-  string repeat(int count) {
-    var result = "";
-    for (var i = 0; i < count; i++) result += this;
-    return result;
-  }
-
-  string replaceAll(string before, string after) {
-    var result = "";
-    var start = 0;
-    while (true) {
-      var end = indexOfFrom(before, start);
-      if (end == -1) break;
-      result += slice(start, end) + after;
-      start = end + before.size();
+  pure {
+    @OperatorIn
+    inline bool contains(string value) {
+      return indexOf(value) >= 0;
     }
-    return result + slice(start, size());
+
+    inline string toString() {
+      return this;
+    }
+
+    bool startsWith(string prefix) {
+      return size() >= prefix.size() && slice(0, prefix.size()) == prefix;
+    }
+
+    bool endsWith(string suffix) {
+      return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;
+    }
+
+    string repeat(int count) {
+      var result = "";
+      for (var i = 0; i < count; i++) result += this;
+      return result;
+    }
+
+    string replaceAll(string before, string after) {
+      var result = "";
+      var start = 0;
+      while (true) {
+        var end = indexOfFrom(before, start);
+        if (end == -1) break;
+        result += slice(start, end) + after;
+        start = end + before.size();
+      }
+      return result + slice(start, size());
+    }
   }
 }
 

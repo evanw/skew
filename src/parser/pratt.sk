@@ -86,7 +86,7 @@ interface IInfixParselet {
 class Pratt {
   var table = IntMap<Parselet>();
 
-  Parselet parselet(TokenKind kind, Precedence precedence) {
+  pure Parselet parselet(TokenKind kind, Precedence precedence) {
     var parselet = table.getOrDefault(kind, null);
     if (parselet == null) {
       var created = Parselet(precedence);
@@ -131,23 +131,23 @@ class Pratt {
     return parselet != null && parselet.prefix != null;
   }
 
-  void literal(TokenKind kind, ILiteralCallback callback) {
+  pure void literal(TokenKind kind, ILiteralCallback callback) {
     parselet(kind, .LOWEST).prefix = LiteralParselet(callback);
   }
 
-  void prefix(TokenKind kind, Precedence precedence, IPrefixCallback callback) {
+  pure void prefix(TokenKind kind, Precedence precedence, IPrefixCallback callback) {
     parselet(kind, .LOWEST).prefix = PrefixParselet(callback, precedence, this);
   }
 
-  void postfix(TokenKind kind, Precedence precedence, IPostfixCallback callback) {
+  pure void postfix(TokenKind kind, Precedence precedence, IPostfixCallback callback) {
     parselet(kind, precedence).infix = PostfixParselet(callback);
   }
 
-  void infix(TokenKind kind, Precedence precedence, IInfixCallback callback) {
+  pure void infix(TokenKind kind, Precedence precedence, IInfixCallback callback) {
     parselet(kind, precedence).infix = InfixParselet(callback, precedence, this);
   }
 
-  void infixRight(TokenKind kind, Precedence precedence, IInfixCallback callback) {
+  pure void infixRight(TokenKind kind, Precedence precedence, IInfixCallback callback) {
     parselet(kind, precedence).infix = InfixParselet(callback, (Precedence)(precedence - 1), this); // Subtract 1 for right-associativity
   }
 }

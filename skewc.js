@@ -34,7 +34,7 @@
   StringMap.literal = function(keys, values) {
     var map = new StringMap();
     if (keys.length !== values.length) {
-      throw new Error('assert keys.size() == values.size(); (<compiler>/stringmap.sk:67:5)');
+      throw new Error('assert keys.size() == values.size(); (<compiler>/stringmap.sk:73:5)');
     }
     for (var i = 0; i < keys.length; i = i + 1 | 0) {
       map._table[keys[i]] = values[i];
@@ -57,7 +57,7 @@
   IntMap.literal = function(keys, values) {
     var map = new IntMap();
     if (keys.length !== values.length) {
-      throw new Error('assert keys.size() == values.size(); (<compiler>/intmap.sk:72:5)');
+      throw new Error('assert keys.size() == values.size(); (<compiler>/intmap.sk:78:5)');
     }
     for (var i = 0; i < keys.length; i = i + 1 | 0) {
       map._table[keys[i]] = values[i];
@@ -2174,10 +2174,6 @@
     var program = Node.createProgram([]);
     var outputs = [];
     var files = [];
-    createOperatorMap();
-    createParser();
-    createNameToSymbolFlag();
-    createSymbolFlagToName();
     if (targetConfig === CompilerConfig.AUTOMATIC) {
       if (targetFormat === TargetFormat.JAVASCRIPT) {
         targetConfig = CompilerConfig.BROWSER;
@@ -2260,7 +2256,7 @@
         emitter = new xml.Emitter(options);
         break;
       default:
-        throw new Error('assert false; (src/compiler/compiler.sk:257:19)');
+        throw new Error('assert false; (src/compiler/compiler.sk:251:19)');
         break;
       }
       if (emitter !== null) {
@@ -4149,9 +4145,6 @@
     this.resolver = _0;
   };
   js.Emitter.prototype.patchProgram = function(program) {
-    if (js.Emitter.isKeyword === null) {
-      js.Emitter.isKeyword = js.Emitter.createIsKeyword();
-    }
     this.options = this.resolver.options;
     if (this.options.minify) {
       this.newline = '';
@@ -4426,7 +4419,7 @@
     case 33:
       break;
     default:
-      throw new Error('assert false; (src/js/emitter.sk:314:19)');
+      throw new Error('assert false; (src/js/emitter.sk:310:19)');
       break;
     }
   };
@@ -4790,7 +4783,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/js/emitter.sk:652:16)');
+        throw new Error('assert false; (src/js/emitter.sk:648:16)');
       }
       break;
     }
@@ -4911,7 +4904,7 @@
   };
   js.Emitter.prototype.isRightChildOfBinaryExpression = function(node, kind) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:763:7)');
+      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:759:7)');
     }
     while (in_NodeKind.isBinaryOperator(node.parent.kind)) {
       if (node.parent.binaryRight() === node) {
@@ -5033,9 +5026,6 @@
   js.Emitter.hasCompoundName = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     return enclosingSymbol !== null && enclosingSymbol.kind !== SymbolKind.GLOBAL_NAMESPACE && (symbol.kind !== SymbolKind.CONSTRUCTOR_FUNCTION || js.Emitter.hasCompoundName(enclosingSymbol));
-  };
-  js.Emitter.createIsKeyword = function() {
-    return StringMap.literal(['apply', 'arguments', 'Boolean', 'break', 'call', 'case', 'catch', 'class', 'const', 'constructor', 'continue', 'Date', 'debugger', 'default', 'delete', 'do', 'double', 'else', 'export', 'extends', 'false', 'finally', 'float', 'for', 'Function', 'function', 'if', 'import', 'in', 'instanceof', 'int', 'let', 'new', 'null', 'Number', 'Object', 'return', 'String', 'super', 'this', 'throw', 'true', 'try', 'var'], [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]);
   };
   js.Emitter.mangleName = function(symbol) {
     if (symbol.emitAs !== null) {
@@ -6035,32 +6025,33 @@
     PRIVATE: 83,
     PROTECTED: 84,
     PUBLIC: 85,
-    QUESTION_MARK: 86,
-    REMAINDER: 87,
-    RETURN: 88,
-    RIGHT_BRACE: 89,
-    RIGHT_BRACKET: 90,
-    RIGHT_PARENTHESIS: 91,
-    SEMICOLON: 92,
-    SHIFT_LEFT: 93,
-    SHIFT_RIGHT: 94,
-    STATIC: 95,
-    STRING: 96,
-    SUPER: 97,
-    SWITCH: 98,
-    THIS: 99,
-    TICK: 100,
-    TILDE: 101,
-    TRUE: 102,
-    TRY: 103,
-    USING: 104,
-    VAR: 105,
-    VIRTUAL: 106,
-    WHILE: 107,
-    WHITESPACE: 108,
-    YY_INVALID_ACTION: 109,
-    START_PARAMETER_LIST: 110,
-    END_PARAMETER_LIST: 111
+    PURE: 86,
+    QUESTION_MARK: 87,
+    REMAINDER: 88,
+    RETURN: 89,
+    RIGHT_BRACE: 90,
+    RIGHT_BRACKET: 91,
+    RIGHT_PARENTHESIS: 92,
+    SEMICOLON: 93,
+    SHIFT_LEFT: 94,
+    SHIFT_RIGHT: 95,
+    STATIC: 96,
+    STRING: 97,
+    SUPER: 98,
+    SWITCH: 99,
+    THIS: 100,
+    TICK: 101,
+    TILDE: 102,
+    TRUE: 103,
+    TRY: 104,
+    USING: 105,
+    VAR: 106,
+    VIRTUAL: 107,
+    WHILE: 108,
+    WHITESPACE: 109,
+    YY_INVALID_ACTION: 110,
+    START_PARAMETER_LIST: 111,
+    END_PARAMETER_LIST: 112
   };
   function Token(_0, _1) {
     this.range = _0;
@@ -7326,6 +7317,9 @@
     this.symbolForThis = null;
     this.functionSymbol = null;
   }
+  ResolveContext.prototype.inPureFunction = function() {
+    return this.functionSymbol !== null && this.functionSymbol.isPure();
+  };
   ResolveContext.fromNode = function(node) {
     var context = new ResolveContext();
     while (node !== null) {
@@ -7370,7 +7364,7 @@
   }
   Resolver.prototype.run = function(program) {
     if (program.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert program.kind == .PROGRAM; (src/resolver/resolver.sk:74:5)');
+      throw new Error('assert program.kind == .PROGRAM; (src/resolver/resolver.sk:78:5)');
     }
     var globalScope = new Scope(null);
     this.cache.insertGlobals(globalScope);
@@ -7411,13 +7405,13 @@
   };
   Resolver.prototype.runPreprocessor = function(program, globalScope) {
     if (program.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert program.kind == .PROGRAM; (src/resolver/resolver.sk:120:5)');
+      throw new Error('assert program.kind == .PROGRAM; (src/resolver/resolver.sk:124:5)');
     }
     var workList = [];
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
       var file = program.children[i];
       if (file.kind !== NodeKind.FILE) {
-        throw new Error('assert file.kind == .FILE; (src/resolver/resolver.sk:126:7)');
+        throw new Error('assert file.kind == .FILE; (src/resolver/resolver.sk:130:7)');
       }
       if (file.needsPreprocessor()) {
         this.findPreprocessorNodes(file, workList, globalScope);
@@ -7445,7 +7439,7 @@
           }
         } else {
           if (node.kind !== NodeKind.PREPROCESSOR_IF) {
-            throw new Error('assert node.kind == .PREPROCESSOR_IF; (src/resolver/resolver.sk:154:11)');
+            throw new Error('assert node.kind == .PREPROCESSOR_IF; (src/resolver/resolver.sk:158:11)');
           }
           var result = this.evaluatePreprocessorValue(node.ifTest(), LogErrors.SILENT_ERRORS);
           if (result !== PreprocessorResult.ERROR) {
@@ -7689,7 +7683,7 @@
       case 17:
         break;
       default:
-        throw new Error('assert false; (src/resolver/resolver.sk:455:19)');
+        throw new Error('assert false; (src/resolver/resolver.sk:459:19)');
         break;
       }
     }
@@ -7800,7 +7794,7 @@
     }
     node.become(Node.createType(member.symbol.type).withRange(node.range).withSymbol(member.symbol));
     if (node.type === null) {
-      throw new Error('assert node.type != null; (src/resolver/resolver.sk:612:5)');
+      throw new Error('assert node.type != null; (src/resolver/resolver.sk:616:5)');
     }
   };
   Resolver.prototype.resolve = function(node, expectedType) {
@@ -7809,7 +7803,7 @@
     }
     node.type = this.cache.errorType;
     if (this.context.scope === null && node.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert context.scope != null || node.kind == .PROGRAM; (src/resolver/resolver.sk:623:5)');
+      throw new Error('assert context.scope != null || node.kind == .PROGRAM; (src/resolver/resolver.sk:627:5)');
     }
     var oldScope = this.context.scope;
     var oldType = this.typeContext;
@@ -7993,14 +7987,20 @@
       } else if (in_NodeKind.isTernaryOperator(kind)) {
         this.resolveTernary(node);
       } else {
-        throw new Error('assert false; (src/resolver/resolver.sk:696:14)');
+        throw new Error('assert false; (src/resolver/resolver.sk:700:14)');
       }
       break;
     }
     this.context.scope = oldScope;
     this.typeContext = oldType;
     if (node.type === null) {
-      throw new Error('assert node.type != null; (src/resolver/resolver.sk:702:5)');
+      throw new Error('assert node.type != null; (src/resolver/resolver.sk:706:5)');
+    }
+  };
+  Resolver.prototype.checkPureInsideFunction = function(node) {
+    var symbol = node.symbol;
+    if (this.context.inPureFunction() && (symbol.kind === SymbolKind.GLOBAL_VARIABLE && !symbol.isConst() || in_SymbolKind.isFunction(symbol.kind) && !symbol.isPure())) {
+      semanticErrorPurityViolation(this.log, node.range);
     }
   };
   Resolver.prototype.checkIsParameterized = function(node) {
@@ -8077,10 +8077,10 @@
   Resolver.prototype.checkConversion = function(to, node, kind) {
     var from = node.type;
     if (from === null) {
-      throw new Error('assert from != null; (src/resolver/resolver.sk:792:5)');
+      throw new Error('assert from != null; (src/resolver/resolver.sk:805:5)');
     }
     if (to === null) {
-      throw new Error('assert to != null; (src/resolver/resolver.sk:793:5)');
+      throw new Error('assert to != null; (src/resolver/resolver.sk:806:5)');
     }
     if (from.isIgnored(this.cache) || to.isIgnored(this.cache)) {
       return;
@@ -8121,7 +8121,7 @@
   };
   Resolver.prototype.checkDeclarationLocation = function(node, allowDeclaration) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:856:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:869:5)');
     }
     var parent = null;
     for (parent = node.parent; parent !== null; parent = parent.parent) {
@@ -8140,7 +8140,7 @@
   };
   Resolver.prototype.checkStatementLocation = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:878:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:891:5)');
     }
     for (var parent = node.parent; parent !== null; parent = parent.parent) {
       var kind = parent.kind;
@@ -8264,21 +8264,22 @@
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.CONST, where);
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, where);
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.INLINE, where);
+    this.unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, where);
+    this.unexpectedModifierIfPresent(symbol, SymbolFlag.PURE, where);
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.STATIC, where);
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, where);
-    this.unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, where);
     this.forbidImportAndExportTogether(symbol);
   };
   Resolver.prototype.initializeNamespace = function(symbol) {
     if (!symbol.type.isNamespace()) {
-      throw new Error('assert symbol.type.isNamespace(); (src/resolver/resolver.sk:1024:5)');
+      throw new Error('assert symbol.type.isNamespace(); (src/resolver/resolver.sk:1038:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on a namespace declaration');
     this.checkNoBaseTypes(symbol, 'A namespace');
   };
   Resolver.prototype.initializeEnum = function(symbol) {
     if (!symbol.type.isEnum()) {
-      throw new Error('assert symbol.type.isEnum(); (src/resolver/resolver.sk:1030:5)');
+      throw new Error('assert symbol.type.isEnum(); (src/resolver/resolver.sk:1044:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on an enum declaration');
     this.checkNoBaseTypes(symbol, 'An enum');
@@ -8291,7 +8292,7 @@
     var baseTypes = this.collectAndResolveBaseTypes(symbol);
     var unmergedMembers = new StringMap();
     if (type.relevantTypes !== null) {
-      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1044:5)');
+      throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1058:5)');
     }
     type.relevantTypes = [];
     for (var i = 0; i < baseTypes.length; i = i + 1 | 0) {
@@ -8314,7 +8315,7 @@
         continue;
       }
       if (baseType.hasBaseType(type)) {
-        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:1076:7)');
+        throw new Error('assert !baseType.hasBaseType(type); (src/resolver/resolver.sk:1090:7)');
       }
       type.relevantTypes.push(baseType);
       var members = baseType.sortedMembers();
@@ -8334,7 +8335,7 @@
           unmergedMembers._table[memberSymbol.name] = new Member(combined);
         } else {
           if (unmerged.symbol.kind !== SymbolKind.UNMERGED) {
-            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:1108:11)');
+            throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:1122:11)');
           }
           unmerged.symbol.identicalMembers.push(member);
         }
@@ -8346,7 +8347,7 @@
       var existing = type.findMember(member.symbol.name);
       if (existing !== null) {
         if (existing.symbol.overriddenMember !== null) {
-          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:1123:9)');
+          throw new Error('assert existing.symbol.overriddenMember == null; (src/resolver/resolver.sk:1137:9)');
         }
         existing.symbol.overriddenMember = member;
       } else if (member.symbol.name !== 'new') {
@@ -8366,7 +8367,7 @@
   };
   Resolver.prototype.initializeObject = function(symbol) {
     if (!symbol.type.isObject()) {
-      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:1149:5)');
+      throw new Error('assert symbol.type.isObject(); (src/resolver/resolver.sk:1163:5)');
     }
     this.forbidBlockDeclarationModifiers(symbol, 'on an object declaration');
     var node = symbol.node;
@@ -8389,7 +8390,7 @@
   Resolver.prototype.initializeFunction = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     if (enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== enclosingSymbol)) {
-      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1180:5)');
+      throw new Error('assert enclosingSymbol == null || !enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == enclosingSymbol; (src/resolver/resolver.sk:1194:5)');
     }
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.CONST, 'on a function declaration');
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.FINAL, 'on a function declaration');
@@ -8404,7 +8405,7 @@
       resultType = result.type;
     } else {
       if (node.kind !== NodeKind.CONSTRUCTOR) {
-        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1201:7)');
+        throw new Error('assert node.kind == .CONSTRUCTOR; (src/resolver/resolver.sk:1215:7)');
       }
       resultType = this.cache.ensureTypeIsParameterized(enclosingSymbol.type);
       var members = enclosingSymbol.type.sortedMembers();
@@ -8473,8 +8474,9 @@
   };
   Resolver.prototype.initializeVariable = function(symbol) {
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.INLINE, 'on a variable declaration');
-    this.unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, 'on a variable declaration');
     this.unexpectedModifierIfPresent(symbol, SymbolFlag.OVERRIDE, 'on a variable declaration');
+    this.unexpectedModifierIfPresent(symbol, SymbolFlag.PURE, 'on a variable declaration');
+    this.unexpectedModifierIfPresent(symbol, SymbolFlag.VIRTUAL, 'on a variable declaration');
     this.checkMemberSymbol(symbol);
     if (symbol.isConst()) {
       this.redundantModifierIfPresent(symbol, SymbolFlag.FINAL, 'on a const variable declaration');
@@ -8486,12 +8488,12 @@
         variableType = node.parent.clusterType().clone();
       } else {
         if (!symbol.isEnumValue()) {
-          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1328:9)');
+          throw new Error('assert symbol.isEnumValue(); (src/resolver/resolver.sk:1343:9)');
         }
         var enclosingSymbol = symbol.enclosingSymbol;
         var type = enclosingSymbol.type;
         variableType = Node.createType(type).withSymbol(enclosingSymbol);
-        symbol.flags |= SymbolFlag.FINAL | SymbolFlag.STATIC | enclosingSymbol.flags & (SymbolFlag.IMPORT | SymbolFlag.EXPORT);
+        symbol.flags |= SymbolFlag.CONST | SymbolFlag.STATIC | enclosingSymbol.flags & (SymbolFlag.IMPORT | SymbolFlag.EXPORT);
         var variableValue = node.variableValue();
         if (variableValue !== null) {
           this.resolveAsParameterizedExpressionWithTypeContext(variableValue, type);
@@ -8528,7 +8530,7 @@
         }
       }
       if (variableType === null) {
-        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1379:7)');
+        throw new Error('assert variableType != null; (src/resolver/resolver.sk:1394:7)');
       }
       node.replaceChild(1, variableType);
     }
@@ -8564,12 +8566,12 @@
         semanticErrorBadOverride(this.log, node.declarationName().range, symbol.name, overriddenMember.symbol.enclosingSymbol.type, overriddenMember.symbol.node.declarationName().range);
       }
     }
-    if (symbol.isConst()) {
+    if (symbol.isConst() && !symbol.isEnumValue()) {
       var value = node.variableValue();
       if (value === null) {
         semanticErrorConstMissingValue(this.log, node.declarationName().range);
       } else {
-        this.resolveAsParamterizedExpressionWithConversion(value, symbol.type, CastKind.IMPLICIT_CAST);
+        this.resolveAsParameterizedExpressionWithConversion(value, symbol.type, CastKind.IMPLICIT_CAST);
         this.constantFolder.foldConstants(value);
         if (in_NodeKind.isConstant(value.kind)) {
           symbol.constant = value.content;
@@ -8593,7 +8595,7 @@
         semanticErrorBadTypeParameterBound(this.log, bound.range, boundType);
       } else {
         if (type.relevantTypes !== null) {
-          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1470:9)');
+          throw new Error('assert type.relevantTypes == null; (src/resolver/resolver.sk:1485:9)');
         }
         type.relevantTypes = [boundType];
         type.copyMembersFrom(boundType);
@@ -8609,17 +8611,28 @@
   Resolver.prototype.initializeDefine = function(symbol) {
     symbol.type = this.cache.boolType;
   };
-  Resolver.prototype.initializeDeclaration = function(node) {
-    var symbol = node.symbol;
-    if (symbol === null) {
-      throw new Error('assert symbol != null; (src/resolver/resolver.sk:1491:5)');
-    }
+  Resolver.prototype.initializeDeclaration = function(symbol) {
     if (symbol.isUninitialized()) {
+      var isAutomatic = symbol.kind === SymbolKind.AUTOMATIC;
       symbol.flags |= SymbolFlag.INITIALIZING;
+      if (isAutomatic) {
+        if (symbol.name === 'new') {
+          this.generateDefaultConstructor(symbol);
+        } else if (symbol.name === 'toString') {
+          this.generateDefaultToString(symbol);
+        } else {
+          throw new Error('assert false; (src/resolver/resolver.sk:1518:14)');
+        }
+        if (symbol.node === null) {
+          symbol.type = this.cache.errorType;
+          symbol.flags = symbol.flags & ~SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED;
+          return;
+        }
+      }
       var oldContext = this.context;
       var oldTypeContext = this.typeContext;
       var oldResultType = this.resultType;
-      this.context = ResolveContext.fromNode(node);
+      this.context = ResolveContext.fromNode(symbol.node);
       this.typeContext = null;
       this.resultType = null;
       switch (symbol.kind) {
@@ -8657,28 +8670,25 @@
       case 0:
         break;
       default:
-        throw new Error('assert false; (src/resolver/resolver.sk:1519:19)');
+        throw new Error('assert false; (src/resolver/resolver.sk:1546:19)');
         break;
       }
-      this.context = oldContext;
       this.typeContext = oldTypeContext;
       this.resultType = oldResultType;
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1526:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:1552:7)');
       }
       if (!symbol.isInitializing()) {
-        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1527:7)');
+        throw new Error('assert symbol.isInitializing(); (src/resolver/resolver.sk:1553:7)');
       }
       if (symbol.isInitialized()) {
-        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1528:7)');
+        throw new Error('assert !symbol.isInitialized(); (src/resolver/resolver.sk:1554:7)');
       }
       symbol.flags = symbol.flags & ~SymbolFlag.INITIALIZING | SymbolFlag.INITIALIZED;
-      while (node !== null) {
-        var name = node.declarationName();
-        name.symbol = symbol;
-        name.type = symbol.type;
-        node = node.sibling;
+      if (isAutomatic) {
+        this.resolve(symbol.node, null);
       }
+      this.context = oldContext;
       this.checkAnnotations(symbol);
     }
   };
@@ -8706,7 +8716,7 @@
     }
     if (member.dependency !== null) {
       if (member.dependency.symbol !== member.symbol) {
-        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1581:7)');
+        throw new Error('assert member.dependency.symbol == member.symbol; (src/resolver/resolver.sk:1606:7)');
       }
       this.initializeMember(member.dependency);
       member.type = member.dependency.type;
@@ -8824,7 +8834,7 @@
       return null;
     }
     var value = $arguments.children[0];
-    this.resolveAsParamterizedExpressionWithConversion(value, this.cache.stringType, CastKind.IMPLICIT_CAST);
+    this.resolveAsParameterizedExpressionWithConversion(value, this.cache.stringType, CastKind.IMPLICIT_CAST);
     this.constantFolder.foldConstants(value);
     if (value.type.isError(this.cache)) {
       return null;
@@ -8864,7 +8874,7 @@
       return;
     }
     if (!symbol.type.isFunction()) {
-      throw new Error('assert symbol.type.isFunction(); (src/resolver/resolver.sk:1790:5)');
+      throw new Error('assert symbol.type.isFunction(); (src/resolver/resolver.sk:1815:5)');
     }
     symbol.enclosingSymbol.operatorOverloadsForKind(kind).push(symbol);
   };
@@ -8964,10 +8974,8 @@
           }
         } else {
           if (!$constructor.type.isIgnored(this.cache)) {
-            throw new Error('assert constructor.type.isIgnored(cache); (src/resolver/resolver.sk:1912:11)');
+            throw new Error('assert constructor.type.isIgnored(cache); (src/resolver/resolver.sk:1937:11)');
           }
-          symbol.flags |= SymbolFlag.INITIALIZED;
-          symbol.type = this.cache.errorType;
           return;
         }
       }
@@ -8978,16 +8986,14 @@
       var memberSymbol = member.symbol;
       if (memberSymbol.kind === SymbolKind.INSTANCE_VARIABLE && memberSymbol.enclosingSymbol === enclosingSymbol) {
         var value = memberSymbol.node.variableValue();
+        this.initializeMember(member);
         if (value === null) {
-          this.initializeMember(member);
-          if (member.type.isError(this.cache)) {
-            symbol.flags |= SymbolFlag.INITIALIZED;
-            symbol.type = this.cache.errorType;
-            return;
-          }
           uninitializedMembers.push(member);
-        } else if (!in_NodeKind.isConstant(value.kind)) {
-          isPure = false;
+        } else {
+          this.resolveAsParameterizedExpressionWithConversion(value, memberSymbol.type, CastKind.IMPLICIT_CAST);
+          if (!this.isPureValue(value)) {
+            isPure = false;
+          }
         }
       }
     }
@@ -9005,7 +9011,7 @@
     symbol.node = Node.createConstructor(Node.createName(symbol.name), Node.createNodeList($arguments), Node.createBlock([]), superArguments !== null ? Node.createSuperCall(superArguments) : null, memberInitializers !== null ? Node.createNodeList(memberInitializers) : null);
     enclosingSymbol.node.declarationBlock().appendChild(symbol.node);
     if (enclosingSymbol.node.scope === null) {
-      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:1981:5)');
+      throw new Error('assert enclosingSymbol.node.scope != null; (src/resolver/resolver.sk:2000:5)');
     }
     var scope = new Scope(enclosingSymbol.node.scope);
     symbol.node.symbol = symbol;
@@ -9019,7 +9025,7 @@
   };
   Resolver.prototype.generateDefaultToString = function(symbol) {
     if (!symbol.isEnumMember()) {
-      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:1996:5)');
+      throw new Error('assert symbol.isEnumMember(); (src/resolver/resolver.sk:2015:5)');
     }
     var enclosingSymbol = symbol.enclosingSymbol;
     var enclosingNode = enclosingSymbol.node;
@@ -9085,12 +9091,12 @@
         statement = Node.createSwitch(Node.createThis(), cases);
       }
     }
+    this.prepareNode(extension, enclosingNode.parent.scope);
+    this.resolve(extension, null);
     symbol.kind = SymbolKind.INSTANCE_FUNCTION;
     symbol.flags |= SymbolFlag.FROM_EXTENSION;
     symbol.node = Node.createFunction(Node.createName(symbol.name), Node.createNodeList([]), Node.createBlock([statement]), Node.createType(this.cache.stringType), null).withSymbol(symbol);
     block.appendChild(symbol.node);
-    this.prepareNode(extension, enclosingNode.parent.scope);
-    this.resolve(extension, null);
   };
   Resolver.prototype.extractConsecutiveRange = function(values, lowest, count) {
     var consecutive = [];
@@ -9104,21 +9110,6 @@
     return consecutive;
   };
   Resolver.prototype.initializeSymbol = function(symbol) {
-    if (symbol.kind === SymbolKind.AUTOMATIC) {
-      if (symbol.name === 'new') {
-        this.generateDefaultConstructor(symbol);
-      } else if (symbol.name === 'toString') {
-        this.generateDefaultToString(symbol);
-      } else {
-        throw new Error('assert false; (src/resolver/resolver.sk:2117:12)');
-      }
-      if (symbol.node !== null) {
-        var oldContext = this.context;
-        this.context = ResolveContext.fromNode(symbol.node);
-        this.resolve(symbol.node, null);
-        this.context = oldContext;
-      }
-    }
     if (symbol.kind === SymbolKind.UNMERGED) {
       if (symbol.type !== null) {
         return;
@@ -9141,25 +9132,25 @@
       return;
     }
     if (symbol.isUninitialized()) {
-      if (symbol.node === null) {
-        throw new Error('assert symbol.node != null; (src/resolver/resolver.sk:2154:7)');
+      if (symbol.node === null && symbol.kind !== SymbolKind.AUTOMATIC) {
+        throw new Error('assert symbol.node != null || symbol.kind == .AUTOMATIC; (src/resolver/resolver.sk:2161:7)');
       }
       symbol.canonicalizeSiblingChain();
-      this.initializeDeclaration(symbol.node);
+      this.initializeDeclaration(symbol);
       if (symbol.isInitializing()) {
-        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:2157:7)');
+        throw new Error('assert !symbol.isInitializing(); (src/resolver/resolver.sk:2164:7)');
       }
       if (!symbol.isInitialized()) {
-        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:2158:7)');
+        throw new Error('assert symbol.isInitialized(); (src/resolver/resolver.sk:2165:7)');
       }
       if (symbol.type === null) {
-        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:2159:7)');
+        throw new Error('assert symbol.type != null; (src/resolver/resolver.sk:2166:7)');
       }
       if (symbol.isEntryPoint()) {
         this.validateEntryPoint(symbol);
       }
     } else if (symbol.isInitializing()) {
-      semanticErrorCyclicDeclaration(this.log, symbol.node.declarationName().range, symbol.name);
+      semanticErrorCyclicDeclaration(this.log, (symbol.kind === SymbolKind.AUTOMATIC ? symbol.enclosingSymbol.node : symbol.node).declarationName().range, symbol.name);
       symbol.type = this.cache.errorType;
     }
   };
@@ -9188,12 +9179,12 @@
       return;
     }
     for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
-      this.resolveAsParamterizedExpressionWithConversion($arguments[i], argumentTypes[i], CastKind.IMPLICIT_CAST);
+      this.resolveAsParameterizedExpressionWithConversion($arguments[i], argumentTypes[i], CastKind.IMPLICIT_CAST);
     }
   };
   Resolver.prototype.resolveAsType = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2220:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2227:5)');
     }
     this.resolve(node, null);
     this.checkIsType(node);
@@ -9204,7 +9195,7 @@
   };
   Resolver.prototype.resolveAsParameterizedExpression = function(node) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2231:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2238:5)');
     }
     this.resolve(node, null);
     this.checkIsInstance(node);
@@ -9212,15 +9203,15 @@
   };
   Resolver.prototype.resolveAsParameterizedExpressionWithTypeContext = function(node, type) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2238:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2245:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
     this.checkIsParameterized(node);
   };
-  Resolver.prototype.resolveAsParamterizedExpressionWithConversion = function(node, type, kind) {
+  Resolver.prototype.resolveAsParameterizedExpressionWithConversion = function(node, type, kind) {
     if (!in_NodeKind.isExpression(node.kind)) {
-      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2245:5)');
+      throw new Error('assert node.kind.isExpression(); (src/resolver/resolver.sk:2252:5)');
     }
     this.resolve(node, type);
     this.checkIsInstance(node);
@@ -9281,16 +9272,16 @@
   };
   Resolver.prototype.resolveProgram = function(node) {
     if (node.parent !== null) {
-      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:2315:5)');
+      throw new Error('assert node.parent == null; (src/resolver/resolver.sk:2322:5)');
     }
     this.resolveChildren(node);
   };
   Resolver.prototype.resolveFile = function(node) {
     if (node.parent === null) {
-      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:2320:5)');
+      throw new Error('assert node.parent != null; (src/resolver/resolver.sk:2327:5)');
     }
     if (node.parent.kind !== NodeKind.PROGRAM) {
-      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:2321:5)');
+      throw new Error('assert node.parent.kind == .PROGRAM; (src/resolver/resolver.sk:2328:5)');
     }
     this.resolve(node.fileBlock(), null);
   };
@@ -9308,22 +9299,22 @@
   };
   Resolver.prototype.resolveCase = function(node) {
     if (node.parent.kind !== NodeKind.NODE_LIST) {
-      throw new Error('assert node.parent.kind == .NODE_LIST; (src/resolver/resolver.sk:2343:5)');
+      throw new Error('assert node.parent.kind == .NODE_LIST; (src/resolver/resolver.sk:2350:5)');
     }
     if (node.parent.parent.kind !== NodeKind.SWITCH) {
-      throw new Error('assert node.parent.parent.kind == .SWITCH; (src/resolver/resolver.sk:2344:5)');
+      throw new Error('assert node.parent.parent.kind == .SWITCH; (src/resolver/resolver.sk:2351:5)');
     }
     if (this.context.switchValue === null) {
-      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:2345:5)');
+      throw new Error('assert context.switchValue != null; (src/resolver/resolver.sk:2352:5)');
     }
     if (this.context.switchValue.type === null) {
-      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:2346:5)');
+      throw new Error('assert context.switchValue.type != null; (src/resolver/resolver.sk:2353:5)');
     }
     var values = node.caseValues().children;
     var block = node.caseBlock();
     for (var i = 0; i < values.length; i = i + 1 | 0) {
       var value = values[i];
-      this.resolveAsParamterizedExpressionWithConversion(value, this.context.switchValue.type, CastKind.IMPLICIT_CAST);
+      this.resolveAsParameterizedExpressionWithConversion(value, this.context.switchValue.type, CastKind.IMPLICIT_CAST);
       this.constantFolder.foldConstants(value);
       if (!value.type.isIgnored(this.cache) && !in_NodeKind.isConstant(value.kind)) {
         semanticErrorNonConstantCaseValue(this.log, value.range);
@@ -9376,7 +9367,7 @@
   Resolver.prototype.resolveFunction = function(node) {
     var symbol = node.symbol;
     if (symbol.enclosingSymbol !== null && in_SymbolKind.isTypeWithInstances(symbol.enclosingSymbol.kind) && (this.context.symbolForThis === null || this.context.symbolForThis !== symbol.enclosingSymbol)) {
-      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:2426:5)');
+      throw new Error('assert symbol.enclosingSymbol == null || !symbol.enclosingSymbol.kind.isTypeWithInstances() ||\n      context.symbolForThis != null && context.symbolForThis == symbol.enclosingSymbol; (src/resolver/resolver.sk:2433:5)');
     }
     this.checkDeclarationLocation(node, AllowDeclaration.ALLOW_TOP_OR_OBJECT_LEVEL);
     this.initializeSymbol(symbol);
@@ -9428,7 +9419,7 @@
           this.resolveNodesAsParameterizedExpressions($arguments);
         } else {
           if (!overriddenType.isFunction()) {
-            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2495:11)');
+            throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2502:11)');
           }
           this.resolveArguments($arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
         }
@@ -9492,7 +9483,7 @@
         this.context.scope = oldScope;
         memberInitializer.symbol = name.symbol;
         if (name.symbol !== null) {
-          this.resolveAsParamterizedExpressionWithConversion(value, name.symbol.type, CastKind.IMPLICIT_CAST);
+          this.resolveAsParameterizedExpressionWithConversion(value, name.symbol.type, CastKind.IMPLICIT_CAST);
           for (var j = 0; j < i; j = j + 1 | 0) {
             var other = memberInitializers.children[j];
             if (other.memberInitializerName().symbol === name.symbol) {
@@ -9512,7 +9503,9 @@
     if (node.type.isIgnored(this.cache)) {
       return true;
     }
-    if (kind === NodeKind.LIST || kind === NodeKind.MAP) {
+    switch (kind) {
+    case 47:
+    case 48:
       if (node.hasChildren()) {
         for (var i = 0; i < node.children.length; i = i + 1 | 0) {
           if (!this.isPureValue(node.children[i])) {
@@ -9521,14 +9514,15 @@
         }
       }
       return true;
-    }
-    if (kind === NodeKind.KEY_VALUE) {
+    case 49:
       return this.isPureValue(node.itemKey()) && this.isPureValue(node.itemValue());
-    }
-    if (kind === NodeKind.CALL) {
+    case 40:
+      return this.isPureValue(node.hookTest()) && this.isPureValue(node.hookTrue()) && this.isPureValue(node.hookFalse());
+    case 53:
       var value = node.callValue();
       var $arguments = node.callArguments();
-      if (value.kind !== NodeKind.TYPE || !node.symbol.isPure()) {
+      var symbol = value.kind === NodeKind.TYPE ? node.symbol : value.symbol;
+      if (symbol === null || !symbol.isPure()) {
         return false;
       }
       for (var i = 0; i < $arguments.length; i = i + 1 | 0) {
@@ -9537,11 +9531,13 @@
         }
       }
       return true;
-    }
-    if (in_NodeKind.isCast(kind)) {
+    case 58:
+    case 59:
       return this.isPureValue(node.castValue());
+    case 37:
+      return node.symbol !== null && node.symbol.isConst();
     }
-    return in_NodeKind.isConstant(kind);
+    return in_NodeKind.isConstant(kind) || in_NodeKind.isUnaryOperator(kind) && this.isPureValue(node.unaryValue()) || in_NodeKind.isBinaryOperator(kind) && this.isPureValue(node.binaryLeft()) && this.isPureValue(node.binaryRight());
   };
   Resolver.prototype.resolveVariable = function(node) {
     var symbol = node.symbol;
@@ -9557,7 +9553,7 @@
       }
     }
     if (value !== null) {
-      this.resolveAsParamterizedExpressionWithConversion(value, symbol.isEnumValue() ? this.cache.intType : symbol.type, CastKind.IMPLICIT_CAST);
+      this.resolveAsParameterizedExpressionWithConversion(value, symbol.isEnumValue() ? this.cache.intType : symbol.type, CastKind.IMPLICIT_CAST);
       if (symbol.kind === SymbolKind.GLOBAL_VARIABLE) {
         this.constantFolder.foldConstants(value);
         if (!this.isPureValue(value) && !symbol.type.isIgnored(this.cache)) {
@@ -9597,7 +9593,7 @@
   };
   Resolver.prototype.resolveIf = function(node) {
     this.checkStatementLocation(node);
-    this.resolveAsParamterizedExpressionWithConversion(node.ifTest(), this.cache.boolType, CastKind.IMPLICIT_CAST);
+    this.resolveAsParameterizedExpressionWithConversion(node.ifTest(), this.cache.boolType, CastKind.IMPLICIT_CAST);
     this.resolve(node.ifTrue(), null);
     if (node.ifFalse() !== null) {
       this.resolve(node.ifFalse(), null);
@@ -9622,7 +9618,7 @@
       }
     }
     if (test !== null) {
-      this.resolveAsParamterizedExpressionWithConversion(test, this.cache.boolType, CastKind.IMPLICIT_CAST);
+      this.resolveAsParameterizedExpressionWithConversion(test, this.cache.boolType, CastKind.IMPLICIT_CAST);
     }
     if (update !== null) {
       this.resolveAsParameterizedExpression(update);
@@ -9650,7 +9646,7 @@
     this.checkStatementLocation(node);
     var test = node.whileTest();
     if (test !== null) {
-      this.resolveAsParamterizedExpressionWithConversion(test, this.cache.boolType, CastKind.IMPLICIT_CAST);
+      this.resolveAsParameterizedExpressionWithConversion(test, this.cache.boolType, CastKind.IMPLICIT_CAST);
     }
     var oldLoop = this.context.loop;
     this.context.loop = node;
@@ -9667,7 +9663,7 @@
       return;
     }
     if (value !== null) {
-      this.resolveAsParamterizedExpressionWithConversion(value, this.resultType, CastKind.IMPLICIT_CAST);
+      this.resolveAsParameterizedExpressionWithConversion(value, this.resultType, CastKind.IMPLICIT_CAST);
     } else if (!this.resultType.isIgnored(this.cache) && !this.resultType.isVoid(this.cache)) {
       semanticErrorExpectedReturnValue(this.log, node.range, this.resultType);
     }
@@ -9687,7 +9683,7 @@
       this.checkStatementLocation(node);
     }
     var value = node.assertValue();
-    this.resolveAsParamterizedExpressionWithConversion(value, this.cache.boolType, CastKind.IMPLICIT_CAST);
+    this.resolveAsParameterizedExpressionWithConversion(value, this.cache.boolType, CastKind.IMPLICIT_CAST);
     if (node.kind === NodeKind.ASSERT_CONST) {
       this.constantFolder.foldConstants(value);
       if (!value.type.isIgnored(this.cache)) {
@@ -9733,7 +9729,7 @@
           continue;
         }
         if (!in_NodeKind.isConstant(caseValue.kind)) {
-          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2900:9)');
+          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:2920:9)');
         }
         var k = 0;
         for (k = 0; k < uniqueValues.length; k = k + 1 | 0) {
@@ -9755,7 +9751,7 @@
       this.log.warning(node.range, value.asString());
     } else {
       if (node.kind !== NodeKind.PREPROCESSOR_ERROR) {
-        throw new Error('assert node.kind == .PREPROCESSOR_ERROR; (src/resolver/resolver.sk:2923:7)');
+        throw new Error('assert node.kind == .PREPROCESSOR_ERROR; (src/resolver/resolver.sk:2943:7)');
       }
       this.log.error(node.range, value.asString());
     }
@@ -9781,11 +9777,12 @@
       return;
     }
     node.type = member.type;
+    this.checkPureInsideFunction(node);
   };
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2959:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2980:7)');
       }
       var symbol = this.context.symbolForThis;
       this.initializeSymbol(symbol);
@@ -9820,7 +9817,7 @@
   Resolver.prototype.resolveHook = function(node) {
     var trueNode = node.hookTrue();
     var falseNode = node.hookFalse();
-    this.resolveAsParamterizedExpressionWithConversion(node.hookTest(), this.cache.boolType, CastKind.IMPLICIT_CAST);
+    this.resolveAsParameterizedExpressionWithConversion(node.hookTest(), this.cache.boolType, CastKind.IMPLICIT_CAST);
     if (this.typeContext !== null || this.needsTypeContext(trueNode) === this.needsTypeContext(falseNode)) {
       this.resolveAsParameterizedExpressionWithTypeContext(trueNode, this.typeContext);
       this.resolveAsParameterizedExpressionWithTypeContext(falseNode, this.typeContext);
@@ -9871,7 +9868,7 @@
     if (this.typeContext !== null && this.typeContext.isList(this.cache)) {
       var itemType = this.typeContext.substitutions[0];
       for (var i = 0; i < values.length; i = i + 1 | 0) {
-        this.resolveAsParamterizedExpressionWithConversion(values[i], itemType, CastKind.IMPLICIT_CAST);
+        this.resolveAsParameterizedExpressionWithConversion(values[i], itemType, CastKind.IMPLICIT_CAST);
       }
       node.type = this.typeContext;
       return;
@@ -9912,12 +9909,12 @@
         var item = items[i];
         if (item.kind !== NodeKind.KEY_VALUE) {
           if (item.kind !== NodeKind.ERROR) {
-            throw new Error('assert item.kind == .ERROR; (src/resolver/resolver.sk:3129:11)');
+            throw new Error('assert item.kind == .ERROR; (src/resolver/resolver.sk:3150:11)');
           }
           continue;
         }
-        this.resolveAsParamterizedExpressionWithConversion(item.itemKey(), keyType, CastKind.IMPLICIT_CAST);
-        this.resolveAsParamterizedExpressionWithConversion(item.itemValue(), valueType, CastKind.IMPLICIT_CAST);
+        this.resolveAsParameterizedExpressionWithConversion(item.itemKey(), keyType, CastKind.IMPLICIT_CAST);
+        this.resolveAsParameterizedExpressionWithConversion(item.itemValue(), valueType, CastKind.IMPLICIT_CAST);
         item.type = this.cache.errorType;
       }
       node.type = this.typeContext;
@@ -9925,7 +9922,7 @@
       for (var i = 0; i < items.length; i = i + 1 | 0) {
         if (items[i].kind !== NodeKind.KEY_VALUE) {
           if (items[i].kind !== NodeKind.ERROR) {
-            throw new Error('assert items[i].kind == .ERROR; (src/resolver/resolver.sk:3143:11)');
+            throw new Error('assert items[i].kind == .ERROR; (src/resolver/resolver.sk:3164:11)');
           }
           this.resolveNodesAsParameterizedExpressions(items);
           return;
@@ -10036,13 +10033,14 @@
       node.type = member.type;
       dotName.type = member.type;
     }
+    this.checkPureInsideFunction(node);
   };
   Resolver.prototype.resolveCall = function(node) {
     this.expandPreprocessorSequences(node);
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3306:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3329:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -10068,6 +10066,9 @@
         semanticErrorAbstractNew(this.log, value.range, valueType, reason.node.declarationName().range, reason.fullName());
         this.resolveNodesAsParameterizedExpressions($arguments);
         return;
+      }
+      if (this.context.inPureFunction() && !member.symbol.isPure()) {
+        semanticErrorPurityViolation(this.log, value.range);
       }
       node.symbol = member.symbol;
       valueType = member.type;
@@ -10115,7 +10116,7 @@
         this.resolveAsParameterizedExpression(child);
         this.checkUnusedExpression(child);
       } else {
-        this.resolveAsParamterizedExpressionWithConversion(child, this.typeContext, node.parent.kind === NodeKind.CAST ? CastKind.EXPLICIT_CAST : CastKind.IMPLICIT_CAST);
+        this.resolveAsParameterizedExpressionWithConversion(child, this.typeContext, node.parent.kind === NodeKind.CAST ? CastKind.EXPLICIT_CAST : CastKind.IMPLICIT_CAST);
       }
     }
   };
@@ -10139,7 +10140,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3439:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3467:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -10172,7 +10173,7 @@
     var type = node.castType();
     this.resolveAsParameterizedType(type);
     this.checkIsValidVariableType(type);
-    this.resolveAsParamterizedExpressionWithConversion(node.castValue(), type.type, CastKind.EXPLICIT_CAST);
+    this.resolveAsParameterizedExpressionWithConversion(node.castValue(), type.type, CastKind.EXPLICIT_CAST);
     node.type = type.type;
   };
   Resolver.prototype.traverseQuotedContent = function(node) {
@@ -10290,7 +10291,7 @@
         this.checkStorageOperator(node);
       }
       if (kind === NodeKind.ASSIGN || left.type.isInteger(this.cache) || left.type.isNumeric(this.cache) && !in_NodeKind.isBinaryBitwiseStorageOperator(kind)) {
-        this.resolveAsParamterizedExpressionWithConversion(right, left.type, CastKind.IMPLICIT_CAST);
+        this.resolveAsParameterizedExpressionWithConversion(right, left.type, CastKind.IMPLICIT_CAST);
         this.checkStorage(left);
         node.type = left.type;
         return;
@@ -10395,7 +10396,7 @@
   };
   Resolver.prototype.assessOperatorOverloadMatch = function(nodeTypes, argumentTypes) {
     if (nodeTypes.length !== (1 + argumentTypes.length | 0)) {
-      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3793:5)');
+      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3821:5)');
     }
     var foundImplicitConversion = false;
     for (var i = 0; i < argumentTypes.length; i = i + 1 | 0) {
@@ -10460,15 +10461,15 @@
     for (var i = 0; i < overloads.length; i = i + 1 | 0) {
       var overload = overloads[i];
       if (!overload.type.isFunction()) {
-        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3876:7)');
+        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3904:7)');
       }
       if ((overload.type.argumentTypes().length + 1 | 0) !== children.length) {
-        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3877:7)');
+        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3905:7)');
       }
       var member = targetType.findOperatorOverload(overload);
       this.initializeMember(member);
       if (!member.type.isFunction()) {
-        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3880:7)');
+        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3908:7)');
       }
       var match = this.assessOperatorOverloadMatch(typeForMatching, member.type.argumentTypes());
       if (match > bestMatch) {
@@ -11815,12 +11816,6 @@
   in_NodeKind.prettyPrint = function($this) {
     return in_string.replaceAll(in_NodeKind._toString_[$this].toLowerCase(), '_', '-');
   };
-  function createOperatorMap() {
-    if (operatorInfo !== null) {
-      return;
-    }
-    operatorInfo = IntMap.literal([NodeKind.NOT, NodeKind.POSITIVE, NodeKind.NEGATIVE, NodeKind.COMPLEMENT, NodeKind.PREFIX_INCREMENT, NodeKind.PREFIX_DECREMENT, NodeKind.POSTFIX_INCREMENT, NodeKind.POSTFIX_DECREMENT, NodeKind.PREFIX_DEREFERENCE, NodeKind.PREFIX_REFERENCE, NodeKind.POSTFIX_DEREFERENCE, NodeKind.POSTFIX_REFERENCE, NodeKind.NEW, NodeKind.DELETE, NodeKind.ADD, NodeKind.BITWISE_AND, NodeKind.BITWISE_OR, NodeKind.BITWISE_XOR, NodeKind.DIVIDE, NodeKind.EQUAL, NodeKind.GREATER_THAN, NodeKind.GREATER_THAN_OR_EQUAL, NodeKind.IN, NodeKind.INDEX, NodeKind.LESS_THAN, NodeKind.LESS_THAN_OR_EQUAL, NodeKind.LOGICAL_AND, NodeKind.LOGICAL_OR, NodeKind.MULTIPLY, NodeKind.NOT_EQUAL, NodeKind.REMAINDER, NodeKind.SHIFT_LEFT, NodeKind.SHIFT_RIGHT, NodeKind.SUBTRACT, NodeKind.ASSIGN, NodeKind.ASSIGN_ADD, NodeKind.ASSIGN_BITWISE_AND, NodeKind.ASSIGN_BITWISE_OR, NodeKind.ASSIGN_BITWISE_XOR, NodeKind.ASSIGN_DIVIDE, NodeKind.ASSIGN_MULTIPLY, NodeKind.ASSIGN_REMAINDER, NodeKind.ASSIGN_SHIFT_LEFT, NodeKind.ASSIGN_SHIFT_RIGHT, NodeKind.ASSIGN_SUBTRACT, NodeKind.ASSIGN_INDEX], [new OperatorInfo('!', Precedence.UNARY_PREFIX, Associativity.NONE), new OperatorInfo('+', Precedence.UNARY_PREFIX, Associativity.NONE), new OperatorInfo('-', Precedence.UNARY_PREFIX, Associativity.NONE), new OperatorInfo('~', Precedence.UNARY_PREFIX, Associativity.NONE), new OperatorInfo('++', Precedence.UNARY_PREFIX, Associativity.NONE), new OperatorInfo('--', Precedence.UNARY_PREFIX, Associativity.NONE), new OperatorInfo('++', Precedence.UNARY_POSTFIX, Associativity.NONE), new OperatorInfo('--', Precedence.UNARY_POSTFIX, Associativity.NONE), new OperatorInfo('*', Precedence.UNARY_PREFIX, Associativity.NONE), new OperatorInfo('&', Precedence.UNARY_PREFIX, Associativity.NONE), new OperatorInfo('*', Precedence.UNARY_POSTFIX, Associativity.NONE), new OperatorInfo('&', Precedence.UNARY_POSTFIX, Associativity.NONE), new OperatorInfo('new', Precedence.UNARY_PREFIX, Associativity.NONE), new OperatorInfo('delete', Precedence.UNARY_PREFIX, Associativity.NONE), new OperatorInfo('+', Precedence.ADD, Associativity.LEFT), new OperatorInfo('&', Precedence.BITWISE_AND, Associativity.LEFT), new OperatorInfo('|', Precedence.BITWISE_OR, Associativity.LEFT), new OperatorInfo('^', Precedence.BITWISE_XOR, Associativity.LEFT), new OperatorInfo('/', Precedence.MULTIPLY, Associativity.LEFT), new OperatorInfo('==', Precedence.EQUAL, Associativity.LEFT), new OperatorInfo('>', Precedence.COMPARE, Associativity.LEFT), new OperatorInfo('>=', Precedence.COMPARE, Associativity.LEFT), new OperatorInfo('in', Precedence.COMPARE, Associativity.LEFT), new OperatorInfo('[]', Precedence.MEMBER, Associativity.LEFT), new OperatorInfo('<', Precedence.COMPARE, Associativity.LEFT), new OperatorInfo('<=', Precedence.COMPARE, Associativity.LEFT), new OperatorInfo('&&', Precedence.LOGICAL_AND, Associativity.LEFT), new OperatorInfo('||', Precedence.LOGICAL_OR, Associativity.LEFT), new OperatorInfo('*', Precedence.MULTIPLY, Associativity.LEFT), new OperatorInfo('!=', Precedence.EQUAL, Associativity.LEFT), new OperatorInfo('%', Precedence.MULTIPLY, Associativity.LEFT), new OperatorInfo('<<', Precedence.SHIFT, Associativity.LEFT), new OperatorInfo('>>', Precedence.SHIFT, Associativity.LEFT), new OperatorInfo('-', Precedence.ADD, Associativity.LEFT), new OperatorInfo('=', Precedence.ASSIGN, Associativity.RIGHT), new OperatorInfo('+=', Precedence.ASSIGN, Associativity.RIGHT), new OperatorInfo('&=', Precedence.ASSIGN, Associativity.RIGHT), new OperatorInfo('|=', Precedence.ASSIGN, Associativity.RIGHT), new OperatorInfo('^=', Precedence.ASSIGN, Associativity.RIGHT), new OperatorInfo('/=', Precedence.ASSIGN, Associativity.RIGHT), new OperatorInfo('*=', Precedence.ASSIGN, Associativity.RIGHT), new OperatorInfo('%=', Precedence.ASSIGN, Associativity.RIGHT), new OperatorInfo('<<=', Precedence.ASSIGN, Associativity.RIGHT), new OperatorInfo('>>=', Precedence.ASSIGN, Associativity.RIGHT), new OperatorInfo('-=', Precedence.ASSIGN, Associativity.RIGHT), new OperatorInfo('[]=', Precedence.ASSIGN, Associativity.RIGHT)]);
-  }
   in_TargetFormat.shouldRunResolver = function($this) {
     return $this >= TargetFormat.NONE && $this <= TargetFormat.JAVASCRIPT;
   };
@@ -12105,7 +12100,7 @@
     while (yy_cp < text_length) {
       var yy_current_state = 1;
       var yy_bp = yy_cp;
-      while (yy_current_state !== 304) {
+      while (yy_current_state !== 306) {
         if (yy_cp >= text_length) {
           break;
         }
@@ -12118,7 +12113,7 @@
         }
         while (yy_chk[yy_base[yy_current_state] + yy_c | 0] !== yy_current_state) {
           yy_current_state = yy_def[yy_current_state];
-          if (yy_current_state >= 305) {
+          if (yy_current_state >= 307) {
             yy_c = yy_meta[yy_c];
           }
         }
@@ -12235,11 +12230,11 @@
     }
     while (!context.peek(TokenKind.END_OF_FILE)) {
       switch (context.current().kind) {
+      case 92:
       case 91:
       case 90:
-      case 89:
         return context.eat(kind);
-      case 92:
+      case 93:
         if (tokenScan === TokenScan.STOP_BEFORE_NEXT_STATEMENT) {
           return context.eat(kind);
         }
@@ -12271,13 +12266,13 @@
       case 83:
       case 84:
       case 85:
-      case 88:
-      case 95:
-      case 98:
-      case 103:
+      case 89:
+      case 96:
+      case 99:
       case 104:
-      case 106:
+      case 105:
       case 107:
+      case 108:
         if (tokenScan === TokenScan.STOP_BEFORE_NEXT_STATEMENT) {
           return true;
         }
@@ -12981,8 +12976,9 @@
     case 83:
     case 84:
     case 85:
-    case 95:
-    case 106:
+    case 86:
+    case 96:
+    case 107:
       return parseModifier(context, hint);
     case 26:
       return parseContinue(context);
@@ -12993,8 +12989,8 @@
     case 44:
       return parseFor(context);
     case 47:
-    case 105:
-    case 100:
+    case 106:
+    case 101:
       return parsePossibleTypedDeclaration(context, hint);
     case 48:
       return parseIf(context);
@@ -13017,15 +13013,15 @@
       return parsePreprocessorIf(context, hint);
     case 82:
       return parsePreprocessorDiagnostic(context, NodeKind.PREPROCESSOR_WARNING);
-    case 88:
+    case 89:
       return parseReturn(context);
-    case 98:
+    case 99:
       return parseSwitch(context);
-    case 103:
-      return parseTry(context);
     case 104:
+      return parseTry(context);
+    case 105:
       return parseUsing(context);
-    case 107:
+    case 108:
       return parseWhile(context);
     }
     return parseExpression(context);
@@ -13055,10 +13051,7 @@
     return Node.createError().withRange(context.spanSince(token.range));
   }
   function createParser() {
-    if (pratt !== null) {
-      return;
-    }
-    pratt = new Pratt();
+    var pratt = new Pratt();
     pratt.literal(TokenKind.NULL, new TokenLiteral(NodeKind.NULL));
     pratt.literal(TokenKind.THIS, new TokenLiteral(NodeKind.THIS));
     pratt.literal(TokenKind.TRUE, new BoolLiteral(true));
@@ -13132,6 +13125,7 @@
     pratt.parselet(TokenKind.SUPER, Precedence.LOWEST).prefix = new SuperParselet();
     pratt.parselet(TokenKind.BITWISE_AND, Precedence.BITWISE_AND).infix = new BinaryInfixOrUnaryPostfix(NodeKind.BITWISE_AND, NodeKind.POSTFIX_REFERENCE, Precedence.BITWISE_AND);
     pratt.parselet(TokenKind.MULTIPLY, Precedence.MULTIPLY).infix = new BinaryInfixOrUnaryPostfix(NodeKind.MULTIPLY, NodeKind.POSTFIX_DEREFERENCE, Precedence.MULTIPLY);
+    return pratt;
   }
   function semanticWarningUnusedExpression(log, range) {
     log.warning(range, 'Unused expression');
@@ -13467,6 +13461,9 @@
   function semanticErrorPreprocessorInvalidOverriddenDefine(log, range, name) {
     log.error(range, 'Could not find a #define named ' + simpleQuote(name) + ' to override');
   }
+  function semanticErrorPurityViolation(log, range) {
+    log.error(range, 'Cannot use impure value inside pure function');
+  }
   FunctionInliningPass.run = function(callGraph, options) {
     var graph = new InliningGraph(callGraph, options);
     for (var i = 0; i < graph.inliningInfo.length; i = i + 1 | 0) {
@@ -13644,18 +13641,6 @@
       }
     }
   };
-  function createNameToSymbolFlag() {
-    if (nameToSymbolFlag !== null) {
-      return;
-    }
-    nameToSymbolFlag = StringMap.literal(['const', 'export', 'final', 'import', 'inline', 'override', 'private', 'protected', 'public', 'static', 'virtual'], [SymbolFlag.CONST, SymbolFlag.EXPORT, SymbolFlag.FINAL, SymbolFlag.IMPORT, SymbolFlag.INLINE, SymbolFlag.OVERRIDE, SymbolFlag.PRIVATE, SymbolFlag.PROTECTED, SymbolFlag.PUBLIC, SymbolFlag.STATIC, SymbolFlag.VIRTUAL]);
-  }
-  function createSymbolFlagToName() {
-    if (symbolFlagToName !== null) {
-      return;
-    }
-    symbolFlagToName = IntMap.literal([SymbolFlag.CONST, SymbolFlag.EXPORT, SymbolFlag.FINAL, SymbolFlag.IMPORT, SymbolFlag.INLINE, SymbolFlag.OVERRIDE, SymbolFlag.PRIVATE, SymbolFlag.PROTECTED, SymbolFlag.PUBLIC, SymbolFlag.STATIC, SymbolFlag.VIRTUAL], ['const', 'export', 'final', 'import', 'inline', 'override', 'private', 'protected', 'public', 'static', 'virtual']);
-  }
   in_SymbolKind.isParameter = function($this) {
     return $this >= SymbolKind.OBJECT_PARAMETER && $this <= SymbolKind.FUNCTION_PARAMETER;
   };
@@ -13985,26 +13970,25 @@
     }
   };
   math.INFINITY = Infinity;
-  var operatorInfo = null;
+  var operatorInfo = IntMap.literal([65, 66, 67, 68, 69, 70, 71, 72, 75, 76, 77, 78, 73, 74, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 106, 107, 108, 102, 103, 104, 109, 110, 105, 111], [new OperatorInfo('!', 13, 0), new OperatorInfo('+', 13, 0), new OperatorInfo('-', 13, 0), new OperatorInfo('~', 13, 0), new OperatorInfo('++', 13, 0), new OperatorInfo('--', 13, 0), new OperatorInfo('++', 14, 0), new OperatorInfo('--', 14, 0), new OperatorInfo('*', 13, 0), new OperatorInfo('&', 13, 0), new OperatorInfo('*', 14, 0), new OperatorInfo('&', 14, 0), new OperatorInfo('new', 13, 0), new OperatorInfo('delete', 13, 0), new OperatorInfo('+', 11, 1), new OperatorInfo('&', 7, 1), new OperatorInfo('|', 5, 1), new OperatorInfo('^', 6, 1), new OperatorInfo('/', 12, 1), new OperatorInfo('==', 8, 1), new OperatorInfo('>', 9, 1), new OperatorInfo('>=', 9, 1), new OperatorInfo('in', 9, 1), new OperatorInfo('[]', 15, 1), new OperatorInfo('<', 9, 1), new OperatorInfo('<=', 9, 1), new OperatorInfo('&&', 4, 1), new OperatorInfo('||', 3, 1), new OperatorInfo('*', 12, 1), new OperatorInfo('!=', 8, 1), new OperatorInfo('%', 12, 1), new OperatorInfo('<<', 10, 1), new OperatorInfo('>>', 10, 1), new OperatorInfo('-', 11, 1), new OperatorInfo('=', 2, 2), new OperatorInfo('+=', 2, 2), new OperatorInfo('&=', 2, 2), new OperatorInfo('|=', 2, 2), new OperatorInfo('^=', 2, 2), new OperatorInfo('/=', 2, 2), new OperatorInfo('*=', 2, 2), new OperatorInfo('%=', 2, 2), new OperatorInfo('<<=', 2, 2), new OperatorInfo('>>=', 2, 2), new OperatorInfo('-=', 2, 2), new OperatorInfo('[]=', 2, 2)]);
   var HEX = '0123456789ABCDEF';
   trace.GENERICS = false;
-  var yy_accept = [109, 109, 109, 36, 39, 108, 71, 39, 39, 87, 15, 39, 62, 91, 68, 75, 24, 67, 32, 30, 55, 55, 23, 92, 63, 4, 45, 86, 39, 47, 61, 90, 17, 100, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 60, 16, 89, 101, 108, 72, 109, 96, 109, 58, 58, 58, 58, 58, 12, 65, 5, 109, 21, 109, 10, 51, 11, 27, 9, 2, 33, 109, 108, 8, 109, 55, 109, 109, 43, 109, 109, 34, 93, 64, 38, 46, 94, 1, 47, 7, 47, 47, 47, 47, 47, 47, 47, 31, 47, 47, 47, 47, 47, 47, 48, 47, 50, 59, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 6, 66, 58, 58, 58, 58, 58, 81, 58, 109, 43, 109, 109, 109, 108, 109, 33, 54, 57, 56, 13, 14, 1, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 44, 47, 47, 47, 47, 70, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 103, 47, 105, 47, 47, 58, 58, 58, 58, 58, 58, 109, 33, 108, 47, 47, 47, 19, 47, 47, 47, 47, 47, 47, 35, 37, 47, 47, 47, 47, 47, 47, 47, 73, 47, 47, 47, 47, 47, 47, 47, 47, 99, 102, 47, 47, 47, 58, 77, 78, 58, 58, 58, 0, 47, 18, 20, 22, 25, 47, 47, 47, 47, 41, 42, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 97, 47, 104, 47, 107, 58, 79, 80, 58, 3, 47, 47, 29, 40, 49, 52, 47, 47, 47, 47, 47, 85, 88, 95, 98, 47, 76, 58, 47, 28, 47, 47, 47, 83, 47, 106, 82, 26, 47, 47, 74, 47, 53, 69, 84, 109];
+  var yy_accept = [110, 110, 110, 36, 39, 109, 71, 39, 39, 88, 15, 39, 62, 92, 68, 75, 24, 67, 32, 30, 55, 55, 23, 93, 63, 4, 45, 87, 39, 47, 61, 91, 17, 101, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 60, 16, 90, 102, 109, 72, 110, 97, 110, 58, 58, 58, 58, 58, 12, 65, 5, 110, 21, 110, 10, 51, 11, 27, 9, 2, 33, 110, 109, 8, 110, 55, 110, 110, 43, 110, 110, 34, 94, 64, 38, 46, 95, 1, 47, 7, 47, 47, 47, 47, 47, 47, 47, 31, 47, 47, 47, 47, 47, 47, 48, 47, 50, 59, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 6, 66, 58, 58, 58, 58, 58, 81, 58, 110, 43, 110, 110, 110, 109, 110, 33, 54, 57, 56, 13, 14, 1, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 44, 47, 47, 47, 47, 70, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 104, 47, 106, 47, 47, 58, 58, 58, 58, 58, 58, 110, 33, 109, 47, 47, 47, 19, 47, 47, 47, 47, 47, 47, 35, 37, 47, 47, 47, 47, 47, 47, 47, 73, 47, 47, 47, 47, 86, 47, 47, 47, 47, 100, 103, 47, 47, 47, 58, 77, 78, 58, 58, 58, 0, 47, 18, 20, 22, 25, 47, 47, 47, 47, 41, 42, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 98, 47, 105, 47, 108, 58, 79, 80, 58, 3, 47, 47, 29, 40, 49, 52, 47, 47, 47, 47, 47, 85, 89, 96, 99, 47, 76, 58, 47, 28, 47, 47, 47, 83, 47, 107, 82, 26, 47, 47, 74, 47, 53, 69, 84, 110];
   var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 6, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 20, 20, 20, 21, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29, 29, 29, 30, 29, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 32, 33, 34, 35, 31, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 31, 46, 47, 48, 49, 50, 51, 31, 52, 53, 54, 55, 56, 57, 58, 59, 31, 60, 61, 62, 63, 1];
   var yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 4, 4, 5, 1, 1, 1, 1, 1, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 1, 1, 1];
-  var yy_base = [0, 0, 0, 423, 424, 62, 397, 61, 27, 396, 61, 62, 424, 424, 395, 57, 424, 62, 55, 66, 80, 86, 397, 424, 55, 393, 64, 424, 0, 0, 424, 424, 392, 424, 50, 364, 76, 67, 62, 87, 87, 78, 359, 79, 373, 87, 41, 360, 102, 368, 424, 87, 424, 424, 143, 424, 120, 424, 408, 0, 369, 102, 367, 371, 424, 424, 424, 134, 424, 404, 424, 424, 424, 424, 424, 424, 138, 138, 0, 424, 142, 153, 169, 146, 424, 157, 0, 424, 381, 424, 424, 424, 380, 0, 0, 424, 359, 350, 361, 132, 364, 351, 149, 0, 346, 343, 346, 349, 346, 342, 0, 342, 145, 0, 344, 334, 343, 348, 148, 350, 333, 349, 334, 339, 338, 111, 337, 329, 328, 334, 424, 424, 0, 336, 152, 337, 324, 0, 323, 188, 424, 198, 199, 200, 0, 200, 204, 195, 208, 0, 424, 424, 0, 337, 332, 335, 330, 331, 316, 176, 331, 326, 325, 317, 314, 310, 325, 0, 311, 315, 318, 317, 0, 310, 304, 299, 300, 306, 297, 297, 309, 295, 295, 306, 0, 297, 0, 291, 297, 298, 300, 300, 295, 289, 289, 213, 217, 424, 284, 284, 289, 0, 290, 280, 278, 286, 275, 275, 0, 0, 276, 286, 279, 273, 275, 271, 269, 0, 269, 283, 278, 273, 265, 271, 263, 275, 0, 0, 270, 257, 270, 261, 0, 0, 267, 256, 262, 0, 252, 0, 0, 0, 0, 256, 257, 262, 248, 0, 0, 247, 259, 244, 207, 212, 202, 216, 215, 204, 213, 0, 207, 0, 213, 0, 208, 0, 0, 199, 0, 192, 191, 0, 0, 0, 0, 207, 206, 202, 200, 186, 0, 0, 0, 0, 192, 0, 161, 161, 0, 161, 142, 137, 0, 111, 0, 0, 0, 73, 51, 0, 41, 0, 0, 0, 424, 259, 261, 266, 268, 271, 274, 279, 284, 287, 289, 294];
-  var yy_def = [0, 304, 1, 304, 304, 304, 304, 305, 306, 304, 304, 307, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 308, 309, 304, 304, 304, 304, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 304, 304, 304, 304, 304, 304, 305, 304, 305, 310, 310, 310, 310, 310, 304, 304, 304, 307, 304, 307, 304, 304, 304, 304, 304, 304, 304, 311, 312, 304, 304, 304, 304, 304, 304, 304, 313, 304, 304, 304, 304, 304, 304, 314, 309, 304, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 304, 304, 310, 310, 310, 310, 310, 310, 310, 304, 304, 311, 315, 311, 312, 304, 304, 304, 304, 313, 304, 304, 314, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 310, 310, 310, 310, 310, 310, 304, 304, 304, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 310, 310, 310, 310, 310, 310, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 310, 310, 310, 310, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 309, 310, 310, 309, 309, 309, 309, 309, 309, 309, 309, 310, 309, 309, 309, 309, 309, 309, 309, 309, 0, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304];
-  var yy_nxt = [0, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 21, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29, 29, 30, 4, 31, 32, 33, 34, 35, 36, 37, 38, 39, 29, 29, 40, 29, 29, 29, 41, 42, 43, 44, 45, 46, 47, 48, 49, 29, 29, 50, 51, 52, 53, 54, 54, 57, 60, 61, 65, 71, 68, 62, 76, 76, 76, 76, 73, 77, 88, 89, 303, 72, 78, 63, 124, 66, 74, 75, 91, 92, 79, 302, 125, 58, 69, 80, 96, 81, 81, 81, 81, 80, 97, 81, 81, 81, 81, 102, 104, 82, 105, 130, 99, 301, 114, 82, 103, 83, 115, 106, 82, 84, 100, 107, 57, 101, 82, 84, 110, 85, 118, 108, 116, 119, 111, 112, 109, 86, 127, 113, 121, 122, 68, 123, 54, 54, 128, 131, 134, 142, 135, 300, 58, 136, 143, 76, 76, 76, 76, 76, 76, 76, 76, 147, 147, 183, 69, 139, 80, 184, 81, 81, 81, 81, 148, 148, 148, 299, 139, 140, 298, 145, 82, 145, 156, 157, 146, 146, 146, 146, 160, 169, 175, 82, 84, 161, 190, 176, 170, 297, 195, 296, 195, 295, 191, 196, 196, 196, 196, 142, 142, 142, 147, 147, 143, 197, 143, 146, 146, 146, 146, 146, 146, 146, 146, 148, 148, 148, 204, 205, 196, 196, 196, 196, 196, 196, 196, 196, 294, 293, 292, 291, 290, 289, 288, 84, 287, 286, 285, 284, 283, 282, 281, 280, 279, 278, 277, 276, 140, 56, 56, 56, 56, 56, 59, 59, 67, 67, 67, 67, 67, 93, 93, 94, 94, 94, 132, 132, 132, 141, 141, 141, 141, 141, 144, 275, 144, 144, 144, 149, 149, 152, 152, 152, 143, 143, 143, 143, 143, 274, 273, 272, 271, 270, 269, 268, 267, 266, 265, 264, 263, 262, 261, 260, 259, 258, 257, 256, 255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 203, 202, 201, 200, 199, 198, 194, 193, 192, 189, 188, 187, 186, 185, 182, 181, 180, 179, 178, 177, 174, 173, 172, 171, 168, 167, 166, 165, 164, 163, 162, 159, 158, 155, 154, 153, 151, 150, 304, 138, 137, 133, 304, 129, 126, 120, 117, 98, 95, 90, 87, 70, 64, 55, 304, 3, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304];
-  var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 7, 8, 8, 10, 15, 11, 8, 18, 18, 18, 18, 17, 19, 24, 24, 300, 15, 19, 8, 46, 10, 17, 17, 26, 26, 19, 298, 46, 7, 11, 20, 34, 20, 20, 20, 20, 21, 34, 21, 21, 21, 21, 37, 38, 20, 38, 51, 36, 297, 41, 21, 37, 20, 41, 38, 20, 20, 36, 39, 56, 36, 21, 21, 40, 20, 43, 39, 41, 43, 40, 40, 39, 20, 48, 40, 45, 45, 67, 45, 54, 54, 48, 51, 61, 77, 61, 293, 56, 61, 77, 76, 76, 76, 76, 80, 80, 80, 80, 83, 83, 125, 67, 76, 81, 125, 81, 81, 81, 81, 85, 85, 85, 291, 76, 76, 290, 82, 81, 82, 99, 99, 82, 82, 82, 82, 102, 112, 118, 81, 81, 102, 134, 118, 112, 289, 139, 287, 139, 286, 134, 139, 139, 139, 139, 141, 142, 143, 147, 147, 141, 142, 143, 145, 145, 145, 145, 146, 146, 146, 146, 148, 148, 148, 159, 159, 195, 195, 195, 195, 196, 196, 196, 196, 284, 279, 278, 277, 276, 275, 270, 146, 269, 267, 264, 262, 260, 258, 257, 256, 255, 254, 253, 252, 196, 305, 305, 305, 305, 305, 306, 306, 307, 307, 307, 307, 307, 308, 308, 309, 309, 309, 310, 310, 310, 311, 311, 311, 311, 311, 312, 251, 312, 312, 312, 313, 313, 314, 314, 314, 315, 315, 315, 315, 315, 250, 249, 246, 245, 244, 243, 238, 236, 235, 234, 231, 230, 229, 228, 225, 224, 223, 222, 221, 220, 219, 218, 216, 215, 214, 213, 212, 211, 210, 207, 206, 205, 204, 203, 202, 200, 199, 198, 194, 193, 192, 191, 190, 189, 188, 187, 185, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 171, 170, 169, 168, 166, 165, 164, 163, 162, 161, 160, 158, 157, 156, 155, 154, 153, 138, 136, 135, 133, 129, 128, 127, 126, 124, 123, 122, 121, 120, 119, 117, 116, 115, 114, 111, 109, 108, 107, 106, 105, 104, 101, 100, 98, 97, 96, 92, 88, 69, 63, 62, 60, 58, 49, 47, 44, 42, 35, 32, 25, 22, 14, 9, 6, 3, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304, 304];
-  var pratt = null;
-  var nameToSymbolFlag = null;
-  var symbolFlagToName = null;
+  var yy_base = [0, 0, 0, 425, 426, 62, 399, 61, 27, 398, 61, 62, 426, 426, 397, 57, 426, 62, 55, 66, 80, 86, 399, 426, 55, 395, 64, 426, 0, 0, 426, 426, 394, 426, 50, 366, 76, 67, 62, 87, 87, 78, 361, 79, 375, 87, 41, 362, 102, 370, 426, 87, 426, 426, 143, 426, 120, 426, 410, 0, 371, 102, 369, 373, 426, 426, 426, 134, 426, 406, 426, 426, 426, 426, 426, 426, 138, 138, 0, 426, 142, 153, 169, 146, 426, 157, 0, 426, 383, 426, 426, 426, 382, 0, 0, 426, 361, 352, 363, 132, 366, 353, 149, 0, 348, 345, 348, 351, 348, 344, 0, 344, 145, 0, 346, 336, 345, 350, 148, 114, 336, 352, 337, 342, 341, 142, 340, 332, 331, 337, 426, 426, 0, 339, 125, 340, 327, 0, 326, 187, 426, 192, 198, 199, 0, 199, 203, 194, 207, 0, 426, 426, 0, 340, 335, 338, 333, 334, 319, 175, 334, 329, 328, 320, 317, 313, 328, 0, 314, 318, 321, 320, 0, 313, 307, 302, 303, 309, 314, 299, 299, 311, 297, 297, 308, 0, 299, 0, 293, 299, 300, 302, 302, 297, 291, 291, 212, 216, 426, 286, 286, 291, 0, 292, 282, 280, 288, 277, 277, 0, 0, 278, 288, 281, 275, 277, 273, 271, 0, 271, 285, 280, 275, 0, 267, 273, 265, 277, 0, 0, 272, 259, 272, 263, 0, 0, 269, 258, 264, 0, 254, 0, 0, 0, 0, 258, 259, 264, 250, 0, 0, 249, 261, 259, 249, 254, 231, 218, 217, 206, 215, 0, 209, 0, 215, 0, 210, 0, 0, 201, 0, 194, 194, 0, 0, 0, 0, 210, 209, 204, 202, 188, 0, 0, 0, 0, 194, 0, 197, 198, 0, 199, 175, 162, 0, 140, 0, 0, 0, 73, 51, 0, 41, 0, 0, 0, 426, 258, 260, 265, 267, 270, 273, 278, 283, 286, 288, 293];
+  var yy_def = [0, 306, 1, 306, 306, 306, 306, 307, 308, 306, 306, 309, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 310, 311, 306, 306, 306, 306, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 306, 306, 306, 306, 306, 306, 307, 306, 307, 312, 312, 312, 312, 312, 306, 306, 306, 309, 306, 309, 306, 306, 306, 306, 306, 306, 306, 313, 314, 306, 306, 306, 306, 306, 306, 306, 315, 306, 306, 306, 306, 306, 306, 316, 311, 306, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 306, 306, 312, 312, 312, 312, 312, 312, 312, 306, 306, 313, 317, 313, 314, 306, 306, 306, 306, 315, 306, 306, 316, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 312, 312, 312, 312, 312, 312, 306, 306, 306, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 312, 312, 312, 312, 312, 312, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 312, 312, 312, 312, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 311, 312, 312, 311, 311, 311, 311, 311, 311, 311, 311, 312, 311, 311, 311, 311, 311, 311, 311, 311, 0, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306];
+  var yy_nxt = [0, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 21, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29, 29, 30, 4, 31, 32, 33, 34, 35, 36, 37, 38, 39, 29, 29, 40, 29, 29, 29, 41, 42, 43, 44, 45, 46, 47, 48, 49, 29, 29, 50, 51, 52, 53, 54, 54, 57, 60, 61, 65, 71, 68, 62, 76, 76, 76, 76, 73, 77, 88, 89, 305, 72, 78, 63, 124, 66, 74, 75, 91, 92, 79, 304, 125, 58, 69, 80, 96, 81, 81, 81, 81, 80, 97, 81, 81, 81, 81, 102, 104, 82, 105, 130, 99, 303, 114, 82, 103, 83, 115, 106, 82, 84, 100, 107, 57, 101, 82, 84, 110, 85, 118, 108, 116, 119, 111, 112, 109, 86, 127, 113, 121, 122, 68, 123, 54, 54, 128, 131, 134, 142, 135, 177, 58, 136, 143, 76, 76, 76, 76, 76, 76, 76, 76, 147, 147, 178, 69, 139, 80, 191, 81, 81, 81, 81, 148, 148, 148, 192, 139, 140, 302, 145, 82, 145, 156, 157, 146, 146, 146, 146, 160, 169, 175, 82, 84, 161, 184, 176, 170, 196, 185, 196, 301, 142, 197, 197, 197, 197, 143, 142, 142, 147, 147, 300, 198, 143, 146, 146, 146, 146, 146, 146, 146, 146, 148, 148, 148, 205, 206, 197, 197, 197, 197, 197, 197, 197, 197, 299, 298, 297, 296, 295, 294, 293, 84, 292, 291, 290, 289, 288, 287, 286, 285, 284, 283, 282, 281, 140, 56, 56, 56, 56, 56, 59, 59, 67, 67, 67, 67, 67, 93, 93, 94, 94, 94, 132, 132, 132, 141, 141, 141, 141, 141, 144, 280, 144, 144, 144, 149, 149, 152, 152, 152, 143, 143, 143, 143, 143, 279, 278, 277, 276, 275, 274, 273, 272, 271, 270, 269, 268, 267, 266, 265, 264, 263, 262, 261, 260, 259, 258, 257, 256, 255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 204, 203, 202, 201, 200, 199, 195, 194, 193, 190, 189, 188, 187, 186, 183, 182, 181, 180, 179, 174, 173, 172, 171, 168, 167, 166, 165, 164, 163, 162, 159, 158, 155, 154, 153, 151, 150, 306, 138, 137, 133, 306, 129, 126, 120, 117, 98, 95, 90, 87, 70, 64, 55, 306, 3, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306];
+  var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 7, 8, 8, 10, 15, 11, 8, 18, 18, 18, 18, 17, 19, 24, 24, 302, 15, 19, 8, 46, 10, 17, 17, 26, 26, 19, 300, 46, 7, 11, 20, 34, 20, 20, 20, 20, 21, 34, 21, 21, 21, 21, 37, 38, 20, 38, 51, 36, 299, 41, 21, 37, 20, 41, 38, 20, 20, 36, 39, 56, 36, 21, 21, 40, 20, 43, 39, 41, 43, 40, 40, 39, 20, 48, 40, 45, 45, 67, 45, 54, 54, 48, 51, 61, 77, 61, 119, 56, 61, 77, 76, 76, 76, 76, 80, 80, 80, 80, 83, 83, 119, 67, 76, 81, 134, 81, 81, 81, 81, 85, 85, 85, 134, 76, 76, 295, 82, 81, 82, 99, 99, 82, 82, 82, 82, 102, 112, 118, 81, 81, 102, 125, 118, 112, 139, 125, 139, 293, 141, 139, 139, 139, 139, 141, 142, 143, 147, 147, 292, 142, 143, 145, 145, 145, 145, 146, 146, 146, 146, 148, 148, 148, 159, 159, 196, 196, 196, 196, 197, 197, 197, 197, 291, 289, 288, 286, 281, 280, 279, 146, 278, 277, 272, 271, 269, 266, 264, 262, 260, 259, 258, 257, 197, 307, 307, 307, 307, 307, 308, 308, 309, 309, 309, 309, 309, 310, 310, 311, 311, 311, 312, 312, 312, 313, 313, 313, 313, 313, 314, 256, 314, 314, 314, 315, 315, 316, 316, 316, 317, 317, 317, 317, 317, 255, 254, 253, 252, 251, 248, 247, 246, 245, 240, 238, 237, 236, 233, 232, 231, 230, 227, 226, 225, 224, 222, 221, 220, 219, 217, 216, 215, 214, 213, 212, 211, 208, 207, 206, 205, 204, 203, 201, 200, 199, 195, 194, 193, 192, 191, 190, 189, 188, 186, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 171, 170, 169, 168, 166, 165, 164, 163, 162, 161, 160, 158, 157, 156, 155, 154, 153, 138, 136, 135, 133, 129, 128, 127, 126, 124, 123, 122, 121, 120, 117, 116, 115, 114, 111, 109, 108, 107, 106, 105, 104, 101, 100, 98, 97, 96, 92, 88, 69, 63, 62, 60, 58, 49, 47, 44, 42, 35, 32, 25, 22, 14, 9, 6, 3, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306, 306];
+  var pratt = createParser();
+  var nameToSymbolFlag = StringMap.literal(['const', 'export', 'final', 'import', 'inline', 'override', 'private', 'protected', 'public', 'pure', 'static', 'virtual'], [1024, 4096, 256, 8192, 512, 32, 2, 4, 1, 2048, 64, 128]);
   frontend.DEFAULT_ERROR_LIMIT = 20;
   in_NodeKind._toString_ = ['PROGRAM', 'FILE', 'BLOCK', 'NODE_LIST', 'CASE', 'MEMBER_INITIALIZER', 'VARIABLE_CLUSTER', 'NAMESPACE', 'ENUM', 'ENUM_FLAGS', 'CLASS', 'INTERFACE', 'EXTENSION', 'CONSTRUCTOR', 'FUNCTION', 'VARIABLE', 'PARAMETER', 'PREPROCESSOR_DEFINE', 'ALIAS', 'IF', 'TRY', 'FOR', 'FOR_EACH', 'WHILE', 'DO_WHILE', 'RETURN', 'BREAK', 'CONTINUE', 'ASSERT', 'ASSERT_CONST', 'EXPRESSION', 'SWITCH', 'MODIFIER', 'USING', 'PREPROCESSOR_WARNING', 'PREPROCESSOR_ERROR', 'PREPROCESSOR_IF', 'NAME', 'TYPE', 'THIS', 'HOOK', 'NULL', 'BOOL', 'INT', 'FLOAT', 'DOUBLE', 'STRING', 'LIST', 'MAP', 'KEY_VALUE', 'DOT', 'DOT_ARROW', 'DOT_COLON', 'CALL', 'SUPER_CALL', 'ERROR', 'SEQUENCE', 'PARAMETERIZE', 'CAST', 'IMPLICIT_CAST', 'QUOTED', 'VAR', 'ANNOTATION', 'PREPROCESSOR_HOOK', 'PREPROCESSOR_SEQUENCE', 'NOT', 'POSITIVE', 'NEGATIVE', 'COMPLEMENT', 'PREFIX_INCREMENT', 'PREFIX_DECREMENT', 'POSTFIX_INCREMENT', 'POSTFIX_DECREMENT', 'NEW', 'DELETE', 'PREFIX_DEREFERENCE', 'PREFIX_REFERENCE', 'POSTFIX_DEREFERENCE', 'POSTFIX_REFERENCE', 'ADD', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'COMPARE', 'DIVIDE', 'EQUAL', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'IN', 'INDEX', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'LOGICAL_AND', 'LOGICAL_OR', 'MULTIPLY', 'NOT_EQUAL', 'REMAINDER', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SUBTRACT', 'ASSIGN', 'ASSIGN_ADD', 'ASSIGN_DIVIDE', 'ASSIGN_MULTIPLY', 'ASSIGN_REMAINDER', 'ASSIGN_SUBTRACT', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'ASSIGN_INDEX'];
-  in_TokenKind._toString_ = ['ALIAS', 'ANNOTATION', 'ARROW', 'ASSERT', 'ASSIGN', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MINUS', 'ASSIGN_MULTIPLY', 'ASSIGN_PLUS', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'BREAK', 'CASE', 'CATCH', 'CHARACTER', 'CLASS', 'COLON', 'COMMA', 'CONST', 'CONTINUE', 'DECREMENT', 'DEFAULT', 'DELETE', 'DIVIDE', 'DO', 'DOT', 'DOUBLE', 'DOUBLE_COLON', 'ELSE', 'END_OF_FILE', 'ENUM', 'EQUAL', 'ERROR', 'EXPORT', 'FALSE', 'FINAL', 'FLOAT', 'FOR', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'IDENTIFIER', 'IF', 'IMPORT', 'IN', 'INCREMENT', 'INLINE', 'INTERFACE', 'INT_BINARY', 'INT_DECIMAL', 'INT_HEX', 'INT_OCTAL', 'INVALID_PREPROCESSOR_DIRECTIVE', 'IS', 'LEFT_BRACE', 'LEFT_BRACKET', 'LEFT_PARENTHESIS', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'LOGICAL_AND', 'LOGICAL_OR', 'MINUS', 'MULTIPLY', 'NAMESPACE', 'NEW', 'NOT', 'NOT_EQUAL', 'NULL', 'OVERRIDE', 'PLUS', 'PREPROCESSOR_DEFINE', 'PREPROCESSOR_ELIF', 'PREPROCESSOR_ELSE', 'PREPROCESSOR_ENDIF', 'PREPROCESSOR_ERROR', 'PREPROCESSOR_IF', 'PREPROCESSOR_WARNING', 'PRIVATE', 'PROTECTED', 'PUBLIC', 'QUESTION_MARK', 'REMAINDER', 'RETURN', 'RIGHT_BRACE', 'RIGHT_BRACKET', 'RIGHT_PARENTHESIS', 'SEMICOLON', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'STATIC', 'STRING', 'SUPER', 'SWITCH', 'THIS', 'TICK', 'TILDE', 'TRUE', 'TRY', 'USING', 'VAR', 'VIRTUAL', 'WHILE', 'WHITESPACE', 'YY_INVALID_ACTION', 'START_PARAMETER_LIST', 'END_PARAMETER_LIST'];
-  Compiler.cachedLibraries = [new CachedSource('defines.sk', '// The "--release" flag automatically overrides BUILD_RELEASE with true\n#define BUILD_DEBUG   !BUILD_RELEASE\n#define BUILD_RELEASE false\n\n// These will be overridden by the compiler with the current language target\n#define TARGET_JS   false\n#define TARGET_CPP  false\n#define TARGET_NONE !TARGET_JS && !TARGET_CPP\n\n// The "--config" flag can be used to override these (example: "--config=node").\n// Using "--target=js" defaults to "--config=browser" and using "--target=cpp"\n// defaults to the config for the current operating system.\n#define CONFIG_IOS     false\n#define CONFIG_OSX     false\n#define CONFIG_LINUX   false\n#define CONFIG_ANDROID false\n#define CONFIG_WINDOWS false\n#define CONFIG_NODE    false\n#define CONFIG_BROWSER false\n#define CONFIG_UNKNOWN !CONFIG_IOS && !CONFIG_OSX && !CONFIG_LINUX && !CONFIG_ANDROID && !CONFIG_WINDOWS && !CONFIG_NODE && !CONFIG_BROWSER\n'), new CachedSource('primitives.sk', '#if TARGET_JS\n\n  import class int { string toString(); }\n  import class bool { string toString(); }\n  import class float { string toString(); }\n  import class double { string toString(); }\n\n  import class string {\n    string slice(int start, int end);\n    List<string> split(string separator);\n    int indexOf(string value);\n    int lastIndexOf(string value);\n    string toLowerCase();\n    string toUpperCase();\n  }\n\n  in string {\n    inline {\n      int size() { return this.`length`; }\n      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }\n      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      string join(List<string> values) { return values.`join`(this); }\n      @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }\n      static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  import class int {}\n  import class bool {}\n  import class float {}\n  import class double {}\n\n  @NeedsInclude("<string>")\n  @EmitAs("std::string")\n  import class string {}\n\n  in int {\n    inline string toString() { return `std`::to_string(this); }\n  }\n\n  in bool {\n    inline string toString() { return this ? "true" : "false"; }\n  }\n\n  in float {\n    inline string toString() { return double._format_(this); }\n  }\n\n  in double {\n    inline string toString() { return _format_(this); }\n\n    #if !CONFIG_WINDOWS\n\n      // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0\n      @NeedsInclude("<cstdio>")\n      static string _format_(double value) {\n        string buffer;\n        `buffer.resize(64)`;\n        `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;\n        if (`std::stod(&buffer[0]) != value`) {\n          `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;\n          }\n        }\n        return `buffer.c_str()`;\n      }\n\n    #else\n\n      // MSVC won\'t allow std::sprintf() even though it\'s in the C++11 standard\n      @NeedsInclude("<stdio.h>")\n      static string _format_(double value) {\n        string buffer;\n        `buffer.resize(64)`;\n        `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;\n        if (`std::stod(&buffer[0]) != value`) {\n          `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;\n          }\n        }\n        return `buffer.c_str()`;\n      }\n\n    #endif\n  }\n\n  in string {\n    inline {\n      int size() { return (int)this.`size`(); }\n      string slice(int start, int end) { return this.`substr`(start, end - start); }\n      string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }\n      int indexOf(string value) { return (int)this.`find`(value); }\n      int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }\n      int lastIndexOf(string value) { return (int)this.`rfind`(value); }\n      int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }\n      @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values\n      static string fromCodeUnit(int value) { return ``string``(1, value); }\n    }\n\n    @NeedsInclude("<algorithm>")\n    @NeedsInclude("<ctype.h>") {\n      string toLowerCase() {\n        var clone = this;\n        `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;\n        return clone;\n      }\n\n      string toUpperCase() {\n        var clone = this;\n        `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;\n        return clone;\n      }\n    }\n\n    string join(List<string> values) {\n      var result = "";\n      for (var i = 0; i < values.size(); i++) {\n        if (i > 0) result += this;\n        result += values[i];\n      }\n      return result;\n    }\n\n    List<string> split(string separator) {\n      List<string> values = [];\n      var start = 0;\n      while (true) {\n        var end = indexOfFrom(separator, start);\n        if (end == -1) break;\n        values.push(slice(start, end));\n        start = end + separator.size();\n      }\n      values.push(slice(start, size()));\n      return values;\n    }\n  }\n\n#else\n\n  import class int { string toString(); }\n  import class bool { string toString(); }\n  import class float { string toString(); }\n  import class double { string toString(); }\n\n  import class string {\n    int size();\n    List<string> split(string separator);\n    string slice(int start, int end);\n    string sliceCodeUnit(int index);\n    int indexOf(string value);\n    int indexOfFrom(string value, int fromIndex);\n    int lastIndexOf(string value);\n    int lastIndexOfFrom(string value, int fromIndex);\n    string toLowerCase();\n    string toUpperCase();\n    string join(List<string> values);\n    @OperatorGet int codeUnitAt(int index);\n    static string fromCodeUnit(int value);\n  }\n\n#endif\n\nin string {\n  @OperatorIn\n  inline bool contains(string value) {\n    return indexOf(value) >= 0;\n  }\n\n  inline string toString() {\n    return this;\n  }\n\n  bool startsWith(string prefix) {\n    return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n  }\n\n  bool endsWith(string suffix) {\n    return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n  }\n\n  string repeat(int count) {\n    var result = "";\n    for (var i = 0; i < count; i++) result += this;\n    return result;\n  }\n\n  string replaceAll(string before, string after) {\n    var result = "";\n    var start = 0;\n    while (true) {\n      var end = indexOfFrom(before, start);\n      if (end == -1) break;\n      result += slice(start, end) + after;\n      start = end + before.size();\n    }\n    return result + slice(start, size());\n  }\n}\n\nclass Box<T> {\n  final T value;\n}\n'), new CachedSource('math.sk', '#if TARGET_JS\n\n  namespace math {\n    inline {\n      double abs(double x) { return `Math`.abs(x); }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return `Math`.pow(x, y); }\n      double floor(double x) { return `Math`.floor(x); }\n      double round(double x) { return `Math`.round(x); }\n      double ceil(double x) { return `Math`.ceil(x); }\n      double min(double x, double y) { return `Math`.min(x, y); }\n      double max(double x, double y) { return `Math`.max(x, y); }\n      double random() { return `Math`.random(); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  namespace math {\n    inline @NeedsInclude("<cmath>") {\n      double abs(double x) { return `std`::abs(x); }\n      double sin(double x) { return `std`::sin(x); }\n      double cos(double x) { return `std`::cos(x); }\n      double tan(double x) { return `std`::tan(x); }\n      double asin(double x) { return `std`::asin(x); }\n      double acos(double x) { return `std`::acos(x); }\n      double atan(double x) { return `std`::atan(x); }\n      double atan2(double y, double x) { return `std`::atan2(y, x); }\n      double sqrt(double x) { return `std`::sqrt(x); }\n      double exp(double x) { return `std`::exp(x); }\n      double log(double x) { return `std`::log(x); }\n      double pow(double x, double y) { return `std`::pow(x, y); }\n      double floor(double x) { return `std`::floor(x); }\n      double round(double x) { return `std`::round(x); }\n      double ceil(double x) { return `std`::ceil(x); }\n      double min(double x, double y) { return `std`::fmin(x, y); }\n      double max(double x, double y) { return `std`::fmax(x, y); }\n    }\n\n    @NeedsInclude("<random>") {\n      `std::uniform_real_distribution<double>` _distribution_;\n      `(std::mt19937 *)` _generator_ = null;\n\n      double random() {\n        if (_generator_ == null) {\n          _generator_ = new `std`::mt19937(`std`::random_device()());\n        }\n        return _distribution_(*_generator_);\n      }\n    }\n  }\n\n#else\n\n  import namespace math {\n    double abs(double x);\n    double sin(double x);\n    double cos(double x);\n    double tan(double x);\n    double asin(double x);\n    double acos(double x);\n    double atan(double x);\n    double atan2(double y, double x);\n    double sqrt(double x);\n    double exp(double x);\n    double log(double x);\n    double pow(double x, double y);\n    double floor(double x);\n    double round(double x);\n    double ceil(double x);\n    double min(double x, double y);\n    double max(double x, double y);\n    double random();\n  }\n\n#endif\n\nin math {\n  const {\n    var SQRT2 = 1.414213562373095;\n    var PI = 3.141592653589793;\n    var TWOPI = 2 * PI;\n    var E = 2.718281828459045;\n    var INFINITY = 1 / 0.0;\n    var NAN = 0 / 0.0;\n  }\n}\n'), new CachedSource('list.sk', 'interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\n#if TARGET_JS\n\n  void bindCompare<T>(Comparison<T> comparison) {\n    return comparison.compare.`bind`(comparison);\n  }\n\n  import class List<T> {\n    new();\n    void push(T value);\n    void unshift(T value);\n    List<T> slice(int start, int end);\n    int indexOf(T value);\n    int lastIndexOf(T value);\n    T shift();\n    T pop();\n    void reverse();\n  }\n\n  in List {\n    inline {\n      int size() { return this.`length`; }\n      void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }\n      List<T> clone() { return this.`slice`(); }\n      T remove(int index) { return this.`splice`(index, 1)[0]; }\n      void removeRange(int start, int end) { this.`splice`(start, end - start); }\n      void insert(int index, T value) { this.`splice`(index, 0, value); }\n      @OperatorGet T get(int index) { return `this`[index]; }\n      @OperatorSet void set(int index, T value) { `this`[index] = value; }\n      @OperatorIn bool contains(T value) { return indexOf(value) >= 0; }\n    }\n\n    T last() { return this[size() - 1]; }\n    void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }\n  }\n\n#elif TARGET_CPP\n\n  bool bindCompare<T>(Comparison<T> comparison, T left, T right) {\n    return comparison.compare(left, right) < 0;\n  }\n\n  @NeedsInclude("<vector>")\n  class List<T> {\n    new() {}\n\n    int size() {\n      return (int)_data.size();\n    }\n\n    void push(T value) {\n      _data.push_back(value);\n    }\n\n    void unshift(T value) {\n      insert(0, value);\n    }\n\n    List<T> slice(int start, int end) {\n      assert start >= 0 && start <= end && end <= size();\n      List<T> slice = [];\n      slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);\n      return slice;\n    }\n\n    T shift() {\n      T value = this[0];\n      remove(0);\n      return value;\n    }\n\n    T pop() {\n      T value = this[size() - 1];\n      _data.pop_back();\n      return value;\n    }\n\n    T last() {\n      assert size() > 0;\n      return _data.back();\n    }\n\n    List<T> clone() {\n      List<T> clone = [];\n      clone._data = _data;\n      return clone;\n    }\n\n    T remove(int index) {\n      T value = this[index];\n      _data.erase(_data.begin() + index);\n      return value;\n    }\n\n    void removeRange(int start, int end) {\n      assert 0 <= start && start <= end && end <= size();\n      _data.erase(_data.begin() + start, _data.begin() + end);\n    }\n\n    void insert(int index, T value) {\n      assert index >= 0 && index <= size();\n      _data.insert(_data.begin() + index, value);\n    }\n\n    @OperatorGet\n    T get(int index) {\n      assert index >= 0 && index < size();\n      return _data[index];\n    }\n\n    @OperatorSet\n    void set(int index, T value) {\n      assert index >= 0 && index < size();\n      _data[index] = value;\n    }\n\n    @OperatorIn\n    bool contains(T value) {\n      return indexOf(value) >= 0;\n    }\n\n    @NeedsInclude("<algorithm>") {\n      int indexOf(T value) {\n        int index = (int)(`std`::find(_data.begin(), _data.end(), value) - _data.begin());\n        return index == size() ? -1 : index;\n      }\n\n      int lastIndexOf(T value) {\n        int index = (int)(`std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin());\n        return size() - index - 1;\n      }\n\n      void swap(int a, int b) {\n        assert a >= 0 && a < size();\n        assert b >= 0 && b < size();\n        `std`::swap(_data[a], _data[b]);\n      }\n\n      void reverse() {\n        `std`::reverse(_data.begin(), _data.end());\n      }\n\n      @NeedsInclude("<functional>")\n      void sort(Comparison<T> comparison) {\n        `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));\n      }\n    }\n\n    // Normally this would be in a constructor but clang has a bug that\n    // sometimes emits incorrect code for a constructor taking an empty\n    // initializer list. See http://llvm.org/bugs/show_bug.cgi?id=22256\n    // for details.\n    @NeedsInclude("<initializer_list>")\n    List<T> _literal_(`std::initializer_list<T>` list) {\n      _data.insert(_data.end(), list.begin(), list.end());\n      return this;\n    }\n\n    `std::vector<T>` _data;\n  }\n\n#else\n\n  import class List<T> {\n    new();\n    int size();\n    void push(T value);\n    void unshift(T value);\n    List<T> slice(int start, int end);\n    int indexOf(T value);\n    int lastIndexOf(T value);\n    T shift();\n    T pop();\n    T last();\n    void reverse();\n    void sort(Comparison<T> comparison);\n    List<T> clone();\n    T remove(int index);\n    void removeRange(int start, int end);\n    void insert(int index, T value);\n    @OperatorGet T get(int index);\n    @OperatorSet void set(int index, T value);\n    @OperatorIn bool contains(T value);\n    void swap(int a, int b);\n  }\n\n#endif\n'), new CachedSource('stringmap.sk', '#if TARGET_JS\n\n  class StringMap<T> {\n    var _table = `Object`.create(null);\n\n    inline {\n      @OperatorGet T get(string key) { return _table[key]; }\n      @OperatorSet void set(string key, T value) { _table[key] = value; }\n      @OperatorIn bool has(string key) { return key in _table; }\n      void remove(string key) { delete _table[key]; }\n      List<string> keys() { return `Object`.keys(_table); }\n    }\n\n    T getOrDefault(string key, T defaultValue) {\n      return key in this ? this[key] : defaultValue;\n    }\n\n    List<T> values() {\n      List<T> values = [];\n      for (string key in _table) values.push(this[key]);\n      return values;\n    }\n\n    StringMap<T> clone() {\n      var clone = StringMap<T>();\n      for (string key in _table) clone[key] = this[key];\n      return clone;\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class StringMap<T> {\n    new() {}\n    @OperatorGet T get(string key) { return _table[key]; }\n    T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n    @OperatorSet void set(string key, T value) { _table[key] = value; }\n    @OperatorIn bool has(string key) { return _table.count(key) > 0; }\n    void remove(string key) { _table.erase(key); }\n    List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n    `std::unordered_map<`string`, T>` _table;\n  }\n\n#else\n\n  import class StringMap<T> {\n    new();\n    @OperatorGet T get(string key);\n    T getOrDefault(string key, T defaultValue);\n    @OperatorSet void set(string key, T value);\n    @OperatorIn bool has(string key);\n    void remove(string key);\n    List<string> keys();\n    List<T> values();\n    StringMap<T> clone();\n  }\n\n#endif\n\nin StringMap {\n  static StringMap<X> literal<X>(List<string> keys, List<X> values) {\n    var map = StringMap<X>();\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedSource('intmap.sk', '#if TARGET_JS\n\n  class IntMap<T> {\n    var _table = `Object`.create(null);\n\n    inline {\n      @OperatorGet T get(int key) { return _table[key]; }\n      @OperatorSet void set(int key, T value) { _table[key] = value; }\n      @OperatorIn bool has(int key) { return key in _table; }\n      void remove(int key) { delete _table[key]; }\n    }\n\n    T getOrDefault(int key, T defaultValue) {\n      return key in this ? this[key] : defaultValue;\n    }\n\n    List<int> keys() {\n      List<int> keys = [];\n      for (double key in _table) keys.push((int)key);\n      return keys;\n    }\n\n    List<T> values() {\n      List<T> values = [];\n      for (int key in _table) values.push(this[key]);\n      return values;\n    }\n\n    IntMap<T> clone() {\n      var clone = IntMap<T>();\n      for (int key in _table) clone[key] = this[key];\n      return clone;\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class IntMap<T> {\n    new() {}\n    @OperatorGet T get(int key) { return _table[key]; }\n    T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n    @OperatorSet void set(int key, T value) { _table[key] = value; }\n    @OperatorIn bool has(int key) { return _table.count(key) > 0; }\n    void remove(int key) { _table.erase(key); }\n    List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n    List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n    StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n\n    `std::unordered_map<`int`, T>` _table;\n  }\n\n#else\n\n  import class IntMap<T> {\n    new();\n    @OperatorGet T get(int key);\n    T getOrDefault(int key, T defaultValue);\n    @OperatorSet void set(int key, T value);\n    @OperatorIn bool has(int key);\n    void remove(int key);\n    List<int> keys();\n    List<T> values();\n    IntMap<T> clone();\n  }\n\n#endif\n\nin IntMap {\n  static IntMap<X> literal<X>(List<int> keys, List<X> values) {\n    var map = IntMap<X>();\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedSource('os.sk', 'enum OperatingSystem {\n  ANDROID,\n  IOS,\n  LINUX,\n  OSX,\n  UNKNOWN,\n  WINDOWS,\n}\n\nin OperatingSystem {\n  static OperatingSystem current() {\n    #if CONFIG_ANDROID\n\n      return .ANDROID;\n\n    #elif CONFIG_IOS\n\n      return .IOS;\n\n    #elif CONFIG_LINUX\n\n      return .LINUX;\n\n    #elif CONFIG_OSX\n\n      return .OSX;\n\n    #elif CONFIG_WINDOWS\n\n      return .WINDOWS;\n\n    #elif CONFIG_NODE\n\n      string platform = `process.platform`;\n      return\n        // Presumably this also means iOS but there\'s no way to check\n        platform == "darwin" ? .OSX :\n\n        // Official documentation says this will never contain "win64"\n        platform == "win32" ? .WINDOWS :\n\n        // Presumably this also means Android but there\'s no way to check\n        platform == "linux" ? .LINUX :\n\n        // This may also be "freebsd" or "sunos"\n        .UNKNOWN;\n\n    #elif CONFIG_BROWSER\n\n      string platform = `navigator.platform`;\n      string userAgent = `navigator.userAgent`;\n      return\n        // OS X encodes the architecture into the platform\n        platform == "MacIntel" || platform == "MacPPC" ? .OSX :\n\n        // MSDN sources say Win64 is used, unlike node\n        platform == "Win32" || platform == "Win64" ? .WINDOWS :\n\n        // Assume the user is using Mobile Safari or Chrome and not some random\n        // browser with a strange platform (Opera apparently messes with this)\n        platform == "iPhone" || platform == "iPad" ? .IOS :\n\n        // Apparently most Android devices have a platform of "Linux" instead\n        // of "Android", so check the user agent instead. Also make sure to test\n        // for Android before Linux for this reason.\n        "Android" in userAgent ? .ANDROID :\n        "Linux" in platform ? .LINUX :\n\n        // The platform string has no specification and can be literally anything.\n        // Other examples: "BlackBerry", "Nintendo 3DS", "PlayStation 4", etc.\n        .UNKNOWN;\n\n    #else\n\n      return .UNKNOWN;\n\n    #endif\n  }\n}\n'), new CachedSource('terminal.sk', 'namespace terminal {\n  enum Color {\n    DEFAULT = 0,\n    BOLD = 1,\n    GRAY = 90,\n    RED = 91,\n    GREEN = 92,\n    YELLOW = 93,\n    BLUE = 94,\n    MAGENTA = 95,\n    CYAN = 96,\n  }\n\n  #if TARGET_JS && CONFIG_BROWSER\n\n    inline {\n      int width() { return 0; }\n      int height() { return 0; }\n      void setColor(Color color) {}\n      void flush() {}\n\n      void print(string text) {\n        `console`.log(text);\n      }\n\n      // Browser logs are so varied that buffering standard output doesn\'t make much sense\n      void write(string text) {\n        `console`.log(text);\n      }\n    }\n\n  #elif TARGET_JS && CONFIG_NODE\n\n    void setColor(Color color) {\n      if (`process`.stdout.isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        return `process`.stdout.columns;\n      }\n\n      int height() {\n        return `process`.stdout.rows;\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        write(text + "\\n");\n      }\n\n      void write(string text) {\n        `process`.stdout.write(text);\n      }\n    }\n\n  #elif TARGET_CPP && CONFIG_WINDOWS\n\n    `HANDLE` _handle = `INVALID_HANDLE_VALUE`;\n    `CONSOLE_SCREEN_BUFFER_INFO` _info;\n\n    @NeedsInclude("<windows.h>")\n    void _setup() {\n      if (_handle == `INVALID_HANDLE_VALUE`) {\n        _handle = `GetStdHandle(STD_OUTPUT_HANDLE)`;\n        `GetConsoleScreenBufferInfo`(_handle, &_info);\n      }\n    }\n\n    int width() {\n      _setup();\n      return _info.dwSize.X;\n    }\n\n    int height() {\n      _setup();\n      return _info.dwSize.Y;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      int value = _info.wAttributes;\n      switch (color) {\n        case .BOLD { value |= `FOREGROUND_INTENSITY`; }\n        case .GRAY { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE`; }\n        case .RED { value = `FOREGROUND_RED | FOREGROUND_INTENSITY`; }\n        case .GREEN { value = `FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .YELLOW { value = `FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .BLUE { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .MAGENTA { value = `FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .CYAN { value = `FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n      }\n      `SetConsoleTextAttribute`(_handle, value);\n    }\n\n    void flush() {\n    }\n\n    void print(string text) {\n      write(text + "\\n");\n    }\n\n    void write(string text) {\n      _setup();\n\n      // Use WriteConsoleA() instead of std::cout for a huge performance boost\n      `WriteConsoleA`(_handle, `text`.c_str(), `text`.size(), null, null);\n    }\n\n  #elif TARGET_CPP && (CONFIG_OSX || CONFIG_LINUX)\n\n    int _width;\n    int _height;\n    bool _isTTY;\n    bool _isSetup;\n\n    @NeedsInclude("<sys/ioctl.h>")\n    @NeedsInclude("<unistd.h>")\n    void _setup() {\n      if (!_isSetup) {\n        `winsize` size;\n        if (!`ioctl`(2, `TIOCGWINSZ`, &size)) {\n          _width = size.ws_col;\n          _height = size.ws_row;\n        }\n        _isTTY = `isatty(STDOUT_FILENO)`;\n        _isSetup = true;\n      }\n    }\n\n    int width() {\n      _setup();\n      return _width;\n    }\n\n    int height() {\n      _setup();\n      return _height;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      if (_isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    void flush() {\n      `std`::cout.flush();\n    }\n\n    @NeedsInclude("<iostream>")\n    inline void print(string text) {\n      `std`::cout << text << `std`::endl;\n    }\n\n    @NeedsInclude("<iostream>")\n    inline void write(string text) {\n      `std`::cout << text;\n    }\n\n  #else\n\n    int width() { return 0; }\n    int height() { return 0; }\n    void setColor(Color color) {}\n    void flush() {}\n    void print(string text) {}\n    void write(string text) {}\n\n  #endif\n}\n')];
+  in_TokenKind._toString_ = ['ALIAS', 'ANNOTATION', 'ARROW', 'ASSERT', 'ASSIGN', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MINUS', 'ASSIGN_MULTIPLY', 'ASSIGN_PLUS', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'BREAK', 'CASE', 'CATCH', 'CHARACTER', 'CLASS', 'COLON', 'COMMA', 'CONST', 'CONTINUE', 'DECREMENT', 'DEFAULT', 'DELETE', 'DIVIDE', 'DO', 'DOT', 'DOUBLE', 'DOUBLE_COLON', 'ELSE', 'END_OF_FILE', 'ENUM', 'EQUAL', 'ERROR', 'EXPORT', 'FALSE', 'FINAL', 'FLOAT', 'FOR', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'IDENTIFIER', 'IF', 'IMPORT', 'IN', 'INCREMENT', 'INLINE', 'INTERFACE', 'INT_BINARY', 'INT_DECIMAL', 'INT_HEX', 'INT_OCTAL', 'INVALID_PREPROCESSOR_DIRECTIVE', 'IS', 'LEFT_BRACE', 'LEFT_BRACKET', 'LEFT_PARENTHESIS', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'LOGICAL_AND', 'LOGICAL_OR', 'MINUS', 'MULTIPLY', 'NAMESPACE', 'NEW', 'NOT', 'NOT_EQUAL', 'NULL', 'OVERRIDE', 'PLUS', 'PREPROCESSOR_DEFINE', 'PREPROCESSOR_ELIF', 'PREPROCESSOR_ELSE', 'PREPROCESSOR_ENDIF', 'PREPROCESSOR_ERROR', 'PREPROCESSOR_IF', 'PREPROCESSOR_WARNING', 'PRIVATE', 'PROTECTED', 'PUBLIC', 'PURE', 'QUESTION_MARK', 'REMAINDER', 'RETURN', 'RIGHT_BRACE', 'RIGHT_BRACKET', 'RIGHT_PARENTHESIS', 'SEMICOLON', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'STATIC', 'STRING', 'SUPER', 'SWITCH', 'THIS', 'TICK', 'TILDE', 'TRUE', 'TRY', 'USING', 'VAR', 'VIRTUAL', 'WHILE', 'WHITESPACE', 'YY_INVALID_ACTION', 'START_PARAMETER_LIST', 'END_PARAMETER_LIST'];
+  Compiler.cachedLibraries = [new CachedSource('defines.sk', '// The "--release" flag automatically overrides BUILD_RELEASE with true\n#define BUILD_DEBUG   !BUILD_RELEASE\n#define BUILD_RELEASE false\n\n// These will be overridden by the compiler with the current language target\n#define TARGET_JS   false\n#define TARGET_CPP  false\n#define TARGET_NONE !TARGET_JS && !TARGET_CPP\n\n// The "--config" flag can be used to override these (example: "--config=node").\n// Using "--target=js" defaults to "--config=browser" and using "--target=cpp"\n// defaults to the config for the current operating system.\n#define CONFIG_IOS     false\n#define CONFIG_OSX     false\n#define CONFIG_LINUX   false\n#define CONFIG_ANDROID false\n#define CONFIG_WINDOWS false\n#define CONFIG_NODE    false\n#define CONFIG_BROWSER false\n#define CONFIG_UNKNOWN !CONFIG_IOS && !CONFIG_OSX && !CONFIG_LINUX && !CONFIG_ANDROID && !CONFIG_WINDOWS && !CONFIG_NODE && !CONFIG_BROWSER\n'), new CachedSource('primitives.sk', '#if TARGET_JS\n\n  import class int { pure string toString(); }\n  import class bool { pure string toString(); }\n  import class float { pure string toString(); }\n  import class double { pure string toString(); }\n\n  import class string {\n    pure {\n      string slice(int start, int end);\n      List<string> split(string separator);\n      int indexOf(string value);\n      int lastIndexOf(string value);\n      string toLowerCase();\n      string toUpperCase();\n    }\n  }\n\n  in string {\n    inline pure {\n      int size() { return this.`length`; }\n      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }\n      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      string join(List<string> values) { return values.`join`(this); }\n      @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }\n      static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  import class int {}\n  import class bool {}\n  import class float {}\n  import class double {}\n\n  @NeedsInclude("<string>")\n  @EmitAs("std::string")\n  import class string {}\n\n  in int {\n    inline pure string toString() { return `std`::to_string(this); }\n  }\n\n  in bool {\n    inline pure string toString() { return this ? "true" : "false"; }\n  }\n\n  in float {\n    inline pure string toString() { return double._format_(this); }\n  }\n\n  in double {\n    pure {\n      inline string toString() { return _format_(this); }\n\n      #if !CONFIG_WINDOWS\n\n        // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0\n        @NeedsInclude("<cstdio>")\n        static string _format_(double value) {\n          string buffer;\n          `buffer.resize(64)`;\n          `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;\n            if (`std::stod(&buffer[0]) != value`) {\n              `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;\n            }\n          }\n          return `buffer.c_str()`;\n        }\n\n      #else\n\n        // MSVC won\'t allow std::sprintf() even though it\'s in the C++11 standard\n        @NeedsInclude("<stdio.h>")\n        static string _format_(double value) {\n          string buffer;\n          `buffer.resize(64)`;\n          `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;\n            if (`std::stod(&buffer[0]) != value`) {\n              `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;\n            }\n          }\n          return `buffer.c_str()`;\n        }\n\n      #endif\n    }\n  }\n\n  in string {\n    pure {\n      inline {\n        int size() { return (int)this.`size`(); }\n        string slice(int start, int end) { return this.`substr`(start, end - start); }\n        string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }\n        int indexOf(string value) { return (int)this.`find`(value); }\n        int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }\n        int lastIndexOf(string value) { return (int)this.`rfind`(value); }\n        int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }\n        @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values\n        static string fromCodeUnit(int value) { return ``string``(1, value); }\n      }\n\n      @NeedsInclude("<algorithm>")\n      @NeedsInclude("<ctype.h>") {\n        string toLowerCase() {\n          var clone = this;\n          `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;\n          return clone;\n        }\n\n        string toUpperCase() {\n          var clone = this;\n          `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;\n          return clone;\n        }\n      }\n\n      string join(List<string> values) {\n        var result = "";\n        for (var i = 0; i < values.size(); i++) {\n          if (i > 0) result += this;\n          result += values[i];\n        }\n        return result;\n      }\n\n      List<string> split(string separator) {\n        List<string> values = [];\n        var start = 0;\n        while (true) {\n          var end = indexOfFrom(separator, start);\n          if (end == -1) break;\n          values.push(slice(start, end));\n          start = end + separator.size();\n        }\n        values.push(slice(start, size()));\n        return values;\n      }\n    }\n  }\n\n#else\n\n  import class int { pure string toString(); }\n  import class bool { pure string toString(); }\n  import class float { pure string toString(); }\n  import class double { pure string toString(); }\n\n  import class string {\n    pure {\n      int size();\n      List<string> split(string separator);\n      string slice(int start, int end);\n      string sliceCodeUnit(int index);\n      int indexOf(string value);\n      int indexOfFrom(string value, int fromIndex);\n      int lastIndexOf(string value);\n      int lastIndexOfFrom(string value, int fromIndex);\n      string toLowerCase();\n      string toUpperCase();\n      string join(List<string> values);\n      @OperatorGet int codeUnitAt(int index);\n      static string fromCodeUnit(int value);\n    }\n  }\n\n#endif\n\nin string {\n  pure {\n    @OperatorIn\n    inline bool contains(string value) {\n      return indexOf(value) >= 0;\n    }\n\n    inline string toString() {\n      return this;\n    }\n\n    bool startsWith(string prefix) {\n      return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n    }\n\n    bool endsWith(string suffix) {\n      return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n    }\n\n    string repeat(int count) {\n      var result = "";\n      for (var i = 0; i < count; i++) result += this;\n      return result;\n    }\n\n    string replaceAll(string before, string after) {\n      var result = "";\n      var start = 0;\n      while (true) {\n        var end = indexOfFrom(before, start);\n        if (end == -1) break;\n        result += slice(start, end) + after;\n        start = end + before.size();\n      }\n      return result + slice(start, size());\n    }\n  }\n}\n\nclass Box<T> {\n  final T value;\n}\n'), new CachedSource('math.sk', '#if TARGET_JS\n\n  namespace math {\n    inline pure {\n      double abs(double x) { return `Math`.abs(x); }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return `Math`.pow(x, y); }\n      double floor(double x) { return `Math`.floor(x); }\n      double round(double x) { return `Math`.round(x); }\n      double ceil(double x) { return `Math`.ceil(x); }\n      double min(double x, double y) { return `Math`.min(x, y); }\n      double max(double x, double y) { return `Math`.max(x, y); }\n    }\n\n    inline double random() { return `Math`.random(); }\n  }\n\n#elif TARGET_CPP\n\n  namespace math {\n    inline pure @NeedsInclude("<cmath>") {\n      double abs(double x) { return `std`::abs(x); }\n      double sin(double x) { return `std`::sin(x); }\n      double cos(double x) { return `std`::cos(x); }\n      double tan(double x) { return `std`::tan(x); }\n      double asin(double x) { return `std`::asin(x); }\n      double acos(double x) { return `std`::acos(x); }\n      double atan(double x) { return `std`::atan(x); }\n      double atan2(double y, double x) { return `std`::atan2(y, x); }\n      double sqrt(double x) { return `std`::sqrt(x); }\n      double exp(double x) { return `std`::exp(x); }\n      double log(double x) { return `std`::log(x); }\n      double pow(double x, double y) { return `std`::pow(x, y); }\n      double floor(double x) { return `std`::floor(x); }\n      double round(double x) { return `std`::round(x); }\n      double ceil(double x) { return `std`::ceil(x); }\n      double min(double x, double y) { return `std`::fmin(x, y); }\n      double max(double x, double y) { return `std`::fmax(x, y); }\n    }\n\n    @NeedsInclude("<random>") {\n      `std::uniform_real_distribution<double>` _distribution_;\n      `(std::mt19937 *)` _generator_ = null;\n\n      double random() {\n        if (_generator_ == null) {\n          _generator_ = new `std`::mt19937(`std`::random_device()());\n        }\n        return _distribution_(*_generator_);\n      }\n    }\n  }\n\n#else\n\n  import namespace math {\n    pure {\n      double abs(double x);\n      double sin(double x);\n      double cos(double x);\n      double tan(double x);\n      double asin(double x);\n      double acos(double x);\n      double atan(double x);\n      double atan2(double y, double x);\n      double sqrt(double x);\n      double exp(double x);\n      double log(double x);\n      double pow(double x, double y);\n      double floor(double x);\n      double round(double x);\n      double ceil(double x);\n      double min(double x, double y);\n      double max(double x, double y);\n      double random();\n    }\n  }\n\n#endif\n\nin math {\n  const {\n    var SQRT2 = 1.414213562373095;\n    var PI = 3.141592653589793;\n    var TWOPI = 2 * PI;\n    var E = 2.718281828459045;\n    var INFINITY = 1 / 0.0;\n    var NAN = 0 / 0.0;\n  }\n}\n'), new CachedSource('list.sk', 'interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n\n#if TARGET_JS\n\n  void bindCompare<T>(Comparison<T> comparison) {\n    return comparison.compare.`bind`(comparison);\n  }\n\n  import class List<T> {\n    pure {\n      new();\n      void push(T value);\n      void unshift(T value);\n      List<T> slice(int start, int end);\n      int indexOf(T value);\n      int lastIndexOf(T value);\n      T shift();\n      T pop();\n      void reverse();\n    }\n  }\n\n  in List {\n    pure {\n      inline {\n        int size() { return this.`length`; }\n        List<T> clone() { return this.`slice`(); }\n        T remove(int index) { return this.`splice`(index, 1)[0]; }\n        void removeRange(int start, int end) { this.`splice`(start, end - start); }\n        void insert(int index, T value) { this.`splice`(index, 0, value); }\n        @OperatorGet T get(int index) { return `this`[index]; }\n        @OperatorSet void set(int index, T value) { `this`[index] = value; }\n        @OperatorIn bool contains(T value) { return indexOf(value) >= 0; }\n      }\n\n      T last() { return this[size() - 1]; }\n      void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }\n    }\n\n    inline void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }\n  }\n\n#elif TARGET_CPP\n\n  bool bindCompare<T>(Comparison<T> comparison, T left, T right) {\n    return comparison.compare(left, right) < 0;\n  }\n\n  @NeedsInclude("<vector>")\n  class List<T> {\n    pure {\n      new() {}\n\n      int size() {\n        return (int)_data.size();\n      }\n\n      void push(T value) {\n        _data.push_back(value);\n      }\n\n      void unshift(T value) {\n        insert(0, value);\n      }\n\n      List<T> slice(int start, int end) {\n        assert start >= 0 && start <= end && end <= size();\n        List<T> slice = [];\n        slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);\n        return slice;\n      }\n\n      T shift() {\n        T value = this[0];\n        remove(0);\n        return value;\n      }\n\n      T pop() {\n        T value = this[size() - 1];\n        _data.pop_back();\n        return value;\n      }\n\n      T last() {\n        assert size() > 0;\n        return _data.back();\n      }\n\n      List<T> clone() {\n        List<T> clone = [];\n        clone._data = _data;\n        return clone;\n      }\n\n      T remove(int index) {\n        T value = this[index];\n        _data.erase(_data.begin() + index);\n        return value;\n      }\n\n      void removeRange(int start, int end) {\n        assert 0 <= start && start <= end && end <= size();\n        _data.erase(_data.begin() + start, _data.begin() + end);\n      }\n\n      void insert(int index, T value) {\n        assert index >= 0 && index <= size();\n        _data.insert(_data.begin() + index, value);\n      }\n\n      @OperatorGet\n      T get(int index) {\n        assert index >= 0 && index < size();\n        return _data[index];\n      }\n\n      @OperatorSet\n      void set(int index, T value) {\n        assert index >= 0 && index < size();\n        _data[index] = value;\n      }\n\n      @OperatorIn\n      bool contains(T value) {\n        return indexOf(value) >= 0;\n      }\n\n      @NeedsInclude("<algorithm>") {\n        int indexOf(T value) {\n          int index = (int)(`std`::find(_data.begin(), _data.end(), value) - _data.begin());\n          return index == size() ? -1 : index;\n        }\n\n        int lastIndexOf(T value) {\n          int index = (int)(`std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin());\n          return size() - index - 1;\n        }\n\n        void swap(int a, int b) {\n          assert a >= 0 && a < size();\n          assert b >= 0 && b < size();\n          `std`::swap(_data[a], _data[b]);\n        }\n\n        void reverse() {\n          `std`::reverse(_data.begin(), _data.end());\n        }\n      }\n\n      // Normally this would be in a constructor but clang has a bug that\n      // sometimes emits incorrect code for a constructor taking an empty\n      // initializer list. See http://llvm.org/bugs/show_bug.cgi?id=22256\n      // for details.\n      @NeedsInclude("<initializer_list>")\n      List<T> _literal_(`std::initializer_list<T>` list) {\n        _data.insert(_data.end(), list.begin(), list.end());\n        return this;\n      }\n    }\n\n    @NeedsInclude("<functional>")\n    @NeedsInclude("<algorithm>")\n    inline void sort(Comparison<T> comparison) {\n      `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));\n    }\n\n    `std::vector<T>` _data;\n  }\n\n#else\n\n  import class List<T> {\n    pure {\n      new();\n      int size();\n      void push(T value);\n      void unshift(T value);\n      List<T> slice(int start, int end);\n      int indexOf(T value);\n      int lastIndexOf(T value);\n      T shift();\n      T pop();\n      T last();\n      void reverse();\n      List<T> clone();\n      T remove(int index);\n      void removeRange(int start, int end);\n      void insert(int index, T value);\n      @OperatorGet T get(int index);\n      @OperatorSet void set(int index, T value);\n      @OperatorIn bool contains(T value);\n      void swap(int a, int b);\n    }\n    void sort(Comparison<T> comparison);\n  }\n\n#endif\n'), new CachedSource('stringmap.sk', '#if TARGET_JS\n\n  class StringMap<T> {\n    var _table = `Object`.create(null);\n\n    pure {\n      inline {\n        @OperatorGet T get(string key) { return _table[key]; }\n        @OperatorSet void set(string key, T value) { _table[key] = value; }\n        @OperatorIn bool has(string key) { return key in _table; }\n        void remove(string key) { delete _table[key]; }\n        List<string> keys() { return `Object`.keys(_table); }\n      }\n\n      T getOrDefault(string key, T defaultValue) {\n        return key in this ? this[key] : defaultValue;\n      }\n\n      List<T> values() {\n        List<T> values = [];\n        for (string key in _table) values.push(this[key]);\n        return values;\n      }\n\n      StringMap<T> clone() {\n        var clone = StringMap<T>();\n        for (string key in _table) clone[key] = this[key];\n        return clone;\n      }\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class StringMap<T> {\n    pure {\n      new() {}\n      @OperatorGet T get(string key) { return _table[key]; }\n      T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n      @OperatorSet void set(string key, T value) { _table[key] = value; }\n      @OperatorIn bool has(string key) { return _table.count(key) > 0; }\n      void remove(string key) { _table.erase(key); }\n      List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n      StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n    }\n\n    `std::unordered_map<`string`, T>` _table;\n  }\n\n#else\n\n  import class StringMap<T> {\n    pure {\n      new();\n      @OperatorGet T get(string key);\n      T getOrDefault(string key, T defaultValue);\n      @OperatorSet void set(string key, T value);\n      @OperatorIn bool has(string key);\n      void remove(string key);\n      List<string> keys();\n      List<T> values();\n      StringMap<T> clone();\n    }\n  }\n\n#endif\n\nin StringMap {\n  static pure StringMap<X> literal<X>(List<string> keys, List<X> values) {\n    var map = StringMap<X>();\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedSource('intmap.sk', '#if TARGET_JS\n\n  class IntMap<T> {\n    var _table = `Object`.create(null);\n\n    pure {\n      inline {\n        @OperatorGet T get(int key) { return _table[key]; }\n        @OperatorSet void set(int key, T value) { _table[key] = value; }\n        @OperatorIn bool has(int key) { return key in _table; }\n        void remove(int key) { delete _table[key]; }\n      }\n\n      T getOrDefault(int key, T defaultValue) {\n        return key in this ? this[key] : defaultValue;\n      }\n\n      List<int> keys() {\n        List<int> keys = [];\n        for (double key in _table) keys.push((int)key);\n        return keys;\n      }\n\n      List<T> values() {\n        List<T> values = [];\n        for (int key in _table) values.push(this[key]);\n        return values;\n      }\n\n      IntMap<T> clone() {\n        var clone = IntMap<T>();\n        for (int key in _table) clone[key] = this[key];\n        return clone;\n      }\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class IntMap<T> {\n    pure {\n      new() {}\n      @OperatorGet T get(int key) { return _table[key]; }\n      T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n      @OperatorSet void set(int key, T value) { _table[key] = value; }\n      @OperatorIn bool has(int key) { return _table.count(key) > 0; }\n      void remove(int key) { _table.erase(key); }\n      List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n      StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n    }\n\n    `std::unordered_map<`int`, T>` _table;\n  }\n\n#else\n\n  import class IntMap<T> {\n    pure {\n      new();\n      @OperatorGet T get(int key);\n      T getOrDefault(int key, T defaultValue);\n      @OperatorSet void set(int key, T value);\n      @OperatorIn bool has(int key);\n      void remove(int key);\n      List<int> keys();\n      List<T> values();\n      IntMap<T> clone();\n    }\n  }\n\n#endif\n\nin IntMap {\n  static pure IntMap<X> literal<X>(List<int> keys, List<X> values) {\n    var map = IntMap<X>();\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedSource('os.sk', 'enum OperatingSystem {\n  ANDROID,\n  IOS,\n  LINUX,\n  OSX,\n  UNKNOWN,\n  WINDOWS,\n}\n\nin OperatingSystem {\n  static OperatingSystem current() {\n    #if CONFIG_ANDROID\n\n      return .ANDROID;\n\n    #elif CONFIG_IOS\n\n      return .IOS;\n\n    #elif CONFIG_LINUX\n\n      return .LINUX;\n\n    #elif CONFIG_OSX\n\n      return .OSX;\n\n    #elif CONFIG_WINDOWS\n\n      return .WINDOWS;\n\n    #elif CONFIG_NODE\n\n      string platform = `process.platform`;\n      return\n        // Presumably this also means iOS but there\'s no way to check\n        platform == "darwin" ? .OSX :\n\n        // Official documentation says this will never contain "win64"\n        platform == "win32" ? .WINDOWS :\n\n        // Presumably this also means Android but there\'s no way to check\n        platform == "linux" ? .LINUX :\n\n        // This may also be "freebsd" or "sunos"\n        .UNKNOWN;\n\n    #elif CONFIG_BROWSER\n\n      string platform = `navigator.platform`;\n      string userAgent = `navigator.userAgent`;\n      return\n        // OS X encodes the architecture into the platform\n        platform == "MacIntel" || platform == "MacPPC" ? .OSX :\n\n        // MSDN sources say Win64 is used, unlike node\n        platform == "Win32" || platform == "Win64" ? .WINDOWS :\n\n        // Assume the user is using Mobile Safari or Chrome and not some random\n        // browser with a strange platform (Opera apparently messes with this)\n        platform == "iPhone" || platform == "iPad" ? .IOS :\n\n        // Apparently most Android devices have a platform of "Linux" instead\n        // of "Android", so check the user agent instead. Also make sure to test\n        // for Android before Linux for this reason.\n        "Android" in userAgent ? .ANDROID :\n        "Linux" in platform ? .LINUX :\n\n        // The platform string has no specification and can be literally anything.\n        // Other examples: "BlackBerry", "Nintendo 3DS", "PlayStation 4", etc.\n        .UNKNOWN;\n\n    #else\n\n      return .UNKNOWN;\n\n    #endif\n  }\n}\n'), new CachedSource('terminal.sk', 'namespace terminal {\n  enum Color {\n    DEFAULT = 0,\n    BOLD = 1,\n    GRAY = 90,\n    RED = 91,\n    GREEN = 92,\n    YELLOW = 93,\n    BLUE = 94,\n    MAGENTA = 95,\n    CYAN = 96,\n  }\n\n  #if TARGET_JS && CONFIG_BROWSER\n\n    inline {\n      int width() { return 0; }\n      int height() { return 0; }\n      void setColor(Color color) {}\n      void flush() {}\n\n      void print(string text) {\n        `console`.log(text);\n      }\n\n      // Browser logs are so varied that buffering standard output doesn\'t make much sense\n      void write(string text) {\n        `console`.log(text);\n      }\n    }\n\n  #elif TARGET_JS && CONFIG_NODE\n\n    void setColor(Color color) {\n      if (`process`.stdout.isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        return `process`.stdout.columns;\n      }\n\n      int height() {\n        return `process`.stdout.rows;\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        write(text + "\\n");\n      }\n\n      void write(string text) {\n        `process`.stdout.write(text);\n      }\n    }\n\n  #elif TARGET_CPP && CONFIG_WINDOWS\n\n    `HANDLE` _handle = `INVALID_HANDLE_VALUE`;\n    `CONSOLE_SCREEN_BUFFER_INFO` _info;\n\n    @NeedsInclude("<windows.h>")\n    void _setup() {\n      if (_handle == `INVALID_HANDLE_VALUE`) {\n        _handle = `GetStdHandle(STD_OUTPUT_HANDLE)`;\n        `GetConsoleScreenBufferInfo`(_handle, &_info);\n      }\n    }\n\n    int width() {\n      _setup();\n      return _info.dwSize.X;\n    }\n\n    int height() {\n      _setup();\n      return _info.dwSize.Y;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      int value = _info.wAttributes;\n      switch (color) {\n        case .BOLD { value |= `FOREGROUND_INTENSITY`; }\n        case .GRAY { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE`; }\n        case .RED { value = `FOREGROUND_RED | FOREGROUND_INTENSITY`; }\n        case .GREEN { value = `FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .YELLOW { value = `FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .BLUE { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .MAGENTA { value = `FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .CYAN { value = `FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n      }\n      `SetConsoleTextAttribute`(_handle, value);\n    }\n\n    void flush() {\n    }\n\n    void print(string text) {\n      write(text + "\\n");\n    }\n\n    void write(string text) {\n      _setup();\n\n      // Use WriteConsoleA() instead of std::cout for a huge performance boost\n      `WriteConsoleA`(_handle, `text`.c_str(), `text`.size(), null, null);\n    }\n\n  #elif TARGET_CPP && (CONFIG_OSX || CONFIG_LINUX)\n\n    int _width;\n    int _height;\n    bool _isTTY;\n    bool _isSetup;\n\n    @NeedsInclude("<sys/ioctl.h>")\n    @NeedsInclude("<unistd.h>")\n    void _setup() {\n      if (!_isSetup) {\n        `winsize` size;\n        if (!`ioctl`(2, `TIOCGWINSZ`, &size)) {\n          _width = size.ws_col;\n          _height = size.ws_row;\n        }\n        _isTTY = `isatty(STDOUT_FILENO)`;\n        _isSetup = true;\n      }\n    }\n\n    int width() {\n      _setup();\n      return _width;\n    }\n\n    int height() {\n      _setup();\n      return _height;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      if (_isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    void flush() {\n      `std`::cout.flush();\n    }\n\n    @NeedsInclude("<iostream>")\n    inline void print(string text) {\n      `std`::cout << text << `std`::endl;\n    }\n\n    @NeedsInclude("<iostream>")\n    inline void write(string text) {\n      `std`::cout << text;\n    }\n\n  #else\n\n    int width() { return 0; }\n    int height() { return 0; }\n    void setColor(Color color) {}\n    void flush() {}\n    void print(string text) {}\n    void write(string text) {}\n\n  #endif\n}\n')];
   Range.EMPTY = new Range(null, 0, 0);
   StringComparison.INSTANCE = new StringComparison();
-  js.Emitter.isKeyword = null;
+  js.Emitter.isKeyword = StringMap.literal(['apply', 'arguments', 'Boolean', 'break', 'call', 'case', 'catch', 'class', 'const', 'constructor', 'continue', 'Date', 'debugger', 'default', 'delete', 'do', 'double', 'else', 'export', 'extends', 'false', 'finally', 'float', 'for', 'Function', 'function', 'if', 'import', 'in', 'instanceof', 'int', 'let', 'new', 'null', 'Number', 'Object', 'return', 'String', 'super', 'this', 'throw', 'true', 'try', 'var'], [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]);
   js.SymbolComparison.INSTANCE = new js.SymbolComparison();
   js.SymbolGroupComparison.INSTANCE = new js.SymbolGroupComparison();
   SourceMapGenerator.comparison = new SourceMappingComparison();
