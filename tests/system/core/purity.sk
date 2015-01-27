@@ -1,0 +1,295 @@
+namespace core { void testPurity() {
+
+test("
+class Foo {
+  int foo;
+}
+var foo = Foo(0);
+", "
+");
+
+test("
+class Foo {
+  int foo = 0;
+}
+var foo = Foo();
+", "
+");
+
+// This is a cyclic declaration because the constructor needs to check each
+// variable initializer during initialization to determine purity status
+test("
+class Foo {
+  var foo = Foo();
+}
+var foo = Foo();
+", "
+<stdin>:1:7: error: Cyclic declaration of \"new\"
+class Foo {
+      ~~~
+");
+
+test("
+var foo = Foo();
+class Foo {
+  var foo = bar();
+}
+inline int bar() { return 0; }
+", "
+<stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Foo();
+          ~~~~~
+");
+
+test("
+class Foo { new() {} }
+var foo = Foo();
+", "
+<stdin>:2:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Foo();
+          ~~~~~
+");
+
+test("
+class Foo {}
+class Bar : Foo {}
+var foo = Bar();
+", "
+<stdin>:3:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Bar();
+          ~~~~~
+");
+
+test("
+var foo = Foo();
+class Foo {
+  var foo = bar();
+}
+import int bar();
+", "
+<stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Foo();
+          ~~~~~
+");
+
+test("
+var foo = Foo();
+class Foo {
+  var foo = bar();
+}
+import pure int bar();
+", "
+");
+
+test("
+var foo = Foo();
+class Foo {
+  var foo = 0 + 1;
+}
+", "
+");
+
+test("
+var foo = Foo();
+class Foo {
+  var foo = math.cos(30) + 1;
+}
+", "
+");
+
+test("
+var foo = Foo();
+class Foo {
+  var foo = bar() + 1;
+}
+import pure int bar();
+", "
+");
+
+test("
+var foo = Foo();
+var bar = 0;
+class Foo {
+  var foo = bar + 1;
+}
+", "
+<stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Foo();
+          ~~~~~
+");
+
+test("
+pure int foo(int foo) {
+  foo++;
+  return foo;
+}
+", "
+");
+
+test("
+int bar;
+pure int foo() {
+  return bar;
+}
+", "
+<stdin>:3:10: error: Cannot use impure value inside pure function
+  return bar;
+         ~~~
+");
+
+test("
+int bar;
+pure int foo() {
+  bar++;
+  return bar;
+}
+", "
+<stdin>:3:3: error: Cannot use impure value inside pure function
+  bar++;
+  ~~~
+<stdin>:4:10: error: Cannot use impure value inside pure function
+  return bar;
+         ~~~
+");
+
+test("
+const var bar = 0;
+pure int foo() {
+  return bar;
+}
+", "
+");
+
+test("
+pure int foo() {
+  return foo();
+}
+", "
+");
+
+test("
+class Foo {
+  void foo() {}
+}
+pure void foo(Foo foo) {
+  foo.foo();
+}
+", "
+<stdin>:5:3: error: Cannot use impure value inside pure function
+  foo.foo();
+  ~~~~~~~
+");
+
+test("
+class Foo {
+  pure void foo() {}
+}
+pure void foo(Foo foo) {
+  foo.foo();
+}
+", "
+");
+
+test("
+class Foo {
+  static int foo;
+}
+pure int foo() {
+  return Foo.foo;
+}
+", "
+<stdin>:5:10: error: Cannot use impure value inside pure function
+  return Foo.foo;
+         ~~~~~~~
+");
+
+test("
+class Foo {
+  static const var foo = 0;
+}
+pure int foo() {
+  return Foo.foo;
+}
+", "
+");
+
+test("
+class Foo {
+  static const var foo = 0;
+}
+pure int foo() {
+  return Foo.foo;
+}
+", "
+");
+
+test("
+enum Foo {
+  FOO
+}
+pure Foo foo() {
+  return .FOO;
+}
+", "
+");
+
+test("
+class Foo {
+  new() {}
+}
+pure Foo foo() {
+  return Foo();
+}
+", "
+<stdin>:5:10: error: Cannot use impure value inside pure function
+  return Foo();
+         ~~~
+");
+
+test("
+class Foo {
+  pure new() {}
+}
+pure Foo foo() {
+  return Foo();
+}
+", "
+");
+
+test("
+var foo = Foo();
+class Foo {
+  var foo = (true ? baz : baz)();
+}
+import int baz();
+", "
+<stdin>:3:21: error: Raw function references are not allowed (call the function instead)
+  var foo = (true ? baz : baz)();
+                    ~~~
+<stdin>:3:27: error: Raw function references are not allowed (call the function instead)
+  var foo = (true ? baz : baz)();
+                          ~~~
+<stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Foo();
+          ~~~~~
+");
+
+test("
+var foo = Foo();
+class Foo {
+  var foo = (true ? baz : baz)();
+}
+import pure int baz();
+", "
+<stdin>:3:21: error: Raw function references are not allowed (call the function instead)
+  var foo = (true ? baz : baz)();
+                    ~~~
+<stdin>:3:27: error: Raw function references are not allowed (call the function instead)
+  var foo = (true ? baz : baz)();
+                          ~~~
+<stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Foo();
+          ~~~~~
+");
+
+}}

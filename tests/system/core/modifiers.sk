@@ -30,6 +30,7 @@ public class Foo {
 ");
 
 test("
+import export alias a = int;
 import export int v;
 import export void f();
 import export enum E {}
@@ -37,156 +38,183 @@ import export class C {}
 import export namespace n {}
 ", "
 <stdin>:1:8: error: Cannot use the \"export\" modifier on an imported declaration
-import export int v;
+import export alias a = int;
        ~~~~~~
 <stdin>:2:8: error: Cannot use the \"export\" modifier on an imported declaration
-import export void f();
+import export int v;
        ~~~~~~
 <stdin>:3:8: error: Cannot use the \"export\" modifier on an imported declaration
-import export enum E {}
+import export void f();
        ~~~~~~
 <stdin>:4:8: error: Cannot use the \"export\" modifier on an imported declaration
-import export class C {}
+import export enum E {}
        ~~~~~~
 <stdin>:5:8: error: Cannot use the \"export\" modifier on an imported declaration
+import export class C {}
+       ~~~~~~
+<stdin>:6:8: error: Cannot use the \"export\" modifier on an imported declaration
 import export namespace n {}
        ~~~~~~
 ");
 
 test("
+inline alias a = int;
 inline int v;
 inline void f() {}
 inline enum E {}
 inline class C {}
 inline namespace n {}
 ", "
-<stdin>:1:1: error: Cannot use the \"inline\" modifier on a variable declaration
+<stdin>:1:1: error: Cannot use the \"inline\" modifier on an alias declaration
+inline alias a = int;
+~~~~~~
+<stdin>:2:1: error: Cannot use the \"inline\" modifier on a variable declaration
 inline int v;
 ~~~~~~
-<stdin>:3:1: error: Cannot use the \"inline\" modifier on an enum declaration
+<stdin>:4:1: error: Cannot use the \"inline\" modifier on an enum declaration
 inline enum E {}
 ~~~~~~
-<stdin>:4:1: error: Cannot use the \"inline\" modifier on an object declaration
+<stdin>:5:1: error: Cannot use the \"inline\" modifier on an object declaration
 inline class C {}
 ~~~~~~
-<stdin>:5:1: error: Cannot use the \"inline\" modifier on a namespace declaration
+<stdin>:6:1: error: Cannot use the \"inline\" modifier on a namespace declaration
 inline namespace n {}
 ~~~~~~
 ");
 
 test("
+const alias a = int;
 const int v;
 const void f() {}
 const enum E {}
 const class C {}
 const namespace n {}
 ", "
-<stdin>:1:11: error: Variables with the \"const\" modifier must be initialized
+<stdin>:1:1: error: Cannot use the \"const\" modifier on an alias declaration
+const alias a = int;
+~~~~~
+<stdin>:2:11: error: Variables with the \"const\" modifier must be initialized
 const int v;
           ^
-<stdin>:2:1: error: Cannot use the \"const\" modifier on a function declaration
+<stdin>:3:1: error: Cannot use the \"const\" modifier on a function declaration
 const void f() {}
 ~~~~~
-<stdin>:3:1: error: Cannot use the \"const\" modifier on an enum declaration
+<stdin>:4:1: error: Cannot use the \"const\" modifier on an enum declaration
 const enum E {}
 ~~~~~
-<stdin>:4:1: error: Cannot use the \"const\" modifier on an object declaration
+<stdin>:5:1: error: Cannot use the \"const\" modifier on an object declaration
 const class C {}
 ~~~~~
-<stdin>:5:1: error: Cannot use the \"const\" modifier on a namespace declaration
+<stdin>:6:1: error: Cannot use the \"const\" modifier on a namespace declaration
 const namespace n {}
 ~~~~~
 ");
 
 test("
+final alias a = int;
 final int v;
 final void f() {}
 final enum E {}
 final class C {}
 final namespace n {}
 ", "
-<stdin>:2:1: error: Cannot use the \"final\" modifier on a function declaration
+<stdin>:1:1: error: Cannot use the \"final\" modifier on an alias declaration
+final alias a = int;
+~~~~~
+<stdin>:3:1: error: Cannot use the \"final\" modifier on a function declaration
 final void f() {}
 ~~~~~
-<stdin>:3:1: error: Cannot use the \"final\" modifier on an enum declaration
+<stdin>:4:1: error: Cannot use the \"final\" modifier on an enum declaration
 final enum E {}
 ~~~~~
-<stdin>:4:1: error: Cannot use the \"final\" modifier on an object declaration
+<stdin>:5:1: error: Cannot use the \"final\" modifier on an object declaration
 final class C {}
 ~~~~~
-<stdin>:5:1: error: Cannot use the \"final\" modifier on a namespace declaration
+<stdin>:6:1: error: Cannot use the \"final\" modifier on a namespace declaration
 final namespace n {}
 ~~~~~
 ");
 
 test("
+virtual alias a = int;
 virtual int v;
 virtual void f() {}
 virtual enum E {}
 virtual class C {}
 virtual namespace n {}
 ", "
-<stdin>:1:1: error: Cannot use the \"virtual\" modifier on a variable declaration
+<stdin>:1:1: error: Cannot use the \"virtual\" modifier on an alias declaration
+virtual alias a = int;
+~~~~~~~
+<stdin>:2:1: error: Cannot use the \"virtual\" modifier on a variable declaration
 virtual int v;
 ~~~~~~~
-<stdin>:2:1: error: Cannot use the \"virtual\" modifier outside an object declaration
+<stdin>:3:1: error: Cannot use the \"virtual\" modifier outside an object declaration
 virtual void f() {}
 ~~~~~~~
-<stdin>:3:1: error: Cannot use the \"virtual\" modifier on an enum declaration
+<stdin>:4:1: error: Cannot use the \"virtual\" modifier on an enum declaration
 virtual enum E {}
 ~~~~~~~
-<stdin>:4:1: error: Cannot use the \"virtual\" modifier on an object declaration
+<stdin>:5:1: error: Cannot use the \"virtual\" modifier on an object declaration
 virtual class C {}
 ~~~~~~~
-<stdin>:5:1: error: Cannot use the \"virtual\" modifier on a namespace declaration
+<stdin>:6:1: error: Cannot use the \"virtual\" modifier on a namespace declaration
 virtual namespace n {}
 ~~~~~~~
 ");
 
 test("
+override alias a = int;
 override int v;
 override void f() {}
 override enum E {}
 override class C {}
 override namespace n {}
 ", "
-<stdin>:1:1: error: Cannot use the \"override\" modifier on a variable declaration
+<stdin>:1:1: error: Cannot use the \"override\" modifier on an alias declaration
+override alias a = int;
+~~~~~~~~
+<stdin>:2:1: error: Cannot use the \"override\" modifier on a variable declaration
 override int v;
 ~~~~~~~~
-<stdin>:2:1: error: Cannot use the \"override\" modifier outside an object declaration
+<stdin>:3:1: error: Cannot use the \"override\" modifier outside an object declaration
 override void f() {}
 ~~~~~~~~
-<stdin>:3:1: error: Cannot use the \"override\" modifier on an enum declaration
+<stdin>:4:1: error: Cannot use the \"override\" modifier on an enum declaration
 override enum E {}
 ~~~~~~~~
-<stdin>:4:1: error: Cannot use the \"override\" modifier on an object declaration
+<stdin>:5:1: error: Cannot use the \"override\" modifier on an object declaration
 override class C {}
 ~~~~~~~~
-<stdin>:5:1: error: Cannot use the \"override\" modifier on a namespace declaration
+<stdin>:6:1: error: Cannot use the \"override\" modifier on a namespace declaration
 override namespace n {}
 ~~~~~~~~
 ");
 
 test("
+static alias a = int;
 static int v;
 static void f() {}
 static enum E {}
 static class C {}
 static namespace n {}
 ", "
-<stdin>:1:1: error: Cannot use the \"static\" modifier outside an object declaration
-static int v;
+<stdin>:1:1: error: Cannot use the \"static\" modifier on an alias declaration
+static alias a = int;
 ~~~~~~
 <stdin>:2:1: error: Cannot use the \"static\" modifier outside an object declaration
+static int v;
+~~~~~~
+<stdin>:3:1: error: Cannot use the \"static\" modifier outside an object declaration
 static void f() {}
 ~~~~~~
-<stdin>:3:1: error: Cannot use the \"static\" modifier on an enum declaration
+<stdin>:4:1: error: Cannot use the \"static\" modifier on an enum declaration
 static enum E {}
 ~~~~~~
-<stdin>:4:1: error: Cannot use the \"static\" modifier on an object declaration
+<stdin>:5:1: error: Cannot use the \"static\" modifier on an object declaration
 static class C {}
 ~~~~~~
-<stdin>:5:1: error: Cannot use the \"static\" modifier on a namespace declaration
+<stdin>:6:1: error: Cannot use the \"static\" modifier on a namespace declaration
 static namespace n {}
 ~~~~~~
 ");
@@ -204,6 +232,31 @@ in foo {
 <stdin>:4:3: error: Cannot use the \"static\" modifier outside an object declaration
   static void bar() {}
   ~~~~~~
+");
+
+test("
+pure alias a = int;
+pure int v;
+pure void f() {}
+pure enum E {}
+pure class C {}
+pure namespace n {}
+", "
+<stdin>:1:1: error: Cannot use the \"pure\" modifier on an alias declaration
+pure alias a = int;
+~~~~
+<stdin>:2:1: error: Cannot use the \"pure\" modifier on a variable declaration
+pure int v;
+~~~~
+<stdin>:4:1: error: Cannot use the \"pure\" modifier on an enum declaration
+pure enum E {}
+~~~~
+<stdin>:5:1: error: Cannot use the \"pure\" modifier on an object declaration
+pure class C {}
+~~~~
+<stdin>:6:1: error: Cannot use the \"pure\" modifier on a namespace declaration
+pure namespace n {}
+~~~~
 ");
 
 }}

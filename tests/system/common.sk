@@ -237,6 +237,7 @@ int start() {
   core.testObjects();
   core.testParsing();
   core.testPreprocessor();
+  core.testPurity();
   core.testStatements();
   core.testStatic();
   core.testSwitch();

@@ -41,6 +41,7 @@
 "private"                            PRIVATE;
 "protected"                          PROTECTED;
 "public"                             PUBLIC;
+"pure"                               PURE;
 "return"                             RETURN;
 "static"                             STATIC;
 "super"                              SUPER;

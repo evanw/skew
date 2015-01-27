@@ -25,7 +25,7 @@ void test() {
   Foo.FOO = Foo.FOO;
 }
 ", "
-<stdin>:3:3: error: Cannot store to a symbol marked as \"final\"
+<stdin>:3:3: error: Cannot store to a symbol marked as \"const\"
   Foo.FOO = Foo.FOO;
   ~~~~~~~
 ");

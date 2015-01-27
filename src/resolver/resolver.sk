@@ -34,6 +34,10 @@ class ResolveContext {
   Symbol symbolForThis = null;
   Symbol functionSymbol = null;
 
+  bool inPureFunction() {
+    return functionSymbol != null && functionSymbol.isPure();
+  }
+
   static ResolveContext fromNode(Node node) {
     var context = ResolveContext();
     while (node != null) {
@@ -702,6 +706,15 @@ class Resolver {
     assert node.type != null;
   }
 
+  void checkPureInsideFunction(Node node) {
+    var symbol = node.symbol;
+    if (context.inPureFunction() && (
+        symbol.kind == .GLOBAL_VARIABLE && !symbol.isConst() ||
+        symbol.kind.isFunction() && !symbol.isPure())) {
+      semanticErrorPurityViolation(log, node.range);
+    }
+  }
+
   void checkIsParameterized(Node node) {
     if (!node.type.isIgnored(cache) && node.type.hasParameters() && !node.type.isParameterized()) {
       semanticErrorUnparameterizedType(log, node.range, node.type);
@@ -1014,9 +1027,10 @@ class Resolver {
     unexpectedModifierIfPresent(symbol, .CONST, where);
     unexpectedModifierIfPresent(symbol, .FINAL, where);
     unexpectedModifierIfPresent(symbol, .INLINE, where);
+    unexpectedModifierIfPresent(symbol, .OVERRIDE, where);
+    unexpectedModifierIfPresent(symbol, .PURE, where);
     unexpectedModifierIfPresent(symbol, .STATIC, where);
     unexpectedModifierIfPresent(symbol, .VIRTUAL, where);
-    unexpectedModifierIfPresent(symbol, .OVERRIDE, where);
     forbidImportAndExportTogether(symbol);
   }
 
@@ -1306,8 +1320,9 @@ class Resolver {
 
   void initializeVariable(Symbol symbol) {
     unexpectedModifierIfPresent(symbol, .INLINE, "on a variable declaration");
-    unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a variable declaration");
     unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a variable declaration");
+    unexpectedModifierIfPresent(symbol, .PURE, "on a variable declaration");
+    unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a variable declaration");
     checkMemberSymbol(symbol);
 
     if (symbol.isConst()) {
@@ -1330,8 +1345,8 @@ class Resolver {
         var type = enclosingSymbol.type;
         variableType = Node.createType(type).withSymbol(enclosingSymbol);
 
-        // All enum values are final and always transfer the import/export flags
-        symbol.flags |= .FINAL | .STATIC | enclosingSymbol.flags & (.IMPORT | .EXPORT);
+        // All enum values are const and always transfer the import/export flags
+        symbol.flags |= .CONST | .STATIC | enclosingSymbol.flags & (.IMPORT | .EXPORT);
 
         // Look at the initializer now
         var variableValue = node.variableValue();
@@ -1423,12 +1438,12 @@ class Resolver {
     }
 
     // Constants must be resolved during initialization
-    if (symbol.isConst()) {
+    if (symbol.isConst() && !symbol.isEnumValue()) {
       var value = node.variableValue();
       if (value == null) {
         semanticErrorConstMissingValue(log, node.declarationName().range);
       } else {
-        resolveAsParamterizedExpressionWithConversion(value, symbol.type, .IMPLICIT_CAST);
+        resolveAsParameterizedExpressionWithConversion(value, symbol.type, .IMPLICIT_CAST);
         constantFolder.foldConstants(value);
         if (value.kind.isConstant()) {
           symbol.constant = value.content;
@@ -1485,25 +1500,37 @@ class Resolver {
     symbol.type = cache.boolType;
   }
 
-  void initializeDeclaration(Node node) {
-    // The symbol should already have been set
-    var symbol = node.symbol;
-    assert symbol != null;
-
+  void initializeDeclaration(Symbol symbol) {
     // Only initialize once
     if (symbol.isUninitialized()) {
+      var isAutomatic = symbol.kind == .AUTOMATIC;
+
       // Flag the symbol's as initializing for the duration of the declaration's
       // initialization. This way we can detect cycles that try to use the symbol
       // in its own type, such as "foo foo;" or "class Foo : Foo {}". Cyclic
       // symbol references will return the error type in this case.
       symbol.flags |= .INITIALIZING;
 
+      // Handle auto-generated symbols now
+      if (isAutomatic) {
+        if (symbol.name == "new") generateDefaultConstructor(symbol);
+        else if (symbol.name == "toString") generateDefaultToString(symbol);
+        else assert false;
+
+        // Bail early if automatic node generation fails
+        if (symbol.node == null) {
+          symbol.type = cache.errorType;
+          symbol.flags = (symbol.flags & ~.INITIALIZING) | .INITIALIZED;
+          return;
+        }
+      }
+
       // Resolve using node.symbol.node to start from the first node in the
       // sibling chain to ensure that the entire chain is processed at once
       var oldContext = context;
       var oldTypeContext = typeContext;
       var oldResultType = resultType;
-      context = ResolveContext.fromNode(node); // TODO: Cache this?
+      context = ResolveContext.fromNode(symbol.node); // TODO: Cache this?
       typeContext = null;
       resultType = null;
       switch (symbol.kind) {
@@ -1518,7 +1545,6 @@ class Resolver {
         case .OTHER {}
         default { assert false; }
       }
-      context = oldContext;
       typeContext = oldTypeContext;
       resultType = oldResultType;
 
@@ -1528,13 +1554,12 @@ class Resolver {
       assert !symbol.isInitialized();
       symbol.flags = (symbol.flags & ~.INITIALIZING) | .INITIALIZED;
 
-      // Attach information to the declaration names for the language service
-      while (node != null) {
-        var name = node.declarationName();
-        name.symbol = symbol;
-        name.type = symbol.type;
-        node = node.sibling;
+      // Automatically generated symbols need to be explicitly resolved because
+      // they aren't reachable from the parse tree, only from the type cache
+      if (isAutomatic) {
+        resolve(symbol.node, null);
       }
+      context = oldContext;
 
       // Initialize annotations last
       checkAnnotations(symbol);
@@ -1735,7 +1760,7 @@ class Resolver {
     //   @NeedsInclude(COMMON_H) export void foo() {}
     //
     var value = arguments.children[0];
-    resolveAsParamterizedExpressionWithConversion(value, cache.stringType, .IMPLICIT_CAST);
+    resolveAsParameterizedExpressionWithConversion(value, cache.stringType, .IMPLICIT_CAST);
     constantFolder.foldConstants(value);
 
     // Avoid reporting further errors
@@ -1910,8 +1935,6 @@ class Resolver {
           }
         } else {
           assert constructor.type.isIgnored(cache);
-          symbol.flags |= .INITIALIZED;
-          symbol.type = cache.errorType;
           return;
         }
       }
@@ -1924,31 +1947,27 @@ class Resolver {
       var memberSymbol = member.symbol;
       if (memberSymbol.kind == .INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
         var value = memberSymbol.node.variableValue();
+        initializeMember(member);
 
         // Uninitialized variables need an argument to provide the value
         if (value == null) {
-          initializeMember(member);
-          if (member.type.isError(cache)) {
-            symbol.flags |= .INITIALIZED;
-            symbol.type = cache.errorType;
-            return;
-          }
           uninitializedMembers.push(member);
         }
 
-        // Ideally we could call isPureValue() but that requires resolving the
-        // initial value for this variable, which could lead to some strange
+        // We need to check if this variable is initialized to a pure value.
+        // This can be done with isPureValue() but that requires resolving the
+        // initial value for this variable. This can lead to some strange
         // circular reference issues. For example:
         //
         //   export class Foo {
-        //     Foo a = Foo(1);
-        //     int b = 100;
-        //     int c;
+        //     var foo = Foo();
         //   }
         //
-        // Play it safe and just use statically-known constant values for now.
-        else if (!value.kind.isConstant()) {
-          isPure = false;
+        else {
+          resolveAsParameterizedExpressionWithConversion(value, memberSymbol.type, .IMPLICIT_CAST);
+          if (!isPureValue(value)) {
+            isPure = false;
+          }
         }
       }
     }
@@ -2081,6 +2100,10 @@ class Resolver {
       }
     }
 
+    // Resolve the extension now since it won't be otherwise
+    prepareNode(extension, enclosingNode.parent.scope);
+    resolve(extension, null);
+
     // Change the automatic symbol into an instance function
     symbol.kind = .INSTANCE_FUNCTION;
     symbol.flags |= .FROM_EXTENSION;
@@ -2090,11 +2113,11 @@ class Resolver {
       Node.createBlock([statement]),
       Node.createType(cache.stringType),
       null).withSymbol(symbol);
-    block.appendChild(symbol.node);
 
-    // Resolve it now since it otherwise may never be resolved
-    prepareNode(extension, enclosingNode.parent.scope);
-    resolve(extension, null);
+    // Don't append the symbol's node before resolving the extension block since
+    // this symbol is still initializing. Append it afterwards instead because
+    // it will be resolved by initializeDeclaration() after initialization is done.
+    block.appendChild(symbol.node);
   }
 
   List<Node> extractConsecutiveRange(IntMap<Symbol> values, int lowest, int count) {
@@ -2110,22 +2133,6 @@ class Resolver {
   }
 
   void initializeSymbol(Symbol symbol) {
-    // Handle auto-generated symbols now
-    if (symbol.kind == .AUTOMATIC) {
-      if (symbol.name == "new") generateDefaultConstructor(symbol);
-      else if (symbol.name == "toString") generateDefaultToString(symbol);
-      else assert false;
-
-      // Automatically generated symbols need to be explicitly resolved because
-      // they aren't reachable from the parse tree, only from the type cache
-      if (symbol.node != null) {
-        var oldContext = context;
-        context = ResolveContext.fromNode(symbol.node);
-        resolve(symbol.node, null);
-        context = oldContext;
-      }
-    }
-
     // Unmerged symbols are the result of multiple base types
     if (symbol.kind == .UNMERGED) {
       if (symbol.type != null) {
@@ -2151,9 +2158,9 @@ class Resolver {
 
     // Only initialize the symbol once
     if (symbol.isUninitialized()) {
-      assert symbol.node != null; // Internal symbols have no node but should already have a type
+      assert symbol.node != null || symbol.kind == .AUTOMATIC; // Internal symbols have no node but should already have a type
       symbol.canonicalizeSiblingChain();
-      initializeDeclaration(symbol.node);
+      initializeDeclaration(symbol);
       assert !symbol.isInitializing();
       assert symbol.isInitialized();
       assert symbol.type != null;
@@ -2165,7 +2172,7 @@ class Resolver {
 
     // Detect cyclic symbol references such as "foo foo;"
     else if (symbol.isInitializing()) {
-      semanticErrorCyclicDeclaration(log, symbol.node.declarationName().range, symbol.name);
+      semanticErrorCyclicDeclaration(log, (symbol.kind == .AUTOMATIC ? symbol.enclosingSymbol.node : symbol.node).declarationName().range, symbol.name);
       symbol.type = cache.errorType;
     }
   }
@@ -2212,7 +2219,7 @@ class Resolver {
 
     // Validate the arguments and provide type context
     for (var i = 0; i < arguments.size(); i++) {
-      resolveAsParamterizedExpressionWithConversion(arguments[i], argumentTypes[i], .IMPLICIT_CAST);
+      resolveAsParameterizedExpressionWithConversion(arguments[i], argumentTypes[i], .IMPLICIT_CAST);
     }
   }
 
@@ -2241,7 +2248,7 @@ class Resolver {
     checkIsParameterized(node);
   }
 
-  void resolveAsParamterizedExpressionWithConversion(Node node, Type type, CastKind kind) {
+  void resolveAsParameterizedExpressionWithConversion(Node node, Type type, CastKind kind) {
     assert node.kind.isExpression();
     resolve(node, type);
     checkIsInstance(node);
@@ -2348,7 +2355,7 @@ class Resolver {
     var block = node.caseBlock();
     for (var i = 0; i < values.size(); i++) {
       var value = values[i];
-      resolveAsParamterizedExpressionWithConversion(value, context.switchValue.type, .IMPLICIT_CAST);
+      resolveAsParameterizedExpressionWithConversion(value, context.switchValue.type, .IMPLICIT_CAST);
       constantFolder.foldConstants(value);
 
       // All case values must be constants but can include enum values
@@ -2592,7 +2599,7 @@ class Resolver {
 
         // Resolve the value and check for duplicate initializations
         if (name.symbol != null) {
-          resolveAsParamterizedExpressionWithConversion(value, name.symbol.type, .IMPLICIT_CAST);
+          resolveAsParameterizedExpressionWithConversion(value, name.symbol.type, .IMPLICIT_CAST);
           for (var j = 0; j < i; j++) {
             var other = memberInitializers.children[j];
             if (other.memberInitializerName().symbol == name.symbol) {
@@ -2609,7 +2616,11 @@ class Resolver {
     context.functionSymbol = oldFunctionSymbol;
   }
 
-  // A pure value is one guaranteed to have no side effects
+  // A pure value is one guaranteed to have no side effects. Pure values can be
+  // easily eliminated as dead code if they aren't needed. All global variable
+  // initializers are required to be pure values. It relies on the definition
+  // of pure functions, which cannot have side effects outside of effects on
+  // their arguments.
   bool isPureValue(Node node) {
     var kind = node.kind;
 
@@ -2618,45 +2629,54 @@ class Resolver {
       return true;
     }
 
-    // List and map literals are only pure if their elements are pure
-    if (kind == .LIST || kind == .MAP) {
-      if (node.hasChildren()) {
-        for (var i = 0; i < node.children.size(); i++) {
-          if (!isPureValue(node.children[i])) {
+    switch (kind) {
+      case .LIST, .MAP {
+        if (node.hasChildren()) {
+          for (var i = 0; i < node.children.size(); i++) {
+            if (!isPureValue(node.children[i])) {
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+
+      case .KEY_VALUE {
+        return isPureValue(node.itemKey()) && isPureValue(node.itemValue());
+      }
+
+      case .HOOK {
+        return isPureValue(node.hookTest()) && isPureValue(node.hookTrue()) && isPureValue(node.hookFalse());
+      }
+
+      case .CALL {
+        var value = node.callValue();
+        var arguments = node.callArguments();
+        var symbol = value.kind == .TYPE ? node.symbol : value.symbol;
+        if (symbol == null || !symbol.isPure()) {
+          return false;
+        }
+        for (var i = 0; i < arguments.size(); i++) {
+          if (!isPureValue(arguments[i])) {
             return false;
           }
         }
+        return true;
       }
-      return true;
-    }
 
-    // Key-value pairs are only pure if both key and value are pure
-    if (kind == .KEY_VALUE) {
-      return isPureValue(node.itemKey()) && isPureValue(node.itemValue());
-    }
-
-    // Calls are pure if the function and all arguments are pure
-    if (kind == .CALL) {
-      var value = node.callValue();
-      var arguments = node.callArguments();
-      if (value.kind != .TYPE || !node.symbol.isPure()) {
-        return false;
+      case .CAST, .IMPLICIT_CAST {
+        return isPureValue(node.castValue());
       }
-      for (var i = 0; i < arguments.size(); i++) {
-        if (!isPureValue(arguments[i])) {
-          return false;
-        }
+
+      case .NAME {
+        return node.symbol != null && node.symbol.isConst();
       }
-      return true;
     }
 
-    // Casts are pure if the casted value is pure
-    if (kind.isCast()) {
-      return isPureValue(node.castValue());
-    }
-
-    // Literals are always pure
-    return kind.isConstant();
+    return
+      kind.isConstant() ||
+      kind.isUnaryOperator() && isPureValue(node.unaryValue()) ||
+      kind.isBinaryOperator() && isPureValue(node.binaryLeft()) && isPureValue(node.binaryRight());
   }
 
   void resolveVariable(Node node) {
@@ -2680,7 +2700,7 @@ class Resolver {
     // Enum values are resolved as ints instead of as the enum type because ints
     // don't implicitly convert to enums.
     if (value != null) {
-      resolveAsParamterizedExpressionWithConversion(value, symbol.isEnumValue() ? cache.intType : symbol.type, .IMPLICIT_CAST);
+      resolveAsParameterizedExpressionWithConversion(value, symbol.isEnumValue() ? cache.intType : symbol.type, .IMPLICIT_CAST);
 
       // Global variables must be initialized to a value without side effects
       // since that ensures there aren't any initialization ordering issues
@@ -2736,7 +2756,7 @@ class Resolver {
 
   void resolveIf(Node node) {
     checkStatementLocation(node);
-    resolveAsParamterizedExpressionWithConversion(node.ifTest(), cache.boolType, .IMPLICIT_CAST);
+    resolveAsParameterizedExpressionWithConversion(node.ifTest(), cache.boolType, .IMPLICIT_CAST);
     resolve(node.ifTrue(), null);
     if (node.ifFalse() != null) resolve(node.ifFalse(), null);
   }
@@ -2761,7 +2781,7 @@ class Resolver {
       }
     }
     if (test != null) {
-      resolveAsParamterizedExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
+      resolveAsParameterizedExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
     }
     if (update != null) {
       resolveAsParameterizedExpression(update);
@@ -2793,7 +2813,7 @@ class Resolver {
   void resolveWhile(Node node) {
     checkStatementLocation(node);
     var test = node.whileTest();
-    if (test != null) resolveAsParamterizedExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
+    if (test != null) resolveAsParameterizedExpressionWithConversion(test, cache.boolType, .IMPLICIT_CAST);
 
     var oldLoop = context.loop;
     context.loop = node;
@@ -2813,7 +2833,7 @@ class Resolver {
 
     // Check the return value
     if (value != null) {
-      resolveAsParamterizedExpressionWithConversion(value, resultType, .IMPLICIT_CAST);
+      resolveAsParameterizedExpressionWithConversion(value, resultType, .IMPLICIT_CAST);
     }
 
     // The return value may be missing only when the return type is void
@@ -2839,7 +2859,7 @@ class Resolver {
       checkStatementLocation(node);
     }
     var value = node.assertValue();
-    resolveAsParamterizedExpressionWithConversion(value, cache.boolType, .IMPLICIT_CAST);
+    resolveAsParameterizedExpressionWithConversion(value, cache.boolType, .IMPLICIT_CAST);
 
     // Constant asserts are evaluated at compile time
     if (node.kind == .ASSERT_CONST) {
@@ -2952,6 +2972,7 @@ class Resolver {
     }
 
     node.type = member.type;
+    checkPureInsideFunction(node);
   }
 
   void resolveThis(Node node) {
@@ -2991,7 +3012,7 @@ class Resolver {
   void resolveHook(Node node) {
     var trueNode = node.hookTrue();
     var falseNode = node.hookFalse();
-    resolveAsParamterizedExpressionWithConversion(node.hookTest(), cache.boolType, .IMPLICIT_CAST);
+    resolveAsParameterizedExpressionWithConversion(node.hookTest(), cache.boolType, .IMPLICIT_CAST);
 
     // Resolve both branches with type context but don't warn about type
     // conversion problems yet (warning later gives better error messages). If
@@ -3070,7 +3091,7 @@ class Resolver {
     if (typeContext != null && typeContext.isList(cache)) {
       var itemType = typeContext.substitutions[0];
       for (var i = 0; i < values.size(); i++) {
-        resolveAsParamterizedExpressionWithConversion(values[i], itemType, .IMPLICIT_CAST);
+        resolveAsParameterizedExpressionWithConversion(values[i], itemType, .IMPLICIT_CAST);
       }
       node.type = typeContext;
       return;
@@ -3129,8 +3150,8 @@ class Resolver {
           assert item.kind == .ERROR;
           continue;
         }
-        resolveAsParamterizedExpressionWithConversion(item.itemKey(), keyType, .IMPLICIT_CAST);
-        resolveAsParamterizedExpressionWithConversion(item.itemValue(), valueType, .IMPLICIT_CAST);
+        resolveAsParameterizedExpressionWithConversion(item.itemKey(), keyType, .IMPLICIT_CAST);
+        resolveAsParameterizedExpressionWithConversion(item.itemValue(), valueType, .IMPLICIT_CAST);
         item.type = cache.errorType;
       }
       node.type = typeContext;
@@ -3296,6 +3317,8 @@ class Resolver {
       node.type = member.type;
       dotName.type = member.type;
     }
+
+    checkPureInsideFunction(node);
   }
 
   void resolveCall(Node node) {
@@ -3337,6 +3360,11 @@ class Resolver {
         semanticErrorAbstractNew(log, value.range, valueType, reason.node.declarationName().range, reason.fullName());
         resolveNodesAsParameterizedExpressions(arguments);
         return;
+      }
+
+      // Cannot call impure constructors (keep going even if this is an error)
+      if (context.inPureFunction() && !member.symbol.isPure()) {
+        semanticErrorPurityViolation(log, value.range);
       }
 
       node.symbol = member.symbol;
@@ -3406,7 +3434,7 @@ class Resolver {
         resolveAsParameterizedExpression(child);
         checkUnusedExpression(child);
       } else {
-        resolveAsParamterizedExpressionWithConversion(child, typeContext, node.parent.kind == .CAST ? .EXPLICIT_CAST : .IMPLICIT_CAST);
+        resolveAsParameterizedExpressionWithConversion(child, typeContext, node.parent.kind == .CAST ? .EXPLICIT_CAST : .IMPLICIT_CAST);
       }
     }
   }
@@ -3471,7 +3499,7 @@ class Resolver {
     var type = node.castType();
     resolveAsParameterizedType(type);
     checkIsValidVariableType(type);
-    resolveAsParamterizedExpressionWithConversion(node.castValue(), type.type, .EXPLICIT_CAST);
+    resolveAsParameterizedExpressionWithConversion(node.castValue(), type.type, .EXPLICIT_CAST);
     node.type = type.type;
   }
 
@@ -3645,7 +3673,7 @@ class Resolver {
       }
 
       if (kind == .ASSIGN || left.type.isInteger(cache) || left.type.isNumeric(cache) && !kind.isBinaryBitwiseStorageOperator()) {
-        resolveAsParamterizedExpressionWithConversion(right, left.type, .IMPLICIT_CAST);
+        resolveAsParameterizedExpressionWithConversion(right, left.type, .IMPLICIT_CAST);
         checkStorage(left);
         node.type = left.type;
         return;
@@ -3937,6 +3965,7 @@ void createNameToSymbolFlag() {
     "private": .PRIVATE,
     "protected": .PROTECTED,
     "public": .PUBLIC,
+    "pure": .PURE,
     "static": .STATIC,
     "virtual": .VIRTUAL,
   };
@@ -3954,6 +3983,7 @@ void createSymbolFlagToName() {
     SymbolFlag.PRIVATE: "private",
     SymbolFlag.PROTECTED: "protected",
     SymbolFlag.PUBLIC: "public",
+    SymbolFlag.PURE: "pure",
     SymbolFlag.STATIC: "static",
     SymbolFlag.VIRTUAL: "virtual",
   };

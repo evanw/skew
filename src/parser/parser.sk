@@ -700,7 +700,7 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case .ASSERT { return parseAssert(context); }
     case .BREAK { return parseBreak(context); }
     case .CLASS { return parseObject(context, .CLASS); }
-    case .CONST, .EXPORT, .FINAL, .IMPORT, .INLINE, .OVERRIDE, .PRIVATE, .PROTECTED, .PUBLIC, .STATIC, .VIRTUAL { return parseModifier(context, hint); }
+    case .CONST, .EXPORT, .FINAL, .IMPORT, .INLINE, .OVERRIDE, .PRIVATE, .PROTECTED, .PUBLIC, .PURE, .STATIC, .VIRTUAL { return parseModifier(context, hint); }
     case .CONTINUE { return parseContinue(context); }
     case .DO { return parseDoWhile(context); }
     case .ENUM { return parseEnum(context); }

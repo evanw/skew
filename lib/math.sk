@@ -1,7 +1,7 @@
 #if TARGET_JS
 
   namespace math {
-    inline {
+    inline pure {
       double abs(double x) { return `Math`.abs(x); }
       double sin(double x) { return `Math`.sin(x); }
       double cos(double x) { return `Math`.cos(x); }
@@ -19,14 +19,15 @@
       double ceil(double x) { return `Math`.ceil(x); }
       double min(double x, double y) { return `Math`.min(x, y); }
       double max(double x, double y) { return `Math`.max(x, y); }
-      double random() { return `Math`.random(); }
     }
+
+    inline double random() { return `Math`.random(); }
   }
 
 #elif TARGET_CPP
 
   namespace math {
-    inline @NeedsInclude("<cmath>") {
+    inline pure @NeedsInclude("<cmath>") {
       double abs(double x) { return `std`::abs(x); }
       double sin(double x) { return `std`::sin(x); }
       double cos(double x) { return `std`::cos(x); }
@@ -62,24 +63,26 @@
 #else
 
   import namespace math {
-    double abs(double x);
-    double sin(double x);
-    double cos(double x);
-    double tan(double x);
-    double asin(double x);
-    double acos(double x);
-    double atan(double x);
-    double atan2(double y, double x);
-    double sqrt(double x);
-    double exp(double x);
-    double log(double x);
-    double pow(double x, double y);
-    double floor(double x);
-    double round(double x);
-    double ceil(double x);
-    double min(double x, double y);
-    double max(double x, double y);
-    double random();
+    pure {
+      double abs(double x);
+      double sin(double x);
+      double cos(double x);
+      double tan(double x);
+      double asin(double x);
+      double acos(double x);
+      double atan(double x);
+      double atan2(double y, double x);
+      double sqrt(double x);
+      double exp(double x);
+      double log(double x);
+      double pow(double x, double y);
+      double floor(double x);
+      double round(double x);
+      double ceil(double x);
+      double min(double x, double y);
+      double max(double x, double y);
+      double random();
+    }
   }
 
 #endif
