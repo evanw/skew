@@ -2048,7 +2048,7 @@
       }
     }
   };
-  CompilerTarget = {
+  var CompilerTarget = {
     NONE: 0,
     CPP: 1,
     JAVASCRIPT: 2,
@@ -2056,11 +2056,11 @@
     JSON_AST: 4,
     XML_AST: 5
   };
-  OverriddenDefine = function(_0, _1) {
+  function OverriddenDefine(_0, _1) {
     this.value = _0;
     this.range = _1;
-  };
-  CompilerConfig = {
+  }
+  var CompilerConfig = {
     AUTOMATIC: 0,
     ANDROID: 1,
     BROWSER: 2,
@@ -2070,12 +2070,12 @@
     OSX: 6,
     WINDOWS: 7
   };
-  MemoryManagement = {
+  var MemoryManagement = {
     NONE: 0,
     NONE_FAST: 1,
     MARK_SWEEP: 2
   };
-  CompilerOptions = function() {
+  function CompilerOptions() {
     this.fileAccess = null;
     this.target = CompilerTarget.NONE;
     this.config = CompilerConfig.AUTOMATIC;
@@ -2092,17 +2092,17 @@
     this.foldAllConstants = false;
     this.inlineAllFunctions = false;
     this.globalizeAllFunctions = false;
-  };
+  }
   CompilerOptions.prototype.overrideDefine = function(name, value) {
     this.overriddenDefines._table[name] = new OverriddenDefine(value, Range.EMPTY);
   };
-  CompilerResult = function(_0, _1, _2, _3, _4) {
+  function CompilerResult(_0, _1, _2, _3, _4) {
     this.options = _0;
     this.outputs = _1;
     this.files = _2;
     this.program = _3;
     this.resolver = _4;
-  };
+  }
   function CachedSource(_0, _1) {
     this.source = null;
     this.file = null;
@@ -2116,7 +2116,7 @@
     }
     return this.file !== null ? this.file.clone() : null;
   };
-  Compiler = function() {
+  function Compiler() {
     this.tokenizingTime = 0;
     this.parsingTime = 0;
     this.resolvingTime = 0;
@@ -2130,7 +2130,7 @@
     this.lineCountingTime = 0;
     this.totalTime = 0;
     this.log = new Log();
-  };
+  }
   Compiler.prototype.statistics = function(result) {
     var lineCountingStart = now();
     var lineCount = 0;
@@ -2316,29 +2316,11 @@
     this.range = _1;
     this.text = _2;
   }
-  Diagnostic.format = function(kind, range, text) {
-    if (range.isEmpty()) {
-      return kind + ': ' + text + '\n';
-    }
-    var formatted = range.format(0);
-    return range.locationString() + ': ' + kind + ': ' + text + '\n' + formatted.line + '\n' + formatted.range + '\n';
-  };
-  Log = function() {
+  function Log() {
     this.diagnostics = [];
     this.warningCount = 0;
     this.errorCount = 0;
-  };
-  Log.prototype.toString = function() {
-    var result = '';
-    for (var i = 0; i < this.diagnostics.length; i = i + 1 | 0) {
-      var diagnostic = this.diagnostics[i];
-      result += Diagnostic.format(diagnostic.kind === DiagnosticKind.ERROR ? 'error' : 'warning', diagnostic.range, diagnostic.text);
-      if (!diagnostic.noteRange.isEmpty()) {
-        result += Diagnostic.format('note', diagnostic.noteRange, diagnostic.noteText);
-      }
-    }
-    return result;
-  };
+  }
   Log.prototype.hasErrors = function() {
     return this.errorCount !== 0;
   };
@@ -2347,21 +2329,21 @@
   };
   Log.prototype.error = function(range, text) {
     if (range === null) {
-      throw new Error('assert range != null; (src/core/log.sk:53:5)');
+      throw new Error('assert range != null; (src/core/log.sk:51:5)');
     }
     this.diagnostics.push(new Diagnostic(DiagnosticKind.ERROR, range, text));
     this.errorCount = this.errorCount + 1 | 0;
   };
   Log.prototype.warning = function(range, text) {
     if (range === null) {
-      throw new Error('assert range != null; (src/core/log.sk:59:5)');
+      throw new Error('assert range != null; (src/core/log.sk:57:5)');
     }
     this.diagnostics.push(new Diagnostic(DiagnosticKind.WARNING, range, text));
     this.warningCount = this.warningCount + 1 | 0;
   };
   Log.prototype.note = function(range, text) {
     if (range === null) {
-      throw new Error('assert range != null; (src/core/log.sk:65:5)');
+      throw new Error('assert range != null; (src/core/log.sk:63:5)');
     }
     var last = in_List.last(this.diagnostics);
     last.noteRange = range;
@@ -2491,11 +2473,11 @@
     this.line = _0;
     this.column = _1;
   }
-  Source = function(_0, _1) {
+  function Source(_0, _1) {
     this.lineOffsets = null;
     this.name = _0;
     this.contents = _1;
-  };
+  }
   Source.prototype.lineCount = function() {
     this.computeLineOffsets();
     return this.lineOffsets.length - 1 | 0;
@@ -3944,7 +3926,7 @@
     }
     return result;
   };
-  json = {};
+  var json = {};
   json.Emitter = function(_0) {
     this.options = _0;
   };
@@ -4006,7 +3988,7 @@
     this.indent = outer;
     this.result += '\n' + this.indent + '}';
   };
-  lisp = {};
+  var lisp = {};
   lisp.Emitter = function(_0) {
     this.options = _0;
   };
@@ -4059,7 +4041,7 @@
     }
     this.result += ')';
   };
-  xml = {};
+  var xml = {};
   xml.Emitter = function(_0) {
     this.options = _0;
   };
@@ -4240,9 +4222,9 @@
     this.decreaseIndent();
     this.emit(this.indent + '}());\n');
     if (this.options.sourceMap) {
-      this.currentSource.contents = this.currentSource.contents + '/';
+      this.currentSource.contents += '/';
       var name = this.options.outputFile + '.map';
-      this.currentSource.contents = this.currentSource.contents + '/# sourceMappingURL=' + splitPath(name).entry + '\n';
+      this.currentSource.contents += '/# sourceMappingURL=' + splitPath(name).entry + '\n';
       return [this.currentSource, new Source(name, this.generator.toString())];
     }
     return [this.currentSource];
@@ -4419,7 +4401,7 @@
     case 33:
       break;
     default:
-      throw new Error('assert false; (src/js/emitter.sk:310:19)');
+      throw new Error('assert false; (src/js/emitter.sk:309:19)');
       break;
     }
   };
@@ -4783,7 +4765,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/js/emitter.sk:648:16)');
+        throw new Error('assert false; (src/js/emitter.sk:647:16)');
       }
       break;
     }
@@ -4904,7 +4886,7 @@
   };
   js.Emitter.prototype.isRightChildOfBinaryExpression = function(node, kind) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:759:7)');
+      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:758:7)');
     }
     while (in_NodeKind.isBinaryOperator(node.parent.kind)) {
       if (node.parent.binaryRight() === node) {

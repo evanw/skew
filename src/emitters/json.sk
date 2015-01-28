@@ -1,12 +1,10 @@
-export namespace json {
+namespace json {
   string dump(Node node) {
     var visitor = DumpVisitor();
     visitor.visit(node);
     return visitor.result;
   }
-}
 
-in json {
   class Emitter : IEmitter {
     CompilerOptions options;
 

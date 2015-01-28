@@ -3,9 +3,12 @@ class LineColumn {
   final int column; // 0-based index
 }
 
-export class Source {
+class Source {
   string name;
   string contents;
+
+  // This maps line numbers to indices within contents
+  List<int> lineOffsets = null;
 
   int lineCount() {
     computeLineOffsets();
@@ -43,11 +46,6 @@ export class Source {
     var column = line > 0 ? index - lineOffsets[line - 1] : index;
     return LineColumn(line - 1, column);
   }
-}
-
-in Source {
-  // This maps line numbers to indices within contents
-  List<int> lineOffsets = null;
 
   Range rangeContainingEverything() {
     return Range(this, 0, contents.size());

@@ -2,7 +2,10 @@
 
   // Use "self" instead of "window" since "self" works in web workers
   double now() {
-    return `self.performance && performance.now ? performance.now() : Date.now()`;
+    if (`self.performance && performance.now`) {
+      return `performance.now()`;
+    }
+    return `Date.now()`;
   }
 
 #elif TARGET_JS && CONFIG_NODE

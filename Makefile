@@ -12,11 +12,17 @@ SOURCES += src/lexer/*.sk
 SOURCES += src/parser/*.sk
 SOURCES += src/resolver/*.sk
 
+DEPS += Makefile
+DEPS += lib/*
+
 TEST_SOURCES += $(SOURCES)
 TEST_SOURCES += tests/system/*.sk tests/system/*/*.sk
 
 FRONTEND_SOURCES += $(SOURCES)
 FRONTEND_SOURCES += src/frontend/*.sk
+
+LIVE_SOURCES += $(SOURCES)
+LIVE_SOURCES += src/live/*.sk
 
 DEBUG_DIR = build/debug
 RELEASE_DIR = build/release
@@ -30,17 +36,15 @@ CPP_FLAGS += --verbose
 CPP_FLAGS += --target=cpp
 CPP_FLAGS += --gc=none-fast
 
-FRONTEND_DEPS += Makefile
+FRONTEND_DEPS += $(DEPS)
 FRONTEND_DEPS += $(FRONTEND_SOURCES)
-FRONTEND_DEPS += lib/*.sk
 
 FRONTEND_FLAGS += $(FRONTEND_SOURCES)
 FRONTEND_FLAGS += $(JS_FLAGS)
 FRONTEND_FLAGS += --config=node
 
-TEST_DEPS += Makefile
+TEST_DEPS += $(DEPS)
 TEST_DEPS += $(TEST_SOURCES)
-TEST_DEPS += lib/*.sk
 
 CXX_FLAGS += -std=c++11
 CXX_FLAGS += -ferror-limit=0
@@ -132,10 +136,11 @@ $(RELEASE_DIR)/skewc: $(RELEASE_DIR)/skewc.cpp
 # LIVE
 ################################################################################
 
-live: $(TESTS_DIR)/live.js
+live: | $(TESTS_DIR)
+	node skewc.js $(LIVE_SOURCES) $(JS_FLAGS) --output-file=$(TESTS_DIR)/live.js --source-map
 
-$(TESTS_DIR)/live.js: $(FRONTEND_DEPS) | $(TESTS_DIR)
-	node skewc.js $(SOURCES) $(JS_FLAGS) --output-file=$(TESTS_DIR)/live.js --source-map
+live-release: | $(TESTS_DIR)
+	node skewc.js $(LIVE_SOURCES) $(JS_FLAGS) --output-file=$(TESTS_DIR)/live.js --release
 
 ################################################################################
 # TEST

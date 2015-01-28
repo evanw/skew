@@ -60,49 +60,6 @@ label {
 </div>
 <script>
 
-function webWorker() {
-  onmessage = function(e) {
-    var message = {};
-    try {
-      var compiler = new Compiler();
-      var options = new CompilerOptions();
-      switch (e.data.format) {
-        case 'js': {
-          options.target = CompilerTarget.JAVASCRIPT;
-          options.outputFile = e.data.js.singleFile ? '' : 'output.js';
-          options.minify = e.data.js.minify;
-          options.mangle = e.data.js.mangle;
-          options.sourceMap = e.data.js.sourceMap;
-          options.removeAsserts = e.data.js.optimize;
-          options.foldAllConstants = e.data.js.optimize;
-          options.inlineAllFunctions = e.data.js.optimize;
-          options.globalizeAllFunctions = e.data.js.optimize;
-          break;
-        }
-        case 'cpp': {
-          options.target = CompilerTarget.CPP;
-          break;
-        }
-      }
-      options.inputs.push(new Source('<stdin>', e.data.input));
-      var result = compiler.compile(options);
-      message.log = compiler.log.toString();
-      message.tree = result.files.map(lisp.dump).join('\n');
-      message.code = result.outputs.map(function(output) {
-        return output.name ? '[' + output.name + ']\n' + output.contents : output.contents;
-      }).join('\n');
-    } catch (e) {
-      var text = e + '';
-      if (e && e.stack) {
-        var stackText = e.stack + '';
-        text = stackText.indexOf(text) === 0 ? stackText : text + '\n' + stackText;
-      }
-      message.error = text;
-    }
-    postMessage(message);
-  };
-}
-
 function ajax(url, callback) {
   var xhr = new XMLHttpRequest;
   xhr.onload = function() { callback(xhr.response); };
@@ -185,8 +142,7 @@ function update(result, timeInMS) {
 }
 
 function start() {
-  ajax('../../build/tests/live.js', function(content) {
-    var code = content + '\n' + webWorker + '\nwebWorker()';
+  ajax('../../build/tests/live.js', function(code) {
     var worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
     var busyCompiling = false;
     var outOfDate = false;

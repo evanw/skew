@@ -2,7 +2,7 @@ interface IEmitter {
   virtual List<Source> emitProgram(Node program);
 }
 
-export enum CompilerTarget {
+enum CompilerTarget {
   // Target languages that run the resolver
   NONE,
   CPP,
@@ -20,16 +20,16 @@ in CompilerTarget {
   }
 }
 
-export class OverriddenDefine {
+class OverriddenDefine {
   bool value;
   Range range;
 }
 
-export interface FileAccess {
+interface FileAccess {
   virtual Source contentsOfFile(string sourcePath, string relativePath);
 }
 
-export enum CompilerConfig {
+enum CompilerConfig {
   AUTOMATIC,
   ANDROID,
   BROWSER,
@@ -40,13 +40,13 @@ export enum CompilerConfig {
   WINDOWS,
 }
 
-export enum MemoryManagement {
+enum MemoryManagement {
   NONE,
   NONE_FAST,
   MARK_SWEEP,
 }
 
-export class CompilerOptions {
+class CompilerOptions {
   FileAccess fileAccess = null;
   CompilerTarget target = .NONE;
   CompilerConfig config = .AUTOMATIC;
@@ -69,7 +69,7 @@ export class CompilerOptions {
   }
 }
 
-export class CompilerResult {
+class CompilerResult {
   CompilerOptions options;
   List<Source> outputs;
   List<Node> files;
@@ -93,7 +93,7 @@ class CachedSource {
   }
 }
 
-export class Compiler {
+class Compiler {
   var tokenizingTime = 0.0;
   var parsingTime = 0.0;
   var resolvingTime = 0.0;
@@ -260,9 +260,7 @@ export class Compiler {
     totalTime += now() - totalStart;
     return CompilerResult(options, outputs, files, program, resolver);
   }
-}
 
-in Compiler {
   // Cache the parsed standard libraries for a speed boost during recompilation
   static List<CachedSource> cachedLibraries = [
     CachedSource("defines.sk", @ContentsOfFile("../../lib/defines.sk")),
