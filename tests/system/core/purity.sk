@@ -51,16 +51,6 @@ var foo = Foo();
 ");
 
 test("
-class Foo {}
-class Bar : Foo {}
-var foo = Bar();
-", "
-<stdin>:3:11: error: Global variables must be initialized to a pure expression (one without side effects)
-var foo = Bar();
-          ~~~~~
-");
-
-test("
 var foo = Foo();
 class Foo {
   var foo = bar();
@@ -290,6 +280,157 @@ import pure int baz();
 <stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
 var foo = Foo();
           ~~~~~
+");
+
+test("
+class Foo {
+  virtual void foo() {}
+}
+class Bar : Foo {
+  pure override void foo() {}
+}
+", "
+<stdin>:5:22: error: \"foo\" overrides another symbol with a different purity
+  pure override void foo() {}
+                     ~~~
+<stdin>:2:16: note: The overridden declaration is here
+  virtual void foo() {}
+               ~~~
+");
+
+test("
+class Foo {
+  pure virtual void foo() {}
+}
+class Bar : Foo {
+  override void foo() {}
+}
+", "
+<stdin>:5:17: error: \"foo\" overrides another symbol with a different purity
+  override void foo() {}
+                ~~~
+<stdin>:2:21: note: The overridden declaration is here
+  pure virtual void foo() {}
+                    ~~~
+");
+
+test("
+class Foo {
+  pure virtual void foo() {}
+}
+class Bar : Foo {
+  pure override void foo() {}
+}
+", "
+");
+
+test("
+var foo = Bar();
+class Foo {
+}
+class Bar : Foo {
+}
+", "
+");
+
+test("
+var foo = Bar();
+class Foo {
+  pure new() {}
+}
+class Bar : Foo {
+}
+", "
+");
+
+test("
+var foo = Bar();
+class Foo {
+}
+class Bar : Foo {
+  pure new() {}
+}
+", "
+");
+
+test("
+var foo = Bar();
+class Foo {
+  pure new() {}
+}
+class Bar : Foo {
+  pure new() {}
+}
+", "
+");
+
+test("
+var foo = Bar();
+class Foo {
+  new() {}
+}
+class Bar : Foo {
+}
+", "
+<stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Bar();
+          ~~~~~
+");
+
+test("
+var foo = Bar();
+class Foo {
+}
+class Bar : Foo {
+  new() {}
+}
+", "
+<stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Bar();
+          ~~~~~
+");
+
+test("
+var foo = Bar();
+class Foo {
+  var foo = bar();
+}
+class Bar : Foo {
+}
+import int bar();
+", "
+<stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Bar();
+          ~~~~~
+");
+
+test("
+var foo = Bar();
+class Foo {
+}
+class Bar : Foo {
+  var foo = bar();
+}
+import int bar();
+", "
+<stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
+var foo = Bar();
+          ~~~~~
+");
+
+test("
+interface Foo {
+  virtual void foo();
+}
+interface Bar {
+  pure virtual void foo();
+}
+interface Baz : Foo, Bar {
+}
+", "
+<stdin>:7:11: error: Member \"Baz.foo\" has an ambiguous inherited purity
+interface Baz : Foo, Bar {
+          ~~~
 ");
 
 }}

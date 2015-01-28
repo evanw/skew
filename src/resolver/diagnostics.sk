@@ -201,6 +201,10 @@ void semanticErrorUnmergedSymbol(Log log, Range range, string name, List<Type> t
   log.error(range, "Member " + simpleQuote(name) + " has an ambiguous inherited type, could be " + typesToText(types, "or"));
 }
 
+void semanticErrorAmbiguousPurity(Log log, Range range, string name) {
+  log.error(range, "Member " + simpleQuote(name) + " has an ambiguous inherited purity");
+}
+
 void semanticErrorBadOverride(Log log, Range range, string name, Type base, Range overridden) {
   log.error(range, simpleQuote(name) + " overrides another declaration with the same name in base " + typeToText(base));
   if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
@@ -219,6 +223,11 @@ void semanticErrorModifierMissingOverride(Log log, Range range, string name, Ran
 
 void semanticErrorCannotOverrideNonVirtual(Log log, Range range, string name, Range overridden) {
   log.error(range, simpleQuote(name) + " cannot override a non-virtual method");
+  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
+}
+
+void semanticErrorOverridePurityMismatch(Log log, Range range, string name, Range overridden) {
+  log.error(range, simpleQuote(name) + " overrides another symbol with a different purity");
   if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
 }
 

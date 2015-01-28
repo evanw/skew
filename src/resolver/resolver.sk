@@ -1266,29 +1266,33 @@ class Resolver {
       var derived = symbol.type;
       if (!base.isIgnored(cache) && !derived.isIgnored(cache)) {
         var overriddenSymbol = overriddenMember.symbol;
+        var declarationRange = node.declarationName().range;
+        var overriddenDeclarationRange = overriddenSymbol.node != null ? overriddenSymbol.node.declarationName().range : .EMPTY;
 
         // Functions can only override other functions
         if (!base.isFunction() || !overriddenSymbol.kind.isInstance() || !symbol.kind.isInstance()) {
-          semanticErrorBadOverride(log, node.declarationName().range, symbol.name,
-            overriddenSymbol.enclosingSymbol.type, overriddenSymbol.node.declarationName().range);
+          semanticErrorBadOverride(log, declarationRange, symbol.name,
+            overriddenSymbol.enclosingSymbol.type, overriddenDeclarationRange);
         }
 
         // Functions can only override other functions with the same signature
         else if (base != derived) {
-          semanticErrorOverrideDifferentTypes(log, node.declarationName().range, symbol.name,
-            base, derived, overriddenSymbol.node.declarationName().range);
+          semanticErrorOverrideDifferentTypes(log, declarationRange, symbol.name, base, derived, overriddenDeclarationRange);
         }
 
         // Overriding must be explicit with the "override" modifier
         else if (!symbol.isOverride()) {
-          semanticErrorModifierMissingOverride(log, node.declarationName().range, symbol.name,
-            overriddenSymbol.node.declarationName().range);
+          semanticErrorModifierMissingOverride(log, declarationRange, symbol.name, overriddenDeclarationRange);
         }
 
         // Overriding must be explicit with the "override" modifier
         else if (!overriddenSymbol.isVirtual()) {
-          semanticErrorCannotOverrideNonVirtual(log, node.declarationName().range, symbol.name,
-            overriddenSymbol.node.declarationName().range);
+          semanticErrorCannotOverrideNonVirtual(log, declarationRange, symbol.name, overriddenDeclarationRange);
+        }
+
+        // Base and derived members must have the same purity
+        else if (symbol.isPure() != overriddenSymbol.isPure()) {
+          semanticErrorOverridePurityMismatch(log, declarationRange, symbol.name, overriddenDeclarationRange);
         }
 
         // The "override" modifier replaces the "virtual" modifier
@@ -1918,10 +1922,10 @@ class Resolver {
     // Add arguments for each base constructor argument
     var baseClass = enclosingSymbol.type.isClass() ? enclosingSymbol.type.baseClass() : null;
     if (baseClass != null) {
-      isPure = false;
       var constructor = baseClass.constructor();
       if (constructor != null) {
         initializeMember(constructor);
+        isPure = constructor.symbol.isPure();
         if (constructor.type.isFunction()) {
           var argumentTypes = constructor.type.argumentTypes();
           superArguments = [];
@@ -2139,6 +2143,8 @@ class Resolver {
         return;
       }
       List<Type> types = [];
+      var isPure = false;
+      var isImpure = false;
       for (var i = 0; i < symbol.identicalMembers.size(); i++) {
         var identical = symbol.identicalMembers[i];
         initializeMember(identical);
@@ -2146,12 +2152,20 @@ class Resolver {
         if (!(type in types)) {
           types.push(type);
         }
+        if (identical.symbol.isPure()) {
+          isPure = true;
+        } else {
+          isImpure = true;
+        }
       }
       if (types.size() != 1) {
         semanticErrorUnmergedSymbol(log, symbol.enclosingSymbol.node.declarationName().range, symbol.fullName(), types);
         symbol.type = cache.errorType;
       } else {
         symbol.type = types[0];
+        if (isPure && isImpure) {
+          semanticErrorAmbiguousPurity(log, symbol.enclosingSymbol.node.declarationName().range, symbol.fullName());
+        }
       }
       return;
     }
@@ -2477,143 +2491,150 @@ class Resolver {
 
     // Resolve the initializer list
     if (node.kind == .CONSTRUCTOR) {
-      // Get the base constructor type
-      var overriddenMember = symbol.overriddenMember;
-      var overriddenType = cache.errorType;
+      resolveConstructorFunction(symbol);
+    }
+
+    context.functionSymbol = oldFunctionSymbol;
+  }
+
+  void resolveConstructorFunction(Symbol symbol) {
+    var node = symbol.node;
+    var block = node.functionBlock();
+
+    // Get the base constructor type
+    var overriddenMember = symbol.overriddenMember;
+    var overriddenType = cache.errorType;
+    if (overriddenMember != null) {
+      initializeMember(overriddenMember);
+      overriddenType = overriddenMember.type;
+    }
+
+    // Resolve the super initializer
+    var superInitializer = node.superInitializer();
+    if (superInitializer != null) {
       if (overriddenMember != null) {
-        initializeMember(overriddenMember);
-        overriddenType = overriddenMember.type;
+        superInitializer.symbol = overriddenMember.symbol;
+      } else {
+        semanticErrorBadSuperInitializer(log, superInitializer.range);
       }
 
-      // Resolve the super initializer
-      var superInitializer = node.superInitializer();
-      if (superInitializer != null) {
-        if (overriddenMember != null) {
-          superInitializer.symbol = overriddenMember.symbol;
-        } else {
-          semanticErrorBadSuperInitializer(log, superInitializer.range);
-        }
-
-        // Resolve the arguments
-        var arguments = superInitializer.superCallArguments();
-        if (overriddenType.isIgnored(cache)) {
-          resolveNodesAsParameterizedExpressions(arguments);
-        } else {
-          assert overriddenType.isFunction();
-          resolveArguments(arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
-        }
+      // Resolve the arguments
+      var arguments = superInitializer.superCallArguments();
+      if (overriddenType.isIgnored(cache)) {
+        resolveNodesAsParameterizedExpressions(arguments);
+      } else {
+        assert overriddenType.isFunction();
+        resolveArguments(arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
       }
+    }
 
-      // Automatically insert a call to the base constructor if possible
-      else if (overriddenType.isFunction()) {
-        if (overriddenType.argumentTypes().size() != 0) {
-          semanticErrorMissingSuperInitializer(log, node.declarationName().range);
-        } else {
-          node.replaceChild(3, Node.createSuperCall([]).withSymbol(overriddenMember.symbol));
-        }
+    // Automatically insert a call to the base constructor if possible
+    else if (overriddenType.isFunction()) {
+      if (overriddenType.argumentTypes().size() != 0) {
+        semanticErrorMissingSuperInitializer(log, node.declarationName().range);
+      } else {
+        node.replaceChild(3, Node.createSuperCall([]).withSymbol(overriddenMember.symbol));
       }
+    }
 
-      // Ensure the member initializer list exists
-      var memberInitializers = node.memberInitializers();
-      if (memberInitializers == null) {
-        memberInitializers = Node.createNodeList([]);
-        node.replaceChild(4, memberInitializers);
-      }
+    // Ensure the member initializer list exists
+    var memberInitializers = node.memberInitializers();
+    if (memberInitializers == null) {
+      memberInitializers = Node.createNodeList([]);
+      node.replaceChild(4, memberInitializers);
+    }
 
-      // Abstract constructors cannot have initializer lists
-      if ((superInitializer != null || memberInitializers.children.size() != 0) && block == null) {
-        semanticErrorAbstractConstructorInitializer(log, Range.span(
-          (superInitializer != null ? superInitializer : memberInitializers.children[0]).range,
-          (memberInitializers.children.size() < 1 ? superInitializer : memberInitializers.lastChild()).range));
-      }
+    // Abstract constructors cannot have initializer lists
+    if ((superInitializer != null || memberInitializers.children.size() != 0) && block == null) {
+      semanticErrorAbstractConstructorInitializer(log, Range.span(
+        (superInitializer != null ? superInitializer : memberInitializers.children[0]).range,
+        (memberInitializers.children.size() < 1 ? superInitializer : memberInitializers.lastChild()).range));
+    }
 
-      // Move the initial values for all member variables to initializers. The
-      // order isn't guaranteed here because extension blocks can add member
-      // variables as long as they are initialized, but those are unordered.
-      var enclosingSymbol = symbol.enclosingSymbol;
-      if (!enclosingSymbol.isImport()) {
-        var members = enclosingSymbol.type.sortedMembers();
-        var index = 0;
-        for (var i = 0; i < members.size(); i++) {
-          var member = members[i];
-          var memberSymbol = member.symbol;
-          if (memberSymbol.kind == .INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
-            var value = memberSymbol.node.variableValue();
-            if (value != null) {
+    // Move the initial values for all member variables to initializers. The
+    // order isn't guaranteed here because extension blocks can add member
+    // variables as long as they are initialized, but those are unordered.
+    var enclosingSymbol = symbol.enclosingSymbol;
+    if (!enclosingSymbol.isImport()) {
+      var members = enclosingSymbol.type.sortedMembers();
+      var index = 0;
+      for (var i = 0; i < members.size(); i++) {
+        var member = members[i];
+        var memberSymbol = member.symbol;
+        if (memberSymbol.kind == .INSTANCE_VARIABLE && memberSymbol.enclosingSymbol == enclosingSymbol) {
+          var value = memberSymbol.node.variableValue();
+          if (value != null) {
+            initializeMember(member);
+
+            // Resolve the value in the context of the object
+            var oldScope = context.scope;
+            context.scope = node.scope.lexicalParent;
+            context.functionSymbol = null;
+            resolve(memberSymbol.node, null);
+            context.functionSymbol = symbol;
+            context.scope = oldScope;
+
+            // Move the value from the variable to a member initializer
+            memberInitializers.insertChild(index, Node.createMemberInitializer(
+              Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type), value.replaceWith(null)));
+            index++;
+          }
+
+          // Automatically add an initializer if one is missing
+          else {
+            int j;
+            for (j = 0; j < memberInitializers.children.size(); j++) {
+              if (memberInitializers.children[j].memberInitializerName().asString() == memberSymbol.name) {
+                break;
+              }
+            }
+            if (j == memberInitializers.children.size()) {
               initializeMember(member);
-
-              // Resolve the value in the context of the object
-              var oldScope = context.scope;
-              context.scope = node.scope.lexicalParent;
-              context.functionSymbol = null;
-              resolve(memberSymbol.node, null);
-              context.functionSymbol = symbol;
-              context.scope = oldScope;
-
-              // Move the value from the variable to a member initializer
               memberInitializers.insertChild(index, Node.createMemberInitializer(
-                Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type), value.replaceWith(null)));
+                Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type),
+                createDefaultValue(member.type, memberSymbol.node.declarationName().range)));
               index++;
             }
-
-            // Automatically add an initializer if one is missing
-            else {
-              int j;
-              for (j = 0; j < memberInitializers.children.size(); j++) {
-                if (memberInitializers.children[j].memberInitializerName().asString() == memberSymbol.name) {
-                  break;
-                }
-              }
-              if (j == memberInitializers.children.size()) {
-                initializeMember(member);
-                memberInitializers.insertChild(index, Node.createMemberInitializer(
-                  Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type),
-                  createDefaultValue(member.type, memberSymbol.node.declarationName().range)));
-                index++;
-              }
-            }
           }
-        }
-      }
-
-      // Resolve the member initializers
-      for (var i = 0; i < memberInitializers.children.size(); i++) {
-        var memberInitializer = memberInitializers.children[i];
-        var name = memberInitializer.memberInitializerName();
-        var value = memberInitializer.memberInitializerValue();
-
-        // Avoid the function arguments when looking up member initializer
-        // names. This allows function arguments to have the same name as a
-        // member initializer without a conflict:
-        //
-        //   class Foo {
-        //     int foo;
-        //     new(int foo) : foo = foo {}
-        //   }
-        //
-        var oldScope = context.scope;
-        context.scope = node.scope.lexicalParent;
-        resolve(name, null);
-        context.scope = oldScope;
-        memberInitializer.symbol = name.symbol;
-
-        // Resolve the value and check for duplicate initializations
-        if (name.symbol != null) {
-          resolveAsParameterizedExpressionWithConversion(value, name.symbol.type, .IMPLICIT_CAST);
-          for (var j = 0; j < i; j++) {
-            var other = memberInitializers.children[j];
-            if (other.memberInitializerName().symbol == name.symbol) {
-              semanticErrorAlreadyInitialized(log, value.range, name.symbol.name, other.memberInitializerValue().range);
-              break;
-            }
-          }
-        } else {
-          resolveAsParameterizedExpression(value);
         }
       }
     }
 
-    context.functionSymbol = oldFunctionSymbol;
+    // Resolve the member initializers
+    for (var i = 0; i < memberInitializers.children.size(); i++) {
+      var memberInitializer = memberInitializers.children[i];
+      var name = memberInitializer.memberInitializerName();
+      var value = memberInitializer.memberInitializerValue();
+
+      // Avoid the function arguments when looking up member initializer
+      // names. This allows function arguments to have the same name as a
+      // member initializer without a conflict:
+      //
+      //   class Foo {
+      //     int foo;
+      //     new(int foo) : foo = foo {}
+      //   }
+      //
+      var oldScope = context.scope;
+      context.scope = node.scope.lexicalParent;
+      resolve(name, null);
+      context.scope = oldScope;
+      memberInitializer.symbol = name.symbol;
+
+      // Resolve the value and check for duplicate initializations
+      if (name.symbol != null) {
+        resolveAsParameterizedExpressionWithConversion(value, name.symbol.type, .IMPLICIT_CAST);
+        for (var j = 0; j < i; j++) {
+          var other = memberInitializers.children[j];
+          if (other.memberInitializerName().symbol == name.symbol) {
+            semanticErrorAlreadyInitialized(log, value.range, name.symbol.name, other.memberInitializerValue().range);
+            break;
+          }
+        }
+      } else {
+        resolveAsParameterizedExpression(value);
+      }
+    }
   }
 
   // A pure value is one guaranteed to have no side effects. Pure values can be

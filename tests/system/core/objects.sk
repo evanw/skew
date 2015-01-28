@@ -563,4 +563,14 @@ in Foo {}
 ", "
 ");
 
+test("
+interface Foo { virtual void foo(); }
+interface Bar { virtual void foo(); }
+interface Baz : Foo, Bar { virtual void foo(); }
+", "
+<stdin>:3:41: error: \"foo\" overrides another declaration with the same name in base type \"Baz\"
+interface Baz : Foo, Bar { virtual void foo(); }
+                                        ~~~
+");
+
 }}
