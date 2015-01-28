@@ -11,6 +11,11 @@ function time(count, callback) {
   for (var i = 0; i < count; i++) {
     source += 'namespace ns' + i + ' {\n' + code + '}\n';
   }
+  source += '@EntryPoint void main(List<string> args) {\n';
+  for (var i = 0; i < count; i++) {
+    source += '  ns' + i + '.frontend.main(args);\n';
+  }
+  source += '}\n';
   fs.writeFileSync(sourcePath, source);
   var args = [sourcePath, '--target=js', '--output-file=' + dir + '/target.js', '--release'];
   var start = Date.now();
