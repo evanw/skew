@@ -2048,7 +2048,7 @@
       }
     }
   };
-  TargetFormat = {
+  CompilerTarget = {
     NONE: 0,
     CPP: 1,
     JAVASCRIPT: 2,
@@ -2077,8 +2077,8 @@
   };
   CompilerOptions = function() {
     this.fileAccess = null;
-    this.targetFormat = TargetFormat.NONE;
-    this.targetConfig = CompilerConfig.AUTOMATIC;
+    this.target = CompilerTarget.NONE;
+    this.config = CompilerConfig.AUTOMATIC;
     this.memoryManagement = MemoryManagement.NONE;
     this.inputs = [];
     this.overriddenDefines = new StringMap();
@@ -2169,29 +2169,29 @@
   };
   Compiler.prototype.compile = function(options) {
     var totalStart = now();
-    var targetFormat = options.targetFormat;
-    var targetConfig = options.targetConfig;
+    var target = options.target;
+    var config = options.config;
     var program = Node.createProgram([]);
     var outputs = [];
     var files = [];
-    if (targetConfig === CompilerConfig.AUTOMATIC) {
-      if (targetFormat === TargetFormat.JAVASCRIPT) {
-        targetConfig = CompilerConfig.BROWSER;
-      } else if (targetFormat === TargetFormat.CPP) {
+    if (config === CompilerConfig.AUTOMATIC) {
+      if (target === CompilerTarget.JAVASCRIPT) {
+        config = CompilerConfig.BROWSER;
+      } else if (target === CompilerTarget.CPP) {
         var os = in_OperatingSystem.current();
-        targetConfig = os === OperatingSystem.ANDROID ? CompilerConfig.ANDROID : os === OperatingSystem.IOS ? CompilerConfig.IOS : os === OperatingSystem.LINUX ? CompilerConfig.LINUX : os === OperatingSystem.OSX ? CompilerConfig.OSX : os === OperatingSystem.WINDOWS ? CompilerConfig.WINDOWS : CompilerConfig.AUTOMATIC;
+        config = os === OperatingSystem.ANDROID ? CompilerConfig.ANDROID : os === OperatingSystem.IOS ? CompilerConfig.IOS : os === OperatingSystem.LINUX ? CompilerConfig.LINUX : os === OperatingSystem.OSX ? CompilerConfig.OSX : os === OperatingSystem.WINDOWS ? CompilerConfig.WINDOWS : CompilerConfig.AUTOMATIC;
       }
-      options.targetConfig = targetConfig;
+      options.config = config;
     }
-    options.overrideDefine('TARGET_JS', targetFormat === TargetFormat.JAVASCRIPT);
-    options.overrideDefine('TARGET_CPP', targetFormat === TargetFormat.CPP);
-    options.overrideDefine('CONFIG_ANDROID', targetConfig === CompilerConfig.ANDROID);
-    options.overrideDefine('CONFIG_BROWSER', targetConfig === CompilerConfig.BROWSER);
-    options.overrideDefine('CONFIG_IOS', targetConfig === CompilerConfig.IOS);
-    options.overrideDefine('CONFIG_LINUX', targetConfig === CompilerConfig.LINUX);
-    options.overrideDefine('CONFIG_NODE', targetConfig === CompilerConfig.NODE);
-    options.overrideDefine('CONFIG_OSX', targetConfig === CompilerConfig.OSX);
-    options.overrideDefine('CONFIG_WINDOWS', targetConfig === CompilerConfig.WINDOWS);
+    options.overrideDefine('TARGET_JS', target === CompilerTarget.JAVASCRIPT);
+    options.overrideDefine('TARGET_CPP', target === CompilerTarget.CPP);
+    options.overrideDefine('CONFIG_ANDROID', config === CompilerConfig.ANDROID);
+    options.overrideDefine('CONFIG_BROWSER', config === CompilerConfig.BROWSER);
+    options.overrideDefine('CONFIG_IOS', config === CompilerConfig.IOS);
+    options.overrideDefine('CONFIG_LINUX', config === CompilerConfig.LINUX);
+    options.overrideDefine('CONFIG_NODE', config === CompilerConfig.NODE);
+    options.overrideDefine('CONFIG_OSX', config === CompilerConfig.OSX);
+    options.overrideDefine('CONFIG_WINDOWS', config === CompilerConfig.WINDOWS);
     for (var i = 0; i < Compiler.cachedLibraries.length; i = i + 1 | 0) {
       var file = Compiler.cachedLibraries[i].compile(this, options);
       if (file !== null) {
@@ -2207,14 +2207,14 @@
       }
     }
     var resolver = null;
-    if (in_TargetFormat.shouldRunResolver(options.targetFormat)) {
+    if (in_CompilerTarget.shouldRunResolver(options.target)) {
       var resolveStart = now();
       resolver = new Resolver(this.log, options);
       resolver.run(program);
       this.resolvingTime += now() - resolveStart;
     }
     if (this.log.errorCount === 0) {
-      if (in_TargetFormat.shouldRunResolver(options.targetFormat)) {
+      if (in_CompilerTarget.shouldRunResolver(options.target)) {
         var callGraphStart = now();
         var graph = new CallGraph(program);
         this.callGraphTime += now() - callGraphStart;
@@ -2237,7 +2237,7 @@
         this.treeShakingTime += now() - treeShakingStart;
       }
       var emitter = null;
-      switch (options.targetFormat) {
+      switch (options.target) {
       case 0:
         break;
       case 1:
@@ -3338,7 +3338,7 @@
     if (useFastHack) {
       this.includes._table['<cassert>'] = true;
       this.includes._table['<new>'] = true;
-      this.includes._table[this.options.targetConfig === CompilerConfig.WINDOWS ? '<windows.h>' : '<sys/mman.h>'] = true;
+      this.includes._table[this.options.config === CompilerConfig.WINDOWS ? '<windows.h>' : '<sys/mman.h>'] = true;
     }
     if (this.isMarkSweep) {
       this.includes._table['<stack>'] = true;
@@ -3795,7 +3795,7 @@
     }
   };
   cpp.Emitter.prototype.emitParenthesizedCast = function(type, node, precedence) {
-    if (this.options.targetConfig === CompilerConfig.WINDOWS && type.isBool(this.cache)) {
+    if (this.options.config === CompilerConfig.WINDOWS && type.isBool(this.cache)) {
       if (Precedence.UNARY_PREFIX < precedence) {
         this.emit('(');
       }
@@ -3929,7 +3929,7 @@
   };
   cpp.Emitter.prototype.createIsKeyword = function() {
     var result = StringMap.literal(['alignas', 'alignof', 'and', 'and_eq', 'asm', 'auto', 'bitand', 'bitor', 'bool', 'break', 'case', 'catch', 'char', 'char16_t', 'char32_t', 'class', 'compl', 'const', 'const_cast', 'constexpr', 'continue', 'decltype', 'default', 'delete', 'do', 'double', 'dynamic_cast', 'else', 'enum', 'explicit', 'export', 'extern', 'false', 'float', 'for', 'friend', 'goto', 'if', 'INFINITY', 'inline', 'int', 'long', 'mutable', 'namespace', 'NAN', 'new', 'noexcept', 'not', 'not_eq', 'NULL', 'nullptr', 'operator', 'or', 'or_eq', 'private', 'protected', 'public', 'register', 'reinterpret_cast', 'return', 'short', 'signed', 'sizeof', 'static', 'static_assert', 'static_cast', 'struct', 'switch', 'template', 'this', 'thread_local', 'throw', 'true', 'try', 'typedef', 'typeid', 'typename', 'union', 'unsigned', 'using', 'virtual', 'void', 'volatile', 'wchar_t', 'while', 'xor', 'xor_eq'], [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]);
-    if (this.options.targetConfig === CompilerConfig.WINDOWS) {
+    if (this.options.config === CompilerConfig.WINDOWS) {
       result._table['CONST'] = true;
       result._table['DELETE'] = true;
       result._table['ERROR'] = true;
@@ -10795,7 +10795,7 @@
   };
   SymbolMotionPass.prototype.moveSymbol = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
-    if (!symbol.isImport() && enclosingSymbol !== null && !in_SymbolKind.isParameter(symbol.kind) && (enclosingSymbol.isImport() || in_SymbolKind.isEnum(enclosingSymbol.kind) && symbol.isFromExtension() || this.resolver.options.targetFormat === TargetFormat.CPP && enclosingSymbol.hasParameters() && in_SymbolKind.isGlobal(symbol.kind))) {
+    if (!symbol.isImport() && enclosingSymbol !== null && !in_SymbolKind.isParameter(symbol.kind) && (enclosingSymbol.isImport() || in_SymbolKind.isEnum(enclosingSymbol.kind) && symbol.isFromExtension() || this.resolver.options.target === CompilerTarget.CPP && enclosingSymbol.hasParameters() && in_SymbolKind.isGlobal(symbol.kind))) {
       var enclosingType = symbol.enclosingSymbol.type;
       var shadow = this.shadowForSymbol(enclosingSymbol);
       var member = enclosingType.members._table[symbol.name];
@@ -10927,7 +10927,7 @@
     if (node.type !== null) {
       this.includeType(node.type);
     }
-    if (this.options.targetFormat === TargetFormat.CPP && node.kind === NodeKind.LIST && this.isFirstList) {
+    if (this.options.target === CompilerTarget.CPP && node.kind === NodeKind.LIST && this.isFirstList) {
       var literal = node.type.findMember('_literal_');
       if (literal === null) {
         throw new Error('assert literal != null; (src/resolver/treeshaking.sk:127:7)');
@@ -11692,7 +11692,7 @@
   var in_List = {};
   var in_OperatingSystem = {};
   var in_NodeKind = {};
-  var in_TargetFormat = {};
+  var in_CompilerTarget = {};
   var in_int = {};
   var in_Precedence = {};
   var in_SymbolKind = {};
@@ -11835,8 +11835,8 @@
   in_NodeKind.prettyPrint = function($this) {
     return in_string.replaceAll(in_NodeKind._toString_[$this].toLowerCase(), '_', '-');
   };
-  in_TargetFormat.shouldRunResolver = function($this) {
-    return $this >= TargetFormat.NONE && $this <= TargetFormat.JAVASCRIPT;
+  in_CompilerTarget.shouldRunResolver = function($this) {
+    return $this >= CompilerTarget.NONE && $this <= CompilerTarget.JAVASCRIPT;
   };
   function now() {
     return Date.now();
@@ -13786,7 +13786,7 @@
     return defaultValue;
   };
   frontend.parseOptions = function(log, parser, $arguments) {
-    var VALID_TARGETS = StringMap.literal(['cpp', 'js', 'json-ast', 'lisp-ast', 'xml-ast'], [TargetFormat.CPP, TargetFormat.JAVASCRIPT, TargetFormat.JSON_AST, TargetFormat.LISP_AST, TargetFormat.XML_AST]);
+    var VALID_TARGETS = StringMap.literal(['cpp', 'js', 'json-ast', 'lisp-ast', 'xml-ast'], [CompilerTarget.CPP, CompilerTarget.JAVASCRIPT, CompilerTarget.JSON_AST, CompilerTarget.LISP_AST, CompilerTarget.XML_AST]);
     var VALID_JS_CONFIGS = StringMap.literal(['browser', 'node'], [CompilerConfig.BROWSER, CompilerConfig.NODE]);
     var VALID_CPP_CONFIGS = StringMap.literal(['android', 'ios', 'linux', 'osx', 'windows'], [CompilerConfig.ANDROID, CompilerConfig.IOS, CompilerConfig.LINUX, CompilerConfig.OSX, CompilerConfig.WINDOWS]);
     var VALID_GC_STRATEGIES = StringMap.literal(['mark-sweep', 'none', 'none-fast'], [MemoryManagement.MARK_SWEEP, MemoryManagement.NONE, MemoryManagement.NONE_FAST]);
@@ -13857,7 +13857,7 @@
     }
     var target = parser.stringRangeForOption(Option.TARGET);
     if (target !== null) {
-      options.targetFormat = frontend.parseEnum(log, 'target', VALID_TARGETS, target, TargetFormat.NONE);
+      options.target = frontend.parseEnum(log, 'target', VALID_TARGETS, target, CompilerTarget.NONE);
     } else {
       commandLineErrorMissingTarget(log, trailingSpace, '--target');
     }
@@ -13873,18 +13873,18 @@
       options.outputDirectory = outputDirectory.toString();
     }
     var config = parser.stringRangeForOption(Option.CONFIG);
-    if (options.targetFormat !== TargetFormat.NONE && config !== null) {
-      if (options.targetFormat === TargetFormat.JAVASCRIPT || options.targetFormat === TargetFormat.CPP) {
-        options.targetConfig = frontend.parseEnum(log, 'configuration', options.targetFormat === TargetFormat.JAVASCRIPT ? VALID_JS_CONFIGS : VALID_CPP_CONFIGS, config, CompilerConfig.AUTOMATIC);
+    if (options.target !== CompilerTarget.NONE && config !== null) {
+      if (options.target === CompilerTarget.JAVASCRIPT || options.target === CompilerTarget.CPP) {
+        options.config = frontend.parseEnum(log, 'configuration', options.target === CompilerTarget.JAVASCRIPT ? VALID_JS_CONFIGS : VALID_CPP_CONFIGS, config, CompilerConfig.AUTOMATIC);
       } else {
         commandLineErrorUnexpectedConfiguration(log, config, config.toString(), target.toString());
       }
     }
     var gc = parser.stringRangeForOption(Option.GC);
     if (gc !== null) {
-      if (options.targetFormat === TargetFormat.CPP) {
+      if (options.target === CompilerTarget.CPP) {
         options.memoryManagement = frontend.parseEnum(log, 'garbage collection strategy', VALID_GC_STRATEGIES, gc, MemoryManagement.NONE);
-      } else if (options.targetFormat !== TargetFormat.NONE) {
+      } else if (options.target !== CompilerTarget.NONE) {
         commandLineErrorUnexpectedGarbageCollectionStrategy(log, gc, target.toString());
       }
     }

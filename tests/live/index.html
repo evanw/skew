@@ -68,7 +68,7 @@ function webWorker() {
       var options = new CompilerOptions();
       switch (e.data.format) {
         case 'js': {
-          options.targetFormat = TargetFormat.JAVASCRIPT;
+          options.target = CompilerTarget.JAVASCRIPT;
           options.outputFile = e.data.js.singleFile ? '' : 'output.js';
           options.minify = e.data.js.minify;
           options.mangle = e.data.js.mangle;
@@ -80,7 +80,7 @@ function webWorker() {
           break;
         }
         case 'cpp': {
-          options.targetFormat = TargetFormat.CPP;
+          options.target = CompilerTarget.CPP;
           break;
         }
       }

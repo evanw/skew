@@ -78,7 +78,7 @@ namespace cpp {
       if (useFastHack) {
         includes["<cassert>"] = true;
         includes["<new>"] = true;
-        includes[options.targetConfig == .WINDOWS ? "<windows.h>" : "<sys/mman.h>"] = true;
+        includes[options.config == .WINDOWS ? "<windows.h>" : "<sys/mman.h>"] = true;
       }
       if (isMarkSweep) {
         includes["<stack>"] = true;
@@ -560,7 +560,7 @@ namespace cpp {
       // (performance warning)". The "!!x" boolean-cast trick works in almost
       // all cases but fails for strongly-typed enums, which are missing a
       // unary not operator.
-      if (options.targetConfig == .WINDOWS && type.isBool(cache)) {
+      if (options.config == .WINDOWS && type.isBool(cache)) {
         if (.UNARY_PREFIX < precedence) emit("(");
         emit("!!");
         if (node.type.isPrimitive()) {
@@ -807,7 +807,7 @@ namespace cpp {
       };
 
       // The windows.h header has an excellent selection of very poorly chosen #define names
-      if (options.targetConfig == .WINDOWS) {
+      if (options.config == .WINDOWS) {
         result["CONST"] = true;
         result["DELETE"] = true;
         result["ERROR"] = true;

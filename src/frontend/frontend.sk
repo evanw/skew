@@ -79,7 +79,7 @@ namespace frontend {
   }
 
   CompilerOptions parseOptions(Log log, OptionParser parser, List<string> arguments) {
-    StringMap<TargetFormat> VALID_TARGETS = {
+    StringMap<CompilerTarget> VALID_TARGETS = {
       "cpp": .CPP,
       "js": .JAVASCRIPT,
       "json-ast": .JSON_AST,
@@ -183,7 +183,7 @@ namespace frontend {
     // Check the target format
     var target = parser.stringRangeForOption(.TARGET);
     if (target != null) {
-      options.targetFormat = parseEnum<TargetFormat>(log, "target", VALID_TARGETS, target, .NONE);
+      options.target = parseEnum<CompilerTarget>(log, "target", VALID_TARGETS, target, .NONE);
     } else {
       commandLineErrorMissingTarget(log, trailingSpace, "--target");
     }
@@ -203,9 +203,9 @@ namespace frontend {
 
     // Parse the configuration
     var config = parser.stringRangeForOption(.CONFIG);
-    if (options.targetFormat != .NONE && config != null) {
-      if (options.targetFormat == .JAVASCRIPT || options.targetFormat == .CPP) {
-        options.targetConfig = parseEnum<CompilerConfig>(log, "configuration", options.targetFormat == .JAVASCRIPT ? VALID_JS_CONFIGS : VALID_CPP_CONFIGS, config, .AUTOMATIC);
+    if (options.target != .NONE && config != null) {
+      if (options.target == .JAVASCRIPT || options.target == .CPP) {
+        options.config = parseEnum<CompilerConfig>(log, "configuration", options.target == .JAVASCRIPT ? VALID_JS_CONFIGS : VALID_CPP_CONFIGS, config, .AUTOMATIC);
       } else {
         commandLineErrorUnexpectedConfiguration(log, config, config.toString(), target.toString());
       }
@@ -214,9 +214,9 @@ namespace frontend {
     // Parse the garbage collection strategy
     var gc = parser.stringRangeForOption(.GC);
     if (gc != null) {
-      if (options.targetFormat == .CPP) {
+      if (options.target == .CPP) {
         options.memoryManagement = parseEnum<MemoryManagement>(log, "garbage collection strategy", VALID_GC_STRATEGIES, gc, .NONE);
-      } else if (options.targetFormat != .NONE) {
+      } else if (options.target != .NONE) {
         commandLineErrorUnexpectedGarbageCollectionStrategy(log, gc, target.toString());
       }
     }

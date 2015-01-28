@@ -2,7 +2,7 @@ interface IEmitter {
   virtual List<Source> emitProgram(Node program);
 }
 
-export enum TargetFormat {
+export enum CompilerTarget {
   // Target languages that run the resolver
   NONE,
   CPP,
@@ -14,7 +14,7 @@ export enum TargetFormat {
   XML_AST,
 }
 
-in TargetFormat {
+in CompilerTarget {
   bool shouldRunResolver() {
     return this >= NONE && this <= JAVASCRIPT;
   }
@@ -48,8 +48,8 @@ export enum MemoryManagement {
 
 export class CompilerOptions {
   FileAccess fileAccess = null;
-  TargetFormat targetFormat = .NONE;
-  CompilerConfig targetConfig = .AUTOMATIC;
+  CompilerTarget target = .NONE;
+  CompilerConfig config = .AUTOMATIC;
   MemoryManagement memoryManagement = .NONE;
   List<Source> inputs = [];
   var overriddenDefines = StringMap<OverriddenDefine>();
@@ -144,19 +144,19 @@ export class Compiler {
 
   CompilerResult compile(CompilerOptions options) {
     var totalStart = now();
-    var targetFormat = options.targetFormat;
-    var targetConfig = options.targetConfig;
+    var target = options.target;
+    var config = options.config;
     var program = Node.createProgram([]);
     List<Source> outputs = [];
     List<Node> files = [];
 
     // Automatically set the current configuration if it's not explicitly set
-    if (targetConfig == .AUTOMATIC) {
-      if (targetFormat == .JAVASCRIPT) {
-        targetConfig = .BROWSER;
-      } else if (targetFormat == .CPP) {
+    if (config == .AUTOMATIC) {
+      if (target == .JAVASCRIPT) {
+        config = .BROWSER;
+      } else if (target == .CPP) {
         var os = OperatingSystem.current();
-        targetConfig =
+        config =
           os == .ANDROID ? .ANDROID :
           os == .IOS ? .IOS :
           os == .LINUX ? .LINUX :
@@ -164,19 +164,19 @@ export class Compiler {
           os == .WINDOWS ? .WINDOWS :
           .AUTOMATIC;
       }
-      options.targetConfig = targetConfig;
+      options.config = config;
     }
 
     // Prepare native #define overrides
-    options.overrideDefine("TARGET_JS", targetFormat == .JAVASCRIPT);
-    options.overrideDefine("TARGET_CPP", targetFormat == .CPP);
-    options.overrideDefine("CONFIG_ANDROID", targetConfig == .ANDROID);
-    options.overrideDefine("CONFIG_BROWSER", targetConfig == .BROWSER);
-    options.overrideDefine("CONFIG_IOS", targetConfig == .IOS);
-    options.overrideDefine("CONFIG_LINUX", targetConfig == .LINUX);
-    options.overrideDefine("CONFIG_NODE", targetConfig == .NODE);
-    options.overrideDefine("CONFIG_OSX", targetConfig == .OSX);
-    options.overrideDefine("CONFIG_WINDOWS", targetConfig == .WINDOWS);
+    options.overrideDefine("TARGET_JS", target == .JAVASCRIPT);
+    options.overrideDefine("TARGET_CPP", target == .CPP);
+    options.overrideDefine("CONFIG_ANDROID", config == .ANDROID);
+    options.overrideDefine("CONFIG_BROWSER", config == .BROWSER);
+    options.overrideDefine("CONFIG_IOS", config == .IOS);
+    options.overrideDefine("CONFIG_LINUX", config == .LINUX);
+    options.overrideDefine("CONFIG_NODE", config == .NODE);
+    options.overrideDefine("CONFIG_OSX", config == .OSX);
+    options.overrideDefine("CONFIG_WINDOWS", config == .WINDOWS);
 
     // Tokenize and parse each module individually
     for (var i = 0; i < cachedLibraries.size(); i++) {
@@ -196,7 +196,7 @@ export class Compiler {
 
     // Resolve everything together
     Resolver resolver = null;
-    if (options.targetFormat.shouldRunResolver()) {
+    if (options.target.shouldRunResolver()) {
       var resolveStart = now();
       resolver = Resolver(log, options);
       resolver.run(program);
@@ -205,7 +205,7 @@ export class Compiler {
     if (log.errorCount == 0) {
 
       // Optimize the module if the target format requires it
-      if (options.targetFormat.shouldRunResolver()) {
+      if (options.target.shouldRunResolver()) {
         // Build a call graph
         var callGraphStart = now();
         var graph = CallGraph(program);
@@ -241,7 +241,7 @@ export class Compiler {
 
       // Emit the module in the target format
       IEmitter emitter = null;
-      switch (options.targetFormat) {
+      switch (options.target) {
         case .NONE {}
         case .CPP { emitter = cpp.Emitter(resolver); }
         case .JAVASCRIPT { emitter = js.Emitter(resolver); }

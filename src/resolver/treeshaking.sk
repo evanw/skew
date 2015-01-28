@@ -122,7 +122,7 @@ class TreeShakingPass {
     }
 
     // Make sure the "_literal_" method is kept around
-    if (options.targetFormat == .CPP && node.kind == .LIST && isFirstList) {
+    if (options.target == .CPP && node.kind == .LIST && isFirstList) {
       var literal = node.type.findMember("_literal_");
       assert literal != null;
       includeSymbol(literal.symbol);
