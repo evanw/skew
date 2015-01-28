@@ -868,6 +868,24 @@ enum Foo { A, B, C, D, E }
 ").release();
 
 testJS("
+export var foo = [\"a\", \"b\", \"c\", \"d\", \"e\", \"f\"];
+", "
+(function(){foo='a b c d e f'.split(' ')}());
+").release();
+
+testJS("
+export var foo = [\"a\", \" \", \"c\", \" \", \"e\", \" \"];
+", "
+(function(){foo='a; ;c; ;e; '.split(';')}());
+").release();
+
+testJS("
+export var foo = [\" \", \";\", \",\", \"{\", \"}\", \" \"];
+", "
+(function(){foo=[' ',';',',','{','}',' ']}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }
