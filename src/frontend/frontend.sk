@@ -81,6 +81,7 @@ namespace frontend {
   CompilerOptions parseOptions(Log log, OptionParser parser, List<string> arguments) {
     StringMap<CompilerTarget> VALID_TARGETS = {
       "cpp": .CPP,
+      "joined": .JOINED,
       "js": .JAVASCRIPT,
       "json-ast": .JSON_AST,
       "lisp-ast": .LISP_AST,

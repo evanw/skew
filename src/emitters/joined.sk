@@ -1,0 +1,36 @@
+// This target joins all source files into a single file to make a blob of
+// source code that's easy to transport (via copy/paste into a browser, for
+// example). It substitutes all @ContentsOfFile annotations with their contents
+// to avoid depending on the file system.
+namespace joined {
+  class Emitter : IEmitter {
+    Resolver resolver;
+    CompilerOptions options = null;
+    var contentsOfFile = StringMap<List<Node>>();
+
+    override List<Source> emitProgram(Node program) {
+      options = resolver.options;
+      var result = "";
+      for (var i = 0; i < options.inputs.size(); i++) {
+        var input = options.inputs[i];
+        var contents = input.contents;
+        var substitutions = resolver.sourceSubstitutions.getOrDefault(input.name, null);
+        if (substitutions != null) {
+          substitutions.sort(SourceSubstitutionComparison.INSTANCE);
+          for (var j = substitutions.size() - 1; j >= 0; j--) {
+            var substitution = substitutions[j];
+            contents =
+              contents.slice(0, substitution.range.start) +
+              quoteString(substitution.content, '"') +
+              contents.slice(substitution.range.end, contents.size());
+          }
+        }
+        result += contents;
+        if (contents != "" && contents[contents.size() - 1] != '\n') {
+          result += "\n";
+        }
+      }
+      return [Source(options.outputFile, result)];
+    }
+  }
+}

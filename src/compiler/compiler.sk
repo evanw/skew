@@ -3,20 +3,21 @@ interface IEmitter {
 }
 
 enum CompilerTarget {
-  // Target languages that run the resolver
+  // Targets that run the resolver
   NONE,
   CPP,
   JAVASCRIPT,
+  JOINED,
 
   // AST-only targets
-  LISP_AST,
   JSON_AST,
+  LISP_AST,
   XML_AST,
 }
 
 in CompilerTarget {
   bool shouldRunResolver() {
-    return this >= NONE && this <= JAVASCRIPT;
+    return this >= NONE && this <= JOINED;
   }
 }
 
@@ -245,8 +246,9 @@ class Compiler {
         case .NONE {}
         case .CPP { emitter = cpp.Emitter(resolver); }
         case .JAVASCRIPT { emitter = js.Emitter(resolver); }
-        case .LISP_AST { emitter = lisp.Emitter(options); }
+        case .JOINED { emitter = joined.Emitter(resolver); }
         case .JSON_AST { emitter = json.Emitter(options); }
+        case .LISP_AST { emitter = lisp.Emitter(options); }
         case .XML_AST { emitter = xml.Emitter(options); }
         default { assert false; }
       }

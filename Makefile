@@ -13,6 +13,7 @@ SOURCES += src/parser/*.sk
 SOURCES += src/resolver/*.sk
 
 DEPS += Makefile
+DEPS += skewc.js
 DEPS += lib/*
 
 TEST_SOURCES += $(SOURCES)
@@ -141,6 +142,15 @@ live: | $(TESTS_DIR)
 
 live-release: | $(TESTS_DIR)
 	node skewc.js $(LIVE_SOURCES) $(JS_FLAGS) --output-file=$(TESTS_DIR)/live.js --release
+
+################################################################################
+# JOIN
+################################################################################
+
+join: $(DEBUG_DIR)/joined.sk
+
+$(DEBUG_DIR)/joined.sk: $(FRONTEND_DEPS)
+	node skewc.js $(FRONTEND_SOURCES) --verbose --target=joined --output-file=$(DEBUG_DIR)/joined.sk
 
 ################################################################################
 # TEST

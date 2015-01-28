@@ -52,7 +52,21 @@ class ResolveContext {
   }
 }
 
+class SourceSubstitution {
+  Range range;
+  string content;
+}
+
+class SourceSubstitutionComparison : Comparison<SourceSubstitution> {
+  static final var INSTANCE = SourceSubstitutionComparison();
+
+  override int compare(SourceSubstitution a, SourceSubstitution b) {
+    return a.range.start - b.range.start;
+  }
+}
+
 class Resolver {
+  var sourceSubstitutions = StringMap<List<SourceSubstitution>>();
   var defines = StringMap<bool>();
   var context = ResolveContext();
   ConstantFolder constantFolder = null;
@@ -2972,10 +2986,17 @@ class Resolver {
       if (options.fileAccess == null) {
         semanticErrorNoFileAccess(log, node.range);
       } else {
-        var source = options.fileAccess.contentsOfFile(node.range.source.name, content.value);
+        var name = node.range.source.name;
+        var source = options.fileAccess.contentsOfFile(name, content.value);
         if (source == null) {
           semanticErrorCannotFindFile(log, node.annotationArguments().children[0].range, content.value);
         } else {
+          if (options.target == .JOINED) {
+            if (!(name in sourceSubstitutions)) {
+              sourceSubstitutions.set(name, []);
+            }
+            sourceSubstitutions[name].push(SourceSubstitution(node.range, source.contents));
+          }
           node.become(Node.createString(source.contents).withType(cache.stringType).withRange(node.range));
         }
       }
