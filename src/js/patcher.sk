@@ -274,6 +274,7 @@ namespace js {
         case .CAST { patchCast(node); }
         case .CLASS { patchClass(node); }
         case .NAME { patchName(node); }
+        case .LIST { mangleStringList(node); }
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinary(node); }
         case .POSITIVE, .NEGATIVE, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node); }
         case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER { patchAssign(node); }
@@ -736,6 +737,50 @@ namespace js {
     void patchName(Node node) {
       if (node.symbol != null && node.symbol.kind.isInstance() && node.isNameExpression()) {
         node.become(Node.createDot(Node.createThis(), node.clone()).withType(node.type));
+      }
+    }
+
+    void mangleStringList(Node node) {
+      var values = node.listValues();
+      var count = values.size();
+
+      // Only mangle if it results in a size win
+      var overhead = count * 2 - ".split('.')".size();
+      if (overhead <= 0) {
+        return;
+      }
+
+      // All values must be strings
+      List<string> strings = [];
+      for (var i = 0; i < values.size(); i++) {
+        var value = values[i];
+        if (value.kind == .STRING) {
+          strings.push(value.asString());
+        } else {
+          return;
+        }
+      }
+
+      // Pick a common delimeter to hopefully have a good huffman encoding.
+      // This idea was from the Google Closure Compiler source code.
+      var delimeters = " ;,{}";
+      for (var i = 0; i < delimeters.size(); i++) {
+        var delimeter = delimeters.sliceCodeUnit(i);
+        var j = 0;
+        var n = strings.size();
+        for (; j < n; j++) {
+          if (delimeter in strings[j]) {
+            break;
+          }
+        }
+
+        // Substitute a single call to split()
+        if (j == n) {
+          node.become(Node.createCall(
+            Node.createDot(Node.createString(delimeter.join(strings)), Node.createName("split")),
+            [Node.createString(delimeter)]));
+          return;
+        }
       }
     }
 

@@ -31,18 +31,18 @@ namespace tests {
     }
 
     Test js() {
-      options.targetFormat = .JAVASCRIPT;
+      options.target = .JAVASCRIPT;
       return this;
     }
 
     Test cpp() {
-      options.targetFormat = .CPP;
-      options.targetConfig = .OSX;
+      options.target = .CPP;
+      options.config = .OSX;
       return this;
     }
 
     Test windows() {
-      options.targetConfig = .WINDOWS;
+      options.config = .WINDOWS;
       return this;
     }
 

@@ -854,6 +854,20 @@ export `var` foo() {
 ").release();
 
 testJS("
+export string foo(Foo foo) { return foo.toString(); }
+enum Foo { A, B, C, D, E, F }
+", "
+(function(){foo=function(a){return c[a]};var c='A B C D E F'.split(' ')}());
+").release();
+
+testJS("
+export string foo(Foo foo) { return foo.toString(); }
+enum Foo { A, B, C, D, E }
+", "
+(function(){foo=function(a){return c[a]};var c=['A','B','C','D','E']}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }
