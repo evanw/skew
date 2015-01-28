@@ -307,13 +307,13 @@ namespace js {
           var value = left.asInt();
 
           // "2 >= a" => "3 > a"
-          if (node.kind == .GREATER_THAN_OR_EQUAL && value.canIncrement()) {
+          if (node.kind == .GREATER_THAN_OR_EQUAL && canIncrement(value)) {
             left.content = IntContent(value + 1);
             node.kind = .GREATER_THAN;
           }
 
           // "2 <= a" => "1 < a"
-          else if (node.kind == .LESS_THAN_OR_EQUAL && value.canDecrement()) {
+          else if (node.kind == .LESS_THAN_OR_EQUAL && canDecrement(value)) {
             left.content = IntContent(value - 1);
             node.kind = .LESS_THAN;
           }
@@ -321,13 +321,13 @@ namespace js {
           var value = right.asInt();
 
           // "a >= 2" => "a > 1"
-          if (node.kind == .GREATER_THAN_OR_EQUAL && value.canDecrement()) {
+          if (node.kind == .GREATER_THAN_OR_EQUAL && canDecrement(value)) {
             right.content = IntContent(value - 1);
             node.kind = .GREATER_THAN;
           }
 
           // "a <= 2" => "a < 3"
-          else if (node.kind == .LESS_THAN_OR_EQUAL && value.canIncrement()) {
+          else if (node.kind == .LESS_THAN_OR_EQUAL && canIncrement(value)) {
             right.content = IntContent(value + 1);
             node.kind = .LESS_THAN;
           }

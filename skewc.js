@@ -5370,19 +5370,19 @@
     if (left.type !== null && left.type.isInteger(this.cache) && right.type !== null && right.type.isInteger(this.cache)) {
       if (left.kind === NodeKind.INT) {
         var value = left.asInt();
-        if (node.kind === NodeKind.GREATER_THAN_OR_EQUAL && in_int.canIncrement(value)) {
+        if (node.kind === NodeKind.GREATER_THAN_OR_EQUAL && canIncrement(value)) {
           left.content = new IntContent(value + 1 | 0);
           node.kind = NodeKind.GREATER_THAN;
-        } else if (node.kind === NodeKind.LESS_THAN_OR_EQUAL && in_int.canDecrement(value)) {
+        } else if (node.kind === NodeKind.LESS_THAN_OR_EQUAL && canDecrement(value)) {
           left.content = new IntContent(value - 1 | 0);
           node.kind = NodeKind.LESS_THAN;
         }
       } else if (right.kind === NodeKind.INT) {
         var value = right.asInt();
-        if (node.kind === NodeKind.GREATER_THAN_OR_EQUAL && in_int.canDecrement(value)) {
+        if (node.kind === NodeKind.GREATER_THAN_OR_EQUAL && canDecrement(value)) {
           right.content = new IntContent(value - 1 | 0);
           node.kind = NodeKind.GREATER_THAN;
-        } else if (node.kind === NodeKind.LESS_THAN_OR_EQUAL && in_int.canIncrement(value)) {
+        } else if (node.kind === NodeKind.LESS_THAN_OR_EQUAL && canIncrement(value)) {
           right.content = new IntContent(value + 1 | 0);
           node.kind = NodeKind.LESS_THAN;
         }
@@ -11722,7 +11722,6 @@
   var in_OperatingSystem = {};
   var in_NodeKind = {};
   var in_CompilerTarget = {};
-  var in_int = {};
   var in_Precedence = {};
   var in_SymbolKind = {};
   var in_TokenKind = {};
@@ -11870,12 +11869,12 @@
   function now() {
     return Date.now();
   }
-  in_int.canIncrement = function($this) {
-    return ($this + 1 | 0) === $this + 1;
-  };
-  in_int.canDecrement = function($this) {
-    return ($this - 1 | 0) === $this - 1;
-  };
+  function canIncrement(value) {
+    return (value + 1 | 0) === value + 1;
+  }
+  function canDecrement(value) {
+    return (value - 1 | 0) === value - 1;
+  }
   function hashCombine(left, right) {
     return left ^ ((right - 1640531527 | 0) + (left << 6) | 0) + (left >> 2);
   }
@@ -11911,13 +11910,13 @@
   }
   function parseStringLiteral(log, range, text) {
     if (!(text.length >= 2)) {
-      throw new Error('assert text.size() >= 2; (src/core/support.sk:79:3)');
+      throw new Error('assert text.size() >= 2; (src/core/support.sk:77:3)');
     }
     if (text.charCodeAt(0) !== 34 && text.charCodeAt(0) !== 39) {
-      throw new Error("assert text[0] == '\"' || text[0] == '\\''; (src/core/support.sk:80:3)");
+      throw new Error("assert text[0] == '\"' || text[0] == '\\''; (src/core/support.sk:78:3)");
     }
     if (text.charCodeAt(text.length - 1 | 0) !== 34 && text.charCodeAt(text.length - 1 | 0) !== 39) {
-      throw new Error("assert text[text.size() - 1] == '\"' || text[text.size() - 1] == '\\''; (src/core/support.sk:81:3)");
+      throw new Error("assert text[text.size() - 1] == '\"' || text[text.size() - 1] == '\\''; (src/core/support.sk:79:3)");
     }
     var isValidString = true;
     var result = '';
