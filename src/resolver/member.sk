@@ -22,9 +22,17 @@ class Member {
 }
 
 class MemberComparison : Comparison<Member> {
-  static var INSTANCE = MemberComparison();
+  static final var INSTANCE = MemberComparison();
 
   override int compare(Member left, Member right) {
     return left.symbol.uniqueID - right.symbol.uniqueID;
+  }
+}
+
+class MemberRangeComparison : Comparison<Member> {
+  static final var INSTANCE = MemberRangeComparison();
+
+  override int compare(Member left, Member right) {
+    return left.symbol.node.range.start - right.symbol.node.range.start;
   }
 }

@@ -52,15 +52,7 @@ class ResolveContext {
   }
 }
 
-class MemberRangeComparison : Comparison<Member> {
-  override int compare(Member left, Member right) {
-    return left.symbol.node.range.start - right.symbol.node.range.start;
-  }
-}
-
 class Resolver {
-  static var comparison = MemberRangeComparison();
-  var operatorAnnotationMap = createOperatorAnnotationMap();
   var defines = StringMap<bool>();
   var context = ResolveContext();
   ConstantFolder constantFolder = null;
@@ -1673,46 +1665,6 @@ class Resolver {
     }
   }
 
-  static StringMap<NodeKind> createOperatorAnnotationMap() {
-    var result = StringMap<NodeKind>();
-
-    // Other operators
-    result["@OperatorGet"] = NodeKind.INDEX;
-    result["@OperatorSet"] = NodeKind.ASSIGN_INDEX;
-
-    // Binary operators
-    result["@OperatorCompare"] = NodeKind.COMPARE;
-    result["@OperatorAdd"] = NodeKind.ADD;
-    result["@OperatorSubtract"] = NodeKind.SUBTRACT;
-    result["@OperatorMultiply"] = NodeKind.MULTIPLY;
-    result["@OperatorDivide"] = NodeKind.DIVIDE;
-    result["@OperatorRemainder"] = NodeKind.REMAINDER;
-    result["@OperatorAnd"] = NodeKind.BITWISE_AND;
-    result["@OperatorOr"] = NodeKind.BITWISE_OR;
-    result["@OperatorXor"] = NodeKind.BITWISE_XOR;
-    result["@OperatorShiftLeft"] = NodeKind.SHIFT_LEFT;
-    result["@OperatorShiftRight"] = NodeKind.SHIFT_RIGHT;
-    result["@OperatorIn"] = NodeKind.IN;
-
-    // Binary storage operators
-    result["@OperatorAddAssign"] = NodeKind.ASSIGN_ADD;
-    result["@OperatorSubtractAssign"] = NodeKind.ASSIGN_SUBTRACT;
-    result["@OperatorMultiplyAssign"] = NodeKind.ASSIGN_MULTIPLY;
-    result["@OperatorDivideAssign"] = NodeKind.ASSIGN_DIVIDE;
-    result["@OperatorRemainderAssign"] = NodeKind.ASSIGN_REMAINDER;
-    result["@OperatorAndAssign"] = NodeKind.ASSIGN_BITWISE_AND;
-    result["@OperatorOrAssign"] = NodeKind.ASSIGN_BITWISE_OR;
-    result["@OperatorXorAssign"] = NodeKind.ASSIGN_BITWISE_XOR;
-    result["@OperatorShiftLeftAssign"] = NodeKind.ASSIGN_SHIFT_LEFT;
-    result["@OperatorShiftRightAssign"] = NodeKind.ASSIGN_SHIFT_RIGHT;
-
-    // Unary operators
-    result["@OperatorNegative"] = NodeKind.NEGATIVE;
-    result["@OperatorComplement"] = NodeKind.COMPLEMENT;
-
-    return result;
-  }
-
   void registerEmitAs(Symbol symbol, Node node) {
     var content = requireSingleStringLiteral(node);
     if (content != null) {
@@ -1977,7 +1929,7 @@ class Resolver {
     }
 
     // Sort the uninitialized members by source location
-    uninitializedMembers.sort(comparison);
+    uninitializedMembers.sort(MemberRangeComparison.INSTANCE);
 
     // Append each uninitialized member argument now that they are sorted
     for (var i = 0; i < uninitializedMembers.size(); i++) {
@@ -3972,34 +3924,70 @@ class Resolver {
       }
     }
   }
+
+  static final StringMap<SymbolFlag> nameToSymbolFlag = {
+    "const": .CONST,
+    "export": .EXPORT,
+    "final": .FINAL,
+    "import": .IMPORT,
+    "inline": .INLINE,
+    "override": .OVERRIDE,
+    "private": .PRIVATE,
+    "protected": .PROTECTED,
+    "public": .PUBLIC,
+    "pure": .PURE,
+    "static": .STATIC,
+    "virtual": .VIRTUAL,
+  };
+
+  static final IntMap<string> symbolFlagToName = {
+    SymbolFlag.CONST: "const",
+    SymbolFlag.EXPORT: "export",
+    SymbolFlag.FINAL: "final",
+    SymbolFlag.IMPORT: "import",
+    SymbolFlag.INLINE: "inline",
+    SymbolFlag.OVERRIDE: "override",
+    SymbolFlag.PRIVATE: "private",
+    SymbolFlag.PROTECTED: "protected",
+    SymbolFlag.PUBLIC: "public",
+    SymbolFlag.PURE: "pure",
+    SymbolFlag.STATIC: "static",
+    SymbolFlag.VIRTUAL: "virtual",
+  };
+
+  static final StringMap<NodeKind> operatorAnnotationMap = {
+    // Other operators
+    "@OperatorGet": .INDEX,
+    "@OperatorSet": .ASSIGN_INDEX,
+
+    // Binary operators
+    "@OperatorCompare": .COMPARE,
+    "@OperatorAdd": .ADD,
+    "@OperatorSubtract": .SUBTRACT,
+    "@OperatorMultiply": .MULTIPLY,
+    "@OperatorDivide": .DIVIDE,
+    "@OperatorRemainder": .REMAINDER,
+    "@OperatorAnd": .BITWISE_AND,
+    "@OperatorOr": .BITWISE_OR,
+    "@OperatorXor": .BITWISE_XOR,
+    "@OperatorShiftLeft": .SHIFT_LEFT,
+    "@OperatorShiftRight": .SHIFT_RIGHT,
+    "@OperatorIn": .IN,
+
+    // Binary storage operators
+    "@OperatorAddAssign": .ASSIGN_ADD,
+    "@OperatorSubtractAssign": .ASSIGN_SUBTRACT,
+    "@OperatorMultiplyAssign": .ASSIGN_MULTIPLY,
+    "@OperatorDivideAssign": .ASSIGN_DIVIDE,
+    "@OperatorRemainderAssign": .ASSIGN_REMAINDER,
+    "@OperatorAndAssign": .ASSIGN_BITWISE_AND,
+    "@OperatorOrAssign": .ASSIGN_BITWISE_OR,
+    "@OperatorXorAssign": .ASSIGN_BITWISE_XOR,
+    "@OperatorShiftLeftAssign": .ASSIGN_SHIFT_LEFT,
+    "@OperatorShiftRightAssign": .ASSIGN_SHIFT_RIGHT,
+
+    // Unary operators
+    "@OperatorNegative": .NEGATIVE,
+    "@OperatorComplement": .COMPLEMENT,
+  };
 }
-
-StringMap<SymbolFlag> nameToSymbolFlag = {
-  "const": .CONST,
-  "export": .EXPORT,
-  "final": .FINAL,
-  "import": .IMPORT,
-  "inline": .INLINE,
-  "override": .OVERRIDE,
-  "private": .PRIVATE,
-  "protected": .PROTECTED,
-  "public": .PUBLIC,
-  "pure": .PURE,
-  "static": .STATIC,
-  "virtual": .VIRTUAL,
-};
-
-IntMap<string> symbolFlagToName = {
-  SymbolFlag.CONST: "const",
-  SymbolFlag.EXPORT: "export",
-  SymbolFlag.FINAL: "final",
-  SymbolFlag.IMPORT: "import",
-  SymbolFlag.INLINE: "inline",
-  SymbolFlag.OVERRIDE: "override",
-  SymbolFlag.PRIVATE: "private",
-  SymbolFlag.PROTECTED: "protected",
-  SymbolFlag.PUBLIC: "public",
-  SymbolFlag.PURE: "pure",
-  SymbolFlag.STATIC: "static",
-  SymbolFlag.VIRTUAL: "virtual",
-};

@@ -15,16 +15,8 @@ namespace js {
     final int count;
   }
 
-  class SymbolComparison : Comparison<Symbol> {
-    static var INSTANCE = SymbolComparison();
-
-    override int compare(Symbol left, Symbol right) {
-      return left.uniqueID - right.uniqueID;
-    }
-  }
-
   class SymbolGroupComparison : Comparison<SymbolGroup> {
-    static var INSTANCE = SymbolGroupComparison();
+    static final var INSTANCE = SymbolGroupComparison();
 
     override int compare(SymbolGroup left, SymbolGroup right) {
       var difference = right.count - left.count;
