@@ -273,8 +273,9 @@ namespace js {
       }
 
       if (node.hasChildren()) {
-        for (var i = 0; i < node.children.size(); i++) {
-          var child = node.children[i];
+        var children = node.children;
+        for (var i = 0; i < children.size(); i++) {
+          var child = children[i];
           if (child != null) {
             patchNode(child);
           }
@@ -283,11 +284,11 @@ namespace js {
 
       switch (node.kind) {
         case .CONSTRUCTOR, .FUNCTION { setCurrentFunction(null); }
-        case .VARIABLE { if (options.mangle) unionVariableWithFunction(node); }
       }
 
       if (options.mangle) {
         switch (node.kind) {
+          case .VARIABLE { unionVariableWithFunction(node); }
           case .IF { peepholeMangleIf(node); }
           case .FOR { peepholeMangleFor(node); }
           case .GREATER_THAN_OR_EQUAL, .LESS_THAN_OR_EQUAL { peepholeMangleBinaryRelational(node); }
@@ -744,7 +745,7 @@ namespace js {
 
       // All values must be strings
       List<string> strings = [];
-      for (var i = 0; i < values.size(); i++) {
+      for (var i = 0; i < count; i++) {
         var value = values[i];
         if (value.kind == .STRING) {
           strings.push(value.asString());
@@ -759,15 +760,14 @@ namespace js {
       for (var i = 0; i < delimeters.size(); i++) {
         var delimeter = delimeters.sliceCodeUnit(i);
         var j = 0;
-        var n = strings.size();
-        for (; j < n; j++) {
+        for (; j < count; j++) {
           if (delimeter in strings[j]) {
             break;
           }
         }
 
         // Substitute a single call to split()
-        if (j == n) {
+        if (j == count) {
           node.become(Node.createCall(
             Node.createDot(Node.createString(delimeter.join(strings)), Node.createName("split")),
             [Node.createString(delimeter)]));
@@ -872,7 +872,7 @@ namespace js {
         index++;
       }
       if (memberInitializers != null) {
-        for (var i = 0; i < memberInitializers.children.size(); i++) {
+        for (var i = 0, n = memberInitializers.children.size(); i < n; i++) {
           var child = memberInitializers.children[i];
           var name = child.memberInitializerName();
           var value = child.memberInitializerValue();

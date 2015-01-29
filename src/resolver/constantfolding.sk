@@ -39,8 +39,9 @@ class ConstantFolder {
   static bool blockContainsVariableCluster(Node node) {
     assert node.kind == .BLOCK;
     if (node.hasChildren()) {
-      for (var i = 0; i < node.children.size(); i++) {
-        if (node.children[i].kind == .VARIABLE_CLUSTER) {
+      var children = node.children;
+      for (var i = 0, n = children.size(); i < n; i++) {
+        if (children[i].kind == .VARIABLE_CLUSTER) {
           return true;
         }
       }
@@ -58,8 +59,9 @@ class ConstantFolder {
 
     // Fold operands before folding this node
     if (node.hasChildren()) {
-      for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children[i];
+      var children = node.children;
+      for (var i = 0, n = children.size(); i < n; i++) {
+        var child = children[i];
         if (child != null) {
           foldConstants(child);
         }
@@ -279,13 +281,15 @@ class ConstantFolder {
   }
 
   void foldBlock(Node node) {
-    for (var i = 0; i < node.children.size(); i++) {
-      var child = node.children[i];
+    var children = node.children;
+
+    for (var i = 0; i < children.size(); i++) {
+      var child = children[i];
       var kind = child.kind;
 
       // Remove everything after a jump
       if (kind.isJump()) {
-        for (var j = node.children.size() - 1; j > i; j--) {
+        for (var j = children.size() - 1; j > i; j--) {
           node.removeChildAtIndex(j);
         }
         break;

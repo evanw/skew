@@ -340,8 +340,9 @@ class Resolver {
     // statements inside expressions since we currently don't have lambda
     // expressions.
     if (node.hasChildren() && !node.kind.isExpression()) {
-      for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children[i];
+      var children = node.children;
+      for (var i = 0, n = children.size(); i < n; i++) {
+        var child = children[i];
         if (child != null) setupScopesAndSymbols(child, scope);
       }
     }

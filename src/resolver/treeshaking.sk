@@ -136,8 +136,9 @@ class TreeShakingPass {
     }
 
     if (node.hasChildren()) {
-      for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children[i];
+      var children = node.children;
+      for (var i = 0, n = children.size(); i < n; i++) {
+        var child = children[i];
         if (child != null) {
           visit(child);
         }
