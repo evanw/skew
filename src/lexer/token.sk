@@ -12,16 +12,31 @@ class Token {
 }
 
 void prepareTokens(List<Token> tokens) {
-  List<int> stack = [];
+  List<Token> stack = [];
+  var count = 0;
 
   for (var i = 0, n = tokens.size(); i < n; i++) {
     var token = tokens[i];
+
+    // Skip null placeholders after tokens that start with a greater than. Each
+    // token that may need to split has enough nulls after it for all the pieces.
+    // It's a lot faster to remove null gaps during token preparation than to
+    // insert pieces in the middle of the token stream (O(n) vs O(n^2)).
+    if (token == null) {
+      continue;
+    }
+
+    // Compress tokens to eliminate unused null gaps
+    tokens[count] = token;
+    count++;
+
+    // Tokens that start with a greater than may need to be split
     var tokenKind = token.kind;
     var tokenStartsWithGreaterThan = token.firstCharacter() == '>';
 
     // Remove tokens from the stack if they aren't working out
     while (stack.size() != 0) {
-      var top = tokens[stack.last()];
+      var top = stack.last();
       var topKind = top.kind;
 
       // Stop parsing a type if we find a token that no type expression uses
@@ -35,7 +50,7 @@ void prepareTokens(List<Token> tokens) {
 
     // Group open
     if (tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET || tokenKind == .LESS_THAN) {
-      stack.push(i);
+      stack.push(token);
       continue;
     }
 
@@ -43,7 +58,7 @@ void prepareTokens(List<Token> tokens) {
     if (tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan) {
       // Search for a matching opposite token
       while (stack.size() != 0) {
-        var top = tokens[stack.last()];
+        var top = stack.last();
         var topKind = top.kind;
 
         // Don't match closing angle brackets that don't work since they are just operators
@@ -66,13 +81,16 @@ void prepareTokens(List<Token> tokens) {
           if (tokenKind != .GREATER_THAN) {
             var range = token.range;
             var start = range.start;
-            TokenKind kind =
+            assert i + 1 < tokens.size();
+            assert tokens[i + 1] == null;
+            assert
+              tokenKind == .SHIFT_RIGHT ||
+              tokenKind == .GREATER_THAN_OR_EQUAL ||
+              tokenKind == .ASSIGN_SHIFT_RIGHT;
+            tokens[i + 1] = Token(Range(range.source, start + 1, range.end),
               tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
               tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :
-              tokenKind == .ASSIGN_SHIFT_RIGHT ? .GREATER_THAN_OR_EQUAL :
-              .ERROR;
-            assert kind != .ERROR;
-            tokens.insert(i + 1, Token(Range(range.source, start + 1, range.end), kind));
+              .GREATER_THAN_OR_EQUAL);
             token.range = Range(range.source, start, start + 1);
           }
 
@@ -85,5 +103,10 @@ void prepareTokens(List<Token> tokens) {
         break;
       }
     }
+  }
+
+  // Trim off the remaining tokens due to null gap removal
+  while (tokens.size() > count) {
+    tokens.pop();
   }
 }

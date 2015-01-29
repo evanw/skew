@@ -12190,6 +12190,12 @@
         break;
       } else if (yy_act !== TokenKind.END_OF_FILE) {
         tokens.push(new Token(new Range(source, yy_bp, yy_cp), yy_act));
+        if (yy_act === TokenKind.ASSIGN_SHIFT_RIGHT || yy_act === TokenKind.SHIFT_RIGHT || yy_act === TokenKind.GREATER_THAN_OR_EQUAL) {
+          tokens.push(null);
+          if (yy_act === TokenKind.ASSIGN_SHIFT_RIGHT) {
+            tokens.push(null);
+          }
+        }
       }
     }
     tokens.push(new Token(new Range(source, text_length, text_length), TokenKind.END_OF_FILE));
@@ -12197,12 +12203,18 @@
   }
   function prepareTokens(tokens) {
     var stack = [];
+    var count = 0;
     for (var i = 0, n = tokens.length; i < n; i = i + 1 | 0) {
       var token = tokens[i];
+      if (token === null) {
+        continue;
+      }
+      tokens[count] = token;
+      count = count + 1 | 0;
       var tokenKind = token.kind;
       var tokenStartsWithGreaterThan = token.firstCharacter() === 62;
       while (stack.length !== 0) {
-        var top = tokens[in_List.last(stack)];
+        var top = in_List.last(stack);
         var topKind = top.kind;
         if (topKind === TokenKind.LESS_THAN && tokenKind !== TokenKind.LESS_THAN && tokenKind !== TokenKind.IDENTIFIER && tokenKind !== TokenKind.IS && tokenKind !== TokenKind.COMMA && tokenKind !== TokenKind.DOT && tokenKind !== TokenKind.TICK && !tokenStartsWithGreaterThan) {
           stack.pop();
@@ -12211,12 +12223,12 @@
         }
       }
       if (tokenKind === TokenKind.LEFT_PARENTHESIS || tokenKind === TokenKind.LEFT_BRACE || tokenKind === TokenKind.LEFT_BRACKET || tokenKind === TokenKind.LESS_THAN) {
-        stack.push(i);
+        stack.push(token);
         continue;
       }
       if (tokenKind === TokenKind.RIGHT_PARENTHESIS || tokenKind === TokenKind.RIGHT_BRACE || tokenKind === TokenKind.RIGHT_BRACKET || tokenStartsWithGreaterThan) {
         while (stack.length !== 0) {
-          var top = tokens[in_List.last(stack)];
+          var top = in_List.last(stack);
           var topKind = top.kind;
           if (tokenStartsWithGreaterThan && topKind !== TokenKind.LESS_THAN) {
             break;
@@ -12229,11 +12241,16 @@
             if (tokenKind !== TokenKind.GREATER_THAN) {
               var range = token.range;
               var start = range.start;
-              var kind = tokenKind === TokenKind.SHIFT_RIGHT ? TokenKind.GREATER_THAN : tokenKind === TokenKind.GREATER_THAN_OR_EQUAL ? TokenKind.ASSIGN : tokenKind === TokenKind.ASSIGN_SHIFT_RIGHT ? TokenKind.GREATER_THAN_OR_EQUAL : TokenKind.ERROR;
-              if (kind === TokenKind.ERROR) {
-                throw new Error('assert kind != .ERROR; (src/lexer/token.sk:74:13)');
+              if (!((i + 1 | 0) < tokens.length)) {
+                throw new Error('assert i + 1 < tokens.size(); (src/lexer/token.sk:84:13)');
               }
-              tokens.splice(i + 1 | 0, 0, new Token(new Range(range.source, start + 1 | 0, range.end), kind));
+              if (tokens[i + 1 | 0] !== null) {
+                throw new Error('assert tokens[i + 1] == null; (src/lexer/token.sk:85:13)');
+              }
+              if (tokenKind !== TokenKind.SHIFT_RIGHT && tokenKind !== TokenKind.GREATER_THAN_OR_EQUAL && tokenKind !== TokenKind.ASSIGN_SHIFT_RIGHT) {
+                throw new Error('assert\n              tokenKind == .SHIFT_RIGHT ||\n              tokenKind == .GREATER_THAN_OR_EQUAL ||\n              tokenKind == .ASSIGN_SHIFT_RIGHT; (src/lexer/token.sk:86:13)');
+              }
+              tokens[i + 1 | 0] = new Token(new Range(range.source, start + 1 | 0, range.end), tokenKind === TokenKind.SHIFT_RIGHT ? TokenKind.GREATER_THAN : tokenKind === TokenKind.GREATER_THAN_OR_EQUAL ? TokenKind.ASSIGN : TokenKind.GREATER_THAN_OR_EQUAL);
               token.range = new Range(range.source, start, start + 1 | 0);
             }
             top.kind = TokenKind.START_PARAMETER_LIST;
@@ -12242,6 +12259,9 @@
           break;
         }
       }
+    }
+    while (tokens.length > count) {
+      tokens.pop();
     }
   }
   function syntaxErrorInvalidEscapeSequence(log, range, text) {

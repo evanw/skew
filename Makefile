@@ -165,7 +165,7 @@ test-release: $(TESTS_DIR)/skewc.min.js
 test-binary: $(TESTS_DIR)/skewc
 	$(TESTS_DIR)/skewc
 
-test-stress: join release-binary
+test-stress: join release-binary | $(TESTS_DIR)
 	node tests/stress/stress.js $(DEBUG_DIR)/joined.sk $(RELEASE_DIR)/skewc $(TESTS_DIR)
 
 $(TESTS_DIR):
