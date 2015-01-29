@@ -75,7 +75,7 @@ class Resolver {
   Type typeContext = null;
   Type resultType = null;
   Symbol entryPointSymbol = null;
-  final List<Symbol> allSymbols = [];
+  List<Symbol> allSymbols = [];
   final var cache = TypeCache();
   final Log log;
   final CompilerOptions options;

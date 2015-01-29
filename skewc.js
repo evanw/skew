@@ -10899,11 +10899,16 @@
         }
       }
     }
+    var live = 0;
     for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
-      if (pass.removeSymbolIfDead(allSymbols[i])) {
-        allSymbols.splice(i, 1)[0];
-        i = i - 1 | 0;
+      var symbol = allSymbols[i];
+      if (!pass.removeSymbolIfDead(symbol)) {
+        allSymbols[live] = symbol;
+        live = live + 1 | 0;
       }
+    }
+    while (allSymbols.length > live) {
+      allSymbols.pop();
     }
   };
   TreeShakingPass.prototype.includeSymbol = function(symbol) {
@@ -10959,7 +10964,7 @@
     if (this.options.target === CompilerTarget.CPP && node.kind === NodeKind.LIST && this.isFirstList) {
       var literal = node.type.findMember('_literal_');
       if (literal === null) {
-        throw new Error('assert literal != null; (src/resolver/treeshaking.sk:127:7)');
+        throw new Error('assert literal != null; (src/resolver/treeshaking.sk:133:7)');
       }
       this.includeSymbol(literal.symbol);
       this.isFirstList = false;
@@ -10975,10 +10980,10 @@
   };
   TreeShakingPass.prototype.includeDueToOverriddenMember = function(symbol) {
     if (symbol.overriddenMember === null) {
-      throw new Error('assert symbol.overriddenMember != null; (src/resolver/treeshaking.sk:143:5)');
+      throw new Error('assert symbol.overriddenMember != null; (src/resolver/treeshaking.sk:149:5)');
     }
     if (symbol.enclosingSymbol === null) {
-      throw new Error('assert symbol.enclosingSymbol != null; (src/resolver/treeshaking.sk:144:5)');
+      throw new Error('assert symbol.enclosingSymbol != null; (src/resolver/treeshaking.sk:150:5)');
     }
     if (!(symbol.uniqueID in this.includedSymbols._table) && (symbol.overriddenMember.symbol.isImport() || symbol.enclosingSymbol.uniqueID in this.includedSymbols._table && symbol.overriddenMember.symbol.uniqueID in this.includedSymbols._table)) {
       this.includeSymbol(symbol);

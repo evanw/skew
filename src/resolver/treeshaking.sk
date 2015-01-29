@@ -46,12 +46,18 @@ class TreeShakingPass {
       }
     }
 
-    // Remove symbols that aren't included
+    // Remove symbols that aren't included. Be careful to erase removed symbols
+    // from allSymbols in place and not with remove() to avoid O(n^2) behavior.
+    var live = 0;
     for (var i = 0; i < allSymbols.size(); i++) {
-      if (pass.removeSymbolIfDead(allSymbols[i])) {
-        allSymbols.remove(i);
-        i--;
+      var symbol = allSymbols[i];
+      if (!pass.removeSymbolIfDead(symbol)) {
+        allSymbols[live] = symbol;
+        live++;
       }
+    }
+    while (allSymbols.size() > live) {
+      allSymbols.pop();
     }
   }
 
