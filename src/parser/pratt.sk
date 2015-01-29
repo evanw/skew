@@ -65,15 +65,15 @@ class ParserContext {
 
 class Parselet {
   Precedence precedence;
-  IPrefixParselet prefix = null;
-  IInfixParselet infix = null;
+  PrefixParselet prefix = null;
+  InfixParselet infix = null;
 }
 
-interface IPrefixParselet {
+interface PrefixParselet {
   virtual Node parse(ParserContext context);
 }
 
-interface IInfixParselet {
+interface InfixParselet {
   virtual Node parse(ParserContext context, Node left);
 }
 
@@ -131,45 +131,45 @@ class Pratt {
     return parselet != null && parselet.prefix != null;
   }
 
-  pure void literal(TokenKind kind, ILiteralCallback callback) {
+  pure void literal(TokenKind kind, LiteralCallback callback) {
     parselet(kind, .LOWEST).prefix = LiteralParselet(callback);
   }
 
-  pure void prefix(TokenKind kind, Precedence precedence, IPrefixCallback callback) {
-    parselet(kind, .LOWEST).prefix = PrefixParselet(callback, precedence, this);
+  pure void prefix(TokenKind kind, Precedence precedence, PrefixCallback callback) {
+    parselet(kind, .LOWEST).prefix = DefaultPrefixParselet(callback, precedence, this);
   }
 
-  pure void postfix(TokenKind kind, Precedence precedence, IPostfixCallback callback) {
+  pure void postfix(TokenKind kind, Precedence precedence, PostfixCallback callback) {
     parselet(kind, precedence).infix = PostfixParselet(callback);
   }
 
-  pure void infix(TokenKind kind, Precedence precedence, IInfixCallback callback) {
-    parselet(kind, precedence).infix = InfixParselet(callback, precedence, this);
+  pure void infix(TokenKind kind, Precedence precedence, InfixCallback callback) {
+    parselet(kind, precedence).infix = DefaultInfixParselet(callback, precedence, this);
   }
 
-  pure void infixRight(TokenKind kind, Precedence precedence, IInfixCallback callback) {
-    parselet(kind, precedence).infix = InfixParselet(callback, (Precedence)(precedence - 1), this); // Subtract 1 for right-associativity
+  pure void infixRight(TokenKind kind, Precedence precedence, InfixCallback callback) {
+    parselet(kind, precedence).infix = DefaultInfixParselet(callback, (Precedence)(precedence - 1), this); // Subtract 1 for right-associativity
   }
 }
 
-interface ILiteralCallback {
+interface LiteralCallback {
   virtual Node parse(ParserContext context, Token token);
 }
 
-class LiteralParselet : IPrefixParselet {
-  ILiteralCallback callback;
+class LiteralParselet : PrefixParselet {
+  LiteralCallback callback;
 
   override Node parse(ParserContext context) {
     return callback.parse(context, context.next());
   }
 }
 
-interface IPrefixCallback {
+interface PrefixCallback {
   virtual Node parse(ParserContext context, Token token, Node value);
 }
 
-class PrefixParselet : IPrefixParselet {
-  IPrefixCallback callback;
+class DefaultPrefixParselet : PrefixParselet {
+  PrefixCallback callback;
   Precedence precedence;
   Pratt pratt;
 
@@ -180,24 +180,24 @@ class PrefixParselet : IPrefixParselet {
   }
 }
 
-interface IPostfixCallback {
+interface PostfixCallback {
   virtual Node parse(ParserContext context, Node value, Token token);
 }
 
-class PostfixParselet : IInfixParselet {
-  IPostfixCallback callback;
+class PostfixParselet : InfixParselet {
+  PostfixCallback callback;
 
   override Node parse(ParserContext context, Node left) {
     return callback.parse(context, left, context.next());
   }
 }
 
-interface IInfixCallback {
+interface InfixCallback {
   virtual Node parse(ParserContext context, Node left, Token token, Node right);
 }
 
-class InfixParselet : IInfixParselet {
-  IInfixCallback callback;
+class DefaultInfixParselet : InfixParselet {
+  InfixCallback callback;
   Precedence precedence;
   Pratt pratt;
 

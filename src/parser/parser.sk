@@ -744,7 +744,7 @@ Node errorExpressionSinceToken(ParserContext context, Token token) {
   return Node.createError().withRange(context.spanSince(token.range));
 }
 
-class TokenLiteral : ILiteralCallback {
+class TokenLiteral : LiteralCallback {
   NodeKind kind;
 
   override Node parse(ParserContext context, Token token) {
@@ -752,7 +752,7 @@ class TokenLiteral : ILiteralCallback {
   }
 }
 
-class BoolLiteral : ILiteralCallback {
+class BoolLiteral : LiteralCallback {
   bool value;
 
   override Node parse(ParserContext context, Token token) {
@@ -760,44 +760,44 @@ class BoolLiteral : ILiteralCallback {
   }
 }
 
-class IntLiteral : ILiteralCallback {
+class IntLiteral : LiteralCallback {
   int base;
 
   override Node parse(ParserContext context, Token token) {
     var value = parseIntLiteral(token.text(), base);
-    if (base == 10 && value != 0 && token.firstCharacter() == '0') {
+    if (base == 10 && value != 0 && token.firstCodeUnit() == '0') {
       syntaxWarningOctal(context.log, token.range);
     }
     return Node.createInt(value).withRange(token.range);
   }
 }
 
-class FloatLiteral : ILiteralCallback {
+class FloatLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
     var range = token.range;
     return Node.createFloat(parseDoubleLiteral(range.source.contents.slice(range.start, range.end - 1))).withRange(range);
   }
 }
 
-class DoubleLiteral : ILiteralCallback {
+class DoubleLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
     return Node.createDouble(parseDoubleLiteral(token.text())).withRange(token.range);
   }
 }
 
-class VarLiteral : ILiteralCallback {
+class VarLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
     return Node.createVar().withRange(token.range);
   }
 }
 
-class StringLiteral : ILiteralCallback {
+class StringLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
     return parseStringToken(context, token);
   }
 }
 
-class CharacterLiteral : ILiteralCallback {
+class CharacterLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
     var result = parseStringLiteral(context.log, token.range, token.text());
 
@@ -812,13 +812,13 @@ class CharacterLiteral : ILiteralCallback {
   }
 }
 
-class NameLiteral : ILiteralCallback {
+class NameLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
     return createNameFromToken(token);
   }
 }
 
-class UnaryPostfix : IPostfixCallback {
+class UnaryPostfix : PostfixCallback {
   NodeKind kind;
 
   override Node parse(ParserContext context, Node value, Token token) {
@@ -826,7 +826,7 @@ class UnaryPostfix : IPostfixCallback {
   }
 }
 
-class UnaryPrefix : IPrefixCallback {
+class UnaryPrefix : PrefixCallback {
   NodeKind kind;
 
   override Node parse(ParserContext context, Token token, Node value) {
@@ -834,7 +834,7 @@ class UnaryPrefix : IPrefixCallback {
   }
 }
 
-class BinaryInfix : IInfixCallback {
+class BinaryInfix : InfixCallback {
   NodeKind kind;
 
   override Node parse(ParserContext context, Node left, Token token, Node right) {
@@ -842,7 +842,7 @@ class BinaryInfix : IInfixCallback {
   }
 }
 
-class BinaryInfixOrUnaryPostfix : IInfixParselet {
+class BinaryInfixOrUnaryPostfix : InfixParselet {
   NodeKind binary;
   NodeKind unary;
   Precedence precedence;
@@ -855,7 +855,7 @@ class BinaryInfixOrUnaryPostfix : IInfixParselet {
   }
 }
 
-class ListParselet : IPrefixParselet {
+class ListParselet : PrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.current();
     var values = parseWrappedCommaSeparatedList(context, .LEFT_BRACKET, .RIGHT_BRACKET, .NORMAL);
@@ -863,7 +863,7 @@ class ListParselet : IPrefixParselet {
   }
 }
 
-class MapParselet : IPrefixParselet {
+class MapParselet : PrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.current();
     var values = parseWrappedCommaSeparatedList(context, .LEFT_BRACE, .RIGHT_BRACE, .KEY_VALUE);
@@ -871,7 +871,7 @@ class MapParselet : IPrefixParselet {
   }
 }
 
-class ParenthesisParselet : IPrefixParselet {
+class ParenthesisParselet : PrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.current();
     var type = parseGroup(context);
@@ -883,7 +883,7 @@ class ParenthesisParselet : IPrefixParselet {
   }
 }
 
-class HookParselet : IInfixParselet {
+class HookParselet : InfixParselet {
   override Node parse(ParserContext context, Node left) {
     context.next();
     var middle = pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1));
@@ -892,7 +892,7 @@ class HookParselet : IInfixParselet {
   }
 }
 
-class SequenceParselet : IInfixParselet {
+class SequenceParselet : InfixParselet {
   override Node parse(ParserContext context, Node left) {
     var values = [left];
     while (context.eat(.COMMA)) {
@@ -902,7 +902,7 @@ class SequenceParselet : IInfixParselet {
   }
 }
 
-class DotInfixParselet : IInfixParselet {
+class DotInfixParselet : InfixParselet {
   NodeKind kind;
 
   override Node parse(ParserContext context, Node left) {
@@ -912,7 +912,7 @@ class DotInfixParselet : IInfixParselet {
   }
 }
 
-class DotPrefixParselet : IPrefixParselet {
+class DotPrefixParselet : PrefixParselet {
   NodeKind kind;
 
   override Node parse(ParserContext context) {
@@ -922,14 +922,14 @@ class DotPrefixParselet : IPrefixParselet {
   }
 }
 
-class CallParselet : IInfixParselet {
+class CallParselet : InfixParselet {
   override Node parse(ParserContext context, Node left) {
     var arguments = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL);
     return Node.createCall(left, arguments).withRange(context.spanSince(left.range));
   }
 }
 
-class IndexParselet : IInfixParselet {
+class IndexParselet : InfixParselet {
   override Node parse(ParserContext context, Node left) {
     context.next();
     var index = pratt.parse(context, .LOWEST);
@@ -938,7 +938,7 @@ class IndexParselet : IInfixParselet {
   }
 }
 
-class ParameterizeParselet : IInfixParselet {
+class ParameterizeParselet : InfixParselet {
   override Node parse(ParserContext context, Node left) {
     var token = context.next();
     var substitutions = parseTypeList(context, .END_PARAMETER_LIST);
@@ -950,7 +950,7 @@ class ParameterizeParselet : IInfixParselet {
   }
 }
 
-class QuotedParselet : IPrefixParselet {
+class QuotedParselet : PrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.next();
     var value = pratt.parse(context, .LOWEST);
@@ -959,13 +959,13 @@ class QuotedParselet : IPrefixParselet {
   }
 }
 
-class SuperParselet : IPrefixParselet {
+class SuperParselet : PrefixParselet {
   override Node parse(ParserContext context) {
     return parseSuperCall(context);
   }
 }
 
-class IfParselet : IPrefixParselet {
+class IfParselet : PrefixParselet {
   override Node parse(ParserContext context) {
     context.needsPreprocessor = true;
     var token = context.next();
@@ -983,7 +983,7 @@ class IfParselet : IPrefixParselet {
   }
 }
 
-class AnnotationParselet : IPrefixParselet {
+class AnnotationParselet : PrefixParselet {
   override Node parse(ParserContext context) {
     var token = context.next();
     var name = createNameFromToken(token);

@@ -2,7 +2,7 @@ class Token {
   Range range;
   TokenKind kind;
 
-  int firstCharacter() {
+  int firstCodeUnit() {
     return range.source.contents[range.start];
   }
 
@@ -32,7 +32,7 @@ void prepareTokens(List<Token> tokens) {
 
     // Tokens that start with a greater than may need to be split
     var tokenKind = token.kind;
-    var tokenStartsWithGreaterThan = token.firstCharacter() == '>';
+    var tokenStartsWithGreaterThan = token.firstCodeUnit() == '>';
 
     // Remove tokens from the stack if they aren't working out
     while (stack.size() != 0) {

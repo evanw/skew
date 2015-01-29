@@ -6098,7 +6098,7 @@
     this.range = _0;
     this.kind = _1;
   }
-  Token.prototype.firstCharacter = function() {
+  Token.prototype.firstCodeUnit = function() {
     return this.range.source.contents.charCodeAt(this.range.start);
   };
   Token.prototype.text = function() {
@@ -6393,16 +6393,16 @@
     this.parselet(kind, Precedence.LOWEST).prefix = new LiteralParselet(callback);
   };
   Pratt.prototype.prefix = function(kind, precedence, callback) {
-    this.parselet(kind, Precedence.LOWEST).prefix = new PrefixParselet(callback, precedence, this);
+    this.parselet(kind, Precedence.LOWEST).prefix = new DefaultPrefixParselet(callback, precedence, this);
   };
   Pratt.prototype.postfix = function(kind, precedence, callback) {
     this.parselet(kind, precedence).infix = new PostfixParselet(callback);
   };
   Pratt.prototype.infix = function(kind, precedence, callback) {
-    this.parselet(kind, precedence).infix = new InfixParselet(callback, precedence, this);
+    this.parselet(kind, precedence).infix = new DefaultInfixParselet(callback, precedence, this);
   };
   Pratt.prototype.infixRight = function(kind, precedence, callback) {
-    this.parselet(kind, precedence).infix = new InfixParselet(callback, precedence - 1 | 0, this);
+    this.parselet(kind, precedence).infix = new DefaultInfixParselet(callback, precedence - 1 | 0, this);
   };
   function DoubleLiteral() {
   }
@@ -6446,7 +6446,7 @@
   }
   IntLiteral.prototype.parse = function(context, token) {
     var value = parseIntLiteral(token.text(), this.base);
-    if (this.base === 10 && value !== 0 && token.firstCharacter() === 48) {
+    if (this.base === 10 && value !== 0 && token.firstCodeUnit() === 48) {
       syntaxWarningOctal(context.log, token.range);
     }
     return Node.createInt(value).withRange(token.range);
@@ -6474,12 +6474,12 @@
   UnaryPrefix.prototype.parse = function(context, token, value) {
     return Node.createUnary(this.kind, value).withRange(Range.span(token.range, value.range));
   };
-  function PrefixParselet(_0, _1, _2) {
+  function DefaultPrefixParselet(_0, _1, _2) {
     this.callback = _0;
     this.precedence = _1;
     this.pratt = _2;
   }
-  PrefixParselet.prototype.parse = function(context) {
+  DefaultPrefixParselet.prototype.parse = function(context) {
     var token = context.next();
     var value = this.pratt.parse(context, this.precedence);
     return value !== null ? this.callback.parse(context, token, value) : null;
@@ -6502,12 +6502,12 @@
   BinaryInfix.prototype.parse = function(context, left, token, right) {
     return Node.createBinary(this.kind, left, right).withRange(Range.span(left.range, right.range));
   };
-  function InfixParselet(_0, _1, _2) {
+  function DefaultInfixParselet(_0, _1, _2) {
     this.callback = _0;
     this.precedence = _1;
     this.pratt = _2;
   }
-  InfixParselet.prototype.parse = function(context, left) {
+  DefaultInfixParselet.prototype.parse = function(context, left) {
     var token = context.next();
     var right = this.pratt.parse(context, this.precedence);
     return right !== null ? this.callback.parse(context, left, token, right) : null;
@@ -12212,7 +12212,7 @@
       tokens[count] = token;
       count = count + 1 | 0;
       var tokenKind = token.kind;
-      var tokenStartsWithGreaterThan = token.firstCharacter() === 62;
+      var tokenStartsWithGreaterThan = token.firstCodeUnit() === 62;
       while (stack.length !== 0) {
         var top = in_List.last(stack);
         var topKind = top.kind;
