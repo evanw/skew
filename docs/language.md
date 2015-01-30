@@ -304,7 +304,7 @@ in double {
 }
 ```
 
-## Function Inlining + Quoting
+## Function Inlining and Quoting
 
 The inline keyword requests function inlining. Functions will currently only be inlined if the body consists of a single statement and each argument is used at most once. The compiler also has a flag to pretend all functions have the inline keyword so normally the inline keyword isn't needed. However, the inline keyword can be used with quoting to create a basic macro system.
 

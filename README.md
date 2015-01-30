@@ -6,6 +6,20 @@ The compiler currently contains a production-quality JavaScript target and a par
 
 *Warning: This is a hobby project and is still evolving rapidly. It can be used for real things (the compiler is written in itself) but the language is nowhere near stability yet.*
 
+## What is it?
+
+This language uses curly-brace syntax and has classes, interfaces, namespaces, enums, type inference, garbage collection, preprocessing, order independent declarations, and more. It looks like this:
+
+    using terminal;
+
+    @EntryPoint
+    void fizzBuzz() {
+      for (var i = 1; i <= 100; i++) {
+        var text = (i % 3 > 0 ? "" : "Fizz") + (i % 5 > 0 ? "" : "Buzz");
+        print(text == "" ? i.toString() : text);
+      }
+    }
+
 ## Why use this?
 
 The intent is to use this language for the platform-independent stuff in an application and to use the language native to the target platform for the platform-specific stuff. When done properly, the vast majority of the code is completely platform-independent and new platforms can be targeted easily with a small platform-specific shim.
@@ -32,5 +46,18 @@ Run `npm install -g skew` to install the `skewc` compiler command globally. It w
 
 ## Documentation
 
-- [Language](docs/language.md)
-- [Compiler](docs/compiler.md)
+* [Language](docs/language.md)
+    * [Primitives](docs/language.md#primitives)
+    * [Objects](docs/language.md#objects)
+    * [Constructors](docs/language.md#constructors)
+    * [Methods](docs/language.md#methods)
+    * [Enums](docs/language.md#enums)
+    * [Namespaces](docs/language.md#namespaces)
+    * [Extension Blocks](docs/language.md#extension-blocks)
+    * [Import and Export](docs/language.md#import-and-export)
+    * [Generics](docs/language.md#generics)
+    * [Asserts](docs/language.md#asserts)
+    * [Operator Overloading](docs/language.md#operator-overloading)
+    * [Casting](docs/language.md#casting)
+    * [Function Inlining and Quoting](docs/language.md#function-inlining-and-quoting)
+* [Compiler](docs/compiler.md)
