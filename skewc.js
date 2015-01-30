@@ -13851,7 +13851,7 @@
     parser.define(OptionType.BOOL, Option.RELEASE, '--release', 'Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE.');
     parser.define(OptionType.STRING, Option.CONFIG, '--config', 'Provides the configuration for the target format. Valid configurations are ' + frontend.joinKeys(Object.keys(VALID_JS_CONFIGS._table)) + ' for JavaScript and ' + frontend.joinKeys(Object.keys(VALID_CPP_CONFIGS._table)) + ' for C++. Defaults to "browser" for JavaScript and the current operating system for C++.');
     parser.define(OptionType.BOOL, Option.VERBOSE, '--verbose', 'Prints out information about the compilation.');
-    parser.define(OptionType.STRING, Option.GC, '--gc', 'Setsthe garbage collection strategy when targeting C++. Valid strategies are ' + frontend.joinKeys(Object.keys(VALID_GC_STRATEGIES._table)) + '. Defaults to "none".');
+    parser.define(OptionType.STRING, Option.GC, '--gc', 'Sets the garbage collection strategy when targeting C++. Valid strategies are ' + frontend.joinKeys(Object.keys(VALID_GC_STRATEGIES._table)) + '. Defaults to "none".');
     parser.define(OptionType.BOOL, Option.SOURCE_MAP, '--source-map', 'Generates a source map when targeting JavaScript. The source map is saved with the ".map" extension in the same directory as the main output file.');
     parser.define(OptionType.BOOL, Option.INLINE, '--inline', 'Uses heuristics to automatically inline simple functions.');
     parser.define(OptionType.BOOL, Option.GLOBALIZE, '--globalize', 'Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.');

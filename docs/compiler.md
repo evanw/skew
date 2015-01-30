@@ -1,7 +1,5 @@
 # Compiler
 
-## Usage
-
 The top-level command is `skewc`, which can be installed using `npm install -g skew`. Example usage:
 
     skewc input.sk --target=js --output-file=output.js --release
@@ -17,7 +15,7 @@ Flag&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs
   --release          | Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE.
   --config=___       | Provides the configuration for the target format. Valid configurations are "browser" and "node" for JavaScript and "android", "ios", "linux", "osx", and "windows" for C++. Defaults to "browser" for JavaScript and the current operating system for C++.
   --verbose          | Prints out information about the compilation.
-  --gc=___           | Setsthe garbage collection strategy when targeting C++. Valid strategies are "mark-sweep", "none", and "none-fast". Defaults to "none".
+  --gc=___           | Sets the garbage collection strategy when targeting C++. Valid strategies are "mark-sweep", "none", and "none-fast". Defaults to "none".
   --source-map       | Generates a source map when targeting JavaScript. The source map is saved with the ".map" extension in the same directory as the main output file.
   --inline           | Uses heuristics to automatically inline simple functions.
   --globalize        | Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.

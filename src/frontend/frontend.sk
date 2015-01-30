@@ -113,7 +113,7 @@ namespace frontend {
     parser.define(.BOOL, .RELEASE, "--release", "Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE.");
     parser.define(.STRING, .CONFIG, "--config", "Provides the configuration for the target format. Valid configurations are " + joinKeys(VALID_JS_CONFIGS.keys()) + " for JavaScript and " + joinKeys(VALID_CPP_CONFIGS.keys()) + " for C++. Defaults to \"browser\" for JavaScript and the current operating system for C++.");
     parser.define(.BOOL, .VERBOSE, "--verbose", "Prints out information about the compilation.");
-    parser.define(.STRING, .GC, "--gc", "Setsthe garbage collection strategy when targeting C++. Valid strategies are " + joinKeys(VALID_GC_STRATEGIES.keys()) + ". Defaults to \"none\".");
+    parser.define(.STRING, .GC, "--gc", "Sets the garbage collection strategy when targeting C++. Valid strategies are " + joinKeys(VALID_GC_STRATEGIES.keys()) + ". Defaults to \"none\".");
     parser.define(.BOOL, .SOURCE_MAP, "--source-map", "Generates a source map when targeting JavaScript. The source map is saved with the \".map\" extension in the same directory as the main output file.");
     parser.define(.BOOL, .INLINE, "--inline", "Uses heuristics to automatically inline simple functions.");
     parser.define(.BOOL, .GLOBALIZE, "--globalize", "Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.");
