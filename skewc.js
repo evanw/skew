@@ -5326,13 +5326,9 @@
         }
       }
     }
-    switch (node.kind) {
-    case 13:
-    case 14:
+    if (in_NodeKind.isFunction(node.kind)) {
       this.setCurrentFunction(null);
-      break;
-    }
-    if (this.options.mangle) {
+    } else if (this.options.mangle) {
       switch (node.kind) {
       case 15:
         this.unionVariableWithFunction(node);
@@ -5362,7 +5358,7 @@
   };
   js.Patcher.prototype.peepholeMangleBinaryRelational = function(node) {
     if (node.kind !== NodeKind.GREATER_THAN_OR_EQUAL && node.kind !== NodeKind.LESS_THAN_OR_EQUAL) {
-      throw new Error('assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL; (src/js/patcher.sk:303:7)');
+      throw new Error('assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL; (src/js/patcher.sk:301:7)');
     }
     var left = node.binaryLeft();
     var right = node.binaryRight();
@@ -5479,10 +5475,10 @@
   };
   js.Patcher.prototype.isJumpImplied = function(node, kind) {
     if (node.kind !== NodeKind.BLOCK) {
-      throw new Error('assert node.kind == .BLOCK; (src/js/patcher.sk:457:7)');
+      throw new Error('assert node.kind == .BLOCK; (src/js/patcher.sk:455:7)');
     }
     if (kind !== NodeKind.RETURN && kind !== NodeKind.CONTINUE) {
-      throw new Error('assert kind == .RETURN || kind == .CONTINUE; (src/js/patcher.sk:458:7)');
+      throw new Error('assert kind == .RETURN || kind == .CONTINUE; (src/js/patcher.sk:456:7)');
     }
     var parent = node.parent;
     var parentKind = parent.kind;
@@ -5552,7 +5548,7 @@
               block = Node.createBlock([]);
               child.replaceChild(2, block);
               if (block !== child.ifFalse()) {
-                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:544:17)');
+                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:542:17)');
               }
             } else {
               this.peepholeMangleIf(child);
@@ -5611,7 +5607,7 @@
   };
   js.Patcher.prototype.peepholeMangleSequence = function(node) {
     if (node.kind !== NodeKind.SEQUENCE) {
-      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:619:7)');
+      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:617:7)');
     }
     for (var i = node.children.length - 1 | 0; i > 0; i = i - 1 | 0) {
       var current = node.children[i];
@@ -5750,7 +5746,7 @@
   };
   js.Patcher.prototype.unionVariableWithFunction = function(node) {
     if (node.symbol.kind === SymbolKind.LOCAL_VARIABLE !== (this.currentFunction !== null)) {
-      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:780:7)');
+      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:778:7)');
     }
     if (this.currentFunction !== null) {
       var left = this.namingGroupIndexForSymbol._table[this.currentFunction.uniqueID];
@@ -5779,7 +5775,7 @@
         this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
       } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
         if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
-          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:815:11)');
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:813:11)');
         }
         if (value.kind === NodeKind.INT) {
           var constant = value.asInt();
@@ -5841,7 +5837,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:904:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:902:7)');
     }
     var current = target;
     var parent = current.parent;

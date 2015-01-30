@@ -282,11 +282,9 @@ namespace js {
         }
       }
 
-      switch (node.kind) {
-        case .CONSTRUCTOR, .FUNCTION { setCurrentFunction(null); }
-      }
-
-      if (options.mangle) {
+      if (node.kind.isFunction()) {
+        setCurrentFunction(null);
+      } else if (options.mangle) {
         switch (node.kind) {
           case .VARIABLE { unionVariableWithFunction(node); }
           case .IF { peepholeMangleIf(node); }
