@@ -936,10 +936,9 @@ namespace js {
     bool alwaysConvertsOperandsToInt(NodeKind kind) {
       switch (kind) {
         case
-          .BITWISE_OR, .BITWISE_AND, .BITWISE_XOR, .SHIFT_LEFT,
-          .SHIFT_RIGHT, .ASSIGN_BITWISE_OR, .ASSIGN_BITWISE_AND,
-          .ASSIGN_BITWISE_XOR, .ASSIGN_SHIFT_LEFT, .ASSIGN_SHIFT_RIGHT {
-
+          .ASSIGN_BITWISE_AND, .ASSIGN_BITWISE_OR, .ASSIGN_BITWISE_XOR,
+          .ASSIGN_SHIFT_LEFT, .ASSIGN_SHIFT_RIGHT, .BITWISE_AND, .BITWISE_OR,
+          .BITWISE_XOR, .COMPLEMENT, .SHIFT_LEFT, .SHIFT_RIGHT {
           return true;
         }
 

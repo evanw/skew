@@ -896,6 +896,8 @@ export bool foo(`var` foo) {
 testJS("
 export List<int> foo(`var` foo) {
   return [
+    ~(foo || 0),
+    ~(foo || 1),
     (foo || 0) | 0,
     (foo || 1) | 0,
     (foo || false) ^ 0,
@@ -906,7 +908,7 @@ export List<int> foo(`var` foo) {
   ];
 }
 ", "
-(function(){foo=function(a){return [a|0,(a||1)|0,a^0,(a||!0)^0,a&0,a&0,(a||Infinity)&0]}}());
+(function(){foo=function(a){return [~a,~(a||1),a|0,(a||1)|0,a^0,(a||!0)^0,a&0,a&0,(a||Infinity)&0]}}());
 ").release();
 
 testJS("

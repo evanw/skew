@@ -20,6 +20,7 @@
       double min(double x, double y) { return `Math`.min(x, y); }
       double max(double x, double y) { return `Math`.max(x, y); }
       bool isNaN(double x) { return `isNaN`(x); }
+      bool isFinite(double x) { return `isFinite`(x); }
     }
 
     inline double random() { return `Math`.random(); }
@@ -47,6 +48,7 @@
       double min(double x, double y) { return `std`::fmin(x, y); }
       double max(double x, double y) { return `std`::fmax(x, y); }
       bool isNaN(double x) { return `std`::isnan(x); }
+      bool isFinite(double x) { return `std`::isfinite(x); }
     }
 
     @NeedsInclude("<random>") {
@@ -85,6 +87,7 @@
       double max(double x, double y);
       double random();
       bool isNaN(double x);
+      bool isFinite(double x);
     }
   }
 
