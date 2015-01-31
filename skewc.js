@@ -5717,7 +5717,9 @@
     }
   };
   js.Patcher.prototype.peepholeMangleLogicalOr = function(node) {
-    if (this.alwaysConvertsOperandsToInt(node.parent.kind) && this.isFalsy(node.binaryRight())) {
+    var parent = node.parent;
+    var parentKind = parent.kind === NodeKind.QUOTED ? parent.parent.kind : parent.kind;
+    if ((this.alwaysConvertsOperandsToInt(parentKind) || parentKind === NodeKind.NOT) && this.isFalsy(node.binaryRight())) {
       node.become(node.binaryLeft().replaceWith(null));
     }
   };
@@ -5764,7 +5766,7 @@
   };
   js.Patcher.prototype.unionVariableWithFunction = function(node) {
     if (node.symbol.kind === SymbolKind.LOCAL_VARIABLE !== (this.currentFunction !== null)) {
-      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:787:7)');
+      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:791:7)');
     }
     if (this.currentFunction !== null) {
       var left = this.namingGroupIndexForSymbol._table[this.currentFunction.uniqueID];
@@ -5793,7 +5795,7 @@
         this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
       } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
         if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
-          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:825:11)');
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:829:11)');
         }
         if (value.kind === NodeKind.INT) {
           var constant = value.asInt();
@@ -5855,7 +5857,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:914:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:918:7)');
     }
     var current = target;
     var parent = current.parent;

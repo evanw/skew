@@ -894,6 +894,31 @@ export bool foo(`var` foo) {
 ").release();
 
 testJS("
+export List<bool> foo(`var` foo) {
+  return [
+    !(foo || 0),
+    !(foo || 1),
+    !(foo || false),
+    !(foo || true),
+    !(foo || null),
+    !(foo || math.NAN),
+    !(foo || math.INFINITY),
+  ];
+}
+", "
+(function(){foo=function(a){return [!a,!(a||1),!a,!(a||!0),!a,!a,!(a||Infinity)]}}());
+").release();
+
+// This must not become +foo because false and NaN give different results
+testJS("
+export double foo(`var` foo) {
+  return +(foo || null);
+}
+", "
+(function(){foo=function(a){return +(a||null)}}());
+").release();
+
+testJS("
 export List<int> foo(`var` foo) {
   return [
     ~(foo || 0),

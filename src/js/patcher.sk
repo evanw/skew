@@ -722,8 +722,12 @@ namespace js {
     }
 
     void peepholeMangleLogicalOr(Node node) {
+      var parent = node.parent;
+      var parentKind = parent.kind == .QUOTED ? parent.parent.kind : parent.kind;
+
       // "(x || null) | 0" => "x | 0"
-      if (alwaysConvertsOperandsToInt(node.parent.kind) && isFalsy(node.binaryRight())) {
+      // "!(x || null)" => "!x"
+      if ((alwaysConvertsOperandsToInt(parentKind) || parentKind == .NOT) && isFalsy(node.binaryRight())) {
         node.become(node.binaryLeft().replaceWith(null));
       }
     }
