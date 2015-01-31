@@ -20,7 +20,7 @@ This language uses curly-brace syntax and has classes, interfaces, namespaces, e
       }
     }
 
-## Why use this?
+## Why use it?
 
 The intent is to use this language for the platform-independent stuff in an application and to use the language native to the target platform for the platform-specific stuff. When done properly, the vast majority of the code is completely platform-independent and new platforms can be targeted easily with a small platform-specific shim.
 

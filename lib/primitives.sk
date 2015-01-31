@@ -212,6 +212,7 @@ in string {
   }
 }
 
+// Boxes are useful for representing nullable primitive types
 class Box<T> {
-  final T value;
+  T value;
 }
