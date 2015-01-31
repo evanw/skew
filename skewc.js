@@ -4250,6 +4250,7 @@
       var type = entryPointSymbol.type;
       var callText = js.Emitter.fullName(entryPointSymbol) + (type.argumentTypes().length !== 0 ? '(process.argv.slice(2))' : '()');
       this.emitSemicolonIfNeeded();
+      this.addMapping(entryPointSymbol.node);
       this.emit(this.indent + (type.resultType() === this.resolver.cache.intType ? 'process.exit(' + callText + ')' : callText));
       this.emitSemicolonAfterStatement();
     }
@@ -4435,7 +4436,7 @@
     case 33:
       break;
     default:
-      throw new Error('assert false; (src/js/emitter.sk:309:19)');
+      throw new Error('assert false; (src/js/emitter.sk:310:19)');
       break;
     }
   };
@@ -4799,7 +4800,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/js/emitter.sk:647:16)');
+        throw new Error('assert false; (src/js/emitter.sk:648:16)');
       }
       break;
     }
@@ -4927,7 +4928,7 @@
   };
   js.Emitter.prototype.isRightChildOfBinaryExpression = function(node, kind) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:766:7)');
+      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:767:7)');
     }
     while (in_NodeKind.isBinaryOperator(node.parent.kind)) {
       if (node.parent.binaryRight() === node) {

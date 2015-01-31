@@ -137,6 +137,7 @@ namespace js {
         var type = entryPointSymbol.type;
         var callText = fullName(entryPointSymbol) + (type.argumentTypes().size() != 0 ? "(process.argv.slice(2))" : "()");
         emitSemicolonIfNeeded();
+        addMapping(entryPointSymbol.node); // Without this, the first call stack entry points at the last global variable during initialization
         emit(indent + (type.resultType() == resolver.cache.intType ? "process.exit(" + callText + ")" : callText));
         emitSemicolonAfterStatement();
       }
