@@ -6913,7 +6913,7 @@
       } else if (kind === NodeKind.NEGATIVE) {
         this.flattenReal(node, -value.asDouble());
       }
-    } else if (kind === NodeKind.NOT) {
+    } else if (kind === NodeKind.NOT && !value.type.isIgnored(this.cache)) {
       switch (valueKind) {
       case 65:
       case 85:

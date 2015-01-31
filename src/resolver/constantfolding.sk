@@ -379,8 +379,8 @@ class ConstantFolder {
       else if (kind == .NEGATIVE) flattenReal(node, -value.asDouble());
     }
 
-    // Partial evaluation
-    else if (kind == .NOT) {
+    // Partial evaluation ("!!`x`" isn't necessarily "!!x" if we don't know the type)
+    else if (kind == .NOT && !value.type.isIgnored(cache)) {
       switch (valueKind) {
         case .NOT, .EQUAL, .NOT_EQUAL, .LOGICAL_OR, .LOGICAL_AND, .LESS_THAN, .GREATER_THAN, .LESS_THAN_OR_EQUAL, .GREATER_THAN_OR_EQUAL {
           value.invertBooleanCondition(cache);

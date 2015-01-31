@@ -912,6 +912,19 @@ export List<int> foo(`var` foo) {
 ").release();
 
 testJS("
+export List<bool> foo(bool foo) {
+  return [
+    !foo,
+    !!foo,
+    !`window`.foo,
+    !!`window`.foo,
+  ];
+}
+", "
+(function(){foo=function(a){return [!a,a,!window.foo,!!window.foo]}}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }
