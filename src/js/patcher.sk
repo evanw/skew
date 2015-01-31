@@ -267,7 +267,7 @@ namespace js {
         case .CLASS { patchClass(node); }
         case .NAME { patchName(node); }
         case .LIST { mangleStringList(node); }
-        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinary(node); }
+        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinaryArithmetic(node); }
         case .POSITIVE, .NEGATIVE, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node); }
         case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER { patchAssign(node); }
       }
@@ -293,6 +293,7 @@ namespace js {
           case .WHILE, .DO_WHILE { peepholeMangleBoolean(node.whileTest(), .NO_SWAP); }
           case .BLOCK { peepholeMangleBlock(node); }
           case .HOOK { peepholeMangleHook(node); }
+          case .LOGICAL_OR { peepholeMangleLogicalOr(node); }
         }
       }
     }
@@ -338,12 +339,13 @@ namespace js {
       var kind = node.kind;
       if (kind == .NULL) return true;
       else if (kind == .INT) return node.asInt() == 0;
-      else if (kind.isReal()) return node.asDouble() == 0;
+      else if (kind.isReal()) return node.asDouble() == 0 || math.isNaN(node.asDouble());
       else if (kind == .STRING) return node.asString() == "";
       else if (kind.isCast()) return isFalsy(node.castValue());
       else return false;
     }
 
+    // Simplifies the node assuming it's used in a boolean context
     BooleanSwap peepholeMangleBoolean(Node node, BooleanSwap canSwap) {
       var kind = node.kind;
 
@@ -719,6 +721,13 @@ namespace js {
       }
     }
 
+    void peepholeMangleLogicalOr(Node node) {
+      // "(x || null) | 0" => "x | 0"
+      if (alwaysConvertsOperandsToInt(node.parent.kind) && isFalsy(node.binaryRight())) {
+        node.become(node.binaryLeft().replaceWith(null));
+      }
+    }
+
     void patchClass(Node node) {
       if (!node.symbol.isImport() && node.symbol.type.baseClass() != null) {
         needExtends = true;
@@ -783,7 +792,10 @@ namespace js {
       }
     }
 
-    void patchBinary(Node node) {
+    void patchBinaryArithmetic(Node node) {
+      // Make sure arithmetic integer operators don't emit doubles outside the
+      // integer range. Allowing this causes JIT slowdowns due to extra checks
+      // during compilation and potential deoptimizations during execution.
       if (node.type.isInt(cache) && (node.kind == .MULTIPLY || !alwaysConvertsOperandsToInt(node.parent.kind))) {
         node.become(createBinaryInt(node.kind, node.binaryLeft().replaceWith(null), node.binaryRight().replaceWith(null)).withRange(node.range));
       }

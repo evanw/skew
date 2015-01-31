@@ -19,6 +19,7 @@
       double ceil(double x) { return `Math`.ceil(x); }
       double min(double x, double y) { return `Math`.min(x, y); }
       double max(double x, double y) { return `Math`.max(x, y); }
+      bool isNaN(double x) { return `isNaN`(x); }
     }
 
     inline double random() { return `Math`.random(); }
@@ -45,6 +46,7 @@
       double ceil(double x) { return `std`::ceil(x); }
       double min(double x, double y) { return `std`::fmin(x, y); }
       double max(double x, double y) { return `std`::fmax(x, y); }
+      bool isNaN(double x) { return `std`::isnan(x); }
     }
 
     @NeedsInclude("<random>") {
@@ -82,6 +84,7 @@
       double min(double x, double y);
       double max(double x, double y);
       double random();
+      bool isNaN(double x);
     }
   }
 

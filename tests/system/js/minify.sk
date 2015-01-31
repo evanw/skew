@@ -894,6 +894,22 @@ export bool foo(`var` foo) {
 ").release();
 
 testJS("
+export List<int> foo(`var` foo) {
+  return [
+    (foo || 0) | 0,
+    (foo || 1) | 0,
+    (foo || false) ^ 0,
+    (foo || true) ^ 0,
+    (foo || null) & 0,
+    (foo || math.NAN) & 0,
+    (foo || math.INFINITY) & 0,
+  ];
+}
+", "
+(function(){foo=function(a){return [a|0,(a||1)|0,a^0,(a||!0)^0,a&0,a&0,(a||Infinity)&0]}}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }
