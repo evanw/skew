@@ -36,6 +36,7 @@ IntMap<OperatorInfo> operatorInfo = {
   NodeKind.GREATER_THAN_OR_EQUAL: OperatorInfo(">=", .COMPARE, .LEFT),
   NodeKind.IN:                    OperatorInfo("in", .COMPARE, .LEFT),
   NodeKind.INDEX:                 OperatorInfo("[]", .MEMBER, .LEFT),
+  NodeKind.IS:                    OperatorInfo("is", .COMPARE, .LEFT),
   NodeKind.LESS_THAN:             OperatorInfo("<", .COMPARE, .LEFT),
   NodeKind.LESS_THAN_OR_EQUAL:    OperatorInfo("<=", .COMPARE, .LEFT),
   NodeKind.LOGICAL_AND:           OperatorInfo("&&", .LOGICAL_AND, .LEFT),

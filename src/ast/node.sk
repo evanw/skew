@@ -102,6 +102,7 @@ enum NodeKind {
   GREATER_THAN_OR_EQUAL,
   IN,
   INDEX,
+  IS, // Used for JavaScript binding
   LESS_THAN,
   LESS_THAN_OR_EQUAL,
   LOGICAL_AND,

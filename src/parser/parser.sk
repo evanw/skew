@@ -1047,6 +1047,7 @@ pure Pratt createParser() {
   pratt.infix(.GREATER_THAN, .COMPARE, BinaryInfix(.GREATER_THAN));
   pratt.infix(.GREATER_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.GREATER_THAN_OR_EQUAL));
   pratt.infix(.IN, .COMPARE, BinaryInfix(.IN));
+  pratt.infix(.IS, .COMPARE, BinaryInfix(.IS));
   pratt.infix(.LESS_THAN, .COMPARE, BinaryInfix(.LESS_THAN));
   pratt.infix(.LESS_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.LESS_THAN_OR_EQUAL));
   pratt.infix(.LOGICAL_AND, .LOGICAL_AND, BinaryInfix(.LOGICAL_AND));

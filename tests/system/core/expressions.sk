@@ -309,4 +309,17 @@ void foo() {
             ~~~~~~~~~~~~~~~~~~~~~
 ");
 
+test("
+int foo(int foo) {
+  return foo is int;
+}
+", "
+<stdin>:2:10: error: No binary operator \"is\" for type \"int\" and type \"int\"
+  return foo is int;
+         ~~~~~~~~~~
+<stdin>:2:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  return foo is int;
+         ~~~~~~~~~~
+");
+
 }}

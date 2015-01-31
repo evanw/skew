@@ -655,8 +655,6 @@ namespace cpp {
     void emitCppType(Type type, CppEmitType mode) {
       if (type.isEnumFlags()) {
         emit("int");
-      } else if (type.isQuoted()) {
-        emitExpression(type.symbol.node, .LOWEST);
       } else {
         emitType(type);
       }

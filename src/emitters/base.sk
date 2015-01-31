@@ -611,14 +611,18 @@ namespace base {
 
     void emitType(Type type) {
       assert !type.isFunction();
-      emit(fullName(type.symbol));
-      if (type.isParameterized()) {
-        emit("<");
-        for (var i = 0; i < type.substitutions.size(); i++) {
-          if (i != 0) emit(", ");
-          emitNormalType(type.substitutions[i]);
+      if (type.isQuoted()) {
+        emitExpression(type.symbol.node, .LOWEST);
+      } else {
+        emit(fullName(type.symbol));
+        if (type.isParameterized()) {
+          emit("<");
+          for (var i = 0; i < type.substitutions.size(); i++) {
+            if (i != 0) emit(", ");
+            emitNormalType(type.substitutions[i]);
+          }
+          emit(">");
         }
-        emit(">");
       }
     }
 

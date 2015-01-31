@@ -3660,6 +3660,17 @@ class Resolver {
     var left = node.binaryLeft();
     var right = node.binaryRight();
 
+    // Special-case the is operator
+    if (kind == .IS) {
+      resolveAsParameterizedExpression(left);
+      resolveAsType(right);
+      if (!left.type.isIgnored(cache) && !right.type.isIgnored(cache)) {
+        semanticErrorNoMatchingOperator(log, node.range, kind, [left.type, right.type]);
+      }
+      node.type = cache.boolType;
+      return;
+    }
+
     // Special-case assignment logic
     if (kind.isBinaryStorageOperator()) {
       resolveAsParameterizedExpression(left);

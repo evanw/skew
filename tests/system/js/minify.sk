@@ -886,6 +886,14 @@ export var foo = [\" \", \";\", \",\", \"{\", \"}\", \" \"];
 ").release();
 
 testJS("
+export bool foo(`var` foo) {
+  return foo is `Array`;
+}
+", "
+(function(){foo=function(a){return a instanceof Array}}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }
