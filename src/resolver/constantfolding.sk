@@ -221,7 +221,6 @@ class ConstantFolder {
 
     // Always false if statement
     else if (test.isFalse()) {
-
       // Remove entirely
       if (falseBlock == null) {
         node.remove();
@@ -240,13 +239,25 @@ class ConstantFolder {
       trueBlock.replaceWith(falseBlock.replaceWith(null));
     }
 
-    // Remove if statements with empty blocks
+    // Remove if statements with empty true blocks
     else if (!trueBlock.hasChildren()) {
-      if (test.hasNoSideEffects()) {
+      // "if (a) {} else b();" => "if (!a) b();"
+      if (falseBlock != null && falseBlock.hasChildren()) {
+        test.invertBooleanCondition(cache);
+        trueBlock.swapWith(falseBlock);
+        trueBlock.replaceWith(null);
+      }
+
+      // "if (a()) {}" => "a();"
+      else if (test.hasNoSideEffects()) {
         node.remove();
         return -1;
       }
-      node.become(Node.createExpression(test.remove()));
+
+      // "if (a) {}" => ""
+      else {
+        node.become(Node.createExpression(test.remove()));
+      }
     }
 
     return 0;

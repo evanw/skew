@@ -339,6 +339,18 @@ export void foo() {
 ").release();
 
 testJS("
+import void x();
+import void y();
+export void foo(int a) {
+  if (a < 1) x();
+  else if (a < 2) {}
+  else y();
+}
+", "
+(function(){foo=function(a){a<1?x():a>1&&y()}}());
+").release();
+
+testJS("
 export int foo(int a, int b) {
   return a != b ? 1 : 2;
 }

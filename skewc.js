@@ -6806,11 +6806,16 @@
       test.replaceWith(Node.createBool(true).withType(test.type));
       trueBlock.replaceWith(falseBlock.replaceWith(null));
     } else if (!trueBlock.hasChildren()) {
-      if (test.hasNoSideEffects()) {
+      if (falseBlock !== null && falseBlock.hasChildren()) {
+        test.invertBooleanCondition(this.cache);
+        trueBlock.swapWith(falseBlock);
+        trueBlock.replaceWith(null);
+      } else if (test.hasNoSideEffects()) {
         node.remove();
         return -1;
+      } else {
+        node.become(Node.createExpression(test.remove()));
       }
-      node.become(Node.createExpression(test.remove()));
     }
     return 0;
   };
@@ -6951,10 +6956,10 @@
       var left = variable.binaryLeft();
       var right = variable.binaryRight();
       if (!left.type.isInt(this.cache) && !left.type.isIgnored(this.cache)) {
-        throw new Error('assert left.type.isInt(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:418:7)');
+        throw new Error('assert left.type.isInt(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:429:7)');
       }
       if (!right.type.isInt(this.cache) && !right.type.isIgnored(this.cache)) {
-        throw new Error('assert right.type.isInt(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:419:7)');
+        throw new Error('assert right.type.isInt(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:430:7)');
       }
       var isLeftConstant = left.kind === NodeKind.INT;
       if (isLeftConstant || right.kind === NodeKind.INT) {
