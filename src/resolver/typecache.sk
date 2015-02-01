@@ -94,8 +94,11 @@ class TypeCache {
     }
 
     Type result;
-    if (type.isFunction()) {
+    if (type.symbol == null) {
       result = parameterize(null, substituteAll(type.relevantTypes, parameters, substitutions));
+    } else if (type.symbol.kind.isFunction()) {
+      result = Type(type.symbol);
+      result.relevantTypes = substituteAll(type.relevantTypes, parameters, substitutions);
     } else if (!type.hasParameters()) {
       var index = parameters.indexOf(type.symbol);
       result = index >= 0 ? substitutions[index] : type;

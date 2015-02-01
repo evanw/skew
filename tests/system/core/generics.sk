@@ -464,7 +464,9 @@ export void bar() {
   Foo<int>().foo();
 }
 ", "
-TODO
+<stdin>:5:3: error: Cannot use unparameterized type \"void fn<T>()\"
+  Foo<int>().foo();
+  ~~~~~~~~~~~~~~
 ");
 
 test("
@@ -496,6 +498,12 @@ export void bar() {
   Foo<int>().foo<float>(false, false);
 }
 ", "
+<stdin>:5:25: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  Foo<int>().foo<float>(false, false);
+                        ~~~~~
+<stdin>:5:32: error: Cannot convert from type \"bool\" to type \"float\" without a cast
+  Foo<int>().foo<float>(false, false);
+                               ~~~~~
 ");
 
 test("

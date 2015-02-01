@@ -11123,7 +11123,7 @@
   };
   Type.environmentToString = function(parameters, substitutions) {
     if (parameters.length !== substitutions.length) {
-      throw new Error('assert parameters.size() == substitutions.size(); (src/resolver/type.sk:104:5)');
+      throw new Error('assert parameters.size() == substitutions.size(); (src/resolver/type.sk:102:5)');
     }
     var text = '[';
     for (var i = 0; i < parameters.length; i = i + 1 | 0) {
@@ -11136,7 +11136,7 @@
   };
   Type.prototype.toString = function() {
     if (this.substitutions !== null && this.substitutions.length !== this.symbol.parameters.length) {
-      throw new Error('assert substitutions == null || substitutions.size() == symbol.parameters.size(); (src/resolver/type.sk:114:5)');
+      throw new Error('assert substitutions == null || substitutions.size() == symbol.parameters.size(); (src/resolver/type.sk:112:5)');
     }
     var parameterText = '';
     if (this.hasParameters()) {
@@ -11173,7 +11173,7 @@
   };
   Type.prototype.baseClass = function() {
     if (!this.isClass()) {
-      throw new Error('assert isClass(); (src/resolver/type.sk:154:5)');
+      throw new Error('assert isClass(); (src/resolver/type.sk:152:5)');
     }
     if (!this.hasRelevantTypes()) {
       return null;
@@ -11183,7 +11183,7 @@
   };
   Type.prototype.bound = function() {
     if (!this.isParameter()) {
-      throw new Error('assert isParameter(); (src/resolver/type.sk:161:5)');
+      throw new Error('assert isParameter(); (src/resolver/type.sk:159:5)');
     }
     return this.hasRelevantTypes() ? this.relevantTypes[0] : null;
   };
@@ -11203,19 +11203,19 @@
   };
   Type.prototype.resultType = function() {
     if (!this.isFunction()) {
-      throw new Error('assert isFunction(); (src/resolver/type.sk:183:5)');
+      throw new Error('assert isFunction(); (src/resolver/type.sk:181:5)');
     }
     if (!this.hasRelevantTypes()) {
-      throw new Error('assert hasRelevantTypes(); (src/resolver/type.sk:184:5)');
+      throw new Error('assert hasRelevantTypes(); (src/resolver/type.sk:182:5)');
     }
     return this.relevantTypes[0];
   };
   Type.prototype.argumentTypes = function() {
     if (!this.isFunction()) {
-      throw new Error('assert isFunction(); (src/resolver/type.sk:189:5)');
+      throw new Error('assert isFunction(); (src/resolver/type.sk:187:5)');
     }
     if (!this.hasRelevantTypes()) {
-      throw new Error('assert hasRelevantTypes(); (src/resolver/type.sk:190:5)');
+      throw new Error('assert hasRelevantTypes(); (src/resolver/type.sk:188:5)');
     }
     return this.relevantTypes.slice(1, this.relevantTypes.length);
   };
@@ -11383,14 +11383,17 @@
       trace.indent();
     }
     var result = null;
-    if (type.isFunction()) {
+    if (type.symbol === null) {
       result = this.parameterize(null, this.substituteAll(type.relevantTypes, parameters, substitutions));
+    } else if (in_SymbolKind.isFunction(type.symbol.kind)) {
+      result = new Type(type.symbol);
+      result.relevantTypes = this.substituteAll(type.relevantTypes, parameters, substitutions);
     } else if (!type.hasParameters()) {
       var index = parameters.indexOf(type.symbol);
       result = index >= 0 ? substitutions[index] : type;
     } else {
       if (type.substitutions === null) {
-        throw new Error('assert type.substitutions != null; (src/resolver/typecache.sk:103:7)');
+        throw new Error('assert type.substitutions != null; (src/resolver/typecache.sk:106:7)');
       }
       result = this.parameterize(type, this.substituteAll(type.substitutions, parameters, substitutions));
     }
@@ -11402,7 +11405,7 @@
   };
   TypeCache.prototype.substituteAll = function(types, parameters, substitutions) {
     if (parameters.length !== substitutions.length) {
-      throw new Error('assert parameters.size() == substitutions.size(); (src/resolver/typecache.sk:115:5)');
+      throw new Error('assert parameters.size() == substitutions.size(); (src/resolver/typecache.sk:118:5)');
     }
     var results = [];
     for (var i = 0; i < types.length; i = i + 1 | 0) {
@@ -11412,7 +11415,7 @@
   };
   TypeCache.prototype.ensureTypeIsParameterized = function(unparameterized) {
     if (unparameterized.isParameterized()) {
-      throw new Error('assert !unparameterized.isParameterized(); (src/resolver/typecache.sk:127:5)');
+      throw new Error('assert !unparameterized.isParameterized(); (src/resolver/typecache.sk:130:5)');
     }
     if (unparameterized.hasParameters()) {
       var parameters = unparameterized.symbol.parameters;
@@ -11428,13 +11431,13 @@
     var symbol = unparameterized !== null ? unparameterized.symbol : null;
     if (symbol !== null) {
       if (!symbol.hasParameters()) {
-        throw new Error('assert symbol.hasParameters(); (src/resolver/typecache.sk:143:7)');
+        throw new Error('assert symbol.hasParameters(); (src/resolver/typecache.sk:146:7)');
       }
       if (symbol.type.isParameterized()) {
-        throw new Error('assert !symbol.type.isParameterized(); (src/resolver/typecache.sk:144:7)');
+        throw new Error('assert !symbol.type.isParameterized(); (src/resolver/typecache.sk:147:7)');
       }
       if (symbol.parameters.length !== substitutions.length) {
-        throw new Error('assert symbol.parameters.size() == substitutions.size(); (src/resolver/typecache.sk:145:7)');
+        throw new Error('assert symbol.parameters.size() == substitutions.size(); (src/resolver/typecache.sk:148:7)');
       }
     }
     var hash = TypeCache.computeHashCode(symbol, substitutions);
@@ -11443,7 +11446,7 @@
       for (var i = 0; i < existingTypes.length; i = i + 1 | 0) {
         var existing = existingTypes[i];
         if (symbol === existing.symbol && symbol !== null && substitutions.length !== existing.substitutions.length) {
-          throw new Error('assert symbol != existing.symbol || symbol == null || substitutions.size() == existing.substitutions.size(); (src/resolver/typecache.sk:156:9)');
+          throw new Error('assert symbol != existing.symbol || symbol == null || substitutions.size() == existing.substitutions.size(); (src/resolver/typecache.sk:159:9)');
         }
         if (symbol === existing.symbol && (symbol === null && TypeCache.areTypeListsEqual(substitutions, existing.relevantTypes) || symbol !== null && TypeCache.areTypeListsEqual(substitutions, existing.substitutions))) {
           return existing;
@@ -12128,10 +12131,13 @@
     return formatNumber(bytes / ByteSize.GB) + 'gb';
   }
   trace.indent = function() {
+    trace.spaces += '  ';
   };
   trace.dedent = function() {
+    trace.spaces = trace.spaces.slice(2, trace.spaces.length);
   };
   trace.log = function(text) {
+    process.stdout.write(trace.spaces + text + '\n');
   };
   function simpleQuote(name) {
     return '"' + name + '"';
@@ -14091,6 +14097,7 @@
   var operatorInfo = IntMap.literal([65, 66, 67, 68, 69, 70, 71, 72, 75, 76, 77, 78, 73, 74, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 107, 108, 109, 103, 104, 105, 110, 111, 106, 112], [new OperatorInfo('!', 13, 0), new OperatorInfo('+', 13, 0), new OperatorInfo('-', 13, 0), new OperatorInfo('~', 13, 0), new OperatorInfo('++', 13, 0), new OperatorInfo('--', 13, 0), new OperatorInfo('++', 14, 0), new OperatorInfo('--', 14, 0), new OperatorInfo('*', 13, 0), new OperatorInfo('&', 13, 0), new OperatorInfo('*', 14, 0), new OperatorInfo('&', 14, 0), new OperatorInfo('new', 13, 0), new OperatorInfo('delete', 13, 0), new OperatorInfo('+', 11, 1), new OperatorInfo('&', 7, 1), new OperatorInfo('|', 5, 1), new OperatorInfo('^', 6, 1), new OperatorInfo('/', 12, 1), new OperatorInfo('==', 8, 1), new OperatorInfo('>', 9, 1), new OperatorInfo('>=', 9, 1), new OperatorInfo('in', 9, 1), new OperatorInfo('[]', 15, 1), new OperatorInfo('is', 9, 1), new OperatorInfo('<', 9, 1), new OperatorInfo('<=', 9, 1), new OperatorInfo('&&', 4, 1), new OperatorInfo('||', 3, 1), new OperatorInfo('*', 12, 1), new OperatorInfo('!=', 8, 1), new OperatorInfo('%', 12, 1), new OperatorInfo('<<', 10, 1), new OperatorInfo('>>', 10, 1), new OperatorInfo('-', 11, 1), new OperatorInfo('=', 2, 2), new OperatorInfo('+=', 2, 2), new OperatorInfo('&=', 2, 2), new OperatorInfo('|=', 2, 2), new OperatorInfo('^=', 2, 2), new OperatorInfo('/=', 2, 2), new OperatorInfo('*=', 2, 2), new OperatorInfo('%=', 2, 2), new OperatorInfo('<<=', 2, 2), new OperatorInfo('>>=', 2, 2), new OperatorInfo('-=', 2, 2), new OperatorInfo('[]=', 2, 2)]);
   var HEX = '0123456789ABCDEF';
   trace.GENERICS = false;
+  trace.spaces = '';
   var yy_accept = [110, 110, 110, 36, 39, 109, 71, 39, 39, 88, 15, 39, 62, 92, 68, 75, 24, 67, 32, 30, 55, 55, 23, 93, 63, 4, 45, 87, 39, 47, 61, 91, 17, 101, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 60, 16, 90, 102, 109, 72, 110, 97, 110, 58, 58, 58, 58, 58, 12, 65, 5, 110, 21, 110, 10, 51, 11, 27, 9, 2, 33, 110, 109, 8, 110, 55, 110, 110, 43, 110, 110, 34, 94, 64, 38, 46, 95, 1, 47, 7, 47, 47, 47, 47, 47, 47, 47, 31, 47, 47, 47, 47, 47, 47, 48, 47, 50, 59, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 6, 66, 58, 58, 58, 58, 58, 81, 58, 110, 43, 110, 110, 110, 109, 110, 33, 54, 57, 56, 13, 14, 1, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 44, 47, 47, 47, 47, 70, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 104, 47, 106, 47, 47, 58, 58, 58, 58, 58, 58, 110, 33, 109, 47, 47, 47, 19, 47, 47, 47, 47, 47, 47, 35, 37, 47, 47, 47, 47, 47, 47, 47, 73, 47, 47, 47, 47, 86, 47, 47, 47, 47, 100, 103, 47, 47, 47, 58, 77, 78, 58, 58, 58, 0, 47, 18, 20, 22, 25, 47, 47, 47, 47, 41, 42, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 98, 47, 105, 47, 108, 58, 79, 80, 58, 3, 47, 47, 29, 40, 49, 52, 47, 47, 47, 47, 47, 85, 89, 96, 99, 47, 76, 58, 47, 28, 47, 47, 47, 83, 47, 107, 82, 26, 47, 47, 74, 47, 53, 69, 84, 110];
   var yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 6, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 20, 20, 20, 21, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29, 29, 29, 30, 29, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 32, 33, 34, 35, 31, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 31, 46, 47, 48, 49, 50, 51, 31, 52, 53, 54, 55, 56, 57, 58, 59, 31, 60, 61, 62, 63, 1];
   var yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 4, 4, 5, 1, 1, 1, 1, 1, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 1, 1, 1];

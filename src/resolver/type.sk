@@ -7,11 +7,9 @@ class Type {
 
   // This contains types used in the definition of this type. Classes derive
   // from at most one base class and implement any number of interfaces.
-  // Interfaces can extend any number of other interfaces. Structs are just
-  // named tuples and cannot derive from or implement any other types.
-  // Functions have one return type followed by a relevant type for each
-  // argument variable. Type parameters are either unbounded or have a single
-  // type bound.
+  // Interfaces can extend any number of other interfaces. Functions have one
+  // return type followed by a relevant type for each argument variable. Type
+  // parameters are either unbounded or have a single type bound.
   List<Type> relevantTypes = null;
 
   // Types that have been substituted for the type parameters of this symbol.

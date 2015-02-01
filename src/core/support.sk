@@ -260,10 +260,11 @@ string bytesToString(int bytes) {
 
 namespace trace {
   const var GENERICS = false;
+  var spaces = "";
 
-  void indent() {}
-  void dedent() {}
-  void log(string text) {}
+  void indent() { spaces += "  "; }
+  void dedent() { spaces = spaces.slice(2, spaces.size()); }
+  void log(string text) { terminal.print(spaces + text); }
 }
 
 class StringComparison : Comparison<string> {
