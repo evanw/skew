@@ -69,3 +69,4 @@ Example usage:
     * [Development](docs/compiler.md#development)
     * [Lexing](docs/compiler.md#lexing)
     * [Parsing](docs/compiler.md#parsing)
+    * [Syntax Tree](docs/compiler.md#syntax-tree)
