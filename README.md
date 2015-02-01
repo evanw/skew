@@ -8,7 +8,7 @@ The compiler currently contains a production-quality JavaScript target and a par
 
 ## What is it?
 
-This language uses curly-brace syntax and has classes, interfaces, namespaces, enums, type inference, garbage collection, preprocessing, order independent declarations, and more. It looks like this:
+This language has curly-brace syntax, classes, interfaces, namespaces, enums, type inference, garbage collection, preprocessing, order independent declarations, and more. It looks like this:
 
     using terminal;
 
@@ -24,7 +24,7 @@ This language uses curly-brace syntax and has classes, interfaces, namespaces, e
 
 The intent is to use this language for the platform-independent stuff in an application and to use the language native to the target platform for the platform-specific stuff. When done properly, the vast majority of the code is completely platform-independent and new platforms can be targeted easily with a small platform-specific shim.
 
-### Pros:
+**Pros:**
 
 * **Native code emission:** For native targets, application logic is compiled directly to native code and is not interpreted in a virtual machine. Native apps don't have to pay for JIT warmup time and native app performance is not at the whim of heuristics. The generated code can be compiled using industry-standard compilers that leverage decades of optimization work.
 * **Fast compile times:** Code compiles at the speed of a browser refresh. Web development still feels like web development despite using an optimizing compiler with static typing. This is in contrast to many other comparable compile-to-JavaScript solutions.
@@ -32,7 +32,7 @@ The intent is to use this language for the platform-independent stuff in an appl
 * **Easy integration:** Generated code is very readable and closely corresponds with the original. Language features allow for the easy import and export of code to and from the target language.
 * **Fast iteration time:** In addition to a fast compiler and a good debugging experience, garbage collection is used instead of manual memory management. This eliminates a whole class of time-consuming bugs that get in the way of the important stuff.
 
-### Cons:
+**Cons:**
 
 * **Lack of IDE support:** IDE support is planned but is a significant undertaking and will not materialize for a while. Developers who normally lean heavily on IDEs will be less efficient than usual.
 * **Immaturity:** This is a new programming language and hasn't stood the test of time. There will likely be many rough edges both in the language design and in the tools. Many planned features are not yet implemented.

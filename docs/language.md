@@ -1,5 +1,7 @@
 # Language Features
 
+This gives a brief overview of each language feature.
+
 ## Primitives
 
 Skew has a few primitive types: void, bool, int, float, double, and string. Primitives are immutable and non-nullable since that maps the cleanest to all target platforms. The range of the int type is left unspecified to improve code readability in generated code. There is no unsigned integer type since it leads to performance penalties for some targets. Strings define the + and += operators which will automatically call toString() on any non-string type.

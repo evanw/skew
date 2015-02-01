@@ -67,6 +67,10 @@
 
 #endif
 
+// This is used by the compiler to implement map literals:
+//
+//   { "a": false, "b": true } => StringMap.literal<bool>(["a", "b"], [false, true])
+//
 in StringMap {
   static pure StringMap<X> literal<X>(List<string> keys, List<X> values) {
     var map = StringMap<X>();

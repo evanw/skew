@@ -72,6 +72,10 @@
 
 #endif
 
+// This is used by the compiler to implement map literals:
+//
+//   { 1: false, 2: true } => IntMap.literal<bool>([1, 2], [false, true])
+//
 in IntMap {
   static pure IntMap<X> literal<X>(List<int> keys, List<X> values) {
     var map = IntMap<X>();

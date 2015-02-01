@@ -100,7 +100,7 @@ namespace terminal {
     void flush() {
     }
 
-    void print(string text) {
+    inline void print(string text) {
       write(text + "\n");
     }
 
@@ -149,18 +149,19 @@ namespace terminal {
       }
     }
 
-    void flush() {
-      `std`::cout.flush();
-    }
-
     @NeedsInclude("<iostream>")
-    inline void print(string text) {
-      `std`::cout << text << `std`::endl;
-    }
+    inline {
+      void flush() {
+        `std`::cout.flush();
+      }
 
-    @NeedsInclude("<iostream>")
-    inline void write(string text) {
-      `std`::cout << text;
+      void print(string text) {
+        `std`::cout << text << `std`::endl;
+      }
+
+      void write(string text) {
+        `std`::cout << text;
+      }
     }
 
   #else

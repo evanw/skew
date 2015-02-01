@@ -1,5 +1,7 @@
 # Compiler
 
+This documents the internals of the compiler.
+
 ## Development
 
 Development on the compiler itself is straightforward since the compiler compiles itself. The current build of the compiler in JavaScript is included in the repo as `skewc.js` and is used by `Makefile`. Here are some useful commands:
