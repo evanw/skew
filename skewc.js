@@ -13898,7 +13898,7 @@
     parser.define(OptionType.BOOL, Option.SOURCE_MAP, '--source-map', 'Generates a source map when targeting JavaScript. The source map is saved with the ".map" extension in the same directory as the main output file.');
     parser.define(OptionType.BOOL, Option.INLINE, '--inline', 'Uses heuristics to automatically inline simple functions.');
     parser.define(OptionType.BOOL, Option.GLOBALIZE, '--globalize', 'Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.');
-    parser.define(OptionType.BOOL, Option.REMOVE_ASSERTS, '--remove-asserts', 'Removes all assert statements prior to compilation.');
+    parser.define(OptionType.BOOL, Option.REMOVE_ASSERTS, '--remove-asserts', 'Removes all assert statements during compilation.');
     parser.define(OptionType.BOOL, Option.FOLD_CONSTANTS, '--fold-constants', 'Evaluates constants at compile time and removes dead code inside functions.');
     parser.define(OptionType.BOOL, Option.MINIFY, '--minify', 'Omits whitespace so the emitted JavaScript takes up less space.');
     parser.define(OptionType.BOOL, Option.MANGLE, '--mangle', 'Transforms your JavaScript code to be as small as possible. The "export" modifier prevents renaming a symbol.');

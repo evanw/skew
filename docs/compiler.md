@@ -1,31 +1,6 @@
 # Compiler
 
-The top-level command is `skewc`, which can be installed using `npm install -g skew`. Example usage:
-
-    skewc input.sk --target=js --output-file=output.js --release
-
-Descriptions of all compiler flags can be accessed with `--help` and looks like this:
-
-Flag&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description
----|---
-  --target=___       | Sets the target format. Valid targets are "cpp", "joined", "js", "json-ast", "lisp-ast", and "xml-ast".
-  --output-file=___  | Combines all output into a single file. Mutually exclusive with --output-dir.
-  --output-dir=___   | Places all output files in the specified directory. Mutually exclusive with --output-file.
-  --define:___       | Overrides the value of a #define statement. Example: --define:UNIT_TESTS=true.
-  --release          | Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE.
-  --config=___       | Provides the configuration for the target format. Valid configurations are "browser" and "node" for JavaScript and "android", "ios", "linux", "osx", and "windows" for C++. Defaults to "browser" for JavaScript and the current operating system for C++.
-  --verbose          | Prints out information about the compilation.
-  --gc=___           | Sets the garbage collection strategy when targeting C++. Valid strategies are "mark-sweep", "none", and "none-fast". Defaults to "none".
-  --source-map       | Generates a source map when targeting JavaScript. The source map is saved with the ".map" extension in the same directory as the main output file.
-  --inline           | Uses heuristics to automatically inline simple functions.
-  --globalize        | Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.
-  --remove-asserts   | Removes all assert statements prior to compilation.
-  --fold-constants   | Evaluates constants at compile time and removes dead code inside functions.
-  --minify           | Omits whitespace so the emitted JavaScript takes up less space.
-  --mangle           | Transforms your JavaScript code to be as small as possible. The "export" modifier prevents renaming a symbol.
-  --error-limit=___  | Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is 20.
-
-## Compiler Development
+## Development
 
 Development on the compiler itself is straightforward since the compiler compiles itself. The current build of the compiler in JavaScript is included in the repo as `skewc.js` and is used by `Makefile`. Here are some useful commands:
 
@@ -33,3 +8,21 @@ Development on the compiler itself is straightforward since the compiler compile
 * `make check`: Run the compiler through itself a few times for a sanity check
 * `make replace`: Replace the top-level `skewc.js` file with a newer version of itself
 * `make test`: Run all tests under `tests/system`
+
+## Lexing
+
+The lexer is split into two files, `src/lexer/token.sk` and `src/lexer/lexer.sk`. It started off as a hand-written lexer but now uses [flex](http://flex.sourceforge.net/) for speed. The `src/lexer/build.py` script takes `src/lexer/flex.l` and generates `lexer.sk` by running `flex` and extracting the embedded magic constants and lookup tables from its output. The generated lexer source code is checked in because it changes infrequently and because it avoids requiring `flex` as a dependency. The output of `flex` is awful for a number of reasons but it's really fast.
+
+Lexing technically requires infinite lookahead due to the generic type syntax. Like C#, angle brackets are matched using syntactic structure alone without a symbol table. When a `<` token is encountered, it's only considered the start of a parameterization expression if there's a matching `>` ahead in the token stream and the tokens in between meet certain conditions. This lookahead may sound expensive, but it's done in a single O(n) token pre-pass in `token.sk` using a stack. This means the lexer is still O(n).
+
+Using angle brackets for generics adds the additional complexity of needing to split tokens that start with a `>`. For example, the type `Foo<Bar<T>>` should end with two `>` tokens, not one `>>` token. To maintain an O(n) bound, the lexer inserts a `null` space after every token starting with a `>` in case it needs to be split. If it didn't do that, inserting new tokens into the token stream during a split would require shifting all remaining tokens over for each split and would make the bound O(n^2). All unused null spaces are removed in the token pre-pass, so tokens coming out of the lexer are still tightly packed.
+
+## Parsing
+
+The hand-written parser uses recursive descent for statements and a Pratt parser for expressions. Pratt parsing support is in `src/parser/pratt.sk` and the grammar implementation is in `src/parser/parser.sk`. For a grammar overview, look at `createParser()` for expressions and `parseStatement()` for statements.
+
+The parser only needs a single token of look-ahead due to the token pre-pass. The two tricky parts are parsing C-style typed declarations and cast expressions, where the type comes in front. Typed declarations are parsed using `parsePossibleTypedDeclaration()`, which parses an expression with a high precedence and then looks for an identifier immediately following it. If the identifier isn't present, it resumes expression parsing with a lower precedence instead of parsing a complete declarations. A parenthesized expression is parsed as a C-style cast if the parenthesized contents pass `looksLikeType()` and the next token could be the start of an expression.
+
+Error recovery is accomplished by scanning forward after an error using `scanForToken()` until the next statement or the next closing token. Errors encountered while parsing an expression insert a special error node so the expression is still a valid syntax tree and the successfully parsed parts can still be type checked. Errors encountered while parsing a statement mean the statement is dropped completely.
+
+One decision that may seem strange is that the C-style "preprocessor" is actually integrated into the grammar. This both ensures that syntax errors can't hide lurk undetected inside a dead preprocessor branch and that the syntax trees for unmodified files can be trivially cached by an interactive compiler.

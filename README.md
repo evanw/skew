@@ -40,9 +40,13 @@ The intent is to use this language for the platform-independent stuff in an appl
 * **No cross-platform multithreading:** Multithreading is not a language feature and needs to be done in the target language. This limits multithreading opportunities to cleanly separable tasks like image decoding.
 * **Lack of low-level features:** Features such as memory layout, move semantics, destructors, and vector instructions are intentionally omitted. These features don't map well to all language targets and their emulation is expensive. Use of these features is limited to imported library routines implemented in the target language.
 
-## Installing
+## Getting Started
 
-Run `npm install -g skew` to install the `skewc` compiler command globally. It will attempt to compile an optimized C++11 build of the compiler but will fall back to a JavaScript build of the compiler if no C++11 compiler is detected. The `npm` command is a package manager bundled with [node](http://nodejs.org/download/).
+Run `npm install -g skew` to install the `skewc` compiler command globally (the `npm` command is a package manager bundled with [node](http://nodejs.org/download/)). The installation will attempt to compile an optimized C++11 build of the compiler but will fall back to a JavaScript build of the compiler if no C++11 compiler is detected. Descriptions of all compiler flags can be accessed with `skewc --help`.
+
+Example usage:
+
+    skewc input.sk --target=js --output-file=output.js --release
 
 ## Documentation
 
@@ -60,4 +64,8 @@ Run `npm install -g skew` to install the `skewc` compiler command globally. It w
     * [Operator Overloading](docs/language.md#operator-overloading)
     * [Casting](docs/language.md#casting)
     * [Function Inlining and Quoting](docs/language.md#function-inlining-and-quoting)
+
 * [Compiler](docs/compiler.md)
+    * [Development](docs/compiler.md#development)
+    * [Lexing](docs/compiler.md#lexing)
+    * [Parsing](docs/compiler.md#parsing)
