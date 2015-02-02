@@ -4491,7 +4491,7 @@
       var variable = variables[i];
       var symbol = variable.symbol;
       var isCompoundName = symbol !== null && (js.Emitter.hasCompoundName(symbol) || symbol.isExport());
-      if (symbol !== null && (in_SymbolKind.isInstance(symbol.kind) || symbol.isImport()) || isCompoundName && variable.variableValue() === null) {
+      if (symbol !== null && (in_SymbolKind.isInstance(symbol.kind) || symbol.isImport() || this.options.foldAllConstants && symbol.isConst()) || isCompoundName && variable.variableValue() === null) {
         continue;
       }
       this.emitSemicolonIfNeeded();
@@ -4800,7 +4800,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/js/emitter.sk:648:16)');
+        throw new Error('assert false; (src/js/emitter.sk:658:16)');
       }
       break;
     }
@@ -4928,7 +4928,7 @@
   };
   js.Emitter.prototype.isRightChildOfBinaryExpression = function(node, kind) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:767:7)');
+      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:777:7)');
     }
     while (in_NodeKind.isBinaryOperator(node.parent.kind)) {
       if (node.parent.binaryRight() === node) {
@@ -9843,13 +9843,23 @@
       node.become(Node.createType(member.type).withRange(node.range).withSymbol(member.symbol));
       return;
     }
+    if (member.symbol.kind === SymbolKind.DEFINE) {
+      if (member.symbol.constant === null) {
+        throw new Error('assert member.symbol.constant != null; (src/resolver/resolver.sk:2964:7)');
+      }
+      if (!member.type.isBool(this.cache)) {
+        throw new Error('assert member.type.isBool(cache); (src/resolver/resolver.sk:2965:7)');
+      }
+      node.kind = NodeKind.BOOL;
+      node.content = member.symbol.constant;
+    }
     node.type = member.type;
     this.checkPureInsideFunction(node);
   };
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2968:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:2976:7)');
       }
       var symbol = this.context.symbolForThis;
       this.initializeSymbol(symbol);
@@ -9983,7 +9993,7 @@
         var item = items[i];
         if (item.kind !== NodeKind.KEY_VALUE) {
           if (item.kind !== NodeKind.ERROR) {
-            throw new Error('assert item.kind == .ERROR; (src/resolver/resolver.sk:3145:11)');
+            throw new Error('assert item.kind == .ERROR; (src/resolver/resolver.sk:3153:11)');
           }
           continue;
         }
@@ -9996,7 +10006,7 @@
       for (var i = 0; i < items.length; i = i + 1 | 0) {
         if (items[i].kind !== NodeKind.KEY_VALUE) {
           if (items[i].kind !== NodeKind.ERROR) {
-            throw new Error('assert items[i].kind == .ERROR; (src/resolver/resolver.sk:3159:11)');
+            throw new Error('assert items[i].kind == .ERROR; (src/resolver/resolver.sk:3167:11)');
           }
           this.resolveNodesAsParameterizedExpressions(items);
           return;
@@ -10114,7 +10124,7 @@
     var value = node.callValue();
     var $arguments = node.callArguments();
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3324:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3332:5)');
     }
     this.resolve(value, null);
     this.checkIsParameterized(value);
@@ -10214,7 +10224,7 @@
       return;
     }
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3462:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3470:5)');
     }
     var sortedTypes = [];
     for (var i = 0; i < sortedParameters.length; i = i + 1 | 0) {
@@ -10479,7 +10489,7 @@
   };
   Resolver.prototype.assessOperatorOverloadMatch = function(nodeTypes, argumentTypes) {
     if (nodeTypes.length !== (1 + argumentTypes.length | 0)) {
-      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3827:5)');
+      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3835:5)');
     }
     var foundImplicitConversion = false;
     for (var i = 0; i < argumentTypes.length; i = i + 1 | 0) {
@@ -10544,15 +10554,15 @@
     for (var i = 0; i < overloads.length; i = i + 1 | 0) {
       var overload = overloads[i];
       if (!overload.type.isFunction()) {
-        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3910:7)');
+        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:3918:7)');
       }
       if ((overload.type.argumentTypes().length + 1 | 0) !== children.length) {
-        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3911:7)');
+        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:3919:7)');
       }
       var member = targetType.findOperatorOverload(overload);
       this.initializeMember(member);
       if (!member.type.isFunction()) {
-        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3914:7)');
+        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:3922:7)');
       }
       var match = this.assessOperatorOverloadMatch(typeForMatching, member.type.argumentTypes());
       if (match > bestMatch) {

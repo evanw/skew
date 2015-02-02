@@ -358,21 +358,29 @@ namespace js {
 
     void emitVariables(List<Node> variables) {
       var state = ClusterState.NONE;
+
       for (var i = 0; i < variables.size(); i++) {
         var variable = variables[i];
         var symbol = variable.symbol;
         var isCompoundName = symbol != null && (hasCompoundName(symbol) || symbol.isExport());
-        if (symbol != null && (symbol.kind.isInstance() || symbol.isImport()) || isCompoundName && variable.variableValue() == null) {
+
+        if (symbol != null && (symbol.kind.isInstance() || symbol.isImport() || options.foldAllConstants && symbol.isConst()) || isCompoundName && variable.variableValue() == null) {
           continue;
         }
+
         emitSemicolonIfNeeded();
+
+        // Use assignment statements for compound names
         if (isCompoundName) {
           if (state != .NONE) {
             emit(";" + newline);
           }
           state = .COMPOUND_NAME;
           emit(indent);
-        } else {
+        }
+
+        // Use variable declarations for simple names
+        else {
           if (state != .VAR_CHAIN) {
             if (state == .COMPOUND_NAME) {
               emit(";" + newline);
@@ -384,8 +392,10 @@ namespace js {
             maybeEmitMinifedNewline();
           }
         }
+
         emitNode(variable);
       }
+
       if (state != .NONE) {
         emitSemicolonAfterStatement();
       }

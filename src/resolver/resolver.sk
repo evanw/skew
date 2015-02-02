@@ -2959,6 +2959,14 @@ class Resolver {
       return;
     }
 
+    // Replace #define variables with their contents
+    if (member.symbol.kind == .DEFINE) {
+      assert member.symbol.constant != null;
+      assert member.type.isBool(cache);
+      node.kind = .BOOL;
+      node.content = member.symbol.constant;
+    }
+
     node.type = member.type;
     checkPureInsideFunction(node);
   }
