@@ -448,4 +448,34 @@ int foo() {
 }
 ");
 
+testCPP("
+#define FOO false
+export var foo = FOO;
+export bool bar() { return FOO; }
+", "
+bool bar();
+
+extern bool foo;
+
+bool bar() {
+  return false;
+}
+
+bool foo = false;
+");
+
+testCPP("
+export bool foo() {
+  const var foo = false;
+  return foo;
+}
+", "
+bool foo();
+
+bool foo() {
+  bool foo = false;
+  return foo;
+}
+");
+
 }}

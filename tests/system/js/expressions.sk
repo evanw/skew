@@ -614,4 +614,31 @@ export void foo(Foo foo) {
 }());
 ");
 
+testJS("
+#define FOO false
+export var foo = FOO;
+export bool bar() { return FOO; }
+", "
+(function() {
+  bar = function() {
+    return false;
+  };
+  foo = false;
+}());
+");
+
+testJS("
+export bool foo() {
+  const var foo = false;
+  return foo;
+}
+", "
+(function() {
+  foo = function() {
+    var foo = false;
+    return foo;
+  };
+}());
+");
+
 }}
