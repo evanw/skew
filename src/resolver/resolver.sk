@@ -84,7 +84,7 @@ class Resolver {
     assert program.kind == .PROGRAM;
     var globalScope = Scope(null);
     cache.insertGlobals(globalScope);
-    constantFolder = ConstantFolder(cache);
+    constantFolder = ConstantFolder(cache, options);
     runPreprocessor(program, globalScope);
     prepareNode(program, globalScope);
     cache.linkGlobals(globalScope);
@@ -1875,6 +1875,35 @@ class Resolver {
     symbol.flags &= ~flag;
   }
 
+  void maybeInlineConstant(Node node) {
+    var symbol = node.symbol;
+
+    // Replace #define variables with their contents, since #define variables
+    // don't have a declaration that will be emitted.
+    //
+    // Always inlining constant variables is bad for readability. However, we
+    // also need to inline global const variables used in pure functions to
+    // avoid a subtle initialization issue:
+    //
+    //   pure int foo() {
+    //     return baz;
+    //   }
+    //   export var bar = foo();
+    //   const var baz = 0;
+    //
+    // You would think that this could also be solived by reordering all global
+    // constants above all global non-constant variables along with enums. The
+    // problem is that initialization order for C++ is unspecified. While it's
+    // true that C++ initialization order is specified within a translation
+    // unit, users likely expect to be able to call a pure function outside
+    // that translation unit. In addition, strings are not constants in C++ and
+    // require initialization to be valid. The safest and most general thing to
+    // do is to always substitute constants in pure functions.
+    if (symbol != null && (symbol.kind == .DEFINE || symbol.kind == .GLOBAL_VARIABLE && symbol.isConst() && context.inPureFunction() && !symbol.isEnumValue())) {
+      constantFolder.flatten(node, symbol.constant);
+    }
+  }
+
   void generateDefaultConstructor(Symbol symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     var members = enclosingSymbol.type.sortedMembers();
@@ -2959,16 +2988,9 @@ class Resolver {
       return;
     }
 
-    // Replace #define variables with their contents
-    if (member.symbol.kind == .DEFINE) {
-      assert member.symbol.constant != null;
-      assert member.type.isBool(cache);
-      node.kind = .BOOL;
-      node.content = member.symbol.constant;
-    }
-
     node.type = member.type;
     checkPureInsideFunction(node);
+    maybeInlineConstant(node);
   }
 
   void resolveThis(Node node) {
@@ -3322,6 +3344,7 @@ class Resolver {
     }
 
     checkPureInsideFunction(node);
+    maybeInlineConstant(node);
   }
 
   void resolveCall(Node node) {

@@ -1,5 +1,10 @@
 class ConstantFolder {
-  TypeCache cache;
+  final TypeCache cache;
+  final CompilerOptions options;
+
+  bool targetHasNoNestedScopes() {
+    return options.target == .JAVASCRIPT;
+  }
 
   void flatten(Node node, Content content) {
     node.removeChildren();
@@ -82,6 +87,7 @@ class ConstantFolder {
     else if (kind.isCast()) foldCast(node);
     else if (kind.isUnaryOperator()) foldUnaryOperator(node, kind);
     else if (kind.isBinaryOperator()) foldBinaryOperator(node, kind);
+    else if (kind == .VARIABLE_CLUSTER) foldVariableCluster(node);
     else if (kind == .HOOK) foldHook(node);
   }
 
@@ -165,19 +171,28 @@ class ConstantFolder {
         return -1;
       }
 
-      // Replace "for (a; false; c) d;" with "a;"
-      else if (setup.kind != .VARIABLE_CLUSTER) {
-        node.replaceWith(Node.createExpression(setup.remove()));
+      // Replace "for (var a = 0; false; c) d;" with "var a = 0;"
+      else if (setup.kind == .VARIABLE_CLUSTER) {
+        if (targetHasNoNestedScopes()) {
+          node.replaceWith(setup.remove());
+        }
+
+        // This loop can't be folded completely because that would pollute the
+        // enclosing scope in targets where that matters
+        else {
+          var update = node.forUpdate();
+          var block = node.forBlock();
+          if (update != null) {
+            update.replaceWith(null);
+          }
+          block.removeChildren();
+          block.children = [];
+        }
       }
 
-      // The code "for (var a = 0; false; c) d;" can't be folded
-      // completely because that would pollute the enclosing scope
+      // Replace "for (a; false; c) d;" with "a;"
       else {
-        var update = node.forUpdate();
-        if (update != null) {
-          update.replaceWith(null);
-        }
-        node.forBlock().removeChildren();
+        node.replaceWith(Node.createExpression(setup.remove()));
       }
     }
     return 0;
@@ -211,8 +226,8 @@ class ConstantFolder {
         falseBlock.replaceWith(null);
       }
 
-      // Be careful not to pollute the enclosing scope
-      if (!blockContainsVariableCluster(trueBlock)) {
+      // Be careful not to pollute the enclosing scope in targets where that matters
+      if (targetHasNoNestedScopes() || !blockContainsVariableCluster(trueBlock)) {
         var replacements = trueBlock.removeChildren();
         node.replaceWithNodes(replacements);
         return replacements.size() - 1;
@@ -227,8 +242,8 @@ class ConstantFolder {
         return -1;
       }
 
-      // Be careful not to pollute the enclosing scope
-      if (!blockContainsVariableCluster(falseBlock)) {
+      // Be careful not to pollute the enclosing scope in targets where that matters
+      if (targetHasNoNestedScopes() || !blockContainsVariableCluster(falseBlock)) {
         var replacements = falseBlock.removeChildren();
         node.replaceWithNodes(replacements);
         return replacements.size() - 1;
@@ -289,6 +304,16 @@ class ConstantFolder {
     }
 
     return 0;
+  }
+
+  void foldVariableCluster(Node node) {
+    var variables = node.clusterVariables();
+    for (var i = 0; i < variables.size(); i++) {
+      var variable = variables[i];
+      if (variable.symbol.isConst()) {
+        variable.remove();
+      }
+    }
   }
 
   void foldBlock(Node node) {

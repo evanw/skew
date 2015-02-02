@@ -135,4 +135,22 @@ alias Bar = Foo;
 }());
 ");
 
+testJS("
+pure int foo() {
+  const var bar = 1;
+  return baz + bar;
+}
+export var bar = foo();
+const var baz = 0;
+", "
+(function() {
+  function foo() {
+    var bar = 1;
+    return 0 + bar | 0;
+  }
+  bar = foo();
+  var baz = 0;
+}());
+");
+
 }}

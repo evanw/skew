@@ -967,10 +967,11 @@ namespace js {
     }
 
     static string numberToName(int number) {
+      const var WRAP = 26 * 2;
       var name = "";
-      if (number >= 52) {
-        name = numberToName(number / 52 - 1);
-        number = number % 52;
+      if (number >= WRAP) {
+        name = numberToName(number / WRAP - 1);
+        number = number % WRAP;
       }
       name += string.fromCodeUnit(number + (number < 26 ? 'a' : 'A' - 26));
       return name;

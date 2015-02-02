@@ -979,6 +979,42 @@ export bool foo() {
 ").release();
 
 testJS("
+export int foo(int y) {
+  if (true) {
+    var x = 100;
+    y += x;
+  }
+  return y;
+}
+", "
+(function(){foo=function(a){var b=100;return a=a+b|0,a}}());
+").release();
+
+testJS("
+export int foo(int y) {
+  if (false) {
+  } else {
+    var x = 100;
+    y += x;
+  }
+  return y;
+}
+", "
+(function(){foo=function(a){var b=100;return a=a+b|0,a}}());
+").release();
+
+testJS("
+export int foo(int y) {
+  for (var x = 100; false; x++) {
+    y += x;
+  }
+  return y;
+}
+", "
+(function(){foo=function(a){var b=100;return a}}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }

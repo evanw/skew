@@ -364,7 +364,7 @@ namespace js {
         var symbol = variable.symbol;
         var isCompoundName = symbol != null && (hasCompoundName(symbol) || symbol.isExport());
 
-        if (symbol != null && (symbol.kind.isInstance() || symbol.isImport() || options.foldAllConstants && symbol.isConst()) || isCompoundName && variable.variableValue() == null) {
+        if (symbol != null && (symbol.kind.isInstance() || symbol.isImport()) || isCompoundName && variable.variableValue() == null) {
           continue;
         }
 

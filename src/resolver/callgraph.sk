@@ -1,11 +1,11 @@
 class CallInfo {
-  Symbol symbol;
-  List<Node> callSites = [];
+  final Symbol symbol;
+  final List<Node> callSites = [];
 }
 
 class CallGraph {
-  List<CallInfo> callInfo = [];
-  var symbolToInfoIndex = IntMap<int>();
+  final List<CallInfo> callInfo = [];
+  final var symbolToInfoIndex = IntMap<int>();
 
   new(Node program) {
     assert program.kind == .PROGRAM;

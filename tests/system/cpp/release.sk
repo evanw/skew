@@ -1,0 +1,83 @@
+namespace cpp { void testRelease() {
+
+testCPP("
+export int foo(int y) {
+  if (true) {
+    var x = 1;
+    y += x;
+  }
+  if (true) {
+    var x = 1;
+    y += x;
+  }
+  return y;
+}
+", "
+int foo(int y);
+
+int foo(int y) {
+  if (true) {
+    int x = 1;
+    y += x;
+  }
+
+  if (true) {
+    int x = 1;
+    y += x;
+  }
+
+  return y;
+}
+").release();
+
+testCPP("
+export int foo(int y) {
+  if (false) {
+  } else {
+    var x = 1;
+    y += x;
+  }
+  if (false) {
+  } else {
+    var x = 1;
+    y += x;
+  }
+  return y;
+}
+", "
+int foo(int y);
+
+int foo(int y) {
+  if (true) {
+    int x = 1;
+    y += x;
+  }
+
+  if (true) {
+    int x = 1;
+    y += x;
+  }
+
+  return y;
+}
+").release();
+
+testCPP("
+export int foo(int y) {
+  for (var x = 100; false; x++) {
+    y += x;
+  }
+  return y;
+}
+", "
+int foo(int y);
+
+int foo(int y) {
+  for (int x = 100; false;) {
+  }
+
+  return y;
+}
+").release();
+
+}}

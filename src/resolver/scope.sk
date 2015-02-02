@@ -1,6 +1,6 @@
 class Scope {
   // This is the lexically enclosing scope. It will be null for the global scope.
-  Scope lexicalParent;
+  final Scope lexicalParent;
 
   // This references the type containing the member symbols for this scope. If
   // this is null, lookups fall back to the list of locals.

@@ -284,6 +284,7 @@ int start() {
   cpp.testFunctions();
   cpp.testNeedsInclude();
   cpp.testObjects();
+  cpp.testRelease();
   cpp.testStatements();
 
   return runAllTests();

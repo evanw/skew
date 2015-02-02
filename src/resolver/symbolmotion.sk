@@ -1,5 +1,5 @@
 class SymbolMotionPass {
-  Resolver resolver;
+  final Resolver resolver;
 
   static void run(Resolver resolver) {
     var pass = SymbolMotionPass(resolver);
