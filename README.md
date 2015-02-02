@@ -64,9 +64,12 @@ Example usage:
     * [Operator Overloading](docs/language.md#operator-overloading)
     * [Casting](docs/language.md#casting)
     * [Function Inlining and Quoting](docs/language.md#function-inlining-and-quoting)
+    * [Preprocessor](docs/language.md#preprocessor)
 
 * [Compiler](docs/compiler.md)
     * [Development](docs/compiler.md#development)
     * [Lexing](docs/compiler.md#lexing)
     * [Parsing](docs/compiler.md#parsing)
     * [Syntax Tree](docs/compiler.md#syntax-tree)
+    * [Preprocessing](docs/compiler.md#preprocessing)
+    * [Type Checking](docs/compiler.md#type-checking)
