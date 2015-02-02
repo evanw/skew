@@ -676,6 +676,18 @@ namespace js {
         trueValue.swapWith(falseValue);
       }
 
+      // "a ? a : b" => "a || b"
+      if (looksTheSame(test, trueValue)) {
+        node.become(Node.createBinary(.LOGICAL_OR, test.replaceWith(null), falseValue.replaceWith(null)));
+        return;
+      }
+
+      // "a ? b : a" => "a && b"
+      if (looksTheSame(test, falseValue)) {
+        node.become(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), trueValue.replaceWith(null)));
+        return;
+      }
+
       // "a ? b : b" => "a, b"
       if (looksTheSame(trueValue, falseValue)) {
         node.become(test.hasNoSideEffects() ? trueValue.replaceWith(null) : Node.createSequence([test.replaceWith(null), trueValue.replaceWith(null)]));

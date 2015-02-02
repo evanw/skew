@@ -5759,6 +5759,14 @@
       falseValue = temp;
       trueValue.swapWith(falseValue);
     }
+    if (this.looksTheSame(test, trueValue)) {
+      node.become(Node.createBinary(NodeKind.LOGICAL_OR, test.replaceWith(null), falseValue.replaceWith(null)));
+      return;
+    }
+    if (this.looksTheSame(test, falseValue)) {
+      node.become(Node.createBinary(NodeKind.LOGICAL_AND, test.replaceWith(null), trueValue.replaceWith(null)));
+      return;
+    }
     if (this.looksTheSame(trueValue, falseValue)) {
       node.become(test.hasNoSideEffects() ? trueValue.replaceWith(null) : Node.createSequence([test.replaceWith(null), trueValue.replaceWith(null)]));
       return;
@@ -5841,7 +5849,7 @@
   };
   js.Patcher.prototype.unionVariableWithFunction = function(node) {
     if (node.symbol.kind === SymbolKind.LOCAL_VARIABLE !== (this.currentFunction !== null)) {
-      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:791:7)');
+      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:803:7)');
     }
     if (this.currentFunction !== null) {
       var left = this.namingGroupIndexForSymbol._table[this.currentFunction.uniqueID];
@@ -5870,7 +5878,7 @@
         this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
       } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
         if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
-          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:829:11)');
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:841:11)');
         }
         if (value.kind === NodeKind.INT) {
           var constant = value.asInt();
@@ -5932,7 +5940,7 @@
       return;
     }
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:918:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:930:7)');
     }
     var current = target;
     var parent = current.parent;

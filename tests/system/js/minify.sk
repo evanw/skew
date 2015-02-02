@@ -1021,6 +1021,32 @@ export int foo(int y) {
 ").release();
 
 testJS("
+export bool foo(bool bar, bool baz) {
+  return bar ? bar : baz;
+}
+", "
+(function(){foo=function(a,b){return a||b}}());
+").release();
+
+testJS("
+export Foo foo(Foo bar, Foo baz) {
+  return bar != null ? bar : baz;
+}
+alias Foo = List<int>;
+", "
+(function(){foo=function(a,b){return a||b}}());
+").release();
+
+testJS("
+export Foo foo(Foo bar, Foo baz) {
+  return bar == null ? bar : baz;
+}
+alias Foo = List<int>;
+", "
+(function(){foo=function(a,b){return a&&b}}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }
