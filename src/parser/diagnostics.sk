@@ -23,5 +23,5 @@ void syntaxErrorBadForEach(Log log, Range range) {
 }
 
 void syntaxWarningOctal(Log log, Range range) {
-  log.warning(range, "Use the prefix \"0o\" for octal numbers");
+  log.warning(range, "Number interpreted as decimal (use the prefix \"0o\" for octal numbers)");
 }

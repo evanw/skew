@@ -1,6 +1,17 @@
 namespace core { void testExpressions() {
 
 test("
+assert const 100 == 0b1100100;
+assert const 100 == 0100;
+assert const 100 == 0o144;
+assert const 100 == 0x64;
+", "
+<stdin>:2:21: warning: Number interpreted as decimal (use the prefix \"0o\" for octal numbers)
+assert const 100 == 0100;
+                    ~~~~
+");
+
+test("
 void foo() {
   int x;
   x++;

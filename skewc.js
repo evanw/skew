@@ -12496,7 +12496,7 @@
     log.error(range, 'More than one variable inside a for-each loop');
   }
   function syntaxWarningOctal(log, range) {
-    log.warning(range, 'Use the prefix "0o" for octal numbers');
+    log.warning(range, 'Number interpreted as decimal (use the prefix "0o" for octal numbers)');
   }
   function parseIntLiteral(text, base) {
     if (base !== 10) {
