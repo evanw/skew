@@ -109,7 +109,6 @@ in string {
     }
 
     else if (STRING_ENCODING == .UTF16) {
-      var result = "";
       for (var i = 0, n = codePoints.size(); i < n; i++) {
         var codePoint = codePoints[i];
         if (codePoint < 0x10000) {
