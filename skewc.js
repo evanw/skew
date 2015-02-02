@@ -2590,9 +2590,6 @@
     var column = line > 0 ? index - this.lineOffsets[line - 1 | 0] | 0 : index;
     return new LineColumn(line - 1 | 0, column);
   };
-  Source.prototype.rangeContainingEverything = function() {
-    return new Range(this, 0, this.contents.length);
-  };
   Source.prototype.computeLineOffsets = function() {
     if (this.lineOffsets === null) {
       this.lineOffsets = [0];
@@ -14025,7 +14022,9 @@
         for (var i = 0; i < result.outputs.length; i = i + 1 | 0) {
           var output = result.outputs[i];
           if (!io.writeFile(output.name, output.contents)) {
-            commandLineErrorUnwritableFile(log, parser.source.rangeContainingEverything(), output.name);
+            var outputFile = parser.stringRangeForOption(Option.OUTPUT_FILE);
+            var outputDirectory = parser.stringRangeForOption(Option.OUTPUT_DIRECTORY);
+            commandLineErrorUnwritableFile(log, outputFile !== null ? outputFile : outputDirectory, output.name);
             break;
           }
         }

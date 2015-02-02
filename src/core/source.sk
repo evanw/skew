@@ -47,10 +47,6 @@ class Source {
     return LineColumn(line - 1, column);
   }
 
-  Range rangeContainingEverything() {
-    return Range(this, 0, contents.size());
-  }
-
   void computeLineOffsets() {
     if (lineOffsets == null) {
       lineOffsets = [0];

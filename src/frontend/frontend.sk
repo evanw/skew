@@ -47,7 +47,9 @@ namespace frontend {
         for (var i = 0; i < result.outputs.size(); i++) {
           var output = result.outputs[i];
           if (!io.writeFile(output.name, output.contents)) {
-            commandLineErrorUnwritableFile(log, parser.source.rangeContainingEverything(), output.name);
+            var outputFile = parser.stringRangeForOption(.OUTPUT_FILE);
+            var outputDirectory = parser.stringRangeForOption(.OUTPUT_DIRECTORY);
+            commandLineErrorUnwritableFile(log, outputFile != null ? outputFile : outputDirectory, output.name);
             break;
           }
         }
