@@ -39,12 +39,14 @@ void test() {
 
 testCPP("
 export void test() {
+  -0x80000000;
   - -0x80000000;
 }
 ", "
 void test();
 
 void test() {
+  -2147483648;
   - -2147483648;
 }
 ");

@@ -71,24 +71,22 @@ class ConstantFolder {
           foldConstants(child);
         }
       }
-
-      // Test these here since hasChildren() is already true
-      if (kind == .BLOCK) {
-        foldBlock(node);
-        return;
-      } else if (kind == .SEQUENCE) {
-        foldSequence(node);
-        return;
-      }
     }
 
-    // Separating the if blocks into separate functions makes the JavaScript JIT go faster
-    if (kind == .NAME) foldName(node);
-    else if (kind.isCast()) foldCast(node);
-    else if (kind.isUnaryOperator()) foldUnaryOperator(node, kind);
-    else if (kind.isBinaryOperator()) foldBinaryOperator(node, kind);
-    else if (kind == .VARIABLE_CLUSTER) foldVariableCluster(node);
-    else if (kind == .HOOK) foldHook(node);
+    // Separating the case bodies into separate functions makes the JavaScript JIT go faster
+    switch (kind) {
+      case .BLOCK { foldBlock(node); }
+      case .CALL { foldCall(node); }
+      case .CAST, .IMPLICIT_CAST { foldCast(node); }
+      case .HOOK { foldHook(node); }
+      case .NAME { foldName(node); }
+      case .SEQUENCE { foldSequence(node); }
+      case .VARIABLE_CLUSTER { foldVariableCluster(node); }
+      default {
+        if (kind.isUnaryOperator()) foldUnaryOperator(node, kind);
+        else if (kind.isBinaryOperator()) foldBinaryOperator(node, kind);
+      }
+    }
   }
 
   void rotateStringConcatenation(Node node) {
@@ -108,36 +106,11 @@ class ConstantFolder {
     }
   }
 
-  void foldToString(Node node) {
-    if (node.kind == .CALL) {
-      var value = node.callValue();
-      if (value.kind == .DOT) {
-        var target = value.dotTarget();
-        var name = value.dotName();
-        if (target != null && target.kind.isConstant() && name != null && name.kind == .NAME && name.asString() == "toString") {
-          string text;
-          switch (target.kind) {
-            case .BOOL { text = target.asBool().toString(); }
-            case .INT { text = target.asInt().toString(); }
-            case .FLOAT, .DOUBLE { text = target.asDouble().toString(); }
-            case .STRING { text = target.asString(); }
-            default { return; }
-          }
-          flattenString(node, text);
-        }
-      }
-    }
-  }
-
   void foldStringConcatenation(Node node) {
     var left = node.binaryLeft();
     var right = node.binaryRight();
     assert left.type.isString(cache) || left.type.isIgnored(cache);
     assert right.type.isString(cache) || right.type.isIgnored(cache);
-
-    // Inline calls to "toString()" on constant values
-    foldToString(left);
-    foldToString(right);
 
     if (right.kind == .STRING) {
       // "a" + "b" => "ab"
@@ -363,6 +336,27 @@ class ConstantFolder {
   void foldName(Node node) {
     if (node.symbol != null && node.symbol.constant != null) {
       flatten(node, node.symbol.constant);
+    }
+  }
+
+  void foldCall(Node node) {
+    if (node.kind == .CALL) {
+      var value = node.callValue();
+      if (value.kind == .DOT) {
+        var target = value.dotTarget();
+        var name = value.dotName();
+        if (target != null && target.kind.isConstant() && name != null && name.kind == .NAME && name.asString() == "toString") {
+          string text;
+          switch (target.kind) {
+            case .BOOL { text = target.asBool().toString(); }
+            case .INT { text = target.asInt().toString(); }
+            case .FLOAT, .DOUBLE { text = target.asDouble().toString(); }
+            case .STRING { text = target.asString(); }
+            default { return; }
+          }
+          flattenString(node, text);
+        }
+      }
     }
   }
 

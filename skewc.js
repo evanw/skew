@@ -6729,92 +6729,71 @@
           this.foldConstants(child);
         }
       }
-      if (kind === NodeKind.BLOCK) {
-        this.foldBlock(node);
-        return;
-      } else if (kind === NodeKind.SEQUENCE) {
-        this.foldSequence(node);
-        return;
-      }
     }
-    if (kind === NodeKind.NAME) {
-      this.foldName(node);
-    } else if (in_NodeKind.isCast(kind)) {
+    switch (kind) {
+    case 2:
+      this.foldBlock(node);
+      break;
+    case 53:
+      this.foldCall(node);
+      break;
+    case 58:
+    case 59:
       this.foldCast(node);
-    } else if (in_NodeKind.isUnaryOperator(kind)) {
-      this.foldUnaryOperator(node, kind);
-    } else if (in_NodeKind.isBinaryOperator(kind)) {
-      this.foldBinaryOperator(node, kind);
-    } else if (kind === NodeKind.VARIABLE_CLUSTER) {
-      this.foldVariableCluster(node);
-    } else if (kind === NodeKind.HOOK) {
+      break;
+    case 40:
       this.foldHook(node);
+      break;
+    case 37:
+      this.foldName(node);
+      break;
+    case 56:
+      this.foldSequence(node);
+      break;
+    case 6:
+      this.foldVariableCluster(node);
+      break;
+    default:
+      if (in_NodeKind.isUnaryOperator(kind)) {
+        this.foldUnaryOperator(node, kind);
+      } else if (in_NodeKind.isBinaryOperator(kind)) {
+        this.foldBinaryOperator(node, kind);
+      }
+      break;
     }
   };
   ConstantFolder.prototype.rotateStringConcatenation = function(node) {
     var left = node.binaryLeft();
     var right = node.binaryRight();
     if (!left.type.isString(this.cache) && !left.type.isIgnored(this.cache)) {
-      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:97:5)');
+      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:95:5)');
     }
     if (!right.type.isString(this.cache) && !right.type.isIgnored(this.cache)) {
-      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:98:5)');
+      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:96:5)');
     }
     if (right.kind === NodeKind.ADD) {
       var rightLeft = right.binaryLeft();
       var rightRight = right.binaryRight();
       if (!rightLeft.type.isString(this.cache) && !rightLeft.type.isIgnored(this.cache)) {
-        throw new Error('assert rightLeft.type.isString(cache) || rightLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:103:7)');
+        throw new Error('assert rightLeft.type.isString(cache) || rightLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:101:7)');
       }
       if (!rightRight.type.isString(this.cache) && !rightRight.type.isIgnored(this.cache)) {
-        throw new Error('assert rightRight.type.isString(cache) || rightRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:104:7)');
+        throw new Error('assert rightRight.type.isString(cache) || rightRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:102:7)');
       }
       left.swapWith(right);
       left.swapWith(rightRight);
       left.swapWith(rightLeft);
     }
   };
-  ConstantFolder.prototype.foldToString = function(node) {
-    if (node.kind === NodeKind.CALL) {
-      var value = node.callValue();
-      if (value.kind === NodeKind.DOT) {
-        var target = value.dotTarget();
-        var name = value.dotName();
-        if (target !== null && in_NodeKind.isConstant(target.kind) && name !== null && name.kind === NodeKind.NAME && name.asString() === 'toString') {
-          var text = '';
-          switch (target.kind) {
-          case 42:
-            text = target.asBool().toString();
-            break;
-          case 43:
-            text = target.asInt().toString();
-            break;
-          case 44:
-          case 45:
-            text = target.asDouble().toString();
-            break;
-          case 46:
-            text = target.asString();
-            break;
-          default:
-            return;
-          }
-          this.flattenString(node, text);
-        }
-      }
-    }
-  };
   ConstantFolder.prototype.foldStringConcatenation = function(node) {
     var left = node.binaryLeft();
     var right = node.binaryRight();
     if (!left.type.isString(this.cache) && !left.type.isIgnored(this.cache)) {
-      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:135:5)');
+      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:112:5)');
     }
     if (!right.type.isString(this.cache) && !right.type.isIgnored(this.cache)) {
-      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:136:5)');
+      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:113:5)');
     }
-    this.foldToString(left);
-    this.foldToString(right);
     if (right.kind === NodeKind.STRING) {
       if (left.kind === NodeKind.STRING) {
         this.flattenString(node, left.asString() + right.asString());
@@ -6822,10 +6801,10 @@
         var leftLeft = left.binaryLeft();
         var leftRight = left.binaryRight();
         if (!leftLeft.type.isString(this.cache) && !leftLeft.type.isIgnored(this.cache)) {
-          throw new Error('assert leftLeft.type.isString(cache) || leftLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:151:9)');
+          throw new Error('assert leftLeft.type.isString(cache) || leftLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:124:9)');
         }
         if (!leftRight.type.isString(this.cache) && !leftRight.type.isIgnored(this.cache)) {
-          throw new Error('assert leftRight.type.isString(cache) || leftRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:152:9)');
+          throw new Error('assert leftRight.type.isString(cache) || leftRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:125:9)');
         }
         if (leftRight.kind === NodeKind.STRING) {
           this.flattenString(leftRight, leftRight.asString() + right.asString());
@@ -6969,6 +6948,36 @@
       this.flatten(node, node.symbol.constant);
     }
   };
+  ConstantFolder.prototype.foldCall = function(node) {
+    if (node.kind === NodeKind.CALL) {
+      var value = node.callValue();
+      if (value.kind === NodeKind.DOT) {
+        var target = value.dotTarget();
+        var name = value.dotName();
+        if (target !== null && in_NodeKind.isConstant(target.kind) && name !== null && name.kind === NodeKind.NAME && name.asString() === 'toString') {
+          var text = '';
+          switch (target.kind) {
+          case 42:
+            text = target.asBool().toString();
+            break;
+          case 43:
+            text = target.asInt().toString();
+            break;
+          case 44:
+          case 45:
+            text = target.asDouble().toString();
+            break;
+          case 46:
+            text = target.asString();
+            break;
+          default:
+            return;
+          }
+          this.flattenString(node, text);
+        }
+      }
+    }
+  };
   ConstantFolder.prototype.foldCast = function(node) {
     var type = node.castType().type;
     var value = node.castValue();
@@ -7055,10 +7064,10 @@
       var left = variable.binaryLeft();
       var right = variable.binaryRight();
       if (!left.type.isInt(this.cache) && !left.type.isIgnored(this.cache)) {
-        throw new Error('assert left.type.isInt(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:454:7)');
+        throw new Error('assert left.type.isInt(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:448:7)');
       }
       if (!right.type.isInt(this.cache) && !right.type.isIgnored(this.cache)) {
-        throw new Error('assert right.type.isInt(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:455:7)');
+        throw new Error('assert right.type.isInt(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:449:7)');
       }
       var isLeftConstant = left.kind === NodeKind.INT;
       if (isLeftConstant || right.kind === NodeKind.INT) {

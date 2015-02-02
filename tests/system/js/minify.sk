@@ -1,6 +1,12 @@
 namespace js { void testMinify() {
 
 testJS("
+export var foo = 1.toString();
+", "
+(function(){foo='1'}());
+").release();
+
+testJS("
 export void foo() {
   for (;;) {}
 }
