@@ -28,38 +28,35 @@ class Range {
     return start <= index && index <= end;
   }
 
-  // Return the length from the start to the end of the range or the end of the
-  // first line, whichever comes first
-  int singleLineLength() {
-    var start = source.indexToLineColumn(this.start);
-    var end = source.indexToLineColumn(this.end);
-    return (start.line == end.line ? end.column : source.contentsOfLine(start.line).size()) - start.column;
-  }
-
   FormattedRange format(int maxLength) {
     assert source != null;
     var start = source.indexToLineColumn(this.start);
     var end = source.indexToLineColumn(this.end);
     var line = source.contentsOfLine(start.line);
     var length = line.size();
-    var a = start.column;
-    var b = end.line == start.line ? end.column : length;
+
+    // Use a unicode iterator to count the actual code points
+    var iterator = unicode.StringIterator.INSTANCE.reset(line, 0);
+    var a = iterator.countCodePointsUntil(start.column);
+    var b = a + iterator.countCodePointsUntil(end.line == start.line ? end.column : length);
+    var count = b + iterator.countCodePointsUntil(length);
 
     // Ensure the line length doesn't exceed maxLength
-    if (maxLength > 0 && length > maxLength) {
-      var centeredWidth = b - a < maxLength / 2 ? b - a : maxLength / 2;
-      var centeredStart = (maxLength - centeredWidth) / 2;
+    if (maxLength > 0 && count > maxLength) {
+      var centeredWidth = imin(b - a, maxLength / 2);
+      var centeredStart = imax((maxLength - centeredWidth) / 2, 3);
+      var codePoints = line.codePoints();
 
       // Left aligned
       if (a < centeredStart) {
-        line = line.slice(0, maxLength - 3) + "...";
+        line = string.fromCodePoints(codePoints.slice(0, maxLength - 3)) + "...";
         if (b > maxLength - 3) b = maxLength - 3;
       }
 
       // Right aligned
-      else if (length - a < maxLength - centeredStart) {
-        var offset = length - maxLength;
-        line = "..." + line.slice(offset + 3, length);
+      else if (count - a < maxLength - centeredStart) {
+        var offset = count - maxLength;
+        line = "..." + string.fromCodePoints(codePoints.slice(offset + 3, count));
         a -= offset;
         b -= offset;
       }
@@ -67,7 +64,7 @@ class Range {
       // Center aligned
       else {
         var offset = a - centeredStart;
-        line = "..." + line.slice(offset + 3, offset + maxLength - 3) + "...";
+        line = "..." + string.fromCodePoints(codePoints.slice(offset + 3, offset + maxLength - 3)) + "...";
         a -= offset;
         b -= offset;
         if (b > maxLength - 3) b = maxLength - 3;

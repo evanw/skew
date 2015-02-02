@@ -129,7 +129,7 @@ string quoteString(string text, int quote) {
     else if (c == '\t') result += text.slice(start, i) + "\\t";
     else if (c == '\0') result += text.slice(start, i) + "\\0";
     else if (c == '\\') result += text.slice(start, i) + "\\\\";
-    else if (c < ' ' || c >= 0x7F && c <= 0xFF) result += text.slice(start, i) + "\\x" + HEX.sliceCodeUnit(c >> 4) + HEX.sliceCodeUnit(c & 15);
+    else if (c < ' ') result += text.slice(start, i) + "\\x" + HEX.sliceCodeUnit(c >> 4) + HEX.sliceCodeUnit(c & 15);
     else continue;
     start = i + 1;
   }
@@ -224,16 +224,18 @@ class SplitPath {
 }
 
 SplitPath splitPath(string path) {
-  var forwardSlash = path.lastIndexOf("/");
-  var backwardSlash = path.lastIndexOf("\\");
-  var slashIndex = forwardSlash > backwardSlash ? forwardSlash : backwardSlash;
+  var slashIndex = imax(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return slashIndex == -1
     ? SplitPath(".", path)
     : SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1, path.size()));
 }
 
 string joinPath(string directory, string entry) {
-  return directory + "/" + entry;
+  return directory + (OperatingSystem.current() == .WINDOWS ? "\\" : "/") + entry;
+}
+
+int imin(int a, int b) {
+  return a < b ? a : b;
 }
 
 int imax(int a, int b) {

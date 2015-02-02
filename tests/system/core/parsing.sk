@@ -29,8 +29,24 @@ var π = Math.PI;
 ");
 
 test("
-var x = \"π\";
+var 💩 = Math.PI;
 ", "
+<stdin>:1:5: error: Syntax error \"💩\"
+var 💩 = Math.PI;
+    ^
+");
+
+test("
+//💩
+", "
+");
+
+test("
+bool foo = \"💩\";
+", "
+<stdin>:1:12: error: Cannot convert from type \"string\" to type \"bool\"
+bool foo = \"💩\";
+           ~~~
 ");
 
 test("

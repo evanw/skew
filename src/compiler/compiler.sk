@@ -273,6 +273,7 @@ class Compiler {
     CachedSource("intmap.sk", @ContentsOfFile("../../lib/intmap.sk")),
     CachedSource("os.sk", @ContentsOfFile("../../lib/os.sk")),
     CachedSource("terminal.sk", @ContentsOfFile("../../lib/terminal.sk")),
+    CachedSource("unicode.sk", @ContentsOfFile("../../lib/unicode.sk")),
   ];
 
   static int totalLineCount(List<Source> sources) {

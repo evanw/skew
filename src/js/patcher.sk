@@ -972,7 +972,7 @@ namespace js {
         name = numberToName(number / 52 - 1);
         number = number % 52;
       }
-      name += string.fromCodeUnit(number + (number < 26 ? 97 : 39));
+      name += string.fromCodeUnit(number + (number < 26 ? 'a' : 'A' - 26));
       return name;
     }
 

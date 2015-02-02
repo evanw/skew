@@ -11,10 +11,29 @@ namespace tests {
     string input;
     string expected;
     var output = "";
-    var options = CompilerOptions();
     Status status = .PENDING;
 
-    void run() {
+    virtual void run();
+  }
+
+  class FormatTest : Test {
+    int start;
+    int end;
+    int maxLength;
+
+    override void run() {
+      var range = Range(Source("<stdin>", input), start, end);
+      var formatted = range.format(maxLength);
+      output = trim(formatted.line + "\n" + formatted.range);
+      expected = trim(expected);
+      status = output == expected ? .SUCCEEDED : .FAILED;
+    }
+  }
+
+  class CompilerTest : Test {
+    var options = CompilerOptions();
+
+    override void run() {
       options.inputs = [Source("<stdin>", input)];
       var compiler = Compiler();
       var result = compiler.compile(options);
@@ -30,23 +49,23 @@ namespace tests {
       status = output == expected ? .SUCCEEDED : .FAILED;
     }
 
-    Test js() {
+    CompilerTest js() {
       options.target = .JAVASCRIPT;
       return this;
     }
 
-    Test cpp() {
+    CompilerTest cpp() {
       options.target = .CPP;
       options.config = .OSX;
       return this;
     }
 
-    Test windows() {
+    CompilerTest windows() {
       options.config = .WINDOWS;
       return this;
     }
 
-    Test release() {
+    CompilerTest release() {
       options.minify = true;
       options.mangle = true;
       options.removeAsserts = true;
@@ -56,12 +75,12 @@ namespace tests {
       return this;
     }
 
-    Test minify() {
+    CompilerTest minify() {
       options.minify = true;
       return this;
     }
 
-    Test mangle() {
+    CompilerTest mangle() {
       options.mangle = true;
       return this;
     }
@@ -205,17 +224,23 @@ namespace tests {
   }
 }
 
-Test test(string input, string expected) {
-  var test = Test(trim(input), expected);
+FormatTest testFormat(string input, string expected, int start, int end, int maxLength) {
+  var test = FormatTest(trim(input), expected, start, end, maxLength);
   registeredTests.push(test);
   return test;
 }
 
-Test testJS(string input, string expected) {
+CompilerTest test(string input, string expected) {
+  var test = CompilerTest(trim(input), expected);
+  registeredTests.push(test);
+  return test;
+}
+
+CompilerTest testJS(string input, string expected) {
   return test(input, expected).js();
 }
 
-Test testCPP(string input, string expected) {
+CompilerTest testCPP(string input, string expected) {
   return test(input, expected).cpp();
 }
 
@@ -229,6 +254,7 @@ int start() {
   core.testCyclic();
   core.testEnums();
   core.testExpressions();
+  core.testFormatting();
   core.testFunctions();
   core.testGenerics();
   core.testLists();
