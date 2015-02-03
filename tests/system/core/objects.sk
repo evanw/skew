@@ -582,4 +582,34 @@ class Diamond : B, C { override void foo() {} }
 TODO
 ");
 
+test("
+interface A {}
+interface B {}
+class C : A, B { void bar() { foo(); } }
+in A { void foo() {} }
+in B { void foo() {} }
+", "
+TODO: foo is ambiguous
+");
+
+test("
+interface A {}
+interface B {}
+class C : A, B { void bar() { foo(); } }
+in A { static void foo() {} }
+in B { static void foo() {} }
+", "
+TODO: foo is ambiguous
+");
+
+test("
+interface A {}
+interface B {}
+class C : A, B { int bar() { return foo; } }
+in A { static int foo; }
+in B { static int foo; }
+", "
+TODO: foo is ambiguous
+");
+
 }}
