@@ -80,6 +80,27 @@ class Type {
     return false;
   }
 
+  bool hasBaseSymbol(Symbol symbol) {
+    if (isParameter()) {
+      var upper = bound();
+      return upper != null && upper.hasBaseSymbol(symbol);
+    }
+    if (!isClass() && !isInterface()) {
+      return false;
+    }
+    if (this.symbol == symbol) {
+      return true;
+    }
+    if (relevantTypes != null) {
+      for (var i = 0; i < relevantTypes.size(); i++) {
+        if (relevantTypes[i].hasBaseSymbol(symbol)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   void addMember(Member member) {
     members[member.symbol.name] = member;
   }

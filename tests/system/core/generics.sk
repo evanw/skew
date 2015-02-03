@@ -162,15 +162,6 @@ bool bar = Baz(0).foo(0);
 ");
 
 test("
-interface IFoo<T> { virtual T foo(); }
-class Foo : IFoo<int>, IFoo<float> {}
-", "
-<stdin>:2:7: error: Member \"Foo.foo\" has an ambiguous inherited type, could be type \"int fn()\" or type \"float fn()\"
-class Foo : IFoo<int>, IFoo<float> {}
-      ~~~
-");
-
-test("
 class Foo<T> { void foo(T foo) {} }
 class Bar : Foo<int> { void foo(T foo) {} }
 ", "
@@ -542,6 +533,77 @@ in Foo : IFoo<T> {}
 class Foo<T> {}
 interface IFoo<X> {}
 ", "
+");
+
+test("
+class Foo<T> {
+  T foo;
+}
+class Bar<X> : Foo<X> {
+  X bar() { return foo; }
+  X baz() { return this.foo; }
+}
+", "
+");
+
+test("
+interface Foo<T> {
+  virtual T foo();
+}
+class Bar<X> : Foo<X> {
+  X bar() { return foo(); }
+  X baz() { return this.foo(); }
+}
+", "
+");
+
+test("
+class Foo : IFoo<int>, IFoo<bool> {}
+interface IFoo<T> {}
+", "
+<stdin>:1:24: error: Duplicate base type \"IFoo<bool>\"
+class Foo : IFoo<int>, IFoo<bool> {}
+                       ~~~~~~~~~~
+");
+
+test("
+class Foo<A, B> : IFoo<A, B>, IFoo<B, A> {}
+interface IFoo<C, D> {}
+", "
+<stdin>:1:31: error: Duplicate base type \"IFoo<B, A>\"
+class Foo<A, B> : IFoo<A, B>, IFoo<B, A> {}
+                              ~~~~~~~~~~
+");
+
+test("
+interface A<T> { virtual void foo(T foo); }
+interface B : A<int> {}
+interface C : A<float> {}
+class Diamond : B, C { override void foo() {} }
+", "
+<stdin>:4:7: error: Member \"Diamond.foo\" has an ambiguous inherited type, could be type \"void fn(int)\" or type \"void fn(float)\"
+class Diamond : B, C { override void foo() {} }
+      ~~~~~~~
+");
+
+test("
+interface A<T> { virtual void foo(T foo); }
+interface B<X> : A<X> {}
+interface C<Y> : A<Y> {}
+class Diamond<Z> : B<Z>, C<Z> { override void foo() {} }
+", "
+TODO
+");
+
+test("
+interface A<T> { virtual void foo(T foo); }
+interface B<X> : A<X> {}
+interface C<Y> : A<Y> {}
+class Diamond<Z> : B<Z>, C<int> { override void foo() {} }
+", "
+<stdin>:4:7: error: Member \"Diamond.foo\" has an ambiguous inherited type, could be type \"void fn(Z)\" or type \"void fn(int)\"
+class Diamond<Z> : B<Z>, C<int> { override void foo() {} }
+      ~~~~~~~
 ");
 
 }}

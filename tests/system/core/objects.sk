@@ -573,4 +573,13 @@ interface Baz : Foo, Bar { virtual void foo(); }
                                         ~~~
 ");
 
+test("
+interface A { virtual void foo(int foo); }
+interface B : A {}
+interface C : A {}
+class Diamond : B, C { override void foo() {} }
+", "
+TODO
+");
+
 }}

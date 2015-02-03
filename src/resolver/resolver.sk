@@ -964,7 +964,7 @@ class Resolver {
     // Allow instance access inside instance functions
     if (functionSymbol != null && functionSymbol.kind.isInstance() && (
         functionSymbol.enclosingSymbol == enclosingSymbol ||
-        functionSymbol.enclosingSymbol.type.hasBaseType(enclosingSymbol.type))) {
+        functionSymbol.enclosingSymbol.type.hasBaseSymbol(enclosingSymbol))) {
       return true;
     }
 
@@ -1083,6 +1083,7 @@ class Resolver {
     var type = symbol.type;
     var baseTypes = collectAndResolveBaseTypes(symbol);
     var unmergedMembers = StringMap<Member>();
+    List<Symbol> baseTypeSymbols = [];
     assert type.relevantTypes == null;
     type.relevantTypes = [];
 
@@ -1106,9 +1107,9 @@ class Resolver {
         continue;
       }
 
-      // Prevent duplicates, but only within this type (duplicates among base
-      // types are fine)
-      if (baseType in type.relevantTypes) {
+      // Prevent duplicates, but only within this type. Duplicates among base
+      // types are fine (diamond inheritance).
+      if (baseType.symbol in baseTypeSymbols) {
         semanticErrorDuplicateBaseType(log, base.range, baseType);
         continue;
       }
@@ -1117,6 +1118,7 @@ class Resolver {
       // detection algorithm, since symbol should still be initializing
       assert !baseType.hasBaseType(type);
 
+      baseTypeSymbols.push(baseType.symbol);
       type.relevantTypes.push(baseType);
 
       // Collect all base type members
