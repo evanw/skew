@@ -1,8 +1,10 @@
 class TreeShakingPass {
-  final CompilerOptions options;
-  final var includedSymbols = IntMap<bool>();
-  final var includedTypes = IntMap<bool>();
-  var isFirstList = true;
+  private {
+    final CompilerOptions options;
+    final var includedSymbols = IntMap<bool>();
+    final var includedTypes = IntMap<bool>();
+    var isFirstList = true;
+  }
 
   static void run(Node program, CompilerOptions options, Resolver resolver) {
     var pass = TreeShakingPass(options);
@@ -61,7 +63,7 @@ class TreeShakingPass {
     }
   }
 
-  void includeSymbol(Symbol symbol) {
+  private void includeSymbol(Symbol symbol) {
     // Don't include constants, needed because constant folding hasn't run yet
     if (symbol.kind == .GLOBAL_VARIABLE && symbol.isConst() && options.foldAllConstants) {
       return;
@@ -104,7 +106,7 @@ class TreeShakingPass {
     }
   }
 
-  void includeType(Type type) {
+  private void includeType(Type type) {
     if (!(type.uniqueID in includedTypes)) {
       includedTypes[type.uniqueID] = true;
       if (type.symbol != null) {
@@ -118,7 +120,7 @@ class TreeShakingPass {
     }
   }
 
-  void visit(Node node) {
+  private void visit(Node node) {
     if (node.symbol != null) {
       includeSymbol(node.symbol);
     }
@@ -146,7 +148,7 @@ class TreeShakingPass {
     }
   }
 
-  bool includeDueToOverriddenMember(Symbol symbol) {
+  private bool includeDueToOverriddenMember(Symbol symbol) {
     assert symbol.overriddenMember != null;
     assert symbol.enclosingSymbol != null;
 
@@ -159,7 +161,7 @@ class TreeShakingPass {
     return false;
   }
 
-  bool removeSymbolIfDead(Symbol symbol) {
+  private bool removeSymbolIfDead(Symbol symbol) {
     // Ignore irrelevant symbols
     if (symbol.kind == .LOCAL_VARIABLE) {
       return false;

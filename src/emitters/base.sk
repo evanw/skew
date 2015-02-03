@@ -1,13 +1,15 @@
 namespace base {
   class Emitter : IEmitter {
-    CompilerOptions options = null;
-    NodeKind previousKind = .NULL;
-    StringMap<bool> isKeyword = null;
-    List<Source> outputs = [];
-    Source output = null;
-    var indent = "";
-    TypeCache cache = null;
-    Resolver resolver;
+    protected {
+      CompilerOptions options = null;
+      NodeKind previousKind = .NULL;
+      StringMap<bool> isKeyword = null;
+      List<Source> outputs = [];
+      Source output = null;
+      var indent = "";
+      TypeCache cache = null;
+      Resolver resolver;
+    }
 
     virtual string extension();
     virtual StringMap<bool> createIsKeyword();

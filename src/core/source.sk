@@ -8,7 +8,7 @@ class Source {
   string contents;
 
   // This maps line numbers to indices within contents
-  List<int> lineOffsets = null;
+  private List<int> lineOffsets = null;
 
   int lineCount() {
     computeLineOffsets();
@@ -47,7 +47,7 @@ class Source {
     return LineColumn(line - 1, column);
   }
 
-  void computeLineOffsets() {
+  private void computeLineOffsets() {
     if (lineOffsets == null) {
       lineOffsets = [0];
       for (var i = 0; i < contents.size(); i++) {

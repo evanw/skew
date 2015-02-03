@@ -4,9 +4,11 @@
 // to avoid depending on the file system.
 namespace joined {
   class Emitter : IEmitter {
-    Resolver resolver;
-    CompilerOptions options = null;
-    var contentsOfFile = StringMap<List<Node>>();
+    private {
+      Resolver resolver;
+      CompilerOptions options = null;
+      var contentsOfFile = StringMap<List<Node>>();
+    }
 
     override List<Source> emitProgram(Node program) {
       options = resolver.options;

@@ -1,9 +1,9 @@
 class SourceMapping {
-  int sourceIndex;
-  int originalLine; // 0-based
-  int originalColumn; // 0-based
-  int generatedLine; // 0-based
-  int generatedColumn; // 0-based
+  final int sourceIndex;
+  final int originalLine; // 0-based
+  final int originalColumn; // 0-based
+  final int generatedLine; // 0-based
+  final int generatedColumn; // 0-based
 }
 
 class SourceMappingComparison : Comparison<SourceMapping> {
@@ -17,8 +17,8 @@ class SourceMappingComparison : Comparison<SourceMapping> {
 
 // Based on: https://github.com/mozilla/source-map
 class SourceMapGenerator {
-  List<SourceMapping> mappings = [];
-  List<Source> sources = [];
+  private List<SourceMapping> mappings = [];
+  private List<Source> sources = [];
 
   void addMapping(Source source, int originalLine, int originalColumn, int generatedLine, int generatedColumn) {
     var sourceIndex = sources.indexOf(source);

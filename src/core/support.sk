@@ -293,6 +293,7 @@ string firstLineOf(string text) {
   var index = text.indexOf("\n");
   return index < 0 ? text : text.slice(0, index);
 }
+
 string typeToText(Type type) {
   return "type \"" + type + "\"";
 }

@@ -1,7 +1,7 @@
 #if TARGET_JS
 
   class StringMap<T> {
-    var _table = `Object`.create(null);
+    private var _table = `Object`.create(null);
 
     pure {
       inline {
@@ -46,7 +46,7 @@
       StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }
     }
 
-    `std::unordered_map<`string`, T>` _table;
+    private `std::unordered_map<`string`, T>` _table;
   }
 
 #else

@@ -167,7 +167,7 @@ interface Comparison<T> {
       `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));
     }
 
-    `std::vector<T>` _data;
+    private `std::vector<T>` _data;
   }
 
 #else

@@ -22,7 +22,7 @@ class TypeCache {
   Type intMapType = null;
   Type toStringType = null;
 
-  final var hashTable = IntMap<List<Type>>();
+  private final var hashTable = IntMap<List<Type>>();
 
   void insertGlobals(Scope scope) {
     scope.type = globalType;
@@ -65,7 +65,7 @@ class TypeCache {
     return null;
   }
 
-  static int computeHashCode(Symbol symbol, List<Type> relevantTypes) {
+  private static int computeHashCode(Symbol symbol, List<Type> relevantTypes) {
     var seed = symbol == null ? -1 : symbol.type.uniqueID;
     for (var i = 0; i < relevantTypes.size(); i++) {
       seed = hashCombine(seed, relevantTypes[i].uniqueID);

@@ -1,5 +1,5 @@
 class SymbolMotionPass {
-  final Resolver resolver;
+  private final Resolver resolver;
 
   static void run(Resolver resolver) {
     var pass = SymbolMotionPass(resolver);
@@ -8,7 +8,7 @@ class SymbolMotionPass {
     }
   }
 
-  void moveSymbol(Symbol symbol) {
+  private void moveSymbol(Symbol symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     if (!symbol.isImport() && enclosingSymbol != null && !symbol.kind.isParameter() && (
         enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() && symbol.isFromExtension() ||
@@ -45,7 +45,7 @@ class SymbolMotionPass {
     }
   }
 
-  Type shadowForSymbol(Symbol symbol) {
+  private Type shadowForSymbol(Symbol symbol) {
     // Get the namespace for the extension if it exists
     var inName = "in_" + symbol.name;
     var enclosingSymbol = symbol.enclosingSymbol;

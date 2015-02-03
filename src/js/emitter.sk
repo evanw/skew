@@ -16,24 +16,26 @@ namespace js {
   }
 
   class Emitter : IEmitter {
-    var newline = "\n";
-    var space = " ";
-    var indent = "";
-    var currentLine = 0;
-    var currentColumn = 0;
-    var needsSemicolon = false;
-    Source currentSource = null;
-    Patcher patcher = null;
-    CompilerOptions options = null;
-    final var generator = SourceMapGenerator();
-    final Resolver resolver;
+    private {
+      var newline = "\n";
+      var space = " ";
+      var indent = "";
+      var currentLine = 0;
+      var currentColumn = 0;
+      var needsSemicolon = false;
+      Source currentSource = null;
+      Patcher patcher = null;
+      CompilerOptions options = null;
+      final var generator = SourceMapGenerator();
+      final Resolver resolver;
 
-    // Numbers normally need to be wrapped in parentheses when toString() is
-    // called on them because "1.toString()" is a syntax error in JavaScript.
-    // However, toString() can be called implicitly as part of a string binary
-    // + operation. This variable prevents wrapping in parentheses when the
-    // toString() call has been elided.
-    Node toStringTarget = null;
+      // Numbers normally need to be wrapped in parentheses when toString() is
+      // called on them because "1.toString()" is a syntax error in JavaScript.
+      // However, toString() can be called implicitly as part of a string binary
+      // + operation. This variable prevents wrapping in parentheses when the
+      // toString() call has been elided.
+      Node toStringTarget = null;
+    }
 
     void patchProgram(Node program) {
       options = resolver.options;

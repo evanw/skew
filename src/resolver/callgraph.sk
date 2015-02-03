@@ -12,7 +12,7 @@ class CallGraph {
     visit(program);
   }
 
-  void visit(Node node) {
+  private void visit(Node node) {
     if (node.hasChildren()) {
       var children = node.children;
       for (var i = 0, n = children.size(); i < n; i++) {
@@ -36,7 +36,7 @@ class CallGraph {
     }
   }
 
-  void recordCallSite(Symbol symbol, Node node) {
+  private void recordCallSite(Symbol symbol, Node node) {
     var index = symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
     var info = index < 0 ? CallInfo(symbol) : callInfo[index];
     if (index < 0) {

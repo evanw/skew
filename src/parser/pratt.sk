@@ -1,8 +1,8 @@
 class ParserContext {
   Log log;
-  List<Token> tokens;
   var needsPreprocessor = false;
-  var index = 0;
+  private List<Token> tokens;
+  private var index = 0;
 
   // Keep track of the previous syntax error so only one syntax error is emitted
   // per token when recovering from a parse error. For example:
@@ -11,7 +11,7 @@ class ParserContext {
   //
   // In the code above, the only syntax error should be about an unexpected
   // semicolon and not also about the two missing right parentheses.
-  Token previousSyntaxError = null;
+  private Token previousSyntaxError = null;
 
   Token current() {
     return tokens[index];
@@ -84,7 +84,7 @@ interface InfixParselet {
 //   http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
 //
 class Pratt {
-  var table = IntMap<Parselet>();
+  private var table = IntMap<Parselet>();
 
   pure Parselet parselet(TokenKind kind, Precedence precedence) {
     var parselet = table.getOrDefault(kind, null);

@@ -6,7 +6,7 @@ namespace json {
   }
 
   class Emitter : IEmitter {
-    CompilerOptions options;
+    private CompilerOptions options;
 
     override List<Source> emitProgram(Node program) {
       List<Source> outputs = [];

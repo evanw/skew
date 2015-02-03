@@ -5,10 +5,10 @@ enum SortTypes {
 }
 
 class Collector {
-  SortTypes sort;
-  List<Symbol> typeSymbols = [];
-  List<Symbol> freeFunctionSymbols = [];
-  List<Symbol> freeVariableSymbols = [];
+  final SortTypes sort;
+  final List<Symbol> typeSymbols = [];
+  final List<Symbol> freeFunctionSymbols = [];
+  final List<Symbol> freeVariableSymbols = [];
 
   new(Node program, SortTypes sort) : sort = sort {
     assert program.kind == .PROGRAM;

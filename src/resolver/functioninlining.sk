@@ -187,10 +187,9 @@ class InliningGraph {
       var info = inliningInfo[i];
       info.shouldInline = !containsInfiniteExpansion(info, []);
     }
-
   }
 
-  static bool containsInfiniteExpansion(InliningInfo info, List<Symbol> symbols) {
+  private static bool containsInfiniteExpansion(InliningInfo info, List<Symbol> symbols) {
     // This shouldn't get very long in normal programs so O(n) here is fine
     if (info.symbol in symbols) {
       return true;
@@ -207,7 +206,7 @@ class InliningGraph {
     return false;
   }
 
-  static InliningInfo createInliningInfo(CallInfo info, CompilerOptions options) {
+  private static InliningInfo createInliningInfo(CallInfo info, CompilerOptions options) {
     var symbol = info.symbol;
 
     // Inline functions consisting of a single return statement
@@ -283,7 +282,7 @@ class InliningGraph {
   }
 
   // This returns false if inlining is impossible
-  static bool recursivelyCountArgumentUses(Node node, IntMap<int> argumentCounts) {
+  private static bool recursivelyCountArgumentUses(Node node, IntMap<int> argumentCounts) {
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
         var child = node.children[i];

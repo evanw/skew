@@ -13,12 +13,14 @@ namespace cpp {
   }
 
   class Emitter : base.Emitter {
-    List<string> namespaceStack = [];
-    var includes = StringMap<bool>();
-    var usedAssert = false;
-    var usedMath = false;
-    var isMarkSweep = false;
-    Pass pass = .NONE;
+    private {
+      List<string> namespaceStack = [];
+      var includes = StringMap<bool>();
+      var usedAssert = false;
+      var usedMath = false;
+      var isMarkSweep = false;
+      Pass pass = .NONE;
+    }
 
     override string extension() {
       return "cpp";

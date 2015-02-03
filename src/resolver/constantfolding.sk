@@ -1,6 +1,8 @@
 class ConstantFolder {
-  final TypeCache cache;
-  final CompilerOptions options;
+  private final {
+    TypeCache cache;
+    CompilerOptions options;
+  }
 
   bool targetHasNoNestedScopes() {
     return options.target == .JAVASCRIPT;

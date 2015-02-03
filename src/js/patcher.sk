@@ -34,21 +34,24 @@ namespace js {
   }
 
   class Patcher {
-    var nextTempID = 0;
-    var createdThisAlias = false;
-    Symbol currentFunction = null;
     var imul = "$imul";
     var extends = "$extends";
     var needExtends = false;
     var needMathImul = false;
-    var nextSymbolName = 0;
-    CompilerOptions options = null;
-    UnionFind localVariableUnionFind = null;
-    TypeCache cache = null;
-    final var reservedNames = Emitter.isKeyword.clone();
-    final var symbolCounts = IntMap<int>();
-    final var namingGroupIndexForSymbol = IntMap<int>();
-    final Resolver resolver;
+
+    private {
+      var nextTempID = 0;
+      var createdThisAlias = false;
+      Symbol currentFunction = null;
+      var nextSymbolName = 0;
+      CompilerOptions options = null;
+      UnionFind localVariableUnionFind = null;
+      TypeCache cache = null;
+      final var reservedNames = Emitter.isKeyword.clone();
+      final var symbolCounts = IntMap<int>();
+      final var namingGroupIndexForSymbol = IntMap<int>();
+      final Resolver resolver;
+    }
 
     void run(Node program) {
       assert program.kind == .PROGRAM;
