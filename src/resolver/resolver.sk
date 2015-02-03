@@ -713,8 +713,7 @@ class Resolver {
     assert node.type != null;
   }
 
-  void checkAccess(Node node) {
-    var symbol = node.symbol;
+  void checkAccess(Symbol symbol, Range range) {
     if (symbol != null && symbol.isPrivateOrProtected()) {
       var enclosingSymbol = symbol.enclosingSymbol;
       var isPrivate = symbol.isPrivate();
@@ -729,7 +728,7 @@ class Resolver {
         }
       }
       if (!hasAccess) {
-        semanticErrorAccessViolation(log, node.range, isPrivate ? "private" : "protected", symbol.fullName());
+        semanticErrorAccessViolation(log, range, isPrivate ? "private" : "protected", symbol.fullName());
       }
     }
   }
@@ -3012,7 +3011,7 @@ class Resolver {
     }
 
     node.type = member.type;
-    checkAccess(node);
+    checkAccess(node.symbol, node.range);
     checkPureInsideFunction(node);
     maybeInlineConstant(node);
   }
@@ -3367,7 +3366,7 @@ class Resolver {
       dotName.type = member.type;
     }
 
-    checkAccess(dotName);
+    checkAccess(node.symbol, dotName.range);
     checkPureInsideFunction(dotName);
     maybeInlineConstant(node);
   }
@@ -3426,6 +3425,8 @@ class Resolver {
         resolveNodesAsParameterizedExpressions(arguments);
         return;
       }
+
+      checkAccess(node.symbol, value.range);
     }
 
     // Can only call an instance of a function type

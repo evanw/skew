@@ -130,4 +130,17 @@ void foo(Foo foo, Bar bar) { foo.foo(); bar.foo(); }
                                             ~~~
 ");
 
+test("
+class Foo {
+  private pure new() {}
+  static pure Foo create() { return Foo(); }
+}
+var foo = Foo();
+var bar = Foo.create();
+", "
+<stdin>:5:11: error: Cannot access private symbol \"Foo.new\" here
+var foo = Foo();
+          ~~~
+");
+
 }}
