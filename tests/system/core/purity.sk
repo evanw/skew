@@ -122,7 +122,7 @@ pure int foo() {
   return bar;
 }
 ", "
-<stdin>:3:10: error: Cannot use impure value inside pure function
+<stdin>:3:10: error: Cannot use an impure value inside a pure function
   return bar;
          ~~~
 ");
@@ -134,10 +134,10 @@ pure int foo() {
   return bar;
 }
 ", "
-<stdin>:3:3: error: Cannot use impure value inside pure function
+<stdin>:3:3: error: Cannot use an impure value inside a pure function
   bar++;
   ~~~
-<stdin>:4:10: error: Cannot use impure value inside pure function
+<stdin>:4:10: error: Cannot use an impure value inside a pure function
   return bar;
          ~~~
 ");
@@ -165,9 +165,9 @@ pure void foo(Foo foo) {
   foo.foo();
 }
 ", "
-<stdin>:5:3: error: Cannot use impure value inside pure function
+<stdin>:5:7: error: Cannot use an impure value inside a pure function
   foo.foo();
-  ~~~~~~~
+      ~~~
 ");
 
 test("
@@ -188,9 +188,9 @@ pure int foo() {
   return Foo.foo;
 }
 ", "
-<stdin>:5:10: error: Cannot use impure value inside pure function
+<stdin>:5:14: error: Cannot use an impure value inside a pure function
   return Foo.foo;
-         ~~~~~~~
+             ~~~
 ");
 
 test("
@@ -231,7 +231,7 @@ pure Foo foo() {
   return Foo();
 }
 ", "
-<stdin>:5:10: error: Cannot use impure value inside pure function
+<stdin>:5:10: error: Cannot use an impure value inside a pure function
   return Foo();
          ~~~
 ");

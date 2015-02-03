@@ -713,6 +713,27 @@ class Resolver {
     assert node.type != null;
   }
 
+  void checkAccess(Node node) {
+    var symbol = node.symbol;
+    if (symbol != null && symbol.isPrivateOrProtected()) {
+      var enclosingSymbol = symbol.enclosingSymbol;
+      var isPrivate = symbol.isPrivate();
+      var hasAccess = false;
+      if (isPrivate) {
+        if (context.functionSymbol != null) {
+          hasAccess = context.functionSymbol.enclosingSymbol == enclosingSymbol;
+        }
+      } else {
+        if (context.functionSymbol != null) {
+          hasAccess = context.functionSymbol.enclosingSymbol.type.hasBaseType(enclosingSymbol.type);
+        }
+      }
+      if (!hasAccess) {
+        semanticErrorAccessViolation(log, node.range, isPrivate ? "private" : "protected", symbol.fullName());
+      }
+    }
+  }
+
   void checkPureInsideFunction(Node node) {
     var symbol = node.symbol;
     if (context.inPureFunction() && (
@@ -2989,6 +3010,7 @@ class Resolver {
     }
 
     node.type = member.type;
+    checkAccess(node);
     checkPureInsideFunction(node);
     maybeInlineConstant(node);
   }
@@ -3343,7 +3365,8 @@ class Resolver {
       dotName.type = member.type;
     }
 
-    checkPureInsideFunction(node);
+    checkAccess(dotName);
+    checkPureInsideFunction(dotName);
     maybeInlineConstant(node);
   }
 

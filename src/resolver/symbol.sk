@@ -293,6 +293,10 @@ class Symbol {
     return (flags & .PROTECTED) != 0;
   }
 
+  bool isPrivateOrProtected() {
+    return (flags & (.PRIVATE | .PROTECTED)) != 0;
+  }
+
   bool isAbstract() {
     return (flags & .ABSTRACT) != 0;
   }

@@ -246,6 +246,7 @@ CompilerTest testCPP(string input, string expected) {
 
 @EntryPoint
 int start() {
+  core.testAccess();
   core.testAnnotations();
   core.testCalls();
   core.testConst();
