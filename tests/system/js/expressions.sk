@@ -1,6 +1,21 @@
 namespace js { void testExpressions() {
 
 testJS("
+export var x = [
+  0b1100100,
+  0100,
+  0o144,
+  0x64,
+  0xabc,
+  0xABC,
+];
+", "
+(function() {
+  x = [100, 100, 100, 100, 2748, 2748];
+}());
+");
+
+testJS("
 export var foo = \"'\";
 export var bar = \"\\\"\";
 ", "

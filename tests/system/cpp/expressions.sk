@@ -1,5 +1,44 @@
 namespace cpp { void testExpressions() {
 
+testCPP("
+export var x = [
+  0b1100100,
+  0100,
+  0o144,
+  0x64,
+  0xabc,
+  0xABC,
+];
+", "
+#include <initializer_list>
+#include <vector>
+
+template <typename T>
+struct List;
+
+template <typename T>
+struct List {
+  List();
+  List<T> *_literal_(std::initializer_list<T> list);
+
+  std::vector<T> _data;
+};
+
+extern List<int> *x;
+
+template <typename T>
+List<T>::List() : _data() {
+}
+
+template <typename T>
+List<T> *List<T>::_literal_(std::initializer_list<T> list) {
+  _data.insert(_data.end(), list.begin(), list.end());
+  return this;
+}
+
+List<int> *x = (new List<int>())->_literal_({ 100, 100, 100, 100, 2748, 2748 });
+");
+
 // Need to special-case strings with '\0' in them to avoid truncation
 testCPP("
 export var foo = \"'\";

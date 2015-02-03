@@ -13,23 +13,43 @@
 
 #elif TARGET_CPP
 
-  @NeedsInclude("<sstream>")
-  @NeedsInclude("<iomanip>") {
-    int parseIntLiteral(string text, int base) {
-      var value = 0;
-      `std::stringstream` ss;
-      ss.str(base == 10 ? text : text.slice(2, text.size()));
-      ss >> `std`::setbase(base) >> value;
-      return value;
+  int parseIntLiteral(string text, int base) {
+    var value = 0;
+
+    switch (base) {
+      case 2, 8 {
+        for (var i = 2; i < text.size(); i++) {
+          value = value * base + text[i] - '0';
+        }
+      }
+
+      // Support for negative decimal literals is needed in a few places
+      case 10 {
+        var isNegative = text.size() > 0 && text[0] == '-';
+        for (var i = isNegative ? 1 : 0; i < text.size(); i++) {
+          value = value * base + text[i] - '0';
+        }
+        if (isNegative) value = -value;
+      }
+
+      case 16 {
+        for (var i = 2; i < text.size(); i++) {
+          var c = text[i];
+          value = value * 16 + c - (c <= '9' ? '0' : c <= 'F' ? 'A' - 10 : 'a' - 10);
+        }
+      }
     }
 
-    double parseDoubleLiteral(string text) {
-      var value = 0.0;
-      `std::stringstream` ss;
-      ss.str(text);
-      ss >> value;
-      return value;
-    }
+    return value;
+  }
+
+  @NeedsInclude("<sstream>")
+  double parseDoubleLiteral(string text) {
+    var value = 0.0;
+    `std::stringstream` ss;
+    ss.str(text);
+    ss >> value;
+    return value;
   }
 
 #else
