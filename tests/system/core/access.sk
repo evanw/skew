@@ -131,6 +131,44 @@ void foo(Foo foo, Bar bar) { foo.foo(); bar.foo(); }
 ");
 
 test("
+class Foo<T> {
+  private T foo;
+  private T bar() { return foo; }
+}
+class Bar<X> : Foo<X> {
+  X baz(bool x, bool y) {
+    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+  }
+}
+", "
+<stdin>:7:20: error: Cannot access private symbol \"Foo.foo\" here
+    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+                   ~~~
+<stdin>:7:26: error: Cannot access private symbol \"Foo.bar\" here
+    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+                         ~~~
+<stdin>:7:43: error: Cannot access private symbol \"Foo.foo\" here
+    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+                                          ~~~
+<stdin>:7:54: error: Cannot access private symbol \"Foo.bar\" here
+    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+                                                     ~~~
+");
+
+test("
+class Foo<T> {
+  protected T foo;
+  protected T bar() { return foo; }
+}
+class Bar<X> : Foo<X> {
+  X baz(bool x, bool y) {
+    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+  }
+}
+", "
+");
+
+test("
 class Foo {
   private pure new() {}
   static pure Foo create() { return Foo(); }

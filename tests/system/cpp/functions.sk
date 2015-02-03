@@ -123,7 +123,7 @@ struct List {
   List();
   int size();
   T get(int index);
-  List<T> *_literal_(std::initializer_list<T> list);
+  List<T> *literal(std::initializer_list<T> list);
 
   std::vector<T> _data;
 };
@@ -150,7 +150,7 @@ T List<T>::get(int index) {
 }
 
 template <typename T>
-List<T> *List<T>::_literal_(std::initializer_list<T> list) {
+List<T> *List<T>::literal(std::initializer_list<T> list) {
   _data.insert(_data.end(), list.begin(), list.end());
   return this;
 }
@@ -159,7 +159,7 @@ std::string in_Foo::foo(Foo _this_) {
   return in_Foo::_toString_->get(static_cast<int>(_this_));
 }
 
-List<std::string> *in_Foo::_toString_ = (new List<std::string>())->_literal_({ std::string(\"FOO\") });
+List<std::string> *in_Foo::_toString_ = (new List<std::string>())->literal({ std::string(\"FOO\") });
 ");
 
 testCPP("

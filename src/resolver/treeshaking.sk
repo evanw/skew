@@ -129,9 +129,9 @@ class TreeShakingPass {
       includeType(node.type);
     }
 
-    // Make sure the "_literal_" method is kept around
+    // Make sure the "literal" method is kept around
     if (options.target == .CPP && node.kind == .LIST && isFirstList) {
-      var literal = node.type.findMember("_literal_");
+      var literal = node.type.findMember("literal");
       assert literal != null;
       includeSymbol(literal.symbol);
       isFirstList = false;

@@ -72,7 +72,7 @@
 //   { "a": false, "b": true } => StringMap.literal<bool>(["a", "b"], [false, true])
 //
 in StringMap {
-  static pure StringMap<X> literal<X>(List<string> keys, List<X> values) {
+  private static pure StringMap<X> literal<X>(List<string> keys, List<X> values) {
     var map = StringMap<X>();
     assert keys.size() == values.size();
     for (var i = 0; i < keys.size(); i++) {

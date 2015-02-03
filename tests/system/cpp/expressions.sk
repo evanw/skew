@@ -19,7 +19,7 @@ struct List;
 template <typename T>
 struct List {
   List();
-  List<T> *_literal_(std::initializer_list<T> list);
+  List<T> *literal(std::initializer_list<T> list);
 
   std::vector<T> _data;
 };
@@ -31,12 +31,12 @@ List<T>::List() : _data() {
 }
 
 template <typename T>
-List<T> *List<T>::_literal_(std::initializer_list<T> list) {
+List<T> *List<T>::literal(std::initializer_list<T> list) {
   _data.insert(_data.end(), list.begin(), list.end());
   return this;
 }
 
-List<int> *x = (new List<int>())->_literal_({ 100, 100, 100, 100, 2748, 2748 });
+List<int> *x = (new List<int>())->literal({ 100, 100, 100, 100, 2748, 2748 });
 ");
 
 // Need to special-case strings with '\0' in them to avoid truncation
@@ -462,7 +462,7 @@ template <typename T>
 struct List {
   List();
   int size();
-  List<T> *_literal_(std::initializer_list<T> list);
+  List<T> *literal(std::initializer_list<T> list);
 
   std::vector<T> _data;
 };
@@ -479,7 +479,7 @@ int List<T>::size() {
 }
 
 template <typename T>
-List<T> *List<T>::_literal_(std::initializer_list<T> list) {
+List<T> *List<T>::literal(std::initializer_list<T> list) {
   _data.insert(_data.end(), list.begin(), list.end());
   return this;
 }

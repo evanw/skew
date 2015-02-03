@@ -182,7 +182,7 @@ struct List;
 template <typename T>
 struct List {
   List();
-  List<T> *_literal_(std::initializer_list<T> list);
+  List<T> *literal(std::initializer_list<T> list);
 
   std::vector<T> _data;
 };
@@ -196,12 +196,12 @@ List<T>::List() : _data() {
 }
 
 template <typename T>
-List<T> *List<T>::_literal_(std::initializer_list<T> list) {
+List<T> *List<T>::literal(std::initializer_list<T> list) {
   _data.insert(_data.end(), list.begin(), list.end());
   return this;
 }
 
-List<int> *foo = (new List<int>())->_literal_({ 0 });
+List<int> *foo = (new List<int>())->literal({ 0 });
 List<int> *bar = new List<int>();
 List<int> *baz = new List<int>();
 ");

@@ -155,7 +155,7 @@ interface Comparison<T> {
       // initializer list. See http://llvm.org/bugs/show_bug.cgi?id=22256
       // for details.
       @NeedsInclude("<initializer_list>")
-      List<T> _literal_(`std::initializer_list<T>` list) {
+      private List<T> literal(`std::initializer_list<T>` list) {
         _data.insert(_data.end(), list.begin(), list.end());
         return this;
       }

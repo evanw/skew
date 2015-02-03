@@ -633,7 +633,7 @@ namespace cpp {
       emit("()");
       if (wrap) emit(")");
       if (values.size() != 0) {
-        emit("->_literal_({ ");
+        emit("->literal({ ");
         emitCommaSeparatedExpressions(values);
         emit(" })");
       }
