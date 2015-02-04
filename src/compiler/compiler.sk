@@ -89,6 +89,7 @@ class CachedSource {
     if (source == null) {
       source = Source(joinPath("<compiler>", name), contents);
       file = compiler.tokenizeAndParseFile(source);
+      assert compiler.log.isEmpty();
     }
     return file != null ? file.clone() : null;
   }

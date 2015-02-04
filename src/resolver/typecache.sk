@@ -1,7 +1,6 @@
 class TypeCache {
   Type globalType = null;
   Type nullType = null;
-  Type voidType = null;
 
   // All expressions that have syntax and/or semantic errors have this type,
   // which silences all further errors related to that expression. When the
@@ -12,6 +11,7 @@ class TypeCache {
 
   // These are defined in the standard library source code, and not by the type
   // cache. That way error messages can have nice sensible line numbers.
+  Type voidType = null;
   Type intType = null;
   Type boolType = null;
   Type floatType = null;
@@ -27,16 +27,15 @@ class TypeCache {
   new() {
     globalType = createType(Symbol("<global>", .GLOBAL_NAMESPACE), 0);
     nullType = createType(Symbol("null", .OTHER), 0);
-    voidType = createType(Symbol("void", .OTHER_TYPE), .IMPORT);
     errorType = createType(Symbol("<error>", .OTHER), 0);
   }
 
   void insertGlobals(Scope scope) {
     scope.type = globalType;
-    scope.insert(Member(voidType.symbol));
   }
 
   void linkGlobals(Scope scope) {
+    voidType = findType(scope, "void", .PRIMITIVE);
     intType = findType(scope, "int", .PRIMITIVE);
     boolType = findType(scope, "bool", .PRIMITIVE);
     floatType = findType(scope, "float", .PRIMITIVE);

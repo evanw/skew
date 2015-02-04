@@ -259,15 +259,29 @@ void test() {
 test("
 foo void;
 ", "
-<stdin>:1:5: error: Cannot create a default value for type \"void\"
+<stdin>:1:5: error: \"void\" is already declared
 foo void;
     ~~~~
+<compiler>/primitives.sk:1:14: note: The previous declaration is here
+import class void {}
+             ~~~~
+<stdin>:1:1: error: \"foo\" is not declared
+foo void;
+~~~
 ");
 
 test("
 foo void() {}
 ", "
-TODO
+<stdin>:1:5: error: \"void\" is already declared
+foo void() {}
+    ~~~~
+<compiler>/primitives.sk:1:14: note: The previous declaration is here
+import class void {}
+             ~~~~
+<stdin>:1:1: error: \"foo\" is not declared
+foo void() {}
+~~~
 ");
 
 }}

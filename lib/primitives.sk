@@ -1,3 +1,5 @@
+import class void {}
+
 #if TARGET_JS
 
   import class int { pure string toString(); }

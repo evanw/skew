@@ -39,6 +39,10 @@ class Log {
     return result;
   }
 
+  bool isEmpty() {
+    return diagnostics.size() == 0;
+  }
+
   bool hasErrors() {
     return errorCount != 0;
   }

@@ -6,7 +6,6 @@ enum SymbolKind {
   UNMERGED,
   FORWARDED,
   QUOTED_TYPE,
-  OTHER_TYPE,
   ALIAS,
 
   // Parameter kinds
