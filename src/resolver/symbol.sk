@@ -4,6 +4,7 @@ enum SymbolKind {
   AUTOMATIC,
   AMBIGUOUS,
   UNMERGED,
+  FORWARDED,
   QUOTED_TYPE,
   OTHER_TYPE,
   ALIAS,
@@ -28,6 +29,7 @@ enum SymbolKind {
   GLOBAL_FUNCTION,
   INSTANCE_FUNCTION,
   CONSTRUCTOR_FUNCTION,
+  MERGED_INSTANCE_FUNCTION,
 
   // Variable kinds
   LOCAL_VARIABLE,
@@ -61,7 +63,7 @@ in SymbolKind {
   }
 
   bool isFunction() {
-    return this >= GLOBAL_FUNCTION && this <= CONSTRUCTOR_FUNCTION;
+    return this >= GLOBAL_FUNCTION && this <= MERGED_INSTANCE_FUNCTION;
   }
 
   bool isVariable() {
@@ -73,7 +75,7 @@ in SymbolKind {
   }
 
   bool isInstance() {
-    return this == INSTANCE_FUNCTION || this == INSTANCE_VARIABLE || this == CONSTRUCTOR_FUNCTION;
+    return this >= INSTANCE_FUNCTION && this <= MERGED_INSTANCE_FUNCTION || this == INSTANCE_VARIABLE;
   }
 }
 
@@ -140,7 +142,8 @@ class Symbol {
 
   // The member from a base type that this symbol is shadowing. If that same
   // member comes from multiple base types, the overridden member will point
-  // to an unmerged member containing the members to be merged.
+  // to an unmerged member containing the members to be merged. This field is
+  // also reused for holding the unambiguous member for merged symbols.
   Member overriddenMember = null;
 
   // The value for a constant symbol. Variables create constants when the
@@ -258,6 +261,12 @@ class Symbol {
         break;
       }
     }
+  }
+
+  Range nameRange() {
+    if (kind == .UNMERGED || kind == .MERGED_INSTANCE_FUNCTION) return enclosingSymbol.nameRange();
+    if (kind == .FORWARDED) return overriddenMember.symbol.nameRange();
+    return node.declarationName().range;
   }
 
   string fullName() {

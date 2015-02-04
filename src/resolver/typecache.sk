@@ -1,14 +1,14 @@
 class TypeCache {
-  final var globalType = createType(Symbol("<global>", .GLOBAL_NAMESPACE), 0);
-  final var nullType = createType(Symbol("null", .OTHER), 0);
-  final var voidType = createType(Symbol("void", .OTHER_TYPE), .IMPORT);
+  Type globalType = null;
+  Type nullType = null;
+  Type voidType = null;
 
   // All expressions that have syntax and/or semantic errors have this type,
   // which silences all further errors related to that expression. When the
   // compiler comes a cross a symbol or expression of this type, it just skips
   // over it because an error has already been logged and further errors will
   // most likely just be noise.
-  final var errorType = createType(Symbol("<error>", .OTHER), 0);
+  Type errorType = null;
 
   // These are defined in the standard library source code, and not by the type
   // cache. That way error messages can have nice sensible line numbers.
@@ -23,6 +23,13 @@ class TypeCache {
   Type toStringType = null;
 
   private final var hashTable = IntMap<List<Type>>();
+
+  new() {
+    globalType = createType(Symbol("<global>", .GLOBAL_NAMESPACE), 0);
+    nullType = createType(Symbol("null", .OTHER), 0);
+    voidType = createType(Symbol("void", .OTHER_TYPE), .IMPORT);
+    errorType = createType(Symbol("<error>", .OTHER), 0);
+  }
 
   void insertGlobals(Scope scope) {
     scope.type = globalType;
@@ -41,17 +48,18 @@ class TypeCache {
     toStringType = functionType(stringType, []);
   }
 
+  Type createType(Symbol symbol, SymbolFlag flags) {
+    var type = Type(symbol);
+    symbol.type = type;
+    symbol.flags |= .INITIALIZED | flags;
+    symbol.enclosingSymbol = globalType == null ? null : globalType.symbol;
+    return type;
+  }
+
   static Type findType(Scope scope, string name, SymbolFlag flags) {
     var symbol = scope.findLocal(name).symbol;
     symbol.flags |= flags;
     return symbol.type;
-  }
-
-  static Type createType(Symbol symbol, SymbolFlag flags) {
-    var type = Type(symbol);
-    symbol.type = type;
-    symbol.flags |= .INITIALIZED | flags;
-    return type;
   }
 
   static Type commonBaseClass(Type left, Type right) {

@@ -229,4 +229,11 @@ class Baz : Foo {
           ~~~~~~~
 ");
 
+test("
+interface Foo {}
+in Foo { virtual void foo() {} }
+", "
+TODO
+");
+
 }}

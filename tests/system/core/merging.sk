@@ -257,14 +257,17 @@ void test() {
 ");
 
 test("
-foo void
+foo void;
 ", "
-<stdin>:1:9: error: Expected SEMICOLON but found END_OF_FILE
-foo void
-        ^
 <stdin>:1:5: error: Cannot create a default value for type \"void\"
-foo void
+foo void;
     ~~~~
+");
+
+test("
+foo void() {}
+", "
+TODO
 ");
 
 }}

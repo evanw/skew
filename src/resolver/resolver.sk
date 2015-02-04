@@ -110,7 +110,7 @@ class Resolver {
       parsedDeclarations.push(node);
       var existing = globalScope.findLocal(symbol.name);
       if (existing != null) {
-        semanticErrorDuplicateSymbol(log, declarationName.range, symbol.name, existing.symbol.node.declarationName().range);
+        semanticErrorDuplicateSymbol(log, declarationName.range, symbol.name, existing.symbol.nameRange());
       } else {
         globalScope.insert(Member(symbol));
       }
@@ -1251,7 +1251,7 @@ class Resolver {
       for (var i = 0; i < members.size(); i++) {
         var memberSymbol = members[i].symbol;
         var isImport = memberSymbol.isImport() || enclosingSymbol.isImport() && !memberSymbol.isFromExtension();
-        if (!isImport && memberSymbol.kind.isFunction() && memberSymbol.node.functionBlock() == null) {
+        if (!isImport && isAbstractFunction(memberSymbol)) {
           enclosingSymbol.reasonForAbstract = memberSymbol;
           enclosingSymbol.flags |= .ABSTRACT;
           break;
@@ -1296,7 +1296,7 @@ class Resolver {
       if (!base.isIgnored(cache) && !derived.isIgnored(cache)) {
         var overriddenSymbol = overriddenMember.symbol;
         var declarationRange = node.declarationName().range;
-        var overriddenDeclarationRange = overriddenSymbol.node != null ? overriddenSymbol.node.declarationName().range : .EMPTY;
+        var overriddenDeclarationRange = overriddenSymbol.node != null ? overriddenSymbol.nameRange() : .EMPTY;
 
         // Functions can only override other functions
         if (!base.isFunction() || !overriddenSymbol.kind.isInstance() || !symbol.kind.isInstance()) {
@@ -1466,7 +1466,7 @@ class Resolver {
       var derived = symbol.type;
       if (!base.isIgnored(cache) && !derived.isIgnored(cache)) {
         semanticErrorBadOverride(log, node.declarationName().range, symbol.name,
-          overriddenMember.symbol.enclosingSymbol.type, overriddenMember.symbol.node.declarationName().range);
+          overriddenMember.symbol.enclosingSymbol.type, overriddenMember.symbol.nameRange());
       }
     }
 
@@ -1640,8 +1640,17 @@ class Resolver {
       initializeMember(member.dependency);
       member.type = member.dependency.type;
     } else {
-      initializeSymbol(member.symbol);
-      member.type = member.symbol.type;
+      var memberSymbol = member.symbol;
+      initializeSymbol(memberSymbol);
+      member.type = memberSymbol.type;
+
+      // If the merging process produced an unambiguous symbol, use that symbol
+      // instead of the unmerged one. The type isn't copied over since it should
+      // already have been copied above.
+      if (memberSymbol.kind == .FORWARDED) {
+        assert member.type == memberSymbol.overriddenMember.type;
+        member.symbol = memberSymbol.overriddenMember.symbol;
+      }
     }
 
     // Perform a lazy type substitution for members on generic types
@@ -2157,33 +2166,10 @@ class Resolver {
   void initializeSymbol(Symbol symbol) {
     // Unmerged symbols are the result of multiple base types
     if (symbol.kind == .UNMERGED) {
-      if (symbol.type != null) {
-        return;
-      }
-      List<Type> types = [];
-      var isPure = false;
-      var isImpure = false;
-      for (var i = 0; i < symbol.identicalMembers.size(); i++) {
-        var identical = symbol.identicalMembers[i];
-        initializeMember(identical);
-        var type = identical.type;
-        if (!(type in types)) {
-          types.push(type);
-        }
-        if (identical.symbol.isPure()) {
-          isPure = true;
-        } else {
-          isImpure = true;
-        }
-      }
-      if (types.size() != 1) {
-        semanticErrorUnmergedSymbol(log, symbol.enclosingSymbol.node.declarationName().range, symbol.fullName(), types);
-        symbol.type = cache.errorType;
+      if (symbol.type == null) {
+        initializeUnmergedSymbol(symbol);
       } else {
-        symbol.type = types[0];
-        if (isPure && isImpure) {
-          semanticErrorAmbiguousPurity(log, symbol.enclosingSymbol.node.declarationName().range, symbol.fullName());
-        }
+        log.warning(.EMPTY, "not merging unmerged symbol " + symbol.fullName() + " of type " + symbol.type);
       }
       return;
     }
@@ -2209,12 +2195,115 @@ class Resolver {
     }
   }
 
+  void initializeUnmergedSymbol(Symbol symbol) {
+    var range = symbol.enclosingSymbol.nameRange();
+    List<Type> types = [];
+    Member first = null;
+    var isPure = false;
+    var isImpure = false;
+    var isAbstract = true;
+    var areSameSymbolAndType = true;
+    var hasNonVirtualMethod = false;
+    var hasInstanceSymbol = false;
+
+    for (var i = 0; i < symbol.identicalMembers.size(); i++) {
+      var member = symbol.identicalMembers[i];
+      var memberSymbol = member.symbol;
+      initializeMember(member);
+      var memberKind = memberSymbol.kind;
+
+      // Check if this is just one symbol inherited using diamond inheritance
+      if (first == null) {
+        first = member;
+      } else if (memberSymbol != first.symbol || member.type != first.type) {
+        areSameSymbolAndType = false;
+      }
+
+      // If this symbol is still unmerged after initializing, be silent and
+      // don't emit further errors
+      if (memberKind == .UNMERGED) {
+        symbol.type = cache.errorType;
+        return;
+      }
+
+      // Track abstract status to transfer to the merged instance function
+      if (!isAbstractFunction(memberSymbol)) {
+        isAbstract = false;
+      }
+
+      // Merging is only an error when an instance symbol is present
+      if (memberKind.isInstance()) {
+        hasInstanceSymbol = true;
+      }
+
+      // For duplicate symbols, only virtual instance methods can be merged
+      if (memberKind != .INSTANCE_FUNCTION && memberKind != .MERGED_INSTANCE_FUNCTION || !memberSymbol.isVirtual()) {
+        hasNonVirtualMethod = true;
+      }
+
+      // Track all types used
+      var type = member.type;
+      if (!(type in types)) {
+        types.push(type);
+      }
+
+      // Check if all symbols use the same purity setting
+      if (memberSymbol.isPure()) {
+        isPure = true;
+      } else {
+        isImpure = true;
+      }
+    }
+
+    // Check if this is really just one symbol
+    if (areSameSymbolAndType) {
+      symbol.kind = .FORWARDED;
+      symbol.overriddenMember = symbol.identicalMembers[0];
+      symbol.type = types[0];
+    }
+
+    // Only virtual methods can be merged
+    else if (hasNonVirtualMethod) {
+      symbol.type = cache.errorType;
+
+      // If there's an instance symbol than report an error, since there's a
+      // naming conflict.
+      if (hasInstanceSymbol) {
+        semanticErrorCannotMerge(log, range, symbol.fullName(), fullNamesForMembers(symbol.identicalMembers));
+      }
+
+      // If there isn't an instance symbol present, then don't report an error.
+      // Each static symbol can still be referenced with its full name. Do mark
+      // this unmerged symbol as ambiguous though so any ambiguous references
+      // will be flagged.
+      else {
+        symbol.kind = .AMBIGUOUS;
+      }
+    }
+
+    // All virtual methods must have the same type
+    else if (types.size() != 1) {
+      semanticErrorAmbiguousMergedType(log, range, symbol.fullName(), types);
+      symbol.type = cache.errorType;
+    }
+
+    // Merged symbols must have consistent purity
+    else {
+      symbol.kind = .MERGED_INSTANCE_FUNCTION;
+      symbol.flags |= .VIRTUAL | (isAbstract ? .ABSTRACT : 0);
+      symbol.type = types[0];
+      if (isPure && isImpure) {
+        semanticErrorAmbiguousPurity(log, range, symbol.fullName());
+      }
+    }
+  }
+
   void validateEntryPoint(Symbol symbol) {
     var modifierName = symbol.node.declarationName();
 
     // Detect duplicate entry points
     if (entryPointSymbol != null) {
-      semanticErrorDuplicateEntryPoint(log, modifierName.range, entryPointSymbol.node.declarationName().range);
+      semanticErrorDuplicateEntryPoint(log, modifierName.range, entryPointSymbol.nameRange());
       return;
     }
 
@@ -2483,9 +2572,13 @@ class Resolver {
 
       // Special-case the return type of constructors to void for the purpose
       // of type conversions in return statements inside the constructor
-      if (symbol.type.isIgnored(cache)) resultType = cache.errorType;
-      else if (symbol.kind == .CONSTRUCTOR_FUNCTION) resultType = cache.voidType;
-      else resultType = symbol.type.resultType();
+      if (!symbol.type.isFunction()) {
+        resultType = cache.errorType;
+      } else if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
+        resultType = cache.voidType;
+      } else {
+        resultType = symbol.type.resultType();
+      }
       resolve(block, null);
 
       // Missing a return statement is an error
@@ -2610,7 +2703,7 @@ class Resolver {
               initializeMember(member);
               memberInitializers.insertChild(index, Node.createMemberInitializer(
                 Node.createName(memberSymbol.name).withSymbol(memberSymbol).withType(member.type),
-                createDefaultValue(member.type, memberSymbol.node.declarationName().range)));
+                createDefaultValue(member.type, memberSymbol.nameRange())));
               index++;
             }
           }
@@ -3407,7 +3500,7 @@ class Resolver {
       // Cannot instantiate abstract types
       if (valueType.symbol.isAbstract()) {
         var reason = valueType.symbol.reasonForAbstract;
-        semanticErrorAbstractNew(log, value.range, valueType, reason.node.declarationName().range, reason.fullName());
+        semanticErrorAbstractNew(log, value.range, valueType, reason.nameRange(), reason.fullName());
         resolveNodesAsParameterizedExpressions(arguments);
         return;
       }
@@ -3466,7 +3559,7 @@ class Resolver {
 
       // Super calls are statically resolved, so the symbol must not be abstract
       if (member.symbol.node.functionBlock() == null) {
-        semanticErrorAbstractSuperCall(log, node.range, member.symbol.node.declarationName().range);
+        semanticErrorAbstractSuperCall(log, node.range, member.symbol.nameRange());
         resolveNodesAsParameterizedExpressions(arguments);
         return;
       }
@@ -3685,7 +3778,7 @@ class Resolver {
 
     // The function must take no arguments and return a string
     if (toString.type != cache.toStringType) {
-      semanticErrorToStringWrongType(log, node.range, cache.toStringType, toString.type, toString.symbol.node.declarationName().range);
+      semanticErrorToStringWrongType(log, node.range, cache.toStringType, toString.type, toString.symbol.nameRange());
       return false;
     }
 
@@ -3994,11 +4087,7 @@ class Resolver {
 
     // Fail if multiple matches
     else if (matches.size() > 1) {
-      List<string> names = [];
-      for (var i = 0; i < matches.size(); i++) {
-        names.push(matches[i].symbol.fullName());
-      }
-      semanticErrorAmbiguousOperator(log, node.range, node.kind, names);
+      semanticErrorAmbiguousOperator(log, node.range, node.kind, fullNamesForMembers(matches));
     }
 
     // Apply the match
@@ -4013,6 +4102,18 @@ class Resolver {
         node.become(Node.createBinary(originalKind, clone, Node.createInt(0).withType(cache.intType)).withType(cache.boolType));
       }
     }
+  }
+
+  static bool isAbstractFunction(Symbol symbol) {
+    return symbol.kind.isFunction() && (symbol.kind == .MERGED_INSTANCE_FUNCTION ? symbol.isAbstract() : symbol.node.functionBlock() == null);
+  }
+
+  static List<string> fullNamesForMembers(List<Member> members) {
+    List<string> names = [];
+    for (var i = 0; i < members.size(); i++) {
+      names.push(members[i].symbol.fullName());
+    }
+    return names;
   }
 
   static final StringMap<SymbolFlag> nameToSymbolFlag = {

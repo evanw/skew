@@ -194,10 +194,14 @@ void semanticErrorDuplicateBaseType(Log log, Range range, Type type) {
 }
 
 void semanticErrorAmbiguousSymbol(Log log, Range range, string name, List<string> names) {
-  log.error(range, "Reference to " + simpleQuote(name) + " is ambiguous, could be " + namesToText(names));
+  log.error(range, "Reference to " + simpleQuote(name) + " is ambiguous, could be " + namesToText(names, "or"));
 }
 
-void semanticErrorUnmergedSymbol(Log log, Range range, string name, List<Type> types) {
+void semanticErrorCannotMerge(Log log, Range range, string name, List<string> names) {
+  log.error(range, "Cannot merge " + namesToText(names, "and") + " for " + simpleQuote(name));
+}
+
+void semanticErrorAmbiguousMergedType(Log log, Range range, string name, List<Type> types) {
   log.error(range, "Member " + simpleQuote(name) + " has an ambiguous inherited type, could be " + typesToText(types, "or"));
 }
 
@@ -396,7 +400,7 @@ void semanticErrorNoMatchingOperator(Log log, Range range, NodeKind kind, List<T
 void semanticErrorAmbiguousOperator(Log log, Range range, NodeKind kind, List<string> names) {
   assert kind in operatorInfo;
   log.error(range, (names.size() == 1 ? "Unary" : names.size() == 2 ? "Binary" : "Ternary") +
-    " operator \"" + operatorInfo[kind].text + "\" is ambiguous, could be " + namesToText(names));
+    " operator \"" + operatorInfo[kind].text + "\" is ambiguous, could be " + namesToText(names, "or"));
 }
 
 void semanticErrorDuplicateEntryPoint(Log log, Range range, Range previous) {

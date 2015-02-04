@@ -85,6 +85,20 @@ in Foo { class Bar {} }
 
 test("
 interface A { virtual void foo(); }
+interface B { void foo(); }
+interface C : A, B {}
+int foo(C foo) { return foo.foo(); }
+", "
+<stdin>:2:20: error: Abstract functions must use the \"virtual\" modifier
+interface B { void foo(); }
+                   ~~~
+<stdin>:3:11: error: Cannot merge \"A.foo\" and \"B.foo\" for \"C.foo\"
+interface C : A, B {}
+          ^
+");
+
+test("
+interface A { virtual void foo(); }
 interface B { virtual void foo(); }
 interface C : A, B {}
 int foo(C foo) { return foo.foo(); }
@@ -159,7 +173,7 @@ interface Bar {}
 in Bar { virtual int foo(); }
 interface Baz : Foo, Bar {}
 ", "
-<stdin>:5:11: error: Member \"Baz.foo\" has an ambiguous inherited type, could be type \"Foo.foo\" or type \"int fn()\"
+<stdin>:5:11: error: Cannot merge \"Foo.foo\" and \"Bar.foo\" for \"Baz.foo\"
 interface Baz : Foo, Bar {}
           ~~~
 ");
@@ -568,7 +582,7 @@ interface Foo { virtual void foo(); }
 interface Bar { virtual void foo(); }
 interface Baz : Foo, Bar { virtual void foo(); }
 ", "
-<stdin>:3:41: error: \"foo\" overrides another declaration with the same name in base type \"Baz\"
+<stdin>:3:41: error: \"foo\" overrides another symbol with the same name but is missing the \"override\" modifier
 interface Baz : Foo, Bar { virtual void foo(); }
                                         ~~~
 ");
@@ -579,17 +593,38 @@ interface B : A {}
 interface C : A {}
 class Diamond : B, C { override void foo() {} }
 ", "
-TODO
+<stdin>:4:38: error: \"foo\" must have the same signature as the method it overrides (expected type \"void fn(int)\" but found type \"void fn()\")
+class Diamond : B, C { override void foo() {} }
+                                     ~~~
+<stdin>:1:28: note: The overridden declaration is here
+interface A { virtual void foo(int foo); }
+                           ~~~
 ");
 
 test("
 interface A {}
 interface B {}
 class C : A, B { void bar() { foo(); } }
-in A { void foo() {} }
-in B { void foo() {} }
+in A { virtual void foo(); }
+in B { virtual void foo(); }
+var c = C();
 ", "
-TODO: foo is ambiguous
+<stdin>:6:9: error: Cannot construct abstract type \"C\"
+var c = C();
+        ^
+<stdin>:3:7: note: The type \"C\" is abstract due to member \"C.foo\"
+class C : A, B { void bar() { foo(); } }
+      ^
+");
+
+test("
+class A {}
+interface B {}
+class C : A, B { void bar() { foo(); } }
+in A { virtual void foo() {} }
+in B { virtual void foo(); }
+var c = C();
+", "
 ");
 
 test("
@@ -599,7 +634,9 @@ class C : A, B { void bar() { foo(); } }
 in A { static void foo() {} }
 in B { static void foo() {} }
 ", "
-TODO: foo is ambiguous
+<stdin>:3:31: error: Reference to \"foo\" is ambiguous, could be \"A.foo\" or \"B.foo\"
+class C : A, B { void bar() { foo(); } }
+                              ~~~
 ");
 
 test("
@@ -609,7 +646,9 @@ class C : A, B { int bar() { return foo; } }
 in A { static int foo; }
 in B { static int foo; }
 ", "
-TODO: foo is ambiguous
+<stdin>:3:37: error: Reference to \"foo\" is ambiguous, could be \"A.foo\" or \"B.foo\"
+class C : A, B { int bar() { return foo; } }
+                                    ~~~
 ");
 
 }}

@@ -298,8 +298,8 @@ string typeToText(Type type) {
   return "type \"" + type + "\"";
 }
 
-string namesToText(List<string> names) {
-  return prettyPrint.join(simpleQuoteAll(names), "or");
+string namesToText(List<string> names, string separator) {
+  return prettyPrint.join(simpleQuoteAll(names), separator);
 }
 
 string typesToText(List<Type> types, string separator) {
