@@ -8202,7 +8202,7 @@
           hasAccess = this.context.functionSymbol.enclosingSymbol === enclosingSymbol;
         }
       } else if (this.context.functionSymbol !== null) {
-        hasAccess = this.context.functionSymbol.enclosingSymbol.type.hasBaseType(enclosingSymbol.type);
+        hasAccess = this.context.functionSymbol.enclosingSymbol.type.hasBaseSymbol(enclosingSymbol);
       }
       if (!hasAccess) {
         semanticErrorAccessViolation(this.log, range, isPrivate ? 'private' : 'protected', symbol.fullName());
@@ -8854,32 +8854,32 @@
       this.typeContext = null;
       this.resultType = null;
       switch (symbol.kind) {
-      case 12:
+      case 11:
         this.initializeNamespace(symbol);
         break;
+      case 12:
       case 13:
-      case 14:
         this.initializeEnum(symbol);
         break;
+      case 14:
       case 15:
-      case 16:
         this.initializeObject(symbol);
         break;
+      case 16:
       case 17:
       case 18:
-      case 19:
         this.initializeFunction(symbol);
         break;
+      case 20:
       case 21:
       case 22:
-      case 23:
         this.initializeVariable(symbol);
         break;
+      case 8:
       case 9:
-      case 10:
         this.initializeParameter(symbol);
         break;
-      case 8:
+      case 7:
         this.initializeAlias(symbol);
         break;
       case 1:
@@ -10837,22 +10837,22 @@
     UNMERGED: 4,
     FORWARDED: 5,
     QUOTED_TYPE: 6,
-    ALIAS: 8,
-    OBJECT_PARAMETER: 9,
-    FUNCTION_PARAMETER: 10,
-    GLOBAL_NAMESPACE: 11,
-    NAMESPACE: 12,
-    ENUM: 13,
-    ENUM_FLAGS: 14,
-    CLASS: 15,
-    INTERFACE: 16,
-    GLOBAL_FUNCTION: 17,
-    INSTANCE_FUNCTION: 18,
-    CONSTRUCTOR_FUNCTION: 19,
-    MERGED_INSTANCE_FUNCTION: 20,
-    LOCAL_VARIABLE: 21,
-    GLOBAL_VARIABLE: 22,
-    INSTANCE_VARIABLE: 23
+    ALIAS: 7,
+    OBJECT_PARAMETER: 8,
+    FUNCTION_PARAMETER: 9,
+    GLOBAL_NAMESPACE: 10,
+    NAMESPACE: 11,
+    ENUM: 12,
+    ENUM_FLAGS: 13,
+    CLASS: 14,
+    INTERFACE: 15,
+    GLOBAL_FUNCTION: 16,
+    INSTANCE_FUNCTION: 17,
+    CONSTRUCTOR_FUNCTION: 18,
+    MERGED_INSTANCE_FUNCTION: 19,
+    LOCAL_VARIABLE: 20,
+    GLOBAL_VARIABLE: 21,
+    INSTANCE_VARIABLE: 22
   };
   var SymbolFlag = {
     PUBLIC: 1,
@@ -11031,19 +11031,19 @@
   };
   Symbol.prototype.isUninitialized = function() {
     if ((this.flags & SymbolFlag.INITIALIZE_MASK) === SymbolFlag.INITIALIZE_MASK) {
-      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:358:5)');
+      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:357:5)');
     }
     return (this.flags & SymbolFlag.INITIALIZE_MASK) === 0;
   };
   Symbol.prototype.isInitializing = function() {
     if ((this.flags & SymbolFlag.INITIALIZE_MASK) === SymbolFlag.INITIALIZE_MASK) {
-      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:363:5)');
+      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:362:5)');
     }
     return (this.flags & SymbolFlag.INITIALIZING) !== 0;
   };
   Symbol.prototype.isInitialized = function() {
     if ((this.flags & SymbolFlag.INITIALIZE_MASK) === SymbolFlag.INITIALIZE_MASK) {
-      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:368:5)');
+      throw new Error('assert (flags & .INITIALIZE_MASK) != .INITIALIZE_MASK; (src/resolver/symbol.sk:367:5)');
     }
     return (this.flags & SymbolFlag.INITIALIZED) !== 0;
   };

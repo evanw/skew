@@ -720,7 +720,7 @@ class Resolver {
         }
       } else {
         if (context.functionSymbol != null) {
-          hasAccess = context.functionSymbol.enclosingSymbol.type.hasBaseType(enclosingSymbol.type);
+          hasAccess = context.functionSymbol.enclosingSymbol.type.hasBaseSymbol(enclosingSymbol);
         }
       }
       if (!hasAccess) {
