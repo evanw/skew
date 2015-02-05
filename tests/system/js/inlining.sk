@@ -27,6 +27,7 @@ export void test() {
   function foo(bar) {
     return bar > 0 ? foo(bar - 1 | 0) : 0;
   }
+
   test = function() {
     var bar = foo(foo(1));
   };
@@ -46,6 +47,7 @@ export void test() {
   function foo(bar) {
     return baz() ? foo(bar) : 0;
   }
+
   test = function() {
     var bar = foo(foo(1));
   };
@@ -79,6 +81,7 @@ export void test() {
   function foo(x, y) {
     x = x + y | 0;
   }
+
   test = function() {
     foo(1, 2);
   };
@@ -101,14 +104,19 @@ export void test() {
     derived.prototype = Object.create(base.prototype);
     derived.prototype.constructor = derived;
   }
+
   function Foo() {
   }
+
   function Bar() {
     Foo.call(this);
   }
+
   $extends(Bar, Foo);
+
   Bar.prototype.foo = function() {
   };
+
   test = function() {
     new Bar().foo();
   };
@@ -184,9 +192,11 @@ export void test() {
   function foo(baz) {
     return bar(baz);
   }
+
   function bar(baz) {
     return foo(baz);
   }
+
   test = function() {
     foo(bar(foo(bar(0))));
   };
@@ -208,9 +218,11 @@ export void test() {
   function foo(baz) {
     return bar(foo(baz));
   }
+
   function bar(baz) {
     return foo(bar(baz));
   }
+
   test = function() {
     foo(bar(foo(bar(0))));
   };
@@ -264,6 +276,7 @@ export void test() {
   function bar(x, y) {
     return x + y | 0;
   }
+
   test = function() {
     bar(1, 2);
   };
@@ -281,6 +294,7 @@ export void test() {
   test = function() {
     x = 0;
   };
+
   var x = 0;
 }());
 ");
@@ -297,6 +311,7 @@ export void test() {
   test = function() {
     x = 0;
   };
+
   var x = 0;
 }());
 ");
@@ -314,6 +329,7 @@ export void test() {
   test = function() {
     x = 0;
   };
+
   var x = 0;
 }());
 ");

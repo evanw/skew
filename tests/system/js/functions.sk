@@ -11,8 +11,10 @@ export void test() {
 (function() {
   function Foo() {
   }
+
   Foo.prototype.foo = function() {
   };
+
   test = function() {
     new Foo().foo();
   };
@@ -31,6 +33,7 @@ export class Foo {
   Foo = function(_0) {
     this.foo = _0;
   };
+
   Foo.prototype.bar = function() {
     this.foo.bar();
   };
@@ -46,6 +49,7 @@ export void test() {
 (function() {
   function foo(foo) {
   }
+
   test = function() {
     foo((1, 2));
   };
@@ -67,10 +71,13 @@ export void test() {
   var Foo = {
     A: 0
   };
+
   var in_Foo = {};
+
   in_Foo.foo = function($this) {
     return $this;
   };
+
   test = function() {
     in_Foo.foo(Foo.A);
   };
@@ -87,10 +94,13 @@ in Foo {
   Foo = {
     FOO: 0
   };
+
   var in_Foo = {};
+
   in_Foo.foo = function($this) {
     return in_Foo._toString_[$this];
   };
+
   in_Foo._toString_ = ['FOO'];
 }());
 ");
@@ -108,8 +118,10 @@ export void test() {
 ", "
 (function() {
   var in_Foo = {};
+
   in_Foo.foo = function($this) {
   };
+
   test = function() {
     in_Foo.foo(new Foo());
   };
@@ -132,18 +144,24 @@ export void test() {
     derived.prototype = Object.create(base.prototype);
     derived.prototype.constructor = derived;
   }
+
   function Foo() {
   }
+
   Foo.prototype.foo = function(bar) {
     return bar;
   };
+
   function Bar() {
     Foo.call(this);
   }
+
   $extends(Bar, Foo);
+
   Bar.prototype.foo = function(bar) {
     return Foo.prototype.foo.call(this, bar);
   };
+
   test = function() {
     new Bar().foo(1);
   };
@@ -169,14 +187,19 @@ export void test() {
     derived.prototype = Object.create(base.prototype);
     derived.prototype.constructor = derived;
   }
+
   function Foo() {
   }
+
   function Bar() {
     Foo.call(this);
   }
+
   $extends(Bar, Foo);
+
   Bar.prototype.foo = function() {
   };
+
   test = function() {
     new Bar().foo();
   };
@@ -200,8 +223,10 @@ export void test() {
 (function() {
   function Bar() {
   }
+
   Bar.prototype.foo = function() {
   };
+
   test = function() {
     new Bar().foo();
   };
@@ -240,17 +265,22 @@ void bar(IBar bar) {
 (function() {
   function Foo() {
   }
+
   Foo.prototype.foo = function() {
   };
+
   function Bar(_0) {
     this.foo = _0;
   }
+
   Bar.prototype.bar = function() {
     this.foo.foo();
   };
+
   foo = function() {
     bar(new Bar(new Foo()));
   };
+
   function bar(bar) {
     bar.bar();
   }
@@ -290,16 +320,21 @@ void bar(IBar bar) {
   function Bar(_0) {
     this.foo = _0;
   }
+
   Bar.prototype.bar = function() {
     this.foo.foo();
   };
+
   function Foo() {
   }
+
   Foo.prototype.foo = function() {
   };
+
   foo = function() {
     bar(new Bar(new Foo()));
   };
+
   function bar(bar) {
     bar.bar();
   }
@@ -320,8 +355,10 @@ export IFoo foo() {
 (function() {
   function Foo() {
   }
+
   Foo.prototype.foo = function() {
   };
+
   foo = function() {
     return new Foo();
   };
@@ -343,8 +380,10 @@ import void bar(IFoo foo);
 (function() {
   function Foo() {
   }
+
   Foo.prototype.foo = function() {
   };
+
   foo = function() {
     bar(new Foo());
   };

@@ -586,7 +586,7 @@ namespace cpp {
     }
 
     override bool shouldEmitCast(Node node) {
-        // C++11 doesn't auto-convert enums to ints for some reason
+      // C++11 doesn't auto-convert enums to ints for some reason
       if (node.type.isInt(cache) && node.castValue().type.isRegularEnum()) {
         return true;
       }

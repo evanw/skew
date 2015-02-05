@@ -26,9 +26,11 @@ export Foo bar() { return .C; }
     A: 0,
     C: 2
   };
+
   foo = function() {
     return Foo.A;
   };
+
   bar = function() {
     return Foo.C;
   };
@@ -48,14 +50,17 @@ export int foo(int x) {
 (function() {
   foo = function(x) {
     var y = 0;
+
     switch (x) {
     case 1:
       y = 1;
       break;
+
     case 2:
       y = 2;
       break;
     }
+
     return y;
   };
 }());
@@ -73,6 +78,7 @@ export class Foo<T is IFoo> {
 (function() {
   Foo = function() {
   };
+
   Foo.prototype.foo = function() {
     var foo = null;
     return foo;
@@ -93,11 +99,13 @@ export void foo() {
   function Foo() {
     this.bar = 0;
   }
+
   Foo.prototype.foo = function() {
     if (this.bar <= 0) {
       throw new Error('assert bar > 0; (<stdin>:3:16)');
     }
   };
+
   foo = function() {
     new Foo().foo();
   };
@@ -129,6 +137,7 @@ alias Bar = Foo;
   Foo = {
     FOO: 0
   };
+
   foo = function() {
     return Foo.FOO;
   };
@@ -148,6 +157,7 @@ const var baz = 0;
     var bar = 1;
     return 0 + bar | 0;
   }
+
   bar = foo();
   var baz = 0;
 }());

@@ -7,6 +7,7 @@ void foo() {}
 (function() {
   function foo() {
   }
+
   foo();
 }());
 ");
@@ -21,6 +22,7 @@ int foo() {
   function foo() {
     return 0;
   }
+
   process.exit(foo());
 }());
 ");
@@ -32,6 +34,7 @@ void foo(List<string> args) {}
 (function() {
   function foo(args) {
   }
+
   foo(process.argv.slice(2));
 }());
 ");
@@ -46,6 +49,7 @@ int foo(List<string> args) {
   function foo(args) {
     return 0;
   }
+
   process.exit(foo(process.argv.slice(2)));
 }());
 ");

@@ -23,6 +23,7 @@ namespace js {
       var currentLine = 0;
       var currentColumn = 0;
       var needsSemicolon = false;
+      NodeKind previousKind = .NULL;
       Source currentSource = null;
       Patcher patcher = null;
       CompilerOptions options = null;
@@ -60,6 +61,7 @@ namespace js {
 
       // Emit helper functions
       if (patcher.needMathImul) {
+        emitExtraNewlineBefore(.VARIABLE);
         emit(indent + "var " + patcher.imul + minifySpaces(" = Math.imul || function(a, b) {" + newline));
         increaseIndent();
         emit(indent + "var " + minifySpaces("ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;" + newline));
@@ -67,11 +69,13 @@ namespace js {
         emitSemicolonAfterStatement();
         decreaseIndent();
         emit(indent + "};" + newline);
+        emitExtraNewlineAfter(.VARIABLE);
         needsSemicolon = false;
       }
       if (patcher.needExtends) {
         var derived = options.mangle ? "d" : "derived";
         var base = options.mangle ? "b" : "base";
+        emitExtraNewlineBefore(.FUNCTION);
         emit(indent + "function " + minifySpaces(patcher.extends + "(" + derived + ", " + base + ") {" + newline));
         increaseIndent();
         emit(indent + derived + minifySpaces(".prototype = Object.create(" + base + ".prototype);" + newline));
@@ -79,6 +83,7 @@ namespace js {
         emitSemicolonAfterStatement();
         decreaseIndent();
         emit(indent + "}" + newline);
+        emitExtraNewlineAfter(.FUNCTION);
         needsSemicolon = false;
       }
 
@@ -139,9 +144,11 @@ namespace js {
         var type = entryPointSymbol.type;
         var callText = fullName(entryPointSymbol) + (type.argumentTypes().size() != 0 ? "(process.argv.slice(2))" : "()");
         emitSemicolonIfNeeded();
+        emitExtraNewlineBefore(.EXPRESSION);
         addMapping(entryPointSymbol.node); // Without this, the first call stack entry points at the last global variable during initialization
         emit(indent + (type.resultType() == resolver.cache.intType ? "process.exit(" + callText + ")" : callText));
         emitSemicolonAfterStatement();
+        emitExtraNewlineAfter(.EXPRESSION);
       }
 
       // End the closure wrapping everything
@@ -163,6 +170,25 @@ namespace js {
       return [currentSource];
     }
 
+    void emitExtraNewlineBefore(NodeKind kind) {
+      if (!options.minify && previousKind != .NULL && shouldEmitExtraNewlineBetween(previousKind, kind)) {
+        emit(newline);
+      }
+      previousKind = .NULL;
+    }
+
+    void emitExtraNewlineAfter(NodeKind kind) {
+      previousKind = kind;
+    }
+
+    bool isFlowNodeKind(NodeKind kind) {
+      return kind == .EXPRESSION || kind == .VARIABLE || kind == .VARIABLE_CLUSTER || kind.isJump();
+    }
+
+    bool shouldEmitExtraNewlineBetween(NodeKind before, NodeKind after) {
+      return !isFlowNodeKind(before) || !isFlowNodeKind(after) || before != .VARIABLE_CLUSTER && after == .VARIABLE_CLUSTER;
+    }
+
     void addMapping(Node node) {
       if (options.sourceMap) {
         var range = node.range;
@@ -175,6 +201,7 @@ namespace js {
 
     void increaseIndent() {
       if (!options.minify) {
+        previousKind = .NULL;
         indent += "  ";
       }
     }
@@ -229,9 +256,13 @@ namespace js {
 
     void emitStatements(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
+        var node = nodes[i];
+        var kind = node.kind;
         emitSemicolonIfNeeded();
         maybeEmitMinifedNewline();
-        emitNode(nodes[i]);
+        if (kind != .MODIFIER) emitExtraNewlineBefore(kind);
+        emitNode(node);
+        if (kind != .MODIFIER) emitExtraNewlineAfter(kind);
       }
     }
 
@@ -371,6 +402,7 @@ namespace js {
         }
 
         emitSemicolonIfNeeded();
+        emitExtraNewlineBefore(.VARIABLE);
 
         // Use assignment statements for compound names
         if (isCompoundName) {
@@ -400,6 +432,7 @@ namespace js {
 
       if (state != .NONE) {
         emitSemicolonAfterStatement();
+        emitExtraNewlineAfter(.VARIABLE);
       }
     }
 
@@ -409,12 +442,14 @@ namespace js {
         return;
       }
       emitSemicolonIfNeeded();
+      emitExtraNewlineBefore(node.kind);
       emit(indent);
       if (!hasCompoundName(symbol) && !symbol.isExport()) {
         emit("var ");
       }
       emit(fullName(symbol) + space + "=" + space + "{}");
       emitSemicolonAfterStatement();
+      emitExtraNewlineAfter(node.kind);
     }
 
     void emitEnum(Node node) {
@@ -424,6 +459,7 @@ namespace js {
         return;
       }
       emitSemicolonIfNeeded();
+      emitExtraNewlineBefore(node.kind);
       emit(indent);
       if (!hasCompoundName(symbol) && !symbol.isExport()) {
         emit("var ");
@@ -451,6 +487,7 @@ namespace js {
         emit(indent + "}");
       }
       emitSemicolonAfterStatement();
+      emitExtraNewlineAfter(node.kind);
     }
 
     void emitFunction(Node node) {
@@ -461,6 +498,7 @@ namespace js {
       }
       var useFunctionStatement = !hasCompoundName(symbol) && !symbol.isExport();
       emitSemicolonIfNeeded();
+      emitExtraNewlineBefore(node.kind);
       emit(useFunctionStatement
         ? indent + "function " + fullName(symbol)
         : indent + fullName(symbol) + space + "=" + space + "function");
@@ -471,12 +509,16 @@ namespace js {
       } else {
         emitSemicolonAfterStatement();
       }
+      emitExtraNewlineAfter(node.kind);
+
       if (node.kind == .CONSTRUCTOR) {
         var type = symbol.enclosingSymbol.type;
         if (type.isClass() && type.baseClass() != null) {
           emitSemicolonIfNeeded();
+          emitExtraNewlineBefore(.EXPRESSION);
           emit(indent + patcher.extends + "(" + fullName(type.symbol) + "," + space + fullName(type.baseClass().symbol) + ")");
           emitSemicolonAfterStatement();
+          emitExtraNewlineAfter(.EXPRESSION);
         }
       }
     }

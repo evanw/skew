@@ -129,6 +129,7 @@ export void foo(bool foo) {
     var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
+
   foo = function(foo) {
     (foo | 0) + 1 | 0;
     (foo | 0) - 1 | 0;
@@ -159,6 +160,7 @@ export void foo(int foo) {
     var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
+
   foo = function(foo) {
     foo + 1 | 1;
     foo - 1 | 1;
@@ -188,6 +190,7 @@ export void foo(int foo, bool bar) {
     var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
+
   foo = function(foo, bar) {
     foo = foo + (bar | 0) | 0;
     foo = foo - (bar | 0) | 0;
@@ -212,12 +215,15 @@ export Foo baz(bool x) { return (Foo)(int)x; }
 (function() {
   var Foo = {
   };
+
   foo = function(x) {
     return x | 0;
   };
+
   bar = function(x) {
     return x | 0;
   };
+
   baz = function(x) {
     return x | 0;
   };
@@ -257,6 +263,7 @@ export class Foo {
   Foo = function(_0) {
     this.bar = _0;
   };
+
   Foo.prototype.baz = function() {
     this.bar = this.bar + 1 | 0;
     this.bar = this.bar - 1 | 0;
@@ -284,16 +291,21 @@ Foo bar() {
   function Foo() {
     this.foo = 0;
   }
+
   foo = function(baz) {
     var $temp0;
     $temp0 = bar(), $temp0.foo = $temp0.foo + 1 | 0;
+
     var $temp1;
     $temp1 = bar(), $temp1.foo = $temp1.foo - 1 | 0;
+
     var $temp2;
     $temp2 = bar(), $temp2.foo = $temp2.foo + 1 | 0;
+
     var $temp3;
     $temp3 = bar(), $temp3.foo = $temp3.foo - 1 | 0;
   };
+
   function bar() {
     return new Foo();
   }
@@ -314,6 +326,7 @@ export void foo(int bar) {
     var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
+
   foo = function(bar) {
     bar = bar + 1 | 0;
     bar = bar - 1 | 0;
@@ -341,9 +354,11 @@ export class Foo {
     var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
+
   Foo = function(_0) {
     this.bar = _0;
   };
+
   Foo.prototype.baz = function() {
     this.bar = this.bar + 1 | 0;
     this.bar = this.bar - 1 | 0;
@@ -374,21 +389,28 @@ Foo baz() {
     var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
+
   Foo = function() {
     this.foo = 0;
   };
+
   Foo.prototype.bar = function() {
     var $temp0;
     $temp0 = baz(), $temp0.foo = $temp0.foo + this.foo | 0;
+
     var $temp1;
     $temp1 = baz(), $temp1.foo = $temp1.foo - this.foo | 0;
+
     var $temp2;
     $temp2 = baz(), $temp2.foo = $imul($temp2.foo, this.foo);
+
     var $temp3;
     $temp3 = baz(), $temp3.foo = $temp3.foo / this.foo | 0;
+
     var $temp4;
     $temp4 = baz(), $temp4.foo = $temp4.foo % this.foo | 0;
   };
+
   function baz() {
     return new Foo();
   }
@@ -545,58 +567,85 @@ export void foo(Foo foo) {
 (function() {
   function Foo() {
   }
+
   Foo.prototype.negative = function() {
   };
+
   Foo.prototype.complement = function() {
   };
+
   Foo.prototype.add = function(x) {
   };
+
   Foo.prototype.subtract = function(x) {
   };
+
   Foo.prototype.multiply = function(x) {
   };
+
   Foo.prototype.divide = function(x) {
   };
+
   Foo.prototype.remainder = function(x) {
   };
+
   Foo.prototype.and = function(x) {
   };
+
   Foo.prototype.or = function(x) {
   };
+
   Foo.prototype.xor = function(x) {
   };
+
   Foo.prototype.shiftLeft = function(x) {
   };
+
   Foo.prototype.shiftRight = function(x) {
   };
+
   Foo.prototype.contains = function(x) {
   };
+
   Foo.prototype.compare = function(x) {
   };
+
   Foo.prototype.addAssign = function(x) {
   };
+
   Foo.prototype.subtractAssign = function(x) {
   };
+
   Foo.prototype.multiplyAssign = function(x) {
   };
+
   Foo.prototype.divideAssign = function(x) {
   };
+
   Foo.prototype.remainderAssign = function(x) {
   };
+
   Foo.prototype.andAssign = function(x) {
   };
+
   Foo.prototype.orAssign = function(x) {
   };
+
   Foo.prototype.xorAssign = function(x) {
   };
+
   Foo.prototype.shiftLeftAssign = function(x) {
   };
+
   Foo.prototype.shiftRightAssign = function(x) {
   };
+
   Foo.prototype.get = function(x) {
   };
+
   Foo.prototype.set = function(x, y) {
   };
+
   foo = function(foo) {
     foo.negative();
     foo.complement();
@@ -640,6 +689,7 @@ export bool bar() { return FOO; }
   bar = function() {
     return false;
   };
+
   foo = false;
 }());
 ");

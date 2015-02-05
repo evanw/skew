@@ -1061,11 +1061,14 @@ export int foo() { return Foo.FOO + Bar.foo; }
 ", "
 (function() {
   var a = 0;
+
   function d() {
   }
+
   foo = function() {
     return a + b | 0;
   };
+
   var b = 0;
 }());
 ").mangle();

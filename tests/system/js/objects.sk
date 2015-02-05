@@ -29,11 +29,14 @@ class Bar {}
     derived.prototype = Object.create(base.prototype);
     derived.prototype.constructor = derived;
   }
+
   function Bar() {
   }
+
   Foo = function() {
     Bar.call(this);
   };
+
   $extends(Foo, Bar);
 }());
 ");
@@ -47,12 +50,15 @@ class Bar { int x; }
     derived.prototype = Object.create(base.prototype);
     derived.prototype.constructor = derived;
   }
+
   function Bar(_0) {
     this.x = _0;
   }
+
   Foo = function(_0) {
     Bar.call(this, _0);
   };
+
   $extends(Foo, Bar);
 }());
 ");
@@ -66,12 +72,15 @@ class Bar {}
     derived.prototype = Object.create(base.prototype);
     derived.prototype.constructor = derived;
   }
+
   function Bar() {
   }
+
   Foo = function(_0) {
     Bar.call(this);
     this.y = _0;
   };
+
   $extends(Foo, Bar);
 }());
 ");
@@ -85,13 +94,16 @@ class Bar { int x; }
     derived.prototype = Object.create(base.prototype);
     derived.prototype.constructor = derived;
   }
+
   function Bar(_0) {
     this.x = _0;
   }
+
   Foo = function(_0, _1) {
     Bar.call(this, _0);
     this.y = _1;
   };
+
   $extends(Foo, Bar);
 }());
 ");
@@ -105,8 +117,10 @@ namespace ns {
 ", "
 (function() {
   var ns = {};
+
   ns.Foo = function() {
   };
+
   ns.Bar = {
     A: 0,
     B: 1,
@@ -137,13 +151,17 @@ export class Bar : Foo {}
     derived.prototype = Object.create(base.prototype);
     derived.prototype.constructor = derived;
   }
+
   Foo = function() {
   };
+
   Foo.prototype.foo = function() {
   };
+
   Bar = function() {
     Foo.call(this);
   };
+
   $extends(Bar, Foo);
 }());
 ");
@@ -159,12 +177,16 @@ export class Bar : Foo {
     derived.prototype = Object.create(base.prototype);
     derived.prototype.constructor = derived;
   }
+
   function Foo() {
   }
+
   Bar = function() {
     Foo.call(this);
   };
+
   $extends(Bar, Foo);
+
   Bar.prototype.foo = function() {
   };
 }());
@@ -215,17 +237,24 @@ namespace y {
     derived.prototype = Object.create(base.prototype);
     derived.prototype.constructor = derived;
   }
+
   var x = {};
+
   x.a = function() {
   };
+
   var y = {};
+
   y.b = function() {
     x.a.call(this);
   };
+
   $extends(y.b, x.a);
+
   x.c = function() {
     y.b.call(this);
   };
+
   $extends(x.c, y.b);
 }());
 ");
