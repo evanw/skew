@@ -226,4 +226,81 @@ test("
 ~~~~~~~~~~~~
 ");
 
+test("
+class Foo {
+  @OperatorGet int foo(int x) { return x; }
+}
+class Bar : Foo {
+  bool bar() { return this[0]; }
+}
+", "
+<stdin>:5:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  bool bar() { return this[0]; }
+                      ~~~~~~~
+");
+
+test("
+interface Foo {
+  @OperatorGet virtual int foo(int x);
+}
+interface Bar : Foo {
+  override int foo(int x);
+}
+class Baz : Bar {
+  bool bar() { return this[0]; }
+}
+", "
+<stdin>:8:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  bool bar() { return this[0]; }
+                      ~~~~~~~
+");
+
+test("
+interface Foo {
+  virtual int foo(int x);
+}
+interface Bar : Foo {
+  @OperatorGet override int foo(int x);
+}
+class Baz : Bar {
+  bool bar() { return this[0]; }
+}
+", "
+<stdin>:8:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  bool bar() { return this[0]; }
+                      ~~~~~~~
+");
+
+test("
+interface Foo {
+  @OperatorGet virtual int foo(int x);
+}
+interface Bar {
+  virtual int foo(int x);
+}
+class Baz : Foo, Bar {
+  bool bar() { return this[0]; }
+}
+", "
+<stdin>:8:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  bool bar() { return this[0]; }
+                      ~~~~~~~
+");
+
+test("
+interface Foo {
+  virtual int foo(int x);
+}
+interface Bar {
+  @OperatorGet virtual int foo(int x);
+}
+class Baz : Foo, Bar {
+  bool bar() { return this[0]; }
+}
+", "
+<stdin>:8:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  bool bar() { return this[0]; }
+                      ~~~~~~~
+");
+
 }}
