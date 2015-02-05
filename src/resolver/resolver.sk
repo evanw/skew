@@ -2561,8 +2561,17 @@ class Resolver {
     if (block != null) {
       var oldResultType = resultType;
 
+      // Virtual instance functions on interfaces must currently be abstract.
+      // We could easily support non-abstract functions here by copying and
+      // pasting the function bodies into the classes that use those interfaces
+      // but we don't yet. Note that non-virtual functions on interfaces are
+      // fine because we can just make them static and lift them off the type.
+      if (symbol.isVirtual() && symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind == .INTERFACE) {
+        semanticErrorCannotImplementInterfaceFunction(log, block.range);
+      }
+
       // Imported functions cannot have an implementation
-      if (symbol.isImport()) {
+      else if (symbol.isImport()) {
         semanticErrorCannotImplementImportedFunction(log, block.range);
       }
 

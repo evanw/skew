@@ -19,6 +19,20 @@ in CompilerTarget {
   bool shouldRunResolver() {
     return this >= NONE && this <= JOINED;
   }
+
+  // C++ has generics, not templates, and each template has a separate copy of
+  // its static members, unlike generics. Fix this by moving all static stuff
+  // off of generic types.
+  bool moveStaticGlobalsOffGenericTypes() {
+    return this == .CPP;
+  }
+
+  // Interfaces in JavaScript go away entirely at runtime. All stuff defined
+  // on an interface (global variables, non-virtual functions, etc.) must be
+  // moved off for it to be emitted correctly.
+  bool moveNonVirtualSymbolsOffInterfaces() {
+    return this == JAVASCRIPT;
+  }
 }
 
 class OverriddenDefine {

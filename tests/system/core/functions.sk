@@ -230,10 +230,31 @@ class Baz : Foo {
 ");
 
 test("
-interface Foo {}
-in Foo { virtual void foo() {} }
+interface Foo {
+  void foo() {}
+}
 ", "
-TODO
+");
+
+test("
+interface Foo {
+  virtual void foo() {}
+}
+", "
+<stdin>:2:22: error: Virtual interface functions cannot have an implementation
+  virtual void foo() {}
+                     ~~
+");
+
+test("
+in Foo {
+  virtual void foo() {}
+}
+interface Foo {}
+", "
+<stdin>:2:22: error: Virtual interface functions cannot have an implementation
+  virtual void foo() {}
+                     ~~
 ");
 
 }}

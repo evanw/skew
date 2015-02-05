@@ -11,12 +11,11 @@ class SymbolMotionPass {
   private void moveSymbol(Symbol symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
     if (!symbol.isImport() && enclosingSymbol != null && !symbol.kind.isParameter() && (
-        enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() && symbol.isFromExtension() ||
-
-        // C++ has generics, not templates, and each template has a separate
-        // copy of its static members unlike generics. Fix this by moving all
-        // static stuff off of generic types.
-        resolver.options.target == .CPP && enclosingSymbol.hasParameters() && symbol.kind.isGlobal())) {
+        enclosingSymbol.isImport() ||
+        enclosingSymbol.kind.isEnum() && symbol.isFromExtension() ||
+        symbol.kind.isGlobal() && (
+          resolver.options.target.moveStaticGlobalsOffGenericTypes() && enclosingSymbol.hasParameters() ||
+          resolver.options.target.moveNonVirtualSymbolsOffInterfaces() && enclosingSymbol.kind == .INTERFACE))) {
 
       // Move the symbol to an automatically-generated namespace
       var enclosingType = symbol.enclosingSymbol.type;

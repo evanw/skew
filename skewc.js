@@ -2837,7 +2837,7 @@
       this.file = compiler.tokenizeAndParseFile(this.source);
 
       if (!compiler.log.isEmpty()) {
-        throw new Error('assert compiler.log.isEmpty(); (src/compiler/compiler.sk:92:7)');
+        throw new Error('assert compiler.log.isEmpty(); (src/compiler/compiler.sk:106:7)');
       }
     }
 
@@ -3022,7 +3022,7 @@
         break;
 
       default:
-        throw new Error('assert false; (src/compiler/compiler.sk:254:19)');
+        throw new Error('assert false; (src/compiler/compiler.sk:268:19)');
         break;
       }
 
@@ -12280,7 +12280,9 @@
     if (block !== null) {
       var oldResultType = this.resultType;
 
-      if (symbol.isImport()) {
+      if (symbol.isVirtual() && symbol.enclosingSymbol !== null && symbol.enclosingSymbol.kind === SymbolKind.INTERFACE) {
+        semanticErrorCannotImplementInterfaceFunction(this.log, block.range);
+      } else if (symbol.isImport()) {
         semanticErrorCannotImplementImportedFunction(this.log, block.range);
       }
 
@@ -12342,7 +12344,7 @@
         this.resolveNodesAsParameterizedExpressions($arguments);
       } else {
         if (!overriddenType.isFunction()) {
-          throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2633:9)');
+          throw new Error('assert overriddenType.isFunction(); (src/resolver/resolver.sk:2642:9)');
         }
 
         this.resolveArguments($arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range);
@@ -12733,7 +12735,7 @@
         }
 
         if (!in_NodeKind.isConstant(caseValue.kind)) {
-          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:3048:9)');
+          throw new Error('assert caseValue.kind.isConstant(); (src/resolver/resolver.sk:3057:9)');
         }
 
         var k = 0;
@@ -12761,7 +12763,7 @@
       this.log.warning(node.range, value.asString());
     } else {
       if (node.kind !== NodeKind.PREPROCESSOR_ERROR) {
-        throw new Error('assert node.kind == .PREPROCESSOR_ERROR; (src/resolver/resolver.sk:3071:7)');
+        throw new Error('assert node.kind == .PREPROCESSOR_ERROR; (src/resolver/resolver.sk:3080:7)');
       }
 
       this.log.error(node.range, value.asString());
@@ -12803,7 +12805,7 @@
   Resolver.prototype.resolveThis = function(node) {
     if (this.checkAccessToThis(node.range)) {
       if (this.context.symbolForThis === null) {
-        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:3110:7)');
+        throw new Error('assert context.symbolForThis != null; (src/resolver/resolver.sk:3119:7)');
       }
 
       var symbol = this.context.symbolForThis;
@@ -12975,7 +12977,7 @@
 
         if (item.kind !== NodeKind.KEY_VALUE) {
           if (item.kind !== NodeKind.ERROR) {
-            throw new Error('assert item.kind == .ERROR; (src/resolver/resolver.sk:3287:11)');
+            throw new Error('assert item.kind == .ERROR; (src/resolver/resolver.sk:3296:11)');
           }
 
           continue;
@@ -12991,7 +12993,7 @@
       for (var i = 0; i < items.length; i = i + 1 | 0) {
         if (items[i].kind !== NodeKind.KEY_VALUE) {
           if (items[i].kind !== NodeKind.ERROR) {
-            throw new Error('assert items[i].kind == .ERROR; (src/resolver/resolver.sk:3301:11)');
+            throw new Error('assert items[i].kind == .ERROR; (src/resolver/resolver.sk:3310:11)');
           }
 
           this.resolveNodesAsParameterizedExpressions(items);
@@ -13145,7 +13147,7 @@
     var $arguments = node.callArguments();
 
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3468:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3477:5)');
     }
 
     this.resolve(value, null);
@@ -13276,7 +13278,7 @@
     }
 
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3608:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3617:5)');
     }
 
     var sortedTypes = [];
@@ -13594,7 +13596,7 @@
 
   Resolver.prototype.assessOperatorOverloadMatch = function(nodeTypes, argumentTypes) {
     if (nodeTypes.length !== (1 + argumentTypes.length | 0)) {
-      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3973:5)');
+      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:3982:5)');
     }
 
     var foundImplicitConversion = false;
@@ -13681,18 +13683,18 @@
       var overload = overloads[i];
 
       if (!overload.type.isFunction()) {
-        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:4056:7)');
+        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:4065:7)');
       }
 
       if ((overload.type.argumentTypes().length + 1 | 0) !== children.length) {
-        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:4057:7)');
+        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:4066:7)');
       }
 
       var member = targetType.findOperatorOverload(overload);
       this.initializeMember(member);
 
       if (!member.type.isFunction()) {
-        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:4060:7)');
+        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:4069:7)');
       }
 
       var match = this.assessOperatorOverloadMatch(typeForMatching, member.type.argumentTypes());
@@ -14106,19 +14108,19 @@
   SymbolMotionPass.prototype.moveSymbol = function(symbol) {
     var enclosingSymbol = symbol.enclosingSymbol;
 
-    if (!symbol.isImport() && enclosingSymbol !== null && !in_SymbolKind.isParameter(symbol.kind) && (enclosingSymbol.isImport() || in_SymbolKind.isEnum(enclosingSymbol.kind) && symbol.isFromExtension() || this.resolver.options.target === CompilerTarget.CPP && enclosingSymbol.hasParameters() && in_SymbolKind.isGlobal(symbol.kind))) {
+    if (!symbol.isImport() && enclosingSymbol !== null && !in_SymbolKind.isParameter(symbol.kind) && (enclosingSymbol.isImport() || in_SymbolKind.isEnum(enclosingSymbol.kind) && symbol.isFromExtension() || in_SymbolKind.isGlobal(symbol.kind) && (in_CompilerTarget.moveStaticGlobalsOffGenericTypes(this.resolver.options.target) && enclosingSymbol.hasParameters() || in_CompilerTarget.moveNonVirtualSymbolsOffInterfaces(this.resolver.options.target) && enclosingSymbol.kind === SymbolKind.INTERFACE))) {
       var enclosingType = symbol.enclosingSymbol.type;
       var shadow = this.shadowForSymbol(enclosingSymbol);
       var member = enclosingType.members._table[symbol.name];
 
       if (member.symbol !== symbol) {
-        throw new Error('assert member.symbol == symbol; (src/resolver/symbolmotion.sk:25:7)');
+        throw new Error('assert member.symbol == symbol; (src/resolver/symbolmotion.sk:24:7)');
       }
 
       delete enclosingType.members._table[symbol.name];
 
       if (shadow.findMember(symbol.name) !== null) {
-        throw new Error('assert shadow.findMember(symbol.name) == null; (src/resolver/symbolmotion.sk:27:7)');
+        throw new Error('assert shadow.findMember(symbol.name) == null; (src/resolver/symbolmotion.sk:26:7)');
       }
 
       shadow.addMember(member);
@@ -15556,6 +15558,14 @@
 
   in_CompilerTarget.shouldRunResolver = function($this) {
     return $this >= CompilerTarget.NONE && $this <= CompilerTarget.JOINED;
+  };
+
+  in_CompilerTarget.moveStaticGlobalsOffGenericTypes = function($this) {
+    return $this === CompilerTarget.CPP;
+  };
+
+  in_CompilerTarget.moveNonVirtualSymbolsOffInterfaces = function($this) {
+    return $this === CompilerTarget.JAVASCRIPT;
   };
 
   function now() {
@@ -17515,7 +17525,7 @@
   }
 
   function semanticErrorOverrideDifferentTypes(log, range, name, base, derived, overridden) {
-    log.error(range, simpleQuote(name) + ' must have the same signature as the method it overrides (expected ' + typeToText(base) + ' but found ' + typeToText(derived) + ')');
+    log.error(range, simpleQuote(name) + ' must have the same signature as the function it overrides (expected ' + typeToText(base) + ' but found ' + typeToText(derived) + ')');
 
     if (!overridden.isEmpty()) {
       log.note(overridden, 'The overridden declaration is here');
@@ -17531,7 +17541,7 @@
   }
 
   function semanticErrorCannotOverrideNonVirtual(log, range, name, overridden) {
-    log.error(range, simpleQuote(name) + ' cannot override a non-virtual method');
+    log.error(range, simpleQuote(name) + ' cannot override a non-virtual function');
 
     if (!overridden.isEmpty()) {
       log.note(overridden, 'The overridden declaration is here');
@@ -17608,6 +17618,10 @@
     if (!declaration.isEmpty()) {
       log.note(declaration, 'The declaration for toString() is here');
     }
+  }
+
+  function semanticErrorCannotImplementInterfaceFunction(log, range) {
+    log.error(range, 'Virtual interface functions cannot have an implementation');
   }
 
   function semanticErrorCannotImplementImportedFunction(log, range) {
@@ -17708,7 +17722,7 @@
 
   function semanticErrorNoMatchingOperator(log, range, kind, types) {
     if (!(kind in operatorInfo._table)) {
-      throw new Error('assert kind in operatorInfo; (src/resolver/diagnostics.sk:395:3)');
+      throw new Error('assert kind in operatorInfo; (src/resolver/diagnostics.sk:399:3)');
     }
 
     log.error(range, 'No ' + (types.length === 1 ? 'unary' : types.length === 2 ? 'binary' : 'ternary') + ' operator "' + operatorInfo._table[kind].text + '" for ' + typesToText(types, 'and'));
@@ -17716,7 +17730,7 @@
 
   function semanticErrorAmbiguousOperator(log, range, kind, names) {
     if (!(kind in operatorInfo._table)) {
-      throw new Error('assert kind in operatorInfo; (src/resolver/diagnostics.sk:401:3)');
+      throw new Error('assert kind in operatorInfo; (src/resolver/diagnostics.sk:405:3)');
     }
 
     log.error(range, (names.length === 1 ? 'Unary' : names.length === 2 ? 'Binary' : 'Ternary') + ' operator "' + operatorInfo._table[kind].text + '" is ambiguous, could be ' + namesToText(names, 'or'));
@@ -17883,7 +17897,7 @@
       var symbol = info.symbol;
       var enclosingSymbol = symbol.enclosingSymbol;
 
-      if (symbol.kind === SymbolKind.INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() !== null && (enclosingSymbol.isImport() || in_SymbolKind.isEnum(enclosingSymbol.kind) || (resolver.options.globalizeAllFunctions || symbol.isInline()) && !symbol.isExport() && !symbol.isVirtual())) {
+      if (symbol.kind === SymbolKind.INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() !== null && (enclosingSymbol.isImport() || in_SymbolKind.isEnum(enclosingSymbol.kind) || (resolver.options.globalizeAllFunctions || symbol.isInline()) && !symbol.isExport() && !symbol.isVirtual() || in_CompilerTarget.moveNonVirtualSymbolsOffInterfaces(resolver.options.target) && enclosingSymbol.kind === SymbolKind.INTERFACE && !symbol.isVirtual())) {
         var thisSymbol = resolver.createSymbol('this', SymbolKind.LOCAL_VARIABLE);
         thisSymbol.type = enclosingSymbol.type;
 
@@ -17927,7 +17941,7 @@
         name = value.dotName().replaceWith(null);
       } else {
         if (value.kind !== NodeKind.NAME) {
-          throw new Error('assert value.kind == .NAME; (src/resolver/globalize.sk:70:9)');
+          throw new Error('assert value.kind == .NAME; (src/resolver/globalize.sk:71:9)');
         }
 
         target = Node.createThis().withType(thisSymbol.type);

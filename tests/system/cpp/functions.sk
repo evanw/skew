@@ -262,4 +262,52 @@ Foo::Foo(int _0) : ns::Foo(_0) {
 }
 ");
 
+testCPP("
+in Foo {
+  void foo() {}
+  static void bar() {}
+  static int baz;
+}
+export void foo() {
+  Bar().foo();
+  Bar.bar();
+  Bar.baz;
+}
+class Bar : Foo {}
+interface Foo {}
+", "
+struct Foo;
+struct Bar;
+
+struct Foo {
+  void foo();
+  static void bar();
+
+  static int baz;
+};
+
+struct Bar : Foo {
+  Bar();
+};
+
+void foo();
+
+void Foo::foo() {
+}
+
+void Foo::bar() {
+}
+
+int Foo::baz = 0;
+
+Bar::Bar() {
+}
+
+void foo() {
+  (new Bar())->foo();
+  Foo::bar();
+  Foo::baz;
+}
+");
+
 }}

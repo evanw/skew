@@ -592,7 +592,7 @@ interface B<X> : A<X> {}
 interface C<Y> : A<Y> {}
 class Diamond<Z> : B<Z>, C<Z> { override void foo() {} }
 ", "
-<stdin>:4:47: error: \"foo\" must have the same signature as the method it overrides (expected type \"void fn(Z)\" but found type \"void fn()\")
+<stdin>:4:47: error: \"foo\" must have the same signature as the function it overrides (expected type \"void fn(Z)\" but found type \"void fn()\")
 class Diamond<Z> : B<Z>, C<Z> { override void foo() {} }
                                               ~~~
 <stdin>:1:31: note: The overridden declaration is here

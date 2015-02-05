@@ -215,7 +215,7 @@ void semanticErrorBadOverride(Log log, Range range, string name, Type base, Rang
 }
 
 void semanticErrorOverrideDifferentTypes(Log log, Range range, string name, Type base, Type derived, Range overridden) {
-  log.error(range, simpleQuote(name) + " must have the same signature as the method it overrides (expected " +
+  log.error(range, simpleQuote(name) + " must have the same signature as the function it overrides (expected " +
     typeToText(base) + " but found " + typeToText(derived) + ")");
   if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
 }
@@ -226,7 +226,7 @@ void semanticErrorModifierMissingOverride(Log log, Range range, string name, Ran
 }
 
 void semanticErrorCannotOverrideNonVirtual(Log log, Range range, string name, Range overridden) {
-  log.error(range, simpleQuote(name) + " cannot override a non-virtual method");
+  log.error(range, simpleQuote(name) + " cannot override a non-virtual function");
   if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
 }
 
@@ -293,6 +293,10 @@ void semanticErrorMissingToString(Log log, Range range, Type type) {
 void semanticErrorToStringWrongType(Log log, Range range, Type expected, Type found, Range declaration) {
   log.error(range, "Expected toString() to have " + typeToText(expected) + " but found " + typeToText(found));
   if (!declaration.isEmpty()) log.note(declaration, "The declaration for toString() is here");
+}
+
+void semanticErrorCannotImplementInterfaceFunction(Log log, Range range) {
+  log.error(range, "Virtual interface functions cannot have an implementation");
 }
 
 void semanticErrorCannotImplementImportedFunction(Log log, Range range) {

@@ -194,7 +194,7 @@ test("
 class Foo { void foo() {} }
 class Bar : Foo { override void foo() {} }
 ", "
-<stdin>:2:33: error: \"foo\" cannot override a non-virtual method
+<stdin>:2:33: error: \"foo\" cannot override a non-virtual function
 class Bar : Foo { override void foo() {} }
                                 ~~~
 <stdin>:1:18: note: The overridden declaration is here
@@ -273,7 +273,7 @@ test("
 class Foo { void foo() {} }
 class Bar : Foo { int foo() { return 0; } }
 ", "
-<stdin>:2:23: error: \"foo\" must have the same signature as the method it overrides (expected type \"void fn()\" but found type \"int fn()\")
+<stdin>:2:23: error: \"foo\" must have the same signature as the function it overrides (expected type \"void fn()\" but found type \"int fn()\")
 class Bar : Foo { int foo() { return 0; } }
                       ~~~
 <stdin>:1:18: note: The overridden declaration is here
@@ -593,7 +593,7 @@ interface B : A {}
 interface C : A {}
 class Diamond : B, C { override void foo() {} }
 ", "
-<stdin>:4:38: error: \"foo\" must have the same signature as the method it overrides (expected type \"void fn(int)\" but found type \"void fn()\")
+<stdin>:4:38: error: \"foo\" must have the same signature as the function it overrides (expected type \"void fn(int)\" but found type \"void fn()\")
 class Diamond : B, C { override void foo() {} }
                                      ~~~
 <stdin>:1:28: note: The overridden declaration is here

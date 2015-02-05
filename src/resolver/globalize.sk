@@ -8,7 +8,8 @@ namespace GlobalizePass {
       // Change instance methods into static methods
       if (symbol.kind == .INSTANCE_FUNCTION && !symbol.isImport() && symbol.node.functionBlock() != null && (
           enclosingSymbol.isImport() || enclosingSymbol.kind.isEnum() ||
-          (resolver.options.globalizeAllFunctions || symbol.isInline()) && !symbol.isExport() && !symbol.isVirtual())) {
+          (resolver.options.globalizeAllFunctions || symbol.isInline()) && !symbol.isExport() && !symbol.isVirtual() ||
+          resolver.options.target.moveNonVirtualSymbolsOffInterfaces() && enclosingSymbol.kind == .INTERFACE && !symbol.isVirtual())) {
 
         // Recursively replace "this" with the new explicit argument. This must
         // be done after all call sites are updated in case that step introduced

@@ -390,4 +390,40 @@ import void bar(IFoo foo);
 }());
 ");
 
+testJS("
+in Foo {
+  void foo() {}
+  static void bar() {}
+  static int baz;
+}
+export void foo() {
+  Bar().foo();
+  Bar.bar();
+  Bar.baz;
+}
+class Bar : Foo {}
+interface Foo {}
+", "
+(function() {
+  function Bar() {
+  }
+
+  var in_Foo = {};
+
+  in_Foo.foo = function($this) {
+  };
+
+  in_Foo.bar = function() {
+  };
+
+  foo = function() {
+    in_Foo.foo(new Bar());
+    in_Foo.bar();
+    in_Foo.baz;
+  };
+
+  in_Foo.baz = 0;
+}());
+");
+
 }}
