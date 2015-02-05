@@ -171,6 +171,10 @@ class Symbol {
   // members of the NodeKind enum to lists of members on this type.
   IntMap<List<Symbol>> operatorOverloads = null;
 
+  // This lists all operators that this symbol is overloaded for. It's used to
+  // inherit operator overload annotations into derived types.
+  List<NodeKind> operatorOverloadKinds = null;
+
   // This tracks headers referenced by the @NeedsInclude annotation
   List<string> neededIncludes = null;
 
@@ -233,6 +237,15 @@ class Symbol {
     }
     if (!(name in neededIncludes)) {
       neededIncludes.push(name);
+    }
+  }
+
+  void registerOperatorOverload(NodeKind kind) {
+    if (operatorOverloadKinds == null) {
+      operatorOverloadKinds = [];
+    }
+    if (!(kind in operatorOverloadKinds)) {
+      operatorOverloadKinds.push(kind);
     }
   }
 

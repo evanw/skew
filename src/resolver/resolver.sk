@@ -1155,20 +1155,45 @@ class Resolver {
     var baseMembers = unmergedMembers.values();
     for (var i = 0; i < baseMembers.size(); i++) {
       var member = baseMembers[i];
-      var existing = type.findMember(member.symbol.name);
+      var memberSymbol = member.symbol;
+      var existing = type.findMember(memberSymbol.name);
 
       // Link existing members with the member they override
       if (existing != null) {
         assert existing.symbol.overriddenMember == null;
         existing.symbol.overriddenMember = member;
+        insertOperatorOverloads(symbol, memberSymbol, existing.symbol);
       }
 
-      // Note that member.symbol.kind == .CONSTRUCTOR_FUNCTION will miss
+      // Note that memberSymbol.kind == .CONSTRUCTOR_FUNCTION will miss
       // automatically generated constructors that haven't been initialized yet,
       // but checking the name against "new" will always be correct since "new"
       // is a keyword
-      else if (member.symbol.name != "new") {
+      else if (memberSymbol.name != "new") {
         type.addMember(member);
+
+        // Inherit operator overload annotations
+        if (memberSymbol.kind == .UNMERGED) {
+          for (var j = 0; j < memberSymbol.identicalMembers.size(); j++) {
+            insertOperatorOverloads(symbol, memberSymbol.identicalMembers[j].symbol, memberSymbol);
+          }
+        } else {
+          insertOperatorOverloads(symbol, memberSymbol, memberSymbol);
+        }
+      }
+    }
+  }
+
+  void insertOperatorOverloads(Symbol target, Symbol proxy, Symbol source) {
+    var kinds = proxy.operatorOverloadKinds;
+    if (kinds != null) {
+      for (var i = 0; i < kinds.size(); i++) {
+        var kind = kinds[i];
+        var overloads = target.operatorOverloadsForKind(kind);
+        if (!(source in overloads)) {
+          overloads.push(source);
+          source.registerOperatorOverload(kind);
+        }
       }
     }
   }
@@ -1812,6 +1837,7 @@ class Resolver {
     if (symbol.type.isIgnored(cache)) return;
     assert symbol.type.isFunction();
 
+    symbol.registerOperatorOverload(kind);
     symbol.enclosingSymbol.operatorOverloadsForKind(kind).push(symbol);
   }
 
