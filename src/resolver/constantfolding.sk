@@ -336,7 +336,7 @@ class ConstantFolder {
   }
 
   void foldName(Node node) {
-    if (node.symbol != null && node.symbol.constant != null) {
+    if (node.symbol != null && node.symbol.constant != null && node.isNameExpression()) {
       flatten(node, node.symbol.constant);
     }
   }

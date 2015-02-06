@@ -181,4 +181,21 @@ var foo = Foo();
           ~~~
 ");
 
+test("
+export class Foo {
+  private static var foo = bar();
+  private static pure int bar() { return 0; }
+}
+", "
+TODO
+");
+
+test("
+export class Foo {
+  private static const var foo = 1, bar = foo;
+}
+", "
+TODO
+");
+
 }}

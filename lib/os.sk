@@ -8,7 +8,7 @@ enum OperatingSystem {
 }
 
 in OperatingSystem {
-  static OperatingSystem current() {
+  static pure OperatingSystem current() {
     #if CONFIG_ANDROID
 
       return .ANDROID;

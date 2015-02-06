@@ -1047,6 +1047,31 @@ alias Foo = List<int>;
 ").release();
 
 testJS("
+class Foo {
+  new() : bar = foo {}
+  int bar;
+  const var foo = 1;
+}
+export int foo() {
+  return Foo().bar;
+}
+", "
+(function(){function b(){this.a=1}foo=function(){return new b().a}}());
+").release();
+
+testJS("
+class Foo {
+  const var foo = 1;
+  int bar() { return foo; }
+}
+export int foo() {
+  return Foo().bar();
+}
+", "
+(function(){function a(){}foo=function(){return new a(),1}}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }

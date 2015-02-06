@@ -123,7 +123,11 @@ in Node {
   }
 
   bool isNameExpression() {
-    return kind == .NAME && (!parent.kind.isDot() || this != parent.dotName()) && (!parent.kind.isNamedDeclaration() || this != parent.declarationName());
+    return kind == .NAME && (
+      parent.kind.isDot() ? this != parent.dotName() :
+      parent.kind.isNamedDeclaration() ? this != parent.declarationName() :
+      parent.kind == .MEMBER_INITIALIZER ? this != parent.memberInitializerName() :
+      true);
   }
 
   bool isDeclarationName() {

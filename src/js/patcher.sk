@@ -680,13 +680,13 @@ namespace js {
       }
 
       // "a ? a : b" => "a || b"
-      if (looksTheSame(test, trueValue)) {
+      if (looksTheSame(test, trueValue) && test.hasNoSideEffects()) {
         node.become(Node.createBinary(.LOGICAL_OR, test.replaceWith(null), falseValue.replaceWith(null)));
         return;
       }
 
       // "a ? b : a" => "a && b"
-      if (looksTheSame(test, falseValue)) {
+      if (looksTheSame(test, falseValue) && test.hasNoSideEffects()) {
         node.become(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), trueValue.replaceWith(null)));
         return;
       }
