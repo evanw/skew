@@ -182,20 +182,34 @@ var foo = Foo();
 ");
 
 test("
-export class Foo {
+class Foo {
   private static var foo = bar();
   private static pure int bar() { return 0; }
 }
+class Bar {
+  private static var foo = Foo.bar();
+  private static int bar() { return Foo.foo; }
+}
 ", "
-TODO
+<stdin>:6:32: error: Cannot access private symbol \"Foo.bar\" here
+  private static var foo = Foo.bar();
+                               ~~~
+<stdin>:7:41: error: Cannot access private symbol \"Foo.foo\" here
+  private static int bar() { return Foo.foo; }
+                                        ~~~
 ");
 
 test("
+export class Bar {
+  private static const var foo = Foo.bar;
+}
 export class Foo {
   private static const var foo = 1, bar = foo;
 }
 ", "
-TODO
+<stdin>:2:38: error: Cannot access private symbol \"Foo.bar\" here
+  private static const var foo = Foo.bar;
+                                     ~~~
 ");
 
 }}

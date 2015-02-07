@@ -715,12 +715,12 @@ class Resolver {
       var isPrivate = symbol.isPrivate();
       var hasAccess = false;
       if (isPrivate) {
-        if (context.functionSymbol != null) {
-          hasAccess = context.functionSymbol.enclosingSymbol == enclosingSymbol;
+        if (context.symbolForThis != null) {
+          hasAccess = context.symbolForThis == enclosingSymbol;
         }
       } else {
-        if (context.functionSymbol != null) {
-          hasAccess = context.functionSymbol.enclosingSymbol.type.hasBaseSymbol(enclosingSymbol);
+        if (context.symbolForThis != null) {
+          hasAccess = context.symbolForThis.type.hasBaseSymbol(enclosingSymbol);
         }
       }
       if (!hasAccess) {

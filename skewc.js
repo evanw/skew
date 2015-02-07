@@ -10487,11 +10487,11 @@
       var hasAccess = false;
 
       if (isPrivate) {
-        if (this.context.functionSymbol !== null) {
-          hasAccess = this.context.functionSymbol.enclosingSymbol === enclosingSymbol;
+        if (this.context.symbolForThis !== null) {
+          hasAccess = this.context.symbolForThis === enclosingSymbol;
         }
-      } else if (this.context.functionSymbol !== null) {
-        hasAccess = this.context.functionSymbol.enclosingSymbol.type.hasBaseSymbol(enclosingSymbol);
+      } else if (this.context.symbolForThis !== null) {
+        hasAccess = this.context.symbolForThis.type.hasBaseSymbol(enclosingSymbol);
       }
 
       if (!hasAccess) {
