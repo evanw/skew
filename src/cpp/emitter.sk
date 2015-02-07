@@ -682,7 +682,7 @@ namespace cpp {
       }
 
       // Find the intersection
-      var n = imin(namespaceStack.size(), names.size());
+      var n = math.imin(namespaceStack.size(), names.size());
       int i;
       for (i = 0; i < n; i++) {
         if (namespaceStack[i] != names[i]) {

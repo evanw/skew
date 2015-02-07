@@ -224,7 +224,7 @@ class SplitPath {
 }
 
 SplitPath splitPath(string path) {
-  var slashIndex = imax(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  var slashIndex = math.imax(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return slashIndex == -1
     ? SplitPath(".", path)
     : SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1, path.size()));
@@ -232,14 +232,6 @@ SplitPath splitPath(string path) {
 
 string joinPath(string directory, string entry) {
   return directory + (OperatingSystem.current() == .WINDOWS ? "\\" : "/") + entry;
-}
-
-int imin(int a, int b) {
-  return a < b ? a : b;
-}
-
-int imax(int a, int b) {
-  return a > b ? a : b;
 }
 
 string formatNumber(double number) {

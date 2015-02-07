@@ -43,8 +43,8 @@ class Range {
 
     // Ensure the line length doesn't exceed maxLength
     if (maxLength > 0 && count > maxLength) {
-      var centeredWidth = imin(b - a, maxLength / 2);
-      var centeredStart = imax((maxLength - centeredWidth) / 2, 3);
+      var centeredWidth = math.imin(b - a, maxLength / 2);
+      var centeredStart = math.imax((maxLength - centeredWidth) / 2, 3);
       var codePoints = line.codePoints();
 
       // Left aligned

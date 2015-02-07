@@ -150,7 +150,7 @@ namespace tests {
       for (var j = 0; j < n; j++, ij++) {
         matrix.push(expected[i] == output[j]
           ? i > 0 && j > 0 ? matrix[ij - n - 1] + 1 : 1
-          : imax(i > 0 ? matrix[ij - n] : 0, j > 0 ? matrix[ij - 1] : 0));
+          : math.imax(i > 0 ? matrix[ij - n] : 0, j > 0 ? matrix[ij - 1] : 0));
       }
     }
 

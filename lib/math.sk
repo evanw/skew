@@ -94,6 +94,14 @@
 #endif
 
 in math {
+  int imax(int a, int b) {
+    return a > b ? a : b;
+  }
+
+  int imin(int a, int b) {
+    return a < b ? a : b;
+  }
+
   const {
     var SQRT2 = 1.414213562373095;
     var PI = 3.141592653589793;
