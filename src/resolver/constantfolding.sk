@@ -255,14 +255,24 @@ class ConstantFolder {
   }
 
   int foldSwitch(Node node) {
-    // Remove the default case if it's empty
     var cases = node.switchCases();
+    var hasDefaultCase = false;
+
+    // Check for a default case
     if (cases.hasChildren()) {
       var last = cases.lastChild();
-      if (!last.caseValues().hasChildren() && !last.caseBlock().hasChildren()) {
-        last.remove();
+      if (!last.caseValues().hasChildren()) {
+        hasDefaultCase = true;
 
-        // If the default case is empty, all other empty cases can be removed too
+        // Remove the default case if it's empty
+        if (!last.caseBlock().hasChildren()) {
+          hasDefaultCase = false;
+          last.remove();
+        }
+      }
+
+      // If the default case is missing, all other empty cases can be removed too
+      if (!hasDefaultCase) {
         for (var i = cases.children.size() - 1; i >= 0; i--) {
           var statement = cases.children[i];
           if (!statement.caseBlock().hasChildren()) {

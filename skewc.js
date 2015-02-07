@@ -8836,13 +8836,21 @@
 
   ConstantFolder.prototype.foldSwitch = function(node) {
     var cases = node.switchCases();
+    var hasDefaultCase = false;
 
     if (cases.hasChildren()) {
       var last = cases.lastChild();
 
-      if (!last.caseValues().hasChildren() && !last.caseBlock().hasChildren()) {
-        last.remove();
+      if (!last.caseValues().hasChildren()) {
+        hasDefaultCase = true;
 
+        if (!last.caseBlock().hasChildren()) {
+          hasDefaultCase = false;
+          last.remove();
+        }
+      }
+
+      if (!hasDefaultCase) {
         for (var i = cases.children.length - 1 | 0; i >= 0; i = i - 1 | 0) {
           var statement = cases.children[i];
 
@@ -9055,11 +9063,11 @@
       var right = variable.binaryRight();
 
       if (!left.type.isInt(this.cache) && !left.type.isIgnored(this.cache)) {
-        throw new Error('assert left.type.isInt(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:462:7)');
+        throw new Error('assert left.type.isInt(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:472:7)');
       }
 
       if (!right.type.isInt(this.cache) && !right.type.isIgnored(this.cache)) {
-        throw new Error('assert right.type.isInt(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:463:7)');
+        throw new Error('assert right.type.isInt(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:473:7)');
       }
 
       var isLeftConstant = left.kind === NodeKind.INT;

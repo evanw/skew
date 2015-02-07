@@ -1082,6 +1082,47 @@ export int foo() {
 ").release();
 
 testJS("
+import void bar(int x);
+export void foo(int x) {
+  switch (x) {
+    case 0 { bar(0); }
+    case 1 { assert false; }
+    case 2 { bar(1); }
+  }
+}
+", "
+(function(){foo=function(a){switch(a){case 0:bar(0);break;case 2:bar(1)}}}());
+").release();
+
+testJS("
+import void bar(int x);
+export void foo(int x) {
+  switch (x) {
+    case 0 { bar(0); }
+    case 1 { assert false; }
+    case 2 { bar(1); }
+    default {}
+  }
+}
+", "
+(function(){foo=function(a){switch(a){case 0:bar(0);break;case 2:bar(1)}}}());
+").release();
+
+testJS("
+import void bar(int x);
+export void foo(int x) {
+  switch (x) {
+    case 0 { bar(0); }
+    case 1 { assert false; }
+    case 2 { bar(1); }
+    default { bar(2); }
+  }
+}
+", "
+(function(){foo=function(a){switch(a){case 0:bar(0);break;case 1:break;case 2:bar(1);break;default:bar(2)}}}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }
