@@ -81,6 +81,7 @@ class ConstantFolder {
       case .CALL { foldCall(node); }
       case .CAST, .IMPLICIT_CAST { foldCast(node); }
       case .HOOK { foldHook(node); }
+      case .DOT { foldDot(node); }
       case .NAME { foldName(node); }
       case .SEQUENCE { foldSequence(node); }
       case .VARIABLE_CLUSTER { foldVariableCluster(node); }
@@ -331,6 +332,17 @@ class ConstantFolder {
       // Fold switch statements
       else if (kind == .SWITCH) {
         i += foldSwitch(child);
+      }
+    }
+  }
+
+  void foldDot(Node node) {
+    if (node.symbol != null && node.symbol.constant != null) {
+      if (node.dotTarget().hasNoSideEffects()) {
+        flatten(node, node.symbol.constant);
+      } else {
+        flatten(node.dotName(), node.symbol.constant);
+        node.kind = .SEQUENCE;
       }
     }
   }

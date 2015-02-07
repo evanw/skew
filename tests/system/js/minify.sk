@@ -1060,6 +1060,16 @@ export int foo() {
 ").release();
 
 testJS("
+export class Foo {
+  new() : bar = foo {}
+  int bar;
+  const var foo = 1;
+}
+", "
+(function(){Foo=function(){this.foo=this.bar=1}}());
+").release();
+
+testJS("
 class Foo {
   const var foo = 1;
   int bar() { return foo; }

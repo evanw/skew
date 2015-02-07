@@ -6892,8 +6892,12 @@
     return groups;
   };
 
+  js.Patcher.prototype.shouldRemoveConstant = function(symbol) {
+    return this.options.foldAllConstants && symbol.isConst() && !symbol.isExport();
+  };
+
   js.Patcher.prototype.canRename = function(symbol) {
-    if (!symbol.isImportOrExport() && symbol.kind !== SymbolKind.CONSTRUCTOR_FUNCTION) {
+    if (!symbol.isImportOrExport() && symbol.kind !== SymbolKind.CONSTRUCTOR_FUNCTION && !this.shouldRemoveConstant(symbol)) {
       if (symbol.overriddenMember !== null) {
         return this.canRename(symbol.overriddenMember.symbol);
       }
@@ -7022,7 +7026,7 @@
 
   js.Patcher.prototype.peepholeMangleBinaryRelational = function(node) {
     if (node.kind !== NodeKind.GREATER_THAN_OR_EQUAL && node.kind !== NodeKind.LESS_THAN_OR_EQUAL) {
-      throw new Error('assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL; (src/js/patcher.sk:305:7)');
+      throw new Error('assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL; (src/js/patcher.sk:309:7)');
     }
 
     var left = node.binaryLeft();
@@ -7160,11 +7164,11 @@
 
   js.Patcher.prototype.isJumpImplied = function(node, kind) {
     if (node.kind !== NodeKind.BLOCK) {
-      throw new Error('assert node.kind == .BLOCK; (src/js/patcher.sk:460:7)');
+      throw new Error('assert node.kind == .BLOCK; (src/js/patcher.sk:464:7)');
     }
 
     if (kind !== NodeKind.RETURN && kind !== NodeKind.CONTINUE) {
-      throw new Error('assert kind == .RETURN || kind == .CONTINUE; (src/js/patcher.sk:461:7)');
+      throw new Error('assert kind == .RETURN || kind == .CONTINUE; (src/js/patcher.sk:465:7)');
     }
 
     var parent = node.parent;
@@ -7255,7 +7259,7 @@
               child.replaceChild(2, block);
 
               if (block !== child.ifFalse()) {
-                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:547:17)');
+                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:551:17)');
               }
             } else {
               this.peepholeMangleIf(child);
@@ -7326,7 +7330,7 @@
 
   js.Patcher.prototype.peepholeMangleSequence = function(node) {
     if (node.kind !== NodeKind.SEQUENCE) {
-      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:622:7)');
+      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:626:7)');
     }
 
     for (var i = node.children.length - 1 | 0; i > 0; i = i - 1 | 0) {
@@ -7518,7 +7522,7 @@
 
   js.Patcher.prototype.unionVariableWithFunction = function(node) {
     if (node.symbol.kind === SymbolKind.LOCAL_VARIABLE !== (this.currentFunction !== null)) {
-      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:806:7)');
+      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:810:7)');
     }
 
     if (this.currentFunction !== null) {
@@ -7552,7 +7556,7 @@
         this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
       } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
         if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
-          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:844:11)');
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:848:11)');
         }
 
         if (value.kind === NodeKind.INT) {
@@ -7600,7 +7604,7 @@
         var name = child.memberInitializerName();
         var value = child.memberInitializerValue();
 
-        if (value.kind !== NodeKind.ERROR) {
+        if (value.kind !== NodeKind.ERROR && !this.shouldRemoveConstant(child.symbol)) {
           block.insertChild(index, Node.createExpression(Node.createBinary(NodeKind.ASSIGN, name.replaceWith(null), value.replaceWith(null))));
           index = index + 1 | 0;
         }
@@ -7628,7 +7632,7 @@
     }
 
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:933:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:937:7)');
     }
 
     var current = target;
@@ -8649,6 +8653,10 @@
       this.foldHook(node);
       break;
 
+    case 50:
+      this.foldDot(node);
+      break;
+
     case 37:
       this.foldName(node);
       break;
@@ -8676,11 +8684,11 @@
     var right = node.binaryRight();
 
     if (!left.type.isString(this.cache) && !left.type.isIgnored(this.cache)) {
-      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:97:5)');
+      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:98:5)');
     }
 
     if (!right.type.isString(this.cache) && !right.type.isIgnored(this.cache)) {
-      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:98:5)');
+      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:99:5)');
     }
 
     if (right.kind === NodeKind.ADD) {
@@ -8688,11 +8696,11 @@
       var rightRight = right.binaryRight();
 
       if (!rightLeft.type.isString(this.cache) && !rightLeft.type.isIgnored(this.cache)) {
-        throw new Error('assert rightLeft.type.isString(cache) || rightLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:103:7)');
+        throw new Error('assert rightLeft.type.isString(cache) || rightLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:104:7)');
       }
 
       if (!rightRight.type.isString(this.cache) && !rightRight.type.isIgnored(this.cache)) {
-        throw new Error('assert rightRight.type.isString(cache) || rightRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:104:7)');
+        throw new Error('assert rightRight.type.isString(cache) || rightRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:105:7)');
       }
 
       left.swapWith(right);
@@ -8706,11 +8714,11 @@
     var right = node.binaryRight();
 
     if (!left.type.isString(this.cache) && !left.type.isIgnored(this.cache)) {
-      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:114:5)');
+      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:115:5)');
     }
 
     if (!right.type.isString(this.cache) && !right.type.isIgnored(this.cache)) {
-      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:115:5)');
+      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:116:5)');
     }
 
     if (right.kind === NodeKind.STRING) {
@@ -8721,11 +8729,11 @@
         var leftRight = left.binaryRight();
 
         if (!leftLeft.type.isString(this.cache) && !leftLeft.type.isIgnored(this.cache)) {
-          throw new Error('assert leftLeft.type.isString(cache) || leftLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:126:9)');
+          throw new Error('assert leftLeft.type.isString(cache) || leftLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:127:9)');
         }
 
         if (!leftRight.type.isString(this.cache) && !leftRight.type.isIgnored(this.cache)) {
-          throw new Error('assert leftRight.type.isString(cache) || leftRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:127:9)');
+          throw new Error('assert leftRight.type.isString(cache) || leftRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:128:9)');
         }
 
         if (leftRight.kind === NodeKind.STRING) {
@@ -8896,6 +8904,17 @@
     }
   };
 
+  ConstantFolder.prototype.foldDot = function(node) {
+    if (node.symbol !== null && node.symbol.constant !== null) {
+      if (node.dotTarget().hasNoSideEffects()) {
+        this.flatten(node, node.symbol.constant);
+      } else {
+        this.flatten(node.dotName(), node.symbol.constant);
+        node.kind = NodeKind.SEQUENCE;
+      }
+    }
+  };
+
   ConstantFolder.prototype.foldName = function(node) {
     if (node.symbol !== null && node.symbol.constant !== null && node.isNameExpression()) {
       this.flatten(node, node.symbol.constant);
@@ -9036,11 +9055,11 @@
       var right = variable.binaryRight();
 
       if (!left.type.isInt(this.cache) && !left.type.isIgnored(this.cache)) {
-        throw new Error('assert left.type.isInt(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:450:7)');
+        throw new Error('assert left.type.isInt(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:462:7)');
       }
 
       if (!right.type.isInt(this.cache) && !right.type.isIgnored(this.cache)) {
-        throw new Error('assert right.type.isInt(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:451:7)');
+        throw new Error('assert right.type.isInt(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:463:7)');
       }
 
       var isLeftConstant = left.kind === NodeKind.INT;
