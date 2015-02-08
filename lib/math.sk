@@ -94,13 +94,10 @@
 #endif
 
 in math {
-  int imax(int a, int b) {
-    return a > b ? a : b;
-  }
-
-  int imin(int a, int b) {
-    return a < b ? a : b;
-  }
+  double clamp(double x, double a, double b) { return max(a, min(x, b)); }
+  int iclamp(int x, int a, int b) { return imax(a, imin(x, b)); }
+  int imax(int a, int b) { return a > b ? a : b; }
+  int imin(int a, int b) { return a < b ? a : b; }
 
   const {
     var SQRT2 = 1.414213562373095;
