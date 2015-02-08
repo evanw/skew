@@ -305,11 +305,15 @@ namespace js {
       }
     }
 
+    bool isIntegerType(Node node) {
+      return node.type != null && node.type.isInteger(cache);
+    }
+
     void peepholeMangleBinaryRelational(Node node) {
       assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL;
       var left = node.binaryLeft();
       var right = node.binaryRight();
-      if (left.type != null && left.type.isInteger(cache) && right.type != null && right.type.isInteger(cache)) {
+      if (isIntegerType(left) && isIntegerType(right)) {
         if (left.kind == .INT) {
           var value = left.asInt();
 
@@ -372,7 +376,7 @@ namespace js {
           }
         }
 
-        else if (left.type != null && left.type.isInteger(cache) && right.type != null && right.type.isInteger(cache)) {
+        else if (isIntegerType(left) && isIntegerType(right)) {
 
           // "if (a != b) c;" => "if (a ^ b) c;"
           if (kind == .NOT_EQUAL) {
@@ -445,11 +449,21 @@ namespace js {
       else if (trueStatement != null && trueStatement.kind == .EXPRESSION) {
         var value = trueStatement.expressionValue().replaceWith(null);
 
+        // "if (a == b) c;" => "a ^ b || c;"
+        if (test.kind == .EQUAL && isIntegerType(test.binaryLeft()) && isIntegerType(test.binaryRight())) {
+          test.kind = .BITWISE_XOR;
+          node.become(Node.createExpression(Node.createBinary(.LOGICAL_OR, test.replaceWith(null), value)));
+        }
+
         // "if (!a) b;" => "a || b;"
-        if (test.kind == .NOT) node.become(Node.createExpression(Node.createBinary(.LOGICAL_OR, test.unaryValue().replaceWith(null), value)));
+        else if (test.kind == .NOT) {
+          node.become(Node.createExpression(Node.createBinary(.LOGICAL_OR, test.unaryValue().replaceWith(null), value)));
+        }
 
         // "if (a) b;" => "a && b;"
-        else node.become(Node.createExpression(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), value)));
+        else {
+          node.become(Node.createExpression(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), value)));
+        }
       }
     }
 
@@ -882,7 +896,7 @@ namespace js {
       }
 
       // Cast to int
-      else if (node.type.isInteger(cache) && !value.type.isInteger(cache) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
+      else if (isIntegerType(node) && !isIntegerType(value) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
         node.become(Node.createBinary(.BITWISE_OR, value.replaceWith(null), Node.createInt(0)).withRange(node.range).withType(node.type));
       }
 

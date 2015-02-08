@@ -1123,6 +1123,17 @@ export void foo(int x) {
 ").release();
 
 testJS("
+export void foo(int x) {
+  if (x == 3) foo(x - 1);
+}
+export void bar(double x) {
+  if (x == 3) bar(x - 1);
+}
+", "
+(function(){foo=function(a){a^3||foo(a-1|0)};bar=function(a){a===3&&bar(a-1)}}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }

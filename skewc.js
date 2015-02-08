@@ -7024,15 +7024,19 @@
     }
   };
 
+  js.Patcher.prototype.isIntegerType = function(node) {
+    return node.type !== null && node.type.isInteger(this.cache);
+  };
+
   js.Patcher.prototype.peepholeMangleBinaryRelational = function(node) {
     if (node.kind !== NodeKind.GREATER_THAN_OR_EQUAL && node.kind !== NodeKind.LESS_THAN_OR_EQUAL) {
-      throw new Error('assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL; (src/js/patcher.sk:309:7)');
+      throw new Error('assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL; (src/js/patcher.sk:313:7)');
     }
 
     var left = node.binaryLeft();
     var right = node.binaryRight();
 
-    if (left.type !== null && left.type.isInteger(this.cache) && right.type !== null && right.type.isInteger(this.cache)) {
+    if (this.isIntegerType(left) && this.isIntegerType(right)) {
       if (left.kind === NodeKind.INT) {
         var value = left.asInt();
 
@@ -7088,7 +7092,7 @@
           replacement.replaceWith(null);
           node.become(kind === NodeKind.EQUAL ? Node.createUnary(NodeKind.NOT, replacement) : replacement);
         }
-      } else if (left.type !== null && left.type.isInteger(this.cache) && right.type !== null && right.type.isInteger(this.cache)) {
+      } else if (this.isIntegerType(left) && this.isIntegerType(right)) {
         if (kind === NodeKind.NOT_EQUAL) {
           node.kind = NodeKind.BITWISE_XOR;
         } else if (kind === NodeKind.EQUAL && canSwap === js.BooleanSwap.SWAP) {
@@ -7146,7 +7150,10 @@
     } else if (trueStatement !== null && trueStatement.kind === NodeKind.EXPRESSION) {
       var value = trueStatement.expressionValue().replaceWith(null);
 
-      if (test.kind === NodeKind.NOT) {
+      if (test.kind === NodeKind.EQUAL && this.isIntegerType(test.binaryLeft()) && this.isIntegerType(test.binaryRight())) {
+        test.kind = NodeKind.BITWISE_XOR;
+        node.become(Node.createExpression(Node.createBinary(NodeKind.LOGICAL_OR, test.replaceWith(null), value)));
+      } else if (test.kind === NodeKind.NOT) {
         node.become(Node.createExpression(Node.createBinary(NodeKind.LOGICAL_OR, test.unaryValue().replaceWith(null), value)));
       } else {
         node.become(Node.createExpression(Node.createBinary(NodeKind.LOGICAL_AND, test.replaceWith(null), value)));
@@ -7164,11 +7171,11 @@
 
   js.Patcher.prototype.isJumpImplied = function(node, kind) {
     if (node.kind !== NodeKind.BLOCK) {
-      throw new Error('assert node.kind == .BLOCK; (src/js/patcher.sk:464:7)');
+      throw new Error('assert node.kind == .BLOCK; (src/js/patcher.sk:478:7)');
     }
 
     if (kind !== NodeKind.RETURN && kind !== NodeKind.CONTINUE) {
-      throw new Error('assert kind == .RETURN || kind == .CONTINUE; (src/js/patcher.sk:465:7)');
+      throw new Error('assert kind == .RETURN || kind == .CONTINUE; (src/js/patcher.sk:479:7)');
     }
 
     var parent = node.parent;
@@ -7259,7 +7266,7 @@
               child.replaceChild(2, block);
 
               if (block !== child.ifFalse()) {
-                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:551:17)');
+                throw new Error('assert block == child.ifFalse(); (src/js/patcher.sk:565:17)');
               }
             } else {
               this.peepholeMangleIf(child);
@@ -7330,7 +7337,7 @@
 
   js.Patcher.prototype.peepholeMangleSequence = function(node) {
     if (node.kind !== NodeKind.SEQUENCE) {
-      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:626:7)');
+      throw new Error('assert node.kind == .SEQUENCE; (src/js/patcher.sk:640:7)');
     }
 
     for (var i = node.children.length - 1 | 0; i > 0; i = i - 1 | 0) {
@@ -7522,7 +7529,7 @@
 
   js.Patcher.prototype.unionVariableWithFunction = function(node) {
     if (node.symbol.kind === SymbolKind.LOCAL_VARIABLE !== (this.currentFunction !== null)) {
-      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:810:7)');
+      throw new Error('assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null); (src/js/patcher.sk:824:7)');
     }
 
     if (this.currentFunction !== null) {
@@ -7556,7 +7563,7 @@
         this.createBinaryIntAssignment(node, isIncrement ? NodeKind.ADD : NodeKind.SUBTRACT, value.replaceWith(null), Node.createInt(1));
       } else if (!this.alwaysConvertsOperandsToInt(node.parent.kind)) {
         if (node.kind !== NodeKind.POSITIVE && node.kind !== NodeKind.NEGATIVE) {
-          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:848:11)');
+          throw new Error('assert node.kind == .POSITIVE || node.kind == .NEGATIVE; (src/js/patcher.sk:862:11)');
         }
 
         if (value.kind === NodeKind.INT) {
@@ -7575,7 +7582,7 @@
     if (node.type.isBool(this.cache) && !value.type.isBool(this.cache)) {
       value = Node.createUnary(NodeKind.NOT, value.replaceWith(null)).withRange(node.range).withType(node.type);
       node.become(Node.createUnary(NodeKind.NOT, value).withRange(node.range).withType(node.type));
-    } else if (node.type.isInteger(this.cache) && !value.type.isInteger(this.cache) && !this.alwaysConvertsOperandsToInt(node.parent.kind)) {
+    } else if (this.isIntegerType(node) && !this.isIntegerType(value) && !this.alwaysConvertsOperandsToInt(node.parent.kind)) {
       node.become(Node.createBinary(NodeKind.BITWISE_OR, value.replaceWith(null), Node.createInt(0)).withRange(node.range).withType(node.type));
     } else if (node.type.isReal(this.cache) && !value.type.isNumeric(this.cache)) {
       node.become(Node.createUnary(NodeKind.POSITIVE, value.replaceWith(null)).withRange(node.range).withType(node.type));
@@ -7632,7 +7639,7 @@
     }
 
     if (left.kind !== NodeKind.DOT) {
-      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:937:7)');
+      throw new Error('assert left.kind == .DOT; (src/js/patcher.sk:951:7)');
     }
 
     var current = target;
