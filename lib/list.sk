@@ -27,7 +27,7 @@ interface Comparison<T> {
       inline {
         int size() { return this.`length`; }
         List<T> clone() { return this.`slice`(); }
-        T remove(int index) { return this.`splice`(index, 1)[0]; }
+        T removeAt(int index) { return this.`splice`(index, 1)[0]; }
         void removeRange(int start, int end) { this.`splice`(start, end - start); }
         void insert(int index, T value) { this.`splice`(index, 0, value); }
         @OperatorGet T get(int index) { return `this`[index]; }
@@ -74,7 +74,7 @@ interface Comparison<T> {
 
       T shift() {
         T value = this[0];
-        remove(0);
+        removeAt(0);
         return value;
       }
 
@@ -95,7 +95,7 @@ interface Comparison<T> {
         return clone;
       }
 
-      T remove(int index) {
+      T removeAt(int index) {
         T value = this[index];
         _data.erase(_data.begin() + index);
         return value;
@@ -186,7 +186,7 @@ interface Comparison<T> {
       T last();
       void reverse();
       List<T> clone();
-      T remove(int index);
+      T removeAt(int index);
       void removeRange(int start, int end);
       void insert(int index, T value);
       @OperatorGet T get(int index);
@@ -198,3 +198,20 @@ interface Comparison<T> {
   }
 
 #endif
+
+in List {
+  void pushOnce(T value) {
+    if (!(value in this)) {
+      push(value);
+    }
+  }
+
+  bool removeOnce(T value) {
+    var index = indexOf(value);
+    if (index >= 0) {
+      removeAt(index);
+      return true;
+    }
+    return false;
+  }
+}

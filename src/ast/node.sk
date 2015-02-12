@@ -298,7 +298,7 @@ class Node {
     if (child != null) {
       child.parent = null;
     }
-    children.remove(index);
+    children.removeAt(index);
     return child;
   }
 

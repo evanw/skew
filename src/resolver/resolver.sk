@@ -156,7 +156,7 @@ class Resolver {
             }
             symbol.constant = BoolContent(value);
             defines[symbol.name] = value;
-            workList.remove(i);
+            workList.removeAt(i);
             i--;
             done = false;
           }
@@ -171,7 +171,7 @@ class Resolver {
             } else {
               node.remove();
             }
-            workList.remove(i);
+            workList.removeAt(i);
             i--;
             done = false;
           }
