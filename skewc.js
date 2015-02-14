@@ -16245,13 +16245,15 @@
   }
 
   function parseGroup(context) {
+    var token = context.current();
+
     if (!context.expect(TokenKind.LEFT_PARENTHESIS)) {
       return null;
     }
 
     var value = pratt.parse(context, Precedence.LOWEST);
     scanForToken(context, TokenKind.RIGHT_PARENTHESIS, TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-    return value;
+    return value.withRange(context.spanSince(token.range));
   }
 
   function createNameFromToken(token) {
@@ -16676,7 +16678,7 @@
     }
 
     if (context.current().range.start < token.range.end) {
-      throw new Error('assert context.current().range.start >= token.range.end; (src/parser/parser.sk:397:3)');
+      throw new Error('assert context.current().range.start >= token.range.end; (src/parser/parser.sk:398:3)');
     }
 
     return Node.createExpression(value).withRange(context.spanSince(token.range));

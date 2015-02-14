@@ -84,10 +84,11 @@ bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
 }
 
 Node parseGroup(ParserContext context) {
+  var token = context.current();
   if (!context.expect(.LEFT_PARENTHESIS)) return null;
   var value = pratt.parse(context, .LOWEST);
   scanForToken(context, .RIGHT_PARENTHESIS, .STOP_BEFORE_NEXT_STATEMENT);
-  return value;
+  return value.withRange(context.spanSince(token.range));
 }
 
 Node createNameFromToken(Token token) {
