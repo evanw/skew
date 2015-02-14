@@ -87,7 +87,7 @@ enum Foo { A, B, C }
 ", "
 <stdin>:2:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   return foo == (bar ? .A : .B);
-         ~~~~~~~~~~~~~~~~~~~~~
+         ~~~~~~~~~~~~~~~~~~~~~~
 ");
 
 test("

@@ -259,4 +259,42 @@ pure namespace n {}
 ~~~~
 ");
 
+test("
+class Foo {
+  import int foo;
+  import void bar() {}
+  import static int foo2;
+  import static void bar2() {}
+}
+", "
+<stdin>:2:3: error: Cannot use the \"import\" modifier inside a non-imported type
+  import int foo;
+  ~~~~~~
+<stdin>:3:3: error: Cannot use the \"import\" modifier inside a non-imported type
+  import void bar() {}
+  ~~~~~~
+<stdin>:4:3: error: Cannot use the \"import\" modifier inside a non-imported type
+  import static int foo2;
+  ~~~~~~
+<stdin>:5:3: error: Cannot use the \"import\" modifier inside a non-imported type
+  import static void bar2() {}
+  ~~~~~~
+");
+
+test("
+class Foo {
+  export int foo;
+  export void bar() {}
+  export static int foo2;
+  export static void bar2() {}
+}
+", "
+<stdin>:4:3: error: Cannot use the \"export\" modifier inside a non-exported type
+  export static int foo2;
+  ~~~~~~
+<stdin>:5:3: error: Cannot use the \"export\" modifier inside a non-exported type
+  export static void bar2() {}
+  ~~~~~~
+");
+
 }}

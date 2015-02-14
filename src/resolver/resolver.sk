@@ -1889,7 +1889,10 @@ class Resolver {
         if (symbol.isImport() && !enclosingSymbol.isImport()) {
           unexpectedModifierIfPresent(symbol, .IMPORT, "inside a non-imported type");
         }
-        if (symbol.isExport() && !enclosingSymbol.isExport()) {
+
+        // Allow exporting on instance members of an non-exported type to
+        // prevent minification when compiling to JavaScript
+        if (symbol.isExport() && !enclosingSymbol.isExport() && !symbol.kind.isInstance()) {
           unexpectedModifierIfPresent(symbol, .EXPORT, "inside a non-exported type");
         }
       }

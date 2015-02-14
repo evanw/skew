@@ -56,39 +56,39 @@ void foo() {
   x = (x ^= 1);
 }
 ", "
-<stdin>:3:8: error: Assignment expressions are not allowed inside other expressions
+<stdin>:3:7: error: Assignment expressions are not allowed inside other expressions
   x = (x = 1);
-       ~~~~~
-<stdin>:4:8: error: Assignment expressions are not allowed inside other expressions
+      ~~~~~~~
+<stdin>:4:7: error: Assignment expressions are not allowed inside other expressions
   x = (x += 1);
-       ~~~~~~
-<stdin>:5:8: error: Assignment expressions are not allowed inside other expressions
+      ~~~~~~~~
+<stdin>:5:7: error: Assignment expressions are not allowed inside other expressions
   x = (x -= 1);
-       ~~~~~~
-<stdin>:6:8: error: Assignment expressions are not allowed inside other expressions
+      ~~~~~~~~
+<stdin>:6:7: error: Assignment expressions are not allowed inside other expressions
   x = (x *= 1);
-       ~~~~~~
-<stdin>:7:8: error: Assignment expressions are not allowed inside other expressions
+      ~~~~~~~~
+<stdin>:7:7: error: Assignment expressions are not allowed inside other expressions
   x = (x /= 1);
-       ~~~~~~
-<stdin>:8:8: error: Assignment expressions are not allowed inside other expressions
+      ~~~~~~~~
+<stdin>:8:7: error: Assignment expressions are not allowed inside other expressions
   x = (x %= 1);
-       ~~~~~~
-<stdin>:9:8: error: Assignment expressions are not allowed inside other expressions
+      ~~~~~~~~
+<stdin>:9:7: error: Assignment expressions are not allowed inside other expressions
   x = (x <<= 1);
-       ~~~~~~~
-<stdin>:10:8: error: Assignment expressions are not allowed inside other expressions
+      ~~~~~~~~~
+<stdin>:10:7: error: Assignment expressions are not allowed inside other expressions
   x = (x >>= 1);
-       ~~~~~~~
-<stdin>:11:8: error: Assignment expressions are not allowed inside other expressions
+      ~~~~~~~~~
+<stdin>:11:7: error: Assignment expressions are not allowed inside other expressions
   x = (x &= 1);
-       ~~~~~~
-<stdin>:12:8: error: Assignment expressions are not allowed inside other expressions
+      ~~~~~~~~
+<stdin>:12:7: error: Assignment expressions are not allowed inside other expressions
   x = (x |= 1);
-       ~~~~~~
-<stdin>:13:8: error: Assignment expressions are not allowed inside other expressions
+      ~~~~~~~~
+<stdin>:13:7: error: Assignment expressions are not allowed inside other expressions
   x = (x ^= 1);
-       ~~~~~~
+      ~~~~~~~~
 ");
 
 test("

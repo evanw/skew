@@ -481,12 +481,12 @@ void test() {
   x < (x > x);
 }
 ", "
-<stdin>:3:4: error: No binary operator \">\" for type \"bool\" and type \"int\"
+<stdin>:3:3: error: No binary operator \">\" for type \"bool\" and type \"int\"
   (x < x) > x;
-   ~~~~~~~~~~
+  ~~~~~~~~~~~
 <stdin>:4:3: error: No binary operator \"<\" for type \"int\" and type \"bool\"
   x < (x > x);
-  ~~~~~~~~~~
+  ~~~~~~~~~~~
 ");
 
 test("
