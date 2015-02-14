@@ -32,7 +32,7 @@ interface Comparison<T> {
         void insert(int index, T value) { this.`splice`(index, 0, value); }
         @OperatorGet T get(int index) { return `this`[index]; }
         @OperatorSet void set(int index, T value) { `this`[index] = value; }
-        @OperatorIn bool contains(T value) { return indexOf(value) >= 0; }
+        @OperatorIn bool contains(T value) { return indexOf(value) != -1; }
       }
 
       T last() { return this[size() - 1]; }
@@ -125,7 +125,7 @@ interface Comparison<T> {
 
       @OperatorIn
       bool contains(T value) {
-        return indexOf(value) >= 0;
+        return indexOf(value) != -1;
       }
 
       @NeedsInclude("<algorithm>") {
@@ -210,7 +210,7 @@ in List {
 
   bool removeOnce(T value) {
     var index = indexOf(value);
-    if (index >= 0) {
+    if (index != -1) {
       removeAt(index);
       return true;
     }

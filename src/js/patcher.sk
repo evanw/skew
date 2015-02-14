@@ -376,18 +376,27 @@ namespace js {
           }
         }
 
-        else if (isIntegerType(left) && isIntegerType(right)) {
+        else if (isIntegerType(left) && isIntegerType(right) && (kind == .NOT_EQUAL || kind == .EQUAL && canSwap == .SWAP)) {
+
+          // "if (a != -1) c;" => "if (~a) c;"
+          // "if (a == -1) c; else d;" => "if (~a) d; else c;"
+          if (right.kind == .INT && right.asInt() == -1) {
+            node.become(Node.createUnary(.COMPLEMENT, left.replaceWith(null)));
+          }
+
+          // "if (-1 != b) c;" => "if (~b) c;"
+          // "if (-1 == b) c; else d;" => "if (~b) d; else c;"
+          else if (left.kind == .INT && left.asInt() == -1) {
+            node.become(Node.createUnary(.COMPLEMENT, right.replaceWith(null)));
+          }
 
           // "if (a != b) c;" => "if (a ^ b) c;"
-          if (kind == .NOT_EQUAL) {
+          // "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
+          else {
             node.kind = .BITWISE_XOR;
           }
 
-          // "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
-          else if (kind == .EQUAL && canSwap == .SWAP) {
-            node.kind = .BITWISE_XOR;
-            return .SWAP;
-          }
+          return kind == .EQUAL ? .SWAP : .NO_SWAP;
         }
       }
 
@@ -398,7 +407,8 @@ namespace js {
       }
 
       // "if (!a) b; else c;" => "if (a) c; else b;"
-      // "a == 0 ? b : c;" => "a ? c : b;" (NOT must come after EQUAL since EQUAL may turn into NOT)
+      // "a == 0 ? b : c;" => "a ? c : b;"
+      // This is not an "else if" check since EQUAL may be turned into NOT above
       if (node.kind == .NOT && canSwap == .SWAP) {
         node.become(node.unaryValue().replaceWith(null));
         return .SWAP;
@@ -411,19 +421,19 @@ namespace js {
       var test = node.ifTest();
       var trueBlock = node.ifTrue();
       var falseBlock = node.ifFalse();
-      var swapped = peepholeMangleBoolean(test, falseBlock != null ? .SWAP : .NO_SWAP);
-
-      // "if (!a) b; else c;" => "if (a) c; else b;"
-      if (swapped == .SWAP) {
-        var temp = trueBlock;
-        trueBlock = falseBlock;
-        falseBlock = temp;
-        trueBlock.swapWith(falseBlock);
-      }
-
       var trueStatement = trueBlock.blockStatement();
+      var swapped = peepholeMangleBoolean(test, falseBlock != null || trueStatement != null && trueStatement.kind == .EXPRESSION ? .SWAP : .NO_SWAP);
+
       if (falseBlock != null) {
         var falseStatement = falseBlock.blockStatement();
+
+        // "if (!a) b; else c;" => "if (a) c; else b;"
+        if (swapped == .SWAP) {
+          var block = trueBlock; trueBlock = falseBlock; falseBlock = block;
+          var statement = trueStatement; trueStatement = falseStatement; falseStatement = statement;
+          trueBlock.swapWith(falseBlock);
+        }
+
         if (trueStatement != null && falseStatement != null) {
 
           // "if (a) b; else c;" => "a ? b : c;"
@@ -446,24 +456,11 @@ namespace js {
         }
       }
 
+      // "if (a) b;" => "a && b;"
+      // "if (!a) b;" => "a || b;"
       else if (trueStatement != null && trueStatement.kind == .EXPRESSION) {
         var value = trueStatement.expressionValue().replaceWith(null);
-
-        // "if (a == b) c;" => "a ^ b || c;"
-        if (test.kind == .EQUAL && isIntegerType(test.binaryLeft()) && isIntegerType(test.binaryRight())) {
-          test.kind = .BITWISE_XOR;
-          node.become(Node.createExpression(Node.createBinary(.LOGICAL_OR, test.replaceWith(null), value)));
-        }
-
-        // "if (!a) b;" => "a || b;"
-        else if (test.kind == .NOT) {
-          node.become(Node.createExpression(Node.createBinary(.LOGICAL_OR, test.unaryValue().replaceWith(null), value)));
-        }
-
-        // "if (a) b;" => "a && b;"
-        else {
-          node.become(Node.createExpression(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), value)));
-        }
+        node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.replaceWith(null), value)));
       }
     }
 

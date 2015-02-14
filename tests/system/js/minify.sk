@@ -1134,6 +1134,28 @@ export void bar(double x) {
 ").release();
 
 testJS("
+export void foo(int x) {
+  if (x != -1) foo(x);
+  if (x == -1) foo(x);
+  if (-1 != x) foo(x);
+  if (-1 == x) foo(x);
+}
+", "
+(function(){foo=function(a){~a&&foo(a),~a||foo(a),~a&&foo(a),~a||foo(a)}}());
+").release();
+
+testJS("
+export void foo(double x) {
+  if (x != -1) foo(x);
+  if (x == -1) foo(x);
+  if (-1 != x) foo(x);
+  if (-1 == x) foo(x);
+}
+", "
+(function(){foo=function(a){a!==-1&&foo(a),a===-1&&foo(a),-1!==a&&foo(a),-1===a&&foo(a)}}());
+").release();
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0; }
 export int foo() { return Foo.FOO + Bar.foo; }

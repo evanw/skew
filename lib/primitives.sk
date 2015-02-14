@@ -179,7 +179,7 @@ in string {
   pure {
     @OperatorIn
     inline bool contains(string value) {
-      return indexOf(value) >= 0;
+      return indexOf(value) != -1;
     }
 
     inline string toString() {
