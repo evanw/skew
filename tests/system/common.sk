@@ -34,15 +34,15 @@ namespace tests {
     var options = CompilerOptions();
 
     override void run() {
-      options.inputs = [Source("<stdin>", input)];
-      var compiler = Compiler();
-      var result = compiler.compile(options);
+      var compiler = Compiler(options);
+      compiler.addInput(Source("<stdin>", input));
+      var result = compiler.compile();
       if (result.outputs.size() != 0) {
         for (var i = 0; i < result.outputs.size(); i++) {
           output += result.outputs[i].contents + "\n";
         }
       } else {
-        output = compiler.log.toString();
+        output = options.log.toString();
       }
       output = trim(output);
       expected = trim(expected);

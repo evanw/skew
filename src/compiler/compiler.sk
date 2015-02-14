@@ -66,7 +66,6 @@ class CompilerOptions {
   CompilerTarget target = .NONE;
   CompilerConfig config = .AUTOMATIC;
   MemoryManagement memoryManagement = .NONE;
-  List<Source> inputs = [];
   var overriddenDefines = StringMap<OverriddenDefine>();
   var outputDirectory = "";
   var outputFile = "";
@@ -78,6 +77,7 @@ class CompilerOptions {
   var foldAllConstants = false;
   var inlineAllFunctions = false;
   var globalizeAllFunctions = false;
+  var log = Log();
 
   void overrideDefine(string name, bool value) {
     overriddenDefines[name] = OverriddenDefine(value, .EMPTY);
@@ -85,27 +85,23 @@ class CompilerOptions {
 }
 
 class CompilerResult {
-  CompilerOptions options;
   List<Source> outputs;
-  List<Node> files;
   Node program;
   Resolver resolver;
 }
 
 // This caches the parse tree for a bundled source file to speed up recompilation
-class CachedSource {
+class CachedLibrary {
   string name;
   string contents;
-  Source source = null;
   Node file = null;
 
-  Node compile(Compiler compiler, CompilerOptions options) {
-    if (source == null) {
-      source = Source(joinPath("<compiler>", name), contents);
-      file = compiler.tokenizeAndParseFile(source);
-      assert compiler.log.isEmpty();
+  void compile(Compiler compiler) {
+    if (file == null) {
+      file = compiler.addInput(Source(joinPath("<compiler>", name), contents)).clone();
+    } else {
+      compiler.addCachedInput(file.clone());
     }
-    return file != null ? file.clone() : null;
   }
 }
 
@@ -122,49 +118,16 @@ class Compiler {
   var emitTime = 0.0;
   var lineCountingTime = 0.0;
   var totalTime = 0.0;
-  var log = Log();
 
-  string statistics(CompilerResult result) {
-    // Line count
-    var lineCountingStart = now();
-    var lineCount = 0;
-    lineCount += totalLineCount(result.options.inputs);
-    var text =
-      "Input line count: " + lineCount +
-      "\nOutput line count: " + totalLineCount(result.outputs);
-    lineCountingTime += now() - lineCountingStart;
-
-    // Compilation time
-    var optimizingTime = callGraphTime + globalizeTime + symbolMotionTime + functionInliningTime + constantFoldingTime + treeShakingTime;
-    text += "\nTotal compile time: " + formatNumber(totalTime + lineCountingTime) + "ms";
-    if (tokenizingTime > 0) text += "\n  Tokenizing: " + formatNumber(tokenizingTime) + "ms";
-    if (parsingTime > 0) text += "\n  Parsing: " + formatNumber(parsingTime) + "ms";
-    if (resolvingTime > 0) text += "\n  Resolving: " + formatNumber(resolvingTime) + "ms";
-    if (optimizingTime > 0) {
-      text += "\n  Optimizing: " + formatNumber(optimizingTime) + "ms";
-      text += "\n    Building call graph: " + formatNumber(callGraphTime) + "ms";
-      text += "\n    Globalize: " + formatNumber(globalizeTime) + "ms";
-      text += "\n    Symbol motion: " + formatNumber(symbolMotionTime) + "ms";
-      text += "\n    Function inlining: " + formatNumber(functionInliningTime) + "ms";
-      text += "\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms";
-      text += "\n    Tree shaking: " + formatNumber(treeShakingTime) + "ms";
-    }
-    if (emitTime > 0) text += "\n  Emit: " + formatNumber(emitTime) + "ms";
-    if (lineCountingTime > 0) text += "\n  Counting lines: " + formatNumber(lineCountingTime) + "ms";
-
-    // Sources
-    text += sourceStatistics("Inputs", result.options.inputs);
-    text += sourceStatistics("Outputs", result.outputs);
-    return text;
+  private {
+    CompilerOptions _options;
+    List<Source> _inputs = [];
+    var _program = Node.createProgram([]);
   }
 
-  CompilerResult compile(CompilerOptions options) {
-    var totalStart = now();
+  new(CompilerOptions options) : _options = options {
     var target = options.target;
     var config = options.config;
-    var program = Node.createProgram([]);
-    List<Source> outputs = [];
-    List<Node> files = [];
 
     // Automatically set the current configuration if it's not explicitly set
     if (config == .AUTOMATIC) {
@@ -194,37 +157,67 @@ class Compiler {
     options.overrideDefine("CONFIG_OSX", config == .OSX);
     options.overrideDefine("CONFIG_WINDOWS", config == .WINDOWS);
 
-    // Tokenize and parse each module individually
+    // Add all libraries before any other code
     for (var i = 0; i < cachedLibraries.size(); i++) {
-      var file = cachedLibraries[i].compile(this, options);
+      cachedLibraries[i].compile(this);
+    }
+  }
+
+  Node addInput(Source source) {
+    var log = _options.log;
+    var errorCount = log.errorCount;
+
+    // Tokenize the source
+    var tokenizeStart = now();
+    var tokens = tokenize(log, source);
+    if (log.errorCount == errorCount) {
+      prepareTokens(tokens);
+    }
+    tokenizingTime += now() - tokenizeStart;
+    _inputs.push(source);
+
+    // Parse the source if the tokenize was successful
+    if (log.errorCount == errorCount) {
+      var parseStart = now();
+      var file = parseFile(log, tokens);
+      parsingTime += now() - parseStart;
+
+      // Return the generated node so it can be cached if needed
       if (file != null) {
-        program.appendChild(file);
-        files.push(file);
+        _program.appendChild(file);
+        return file;
       }
     }
-    for (var i = 0; i < options.inputs.size(); i++) {
-      var file = tokenizeAndParseFile(options.inputs[i]);
-      if (file != null) {
-        program.appendChild(file);
-        files.push(file);
-      }
-    }
+
+    return null;
+  }
+
+  void addCachedInput(Node node) {
+    assert node.kind == .FILE;
+    assert !node.range.isEmpty();
+    _inputs.push(node.range.source);
+    _program.appendChild(node);
+  }
+
+  CompilerResult compile() {
+    var totalStart = now();
+    List<Source> outputs = [];
 
     // Resolve everything together
     Resolver resolver = null;
-    if (options.target.shouldRunResolver()) {
+    if (_options.target.shouldRunResolver()) {
       var resolveStart = now();
-      resolver = Resolver(log, options);
-      resolver.run(program);
+      resolver = Resolver(_options.log, _options);
+      resolver.run(_program);
       resolvingTime += now() - resolveStart;
     }
-    if (log.errorCount == 0) {
+    if (!_options.log.hasErrors()) {
 
       // Optimize the module if the target format requires it
-      if (options.target.shouldRunResolver()) {
+      if (_options.target.shouldRunResolver()) {
         // Build a call graph
         var callGraphStart = now();
-        var graph = CallGraph(program);
+        var graph = CallGraph(_program);
         callGraphTime += now() - callGraphStart;
 
         // Convert instance functions to static functions
@@ -239,56 +232,90 @@ class Compiler {
 
         // Inline functions
         var functionInliningStart = now();
-        FunctionInliningPass.run(graph, options);
+        FunctionInliningPass.run(graph, _options);
         functionInliningTime += now() - functionInliningStart;
 
         // Fold constants
-        if (options.foldAllConstants) {
+        if (_options.foldAllConstants) {
           var constantFoldingStart = now();
-          resolver.constantFolder.foldConstants(program);
+          resolver.constantFolder.foldConstants(_program);
           constantFoldingTime += now() - constantFoldingStart;
         }
 
         // Tree shaking
         var treeShakingStart = now();
-        TreeShakingPass.run(program, options, resolver);
+        TreeShakingPass.run(_program, _options, resolver);
         treeShakingTime += now() - treeShakingStart;
       }
 
       // Emit the module in the target format
       IEmitter emitter = null;
-      switch (options.target) {
+      switch (_options.target) {
         case .NONE {}
         case .CPP { emitter = cpp.Emitter(resolver); }
         case .JAVASCRIPT { emitter = js.Emitter(resolver); }
         case .JOINED { emitter = joined.Emitter(resolver); }
-        case .JSON_AST { emitter = json.Emitter(options); }
-        case .LISP_AST { emitter = lisp.Emitter(options); }
-        case .XML_AST { emitter = xml.Emitter(options); }
+        case .JSON_AST { emitter = json.Emitter(_options); }
+        case .LISP_AST { emitter = lisp.Emitter(_options); }
+        case .XML_AST { emitter = xml.Emitter(_options); }
         default { assert false; }
       }
       if (emitter != null) {
         var emitStart = now();
-        outputs = emitter.emitProgram(program);
+        outputs = emitter.emitProgram(_program);
         emitTime += now() - emitStart;
       }
     }
 
     totalTime += now() - totalStart;
-    return CompilerResult(options, outputs, files, program, resolver);
+    return CompilerResult(outputs, _program, resolver);
+  }
+
+  string statistics(CompilerResult result) {
+    // Line count
+    var lineCountingStart = now();
+    var lineCount = 0;
+    lineCount += totalLineCount(_inputs);
+    var text =
+      "Input line count: " + lineCount +
+      "\nOutput line count: " + totalLineCount(result.outputs);
+    lineCountingTime += now() - lineCountingStart;
+
+    // Compilation time
+    var optimizingTime = callGraphTime + globalizeTime + symbolMotionTime + functionInliningTime + constantFoldingTime + treeShakingTime;
+    text += "\nTotal compile time: " + formatNumber(totalTime + lineCountingTime) + "ms";
+    if (tokenizingTime > 0) text += "\n  Tokenizing: " + formatNumber(tokenizingTime) + "ms";
+    if (parsingTime > 0) text += "\n  Parsing: " + formatNumber(parsingTime) + "ms";
+    if (resolvingTime > 0) text += "\n  Resolving: " + formatNumber(resolvingTime) + "ms";
+    if (optimizingTime > 0) {
+      text += "\n  Optimizing: " + formatNumber(optimizingTime) + "ms";
+      text += "\n    Building call graph: " + formatNumber(callGraphTime) + "ms";
+      text += "\n    Globalize: " + formatNumber(globalizeTime) + "ms";
+      text += "\n    Symbol motion: " + formatNumber(symbolMotionTime) + "ms";
+      text += "\n    Function inlining: " + formatNumber(functionInliningTime) + "ms";
+      text += "\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms";
+      text += "\n    Tree shaking: " + formatNumber(treeShakingTime) + "ms";
+    }
+    if (emitTime > 0) text += "\n  Emit: " + formatNumber(emitTime) + "ms";
+    if (lineCountingTime > 0) text += "\n  Counting lines: " + formatNumber(lineCountingTime) + "ms";
+
+    // Sources
+    text += sourceStatistics("Inputs", _inputs);
+    text += sourceStatistics("Outputs", result.outputs);
+    return text;
   }
 
   // Cache the parsed standard libraries for a speed boost during recompilation
-  static List<CachedSource> cachedLibraries = [
-    CachedSource("defines.sk", @ContentsOfFile("../../lib/defines.sk")),
-    CachedSource("primitives.sk", @ContentsOfFile("../../lib/primitives.sk")),
-    CachedSource("math.sk", @ContentsOfFile("../../lib/math.sk")),
-    CachedSource("list.sk", @ContentsOfFile("../../lib/list.sk")),
-    CachedSource("stringmap.sk", @ContentsOfFile("../../lib/stringmap.sk")),
-    CachedSource("intmap.sk", @ContentsOfFile("../../lib/intmap.sk")),
-    CachedSource("os.sk", @ContentsOfFile("../../lib/os.sk")),
-    CachedSource("terminal.sk", @ContentsOfFile("../../lib/terminal.sk")),
-    CachedSource("unicode.sk", @ContentsOfFile("../../lib/unicode.sk")),
+  static List<CachedLibrary> cachedLibraries = [
+    CachedLibrary("defines.sk", @ContentsOfFile("../../lib/defines.sk")),
+    CachedLibrary("primitives.sk", @ContentsOfFile("../../lib/primitives.sk")),
+    CachedLibrary("math.sk", @ContentsOfFile("../../lib/math.sk")),
+    CachedLibrary("list.sk", @ContentsOfFile("../../lib/list.sk")),
+    CachedLibrary("stringmap.sk", @ContentsOfFile("../../lib/stringmap.sk")),
+    CachedLibrary("intmap.sk", @ContentsOfFile("../../lib/intmap.sk")),
+    CachedLibrary("os.sk", @ContentsOfFile("../../lib/os.sk")),
+    CachedLibrary("terminal.sk", @ContentsOfFile("../../lib/terminal.sk")),
+    CachedLibrary("unicode.sk", @ContentsOfFile("../../lib/unicode.sk")),
   ];
 
   static int totalLineCount(List<Source> sources) {
@@ -310,29 +337,5 @@ class Compiler {
       text += "\n  " + source.name + ": " + bytesToString(source.contents.size());
     }
     return text;
-  }
-
-  Node tokenizeAndParseFile(Source source) {
-    var errorCount = log.errorCount;
-
-    // Tokenize the source
-    var tokenizeStart = now();
-    var tokens = tokenize(log, source);
-    if (log.errorCount == errorCount) {
-      prepareTokens(tokens);
-    }
-    tokenizingTime += now() - tokenizeStart;
-
-    // Parse the source if the tokenize was successful
-    if (log.errorCount == errorCount) {
-      var parseStart = now();
-      var file = parseFile(log, tokens);
-      parsingTime += now() - parseStart;
-      if (file != null) {
-        return file;
-      }
-    }
-
-    return null;
   }
 }

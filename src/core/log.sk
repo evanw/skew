@@ -11,7 +11,9 @@ class Diagnostic {
   var noteText = "";
 
   static string format(string kind, Range range, string text) {
-    if (range.isEmpty()) return kind + ": " + text + "\n";
+    if (range.isEmpty()) {
+      return kind + ": " + text + "\n";
+    }
     var formatted = range.format(0);
     return range.locationString() + ": " + kind + ": " + text + "\n" + formatted.line + "\n" + formatted.range + "\n";
   }

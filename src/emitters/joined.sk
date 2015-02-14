@@ -4,17 +4,12 @@
 // to avoid depending on the file system.
 namespace joined {
   class Emitter : IEmitter {
-    private {
-      Resolver resolver;
-      CompilerOptions options = null;
-      var contentsOfFile = StringMap<List<Node>>();
-    }
+    private Resolver resolver;
 
     override List<Source> emitProgram(Node program) {
-      options = resolver.options;
       var result = "";
-      for (var i = 0; i < options.inputs.size(); i++) {
-        var input = options.inputs[i];
+      for (var i = 0; i < program.children.size(); i++) {
+        var input = program.children[i].range.source;
         var contents = input.contents;
         var substitutions = resolver.sourceSubstitutions.getOrDefault(input.name, null);
         if (substitutions != null) {
@@ -32,7 +27,7 @@ namespace joined {
           result += "\n";
         }
       }
-      return [Source(options.outputFile, result)];
+      return [Source(resolver.options.outputFile, result)];
     }
   }
 }
