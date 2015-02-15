@@ -627,4 +627,44 @@ int foo int bar;
         ~~~
 ");
 
+test("
+enum Foo {
+  FOO
+  BAR
+  BAZ
+}
+", "
+<stdin>:2:6: error: Expected COMMA but found IDENTIFIER
+  FOO
+     ^
+");
+
+test("
+enum Foo { FOO BAR BAZ }
+", "
+<stdin>:1:16: error: Expected COMMA but found IDENTIFIER
+enum Foo { FOO BAR BAZ }
+               ~~~
+");
+
+test("
+var foo = [
+  1
+  2
+  3
+];
+", "
+<stdin>:2:4: error: Expected COMMA but found INT_DECIMAL
+  1
+   ^
+");
+
+test("
+var foo = [ 1 2 3 ];
+", "
+<stdin>:1:15: error: Expected COMMA but found INT_DECIMAL
+var foo = [ 1 2 3 ];
+              ^
+");
+
 }}

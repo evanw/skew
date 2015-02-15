@@ -48,10 +48,10 @@ class ParserContext {
       if (previousSyntaxError != token) {
         var range = token.range;
 
-        // Show missing semicolon errors at the end of the previous line
+        // Show missing semicolon/comma errors at the end of the previous line
         // instead of at the start of the next line. This is especially
         // important for interactive editing.
-        if (kind == .SEMICOLON && index > 0) {
+        if ((kind == .SEMICOLON || kind == .COMMA) && index > 0) {
           var end = tokens[index - 1].range.end;
           var source = range.source;
           if (source.indexToLineColumn(range.end).line != source.indexToLineColumn(end).line) {

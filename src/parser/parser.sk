@@ -163,7 +163,7 @@ List<Node> parseStatements(ParserContext context, StatementHint hint) {
     if (hint == .IN_ENUM) {
       var declaration = parseEnumValueDeclaration(context); if (declaration == null) break;
       statements.push(declaration);
-      if (!context.eat(.COMMA)) break;
+      if (context.peek(.RIGHT_BRACE) || !context.expect(.COMMA)) break;
     } else {
       var statement = hint == .IN_SWITCH ? parseCaseStatement(context) : parseStatement(context, hint); if (statement == null) break;
       statements.push(statement);

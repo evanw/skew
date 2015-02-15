@@ -8012,7 +8012,7 @@
       if (this.previousSyntaxError !== token) {
         var range = token.range;
 
-        if (kind === TokenKind.SEMICOLON && this.index > 0) {
+        if ((kind === TokenKind.SEMICOLON || kind === TokenKind.COMMA) && this.index > 0) {
           var end = this.tokens[this.index - 1 | 0].range.end;
           var source = range.source;
 
@@ -16371,7 +16371,7 @@
 
         statements.push(declaration);
 
-        if (!context.eat(TokenKind.COMMA)) {
+        if (context.peek(TokenKind.RIGHT_BRACE) || !context.expect(TokenKind.COMMA)) {
           break;
         }
       } else {
