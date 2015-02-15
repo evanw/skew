@@ -36,6 +36,7 @@ interface Comparison<T> {
       }
 
       T last() { return this[size() - 1]; }
+      void clear() { this.`length` = 0; }
       void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }
     }
 
@@ -128,6 +129,10 @@ interface Comparison<T> {
         return indexOf(value) != -1;
       }
 
+      void clear() {
+        _data.clear();
+      }
+
       @NeedsInclude("<algorithm>") {
         int indexOf(T value) {
           int index = (int)(`std`::find(_data.begin(), _data.end(), value) - _data.begin());
@@ -192,6 +197,7 @@ interface Comparison<T> {
       @OperatorGet T get(int index);
       @OperatorSet void set(int index, T value);
       @OperatorIn bool contains(T value);
+      void clear();
       void swap(int a, int b);
     }
     void sort(Comparison<T> comparison);
