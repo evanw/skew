@@ -610,4 +610,21 @@ export Foo<`foo`> bar;
        ~~~
 ");
 
+test("
+int foo
+int bar;
+", "
+<stdin>:1:8: error: Expected SEMICOLON but found IDENTIFIER
+int foo
+       ^
+");
+
+test("
+int foo int bar;
+", "
+<stdin>:1:9: error: Expected SEMICOLON but found IDENTIFIER
+int foo int bar;
+        ~~~
+");
+
 }}

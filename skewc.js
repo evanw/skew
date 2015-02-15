@@ -8010,7 +8010,18 @@
       var token = this.current();
 
       if (this.previousSyntaxError !== token) {
-        syntaxErrorExpectedToken(this.log, token, kind);
+        var range = token.range;
+
+        if (kind === TokenKind.SEMICOLON && this.index > 0) {
+          var end = this.tokens[this.index - 1 | 0].range.end;
+          var source = range.source;
+
+          if (source.indexToLineColumn(range.end).line !== source.indexToLineColumn(end).line) {
+            range = new Range(source, end, end);
+          }
+        }
+
+        syntaxErrorExpectedToken(this.log, range, token.kind, kind);
         this.previousSyntaxError = token;
       }
 
@@ -8260,11 +8271,11 @@
     var node = this.resume(context, precedence, parselet.prefix.parse(context));
 
     if (node === null) {
-      throw new Error('assert node != null; (src/parser/pratt.sk:109:5)');
+      throw new Error('assert node != null; (src/parser/pratt.sk:122:5)');
     }
 
     if (node.range.isEmpty()) {
-      throw new Error('assert !node.range.isEmpty(); (src/parser/pratt.sk:110:5)');
+      throw new Error('assert !node.range.isEmpty(); (src/parser/pratt.sk:123:5)');
     }
 
     return node;
@@ -8272,7 +8283,7 @@
 
   Pratt.prototype.resume = function(context, precedence, left) {
     if (left === null) {
-      throw new Error('assert left != null; (src/parser/pratt.sk:115:5)');
+      throw new Error('assert left != null; (src/parser/pratt.sk:128:5)');
     }
 
     while (left.kind !== NodeKind.ERROR) {
@@ -8286,11 +8297,11 @@
       left = parselet.infix.parse(context, left);
 
       if (left === null) {
-        throw new Error('assert left != null; (src/parser/pratt.sk:123:7)');
+        throw new Error('assert left != null; (src/parser/pratt.sk:136:7)');
       }
 
       if (left.range.isEmpty()) {
-        throw new Error('assert !left.range.isEmpty(); (src/parser/pratt.sk:124:7)');
+        throw new Error('assert !left.range.isEmpty(); (src/parser/pratt.sk:137:7)');
       }
     }
 
@@ -16148,8 +16159,8 @@
     log.error(token.range, 'Unexpected ' + in_TokenKind._toString_[token.kind]);
   }
 
-  function syntaxErrorExpectedToken(log, found, expected) {
-    log.error(found.range, 'Expected ' + in_TokenKind._toString_[expected] + ' but found ' + in_TokenKind._toString_[found.kind]);
+  function syntaxErrorExpectedToken(log, range, found, expected) {
+    log.error(range, 'Expected ' + in_TokenKind._toString_[expected] + ' but found ' + in_TokenKind._toString_[found]);
   }
 
   function syntaxErrorBadForEach(log, range) {

@@ -14,8 +14,8 @@ void syntaxErrorUnexpectedToken(Log log, Token token) {
   log.error(token.range, "Unexpected " + token.kind);
 }
 
-void syntaxErrorExpectedToken(Log log, Token found, TokenKind expected) {
-  log.error(found.range, "Expected " + expected + " but found " + found.kind);
+void syntaxErrorExpectedToken(Log log, Range range, TokenKind found, TokenKind expected) {
+  log.error(range, "Expected " + expected + " but found " + found);
 }
 
 void syntaxErrorBadForEach(Log log, Range range) {
