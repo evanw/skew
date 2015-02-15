@@ -1,4 +1,5 @@
 import class void {}
+alias dynamic = `dynamic`;
 
 #if TARGET_JS
 

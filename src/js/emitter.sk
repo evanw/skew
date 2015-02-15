@@ -610,7 +610,7 @@ namespace js {
       var value = node.returnValue();
       emit(indent);
       if (value != null) {
-        emit("return ");
+        emit("return" + (value.kind == .MAP || value.kind == .LIST ? space : " "));
         emitExpression(value, .LOWEST);
       } else {
         emit("return");

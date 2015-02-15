@@ -706,7 +706,7 @@ export List<double> foo(float x) {
   ];
 }
 ", "
-(function(){foo=function(a){return [- -a,a- -2,a- -2,a- -2.5,a- -2,a- -2.5,a- -Infinity]}}());
+(function(){foo=function(a){return[- -a,a- -2,a- -2,a- -2.5,a- -2,a- -2.5,a- -Infinity]}}());
 ").release();
 
 testJS("
@@ -828,7 +828,7 @@ export List<int> foo(int x) {
   ];
 }
 ", "
-(function(){foo=function(a){return [a,a,a-2|0,2-a|0,2-a|0,a-2|0,a+3|0,a-1|0,a+1|0,a-3|0,3+a|0,a-1|0,3-a|0,-1-a|0,3+a|0,3-a|0,a-1|0,-1-a|0]}}());
+(function(){foo=function(a){return[a,a,a-2|0,2-a|0,2-a|0,a-2|0,a+3|0,a-1|0,a+1|0,a-3|0,3+a|0,a-1|0,3-a|0,-1-a|0,3+a|0,3-a|0,a-1|0,-1-a|0]}}());
 ").release();
 
 testJS("
@@ -852,11 +852,11 @@ export List<double> foo(double x, bool y) {
  ];
 }
 ", "
-(function(){foo=function(a,b){return [1- -a*2,1+ +a*2,1+ +b*2,1- -a*2/3,1+ +a*2/3,1+ +b*2/3,-a*2-1,+a*2+1,+b*2+1,1-2*-a,1+2*+a,1+2*+b]}}());
+(function(){foo=function(a,b){return[1- -a*2,1+ +a*2,1+ +b*2,1- -a*2/3,1+ +a*2/3,1+ +b*2/3,-a*2-1,+a*2+1,+b*2+1,1-2*-a,1+2*+a,1+2*+b]}}());
 ").release();
 
 testJS("
-export `var` foo() {
+export dynamic foo() {
   return {
     \"abc\": 0,
     \"456\": 0,
@@ -868,7 +868,7 @@ export `var` foo() {
   };
 }
 ", "
-(function(){foo=function(){return {abc:0,456:0,'x y':0,-1:0,'01':0,$:0,_:0}}}());
+(function(){foo=function(){return{abc:0,456:0,'x y':0,-1:0,'01':0,$:0,_:0}}}());
 ").release();
 
 testJS("
@@ -904,7 +904,7 @@ export var foo = [\" \", \";\", \",\", \"{\", \"}\", \" \"];
 ").release();
 
 testJS("
-export bool foo(`var` foo) {
+export bool foo(dynamic foo) {
   return foo is `Array`;
 }
 ", "
@@ -912,7 +912,7 @@ export bool foo(`var` foo) {
 ").release();
 
 testJS("
-export List<bool> foo(`var` foo) {
+export List<bool> foo(dynamic foo) {
   return [
     !(foo || 0),
     !(foo || 1),
@@ -924,12 +924,12 @@ export List<bool> foo(`var` foo) {
   ];
 }
 ", "
-(function(){foo=function(a){return [!a,!(a||1),!a,!(a||!0),!a,!a,!(a||Infinity)]}}());
+(function(){foo=function(a){return[!a,!(a||1),!a,!(a||!0),!a,!a,!(a||Infinity)]}}());
 ").release();
 
 // This must not become +foo because false and NaN give different results
 testJS("
-export double foo(`var` foo) {
+export double foo(dynamic foo) {
   return +(foo || null);
 }
 ", "
@@ -937,7 +937,7 @@ export double foo(`var` foo) {
 ").release();
 
 testJS("
-export List<int> foo(`var` foo) {
+export List<int> foo(dynamic foo) {
   return [
     ~(foo || 0),
     ~(foo || 1),
@@ -951,7 +951,7 @@ export List<int> foo(`var` foo) {
   ];
 }
 ", "
-(function(){foo=function(a){return [~a,~(a||1),a|0,(a||1)|0,a^0,(a||!0)^0,a&0,a&0,(a||Infinity)&0]}}());
+(function(){foo=function(a){return[~a,~(a||1),a|0,(a||1)|0,a^0,(a||!0)^0,a&0,a&0,(a||Infinity)&0]}}());
 ").release();
 
 testJS("
@@ -964,7 +964,7 @@ export List<bool> foo(bool foo) {
   ];
 }
 ", "
-(function(){foo=function(a){return [!a,a,!window.foo,!!window.foo]}}());
+(function(){foo=function(a){return[!a,a,!window.foo,!!window.foo]}}());
 ").release();
 
 testJS("

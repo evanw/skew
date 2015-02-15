@@ -115,11 +115,13 @@ export void foo() {
 testJS("
 export class Foo {
   `var` foo;
+  dynamic bar;
 }
 ", "
 (function() {
-  Foo = function(_0) {
+  Foo = function(_0, _1) {
     this.foo = _0;
+    this.bar = _1;
   };
 }());
 ");

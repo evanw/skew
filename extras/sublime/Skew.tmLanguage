@@ -40,7 +40,7 @@
     </dict>
     <dict>
       <key>match</key>
-      <string>\b(?:var|void|int|bool|float|double|string|[A-Z][A-Za-z0-9_]*(?:\.[A-Z][A-Za-z0-9_]*[a-z][A-Za-z0-9_]*)*)\b(?:&lt;.*?&gt;(?!&gt;))?(?:\s*[*&amp;])?(\s+[A-Za-z0-9_]+(?=\()\b)?</string>
+      <string>\b(?:bool|double|dynamic|float|int|string|var|void|[A-Z][A-Za-z0-9_]*(?:\.[A-Z][A-Za-z0-9_]*[a-z][A-Za-z0-9_]*)*)\b(?:&lt;.*?&gt;(?!&gt;))?(?:\s*[*&amp;])?(\s+[A-Za-z0-9_]+(?=\()\b)?</string>
       <key>name</key>
       <string>storage.type.skew</string>
       <key>captures</key>
