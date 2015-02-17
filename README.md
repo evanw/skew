@@ -2,7 +2,7 @@
 
 This is a programming language with the goal of supporting better cross-platform software development. It tries to make the right compromises and leave open the possibility of targeting almost any platform. There are other cross-platform languages out there (JavaScript, Java, C++, C#, etc.) but none take the same approach.
 
-The compiler currently contains a production-quality JavaScript target and a partially-complete C++11 target. It can easily be extended to support languages like C#, Java, Swift, C++/CX, Python, Ruby, PHP, and so on.
+The compiler currently contains a production-quality JavaScript target and partially-complete targets for C++11 and Ruby. It can easily be extended to support languages like C#, Java, Swift, C++/CX, Python, PHP, and so on.
 
 *Warning: This is a hobby project and is still evolving rapidly. It can be used for real things (the compiler is written in itself) but the language is nowhere near stability yet.*
 
