@@ -1,5 +1,18 @@
 namespace ruby { void testExpressions() {
 
+// Ruby apparently has a quirk regarding "==" and "!=" that requires extra
+// parentheses here. Other targets do not have this issue and other operators
+// in Ruby also don't seem to have this issue.
+testRuby("
+export bool foo(int a, int b, int c, int d) {
+  return (a == b) == (c == d);
+}
+", "
+def foo(a, b, c, d)
+  return (a == b) == (c == d)
+end
+");
+
 testRuby("
 export var foo = \"'\";
 export var bar = \"\\\"\";

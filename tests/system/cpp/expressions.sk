@@ -1,6 +1,18 @@
 namespace cpp { void testExpressions() {
 
 testCPP("
+export bool foo(int a, int b, int c, int d) {
+  return (a == b) == (c == d);
+}
+", "
+bool foo(int a, int b, int c, int d);
+
+bool foo(int a, int b, int c, int d) {
+  return a == b == (c == d);
+}
+");
+
+testCPP("
 export var x = [
   0b1100100,
   0100,

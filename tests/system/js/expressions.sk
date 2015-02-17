@@ -1,6 +1,18 @@
 namespace js { void testExpressions() {
 
 testJS("
+export bool foo(int a, int b, int c, int d) {
+  return (a == b) == (c == d);
+}
+", "
+(function() {
+  foo = function(a, b, c, d) {
+    return a === b === (c === d);
+  };
+}());
+");
+
+testJS("
 export var x = [
   0b1100100,
   0100,

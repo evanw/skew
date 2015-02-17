@@ -1,6 +1,17 @@
 namespace core { void testExpressions() {
 
 test("
+bool foo = (1, 2.0);
+", "
+<stdin>:1:13: warning: Unused expression
+bool foo = (1, 2.0);
+            ^
+<stdin>:1:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+bool foo = (1, 2.0);
+               ~~~
+");
+
+test("
 assert const 100 == 0b1100100;
 assert const 100 == 0100;
 assert const 100 == 0o144;
