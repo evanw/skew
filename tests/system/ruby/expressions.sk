@@ -1,0 +1,30 @@
+namespace ruby { void testExpressions() {
+
+testRuby("
+export var foo = \"'\";
+export var bar = \"\\\"\";
+export var baz = \"#{test}\";
+", "
+$foo = \"'\"
+$bar = \"\\\"\"
+$baz = \"\\#{test}\"
+");
+
+testRuby("
+export List<float> foo(int x, float y) {
+  return [1, 1 + 2, 1 + 2f, 1 + 2.0, x + 2.0, 1 + y];
+}
+export List<double> bar(int x, double y) {
+  return [1, 1 + 2, 1 + 2f, 1 + 2.0, x + 2.0, 1 + y];
+}
+", "
+def foo(x, y)
+  return [1.0, Float(1 + 2), 1.0 + 2.0, 1.0 + 2.0, Float(x) + 2.0, 1.0 + y]
+end
+
+def bar(x, y)
+  return [1.0, Float(1 + 2), 1.0 + 2.0, 1.0 + 2.0, Float(x) + 2.0, 1.0 + y]
+end
+");
+
+}}

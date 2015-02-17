@@ -3,6 +3,9 @@ namespace ruby {
     private {
       Node elseIf = null;
       Node skipEnd = null;
+      var needsStaticVariable = false;
+      var needsEnumValue = false;
+      var needsSortHelper = false;
     }
 
     override string extension() {
@@ -10,8 +13,14 @@ namespace ruby {
     }
 
     override void visitProgram(Node node) {
-      emitExtraNewlineBefore(.FUNCTION);
-      emit(
+      super(node);
+      emitHelperFunctions();
+      emitEntryPoint();
+    }
+
+    void emitHelperFunctions() {
+      if (needsStaticVariable) {
+        prepended.append(
 "def static_variable(symbol)
   class_eval(\"
     @@#{symbol} = nil
@@ -23,10 +32,11 @@ namespace ruby {
     end
   \")
 end
+
 ");
-      emitExtraNewlineAfter(.FUNCTION);
-      emitExtraNewlineBefore(.FUNCTION);
-      emit(
+      }
+      if (needsEnumValue) {
+        prepended.append(
 "def enum_value(symbol, value)
   class_eval(\"
     @@#{symbol} = value
@@ -35,18 +45,17 @@ end
     end
   \")
 end
+
 ");
-      emitExtraNewlineAfter(.FUNCTION);
-      emitExtraNewlineBefore(.FUNCTION);
-      emit(
+      }
+      if (needsSortHelper) {
+        prepended.append(
 "def sort_helper(array, comparison)
   array.sort! { |a, b| comparison.compare(a, b) }
 end
-");
-      emitExtraNewlineAfter(.FUNCTION);
 
-      super(node);
-      emitEntryPoint();
+");
+      }
     }
 
     void emitEntryPoint() {
@@ -94,6 +103,7 @@ end
           var member = members[i].symbol;
           if (member.isEnumValue()) {
             emit(indent + "enum_value :" + mangleName(member) + ", " + member.constant.asInt() + "\n");
+            needsEnumValue = true;
           }
         }
         leaveNamespace(symbol);
@@ -183,7 +193,13 @@ end
       var node = symbol.node;
       adjustNamespace(symbol);
       emitExtraNewlineBefore(node.kind);
-      emit(indent + (symbol.kind == .INSTANCE_VARIABLE ? "attr_accessor :" : "static_variable :"));
+      emit(indent);
+      if (symbol.kind == .INSTANCE_VARIABLE) {
+        emit("attr_accessor :");
+      } else {
+        emit("static_variable :");
+        needsStaticVariable = true;
+      }
       emit(mangleName(symbol));
       emit("\n");
       emitExtraNewlineAfter(node.kind);
@@ -300,7 +316,18 @@ end
       var valueType = value.type;
       var type = node.type;
 
-      if (shouldEmitCast(node)) {
+      // We must manually promote ints to floats. This matters because dividing
+      // an integer by an integer produces an integer.
+      if (type.isReal(cache) && valueType.isInteger(cache)) {
+        if (value.kind == .INT) {
+          node.become(Node.createDouble(value.asInt()));
+        } else {
+          node.become(Node.createCall(Node.createName("Float"), [value.replaceWith(null)]));
+        }
+        value = node;
+      }
+
+      else if (shouldEmitCast(node)) {
         if (type.isNumeric(cache)) {
           if (type.isInt(cache) && valueType.isReal(cache)) {
             node.become(Node.createDot(value.replaceWith(null), Node.createName("truncate")));
@@ -315,13 +342,6 @@ end
             value = node;
           }
         }
-      }
-
-      // We must manually promote ints to floats. This matters because dividing
-      // an integer by an integer produces an integer.
-      else if (type.isReal(cache) && valueType.isInteger(cache)) {
-        node.become(Node.createCall(Node.createName("Float"), [value.replaceWith(null)]));
-        value = node;
       }
 
       emitExpression(value, precedence);
@@ -390,8 +410,12 @@ end
     }
 
     override void emitName(Node node) {
-      if (node.symbol != null && node.symbol.kind == .INSTANCE_VARIABLE) {
-        emit("@");
+      if (node.symbol != null) {
+        if (node.symbol.kind == .INSTANCE_VARIABLE) {
+          emit("@");
+        }
+      } else if (node.asString() == "sort_helper") {
+        needsSortHelper = true;
       }
       super(node);
     }

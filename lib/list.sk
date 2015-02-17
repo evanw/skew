@@ -225,10 +225,6 @@ interface Comparison<T> {
         destructiveSlice(start, end - start);
       }
 
-      void sort(Comparison<T> comparison) {
-        `sort_helper`(this, comparison);
-      }
-
       void swap(int a, int b) {
         assert a >= 0 && a < size();
         assert b >= 0 && b < size();
@@ -236,6 +232,10 @@ interface Comparison<T> {
         this[a] = this[b];
         this[b] = temp;
       }
+    }
+
+    inline void sort(Comparison<T> comparison) {
+      `sort_helper`(this, comparison);
     }
   }
 

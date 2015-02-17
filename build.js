@@ -22,13 +22,16 @@ var SOURCES = [
   'src/ast/logic.sk',
   'src/ast/node.sk',
   'src/ast/operators.sk',
+
   'src/compiler/collector.sk',
   'src/compiler/compiler.sk',
   'src/compiler/now.sk',
+
   'src/core/log.sk',
   'src/core/range.sk',
   'src/core/source.sk',
   'src/core/support.sk',
+
   'src/emitters/base.sk',
   'src/emitters/cpp.sk',
   'src/emitters/joined.sk',
@@ -36,15 +39,19 @@ var SOURCES = [
   'src/emitters/lisp.sk',
   'src/emitters/ruby.sk',
   'src/emitters/xml.sk',
+
   'src/js/emitter.sk',
   'src/js/patcher.sk',
   'src/js/sourcemap.sk',
+
   'src/lexer/lexer.sk',
   'src/lexer/token.sk',
+
   'src/parser/diagnostics.sk',
   'src/parser/literals.sk',
   'src/parser/parser.sk',
   'src/parser/pratt.sk',
+
   'src/resolver/callgraph.sk',
   'src/resolver/constantfolding.sk',
   'src/resolver/diagnostics.sk',
@@ -98,6 +105,7 @@ var TEST_SOURCES = SOURCES.concat([
   'tests/system/core/types.sk',
   'tests/system/core/using.sk',
   'tests/system/core/var.sk',
+
   'tests/system/cpp/annotations.sk',
   'tests/system/cpp/expressions.sk',
   'tests/system/cpp/functions.sk',
@@ -105,6 +113,7 @@ var TEST_SOURCES = SOURCES.concat([
   'tests/system/cpp/objects.sk',
   'tests/system/cpp/release.sk',
   'tests/system/cpp/statements.sk',
+
   'tests/system/js/annotations.sk',
   'tests/system/js/expressions.sk',
   'tests/system/js/functions.sk',
@@ -112,6 +121,8 @@ var TEST_SOURCES = SOURCES.concat([
   'tests/system/js/minify.sk',
   'tests/system/js/objects.sk',
   'tests/system/js/statements.sk',
+
+  'tests/system/ruby/expressions.sk',
 ]);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -172,10 +183,7 @@ task('clean', function(done) {
 }).describe('Remove the build directory');
 
 task('replace', function(done) {
-  fs.rename(DEBUG_DIR + '/skewc.js', 'skewc.js', function(error) {
-    if (error) die(error);
-    done();
-  });
+  run(['cp', DEBUG_DIR + '/skewc.js', 'skewc.js'], done);
 }).requires(['js-check']).describe('Replace the current frontend with a newer version of itself');
 
 task('publish', function(done) {

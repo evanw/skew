@@ -49,6 +49,17 @@ assert const (double)2.5 == 2.5;
 ");
 
 test("
+assert const 3 / 2 == 1;
+assert const 3f / 2 == 1.5;
+assert const 3.0 / 2 == 1.5;
+assert const 3 / 2f == 1.5;
+assert const 3 / 2.0 == 1.5;
+assert const 3f / 2f == 1.5;
+assert const 3.0 / 2.0 == 1.5;
+", "
+");
+
+test("
 int a = 0;
 int b = false;
 int c = 0.0f;

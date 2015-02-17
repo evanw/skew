@@ -64,6 +64,11 @@ namespace tests {
       return this;
     }
 
+    CompilerTest ruby() {
+      options.target = .RUBY;
+      return this;
+    }
+
     CompilerTest windows() {
       options.config = .WINDOWS;
       return this;
@@ -248,6 +253,10 @@ CompilerTest testCPP(string input, string expected) {
   return test(input, expected).cpp();
 }
 
+CompilerTest testRuby(string input, string expected) {
+  return test(input, expected).ruby();
+}
+
 @EntryPoint
 int start() {
   core.testAccess();
@@ -291,6 +300,8 @@ int start() {
   cpp.testObjects();
   cpp.testRelease();
   cpp.testStatements();
+
+  ruby.testExpressions();
 
   return runAllTests();
 }
