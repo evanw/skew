@@ -97,19 +97,24 @@ namespace cpp {
       headers.sort(StringComparison.INSTANCE);
 
       // Prepend headers if needed
-      var text = "";
       if (headers.size() != 0) {
         for (var i = 0; i < headers.size(); i++) {
           var name = headers[i];
           var size = name.size();
-          text += "#include " + (size == 0 || name[0] != '<' || name[size - 1] != '>' ? "\"" + name + "\"" : name) + "\n";
+          prepended.append("#include " + (size == 0 || name[0] != '<' || name[size - 1] != '>' ? "\"" + name + "\"" : name) + "\n");
         }
-        text += "\n";
+        prepended.append("\n");
       }
-      if (isMarkSweep) text += @ContentsOfFile("../../lib/mark-sweep.h") + "\n";
-      if (text != "") output.contents = text + output.contents;
-      if (isMarkSweep) output.contents += "\n" + @ContentsOfFile("../../lib/mark-sweep.cpp");
-      if (useFastHack) output.contents += "\n" + @ContentsOfFile("../../lib/fast.cpp");
+      if (isMarkSweep) {
+        prepended.append(@ContentsOfFile("../../lib/mark-sweep.h"));
+        prepended.append("\n");
+        emit("\n");
+        emit(@ContentsOfFile("../../lib/mark-sweep.cpp"));
+      }
+      if (useFastHack) {
+        emit("\n");
+        emit(@ContentsOfFile("../../lib/fast.cpp"));
+      }
     }
 
     override void handleSymbol(Symbol symbol) {

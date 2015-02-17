@@ -2,7 +2,8 @@ namespace json {
   string dump(Node node) {
     var visitor = DumpVisitor();
     visitor.visit(node);
-    return visitor.result;
+    visitor.builder.append("\n");
+    return visitor.builder.toString();
   }
 
   class Emitter : IEmitter {
@@ -11,11 +12,11 @@ namespace json {
     override List<Source> emitProgram(Node program) {
       List<Source> outputs = [];
       if (options.outputDirectory == "") {
-        outputs.push(Source(options.outputFile, dump(program) + "\n"));
+        outputs.push(Source(options.outputFile, dump(program)));
       } else {
         for (var i = 0; i < program.children.size(); i++) {
           var file = program.children[i];
-          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".json"), dump(file) + "\n"));
+          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".json"), dump(file)));
         }
       }
       return outputs;
@@ -23,40 +24,40 @@ namespace json {
   }
 
   class DumpVisitor {
-    var result = "";
+    var builder = StringBuilder();
     var indent = "";
 
     void visit(Node node) {
       if (node == null) {
-        result += "null";
+        builder.append("null");
         return;
       }
       var outer = indent;
       indent += "  ";
-      result += "{\n" + indent + "\"kind\": " + simpleQuote(node.kind.prettyPrint());
+      builder.append("{\n" + indent + "\"kind\": " + simpleQuote(node.kind.prettyPrint()));
       if (node.content != null) {
-        result += ",\n" + indent + "\"content\": ";
+        builder.append(",\n" + indent + "\"content\": ");
         switch (node.content.type()) {
-          case .INT { result += node.asInt(); }
-          case .BOOL { result += node.asBool(); }
-          case .DOUBLE { result += node.asDouble(); }
-          case .STRING { result += quoteString(node.asString(), '"'); }
+          case .INT { builder.append(node.asInt().toString()); }
+          case .BOOL { builder.append(node.asBool().toString()); }
+          case .DOUBLE { builder.append(node.asDouble().toString()); }
+          case .STRING { builder.append(quoteString(node.asString(), '"')); }
         }
       }
       if (node.hasChildren()) {
-        result += ",\n" + indent + "\"children\": [";
+        builder.append(",\n" + indent + "\"children\": [");
         var inner = indent;
         indent += "  ";
         for (var i = 0; i < node.children.size(); i++) {
-          if (i != 0) result += ",";
-          result += "\n" + indent;
+          if (i != 0) builder.append(",");
+          builder.append("\n" + indent);
           visit(node.children[i]);
         }
         indent = inner;
-        result += "\n" + indent + "]";
+        builder.append("\n" + indent + "]");
       }
       indent = outer;
-      result += "\n" + indent + "}";
+      builder.append("\n" + indent + "}");
     }
   }
 }

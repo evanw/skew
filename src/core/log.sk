@@ -25,20 +25,20 @@ class Log {
   var errorCount = 0;
 
   string toString() {
-    var result = "";
+    var builder = StringBuilder();
 
     // Emit the log assuming an infinite terminal width
     for (var i = 0; i < diagnostics.size(); i++) {
       var diagnostic = diagnostics[i];
-      result += Diagnostic.format(diagnostic.kind == .ERROR ? "error" : "warning", diagnostic.range, diagnostic.text);
+      builder.append(Diagnostic.format(diagnostic.kind == .ERROR ? "error" : "warning", diagnostic.range, diagnostic.text));
 
       // Append notes after the diagnostic they apply to
       if (!diagnostic.noteRange.isEmpty()) {
-        result += Diagnostic.format("note", diagnostic.noteRange, diagnostic.noteText);
+        builder.append(Diagnostic.format("note", diagnostic.noteRange, diagnostic.noteText));
       }
     }
 
-    return result;
+    return builder.toString();
   }
 
   bool isEmpty() {

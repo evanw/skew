@@ -6,7 +6,8 @@ namespace base {
       NodeKind previousKind = .NULL;
       StringMap<bool> isKeyword = null;
       List<Source> outputs = [];
-      Source output = null;
+      var prepended = StringBuilder();
+      var builder = StringBuilder();
       var indent = "";
       TypeCache cache = null;
       Resolver resolver;
@@ -19,9 +20,9 @@ namespace base {
       cache = resolver.cache;
       options = resolver.options;
       isKeyword = createIsKeyword();
-      output = Source(options.outputFile, "");
-      outputs.push(output);
       visitProgram(program);
+      prepended.append(builder.toString());
+      outputs.push(Source(options.outputFile, prepended.toString()));
       return outputs;
     }
 
@@ -212,8 +213,8 @@ namespace base {
       indent = indent.slice(2, indent.size());
     }
 
-    void emit(string text) {
-      output.contents += text;
+    inline void emit(string text) {
+      builder.append(text);
     }
 
     virtual void emitBlock(Node node) {

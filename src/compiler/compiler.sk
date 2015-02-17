@@ -286,33 +286,33 @@ class Compiler {
     var lineCountingStart = now();
     var lineCount = 0;
     lineCount += totalLineCount(_inputs);
-    var text =
-      "Input line count: " + lineCount +
-      "\nOutput line count: " + totalLineCount(result.outputs);
+    var builder = StringBuilder();
+    builder.append("Input line count: " + lineCount);
+    builder.append("\nOutput line count: " + totalLineCount(result.outputs));
     lineCountingTime += now() - lineCountingStart;
 
     // Compilation time
     var optimizingTime = callGraphTime + globalizeTime + symbolMotionTime + functionInliningTime + constantFoldingTime + treeShakingTime;
-    text += "\nTotal compile time: " + formatNumber(totalTime + lineCountingTime) + "ms";
-    if (tokenizingTime > 0) text += "\n  Tokenizing: " + formatNumber(tokenizingTime) + "ms";
-    if (parsingTime > 0) text += "\n  Parsing: " + formatNumber(parsingTime) + "ms";
-    if (resolvingTime > 0) text += "\n  Resolving: " + formatNumber(resolvingTime) + "ms";
+    builder.append("\nTotal compile time: " + formatNumber(totalTime + lineCountingTime) + "ms");
+    if (tokenizingTime > 0) builder.append("\n  Tokenizing: " + formatNumber(tokenizingTime) + "ms");
+    if (parsingTime > 0) builder.append("\n  Parsing: " + formatNumber(parsingTime) + "ms");
+    if (resolvingTime > 0) builder.append("\n  Resolving: " + formatNumber(resolvingTime) + "ms");
     if (optimizingTime > 0) {
-      text += "\n  Optimizing: " + formatNumber(optimizingTime) + "ms";
-      text += "\n    Building call graph: " + formatNumber(callGraphTime) + "ms";
-      text += "\n    Globalize: " + formatNumber(globalizeTime) + "ms";
-      text += "\n    Symbol motion: " + formatNumber(symbolMotionTime) + "ms";
-      text += "\n    Function inlining: " + formatNumber(functionInliningTime) + "ms";
-      text += "\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms";
-      text += "\n    Tree shaking: " + formatNumber(treeShakingTime) + "ms";
+      builder.append("\n  Optimizing: " + formatNumber(optimizingTime) + "ms");
+      builder.append("\n    Building call graph: " + formatNumber(callGraphTime) + "ms");
+      builder.append("\n    Globalize: " + formatNumber(globalizeTime) + "ms");
+      builder.append("\n    Symbol motion: " + formatNumber(symbolMotionTime) + "ms");
+      builder.append("\n    Function inlining: " + formatNumber(functionInliningTime) + "ms");
+      builder.append("\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms");
+      builder.append("\n    Tree shaking: " + formatNumber(treeShakingTime) + "ms");
     }
-    if (emitTime > 0) text += "\n  Emit: " + formatNumber(emitTime) + "ms";
-    if (lineCountingTime > 0) text += "\n  Counting lines: " + formatNumber(lineCountingTime) + "ms";
+    if (emitTime > 0) builder.append("\n  Emit: " + formatNumber(emitTime) + "ms");
+    if (lineCountingTime > 0) builder.append("\n  Counting lines: " + formatNumber(lineCountingTime) + "ms");
 
     // Sources
-    text += sourceStatistics("Inputs", _inputs);
-    text += sourceStatistics("Outputs", result.outputs);
-    return text;
+    sourceStatistics("Inputs", _inputs, builder);
+    sourceStatistics("Outputs", result.outputs, builder);
+    return builder.toString();
   }
 
   // Cache the parsed standard libraries for a speed boost during recompilation
@@ -336,16 +336,15 @@ class Compiler {
     return lineCount;
   }
 
-  static string sourceStatistics(string name, List<Source> sources) {
+  static void sourceStatistics(string name, List<Source> sources, StringBuilder builder) {
     var total = 0;
     for (var i = 0; i < sources.size(); i++) {
       total += sources[i].contents.size();
     }
-    var text = "\n" + name + ": " + sources.size() + " (" + bytesToString(total) + " total)";
+    builder.append("\n" + name + ": " + sources.size() + " (" + bytesToString(total) + " total)");
     for (var i = 0; i < sources.size(); i++) {
       var source = sources[i];
-      text += "\n  " + source.name + ": " + bytesToString(source.contents.size());
+      builder.append("\n  " + source.name + ": " + bytesToString(source.contents.size()));
     }
-    return text;
   }
 }

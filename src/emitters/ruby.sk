@@ -337,24 +337,27 @@ end
 
     override void emitString(Node node) {
       var text = node.asString();
-      var result = "\"";
+      var escaped = "";
       var start = 0; // Append long runs of unescaped characters using a single slice() for speed
       int i;
+      emit("\"");
       for (i = 0; i < text.size(); i++) {
         var c = text[i];
-        if (c == '"') result += text.slice(start, i) + "\\\"";
-        else if (c == '#') result += text.slice(start, i) + "\\#";
-        else if (c == '\n') result += text.slice(start, i) + "\\n";
-        else if (c == '\r') result += text.slice(start, i) + "\\r";
-        else if (c == '\t') result += text.slice(start, i) + "\\t";
-        else if (c == '\0') result += text.slice(start, i) + "\\0";
-        else if (c == '\\') result += text.slice(start, i) + "\\\\";
-        else if (c < ' ') result += text.slice(start, i) + "\\x" + HEX.sliceCodeUnit(c >> 4) + HEX.sliceCodeUnit(c & 15);
+        if (c == '"') escaped = "\\\"";
+        else if (c == '#') escaped = "\\#";
+        else if (c == '\n') escaped = "\\n";
+        else if (c == '\r') escaped = "\\r";
+        else if (c == '\t') escaped = "\\t";
+        else if (c == '\0') escaped = "\\0";
+        else if (c == '\\') escaped = "\\\\";
+        else if (c < ' ') escaped = "\\x" + HEX.sliceCodeUnit(c >> 4) + HEX.sliceCodeUnit(c & 15);
         else continue;
+        emit(text.slice(start, i));
+        emit(escaped);
         start = i + 1;
       }
-      result += text.slice(start, i) + "\"";
-      emit(result);
+      emit(text.slice(start, i));
+      emit("\"");
     }
 
     override void emitSequence(Node node, Precedence precedence) {

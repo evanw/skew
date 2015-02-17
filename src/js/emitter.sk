@@ -20,6 +20,7 @@ namespace js {
       var newline = "\n";
       var space = " ";
       var indent = "";
+      var builder = StringBuilder();
       var currentLine = 0;
       var currentColumn = 0;
       var needsSemicolon = false;
@@ -157,14 +158,16 @@ namespace js {
       if (options.sourceMap) {
         // Obfuscate the sourceMappingURL so it's not incorrectly picked up as
         // the sourceMappingURL for the compiled JavaScript compiler file
-        currentSource.contents += "/";
+        emit("/");
 
         // Create the source map as another file alongside the output
         var name = options.outputFile + ".map";
-        currentSource.contents += "/# sourceMappingURL=" + splitPath(name).entry + "\n";
+        emit("/# sourceMappingURL=" + splitPath(name).entry + "\n");
+        currentSource.contents = builder.toString();
         return [currentSource, Source(name, generator.toString())];
       }
 
+      currentSource.contents = builder.toString();
       return [currentSource];
     }
 
@@ -222,7 +225,7 @@ namespace js {
           }
         }
       }
-      currentSource.contents += text;
+      builder.append(text);
     }
 
     string minifySpaces(string text) {

@@ -9,6 +9,10 @@
     derived.prototype.constructor = derived;
   }
 
+  function StringBuilder() {
+    this._buffer = '';
+  }
+
   function Box(_0) {
     this.value = _0;
   }
@@ -3048,45 +3052,47 @@
     var lineCount = 0;
     lineCount = lineCount + Compiler.totalLineCount(this._inputs) | 0;
 
-    var text = 'Input line count: ' + lineCount + '\nOutput line count: ' + Compiler.totalLineCount(result.outputs);
+    var builder = new StringBuilder();
+    builder._buffer += 'Input line count: ' + lineCount;
+    builder._buffer += '\nOutput line count: ' + Compiler.totalLineCount(result.outputs);
     this.lineCountingTime += Date.now() - lineCountingStart;
 
     var optimizingTime = this.callGraphTime + this.globalizeTime + this.symbolMotionTime + this.functionInliningTime + this.constantFoldingTime + this.treeShakingTime;
-    text += '\nTotal compile time: ' + formatNumber(this.totalTime + this.lineCountingTime) + 'ms';
+    builder._buffer += '\nTotal compile time: ' + formatNumber(this.totalTime + this.lineCountingTime) + 'ms';
 
     if (this.tokenizingTime > 0) {
-      text += '\n  Tokenizing: ' + formatNumber(this.tokenizingTime) + 'ms';
+      builder._buffer += '\n  Tokenizing: ' + formatNumber(this.tokenizingTime) + 'ms';
     }
 
     if (this.parsingTime > 0) {
-      text += '\n  Parsing: ' + formatNumber(this.parsingTime) + 'ms';
+      builder._buffer += '\n  Parsing: ' + formatNumber(this.parsingTime) + 'ms';
     }
 
     if (this.resolvingTime > 0) {
-      text += '\n  Resolving: ' + formatNumber(this.resolvingTime) + 'ms';
+      builder._buffer += '\n  Resolving: ' + formatNumber(this.resolvingTime) + 'ms';
     }
 
     if (optimizingTime > 0) {
-      text += '\n  Optimizing: ' + formatNumber(optimizingTime) + 'ms';
-      text += '\n    Building call graph: ' + formatNumber(this.callGraphTime) + 'ms';
-      text += '\n    Globalize: ' + formatNumber(this.globalizeTime) + 'ms';
-      text += '\n    Symbol motion: ' + formatNumber(this.symbolMotionTime) + 'ms';
-      text += '\n    Function inlining: ' + formatNumber(this.functionInliningTime) + 'ms';
-      text += '\n    Constant folding: ' + formatNumber(this.constantFoldingTime) + 'ms';
-      text += '\n    Tree shaking: ' + formatNumber(this.treeShakingTime) + 'ms';
+      builder._buffer += '\n  Optimizing: ' + formatNumber(optimizingTime) + 'ms';
+      builder._buffer += '\n    Building call graph: ' + formatNumber(this.callGraphTime) + 'ms';
+      builder._buffer += '\n    Globalize: ' + formatNumber(this.globalizeTime) + 'ms';
+      builder._buffer += '\n    Symbol motion: ' + formatNumber(this.symbolMotionTime) + 'ms';
+      builder._buffer += '\n    Function inlining: ' + formatNumber(this.functionInliningTime) + 'ms';
+      builder._buffer += '\n    Constant folding: ' + formatNumber(this.constantFoldingTime) + 'ms';
+      builder._buffer += '\n    Tree shaking: ' + formatNumber(this.treeShakingTime) + 'ms';
     }
 
     if (this.emitTime > 0) {
-      text += '\n  Emit: ' + formatNumber(this.emitTime) + 'ms';
+      builder._buffer += '\n  Emit: ' + formatNumber(this.emitTime) + 'ms';
     }
 
     if (this.lineCountingTime > 0) {
-      text += '\n  Counting lines: ' + formatNumber(this.lineCountingTime) + 'ms';
+      builder._buffer += '\n  Counting lines: ' + formatNumber(this.lineCountingTime) + 'ms';
     }
 
-    text += Compiler.sourceStatistics('Inputs', this._inputs);
-    text += Compiler.sourceStatistics('Outputs', result.outputs);
-    return text;
+    Compiler.sourceStatistics('Inputs', this._inputs, builder);
+    Compiler.sourceStatistics('Outputs', result.outputs, builder);
+    return builder._buffer;
   };
 
   Compiler.totalLineCount = function(sources) {
@@ -3099,21 +3105,19 @@
     return lineCount;
   };
 
-  Compiler.sourceStatistics = function(name, sources) {
+  Compiler.sourceStatistics = function(name, sources, builder) {
     var total = 0;
 
     for (var i = 0; i < sources.length; i = i + 1 | 0) {
       total = total + sources[i].contents.length | 0;
     }
 
-    var text = '\n' + name + ': ' + sources.length + ' (' + bytesToString(total) + ' total)';
+    builder._buffer += '\n' + name + ': ' + sources.length + ' (' + bytesToString(total) + ' total)';
 
     for (var i = 0; i < sources.length; i = i + 1 | 0) {
       var source = sources[i];
-      text += '\n  ' + source.name + ': ' + bytesToString(source.contents.length);
+      builder._buffer += '\n  ' + source.name + ': ' + bytesToString(source.contents.length);
     }
-
-    return text;
   };
 
   var DiagnosticKind = {
@@ -3145,18 +3149,18 @@
   }
 
   Log.prototype.toString = function() {
-    var result = '';
+    var builder = new StringBuilder();
 
     for (var i = 0; i < this.diagnostics.length; i = i + 1 | 0) {
       var diagnostic = this.diagnostics[i];
-      result += Diagnostic.format(diagnostic.kind === DiagnosticKind.ERROR ? 'error' : 'warning', diagnostic.range, diagnostic.text);
+      builder._buffer += Diagnostic.format(diagnostic.kind === DiagnosticKind.ERROR ? 'error' : 'warning', diagnostic.range, diagnostic.text);
 
       if (!diagnostic.noteRange.isEmpty()) {
-        result += Diagnostic.format('note', diagnostic.noteRange, diagnostic.noteText);
+        builder._buffer += Diagnostic.format('note', diagnostic.noteRange, diagnostic.noteText);
       }
     }
 
-    return result;
+    return builder._buffer;
   };
 
   Log.prototype.hasErrors = function() {
@@ -3477,7 +3481,8 @@
     this.previousKind = NodeKind.NULL;
     this.isKeyword = null;
     this.outputs = [];
-    this.output = null;
+    this.prepended = new StringBuilder();
+    this.builder = new StringBuilder();
     this.indent = '';
     this.cache = null;
     this.resolver = _0;
@@ -3487,9 +3492,9 @@
     this.cache = this.resolver.cache;
     this.options = this.resolver.options;
     this.isKeyword = this.createIsKeyword();
-    this.output = new Source(this.options.outputFile, '');
-    this.outputs.push(this.output);
     this.visitProgram(program);
+    this.prepended._buffer += this.builder._buffer;
+    this.outputs.push(new Source(this.options.outputFile, this.prepended._buffer));
     return this.outputs;
   };
 
@@ -3535,13 +3540,13 @@
 
   base.Emitter.prototype.enterNamespace = function(symbol) {
     this.emitExtraNewlineBefore(NodeKind.NAMESPACE);
-    this.emit(this.indent + 'namespace ' + this.mangleName(symbol) + ' {\n');
+    this.builder._buffer += this.indent + 'namespace ' + this.mangleName(symbol) + ' {\n';
     this.increaseIndent();
   };
 
   base.Emitter.prototype.leaveNamespace = function(symbol) {
     this.decreaseIndent();
-    this.emit(this.indent + '}\n');
+    this.builder._buffer += this.indent + '}\n';
     this.emitExtraNewlineAfter(NodeKind.NAMESPACE);
   };
 
@@ -3600,7 +3605,7 @@
 
   base.Emitter.prototype.emitTypeBeforeVariable = function(symbol) {
     this.emitType(symbol.type);
-    this.emit(' ');
+    this.builder._buffer += ' ';
   };
 
   base.Emitter.prototype.emitMemberVariable = function(symbol) {
@@ -3613,29 +3618,29 @@
 
   base.Emitter.prototype.emitFunctionArgument = function(symbol) {
     this.emitType(symbol.type);
-    this.emit(' ' + this.mangleName(symbol));
+    this.builder._buffer += ' ' + this.mangleName(symbol);
   };
 
   base.Emitter.prototype.emitFunctionArguments = function(symbol) {
     var $arguments = symbol.node.functionArguments();
-    this.emit('(');
+    this.builder._buffer += '(';
 
     if ($arguments.hasChildren()) {
       for (var i = 0; i < $arguments.children.length; i = i + 1 | 0) {
         if (i !== 0) {
-          this.emit(', ');
+          this.builder._buffer += ', ';
         }
 
         this.emitFunctionArgument($arguments.children[i].symbol);
       }
     }
 
-    this.emit(')');
+    this.builder._buffer += ')';
   };
 
   base.Emitter.prototype.forceEmitExtraNewline = function() {
     if (this.previousKind !== NodeKind.NULL) {
-      this.emit('\n');
+      this.builder._buffer += '\n';
     }
 
     this.previousKind = NodeKind.NULL;
@@ -3651,7 +3656,7 @@
 
   base.Emitter.prototype.emitExtraNewlineBefore = function(kind) {
     if (this.previousKind !== NodeKind.NULL && this.shouldEmitExtraNewlineBetween(this.previousKind, kind)) {
-      this.emit('\n');
+      this.builder._buffer += '\n';
     }
 
     this.previousKind = NodeKind.NULL;
@@ -3665,7 +3670,7 @@
     var value = node.variableValue();
 
     if (value !== null) {
-      this.emit(' = ');
+      this.builder._buffer += ' = ';
       this.emitExpression(value, Precedence.COMMA);
     }
   };
@@ -3679,23 +3684,19 @@
     this.indent = this.indent.slice(2, this.indent.length);
   };
 
-  base.Emitter.prototype.emit = function(text) {
-    this.output.contents += text;
-  };
-
   base.Emitter.prototype.emitBlock = function(node) {
-    this.emit(' {\n');
+    this.builder._buffer += ' {\n';
     this.increaseIndent();
     this.previousKind = NodeKind.NULL;
     this.emitStatements(node.blockStatements());
     this.decreaseIndent();
-    this.emit(this.indent + '}');
+    this.builder._buffer += this.indent + '}';
     this.previousKind = NodeKind.NULL;
   };
 
   base.Emitter.prototype.emitLastBlock = function(node) {
     this.emitBlock(node);
-    this.emit('\n');
+    this.builder._buffer += '\n';
   };
 
   base.Emitter.prototype.emitStatements = function(nodes) {
@@ -3782,13 +3783,13 @@
       break;
 
     default:
-      throw new Error('assert false; (src/emitters/base.sk:262:19)');
+      throw new Error('assert false; (src/emitters/base.sk:263:19)');
       break;
     }
   };
 
   base.Emitter.prototype.endStatement = function() {
-    this.emit(';\n');
+    this.builder._buffer += ';\n';
   };
 
   base.Emitter.prototype.emitCase = function(node) {
@@ -3798,69 +3799,69 @@
     if (values.length !== 0) {
       for (var i = 0; i < values.length; i = i + 1 | 0) {
         if (i !== 0) {
-          this.emit('\n');
+          this.builder._buffer += '\n';
         }
 
-        this.emit(this.indent + 'case ');
+        this.builder._buffer += this.indent + 'case ';
         this.emitExpression(values[i], Precedence.LOWEST);
-        this.emit(':');
+        this.builder._buffer += ':';
       }
     } else {
-      this.emit(this.indent + 'default:');
+      this.builder._buffer += this.indent + 'default:';
     }
 
-    this.emit(' {\n');
+    this.builder._buffer += ' {\n';
     this.increaseIndent();
     this.emitStatements(block.blockStatements());
 
     if (!block.blockAlwaysEndsWithReturn()) {
-      this.emit(this.indent + 'break;\n');
+      this.builder._buffer += this.indent + 'break;\n';
     }
 
     this.decreaseIndent();
-    this.emit(this.indent + '}\n');
+    this.builder._buffer += this.indent + '}\n';
   };
 
   base.Emitter.prototype.emitSwitch = function(node) {
     var cases = node.switchCases().children;
-    this.emit(this.indent + 'switch (');
+    this.builder._buffer += this.indent + 'switch (';
     this.emitExpression(node.switchValue(), Precedence.LOWEST);
-    this.emit(') {\n');
+    this.builder._buffer += ') {\n';
     this.increaseIndent();
     this.previousKind = NodeKind.NULL;
     this.emitStatements(cases);
     this.decreaseIndent();
-    this.emit(this.indent + '}\n');
+    this.builder._buffer += this.indent + '}\n';
   };
 
   base.Emitter.prototype.recursiveEmitIfStatement = function(node) {
     var falseBlock = node.ifFalse();
-    this.emit('if (');
+    this.builder._buffer += 'if (';
     this.emitExpression(node.ifTest(), Precedence.LOWEST);
-    this.emit(')');
+    this.builder._buffer += ')';
     this.emitBlock(node.ifTrue());
 
     if (falseBlock !== null) {
       var falseStatement = falseBlock.blockStatement();
 
       if (falseStatement !== null && falseStatement.kind === NodeKind.IF) {
-        this.emit(' else ');
+        this.builder._buffer += ' else ';
         this.recursiveEmitIfStatement(falseStatement);
       } else {
-        this.emit(' else');
+        this.builder._buffer += ' else';
         this.emitBlock(falseBlock);
       }
     }
   };
 
   base.Emitter.prototype.emitIf = function(node) {
-    this.emit(this.indent);
+    this.builder._buffer += this.indent;
     this.recursiveEmitIfStatement(node);
-    this.emit('\n');
+    this.builder._buffer += '\n';
   };
 
   base.Emitter.prototype.emitBeforeSubsequentForVariable = function(node) {
-    this.emit(', ');
+    this.builder._buffer += ', ';
   };
 
   base.Emitter.prototype.useWhileForAllLoops = function() {
@@ -3877,7 +3878,7 @@
         this.emitBeforeSubsequentForVariable(node);
       }
 
-      this.emit(this.mangleName(node.symbol));
+      this.builder._buffer += this.mangleName(node.symbol);
       this.emitAfterVariable(node);
     }
   };
@@ -3916,9 +3917,9 @@
         if (setup.kind === NodeKind.VARIABLE_CLUSTER) {
           this.emitStatement(setup);
         } else {
-          this.emit(this.indent);
+          this.builder._buffer += this.indent;
           this.emitExpression(setup, Precedence.LOWEST);
-          this.emit('\n');
+          this.builder._buffer += '\n';
         }
       }
 
@@ -3928,7 +3929,7 @@
 
       this.emitStatement(Node.createWhile(test !== null ? test.replaceWith(null) : Node.createBool(true), block.replaceWith(null)));
     } else {
-      this.emit(this.indent + 'for (');
+      this.builder._buffer += this.indent + 'for (';
 
       if (setup !== null) {
         if (setup.kind === NodeKind.VARIABLE_CLUSTER) {
@@ -3939,20 +3940,20 @@
       }
 
       if (test !== null) {
-        this.emit('; ');
+        this.builder._buffer += '; ';
         this.emitExpression(test, Precedence.LOWEST);
       } else {
-        this.emit(';');
+        this.builder._buffer += ';';
       }
 
       if (update !== null) {
-        this.emit('; ');
+        this.builder._buffer += '; ';
         this.emitExpression(update, Precedence.LOWEST);
       } else {
-        this.emit(';');
+        this.builder._buffer += ';';
       }
 
-      this.emit(')');
+      this.builder._buffer += ')';
       this.emitLastBlock(block);
     }
   };
@@ -3965,11 +3966,11 @@
   };
 
   base.Emitter.prototype.emitWhile = function(node) {
-    this.emit(this.indent + 'while ' + (this.emitControlStatementParentheses() ? '(' : ''));
+    this.builder._buffer += this.indent + 'while ' + (this.emitControlStatementParentheses() ? '(' : '');
     this.emitExpression(node.whileTest(), Precedence.LOWEST);
 
     if (this.emitControlStatementParentheses()) {
-      this.emit(')');
+      this.builder._buffer += ')';
     }
 
     this.emitLastBlock(node.whileBlock());
@@ -3987,13 +3988,13 @@
       return;
     }
 
-    this.emit(this.indent + 'do');
+    this.builder._buffer += this.indent + 'do';
     this.emitBlock(node.whileBlock());
-    this.emit(this.indent + 'while ' + (this.emitControlStatementParentheses() ? '(' : ''));
+    this.builder._buffer += this.indent + 'while ' + (this.emitControlStatementParentheses() ? '(' : '');
     this.emitExpression(node.whileTest(), Precedence.LOWEST);
 
     if (this.emitControlStatementParentheses()) {
-      this.emit(')');
+      this.builder._buffer += ')';
     }
 
     this.endStatement();
@@ -4003,27 +4004,27 @@
     var value = node.returnValue();
 
     if (value !== null) {
-      this.emit(this.indent + 'return ');
+      this.builder._buffer += this.indent + 'return ';
       this.emitExpression(value, Precedence.LOWEST);
     } else {
-      this.emit(this.indent + 'return');
+      this.builder._buffer += this.indent + 'return';
     }
 
     this.endStatement();
   };
 
   base.Emitter.prototype.emitBreak = function(node) {
-    this.emit(this.indent + 'break');
+    this.builder._buffer += this.indent + 'break';
     this.endStatement();
   };
 
   base.Emitter.prototype.emitContinue = function(node) {
-    this.emit(this.indent + 'continue');
+    this.builder._buffer += this.indent + 'continue';
     this.endStatement();
   };
 
   base.Emitter.prototype.emitExpressionStatement = function(node) {
-    this.emit(this.indent);
+    this.builder._buffer += this.indent;
     this.emitExpression(node.expressionValue(), Precedence.LOWEST);
     this.endStatement();
   };
@@ -4121,7 +4122,7 @@
       break;
 
     case 61:
-      this.emit('var');
+      this.builder._buffer += 'var';
       break;
 
     default:
@@ -4130,7 +4131,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/emitters/base.sk:534:16)');
+        throw new Error('assert false; (src/emitters/base.sk:535:16)');
       }
       break;
     }
@@ -4139,7 +4140,7 @@
   base.Emitter.prototype.emitCommaSeparatedExpressions = function(nodes) {
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
       if (i !== 0) {
-        this.emit(', ');
+        this.builder._buffer += ', ';
       }
 
       this.emitExpression(nodes[i], Precedence.COMMA);
@@ -4150,17 +4151,17 @@
     var values = node.sequenceValues();
 
     if (!(values.length > 1)) {
-      throw new Error('assert values.size() > 1; (src/emitters/base.sk:548:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/base.sk:549:7)');
     }
 
     if (Precedence.COMMA <= precedence) {
-      this.emit('(');
+      this.builder._buffer += '(';
     }
 
     this.emitCommaSeparatedExpressions(values);
 
     if (Precedence.COMMA <= precedence) {
-      this.emit(')');
+      this.builder._buffer += ')';
     }
   };
 
@@ -4186,14 +4187,14 @@
 
     if (in_NodeKind.isUnaryStorageOperator(kind) && !this.hasUnaryStorageOperators()) {
       if (Precedence.ASSIGN < precedence) {
-        this.emit('(');
+        this.builder._buffer += '(';
       }
 
       this.emitExpression(value, Precedence.ASSIGN);
-      this.emit(kind === NodeKind.PREFIX_INCREMENT || kind === NodeKind.POSTFIX_INCREMENT ? ' += 1' : ' -= 1');
+      this.builder._buffer += kind === NodeKind.PREFIX_INCREMENT || kind === NodeKind.POSTFIX_INCREMENT ? ' += 1' : ' -= 1';
 
       if (Precedence.ASSIGN < precedence) {
-        this.emit(')');
+        this.builder._buffer += ')';
       }
 
       return;
@@ -4208,16 +4209,16 @@
     var info = operatorInfo._table[kind];
 
     if (info.precedence < precedence) {
-      this.emit('(');
+      this.builder._buffer += '(';
     }
 
     var isPostfix = info.precedence === Precedence.UNARY_POSTFIX;
 
     if (!isPostfix) {
-      this.emit(info.text);
+      this.builder._buffer += info.text;
 
       if (this.shouldEmitSpaceForUnaryOperator(node)) {
-        this.emit(' ');
+        this.builder._buffer += ' ';
       }
     }
 
@@ -4225,14 +4226,14 @@
 
     if (isPostfix) {
       if (this.shouldEmitSpaceForUnaryOperator(node)) {
-        this.emit(' ');
+        this.builder._buffer += ' ';
       }
 
-      this.emit(info.text);
+      this.builder._buffer += info.text;
     }
 
     if (info.precedence < precedence) {
-      this.emit(')');
+      this.builder._buffer += ')';
     }
   };
 
@@ -4240,46 +4241,46 @@
     var info = operatorInfo._table[node.kind];
 
     if (info.precedence < precedence) {
-      this.emit('(');
+      this.builder._buffer += '(';
     }
 
     this.emitExpression(node.binaryLeft(), in_Precedence.incrementIfRightAssociative(info.precedence, info.associativity));
-    this.emit(' ' + info.text + ' ');
+    this.builder._buffer += ' ' + info.text + ' ';
     this.emitExpression(node.binaryRight(), in_Precedence.incrementIfLeftAssociative(info.precedence, info.associativity));
 
     if (info.precedence < precedence) {
-      this.emit(')');
+      this.builder._buffer += ')';
     }
   };
 
   base.Emitter.prototype.emitIndex = function(node, precedence) {
     this.emitExpression(node.binaryLeft(), Precedence.MEMBER);
-    this.emit('[');
+    this.builder._buffer += '[';
     this.emitExpression(node.binaryRight(), Precedence.LOWEST);
-    this.emit(']');
+    this.builder._buffer += ']';
   };
 
   base.Emitter.prototype.emitTernary = function(node, precedence) {
     if (Precedence.ASSIGN < precedence) {
-      this.emit('(');
+      this.builder._buffer += '(';
     }
 
     this.emitExpression(node.ternaryLeft(), Precedence.MEMBER);
-    this.emit('[');
+    this.builder._buffer += '[';
     this.emitExpression(node.ternaryMiddle(), Precedence.LOWEST);
-    this.emit('] = ');
+    this.builder._buffer += '] = ';
     this.emitExpression(node.ternaryRight(), Precedence.ASSIGN);
 
     if (Precedence.ASSIGN < precedence) {
-      this.emit(')');
+      this.builder._buffer += ')';
     }
   };
 
   base.Emitter.prototype.emitParameterize = function(node) {
     this.emitExpression(node.parameterizeValue(), Precedence.MEMBER);
-    this.emit('<');
+    this.builder._buffer += '<';
     this.emitCommaSeparatedExpressions(node.parameterizeTypes());
-    this.emit('>');
+    this.builder._buffer += '>';
   };
 
   base.Emitter.prototype.emitDot = function(node) {
@@ -4290,35 +4291,35 @@
     }
 
     this.emitExpression(node.dotTarget(), Precedence.MEMBER);
-    this.emit('.');
-    this.emit(node.symbol !== null ? this.mangleName(node.symbol) : dotName.asString());
+    this.builder._buffer += '.';
+    this.builder._buffer += node.symbol !== null ? this.mangleName(node.symbol) : dotName.asString();
   };
 
   base.Emitter.prototype.emitCall = function(node, precedence) {
     var value = node.callValue();
 
     if (value.kind === NodeKind.TYPE) {
-      this.emit('new ');
+      this.builder._buffer += 'new ';
     }
 
     this.emitExpression(value, Precedence.UNARY_POSTFIX);
-    this.emit('(');
+    this.builder._buffer += '(';
     this.emitCommaSeparatedExpressions(node.callArguments());
-    this.emit(')');
+    this.builder._buffer += ')';
   };
 
   base.Emitter.prototype.emitParenthesizedCast = function(type, node, precedence) {
     if (Precedence.UNARY_PREFIX < precedence) {
-      this.emit('(');
+      this.builder._buffer += '(';
     }
 
-    this.emit('(');
+    this.builder._buffer += '(';
     this.emitNormalType(type);
-    this.emit(')');
+    this.builder._buffer += ')';
     this.emitExpression(node, Precedence.UNARY_PREFIX);
 
     if (Precedence.UNARY_PREFIX < precedence) {
-      this.emit(')');
+      this.builder._buffer += ')';
     }
   };
 
@@ -4335,38 +4336,38 @@
   };
 
   base.Emitter.prototype.emitList = function(node, precedence) {
-    this.emit('[');
+    this.builder._buffer += '[';
     this.emitCommaSeparatedExpressions(node.listValues());
-    this.emit(']');
+    this.builder._buffer += ']';
   };
 
   base.Emitter.prototype.emitKeyValue = function(node) {
     this.emitExpression(node.itemKey(), Precedence.COMMA);
-    this.emit(': ');
+    this.builder._buffer += ': ';
     this.emitExpression(node.itemValue(), Precedence.COMMA);
   };
 
   base.Emitter.prototype.emitMap = function(node, precedence) {
     var items = node.mapItems();
     var space = items.length > 0 ? ' ' : '';
-    this.emit('{' + space);
+    this.builder._buffer += '{' + space;
     this.emitCommaSeparatedExpressions(items);
-    this.emit(space + '}');
+    this.builder._buffer += space + '}';
   };
 
   base.Emitter.prototype.emitSuperCall = function(node) {
-    this.emit('super(');
+    this.builder._buffer += 'super(';
     this.emitCommaSeparatedExpressions(node.superCallArguments());
-    this.emit(')');
+    this.builder._buffer += ')';
   };
 
   base.Emitter.prototype.emitName = function(node) {
     var symbol = node.symbol;
-    this.emit(symbol !== null ? in_SymbolKind.isInstance(symbol.kind) ? this.mangleName(symbol) : this.fullName(symbol) : node.asString());
+    this.builder._buffer += symbol !== null ? in_SymbolKind.isInstance(symbol.kind) ? this.mangleName(symbol) : this.fullName(symbol) : node.asString();
   };
 
   base.Emitter.prototype.emitThis = function() {
-    this.emit('this');
+    this.builder._buffer += 'this';
   };
 
   base.Emitter.prototype.hookNeedsExplicitCast = function(node) {
@@ -4377,11 +4378,11 @@
     var trueValue = node.hookTrue();
 
     if (Precedence.ASSIGN < precedence) {
-      this.emit('(');
+      this.builder._buffer += '(';
     }
 
     this.emitExpression(node.hookTest(), Precedence.LOGICAL_OR);
-    this.emit(' ? ');
+    this.builder._buffer += ' ? ';
 
     if (this.hookNeedsExplicitCast(trueValue)) {
       this.emitParenthesizedCast(node.type, trueValue, precedence);
@@ -4389,36 +4390,36 @@
       this.emitExpression(trueValue, Precedence.ASSIGN);
     }
 
-    this.emit(' : ');
+    this.builder._buffer += ' : ';
     this.emitExpression(node.hookFalse(), Precedence.ASSIGN);
 
     if (Precedence.ASSIGN < precedence) {
-      this.emit(')');
+      this.builder._buffer += ')';
     }
   };
 
   base.Emitter.prototype.emitNull = function() {
-    this.emit('null');
+    this.builder._buffer += 'null';
   };
 
   base.Emitter.prototype.emitBool = function(node) {
-    this.emit(node.asBool().toString());
+    this.builder._buffer += node.asBool();
   };
 
   base.Emitter.prototype.emitInt = function(node, precedence) {
     if (node.type !== null && node.type.isEnum() && node.symbol !== null) {
       this.emitName(node);
     } else {
-      this.emit(node.asInt().toString());
+      this.builder._buffer += node.asInt();
     }
   };
 
   base.Emitter.prototype.emitReal = function(node) {
-    this.emit(node.asDouble().toString());
+    this.builder._buffer += node.asDouble();
   };
 
   base.Emitter.prototype.emitString = function(node) {
-    this.emit(quoteString(node.asString(), 34));
+    this.builder._buffer += quoteString(node.asString(), 34);
   };
 
   base.Emitter.prototype.emitNormalType = function(type) {
@@ -4427,26 +4428,26 @@
 
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:764:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:765:7)');
     }
 
     if (type.isQuoted()) {
       this.emitExpression(type.symbol.node, Precedence.LOWEST);
     } else {
-      this.emit(this.fullName(type.symbol));
+      this.builder._buffer += this.fullName(type.symbol);
 
       if (type.isParameterized()) {
-        this.emit('<');
+        this.builder._buffer += '<';
 
         for (var i = 0; i < type.substitutions.length; i = i + 1 | 0) {
           if (i !== 0) {
-            this.emit(', ');
+            this.builder._buffer += ', ';
           }
 
           this.emitNormalType(type.substitutions[i]);
         }
 
-        this.emit('>');
+        this.builder._buffer += '>';
       }
     }
   };
@@ -4533,7 +4534,7 @@
       var hasArguments = type.argumentTypes().length > 0;
       var hasReturnValue = type.resultType() === this.cache.intType;
       this.emitExtraNewlineBefore(NodeKind.NULL);
-      this.emit(this.indent + 'int main(' + (hasArguments ? 'int argc, char **argv' : '') + ') {\n');
+      this.builder._buffer += this.indent + 'int main(' + (hasArguments ? 'int argc, char **argv' : '') + ') {\n';
       this.increaseIndent();
 
       if (hasArguments) {
@@ -4542,13 +4543,13 @@
         }
 
         var listType = 'List<' + this.mangleName(this.cache.stringType.symbol) + '>';
-        this.emit(this.indent + (this.isMarkSweep ? 'gc::Root<' + listType + '> ' : listType + ' *') + 'args = new ' + listType + '();\n');
-        this.emit(this.indent + 'args->_data.insert(args->_data.begin(), argv + 1, argv + argc);\n');
+        this.builder._buffer += this.indent + (this.isMarkSweep ? 'gc::Root<' + listType + '> ' : listType + ' *') + 'args = new ' + listType + '();\n';
+        this.builder._buffer += this.indent + 'args->_data.insert(args->_data.begin(), argv + 1, argv + argc);\n';
       }
 
-      this.emit(this.indent + (hasReturnValue ? 'return ' : '') + this.fullName(entryPointSymbol) + '(' + (hasArguments ? 'args' : '') + ');\n');
+      this.builder._buffer += this.indent + (hasReturnValue ? 'return ' : '') + this.fullName(entryPointSymbol) + '(' + (hasArguments ? 'args' : '') + ');\n';
       this.decreaseIndent();
-      this.emit(this.indent + '}\n');
+      this.builder._buffer += this.indent + '}\n';
     }
   };
 
@@ -4580,32 +4581,26 @@
     var headers = Object.keys(this.includes._table);
     headers.sort(bindCompare(StringComparison.INSTANCE));
 
-    var text = '';
-
     if (headers.length !== 0) {
       for (var i = 0; i < headers.length; i = i + 1 | 0) {
         var name = headers[i];
         var size = name.length;
-        text += '#include ' + (size === 0 || name.charCodeAt(0) !== 60 || name.charCodeAt(size - 1 | 0) !== 62 ? '"' + name + '"' : name) + '\n';
+        this.prepended._buffer += '#include ' + (size === 0 || name.charCodeAt(0) !== 60 || name.charCodeAt(size - 1 | 0) !== 62 ? '"' + name + '"' : name) + '\n';
       }
 
-      text += '\n';
+      this.prepended._buffer += '\n';
     }
 
     if (this.isMarkSweep) {
-      text += "namespace gc {\n  struct GC;\n\n  struct Object {\n    Object(); // Adds this object to the global linked list of objects\n    virtual ~Object() {}\n\n  private:\n    friend GC;\n    Object *__gc_next = nullptr; // GC space overhead is one pointer per object\n    virtual void __gc_mark() = 0; // Recursively marks all child objects\n    Object(const Object &); // Prevent copying\n    Object &operator = (const Object &); // Prevent copying\n  };\n\n  struct UntypedRoot {\n    ~UntypedRoot();\n\n  protected:\n    friend GC;\n    UntypedRoot &operator = (const UntypedRoot &root) { _object = root._object; return *this; }\n    UntypedRoot(const UntypedRoot &root) : UntypedRoot(root._object) {}\n    UntypedRoot() : _previous(this), _next(this), _object() {} // Only used for the first root\n    UntypedRoot(Object *object); // Adds this root to the circular doubly-linked list of roots\n    UntypedRoot *_previous;\n    UntypedRoot *_next;\n    Object *_object;\n  };\n\n  template <typename T>\n  struct Root : UntypedRoot {\n    Root(T *object = nullptr) : UntypedRoot(object) {}\n    operator T * () const { return dynamic_cast<T *>(_object); }\n    T *operator -> () const { return dynamic_cast<T *>(_object); }\n    Root<T> &operator = (T *value) { _object = value; return *this; }\n  };\n\n  void collect();\n  void mark(Object *object);\n\n  template <typename T>\n  using VoidIfNotObject = typename std::enable_if<!std::is_base_of<Object, typename std::remove_pointer<T>::type>::value, void>::type;\n\n  template <typename T>\n  inline VoidIfNotObject<T> mark(const T &value) {} // Don't mark anything that's not an object\n\n  template <typename T>\n  inline void mark(const std::vector<T> &values) {\n    for (const auto &value : values) {\n      gc::mark(value);\n    }\n  }\n\n  template <typename K, typename V>\n  inline void mark(const std::unordered_map<K, V> &values) {\n    for (const auto &value : values) {\n      gc::mark(value.second);\n    }\n  }\n}\n" + '\n';
-    }
-
-    if (text !== '') {
-      this.output.contents = text + this.output.contents;
-    }
-
-    if (this.isMarkSweep) {
-      this.output.contents += '\n' + "namespace gc {\n  static std::unordered_set<Object *> marked;\n  static std::stack<Object *> stack;\n  static Object *latest;\n\n  struct GC {\n    // The first root is the start of a doubly-linked list of roots. It's returned as\n    // a static local variable to avoid trouble from C++ initialization order. Roots\n    // are global variables and initialization order of global variables is undefined.\n    static UntypedRoot *start() {\n      static UntypedRoot start;\n      return &start;\n    }\n\n    // Marking must be done with an explicit stack to avoid call stack overflow\n    static void mark() {\n      for (auto end = start(), root = end->_next; root != end; root = root->_next) {\n        gc::mark(root->_object);\n      }\n      while (!stack.empty()) {\n        auto object = stack.top();\n        stack.pop();\n        object->__gc_mark();\n      }\n    }\n\n    // Sweeping removes unmarked objects from the linked list and deletes them\n    static void sweep() {\n      for (Object *previous = nullptr, *current = latest, *next; current; current = next) {\n        next = current->__gc_next;\n        if (!marked.count(current)) {\n          (previous ? previous->__gc_next : latest) = next;\n          delete current;\n        } else {\n          previous = current;\n        }\n      }\n      marked.clear();\n    }\n  };\n\n  UntypedRoot::UntypedRoot(Object *object) : _previous(GC::start()), _next(_previous->_next), _object(object) {\n    _previous->_next = this;\n    _next->_previous = this;\n  }\n\n  UntypedRoot::~UntypedRoot() {\n    _previous->_next = _next;\n    _next->_previous = _previous;\n  }\n\n  Object::Object() : __gc_next(latest) {\n    latest = this;\n  }\n\n  void collect() {\n    GC::mark();\n    GC::sweep();\n  }\n\n  void mark(Object *object) {\n    if (object && !marked.count(object)) {\n      marked.insert(object);\n      stack.push(object);\n    }\n  }\n}\n";
+      this.prepended._buffer += "namespace gc {\n  struct GC;\n\n  struct Object {\n    Object(); // Adds this object to the global linked list of objects\n    virtual ~Object() {}\n\n  private:\n    friend GC;\n    Object *__gc_next = nullptr; // GC space overhead is one pointer per object\n    virtual void __gc_mark() = 0; // Recursively marks all child objects\n    Object(const Object &); // Prevent copying\n    Object &operator = (const Object &); // Prevent copying\n  };\n\n  struct UntypedRoot {\n    ~UntypedRoot();\n\n  protected:\n    friend GC;\n    UntypedRoot &operator = (const UntypedRoot &root) { _object = root._object; return *this; }\n    UntypedRoot(const UntypedRoot &root) : UntypedRoot(root._object) {}\n    UntypedRoot() : _previous(this), _next(this), _object() {} // Only used for the first root\n    UntypedRoot(Object *object); // Adds this root to the circular doubly-linked list of roots\n    UntypedRoot *_previous;\n    UntypedRoot *_next;\n    Object *_object;\n  };\n\n  template <typename T>\n  struct Root : UntypedRoot {\n    Root(T *object = nullptr) : UntypedRoot(object) {}\n    operator T * () const { return dynamic_cast<T *>(_object); }\n    T *operator -> () const { return dynamic_cast<T *>(_object); }\n    Root<T> &operator = (T *value) { _object = value; return *this; }\n  };\n\n  void collect();\n  void mark(Object *object);\n\n  template <typename T>\n  using VoidIfNotObject = typename std::enable_if<!std::is_base_of<Object, typename std::remove_pointer<T>::type>::value, void>::type;\n\n  template <typename T>\n  inline VoidIfNotObject<T> mark(const T &value) {} // Don't mark anything that's not an object\n\n  template <typename T>\n  inline void mark(const std::vector<T> &values) {\n    for (const auto &value : values) {\n      gc::mark(value);\n    }\n  }\n\n  template <typename K, typename V>\n  inline void mark(const std::unordered_map<K, V> &values) {\n    for (const auto &value : values) {\n      gc::mark(value.second);\n    }\n  }\n}\n";
+      this.prepended._buffer += '\n';
+      this.builder._buffer += '\n';
+      this.builder._buffer += "namespace gc {\n  static std::unordered_set<Object *> marked;\n  static std::stack<Object *> stack;\n  static Object *latest;\n\n  struct GC {\n    // The first root is the start of a doubly-linked list of roots. It's returned as\n    // a static local variable to avoid trouble from C++ initialization order. Roots\n    // are global variables and initialization order of global variables is undefined.\n    static UntypedRoot *start() {\n      static UntypedRoot start;\n      return &start;\n    }\n\n    // Marking must be done with an explicit stack to avoid call stack overflow\n    static void mark() {\n      for (auto end = start(), root = end->_next; root != end; root = root->_next) {\n        gc::mark(root->_object);\n      }\n      while (!stack.empty()) {\n        auto object = stack.top();\n        stack.pop();\n        object->__gc_mark();\n      }\n    }\n\n    // Sweeping removes unmarked objects from the linked list and deletes them\n    static void sweep() {\n      for (Object *previous = nullptr, *current = latest, *next; current; current = next) {\n        next = current->__gc_next;\n        if (!marked.count(current)) {\n          (previous ? previous->__gc_next : latest) = next;\n          delete current;\n        } else {\n          previous = current;\n        }\n      }\n      marked.clear();\n    }\n  };\n\n  UntypedRoot::UntypedRoot(Object *object) : _previous(GC::start()), _next(_previous->_next), _object(object) {\n    _previous->_next = this;\n    _next->_previous = this;\n  }\n\n  UntypedRoot::~UntypedRoot() {\n    _previous->_next = _next;\n    _next->_previous = _previous;\n  }\n\n  Object::Object() : __gc_next(latest) {\n    latest = this;\n  }\n\n  void collect() {\n    GC::mark();\n    GC::sweep();\n  }\n\n  void mark(Object *object) {\n    if (object && !marked.count(object)) {\n      marked.insert(object);\n      stack.push(object);\n    }\n  }\n}\n";
     }
 
     if (useFastHack) {
-      this.output.contents += '\n' + 'static void *_fast_next_;\nstatic size_t _fast_available_;\n\nstatic void *_fast_allocate_(size_t size) {\n  enum {\n    CHUNK_SIZE = 1 << 20,\n    ALIGN = 8,\n  };\n  size = (size + ALIGN - 1) & ~(ALIGN - 1);\n  if (_fast_available_ < size) {\n    size_t chunk = (size + CHUNK_SIZE - 1) & ~(CHUNK_SIZE - 1);\n    assert(size <= chunk);\n    #if _WIN32\n      _fast_next_ = VirtualAlloc(nullptr, chunk, MEM_COMMIT, PAGE_READWRITE);\n      assert(_fast_next_ != nullptr);\n    #else\n      _fast_next_ = mmap(nullptr, chunk, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);\n      assert(_fast_next_ != MAP_FAILED);\n    #endif\n    _fast_available_ = chunk;\n  }\n  void *data = _fast_next_;\n  _fast_next_ = (char *)_fast_next_ + size;\n  _fast_available_ -= size;\n  return data;\n}\n\nvoid *operator new (size_t size) { return _fast_allocate_(size); }\nvoid *operator new [] (size_t size) { return _fast_allocate_(size); }\nvoid operator delete (void *data) throw() {}\nvoid operator delete [] (void *data) throw() {}\n\n// Overriding malloc() and free() is really hard on Windows for some reason\n#if !_WIN32\n  extern "C" void *malloc(size_t size) { return _fast_allocate_(size); }\n  extern "C" void free(void *data) {}\n#endif\n';
+      this.builder._buffer += '\n';
+      this.builder._buffer += 'static void *_fast_next_;\nstatic size_t _fast_available_;\n\nstatic void *_fast_allocate_(size_t size) {\n  enum {\n    CHUNK_SIZE = 1 << 20,\n    ALIGN = 8,\n  };\n  size = (size + ALIGN - 1) & ~(ALIGN - 1);\n  if (_fast_available_ < size) {\n    size_t chunk = (size + CHUNK_SIZE - 1) & ~(CHUNK_SIZE - 1);\n    assert(size <= chunk);\n    #if _WIN32\n      _fast_next_ = VirtualAlloc(nullptr, chunk, MEM_COMMIT, PAGE_READWRITE);\n      assert(_fast_next_ != nullptr);\n    #else\n      _fast_next_ = mmap(nullptr, chunk, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);\n      assert(_fast_next_ != MAP_FAILED);\n    #endif\n    _fast_available_ = chunk;\n  }\n  void *data = _fast_next_;\n  _fast_next_ = (char *)_fast_next_ + size;\n  _fast_available_ -= size;\n  return data;\n}\n\nvoid *operator new (size_t size) { return _fast_allocate_(size); }\nvoid *operator new [] (size_t size) { return _fast_allocate_(size); }\nvoid operator delete (void *data) throw() {}\nvoid operator delete [] (void *data) throw() {}\n\n// Overriding malloc() and free() is really hard on Windows for some reason\n#if !_WIN32\n  extern "C" void *malloc(size_t size) { return _fast_allocate_(size); }\n  extern "C" void free(void *data) {}\n#endif\n';
     }
   };
 
@@ -4631,17 +4626,17 @@
     }
 
     if (symbol.hasParameters()) {
-      this.emit(this.indent + 'template <');
+      this.builder._buffer += this.indent + 'template <';
 
       for (var i = 0; i < symbol.parameters.length; i = i + 1 | 0) {
         if (i !== 0) {
-          this.emit(', ');
+          this.builder._buffer += ', ';
         }
 
-        this.emit('typename ' + this.mangleName(symbol.parameters[i]));
+        this.builder._buffer += 'typename ' + this.mangleName(symbol.parameters[i]);
       }
 
-      this.emit('>\n');
+      this.builder._buffer += '>\n';
     }
   };
 
@@ -4659,14 +4654,14 @@
         if (isFirst) {
           isFirst = false;
         } else {
-          this.emit(',\n');
+          this.builder._buffer += ',\n';
         }
 
         var value = member.constant.asInt();
-        this.emit(this.indent + this.mangleName(member));
+        this.builder._buffer += this.indent + this.mangleName(member);
 
         if (isEnumFlags || value !== (previous + 1 | 0)) {
-          this.emit(' = ' + value);
+          this.builder._buffer += ' = ' + value;
         }
 
         previous = value;
@@ -4674,7 +4669,7 @@
     }
 
     if (!isFirst) {
-      this.emit('\n');
+      this.builder._buffer += '\n';
     }
   };
 
@@ -4687,32 +4682,32 @@
         this.adjustNamespace(symbol);
         this.emitExtraNewlineBefore(symbol.node.kind);
         this.emitTypeParameters(symbol);
-        this.emit(this.indent + 'struct ' + this.mangleName(symbol));
+        this.builder._buffer += this.indent + 'struct ' + this.mangleName(symbol);
 
         if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
           var needsObject = this.isMarkSweep && (symbol.kind === SymbolKind.INTERFACE || symbol.type.baseClass() === null);
 
           if (needsObject) {
-            this.emit(' : virtual gc::Object');
+            this.builder._buffer += ' : virtual gc::Object';
           }
 
           if (symbol.type.hasRelevantTypes()) {
             var types = symbol.type.relevantTypes;
 
             if (!needsObject) {
-              this.emit(' : ');
+              this.builder._buffer += ' : ';
             }
 
             for (var i = 0; i < types.length; i = i + 1 | 0) {
               if (i !== 0 || needsObject) {
-                this.emit(', ');
+                this.builder._buffer += ', ';
               }
 
               this.emitCppType(types[i], cpp.CppEmitType.BARE);
             }
           }
 
-          this.emit(' {\n');
+          this.builder._buffer += ' {\n';
           this.increaseIndent();
           this.emitTypeMembers(symbol);
 
@@ -4721,10 +4716,10 @@
           }
 
           this.decreaseIndent();
-          this.emit(this.indent + '}');
+          this.builder._buffer += this.indent + '}';
         }
 
-        this.emit(';\n');
+        this.builder._buffer += ';\n';
         this.emitExtraNewlineAfter(symbol.node.kind);
       } else {
         this.emitTypeMembers(symbol);
@@ -4737,26 +4732,26 @@
       if (this.pass === cpp.Pass.FORWARD_DECLARE_TYPES) {
         this.adjustNamespace(symbol);
         this.emitExtraNewlineBefore(NodeKind.ENUM);
-        this.emit(this.indent + 'enum struct ' + this.mangleName(symbol) + ' {\n');
+        this.builder._buffer += this.indent + 'enum struct ' + this.mangleName(symbol) + ' {\n';
         this.increaseIndent();
         this.emitEnumValues(symbol);
         this.decreaseIndent();
-        this.emit(this.indent + '};\n');
+        this.builder._buffer += this.indent + '};\n';
         this.emitExtraNewlineAfter(NodeKind.ENUM);
       }
     } else if (symbol.kind === SymbolKind.ENUM_FLAGS) {
       if (this.pass === cpp.Pass.FORWARD_DECLARE_TYPES) {
         this.adjustNamespace(symbol);
         this.emitExtraNewlineBefore(NodeKind.ENUM_FLAGS);
-        this.emit(this.indent + 'namespace ' + this.mangleName(symbol) + ' {\n');
+        this.builder._buffer += this.indent + 'namespace ' + this.mangleName(symbol) + ' {\n';
         this.increaseIndent();
-        this.emit(this.indent + 'enum {\n');
+        this.builder._buffer += this.indent + 'enum {\n';
         this.increaseIndent();
         this.emitEnumValues(symbol);
         this.decreaseIndent();
-        this.emit(this.indent + '};\n');
+        this.builder._buffer += this.indent + '};\n';
         this.decreaseIndent();
-        this.emit(this.indent + '}\n');
+        this.builder._buffer += this.indent + '}\n';
         this.emitExtraNewlineAfter(NodeKind.ENUM_FLAGS);
       }
     }
@@ -4766,20 +4761,20 @@
     if (this.isMarkSweep && symbol.kind === SymbolKind.CLASS) {
       if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
         this.emitExtraNewlineBefore(NodeKind.FUNCTION);
-        this.emit(this.indent + 'virtual void __gc_mark();\n');
+        this.builder._buffer += this.indent + 'virtual void __gc_mark();\n';
         this.emitExtraNewlineAfter(NodeKind.FUNCTION);
       } else if (this.pass === cpp.Pass.IMPLEMENT_CODE) {
         this.emitExtraNewlineBefore(NodeKind.FUNCTION);
         this.emitTypeParameters(symbol);
-        this.emit(this.indent + 'void ');
+        this.builder._buffer += this.indent + 'void ';
         this.emitEnclosingSymbolPrefix(symbol);
-        this.emit('__gc_mark() {\n');
+        this.builder._buffer += '__gc_mark() {\n';
         this.increaseIndent();
 
         var baseClass = symbol.type.baseClass();
 
         if (baseClass !== null) {
-          this.emit(this.indent + this.mangleName(baseClass.symbol) + '::__gc_mark();\n');
+          this.builder._buffer += this.indent + this.mangleName(baseClass.symbol) + '::__gc_mark();\n';
         }
 
         var members = symbol.type.sortedMembers();
@@ -4788,12 +4783,12 @@
           var member = members[i].symbol;
 
           if (member.kind === SymbolKind.INSTANCE_VARIABLE && member.enclosingSymbol === symbol && !member.type.isPrimitive() && !member.type.isEnum()) {
-            this.emit(this.indent + 'gc::mark(' + this.mangleName(member) + ');\n');
+            this.builder._buffer += this.indent + 'gc::mark(' + this.mangleName(member) + ');\n';
           }
         }
 
         this.decreaseIndent();
-        this.emit(this.indent + '}\n');
+        this.builder._buffer += this.indent + '}\n';
         this.emitExtraNewlineAfter(NodeKind.FUNCTION);
       }
     }
@@ -4801,23 +4796,23 @@
 
   cpp.Emitter.prototype.emitEnclosingSymbolPrefix = function(enclosingSymbol) {
     if (enclosingSymbol !== null && enclosingSymbol.kind !== SymbolKind.GLOBAL_NAMESPACE) {
-      this.emit(this.fullName(enclosingSymbol));
+      this.builder._buffer += this.fullName(enclosingSymbol);
 
       if (enclosingSymbol.hasParameters()) {
-        this.emit('<');
+        this.builder._buffer += '<';
 
         for (var i = 0; i < enclosingSymbol.parameters.length; i = i + 1 | 0) {
           if (i !== 0) {
-            this.emit(', ');
+            this.builder._buffer += ', ';
           }
 
-          this.emit(this.mangleName(enclosingSymbol.parameters[i]));
+          this.builder._buffer += this.mangleName(enclosingSymbol.parameters[i]);
         }
 
-        this.emit('>');
+        this.builder._buffer += '>';
       }
 
-      this.emit('::');
+      this.builder._buffer += '::';
     }
   };
 
@@ -4832,19 +4827,19 @@
         this.adjustNamespace(this.pass === cpp.Pass.FORWARD_DECLARE_CODE ? symbol : null);
         this.emitExtraNewlineBefore(node.kind);
         this.emitTypeParameters(symbol);
-        this.emit(this.indent);
+        this.builder._buffer += this.indent;
 
         if (symbol.isExternC() && (this.pass === cpp.Pass.FORWARD_DECLARE_CODE || this.pass === cpp.Pass.IMPLEMENT_CODE)) {
-          this.emit('extern "C" ');
+          this.builder._buffer += 'extern "C" ';
         }
 
         if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
           if (symbol.isStatic()) {
-            this.emit('static ');
+            this.builder._buffer += 'static ';
           }
 
           if (symbol.isVirtual()) {
-            this.emit('virtual ');
+            this.builder._buffer += 'virtual ';
           }
         }
 
@@ -4856,13 +4851,13 @@
           this.emitEnclosingSymbolPrefix(symbol.enclosingSymbol);
         }
 
-        this.emit(this.mangleName(symbol));
+        this.builder._buffer += this.mangleName(symbol);
         this.emitFunctionArguments(symbol);
 
         if (block === null) {
-          this.emit(' = 0;');
+          this.builder._buffer += ' = 0;';
         } else if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
-          this.emit(';');
+          this.builder._buffer += ';';
         } else {
           if (symbol.kind === SymbolKind.CONSTRUCTOR_FUNCTION) {
             var superInitializer = node.superInitializer();
@@ -4872,15 +4867,15 @@
             var hasMemberInitializers = memberInitializers !== null && memberInitializers.hasChildren();
 
             if (hasSuperInitializer || hasMemberInitializers) {
-              this.emit(' : ');
+              this.builder._buffer += ' : ';
 
               if (hasSuperInitializer) {
-                this.emit(this.fullName(superInitializer.symbol.enclosingSymbol) + '(');
+                this.builder._buffer += this.fullName(superInitializer.symbol.enclosingSymbol) + '(';
                 this.emitCommaSeparatedExpressions(superInitializer.superCallArguments());
-                this.emit(')');
+                this.builder._buffer += ')';
 
                 if (hasMemberInitializers) {
-                  this.emit(', ');
+                  this.builder._buffer += ', ';
                 }
               }
 
@@ -4890,16 +4885,16 @@
                   var value = initializer.memberInitializerValue();
 
                   if (i !== 0) {
-                    this.emit(', ');
+                    this.builder._buffer += ', ';
                   }
 
-                  this.emit(this.mangleName(initializer.symbol) + '(');
+                  this.builder._buffer += this.mangleName(initializer.symbol) + '(';
 
                   if (value.kind !== NodeKind.ERROR) {
                     this.emitExpression(value, Precedence.LOWEST);
                   }
 
-                  this.emit(')');
+                  this.builder._buffer += ')';
                 }
               }
             }
@@ -4908,7 +4903,7 @@
           this.emitBlock(block);
         }
 
-        this.emit('\n');
+        this.builder._buffer += '\n';
         this.emitExtraNewlineAfter(node.kind);
       }
     }
@@ -4920,9 +4915,9 @@
 
   cpp.Emitter.prototype.emitTypeBeforeVariable = function(symbol) {
     if (this.isMarkSweep && symbol.kind === SymbolKind.GLOBAL_VARIABLE && symbol.type.isReference()) {
-      this.emit('gc::Root<');
+      this.builder._buffer += 'gc::Root<';
       this.emitCppType(symbol.type, cpp.CppEmitType.BARE);
-      this.emit('> ');
+      this.builder._buffer += '> ';
     } else {
       this.emitCppType(symbol.type, cpp.CppEmitType.DECLARATION);
     }
@@ -4940,24 +4935,24 @@
     if (this.pass !== cpp.Pass.FORWARD_DECLARE_TYPES && (this.pass === cpp.Pass.FORWARD_DECLARE_CODE || symbol.kind !== SymbolKind.INSTANCE_VARIABLE)) {
       this.adjustNamespace(this.pass === cpp.Pass.FORWARD_DECLARE_CODE ? symbol : null);
       this.emitExtraNewlineBefore(symbol.node.kind);
-      this.emit(this.indent);
+      this.builder._buffer += this.indent;
 
       if (symbol.isExternC() && (this.pass === cpp.Pass.FORWARD_DECLARE_CODE || this.pass === cpp.Pass.IMPLEMENT_CODE)) {
-        this.emit('extern "C" ');
+        this.builder._buffer += 'extern "C" ';
       } else if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE && in_SymbolKind.isGlobal(symbol.kind)) {
-        this.emit(symbol.isStatic() ? 'static ' : 'extern ');
+        this.builder._buffer += symbol.isStatic() ? 'static ' : 'extern ';
       }
 
       this.emitTypeBeforeVariable(symbol);
 
       if (this.pass === cpp.Pass.FORWARD_DECLARE_CODE) {
-        this.emit(this.mangleName(symbol));
+        this.builder._buffer += this.mangleName(symbol);
       } else {
-        this.emit(this.fullName(symbol));
+        this.builder._buffer += this.fullName(symbol);
         this.emitAfterVariable(symbol.node);
       }
 
-      this.emit(';\n');
+      this.builder._buffer += ';\n';
       this.emitExtraNewlineAfter(symbol.node.kind);
     }
   };
@@ -4966,48 +4961,48 @@
     var useConstReference = symbol.name === 'this' && symbol.type.isString(this.cache);
 
     if (useConstReference) {
-      this.emit('const ');
+      this.builder._buffer += 'const ';
     }
 
     this.emitCppType(symbol.type, cpp.CppEmitType.DECLARATION);
 
     if (useConstReference) {
-      this.emit('&');
+      this.builder._buffer += '&';
     }
 
-    this.emit(this.mangleName(symbol));
+    this.builder._buffer += this.mangleName(symbol);
     this.emitAfterVariable(symbol.node);
   };
 
   cpp.Emitter.prototype.emitTry = function(node) {
-    this.emit(this.indent + 'try');
+    this.builder._buffer += this.indent + 'try';
     this.emitBlock(node.tryBlock());
-    this.emit(' catch (...)');
+    this.builder._buffer += ' catch (...)';
     this.emitBlock(node.catchBlock());
-    this.emit('\n');
+    this.builder._buffer += '\n';
   };
 
   cpp.Emitter.prototype.emitBeforeSubsequentForVariable = function(node) {
     var type = node.symbol.type;
-    this.emit(type.isReference() || type.isQuoted() && type.symbol.node.kind === NodeKind.POSTFIX_DEREFERENCE ? ', *' : type.isQuoted() && type.symbol.node.kind === NodeKind.POSTFIX_REFERENCE ? ', &' : ', ');
+    this.builder._buffer += type.isReference() || type.isQuoted() && type.symbol.node.kind === NodeKind.POSTFIX_DEREFERENCE ? ', *' : type.isQuoted() && type.symbol.node.kind === NodeKind.POSTFIX_REFERENCE ? ', &' : ', ';
   };
 
   cpp.Emitter.prototype.emitForEach = function(node) {
     var symbol = node.forEachVariable().symbol;
-    this.emit(this.indent + 'for (');
+    this.builder._buffer += this.indent + 'for (';
     this.emitTypeBeforeVariable(symbol);
-    this.emit(this.mangleName(symbol));
-    this.emit(' : ');
+    this.builder._buffer += this.mangleName(symbol);
+    this.builder._buffer += ' : ';
     this.emitExpression(node.forEachValue(), Precedence.LOWEST);
-    this.emit(')');
+    this.builder._buffer += ')';
     this.emitBlock(node.forEachBlock());
-    this.emit('\n');
+    this.builder._buffer += '\n';
   };
 
   cpp.Emitter.prototype.emitAssert = function(node) {
-    this.emit(this.indent + 'assert(');
+    this.builder._buffer += this.indent + 'assert(';
     this.emitExpression(node.assertValue(), Precedence.LOWEST);
-    this.emit(');\n');
+    this.builder._buffer += ');\n';
     this.usedAssert = true;
   };
 
@@ -5020,7 +5015,7 @@
   };
 
   cpp.Emitter.prototype.emitNull = function() {
-    this.emit('nullptr');
+    this.builder._buffer += 'nullptr';
   };
 
   cpp.Emitter.prototype.emitReal = function(node) {
@@ -5028,15 +5023,15 @@
 
     if (value === math.INFINITY) {
       this.usedMath = true;
-      this.emit('INFINITY');
+      this.builder._buffer += 'INFINITY';
     } else if (value === -math.INFINITY) {
       this.usedMath = true;
-      this.emit('-INFINITY');
+      this.builder._buffer += '-INFINITY';
     } else if (value !== value) {
       this.usedMath = true;
-      this.emit('NAN');
+      this.builder._buffer += 'NAN';
     } else {
-      this.emit(doubleToStringWithDot(value) + (node.kind === NodeKind.FLOAT ? 'f' : ''));
+      this.builder._buffer += doubleToStringWithDot(value) + (node.kind === NodeKind.FLOAT ? 'f' : '');
     }
   };
 
@@ -5072,17 +5067,17 @@
 
     if (needsWrap) {
       this.handleSymbol(this.cache.stringType.symbol);
-      this.emit(this.mangleName(this.cache.stringType.symbol) + '(');
+      this.builder._buffer += this.mangleName(this.cache.stringType.symbol) + '(';
     }
 
     base.Emitter.prototype.emitString.call(this, node);
 
     if (needsWrap) {
       if (needsLength) {
-        this.emit(', ' + content.length);
+        this.builder._buffer += ', ' + content.length;
       }
 
-      this.emit(')');
+      this.builder._buffer += ')';
     }
   };
 
@@ -5098,8 +5093,8 @@
       dotName = dotName.quotedValue();
     }
 
-    this.emit(node.kind === NodeKind.DOT_COLON ? '::' : node.kind === NodeKind.DOT_ARROW || target !== null && target.type.isReference() ? '->' : '.');
-    this.emit(node.symbol !== null ? this.mangleName(node.symbol) : dotName.asString());
+    this.builder._buffer += node.kind === NodeKind.DOT_COLON ? '::' : node.kind === NodeKind.DOT_ARROW || target !== null && target.type.isReference() ? '->' : '.';
+    this.builder._buffer += node.symbol !== null ? this.mangleName(node.symbol) : dotName.asString();
   };
 
   cpp.Emitter.prototype.emitCall = function(node, precedence) {
@@ -5108,11 +5103,11 @@
     var wrap = isNew && precedence === Precedence.MEMBER;
 
     if (wrap) {
-      this.emit('(');
+      this.builder._buffer += '(';
     }
 
     if (isNew) {
-      this.emit('new ');
+      this.builder._buffer += 'new ';
       this.emitCppType(value.type, cpp.CppEmitType.BARE);
     } else {
       this.emitExpression(value, Precedence.UNARY_POSTFIX);
@@ -5120,53 +5115,53 @@
 
     if (!isNew && value.type !== null && value.type.isParameterized()) {
       var substitutions = value.type.substitutions;
-      this.emit('<');
+      this.builder._buffer += '<';
 
       for (var i = 0; i < substitutions.length; i = i + 1 | 0) {
         if (i !== 0) {
-          this.emit(', ');
+          this.builder._buffer += ', ';
         }
 
         this.emitCppType(substitutions[i], cpp.CppEmitType.NORMAL);
       }
 
-      this.emit('>');
+      this.builder._buffer += '>';
     }
 
-    this.emit('(');
+    this.builder._buffer += '(';
     this.emitCommaSeparatedExpressions(node.callArguments());
-    this.emit(')');
+    this.builder._buffer += ')';
 
     if (wrap) {
-      this.emit(')');
+      this.builder._buffer += ')';
     }
   };
 
   cpp.Emitter.prototype.emitParenthesizedCast = function(type, node, precedence) {
     if (this.options.config === CompilerConfig.WINDOWS && type.isBool(this.cache)) {
       if (Precedence.UNARY_PREFIX < precedence) {
-        this.emit('(');
+        this.builder._buffer += '(';
       }
 
-      this.emit('!!');
+      this.builder._buffer += '!!';
 
       if (node.type.isPrimitive()) {
         this.emitExpression(node, Precedence.UNARY_PREFIX);
       } else {
-        this.emit('static_cast<int>(');
+        this.builder._buffer += 'static_cast<int>(';
         this.emitExpression(node, Precedence.UNARY_PREFIX);
-        this.emit(')');
+        this.builder._buffer += ')';
       }
 
       if (Precedence.UNARY_PREFIX < precedence) {
-        this.emit(')');
+        this.builder._buffer += ')';
       }
     } else {
-      this.emit('static_cast<');
+      this.builder._buffer += 'static_cast<';
       this.emitNormalType(type);
-      this.emit('>(');
+      this.builder._buffer += '>(';
       this.emitExpression(node, Precedence.LOWEST);
-      this.emit(')');
+      this.builder._buffer += ')';
     }
   };
 
@@ -5187,19 +5182,19 @@
       this.emitName(node);
     } else if (node.type.isRegularEnum()) {
       if (Precedence.UNARY_PREFIX < precedence) {
-        this.emit('(');
+        this.builder._buffer += '(';
       }
 
-      this.emit('(');
+      this.builder._buffer += '(';
       this.emitNormalType(node.type);
-      this.emit(')');
-      this.emit(node.asInt().toString());
+      this.builder._buffer += ')';
+      this.builder._buffer += node.asInt();
 
       if (Precedence.UNARY_PREFIX < precedence) {
-        this.emit(')');
+        this.builder._buffer += ')';
       }
     } else {
-      this.emit(node.asInt().toString());
+      this.builder._buffer += node.asInt();
     }
   };
 
@@ -5208,29 +5203,29 @@
     var wrap = values.length > 0 || precedence === Precedence.MEMBER;
 
     if (wrap) {
-      this.emit('(');
+      this.builder._buffer += '(';
     }
 
-    this.emit('new ');
+    this.builder._buffer += 'new ';
     this.emitCppType(node.type, cpp.CppEmitType.BARE);
-    this.emit('()');
+    this.builder._buffer += '()';
 
     if (wrap) {
-      this.emit(')');
+      this.builder._buffer += ')';
     }
 
     if (values.length !== 0) {
-      this.emit('->literal({ ');
+      this.builder._buffer += '->literal({ ';
       this.emitCommaSeparatedExpressions(values);
-      this.emit(' })');
+      this.builder._buffer += ' })';
     }
   };
 
   cpp.Emitter.prototype.emitSuperCall = function(node) {
-    this.emit(this.fullName(node.symbol));
-    this.emit('(');
+    this.builder._buffer += this.fullName(node.symbol);
+    this.builder._buffer += '(';
     this.emitCommaSeparatedExpressions(node.superCallArguments());
-    this.emit(')');
+    this.builder._buffer += ')';
   };
 
   cpp.Emitter.prototype.hookNeedsExplicitCast = function(node) {
@@ -5243,15 +5238,15 @@
 
   cpp.Emitter.prototype.emitCppType = function(type, mode) {
     if (type.isEnumFlags()) {
-      this.emit('int');
+      this.builder._buffer += 'int';
     } else {
       this.emitType(type);
     }
 
     if (type.isReference() && mode !== cpp.CppEmitType.BARE) {
-      this.emit(' *');
+      this.builder._buffer += ' *';
     } else if (mode === cpp.CppEmitType.DECLARATION && (!type.isQuoted() || !in_NodeKind.isUnaryTypeOperator(type.symbol.node.kind))) {
-      this.emit(' ');
+      this.builder._buffer += ' ';
     }
   };
 
@@ -5294,7 +5289,7 @@
   };
 
   joined.Emitter.prototype.emitProgram = function(program) {
-    var result = '';
+    var builder = new StringBuilder();
 
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
       var file = program.children[i];
@@ -5316,14 +5311,14 @@
         }
       }
 
-      result += contents;
+      builder._buffer += contents;
 
       if (contents !== '' && contents.charCodeAt(contents.length - 1 | 0) !== 10) {
-        result += '\n';
+        builder._buffer += '\n';
       }
     }
 
-    return [new Source(this.resolver.options.outputFile, result)];
+    return [new Source(this.resolver.options.outputFile, builder._buffer)];
   };
 
   var json = {};
@@ -5336,11 +5331,11 @@
     var outputs = [];
 
     if (this.options.outputDirectory === '') {
-      outputs.push(new Source(this.options.outputFile, json.dump(program) + '\n'));
+      outputs.push(new Source(this.options.outputFile, json.dump(program)));
     } else {
       for (var i = 0; i < program.children.length; i = i + 1 | 0) {
         var file = program.children[i];
-        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.json'), json.dump(file) + '\n'));
+        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.json'), json.dump(file)));
       }
     }
 
@@ -5348,63 +5343,63 @@
   };
 
   json.DumpVisitor = function() {
-    this.result = '';
+    this.builder = new StringBuilder();
     this.indent = '';
   };
 
   json.DumpVisitor.prototype.visit = function(node) {
     if (node === null) {
-      this.result += 'null';
+      this.builder._buffer += 'null';
       return;
     }
 
     var outer = this.indent;
     this.indent += '  ';
-    this.result += '{\n' + this.indent + '"kind": ' + simpleQuote(in_NodeKind.prettyPrint(node.kind));
+    this.builder._buffer += '{\n' + this.indent + '"kind": ' + simpleQuote(in_NodeKind.prettyPrint(node.kind));
 
     if (node.content !== null) {
-      this.result += ',\n' + this.indent + '"content": ';
+      this.builder._buffer += ',\n' + this.indent + '"content": ';
 
       switch (node.content.type()) {
       case 1:
-        this.result += node.asInt();
+        this.builder._buffer += node.asInt();
         break;
 
       case 0:
-        this.result += node.asBool();
+        this.builder._buffer += node.asBool();
         break;
 
       case 2:
-        this.result += node.asDouble();
+        this.builder._buffer += node.asDouble();
         break;
 
       case 3:
-        this.result += quoteString(node.asString(), 34);
+        this.builder._buffer += quoteString(node.asString(), 34);
         break;
       }
     }
 
     if (node.hasChildren()) {
-      this.result += ',\n' + this.indent + '"children": [';
+      this.builder._buffer += ',\n' + this.indent + '"children": [';
 
       var inner = this.indent;
       this.indent += '  ';
 
       for (var i = 0; i < node.children.length; i = i + 1 | 0) {
         if (i !== 0) {
-          this.result += ',';
+          this.builder._buffer += ',';
         }
 
-        this.result += '\n' + this.indent;
+        this.builder._buffer += '\n' + this.indent;
         this.visit(node.children[i]);
       }
 
       this.indent = inner;
-      this.result += '\n' + this.indent + ']';
+      this.builder._buffer += '\n' + this.indent + ']';
     }
 
     this.indent = outer;
-    this.result += '\n' + this.indent + '}';
+    this.builder._buffer += '\n' + this.indent + '}';
   };
 
   var lisp = {};
@@ -5417,11 +5412,11 @@
     var outputs = [];
 
     if (this.options.outputDirectory === '') {
-      outputs.push(new Source(this.options.outputFile, lisp.dump(program) + '\n'));
+      outputs.push(new Source(this.options.outputFile, lisp.dump(program)));
     } else {
       for (var i = 0; i < program.children.length; i = i + 1 | 0) {
         var file = program.children[i];
-        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.lisp'), lisp.dump(file) + '\n'));
+        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.lisp'), lisp.dump(file)));
       }
     }
 
@@ -5429,34 +5424,34 @@
   };
 
   lisp.DumpVisitor = function() {
-    this.result = '';
+    this.builder = new StringBuilder();
     this.indent = '';
   };
 
   lisp.DumpVisitor.prototype.visit = function(node) {
     if (node === null) {
-      this.result += 'nil';
+      this.builder._buffer += 'nil';
       return;
     }
 
-    this.result += '(' + in_NodeKind.prettyPrint(node.kind);
+    this.builder._buffer += '(' + in_NodeKind.prettyPrint(node.kind);
 
     if (node.content !== null) {
       switch (node.content.type()) {
       case 1:
-        this.result += ' ' + node.asInt();
+        this.builder._buffer += ' ' + node.asInt();
         break;
 
       case 0:
-        this.result += ' ' + node.asBool();
+        this.builder._buffer += ' ' + node.asBool();
         break;
 
       case 2:
-        this.result += ' ' + node.asDouble();
+        this.builder._buffer += ' ' + node.asDouble();
         break;
 
       case 3:
-        this.result += ' ' + quoteString(node.asString(), 34);
+        this.builder._buffer += ' ' + quoteString(node.asString(), 34);
         break;
       }
     }
@@ -5466,14 +5461,14 @@
       this.indent += '  ';
 
       for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        this.result += '\n' + this.indent;
+        this.builder._buffer += '\n' + this.indent;
         this.visit(node.children[i]);
       }
 
       this.indent = old;
     }
 
-    this.result += ')';
+    this.builder._buffer += ')';
   };
 
   var ruby = {};
@@ -5488,13 +5483,13 @@
 
   ruby.Emitter.prototype.visitProgram = function(node) {
     this.emitExtraNewlineBefore(NodeKind.FUNCTION);
-    this.emit('def static_variable(symbol)\n  class_eval("\n    @@#{symbol} = nil\n    def self.#{symbol}\n      @@#{symbol}\n    end\n    def self.#{symbol}=(value)\n      @@#{symbol} = value\n    end\n  ")\nend\n');
+    this.builder._buffer += 'def static_variable(symbol)\n  class_eval("\n    @@#{symbol} = nil\n    def self.#{symbol}\n      @@#{symbol}\n    end\n    def self.#{symbol}=(value)\n      @@#{symbol} = value\n    end\n  ")\nend\n';
     this.emitExtraNewlineAfter(NodeKind.FUNCTION);
     this.emitExtraNewlineBefore(NodeKind.FUNCTION);
-    this.emit('def enum_value(symbol, value)\n  class_eval("\n    @@#{symbol} = value\n    def self.#{symbol}\n      @@#{symbol}\n    end\n  ")\nend\n');
+    this.builder._buffer += 'def enum_value(symbol, value)\n  class_eval("\n    @@#{symbol} = value\n    def self.#{symbol}\n      @@#{symbol}\n    end\n  ")\nend\n';
     this.emitExtraNewlineAfter(NodeKind.FUNCTION);
     this.emitExtraNewlineBefore(NodeKind.FUNCTION);
-    this.emit('def sort_helper(array, comparison)\n  array.sort! { |a, b| comparison.compare(a, b) }\nend\n');
+    this.builder._buffer += 'def sort_helper(array, comparison)\n  array.sort! { |a, b| comparison.compare(a, b) }\nend\n';
     this.emitExtraNewlineAfter(NodeKind.FUNCTION);
     base.Emitter.prototype.visitProgram.call(this, node);
     this.emitEntryPoint();
@@ -5508,13 +5503,13 @@
       var hasArguments = type.argumentTypes().length > 0;
       var hasReturnValue = type.resultType() === this.cache.intType;
       this.emitExtraNewlineBefore(NodeKind.NULL);
-      this.emit(this.indent);
+      this.builder._buffer += this.indent;
 
       if (hasReturnValue) {
-        this.emit('exit ');
+        this.builder._buffer += 'exit ';
       }
 
-      this.emit(this.fullName(entryPointSymbol) + '(' + (hasArguments ? 'ARGV' : '') + ')\n');
+      this.builder._buffer += this.fullName(entryPointSymbol) + '(' + (hasArguments ? 'ARGV' : '') + ')\n';
     }
   };
 
@@ -5524,21 +5519,21 @@
     } else if (symbol.kind === SymbolKind.CLASS) {
       this.adjustNamespace(symbol);
       this.emitExtraNewlineBefore(symbol.node.kind);
-      this.emit(this.indent + 'class ' + this.mangleName(symbol));
+      this.builder._buffer += this.indent + 'class ' + this.mangleName(symbol);
 
       if (symbol.type.isClass()) {
         var base = symbol.type.baseClass();
 
         if (base !== null) {
-          this.emit(' < ' + this.fullName(base.symbol));
+          this.builder._buffer += ' < ' + this.fullName(base.symbol);
         }
       }
 
-      this.emit('\n');
+      this.builder._buffer += '\n';
       this.increaseIndent();
       this.emitTypeMembers(symbol);
       this.decreaseIndent();
-      this.emit(this.indent + 'end\n');
+      this.builder._buffer += this.indent + 'end\n';
       this.emitExtraNewlineAfter(symbol.node.kind);
     } else if (in_SymbolKind.isEnum(symbol.kind)) {
       this.adjustNamespace(symbol);
@@ -5551,7 +5546,7 @@
         var member = members[i].symbol;
 
         if (member.isEnumValue()) {
-          this.emit(this.indent + 'enum_value :' + this.mangleName(member) + ', ' + member.constant.asInt() + '\n');
+          this.builder._buffer += this.indent + 'enum_value :' + this.mangleName(member) + ', ' + member.constant.asInt() + '\n';
         }
       }
 
@@ -5568,17 +5563,17 @@
     var needsEnd = node !== this.skipEnd;
 
     if (in_NodeKind.isLoop(node.parent.kind)) {
-      this.emit(' do');
+      this.builder._buffer += ' do';
     }
 
-    this.emit('\n');
+    this.builder._buffer += '\n';
     this.increaseIndent();
     this.previousKind = NodeKind.NULL;
     this.emitStatements(node.blockStatements());
     this.decreaseIndent();
 
     if (needsEnd) {
-      this.emit(this.indent + 'end\n');
+      this.builder._buffer += this.indent + 'end\n';
     }
   };
 
@@ -5600,19 +5595,19 @@
 
     this.adjustNamespace(symbol);
     this.emitExtraNewlineBefore(node.kind);
-    this.emit(this.indent + 'def ');
+    this.builder._buffer += this.indent + 'def ';
 
     if (symbol.kind === SymbolKind.GLOBAL_FUNCTION && symbol.enclosingSymbol.kind !== SymbolKind.GLOBAL_NAMESPACE) {
-      this.emit('self.');
+      this.builder._buffer += 'self.';
     }
 
-    this.emit(this.mangleName(symbol));
+    this.builder._buffer += this.mangleName(symbol);
 
     if (node.functionArguments().hasChildren()) {
       this.emitFunctionArguments(symbol);
     }
 
-    this.emit('\n');
+    this.builder._buffer += '\n';
     this.increaseIndent();
 
     if (node.kind === NodeKind.CONSTRUCTOR) {
@@ -5620,9 +5615,9 @@
       var memberInitializers = node.memberInitializers();
 
       if (superInitializer !== null) {
-        this.emit(this.indent);
+        this.builder._buffer += this.indent;
         this.emitExpression(superInitializer, Precedence.LOWEST);
-        this.emit('\n');
+        this.builder._buffer += '\n';
       }
 
       if (memberInitializers !== null) {
@@ -5632,11 +5627,11 @@
           var value = child.memberInitializerValue();
 
           if (value.kind !== NodeKind.ERROR) {
-            this.emit(this.indent);
+            this.builder._buffer += this.indent;
             this.emitExpression(name, Precedence.LOWEST);
-            this.emit(' = ');
+            this.builder._buffer += ' = ';
             this.emitExpression(value, Precedence.LOWEST);
-            this.emit('\n');
+            this.builder._buffer += '\n';
           }
         }
       }
@@ -5644,21 +5639,21 @@
 
     this.emitStatements(block.blockStatements());
     this.decreaseIndent();
-    this.emit(this.indent + 'end\n');
+    this.builder._buffer += this.indent + 'end\n';
     this.emitExtraNewlineAfter(node.kind);
   };
 
   ruby.Emitter.prototype.emitFunctionArgument = function(symbol) {
-    this.emit(this.mangleName(symbol));
+    this.builder._buffer += this.mangleName(symbol);
   };
 
   ruby.Emitter.prototype.emitMemberVariable = function(symbol) {
     var node = symbol.node;
     this.adjustNamespace(symbol);
     this.emitExtraNewlineBefore(node.kind);
-    this.emit(this.indent + (symbol.kind === SymbolKind.INSTANCE_VARIABLE ? 'attr_accessor :' : 'static_variable :'));
-    this.emit(this.mangleName(symbol));
-    this.emit('\n');
+    this.builder._buffer += this.indent + (symbol.kind === SymbolKind.INSTANCE_VARIABLE ? 'attr_accessor :' : 'static_variable :');
+    this.builder._buffer += this.mangleName(symbol);
+    this.builder._buffer += '\n';
     this.emitExtraNewlineAfter(node.kind);
   };
 
@@ -5677,24 +5672,24 @@
     var node = symbol.node;
     var value = node.variableValue();
     this.emitExtraNewlineBefore(node.kind);
-    this.emit(this.indent);
-    this.emit(this.fullName(symbol));
-    this.emit(' = ');
+    this.builder._buffer += this.indent;
+    this.builder._buffer += this.fullName(symbol);
+    this.builder._buffer += ' = ';
 
     if (value !== null) {
       this.emitExpression(value, Precedence.LOWEST);
     } else {
-      this.emit('nil');
+      this.builder._buffer += 'nil';
     }
 
-    this.emit('\n');
+    this.builder._buffer += '\n';
     this.emitExtraNewlineAfter(node.kind);
   };
 
   ruby.Emitter.prototype.emitIf = function(node) {
     var trueBlock = node.ifTrue();
     var falseBlock = node.ifFalse();
-    this.emit(this.indent + (node === this.elseIf ? 'elsif ' : 'if '));
+    this.builder._buffer += this.indent + (node === this.elseIf ? 'elsif ' : 'if ');
     this.emitExpression(node.ifTest(), Precedence.LOWEST);
 
     if (falseBlock === null) {
@@ -5709,7 +5704,7 @@
         this.elseIf = falseStatement;
         this.emitIf(falseStatement);
       } else {
-        this.emit(this.indent + 'else');
+        this.builder._buffer += this.indent + 'else';
         this.emitBlock(falseBlock);
       }
     }
@@ -5718,15 +5713,15 @@
   ruby.Emitter.prototype.emitTry = function(node) {
     var tryBlock = node.tryBlock();
     var catchBlock = node.catchBlock();
-    this.emit(this.indent + 'begin\n');
+    this.builder._buffer += this.indent + 'begin\n';
     this.skipEnd = tryBlock;
     this.emitBlock(tryBlock);
-    this.emit(this.indent + 'rescue\n');
+    this.builder._buffer += this.indent + 'rescue\n';
     this.emitBlock(catchBlock);
   };
 
   ruby.Emitter.prototype.endStatement = function() {
-    this.emit('\n');
+    this.builder._buffer += '\n';
   };
 
   ruby.Emitter.prototype.hasUnaryStorageOperators = function() {
@@ -5738,32 +5733,32 @@
   };
 
   ruby.Emitter.prototype.emitContinue = function(node) {
-    this.emit(this.indent + 'next\n');
+    this.builder._buffer += this.indent + 'next\n';
   };
 
   ruby.Emitter.prototype.emitSwitch = function(node) {
     var cases = node.switchCases().children;
-    this.emit(this.indent + 'case ');
+    this.builder._buffer += this.indent + 'case ';
     this.emitExpression(node.switchValue(), Precedence.LOWEST);
-    this.emit('\n');
+    this.builder._buffer += '\n';
     this.previousKind = NodeKind.NULL;
     this.emitStatements(cases);
-    this.emit(this.indent + 'end\n');
+    this.builder._buffer += this.indent + 'end\n';
   };
 
   ruby.Emitter.prototype.emitCase = function(node) {
     var values = node.caseValues().children;
     var block = node.caseBlock();
-    this.emit(this.indent);
+    this.builder._buffer += this.indent;
 
     if (values.length !== 0) {
-      this.emit('when ');
+      this.builder._buffer += 'when ';
       this.emitCommaSeparatedExpressions(values);
     } else {
-      this.emit('else');
+      this.builder._buffer += 'else';
     }
 
-    this.emit('\n');
+    this.builder._buffer += '\n';
     this.increaseIndent();
     this.emitStatements(block.blockStatements());
     this.decreaseIndent();
@@ -5772,14 +5767,14 @@
   ruby.Emitter.prototype.emitAssert = function(node) {
     var value = node.assertValue();
     var text = node.range + ' (' + node.range.locationString() + ')';
-    this.emit(this.indent + 'raise ' + quoteString(text, 39));
+    this.builder._buffer += this.indent + 'raise ' + quoteString(text, 39);
 
     if (!value.isFalse()) {
-      this.emit(' unless ');
+      this.builder._buffer += ' unless ';
       this.emitExpression(value, Precedence.LOWEST);
     }
 
-    this.emit('\n');
+    this.builder._buffer += '\n';
   };
 
   ruby.Emitter.prototype.emitCast = function(node, precedence) {
@@ -5814,76 +5809,79 @@
     var value = node.asDouble();
 
     if (value === math.INFINITY) {
-      this.emit('Float::INFINITY');
+      this.builder._buffer += 'Float::INFINITY';
     } else if (value === -math.INFINITY) {
-      this.emit('-Float::INFINITY');
+      this.builder._buffer += '-Float::INFINITY';
     } else if (value !== value) {
-      this.emit('Float::NAN');
+      this.builder._buffer += 'Float::NAN';
     } else {
-      this.emit(doubleToStringWithDot(value));
+      this.builder._buffer += doubleToStringWithDot(value);
     }
   };
 
   ruby.Emitter.prototype.emitString = function(node) {
     var text = node.asString();
-    var result = '"';
+    var escaped = '';
     var start = 0;
     var i = 0;
+    this.builder._buffer += '"';
 
     for (i = 0; i < text.length; i = i + 1 | 0) {
       var c = text.charCodeAt(i);
 
       if (c === 34) {
-        result += text.slice(start, i) + '\\"';
+        escaped = '\\"';
       } else if (c === 35) {
-        result += text.slice(start, i) + '\\#';
+        escaped = '\\#';
       } else if (c === 10) {
-        result += text.slice(start, i) + '\\n';
+        escaped = '\\n';
       } else if (c === 13) {
-        result += text.slice(start, i) + '\\r';
+        escaped = '\\r';
       } else if (c === 9) {
-        result += text.slice(start, i) + '\\t';
+        escaped = '\\t';
       } else if (c === 0) {
-        result += text.slice(start, i) + '\\0';
+        escaped = '\\0';
       } else if (c === 92) {
-        result += text.slice(start, i) + '\\\\';
+        escaped = '\\\\';
       } else if (c < 32) {
-        result += text.slice(start, i) + '\\x' + HEX[c >> 4] + HEX[c & 15];
+        escaped = '\\x' + HEX[c >> 4] + HEX[c & 15];
       } else {
         continue;
       }
 
+      this.builder._buffer += text.slice(start, i);
+      this.builder._buffer += escaped;
       start = i + 1 | 0;
     }
 
-    result += text.slice(start, i) + '"';
-    this.emit(result);
+    this.builder._buffer += text.slice(start, i);
+    this.builder._buffer += '"';
   };
 
   ruby.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
 
     if (!(values.length > 1)) {
-      throw new Error('assert values.size() > 1; (src/emitters/ruby.sk:362:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/ruby.sk:365:7)');
     }
 
     var isSequence = node.parent.kind !== NodeKind.EXPRESSION;
     var separator = isSequence ? '; ' : '\n' + this.indent;
 
     if (isSequence) {
-      this.emit('(');
+      this.builder._buffer += '(';
     }
 
     for (var i = 0; i < values.length; i = i + 1 | 0) {
       if (i > 0) {
-        this.emit(separator);
+        this.builder._buffer += separator;
       }
 
       this.emitExpression(values[i], Precedence.LOWEST);
     }
 
     if (isSequence) {
-      this.emit(')');
+      this.builder._buffer += ')';
     }
   };
 
@@ -5903,22 +5901,22 @@
 
   ruby.Emitter.prototype.emitName = function(node) {
     if (node.symbol !== null && node.symbol.kind === SymbolKind.INSTANCE_VARIABLE) {
-      this.emit('@');
+      this.builder._buffer += '@';
     }
 
     base.Emitter.prototype.emitName.call(this, node);
   };
 
   ruby.Emitter.prototype.emitThis = function() {
-    this.emit('self');
+    this.builder._buffer += 'self';
   };
 
   ruby.Emitter.prototype.emitNull = function() {
-    this.emit('nil');
+    this.builder._buffer += 'nil';
   };
 
   ruby.Emitter.prototype.emitType = function(type) {
-    this.emit(this.fullName(type.symbol));
+    this.builder._buffer += this.fullName(type.symbol);
   };
 
   ruby.Emitter.prototype.emitBinary = function(node, precedence) {
@@ -5934,32 +5932,32 @@
     var $arguments = node.callArguments();
 
     if (value.kind === NodeKind.TYPE && (value.type.isIntMap(this.cache) || value.type.isIntMap(this.cache))) {
-      this.emit('{}');
+      this.builder._buffer += '{}';
       return;
     }
 
     this.emitExpression(value, Precedence.UNARY_POSTFIX);
 
     if (value.kind === NodeKind.TYPE) {
-      this.emit('.new');
+      this.builder._buffer += '.new';
     }
 
     if ($arguments.length > 0) {
-      this.emit('(');
+      this.builder._buffer += '(';
       this.emitCommaSeparatedExpressions($arguments);
-      this.emit(')');
+      this.builder._buffer += ')';
     }
   };
 
   ruby.Emitter.prototype.enterNamespace = function(symbol) {
     this.emitExtraNewlineBefore(NodeKind.NAMESPACE);
-    this.emit(this.indent + 'module ' + this.mangleName(symbol) + '\n');
+    this.builder._buffer += this.indent + 'module ' + this.mangleName(symbol) + '\n';
     this.increaseIndent();
   };
 
   ruby.Emitter.prototype.leaveNamespace = function(symbol) {
     this.decreaseIndent();
-    this.emit(this.indent + 'end\n');
+    this.builder._buffer += this.indent + 'end\n';
     this.emitExtraNewlineAfter(NodeKind.NAMESPACE);
   };
 
@@ -6015,11 +6013,11 @@
     var outputs = [];
 
     if (this.options.outputDirectory === '') {
-      outputs.push(new Source(this.options.outputFile, xml.dump(program) + '\n'));
+      outputs.push(new Source(this.options.outputFile, xml.dump(program)));
     } else {
       for (var i = 0; i < program.children.length; i = i + 1 | 0) {
         var file = program.children[i];
-        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.xml'), xml.dump(file) + '\n'));
+        outputs.push(new Source(joinPath(this.options.outputDirectory, file.range.source.name + '.xml'), xml.dump(file)));
       }
     }
 
@@ -6027,55 +6025,55 @@
   };
 
   xml.DumpVisitor = function() {
-    this.result = '';
+    this.builder = new StringBuilder();
     this.indent = '';
   };
 
   xml.DumpVisitor.prototype.visit = function(node) {
     if (node === null) {
-      this.result += '<null/>';
+      this.builder._buffer += '<null/>';
       return;
     }
 
-    this.result += '<' + in_NodeKind.prettyPrint(node.kind);
+    this.builder._buffer += '<' + in_NodeKind.prettyPrint(node.kind);
 
     if (node.content !== null) {
-      this.result += ' content=';
+      this.builder._buffer += ' content=';
 
       switch (node.content.type()) {
       case 1:
-        this.result += simpleQuote(node.asInt().toString());
+        this.builder._buffer += simpleQuote(node.asInt().toString());
         break;
 
       case 0:
-        this.result += simpleQuote(node.asBool().toString());
+        this.builder._buffer += simpleQuote(node.asBool().toString());
         break;
 
       case 2:
-        this.result += simpleQuote(node.asDouble().toString());
+        this.builder._buffer += simpleQuote(node.asDouble().toString());
         break;
 
       case 3:
-        this.result += quoteString(node.asString(), 34);
+        this.builder._buffer += quoteString(node.asString(), 34);
         break;
       }
     }
 
     if (node.hasChildren()) {
-      this.result += '>';
+      this.builder._buffer += '>';
 
       var inner = this.indent;
       this.indent += '  ';
 
       for (var i = 0; i < node.children.length; i = i + 1 | 0) {
-        this.result += '\n' + this.indent;
+        this.builder._buffer += '\n' + this.indent;
         this.visit(node.children[i]);
       }
 
       this.indent = inner;
-      this.result += '\n' + this.indent + '</' + in_NodeKind.prettyPrint(node.kind) + '>';
+      this.builder._buffer += '\n' + this.indent + '</' + in_NodeKind.prettyPrint(node.kind) + '>';
     } else {
-      this.result += '/>';
+      this.builder._buffer += '/>';
     }
   };
 
@@ -6101,6 +6099,7 @@
     this.newline = '\n';
     this.space = ' ';
     this.indent = '';
+    this.builder = new StringBuilder();
     this.currentLine = 0;
     this.currentColumn = 0;
     this.needsSemicolon = false;
@@ -6238,13 +6237,15 @@
     this.emit(this.indent + '}());\n');
 
     if (this.options.sourceMap) {
-      this.currentSource.contents += '/';
+      this.emit('/');
 
       var name = this.options.outputFile + '.map';
-      this.currentSource.contents += '/# sourceMappingURL=' + splitPath(name).entry + '\n';
+      this.emit('/# sourceMappingURL=' + splitPath(name).entry + '\n');
+      this.currentSource.contents = this.builder._buffer;
       return [this.currentSource, new Source(name, this.generator.toString())];
     }
 
+    this.currentSource.contents = this.builder._buffer;
     return [this.currentSource];
   };
 
@@ -6306,7 +6307,7 @@
       }
     }
 
-    this.currentSource.contents += text;
+    this.builder._buffer += text;
   };
 
   js.Emitter.prototype.minifySpaces = function(text) {
@@ -6494,7 +6495,7 @@
       break;
 
     default:
-      throw new Error('assert false; (src/js/emitter.sk:341:19)');
+      throw new Error('assert false; (src/js/emitter.sk:344:19)');
       break;
     }
   };
@@ -6961,7 +6962,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/js/emitter.sk:700:16)');
+        throw new Error('assert false; (src/js/emitter.sk:703:16)');
       }
       break;
     }
@@ -7122,7 +7123,7 @@
 
   js.Emitter.prototype.isRightChildOfBinaryExpression = function(node, kind) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:819:7)');
+      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:822:7)');
     }
 
     while (in_NodeKind.isBinaryOperator(node.parent.kind)) {
@@ -8433,7 +8434,12 @@
       sourceContents.push(quoteString(source.contents, 34));
     }
 
-    var result = '{"version":3,"sources":[' + sourceNames.join(',') + '],"sourcesContent":[' + sourceContents.join(',') + '],"names":[],"mappings":"';
+    var builder = new StringBuilder();
+    builder._buffer += '{"version":3,"sources":[';
+    builder._buffer += sourceNames.join(',');
+    builder._buffer += '],"sourcesContent":[';
+    builder._buffer += sourceContents.join(',');
+    builder._buffer += '],"names":[],"mappings":"';
     this.mappings.sort(bindCompare(SourceMappingComparison.INSTANCE));
 
     var previousGeneratedColumn = 0;
@@ -8451,27 +8457,28 @@
           continue;
         }
 
-        result += ',';
+        builder._buffer += ',';
       } else {
         previousGeneratedColumn = 0;
 
         while (previousGeneratedLine < generatedLine) {
-          result += ';';
+          builder._buffer += ';';
           previousGeneratedLine = previousGeneratedLine + 1 | 0;
         }
       }
 
-      result += SourceMapGenerator.encodeVLQ(mapping.generatedColumn - previousGeneratedColumn | 0);
+      builder._buffer += SourceMapGenerator.encodeVLQ(mapping.generatedColumn - previousGeneratedColumn | 0);
       previousGeneratedColumn = mapping.generatedColumn;
-      result += SourceMapGenerator.encodeVLQ(mapping.sourceIndex - previousSourceIndex | 0);
+      builder._buffer += SourceMapGenerator.encodeVLQ(mapping.sourceIndex - previousSourceIndex | 0);
       previousSourceIndex = mapping.sourceIndex;
-      result += SourceMapGenerator.encodeVLQ(mapping.originalLine - previousOriginalLine | 0);
+      builder._buffer += SourceMapGenerator.encodeVLQ(mapping.originalLine - previousOriginalLine | 0);
       previousOriginalLine = mapping.originalLine;
-      result += SourceMapGenerator.encodeVLQ(mapping.originalColumn - previousOriginalColumn | 0);
+      builder._buffer += SourceMapGenerator.encodeVLQ(mapping.originalColumn - previousOriginalColumn | 0);
       previousOriginalColumn = mapping.originalColumn;
     }
 
-    return result + '"}\n';
+    builder._buffer += '"}\n';
+    return builder._buffer;
   };
 
   SourceMapGenerator.encodeVLQ = function(value) {
@@ -16183,29 +16190,29 @@
   };
 
   in_string.fromCodePoints = function(codePoints) {
-    var result = '';
+    var builder = new StringBuilder();
 
     if (unicode.STRING_ENCODING === unicode.Encoding.UTF8) {
       for (var i = 0, n = codePoints.length; i < n; i = i + 1 | 0) {
         var codePoint = codePoints[i];
 
         if (codePoint < 128) {
-          result += String.fromCharCode(codePoint);
+          builder._buffer += String.fromCharCode(codePoint);
         } else {
           if (codePoint < 2048) {
-            result += String.fromCharCode(codePoint >> 6 & 31 | 192);
+            builder._buffer += String.fromCharCode(codePoint >> 6 & 31 | 192);
           } else {
             if (codePoint < 65536) {
-              result += String.fromCharCode(codePoint >> 12 & 15 | 224);
+              builder._buffer += String.fromCharCode(codePoint >> 12 & 15 | 224);
             } else {
-              result += String.fromCharCode(codePoint >> 18 & 7 | 240);
-              result += String.fromCharCode(codePoint >> 12 & 63 | 128);
+              builder._buffer += String.fromCharCode(codePoint >> 18 & 7 | 240);
+              builder._buffer += String.fromCharCode(codePoint >> 12 & 63 | 128);
             }
 
-            result += String.fromCharCode(codePoint >> 6 & 63 | 128);
+            builder._buffer += String.fromCharCode(codePoint >> 6 & 63 | 128);
           }
 
-          result += String.fromCharCode(codePoint & 63 | 128);
+          builder._buffer += String.fromCharCode(codePoint & 63 | 128);
         }
       }
     } else if (unicode.STRING_ENCODING === unicode.Encoding.UTF16) {
@@ -16213,20 +16220,20 @@
         var codePoint = codePoints[i];
 
         if (codePoint < 65536) {
-          result += String.fromCharCode(codePoint);
+          builder._buffer += String.fromCharCode(codePoint);
         } else {
           codePoint = codePoint - 65536 | 0;
-          result += String.fromCharCode((codePoint >> 10) + 55296 | 0);
-          result += String.fromCharCode((codePoint & (1 << 10) - 1) + 56320 | 0);
+          builder._buffer += String.fromCharCode((codePoint >> 10) + 55296 | 0);
+          builder._buffer += String.fromCharCode((codePoint & (1 << 10) - 1) + 56320 | 0);
         }
       }
     } else {
       for (var i = 0, n = codePoints.length; i < n; i = i + 1 | 0) {
-        result += String.fromCharCode(codePoints[i]);
+        builder._buffer += String.fromCharCode(codePoints[i]);
       }
     }
 
-    return result;
+    return builder._buffer;
   };
 
   function checkAllNodeListKinds(node, checker) {
@@ -16434,7 +16441,7 @@
     }
 
     var isValidString = true;
-    var result = '';
+    var builder = new StringBuilder();
     var start = 1;
     var i = 1;
 
@@ -16444,29 +16451,29 @@
 
       if (c === 92) {
         var escape = i - 1 | 0;
-        result += text.slice(start, escape);
+        builder._buffer += text.slice(start, escape);
 
         if ((i + 1 | 0) < text.length) {
           c = text.charCodeAt(i);
           i = i + 1 | 0;
 
           if (c === 110) {
-            result += '\n';
+            builder._buffer += '\n';
             start = i;
           } else if (c === 114) {
-            result += '\r';
+            builder._buffer += '\r';
             start = i;
           } else if (c === 116) {
-            result += '\t';
+            builder._buffer += '\t';
             start = i;
           } else if (c === 101) {
-            result += '\x1B';
+            builder._buffer += '\x1B';
             start = i;
           } else if (c === 48) {
-            result += '\0';
+            builder._buffer += '\0';
             start = i;
           } else if (c === 92 || c === 34 || c === 39) {
-            result += String.fromCharCode(c);
+            builder._buffer += String.fromCharCode(c);
             start = i;
           } else if (c === 120) {
             if ((i + 1 | 0) < text.length) {
@@ -16478,7 +16485,7 @@
                 i = i + 1 | 0;
 
                 if (c0 !== -1 && c1 !== -1) {
-                  result += String.fromCharCode(c0 << 4 | c1);
+                  builder._buffer += String.fromCharCode(c0 << 4 | c1);
                   start = i;
                 }
               }
@@ -16493,44 +16500,47 @@
       }
     }
 
-    result += text.slice(start, i);
-    return isValidString ? new StringContent(result) : null;
+    builder._buffer += text.slice(start, i);
+    return isValidString ? new StringContent(builder._buffer) : null;
   }
 
   function quoteString(text, quote) {
-    var result = '';
+    var builder = new StringBuilder();
     var quoteString = String.fromCharCode(quote);
-    result += quoteString;
-
+    var escaped = '';
     var start = 0;
     var i = 0;
+    builder._buffer += quoteString;
 
     for (i = 0; i < text.length; i = i + 1 | 0) {
       var c = text.charCodeAt(i);
 
       if (c === quote) {
-        result += text.slice(start, i) + '\\' + quoteString;
+        escaped = '\\' + quoteString;
       } else if (c === 10) {
-        result += text.slice(start, i) + '\\n';
+        escaped = '\\n';
       } else if (c === 13) {
-        result += text.slice(start, i) + '\\r';
+        escaped = '\\r';
       } else if (c === 9) {
-        result += text.slice(start, i) + '\\t';
+        escaped = '\\t';
       } else if (c === 0) {
-        result += text.slice(start, i) + '\\0';
+        escaped = '\\0';
       } else if (c === 92) {
-        result += text.slice(start, i) + '\\\\';
+        escaped = '\\\\';
       } else if (c < 32) {
-        result += text.slice(start, i) + '\\x' + HEX[c >> 4] + HEX[c & 15];
+        escaped = '\\x' + HEX[c >> 4] + HEX[c & 15];
       } else {
         continue;
       }
 
+      builder._buffer += text.slice(start, i);
+      builder._buffer += escaped;
       start = i + 1 | 0;
     }
 
-    result += text.slice(start, i) + quoteString;
-    return result;
+    builder._buffer += text.slice(start, i);
+    builder._buffer += quoteString;
+    return builder._buffer;
   }
 
   prettyPrint.plural = function(value) {
@@ -16693,19 +16703,22 @@
   json.dump = function(node) {
     var visitor = new json.DumpVisitor();
     visitor.visit(node);
-    return visitor.result;
+    visitor.builder._buffer += '\n';
+    return visitor.builder._buffer;
   };
 
   lisp.dump = function(node) {
     var visitor = new lisp.DumpVisitor();
     visitor.visit(node);
-    return visitor.result;
+    visitor.builder._buffer += '\n';
+    return visitor.builder._buffer;
   };
 
   xml.dump = function(node) {
     var visitor = new xml.DumpVisitor();
     visitor.visit(node);
-    return visitor.result;
+    visitor.builder._buffer += '\n';
+    return visitor.builder._buffer;
   };
 
   function tokenize(log, source) {
@@ -19209,7 +19222,7 @@
   unicode.STRING_ENCODING = 1;
   unicode.StringIterator.INSTANCE = new unicode.StringIterator();
   var operatorInfo = IntMap.literal([65, 66, 67, 68, 69, 70, 71, 72, 75, 76, 77, 78, 73, 74, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 107, 108, 109, 103, 104, 105, 110, 111, 106, 112], [new OperatorInfo('!', 13, 0), new OperatorInfo('+', 13, 0), new OperatorInfo('-', 13, 0), new OperatorInfo('~', 13, 0), new OperatorInfo('++', 13, 0), new OperatorInfo('--', 13, 0), new OperatorInfo('++', 14, 0), new OperatorInfo('--', 14, 0), new OperatorInfo('*', 13, 0), new OperatorInfo('&', 13, 0), new OperatorInfo('*', 14, 0), new OperatorInfo('&', 14, 0), new OperatorInfo('new', 13, 0), new OperatorInfo('delete', 13, 0), new OperatorInfo('+', 11, 1), new OperatorInfo('&', 7, 1), new OperatorInfo('|', 5, 1), new OperatorInfo('^', 6, 1), new OperatorInfo('/', 12, 1), new OperatorInfo('==', 8, 1), new OperatorInfo('>', 9, 1), new OperatorInfo('>=', 9, 1), new OperatorInfo('in', 9, 1), new OperatorInfo('[]', 15, 1), new OperatorInfo('is', 9, 1), new OperatorInfo('<', 9, 1), new OperatorInfo('<=', 9, 1), new OperatorInfo('&&', 4, 1), new OperatorInfo('||', 3, 1), new OperatorInfo('*', 12, 1), new OperatorInfo('!=', 8, 1), new OperatorInfo('%', 12, 1), new OperatorInfo('<<', 10, 1), new OperatorInfo('>>', 10, 1), new OperatorInfo('-', 11, 1), new OperatorInfo('=', 2, 2), new OperatorInfo('+=', 2, 2), new OperatorInfo('&=', 2, 2), new OperatorInfo('|=', 2, 2), new OperatorInfo('^=', 2, 2), new OperatorInfo('/=', 2, 2), new OperatorInfo('*=', 2, 2), new OperatorInfo('%=', 2, 2), new OperatorInfo('<<=', 2, 2), new OperatorInfo('>>=', 2, 2), new OperatorInfo('-=', 2, 2), new OperatorInfo('[]=', 2, 2)]);
-  Compiler.cachedLibraries = [new CachedLibrary('defines.sk', '// The "--release" flag automatically overrides BUILD_RELEASE with true\n#define BUILD_DEBUG   !BUILD_RELEASE\n#define BUILD_RELEASE false\n\n// These will be overridden by the compiler with the current language target\n#define TARGET_CPP   false\n#define TARGET_JS    false\n#define TARGET_RUBY  false\n#define TARGET_NONE  !TARGET_CPP && !TARGET_JS && !TARGET_RUBY\n\n// The "--config" flag can be used to override these (example: "--config=node").\n// Using "--target=js" defaults to "--config=browser" and using "--target=cpp"\n// defaults to the config for the current operating system.\n#define CONFIG_IOS     false\n#define CONFIG_OSX     false\n#define CONFIG_LINUX   false\n#define CONFIG_ANDROID false\n#define CONFIG_WINDOWS false\n#define CONFIG_NODE    false\n#define CONFIG_BROWSER false\n#define CONFIG_UNKNOWN !CONFIG_IOS && !CONFIG_OSX && !CONFIG_LINUX && !CONFIG_ANDROID && !CONFIG_WINDOWS && !CONFIG_NODE && !CONFIG_BROWSER\n'), new CachedLibrary('primitives.sk', 'import class void {}\nalias dynamic = `dynamic`;\n\n#if TARGET_JS\n\n  import class int { pure string toString(); }\n  import class bool { pure string toString(); }\n  import class float { pure string toString(); }\n  import class double { pure string toString(); }\n\n  import class string {\n    pure {\n      string slice(int start, int end);\n      List<string> split(string separator);\n      int indexOf(string value);\n      int lastIndexOf(string value);\n      string toLowerCase();\n      string toUpperCase();\n    }\n  }\n\n  in string {\n    inline pure {\n      int size() { return this.`length`; }\n      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }\n      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      string join(List<string> values) { return values.`join`(this); }\n      @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }\n      static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }\n    }\n  }\n\n#elif TARGET_CPP\n\n  import class int {}\n  import class bool {}\n  import class float {}\n  import class double {}\n\n  @NeedsInclude("<string>")\n  @EmitAs("std::string")\n  import class string {}\n\n  in int {\n    inline pure string toString() { return `std`::to_string(this); }\n  }\n\n  in bool {\n    inline pure string toString() { return this ? "true" : "false"; }\n  }\n\n  in float {\n    inline pure string toString() { return double._format_(this); }\n  }\n\n  in double {\n    pure {\n      inline string toString() { return _format_(this); }\n\n      #if !CONFIG_WINDOWS\n\n        // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0\n        @NeedsInclude("<cstdio>")\n        static string _format_(double value) {\n          string buffer;\n          `buffer.resize(64)`;\n          `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;\n            if (`std::stod(&buffer[0]) != value`) {\n              `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;\n            }\n          }\n          return `buffer.c_str()`;\n        }\n\n      #else\n\n        // MSVC won\'t allow std::sprintf() even though it\'s in the C++11 standard\n        @NeedsInclude("<stdio.h>")\n        static string _format_(double value) {\n          string buffer;\n          `buffer.resize(64)`;\n          `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;\n            if (`std::stod(&buffer[0]) != value`) {\n              `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;\n            }\n          }\n          return `buffer.c_str()`;\n        }\n\n      #endif\n    }\n  }\n\n  in string {\n    pure {\n      inline {\n        int size() { return (int)this.`size`(); }\n        string slice(int start, int end) { return this.`substr`(start, end - start); }\n        string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }\n        int indexOf(string value) { return (int)this.`find`(value); }\n        int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }\n        int lastIndexOf(string value) { return (int)this.`rfind`(value); }\n        int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }\n        @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values\n        static string fromCodeUnit(int value) { return ``string``(1, value); }\n      }\n\n      @NeedsInclude("<algorithm>")\n      @NeedsInclude("<ctype.h>") {\n        string toLowerCase() {\n          var clone = this;\n          `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;\n          return clone;\n        }\n\n        string toUpperCase() {\n          var clone = this;\n          `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;\n          return clone;\n        }\n      }\n\n      string join(List<string> values) {\n        var result = "";\n        for (var i = 0; i < values.size(); i++) {\n          if (i > 0) result += this;\n          result += values[i];\n        }\n        return result;\n      }\n\n      List<string> split(string separator) {\n        List<string> values = [];\n        var start = 0;\n        while (true) {\n          var end = indexOfFrom(separator, start);\n          if (end == -1) break;\n          values.push(slice(start, end));\n          start = end + separator.size();\n        }\n        values.push(slice(start, size()));\n        return values;\n      }\n    }\n  }\n\n#elif TARGET_RUBY\n\n  import class int { @EmitAs("to_s") pure string toString(); }\n  import class bool { @EmitAs("to_s") pure string toString(); }\n  import class float { @EmitAs("to_s") pure string toString(); }\n  import class double { @EmitAs("to_s") pure string toString(); }\n\n  import class string {\n    pure {\n      int size();\n      List<string> split(string separator);\n      @EmitAs("upcase") string toLowerCase();\n      @EmitAs("downcase") string toUpperCase();\n    }\n  }\n\n  in string {\n    pure inline {\n      string join(List<string> values) { return values.`join`(this); }\n      string slice(int start, int end) { return this.`slice`(start, end - start); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      @OperatorGet int codeUnitAt(int index) { return sliceCodeUnit(index).`ord`; }\n      static string fromCodeUnit(int value) { return value.`chr`("UTF-8"); }\n\n      int indexOf(string value) {\n        var i = this.`index`(value);\n        return i != null ? i : -1;\n      }\n\n      int indexOfFrom(string value, int fromIndex) {\n        var i = this.`index`(value, fromIndex);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOf(string value) {\n        var i = this.`rindex`(value);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOfFrom(string value, int fromIndex) {\n        var i = this.`rindex`(value, fromIndex);\n        return i != null ? i : -1;\n      }\n    }\n  }\n\n#else\n\n  import class int { pure string toString(); }\n  import class bool { pure string toString(); }\n  import class float { pure string toString(); }\n  import class double { pure string toString(); }\n\n  import class string {\n    pure {\n      int size();\n      List<string> split(string separator);\n      string slice(int start, int end);\n      string sliceCodeUnit(int index);\n      int indexOf(string value);\n      int indexOfFrom(string value, int fromIndex);\n      int lastIndexOf(string value);\n      int lastIndexOfFrom(string value, int fromIndex);\n      string toLowerCase();\n      string toUpperCase();\n      string join(List<string> values);\n      @OperatorGet int codeUnitAt(int index);\n      static string fromCodeUnit(int value);\n    }\n  }\n\n#endif\n\nin string {\n  pure {\n    @OperatorIn\n    inline bool contains(string value) {\n      return indexOf(value) != -1;\n    }\n\n    inline string toString() {\n      return this;\n    }\n\n    bool startsWith(string prefix) {\n      return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n    }\n\n    bool endsWith(string suffix) {\n      return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n    }\n\n    string repeat(int count) {\n      var result = "";\n      for (var i = 0; i < count; i++) result += this;\n      return result;\n    }\n\n    string replaceAll(string before, string after) {\n      var result = "";\n      var start = 0;\n      while (true) {\n        var end = indexOfFrom(before, start);\n        if (end == -1) break;\n        result += slice(start, end) + after;\n        start = end + before.size();\n      }\n      return result + slice(start, size());\n    }\n  }\n}\n\n// Boxes are useful for representing nullable primitive types\nclass Box<T> {\n  T value;\n}\n'), new CachedLibrary('math.sk', '#if TARGET_JS\n\n  namespace math {\n    inline pure {\n      double abs(double x) { return `Math`.abs(x); }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return `Math`.pow(x, y); }\n      double floor(double x) { return `Math`.floor(x); }\n      double round(double x) { return `Math`.round(x); }\n      double ceil(double x) { return `Math`.ceil(x); }\n      double min(double x, double y) { return `Math`.min(x, y); }\n      double max(double x, double y) { return `Math`.max(x, y); }\n      bool isNaN(double x) { return `isNaN`(x); }\n      bool isFinite(double x) { return `isFinite`(x); }\n    }\n\n    inline double random() { return `Math`.random(); }\n  }\n\n#elif TARGET_CPP\n\n  namespace math {\n    inline pure @NeedsInclude("<cmath>") {\n      double abs(double x) { return `std`::abs(x); }\n      double sin(double x) { return `std`::sin(x); }\n      double cos(double x) { return `std`::cos(x); }\n      double tan(double x) { return `std`::tan(x); }\n      double asin(double x) { return `std`::asin(x); }\n      double acos(double x) { return `std`::acos(x); }\n      double atan(double x) { return `std`::atan(x); }\n      double atan2(double y, double x) { return `std`::atan2(y, x); }\n      double sqrt(double x) { return `std`::sqrt(x); }\n      double exp(double x) { return `std`::exp(x); }\n      double log(double x) { return `std`::log(x); }\n      double pow(double x, double y) { return `std`::pow(x, y); }\n      double floor(double x) { return `std`::floor(x); }\n      double round(double x) { return `std`::round(x); }\n      double ceil(double x) { return `std`::ceil(x); }\n      double min(double x, double y) { return `std`::fmin(x, y); }\n      double max(double x, double y) { return `std`::fmax(x, y); }\n      bool isNaN(double x) { return `std`::isnan(x); }\n      bool isFinite(double x) { return `std`::isfinite(x); }\n    }\n\n    @NeedsInclude("<random>") {\n      `std::uniform_real_distribution<double>` _distribution_;\n      `(std::mt19937 *)` _generator_ = null;\n\n      double random() {\n        if (_generator_ == null) {\n          _generator_ = new `std`::mt19937(`std`::random_device()());\n        }\n        return _distribution_(*_generator_);\n      }\n    }\n  }\n\n#elif TARGET_RUBY\n\n  namespace math {\n    inline pure {\n      double abs(double x) { return x.`abs`; }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return exp(y * log(x)); } // TODO: Use "**" instead\n      double floor(double x) { return x.`floor`; }\n      double round(double x) { return x.`round`; }\n      double ceil(double x) { return x.`ceil`; }\n      double min(double x, double y) { return [x, y].`min`; }\n      double max(double x, double y) { return [x, y].`max`; }\n      bool isNaN(double x) { return x.__ruby_nan(); }\n      bool isFinite(double x) { return x.__ruby_finite(); }\n      double random() { return `Random`.rand; }\n    }\n  }\n\n  in double {\n    import pure {\n      @EmitAs("nan?") bool __ruby_nan();\n      @EmitAs("finite?") bool __ruby_finite();\n    }\n  }\n\n#else\n\n  import namespace math {\n    pure {\n      double abs(double x);\n      double sin(double x);\n      double cos(double x);\n      double tan(double x);\n      double asin(double x);\n      double acos(double x);\n      double atan(double x);\n      double atan2(double y, double x);\n      double sqrt(double x);\n      double exp(double x);\n      double log(double x);\n      double pow(double x, double y);\n      double floor(double x);\n      double round(double x);\n      double ceil(double x);\n      double min(double x, double y);\n      double max(double x, double y);\n      double random();\n      bool isNaN(double x);\n      bool isFinite(double x);\n    }\n  }\n\n#endif\n\nin math {\n  double clamp(double x, double a, double b) { return max(a, min(x, b)); }\n  int iclamp(int x, int a, int b) { return imax(a, imin(x, b)); }\n  int imax(int a, int b) { return a > b ? a : b; }\n  int imin(int a, int b) { return a < b ? a : b; }\n\n  const {\n    var SQRT2 = 1.414213562373095;\n    var PI = 3.141592653589793;\n    var TWOPI = 2 * PI;\n    var E = 2.718281828459045;\n    var INFINITY = 1 / 0.0;\n    var NAN = 0 / 0.0;\n  }\n}\n'), new CachedLibrary('list.sk', '#if TARGET_RUBY\nexport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n#else\ninterface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n#endif\n\n#if TARGET_JS\n\n  void bindCompare<T>(Comparison<T> comparison) {\n    return comparison.compare.`bind`(comparison);\n  }\n\n  import class List<T> {\n    pure {\n      new();\n      void push(T value);\n      void unshift(T value);\n      List<T> slice(int start, int end);\n      int indexOf(T value);\n      int lastIndexOf(T value);\n      T shift();\n      T pop();\n      void reverse();\n    }\n  }\n\n  in List {\n    pure {\n      inline {\n        int size() { return this.`length`; }\n        List<T> clone() { return this.`slice`(); }\n        T removeAt(int index) { return this.`splice`(index, 1)[0]; }\n        void removeRange(int start, int end) { this.`splice`(start, end - start); }\n        void insert(int index, T value) { this.`splice`(index, 0, value); }\n        @OperatorGet T get(int index) { return `this`[index]; }\n        @OperatorSet void set(int index, T value) { `this`[index] = value; }\n        @OperatorIn bool contains(T value) { return indexOf(value) != -1; }\n      }\n\n      T last() { return this[size() - 1]; }\n      void clear() { this.`length` = 0; }\n      void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }\n    }\n\n    inline void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }\n  }\n\n#elif TARGET_CPP\n\n  bool bindCompare<T>(Comparison<T> comparison, T left, T right) {\n    return comparison.compare(left, right) < 0;\n  }\n\n  @NeedsInclude("<vector>")\n  class List<T> {\n    pure {\n      new() {}\n\n      int size() {\n        return (int)_data.size();\n      }\n\n      void push(T value) {\n        _data.push_back(value);\n      }\n\n      void unshift(T value) {\n        insert(0, value);\n      }\n\n      List<T> slice(int start, int end) {\n        assert start >= 0 && start <= end && end <= size();\n        List<T> slice = [];\n        slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);\n        return slice;\n      }\n\n      T shift() {\n        T value = this[0];\n        removeAt(0);\n        return value;\n      }\n\n      T pop() {\n        T value = this[size() - 1];\n        _data.pop_back();\n        return value;\n      }\n\n      T last() {\n        assert size() > 0;\n        return _data.back();\n      }\n\n      List<T> clone() {\n        List<T> clone = [];\n        clone._data = _data;\n        return clone;\n      }\n\n      T removeAt(int index) {\n        T value = this[index];\n        _data.erase(_data.begin() + index);\n        return value;\n      }\n\n      void removeRange(int start, int end) {\n        assert 0 <= start && start <= end && end <= size();\n        _data.erase(_data.begin() + start, _data.begin() + end);\n      }\n\n      void insert(int index, T value) {\n        assert index >= 0 && index <= size();\n        _data.insert(_data.begin() + index, value);\n      }\n\n      @OperatorGet\n      T get(int index) {\n        assert index >= 0 && index < size();\n        return _data[index];\n      }\n\n      @OperatorSet\n      void set(int index, T value) {\n        assert index >= 0 && index < size();\n        _data[index] = value;\n      }\n\n      @OperatorIn\n      bool contains(T value) {\n        return indexOf(value) != -1;\n      }\n\n      void clear() {\n        _data.clear();\n      }\n\n      @NeedsInclude("<algorithm>") {\n        int indexOf(T value) {\n          int index = (int)(`std`::find(_data.begin(), _data.end(), value) - _data.begin());\n          return index == size() ? -1 : index;\n        }\n\n        int lastIndexOf(T value) {\n          int index = (int)(`std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin());\n          return size() - index - 1;\n        }\n\n        void swap(int a, int b) {\n          assert a >= 0 && a < size();\n          assert b >= 0 && b < size();\n          `std`::swap(_data[a], _data[b]);\n        }\n\n        void reverse() {\n          `std`::reverse(_data.begin(), _data.end());\n        }\n      }\n\n      // Normally this would be in a constructor but clang has a bug that\n      // sometimes emits incorrect code for a constructor taking an empty\n      // initializer list. See http://llvm.org/bugs/show_bug.cgi?id=22256\n      // for details.\n      @NeedsInclude("<initializer_list>")\n      private List<T> literal(`std::initializer_list<T>` list) {\n        _data.insert(_data.end(), list.begin(), list.end());\n        return this;\n      }\n    }\n\n    @NeedsInclude("<functional>")\n    @NeedsInclude("<algorithm>")\n    inline void sort(Comparison<T> comparison) {\n      `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));\n    }\n\n    private `std::vector<T>` _data;\n  }\n\n#elif TARGET_RUBY\n\n  import class List<T> {\n    pure {\n      new();\n      int size();\n      void push(T value);\n      void unshift(T value);\n      T shift();\n      T pop();\n      T last();\n      @EmitAs("reverse!") void reverse();\n      List<T> clone();\n      @EmitAs("delete_at") T removeAt(int index);\n      void insert(int index, T value);\n      @EmitAs("include?") @OperatorIn bool contains(T value);\n      void clear();\n      private @EmitAs("slice!") void destructiveSlice(int start, int count);\n    }\n  }\n\n  in List {\n    pure {\n      inline @OperatorGet T get(int index) { return `this`[index]; }\n      inline @OperatorSet void set(int index, T value) { `this`[index] = value; }\n\n      int indexOf(T value) {\n        var i = this.`index`(value);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOf(T value) {\n        var i = this.`rindex`(value);\n        return i != null ? i : -1;\n      }\n\n      List<T> slice(int start, int end) {\n        return `this`.slice(start, end - start);\n      }\n\n      void removeRange(int start, int end) {\n        destructiveSlice(start, end - start);\n      }\n\n      void sort(Comparison<T> comparison) {\n        `sort_helper`(this, comparison);\n      }\n\n      void swap(int a, int b) {\n        assert a >= 0 && a < size();\n        assert b >= 0 && b < size();\n        var temp = this[a];\n        this[a] = this[b];\n        this[b] = temp;\n      }\n    }\n  }\n\n#else\n\n  import class List<T> {\n    pure {\n      new();\n      int size();\n      void push(T value);\n      void unshift(T value);\n      List<T> slice(int start, int end);\n      int indexOf(T value);\n      int lastIndexOf(T value);\n      T shift();\n      T pop();\n      T last();\n      void reverse();\n      List<T> clone();\n      T removeAt(int index);\n      void removeRange(int start, int end);\n      void insert(int index, T value);\n      @OperatorGet T get(int index);\n      @OperatorSet void set(int index, T value);\n      @OperatorIn bool contains(T value);\n      void clear();\n      void swap(int a, int b);\n    }\n    void sort(Comparison<T> comparison);\n  }\n\n#endif\n\nin List {\n  bool pushOnce(T value) {\n    if (!(value in this)) {\n      push(value);\n      return true;\n    }\n    return false;\n  }\n\n  bool removeOnce(T value) {\n    var index = indexOf(value);\n    if (index != -1) {\n      removeAt(index);\n      return true;\n    }\n    return false;\n  }\n}\n'), new CachedLibrary('stringmap.sk', '#if TARGET_JS\n\n  class StringMap<T> {\n    private var _table = `Object`.create(null);\n\n    pure {\n      inline {\n        @OperatorGet T get(string key) { return _table[key]; }\n        @OperatorSet void set(string key, T value) { _table[key] = value; }\n        @OperatorIn bool has(string key) { return key in _table; }\n        void remove(string key) { delete _table[key]; }\n        List<string> keys() { return `Object`.keys(_table); }\n      }\n\n      T getOrDefault(string key, T defaultValue) {\n        return key in this ? this[key] : defaultValue;\n      }\n\n      List<T> values() {\n        List<T> values = [];\n        for (string key in _table) values.push(this[key]);\n        return values;\n      }\n\n      StringMap<T> clone() {\n        var clone = StringMap<T>();\n        for (string key in _table) clone[key] = this[key];\n        return clone;\n      }\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class StringMap<T> {\n    pure {\n      new() {}\n      @OperatorGet T get(string key) { return _table[key]; }\n      T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n      @OperatorSet void set(string key, T value) { _table[key] = value; }\n      @OperatorIn bool has(string key) { return _table.count(key) > 0; }\n      void remove(string key) { _table.erase(key); }\n      List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n      StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n    }\n\n    private `std::unordered_map<`string`, T>` _table;\n  }\n\n#elif TARGET_RUBY\n\n  import class StringMap<T> {\n    pure {\n      new();\n      @EmitAs("has_key?") @OperatorIn bool has(string key);\n      @EmitAs("delete") bool remove(string key);\n      List<string> keys();\n      List<T> values();\n      StringMap<T> clone();\n    }\n  }\n\n  in StringMap {\n    pure {\n      inline @OperatorGet T get(string key) { return `this`[key]; }\n      inline @OperatorSet void set(string key, T value) { `this`[key] = value; }\n      T getOrDefault(string key, T defaultValue) { return key in this ? this[key] : defaultValue; }\n    }\n  }\n\n#else\n\n  import class StringMap<T> {\n    pure {\n      new();\n      @OperatorGet T get(string key);\n      T getOrDefault(string key, T defaultValue);\n      @OperatorSet void set(string key, T value);\n      @OperatorIn bool has(string key);\n      void remove(string key);\n      List<string> keys();\n      List<T> values();\n      StringMap<T> clone();\n    }\n  }\n\n#endif\n\n// This is used by the compiler to implement map literals:\n//\n//   { "a": false, "b": true } => StringMap.literal<bool>(["a", "b"], [false, true])\n//\nin StringMap {\n  private static pure StringMap<X> literal<X>(List<string> keys, List<X> values) {\n    #if TARGET_RUBY\n    StringMap<X> map = `{}`;\n    #else\n    var map = StringMap<X>();\n    #endif\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedLibrary('intmap.sk', '#if TARGET_JS\n\n  class IntMap<T> {\n    private var _table = `Object`.create(null);\n\n    pure {\n      inline {\n        @OperatorGet T get(int key) { return _table[key]; }\n        @OperatorSet void set(int key, T value) { _table[key] = value; }\n        @OperatorIn bool has(int key) { return key in _table; }\n        void remove(int key) { delete _table[key]; }\n      }\n\n      T getOrDefault(int key, T defaultValue) {\n        return key in this ? this[key] : defaultValue;\n      }\n\n      List<int> keys() {\n        List<int> keys = [];\n        for (double key in _table) keys.push((int)key);\n        return keys;\n      }\n\n      List<T> values() {\n        List<T> values = [];\n        for (int key in _table) values.push(this[key]);\n        return values;\n      }\n\n      IntMap<T> clone() {\n        var clone = IntMap<T>();\n        for (int key in _table) clone[key] = this[key];\n        return clone;\n      }\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class IntMap<T> {\n    pure {\n      new() {}\n      @OperatorGet T get(int key) { return _table[key]; }\n      T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n      @OperatorSet void set(int key, T value) { _table[key] = value; }\n      @OperatorIn bool has(int key) { return _table.count(key) > 0; }\n      void remove(int key) { _table.erase(key); }\n      List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n      IntMap<T> clone() { var clone = IntMap<T>(); clone._table = _table; return clone; }\n    }\n\n    private `std::unordered_map<`int`, T>` _table;\n  }\n\n#elif TARGET_RUBY\n\n  import class IntMap<T> {\n    pure {\n      new();\n      @EmitAs("has_key?") @OperatorIn bool has(int key);\n      @EmitAs("delete") bool remove(int key);\n      List<int> keys();\n      List<T> values();\n      IntMap<T> clone();\n    }\n  }\n\n  in IntMap {\n    pure {\n      inline @OperatorGet T get(int key) { return `this`[key]; }\n      inline @OperatorSet void set(int key, T value) { `this`[key] = value; }\n      T getOrDefault(int key, T defaultValue) { return key in this ? this[key] : defaultValue; }\n    }\n  }\n\n#else\n\n  import class IntMap<T> {\n    pure {\n      new();\n      @OperatorGet T get(int key);\n      T getOrDefault(int key, T defaultValue);\n      @OperatorSet void set(int key, T value);\n      @OperatorIn bool has(int key);\n      void remove(int key);\n      List<int> keys();\n      List<T> values();\n      IntMap<T> clone();\n    }\n  }\n\n#endif\n\n// This is used by the compiler to implement map literals:\n//\n//   { 1: false, 2: true } => IntMap.literal<bool>([1, 2], [false, true])\n//\nin IntMap {\n  private static pure IntMap<X> literal<X>(List<int> keys, List<X> values) {\n    #if TARGET_RUBY\n    IntMap<X> map = `{}`;\n    #else\n    var map = IntMap<X>();\n    #endif\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedLibrary('os.sk', 'enum OperatingSystem {\n  ANDROID,\n  IOS,\n  LINUX,\n  OSX,\n  UNKNOWN,\n  WINDOWS,\n}\n\nin OperatingSystem {\n  static pure OperatingSystem current() {\n    #if CONFIG_ANDROID\n\n      return .ANDROID;\n\n    #elif CONFIG_IOS\n\n      return .IOS;\n\n    #elif CONFIG_LINUX\n\n      return .LINUX;\n\n    #elif CONFIG_OSX\n\n      return .OSX;\n\n    #elif CONFIG_WINDOWS\n\n      return .WINDOWS;\n\n    #elif CONFIG_NODE\n\n      string platform = `process.platform`;\n      return\n        // Presumably this also means iOS but there\'s no way to check\n        platform == "darwin" ? .OSX :\n\n        // Official documentation says this will never contain "win64"\n        platform == "win32" ? .WINDOWS :\n\n        // Presumably this also means Android but there\'s no way to check\n        platform == "linux" ? .LINUX :\n\n        // This may also be "freebsd" or "sunos"\n        .UNKNOWN;\n\n    #elif CONFIG_BROWSER\n\n      string platform = `navigator.platform`;\n      string userAgent = `navigator.userAgent`;\n      return\n        // OS X encodes the architecture into the platform\n        platform == "MacIntel" || platform == "MacPPC" ? .OSX :\n\n        // MSDN sources say Win64 is used, unlike node\n        platform == "Win32" || platform == "Win64" ? .WINDOWS :\n\n        // Assume the user is using Mobile Safari or Chrome and not some random\n        // browser with a strange platform (Opera apparently messes with this)\n        platform == "iPhone" || platform == "iPad" ? .IOS :\n\n        // Apparently most Android devices have a platform of "Linux" instead\n        // of "Android", so check the user agent instead. Also make sure to test\n        // for Android before Linux for this reason.\n        "Android" in userAgent ? .ANDROID :\n        "Linux" in platform ? .LINUX :\n\n        // The platform string has no specification and can be literally anything.\n        // Other examples: "BlackBerry", "Nintendo 3DS", "PlayStation 4", etc.\n        .UNKNOWN;\n\n    #else\n\n      return .UNKNOWN;\n\n    #endif\n  }\n}\n'), new CachedLibrary('terminal.sk', 'namespace terminal {\n  enum Color {\n    DEFAULT = 0,\n    BOLD = 1,\n    GRAY = 90,\n    RED = 91,\n    GREEN = 92,\n    YELLOW = 93,\n    BLUE = 94,\n    MAGENTA = 95,\n    CYAN = 96,\n  }\n\n  #if TARGET_JS && CONFIG_BROWSER\n\n    inline {\n      int width() { return 0; }\n      int height() { return 0; }\n      void setColor(Color color) {}\n      void flush() {}\n\n      void print(string text) {\n        `console`.log(text);\n      }\n\n      // Browser logs are so varied that buffering standard output doesn\'t make much sense\n      void write(string text) {\n        `console`.log(text);\n      }\n    }\n\n  #elif TARGET_JS && CONFIG_NODE\n\n    void setColor(Color color) {\n      if (`process`.stdout.isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        return `process`.stdout.columns;\n      }\n\n      int height() {\n        return `process`.stdout.rows;\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        write(text + "\\n");\n      }\n\n      void write(string text) {\n        `process`.stdout.write(text);\n      }\n    }\n\n  #elif TARGET_CPP && CONFIG_WINDOWS\n\n    `HANDLE` _handle = `INVALID_HANDLE_VALUE`;\n    `CONSOLE_SCREEN_BUFFER_INFO` _info;\n\n    @NeedsInclude("<windows.h>")\n    void _setup() {\n      if (_handle == `INVALID_HANDLE_VALUE`) {\n        _handle = `GetStdHandle(STD_OUTPUT_HANDLE)`;\n        `GetConsoleScreenBufferInfo`(_handle, &_info);\n      }\n    }\n\n    int width() {\n      _setup();\n      return _info.dwSize.X;\n    }\n\n    int height() {\n      _setup();\n      return _info.dwSize.Y;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      int value = _info.wAttributes;\n      switch (color) {\n        case .BOLD { value |= `FOREGROUND_INTENSITY`; }\n        case .GRAY { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE`; }\n        case .RED { value = `FOREGROUND_RED | FOREGROUND_INTENSITY`; }\n        case .GREEN { value = `FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .YELLOW { value = `FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .BLUE { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .MAGENTA { value = `FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .CYAN { value = `FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n      }\n      `SetConsoleTextAttribute`(_handle, value);\n    }\n\n    void flush() {\n    }\n\n    inline void print(string text) {\n      write(text + "\\n");\n    }\n\n    void write(string text) {\n      _setup();\n\n      // Use WriteConsoleA() instead of std::cout for a huge performance boost\n      `WriteConsoleA`(_handle, `text`.c_str(), `text`.size(), null, null);\n    }\n\n  #elif TARGET_CPP && (CONFIG_OSX || CONFIG_LINUX)\n\n    int _width;\n    int _height;\n    bool _isTTY;\n    bool _isSetup;\n\n    @NeedsInclude("<sys/ioctl.h>")\n    @NeedsInclude("<unistd.h>")\n    void _setup() {\n      if (!_isSetup) {\n        `winsize` size;\n        if (!`ioctl`(2, `TIOCGWINSZ`, &size)) {\n          _width = size.ws_col;\n          _height = size.ws_row;\n        }\n        _isTTY = `isatty(STDOUT_FILENO)`;\n        _isSetup = true;\n      }\n    }\n\n    int width() {\n      _setup();\n      return _width;\n    }\n\n    int height() {\n      _setup();\n      return _height;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      if (_isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    @NeedsInclude("<iostream>")\n    inline {\n      void flush() {\n        `std`::cout.flush();\n      }\n\n      void print(string text) {\n        `std`::cout << text << `std`::endl;\n      }\n\n      void write(string text) {\n        `std`::cout << text;\n      }\n    }\n\n  #elif TARGET_RUBY\n\n    void setColor(Color color) {\n      if (`STDOUT`.isatty) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        `require`("io/console");\n        return `STDIN`.winsize[1];\n      }\n\n      int height() {\n        `require`("io/console");\n        return `STDIN`.winsize[0];\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        `puts`(text);\n      }\n\n      void write(string text) {\n        `print`(text);\n      }\n    }\n\n  #else\n\n    int width() { return 0; }\n    int height() { return 0; }\n    void setColor(Color color) {}\n    void flush() {}\n    void print(string text) {}\n    void write(string text) {}\n\n  #endif\n}\n'), new CachedLibrary('unicode.sk', 'namespace unicode {\n  enum Encoding {\n    UTF8,\n    UTF16,\n    UTF32,\n  }\n\n  const Encoding STRING_ENCODING =\n    TARGET_CPP ? .UTF8 :\n    TARGET_JS ? .UTF16 :\n    .UTF32;\n\n  class StringIterator {\n    static final var INSTANCE = StringIterator();\n\n    var value = "";\n    var index = 0;\n    var stop = 0;\n\n    StringIterator reset(string text, int start) {\n      value = text;\n      index = start;\n      stop = text.size();\n      return this;\n    }\n\n    int countCodePointsUntil(int stop) {\n      var count = 0;\n      while (index < stop && nextCodePoint() >= 0) {\n        count++;\n      }\n      return count;\n    }\n\n    int nextCodePoint() {\n      if (STRING_ENCODING == .UTF8) {\n        if (index >= stop) return -1;\n        var a = value.codeUnitAt(index);\n        index++;\n        if (a < 0xC0) return a;\n        if (index >= stop) return -1;\n        var b = value.codeUnitAt(index);\n        index++;\n        if (a < 0xE0) return ((a & 0x1F) << 6) | (b & 0x3F);\n        if (index >= stop) return -1;\n        var c = value.codeUnitAt(index);\n        index++;\n        if (a < 0xF0) return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F);\n        if (index >= stop) return -1;\n        var d = value.codeUnitAt(index);\n        index++;\n        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F);\n      }\n\n      else if (STRING_ENCODING == .UTF16) {\n        if (index >= stop) return -1;\n        var a = value.codeUnitAt(index);\n        index++;\n        if (a < 0xD800) return a;\n        if (index >= stop) return -1;\n        var b = value.codeUnitAt(index);\n        index++;\n        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00);\n      }\n\n      else {\n        if (index >= stop) return -1;\n        var c = value.codeUnitAt(index);\n        index++;\n        return c;\n      }\n    }\n  }\n}\n\nin string {\n  using unicode;\n\n  List<int> codePoints() {\n    List<int> codePoints = [];\n    StringIterator.INSTANCE.reset(this, 0);\n    while (true) {\n      var codePoint = StringIterator.INSTANCE.nextCodePoint();\n      if (codePoint < 0) {\n        break;\n      }\n      codePoints.push(codePoint);\n    }\n    return codePoints;\n  }\n\n  static string fromCodePoints(List<int> codePoints) {\n    var result = "";\n\n    if (STRING_ENCODING == .UTF8) {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        var codePoint = codePoints[i];\n        if (codePoint < 0x80) {\n          result += fromCodeUnit(codePoint);\n        } else {\n          if (codePoint < 0x800) {\n            result += fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0);\n          } else {\n            if (codePoint < 0x10000) {\n              result += fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0);\n            } else {\n              result += fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0);\n              result += fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80);\n            }\n            result += fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80);\n          }\n          result += fromCodeUnit((codePoint & 0x3F) | 0x80);\n        }\n      }\n    }\n\n    else if (STRING_ENCODING == .UTF16) {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        var codePoint = codePoints[i];\n        if (codePoint < 0x10000) {\n          result += fromCodeUnit(codePoint);\n        } else {\n          codePoint -= 0x10000;\n          result += fromCodeUnit((codePoint >> 10) + 0xD800);\n          result += fromCodeUnit((codePoint & ((1 << 10) - 1)) + 0xDC00);\n        }\n      }\n    }\n\n    else {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        result += fromCodeUnit(codePoints[i]);\n      }\n    }\n\n    return result;\n  }\n}\n')];
+  Compiler.cachedLibraries = [new CachedLibrary('defines.sk', '// The "--release" flag automatically overrides BUILD_RELEASE with true\n#define BUILD_DEBUG   !BUILD_RELEASE\n#define BUILD_RELEASE false\n\n// These will be overridden by the compiler with the current language target\n#define TARGET_CPP   false\n#define TARGET_JS    false\n#define TARGET_RUBY  false\n#define TARGET_NONE  !TARGET_CPP && !TARGET_JS && !TARGET_RUBY\n\n// The "--config" flag can be used to override these (example: "--config=node").\n// Using "--target=js" defaults to "--config=browser" and using "--target=cpp"\n// defaults to the config for the current operating system.\n#define CONFIG_IOS     false\n#define CONFIG_OSX     false\n#define CONFIG_LINUX   false\n#define CONFIG_ANDROID false\n#define CONFIG_WINDOWS false\n#define CONFIG_NODE    false\n#define CONFIG_BROWSER false\n#define CONFIG_UNKNOWN !CONFIG_IOS && !CONFIG_OSX && !CONFIG_LINUX && !CONFIG_ANDROID && !CONFIG_WINDOWS && !CONFIG_NODE && !CONFIG_BROWSER\n'), new CachedLibrary('primitives.sk', 'import class void {}\nalias dynamic = `dynamic`;\n\n#if TARGET_JS\n\n  import class int { pure string toString(); }\n  import class bool { pure string toString(); }\n  import class float { pure string toString(); }\n  import class double { pure string toString(); }\n\n  import class string {\n    pure {\n      string slice(int start, int end);\n      List<string> split(string separator);\n      int indexOf(string value);\n      int lastIndexOf(string value);\n      string toLowerCase();\n      string toUpperCase();\n    }\n  }\n\n  in string {\n    inline pure {\n      int size() { return this.`length`; }\n      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }\n      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      string join(List<string> values) { return values.`join`(this); }\n      @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }\n      static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }\n    }\n  }\n\n  class StringBuilder {\n    private var _buffer = "";\n\n    inline {\n      void append(string text) { _buffer += text; }\n      string toString() { return _buffer; }\n    }\n  }\n\n#elif TARGET_CPP\n\n  import class int {}\n  import class bool {}\n  import class float {}\n  import class double {}\n\n  @NeedsInclude("<string>")\n  @EmitAs("std::string")\n  import class string {}\n\n  in int {\n    inline pure string toString() { return `std`::to_string(this); }\n  }\n\n  in bool {\n    inline pure string toString() { return this ? "true" : "false"; }\n  }\n\n  in float {\n    inline pure string toString() { return double._format_(this); }\n  }\n\n  in double {\n    pure {\n      inline string toString() { return _format_(this); }\n\n      #if !CONFIG_WINDOWS\n\n        // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0\n        @NeedsInclude("<cstdio>")\n        static string _format_(double value) {\n          string buffer;\n          `buffer.resize(64)`;\n          `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;\n            if (`std::stod(&buffer[0]) != value`) {\n              `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;\n            }\n          }\n          return `buffer.c_str()`;\n        }\n\n      #else\n\n        // MSVC won\'t allow std::sprintf() even though it\'s in the C++11 standard\n        @NeedsInclude("<stdio.h>")\n        static string _format_(double value) {\n          string buffer;\n          `buffer.resize(64)`;\n          `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;\n            if (`std::stod(&buffer[0]) != value`) {\n              `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;\n            }\n          }\n          return `buffer.c_str()`;\n        }\n\n      #endif\n    }\n  }\n\n  in string {\n    pure {\n      inline {\n        int size() { return (int)this.`size`(); }\n        string slice(int start, int end) { return this.`substr`(start, end - start); }\n        string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }\n        int indexOf(string value) { return (int)this.`find`(value); }\n        int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }\n        int lastIndexOf(string value) { return (int)this.`rfind`(value); }\n        int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }\n        @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values\n        static string fromCodeUnit(int value) { return ``string``(1, value); }\n      }\n\n      @NeedsInclude("<algorithm>")\n      @NeedsInclude("<ctype.h>") {\n        string toLowerCase() {\n          var clone = this;\n          `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;\n          return clone;\n        }\n\n        string toUpperCase() {\n          var clone = this;\n          `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;\n          return clone;\n        }\n      }\n\n      string join(List<string> values) {\n        var result = "";\n        for (var i = 0; i < values.size(); i++) {\n          if (i > 0) result += this;\n          result += values[i];\n        }\n        return result;\n      }\n\n      List<string> split(string separator) {\n        List<string> values = [];\n        var start = 0;\n        while (true) {\n          var end = indexOfFrom(separator, start);\n          if (end == -1) break;\n          values.push(slice(start, end));\n          start = end + separator.size();\n        }\n        values.push(slice(start, size()));\n        return values;\n      }\n    }\n  }\n\n  class StringBuilder {\n    private var _buffer = "";\n\n    inline {\n      void append(string text) { _buffer += text; }\n      string toString() { return _buffer; }\n    }\n  }\n\n#elif TARGET_RUBY\n\n  import class int { @EmitAs("to_s") pure string toString(); }\n  import class bool { @EmitAs("to_s") pure string toString(); }\n  import class float { @EmitAs("to_s") pure string toString(); }\n  import class double { @EmitAs("to_s") pure string toString(); }\n\n  import class string {\n    pure {\n      int size();\n      List<string> split(string separator);\n      @EmitAs("upcase") string toLowerCase();\n      @EmitAs("downcase") string toUpperCase();\n    }\n  }\n\n  in string {\n    pure inline {\n      string join(List<string> values) { return values.`join`(this); }\n      string slice(int start, int end) { return this.`slice`(start, end - start); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      @OperatorGet int codeUnitAt(int index) { return sliceCodeUnit(index).`ord`; }\n      static string fromCodeUnit(int value) { return value.`chr`("UTF-8"); }\n\n      int indexOf(string value) {\n        var i = this.`index`(value);\n        return i != null ? i : -1;\n      }\n\n      int indexOfFrom(string value, int fromIndex) {\n        var i = this.`index`(value, fromIndex);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOf(string value) {\n        var i = this.`rindex`(value);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOfFrom(string value, int fromIndex) {\n        var i = this.`rindex`(value, fromIndex);\n        return i != null ? i : -1;\n      }\n    }\n  }\n\n  class StringBuilder {\n    private var _buffer = "";\n\n    inline {\n      void append(string text) { `this`._buffer << text; }\n      string toString() { return _buffer.`dup`; }\n    }\n  }\n\n#else\n\n  import class int { pure string toString(); }\n  import class bool { pure string toString(); }\n  import class float { pure string toString(); }\n  import class double { pure string toString(); }\n\n  import class string {\n    pure {\n      int size();\n      List<string> split(string separator);\n      string slice(int start, int end);\n      string sliceCodeUnit(int index);\n      int indexOf(string value);\n      int indexOfFrom(string value, int fromIndex);\n      int lastIndexOf(string value);\n      int lastIndexOfFrom(string value, int fromIndex);\n      string toLowerCase();\n      string toUpperCase();\n      string join(List<string> values);\n      @OperatorGet int codeUnitAt(int index);\n      static string fromCodeUnit(int value);\n    }\n  }\n\n  import class StringBuilder {\n    new();\n    void append(string text);\n    string toString();\n  }\n\n#endif\n\nin string {\n  pure {\n    @OperatorIn\n    inline bool contains(string value) {\n      return indexOf(value) != -1;\n    }\n\n    inline string toString() {\n      return this;\n    }\n\n    bool startsWith(string prefix) {\n      return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n    }\n\n    bool endsWith(string suffix) {\n      return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n    }\n\n    string repeat(int count) {\n      var result = "";\n      for (var i = 0; i < count; i++) result += this;\n      return result;\n    }\n\n    string replaceAll(string before, string after) {\n      var result = "";\n      var start = 0;\n      while (true) {\n        var end = indexOfFrom(before, start);\n        if (end == -1) break;\n        result += slice(start, end) + after;\n        start = end + before.size();\n      }\n      return result + slice(start, size());\n    }\n  }\n}\n\n// Boxes are useful for representing nullable primitive types\nclass Box<T> {\n  T value;\n}\n'), new CachedLibrary('math.sk', '#if TARGET_JS\n\n  namespace math {\n    inline pure {\n      double abs(double x) { return `Math`.abs(x); }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return `Math`.pow(x, y); }\n      double floor(double x) { return `Math`.floor(x); }\n      double round(double x) { return `Math`.round(x); }\n      double ceil(double x) { return `Math`.ceil(x); }\n      double min(double x, double y) { return `Math`.min(x, y); }\n      double max(double x, double y) { return `Math`.max(x, y); }\n      bool isNaN(double x) { return `isNaN`(x); }\n      bool isFinite(double x) { return `isFinite`(x); }\n    }\n\n    inline double random() { return `Math`.random(); }\n  }\n\n#elif TARGET_CPP\n\n  namespace math {\n    inline pure @NeedsInclude("<cmath>") {\n      double abs(double x) { return `std`::abs(x); }\n      double sin(double x) { return `std`::sin(x); }\n      double cos(double x) { return `std`::cos(x); }\n      double tan(double x) { return `std`::tan(x); }\n      double asin(double x) { return `std`::asin(x); }\n      double acos(double x) { return `std`::acos(x); }\n      double atan(double x) { return `std`::atan(x); }\n      double atan2(double y, double x) { return `std`::atan2(y, x); }\n      double sqrt(double x) { return `std`::sqrt(x); }\n      double exp(double x) { return `std`::exp(x); }\n      double log(double x) { return `std`::log(x); }\n      double pow(double x, double y) { return `std`::pow(x, y); }\n      double floor(double x) { return `std`::floor(x); }\n      double round(double x) { return `std`::round(x); }\n      double ceil(double x) { return `std`::ceil(x); }\n      double min(double x, double y) { return `std`::fmin(x, y); }\n      double max(double x, double y) { return `std`::fmax(x, y); }\n      bool isNaN(double x) { return `std`::isnan(x); }\n      bool isFinite(double x) { return `std`::isfinite(x); }\n    }\n\n    @NeedsInclude("<random>") {\n      `std::uniform_real_distribution<double>` _distribution_;\n      `(std::mt19937 *)` _generator_ = null;\n\n      double random() {\n        if (_generator_ == null) {\n          _generator_ = new `std`::mt19937(`std`::random_device()());\n        }\n        return _distribution_(*_generator_);\n      }\n    }\n  }\n\n#elif TARGET_RUBY\n\n  namespace math {\n    inline pure {\n      double abs(double x) { return x.`abs`; }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return exp(y * log(x)); } // TODO: Use "**" instead\n      double floor(double x) { return x.`floor`; }\n      double round(double x) { return x.`round`; }\n      double ceil(double x) { return x.`ceil`; }\n      double min(double x, double y) { return [x, y].`min`; }\n      double max(double x, double y) { return [x, y].`max`; }\n      bool isNaN(double x) { return x.__ruby_nan(); }\n      bool isFinite(double x) { return x.__ruby_finite(); }\n      double random() { return `Random`.rand; }\n    }\n  }\n\n  in double {\n    import pure {\n      @EmitAs("nan?") bool __ruby_nan();\n      @EmitAs("finite?") bool __ruby_finite();\n    }\n  }\n\n#else\n\n  import namespace math {\n    pure {\n      double abs(double x);\n      double sin(double x);\n      double cos(double x);\n      double tan(double x);\n      double asin(double x);\n      double acos(double x);\n      double atan(double x);\n      double atan2(double y, double x);\n      double sqrt(double x);\n      double exp(double x);\n      double log(double x);\n      double pow(double x, double y);\n      double floor(double x);\n      double round(double x);\n      double ceil(double x);\n      double min(double x, double y);\n      double max(double x, double y);\n      double random();\n      bool isNaN(double x);\n      bool isFinite(double x);\n    }\n  }\n\n#endif\n\nin math {\n  double clamp(double x, double a, double b) { return max(a, min(x, b)); }\n  int iclamp(int x, int a, int b) { return imax(a, imin(x, b)); }\n  int imax(int a, int b) { return a > b ? a : b; }\n  int imin(int a, int b) { return a < b ? a : b; }\n\n  const {\n    var SQRT2 = 1.414213562373095;\n    var PI = 3.141592653589793;\n    var TWOPI = 2 * PI;\n    var E = 2.718281828459045;\n    var INFINITY = 1 / 0.0;\n    var NAN = 0 / 0.0;\n  }\n}\n'), new CachedLibrary('list.sk', '#if TARGET_RUBY\nexport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n#else\ninterface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n#endif\n\n#if TARGET_JS\n\n  void bindCompare<T>(Comparison<T> comparison) {\n    return comparison.compare.`bind`(comparison);\n  }\n\n  import class List<T> {\n    pure {\n      new();\n      void push(T value);\n      void unshift(T value);\n      List<T> slice(int start, int end);\n      int indexOf(T value);\n      int lastIndexOf(T value);\n      T shift();\n      T pop();\n      void reverse();\n    }\n  }\n\n  in List {\n    pure {\n      inline {\n        int size() { return this.`length`; }\n        List<T> clone() { return this.`slice`(); }\n        T removeAt(int index) { return this.`splice`(index, 1)[0]; }\n        void removeRange(int start, int end) { this.`splice`(start, end - start); }\n        void insert(int index, T value) { this.`splice`(index, 0, value); }\n        @OperatorGet T get(int index) { return `this`[index]; }\n        @OperatorSet void set(int index, T value) { `this`[index] = value; }\n        @OperatorIn bool contains(T value) { return indexOf(value) != -1; }\n      }\n\n      T last() { return this[size() - 1]; }\n      void clear() { this.`length` = 0; }\n      void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }\n    }\n\n    inline void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }\n  }\n\n#elif TARGET_CPP\n\n  bool bindCompare<T>(Comparison<T> comparison, T left, T right) {\n    return comparison.compare(left, right) < 0;\n  }\n\n  @NeedsInclude("<vector>")\n  class List<T> {\n    pure {\n      new() {}\n\n      int size() {\n        return (int)_data.size();\n      }\n\n      void push(T value) {\n        _data.push_back(value);\n      }\n\n      void unshift(T value) {\n        insert(0, value);\n      }\n\n      List<T> slice(int start, int end) {\n        assert start >= 0 && start <= end && end <= size();\n        List<T> slice = [];\n        slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);\n        return slice;\n      }\n\n      T shift() {\n        T value = this[0];\n        removeAt(0);\n        return value;\n      }\n\n      T pop() {\n        T value = this[size() - 1];\n        _data.pop_back();\n        return value;\n      }\n\n      T last() {\n        assert size() > 0;\n        return _data.back();\n      }\n\n      List<T> clone() {\n        List<T> clone = [];\n        clone._data = _data;\n        return clone;\n      }\n\n      T removeAt(int index) {\n        T value = this[index];\n        _data.erase(_data.begin() + index);\n        return value;\n      }\n\n      void removeRange(int start, int end) {\n        assert 0 <= start && start <= end && end <= size();\n        _data.erase(_data.begin() + start, _data.begin() + end);\n      }\n\n      void insert(int index, T value) {\n        assert index >= 0 && index <= size();\n        _data.insert(_data.begin() + index, value);\n      }\n\n      @OperatorGet\n      T get(int index) {\n        assert index >= 0 && index < size();\n        return _data[index];\n      }\n\n      @OperatorSet\n      void set(int index, T value) {\n        assert index >= 0 && index < size();\n        _data[index] = value;\n      }\n\n      @OperatorIn\n      bool contains(T value) {\n        return indexOf(value) != -1;\n      }\n\n      void clear() {\n        _data.clear();\n      }\n\n      @NeedsInclude("<algorithm>") {\n        int indexOf(T value) {\n          int index = (int)(`std`::find(_data.begin(), _data.end(), value) - _data.begin());\n          return index == size() ? -1 : index;\n        }\n\n        int lastIndexOf(T value) {\n          int index = (int)(`std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin());\n          return size() - index - 1;\n        }\n\n        void swap(int a, int b) {\n          assert a >= 0 && a < size();\n          assert b >= 0 && b < size();\n          `std`::swap(_data[a], _data[b]);\n        }\n\n        void reverse() {\n          `std`::reverse(_data.begin(), _data.end());\n        }\n      }\n\n      // Normally this would be in a constructor but clang has a bug that\n      // sometimes emits incorrect code for a constructor taking an empty\n      // initializer list. See http://llvm.org/bugs/show_bug.cgi?id=22256\n      // for details.\n      @NeedsInclude("<initializer_list>")\n      private List<T> literal(`std::initializer_list<T>` list) {\n        _data.insert(_data.end(), list.begin(), list.end());\n        return this;\n      }\n    }\n\n    @NeedsInclude("<functional>")\n    @NeedsInclude("<algorithm>")\n    inline void sort(Comparison<T> comparison) {\n      `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));\n    }\n\n    private `std::vector<T>` _data;\n  }\n\n#elif TARGET_RUBY\n\n  import class List<T> {\n    pure {\n      new();\n      int size();\n      void push(T value);\n      void unshift(T value);\n      T shift();\n      T pop();\n      T last();\n      @EmitAs("reverse!") void reverse();\n      List<T> clone();\n      @EmitAs("delete_at") T removeAt(int index);\n      void insert(int index, T value);\n      @EmitAs("include?") @OperatorIn bool contains(T value);\n      void clear();\n      private @EmitAs("slice!") void destructiveSlice(int start, int count);\n    }\n  }\n\n  in List {\n    pure {\n      inline @OperatorGet T get(int index) { return `this`[index]; }\n      inline @OperatorSet void set(int index, T value) { `this`[index] = value; }\n\n      int indexOf(T value) {\n        var i = this.`index`(value);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOf(T value) {\n        var i = this.`rindex`(value);\n        return i != null ? i : -1;\n      }\n\n      List<T> slice(int start, int end) {\n        return `this`.slice(start, end - start);\n      }\n\n      void removeRange(int start, int end) {\n        destructiveSlice(start, end - start);\n      }\n\n      void sort(Comparison<T> comparison) {\n        `sort_helper`(this, comparison);\n      }\n\n      void swap(int a, int b) {\n        assert a >= 0 && a < size();\n        assert b >= 0 && b < size();\n        var temp = this[a];\n        this[a] = this[b];\n        this[b] = temp;\n      }\n    }\n  }\n\n#else\n\n  import class List<T> {\n    pure {\n      new();\n      int size();\n      void push(T value);\n      void unshift(T value);\n      List<T> slice(int start, int end);\n      int indexOf(T value);\n      int lastIndexOf(T value);\n      T shift();\n      T pop();\n      T last();\n      void reverse();\n      List<T> clone();\n      T removeAt(int index);\n      void removeRange(int start, int end);\n      void insert(int index, T value);\n      @OperatorGet T get(int index);\n      @OperatorSet void set(int index, T value);\n      @OperatorIn bool contains(T value);\n      void clear();\n      void swap(int a, int b);\n    }\n    void sort(Comparison<T> comparison);\n  }\n\n#endif\n\nin List {\n  bool pushOnce(T value) {\n    if (!(value in this)) {\n      push(value);\n      return true;\n    }\n    return false;\n  }\n\n  bool removeOnce(T value) {\n    var index = indexOf(value);\n    if (index != -1) {\n      removeAt(index);\n      return true;\n    }\n    return false;\n  }\n}\n'), new CachedLibrary('stringmap.sk', '#if TARGET_JS\n\n  class StringMap<T> {\n    private var _table = `Object`.create(null);\n\n    pure {\n      inline {\n        @OperatorGet T get(string key) { return _table[key]; }\n        @OperatorSet void set(string key, T value) { _table[key] = value; }\n        @OperatorIn bool has(string key) { return key in _table; }\n        void remove(string key) { delete _table[key]; }\n        List<string> keys() { return `Object`.keys(_table); }\n      }\n\n      T getOrDefault(string key, T defaultValue) {\n        return key in this ? this[key] : defaultValue;\n      }\n\n      List<T> values() {\n        List<T> values = [];\n        for (string key in _table) values.push(this[key]);\n        return values;\n      }\n\n      StringMap<T> clone() {\n        var clone = StringMap<T>();\n        for (string key in _table) clone[key] = this[key];\n        return clone;\n      }\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class StringMap<T> {\n    pure {\n      new() {}\n      @OperatorGet T get(string key) { return _table[key]; }\n      T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n      @OperatorSet void set(string key, T value) { _table[key] = value; }\n      @OperatorIn bool has(string key) { return _table.count(key) > 0; }\n      void remove(string key) { _table.erase(key); }\n      List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n      StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n    }\n\n    private `std::unordered_map<`string`, T>` _table;\n  }\n\n#elif TARGET_RUBY\n\n  import class StringMap<T> {\n    pure {\n      new();\n      @EmitAs("has_key?") @OperatorIn bool has(string key);\n      @EmitAs("delete") bool remove(string key);\n      List<string> keys();\n      List<T> values();\n      StringMap<T> clone();\n    }\n  }\n\n  in StringMap {\n    pure {\n      inline @OperatorGet T get(string key) { return `this`[key]; }\n      inline @OperatorSet void set(string key, T value) { `this`[key] = value; }\n      T getOrDefault(string key, T defaultValue) { return key in this ? this[key] : defaultValue; }\n    }\n  }\n\n#else\n\n  import class StringMap<T> {\n    pure {\n      new();\n      @OperatorGet T get(string key);\n      T getOrDefault(string key, T defaultValue);\n      @OperatorSet void set(string key, T value);\n      @OperatorIn bool has(string key);\n      void remove(string key);\n      List<string> keys();\n      List<T> values();\n      StringMap<T> clone();\n    }\n  }\n\n#endif\n\n// This is used by the compiler to implement map literals:\n//\n//   { "a": false, "b": true } => StringMap.literal<bool>(["a", "b"], [false, true])\n//\nin StringMap {\n  private static pure StringMap<X> literal<X>(List<string> keys, List<X> values) {\n    #if TARGET_RUBY\n    StringMap<X> map = `{}`;\n    #else\n    var map = StringMap<X>();\n    #endif\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedLibrary('intmap.sk', '#if TARGET_JS\n\n  class IntMap<T> {\n    private var _table = `Object`.create(null);\n\n    pure {\n      inline {\n        @OperatorGet T get(int key) { return _table[key]; }\n        @OperatorSet void set(int key, T value) { _table[key] = value; }\n        @OperatorIn bool has(int key) { return key in _table; }\n        void remove(int key) { delete _table[key]; }\n      }\n\n      T getOrDefault(int key, T defaultValue) {\n        return key in this ? this[key] : defaultValue;\n      }\n\n      List<int> keys() {\n        List<int> keys = [];\n        for (double key in _table) keys.push((int)key);\n        return keys;\n      }\n\n      List<T> values() {\n        List<T> values = [];\n        for (int key in _table) values.push(this[key]);\n        return values;\n      }\n\n      IntMap<T> clone() {\n        var clone = IntMap<T>();\n        for (int key in _table) clone[key] = this[key];\n        return clone;\n      }\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class IntMap<T> {\n    pure {\n      new() {}\n      @OperatorGet T get(int key) { return _table[key]; }\n      T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n      @OperatorSet void set(int key, T value) { _table[key] = value; }\n      @OperatorIn bool has(int key) { return _table.count(key) > 0; }\n      void remove(int key) { _table.erase(key); }\n      List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n      IntMap<T> clone() { var clone = IntMap<T>(); clone._table = _table; return clone; }\n    }\n\n    private `std::unordered_map<`int`, T>` _table;\n  }\n\n#elif TARGET_RUBY\n\n  import class IntMap<T> {\n    pure {\n      new();\n      @EmitAs("has_key?") @OperatorIn bool has(int key);\n      @EmitAs("delete") bool remove(int key);\n      List<int> keys();\n      List<T> values();\n      IntMap<T> clone();\n    }\n  }\n\n  in IntMap {\n    pure {\n      inline @OperatorGet T get(int key) { return `this`[key]; }\n      inline @OperatorSet void set(int key, T value) { `this`[key] = value; }\n      T getOrDefault(int key, T defaultValue) { return key in this ? this[key] : defaultValue; }\n    }\n  }\n\n#else\n\n  import class IntMap<T> {\n    pure {\n      new();\n      @OperatorGet T get(int key);\n      T getOrDefault(int key, T defaultValue);\n      @OperatorSet void set(int key, T value);\n      @OperatorIn bool has(int key);\n      void remove(int key);\n      List<int> keys();\n      List<T> values();\n      IntMap<T> clone();\n    }\n  }\n\n#endif\n\n// This is used by the compiler to implement map literals:\n//\n//   { 1: false, 2: true } => IntMap.literal<bool>([1, 2], [false, true])\n//\nin IntMap {\n  private static pure IntMap<X> literal<X>(List<int> keys, List<X> values) {\n    #if TARGET_RUBY\n    IntMap<X> map = `{}`;\n    #else\n    var map = IntMap<X>();\n    #endif\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedLibrary('os.sk', 'enum OperatingSystem {\n  ANDROID,\n  IOS,\n  LINUX,\n  OSX,\n  UNKNOWN,\n  WINDOWS,\n}\n\nin OperatingSystem {\n  static pure OperatingSystem current() {\n    #if CONFIG_ANDROID\n\n      return .ANDROID;\n\n    #elif CONFIG_IOS\n\n      return .IOS;\n\n    #elif CONFIG_LINUX\n\n      return .LINUX;\n\n    #elif CONFIG_OSX\n\n      return .OSX;\n\n    #elif CONFIG_WINDOWS\n\n      return .WINDOWS;\n\n    #elif CONFIG_NODE\n\n      string platform = `process.platform`;\n      return\n        // Presumably this also means iOS but there\'s no way to check\n        platform == "darwin" ? .OSX :\n\n        // Official documentation says this will never contain "win64"\n        platform == "win32" ? .WINDOWS :\n\n        // Presumably this also means Android but there\'s no way to check\n        platform == "linux" ? .LINUX :\n\n        // This may also be "freebsd" or "sunos"\n        .UNKNOWN;\n\n    #elif CONFIG_BROWSER\n\n      string platform = `navigator.platform`;\n      string userAgent = `navigator.userAgent`;\n      return\n        // OS X encodes the architecture into the platform\n        platform == "MacIntel" || platform == "MacPPC" ? .OSX :\n\n        // MSDN sources say Win64 is used, unlike node\n        platform == "Win32" || platform == "Win64" ? .WINDOWS :\n\n        // Assume the user is using Mobile Safari or Chrome and not some random\n        // browser with a strange platform (Opera apparently messes with this)\n        platform == "iPhone" || platform == "iPad" ? .IOS :\n\n        // Apparently most Android devices have a platform of "Linux" instead\n        // of "Android", so check the user agent instead. Also make sure to test\n        // for Android before Linux for this reason.\n        "Android" in userAgent ? .ANDROID :\n        "Linux" in platform ? .LINUX :\n\n        // The platform string has no specification and can be literally anything.\n        // Other examples: "BlackBerry", "Nintendo 3DS", "PlayStation 4", etc.\n        .UNKNOWN;\n\n    #else\n\n      return .UNKNOWN;\n\n    #endif\n  }\n}\n'), new CachedLibrary('terminal.sk', 'namespace terminal {\n  enum Color {\n    DEFAULT = 0,\n    BOLD = 1,\n    GRAY = 90,\n    RED = 91,\n    GREEN = 92,\n    YELLOW = 93,\n    BLUE = 94,\n    MAGENTA = 95,\n    CYAN = 96,\n  }\n\n  #if TARGET_JS && CONFIG_BROWSER\n\n    inline {\n      int width() { return 0; }\n      int height() { return 0; }\n      void setColor(Color color) {}\n      void flush() {}\n\n      void print(string text) {\n        `console`.log(text);\n      }\n\n      // Browser logs are so varied that buffering standard output doesn\'t make much sense\n      void write(string text) {\n        `console`.log(text);\n      }\n    }\n\n  #elif TARGET_JS && CONFIG_NODE\n\n    void setColor(Color color) {\n      if (`process`.stdout.isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        return `process`.stdout.columns;\n      }\n\n      int height() {\n        return `process`.stdout.rows;\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        write(text + "\\n");\n      }\n\n      void write(string text) {\n        `process`.stdout.write(text);\n      }\n    }\n\n  #elif TARGET_CPP && CONFIG_WINDOWS\n\n    `HANDLE` _handle = `INVALID_HANDLE_VALUE`;\n    `CONSOLE_SCREEN_BUFFER_INFO` _info;\n\n    @NeedsInclude("<windows.h>")\n    void _setup() {\n      if (_handle == `INVALID_HANDLE_VALUE`) {\n        _handle = `GetStdHandle(STD_OUTPUT_HANDLE)`;\n        `GetConsoleScreenBufferInfo`(_handle, &_info);\n      }\n    }\n\n    int width() {\n      _setup();\n      return _info.dwSize.X;\n    }\n\n    int height() {\n      _setup();\n      return _info.dwSize.Y;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      int value = _info.wAttributes;\n      switch (color) {\n        case .BOLD { value |= `FOREGROUND_INTENSITY`; }\n        case .GRAY { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE`; }\n        case .RED { value = `FOREGROUND_RED | FOREGROUND_INTENSITY`; }\n        case .GREEN { value = `FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .YELLOW { value = `FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .BLUE { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .MAGENTA { value = `FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .CYAN { value = `FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n      }\n      `SetConsoleTextAttribute`(_handle, value);\n    }\n\n    void flush() {\n    }\n\n    inline void print(string text) {\n      write(text + "\\n");\n    }\n\n    void write(string text) {\n      _setup();\n\n      // Use WriteConsoleA() instead of std::cout for a huge performance boost\n      `WriteConsoleA`(_handle, `text`.c_str(), `text`.size(), null, null);\n    }\n\n  #elif TARGET_CPP && (CONFIG_OSX || CONFIG_LINUX)\n\n    int _width;\n    int _height;\n    bool _isTTY;\n    bool _isSetup;\n\n    @NeedsInclude("<sys/ioctl.h>")\n    @NeedsInclude("<unistd.h>")\n    void _setup() {\n      if (!_isSetup) {\n        `winsize` size;\n        if (!`ioctl`(2, `TIOCGWINSZ`, &size)) {\n          _width = size.ws_col;\n          _height = size.ws_row;\n        }\n        _isTTY = `isatty(STDOUT_FILENO)`;\n        _isSetup = true;\n      }\n    }\n\n    int width() {\n      _setup();\n      return _width;\n    }\n\n    int height() {\n      _setup();\n      return _height;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      if (_isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    @NeedsInclude("<iostream>")\n    inline {\n      void flush() {\n        `std`::cout.flush();\n      }\n\n      void print(string text) {\n        `std`::cout << text << `std`::endl;\n      }\n\n      void write(string text) {\n        `std`::cout << text;\n      }\n    }\n\n  #elif TARGET_RUBY\n\n    void setColor(Color color) {\n      if (`STDOUT`.isatty) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        `require`("io/console");\n        return `STDIN`.winsize[1];\n      }\n\n      int height() {\n        `require`("io/console");\n        return `STDIN`.winsize[0];\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        `puts`(text);\n      }\n\n      void write(string text) {\n        `print`(text);\n      }\n    }\n\n  #else\n\n    int width() { return 0; }\n    int height() { return 0; }\n    void setColor(Color color) {}\n    void flush() {}\n    void print(string text) {}\n    void write(string text) {}\n\n  #endif\n}\n'), new CachedLibrary('unicode.sk', 'namespace unicode {\n  enum Encoding {\n    UTF8,\n    UTF16,\n    UTF32,\n  }\n\n  const Encoding STRING_ENCODING =\n    TARGET_CPP ? .UTF8 :\n    TARGET_JS ? .UTF16 :\n    .UTF32;\n\n  class StringIterator {\n    static final var INSTANCE = StringIterator();\n\n    var value = "";\n    var index = 0;\n    var stop = 0;\n\n    StringIterator reset(string text, int start) {\n      value = text;\n      index = start;\n      stop = text.size();\n      return this;\n    }\n\n    int countCodePointsUntil(int stop) {\n      var count = 0;\n      while (index < stop && nextCodePoint() >= 0) {\n        count++;\n      }\n      return count;\n    }\n\n    int nextCodePoint() {\n      if (STRING_ENCODING == .UTF8) {\n        if (index >= stop) return -1;\n        var a = value.codeUnitAt(index);\n        index++;\n        if (a < 0xC0) return a;\n        if (index >= stop) return -1;\n        var b = value.codeUnitAt(index);\n        index++;\n        if (a < 0xE0) return ((a & 0x1F) << 6) | (b & 0x3F);\n        if (index >= stop) return -1;\n        var c = value.codeUnitAt(index);\n        index++;\n        if (a < 0xF0) return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F);\n        if (index >= stop) return -1;\n        var d = value.codeUnitAt(index);\n        index++;\n        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F);\n      }\n\n      else if (STRING_ENCODING == .UTF16) {\n        if (index >= stop) return -1;\n        var a = value.codeUnitAt(index);\n        index++;\n        if (a < 0xD800) return a;\n        if (index >= stop) return -1;\n        var b = value.codeUnitAt(index);\n        index++;\n        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00);\n      }\n\n      else {\n        if (index >= stop) return -1;\n        var c = value.codeUnitAt(index);\n        index++;\n        return c;\n      }\n    }\n  }\n}\n\nin string {\n  using unicode;\n\n  List<int> codePoints() {\n    List<int> codePoints = [];\n    StringIterator.INSTANCE.reset(this, 0);\n    while (true) {\n      var codePoint = StringIterator.INSTANCE.nextCodePoint();\n      if (codePoint < 0) {\n        break;\n      }\n      codePoints.push(codePoint);\n    }\n    return codePoints;\n  }\n\n  static string fromCodePoints(List<int> codePoints) {\n    var builder = StringBuilder();\n\n    if (STRING_ENCODING == .UTF8) {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        var codePoint = codePoints[i];\n        if (codePoint < 0x80) {\n          builder.append(fromCodeUnit(codePoint));\n        } else {\n          if (codePoint < 0x800) {\n            builder.append(fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0));\n          } else {\n            if (codePoint < 0x10000) {\n              builder.append(fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0));\n            } else {\n              builder.append(fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0));\n              builder.append(fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80));\n            }\n            builder.append(fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80));\n          }\n          builder.append(fromCodeUnit((codePoint & 0x3F) | 0x80));\n        }\n      }\n    }\n\n    else if (STRING_ENCODING == .UTF16) {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        var codePoint = codePoints[i];\n        if (codePoint < 0x10000) {\n          builder.append(fromCodeUnit(codePoint));\n        } else {\n          codePoint -= 0x10000;\n          builder.append(fromCodeUnit((codePoint >> 10) + 0xD800));\n          builder.append(fromCodeUnit((codePoint & ((1 << 10) - 1)) + 0xDC00));\n        }\n      }\n    }\n\n    else {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        builder.append(fromCodeUnit(codePoints[i]));\n      }\n    }\n\n    return builder.toString();\n  }\n}\n')];
   Range.EMPTY = new Range(null, 0, 0);
   var HEX = '0123456789ABCDEF';
   trace.GENERICS = false;

@@ -7,7 +7,7 @@ namespace joined {
     private Resolver resolver;
 
     override List<Source> emitProgram(Node program) {
-      var result = "";
+      var builder = StringBuilder();
 
       for (var i = 0; i < program.children.size(); i++) {
         var file = program.children[i];
@@ -30,13 +30,13 @@ namespace joined {
           }
         }
 
-        result += contents;
+        builder.append(contents);
         if (contents != "" && contents[contents.size() - 1] != '\n') {
-          result += "\n";
+          builder.append("\n");
         }
       }
 
-      return [Source(resolver.options.outputFile, result)];
+      return [Source(resolver.options.outputFile, builder.toString())];
     }
   }
 }

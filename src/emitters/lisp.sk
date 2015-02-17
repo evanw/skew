@@ -2,7 +2,8 @@ namespace lisp {
   string dump(Node node) {
     var visitor = DumpVisitor();
     visitor.visit(node);
-    return visitor.result;
+    visitor.builder.append("\n");
+    return visitor.builder.toString();
   }
 
   class Emitter : IEmitter {
@@ -11,11 +12,11 @@ namespace lisp {
     override List<Source> emitProgram(Node program) {
       List<Source> outputs = [];
       if (options.outputDirectory == "") {
-        outputs.push(Source(options.outputFile, dump(program) + "\n"));
+        outputs.push(Source(options.outputFile, dump(program)));
       } else {
         for (var i = 0; i < program.children.size(); i++) {
           var file = program.children[i];
-          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".lisp"), dump(file) + "\n"));
+          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".lisp"), dump(file)));
         }
       }
       return outputs;
@@ -23,33 +24,33 @@ namespace lisp {
   }
 
   class DumpVisitor {
-    var result = "";
+    var builder = StringBuilder();
     var indent = "";
 
     void visit(Node node) {
       if (node == null) {
-        result += "nil";
+        builder.append("nil");
         return;
       }
-      result += "(" + node.kind.prettyPrint();
+      builder.append("(" + node.kind.prettyPrint());
       if (node.content != null) {
         switch (node.content.type()) {
-          case .INT { result += " " + node.asInt(); }
-          case .BOOL { result += " " + node.asBool(); }
-          case .DOUBLE { result += " " + node.asDouble(); }
-          case .STRING { result += " " + quoteString(node.asString(), '"'); }
+          case .INT { builder.append(" " + node.asInt()); }
+          case .BOOL { builder.append(" " + node.asBool()); }
+          case .DOUBLE { builder.append(" " + node.asDouble()); }
+          case .STRING { builder.append(" " + quoteString(node.asString(), '"')); }
         }
       }
       if (node.hasChildren()) {
         var old = indent;
         indent += "  ";
         for (var i = 0; i < node.children.size(); i++) {
-          result += "\n" + indent;
+          builder.append("\n" + indent);
           visit(node.children[i]);
         }
         indent = old;
       }
-      result += ")";
+      builder.append(")");
     }
   }
 }

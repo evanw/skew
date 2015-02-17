@@ -31,6 +31,15 @@ alias dynamic = `dynamic`;
     }
   }
 
+  class StringBuilder {
+    private var _buffer = "";
+
+    inline {
+      void append(string text) { _buffer += text; }
+      string toString() { return _buffer; }
+    }
+  }
+
 #elif TARGET_CPP
 
   import class int {}
@@ -149,6 +158,15 @@ alias dynamic = `dynamic`;
     }
   }
 
+  class StringBuilder {
+    private var _buffer = "";
+
+    inline {
+      void append(string text) { _buffer += text; }
+      string toString() { return _buffer; }
+    }
+  }
+
 #elif TARGET_RUBY
 
   import class int { @EmitAs("to_s") pure string toString(); }
@@ -195,6 +213,15 @@ alias dynamic = `dynamic`;
     }
   }
 
+  class StringBuilder {
+    private var _buffer = "";
+
+    inline {
+      void append(string text) { `this`._buffer << text; }
+      string toString() { return _buffer.`dup`; }
+    }
+  }
+
 #else
 
   import class int { pure string toString(); }
@@ -218,6 +245,12 @@ alias dynamic = `dynamic`;
       @OperatorGet int codeUnitAt(int index);
       static string fromCodeUnit(int value);
     }
+  }
+
+  import class StringBuilder {
+    new();
+    void append(string text);
+    string toString();
   }
 
 #endif

@@ -39,8 +39,12 @@ class SourceMapGenerator {
       sourceContents.push(quoteString(source.contents, '"'));
     }
 
-    var result = "{\"version\":3,\"sources\":[" + ",".join(sourceNames) +
-      "],\"sourcesContent\":[" + ",".join(sourceContents) + "],\"names\":[],\"mappings\":\"";
+    var builder = StringBuilder();
+    builder.append("{\"version\":3,\"sources\":[");
+    builder.append(",".join(sourceNames));
+    builder.append("],\"sourcesContent\":[");
+    builder.append(",".join(sourceContents));
+    builder.append("],\"names\":[],\"mappings\":\"");
 
     // Sort the mappings in increasing order by generated location
     mappings.sort(SourceMappingComparison.INSTANCE);
@@ -62,33 +66,34 @@ class SourceMapGenerator {
             previousGeneratedLine != 0 || previousGeneratedColumn != 0)) {
           continue;
         }
-        result += ",";
+        builder.append(",");
       } else {
         previousGeneratedColumn = 0;
         while (previousGeneratedLine < generatedLine) {
-          result += ";";
+          builder.append(";");
           previousGeneratedLine++;
         }
       }
 
       // Record the generated column (the line is recorded using ';' above)
-      result += encodeVLQ(mapping.generatedColumn - previousGeneratedColumn);
+      builder.append(encodeVLQ(mapping.generatedColumn - previousGeneratedColumn));
       previousGeneratedColumn = mapping.generatedColumn;
 
       // Record the generated source
-      result += encodeVLQ(mapping.sourceIndex - previousSourceIndex);
+      builder.append(encodeVLQ(mapping.sourceIndex - previousSourceIndex));
       previousSourceIndex = mapping.sourceIndex;
 
       // Record the original line
-      result += encodeVLQ(mapping.originalLine - previousOriginalLine);
+      builder.append(encodeVLQ(mapping.originalLine - previousOriginalLine));
       previousOriginalLine = mapping.originalLine;
 
       // Record the original column
-      result += encodeVLQ(mapping.originalColumn - previousOriginalColumn);
+      builder.append(encodeVLQ(mapping.originalColumn - previousOriginalColumn));
       previousOriginalColumn = mapping.originalColumn;
     }
 
-    return result + "\"}\n";
+    builder.append("\"}\n");
+    return builder.toString();
   }
 
   // A single base 64 digit can contain 6 bits of data. For the base 64 variable

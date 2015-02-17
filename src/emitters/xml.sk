@@ -2,7 +2,8 @@ namespace xml {
   string dump(Node node) {
     var visitor = DumpVisitor();
     visitor.visit(node);
-    return visitor.result;
+    visitor.builder.append("\n");
+    return visitor.builder.toString();
   }
 
   class Emitter : IEmitter {
@@ -11,11 +12,11 @@ namespace xml {
     override List<Source> emitProgram(Node program) {
       List<Source> outputs = [];
       if (options.outputDirectory == "") {
-        outputs.push(Source(options.outputFile, dump(program) + "\n"));
+        outputs.push(Source(options.outputFile, dump(program)));
       } else {
         for (var i = 0; i < program.children.size(); i++) {
           var file = program.children[i];
-          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".xml"), dump(file) + "\n"));
+          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".xml"), dump(file)));
         }
       }
       return outputs;
@@ -23,36 +24,36 @@ namespace xml {
   }
 
   class DumpVisitor {
-    var result = "";
+    var builder = StringBuilder();
     var indent = "";
 
     void visit(Node node) {
       if (node == null) {
-        result += "<null/>";
+        builder.append("<null/>");
         return;
       }
-      result += "<" + node.kind.prettyPrint();
+      builder.append("<" + node.kind.prettyPrint());
       if (node.content != null) {
-        result += " content=";
+        builder.append(" content=");
         switch (node.content.type()) {
-          case .INT { result += simpleQuote(node.asInt().toString()); }
-          case .BOOL { result += simpleQuote(node.asBool().toString()); }
-          case .DOUBLE { result += simpleQuote(node.asDouble().toString()); }
-          case .STRING { result += quoteString(node.asString(), '"'); }
+          case .INT { builder.append(simpleQuote(node.asInt().toString())); }
+          case .BOOL { builder.append(simpleQuote(node.asBool().toString())); }
+          case .DOUBLE { builder.append(simpleQuote(node.asDouble().toString())); }
+          case .STRING { builder.append(quoteString(node.asString(), '"')); }
         }
       }
       if (node.hasChildren()) {
-        result += ">";
+        builder.append(">");
         var inner = indent;
         indent += "  ";
         for (var i = 0; i < node.children.size(); i++) {
-          result += "\n" + indent;
+          builder.append("\n" + indent);
           visit(node.children[i]);
         }
         indent = inner;
-        result += "\n" + indent + "</" + node.kind.prettyPrint() + ">";
+        builder.append("\n" + indent + "</" + node.kind.prettyPrint() + ">");
       } else {
-        result += "/>";
+        builder.append("/>");
       }
     }
   }
