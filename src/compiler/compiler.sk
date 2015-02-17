@@ -76,6 +76,7 @@ class CompilerOptions {
   var sourceMap = false;
   var removeAsserts = false;
   var foldAllConstants = false;
+  var includeLibraries = false;
   var inlineAllFunctions = false;
   var globalizeAllFunctions = false;
   var log = Log();

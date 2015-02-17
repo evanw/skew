@@ -157,4 +157,16 @@ in Node {
   bool isNumberLessThanZero() {
     return kind == .INT && asInt() < 0 || kind.isReal() && asDouble() < 0;
   }
+
+  void removeLibraryFiles() {
+    assert kind == .PROGRAM;
+    for (var i = 0; i < children.size(); ) {
+      var file = children[i];
+      if (children[i].isLibraryFile()) {
+        removeChildAtIndex(i);
+      } else {
+        i++;
+      }
+    }
+  }
 }

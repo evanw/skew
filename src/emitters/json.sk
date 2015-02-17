@@ -11,6 +11,9 @@ namespace json {
 
     override List<Source> emitProgram(Node program) {
       List<Source> outputs = [];
+      if (!options.includeLibraries) {
+        program.removeLibraryFiles();
+      }
       if (options.outputDirectory == "") {
         outputs.push(Source(options.outputFile, dump(program)));
       } else {

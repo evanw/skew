@@ -14,6 +14,7 @@ enum Option {
   GC,
   GLOBALIZE,
   HELP,
+  INCLUDE_LIBRARIES,
   INLINE,
   MANGLE,
   MINIFY,
@@ -121,6 +122,7 @@ namespace frontend {
     parser.define(.BOOL, .VERBOSE, "--verbose", "Prints out information about the compilation.");
     parser.define(.STRING, .GC, "--gc", "Sets the garbage collection strategy when targeting C++. Valid strategies are " + joinKeys(VALID_GC_STRATEGIES.keys()) + ". Defaults to \"none\".");
     parser.define(.BOOL, .SOURCE_MAP, "--source-map", "Generates a source map when targeting JavaScript. The source map is saved with the \".map\" extension in the same directory as the main output file.");
+    parser.define(.BOOL, .INCLUDE_LIBRARIES, "--include-libraries", "Includes library source code in the output. Only applies to the \"joined\", \"json-ast\", \"lisp-ast\", and \"xml-ast\" targets.");
     parser.define(.BOOL, .INLINE, "--inline", "Uses heuristics to automatically inline simple functions.");
     parser.define(.BOOL, .GLOBALIZE, "--globalize", "Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.");
     parser.define(.BOOL, .REMOVE_ASSERTS, "--remove-asserts", "Removes all assert statements during compilation.");
@@ -151,6 +153,7 @@ namespace frontend {
     options.mangle = parser.boolForOption(.MANGLE, releaseFlag);
     options.removeAsserts = parser.boolForOption(.REMOVE_ASSERTS, releaseFlag);
     options.foldAllConstants = parser.boolForOption(.FOLD_CONSTANTS, releaseFlag);
+    options.includeLibraries = parser.boolForOption(.INCLUDE_LIBRARIES, false);
     options.inlineAllFunctions = parser.boolForOption(.INLINE, releaseFlag);
     options.globalizeAllFunctions = parser.boolForOption(.GLOBALIZE, releaseFlag);
     options.log = log;

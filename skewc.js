@@ -2241,6 +2241,22 @@
     return this.kind === NodeKind.INT && this.asInt() < 0 || in_NodeKind.isReal(this.kind) && this.asDouble() < 0;
   };
 
+  Node.prototype.removeLibraryFiles = function() {
+    if (this.kind !== NodeKind.PROGRAM) {
+      throw new Error('assert kind == .PROGRAM; (src/ast/logic.sk:162:5)');
+    }
+
+    for (var i = 0; i < this.children.length;) {
+      var file = this.children[i];
+
+      if (this.children[i].isLibraryFile()) {
+        this.removeChildAtIndex(i);
+      } else {
+        i = i + 1 | 0;
+      }
+    }
+  };
+
   Node.prototype.hasChildren = function() {
     return this.children !== null && this.children.length > 0;
   };
@@ -2831,6 +2847,7 @@
     this.sourceMap = false;
     this.removeAsserts = false;
     this.foldAllConstants = false;
+    this.includeLibraries = false;
     this.inlineAllFunctions = false;
     this.globalizeAllFunctions = false;
     this.log = new Log();
@@ -2859,7 +2876,7 @@
       if (this.file === null) {
         process.stdout.write('could not compile ' + this.name + ':\n' + compiler._options.log + '\n');
 
-        throw new Error('assert false; (src/compiler/compiler.sk:105:9)');
+        throw new Error('assert false; (src/compiler/compiler.sk:106:9)');
       }
 
       this.file.flags |= NodeFlags.IS_LIBRARY_FILE;
@@ -2945,11 +2962,11 @@
 
   Compiler.prototype.addCachedInput = function(node) {
     if (node.kind !== NodeKind.FILE) {
-      throw new Error('assert node.kind == .FILE; (src/compiler/compiler.sk:205:5)');
+      throw new Error('assert node.kind == .FILE; (src/compiler/compiler.sk:206:5)');
     }
 
     if (node.range.isEmpty()) {
-      throw new Error('assert !node.range.isEmpty(); (src/compiler/compiler.sk:206:5)');
+      throw new Error('assert !node.range.isEmpty(); (src/compiler/compiler.sk:207:5)');
     }
 
     this._inputs.push(node.range.source);
@@ -3032,7 +3049,7 @@
         break;
 
       default:
-        throw new Error('assert false; (src/compiler/compiler.sk:271:19)');
+        throw new Error('assert false; (src/compiler/compiler.sk:272:19)');
         break;
       }
 
@@ -5284,15 +5301,14 @@
   };
 
   joined.Emitter.prototype.emitProgram = function(program) {
+    if (!this.resolver.options.includeLibraries) {
+      program.removeLibraryFiles();
+    }
+
     var builder = new StringBuilder();
 
     for (var i = 0; i < program.children.length; i = i + 1 | 0) {
       var file = program.children[i];
-
-      if (file.isLibraryFile()) {
-        continue;
-      }
-
       var input = file.range.source;
       var contents = input.contents;
       var substitutions = this.resolver.sourceSubstitutions.getOrDefault(input.name, null);
@@ -5324,6 +5340,10 @@
 
   json.Emitter.prototype.emitProgram = function(program) {
     var outputs = [];
+
+    if (!this.options.includeLibraries) {
+      program.removeLibraryFiles();
+    }
 
     if (this.options.outputDirectory === '') {
       outputs.push(new Source(this.options.outputFile, json.dump(program)));
@@ -5405,6 +5425,10 @@
 
   lisp.Emitter.prototype.emitProgram = function(program) {
     var outputs = [];
+
+    if (!this.options.includeLibraries) {
+      program.removeLibraryFiles();
+    }
 
     if (this.options.outputDirectory === '') {
       outputs.push(new Source(this.options.outputFile, lisp.dump(program)));
@@ -6039,6 +6063,10 @@
 
   xml.Emitter.prototype.emitProgram = function(program) {
     var outputs = [];
+
+    if (!this.options.includeLibraries) {
+      program.removeLibraryFiles();
+    }
 
     if (this.options.outputDirectory === '') {
       outputs.push(new Source(this.options.outputFile, xml.dump(program)));
@@ -15885,16 +15913,17 @@
     GC: 4,
     GLOBALIZE: 5,
     HELP: 6,
-    INLINE: 7,
-    MANGLE: 8,
-    MINIFY: 9,
-    OUTPUT_DIRECTORY: 10,
-    OUTPUT_FILE: 11,
-    RELEASE: 12,
-    REMOVE_ASSERTS: 13,
-    SOURCE_MAP: 14,
-    TARGET: 15,
-    VERBOSE: 16
+    INCLUDE_LIBRARIES: 7,
+    INLINE: 8,
+    MANGLE: 9,
+    MINIFY: 10,
+    OUTPUT_DIRECTORY: 11,
+    OUTPUT_FILE: 12,
+    RELEASE: 13,
+    REMOVE_ASSERTS: 14,
+    SOURCE_MAP: 15,
+    TARGET: 16,
+    VERBOSE: 17
   };
 
   var frontend = {};
@@ -19014,6 +19043,7 @@
     parser.define(OptionType.BOOL, Option.VERBOSE, '--verbose', 'Prints out information about the compilation.');
     parser.define(OptionType.STRING, Option.GC, '--gc', 'Sets the garbage collection strategy when targeting C++. Valid strategies are ' + frontend.joinKeys(Object.keys(VALID_GC_STRATEGIES._table)) + '. Defaults to "none".');
     parser.define(OptionType.BOOL, Option.SOURCE_MAP, '--source-map', 'Generates a source map when targeting JavaScript. The source map is saved with the ".map" extension in the same directory as the main output file.');
+    parser.define(OptionType.BOOL, Option.INCLUDE_LIBRARIES, '--include-libraries', 'Includes library source code in the output. Only applies to the "joined", "json-ast", "lisp-ast", and "xml-ast" targets.');
     parser.define(OptionType.BOOL, Option.INLINE, '--inline', 'Uses heuristics to automatically inline simple functions.');
     parser.define(OptionType.BOOL, Option.GLOBALIZE, '--globalize', 'Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.');
     parser.define(OptionType.BOOL, Option.REMOVE_ASSERTS, '--remove-asserts', 'Removes all assert statements during compilation.');
@@ -19041,6 +19071,7 @@
     options.mangle = parser.boolForOption(Option.MANGLE, releaseFlag);
     options.removeAsserts = parser.boolForOption(Option.REMOVE_ASSERTS, releaseFlag);
     options.foldAllConstants = parser.boolForOption(Option.FOLD_CONSTANTS, releaseFlag);
+    options.includeLibraries = parser.boolForOption(Option.INCLUDE_LIBRARIES, false);
     options.inlineAllFunctions = parser.boolForOption(Option.INLINE, releaseFlag);
     options.globalizeAllFunctions = parser.boolForOption(Option.GLOBALIZE, releaseFlag);
     options.log = log;
