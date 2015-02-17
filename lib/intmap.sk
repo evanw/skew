@@ -7,7 +7,7 @@
       inline {
         @OperatorGet T get(int key) { return _table[key]; }
         @OperatorSet void set(int key, T value) { _table[key] = value; }
-        @OperatorIn bool has(int key) { return key in _table; }
+        @OperatorIn bool containsKey(int key) { return key in _table; }
         void remove(int key) { delete _table[key]; }
       }
 
@@ -44,7 +44,7 @@
       @OperatorGet T get(int key) { return _table[key]; }
       T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
       @OperatorSet void set(int key, T value) { _table[key] = value; }
-      @OperatorIn bool has(int key) { return _table.count(key) > 0; }
+      @OperatorIn bool containsKey(int key) { return _table.count(key) > 0; }
       void remove(int key) { _table.erase(key); }
       List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
       List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }
@@ -59,7 +59,7 @@
   import class IntMap<T> {
     pure {
       new();
-      @EmitAs("has_key?") @OperatorIn bool has(int key);
+      @EmitAs("has_key?") @OperatorIn bool containsKey(int key);
       @EmitAs("delete") bool remove(int key);
       List<int> keys();
       List<T> values();
@@ -83,7 +83,7 @@
       @OperatorGet T get(int key);
       T getOrDefault(int key, T defaultValue);
       @OperatorSet void set(int key, T value);
-      @OperatorIn bool has(int key);
+      @OperatorIn bool containsKey(int key);
       void remove(int key);
       List<int> keys();
       List<T> values();

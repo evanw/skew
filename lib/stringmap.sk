@@ -7,7 +7,7 @@
       inline {
         @OperatorGet T get(string key) { return _table[key]; }
         @OperatorSet void set(string key, T value) { _table[key] = value; }
-        @OperatorIn bool has(string key) { return key in _table; }
+        @OperatorIn bool containsKey(string key) { return key in _table; }
         void remove(string key) { delete _table[key]; }
         List<string> keys() { return `Object`.keys(_table); }
       }
@@ -39,7 +39,7 @@
       @OperatorGet T get(string key) { return _table[key]; }
       T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
       @OperatorSet void set(string key, T value) { _table[key] = value; }
-      @OperatorIn bool has(string key) { return _table.count(key) > 0; }
+      @OperatorIn bool containsKey(string key) { return _table.count(key) > 0; }
       void remove(string key) { _table.erase(key); }
       List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
       List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }
@@ -54,7 +54,7 @@
   import class StringMap<T> {
     pure {
       new();
-      @EmitAs("has_key?") @OperatorIn bool has(string key);
+      @EmitAs("has_key?") @OperatorIn bool containsKey(string key);
       @EmitAs("delete") bool remove(string key);
       List<string> keys();
       List<T> values();
@@ -78,7 +78,7 @@
       @OperatorGet T get(string key);
       T getOrDefault(string key, T defaultValue);
       @OperatorSet void set(string key, T value);
-      @OperatorIn bool has(string key);
+      @OperatorIn bool containsKey(string key);
       void remove(string key);
       List<string> keys();
       List<T> values();
