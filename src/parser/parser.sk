@@ -930,6 +930,15 @@ class CallParselet : InfixParselet {
   }
 }
 
+class NewParselet : PrefixParselet {
+  override Node parse(ParserContext context) {
+    var token = context.next();
+    var left = parseType(context);
+    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL);
+    return Node.createUnary(.NEW, Node.createCall(left, arguments).withRange(context.spanSince(left.range))).withRange(context.spanSince(token.range));
+  }
+}
+
 class IndexParselet : InfixParselet {
   override Node parse(ParserContext context, Node left) {
     context.next();
@@ -1034,7 +1043,6 @@ pure Pratt createParser() {
   pratt.prefix(.TILDE, .UNARY_PREFIX, UnaryPrefix(.COMPLEMENT));
   pratt.prefix(.MULTIPLY, .UNARY_PREFIX, UnaryPrefix(.PREFIX_DEREFERENCE));
   pratt.prefix(.BITWISE_AND, .UNARY_PREFIX, UnaryPrefix(.PREFIX_REFERENCE));
-  pratt.prefix(.NEW, .UNARY_PREFIX, UnaryPrefix(.NEW));
   pratt.prefix(.DELETE, .UNARY_PREFIX, UnaryPrefix(.DELETE));
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -1093,6 +1101,7 @@ pure Pratt createParser() {
   pratt.parselet(.DOT, .LOWEST).prefix = DotPrefixParselet(.DOT);
   pratt.parselet(.DOUBLE_COLON, .LOWEST).prefix = DotPrefixParselet(.DOT_COLON);
   pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet();
+  pratt.parselet(.NEW, .UNARY_PREFIX).prefix = NewParselet();
   pratt.parselet(.LEFT_BRACKET, .UNARY_POSTFIX).infix = IndexParselet();
   pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizeParselet();
   pratt.parselet(.TICK, .UNARY_PREFIX).prefix = QuotedParselet();

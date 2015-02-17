@@ -1,6 +1,7 @@
 namespace base {
   class Emitter : IEmitter {
     protected {
+      List<Symbol> namespaceStack = [];
       CompilerOptions options = null;
       NodeKind previousKind = .NULL;
       StringMap<bool> isKeyword = null;
@@ -26,6 +27,7 @@ namespace base {
 
     virtual void visitProgram(Node node) {
       visitCollector(Collector(node, .SORT_BY_INHERITANCE_AND_CONTAINMENT));
+      adjustNamespace(null);
     }
 
     virtual void handleSymbol(Symbol symbol) {
@@ -51,10 +53,56 @@ namespace base {
       for (var i = 0; i < collector.freeVariableSymbols.size(); i++) {
         var symbol = collector.freeVariableSymbols[i];
         if (!symbol.isImport()) {
-          emitVariable(symbol);
+          emitFreeVariable(symbol);
         } else {
           handleSymbol(symbol);
         }
+      }
+    }
+
+    virtual void enterNamespace(Symbol symbol) {
+      emitExtraNewlineBefore(.NAMESPACE);
+      emit(indent + "namespace " + mangleName(symbol) + " {\n");
+      increaseIndent();
+    }
+
+    virtual void leaveNamespace(Symbol symbol) {
+      decreaseIndent();
+      emit(indent + "}\n");
+      emitExtraNewlineAfter(.NAMESPACE);
+    }
+
+    void adjustNamespace(Symbol symbol) {
+      // Get the namespace chain for this symbol
+      List<Symbol> symbols = [];
+      while (symbol != null && symbol.kind != .GLOBAL_NAMESPACE) {
+        if (symbol.kind == .NAMESPACE) {
+          symbols.unshift(symbol);
+        }
+        symbol = symbol.enclosingSymbol;
+      }
+
+      // Find the intersection
+      var n = math.imin(namespaceStack.size(), symbols.size());
+      int i;
+      for (i = 0; i < n; i++) {
+        if (namespaceStack[i] != symbols[i]) {
+          break;
+        }
+      }
+
+      // Leave the old namespace
+      while (namespaceStack.size() > i) {
+        leaveNamespace(namespaceStack.pop());
+        emitExtraNewlineAfter(.NAMESPACE);
+      }
+
+      // Enter the new namespace
+      while (namespaceStack.size() < symbols.size()) {
+        var symbol = symbols[namespaceStack.size()];
+        emitExtraNewlineBefore(.NAMESPACE);
+        enterNamespace(symbol);
+        namespaceStack.push(symbol);
       }
     }
 
@@ -66,7 +114,7 @@ namespace base {
           if (member.kind.isFunction()) {
             emitFunction(member);
           } else if (member.kind.isVariable()) {
-            emitVariable(member);
+            emitMemberVariable(member);
           } else {
             handleSymbol(member);
           }
@@ -82,9 +130,21 @@ namespace base {
     }
 
     virtual void emitTypeDeclaration(Symbol symbol);
-    virtual void emitFunction(Symbol symbol);
     virtual void emitVariable(Symbol symbol);
-    virtual void emitFunctionArgument(Symbol symbol);
+    virtual void emitFunction(Symbol symbol);
+
+    virtual void emitMemberVariable(Symbol symbol) {
+      emitVariable(symbol);
+    }
+
+    virtual void emitFreeVariable(Symbol symbol) {
+      emitVariable(symbol);
+    }
+
+    virtual void emitFunctionArgument(Symbol symbol) {
+      emitType(symbol.type);
+      emit(" " + mangleName(symbol));
+    }
 
     void emitFunctionArguments(Symbol symbol) {
       var arguments = symbol.node.functionArguments();
@@ -166,6 +226,11 @@ namespace base {
       previousKind = .NULL;
     }
 
+    virtual void emitLastBlock(Node node) {
+      emitBlock(node);
+      emit("\n");
+    }
+
     void emitStatements(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
         var child = nodes[i];
@@ -202,7 +267,7 @@ namespace base {
       emit(";\n");
     }
 
-    void emitCase(Node node) {
+    virtual void emitCase(Node node) {
       var values = node.caseValues().children;
       var block = node.caseBlock();
       if (values.size() != 0) {
@@ -225,19 +290,14 @@ namespace base {
       emit(indent + "}\n");
     }
 
-    void emitSwitch(Node node) {
+    virtual void emitSwitch(Node node) {
       var cases = node.switchCases().children;
       emit(indent + "switch (");
       emitExpression(node.switchValue(), .LOWEST);
       emit(") {\n");
       increaseIndent();
       previousKind = .NULL;
-      for (var i = 0; i < cases.size(); i++) {
-        var child = cases[i];
-        emitExtraNewlineBefore(child.kind);
-        emitCase(child);
-        emitExtraNewlineAfter(child.kind);
-      }
+      emitStatements(cases);
       decreaseIndent();
       emit(indent + "}\n");
     }
@@ -262,7 +322,7 @@ namespace base {
 
     virtual void emitTry(Node node);
 
-    void emitIf(Node node) {
+    virtual void emitIf(Node node) {
       emit(indent);
       recursiveEmitIfStatement(node);
       emit("\n");
@@ -270,6 +330,10 @@ namespace base {
 
     virtual void emitBeforeSubsequentForVariable(Node node) {
       emit(", ");
+    }
+
+    virtual bool useWhileForAllLoops() {
+      return false;
     }
 
     void emitForVariables(List<Node> nodes) {
@@ -282,52 +346,131 @@ namespace base {
       }
     }
 
+    void emitPossibleForUpdate(Node node) {
+      if (useWhileForAllLoops()) {
+        while (node != null) {
+          if (node.kind.isLoop()) {
+            if (node.kind == .FOR) {
+              var update = node.forUpdate();
+              if (update != null) {
+                emit(indent);
+                emitExpression(update, .LOWEST);
+                endStatement();
+              }
+            }
+            break;
+          }
+          node = node.parent;
+        }
+      }
+    }
+
+    void insertStatementBeforeLoopContinue(Node node, Node update) {
+      if (node.hasChildren()) {
+        for (var i = 0; i < node.children.size(); i++) {
+          var child = node.children[i];
+          if (child == null) {
+            continue;
+          }
+          if (child.kind == .CONTINUE) {
+            node.insertChild(i, update.clone());
+            i++;
+          } else if (!child.kind.isExpression() && !child.kind.isLoop()) {
+            insertStatementBeforeLoopContinue(child, update);
+          }
+        }
+      }
+      if (node.kind == .BLOCK && node.parent.kind.isLoop()) {
+        node.appendChild(update.clone());
+      }
+    }
+
     void emitFor(Node node) {
       var setup = node.forSetup();
       var test = node.forTest();
       var update = node.forUpdate();
-      emit(indent + "for (");
-      if (setup != null) {
-        if (setup.kind == .VARIABLE_CLUSTER) {
-          emitForVariables(setup.clusterVariables());
-        } else {
-          emitExpression(setup, .LOWEST);
+      var block = node.forBlock();
+
+      // For languages that lack the C-style for loop with an update expression
+      // after every iteration, a while loop with code duplication at control
+      // flow back edges is used instead
+      if (useWhileForAllLoops()) {
+        if (setup != null) {
+          if (setup.kind == .VARIABLE_CLUSTER) {
+            emitStatement(setup);
+          } else {
+            emit(indent);
+            emitExpression(setup, .LOWEST);
+            emit("\n");
+          }
         }
+        if (update != null) {
+          insertStatementBeforeLoopContinue(block, Node.createExpression(update.replaceWith(null)));
+        }
+        emitStatement(Node.createWhile(test != null ? test.replaceWith(null) : Node.createBool(true), block.replaceWith(null)));
       }
-      if (test != null) {
-        emit("; ");
-        emitExpression(test, .LOWEST);
-      } else {
-        emit(";");
+
+      // Use a normal for loop if the target language supports it
+      else {
+        emit(indent + "for (");
+        if (setup != null) {
+          if (setup.kind == .VARIABLE_CLUSTER) {
+            emitForVariables(setup.clusterVariables());
+          } else {
+            emitExpression(setup, .LOWEST);
+          }
+        }
+        if (test != null) {
+          emit("; ");
+          emitExpression(test, .LOWEST);
+        } else {
+          emit(";");
+        }
+        if (update != null) {
+          emit("; ");
+          emitExpression(update, .LOWEST);
+        } else {
+          emit(";");
+        }
+        emit(")");
+        emitLastBlock(block);
       }
-      if (update != null) {
-        emit("; ");
-        emitExpression(update, .LOWEST);
-      } else {
-        emit(";");
-      }
-      emit(")");
-      emitBlock(node.forBlock());
-      emit("\n");
     }
 
     virtual void emitForEach(Node node) {
     }
 
+    virtual bool emitControlStatementParentheses() {
+      return true;
+    }
+
     void emitWhile(Node node) {
-      emit(indent + "while (");
+      emit(indent + "while " + (emitControlStatementParentheses() ? "(" : ""));
       emitExpression(node.whileTest(), .LOWEST);
-      emit(")");
-      emitBlock(node.whileBlock());
-      emit("\n");
+      if (emitControlStatementParentheses()) emit(")");
+      emitLastBlock(node.whileBlock());
     }
 
     void emitDoWhile(Node node) {
+      var test = node.whileTest();
+      var block = node.whileBlock();
+
+      // For languages that lack the C-style do-while loop that always
+      // evaluates the body at least once, an infinite loop with a trailing
+      // conditional break statement is used instead
+      if (useWhileForAllLoops()) {
+        node.kind = .WHILE;
+        test.replaceWith(Node.createBool(true)).invertBooleanCondition(cache);
+        insertStatementBeforeLoopContinue(block, Node.createIf(.IF, test, Node.createBlock([Node.createBreak()]), null));
+        emitWhile(node);
+        return;
+      }
+
       emit(indent + "do");
       emitBlock(node.whileBlock());
-      emit(" while (");
+      emit(indent + "while " + (emitControlStatementParentheses() ? "(" : ""));
       emitExpression(node.whileTest(), .LOWEST);
-      emit(")");
+      if (emitControlStatementParentheses()) emit(")");
       endStatement();
     }
 
@@ -347,7 +490,7 @@ namespace base {
       endStatement();
     }
 
-    void emitContinue(Node node) {
+    virtual void emitContinue(Node node) {
       emit(indent + "continue");
       endStatement();
     }
@@ -400,7 +543,7 @@ namespace base {
       }
     }
 
-    void emitSequence(Node node, Precedence precedence) {
+    virtual void emitSequence(Node node, Precedence precedence) {
       var values = node.sequenceValues();
       assert values.size() > 1;
       if (.COMMA <= precedence) emit("(");
@@ -424,9 +567,11 @@ namespace base {
       return false;
     }
 
-    void emitUnary(Node node, Precedence precedence) {
+    virtual void emitUnary(Node node, Precedence precedence) {
       var value = node.unaryValue();
       var kind = node.kind;
+
+      // Some languages don't support "++" and "--"
       if (kind.isUnaryStorageOperator() && !hasUnaryStorageOperators()) {
         if (.ASSIGN < precedence) emit("(");
         emitExpression(value, .ASSIGN);
@@ -492,9 +637,13 @@ namespace base {
     }
 
     virtual void emitDot(Node node) {
+      var dotName = node.dotName();
+      if (dotName.kind == .QUOTED) {
+        dotName = dotName.quotedValue();
+      }
       emitExpression(node.dotTarget(), .MEMBER);
       emit(".");
-      emit(mangleName(node.symbol));
+      emit(node.symbol != null ? mangleName(node.symbol) : dotName.asString());
     }
 
     virtual void emitCall(Node node, Precedence precedence) {
@@ -521,7 +670,7 @@ namespace base {
       return node.kind == .CAST;
     }
 
-    void emitCast(Node node, Precedence precedence) {
+    virtual void emitCast(Node node, Precedence precedence) {
       if (shouldEmitCast(node)) {
         emitParenthesizedCast(node.castType().type, node.castValue(), precedence);
       } else {
@@ -592,7 +741,7 @@ namespace base {
     }
 
     virtual void emitInt(Node node, Precedence precedence) {
-      if (node.type.isEnum() && node.symbol != null) {
+      if (node.type != null && node.type.isEnum() && node.symbol != null) {
         emitName(node);
       } else {
         emit(node.asInt().toString());
@@ -611,7 +760,7 @@ namespace base {
       emitType(type);
     }
 
-    void emitType(Type type) {
+    virtual void emitType(Type type) {
       assert !type.isFunction();
       if (type.isQuoted()) {
         emitExpression(type.symbol.node, .LOWEST);
@@ -641,14 +790,14 @@ namespace base {
       return symbol.name;
     }
 
-    virtual bool useDoubleColonForEnclosingSymbols() {
+    virtual bool useDoubleColonForEnclosingSymbols(Symbol symbol) {
       return false;
     }
 
     virtual string fullName(Symbol symbol) {
       var name = mangleName(symbol);
       if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind != .GLOBAL_NAMESPACE && !symbol.kind.isParameter()) {
-        return fullName(symbol.enclosingSymbol) + (useDoubleColonForEnclosingSymbols() ? "::" : ".") + name;
+        return fullName(symbol.enclosingSymbol) + (useDoubleColonForEnclosingSymbols(symbol.enclosingSymbol) ? "::" : ".") + name;
       }
       return name;
     }

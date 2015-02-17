@@ -1,0 +1,202 @@
+<style>
+
+body {
+  font: 12px/15px 'Lucida Grande', sans-serif;
+  margin: 20px;
+}
+
+textarea {
+  font: 12px Monaco, monospace;
+}
+
+div {
+  display: inline-block;
+  vertical-align: top;
+  margin: 20px;
+}
+
+select {
+  width: 100px;
+}
+
+#compileTime {
+  font: 12px/15px 'Lucida Grande', sans-serif;
+  float: right;
+}
+
+label {
+  cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: -moz-none;
+}
+
+#optionArea {
+  display: block;
+  height: 30px;
+  margin-bottom: -30px;
+}
+
+</style>
+<div>
+  <h2>Input</h2>
+  <textarea id="input" rows="10" cols="80" spellcheck="false" autofocus></textarea>
+  <p>
+    <span id="compileTime">Loading...</span>
+    Target: <span id="targetArea"></span>
+    <span id="optionArea"></span>
+  </p>
+</div>
+<div>
+  <h2>Log</h2>
+  <textarea id="outputLog" rows="10" cols="80" spellcheck="false" readonly></textarea>
+</div>
+<div>
+  <h2>Tree</h2>
+  <textarea id="outputTree" rows="20" cols="80" spellcheck="false" readonly></textarea>
+</div>
+<div>
+  <h2>Code</h2>
+  <textarea id="outputCode" rows="20" cols="80" spellcheck="false" readonly></textarea>
+</div>
+<script>
+
+function ajax(url, callback) {
+  var xhr = new XMLHttpRequest;
+  xhr.onload = function() { callback(xhr.response); };
+  xhr.open('GET', url);
+  xhr.send();
+}
+
+function gatherSettings() {
+  var result = {};
+  targets.forEach(function(target) {
+    if (target.element.checked) {
+      result.format = target.name;
+    }
+    var json = result[target.name] = {};
+    target.options.forEach(function(option) {
+      json[option.name] = option.element.checked;
+      option.element.parentNode.style.display = target.element.checked ? 'inline' : 'none';
+    });
+  });
+  result.input = input.value || '';
+  return result;
+}
+
+function ui(compile) {
+  targets.forEach(function(target, i) {
+    var element = document.createElement('label');
+    element.innerHTML = '<input name="target" type="radio"' + (i === 0 ? ' checked' : '') + '> ' + target.text + ' ';
+    element.onchange = compile;
+    targetArea.appendChild(element);
+    target.element = element.firstChild;
+    target.options.forEach(function(option) {
+      var element = document.createElement('label');
+      element.innerHTML = '<input type="checkbox"' + (option.value ? ' checked' : '') + '> ' + option.text + ' ';
+      element.onchange = compile;
+      optionArea.appendChild(element);
+      option.element = element.firstChild;
+    });
+  });
+
+  // Try to restore settings from the previous session
+  try {
+    var settings = JSON.parse(localStorage.settings);
+    targets.forEach(function(target) {
+      if (settings.format === target.name) {
+        target.element.checked = true;
+      }
+      var json = settings[target.name];
+      if (json) {
+        target.options.forEach(function(option) {
+          if (option.name in json) {
+            option.element.checked = json[option.name];
+          }
+        });
+      }
+    });
+    input.value = settings.input;
+  } catch (e) {
+  }
+}
+
+function update(result, timeInMS) {
+  outputLog.value = result.error || result.log || '';
+  outputTree.value = result.tree || '';
+  outputCode.value = result.code || '';
+  compileTime.textContent = +timeInMS.toFixed(1) + 'ms';
+}
+
+function start() {
+  ajax('../../build/tests/live.js', function(code) {
+    var worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
+    var busyCompiling = false;
+    var outOfDate = false;
+    var startTime = null;
+    var oldSettings = null;
+    var now = this.performance && performance.now
+      ? function() { return performance.now(); }
+      : function() { return +new Date; };
+
+    function compile() {
+      var settings = gatherSettings();
+      var newSettings = JSON.stringify(settings);
+      if (oldSettings !== newSettings) {
+        localStorage.settings = newSettings;
+        if (busyCompiling) {
+          outOfDate = true;
+        } else {
+          busyCompiling = true;
+          startTime = now();
+          worker.postMessage(settings);
+        }
+      }
+    }
+
+    worker.onmessage = function(e) {
+      busyCompiling = false;
+      if (outOfDate) {
+        outOfDate = false;
+        compile();
+      } else {
+        update(e.data, now() - startTime);
+      }
+    };
+
+    input.oninput = input.onchange = compile;
+    ui(compile);
+    compile();
+  });
+}
+
+var targets = [
+  {
+    name: 'js',
+    text: 'JavaScript',
+    options: [
+      { name: 'minify', text: 'Minify', value: false },
+      { name: 'mangle', text: 'Mangle', value: false },
+      { name: 'optimize', text: 'Optimize', value: false },
+      { name: 'sourceMap', text: 'Source Map', value: false },
+      { name: 'singleFile', text: 'Single File', value: true },
+    ],
+  },
+  {
+    name: 'cpp',
+    text: 'C++',
+    options: [
+      { name: 'singleFile', text: 'Single File', value: true },
+    ],
+  },
+  {
+    name: 'ruby',
+    text: 'Ruby',
+    options: [
+      { name: 'singleFile', text: 'Single File', value: true },
+    ],
+  },
+];
+
+start();
+
+</script>

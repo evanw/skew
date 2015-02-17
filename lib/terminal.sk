@@ -164,6 +164,38 @@ namespace terminal {
       }
     }
 
+  #elif TARGET_RUBY
+
+    void setColor(Color color) {
+      if (`STDOUT`.isatty) {
+        write("\x1B[0;" + (int)color + "m");
+      }
+    }
+
+    inline {
+      int width() {
+        `require`("io/console");
+        return `STDIN`.winsize[0];
+      }
+
+      int height() {
+        `require`("io/console");
+        return `STDIN`.winsize[1];
+      }
+
+      void flush() {
+        `STDOUT`.oflush();
+      }
+
+      void print(string text) {
+        `puts`(text);
+      }
+
+      void write(string text) {
+        `print`(text);
+      }
+    }
+
   #else
 
     int width() { return 0; }

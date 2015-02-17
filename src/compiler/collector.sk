@@ -45,7 +45,7 @@ class Collector {
         var variables = node.clusterVariables();
         for (var i = 0; i < variables.size(); i++) {
           var symbol = variables[i].symbol;
-          if (symbol.kind == .GLOBAL_VARIABLE && symbol.enclosingSymbol.kind.isNamespace()) {
+          if (symbol.kind == .GLOBAL_VARIABLE && !symbol.isEnumValue()) {
             freeVariableSymbols.push(symbol);
           }
         }

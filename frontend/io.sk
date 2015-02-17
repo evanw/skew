@@ -43,6 +43,26 @@
     }
   }
 
+#elif TARGET_RUBY
+
+  namespace io {
+    Box<string> readFile(string path) {
+      var file = `File`.open(path, "r");
+      if (file == null) return null;
+      var value = Box<string>(file.read());
+      file.close();
+      return value;
+    }
+
+    bool writeFile(string path, string contents) {
+      var file = new `File`("out", "w");
+      if (file == null) return false;
+      file.write(contents);
+      file.close();
+      return true;
+    }
+  }
+
 #else
 
   import namespace io {

@@ -90,6 +90,7 @@ namespace frontend {
       "js": .JAVASCRIPT,
       "json-ast": .JSON_AST,
       "lisp-ast": .LISP_AST,
+      "ruby": .RUBY,
       "xml-ast": .XML_AST,
     };
     StringMap<CompilerConfig> VALID_JS_CONFIGS = {

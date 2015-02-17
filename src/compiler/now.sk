@@ -10,7 +10,7 @@
 
 #elif TARGET_JS && CONFIG_NODE
 
-  double now() {
+  inline double now() {
     return `Date`.now();
   }
 
@@ -35,6 +35,12 @@
     `timeval` data;
     `gettimeofday`(&data, null);
     return data.tv_sec * 1000.0 + data.tv_usec / 1000.0;
+  }
+
+#elif TARGET_RUBY
+
+  inline double now() {
+    return new `Time`().to_f;
   }
 
 #else

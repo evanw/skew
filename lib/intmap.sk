@@ -54,6 +54,27 @@
     private `std::unordered_map<`int`, T>` _table;
   }
 
+#elif TARGET_RUBY
+
+  import class IntMap<T> {
+    pure {
+      new();
+      @EmitAs("has_key?") @OperatorIn bool has(int key);
+      @EmitAs("delete") bool remove(int key);
+      List<int> keys();
+      List<T> values();
+      IntMap<T> clone();
+    }
+  }
+
+  in IntMap {
+    pure {
+      inline @OperatorGet T get(int key) { return `this`[key]; }
+      inline @OperatorSet void set(int key, T value) { `this`[key] = value; }
+      T getOrDefault(int key, T defaultValue) { return key in this ? this[key] : defaultValue; }
+    }
+  }
+
 #else
 
   import class IntMap<T> {
@@ -78,7 +99,11 @@
 //
 in IntMap {
   private static pure IntMap<X> literal<X>(List<int> keys, List<X> values) {
+    #if TARGET_RUBY
+    IntMap<X> map = `{}`;
+    #else
     var map = IntMap<X>();
+    #endif
     assert keys.size() == values.size();
     for (var i = 0; i < keys.size(); i++) {
       map[keys[i]] = values[i];

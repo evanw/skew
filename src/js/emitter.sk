@@ -117,8 +117,6 @@ namespace js {
           if (member.enclosingSymbol == symbol && member.node != null) {
             if (member.kind.isFunction() && member.kind != .CONSTRUCTOR_FUNCTION) {
               emitNode(member.node);
-            } else if (member.kind == .GLOBAL_VARIABLE && !member.isEnumValue()) {
-              collector.freeVariableSymbols.push(member);
             }
           }
         }

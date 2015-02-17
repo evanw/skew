@@ -14,7 +14,6 @@ namespace cpp {
 
   class Emitter : base.Emitter {
     private {
-      List<string> namespaceStack = [];
       var includes = StringMap<bool>();
       var usedAssert = false;
       var usedMath = false;
@@ -174,6 +173,7 @@ namespace cpp {
     override void emitTypeDeclaration(Symbol symbol) {
       var needsMark = isMarkSweep && symbol.kind == .CLASS;
       handleSymbol(symbol);
+
       if (symbol.kind.isObject()) {
         if (pass != .IMPLEMENT_CODE) {
           adjustNamespace(symbol);
@@ -381,6 +381,12 @@ namespace cpp {
         emit("> ");
       } else {
         emitCppType(symbol.type, .DECLARATION);
+      }
+    }
+
+    override void emitFreeVariable(Symbol symbol) {
+      if (symbol.enclosingSymbol.kind.isNamespace()) {
+        emitVariable(symbol);
       }
     }
 
@@ -667,45 +673,8 @@ namespace cpp {
       }
     }
 
-    override bool useDoubleColonForEnclosingSymbols() {
+    override bool useDoubleColonForEnclosingSymbols(Symbol symbol) {
       return true;
-    }
-
-    void adjustNamespace(Symbol symbol) {
-      // Get the namespace chain for this symbol
-      List<string> names = [];
-      while (symbol != null && symbol.kind != .GLOBAL_NAMESPACE) {
-        if (symbol.kind == .NAMESPACE) {
-          names.unshift(mangleName(symbol));
-        }
-        symbol = symbol.enclosingSymbol;
-      }
-
-      // Find the intersection
-      var n = math.imin(namespaceStack.size(), names.size());
-      int i;
-      for (i = 0; i < n; i++) {
-        if (namespaceStack[i] != names[i]) {
-          break;
-        }
-      }
-
-      // Leave the old namespace
-      while (namespaceStack.size() > i) {
-        namespaceStack.pop();
-        decreaseIndent();
-        emit(indent + "}\n");
-        emitExtraNewlineAfter(.NAMESPACE);
-      }
-
-      // Enter the new namespace
-      while (namespaceStack.size() < names.size()) {
-        var name = names[namespaceStack.size()];
-        emitExtraNewlineBefore(.NAMESPACE);
-        emit(indent + "namespace " + name + " {\n");
-        increaseIndent();
-        namespaceStack.push(name);
-      }
     }
 
     override string mangleName(Symbol symbol) {

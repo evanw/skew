@@ -49,6 +49,27 @@
     private `std::unordered_map<`string`, T>` _table;
   }
 
+#elif TARGET_RUBY
+
+  import class StringMap<T> {
+    pure {
+      new();
+      @EmitAs("has_key?") @OperatorIn bool has(string key);
+      @EmitAs("delete") bool remove(string key);
+      List<string> keys();
+      List<T> values();
+      StringMap<T> clone();
+    }
+  }
+
+  in StringMap {
+    pure {
+      inline @OperatorGet T get(string key) { return `this`[key]; }
+      inline @OperatorSet void set(string key, T value) { `this`[key] = value; }
+      T getOrDefault(string key, T defaultValue) { return key in this ? this[key] : defaultValue; }
+    }
+  }
+
 #else
 
   import class StringMap<T> {
@@ -73,7 +94,11 @@
 //
 in StringMap {
   private static pure StringMap<X> literal<X>(List<string> keys, List<X> values) {
+    #if TARGET_RUBY
+    StringMap<X> map = `{}`;
+    #else
     var map = StringMap<X>();
+    #endif
     assert keys.size() == values.size();
     for (var i = 0; i < keys.size(); i++) {
       map[keys[i]] = values[i];

@@ -8,6 +8,7 @@ enum CompilerTarget {
   CPP,
   JAVASCRIPT,
   JOINED,
+  RUBY,
 
   // AST-only targets
   JSON_AST,
@@ -17,7 +18,7 @@ enum CompilerTarget {
 
 in CompilerTarget {
   bool shouldRunResolver() {
-    return this >= NONE && this <= JOINED;
+    return this >= NONE && this <= RUBY;
   }
 
   // C++ has generics, not templates, and each template has a separate copy of
@@ -31,7 +32,7 @@ in CompilerTarget {
   // on an interface (global variables, non-virtual functions, etc.) must be
   // moved off for it to be emitted correctly.
   bool moveNonVirtualSymbolsOffInterfaces() {
-    return this == JAVASCRIPT;
+    return this == JAVASCRIPT || this == RUBY;
   }
 }
 
@@ -98,7 +99,12 @@ class CachedLibrary {
 
   void compile(Compiler compiler) {
     if (file == null) {
-      file = compiler.addInput(Source(joinPath("<compiler>", name), contents)).clone();
+      file = compiler.addInput(Source(joinPath("<compiler>", name), contents));
+      if (file == null) {
+        terminal.print("could not compile " + name + ":\n" + compiler._options.log.toString());
+        assert false;
+      }
+      file = file.clone();
     } else {
       compiler.addCachedInput(file.clone());
     }
@@ -119,8 +125,9 @@ class Compiler {
   var lineCountingTime = 0.0;
   var totalTime = 0.0;
 
-  private {
     CompilerOptions _options;
+  private {
+    // CompilerOptions _options;
     List<Source> _inputs = [];
     var _program = Node.createProgram([]);
   }
@@ -133,7 +140,7 @@ class Compiler {
     if (config == .AUTOMATIC) {
       if (target == .JAVASCRIPT) {
         config = .BROWSER;
-      } else if (target == .CPP) {
+      } else if (target == .CPP || target == .RUBY) {
         var os = OperatingSystem.current();
         config =
           os == .ANDROID ? .ANDROID :
@@ -147,8 +154,9 @@ class Compiler {
     }
 
     // Prepare native #define overrides
-    options.overrideDefine("TARGET_JS", target == .JAVASCRIPT);
     options.overrideDefine("TARGET_CPP", target == .CPP);
+    options.overrideDefine("TARGET_JS", target == .JAVASCRIPT);
+    options.overrideDefine("TARGET_RUBY", target == .RUBY);
     options.overrideDefine("CONFIG_ANDROID", config == .ANDROID);
     options.overrideDefine("CONFIG_BROWSER", config == .BROWSER);
     options.overrideDefine("CONFIG_IOS", config == .IOS);
@@ -255,6 +263,7 @@ class Compiler {
         case .CPP { emitter = cpp.Emitter(resolver); }
         case .JAVASCRIPT { emitter = js.Emitter(resolver); }
         case .JOINED { emitter = joined.Emitter(resolver); }
+        case .RUBY { emitter = ruby.Emitter(resolver); }
         case .JSON_AST { emitter = json.Emitter(_options); }
         case .LISP_AST { emitter = lisp.Emitter(_options); }
         case .XML_AST { emitter = xml.Emitter(_options); }

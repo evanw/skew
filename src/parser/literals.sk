@@ -52,6 +52,19 @@
     return value;
   }
 
+#elif TARGET_RUBY
+
+  int parseIntLiteral(string text, int base) {
+    if (base != 10) {
+      text = text.slice(2, text.size());
+    }
+    return `Integer`(text, base);
+  }
+
+  double parseDoubleLiteral(string text) {
+    return text.`to_f`;
+  }
+
 #else
 
   import {

@@ -149,6 +149,52 @@ alias dynamic = `dynamic`;
     }
   }
 
+#elif TARGET_RUBY
+
+  import class int { @EmitAs("to_s") pure string toString(); }
+  import class bool { @EmitAs("to_s") pure string toString(); }
+  import class float { @EmitAs("to_s") pure string toString(); }
+  import class double { @EmitAs("to_s") pure string toString(); }
+
+  import class string {
+    pure {
+      int size();
+      List<string> split(string separator);
+      @EmitAs("upcase") string toLowerCase();
+      @EmitAs("downcase") string toUpperCase();
+    }
+  }
+
+  in string {
+    pure inline {
+      string join(List<string> values) { return values.`join`(this); }
+      string slice(int start, int end) { return this.`slice`(start, end - start); }
+      string sliceCodeUnit(int index) { return `this`[index]; }
+      @OperatorGet int codeUnitAt(int index) { return sliceCodeUnit(index).`ord`; }
+      static string fromCodeUnit(int value) { return value.`chr`("UTF-8"); }
+
+      int indexOf(string value) {
+        var i = this.`index`(value);
+        return i != null ? i : -1;
+      }
+
+      int indexOfFrom(string value, int fromIndex) {
+        var i = this.`index`(value, fromIndex);
+        return i != null ? i : -1;
+      }
+
+      int lastIndexOf(string value) {
+        var i = this.`rindex`(value);
+        return i != null ? i : -1;
+      }
+
+      int lastIndexOfFrom(string value, int fromIndex) {
+        var i = this.`rindex`(value, fromIndex);
+        return i != null ? i : -1;
+      }
+    }
+  }
+
 #else
 
   import class int { pure string toString(); }

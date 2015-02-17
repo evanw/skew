@@ -1,6 +1,12 @@
+#if TARGET_RUBY
+export interface Comparison<T> {
+  virtual int compare(T left, T right);
+}
+#else
 interface Comparison<T> {
   virtual int compare(T left, T right);
 }
+#endif
 
 #if TARGET_JS
 
@@ -173,6 +179,64 @@ interface Comparison<T> {
     }
 
     private `std::vector<T>` _data;
+  }
+
+#elif TARGET_RUBY
+
+  import class List<T> {
+    pure {
+      new();
+      int size();
+      void push(T value);
+      void unshift(T value);
+      T shift();
+      T pop();
+      T last();
+      @EmitAs("reverse!") void reverse();
+      List<T> clone();
+      @EmitAs("delete_at") T removeAt(int index);
+      void insert(int index, T value);
+      @EmitAs("include?") @OperatorIn bool contains(T value);
+      void clear();
+      private @EmitAs("slice!") void destructiveSlice(int start, int count);
+    }
+  }
+
+  in List {
+    pure {
+      inline @OperatorGet T get(int index) { return `this`[index]; }
+      inline @OperatorSet void set(int index, T value) { `this`[index] = value; }
+
+      int indexOf(T value) {
+        var i = this.`index`(value);
+        return i != null ? i : -1;
+      }
+
+      int lastIndexOf(T value) {
+        var i = this.`rindex`(value);
+        return i != null ? i : -1;
+      }
+
+      List<T> slice(int start, int end) {
+        return `this`.slice(start, end - start);
+      }
+
+      void removeRange(int start, int end) {
+        destructiveSlice(start, end - start);
+      }
+
+      void sort(Comparison<T> comparison) {
+        `sort_helper`(this, comparison);
+      }
+
+      void swap(int a, int b) {
+        assert a >= 0 && a < size();
+        assert b >= 0 && b < size();
+        var temp = this[a];
+        this[a] = this[b];
+        this[b] = temp;
+      }
+    }
   }
 
 #else

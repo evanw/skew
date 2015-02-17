@@ -1,0 +1,515 @@
+namespace ruby {
+  class Emitter : base.Emitter {
+    private {
+      Node elseIf = null;
+      Node skipEnd = null;
+    }
+
+    override string extension() {
+      return "rb";
+    }
+
+    override void visitProgram(Node node) {
+      emitExtraNewlineBefore(.FUNCTION);
+      emit(
+"def static_variable(symbol)
+  class_eval(\"
+    @@#{symbol} = nil
+    def self.#{symbol}
+      @@#{symbol}
+    end
+    def self.#{symbol}=(value)
+      @@#{symbol} = value
+    end
+  \")
+end
+");
+      emitExtraNewlineAfter(.FUNCTION);
+      emitExtraNewlineBefore(.FUNCTION);
+      emit(
+"def enum_value(symbol, value)
+  class_eval(\"
+    @@#{symbol} = value
+    def self.#{symbol}
+      @@#{symbol}
+    end
+  \")
+end
+");
+      emitExtraNewlineAfter(.FUNCTION);
+      emitExtraNewlineBefore(.FUNCTION);
+      emit(
+"def sort_helper(array, comparison)
+  array.sort! { |a, b| comparison.compare(a, b) }
+end
+");
+      emitExtraNewlineAfter(.FUNCTION);
+
+      super(node);
+      emitEntryPoint();
+    }
+
+    void emitEntryPoint() {
+      var entryPointSymbol = resolver.entryPointSymbol;
+      if (entryPointSymbol != null) {
+        var type = entryPointSymbol.type;
+        var hasArguments = type.argumentTypes().size() > 0;
+        var hasReturnValue = type.resultType() == cache.intType;
+        emitExtraNewlineBefore(.NULL);
+        emit(indent);
+        if (hasReturnValue) emit("exit ");
+        emit(fullName(entryPointSymbol) + "(" + (hasArguments ? "ARGV" : "") + ")\n");
+      }
+    }
+
+    override void emitTypeDeclaration(Symbol symbol) {
+      if (symbol.kind == .INTERFACE) {
+        return;
+      }
+
+      else if (symbol.kind == .CLASS) {
+        adjustNamespace(symbol);
+        emitExtraNewlineBefore(symbol.node.kind);
+        emit(indent + "class " + mangleName(symbol));
+        if (symbol.type.isClass()) {
+          var base = symbol.type.baseClass();
+          if (base != null) {
+            emit(" < " + fullName(base.symbol));
+          }
+        }
+        emit("\n");
+        increaseIndent();
+        emitTypeMembers(symbol);
+        decreaseIndent();
+        emit(indent + "end\n");
+        emitExtraNewlineAfter(symbol.node.kind);
+      }
+
+      else if (symbol.kind.isEnum()) {
+        adjustNamespace(symbol);
+        emitExtraNewlineBefore(.ENUM);
+        enterNamespace(symbol);
+        var members = symbol.type.sortedMembers();
+        for (var i = 0; i < members.size(); i++) {
+          var member = members[i].symbol;
+          if (member.isEnumValue()) {
+            emit(indent + "enum_value :" + mangleName(member) + ", " + member.constant.asInt() + "\n");
+          }
+        }
+        leaveNamespace(symbol);
+        emitExtraNewlineAfter(.ENUM);
+      }
+
+      else {
+        assert symbol.kind == .NAMESPACE;
+      }
+    }
+
+    override void emitBlock(Node node) {
+      var needsEnd = node != skipEnd; // Check this first since emitNodes() may change it
+      if (node.parent.kind.isLoop()) {
+        emit(" do");
+      }
+      emit("\n");
+      increaseIndent();
+      emitStatements(node.blockStatements());
+      decreaseIndent();
+      if (needsEnd) {
+        emit(indent + "end\n");
+      }
+    }
+
+    override void emitLastBlock(Node node) {
+      emitBlock(node);
+    }
+
+    override bool emitControlStatementParentheses() {
+      return false;
+    }
+
+    override void emitFunction(Symbol symbol) {
+      var node = symbol.node;
+      var block = node.functionBlock();
+      if (block == null) {
+        return;
+      }
+      adjustNamespace(symbol);
+      emitExtraNewlineBefore(node.kind);
+      emit(indent + "def ");
+      if (symbol.kind == .GLOBAL_FUNCTION && symbol.enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
+        emit("self.");
+      }
+      emit(mangleName(symbol));
+      if (node.functionArguments().hasChildren()) {
+        emitFunctionArguments(symbol);
+      }
+      emit("\n");
+      increaseIndent();
+      if (node.kind == .CONSTRUCTOR) {
+        var superInitializer = node.superInitializer();
+        var memberInitializers = node.memberInitializers();
+        if (superInitializer != null) {
+          emit(indent);
+          emitExpression(superInitializer, .LOWEST);
+          emit("\n");
+        }
+        if (memberInitializers != null) {
+          for (var i = 0, n = memberInitializers.children.size(); i < n; i++) {
+            var child = memberInitializers.children[i];
+            var name = child.memberInitializerName();
+            var value = child.memberInitializerValue();
+            if (value.kind != .ERROR) {
+              emit(indent);
+              emitExpression(name, .LOWEST);
+              emit(" = ");
+              emitExpression(value, .LOWEST);
+              emit("\n");
+            }
+          }
+        }
+      }
+      emitStatements(block.blockStatements());
+      decreaseIndent();
+      emit(indent + "end\n");
+      emitExtraNewlineAfter(node.kind);
+    }
+
+    override void emitFunctionArgument(Symbol symbol) {
+      emit(mangleName(symbol));
+    }
+
+    override void emitMemberVariable(Symbol symbol) {
+      var node = symbol.node;
+      adjustNamespace(symbol);
+      emitExtraNewlineBefore(node.kind);
+      emit(indent + (symbol.kind == .INSTANCE_VARIABLE ? "attr_accessor :" : "static_variable :"));
+      emit(mangleName(symbol));
+      emit("\n");
+      emitExtraNewlineAfter(node.kind);
+    }
+
+    override void emitFreeVariable(Symbol symbol) {
+      var kind = symbol.enclosingSymbol.kind;
+      if (kind == .NAMESPACE || kind.isEnum()) {
+        emitMemberVariable(symbol);
+      }
+      adjustNamespace(null);
+      emitVariable(symbol);
+    }
+
+    override void emitVariable(Symbol symbol) {
+      var node = symbol.node;
+      var value = node.variableValue();
+      emitExtraNewlineBefore(node.kind);
+      emit(indent);
+      emit(fullName(symbol));
+      emit(" = ");
+      if (value != null) emitExpression(value, .LOWEST);
+      else emit("nil");
+      emit("\n");
+      emitExtraNewlineAfter(node.kind);
+    }
+
+    override void emitIf(Node node) {
+      var trueBlock = node.ifTrue();
+      var falseBlock = node.ifFalse();
+      emit(indent + (node == elseIf ? "elsif " : "if "));
+      emitExpression(node.ifTest(), .LOWEST);
+      if (falseBlock == null) {
+        emitBlock(trueBlock);
+      } else {
+        skipEnd = trueBlock;
+        emitBlock(trueBlock);
+        var falseStatement = falseBlock.blockStatement();
+        if (falseStatement != null && falseStatement.kind == .IF) {
+          elseIf = falseStatement;
+          emitIf(falseStatement);
+        } else {
+          emit(indent + "else");
+          emitBlock(falseBlock);
+        }
+      }
+    }
+
+    override void emitTry(Node node) {
+    }
+
+    override void endStatement() {
+      emit("\n");
+    }
+
+    override bool hasUnaryStorageOperators() {
+      return false;
+    }
+
+    override bool useWhileForAllLoops() {
+      return true;
+    }
+
+    override void emitContinue(Node node) {
+      emit(indent + "next\n");
+    }
+
+    override void emitSwitch(Node node) {
+      var cases = node.switchCases().children;
+      emit(indent + "case ");
+      emitExpression(node.switchValue(), .LOWEST);
+      emit("\n");
+      previousKind = .NULL;
+      emitStatements(cases);
+      emit(indent + "end\n");
+    }
+
+    override void emitCase(Node node) {
+      var values = node.caseValues().children;
+      var block = node.caseBlock();
+      emit(indent);
+      if (values.size() != 0) {
+        emit("when ");
+        emitCommaSeparatedExpressions(values);
+      } else {
+        emit("else");
+      }
+      emit("\n");
+      increaseIndent();
+      emitStatements(block.blockStatements());
+      decreaseIndent();
+    }
+
+    override void emitAssert(Node node) {
+      var value = node.assertValue();
+      var text = node.range + " (" + node.range.locationString() + ")";
+      emit(indent + "raise " + quoteString(text, '\''));
+      if (!value.isFalse()) {
+        emit(" unless ");
+        emitExpression(value, .LOWEST);
+      }
+      emit("\n");
+    }
+
+    override void emitCast(Node node, Precedence precedence) {
+      var value = node.castValue();
+      var valueType = value.type;
+      var type = node.type;
+
+      if (shouldEmitCast(node)) {
+        if (type.isNumeric(cache)) {
+          if (type.isInt(cache) && valueType.isReal(cache)) {
+            node.become(Node.createDot(value.replaceWith(null), Node.createName("truncate")));
+            value = node;
+          } else if (valueType.isBool(cache)) {
+            node.become(Node.createHook(.HOOK, value.replaceWith(null), Node.createInt(1), Node.createInt(0)));
+            value = node;
+          }
+        } else if (type.isBool(cache)) {
+          if (valueType.isNumeric(cache)) {
+            node.become(Node.createBinary(.NOT_EQUAL, value.replaceWith(null), Node.createInt(0)));
+            value = node;
+          }
+        }
+      }
+
+      // We must manually promote ints to floats. This matters because dividing
+      // an integer by an integer produces an integer.
+      else if (type.isReal(cache) && valueType.isInteger(cache)) {
+        node.become(Node.createCall(Node.createName("Float"), [value.replaceWith(null)]));
+        value = node;
+      }
+
+      emitExpression(value, precedence);
+    }
+
+    override void emitReal(Node node) {
+      var value = node.asDouble();
+      if (value == math.INFINITY) emit("Float::INFINITY");
+      else if (value == -math.INFINITY) emit("-Float::INFINITY");
+      else if (value != value) emit("Float::NAN");
+      else emit(doubleToStringWithDot(value));
+    }
+
+    override void emitString(Node node) {
+      var text = node.asString();
+      var result = "\"";
+      var start = 0; // Append long runs of unescaped characters using a single slice() for speed
+      int i;
+      for (i = 0; i < text.size(); i++) {
+        var c = text[i];
+        if (c == '"') result += text.slice(start, i) + "\\\"";
+        else if (c == '#') result += text.slice(start, i) + "\\#";
+        else if (c == '\n') result += text.slice(start, i) + "\\n";
+        else if (c == '\r') result += text.slice(start, i) + "\\r";
+        else if (c == '\t') result += text.slice(start, i) + "\\t";
+        else if (c == '\0') result += text.slice(start, i) + "\\0";
+        else if (c == '\\') result += text.slice(start, i) + "\\\\";
+        else if (c < ' ') result += text.slice(start, i) + "\\x" + HEX.sliceCodeUnit(c >> 4) + HEX.sliceCodeUnit(c & 15);
+        else continue;
+        start = i + 1;
+      }
+      result += text.slice(start, i) + "\"";
+      emit(result);
+    }
+
+    override void emitSequence(Node node, Precedence precedence) {
+      var values = node.sequenceValues();
+      assert values.size() > 1;
+      var isSequence = node.parent.kind != .EXPRESSION;
+      var separator = isSequence ? "; " : "\n" + indent;
+      if (isSequence) emit("(");
+      for (var i = 0; i < values.size(); i++) {
+        if (i > 0) emit(separator);
+        emitExpression(values[i], .LOWEST);
+      }
+      if (isSequence) emit(")");
+    }
+
+    override void emitUnary(Node node, Precedence precedence) {
+      // The "new" keyword can't be used as a property name, but binding code
+      // needs to be able to use it as a property somehow. This transforms
+      // "new `Foo`()" into "Foo.new()" so this is still possible.
+      if (node.kind == .NEW) {
+        var value = node.unaryValue();
+        if (value.kind == .CALL) {
+          var target = value.callValue().remove();
+          emitExpression(Node.createCall(Node.createDot(target, Node.createName("new")), value.removeChildren()), precedence);
+          return;
+        }
+      }
+
+      super(node, precedence);
+    }
+
+    override void emitName(Node node) {
+      if (node.symbol != null && node.symbol.kind == .INSTANCE_VARIABLE) {
+        emit("@");
+      }
+      super(node);
+    }
+
+    override void emitThis() {
+      emit("self");
+    }
+
+    override void emitNull() {
+      emit("nil");
+    }
+
+    override void emitType(Type type) {
+      emit(fullName(type.symbol));
+    }
+
+    override void emitBinary(Node node, Precedence precedence) {
+      // "a == b == c" is a syntax error
+      if ((node.kind == .EQUAL || node.kind == .NOT_EQUAL) && (node.parent.kind == .EQUAL || node.parent.kind == .NOT_EQUAL)) {
+        precedence = .MEMBER;
+      }
+
+      super(node, precedence);
+    }
+
+    override void emitCall(Node node, Precedence precedence) {
+      var value = node.callValue();
+
+      // TODO: Remove this hack around map literal constructors
+      if (value.kind == .TYPE && (value.type.isIntMap(cache) || value.type.isIntMap(cache))) {
+        emit("{}");
+        return;
+      }
+
+      emitExpression(value, .UNARY_POSTFIX);
+      if (value.kind == .TYPE) emit(".new");
+      emit("(");
+      emitCommaSeparatedExpressions(node.callArguments());
+      emit(")");
+    }
+
+    override void enterNamespace(Symbol symbol) {
+      emitExtraNewlineBefore(.NAMESPACE);
+      emit(indent + "module " + mangleName(symbol) + "\n");
+      increaseIndent();
+    }
+
+    override void leaveNamespace(Symbol symbol) {
+      decreaseIndent();
+      emit(indent + "end\n");
+      emitExtraNewlineAfter(.NAMESPACE);
+    }
+
+    override bool useDoubleColonForEnclosingSymbols(Symbol symbol) {
+      return symbol.kind == .NAMESPACE;
+    }
+
+    override string mangleName(Symbol symbol) {
+      if (symbol.emitAs != null) {
+        return symbol.emitAs.value;
+      }
+      if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
+        return "initialize";
+      }
+      if (symbol.kind == .GLOBAL_VARIABLE && symbol.enclosingSymbol.kind == .GLOBAL_NAMESPACE) {
+        return "$" + symbol.name;
+      }
+      var name = symbol.name;
+      if (symbol.name in isKeyword && !symbol.isImport()) {
+        name += "_";
+      }
+      var c = name[0];
+      var isUpperCase = c >= 'A' && c <= 'Z';
+      var shouldBeUpperCase = symbol.kind.isType();
+      if (shouldBeUpperCase && !isUpperCase) {
+        return "X_" + name;
+      }
+      if (!shouldBeUpperCase && isUpperCase) {
+        return "_" + name;
+      }
+      return name;
+    }
+
+    override StringMap<bool> createIsKeyword() {
+      return {
+        "Symbol": false,
+        "Float": false,
+        "Integer": false,
+
+        "__FILE__": false,
+        "__LINE__": false,
+        "alias": false,
+        "and": false,
+        "BEGIN": false,
+        "begin": false,
+        "break": false,
+        "case": false,
+        "class": false,
+        "def": false,
+        "do": false,
+        "else": false,
+        "elsif": false,
+        "END": false,
+        "end": false,
+        "ensure": false,
+        "false": false,
+        "for": false,
+        "if": false,
+        "in": false,
+        "module": false,
+        "next": false,
+        "nil": false,
+        "not": false,
+        "or": false,
+        "redo": false,
+        "rescue": false,
+        "retry": false,
+        "return": false,
+        "self": false,
+        "super": false,
+        "then": false,
+        "true": false,
+        "undef": false,
+        "unless": false,
+        "until": false,
+        "when": false,
+        "while": false,
+        "yield": false,
+      };
+    }
+  }
+}

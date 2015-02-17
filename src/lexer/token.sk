@@ -3,6 +3,8 @@ class Token {
   TokenKind kind;
 
   int firstCodeUnit() {
+    if (kind == .END_OF_FILE) return 0;
+    assert range.start < range.source.contents.size();
     return range.source.contents[range.start];
   }
 

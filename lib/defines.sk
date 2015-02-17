@@ -3,9 +3,10 @@
 #define BUILD_RELEASE false
 
 // These will be overridden by the compiler with the current language target
-#define TARGET_JS   false
-#define TARGET_CPP  false
-#define TARGET_NONE !TARGET_JS && !TARGET_CPP
+#define TARGET_CPP   false
+#define TARGET_JS    false
+#define TARGET_RUBY  false
+#define TARGET_NONE  !TARGET_CPP && !TARGET_JS && !TARGET_RUBY
 
 // The "--config" flag can be used to override these (example: "--config=node").
 // Using "--target=js" defaults to "--config=browser" and using "--target=cpp"

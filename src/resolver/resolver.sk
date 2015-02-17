@@ -202,7 +202,7 @@ class Resolver {
       case .NAME {
         var name = node.asString();
         if (name in defines) {
-          return (PreprocessorResult)defines[name];
+          return defines[name] ? .TRUE : .FALSE;
         } else if (mode == .LOG_ERRORS) {
           semanticErrorPreprocessorInvalidSymbol(log, node.range, name);
         }
@@ -3310,7 +3310,7 @@ class Resolver {
     // The type of the literal comes from how it's used
     if (typeContext != null && (typeContext.isStringMap(cache) || typeContext.isIntMap(cache))) {
       // Just call the constructor for an empty map literal
-      if (items.size() == 0) {
+      if (items.size() == 0 && options.target != .RUBY) {
         node.become(Node.createCall(Node.createType(typeContext), []).withRange(node.range).withType(node.type));
         resolveAsParameterizedExpression(node);
         return;
@@ -3554,6 +3554,13 @@ class Resolver {
       }
 
       checkAccess(node.symbol, value.range);
+
+      // Hack around broken map literal constructors for now
+      var hack = valueType.resultType();
+      if (options.target == .RUBY && (hack.isIntMap(cache) || hack.isStringMap(cache))) {
+        node.become(Node.createMap([]).withType(hack));
+        return;
+      }
     }
 
     // Can only call an instance of a function type
@@ -3616,6 +3623,7 @@ class Resolver {
         resolveAsParameterizedExpressionWithConversion(child, typeContext, node.parent.kind == .CAST ? .EXPLICIT_CAST : .IMPLICIT_CAST);
       }
     }
+    node.type = values.last().type;
   }
 
   void resolveParameterize(Node node) {

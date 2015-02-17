@@ -64,6 +64,40 @@
     }
   }
 
+#elif TARGET_RUBY
+
+  namespace math {
+    inline pure {
+      double abs(double x) { return x.`abs`; }
+      double sin(double x) { return `Math`.sin(x); }
+      double cos(double x) { return `Math`.cos(x); }
+      double tan(double x) { return `Math`.tan(x); }
+      double asin(double x) { return `Math`.asin(x); }
+      double acos(double x) { return `Math`.acos(x); }
+      double atan(double x) { return `Math`.atan(x); }
+      double atan2(double y, double x) { return `Math`.atan2(y, x); }
+      double sqrt(double x) { return `Math`.sqrt(x); }
+      double exp(double x) { return `Math`.exp(x); }
+      double log(double x) { return `Math`.log(x); }
+      double pow(double x, double y) { return exp(y * log(x)); } // TODO: Use "**" instead
+      double floor(double x) { return x.`floor`; }
+      double round(double x) { return x.`round`; }
+      double ceil(double x) { return x.`ceil`; }
+      double min(double x, double y) { return [x, y].`min`; }
+      double max(double x, double y) { return [x, y].`max`; }
+      bool isNaN(double x) { return x.__ruby_nan(); }
+      bool isFinite(double x) { return x.__ruby_finite(); }
+      double random() { return `Random`.rand; }
+    }
+  }
+
+  in double {
+    import pure {
+      @EmitAs("nan?") bool __ruby_nan();
+      @EmitAs("finite?") bool __ruby_finite();
+    }
+  }
+
 #else
 
   import namespace math {

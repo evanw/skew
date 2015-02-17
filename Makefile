@@ -14,6 +14,9 @@ TEST_SOURCES += tests/system/*.sk tests/system/*/*.sk
 FRONTEND_SOURCES += $(SOURCES)
 FRONTEND_SOURCES += frontend/*.sk
 
+LIVE_SOURCES += $(SOURCES)
+LIVE_SOURCES += tests/live/*.sk
+
 DEBUG_DIR = build/debug
 RELEASE_DIR = build/release
 TESTS_DIR = build/tests
@@ -121,6 +124,16 @@ $(RELEASE_DIR)/skewc.cpp: $(FRONTEND_DEPS) | $(RELEASE_DIR)
 
 $(RELEASE_DIR)/skewc: $(RELEASE_DIR)/skewc.cpp
 	c++ $(RELEASE_DIR)/skewc.cpp $(CXX_FLAGS) -O3 -DNDEBUG -fomit-frame-pointer -fvisibility=hidden -o $(RELEASE_DIR)/skewc
+
+################################################################################
+# LIVE
+################################################################################
+
+live: | $(TESTS_DIR)
+	node skewc.js $(LIVE_SOURCES) $(JS_FLAGS) --output-file=$(TESTS_DIR)/live.js --source-map
+
+live-release: | $(TESTS_DIR)
+	node skewc.js $(LIVE_SOURCES) $(JS_FLAGS) --output-file=$(TESTS_DIR)/live.js --release
 
 ################################################################################
 # JOIN
