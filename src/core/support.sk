@@ -66,8 +66,13 @@ string doubleToStringWithDot(double value) {
   var text = value.toString();
 
   // Make sure the generated code treats this number as a double
-  if (!("." in text) && !("e" in text) && !("E" in text)) {
-    text += ".0";
+  if (!("." in text)) {
+    var e = math.imax(text.indexOf("e"), text.indexOf("E"));
+    if (e == -1) {
+      text += ".0";
+    } else {
+      text = text.slice(0, e) + ".0" + text.slice(e, text.size());
+    }
   }
 
   return text;

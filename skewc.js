@@ -7062,7 +7062,7 @@
     } else if (value !== value) {
       this.emit('NaN');
     } else {
-      this.emit(value.toString());
+      this.emit(doubleToStringWithoutDotZero(value));
     }
 
     if (wrap) {
@@ -7076,13 +7076,29 @@
     this.emit(']');
   };
 
+  js.Emitter.isDigits = function(text) {
+    var found = false;
+
+    for (var n = text.length, i = n !== 0 && text.charCodeAt(0) === 45 ? 1 : 0; i < n; i = i + 1 | 0) {
+      var c = text.charCodeAt(i);
+
+      if (c >= 48 && c <= 57) {
+        found = true;
+      } else {
+        return false;
+      }
+    }
+
+    return found;
+  };
+
   js.Emitter.prototype.emitKeyValue = function(node) {
     var key = node.itemKey();
 
     if (this.options.minify && key.kind === NodeKind.STRING) {
       var value = key.asString();
 
-      if (js.Emitter.isValidIdentifier(value) || parseIntLiteral(value, 10).toString() === value) {
+      if (js.Emitter.isValidIdentifier(value) || js.Emitter.isDigits(value) && parseIntLiteral(value, 10).toString() === value) {
         this.emit(value);
       } else {
         this.emitExpression(key, Precedence.COMMA);
@@ -7156,7 +7172,7 @@
 
   js.Emitter.prototype.isRightChildOfBinaryExpression = function(node, kind) {
     if (!in_NodeKind.isBinaryOperator(kind)) {
-      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:822:7)');
+      throw new Error('assert kind.isBinaryOperator(); (src/js/emitter.sk:835:7)');
     }
 
     while (in_NodeKind.isBinaryOperator(node.parent.kind)) {
@@ -9703,7 +9719,7 @@
 
           case 44:
           case 45:
-            text = target.asDouble().toString();
+            text = doubleToStringWithoutDotZero(target.asDouble());
             break;
 
           case 46:
@@ -16452,8 +16468,14 @@
   function doubleToStringWithDot(value) {
     var text = value.toString();
 
-    if (!(text.indexOf('.') !== -1) && !(text.indexOf('e') !== -1) && !(text.indexOf('E') !== -1)) {
-      text += '.0';
+    if (!(text.indexOf('.') !== -1)) {
+      var e = math.imax(text.indexOf('e'), text.indexOf('E'));
+
+      if (e === -1) {
+        text += '.0';
+      } else {
+        text = text.slice(0, e) + '.0' + text.slice(e, text.length);
+      }
     }
 
     return text;
@@ -16461,15 +16483,15 @@
 
   function parseStringLiteral(log, range, text) {
     if (text.length < 2) {
-      throw new Error('assert text.size() >= 2; (src/core/support.sk:77:3)');
+      throw new Error('assert text.size() >= 2; (src/core/support.sk:82:3)');
     }
 
     if (text.charCodeAt(0) !== 34 && text.charCodeAt(0) !== 39) {
-      throw new Error("assert text[0] == '\"' || text[0] == '\\''; (src/core/support.sk:78:3)");
+      throw new Error("assert text[0] == '\"' || text[0] == '\\''; (src/core/support.sk:83:3)");
     }
 
     if (text.charCodeAt(text.length - 1 | 0) !== 34 && text.charCodeAt(text.length - 1 | 0) !== 39) {
-      throw new Error("assert text[text.size() - 1] == '\"' || text[text.size() - 1] == '\\''; (src/core/support.sk:79:3)");
+      throw new Error("assert text[text.size() - 1] == '\"' || text[text.size() - 1] == '\\''; (src/core/support.sk:84:3)");
     }
 
     var isValidString = true;
@@ -16946,6 +16968,10 @@
 
   function parseDoubleLiteral(text) {
     return +text;
+  }
+
+  function doubleToStringWithoutDotZero(value) {
+    return value.toString();
   }
 
   in_Precedence.incrementIfLeftAssociative = function($this, associativity) {

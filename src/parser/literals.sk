@@ -73,3 +73,19 @@
   }
 
 #endif
+
+#if TARGET_RUBY
+
+  var doubleToStringRegex = new `Regexp`("\\.0(?:e|$)");
+
+  string doubleToStringWithoutDotZero(double value) {
+    return value.toString().`gsub`(doubleToStringRegex, "");
+  }
+
+#else
+
+  string doubleToStringWithoutDotZero(double value) {
+    return value.toString();
+  }
+
+#endif

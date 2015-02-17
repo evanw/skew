@@ -745,7 +745,7 @@ namespace js {
       if (value == math.INFINITY) emit("Infinity");
       else if (value == -math.INFINITY) emit("-Infinity");
       else if (value != value) emit("NaN");
-      else emit(value.toString());
+      else emit(doubleToStringWithoutDotZero(value));
       if (wrap) emit(")");
     }
 
@@ -755,11 +755,24 @@ namespace js {
       emit("]");
     }
 
+    static bool isDigits(string text) {
+      var found = false;
+      for (var n = text.size(), i = n != 0 && text[0] == '-' ? 1 : 0; i < n; i++) {
+        var c = text[i];
+        if (c >= '0' && c <= '9') {
+          found = true;
+        } else {
+          return false;
+        }
+      }
+      return found;
+    }
+
     void emitKeyValue(Node node) {
       var key = node.itemKey();
       if (options.minify && key.kind == .STRING) {
         var value = key.asString();
-        if (isValidIdentifier(value) || parseIntLiteral(value, 10).toString() == value) {
+        if (isValidIdentifier(value) || isDigits(value) && parseIntLiteral(value, 10).toString() == value) {
           emit(value);
         } else {
           emitExpression(key, .COMMA);

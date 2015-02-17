@@ -374,7 +374,7 @@ class ConstantFolder {
           switch (target.kind) {
             case .BOOL { text = target.asBool().toString(); }
             case .INT { text = target.asInt().toString(); }
-            case .FLOAT, .DOUBLE { text = target.asDouble().toString(); }
+            case .FLOAT, .DOUBLE { text = doubleToStringWithoutDotZero(target.asDouble()); }
             case .STRING { text = target.asString(); }
             default { return; }
           }
