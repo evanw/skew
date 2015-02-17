@@ -685,7 +685,7 @@ namespace base {
       emit("]");
     }
 
-    void emitKeyValue(Node node) {
+    virtual void emitKeyValue(Node node) {
       emitExpression(node.itemKey(), .COMMA);
       emit(": ");
       emitExpression(node.itemValue(), .COMMA);

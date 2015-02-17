@@ -62,4 +62,14 @@ def bar(x)
 end
 ");
 
+testRuby("
+export dynamic foo() {
+  return `{ \"x\": 1, 2: \"y\" }`;
+}
+", "
+def foo
+  return { \"x\" => 1, 2 => \"y\" }
+end
+");
+
 }}

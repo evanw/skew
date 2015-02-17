@@ -111,7 +111,7 @@ end
       }
 
       else {
-        assert symbol.kind == .NAMESPACE;
+        assert symbol.kind == .ALIAS || symbol.kind == .NAMESPACE;
       }
     }
 
@@ -439,6 +439,12 @@ end
       }
 
       super(node, precedence);
+    }
+
+    override void emitKeyValue(Node node) {
+      emitExpression(node.itemKey(), .COMMA);
+      emit(" => ");
+      emitExpression(node.itemValue(), .COMMA);
     }
 
     override void emitCall(Node node, Precedence precedence) {

@@ -5563,8 +5563,8 @@
       this.leaveNamespace(symbol);
       this.emitExtraNewlineAfter(NodeKind.ENUM);
     } else {
-      if (symbol.kind !== SymbolKind.NAMESPACE) {
-        throw new Error('assert symbol.kind == .NAMESPACE; (src/emitters/ruby.sk:114:9)');
+      if (symbol.kind !== SymbolKind.ALIAS && symbol.kind !== SymbolKind.NAMESPACE) {
+        throw new Error('assert symbol.kind == .ALIAS || symbol.kind == .NAMESPACE; (src/emitters/ruby.sk:114:9)');
       }
     }
   };
@@ -5952,6 +5952,12 @@
     }
 
     base.Emitter.prototype.emitBinary.call(this, node, precedence);
+  };
+
+  ruby.Emitter.prototype.emitKeyValue = function(node) {
+    this.emitExpression(node.itemKey(), Precedence.COMMA);
+    this.builder._buffer += ' => ';
+    this.emitExpression(node.itemValue(), Precedence.COMMA);
   };
 
   ruby.Emitter.prototype.emitCall = function(node, precedence) {
