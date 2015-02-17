@@ -21,12 +21,12 @@ alias dynamic = `dynamic`;
 
   in string {
     inline pure {
-      int size() { return this.`length`; }
+      int size() { return `this`.length; }
       int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }
       int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }
       string sliceCodeUnit(int index) { return `this`[index]; }
-      string join(List<string> values) { return values.`join`(this); }
-      @OperatorGet int codeUnitAt(int index) { return this.`charCodeAt`(index); }
+      string join(List<string> values) { return values."join"(this); }
+      @OperatorGet int codeUnitAt(int index) { return `this`.charCodeAt(index); }
       static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }
     }
   }
@@ -108,13 +108,13 @@ alias dynamic = `dynamic`;
   in string {
     pure {
       inline {
-        int size() { return (int)this.`size`(); }
-        string slice(int start, int end) { return this.`substr`(start, end - start); }
+        int size() { return (int)`this`.size(); }
+        string slice(int start, int end) { return `this`.substr(start, end - start); }
         string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }
-        int indexOf(string value) { return (int)this.`find`(value); }
-        int indexOfFrom(string value, int fromIndex) { return (int)this.`find`(value, fromIndex); }
-        int lastIndexOf(string value) { return (int)this.`rfind`(value); }
-        int lastIndexOfFrom(string value, int fromIndex) { return (int)this.`rfind`(value, fromIndex); }
+        int indexOf(string value) { return (int)`this`.find(value); }
+        int indexOfFrom(string value, int fromIndex) { return (int)`this`.find(value, fromIndex); }
+        int lastIndexOf(string value) { return (int)`this`.rfind(value); }
+        int lastIndexOfFrom(string value, int fromIndex) { return (int)`this`.rfind(value, fromIndex); }
         @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values
         static string fromCodeUnit(int value) { return ``string``(1, value); }
       }
@@ -185,29 +185,29 @@ alias dynamic = `dynamic`;
 
   in string {
     pure inline {
-      string join(List<string> values) { return values.`join`(this); }
-      string slice(int start, int end) { return this.`slice`(start, end - start); }
+      string join(List<string> values) { return values."join"(this); }
+      string slice(int start, int end) { return `this`.slice(start, end - start); }
       string sliceCodeUnit(int index) { return `this`[index]; }
-      @OperatorGet int codeUnitAt(int index) { return sliceCodeUnit(index).`ord`; }
-      static string fromCodeUnit(int value) { return value.`chr`("UTF-8"); }
+      @OperatorGet int codeUnitAt(int index) { return sliceCodeUnit(index)."ord"; }
+      static string fromCodeUnit(int value) { return value."chr"("UTF-8"); }
 
       int indexOf(string value) {
-        var i = this.`index`(value);
+        var i = `this`.index(value);
         return i != null ? i : -1;
       }
 
       int indexOfFrom(string value, int fromIndex) {
-        var i = this.`index`(value, fromIndex);
+        var i = `this`.index(value, fromIndex);
         return i != null ? i : -1;
       }
 
       int lastIndexOf(string value) {
-        var i = this.`rindex`(value);
+        var i = `this`.rindex(value);
         return i != null ? i : -1;
       }
 
       int lastIndexOfFrom(string value, int fromIndex) {
-        var i = this.`rindex`(value, fromIndex);
+        var i = `this`.rindex(value, fromIndex);
         return i != null ? i : -1;
       }
     }
@@ -218,7 +218,7 @@ alias dynamic = `dynamic`;
 
     inline {
       void append(string text) { `this`._buffer << text; }
-      string toString() { return _buffer.`dup`; }
+      string toString() { return _buffer."dup"; }
     }
   }
 

@@ -11,7 +11,7 @@ interface Comparison<T> {
 #if TARGET_JS
 
   void bindCompare<T>(Comparison<T> comparison) {
-    return comparison.compare.`bind`(comparison);
+    return comparison.compare."bind"(comparison);
   }
 
   import class List<T> {
@@ -31,22 +31,22 @@ interface Comparison<T> {
   in List {
     pure {
       inline {
-        int size() { return this.`length`; }
-        List<T> clone() { return this.`slice`(); }
-        T removeAt(int index) { return this.`splice`(index, 1)[0]; }
-        void removeRange(int start, int end) { this.`splice`(start, end - start); }
-        void insert(int index, T value) { this.`splice`(index, 0, value); }
+        int size() { return `this`.length; }
+        List<T> clone() { return `this`.slice(); }
+        T removeAt(int index) { return `this`.splice(index, 1)[0]; }
+        void removeRange(int start, int end) { `this`.splice(start, end - start); }
+        void insert(int index, T value) { `this`.splice(index, 0, value); }
         @OperatorGet T get(int index) { return `this`[index]; }
         @OperatorSet void set(int index, T value) { `this`[index] = value; }
         @OperatorIn bool contains(T value) { return indexOf(value) != -1; }
       }
 
       T last() { return this[size() - 1]; }
-      void clear() { this.`length` = 0; }
+      void clear() { `this`.length = 0; }
       void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }
     }
 
-    inline void sort(Comparison<T> comparison) { this.`sort`(bindCompare<T>(comparison)); }
+    inline void sort(Comparison<T> comparison) { `this`.sort(bindCompare<T>(comparison)); }
   }
 
 #elif TARGET_CPP
@@ -198,7 +198,6 @@ interface Comparison<T> {
       void insert(int index, T value);
       @EmitAs("include?") @OperatorIn bool contains(T value);
       void clear();
-      private @EmitAs("slice!") void destructiveSlice(int start, int count);
     }
   }
 
@@ -208,12 +207,12 @@ interface Comparison<T> {
       inline @OperatorSet void set(int index, T value) { `this`[index] = value; }
 
       int indexOf(T value) {
-        var i = this.`index`(value);
+        var i = `this`.index(value);
         return i != null ? i : -1;
       }
 
       int lastIndexOf(T value) {
-        var i = this.`rindex`(value);
+        var i = `this`.rindex(value);
         return i != null ? i : -1;
       }
 
@@ -222,7 +221,7 @@ interface Comparison<T> {
       }
 
       void removeRange(int start, int end) {
-        destructiveSlice(start, end - start);
+        this."slice!"(start, end - start);
       }
 
       void swap(int a, int b) {

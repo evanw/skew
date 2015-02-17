@@ -3449,8 +3449,8 @@ class Resolver {
       return;
     }
 
-    // The name is allowed to be quoted
-    if (dotName.kind == .QUOTED) {
+    // The name is allowed to be a string
+    if (dotName.kind == .STRING) {
       return;
     }
 

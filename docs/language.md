@@ -286,11 +286,11 @@ An expression can be quoted by surrounding it with backtick characters. Quoting 
       }
     }
 
-The type of a quoted expression is the error type, which causes type checking to be ignored for all uses of that expression. Use of quoting should be limited as much as possible since it avoids the type checker. It is very useful for library binding code, however. Property names can be quoted too:
+The type of a quoted expression is the error type, which causes type checking to be ignored for all uses of that expression. Use of quoting should be limited as much as possible since it avoids the type checker. It is very useful for library binding code, however. Property names can be quoted too, although they use double quotes instead of backticks and can contain arbitrary characters to make binding easier:
 
-    in List {
-      inline void insert(int index, T value) {
-        this.`splice`(index, 0, value);
+    namespace math {
+      inline pure bool isNaN(double x) {
+        return x."nan?";
       }
     }
 
@@ -303,6 +303,10 @@ Type names can also be quoted. This gives the ability to quickly reference exter
         return ss.str();
       }
     }
+
+The type `dynamic` behaves like in C# and can be used for language targets without type declarations (JavaScript, for example). It's just implemented using a quoted type, so there's nothing special about it:
+
+    alias dynamic = `dynamic`;
 
 Finally, a quoted expression inside another quoted expression can be used to get type checking back. The type checker does symbol binding which is necessary for correct minification and inlining. Unbound symbols are quoted verbatim and do not undergo value substitution during inlining.
 

@@ -639,9 +639,6 @@ namespace base {
 
     virtual void emitDot(Node node) {
       var dotName = node.dotName();
-      if (dotName.kind == .QUOTED) {
-        dotName = dotName.quotedValue();
-      }
       emitExpression(node.dotTarget(), .MEMBER);
       emit(".");
       emit(node.symbol != null ? mangleName(node.symbol) : dotName.asString());

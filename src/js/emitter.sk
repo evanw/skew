@@ -796,9 +796,6 @@ namespace js {
       emitExpression(node.dotTarget(), .MEMBER);
       emit(".");
       var name = node.dotName();
-      if (name.kind == .QUOTED) {
-        name = name.quotedValue();
-      }
       emit(
         name.symbol == null ? name.asString() :
         name.symbol.kind.isInstance() ? mangleName(name.symbol) :

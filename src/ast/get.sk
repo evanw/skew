@@ -29,7 +29,7 @@ in Node {
   Node dotName() {
     assert kind.isDot();
     assert children.size() == 2;
-    assert children[1] == null || children[1].kind == .NAME || children[1].kind == .QUOTED && children[1].quotedValue().kind == .NAME;
+    assert children[1] == null || children[1].kind == .NAME || children[1].kind == .STRING;
     return children[1];
   }
 
