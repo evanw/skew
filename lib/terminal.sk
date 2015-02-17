@@ -175,16 +175,15 @@ namespace terminal {
     inline {
       int width() {
         `require`("io/console");
-        return `STDIN`.winsize[0];
+        return `STDIN`.winsize[1];
       }
 
       int height() {
         `require`("io/console");
-        return `STDIN`.winsize[1];
+        return `STDIN`.winsize[0];
       }
 
       void flush() {
-        `STDOUT`.oflush();
       }
 
       void print(string text) {

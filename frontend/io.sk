@@ -55,7 +55,7 @@
     }
 
     bool writeFile(string path, string contents) {
-      var file = new `File`("out", "w");
+      var file = new `File`(path, "w");
       if (file == null) return false;
       file.write(contents);
       file.close();

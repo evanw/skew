@@ -104,6 +104,7 @@ class CachedLibrary {
         terminal.print("could not compile " + name + ":\n" + compiler._options.log.toString());
         assert false;
       }
+      file.flags |= .IS_LIBRARY_FILE;
       file = file.clone();
     } else {
       compiler.addCachedInput(file.clone());

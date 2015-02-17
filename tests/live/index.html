@@ -128,7 +128,7 @@ function update(result, timeInMS) {
 }
 
 function start() {
-  ajax('../../build/tests/live.js', function(code) {
+  ajax('../../out/debug/live.js', function(code) {
     var worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
     var busyCompiling = false;
     var outOfDate = false;

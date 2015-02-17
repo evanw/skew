@@ -112,6 +112,7 @@ end
       }
       emit("\n");
       increaseIndent();
+      previousKind = .NULL;
       emitStatements(node.blockStatements());
       decreaseIndent();
       if (needsEnd) {
@@ -232,6 +233,13 @@ end
     }
 
     override void emitTry(Node node) {
+      var tryBlock = node.tryBlock();
+      var catchBlock = node.catchBlock();
+      emit(indent + "begin\n");
+      skipEnd = tryBlock;
+      emitBlock(tryBlock);
+      emit(indent + "rescue\n");
+      emitBlock(catchBlock);
     }
 
     override void endStatement() {
@@ -408,6 +416,7 @@ end
 
     override void emitCall(Node node, Precedence precedence) {
       var value = node.callValue();
+      var arguments = node.callArguments();
 
       // TODO: Remove this hack around map literal constructors
       if (value.kind == .TYPE && (value.type.isIntMap(cache) || value.type.isIntMap(cache))) {
@@ -417,9 +426,11 @@ end
 
       emitExpression(value, .UNARY_POSTFIX);
       if (value.kind == .TYPE) emit(".new");
-      emit("(");
-      emitCommaSeparatedExpressions(node.callArguments());
-      emit(")");
+      if (arguments.size() > 0) {
+        emit("(");
+        emitCommaSeparatedExpressions(arguments);
+        emit(")");
+      }
     }
 
     override void enterNamespace(Symbol symbol) {

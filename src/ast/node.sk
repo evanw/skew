@@ -233,6 +233,7 @@ in NodeKind {
 
 enum flags NodeFlags {
   NEEDS_PREPROCESSOR,
+  IS_LIBRARY_FILE,
 }
 
 class Node {
@@ -252,7 +253,13 @@ class Node {
   }
 
   bool needsPreprocessor() {
+    assert kind == .FILE;
     return (flags & .NEEDS_PREPROCESSOR) != 0;
+  }
+
+  bool isLibraryFile() {
+    assert kind == .FILE;
+    return (flags & .IS_LIBRARY_FILE) != 0;
   }
 
   bool isLastChild() {

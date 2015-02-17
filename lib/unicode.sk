@@ -1,11 +1,14 @@
 namespace unicode {
   enum Encoding {
-    UNKNOWN,
     UTF8,
     UTF16,
+    UTF32,
   }
 
-  const Encoding STRING_ENCODING = TARGET_JS ? .UTF16 : TARGET_CPP ? .UTF8 : .UNKNOWN;
+  const Encoding STRING_ENCODING =
+    TARGET_CPP ? .UTF8 :
+    TARGET_JS ? .UTF16 :
+    .UTF32;
 
   class StringIterator {
     static final var INSTANCE = StringIterator();
@@ -61,7 +64,10 @@ namespace unicode {
       }
 
       else {
-        return -1;
+        if (index >= stop) return -1;
+        var c = value.codeUnitAt(index);
+        index++;
+        return c;
       }
     }
   }
@@ -118,6 +124,12 @@ in string {
           result += fromCodeUnit((codePoint >> 10) + 0xD800);
           result += fromCodeUnit((codePoint & ((1 << 10) - 1)) + 0xDC00);
         }
+      }
+    }
+
+    else {
+      for (var i = 0, n = codePoints.size(); i < n; i++) {
+        result += fromCodeUnit(codePoints[i]);
       }
     }
 

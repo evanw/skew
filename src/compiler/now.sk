@@ -40,7 +40,7 @@
 #elif TARGET_RUBY
 
   inline double now() {
-    return new `Time`().to_f;
+    return new `Time`().to_f * 1000;
   }
 
 #else

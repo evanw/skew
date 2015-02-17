@@ -34,15 +34,19 @@ namespace tests {
     var options = CompilerOptions();
 
     override void run() {
-      var compiler = Compiler(options);
-      compiler.addInput(Source("<stdin>", input));
-      var result = compiler.compile();
-      if (result.outputs.size() != 0) {
-        for (var i = 0; i < result.outputs.size(); i++) {
-          output += result.outputs[i].contents + "\n";
+      try {
+        var compiler = Compiler(options);
+        compiler.addInput(Source("<stdin>", input));
+        var result = compiler.compile();
+        if (result.outputs.size() != 0) {
+          for (var i = 0; i < result.outputs.size(); i++) {
+            output += result.outputs[i].contents + "\n";
+          }
+        } else {
+          output = options.log.toString();
         }
-      } else {
-        output = options.log.toString();
+      } catch {
+        output = "(internal compiler error)";
       }
       output = trim(output);
       expected = trim(expected);
@@ -116,7 +120,7 @@ namespace tests {
     terminal.setColor(.GREEN);
     terminal.write("  " + (registeredTests.size() - failing.size()) + " passing");
     terminal.setColor(.GRAY);
-    terminal.print("  (" + formatNumber(totalTime) + "ms)");
+    terminal.print("  (" + formatNumber(totalTime / 1000) + "s)");
     if (failing.size() != 0) {
       terminal.setColor(.RED);
       terminal.print("  " + failing.size() + " failing");

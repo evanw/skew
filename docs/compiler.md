@@ -4,12 +4,12 @@ This documents the internals of the compiler.
 
 ## Development
 
-Development on the compiler itself is straightforward since the compiler compiles itself. The current build of the compiler in JavaScript is included in the repo as `skewc.js` and is used by `Makefile`. Here are some useful commands:
+Development on the compiler itself is straightforward since the compiler compiles itself. The current build of the compiler in JavaScript is included in the repo as `skewc.js` and is used by `build.js`. Here are some useful commands:
 
-* `make live`: Build the compiler into `build/tests/live.js` which can be tested using `tests/live/index.html`
-* `make check`: Run the compiler through itself a few times for a sanity check
-* `make replace`: Replace the top-level `skewc.js` file with a newer version of itself
-* `make test`: Run all tests under `tests/system`
+* `node build live`: Build the compiler into `out/debug/live.js` which can be tested using `tests/live/index.html`
+* `node build js-check`: Run the compiler through itself a few times for a sanity check
+* `node build replace`: Replace the top-level `skewc.js` file with a newer version of itself
+* `node build js-test`: Run all tests under `tests/system`
 
 The core of the compiler is the `compile()` method in `src/compiler/compiler.sk` and is a good place to start reading for an overview of the compilation process.
 

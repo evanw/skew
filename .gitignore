@@ -1,6 +1,6 @@
 *.pyc
 .DS_Store
-/build/
+/out/
 /npm/compiled.js
 /npm/skewc.unix.cpp
 /npm/skewc.windows.cpp

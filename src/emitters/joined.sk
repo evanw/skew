@@ -8,10 +8,17 @@ namespace joined {
 
     override List<Source> emitProgram(Node program) {
       var result = "";
+
       for (var i = 0; i < program.children.size(); i++) {
-        var input = program.children[i].range.source;
+        var file = program.children[i];
+        if (file.isLibraryFile()) {
+          continue;
+        }
+
+        var input = file.range.source;
         var contents = input.contents;
         var substitutions = resolver.sourceSubstitutions.getOrDefault(input.name, null);
+
         if (substitutions != null) {
           substitutions.sort(SourceSubstitutionComparison.INSTANCE);
           for (var j = substitutions.size() - 1; j >= 0; j--) {
@@ -22,11 +29,13 @@ namespace joined {
               contents.slice(substitution.range.end, contents.size());
           }
         }
+
         result += contents;
         if (contents != "" && contents[contents.size() - 1] != '\n') {
           result += "\n";
         }
       }
+
       return [Source(resolver.options.outputFile, result)];
     }
   }
