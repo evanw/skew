@@ -1254,7 +1254,7 @@
       throw new Error('assert kind.isNamedDeclaration(); (src/ast/get.sk:91:5)');
     }
 
-    if (!(this.children.length >= 1)) {
+    if (this.children.length < 1) {
       throw new Error('assert children.size() >= 1; (src/ast/get.sk:92:5)');
     }
 
@@ -1270,7 +1270,7 @@
       throw new Error('assert kind.isNamedBlockDeclaration(); (src/ast/get.sk:98:5)');
     }
 
-    if (!(this.children.length >= 2)) {
+    if (this.children.length < 2) {
       throw new Error('assert children.size() >= 2; (src/ast/get.sk:99:5)');
     }
 
@@ -1286,7 +1286,7 @@
       throw new Error('assert kind == .VARIABLE_CLUSTER; (src/ast/get.sk:105:5)');
     }
 
-    if (!(this.children.length >= 1)) {
+    if (this.children.length < 1) {
       throw new Error('assert children.size() >= 1; (src/ast/get.sk:106:5)');
     }
 
@@ -1298,7 +1298,7 @@
       throw new Error('assert kind == .VARIABLE_CLUSTER; (src/ast/get.sk:111:5)');
     }
 
-    if (!(this.children.length >= 1)) {
+    if (this.children.length < 1) {
       throw new Error('assert children.size() >= 1; (src/ast/get.sk:112:5)');
     }
 
@@ -1382,7 +1382,7 @@
       throw new Error('assert kind == .MODIFIER; (src/ast/get.sk:153:5)');
     }
 
-    if (!(this.children.length >= 2)) {
+    if (this.children.length < 2) {
       throw new Error('assert children.size() >= 2; (src/ast/get.sk:154:5)');
     }
 
@@ -1398,7 +1398,7 @@
       throw new Error('assert kind == .MODIFIER; (src/ast/get.sk:160:5)');
     }
 
-    if (!(this.children.length >= 2)) {
+    if (this.children.length < 2) {
       throw new Error('assert children.size() >= 2; (src/ast/get.sk:161:5)');
     }
 
@@ -1414,7 +1414,7 @@
       throw new Error('assert kind == .MODIFIER || kind == .ANNOTATION; (src/ast/get.sk:167:5)');
     }
 
-    if (!(this.children.length >= 2)) {
+    if (this.children.length < 2) {
       throw new Error('assert children.size() >= 2; (src/ast/get.sk:168:5)');
     }
 
@@ -1430,7 +1430,7 @@
       throw new Error('assert kind == .MODIFIER || kind == .ANNOTATION; (src/ast/get.sk:174:5)');
     }
 
-    if (!(this.children.length >= 2)) {
+    if (this.children.length < 2) {
       throw new Error('assert children.size() >= 2; (src/ast/get.sk:175:5)');
     }
 
@@ -1446,7 +1446,7 @@
       throw new Error('assert kind == .MODIFIER; (src/ast/get.sk:181:5)');
     }
 
-    if (!(this.children.length >= 2)) {
+    if (this.children.length < 2) {
       throw new Error('assert children.size() >= 2; (src/ast/get.sk:182:5)');
     }
 
@@ -1738,7 +1738,7 @@
       throw new Error('assert kind.isObject() || kind == .EXTENSION; (src/ast/get.sk:323:5)');
     }
 
-    if (!(this.children.length >= 3)) {
+    if (this.children.length < 3) {
       throw new Error('assert children.size() >= 3; (src/ast/get.sk:324:5)');
     }
 
@@ -1886,7 +1886,7 @@
       throw new Error('assert kind == .PARAMETERIZE; (src/ast/get.sk:393:5)');
     }
 
-    if (!(this.children.length >= 1)) {
+    if (this.children.length < 1) {
       throw new Error('assert children.size() >= 1; (src/ast/get.sk:394:5)');
     }
 
@@ -1898,7 +1898,7 @@
       throw new Error('assert kind == .PARAMETERIZE; (src/ast/get.sk:399:5)');
     }
 
-    if (!(this.children.length >= 1)) {
+    if (this.children.length < 1) {
       throw new Error('assert children.size() >= 1; (src/ast/get.sk:400:5)');
     }
 
@@ -1910,7 +1910,7 @@
       throw new Error('assert kind == .CALL; (src/ast/get.sk:405:5)');
     }
 
-    if (!(this.children.length >= 1)) {
+    if (this.children.length < 1) {
       throw new Error('assert children.size() >= 1; (src/ast/get.sk:406:5)');
     }
 
@@ -1922,7 +1922,7 @@
       throw new Error('assert kind == .CALL; (src/ast/get.sk:411:5)');
     }
 
-    if (!(this.children.length >= 1)) {
+    if (this.children.length < 1) {
       throw new Error('assert children.size() >= 1; (src/ast/get.sk:412:5)');
     }
 
@@ -2290,7 +2290,7 @@
   };
 
   Node.prototype.removeChildAtIndex = function(index) {
-    if (index < 0 || !(index < this.children.length)) {
+    if (index < 0 || index >= this.children.length) {
       throw new Error('assert index >= 0 && index < children.size(); (src/ast/node.sk:303:5)');
     }
 
@@ -2376,7 +2376,7 @@
       throw new Error('assert children != null; (src/ast/node.sk:375:5)');
     }
 
-    if (index < 0 || !(index <= this.children.length)) {
+    if (index < 0 || index > this.children.length) {
       throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:376:5)');
     }
 
@@ -2396,7 +2396,7 @@
       this.children = [];
     }
 
-    if (index < 0 || !(index <= this.children.length)) {
+    if (index < 0 || index > this.children.length) {
       throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:385:5)');
     }
 
@@ -2409,7 +2409,7 @@
       this.children = [];
     }
 
-    if (index < 0 || !(index <= this.children.length)) {
+    if (index < 0 || index > this.children.length) {
       throw new Error('assert index >= 0 && index <= children.size(); (src/ast/node.sk:392:5)');
     }
 
@@ -3437,7 +3437,7 @@
   };
 
   UnionFind.prototype.find = function(index) {
-    if (index < 0 || !(index < this.parents.length)) {
+    if (index < 0 || index >= this.parents.length) {
       throw new Error('assert index >= 0 && index < parents.size(); (src/core/support.sk:23:5)');
     }
 
@@ -4150,7 +4150,7 @@
   base.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
 
-    if (!(values.length > 1)) {
+    if (values.length <= 1) {
       throw new Error('assert values.size() > 1; (src/emitters/base.sk:549:7)');
     }
 
@@ -5884,7 +5884,7 @@
   ruby.Emitter.prototype.emitSequence = function(node, precedence) {
     var values = node.sequenceValues();
 
-    if (!(values.length > 1)) {
+    if (values.length <= 1) {
       throw new Error('assert values.size() > 1; (src/emitters/ruby.sk:385:7)');
     }
 
@@ -8652,7 +8652,7 @@
       return 0;
     }
 
-    if (!(this.range.start < this.range.source.contents.length)) {
+    if (this.range.start >= this.range.source.contents.length) {
       throw new Error('assert range.start < range.source.contents.size(); (src/lexer/token.sk:7:5)');
     }
 
@@ -10340,7 +10340,6 @@
 
   var PreprocessorResult = {
     FALSE: 0,
-    TRUE: 1,
     ERROR: 2
   };
 
@@ -10559,7 +10558,7 @@
       var name = node.asString();
 
       if (name in this.defines._table) {
-        return this.defines._table[name] ? PreprocessorResult.TRUE : PreprocessorResult.FALSE;
+        return this.defines._table[name] | 0;
       } else if (mode === LogErrors.LOG_ERRORS) {
         semanticErrorPreprocessorInvalidSymbol(this.log, node.range, name);
       }
@@ -16455,7 +16454,7 @@
   }
 
   function parseStringLiteral(log, range, text) {
-    if (!(text.length >= 2)) {
+    if (text.length < 2) {
       throw new Error('assert text.size() >= 2; (src/core/support.sk:77:3)');
     }
 
@@ -16873,7 +16872,7 @@
               var range = token.range;
               var start = range.start;
 
-              if (!((i + 1 | 0) < tokens.length)) {
+              if ((i + 1 | 0) >= tokens.length) {
                 throw new Error('assert i + 1 < tokens.size(); (src/lexer/token.sk:86:13)');
               }
 
@@ -18629,7 +18628,7 @@
 
         info.callSites[i] = null;
 
-        var clone = info.inlineValue.clone();
+        var clone = info.inlineValue.clone().withType(callSite.type);
         var values = callSite.removeChildren();
 
         if (values.length !== (info.$arguments.length + 1 | 0)) {

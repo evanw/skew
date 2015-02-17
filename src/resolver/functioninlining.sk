@@ -31,7 +31,7 @@ namespace FunctionInliningPass {
         // to mess up the indices of another call to inlineSymbol() further up
         // the call stack.
         info.callSites[i] = null;
-        var clone = info.inlineValue.clone();
+        var clone = info.inlineValue.clone().withType(callSite.type);
         var values = callSite.removeChildren();
         assert values.size() == info.arguments.size() + 1;
         var value = values.shift();

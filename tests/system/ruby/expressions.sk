@@ -27,4 +27,39 @@ def bar(x, y)
 end
 ");
 
+testRuby("
+export void foo(int x) {
+  x = (1, 2);
+  x++, --x;
+}
+", "
+def foo(x)
+  x = (1; 2)
+  x += 1
+  x -= 1
+end
+");
+
+testRuby("
+class Foo<T> {
+  inline T foo() { return `this`.untyped; }
+}
+export int foo(Foo<bool> foo) { return (int)foo.foo(); }
+export int bar(int x) { return (int)baz(x); }
+inline bool baz(int x) { return x == 0; }
+", "
+class Foo
+  def initialize
+  end
+end
+
+def foo(foo)
+  return foo.untyped ? 1 : 0
+end
+
+def bar(x)
+  return x == 0 ? 1 : 0
+end
+");
+
 }}

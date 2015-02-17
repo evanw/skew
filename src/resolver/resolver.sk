@@ -202,7 +202,7 @@ class Resolver {
       case .NAME {
         var name = node.asString();
         if (name in defines) {
-          return defines[name] ? .TRUE : .FALSE;
+          return (PreprocessorResult)defines[name];
         } else if (mode == .LOG_ERRORS) {
           semanticErrorPreprocessorInvalidSymbol(log, node.range, name);
         }
