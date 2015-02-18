@@ -21,11 +21,19 @@ in CompilerTarget {
     return this >= NONE && this <= RUBY;
   }
 
+  bool needsMapLiteralFactory() {
+    return this != RUBY;
+  }
+
+  bool hasNoNestedScopes() {
+    return this == JAVASCRIPT;
+  }
+
   // C++ has generics, not templates, and each template has a separate copy of
   // its static members, unlike generics. Fix this by moving all static stuff
   // off of generic types.
   bool moveStaticGlobalsOffGenericTypes() {
-    return this == .CPP;
+    return this == CPP;
   }
 
   // Interfaces in JavaScript go away entirely at runtime. All stuff defined

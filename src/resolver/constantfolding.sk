@@ -4,10 +4,6 @@ class ConstantFolder {
     CompilerOptions options;
   }
 
-  bool targetHasNoNestedScopes() {
-    return options.target == .JAVASCRIPT;
-  }
-
   void flatten(Node node, Content content) {
     node.removeChildren();
     switch (content.type()) {
@@ -149,7 +145,7 @@ class ConstantFolder {
 
       // Replace "for (var a = 0; false; c) d;" with "var a = 0;"
       else if (setup.kind == .VARIABLE_CLUSTER) {
-        if (targetHasNoNestedScopes()) {
+        if (options.target.hasNoNestedScopes()) {
           node.replaceWith(setup.remove());
         }
 
@@ -203,7 +199,7 @@ class ConstantFolder {
       }
 
       // Be careful not to pollute the enclosing scope in targets where that matters
-      if (targetHasNoNestedScopes() || !blockContainsVariableCluster(trueBlock)) {
+      if (options.target.hasNoNestedScopes() || !blockContainsVariableCluster(trueBlock)) {
         var replacements = trueBlock.removeChildren();
         node.replaceWithNodes(replacements);
         return replacements.size() - 1;
@@ -219,7 +215,7 @@ class ConstantFolder {
       }
 
       // Be careful not to pollute the enclosing scope in targets where that matters
-      if (targetHasNoNestedScopes() || !blockContainsVariableCluster(falseBlock)) {
+      if (options.target.hasNoNestedScopes() || !blockContainsVariableCluster(falseBlock)) {
         var replacements = falseBlock.removeChildren();
         node.replaceWithNodes(replacements);
         return replacements.size() - 1;

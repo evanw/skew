@@ -2802,7 +2802,7 @@
       if (this.file === null) {
         process.stdout.write('could not compile ' + this.name + ':\n' + compiler._options.log + '\n');
 
-        throw new Error('assert false; (src/compiler/compiler.sk:106:9)');
+        throw new Error('assert false; (src/compiler/compiler.sk:114:9)');
       }
 
       this.file.flags |= NodeFlags.IS_LIBRARY_FILE;
@@ -2888,11 +2888,11 @@
 
   Compiler.prototype.addCachedInput = function(node) {
     if (node.kind !== NodeKind.FILE) {
-      throw new Error('assert node.kind == .FILE; (src/compiler/compiler.sk:206:5)');
+      throw new Error('assert node.kind == .FILE; (src/compiler/compiler.sk:214:5)');
     }
 
     if (node.range.isEmpty()) {
-      throw new Error('assert !node.range.isEmpty(); (src/compiler/compiler.sk:207:5)');
+      throw new Error('assert !node.range.isEmpty(); (src/compiler/compiler.sk:215:5)');
     }
 
     this._inputs.push(node.range.source);
@@ -2975,7 +2975,7 @@
         break;
 
       default:
-        throw new Error('assert false; (src/compiler/compiler.sk:272:19)');
+        throw new Error('assert false; (src/compiler/compiler.sk:280:19)');
         break;
       }
 
@@ -9247,10 +9247,6 @@
     this.options = _1;
   }
 
-  ConstantFolder.prototype.targetHasNoNestedScopes = function() {
-    return this.options.target === CompilerTarget.JAVASCRIPT;
-  };
-
   ConstantFolder.prototype.flatten = function(node, content) {
     node.removeChildren();
 
@@ -9277,7 +9273,7 @@
 
   ConstantFolder.prototype.flattenBool = function(node, value) {
     if (!node.type.isIgnored(this.cache) && !node.type.isBool(this.cache)) {
-      throw new Error('assert node.type.isIgnored(cache) || node.type.isBool(cache); (src/resolver/constantfolding.sk:24:5)');
+      throw new Error('assert node.type.isIgnored(cache) || node.type.isBool(cache); (src/resolver/constantfolding.sk:20:5)');
     }
 
     this.flatten(node, new BoolContent(value));
@@ -9285,7 +9281,7 @@
 
   ConstantFolder.prototype.flattenInt = function(node, value) {
     if (!node.type.isIgnored(this.cache) && !node.type.isInteger(this.cache)) {
-      throw new Error('assert node.type.isIgnored(cache) || node.type.isInteger(cache); (src/resolver/constantfolding.sk:30:5)');
+      throw new Error('assert node.type.isIgnored(cache) || node.type.isInteger(cache); (src/resolver/constantfolding.sk:26:5)');
     }
 
     this.flatten(node, new IntContent(value));
@@ -9293,7 +9289,7 @@
 
   ConstantFolder.prototype.flattenReal = function(node, value) {
     if (!node.type.isIgnored(this.cache) && !node.type.isReal(this.cache)) {
-      throw new Error('assert node.type.isIgnored(cache) || node.type.isReal(cache); (src/resolver/constantfolding.sk:36:5)');
+      throw new Error('assert node.type.isIgnored(cache) || node.type.isReal(cache); (src/resolver/constantfolding.sk:32:5)');
     }
 
     this.flatten(node, new DoubleContent(value));
@@ -9301,7 +9297,7 @@
 
   ConstantFolder.prototype.flattenString = function(node, value) {
     if (!node.type.isIgnored(this.cache) && !node.type.isString(this.cache)) {
-      throw new Error('assert node.type.isIgnored(cache) || node.type.isString(cache); (src/resolver/constantfolding.sk:42:5)');
+      throw new Error('assert node.type.isIgnored(cache) || node.type.isString(cache); (src/resolver/constantfolding.sk:38:5)');
     }
 
     this.flatten(node, new StringContent(value));
@@ -9309,7 +9305,7 @@
 
   ConstantFolder.blockContainsVariableCluster = function(node) {
     if (node.kind !== NodeKind.BLOCK) {
-      throw new Error('assert node.kind == .BLOCK; (src/resolver/constantfolding.sk:47:5)');
+      throw new Error('assert node.kind == .BLOCK; (src/resolver/constantfolding.sk:43:5)');
     }
 
     if (node.hasChildren()) {
@@ -9393,11 +9389,11 @@
     var right = node.binaryRight();
 
     if (!left.type.isString(this.cache) && !left.type.isIgnored(this.cache)) {
-      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:98:5)');
+      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:94:5)');
     }
 
     if (!right.type.isString(this.cache) && !right.type.isIgnored(this.cache)) {
-      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:99:5)');
+      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:95:5)');
     }
 
     if (right.kind === NodeKind.ADD) {
@@ -9405,11 +9401,11 @@
       var rightRight = right.binaryRight();
 
       if (!rightLeft.type.isString(this.cache) && !rightLeft.type.isIgnored(this.cache)) {
-        throw new Error('assert rightLeft.type.isString(cache) || rightLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:104:7)');
+        throw new Error('assert rightLeft.type.isString(cache) || rightLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:100:7)');
       }
 
       if (!rightRight.type.isString(this.cache) && !rightRight.type.isIgnored(this.cache)) {
-        throw new Error('assert rightRight.type.isString(cache) || rightRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:105:7)');
+        throw new Error('assert rightRight.type.isString(cache) || rightRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:101:7)');
       }
 
       left.swapWith(right);
@@ -9423,11 +9419,11 @@
     var right = node.binaryRight();
 
     if (!left.type.isString(this.cache) && !left.type.isIgnored(this.cache)) {
-      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:115:5)');
+      throw new Error('assert left.type.isString(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:111:5)');
     }
 
     if (!right.type.isString(this.cache) && !right.type.isIgnored(this.cache)) {
-      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:116:5)');
+      throw new Error('assert right.type.isString(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:112:5)');
     }
 
     if (right.kind === NodeKind.STRING) {
@@ -9438,11 +9434,11 @@
         var leftRight = left.binaryRight();
 
         if (!leftLeft.type.isString(this.cache) && !leftLeft.type.isIgnored(this.cache)) {
-          throw new Error('assert leftLeft.type.isString(cache) || leftLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:127:9)');
+          throw new Error('assert leftLeft.type.isString(cache) || leftLeft.type.isIgnored(cache); (src/resolver/constantfolding.sk:123:9)');
         }
 
         if (!leftRight.type.isString(this.cache) && !leftRight.type.isIgnored(this.cache)) {
-          throw new Error('assert leftRight.type.isString(cache) || leftRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:128:9)');
+          throw new Error('assert leftRight.type.isString(cache) || leftRight.type.isIgnored(cache); (src/resolver/constantfolding.sk:124:9)');
         }
 
         if (leftRight.kind === NodeKind.STRING) {
@@ -9463,7 +9459,7 @@
         node.remove();
         return -1;
       } else if (setup.kind === NodeKind.VARIABLE_CLUSTER) {
-        if (this.targetHasNoNestedScopes()) {
+        if (in_CompilerTarget.hasNoNestedScopes(this.options.target)) {
           node.replaceWith(setup.remove());
         } else {
           var update = node.forUpdate();
@@ -9508,7 +9504,7 @@
         falseBlock.replaceWith(null);
       }
 
-      if (this.targetHasNoNestedScopes() || !ConstantFolder.blockContainsVariableCluster(trueBlock)) {
+      if (in_CompilerTarget.hasNoNestedScopes(this.options.target) || !ConstantFolder.blockContainsVariableCluster(trueBlock)) {
         var replacements = trueBlock.removeChildren();
         node.replaceWithNodes(replacements);
         return replacements.length - 1 | 0;
@@ -9519,7 +9515,7 @@
         return -1;
       }
 
-      if (this.targetHasNoNestedScopes() || !ConstantFolder.blockContainsVariableCluster(falseBlock)) {
+      if (in_CompilerTarget.hasNoNestedScopes(this.options.target) || !ConstantFolder.blockContainsVariableCluster(falseBlock)) {
         var replacements = falseBlock.removeChildren();
         node.replaceWithNodes(replacements);
         return replacements.length - 1 | 0;
@@ -9772,11 +9768,11 @@
       var right = variable.binaryRight();
 
       if (!left.type.isInt(this.cache) && !left.type.isIgnored(this.cache)) {
-        throw new Error('assert left.type.isInt(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:472:7)');
+        throw new Error('assert left.type.isInt(cache) || left.type.isIgnored(cache); (src/resolver/constantfolding.sk:468:7)');
       }
 
       if (!right.type.isInt(this.cache) && !right.type.isIgnored(this.cache)) {
-        throw new Error('assert right.type.isInt(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:473:7)');
+        throw new Error('assert right.type.isInt(cache) || right.type.isIgnored(cache); (src/resolver/constantfolding.sk:469:7)');
       }
 
       var isLeftConstant = left.kind === NodeKind.INT;
@@ -13804,17 +13800,19 @@
       node.type = this.cache.parameterize(isString ? this.cache.stringMapType : this.cache.intMapType, [valueType]);
     }
 
-    var literal = node.type.findMember('literal').symbol;
-    var keys = [];
-    var values = [];
+    if (in_CompilerTarget.needsMapLiteralFactory(this.options.target)) {
+      var literal = node.type.findMember('literal').symbol;
+      var keys = [];
+      var values = [];
 
-    for (var i = 0; i < items.length; i = i + 1 | 0) {
-      var item = items[i];
-      keys.push(item.itemKey().replaceWith(null));
-      values.push(item.itemValue().replaceWith(null));
+      for (var i = 0; i < items.length; i = i + 1 | 0) {
+        var item = items[i];
+        keys.push(item.itemKey().replaceWith(null));
+        values.push(item.itemValue().replaceWith(null));
+      }
+
+      node.become(Node.createCall(Node.createName(literal.name).withSymbol(literal).withType(this.cache.parameterize(literal.type, [valueType])), [Node.createList(keys).withType(this.cache.parameterizeListType(keyType)), Node.createList(values).withType(this.cache.parameterizeListType(valueType))]).withRange(node.range).withType(node.type));
     }
-
-    node.become(Node.createCall(Node.createName(literal.name).withSymbol(literal).withType(this.cache.parameterize(literal.type, [valueType])), [Node.createList(keys).withType(this.cache.parameterizeListType(keyType)), Node.createList(values).withType(this.cache.parameterizeListType(valueType))]).withRange(node.range).withType(node.type));
   };
 
   Resolver.prototype.mergeCommonLiteralType = function(commonType, child, parent) {
@@ -13920,7 +13918,7 @@
     var $arguments = node.callArguments();
 
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3521:5)');
+      throw new Error('assert value.kind.isExpression(); (src/resolver/resolver.sk:3523:5)');
     }
 
     this.resolve(value, null);
@@ -14059,7 +14057,7 @@
     }
 
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3669:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3671:5)');
     }
 
     var sortedTypes = [];
@@ -14377,7 +14375,7 @@
 
   Resolver.prototype.assessOperatorOverloadMatch = function(nodeTypes, argumentTypes) {
     if (nodeTypes.length !== (1 + argumentTypes.length | 0)) {
-      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:4034:5)');
+      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:4036:5)');
     }
 
     var foundImplicitConversion = false;
@@ -14464,18 +14462,18 @@
       var overload = overloads[i];
 
       if (!overload.type.isFunction()) {
-        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:4117:7)');
+        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:4119:7)');
       }
 
       if ((overload.type.argumentTypes().length + 1 | 0) !== children.length) {
-        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:4118:7)');
+        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:4120:7)');
       }
 
       var member = targetType.findOperatorOverload(overload);
       this.initializeMember(member);
 
       if (!member.type.isFunction()) {
-        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:4121:7)');
+        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:4123:7)');
       }
 
       var match = this.assessOperatorOverloadMatch(typeForMatching, member.type.argumentTypes());
@@ -16439,6 +16437,14 @@
 
   in_CompilerTarget.shouldRunResolver = function($this) {
     return $this >= CompilerTarget.NONE && $this <= CompilerTarget.RUBY;
+  };
+
+  in_CompilerTarget.needsMapLiteralFactory = function($this) {
+    return $this !== CompilerTarget.RUBY;
+  };
+
+  in_CompilerTarget.hasNoNestedScopes = function($this) {
+    return $this === CompilerTarget.JAVASCRIPT;
   };
 
   in_CompilerTarget.moveStaticGlobalsOffGenericTypes = function($this) {

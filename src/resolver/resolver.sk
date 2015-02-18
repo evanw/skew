@@ -3393,19 +3393,21 @@ class Resolver {
     }
 
     // Call the factory function
-    var literal = node.type.findMember("literal").symbol;
-    List<Node> keys = [];
-    List<Node> values = [];
-    for (var i = 0; i < items.size(); i++) {
-      var item = items[i];
-      keys.push(item.itemKey().replaceWith(null));
-      values.push(item.itemValue().replaceWith(null));
+    if (options.target.needsMapLiteralFactory()) {
+      var literal = node.type.findMember("literal").symbol;
+      List<Node> keys = [];
+      List<Node> values = [];
+      for (var i = 0; i < items.size(); i++) {
+        var item = items[i];
+        keys.push(item.itemKey().replaceWith(null));
+        values.push(item.itemValue().replaceWith(null));
+      }
+      node.become(Node.createCall(
+        Node.createName(literal.name).withSymbol(literal).withType(cache.parameterize(literal.type, [valueType])), [
+        Node.createList(keys).withType(cache.parameterizeListType(keyType)),
+        Node.createList(values).withType(cache.parameterizeListType(valueType))
+      ]).withRange(node.range).withType(node.type));
     }
-    node.become(Node.createCall(
-      Node.createName(literal.name).withSymbol(literal).withType(cache.parameterize(literal.type, [valueType])), [
-      Node.createList(keys).withType(cache.parameterizeListType(keyType)),
-      Node.createList(values).withType(cache.parameterizeListType(valueType))
-    ]).withRange(node.range).withType(node.type));
   }
 
   Type mergeCommonLiteralType(Type commonType, Node child, Node parent) {

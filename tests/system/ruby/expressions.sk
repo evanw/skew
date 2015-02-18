@@ -85,4 +85,14 @@ def foo
 end
 ");
 
+testRuby("
+export StringMap<int> foo() {
+  return { \"x\": 1, \"y\": 2 };
+}
+", "
+def foo
+  return { \"x\" => 1, \"y\" => 2 }
+end
+");
+
 }}
