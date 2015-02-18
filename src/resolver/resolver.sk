@@ -1283,6 +1283,23 @@ class Resolver {
       unexpectedModifierIfPresent(symbol, .STATIC, "on a constructor");
       unexpectedModifierIfPresent(symbol, .VIRTUAL, "on a constructor");
       unexpectedModifierIfPresent(symbol, .OVERRIDE, "on a constructor");
+
+      // Special-case non-imported constructors inside imported types to just
+      // be regular static functions that are called in place of the constructor
+      // and that return the instance. This is very convenient for binding.
+      if (enclosingSymbol.isImport() && !symbol.isImport()) {
+        if (node.superInitializer() != null || node.memberInitializers() != null) {
+          semanticErrorStaticConstructorInitializerList(log, initializerListRange(node));
+        }
+        node.become(Node.createFunction(
+          node.declarationName().replaceWith(null),
+          node.functionArguments().replaceWith(null),
+          node.functionBlock().replaceWith(null),
+          Node.createType(resultType),
+          null).withSymbol(symbol).withRange(node.range));
+        symbol.kind = .GLOBAL_FUNCTION;
+        symbol.flags |= .STATIC;
+      }
     }
 
     // Resolve argument variables
@@ -2691,9 +2708,7 @@ class Resolver {
 
     // Abstract constructors cannot have initializer lists
     if ((superInitializer != null || memberInitializers.children.size() != 0) && block == null) {
-      semanticErrorAbstractConstructorInitializer(log, Range.span(
-        (superInitializer != null ? superInitializer : memberInitializers.children[0]).range,
-        (memberInitializers.children.size() < 1 ? superInitializer : memberInitializers.lastChild()).range));
+      semanticErrorAbstractConstructorInitializer(log, initializerListRange(node));
     }
 
     // Move the initial values for all member variables to initializers. The
@@ -3540,11 +3555,12 @@ class Resolver {
       }
 
       // Cannot call impure constructors (keep going even if this is an error)
-      if (context.inPureFunction() && !member.symbol.isPure()) {
+      var symbol = member.symbol;
+      if (context.inPureFunction() && !symbol.isPure()) {
         semanticErrorPurityViolation(log, value.range);
       }
 
-      node.symbol = member.symbol;
+      node.symbol = symbol;
       valueType = member.type;
 
       // Avoid reporting further errors
@@ -3553,13 +3569,19 @@ class Resolver {
         return;
       }
 
-      checkAccess(node.symbol, value.range);
+      checkAccess(symbol, value.range);
 
       // Hack around broken map literal constructors for now
       var hack = valueType.resultType();
       if (options.target == .RUBY && (hack.isIntMap(cache) || hack.isStringMap(cache))) {
         node.become(Node.createMap([]).withType(hack));
         return;
+      }
+
+      // Non-imported constructors on imported types get converted to static
+      // functions. All call sites should be converted too.
+      if (symbol.kind == .GLOBAL_FUNCTION) {
+        value.become(Node.createName(symbol.name).withSymbol(symbol).withType(valueType).withRange(value.range));
       }
     }
 
@@ -4144,6 +4166,14 @@ class Resolver {
         node.become(Node.createBinary(originalKind, clone, Node.createInt(0).withType(cache.intType)).withType(cache.boolType));
       }
     }
+  }
+
+  static Range initializerListRange(Node node) {
+    var superInitializer = node.superInitializer();
+    var memberInitializers = node.memberInitializers();
+    return Range.span(
+      (superInitializer != null ? superInitializer : memberInitializers.children[0]).range,
+      (memberInitializers.children.size() < 1 ? superInitializer : memberInitializers.lastChild()).range);
   }
 
   static bool isAbstractFunction(Symbol symbol) {

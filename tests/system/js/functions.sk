@@ -426,4 +426,26 @@ interface Foo {}
 }());
 ");
 
+testJS("
+import class Foo {}
+in Foo {
+  new() { return `100`; }
+}
+export Foo bar() {
+  return Foo();
+}
+", "
+(function() {
+  var in_Foo = {};
+
+  in_Foo.$new = function() {
+    return 100;
+  };
+
+  bar = function() {
+    return in_Foo.$new();
+  };
+}());
+");
+
 }}
