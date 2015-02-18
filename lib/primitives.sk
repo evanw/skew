@@ -34,7 +34,7 @@ alias dynamic = `dynamic`;
   class StringBuilder {
     private var _buffer = "";
 
-    inline {
+    pure inline {
       void append(string text) { _buffer += text; }
       string toString() { return _buffer; }
     }
@@ -161,7 +161,7 @@ alias dynamic = `dynamic`;
   class StringBuilder {
     private var _buffer = "";
 
-    inline {
+    pure inline {
       void append(string text) { _buffer += text; }
       string toString() { return _buffer; }
     }
@@ -213,12 +213,13 @@ alias dynamic = `dynamic`;
     }
   }
 
-  class StringBuilder {
-    private var _buffer = "";
+  import class StringBuilder {}
 
-    inline {
-      void append(string text) { `this`._buffer << text; }
-      string toString() { return _buffer."dup"; }
+  in StringBuilder {
+    pure inline {
+      new() { return `""`; }
+      void append(string text) { `this` << text; }
+      string toString() { return this."dup"; }
     }
   }
 
@@ -248,9 +249,11 @@ alias dynamic = `dynamic`;
   }
 
   import class StringBuilder {
-    new();
-    void append(string text);
-    string toString();
+    pure {
+      new();
+      void append(string text);
+      string toString();
+    }
   }
 
 #endif

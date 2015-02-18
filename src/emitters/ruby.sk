@@ -122,7 +122,6 @@ end
       }
       emit("\n");
       increaseIndent();
-      previousKind = .NULL;
       emitStatements(node.blockStatements());
       decreaseIndent();
       if (needsEnd) {

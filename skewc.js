@@ -19,80 +19,6 @@
 
   var math = {};
 
-  function StringMap() {
-    this._table = Object.create(null);
-  }
-
-  StringMap.prototype.getOrDefault = function(key, defaultValue) {
-    return key in this._table ? this._table[key] : defaultValue;
-  };
-
-  StringMap.prototype.values = function() {
-    var values = [];
-
-    for (var key in this._table) {
-      values.push(this._table[key]);
-    }
-
-    return values;
-  };
-
-  StringMap.prototype.clone = function() {
-    var clone = new StringMap();
-
-    for (var key in this._table) {
-      clone._table[key] = this._table[key];
-    }
-
-    return clone;
-  };
-
-  StringMap.literal = function(keys, values) {
-    var map = new StringMap();
-
-    if (keys.length !== values.length) {
-      throw new Error('assert keys.size() == values.size(); (<compiler>/stringmap.sk:102:5)');
-    }
-
-    for (var i = 0; i < keys.length; i = i + 1 | 0) {
-      map._table[keys[i]] = values[i];
-    }
-
-    return map;
-  };
-
-  function IntMap() {
-    this._table = Object.create(null);
-  }
-
-  IntMap.prototype.getOrDefault = function(key, defaultValue) {
-    return key in this._table ? this._table[key] : defaultValue;
-  };
-
-  IntMap.prototype.values = function() {
-    var values = [];
-
-    for (var key in this._table) {
-      values.push(this._table[key]);
-    }
-
-    return values;
-  };
-
-  IntMap.literal = function(keys, values) {
-    var map = new IntMap();
-
-    if (keys.length !== values.length) {
-      throw new Error('assert keys.size() == values.size(); (<compiler>/intmap.sk:107:5)');
-    }
-
-    for (var i = 0; i < keys.length; i = i + 1 | 0) {
-      map._table[keys[i]] = values[i];
-    }
-
-    return map;
-  };
-
   var OperatingSystem = {
     ANDROID: 0,
     IOS: 1,
@@ -2838,7 +2764,7 @@
     this.target = CompilerTarget.NONE;
     this.config = CompilerConfig.AUTOMATIC;
     this.memoryManagement = MemoryManagement.NONE;
-    this.overriddenDefines = new StringMap();
+    this.overriddenDefines = Object.create(null);
     this.outputDirectory = '';
     this.outputFile = '';
     this.verbose = false;
@@ -2854,7 +2780,7 @@
   }
 
   CompilerOptions.prototype.overrideDefine = function(name, value) {
-    this.overriddenDefines._table[name] = new OverriddenDefine(value, Range.EMPTY);
+    this.overriddenDefines[name] = new OverriddenDefine(value, Range.EMPTY);
   };
 
   function CompilerResult(_0, _1, _2) {
@@ -3704,7 +3630,6 @@
   base.Emitter.prototype.emitBlock = function(node) {
     this.builder._buffer += ' {\n';
     this.increaseIndent();
-    this.previousKind = NodeKind.NULL;
     this.emitStatements(node.blockStatements());
     this.decreaseIndent();
     this.builder._buffer += this.indent + '}';
@@ -3800,7 +3725,7 @@
       break;
 
     default:
-      throw new Error('assert false; (src/emitters/base.sk:263:19)');
+      throw new Error('assert false; (src/emitters/base.sk:262:19)');
       break;
     }
   };
@@ -3845,7 +3770,6 @@
     this.emitExpression(node.switchValue(), Precedence.LOWEST);
     this.builder._buffer += ') {\n';
     this.increaseIndent();
-    this.previousKind = NodeKind.NULL;
     this.emitStatements(cases);
     this.decreaseIndent();
     this.builder._buffer += this.indent + '}\n';
@@ -4148,7 +4072,7 @@
       } else if (in_NodeKind.isBinaryOperator(kind)) {
         this.emitBinary(node, precedence);
       } else {
-        throw new Error('assert false; (src/emitters/base.sk:535:16)');
+        throw new Error('assert false; (src/emitters/base.sk:533:16)');
       }
       break;
     }
@@ -4168,7 +4092,7 @@
     var values = node.sequenceValues();
 
     if (values.length <= 1) {
-      throw new Error('assert values.size() > 1; (src/emitters/base.sk:549:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/base.sk:547:7)');
     }
 
     if (Precedence.COMMA <= precedence) {
@@ -4223,7 +4147,7 @@
       return;
     }
 
-    var info = operatorInfo._table[kind];
+    var info = operatorInfo[kind];
 
     if (info.precedence < precedence) {
       this.builder._buffer += '(';
@@ -4255,7 +4179,7 @@
   };
 
   base.Emitter.prototype.emitBinary = function(node, precedence) {
-    var info = operatorInfo._table[node.kind];
+    var info = operatorInfo[node.kind];
 
     if (info.precedence < precedence) {
       this.builder._buffer += '(';
@@ -4440,7 +4364,7 @@
 
   base.Emitter.prototype.emitType = function(type) {
     if (type.isFunction()) {
-      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:762:7)');
+      throw new Error('assert !type.isFunction(); (src/emitters/base.sk:760:7)');
     }
 
     if (type.isQuoted()) {
@@ -4473,7 +4397,7 @@
       return this.mangleName(symbol.enclosingSymbol);
     }
 
-    if (symbol.name in this.isKeyword._table && !symbol.isImport()) {
+    if (symbol.name in this.isKeyword && !symbol.isImport()) {
       return '_' + symbol.name + '_';
     }
 
@@ -4511,7 +4435,7 @@
 
   cpp.Emitter = function(_0) {
     base.Emitter.call(this, _0);
-    this.includes = new StringMap();
+    this.includes = Object.create(null);
     this.usedAssert = false;
     this.usedMath = false;
     this.isMarkSweep = false;
@@ -4550,7 +4474,7 @@
       this.increaseIndent();
 
       if (hasArguments) {
-        if (!('<string>' in this.includes._table)) {
+        if (!('<string>' in this.includes)) {
           throw new Error('assert "<string>" in includes; (src/emitters/cpp.sk:61:11)');
         }
 
@@ -4569,28 +4493,28 @@
     var useFastHack = this.options.memoryManagement === MemoryManagement.NONE_FAST;
 
     if (this.usedAssert) {
-      this.includes._table['<cassert>'] = true;
+      this.includes['<cassert>'] = true;
     }
 
     if (useFastHack) {
-      this.includes._table['<cassert>'] = true;
-      this.includes._table['<new>'] = true;
-      this.includes._table[this.options.config === CompilerConfig.WINDOWS ? '<windows.h>' : '<sys/mman.h>'] = true;
+      this.includes['<cassert>'] = true;
+      this.includes['<new>'] = true;
+      this.includes[this.options.config === CompilerConfig.WINDOWS ? '<windows.h>' : '<sys/mman.h>'] = true;
     }
 
     if (this.isMarkSweep) {
-      this.includes._table['<stack>'] = true;
-      this.includes._table['<type_traits>'] = true;
-      this.includes._table['<unordered_map>'] = true;
-      this.includes._table['<unordered_set>'] = true;
-      this.includes._table['<vector>'] = true;
+      this.includes['<stack>'] = true;
+      this.includes['<type_traits>'] = true;
+      this.includes['<unordered_map>'] = true;
+      this.includes['<unordered_set>'] = true;
+      this.includes['<vector>'] = true;
     }
 
     if (this.usedMath) {
-      this.includes._table['<cmath>'] = true;
+      this.includes['<cmath>'] = true;
     }
 
-    var headers = Object.keys(this.includes._table);
+    var headers = Object.keys(this.includes);
     headers.sort(bindCompare(StringComparison.INSTANCE));
 
     if (headers.length !== 0) {
@@ -4619,7 +4543,7 @@
   cpp.Emitter.prototype.handleSymbol = function(symbol) {
     if (symbol.neededIncludes !== null) {
       for (var i = 0; i < symbol.neededIncludes.length; i = i + 1 | 0) {
-        this.includes._table[symbol.neededIncludes[i]] = true;
+        this.includes[symbol.neededIncludes[i]] = true;
       }
     }
   };
@@ -5275,20 +5199,20 @@
   };
 
   cpp.Emitter.prototype.createIsKeyword = function() {
-    var result = StringMap.literal('alignas alignof and and_eq asm auto bitand bitor bool break case catch char char16_t char32_t class compl const const_cast constexpr continue decltype default delete do double dynamic_cast else enum explicit export extern false float for friend goto if INFINITY inline int long mutable namespace NAN new noexcept not not_eq NULL nullptr operator or or_eq private protected public register reinterpret_cast return short signed sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typeid typename union unsigned using virtual void volatile wchar_t while xor xor_eq'.split(' '), [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]);
+    var result = in_StringMap.literal('alignas alignof and and_eq asm auto bitand bitor bool break case catch char char16_t char32_t class compl const const_cast constexpr continue decltype default delete do double dynamic_cast else enum explicit export extern false float for friend goto if INFINITY inline int long mutable namespace NAN new noexcept not not_eq NULL nullptr operator or or_eq private protected public register reinterpret_cast return short signed sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typeid typename union unsigned using virtual void volatile wchar_t while xor xor_eq'.split(' '), [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]);
 
     if (this.options.config === CompilerConfig.WINDOWS) {
-      result._table['CONST'] = true;
-      result._table['DELETE'] = true;
-      result._table['ERROR'] = true;
-      result._table['EXTERN_C'] = true;
-      result._table['FALSE'] = true;
-      result._table['IN'] = true;
-      result._table['INTERFACE'] = true;
-      result._table['OUT'] = true;
-      result._table['PURE'] = true;
-      result._table['THIS'] = true;
-      result._table['TRUE'] = true;
+      result['CONST'] = true;
+      result['DELETE'] = true;
+      result['ERROR'] = true;
+      result['EXTERN_C'] = true;
+      result['FALSE'] = true;
+      result['IN'] = true;
+      result['INTERFACE'] = true;
+      result['OUT'] = true;
+      result['PURE'] = true;
+      result['THIS'] = true;
+      result['TRUE'] = true;
     }
 
     return result;
@@ -5311,7 +5235,7 @@
       var file = program.children[i];
       var input = file.range.source;
       var contents = input.contents;
-      var substitutions = this.resolver.sourceSubstitutions.getOrDefault(input.name, null);
+      var substitutions = in_StringMap.getOrDefault(this.resolver.sourceSubstitutions, input.name, null);
 
       if (substitutions !== null) {
         substitutions.sort(bindCompare(SourceSubstitutionComparison.INSTANCE));
@@ -5597,7 +5521,6 @@
 
     this.builder._buffer += '\n';
     this.increaseIndent();
-    this.previousKind = NodeKind.NULL;
     this.emitStatements(node.blockStatements());
     this.decreaseIndent();
 
@@ -5904,7 +5827,7 @@
     var values = node.sequenceValues();
 
     if (values.length <= 1) {
-      throw new Error('assert values.size() > 1; (src/emitters/ruby.sk:385:7)');
+      throw new Error('assert values.size() > 1; (src/emitters/ruby.sk:384:7)');
     }
 
     var isSequence = node.parent.kind !== NodeKind.EXPRESSION;
@@ -6032,7 +5955,7 @@
 
     var name = symbol.name;
 
-    if (symbol.name in this.isKeyword._table && !symbol.isImport()) {
+    if (symbol.name in this.isKeyword && !symbol.isImport()) {
       name += '_';
     }
 
@@ -6052,7 +5975,7 @@
   };
 
   ruby.Emitter.prototype.createIsKeyword = function() {
-    return StringMap.literal('Symbol Float Integer __FILE__ __LINE__ alias and BEGIN begin break case class def do else elsif END end ensure false for if in module next nil not or redo rescue retry return self super then true undef unless until when while yield'.split(' '), [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]);
+    return in_StringMap.literal('Symbol Float Integer __FILE__ __LINE__ alias and BEGIN begin break case class def do else elsif END end ensure false for if in module next nil not or redo rescue retry return self super then true undef unless until when while yield'.split(' '), [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]);
   };
 
   var xml = {};
@@ -7206,7 +7129,7 @@
 
   js.Emitter.prototype.emitUnary = function(node, precedence) {
     var value = node.unaryValue();
-    var info = operatorInfo._table[node.kind];
+    var info = operatorInfo[node.kind];
 
     if (info.precedence < precedence) {
       this.emit('(');
@@ -7253,7 +7176,7 @@
     var kind = node.kind;
     var left = node.binaryLeft();
     var right = node.binaryRight();
-    var info = operatorInfo._table[kind];
+    var info = operatorInfo[kind];
 
     if (info.precedence < precedence) {
       this.emit('(');
@@ -7293,7 +7216,7 @@
         }
       }
 
-      return value.length > 0 && !(value in js.Emitter.isKeyword._table);
+      return value.length > 0 && !(value in js.Emitter.isKeyword);
     }
 
     return false;
@@ -7364,7 +7287,7 @@
       return symbol.name;
     }
 
-    if (symbol.name in js.Emitter.isKeyword._table) {
+    if (symbol.name in js.Emitter.isKeyword) {
       return '$' + symbol.name;
     }
 
@@ -7448,9 +7371,9 @@
     this.options = null;
     this.localVariableUnionFind = null;
     this.cache = null;
-    this.reservedNames = js.Emitter.isKeyword.clone();
-    this.symbolCounts = new IntMap();
-    this.namingGroupIndexForSymbol = new IntMap();
+    this.reservedNames = in_StringMap.clone(js.Emitter.isKeyword);
+    this.symbolCounts = Object.create(null);
+    this.namingGroupIndexForSymbol = Object.create(null);
     this.resolver = _0;
   };
 
@@ -7467,7 +7390,7 @@
       this.localVariableUnionFind = new UnionFind(allSymbols.length);
 
       for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
-        this.namingGroupIndexForSymbol._table[allSymbols[i].uniqueID] = i;
+        this.namingGroupIndexForSymbol[allSymbols[i].uniqueID] = i;
       }
 
       this.imul = '$i';
@@ -7487,24 +7410,24 @@
 
         if (symbol.overriddenMember !== null) {
           var overridden = symbol.overriddenMember.symbol;
-          var index = this.namingGroupIndexForSymbol._table[symbol.uniqueID];
-          namingGroupsUnionFind.union(index, this.namingGroupIndexForSymbol._table[overridden.uniqueID]);
+          var index = this.namingGroupIndexForSymbol[symbol.uniqueID];
+          namingGroupsUnionFind.union(index, this.namingGroupIndexForSymbol[overridden.uniqueID]);
 
           if (overridden.identicalMembers !== null) {
             for (var j = 0; j < overridden.identicalMembers.length; j = j + 1 | 0) {
-              namingGroupsUnionFind.union(index, this.namingGroupIndexForSymbol._table[overridden.identicalMembers[j].symbol.uniqueID]);
+              namingGroupsUnionFind.union(index, this.namingGroupIndexForSymbol[overridden.identicalMembers[j].symbol.uniqueID]);
             }
           }
         }
       }
 
-      var members = this.cache.globalType.members.values();
+      var members = in_StringMap.values(this.cache.globalType.members);
 
       for (var i = 0; i < members.length; i = i + 1 | 0) {
         var member = members[i];
 
         if (!this.canRename(member.symbol)) {
-          this.reservedNames._table[member.symbol.name] = true;
+          this.reservedNames[member.symbol.name] = true;
         }
       }
 
@@ -7519,7 +7442,7 @@
           var symbol = group[j];
 
           if (this.canRename(symbol)) {
-            count = count + this.symbolCounts.getOrDefault(symbol.uniqueID, 0) | 0;
+            count = count + in_IntMap.getOrDefault(this.symbolCounts, symbol.uniqueID, 0) | 0;
           }
         }
 
@@ -7567,14 +7490,14 @@
           var types = symbol.type.relevantTypes;
 
           for (var j = 0; j < types.length; j = j + 1 | 0) {
-            relatedTypesUnionFind.union(i, this.namingGroupIndexForSymbol._table[types[j].symbol.uniqueID]);
+            relatedTypesUnionFind.union(i, this.namingGroupIndexForSymbol[types[j].symbol.uniqueID]);
           }
         }
 
-        var members = symbol.type.members.values();
+        var members = in_StringMap.values(symbol.type.members);
 
         for (var j = 0; j < members.length; j = j + 1 | 0) {
-          var index = this.namingGroupIndexForSymbol.getOrDefault(members[j].symbol.uniqueID, -1);
+          var index = in_IntMap.getOrDefault(this.namingGroupIndexForSymbol, members[j].symbol.uniqueID, -1);
 
           if (index !== -1) {
             relatedTypesUnionFind.union(i, index);
@@ -7592,7 +7515,7 @@
 
       for (var j = 0; j < group.length; j = j + 1 | 0) {
         var symbol = group[j];
-        var index = this.namingGroupIndexForSymbol._table[symbol.uniqueID];
+        var index = this.namingGroupIndexForSymbol[symbol.uniqueID];
 
         if (order.length <= j) {
           order.push(index);
@@ -7604,7 +7527,7 @@
   };
 
   js.Patcher.prototype.extractGroups = function(unionFind, mode) {
-    var labelToGroup = new IntMap();
+    var labelToGroup = Object.create(null);
     var allSymbols = this.resolver.allSymbols;
 
     for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
@@ -7614,18 +7537,18 @@
         continue;
       }
 
-      var label = unionFind.find(this.namingGroupIndexForSymbol._table[symbol.uniqueID]);
-      var group = labelToGroup.getOrDefault(label, null);
+      var label = unionFind.find(this.namingGroupIndexForSymbol[symbol.uniqueID]);
+      var group = in_IntMap.getOrDefault(labelToGroup, label, null);
 
       if (group === null) {
         group = [];
-        labelToGroup._table[label] = group;
+        labelToGroup[label] = group;
       }
 
       group.push(symbol);
     }
 
-    var groups = labelToGroup.values();
+    var groups = in_IntMap.values(labelToGroup);
 
     for (var i = 0; i < groups.length; i = i + 1 | 0) {
       var group = groups[i];
@@ -7658,7 +7581,7 @@
     var symbol = node.symbol;
 
     if (symbol !== null && node.kind !== NodeKind.TYPE && !node.isDeclarationName()) {
-      this.symbolCounts._table[symbol.uniqueID] = this.symbolCounts.getOrDefault(symbol.uniqueID, 0) + 1 | 0;
+      this.symbolCounts[symbol.uniqueID] = in_IntMap.getOrDefault(this.symbolCounts, symbol.uniqueID, 0) + 1 | 0;
     }
   };
 
@@ -8277,8 +8200,8 @@
     }
 
     if (this.currentFunction !== null) {
-      var left = this.namingGroupIndexForSymbol._table[this.currentFunction.uniqueID];
-      var right = this.namingGroupIndexForSymbol._table[node.symbol.uniqueID];
+      var left = this.namingGroupIndexForSymbol[this.currentFunction.uniqueID];
+      var right = this.namingGroupIndexForSymbol[node.symbol.uniqueID];
       this.localVariableUnionFind.union(left, right);
     }
   };
@@ -8405,7 +8328,7 @@
     target.become(Node.createSequence([Node.createBinary(NodeKind.ASSIGN, reference.clone(), left.dotTarget().replaceWith(null)), Node.createBinary(NodeKind.ASSIGN, property.clone(), this.createBinaryInt(kind, property, right))]).withRange(target.range));
 
     if (this.options.mangle) {
-      this.namingGroupIndexForSymbol._table[symbol.uniqueID] = this.localVariableUnionFind.allocate();
+      this.namingGroupIndexForSymbol[symbol.uniqueID] = this.localVariableUnionFind.allocate();
       this.unionVariableWithFunction(reference);
     }
   };
@@ -8454,7 +8377,7 @@
     do {
       name = js.Patcher.numberToName(this.nextSymbolName);
       this.nextSymbolName = this.nextSymbolName + 1 | 0;
-    } while (name in this.reservedNames._table);
+    } while (name in this.reservedNames);
 
     return name;
   };
@@ -9026,16 +8949,16 @@
   };
 
   function Pratt() {
-    this.table = new IntMap();
+    this.table = Object.create(null);
   }
 
   Pratt.prototype.parselet = function(kind, precedence) {
-    var parselet = this.table.getOrDefault(kind, null);
+    var parselet = in_IntMap.getOrDefault(this.table, kind, null);
 
     if (parselet === null) {
       var created = new Parselet(precedence);
       parselet = created;
-      this.table._table[kind] = created;
+      this.table[kind] = created;
     } else if (precedence > parselet.precedence) {
       parselet.precedence = precedence;
     }
@@ -9045,7 +8968,7 @@
 
   Pratt.prototype.parse = function(context, precedence) {
     var token = context.current();
-    var parselet = this.table.getOrDefault(token.kind, null);
+    var parselet = in_IntMap.getOrDefault(this.table, token.kind, null);
 
     if (parselet === null || parselet.prefix === null) {
       context.unexpectedToken();
@@ -9072,7 +8995,7 @@
 
     while (left.kind !== NodeKind.ERROR) {
       var kind = context.current().kind;
-      var parselet = this.table.getOrDefault(kind, null);
+      var parselet = in_IntMap.getOrDefault(this.table, kind, null);
 
       if (parselet === null || parselet.infix === null || parselet.precedence <= precedence) {
         break;
@@ -9093,7 +9016,7 @@
   };
 
   Pratt.prototype.hasPrefixParselet = function(context) {
-    var parselet = this.table.getOrDefault(context.current().kind, null);
+    var parselet = in_IntMap.getOrDefault(this.table, context.current().kind, null);
     return parselet !== null && parselet.prefix !== null;
   };
 
@@ -9268,7 +9191,7 @@
 
   function CallGraph(program) {
     this.callInfo = [];
-    this.symbolToInfoIndex = new IntMap();
+    this.symbolToInfoIndex = Object.create(null);
 
     if (program.kind !== NodeKind.PROGRAM) {
       throw new Error('assert program.kind == .PROGRAM; (src/resolver/callgraph.sk:11:5)');
@@ -9306,11 +9229,11 @@
   };
 
   CallGraph.prototype.recordCallSite = function(symbol, node) {
-    var index = this.symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
+    var index = in_IntMap.getOrDefault(this.symbolToInfoIndex, symbol.uniqueID, -1);
     var info = index < 0 ? new CallInfo(symbol) : this.callInfo[index];
 
     if (index < 0) {
-      this.symbolToInfoIndex._table[symbol.uniqueID] = this.callInfo.length;
+      this.symbolToInfoIndex[symbol.uniqueID] = this.callInfo.length;
       this.callInfo.push(info);
     }
 
@@ -10186,27 +10109,27 @@
 
   function InliningGraph(graph, options) {
     this.inliningInfo = [];
-    this.symbolToInfoIndex = new IntMap();
+    this.symbolToInfoIndex = Object.create(null);
 
     for (var i = 0; i < graph.callInfo.length; i = i + 1 | 0) {
       var info = InliningGraph.createInliningInfo(graph.callInfo[i], options);
 
       if (info !== null) {
-        this.symbolToInfoIndex._table[info.symbol.uniqueID] = this.inliningInfo.length;
+        this.symbolToInfoIndex[info.symbol.uniqueID] = this.inliningInfo.length;
         this.inliningInfo.push(info);
       }
     }
 
     for (var i = 0; i < this.inliningInfo.length; i = i + 1 | 0) {
       var info = this.inliningInfo[i];
-      var callSites = graph.callInfo[graph.symbolToInfoIndex._table[info.symbol.uniqueID]].callSites;
+      var callSites = graph.callInfo[graph.symbolToInfoIndex[info.symbol.uniqueID]].callSites;
 
       for (var j = 0; j < callSites.length; j = j + 1 | 0) {
         var callSite = callSites[j];
 
         for (var node = callSite.parent; node !== null; node = node.parent) {
           if (node.kind === NodeKind.FUNCTION && node.symbol.kind === SymbolKind.GLOBAL_FUNCTION) {
-            var index = this.symbolToInfoIndex.getOrDefault(node.symbol.uniqueID, -1);
+            var index = in_IntMap.getOrDefault(this.symbolToInfoIndex, node.symbol.uniqueID, -1);
 
             if (index >= 0) {
               var other = this.inliningInfo[index];
@@ -10276,10 +10199,10 @@
 
       if (inlineValue !== null) {
         var argumentVariables = symbol.node.functionArguments().children;
-        var argumentCounts = new IntMap();
+        var argumentCounts = Object.create(null);
 
         for (var i = 0; i < argumentVariables.length; i = i + 1 | 0) {
-          argumentCounts._table[argumentVariables[i].symbol.uniqueID] = 0;
+          argumentCounts[argumentVariables[i].symbol.uniqueID] = 0;
         }
 
         if (InliningGraph.recursivelyCountArgumentUses(inlineValue, argumentCounts)) {
@@ -10289,7 +10212,7 @@
 
           for (var i = 0; i < argumentVariables.length; i = i + 1 | 0) {
             var argument = argumentVariables[i].symbol;
-            var count = argumentCounts._table[argument.uniqueID];
+            var count = argumentCounts[argument.uniqueID];
 
             if (count === 0) {
               unusedArguments.push(argument);
@@ -10325,10 +10248,10 @@
     var symbol = node.symbol;
 
     if (symbol !== null) {
-      var count = argumentCounts.getOrDefault(symbol.uniqueID, -1);
+      var count = in_IntMap.getOrDefault(argumentCounts, symbol.uniqueID, -1);
 
       if (count >= 0) {
-        argumentCounts._table[symbol.uniqueID] = count + 1 | 0;
+        argumentCounts[symbol.uniqueID] = count + 1 | 0;
 
         if (node.isStorage()) {
           return false;
@@ -10443,8 +10366,8 @@
   };
 
   function Resolver(_0, _1) {
-    this.sourceSubstitutions = new StringMap();
-    this.defines = new StringMap();
+    this.sourceSubstitutions = Object.create(null);
+    this.defines = Object.create(null);
     this.context = new ResolveContext();
     this.constantFolder = null;
     this.parsedDeclarations = [];
@@ -10540,13 +10463,13 @@
             var symbol = node.symbol;
             var value = !!result;
 
-            if (symbol.name in this.options.overriddenDefines._table) {
-              value = this.options.overriddenDefines._table[symbol.name].value;
-              delete this.options.overriddenDefines._table[symbol.name];
+            if (symbol.name in this.options.overriddenDefines) {
+              value = this.options.overriddenDefines[symbol.name].value;
+              delete this.options.overriddenDefines[symbol.name];
             }
 
             symbol.constant = new BoolContent(value);
-            this.defines._table[symbol.name] = value;
+            this.defines[symbol.name] = value;
             workList.splice(i, 1)[0];
             i = i - 1 | 0;
             done = false;
@@ -10581,11 +10504,11 @@
       this.evaluatePreprocessorValue(node.kind === NodeKind.PREPROCESSOR_DEFINE ? node.defineValue() : node.ifTest(), LogErrors.LOG_ERRORS);
     }
 
-    var keys = Object.keys(this.options.overriddenDefines._table);
+    var keys = Object.keys(this.options.overriddenDefines);
 
     for (var i = 0; i < keys.length; i = i + 1 | 0) {
       var key = keys[i];
-      semanticErrorPreprocessorInvalidOverriddenDefine(this.log, this.options.overriddenDefines._table[key].range, key);
+      semanticErrorPreprocessorInvalidOverriddenDefine(this.log, this.options.overriddenDefines[key].range, key);
     }
   };
 
@@ -10597,8 +10520,8 @@
     case 37:
       var name = node.asString();
 
-      if (name in this.defines._table) {
-        return this.defines._table[name] | 0;
+      if (name in this.defines) {
+        return this.defines[name] | 0;
       } else if (mode === LogErrors.LOG_ERRORS) {
         semanticErrorPreprocessorInvalidSymbol(this.log, node.range, name);
       }
@@ -10735,7 +10658,7 @@
       if (node.kind === NodeKind.EXTENSION) {
         semanticErrorUnexpectedModifier(this.log, modifierName.range, name, 'on an extension block');
       } else {
-        var flag = Resolver.nameToSymbolFlag.getOrDefault(name, 0);
+        var flag = in_StringMap.getOrDefault(Resolver.nameToSymbolFlag, name, 0);
 
         if (flag === 0) {
           flag = SymbolFlag.HAS_ANNOTATIONS;
@@ -10952,7 +10875,7 @@
             if (memberSymbol !== currentSymbol) {
               var collision = this.createSymbol(memberSymbol.name, SymbolKind.AMBIGUOUS);
               collision.identicalMembers = [current, member];
-              block.scope.locals._table[memberSymbol.name] = new Member(collision);
+              block.scope.locals[memberSymbol.name] = new Member(collision);
               insertedSymbols.push(collision);
             }
           } else if (!(currentSymbol.identicalMembers.indexOf(member) !== -1)) {
@@ -11661,7 +11584,7 @@
   Resolver.prototype.resolveBaseTypes = function(symbol) {
     var type = symbol.type;
     var baseTypes = this.collectAndResolveBaseTypes(symbol);
-    var unmergedMembers = new StringMap();
+    var unmergedMembers = Object.create(null);
     var baseTypeSymbols = [];
 
     if (type.relevantTypes !== null) {
@@ -11705,19 +11628,19 @@
       for (var j = 0; j < members.length; j = j + 1 | 0) {
         var member = members[j];
         var memberSymbol = member.symbol;
-        var unmerged = unmergedMembers.getOrDefault(memberSymbol.name, null);
+        var unmerged = in_StringMap.getOrDefault(unmergedMembers, memberSymbol.name, null);
 
         if (memberSymbol.kind === SymbolKind.OBJECT_PARAMETER) {
           continue;
         }
 
         if (unmerged === null) {
-          unmergedMembers._table[memberSymbol.name] = member;
+          unmergedMembers[memberSymbol.name] = member;
         } else if (unmerged.symbol.enclosingSymbol !== memberSymbol) {
           var combined = this.createSymbol(memberSymbol.name, SymbolKind.UNMERGED);
           combined.enclosingSymbol = symbol;
           combined.identicalMembers = [unmerged, member];
-          unmergedMembers._table[memberSymbol.name] = new Member(combined);
+          unmergedMembers[memberSymbol.name] = new Member(combined);
         } else {
           if (unmerged.symbol.kind !== SymbolKind.UNMERGED) {
             throw new Error('assert unmerged.symbol.kind == .UNMERGED; (src/resolver/resolver.sk:1147:11)');
@@ -11728,7 +11651,7 @@
       }
     }
 
-    var baseMembers = unmergedMembers.values();
+    var baseMembers = in_StringMap.values(unmergedMembers);
 
     for (var i = 0; i < baseMembers.length; i = i + 1 | 0) {
       var member = baseMembers[i];
@@ -12300,8 +12223,8 @@
       var name = modifierName.asString();
 
       if (name.charCodeAt(0) === 64) {
-        if (name in Resolver.operatorAnnotationMap._table) {
-          this.registerOperatorOverload(symbol, node, Resolver.operatorAnnotationMap._table[name]);
+        if (name in Resolver.operatorAnnotationMap) {
+          this.registerOperatorOverload(symbol, node, Resolver.operatorAnnotationMap[name]);
         } else if (name === '@NeedsInclude') {
           this.registerNeedsInclude(symbol, node);
         } else if (name === '@EmitAs') {
@@ -12436,7 +12359,7 @@
     while (node !== null && node.kind === NodeKind.MODIFIER) {
       var modifierName = node.modifierName();
 
-      if (Resolver.nameToSymbolFlag._table[modifierName.asString()] === flag) {
+      if (Resolver.nameToSymbolFlag[modifierName.asString()] === flag) {
         return modifierName;
       }
 
@@ -12630,7 +12553,7 @@
     }
 
     var fieldsSize = fields.length;
-    var values = new IntMap();
+    var values = Object.create(null);
     var problem = false;
     var lowest = 0;
 
@@ -12644,7 +12567,7 @@
       }
 
       var value = field.constant.asInt();
-      var other = values.getOrDefault(value, null);
+      var other = in_IntMap.getOrDefault(values, value, null);
 
       if (other !== null) {
         semanticErrorBadEnumToString(this.log, enclosingNode.declarationName().range, enclosingSymbol.name, field.name, other.name, value);
@@ -12656,7 +12579,7 @@
         lowest = value;
       }
 
-      values._table[value] = field;
+      values[value] = field;
     }
 
     var block = Node.createBlock([]);
@@ -12709,7 +12632,7 @@
     var consecutive = [];
 
     for (var i = 0; i < count; i = i + 1 | 0) {
-      var value = values.getOrDefault(lowest + i | 0, null);
+      var value = in_IntMap.getOrDefault(values, lowest + i | 0, null);
 
       if (value === null) {
         return null;
@@ -13690,11 +13613,11 @@
           semanticErrorCannotFindFile(this.log, node.annotationArguments().children[0].range, content.value);
         } else {
           if (this.options.target === CompilerTarget.JOINED) {
-            if (!(name in this.sourceSubstitutions._table)) {
-              this.sourceSubstitutions._table[name] = [];
+            if (!(name in this.sourceSubstitutions)) {
+              this.sourceSubstitutions[name] = [];
             }
 
-            this.sourceSubstitutions._table[name].push(new SourceSubstitution(node.range, source.contents));
+            this.sourceSubstitutions[name].push(new SourceSubstitution(node.range, source.contents));
           }
 
           node.become(Node.createString(source.contents).withType(this.cache.stringType).withRange(node.range));
@@ -13813,8 +13736,8 @@
     }
 
     if (this.typeContext !== null && (this.typeContext.isStringMap(this.cache) || this.typeContext.isIntMap(this.cache))) {
-      if (items.length === 0 && this.options.target !== CompilerTarget.RUBY) {
-        node.become(Node.createCall(Node.createType(this.typeContext), []).withRange(node.range).withType(node.type));
+      if (items.length === 0) {
+        node.become(Node.createCall(Node.createType(this.typeContext), []));
         this.resolveAsParameterizedExpression(node);
         return;
       }
@@ -14049,13 +13972,6 @@
 
       this.checkAccess(symbol, value.range);
 
-      var hack = valueType.resultType();
-
-      if (this.options.target === CompilerTarget.RUBY && (hack.isIntMap(this.cache) || hack.isStringMap(this.cache))) {
-        node.become(Node.createMap([]).withType(hack));
-        return;
-      }
-
       if (symbol.kind === SymbolKind.GLOBAL_FUNCTION) {
         value.become(Node.createName(symbol.name).withSymbol(symbol).withType(valueType).withRange(value.range));
       }
@@ -14143,7 +14059,7 @@
     }
 
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3676:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size(); (src/resolver/resolver.sk:3669:5)');
     }
 
     var sortedTypes = [];
@@ -14461,7 +14377,7 @@
 
   Resolver.prototype.assessOperatorOverloadMatch = function(nodeTypes, argumentTypes) {
     if (nodeTypes.length !== (1 + argumentTypes.length | 0)) {
-      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:4041:5)');
+      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size(); (src/resolver/resolver.sk:4034:5)');
     }
 
     var foundImplicitConversion = false;
@@ -14548,18 +14464,18 @@
       var overload = overloads[i];
 
       if (!overload.type.isFunction()) {
-        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:4124:7)');
+        throw new Error('assert overload.type.isFunction(); (src/resolver/resolver.sk:4117:7)');
       }
 
       if ((overload.type.argumentTypes().length + 1 | 0) !== children.length) {
-        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:4125:7)');
+        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size(); (src/resolver/resolver.sk:4118:7)');
       }
 
       var member = targetType.findOperatorOverload(overload);
       this.initializeMember(member);
 
       if (!member.type.isFunction()) {
-        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:4128:7)');
+        throw new Error('assert member.type.isFunction(); (src/resolver/resolver.sk:4121:7)');
       }
 
       var match = this.assessOperatorOverloadMatch(typeForMatching, member.type.argumentTypes());
@@ -14633,14 +14549,14 @@
 
   Scope.prototype.insertLocal = function(member) {
     if (this.locals === null) {
-      this.locals = new StringMap();
+      this.locals = Object.create(null);
     }
 
-    if (member.symbol.name in this.locals._table) {
+    if (member.symbol.name in this.locals) {
       throw new Error('assert !(member.symbol.name in locals); (src/resolver/scope.sk:26:5)');
     }
 
-    this.locals._table[member.symbol.name] = member;
+    this.locals[member.symbol.name] = member;
   };
 
   Scope.prototype.find = function(name) {
@@ -14650,7 +14566,7 @@
 
   Scope.prototype.findLocal = function(name) {
     if (this.locals !== null) {
-      var member = this.locals.getOrDefault(name, null);
+      var member = in_StringMap.getOrDefault(this.locals, name, null);
 
       if (member !== null) {
         return member;
@@ -14809,14 +14725,14 @@
 
   Symbol.prototype.operatorOverloadsForKind = function(kind) {
     if (this.operatorOverloads === null) {
-      this.operatorOverloads = new IntMap();
+      this.operatorOverloads = Object.create(null);
     }
 
-    var symbols = this.operatorOverloads.getOrDefault(kind, null);
+    var symbols = in_IntMap.getOrDefault(this.operatorOverloads, kind, null);
 
     if (symbols === null) {
       symbols = [];
-      this.operatorOverloads._table[kind] = symbols;
+      this.operatorOverloads[kind] = symbols;
     }
 
     return symbols;
@@ -14993,13 +14909,13 @@
     if (!symbol.isImport() && enclosingSymbol !== null && !in_SymbolKind.isParameter(symbol.kind) && (enclosingSymbol.isImport() || in_SymbolKind.isEnum(enclosingSymbol.kind) && symbol.isFromExtension() || in_SymbolKind.isGlobal(symbol.kind) && (in_CompilerTarget.moveStaticGlobalsOffGenericTypes(this.resolver.options.target) && enclosingSymbol.hasParameters() || in_CompilerTarget.moveNonVirtualSymbolsOffInterfaces(this.resolver.options.target) && enclosingSymbol.kind === SymbolKind.INTERFACE))) {
       var enclosingType = symbol.enclosingSymbol.type;
       var shadow = this.shadowForSymbol(enclosingSymbol);
-      var member = enclosingType.members._table[symbol.name];
+      var member = enclosingType.members[symbol.name];
 
       if (member.symbol !== symbol) {
         throw new Error('assert member.symbol == symbol; (src/resolver/symbolmotion.sk:24:7)');
       }
 
-      delete enclosingType.members._table[symbol.name];
+      delete enclosingType.members[symbol.name];
 
       if (shadow.findMember(symbol.name) !== null) {
         throw new Error('assert shadow.findMember(symbol.name) == null; (src/resolver/symbolmotion.sk:26:7)');
@@ -15048,8 +14964,8 @@
   };
 
   function TreeShakingPass(_0) {
-    this.includedSymbols = new IntMap();
-    this.includedTypes = new IntMap();
+    this.includedSymbols = Object.create(null);
+    this.includedTypes = Object.create(null);
     this.isFirstList = true;
     this.options = _0;
   }
@@ -15072,7 +14988,7 @@
     for (var i = 0; i < allSymbols.length; i = i + 1 | 0) {
       var symbol = allSymbols[i];
 
-      if (!(symbol.uniqueID in pass.includedSymbols._table) && symbol.overriddenMember !== null) {
+      if (!(symbol.uniqueID in pass.includedSymbols) && symbol.overriddenMember !== null) {
         deadSymbolsWithOverrides.push(symbol);
       }
     }
@@ -15108,8 +15024,8 @@
       return;
     }
 
-    if (!(symbol.uniqueID in this.includedSymbols._table)) {
-      this.includedSymbols._table[symbol.uniqueID] = true;
+    if (!(symbol.uniqueID in this.includedSymbols)) {
+      this.includedSymbols[symbol.uniqueID] = true;
 
       if (symbol.enclosingSymbol !== null && symbol.kind !== SymbolKind.INSTANCE_VARIABLE) {
         this.includeSymbol(symbol.enclosingSymbol);
@@ -15144,8 +15060,8 @@
   };
 
   TreeShakingPass.prototype.includeType = function(type) {
-    if (!(type.uniqueID in this.includedTypes._table)) {
-      this.includedTypes._table[type.uniqueID] = true;
+    if (!(type.uniqueID in this.includedTypes)) {
+      this.includedTypes[type.uniqueID] = true;
 
       if (type.symbol !== null) {
         this.includeSymbol(type.symbol);
@@ -15201,7 +15117,7 @@
       throw new Error('assert symbol.enclosingSymbol != null; (src/resolver/treeshaking.sk:153:5)');
     }
 
-    if (!(symbol.uniqueID in this.includedSymbols._table) && (symbol.overriddenMember.symbol.isImport() || symbol.enclosingSymbol.uniqueID in this.includedSymbols._table && symbol.overriddenMember.symbol.uniqueID in this.includedSymbols._table)) {
+    if (!(symbol.uniqueID in this.includedSymbols) && (symbol.overriddenMember.symbol.isImport() || symbol.enclosingSymbol.uniqueID in this.includedSymbols && symbol.overriddenMember.symbol.uniqueID in this.includedSymbols)) {
       this.includeSymbol(symbol);
       return true;
     }
@@ -15214,9 +15130,9 @@
       return false;
     }
 
-    if (!(symbol.uniqueID in this.includedSymbols._table)) {
+    if (!(symbol.uniqueID in this.includedSymbols)) {
       if (symbol.enclosingSymbol !== null) {
-        delete symbol.enclosingSymbol.type.members._table[symbol.name];
+        delete symbol.enclosingSymbol.type.members[symbol.name];
       }
 
       if (symbol.node !== null && symbol.kind !== SymbolKind.QUOTED_TYPE) {
@@ -15227,7 +15143,7 @@
       return true;
     }
 
-    if (symbol.overriddenMember !== null && !(symbol.overriddenMember.symbol.uniqueID in this.includedSymbols._table)) {
+    if (symbol.overriddenMember !== null && !(symbol.overriddenMember.symbol.uniqueID in this.includedSymbols)) {
       symbol.overriddenMember = null;
     }
 
@@ -15235,7 +15151,7 @@
   };
 
   function Type(_0) {
-    this.members = new StringMap();
+    this.members = Object.create(null);
     this.relevantTypes = null;
     this.substitutions = null;
     this.operatorOverloadCache = null;
@@ -15250,13 +15166,13 @@
 
   Type.prototype.findOperatorOverload = function(symbol) {
     if (this.operatorOverloadCache === null) {
-      this.operatorOverloadCache = new IntMap();
+      this.operatorOverloadCache = Object.create(null);
     }
 
-    var member = this.operatorOverloadCache.getOrDefault(symbol.uniqueID, null);
+    var member = in_IntMap.getOrDefault(this.operatorOverloadCache, symbol.uniqueID, null);
 
     if (member === null) {
-      var list = this.members.values();
+      var list = in_StringMap.values(this.members);
 
       for (var i = 0; i < list.length; i = i + 1 | 0) {
         if (list[i].symbol === symbol) {
@@ -15266,12 +15182,12 @@
       }
     }
 
-    this.operatorOverloadCache._table[symbol.uniqueID] = member;
+    this.operatorOverloadCache[symbol.uniqueID] = member;
     return member;
   };
 
   Type.prototype.sortedMembers = function() {
-    var result = this.members.values();
+    var result = in_StringMap.values(this.members);
     result.sort(bindCompare(MemberComparison.INSTANCE));
     return result;
   };
@@ -15281,7 +15197,7 @@
       return null;
     }
 
-    return this.members.getOrDefault('new', null);
+    return in_StringMap.getOrDefault(this.members, 'new', null);
   };
 
   Type.prototype.hasBaseType = function(type) {
@@ -15335,23 +15251,23 @@
   };
 
   Type.prototype.addMember = function(member) {
-    this.members._table[member.symbol.name] = member;
+    this.members[member.symbol.name] = member;
   };
 
   Type.prototype.copyMembersFrom = function(other) {
-    var otherMembers = other.members.values();
+    var otherMembers = in_StringMap.values(other.members);
 
     for (var i = 0; i < otherMembers.length; i = i + 1 | 0) {
       var member = otherMembers[i];
 
-      if (!(member.symbol.name in this.members._table)) {
-        this.members._table[member.symbol.name] = member;
+      if (!(member.symbol.name in this.members)) {
+        this.members[member.symbol.name] = member;
       }
     }
   };
 
   Type.prototype.findMember = function(name) {
-    return this.members.getOrDefault(name, null);
+    return in_StringMap.getOrDefault(this.members, name, null);
   };
 
   Type.environmentToString = function(parameters, substitutions) {
@@ -15612,7 +15528,7 @@
     this.stringMapType = null;
     this.intMapType = null;
     this.toStringType = null;
-    this.hashTable = new IntMap();
+    this.hashTable = Object.create(null);
     this.globalType = this.createType(new Symbol('<global>', SymbolKind.GLOBAL_NAMESPACE), 0);
     this.nullType = this.createType(new Symbol('null', SymbolKind.OTHER), 0);
     this.errorType = this.createType(new Symbol('<error>', SymbolKind.OTHER), 0);
@@ -15774,7 +15690,7 @@
     }
 
     var hash = TypeCache.computeHashCode(symbol, substitutions);
-    var existingTypes = this.hashTable.getOrDefault(hash, null);
+    var existingTypes = in_IntMap.getOrDefault(this.hashTable, hash, null);
 
     if (existingTypes !== null) {
       for (var i = 0; i < existingTypes.length; i = i + 1 | 0) {
@@ -15790,7 +15706,7 @@
       }
     } else {
       existingTypes = [];
-      this.hashTable._table[hash] = existingTypes;
+      this.hashTable[hash] = existingTypes;
     }
 
     if (trace.GENERICS && symbol !== null && substitutions !== null) {
@@ -15804,7 +15720,7 @@
       type.substitutions = substitutions;
       type.relevantTypes = this.substituteAll(unparameterized.relevantTypes, symbol.parameters, substitutions);
 
-      var members = unparameterized.members.values();
+      var members = in_StringMap.values(unparameterized.members);
 
       for (var i = 0; i < members.length; i = i + 1 | 0) {
         var member = members[i];
@@ -15973,7 +15889,7 @@
 
   OptionData.prototype.aliases = function(names) {
     for (var i = 0; i < names.length; i = i + 1 | 0) {
-      this.parser.map._table[names[i]] = this;
+      this.parser.map[names[i]] = this;
     }
 
     return this;
@@ -15981,21 +15897,21 @@
 
   function OptionParser() {
     this.options = [];
-    this.map = new StringMap();
-    this.optionalArguments = new IntMap();
+    this.map = Object.create(null);
+    this.optionalArguments = Object.create(null);
     this.normalArguments = [];
     this.source = null;
   }
 
   OptionParser.prototype.define = function(type, option, name, description) {
     var data = new OptionData(this, type, option, name, description);
-    this.map._table[name] = data;
+    this.map[name] = data;
     this.options.push(data);
     return data;
   };
 
   OptionParser.prototype.nodeForOption = function(option) {
-    return this.optionalArguments.getOrDefault(option, null);
+    return in_IntMap.getOrDefault(this.optionalArguments, option, null);
   };
 
   OptionParser.prototype.boolForOption = function(option, defaultValue) {
@@ -16043,7 +15959,7 @@
       var argument = $arguments[i];
       var range = ranges[i];
 
-      if (argument === '' || argument.charCodeAt(0) !== 45 && !(argument in this.map._table)) {
+      if (argument === '' || argument.charCodeAt(0) !== 45 && !(argument in this.map)) {
         this.normalArguments.push(range);
         continue;
       }
@@ -16052,7 +15968,7 @@
       var colon = argument.indexOf(':');
       var separator = equals >= 0 && (colon < 0 || equals < colon) ? equals : colon;
       var name = separator >= 0 ? argument.slice(0, separator) : argument;
-      var data = this.map.getOrDefault(name, null);
+      var data = in_StringMap.getOrDefault(this.map, name, null);
 
       if (data === null) {
         commandLineErrorBadFlag(log, range.fromStart(name.length), name);
@@ -16075,11 +15991,11 @@
           continue;
         }
 
-        if (data.option in this.optionalArguments._table) {
-          commandLineWarningDuplicateFlagValue(log, textRange, name, this.optionalArguments._table[data.option].range);
+        if (data.option in this.optionalArguments) {
+          commandLineWarningDuplicateFlagValue(log, textRange, name, this.optionalArguments[data.option].range);
         }
 
-        this.optionalArguments._table[data.option] = Node.createBool(text === 'true').withRange(textRange);
+        this.optionalArguments[data.option] = Node.createBool(text === 'true').withRange(textRange);
         break;
 
       case 1:
@@ -16090,11 +16006,11 @@
         } else if (!OptionParser.isInteger(text)) {
           commandLineErrorNonIntegerValue(log, textRange, text, argument);
         } else {
-          if (data.option in this.optionalArguments._table) {
-            commandLineWarningDuplicateFlagValue(log, textRange, name, this.optionalArguments._table[data.option].range);
+          if (data.option in this.optionalArguments) {
+            commandLineWarningDuplicateFlagValue(log, textRange, name, this.optionalArguments[data.option].range);
           }
 
-          this.optionalArguments._table[data.option] = Node.createInt(parseIntLiteral(text, 10)).withRange(textRange);
+          this.optionalArguments[data.option] = Node.createInt(parseIntLiteral(text, 10)).withRange(textRange);
         }
         break;
 
@@ -16104,11 +16020,11 @@
         } else if (argument.charCodeAt(separator) !== 61) {
           commandLineErrorExpectedToken(log, separatorRange, '=', argument[separator], argument);
         } else {
-          if (data.option in this.optionalArguments._table) {
-            commandLineWarningDuplicateFlagValue(log, textRange, name, this.optionalArguments._table[data.option].range);
+          if (data.option in this.optionalArguments) {
+            commandLineWarningDuplicateFlagValue(log, textRange, name, this.optionalArguments[data.option].range);
           }
 
-          this.optionalArguments._table[data.option] = Node.createString(text).withRange(textRange);
+          this.optionalArguments[data.option] = Node.createString(text).withRange(textRange);
         }
         break;
 
@@ -16121,11 +16037,11 @@
         } else {
           var node = null;
 
-          if (data.option in this.optionalArguments._table) {
-            node = this.optionalArguments._table[data.option];
+          if (data.option in this.optionalArguments) {
+            node = this.optionalArguments[data.option];
           } else {
             node = Node.createList([]);
-            this.optionalArguments._table[data.option] = node;
+            this.optionalArguments[data.option] = node;
           }
 
           node.appendChild(Node.createString(text).withRange(textRange));
@@ -16183,6 +16099,10 @@
   var in_string = {};
 
   var in_List = {};
+
+  var in_StringMap = {};
+
+  var in_IntMap = {};
 
   var in_OperatingSystem = {};
 
@@ -16248,6 +16168,72 @@
     var temp = $this[a];
     $this[a] = $this[b];
     $this[b] = temp;
+  };
+
+  in_StringMap.getOrDefault = function($this, key, defaultValue) {
+    return key in $this ? $this[key] : defaultValue;
+  };
+
+  in_StringMap.values = function($this) {
+    var values = [];
+
+    for (var key in $this) {
+      values.push($this[key]);
+    }
+
+    return values;
+  };
+
+  in_StringMap.clone = function($this) {
+    var clone = Object.create(null);
+
+    for (var key in $this) {
+      clone[key] = $this[key];
+    }
+
+    return clone;
+  };
+
+  in_StringMap.literal = function(keys, values) {
+    var map = Object.create(null);
+
+    if (keys.length !== values.length) {
+      throw new Error('assert keys.size() == values.size(); (<compiler>/stringmap.sk:101:5)');
+    }
+
+    for (var i = 0; i < keys.length; i = i + 1 | 0) {
+      map[keys[i]] = values[i];
+    }
+
+    return map;
+  };
+
+  in_IntMap.getOrDefault = function($this, key, defaultValue) {
+    return key in $this ? $this[key] : defaultValue;
+  };
+
+  in_IntMap.values = function($this) {
+    var values = [];
+
+    for (var key in $this) {
+      values.push($this[key]);
+    }
+
+    return values;
+  };
+
+  in_IntMap.literal = function(keys, values) {
+    var map = Object.create(null);
+
+    if (keys.length !== values.length) {
+      throw new Error('assert keys.size() == values.size(); (<compiler>/intmap.sk:106:5)');
+    }
+
+    for (var i = 0; i < keys.length; i = i + 1 | 0) {
+      map[keys[i]] = values[i];
+    }
+
+    return map;
   };
 
   in_OperatingSystem.current = function() {
@@ -18620,19 +18606,19 @@
   }
 
   function semanticErrorNoMatchingOperator(log, range, kind, types) {
-    if (!(kind in operatorInfo._table)) {
+    if (!(kind in operatorInfo)) {
       throw new Error('assert kind in operatorInfo; (src/resolver/diagnostics.sk:403:3)');
     }
 
-    log.error(range, 'No ' + (types.length === 1 ? 'unary' : types.length === 2 ? 'binary' : 'ternary') + ' operator "' + operatorInfo._table[kind].text + '" for ' + typesToText(types, 'and'));
+    log.error(range, 'No ' + (types.length === 1 ? 'unary' : types.length === 2 ? 'binary' : 'ternary') + ' operator "' + operatorInfo[kind].text + '" for ' + typesToText(types, 'and'));
   }
 
   function semanticErrorAmbiguousOperator(log, range, kind, names) {
-    if (!(kind in operatorInfo._table)) {
+    if (!(kind in operatorInfo)) {
       throw new Error('assert kind in operatorInfo; (src/resolver/diagnostics.sk:409:3)');
     }
 
-    log.error(range, (names.length === 1 ? 'Unary' : names.length === 2 ? 'Binary' : 'Ternary') + ' operator "' + operatorInfo._table[kind].text + '" is ambiguous, could be ' + namesToText(names, 'or'));
+    log.error(range, (names.length === 1 ? 'Unary' : names.length === 2 ? 'Binary' : 'Ternary') + ' operator "' + operatorInfo[kind].text + '" is ambiguous, could be ' + namesToText(names, 'or'));
   }
 
   function semanticErrorDuplicateEntryPoint(log, range, previous) {
@@ -19044,30 +19030,30 @@
   frontend.parseEnum = function(log, name, map, range, defaultValue) {
     var key = range.toString();
 
-    if (key in map._table) {
-      return map._table[key];
+    if (key in map) {
+      return map[key];
     }
 
-    var keys = Object.keys(map._table);
+    var keys = Object.keys(map);
     keys.sort(bindCompare(StringComparison.INSTANCE));
     commandLineErrorInvalidEnum(log, range, name, key, keys);
     return defaultValue;
   };
 
   frontend.parseOptions = function(log, parser, $arguments) {
-    var VALID_TARGETS = StringMap.literal('cpp joined js json-ast lisp-ast ruby xml-ast'.split(' '), [CompilerTarget.CPP, CompilerTarget.JOINED, CompilerTarget.JAVASCRIPT, CompilerTarget.JSON_AST, CompilerTarget.LISP_AST, CompilerTarget.RUBY, CompilerTarget.XML_AST]);
-    var VALID_JS_CONFIGS = StringMap.literal(['browser', 'node'], [CompilerConfig.BROWSER, CompilerConfig.NODE]);
-    var VALID_CPP_CONFIGS = StringMap.literal(['android', 'ios', 'linux', 'osx', 'windows'], [CompilerConfig.ANDROID, CompilerConfig.IOS, CompilerConfig.LINUX, CompilerConfig.OSX, CompilerConfig.WINDOWS]);
-    var VALID_GC_STRATEGIES = StringMap.literal(['mark-sweep', 'none', 'none-fast'], [MemoryManagement.MARK_SWEEP, MemoryManagement.NONE, MemoryManagement.NONE_FAST]);
+    var VALID_TARGETS = in_StringMap.literal('cpp joined js json-ast lisp-ast ruby xml-ast'.split(' '), [CompilerTarget.CPP, CompilerTarget.JOINED, CompilerTarget.JAVASCRIPT, CompilerTarget.JSON_AST, CompilerTarget.LISP_AST, CompilerTarget.RUBY, CompilerTarget.XML_AST]);
+    var VALID_JS_CONFIGS = in_StringMap.literal(['browser', 'node'], [CompilerConfig.BROWSER, CompilerConfig.NODE]);
+    var VALID_CPP_CONFIGS = in_StringMap.literal(['android', 'ios', 'linux', 'osx', 'windows'], [CompilerConfig.ANDROID, CompilerConfig.IOS, CompilerConfig.LINUX, CompilerConfig.OSX, CompilerConfig.WINDOWS]);
+    var VALID_GC_STRATEGIES = in_StringMap.literal(['mark-sweep', 'none', 'none-fast'], [MemoryManagement.MARK_SWEEP, MemoryManagement.NONE, MemoryManagement.NONE_FAST]);
     parser.define(OptionType.BOOL, Option.HELP, '--help', 'Prints this message.').aliases('-help ? -? -h -H /? /h /H'.split(' '));
-    parser.define(OptionType.STRING, Option.TARGET, '--target', 'Sets the target format. Valid targets are ' + frontend.joinKeys(Object.keys(VALID_TARGETS._table)) + '.');
+    parser.define(OptionType.STRING, Option.TARGET, '--target', 'Sets the target format. Valid targets are ' + frontend.joinKeys(Object.keys(VALID_TARGETS)) + '.');
     parser.define(OptionType.STRING, Option.OUTPUT_FILE, '--output-file', 'Combines all output into a single file. Mutually exclusive with --output-dir.');
     parser.define(OptionType.STRING, Option.OUTPUT_DIRECTORY, '--output-dir', 'Places all output files in the specified directory. Mutually exclusive with --output-file.');
     parser.define(OptionType.STRING_LIST, Option.DEFINE, '--define', 'Overrides the value of a #define statement. Example: --define:UNIT_TESTS=true.');
     parser.define(OptionType.BOOL, Option.RELEASE, '--release', 'Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE.');
-    parser.define(OptionType.STRING, Option.CONFIG, '--config', 'Provides the configuration for the target format. Valid configurations are ' + frontend.joinKeys(Object.keys(VALID_JS_CONFIGS._table)) + ' for JavaScript and ' + frontend.joinKeys(Object.keys(VALID_CPP_CONFIGS._table)) + ' for C++. Defaults to "browser" for JavaScript and the current operating system for C++.');
+    parser.define(OptionType.STRING, Option.CONFIG, '--config', 'Provides the configuration for the target format. Valid configurations are ' + frontend.joinKeys(Object.keys(VALID_JS_CONFIGS)) + ' for JavaScript and ' + frontend.joinKeys(Object.keys(VALID_CPP_CONFIGS)) + ' for C++. Defaults to "browser" for JavaScript and the current operating system for C++.');
     parser.define(OptionType.BOOL, Option.VERBOSE, '--verbose', 'Prints out information about the compilation.');
-    parser.define(OptionType.STRING, Option.GC, '--gc', 'Sets the garbage collection strategy when targeting C++. Valid strategies are ' + frontend.joinKeys(Object.keys(VALID_GC_STRATEGIES._table)) + '. Defaults to "none".');
+    parser.define(OptionType.STRING, Option.GC, '--gc', 'Sets the garbage collection strategy when targeting C++. Valid strategies are ' + frontend.joinKeys(Object.keys(VALID_GC_STRATEGIES)) + '. Defaults to "none".');
     parser.define(OptionType.BOOL, Option.SOURCE_MAP, '--source-map', 'Generates a source map when targeting JavaScript. The source map is saved with the ".map" extension in the same directory as the main output file.');
     parser.define(OptionType.BOOL, Option.INCLUDE_LIBRARIES, '--include-libraries', 'Includes library source code in the output. Only applies to the "joined", "json-ast", "lisp-ast", and "xml-ast" targets.');
     parser.define(OptionType.BOOL, Option.INLINE, '--inline', 'Uses heuristics to automatically inline simple functions.');
@@ -19130,7 +19116,7 @@
           range = range.fromStart(name.length);
         }
 
-        options.overriddenDefines._table[name] = new OverriddenDefine(value, range);
+        options.overriddenDefines[name] = new OverriddenDefine(value, range);
       }
     }
 
@@ -19320,14 +19306,14 @@
   math.INFINITY = Infinity;
   unicode.STRING_ENCODING = 1;
   unicode.StringIterator.INSTANCE = new unicode.StringIterator();
-  var operatorInfo = IntMap.literal([65, 66, 67, 68, 69, 70, 71, 72, 75, 76, 77, 78, 73, 74, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 107, 108, 109, 103, 104, 105, 110, 111, 106, 112], [new OperatorInfo('!', 13, 0), new OperatorInfo('+', 13, 0), new OperatorInfo('-', 13, 0), new OperatorInfo('~', 13, 0), new OperatorInfo('++', 13, 0), new OperatorInfo('--', 13, 0), new OperatorInfo('++', 14, 0), new OperatorInfo('--', 14, 0), new OperatorInfo('*', 13, 0), new OperatorInfo('&', 13, 0), new OperatorInfo('*', 14, 0), new OperatorInfo('&', 14, 0), new OperatorInfo('new', 13, 0), new OperatorInfo('delete', 13, 0), new OperatorInfo('+', 11, 1), new OperatorInfo('&', 7, 1), new OperatorInfo('|', 5, 1), new OperatorInfo('^', 6, 1), new OperatorInfo('/', 12, 1), new OperatorInfo('==', 8, 1), new OperatorInfo('>', 9, 1), new OperatorInfo('>=', 9, 1), new OperatorInfo('in', 9, 1), new OperatorInfo('[]', 15, 1), new OperatorInfo('is', 9, 1), new OperatorInfo('<', 9, 1), new OperatorInfo('<=', 9, 1), new OperatorInfo('&&', 4, 1), new OperatorInfo('||', 3, 1), new OperatorInfo('*', 12, 1), new OperatorInfo('!=', 8, 1), new OperatorInfo('%', 12, 1), new OperatorInfo('<<', 10, 1), new OperatorInfo('>>', 10, 1), new OperatorInfo('-', 11, 1), new OperatorInfo('=', 2, 2), new OperatorInfo('+=', 2, 2), new OperatorInfo('&=', 2, 2), new OperatorInfo('|=', 2, 2), new OperatorInfo('^=', 2, 2), new OperatorInfo('/=', 2, 2), new OperatorInfo('*=', 2, 2), new OperatorInfo('%=', 2, 2), new OperatorInfo('<<=', 2, 2), new OperatorInfo('>>=', 2, 2), new OperatorInfo('-=', 2, 2), new OperatorInfo('[]=', 2, 2)]);
-  Compiler.cachedLibraries = [new CachedLibrary('defines.sk', '// The "--release" flag automatically overrides BUILD_RELEASE with true\n#define BUILD_DEBUG   !BUILD_RELEASE\n#define BUILD_RELEASE false\n\n// These will be overridden by the compiler with the current language target\n#define TARGET_CPP   false\n#define TARGET_JS    false\n#define TARGET_RUBY  false\n#define TARGET_NONE  !TARGET_CPP && !TARGET_JS && !TARGET_RUBY\n\n// The "--config" flag can be used to override these (example: "--config=node").\n// Using "--target=js" defaults to "--config=browser" and using "--target=cpp"\n// defaults to the config for the current operating system.\n#define CONFIG_IOS     false\n#define CONFIG_OSX     false\n#define CONFIG_LINUX   false\n#define CONFIG_ANDROID false\n#define CONFIG_WINDOWS false\n#define CONFIG_NODE    false\n#define CONFIG_BROWSER false\n#define CONFIG_UNKNOWN !CONFIG_IOS && !CONFIG_OSX && !CONFIG_LINUX && !CONFIG_ANDROID && !CONFIG_WINDOWS && !CONFIG_NODE && !CONFIG_BROWSER\n'), new CachedLibrary('primitives.sk', 'import class void {}\nalias dynamic = `dynamic`;\n\n#if TARGET_JS\n\n  import class int { pure string toString(); }\n  import class bool { pure string toString(); }\n  import class float { pure string toString(); }\n  import class double { pure string toString(); }\n\n  import class string {\n    pure {\n      string slice(int start, int end);\n      List<string> split(string separator);\n      int indexOf(string value);\n      int lastIndexOf(string value);\n      string toLowerCase();\n      string toUpperCase();\n    }\n  }\n\n  in string {\n    inline pure {\n      int size() { return `this`.length; }\n      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }\n      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      string join(List<string> values) { return values."join"(this); }\n      @OperatorGet int codeUnitAt(int index) { return `this`.charCodeAt(index); }\n      static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }\n    }\n  }\n\n  class StringBuilder {\n    private var _buffer = "";\n\n    inline {\n      void append(string text) { _buffer += text; }\n      string toString() { return _buffer; }\n    }\n  }\n\n#elif TARGET_CPP\n\n  import class int {}\n  import class bool {}\n  import class float {}\n  import class double {}\n\n  @NeedsInclude("<string>")\n  @EmitAs("std::string")\n  import class string {}\n\n  in int {\n    inline pure string toString() { return `std`::to_string(this); }\n  }\n\n  in bool {\n    inline pure string toString() { return this ? "true" : "false"; }\n  }\n\n  in float {\n    inline pure string toString() { return double._format_(this); }\n  }\n\n  in double {\n    pure {\n      inline string toString() { return _format_(this); }\n\n      #if !CONFIG_WINDOWS\n\n        // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0\n        @NeedsInclude("<cstdio>")\n        static string _format_(double value) {\n          string buffer;\n          `buffer.resize(64)`;\n          `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;\n            if (`std::stod(&buffer[0]) != value`) {\n              `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;\n            }\n          }\n          return `buffer.c_str()`;\n        }\n\n      #else\n\n        // MSVC won\'t allow std::sprintf() even though it\'s in the C++11 standard\n        @NeedsInclude("<stdio.h>")\n        static string _format_(double value) {\n          string buffer;\n          `buffer.resize(64)`;\n          `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;\n            if (`std::stod(&buffer[0]) != value`) {\n              `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;\n            }\n          }\n          return `buffer.c_str()`;\n        }\n\n      #endif\n    }\n  }\n\n  in string {\n    pure {\n      inline {\n        int size() { return (int)`this`.size(); }\n        string slice(int start, int end) { return `this`.substr(start, end - start); }\n        string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }\n        int indexOf(string value) { return (int)`this`.find(value); }\n        int indexOfFrom(string value, int fromIndex) { return (int)`this`.find(value, fromIndex); }\n        int lastIndexOf(string value) { return (int)`this`.rfind(value); }\n        int lastIndexOfFrom(string value, int fromIndex) { return (int)`this`.rfind(value, fromIndex); }\n        @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values\n        static string fromCodeUnit(int value) { return ``string``(1, value); }\n      }\n\n      @NeedsInclude("<algorithm>")\n      @NeedsInclude("<ctype.h>") {\n        string toLowerCase() {\n          var clone = this;\n          `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;\n          return clone;\n        }\n\n        string toUpperCase() {\n          var clone = this;\n          `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;\n          return clone;\n        }\n      }\n\n      string join(List<string> values) {\n        var result = "";\n        for (var i = 0; i < values.size(); i++) {\n          if (i > 0) result += this;\n          result += values[i];\n        }\n        return result;\n      }\n\n      List<string> split(string separator) {\n        List<string> values = [];\n        var start = 0;\n        while (true) {\n          var end = indexOfFrom(separator, start);\n          if (end == -1) break;\n          values.push(slice(start, end));\n          start = end + separator.size();\n        }\n        values.push(slice(start, size()));\n        return values;\n      }\n    }\n  }\n\n  class StringBuilder {\n    private var _buffer = "";\n\n    inline {\n      void append(string text) { _buffer += text; }\n      string toString() { return _buffer; }\n    }\n  }\n\n#elif TARGET_RUBY\n\n  import class int { @EmitAs("to_s") pure string toString(); }\n  import class bool { @EmitAs("to_s") pure string toString(); }\n  import class float { @EmitAs("to_s") pure string toString(); }\n  import class double { @EmitAs("to_s") pure string toString(); }\n\n  import class string {\n    pure {\n      int size();\n      List<string> split(string separator);\n      @EmitAs("upcase") string toLowerCase();\n      @EmitAs("downcase") string toUpperCase();\n    }\n  }\n\n  in string {\n    pure inline {\n      string join(List<string> values) { return values."join"(this); }\n      string slice(int start, int end) { return `this`.slice(start, end - start); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      @OperatorGet int codeUnitAt(int index) { return sliceCodeUnit(index)."ord"; }\n      static string fromCodeUnit(int value) { return value."chr"("UTF-8"); }\n\n      int indexOf(string value) {\n        var i = `this`.index(value);\n        return i != null ? i : -1;\n      }\n\n      int indexOfFrom(string value, int fromIndex) {\n        var i = `this`.index(value, fromIndex);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOf(string value) {\n        var i = `this`.rindex(value);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOfFrom(string value, int fromIndex) {\n        var i = `this`.rindex(value, fromIndex);\n        return i != null ? i : -1;\n      }\n    }\n  }\n\n  class StringBuilder {\n    private var _buffer = "";\n\n    inline {\n      void append(string text) { `this`._buffer << text; }\n      string toString() { return _buffer."dup"; }\n    }\n  }\n\n#else\n\n  import class int { pure string toString(); }\n  import class bool { pure string toString(); }\n  import class float { pure string toString(); }\n  import class double { pure string toString(); }\n\n  import class string {\n    pure {\n      int size();\n      List<string> split(string separator);\n      string slice(int start, int end);\n      string sliceCodeUnit(int index);\n      int indexOf(string value);\n      int indexOfFrom(string value, int fromIndex);\n      int lastIndexOf(string value);\n      int lastIndexOfFrom(string value, int fromIndex);\n      string toLowerCase();\n      string toUpperCase();\n      string join(List<string> values);\n      @OperatorGet int codeUnitAt(int index);\n      static string fromCodeUnit(int value);\n    }\n  }\n\n  import class StringBuilder {\n    new();\n    void append(string text);\n    string toString();\n  }\n\n#endif\n\nin string {\n  pure {\n    @OperatorIn\n    inline bool contains(string value) {\n      return indexOf(value) != -1;\n    }\n\n    inline string toString() {\n      return this;\n    }\n\n    bool startsWith(string prefix) {\n      return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n    }\n\n    bool endsWith(string suffix) {\n      return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n    }\n\n    string repeat(int count) {\n      var result = "";\n      for (var i = 0; i < count; i++) result += this;\n      return result;\n    }\n\n    string replaceAll(string before, string after) {\n      var result = "";\n      var start = 0;\n      while (true) {\n        var end = indexOfFrom(before, start);\n        if (end == -1) break;\n        result += slice(start, end) + after;\n        start = end + before.size();\n      }\n      return result + slice(start, size());\n    }\n  }\n}\n\n// Boxes are useful for representing nullable primitive types\nclass Box<T> {\n  T value;\n}\n'), new CachedLibrary('math.sk', '#if TARGET_JS\n\n  namespace math {\n    inline pure {\n      double abs(double x) { return `Math`.abs(x); }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return `Math`.pow(x, y); }\n      double floor(double x) { return `Math`.floor(x); }\n      double round(double x) { return `Math`.round(x); }\n      double ceil(double x) { return `Math`.ceil(x); }\n      double min(double x, double y) { return `Math`.min(x, y); }\n      double max(double x, double y) { return `Math`.max(x, y); }\n      bool isNaN(double x) { return `isNaN`(x); }\n      bool isFinite(double x) { return `isFinite`(x); }\n    }\n\n    inline double random() { return `Math`.random(); }\n  }\n\n#elif TARGET_CPP\n\n  namespace math {\n    inline pure @NeedsInclude("<cmath>") {\n      double abs(double x) { return `std`::abs(x); }\n      double sin(double x) { return `std`::sin(x); }\n      double cos(double x) { return `std`::cos(x); }\n      double tan(double x) { return `std`::tan(x); }\n      double asin(double x) { return `std`::asin(x); }\n      double acos(double x) { return `std`::acos(x); }\n      double atan(double x) { return `std`::atan(x); }\n      double atan2(double y, double x) { return `std`::atan2(y, x); }\n      double sqrt(double x) { return `std`::sqrt(x); }\n      double exp(double x) { return `std`::exp(x); }\n      double log(double x) { return `std`::log(x); }\n      double pow(double x, double y) { return `std`::pow(x, y); }\n      double floor(double x) { return `std`::floor(x); }\n      double round(double x) { return `std`::round(x); }\n      double ceil(double x) { return `std`::ceil(x); }\n      double min(double x, double y) { return `std`::fmin(x, y); }\n      double max(double x, double y) { return `std`::fmax(x, y); }\n      bool isNaN(double x) { return `std`::isnan(x); }\n      bool isFinite(double x) { return `std`::isfinite(x); }\n    }\n\n    @NeedsInclude("<random>") {\n      `std::uniform_real_distribution<double>` _distribution_;\n      `(std::mt19937 *)` _generator_ = null;\n\n      double random() {\n        if (_generator_ == null) {\n          _generator_ = new `std`::mt19937(`std`::random_device()());\n        }\n        return _distribution_(*_generator_);\n      }\n    }\n  }\n\n#elif TARGET_RUBY\n\n  namespace math {\n    inline pure {\n      double abs(double x) { return x."abs"; }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return exp(y * log(x)); } // TODO: Use "**" instead\n      double floor(double x) { return x."floor"; }\n      double round(double x) { return x."round"; }\n      double ceil(double x) { return x."ceil"; }\n      double min(double x, double y) { return x < y ? x : y; }\n      double max(double x, double y) { return x > y ? x : y; }\n      bool isNaN(double x) { return x."nan?"; }\n      bool isFinite(double x) { return x."finite?"; }\n      double random() { return `Random`.rand; }\n    }\n  }\n\n#else\n\n  import namespace math {\n    pure {\n      double abs(double x);\n      double sin(double x);\n      double cos(double x);\n      double tan(double x);\n      double asin(double x);\n      double acos(double x);\n      double atan(double x);\n      double atan2(double y, double x);\n      double sqrt(double x);\n      double exp(double x);\n      double log(double x);\n      double pow(double x, double y);\n      double floor(double x);\n      double round(double x);\n      double ceil(double x);\n      double min(double x, double y);\n      double max(double x, double y);\n      double random();\n      bool isNaN(double x);\n      bool isFinite(double x);\n    }\n  }\n\n#endif\n\nin math {\n  double clamp(double x, double a, double b) { return max(a, min(x, b)); }\n  int iclamp(int x, int a, int b) { return imax(a, imin(x, b)); }\n  int imax(int a, int b) { return a > b ? a : b; }\n  int imin(int a, int b) { return a < b ? a : b; }\n\n  const {\n    var SQRT2 = 1.414213562373095;\n    var PI = 3.141592653589793;\n    var TWOPI = 2 * PI;\n    var E = 2.718281828459045;\n    var INFINITY = 1 / 0.0;\n    var NAN = 0 / 0.0;\n  }\n}\n'), new CachedLibrary('list.sk', '#if TARGET_RUBY\nexport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n#else\ninterface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n#endif\n\n#if TARGET_JS\n\n  void bindCompare<T>(Comparison<T> comparison) {\n    return comparison.compare."bind"(comparison);\n  }\n\n  import class List<T> {\n    pure {\n      new();\n      void push(T value);\n      void unshift(T value);\n      List<T> slice(int start, int end);\n      int indexOf(T value);\n      int lastIndexOf(T value);\n      T shift();\n      T pop();\n      void reverse();\n    }\n  }\n\n  in List {\n    pure {\n      inline {\n        int size() { return `this`.length; }\n        List<T> clone() { return `this`.slice(); }\n        T removeAt(int index) { return `this`.splice(index, 1)[0]; }\n        void removeRange(int start, int end) { `this`.splice(start, end - start); }\n        void insert(int index, T value) { `this`.splice(index, 0, value); }\n        @OperatorGet T get(int index) { return `this`[index]; }\n        @OperatorSet void set(int index, T value) { `this`[index] = value; }\n        @OperatorIn bool contains(T value) { return indexOf(value) != -1; }\n      }\n\n      T last() { return this[size() - 1]; }\n      void clear() { `this`.length = 0; }\n      void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }\n    }\n\n    inline void sort(Comparison<T> comparison) { `this`.sort(bindCompare<T>(comparison)); }\n  }\n\n#elif TARGET_CPP\n\n  bool bindCompare<T>(Comparison<T> comparison, T left, T right) {\n    return comparison.compare(left, right) < 0;\n  }\n\n  @NeedsInclude("<vector>")\n  class List<T> {\n    pure {\n      new() {}\n\n      int size() {\n        return (int)_data.size();\n      }\n\n      void push(T value) {\n        _data.push_back(value);\n      }\n\n      void unshift(T value) {\n        insert(0, value);\n      }\n\n      List<T> slice(int start, int end) {\n        assert start >= 0 && start <= end && end <= size();\n        List<T> slice = [];\n        slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);\n        return slice;\n      }\n\n      T shift() {\n        T value = this[0];\n        removeAt(0);\n        return value;\n      }\n\n      T pop() {\n        T value = this[size() - 1];\n        _data.pop_back();\n        return value;\n      }\n\n      T last() {\n        assert size() > 0;\n        return _data.back();\n      }\n\n      List<T> clone() {\n        List<T> clone = [];\n        clone._data = _data;\n        return clone;\n      }\n\n      T removeAt(int index) {\n        T value = this[index];\n        _data.erase(_data.begin() + index);\n        return value;\n      }\n\n      void removeRange(int start, int end) {\n        assert 0 <= start && start <= end && end <= size();\n        _data.erase(_data.begin() + start, _data.begin() + end);\n      }\n\n      void insert(int index, T value) {\n        assert index >= 0 && index <= size();\n        _data.insert(_data.begin() + index, value);\n      }\n\n      @OperatorGet\n      T get(int index) {\n        assert index >= 0 && index < size();\n        return _data[index];\n      }\n\n      @OperatorSet\n      void set(int index, T value) {\n        assert index >= 0 && index < size();\n        _data[index] = value;\n      }\n\n      @OperatorIn\n      bool contains(T value) {\n        return indexOf(value) != -1;\n      }\n\n      void clear() {\n        _data.clear();\n      }\n\n      @NeedsInclude("<algorithm>") {\n        int indexOf(T value) {\n          int index = (int)(`std`::find(_data.begin(), _data.end(), value) - _data.begin());\n          return index == size() ? -1 : index;\n        }\n\n        int lastIndexOf(T value) {\n          int index = (int)(`std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin());\n          return size() - index - 1;\n        }\n\n        void swap(int a, int b) {\n          assert a >= 0 && a < size();\n          assert b >= 0 && b < size();\n          `std`::swap(_data[a], _data[b]);\n        }\n\n        void reverse() {\n          `std`::reverse(_data.begin(), _data.end());\n        }\n      }\n\n      // Normally this would be in a constructor but clang has a bug that\n      // sometimes emits incorrect code for a constructor taking an empty\n      // initializer list. See http://llvm.org/bugs/show_bug.cgi?id=22256\n      // for details.\n      @NeedsInclude("<initializer_list>")\n      private List<T> literal(`std::initializer_list<T>` list) {\n        _data.insert(_data.end(), list.begin(), list.end());\n        return this;\n      }\n    }\n\n    @NeedsInclude("<functional>")\n    @NeedsInclude("<algorithm>")\n    inline void sort(Comparison<T> comparison) {\n      `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));\n    }\n\n    private `std::vector<T>` _data;\n  }\n\n#elif TARGET_RUBY\n\n  import class List<T> {\n    pure {\n      new();\n      int size();\n      void push(T value);\n      void unshift(T value);\n      T shift();\n      T pop();\n      T last();\n      @EmitAs("reverse!") void reverse();\n      List<T> clone();\n      @EmitAs("delete_at") T removeAt(int index);\n      void insert(int index, T value);\n      @EmitAs("include?") @OperatorIn bool contains(T value);\n      void clear();\n    }\n  }\n\n  in List {\n    pure {\n      inline @OperatorGet T get(int index) { return `this`[index]; }\n      inline @OperatorSet void set(int index, T value) { `this`[index] = value; }\n\n      int indexOf(T value) {\n        var i = `this`.index(value);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOf(T value) {\n        var i = `this`.rindex(value);\n        return i != null ? i : -1;\n      }\n\n      List<T> slice(int start, int end) {\n        return `this`.slice(start, end - start);\n      }\n\n      void removeRange(int start, int end) {\n        this."slice!"(start, end - start);\n      }\n\n      void swap(int a, int b) {\n        assert a >= 0 && a < size();\n        assert b >= 0 && b < size();\n        var temp = this[a];\n        this[a] = this[b];\n        this[b] = temp;\n      }\n    }\n\n    inline void sort(Comparison<T> comparison) {\n      `sort_helper`(this, comparison);\n    }\n  }\n\n#else\n\n  import class List<T> {\n    pure {\n      new();\n      int size();\n      void push(T value);\n      void unshift(T value);\n      List<T> slice(int start, int end);\n      int indexOf(T value);\n      int lastIndexOf(T value);\n      T shift();\n      T pop();\n      T last();\n      void reverse();\n      List<T> clone();\n      T removeAt(int index);\n      void removeRange(int start, int end);\n      void insert(int index, T value);\n      @OperatorGet T get(int index);\n      @OperatorSet void set(int index, T value);\n      @OperatorIn bool contains(T value);\n      void clear();\n      void swap(int a, int b);\n    }\n    void sort(Comparison<T> comparison);\n  }\n\n#endif\n\nin List {\n  bool pushOnce(T value) {\n    if (!(value in this)) {\n      push(value);\n      return true;\n    }\n    return false;\n  }\n\n  bool removeOnce(T value) {\n    var index = indexOf(value);\n    if (index != -1) {\n      removeAt(index);\n      return true;\n    }\n    return false;\n  }\n}\n'), new CachedLibrary('stringmap.sk', '#if TARGET_JS\n\n  class StringMap<T> {\n    private var _table = `Object`.create(null);\n\n    pure {\n      inline {\n        @OperatorGet T get(string key) { return _table[key]; }\n        @OperatorSet void set(string key, T value) { _table[key] = value; }\n        @OperatorIn bool containsKey(string key) { return key in _table; }\n        void remove(string key) { delete _table[key]; }\n        List<string> keys() { return `Object`.keys(_table); }\n      }\n\n      T getOrDefault(string key, T defaultValue) {\n        return key in this ? this[key] : defaultValue;\n      }\n\n      List<T> values() {\n        List<T> values = [];\n        for (string key in _table) values.push(this[key]);\n        return values;\n      }\n\n      StringMap<T> clone() {\n        var clone = StringMap<T>();\n        for (string key in _table) clone[key] = this[key];\n        return clone;\n      }\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class StringMap<T> {\n    pure {\n      new() {}\n      @OperatorGet T get(string key) { return _table[key]; }\n      T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n      @OperatorSet void set(string key, T value) { _table[key] = value; }\n      @OperatorIn bool containsKey(string key) { return _table.count(key) > 0; }\n      void remove(string key) { _table.erase(key); }\n      List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n      StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n    }\n\n    private `std::unordered_map<`string`, T>` _table;\n  }\n\n#elif TARGET_RUBY\n\n  import class StringMap<T> {\n    pure {\n      new();\n      @EmitAs("has_key?") @OperatorIn bool containsKey(string key);\n      @EmitAs("delete") bool remove(string key);\n      List<string> keys();\n      List<T> values();\n      StringMap<T> clone();\n    }\n  }\n\n  in StringMap {\n    pure {\n      inline @OperatorGet T get(string key) { return `this`[key]; }\n      inline @OperatorSet void set(string key, T value) { `this`[key] = value; }\n      T getOrDefault(string key, T defaultValue) { return key in this ? this[key] : defaultValue; }\n    }\n  }\n\n#else\n\n  import class StringMap<T> {\n    pure {\n      new();\n      @OperatorGet T get(string key);\n      T getOrDefault(string key, T defaultValue);\n      @OperatorSet void set(string key, T value);\n      @OperatorIn bool containsKey(string key);\n      void remove(string key);\n      List<string> keys();\n      List<T> values();\n      StringMap<T> clone();\n    }\n  }\n\n#endif\n\n// This is used by the compiler to implement map literals:\n//\n//   { "a": false, "b": true } => StringMap.literal<bool>(["a", "b"], [false, true])\n//\nin StringMap {\n  private static pure StringMap<X> literal<X>(List<string> keys, List<X> values) {\n    #if TARGET_RUBY\n    StringMap<X> map = `{}`;\n    #else\n    var map = StringMap<X>();\n    #endif\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedLibrary('intmap.sk', '#if TARGET_JS\n\n  class IntMap<T> {\n    private var _table = `Object`.create(null);\n\n    pure {\n      inline {\n        @OperatorGet T get(int key) { return _table[key]; }\n        @OperatorSet void set(int key, T value) { _table[key] = value; }\n        @OperatorIn bool containsKey(int key) { return key in _table; }\n        void remove(int key) { delete _table[key]; }\n      }\n\n      T getOrDefault(int key, T defaultValue) {\n        return key in this ? this[key] : defaultValue;\n      }\n\n      List<int> keys() {\n        List<int> keys = [];\n        for (double key in _table) keys.push((int)key);\n        return keys;\n      }\n\n      List<T> values() {\n        List<T> values = [];\n        for (int key in _table) values.push(this[key]);\n        return values;\n      }\n\n      IntMap<T> clone() {\n        var clone = IntMap<T>();\n        for (int key in _table) clone[key] = this[key];\n        return clone;\n      }\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class IntMap<T> {\n    pure {\n      new() {}\n      @OperatorGet T get(int key) { return _table[key]; }\n      T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n      @OperatorSet void set(int key, T value) { _table[key] = value; }\n      @OperatorIn bool containsKey(int key) { return _table.count(key) > 0; }\n      void remove(int key) { _table.erase(key); }\n      List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n      IntMap<T> clone() { var clone = IntMap<T>(); clone._table = _table; return clone; }\n    }\n\n    private `std::unordered_map<`int`, T>` _table;\n  }\n\n#elif TARGET_RUBY\n\n  import class IntMap<T> {\n    pure {\n      new();\n      @EmitAs("has_key?") @OperatorIn bool containsKey(int key);\n      @EmitAs("delete") bool remove(int key);\n      List<int> keys();\n      List<T> values();\n      IntMap<T> clone();\n    }\n  }\n\n  in IntMap {\n    pure {\n      inline @OperatorGet T get(int key) { return `this`[key]; }\n      inline @OperatorSet void set(int key, T value) { `this`[key] = value; }\n      T getOrDefault(int key, T defaultValue) { return key in this ? this[key] : defaultValue; }\n    }\n  }\n\n#else\n\n  import class IntMap<T> {\n    pure {\n      new();\n      @OperatorGet T get(int key);\n      T getOrDefault(int key, T defaultValue);\n      @OperatorSet void set(int key, T value);\n      @OperatorIn bool containsKey(int key);\n      void remove(int key);\n      List<int> keys();\n      List<T> values();\n      IntMap<T> clone();\n    }\n  }\n\n#endif\n\n// This is used by the compiler to implement map literals:\n//\n//   { 1: false, 2: true } => IntMap.literal<bool>([1, 2], [false, true])\n//\nin IntMap {\n  private static pure IntMap<X> literal<X>(List<int> keys, List<X> values) {\n    #if TARGET_RUBY\n    IntMap<X> map = `{}`;\n    #else\n    var map = IntMap<X>();\n    #endif\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedLibrary('os.sk', 'enum OperatingSystem {\n  ANDROID,\n  IOS,\n  LINUX,\n  OSX,\n  UNKNOWN,\n  WINDOWS,\n}\n\nin OperatingSystem {\n  static pure OperatingSystem current() {\n    #if CONFIG_ANDROID\n\n      return .ANDROID;\n\n    #elif CONFIG_IOS\n\n      return .IOS;\n\n    #elif CONFIG_LINUX\n\n      return .LINUX;\n\n    #elif CONFIG_OSX\n\n      return .OSX;\n\n    #elif CONFIG_WINDOWS\n\n      return .WINDOWS;\n\n    #elif CONFIG_NODE\n\n      string platform = `process.platform`;\n      return\n        // Presumably this also means iOS but there\'s no way to check\n        platform == "darwin" ? .OSX :\n\n        // Official documentation says this will never contain "win64"\n        platform == "win32" ? .WINDOWS :\n\n        // Presumably this also means Android but there\'s no way to check\n        platform == "linux" ? .LINUX :\n\n        // This may also be "freebsd" or "sunos"\n        .UNKNOWN;\n\n    #elif CONFIG_BROWSER\n\n      string platform = `navigator.platform`;\n      string userAgent = `navigator.userAgent`;\n      return\n        // OS X encodes the architecture into the platform\n        platform == "MacIntel" || platform == "MacPPC" ? .OSX :\n\n        // MSDN sources say Win64 is used, unlike node\n        platform == "Win32" || platform == "Win64" ? .WINDOWS :\n\n        // Assume the user is using Mobile Safari or Chrome and not some random\n        // browser with a strange platform (Opera apparently messes with this)\n        platform == "iPhone" || platform == "iPad" ? .IOS :\n\n        // Apparently most Android devices have a platform of "Linux" instead\n        // of "Android", so check the user agent instead. Also make sure to test\n        // for Android before Linux for this reason.\n        "Android" in userAgent ? .ANDROID :\n        "Linux" in platform ? .LINUX :\n\n        // The platform string has no specification and can be literally anything.\n        // Other examples: "BlackBerry", "Nintendo 3DS", "PlayStation 4", etc.\n        .UNKNOWN;\n\n    #else\n\n      return .UNKNOWN;\n\n    #endif\n  }\n}\n'), new CachedLibrary('terminal.sk', 'namespace terminal {\n  enum Color {\n    DEFAULT = 0,\n    BOLD = 1,\n    GRAY = 90,\n    RED = 91,\n    GREEN = 92,\n    YELLOW = 93,\n    BLUE = 94,\n    MAGENTA = 95,\n    CYAN = 96,\n  }\n\n  #if TARGET_JS && CONFIG_BROWSER\n\n    inline {\n      int width() { return 0; }\n      int height() { return 0; }\n      void setColor(Color color) {}\n      void flush() {}\n\n      void print(string text) {\n        `console`.log(text);\n      }\n\n      // Browser logs are so varied that buffering standard output doesn\'t make much sense\n      void write(string text) {\n        `console`.log(text);\n      }\n    }\n\n  #elif TARGET_JS && CONFIG_NODE\n\n    void setColor(Color color) {\n      if (`process`.stdout.isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        return `process`.stdout.columns;\n      }\n\n      int height() {\n        return `process`.stdout.rows;\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        write(text + "\\n");\n      }\n\n      void write(string text) {\n        `process`.stdout.write(text);\n      }\n    }\n\n  #elif TARGET_CPP && CONFIG_WINDOWS\n\n    `HANDLE` _handle = `INVALID_HANDLE_VALUE`;\n    `CONSOLE_SCREEN_BUFFER_INFO` _info;\n\n    @NeedsInclude("<windows.h>")\n    void _setup() {\n      if (_handle == `INVALID_HANDLE_VALUE`) {\n        _handle = `GetStdHandle(STD_OUTPUT_HANDLE)`;\n        `GetConsoleScreenBufferInfo`(_handle, &_info);\n      }\n    }\n\n    int width() {\n      _setup();\n      return _info.dwSize.X;\n    }\n\n    int height() {\n      _setup();\n      return _info.dwSize.Y;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      int value = _info.wAttributes;\n      switch (color) {\n        case .BOLD { value |= `FOREGROUND_INTENSITY`; }\n        case .GRAY { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE`; }\n        case .RED { value = `FOREGROUND_RED | FOREGROUND_INTENSITY`; }\n        case .GREEN { value = `FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .YELLOW { value = `FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .BLUE { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .MAGENTA { value = `FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .CYAN { value = `FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n      }\n      `SetConsoleTextAttribute`(_handle, value);\n    }\n\n    void flush() {\n    }\n\n    inline void print(string text) {\n      write(text + "\\n");\n    }\n\n    void write(string text) {\n      _setup();\n\n      // Use WriteConsoleA() instead of std::cout for a huge performance boost\n      `WriteConsoleA`(_handle, `text`.c_str(), `text`.size(), null, null);\n    }\n\n  #elif TARGET_CPP && (CONFIG_OSX || CONFIG_LINUX)\n\n    int _width;\n    int _height;\n    bool _isTTY;\n    bool _isSetup;\n\n    @NeedsInclude("<sys/ioctl.h>")\n    @NeedsInclude("<unistd.h>")\n    void _setup() {\n      if (!_isSetup) {\n        `winsize` size;\n        if (!`ioctl`(2, `TIOCGWINSZ`, &size)) {\n          _width = size.ws_col;\n          _height = size.ws_row;\n        }\n        _isTTY = `isatty(STDOUT_FILENO)`;\n        _isSetup = true;\n      }\n    }\n\n    int width() {\n      _setup();\n      return _width;\n    }\n\n    int height() {\n      _setup();\n      return _height;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      if (_isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    @NeedsInclude("<iostream>")\n    inline {\n      void flush() {\n        `std`::cout.flush();\n      }\n\n      void print(string text) {\n        `std`::cout << text << `std`::endl;\n      }\n\n      void write(string text) {\n        `std`::cout << text;\n      }\n    }\n\n  #elif TARGET_RUBY\n\n    void setColor(Color color) {\n      if (`STDOUT`.isatty) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        `require`("io/console");\n        return `STDIN`.winsize[1];\n      }\n\n      int height() {\n        `require`("io/console");\n        return `STDIN`.winsize[0];\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        `puts`(text);\n      }\n\n      void write(string text) {\n        `print`(text);\n      }\n    }\n\n  #else\n\n    int width() { return 0; }\n    int height() { return 0; }\n    void setColor(Color color) {}\n    void flush() {}\n    void print(string text) {}\n    void write(string text) {}\n\n  #endif\n}\n'), new CachedLibrary('unicode.sk', 'namespace unicode {\n  enum Encoding {\n    UTF8,\n    UTF16,\n    UTF32,\n  }\n\n  const Encoding STRING_ENCODING =\n    TARGET_CPP ? .UTF8 :\n    TARGET_JS ? .UTF16 :\n    .UTF32;\n\n  class StringIterator {\n    static final var INSTANCE = StringIterator();\n\n    var value = "";\n    var index = 0;\n    var stop = 0;\n\n    StringIterator reset(string text, int start) {\n      value = text;\n      index = start;\n      stop = text.size();\n      return this;\n    }\n\n    int countCodePointsUntil(int stop) {\n      var count = 0;\n      while (index < stop && nextCodePoint() >= 0) {\n        count++;\n      }\n      return count;\n    }\n\n    int nextCodePoint() {\n      if (STRING_ENCODING == .UTF8) {\n        if (index >= stop) return -1;\n        var a = value.codeUnitAt(index);\n        index++;\n        if (a < 0xC0) return a;\n        if (index >= stop) return -1;\n        var b = value.codeUnitAt(index);\n        index++;\n        if (a < 0xE0) return ((a & 0x1F) << 6) | (b & 0x3F);\n        if (index >= stop) return -1;\n        var c = value.codeUnitAt(index);\n        index++;\n        if (a < 0xF0) return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F);\n        if (index >= stop) return -1;\n        var d = value.codeUnitAt(index);\n        index++;\n        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F);\n      }\n\n      else if (STRING_ENCODING == .UTF16) {\n        if (index >= stop) return -1;\n        var a = value.codeUnitAt(index);\n        index++;\n        if (a < 0xD800) return a;\n        if (index >= stop) return -1;\n        var b = value.codeUnitAt(index);\n        index++;\n        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00);\n      }\n\n      else {\n        if (index >= stop) return -1;\n        var c = value.codeUnitAt(index);\n        index++;\n        return c;\n      }\n    }\n  }\n}\n\nin string {\n  using unicode;\n\n  List<int> codePoints() {\n    List<int> codePoints = [];\n    StringIterator.INSTANCE.reset(this, 0);\n    while (true) {\n      var codePoint = StringIterator.INSTANCE.nextCodePoint();\n      if (codePoint < 0) {\n        break;\n      }\n      codePoints.push(codePoint);\n    }\n    return codePoints;\n  }\n\n  static string fromCodePoints(List<int> codePoints) {\n    var builder = StringBuilder();\n\n    if (STRING_ENCODING == .UTF8) {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        var codePoint = codePoints[i];\n        if (codePoint < 0x80) {\n          builder.append(fromCodeUnit(codePoint));\n        } else {\n          if (codePoint < 0x800) {\n            builder.append(fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0));\n          } else {\n            if (codePoint < 0x10000) {\n              builder.append(fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0));\n            } else {\n              builder.append(fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0));\n              builder.append(fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80));\n            }\n            builder.append(fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80));\n          }\n          builder.append(fromCodeUnit((codePoint & 0x3F) | 0x80));\n        }\n      }\n    }\n\n    else if (STRING_ENCODING == .UTF16) {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        var codePoint = codePoints[i];\n        if (codePoint < 0x10000) {\n          builder.append(fromCodeUnit(codePoint));\n        } else {\n          codePoint -= 0x10000;\n          builder.append(fromCodeUnit((codePoint >> 10) + 0xD800));\n          builder.append(fromCodeUnit((codePoint & ((1 << 10) - 1)) + 0xDC00));\n        }\n      }\n    }\n\n    else {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        builder.append(fromCodeUnit(codePoints[i]));\n      }\n    }\n\n    return builder.toString();\n  }\n}\n')];
+  var operatorInfo = in_IntMap.literal([65, 66, 67, 68, 69, 70, 71, 72, 75, 76, 77, 78, 73, 74, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 107, 108, 109, 103, 104, 105, 110, 111, 106, 112], [new OperatorInfo('!', 13, 0), new OperatorInfo('+', 13, 0), new OperatorInfo('-', 13, 0), new OperatorInfo('~', 13, 0), new OperatorInfo('++', 13, 0), new OperatorInfo('--', 13, 0), new OperatorInfo('++', 14, 0), new OperatorInfo('--', 14, 0), new OperatorInfo('*', 13, 0), new OperatorInfo('&', 13, 0), new OperatorInfo('*', 14, 0), new OperatorInfo('&', 14, 0), new OperatorInfo('new', 13, 0), new OperatorInfo('delete', 13, 0), new OperatorInfo('+', 11, 1), new OperatorInfo('&', 7, 1), new OperatorInfo('|', 5, 1), new OperatorInfo('^', 6, 1), new OperatorInfo('/', 12, 1), new OperatorInfo('==', 8, 1), new OperatorInfo('>', 9, 1), new OperatorInfo('>=', 9, 1), new OperatorInfo('in', 9, 1), new OperatorInfo('[]', 15, 1), new OperatorInfo('is', 9, 1), new OperatorInfo('<', 9, 1), new OperatorInfo('<=', 9, 1), new OperatorInfo('&&', 4, 1), new OperatorInfo('||', 3, 1), new OperatorInfo('*', 12, 1), new OperatorInfo('!=', 8, 1), new OperatorInfo('%', 12, 1), new OperatorInfo('<<', 10, 1), new OperatorInfo('>>', 10, 1), new OperatorInfo('-', 11, 1), new OperatorInfo('=', 2, 2), new OperatorInfo('+=', 2, 2), new OperatorInfo('&=', 2, 2), new OperatorInfo('|=', 2, 2), new OperatorInfo('^=', 2, 2), new OperatorInfo('/=', 2, 2), new OperatorInfo('*=', 2, 2), new OperatorInfo('%=', 2, 2), new OperatorInfo('<<=', 2, 2), new OperatorInfo('>>=', 2, 2), new OperatorInfo('-=', 2, 2), new OperatorInfo('[]=', 2, 2)]);
+  Compiler.cachedLibraries = [new CachedLibrary('defines.sk', '// The "--release" flag automatically overrides BUILD_RELEASE with true\n#define BUILD_DEBUG   !BUILD_RELEASE\n#define BUILD_RELEASE false\n\n// These will be overridden by the compiler with the current language target\n#define TARGET_CPP   false\n#define TARGET_JS    false\n#define TARGET_RUBY  false\n#define TARGET_NONE  !TARGET_CPP && !TARGET_JS && !TARGET_RUBY\n\n// The "--config" flag can be used to override these (example: "--config=node").\n// Using "--target=js" defaults to "--config=browser" and using "--target=cpp"\n// defaults to the config for the current operating system.\n#define CONFIG_IOS     false\n#define CONFIG_OSX     false\n#define CONFIG_LINUX   false\n#define CONFIG_ANDROID false\n#define CONFIG_WINDOWS false\n#define CONFIG_NODE    false\n#define CONFIG_BROWSER false\n#define CONFIG_UNKNOWN !CONFIG_IOS && !CONFIG_OSX && !CONFIG_LINUX && !CONFIG_ANDROID && !CONFIG_WINDOWS && !CONFIG_NODE && !CONFIG_BROWSER\n'), new CachedLibrary('primitives.sk', 'import class void {}\nalias dynamic = `dynamic`;\n\n#if TARGET_JS\n\n  import class int { pure string toString(); }\n  import class bool { pure string toString(); }\n  import class float { pure string toString(); }\n  import class double { pure string toString(); }\n\n  import class string {\n    pure {\n      string slice(int start, int end);\n      List<string> split(string separator);\n      int indexOf(string value);\n      int lastIndexOf(string value);\n      string toLowerCase();\n      string toUpperCase();\n    }\n  }\n\n  in string {\n    inline pure {\n      int size() { return `this`.length; }\n      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }\n      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      string join(List<string> values) { return values."join"(this); }\n      @OperatorGet int codeUnitAt(int index) { return `this`.charCodeAt(index); }\n      static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }\n    }\n  }\n\n  class StringBuilder {\n    private var _buffer = "";\n\n    pure inline {\n      void append(string text) { _buffer += text; }\n      string toString() { return _buffer; }\n    }\n  }\n\n#elif TARGET_CPP\n\n  import class int {}\n  import class bool {}\n  import class float {}\n  import class double {}\n\n  @NeedsInclude("<string>")\n  @EmitAs("std::string")\n  import class string {}\n\n  in int {\n    inline pure string toString() { return `std`::to_string(this); }\n  }\n\n  in bool {\n    inline pure string toString() { return this ? "true" : "false"; }\n  }\n\n  in float {\n    inline pure string toString() { return double._format_(this); }\n  }\n\n  in double {\n    pure {\n      inline string toString() { return _format_(this); }\n\n      #if !CONFIG_WINDOWS\n\n        // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0\n        @NeedsInclude("<cstdio>")\n        static string _format_(double value) {\n          string buffer;\n          `buffer.resize(64)`;\n          `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;\n            if (`std::stod(&buffer[0]) != value`) {\n              `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;\n            }\n          }\n          return `buffer.c_str()`;\n        }\n\n      #else\n\n        // MSVC won\'t allow std::sprintf() even though it\'s in the C++11 standard\n        @NeedsInclude("<stdio.h>")\n        static string _format_(double value) {\n          string buffer;\n          `buffer.resize(64)`;\n          `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;\n          if (`std::stod(&buffer[0]) != value`) {\n            `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;\n            if (`std::stod(&buffer[0]) != value`) {\n              `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;\n            }\n          }\n          return `buffer.c_str()`;\n        }\n\n      #endif\n    }\n  }\n\n  in string {\n    pure {\n      inline {\n        int size() { return (int)`this`.size(); }\n        string slice(int start, int end) { return `this`.substr(start, end - start); }\n        string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }\n        int indexOf(string value) { return (int)`this`.find(value); }\n        int indexOfFrom(string value, int fromIndex) { return (int)`this`.find(value, fromIndex); }\n        int lastIndexOf(string value) { return (int)`this`.rfind(value); }\n        int lastIndexOfFrom(string value, int fromIndex) { return (int)`this`.rfind(value, fromIndex); }\n        @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values\n        static string fromCodeUnit(int value) { return ``string``(1, value); }\n      }\n\n      @NeedsInclude("<algorithm>")\n      @NeedsInclude("<ctype.h>") {\n        string toLowerCase() {\n          var clone = this;\n          `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;\n          return clone;\n        }\n\n        string toUpperCase() {\n          var clone = this;\n          `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;\n          return clone;\n        }\n      }\n\n      string join(List<string> values) {\n        var result = "";\n        for (var i = 0; i < values.size(); i++) {\n          if (i > 0) result += this;\n          result += values[i];\n        }\n        return result;\n      }\n\n      List<string> split(string separator) {\n        List<string> values = [];\n        var start = 0;\n        while (true) {\n          var end = indexOfFrom(separator, start);\n          if (end == -1) break;\n          values.push(slice(start, end));\n          start = end + separator.size();\n        }\n        values.push(slice(start, size()));\n        return values;\n      }\n    }\n  }\n\n  class StringBuilder {\n    private var _buffer = "";\n\n    pure inline {\n      void append(string text) { _buffer += text; }\n      string toString() { return _buffer; }\n    }\n  }\n\n#elif TARGET_RUBY\n\n  import class int { @EmitAs("to_s") pure string toString(); }\n  import class bool { @EmitAs("to_s") pure string toString(); }\n  import class float { @EmitAs("to_s") pure string toString(); }\n  import class double { @EmitAs("to_s") pure string toString(); }\n\n  import class string {\n    pure {\n      int size();\n      List<string> split(string separator);\n      @EmitAs("upcase") string toLowerCase();\n      @EmitAs("downcase") string toUpperCase();\n    }\n  }\n\n  in string {\n    pure inline {\n      string join(List<string> values) { return values."join"(this); }\n      string slice(int start, int end) { return `this`.slice(start, end - start); }\n      string sliceCodeUnit(int index) { return `this`[index]; }\n      @OperatorGet int codeUnitAt(int index) { return sliceCodeUnit(index)."ord"; }\n      static string fromCodeUnit(int value) { return value."chr"("UTF-8"); }\n\n      int indexOf(string value) {\n        var i = `this`.index(value);\n        return i != null ? i : -1;\n      }\n\n      int indexOfFrom(string value, int fromIndex) {\n        var i = `this`.index(value, fromIndex);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOf(string value) {\n        var i = `this`.rindex(value);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOfFrom(string value, int fromIndex) {\n        var i = `this`.rindex(value, fromIndex);\n        return i != null ? i : -1;\n      }\n    }\n  }\n\n  import class StringBuilder {}\n\n  in StringBuilder {\n    pure inline {\n      new() { return `""`; }\n      void append(string text) { `this` << text; }\n      string toString() { return this."dup"; }\n    }\n  }\n\n#else\n\n  import class int { pure string toString(); }\n  import class bool { pure string toString(); }\n  import class float { pure string toString(); }\n  import class double { pure string toString(); }\n\n  import class string {\n    pure {\n      int size();\n      List<string> split(string separator);\n      string slice(int start, int end);\n      string sliceCodeUnit(int index);\n      int indexOf(string value);\n      int indexOfFrom(string value, int fromIndex);\n      int lastIndexOf(string value);\n      int lastIndexOfFrom(string value, int fromIndex);\n      string toLowerCase();\n      string toUpperCase();\n      string join(List<string> values);\n      @OperatorGet int codeUnitAt(int index);\n      static string fromCodeUnit(int value);\n    }\n  }\n\n  import class StringBuilder {\n    pure {\n      new();\n      void append(string text);\n      string toString();\n    }\n  }\n\n#endif\n\nin string {\n  pure {\n    @OperatorIn\n    inline bool contains(string value) {\n      return indexOf(value) != -1;\n    }\n\n    inline string toString() {\n      return this;\n    }\n\n    bool startsWith(string prefix) {\n      return size() >= prefix.size() && slice(0, prefix.size()) == prefix;\n    }\n\n    bool endsWith(string suffix) {\n      return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;\n    }\n\n    string repeat(int count) {\n      var result = "";\n      for (var i = 0; i < count; i++) result += this;\n      return result;\n    }\n\n    string replaceAll(string before, string after) {\n      var result = "";\n      var start = 0;\n      while (true) {\n        var end = indexOfFrom(before, start);\n        if (end == -1) break;\n        result += slice(start, end) + after;\n        start = end + before.size();\n      }\n      return result + slice(start, size());\n    }\n  }\n}\n\n// Boxes are useful for representing nullable primitive types\nclass Box<T> {\n  T value;\n}\n'), new CachedLibrary('math.sk', '#if TARGET_JS\n\n  namespace math {\n    inline pure {\n      double abs(double x) { return `Math`.abs(x); }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return `Math`.pow(x, y); }\n      double floor(double x) { return `Math`.floor(x); }\n      double round(double x) { return `Math`.round(x); }\n      double ceil(double x) { return `Math`.ceil(x); }\n      double min(double x, double y) { return `Math`.min(x, y); }\n      double max(double x, double y) { return `Math`.max(x, y); }\n      bool isNaN(double x) { return `isNaN`(x); }\n      bool isFinite(double x) { return `isFinite`(x); }\n    }\n\n    inline double random() { return `Math`.random(); }\n  }\n\n#elif TARGET_CPP\n\n  namespace math {\n    inline pure @NeedsInclude("<cmath>") {\n      double abs(double x) { return `std`::abs(x); }\n      double sin(double x) { return `std`::sin(x); }\n      double cos(double x) { return `std`::cos(x); }\n      double tan(double x) { return `std`::tan(x); }\n      double asin(double x) { return `std`::asin(x); }\n      double acos(double x) { return `std`::acos(x); }\n      double atan(double x) { return `std`::atan(x); }\n      double atan2(double y, double x) { return `std`::atan2(y, x); }\n      double sqrt(double x) { return `std`::sqrt(x); }\n      double exp(double x) { return `std`::exp(x); }\n      double log(double x) { return `std`::log(x); }\n      double pow(double x, double y) { return `std`::pow(x, y); }\n      double floor(double x) { return `std`::floor(x); }\n      double round(double x) { return `std`::round(x); }\n      double ceil(double x) { return `std`::ceil(x); }\n      double min(double x, double y) { return `std`::fmin(x, y); }\n      double max(double x, double y) { return `std`::fmax(x, y); }\n      bool isNaN(double x) { return `std`::isnan(x); }\n      bool isFinite(double x) { return `std`::isfinite(x); }\n    }\n\n    @NeedsInclude("<random>") {\n      `std::uniform_real_distribution<double>` _distribution_;\n      `(std::mt19937 *)` _generator_ = null;\n\n      double random() {\n        if (_generator_ == null) {\n          _generator_ = new `std`::mt19937(`std`::random_device()());\n        }\n        return _distribution_(*_generator_);\n      }\n    }\n  }\n\n#elif TARGET_RUBY\n\n  namespace math {\n    inline pure {\n      double abs(double x) { return x."abs"; }\n      double sin(double x) { return `Math`.sin(x); }\n      double cos(double x) { return `Math`.cos(x); }\n      double tan(double x) { return `Math`.tan(x); }\n      double asin(double x) { return `Math`.asin(x); }\n      double acos(double x) { return `Math`.acos(x); }\n      double atan(double x) { return `Math`.atan(x); }\n      double atan2(double y, double x) { return `Math`.atan2(y, x); }\n      double sqrt(double x) { return `Math`.sqrt(x); }\n      double exp(double x) { return `Math`.exp(x); }\n      double log(double x) { return `Math`.log(x); }\n      double pow(double x, double y) { return exp(y * log(x)); } // TODO: Use "**" instead\n      double floor(double x) { return x."floor"; }\n      double round(double x) { return x."round"; }\n      double ceil(double x) { return x."ceil"; }\n      double min(double x, double y) { return x < y ? x : y; }\n      double max(double x, double y) { return x > y ? x : y; }\n      bool isNaN(double x) { return x."nan?"; }\n      bool isFinite(double x) { return x."finite?"; }\n      double random() { return `Random`.rand; }\n    }\n  }\n\n#else\n\n  import namespace math {\n    pure {\n      double abs(double x);\n      double sin(double x);\n      double cos(double x);\n      double tan(double x);\n      double asin(double x);\n      double acos(double x);\n      double atan(double x);\n      double atan2(double y, double x);\n      double sqrt(double x);\n      double exp(double x);\n      double log(double x);\n      double pow(double x, double y);\n      double floor(double x);\n      double round(double x);\n      double ceil(double x);\n      double min(double x, double y);\n      double max(double x, double y);\n      double random();\n      bool isNaN(double x);\n      bool isFinite(double x);\n    }\n  }\n\n#endif\n\nin math {\n  double clamp(double x, double a, double b) { return max(a, min(x, b)); }\n  int iclamp(int x, int a, int b) { return imax(a, imin(x, b)); }\n  int imax(int a, int b) { return a > b ? a : b; }\n  int imin(int a, int b) { return a < b ? a : b; }\n\n  const {\n    var SQRT2 = 1.414213562373095;\n    var PI = 3.141592653589793;\n    var TWOPI = 2 * PI;\n    var E = 2.718281828459045;\n    var INFINITY = 1 / 0.0;\n    var NAN = 0 / 0.0;\n  }\n}\n'), new CachedLibrary('list.sk', '#if TARGET_RUBY\nexport interface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n#else\ninterface Comparison<T> {\n  virtual int compare(T left, T right);\n}\n#endif\n\n#if TARGET_JS\n\n  void bindCompare<T>(Comparison<T> comparison) {\n    return comparison.compare."bind"(comparison);\n  }\n\n  import class List<T> {\n    pure {\n      new();\n      void push(T value);\n      void unshift(T value);\n      List<T> slice(int start, int end);\n      int indexOf(T value);\n      int lastIndexOf(T value);\n      T shift();\n      T pop();\n      void reverse();\n    }\n  }\n\n  in List {\n    pure {\n      inline {\n        int size() { return `this`.length; }\n        List<T> clone() { return `this`.slice(); }\n        T removeAt(int index) { return `this`.splice(index, 1)[0]; }\n        void removeRange(int start, int end) { `this`.splice(start, end - start); }\n        void insert(int index, T value) { `this`.splice(index, 0, value); }\n        @OperatorGet T get(int index) { return `this`[index]; }\n        @OperatorSet void set(int index, T value) { `this`[index] = value; }\n        @OperatorIn bool contains(T value) { return indexOf(value) != -1; }\n      }\n\n      T last() { return this[size() - 1]; }\n      void clear() { `this`.length = 0; }\n      void swap(int a, int b) { var temp = this[a]; this[a] = this[b]; this[b] = temp; }\n    }\n\n    inline void sort(Comparison<T> comparison) { `this`.sort(bindCompare<T>(comparison)); }\n  }\n\n#elif TARGET_CPP\n\n  bool bindCompare<T>(Comparison<T> comparison, T left, T right) {\n    return comparison.compare(left, right) < 0;\n  }\n\n  @NeedsInclude("<vector>")\n  class List<T> {\n    pure {\n      new() {}\n\n      int size() {\n        return (int)_data.size();\n      }\n\n      void push(T value) {\n        _data.push_back(value);\n      }\n\n      void unshift(T value) {\n        insert(0, value);\n      }\n\n      List<T> slice(int start, int end) {\n        assert start >= 0 && start <= end && end <= size();\n        List<T> slice = [];\n        slice._data.insert(slice._data.begin(), _data.begin() + start, _data.begin() + end);\n        return slice;\n      }\n\n      T shift() {\n        T value = this[0];\n        removeAt(0);\n        return value;\n      }\n\n      T pop() {\n        T value = this[size() - 1];\n        _data.pop_back();\n        return value;\n      }\n\n      T last() {\n        assert size() > 0;\n        return _data.back();\n      }\n\n      List<T> clone() {\n        List<T> clone = [];\n        clone._data = _data;\n        return clone;\n      }\n\n      T removeAt(int index) {\n        T value = this[index];\n        _data.erase(_data.begin() + index);\n        return value;\n      }\n\n      void removeRange(int start, int end) {\n        assert 0 <= start && start <= end && end <= size();\n        _data.erase(_data.begin() + start, _data.begin() + end);\n      }\n\n      void insert(int index, T value) {\n        assert index >= 0 && index <= size();\n        _data.insert(_data.begin() + index, value);\n      }\n\n      @OperatorGet\n      T get(int index) {\n        assert index >= 0 && index < size();\n        return _data[index];\n      }\n\n      @OperatorSet\n      void set(int index, T value) {\n        assert index >= 0 && index < size();\n        _data[index] = value;\n      }\n\n      @OperatorIn\n      bool contains(T value) {\n        return indexOf(value) != -1;\n      }\n\n      void clear() {\n        _data.clear();\n      }\n\n      @NeedsInclude("<algorithm>") {\n        int indexOf(T value) {\n          int index = (int)(`std`::find(_data.begin(), _data.end(), value) - _data.begin());\n          return index == size() ? -1 : index;\n        }\n\n        int lastIndexOf(T value) {\n          int index = (int)(`std`::find(_data.rbegin(), _data.rend(), value) - _data.rbegin());\n          return size() - index - 1;\n        }\n\n        void swap(int a, int b) {\n          assert a >= 0 && a < size();\n          assert b >= 0 && b < size();\n          `std`::swap(_data[a], _data[b]);\n        }\n\n        void reverse() {\n          `std`::reverse(_data.begin(), _data.end());\n        }\n      }\n\n      // Normally this would be in a constructor but clang has a bug that\n      // sometimes emits incorrect code for a constructor taking an empty\n      // initializer list. See http://llvm.org/bugs/show_bug.cgi?id=22256\n      // for details.\n      @NeedsInclude("<initializer_list>")\n      private List<T> literal(`std::initializer_list<T>` list) {\n        _data.insert(_data.end(), list.begin(), list.end());\n        return this;\n      }\n    }\n\n    @NeedsInclude("<functional>")\n    @NeedsInclude("<algorithm>")\n    inline void sort(Comparison<T> comparison) {\n      `std`::sort(_data.begin(), _data.end(), `std`::bind(`&`bindCompare`<T>`, comparison, `std`::placeholders::_1, `std`::placeholders::_2));\n    }\n\n    private `std::vector<T>` _data;\n  }\n\n#elif TARGET_RUBY\n\n  import class List<T> {\n    pure {\n      new();\n      int size();\n      void push(T value);\n      void unshift(T value);\n      T shift();\n      T pop();\n      T last();\n      @EmitAs("reverse!") void reverse();\n      List<T> clone();\n      @EmitAs("delete_at") T removeAt(int index);\n      void insert(int index, T value);\n      @EmitAs("include?") @OperatorIn bool contains(T value);\n      void clear();\n    }\n  }\n\n  in List {\n    pure {\n      inline @OperatorGet T get(int index) { return `this`[index]; }\n      inline @OperatorSet void set(int index, T value) { `this`[index] = value; }\n\n      int indexOf(T value) {\n        var i = `this`.index(value);\n        return i != null ? i : -1;\n      }\n\n      int lastIndexOf(T value) {\n        var i = `this`.rindex(value);\n        return i != null ? i : -1;\n      }\n\n      List<T> slice(int start, int end) {\n        return `this`.slice(start, end - start);\n      }\n\n      void removeRange(int start, int end) {\n        this."slice!"(start, end - start);\n      }\n\n      void swap(int a, int b) {\n        assert a >= 0 && a < size();\n        assert b >= 0 && b < size();\n        var temp = this[a];\n        this[a] = this[b];\n        this[b] = temp;\n      }\n    }\n\n    inline void sort(Comparison<T> comparison) {\n      `sort_helper`(this, comparison);\n    }\n  }\n\n#else\n\n  import class List<T> {\n    pure {\n      new();\n      int size();\n      void push(T value);\n      void unshift(T value);\n      List<T> slice(int start, int end);\n      int indexOf(T value);\n      int lastIndexOf(T value);\n      T shift();\n      T pop();\n      T last();\n      void reverse();\n      List<T> clone();\n      T removeAt(int index);\n      void removeRange(int start, int end);\n      void insert(int index, T value);\n      @OperatorGet T get(int index);\n      @OperatorSet void set(int index, T value);\n      @OperatorIn bool contains(T value);\n      void clear();\n      void swap(int a, int b);\n    }\n    void sort(Comparison<T> comparison);\n  }\n\n#endif\n\nin List {\n  bool pushOnce(T value) {\n    if (!(value in this)) {\n      push(value);\n      return true;\n    }\n    return false;\n  }\n\n  bool removeOnce(T value) {\n    var index = indexOf(value);\n    if (index != -1) {\n      removeAt(index);\n      return true;\n    }\n    return false;\n  }\n}\n'), new CachedLibrary('stringmap.sk', '#if TARGET_JS\n\n  import class StringMap<T> {}\n\n  in StringMap {\n    pure inline {\n      new() { return `Object`.create(null); }\n      @OperatorGet T get(string key) { return `this`[key]; }\n      @OperatorSet void set(string key, T value) { `this`[key] = value; }\n      @OperatorIn bool containsKey(string key) { return key in `this`; }\n      void remove(string key) { delete `this`[key]; }\n      List<string> keys() { return `Object`.keys(this); }\n\n      T getOrDefault(string key, T defaultValue) {\n        return key in this ? this[key] : defaultValue;\n      }\n\n      List<T> values() {\n        List<T> values = [];\n        for (string key in `this`) values.push(this[key]);\n        return values;\n      }\n\n      StringMap<T> clone() {\n        var clone = StringMap<T>();\n        for (string key in `this`) clone[key] = this[key];\n        return clone;\n      }\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class StringMap<T> {\n    pure {\n      new() {}\n      @OperatorGet T get(string key) { return _table[key]; }\n      T getOrDefault(string key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n      @OperatorSet void set(string key, T value) { _table[key] = value; }\n      @OperatorIn bool containsKey(string key) { return _table.count(key) > 0; }\n      void remove(string key) { _table.erase(key); }\n      List<string> keys() { List<string> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n      StringMap<T> clone() { var clone = StringMap<T>(); clone._table = _table; return clone; }\n    }\n\n    private `std::unordered_map<`string`, T>` _table;\n  }\n\n#elif TARGET_RUBY\n\n  import class StringMap<T> {\n    pure {\n      @EmitAs("has_key?") @OperatorIn bool containsKey(string key);\n      @EmitAs("delete") bool remove(string key);\n      List<string> keys();\n      List<T> values();\n      StringMap<T> clone();\n    }\n  }\n\n  in StringMap {\n    pure inline {\n      new() { return `{}`; }\n      @OperatorGet T get(string key) { return `this`[key]; }\n      @OperatorSet void set(string key, T value) { `this`[key] = value; }\n      T getOrDefault(string key, T defaultValue) { return key in this ? this[key] : defaultValue; }\n    }\n  }\n\n#else\n\n  import class StringMap<T> {\n    pure {\n      new();\n      @OperatorGet T get(string key);\n      T getOrDefault(string key, T defaultValue);\n      @OperatorSet void set(string key, T value);\n      @OperatorIn bool containsKey(string key);\n      void remove(string key);\n      List<string> keys();\n      List<T> values();\n      StringMap<T> clone();\n    }\n  }\n\n#endif\n\n// This is used by the compiler to implement map literals:\n//\n//   { "a": false, "b": true } => StringMap.literal<bool>(["a", "b"], [false, true])\n//\nin StringMap {\n  private static pure StringMap<X> literal<X>(List<string> keys, List<X> values) {\n    #if TARGET_RUBY\n    StringMap<X> map = `{}`;\n    #else\n    var map = StringMap<X>();\n    #endif\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedLibrary('intmap.sk', '#if TARGET_JS\n\n  import class IntMap<T> {}\n\n  in IntMap {\n    pure inline {\n      new() { return `Object`.create(null); }\n      @OperatorGet T get(int key) { return `this`[key]; }\n      @OperatorSet void set(int key, T value) { `this`[key] = value; }\n      @OperatorIn bool containsKey(int key) { return key in `this`; }\n      void remove(int key) { delete `this`[key]; }\n\n      T getOrDefault(int key, T defaultValue) {\n        return key in this ? this[key] : defaultValue;\n      }\n\n      List<int> keys() {\n        List<int> keys = [];\n        for (double key in `this`) keys.push((int)key);\n        return keys;\n      }\n\n      List<T> values() {\n        List<T> values = [];\n        for (int key in `this`) values.push(this[key]);\n        return values;\n      }\n\n      IntMap<T> clone() {\n        var clone = IntMap<T>();\n        for (int key in `this`) clone[key] = this[key];\n        return clone;\n      }\n    }\n  }\n\n#elif TARGET_CPP\n\n  @NeedsInclude("<unordered_map>")\n  class IntMap<T> {\n    pure {\n      new() {}\n      @OperatorGet T get(int key) { return _table[key]; }\n      T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }\n      @OperatorSet void set(int key, T value) { _table[key] = value; }\n      @OperatorIn bool containsKey(int key) { return _table.count(key) > 0; }\n      void remove(int key) { _table.erase(key); }\n      List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }\n      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }\n      IntMap<T> clone() { var clone = IntMap<T>(); clone._table = _table; return clone; }\n    }\n\n    private `std::unordered_map<`int`, T>` _table;\n  }\n\n#elif TARGET_RUBY\n\n  import class IntMap<T> {\n    pure {\n      @EmitAs("has_key?") @OperatorIn bool containsKey(int key);\n      @EmitAs("delete") bool remove(int key);\n      List<int> keys();\n      List<T> values();\n      IntMap<T> clone();\n    }\n  }\n\n  in IntMap {\n    pure inline {\n      new() { return `{}`; }\n      @OperatorGet T get(int key) { return `this`[key]; }\n      @OperatorSet void set(int key, T value) { `this`[key] = value; }\n      T getOrDefault(int key, T defaultValue) { return key in this ? this[key] : defaultValue; }\n    }\n  }\n\n#else\n\n  import class IntMap<T> {\n    pure {\n      new();\n      @OperatorGet T get(int key);\n      T getOrDefault(int key, T defaultValue);\n      @OperatorSet void set(int key, T value);\n      @OperatorIn bool containsKey(int key);\n      void remove(int key);\n      List<int> keys();\n      List<T> values();\n      IntMap<T> clone();\n    }\n  }\n\n#endif\n\n// This is used by the compiler to implement map literals:\n//\n//   { 1: false, 2: true } => IntMap.literal<bool>([1, 2], [false, true])\n//\nin IntMap {\n  private static pure IntMap<X> literal<X>(List<int> keys, List<X> values) {\n    #if TARGET_RUBY\n    IntMap<X> map = `{}`;\n    #else\n    var map = IntMap<X>();\n    #endif\n    assert keys.size() == values.size();\n    for (var i = 0; i < keys.size(); i++) {\n      map[keys[i]] = values[i];\n    }\n    return map;\n  }\n}\n'), new CachedLibrary('os.sk', 'enum OperatingSystem {\n  ANDROID,\n  IOS,\n  LINUX,\n  OSX,\n  UNKNOWN,\n  WINDOWS,\n}\n\nin OperatingSystem {\n  static pure OperatingSystem current() {\n    #if CONFIG_ANDROID\n\n      return .ANDROID;\n\n    #elif CONFIG_IOS\n\n      return .IOS;\n\n    #elif CONFIG_LINUX\n\n      return .LINUX;\n\n    #elif CONFIG_OSX\n\n      return .OSX;\n\n    #elif CONFIG_WINDOWS\n\n      return .WINDOWS;\n\n    #elif CONFIG_NODE\n\n      string platform = `process.platform`;\n      return\n        // Presumably this also means iOS but there\'s no way to check\n        platform == "darwin" ? .OSX :\n\n        // Official documentation says this will never contain "win64"\n        platform == "win32" ? .WINDOWS :\n\n        // Presumably this also means Android but there\'s no way to check\n        platform == "linux" ? .LINUX :\n\n        // This may also be "freebsd" or "sunos"\n        .UNKNOWN;\n\n    #elif CONFIG_BROWSER\n\n      string platform = `navigator.platform`;\n      string userAgent = `navigator.userAgent`;\n      return\n        // OS X encodes the architecture into the platform\n        platform == "MacIntel" || platform == "MacPPC" ? .OSX :\n\n        // MSDN sources say Win64 is used, unlike node\n        platform == "Win32" || platform == "Win64" ? .WINDOWS :\n\n        // Assume the user is using Mobile Safari or Chrome and not some random\n        // browser with a strange platform (Opera apparently messes with this)\n        platform == "iPhone" || platform == "iPad" ? .IOS :\n\n        // Apparently most Android devices have a platform of "Linux" instead\n        // of "Android", so check the user agent instead. Also make sure to test\n        // for Android before Linux for this reason.\n        "Android" in userAgent ? .ANDROID :\n        "Linux" in platform ? .LINUX :\n\n        // The platform string has no specification and can be literally anything.\n        // Other examples: "BlackBerry", "Nintendo 3DS", "PlayStation 4", etc.\n        .UNKNOWN;\n\n    #else\n\n      return .UNKNOWN;\n\n    #endif\n  }\n}\n'), new CachedLibrary('terminal.sk', 'namespace terminal {\n  enum Color {\n    DEFAULT = 0,\n    BOLD = 1,\n    GRAY = 90,\n    RED = 91,\n    GREEN = 92,\n    YELLOW = 93,\n    BLUE = 94,\n    MAGENTA = 95,\n    CYAN = 96,\n  }\n\n  #if TARGET_JS && CONFIG_BROWSER\n\n    inline {\n      int width() { return 0; }\n      int height() { return 0; }\n      void setColor(Color color) {}\n      void flush() {}\n\n      void print(string text) {\n        `console`.log(text);\n      }\n\n      // Browser logs are so varied that buffering standard output doesn\'t make much sense\n      void write(string text) {\n        `console`.log(text);\n      }\n    }\n\n  #elif TARGET_JS && CONFIG_NODE\n\n    void setColor(Color color) {\n      if (`process`.stdout.isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        return `process`.stdout.columns;\n      }\n\n      int height() {\n        return `process`.stdout.rows;\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        write(text + "\\n");\n      }\n\n      void write(string text) {\n        `process`.stdout.write(text);\n      }\n    }\n\n  #elif TARGET_CPP && CONFIG_WINDOWS\n\n    `HANDLE` _handle = `INVALID_HANDLE_VALUE`;\n    `CONSOLE_SCREEN_BUFFER_INFO` _info;\n\n    @NeedsInclude("<windows.h>")\n    void _setup() {\n      if (_handle == `INVALID_HANDLE_VALUE`) {\n        _handle = `GetStdHandle(STD_OUTPUT_HANDLE)`;\n        `GetConsoleScreenBufferInfo`(_handle, &_info);\n      }\n    }\n\n    int width() {\n      _setup();\n      return _info.dwSize.X;\n    }\n\n    int height() {\n      _setup();\n      return _info.dwSize.Y;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      int value = _info.wAttributes;\n      switch (color) {\n        case .BOLD { value |= `FOREGROUND_INTENSITY`; }\n        case .GRAY { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE`; }\n        case .RED { value = `FOREGROUND_RED | FOREGROUND_INTENSITY`; }\n        case .GREEN { value = `FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .YELLOW { value = `FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .BLUE { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }\n        case .MAGENTA { value = `FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n        case .CYAN { value = `FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }\n      }\n      `SetConsoleTextAttribute`(_handle, value);\n    }\n\n    void flush() {\n    }\n\n    inline void print(string text) {\n      write(text + "\\n");\n    }\n\n    void write(string text) {\n      _setup();\n\n      // Use WriteConsoleA() instead of std::cout for a huge performance boost\n      `WriteConsoleA`(_handle, `text`.c_str(), `text`.size(), null, null);\n    }\n\n  #elif TARGET_CPP && (CONFIG_OSX || CONFIG_LINUX)\n\n    int _width;\n    int _height;\n    bool _isTTY;\n    bool _isSetup;\n\n    @NeedsInclude("<sys/ioctl.h>")\n    @NeedsInclude("<unistd.h>")\n    void _setup() {\n      if (!_isSetup) {\n        `winsize` size;\n        if (!`ioctl`(2, `TIOCGWINSZ`, &size)) {\n          _width = size.ws_col;\n          _height = size.ws_row;\n        }\n        _isTTY = `isatty(STDOUT_FILENO)`;\n        _isSetup = true;\n      }\n    }\n\n    int width() {\n      _setup();\n      return _width;\n    }\n\n    int height() {\n      _setup();\n      return _height;\n    }\n\n    void setColor(Color color) {\n      _setup();\n      if (_isTTY) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    @NeedsInclude("<iostream>")\n    inline {\n      void flush() {\n        `std`::cout.flush();\n      }\n\n      void print(string text) {\n        `std`::cout << text << `std`::endl;\n      }\n\n      void write(string text) {\n        `std`::cout << text;\n      }\n    }\n\n  #elif TARGET_RUBY\n\n    void setColor(Color color) {\n      if (`STDOUT`.isatty) {\n        write("\\x1B[0;" + (int)color + "m");\n      }\n    }\n\n    inline {\n      int width() {\n        `require`("io/console");\n        return `STDIN`.winsize[1];\n      }\n\n      int height() {\n        `require`("io/console");\n        return `STDIN`.winsize[0];\n      }\n\n      void flush() {\n      }\n\n      void print(string text) {\n        `puts`(text);\n      }\n\n      void write(string text) {\n        `print`(text);\n      }\n    }\n\n  #else\n\n    int width() { return 0; }\n    int height() { return 0; }\n    void setColor(Color color) {}\n    void flush() {}\n    void print(string text) {}\n    void write(string text) {}\n\n  #endif\n}\n'), new CachedLibrary('unicode.sk', 'namespace unicode {\n  enum Encoding {\n    UTF8,\n    UTF16,\n    UTF32,\n  }\n\n  const Encoding STRING_ENCODING =\n    TARGET_CPP ? .UTF8 :\n    TARGET_JS ? .UTF16 :\n    .UTF32;\n\n  class StringIterator {\n    static final var INSTANCE = StringIterator();\n\n    var value = "";\n    var index = 0;\n    var stop = 0;\n\n    StringIterator reset(string text, int start) {\n      value = text;\n      index = start;\n      stop = text.size();\n      return this;\n    }\n\n    int countCodePointsUntil(int stop) {\n      var count = 0;\n      while (index < stop && nextCodePoint() >= 0) {\n        count++;\n      }\n      return count;\n    }\n\n    int nextCodePoint() {\n      if (STRING_ENCODING == .UTF8) {\n        if (index >= stop) return -1;\n        var a = value.codeUnitAt(index);\n        index++;\n        if (a < 0xC0) return a;\n        if (index >= stop) return -1;\n        var b = value.codeUnitAt(index);\n        index++;\n        if (a < 0xE0) return ((a & 0x1F) << 6) | (b & 0x3F);\n        if (index >= stop) return -1;\n        var c = value.codeUnitAt(index);\n        index++;\n        if (a < 0xF0) return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F);\n        if (index >= stop) return -1;\n        var d = value.codeUnitAt(index);\n        index++;\n        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F);\n      }\n\n      else if (STRING_ENCODING == .UTF16) {\n        if (index >= stop) return -1;\n        var a = value.codeUnitAt(index);\n        index++;\n        if (a < 0xD800) return a;\n        if (index >= stop) return -1;\n        var b = value.codeUnitAt(index);\n        index++;\n        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00);\n      }\n\n      else {\n        if (index >= stop) return -1;\n        var c = value.codeUnitAt(index);\n        index++;\n        return c;\n      }\n    }\n  }\n}\n\nin string {\n  using unicode;\n\n  List<int> codePoints() {\n    List<int> codePoints = [];\n    StringIterator.INSTANCE.reset(this, 0);\n    while (true) {\n      var codePoint = StringIterator.INSTANCE.nextCodePoint();\n      if (codePoint < 0) {\n        break;\n      }\n      codePoints.push(codePoint);\n    }\n    return codePoints;\n  }\n\n  static string fromCodePoints(List<int> codePoints) {\n    var builder = StringBuilder();\n\n    if (STRING_ENCODING == .UTF8) {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        var codePoint = codePoints[i];\n        if (codePoint < 0x80) {\n          builder.append(fromCodeUnit(codePoint));\n        } else {\n          if (codePoint < 0x800) {\n            builder.append(fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0));\n          } else {\n            if (codePoint < 0x10000) {\n              builder.append(fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0));\n            } else {\n              builder.append(fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0));\n              builder.append(fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80));\n            }\n            builder.append(fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80));\n          }\n          builder.append(fromCodeUnit((codePoint & 0x3F) | 0x80));\n        }\n      }\n    }\n\n    else if (STRING_ENCODING == .UTF16) {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        var codePoint = codePoints[i];\n        if (codePoint < 0x10000) {\n          builder.append(fromCodeUnit(codePoint));\n        } else {\n          codePoint -= 0x10000;\n          builder.append(fromCodeUnit((codePoint >> 10) + 0xD800));\n          builder.append(fromCodeUnit((codePoint & ((1 << 10) - 1)) + 0xDC00));\n        }\n      }\n    }\n\n    else {\n      for (var i = 0, n = codePoints.size(); i < n; i++) {\n        builder.append(fromCodeUnit(codePoints[i]));\n      }\n    }\n\n    return builder.toString();\n  }\n}\n')];
   Range.EMPTY = new Range(null, 0, 0);
   var HEX = '0123456789ABCDEF';
   trace.GENERICS = false;
   trace.spaces = '';
   StringComparison.INSTANCE = new StringComparison();
-  js.Emitter.isKeyword = StringMap.literal('apply arguments Boolean break call case catch class const constructor continue Date debugger default delete do double else export extends false finally float for Function function if import in instanceof int let new null Number Object return String super this throw true try var'.split(' '), [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]);
+  js.Emitter.isKeyword = in_StringMap.literal('apply arguments Boolean break call case catch class const constructor continue Date debugger default delete do double else export extends false finally float for Function function if import in instanceof int let new null Number Object return String super this throw true try var'.split(' '), [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]);
   js.SymbolGroupComparison.INSTANCE = new js.SymbolGroupComparison();
   SourceMappingComparison.INSTANCE = new SourceMappingComparison();
   SourceMapGenerator.BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -19342,8 +19328,8 @@
   MemberComparison.INSTANCE = new MemberComparison();
   MemberRangeComparison.INSTANCE = new MemberRangeComparison();
   SourceSubstitutionComparison.INSTANCE = new SourceSubstitutionComparison();
-  Resolver.nameToSymbolFlag = StringMap.literal('const export final import inline override private protected public pure static virtual'.split(' '), [1024, 4096, 256, 8192, 512, 32, 2, 4, 1, 2048, 64, 128]);
-  Resolver.operatorAnnotationMap = StringMap.literal('@OperatorGet @OperatorSet @OperatorCompare @OperatorAdd @OperatorSubtract @OperatorMultiply @OperatorDivide @OperatorRemainder @OperatorAnd @OperatorOr @OperatorXor @OperatorShiftLeft @OperatorShiftRight @OperatorIn @OperatorAddAssign @OperatorSubtractAssign @OperatorMultiplyAssign @OperatorDivideAssign @OperatorRemainderAssign @OperatorAndAssign @OperatorOrAssign @OperatorXorAssign @OperatorShiftLeftAssign @OperatorShiftRightAssign @OperatorNegative @OperatorComplement'.split(' '), [89, 112, 83, 79, 100, 95, 84, 97, 80, 81, 82, 98, 99, 88, 102, 106, 104, 103, 105, 107, 108, 109, 110, 111, 67, 68]);
+  Resolver.nameToSymbolFlag = in_StringMap.literal('const export final import inline override private protected public pure static virtual'.split(' '), [1024, 4096, 256, 8192, 512, 32, 2, 4, 1, 2048, 64, 128]);
+  Resolver.operatorAnnotationMap = in_StringMap.literal('@OperatorGet @OperatorSet @OperatorCompare @OperatorAdd @OperatorSubtract @OperatorMultiply @OperatorDivide @OperatorRemainder @OperatorAnd @OperatorOr @OperatorXor @OperatorShiftLeft @OperatorShiftRight @OperatorIn @OperatorAddAssign @OperatorSubtractAssign @OperatorMultiplyAssign @OperatorDivideAssign @OperatorRemainderAssign @OperatorAndAssign @OperatorOrAssign @OperatorXorAssign @OperatorShiftLeftAssign @OperatorShiftRightAssign @OperatorNegative @OperatorComplement'.split(' '), [89, 112, 83, 79, 100, 95, 84, 97, 80, 81, 82, 98, 99, 88, 102, 106, 104, 103, 105, 107, 108, 109, 110, 111, 67, 68]);
   Symbol.nextUniqueID = -1;
   SymbolComparison.INSTANCE = new SymbolComparison();
   Type.nextUniqueID = -1;

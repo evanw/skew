@@ -1,16 +1,15 @@
 #if TARGET_JS
 
-  class StringMap<T> {
-    private var _table = `Object`.create(null);
+  import class StringMap<T> {}
 
-    pure {
-      inline {
-        @OperatorGet T get(string key) { return _table[key]; }
-        @OperatorSet void set(string key, T value) { _table[key] = value; }
-        @OperatorIn bool containsKey(string key) { return key in _table; }
-        void remove(string key) { delete _table[key]; }
-        List<string> keys() { return `Object`.keys(_table); }
-      }
+  in StringMap {
+    pure inline {
+      new() { return `Object`.create(null); }
+      @OperatorGet T get(string key) { return `this`[key]; }
+      @OperatorSet void set(string key, T value) { `this`[key] = value; }
+      @OperatorIn bool containsKey(string key) { return key in `this`; }
+      void remove(string key) { delete `this`[key]; }
+      List<string> keys() { return `Object`.keys(this); }
 
       T getOrDefault(string key, T defaultValue) {
         return key in this ? this[key] : defaultValue;
@@ -18,13 +17,13 @@
 
       List<T> values() {
         List<T> values = [];
-        for (string key in _table) values.push(this[key]);
+        for (string key in `this`) values.push(this[key]);
         return values;
       }
 
       StringMap<T> clone() {
         var clone = StringMap<T>();
-        for (string key in _table) clone[key] = this[key];
+        for (string key in `this`) clone[key] = this[key];
         return clone;
       }
     }
@@ -53,7 +52,6 @@
 
   import class StringMap<T> {
     pure {
-      new();
       @EmitAs("has_key?") @OperatorIn bool containsKey(string key);
       @EmitAs("delete") bool remove(string key);
       List<string> keys();
@@ -63,9 +61,10 @@
   }
 
   in StringMap {
-    pure {
-      inline @OperatorGet T get(string key) { return `this`[key]; }
-      inline @OperatorSet void set(string key, T value) { `this`[key] = value; }
+    pure inline {
+      new() { return `{}`; }
+      @OperatorGet T get(string key) { return `this`[key]; }
+      @OperatorSet void set(string key, T value) { `this`[key] = value; }
       T getOrDefault(string key, T defaultValue) { return key in this ? this[key] : defaultValue; }
     }
   }

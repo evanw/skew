@@ -220,7 +220,6 @@ namespace base {
     virtual void emitBlock(Node node) {
       emit(" {\n");
       increaseIndent();
-      previousKind = .NULL;
       emitStatements(node.blockStatements());
       decreaseIndent();
       emit(indent + "}");
@@ -297,7 +296,6 @@ namespace base {
       emitExpression(node.switchValue(), .LOWEST);
       emit(") {\n");
       increaseIndent();
-      previousKind = .NULL;
       emitStatements(cases);
       decreaseIndent();
       emit(indent + "}\n");

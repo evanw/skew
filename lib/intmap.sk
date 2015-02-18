@@ -1,15 +1,14 @@
 #if TARGET_JS
 
-  class IntMap<T> {
-    private var _table = `Object`.create(null);
+  import class IntMap<T> {}
 
-    pure {
-      inline {
-        @OperatorGet T get(int key) { return _table[key]; }
-        @OperatorSet void set(int key, T value) { _table[key] = value; }
-        @OperatorIn bool containsKey(int key) { return key in _table; }
-        void remove(int key) { delete _table[key]; }
-      }
+  in IntMap {
+    pure inline {
+      new() { return `Object`.create(null); }
+      @OperatorGet T get(int key) { return `this`[key]; }
+      @OperatorSet void set(int key, T value) { `this`[key] = value; }
+      @OperatorIn bool containsKey(int key) { return key in `this`; }
+      void remove(int key) { delete `this`[key]; }
 
       T getOrDefault(int key, T defaultValue) {
         return key in this ? this[key] : defaultValue;
@@ -17,19 +16,19 @@
 
       List<int> keys() {
         List<int> keys = [];
-        for (double key in _table) keys.push((int)key);
+        for (double key in `this`) keys.push((int)key);
         return keys;
       }
 
       List<T> values() {
         List<T> values = [];
-        for (int key in _table) values.push(this[key]);
+        for (int key in `this`) values.push(this[key]);
         return values;
       }
 
       IntMap<T> clone() {
         var clone = IntMap<T>();
-        for (int key in _table) clone[key] = this[key];
+        for (int key in `this`) clone[key] = this[key];
         return clone;
       }
     }
@@ -58,7 +57,6 @@
 
   import class IntMap<T> {
     pure {
-      new();
       @EmitAs("has_key?") @OperatorIn bool containsKey(int key);
       @EmitAs("delete") bool remove(int key);
       List<int> keys();
@@ -68,9 +66,10 @@
   }
 
   in IntMap {
-    pure {
-      inline @OperatorGet T get(int key) { return `this`[key]; }
-      inline @OperatorSet void set(int key, T value) { `this`[key] = value; }
+    pure inline {
+      new() { return `{}`; }
+      @OperatorGet T get(int key) { return `this`[key]; }
+      @OperatorSet void set(int key, T value) { `this`[key] = value; }
       T getOrDefault(int key, T defaultValue) { return key in this ? this[key] : defaultValue; }
     }
   }

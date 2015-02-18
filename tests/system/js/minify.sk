@@ -45,7 +45,7 @@ export int foo(StringMap<int> map) {
   return map.get(\"x\") + map.get(\"_\") + map.get(\"x\") + map.get(\"0\") + map.get(\"x0\") + map.get(\"if\");
 }
 ", "
-(function(){function b(){this.a=Object.create(null)}foo=function(a){return ((((a.a.x+a.a._|0)+a.a.x|0)+a.a['0']|0)+a.a.x0|0)+a.a['if']|0}}());
+(function(){foo=function(a){return ((((a.x+a._|0)+a.x|0)+a['0']|0)+a.x0|0)+a['if']|0}}());
 ").release();
 
 testJS("
@@ -58,7 +58,7 @@ export void foo(StringMap<int> map) {
   map.set(\"if\", 0);
 }
 ", "
-(function(){function b(){this.a=Object.create(null)}foo=function(a){a.a.x=a.a._=a.a.x=a.a['0']=a.a.x0=a.a['if']=0}}());
+(function(){foo=function(a){a.x=a._=a.x=a['0']=a.x0=a['if']=0}}());
 ").release();
 
 testJS("
@@ -71,7 +71,7 @@ export void foo() {
   map.set(\"a\", true);
 }
 ", "
-(function(){function c(){this.a=Object.create(null)}foo=function(){var a=new c(),b=!1;b=a.a.a=!1,b=a.a.a=!0}}());
+(function(){foo=function(){var a=Object.create(null),b=!1;b=a.a=!1,b=a.a=!0}}());
 ").release();
 
 testJS("

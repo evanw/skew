@@ -3325,8 +3325,8 @@ class Resolver {
     // The type of the literal comes from how it's used
     if (typeContext != null && (typeContext.isStringMap(cache) || typeContext.isIntMap(cache))) {
       // Just call the constructor for an empty map literal
-      if (items.size() == 0 && options.target != .RUBY) {
-        node.become(Node.createCall(Node.createType(typeContext), []).withRange(node.range).withType(node.type));
+      if (items.size() == 0) {
+        node.become(Node.createCall(Node.createType(typeContext), []));
         resolveAsParameterizedExpression(node);
         return;
       }
@@ -3570,13 +3570,6 @@ class Resolver {
       }
 
       checkAccess(symbol, value.range);
-
-      // Hack around broken map literal constructors for now
-      var hack = valueType.resultType();
-      if (options.target == .RUBY && (hack.isIntMap(cache) || hack.isStringMap(cache))) {
-        node.become(Node.createMap([]).withType(hack));
-        return;
-      }
 
       // Non-imported constructors on imported types get converted to static
       // functions. All call sites should be converted too.
