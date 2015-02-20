@@ -235,30 +235,32 @@ namespace base {
       for (var i = 0; i < nodes.size(); i++) {
         var child = nodes[i];
         var kind = child.kind;
-        if (kind != .MODIFIER) emitExtraNewlineBefore(kind);
+        var emitExtraNewline = kind != .MODIFIER && kind != .USING && kind != .ALIAS;
+        if (emitExtraNewline) emitExtraNewlineBefore(kind);
         emitStatement(child);
-        if (kind != .MODIFIER) emitExtraNewlineAfter(kind);
+        if (emitExtraNewline) emitExtraNewlineAfter(kind);
       }
     }
 
     void emitStatement(Node node) {
       switch (node.kind) {
+        case .ALIAS, .USING {}
+        case .ASSERT { emitAssert(node); }
+        case .BREAK { emitBreak(node); }
         case .CASE { emitCase(node); }
-        case .VARIABLE_CLUSTER { emitStatements(node.clusterVariables()); }
-        case .IF { emitIf(node); }
-        case .TRY { emitTry(node); }
+        case .CONTINUE { emitContinue(node); }
+        case .DO_WHILE { emitDoWhile(node); }
+        case .EXPRESSION { emitExpressionStatement(node); }
         case .FOR { emitFor(node); }
         case .FOR_EACH { emitForEach(node); }
-        case .WHILE { emitWhile(node); }
-        case .DO_WHILE { emitDoWhile(node); }
-        case .RETURN { emitReturn(node); }
-        case .BREAK { emitBreak(node); }
-        case .CONTINUE { emitContinue(node); }
-        case .ASSERT { emitAssert(node); }
-        case .EXPRESSION { emitExpressionStatement(node); }
-        case .SWITCH { emitSwitch(node); }
+        case .IF { emitIf(node); }
         case .MODIFIER { emitStatements(node.modifierStatements()); }
+        case .RETURN { emitReturn(node); }
+        case .SWITCH { emitSwitch(node); }
+        case .TRY { emitTry(node); }
         case .VARIABLE { emitVariable(node.symbol); }
+        case .VARIABLE_CLUSTER { emitStatements(node.clusterVariables()); }
+        case .WHILE { emitWhile(node); }
         default { assert false; }
       }
     }

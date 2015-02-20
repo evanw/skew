@@ -52,7 +52,7 @@
 
   import class StringMap<T> {
     pure {
-      @EmitAs("has_key?") @OperatorIn bool containsKey(string key);
+      @EmitAs("key?") @OperatorIn bool containsKey(string key);
       @EmitAs("delete") bool remove(string key);
       List<string> keys();
       List<T> values();
@@ -63,9 +63,9 @@
   in StringMap {
     pure inline {
       new() { return `{}`; }
-      @OperatorGet T get(string key) { return `this`[key]; }
+      @OperatorGet T get(string key) { return `this`.fetch(key); }
       @OperatorSet void set(string key, T value) { `this`[key] = value; }
-      T getOrDefault(string key, T defaultValue) { return key in this ? this[key] : defaultValue; }
+      T getOrDefault(string key, T defaultValue) { return `this`.fetch(key, defaultValue); }
     }
   }
 
@@ -93,11 +93,7 @@
 //
 in StringMap {
   private static pure StringMap<X> literal<X>(List<string> keys, List<X> values) {
-    #if TARGET_RUBY
-    StringMap<X> map = `{}`;
-    #else
     var map = StringMap<X>();
-    #endif
     assert keys.size() == values.size();
     for (var i = 0; i < keys.size(); i++) {
       map[keys[i]] = values[i];

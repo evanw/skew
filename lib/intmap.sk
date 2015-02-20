@@ -57,7 +57,7 @@
 
   import class IntMap<T> {
     pure {
-      @EmitAs("has_key?") @OperatorIn bool containsKey(int key);
+      @EmitAs("key?") @OperatorIn bool containsKey(int key);
       @EmitAs("delete") bool remove(int key);
       List<int> keys();
       List<T> values();
@@ -68,9 +68,9 @@
   in IntMap {
     pure inline {
       new() { return `{}`; }
-      @OperatorGet T get(int key) { return `this`[key]; }
+      @OperatorGet T get(int key) { return `this`.fetch(key); }
       @OperatorSet void set(int key, T value) { `this`[key] = value; }
-      T getOrDefault(int key, T defaultValue) { return key in this ? this[key] : defaultValue; }
+      T getOrDefault(int key, T defaultValue) { return `this`.fetch(key, defaultValue); }
     }
   }
 
@@ -98,11 +98,7 @@
 //
 in IntMap {
   private static pure IntMap<X> literal<X>(List<int> keys, List<X> values) {
-    #if TARGET_RUBY
-    IntMap<X> map = `{}`;
-    #else
     var map = IntMap<X>();
-    #endif
     assert keys.size() == values.size();
     for (var i = 0; i < keys.size(); i++) {
       map[keys[i]] = values[i];

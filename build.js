@@ -123,6 +123,7 @@ var TEST_SOURCES = SOURCES.concat([
   'tests/system/js/statements.sk',
 
   'tests/system/ruby/expressions.sk',
+  'tests/system/ruby/statements.sk',
 ]);
 
 ////////////////////////////////////////////////////////////////////////////////

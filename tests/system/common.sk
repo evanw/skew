@@ -302,6 +302,7 @@ int start() {
   cpp.testStatements();
 
   ruby.testExpressions();
+  ruby.testStatements();
 
   return runAllTests();
 }

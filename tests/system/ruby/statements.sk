@@ -1,0 +1,18 @@
+namespace ruby { void testStatements() {
+
+// Alias and using statements shouldn't introduce extra spaces
+testRuby("
+export double foo() {
+  alias d = double;
+  d x = 0;
+  using math;
+  return cos(x);
+}
+", "
+def foo
+  x = 0.0
+  return Math.cos(x)
+end
+");
+
+}}
