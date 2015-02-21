@@ -2376,7 +2376,7 @@ class Resolver {
     if (argumentTypes.size() != arguments.size()) {
       var range = Range.equal(outer, inner) ? outer : Range.after(outer, inner)
       semanticErrorArgumentCount(log, range, argumentTypes.size(), arguments.size())
-      resolveNodesAsParameterizedExpressions(arguments)
+      resolveNodesAsParameterizedExpressionsAfterError(arguments)
       return
     }
 
@@ -2461,9 +2461,9 @@ class Resolver {
     }
   }
 
-  void resolveNodesAsParameterizedExpressions(List<Node> nodes) {
+  void resolveNodesAsParameterizedExpressionsAfterError(List<Node> nodes) {
     for (var i = 0; i < nodes.size(); i++) {
-      resolveAsParameterizedExpression(nodes[i])
+      resolveAsParameterizedExpressionWithTypeContext(nodes[i], cache.errorType)
     }
   }
 
@@ -2683,7 +2683,7 @@ class Resolver {
       // Resolve the arguments
       var arguments = superInitializer.superCallArguments()
       if (overriddenType.isIgnored(cache)) {
-        resolveNodesAsParameterizedExpressions(arguments)
+        resolveNodesAsParameterizedExpressionsAfterError(arguments)
       } else {
         assert overriddenType.isFunction()
         resolveArguments(arguments, overriddenType.argumentTypes(), superInitializer.range, superInitializer.range)
@@ -3273,7 +3273,7 @@ class Resolver {
 
     // Avoid reporting further errors
     if (typeContext != null && typeContext.isIgnored(cache)) {
-      resolveNodesAsParameterizedExpressions(values)
+      resolveNodesAsParameterizedExpressionsAfterError(values)
       return
     }
 
@@ -3318,7 +3318,7 @@ class Resolver {
 
     // Avoid reporting further errors
     if (typeContext != null && typeContext.isIgnored(cache)) {
-      resolveNodesAsParameterizedExpressions(items)
+      resolveNodesAsParameterizedExpressionsAfterError(items)
       return
     }
 
@@ -3352,7 +3352,7 @@ class Resolver {
       for (var i = 0; i < items.size(); i++) {
         if (items[i].kind != .KEY_VALUE) {
           assert items[i].kind == .ERROR
-          resolveNodesAsParameterizedExpressions(items)
+          resolveNodesAsParameterizedExpressionsAfterError(items)
           return
         }
       }
@@ -3533,7 +3533,7 @@ class Resolver {
 
     // Avoid reporting further errors
     if (valueType.isIgnored(cache)) {
-      resolveNodesAsParameterizedExpressions(arguments)
+      resolveNodesAsParameterizedExpressionsAfterError(arguments)
       return
     }
 
@@ -3549,7 +3549,7 @@ class Resolver {
       var member = valueType.constructor()
       if (member == null) {
         semanticErrorUnconstructableType(log, value.range, valueType)
-        resolveNodesAsParameterizedExpressions(arguments)
+        resolveNodesAsParameterizedExpressionsAfterError(arguments)
         return
       }
       initializeMember(member)
@@ -3558,7 +3558,7 @@ class Resolver {
       if (valueType.symbol.isAbstract()) {
         var reason = valueType.symbol.reasonForAbstract
         semanticErrorAbstractNew(log, value.range, valueType, reason.nameRange(), reason.fullName())
-        resolveNodesAsParameterizedExpressions(arguments)
+        resolveNodesAsParameterizedExpressionsAfterError(arguments)
         return
       }
 
@@ -3573,7 +3573,7 @@ class Resolver {
 
       // Avoid reporting further errors
       if (valueType.isIgnored(cache)) {
-        resolveNodesAsParameterizedExpressions(arguments)
+        resolveNodesAsParameterizedExpressionsAfterError(arguments)
         return
       }
 
@@ -3589,7 +3589,7 @@ class Resolver {
     // Can only call an instance of a function type
     if (!valueType.isFunction()) {
       semanticErrorInvalidCall(log, value.range, valueType)
-      resolveNodesAsParameterizedExpressions(arguments)
+      resolveNodesAsParameterizedExpressionsAfterError(arguments)
       return
     }
 
@@ -3607,7 +3607,7 @@ class Resolver {
         context.functionSymbol.overriddenMember == null ||
         context.functionSymbol.kind == .CONSTRUCTOR_FUNCTION) {
       semanticErrorBadSuperCall(log, node.range)
-      resolveNodesAsParameterizedExpressions(arguments)
+      resolveNodesAsParameterizedExpressionsAfterError(arguments)
     }
 
     else {
@@ -3617,14 +3617,14 @@ class Resolver {
       // Avoid reporting further errors
       var type = member.type
       if (type.isIgnored(cache) || !type.isFunction()) {
-        resolveNodesAsParameterizedExpressions(arguments)
+        resolveNodesAsParameterizedExpressionsAfterError(arguments)
         return
       }
 
       // Super calls are statically resolved, so the symbol must not be abstract
       if (member.symbol.node.functionBlock() == null) {
         semanticErrorAbstractSuperCall(log, node.range, member.symbol.nameRange())
-        resolveNodesAsParameterizedExpressions(arguments)
+        resolveNodesAsParameterizedExpressionsAfterError(arguments)
         return
       }
 

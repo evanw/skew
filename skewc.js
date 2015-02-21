@@ -12806,7 +12806,7 @@
     if (argumentTypes.length !== $arguments.length) {
       var range = Range.equal(outer, inner) ? outer : Range.after(outer, inner);
       semanticErrorArgumentCount(this.log, range, argumentTypes.length, $arguments.length);
-      this.resolveNodesAsParameterizedExpressions($arguments);
+      this.resolveNodesAsParameterizedExpressionsAfterError($arguments);
       return;
     }
 
@@ -12903,9 +12903,9 @@
     }
   };
 
-  Resolver.prototype.resolveNodesAsParameterizedExpressions = function(nodes) {
+  Resolver.prototype.resolveNodesAsParameterizedExpressionsAfterError = function(nodes) {
     for (var i = 0; i < nodes.length; i = i + 1 | 0) {
-      this.resolveAsParameterizedExpression(nodes[i]);
+      this.resolveAsParameterizedExpressionWithTypeContext(nodes[i], this.cache.errorType);
     }
   };
 
@@ -13129,7 +13129,7 @@
       var $arguments = superInitializer.superCallArguments();
 
       if (overriddenType.isIgnored(this.cache)) {
-        this.resolveNodesAsParameterizedExpressions($arguments);
+        this.resolveNodesAsParameterizedExpressionsAfterError($arguments);
       } else {
         if (!overriddenType.isFunction()) {
           throw new Error('assert overriddenType.isFunction() (src/resolver/resolver.sk:2688:9)');
@@ -13703,7 +13703,7 @@
     var values = node.listValues();
 
     if (this.typeContext !== null && this.typeContext.isIgnored(this.cache)) {
-      this.resolveNodesAsParameterizedExpressions(values);
+      this.resolveNodesAsParameterizedExpressionsAfterError(values);
       return;
     }
 
@@ -13746,7 +13746,7 @@
     var valueType = null;
 
     if (this.typeContext !== null && this.typeContext.isIgnored(this.cache)) {
-      this.resolveNodesAsParameterizedExpressions(items);
+      this.resolveNodesAsParameterizedExpressionsAfterError(items);
       return;
     }
 
@@ -13784,7 +13784,7 @@
             throw new Error('assert items[i].kind == .ERROR (src/resolver/resolver.sk:3354:11)');
           }
 
-          this.resolveNodesAsParameterizedExpressions(items);
+          this.resolveNodesAsParameterizedExpressionsAfterError(items);
           return;
         }
       }
@@ -13952,7 +13952,7 @@
     var valueType = value.type;
 
     if (valueType.isIgnored(this.cache)) {
-      this.resolveNodesAsParameterizedExpressions($arguments);
+      this.resolveNodesAsParameterizedExpressionsAfterError($arguments);
       return;
     }
 
@@ -13966,7 +13966,7 @@
 
       if (member === null) {
         semanticErrorUnconstructableType(this.log, value.range, valueType);
-        this.resolveNodesAsParameterizedExpressions($arguments);
+        this.resolveNodesAsParameterizedExpressionsAfterError($arguments);
         return;
       }
 
@@ -13975,7 +13975,7 @@
       if (valueType.symbol.isAbstract()) {
         var reason = valueType.symbol.reasonForAbstract;
         semanticErrorAbstractNew(this.log, value.range, valueType, reason.nameRange(), reason.fullName());
-        this.resolveNodesAsParameterizedExpressions($arguments);
+        this.resolveNodesAsParameterizedExpressionsAfterError($arguments);
         return;
       }
 
@@ -13989,7 +13989,7 @@
       valueType = member.type;
 
       if (valueType.isIgnored(this.cache)) {
-        this.resolveNodesAsParameterizedExpressions($arguments);
+        this.resolveNodesAsParameterizedExpressionsAfterError($arguments);
         return;
       }
 
@@ -14002,7 +14002,7 @@
 
     if (!valueType.isFunction()) {
       semanticErrorInvalidCall(this.log, value.range, valueType);
-      this.resolveNodesAsParameterizedExpressions($arguments);
+      this.resolveNodesAsParameterizedExpressionsAfterError($arguments);
       return;
     }
 
@@ -14015,7 +14015,7 @@
 
     if (this.context.functionSymbol === null || !this.context.functionSymbol.isObjectMember() || this.context.functionSymbol.overriddenMember === null || this.context.functionSymbol.kind === SymbolKind.CONSTRUCTOR_FUNCTION) {
       semanticErrorBadSuperCall(this.log, node.range);
-      this.resolveNodesAsParameterizedExpressions($arguments);
+      this.resolveNodesAsParameterizedExpressionsAfterError($arguments);
     } else {
       var member = this.context.functionSymbol.overriddenMember;
       this.initializeMember(member);
@@ -14023,13 +14023,13 @@
       var type = member.type;
 
       if (type.isIgnored(this.cache) || !type.isFunction()) {
-        this.resolveNodesAsParameterizedExpressions($arguments);
+        this.resolveNodesAsParameterizedExpressionsAfterError($arguments);
         return;
       }
 
       if (member.symbol.node.functionBlock() === null) {
         semanticErrorAbstractSuperCall(this.log, node.range, member.symbol.nameRange());
-        this.resolveNodesAsParameterizedExpressions($arguments);
+        this.resolveNodesAsParameterizedExpressionsAfterError($arguments);
         return;
       }
 

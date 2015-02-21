@@ -346,4 +346,14 @@ int foo(int foo) {
          ~~~~~~~~~~
 ")
 
+test("
+void foo(Foo foo) {
+  foo.bar(.FOO)
+}
+", "
+<stdin>:1:10: error: \"Foo\" is not declared
+void foo(Foo foo) {
+         ~~~
+")
+
 }}
