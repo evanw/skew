@@ -17500,21 +17500,6 @@
     return true;
   }
 
-  function expectCommaWithoutNewline(context) {
-    if (!context.expect(TokenKind.COMMA)) {
-      return false;
-    }
-
-    if (context.peek(TokenKind.NEWLINE)) {
-      context.undo();
-      context.unexpectedToken();
-      context.next();
-      context.next();
-    }
-
-    return true;
-  }
-
   function parseStatements(context, hint) {
     var statements = [];
     context.eat(TokenKind.NEWLINE);
@@ -17535,8 +17520,17 @@
 
         statements.push(declaration);
 
-        if (!context.eat(TokenKind.NEWLINE) && (context.peek(TokenKind.RIGHT_BRACE) || !expectCommaWithoutNewline(context))) {
-          break;
+        if (!context.eat(TokenKind.NEWLINE)) {
+          if (context.peek(TokenKind.RIGHT_BRACE) || !context.expect(TokenKind.COMMA)) {
+            break;
+          }
+
+          if (context.peek(TokenKind.NEWLINE) || context.peek(TokenKind.RIGHT_BRACE)) {
+            context.undo();
+            context.unexpectedToken();
+            context.next();
+            context.eat(TokenKind.NEWLINE);
+          }
         }
       } else {
         var statement = hint === StatementHint.IN_SWITCH ? parseCaseStatement(context) : parseStatement(context, hint);

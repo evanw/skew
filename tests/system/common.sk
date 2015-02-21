@@ -2,9 +2,9 @@ using tests
 
 namespace tests {
   enum Status {
-    PENDING,
-    FAILED,
-    SUCCEEDED,
+    PENDING
+    FAILED
+    SUCCEEDED
   }
 
   class Test {

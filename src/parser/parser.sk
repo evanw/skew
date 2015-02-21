@@ -158,17 +158,6 @@ bool eatCommaAndMaybeNewline(ParserContext context) {
   return true
 }
 
-bool expectCommaWithoutNewline(ParserContext context) {
-  if (!context.expect(.COMMA)) return false
-  if (context.peek(.NEWLINE)) {
-    context.undo() // Go back to the comma
-    context.unexpectedToken() // Emit the error
-    context.next() // Go past the comma again
-    context.next() // Go past the newline
-  }
-  return true
-}
-
 List<Node> parseStatements(ParserContext context, StatementHint hint) {
   List<Node> statements = []
   context.eat(.NEWLINE)
@@ -181,12 +170,25 @@ List<Node> parseStatements(ParserContext context, StatementHint hint) {
         kind == .END_OF_FILE) {
       break
     }
+
+    // Enum values
     if (hint == .IN_ENUM) {
       var declaration = parseEnumValueDeclaration(context)
       if (declaration == null) break
       statements.push(declaration)
-      if (!context.eat(.NEWLINE) && (context.peek(.RIGHT_BRACE) || !expectCommaWithoutNewline(context))) break
-    } else {
+      if (!context.eat(.NEWLINE)) {
+        if (context.peek(.RIGHT_BRACE) || !context.expect(.COMMA)) break
+        if (context.peek(.NEWLINE) || context.peek(.RIGHT_BRACE)) {
+          context.undo() // Go back to the comma
+          context.unexpectedToken() // Emit the error
+          context.next() // Go past the comma again
+          context.eat(.NEWLINE)
+        }
+      }
+    }
+
+    // Normal statements
+    else {
       var statement = hint == .IN_SWITCH ? parseCaseStatement(context) : parseStatement(context, hint)
       if (statement == null) break
       statements.push(statement)

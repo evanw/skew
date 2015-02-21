@@ -626,6 +626,14 @@ int foo int bar
 ")
 
 test("
+enum Foo { FOO, BAR, BAZ, }
+", "
+<stdin>:1:25: error: Unexpected COMMA
+enum Foo { FOO, BAR, BAZ, }
+                        ^
+")
+
+test("
 enum Foo { FOO; BAR; BAZ }
 ", "
 <stdin>:1:15: error: Expected COMMA but found SEMICOLON
