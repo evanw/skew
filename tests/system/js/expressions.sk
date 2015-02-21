@@ -10,7 +10,7 @@ export bool foo(int a, int b, int c, int d) {
     return a === b === (c === d);
   };
 }());
-");
+")
 
 testJS("
 export var x = [
@@ -25,7 +25,7 @@ export var x = [
 (function() {
   x = [100, 100, 100, 100, 2748, 2748];
 }());
-");
+")
 
 testJS("
 export var foo = \"'\";
@@ -35,7 +35,7 @@ export var bar = \"\\\"\";
   foo = \"'\";
   bar = '\"';
 }());
-");
+")
 
 testJS("
 export void test() {
@@ -55,7 +55,7 @@ export void test() {
     +-1 | 0;
   };
 }());
-");
+")
 
 testJS("
 export void test() {
@@ -69,7 +69,7 @@ export void test() {
     - -2147483648 | 0;
   };
 }());
-");
+")
 
 testJS("
 export void test() {
@@ -89,7 +89,7 @@ export void test() {
     1 / (2 * 3);
   };
 }());
-");
+")
 
 testJS("
 export void test() {
@@ -105,7 +105,7 @@ export void test() {
     +false;
   };
 }());
-");
+")
 
 testJS("
 export void test() {
@@ -119,7 +119,7 @@ export void test() {
     }
   };
 }());
-");
+")
 
 testJS("
 export void foo(bool foo) {
@@ -156,7 +156,7 @@ export void foo(bool foo) {
     foo | 0, true | 0;
   };
 }());
-");
+")
 
 testJS("
 export void foo(int foo) {
@@ -181,7 +181,7 @@ export void foo(int foo) {
     foo % 1 | 1;
   };
 }());
-");
+")
 
 testJS("
 export void foo(int foo, bool bar) {
@@ -216,7 +216,7 @@ export void foo(int foo, bool bar) {
     foo >>= bar;
   };
 }());
-");
+")
 
 testJS("
 enum Foo {}
@@ -240,7 +240,7 @@ export Foo baz(bool x) { return (Foo)(int)x; }
     return x | 0;
   };
 }());
-");
+")
 
 testJS("
 export void foo(int bar) {
@@ -258,7 +258,7 @@ export void foo(int bar) {
     bar = bar - 1 | 0;
   };
 }());
-");
+")
 
 testJS("
 export class Foo {
@@ -283,7 +283,7 @@ export class Foo {
     this.bar = this.bar - 1 | 0;
   };
 }());
-");
+")
 
 testJS("
 class Foo {
@@ -322,7 +322,7 @@ Foo bar() {
     return new Foo();
   }
 }());
-");
+")
 
 testJS("
 export void foo(int bar) {
@@ -347,7 +347,7 @@ export void foo(int bar) {
     bar = bar % 1 | 0;
   };
 }());
-");
+")
 
 testJS("
 export class Foo {
@@ -379,7 +379,7 @@ export class Foo {
     this.bar = this.bar % 1 | 0;
   };
 }());
-");
+")
 
 testJS("
 export class Foo {
@@ -427,7 +427,7 @@ Foo baz() {
     return new Foo();
   }
 }());
-");
+")
 
 testJS("
 export void test() {
@@ -443,7 +443,7 @@ export void test() {
     (1, 2), (3, 4);
   };
 }());
-");
+")
 
 testJS("
 export void test() {
@@ -459,7 +459,7 @@ export void test() {
     (0.5).toString();
   };
 }());
-");
+")
 
 testJS("
 export void test() {
@@ -475,7 +475,7 @@ export void test() {
     var c = '' + 1 + 2;
   };
 }());
-");
+")
 
 testJS("
 export void test() {
@@ -491,7 +491,7 @@ export void test() {
     var c = (1 + 2 | 0) + '';
   };
 }());
-");
+")
 
 testJS("
 export string foo() {
@@ -507,7 +507,7 @@ export string foo() {
     return t;
   };
 }());
-");
+")
 
 testJS("
 class Foo {
@@ -690,7 +690,7 @@ export void foo(Foo foo) {
     foo.set(0, 1);
   };
 }());
-");
+")
 
 testJS("
 #define FOO false
@@ -704,7 +704,7 @@ export bool bar() { return FOO; }
 
   foo = false;
 }());
-");
+")
 
 testJS("
 export bool foo() {
@@ -718,6 +718,6 @@ export bool foo() {
     return foo;
   };
 }());
-");
+")
 
 }}

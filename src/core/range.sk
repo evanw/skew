@@ -1,121 +1,121 @@
 class FormattedRange {
-  final string line;
-  final string range;
+  final string line
+  final string range
 }
 
 class Range {
-  static final var EMPTY = Range(null, 0, 0);
+  static final var EMPTY = Range(null, 0, 0)
 
-  final Source source;
-  final int start;
-  final int end;
+  final Source source
+  final int start
+  final int end
 
   bool isEmpty() {
-    return source == null;
+    return source == null
   }
 
   string toString() {
-    return source == null ? "" : source.contents.slice(start, end);
+    return source == null ? "" : source.contents.slice(start, end)
   }
 
   string locationString() {
-    if (isEmpty()) return "";
-    var location = source.indexToLineColumn(start);
-    return source.name + ":" + (location.line + 1) + ":" + (location.column + 1);
+    if (isEmpty()) return ""
+    var location = source.indexToLineColumn(start)
+    return source.name + ":" + (location.line + 1) + ":" + (location.column + 1)
   }
 
   bool touches(int index) {
-    return start <= index && index <= end;
+    return start <= index && index <= end
   }
 
   FormattedRange format(int maxLength) {
-    assert source != null;
-    var start = source.indexToLineColumn(this.start);
-    var end = source.indexToLineColumn(this.end);
-    var line = source.contentsOfLine(start.line);
-    var length = line.size();
+    assert source != null
+    var start = source.indexToLineColumn(this.start)
+    var end = source.indexToLineColumn(this.end)
+    var line = source.contentsOfLine(start.line)
+    var length = line.size()
 
     // Use a unicode iterator to count the actual code points
-    var iterator = unicode.StringIterator.INSTANCE.reset(line, 0);
-    var a = iterator.countCodePointsUntil(start.column);
-    var b = a + iterator.countCodePointsUntil(end.line == start.line ? end.column : length);
-    var count = b + iterator.countCodePointsUntil(length);
+    var iterator = unicode.StringIterator.INSTANCE.reset(line, 0)
+    var a = iterator.countCodePointsUntil(start.column)
+    var b = a + iterator.countCodePointsUntil(end.line == start.line ? end.column : length)
+    var count = b + iterator.countCodePointsUntil(length)
 
     // Ensure the line length doesn't exceed maxLength
     if (maxLength > 0 && count > maxLength) {
-      var centeredWidth = math.imin(b - a, maxLength / 2);
-      var centeredStart = math.imax((maxLength - centeredWidth) / 2, 3);
-      var codePoints = line.codePoints();
+      var centeredWidth = math.imin(b - a, maxLength / 2)
+      var centeredStart = math.imax((maxLength - centeredWidth) / 2, 3)
+      var codePoints = line.codePoints()
 
       // Left aligned
       if (a < centeredStart) {
-        line = string.fromCodePoints(codePoints.slice(0, maxLength - 3)) + "...";
-        if (b > maxLength - 3) b = maxLength - 3;
+        line = string.fromCodePoints(codePoints.slice(0, maxLength - 3)) + "..."
+        if (b > maxLength - 3) b = maxLength - 3
       }
 
       // Right aligned
       else if (count - a < maxLength - centeredStart) {
-        var offset = count - maxLength;
-        line = "..." + string.fromCodePoints(codePoints.slice(offset + 3, count));
-        a -= offset;
-        b -= offset;
+        var offset = count - maxLength
+        line = "..." + string.fromCodePoints(codePoints.slice(offset + 3, count))
+        a -= offset
+        b -= offset
       }
 
       // Center aligned
       else {
-        var offset = a - centeredStart;
-        line = "..." + string.fromCodePoints(codePoints.slice(offset + 3, offset + maxLength - 3)) + "...";
-        a -= offset;
-        b -= offset;
-        if (b > maxLength - 3) b = maxLength - 3;
+        var offset = a - centeredStart
+        line = "..." + string.fromCodePoints(codePoints.slice(offset + 3, offset + maxLength - 3)) + "..."
+        a -= offset
+        b -= offset
+        if (b > maxLength - 3) b = maxLength - 3
       }
     }
 
-    return FormattedRange(line, " ".repeat(a) + (b - a < 2 ? "^" : "~".repeat(b - a)));
+    return FormattedRange(line, " ".repeat(a) + (b - a < 2 ? "^" : "~".repeat(b - a)))
   }
 
   Range fromStart(int count) {
-    assert count >= 0 && count <= end - start;
-    return Range(source, start, start + count);
+    assert count >= 0 && count <= end - start
+    return Range(source, start, start + count)
   }
 
   Range fromEnd(int count) {
-    assert count >= 0 && count <= end - start;
-    return Range(source, end - count, end);
+    assert count >= 0 && count <= end - start
+    return Range(source, end - count, end)
   }
 
   Range slice(int offsetStart, int offsetEnd) {
-    assert offsetStart >= 0 && offsetStart <= offsetEnd && offsetEnd <= end - start;
-    return Range(source, start + offsetStart, start + offsetEnd);
+    assert offsetStart >= 0 && offsetStart <= offsetEnd && offsetEnd <= end - start
+    return Range(source, start + offsetStart, start + offsetEnd)
   }
 
   static Range span(Range start, Range end) {
-    assert start.source == end.source;
-    assert start.start <= end.end;
-    return Range(start.source, start.start, end.end);
+    assert start.source == end.source
+    assert start.start <= end.end
+    return Range(start.source, start.start, end.end)
   }
 
   static Range inner(Range start, Range end) {
-    assert start.source == end.source;
-    assert start.end <= end.start;
-    return Range(start.source, start.end, end.start);
+    assert start.source == end.source
+    assert start.end <= end.start
+    return Range(start.source, start.end, end.start)
   }
 
   static Range before(Range outer, Range inner) {
-    assert outer.source == inner.source;
-    assert outer.start <= inner.start;
-    assert outer.end >= inner.end;
-    return Range(outer.source, outer.start, inner.start);
+    assert outer.source == inner.source
+    assert outer.start <= inner.start
+    assert outer.end >= inner.end
+    return Range(outer.source, outer.start, inner.start)
   }
 
   static Range after(Range outer, Range inner) {
-    assert outer.source == inner.source;
-    assert outer.start <= inner.start;
-    assert outer.end >= inner.end;
-    return Range(outer.source, inner.end, outer.end);
+    assert outer.source == inner.source
+    assert outer.start <= inner.start
+    assert outer.end >= inner.end
+    return Range(outer.source, inner.end, outer.end)
   }
 
   static bool equal(Range left, Range right) {
-    return left.source == right.source && left.start == right.start && left.end == right.end;
+    return left.source == right.source && left.start == right.start && left.end == right.end
   }
 }

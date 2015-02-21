@@ -2,90 +2,90 @@
 
   int parseIntLiteral(string text, int base) {
     if (base != 10) {
-      text = text.slice(2, text.size());
+      text = text.slice(2, text.size())
     }
-    return `parseInt`(text, base) | 0;
+    return `parseInt`(text, base) | 0
   }
 
   double parseDoubleLiteral(string text) {
-    return `+`text``;
+    return `+`text``
   }
 
 #elif TARGET_CPP
 
   int parseIntLiteral(string text, int base) {
-    var value = 0;
+    var value = 0
 
     switch (base) {
       case 2, 8 {
         for (var i = 2; i < text.size(); i++) {
-          value = value * base + text[i] - '0';
+          value = value * base + text[i] - '0'
         }
       }
 
       // Support for negative decimal literals is needed in a few places
       case 10 {
-        var isNegative = text.size() > 0 && text[0] == '-';
+        var isNegative = text.size() > 0 && text[0] == '-'
         for (var i = isNegative ? 1 : 0; i < text.size(); i++) {
-          value = value * base + text[i] - '0';
+          value = value * base + text[i] - '0'
         }
-        if (isNegative) value = -value;
+        if (isNegative) value = -value
       }
 
       case 16 {
         for (var i = 2; i < text.size(); i++) {
-          var c = text[i];
-          value = value * 16 + c - (c <= '9' ? '0' : c <= 'F' ? 'A' - 10 : 'a' - 10);
+          var c = text[i]
+          value = value * 16 + c - (c <= '9' ? '0' : c <= 'F' ? 'A' - 10 : 'a' - 10)
         }
       }
     }
 
-    return value;
+    return value
   }
 
   @NeedsInclude("<sstream>")
   double parseDoubleLiteral(string text) {
-    var value = 0.0;
-    `std::stringstream` ss;
-    ss.str(text);
-    ss >> value;
-    return value;
+    var value = 0.0
+    `std::stringstream` ss
+    ss.str(text)
+    ss >> value
+    return value
   }
 
 #elif TARGET_RUBY
 
   int parseIntLiteral(string text, int base) {
     if (base != 10) {
-      text = text.slice(2, text.size());
+      text = text.slice(2, text.size())
     }
-    return `Integer`(text, base);
+    return `Integer`(text, base)
   }
 
   double parseDoubleLiteral(string text) {
-    return text."to_f";
+    return text."to_f"
   }
 
 #else
 
   import {
-    int parseIntLiteral(string value, int base);
-    double parseDoubleLiteral(string value);
+    int parseIntLiteral(string value, int base)
+    double parseDoubleLiteral(string value)
   }
 
 #endif
 
 #if TARGET_RUBY
 
-  var doubleToStringRegex = new `Regexp`("\\.0(?:e|$)");
+  var doubleToStringRegex = new `Regexp`("\\.0(?:e|$)")
 
   string doubleToStringWithoutDotZero(double value) {
-    return value.toString()."gsub"(doubleToStringRegex, "");
+    return value.toString()."gsub"(doubleToStringRegex, "")
   }
 
 #else
 
   string doubleToStringWithoutDotZero(double value) {
-    return value.toString();
+    return value.toString()
   }
 
 #endif

@@ -20,7 +20,7 @@ void test() {
 <stdin>:5:5: error: Only the last case can be a default case
     default { foo; }
     ~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 void test() {
@@ -58,7 +58,7 @@ void test() {
 <stdin>:3:10: note: The first occurrence is here
     case 1 { foo; }
          ^
-");
+")
 
 test("
 void test() {
@@ -80,7 +80,7 @@ void test() {
 <stdin>:4:18: error: \"foo\" is not declared
     case false { foo; }
                  ~~~
-");
+")
 
 test("
 enum Foo { FOO, BAR, BAZ }
@@ -101,7 +101,7 @@ void foo(Foo foo) {
 <stdin>:4:10: note: The first occurrence is here
     case .FOO, .BAR {}
          ~~~~
-");
+")
 
 test("
 enum Foo { FOO, BAR = 0 }
@@ -117,7 +117,7 @@ void foo(Foo foo) {
 <stdin>:4:10: note: The first occurrence is here
     case .FOO, .BAR {}
          ~~~~
-");
+")
 
 test("
 enum Foo { FOO }
@@ -133,6 +133,6 @@ void foo(int foo) {
 <stdin>:4:10: note: The first occurrence is here
     case 0, Foo.FOO {}
          ^
-");
+")
 
 }}

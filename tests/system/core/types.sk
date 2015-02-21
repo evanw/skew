@@ -10,7 +10,7 @@ string e;
 Foo f;
 Foo g = Foo();
 ", "
-");
+")
 
 test("
 void test() {
@@ -20,7 +20,7 @@ void test() {
 <stdin>:2:3: error: Cannot use type \"void\" here
   (void)null;
   ~~~~~~
-");
+")
 
 test("
 void test() {
@@ -31,7 +31,7 @@ namespace ns {}
 <stdin>:2:3: error: Cannot use type \"ns\" here
   (ns)null;
   ~~~~
-");
+")
 
 test("
 void foo;
@@ -39,7 +39,7 @@ void foo;
 <stdin>:1:1: error: Cannot use type \"void\" here
 void foo;
 ~~~~
-");
+")
 
 test("
 ns foo;
@@ -48,12 +48,12 @@ namespace ns {}
 <stdin>:1:1: error: Cannot use type \"ns\" here
 ns foo;
 ~~
-");
+")
 
 test("
 void foo() {}
 ", "
-");
+")
 
 test("
 void foo(void foo, void bar) {}
@@ -64,7 +64,7 @@ void foo(void foo, void bar) {}
 <stdin>:1:20: error: Cannot use type \"void\" here
 void foo(void foo, void bar) {}
                    ~~~~
-");
+")
 
 test("
 ns foo(ns bar, ns baz) {}
@@ -79,7 +79,7 @@ ns foo(ns bar, ns baz) {}
 <stdin>:1:16: error: Cannot use type \"ns\" here
 ns foo(ns bar, ns baz) {}
                ~~
-");
+")
 
 test("
 class Foo<T> {
@@ -91,7 +91,7 @@ class Foo<T> {
 <stdin>:3:7: error: Cannot create a default value for type \"T\"
     T foo;
       ~~~
-");
+")
 
 test("
 interface IFoo {}
@@ -101,7 +101,7 @@ class Foo<T is IFoo> {
   }
 }
 ", "
-");
+")
 
 test("
 class Foo<T> {
@@ -110,7 +110,7 @@ class Foo<T> {
   }
 }
 ", "
-");
+")
 
 test("
 interface IFoo {}
@@ -120,14 +120,14 @@ class Foo<T is IFoo> {
   }
 }
 ", "
-");
+")
 
 test("
 bool foo<T>(T a, T b) {
   return a == b;
 }
 ", "
-");
+")
 
 test("
 interface IFoo {}
@@ -135,6 +135,6 @@ bool foo<T is IFoo>(T a, T b) {
   return a == b;
 }
 ", "
-");
+")
 
 }}

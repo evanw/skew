@@ -33,7 +33,7 @@ void foo(int foo, int bar) {
   for (int &x = foo, &y = bar; foo == bar; foo++, bar--) {
   }
 }
-");
+")
 
 testCPP("
 export enum Foo {
@@ -53,7 +53,7 @@ Foo foo();
 Foo foo() {
   return Foo::FOO;
 }
-");
+")
 
 testCPP("
 pure int foo() {
@@ -75,6 +75,6 @@ int foo() {
 
 int bar = foo();
 int baz = 0;
-");
+")
 
 }}

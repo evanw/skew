@@ -14,240 +14,240 @@ namespace cpp {
 
   class Emitter : base.Emitter {
     private {
-      var includes = StringMap<bool>();
-      var usedAssert = false;
-      var usedMath = false;
-      var isMarkSweep = false;
-      Pass pass = .NONE;
+      var includes = StringMap<bool>()
+      var usedAssert = false
+      var usedMath = false
+      var isMarkSweep = false
+      Pass pass = .NONE
     }
 
     override string extension() {
-      return "cpp";
+      return "cpp"
     }
 
     override void visitProgram(Node node) {
       // Emit code in three passes
-      var collector = Collector(node, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
-      isMarkSweep = options.memoryManagement == .MARK_SWEEP;
+      var collector = Collector(node, .SORT_BY_INHERITANCE_AND_CONTAINMENT)
+      isMarkSweep = options.memoryManagement == .MARK_SWEEP
 
-      pass = .FORWARD_DECLARE_TYPES;
-      visitCollector(collector);
-      adjustNamespace(null);
-      forceEmitExtraNewline();
+      pass = .FORWARD_DECLARE_TYPES
+      visitCollector(collector)
+      adjustNamespace(null)
+      forceEmitExtraNewline()
 
-      pass = .FORWARD_DECLARE_CODE;
-      visitCollector(collector);
-      adjustNamespace(null);
-      forceEmitExtraNewline();
+      pass = .FORWARD_DECLARE_CODE
+      visitCollector(collector)
+      adjustNamespace(null)
+      forceEmitExtraNewline()
 
-      pass = .IMPLEMENT_CODE;
-      visitCollector(collector);
-      adjustNamespace(null);
+      pass = .IMPLEMENT_CODE
+      visitCollector(collector)
+      adjustNamespace(null)
 
-      emitEntryPoint();
-      wrapEmittedCode();
+      emitEntryPoint()
+      wrapEmittedCode()
     }
 
     void emitEntryPoint() {
-      var entryPointSymbol = resolver.entryPointSymbol;
+      var entryPointSymbol = resolver.entryPointSymbol
       if (entryPointSymbol != null) {
-        var type = entryPointSymbol.type;
-        var hasArguments = type.argumentTypes().size() > 0;
-        var hasReturnValue = type.resultType() == cache.intType;
-        emitExtraNewlineBefore(.NULL);
-        emit(indent + "int main(" + (hasArguments ? "int argc, char **argv" : "") + ") {\n");
-        increaseIndent();
+        var type = entryPointSymbol.type
+        var hasArguments = type.argumentTypes().size() > 0
+        var hasReturnValue = type.resultType() == cache.intType
+        emitExtraNewlineBefore(.NULL)
+        emit(indent + "int main(" + (hasArguments ? "int argc, char **argv" : "") + ") {\n")
+        increaseIndent()
         if (hasArguments) {
-          assert "<string>" in includes;
-          var listType = "List<" + mangleName(cache.stringType.symbol) + ">";
-          emit(indent + (isMarkSweep ? "gc::Root<" + listType + "> " : listType + " *") + "args = new " + listType + "();\n");
-          emit(indent + "args->_data.insert(args->_data.begin(), argv + 1, argv + argc);\n"); // The method push() may not have been emitted
+          assert "<string>" in includes
+          var listType = "List<" + mangleName(cache.stringType.symbol) + ">"
+          emit(indent + (isMarkSweep ? "gc::Root<" + listType + "> " : listType + " *") + "args = new " + listType + "();\n")
+          emit(indent + "args->_data.insert(args->_data.begin(), argv + 1, argv + argc);\n") // The method push() may not have been emitted
         }
-        emit(indent + (hasReturnValue ? "return " : "") + fullName(entryPointSymbol) + "(" + (hasArguments ? "args" : "") + ");\n");
-        decreaseIndent();
-        emit(indent + "}\n");
+        emit(indent + (hasReturnValue ? "return " : "") + fullName(entryPointSymbol) + "(" + (hasArguments ? "args" : "") + ");\n")
+        decreaseIndent()
+        emit(indent + "}\n")
       }
     }
 
     void wrapEmittedCode() {
-      var useFastHack = options.memoryManagement == .NONE_FAST;
+      var useFastHack = options.memoryManagement == .NONE_FAST
 
       // Some headers need to be force-included
       if (usedAssert) {
-        includes["<cassert>"] = true;
+        includes["<cassert>"] = true
       }
       if (useFastHack) {
-        includes["<cassert>"] = true;
-        includes["<new>"] = true;
-        includes[options.config == .WINDOWS ? "<windows.h>" : "<sys/mman.h>"] = true;
+        includes["<cassert>"] = true
+        includes["<new>"] = true
+        includes[options.config == .WINDOWS ? "<windows.h>" : "<sys/mman.h>"] = true
       }
       if (isMarkSweep) {
-        includes["<stack>"] = true;
-        includes["<type_traits>"] = true;
-        includes["<unordered_map>"] = true;
-        includes["<unordered_set>"] = true;
-        includes["<vector>"] = true;
+        includes["<stack>"] = true
+        includes["<type_traits>"] = true
+        includes["<unordered_map>"] = true
+        includes["<unordered_set>"] = true
+        includes["<vector>"] = true
       }
       if (usedMath) {
-        includes["<cmath>"] = true;
+        includes["<cmath>"] = true
       }
 
       // Sort headers for deterministic output
-      var headers = includes.keys();
-      headers.sort(StringComparison.INSTANCE);
+      var headers = includes.keys()
+      headers.sort(StringComparison.INSTANCE)
 
       // Prepend headers if needed
       if (headers.size() != 0) {
         for (var i = 0; i < headers.size(); i++) {
-          var name = headers[i];
-          var size = name.size();
-          prepended.append("#include " + (size == 0 || name[0] != '<' || name[size - 1] != '>' ? "\"" + name + "\"" : name) + "\n");
+          var name = headers[i]
+          var size = name.size()
+          prepended.append("#include " + (size == 0 || name[0] != '<' || name[size - 1] != '>' ? "\"" + name + "\"" : name) + "\n")
         }
-        prepended.append("\n");
+        prepended.append("\n")
       }
       if (isMarkSweep) {
-        prepended.append(@ContentsOfFile("../../lib/mark-sweep.h"));
-        prepended.append("\n");
-        emit("\n");
-        emit(@ContentsOfFile("../../lib/mark-sweep.cpp"));
+        prepended.append(@ContentsOfFile("../../lib/mark-sweep.h"))
+        prepended.append("\n")
+        emit("\n")
+        emit(@ContentsOfFile("../../lib/mark-sweep.cpp"))
       }
       if (useFastHack) {
-        emit("\n");
-        emit(@ContentsOfFile("../../lib/fast.cpp"));
+        emit("\n")
+        emit(@ContentsOfFile("../../lib/fast.cpp"))
       }
     }
 
     override void handleSymbol(Symbol symbol) {
       if (symbol.neededIncludes != null) {
         for (var i = 0; i < symbol.neededIncludes.size(); i++) {
-          includes[symbol.neededIncludes[i]] = true;
+          includes[symbol.neededIncludes[i]] = true
         }
       }
     }
 
     override bool shouldEmitExtraNewlineBetween(NodeKind before, NodeKind after) {
       if (pass == .FORWARD_DECLARE_TYPES) {
-        return before == .NAMESPACE || after == .NAMESPACE || before.isEnum() || after.isEnum();
+        return before == .NAMESPACE || after == .NAMESPACE || before.isEnum() || after.isEnum()
       }
-      return super(before, after) && (pass != .FORWARD_DECLARE_CODE || !before.isFunction() || !after.isFunction());
+      return super(before, after) && (pass != .FORWARD_DECLARE_CODE || !before.isFunction() || !after.isFunction())
     }
 
     override void emitTypeParameters(Symbol symbol) {
       if (pass == .IMPLEMENT_CODE && symbol.enclosingSymbol.hasParameters()) {
-        emitTypeParameters(symbol.enclosingSymbol);
+        emitTypeParameters(symbol.enclosingSymbol)
       }
       if (symbol.hasParameters()) {
-        emit(indent + "template <");
+        emit(indent + "template <")
         for (var i = 0; i < symbol.parameters.size(); i++) {
           if (i != 0) {
-            emit(", ");
+            emit(", ")
           }
-          emit("typename " + mangleName(symbol.parameters[i]));
+          emit("typename " + mangleName(symbol.parameters[i]))
         }
-        emit(">\n");
+        emit(">\n")
       }
     }
 
     void emitEnumValues(Symbol symbol) {
-      var members = symbol.type.sortedMembers();
-      var isEnumFlags = symbol.kind == .ENUM_FLAGS;
-      var isFirst = true;
-      var previous = -1;
+      var members = symbol.type.sortedMembers()
+      var isEnumFlags = symbol.kind == .ENUM_FLAGS
+      var isFirst = true
+      var previous = -1
       for (var i = 0; i < members.size(); i++) {
-        var member = members[i].symbol;
-        handleSymbol(member);
+        var member = members[i].symbol
+        handleSymbol(member)
         if (member.isEnumValue()) {
           if (isFirst) {
-            isFirst = false;
+            isFirst = false
           } else {
-            emit(",\n");
+            emit(",\n")
           }
-          var value = member.constant.asInt();
-          emit(indent + mangleName(member));
+          var value = member.constant.asInt()
+          emit(indent + mangleName(member))
           if (isEnumFlags || value != previous + 1) {
-            emit(" = " + value);
+            emit(" = " + value)
           }
-          previous = value;
+          previous = value
         }
       }
       if (!isFirst) {
-        emit("\n");
+        emit("\n")
       }
     }
 
     override void emitTypeDeclaration(Symbol symbol) {
-      var needsMark = isMarkSweep && symbol.kind == .CLASS;
-      handleSymbol(symbol);
+      var needsMark = isMarkSweep && symbol.kind == .CLASS
+      handleSymbol(symbol)
 
       if (symbol.kind.isObject()) {
         if (pass != .IMPLEMENT_CODE) {
-          adjustNamespace(symbol);
-          emitExtraNewlineBefore(symbol.node.kind);
-          emitTypeParameters(symbol);
-          emit(indent + "struct " + mangleName(symbol));
+          adjustNamespace(symbol)
+          emitExtraNewlineBefore(symbol.node.kind)
+          emitTypeParameters(symbol)
+          emit(indent + "struct " + mangleName(symbol))
           if (pass == .FORWARD_DECLARE_CODE) {
-            var needsObject = isMarkSweep && (symbol.kind == .INTERFACE || symbol.type.baseClass() == null);
+            var needsObject = isMarkSweep && (symbol.kind == .INTERFACE || symbol.type.baseClass() == null)
             if (needsObject) {
-              emit(" : virtual gc::Object");
+              emit(" : virtual gc::Object")
             }
             if (symbol.type.hasRelevantTypes()) {
-              var types = symbol.type.relevantTypes;
+              var types = symbol.type.relevantTypes
               if (!needsObject) {
-                emit(" : ");
+                emit(" : ")
               }
               for (var i = 0; i < types.size(); i++) {
                 if (i != 0 || needsObject) {
-                  emit(", ");
+                  emit(", ")
                 }
-                emitCppType(types[i], .BARE);
+                emitCppType(types[i], .BARE)
               }
             }
-            emit(" {\n");
-            increaseIndent();
-            emitTypeMembers(symbol);
+            emit(" {\n")
+            increaseIndent()
+            emitTypeMembers(symbol)
             if (needsMark) {
-              emitMarkFunction(symbol);
+              emitMarkFunction(symbol)
             }
-            decreaseIndent();
-            emit(indent + "}");
+            decreaseIndent()
+            emit(indent + "}")
           }
-          emit(";\n");
-          emitExtraNewlineAfter(symbol.node.kind);
+          emit(";\n")
+          emitExtraNewlineAfter(symbol.node.kind)
         } else {
-          emitTypeMembers(symbol);
+          emitTypeMembers(symbol)
           if (needsMark) {
-            emitMarkFunction(symbol);
+            emitMarkFunction(symbol)
           }
         }
       }
 
       else if (symbol.kind == .ENUM) {
         if (pass == .FORWARD_DECLARE_TYPES) {
-          adjustNamespace(symbol);
-          emitExtraNewlineBefore(.ENUM);
-          emit(indent + "enum struct " + mangleName(symbol) + " {\n");
-          increaseIndent();
-          emitEnumValues(symbol);
-          decreaseIndent();
-          emit(indent + "};\n");
-          emitExtraNewlineAfter(.ENUM);
+          adjustNamespace(symbol)
+          emitExtraNewlineBefore(.ENUM)
+          emit(indent + "enum struct " + mangleName(symbol) + " {\n")
+          increaseIndent()
+          emitEnumValues(symbol)
+          decreaseIndent()
+          emit(indent + "};\n")
+          emitExtraNewlineAfter(.ENUM)
         }
       }
 
       else if (symbol.kind == .ENUM_FLAGS) {
         if (pass == .FORWARD_DECLARE_TYPES) {
-          adjustNamespace(symbol);
-          emitExtraNewlineBefore(.ENUM_FLAGS);
-          emit(indent + "namespace " + mangleName(symbol) + " {\n");
-          increaseIndent();
-          emit(indent + "enum {\n");
-          increaseIndent();
-          emitEnumValues(symbol);
-          decreaseIndent();
-          emit(indent + "};\n");
-          decreaseIndent();
-          emit(indent + "}\n");
-          emitExtraNewlineAfter(.ENUM_FLAGS);
+          adjustNamespace(symbol)
+          emitExtraNewlineBefore(.ENUM_FLAGS)
+          emit(indent + "namespace " + mangleName(symbol) + " {\n")
+          increaseIndent()
+          emit(indent + "enum {\n")
+          increaseIndent()
+          emitEnumValues(symbol)
+          decreaseIndent()
+          emit(indent + "};\n")
+          decreaseIndent()
+          emit(indent + "}\n")
+          emitExtraNewlineAfter(.ENUM_FLAGS)
         }
       }
     }
@@ -255,314 +255,314 @@ namespace cpp {
     void emitMarkFunction(Symbol symbol) {
       if (isMarkSweep && symbol.kind == .CLASS) {
         if (pass == .FORWARD_DECLARE_CODE) {
-          emitExtraNewlineBefore(.FUNCTION);
-          emit(indent + "virtual void __gc_mark();\n");
-          emitExtraNewlineAfter(.FUNCTION);
+          emitExtraNewlineBefore(.FUNCTION)
+          emit(indent + "virtual void __gc_mark();\n")
+          emitExtraNewlineAfter(.FUNCTION)
         }
 
         else if (pass == .IMPLEMENT_CODE) {
-          emitExtraNewlineBefore(.FUNCTION);
-          emitTypeParameters(symbol);
-          emit(indent + "void ");
-          emitEnclosingSymbolPrefix(symbol);
-          emit("__gc_mark() {\n");
-          increaseIndent();
+          emitExtraNewlineBefore(.FUNCTION)
+          emitTypeParameters(symbol)
+          emit(indent + "void ")
+          emitEnclosingSymbolPrefix(symbol)
+          emit("__gc_mark() {\n")
+          increaseIndent()
 
-          var baseClass = symbol.type.baseClass();
+          var baseClass = symbol.type.baseClass()
           if (baseClass != null) {
-            emit(indent + mangleName(baseClass.symbol) + "::__gc_mark();\n");
+            emit(indent + mangleName(baseClass.symbol) + "::__gc_mark();\n")
           }
 
-          var members = symbol.type.sortedMembers();
+          var members = symbol.type.sortedMembers()
           for (var i = 0; i < members.size(); i++) {
-            var member = members[i].symbol;
+            var member = members[i].symbol
             if (member.kind == .INSTANCE_VARIABLE && member.enclosingSymbol == symbol && !member.type.isPrimitive() && !member.type.isEnum()) {
-              emit(indent + "gc::mark(" + mangleName(member) + ");\n");
+              emit(indent + "gc::mark(" + mangleName(member) + ");\n")
             }
           }
 
-          decreaseIndent();
-          emit(indent + "}\n");
-          emitExtraNewlineAfter(.FUNCTION);
+          decreaseIndent()
+          emit(indent + "}\n")
+          emitExtraNewlineAfter(.FUNCTION)
         }
       }
     }
 
     void emitEnclosingSymbolPrefix(Symbol enclosingSymbol) {
       if (enclosingSymbol != null && enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
-        emit(fullName(enclosingSymbol));
+        emit(fullName(enclosingSymbol))
         if (enclosingSymbol.hasParameters()) {
-          emit("<");
+          emit("<")
           for (var i = 0; i < enclosingSymbol.parameters.size(); i++) {
             if (i != 0) {
-              emit(", ");
+              emit(", ")
             }
-            emit(mangleName(enclosingSymbol.parameters[i]));
+            emit(mangleName(enclosingSymbol.parameters[i]))
           }
-          emit(">");
+          emit(">")
         }
-        emit("::");
+        emit("::")
       }
     }
 
     override void emitFunction(Symbol symbol) {
-      handleSymbol(symbol);
+      handleSymbol(symbol)
       if (pass != .FORWARD_DECLARE_TYPES) {
-        var node = symbol.node;
-        var block = node.functionBlock();
+        var node = symbol.node
+        var block = node.functionBlock()
         if (block != null || pass == .FORWARD_DECLARE_CODE) {
-          adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null);
-          emitExtraNewlineBefore(node.kind);
-          emitTypeParameters(symbol);
-          emit(indent);
+          adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null)
+          emitExtraNewlineBefore(node.kind)
+          emitTypeParameters(symbol)
+          emit(indent)
           if (symbol.isExternC() && (pass == .FORWARD_DECLARE_CODE || pass == .IMPLEMENT_CODE)) {
-            emit("extern \"C\" ");
+            emit("extern \"C\" ")
           }
           if (pass == .FORWARD_DECLARE_CODE) {
-            if (symbol.isStatic()) emit("static ");
-            if (symbol.isVirtual()) emit("virtual ");
+            if (symbol.isStatic()) emit("static ")
+            if (symbol.isVirtual()) emit("virtual ")
           }
           if (symbol.kind != .CONSTRUCTOR_FUNCTION) {
-            emitCppType(symbol.type.resultType(), .DECLARATION);
+            emitCppType(symbol.type.resultType(), .DECLARATION)
           }
           if (pass == .IMPLEMENT_CODE) {
-            emitEnclosingSymbolPrefix(symbol.enclosingSymbol);
+            emitEnclosingSymbolPrefix(symbol.enclosingSymbol)
           }
-          emit(mangleName(symbol));
-          emitFunctionArguments(symbol);
+          emit(mangleName(symbol))
+          emitFunctionArguments(symbol)
           if (block == null) {
-            emit(" = 0;");
+            emit(" = 0;")
           } else if (pass == .FORWARD_DECLARE_CODE) {
-            emit(";");
+            emit(";")
           } else {
             if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
-              var superInitializer = node.superInitializer();
-              var memberInitializers = node.memberInitializers();
-              var superCallArguments = superInitializer != null ? superInitializer.superCallArguments() : null;
-              var hasSuperInitializer = superInitializer != null && superCallArguments.size() > 0;
-              var hasMemberInitializers = memberInitializers != null && memberInitializers.hasChildren();
+              var superInitializer = node.superInitializer()
+              var memberInitializers = node.memberInitializers()
+              var superCallArguments = superInitializer != null ? superInitializer.superCallArguments() : null
+              var hasSuperInitializer = superInitializer != null && superCallArguments.size() > 0
+              var hasMemberInitializers = memberInitializers != null && memberInitializers.hasChildren()
               if (hasSuperInitializer || hasMemberInitializers) {
-                emit(" : ");
+                emit(" : ")
                 if (hasSuperInitializer) {
-                  emit(fullName(superInitializer.symbol.enclosingSymbol) + "(");
-                  emitCommaSeparatedExpressions(superInitializer.superCallArguments());
-                  emit(")");
+                  emit(fullName(superInitializer.symbol.enclosingSymbol) + "(")
+                  emitCommaSeparatedExpressions(superInitializer.superCallArguments())
+                  emit(")")
                   if (hasMemberInitializers) {
-                    emit(", ");
+                    emit(", ")
                   }
                 }
                 if (hasMemberInitializers) {
                   for (var i = 0; i < memberInitializers.children.size(); i++) {
-                    var initializer = memberInitializers.children[i];
-                    var value = initializer.memberInitializerValue();
+                    var initializer = memberInitializers.children[i]
+                    var value = initializer.memberInitializerValue()
                     if (i != 0) {
-                      emit(", ");
+                      emit(", ")
                     }
-                    emit(mangleName(initializer.symbol) + "(");
+                    emit(mangleName(initializer.symbol) + "(")
                     if (value.kind != .ERROR) {
-                      emitExpression(value, .LOWEST);
+                      emitExpression(value, .LOWEST)
                     }
-                    emit(")");
+                    emit(")")
                   }
                 }
               }
             }
-            emitBlock(block);
+            emitBlock(block)
           }
-          emit("\n");
-          emitExtraNewlineAfter(node.kind);
+          emit("\n")
+          emitExtraNewlineAfter(node.kind)
         }
       }
     }
 
     override bool shouldEmitSpaceForUnaryOperator(Node node) {
-      return node.kind.isUnaryTypeOperator() ? true : super(node);
+      return node.kind.isUnaryTypeOperator() ? true : super(node)
     }
 
     override void emitTypeBeforeVariable(Symbol symbol) {
       if (isMarkSweep && symbol.kind == .GLOBAL_VARIABLE && symbol.type.isReference()) {
-        emit("gc::Root<");
-        emitCppType(symbol.type, .BARE);
-        emit("> ");
+        emit("gc::Root<")
+        emitCppType(symbol.type, .BARE)
+        emit("> ")
       } else {
-        emitCppType(symbol.type, .DECLARATION);
+        emitCppType(symbol.type, .DECLARATION)
       }
     }
 
     override void emitFreeVariable(Symbol symbol) {
       if (symbol.enclosingSymbol.kind.isNamespace()) {
-        emitVariable(symbol);
+        emitVariable(symbol)
       }
     }
 
     override void emitVariable(Symbol symbol) {
-      handleSymbol(symbol);
+      handleSymbol(symbol)
       if (pass != .FORWARD_DECLARE_TYPES && (pass == .FORWARD_DECLARE_CODE || symbol.kind != .INSTANCE_VARIABLE)) {
-        adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null);
-        emitExtraNewlineBefore(symbol.node.kind);
-        emit(indent);
+        adjustNamespace(pass == .FORWARD_DECLARE_CODE ? symbol : null)
+        emitExtraNewlineBefore(symbol.node.kind)
+        emit(indent)
         if (symbol.isExternC() && (pass == .FORWARD_DECLARE_CODE || pass == .IMPLEMENT_CODE)) {
-          emit("extern \"C\" ");
+          emit("extern \"C\" ")
         } else if (pass == .FORWARD_DECLARE_CODE && symbol.kind.isGlobal()) {
-          emit(symbol.isStatic() ? "static " : "extern ");
+          emit(symbol.isStatic() ? "static " : "extern ")
         }
-        emitTypeBeforeVariable(symbol);
+        emitTypeBeforeVariable(symbol)
         if (pass == .FORWARD_DECLARE_CODE) {
-          emit(mangleName(symbol));
+          emit(mangleName(symbol))
         } else {
-          emit(fullName(symbol));
-          emitAfterVariable(symbol.node);
+          emit(fullName(symbol))
+          emitAfterVariable(symbol.node)
         }
-        emit(";\n");
-        emitExtraNewlineAfter(symbol.node.kind);
+        emit(";\n")
+        emitExtraNewlineAfter(symbol.node.kind)
       }
     }
 
     override void emitFunctionArgument(Symbol symbol) {
       // Make sure to avoid copies for std::string extension methods
-      var useConstReference = symbol.name == "this" && symbol.type.isString(cache);
-      if (useConstReference) emit("const ");
-      emitCppType(symbol.type, .DECLARATION);
-      if (useConstReference) emit("&");
-      emit(mangleName(symbol));
-      emitAfterVariable(symbol.node);
+      var useConstReference = symbol.name == "this" && symbol.type.isString(cache)
+      if (useConstReference) emit("const ")
+      emitCppType(symbol.type, .DECLARATION)
+      if (useConstReference) emit("&")
+      emit(mangleName(symbol))
+      emitAfterVariable(symbol.node)
     }
 
     override void emitTry(Node node) {
-      emit(indent + "try");
-      emitBlock(node.tryBlock());
-      emit(" catch (...)");
-      emitBlock(node.catchBlock());
-      emit("\n");
+      emit(indent + "try")
+      emitBlock(node.tryBlock())
+      emit(" catch (...)")
+      emitBlock(node.catchBlock())
+      emit("\n")
     }
 
     override void emitBeforeSubsequentForVariable(Node node) {
-      var type = node.symbol.type;
+      var type = node.symbol.type
       emit(
         type.isReference() || type.isQuoted() && type.symbol.node.kind == .POSTFIX_DEREFERENCE ? ", *" :
         type.isQuoted() && type.symbol.node.kind == .POSTFIX_REFERENCE ? ", &" :
-        ", ");
+        ", ")
     }
 
     override void emitForEach(Node node) {
-      var symbol = node.forEachVariable().symbol;
-      emit(indent + "for (");
-      emitTypeBeforeVariable(symbol);
-      emit(mangleName(symbol));
-      emit(" : ");
-      emitExpression(node.forEachValue(), .LOWEST);
-      emit(")");
-      emitBlock(node.forEachBlock());
-      emit("\n");
+      var symbol = node.forEachVariable().symbol
+      emit(indent + "for (")
+      emitTypeBeforeVariable(symbol)
+      emit(mangleName(symbol))
+      emit(" : ")
+      emitExpression(node.forEachValue(), .LOWEST)
+      emit(")")
+      emitBlock(node.forEachBlock())
+      emit("\n")
     }
 
     override void emitAssert(Node node) {
-      emit(indent + "assert(");
-      emitExpression(node.assertValue(), .LOWEST);
-      emit(");\n");
-      usedAssert = true;
+      emit(indent + "assert(")
+      emitExpression(node.assertValue(), .LOWEST)
+      emit(");\n")
+      usedAssert = true
     }
 
     override void emitBinary(Node node, Precedence precedence) {
       // Clang warns about && inside || or & inside | without parentheses
       if (node.parent.kind == .LOGICAL_OR && node.kind == .LOGICAL_AND ||
           node.parent.kind == .BITWISE_OR && node.kind == .BITWISE_AND) {
-        precedence = .MEMBER;
+        precedence = .MEMBER
       }
 
-      super(node, precedence);
+      super(node, precedence)
     }
 
     override void emitNull() {
-      emit("nullptr");
+      emit("nullptr")
     }
 
     override void emitReal(Node node) {
-      var value = node.asDouble();
+      var value = node.asDouble()
       if (value == math.INFINITY) {
-        usedMath = true;
-        emit("INFINITY");
+        usedMath = true
+        emit("INFINITY")
       } else if (value == -math.INFINITY) {
-        usedMath = true;
-        emit("-INFINITY");
+        usedMath = true
+        emit("-INFINITY")
       } else if (value != value) {
-        usedMath = true;
-        emit("NAN");
+        usedMath = true
+        emit("NAN")
       } else {
-        emit(doubleToStringWithDot(value) + (node.kind == .FLOAT ? "f" : ""));
+        emit(doubleToStringWithDot(value) + (node.kind == .FLOAT ? "f" : ""))
       }
     }
 
     // Avoid generating C++ code that adds two "char *" pointers or that
     // tries to access a member of std::string off a "char *" pointer
     static bool needsWrappedStringConstructor(Node node) {
-      var parent = node.parent;
+      var parent = node.parent
       switch (parent.kind) {
-        case .CALL { return node == parent.callValue(); }
-        case .HOOK { return parent.hookTrue() == node && parent.hookFalse().kind == .STRING; }
-        case .ADD { return parent.binaryLeft() == node && parent.binaryRight().kind == .STRING; }
-        case .ASSIGN, .ASSIGN_ADD, .VARIABLE, .MEMBER_INITIALIZER, .RETURN { return false; }
-        default { return true; }
+        case .CALL { return node == parent.callValue() }
+        case .HOOK { return parent.hookTrue() == node && parent.hookFalse().kind == .STRING }
+        case .ADD { return parent.binaryLeft() == node && parent.binaryRight().kind == .STRING }
+        case .ASSIGN, .ASSIGN_ADD, .VARIABLE, .MEMBER_INITIALIZER, .RETURN { return false }
+        default { return true }
       }
     }
 
     override void emitString(Node node) {
-      var content = node.asString();
-      var needsLength = "\0" in content;
-      var needsWrap = needsLength || needsWrappedStringConstructor(node);
+      var content = node.asString()
+      var needsLength = "\0" in content
+      var needsWrap = needsLength || needsWrappedStringConstructor(node)
 
       if (needsWrap) {
-        handleSymbol(cache.stringType.symbol);
-        emit(mangleName(cache.stringType.symbol) + "(");
+        handleSymbol(cache.stringType.symbol)
+        emit(mangleName(cache.stringType.symbol) + "(")
       }
-      super(node);
+      super(node)
       if (needsWrap) {
         if (needsLength) {
-          emit(", " + content.size());
+          emit(", " + content.size())
         }
-        emit(")");
+        emit(")")
       }
     }
 
     override void emitDot(Node node) {
-      var target = node.dotTarget();
-      var dotName = node.dotName();
+      var target = node.dotTarget()
+      var dotName = node.dotName()
       if (target != null) {
-        emitExpression(target, .MEMBER);
+        emitExpression(target, .MEMBER)
       }
       if (dotName.kind == .QUOTED) {
-        dotName = dotName.quotedValue();
+        dotName = dotName.quotedValue()
       }
-      emit(node.kind == .DOT_COLON ? "::" : node.kind == .DOT_ARROW || target != null && target.type.isReference() ? "->" : ".");
-      emit(node.symbol != null ? mangleName(node.symbol) : dotName.asString());
+      emit(node.kind == .DOT_COLON ? "::" : node.kind == .DOT_ARROW || target != null && target.type.isReference() ? "->" : ".")
+      emit(node.symbol != null ? mangleName(node.symbol) : dotName.asString())
     }
 
     override void emitCall(Node node, Precedence precedence) {
-      var value = node.callValue();
-      var isNew = value.kind == .TYPE;
-      var wrap = isNew && precedence == .MEMBER;
-      if (wrap) emit("(");
+      var value = node.callValue()
+      var isNew = value.kind == .TYPE
+      var wrap = isNew && precedence == .MEMBER
+      if (wrap) emit("(")
       if (isNew) {
-        emit("new ");
-        emitCppType(value.type, .BARE);
+        emit("new ")
+        emitCppType(value.type, .BARE)
       } else {
-        emitExpression(value, .UNARY_POSTFIX);
+        emitExpression(value, .UNARY_POSTFIX)
       }
       if (!isNew && value.type != null && value.type.isParameterized()) {
-        var substitutions = value.type.substitutions;
-        emit("<");
+        var substitutions = value.type.substitutions
+        emit("<")
         for (var i = 0; i < substitutions.size(); i++) {
           if (i != 0) {
-            emit(", ");
+            emit(", ")
           }
-          emitCppType(substitutions[i], .NORMAL);
+          emitCppType(substitutions[i], .NORMAL)
         }
-        emit(">");
+        emit(">")
       }
-      emit("(");
-      emitCommaSeparatedExpressions(node.callArguments());
-      emit(")");
-      if (wrap) emit(")");
+      emit("(")
+      emitCommaSeparatedExpressions(node.callArguments())
+      emit(")")
+      if (wrap) emit(")")
     }
 
     override void emitParenthesizedCast(Type type, Node node, Precedence precedence) {
@@ -574,228 +574,228 @@ namespace cpp {
       // all cases but fails for strongly-typed enums, which are missing a
       // unary not operator.
       if (options.config == .WINDOWS && type.isBool(cache)) {
-        if (.UNARY_PREFIX < precedence) emit("(");
-        emit("!!");
+        if (.UNARY_PREFIX < precedence) emit("(")
+        emit("!!")
         if (node.type.isPrimitive()) {
-          emitExpression(node, .UNARY_PREFIX);
+          emitExpression(node, .UNARY_PREFIX)
         } else {
-          emit("static_cast<int>(");
-          emitExpression(node, .UNARY_PREFIX);
-          emit(")");
+          emit("static_cast<int>(")
+          emitExpression(node, .UNARY_PREFIX)
+          emit(")")
         }
-        if (.UNARY_PREFIX < precedence) emit(")");
+        if (.UNARY_PREFIX < precedence) emit(")")
       }
 
       // Emit a normal cast
       else {
-        emit("static_cast<");
-        emitNormalType(type);
-        emit(">(");
-        emitExpression(node, .LOWEST);
-        emit(")");
+        emit("static_cast<")
+        emitNormalType(type)
+        emit(">(")
+        emitExpression(node, .LOWEST)
+        emit(")")
       }
     }
 
     override bool shouldEmitCast(Node node) {
       // C++11 doesn't auto-convert enums to ints for some reason
       if (node.type.isInt(cache) && node.castValue().type.isRegularEnum()) {
-        return true;
+        return true
       }
 
       // C++ doesn't find common types for some reason, so this is an error:
       //
-      //   struct Foo {};
-      //   struct Bar : Foo {};
-      //   struct Baz : Foo {};
-      //   Foo *foo = ... ? new Bar : new Baz;
+      //   struct Foo {}
+      //   struct Bar : Foo {}
+      //   struct Baz : Foo {}
+      //   Foo *foo = ... ? new Bar : new Baz
       //
       // This must be used instead:
       //
-      //   Foo *foo = ... ? static_cast<Foo *>(new Bar) : new Baz;
+      //   Foo *foo = ... ? static_cast<Foo *>(new Bar) : new Baz
       //
       if (node.type.isReference() && node.parent.kind == .HOOK && node.castValue().kind != .NULL && node == node.parent.hookTrue()) {
-        return true;
+        return true
       }
 
-      return super(node);
+      return super(node)
     }
 
     override void emitInt(Node node, Precedence precedence) {
       if (node.type.isEnum() && node.symbol != null) {
-        emitName(node);
+        emitName(node)
       } else if (node.type.isRegularEnum()) {
-        if (.UNARY_PREFIX < precedence) emit("(");
-        emit("(");
-        emitNormalType(node.type);
-        emit(")");
-        emit(node.asInt().toString());
-        if (.UNARY_PREFIX < precedence) emit(")");
+        if (.UNARY_PREFIX < precedence) emit("(")
+        emit("(")
+        emitNormalType(node.type)
+        emit(")")
+        emit(node.asInt().toString())
+        if (.UNARY_PREFIX < precedence) emit(")")
       } else {
-        emit(node.asInt().toString());
+        emit(node.asInt().toString())
       }
     }
 
     override void emitList(Node node, Precedence precedence) {
-      var values = node.listValues();
-      var wrap = values.size() > 0 || precedence == .MEMBER;
-      if (wrap) emit("(");
-      emit("new ");
-      emitCppType(node.type, .BARE);
-      emit("()");
-      if (wrap) emit(")");
+      var values = node.listValues()
+      var wrap = values.size() > 0 || precedence == .MEMBER
+      if (wrap) emit("(")
+      emit("new ")
+      emitCppType(node.type, .BARE)
+      emit("()")
+      if (wrap) emit(")")
       if (values.size() != 0) {
-        emit("->literal({ ");
-        emitCommaSeparatedExpressions(values);
-        emit(" })");
+        emit("->literal({ ")
+        emitCommaSeparatedExpressions(values)
+        emit(" })")
       }
     }
 
     override void emitSuperCall(Node node) {
-      emit(fullName(node.symbol));
-      emit("(");
-      emitCommaSeparatedExpressions(node.superCallArguments());
-      emit(")");
+      emit(fullName(node.symbol))
+      emit("(")
+      emitCommaSeparatedExpressions(node.superCallArguments())
+      emit(")")
     }
 
     override bool hookNeedsExplicitCast(Node node) {
-      return isMarkSweep && node.type.isReference();
+      return isMarkSweep && node.type.isReference()
     }
 
     override void emitNormalType(Type type) {
-      emitCppType(type, .NORMAL);
+      emitCppType(type, .NORMAL)
     }
 
     void emitCppType(Type type, CppEmitType mode) {
       if (type.isEnumFlags()) {
-        emit("int");
+        emit("int")
       } else {
-        emitType(type);
+        emitType(type)
       }
       if (type.isReference() && mode != .BARE) {
-        emit(" *");
+        emit(" *")
       } else if (mode == .DECLARATION && (!type.isQuoted() || !type.symbol.node.kind.isUnaryTypeOperator())) {
-        emit(" ");
+        emit(" ")
       }
     }
 
     override bool useDoubleColonForEnclosingSymbols(Symbol symbol) {
-      return true;
+      return true
     }
 
     override string mangleName(Symbol symbol) {
       if (symbol.name == "main" && symbol.fullName() == "main") {
-        return "_main_";
+        return "_main_"
       }
-      return super(symbol);
+      return super(symbol)
     }
 
-    override StringMap<bool> createIsKeyword() {
+    override StringMap<int> createIsKeyword() {
       var result = {
-        "alignas": true,
-        "alignof": true,
-        "and": true,
-        "and_eq": true,
-        "asm": true,
-        "auto": true,
-        "bitand": true,
-        "bitor": true,
-        "bool": true,
-        "break": true,
-        "case": true,
-        "catch": true,
-        "char": true,
-        "char16_t": true,
-        "char32_t": true,
-        "class": true,
-        "compl": true,
-        "const": true,
-        "const_cast": true,
-        "constexpr": true,
-        "continue": true,
-        "decltype": true,
-        "default": true,
-        "delete": true,
-        "do": true,
-        "double": true,
-        "dynamic_cast": true,
-        "else": true,
-        "enum": true,
-        "explicit": true,
-        "export": true,
-        "extern": true,
-        "false": true,
-        "float": true,
-        "for": true,
-        "friend": true,
-        "goto": true,
-        "if": true,
-        "INFINITY": true,
-        "inline": true,
-        "int": true,
-        "long": true,
-        "mutable": true,
-        "namespace": true,
-        "NAN": true,
-        "new": true,
-        "noexcept": true,
-        "not": true,
-        "not_eq": true,
-        "NULL": true,
-        "nullptr": true,
-        "operator": true,
-        "or": true,
-        "or_eq": true,
-        "private": true,
-        "protected": true,
-        "public": true,
-        "register": true,
-        "reinterpret_cast": true,
-        "return": true,
-        "short": true,
-        "signed": true,
-        "sizeof": true,
-        "static": true,
-        "static_assert": true,
-        "static_cast": true,
-        "struct": true,
-        "switch": true,
-        "template": true,
-        "this": true,
-        "thread_local": true,
-        "throw": true,
-        "true": true,
-        "try": true,
-        "typedef": true,
-        "typeid": true,
-        "typename": true,
-        "union": true,
-        "unsigned": true,
-        "using": true,
-        "virtual": true,
-        "void": true,
-        "volatile": true,
-        "wchar_t": true,
-        "while": true,
-        "xor": true,
-        "xor_eq": true,
-      };
+        "alignas": 0,
+        "alignof": 0,
+        "and": 0,
+        "and_eq": 0,
+        "asm": 0,
+        "auto": 0,
+        "bitand": 0,
+        "bitor": 0,
+        "bool": 0,
+        "break": 0,
+        "case": 0,
+        "catch": 0,
+        "char": 0,
+        "char16_t": 0,
+        "char32_t": 0,
+        "class": 0,
+        "compl": 0,
+        "const": 0,
+        "const_cast": 0,
+        "constexpr": 0,
+        "continue": 0,
+        "decltype": 0,
+        "default": 0,
+        "delete": 0,
+        "do": 0,
+        "double": 0,
+        "dynamic_cast": 0,
+        "else": 0,
+        "enum": 0,
+        "explicit": 0,
+        "export": 0,
+        "extern": 0,
+        "false": 0,
+        "float": 0,
+        "for": 0,
+        "friend": 0,
+        "goto": 0,
+        "if": 0,
+        "INFINITY": 0,
+        "inline": 0,
+        "int": 0,
+        "long": 0,
+        "mutable": 0,
+        "namespace": 0,
+        "NAN": 0,
+        "new": 0,
+        "noexcept": 0,
+        "not": 0,
+        "not_eq": 0,
+        "NULL": 0,
+        "nullptr": 0,
+        "operator": 0,
+        "or": 0,
+        "or_eq": 0,
+        "private": 0,
+        "protected": 0,
+        "public": 0,
+        "register": 0,
+        "reinterpret_cast": 0,
+        "return": 0,
+        "short": 0,
+        "signed": 0,
+        "sizeof": 0,
+        "static": 0,
+        "static_assert": 0,
+        "static_cast": 0,
+        "struct": 0,
+        "switch": 0,
+        "template": 0,
+        "this": 0,
+        "thread_local": 0,
+        "throw": 0,
+        "true": 0,
+        "try": 0,
+        "typedef": 0,
+        "typeid": 0,
+        "typename": 0,
+        "union": 0,
+        "unsigned": 0,
+        "using": 0,
+        "virtual": 0,
+        "void": 0,
+        "volatile": 0,
+        "wchar_t": 0,
+        "while": 0,
+        "xor": 0,
+        "xor_eq": 0,
+      }
 
       // The windows.h header has an excellent selection of very poorly chosen #define names
       if (options.config == .WINDOWS) {
-        result["CONST"] = true;
-        result["DELETE"] = true;
-        result["ERROR"] = true;
-        result["EXTERN_C"] = true;
-        result["FALSE"] = true;
-        result["IN"] = true;
-        result["INTERFACE"] = true;
-        result["OUT"] = true;
-        result["PURE"] = true;
-        result["THIS"] = true;
-        result["TRUE"] = true;
+        result["CONST"] = 0
+        result["DELETE"] = 0
+        result["ERROR"] = 0
+        result["EXTERN_C"] = 0
+        result["FALSE"] = 0
+        result["IN"] = 0
+        result["INTERFACE"] = 0
+        result["OUT"] = 0
+        result["PURE"] = 0
+        result["THIS"] = 0
+        result["TRUE"] = 0
       }
 
-      return result;
+      return result
     }
   }
 }

@@ -1,50 +1,50 @@
 class CallInfo {
-  final Symbol symbol;
-  final List<Node> callSites = [];
+  final Symbol symbol
+  final List<Node> callSites = []
 }
 
 class CallGraph {
-  final List<CallInfo> callInfo = [];
-  final var symbolToInfoIndex = IntMap<int>();
+  final List<CallInfo> callInfo = []
+  final var symbolToInfoIndex = IntMap<int>()
 
   new(Node program) {
-    assert program.kind == .PROGRAM;
-    visit(program);
+    assert program.kind == .PROGRAM
+    visit(program)
   }
 
   private void visit(Node node) {
     if (node.hasChildren()) {
-      var children = node.children;
+      var children = node.children
       for (var i = 0, n = children.size(); i < n; i++) {
-        var child = children[i];
+        var child = children[i]
         if (child != null) {
-          visit(child);
+          visit(child)
         }
       }
     }
 
     if (node.kind == .CALL) {
-      var value = node.callValue();
+      var value = node.callValue()
       if (value.symbol != null && value.symbol.kind.isFunction()) {
-        assert value.kind == .NAME || value.kind == .DOT;
-        recordCallSite(value.symbol, node);
+        assert value.kind == .NAME || value.kind == .DOT
+        recordCallSite(value.symbol, node)
       }
     }
 
     else if (node.kind == .FUNCTION) {
-      recordCallSite(node.symbol, null);
+      recordCallSite(node.symbol, null)
     }
   }
 
   private void recordCallSite(Symbol symbol, Node node) {
-    var index = symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
-    var info = index < 0 ? CallInfo(symbol) : callInfo[index];
+    var index = symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1)
+    var info = index < 0 ? CallInfo(symbol) : callInfo[index]
     if (index < 0) {
-      symbolToInfoIndex[symbol.uniqueID] = callInfo.size();
-      callInfo.push(info);
+      symbolToInfoIndex[symbol.uniqueID] = callInfo.size()
+      callInfo.push(info)
     }
     if (node != null) {
-      info.callSites.push(node);
+      info.callSites.push(node)
     }
   }
 }

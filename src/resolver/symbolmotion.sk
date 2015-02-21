@@ -1,15 +1,15 @@
 class SymbolMotionPass {
-  private final Resolver resolver;
+  private final Resolver resolver
 
   static void run(Resolver resolver) {
-    var pass = SymbolMotionPass(resolver);
+    var pass = SymbolMotionPass(resolver)
     for (var i = 0; i < resolver.allSymbols.size(); i++) {
-      pass.moveSymbol(resolver.allSymbols[i]);
+      pass.moveSymbol(resolver.allSymbols[i])
     }
   }
 
   private void moveSymbol(Symbol symbol) {
-    var enclosingSymbol = symbol.enclosingSymbol;
+    var enclosingSymbol = symbol.enclosingSymbol
     if (!symbol.isImport() && enclosingSymbol != null && !symbol.kind.isParameter() && (
         enclosingSymbol.isImport() ||
         enclosingSymbol.kind.isEnum() && symbol.isFromExtension() ||
@@ -18,51 +18,51 @@ class SymbolMotionPass {
           resolver.options.target.moveNonVirtualSymbolsOffInterfaces() && enclosingSymbol.kind == .INTERFACE))) {
 
       // Move the symbol to an automatically-generated namespace
-      var enclosingType = symbol.enclosingSymbol.type;
-      var shadow = shadowForSymbol(enclosingSymbol);
-      var member = enclosingType.members[symbol.name];
-      assert member.symbol == symbol;
-      enclosingType.members.remove(symbol.name);
-      assert shadow.findMember(symbol.name) == null;
-      shadow.addMember(member);
-      symbol.enclosingSymbol = shadow.symbol;
+      var enclosingType = symbol.enclosingSymbol.type
+      var shadow = shadowForSymbol(enclosingSymbol)
+      var member = enclosingType.members[symbol.name]
+      assert member.symbol == symbol
+      enclosingType.members.remove(symbol.name)
+      assert shadow.findMember(symbol.name) == null
+      shadow.addMember(member)
+      symbol.enclosingSymbol = shadow.symbol
 
       // This should no longer be marked static because the enclosing symbol is now a namespace
-      symbol.flags &= ~.STATIC;
+      symbol.flags &= ~.STATIC
 
       // Move the node for this symbol inside the namespace node
-      var block = shadow.symbol.node.declarationBlock();
-      var parent = symbol.node.parent;
-      var node = symbol.node.remove();
+      var block = shadow.symbol.node.declarationBlock()
+      var parent = symbol.node.parent
+      var node = symbol.node.remove()
       if (parent.kind == .VARIABLE_CLUSTER) {
-        node = Node.createVariableCluster(Node.createType(symbol.type), [node]);
+        node = Node.createVariableCluster(Node.createType(symbol.type), [node])
         if (parent.children.size() == 1) {
-          parent.remove();
+          parent.remove()
         }
       }
-      block.appendChild(node);
+      block.appendChild(node)
     }
   }
 
   private Type shadowForSymbol(Symbol symbol) {
     // Get the namespace for the extension if it exists
-    var inName = "in_" + symbol.name;
-    var enclosingSymbol = symbol.enclosingSymbol;
-    var inMember = enclosingSymbol.type.findMember(inName);
+    var inName = "in_" + symbol.name
+    var enclosingSymbol = symbol.enclosingSymbol
+    var inMember = enclosingSymbol.type.findMember(inName)
     if (inMember != null) {
-      return inMember.type;
+      return inMember.type
     }
 
     // Create a namespace for the extension if it doesn't exist
-    var inSymbol = resolver.createSymbol(inName, .NAMESPACE);
-    inSymbol.enclosingSymbol = enclosingSymbol;
-    var inType = Type(inSymbol);
-    inSymbol.type = inType;
-    inMember = Member(inSymbol);
-    inMember.type = inType;
-    enclosingSymbol.type.addMember(inMember);
-    inSymbol.node = Node.createNamespace(Node.createName(inName).withSymbol(inSymbol), Node.createBlock([])).withSymbol(inSymbol);
-    symbol.node.insertSiblingAfter(inSymbol.node);
-    return inType;
+    var inSymbol = resolver.createSymbol(inName, .NAMESPACE)
+    inSymbol.enclosingSymbol = enclosingSymbol
+    var inType = Type(inSymbol)
+    inSymbol.type = inType
+    inMember = Member(inSymbol)
+    inMember.type = inType
+    enclosingSymbol.type.addMember(inMember)
+    inSymbol.node = Node.createNamespace(Node.createName(inName).withSymbol(inSymbol), Node.createBlock([])).withSymbol(inSymbol)
+    symbol.node.insertSiblingAfter(inSymbol.node)
+    return inType
   }
 }

@@ -1,60 +1,60 @@
 void commandLineWarningDuplicateFlagValue(Log log, Range range, string name, Range previous) {
-  log.warning(range, "Multiple values are specified for " + simpleQuote(name) + ", using the later value");
-  if (!previous.isEmpty()) log.note(previous, "Ignoring the value from the previous use");
+  log.warning(range, "Multiple values are specified for " + simpleQuote(name) + ", using the later value")
+  if (!previous.isEmpty()) log.note(previous, "Ignoring the value from the previous use")
 }
 
 void commandLineErrorBadFlag(Log log, Range range, string name) {
-  log.error(range, "Unknown command line flag " + simpleQuote(name));
+  log.error(range, "Unknown command line flag " + simpleQuote(name))
 }
 
 void commandLineErrorMissingTarget(Log log, Range range, string name) {
-  log.error(range, "Specify the target format using " + simpleQuote(name));
+  log.error(range, "Specify the target format using " + simpleQuote(name))
 }
 
 void commandLineErrorMissingOutput(Log log, Range range, string first, string second) {
-  log.error(range, "Specify the output location using either " + simpleQuote(first) + " or " + simpleQuote(second));
+  log.error(range, "Specify the output location using either " + simpleQuote(first) + " or " + simpleQuote(second))
 }
 
 void commandLineErrorDuplicateOutput(Log log, Range range, string first, string second) {
-  log.error(range, "Cannot specify both " + simpleQuote(first) + " and " + simpleQuote(second));
+  log.error(range, "Cannot specify both " + simpleQuote(first) + " and " + simpleQuote(second))
 }
 
 void commandLineErrorNonBooleanValue(Log log, Range range, string value, string text) {
-  log.error(range, "Expected \"true\" or \"false\" but found " + simpleQuote(value) + " in " + simpleQuote(text));
+  log.error(range, "Expected \"true\" or \"false\" but found " + simpleQuote(value) + " in " + simpleQuote(text))
 }
 
 void commandLineErrorNonIntegerValue(Log log, Range range, string value, string text) {
-  log.error(range, "Expected integer constant but found " + simpleQuote(value) + " in " + simpleQuote(text));
+  log.error(range, "Expected integer constant but found " + simpleQuote(value) + " in " + simpleQuote(text))
 }
 
 void commandLineErrorMissingValue(Log log, Range range, string text) {
-  log.error(range, "Use " + simpleQuote(text) + " to provide a value");
+  log.error(range, "Use " + simpleQuote(text) + " to provide a value")
 }
 
 void commandLineErrorExpectedToken(Log log, Range range, string expected, string found, string text) {
-  log.error(range, "Expected " + simpleQuote(expected) + " but found " + simpleQuote(found) + " in " + simpleQuote(text));
+  log.error(range, "Expected " + simpleQuote(expected) + " but found " + simpleQuote(found) + " in " + simpleQuote(text))
 }
 
 void commandLineErrorInvalidEnum(Log log, Range range, string name, string found, List<string> expected) {
-  log.error(range, "Invalid " + name + " " + simpleQuote(found) + ", must be either " + prettyPrint.join(simpleQuoteAll(expected), "or"));
+  log.error(range, "Invalid " + name + " " + simpleQuote(found) + ", must be either " + prettyPrint.join(simpleQuoteAll(expected), "or"))
 }
 
 void commandLineErrorUnexpectedConfiguration(Log log, Range range, string config, string target) {
-  log.error(range, "Unexpected configuration " + simpleQuote(config) + " for target " + simpleQuote(target));
+  log.error(range, "Unexpected configuration " + simpleQuote(config) + " for target " + simpleQuote(target))
 }
 
 void commandLineErrorUnexpectedGarbageCollectionStrategy(Log log, Range range, string target) {
-  log.error(range, "The " + simpleQuote(target) + " target does not have a configurable garbage collection strategy");
+  log.error(range, "The " + simpleQuote(target) + " target does not have a configurable garbage collection strategy")
 }
 
 void commandLineErrorUnreadableFile(Log log, Range range, string name) {
-  log.error(range, "Could not read from " + simpleQuote(name));
+  log.error(range, "Could not read from " + simpleQuote(name))
 }
 
 void commandLineErrorUnwritableFile(Log log, Range range, string name) {
-  log.error(range, "Could not write to " + simpleQuote(name));
+  log.error(range, "Could not write to " + simpleQuote(name))
 }
 
 void commandLineErrorNoInputFiles(Log log, Range range) {
-  log.error(range, "Missing input files");
+  log.error(range, "Missing input files")
 }

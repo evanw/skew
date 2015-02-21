@@ -7,7 +7,7 @@ enum Foo { FOO = foo }
 <stdin>:2:18: error: Expected integer constant but found expression of type \"int\"
 enum Foo { FOO = foo }
                  ~~~
-");
+")
 
 test("
 namespace foo {
@@ -17,7 +17,7 @@ namespace foo {
 <stdin>:2:20: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   enum Foo { FOO = false }
                    ~~~~~
-");
+")
 
 test("
 enum Foo { FOO }
@@ -28,7 +28,7 @@ void test() {
 <stdin>:3:3: error: Cannot store to a symbol marked as \"const\"
   Foo.FOO = Foo.FOO;
   ~~~~~~~
-");
+")
 
 test("
 enum Foo { FOO }
@@ -42,7 +42,7 @@ bool foo = Foo.FOO | Foo.FOO;
 <stdin>:4:12: error: Cannot convert from type \"Bar\" to type \"bool\" without a cast
 bool bar = Bar.FOO | Bar.FOO;
            ~~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 enum Foo { BAR, BAZ }
@@ -59,7 +59,7 @@ int z = x == .FOO || .FOO == y;
 <stdin>:4:23: error: \"FOO\" is not declared on type \"Foo\"
 int z = x == .FOO || .FOO == y;
                       ~~~
-");
+")
 
 test("
 enum Foo { BAR }
@@ -69,7 +69,7 @@ Foo bar() { return .BAR; }
 <stdin>:2:21: error: \"BAZ\" is not declared on type \"Foo\"
 Foo foo() { return .BAZ; }
                     ~~~
-");
+")
 
 test("
 Foo foo(bool foo, bool bar) {
@@ -77,7 +77,7 @@ Foo foo(bool foo, bool bar) {
 }
 enum Foo { A, B, C }
 ", "
-");
+")
 
 test("
 int foo(Foo foo, bool bar) {
@@ -88,13 +88,13 @@ enum Foo { A, B, C }
 <stdin>:2:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   return foo == (bar ? .A : .B);
          ~~~~~~~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 enum Foo {}
 in Foo { int foo() { return this; } }
 ", "
-");
+")
 
 test("
 enum Foo { FOO }
@@ -107,7 +107,7 @@ in Foo { int foo; }
 <stdin>:3:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
 bool foo = Foo.FOO.foo;
            ~~~~~~~~~~~
-");
+")
 
 test("
 enum Foo { FOO }
@@ -120,7 +120,7 @@ bool foo = Foo.FOO.foo;
 <stdin>:3:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
 bool foo = Foo.FOO.foo;
            ~~~~~~~~~~~
-");
+")
 
 test("
 enum Foo { FOO }
@@ -130,7 +130,7 @@ bool foo = Foo.foo;
 <stdin>:3:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
 bool foo = Foo.foo;
            ~~~~~~~
-");
+")
 
 test("
 void test() {
@@ -141,7 +141,7 @@ enum Foo { FOO = 1, BAR = 1 }
 <stdin>:4:6: error: Cannot automatically generate \"toString\" for \"Foo\" because \"BAR\" and \"FOO\" both have the same value 1
 enum Foo { FOO = 1, BAR = 1 }
      ~~~
-");
+")
 
 test("
 void test() {
@@ -149,7 +149,7 @@ void test() {
 }
 enum Foo { FOO, BAR }
 ", "
-");
+")
 
 test("
 class Foo {}
@@ -158,7 +158,7 @@ in Foo { int foo() { return this; } }
 <stdin>:2:29: error: Cannot convert from type \"Foo\" to type \"int\"
 in Foo { int foo() { return this; } }
                             ~~~~
-");
+")
 
 test("
 enum Foo {}
@@ -167,7 +167,7 @@ in Foo { static string foo = false; }
 <stdin>:2:30: error: Cannot convert from type \"bool\" to type \"string\"
 in Foo { static string foo = false; }
                              ~~~~~
-");
+")
 
 test("
 enum flags Foo { FOO, BAR }
@@ -205,7 +205,7 @@ bool xor_b = Foo.FOO ^ ~.BAR;
 <stdin>:16:14: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
 bool xor_d = ~.FOO ^ Foo.BAR;
              ~~~~~~~~~~~~~~~
-");
+")
 
 test("
 enum flags Foo { FOO, BAR, BAZ }
@@ -223,7 +223,7 @@ bool c = .FOO | ~Foo.BAR & .BAZ;
 <stdin>:5:10: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
 bool d = .FOO | .BAR & ~Foo.BAZ;
          ~~~~~~~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 enum Foo { FOO, BAR }
@@ -244,7 +244,7 @@ int c = Foo.FOO <= .BAR;
 <stdin>:5:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 int d = .FOO >= Foo.BAR;
         ~~~~~~~~~~~~~~~
-");
+")
 
 test("
 enum flags Foo {
@@ -257,7 +257,7 @@ enum flags Foo {
 <stdin>:5:8: error: Assigned value for enum \"E32\" cannot fit in an integer
   E31, E32,
        ~~~
-");
+")
 
 test("
 enum flags Foo {
@@ -266,13 +266,13 @@ enum flags Foo {
   C = .A | .B,
 }
 ", "
-");
+")
 
 test("
 enum flags Foo { FOO }
 Foo foo(bool b) { return b ? .FOO : 0; }
 ", "
-");
+")
 
 test("
 enum flags Foo { FOO }
@@ -282,6 +282,6 @@ bool foo(Foo foo) {
   return bar == baz;
 }
 ", "
-");
+")
 
 }}

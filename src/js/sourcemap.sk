@@ -1,99 +1,99 @@
 class SourceMapping {
-  final int sourceIndex;
-  final int originalLine; // 0-based
-  final int originalColumn; // 0-based
-  final int generatedLine; // 0-based
-  final int generatedColumn; // 0-based
+  final int sourceIndex
+  final int originalLine // 0-based
+  final int originalColumn // 0-based
+  final int generatedLine // 0-based
+  final int generatedColumn // 0-based
 }
 
 class SourceMappingComparison : Comparison<SourceMapping> {
-  static final var INSTANCE = SourceMappingComparison();
+  static final var INSTANCE = SourceMappingComparison()
 
   override int compare(SourceMapping left, SourceMapping right) {
-    var delta = left.generatedLine - right.generatedLine;
-    return delta != 0 ? delta : left.generatedColumn - right.generatedColumn;
+    var delta = left.generatedLine - right.generatedLine
+    return delta != 0 ? delta : left.generatedColumn - right.generatedColumn
   }
 }
 
 // Based on: https://github.com/mozilla/source-map
 class SourceMapGenerator {
-  private List<SourceMapping> mappings = [];
-  private List<Source> sources = [];
+  private List<SourceMapping> mappings = []
+  private List<Source> sources = []
 
   void addMapping(Source source, int originalLine, int originalColumn, int generatedLine, int generatedColumn) {
-    var sourceIndex = sources.indexOf(source);
+    var sourceIndex = sources.indexOf(source)
     if (sourceIndex == -1) {
-      sourceIndex = sources.size();
-      sources.push(source);
+      sourceIndex = sources.size()
+      sources.push(source)
     }
-    mappings.push(SourceMapping(sourceIndex, originalLine, originalColumn, generatedLine, generatedColumn));
+    mappings.push(SourceMapping(sourceIndex, originalLine, originalColumn, generatedLine, generatedColumn))
   }
 
   string toString() {
-    List<string> sourceNames = [];
-    List<string> sourceContents = [];
+    List<string> sourceNames = []
+    List<string> sourceContents = []
 
     for (var i = 0; i < sources.size(); i++) {
-      Source source = sources[i];
-      sourceNames.push(quoteString(source.name, '"'));
-      sourceContents.push(quoteString(source.contents, '"'));
+      Source source = sources[i]
+      sourceNames.push(quoteString(source.name, '"'))
+      sourceContents.push(quoteString(source.contents, '"'))
     }
 
-    var builder = StringBuilder();
-    builder.append("{\"version\":3,\"sources\":[");
-    builder.append(",".join(sourceNames));
-    builder.append("],\"sourcesContent\":[");
-    builder.append(",".join(sourceContents));
-    builder.append("],\"names\":[],\"mappings\":\"");
+    var builder = StringBuilder()
+    builder.append("{\"version\":3,\"sources\":[")
+    builder.append(",".join(sourceNames))
+    builder.append("],\"sourcesContent\":[")
+    builder.append(",".join(sourceContents))
+    builder.append("],\"names\":[],\"mappings\":\"")
 
     // Sort the mappings in increasing order by generated location
-    mappings.sort(SourceMappingComparison.INSTANCE);
+    mappings.sort(SourceMappingComparison.INSTANCE)
 
-    var previousGeneratedColumn = 0;
-    var previousGeneratedLine = 0;
-    var previousOriginalColumn = 0;
-    var previousOriginalLine = 0;
-    var previousSourceIndex = 0;
+    var previousGeneratedColumn = 0
+    var previousGeneratedLine = 0
+    var previousOriginalColumn = 0
+    var previousOriginalLine = 0
+    var previousSourceIndex = 0
 
     // Generate the base64 VLQ encoded mappings
     for (var i = 0; i < mappings.size(); i++) {
-      var mapping = mappings[i];
-      var generatedLine = mapping.generatedLine;
+      var mapping = mappings[i]
+      var generatedLine = mapping.generatedLine
 
       // Insert ',' for the same line and ';' for a line
       if (previousGeneratedLine == generatedLine) {
         if (previousGeneratedColumn == mapping.generatedColumn && (
             previousGeneratedLine != 0 || previousGeneratedColumn != 0)) {
-          continue;
+          continue
         }
-        builder.append(",");
+        builder.append(",")
       } else {
-        previousGeneratedColumn = 0;
+        previousGeneratedColumn = 0
         while (previousGeneratedLine < generatedLine) {
-          builder.append(";");
-          previousGeneratedLine++;
+          builder.append(";")
+          previousGeneratedLine++
         }
       }
 
       // Record the generated column (the line is recorded using ';' above)
-      builder.append(encodeVLQ(mapping.generatedColumn - previousGeneratedColumn));
-      previousGeneratedColumn = mapping.generatedColumn;
+      builder.append(encodeVLQ(mapping.generatedColumn - previousGeneratedColumn))
+      previousGeneratedColumn = mapping.generatedColumn
 
       // Record the generated source
-      builder.append(encodeVLQ(mapping.sourceIndex - previousSourceIndex));
-      previousSourceIndex = mapping.sourceIndex;
+      builder.append(encodeVLQ(mapping.sourceIndex - previousSourceIndex))
+      previousSourceIndex = mapping.sourceIndex
 
       // Record the original line
-      builder.append(encodeVLQ(mapping.originalLine - previousOriginalLine));
-      previousOriginalLine = mapping.originalLine;
+      builder.append(encodeVLQ(mapping.originalLine - previousOriginalLine))
+      previousOriginalLine = mapping.originalLine
 
       // Record the original column
-      builder.append(encodeVLQ(mapping.originalColumn - previousOriginalColumn));
-      previousOriginalColumn = mapping.originalColumn;
+      builder.append(encodeVLQ(mapping.originalColumn - previousOriginalColumn))
+      previousOriginalColumn = mapping.originalColumn
     }
 
-    builder.append("\"}\n");
-    return builder.toString();
+    builder.append("\"}\n")
+    return builder.toString()
   }
 
   // A single base 64 digit can contain 6 bits of data. For the base 64 variable
@@ -109,20 +109,20 @@ class SourceMapGenerator {
   //   101011
   //
   static string encodeVLQ(int value) {
-    var vlq = value < 0 ? -value << 1 | 1 : value << 1;
-    var encoded = "";
+    var vlq = value < 0 ? -value << 1 | 1 : value << 1
+    var encoded = ""
     do {
-      var digit = vlq & 31;
-      vlq >>= 5;
+      var digit = vlq & 31
+      vlq >>= 5
 
       // If there are still more digits in this value, we must make sure the
       // continuation bit is marked
-      if (vlq != 0) digit |= 32;
+      if (vlq != 0) digit |= 32
 
-      encoded += BASE64.sliceCodeUnit(digit);
-    } while (vlq != 0);
-    return encoded;
+      encoded += BASE64.sliceCodeUnit(digit)
+    } while (vlq != 0)
+    return encoded
   }
 
-  static final string BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  static final string BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 }

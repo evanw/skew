@@ -3,19 +3,19 @@
   namespace io {
     Box<string> readFile(string path) {
       try {
-        string contents = `require`("fs").readFileSync(path, "utf8");
-        return Box<string>(contents.replaceAll("\r\n", "\n"));
+        string contents = `require`("fs").readFileSync(path, "utf8")
+        return Box<string>(contents.replaceAll("\r\n", "\n"))
       } catch {
-        return null;
+        return null
       }
     }
 
     bool writeFile(string path, string contents) {
       try {
-        `require`("fs").writeFileSync(path, contents);
-        return true;
+        `require`("fs").writeFileSync(path, contents)
+        return true
       } catch {
-        return false;
+        return false
       }
     }
   }
@@ -25,20 +25,20 @@
   namespace io {
     @NeedsInclude("<fstream>") {
       Box<string> readFile(string path) {
-        `std::ifstream` file;
-        file.open(path."c_str"());
-        if (!file) return null;
-        var contents = "";
-        `contents.append(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>())`;
-        return Box<string>(contents.replaceAll("\r\n", "\n"));
+        `std::ifstream` file
+        file.open(path."c_str"())
+        if (!file) return null
+        var contents = ""
+        `contents.append(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>())`
+        return Box<string>(contents.replaceAll("\r\n", "\n"))
       }
 
       bool writeFile(string path, string contents) {
-        `std::ofstream` file;
-        file.open(path."c_str"());
-        if (!file) return false;
-        file << contents;
-        return true;
+        `std::ofstream` file
+        file.open(path."c_str"())
+        if (!file) return false
+        file << contents
+        return true
       }
     }
   }
@@ -47,27 +47,27 @@
 
   namespace io {
     Box<string> readFile(string path) {
-      var file = `File`.open(path, "r");
-      if (file == null) return null;
-      var value = Box<string>(file.read());
-      file.close();
-      return value;
+      var file = `File`.open(path, "r")
+      if (file == null) return null
+      var value = Box<string>(file.read())
+      file.close()
+      return value
     }
 
     bool writeFile(string path, string contents) {
-      var file = new `File`(path, "w");
-      if (file == null) return false;
-      file.write(contents);
-      file.close();
-      return true;
+      var file = new `File`(path, "w")
+      if (file == null) return false
+      file.write(contents)
+      file.close()
+      return true
     }
   }
 
 #else
 
   import namespace io {
-    Box<string> readFile(string path);
-    bool writeFile(string path, string contents);
+    Box<string> readFile(string path)
+    bool writeFile(string path, string contents)
   }
 
 #endif

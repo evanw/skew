@@ -9,7 +9,7 @@ Foo foo;
 <stdin>:4:1: error: \"Foo\" is not declared
 Foo foo;
 ~~~
-");
+")
 
 test("
 namespace ns {
@@ -17,7 +17,7 @@ namespace ns {
 }
 ns.Foo foo;
 ", "
-");
+")
 
 test("
 namespace ns1 {
@@ -31,7 +31,7 @@ ns1.Foo foo;
 <stdin>:7:5: error: \"Foo\" is not declared on type \"ns1\"
 ns1.Foo foo;
     ~~~
-");
+")
 
 test("
 int foo;
@@ -40,7 +40,7 @@ using foo;
 <stdin>:2:7: error: Expected a type here
 using foo;
       ~~~
-");
+")
 
 test("
 using foo;
@@ -49,13 +49,13 @@ class foo {}
 <stdin>:1:7: error: Expected a namespace here
 using foo;
       ~~~
-");
+")
 
 test("
 using foo;
 namespace foo {}
 ", "
-");
+")
 
 test("
 namespace ns { int foo; }
@@ -64,7 +64,7 @@ using ns.foo;
 <stdin>:2:7: error: Expected a type here
 using ns.foo;
       ~~~~~~
-");
+")
 
 test("
 using ns.Foo;
@@ -73,13 +73,13 @@ namespace ns { class Foo {} }
 <stdin>:1:7: error: Expected a namespace here
 using ns.Foo;
       ~~~~~~
-");
+")
 
 test("
 using ns.foo;
 namespace ns.foo {}
 ", "
-");
+")
 
 test("
 int foo;
@@ -88,13 +88,13 @@ alias bar = foo;
 <stdin>:2:13: error: Unexpected expression of type \"int\"
 alias bar = foo;
             ~~~
-");
+")
 
 test("
 alias bar = foo;
 class foo {}
 ", "
-");
+")
 
 test("
 alias bar = foo;
@@ -104,7 +104,7 @@ bool y = bar.x;
 <stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
 bool y = bar.x;
          ~~~~~
-");
+")
 
 test("
 namespace ns { int foo; }
@@ -113,7 +113,7 @@ alias bar = ns.foo;
 <stdin>:2:13: error: Unexpected expression of type \"int\"
 alias bar = ns.foo;
             ~~~~~~
-");
+")
 
 test("
 alias bar = ns.Foo;
@@ -123,13 +123,13 @@ bar Foo = 0;
 <stdin>:3:11: error: Cannot convert from type \"int\" to type \"ns.Foo\"
 bar Foo = 0;
           ^
-");
+")
 
 test("
 alias bar = ns.foo;
 namespace ns.foo {}
 ", "
-");
+")
 
 test("
 Int foo = false;
@@ -138,7 +138,7 @@ alias Int = int;
 <stdin>:1:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 Int foo = false;
           ~~~~~
-");
+")
 
 test("
 namespace ns1 {
@@ -152,7 +152,7 @@ namespace ns2 {
 <stdin>:2:13: error: Cannot convert from type \"int\" to type \"ns2.Foo\"
   Foo bar = 0;
             ^
-");
+")
 
 test("
 using ns;
@@ -164,7 +164,7 @@ namespace ns {
 <stdin>:2:11: error: Cannot convert from type \"int\" to type \"ns.Foo\"
 Foo foo = 0;
           ^
-");
+")
 
 test("
 using ns;
@@ -177,7 +177,7 @@ using ns;
 <stdin>:2:11: error: Cannot convert from type \"int\" to type \"ns.Foo\"
 Foo foo = 0;
           ^
-");
+")
 
 test("
 using ns2;
@@ -194,7 +194,7 @@ namespace ns2 {
 <stdin>:3:1: error: Reference to \"Foo\" is ambiguous, could be \"ns2.Foo\" or \"ns1.Foo\"
 Foo foo = 0;
 ~~~
-");
+")
 
 test("
 using ns1;
@@ -211,7 +211,7 @@ namespace ns2 {
 <stdin>:3:1: error: Reference to \"Foo\" is ambiguous, could be \"ns1.Foo\" or \"ns2.Foo\"
 Foo foo = 0;
 ~~~
-");
+")
 
 test("
 using ns1;
@@ -223,7 +223,7 @@ namespace ns2 { class Foo {} }
 <stdin>:3:1: error: Reference to \"Foo\" is ambiguous, could be \"ns1.Foo\" or \"ns2.Foo\"
 Foo foo = 0;
 ~~~
-");
+")
 
 test("
 alias Foo = ns1.Foo;
@@ -236,7 +236,7 @@ namespace ns2 { class Foo {} }
 <stdin>:4:11: error: Cannot convert from type \"int\" to type \"ns1.Foo\"
 Foo foo = 0;
           ^
-");
+")
 
 test("
 using ns1;
@@ -250,7 +250,7 @@ namespace ns3 { class Foo {} }
 <stdin>:4:1: error: Reference to \"Foo\" is ambiguous, could be \"ns1.Foo\", \"ns2.Foo\", or \"ns3.Foo\"
 Foo foo = 0;
 ~~~
-");
+")
 
 test("
 namespace ns {
@@ -262,7 +262,7 @@ namespace ns {
 <stdin>:4:13: error: Cannot convert from type \"int\" to type \"ns.Foo\"
   Foo foo = 0;
             ^
-");
+")
 
 test("
 namespace ns {
@@ -276,7 +276,7 @@ namespace ns {
 <stdin>:3:13: error: Cannot convert from type \"int\" to type \"ns.Foo\"
   Foo foo = 0;
             ^
-");
+")
 
 test("
 namespace ns {
@@ -290,7 +290,7 @@ namespace ns {
 <stdin>:6:13: error: Cannot convert from type \"int\" to type \"ns.Foo\"
   Foo foo = 0;
             ^
-");
+")
 
 test("
 namespace ns.foo { class Foo {} }
@@ -300,7 +300,7 @@ foo.Foo bar = 0;
 <stdin>:3:1: error: \"foo\" is not declared
 foo.Foo bar = 0;
 ~~~
-");
+")
 
 test("
 bar foo = false;
@@ -309,7 +309,7 @@ alias bar = int;
 <stdin>:1:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 bar foo = false;
           ~~~~~
-");
+")
 
 test("
 alias bar = int;
@@ -318,7 +318,7 @@ bar foo = false;
 <stdin>:2:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 bar foo = false;
           ~~~~~
-");
+")
 
 test("
 ns.bar foo = false;
@@ -327,7 +327,7 @@ namespace ns { alias bar = int; }
 <stdin>:1:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 ns.bar foo = false;
              ~~~~~
-");
+")
 
 test("
 namespace ns { alias bar = int; }
@@ -336,7 +336,7 @@ ns.bar foo = false;
 <stdin>:2:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 ns.bar foo = false;
              ~~~~~
-");
+")
 
 test("
 enum Bar {}
@@ -346,7 +346,7 @@ in Bar {
   }
 }
 ", "
-");
+")
 
 test("
 namespace a.b.c {
@@ -365,6 +365,6 @@ void foo() {
 <stdin>:8:14: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   bool foo = Foo<int>().id(false);
              ~~~~~~~~~~~~~~~~~~~~
-");
+")
 
 }}

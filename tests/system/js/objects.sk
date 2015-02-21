@@ -8,7 +8,7 @@ export class Foo {}
   Foo = function() {
   };
 }());
-");
+")
 
 testJS("
 export class Foo {}
@@ -18,7 +18,7 @@ in Foo {}
   Foo = function() {
   };
 }());
-");
+")
 
 testJS("
 export class Foo : Bar {}
@@ -39,7 +39,7 @@ class Bar {}
 
   $extends(Foo, Bar);
 }());
-");
+")
 
 testJS("
 export class Foo : Bar {}
@@ -61,7 +61,7 @@ class Bar { int x; }
 
   $extends(Foo, Bar);
 }());
-");
+")
 
 testJS("
 export class Foo : Bar { int y; }
@@ -83,7 +83,7 @@ class Bar {}
 
   $extends(Foo, Bar);
 }());
-");
+")
 
 testJS("
 export class Foo : Bar { int y; }
@@ -106,7 +106,7 @@ class Bar { int x; }
 
   $extends(Foo, Bar);
 }());
-");
+")
 
 testJS("
 namespace ns {
@@ -127,7 +127,7 @@ namespace ns {
     C: 2
   };
 }());
-");
+")
 
 testJS("
 import namespace ns {
@@ -138,7 +138,7 @@ import namespace ns {
 ", "
 (function() {
 }());
-");
+")
 
 testJS("
 export class Foo {
@@ -164,7 +164,7 @@ export class Bar : Foo {}
 
   $extends(Bar, Foo);
 }());
-");
+")
 
 testJS("
 class Foo {}
@@ -190,7 +190,7 @@ export class Bar : Foo {
   Bar.prototype.foo = function() {
   };
 }());
-");
+")
 
 testJS("
 export class Foo {
@@ -203,7 +203,7 @@ export class Foo {
     this.foo = 0;
   };
 }());
-");
+")
 
 testJS("
 import class Foo : Bar {
@@ -221,7 +221,7 @@ export void test() {
     var foo = new Foo();
   };
 }());
-");
+")
 
 testJS("
 namespace x {
@@ -257,6 +257,6 @@ namespace y {
 
   $extends(x.c, y.b);
 }());
-");
+")
 
 }}

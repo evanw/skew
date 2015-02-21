@@ -9,7 +9,7 @@ void bar() {
 <stdin>:3:3: error: Cannot store to a symbol marked as \"const\"
   foo = 2;
   ~~~
-");
+")
 
 test("
 const final int x = 1;
@@ -17,7 +17,7 @@ const final int x = 1;
 <stdin>:1:7: error: Redundant modifier \"final\" on a const variable declaration
 const final int x = 1;
       ~~~~~
-");
+")
 
 test("
 const int foo;
@@ -25,7 +25,7 @@ const int foo;
 <stdin>:1:11: error: Variables with the \"const\" modifier must be initialized
 const int foo;
           ~~~
-");
+")
 
 test("
 import int bar;
@@ -34,13 +34,13 @@ const int foo = bar;
 <stdin>:2:17: error: Variables with the \"const\" modifier must be initialized to a compile-time constant
 const int foo = bar;
                 ~~~
-");
+")
 
 test("
 const int foo = 1 + 2 + 3;
 enum Foo { FOO = foo }
 ", "
-");
+")
 
 test("
 import int baz;
@@ -59,7 +59,7 @@ void test() {
 <stdin>:6:10: note: The first occurrence is here
     case foo {}
          ~~~
-");
+")
 
 test("
 assert const true;
@@ -82,7 +82,7 @@ assert const foo;
 <stdin>:6:14: error: The argument to a compile-time assert must be a constant
 assert const bar;
              ~~~
-");
+")
 
 test("
 const string a = false + \"\";
@@ -97,7 +97,7 @@ assert const c == \"1\";
 assert const d == \"1\";
 assert const e == \"x\";
 ", "
-");
+")
 
 test("
 const string a = false.toString() + \"\";
@@ -112,7 +112,7 @@ assert const c == \"1\";
 assert const d == \"1\";
 assert const e == \"x\";
 ", "
-");
+")
 
 test("
 const var foo = bar + \"\";
@@ -120,6 +120,6 @@ const var bar = (int)baz;
 const var baz = true;
 assert const foo == \"1\";
 ", "
-");
+")
 
 }}

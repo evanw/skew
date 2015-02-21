@@ -1,92 +1,92 @@
 namespace FunctionInliningPass {
   void run(CallGraph callGraph, CompilerOptions options) {
-    var graph = InliningGraph(callGraph, options);
+    var graph = InliningGraph(callGraph, options)
     for (var i = 0; i < graph.inliningInfo.size(); i++) {
-      inlineSymbol(graph, graph.inliningInfo[i]);
+      inlineSymbol(graph, graph.inliningInfo[i])
     }
   }
 
   void inlineSymbol(InliningGraph graph, InliningInfo info) {
     if (!info.shouldInline) {
-      return;
+      return
     }
 
     // Inlining nested functions first is more efficient because it results in
     // fewer inlining operations. This won't enter an infinite loop because
     // inlining for all such functions has already been disabled.
     for (var i = 0; i < info.bodyCalls.size(); i++) {
-      inlineSymbol(graph, info.bodyCalls[i]);
+      inlineSymbol(graph, info.bodyCalls[i])
     }
 
     for (var i = 0; i < info.callSites.size(); i++) {
-      var callSite = info.callSites[i];
+      var callSite = info.callSites[i]
       if (callSite != null && callSite.kind == .CALL) {
         // Propagate needed includes to ensure they are preserved through inlining
         if (info.symbol.neededIncludes != null) {
-          propagateNeededIncludes(info.symbol, callSite);
+          propagateNeededIncludes(info.symbol, callSite)
         }
 
         // Make sure each call site is inlined once by setting the call site to
         // null. The call site isn't removed from the list since we don't want
         // to mess up the indices of another call to inlineSymbol() further up
         // the call stack.
-        info.callSites[i] = null;
-        var clone = info.inlineValue.clone().withType(callSite.type);
-        var values = callSite.removeChildren();
-        assert values.size() == info.arguments.size() + 1;
-        var value = values.shift();
-        assert value.kind == .NAME && value.symbol == info.symbol;
+        info.callSites[i] = null
+        var clone = info.inlineValue.clone().withType(callSite.type)
+        var values = callSite.removeChildren()
+        assert values.size() == info.arguments.size() + 1
+        var value = values.shift()
+        assert value.kind == .NAME && value.symbol == info.symbol
 
         // If there are unused arguments, then stick any with side effects in a
         // sequence expression so they will be evaluated before the call body.
         // For example:
         //
-        //   import int foo();
-        //   int bar(int a, int b) { return a; }
-        //   var baz = bar(1, foo());
+        //   import int foo()
+        //   int bar(int a, int b) { return a }
+        //   var baz = bar(1, foo())
         //
         // This should compile to:
         //
-        //   var baz = (foo(), 1);
+        //   var baz = (foo(), 1)
         //
         if (info.unusedArguments.size() != 0) {
-          List<Node> sequence = null;
+          List<Node> sequence = null
           for (var j = 0; j < info.unusedArguments.size(); j++) {
-            var index = info.arguments.indexOf(info.unusedArguments[j]);
-            assert index >= 0;
-            var replacement = values[index];
+            var index = info.arguments.indexOf(info.unusedArguments[j])
+            assert index >= 0
+            var replacement = values[index]
             if (!replacement.hasNoSideEffects()) {
-              if (sequence == null) sequence = []; // Save on allocations
-              sequence.push(replacement);
+              if (sequence == null) sequence = [] // Save on allocations
+              sequence.push(replacement)
             }
           }
           if (sequence != null) {
-            sequence.push(clone);
-            callSite.become(Node.createSequence(sequence));
-            recursivelySubstituteArguments(callSite, info.arguments, values);
-            continue;
+            sequence.push(clone)
+            callSite.become(Node.createSequence(sequence))
+            recursivelySubstituteArguments(callSite, info.arguments, values)
+            continue
           }
         }
 
-        callSite.become(clone);
-        recursivelySubstituteArguments(callSite, info.arguments, values);
+        callSite.become(clone)
+        recursivelySubstituteArguments(callSite, info.arguments, values)
       }
     }
   }
 
   void propagateNeededIncludes(Symbol symbol, Node node) {
-    assert symbol.neededIncludes != null;
+    assert symbol.neededIncludes != null
     while (node != null) {
       if (node.kind.isNamedDeclaration() && node.symbol != null) {
-        var kind = node.symbol.kind;
+        var kind = node.symbol.kind
         if (kind.isGlobal() || kind.isInstance()) {
           for (var i = 0; i < symbol.neededIncludes.size(); i++) {
-            node.symbol.addNeededInclude(symbol.neededIncludes[i]);
+            node.symbol.addNeededInclude(symbol.neededIncludes[i])
           }
-          break;
+          break
         }
       }
-      node = node.parent;
+      node = node.parent
     }
   }
 
@@ -94,20 +94,20 @@ namespace FunctionInliningPass {
     // Recursively inline child nodes first
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children[i];
+        var child = node.children[i]
         if (child != null) {
-          recursivelyInlineFunctionCalls(graph, child);
+          recursivelyInlineFunctionCalls(graph, child)
         }
       }
     }
 
     // Inline calls after all children have been processed
     if (node.kind == .CALL) {
-      var symbol = node.callValue().symbol;
+      var symbol = node.callValue().symbol
       if (symbol != null) {
-        var index = graph.symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1);
+        var index = graph.symbolToInfoIndex.getOrDefault(symbol.uniqueID, -1)
         if (index >= 0) {
-          inlineSymbol(graph, graph.inliningInfo[index]);
+          inlineSymbol(graph, graph.inliningInfo[index])
         }
       }
     }
@@ -116,19 +116,19 @@ namespace FunctionInliningPass {
   void recursivelySubstituteArguments(Node node, List<Symbol> arguments, List<Node> values) {
     // Substitute the argument if this is an argument name
     if (node.symbol != null) {
-      var index = arguments.indexOf(node.symbol);
+      var index = arguments.indexOf(node.symbol)
       if (index >= 0) {
-        node.replaceWith(values[index]);
-        return;
+        node.replaceWith(values[index])
+        return
       }
     }
 
     // Otherwise, recursively search for substitutions in all child nodes
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children[i];
+        var child = node.children[i]
         if (child != null) {
-          recursivelySubstituteArguments(child, arguments, values);
+          recursivelySubstituteArguments(child, arguments, values)
         }
       }
     }
@@ -136,13 +136,13 @@ namespace FunctionInliningPass {
 }
 
 class InliningInfo {
-  Symbol symbol;
-  Node inlineValue;
-  List<Node> callSites;
-  List<Symbol> arguments;
-  List<Symbol> unusedArguments;
-  var shouldInline = true;
-  List<InliningInfo> bodyCalls = [];
+  Symbol symbol
+  Node inlineValue
+  List<Node> callSites
+  List<Symbol> arguments
+  List<Symbol> unusedArguments
+  var shouldInline = true
+  List<InliningInfo> bodyCalls = []
 }
 
 // Each node in the Inlining graph is a symbol of an inlineable function and
@@ -151,31 +151,31 @@ class InliningInfo {
 // calls that may become direct calls through inlining can be discovered by
 // traversing edges of this graph.
 class InliningGraph {
-  List<InliningInfo> inliningInfo = [];
-  var symbolToInfoIndex = IntMap<int>();
+  List<InliningInfo> inliningInfo = []
+  var symbolToInfoIndex = IntMap<int>()
 
   new(CallGraph graph, CompilerOptions options) {
     // Create the nodes in the graph
     for (var i = 0; i < graph.callInfo.size(); i++) {
-      var info = createInliningInfo(graph.callInfo[i], options);
+      var info = createInliningInfo(graph.callInfo[i], options)
       if (info != null) {
-        symbolToInfoIndex[info.symbol.uniqueID] = inliningInfo.size();
-        inliningInfo.push(info);
+        symbolToInfoIndex[info.symbol.uniqueID] = inliningInfo.size()
+        inliningInfo.push(info)
       }
     }
 
     // Create the edges in the graph
     for (var i = 0; i < inliningInfo.size(); i++) {
-      var info = inliningInfo[i];
-      var callSites = graph.callInfo[graph.symbolToInfoIndex[info.symbol.uniqueID]].callSites;
+      var info = inliningInfo[i]
+      var callSites = graph.callInfo[graph.symbolToInfoIndex[info.symbol.uniqueID]].callSites
       for (var j = 0; j < callSites.size(); j++) {
-        var callSite = callSites[j];
+        var callSite = callSites[j]
         for (var node = callSite.parent; node != null; node = node.parent) {
           if (node.kind == .FUNCTION && node.symbol.kind == .GLOBAL_FUNCTION) {
-            var index = symbolToInfoIndex.getOrDefault(node.symbol.uniqueID, -1);
+            var index = symbolToInfoIndex.getOrDefault(node.symbol.uniqueID, -1)
             if (index >= 0) {
-              var other = inliningInfo[index];
-              other.bodyCalls.push(info);
+              var other = inliningInfo[index]
+              other.bodyCalls.push(info)
             }
           }
         }
@@ -184,36 +184,36 @@ class InliningGraph {
 
     // Detect and disable infinitely expanding inline operations
     for (var i = 0; i < inliningInfo.size(); i++) {
-      var info = inliningInfo[i];
-      info.shouldInline = !containsInfiniteExpansion(info, []);
+      var info = inliningInfo[i]
+      info.shouldInline = !containsInfiniteExpansion(info, [])
     }
   }
 
   private static bool containsInfiniteExpansion(InliningInfo info, List<Symbol> symbols) {
     // This shouldn't get very long in normal programs so O(n) here is fine
     if (info.symbol in symbols) {
-      return true;
+      return true
     }
 
     // Do a depth-first search on the graph and check for cycles
-    symbols.push(info.symbol);
+    symbols.push(info.symbol)
     for (var i = 0; i < info.bodyCalls.size(); i++) {
       if (containsInfiniteExpansion(info.bodyCalls[i], symbols)) {
-        return true;
+        return true
       }
     }
-    symbols.pop();
-    return false;
+    symbols.pop()
+    return false
   }
 
   private static InliningInfo createInliningInfo(CallInfo info, CompilerOptions options) {
-    var symbol = info.symbol;
+    var symbol = info.symbol
 
     // Inline functions consisting of a single return statement
     if (symbol.kind == .GLOBAL_FUNCTION && (symbol.isInline() || options.inlineAllFunctions)) {
-      var block = symbol.node.functionBlock();
+      var block = symbol.node.functionBlock()
       if (block == null) {
-        return null;
+        return null
       }
 
       // Replace functions with empty bodies with null if global constant
@@ -221,29 +221,29 @@ class InliningGraph {
       // be removed
       if (!block.hasChildren()) {
         if (options.foldAllConstants) {
-          List<Symbol> arguments = [];
-          var argumentVariables = symbol.node.functionArguments().children;
+          List<Symbol> arguments = []
+          var argumentVariables = symbol.node.functionArguments().children
           for (var i = 0; i < argumentVariables.size(); i++) {
-            arguments.push(argumentVariables[i].symbol);
+            arguments.push(argumentVariables[i].symbol)
           }
-          return InliningInfo(symbol, Node.createNull().withType(symbol.type.resultType()), info.callSites, arguments, arguments);
+          return InliningInfo(symbol, Node.createNull().withType(symbol.type.resultType()), info.callSites, arguments, arguments)
         }
-        return null;
+        return null
       }
 
-      var first = block.children[0];
-      Node inlineValue = null;
+      var first = block.children[0]
+      Node inlineValue = null
 
       // If the first value in the function is a return statement, then the
       // function body doesn't need to only have one statement. Subsequent
       // statements are just dead code and will never be executed anyway.
       if (first.kind == .RETURN) {
-        inlineValue = first.returnValue();
+        inlineValue = first.returnValue()
       }
 
       // Otherwise, this statement must be a lone expression statement
       else if (first.kind == .EXPRESSION && block.children.size() == 1) {
-        inlineValue = first.expressionValue();
+        inlineValue = first.expressionValue()
       }
 
       if (inlineValue != null) {
@@ -251,69 +251,69 @@ class InliningGraph {
         // variables that are used more than once may need a let statement
         // to avoid changing the semantics of the call site. For now, just
         // only inline functions where each argument is used exactly once.
-        var argumentVariables = symbol.node.functionArguments().children;
-        var argumentCounts = IntMap<int>();
+        var argumentVariables = symbol.node.functionArguments().children
+        var argumentCounts = IntMap<int>()
         for (var i = 0; i < argumentVariables.size(); i++) {
-          argumentCounts[argumentVariables[i].symbol.uniqueID] = 0;
+          argumentCounts[argumentVariables[i].symbol.uniqueID] = 0
         }
         if (recursivelyCountArgumentUses(inlineValue, argumentCounts)) {
-          List<Symbol> unusedArguments = [];
-          List<Symbol> arguments = [];
-          var isSimpleSubstitution = true;
+          List<Symbol> unusedArguments = []
+          List<Symbol> arguments = []
+          var isSimpleSubstitution = true
           for (var i = 0; i < argumentVariables.size(); i++) {
-            var argument = argumentVariables[i].symbol;
-            var count = argumentCounts[argument.uniqueID];
+            var argument = argumentVariables[i].symbol
+            var count = argumentCounts[argument.uniqueID]
             if (count == 0) {
-              unusedArguments.push(argument);
+              unusedArguments.push(argument)
             } else if (count != 1) {
-              isSimpleSubstitution = false;
-              break;
+              isSimpleSubstitution = false
+              break
             }
-            arguments.push(argument);
+            arguments.push(argument)
           }
           if (isSimpleSubstitution) {
-            return InliningInfo(symbol, inlineValue, info.callSites, arguments, unusedArguments);
+            return InliningInfo(symbol, inlineValue, info.callSites, arguments, unusedArguments)
           }
         }
       }
     }
 
-    return null;
+    return null
   }
 
   // This returns false if inlining is impossible
   private static bool recursivelyCountArgumentUses(Node node, IntMap<int> argumentCounts) {
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children[i];
+        var child = node.children[i]
         if (child != null && !recursivelyCountArgumentUses(child, argumentCounts)) {
-          return false;
+          return false
         }
       }
     }
 
-    var symbol = node.symbol;
+    var symbol = node.symbol
     if (symbol != null) {
-      var count = argumentCounts.getOrDefault(symbol.uniqueID, -1);
+      var count = argumentCounts.getOrDefault(symbol.uniqueID, -1)
       if (count >= 0) {
-        argumentCounts[symbol.uniqueID] = count + 1;
+        argumentCounts[symbol.uniqueID] = count + 1
 
         // Prevent inlining of functions that modify their arguments locally. For
         // example, inlining this would lead to incorrect code:
         //
         //   inline void foo(int x, int y) {
-        //     x += y;
+        //     x += y
         //   }
         //   export void test() {
-        //     foo(1, 2);
+        //     foo(1, 2)
         //   }
         //
         if (node.isStorage()) {
-          return false;
+          return false
         }
       }
     }
 
-    return true;
+    return true
   }
 }

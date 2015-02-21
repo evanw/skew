@@ -6,7 +6,7 @@ test("
 <stdin>:1:4: error: Unexpected END_OF_FILE
 #if
    ^
-");
+")
 
 test("
 #if true
@@ -14,7 +14,7 @@ test("
 <stdin>:1:9: error: Expected PREPROCESSOR_ENDIF but found END_OF_FILE
 #if true
         ^
-");
+")
 
 test("
 #if true
@@ -23,7 +23,7 @@ test("
 <stdin>:2:6: error: Expected PREPROCESSOR_ENDIF but found END_OF_FILE
 #else
      ^
-");
+")
 
 test("
 #warning 0
@@ -51,7 +51,7 @@ test("
 <stdin>:6:9: error: Invalid escape sequence \"\\x\"
 #error \"\\x\"
         ~~
-");
+")
 
 test("
 #if false
@@ -81,7 +81,7 @@ test("
 <stdin>:7:11: error: Invalid escape sequence \"\\x\"
   #error \"\\x\"
           ~~
-");
+")
 
 test("
 #warning \"A test warning\"
@@ -93,7 +93,7 @@ test("
 <stdin>:2:1: error: A test error
 #error \"A test error\"
 ~~~~~~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 #if true
@@ -106,7 +106,7 @@ test("
 <stdin>:2:3: warning: A
   #warning \"A\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if true
@@ -118,7 +118,7 @@ test("
 <stdin>:2:3: warning: A
   #warning \"A\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if false
@@ -130,7 +130,7 @@ test("
 <stdin>:4:3: warning: B
   #warning \"B\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if true
@@ -144,7 +144,7 @@ test("
 <stdin>:2:3: warning: A
   #warning \"A\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if false
@@ -158,7 +158,7 @@ test("
 <stdin>:4:3: warning: B
   #warning \"B\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if true
@@ -172,7 +172,7 @@ test("
 <stdin>:2:3: warning: A
   #warning \"A\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if false
@@ -186,7 +186,7 @@ test("
 <stdin>:6:3: warning: C
   #warning \"C\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if false || true && false
@@ -202,7 +202,7 @@ test("
 <stdin>:8:3: warning: C
   #warning \"C\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if true
@@ -232,7 +232,7 @@ test("
 <stdin>:8:3: warning: D
   #warning \"D\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if true
@@ -250,7 +250,7 @@ test("
 <stdin>:4:3: warning: B
   #warning \"B\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if false
@@ -262,7 +262,7 @@ test("
 <stdin>:3:1: error: Unexpected INVALID_PREPROCESSOR_DIRECTIVE
 #elseif
 ~~~~~~~
-");
+")
 
 test("
 void foo() {
@@ -278,7 +278,7 @@ class Foo {
 <stdin>:5:3: error: Cannot use this statement here
   #define baz true
   ~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 int foo(bool bar) {
@@ -293,7 +293,7 @@ int foo(bool bar) {
 <stdin>:3:9: error: \"bar\" is not a valid preprocessor symbol
     #if bar
         ~~~
-");
+")
 
 test("
 int foo(bool bar) {
@@ -308,7 +308,7 @@ namespace ns {
   #define bar true
 }
 ", "
-");
+")
 
 test("
 List<int> foo(bool bar) {
@@ -322,7 +322,7 @@ List<int> foo(bool bar) {
 <stdin>:3:9: error: \"bar\" is not a valid preprocessor symbol
     #if bar
         ~~~
-");
+")
 
 test("
 List<int> foo(bool bar) {
@@ -336,7 +336,7 @@ namespace ns {
   #define bar true
 }
 ", "
-");
+")
 
 test("
 namespace ns {
@@ -351,7 +351,7 @@ bool foo() {
 <stdin>:7:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   return ns.foo;
          ~~~~~~
-");
+")
 
 test("
 bool foo = [
@@ -363,7 +363,7 @@ bool foo = [
 <stdin>:1:12: error: Cannot infer a common element type for this list literal
 bool foo = [
            ^
-");
+")
 
 test("
 bool foo = [
@@ -377,7 +377,7 @@ bool foo = [
 <stdin>:1:12: error: Cannot infer a common element type for this list literal
 bool foo = [
            ^
-");
+")
 
 test("
 bool foo = [
@@ -390,7 +390,7 @@ bool foo = [
 <stdin>:1:12: error: Cannot convert from type \"List<int>\" to type \"bool\"
 bool foo = [
            ^
-");
+")
 
 test("
 bool foo = [
@@ -404,7 +404,7 @@ bool foo = [
 <stdin>:1:12: error: Cannot convert from type \"List<int>\" to type \"bool\"
 bool foo = [
            ^
-");
+")
 
 test("
 bool foo = [
@@ -419,7 +419,7 @@ bool foo = [
 <stdin>:1:12: error: Cannot infer a common element type for this list literal
 bool foo = [
            ^
-");
+")
 
 test("
 import void foo(int x, int y);
@@ -437,7 +437,7 @@ void bar() {
 <stdin>:5:13: error: Cannot convert from type \"bool\" to type \"int\" without a cast
       true, false
             ~~~~~
-");
+")
 
 test("
 #if foo
@@ -450,7 +450,7 @@ test("
 <stdin>:2:3: warning: A
   #warning \"A\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if foo
@@ -463,7 +463,7 @@ test("
 <stdin>:4:3: warning: B
   #warning \"B\"
   ~~~~~~~~~~~~
-");
+")
 
 test("
 #if foo
@@ -479,7 +479,7 @@ test("
 <stdin>:6:13: error: Unexpected expression in preprocessor value
 #define foo 0
             ^
-");
+")
 
 test("
 #define foo true
@@ -491,7 +491,7 @@ test("
 <stdin>:1:9: note: The previous declaration is here
 #define foo true
         ~~~
-");
+")
 
 test("
 var foo = foo;
@@ -503,7 +503,7 @@ var foo = foo;
 <stdin>:2:9: note: The previous declaration is here
 #define foo true
         ~~~
-");
+")
 
 test("
 #define foo true
@@ -515,7 +515,7 @@ var foo = foo;
 <stdin>:1:9: note: The previous declaration is here
 #define foo true
         ~~~
-");
+")
 
 test("
 int x = baz;
@@ -530,7 +530,7 @@ int x = baz;
 <stdin>:1:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 int x = baz;
         ~~~
-");
+")
 
 test("
 #define foo bar
@@ -542,7 +542,7 @@ test("
 <stdin>:2:13: error: \"foo\" is not a valid preprocessor symbol
 #define bar foo
             ~~~
-");
+")
 
 test("
 #if foo
@@ -558,13 +558,13 @@ test("
 <stdin>:4:5: error: \"bar\" is not a valid preprocessor symbol
 #if bar
     ~~~
-");
+")
 
 test("
 assert const TARGET_NONE == true;
 assert const foo == true;
 const var foo = TARGET_NONE;
 ", "
-");
+")
 
 }}

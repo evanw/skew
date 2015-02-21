@@ -10,7 +10,7 @@ bool foo(int a, int b, int c, int d);
 bool foo(int a, int b, int c, int d) {
   return a == b == (c == d);
 }
-");
+")
 
 testCPP("
 export var x = [
@@ -49,7 +49,7 @@ List<T> *List<T>::literal(std::initializer_list<T> list) {
 }
 
 List<int> *x = (new List<int>())->literal({ 100, 100, 100, 100, 2748, 2748 });
-");
+")
 
 // Need to special-case strings with '\0' in them to avoid truncation
 testCPP("
@@ -66,7 +66,7 @@ extern std::string baz;
 std::string foo = \"'\";
 std::string bar = \"\\\"\";
 std::string baz = std::string(\"abc \\0 def\", 9);
-");
+")
 
 testCPP("
 export void test() {
@@ -86,7 +86,7 @@ void test() {
   -+1;
   +-1;
 }
-");
+")
 
 testCPP("
 export void test() {
@@ -100,7 +100,7 @@ void test() {
   -2147483648;
   - -2147483648;
 }
-");
+")
 
 testCPP("
 export void test() {
@@ -120,7 +120,7 @@ void test() {
   1.0e+30f - (2.0e+30f - 3.0e+30f);
   1.0e-30f / (2.0e-30f * 3.0e-30f);
 }
-");
+")
 
 testCPP("
 export void test() {
@@ -140,7 +140,7 @@ void test() {
   1.0e+30 - (2.0e+30 - 3.0e+30);
   1.0e-30 / (2.0e-30 * 3.0e-30);
 }
-");
+")
 
 testCPP("
 export void test() {
@@ -156,7 +156,7 @@ void test() {
   static_cast<int>(false);
   static_cast<float>(false);
 }
-");
+")
 
 testCPP("
 export void test() {
@@ -168,7 +168,7 @@ void test();
 void test() {
   !!1;
 }
-").windows();
+").windows()
 
 testCPP("
 export void test() {
@@ -182,7 +182,7 @@ void test();
 void test() {
   assert(static_cast<bool>(1));
 }
-");
+")
 
 testCPP("
 enum Foo {}
@@ -214,7 +214,7 @@ int c(int x) {
 Foo d(Foo x) {
   return static_cast<Foo>(static_cast<int>(x));
 }
-");
+")
 
 testCPP("
 enum flags Foo {}
@@ -248,7 +248,7 @@ int c(int x) {
 int d(int x) {
   return static_cast<int>(static_cast<int>(x));
 }
-");
+")
 
 testCPP("
 enum flags Foo {}
@@ -264,7 +264,7 @@ int a(int x);
 int a(int x) {
   return x;
 }
-");
+")
 
 testCPP("
 export void test() {
@@ -280,7 +280,7 @@ void test() {
   foo = (1, 2);
   (1, 2), (3, 4);
 }
-");
+")
 
 testCPP("
 export void test() {
@@ -319,7 +319,7 @@ void test() {
   in_double::_format_(0.0f);
   in_double::_format_(0.0);
 }
-");
+")
 
 testCPP("
 export void test() {
@@ -358,7 +358,7 @@ void test() {
   in_double::_format_(0.0f);
   in_double::_format_(0.0);
 }
-").windows();
+").windows()
 
 testCPP("
 export void test(bool a) {
@@ -372,7 +372,7 @@ void test(bool a);
 void test(bool a) {
   std::string b = a ? std::string(\"1\") : \"2\";
 }
-");
+")
 
 // Need to make implicit casts explicit here to avoid compile errors
 testCPP("
@@ -425,7 +425,7 @@ void foo(Foo *foo) {
   foo = true ? nullptr : new Baz();
   foo = true ? nullptr : nullptr;
 }
-");
+")
 
 testCPP("
 alias foo = `foo`;
@@ -436,7 +436,7 @@ void bar();
 void bar() {
   new foo();
 }
-");
+")
 
 testCPP("
 class Foo<T> {}
@@ -457,7 +457,7 @@ Foo<T>::Foo() {
 }
 
 Foo<foo> *bar = nullptr;
-");
+")
 
 testCPP("
 export int foo() {
@@ -499,7 +499,7 @@ List<T> *List<T>::literal(std::initializer_list<T> list) {
 int foo() {
   return (new List<int>())->size();
 }
-");
+")
 
 testCPP("
 #define FOO false
@@ -515,7 +515,7 @@ bool bar() {
 }
 
 bool foo = false;
-");
+")
 
 testCPP("
 export bool foo() {
@@ -529,6 +529,6 @@ bool foo() {
   bool foo = false;
   return foo;
 }
-");
+")
 
 }}

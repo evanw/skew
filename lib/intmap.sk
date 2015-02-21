@@ -4,32 +4,32 @@
 
   in IntMap {
     pure inline {
-      new() { return `Object`.create(null); }
-      @OperatorGet T get(int key) { return `this`[key]; }
-      @OperatorSet void set(int key, T value) { `this`[key] = value; }
-      @OperatorIn bool containsKey(int key) { return key in `this`; }
-      void remove(int key) { delete `this`[key]; }
+      new() { return `Object`.create(null) }
+      @OperatorGet T get(int key) { return `this`[key] }
+      @OperatorSet void set(int key, T value) { `this`[key] = value }
+      @OperatorIn bool containsKey(int key) { return key in `this` }
+      void remove(int key) { delete `this`[key] }
 
       T getOrDefault(int key, T defaultValue) {
-        return key in this ? this[key] : defaultValue;
+        return key in this ? this[key] : defaultValue
       }
 
       List<int> keys() {
-        List<int> keys = [];
-        for (double key in `this`) keys.push((int)key);
-        return keys;
+        List<int> keys = []
+        for (double key in `this`) keys.push((int)key)
+        return keys
       }
 
       List<T> values() {
-        List<T> values = [];
-        for (int key in `this`) values.push(this[key]);
-        return values;
+        List<T> values = []
+        for (int key in `this`) values.push(this[key])
+        return values
       }
 
       IntMap<T> clone() {
-        var clone = IntMap<T>();
-        for (int key in `this`) clone[key] = this[key];
-        return clone;
+        var clone = IntMap<T>()
+        for (int key in `this`) clone[key] = this[key]
+        return clone
       }
     }
   }
@@ -40,37 +40,52 @@
   class IntMap<T> {
     pure {
       new() {}
-      @OperatorGet T get(int key) { return _table[key]; }
-      T getOrDefault(int key, T defaultValue) { `auto` it = _table.find(key); return it != _table.end() ? it->second : defaultValue; }
-      @OperatorSet void set(int key, T value) { _table[key] = value; }
-      @OperatorIn bool containsKey(int key) { return _table.count(key) > 0; }
-      void remove(int key) { _table.erase(key); }
-      List<int> keys() { List<int> keys = []; for (`(auto &)` it in _table) keys.push(it.first); return keys; }
-      List<T> values() { List<T> values = []; for (`(auto &)` it in _table) values.push(it.second); return values; }
-      IntMap<T> clone() { var clone = IntMap<T>(); clone._table = _table; return clone; }
+      @OperatorGet T get(int key) { return _table[key] }
+      T getOrDefault(int key, T defaultValue) {
+        `auto` it = _table.find(key)
+        return it != _table.end() ? it->second : defaultValue
+      }
+      @OperatorSet void set(int key, T value) { _table[key] = value }
+      @OperatorIn bool containsKey(int key) { return _table.count(key) > 0 }
+      void remove(int key) { _table.erase(key) }
+      List<int> keys() {
+        List<int> keys = []
+        for (`(auto &)` it in _table) keys.push(it.first)
+        return keys
+      }
+      List<T> values() {
+        List<T> values = []
+        for (`(auto &)` it in _table) values.push(it.second)
+        return values
+      }
+      IntMap<T> clone() {
+        var clone = IntMap<T>()
+        clone._table = _table
+        return clone
+      }
     }
 
-    private `std::unordered_map<`int`, T>` _table;
+    private `std::unordered_map<`int`, T>` _table
   }
 
 #elif TARGET_RUBY
 
   import class IntMap<T> {
     pure {
-      @EmitAs("key?") @OperatorIn bool containsKey(int key);
-      @EmitAs("delete") bool remove(int key);
-      List<int> keys();
-      List<T> values();
-      IntMap<T> clone();
+      @EmitAs("key?") @OperatorIn bool containsKey(int key)
+      @EmitAs("delete") bool remove(int key)
+      List<int> keys()
+      List<T> values()
+      IntMap<T> clone()
     }
   }
 
   in IntMap {
     pure inline {
-      new() { return `{}`; }
-      @OperatorGet T get(int key) { return `this`.fetch(key); }
-      @OperatorSet void set(int key, T value) { `this`[key] = value; }
-      T getOrDefault(int key, T defaultValue) { return `this`.fetch(key, defaultValue); }
+      new() { return `{}` }
+      @OperatorGet T get(int key) { return `this`.fetch(key) }
+      @OperatorSet void set(int key, T value) { `this`[key] = value }
+      T getOrDefault(int key, T defaultValue) { return `this`.fetch(key, defaultValue) }
     }
   }
 
@@ -78,15 +93,15 @@
 
   import class IntMap<T> {
     pure {
-      new();
-      @OperatorGet T get(int key);
-      T getOrDefault(int key, T defaultValue);
-      @OperatorSet void set(int key, T value);
-      @OperatorIn bool containsKey(int key);
-      void remove(int key);
-      List<int> keys();
-      List<T> values();
-      IntMap<T> clone();
+      new()
+      @OperatorGet T get(int key)
+      T getOrDefault(int key, T defaultValue)
+      @OperatorSet void set(int key, T value)
+      @OperatorIn bool containsKey(int key)
+      void remove(int key)
+      List<int> keys()
+      List<T> values()
+      IntMap<T> clone()
     }
   }
 
@@ -98,11 +113,11 @@
 //
 in IntMap {
   private static pure IntMap<X> literal<X>(List<int> keys, List<X> values) {
-    var map = IntMap<X>();
-    assert keys.size() == values.size();
+    var map = IntMap<X>()
+    assert keys.size() == values.size()
     for (var i = 0; i < keys.size(); i++) {
-      map[keys[i]] = values[i];
+      map[keys[i]] = values[i]
     }
-    return map;
+    return map
   }
 }

@@ -8,7 +8,7 @@ assert const 1e1 == 10.0;
 assert const 1e+1 == 10.0;
 assert const 1e-1 == 0.1;
 ", "
-");
+")
 
 test("
 assert const 1.0e1f == 10.0f;
@@ -18,7 +18,7 @@ assert const 1e1f == 10.0f;
 assert const 1e+1f == 10.0f;
 assert const 1e-1f == 0.1f;
 ", "
-");
+")
 
 test("
 var π = Math.PI;
@@ -26,7 +26,7 @@ var π = Math.PI;
 <stdin>:1:5: error: Syntax error \"π\"
 var π = Math.PI;
     ^
-");
+")
 
 test("
 var 💩 = Math.PI;
@@ -34,12 +34,12 @@ var 💩 = Math.PI;
 <stdin>:1:5: error: Syntax error \"💩\"
 var 💩 = Math.PI;
     ^
-");
+")
 
 test("
 //💩
 ", "
-");
+")
 
 test("
 bool foo = \"💩\";
@@ -47,7 +47,7 @@ bool foo = \"💩\";
 <stdin>:1:12: error: Cannot convert from type \"string\" to type \"bool\"
 bool foo = \"💩\";
            ~~~
-");
+")
 
 test("
 var x = [0, 0.0, .0, 0.];
@@ -59,7 +59,7 @@ var x = [0, 0.0, .0, 0.];
 <stdin>:2:27: error: \"f\" is not declared on type \"int\"
 var y = [0f, 0.0f, .0f, 0.f];
                           ^
-");
+")
 
 test("
 int foo = 0123;
@@ -67,7 +67,7 @@ int foo = 0123;
 <stdin>:1:11: warning: Number interpreted as decimal (use the prefix \"0o\" for octal numbers)
 int foo = 0123;
           ~~~~
-");
+")
 
 test("
 bool a = 0b1101;
@@ -83,7 +83,7 @@ bool b = 0xFF01;
 <stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
 bool c = 0o7071;
          ~~~~~~
-");
+")
 
 test("
 bool a = 0b1102;
@@ -108,7 +108,7 @@ bool b = 0xFF0G;
 <stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
 bool c = 0o7078;
          ~~~~~
-");
+")
 
 test("
 bool a = 0b11.01;
@@ -133,7 +133,7 @@ bool b = 0xFF.01;
 <stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
 bool c = 0o70.71;
          ~~~~
-");
+")
 
 test("
 bool a = 0b11.01f;
@@ -158,7 +158,7 @@ bool b = 0xFF.01f;
 <stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
 bool c = 0o70.71f;
          ~~~~
-");
+")
 
 test("
 bool a = 1e+6;
@@ -185,7 +185,7 @@ bool d = 1.5e-6;
 <stdin>:5:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
 bool e = 1e-6.2;
          ~~~~
-");
+")
 
 test("
 bool a = 1e+6f;
@@ -212,7 +212,7 @@ bool d = 1.5e-6f;
 <stdin>:5:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
 bool e = 1e-6.2f;
          ~~~~
-");
+")
 
 test("
 int foo = \"\\x\";
@@ -228,7 +228,7 @@ int bar = \"\\xx\";
 <stdin>:3:12: error: Invalid escape sequence \"\\xxx\"
 int baz = \"\\xxx\";
            ~~~~
-");
+")
 
 test("
 int x = (in)1.5;
@@ -239,7 +239,7 @@ int x = (in)1.5;
 <stdin>:1:13: error: Expected SEMICOLON but found DOUBLE
 int x = (in)1.5;
             ~~~
-");
+")
 
 test("
 int x = .
@@ -247,7 +247,7 @@ int x = .
 <stdin>:1:10: error: Expected IDENTIFIER but found END_OF_FILE
 int x = .
          ^
-");
+")
 
 test("
 int x = .;
@@ -255,7 +255,7 @@ int x = .;
 <stdin>:1:10: error: Expected IDENTIFIER but found SEMICOLON
 int x = .;
          ^
-");
+")
 
 test("
 enum Foo { FOO }
@@ -264,7 +264,7 @@ Foo x = Foo.;
 <stdin>:2:13: error: Expected IDENTIFIER but found SEMICOLON
 Foo x = Foo.;
             ^
-");
+")
 
 test("
 enum Foo { FOO }
@@ -278,7 +278,7 @@ bool y = (Foo).FOO;
 <stdin>:4:10: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
 bool z = (Foo)(.FOO);
          ~~~~~~~~~~~
-");
+")
 
 test("
 void test() {
@@ -291,7 +291,7 @@ void test() {
 <stdin>:2:20: error: \"z\" is not declared
   for (int x, y in z) {}
                    ^
-");
+")
 
 test("
 if
@@ -299,7 +299,7 @@ if
 <stdin>:1:3: error: Expected LEFT_PARENTHESIS but found END_OF_FILE
 if
   ^
-");
+")
 
 test("
 while
@@ -307,7 +307,7 @@ while
 <stdin>:1:6: error: Expected LEFT_PARENTHESIS but found END_OF_FILE
 while
      ^
-");
+")
 
 test("
 for
@@ -315,7 +315,7 @@ for
 <stdin>:1:4: error: Expected LEFT_PARENTHESIS but found END_OF_FILE
 for
    ^
-");
+")
 
 test("
 do {} while
@@ -326,7 +326,7 @@ do {} while
 <stdin>:1:1: error: Cannot use this statement here
 do {} while
 ~~~~~~~~~~~
-");
+")
 
 test("
 do {} while;
@@ -344,7 +344,7 @@ do {} while;
 <stdin>:2:1: error: Cannot use this statement here
 do {} while (;
 ~~~~~~~~~~~~~~
-");
+")
 
 test("
 for (int x in
@@ -355,7 +355,7 @@ for (int x in
 <stdin>:1:1: error: Cannot use this statement here
 for (int x in
 ~~~~~~~~~~~~~
-");
+")
 
 test("
 void test() {
@@ -365,7 +365,7 @@ void test() {
 <stdin>:2:16: error: Unexpected RIGHT_PARENTHESIS
   for (int x in) {}
                ^
-");
+")
 
 test("
 void test() {
@@ -379,7 +379,7 @@ void test() {
 <stdin>:3:9: error: Expected SEMICOLON but found RIGHT_PARENTHESIS
   for (;) {}
         ^
-");
+")
 
 test("
 else
@@ -387,7 +387,7 @@ else
 <stdin>:1:1: error: Unexpected ELSE
 else
 ~~~~
-");
+")
 
 test("
 void test() {
@@ -397,7 +397,7 @@ void test() {
 <stdin>:2:7: error: Unexpected RIGHT_PARENTHESIS
   if () {}
       ^
-");
+")
 
 test("
 Foo<Bar Baz> foo;
@@ -409,7 +409,7 @@ Foo<Bar Baz> foo;
 <stdin>:2:9: error: Expected END_PARAMETER_LIST but found IDENTIFIER
 Foo<Bar Baz> bar;
         ~~~
-");
+")
 
 test("
 class Foo :
@@ -417,7 +417,7 @@ class Foo :
 <stdin>:1:12: error: Unexpected END_OF_FILE
 class Foo :
            ^
-");
+")
 
 test("
 class Foo : Bar
@@ -425,7 +425,7 @@ class Foo : Bar
 <stdin>:1:16: error: Expected LEFT_BRACE but found END_OF_FILE
 class Foo : Bar
                ^
-");
+")
 
 test("
 class Foo : {}
@@ -437,7 +437,7 @@ class Foo : {}
 <stdin>:2:13: error: Unexpected LEFT_BRACE
 class Bar : {}
             ^
-");
+")
 
 test("
 class Foo : Bar, {}
@@ -452,7 +452,7 @@ class Bar : Baz, {}
 <stdin>:2:13: error: \"Baz\" is not declared
 class Bar : Baz, {}
             ~~~
-");
+")
 
 test("
 void test() {
@@ -472,7 +472,7 @@ void test() {
 <stdin>:5:16: error: Unexpected LEFT_BRACE
     case 2, 3, {}
                ^
-");
+")
 
 test("
 void test() {
@@ -487,7 +487,7 @@ void test() {
 <stdin>:4:3: error: No binary operator \"<\" for type \"int\" and type \"bool\"
   x < (x > x);
   ~~~~~~~~~~~
-");
+")
 
 test("
 void test() {
@@ -498,7 +498,7 @@ void test() {
 <stdin>:3:3: error: No binary operator \">\" for type \"bool\" and type \"int\"
   x < (x) > x;
   ~~~~~~~~~~~
-");
+")
 
 test("
 void test() {
@@ -518,7 +518,7 @@ void test() {
 <stdin>:3:3: error: Cannot parameterize type \"int\" because it has no type parameters
   x < x > x;
   ^
-");
+")
 
 test("
 class Foo<A is> {}
@@ -527,7 +527,7 @@ Foo<int> foo;
 <stdin>:1:15: error: Unexpected END_PARAMETER_LIST
 class Foo<A is> {}
               ^
-");
+")
 
 test("
 class Foo {
@@ -541,7 +541,7 @@ int foo = new Foo(false);
 <stdin>:4:11: error: No unary operator \"new\" for type \"Foo\"
 int foo = new Foo(false);
           ~~~~~~~~~~~~~~
-");
+")
 
 test("
 switch (0) {
@@ -558,7 +558,7 @@ switch (0) {
 <stdin>:3:11: error: Expected END_OF_FILE but found RIGHT_BRACE
   case 2 {}
           ^
-");
+")
 
 test("
 case 0 {}
@@ -569,14 +569,14 @@ case 0 {}
 <stdin>:1:9: error: Expected END_OF_FILE but found RIGHT_BRACE
 case 0 {}
         ^
-");
+")
 
 test("
 class Foo {
   private new() {}
 }
 ", "
-");
+")
 
 test("
 namespace foo.bar. {
@@ -592,7 +592,7 @@ namespace foo.bar. {
 <stdin>:5:11: error: \"foo\" is not declared on type \"foo.bar\"
   foo.bar.foo();
           ~~~
-");
+")
 
 test("
 (`foo`)0;
@@ -600,7 +600,7 @@ test("
 <stdin>:1:1: error: Cannot use this statement here
 (`foo`)0;
 ~~~~~~~~~
-");
+")
 
 test("
 export Foo<`foo`> bar;
@@ -608,7 +608,7 @@ export Foo<`foo`> bar;
 <stdin>:1:8: error: \"Foo\" is not declared
 export Foo<`foo`> bar;
        ~~~
-");
+")
 
 test("
 int foo
@@ -617,7 +617,7 @@ int bar;
 <stdin>:1:8: error: Expected SEMICOLON but found IDENTIFIER
 int foo
        ^
-");
+")
 
 test("
 int foo int bar;
@@ -625,7 +625,7 @@ int foo int bar;
 <stdin>:1:9: error: Expected SEMICOLON but found IDENTIFIER
 int foo int bar;
         ~~~
-");
+")
 
 test("
 enum Foo {
@@ -637,7 +637,7 @@ enum Foo {
 <stdin>:2:6: error: Expected COMMA but found IDENTIFIER
   FOO
      ^
-");
+")
 
 test("
 enum Foo { FOO BAR BAZ }
@@ -645,7 +645,7 @@ enum Foo { FOO BAR BAZ }
 <stdin>:1:16: error: Expected COMMA but found IDENTIFIER
 enum Foo { FOO BAR BAZ }
                ~~~
-");
+")
 
 test("
 var foo = [
@@ -657,7 +657,7 @@ var foo = [
 <stdin>:2:4: error: Expected COMMA but found INT_DECIMAL
   1
    ^
-");
+")
 
 test("
 var foo = [ 1 2 3 ];
@@ -665,6 +665,6 @@ var foo = [ 1 2 3 ];
 <stdin>:1:15: error: Expected COMMA but found INT_DECIMAL
 var foo = [ 1 2 3 ];
               ^
-");
+")
 
 }}

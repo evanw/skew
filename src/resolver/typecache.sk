@@ -1,201 +1,201 @@
 class TypeCache {
-  Type globalType = null;
-  Type nullType = null;
+  Type globalType = null
+  Type nullType = null
 
   // All expressions that have syntax and/or semantic errors have this type,
   // which silences all further errors related to that expression. When the
   // compiler comes a cross a symbol or expression of this type, it just skips
   // over it because an error has already been logged and further errors will
   // most likely just be noise.
-  Type errorType = null;
+  Type errorType = null
 
   // These are defined in the standard library source code, and not by the type
   // cache. That way error messages can have nice sensible line numbers.
-  Type voidType = null;
-  Type intType = null;
-  Type boolType = null;
-  Type floatType = null;
-  Type doubleType = null;
-  Type stringType = null;
-  Type listType = null;
-  Type stringMapType = null;
-  Type intMapType = null;
-  Type toStringType = null;
+  Type voidType = null
+  Type intType = null
+  Type boolType = null
+  Type floatType = null
+  Type doubleType = null
+  Type stringType = null
+  Type listType = null
+  Type stringMapType = null
+  Type intMapType = null
+  Type toStringType = null
 
-  private final var hashTable = IntMap<List<Type>>();
+  private final var hashTable = IntMap<List<Type>>()
 
   new() {
-    globalType = createType(Symbol("<global>", .GLOBAL_NAMESPACE), 0);
-    nullType = createType(Symbol("null", .OTHER), 0);
-    errorType = createType(Symbol("<error>", .OTHER), 0);
+    globalType = createType(Symbol("<global>", .GLOBAL_NAMESPACE), 0)
+    nullType = createType(Symbol("null", .OTHER), 0)
+    errorType = createType(Symbol("<error>", .OTHER), 0)
   }
 
   void insertGlobals(Scope scope) {
-    scope.type = globalType;
+    scope.type = globalType
   }
 
   void linkGlobals(Scope scope) {
-    voidType = findType(scope, "void", .PRIMITIVE);
-    intType = findType(scope, "int", .PRIMITIVE);
-    boolType = findType(scope, "bool", .PRIMITIVE);
-    floatType = findType(scope, "float", .PRIMITIVE);
-    doubleType = findType(scope, "double", .PRIMITIVE);
-    stringType = findType(scope, "string", .PRIMITIVE);
-    listType = findType(scope, "List", 0);
-    stringMapType = findType(scope, "StringMap", 0);
-    intMapType = findType(scope, "IntMap", 0);
-    toStringType = functionType(stringType, []);
+    voidType = findType(scope, "void", .PRIMITIVE)
+    intType = findType(scope, "int", .PRIMITIVE)
+    boolType = findType(scope, "bool", .PRIMITIVE)
+    floatType = findType(scope, "float", .PRIMITIVE)
+    doubleType = findType(scope, "double", .PRIMITIVE)
+    stringType = findType(scope, "string", .PRIMITIVE)
+    listType = findType(scope, "List", 0)
+    stringMapType = findType(scope, "StringMap", 0)
+    intMapType = findType(scope, "IntMap", 0)
+    toStringType = functionType(stringType, [])
   }
 
   Type createType(Symbol symbol, SymbolFlag flags) {
-    var type = Type(symbol);
-    symbol.type = type;
-    symbol.flags |= .INITIALIZED | flags;
-    symbol.enclosingSymbol = globalType == null ? null : globalType.symbol;
-    return type;
+    var type = Type(symbol)
+    symbol.type = type
+    symbol.flags |= .INITIALIZED | flags
+    symbol.enclosingSymbol = globalType == null ? null : globalType.symbol
+    return type
   }
 
   static Type findType(Scope scope, string name, SymbolFlag flags) {
-    var symbol = scope.findLocal(name).symbol;
-    symbol.flags |= flags;
-    return symbol.type;
+    var symbol = scope.findLocal(name).symbol
+    symbol.flags |= flags
+    return symbol.type
   }
 
   static Type commonBaseClass(Type left, Type right) {
     for (var a = left; a != null; a = a.baseClass()) {
       for (var b = right; b != null; b = b.baseClass()) {
         if (a == b) {
-          return a;
+          return a
         }
       }
     }
-    return null;
+    return null
   }
 
   private static int computeHashCode(Symbol symbol, List<Type> relevantTypes) {
-    var seed = symbol == null ? -1 : symbol.type.uniqueID;
+    var seed = symbol == null ? -1 : symbol.type.uniqueID
     for (var i = 0; i < relevantTypes.size(); i++) {
-      seed = hashCombine(seed, relevantTypes[i].uniqueID);
+      seed = hashCombine(seed, relevantTypes[i].uniqueID)
     }
-    return seed;
+    return seed
   }
 
   static bool areTypeListsEqual(List<Type> left, List<Type> right) {
-    var n = left.size();
+    var n = left.size()
     if (n != right.size()) {
-      return false;
+      return false
     }
     for (var i = 0; i < n; i++) {
       if (left[i] != right[i]) {
-        return false;
+        return false
       }
     }
-    return true;
+    return true
   }
 
   Type substitute(Type type, List<Symbol> parameters, List<Type> substitutions) {
-    assert parameters.size() == substitutions.size();
+    assert parameters.size() == substitutions.size()
     if (trace.GENERICS) {
-      trace.log("substitute " + type + " with " + Type.environmentToString(parameters, substitutions));
-      trace.indent();
+      trace.log("substitute " + type + " with " + Type.environmentToString(parameters, substitutions))
+      trace.indent()
     }
 
-    Type result;
+    Type result
     if (type.symbol == null) {
-      result = parameterize(null, substituteAll(type.relevantTypes, parameters, substitutions));
+      result = parameterize(null, substituteAll(type.relevantTypes, parameters, substitutions))
     } else if (type.symbol.kind.isFunction()) {
-      result = Type(type.symbol);
-      result.relevantTypes = substituteAll(type.relevantTypes, parameters, substitutions);
+      result = Type(type.symbol)
+      result.relevantTypes = substituteAll(type.relevantTypes, parameters, substitutions)
     } else if (!type.hasParameters()) {
-      var index = parameters.indexOf(type.symbol);
-      result = index >= 0 ? substitutions[index] : type;
+      var index = parameters.indexOf(type.symbol)
+      result = index >= 0 ? substitutions[index] : type
     } else {
-      assert type.substitutions != null; // Unparameterized types should become errorType immediately and not get here
-      result = parameterize(type, substituteAll(type.substitutions, parameters, substitutions));
+      assert type.substitutions != null // Unparameterized types should become errorType immediately and not get here
+      result = parameterize(type, substituteAll(type.substitutions, parameters, substitutions))
     }
 
     if (trace.GENERICS) {
-      trace.log("substitute gave " + result);
-      trace.dedent();
+      trace.log("substitute gave " + result)
+      trace.dedent()
     }
-    return result;
+    return result
   }
 
   List<Type> substituteAll(List<Type> types, List<Symbol> parameters, List<Type> substitutions) {
-    assert parameters.size() == substitutions.size();
-    List<Type> results = [];
+    assert parameters.size() == substitutions.size()
+    List<Type> results = []
     for (var i = 0; i < types.size(); i++) {
-      results.push(substitute(types[i], parameters, substitutions));
+      results.push(substitute(types[i], parameters, substitutions))
     }
-    return results;
+    return results
   }
 
   // Parameterize the provided type by its own parameters if possible. This is
   // the difference between the unparameterized type "Foo" and the parameterized
   // type "Foo<T>".
   Type ensureTypeIsParameterized(Type unparameterized) {
-    assert !unparameterized.isParameterized();
+    assert !unparameterized.isParameterized()
     if (unparameterized.hasParameters()) {
-      var parameters = unparameterized.symbol.parameters;
-      List<Type> substitutions = [];
+      var parameters = unparameterized.symbol.parameters
+      List<Type> substitutions = []
       for (var i = 0; i < parameters.size(); i++) {
-        substitutions.push(parameters[i].type);
+        substitutions.push(parameters[i].type)
       }
-      return parameterize(unparameterized, substitutions);
+      return parameterize(unparameterized, substitutions)
     }
-    return unparameterized;
+    return unparameterized
   }
 
   Type parameterize(Type unparameterized, List<Type> substitutions) {
-    var symbol = unparameterized != null ? unparameterized.symbol : null;
+    var symbol = unparameterized != null ? unparameterized.symbol : null
 
     if (symbol != null) {
-      assert symbol.hasParameters();
-      assert !symbol.type.isParameterized();
-      assert symbol.parameters.size() == substitutions.size();
+      assert symbol.hasParameters()
+      assert !symbol.type.isParameterized()
+      assert symbol.parameters.size() == substitutions.size()
     }
 
     // Hash the symbol along with all types
-    var hash = computeHashCode(symbol, substitutions);
-    var existingTypes = hashTable.getOrDefault(hash, null);
+    var hash = computeHashCode(symbol, substitutions)
+    var existingTypes = hashTable.getOrDefault(hash, null)
 
     // Check existing types in that hash bucket for a match
     if (existingTypes != null) {
       for (var i = 0; i < existingTypes.size(); i++) {
-        var existing = existingTypes[i];
-        assert symbol != existing.symbol || symbol == null || substitutions.size() == existing.substitutions.size();
+        var existing = existingTypes[i]
+        assert symbol != existing.symbol || symbol == null || substitutions.size() == existing.substitutions.size()
         if (symbol == existing.symbol && (
             symbol == null && areTypeListsEqual(substitutions, existing.relevantTypes) ||
             symbol != null && areTypeListsEqual(substitutions, existing.substitutions))) {
-          return existing;
+          return existing
         }
       }
     }
 
     // Make a hash bucket
     else {
-      existingTypes = [];
-      hashTable[hash] = existingTypes;
+      existingTypes = []
+      hashTable[hash] = existingTypes
     }
 
     if (trace.GENERICS && symbol != null && substitutions != null) {
       trace.log("parameterize " + (unparameterized != null ? unparameterized.toString() : "null") +
-        " with " + Type.environmentToString(symbol.parameters, substitutions));
-      trace.indent();
+        " with " + Type.environmentToString(symbol.parameters, substitutions))
+      trace.indent()
     }
 
     // We didn't find a match, so make the type for the first time
-    var type = Type(symbol);
+    var type = Type(symbol)
     if (symbol != null) {
-      type.substitutions = substitutions;
-      type.relevantTypes = substituteAll(unparameterized.relevantTypes, symbol.parameters, substitutions);
+      type.substitutions = substitutions
+      type.relevantTypes = substituteAll(unparameterized.relevantTypes, symbol.parameters, substitutions)
 
-      var members = unparameterized.members.values();
+      var members = unparameterized.members.values()
       for (var i = 0; i < members.size(); i++) {
-        var member = members[i];
-        var clone = Member(member.symbol);
-        clone.dependency = member.dependency != null ? member.dependency : member;
-        clone.parameterizedType = type;
+        var member = members[i]
+        var clone = Member(member.symbol)
+        clone.dependency = member.dependency != null ? member.dependency : member
+        clone.parameterizedType = type
 
         // The type environment for lazy type substitution of the member is
         // stored in clone.parameterizedType. However, the type environment
@@ -205,89 +205,89 @@ class TypeCache {
         // from Bar<bool>, or Bar<bool>.foo will have the wrong type:
         //
         //   class Foo<A, B> {
-        //     A baz;
+        //     A baz
         //     A foo(B bar) { return baz; }
         //   }
         //   class Bar<T> : Foo<int, T> {}
         //   class Baz : Bar<bool> {}
         //   export int foo() {
-        //     return Baz(0).foo(false);
+        //     return Baz(0).foo(false)
         //   }
         //
-        var parameterizedType = member.parameterizedType;
+        var parameterizedType = member.parameterizedType
         if (parameterizedType != null && parameterizedType != unparameterized) {
-          List<Type> merged = [];
+          List<Type> merged = []
           for (var j = 0; j < parameterizedType.substitutions.size(); j++) {
-            var parameter = parameterizedType.symbol.parameters[j];
-            var index = symbol.parameters.indexOf(parameter);
-            merged.push(index >= 0 ? substitutions[index] : substitute(parameterizedType.substitutions[j], symbol.parameters, substitutions));
+            var parameter = parameterizedType.symbol.parameters[j]
+            var index = symbol.parameters.indexOf(parameter)
+            merged.push(index >= 0 ? substitutions[index] : substitute(parameterizedType.substitutions[j], symbol.parameters, substitutions))
           }
-          clone.parameterizedType = parameterize(parameterizedType.symbol.type, merged);
+          clone.parameterizedType = parameterize(parameterizedType.symbol.type, merged)
         }
 
-        type.addMember(clone);
+        type.addMember(clone)
       }
 
       if (trace.GENERICS && substitutions != null) {
-        trace.log("parameterize gave " + type);
-        trace.dedent();
+        trace.log("parameterize gave " + type)
+        trace.dedent()
       }
     } else {
-      type.relevantTypes = substitutions;
+      type.relevantTypes = substitutions
     }
-    existingTypes.push(type);
-    return type;
+    existingTypes.push(type)
+    return type
   }
 
   Type parameterizeListType(Type itemType) {
-    return parameterize(listType, [itemType]);
+    return parameterize(listType, [itemType])
   }
 
   Type functionType(Type result, List<Type> arguments) {
-    arguments.unshift(result);
-    return parameterize(null, arguments);
+    arguments.unshift(result)
+    return parameterize(null, arguments)
   }
 
   bool canCastToNumeric(Type type) {
-    return type.isNumeric(this) || type.isBool(this);
+    return type.isNumeric(this) || type.isBool(this)
   }
 
   Type commonImplicitType(Type left, Type right) {
     // Short-circuit early for identical types
-    if (left == right) return left;
+    if (left == right) return left
 
     // Check implicit conversions
-    if (canImplicitlyConvert(left, right)) return right;
-    if (canImplicitlyConvert(right, left)) return left;
+    if (canImplicitlyConvert(left, right)) return right
+    if (canImplicitlyConvert(right, left)) return left
 
     // Implement common implicit types for numeric types
     if (left.isNumeric(this) && right.isNumeric(this)) {
       return left.isInteger(this) && right.isInteger(this) ? intType :
         left.isFloat(this) && right.isFloat(this) ? floatType :
-        doubleType;
+        doubleType
     }
 
     // Check for a common base class
     if (left.isClass() && right.isClass()) {
-      return commonBaseClass(left, right);
+      return commonBaseClass(left, right)
     }
 
-    return null;
+    return null
   }
 
   bool canImplicitlyConvert(Type from, Type to) {
-    if (from == to) return true;
-    if (from.isNull(this) && to.isReference()) return true;
-    if ((from.isInteger(this) || from.isReal(this)) && to.isReal(this)) return true;
-    if (from.isEnum() && (to.isInt(this) || to.isDouble(this))) return true;
-    if (from.hasBaseType(to)) return true;
-    return false;
+    if (from == to) return true
+    if (from.isNull(this) && to.isReference()) return true
+    if ((from.isInteger(this) || from.isReal(this)) && to.isReal(this)) return true
+    if (from.isEnum() && (to.isInt(this) || to.isDouble(this))) return true
+    if (from.hasBaseType(to)) return true
+    return false
   }
 
   bool canExplicitlyConvert(Type from, Type to) {
-    if (canImplicitlyConvert(from, to)) return true;
-    if (canCastToNumeric(from) && canCastToNumeric(to)) return true;
-    if (to.hasBaseType(from)) return true;
-    return false;
+    if (canImplicitlyConvert(from, to)) return true
+    if (canCastToNumeric(from) && canCastToNumeric(to)) return true
+    if (to.hasBaseType(from)) return true
+    return false
   }
 }

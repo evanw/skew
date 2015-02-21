@@ -1,20 +1,20 @@
 class TreeShakingPass {
   private {
-    final CompilerOptions options;
-    final var includedSymbols = IntMap<bool>();
-    final var includedTypes = IntMap<bool>();
-    var isFirstList = true;
+    final CompilerOptions options
+    final var includedSymbols = IntMap<bool>()
+    final var includedTypes = IntMap<bool>()
+    var isFirstList = true
   }
 
   static void run(Node program, CompilerOptions options, Resolver resolver) {
-    var pass = TreeShakingPass(options);
-    var allSymbols = resolver.allSymbols;
+    var pass = TreeShakingPass(options)
+    var allSymbols = resolver.allSymbols
 
     // Include all exported symbols
     for (var i = 0; i < allSymbols.size(); i++) {
-      var symbol = allSymbols[i];
+      var symbol = allSymbols[i]
       if (symbol.isExport() || symbol.isEntryPoint()) {
-        pass.includeSymbol(symbol);
+        pass.includeSymbol(symbol)
       }
     }
 
@@ -31,89 +31,89 @@ class TreeShakingPass {
     // This iterates until a fixed point is reached because there may be
     // complex dependency issues. The work list is narrowed down before the
     // fixed point loop to reduce overhead.
-    List<Symbol> deadSymbolsWithOverrides = [];
-    var isFixedPoint = false;
+    List<Symbol> deadSymbolsWithOverrides = []
+    var isFixedPoint = false
     for (var i = 0; i < allSymbols.size(); i++) {
-      var symbol = allSymbols[i];
+      var symbol = allSymbols[i]
       if (!(symbol.uniqueID in pass.includedSymbols) && symbol.overriddenMember != null) {
-        deadSymbolsWithOverrides.push(symbol);
+        deadSymbolsWithOverrides.push(symbol)
       }
     }
     while (!isFixedPoint) {
-      isFixedPoint = true;
+      isFixedPoint = true
       for (var i = 0; i < deadSymbolsWithOverrides.size(); i++) {
         if (pass.includeDueToOverriddenMember(deadSymbolsWithOverrides[i])) {
-          isFixedPoint = false;
+          isFixedPoint = false
         }
       }
     }
 
     // Remove symbols that aren't included. Be careful to erase removed symbols
     // from allSymbols in place and not with remove() to avoid O(n^2) behavior.
-    var live = 0;
+    var live = 0
     for (var i = 0; i < allSymbols.size(); i++) {
-      var symbol = allSymbols[i];
+      var symbol = allSymbols[i]
       if (!pass.removeSymbolIfDead(symbol)) {
-        allSymbols[live] = symbol;
-        live++;
+        allSymbols[live] = symbol
+        live++
       }
     }
     while (allSymbols.size() > live) {
-      allSymbols.pop();
+      allSymbols.pop()
     }
   }
 
   private void includeSymbol(Symbol symbol) {
     // Don't include constants, needed because constant folding hasn't run yet
     if (symbol.kind == .GLOBAL_VARIABLE && symbol.isConst() && options.foldAllConstants) {
-      return;
+      return
     }
 
     if (!(symbol.uniqueID in includedSymbols)) {
-      includedSymbols[symbol.uniqueID] = true;
+      includedSymbols[symbol.uniqueID] = true
 
       // This symbol depends on the enclosing symbol being present
       if (symbol.enclosingSymbol != null && symbol.kind != .INSTANCE_VARIABLE) {
-        includeSymbol(symbol.enclosingSymbol);
+        includeSymbol(symbol.enclosingSymbol)
       }
 
       // Object types depend on their constructor even if not explicitly used
       if (symbol.kind.isObject()) {
-        var constructor = symbol.type.constructor();
+        var constructor = symbol.type.constructor()
         if (constructor != null) {
-          includeSymbol(constructor.symbol);
+          includeSymbol(constructor.symbol)
         }
       }
 
       // This symbol depends on all other relevant types
       if (symbol.type.hasRelevantTypes()) {
-        var types = symbol.type.relevantTypes;
+        var types = symbol.type.relevantTypes
         for (var i = 0; i < types.size(); i++) {
-          var relevantSymbol = types[i].symbol;
+          var relevantSymbol = types[i].symbol
 
           // Function types don't have a symbol
           if (relevantSymbol != null) {
-            includeSymbol(relevantSymbol);
+            includeSymbol(relevantSymbol)
           }
         }
       }
 
       // Recursively include child non-structural nodes
-      var node = symbol.node;
+      var node = symbol.node
       if (node != null && !node.kind.isNamedBlockDeclaration()) {
-        visit(node);
+        visit(node)
       }
     }
   }
 
   private void includeType(Type type) {
     if (!(type.uniqueID in includedTypes)) {
-      includedTypes[type.uniqueID] = true;
+      includedTypes[type.uniqueID] = true
       if (type.symbol != null) {
-        includeSymbol(type.symbol);
+        includeSymbol(type.symbol)
         if (type.isParameterized()) {
           for (var i = 0; i < type.substitutions.size(); i++) {
-            includeType(type.substitutions[i]);
+            includeType(type.substitutions[i])
           }
         }
       }
@@ -122,69 +122,69 @@ class TreeShakingPass {
 
   private void visit(Node node) {
     if (node.symbol != null) {
-      includeSymbol(node.symbol);
+      includeSymbol(node.symbol)
     }
 
     if (node.type != null) {
-      includeType(node.type);
+      includeType(node.type)
     }
 
     // Make sure the "literal" method is kept around
     if (options.target == .CPP && node.kind == .LIST && isFirstList) {
-      var literal = node.type.findMember("literal");
-      assert literal != null;
-      includeSymbol(literal.symbol);
-      isFirstList = false;
+      var literal = node.type.findMember("literal")
+      assert literal != null
+      includeSymbol(literal.symbol)
+      isFirstList = false
     }
 
     if (node.hasChildren()) {
-      var children = node.children;
+      var children = node.children
       for (var i = 0, n = children.size(); i < n; i++) {
-        var child = children[i];
+        var child = children[i]
         if (child != null) {
-          visit(child);
+          visit(child)
         }
       }
     }
   }
 
   private bool includeDueToOverriddenMember(Symbol symbol) {
-    assert symbol.overriddenMember != null;
-    assert symbol.enclosingSymbol != null;
+    assert symbol.overriddenMember != null
+    assert symbol.enclosingSymbol != null
 
     if (!(symbol.uniqueID in includedSymbols) && (symbol.overriddenMember.symbol.isImport() ||
         symbol.enclosingSymbol.uniqueID in includedSymbols && symbol.overriddenMember.symbol.uniqueID in includedSymbols)) {
-      includeSymbol(symbol);
-      return true;
+      includeSymbol(symbol)
+      return true
     }
 
-    return false;
+    return false
   }
 
   private bool removeSymbolIfDead(Symbol symbol) {
     // Ignore irrelevant symbols
     if (symbol.kind == .LOCAL_VARIABLE) {
-      return false;
+      return false
     }
 
     // Remove symbols that aren't included
     if (!(symbol.uniqueID in includedSymbols)) {
       if (symbol.enclosingSymbol != null) {
-        symbol.enclosingSymbol.type.members.remove(symbol.name);
+        symbol.enclosingSymbol.type.members.remove(symbol.name)
       }
 
       // Quoted types need their original node kept around for printing later
       if (symbol.node != null && symbol.kind != .QUOTED_TYPE) {
-        symbol.node.remove();
-        symbol.node = null;
+        symbol.node.remove()
+        symbol.node = null
       }
-      return true;
+      return true
     }
 
     // Disconnect symbols that are included from overridden symbols that aren't included
     if (symbol.overriddenMember != null && !(symbol.overriddenMember.symbol.uniqueID in includedSymbols)) {
-      symbol.overriddenMember = null;
+      symbol.overriddenMember = null
     }
-    return false;
+    return false
   }
 }

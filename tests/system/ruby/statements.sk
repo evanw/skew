@@ -13,6 +13,6 @@ def foo
   x = 0.0
   return Math.cos(x)
 end
-");
+")
 
 }}

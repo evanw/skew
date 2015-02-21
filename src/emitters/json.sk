@@ -1,66 +1,66 @@
 namespace json {
   string dump(Node node) {
-    var visitor = DumpVisitor();
-    visitor.visit(node);
-    visitor.builder.append("\n");
-    return visitor.builder.toString();
+    var visitor = DumpVisitor()
+    visitor.visit(node)
+    visitor.builder.append("\n")
+    return visitor.builder.toString()
   }
 
   class Emitter : IEmitter {
-    private CompilerOptions options;
+    private CompilerOptions options
 
     override List<Source> emitProgram(Node program) {
-      List<Source> outputs = [];
+      List<Source> outputs = []
       if (!options.includeLibraries) {
-        program.removeLibraryFiles();
+        program.removeLibraryFiles()
       }
       if (options.outputDirectory == "") {
-        outputs.push(Source(options.outputFile, dump(program)));
+        outputs.push(Source(options.outputFile, dump(program)))
       } else {
         for (var i = 0; i < program.children.size(); i++) {
-          var file = program.children[i];
-          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".json"), dump(file)));
+          var file = program.children[i]
+          outputs.push(Source(joinPath(options.outputDirectory, file.range.source.name + ".json"), dump(file)))
         }
       }
-      return outputs;
+      return outputs
     }
   }
 
   class DumpVisitor {
-    var builder = StringBuilder();
-    var indent = "";
+    var builder = StringBuilder()
+    var indent = ""
 
     void visit(Node node) {
       if (node == null) {
-        builder.append("null");
-        return;
+        builder.append("null")
+        return
       }
-      var outer = indent;
-      indent += "  ";
-      builder.append("{\n" + indent + "\"kind\": " + simpleQuote(node.kind.prettyPrint()));
+      var outer = indent
+      indent += "  "
+      builder.append("{\n" + indent + "\"kind\": " + simpleQuote(node.kind.prettyPrint()))
       if (node.content != null) {
-        builder.append(",\n" + indent + "\"content\": ");
+        builder.append(",\n" + indent + "\"content\": ")
         switch (node.content.type()) {
-          case .INT { builder.append(node.asInt().toString()); }
-          case .BOOL { builder.append(node.asBool().toString()); }
-          case .DOUBLE { builder.append(node.asDouble().toString()); }
-          case .STRING { builder.append(quoteString(node.asString(), '"')); }
+          case .INT { builder.append(node.asInt().toString()) }
+          case .BOOL { builder.append(node.asBool().toString()) }
+          case .DOUBLE { builder.append(node.asDouble().toString()) }
+          case .STRING { builder.append(quoteString(node.asString(), '"')) }
         }
       }
       if (node.hasChildren()) {
-        builder.append(",\n" + indent + "\"children\": [");
-        var inner = indent;
-        indent += "  ";
+        builder.append(",\n" + indent + "\"children\": [")
+        var inner = indent
+        indent += "  "
         for (var i = 0; i < node.children.size(); i++) {
-          if (i != 0) builder.append(",");
-          builder.append("\n" + indent);
-          visit(node.children[i]);
+          if (i != 0) builder.append(",")
+          builder.append("\n" + indent)
+          visit(node.children[i])
         }
-        indent = inner;
-        builder.append("\n" + indent + "]");
+        indent = inner
+        builder.append("\n" + indent + "]")
       }
-      indent = outer;
-      builder.append("\n" + indent + "}");
+      indent = outer
+      builder.append("\n" + indent + "}")
     }
   }
 }

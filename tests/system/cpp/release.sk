@@ -28,7 +28,7 @@ int foo(int y) {
 
   return y;
 }
-").release();
+").release()
 
 testCPP("
 export int foo(int y) {
@@ -60,7 +60,7 @@ int foo(int y) {
 
   return y;
 }
-").release();
+").release()
 
 testCPP("
 export int foo(int y) {
@@ -78,6 +78,6 @@ int foo(int y) {
 
   return y;
 }
-").release();
+").release()
 
 }}

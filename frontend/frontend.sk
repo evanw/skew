@@ -1,8 +1,8 @@
 class FrontendFileAccess : FileAccess {
   override Source contentsOfFile(string sourcePath, string relativePath) {
-    var path = joinPath(splitPath(sourcePath).directory, relativePath);
-    var contents = io.readFile(path);
-    return contents != null ? Source(path, contents.value) : null;
+    var path = joinPath(splitPath(sourcePath).directory, relativePath)
+    var contents = io.readFile(path)
+    return contents != null ? Source(path, contents.value) : null
   }
 }
 
@@ -28,60 +28,60 @@ enum Option {
 }
 
 namespace frontend {
-  const var DEFAULT_ERROR_LIMIT = 20;
+  const var DEFAULT_ERROR_LIMIT = 20
 
   @EntryPoint
   int main(List<string> arguments) {
     // Translate frontend flags to compiler options
-    var log = Log();
-    var parser = OptionParser();
-    var options = parseOptions(log, parser, arguments);
-    var inputs = readSources(log, parser.normalArguments);
+    var log = Log()
+    var parser = OptionParser()
+    var options = parseOptions(log, parser, arguments)
+    var inputs = readSources(log, parser.normalArguments)
 
     // Run the compilation
     if (!log.hasErrors() && options != null) {
-      var compiler = Compiler(options);
+      var compiler = Compiler(options)
       for (var i = 0; i < inputs.size(); i++) {
-        compiler.addInput(inputs[i]);
+        compiler.addInput(inputs[i])
       }
-      var result = compiler.compile();
+      var result = compiler.compile()
 
       // Write all outputs
       if (!log.hasErrors()) {
         for (var i = 0; i < result.outputs.size(); i++) {
-          var output = result.outputs[i];
+          var output = result.outputs[i]
           if (!io.writeFile(output.name, output.contents)) {
-            var outputFile = parser.stringRangeForOption(.OUTPUT_FILE);
-            var outputDirectory = parser.stringRangeForOption(.OUTPUT_DIRECTORY);
-            commandLineErrorUnwritableFile(log, outputFile != null ? outputFile : outputDirectory, output.name);
-            break;
+            var outputFile = parser.stringRangeForOption(.OUTPUT_FILE)
+            var outputDirectory = parser.stringRangeForOption(.OUTPUT_DIRECTORY)
+            commandLineErrorUnwritableFile(log, outputFile != null ? outputFile : outputDirectory, output.name)
+            break
           }
         }
 
         // Print compilation statistics
         if (!log.hasErrors() && options.verbose) {
-          terminal.print(compiler.statistics(result));
+          terminal.print(compiler.statistics(result))
         }
       }
     }
 
     // Print any errors and warnings
-    printLogWithColor(log, parser.intForOption(.ERROR_LIMIT, DEFAULT_ERROR_LIMIT));
-    return log.hasErrors() ? 1 : 0;
+    printLogWithColor(log, parser.intForOption(.ERROR_LIMIT, DEFAULT_ERROR_LIMIT))
+    return log.hasErrors() ? 1 : 0
   }
 
   string joinKeys(List<string> keys) {
-    keys.sort(StringComparison.INSTANCE);
-    return prettyPrint.join(simpleQuoteAll(keys), "and");
+    keys.sort(StringComparison.INSTANCE)
+    return prettyPrint.join(simpleQuoteAll(keys), "and")
   }
 
   T parseEnum<T>(Log log, string name, StringMap<T> map, Range range, T defaultValue) {
-    var key = range.toString();
-    if (key in map) return map[key];
-    var keys = map.keys();
-    keys.sort(StringComparison.INSTANCE);
-    commandLineErrorInvalidEnum(log, range, name, key, keys);
-    return defaultValue;
+    var key = range.toString()
+    if (key in map) return map[key]
+    var keys = map.keys()
+    keys.sort(StringComparison.INSTANCE)
+    commandLineErrorInvalidEnum(log, range, name, key, keys)
+    return defaultValue
   }
 
   CompilerOptions parseOptions(Log log, OptionParser parser, List<string> arguments) {
@@ -93,241 +93,246 @@ namespace frontend {
       "lisp-ast": .LISP_AST,
       "ruby": .RUBY,
       "xml-ast": .XML_AST,
-    };
+    }
     StringMap<CompilerConfig> VALID_JS_CONFIGS = {
       "browser": .BROWSER,
       "node": .NODE,
-    };
+    }
     StringMap<CompilerConfig> VALID_CPP_CONFIGS = {
       "android": .ANDROID,
       "ios": .IOS,
       "linux": .LINUX,
       "osx": .OSX,
       "windows": .WINDOWS,
-    };
+    }
     StringMap<MemoryManagement> VALID_GC_STRATEGIES = {
       "mark-sweep": .MARK_SWEEP,
       "none": .NONE,
       "none-fast": .NONE_FAST,
-    };
+    }
 
     // Configure the parser
-    parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"]);
-    parser.define(.STRING, .TARGET, "--target", "Sets the target format. Valid targets are " + joinKeys(VALID_TARGETS.keys()) + ".");
-    parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.");
-    parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.");
-    parser.define(.STRING_LIST, .DEFINE, "--define", "Overrides the value of a #define statement. Example: --define:UNIT_TESTS=true.");
-    parser.define(.BOOL, .RELEASE, "--release", "Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE.");
-    parser.define(.STRING, .CONFIG, "--config", "Provides the configuration for the target format. Valid configurations are " + joinKeys(VALID_JS_CONFIGS.keys()) + " for JavaScript and " + joinKeys(VALID_CPP_CONFIGS.keys()) + " for C++. Defaults to \"browser\" for JavaScript and the current operating system for C++.");
-    parser.define(.BOOL, .VERBOSE, "--verbose", "Prints out information about the compilation.");
-    parser.define(.STRING, .GC, "--gc", "Sets the garbage collection strategy when targeting C++. Valid strategies are " + joinKeys(VALID_GC_STRATEGIES.keys()) + ". Defaults to \"none\".");
-    parser.define(.BOOL, .SOURCE_MAP, "--source-map", "Generates a source map when targeting JavaScript. The source map is saved with the \".map\" extension in the same directory as the main output file.");
-    parser.define(.BOOL, .INCLUDE_LIBRARIES, "--include-libraries", "Includes library source code in the output. Only applies to the \"joined\", \"json-ast\", \"lisp-ast\", and \"xml-ast\" targets.");
-    parser.define(.BOOL, .INLINE, "--inline", "Uses heuristics to automatically inline simple functions.");
-    parser.define(.BOOL, .GLOBALIZE, "--globalize", "Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.");
-    parser.define(.BOOL, .REMOVE_ASSERTS, "--remove-asserts", "Removes all assert statements during compilation.");
-    parser.define(.BOOL, .FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.");
-    parser.define(.BOOL, .MINIFY, "--minify", "Omits whitespace so the emitted JavaScript takes up less space.");
-    parser.define(.BOOL, .MANGLE, "--mangle", "Transforms your JavaScript code to be as small as possible. The \"export\" modifier prevents renaming a symbol.");
-    parser.define(.INT, .ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is 20.");
+    parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"])
+    parser.define(.STRING, .TARGET, "--target", "Sets the target format. Valid targets are " + joinKeys(VALID_TARGETS.keys()) + ".")
+    parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.")
+    parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.")
+    parser.define(.STRING_LIST, .DEFINE, "--define", "Overrides the value of a #define statement. Example: --define:UNIT_TESTS=true.")
+    parser.define(.BOOL, .RELEASE, "--release", "Implies --inline, --globalize, --remove-asserts, --fold-constants, --minify, --mangle, and --define:BUILD_RELEASE.")
+    parser.define(.STRING, .CONFIG, "--config", "Provides the configuration for the target format. Valid configurations are " + joinKeys(VALID_JS_CONFIGS.keys()) + " for JavaScript and " + joinKeys(VALID_CPP_CONFIGS.keys()) + " for C++. Defaults to \"browser\" for JavaScript and the current operating system for C++.")
+    parser.define(.BOOL, .VERBOSE, "--verbose", "Prints out information about the compilation.")
+    parser.define(.STRING, .GC, "--gc", "Sets the garbage collection strategy when targeting C++. Valid strategies are " + joinKeys(VALID_GC_STRATEGIES.keys()) + ". Defaults to \"none\".")
+    parser.define(.BOOL, .SOURCE_MAP, "--source-map", "Generates a source map when targeting JavaScript. The source map is saved with the \".map\" extension in the same directory as the main output file.")
+    parser.define(.BOOL, .INCLUDE_LIBRARIES, "--include-libraries", "Includes library source code in the output. Only applies to the \"joined\", \"json-ast\", \"lisp-ast\", and \"xml-ast\" targets.")
+    parser.define(.BOOL, .INLINE, "--inline", "Uses heuristics to automatically inline simple functions.")
+    parser.define(.BOOL, .GLOBALIZE, "--globalize", "Changes all internal non-virtual instance methods to static methods. This provides more inlining opportunities at compile time and avoids property access overhead at runtime.")
+    parser.define(.BOOL, .REMOVE_ASSERTS, "--remove-asserts", "Removes all assert statements during compilation.")
+    parser.define(.BOOL, .FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.")
+    parser.define(.BOOL, .MINIFY, "--minify", "Omits whitespace so the emitted JavaScript takes up less space.")
+    parser.define(.BOOL, .MANGLE, "--mangle", "Transforms your JavaScript code to be as small as possible. The \"export\" modifier prevents renaming a symbol.")
+    parser.define(.INT, .ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is 20.")
 
     // Parse the command line arguments
-    parser.parse(log, arguments);
+    parser.parse(log, arguments)
     if (log.hasErrors()) {
-      return null;
+      return null
     }
 
     // Early-out when printing the usage text
     if (parser.boolForOption(.HELP, arguments.size() == 0)) {
-      printUsage(parser);
-      return null;
+      printUsage(parser)
+      return null
     }
 
     // Set up the options for the compiler
-    var options = CompilerOptions();
-    var releaseFlag = parser.boolForOption(.RELEASE, false);
-    options.fileAccess = FrontendFileAccess();
-    options.verbose = parser.boolForOption(.VERBOSE, false);
-    options.sourceMap = parser.boolForOption(.SOURCE_MAP, false);
-    options.minify = parser.boolForOption(.MINIFY, releaseFlag);
-    options.mangle = parser.boolForOption(.MANGLE, releaseFlag);
-    options.removeAsserts = parser.boolForOption(.REMOVE_ASSERTS, releaseFlag);
-    options.foldAllConstants = parser.boolForOption(.FOLD_CONSTANTS, releaseFlag);
-    options.includeLibraries = parser.boolForOption(.INCLUDE_LIBRARIES, false);
-    options.inlineAllFunctions = parser.boolForOption(.INLINE, releaseFlag);
-    options.globalizeAllFunctions = parser.boolForOption(.GLOBALIZE, releaseFlag);
-    options.log = log;
+    var options = CompilerOptions()
+    var releaseFlag = parser.boolForOption(.RELEASE, false)
+    options.fileAccess = FrontendFileAccess()
+    options.verbose = parser.boolForOption(.VERBOSE, false)
+    options.sourceMap = parser.boolForOption(.SOURCE_MAP, false)
+    options.minify = parser.boolForOption(.MINIFY, releaseFlag)
+    options.mangle = parser.boolForOption(.MANGLE, releaseFlag)
+    options.removeAsserts = parser.boolForOption(.REMOVE_ASSERTS, releaseFlag)
+    options.foldAllConstants = parser.boolForOption(.FOLD_CONSTANTS, releaseFlag)
+    options.includeLibraries = parser.boolForOption(.INCLUDE_LIBRARIES, false)
+    options.inlineAllFunctions = parser.boolForOption(.INLINE, releaseFlag)
+    options.globalizeAllFunctions = parser.boolForOption(.GLOBALIZE, releaseFlag)
+    options.log = log
 
     // Prepare the defines
     if (releaseFlag) {
-      options.overrideDefine("BUILD_RELEASE", true);
+      options.overrideDefine("BUILD_RELEASE", true)
     }
-    var defines = parser.stringRangeListForOption(.DEFINE);
+    var defines = parser.stringRangeListForOption(.DEFINE)
     if (defines != null) {
       for (var i = 0; i < defines.size(); i++) {
-        var range = defines[i];
-        var text = range.toString();
-        var equals = text.indexOf("=");
-        var value = true;
-        var name = text;
+        var range = defines[i]
+        var text = range.toString()
+        var equals = text.indexOf("=")
+        var value = true
+        var name = text
         if (equals >= 0) {
-          name = text.slice(0, equals);
-          var boolean = text.slice(equals + 1, text.size());
+          name = text.slice(0, equals)
+          var boolean = text.slice(equals + 1, text.size())
           if (boolean != "true" && boolean != "false") {
-            commandLineErrorNonBooleanValue(log, range.fromEnd(boolean.size()), boolean, text);
-            continue;
+            commandLineErrorNonBooleanValue(log, range.fromEnd(boolean.size()), boolean, text)
+            continue
           }
-          value = boolean == "true";
-          range = range.fromStart(name.size());
+          value = boolean == "true"
+          range = range.fromStart(name.size())
         }
-        options.overriddenDefines[name] = OverriddenDefine(value, range);
+        options.overriddenDefines[name] = OverriddenDefine(value, range)
       }
     }
 
     // There must be at least one source file
-    var end = parser.source.contents.size();
-    var trailingSpace = Range(parser.source, end - 1, end);
+    var end = parser.source.contents.size()
+    var trailingSpace = Range(parser.source, end - 1, end)
     if (parser.normalArguments.size() == 0) {
-      commandLineErrorNoInputFiles(log, trailingSpace);
+      commandLineErrorNoInputFiles(log, trailingSpace)
     }
 
     // Check the target format
-    var target = parser.stringRangeForOption(.TARGET);
+    var target = parser.stringRangeForOption(.TARGET)
     if (target != null) {
-      options.target = parseEnum<CompilerTarget>(log, "target", VALID_TARGETS, target, .NONE);
+      options.target = parseEnum<CompilerTarget>(log, "target", VALID_TARGETS, target, .NONE)
     } else {
-      commandLineErrorMissingTarget(log, trailingSpace, "--target");
+      commandLineErrorMissingTarget(log, trailingSpace, "--target")
     }
 
     // Parse the output location
-    var outputFile = parser.stringRangeForOption(.OUTPUT_FILE);
-    var outputDirectory = parser.stringRangeForOption(.OUTPUT_DIRECTORY);
+    var outputFile = parser.stringRangeForOption(.OUTPUT_FILE)
+    var outputDirectory = parser.stringRangeForOption(.OUTPUT_DIRECTORY)
     if (outputFile == null && outputDirectory == null) {
-      commandLineErrorMissingOutput(log, trailingSpace, "--output-file", "--output-dir");
+      commandLineErrorMissingOutput(log, trailingSpace, "--output-file", "--output-dir")
     } else if (outputFile != null && outputDirectory != null) {
-      commandLineErrorDuplicateOutput(log, outputFile.start > outputDirectory.start ? outputFile : outputDirectory, "--output-file", "--output-dir");
+      commandLineErrorDuplicateOutput(log, outputFile.start > outputDirectory.start ? outputFile : outputDirectory, "--output-file", "--output-dir")
     } else if (outputFile != null) {
-      options.outputFile = outputFile.toString();
+      options.outputFile = outputFile.toString()
     } else {
-      options.outputDirectory = outputDirectory.toString();
+      options.outputDirectory = outputDirectory.toString()
     }
 
     // Parse the configuration
-    var config = parser.stringRangeForOption(.CONFIG);
+    var config = parser.stringRangeForOption(.CONFIG)
     if (options.target != .NONE && config != null) {
       if (options.target == .JAVASCRIPT || options.target == .CPP) {
-        options.config = parseEnum<CompilerConfig>(log, "configuration", options.target == .JAVASCRIPT ? VALID_JS_CONFIGS : VALID_CPP_CONFIGS, config, .AUTOMATIC);
+        options.config = parseEnum<CompilerConfig>(log, "configuration", options.target == .JAVASCRIPT ? VALID_JS_CONFIGS : VALID_CPP_CONFIGS, config, .AUTOMATIC)
       } else {
-        commandLineErrorUnexpectedConfiguration(log, config, config.toString(), target.toString());
+        commandLineErrorUnexpectedConfiguration(log, config, config.toString(), target.toString())
       }
     }
 
     // Parse the garbage collection strategy
-    var gc = parser.stringRangeForOption(.GC);
+    var gc = parser.stringRangeForOption(.GC)
     if (gc != null) {
       if (options.target == .CPP) {
-        options.memoryManagement = parseEnum<MemoryManagement>(log, "garbage collection strategy", VALID_GC_STRATEGIES, gc, .NONE);
+        options.memoryManagement = parseEnum<MemoryManagement>(log, "garbage collection strategy", VALID_GC_STRATEGIES, gc, .NONE)
       } else if (options.target != .NONE) {
-        commandLineErrorUnexpectedGarbageCollectionStrategy(log, gc, target.toString());
+        commandLineErrorUnexpectedGarbageCollectionStrategy(log, gc, target.toString())
       }
     }
 
-    return options;
+    return options
   }
 
   List<Source> readSources(Log log, List<Range> files) {
-    List<Source> result = [];
-    var error = false;
+    List<Source> result = []
+    var error = false
     for (var i = 0; i < files.size(); i++) {
-      var file = files[i];
-      var path = file.toString();
-      var contents = io.readFile(path);
+      var file = files[i]
+      var path = file.toString()
+      var contents = io.readFile(path)
       if (contents == null) {
-        commandLineErrorUnreadableFile(log, file, path);
+        commandLineErrorUnreadableFile(log, file, path)
       } else {
-        result.push(Source(path, contents.value));
+        result.push(Source(path, contents.value))
       }
     }
-    return error ? null : result;
+    return error ? null : result
   }
 
   void printWithColor(terminal.Color color, string text) {
-    terminal.setColor(color);
-    terminal.write(text);
-    terminal.setColor(.DEFAULT);
+    terminal.setColor(color)
+    terminal.write(text)
+    terminal.setColor(.DEFAULT)
   }
 
   void printError(string text) {
-    printWithColor(.RED, "error: ");
-    printWithColor(.BOLD, text + "\n");
+    printWithColor(.RED, "error: ")
+    printWithColor(.BOLD, text + "\n")
   }
 
   void printNote(string text) {
-    printWithColor(.GRAY, "note: ");
-    printWithColor(.BOLD, text + "\n");
+    printWithColor(.GRAY, "note: ")
+    printWithColor(.BOLD, text + "\n")
   }
 
   void printWarning(string text) {
-    printWithColor(.MAGENTA, "warning: ");
-    printWithColor(.BOLD, text + "\n");
+    printWithColor(.MAGENTA, "warning: ")
+    printWithColor(.BOLD, text + "\n")
   }
 
   void printUsage(OptionParser parser) {
-    printWithColor(.GREEN, "\nusage: ");
-    printWithColor(.BOLD, "skewc [flags] [inputs]\n");
-    terminal.write(parser.usageText(80 - terminalWidthPadding()));
+    printWithColor(.GREEN, "\nusage: ")
+    printWithColor(.BOLD, "skewc [flags] [inputs]\n")
+    terminal.write(parser.usageText(80 - terminalWidthPadding()))
   }
 
   void printLogWithColor(Log log, int errorLimit) {
-    var terminalWidth = terminal.width() - terminalWidthPadding();
-    var errorCount = 0;
+    var terminalWidth = terminal.width() - terminalWidthPadding()
+    var errorCount = 0
 
     for (var i = 0; i < log.diagnostics.size(); i++) {
-      var diagnostic = log.diagnostics[i];
+      var diagnostic = log.diagnostics[i]
       if (diagnostic.kind == .ERROR && errorLimit > 0 && errorCount == errorLimit) {
-        break;
+        break
       }
       if (!diagnostic.range.isEmpty()) {
-        printWithColor(.BOLD, diagnostic.range.locationString() + ": ");
+        printWithColor(.BOLD, diagnostic.range.locationString() + ": ")
       }
       switch (diagnostic.kind) {
-        case .WARNING { printWarning(diagnostic.text); }
-        case .ERROR { printError(diagnostic.text); errorCount++; }
+        case .WARNING {
+          printWarning(diagnostic.text)
+        }
+        case .ERROR {
+          printError(diagnostic.text)
+          errorCount++
+        }
       }
       if (!diagnostic.range.isEmpty()) {
-        var formatted = diagnostic.range.format(terminalWidth);
-        terminal.print(formatted.line);
-        printWithColor(.GREEN, formatted.range + "\n");
+        var formatted = diagnostic.range.format(terminalWidth)
+        terminal.print(formatted.line)
+        printWithColor(.GREEN, formatted.range + "\n")
       }
       if (!diagnostic.noteRange.isEmpty()) {
-        printWithColor(.BOLD, diagnostic.noteRange.locationString() + ": ");
-        printNote(diagnostic.noteText);
-        var formatted = diagnostic.noteRange.format(terminalWidth);
-        terminal.print(formatted.line);
-        printWithColor(.GREEN, formatted.range + "\n");
+        printWithColor(.BOLD, diagnostic.noteRange.locationString() + ": ")
+        printNote(diagnostic.noteText)
+        var formatted = diagnostic.noteRange.format(terminalWidth)
+        terminal.print(formatted.line)
+        printWithColor(.GREEN, formatted.range + "\n")
       }
     }
 
     // Print the summary
-    var hasErrors = log.hasErrors();
-    var hasWarnings = log.hasWarnings();
-    var summary = "";
+    var hasErrors = log.hasErrors()
+    var hasWarnings = log.hasWarnings()
+    var summary = ""
     if (hasWarnings) {
-      summary += log.warningCount + " warning" + prettyPrint.plural(log.warningCount);
-      if (hasErrors) summary += " and ";
+      summary += log.warningCount + " warning" + prettyPrint.plural(log.warningCount)
+      if (hasErrors) summary += " and "
     }
     if (hasErrors) {
-      summary += log.errorCount + " error" + prettyPrint.plural(log.errorCount);
+      summary += log.errorCount + " error" + prettyPrint.plural(log.errorCount)
     }
     if (hasWarnings || hasErrors) {
-      terminal.write(summary + " generated");
-      printWithColor(.GRAY, errorCount < log.errorCount ? " (only showing " + errorLimit + " error" + prettyPrint.plural(errorLimit) + ", use \"--error-limit=0\" to see all)\n" : "\n");
+      terminal.write(summary + " generated")
+      printWithColor(.GRAY, errorCount < log.errorCount ? " (only showing " + errorLimit + " error" + prettyPrint.plural(errorLimit) + ", use \"--error-limit=0\" to see all)\n" : "\n")
     }
   }
 
   // The windows command prompt inserts an extra line break if text is present
   // in the last column of a row, so don't put any text there just to be safe
   int terminalWidthPadding() {
-    return OperatingSystem.current() == .WINDOWS ? 1 : 0;
+    return OperatingSystem.current() == .WINDOWS ? 1 : 0
   }
 }

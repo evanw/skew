@@ -1,52 +1,58 @@
 export void onmessage(`var` event) {
-  var message = `{}`;
+  var message = `{}`
 
   try {
-    var options = CompilerOptions();
-    var data = event.data;
-    var js = data.js;
-    var cpp = data.cpp;
+    var options = CompilerOptions()
+    var data = event.data
+    var js = data.js
+    var cpp = data.cpp
 
     // Prepare the input for the compiler
     if (data.format == "js") {
-      options.target = .JAVASCRIPT;
-      options.outputFile = js.singleFile ? "" : "output.js";
-      options.minify = js.minify;
-      options.mangle = js.mangle;
-      options.sourceMap = js.sourceMap;
-      options.removeAsserts = js.optimize;
-      options.foldAllConstants = js.optimize;
-      options.inlineAllFunctions = js.optimize;
-      options.globalizeAllFunctions = js.optimize;
+      options.target = .JAVASCRIPT
+      options.outputFile = js.singleFile ? "" : "output.js"
+      options.minify = js.minify
+      options.mangle = js.mangle
+      options.sourceMap = js.sourceMap
+      options.removeAsserts = js.optimize
+      options.foldAllConstants = js.optimize
+      options.inlineAllFunctions = js.optimize
+      options.globalizeAllFunctions = js.optimize
     } else if (data.format == "cpp") {
-      options.target = .CPP;
+      options.target = .CPP
     } else if (data.format == "ruby") {
-      options.target = .RUBY;
+      options.target = .RUBY
     }
 
     // Compile the input and wrap it in a message
-    var compiler = Compiler(options);
-    compiler.addInput(Source("<stdin>", data.input));
-    var result = compiler.compile();
-    var count = result.outputs.size();
-    message.log = options.log.toString();
-    message.tree = lisp.dump(result.program.children.last());
+    var compiler = Compiler(options)
+    compiler.addInput(Source("<stdin>", data.input))
+    var result = compiler.compile()
+    var count = result.outputs.size()
+    message.log = options.log.toString()
+    message.tree = ""
+    if (result.program.hasChildren()) {
+      var last = result.program.children.last()
+      if (!last.isLibraryFile()) {
+        message.tree = lisp.dump(last)
+      }
+    }
     if (count == 1) {
-      message.code = result.outputs[0].contents;
+      message.code = result.outputs[0].contents
     } else {
-      message.code = "";
+      message.code = ""
       for (var i = 0; i < count; i++) {
-        var output = result.outputs[i];
-        if (i != 0) message.code += "\n";
-        message.code += "[" + output.name + "]\n" + output.contents;
+        var output = result.outputs[i]
+        if (i != 0) message.code += "\n"
+        message.code += "[" + output.name + "]\n" + output.contents
       }
     }
   }
 
   // Just indicate a crash for now since exception support isn't fleshed out yet
   catch {
-    message.error = "(internal compiler error)";
+    message.error = "(internal compiler error)"
   }
 
-  `postMessage`(message);
+  `postMessage`(message)
 }

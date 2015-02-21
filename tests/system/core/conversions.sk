@@ -10,7 +10,7 @@ assert const (bool)2 == true;
 assert const (bool)2.5f == true;
 assert const (bool)2.5 == true;
 ", "
-");
+")
 
 test("
 assert const (int)false == 0;
@@ -22,7 +22,7 @@ assert const (int)2 == 2;
 assert const (int)2.5f == 2;
 assert const (int)2.5 == 2;
 ", "
-");
+")
 
 test("
 assert const (float)false == 0.0f;
@@ -34,7 +34,7 @@ assert const (float)2 == 2.0f;
 assert const (float)2.5f == 2.5f;
 assert const (float)2.5 == 2.5f;
 ", "
-");
+")
 
 test("
 assert const (double)false == 0.0;
@@ -46,7 +46,7 @@ assert const (double)2 == 2.0;
 assert const (double)2.5f == 2.5;
 assert const (double)2.5 == 2.5;
 ", "
-");
+")
 
 test("
 assert const 3 / 2 == 1;
@@ -57,7 +57,7 @@ assert const 3 / 2.0 == 1.5;
 assert const 3f / 2f == 1.5;
 assert const 3.0 / 2.0 == 1.5;
 ", "
-");
+")
 
 test("
 int a = 0;
@@ -82,7 +82,7 @@ int e = null;
 <stdin>:6:9: error: Cannot convert from type \"string\" to type \"int\"
 int f = \"\";
         ~~
-");
+")
 
 test("
 bool a = 0;
@@ -107,7 +107,7 @@ bool e = null;
 <stdin>:6:10: error: Cannot convert from type \"string\" to type \"bool\"
 bool f = \"\";
          ~~
-");
+")
 
 test("
 float a = 0;
@@ -126,7 +126,7 @@ float e = null;
 <stdin>:6:11: error: Cannot convert from type \"string\" to type \"float\"
 float f = \"\";
           ~~
-");
+")
 
 test("
 double a = 0;
@@ -145,7 +145,7 @@ double e = null;
 <stdin>:6:12: error: Cannot convert from type \"string\" to type \"double\"
 double f = \"\";
            ~~
-");
+")
 
 test("
 string a = 0;
@@ -170,7 +170,7 @@ string d = 0.0;
 <stdin>:5:12: error: Cannot convert from type \"null\" to type \"string\"
 string e = null;
            ~~~~
-");
+")
 
 test("
 int a = (int)0;
@@ -186,7 +186,7 @@ int e = (int)null;
 <stdin>:6:14: error: Cannot convert from type \"string\" to type \"int\"
 int f = (int)\"\";
              ~~
-");
+")
 
 test("
 bool a = (bool)0;
@@ -202,7 +202,7 @@ bool e = (bool)null;
 <stdin>:6:16: error: Cannot convert from type \"string\" to type \"bool\"
 bool f = (bool)\"\";
                ~~
-");
+")
 
 test("
 float a = (float)0;
@@ -218,7 +218,7 @@ float e = (float)null;
 <stdin>:6:18: error: Cannot convert from type \"string\" to type \"float\"
 float f = (float)\"\";
                  ~~
-");
+")
 
 test("
 double a = (double)0;
@@ -234,7 +234,7 @@ double e = (double)null;
 <stdin>:6:20: error: Cannot convert from type \"string\" to type \"double\"
 double f = (double)\"\";
                    ~~
-");
+")
 
 test("
 string a = (string)0;
@@ -259,7 +259,7 @@ string d = (string)0.0;
 <stdin>:5:20: error: Cannot convert from type \"null\" to type \"string\"
 string e = (string)null;
                    ~~~~
-");
+")
 
 test("
 class C {}
@@ -267,7 +267,7 @@ interface I {}
 C c = null;
 I i = null;
 ", "
-");
+")
 
 test("
 int x = true ? true : false;
@@ -275,7 +275,7 @@ int x = true ? true : false;
 <stdin>:1:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 int x = true ? true : false;
         ~~~~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 bool x = true ? 0 : 1.0f;
@@ -283,7 +283,7 @@ bool x = true ? 0 : 1.0f;
 <stdin>:1:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
 bool x = true ? 0 : 1.0f;
          ~~~~~~~~~~~~~~~
-");
+")
 
 test("
 int x = true ? 1 : false;
@@ -291,7 +291,7 @@ int x = true ? 1 : false;
 <stdin>:1:16: error: No common type for type \"int\" and type \"bool\"
 int x = true ? 1 : false;
                ~~~~~~~~~
-");
+")
 
 test("
 class Foo {
@@ -303,7 +303,7 @@ class Foo {
 <stdin>:3:13: error: Cannot convert from type \"Foo\" to type \"int\"
     int x = this;
             ~~~~
-");
+")
 
 test("
 enum Foo {
@@ -315,7 +315,7 @@ enum Foo {
 <stdin>:4:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   BAZ = false,
         ~~~~~
-");
+")
 
 test("
 void test() {
@@ -325,7 +325,7 @@ void test() {
 <stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   assert 0;
          ^
-");
+")
 
 test("
 int foo() { return; }
@@ -341,7 +341,7 @@ void bar() { return 100; }
 <stdin>:3:21: error: Unexpected expression of type \"void\"
 void baz() { return bar(); }
                     ~~~~~
-");
+")
 
 test("
 class Foo {
@@ -364,7 +364,7 @@ void foo() {
 <stdin>:2:7: note: The declaration for toString() is here
   int toString() { return 0; }
       ~~~~~~~~
-");
+")
 
 test("
 var foo = null + \"\";
@@ -376,7 +376,7 @@ var foo = null + \"\";
 <stdin>:2:16: error: \"toString\" is not declared on type \"null\"
 var bar = null.toString() + \"\";
                ~~~~~~~~
-");
+")
 
 test("
 class Foo {
@@ -389,6 +389,6 @@ string foo(Foo foo) {
 <stdin>:5:10: error: Expression of type \"Foo\" has no toString() member to call
   return foo + \"!\";
          ~~~
-");
+")
 
 }}

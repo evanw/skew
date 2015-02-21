@@ -4,31 +4,31 @@ test("
 in Foo {}
 class Foo {}
 ", "
-");
+")
 
 test("
 in Foo {}
 interface Foo {}
 ", "
-");
+")
 
 test("
 in Foo {}
 namespace Foo {}
 ", "
-");
+")
 
 test("
 in Foo {}
 enum Foo {}
 ", "
-");
+")
 
 test("
 in Foo {}
 enum flags Foo {}
 ", "
-");
+")
 
 test("
 int foo;
@@ -40,7 +40,7 @@ in foo {}
 <stdin>:1:5: note: The previous declaration is here
 int foo;
     ~~~
-");
+")
 
 test("
 in foo {}
@@ -55,7 +55,7 @@ in foo {}
 <stdin>:1:4: error: No type named \"foo\" to extend
 in foo {}
    ~~~
-");
+")
 
 test("
 in foo {}
@@ -70,7 +70,7 @@ in foo {}
 <stdin>:1:4: error: No type named \"foo\" to extend
 in foo {}
    ~~~
-");
+")
 
 test("
 void foo() { return 100; }
@@ -88,7 +88,7 @@ void foo() { return 100; }
 <stdin>:2:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 int foo = false;
           ~~~~~
-");
+")
 
 test("
 int foo = false;
@@ -106,13 +106,13 @@ int foo = false;
 <stdin>:2:21: error: Cannot convert from type \"int\" to type \"void\"
 void foo() { return 100; }
                     ~~~
-");
+")
 
 test("
 namespace Foo {}
 namespace Foo {}
 ", "
-");
+")
 
 test("
 class Foo {}
@@ -124,7 +124,7 @@ class Foo {}
 <stdin>:1:7: note: The previous declaration is here
 class Foo {}
       ~~~
-");
+")
 
 test("
 class Foo {}
@@ -136,7 +136,7 @@ interface Foo {}
 <stdin>:1:7: note: The previous declaration is here
 class Foo {}
       ~~~
-");
+")
 
 test("
 in Foo {}
@@ -144,7 +144,7 @@ in Foo {}
 <stdin>:1:4: error: No type named \"Foo\" to extend
 in Foo {}
    ~~~
-");
+")
 
 test("
 in Foo {}
@@ -153,7 +153,7 @@ in Foo {}
 <stdin>:1:4: error: No type named \"Foo\" to extend
 in Foo {}
    ~~~
-");
+")
 
 test("
 namespace Foo.Bar { class Baz {} }
@@ -165,7 +165,7 @@ namespace Foo.Bar { class Baz {} }
 <stdin>:1:27: note: The previous declaration is here
 namespace Foo.Bar { class Baz {} }
                           ~~~
-");
+")
 
 test("
 namespace Foo { in Bar { class Baz {} } }
@@ -177,7 +177,7 @@ namespace Foo.Bar { class Baz {} }
 <stdin>:1:32: note: The previous declaration is here
 namespace Foo { in Bar { class Baz {} } }
                                ~~~
-");
+")
 
 test("
 export class Foo {}
@@ -186,7 +186,7 @@ import in Foo {}
 <stdin>:2:1: error: Cannot use the \"import\" modifier on an extension block
 import in Foo {}
 ~~~~~~
-");
+")
 
 test("
 import class Foo {}
@@ -195,13 +195,13 @@ export in Foo {}
 <stdin>:2:1: error: Cannot use the \"export\" modifier on an extension block
 export in Foo {}
 ~~~~~~
-");
+")
 
 test("
 class Foo<T> {}
 int T;
 ", "
-");
+")
 
 test("
 class Foo<T> {
@@ -214,7 +214,7 @@ class Foo<T> {
 <stdin>:2:7: note: The previous declaration is here
   int T;
       ^
-");
+")
 
 test("
 class Foo<T, T> {}
@@ -226,7 +226,7 @@ class Foo<T, T> {}
 <stdin>:1:11: note: The previous declaration is here
 class Foo<T, T> {}
           ^
-");
+")
 
 test("
 in Foo {}
@@ -238,7 +238,7 @@ class Foo<T, T> {}
 <stdin>:2:11: note: The previous declaration is here
 class Foo<T, T> {}
           ^
-");
+")
 
 test("
 void test() {
@@ -254,7 +254,7 @@ void test() {
 <stdin>:3:12: note: The previous declaration is here
   for (int foo = 0;;) {
            ~~~
-");
+")
 
 test("
 foo void;
@@ -268,7 +268,7 @@ import class void {}
 <stdin>:1:1: error: \"foo\" is not declared
 foo void;
 ~~~
-");
+")
 
 test("
 foo void() {}
@@ -282,6 +282,6 @@ import class void {}
 <stdin>:1:1: error: \"foo\" is not declared
 foo void() {}
 ~~~
-");
+")
 
 }}

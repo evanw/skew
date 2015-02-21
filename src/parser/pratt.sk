@@ -1,93 +1,94 @@
 class ParserContext {
-  Log log;
-  var needsPreprocessor = false;
-  private List<Token> tokens;
-  private var index = 0;
+  Log log
+  var inVoidFunction = false
+  var needsPreprocessor = false
+  private List<Token> tokens
+  private var index = 0
 
   // Keep track of the previous syntax error so only one syntax error is emitted
   // per token when recovering from a parse error. For example:
   //
-  //   int x = (1 + (2 + ;
+  //   int x = (1 + (2 +
   //
   // In the code above, the only syntax error should be about an unexpected
   // semicolon and not also about the two missing right parentheses.
-  private Token previousSyntaxError = null;
+  private Token previousSyntaxError = null
 
   Token current() {
-    return tokens[index];
+    return tokens[index]
   }
 
   Token next() {
-    var token = current();
+    var token = current()
     if (index + 1 < tokens.size()) {
-      index++;
+      index++
     }
-    return token;
+    return token
   }
 
   Range spanSince(Range range) {
-    var previous = tokens[index > 0 ? index - 1 : 0];
-    return previous.range.end < range.start ? range : Range.span(range, previous.range);
+    var previous = tokens[index > 0 ? index - 1 : 0]
+    return previous.range.end < range.start ? range : Range.span(range, previous.range)
   }
 
   bool peek(TokenKind kind) {
-    return current().kind == kind;
+    return current().kind == kind
   }
 
   bool eat(TokenKind kind) {
     if (peek(kind)) {
-      next();
-      return true;
+      next()
+      return true
     }
-    return false;
+    return false
   }
 
   bool expect(TokenKind kind) {
     if (!eat(kind)) {
-      var token = current();
+      var token = current()
       if (previousSyntaxError != token) {
-        var range = token.range;
+        var range = token.range
 
-        // Show missing semicolon/comma errors at the end of the previous line
-        // instead of at the start of the next line. This is especially
-        // important for interactive editing.
-        if ((kind == .SEMICOLON || kind == .COMMA) && index > 0) {
-          var end = tokens[index - 1].range.end;
-          var source = range.source;
+        // Show expected newline errors at the end of the previous line instead
+        // of at the start of the next line. This is especially important for
+        // interactive editing.
+        if (kind == .NEWLINE && index > 0) {
+          var end = tokens[index - 1].range.end
+          var source = range.source
           if (source.indexToLineColumn(range.end).line != source.indexToLineColumn(end).line) {
-            range = Range(source, end, end);
+            range = Range(source, end, end)
           }
         }
 
-        syntaxErrorExpectedToken(log, range, token.kind, kind);
-        previousSyntaxError = token;
+        syntaxErrorExpectedToken(log, range, token.kind, kind)
+        previousSyntaxError = token
       }
-      return false;
+      return false
     }
-    return true;
+    return true
   }
 
   void unexpectedToken() {
-    var token = current();
+    var token = current()
     if (previousSyntaxError != token) {
-      syntaxErrorUnexpectedToken(log, token);
-      previousSyntaxError = token;
+      syntaxErrorUnexpectedToken(log, token)
+      previousSyntaxError = token
     }
   }
 }
 
 class Parselet {
-  Precedence precedence;
-  PrefixParselet prefix = null;
-  InfixParselet infix = null;
+  Precedence precedence
+  PrefixParselet prefix = null
+  InfixParselet infix = null
 }
 
 interface PrefixParselet {
-  virtual Node parse(ParserContext context);
+  virtual Node parse(ParserContext context)
 }
 
 interface InfixParselet {
-  virtual Node parse(ParserContext context, Node left);
+  virtual Node parse(ParserContext context, Node left)
 }
 
 // A Pratt parser is a parser that associates up to two operations per token,
@@ -97,126 +98,126 @@ interface InfixParselet {
 //   http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
 //
 class Pratt {
-  private var table = IntMap<Parselet>();
+  private var table = IntMap<Parselet>()
 
   pure Parselet parselet(TokenKind kind, Precedence precedence) {
-    var parselet = table.getOrDefault(kind, null);
+    var parselet = table.getOrDefault(kind, null)
     if (parselet == null) {
-      var created = Parselet(precedence);
-      parselet = created;
-      table[kind] = created;
+      var created = Parselet(precedence)
+      parselet = created
+      table[kind] = created
     } else if (precedence > parselet.precedence) {
-      parselet.precedence = precedence;
+      parselet.precedence = precedence
     }
-    return parselet;
+    return parselet
   }
 
   Node parse(ParserContext context, Precedence precedence) {
-    var token = context.current();
-    var parselet = table.getOrDefault(token.kind, null);
+    var token = context.current()
+    var parselet = table.getOrDefault(token.kind, null)
     if (parselet == null || parselet.prefix == null) {
-      context.unexpectedToken();
-      return Node.createError().withRange(context.spanSince(token.range));
+      context.unexpectedToken()
+      return Node.createError().withRange(context.spanSince(token.range))
     }
-    var node = resume(context, precedence, parselet.prefix.parse(context));
-    assert node != null; // Parselets must return Node.createError() instead of null
-    assert !node.range.isEmpty(); // Parselets must set the range of every node
-    return node;
+    var node = resume(context, precedence, parselet.prefix.parse(context))
+    assert node != null // Parselets must return Node.createError() instead of null
+    assert !node.range.isEmpty() // Parselets must set the range of every node
+    return node
   }
 
   Node resume(ParserContext context, Precedence precedence, Node left) {
-    assert left != null;
+    assert left != null
     while (left.kind != .ERROR) {
-      var kind = context.current().kind;
-      var parselet = table.getOrDefault(kind, null);
+      var kind = context.current().kind
+      var parselet = table.getOrDefault(kind, null)
       if (parselet == null || parselet.infix == null || parselet.precedence <= precedence) {
-        break;
+        break
       }
-      left = parselet.infix.parse(context, left);
-      assert left != null; // Parselets must return Node.createError() instead of null
-      assert !left.range.isEmpty(); // Parselets must set the range of every node
+      left = parselet.infix.parse(context, left)
+      assert left != null // Parselets must return Node.createError() instead of null
+      assert !left.range.isEmpty() // Parselets must set the range of every node
     }
-    return left;
+    return left
   }
 
   bool hasPrefixParselet(ParserContext context) {
-    var parselet = table.getOrDefault(context.current().kind, null);
-    return parselet != null && parselet.prefix != null;
+    var parselet = table.getOrDefault(context.current().kind, null)
+    return parselet != null && parselet.prefix != null
   }
 
   pure void literal(TokenKind kind, LiteralCallback callback) {
-    parselet(kind, .LOWEST).prefix = LiteralParselet(callback);
+    parselet(kind, .LOWEST).prefix = LiteralParselet(callback)
   }
 
   pure void prefix(TokenKind kind, Precedence precedence, PrefixCallback callback) {
-    parselet(kind, .LOWEST).prefix = DefaultPrefixParselet(callback, precedence, this);
+    parselet(kind, .LOWEST).prefix = DefaultPrefixParselet(callback, precedence, this)
   }
 
   pure void postfix(TokenKind kind, Precedence precedence, PostfixCallback callback) {
-    parselet(kind, precedence).infix = PostfixParselet(callback);
+    parselet(kind, precedence).infix = PostfixParselet(callback)
   }
 
   pure void infix(TokenKind kind, Precedence precedence, InfixCallback callback) {
-    parselet(kind, precedence).infix = DefaultInfixParselet(callback, precedence, this);
+    parselet(kind, precedence).infix = DefaultInfixParselet(callback, precedence, this)
   }
 
   pure void infixRight(TokenKind kind, Precedence precedence, InfixCallback callback) {
-    parselet(kind, precedence).infix = DefaultInfixParselet(callback, (Precedence)(precedence - 1), this); // Subtract 1 for right-associativity
+    parselet(kind, precedence).infix = DefaultInfixParselet(callback, (Precedence)(precedence - 1), this) // Subtract 1 for right-associativity
   }
 }
 
 interface LiteralCallback {
-  virtual Node parse(ParserContext context, Token token);
+  virtual Node parse(ParserContext context, Token token)
 }
 
 class LiteralParselet : PrefixParselet {
-  LiteralCallback callback;
+  LiteralCallback callback
 
   override Node parse(ParserContext context) {
-    return callback.parse(context, context.next());
+    return callback.parse(context, context.next())
   }
 }
 
 interface PrefixCallback {
-  virtual Node parse(ParserContext context, Token token, Node value);
+  virtual Node parse(ParserContext context, Token token, Node value)
 }
 
 class DefaultPrefixParselet : PrefixParselet {
-  PrefixCallback callback;
-  Precedence precedence;
-  Pratt pratt;
+  PrefixCallback callback
+  Precedence precedence
+  Pratt pratt
 
   override Node parse(ParserContext context) {
-    var token = context.next();
-    var value = pratt.parse(context, precedence);
-    return value != null ? callback.parse(context, token, value) : null;
+    var token = context.next()
+    var value = pratt.parse(context, precedence)
+    return value != null ? callback.parse(context, token, value) : null
   }
 }
 
 interface PostfixCallback {
-  virtual Node parse(ParserContext context, Node value, Token token);
+  virtual Node parse(ParserContext context, Node value, Token token)
 }
 
 class PostfixParselet : InfixParselet {
-  PostfixCallback callback;
+  PostfixCallback callback
 
   override Node parse(ParserContext context, Node left) {
-    return callback.parse(context, left, context.next());
+    return callback.parse(context, left, context.next())
   }
 }
 
 interface InfixCallback {
-  virtual Node parse(ParserContext context, Node left, Token token, Node right);
+  virtual Node parse(ParserContext context, Node left, Token token, Node right)
 }
 
 class DefaultInfixParselet : InfixParselet {
-  InfixCallback callback;
-  Precedence precedence;
-  Pratt pratt;
+  InfixCallback callback
+  Precedence precedence
+  Pratt pratt
 
   override Node parse(ParserContext context, Node left) {
-    var token = context.next();
-    var right = pratt.parse(context, precedence);
-    return right != null ? callback.parse(context, left, token, right) : null;
+    var token = context.next()
+    var right = pratt.parse(context, precedence)
+    return right != null ? callback.parse(context, left, token, right) : null
   }
 }

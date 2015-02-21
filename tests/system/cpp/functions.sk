@@ -26,7 +26,7 @@ Foo::Foo() {
 void test() {
   (new Foo())->foo();
 }
-");
+")
 
 testCPP("
 export class Foo {
@@ -51,7 +51,7 @@ void Foo::bar() {
 
 Foo::Foo(Foo *_0) : foo(_0) {
 }
-");
+")
 
 testCPP("
 void foo(int foo) {}
@@ -68,7 +68,7 @@ void foo(int foo) {
 void test() {
   foo((1, 2));
 }
-");
+")
 
 testCPP("
 enum Foo { A, B, C }
@@ -98,7 +98,7 @@ int in_Foo::foo(Foo _this_) {
 void test() {
   in_Foo::foo(Foo::A);
 }
-");
+")
 
 testCPP("
 export enum Foo { FOO }
@@ -160,7 +160,7 @@ std::string in_Foo::foo(Foo _this_) {
 }
 
 List<std::string> *in_Foo::_toString_ = (new List<std::string>())->literal({ std::string(\"FOO\") });
-");
+")
 
 testCPP("
 import class Foo {
@@ -185,7 +185,7 @@ void in_Foo::foo(Foo *_this_) {
 void test() {
   in_Foo::foo(new Foo());
 }
-");
+")
 
 // Calls off of new objects must be wrapped with parentheses to avoid syntax errors
 testCPP("
@@ -228,7 +228,7 @@ Bar::Bar() {
 void test() {
   (new Bar())->foo();
 }
-");
+")
 
 // This must not generate "Foo::Foo(int _0) : ns::Foo::Foo(_0) {}" because MSVC will choke on it
 testCPP("
@@ -260,7 +260,7 @@ ns::Foo::Foo(int _0) : foo(_0) {
 
 Foo::Foo(int _0) : ns::Foo(_0) {
 }
-");
+")
 
 testCPP("
 in Foo {
@@ -308,6 +308,6 @@ void foo() {
   Foo::bar();
   Foo::baz;
 }
-");
+")
 
 }}

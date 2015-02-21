@@ -1,42 +1,42 @@
 import class void {}
-alias dynamic = `dynamic`;
+alias dynamic = `dynamic`
 
 #if TARGET_JS
 
-  import class int { pure string toString(); }
-  import class bool { pure string toString(); }
-  import class float { pure string toString(); }
-  import class double { pure string toString(); }
+  import class int { pure string toString() }
+  import class bool { pure string toString() }
+  import class float { pure string toString() }
+  import class double { pure string toString() }
 
   import class string {
     pure {
-      string slice(int start, int end);
-      List<string> split(string separator);
-      int indexOf(string value);
-      int lastIndexOf(string value);
-      string toLowerCase();
-      string toUpperCase();
+      string slice(int start, int end)
+      List<string> split(string separator)
+      int indexOf(string value)
+      int lastIndexOf(string value)
+      string toLowerCase()
+      string toUpperCase()
     }
   }
 
   in string {
     inline pure {
-      int size() { return `this`.length; }
-      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex); }
-      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex); }
-      string sliceCodeUnit(int index) { return `this`[index]; }
-      string join(List<string> values) { return values."join"(this); }
-      @OperatorGet int codeUnitAt(int index) { return `this`.charCodeAt(index); }
-      static string fromCodeUnit(int value) { return `String`.fromCharCode(value); }
+      int size() { return `this`.length }
+      int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex) }
+      int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex) }
+      string sliceCodeUnit(int index) { return `this`[index] }
+      string join(List<string> values) { return values."join"(this) }
+      @OperatorGet int codeUnitAt(int index) { return `this`.charCodeAt(index) }
+      static string fromCodeUnit(int value) { return `String`.fromCharCode(value) }
     }
   }
 
   class StringBuilder {
-    private var _buffer = "";
+    private var _buffer = ""
 
     pure inline {
-      void append(string text) { _buffer += text; }
-      string toString() { return _buffer; }
+      void append(string text) { _buffer += text }
+      string toString() { return _buffer }
     }
   }
 
@@ -52,36 +52,36 @@ alias dynamic = `dynamic`;
   import class string {}
 
   in int {
-    inline pure string toString() { return `std`::to_string(this); }
+    inline pure string toString() { return `std`::to_string(this) }
   }
 
   in bool {
-    inline pure string toString() { return this ? "true" : "false"; }
+    inline pure string toString() { return this ? "true" : "false" }
   }
 
   in float {
-    inline pure string toString() { return double._format_(this); }
+    inline pure string toString() { return double._format_(this) }
   }
 
   in double {
     pure {
-      inline string toString() { return _format_(this); }
+      inline string toString() { return _format_(this) }
 
       #if !CONFIG_WINDOWS
 
         // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0
         @NeedsInclude("<cstdio>")
         static string _format_(double value) {
-          string buffer;
-          `buffer.resize(64)`;
-          `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`;
+          string buffer
+          `buffer.resize(64)`
+          `std::snprintf(&buffer[0], buffer.size(), "%.15g", value)`
           if (`std::stod(&buffer[0]) != value`) {
-            `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`;
+            `std::snprintf(&buffer[0], buffer.size(), "%.16g", value)`
             if (`std::stod(&buffer[0]) != value`) {
-              `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`;
+              `std::snprintf(&buffer[0], buffer.size(), "%.17g", value)`
             }
           }
-          return `buffer.c_str()`;
+          return `buffer.c_str()`
         }
 
       #else
@@ -89,16 +89,16 @@ alias dynamic = `dynamic`;
         // MSVC won't allow std::sprintf() even though it's in the C++11 standard
         @NeedsInclude("<stdio.h>")
         static string _format_(double value) {
-          string buffer;
-          `buffer.resize(64)`;
-          `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`;
+          string buffer
+          `buffer.resize(64)`
+          `sprintf_s(&buffer[0], buffer.size(), "%.15g", value)`
           if (`std::stod(&buffer[0]) != value`) {
-            `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`;
+            `sprintf_s(&buffer[0], buffer.size(), "%.16g", value)`
             if (`std::stod(&buffer[0]) != value`) {
-              `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`;
+              `sprintf_s(&buffer[0], buffer.size(), "%.17g", value)`
             }
           }
-          return `buffer.c_str()`;
+          return `buffer.c_str()`
         }
 
       #endif
@@ -108,107 +108,107 @@ alias dynamic = `dynamic`;
   in string {
     pure {
       inline {
-        int size() { return (int)`this`.size(); }
-        string slice(int start, int end) { return `this`.substr(start, end - start); }
-        string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)); }
-        int indexOf(string value) { return (int)`this`.find(value); }
-        int indexOfFrom(string value, int fromIndex) { return (int)`this`.find(value, fromIndex); }
-        int lastIndexOf(string value) { return (int)`this`.rfind(value); }
-        int lastIndexOfFrom(string value, int fromIndex) { return (int)`this`.rfind(value, fromIndex); }
-        @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF; } // Must not return negative values
-        static string fromCodeUnit(int value) { return ``string``(1, value); }
+        int size() { return (int)`this`.size() }
+        string slice(int start, int end) { return `this`.substr(start, end - start) }
+        string sliceCodeUnit(int index) { return fromCodeUnit(codeUnitAt(index)) }
+        int indexOf(string value) { return (int)`this`.find(value) }
+        int indexOfFrom(string value, int fromIndex) { return (int)`this`.find(value, fromIndex) }
+        int lastIndexOf(string value) { return (int)`this`.rfind(value) }
+        int lastIndexOfFrom(string value, int fromIndex) { return (int)`this`.rfind(value, fromIndex) }
+        @OperatorGet int codeUnitAt(int index) { return `this`[index] & 0xFF } // Must not return negative values
+        static string fromCodeUnit(int value) { return ``string``(1, value) }
       }
 
       @NeedsInclude("<algorithm>")
       @NeedsInclude("<ctype.h>") {
         string toLowerCase() {
-          var clone = this;
-          `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`;
-          return clone;
+          var clone = this
+          `std::transform(clone.begin(), clone.end(), clone.begin(), ::tolower)`
+          return clone
         }
 
         string toUpperCase() {
-          var clone = this;
-          `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`;
-          return clone;
+          var clone = this
+          `std::transform(clone.begin(), clone.end(), clone.begin(), ::toupper)`
+          return clone
         }
       }
 
       string join(List<string> values) {
-        var result = "";
+        var result = ""
         for (var i = 0; i < values.size(); i++) {
-          if (i > 0) result += this;
-          result += values[i];
+          if (i > 0) result += this
+          result += values[i]
         }
-        return result;
+        return result
       }
 
       List<string> split(string separator) {
-        List<string> values = [];
-        var start = 0;
+        List<string> values = []
+        var start = 0
         while (true) {
-          var end = indexOfFrom(separator, start);
-          if (end == -1) break;
-          values.push(slice(start, end));
-          start = end + separator.size();
+          var end = indexOfFrom(separator, start)
+          if (end == -1) break
+          values.push(slice(start, end))
+          start = end + separator.size()
         }
-        values.push(slice(start, size()));
-        return values;
+        values.push(slice(start, size()))
+        return values
       }
     }
   }
 
   class StringBuilder {
-    private var _buffer = "";
+    private var _buffer = ""
 
     pure inline {
-      void append(string text) { _buffer += text; }
-      string toString() { return _buffer; }
+      void append(string text) { _buffer += text }
+      string toString() { return _buffer }
     }
   }
 
 #elif TARGET_RUBY
 
-  import class int { @EmitAs("to_s") pure string toString(); }
-  import class bool { @EmitAs("to_s") pure string toString(); }
-  import class float { @EmitAs("to_s") pure string toString(); }
-  import class double { @EmitAs("to_s") pure string toString(); }
+  import class int { @EmitAs("to_s") pure string toString() }
+  import class bool { @EmitAs("to_s") pure string toString() }
+  import class float { @EmitAs("to_s") pure string toString() }
+  import class double { @EmitAs("to_s") pure string toString() }
 
   import class string {
     pure {
-      int size();
-      List<string> split(string separator);
-      @EmitAs("upcase") string toLowerCase();
-      @EmitAs("downcase") string toUpperCase();
+      int size()
+      List<string> split(string separator)
+      @EmitAs("upcase") string toLowerCase()
+      @EmitAs("downcase") string toUpperCase()
     }
   }
 
   in string {
     pure inline {
-      string join(List<string> values) { return values."join"(this); }
-      string slice(int start, int end) { return `this`.slice(start, end - start); }
-      string sliceCodeUnit(int index) { return `this`[index]; }
-      @OperatorGet int codeUnitAt(int index) { return sliceCodeUnit(index)."ord"; }
-      static string fromCodeUnit(int value) { return value."chr"("UTF-8"); }
+      string join(List<string> values) { return values."join"(this) }
+      string slice(int start, int end) { return `this`.slice(start, end - start) }
+      string sliceCodeUnit(int index) { return `this`[index] }
+      @OperatorGet int codeUnitAt(int index) { return sliceCodeUnit(index)."ord" }
+      static string fromCodeUnit(int value) { return value."chr"("UTF-8") }
 
       int indexOf(string value) {
-        var i = `this`.index(value);
-        return i != null ? i : -1;
+        var i = `this`.index(value)
+        return i != null ? i : -1
       }
 
       int indexOfFrom(string value, int fromIndex) {
-        var i = `this`.index(value, fromIndex);
-        return i != null ? i : -1;
+        var i = `this`.index(value, fromIndex)
+        return i != null ? i : -1
       }
 
       int lastIndexOf(string value) {
-        var i = `this`.rindex(value);
-        return i != null ? i : -1;
+        var i = `this`.rindex(value)
+        return i != null ? i : -1
       }
 
       int lastIndexOfFrom(string value, int fromIndex) {
-        var i = `this`.rindex(value, fromIndex);
-        return i != null ? i : -1;
+        var i = `this`.rindex(value, fromIndex)
+        return i != null ? i : -1
       }
     }
   }
@@ -217,42 +217,42 @@ alias dynamic = `dynamic`;
 
   in StringBuilder {
     pure inline {
-      new() { return `""`; }
-      void append(string text) { `this` << text; }
-      string toString() { return this."dup"; }
+      new() { return `""` }
+      void append(string text) { `this` << text }
+      string toString() { return this."dup" }
     }
   }
 
 #else
 
-  import class int { pure string toString(); }
-  import class bool { pure string toString(); }
-  import class float { pure string toString(); }
-  import class double { pure string toString(); }
+  import class int { pure string toString() }
+  import class bool { pure string toString() }
+  import class float { pure string toString() }
+  import class double { pure string toString() }
 
   import class string {
     pure {
-      int size();
-      List<string> split(string separator);
-      string slice(int start, int end);
-      string sliceCodeUnit(int index);
-      int indexOf(string value);
-      int indexOfFrom(string value, int fromIndex);
-      int lastIndexOf(string value);
-      int lastIndexOfFrom(string value, int fromIndex);
-      string toLowerCase();
-      string toUpperCase();
-      string join(List<string> values);
-      @OperatorGet int codeUnitAt(int index);
-      static string fromCodeUnit(int value);
+      int size()
+      List<string> split(string separator)
+      string slice(int start, int end)
+      string sliceCodeUnit(int index)
+      int indexOf(string value)
+      int indexOfFrom(string value, int fromIndex)
+      int lastIndexOf(string value)
+      int lastIndexOfFrom(string value, int fromIndex)
+      string toLowerCase()
+      string toUpperCase()
+      string join(List<string> values)
+      @OperatorGet int codeUnitAt(int index)
+      static string fromCodeUnit(int value)
     }
   }
 
   import class StringBuilder {
     pure {
-      new();
-      void append(string text);
-      string toString();
+      new()
+      void append(string text)
+      string toString()
     }
   }
 
@@ -262,42 +262,42 @@ in string {
   pure {
     @OperatorIn
     inline bool contains(string value) {
-      return indexOf(value) != -1;
+      return indexOf(value) != -1
     }
 
     inline string toString() {
-      return this;
+      return this
     }
 
     bool startsWith(string prefix) {
-      return size() >= prefix.size() && slice(0, prefix.size()) == prefix;
+      return size() >= prefix.size() && slice(0, prefix.size()) == prefix
     }
 
     bool endsWith(string suffix) {
-      return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix;
+      return size() >= suffix.size() && slice(size() - suffix.size(), size()) == suffix
     }
 
     string repeat(int count) {
-      var result = "";
-      for (var i = 0; i < count; i++) result += this;
-      return result;
+      var result = ""
+      for (var i = 0; i < count; i++) result += this
+      return result
     }
 
     string replaceAll(string before, string after) {
-      var result = "";
-      var start = 0;
+      var result = ""
+      var start = 0
       while (true) {
-        var end = indexOfFrom(before, start);
-        if (end == -1) break;
-        result += slice(start, end) + after;
-        start = end + before.size();
+        var end = indexOfFrom(before, start)
+        if (end == -1) break
+        result += slice(start, end) + after
+        start = end + before.size()
       }
-      return result + slice(start, size());
+      return result + slice(start, size())
     }
   }
 }
 
 // Boxes are useful for representing nullable primitive types
 class Box<T> {
-  T value;
+  T value
 }

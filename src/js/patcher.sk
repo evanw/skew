@@ -11,68 +11,68 @@ namespace js {
   }
 
   class SymbolGroup {
-    final List<Symbol> group;
-    final int count;
+    final List<Symbol> group
+    final int count
   }
 
   class SymbolGroupComparison : Comparison<SymbolGroup> {
-    static final var INSTANCE = SymbolGroupComparison();
+    static final var INSTANCE = SymbolGroupComparison()
 
     override int compare(SymbolGroup left, SymbolGroup right) {
-      var difference = right.count - left.count;
+      var difference = right.count - left.count
 
       // Create a total order to make builds deterministic
       if (difference == 0) {
-        difference = right.group.size() - left.group.size();
+        difference = right.group.size() - left.group.size()
         for (var i = 0; difference == 0 && i < left.group.size(); i++) {
-          difference = left.group[i].uniqueID - right.group[i].uniqueID;
+          difference = left.group[i].uniqueID - right.group[i].uniqueID
         }
       }
 
-      return difference;
+      return difference
     }
   }
 
   class Patcher {
-    var imul = "$imul";
-    var extends = "$extends";
-    var needExtends = false;
-    var needMathImul = false;
+    var imul = "$imul"
+    var extends = "$extends"
+    var needExtends = false
+    var needMathImul = false
 
     private {
-      var nextTempID = 0;
-      var createdThisAlias = false;
-      Symbol currentFunction = null;
-      var nextSymbolName = 0;
-      CompilerOptions options = null;
-      UnionFind localVariableUnionFind = null;
-      TypeCache cache = null;
-      final var reservedNames = Emitter.isKeyword.clone();
-      final var symbolCounts = IntMap<int>();
-      final var namingGroupIndexForSymbol = IntMap<int>();
-      final Resolver resolver;
+      var nextTempID = 0
+      var createdThisAlias = false
+      Symbol currentFunction = null
+      var nextSymbolName = 0
+      CompilerOptions options = null
+      UnionFind localVariableUnionFind = null
+      TypeCache cache = null
+      final var reservedNames = Emitter.isKeyword.clone()
+      final var symbolCounts = IntMap<int>()
+      final var namingGroupIndexForSymbol = IntMap<int>()
+      final Resolver resolver
     }
 
     void run(Node program) {
-      assert program.kind == .PROGRAM;
-      var allSymbols = resolver.allSymbols;
-      options = resolver.options;
-      cache = resolver.cache;
+      assert program.kind == .PROGRAM
+      var allSymbols = resolver.allSymbols
+      options = resolver.options
+      cache = resolver.cache
 
       // A union-find data structure is used to quickly merge symbols into
       // groups. All local variables inside a function are merged with that
       // function. Also create a quick way of getting from a symbol to its
       // union/find index.
       if (options.mangle) {
-        localVariableUnionFind = UnionFind(allSymbols.size());
+        localVariableUnionFind = UnionFind(allSymbols.size())
         for (var i = 0; i < allSymbols.size(); i++) {
-          namingGroupIndexForSymbol[allSymbols[i].uniqueID] = i;
+          namingGroupIndexForSymbol[allSymbols[i].uniqueID] = i
         }
 
         // Shorten the library function names while still avoiding needing to
         // do conflict detection with user-defined symbol names
-        imul = "$i";
-        extends = "$e";
+        imul = "$i"
+        extends = "$e"
       }
 
       // Traverse the tree of nodes, fixing up everything for emission in one
@@ -81,74 +81,74 @@ namespace js {
       // level function symbol instantly and avoid needing to traverse up to
       // the function from every local variable symbol, which we would have to
       // do if we just looped over symbols.
-      patchNode(program);
+      patchNode(program)
 
       // Rename all internal symbols
       if (options.mangle) {
         // This holds the groups used for naming. Unioning two labels using
         // this object will cause both groups of symbols to have the same name.
-        var namingGroupsUnionFind = UnionFind(allSymbols.size());
+        var namingGroupsUnionFind = UnionFind(allSymbols.size())
 
         // These are optional and only reduce the number of generated names
-        List<int> order = [];
-        aliasLocalVariables(namingGroupsUnionFind, order);
-        aliasUnrelatedProperties(namingGroupsUnionFind, order);
+        List<int> order = []
+        aliasLocalVariables(namingGroupsUnionFind, order)
+        aliasUnrelatedProperties(namingGroupsUnionFind, order)
 
         // Ensure all overridden symbols have the same generated name. This is
         // manditory for correctness, otherwise virtual functions break.
         for (var i = 0; i < allSymbols.size(); i++) {
-          var symbol = allSymbols[i];
+          var symbol = allSymbols[i]
           if (symbol.overriddenMember != null) {
-            var overridden = symbol.overriddenMember.symbol;
-            var index = namingGroupIndexForSymbol[symbol.uniqueID];
-            namingGroupsUnionFind.union(index, namingGroupIndexForSymbol[overridden.uniqueID]);
+            var overridden = symbol.overriddenMember.symbol
+            var index = namingGroupIndexForSymbol[symbol.uniqueID]
+            namingGroupsUnionFind.union(index, namingGroupIndexForSymbol[overridden.uniqueID])
             if (overridden.identicalMembers != null) {
               for (var j = 0; j < overridden.identicalMembers.size(); j++) {
-                namingGroupsUnionFind.union(index, namingGroupIndexForSymbol[overridden.identicalMembers[j].symbol.uniqueID]);
+                namingGroupsUnionFind.union(index, namingGroupIndexForSymbol[overridden.identicalMembers[j].symbol.uniqueID])
               }
             }
           }
         }
 
         // Collect all reserved names together into one big set for querying
-        var members = cache.globalType.members.values();
+        var members = cache.globalType.members.values()
         for (var i = 0; i < members.size(); i++) {
-          var member = members[i];
+          var member = members[i]
           if (!canRename(member.symbol)) {
-            reservedNames[member.symbol.name] = true;
+            reservedNames[member.symbol.name] = 0
           }
         }
 
         // Everything that should have the same name is now grouped together.
         // Generate and assign names to all internal symbols, but use shorter
         // names for more frequently used symbols.
-        var namingGroups = extractGroups(namingGroupsUnionFind, .ALL_SYMBOLS);
-        List<SymbolGroup> sortedGroups = [];
+        var namingGroups = extractGroups(namingGroupsUnionFind, .ALL_SYMBOLS)
+        List<SymbolGroup> sortedGroups = []
         for (var i = 0; i < namingGroups.size(); i++) {
-          var group = namingGroups[i];
-          var count = 0;
+          var group = namingGroups[i]
+          var count = 0
           for (var j = 0; j < group.size(); j++) {
-            var symbol = group[j];
+            var symbol = group[j]
             if (canRename(symbol)) {
-              count += symbolCounts.getOrDefault(symbol.uniqueID, 0);
+              count += symbolCounts.getOrDefault(symbol.uniqueID, 0)
             }
           }
-          sortedGroups.push(SymbolGroup(group, count));
+          sortedGroups.push(SymbolGroup(group, count))
         }
-        sortedGroups.sort(SymbolGroupComparison.INSTANCE);
+        sortedGroups.sort(SymbolGroupComparison.INSTANCE)
         for (var i = 0; i < sortedGroups.size(); i++) {
-          var group = sortedGroups[i].group;
-          var name = "";
+          var group = sortedGroups[i].group
+          var name = ""
           for (var j = 0; j < group.size(); j++) {
-            var symbol = group[j];
+            var symbol = group[j]
             if (canRename(symbol)) {
               if (name == "") {
-                name = generateSymbolName();
+                name = generateSymbolName()
               }
               if (symbol.kind != .INSTANCE_FUNCTION) {
-                symbol.enclosingSymbol = cache.globalType.symbol;
+                symbol.enclosingSymbol = cache.globalType.symbol
               }
-              symbol.name = name;
+              symbol.name = name
             }
           }
         }
@@ -163,27 +163,27 @@ namespace js {
     //   function e(a, b, c) {}
     //
     void aliasLocalVariables(UnionFind unionFind, List<int> order) {
-      zipTogetherInOrder(unionFind, order, extractGroups(localVariableUnionFind, .ONLY_LOCAL_VARIABLES));
+      zipTogetherInOrder(unionFind, order, extractGroups(localVariableUnionFind, .ONLY_LOCAL_VARIABLES))
     }
 
     // Merge all related types together into naming groups. This ensures names
     // will be unique within a subclass hierarchy allowing names to be
     // duplicated in separate subclass hierarchies.
     void aliasUnrelatedProperties(UnionFind unionFind, List<int> order) {
-      var allSymbols = resolver.allSymbols;
-      var relatedTypesUnionFind = UnionFind(allSymbols.size());
+      var allSymbols = resolver.allSymbols
+      var relatedTypesUnionFind = UnionFind(allSymbols.size())
       for (var i = 0; i < allSymbols.size(); i++) {
-        var symbol = allSymbols[i];
+        var symbol = allSymbols[i]
         if (symbol.kind.isType()) {
           if (symbol.type.hasRelevantTypes()) {
-            var types = symbol.type.relevantTypes;
+            var types = symbol.type.relevantTypes
             for (var j = 0; j < types.size(); j++) {
-              relatedTypesUnionFind.union(i, namingGroupIndexForSymbol[types[j].symbol.uniqueID]);
+              relatedTypesUnionFind.union(i, namingGroupIndexForSymbol[types[j].symbol.uniqueID])
             }
           }
-          var members = symbol.type.members.values();
+          var members = symbol.type.members.values()
           for (var j = 0; j < members.size(); j++) {
-            var index = namingGroupIndexForSymbol.getOrDefault(members[j].symbol.uniqueID, -1);
+            var index = namingGroupIndexForSymbol.getOrDefault(members[j].symbol.uniqueID, -1)
 
             // Guard against observing symbols that have been removed from
             // cache.allSymbols by TreeShakingPass but that are still reachable
@@ -192,178 +192,181 @@ namespace js {
             // should remove the symbol from all parameterized types too but
             // this guard fixes compilation issues until then.
             if (index != -1) {
-              relatedTypesUnionFind.union(i, index);
+              relatedTypesUnionFind.union(i, index)
             }
           }
         }
       }
-      zipTogetherInOrder(unionFind, order, extractGroups(relatedTypesUnionFind, .ONLY_INSTANCE_VARIABLES));
+      zipTogetherInOrder(unionFind, order, extractGroups(relatedTypesUnionFind, .ONLY_INSTANCE_VARIABLES))
     }
 
     void zipTogetherInOrder(UnionFind unionFind, List<int> order, List<List<Symbol>> groups) {
       for (var i = 0; i < groups.size(); i++) {
-        var group = groups[i];
+        var group = groups[i]
         for (var j = 0; j < group.size(); j++) {
-          var symbol = group[j];
-          var index = namingGroupIndexForSymbol[symbol.uniqueID];
+          var symbol = group[j]
+          var index = namingGroupIndexForSymbol[symbol.uniqueID]
           if (order.size() <= j) {
-            order.push(index);
+            order.push(index)
           }
-          unionFind.union(index, order[j]);
+          unionFind.union(index, order[j])
         }
       }
     }
 
     List<List<Symbol>> extractGroups(UnionFind unionFind, ExtractGroupsMode mode) {
-      var labelToGroup = IntMap<List<Symbol>>();
-      var allSymbols = resolver.allSymbols;
+      var labelToGroup = IntMap<List<Symbol>>()
+      var allSymbols = resolver.allSymbols
       for (var i = 0; i < allSymbols.size(); i++) {
-        var symbol = allSymbols[i];
+        var symbol = allSymbols[i]
         if (mode == .ONLY_LOCAL_VARIABLES && symbol.kind != .LOCAL_VARIABLE ||
             mode == .ONLY_INSTANCE_VARIABLES && symbol.kind != .INSTANCE_VARIABLE) {
-          continue;
+          continue
         }
-        var label = unionFind.find(namingGroupIndexForSymbol[symbol.uniqueID]);
-        var group = labelToGroup.getOrDefault(label, null);
+        var label = unionFind.find(namingGroupIndexForSymbol[symbol.uniqueID])
+        var group = labelToGroup.getOrDefault(label, null)
         if (group == null) {
-          group = [];
-          labelToGroup[label] = group;
+          group = []
+          labelToGroup[label] = group
         }
-        group.push(symbol);
+        group.push(symbol)
       }
 
       // Sort each resulting group to make builds deterministic
-      var groups = labelToGroup.values();
+      var groups = labelToGroup.values()
       for (var i = 0; i < groups.size(); i++) {
-        var group = groups[i];
+        var group = groups[i]
         if (group.size() > 1) {
-          group.sort(SymbolComparison.INSTANCE);
+          group.sort(SymbolComparison.INSTANCE)
         }
       }
-      return groups;
+      return groups
     }
 
     bool shouldRemoveConstant(Symbol symbol) {
-      return options.foldAllConstants && symbol.isConst() && !symbol.isExport();
+      return options.foldAllConstants && symbol.isConst() && !symbol.isExport()
     }
 
     bool canRename(Symbol symbol) {
       if (!symbol.isImportOrExport() && symbol.kind != .CONSTRUCTOR_FUNCTION && !shouldRemoveConstant(symbol)) {
         if (symbol.overriddenMember != null) {
-          return canRename(symbol.overriddenMember.symbol);
+          return canRename(symbol.overriddenMember.symbol)
         }
-        return true;
+        return true
       }
-      return false;
+      return false
     }
 
     void trackSymbolCount(Node node) {
-      var symbol = node.symbol;
+      var symbol = node.symbol
       if (symbol != null && node.kind != .TYPE && !node.isDeclarationName()) {
-        symbolCounts[symbol.uniqueID] = symbolCounts.getOrDefault(symbol.uniqueID, 0) + 1;
+        symbolCounts[symbol.uniqueID] = symbolCounts.getOrDefault(symbol.uniqueID, 0) + 1
       }
     }
 
     void patchNode(Node node) {
-      trackSymbolCount(node);
+      trackSymbolCount(node)
 
       switch (node.kind) {
-        case .CONSTRUCTOR { patchConstructor(node); setCurrentFunction(node.symbol); }
-        case .FUNCTION { setCurrentFunction(node.symbol); }
-        case .CAST { patchCast(node); }
-        case .CLASS { patchClass(node); }
-        case .NAME { patchName(node); }
-        case .LIST { mangleStringList(node); }
-        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinaryArithmetic(node); }
-        case .POSITIVE, .NEGATIVE, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node); }
-        case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER { patchAssign(node); }
+        case .CONSTRUCTOR {
+          patchConstructor(node)
+          setCurrentFunction(node.symbol)
+        }
+        case .FUNCTION { setCurrentFunction(node.symbol) }
+        case .CAST { patchCast(node) }
+        case .CLASS { patchClass(node) }
+        case .NAME { patchName(node) }
+        case .LIST { mangleStringList(node) }
+        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinaryArithmetic(node) }
+        case .POSITIVE, .NEGATIVE, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node) }
+        case .ASSIGN_ADD, .ASSIGN_SUBTRACT, .ASSIGN_MULTIPLY, .ASSIGN_DIVIDE, .ASSIGN_REMAINDER { patchAssign(node) }
       }
 
       if (node.hasChildren()) {
-        var children = node.children;
+        var children = node.children
         for (var i = 0; i < children.size(); i++) {
-          var child = children[i];
+          var child = children[i]
           if (child != null) {
-            patchNode(child);
+            patchNode(child)
           }
         }
       }
 
       if (node.kind.isFunction()) {
-        setCurrentFunction(null);
+        setCurrentFunction(null)
       } else if (options.mangle) {
         switch (node.kind) {
-          case .VARIABLE { unionVariableWithFunction(node); }
-          case .IF { peepholeMangleIf(node); }
-          case .FOR { peepholeMangleFor(node); }
-          case .GREATER_THAN_OR_EQUAL, .LESS_THAN_OR_EQUAL { peepholeMangleBinaryRelational(node); }
-          case .WHILE, .DO_WHILE { peepholeMangleBoolean(node.whileTest(), .NO_SWAP); }
-          case .BLOCK { peepholeMangleBlock(node); }
-          case .HOOK { peepholeMangleHook(node); }
-          case .LOGICAL_OR { peepholeMangleLogicalOr(node); }
+          case .VARIABLE { unionVariableWithFunction(node) }
+          case .IF { peepholeMangleIf(node) }
+          case .FOR { peepholeMangleFor(node) }
+          case .GREATER_THAN_OR_EQUAL, .LESS_THAN_OR_EQUAL { peepholeMangleBinaryRelational(node) }
+          case .WHILE, .DO_WHILE { peepholeMangleBoolean(node.whileTest(), .NO_SWAP) }
+          case .BLOCK { peepholeMangleBlock(node) }
+          case .HOOK { peepholeMangleHook(node) }
+          case .LOGICAL_OR { peepholeMangleLogicalOr(node) }
         }
       }
     }
 
     bool isIntegerType(Node node) {
-      return node.type != null && node.type.isInteger(cache);
+      return node.type != null && node.type.isInteger(cache)
     }
 
     void peepholeMangleBinaryRelational(Node node) {
-      assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL;
-      var left = node.binaryLeft();
-      var right = node.binaryRight();
+      assert node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL
+      var left = node.binaryLeft()
+      var right = node.binaryRight()
       if (isIntegerType(left) && isIntegerType(right)) {
         if (left.kind == .INT) {
-          var value = left.asInt();
+          var value = left.asInt()
 
           // "2 >= a" => "3 > a"
           if (node.kind == .GREATER_THAN_OR_EQUAL && canIncrement(value)) {
-            left.content = IntContent(value + 1);
-            node.kind = .GREATER_THAN;
+            left.content = IntContent(value + 1)
+            node.kind = .GREATER_THAN
           }
 
           // "2 <= a" => "1 < a"
           else if (node.kind == .LESS_THAN_OR_EQUAL && canDecrement(value)) {
-            left.content = IntContent(value - 1);
-            node.kind = .LESS_THAN;
+            left.content = IntContent(value - 1)
+            node.kind = .LESS_THAN
           }
         } else if (right.kind == .INT) {
-          var value = right.asInt();
+          var value = right.asInt()
 
           // "a >= 2" => "a > 1"
           if (node.kind == .GREATER_THAN_OR_EQUAL && canDecrement(value)) {
-            right.content = IntContent(value - 1);
-            node.kind = .GREATER_THAN;
+            right.content = IntContent(value - 1)
+            node.kind = .GREATER_THAN
           }
 
           // "a <= 2" => "a < 3"
           else if (node.kind == .LESS_THAN_OR_EQUAL && canIncrement(value)) {
-            right.content = IntContent(value + 1);
-            node.kind = .LESS_THAN;
+            right.content = IntContent(value + 1)
+            node.kind = .LESS_THAN
           }
         }
       }
     }
 
     bool isFalsy(Node node) {
-      var kind = node.kind;
-      if (kind == .NULL) return true;
-      else if (kind == .INT) return node.asInt() == 0;
-      else if (kind.isReal()) return node.asDouble() == 0 || math.isNaN(node.asDouble());
-      else if (kind == .STRING) return node.asString() == "";
-      else if (kind.isCast()) return isFalsy(node.castValue());
-      else return false;
+      var kind = node.kind
+      if (kind == .NULL) return true
+      else if (kind == .INT) return node.asInt() == 0
+      else if (kind.isReal()) return node.asDouble() == 0 || math.isNaN(node.asDouble())
+      else if (kind == .STRING) return node.asString() == ""
+      else if (kind.isCast()) return isFalsy(node.castValue())
+      else return false
     }
 
     // Simplifies the node assuming it's used in a boolean context
     BooleanSwap peepholeMangleBoolean(Node node, BooleanSwap canSwap) {
-      var kind = node.kind;
+      var kind = node.kind
 
       if (kind == .EQUAL || kind == .NOT_EQUAL) {
-        var left = node.binaryLeft();
-        var right = node.binaryRight();
-        var replacement = isFalsy(right) ? left : isFalsy(left) ? right : null;
+        var left = node.binaryLeft()
+        var right = node.binaryRight()
+        var replacement = isFalsy(right) ? left : isFalsy(left) ? right : null
 
         // "if (a != 0) b;" => "if (a) b;"
         if (replacement != null) {
@@ -371,8 +374,8 @@ namespace js {
           // This minification is not valid for floating-point values because
           // of NaN, since NaN != 0 but NaN is falsy in JavaScript
           if (left.type != null && !left.type.isReal(cache) && right.type != null && !right.type.isReal(cache)) {
-            replacement.replaceWith(null);
-            node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement);
+            replacement.replaceWith(null)
+            node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement)
           }
         }
 
@@ -381,76 +384,80 @@ namespace js {
           // "if (a != -1) c;" => "if (~a) c;"
           // "if (a == -1) c; else d;" => "if (~a) d; else c;"
           if (right.kind == .INT && right.asInt() == -1) {
-            node.become(Node.createUnary(.COMPLEMENT, left.replaceWith(null)));
+            node.become(Node.createUnary(.COMPLEMENT, left.replaceWith(null)))
           }
 
           // "if (-1 != b) c;" => "if (~b) c;"
           // "if (-1 == b) c; else d;" => "if (~b) d; else c;"
           else if (left.kind == .INT && left.asInt() == -1) {
-            node.become(Node.createUnary(.COMPLEMENT, right.replaceWith(null)));
+            node.become(Node.createUnary(.COMPLEMENT, right.replaceWith(null)))
           }
 
           // "if (a != b) c;" => "if (a ^ b) c;"
           // "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
           else {
-            node.kind = .BITWISE_XOR;
+            node.kind = .BITWISE_XOR
           }
 
-          return kind == .EQUAL ? .SWAP : .NO_SWAP;
+          return kind == .EQUAL ? .SWAP : .NO_SWAP
         }
       }
 
       // "if (a != 0 || b != 0) c;" => "if (a || b) c;"
       else if (kind == .LOGICAL_AND || kind == .LOGICAL_OR) {
-        peepholeMangleBoolean(node.binaryLeft(), .NO_SWAP);
-        peepholeMangleBoolean(node.binaryRight(), .NO_SWAP);
+        peepholeMangleBoolean(node.binaryLeft(), .NO_SWAP)
+        peepholeMangleBoolean(node.binaryRight(), .NO_SWAP)
       }
 
       // "if (!a) b; else c;" => "if (a) c; else b;"
       // "a == 0 ? b : c;" => "a ? c : b;"
       // This is not an "else if" check since EQUAL may be turned into NOT above
       if (node.kind == .NOT && canSwap == .SWAP) {
-        node.become(node.unaryValue().replaceWith(null));
-        return .SWAP;
+        node.become(node.unaryValue().replaceWith(null))
+        return .SWAP
       }
 
-      return .NO_SWAP;
+      return .NO_SWAP
     }
 
     void peepholeMangleIf(Node node) {
-      var test = node.ifTest();
-      var trueBlock = node.ifTrue();
-      var falseBlock = node.ifFalse();
-      var trueStatement = trueBlock.blockStatement();
-      var swapped = peepholeMangleBoolean(test, falseBlock != null || trueStatement != null && trueStatement.kind == .EXPRESSION ? .SWAP : .NO_SWAP);
+      var test = node.ifTest()
+      var trueBlock = node.ifTrue()
+      var falseBlock = node.ifFalse()
+      var trueStatement = trueBlock.blockStatement()
+      var swapped = peepholeMangleBoolean(test, falseBlock != null || trueStatement != null && trueStatement.kind == .EXPRESSION ? .SWAP : .NO_SWAP)
 
       if (falseBlock != null) {
-        var falseStatement = falseBlock.blockStatement();
+        var falseStatement = falseBlock.blockStatement()
 
         // "if (!a) b; else c;" => "if (a) c; else b;"
         if (swapped == .SWAP) {
-          var block = trueBlock; trueBlock = falseBlock; falseBlock = block;
-          var statement = trueStatement; trueStatement = falseStatement; falseStatement = statement;
-          trueBlock.swapWith(falseBlock);
+          var block = trueBlock
+          trueBlock = falseBlock
+          falseBlock = block
+          var statement = trueStatement
+          trueStatement = falseStatement
+          falseStatement = statement
+          trueBlock.swapWith(falseBlock)
         }
 
         if (trueStatement != null && falseStatement != null) {
 
           // "if (a) b; else c;" => "a ? b : c;"
           if (trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION) {
-            var hook = Node.createHook(.HOOK, test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null));
-            peepholeMangleHook(hook);
-            node.become(Node.createExpression(hook));
+            var hook = Node.createHook(.HOOK, test.replaceWith(null), trueStatement.expressionValue().replaceWith(null), falseStatement.expressionValue().replaceWith(null))
+            peepholeMangleHook(hook)
+            node.become(Node.createExpression(hook))
           }
 
           // "if (a) return b; else return c;" => "return a ? b : c;"
           else if (trueStatement.kind == .RETURN && falseStatement.kind == .RETURN) {
-            var trueValue = trueStatement.returnValue();
-            var falseValue = falseStatement.returnValue();
+            var trueValue = trueStatement.returnValue()
+            var falseValue = falseStatement.returnValue()
             if (trueValue != null && falseValue != null) {
-              var hook = Node.createHook(.HOOK, test.replaceWith(null), trueValue.replaceWith(null), falseValue.replaceWith(null));
-              peepholeMangleHook(hook);
-              node.become(Node.createReturn(hook));
+              var hook = Node.createHook(.HOOK, test.replaceWith(null), trueValue.replaceWith(null), falseValue.replaceWith(null))
+              peepholeMangleHook(hook)
+              node.become(Node.createReturn(hook))
             }
           }
         }
@@ -459,161 +466,161 @@ namespace js {
       // "if (a) b;" => "a && b;"
       // "if (!a) b;" => "a || b;"
       else if (trueStatement != null && trueStatement.kind == .EXPRESSION) {
-        var value = trueStatement.expressionValue().replaceWith(null);
-        node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.replaceWith(null), value)));
+        var value = trueStatement.expressionValue().replaceWith(null)
+        node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.replaceWith(null), value)))
       }
     }
 
     void peepholeMangleFor(Node node) {
-      var test = node.forTest();
+      var test = node.forTest()
       if (test != null) {
-        peepholeMangleBoolean(test, .NO_SWAP);
+        peepholeMangleBoolean(test, .NO_SWAP)
       }
     }
 
     bool isJumpImplied(Node node, NodeKind kind) {
-      assert node.kind == .BLOCK;
-      assert kind == .RETURN || kind == .CONTINUE;
-      var parent = node.parent;
-      var parentKind = parent.kind;
+      assert node.kind == .BLOCK
+      assert kind == .RETURN || kind == .CONTINUE
+      var parent = node.parent
+      var parentKind = parent.kind
       if (kind == .RETURN && parentKind == .FUNCTION || kind == .CONTINUE && parentKind.isLoop()) {
-        return true;
+        return true
       }
       if (parentKind == .IF && parent.isLastChild()) {
-        return isJumpImplied(parent.parent, kind);
+        return isJumpImplied(parent.parent, kind)
       }
-      return false;
+      return false
     }
 
     void peepholeMangleBlock(Node node) {
       if (!node.hasChildren()) {
-        return;
+        return
       }
 
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children[i];
-        var kind = child.kind;
+        var child = node.children[i]
+        var kind = child.kind
 
         // "var a = 0; var b = 1;" => "var a = 0, b = 1;"
         if (kind == .VARIABLE_CLUSTER) {
           while (i + 1 < node.children.size()) {
-            var next = node.children[i + 1];
+            var next = node.children[i + 1]
             if (next.kind != .VARIABLE_CLUSTER) {
-              break;
+              break
             }
-            var variables = next.remove().clusterVariables();
+            var variables = next.remove().clusterVariables()
             for (var j = 0; j < variables.size(); j++) {
-              child.appendChild(variables[j].replaceWith(null));
+              child.appendChild(variables[j].replaceWith(null))
             }
           }
         }
 
         // "var a = 0, b = 1; for (var c = 2;;) {}" => "for (var a = 0, b = 1, c = 2;;) {}"
         else if (kind == .FOR && i != 0) {
-          var previous = node.children[i - 1];
-          var setup = child.forSetup();
+          var previous = node.children[i - 1]
+          var setup = child.forSetup()
           if (setup != null && previous.kind == .VARIABLE_CLUSTER && setup.kind == .VARIABLE_CLUSTER) {
-            var variables = previous.clusterVariables();
+            var variables = previous.clusterVariables()
             for (var j = 0; j < variables.size(); j++) {
-              variables[j].replaceWith(null);
+              variables[j].replaceWith(null)
             }
-            setup.insertChildren(1, variables);
-            previous.remove();
-            i--;
+            setup.insertChildren(1, variables)
+            previous.remove()
+            i--
           }
         }
 
         // "a; b; c;" => "a, b, c;"
         else if (kind == .EXPRESSION) {
           while (i + 1 < node.children.size()) {
-            var next = node.children[i + 1];
+            var next = node.children[i + 1]
             if (next.kind != .EXPRESSION) {
-              break;
+              break
             }
-            var combined = Node.createExpression(joinExpressions(child.expressionValue().replaceWith(null), next.remove().expressionValue().replaceWith(null)));
-            child.replaceWith(combined);
-            child = combined;
+            var combined = Node.createExpression(joinExpressions(child.expressionValue().replaceWith(null), next.remove().expressionValue().replaceWith(null)))
+            child.replaceWith(combined)
+            child = combined
           }
-          var value = child.expressionValue();
+          var value = child.expressionValue()
           if (value.kind == .SEQUENCE) {
-            peepholeMangleSequence(value);
+            peepholeMangleSequence(value)
           }
         }
 
-        // "void foo() { if (a) return; b(); c(); }" => "void foo() { if (!a) { b(); c(); } }"
-        // "while (a) { if (b) continue; c(); d(); }" => "while (a) { if (!b) { c(); d(); } }"
+        // "void foo() { if (a) return; b(); c() }" => "void foo() { if (!a) { b(); c() } }"
+        // "while (a) { if (b) continue; c(); d() }" => "while (a) { if (!b) { c(); d() } }"
         else if (kind == .IF && child.ifFalse() == null) {
-          var trueBlock = child.ifTrue();
+          var trueBlock = child.ifTrue()
           if (trueBlock.hasChildren()) {
-            var statement = trueBlock.lastChild();
+            var statement = trueBlock.lastChild()
             if ((statement.kind == .RETURN && statement.returnValue() == null || statement.kind == .CONTINUE) && isJumpImplied(node, statement.kind)) {
-              Node block;
+              Node block
 
               // If the if statement block without the jump is empty, then flip
               // the condition of the if statement and reuse the block. Otherwise,
               // create an else branch for the if statement and use that block.
-              statement.remove();
+              statement.remove()
               if (!trueBlock.hasChildren()) {
-                child.ifTest().invertBooleanCondition(cache);
-                block = trueBlock;
+                child.ifTest().invertBooleanCondition(cache)
+                block = trueBlock
               } else if (!child.isLastChild()) {
-                block = Node.createBlock([]);
-                child.replaceChild(2, block);
-                assert block == child.ifFalse();
+                block = Node.createBlock([])
+                child.replaceChild(2, block)
+                assert block == child.ifFalse()
               } else {
-                peepholeMangleIf(child);
-                return;
+                peepholeMangleIf(child)
+                return
               }
 
               // Move the rest of this block into the block for the if statement
               while (i + 1 < node.children.size()) {
-                block.appendChild(node.children[i + 1].remove());
+                block.appendChild(node.children[i + 1].remove())
               }
-              peepholeMangleBlock(block);
-              peepholeMangleIf(child);
+              peepholeMangleBlock(block)
+              peepholeMangleIf(child)
 
               // "a(); if (b) return; c();" => "a(); if (!b) c();" => "a(); !b && c();" => "a(), !b && c();"
               if (child.kind == .EXPRESSION && i != 0) {
-                var previous = node.children[i - 1];
+                var previous = node.children[i - 1]
                 if (previous.kind == .EXPRESSION) {
-                  previous.replaceWith(Node.createExpression(joinExpressions(previous.expressionValue().replaceWith(null), child.remove().expressionValue().replaceWith(null))));
+                  previous.replaceWith(Node.createExpression(joinExpressions(previous.expressionValue().replaceWith(null), child.remove().expressionValue().replaceWith(null))))
                 }
               }
-              return;
+              return
             }
           }
         }
 
         else if (kind == .RETURN && child.returnValue() != null) {
           while (i != 0) {
-            var previous = node.children[i - 1];
+            var previous = node.children[i - 1]
 
             // "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
             if (previous.kind == .IF && previous.ifFalse() == null) {
-              var statement = previous.ifTrue().blockStatement();
+              var statement = previous.ifTrue().blockStatement()
               if (statement != null && statement.kind == .RETURN && statement.returnValue() != null) {
-                var hook = Node.createHook(.HOOK, previous.ifTest().replaceWith(null), statement.returnValue().replaceWith(null), child.returnValue().replaceWith(null));
-                peepholeMangleHook(hook);
-                child.remove();
-                child = Node.createReturn(hook);
-                previous.replaceWith(child);
+                var hook = Node.createHook(.HOOK, previous.ifTest().replaceWith(null), statement.returnValue().replaceWith(null), child.returnValue().replaceWith(null))
+                peepholeMangleHook(hook)
+                child.remove()
+                child = Node.createReturn(hook)
+                previous.replaceWith(child)
               } else {
-                break;
+                break
               }
             }
 
             // "a(); return b;" => "return a(), b;"
             else if (previous.kind == .EXPRESSION) {
-              var combined = Node.createReturn(joinExpressions(previous.remove().expressionValue().replaceWith(null), child.returnValue().replaceWith(null)));
-              child.replaceWith(combined);
-              child = combined;
+              var combined = Node.createReturn(joinExpressions(previous.remove().expressionValue().replaceWith(null), child.returnValue().replaceWith(null)))
+              child.replaceWith(combined)
+              child = combined
             }
 
             else {
-              break;
+              break
             }
 
-            i--;
+            i--
           }
         }
       }
@@ -621,189 +628,189 @@ namespace js {
 
     Node assignSourceIfNoSideEffects(Node node) {
       if (node.kind == .ASSIGN && node.binaryLeft().hasNoSideEffects()) {
-        var right = node.binaryRight();
-        return right.hasNoSideEffects() ? right : null;
+        var right = node.binaryRight()
+        return right.hasNoSideEffects() ? right : null
       }
 
       if (node.kind == .ASSIGN_INDEX && node.ternaryLeft().hasNoSideEffects() && node.ternaryMiddle().hasNoSideEffects()) {
-        var right = node.ternaryRight();
-        return right.hasNoSideEffects() ? right : null;
+        var right = node.ternaryRight()
+        return right.hasNoSideEffects() ? right : null
       }
 
-      return null;
+      return null
     }
 
     void peepholeMangleSequence(Node node) {
-      assert node.kind == .SEQUENCE;
+      assert node.kind == .SEQUENCE
 
       // "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
       for (var i = node.children.size() - 1; i > 0; i--) {
-        var current = node.children[i];
-        var currentRight = assignSourceIfNoSideEffects(current);
+        var current = node.children[i]
+        var currentRight = assignSourceIfNoSideEffects(current)
         if (currentRight != null) {
           while (i != 0) {
-            var previous = node.children[i - 1];
-            var previousRight = assignSourceIfNoSideEffects(previous);
+            var previous = node.children[i - 1]
+            var previousRight = assignSourceIfNoSideEffects(previous)
             if (previousRight == null || !looksTheSame(previousRight, currentRight)) {
-              break;
+              break
             }
-            previousRight.replaceWith(current.remove());
-            current = previous;
-            i--;
+            previousRight.replaceWith(current.remove())
+            current = previous
+            i--
           }
         }
       }
     }
 
     Node joinExpressions(Node left, Node right) {
-      var sequence = Node.createSequence(left.kind == .SEQUENCE ? left.removeChildren() : [left]);
-      sequence.appendChildren(right.kind == .SEQUENCE ? right.removeChildren() : [right]);
-      return sequence;
+      var sequence = Node.createSequence(left.kind == .SEQUENCE ? left.removeChildren() : [left])
+      sequence.appendChildren(right.kind == .SEQUENCE ? right.removeChildren() : [right])
+      return sequence
     }
 
     bool looksTheSame(Node left, Node right) {
       if (left.kind == right.kind) {
         switch (left.kind) {
-          case .NULL, .THIS { return true; }
-          case .INT { return left.asInt() == right.asInt(); }
-          case .BOOL { return left.asBool() == right.asBool(); }
-          case .FLOAT, .DOUBLE { return left.asDouble() == right.asDouble(); }
-          case .STRING { return left.asString() == right.asString(); }
-          case .NAME { return left.symbol != null && left.symbol == right.symbol || left.asString() == right.asString(); }
-          case .DOT { return left.symbol == right.symbol && looksTheSame(left.dotTarget(), right.dotTarget()) && looksTheSame(left.dotName(), right.dotName()); }
+          case .NULL, .THIS { return true }
+          case .INT { return left.asInt() == right.asInt() }
+          case .BOOL { return left.asBool() == right.asBool() }
+          case .FLOAT, .DOUBLE { return left.asDouble() == right.asDouble() }
+          case .STRING { return left.asString() == right.asString() }
+          case .NAME { return left.symbol != null && left.symbol == right.symbol || left.asString() == right.asString() }
+          case .DOT { return left.symbol == right.symbol && looksTheSame(left.dotTarget(), right.dotTarget()) && looksTheSame(left.dotName(), right.dotName()) }
         }
       }
 
       // Null literals are always implicitly casted, so unwrap implicit casts
-      if (left.kind == .IMPLICIT_CAST) return looksTheSame(left.castValue(), right);
-      if (right.kind == .IMPLICIT_CAST) return looksTheSame(left, right.castValue());
-      return false;
+      if (left.kind == .IMPLICIT_CAST) return looksTheSame(left.castValue(), right)
+      if (right.kind == .IMPLICIT_CAST) return looksTheSame(left, right.castValue())
+      return false
     }
 
     void peepholeMangleHook(Node node) {
-      var test = node.hookTest();
-      var trueValue = node.hookTrue();
-      var falseValue = node.hookFalse();
-      var swapped = peepholeMangleBoolean(test, .SWAP);
+      var test = node.hookTest()
+      var trueValue = node.hookTrue()
+      var falseValue = node.hookFalse()
+      var swapped = peepholeMangleBoolean(test, .SWAP)
 
       // "!a ? b : c;" => "a ? c : b;"
       if (swapped == .SWAP) {
-        var temp = trueValue;
-        trueValue = falseValue;
-        falseValue = temp;
-        trueValue.swapWith(falseValue);
+        var temp = trueValue
+        trueValue = falseValue
+        falseValue = temp
+        trueValue.swapWith(falseValue)
       }
 
       // "a ? a : b" => "a || b"
       if (looksTheSame(test, trueValue) && test.hasNoSideEffects()) {
-        node.become(Node.createBinary(.LOGICAL_OR, test.replaceWith(null), falseValue.replaceWith(null)));
-        return;
+        node.become(Node.createBinary(.LOGICAL_OR, test.replaceWith(null), falseValue.replaceWith(null)))
+        return
       }
 
       // "a ? b : a" => "a && b"
       if (looksTheSame(test, falseValue) && test.hasNoSideEffects()) {
-        node.become(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), trueValue.replaceWith(null)));
-        return;
+        node.become(Node.createBinary(.LOGICAL_AND, test.replaceWith(null), trueValue.replaceWith(null)))
+        return
       }
 
       // "a ? b : b" => "a, b"
       if (looksTheSame(trueValue, falseValue)) {
-        node.become(test.hasNoSideEffects() ? trueValue.replaceWith(null) : Node.createSequence([test.replaceWith(null), trueValue.replaceWith(null)]));
-        return;
+        node.become(test.hasNoSideEffects() ? trueValue.replaceWith(null) : Node.createSequence([test.replaceWith(null), trueValue.replaceWith(null)]))
+        return
       }
 
       // Collapse partially-identical hook expressions
       if (falseValue.kind == .HOOK) {
-        var falseTest = falseValue.hookTest();
-        var falseTrueValue = falseValue.hookTrue();
-        var falseFalseValue = falseValue.hookFalse();
+        var falseTest = falseValue.hookTest()
+        var falseTrueValue = falseValue.hookTrue()
+        var falseFalseValue = falseValue.hookFalse()
 
         // "a ? b : c ? b : d" => "a || c ? b : d"
         if (looksTheSame(trueValue, falseTrueValue)) {
-          var or = Node.createBinary(.LOGICAL_OR, Node.createNull(), falseTest.replaceWith(null));
-          or.binaryLeft().replaceWith(test.replaceWith(or));
-          falseValue.replaceWith(falseFalseValue.replaceWith(null));
-          peepholeMangleHook(node);
-          return;
+          var or = Node.createBinary(.LOGICAL_OR, Node.createNull(), falseTest.replaceWith(null))
+          or.binaryLeft().replaceWith(test.replaceWith(or))
+          falseValue.replaceWith(falseFalseValue.replaceWith(null))
+          peepholeMangleHook(node)
+          return
         }
       }
 
       // Collapse partially-identical binary expressions
       if (trueValue.kind == falseValue.kind && trueValue.kind.isBinaryOperator()) {
-        var trueLeft = trueValue.binaryLeft();
-        var trueRight = trueValue.binaryRight();
-        var falseLeft = falseValue.binaryLeft();
-        var falseRight = falseValue.binaryRight();
+        var trueLeft = trueValue.binaryLeft()
+        var trueRight = trueValue.binaryRight()
+        var falseLeft = falseValue.binaryLeft()
+        var falseRight = falseValue.binaryRight()
 
         // "a ? b = c : b = d;" => "b = a ? c : d;"
         if (looksTheSame(trueLeft, falseLeft)) {
-          var hook = Node.createHook(.HOOK, test.replaceWith(null), trueRight.replaceWith(null), falseRight.replaceWith(null));
-          peepholeMangleHook(hook);
-          node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWith(null), hook));
+          var hook = Node.createHook(.HOOK, test.replaceWith(null), trueRight.replaceWith(null), falseRight.replaceWith(null))
+          peepholeMangleHook(hook)
+          node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWith(null), hook))
         }
 
         // "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
         else if (looksTheSame(trueRight, falseRight) && !trueValue.kind.isBinaryStorageOperator()) {
-          var hook = Node.createHook(.HOOK, test.replaceWith(null), trueLeft.replaceWith(null), falseLeft.replaceWith(null));
-          peepholeMangleHook(hook);
-          node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWith(null)));
+          var hook = Node.createHook(.HOOK, test.replaceWith(null), trueLeft.replaceWith(null), falseLeft.replaceWith(null))
+          peepholeMangleHook(hook)
+          node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWith(null)))
         }
       }
     }
 
     void peepholeMangleLogicalOr(Node node) {
-      var parent = node.parent;
-      var parentKind = parent.kind == .QUOTED ? parent.parent.kind : parent.kind;
+      var parent = node.parent
+      var parentKind = parent.kind == .QUOTED ? parent.parent.kind : parent.kind
 
       // "(x || null) | 0" => "x | 0"
       // "!(x || null)" => "!x"
       if ((alwaysConvertsOperandsToInt(parentKind) || parentKind == .NOT) && isFalsy(node.binaryRight())) {
-        node.become(node.binaryLeft().replaceWith(null));
+        node.become(node.binaryLeft().replaceWith(null))
       }
     }
 
     void patchClass(Node node) {
       if (!node.symbol.isImport() && node.symbol.type.baseClass() != null) {
-        needExtends = true;
+        needExtends = true
       }
     }
 
     void patchName(Node node) {
       if (node.symbol != null && node.symbol.kind.isInstance() && node.isNameExpression()) {
-        node.become(Node.createDot(Node.createThis(), node.clone()).withType(node.type));
+        node.become(Node.createDot(Node.createThis(), node.clone()).withType(node.type))
       }
     }
 
     void mangleStringList(Node node) {
-      var values = node.listValues();
-      var count = values.size();
+      var values = node.listValues()
+      var count = values.size()
 
       // Only mangle if it results in a size win
-      var overhead = count * 2 - ".split('.')".size();
+      var overhead = count * 2 - ".split('.')".size()
       if (overhead <= 0) {
-        return;
+        return
       }
 
       // All values must be strings
-      List<string> strings = [];
+      List<string> strings = []
       for (var i = 0; i < count; i++) {
-        var value = values[i];
+        var value = values[i]
         if (value.kind == .STRING) {
-          strings.push(value.asString());
+          strings.push(value.asString())
         } else {
-          return;
+          return
         }
       }
 
       // Pick a common delimeter to hopefully have a good huffman encoding.
       // This idea was from the Google Closure Compiler source code.
-      var delimeters = " ;,{}";
+      var delimeters = " ;,{}"
       for (var i = 0; i < delimeters.size(); i++) {
-        var delimeter = delimeters.sliceCodeUnit(i);
-        var j = 0;
+        var delimeter = delimeters.sliceCodeUnit(i)
+        var j = 0
         for (; j < count; j++) {
           if (delimeter in strings[j]) {
-            break;
+            break
           }
         }
 
@@ -811,18 +818,18 @@ namespace js {
         if (j == count) {
           node.become(Node.createCall(
             Node.createDot(Node.createString(delimeter.join(strings)), Node.createName("split")),
-            [Node.createString(delimeter)]));
-          return;
+            [Node.createString(delimeter)]))
+          return
         }
       }
     }
 
     void unionVariableWithFunction(Node node) {
-      assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null);
+      assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null)
       if (currentFunction != null) {
-        var left = namingGroupIndexForSymbol[currentFunction.uniqueID];
-        var right = namingGroupIndexForSymbol[node.symbol.uniqueID];
-        localVariableUnionFind.union(left, right);
+        var left = namingGroupIndexForSymbol[currentFunction.uniqueID]
+        var right = namingGroupIndexForSymbol[node.symbol.uniqueID]
+        localVariableUnionFind.union(left, right)
       }
     }
 
@@ -831,98 +838,98 @@ namespace js {
       // integer range. Allowing this causes JIT slowdowns due to extra checks
       // during compilation and potential deoptimizations during execution.
       if (node.type.isInt(cache) && (node.kind == .MULTIPLY || !alwaysConvertsOperandsToInt(node.parent.kind))) {
-        node.become(createBinaryInt(node.kind, node.binaryLeft().replaceWith(null), node.binaryRight().replaceWith(null)).withRange(node.range));
+        node.become(createBinaryInt(node.kind, node.binaryLeft().replaceWith(null), node.binaryRight().replaceWith(null)).withRange(node.range))
       }
     }
 
     void patchAssign(Node node) {
       if (node.type.isInt(cache)) {
-        var left = node.binaryLeft();
-        var right = node.binaryRight();
+        var left = node.binaryLeft()
+        var right = node.binaryRight()
         NodeKind kind =
           node.kind == .ASSIGN_ADD ? .ADD :
           node.kind == .ASSIGN_SUBTRACT ? .SUBTRACT :
           node.kind == .ASSIGN_MULTIPLY ? .MULTIPLY :
           node.kind == .ASSIGN_DIVIDE ? .DIVIDE :
-          .REMAINDER;
-        createBinaryIntAssignment(node, kind, left.replaceWith(null), right.replaceWith(null));
+          .REMAINDER
+        createBinaryIntAssignment(node, kind, left.replaceWith(null), right.replaceWith(null))
       }
     }
 
     void patchUnary(Node node) {
       if (node.type.isInt(cache)) {
-        var value = node.unaryValue();
+        var value = node.unaryValue()
         if (node.kind.isUnaryStorageOperator()) {
-          var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT;
-          createBinaryIntAssignment(node, isIncrement ? .ADD : .SUBTRACT, value.replaceWith(null), Node.createInt(1));
+          var isIncrement = node.kind == .PREFIX_INCREMENT || node.kind == .POSTFIX_INCREMENT
+          createBinaryIntAssignment(node, isIncrement ? .ADD : .SUBTRACT, value.replaceWith(null), Node.createInt(1))
         } else if (!alwaysConvertsOperandsToInt(node.parent.kind)) {
-          assert node.kind == .POSITIVE || node.kind == .NEGATIVE;
+          assert node.kind == .POSITIVE || node.kind == .NEGATIVE
 
           // Don't need a bitwise or with zero for constant values
           if (value.kind == .INT) {
-            var constant = value.asInt();
-            node.become(Node.createInt(node.kind == .NEGATIVE ? -constant : constant).withType(cache.intType));
+            var constant = value.asInt()
+            node.become(Node.createInt(node.kind == .NEGATIVE ? -constant : constant).withType(cache.intType))
           }
 
           // Make sure that negating an integer doesn't exceed integer range:
           //
           //   export void foo() {
-          //     int result = bar(-0x80000000);
-          //     assert result >= -0x80000000 && result <= 0x7FFFFFFF;
+          //     int result = bar(-0x80000000)
+          //     assert result >= -0x80000000 && result <= 0x7FFFFFFF
           //   }
           //   int bar(int foo) {
-          //     return -foo;
+          //     return -foo
           //   }
           //
           else {
             node.become(Node.createBinary(.BITWISE_OR,
               Node.createUnary(node.kind, value.replaceWith(null)).withType(cache.intType),
-              Node.createInt(0).withType(cache.intType)).withType(cache.intType));
+              Node.createInt(0).withType(cache.intType)).withType(cache.intType))
           }
         }
       }
     }
 
     void patchCast(Node node) {
-      var value = node.castValue();
+      var value = node.castValue()
 
       // Cast to bool
       if (node.type.isBool(cache) && !value.type.isBool(cache)) {
-        value = Node.createUnary(.NOT, value.replaceWith(null)).withRange(node.range).withType(node.type);
-        node.become(Node.createUnary(.NOT, value).withRange(node.range).withType(node.type));
+        value = Node.createUnary(.NOT, value.replaceWith(null)).withRange(node.range).withType(node.type)
+        node.become(Node.createUnary(.NOT, value).withRange(node.range).withType(node.type))
       }
 
       // Cast to int
       else if (isIntegerType(node) && !isIntegerType(value) && !alwaysConvertsOperandsToInt(node.parent.kind)) {
-        node.become(Node.createBinary(.BITWISE_OR, value.replaceWith(null), Node.createInt(0)).withRange(node.range).withType(node.type));
+        node.become(Node.createBinary(.BITWISE_OR, value.replaceWith(null), Node.createInt(0)).withRange(node.range).withType(node.type))
       }
 
       // Cast to float/double
       else if (node.type.isReal(cache) && !value.type.isNumeric(cache)) {
-        node.become(Node.createUnary(.POSITIVE, value.replaceWith(null)).withRange(node.range).withType(node.type));
+        node.become(Node.createUnary(.POSITIVE, value.replaceWith(null)).withRange(node.range).withType(node.type))
       }
     }
 
     void patchConstructor(Node node) {
-      var block = node.functionBlock();
+      var block = node.functionBlock()
       if (block == null) {
-        return;
+        return
       }
-      var superInitializer = node.superInitializer();
-      var memberInitializers = node.memberInitializers();
-      var index = 0;
+      var superInitializer = node.superInitializer()
+      var memberInitializers = node.memberInitializers()
+      var index = 0
       if (superInitializer != null) {
-        block.insertChild(index, Node.createExpression(superInitializer.replaceWith(null)));
-        index++;
+        block.insertChild(index, Node.createExpression(superInitializer.replaceWith(null)))
+        index++
       }
       if (memberInitializers != null) {
         for (var i = 0, n = memberInitializers.children.size(); i < n; i++) {
-          var child = memberInitializers.children[i];
-          var name = child.memberInitializerName();
-          var value = child.memberInitializerValue();
+          var child = memberInitializers.children[i]
+          var name = child.memberInitializerName()
+          var value = child.memberInitializerValue()
           if (value.kind != .ERROR && !shouldRemoveConstant(child.symbol)) {
-            block.insertChild(index, Node.createExpression(Node.createBinary(.ASSIGN, name.replaceWith(null), value.replaceWith(null))));
-            index++;
+            block.insertChild(index, Node.createExpression(Node.createBinary(.ASSIGN, name.replaceWith(null), value.replaceWith(null))))
+            index++
           }
         }
       }
@@ -930,40 +937,41 @@ namespace js {
 
     Node createBinaryInt(NodeKind kind, Node left, Node right) {
       if (kind == .MULTIPLY) {
-        needMathImul = true;
-        return Node.createCall(Node.createName(imul), [left, right]).withType(cache.intType);
+        needMathImul = true
+        return Node.createCall(Node.createName(imul), [left, right]).withType(cache.intType)
       }
-      return Node.createBinary(.BITWISE_OR, Node.createBinary(kind, left, right).withType(cache.intType), Node.createInt(0).withType(cache.intType)).withType(cache.intType);
+      return Node.createBinary(.BITWISE_OR, Node.createBinary(kind, left, right).withType(cache.intType), Node.createInt(0).withType(cache.intType)).withType(cache.intType)
     }
 
     static bool isSimpleNameAccess(Node node) {
-      return node.kind == .NAME || node.kind == .THIS || node.kind == .DOT && isSimpleNameAccess(node.dotTarget());
+      return node.kind == .NAME || node.kind == .THIS || node.kind == .DOT && isSimpleNameAccess(node.dotTarget())
     }
 
     void createBinaryIntAssignment(Node target, NodeKind kind, Node left, Node right) {
       if (isSimpleNameAccess(left)) {
-        target.become(Node.createBinary(.ASSIGN, left.clone(), createBinaryInt(kind, left, right)).withRange(target.range));
-        return;
+        target.become(Node.createBinary(.ASSIGN, left.clone(), createBinaryInt(kind, left, right)).withRange(target.range))
+        return
       }
-      assert left.kind == .DOT;
-      var current = target;
-      var parent = current.parent;
+      assert left.kind == .DOT
+      var current = target
+      var parent = current.parent
       while (parent.kind != .BLOCK) {
-        current = parent;
-        parent = parent.parent;
+        current = parent
+        parent = parent.parent
       }
-      var name = "$temp" + nextTempID; nextTempID++;
-      var symbol = resolver.createSymbol(name, .LOCAL_VARIABLE);
-      var reference = Node.createName(name).withSymbol(symbol);
-      var property = Node.createDot(reference, left.dotName().replaceWith(null));
-      symbol.node = Node.createVariable(reference.clone(), Node.createType(cache.intType), null).withSymbol(symbol);
-      parent.insertChild(parent.children.indexOf(current), Node.createVariableCluster(Node.createType(cache.intType), [symbol.node]));
+      var name = "$temp" + nextTempID
+      nextTempID++
+      var symbol = resolver.createSymbol(name, .LOCAL_VARIABLE)
+      var reference = Node.createName(name).withSymbol(symbol)
+      var property = Node.createDot(reference, left.dotName().replaceWith(null))
+      symbol.node = Node.createVariable(reference.clone(), Node.createType(cache.intType), null).withSymbol(symbol)
+      parent.insertChild(parent.children.indexOf(current), Node.createVariableCluster(Node.createType(cache.intType), [symbol.node]))
       target.become(Node.createSequence([
         Node.createBinary(.ASSIGN, reference.clone(), left.dotTarget().replaceWith(null)),
-        Node.createBinary(.ASSIGN, property.clone(), createBinaryInt(kind, property, right))]).withRange(target.range));
+        Node.createBinary(.ASSIGN, property.clone(), createBinaryInt(kind, property, right))]).withRange(target.range))
       if (options.mangle) {
-        namingGroupIndexForSymbol[symbol.uniqueID] = localVariableUnionFind.allocate();
-        unionVariableWithFunction(reference);
+        namingGroupIndexForSymbol[symbol.uniqueID] = localVariableUnionFind.allocate()
+        unionVariableWithFunction(reference)
       }
     }
 
@@ -973,47 +981,47 @@ namespace js {
           .ASSIGN_BITWISE_AND, .ASSIGN_BITWISE_OR, .ASSIGN_BITWISE_XOR,
           .ASSIGN_SHIFT_LEFT, .ASSIGN_SHIFT_RIGHT, .BITWISE_AND, .BITWISE_OR,
           .BITWISE_XOR, .COMPLEMENT, .SHIFT_LEFT, .SHIFT_RIGHT {
-          return true;
+          return true
         }
 
         default {
-          return false;
+          return false
         }
       }
     }
 
     void setCurrentFunction(Symbol symbol) {
-      currentFunction = symbol;
-      createdThisAlias = false;
+      currentFunction = symbol
+      createdThisAlias = false
     }
 
     Node thisAlias() {
       if (!createdThisAlias) {
-        createdThisAlias = true;
+        createdThisAlias = true
         currentFunction.node.functionBlock().insertChild(0, Node.createVariableCluster(Node.createError(),
-          [Node.createVariable(Node.createName("$this"), null, Node.createThis())]));
+          [Node.createVariable(Node.createName("$this"), null, Node.createThis())]))
       }
-      return Node.createName("$this");
+      return Node.createName("$this")
     }
 
     static string numberToName(int number) {
-      const var WRAP = 26 * 2;
-      var name = "";
+      const var WRAP = 26 * 2
+      var name = ""
       if (number >= WRAP) {
-        name = numberToName(number / WRAP - 1);
-        number = number % WRAP;
+        name = numberToName(number / WRAP - 1)
+        number = number % WRAP
       }
-      name += string.fromCodeUnit(number + (number < 26 ? 'a' : 'A' - 26));
-      return name;
+      name += string.fromCodeUnit(number + (number < 26 ? 'a' : 'A' - 26))
+      return name
     }
 
     string generateSymbolName() {
-      string name;
+      string name
       do {
-        name = numberToName(nextSymbolName);
-        nextSymbolName++;
-      } while (name in reservedNames);
-      return name;
+        name = numberToName(nextSymbolName)
+        nextSymbolName++
+      } while (name in reservedNames)
+      return name
     }
   }
 }

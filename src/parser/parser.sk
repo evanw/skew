@@ -20,11 +20,11 @@ enum Precedence {
 
 in Precedence {
   Precedence incrementIfLeftAssociative(Associativity associativity) {
-    return (Precedence)(this + (int)(associativity == .LEFT));
+    return (Precedence)(this + (int)(associativity == .LEFT))
   }
 
   Precedence incrementIfRightAssociative(Associativity associativity) {
-    return (Precedence)(this + (int)(associativity == .RIGHT));
+    return (Precedence)(this + (int)(associativity == .RIGHT))
   }
 }
 
@@ -40,92 +40,83 @@ enum ListMode {
   KEY_VALUE,
 }
 
-enum TokenScan {
-  NORMAL,
-  STOP_BEFORE_NEXT_STATEMENT,
+bool peekEndOfLine(ParserContext context) {
+  return
+    context.peek(.NEWLINE) ||
+    context.peek(.RIGHT_BRACE) ||
+    context.peek(.END_OF_FILE)
 }
 
-// Parser recovery is done by skipping to the next closing token after an error
-bool scanForToken(ParserContext context, TokenKind kind, TokenScan tokenScan) {
+bool eatEndOfLine(ParserContext context) {
+  return
+    context.eat(.NEWLINE) ||
+    context.peek(.RIGHT_BRACE) ||
+    context.peek(.END_OF_FILE)
+}
+
+void expectEndOfLine(ParserContext context) {
+  if (!eatEndOfLine(context)) {
+    context.expect(.NEWLINE)
+    do {
+      context.next()
+    } while (!eatEndOfLine(context))
+  }
+}
+
+bool scanForToken(ParserContext context, TokenKind kind) {
   if (context.expect(kind)) {
-    return true;
+    return true
   }
-
-  // Scan until the next closing token
-  while (!context.peek(.END_OF_FILE)) {
-    switch (context.current().kind) {
-      case .RIGHT_PARENTHESIS, .RIGHT_BRACKET, .RIGHT_BRACE {
-        return context.eat(kind);
-      }
-
-      case .SEMICOLON {
-        if (tokenScan == .STOP_BEFORE_NEXT_STATEMENT) {
-          return context.eat(kind);
-        }
-      }
-
-      case
-        .ALIAS, .ANNOTATION, .ASSERT, .BREAK, .CLASS, .CONTINUE, .DO, .ENUM, .EXPORT,
-        .FINAL, .FOR, .IF, .IMPORT, .INLINE, .INTERFACE, .NAMESPACE, .OVERRIDE,
-        .PREPROCESSOR_DEFINE, .PREPROCESSOR_ELIF, .PREPROCESSOR_ELSE, .PREPROCESSOR_ENDIF,
-        .PREPROCESSOR_ERROR, .PREPROCESSOR_IF, .PREPROCESSOR_WARNING, .PRIVATE, .PROTECTED,
-        .PUBLIC, .RETURN, .STATIC, .SWITCH, .TRY, .USING, .VIRTUAL, .WHILE {
-
-        // Optionally recover parsing before the next statement if it's unambiguous
-        if (tokenScan == .STOP_BEFORE_NEXT_STATEMENT) {
-          return true;
-        }
-      }
-    }
-    context.next();
+  while (!eatEndOfLine(context)) {
+    context.next()
   }
-
-  return false;
+  return false
 }
 
 Node parseGroup(ParserContext context) {
-  var token = context.current();
-  if (!context.expect(.LEFT_PARENTHESIS)) return null;
-  var value = pratt.parse(context, .LOWEST);
-  scanForToken(context, .RIGHT_PARENTHESIS, .STOP_BEFORE_NEXT_STATEMENT);
-  return value.withRange(context.spanSince(token.range));
+  var token = context.current()
+  if (!context.expect(.LEFT_PARENTHESIS)) return null
+  var value = pratt.parse(context, .LOWEST)
+  scanForToken(context, .RIGHT_PARENTHESIS)
+  return value.withRange(context.spanSince(token.range))
 }
 
 Node createNameFromToken(Token token) {
-  return Node.createName(token.text()).withRange(token.range);
+  return Node.createName(token.text()).withRange(token.range)
 }
 
 Node parseName(ParserContext context) {
-  var token = context.current();
-  if (!context.expect(.IDENTIFIER)) return null;
-  return createNameFromToken(token);
+  var token = context.current()
+  if (!context.expect(.IDENTIFIER)) return null
+  return createNameFromToken(token)
 }
 
 Node parseNameOrString(ParserContext context) {
-  var token = context.current();
-  if (context.eat(.STRING)) return parseStringToken(context, token);
-  return parseName(context);
+  var token = context.current()
+  if (context.eat(.STRING)) return parseStringToken(context, token)
+  return parseName(context)
 }
 
 Node parseBlock(ParserContext context, StatementHint hint) {
-  var token = context.current();
-  if (!context.expect(.LEFT_BRACE)) return null;
-  var statements = parseStatements(context, hint);
-  scanForToken(context, .RIGHT_BRACE, .NORMAL);
-  return Node.createBlock(statements).withRange(context.spanSince(token.range));
+  var token = context.current()
+  if (!context.expect(.LEFT_BRACE)) return null
+  var statements = parseStatements(context, hint)
+  scanForToken(context, .RIGHT_BRACE)
+  return Node.createBlock(statements).withRange(context.spanSince(token.range))
 }
 
 Node parseBlockOrStatement(ParserContext context, StatementHint hint) {
-  if (context.peek(.LEFT_BRACE)) return parseBlock(context, hint);
-  var statement = parseStatement(context, hint); if (statement == null) return null;
-  return Node.createBlock([statement]).withRange(statement.range);
+  if (context.peek(.LEFT_BRACE)) return parseBlock(context, hint)
+  var statement = parseStatement(context, hint)
+  if (statement == null) return null
+  return Node.createBlock([statement]).withRange(statement.range)
 }
 
 Node parseCaseStatement(ParserContext context) {
-  var token = context.current();
-  List<Node> values = [];
+  var token = context.current()
+  List<Node> values = []
   if (!context.eat(.DEFAULT)) {
-    if (!context.expect(.CASE)) return null;
+    if (!context.expect(.CASE)) return null
     do {
       // Make sure we don't parse a map expression here. The user is likely in
       // the middle of typing a case statement and trying to parse a map
@@ -133,245 +124,268 @@ Node parseCaseStatement(ParserContext context) {
       // interpret the case block as a map expression. Map expressions cannot
       // be used in a case statement anyway so this isn't a problem.
       if (context.peek(.LEFT_BRACE)) {
-        context.unexpectedToken();
-        values.push(Node.createError()); // Make sure this case doesn't look like a default case
-        break;
+        context.unexpectedToken()
+        values.push(Node.createError()) // Make sure this case doesn't look like a default case
+        break
       }
 
-      values.push(pratt.parse(context, .COMMA));
-    } while (context.eat(.COMMA));
+      values.push(pratt.parse(context, .COMMA))
+    } while (context.eat(.COMMA))
   }
-  var block = parseBlock(context, .NORMAL); if (block == null) return null;
-  return Node.createCase(values, block).withRange(context.spanSince(token.range));
+  var block = parseBlock(context, .NORMAL)
+  if (block == null) return null
+  return Node.createCase(values, block).withRange(context.spanSince(token.range))
 }
 
 List<Node> parseStatements(ParserContext context, StatementHint hint) {
-  List<Node> statements = [];
+  List<Node> statements = []
   while (true) {
-    var kind = context.current().kind;
+    var kind = context.current().kind
     if (kind == .RIGHT_BRACE ||
         kind == .PREPROCESSOR_ELIF ||
         kind == .PREPROCESSOR_ELSE ||
         kind == .PREPROCESSOR_ENDIF ||
         kind == .END_OF_FILE) {
-      break;
+      break
+    }
+    if (context.eat(.NEWLINE)) {
+      continue
     }
     if (hint == .IN_ENUM) {
-      var declaration = parseEnumValueDeclaration(context); if (declaration == null) break;
-      statements.push(declaration);
-      if (context.peek(.RIGHT_BRACE) || !context.expect(.COMMA)) break;
+      var declaration = parseEnumValueDeclaration(context)
+      if (declaration == null) break
+      statements.push(declaration)
+      if (context.peek(.RIGHT_BRACE) || !context.expect(.COMMA)) break
+      eatEndOfLine(context)
     } else {
-      var statement = hint == .IN_SWITCH ? parseCaseStatement(context) : parseStatement(context, hint); if (statement == null) break;
-      statements.push(statement);
+      var statement = hint == .IN_SWITCH ? parseCaseStatement(context) : parseStatement(context, hint)
+      if (statement == null) break
+      statements.push(statement)
+      expectEndOfLine(context)
     }
   }
-  return statements;
+  return statements
 }
 
 Node parseArgumentVariables(ParserContext context) {
-  var token = context.current();
-  List<Node> arguments = [];
-  if (!context.expect(.LEFT_PARENTHESIS)) return null;
+  var token = context.current()
+  List<Node> arguments = []
+  if (!context.expect(.LEFT_PARENTHESIS)) return null
   while (!context.peek(.RIGHT_PARENTHESIS)) {
-    if (arguments.size() != 0 && !context.expect(.COMMA)) break;
-    var type = parseType(context);
-    var name = parseName(context); if (name == null) break;
-    arguments.push(Node.createVariable(name, type, null).withRange(Range.span(type.range, name.range)));
+    if (arguments.size() != 0 && !context.expect(.COMMA)) break
+    var type = parseType(context)
+    var name = parseName(context)
+    if (name == null) break
+    arguments.push(Node.createVariable(name, type, null).withRange(Range.span(type.range, name.range)))
   }
-  scanForToken(context, .RIGHT_PARENTHESIS, .NORMAL);
-  return Node.createNodeList(arguments).withRange(context.spanSince(token.range));
+  scanForToken(context, .RIGHT_PARENTHESIS)
+  return Node.createNodeList(arguments).withRange(context.spanSince(token.range))
 }
 
 Node parseType(ParserContext context) {
-  return pratt.parse(context, (Precedence)(Precedence.MEMBER - 1));
+  return pratt.parse(context, (Precedence)(Precedence.MEMBER - 1))
 }
 
 Node parseEnumValueDeclaration(ParserContext context) {
-  var name = parseName(context); if (name == null) return null;
-  var value = context.eat(.ASSIGN) ? pratt.parse(context, .COMMA) : null;
-  return Node.createVariable(name, null, value).withRange(context.spanSince(name.range));
+  var name = parseName(context)
+  if (name == null) return null
+  var value = context.eat(.ASSIGN) ? pratt.parse(context, .COMMA) : null
+  return Node.createVariable(name, null, value).withRange(context.spanSince(name.range))
 }
 
 Node parseParameter(ParserContext context) {
-  var token = context.current();
-  var name = parseName(context); if (name == null) return null;
-  var bound = context.eat(.IS) ? pratt.parse(context, .COMMA) : null;
-  return Node.createParameter(name, bound).withRange(context.spanSince(token.range));
+  var token = context.current()
+  var name = parseName(context)
+  if (name == null) return null
+  var bound = context.eat(.IS) ? pratt.parse(context, .COMMA) : null
+  return Node.createParameter(name, bound).withRange(context.spanSince(token.range))
 }
 
 Node parseParameters(ParserContext context) {
-  var token = context.current();
-  List<Node> parameters = [];
-  if (!context.eat(.START_PARAMETER_LIST)) return null;
+  var token = context.current()
+  List<Node> parameters = []
+  if (!context.eat(.START_PARAMETER_LIST)) return null
   while (parameters.size() == 0 || !context.peek(.END_PARAMETER_LIST)) {
-    if (parameters.size() != 0 && !context.expect(.COMMA)) break;
-    var parameter = parseParameter(context); if (parameter == null) break;
-    parameters.push(parameter);
+    if (parameters.size() != 0 && !context.expect(.COMMA)) break
+    var parameter = parseParameter(context)
+    if (parameter == null) break
+    parameters.push(parameter)
   }
-  scanForToken(context, .END_PARAMETER_LIST, .STOP_BEFORE_NEXT_STATEMENT);
-  return Node.createNodeList(parameters).withRange(context.spanSince(token.range));
+  scanForToken(context, .END_PARAMETER_LIST)
+  return Node.createNodeList(parameters).withRange(context.spanSince(token.range))
 }
 
 Node parseMapKeyValuePair(ParserContext context) {
-  var key = pratt.parse(context, .COMMA);
-  if (!context.expect(.COLON)) return Node.createError().withRange(key.range);
-  var value = pratt.parse(context, .COMMA);
-  return Node.createKeyValue(key, value).withRange(Range.span(key.range, value.range));
+  var key = pratt.parse(context, .COMMA)
+  if (!context.expect(.COLON)) return Node.createError().withRange(key.range)
+  var value = pratt.parse(context, .COMMA)
+  return Node.createKeyValue(key, value).withRange(Range.span(key.range, value.range))
 }
 
 Node parsePreprocessorSequence(ParserContext context, ListMode mode) {
-  context.needsPreprocessor = true;
-  var token = context.next();
-  var value = pratt.parse(context, .COMMA);
-  var trueNodes = parseCommaSeparatedNodeList(context, mode);
-  Node falseNodes;
+  context.needsPreprocessor = true
+  var token = context.next()
+  var value = pratt.parse(context, .COMMA)
+  var trueNodes = parseCommaSeparatedNodeList(context, mode)
+  Node falseNodes
   if (context.peek(.PREPROCESSOR_ELIF)) {
-    var node = parsePreprocessorSequence(context, mode);
-    falseNodes = Node.createNodeList([node]).withRange(node.range);
+    var node = parsePreprocessorSequence(context, mode)
+    falseNodes = Node.createNodeList([node]).withRange(node.range)
   } else {
     if (context.eat(.PREPROCESSOR_ELSE)) {
-      falseNodes = parseCommaSeparatedNodeList(context, mode);
+      falseNodes = parseCommaSeparatedNodeList(context, mode)
     }
     if (!context.expect(.PREPROCESSOR_ENDIF)) {
-      return errorExpressionSinceToken(context, token);
+      return errorExpressionSinceToken(context, token)
     }
   }
-  return Node.createPreprocessorSequence(value, trueNodes, falseNodes).withRange(context.spanSince(token.range));
+  return Node.createPreprocessorSequence(value, trueNodes, falseNodes).withRange(context.spanSince(token.range))
 }
 
 bool isEndOfCommaSeparatedList(ParserContext context) {
-  var kind = context.current().kind;
+  var kind = context.current().kind
   return
     kind == .RIGHT_PARENTHESIS ||
     kind == .RIGHT_BRACKET ||
     kind == .RIGHT_BRACE ||
     kind == .PREPROCESSOR_ELIF ||
     kind == .PREPROCESSOR_ELSE ||
-    kind == .PREPROCESSOR_ENDIF;
+    kind == .PREPROCESSOR_ENDIF
 }
 
 List<Node> parseCommaSeparatedList(ParserContext context, ListMode mode) {
-  List<Node> values = [];
+  List<Node> values = []
   while (!isEndOfCommaSeparatedList(context)) {
-    var isPreprocessorSequence = context.peek(.PREPROCESSOR_IF);
+    var isPreprocessorSequence = context.peek(.PREPROCESSOR_IF)
     var value =
       isPreprocessorSequence ? parsePreprocessorSequence(context, mode) :
       mode == .KEY_VALUE ? parseMapKeyValuePair(context) :
-      pratt.parse(context, .COMMA);
-    values.push(value);
-    if (value.kind == .ERROR || !isPreprocessorSequence && !isEndOfCommaSeparatedList(context) && !context.expect(.COMMA)) break;
+      pratt.parse(context, .COMMA)
+    values.push(value)
+    if (value.kind == .ERROR || !isPreprocessorSequence && !isEndOfCommaSeparatedList(context) && !context.expect(.COMMA)) break
+    eatEndOfLine(context)
   }
-  return values;
+  return values
 }
 
 Node parseCommaSeparatedNodeList(ParserContext context, ListMode mode) {
-  var token = context.current();
-  var values = parseCommaSeparatedList(context, mode);
-  return Node.createNodeList(values).withRange(context.spanSince(token.range));
+  var token = context.current()
+  var values = parseCommaSeparatedList(context, mode)
+  return Node.createNodeList(values).withRange(context.spanSince(token.range))
 }
 
 List<Node> parseWrappedCommaSeparatedList(ParserContext context, TokenKind left, TokenKind right, ListMode mode) {
-  if (!context.expect(left)) return [];
-  var values = parseCommaSeparatedList(context, mode);
-  scanForToken(context, right, .STOP_BEFORE_NEXT_STATEMENT);
-  return values;
+  if (!context.expect(left)) return []
+  var values = parseCommaSeparatedList(context, mode)
+  scanForToken(context, right)
+  return values
 }
 
 List<Node> parseTypeList(ParserContext context, TokenKind end) {
-  List<Node> types = [];
+  List<Node> types = []
   while (types.size() == 0 || !context.peek(end)) {
-    // Make sure we don't parse an initializer expression. The user is likely
-    // in the middle of typing an object base type list and trying to parse an
-    // initializer expression will generate many confusing errors as the parser
-    // tries to interpret the object block as an initializer expression.
+    // Make sure we don't parse a map expression. The user is likely in the
+    // middle of typing an object base type list and trying to parse a map
+    // expression will generate many confusing errors as the parser tries to
+    // interpret the object block as a map expression.
     if (context.peek(.LEFT_BRACE)) {
-      context.unexpectedToken();
-      break;
+      context.unexpectedToken()
+      break
     }
 
     // Commas must come between types
     if (types.size() != 0 && !context.eat(.COMMA)) {
-      context.expect(end); // Expecting the end token here makes more sense than a comma
-      break;
+      context.expect(end) // Expecting the end token here makes more sense than a comma
+      break
     }
 
-    // Also prevent initializer expression parsing after a comma
+    // Also prevent a map expression parsing after a comma
     if (context.peek(.LEFT_BRACE)) {
-      context.unexpectedToken();
-      break;
+      context.unexpectedToken()
+      break
     }
 
-    types.push(parseType(context));
+    types.push(parseType(context))
   }
-  return types;
+  return types
 }
 
 Node parseObject(ParserContext context, NodeKind kind) {
-  var token = context.next();
-  var name = parseName(context); if (name == null) return null;
-  var parameters = parseParameters(context);
-  var bases = context.eat(.COLON) ? Node.createNodeList(parseTypeList(context, .LEFT_BRACE)) : null;
-  var block = parseBlock(context, .IN_OBJECT); if (block == null) return null;
-  return Node.createObject(kind, name, parameters, bases, block).withRange(context.spanSince(token.range));
+  var token = context.next()
+  var name = parseName(context)
+  if (name == null) return null
+  var parameters = parseParameters(context)
+  var bases = context.eat(.COLON) ? Node.createNodeList(parseTypeList(context, .LEFT_BRACE)) : null
+  var block = parseBlock(context, .IN_OBJECT)
+  if (block == null) return null
+  return Node.createObject(kind, name, parameters, bases, block).withRange(context.spanSince(token.range))
 }
 
 Node parseNestedNamespaceBlock(ParserContext context) {
   if (!context.eat(.DOT)) {
-    return parseBlock(context, .NORMAL);
+    return parseBlock(context, .NORMAL)
   }
-  var name = parseName(context); // Allow this to be null for autocomplete
-  var block = parseNestedNamespaceBlock(context); if (block == null) return null;
-  var range = context.spanSince((name != null ? name : block).range);
-  return Node.createBlock([Node.createNamespace(name, block).withRange(range)]).withRange(range);
+  var name = parseName(context) // Allow this to be null for autocomplete
+  var block = parseNestedNamespaceBlock(context)
+  if (block == null) return null
+  var range = context.spanSince((name != null ? name : block).range)
+  return Node.createBlock([Node.createNamespace(name, block).withRange(range)]).withRange(range)
 }
 
 Node parseNamespace(ParserContext context) {
-  var token = context.next();
-  var name = parseName(context); if (name == null) return null;
-  var block = parseNestedNamespaceBlock(context); if (block == null) return null;
-  return Node.createNamespace(name, block).withRange(context.spanSince(token.range));
+  var token = context.next()
+  var name = parseName(context)
+  if (name == null) return null
+  var block = parseNestedNamespaceBlock(context)
+  if (block == null) return null
+  return Node.createNamespace(name, block).withRange(context.spanSince(token.range))
 }
 
 Node parseConstructor(ParserContext context, StatementHint hint) {
   if (hint != .IN_OBJECT) {
-    context.unexpectedToken();
-    return null;
+    context.unexpectedToken()
+    return null
   }
 
   // Parse a constructor
-  var token = context.next();
-  var name = createNameFromToken(token);
-  var arguments = parseArgumentVariables(context); if (arguments == null) return null;
-  Node superInitializer = null;
-  Node memberInitializers = null;
+  var token = context.next()
+  var name = createNameFromToken(token)
+  var arguments = parseArgumentVariables(context)
+  if (arguments == null) return null
+  Node superInitializer = null
+  Node memberInitializers = null
 
   // Parse the initializer list
   if (context.eat(.COLON)) {
 
     // The super initializer can have multiple arguments
     if (context.peek(.SUPER)) {
-      superInitializer = parseSuperCall(context);
+      superInitializer = parseSuperCall(context)
     }
 
     // Each member initializer has one argument
     if (superInitializer == null || context.eat(.COMMA)) {
-      List<Node> values = [];
-      var first = context.current();
+      List<Node> values = []
+      var first = context.current()
       do {
-        var member = parseName(context); if (member == null) break;
-        if (!context.expect(.ASSIGN)) break;
-        var value = pratt.parse(context, .COMMA);
-        values.push(Node.createMemberInitializer(member, value).withRange(context.spanSince(member.range)));
-      } while (context.eat(.COMMA));
-      memberInitializers = Node.createNodeList(values).withRange(context.spanSince(first.range));
+        var member = parseName(context)
+        if (member == null) break
+        if (!context.expect(.ASSIGN)) break
+        var value = pratt.parse(context, .COMMA)
+        values.push(Node.createMemberInitializer(member, value).withRange(context.spanSince(member.range)))
+      } while (context.eat(.COMMA))
+      memberInitializers = Node.createNodeList(values).withRange(context.spanSince(first.range))
     }
   }
 
-  Node block = null;
-  if (!context.eat(.SEMICOLON)) {
-    block = parseBlock(context, .NORMAL); if (block == null) return null;
+  Node block = null
+  if (!peekEndOfLine(context)) {
+    context.inVoidFunction = true
+    block = parseBlock(context, .NORMAL)
+    context.inVoidFunction = false
+    if (block == null) return null
   }
-  return Node.createConstructor(name, arguments, block, superInitializer, memberInitializers).withRange(context.spanSince(token.range));
+  return Node.createConstructor(name, arguments, block, superInitializer, memberInitializers).withRange(context.spanSince(token.range))
 }
 
 Node parseExpression(ParserContext context) {
@@ -380,732 +394,745 @@ Node parseExpression(ParserContext context) {
   // initializer expression wouldn't make sense here anyway since there's no
   // type context yet at the start of an expression statement.
   if (context.peek(.LEFT_BRACE)) {
-    context.unexpectedToken();
-    return null;
+    context.unexpectedToken()
+    return null
   }
 
   // Parse an expression
-  var token = context.current();
-  var value = pratt.parse(context, .LOWEST);
-  if (!scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT) && context.current().range.start == token.range.start) {
-    context.next(); // This is necessary to prevent an infinite loop when the first token of the expression is a syntax error
-  }
-
-  assert context.current().range.start >= token.range.end; // Make sure the context was advanced
-  return Node.createExpression(value).withRange(context.spanSince(token.range));
+  var token = context.current()
+  var value = pratt.parse(context, .LOWEST)
+  return Node.createExpression(value).withRange(context.spanSince(token.range))
 }
 
 Node parseModifier(ParserContext context, StatementHint hint) {
-  var token = context.next();
-  var name = createNameFromToken(token);
-  var block = parseBlockOrStatement(context, hint); if (block == null) return null;
-  return Node.createModifier(name, null, block.removeChildren()).withRange(context.spanSince(token.range));
+  var token = context.next()
+  var name = createNameFromToken(token)
+  var block = parseBlockOrStatement(context, hint)
+  if (block == null) return null
+  return Node.createModifier(name, null, block.removeChildren()).withRange(context.spanSince(token.range))
 }
 
 Node parseAnnotation(ParserContext context, StatementHint hint) {
-  var token = context.next();
-  var name = createNameFromToken(token);
-  Node arguments = null;
+  var token = context.next()
+  var name = createNameFromToken(token)
+  Node arguments = null
   if (context.peek(.LEFT_PARENTHESIS)) {
-    var parenthesis = context.current();
-    var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL);
-    arguments = Node.createNodeList(values).withRange(context.spanSince(parenthesis.range));
+    var parenthesis = context.current()
+    var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL)
+    arguments = Node.createNodeList(values).withRange(context.spanSince(parenthesis.range))
   }
-  var block = parseBlockOrStatement(context, hint); if (block == null) return null;
-  return Node.createModifier(name, arguments, block.removeChildren()).withRange(context.spanSince(token.range));
+  eatEndOfLine(context)
+  var block = parseBlockOrStatement(context, hint)
+  if (block == null) return null
+  return Node.createModifier(name, arguments, block.removeChildren()).withRange(context.spanSince(token.range))
 }
 
 Node parseReturn(ParserContext context) {
-  var token = context.next();
-  Node value = null;
-  if (!context.eat(.SEMICOLON)) {
-    value = pratt.parse(context, .LOWEST);
-    scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
+  var token = context.next()
+  Node value = null
+
+  // There is a well-known ambiguity in languages like JavaScript where a
+  // return statement followed by a newline and a value can either be parsed
+  // as a single return statement with a value or as two statements, a return
+  // statement without a value and an expression statement. Luckily, we're
+  // better off than JavaScript since we know the type of the function. Parse
+  // a single statement in a non-void function but two statements in a void
+  // function.
+  if (!context.inVoidFunction) {
+    eatEndOfLine(context)
   }
-  return Node.createReturn(value).withRange(context.spanSince(token.range));
+
+  if (!peekEndOfLine(context)) {
+    value = pratt.parse(context, .LOWEST)
+  }
+  return Node.createReturn(value).withRange(context.spanSince(token.range))
 }
 
 Node parseBreak(ParserContext context) {
-  var token = context.next();
-  context.expect(.SEMICOLON); // No need to use scanForToken() here
-  return Node.createBreak().withRange(context.spanSince(token.range));
+  var token = context.next()
+  return Node.createBreak().withRange(context.spanSince(token.range))
 }
 
 Node parseContinue(ParserContext context) {
-  var token = context.next();
-  context.expect(.SEMICOLON); // No need to use scanForToken() here
-  return Node.createContinue().withRange(context.spanSince(token.range));
+  var token = context.next()
+  return Node.createContinue().withRange(context.spanSince(token.range))
 }
 
 Node parseAssert(ParserContext context) {
-  var token = context.next();
-  var isConst = context.eat(.CONST);
-  var value = pratt.parse(context, .LOWEST);
-  scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-  return Node.createAssert(isConst ? .ASSERT_CONST : .ASSERT, value).withRange(context.spanSince(token.range));
+  var token = context.next()
+  var isConst = context.eat(.CONST)
+  var value = pratt.parse(context, .LOWEST)
+  return Node.createAssert(isConst ? .ASSERT_CONST : .ASSERT, value).withRange(context.spanSince(token.range))
 }
 
 Node parseSwitch(ParserContext context) {
-  var token = context.next();
-  var value = parseGroup(context); if (value == null) return null;
-  var block = parseBlock(context, .IN_SWITCH); if (block == null) return null;
-  return Node.createSwitch(value, block.removeChildren()).withRange(context.spanSince(token.range));
+  var token = context.next()
+  var value = parseGroup(context)
+  if (value == null) return null
+  var block = parseBlock(context, .IN_SWITCH)
+  if (block == null) return null
+  return Node.createSwitch(value, block.removeChildren()).withRange(context.spanSince(token.range))
 }
 
 Node parseWhile(ParserContext context) {
-  var token = context.next();
-  var value = parseGroup(context); if (value == null) return null;
-  var block = parseBlockOrStatement(context, .NORMAL); if (block == null) return null;
-  return Node.createWhile(value, block).withRange(context.spanSince(token.range));
+  var token = context.next()
+  var value = parseGroup(context)
+  if (value == null) return null
+  var block = parseBlockOrStatement(context, .NORMAL)
+  if (block == null) return null
+  return Node.createWhile(value, block).withRange(context.spanSince(token.range))
 }
 
 Node parseDoWhile(ParserContext context) {
-  var token = context.next();
-  var block = parseBlockOrStatement(context, .NORMAL); if (block == null) return null;
-  if (!context.expect(.WHILE)) return null;
-  var value = parseGroup(context);
-  scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-  return Node.createDoWhile(block, value).withRange(context.spanSince(token.range));
+  var token = context.next()
+  var block = parseBlockOrStatement(context, .NORMAL)
+  if (block == null) return null
+  if (!context.expect(.WHILE)) return null
+  var value = parseGroup(context)
+  return Node.createDoWhile(block, value).withRange(context.spanSince(token.range))
 }
 
 Node parseIf(ParserContext context) {
-  var token = context.next();
-  var value = parseGroup(context); if (value == null) return null;
-  var trueBlock = parseBlockOrStatement(context, .NORMAL); if (trueBlock == null) return null;
-  Node falseBlock = null;
+  var token = context.next()
+  var value = parseGroup(context)
+  if (value == null) return null
+  var trueBlock = parseBlockOrStatement(context, .NORMAL)
+  if (trueBlock == null) return null
+  Node falseBlock = null
   if (context.eat(.ELSE)) {
-    falseBlock = parseBlockOrStatement(context, .NORMAL); if (falseBlock == null) return null;
+    falseBlock = parseBlockOrStatement(context, .NORMAL)
+    if (falseBlock == null) return null
   }
-  return Node.createIf(.IF, value, trueBlock, falseBlock).withRange(context.spanSince(token.range));
+  return Node.createIf(.IF, value, trueBlock, falseBlock).withRange(context.spanSince(token.range))
 }
 
 Node parseExtension(ParserContext context) {
-  var token = context.next();
-  var name = parseName(context); if (name == null) return null;
-  var bases = context.eat(.COLON) ? Node.createNodeList(parseTypeList(context, .LEFT_BRACE)) : null;
-  var block = parseBlock(context, .IN_OBJECT); if (block == null) return null;
-  return Node.createExtension(name, bases, block).withRange(context.spanSince(token.range));
+  var token = context.next()
+  var name = parseName(context)
+  if (name == null) return null
+  var bases = context.eat(.COLON) ? Node.createNodeList(parseTypeList(context, .LEFT_BRACE)) : null
+  var block = parseBlock(context, .IN_OBJECT)
+  if (block == null) return null
+  return Node.createExtension(name, bases, block).withRange(context.spanSince(token.range))
 }
 
 Node parseEnum(ParserContext context) {
-  var token = context.next();
-  var isFlags = false;
+  var token = context.next()
+  var isFlags = false
   if (context.peek(.IDENTIFIER) && context.current().text() == "flags") {
-    isFlags = true;
-    context.next();
+    isFlags = true
+    context.next()
   }
-  var name = parseName(context); if (name == null) return null;
-  var block = parseBlock(context, .IN_ENUM); if (block == null) return null;
-  return (isFlags ? Node.createEnumFlags(name, block) : Node.createEnum(name, block)).withRange(context.spanSince(token.range));
+  var name = parseName(context)
+  if (name == null) return null
+  var block = parseBlock(context, .IN_ENUM)
+  if (block == null) return null
+  return (isFlags ? Node.createEnumFlags(name, block) : Node.createEnum(name, block)).withRange(context.spanSince(token.range))
 }
 
 Node parseVariableCluster(ParserContext context, Node type, Node name) {
-  List<Node> variables = [];
-  var start = type;
-  while (variables.size() == 0 || !context.peek(.SEMICOLON) && !context.peek(.IN)) {
-    if (variables.size() != 0 && !context.eat(.COMMA)) {
-      context.expect(.SEMICOLON); // Expecting a semicolon here makes more sense than a comma
-      break;
-    }
+  List<Node> variables = []
+  var start = type
+  while (variables.size() == 0 || !peekEndOfLine(context) && !context.peek(.SEMICOLON) && !context.peek(.IN)) {
+    if (variables.size() != 0 && !context.expect(.COMMA)) break
     if (name == null) {
-      name = parseName(context); if (name == null) break;
-      start = name;
+      name = parseName(context)
+      if (name == null) break
+      start = name
     }
-    var value = context.eat(.ASSIGN) ? pratt.parse(context, .COMMA) : null;
-    variables.push(Node.createVariable(name, null, value).withRange(context.spanSince(start.range)));
-    name = null;
+    var value = context.eat(.ASSIGN) ? pratt.parse(context, .COMMA) : null
+    variables.push(Node.createVariable(name, null, value).withRange(context.spanSince(start.range)))
+    name = null
   }
-  return Node.createVariableCluster(type, variables).withRange(context.spanSince(type.range));
+  return Node.createVariableCluster(type, variables).withRange(context.spanSince(type.range))
 }
 
 Node parseFor(ParserContext context) {
-  var token = context.next();
-  if (!context.expect(.LEFT_PARENTHESIS)) return null;
-  Node setup = null;
-  Node test = null;
-  Node update = null;
+  var token = context.next()
+  if (!context.expect(.LEFT_PARENTHESIS)) return null
+  Node setup = null
+  Node test = null
+  Node update = null
   do {
     if (!context.peek(.SEMICOLON) && !context.peek(.RIGHT_PARENTHESIS)) {
-      setup = parseType(context);
+      setup = parseType(context)
       if (context.peek(.IDENTIFIER)) {
-        var name = parseName(context);
-        setup = name != null ? parseVariableCluster(context, setup, name) : null;
+        var name = parseName(context)
+        setup = name != null ? parseVariableCluster(context, setup, name) : null
         if (setup != null && context.eat(.IN)) {
-          var values = pratt.parse(context, .LOWEST);
-          scanForToken(context, .RIGHT_PARENTHESIS, .NORMAL);
-          var body = parseBlockOrStatement(context, .NORMAL); if (body == null) return null;
-          var variables = setup.clusterVariables();
-          if (variables.size() > 1) syntaxErrorBadForEach(context.log, setup.range);
-          var name = variables[0].declarationName().remove();
-          var value = Node.createVariable(name, setup.clusterType().remove(), null).withRange(name.range);
-          return Node.createForEach(value, values, body).withRange(context.spanSince(token.range));
+          var values = pratt.parse(context, .LOWEST)
+          scanForToken(context, .RIGHT_PARENTHESIS)
+          var body = parseBlockOrStatement(context, .NORMAL)
+          if (body == null) return null
+          var variables = setup.clusterVariables()
+          if (variables.size() > 1) syntaxErrorBadForEach(context.log, setup.range)
+          var name = variables[0].declarationName().remove()
+          var value = Node.createVariable(name, setup.clusterType().remove(), null).withRange(name.range)
+          return Node.createForEach(value, values, body).withRange(context.spanSince(token.range))
         }
       } else if (!context.peek(.SEMICOLON)) {
-        setup = pratt.resume(context, .LOWEST, setup);
+        setup = pratt.resume(context, .LOWEST, setup)
       }
     }
-    if (!context.expect(.SEMICOLON)) break;
-    if (!context.peek(.SEMICOLON) && !context.peek(.RIGHT_PARENTHESIS)) test = pratt.parse(context, .LOWEST);
-    if (!context.expect(.SEMICOLON)) break;
-    if (!context.peek(.RIGHT_PARENTHESIS)) update = pratt.parse(context, .LOWEST);
-  } while (false);
-  scanForToken(context, .RIGHT_PARENTHESIS, .NORMAL);
-  var block = parseBlockOrStatement(context, .NORMAL); if (block == null) return null;
-  return Node.createFor(setup, test, update, block).withRange(context.spanSince(token.range));
+    if (!context.expect(.SEMICOLON)) break
+    if (!context.peek(.SEMICOLON) && !context.peek(.RIGHT_PARENTHESIS)) test = pratt.parse(context, .LOWEST)
+    if (!context.expect(.SEMICOLON)) break
+    if (!context.peek(.RIGHT_PARENTHESIS)) update = pratt.parse(context, .LOWEST)
+  } while (false)
+  scanForToken(context, .RIGHT_PARENTHESIS)
+  var block = parseBlockOrStatement(context, .NORMAL)
+  if (block == null) return null
+  return Node.createFor(setup, test, update, block).withRange(context.spanSince(token.range))
 }
 
 Node parseSuperCall(ParserContext context) {
-  var token = context.next();
-  var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL);
-  return Node.createSuperCall(values).withRange(context.spanSince(token.range));
+  var token = context.next()
+  var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL)
+  return Node.createSuperCall(values).withRange(context.spanSince(token.range))
 }
 
 Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
-  var type = parseType(context);
+  var type = parseType(context)
 
   // If this isn't a typed declaration, just parse an expression statement
   if (!context.peek(.IDENTIFIER)) {
-    var value = pratt.resume(context, .LOWEST, type);
-    scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-    return Node.createExpression(value).withRange(context.spanSince(type.range));
+    var value = pratt.resume(context, .LOWEST, type)
+    return Node.createExpression(value).withRange(context.spanSince(type.range))
   }
 
   // Parse a typed declaration
-  var name = parseName(context); if (name == null) return null;
+  var name = parseName(context)
+  if (name == null) return null
 
   // Function declaration
   if (context.peek(.LEFT_PARENTHESIS) || context.peek(.START_PARAMETER_LIST)) {
-    var parameters = parseParameters(context);
-    var arguments = parseArgumentVariables(context); if (arguments == null) return null;
-    Node block = null;
-    if (!context.eat(.SEMICOLON)) {
-      block = parseBlock(context, .NORMAL); if (block == null) return null;
+    var parameters = parseParameters(context)
+    var arguments = parseArgumentVariables(context)
+    if (arguments == null) return null
+    Node block = null
+    if (!peekEndOfLine(context)) {
+      context.inVoidFunction = type.kind == .NAME && type.asString() == "void"
+      block = parseBlock(context, .NORMAL)
+      context.inVoidFunction = false
+      if (block == null) return null
     }
-    return Node.createFunction(name, arguments, block, type, parameters).withRange(context.spanSince(type.range));
+    return Node.createFunction(name, arguments, block, type, parameters).withRange(context.spanSince(type.range))
   }
 
   // Variable declaration
-  var cluster = parseVariableCluster(context, type, name);
-  scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-  var last = cluster.lastChild();
-  last.withRange(context.spanSince(last.range));
-  return cluster;
+  var cluster = parseVariableCluster(context, type, name)
+  var last = cluster.lastChild()
+  last.withRange(context.spanSince(last.range))
+  return cluster
 }
 
 Node parseTry(ParserContext context) {
-  var token = context.next();
-  var tryBlock = parseBlock(context, .NORMAL); if (tryBlock == null) return null;
-  if (!context.expect(.CATCH)) return null;
-  var catchBlock = parseBlock(context, .NORMAL); if (catchBlock == null) return null;
-  return Node.createTry(tryBlock, catchBlock).withRange(context.spanSince(token.range));
+  var token = context.next()
+  var tryBlock = parseBlock(context, .NORMAL)
+  if (tryBlock == null || !context.expect(.CATCH)) return null
+  var catchBlock = parseBlock(context, .NORMAL)
+  if (catchBlock == null) return null
+  return Node.createTry(tryBlock, catchBlock).withRange(context.spanSince(token.range))
 }
 
 Node parseUsing(ParserContext context) {
-  var token = context.next();
-  var value = parseType(context);
-  scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-  return Node.createUsing(value).withRange(context.spanSince(token.range));
+  var token = context.next()
+  var value = parseType(context)
+  return Node.createUsing(value).withRange(context.spanSince(token.range))
 }
 
 Node parseAlias(ParserContext context) {
-  var token = context.next();
-  var name = parseName(context);
+  var token = context.next()
+  var name = parseName(context)
   if (name == null || !context.expect(.ASSIGN)) {
-    scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-    return errorStatementSinceToken(context, token);
+    return errorStatementSinceToken(context, token)
   }
-  var value = pratt.parse(context, .LOWEST);
-  scanForToken(context, .SEMICOLON, .STOP_BEFORE_NEXT_STATEMENT);
-  return Node.createAlias(name, value).withRange(context.spanSince(token.range));
+  var value = pratt.parse(context, .LOWEST)
+  return Node.createAlias(name, value).withRange(context.spanSince(token.range))
 }
 
 bool looksLikeType(Node node) {
   switch (node.kind) {
     case .DOT {
-      var target = node.dotTarget();
-      return target != null && looksLikeType(target);
+      var target = node.dotTarget()
+      return target != null && looksLikeType(target)
     }
     case .NAME, .PARAMETERIZE, .QUOTED {
-      return true;
+      return true
     }
   }
-  return false;
+  return false
 }
 
 Node parseStringToken(ParserContext context, Token token) {
-  var result = parseStringLiteral(context.log, token.range, token.text());
-  return (result != null ? Node.createString(result.value) : Node.createError()).withRange(token.range);
+  var result = parseStringLiteral(context.log, token.range, token.text())
+  return (result != null ? Node.createString(result.value) : Node.createError()).withRange(token.range)
 }
 
 Node parsePreprocessorDefine(ParserContext context) {
-  context.needsPreprocessor = true;
-  var token = context.next();
-  var name = parseName(context);
-  if (name == null) {
-    scanForToken(context, .END_OF_FILE, .STOP_BEFORE_NEXT_STATEMENT);
-    return errorStatementSinceToken(context, token);
-  }
-  var value = pratt.parse(context, .COMMA);
-  return Node.createPreprocessorDefine(name, value).withRange(context.spanSince(token.range));
+  context.needsPreprocessor = true
+  var token = context.next()
+  var name = parseName(context)
+  if (name == null) return errorStatementSinceToken(context, token)
+  var value = pratt.parse(context, .COMMA)
+  return Node.createPreprocessorDefine(name, value).withRange(context.spanSince(token.range))
 }
 
 Node parsePreprocessorDiagnostic(ParserContext context, NodeKind kind) {
-  context.needsPreprocessor = true;
-  var token = context.next();
-  var stringToken = context.current();
-  if (!context.expect(.STRING)) {
-    scanForToken(context, .END_OF_FILE, .STOP_BEFORE_NEXT_STATEMENT);
-    return errorStatementSinceToken(context, token);
-  }
-  var value = parseStringToken(context, stringToken);
-  if (value.kind == .ERROR) return Node.createExpression(value).withRange(value.range);
-  return Node.createPreprocessorDiagnostic(kind, value).withRange(context.spanSince(token.range));
+  context.needsPreprocessor = true
+  var token = context.next()
+  var stringToken = context.current()
+  if (!context.expect(.STRING)) return errorStatementSinceToken(context, token)
+  var value = parseStringToken(context, stringToken)
+  if (value.kind == .ERROR) return Node.createExpression(value).withRange(value.range)
+  return Node.createPreprocessorDiagnostic(kind, value).withRange(context.spanSince(token.range))
 }
 
 Node parsePreprocessorBlock(ParserContext context, StatementHint hint) {
-  var token = context.current();
-  var statements = parseStatements(context, hint);
-  return Node.createBlock(statements).withRange(context.spanSince(token.range));
+  var token = context.current()
+  var statements = parseStatements(context, hint)
+  return Node.createBlock(statements).withRange(context.spanSince(token.range))
 }
 
 Node parsePreprocessorIf(ParserContext context, StatementHint hint) {
-  context.needsPreprocessor = true;
-  var token = context.next();
-  var value = pratt.parse(context, .COMMA);
-  var trueNode = parsePreprocessorBlock(context, hint);
-  Node falseNode = null;
+  context.needsPreprocessor = true
+  var token = context.next()
+  var value = pratt.parse(context, .COMMA)
+  var trueNode = parsePreprocessorBlock(context, hint)
+  Node falseNode = null
   if (context.peek(.PREPROCESSOR_ELIF)) {
-    var node = parsePreprocessorIf(context, hint);
-    if (node == null) return null;
-    falseNode = Node.createBlock([node]).withRange(node.range);
+    var node = parsePreprocessorIf(context, hint)
+    if (node == null) return null
+    falseNode = Node.createBlock([node]).withRange(node.range)
   } else {
     if (context.eat(.PREPROCESSOR_ELSE)) {
-      falseNode = parsePreprocessorBlock(context, hint);
+      falseNode = parsePreprocessorBlock(context, hint)
     }
     if (!context.expect(.PREPROCESSOR_ENDIF)) {
-      return null;
+      return null
     }
   }
-  return Node.createIf(.PREPROCESSOR_IF, value, trueNode, falseNode).withRange(context.spanSince(token.range));
+  return Node.createIf(.PREPROCESSOR_IF, value, trueNode, falseNode).withRange(context.spanSince(token.range))
 }
 
 Node parseStatement(ParserContext context, StatementHint hint) {
   // Separating the case bodies into separate functions makes the JavaScript JIT go faster
   switch (context.current().kind) {
-    case .ALIAS { return parseAlias(context); }
-    case .ANNOTATION { return parseAnnotation(context, hint); }
-    case .ASSERT { return parseAssert(context); }
-    case .BREAK { return parseBreak(context); }
-    case .CLASS { return parseObject(context, .CLASS); }
-    case .CONST, .EXPORT, .FINAL, .IMPORT, .INLINE, .OVERRIDE, .PRIVATE, .PROTECTED, .PUBLIC, .PURE, .STATIC, .VIRTUAL { return parseModifier(context, hint); }
-    case .CONTINUE { return parseContinue(context); }
-    case .DO { return parseDoWhile(context); }
-    case .ENUM { return parseEnum(context); }
-    case .FOR { return parseFor(context); }
-    case .IDENTIFIER, .VAR, .TICK { return parsePossibleTypedDeclaration(context, hint); }
-    case .IF { return parseIf(context); }
-    case .IN { return parseExtension(context); }
-    case .INTERFACE { return parseObject(context, .INTERFACE); }
-    case .NAMESPACE { return parseNamespace(context); }
-    case .NEW { if (hint == .IN_OBJECT) return parseConstructor(context, hint); }
-    case .PREPROCESSOR_DEFINE { return parsePreprocessorDefine(context); }
-    case .PREPROCESSOR_ERROR { return parsePreprocessorDiagnostic(context, .PREPROCESSOR_ERROR); }
-    case .PREPROCESSOR_IF { return parsePreprocessorIf(context, hint); }
-    case .PREPROCESSOR_WARNING { return parsePreprocessorDiagnostic(context, .PREPROCESSOR_WARNING); }
-    case .RETURN { return parseReturn(context); }
-    case .SWITCH { return parseSwitch(context); }
-    case .TRY { return parseTry(context); }
-    case .USING { return parseUsing(context); }
-    case .WHILE { return parseWhile(context); }
+    case .ALIAS { return parseAlias(context) }
+    case .ANNOTATION { return parseAnnotation(context, hint) }
+    case .ASSERT { return parseAssert(context) }
+    case .BREAK { return parseBreak(context) }
+    case .CLASS { return parseObject(context, .CLASS) }
+    case .CONST, .EXPORT, .FINAL, .IMPORT, .INLINE, .OVERRIDE, .PRIVATE, .PROTECTED, .PUBLIC, .PURE, .STATIC, .VIRTUAL { return parseModifier(context, hint) }
+    case .CONTINUE { return parseContinue(context) }
+    case .DO { return parseDoWhile(context) }
+    case .ENUM { return parseEnum(context) }
+    case .FOR { return parseFor(context) }
+    case .IDENTIFIER, .VAR, .TICK { return parsePossibleTypedDeclaration(context, hint) }
+    case .IF { return parseIf(context) }
+    case .IN { return parseExtension(context) }
+    case .INTERFACE { return parseObject(context, .INTERFACE) }
+    case .NAMESPACE { return parseNamespace(context) }
+    case .NEW { if (hint == .IN_OBJECT) return parseConstructor(context, hint) }
+    case .PREPROCESSOR_DEFINE { return parsePreprocessorDefine(context) }
+    case .PREPROCESSOR_ERROR { return parsePreprocessorDiagnostic(context, .PREPROCESSOR_ERROR) }
+    case .PREPROCESSOR_IF { return parsePreprocessorIf(context, hint) }
+    case .PREPROCESSOR_WARNING { return parsePreprocessorDiagnostic(context, .PREPROCESSOR_WARNING) }
+    case .RETURN { return parseReturn(context) }
+    case .SWITCH { return parseSwitch(context) }
+    case .TRY { return parseTry(context) }
+    case .USING { return parseUsing(context) }
+    case .WHILE { return parseWhile(context) }
   }
-  return parseExpression(context);
+  return parseExpression(context)
 }
 
 Node parseFile(Log log, List<Token> tokens) {
-  var context = ParserContext(log, tokens);
-  var token = context.current();
-  var statements = parseStatements(context, .NORMAL); if (statements == null) return null;
-  if (!context.expect(.END_OF_FILE)) return null;
-  var range = context.spanSince(token.range);
-  var file = Node.createFile(Node.createBlock(statements).withRange(range)).withRange(range);
-  if (context.needsPreprocessor) file.flags |= .NEEDS_PREPROCESSOR;
-  return file;
+  var context = ParserContext(log, tokens)
+  var token = context.current()
+  var statements = parseStatements(context, .NORMAL)
+  if (statements == null) return null
+  if (!context.expect(.END_OF_FILE)) return null
+  var range = context.spanSince(token.range)
+  var file = Node.createFile(Node.createBlock(statements).withRange(range)).withRange(range)
+  if (context.needsPreprocessor) file.flags |= .NEEDS_PREPROCESSOR
+  return file
 }
 
 Node errorStatementSinceToken(ParserContext context, Token token) {
-  var range = context.spanSince(token.range);
-  return Node.createExpression(Node.createError().withRange(range)).withRange(range);
+  var range = context.spanSince(token.range)
+  return Node.createExpression(Node.createError().withRange(range)).withRange(range)
 }
 
 Node errorExpressionSinceToken(ParserContext context, Token token) {
-  return Node.createError().withRange(context.spanSince(token.range));
+  return Node.createError().withRange(context.spanSince(token.range))
 }
 
 class TokenLiteral : LiteralCallback {
-  NodeKind kind;
+  NodeKind kind
 
   override Node parse(ParserContext context, Token token) {
-    return Node(kind).withRange(token.range);
+    return Node(kind).withRange(token.range)
   }
 }
 
 class BoolLiteral : LiteralCallback {
-  bool value;
+  bool value
 
   override Node parse(ParserContext context, Token token) {
-    return Node.createBool(value).withRange(token.range);
+    return Node.createBool(value).withRange(token.range)
   }
 }
 
 class IntLiteral : LiteralCallback {
-  int base;
+  int base
 
   override Node parse(ParserContext context, Token token) {
-    var value = parseIntLiteral(token.text(), base);
+    var value = parseIntLiteral(token.text(), base)
     if (base == 10 && value != 0 && token.firstCodeUnit() == '0') {
-      syntaxWarningOctal(context.log, token.range);
+      syntaxWarningOctal(context.log, token.range)
     }
-    return Node.createInt(value).withRange(token.range);
+    return Node.createInt(value).withRange(token.range)
   }
 }
 
 class FloatLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
-    var range = token.range;
-    return Node.createFloat(parseDoubleLiteral(range.source.contents.slice(range.start, range.end - 1))).withRange(range);
+    var range = token.range
+    return Node.createFloat(parseDoubleLiteral(range.source.contents.slice(range.start, range.end - 1))).withRange(range)
   }
 }
 
 class DoubleLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
-    return Node.createDouble(parseDoubleLiteral(token.text())).withRange(token.range);
+    return Node.createDouble(parseDoubleLiteral(token.text())).withRange(token.range)
   }
 }
 
 class VarLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
-    return Node.createVar().withRange(token.range);
+    return Node.createVar().withRange(token.range)
   }
 }
 
 class StringLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
-    return parseStringToken(context, token);
+    return parseStringToken(context, token)
   }
 }
 
 class CharacterLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
-    var result = parseStringLiteral(context.log, token.range, token.text());
+    var result = parseStringLiteral(context.log, token.range, token.text())
 
     // TODO: Do true unicode code point parsing
     if (result != null && result.value.size() != 1) {
-      syntaxErrorInvalidCharacter(context.log, token.range, token.text());
-      result = null;
+      syntaxErrorInvalidCharacter(context.log, token.range, token.text())
+      result = null
     }
 
     // Don't return null on failure because this doesn't affect the rest of the compilation
-    return Node.createInt(result != null ? result.value[0] : 0).withRange(token.range);
+    return Node.createInt(result != null ? result.value[0] : 0).withRange(token.range)
   }
 }
 
 class NameLiteral : LiteralCallback {
   override Node parse(ParserContext context, Token token) {
-    return createNameFromToken(token);
+    return createNameFromToken(token)
   }
 }
 
 class UnaryPostfix : PostfixCallback {
-  NodeKind kind;
+  NodeKind kind
 
   override Node parse(ParserContext context, Node value, Token token) {
-    return Node.createUnary(kind, value).withRange(Range.span(value.range, token.range));
+    return Node.createUnary(kind, value).withRange(Range.span(value.range, token.range))
   }
 }
 
 class UnaryPrefix : PrefixCallback {
-  NodeKind kind;
+  NodeKind kind
 
   override Node parse(ParserContext context, Token token, Node value) {
-    return Node.createUnary(kind, value).withRange(Range.span(token.range, value.range));
+    return Node.createUnary(kind, value).withRange(Range.span(token.range, value.range))
   }
 }
 
 class BinaryInfix : InfixCallback {
-  NodeKind kind;
+  NodeKind kind
 
   override Node parse(ParserContext context, Node left, Token token, Node right) {
-    return Node.createBinary(kind, left, right).withRange(Range.span(left.range, right.range));
+    return Node.createBinary(kind, left, right).withRange(Range.span(left.range, right.range))
   }
 }
 
 class BinaryInfixOrUnaryPostfix : InfixParselet {
-  NodeKind binary;
-  NodeKind unary;
-  Precedence precedence;
+  NodeKind binary
+  NodeKind unary
+  Precedence precedence
 
   override Node parse(ParserContext context, Node left) {
-    context.next();
-    if (!pratt.hasPrefixParselet(context)) return Node.createUnary(unary, left).withRange(context.spanSince(left.range));
-    var right = pratt.parse(context, precedence);
-    return right != null ? Node.createBinary(binary, left, right).withRange(context.spanSince(left.range)) : null;
+    context.next()
+    if (!pratt.hasPrefixParselet(context)) return Node.createUnary(unary, left).withRange(context.spanSince(left.range))
+    var right = pratt.parse(context, precedence)
+    return right != null ? Node.createBinary(binary, left, right).withRange(context.spanSince(left.range)) : null
   }
 }
 
 class ListParselet : PrefixParselet {
   override Node parse(ParserContext context) {
-    var token = context.current();
-    var values = parseWrappedCommaSeparatedList(context, .LEFT_BRACKET, .RIGHT_BRACKET, .NORMAL);
-    return Node.createList(values).withRange(context.spanSince(token.range));
+    var token = context.current()
+    var values = parseWrappedCommaSeparatedList(context, .LEFT_BRACKET, .RIGHT_BRACKET, .NORMAL)
+    return Node.createList(values).withRange(context.spanSince(token.range))
   }
 }
 
 class MapParselet : PrefixParselet {
   override Node parse(ParserContext context) {
-    var token = context.current();
-    var values = parseWrappedCommaSeparatedList(context, .LEFT_BRACE, .RIGHT_BRACE, .KEY_VALUE);
-    return Node.createMap(values).withRange(context.spanSince(token.range));
+    var token = context.current()
+    var values = parseWrappedCommaSeparatedList(context, .LEFT_BRACE, .RIGHT_BRACE, .KEY_VALUE)
+    return Node.createMap(values).withRange(context.spanSince(token.range))
   }
 }
 
 class ParenthesisParselet : PrefixParselet {
   override Node parse(ParserContext context) {
-    var token = context.current();
-    var type = parseGroup(context);
+    var token = context.current()
+    var type = parseGroup(context)
     if (looksLikeType(type) && pratt.hasPrefixParselet(context)) {
-      var value = pratt.parse(context, .UNARY_PREFIX);
-      return Node.createCast(type, value).withRange(context.spanSince(token.range));
+      var value = pratt.parse(context, .UNARY_PREFIX)
+      return Node.createCast(type, value).withRange(context.spanSince(token.range))
     }
-    return type;
+    return type
   }
 }
 
 class HookParselet : InfixParselet {
   override Node parse(ParserContext context, Node left) {
-    context.next();
-    var middle = pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1));
-    var right = context.expect(.COLON) ? pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1)) : Node.createError().withRange(context.current().range);
-    return Node.createHook(.HOOK, left, middle, right).withRange(context.spanSince(left.range));
+    context.next()
+    var middle = pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1))
+    var right = context.expect(.COLON) ? pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1)) : Node.createError().withRange(context.current().range)
+    return Node.createHook(.HOOK, left, middle, right).withRange(context.spanSince(left.range))
   }
 }
 
 class SequenceParselet : InfixParselet {
   override Node parse(ParserContext context, Node left) {
-    var values = [left];
+    var values = [left]
     while (context.eat(.COMMA)) {
-      values.push(pratt.parse(context, .COMMA));
+      values.push(pratt.parse(context, .COMMA))
     }
-    return Node.createSequence(values).withRange(context.spanSince(left.range));
+    return Node.createSequence(values).withRange(context.spanSince(left.range))
   }
 }
 
 class DotInfixParselet : InfixParselet {
-  NodeKind kind;
+  NodeKind kind
 
   override Node parse(ParserContext context, Node left) {
-    context.next();
-    var name = parseNameOrString(context);
-    return Node.createDotWithKind(kind, left, name).withRange(context.spanSince(left.range));
+    context.next()
+    var name = parseNameOrString(context)
+    return Node.createDotWithKind(kind, left, name).withRange(context.spanSince(left.range))
   }
 }
 
 class DotPrefixParselet : PrefixParselet {
-  NodeKind kind;
+  NodeKind kind
 
   override Node parse(ParserContext context) {
-    var token = context.next();
-    var name = parseNameOrString(context);
-    return Node.createDotWithKind(kind, null, name).withRange(context.spanSince(token.range));
+    var token = context.next()
+    var name = parseNameOrString(context)
+    return Node.createDotWithKind(kind, null, name).withRange(context.spanSince(token.range))
   }
 }
 
 class CallParselet : InfixParselet {
   override Node parse(ParserContext context, Node left) {
-    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL);
-    return Node.createCall(left, arguments).withRange(context.spanSince(left.range));
+    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL)
+    return Node.createCall(left, arguments).withRange(context.spanSince(left.range))
   }
 }
 
 class NewParselet : PrefixParselet {
   override Node parse(ParserContext context) {
-    var token = context.next();
-    var left = parseType(context);
-    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL);
-    return Node.createUnary(.NEW, Node.createCall(left, arguments).withRange(context.spanSince(left.range))).withRange(context.spanSince(token.range));
+    var token = context.next()
+    var left = parseType(context)
+    var arguments = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL)
+    return Node.createUnary(.NEW, Node.createCall(left, arguments).withRange(context.spanSince(left.range))).withRange(context.spanSince(token.range))
   }
 }
 
 class IndexParselet : InfixParselet {
   override Node parse(ParserContext context, Node left) {
-    context.next();
-    var index = pratt.parse(context, .LOWEST);
-    scanForToken(context, .RIGHT_BRACKET, .STOP_BEFORE_NEXT_STATEMENT);
-    return Node.createBinary(.INDEX, left, index).withRange(context.spanSince(left.range));
+    context.next()
+    var index = pratt.parse(context, .LOWEST)
+    scanForToken(context, .RIGHT_BRACKET)
+    return Node.createBinary(.INDEX, left, index).withRange(context.spanSince(left.range))
   }
 }
 
 class ParameterizeParselet : InfixParselet {
   override Node parse(ParserContext context, Node left) {
-    var token = context.next();
-    var substitutions = parseTypeList(context, .END_PARAMETER_LIST);
+    var token = context.next()
+    var substitutions = parseTypeList(context, .END_PARAMETER_LIST)
     if (!context.expect(.END_PARAMETER_LIST)) {
-      scanForToken(context, .END_PARAMETER_LIST, .STOP_BEFORE_NEXT_STATEMENT);
-      return errorExpressionSinceToken(context, token);
+      scanForToken(context, .END_PARAMETER_LIST)
+      return errorExpressionSinceToken(context, token)
     }
-    return Node.createParameterize(left, substitutions).withRange(context.spanSince(left.range));
+    return Node.createParameterize(left, substitutions).withRange(context.spanSince(left.range))
   }
 }
 
 class QuotedParselet : PrefixParselet {
   override Node parse(ParserContext context) {
-    var token = context.next();
-    var value = pratt.parse(context, .LOWEST);
-    if (value == null || !context.expect(.TICK)) return errorExpressionSinceToken(context, token);
-    return Node.createQuoted(value).withRange(context.spanSince(token.range));
+    var token = context.next()
+    var value = pratt.parse(context, .LOWEST)
+    if (value == null || !context.expect(.TICK)) return errorExpressionSinceToken(context, token)
+    return Node.createQuoted(value).withRange(context.spanSince(token.range))
   }
 }
 
 class SuperParselet : PrefixParselet {
   override Node parse(ParserContext context) {
-    return parseSuperCall(context);
+    return parseSuperCall(context)
   }
 }
 
 class IfParselet : PrefixParselet {
   override Node parse(ParserContext context) {
-    context.needsPreprocessor = true;
-    var token = context.next();
-    var value = pratt.parse(context, .COMMA);
-    var trueNode = pratt.parse(context, .LOWEST);
-    Node falseNode = null;
+    context.needsPreprocessor = true
+    var token = context.next()
+    var value = pratt.parse(context, .COMMA)
+    var trueNode = pratt.parse(context, .LOWEST)
+    Node falseNode = null
     if (context.peek(.PREPROCESSOR_ELIF)) {
-      falseNode = parse(context);
+      falseNode = parse(context)
     } else {
-      if (!context.expect(.PREPROCESSOR_ELSE)) return errorExpressionSinceToken(context, token);
-      falseNode = pratt.parse(context, .LOWEST);
-      if (!context.expect(.PREPROCESSOR_ENDIF)) return errorExpressionSinceToken(context, token);
+      if (!context.expect(.PREPROCESSOR_ELSE)) return errorExpressionSinceToken(context, token)
+      falseNode = pratt.parse(context, .LOWEST)
+      if (!context.expect(.PREPROCESSOR_ENDIF)) return errorExpressionSinceToken(context, token)
     }
-    return Node.createHook(.PREPROCESSOR_HOOK, value, trueNode, falseNode).withRange(context.spanSince(token.range));
+    return Node.createHook(.PREPROCESSOR_HOOK, value, trueNode, falseNode).withRange(context.spanSince(token.range))
   }
 }
 
 class AnnotationParselet : PrefixParselet {
   override Node parse(ParserContext context) {
-    var token = context.next();
-    var name = createNameFromToken(token);
-    Node arguments = null;
+    var token = context.next()
+    var name = createNameFromToken(token)
+    Node arguments = null
     if (context.peek(.LEFT_PARENTHESIS)) {
-      var parenthesis = context.current();
-      var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL);
-      arguments = Node.createNodeList(values).withRange(context.spanSince(parenthesis.range));
+      var parenthesis = context.current()
+      var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL)
+      arguments = Node.createNodeList(values).withRange(context.spanSince(parenthesis.range))
     }
-    return Node.createAnnotation(name, arguments).withRange(context.spanSince(token.range));
+    return Node.createAnnotation(name, arguments).withRange(context.spanSince(token.range))
   }
 }
 
 pure Pratt createParser() {
-  var pratt = Pratt();
+  var pratt = Pratt()
 
   ////////////////////////////////////////////////////////////////////////////////
   // Literals
   ////////////////////////////////////////////////////////////////////////////////
 
-  pratt.literal(.NULL, TokenLiteral(.NULL));
-  pratt.literal(.THIS, TokenLiteral(.THIS));
-  pratt.literal(.TRUE, BoolLiteral(true));
-  pratt.literal(.FALSE, BoolLiteral(false));
-  pratt.literal(.INT_DECIMAL, IntLiteral(10));
-  pratt.literal(.INT_BINARY, IntLiteral(2));
-  pratt.literal(.INT_OCTAL, IntLiteral(8));
-  pratt.literal(.INT_HEX, IntLiteral(16));
-  pratt.literal(.FLOAT, FloatLiteral());
-  pratt.literal(.DOUBLE, DoubleLiteral());
-  pratt.literal(.VAR, VarLiteral());
-  pratt.literal(.STRING, StringLiteral());
-  pratt.literal(.CHARACTER, CharacterLiteral());
-  pratt.literal(.IDENTIFIER, NameLiteral());
+  pratt.literal(.NULL, TokenLiteral(.NULL))
+  pratt.literal(.THIS, TokenLiteral(.THIS))
+  pratt.literal(.TRUE, BoolLiteral(true))
+  pratt.literal(.FALSE, BoolLiteral(false))
+  pratt.literal(.INT_DECIMAL, IntLiteral(10))
+  pratt.literal(.INT_BINARY, IntLiteral(2))
+  pratt.literal(.INT_OCTAL, IntLiteral(8))
+  pratt.literal(.INT_HEX, IntLiteral(16))
+  pratt.literal(.FLOAT, FloatLiteral())
+  pratt.literal(.DOUBLE, DoubleLiteral())
+  pratt.literal(.VAR, VarLiteral())
+  pratt.literal(.STRING, StringLiteral())
+  pratt.literal(.CHARACTER, CharacterLiteral())
+  pratt.literal(.IDENTIFIER, NameLiteral())
 
   ////////////////////////////////////////////////////////////////////////////////
   // Unary expressions
   ////////////////////////////////////////////////////////////////////////////////
 
-  pratt.postfix(.INCREMENT, .UNARY_POSTFIX, UnaryPostfix(.POSTFIX_INCREMENT));
-  pratt.postfix(.DECREMENT, .UNARY_POSTFIX, UnaryPostfix(.POSTFIX_DECREMENT));
-  pratt.prefix(.INCREMENT, .UNARY_PREFIX, UnaryPrefix(.PREFIX_INCREMENT));
-  pratt.prefix(.DECREMENT, .UNARY_PREFIX, UnaryPrefix(.PREFIX_DECREMENT));
-  pratt.prefix(.PLUS, .UNARY_PREFIX, UnaryPrefix(.POSITIVE));
-  pratt.prefix(.MINUS, .UNARY_PREFIX, UnaryPrefix(.NEGATIVE));
-  pratt.prefix(.NOT, .UNARY_PREFIX, UnaryPrefix(.NOT));
-  pratt.prefix(.TILDE, .UNARY_PREFIX, UnaryPrefix(.COMPLEMENT));
-  pratt.prefix(.MULTIPLY, .UNARY_PREFIX, UnaryPrefix(.PREFIX_DEREFERENCE));
-  pratt.prefix(.BITWISE_AND, .UNARY_PREFIX, UnaryPrefix(.PREFIX_REFERENCE));
-  pratt.prefix(.DELETE, .UNARY_PREFIX, UnaryPrefix(.DELETE));
+  pratt.postfix(.INCREMENT, .UNARY_POSTFIX, UnaryPostfix(.POSTFIX_INCREMENT))
+  pratt.postfix(.DECREMENT, .UNARY_POSTFIX, UnaryPostfix(.POSTFIX_DECREMENT))
+  pratt.prefix(.INCREMENT, .UNARY_PREFIX, UnaryPrefix(.PREFIX_INCREMENT))
+  pratt.prefix(.DECREMENT, .UNARY_PREFIX, UnaryPrefix(.PREFIX_DECREMENT))
+  pratt.prefix(.PLUS, .UNARY_PREFIX, UnaryPrefix(.POSITIVE))
+  pratt.prefix(.MINUS, .UNARY_PREFIX, UnaryPrefix(.NEGATIVE))
+  pratt.prefix(.NOT, .UNARY_PREFIX, UnaryPrefix(.NOT))
+  pratt.prefix(.TILDE, .UNARY_PREFIX, UnaryPrefix(.COMPLEMENT))
+  pratt.prefix(.MULTIPLY, .UNARY_PREFIX, UnaryPrefix(.PREFIX_DEREFERENCE))
+  pratt.prefix(.BITWISE_AND, .UNARY_PREFIX, UnaryPrefix(.PREFIX_REFERENCE))
+  pratt.prefix(.DELETE, .UNARY_PREFIX, UnaryPrefix(.DELETE))
 
   ////////////////////////////////////////////////////////////////////////////////
   // Binary expressions
   ////////////////////////////////////////////////////////////////////////////////
 
-  pratt.infix(.BITWISE_OR, .BITWISE_OR, BinaryInfix(.BITWISE_OR));
-  pratt.infix(.BITWISE_XOR, .BITWISE_XOR, BinaryInfix(.BITWISE_XOR));
-  pratt.infix(.DIVIDE, .MULTIPLY, BinaryInfix(.DIVIDE));
-  pratt.infix(.EQUAL, .EQUAL, BinaryInfix(.EQUAL));
-  pratt.infix(.GREATER_THAN, .COMPARE, BinaryInfix(.GREATER_THAN));
-  pratt.infix(.GREATER_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.GREATER_THAN_OR_EQUAL));
-  pratt.infix(.IN, .COMPARE, BinaryInfix(.IN));
-  pratt.infix(.IS, .COMPARE, BinaryInfix(.IS));
-  pratt.infix(.LESS_THAN, .COMPARE, BinaryInfix(.LESS_THAN));
-  pratt.infix(.LESS_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.LESS_THAN_OR_EQUAL));
-  pratt.infix(.LOGICAL_AND, .LOGICAL_AND, BinaryInfix(.LOGICAL_AND));
-  pratt.infix(.LOGICAL_OR, .LOGICAL_OR, BinaryInfix(.LOGICAL_OR));
-  pratt.infix(.MINUS, .ADD, BinaryInfix(.SUBTRACT));
-  pratt.infix(.NOT_EQUAL, .EQUAL, BinaryInfix(.NOT_EQUAL));
-  pratt.infix(.PLUS, .ADD, BinaryInfix(.ADD));
-  pratt.infix(.REMAINDER, .MULTIPLY, BinaryInfix(.REMAINDER));
-  pratt.infix(.SHIFT_LEFT, .SHIFT, BinaryInfix(.SHIFT_LEFT));
-  pratt.infix(.SHIFT_RIGHT, .SHIFT, BinaryInfix(.SHIFT_RIGHT));
+  pratt.infix(.BITWISE_OR, .BITWISE_OR, BinaryInfix(.BITWISE_OR))
+  pratt.infix(.BITWISE_XOR, .BITWISE_XOR, BinaryInfix(.BITWISE_XOR))
+  pratt.infix(.DIVIDE, .MULTIPLY, BinaryInfix(.DIVIDE))
+  pratt.infix(.EQUAL, .EQUAL, BinaryInfix(.EQUAL))
+  pratt.infix(.GREATER_THAN, .COMPARE, BinaryInfix(.GREATER_THAN))
+  pratt.infix(.GREATER_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.GREATER_THAN_OR_EQUAL))
+  pratt.infix(.IN, .COMPARE, BinaryInfix(.IN))
+  pratt.infix(.IS, .COMPARE, BinaryInfix(.IS))
+  pratt.infix(.LESS_THAN, .COMPARE, BinaryInfix(.LESS_THAN))
+  pratt.infix(.LESS_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.LESS_THAN_OR_EQUAL))
+  pratt.infix(.LOGICAL_AND, .LOGICAL_AND, BinaryInfix(.LOGICAL_AND))
+  pratt.infix(.LOGICAL_OR, .LOGICAL_OR, BinaryInfix(.LOGICAL_OR))
+  pratt.infix(.MINUS, .ADD, BinaryInfix(.SUBTRACT))
+  pratt.infix(.NOT_EQUAL, .EQUAL, BinaryInfix(.NOT_EQUAL))
+  pratt.infix(.PLUS, .ADD, BinaryInfix(.ADD))
+  pratt.infix(.REMAINDER, .MULTIPLY, BinaryInfix(.REMAINDER))
+  pratt.infix(.SHIFT_LEFT, .SHIFT, BinaryInfix(.SHIFT_LEFT))
+  pratt.infix(.SHIFT_RIGHT, .SHIFT, BinaryInfix(.SHIFT_RIGHT))
 
   ////////////////////////////////////////////////////////////////////////////////
   // Assignment expressions
   ////////////////////////////////////////////////////////////////////////////////
 
-  pratt.infixRight(.ASSIGN, .ASSIGN, BinaryInfix(.ASSIGN));
-  pratt.infixRight(.ASSIGN_PLUS, .ASSIGN, BinaryInfix(.ASSIGN_ADD));
-  pratt.infixRight(.ASSIGN_BITWISE_AND, .ASSIGN, BinaryInfix(.ASSIGN_BITWISE_AND));
-  pratt.infixRight(.ASSIGN_BITWISE_OR, .ASSIGN, BinaryInfix(.ASSIGN_BITWISE_OR));
-  pratt.infixRight(.ASSIGN_BITWISE_XOR, .ASSIGN, BinaryInfix(.ASSIGN_BITWISE_XOR));
-  pratt.infixRight(.ASSIGN_DIVIDE, .ASSIGN, BinaryInfix(.ASSIGN_DIVIDE));
-  pratt.infixRight(.ASSIGN_MULTIPLY, .ASSIGN, BinaryInfix(.ASSIGN_MULTIPLY));
-  pratt.infixRight(.ASSIGN_REMAINDER, .ASSIGN, BinaryInfix(.ASSIGN_REMAINDER));
-  pratt.infixRight(.ASSIGN_SHIFT_LEFT, .ASSIGN, BinaryInfix(.ASSIGN_SHIFT_LEFT));
-  pratt.infixRight(.ASSIGN_SHIFT_RIGHT, .ASSIGN, BinaryInfix(.ASSIGN_SHIFT_RIGHT));
-  pratt.infixRight(.ASSIGN_MINUS, .ASSIGN, BinaryInfix(.ASSIGN_SUBTRACT));
+  pratt.infixRight(.ASSIGN, .ASSIGN, BinaryInfix(.ASSIGN))
+  pratt.infixRight(.ASSIGN_PLUS, .ASSIGN, BinaryInfix(.ASSIGN_ADD))
+  pratt.infixRight(.ASSIGN_BITWISE_AND, .ASSIGN, BinaryInfix(.ASSIGN_BITWISE_AND))
+  pratt.infixRight(.ASSIGN_BITWISE_OR, .ASSIGN, BinaryInfix(.ASSIGN_BITWISE_OR))
+  pratt.infixRight(.ASSIGN_BITWISE_XOR, .ASSIGN, BinaryInfix(.ASSIGN_BITWISE_XOR))
+  pratt.infixRight(.ASSIGN_DIVIDE, .ASSIGN, BinaryInfix(.ASSIGN_DIVIDE))
+  pratt.infixRight(.ASSIGN_MULTIPLY, .ASSIGN, BinaryInfix(.ASSIGN_MULTIPLY))
+  pratt.infixRight(.ASSIGN_REMAINDER, .ASSIGN, BinaryInfix(.ASSIGN_REMAINDER))
+  pratt.infixRight(.ASSIGN_SHIFT_LEFT, .ASSIGN, BinaryInfix(.ASSIGN_SHIFT_LEFT))
+  pratt.infixRight(.ASSIGN_SHIFT_RIGHT, .ASSIGN, BinaryInfix(.ASSIGN_SHIFT_RIGHT))
+  pratt.infixRight(.ASSIGN_MINUS, .ASSIGN, BinaryInfix(.ASSIGN_SUBTRACT))
 
   ////////////////////////////////////////////////////////////////////////////////
   // Other expressions
   ////////////////////////////////////////////////////////////////////////////////
 
-  pratt.parselet(.ANNOTATION, .LOWEST).prefix = AnnotationParselet();
-  pratt.parselet(.PREPROCESSOR_IF, .LOWEST).prefix = IfParselet();
-  pratt.parselet(.LEFT_BRACKET, .LOWEST).prefix = ListParselet();
-  pratt.parselet(.LEFT_BRACE, .LOWEST).prefix = MapParselet();
-  pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet();
-  pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet();
-  pratt.parselet(.COMMA, .COMMA).infix = SequenceParselet();
-  pratt.parselet(.DOT, .MEMBER).infix = DotInfixParselet(.DOT);
-  pratt.parselet(.ARROW, .MEMBER).infix = DotInfixParselet(.DOT_ARROW);
-  pratt.parselet(.DOUBLE_COLON, .MEMBER).infix = DotInfixParselet(.DOT_COLON);
-  pratt.parselet(.DOT, .LOWEST).prefix = DotPrefixParselet(.DOT);
-  pratt.parselet(.DOUBLE_COLON, .LOWEST).prefix = DotPrefixParselet(.DOT_COLON);
-  pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet();
-  pratt.parselet(.NEW, .UNARY_PREFIX).prefix = NewParselet();
-  pratt.parselet(.LEFT_BRACKET, .UNARY_POSTFIX).infix = IndexParselet();
-  pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizeParselet();
-  pratt.parselet(.TICK, .UNARY_PREFIX).prefix = QuotedParselet();
-  pratt.parselet(.SUPER, .LOWEST).prefix = SuperParselet();
-  pratt.parselet(.BITWISE_AND, .BITWISE_AND).infix = BinaryInfixOrUnaryPostfix(.BITWISE_AND, .POSTFIX_REFERENCE, .BITWISE_AND);
-  pratt.parselet(.MULTIPLY, .MULTIPLY).infix = BinaryInfixOrUnaryPostfix(.MULTIPLY, .POSTFIX_DEREFERENCE, .MULTIPLY);
+  pratt.parselet(.ANNOTATION, .LOWEST).prefix = AnnotationParselet()
+  pratt.parselet(.PREPROCESSOR_IF, .LOWEST).prefix = IfParselet()
+  pratt.parselet(.LEFT_BRACKET, .LOWEST).prefix = ListParselet()
+  pratt.parselet(.LEFT_BRACE, .LOWEST).prefix = MapParselet()
+  pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet()
+  pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet()
+  pratt.parselet(.COMMA, .COMMA).infix = SequenceParselet()
+  pratt.parselet(.DOT, .MEMBER).infix = DotInfixParselet(.DOT)
+  pratt.parselet(.ARROW, .MEMBER).infix = DotInfixParselet(.DOT_ARROW)
+  pratt.parselet(.DOUBLE_COLON, .MEMBER).infix = DotInfixParselet(.DOT_COLON)
+  pratt.parselet(.DOT, .LOWEST).prefix = DotPrefixParselet(.DOT)
+  pratt.parselet(.DOUBLE_COLON, .LOWEST).prefix = DotPrefixParselet(.DOT_COLON)
+  pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet()
+  pratt.parselet(.NEW, .UNARY_PREFIX).prefix = NewParselet()
+  pratt.parselet(.LEFT_BRACKET, .UNARY_POSTFIX).infix = IndexParselet()
+  pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizeParselet()
+  pratt.parselet(.TICK, .UNARY_PREFIX).prefix = QuotedParselet()
+  pratt.parselet(.SUPER, .LOWEST).prefix = SuperParselet()
+  pratt.parselet(.BITWISE_AND, .BITWISE_AND).infix = BinaryInfixOrUnaryPostfix(.BITWISE_AND, .POSTFIX_REFERENCE, .BITWISE_AND)
+  pratt.parselet(.MULTIPLY, .MULTIPLY).infix = BinaryInfixOrUnaryPostfix(.MULTIPLY, .POSTFIX_DEREFERENCE, .MULTIPLY)
 
-  return pratt;
+  return pratt
 }
 
-var pratt = createParser();
+var pratt = createParser()

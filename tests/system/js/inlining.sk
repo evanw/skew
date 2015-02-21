@@ -13,7 +13,7 @@ export void test() {
     var bar = 1;
   };
 }());
-");
+")
 
 testJS("
 inline int foo(int bar) {
@@ -32,7 +32,7 @@ export void test() {
     var bar = foo(foo(1));
   };
 }());
-");
+")
 
 testJS("
 import bool baz();
@@ -52,7 +52,7 @@ export void test() {
     var bar = foo(foo(1));
   };
 }());
-");
+")
 
 testJS("
 inline int foo(int x, int y) {
@@ -67,7 +67,7 @@ export void test() {
     1 + 2 | 0;
   };
 }());
-");
+")
 
 testJS("
 inline void foo(int x, int y) {
@@ -86,7 +86,7 @@ export void test() {
     foo(1, 2);
   };
 }());
-");
+")
 
 testJS("
 class Foo {
@@ -121,7 +121,7 @@ export void test() {
     new Bar().foo();
   };
 }());
-");
+")
 
 testJS("
 inline int foo(int a, int b) {
@@ -139,7 +139,7 @@ export int bar(int a) {
     return 1 + (2 + a | 0) | 0;
   };
 }());
-");
+")
 
 testJS("
 inline int foo(int a, int b) {
@@ -157,7 +157,7 @@ inline int baz(int a) {
     return 1 + (2 + a | 0) | 0;
   };
 }());
-");
+")
 
 testJS("
 inline int foo(int a, int b) {
@@ -175,7 +175,7 @@ inline int baz(int a) {
     return 1 + (2 + (2 + a | 0) | 0) | 0;
   };
 }());
-");
+")
 
 testJS("
 inline int foo(int baz) {
@@ -201,7 +201,7 @@ export void test() {
     foo(bar(foo(bar(0))));
   };
 }());
-");
+")
 
 testJS("
 inline int foo(int baz) {
@@ -227,7 +227,7 @@ export void test() {
     foo(bar(foo(bar(0))));
   };
 }());
-");
+")
 
 testJS("
 inline int foo(int x) {
@@ -245,7 +245,7 @@ inline int baz(int z) {
     return (y + 2 | 0) + 1 | 0;
   };
 }());
-");
+")
 
 testJS("
 inline int foo(int x) {
@@ -263,7 +263,7 @@ inline int baz(int z) {
     return (y + 1 | 0) + 2 | 0;
   };
 }());
-");
+")
 
 testJS("
 inline void foo(int x) { bar(1, x); }
@@ -281,7 +281,7 @@ export void test() {
     bar(1, 2);
   };
 }());
-");
+")
 
 testJS("
 inline void foo() { x = 0; }
@@ -297,7 +297,7 @@ export void test() {
 
   var x = 0;
 }());
-");
+")
 
 testJS("
 inline void foo() { bar(); }
@@ -314,7 +314,7 @@ export void test() {
 
   var x = 0;
 }());
-");
+")
 
 testJS("
 inline void foo() { bar(); }
@@ -332,7 +332,7 @@ export void test() {
 
   var x = 0;
 }());
-");
+")
 
 testJS("
 import int foo();
@@ -346,7 +346,7 @@ export void test() {
     var baz = (foo(), 1);
   };
 }());
-");
+")
 
 testJS("
 inline int foo() { return 2; }
@@ -360,6 +360,6 @@ export void test() {
     var baz = 1;
   };
 }());
-");
+")
 
 }}

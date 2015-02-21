@@ -18,7 +18,7 @@ class Foo { return; }
 <stdin>:4:17: error: Cannot use this statement here
 interface Baz { return; }
                 ~~~~~~~
-");
+")
 
 test("
 bar foo = false;
@@ -30,12 +30,12 @@ inline alias bar = int;
 <stdin>:1:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 bar foo = false;
           ~~~~~
-");
+")
 
 test("
 void foo() { alias bar = int; }
 ", "
-");
+")
 
 test("
 if (true) class Foo {}
@@ -53,7 +53,7 @@ if (true) interface Foo {}
 <stdin>:2:11: error: Cannot use this statement here
 if (true) interface Foo {}
           ~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 void test() {
@@ -67,7 +67,7 @@ void test() {
 <stdin>:3:13: error: Cannot use this statement here
   if (true) interface Foo {}
             ~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 void foo() { void foo(); }
@@ -82,7 +82,7 @@ void foo() { void foo(); }
 <stdin>:2:14: error: Cannot use this statement here
 void bar() { void bar() {} }
              ~~~~~~~~~~~~~
-");
+")
 
 test("
 void foo() {
@@ -96,7 +96,7 @@ void foo() {
 <stdin>:3:3: error: Cannot use this statement here
   interface Bar {}
   ~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 class Foo { int foo; }
@@ -105,7 +105,7 @@ interface Baz { int foo; }
 <stdin>:2:17: error: Cannot use this statement here
 interface Baz { int foo; }
                 ~~~~~~~~
-");
+")
 
 test("
 class Foo {}
@@ -122,7 +122,7 @@ in Foo {
 <stdin>:4:10: error: Instance variables in extension blocks must be initialized
   int b, foo;
          ~~~
-");
+")
 
 test("
 interface Foo {}
@@ -139,7 +139,7 @@ in Foo {
 <stdin>:4:3: error: Cannot use this statement here
   int b;
   ~~~~~~
-");
+")
 
 test("
 enum Foo {}
@@ -156,7 +156,7 @@ in Foo {
 <stdin>:4:3: error: Cannot use this statement here
   int b;
   ~~~~~~
-");
+")
 
 test("
 namespace Foo {}
@@ -173,7 +173,7 @@ in Foo {
 <stdin>:6:3: error: Cannot use the \"static\" modifier outside an object declaration
   static int d;
   ~~~~~~
-");
+")
 
 test("
 break; continue;
@@ -212,7 +212,7 @@ void foo() { break; continue; }
 <stdin>:5:21: error: Cannot use this statement here
 void foo() { break; continue; }
                     ~~~~~~~~~
-");
+")
 
 test("
 void foo() {
@@ -230,7 +230,7 @@ void foo() {
 <stdin>:7:3: error: Cannot use this statement here
   continue;
   ~~~~~~~~~
-");
+")
 
 test("
 break;
@@ -253,7 +253,7 @@ while (true) {
 <stdin>:10:1: error: Cannot use this statement here
 continue;
 ~~~~~~~~~
-");
+")
 
 test("
 class Foo {
@@ -290,7 +290,7 @@ class Foo {
 <stdin>:8:3: warning: Unused expression
   0;
   ^
-");
+")
 
 test("
 void foo() {}
@@ -316,7 +316,7 @@ void test() {
 <stdin>:6:14: warning: Unused expression
   true ? 1 : 2;
              ^
-");
+")
 
 test("
 void test() {
@@ -327,7 +327,7 @@ void test() {
   i *= 2;
 }
 ", "
-");
+")
 
 test("
 void foo() {
@@ -337,7 +337,7 @@ void foo() {
 <stdin>:2:3: error: Cannot use this statement here
   enum Foo { FOO }
   ~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 class Foo {
@@ -355,7 +355,7 @@ enum Bar {}
 <stdin>:3:1: error: Cannot use this statement here
 in Bar {
 ~~~~~~~~
-");
+")
 
 test("
 assert true;
@@ -364,7 +364,7 @@ assert const true;
 <stdin>:1:1: error: Cannot use this statement here
 assert true;
 ~~~~~~~~~~~~
-");
+")
 
 test("
 void foo() {
@@ -375,6 +375,6 @@ void foo() {
 <stdin>:2:8: error: All for loop variables must have the same type (\"a\" has type \"int\" but \"b\" has type \"bool\")
   for (var a = 0, b = false; ; a++, a--) {}
        ~~~~~~~~~~~~~~~~~~~~
-");
+")
 
 }}

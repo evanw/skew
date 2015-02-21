@@ -3,7 +3,7 @@ namespace core { void testLists() {
 test("
 List<int> foo = [];
 ", "
-");
+")
 
 test("
 List<int> foo = [1, false, 2, 2.5];
@@ -14,7 +14,7 @@ List<int> foo = [1, false, 2, 2.5];
 <stdin>:1:31: error: Cannot convert from type \"double\" to type \"int\" without a cast
 List<int> foo = [1, false, 2, 2.5];
                               ~~~
-");
+")
 
 test("
 var foo = [1, 1.5f, 2, 2.5];
@@ -23,7 +23,7 @@ bool bar() { return foo.get(0); }
 <stdin>:2:21: error: Cannot convert from type \"double\" to type \"bool\" without a cast
 bool bar() { return foo.get(0); }
                     ~~~~~~~~~~
-");
+")
 
 test("
 var foo = [1, false, 2, 2.5];
@@ -31,7 +31,7 @@ var foo = [1, false, 2, 2.5];
 <stdin>:1:11: error: Cannot infer a common element type for this list literal
 var foo = [1, false, 2, 2.5];
           ~~~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 var foo = [];
@@ -39,7 +39,7 @@ var foo = [];
 <stdin>:1:11: error: Cannot infer a common element type for this list literal
 var foo = [];
           ~~
-");
+")
 
 test("
 var foo = [1, 2, x, false];
@@ -48,7 +48,7 @@ bool bar() { return foo.get(0); }
 <stdin>:1:18: error: \"x\" is not declared
 var foo = [1, 2, x, false];
                  ^
-");
+")
 
 test("
 List<Foo> foo = [1, 2, x, false];
@@ -60,6 +60,6 @@ List<Foo> foo = [1, 2, x, false];
 <stdin>:1:24: error: \"x\" is not declared
 List<Foo> foo = [1, 2, x, false];
                        ^
-");
+")
 
 }}

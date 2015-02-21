@@ -1,34 +1,34 @@
 namespace base {
   class Emitter : IEmitter {
     protected {
-      List<Symbol> namespaceStack = [];
-      CompilerOptions options = null;
-      NodeKind previousKind = .NULL;
-      StringMap<bool> isKeyword = null;
-      List<Source> outputs = [];
-      var prepended = StringBuilder();
-      var builder = StringBuilder();
-      var indent = "";
-      TypeCache cache = null;
-      Resolver resolver;
+      List<Symbol> namespaceStack = []
+      CompilerOptions options = null
+      NodeKind previousKind = .NULL
+      StringMap<int> isKeyword = null
+      List<Source> outputs = []
+      var prepended = StringBuilder()
+      var builder = StringBuilder()
+      var indent = ""
+      TypeCache cache = null
+      Resolver resolver
     }
 
-    virtual string extension();
-    virtual StringMap<bool> createIsKeyword();
+    virtual string extension()
+    virtual StringMap<int> createIsKeyword()
 
     override List<Source> emitProgram(Node program) {
-      cache = resolver.cache;
-      options = resolver.options;
-      isKeyword = createIsKeyword();
-      visitProgram(program);
-      prepended.append(builder.toString());
-      outputs.push(Source(options.outputFile, prepended.toString()));
-      return outputs;
+      cache = resolver.cache
+      options = resolver.options
+      isKeyword = createIsKeyword()
+      visitProgram(program)
+      prepended.append(builder.toString())
+      outputs.push(Source(options.outputFile, prepended.toString()))
+      return outputs
     }
 
     virtual void visitProgram(Node node) {
-      visitCollector(Collector(node, .SORT_BY_INHERITANCE_AND_CONTAINMENT));
-      adjustNamespace(null);
+      visitCollector(Collector(node, .SORT_BY_INHERITANCE_AND_CONTAINMENT))
+      adjustNamespace(null)
     }
 
     virtual void handleSymbol(Symbol symbol) {
@@ -36,314 +36,314 @@ namespace base {
 
     void visitCollector(Collector collector) {
       for (var i = 0; i < collector.typeSymbols.size(); i++) {
-        var symbol = collector.typeSymbols[i];
+        var symbol = collector.typeSymbols[i]
         if (!symbol.isImport()) {
-          emitTypeDeclaration(symbol);
+          emitTypeDeclaration(symbol)
         } else {
-          handleSymbol(symbol);
+          handleSymbol(symbol)
         }
       }
       for (var i = 0; i < collector.freeFunctionSymbols.size(); i++) {
-        var symbol = collector.freeFunctionSymbols[i];
+        var symbol = collector.freeFunctionSymbols[i]
         if (!symbol.isImport()) {
-          emitFunction(symbol);
+          emitFunction(symbol)
         } else {
-          handleSymbol(symbol);
+          handleSymbol(symbol)
         }
       }
       for (var i = 0; i < collector.freeVariableSymbols.size(); i++) {
-        var symbol = collector.freeVariableSymbols[i];
+        var symbol = collector.freeVariableSymbols[i]
         if (!symbol.isImport()) {
-          emitFreeVariable(symbol);
+          emitFreeVariable(symbol)
         } else {
-          handleSymbol(symbol);
+          handleSymbol(symbol)
         }
       }
     }
 
     virtual void enterNamespace(Symbol symbol) {
-      emitExtraNewlineBefore(.NAMESPACE);
-      emit(indent + "namespace " + mangleName(symbol) + " {\n");
-      increaseIndent();
+      emitExtraNewlineBefore(.NAMESPACE)
+      emit(indent + "namespace " + mangleName(symbol) + " {\n")
+      increaseIndent()
     }
 
     virtual void leaveNamespace(Symbol symbol) {
-      decreaseIndent();
-      emit(indent + "}\n");
-      emitExtraNewlineAfter(.NAMESPACE);
+      decreaseIndent()
+      emit(indent + "}\n")
+      emitExtraNewlineAfter(.NAMESPACE)
     }
 
     void adjustNamespace(Symbol symbol) {
       // Get the namespace chain for this symbol
-      List<Symbol> symbols = [];
+      List<Symbol> symbols = []
       while (symbol != null && symbol.kind != .GLOBAL_NAMESPACE) {
         if (symbol.kind == .NAMESPACE) {
-          symbols.unshift(symbol);
+          symbols.unshift(symbol)
         }
-        symbol = symbol.enclosingSymbol;
+        symbol = symbol.enclosingSymbol
       }
 
       // Find the intersection
-      var n = math.imin(namespaceStack.size(), symbols.size());
-      int i;
+      var n = math.imin(namespaceStack.size(), symbols.size())
+      int i
       for (i = 0; i < n; i++) {
         if (namespaceStack[i] != symbols[i]) {
-          break;
+          break
         }
       }
 
       // Leave the old namespace
       while (namespaceStack.size() > i) {
-        leaveNamespace(namespaceStack.pop());
-        emitExtraNewlineAfter(.NAMESPACE);
+        leaveNamespace(namespaceStack.pop())
+        emitExtraNewlineAfter(.NAMESPACE)
       }
 
       // Enter the new namespace
       while (namespaceStack.size() < symbols.size()) {
-        var symbol = symbols[namespaceStack.size()];
-        emitExtraNewlineBefore(.NAMESPACE);
-        enterNamespace(symbol);
-        namespaceStack.push(symbol);
+        var symbol = symbols[namespaceStack.size()]
+        emitExtraNewlineBefore(.NAMESPACE)
+        enterNamespace(symbol)
+        namespaceStack.push(symbol)
       }
     }
 
     void emitTypeMembers(Symbol symbol) {
-      var members = symbol.type.sortedMembers();
+      var members = symbol.type.sortedMembers()
       for (var i = 0; i < members.size(); i++) {
-        var member = members[i].symbol;
+        var member = members[i].symbol
         if (!member.isImport() && member.enclosingSymbol == symbol) {
           if (member.kind.isFunction()) {
-            emitFunction(member);
+            emitFunction(member)
           } else if (member.kind.isVariable()) {
-            emitMemberVariable(member);
+            emitMemberVariable(member)
           } else {
-            handleSymbol(member);
+            handleSymbol(member)
           }
         } else {
-          handleSymbol(member);
+          handleSymbol(member)
         }
       }
     }
 
     virtual void emitTypeBeforeVariable(Symbol symbol) {
-      emitType(symbol.type);
-      emit(" ");
+      emitType(symbol.type)
+      emit(" ")
     }
 
-    virtual void emitTypeDeclaration(Symbol symbol);
-    virtual void emitVariable(Symbol symbol);
-    virtual void emitFunction(Symbol symbol);
+    virtual void emitTypeDeclaration(Symbol symbol)
+    virtual void emitVariable(Symbol symbol)
+    virtual void emitFunction(Symbol symbol)
 
     virtual void emitMemberVariable(Symbol symbol) {
-      emitVariable(symbol);
+      emitVariable(symbol)
     }
 
     virtual void emitFreeVariable(Symbol symbol) {
-      emitVariable(symbol);
+      emitVariable(symbol)
     }
 
     virtual void emitFunctionArgument(Symbol symbol) {
-      emitType(symbol.type);
-      emit(" " + mangleName(symbol));
+      emitType(symbol.type)
+      emit(" " + mangleName(symbol))
     }
 
     void emitFunctionArguments(Symbol symbol) {
-      var arguments = symbol.node.functionArguments();
-      emit("(");
+      var arguments = symbol.node.functionArguments()
+      emit("(")
       if (arguments.hasChildren()) {
         for (var i = 0; i < arguments.children.size(); i++) {
-          if (i != 0) emit(", ");
-          emitFunctionArgument(arguments.children[i].symbol);
+          if (i != 0) emit(", ")
+          emitFunctionArgument(arguments.children[i].symbol)
         }
       }
-      emit(")");
+      emit(")")
     }
 
     virtual void emitTypeParameters(Symbol symbol) {
       if (symbol.hasParameters()) {
-        emit("<");
+        emit("<")
         for (var i = 0; i < symbol.parameters.size(); i++) {
-          if (i != 0) emit(", ");
-          emit(mangleName(symbol.parameters[i]));
+          if (i != 0) emit(", ")
+          emit(mangleName(symbol.parameters[i]))
         }
-        emit(">");
+        emit(">")
       }
     }
 
     void forceEmitExtraNewline() {
       if (previousKind != .NULL) {
-        emit("\n");
+        emit("\n")
       }
-      previousKind = .NULL;
+      previousKind = .NULL
     }
 
     bool isFlowNodeKind(NodeKind kind) {
-      return kind == .EXPRESSION || kind == .VARIABLE || kind == .VARIABLE_CLUSTER || kind.isJump() || kind == .ASSERT;
+      return kind == .EXPRESSION || kind == .VARIABLE || kind == .VARIABLE_CLUSTER || kind.isJump() || kind == .ASSERT
     }
 
     virtual bool shouldEmitExtraNewlineBetween(NodeKind before, NodeKind after) {
-      return !isFlowNodeKind(before) || !isFlowNodeKind(after) || before != .VARIABLE_CLUSTER && after == .VARIABLE_CLUSTER;
+      return !isFlowNodeKind(before) || !isFlowNodeKind(after) || before != .VARIABLE_CLUSTER && after == .VARIABLE_CLUSTER
     }
 
     void emitExtraNewlineBefore(NodeKind kind) {
       if (previousKind != .NULL && shouldEmitExtraNewlineBetween(previousKind, kind)) {
-        emit("\n");
+        emit("\n")
       }
-      previousKind = .NULL;
+      previousKind = .NULL
     }
 
     void emitExtraNewlineAfter(NodeKind kind) {
-      previousKind = kind;
+      previousKind = kind
     }
 
     void emitAfterVariable(Node node) {
-      var value = node.variableValue();
+      var value = node.variableValue()
       if (value != null) {
-        emit(" = ");
-        emitExpression(value, .COMMA);
+        emit(" = ")
+        emitExpression(value, .COMMA)
       }
     }
 
     void increaseIndent() {
-      previousKind = .NULL;
-      indent += "  ";
+      previousKind = .NULL
+      indent += "  "
     }
 
     void decreaseIndent() {
-      indent = indent.slice(2, indent.size());
+      indent = indent.slice(2, indent.size())
     }
 
     inline void emit(string text) {
-      builder.append(text);
+      builder.append(text)
     }
 
     virtual void emitBlock(Node node) {
-      emit(" {\n");
-      increaseIndent();
-      emitStatements(node.blockStatements());
-      decreaseIndent();
-      emit(indent + "}");
-      previousKind = .NULL;
+      emit(" {\n")
+      increaseIndent()
+      emitStatements(node.blockStatements())
+      decreaseIndent()
+      emit(indent + "}")
+      previousKind = .NULL
     }
 
     virtual void emitLastBlock(Node node) {
-      emitBlock(node);
-      emit("\n");
+      emitBlock(node)
+      emit("\n")
     }
 
     void emitStatements(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
-        var child = nodes[i];
-        var kind = child.kind;
-        var emitExtraNewline = kind != .MODIFIER && kind != .USING && kind != .ALIAS;
-        if (emitExtraNewline) emitExtraNewlineBefore(kind);
-        emitStatement(child);
-        if (emitExtraNewline) emitExtraNewlineAfter(kind);
+        var child = nodes[i]
+        var kind = child.kind
+        var emitExtraNewline = kind != .MODIFIER && kind != .USING && kind != .ALIAS
+        if (emitExtraNewline) emitExtraNewlineBefore(kind)
+        emitStatement(child)
+        if (emitExtraNewline) emitExtraNewlineAfter(kind)
       }
     }
 
     void emitStatement(Node node) {
       switch (node.kind) {
         case .ALIAS, .USING {}
-        case .ASSERT { emitAssert(node); }
-        case .BREAK { emitBreak(node); }
-        case .CASE { emitCase(node); }
-        case .CONTINUE { emitContinue(node); }
-        case .DO_WHILE { emitDoWhile(node); }
-        case .EXPRESSION { emitExpressionStatement(node); }
-        case .FOR { emitFor(node); }
-        case .FOR_EACH { emitForEach(node); }
-        case .IF { emitIf(node); }
-        case .MODIFIER { emitStatements(node.modifierStatements()); }
-        case .RETURN { emitReturn(node); }
-        case .SWITCH { emitSwitch(node); }
-        case .TRY { emitTry(node); }
-        case .VARIABLE { emitVariable(node.symbol); }
-        case .VARIABLE_CLUSTER { emitStatements(node.clusterVariables()); }
-        case .WHILE { emitWhile(node); }
-        default { assert false; }
+        case .ASSERT { emitAssert(node) }
+        case .BREAK { emitBreak(node) }
+        case .CASE { emitCase(node) }
+        case .CONTINUE { emitContinue(node) }
+        case .DO_WHILE { emitDoWhile(node) }
+        case .EXPRESSION { emitExpressionStatement(node) }
+        case .FOR { emitFor(node) }
+        case .FOR_EACH { emitForEach(node) }
+        case .IF { emitIf(node) }
+        case .MODIFIER { emitStatements(node.modifierStatements()) }
+        case .RETURN { emitReturn(node) }
+        case .SWITCH { emitSwitch(node) }
+        case .TRY { emitTry(node) }
+        case .VARIABLE { emitVariable(node.symbol) }
+        case .VARIABLE_CLUSTER { emitStatements(node.clusterVariables()) }
+        case .WHILE { emitWhile(node) }
+        default { assert false }
       }
     }
 
     virtual void endStatement() {
-      emit(";\n");
+      emit(";\n")
     }
 
     virtual void emitCase(Node node) {
-      var values = node.caseValues().children;
-      var block = node.caseBlock();
+      var values = node.caseValues().children
+      var block = node.caseBlock()
       if (values.size() != 0) {
         for (var i = 0; i < values.size(); i++) {
-          if (i != 0) emit("\n");
-          emit(indent + "case ");
-          emitExpression(values[i], .LOWEST);
-          emit(":");
+          if (i != 0) emit("\n")
+          emit(indent + "case ")
+          emitExpression(values[i], .LOWEST)
+          emit(":")
         }
       } else {
-        emit(indent + "default:");
+        emit(indent + "default:")
       }
-      emit(" {\n");
-      increaseIndent();
-      emitStatements(block.blockStatements());
+      emit(" {\n")
+      increaseIndent()
+      emitStatements(block.blockStatements())
       if (!block.blockAlwaysEndsWithReturn()) {
-        emit(indent + "break;\n");
+        emit(indent + "break;\n")
       }
-      decreaseIndent();
-      emit(indent + "}\n");
+      decreaseIndent()
+      emit(indent + "}\n")
     }
 
     virtual void emitSwitch(Node node) {
-      var cases = node.switchCases().children;
-      emit(indent + "switch (");
-      emitExpression(node.switchValue(), .LOWEST);
-      emit(") {\n");
-      increaseIndent();
-      emitStatements(cases);
-      decreaseIndent();
-      emit(indent + "}\n");
+      var cases = node.switchCases().children
+      emit(indent + "switch (")
+      emitExpression(node.switchValue(), .LOWEST)
+      emit(") {\n")
+      increaseIndent()
+      emitStatements(cases)
+      decreaseIndent()
+      emit(indent + "}\n")
     }
 
     void recursiveEmitIfStatement(Node node) {
-      var falseBlock = node.ifFalse();
-      emit("if (");
-      emitExpression(node.ifTest(), .LOWEST);
-      emit(")");
-      emitBlock(node.ifTrue());
+      var falseBlock = node.ifFalse()
+      emit("if (")
+      emitExpression(node.ifTest(), .LOWEST)
+      emit(")")
+      emitBlock(node.ifTrue())
       if (falseBlock != null) {
-        var falseStatement = falseBlock.blockStatement();
+        var falseStatement = falseBlock.blockStatement()
         if (falseStatement != null && falseStatement.kind == .IF) {
-          emit(" else ");
-          recursiveEmitIfStatement(falseStatement);
+          emit(" else ")
+          recursiveEmitIfStatement(falseStatement)
         } else {
-          emit(" else");
-          emitBlock(falseBlock);
+          emit(" else")
+          emitBlock(falseBlock)
         }
       }
     }
 
-    virtual void emitTry(Node node);
+    virtual void emitTry(Node node)
 
     virtual void emitIf(Node node) {
-      emit(indent);
-      recursiveEmitIfStatement(node);
-      emit("\n");
+      emit(indent)
+      recursiveEmitIfStatement(node)
+      emit("\n")
     }
 
     virtual void emitBeforeSubsequentForVariable(Node node) {
-      emit(", ");
+      emit(", ")
     }
 
     virtual bool useWhileForAllLoops() {
-      return false;
+      return false
     }
 
     void emitForVariables(List<Node> nodes) {
-      emitTypeBeforeVariable(nodes[0].symbol);
+      emitTypeBeforeVariable(nodes[0].symbol)
       for (var i = 0; i < nodes.size(); i++) {
-        var node = nodes[i];
-        if (i != 0) emitBeforeSubsequentForVariable(node);
-        emit(mangleName(node.symbol));
-        emitAfterVariable(node);
+        var node = nodes[i]
+        if (i != 0) emitBeforeSubsequentForVariable(node)
+        emit(mangleName(node.symbol))
+        emitAfterVariable(node)
       }
     }
 
@@ -352,16 +352,16 @@ namespace base {
         while (node != null) {
           if (node.kind.isLoop()) {
             if (node.kind == .FOR) {
-              var update = node.forUpdate();
+              var update = node.forUpdate()
               if (update != null) {
-                emit(indent);
-                emitExpression(update, .LOWEST);
-                endStatement();
+                emit(indent)
+                emitExpression(update, .LOWEST)
+                endStatement()
               }
             }
-            break;
+            break
           }
-          node = node.parent;
+          node = node.parent
         }
       }
     }
@@ -369,28 +369,28 @@ namespace base {
     void insertStatementBeforeLoopContinue(Node node, Node update) {
       if (node.hasChildren()) {
         for (var i = 0; i < node.children.size(); i++) {
-          var child = node.children[i];
+          var child = node.children[i]
           if (child == null) {
-            continue;
+            continue
           }
           if (child.kind == .CONTINUE) {
-            node.insertChild(i, update.clone());
-            i++;
+            node.insertChild(i, update.clone())
+            i++
           } else if (!child.kind.isExpression() && !child.kind.isLoop()) {
-            insertStatementBeforeLoopContinue(child, update);
+            insertStatementBeforeLoopContinue(child, update)
           }
         }
       }
       if (node.kind == .BLOCK && node.parent.kind.isLoop()) {
-        node.appendChild(update.clone());
+        node.appendChild(update.clone())
       }
     }
 
     void emitFor(Node node) {
-      var setup = node.forSetup();
-      var test = node.forTest();
-      var update = node.forUpdate();
-      var block = node.forBlock();
+      var setup = node.forSetup()
+      var test = node.forTest()
+      var update = node.forUpdate()
+      var block = node.forBlock()
 
       // For languages that lack the C-style for loop with an update expression
       // after every iteration, a while loop with code duplication at control
@@ -398,43 +398,43 @@ namespace base {
       if (useWhileForAllLoops()) {
         if (setup != null) {
           if (setup.kind == .VARIABLE_CLUSTER) {
-            emitStatement(setup);
+            emitStatement(setup)
           } else {
-            emit(indent);
-            emitExpression(setup, .LOWEST);
-            emit("\n");
+            emit(indent)
+            emitExpression(setup, .LOWEST)
+            emit("\n")
           }
         }
         if (update != null) {
-          insertStatementBeforeLoopContinue(block, Node.createExpression(update.replaceWith(null)));
+          insertStatementBeforeLoopContinue(block, Node.createExpression(update.replaceWith(null)))
         }
-        emitStatement(Node.createWhile(test != null ? test.replaceWith(null) : Node.createBool(true), block.replaceWith(null)));
+        emitStatement(Node.createWhile(test != null ? test.replaceWith(null) : Node.createBool(true), block.replaceWith(null)))
       }
 
       // Use a normal for loop if the target language supports it
       else {
-        emit(indent + "for (");
+        emit(indent + "for (")
         if (setup != null) {
           if (setup.kind == .VARIABLE_CLUSTER) {
-            emitForVariables(setup.clusterVariables());
+            emitForVariables(setup.clusterVariables())
           } else {
-            emitExpression(setup, .LOWEST);
+            emitExpression(setup, .LOWEST)
           }
         }
         if (test != null) {
-          emit("; ");
-          emitExpression(test, .LOWEST);
+          emit("; ")
+          emitExpression(test, .LOWEST)
         } else {
-          emit(";");
+          emit(";")
         }
         if (update != null) {
-          emit("; ");
-          emitExpression(update, .LOWEST);
+          emit("; ")
+          emitExpression(update, .LOWEST)
         } else {
-          emit(";");
+          emit(";")
         }
-        emit(")");
-        emitLastBlock(block);
+        emit(")")
+        emitLastBlock(block)
       }
     }
 
@@ -442,362 +442,362 @@ namespace base {
     }
 
     virtual bool emitControlStatementParentheses() {
-      return true;
+      return true
     }
 
     void emitWhile(Node node) {
-      emit(indent + "while " + (emitControlStatementParentheses() ? "(" : ""));
-      emitExpression(node.whileTest(), .LOWEST);
-      if (emitControlStatementParentheses()) emit(")");
-      emitLastBlock(node.whileBlock());
+      emit(indent + "while " + (emitControlStatementParentheses() ? "(" : ""))
+      emitExpression(node.whileTest(), .LOWEST)
+      if (emitControlStatementParentheses()) emit(")")
+      emitLastBlock(node.whileBlock())
     }
 
     void emitDoWhile(Node node) {
-      var test = node.whileTest();
-      var block = node.whileBlock();
+      var test = node.whileTest()
+      var block = node.whileBlock()
 
       // For languages that lack the C-style do-while loop that always
       // evaluates the body at least once, an infinite loop with a trailing
       // conditional break statement is used instead
       if (useWhileForAllLoops()) {
-        node.kind = .WHILE;
-        test.replaceWith(Node.createBool(true)).invertBooleanCondition(cache);
-        insertStatementBeforeLoopContinue(block, Node.createIf(.IF, test, Node.createBlock([Node.createBreak()]), null));
-        emitWhile(node);
-        return;
+        node.kind = .WHILE
+        test.replaceWith(Node.createBool(true)).invertBooleanCondition(cache)
+        insertStatementBeforeLoopContinue(block, Node.createIf(.IF, test, Node.createBlock([Node.createBreak()]), null))
+        emitWhile(node)
+        return
       }
 
-      emit(indent + "do");
-      emitBlock(node.whileBlock());
-      emit(indent + "while " + (emitControlStatementParentheses() ? "(" : ""));
-      emitExpression(node.whileTest(), .LOWEST);
-      if (emitControlStatementParentheses()) emit(")");
-      endStatement();
+      emit(indent + "do")
+      emitBlock(node.whileBlock())
+      emit(indent + "while " + (emitControlStatementParentheses() ? "(" : ""))
+      emitExpression(node.whileTest(), .LOWEST)
+      if (emitControlStatementParentheses()) emit(")")
+      endStatement()
     }
 
     void emitReturn(Node node) {
-      var value = node.returnValue();
+      var value = node.returnValue()
       if (value != null) {
-        emit(indent + "return ");
-        emitExpression(value, .LOWEST);
+        emit(indent + "return ")
+        emitExpression(value, .LOWEST)
       } else {
-        emit(indent + "return");
+        emit(indent + "return")
       }
-      endStatement();
+      endStatement()
     }
 
     void emitBreak(Node node) {
-      emit(indent + "break");
-      endStatement();
+      emit(indent + "break")
+      endStatement()
     }
 
     virtual void emitContinue(Node node) {
-      emit(indent + "continue");
-      endStatement();
+      emit(indent + "continue")
+      endStatement()
     }
 
-    virtual void emitAssert(Node node);
+    virtual void emitAssert(Node node)
 
     void emitExpressionStatement(Node node) {
-      emit(indent);
-      emitExpression(node.expressionValue(), .LOWEST);
-      endStatement();
+      emit(indent)
+      emitExpression(node.expressionValue(), .LOWEST)
+      endStatement()
     }
 
     void emitExpression(Node node, Precedence precedence) {
-      var kind = node.kind;
+      var kind = node.kind
       switch (kind) {
-        case .NAME { emitName(node); }
-        case .TYPE { emitType(node.type); }
-        case .THIS { emitThis(); }
-        case .HOOK { emitHook(node, precedence); }
-        case .NULL { emitNull(); }
-        case .BOOL { emitBool(node); }
-        case .INT { emitInt(node, precedence); }
-        case .FLOAT, .DOUBLE { emitReal(node); }
-        case .STRING { emitString(node); }
-        case .DOT, .DOT_ARROW, .DOT_COLON { emitDot(node); }
-        case .CALL { emitCall(node, precedence); }
-        case .SEQUENCE { emitSequence(node, precedence); }
-        case .INDEX { emitIndex(node, precedence); }
-        case .ASSIGN_INDEX { emitTernary(node, precedence); }
-        case .PARAMETERIZE { emitParameterize(node); }
-        case .CAST, .IMPLICIT_CAST { emitCast(node, precedence); }
-        case .LIST { emitList(node, precedence); }
-        case .KEY_VALUE { emitKeyValue(node); }
-        case .MAP { emitMap(node, precedence); }
-        case .SUPER_CALL { emitSuperCall(node); }
-        case .QUOTED { emitExpression(node.quotedValue(), precedence); }
-        case .VAR { emit("var"); }
+        case .NAME { emitName(node) }
+        case .TYPE { emitType(node.type) }
+        case .THIS { emitThis() }
+        case .HOOK { emitHook(node, precedence) }
+        case .NULL { emitNull() }
+        case .BOOL { emitBool(node) }
+        case .INT { emitInt(node, precedence) }
+        case .FLOAT, .DOUBLE { emitReal(node) }
+        case .STRING { emitString(node) }
+        case .DOT, .DOT_ARROW, .DOT_COLON { emitDot(node) }
+        case .CALL { emitCall(node, precedence) }
+        case .SEQUENCE { emitSequence(node, precedence) }
+        case .INDEX { emitIndex(node, precedence) }
+        case .ASSIGN_INDEX { emitTernary(node, precedence) }
+        case .PARAMETERIZE { emitParameterize(node) }
+        case .CAST, .IMPLICIT_CAST { emitCast(node, precedence) }
+        case .LIST { emitList(node, precedence) }
+        case .KEY_VALUE { emitKeyValue(node) }
+        case .MAP { emitMap(node, precedence) }
+        case .SUPER_CALL { emitSuperCall(node) }
+        case .QUOTED { emitExpression(node.quotedValue(), precedence) }
+        case .VAR { emit("var") }
         default {
-          if (kind.isUnaryOperator()) emitUnary(node, precedence);
-          else if (kind.isBinaryOperator()) emitBinary(node, precedence);
-          else assert false;
+          if (kind.isUnaryOperator()) emitUnary(node, precedence)
+          else if (kind.isBinaryOperator()) emitBinary(node, precedence)
+          else assert false
         }
       }
     }
 
     void emitCommaSeparatedExpressions(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
-        if (i != 0) emit(", ");
-        emitExpression(nodes[i], .COMMA);
+        if (i != 0) emit(", ")
+        emitExpression(nodes[i], .COMMA)
       }
     }
 
     virtual void emitSequence(Node node, Precedence precedence) {
-      var values = node.sequenceValues();
-      assert values.size() > 1;
-      if (.COMMA <= precedence) emit("(");
-      emitCommaSeparatedExpressions(values);
-      if (.COMMA <= precedence) emit(")");
+      var values = node.sequenceValues()
+      assert values.size() > 1
+      if (.COMMA <= precedence) emit("(")
+      emitCommaSeparatedExpressions(values)
+      if (.COMMA <= precedence) emit(")")
     }
 
     virtual bool hasUnaryStorageOperators() {
-      return true;
+      return true
     }
 
     virtual bool shouldEmitSpaceForUnaryOperator(Node node) {
-      var value = node.unaryValue();
-      var kind = node.kind;
-      var valueKind = value.kind;
+      var value = node.unaryValue()
+      var kind = node.kind
+      var valueKind = value.kind
       if (kind == .NEW || kind == .DELETE ||
           kind == .POSITIVE && (valueKind == .POSITIVE || valueKind == .PREFIX_INCREMENT) ||
           kind == .NEGATIVE && (valueKind == .NEGATIVE || valueKind == .PREFIX_DECREMENT)) {
-        return true; // Prevent "- -1" from becoming "--1"
+        return true // Prevent "- -1" from becoming "--1"
       }
-      return false;
+      return false
     }
 
     virtual void emitUnary(Node node, Precedence precedence) {
-      var value = node.unaryValue();
-      var kind = node.kind;
+      var value = node.unaryValue()
+      var kind = node.kind
 
       // Some languages don't support "++" and "--"
       if (kind.isUnaryStorageOperator() && !hasUnaryStorageOperators()) {
-        if (.ASSIGN < precedence) emit("(");
-        emitExpression(value, .ASSIGN);
-        emit(kind == .PREFIX_INCREMENT || kind == .POSTFIX_INCREMENT ? " += 1" : " -= 1");
-        if (.ASSIGN < precedence) emit(")");
-        return;
+        if (.ASSIGN < precedence) emit("(")
+        emitExpression(value, .ASSIGN)
+        emit(kind == .PREFIX_INCREMENT || kind == .POSTFIX_INCREMENT ? " += 1" : " -= 1")
+        if (.ASSIGN < precedence) emit(")")
+        return
       }
 
       // This is necessary to avoid trouble with always-negative integers. The
       // integer "-0x80000000" should not be emitted as "--0x80000000".
       if (kind == .NEGATIVE && value.isNumberLessThanZero()) {
-        value.content = value.kind == .INT ? IntContent(-value.asInt()) : DoubleContent(-value.asDouble());
-        emitExpression(value, precedence);
-        return;
+        value.content = value.kind == .INT ? IntContent(-value.asInt()) : DoubleContent(-value.asDouble())
+        emitExpression(value, precedence)
+        return
       }
 
-      var info = operatorInfo[kind];
-      if (info.precedence < precedence) emit("(");
-      var isPostfix = info.precedence == .UNARY_POSTFIX;
+      var info = operatorInfo[kind]
+      if (info.precedence < precedence) emit("(")
+      var isPostfix = info.precedence == .UNARY_POSTFIX
       if (!isPostfix) {
-        emit(info.text);
-        if (shouldEmitSpaceForUnaryOperator(node)) emit(" ");
+        emit(info.text)
+        if (shouldEmitSpaceForUnaryOperator(node)) emit(" ")
       }
-      emitExpression(value, info.precedence);
+      emitExpression(value, info.precedence)
       if (isPostfix) {
-        if (shouldEmitSpaceForUnaryOperator(node)) emit(" ");
-        emit(info.text);
+        if (shouldEmitSpaceForUnaryOperator(node)) emit(" ")
+        emit(info.text)
       }
-      if (info.precedence < precedence) emit(")");
+      if (info.precedence < precedence) emit(")")
     }
 
     virtual void emitBinary(Node node, Precedence precedence) {
-      var info = operatorInfo[node.kind];
-      if (info.precedence < precedence) emit("(");
-      emitExpression(node.binaryLeft(), info.precedence.incrementIfRightAssociative(info.associativity));
-      emit(" " + info.text + " ");
-      emitExpression(node.binaryRight(), info.precedence.incrementIfLeftAssociative(info.associativity));
-      if (info.precedence < precedence) emit(")");
+      var info = operatorInfo[node.kind]
+      if (info.precedence < precedence) emit("(")
+      emitExpression(node.binaryLeft(), info.precedence.incrementIfRightAssociative(info.associativity))
+      emit(" " + info.text + " ")
+      emitExpression(node.binaryRight(), info.precedence.incrementIfLeftAssociative(info.associativity))
+      if (info.precedence < precedence) emit(")")
     }
 
     void emitIndex(Node node, Precedence precedence) {
-      emitExpression(node.binaryLeft(), .MEMBER);
-      emit("[");
-      emitExpression(node.binaryRight(), .LOWEST);
-      emit("]");
+      emitExpression(node.binaryLeft(), .MEMBER)
+      emit("[")
+      emitExpression(node.binaryRight(), .LOWEST)
+      emit("]")
     }
 
     void emitTernary(Node node, Precedence precedence) {
-      if (.ASSIGN < precedence) emit("(");
-      emitExpression(node.ternaryLeft(), .MEMBER);
-      emit("[");
-      emitExpression(node.ternaryMiddle(), .LOWEST);
-      emit("] = ");
-      emitExpression(node.ternaryRight(), .ASSIGN);
-      if (.ASSIGN < precedence) emit(")");
+      if (.ASSIGN < precedence) emit("(")
+      emitExpression(node.ternaryLeft(), .MEMBER)
+      emit("[")
+      emitExpression(node.ternaryMiddle(), .LOWEST)
+      emit("] = ")
+      emitExpression(node.ternaryRight(), .ASSIGN)
+      if (.ASSIGN < precedence) emit(")")
     }
 
     void emitParameterize(Node node) {
-      emitExpression(node.parameterizeValue(), .MEMBER);
-      emit("<");
-      emitCommaSeparatedExpressions(node.parameterizeTypes());
-      emit(">");
+      emitExpression(node.parameterizeValue(), .MEMBER)
+      emit("<")
+      emitCommaSeparatedExpressions(node.parameterizeTypes())
+      emit(">")
     }
 
     virtual void emitDot(Node node) {
-      var dotName = node.dotName();
-      emitExpression(node.dotTarget(), .MEMBER);
-      emit(".");
-      emit(node.symbol != null ? mangleName(node.symbol) : dotName.asString());
+      var dotName = node.dotName()
+      emitExpression(node.dotTarget(), .MEMBER)
+      emit(".")
+      emit(node.symbol != null ? mangleName(node.symbol) : dotName.asString())
     }
 
     virtual void emitCall(Node node, Precedence precedence) {
-      var value = node.callValue();
+      var value = node.callValue()
       if (value.kind == .TYPE) {
-        emit("new ");
+        emit("new ")
       }
-      emitExpression(value, .UNARY_POSTFIX);
-      emit("(");
-      emitCommaSeparatedExpressions(node.callArguments());
-      emit(")");
+      emitExpression(value, .UNARY_POSTFIX)
+      emit("(")
+      emitCommaSeparatedExpressions(node.callArguments())
+      emit(")")
     }
 
     virtual void emitParenthesizedCast(Type type, Node node, Precedence precedence) {
-      if (.UNARY_PREFIX < precedence) emit("(");
-      emit("(");
-      emitNormalType(type);
-      emit(")");
-      emitExpression(node, .UNARY_PREFIX);
-      if (.UNARY_PREFIX < precedence) emit(")");
+      if (.UNARY_PREFIX < precedence) emit("(")
+      emit("(")
+      emitNormalType(type)
+      emit(")")
+      emitExpression(node, .UNARY_PREFIX)
+      if (.UNARY_PREFIX < precedence) emit(")")
     }
 
     virtual bool shouldEmitCast(Node node) {
-      return node.kind == .CAST;
+      return node.kind == .CAST
     }
 
     virtual void emitCast(Node node, Precedence precedence) {
       if (shouldEmitCast(node)) {
-        emitParenthesizedCast(node.castType().type, node.castValue(), precedence);
+        emitParenthesizedCast(node.castType().type, node.castValue(), precedence)
       } else {
-        emitExpression(node.castValue(), precedence);
+        emitExpression(node.castValue(), precedence)
       }
     }
 
     virtual void emitList(Node node, Precedence precedence) {
-      emit("[");
-      emitCommaSeparatedExpressions(node.listValues());
-      emit("]");
+      emit("[")
+      emitCommaSeparatedExpressions(node.listValues())
+      emit("]")
     }
 
     virtual void emitKeyValue(Node node) {
-      emitExpression(node.itemKey(), .COMMA);
-      emit(": ");
-      emitExpression(node.itemValue(), .COMMA);
+      emitExpression(node.itemKey(), .COMMA)
+      emit(": ")
+      emitExpression(node.itemValue(), .COMMA)
     }
 
     virtual void emitMap(Node node, Precedence precedence) {
-      var items = node.mapItems();
-      var space = items.size() > 0 ? " " : "";
-      emit("{" + space);
-      emitCommaSeparatedExpressions(items);
-      emit(space + "}");
+      var items = node.mapItems()
+      var space = items.size() > 0 ? " " : ""
+      emit("{" + space)
+      emitCommaSeparatedExpressions(items)
+      emit(space + "}")
     }
 
     virtual void emitSuperCall(Node node) {
-      emit("super(");
-      emitCommaSeparatedExpressions(node.superCallArguments());
-      emit(")");
+      emit("super(")
+      emitCommaSeparatedExpressions(node.superCallArguments())
+      emit(")")
     }
 
     virtual void emitName(Node node) {
-      var symbol = node.symbol;
-      emit(symbol != null ? symbol.kind.isInstance() ? mangleName(symbol) : fullName(symbol) : node.asString());
+      var symbol = node.symbol
+      emit(symbol != null ? symbol.kind.isInstance() ? mangleName(symbol) : fullName(symbol) : node.asString())
     }
 
     virtual void emitThis() {
-      emit("this");
+      emit("this")
     }
 
     virtual bool hookNeedsExplicitCast(Node node) {
-      return false;
+      return false
     }
 
     virtual void emitHook(Node node, Precedence precedence) {
-      var trueValue = node.hookTrue();
-      if (.ASSIGN < precedence) emit("(");
-      emitExpression(node.hookTest(), .LOGICAL_OR);
-      emit(" ? ");
+      var trueValue = node.hookTrue()
+      if (.ASSIGN < precedence) emit("(")
+      emitExpression(node.hookTest(), .LOGICAL_OR)
+      emit(" ? ")
       if (hookNeedsExplicitCast(trueValue)) {
-        emitParenthesizedCast(node.type, trueValue, precedence);
+        emitParenthesizedCast(node.type, trueValue, precedence)
       } else {
-        emitExpression(trueValue, .ASSIGN);
+        emitExpression(trueValue, .ASSIGN)
       }
-      emit(" : ");
-      emitExpression(node.hookFalse(), .ASSIGN);
-      if (.ASSIGN < precedence) emit(")");
+      emit(" : ")
+      emitExpression(node.hookFalse(), .ASSIGN)
+      if (.ASSIGN < precedence) emit(")")
     }
 
     virtual void emitNull() {
-      emit("null");
+      emit("null")
     }
 
     virtual void emitBool(Node node) {
-      emit(node.asBool().toString());
+      emit(node.asBool().toString())
     }
 
     virtual void emitInt(Node node, Precedence precedence) {
       if (node.type != null && node.type.isEnum() && node.symbol != null) {
-        emitName(node);
+        emitName(node)
       } else {
-        emit(node.asInt().toString());
+        emit(node.asInt().toString())
       }
     }
 
     virtual void emitReal(Node node) {
-      emit(node.asDouble().toString());
+      emit(node.asDouble().toString())
     }
 
     virtual void emitString(Node node) {
-      emit(quoteString(node.asString(), '"'));
+      emit(quoteString(node.asString(), '"'))
     }
 
     virtual void emitNormalType(Type type) {
-      emitType(type);
+      emitType(type)
     }
 
     virtual void emitType(Type type) {
-      assert !type.isFunction();
+      assert !type.isFunction()
       if (type.isQuoted()) {
-        emitExpression(type.symbol.node, .LOWEST);
+        emitExpression(type.symbol.node, .LOWEST)
       } else {
-        emit(fullName(type.symbol));
+        emit(fullName(type.symbol))
         if (type.isParameterized()) {
-          emit("<");
+          emit("<")
           for (var i = 0; i < type.substitutions.size(); i++) {
-            if (i != 0) emit(", ");
-            emitNormalType(type.substitutions[i]);
+            if (i != 0) emit(", ")
+            emitNormalType(type.substitutions[i])
           }
-          emit(">");
+          emit(">")
         }
       }
     }
 
     virtual string mangleName(Symbol symbol) {
       if (symbol.emitAs != null) {
-        return symbol.emitAs.value;
+        return symbol.emitAs.value
       }
       if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
-        return mangleName(symbol.enclosingSymbol);
+        return mangleName(symbol.enclosingSymbol)
       }
       if (symbol.name in isKeyword && !symbol.isImport()) {
-        return "_" + symbol.name + "_";
+        return "_" + symbol.name + "_"
       }
-      return symbol.name;
+      return symbol.name
     }
 
     virtual bool useDoubleColonForEnclosingSymbols(Symbol symbol) {
-      return false;
+      return false
     }
 
     virtual string fullName(Symbol symbol) {
-      var name = mangleName(symbol);
+      var name = mangleName(symbol)
       if (symbol.enclosingSymbol != null && symbol.enclosingSymbol.kind != .GLOBAL_NAMESPACE && !symbol.kind.isParameter()) {
-        return fullName(symbol.enclosingSymbol) + (useDoubleColonForEnclosingSymbols(symbol.enclosingSymbol) ? "::" : ".") + name;
+        return fullName(symbol.enclosingSymbol) + (useDoubleColonForEnclosingSymbols(symbol.enclosingSymbol) ? "::" : ".") + name
       }
-      return name;
+      return name
     }
   }
 }

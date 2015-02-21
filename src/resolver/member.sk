@@ -1,10 +1,10 @@
 class Member {
-  Symbol symbol;
+  Symbol symbol
 
   // The type of the member may be different from the symbol since the symbol
   // represents the unparameterized type and the member is a parameterization
   // of that symbol
-  Type type = null;
+  Type type = null
 
   // The member that this symbol re-parameterizes. The type of a member in a
   // derived type may depend on type substitution on that member's type in a
@@ -13,26 +13,26 @@ class Member {
   //   class Foo<A, B> { A foo(B bar) {} }
   //   class Bar<T> : Foo<int, T> {}
   //   class Baz : Bar<bool> {}
-  //   int baz = Baz().foo(false);
+  //   int baz = Baz().foo(false)
   //
   // In that case, parameterizedType stores the type environment to be applied
   // to the type of the dependency after being resolved.
-  Member dependency = null;
-  Type parameterizedType = null;
+  Member dependency = null
+  Type parameterizedType = null
 }
 
 class MemberComparison : Comparison<Member> {
-  static final var INSTANCE = MemberComparison();
+  static final var INSTANCE = MemberComparison()
 
   override int compare(Member left, Member right) {
-    return left.symbol.uniqueID - right.symbol.uniqueID;
+    return left.symbol.uniqueID - right.symbol.uniqueID
   }
 }
 
 class MemberRangeComparison : Comparison<Member> {
-  static final var INSTANCE = MemberRangeComparison();
+  static final var INSTANCE = MemberRangeComparison()
 
   override int compare(Member left, Member right) {
-    return left.symbol.node.range.start - right.symbol.node.range.start;
+    return left.symbol.node.range.start - right.symbol.node.range.start
   }
 }

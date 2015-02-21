@@ -135,99 +135,99 @@ enum NodeKind {
 
 in NodeKind {
   bool isStatement() {
-    return this >= VARIABLE_CLUSTER && this <= PREPROCESSOR_IF;
+    return this >= VARIABLE_CLUSTER && this <= PREPROCESSOR_IF
   }
 
   bool isNamedBlockDeclaration() {
-    return this >= NAMESPACE && this <= EXTENSION;
+    return this >= NAMESPACE && this <= EXTENSION
   }
 
   bool isNamedDeclaration() {
-    return this >= NAMESPACE && this <= ALIAS;
+    return this >= NAMESPACE && this <= ALIAS
   }
 
   bool isEnum() {
-    return this >= ENUM && this <= ENUM_FLAGS;
+    return this >= ENUM && this <= ENUM_FLAGS
   }
 
   bool isObject() {
-    return this >= CLASS && this <= INTERFACE;
+    return this >= CLASS && this <= INTERFACE
   }
 
   bool isFunction() {
-    return this >= CONSTRUCTOR && this <= FUNCTION;
+    return this >= CONSTRUCTOR && this <= FUNCTION
   }
 
   bool isAssert() {
-    return this >= ASSERT && this <= ASSERT_CONST;
+    return this >= ASSERT && this <= ASSERT_CONST
   }
 
   bool isExpression() {
-    return this >= NAME && this <= ASSIGN_INDEX;
+    return this >= NAME && this <= ASSIGN_INDEX
   }
 
   bool isConstant() {
-    return this >= NULL && this <= STRING;
+    return this >= NULL && this <= STRING
   }
 
   bool isCall() {
-    return this >= CALL && this <= SUPER_CALL;
+    return this >= CALL && this <= SUPER_CALL
   }
 
   bool isUnaryOperator() {
-    return this >= NOT && this <= POSTFIX_REFERENCE;
+    return this >= NOT && this <= POSTFIX_REFERENCE
   }
 
   bool isUnaryTypeOperator() {
-    return this >= POSTFIX_DEREFERENCE && this <= POSTFIX_REFERENCE;
+    return this >= POSTFIX_DEREFERENCE && this <= POSTFIX_REFERENCE
   }
 
   bool isUnaryStorageOperator() {
-    return this >= PREFIX_INCREMENT && this <= POSTFIX_DECREMENT;
+    return this >= PREFIX_INCREMENT && this <= POSTFIX_DECREMENT
   }
 
   bool isBinaryOperator() {
-    return this >= ADD && this <= ASSIGN_SHIFT_RIGHT;
+    return this >= ADD && this <= ASSIGN_SHIFT_RIGHT
   }
 
   bool isBinaryStorageOperator() {
-    return this >= ASSIGN && this <= ASSIGN_SHIFT_RIGHT;
+    return this >= ASSIGN && this <= ASSIGN_SHIFT_RIGHT
   }
 
   bool isBinaryBitwiseStorageOperator() {
-    return this >= ASSIGN_BITWISE_AND && this <= ASSIGN_SHIFT_RIGHT;
+    return this >= ASSIGN_BITWISE_AND && this <= ASSIGN_SHIFT_RIGHT
   }
 
   bool isTernaryOperator() {
-    return this == ASSIGN_INDEX;
+    return this == ASSIGN_INDEX
   }
 
   bool isCast() {
-    return this >= CAST && this <= IMPLICIT_CAST;
+    return this >= CAST && this <= IMPLICIT_CAST
   }
 
   bool isReal() {
-    return this >= FLOAT && this <= DOUBLE;
+    return this >= FLOAT && this <= DOUBLE
   }
 
   bool isJump() {
-    return this >= RETURN && this <= CONTINUE;
+    return this >= RETURN && this <= CONTINUE
   }
 
   bool isDot() {
-    return this >= DOT && this <= DOT_COLON;
+    return this >= DOT && this <= DOT_COLON
   }
 
   bool isLoop() {
-    return this >= FOR && this <= DO_WHILE;
+    return this >= FOR && this <= DO_WHILE
   }
 
   bool isStorage() {
-    return this == NAME || this == DOT;
+    return this == NAME || this == DOT
   }
 
   string prettyPrint() {
-    return toString().toLowerCase().replaceAll("_", "-");
+    return toString().toLowerCase().replaceAll("_", "-")
   }
 }
 
@@ -237,96 +237,96 @@ enum flags NodeFlags {
 }
 
 class Node {
-  Range range = .EMPTY;
-  NodeKind kind;
-  Node parent = null;
-  Node sibling = null; // Adjacent declarations with the same name
-  List<Node> children = null;
-  Type type = null;
-  Scope scope = null; // The scope that this node introduces, if any
-  Symbol symbol = null;
-  Content content = null;
-  NodeFlags flags = 0;
+  Range range = .EMPTY
+  NodeKind kind
+  Node parent = null
+  Node sibling = null // Adjacent declarations with the same name
+  List<Node> children = null
+  Type type = null
+  Scope scope = null // The scope that this node introduces, if any
+  Symbol symbol = null
+  Content content = null
+  NodeFlags flags = 0
 
   bool hasChildren() {
-    return children != null && children.size() > 0;
+    return children != null && children.size() > 0
   }
 
   bool needsPreprocessor() {
-    assert kind == .FILE;
-    return (flags & .NEEDS_PREPROCESSOR) != 0;
+    assert kind == .FILE
+    return (flags & .NEEDS_PREPROCESSOR) != 0
   }
 
   bool isLibraryFile() {
-    assert kind == .FILE;
-    return (flags & .IS_LIBRARY_FILE) != 0;
+    assert kind == .FILE
+    return (flags & .IS_LIBRARY_FILE) != 0
   }
 
   bool isLastChild() {
-    return parent.lastChild() == this;
+    return parent.lastChild() == this
   }
 
   Node lastChild() {
-    return children.last();
+    return children.last()
   }
 
   int indexInParent() {
-    assert parent != null;
-    return parent.children.indexOf(this);
+    assert parent != null
+    return parent.children.indexOf(this)
   }
 
   void prependChild(Node node) {
-    insertChild(0, node);
+    insertChild(0, node)
   }
 
   void prependChildren(List<Node> nodes) {
-    insertChildren(0, nodes);
+    insertChildren(0, nodes)
   }
 
   void appendChild(Node node) {
-    insertChild(children == null ? 0 : children.size(), node);
+    insertChild(children == null ? 0 : children.size(), node)
   }
 
   void appendChildren(List<Node> nodes) {
-    insertChildren(children == null ? 0 : children.size(), nodes);
+    insertChildren(children == null ? 0 : children.size(), nodes)
   }
 
   void insertSiblingBefore(Node node) {
-    parent.insertChild(indexInParent(), node);
+    parent.insertChild(indexInParent(), node)
   }
 
   void insertSiblingAfter(Node node) {
-    parent.insertChild(indexInParent() + 1, node);
+    parent.insertChild(indexInParent() + 1, node)
   }
 
   Node removeChildAtIndex(int index) {
-    assert index >= 0 && index < children.size();
-    var child = children[index];
+    assert index >= 0 && index < children.size()
+    var child = children[index]
     if (child != null) {
-      child.parent = null;
+      child.parent = null
     }
-    children.removeAt(index);
-    return child;
+    children.removeAt(index)
+    return child
   }
 
   Node remove() {
     if (parent != null) {
-      parent.removeChildAtIndex(indexInParent());
+      parent.removeChildAtIndex(indexInParent())
     }
-    return this;
+    return this
   }
 
   List<Node> removeChildren() {
-    if (children == null) return [];
-    var result = children;
+    if (children == null) return []
+    var result = children
     for (var i = 0; i < children.size(); i++) {
-      var child = children[i];
+      var child = children[i]
       if (child != null) {
-        child.parent = null;
+        child.parent = null
       }
     }
-    children = null;
-    return result;
+    children = null
+    return result
   }
 
   // Change this node in place to become the provided node. The parent node is
@@ -334,128 +334,128 @@ class Node {
   // need to report the updated node reference to the caller since the reference
   // does not change.
   void become(Node node) {
-    kind = node.kind;
-    range = node.range;
-    sibling = node.sibling;
-    removeChildren();
-    withChildren(node.removeChildren());
-    type = node.type;
-    scope = node.scope;
-    symbol = node.symbol;
-    content = node.content;
-    flags = node.flags;
+    kind = node.kind
+    range = node.range
+    sibling = node.sibling
+    removeChildren()
+    withChildren(node.removeChildren())
+    type = node.type
+    scope = node.scope
+    symbol = node.symbol
+    content = node.content
+    flags = node.flags
   }
 
   Node replaceWith(Node node) {
-    parent.replaceChild(indexInParent(), node);
-    return this;
+    parent.replaceChild(indexInParent(), node)
+    return this
   }
 
   void swapWith(Node node) {
-    Node parentA = parent;
-    Node parentB = node.parent;
-    int indexA = indexInParent();
-    int indexB = node.indexInParent();
-    parentA.children[indexA] = node;
-    parentB.children[indexB] = this;
-    parent = parentB;
-    node.parent = parentA;
+    Node parentA = parent
+    Node parentB = node.parent
+    int indexA = indexInParent()
+    int indexB = node.indexInParent()
+    parentA.children[indexA] = node
+    parentB.children[indexB] = this
+    parent = parentB
+    node.parent = parentA
   }
 
   Node replaceWithNodes(List<Node> nodes) {
-    var index = indexInParent();
+    var index = indexInParent()
     for (var i = 0; i < nodes.size(); i++) {
-      parent.insertChild(index + i + 1, nodes[i]);
+      parent.insertChild(index + i + 1, nodes[i])
     }
-    parent.removeChildAtIndex(index);
-    return this;
+    parent.removeChildAtIndex(index)
+    return this
   }
 
   void replaceChild(int index, Node node) {
-    assert children != null;
-    assert index >= 0 && index <= children.size();
-    updateParent(node, this);
-    var old = children[index];
-    if (old != null) old.parent = null;
-    children[index] = node;
+    assert children != null
+    assert index >= 0 && index <= children.size()
+    updateParent(node, this)
+    var old = children[index]
+    if (old != null) old.parent = null
+    children[index] = node
   }
 
   void insertChild(int index, Node node) {
-    if (children == null) children = [];
-    assert index >= 0 && index <= children.size();
-    updateParent(node, this);
-    children.insert(index, node);
+    if (children == null) children = []
+    assert index >= 0 && index <= children.size()
+    updateParent(node, this)
+    children.insert(index, node)
   }
 
   void insertChildren(int index, List<Node> nodes) {
-    if (children == null) children = [];
-    assert index >= 0 && index <= children.size();
+    if (children == null) children = []
+    assert index >= 0 && index <= children.size()
     for (var i = 0; i < nodes.size(); i++) {
-      var node = nodes[i];
-      updateParent(node, this);
-      children.insert(index, node);
-      index++;
+      var node = nodes[i]
+      updateParent(node, this)
+      children.insert(index, node)
+      index++
     }
   }
 
   Node clone() {
-    var node = Node(kind);
-    node.range = range;
-    node.type = type;
-    node.symbol = symbol;
-    node.content = content;
-    node.flags = flags;
+    var node = Node(kind)
+    node.range = range
+    node.type = type
+    node.symbol = symbol
+    node.content = content
+    node.flags = flags
     if (children != null) {
-      node.children = [];
+      node.children = []
       for (var i = 0; i < children.size(); i++) {
-        var child = children[i];
-        node.appendChild(child != null ? child.clone() : null);
+        var child = children[i]
+        node.appendChild(child != null ? child.clone() : null)
       }
     }
-    return node;
+    return node
   }
 
   Node withRange(Range value) {
-    range = value;
-    return this;
+    range = value
+    return this
   }
 
   Node withType(Type value) {
-    type = value;
-    return this;
+    type = value
+    return this
   }
 
   Node withSymbol(Symbol value) {
-    symbol = value;
-    return this;
+    symbol = value
+    return this
   }
 
   Node withContent(Content value) {
-    content = value;
-    return this;
+    content = value
+    return this
   }
 
   Node withChildren(List<Node> nodes) {
-    assert children == null;
+    assert children == null
     for (var i = 0; i < nodes.size(); i++) {
-      updateParent(nodes[i], this);
+      updateParent(nodes[i], this)
     }
-    children = nodes;
-    return this;
+    children = nodes
+    return this
   }
 
   void appendToSiblingChain(Node node) {
-    var last = this;
+    var last = this
     while (last.sibling != null) {
-      last = last.sibling;
+      last = last.sibling
     }
-    last.sibling = node;
+    last.sibling = node
   }
 
   static void updateParent(Node node, Node parent) {
     if (node != null) {
-      assert node.parent == null;
-      node.parent = parent;
+      assert node.parent == null
+      node.parent = parent
     }
   }
 }

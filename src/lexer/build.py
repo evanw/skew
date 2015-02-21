@@ -29,69 +29,69 @@ enum TokenKind {
 // code) but it's fast and somewhat standard for compiler design. The code below
 // replaces a simple hand-coded lexer and offers much better performance.
 List<Token> tokenize(Log log, Source source) {
-  List<Token> tokens = [];
-  var text = source.contents;
-  var text_length = text.size();
+  List<Token> tokens = []
+  var text = source.contents
+  var text_length = text.size()
 
   // For backing up
-  var yy_last_accepting_state = 0;
-  var yy_last_accepting_cpos = 0;
+  var yy_last_accepting_state = 0
+  var yy_last_accepting_cpos = 0
 
   // The current character pointer
-  var yy_cp = 0;
+  var yy_cp = 0
 
   while (yy_cp < text_length) {
-    var yy_current_state = 1; // Reset the NFA
-    var yy_bp = yy_cp; // The pointer to the beginning of the token
+    var yy_current_state = 1 // Reset the NFA
+    var yy_bp = yy_cp // The pointer to the beginning of the token
 
     // Search for a match
     while (yy_current_state != %(jamstate)s) {
       if (yy_cp >= text_length) {
-        break; // This prevents syntax errors from causing infinite loops
+        break // This prevents syntax errors from causing infinite loops
       }
-      var c = text[yy_cp];
-      var index = c < 127 ? c : 127;
-      var yy_c = yy_ec[index];
+      var c = text[yy_cp]
+      var index = c < 127 ? c : 127
+      var yy_c = yy_ec[index]
       if (yy_accept[yy_current_state] != .YY_INVALID_ACTION) {
-        yy_last_accepting_state = yy_current_state;
-        yy_last_accepting_cpos = yy_cp;
+        yy_last_accepting_state = yy_current_state
+        yy_last_accepting_cpos = yy_cp
       }
       while (yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state) {
-        yy_current_state = yy_def[yy_current_state];
+        yy_current_state = yy_def[yy_current_state]
         if (yy_current_state >= %(yy_accept_length)s) {
-          yy_c = yy_meta[yy_c];
+          yy_c = yy_meta[yy_c]
         }
       }
-      yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
-      yy_cp++;
+      yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c]
+      yy_cp++
     }
 
     // Find the action
-    var yy_act = yy_accept[yy_current_state];
+    var yy_act = yy_accept[yy_current_state]
     while (yy_act == .YY_INVALID_ACTION) {
       // Have to back up
-      yy_cp = yy_last_accepting_cpos;
-      yy_current_state = yy_last_accepting_state;
-      yy_act = yy_accept[yy_current_state];
+      yy_cp = yy_last_accepting_cpos
+      yy_current_state = yy_last_accepting_state
+      yy_act = yy_accept[yy_current_state]
     }
 
     // Ignore whitespace
     if (yy_act == .WHITESPACE) {
-      continue;
+      continue
     }
 
     // This is the default action in flex, which is usually called ECHO
     else if (yy_act == .ERROR) {
-      var iterator = unicode.StringIterator.INSTANCE.reset(text, yy_bp);
-      iterator.nextCodePoint();
-      var range = Range(source, yy_bp, iterator.index);
-      syntaxErrorExtraData(log, range, range.toString());
-      break;
+      var iterator = unicode.StringIterator.INSTANCE.reset(text, yy_bp)
+      iterator.nextCodePoint()
+      var range = Range(source, yy_bp, iterator.index)
+      syntaxErrorExtraData(log, range, range.toString())
+      break
     }
 
     // Ignore END_OF_FILE since this loop must still perform the last action
     else if (yy_act != .END_OF_FILE) {
-      tokens.push(Token(Range(source, yy_bp, yy_cp), yy_act));
+      tokens.push(Token(Range(source, yy_bp, yy_cp), yy_act))
 
       // These tokens start with a ">" and may need to be split if we discover
       // that they should really be END_PARAMETER_LIST tokens. Save enough room
@@ -100,24 +100,24 @@ List<Token> tokenize(Log log, Source source) {
       // ">>" token may become ">" + ">", the ">=" token may become ">" + "=",
       // and the ">>=" token may become ">" + ">=" and so ">" + ">" + "=".
       if (yy_act == .ASSIGN_SHIFT_RIGHT || yy_act == .SHIFT_RIGHT || yy_act == .GREATER_THAN_OR_EQUAL) {
-        tokens.push(null);
+        tokens.push(null)
         if (yy_act == .ASSIGN_SHIFT_RIGHT) {
-          tokens.push(null);
+          tokens.push(null)
         }
       }
     }
   }
 
   // Every token stream ends in END_OF_FILE
-  tokens.push(Token(Range(source, text_length, text_length), .END_OF_FILE));
+  tokens.push(Token(Range(source, text_length, text_length), .END_OF_FILE))
 
   // Also return preprocessor token presence so the preprocessor can be avoided
-  return tokens;
+  return tokens
 }
 '''
 
 def create_table(result, name, type='var'):
-  return 'final %(type)s %(name)s = [%(entries)s];' % {
+  return 'final %(type)s %(name)s = [%(entries)s]' % {
     'type': type,
     'name': name,
     'entries': ', '.join('%s' % x for x in result[name]),

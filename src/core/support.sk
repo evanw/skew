@@ -1,250 +1,274 @@
-final string HEX = "0123456789ABCDEF";
+final string HEX = "0123456789ABCDEF"
 
 class UnionFind {
-  List<int> parents = [];
+  List<int> parents = []
 
   new(int count) {
     for (var i = 0; i < count; i++) {
-      parents.push(i);
+      parents.push(i)
     }
   }
 
   int allocate() {
-    var index = parents.size();
-    parents.push(index);
-    return index;
+    var index = parents.size()
+    parents.push(index)
+    return index
   }
 
   void union(int left, int right) {
-    parents[find(left)] = find(right);
+    parents[find(left)] = find(right)
   }
 
   int find(int index) {
-    assert index >= 0 && index < parents.size();
-    var parent = parents[index];
+    assert index >= 0 && index < parents.size()
+    var parent = parents[index]
     if (parent != index) {
-      parent = find(parent);
-      parents[index] = parent;
+      parent = find(parent)
+      parents[index] = parent
     }
-    return parent;
+    return parent
   }
 }
 
 bool canIncrement(int value) {
-  return value + 1 == ((double)value + 1);
+  return value + 1 == ((double)value + 1)
 }
 
 bool canDecrement(int value) {
-  return value - 1 == ((double)value - 1);
+  return value - 1 == ((double)value - 1)
 }
 
 int hashCombine(int left, int right) {
-  return left ^ right - 0x61c88647 + (left << 6) + (left >> 2);
+  return left ^ right - 0x61c88647 + (left << 6) + (left >> 2)
 }
 
 // Returns the log2(value) or -1 if log2(value) is not an integer
 int logBase2(int value) {
   if (value < 1 || (value & (value - 1)) != 0) {
-    return -1;
+    return -1
   }
-  var result = 0;
+  var result = 0
   while (value > 1) {
-    value >>= 1;
-    result++;
+    value >>= 1
+    result++
   }
-  return result;
+  return result
 }
 
 int parseHexCharacter(int c) {
-  if (c >= '0' && c <= '9') return c - '0';
-  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-  return -1;
+  if (c >= '0' && c <= '9') return c - '0'
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10
+  return -1
 }
 
 string doubleToStringWithDot(double value) {
-  var text = value.toString();
+  var text = value.toString()
 
   // Make sure the generated code treats this number as a double
   if (!("." in text)) {
-    var e = math.imax(text.indexOf("e"), text.indexOf("E"));
+    var e = math.imax(text.indexOf("e"), text.indexOf("E"))
     if (e == -1) {
-      text += ".0";
+      text += ".0"
     } else {
-      text = text.slice(0, e) + ".0" + text.slice(e, text.size());
+      text = text.slice(0, e) + ".0" + text.slice(e, text.size())
     }
   }
 
-  return text;
+  return text
 }
 
 StringContent parseStringLiteral(Log log, Range range, string text) {
-  assert text.size() >= 2;
-  assert text[0] == '"' || text[0] == '\'';
-  assert text[text.size() - 1] == '"' || text[text.size() - 1] == '\'';
-  var isValidString = true;
-  var builder = StringBuilder();
-  var start = 1; // Append long runs of unescaped characters using a single slice() for speed
-  var i = 1;
+  assert text.size() >= 2
+  assert text[0] == '"' || text[0] == '\''
+  assert text[text.size() - 1] == '"' || text[text.size() - 1] == '\''
+  var isValidString = true
+  var builder = StringBuilder()
+  var start = 1 // Append long runs of unescaped characters using a single slice() for speed
+  var i = 1
   while (i + 1 < text.size()) {
-    var c = text[i];
-    i++;
+    var c = text[i]
+    i++
     if (c == '\\') {
-      var escape = i - 1;
-      builder.append(text.slice(start, escape));
+      var escape = i - 1
+      builder.append(text.slice(start, escape))
       if (i + 1 < text.size()) {
-        c = text[i]; i++;
-        if (c == 'n') { builder.append("\n"); start = i; }
-        else if (c == 'r') { builder.append("\r"); start = i; }
-        else if (c == 't') { builder.append("\t"); start = i; }
-        else if (c == 'e') { builder.append("\e"); start = i; }
-        else if (c == '0') { builder.append("\0"); start = i; }
-        else if (c == '\\' || c == '"' || c == '\'') { builder.append(string.fromCodeUnit(c)); start = i; }
+        c = text[i]
+        i++
+        if (c == 'n') {
+          builder.append("\n")
+          start = i
+        }
+        else if (c == 'r') {
+          builder.append("\r")
+          start = i
+        }
+        else if (c == 't') {
+          builder.append("\t")
+          start = i
+        }
+        else if (c == 'e') {
+          builder.append("\e")
+          start = i
+        }
+        else if (c == '0') {
+          builder.append("\0")
+          start = i
+        }
+        else if (c == '\\' || c == '"' || c == '\'') {
+          builder.append(string.fromCodeUnit(c))
+          start = i
+        }
         else if (c == 'x') {
           if (i + 1 < text.size()) {
-            var c0 = parseHexCharacter(text[i]); i++;
+            var c0 = parseHexCharacter(text[i])
+            i++
             if (i + 1 < text.size()) {
-              var c1 = parseHexCharacter(text[i]); i++;
-              if (c0 != -1 && c1 != -1) { builder.append(string.fromCodeUnit(c0 << 4 | c1)); start = i; }
+              var c1 = parseHexCharacter(text[i])
+              i++
+              if (c0 != -1 && c1 != -1) {
+                builder.append(string.fromCodeUnit(c0 << 4 | c1))
+                start = i
+              }
             }
           }
         }
       }
       if (start < i) {
-        syntaxErrorInvalidEscapeSequence(log, Range(range.source, range.start + escape, range.start + i), text.slice(escape, i));
-        isValidString = false;
+        syntaxErrorInvalidEscapeSequence(log, Range(range.source, range.start + escape, range.start + i), text.slice(escape, i))
+        isValidString = false
       }
     }
   }
-  builder.append(text.slice(start, i));
-  return isValidString ? StringContent(builder.toString()) : null;
+  builder.append(text.slice(start, i))
+  return isValidString ? StringContent(builder.toString()) : null
 }
 
 string quoteString(string text, int quote) {
-  var builder = StringBuilder();
-  var quoteString = string.fromCodeUnit(quote);
-  var escaped = "";
-  var start = 0; // Append long runs of unescaped characters using a single slice() for speed
-  int i;
-  builder.append(quoteString);
+  var builder = StringBuilder()
+  var quoteString = string.fromCodeUnit(quote)
+  var escaped = ""
+  var start = 0 // Append long runs of unescaped characters using a single slice() for speed
+  int i
+  builder.append(quoteString)
   for (i = 0; i < text.size(); i++) {
-    var c = text[i];
-    if (c == quote) escaped = "\\" + quoteString;
-    else if (c == '\n') escaped = "\\n";
-    else if (c == '\r') escaped = "\\r";
-    else if (c == '\t') escaped = "\\t";
-    else if (c == '\0') escaped = "\\0";
-    else if (c == '\\') escaped = "\\\\";
-    else if (c < ' ') escaped = "\\x" + HEX.sliceCodeUnit(c >> 4) + HEX.sliceCodeUnit(c & 15);
-    else continue;
-    builder.append(text.slice(start, i));
-    builder.append(escaped);
-    start = i + 1;
+    var c = text[i]
+    if (c == quote) escaped = "\\" + quoteString
+    else if (c == '\n') escaped = "\\n"
+    else if (c == '\r') escaped = "\\r"
+    else if (c == '\t') escaped = "\\t"
+    else if (c == '\0') escaped = "\\0"
+    else if (c == '\\') escaped = "\\\\"
+    else if (c < ' ') escaped = "\\x" + HEX.sliceCodeUnit(c >> 4) + HEX.sliceCodeUnit(c & 15)
+    else continue
+    builder.append(text.slice(start, i))
+    builder.append(escaped)
+    start = i + 1
   }
-  builder.append(text.slice(start, i));
-  builder.append(quoteString);
-  return builder.toString();
+  builder.append(text.slice(start, i))
+  builder.append(quoteString)
+  return builder.toString()
 }
 
 namespace prettyPrint {
   string plural(int value) {
-    return value == 1 ? "" : "s";
+    return value == 1 ? "" : "s"
   }
 
   string join(List<string> parts, string trailing) {
     if (parts.size() < 3) {
-      return (" " + trailing + " ").join(parts);
+      return (" " + trailing + " ").join(parts)
     }
-    var text = "";
+    var text = ""
     for (var i = 0; i < parts.size(); i++) {
       if (i != 0) {
-        text += ", ";
+        text += ", "
         if (i + 1 == parts.size()) {
-          text += trailing + " ";
+          text += trailing + " "
         }
       }
-      text += parts[i];
+      text += parts[i]
     }
-    return text;
+    return text
   }
 
   List<string> wrapWords(string text, int width) {
     // An invalid length means wrapping is disabled
     if (width < 1) {
-      return [text];
+      return [text]
     }
 
-    var words = text.split(" ");
-    List<string> lines = [];
-    var line = "";
+    var words = text.split(" ")
+    List<string> lines = []
+    var line = ""
 
     // Run the word wrapping algorithm
     for (var i = 0; i < words.size(); i++) {
-      var word = words[i];
-      var lineLength = line.size();
-      var wordLength = word.size();
-      var estimatedLength = lineLength + 1 + wordLength;
+      var word = words[i]
+      var lineLength = line.size()
+      var wordLength = word.size()
+      var estimatedLength = lineLength + 1 + wordLength
 
       // Collapse adjacent spaces
       if (word == "") {
-        continue;
+        continue
       }
 
       // Start the line
       if (line == "") {
         while (word.size() > width) {
-          lines.push(word.slice(0, width));
-          word = word.slice(width, word.size());
+          lines.push(word.slice(0, width))
+          word = word.slice(width, word.size())
         }
-        line = word;
+        line = word
       }
 
       // Continue line
       else if (estimatedLength < width) {
-        line += " " + word;
+        line += " " + word
       }
 
       // Continue and wrap
       else if (estimatedLength == width) {
-        lines.push(line + " " + word);
-        line = "";
+        lines.push(line + " " + word)
+        line = ""
       }
 
       // Wrap and try again
       else {
-        lines.push(line);
-        line = "";
-        i--;
+        lines.push(line)
+        line = ""
+        i--
       }
     }
 
     // Don't add an empty trailing line unless there are no other lines
     if (line != "" || lines.size() == 0) {
-      lines.push(line);
+      lines.push(line)
     }
 
-    return lines;
+    return lines
   }
 }
 
 class SplitPath {
-  final string directory;
-  final string entry;
+  final string directory
+  final string entry
 }
 
 SplitPath splitPath(string path) {
-  var slashIndex = math.imax(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  var slashIndex = math.imax(path.lastIndexOf("/"), path.lastIndexOf("\\"))
   return slashIndex == -1
     ? SplitPath(".", path)
-    : SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1, path.size()));
+    : SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1, path.size()))
 }
 
 string joinPath(string directory, string entry) {
-  return directory + (OperatingSystem.current() == .WINDOWS ? "\\" : "/") + entry;
+  return directory + (OperatingSystem.current() == .WINDOWS ? "\\" : "/") + entry
 }
 
 string formatNumber(double number) {
-  return (math.round(number * 10) / 10).toString();
+  return (math.round(number * 10) / 10).toString()
 }
 
 enum ByteSize {
@@ -254,64 +278,64 @@ enum ByteSize {
 }
 
 string bytesToString(int bytes) {
-  if (bytes == 1) return "1 byte";
-  if (bytes < ByteSize.KB) return bytes + " bytes";
-  if (bytes < ByteSize.MB) return formatNumber(bytes / (double)ByteSize.KB) + "kb";
-  if (bytes < ByteSize.GB) return formatNumber(bytes / (double)ByteSize.MB) + "mb";
-  return formatNumber(bytes / (double)ByteSize.GB) + "gb";
+  if (bytes == 1) return "1 byte"
+  if (bytes < ByteSize.KB) return bytes + " bytes"
+  if (bytes < ByteSize.MB) return formatNumber(bytes / (double)ByteSize.KB) + "kb"
+  if (bytes < ByteSize.GB) return formatNumber(bytes / (double)ByteSize.MB) + "mb"
+  return formatNumber(bytes / (double)ByteSize.GB) + "gb"
 }
 
 namespace trace {
-  const var GENERICS = false;
-  var spaces = "";
+  const var GENERICS = false
+  var spaces = ""
 
-  void indent() { spaces += "  "; }
-  void dedent() { spaces = spaces.slice(2, spaces.size()); }
-  void log(string text) { terminal.print(spaces + text); }
+  void indent() { spaces += "  " }
+  void dedent() { spaces = spaces.slice(2, spaces.size()) }
+  void log(string text) { terminal.print(spaces + text) }
 }
 
 class StringComparison : Comparison<string> {
-  static final var INSTANCE = StringComparison();
+  static final var INSTANCE = StringComparison()
 
   override int compare(string a, string b) {
-    return (int)(a > b) - (int)(a < b);
+    return (int)(a > b) - (int)(a < b)
   }
 }
 
 string simpleQuote(string name) {
-  return "\"" + name + "\"";
+  return "\"" + name + "\""
 }
 
 List<string> simpleQuoteAll(List<string> names) {
-  List<string> quoted = [];
+  List<string> quoted = []
   for (var i = 0; i < names.size(); i++) {
-    quoted.push(simpleQuote(names[i]));
+    quoted.push(simpleQuote(names[i]))
   }
-  return quoted;
+  return quoted
 }
 
 string firstLineOf(string text) {
-  var index = text.indexOf("\n");
-  return index < 0 ? text : text.slice(0, index);
+  var index = text.indexOf("\n")
+  return index < 0 ? text : text.slice(0, index)
 }
 
 string typeToText(Type type) {
-  return "type \"" + type + "\"";
+  return "type \"" + type + "\""
 }
 
 string namesToText(List<string> names, string separator) {
-  return prettyPrint.join(simpleQuoteAll(names), separator);
+  return prettyPrint.join(simpleQuoteAll(names), separator)
 }
 
 string typesToText(List<Type> types, string separator) {
-  List<string> names = [];
+  List<string> names = []
   for (var i = 0; i < types.size(); i++) {
-    names.push(typeToText(types[i]));
+    names.push(typeToText(types[i]))
   }
-  return prettyPrint.join(names, separator);
+  return prettyPrint.join(names, separator)
 }
 
 string expectedCountText(string singular, int expected, int found, string because) {
   return "Expected " + expected + " " + singular + prettyPrint.plural(expected) +
-    because + " but found " + found + " " + singular + prettyPrint.plural(found);
+    because + " but found " + found + " " + singular + prettyPrint.plural(found)
 }

@@ -1,449 +1,449 @@
 void semanticWarningUnusedExpression(Log log, Range range) {
-  log.warning(range, "Unused expression");
+  log.warning(range, "Unused expression")
 }
 
 void semanticWarningDuplicateModifier(Log log, Range range, string modifier) {
-  log.warning(range, "Duplicate modifier " + simpleQuote(modifier));
+  log.warning(range, "Duplicate modifier " + simpleQuote(modifier))
 }
 
 void semanticErrorRedundantModifier(Log log, Range range, string modifier, string where) {
-  log.error(range, "Redundant modifier " + simpleQuote(modifier) + " " + where);
+  log.error(range, "Redundant modifier " + simpleQuote(modifier) + " " + where)
 }
 
 void semanticErrorUnexpectedModifier(Log log, Range range, string modifier, string where) {
-  log.error(range, "Cannot use the " + simpleQuote(modifier) + " modifier " + where);
+  log.error(range, "Cannot use the " + simpleQuote(modifier) + " modifier " + where)
 }
 
 void semanticErrorExpectedModifier(Log log, Range range, string modifier, string where) {
-  log.error(range, "Expected the " + simpleQuote(modifier) + " modifier " + where);
+  log.error(range, "Expected the " + simpleQuote(modifier) + " modifier " + where)
 }
 
 void semanticErrorDuplicateSymbol(Log log, Range range, string name, Range previous) {
-  log.error(range, simpleQuote(name) + " is already declared");
-  if (!previous.isEmpty()) log.note(previous, "The previous declaration is here");
+  log.error(range, simpleQuote(name) + " is already declared")
+  if (!previous.isEmpty()) log.note(previous, "The previous declaration is here")
 }
 
 void semanticErrorUnexpectedNode(Log log, Range range, NodeKind kind) {
-  log.error(range, "Unexpected " + kind);
+  log.error(range, "Unexpected " + kind)
 }
 
 void semanticErrorUnexpectedExpression(Log log, Range range, Type type) {
-  log.error(range, "Unexpected expression of " + typeToText(type));
+  log.error(range, "Unexpected expression of " + typeToText(type))
 }
 
 void semanticErrorUnexpectedType(Log log, Range range, Type type) {
-  log.error(range, "Unexpected " + typeToText(type));
+  log.error(range, "Unexpected " + typeToText(type))
 }
 
 void semanticErrorUndeclaredSymbol(Log log, Range range, string name) {
-  log.error(range, simpleQuote(name) + " is not declared");
+  log.error(range, simpleQuote(name) + " is not declared")
 }
 
 void semanticErrorUnknownMemberSymbol(Log log, Range range, string name, Type type) {
-  log.error(range, simpleQuote(name) + " is not declared on " + typeToText(type));
+  log.error(range, simpleQuote(name) + " is not declared on " + typeToText(type))
 }
 
 void semanticErrorBadDotToken(Log log, Range range) {
-  log.error(range, "Use the \".\" operator for member access");
+  log.error(range, "Use the \".\" operator for member access")
 }
 
 void semanticErrorExtensionMissingTarget(Log log, Range range, string name) {
-  log.error(range, "No type named " + simpleQuote(name) + " to extend");
+  log.error(range, "No type named " + simpleQuote(name) + " to extend")
 }
 
 void semanticErrorBadUsingValue(Log log, Range range) {
-  log.error(range, "Expected a type here");
+  log.error(range, "Expected a type here")
 }
 
 void semanticErrorBadUsing(Log log, Range range) {
-  log.error(range, "Expected a namespace here");
+  log.error(range, "Expected a namespace here")
 }
 
 void semanticErrorUnexpectedStatement(Log log, Range range) {
-  log.error(range, "Cannot use this statement here");
+  log.error(range, "Cannot use this statement here")
 }
 
 void semanticErrorCyclicDeclaration(Log log, Range range, string name) {
-  log.error(range, "Cyclic declaration of " + simpleQuote(name));
+  log.error(range, "Cyclic declaration of " + simpleQuote(name))
 }
 
 void semanticErrorUnexpectedThis(Log log, Range range, string name) {
-  log.error(range, "Cannot use " + simpleQuote(name) + " outside a class");
+  log.error(range, "Cannot use " + simpleQuote(name) + " outside a class")
 }
 
 void semanticErrorStaticThis(Log log, Range range, string name) {
-  log.error(range, "Cannot access " + simpleQuote(name) + " from a static context");
+  log.error(range, "Cannot access " + simpleQuote(name) + " from a static context")
 }
 
 void semanticErrorIncompatibleTypes(Log log, Range range, Type from, Type to, bool isCastAllowed) {
-  log.error(range, "Cannot convert from " + typeToText(from) + " to " + typeToText(to) + (isCastAllowed ? " without a cast" : ""));
+  log.error(range, "Cannot convert from " + typeToText(from) + " to " + typeToText(to) + (isCastAllowed ? " without a cast" : ""))
 }
 
 void semanticErrorNoCommonType(Log log, Range range, Type left, Type right) {
-  log.error(range, "No common type for " + typeToText(left) + " and " + typeToText(right));
+  log.error(range, "No common type for " + typeToText(left) + " and " + typeToText(right))
 }
 
 void semanticErrorBadType(Log log, Range range, Type type) {
-  log.error(range, "Cannot use " + typeToText(type) + " here");
+  log.error(range, "Cannot use " + typeToText(type) + " here")
 }
 
 void semanticErrorMemberUnexpectedStatic(Log log, Range range, string name) {
-  log.error(range, "Cannot access static member " + simpleQuote(name) + " from an instance context");
+  log.error(range, "Cannot access static member " + simpleQuote(name) + " from an instance context")
 }
 
 void semanticErrorMemberUnexpectedInstance(Log log, Range range, string name) {
-  log.error(range, "Cannot access instance member " + simpleQuote(name) + " from a static context");
+  log.error(range, "Cannot access instance member " + simpleQuote(name) + " from a static context")
 }
 
 void semanticErrorMissingTypeContext(Log log, Range range) {
-  log.error(range, "Expression has no type context here");
+  log.error(range, "Expression has no type context here")
 }
 
 void semanticErrorBadTypeParameterBound(Log log, Range range, Type type) {
-  log.error(range, "Cannot use " + typeToText(type) + " as a type parameter bound");
+  log.error(range, "Cannot use " + typeToText(type) + " as a type parameter bound")
 }
 
 void semanticErrorUninitializedExtensionVariable(Log log, Range range) {
-  log.error(range, "Instance variables in extension blocks must be initialized");
+  log.error(range, "Instance variables in extension blocks must be initialized")
 }
 
 void semanticErrorNonPureGlobalVariable(Log log, Range range) {
-  log.error(range, "Global variables must be initialized to a pure expression (one without side effects)");
+  log.error(range, "Global variables must be initialized to a pure expression (one without side effects)")
 }
 
 void semanticErrorNonConstantConstValue(Log log, Range range) {
-  log.error(range, "Variables with the \"const\" modifier must be initialized to a compile-time constant");
+  log.error(range, "Variables with the \"const\" modifier must be initialized to a compile-time constant")
 }
 
 void semanticErrorNonConstantAnnotationString(Log log, Range range) {
-  log.error(range, "This value must be a compile-time constant string");
+  log.error(range, "This value must be a compile-time constant string")
 }
 
 void semanticErrorConstMissingValue(Log log, Range range) {
-  log.error(range, "Variables with the \"const\" modifier must be initialized");
+  log.error(range, "Variables with the \"const\" modifier must be initialized")
 }
 
 void semanticErrorVarMissingValue(Log log, Range range) {
-  log.error(range, "Implicitly typed variables must be initialized");
+  log.error(range, "Implicitly typed variables must be initialized")
 }
 
 void semanticErrorVarBadType(Log log, Range range, Type type) {
-  log.error(range, "Implicitly typed variables cannot be of " + typeToText(type));
+  log.error(range, "Implicitly typed variables cannot be of " + typeToText(type))
 }
 
 void semanticErrorInvalidCall(Log log, Range range, Type type) {
-  log.error(range, "Cannot call " + typeToText(type));
+  log.error(range, "Cannot call " + typeToText(type))
 }
 
 void semanticErrorParameterCount(Log log, Range range, int expected, int found) {
-  log.error(range, expectedCountText("type parameter", expected, found, ""));
+  log.error(range, expectedCountText("type parameter", expected, found, ""))
 }
 
 void semanticErrorArgumentCount(Log log, Range range, int expected, int found) {
-  log.error(range, expectedCountText("argument", expected, found, ""));
+  log.error(range, expectedCountText("argument", expected, found, ""))
 }
 
 void semanticErrorExpectedReturnValue(Log log, Range range, Type type) {
-  log.error(range, "Return statement must return " + typeToText(type));
+  log.error(range, "Return statement must return " + typeToText(type))
 }
 
 void semanticErrorNonConstantCaseValue(Log log, Range range) {
-  log.error(range, "Non-constant case value");
+  log.error(range, "Non-constant case value")
 }
 
 void semanticErrorBadDefaultCase(Log log, Range range) {
-  log.error(range, "Only the last case can be a default case");
+  log.error(range, "Only the last case can be a default case")
 }
 
 void semanticErrorNonIntegerSwitch(Log log, Range range, Type type) {
-  log.error(range, "Expected an integer type but got " + typeToText(type));
+  log.error(range, "Expected an integer type but got " + typeToText(type))
 }
 
 void semanticErrorDuplicateCase(Log log, Range range, Range previous) {
-  log.error(range, "Duplicate case value");
-  if (!previous.isEmpty()) log.note(previous, "The first occurrence is here");
+  log.error(range, "Duplicate case value")
+  if (!previous.isEmpty()) log.note(previous, "The first occurrence is here")
 }
 
 void semanticErrorUnconstructableType(Log log, Range range, Type type) {
-  log.error(range, "Cannot construct " + typeToText(type));
+  log.error(range, "Cannot construct " + typeToText(type))
 }
 
 void semanticErrorAbstractConstructorInitializer(Log log, Range range) {
-  log.error(range, "An abstract constructor must not have initializer list");
+  log.error(range, "An abstract constructor must not have initializer list")
 }
 
 void semanticErrorAbstractNew(Log log, Range range, Type type, Range reason, string name) {
-  log.error(range, "Cannot construct abstract " + typeToText(type));
-  if (!reason.isEmpty()) log.note(reason, "The " + typeToText(type) + " is abstract due to member " + simpleQuote(name));
+  log.error(range, "Cannot construct abstract " + typeToText(type))
+  if (!reason.isEmpty()) log.note(reason, "The " + typeToText(type) + " is abstract due to member " + simpleQuote(name))
 }
 
 void semanticErrorUnexpectedBaseType(Log log, Range range, string what) {
-  log.error(range, what + " cannot inherit from another type");
+  log.error(range, what + " cannot inherit from another type")
 }
 
 void semanticErrorClassBaseNotFirst(Log log, Range range, Type type) {
-  log.error(range, "Base " + typeToText(type) + " must come first in a class declaration");
+  log.error(range, "Base " + typeToText(type) + " must come first in a class declaration")
 }
 
 void semanticErrorBadBaseType(Log log, Range range, Type type) {
-  log.error(range, "Invalid base " + typeToText(type));
+  log.error(range, "Invalid base " + typeToText(type))
 }
 
 void semanticErrorDuplicateBaseType(Log log, Range range, Type type) {
-  log.error(range, "Duplicate base " + typeToText(type));
+  log.error(range, "Duplicate base " + typeToText(type))
 }
 
 void semanticErrorAmbiguousSymbol(Log log, Range range, string name, List<string> names) {
-  log.error(range, "Reference to " + simpleQuote(name) + " is ambiguous, could be " + namesToText(names, "or"));
+  log.error(range, "Reference to " + simpleQuote(name) + " is ambiguous, could be " + namesToText(names, "or"))
 }
 
 void semanticErrorCannotMerge(Log log, Range range, string name, List<string> names) {
-  log.error(range, "Cannot merge " + namesToText(names, "and") + " for " + simpleQuote(name));
+  log.error(range, "Cannot merge " + namesToText(names, "and") + " for " + simpleQuote(name))
 }
 
 void semanticErrorAmbiguousMergedType(Log log, Range range, string name, List<Type> types) {
-  log.error(range, "Member " + simpleQuote(name) + " has an ambiguous inherited type, could be " + typesToText(types, "or"));
+  log.error(range, "Member " + simpleQuote(name) + " has an ambiguous inherited type, could be " + typesToText(types, "or"))
 }
 
 void semanticErrorAmbiguousPurity(Log log, Range range, string name) {
-  log.error(range, "Member " + simpleQuote(name) + " has an ambiguous inherited purity");
+  log.error(range, "Member " + simpleQuote(name) + " has an ambiguous inherited purity")
 }
 
 void semanticErrorBadOverride(Log log, Range range, string name, Type base, Range overridden) {
-  log.error(range, simpleQuote(name) + " overrides another declaration with the same name in base " + typeToText(base));
-  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
+  log.error(range, simpleQuote(name) + " overrides another declaration with the same name in base " + typeToText(base))
+  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here")
 }
 
 void semanticErrorOverrideDifferentTypes(Log log, Range range, string name, Type base, Type derived, Range overridden) {
   log.error(range, simpleQuote(name) + " must have the same signature as the function it overrides (expected " +
-    typeToText(base) + " but found " + typeToText(derived) + ")");
-  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
+    typeToText(base) + " but found " + typeToText(derived) + ")")
+  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here")
 }
 
 void semanticErrorModifierMissingOverride(Log log, Range range, string name, Range overridden) {
-  log.error(range, simpleQuote(name) + " overrides another symbol with the same name but is missing the \"override\" modifier");
-  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
+  log.error(range, simpleQuote(name) + " overrides another symbol with the same name but is missing the \"override\" modifier")
+  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here")
 }
 
 void semanticErrorCannotOverrideNonVirtual(Log log, Range range, string name, Range overridden) {
-  log.error(range, simpleQuote(name) + " cannot override a non-virtual function");
-  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
+  log.error(range, simpleQuote(name) + " cannot override a non-virtual function")
+  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here")
 }
 
 void semanticErrorOverridePurityMismatch(Log log, Range range, string name, Range overridden) {
-  log.error(range, simpleQuote(name) + " overrides another symbol with a different purity");
-  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here");
+  log.error(range, simpleQuote(name) + " overrides another symbol with a different purity")
+  if (!overridden.isEmpty()) log.note(overridden, "The overridden declaration is here")
 }
 
 void semanticErrorBadIntegerConstant(Log log, Range range, Type type) {
-  log.error(range, "Expected integer constant but found expression of " + typeToText(type));
+  log.error(range, "Expected integer constant but found expression of " + typeToText(type))
 }
 
 void semanticErrorBadStorage(Log log, Range range) {
-  log.error(range, "Cannot store to this location");
+  log.error(range, "Cannot store to this location")
 }
 
 void semanticErrorStorageToProtectedSymbol(Log log, Range range, string modifier) {
-  log.error(range, "Cannot store to a symbol marked as " + simpleQuote(modifier));
+  log.error(range, "Cannot store to a symbol marked as " + simpleQuote(modifier))
 }
 
 void semanticErrorUnparameterizedType(Log log, Range range, Type type) {
-  log.error(range, "Cannot use unparameterized " + typeToText(type));
+  log.error(range, "Cannot use unparameterized " + typeToText(type))
 }
 
 void semanticErrorCannotParameterize(Log log, Range range, Type type) {
   log.error(range, "Cannot parameterize " + typeToText(type) + (
-    type.hasParameters() ? " because it is already parameterized" : " because it has no type parameters"));
+    type.hasParameters() ? " because it is already parameterized" : " because it has no type parameters"))
 }
 
 void semanticErrorBadSuperInitializer(Log log, Range range) {
-  log.error(range, "No base constructor to call");
+  log.error(range, "No base constructor to call")
 }
 
 void semanticErrorMissingSuperInitializer(Log log, Range range) {
-  log.error(range, "Missing call to \"super\" in initializer list");
+  log.error(range, "Missing call to \"super\" in initializer list")
 }
 
 void semanticErrorStaticConstructorInitializerList(Log log, Range range) {
-  log.error(range, "Static constructors cannot have initializer lists");
+  log.error(range, "Static constructors cannot have initializer lists")
 }
 
 void semanticErrorAlreadyInitialized(Log log, Range range, string name, Range previous) {
-  log.error(range, simpleQuote(name) + " is already initialized");
-  if (!previous.isEmpty()) log.note(previous, "The previous initialization is here");
+  log.error(range, simpleQuote(name) + " is already initialized")
+  if (!previous.isEmpty()) log.note(previous, "The previous initialization is here")
 }
 
 void semanticErrorBadEnumToString(Log log, Range range, string name, string first, string second, int value) {
   log.error(range, "Cannot automatically generate \"toString\" for " + simpleQuote(name) + " because " +
-    simpleQuote(first) + " and " + simpleQuote(second) + " both have the same value " + value);
+    simpleQuote(first) + " and " + simpleQuote(second) + " both have the same value " + value)
 }
 
 void semanticErrorMissingReturn(Log log, Range range, string name, Type type) {
-  log.error(range, "All control paths for " + simpleQuote(name) + " must return a value of " + typeToText(type));
+  log.error(range, "All control paths for " + simpleQuote(name) + " must return a value of " + typeToText(type))
 }
 
 void semanticErrorBaseClassInExtension(Log log, Range range) {
-  log.error(range, "The base class must be set from the class declaration, not from an extension block");
+  log.error(range, "The base class must be set from the class declaration, not from an extension block")
 }
 
 void semanticErrorMustCallFunctionReference(Log log, Range range) {
-  log.error(range, "Raw function references are not allowed (call the function instead)");
+  log.error(range, "Raw function references are not allowed (call the function instead)")
 }
 
 void semanticErrorMissingToString(Log log, Range range, Type type) {
-  log.error(range, "Expression of " + typeToText(type) + " has no toString() member to call");
+  log.error(range, "Expression of " + typeToText(type) + " has no toString() member to call")
 }
 
 void semanticErrorToStringWrongType(Log log, Range range, Type expected, Type found, Range declaration) {
-  log.error(range, "Expected toString() to have " + typeToText(expected) + " but found " + typeToText(found));
-  if (!declaration.isEmpty()) log.note(declaration, "The declaration for toString() is here");
+  log.error(range, "Expected toString() to have " + typeToText(expected) + " but found " + typeToText(found))
+  if (!declaration.isEmpty()) log.note(declaration, "The declaration for toString() is here")
 }
 
 void semanticErrorCannotImplementInterfaceFunction(Log log, Range range) {
-  log.error(range, "Virtual interface functions cannot have an implementation");
+  log.error(range, "Virtual interface functions cannot have an implementation")
 }
 
 void semanticErrorCannotImplementImportedFunction(Log log, Range range) {
-  log.error(range, "Imported functions cannot have an implementation");
+  log.error(range, "Imported functions cannot have an implementation")
 }
 
 void semanticErrorFunctionMustBeAbstract(Log log, Range range) {
-  log.error(range, "Abstract functions must use the \"virtual\" modifier");
+  log.error(range, "Abstract functions must use the \"virtual\" modifier")
 }
 
 void semanticErrorUnimplementedConstructor(Log log, Range range) {
-  log.error(range, "Every constructor must have an implementation");
+  log.error(range, "Every constructor must have an implementation")
 }
 
 void semanticErrorUnimplementedFunction(Log log, Range range) {
-  log.error(range, "Use the \"import\" modifier to import functions");
+  log.error(range, "Use the \"import\" modifier to import functions")
 }
 
 void semanticErrorNonConstantAssert(Log log, Range range) {
-  log.error(range, "The argument to a compile-time assert must be a constant");
+  log.error(range, "The argument to a compile-time assert must be a constant")
 }
 
 void semanticErrorFalseAssert(Log log, Range range) {
-  log.error(range, "Assertion failed");
+  log.error(range, "Assertion failed")
 }
 
 void semanticErrorListLiteralCommonTypeInferenceFailed(Log log, Range range) {
-  log.error(range, "Cannot infer a common element type for this list literal");
+  log.error(range, "Cannot infer a common element type for this list literal")
 }
 
 void semanticErrorMapLiteralCommonTypeInferenceFailed(Log log, Range range, string where) {
-  log.error(range, "Cannot infer a common " + where + " type for this map literal");
+  log.error(range, "Cannot infer a common " + where + " type for this map literal")
 }
 
 void semanticErrorMapLiteralBadKeyType(Log log, Range range, Type type) {
-  log.error(range, "No support for maps with keys of " + typeToText(type));
+  log.error(range, "No support for maps with keys of " + typeToText(type))
 }
 
 void semanticErrorNoDefaultValue(Log log, Range range, Type type) {
-  log.error(range, "Cannot create a default value for " + typeToText(type));
+  log.error(range, "Cannot create a default value for " + typeToText(type))
 }
 
 void semanticErrorEnumValueOutOfRange(Log log, Range range, string name) {
-  log.error(range, "Assigned value for enum " + simpleQuote(name) + " cannot fit in an integer");
+  log.error(range, "Assigned value for enum " + simpleQuote(name) + " cannot fit in an integer")
 }
 
 void semanticErrorBadSuperCall(Log log, Range range) {
-  log.error(range, "Cannot use \"super\" here");
+  log.error(range, "Cannot use \"super\" here")
 }
 
 void semanticErrorAbstractSuperCall(Log log, Range range, Range overridden) {
-  log.error(range, "Cannot call abstract member in base class");
-  if (!overridden.isEmpty()) log.note(overridden, "The overridden member is here");
+  log.error(range, "Cannot call abstract member in base class")
+  if (!overridden.isEmpty()) log.note(overridden, "The overridden member is here")
 }
 
 void semanticErrorNestedStorageOperator(Log log, Range range) {
-  log.error(range, "Assignment expressions are not allowed inside other expressions");
+  log.error(range, "Assignment expressions are not allowed inside other expressions")
 }
 
 void semanticErrorForVariablesMustBeSameType(Log log, Range range, string firstName, Type firstType, string secondName, Type secondType) {
   log.error(range, "All for loop variables must have the same type (" +
     simpleQuote(firstName) + " has " + typeToText(firstType) + " but " +
-    simpleQuote(secondName) + " has " + typeToText(secondType) + ")");
+    simpleQuote(secondName) + " has " + typeToText(secondType) + ")")
 }
 
 void semanticErrorUnknownAnnotation(Log log, Range range, string name) {
-  log.error(range, "Unknown annotation " + simpleQuote(name));
+  log.error(range, "Unknown annotation " + simpleQuote(name))
 }
 
 void semanticErrorUnexpectedAnnotationArgumentCount(Log log, Range range, string name, int expected) {
   log.error(range, "The annotation " + simpleQuote(name) + (expected == 0 ? " cannot take arguments" :
-    " must take " + expected + " argument" + prettyPrint.plural(expected)));
+    " must take " + expected + " argument" + prettyPrint.plural(expected)))
 }
 
 void semanticErrorNoFileAccess(Log log, Range range) {
-  log.error(range, "The compiler does not have file access");
+  log.error(range, "The compiler does not have file access")
 }
 
 void semanticErrorCannotFindFile(Log log, Range range, string relativePath) {
-  log.error(range, "The file " + simpleQuote(relativePath) + " could not be found");
+  log.error(range, "The file " + simpleQuote(relativePath) + " could not be found")
 }
 
 void semanticErrorOperatorOnNonInstanceFunction(Log log, Range range) {
-  log.error(range, "Operator overloading only applies to instance functions");
+  log.error(range, "Operator overloading only applies to instance functions")
 }
 
 void semanticErrorNonGlobalEntryPoint(Log log, Range range) {
-  log.error(range, "The entry point must be a global function");
+  log.error(range, "The entry point must be a global function")
 }
 
 void semanticErrorNonTopLevelExternC(Log log, Range range) {
-  log.error(range, "An external C-style symbol must be a top-level function or variable");
+  log.error(range, "An external C-style symbol must be a top-level function or variable")
 }
 
 void semanticErrorOperatorArgumentCount(Log log, Range range, int expected, int found, string name) {
-  log.error(range, expectedCountText("argument", expected, found, " because of " + simpleQuote(name)));
+  log.error(range, expectedCountText("argument", expected, found, " because of " + simpleQuote(name)))
 }
 
 void semanticErrorNoMatchingOperator(Log log, Range range, NodeKind kind, List<Type> types) {
-  assert kind in operatorInfo;
+  assert kind in operatorInfo
   log.error(range, "No " + (types.size() == 1 ? "unary" : types.size() == 2 ? "binary" : "ternary") +
-    " operator \"" + operatorInfo[kind].text + "\" for " + typesToText(types, "and"));
+    " operator \"" + operatorInfo[kind].text + "\" for " + typesToText(types, "and"))
 }
 
 void semanticErrorAmbiguousOperator(Log log, Range range, NodeKind kind, List<string> names) {
-  assert kind in operatorInfo;
+  assert kind in operatorInfo
   log.error(range, (names.size() == 1 ? "Unary" : names.size() == 2 ? "Binary" : "Ternary") +
-    " operator \"" + operatorInfo[kind].text + "\" is ambiguous, could be " + namesToText(names, "or"));
+    " operator \"" + operatorInfo[kind].text + "\" is ambiguous, could be " + namesToText(names, "or"))
 }
 
 void semanticErrorDuplicateEntryPoint(Log log, Range range, Range previous) {
-  log.error(range, "Multiple entry points are declared");
-  log.note(previous, "The first entry point is here");
+  log.error(range, "Multiple entry points are declared")
+  log.note(previous, "The first entry point is here")
 }
 
 void semanticErrorInvalidEntryPointType(Log log, Range range, Type found, List<Type> expected) {
-  log.error(range, "Unexpected entry point " + typeToText(found) + ", expected " + typesToText(expected, "or"));
+  log.error(range, "Unexpected entry point " + typeToText(found) + ", expected " + typesToText(expected, "or"))
 }
 
 void semanticErrorEntryPointOnImportedSymbol(Log log, Range range) {
-  log.error(range, "The entry point cannot be imported");
+  log.error(range, "The entry point cannot be imported")
 }
 
 void semanticErrorDuplicateEmitAs(Log log, Range range) {
-  log.error(range, "Duplicate @EmitAs annotation");
+  log.error(range, "Duplicate @EmitAs annotation")
 }
 
 void semanticErrorPreprocessorInvalidValue(Log log, Range range) {
-  log.error(range, "Unexpected expression in preprocessor value");
+  log.error(range, "Unexpected expression in preprocessor value")
 }
 
 void semanticErrorPreprocessorInvalidSymbol(Log log, Range range, string name) {
-  log.error(range, simpleQuote(name) + " is not a valid preprocessor symbol");
+  log.error(range, simpleQuote(name) + " is not a valid preprocessor symbol")
 }
 
 void semanticErrorPreprocessorInvalidOverriddenDefine(Log log, Range range, string name) {
-  log.error(range, "Could not find a #define named " + simpleQuote(name) + " to override");
+  log.error(range, "Could not find a #define named " + simpleQuote(name) + " to override")
 }
 
 void semanticErrorPurityViolation(Log log, Range range) {
-  log.error(range, "Cannot use an impure value inside a pure function");
+  log.error(range, "Cannot use an impure value inside a pure function")
 }
 
 void semanticErrorAccessViolation(Log log, Range range, string level, string name) {
-  log.error(range, "Cannot access " + level + " symbol " + simpleQuote(name) + " here");
+  log.error(range, "Cannot access " + level + " symbol " + simpleQuote(name) + " here")
 }

@@ -6,176 +6,176 @@ enum OptionType {
 }
 
 class OptionData {
-  OptionParser parser;
-  OptionType type;
-  Option option;
-  string name;
-  string description;
+  OptionParser parser
+  OptionType type
+  Option option
+  string name
+  string description
 
   string nameText() {
-    return name + (type == .BOOL ? "" : type == .STRING_LIST ? ":___" : "=___");
+    return name + (type == .BOOL ? "" : type == .STRING_LIST ? ":___" : "=___")
   }
 
   OptionData aliases(List<string> names) {
     for (var i = 0; i < names.size(); i++) {
-      parser.map[names[i]] = this;
+      parser.map[names[i]] = this
     }
-    return this;
+    return this
   }
 }
 
 class OptionParser {
-  List<OptionData> options = [];
-  var map = StringMap<OptionData>();
-  var optionalArguments = IntMap<Node>();
-  List<Range> normalArguments = [];
-  Source source = null;
+  List<OptionData> options = []
+  var map = StringMap<OptionData>()
+  var optionalArguments = IntMap<Node>()
+  List<Range> normalArguments = []
+  Source source = null
 
   OptionData define(OptionType type, Option option, string name, string description) {
-    var data = OptionData(this, type, option, name, description);
-    map[name] = data;
-    options.push(data);
-    return data;
+    var data = OptionData(this, type, option, name, description)
+    map[name] = data
+    options.push(data)
+    return data
   }
 
   Node nodeForOption(Option option) {
-    return optionalArguments.getOrDefault(option, null);
+    return optionalArguments.getOrDefault(option, null)
   }
 
   bool boolForOption(Option option, bool defaultValue) {
-    var node = nodeForOption(option);
-    return node != null ? node.asBool() : defaultValue;
+    var node = nodeForOption(option)
+    return node != null ? node.asBool() : defaultValue
   }
 
   int intForOption(Option option, int defaultValue) {
-    var node = nodeForOption(option);
-    return node != null ? node.asInt() : defaultValue;
+    var node = nodeForOption(option)
+    return node != null ? node.asInt() : defaultValue
   }
 
   Range stringRangeForOption(Option option) {
-    var node = nodeForOption(option);
-    return node != null ? node.range : null;
+    var node = nodeForOption(option)
+    return node != null ? node.range : null
   }
 
   List<Range> stringRangeListForOption(Option option) {
-    var node = nodeForOption(option);
-    List<Range> ranges = [];
+    var node = nodeForOption(option)
+    List<Range> ranges = []
     if (node != null) {
       for (var i = 0; i < node.children.size(); i++) {
-        ranges.push(node.children[i].range);
+        ranges.push(node.children[i].range)
       }
     }
-    return ranges;
+    return ranges
   }
 
   void parse(Log log, List<string> arguments) {
-    source = Source("<arguments>", "");
-    List<Range> ranges = [];
+    source = Source("<arguments>", "")
+    List<Range> ranges = []
 
     // Create a source for the arguments to work with the log system. The
     // trailing space is needed to be able to point to the character after
     // the last argument without wrapping onto the next line.
     for (var i = 0; i < arguments.size(); i++) {
-      var argument = arguments[i];
-      var needsQuotes = " " in argument;
-      var start = source.contents.size() + (int)needsQuotes;
-      ranges.push(Range(source, start, start + argument.size()));
-      source.contents += needsQuotes ? "'" + argument + "' " : argument + " ";
+      var argument = arguments[i]
+      var needsQuotes = " " in argument
+      var start = source.contents.size() + (int)needsQuotes
+      ranges.push(Range(source, start, start + argument.size()))
+      source.contents += needsQuotes ? "'" + argument + "' " : argument + " "
     }
 
     // Parse each argument
     for (var i = 0; i < arguments.size(); i++) {
-      var argument = arguments[i];
-      var range = ranges[i];
+      var argument = arguments[i]
+      var range = ranges[i]
 
       // Track all normal arguments separately
       if (argument == "" || argument[0] != '-' && !(argument in map)) {
-        normalArguments.push(range);
-        continue;
+        normalArguments.push(range)
+        continue
       }
 
       // Parse a flag
-      var equals = argument.indexOf("=");
-      var colon = argument.indexOf(":");
-      var separator = equals >= 0 && (colon < 0 || equals < colon) ? equals : colon;
-      var name = separator >= 0 ? argument.slice(0, separator) : argument;
-      var data = map.getOrDefault(name, null);
+      var equals = argument.indexOf("=")
+      var colon = argument.indexOf(":")
+      var separator = equals >= 0 && (colon < 0 || equals < colon) ? equals : colon
+      var name = separator >= 0 ? argument.slice(0, separator) : argument
+      var data = map.getOrDefault(name, null)
 
       // Check that the flag exists
       if (data == null) {
-        commandLineErrorBadFlag(log, range.fromStart(name.size()), name);
-        continue;
+        commandLineErrorBadFlag(log, range.fromStart(name.size()), name)
+        continue
       }
 
       // Validate the flag data
-      var text = argument.slice(separator + 1, argument.size());
-      var separatorRange = separator < 0 ? Range.EMPTY : range.slice(separator, separator + 1);
-      var textRange = range.fromEnd(text.size());
+      var text = argument.slice(separator + 1, argument.size())
+      var separatorRange = separator < 0 ? Range.EMPTY : range.slice(separator, separator + 1)
+      var textRange = range.fromEnd(text.size())
       switch (data.type) {
 
         // Parse a single boolean value
         case .BOOL {
           if (separator < 0) {
-            text = "true";
+            text = "true"
           } else if (argument[separator] != '=') {
-            commandLineErrorExpectedToken(log, separatorRange, "=", argument.sliceCodeUnit(separator), argument);
-            continue;
+            commandLineErrorExpectedToken(log, separatorRange, "=", argument.sliceCodeUnit(separator), argument)
+            continue
           } else if (text != "true" && text != "false") {
-            commandLineErrorNonBooleanValue(log, textRange, text, argument);
-            continue;
+            commandLineErrorNonBooleanValue(log, textRange, text, argument)
+            continue
           }
           if (data.option in optionalArguments) {
-            commandLineWarningDuplicateFlagValue(log, textRange, name, optionalArguments[data.option].range);
+            commandLineWarningDuplicateFlagValue(log, textRange, name, optionalArguments[data.option].range)
           }
-          optionalArguments[data.option] = Node.createBool(text == "true").withRange(textRange);
+          optionalArguments[data.option] = Node.createBool(text == "true").withRange(textRange)
         }
 
         // Parse a single int value
         case .INT {
           if (separator < 0) {
-            commandLineErrorMissingValue(log, textRange, data.nameText());
+            commandLineErrorMissingValue(log, textRange, data.nameText())
           } else if (argument[separator] != '=') {
-            commandLineErrorExpectedToken(log, separatorRange, "=", argument.sliceCodeUnit(separator), argument);
+            commandLineErrorExpectedToken(log, separatorRange, "=", argument.sliceCodeUnit(separator), argument)
           } else if (!isInteger(text)) {
-            commandLineErrorNonIntegerValue(log, textRange, text, argument);
+            commandLineErrorNonIntegerValue(log, textRange, text, argument)
           } else {
             if (data.option in optionalArguments) {
-              commandLineWarningDuplicateFlagValue(log, textRange, name, optionalArguments[data.option].range);
+              commandLineWarningDuplicateFlagValue(log, textRange, name, optionalArguments[data.option].range)
             }
-            optionalArguments[data.option] = Node.createInt(parseIntLiteral(text, 10)).withRange(textRange);
+            optionalArguments[data.option] = Node.createInt(parseIntLiteral(text, 10)).withRange(textRange)
           }
         }
 
         // Parse a single string value
         case .STRING {
           if (separator < 0) {
-            commandLineErrorMissingValue(log, textRange, data.nameText());
+            commandLineErrorMissingValue(log, textRange, data.nameText())
           } else if (argument[separator] != '=') {
-            commandLineErrorExpectedToken(log, separatorRange, "=", argument.sliceCodeUnit(separator), argument);
+            commandLineErrorExpectedToken(log, separatorRange, "=", argument.sliceCodeUnit(separator), argument)
           } else {
             if (data.option in optionalArguments) {
-              commandLineWarningDuplicateFlagValue(log, textRange, name, optionalArguments[data.option].range);
+              commandLineWarningDuplicateFlagValue(log, textRange, name, optionalArguments[data.option].range)
             }
-            optionalArguments[data.option] = Node.createString(text).withRange(textRange);
+            optionalArguments[data.option] = Node.createString(text).withRange(textRange)
           }
         }
 
         // Parse an item in a list of string values
         case .STRING_LIST {
           if (separator < 0) {
-            commandLineErrorMissingValue(log, textRange, data.nameText());
+            commandLineErrorMissingValue(log, textRange, data.nameText())
           } else if (argument[separator] != ':') {
-            commandLineErrorExpectedToken(log, separatorRange, ":", argument.sliceCodeUnit(separator), argument);
-            continue;
+            commandLineErrorExpectedToken(log, separatorRange, ":", argument.sliceCodeUnit(separator), argument)
+            continue
           } else {
-            Node node;
+            Node node
             if (data.option in optionalArguments) {
-              node = optionalArguments[data.option];
+              node = optionalArguments[data.option]
             } else {
-              node = Node.createList([]);
-              optionalArguments[data.option] = node;
+              node = Node.createList([])
+              optionalArguments[data.option] = node
             }
-            node.appendChild(Node.createString(text).withRange(textRange));
+            node.appendChild(Node.createString(text).withRange(textRange))
           }
         }
       }
@@ -183,41 +183,41 @@ class OptionParser {
   }
 
   string usageText(int wrapWidth) {
-    var text = "";
-    var columnWidth = 0;
+    var text = ""
+    var columnWidth = 0
 
     // Figure out the column width
     for (var i = 0; i < options.size(); i++) {
-      var width = options[i].nameText().size() + 4;
+      var width = options[i].nameText().size() + 4
       if (columnWidth < width) {
-        columnWidth = width;
+        columnWidth = width
       }
     }
 
     // Format the options
-    var columnText = " ".repeat(columnWidth);
+    var columnText = " ".repeat(columnWidth)
     for (var i = 0; i < options.size(); i++) {
-      var option = options[i];
-      var nameText = option.nameText();
-      text += "\n  " + nameText + " ".repeat(columnWidth - nameText.size() - 2);
-      var lines = prettyPrint.wrapWords(option.description, wrapWidth - columnWidth);
+      var option = options[i]
+      var nameText = option.nameText()
+      text += "\n  " + nameText + " ".repeat(columnWidth - nameText.size() - 2)
+      var lines = prettyPrint.wrapWords(option.description, wrapWidth - columnWidth)
       for (var j = 0; j < lines.size(); j++) {
-        text += (j > 0 ? columnText : "") + lines[j] + "\n";
+        text += (j > 0 ? columnText : "") + lines[j] + "\n"
       }
     }
 
-    return text + "\n";
+    return text + "\n"
   }
 
   static bool isInteger(string text) {
-    var found = false;
+    var found = false
     for (var i = text.startsWith("-") ? 1 : 0; i < text.size(); i++) {
-      var c = text[i];
+      var c = text[i]
       if (c < '0' || c > '9') {
-        return false;
+        return false
       }
-      found = true;
+      found = true
     }
-    return found;
+    return found
   }
 }

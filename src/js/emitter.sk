@@ -17,107 +17,107 @@ namespace js {
 
   class Emitter : IEmitter {
     private {
-      var newline = "\n";
-      var space = " ";
-      var indent = "";
-      var builder = StringBuilder();
-      var currentLine = 0;
-      var currentColumn = 0;
-      var needsSemicolon = false;
-      NodeKind previousKind = .NULL;
-      Source currentSource = null;
-      Patcher patcher = null;
-      CompilerOptions options = null;
-      final var generator = SourceMapGenerator();
-      final Resolver resolver;
+      var newline = "\n"
+      var space = " "
+      var indent = ""
+      var builder = StringBuilder()
+      var currentLine = 0
+      var currentColumn = 0
+      var needsSemicolon = false
+      NodeKind previousKind = .NULL
+      Source currentSource = null
+      Patcher patcher = null
+      CompilerOptions options = null
+      final var generator = SourceMapGenerator()
+      final Resolver resolver
 
       // Numbers normally need to be wrapped in parentheses when toString() is
       // called on them because "1.toString()" is a syntax error in JavaScript.
       // However, toString() can be called implicitly as part of a string binary
       // + operation. This variable prevents wrapping in parentheses when the
       // toString() call has been elided.
-      Node toStringTarget = null;
+      Node toStringTarget = null
     }
 
     void patchProgram(Node program) {
-      options = resolver.options;
+      options = resolver.options
       if (options.minify) {
-        newline = "";
-        space = "";
+        newline = ""
+        space = ""
       }
-      patcher = Patcher(resolver);
-      patcher.run(program);
+      patcher = Patcher(resolver)
+      patcher.run(program)
     }
 
     override List<Source> emitProgram(Node program) {
-      patchProgram(program);
+      patchProgram(program)
 
       // Collect all interesting nodes for easy access
-      var collector = Collector(program, .SORT_BY_INHERITANCE_AND_CONTAINMENT);
-      currentSource = Source(options.outputFile, "");
+      var collector = Collector(program, .SORT_BY_INHERITANCE_AND_CONTAINMENT)
+      currentSource = Source(options.outputFile, "")
 
       // The entire body of code is wrapped in a closure for safety
-      emit(indent + minifySpaces("(function() {" + newline));
-      increaseIndent();
+      emit(indent + minifySpaces("(function() {" + newline))
+      increaseIndent()
 
       // Emit helper functions
       if (patcher.needMathImul) {
-        emitExtraNewlineBefore(.VARIABLE);
-        emit(indent + "var " + patcher.imul + minifySpaces(" = Math.imul || function(a, b) {" + newline));
-        increaseIndent();
-        emit(indent + "var " + minifySpaces("ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;" + newline));
-        emit(indent + "return " + minifySpaces("al * bl + (ah * bl + al * bh << 16) | 0"));
-        emitSemicolonAfterStatement();
-        decreaseIndent();
-        emit(indent + "};" + newline);
-        emitExtraNewlineAfter(.VARIABLE);
-        needsSemicolon = false;
+        emitExtraNewlineBefore(.VARIABLE)
+        emit(indent + "var " + patcher.imul + minifySpaces(" = Math.imul || function(a, b) {" + newline))
+        increaseIndent()
+        emit(indent + "var " + minifySpaces("ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;" + newline))
+        emit(indent + "return " + minifySpaces("al * bl + (ah * bl + al * bh << 16) | 0"))
+        emitSemicolonAfterStatement()
+        decreaseIndent()
+        emit(indent + "};" + newline)
+        emitExtraNewlineAfter(.VARIABLE)
+        needsSemicolon = false
       }
       if (patcher.needExtends) {
-        var derived = options.mangle ? "d" : "derived";
-        var base = options.mangle ? "b" : "base";
-        emitExtraNewlineBefore(.FUNCTION);
-        emit(indent + "function " + minifySpaces(patcher.extends + "(" + derived + ", " + base + ") {" + newline));
-        increaseIndent();
-        emit(indent + derived + minifySpaces(".prototype = Object.create(" + base + ".prototype);" + newline));
-        emit(indent + derived + minifySpaces(".prototype.constructor = " + derived));
-        emitSemicolonAfterStatement();
-        decreaseIndent();
-        emit(indent + "}" + newline);
-        emitExtraNewlineAfter(.FUNCTION);
-        needsSemicolon = false;
+        var derived = options.mangle ? "d" : "derived"
+        var base = options.mangle ? "b" : "base"
+        emitExtraNewlineBefore(.FUNCTION)
+        emit(indent + "function " + minifySpaces(patcher.extends + "(" + derived + ", " + base + ") {" + newline))
+        increaseIndent()
+        emit(indent + derived + minifySpaces(".prototype = Object.create(" + base + ".prototype);" + newline))
+        emit(indent + derived + minifySpaces(".prototype.constructor = " + derived))
+        emitSemicolonAfterStatement()
+        decreaseIndent()
+        emit(indent + "}" + newline)
+        emitExtraNewlineAfter(.FUNCTION)
+        needsSemicolon = false
       }
 
       // Emit types
       for (var i = 0; i < collector.typeSymbols.size(); i++) {
-        var symbol = collector.typeSymbols[i];
-        var type = symbol.type;
+        var symbol = collector.typeSymbols[i]
+        var type = symbol.type
         if (symbol.kind == .ALIAS) {
-          continue;
+          continue
         }
         if (type.isNamespace()) {
           if (!symbol.isImport()) {
-            maybeEmitMinifedNewline();
-            emitNode(symbol.node);
+            maybeEmitMinifedNewline()
+            emitNode(symbol.node)
           }
-          continue;
+          continue
         }
         if (!symbol.isImport()) {
           if (type.isEnum()) {
-            emitNode(symbol.node);
+            emitNode(symbol.node)
           } else {
-            var constructor = type.constructor();
+            var constructor = type.constructor()
             if (constructor != null) {
-              emitNode(constructor.symbol.node);
+              emitNode(constructor.symbol.node)
             }
           }
         }
-        var members = type.sortedMembers();
+        var members = type.sortedMembers()
         for (var j = 0; j < members.size(); j++) {
-          var member = members[j].symbol;
+          var member = members[j].symbol
           if (member.enclosingSymbol == symbol && member.node != null) {
             if (member.kind.isFunction() && member.kind != .CONSTRUCTOR_FUNCTION) {
-              emitNode(member.node);
+              emitNode(member.node)
             }
           }
         }
@@ -125,928 +125,928 @@ namespace js {
 
       // Emit free functions
       for (var i = 0; i < collector.freeFunctionSymbols.size(); i++) {
-        emitNode(collector.freeFunctionSymbols[i].node);
+        emitNode(collector.freeFunctionSymbols[i].node)
       }
 
       // Emit free variables
-      List<Node> variables = [];
+      List<Node> variables = []
       for (var i = 0; i < collector.freeVariableSymbols.size(); i++) {
-        var variable = collector.freeVariableSymbols[i].node;
-        if (options.minify) variables.push(variable);
-        else emitVariables([variable]);
+        var variable = collector.freeVariableSymbols[i].node
+        if (options.minify) variables.push(variable)
+        else emitVariables([variable])
       }
-      emitVariables(variables);
+      emitVariables(variables)
 
       // Emit entry point
-      var entryPointSymbol = resolver.entryPointSymbol;
+      var entryPointSymbol = resolver.entryPointSymbol
       if (entryPointSymbol != null) {
-        var type = entryPointSymbol.type;
-        var callText = fullName(entryPointSymbol) + (type.argumentTypes().size() != 0 ? "(process.argv.slice(2))" : "()");
-        emitSemicolonIfNeeded();
-        emitExtraNewlineBefore(.EXPRESSION);
-        addMapping(entryPointSymbol.node); // Without this, the first call stack entry points at the last global variable during initialization
-        emit(indent + (type.resultType() == resolver.cache.intType ? "process.exit(" + callText + ")" : callText));
-        emitSemicolonAfterStatement();
-        emitExtraNewlineAfter(.EXPRESSION);
+        var type = entryPointSymbol.type
+        var callText = fullName(entryPointSymbol) + (type.argumentTypes().size() != 0 ? "(process.argv.slice(2))" : "()")
+        emitSemicolonIfNeeded()
+        emitExtraNewlineBefore(.EXPRESSION)
+        addMapping(entryPointSymbol.node) // Without this, the first call stack entry points at the last global variable during initialization
+        emit(indent + (type.resultType() == resolver.cache.intType ? "process.exit(" + callText + ")" : callText))
+        emitSemicolonAfterStatement()
+        emitExtraNewlineAfter(.EXPRESSION)
       }
 
       // End the closure wrapping everything
-      decreaseIndent();
-      emit(indent + "}());\n");
+      decreaseIndent()
+      emit(indent + "}());\n")
 
       // Create the source map
       if (options.sourceMap) {
         // Obfuscate the sourceMappingURL so it's not incorrectly picked up as
         // the sourceMappingURL for the compiled JavaScript compiler file
-        emit("/");
+        emit("/")
 
         // Create the source map as another file alongside the output
-        var name = options.outputFile + ".map";
-        emit("/# sourceMappingURL=" + splitPath(name).entry + "\n");
-        currentSource.contents = builder.toString();
-        return [currentSource, Source(name, generator.toString())];
+        var name = options.outputFile + ".map"
+        emit("/# sourceMappingURL=" + splitPath(name).entry + "\n")
+        currentSource.contents = builder.toString()
+        return [currentSource, Source(name, generator.toString())]
       }
 
-      currentSource.contents = builder.toString();
-      return [currentSource];
+      currentSource.contents = builder.toString()
+      return [currentSource]
     }
 
     void emitExtraNewlineBefore(NodeKind kind) {
       if (!options.minify && previousKind != .NULL && shouldEmitExtraNewlineBetween(previousKind, kind)) {
-        emit(newline);
+        emit(newline)
       }
-      previousKind = .NULL;
+      previousKind = .NULL
     }
 
     void emitExtraNewlineAfter(NodeKind kind) {
-      previousKind = kind;
+      previousKind = kind
     }
 
     bool isFlowNodeKind(NodeKind kind) {
-      return kind == .EXPRESSION || kind == .VARIABLE || kind == .VARIABLE_CLUSTER || kind.isJump();
+      return kind == .EXPRESSION || kind == .VARIABLE || kind == .VARIABLE_CLUSTER || kind.isJump()
     }
 
     bool shouldEmitExtraNewlineBetween(NodeKind before, NodeKind after) {
-      return !isFlowNodeKind(before) || !isFlowNodeKind(after) || before != .VARIABLE_CLUSTER && after == .VARIABLE_CLUSTER;
+      return !isFlowNodeKind(before) || !isFlowNodeKind(after) || before != .VARIABLE_CLUSTER && after == .VARIABLE_CLUSTER
     }
 
     void addMapping(Node node) {
       if (options.sourceMap) {
-        var range = node.range;
+        var range = node.range
         if (range.source != null) {
-          var location = range.source.indexToLineColumn(range.start);
-          generator.addMapping(range.source, location.line, location.column, currentLine, currentColumn);
+          var location = range.source.indexToLineColumn(range.start)
+          generator.addMapping(range.source, location.line, location.column, currentLine, currentColumn)
         }
       }
     }
 
     void increaseIndent() {
       if (!options.minify) {
-        previousKind = .NULL;
-        indent += "  ";
+        previousKind = .NULL
+        indent += "  "
       }
     }
 
     void decreaseIndent() {
       if (!options.minify) {
-        indent = indent.slice(2, indent.size());
+        indent = indent.slice(2, indent.size())
       }
     }
 
     void emit(string text) {
       if (options.minify || options.sourceMap) {
         for (var i = 0; i < text.size(); i++) {
-          var c = text[i];
+          var c = text[i]
           if (c == '\n') {
-            currentColumn = 0;
-            currentLine++;
+            currentColumn = 0
+            currentLine++
           } else {
-            currentColumn++;
+            currentColumn++
           }
         }
       }
-      builder.append(text);
+      builder.append(text)
     }
 
     string minifySpaces(string text) {
-      return text.replaceAll(" ", space);
+      return text.replaceAll(" ", space)
     }
 
     // Lots of text editors choke up on long lines, so add a newline every now
     // and then for usability's sake
     void maybeEmitMinifedNewline() {
       if (newline == "" && currentColumn > 1024) {
-        emit("\n");
+        emit("\n")
       }
     }
 
     void emitSemicolonAfterStatement() {
       if (!options.minify) {
-        emit(";\n");
+        emit(";\n")
       } else {
-        needsSemicolon = true;
+        needsSemicolon = true
       }
     }
 
     void emitSemicolonIfNeeded() {
       if (needsSemicolon) {
-        emit(";");
-        needsSemicolon = false;
+        emit(";")
+        needsSemicolon = false
       }
     }
 
     void emitStatements(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
-        var node = nodes[i];
-        var kind = node.kind;
-        emitSemicolonIfNeeded();
-        maybeEmitMinifedNewline();
-        if (kind != .MODIFIER) emitExtraNewlineBefore(kind);
-        emitNode(node);
-        if (kind != .MODIFIER) emitExtraNewlineAfter(kind);
+        var node = nodes[i]
+        var kind = node.kind
+        emitSemicolonIfNeeded()
+        maybeEmitMinifedNewline()
+        if (kind != .MODIFIER) emitExtraNewlineBefore(kind)
+        emitNode(node)
+        if (kind != .MODIFIER) emitExtraNewlineAfter(kind)
       }
     }
 
     void emitCommaSeparatedNodes(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
-        if (i != 0) emit("," + space);
-        emitNode(nodes[i]);
+        if (i != 0) emit("," + space)
+        emitNode(nodes[i])
       }
     }
 
     void emitCommaSeparatedExpressions(List<Node> nodes) {
       for (var i = 0; i < nodes.size(); i++) {
         if (i != 0) {
-          emit("," + space);
-          maybeEmitMinifedNewline();
+          emit("," + space)
+          maybeEmitMinifedNewline()
         }
-        emitExpression(nodes[i], .COMMA);
+        emitExpression(nodes[i], .COMMA)
       }
     }
 
     void emitArgumentVariables(List<Node> nodes) {
-      emit("(");
-      emitCommaSeparatedNodes(nodes);
-      emit(")");
+      emit("(")
+      emitCommaSeparatedNodes(nodes)
+      emit(")")
     }
 
     void recursiveEmitIfStatement(Node node) {
-      var trueBlock = node.ifTrue();
-      var falseBlock = node.ifFalse();
-      var trueStatement = trueBlock.blockStatement();
-      emit("if" + space + "(");
-      emitExpression(node.ifTest(), .LOWEST);
-      emit(")");
+      var trueBlock = node.ifTrue()
+      var falseBlock = node.ifFalse()
+      var trueStatement = trueBlock.blockStatement()
+      emit("if" + space + "(")
+      emitExpression(node.ifTest(), .LOWEST)
+      emit(")")
 
       // Make sure to always keep braces to avoid the dangling "else" case
-      emitBlock(trueBlock, .AFTER_PARENTHESIS, falseBlock != null && trueStatement != null && trueStatement.kind == .IF ? .MUST_KEEP_BRACES : .CAN_OMIT_BRACES);
+      emitBlock(trueBlock, .AFTER_PARENTHESIS, falseBlock != null && trueStatement != null && trueStatement.kind == .IF ? .MUST_KEEP_BRACES : .CAN_OMIT_BRACES)
 
       if (falseBlock != null) {
-        emitSemicolonIfNeeded();
-        maybeEmitMinifedNewline();
-        emit(space + "else");
-        var falseStatement = falseBlock.blockStatement();
+        emitSemicolonIfNeeded()
+        maybeEmitMinifedNewline()
+        emit(space + "else")
+        var falseStatement = falseBlock.blockStatement()
         if (falseStatement != null && falseStatement.kind == .IF) {
-          emit(" ");
-          addMapping(falseStatement);
-          recursiveEmitIfStatement(falseStatement);
+          emit(" ")
+          addMapping(falseStatement)
+          recursiveEmitIfStatement(falseStatement)
         } else {
-          emitBlock(falseBlock, .AFTER_KEYWORD, .CAN_OMIT_BRACES);
+          emitBlock(falseBlock, .AFTER_KEYWORD, .CAN_OMIT_BRACES)
         }
       }
     }
 
     void emitNode(Node node) {
-      addMapping(node);
+      addMapping(node)
 
       // Separating the case bodies into separate functions makes the JavaScript JIT go faster
       switch (node.kind) {
-        case .CASE { emitCase(node); }
-        case .VARIABLE_CLUSTER { emitVariables(node.clusterVariables()); }
-        case .NAMESPACE { emitNamespace(node); }
-        case .ENUM, .ENUM_FLAGS { emitEnum(node); }
-        case .CONSTRUCTOR, .FUNCTION { emitFunction(node); }
-        case .VARIABLE { emitVariable(node); }
-        case .IF { emitIf(node); }
-        case .TRY { emitTry(node); }
-        case .FOR { emitFor(node); }
-        case .FOR_EACH { emitForEach(node); }
-        case .WHILE { emitWhile(node); }
-        case .DO_WHILE { emitDoWhile(node); }
-        case .RETURN { emitReturn(node); }
-        case .BREAK { emitBreak(node); }
-        case .CONTINUE { emitContinue(node); }
-        case .ASSERT { emitAssert(node); }
-        case .EXPRESSION { emitExpressionStatement(node); }
-        case .SWITCH { emitSwitch(node); }
-        case .MODIFIER { emitModifier(node); }
+        case .CASE { emitCase(node) }
+        case .VARIABLE_CLUSTER { emitVariables(node.clusterVariables()) }
+        case .NAMESPACE { emitNamespace(node) }
+        case .ENUM, .ENUM_FLAGS { emitEnum(node) }
+        case .CONSTRUCTOR, .FUNCTION { emitFunction(node) }
+        case .VARIABLE { emitVariable(node) }
+        case .IF { emitIf(node) }
+        case .TRY { emitTry(node) }
+        case .FOR { emitFor(node) }
+        case .FOR_EACH { emitForEach(node) }
+        case .WHILE { emitWhile(node) }
+        case .DO_WHILE { emitDoWhile(node) }
+        case .RETURN { emitReturn(node) }
+        case .BREAK { emitBreak(node) }
+        case .CONTINUE { emitContinue(node) }
+        case .ASSERT { emitAssert(node) }
+        case .EXPRESSION { emitExpressionStatement(node) }
+        case .SWITCH { emitSwitch(node) }
+        case .MODIFIER { emitModifier(node) }
         case .PARAMETER, .ALIAS, .USING {}
-        default { assert false; }
+        default { assert false }
       }
     }
 
     void emitBlock(Node node, AfterToken after, BracesMode mode) {
-      var shouldMinify = mode == .CAN_OMIT_BRACES && options.minify;
-      addMapping(node);
+      var shouldMinify = mode == .CAN_OMIT_BRACES && options.minify
+      addMapping(node)
       if (shouldMinify && !node.hasChildren()) {
-        emit(";");
+        emit(";")
       } else if (shouldMinify && node.children.size() == 1) {
-        if (after == .AFTER_KEYWORD) emit(" ");
-        emitNode(node.children[0]);
+        if (after == .AFTER_KEYWORD) emit(" ")
+        emitNode(node.children[0])
       } else {
-        emit(space + "{" + newline);
+        emit(space + "{" + newline)
         if (node.hasChildren()) {
-          increaseIndent();
-          emitStatements(node.children);
-          decreaseIndent();
+          increaseIndent()
+          emitStatements(node.children)
+          decreaseIndent()
         }
-        emit(indent + "}");
-        needsSemicolon = false;
+        emit(indent + "}")
+        needsSemicolon = false
       }
     }
 
     void emitCase(Node node) {
-      var values = node.caseValues().children;
-      var block = node.caseBlock();
-      emitSemicolonIfNeeded();
+      var values = node.caseValues().children
+      var block = node.caseBlock()
+      emitSemicolonIfNeeded()
       for (var i = 0; i < values.size(); i++) {
-        emit(indent + "case ");
-        emitExpression(values[i], .LOWEST);
-        emit(":" + newline);
-        maybeEmitMinifedNewline();
+        emit(indent + "case ")
+        emitExpression(values[i], .LOWEST)
+        emit(":" + newline)
+        maybeEmitMinifedNewline()
       }
       if (values.size() == 0) {
-        emit(indent + "default:" + newline);
+        emit(indent + "default:" + newline)
       }
-      increaseIndent();
+      increaseIndent()
       if (block.hasChildren()) {
-        emitStatements(block.children);
+        emitStatements(block.children)
       }
       if (!block.blockAlwaysEndsWithReturn() && (!options.minify || !node.isLastChild())) {
-        emitSemicolonIfNeeded();
-        emit(indent + "break");
-        emitSemicolonAfterStatement();
+        emitSemicolonIfNeeded()
+        emit(indent + "break")
+        emitSemicolonAfterStatement()
       }
-      decreaseIndent();
+      decreaseIndent()
     }
 
     void emitVariables(List<Node> variables) {
-      var state = ClusterState.NONE;
+      var state = ClusterState.NONE
 
       for (var i = 0; i < variables.size(); i++) {
-        var variable = variables[i];
-        var symbol = variable.symbol;
-        var isCompoundName = symbol != null && (hasCompoundName(symbol) || symbol.isExport());
+        var variable = variables[i]
+        var symbol = variable.symbol
+        var isCompoundName = symbol != null && (hasCompoundName(symbol) || symbol.isExport())
 
         if (symbol != null && (symbol.kind.isInstance() || symbol.isImport()) || isCompoundName && variable.variableValue() == null) {
-          continue;
+          continue
         }
 
-        emitSemicolonIfNeeded();
-        emitExtraNewlineBefore(.VARIABLE);
+        emitSemicolonIfNeeded()
+        emitExtraNewlineBefore(.VARIABLE)
 
         // Use assignment statements for compound names
         if (isCompoundName) {
           if (state != .NONE) {
-            emit(";" + newline);
+            emit(";" + newline)
           }
-          state = .COMPOUND_NAME;
-          emit(indent);
+          state = .COMPOUND_NAME
+          emit(indent)
         }
 
         // Use variable declarations for simple names
         else {
           if (state != .VAR_CHAIN) {
             if (state == .COMPOUND_NAME) {
-              emit(";" + newline);
+              emit(";" + newline)
             }
-            emit(indent + "var ");
-            state = .VAR_CHAIN;
+            emit(indent + "var ")
+            state = .VAR_CHAIN
           } else {
-            emit("," + space);
-            maybeEmitMinifedNewline();
+            emit("," + space)
+            maybeEmitMinifedNewline()
           }
         }
 
-        emitNode(variable);
+        emitNode(variable)
       }
 
       if (state != .NONE) {
-        emitSemicolonAfterStatement();
-        emitExtraNewlineAfter(.VARIABLE);
+        emitSemicolonAfterStatement()
+        emitExtraNewlineAfter(.VARIABLE)
       }
     }
 
     void emitNamespace(Node node) {
-      var symbol = node.symbol;
+      var symbol = node.symbol
       if (options.mangle && !symbol.isImportOrExport()) {
-        return;
+        return
       }
-      emitSemicolonIfNeeded();
-      emitExtraNewlineBefore(node.kind);
-      emit(indent);
+      emitSemicolonIfNeeded()
+      emitExtraNewlineBefore(node.kind)
+      emit(indent)
       if (!hasCompoundName(symbol) && !symbol.isExport()) {
-        emit("var ");
+        emit("var ")
       }
-      emit(fullName(symbol) + space + "=" + space + "{}");
-      emitSemicolonAfterStatement();
-      emitExtraNewlineAfter(node.kind);
+      emit(fullName(symbol) + space + "=" + space + "{}")
+      emitSemicolonAfterStatement()
+      emitExtraNewlineAfter(node.kind)
     }
 
     void emitEnum(Node node) {
-      var symbol = node.symbol;
-      var block = node.declarationBlock();
+      var symbol = node.symbol
+      var block = node.declarationBlock()
       if (options.foldAllConstants && !symbol.isImportOrExport()) {
-        return;
+        return
       }
-      emitSemicolonIfNeeded();
-      emitExtraNewlineBefore(node.kind);
-      emit(indent);
+      emitSemicolonIfNeeded()
+      emitExtraNewlineBefore(node.kind)
+      emit(indent)
       if (!hasCompoundName(symbol) && !symbol.isExport()) {
-        emit("var ");
+        emit("var ")
       }
       if (options.mangle && !symbol.isImportOrExport()) {
         for (var i = 0; i < block.children.size(); i++) {
-          var child = block.children[i].symbol;
-          if (i != 0) emit("," + space);
-          emit(mangleName(child) + space + "=" + space + child.constant.asInt());
+          var child = block.children[i].symbol
+          if (i != 0) emit("," + space)
+          emit(mangleName(child) + space + "=" + space + child.constant.asInt())
         }
       } else {
-        emit(fullName(symbol) + space + "=" + space + "{" + newline);
-        increaseIndent();
+        emit(fullName(symbol) + space + "=" + space + "{" + newline)
+        increaseIndent()
         for (var i = 0; i < block.children.size(); i++) {
-          var child = block.children[i].symbol;
-          emit(indent + mangleName(child) + ":" + space + child.constant.asInt());
+          var child = block.children[i].symbol
+          emit(indent + mangleName(child) + ":" + space + child.constant.asInt())
           if (i != block.children.size() - 1) {
-            emit("," + newline);
-            maybeEmitMinifedNewline();
+            emit("," + newline)
+            maybeEmitMinifedNewline()
           } else {
-            emit(newline);
+            emit(newline)
           }
         }
-        decreaseIndent();
-        emit(indent + "}");
+        decreaseIndent()
+        emit(indent + "}")
       }
-      emitSemicolonAfterStatement();
-      emitExtraNewlineAfter(node.kind);
+      emitSemicolonAfterStatement()
+      emitExtraNewlineAfter(node.kind)
     }
 
     void emitFunction(Node node) {
-      var block = node.functionBlock();
-      var symbol = node.symbol;
+      var block = node.functionBlock()
+      var symbol = node.symbol
       if (block == null) {
-        return;
+        return
       }
-      var useFunctionStatement = !hasCompoundName(symbol) && !symbol.isExport();
-      emitSemicolonIfNeeded();
-      emitExtraNewlineBefore(node.kind);
+      var useFunctionStatement = !hasCompoundName(symbol) && !symbol.isExport()
+      emitSemicolonIfNeeded()
+      emitExtraNewlineBefore(node.kind)
       emit(useFunctionStatement
         ? indent + "function " + fullName(symbol)
-        : indent + fullName(symbol) + space + "=" + space + "function");
-      emitArgumentVariables(node.functionArguments().children);
-      emitBlock(block, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES);
+        : indent + fullName(symbol) + space + "=" + space + "function")
+      emitArgumentVariables(node.functionArguments().children)
+      emitBlock(block, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
       if (useFunctionStatement) {
-        emit(newline);
+        emit(newline)
       } else {
-        emitSemicolonAfterStatement();
+        emitSemicolonAfterStatement()
       }
-      emitExtraNewlineAfter(node.kind);
+      emitExtraNewlineAfter(node.kind)
 
       if (node.kind == .CONSTRUCTOR) {
-        var type = symbol.enclosingSymbol.type;
+        var type = symbol.enclosingSymbol.type
         if (type.isClass() && type.baseClass() != null) {
-          emitSemicolonIfNeeded();
-          emitExtraNewlineBefore(.EXPRESSION);
-          emit(indent + patcher.extends + "(" + fullName(type.symbol) + "," + space + fullName(type.baseClass().symbol) + ")");
-          emitSemicolonAfterStatement();
-          emitExtraNewlineAfter(.EXPRESSION);
+          emitSemicolonIfNeeded()
+          emitExtraNewlineBefore(.EXPRESSION)
+          emit(indent + patcher.extends + "(" + fullName(type.symbol) + "," + space + fullName(type.baseClass().symbol) + ")")
+          emitSemicolonAfterStatement()
+          emitExtraNewlineAfter(.EXPRESSION)
         }
       }
     }
 
     void emitVariable(Node node) {
-      var value = node.variableValue();
-      emit(node.symbol == null ? node.declarationName().asString() : fullName(node.symbol));
+      var value = node.variableValue()
+      emit(node.symbol == null ? node.declarationName().asString() : fullName(node.symbol))
       if (value != null) {
-        emit(space + "=" + space);
-        emitExpression(value, .COMMA);
+        emit(space + "=" + space)
+        emitExpression(value, .COMMA)
       }
     }
 
     void emitIf(Node node) {
-      emit(indent);
-      recursiveEmitIfStatement(node);
-      emit(newline);
+      emit(indent)
+      recursiveEmitIfStatement(node)
+      emit(newline)
     }
 
     void emitTry(Node node) {
-      emit(indent + "try");
-      emitBlock(node.tryBlock(), .AFTER_KEYWORD, .MUST_KEEP_BRACES);
-      emit(space + "catch" + space + "(" + (options.minify ? "$x" : "$exception") + ")");
-      emitBlock(node.catchBlock(), .AFTER_PARENTHESIS, .MUST_KEEP_BRACES);
-      emit(newline);
+      emit(indent + "try")
+      emitBlock(node.tryBlock(), .AFTER_KEYWORD, .MUST_KEEP_BRACES)
+      emit(space + "catch" + space + "(" + (options.minify ? "$x" : "$exception") + ")")
+      emitBlock(node.catchBlock(), .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
+      emit(newline)
     }
 
     void emitFor(Node node) {
-      var setup = node.forSetup();
-      var test = node.forTest();
-      var update = node.forUpdate();
-      emit(indent + "for" + space + "(");
+      var setup = node.forSetup()
+      var test = node.forTest()
+      var update = node.forUpdate()
+      emit(indent + "for" + space + "(")
       if (setup != null) {
         if (setup.kind == .VARIABLE_CLUSTER) {
-          emit("var ");
-          emitCommaSeparatedNodes(setup.clusterVariables());
+          emit("var ")
+          emitCommaSeparatedNodes(setup.clusterVariables())
         } else {
-          emitExpression(setup, .LOWEST);
+          emitExpression(setup, .LOWEST)
         }
       }
       if (test != null) {
-        emit(";" + space);
-        emitExpression(test, .LOWEST);
+        emit(";" + space)
+        emitExpression(test, .LOWEST)
       } else {
-        emit(";");
+        emit(";")
       }
       if (update != null) {
-        emit(";" + space);
-        emitExpression(update, .LOWEST);
+        emit(";" + space)
+        emitExpression(update, .LOWEST)
       } else {
-        emit(";");
+        emit(";")
       }
-      emit(")");
-      emitBlock(node.forBlock(), .AFTER_PARENTHESIS, .CAN_OMIT_BRACES);
-      emit(newline);
+      emit(")")
+      emitBlock(node.forBlock(), .AFTER_PARENTHESIS, .CAN_OMIT_BRACES)
+      emit(newline)
     }
 
     void emitForEach(Node node) {
-      var variable = node.forEachVariable();
-      var value = node.forEachValue();
-      emit(indent + "for" + space + "(var ");
-      emitNode(variable);
-      emit(" in ");
-      emitExpression(value, .LOWEST);
-      emit(")");
-      emitBlock(node.forEachBlock(), .AFTER_PARENTHESIS, .CAN_OMIT_BRACES);
-      emit(newline);
+      var variable = node.forEachVariable()
+      var value = node.forEachValue()
+      emit(indent + "for" + space + "(var ")
+      emitNode(variable)
+      emit(" in ")
+      emitExpression(value, .LOWEST)
+      emit(")")
+      emitBlock(node.forEachBlock(), .AFTER_PARENTHESIS, .CAN_OMIT_BRACES)
+      emit(newline)
     }
 
     void emitWhile(Node node) {
-      emit(indent + "while" + space + "(");
-      emitExpression(node.whileTest(), .LOWEST);
-      emit(")");
-      emitBlock(node.whileBlock(), .AFTER_PARENTHESIS, .CAN_OMIT_BRACES);
-      emit(newline);
+      emit(indent + "while" + space + "(")
+      emitExpression(node.whileTest(), .LOWEST)
+      emit(")")
+      emitBlock(node.whileBlock(), .AFTER_PARENTHESIS, .CAN_OMIT_BRACES)
+      emit(newline)
     }
 
     void emitDoWhile(Node node) {
-      emit(indent + "do");
-      emitBlock(node.whileBlock(), .AFTER_KEYWORD, .CAN_OMIT_BRACES);
-      emitSemicolonIfNeeded();
-      emit(space + "while" + space + "(");
-      emitExpression(node.whileTest(), .LOWEST);
-      emit(")");
-      emitSemicolonAfterStatement();
+      emit(indent + "do")
+      emitBlock(node.whileBlock(), .AFTER_KEYWORD, .CAN_OMIT_BRACES)
+      emitSemicolonIfNeeded()
+      emit(space + "while" + space + "(")
+      emitExpression(node.whileTest(), .LOWEST)
+      emit(")")
+      emitSemicolonAfterStatement()
     }
 
     void emitReturn(Node node) {
-      var value = node.returnValue();
-      emit(indent);
+      var value = node.returnValue()
+      emit(indent)
       if (value != null) {
-        emit("return" + (value.kind == .MAP || value.kind == .LIST ? space : " "));
-        emitExpression(value, .LOWEST);
+        emit("return" + (value.kind == .MAP || value.kind == .LIST ? space : " "))
+        emitExpression(value, .LOWEST)
       } else {
-        emit("return");
+        emit("return")
       }
-      emitSemicolonAfterStatement();
+      emitSemicolonAfterStatement()
     }
 
     void emitBreak(Node node) {
-      emit(indent + "break");
-      emitSemicolonAfterStatement();
+      emit(indent + "break")
+      emitSemicolonAfterStatement()
     }
 
     void emitContinue(Node node) {
-      emit(indent + "continue");
-      emitSemicolonAfterStatement();
+      emit(indent + "continue")
+      emitSemicolonAfterStatement()
     }
 
     void emitAssert(Node node) {
-      var value = node.assertValue();
-      value.invertBooleanCondition(resolver.cache);
+      var value = node.assertValue()
+      value.invertBooleanCondition(resolver.cache)
       if (!value.isFalse()) {
-        var couldBeFalse = !value.isTrue();
+        var couldBeFalse = !value.isTrue()
         if (couldBeFalse) {
-          emit(indent + "if" + space + "(");
-          emitExpression(value, .LOWEST);
-          emit(")");
+          emit(indent + "if" + space + "(")
+          emitExpression(value, .LOWEST)
+          emit(")")
           if (!options.minify) {
-            emit(" {\n");
-            increaseIndent();
+            emit(" {\n")
+            increaseIndent()
           }
         }
-        var text = node.range + " (" + node.range.locationString() + ")";
-        emit(indent + "throw new Error(" + quoteStringJS(text) + ")");
-        emitSemicolonAfterStatement();
+        var text = node.range + " (" + node.range.locationString() + ")"
+        emit(indent + "throw new Error(" + quoteStringJS(text) + ")")
+        emitSemicolonAfterStatement()
         if (couldBeFalse && !options.minify) {
-          decreaseIndent();
-          emit(indent + "}\n");
+          decreaseIndent()
+          emit(indent + "}\n")
         }
       }
     }
 
     void emitExpressionStatement(Node node) {
-      emit(indent);
-      emitExpression(node.expressionValue(), .LOWEST);
-      emitSemicolonAfterStatement();
+      emit(indent)
+      emitExpression(node.expressionValue(), .LOWEST)
+      emitSemicolonAfterStatement()
     }
 
     void emitSwitch(Node node) {
-      emit(indent + "switch" + space + "(");
-      emitExpression(node.switchValue(), .LOWEST);
-      emit(")" + space + "{" + newline);
-      emitStatements(node.switchCases().children);
-      emit(indent + "}" + newline);
-      needsSemicolon = false;
+      emit(indent + "switch" + space + "(")
+      emitExpression(node.switchValue(), .LOWEST)
+      emit(")" + space + "{" + newline)
+      emitStatements(node.switchCases().children)
+      emit(indent + "}" + newline)
+      needsSemicolon = false
     }
 
     void emitModifier(Node node) {
-      emitStatements(node.modifierStatements());
+      emitStatements(node.modifierStatements())
     }
 
     void emitExpression(Node node, Precedence precedence) {
-      addMapping(node);
+      addMapping(node)
 
-      var kind = node.kind;
+      var kind = node.kind
       switch (kind) {
-        case .NAME { emit(node.symbol == null ? node.asString() : fullName(node.symbol)); }
-        case .TYPE { emitType(node.type, precedence); }
-        case .THIS { emit("this"); }
-        case .HOOK { emitHook(node, precedence); }
-        case .NULL { emit("null"); }
-        case .BOOL { emitBool(node); }
-        case .INT { emitInt(node); }
-        case .FLOAT, .DOUBLE { emitDouble(node); }
-        case .STRING { emit(quoteStringJS(node.asString())); }
-        case .LIST { emitList(node); }
-        case .KEY_VALUE { emitKeyValue(node); }
-        case .MAP { emitMap(node); }
-        case .DOT, .DOT_ARROW, .DOT_COLON { emitDot(node); }
-        case .CALL { emitCall(node); }
-        case .SUPER_CALL { emitSuperCall(node); }
-        case .SEQUENCE { emitSequence(node, precedence); }
-        case .QUOTED { emitExpression(node.quotedValue(), precedence); }
-        case .INDEX { emitIndex(node, precedence); }
-        case .ASSIGN_INDEX { emitTernary(node, precedence); }
-        case .CAST, .IMPLICIT_CAST { emitExpression(node.castValue(), precedence); }
+        case .NAME { emit(node.symbol == null ? node.asString() : fullName(node.symbol)) }
+        case .TYPE { emitType(node.type, precedence) }
+        case .THIS { emit("this") }
+        case .HOOK { emitHook(node, precedence) }
+        case .NULL { emit("null") }
+        case .BOOL { emitBool(node) }
+        case .INT { emitInt(node) }
+        case .FLOAT, .DOUBLE { emitDouble(node) }
+        case .STRING { emit(quoteStringJS(node.asString())) }
+        case .LIST { emitList(node) }
+        case .KEY_VALUE { emitKeyValue(node) }
+        case .MAP { emitMap(node) }
+        case .DOT, .DOT_ARROW, .DOT_COLON { emitDot(node) }
+        case .CALL { emitCall(node) }
+        case .SUPER_CALL { emitSuperCall(node) }
+        case .SEQUENCE { emitSequence(node, precedence) }
+        case .QUOTED { emitExpression(node.quotedValue(), precedence) }
+        case .INDEX { emitIndex(node, precedence) }
+        case .ASSIGN_INDEX { emitTernary(node, precedence) }
+        case .CAST, .IMPLICIT_CAST { emitExpression(node.castValue(), precedence) }
         default {
-          if (kind.isUnaryOperator()) emitUnary(node, precedence);
-          else if (kind.isBinaryOperator()) emitBinary(node, precedence);
-          else assert false;
+          if (kind.isUnaryOperator()) emitUnary(node, precedence)
+          else if (kind.isBinaryOperator()) emitBinary(node, precedence)
+          else assert false
         }
       }
     }
 
     void emitType(Type type, Precedence precedence) {
       if (type.isQuoted()) {
-        emitExpression(type.symbol.node, precedence);
+        emitExpression(type.symbol.node, precedence)
       } else {
-        emit(fullName(type.symbol));
+        emit(fullName(type.symbol))
       }
     }
 
     void emitHook(Node node, Precedence precedence) {
-      if (.ASSIGN < precedence) emit("(");
-      emitExpression(node.hookTest(), .LOGICAL_OR);
-      emit(space + "?" + space);
-      emitExpression(node.hookTrue(), .ASSIGN);
-      emit(space + ":" + space);
-      emitExpression(node.hookFalse(), .ASSIGN);
-      if (.ASSIGN < precedence) emit(")");
+      if (.ASSIGN < precedence) emit("(")
+      emitExpression(node.hookTest(), .LOGICAL_OR)
+      emit(space + "?" + space)
+      emitExpression(node.hookTrue(), .ASSIGN)
+      emit(space + ":" + space)
+      emitExpression(node.hookFalse(), .ASSIGN)
+      if (.ASSIGN < precedence) emit(")")
     }
 
     void emitBool(Node node) {
       if (options.mangle) {
-        emit(node.asBool() ? "!0" : "!1");
+        emit(node.asBool() ? "!0" : "!1")
       } else {
-        emit(node.asBool() ? "true" : "false");
+        emit(node.asBool() ? "true" : "false")
       }
     }
 
     void emitInt(Node node) {
-      var wrap = node.parent.kind == .DOT && node != toStringTarget;
-      if (wrap) emit("(");
-      emit(node.asInt().toString());
-      if (wrap) emit(")");
+      var wrap = node.parent.kind == .DOT && node != toStringTarget
+      if (wrap) emit("(")
+      emit(node.asInt().toString())
+      if (wrap) emit(")")
     }
 
     void emitDouble(Node node) {
-      var wrap = node.parent.kind == .DOT && node != toStringTarget;
-      var value = node.asDouble();
-      if (wrap) emit("(");
-      if (value == math.INFINITY) emit("Infinity");
-      else if (value == -math.INFINITY) emit("-Infinity");
-      else if (value != value) emit("NaN");
-      else emit(doubleToStringWithoutDotZero(value));
-      if (wrap) emit(")");
+      var wrap = node.parent.kind == .DOT && node != toStringTarget
+      var value = node.asDouble()
+      if (wrap) emit("(")
+      if (value == math.INFINITY) emit("Infinity")
+      else if (value == -math.INFINITY) emit("-Infinity")
+      else if (value != value) emit("NaN")
+      else emit(doubleToStringWithoutDotZero(value))
+      if (wrap) emit(")")
     }
 
     void emitList(Node node) {
-      emit("[");
-      emitCommaSeparatedExpressions(node.listValues());
-      emit("]");
+      emit("[")
+      emitCommaSeparatedExpressions(node.listValues())
+      emit("]")
     }
 
     static bool isDigits(string text) {
-      var found = false;
+      var found = false
       for (var n = text.size(), i = n != 0 && text[0] == '-' ? 1 : 0; i < n; i++) {
-        var c = text[i];
+        var c = text[i]
         if (c >= '0' && c <= '9') {
-          found = true;
+          found = true
         } else {
-          return false;
+          return false
         }
       }
-      return found;
+      return found
     }
 
     void emitKeyValue(Node node) {
-      var key = node.itemKey();
+      var key = node.itemKey()
       if (options.minify && key.kind == .STRING) {
-        var value = key.asString();
+        var value = key.asString()
         if (isValidIdentifier(value) || isDigits(value) && parseIntLiteral(value, 10).toString() == value) {
-          emit(value);
+          emit(value)
         } else {
-          emitExpression(key, .COMMA);
+          emitExpression(key, .COMMA)
         }
       } else {
-        emitExpression(key, .COMMA);
+        emitExpression(key, .COMMA)
       }
-      emit(":" + space);
-      emitExpression(node.itemValue(), .COMMA);
+      emit(":" + space)
+      emitExpression(node.itemValue(), .COMMA)
     }
 
     void emitMap(Node node) {
-      var items = node.mapItems();
-      var padding = items.size() != 0 ? space : "";
-      emit("{" + padding);
-      emitCommaSeparatedExpressions(items);
-      emit(padding + "}");
+      var items = node.mapItems()
+      var padding = items.size() != 0 ? space : ""
+      emit("{" + padding)
+      emitCommaSeparatedExpressions(items)
+      emit(padding + "}")
     }
 
     void emitDot(Node node) {
-      emitExpression(node.dotTarget(), .MEMBER);
-      emit(".");
-      var name = node.dotName();
+      emitExpression(node.dotTarget(), .MEMBER)
+      emit(".")
+      var name = node.dotName()
       emit(
         name.symbol == null ? name.asString() :
         name.symbol.kind.isInstance() ? mangleName(name.symbol) :
-        fullName(name.symbol));
+        fullName(name.symbol))
     }
 
     void emitCall(Node node) {
-      var value = node.callValue();
-      if (value.kind == .TYPE) emit("new ");
-      emitExpression(value, .UNARY_POSTFIX);
-      emit("(");
-      emitCommaSeparatedExpressions(node.callArguments());
-      emit(")");
+      var value = node.callValue()
+      if (value.kind == .TYPE) emit("new ")
+      emitExpression(value, .UNARY_POSTFIX)
+      emit("(")
+      emitCommaSeparatedExpressions(node.callArguments())
+      emit(")")
     }
 
     void emitSuperCall(Node node) {
-      var arguments = node.superCallArguments();
-      emit(fullName(node.symbol));
-      emit(".call(this");
+      var arguments = node.superCallArguments()
+      emit(fullName(node.symbol))
+      emit(".call(this")
       for (var i = 0; i < arguments.size(); i++) {
-        emit("," + space);
-        emitExpression(arguments[i], .COMMA);
+        emit("," + space)
+        emitExpression(arguments[i], .COMMA)
       }
-      emit(")");
+      emit(")")
     }
 
     void emitSequence(Node node, Precedence precedence) {
-      if (.COMMA <= precedence) emit("(");
-      emitCommaSeparatedExpressions(node.sequenceValues());
-      if (.COMMA <= precedence) emit(")");
+      if (.COMMA <= precedence) emit("(")
+      emitCommaSeparatedExpressions(node.sequenceValues())
+      if (.COMMA <= precedence) emit(")")
     }
 
     bool isRightChildOfBinaryExpression(Node node, NodeKind kind) {
-      assert kind.isBinaryOperator();
+      assert kind.isBinaryOperator()
       while (node.parent.kind.isBinaryOperator()) {
         if (node.parent.binaryRight() == node) {
-          return node.parent.kind == kind;
+          return node.parent.kind == kind
         }
-        node = node.parent;
+        node = node.parent
       }
-      return false;
+      return false
     }
 
     void emitUnary(Node node, Precedence precedence) {
-      var value = node.unaryValue();
-      var info = operatorInfo[node.kind];
-      if (info.precedence < precedence) emit("(");
-      var isPostfix = info.precedence == .UNARY_POSTFIX;
+      var value = node.unaryValue()
+      var info = operatorInfo[node.kind]
+      if (info.precedence < precedence) emit("(")
+      var isPostfix = info.precedence == .UNARY_POSTFIX
       if (!isPostfix) {
-        var kind = node.kind;
-        var valueKind = value.kind;
+        var kind = node.kind
+        var valueKind = value.kind
 
         if (options.minify && (
             kind == .POSITIVE && isRightChildOfBinaryExpression(node, .ADD) ||
             kind == .NEGATIVE && isRightChildOfBinaryExpression(node, .SUBTRACT))) {
-          emit(" "); // Prevent "- -1" from becoming "--1"
+          emit(" ") // Prevent "- -1" from becoming "--1"
         }
 
-        emit(info.text);
+        emit(info.text)
 
         if (kind == .NEW || kind == .DELETE ||
             kind == .POSITIVE && (valueKind == .POSITIVE || valueKind == .PREFIX_INCREMENT) ||
             kind == .NEGATIVE && (valueKind == .NEGATIVE || valueKind == .PREFIX_DECREMENT || value.isNumberLessThanZero())) {
-          emit(" "); // Prevent "- -1" from becoming "--1"
+          emit(" ") // Prevent "- -1" from becoming "--1"
         }
       }
-      emitExpression(value, info.precedence);
-      if (isPostfix) emit(info.text);
-      if (info.precedence < precedence) emit(")");
+      emitExpression(value, info.precedence)
+      if (isPostfix) emit(info.text)
+      if (info.precedence < precedence) emit(")")
     }
 
     bool isToStringCall(Node node) {
       if (node.kind == .CALL) {
-        var value = node.callValue();
-        return value.kind == .DOT && value.symbol != null && value.symbol.name == "toString" && node.callArguments().size() == 0;
+        var value = node.callValue()
+        return value.kind == .DOT && value.symbol != null && value.symbol.name == "toString" && node.callArguments().size() == 0
       }
-      return false;
+      return false
     }
 
     void emitBinary(Node node, Precedence precedence) {
-      var kind = node.kind;
-      var left = node.binaryLeft();
-      var right = node.binaryRight();
-      var info = operatorInfo[kind];
-      if (info.precedence < precedence) emit("(");
+      var kind = node.kind
+      var left = node.binaryLeft()
+      var right = node.binaryRight()
+      var info = operatorInfo[kind]
+      if (info.precedence < precedence) emit("(")
 
       // Special case adding a string with the result of calling toString()
       // since the JavaScript runtime will automatically call toString()
       if ((kind == .ADD || kind == .ASSIGN_ADD) && left.type != null && left.type.isString(resolver.cache) && isToStringCall(right)) {
-        right = right.callValue().dotTarget();
+        right = right.callValue().dotTarget()
       } else if (kind == .ADD && right.type != null && right.type.isString(resolver.cache) && isToStringCall(left)) {
-        left = left.callValue().dotTarget();
+        left = left.callValue().dotTarget()
       }
 
-      toStringTarget = left;
-      emitExpression(left, info.precedence.incrementIfRightAssociative(info.associativity));
-      emit(kind == .IN ? " in " : kind == .IS ? " instanceof " : space + (kind == .EQUAL ? "===" : kind == .NOT_EQUAL ? "!==" : info.text) + space);
+      toStringTarget = left
+      emitExpression(left, info.precedence.incrementIfRightAssociative(info.associativity))
+      emit(kind == .IN ? " in " : kind == .IS ? " instanceof " : space + (kind == .EQUAL ? "===" : kind == .NOT_EQUAL ? "!==" : info.text) + space)
 
       // Prevent "x - -1" from becoming "x--1"
       if (space == "" && (
           kind == .ADD && (right.kind == .POSITIVE || right.kind == .PREFIX_INCREMENT) ||
           kind == .SUBTRACT && (right.kind == .NEGATIVE || right.kind == .PREFIX_DECREMENT || right.isNumberLessThanZero()))) {
-        emit(" ");
+        emit(" ")
       }
 
-      toStringTarget = right;
-      emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity));
-      if (info.precedence < precedence) emit(")");
+      toStringTarget = right
+      emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
+      if (info.precedence < precedence) emit(")")
     }
 
     bool isIdentifierString(Node node) {
       if (node.kind == .STRING) {
-        var value = node.asString();
+        var value = node.asString()
         for (var i = 0; i < value.size(); i++) {
-          var c = value[i];
+          var c = value[i]
           if ((c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && c != '_' && c != '$' && (i == 0 || c < '0' || c > '9')) {
-            return false;
+            return false
           }
         }
-        return value.size() > 0 && !(value in isKeyword);
+        return value.size() > 0 && !(value in isKeyword)
       }
-      return false;
+      return false
     }
 
     void emitIndexProperty(Node node) {
       if (options.mangle && isIdentifierString(node)) {
-        emit("." + node.asString());
+        emit("." + node.asString())
       } else {
-        emit("[");
-        emitExpression(node, .LOWEST);
-        emit("]");
+        emit("[")
+        emitExpression(node, .LOWEST)
+        emit("]")
       }
     }
 
     void emitIndex(Node node, Precedence precedence) {
-      emitExpression(node.binaryLeft(), .MEMBER);
-      emitIndexProperty(node.binaryRight());
+      emitExpression(node.binaryLeft(), .MEMBER)
+      emitIndexProperty(node.binaryRight())
     }
 
     void emitTernary(Node node, Precedence precedence) {
-      if (.ASSIGN < precedence) emit("(");
-      emitExpression(node.ternaryLeft(), .MEMBER);
-      emitIndexProperty(node.ternaryMiddle());
-      emit(space + "=" + space);
-      emitExpression(node.ternaryRight(), .ASSIGN);
-      if (.ASSIGN < precedence) emit(")");
+      if (.ASSIGN < precedence) emit("(")
+      emitExpression(node.ternaryLeft(), .MEMBER)
+      emitIndexProperty(node.ternaryMiddle())
+      emit(space + "=" + space)
+      emitExpression(node.ternaryRight(), .ASSIGN)
+      if (.ASSIGN < precedence) emit(")")
     }
 
     string quoteStringJS(string text) {
-      var doubleCount = 0;
-      var singleCount = 0;
+      var doubleCount = 0
+      var singleCount = 0
       for (var i = 0; i < text.size(); i++) {
-        var c = text[i];
-        if (c == '"') doubleCount++;
-        else if (c == '\'') singleCount++;
+        var c = text[i]
+        if (c == '"') doubleCount++
+        else if (c == '\'') singleCount++
       }
-      return quoteString(text, singleCount > doubleCount ? '"' : '\'');
+      return quoteString(text, singleCount > doubleCount ? '"' : '\'')
     }
 
     static bool hasCompoundName(Symbol symbol) {
-      var enclosingSymbol = symbol.enclosingSymbol;
+      var enclosingSymbol = symbol.enclosingSymbol
       return enclosingSymbol != null && enclosingSymbol.kind != .GLOBAL_NAMESPACE && (
-        symbol.kind != .CONSTRUCTOR_FUNCTION || hasCompoundName(enclosingSymbol));
+        symbol.kind != .CONSTRUCTOR_FUNCTION || hasCompoundName(enclosingSymbol))
     }
 
     static string mangleName(Symbol symbol) {
       if (symbol.emitAs != null) {
-        return symbol.emitAs.value;
+        return symbol.emitAs.value
       }
       if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
-        return mangleName(symbol.enclosingSymbol);
+        return mangleName(symbol.enclosingSymbol)
       }
       if (symbol.isImportOrExport()) {
-        return symbol.name;
+        return symbol.name
       }
       if (symbol.name in isKeyword) {
-        return "$" + symbol.name;
+        return "$" + symbol.name
       }
-      return symbol.name;
+      return symbol.name
     }
 
     static string fullName(Symbol symbol) {
-      var enclosingSymbol = symbol.enclosingSymbol;
+      var enclosingSymbol = symbol.enclosingSymbol
       if (enclosingSymbol != null && enclosingSymbol.kind != .GLOBAL_NAMESPACE) {
-        var enclosingName = fullName(enclosingSymbol);
+        var enclosingName = fullName(enclosingSymbol)
         if (symbol.kind == .CONSTRUCTOR_FUNCTION) {
-          return enclosingName;
+          return enclosingName
         }
         if (symbol.kind.isInstance()) {
-          enclosingName += ".prototype";
+          enclosingName += ".prototype"
         }
-        return enclosingName + "." + mangleName(symbol);
+        return enclosingName + "." + mangleName(symbol)
       }
-      return mangleName(symbol);
+      return mangleName(symbol)
     }
 
     static bool isValidIdentifier(string text) {
       for (var i = 0; i < text.size(); i++) {
-        var c = text[i];
+        var c = text[i]
         if (((c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && c != '_' && c != '$') && (i == 0 || c < '0' || c > '9')) {
-          return false;
+          return false
         }
       }
-      return text != "";
+      return text != ""
     }
 
-    static StringMap<bool> isKeyword = {
-      "apply": true,
-      "arguments": true,
-      "Boolean": true,
-      "break": true,
-      "call": true,
-      "case": true,
-      "catch": true,
-      "class": true,
-      "const": true,
-      "constructor": true,
-      "continue": true,
-      "Date": true,
-      "debugger": true,
-      "default": true,
-      "delete": true,
-      "do": true,
-      "double": true,
-      "else": true,
-      "export": true,
-      "extends": true,
-      "false": true,
-      "finally": true,
-      "float": true,
-      "for": true,
-      "Function": true,
-      "function": true,
-      "if": true,
-      "import": true,
-      "in": true,
-      "instanceof": true,
-      "int": true,
-      "let": true,
-      "new": true,
-      "null": true,
-      "Number": true,
-      "Object": true,
-      "return": true,
-      "String": true,
-      "super": true,
-      "this": true,
-      "throw": true,
-      "true": true,
-      "try": true,
-      "var": true,
-    };
+    static var isKeyword = {
+      "apply": 0,
+      "arguments": 0,
+      "Boolean": 0,
+      "break": 0,
+      "call": 0,
+      "case": 0,
+      "catch": 0,
+      "class": 0,
+      "const": 0,
+      "constructor": 0,
+      "continue": 0,
+      "Date": 0,
+      "debugger": 0,
+      "default": 0,
+      "delete": 0,
+      "do": 0,
+      "double": 0,
+      "else": 0,
+      "export": 0,
+      "extends": 0,
+      "false": 0,
+      "finally": 0,
+      "float": 0,
+      "for": 0,
+      "Function": 0,
+      "function": 0,
+      "if": 0,
+      "import": 0,
+      "in": 0,
+      "instanceof": 0,
+      "int": 0,
+      "let": 0,
+      "new": 0,
+      "null": 0,
+      "Number": 0,
+      "Object": 0,
+      "return": 0,
+      "String": 0,
+      "super": 0,
+      "this": 0,
+      "throw": 0,
+      "true": 0,
+      "try": 0,
+      "var": 0,
+    }
   }
 }

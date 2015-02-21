@@ -1,5 +1,5 @@
 interface IEmitter {
-  virtual List<Source> emitProgram(Node program);
+  virtual List<Source> emitProgram(Node program)
 }
 
 enum CompilerTarget {
@@ -18,39 +18,39 @@ enum CompilerTarget {
 
 in CompilerTarget {
   bool shouldRunResolver() {
-    return this >= NONE && this <= RUBY;
+    return this >= NONE && this <= RUBY
   }
 
   bool needsMapLiteralFactory() {
-    return this != RUBY;
+    return this != RUBY
   }
 
   bool hasNoNestedScopes() {
-    return this == JAVASCRIPT;
+    return this == JAVASCRIPT
   }
 
   // C++ has generics, not templates, and each template has a separate copy of
   // its static members, unlike generics. Fix this by moving all static stuff
   // off of generic types.
   bool moveStaticGlobalsOffGenericTypes() {
-    return this == CPP;
+    return this == CPP
   }
 
   // Interfaces in JavaScript go away entirely at runtime. All stuff defined
   // on an interface (global variables, non-virtual functions, etc.) must be
   // moved off for it to be emitted correctly.
   bool moveNonVirtualSymbolsOffInterfaces() {
-    return this == JAVASCRIPT || this == RUBY;
+    return this == JAVASCRIPT || this == RUBY
   }
 }
 
 class OverriddenDefine {
-  bool value;
-  Range range;
+  bool value
+  Range range
 }
 
 interface FileAccess {
-  virtual Source contentsOfFile(string sourcePath, string relativePath);
+  virtual Source contentsOfFile(string sourcePath, string relativePath)
 }
 
 enum CompilerConfig {
@@ -71,257 +71,257 @@ enum MemoryManagement {
 }
 
 class CompilerOptions {
-  FileAccess fileAccess = null;
-  CompilerTarget target = .NONE;
-  CompilerConfig config = .AUTOMATIC;
-  MemoryManagement memoryManagement = .NONE;
-  var overriddenDefines = StringMap<OverriddenDefine>();
-  var outputDirectory = "";
-  var outputFile = "";
-  var verbose = false;
-  var minify = false; // Removes whitespace
-  var mangle = false; // Changes the code structure to save space
-  var sourceMap = false;
-  var removeAsserts = false;
-  var foldAllConstants = false;
-  var includeLibraries = false;
-  var inlineAllFunctions = false;
-  var globalizeAllFunctions = false;
-  var log = Log();
+  FileAccess fileAccess = null
+  CompilerTarget target = .NONE
+  CompilerConfig config = .AUTOMATIC
+  MemoryManagement memoryManagement = .NONE
+  var overriddenDefines = StringMap<OverriddenDefine>()
+  var outputDirectory = ""
+  var outputFile = ""
+  var verbose = false
+  var minify = false // Removes whitespace
+  var mangle = false // Changes the code structure to save space
+  var sourceMap = false
+  var removeAsserts = false
+  var foldAllConstants = false
+  var includeLibraries = false
+  var inlineAllFunctions = false
+  var globalizeAllFunctions = false
+  var log = Log()
 
   void overrideDefine(string name, bool value) {
-    overriddenDefines[name] = OverriddenDefine(value, .EMPTY);
+    overriddenDefines[name] = OverriddenDefine(value, .EMPTY)
   }
 }
 
 class CompilerResult {
-  List<Source> outputs;
-  Node program;
-  Resolver resolver;
+  List<Source> outputs
+  Node program
+  Resolver resolver
 }
 
 // This caches the parse tree for a bundled source file to speed up recompilation
 class CachedLibrary {
-  string name;
-  string contents;
-  Node file = null;
+  string name
+  string contents
+  Node file = null
 
   void compile(Compiler compiler) {
     if (file == null) {
-      file = compiler.addInput(Source(joinPath("<compiler>", name), contents));
+      file = compiler.addInput(Source(joinPath("<compiler>", name), contents))
       if (file == null) {
-        terminal.print("could not compile " + name + ":\n" + compiler._options.log.toString());
-        assert false;
+        terminal.print("could not compile " + name + ":\n" + compiler._options.log.toString())
+        assert false
       }
-      file.flags |= .IS_LIBRARY_FILE;
-      file = file.clone();
+      file.flags |= .IS_LIBRARY_FILE
+      file = file.clone()
     } else {
-      compiler.addCachedInput(file.clone());
+      compiler.addCachedInput(file.clone())
     }
   }
 }
 
 class Compiler {
-  var tokenizingTime = 0.0;
-  var parsingTime = 0.0;
-  var resolvingTime = 0.0;
-  var callGraphTime = 0.0;
-  var globalizeTime = 0.0;
-  var symbolMotionTime = 0.0;
-  var functionInliningTime = 0.0;
-  var constantFoldingTime = 0.0;
-  var treeShakingTime = 0.0;
-  var emitTime = 0.0;
-  var lineCountingTime = 0.0;
-  var totalTime = 0.0;
+  var tokenizingTime = 0.0
+  var parsingTime = 0.0
+  var resolvingTime = 0.0
+  var callGraphTime = 0.0
+  var globalizeTime = 0.0
+  var symbolMotionTime = 0.0
+  var functionInliningTime = 0.0
+  var constantFoldingTime = 0.0
+  var treeShakingTime = 0.0
+  var emitTime = 0.0
+  var lineCountingTime = 0.0
+  var totalTime = 0.0
 
-    CompilerOptions _options;
+    CompilerOptions _options
   private {
-    // CompilerOptions _options;
-    List<Source> _inputs = [];
-    var _program = Node.createProgram([]);
+    // CompilerOptions _options
+    List<Source> _inputs = []
+    var _program = Node.createProgram([])
   }
 
   new(CompilerOptions options) : _options = options {
-    var target = options.target;
-    var config = options.config;
+    var target = options.target
+    var config = options.config
 
     // Automatically set the current configuration if it's not explicitly set
     if (config == .AUTOMATIC) {
       if (target == .JAVASCRIPT) {
-        config = .BROWSER;
+        config = .BROWSER
       } else if (target == .CPP || target == .RUBY) {
-        var os = OperatingSystem.current();
+        var os = OperatingSystem.current()
         config =
           os == .ANDROID ? .ANDROID :
           os == .IOS ? .IOS :
           os == .LINUX ? .LINUX :
           os == .OSX ? .OSX :
           os == .WINDOWS ? .WINDOWS :
-          .AUTOMATIC;
+          .AUTOMATIC
       }
-      options.config = config;
+      options.config = config
     }
 
     // Prepare native #define overrides
-    options.overrideDefine("TARGET_CPP", target == .CPP);
-    options.overrideDefine("TARGET_JS", target == .JAVASCRIPT);
-    options.overrideDefine("TARGET_RUBY", target == .RUBY);
-    options.overrideDefine("CONFIG_ANDROID", config == .ANDROID);
-    options.overrideDefine("CONFIG_BROWSER", config == .BROWSER);
-    options.overrideDefine("CONFIG_IOS", config == .IOS);
-    options.overrideDefine("CONFIG_LINUX", config == .LINUX);
-    options.overrideDefine("CONFIG_NODE", config == .NODE);
-    options.overrideDefine("CONFIG_OSX", config == .OSX);
-    options.overrideDefine("CONFIG_WINDOWS", config == .WINDOWS);
+    options.overrideDefine("TARGET_CPP", target == .CPP)
+    options.overrideDefine("TARGET_JS", target == .JAVASCRIPT)
+    options.overrideDefine("TARGET_RUBY", target == .RUBY)
+    options.overrideDefine("CONFIG_ANDROID", config == .ANDROID)
+    options.overrideDefine("CONFIG_BROWSER", config == .BROWSER)
+    options.overrideDefine("CONFIG_IOS", config == .IOS)
+    options.overrideDefine("CONFIG_LINUX", config == .LINUX)
+    options.overrideDefine("CONFIG_NODE", config == .NODE)
+    options.overrideDefine("CONFIG_OSX", config == .OSX)
+    options.overrideDefine("CONFIG_WINDOWS", config == .WINDOWS)
 
     // Add all libraries before any other code
     for (var i = 0; i < cachedLibraries.size(); i++) {
-      cachedLibraries[i].compile(this);
+      cachedLibraries[i].compile(this)
     }
   }
 
   Node addInput(Source source) {
-    var log = _options.log;
-    var errorCount = log.errorCount;
+    var log = _options.log
+    var errorCount = log.errorCount
 
     // Tokenize the source
-    var tokenizeStart = now();
-    var tokens = tokenize(log, source);
+    var tokenizeStart = now()
+    var tokens = tokenize(log, source)
     if (log.errorCount == errorCount) {
-      prepareTokens(tokens);
+      prepareTokens(tokens)
     }
-    tokenizingTime += now() - tokenizeStart;
-    _inputs.push(source);
+    tokenizingTime += now() - tokenizeStart
+    _inputs.push(source)
 
     // Parse the source if the tokenize was successful
     if (log.errorCount == errorCount) {
-      var parseStart = now();
-      var file = parseFile(log, tokens);
-      parsingTime += now() - parseStart;
+      var parseStart = now()
+      var file = parseFile(log, tokens)
+      parsingTime += now() - parseStart
 
       // Return the generated node so it can be cached if needed
       if (file != null) {
-        _program.appendChild(file);
-        return file;
+        _program.appendChild(file)
+        return file
       }
     }
 
-    return null;
+    return null
   }
 
   void addCachedInput(Node node) {
-    assert node.kind == .FILE;
-    assert !node.range.isEmpty();
-    _inputs.push(node.range.source);
-    _program.appendChild(node);
+    assert node.kind == .FILE
+    assert !node.range.isEmpty()
+    _inputs.push(node.range.source)
+    _program.appendChild(node)
   }
 
   CompilerResult compile() {
-    var totalStart = now();
-    List<Source> outputs = [];
+    var totalStart = now()
+    List<Source> outputs = []
 
     // Resolve everything together
-    Resolver resolver = null;
+    Resolver resolver = null
     if (_options.target.shouldRunResolver()) {
-      var resolveStart = now();
-      resolver = Resolver(_options.log, _options);
-      resolver.run(_program);
-      resolvingTime += now() - resolveStart;
+      var resolveStart = now()
+      resolver = Resolver(_options.log, _options)
+      resolver.run(_program)
+      resolvingTime += now() - resolveStart
     }
     if (!_options.log.hasErrors()) {
 
       // Optimize the module if the target format requires it
       if (_options.target.shouldRunResolver()) {
         // Build a call graph
-        var callGraphStart = now();
-        var graph = CallGraph(_program);
-        callGraphTime += now() - callGraphStart;
+        var callGraphStart = now()
+        var graph = CallGraph(_program)
+        callGraphTime += now() - callGraphStart
 
         // Convert instance functions to static functions
-        var globalizeStart = now();
-        GlobalizePass.run(graph, resolver);
-        globalizeTime += now() - globalizeStart;
+        var globalizeStart = now()
+        GlobalizePass.run(graph, resolver)
+        globalizeTime += now() - globalizeStart
 
         // Move functions
-        var symbolMotionStart = now();
-        SymbolMotionPass.run(resolver);
-        symbolMotionTime += now() - symbolMotionStart;
+        var symbolMotionStart = now()
+        SymbolMotionPass.run(resolver)
+        symbolMotionTime += now() - symbolMotionStart
 
         // Inline functions
-        var functionInliningStart = now();
-        FunctionInliningPass.run(graph, _options);
-        functionInliningTime += now() - functionInliningStart;
+        var functionInliningStart = now()
+        FunctionInliningPass.run(graph, _options)
+        functionInliningTime += now() - functionInliningStart
 
         // Fold constants
         if (_options.foldAllConstants) {
-          var constantFoldingStart = now();
-          resolver.constantFolder.foldConstants(_program);
-          constantFoldingTime += now() - constantFoldingStart;
+          var constantFoldingStart = now()
+          resolver.constantFolder.foldConstants(_program)
+          constantFoldingTime += now() - constantFoldingStart
         }
 
         // Tree shaking
-        var treeShakingStart = now();
-        TreeShakingPass.run(_program, _options, resolver);
-        treeShakingTime += now() - treeShakingStart;
+        var treeShakingStart = now()
+        TreeShakingPass.run(_program, _options, resolver)
+        treeShakingTime += now() - treeShakingStart
       }
 
       // Emit the module in the target format
-      IEmitter emitter = null;
+      IEmitter emitter = null
       switch (_options.target) {
         case .NONE {}
-        case .CPP { emitter = cpp.Emitter(resolver); }
-        case .JAVASCRIPT { emitter = js.Emitter(resolver); }
-        case .JOINED { emitter = joined.Emitter(resolver); }
-        case .RUBY { emitter = ruby.Emitter(resolver); }
-        case .JSON_AST { emitter = json.Emitter(_options); }
-        case .LISP_AST { emitter = lisp.Emitter(_options); }
-        case .XML_AST { emitter = xml.Emitter(_options); }
-        default { assert false; }
+        case .CPP { emitter = cpp.Emitter(resolver) }
+        case .JAVASCRIPT { emitter = js.Emitter(resolver) }
+        case .JOINED { emitter = joined.Emitter(resolver) }
+        case .RUBY { emitter = ruby.Emitter(resolver) }
+        case .JSON_AST { emitter = json.Emitter(_options) }
+        case .LISP_AST { emitter = lisp.Emitter(_options) }
+        case .XML_AST { emitter = xml.Emitter(_options) }
+        default { assert false }
       }
       if (emitter != null) {
-        var emitStart = now();
-        outputs = emitter.emitProgram(_program);
-        emitTime += now() - emitStart;
+        var emitStart = now()
+        outputs = emitter.emitProgram(_program)
+        emitTime += now() - emitStart
       }
     }
 
-    totalTime += now() - totalStart;
-    return CompilerResult(outputs, _program, resolver);
+    totalTime += now() - totalStart
+    return CompilerResult(outputs, _program, resolver)
   }
 
   string statistics(CompilerResult result) {
     // Line count
-    var lineCountingStart = now();
-    var lineCount = 0;
-    lineCount += totalLineCount(_inputs);
-    var builder = StringBuilder();
-    builder.append("Input line count: " + lineCount);
-    builder.append("\nOutput line count: " + totalLineCount(result.outputs));
-    lineCountingTime += now() - lineCountingStart;
+    var lineCountingStart = now()
+    var lineCount = 0
+    lineCount += totalLineCount(_inputs)
+    var builder = StringBuilder()
+    builder.append("Input line count: " + lineCount)
+    builder.append("\nOutput line count: " + totalLineCount(result.outputs))
+    lineCountingTime += now() - lineCountingStart
 
     // Compilation time
-    var optimizingTime = callGraphTime + globalizeTime + symbolMotionTime + functionInliningTime + constantFoldingTime + treeShakingTime;
-    builder.append("\nTotal compile time: " + formatNumber(totalTime + lineCountingTime) + "ms");
-    if (tokenizingTime > 0) builder.append("\n  Tokenizing: " + formatNumber(tokenizingTime) + "ms");
-    if (parsingTime > 0) builder.append("\n  Parsing: " + formatNumber(parsingTime) + "ms");
-    if (resolvingTime > 0) builder.append("\n  Resolving: " + formatNumber(resolvingTime) + "ms");
+    var optimizingTime = callGraphTime + globalizeTime + symbolMotionTime + functionInliningTime + constantFoldingTime + treeShakingTime
+    builder.append("\nTotal compile time: " + formatNumber(totalTime + lineCountingTime) + "ms")
+    if (tokenizingTime > 0) builder.append("\n  Tokenizing: " + formatNumber(tokenizingTime) + "ms")
+    if (parsingTime > 0) builder.append("\n  Parsing: " + formatNumber(parsingTime) + "ms")
+    if (resolvingTime > 0) builder.append("\n  Resolving: " + formatNumber(resolvingTime) + "ms")
     if (optimizingTime > 0) {
-      builder.append("\n  Optimizing: " + formatNumber(optimizingTime) + "ms");
-      builder.append("\n    Building call graph: " + formatNumber(callGraphTime) + "ms");
-      builder.append("\n    Globalize: " + formatNumber(globalizeTime) + "ms");
-      builder.append("\n    Symbol motion: " + formatNumber(symbolMotionTime) + "ms");
-      builder.append("\n    Function inlining: " + formatNumber(functionInliningTime) + "ms");
-      builder.append("\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms");
-      builder.append("\n    Tree shaking: " + formatNumber(treeShakingTime) + "ms");
+      builder.append("\n  Optimizing: " + formatNumber(optimizingTime) + "ms")
+      builder.append("\n    Building call graph: " + formatNumber(callGraphTime) + "ms")
+      builder.append("\n    Globalize: " + formatNumber(globalizeTime) + "ms")
+      builder.append("\n    Symbol motion: " + formatNumber(symbolMotionTime) + "ms")
+      builder.append("\n    Function inlining: " + formatNumber(functionInliningTime) + "ms")
+      builder.append("\n    Constant folding: " + formatNumber(constantFoldingTime) + "ms")
+      builder.append("\n    Tree shaking: " + formatNumber(treeShakingTime) + "ms")
     }
-    if (emitTime > 0) builder.append("\n  Emit: " + formatNumber(emitTime) + "ms");
-    if (lineCountingTime > 0) builder.append("\n  Counting lines: " + formatNumber(lineCountingTime) + "ms");
+    if (emitTime > 0) builder.append("\n  Emit: " + formatNumber(emitTime) + "ms")
+    if (lineCountingTime > 0) builder.append("\n  Counting lines: " + formatNumber(lineCountingTime) + "ms")
 
     // Sources
-    sourceStatistics("Inputs", _inputs, builder);
-    sourceStatistics("Outputs", result.outputs, builder);
-    return builder.toString();
+    sourceStatistics("Inputs", _inputs, builder)
+    sourceStatistics("Outputs", result.outputs, builder)
+    return builder.toString()
   }
 
   // Cache the parsed standard libraries for a speed boost during recompilation
@@ -335,25 +335,25 @@ class Compiler {
     CachedLibrary("os.sk", @ContentsOfFile("../../lib/os.sk")),
     CachedLibrary("terminal.sk", @ContentsOfFile("../../lib/terminal.sk")),
     CachedLibrary("unicode.sk", @ContentsOfFile("../../lib/unicode.sk")),
-  ];
+  ]
 
   static int totalLineCount(List<Source> sources) {
-    var lineCount = 0;
+    var lineCount = 0
     for (var i = 0; i < sources.size(); i++) {
-      lineCount += sources[i].lineCount();
+      lineCount += sources[i].lineCount()
     }
-    return lineCount;
+    return lineCount
   }
 
   static void sourceStatistics(string name, List<Source> sources, StringBuilder builder) {
-    var total = 0;
+    var total = 0
     for (var i = 0; i < sources.size(); i++) {
-      total += sources[i].contents.size();
+      total += sources[i].contents.size()
     }
-    builder.append("\n" + name + ": " + sources.size() + " (" + bytesToString(total) + " total)");
+    builder.append("\n" + name + ": " + sources.size() + " (" + bytesToString(total) + " total)")
     for (var i = 0; i < sources.size(); i++) {
-      var source = sources[i];
-      builder.append("\n  " + source.name + ": " + bytesToString(source.contents.size()));
+      var source = sources[i]
+      builder.append("\n  " + source.name + ": " + bytesToString(source.contents.size()))
     }
   }
 }

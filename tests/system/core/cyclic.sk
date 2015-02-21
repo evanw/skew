@@ -6,7 +6,7 @@ var foo = foo;
 <stdin>:1:5: error: Cyclic declaration of \"foo\"
 var foo = foo;
     ~~~
-");
+")
 
 test("
 foo foo = foo;
@@ -14,7 +14,7 @@ foo foo = foo;
 <stdin>:1:5: error: Cyclic declaration of \"foo\"
 foo foo = foo;
     ~~~
-");
+")
 
 test("
 foo foo = foo, bar = bar;
@@ -22,7 +22,7 @@ foo foo = foo, bar = bar;
 <stdin>:1:5: error: Cyclic declaration of \"foo\"
 foo foo = foo, bar = bar;
     ~~~
-");
+")
 
 test("
 bar foo = foo, bar = bar;
@@ -30,7 +30,7 @@ bar foo = foo, bar = bar;
 <stdin>:1:16: error: Cyclic declaration of \"bar\"
 bar foo = foo, bar = bar;
                ~~~
-");
+")
 
 test("
 bar foo = foo;
@@ -39,7 +39,7 @@ foo bar = bar;
 <stdin>:1:5: error: Cyclic declaration of \"foo\"
 bar foo = foo;
     ~~~
-");
+")
 
 test("
 class Foo : Foo {}
@@ -48,7 +48,7 @@ in Foo {}
 <stdin>:1:7: error: Cyclic declaration of \"Foo\"
 class Foo : Foo {}
       ~~~
-");
+")
 
 test("
 in Foo {}
@@ -57,7 +57,7 @@ class Foo : Foo {}
 <stdin>:2:7: error: Cyclic declaration of \"Foo\"
 class Foo : Foo {}
       ~~~
-");
+")
 
 test("
 class Foo : Bar {}
@@ -66,7 +66,7 @@ class Bar : Foo {}
 <stdin>:1:7: error: Cyclic declaration of \"Foo\"
 class Foo : Bar {}
       ~~~
-");
+")
 
 test("
 class Foo : Bar {}
@@ -76,7 +76,7 @@ class Baz : Foo {}
 <stdin>:1:7: error: Cyclic declaration of \"Foo\"
 class Foo : Bar {}
       ~~~
-");
+")
 
 test("
 class Foo<T is T> {}
@@ -84,7 +84,7 @@ class Foo<T is T> {}
 <stdin>:1:11: error: Cyclic declaration of \"T\"
 class Foo<T is T> {}
           ^
-");
+")
 
 test("
 class Foo<A is B, B is A> {}
@@ -92,7 +92,7 @@ class Foo<A is B, B is A> {}
 <stdin>:1:11: error: Cyclic declaration of \"A\"
 class Foo<A is B, B is A> {}
           ^
-");
+")
 
 test("
 class Foo<A is B, B is C, C is A> {}
@@ -100,7 +100,7 @@ class Foo<A is B, B is C, C is A> {}
 <stdin>:1:11: error: Cyclic declaration of \"A\"
 class Foo<A is B, B is C, C is A> {}
           ^
-");
+")
 
 test("
 void foo(foo bar) {}
@@ -108,7 +108,7 @@ void foo(foo bar) {}
 <stdin>:1:6: error: Cyclic declaration of \"foo\"
 void foo(foo bar) {}
      ~~~
-");
+")
 
 test("
 void foo(bar baz) {}
@@ -117,7 +117,7 @@ void bar(foo baz) {}
 <stdin>:1:6: error: Cyclic declaration of \"foo\"
 void foo(bar baz) {}
      ~~~
-");
+")
 
 test("
 enum Foo { FOO = FOO }
@@ -125,7 +125,7 @@ enum Foo { FOO = FOO }
 <stdin>:1:12: error: Cyclic declaration of \"FOO\"
 enum Foo { FOO = FOO }
            ~~~
-");
+")
 
 test("
 enum Foo { FOO = BAR, BAR }
@@ -133,7 +133,7 @@ enum Foo { FOO = BAR, BAR }
 <stdin>:1:12: error: Cyclic declaration of \"FOO\"
 enum Foo { FOO = BAR, BAR }
            ~~~
-");
+")
 
 test("
 class A : C {}
@@ -141,7 +141,7 @@ in A { class B : C.D {} }
 class C {}
 in C { class D : A {} }
 ", "
-");
+")
 
 test("
 class A : C.D {}
@@ -152,7 +152,7 @@ in C { class D {} }
 <stdin>:1:7: error: Cyclic declaration of \"A\"
 class A : C.D {}
       ^
-");
+")
 
 test("
 alias foo = foo;
@@ -165,7 +165,7 @@ alias foo = foo;
 <stdin>:2:7: error: Cyclic declaration of \"bar\"
 alias bar = baz;
       ~~~
-");
+")
 
 test("
 const int foo = foo;
@@ -178,6 +178,6 @@ const int foo = foo;
 <stdin>:2:11: error: Cyclic declaration of \"bar\"
 const int bar = baz;
           ~~~
-");
+")
 
 }}

@@ -4,71 +4,71 @@ enum DiagnosticKind {
 }
 
 class Diagnostic {
-  DiagnosticKind kind;
-  Range range;
-  string text;
-  Range noteRange = .EMPTY;
-  var noteText = "";
+  DiagnosticKind kind
+  Range range
+  string text
+  Range noteRange = .EMPTY
+  var noteText = ""
 
   static string format(string kind, Range range, string text) {
     if (range.isEmpty()) {
-      return kind + ": " + text + "\n";
+      return kind + ": " + text + "\n"
     }
-    var formatted = range.format(0);
-    return range.locationString() + ": " + kind + ": " + text + "\n" + formatted.line + "\n" + formatted.range + "\n";
+    var formatted = range.format(0)
+    return range.locationString() + ": " + kind + ": " + text + "\n" + formatted.line + "\n" + formatted.range + "\n"
   }
 }
 
 class Log {
-  List<Diagnostic> diagnostics = [];
-  var warningCount = 0;
-  var errorCount = 0;
+  List<Diagnostic> diagnostics = []
+  var warningCount = 0
+  var errorCount = 0
 
   string toString() {
-    var builder = StringBuilder();
+    var builder = StringBuilder()
 
     // Emit the log assuming an infinite terminal width
     for (var i = 0; i < diagnostics.size(); i++) {
-      var diagnostic = diagnostics[i];
-      builder.append(Diagnostic.format(diagnostic.kind == .ERROR ? "error" : "warning", diagnostic.range, diagnostic.text));
+      var diagnostic = diagnostics[i]
+      builder.append(Diagnostic.format(diagnostic.kind == .ERROR ? "error" : "warning", diagnostic.range, diagnostic.text))
 
       // Append notes after the diagnostic they apply to
       if (!diagnostic.noteRange.isEmpty()) {
-        builder.append(Diagnostic.format("note", diagnostic.noteRange, diagnostic.noteText));
+        builder.append(Diagnostic.format("note", diagnostic.noteRange, diagnostic.noteText))
       }
     }
 
-    return builder.toString();
+    return builder.toString()
   }
 
   bool isEmpty() {
-    return diagnostics.size() == 0;
+    return diagnostics.size() == 0
   }
 
   bool hasErrors() {
-    return errorCount != 0;
+    return errorCount != 0
   }
 
   bool hasWarnings() {
-    return warningCount != 0;
+    return warningCount != 0
   }
 
   void error(Range range, string text) {
-    assert range != null; // Use Range.EMPTY instead of null
-    diagnostics.push(Diagnostic(.ERROR, range, text));
-    errorCount++;
+    assert range != null // Use Range.EMPTY instead of null
+    diagnostics.push(Diagnostic(.ERROR, range, text))
+    errorCount++
   }
 
   void warning(Range range, string text) {
-    assert range != null; // Use Range.EMPTY instead of null
-    diagnostics.push(Diagnostic(.WARNING, range, text));
-    warningCount++;
+    assert range != null // Use Range.EMPTY instead of null
+    diagnostics.push(Diagnostic(.WARNING, range, text))
+    warningCount++
   }
 
   void note(Range range, string text) {
-    assert range != null; // Use Range.EMPTY instead of null
-    var last = diagnostics.last();
-    last.noteRange = range;
-    last.noteText = text;
+    assert range != null // Use Range.EMPTY instead of null
+    var last = diagnostics.last()
+    last.noteRange = range
+    last.noteText = text
   }
 }

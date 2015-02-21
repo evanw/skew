@@ -5,7 +5,7 @@ import int foo;
 ", "
 (function() {
 }());
-");
+")
 
 testJS("
 int foo = 0;
@@ -14,7 +14,7 @@ class Bar : Foo {}
 ", "
 (function() {
 }());
-");
+")
 
 testJS("
 enum Foo { A, B, C }
@@ -35,7 +35,7 @@ export Foo bar() { return .C; }
     return Foo.C;
   };
 }());
-");
+")
 
 testJS("
 export int foo(int x) {
@@ -64,7 +64,7 @@ export int foo(int x) {
     return y;
   };
 }());
-");
+")
 
 testJS("
 interface IFoo {}
@@ -84,7 +84,7 @@ export class Foo<T is IFoo> {
     return foo;
   };
 }());
-");
+")
 
 testJS("
 class Foo {
@@ -110,7 +110,7 @@ export void foo() {
     new Foo().foo();
   };
 }());
-");
+")
 
 testJS("
 export class Foo {
@@ -124,7 +124,7 @@ export class Foo {
     this.bar = _1;
   };
 }());
-");
+")
 
 testJS("
 export enum Foo {
@@ -144,7 +144,7 @@ alias Bar = Foo;
     return Foo.FOO;
   };
 }());
-");
+")
 
 testJS("
 pure int foo() {
@@ -163,6 +163,6 @@ const var baz = 0;
   bar = foo();
   var baz = 0;
 }());
-");
+")
 
 }}

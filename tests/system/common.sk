@@ -1,4 +1,4 @@
-using tests;
+using tests
 
 namespace tests {
   enum Status {
@@ -8,301 +8,301 @@ namespace tests {
   }
 
   class Test {
-    string input;
-    string expected;
-    var output = "";
-    Status status = .PENDING;
+    string input
+    string expected
+    var output = ""
+    Status status = .PENDING
 
-    virtual void run();
+    virtual void run()
   }
 
   class FormatTest : Test {
-    int start;
-    int end;
-    int maxLength;
+    int start
+    int end
+    int maxLength
 
     override void run() {
-      var range = Range(Source("<stdin>", input), start, end);
-      var formatted = range.format(maxLength);
-      output = trim(formatted.line + "\n" + formatted.range);
-      expected = trim(expected);
-      status = output == expected ? .SUCCEEDED : .FAILED;
+      var range = Range(Source("<stdin>", input), start, end)
+      var formatted = range.format(maxLength)
+      output = trim(formatted.line + "\n" + formatted.range)
+      expected = trim(expected)
+      status = output == expected ? .SUCCEEDED : .FAILED
     }
   }
 
   class CompilerTest : Test {
-    var options = CompilerOptions();
+    var options = CompilerOptions()
 
     override void run() {
       try {
-        var compiler = Compiler(options);
-        compiler.addInput(Source("<stdin>", input));
-        var result = compiler.compile();
+        var compiler = Compiler(options)
+        compiler.addInput(Source("<stdin>", input))
+        var result = compiler.compile()
         if (result.outputs.size() != 0) {
           for (var i = 0; i < result.outputs.size(); i++) {
-            output += result.outputs[i].contents + "\n";
+            output += result.outputs[i].contents + "\n"
           }
         } else {
-          output = options.log.toString();
+          output = options.log.toString()
         }
       } catch {
-        output = "(internal compiler error)";
+        output = "(internal compiler error)"
       }
-      output = trim(output);
-      expected = trim(expected);
-      status = output == expected ? .SUCCEEDED : .FAILED;
+      output = trim(output)
+      expected = trim(expected)
+      status = output == expected ? .SUCCEEDED : .FAILED
     }
 
     CompilerTest js() {
-      options.target = .JAVASCRIPT;
-      return this;
+      options.target = .JAVASCRIPT
+      return this
     }
 
     CompilerTest cpp() {
-      options.target = .CPP;
-      options.config = .OSX;
-      return this;
+      options.target = .CPP
+      options.config = .OSX
+      return this
     }
 
     CompilerTest ruby() {
-      options.target = .RUBY;
-      return this;
+      options.target = .RUBY
+      return this
     }
 
     CompilerTest windows() {
-      options.config = .WINDOWS;
-      return this;
+      options.config = .WINDOWS
+      return this
     }
 
     CompilerTest release() {
-      options.minify = true;
-      options.mangle = true;
-      options.removeAsserts = true;
-      options.foldAllConstants = true;
-      options.inlineAllFunctions = true;
-      options.globalizeAllFunctions = true;
-      return this;
+      options.minify = true
+      options.mangle = true
+      options.removeAsserts = true
+      options.foldAllConstants = true
+      options.inlineAllFunctions = true
+      options.globalizeAllFunctions = true
+      return this
     }
 
     CompilerTest minify() {
-      options.minify = true;
-      return this;
+      options.minify = true
+      return this
     }
 
     CompilerTest mangle() {
-      options.mangle = true;
-      return this;
+      options.mangle = true
+      return this
     }
   }
 
-  List<Test> registeredTests = [];
+  List<Test> registeredTests = []
 
   int runAllTests() {
     // Run the tests
-    List<Test> failing = [];
-    var width = terminal.width() * 3 / 4;
-    var startTime = now();
-    terminal.write("\n  ");
+    List<Test> failing = []
+    var width = terminal.width() * 3 / 4
+    var startTime = now()
+    terminal.write("\n  ")
     for (var i = 0; i < registeredTests.size(); i++) {
-      var test = registeredTests[i];
-      test.run();
-      var failed = test.status == .FAILED;
-      terminal.setColor(failed ? .RED : .GREEN);
-      terminal.write(failed ? "x" : ".");
+      var test = registeredTests[i]
+      test.run()
+      var failed = test.status == .FAILED
+      terminal.setColor(failed ? .RED : .GREEN)
+      terminal.write(failed ? "x" : ".")
       if (i + 1 < registeredTests.size() && width != 0 && i % width == width - 1) {
-        terminal.write("\n  ");
+        terminal.write("\n  ")
       }
-      terminal.setColor(.DEFAULT);
-      terminal.flush();
+      terminal.setColor(.DEFAULT)
+      terminal.flush()
       if (failed) {
-        failing.push(test);
+        failing.push(test)
       }
     }
-    terminal.print("\n");
+    terminal.print("\n")
 
     // Print the summary
-    var totalTime = now() - startTime;
-    terminal.setColor(.GREEN);
-    terminal.write("  " + (registeredTests.size() - failing.size()) + " passing");
-    terminal.setColor(.GRAY);
-    terminal.print("  (" + formatNumber(totalTime / 1000) + "s)");
+    var totalTime = now() - startTime
+    terminal.setColor(.GREEN)
+    terminal.write("  " + (registeredTests.size() - failing.size()) + " passing")
+    terminal.setColor(.GRAY)
+    terminal.print("  (" + formatNumber(totalTime / 1000) + "s)")
     if (failing.size() != 0) {
-      terminal.setColor(.RED);
-      terminal.print("  " + failing.size() + " failing");
+      terminal.setColor(.RED)
+      terminal.print("  " + failing.size() + " failing")
     }
-    terminal.setColor(.DEFAULT);
-    terminal.print("");
+    terminal.setColor(.DEFAULT)
+    terminal.print("")
 
     // Print the failed tests
-    var indent = " ".repeat(failing.size().toString().size() + 5);
+    var indent = " ".repeat(failing.size().toString().size() + 5)
     for (var i = 0; i < failing.size(); i++) {
-      var test = failing[i];
-      var text = "  " + (i + 1) + ")";
-      terminal.setColor(.BOLD);
-      terminal.print(text + " ".repeat(indent.size() - text.size()) + compactWhitespace(test.input) + "\n");
+      var test = failing[i]
+      var text = "  " + (i + 1) + ")"
+      terminal.setColor(.BOLD)
+      terminal.print(text + " ".repeat(indent.size() - text.size()) + compactWhitespace(test.input) + "\n")
       printDiff(indent,
         test.expected == "" ? [] : test.expected.split("\n"),
-        test.output == "" ? [] : test.output.split("\n"));
-      terminal.setColor(.DEFAULT);
-      terminal.print("");
+        test.output == "" ? [] : test.output.split("\n"))
+      terminal.setColor(.DEFAULT)
+      terminal.print("")
     }
-    return failing.size();
+    return failing.size()
   }
 
   void printDiff(string indent, List<string> expected, List<string> output) {
-    var m = expected.size();
-    var n = output.size();
-    List<int> matrix = [];
+    var m = expected.size()
+    var n = output.size()
+    List<int> matrix = []
 
     // Solve for the lowest common subsequence length
     for (var i = 0, ij = 0; i < m; i++) {
       for (var j = 0; j < n; j++, ij++) {
         matrix.push(expected[i] == output[j]
           ? i > 0 && j > 0 ? matrix[ij - n - 1] + 1 : 1
-          : math.imax(i > 0 ? matrix[ij - n] : 0, j > 0 ? matrix[ij - 1] : 0));
+          : math.imax(i > 0 ? matrix[ij - n] : 0, j > 0 ? matrix[ij - 1] : 0))
       }
     }
 
     // Extract the diff in reverse
-    List<string> reversed = [];
-    var i = m - 1;
-    var j = n - 1;
+    List<string> reversed = []
+    var i = m - 1
+    var j = n - 1
     while (i >= 0 || j >= 0) {
-      var ij = i * n + j;
+      var ij = i * n + j
 
       // Common
       if (i >= 0 && j >= 0 && expected[i] == output[j]) {
-        reversed.push(" " + expected[i]);
-        i--;
-        j--;
+        reversed.push(" " + expected[i])
+        i--
+        j--
       }
 
       // Removal
       else if (j >= 0 && (i < 0 || (j > 0 ? matrix[ij - 1] : 0) > (i > 0 ? matrix[ij - n] : 0))) {
-        reversed.push("-" + output[j]);
-        j--;
+        reversed.push("-" + output[j])
+        j--
       }
 
       // Insertion
       else {
-        assert i >= 0 && (j < 0 || (j > 0 ? matrix[ij - 1] : 0) <= (i > 0 ? matrix[ij - n] : 0));
-        reversed.push("+" + expected[i]);
-        i--;
+        assert i >= 0 && (j < 0 || (j > 0 ? matrix[ij - 1] : 0) <= (i > 0 ? matrix[ij - n] : 0))
+        reversed.push("+" + expected[i])
+        i--
       }
     }
 
     // Print out the diff
     for (var i = reversed.size() - 1; i >= 0; i--) {
-      var text = reversed[i];
-      var c = text[0];
-      terminal.setColor(c == '+' ? .GREEN : c == '-' ? .RED : .GRAY);
-      terminal.print(indent + text);
+      var text = reversed[i]
+      var c = text[0]
+      terminal.setColor(c == '+' ? .GREEN : c == '-' ? .RED : .GRAY)
+      terminal.print(indent + text)
     }
   }
 
   bool isSpace(int c) {
-    return c == ' ' || c == '\n';
+    return c == ' ' || c == '\n'
   }
 
   string trim(string text) {
-    var length = text.size();
-    var start = 0;
-    var end = length;
+    var length = text.size()
+    var start = 0
+    var end = length
     while (start < length && isSpace(text[start])) {
-      start++;
+      start++
     }
     while (start < end && isSpace(text[end - 1])) {
-      end--;
+      end--
     }
-    return text.slice(start, end);
+    return text.slice(start, end)
   }
 
   string compactWhitespace(string text) {
-    var wasSpace = false;
-    var result = "";
+    var wasSpace = false
+    var result = ""
     for (var i = 0; i < text.size(); i++) {
       if (!isSpace(text[i])) {
-        result += text.sliceCodeUnit(i);
-        wasSpace = false;
+        result += text.sliceCodeUnit(i)
+        wasSpace = false
       } else if (!wasSpace) {
-        result += " ";
-        wasSpace = true;
+        result += " "
+        wasSpace = true
       }
     }
-    return result;
+    return result
   }
 }
 
 FormatTest testFormat(string input, string expected, int start, int end, int maxLength) {
-  var test = FormatTest(trim(input), expected, start, end, maxLength);
-  registeredTests.push(test);
-  return test;
+  var test = FormatTest(trim(input), expected, start, end, maxLength)
+  registeredTests.push(test)
+  return test
 }
 
 CompilerTest test(string input, string expected) {
-  var test = CompilerTest(trim(input), expected);
-  registeredTests.push(test);
-  return test;
+  var test = CompilerTest(trim(input), expected)
+  registeredTests.push(test)
+  return test
 }
 
 CompilerTest testJS(string input, string expected) {
-  return test(input, expected).js();
+  return test(input, expected).js()
 }
 
 CompilerTest testCPP(string input, string expected) {
-  return test(input, expected).cpp();
+  return test(input, expected).cpp()
 }
 
 CompilerTest testRuby(string input, string expected) {
-  return test(input, expected).ruby();
+  return test(input, expected).ruby()
 }
 
 @EntryPoint
 int start() {
-  core.testAccess();
-  core.testAnnotations();
-  core.testCalls();
-  core.testConst();
-  core.testConstructors();
-  core.testConversions();
-  core.testCyclic();
-  core.testEnums();
-  core.testExpressions();
-  core.testFormatting();
-  core.testFunctions();
-  core.testGenerics();
-  core.testLists();
-  core.testMerging();
-  core.testModifiers();
-  core.testObjects();
-  core.testParsing();
-  core.testPreprocessor();
-  core.testPurity();
-  core.testStatements();
-  core.testStatic();
-  core.testSwitch();
-  core.testTypes();
-  core.testUsing();
-  core.testVar();
+  core.testAccess()
+  core.testAnnotations()
+  core.testCalls()
+  core.testConst()
+  core.testConstructors()
+  core.testConversions()
+  core.testCyclic()
+  core.testEnums()
+  core.testExpressions()
+  core.testFormatting()
+  core.testFunctions()
+  core.testGenerics()
+  core.testLists()
+  core.testMerging()
+  core.testModifiers()
+  core.testObjects()
+  core.testParsing()
+  core.testPreprocessor()
+  core.testPurity()
+  core.testStatements()
+  core.testStatic()
+  core.testSwitch()
+  core.testTypes()
+  core.testUsing()
+  core.testVar()
 
-  js.testAnnotations();
-  js.testExpressions();
-  js.testFunctions();
-  js.testInlining();
-  js.testMinify();
-  js.testObjects();
-  js.testStatements();
+  js.testAnnotations()
+  js.testExpressions()
+  js.testFunctions()
+  js.testInlining()
+  js.testMinify()
+  js.testObjects()
+  js.testStatements()
 
-  cpp.testAnnotations();
-  cpp.testExpressions();
-  cpp.testFunctions();
-  cpp.testNeedsInclude();
-  cpp.testObjects();
-  cpp.testRelease();
-  cpp.testStatements();
+  cpp.testAnnotations()
+  cpp.testExpressions()
+  cpp.testFunctions()
+  cpp.testNeedsInclude()
+  cpp.testObjects()
+  cpp.testRelease()
+  cpp.testStatements()
 
-  ruby.testExpressions();
-  ruby.testStatements();
+  ruby.testExpressions()
+  ruby.testStatements()
 
-  return runAllTests();
+  return runAllTests()
 }

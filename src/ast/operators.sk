@@ -5,9 +5,9 @@ enum Associativity {
 }
 
 class OperatorInfo {
-  final string text;
-  final Precedence precedence;
-  final Associativity associativity;
+  final string text
+  final Precedence precedence
+  final Associativity associativity
 }
 
 IntMap<OperatorInfo> operatorInfo = {
@@ -61,4 +61,4 @@ IntMap<OperatorInfo> operatorInfo = {
   NodeKind.ASSIGN_SUBTRACT:       OperatorInfo("-=", .ASSIGN, .RIGHT),
 
   NodeKind.ASSIGN_INDEX:          OperatorInfo("[]=", .ASSIGN, .RIGHT),
-};
+}

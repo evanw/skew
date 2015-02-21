@@ -9,7 +9,7 @@ import public import public class Foo {}
 <stdin>:1:1: warning: Duplicate modifier \"import\"
 import public import public class Foo {}
 ~~~~~~
-");
+")
 
 test("
 public public public class Foo {}
@@ -20,14 +20,14 @@ public public public class Foo {}
 <stdin>:1:1: warning: Duplicate modifier \"public\"
 public public public class Foo {}
 ~~~~~~
-");
+")
 
 test("
 public class Foo {
   public void main() {}
 }
 ", "
-");
+")
 
 test("
 import export alias a = int;
@@ -55,7 +55,7 @@ import export class C {}
 <stdin>:6:8: error: Cannot use the \"export\" modifier on an imported declaration
 import export namespace n {}
        ~~~~~~
-");
+")
 
 test("
 inline alias a = int;
@@ -80,7 +80,7 @@ inline class C {}
 <stdin>:6:1: error: Cannot use the \"inline\" modifier on a namespace declaration
 inline namespace n {}
 ~~~~~~
-");
+")
 
 test("
 const alias a = int;
@@ -108,7 +108,7 @@ const class C {}
 <stdin>:6:1: error: Cannot use the \"const\" modifier on a namespace declaration
 const namespace n {}
 ~~~~~
-");
+")
 
 test("
 final alias a = int;
@@ -133,7 +133,7 @@ final class C {}
 <stdin>:6:1: error: Cannot use the \"final\" modifier on a namespace declaration
 final namespace n {}
 ~~~~~
-");
+")
 
 test("
 virtual alias a = int;
@@ -161,7 +161,7 @@ virtual class C {}
 <stdin>:6:1: error: Cannot use the \"virtual\" modifier on a namespace declaration
 virtual namespace n {}
 ~~~~~~~
-");
+")
 
 test("
 override alias a = int;
@@ -189,7 +189,7 @@ override class C {}
 <stdin>:6:1: error: Cannot use the \"override\" modifier on a namespace declaration
 override namespace n {}
 ~~~~~~~~
-");
+")
 
 test("
 static alias a = int;
@@ -217,7 +217,7 @@ static class C {}
 <stdin>:6:1: error: Cannot use the \"static\" modifier on a namespace declaration
 static namespace n {}
 ~~~~~~
-");
+")
 
 test("
 namespace foo {}
@@ -232,7 +232,7 @@ in foo {
 <stdin>:4:3: error: Cannot use the \"static\" modifier outside an object declaration
   static void bar() {}
   ~~~~~~
-");
+")
 
 test("
 pure alias a = int;
@@ -257,7 +257,7 @@ pure class C {}
 <stdin>:6:1: error: Cannot use the \"pure\" modifier on a namespace declaration
 pure namespace n {}
 ~~~~
-");
+")
 
 test("
 class Foo {
@@ -279,7 +279,7 @@ class Foo {
 <stdin>:5:3: error: Cannot use the \"import\" modifier inside a non-imported type
   import static void bar2() {}
   ~~~~~~
-");
+")
 
 test("
 class Foo {
@@ -295,6 +295,6 @@ class Foo {
 <stdin>:5:3: error: Cannot use the \"export\" modifier inside a non-exported type
   export static void bar2() {}
   ~~~~~~
-");
+")
 
 }}

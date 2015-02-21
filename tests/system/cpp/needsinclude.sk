@@ -11,7 +11,7 @@ void foo();
 void foo() {
   int baz = 0;
 }
-");
+")
 
 testCPP("
 export Foo foo;
@@ -22,7 +22,7 @@ export Foo foo;
 extern Foo *foo;
 
 Foo *foo = nullptr;
-");
+")
 
 testCPP("
 export Foo foo;
@@ -42,7 +42,7 @@ Foo::Foo() {
 }
 
 Foo *foo = nullptr;
-");
+")
 
 testCPP("
 export Foo<Bar> foo;
@@ -54,7 +54,7 @@ import class Foo<T> {}
 extern Foo<Bar *> *foo;
 
 Foo<Bar *> *foo = nullptr;
-");
+")
 
 testCPP("
 export Foo<Bar> foo;
@@ -86,7 +86,7 @@ Bar::Bar() {
 }
 
 Foo<Bar *> *foo = nullptr;
-");
+")
 
 testCPP("
 export void foo(Foo<Bar> bar) {}
@@ -99,7 +99,7 @@ void foo(Foo<Bar *> *bar);
 
 void foo(Foo<Bar *> *bar) {
 }
-");
+")
 
 testCPP("
 export void foo(Foo<Bar> bar) {}
@@ -132,7 +132,7 @@ Bar::Bar() {
 
 void foo(Foo<Bar *> *bar) {
 }
-");
+")
 
 testCPP("
 @NeedsInclude(\"<test>\")
@@ -144,7 +144,7 @@ export foo bar;
 extern foo bar;
 
 foo bar;
-");
+")
 
 testCPP("
 export var foo = \"\";
@@ -154,7 +154,7 @@ export var foo = \"\";
 extern std::string foo;
 
 std::string foo = \"\";
-");
+")
 
 testCPP("
 export void foo() { var bar = string.fromCodeUnit('a'); }
@@ -166,7 +166,7 @@ void foo();
 void foo() {
   std::string bar = std::string(1, 97);
 }
-");
+")
 
 testCPP("
 export var foo = [0];
@@ -204,6 +204,6 @@ List<T> *List<T>::literal(std::initializer_list<T> list) {
 List<int> *foo = (new List<int>())->literal({ 0 });
 List<int> *bar = new List<int>();
 List<int> *baz = new List<int>();
-");
+")
 
 }}

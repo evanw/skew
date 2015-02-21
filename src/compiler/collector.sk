@@ -5,48 +5,48 @@ enum SortTypes {
 }
 
 class Collector {
-  final SortTypes sort;
-  final List<Symbol> typeSymbols = [];
-  final List<Symbol> freeFunctionSymbols = [];
-  final List<Symbol> freeVariableSymbols = [];
+  final SortTypes sort
+  final List<Symbol> typeSymbols = []
+  final List<Symbol> freeFunctionSymbols = []
+  final List<Symbol> freeVariableSymbols = []
 
   new(Node program, SortTypes sort) : sort = sort {
-    assert program.kind == .PROGRAM;
-    collectStatements(program);
+    assert program.kind == .PROGRAM
+    collectStatements(program)
 
     // Enforce a consistent symbol iteration order
-    typeSymbols.sort(SymbolComparison.INSTANCE);
-    freeFunctionSymbols.sort(SymbolComparison.INSTANCE);
-    freeVariableSymbols.sort(SymbolComparison.INSTANCE);
+    typeSymbols.sort(SymbolComparison.INSTANCE)
+    freeFunctionSymbols.sort(SymbolComparison.INSTANCE)
+    freeVariableSymbols.sort(SymbolComparison.INSTANCE)
 
-    sortTypeSymbols();
+    sortTypeSymbols()
   }
 
   void collectStatements(Node node) {
     switch (node.kind) {
       case .PROGRAM, .FILE, .MODIFIER, .BLOCK {
-        collectChildStatements(node);
+        collectChildStatements(node)
       }
 
       case .NAMESPACE, .CLASS, .INTERFACE, .EXTENSION, .ENUM, .ENUM_FLAGS, .ALIAS {
         if (node == node.symbol.node) {
-          typeSymbols.push(node.symbol);
+          typeSymbols.push(node.symbol)
         }
-        collectChildStatements(node);
+        collectChildStatements(node)
       }
 
       case .CONSTRUCTOR, .FUNCTION {
         if (!node.symbol.enclosingSymbol.kind.isTypeWithInstances()) {
-          freeFunctionSymbols.push(node.symbol);
+          freeFunctionSymbols.push(node.symbol)
         }
       }
 
       case .VARIABLE_CLUSTER {
-        var variables = node.clusterVariables();
+        var variables = node.clusterVariables()
         for (var i = 0; i < variables.size(); i++) {
-          var symbol = variables[i].symbol;
+          var symbol = variables[i].symbol
           if (symbol.kind == .GLOBAL_VARIABLE && !symbol.isEnumValue()) {
-            freeVariableSymbols.push(symbol);
+            freeVariableSymbols.push(symbol)
           }
         }
       }
@@ -55,56 +55,56 @@ class Collector {
 
   void sortTypeSymbols() {
     if (sort == .DO_NOT_SORT) {
-      return;
+      return
     }
 
     for (var i = 0; i < typeSymbols.size(); i++) {
-      var j = i;
+      var j = i
 
       // Select a type that comes before all other types
       for (; j < typeSymbols.size(); j++) {
-        var type = typeSymbols[j].type;
-        var k = i;
+        var type = typeSymbols[j].type
+        var k = i
 
         // Check to see if this comes before all other types
         for (; k < typeSymbols.size(); k++) {
           if (j == k) {
-            continue;
+            continue
           }
           if (typeComesBefore(typeSymbols[k].type, type)) {
-            break;
+            break
           }
         }
         if (k == typeSymbols.size()) {
-          break;
+          break
         }
       }
 
       // Swap the type into the correct order
       if (j < typeSymbols.size()) {
-        typeSymbols.swap(i, j);
+        typeSymbols.swap(i, j)
       }
     }
   }
 
   bool isContainedBy(Symbol inner, Symbol outer) {
-    if (inner.enclosingSymbol == null) return false;
-    if (inner.enclosingSymbol == outer) return true;
-    return isContainedBy(inner.enclosingSymbol, outer);
+    if (inner.enclosingSymbol == null) return false
+    if (inner.enclosingSymbol == outer) return true
+    return isContainedBy(inner.enclosingSymbol, outer)
   }
 
   bool typeComesBefore(Type before, Type after) {
-    if (after.hasBaseType(before)) return true;
-    if (sort == .SORT_BY_INHERITANCE_AND_CONTAINMENT && isContainedBy(after.symbol, before.symbol)) return true;
-    return false;
+    if (after.hasBaseType(before)) return true
+    if (sort == .SORT_BY_INHERITANCE_AND_CONTAINMENT && isContainedBy(after.symbol, before.symbol)) return true
+    return false
   }
 
   void collectChildStatements(Node node) {
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
-        var child = node.children[i];
+        var child = node.children[i]
         if (child != null) {
-          collectStatements(child);
+          collectStatements(child)
         }
       }
     }

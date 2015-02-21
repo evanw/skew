@@ -1,39 +1,39 @@
 in Node {
   void invertBooleanCondition(TypeCache cache) {
-    assert kind.isExpression();
+    assert kind.isExpression()
     switch (kind) {
       case .BOOL {
-        content = BoolContent(!asBool());
-        return;
+        content = BoolContent(!asBool())
+        return
       }
 
       case .NOT {
-        become(unaryValue().remove());
-        return;
+        become(unaryValue().remove())
+        return
       }
 
       case .EQUAL {
-        kind = .NOT_EQUAL;
-        return;
+        kind = .NOT_EQUAL
+        return
       }
 
       case .NOT_EQUAL {
-        kind = .EQUAL;
-        return;
+        kind = .EQUAL
+        return
       }
 
       case .LOGICAL_OR {
-        kind = .LOGICAL_AND;
-        binaryLeft().invertBooleanCondition(cache);
-        binaryRight().invertBooleanCondition(cache);
-        return;
+        kind = .LOGICAL_AND
+        binaryLeft().invertBooleanCondition(cache)
+        binaryRight().invertBooleanCondition(cache)
+        return
       }
 
       case .LOGICAL_AND {
-        kind = .LOGICAL_OR;
-        binaryLeft().invertBooleanCondition(cache);
-        binaryRight().invertBooleanCondition(cache);
-        return;
+        kind = .LOGICAL_OR
+        binaryLeft().invertBooleanCondition(cache)
+        binaryRight().invertBooleanCondition(cache)
+        return
       }
 
       // Non-equality comparison operators involving floating-point numbers
@@ -57,69 +57,69 @@ in Node {
       //   NAN >= NAN  |  false
       //
       case .LESS_THAN, .GREATER_THAN, .LESS_THAN_OR_EQUAL, .GREATER_THAN_OR_EQUAL {
-        var commonType = cache.commonImplicitType(binaryLeft().type, binaryRight().type);
+        var commonType = cache.commonImplicitType(binaryLeft().type, binaryRight().type)
         if (commonType != null && !commonType.isReal(cache)) {
           switch (kind) {
-            case .LESS_THAN { kind = .GREATER_THAN_OR_EQUAL; }
-            case .GREATER_THAN { kind = .LESS_THAN_OR_EQUAL; }
-            case .LESS_THAN_OR_EQUAL { kind = .GREATER_THAN; }
-            case .GREATER_THAN_OR_EQUAL { kind = .LESS_THAN; }
+            case .LESS_THAN { kind = .GREATER_THAN_OR_EQUAL }
+            case .GREATER_THAN { kind = .LESS_THAN_OR_EQUAL }
+            case .LESS_THAN_OR_EQUAL { kind = .GREATER_THAN }
+            case .GREATER_THAN_OR_EQUAL { kind = .LESS_THAN }
           }
-          return;
+          return
         }
       }
     }
 
     // Remove children before clone() so they are moved instead of copied
-    var children = removeChildren();
-    become(Node.createUnary(.NOT, clone().withChildren(children)).withType(cache.boolType));
+    var children = removeChildren()
+    become(Node.createUnary(.NOT, clone().withChildren(children)).withType(cache.boolType))
   }
 
   bool blockAlwaysEndsWithReturn() {
-    assert kind == .BLOCK;
+    assert kind == .BLOCK
     if (!hasChildren()) {
-      return false;
+      return false
     }
 
     for (var i = children.size() - 1; i >= 0; i--) {
-      var child = children[i];
+      var child = children[i]
       switch (child.kind) {
         case .RETURN {
-          return true;
+          return true
         }
 
         case .IF {
-          var trueBlock = child.ifTrue();
-          var falseBlock = child.ifFalse();
+          var trueBlock = child.ifTrue()
+          var falseBlock = child.ifFalse()
           if (falseBlock != null && trueBlock.blockAlwaysEndsWithReturn() && falseBlock.blockAlwaysEndsWithReturn()) {
-            return true;
+            return true
           }
         }
 
         case .TRY {
           if (child.tryBlock().blockAlwaysEndsWithReturn() && child.catchBlock().blockAlwaysEndsWithReturn()) {
-            return true;
+            return true
           }
         }
 
         case .SWITCH {
-          var cases = child.switchCases().children;
-          var foundDefault = false;
+          var cases = child.switchCases().children
+          var foundDefault = false
           for (var j = 0; j < cases.size(); j++) {
-            var node = cases[j];
+            var node = cases[j]
             if (!node.caseBlock().blockAlwaysEndsWithReturn()) {
-              return false;
+              return false
             }
             if (!node.caseValues().hasChildren()) {
-              foundDefault = true;
+              foundDefault = true
             }
           }
-          return foundDefault;
+          return foundDefault
         }
       }
     }
 
-    return false;
+    return false
   }
 
   bool isNameExpression() {
@@ -127,45 +127,45 @@ in Node {
       parent.kind.isDot() ? this != parent.dotName() :
       parent.kind.isNamedDeclaration() ? this != parent.declarationName() :
       parent.kind == .MEMBER_INITIALIZER ? this != parent.memberInitializerName() :
-      true);
+      true)
   }
 
   bool isDeclarationName() {
-    return kind == .NAME && parent.kind.isNamedDeclaration() && this == parent.declarationName();
+    return kind == .NAME && parent.kind.isNamedDeclaration() && this == parent.declarationName()
   }
 
   bool isStorage() {
-    return parent.kind.isUnaryStorageOperator() || parent.kind.isBinaryStorageOperator() && this == parent.binaryLeft();
+    return parent.kind.isUnaryStorageOperator() || parent.kind.isBinaryStorageOperator() && this == parent.binaryLeft()
   }
 
   bool hasNoSideEffects() {
     switch (kind) {
-      case .NAME, .THIS, .BOOL, .INT, .FLOAT, .DOUBLE, .STRING, .NULL { return true; }
-      case .CAST, .IMPLICIT_CAST { return castValue().hasNoSideEffects(); }
-      case .HOOK { return hookTest().hasNoSideEffects() && hookTrue().hasNoSideEffects() && hookFalse().hasNoSideEffects(); }
-      case .DOT { return dotTarget().hasNoSideEffects(); }
-      case .QUOTED { return quotedValue().hasNoSideEffects(); }
-      case .NEW, .DELETE { return false; } // These are only used with quoting and should never be removed
+      case .NAME, .THIS, .BOOL, .INT, .FLOAT, .DOUBLE, .STRING, .NULL { return true }
+      case .CAST, .IMPLICIT_CAST { return castValue().hasNoSideEffects() }
+      case .HOOK { return hookTest().hasNoSideEffects() && hookTrue().hasNoSideEffects() && hookFalse().hasNoSideEffects() }
+      case .DOT { return dotTarget().hasNoSideEffects() }
+      case .QUOTED { return quotedValue().hasNoSideEffects() }
+      case .NEW, .DELETE { return false } // These are only used with quoting and should never be removed
       default {
-        if (kind.isBinaryOperator() && !kind.isBinaryStorageOperator()) return binaryLeft().hasNoSideEffects() && binaryRight().hasNoSideEffects();
-        if (kind.isUnaryOperator() && !kind.isUnaryStorageOperator()) return unaryValue().hasNoSideEffects();
-        return false;
+        if (kind.isBinaryOperator() && !kind.isBinaryStorageOperator()) return binaryLeft().hasNoSideEffects() && binaryRight().hasNoSideEffects()
+        if (kind.isUnaryOperator() && !kind.isUnaryStorageOperator()) return unaryValue().hasNoSideEffects()
+        return false
       }
     }
   }
 
   bool isNumberLessThanZero() {
-    return kind == .INT && asInt() < 0 || kind.isReal() && asDouble() < 0;
+    return kind == .INT && asInt() < 0 || kind.isReal() && asDouble() < 0
   }
 
   void removeLibraryFiles() {
-    assert kind == .PROGRAM;
+    assert kind == .PROGRAM
     for (var i = 0; i < children.size(); ) {
-      var file = children[i];
+      var file = children[i]
       if (children[i].isLibraryFile()) {
-        removeChildAtIndex(i);
+        removeChildAtIndex(i)
       } else {
-        i++;
+        i++
       }
     }
   }

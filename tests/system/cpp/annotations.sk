@@ -14,7 +14,7 @@ extern \"C\" void bar() {
 }
 
 extern \"C\" int foo = 0;
-");
+")
 
 testCPP("
 @EntryPoint
@@ -28,7 +28,7 @@ void foo() {
 int main() {
   foo();
 }
-");
+")
 
 testCPP("
 @EntryPoint
@@ -45,7 +45,7 @@ int foo() {
 int main() {
   return foo();
 }
-");
+")
 
 testCPP("
 @EntryPoint
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
   args->_data.insert(args->_data.begin(), argv + 1, argv + argc);
   foo(args);
 }
-");
+")
 
 testCPP("
 @EntryPoint
@@ -114,6 +114,6 @@ int main(int argc, char **argv) {
   args->_data.insert(args->_data.begin(), argv + 1, argv + argc);
   return foo(args);
 }
-");
+")
 
 }}

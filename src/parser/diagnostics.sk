@@ -1,27 +1,27 @@
 void syntaxErrorInvalidEscapeSequence(Log log, Range range, string text) {
-  log.error(range, "Invalid escape sequence " + firstLineOf(simpleQuote(text)));
+  log.error(range, "Invalid escape sequence " + firstLineOf(simpleQuote(text)))
 }
 
 void syntaxErrorInvalidCharacter(Log log, Range range, string text) {
-  log.error(range, "Invalid character literal " + firstLineOf(text));
+  log.error(range, "Invalid character literal " + firstLineOf(text))
 }
 
 void syntaxErrorExtraData(Log log, Range range, string text) {
-  log.error(range, "Syntax error " + quoteString(text, '"'));
+  log.error(range, "Syntax error " + quoteString(text, '"'))
 }
 
 void syntaxErrorUnexpectedToken(Log log, Token token) {
-  log.error(token.range, "Unexpected " + token.kind);
+  log.error(token.range, "Unexpected " + token.kind)
 }
 
 void syntaxErrorExpectedToken(Log log, Range range, TokenKind found, TokenKind expected) {
-  log.error(range, "Expected " + expected + " but found " + found);
+  log.error(range, "Expected " + expected + " but found " + found)
 }
 
 void syntaxErrorBadForEach(Log log, Range range) {
-  log.error(range, "More than one variable inside a for-each loop");
+  log.error(range, "More than one variable inside a for-each loop")
 }
 
 void syntaxWarningOctal(Log log, Range range) {
-  log.warning(range, "Number interpreted as decimal (use the prefix \"0o\" for octal numbers)");
+  log.warning(range, "Number interpreted as decimal (use the prefix \"0o\" for octal numbers)")
 }

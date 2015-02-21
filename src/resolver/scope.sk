@@ -1,46 +1,46 @@
 class Scope {
   // This is the lexically enclosing scope. It will be null for the global scope.
-  final Scope lexicalParent;
+  final Scope lexicalParent
 
   // This references the type containing the member symbols for this scope. If
   // this is null, lookups fall back to the list of locals.
-  Type type = null;
+  Type type = null
 
   // This stores all local symbols. Local symbols automatically override any
   // member symbols on the type. Scopes inside function bodies will only contain
   // local symbols since those scopes don't have a type.
-  StringMap<Member> locals = null;
+  StringMap<Member> locals = null
 
   void insert(Member member) {
     if (type != null) {
-      type.addMember(member);
-      return;
+      type.addMember(member)
+      return
     }
-    insertLocal(member);
+    insertLocal(member)
   }
 
   void insertLocal(Member member) {
     if (locals == null) {
-      locals = StringMap<Member>();
+      locals = StringMap<Member>()
     }
-    assert !(member.symbol.name in locals);
-    locals[member.symbol.name] = member;
+    assert !(member.symbol.name in locals)
+    locals[member.symbol.name] = member
   }
 
   Member find(string name) {
-    var member = findLocal(name);
-    return member != null ? member : lexicalParent != null ? lexicalParent.find(name) : null;
+    var member = findLocal(name)
+    return member != null ? member : lexicalParent != null ? lexicalParent.find(name) : null
   }
 
   Member findLocal(string name) {
     if (locals != null) {
-      var member = locals.getOrDefault(name, null);
-      if (member != null) return member;
+      var member = locals.getOrDefault(name, null)
+      if (member != null) return member
     }
     if (type != null) {
-      var member = type.findMember(name);
-      if (member != null) return member;
+      var member = type.findMember(name)
+      if (member != null) return member
     }
-    return null;
+    return null
   }
 }

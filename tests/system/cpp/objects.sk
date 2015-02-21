@@ -20,7 +20,7 @@ Bar::Bar() {
 
 Foo::Foo() {
 }
-");
+")
 
 testCPP("
 export class Foo : Bar {}
@@ -44,7 +44,7 @@ Bar::Bar(int _0) : x(_0) {
 
 Foo::Foo(int _0) : Bar(_0) {
 }
-");
+")
 
 testCPP("
 export class Foo : Bar { int y; }
@@ -68,7 +68,7 @@ Bar::Bar() {
 
 Foo::Foo(int _0) : y(_0) {
 }
-");
+")
 
 testCPP("
 export class Foo : Bar { int y; }
@@ -94,7 +94,7 @@ Bar::Bar(int _0) : x(_0) {
 
 Foo::Foo(int _0, int _1) : Bar(_0), y(_1) {
 }
-");
+")
 
 testCPP("
 namespace ns {
@@ -125,7 +125,7 @@ namespace ns {
 
 ns::Foo::Foo() {
 }
-");
+")
 
 testCPP("
 import namespace ns {
@@ -134,7 +134,7 @@ import namespace ns {
   import enum Bar { A, B, C }
 }
 ", "
-");
+")
 
 testCPP("
 export class Foo {
@@ -162,7 +162,7 @@ Foo::Foo() {
 
 Bar::Bar() {
 }
-");
+")
 
 testCPP("
 class Foo {}
@@ -190,7 +190,7 @@ void Bar::foo() {
 
 Bar::Bar() {
 }
-");
+")
 
 testCPP("
 export class Foo {
@@ -208,7 +208,7 @@ struct Foo {
 
 Foo::Foo() : foo(0) {
 }
-");
+")
 
 testCPP("
 namespace x {
@@ -257,6 +257,6 @@ y::b::b() {
 
 x::c::c() {
 }
-");
+")
 
 }}

@@ -6,7 +6,7 @@ class Foo<T> : T {}
 <stdin>:1:16: error: Invalid base type \"T\"
 class Foo<T> : T {}
                ^
-");
+")
 
 test("
 interface IFoo {}
@@ -16,19 +16,19 @@ class Bar {}
 <stdin>:2:19: error: Base type \"Bar\" must come first in a class declaration
 class Foo : IFoo, Bar {}
                   ~~~
-");
+")
 
 test("
 class Foo : Bar {}
 class Bar {}
 ", "
-");
+")
 
 test("
 interface IFoo : IBar {}
 interface IBar {}
 ", "
-");
+")
 
 test("
 interface IFoo : Bar {}
@@ -37,7 +37,7 @@ class Bar {}
 <stdin>:1:18: error: Invalid base type \"Bar\"
 interface IFoo : Bar {}
                  ~~~
-");
+")
 
 test("
 class Foo : IFoo, IFoo {}
@@ -46,7 +46,7 @@ interface IFoo {}
 <stdin>:1:19: error: Duplicate base type \"IFoo\"
 class Foo : IFoo, IFoo {}
                   ~~~~
-");
+")
 
 test("
 class Foo {}
@@ -56,7 +56,7 @@ class Bar {}
 <stdin>:2:10: error: The base class must be set from the class declaration, not from an extension block
 in Foo : Bar {}
          ~~~
-");
+")
 
 test("
 class Foo {}
@@ -67,7 +67,7 @@ interface IFoo {}
 <stdin>:3:10: error: Duplicate base type \"IFoo\"
 in Foo : IFoo {}
          ~~~~
-");
+")
 
 test("
 class Foo : IBar {}
@@ -75,13 +75,13 @@ class Bar : Foo, IBar {}
 interface IFoo {}
 interface IBar : IFoo {}
 ", "
-");
+")
 
 test("
 class Foo : Bar {}
 in Foo { class Bar {} }
 ", "
-");
+")
 
 test("
 interface A { virtual void foo(); }
@@ -95,7 +95,7 @@ interface B { void foo(); }
 <stdin>:3:11: error: Cannot merge \"A.foo\" and \"B.foo\" for \"C.foo\"
 interface C : A, B {}
           ^
-");
+")
 
 test("
 interface A { virtual void foo(); }
@@ -106,7 +106,7 @@ int foo(C foo) { return foo.foo(); }
 <stdin>:4:25: error: Cannot convert from type \"void\" to type \"int\"
 int foo(C foo) { return foo.foo(); }
                         ~~~~~~~~~
-");
+")
 
 test("
 void foo(C foo) { foo.foo(); }
@@ -117,7 +117,7 @@ interface B { virtual int foo(); }
 <stdin>:2:11: error: Member \"C.foo\" has an ambiguous inherited type, could be type \"void fn()\" or type \"int fn()\"
 interface C : A, B {}
           ^
-");
+")
 
 test("
 interface G : C, F {}
@@ -137,7 +137,7 @@ interface C : A, B {}
 <stdin>:10:11: error: Member \"F.foo\" has an ambiguous inherited type, could be type \"float fn()\" or type \"bool fn()\"
 interface F : E, D {}
           ^
-");
+")
 
 test("
 void foo(G foo) { foo.foo(); }
@@ -154,7 +154,7 @@ interface F : E, D {}
 <stdin>:2:11: error: Member \"G.foo\" has an ambiguous inherited type, could be type \"int fn()\" or type \"bool fn()\"
 interface G : C, F {}
           ^
-");
+")
 
 test("
 interface Foo { virtual bool foo(); }
@@ -164,7 +164,7 @@ interface Baz : Foo, Bar {}
 <stdin>:3:11: error: Member \"Baz.foo\" has an ambiguous inherited type, could be type \"bool fn()\" or type \"int fn()\"
 interface Baz : Foo, Bar {}
           ~~~
-");
+")
 
 test("
 interface Foo {}
@@ -176,7 +176,7 @@ interface Baz : Foo, Bar {}
 <stdin>:5:11: error: Cannot merge \"Foo.foo\" and \"Bar.foo\" for \"Baz.foo\"
 interface Baz : Foo, Bar {}
           ~~~
-");
+")
 
 test("
 class Foo { void foo() {} }
@@ -188,7 +188,7 @@ class Bar : Foo { void foo() {} }
 <stdin>:1:18: note: The overridden declaration is here
 class Foo { void foo() {} }
                  ~~~
-");
+")
 
 test("
 class Foo { void foo() {} }
@@ -200,7 +200,7 @@ class Bar : Foo { override void foo() {} }
 <stdin>:1:18: note: The overridden declaration is here
 class Foo { void foo() {} }
                  ~~~
-");
+")
 
 test("
 class Foo { override void foo() {} }
@@ -209,7 +209,7 @@ class Bar : Foo { override void foo() {} }
 <stdin>:1:13: error: Cannot use the \"override\" modifier on a function that doesn't override anything
 class Foo { override void foo() {} }
             ~~~~~~~~
-");
+")
 
 test("
 class Foo { virtual void foo() {} }
@@ -218,7 +218,7 @@ class Bar : Foo { virtual override void foo() {} }
 <stdin>:2:19: error: Redundant modifier \"virtual\" on an overriding function
 class Bar : Foo { virtual override void foo() {} }
                   ~~~~~~~
-");
+")
 
 test("
 class Foo { virtual override void foo() {} }
@@ -233,20 +233,20 @@ class Bar : Foo { virtual void foo() {} }
 <stdin>:1:35: note: The overridden declaration is here
 class Foo { virtual override void foo() {} }
                                   ~~~
-");
+")
 
 test("
 class Foo { virtual void foo() {} }
 class Bar : Foo { override void foo() {} }
 ", "
-");
+")
 
 test("
 class Foo { virtual void foo() {} }
 class Bar : Foo { override void foo() {} }
 class Baz : Bar { override void foo() {} }
 ", "
-");
+")
 
 test("
 interface IFoo { virtual void foo(); }
@@ -254,7 +254,7 @@ class Foo {}
 in Foo { override void foo() {} }
 in Foo : IFoo {}
 ", "
-");
+")
 
 test("
 class Foo { virtual void foo() {} }
@@ -267,7 +267,7 @@ class Bar : Foo { void foo() {} }
 <stdin>:1:26: note: The overridden declaration is here
 class Foo { virtual void foo() {} }
                          ~~~
-");
+")
 
 test("
 class Foo { void foo() {} }
@@ -279,7 +279,7 @@ class Bar : Foo { int foo() { return 0; } }
 <stdin>:1:18: note: The overridden declaration is here
 class Foo { void foo() {} }
                  ~~~
-");
+")
 
 test("
 class Foo { int foo; }
@@ -291,7 +291,7 @@ class Bar : Foo { int foo() { return 0; } }
 <stdin>:1:17: note: The overridden declaration is here
 class Foo { int foo; }
                 ~~~
-");
+")
 
 test("
 class Foo {}
@@ -304,7 +304,7 @@ class Bar : Foo { int foo() { return 0; } }
 <stdin>:3:20: note: The overridden declaration is here
 in Foo { namespace foo {} }
                    ~~~
-");
+")
 
 test("
 class Foo { static virtual void foo() {} }
@@ -312,7 +312,7 @@ class Foo { static virtual void foo() {} }
 <stdin>:1:20: error: Cannot use the \"virtual\" modifier on a non-instance function
 class Foo { static virtual void foo() {} }
                    ~~~~~~~
-");
+")
 
 test("
 class Foo { void foo() {} }
@@ -324,7 +324,7 @@ class Bar : Foo { static void foo() {} }
 <stdin>:1:18: note: The overridden declaration is here
 class Foo { void foo() {} }
                  ~~~
-");
+")
 
 test("
 class Foo { static void foo() {} }
@@ -336,7 +336,7 @@ class Bar : Foo { void foo() {} }
 <stdin>:1:25: note: The overridden declaration is here
 class Foo { static void foo() {} }
                         ~~~
-");
+")
 
 test("
 class Foo { static void foo() {} }
@@ -348,7 +348,7 @@ class Bar : Foo { static void foo() {} }
 <stdin>:1:25: note: The overridden declaration is here
 class Foo { static void foo() {} }
                         ~~~
-");
+")
 
 test("
 class Foo { int foo; }
@@ -360,7 +360,7 @@ class Bar : Foo { int foo; }
 <stdin>:1:17: note: The overridden declaration is here
 class Foo { int foo; }
                 ~~~
-");
+")
 
 test("
 class Foo { void foo() {} }
@@ -372,7 +372,7 @@ class Bar : Foo { int foo; }
 <stdin>:1:18: note: The overridden declaration is here
 class Foo { void foo() {} }
                  ~~~
-");
+")
 
 test("
 virtual void foo() {}
@@ -384,7 +384,7 @@ virtual void foo() {}
 <stdin>:2:1: error: Cannot use the \"override\" modifier outside an object declaration
 override void bar() {}
 ~~~~~~~~
-");
+")
 
 test("
 virtual int foo;
@@ -396,7 +396,7 @@ virtual int foo;
 <stdin>:2:1: error: Cannot use the \"override\" modifier on a variable declaration
 override int bar;
 ~~~~~~~~
-");
+")
 
 test("
 virtual namespace foo {}
@@ -408,7 +408,7 @@ virtual namespace foo {}
 <stdin>:2:1: error: Cannot use the \"override\" modifier on a namespace declaration
 override namespace bar {}
 ~~~~~~~~
-");
+")
 
 test("
 virtual class Foo {}
@@ -420,7 +420,7 @@ virtual class Foo {}
 <stdin>:2:1: error: Cannot use the \"override\" modifier on an object declaration
 override class Bar {}
 ~~~~~~~~
-");
+")
 
 test("
 virtual interface Foo {}
@@ -432,7 +432,7 @@ virtual interface Foo {}
 <stdin>:2:1: error: Cannot use the \"override\" modifier on an object declaration
 override interface Bar {}
 ~~~~~~~~
-");
+")
 
 test("
 virtual enum Foo {}
@@ -444,7 +444,7 @@ virtual enum Foo {}
 <stdin>:2:1: error: Cannot use the \"override\" modifier on an enum declaration
 override enum Bar {}
 ~~~~~~~~
-");
+")
 
 test("
 virtual enum flags Foo {}
@@ -456,7 +456,7 @@ virtual enum flags Foo {}
 <stdin>:2:1: error: Cannot use the \"override\" modifier on an enum declaration
 override enum flags Bar {}
 ~~~~~~~~
-");
+")
 
 test("
 class Foo {}
@@ -470,7 +470,7 @@ virtual in Foo {}
 <stdin>:3:1: error: Cannot use the \"override\" modifier on an extension block
 override in Bar {}
 ~~~~~~~~
-");
+")
 
 test("
 virtual class Foo {}
@@ -490,7 +490,7 @@ virtual class Foo {}
 <stdin>:4:1: error: Cannot use the \"override\" modifier on an object declaration
 override class Bar {}
 ~~~~~~~~
-");
+")
 
 test("
 namespace foo {}
@@ -499,7 +499,7 @@ in foo : int {}
 <stdin>:2:10: error: A namespace cannot inherit from another type
 in foo : int {}
          ~~~
-");
+")
 
 test("
 enum Foo {}
@@ -508,7 +508,7 @@ in Foo : int {}
 <stdin>:2:10: error: An enum cannot inherit from another type
 in Foo : int {}
          ~~~
-");
+")
 
 test("
 class Foo {
@@ -519,7 +519,7 @@ class Foo {
 <stdin>:3:13: error: Cannot access \"foo\" from a static context
   int bar = foo;
             ~~~
-");
+")
 
 test("
 class Foo { bool foo; int bar; }
@@ -531,7 +531,7 @@ Foo foo() { return Foo(1, false); }
 <stdin>:2:27: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 Foo foo() { return Foo(1, false); }
                           ~~~~~
-");
+")
 
 test("
 class Foo { var foo; }
@@ -541,7 +541,7 @@ Bar foo = Bar();
 <stdin>:1:17: error: Implicitly typed variables must be initialized
 class Foo { var foo; }
                 ~~~
-");
+")
 
 test("
 class Foo {}
@@ -550,7 +550,7 @@ in Foo { int foo() { return this; } }
 <stdin>:2:29: error: Cannot convert from type \"Foo\" to type \"int\"
 in Foo { int foo() { return this; } }
                             ~~~~
-");
+")
 
 test("
 class Foo {}
@@ -563,19 +563,19 @@ export void test() {
   Baz baz = Bar();
 }
 ", "
-");
+")
 
 test("
 in Foo {}
 export class Foo {}
 ", "
-");
+")
 
 test("
 export class Foo {}
 in Foo {}
 ", "
-");
+")
 
 test("
 interface Foo { virtual void foo(); }
@@ -585,7 +585,7 @@ interface Baz : Foo, Bar { virtual void foo(); }
 <stdin>:3:41: error: \"foo\" overrides another symbol with the same name but is missing the \"override\" modifier
 interface Baz : Foo, Bar { virtual void foo(); }
                                         ~~~
-");
+")
 
 test("
 interface A { virtual void foo(int foo); }
@@ -599,7 +599,7 @@ class Diamond : B, C { override void foo() {} }
 <stdin>:1:28: note: The overridden declaration is here
 interface A { virtual void foo(int foo); }
                            ~~~
-");
+")
 
 test("
 interface A {}
@@ -615,7 +615,7 @@ var c = C();
 <stdin>:3:7: note: The type \"C\" is abstract due to member \"C.foo\"
 class C : A, B { void bar() { foo(); } }
       ^
-");
+")
 
 test("
 class A {}
@@ -625,7 +625,7 @@ in A { virtual void foo() {} }
 in B { virtual void foo(); }
 var c = C();
 ", "
-");
+")
 
 test("
 interface A {}
@@ -637,7 +637,7 @@ in B { static void foo() {} }
 <stdin>:3:31: error: Reference to \"foo\" is ambiguous, could be \"A.foo\" or \"B.foo\"
 class C : A, B { void bar() { foo(); } }
                               ~~~
-");
+")
 
 test("
 interface A {}
@@ -649,6 +649,6 @@ in B { static int foo; }
 <stdin>:3:37: error: Reference to \"foo\" is ambiguous, could be \"A.foo\" or \"B.foo\"
 class C : A, B { int bar() { return foo; } }
                                     ~~~
-");
+")
 
 }}

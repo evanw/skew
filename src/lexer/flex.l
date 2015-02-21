@@ -1,6 +1,7 @@
 %%
 
-[ \t\r\n]+                           WHITESPACE;
+\n[ \t\r\n]*                         NEWLINE;
+[ \t\r]+                             WHITESPACE;
 "//".*                               WHITESPACE;
 "/""*"([^*]|"*"*[^*/])*"*"+"/"       WHITESPACE;
 

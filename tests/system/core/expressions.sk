@@ -9,7 +9,7 @@ bool foo = (1, 2.0);
 <stdin>:1:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
 bool foo = (1, 2.0);
                ~~~
-");
+")
 
 test("
 assert const 100 == 0b1100100;
@@ -22,7 +22,7 @@ assert const 2748 == 0xABC;
 <stdin>:2:21: warning: Number interpreted as decimal (use the prefix \"0o\" for octal numbers)
 assert const 100 == 0100;
                     ~~~~
-");
+")
 
 test("
 void foo() {
@@ -49,7 +49,7 @@ void foo() {
 <stdin>:10:7: error: Assignment expressions are not allowed inside other expressions
   x = --x;
       ~~~
-");
+")
 
 test("
 void foo() {
@@ -100,7 +100,7 @@ void foo() {
 <stdin>:13:7: error: Assignment expressions are not allowed inside other expressions
   x = (x ^= 1);
       ~~~~~~~~
-");
+")
 
 test("
 void foo(int x) {
@@ -116,7 +116,7 @@ void foo(int x) {
   x ^= 1;
 }
 ", "
-");
+")
 
 test("
 void foo(float x) {
@@ -147,7 +147,7 @@ void foo(float x) {
 <stdin>:11:3: error: No binary operator \"^=\" for type \"float\" and type \"int\"
   x ^= 1;
   ~~~~~~
-");
+")
 
 test("
 void foo(double x) {
@@ -178,7 +178,7 @@ void foo(double x) {
 <stdin>:11:3: error: No binary operator \"^=\" for type \"double\" and type \"int\"
   x ^= 1;
   ~~~~~~
-");
+")
 
 test("
 class Foo {
@@ -196,7 +196,7 @@ void foo(Foo foo) {
 <stdin>:7:3: error: Binary operator \"-\" is ambiguous, could be \"Foo.foo\" or \"Foo.bar\"
   -foo;
   ~~~~
-");
+")
 
 test("
 class Foo {
@@ -214,7 +214,7 @@ void foo(Foo foo) {
 <stdin>:4:24: error: Expected 1 argument because of \"@OperatorAdd\" but found 2 arguments
   @OperatorAdd void baz(int x, int y) {}
                        ~~~~~~~~~~~~~~
-");
+")
 
 test("
 class Foo {
@@ -231,7 +231,7 @@ void foo(Foo foo) {
 <stdin>:7:3: error: Binary operator \"+\" is ambiguous, could be \"Foo.foo\" or \"Foo.bar\"
   foo + Bar.FOO;
   ~~~~~~~~~~~~~
-");
+")
 
 test("
 class Foo {
@@ -246,7 +246,7 @@ void foo(Foo foo) {
   foo + (double)Bar.FOO;
 }
 ", "
-");
+")
 
 test("
 namespace ns {
@@ -260,7 +260,7 @@ class Bar : ns.Foo {
 <stdin>:6:33: error: No binary operator \"!=\" for type \"ns.Bar fn()\" and type \"ns.Bar\"
   bool bar(ns.Bar bar) { return foo != bar; }
                                 ~~~~~~~~~~
-");
+")
 
 test("
 void foo() {
@@ -270,7 +270,7 @@ void foo() {
 <stdin>:2:13: error: Cannot infer a common key type for this map literal
   var foo = {};
             ~~
-");
+")
 
 test("
 enum Foo { FOO, BAR }
@@ -280,7 +280,7 @@ void foo() {
   var baz = { Foo.FOO: false, Foo.BAR: true };
 }
 ", "
-");
+")
 
 test("
 void foo() {
@@ -299,7 +299,7 @@ void foo() {
 <stdin>:2:36: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   StringMap<bool> foo = { 0: 0, 1: 1 };
                                    ^
-");
+")
 
 test("
 void foo() {
@@ -318,7 +318,7 @@ void foo() {
 <stdin>:2:40: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   IntMap<bool> foo = { false: 0, true: 1 };
                                        ^
-");
+")
 
 test("
 void foo() {
@@ -331,7 +331,7 @@ void foo() {
 <stdin>:2:13: error: Cannot infer a common value type for this map literal
   var foo = { 0: false, true: 1 };
             ~~~~~~~~~~~~~~~~~~~~~
-");
+")
 
 test("
 int foo(int foo) {
@@ -344,6 +344,6 @@ int foo(int foo) {
 <stdin>:2:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   return foo is int;
          ~~~~~~~~~~
-");
+")
 
 }}

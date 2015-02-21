@@ -8,131 +8,131 @@ namespace unicode {
   const Encoding STRING_ENCODING =
     TARGET_CPP ? .UTF8 :
     TARGET_JS ? .UTF16 :
-    .UTF32;
+    .UTF32
 
   class StringIterator {
-    static final var INSTANCE = StringIterator();
+    static final var INSTANCE = StringIterator()
 
-    var value = "";
-    var index = 0;
-    var stop = 0;
+    var value = ""
+    var index = 0
+    var stop = 0
 
     StringIterator reset(string text, int start) {
-      value = text;
-      index = start;
-      stop = text.size();
-      return this;
+      value = text
+      index = start
+      stop = text.size()
+      return this
     }
 
     int countCodePointsUntil(int stop) {
-      var count = 0;
+      var count = 0
       while (index < stop && nextCodePoint() >= 0) {
-        count++;
+        count++
       }
-      return count;
+      return count
     }
 
     int nextCodePoint() {
       if (STRING_ENCODING == .UTF8) {
-        if (index >= stop) return -1;
-        var a = value.codeUnitAt(index);
-        index++;
-        if (a < 0xC0) return a;
-        if (index >= stop) return -1;
-        var b = value.codeUnitAt(index);
-        index++;
-        if (a < 0xE0) return ((a & 0x1F) << 6) | (b & 0x3F);
-        if (index >= stop) return -1;
-        var c = value.codeUnitAt(index);
-        index++;
-        if (a < 0xF0) return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F);
-        if (index >= stop) return -1;
-        var d = value.codeUnitAt(index);
-        index++;
-        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F);
+        if (index >= stop) return -1
+        var a = value.codeUnitAt(index)
+        index++
+        if (a < 0xC0) return a
+        if (index >= stop) return -1
+        var b = value.codeUnitAt(index)
+        index++
+        if (a < 0xE0) return ((a & 0x1F) << 6) | (b & 0x3F)
+        if (index >= stop) return -1
+        var c = value.codeUnitAt(index)
+        index++
+        if (a < 0xF0) return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F)
+        if (index >= stop) return -1
+        var d = value.codeUnitAt(index)
+        index++
+        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F)
       }
 
       else if (STRING_ENCODING == .UTF16) {
-        if (index >= stop) return -1;
-        var a = value.codeUnitAt(index);
-        index++;
-        if (a < 0xD800) return a;
-        if (index >= stop) return -1;
-        var b = value.codeUnitAt(index);
-        index++;
-        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00);
+        if (index >= stop) return -1
+        var a = value.codeUnitAt(index)
+        index++
+        if (a < 0xD800) return a
+        if (index >= stop) return -1
+        var b = value.codeUnitAt(index)
+        index++
+        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00)
       }
 
       else {
-        if (index >= stop) return -1;
-        var c = value.codeUnitAt(index);
-        index++;
-        return c;
+        if (index >= stop) return -1
+        var c = value.codeUnitAt(index)
+        index++
+        return c
       }
     }
   }
 }
 
 in string {
-  using unicode;
+  using unicode
 
   List<int> codePoints() {
-    List<int> codePoints = [];
-    StringIterator.INSTANCE.reset(this, 0);
+    List<int> codePoints = []
+    StringIterator.INSTANCE.reset(this, 0)
     while (true) {
-      var codePoint = StringIterator.INSTANCE.nextCodePoint();
+      var codePoint = StringIterator.INSTANCE.nextCodePoint()
       if (codePoint < 0) {
-        break;
+        break
       }
-      codePoints.push(codePoint);
+      codePoints.push(codePoint)
     }
-    return codePoints;
+    return codePoints
   }
 
   static string fromCodePoints(List<int> codePoints) {
-    var builder = StringBuilder();
+    var builder = StringBuilder()
 
     if (STRING_ENCODING == .UTF8) {
       for (var i = 0, n = codePoints.size(); i < n; i++) {
-        var codePoint = codePoints[i];
+        var codePoint = codePoints[i]
         if (codePoint < 0x80) {
-          builder.append(fromCodeUnit(codePoint));
+          builder.append(fromCodeUnit(codePoint))
         } else {
           if (codePoint < 0x800) {
-            builder.append(fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0));
+            builder.append(fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0))
           } else {
             if (codePoint < 0x10000) {
-              builder.append(fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0));
+              builder.append(fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0))
             } else {
-              builder.append(fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0));
-              builder.append(fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80));
+              builder.append(fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0))
+              builder.append(fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80))
             }
-            builder.append(fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80));
+            builder.append(fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80))
           }
-          builder.append(fromCodeUnit((codePoint & 0x3F) | 0x80));
+          builder.append(fromCodeUnit((codePoint & 0x3F) | 0x80))
         }
       }
     }
 
     else if (STRING_ENCODING == .UTF16) {
       for (var i = 0, n = codePoints.size(); i < n; i++) {
-        var codePoint = codePoints[i];
+        var codePoint = codePoints[i]
         if (codePoint < 0x10000) {
-          builder.append(fromCodeUnit(codePoint));
+          builder.append(fromCodeUnit(codePoint))
         } else {
-          codePoint -= 0x10000;
-          builder.append(fromCodeUnit((codePoint >> 10) + 0xD800));
-          builder.append(fromCodeUnit((codePoint & ((1 << 10) - 1)) + 0xDC00));
+          codePoint -= 0x10000
+          builder.append(fromCodeUnit((codePoint >> 10) + 0xD800))
+          builder.append(fromCodeUnit((codePoint & ((1 << 10) - 1)) + 0xDC00))
         }
       }
     }
 
     else {
       for (var i = 0, n = codePoints.size(); i < n; i++) {
-        builder.append(fromCodeUnit(codePoints[i]));
+        builder.append(fromCodeUnit(codePoints[i]))
       }
     }
 
-    return builder.toString();
+    return builder.toString()
   }
 }

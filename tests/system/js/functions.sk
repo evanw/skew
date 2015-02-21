@@ -19,7 +19,7 @@ export void test() {
     new Foo().foo();
   };
 }());
-");
+")
 
 testJS("
 export class Foo {
@@ -38,7 +38,7 @@ export class Foo {
     this.foo.bar();
   };
 }());
-");
+")
 
 testJS("
 void foo(int foo) {}
@@ -54,7 +54,7 @@ export void test() {
     foo((1, 2));
   };
 }());
-");
+")
 
 testJS("
 enum Foo { A, B, C }
@@ -82,7 +82,7 @@ export void test() {
     in_Foo.foo(Foo.A);
   };
 }());
-");
+")
 
 testJS("
 export enum Foo { FOO }
@@ -103,7 +103,7 @@ in Foo {
 
   in_Foo._toString_ = ['FOO'];
 }());
-");
+")
 
 testJS("
 import class Foo {
@@ -126,7 +126,7 @@ export void test() {
     in_Foo.foo(new Foo());
   };
 }());
-");
+")
 
 testJS("
 class Foo {
@@ -166,7 +166,7 @@ export void test() {
     new Bar().foo(1);
   };
 }());
-");
+")
 
 testJS("
 class Foo {
@@ -204,7 +204,7 @@ export void test() {
     new Bar().foo();
   };
 }());
-");
+")
 
 testJS("
 interface IFoo {
@@ -231,7 +231,7 @@ export void test() {
     new Bar().foo();
   };
 }());
-");
+")
 
 testJS("
 interface IFoo {
@@ -285,7 +285,7 @@ void bar(IBar bar) {
     bar.bar();
   }
 }());
-");
+")
 
 testJS("
 interface IFoo {
@@ -339,7 +339,7 @@ void bar(IBar bar) {
     bar.bar();
   }
 }());
-");
+")
 
 testJS("
 import interface IFoo {
@@ -363,7 +363,7 @@ export IFoo foo() {
     return new Foo();
   };
 }());
-");
+")
 
 testJS("
 import interface IFoo {
@@ -388,7 +388,7 @@ import void bar(IFoo foo);
     bar(new Foo());
   };
 }());
-");
+")
 
 testJS("
 in Foo {
@@ -424,7 +424,7 @@ interface Foo {}
 
   in_Foo.baz = 0;
 }());
-");
+")
 
 testJS("
 import class Foo {}
@@ -446,6 +446,6 @@ export Foo bar() {
     return in_Foo.$new();
   };
 }());
-");
+")
 
 }}

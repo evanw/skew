@@ -14,18 +14,18 @@ namespace terminal {
   #if TARGET_JS && CONFIG_BROWSER
 
     inline {
-      int width() { return 0; }
-      int height() { return 0; }
+      int width() { return 0 }
+      int height() { return 0 }
       void setColor(Color color) {}
       void flush() {}
 
       void print(string text) {
-        `console`.log(text);
+        `console`.log(text)
       }
 
       // Browser logs are so varied that buffering standard output doesn't make much sense
       void write(string text) {
-        `console`.log(text);
+        `console`.log(text)
       }
     }
 
@@ -33,134 +33,134 @@ namespace terminal {
 
     void setColor(Color color) {
       if (`process`.stdout.isTTY) {
-        write("\x1B[0;" + (int)color + "m");
+        write("\x1B[0;" + (int)color + "m")
       }
     }
 
     inline {
       int width() {
-        return `process`.stdout.columns;
+        return `process`.stdout.columns
       }
 
       int height() {
-        return `process`.stdout.rows;
+        return `process`.stdout.rows
       }
 
       void flush() {
       }
 
       void print(string text) {
-        write(text + "\n");
+        write(text + "\n")
       }
 
       void write(string text) {
-        `process`.stdout.write(text);
+        `process`.stdout.write(text)
       }
     }
 
   #elif TARGET_CPP && CONFIG_WINDOWS
 
-    `HANDLE` _handle = `INVALID_HANDLE_VALUE`;
-    `CONSOLE_SCREEN_BUFFER_INFO` _info;
+    `HANDLE` _handle = `INVALID_HANDLE_VALUE`
+    `CONSOLE_SCREEN_BUFFER_INFO` _info
 
     @NeedsInclude("<windows.h>")
     void _setup() {
       if (_handle == `INVALID_HANDLE_VALUE`) {
-        _handle = `GetStdHandle(STD_OUTPUT_HANDLE)`;
-        `GetConsoleScreenBufferInfo`(_handle, &_info);
+        _handle = `GetStdHandle(STD_OUTPUT_HANDLE)`
+        `GetConsoleScreenBufferInfo`(_handle, &_info)
       }
     }
 
     int width() {
-      _setup();
-      return _info.dwSize.X;
+      _setup()
+      return _info.dwSize.X
     }
 
     int height() {
-      _setup();
-      return _info.dwSize.Y;
+      _setup()
+      return _info.dwSize.Y
     }
 
     void setColor(Color color) {
-      _setup();
-      int value = _info.wAttributes;
+      _setup()
+      int value = _info.wAttributes
       switch (color) {
-        case .BOLD { value |= `FOREGROUND_INTENSITY`; }
-        case .GRAY { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE`; }
-        case .RED { value = `FOREGROUND_RED | FOREGROUND_INTENSITY`; }
-        case .GREEN { value = `FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }
-        case .YELLOW { value = `FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }
-        case .BLUE { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY`; }
-        case .MAGENTA { value = `FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }
-        case .CYAN { value = `FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY`; }
+        case .BOLD { value |= `FOREGROUND_INTENSITY` }
+        case .GRAY { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE` }
+        case .RED { value = `FOREGROUND_RED | FOREGROUND_INTENSITY` }
+        case .GREEN { value = `FOREGROUND_GREEN | FOREGROUND_INTENSITY` }
+        case .YELLOW { value = `FOREGROUND_BLUE | FOREGROUND_INTENSITY` }
+        case .BLUE { value = `FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY` }
+        case .MAGENTA { value = `FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY` }
+        case .CYAN { value = `FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY` }
       }
-      `SetConsoleTextAttribute`(_handle, value);
+      `SetConsoleTextAttribute`(_handle, value)
     }
 
     void flush() {
     }
 
     inline void print(string text) {
-      write(text + "\n");
+      write(text + "\n")
     }
 
     void write(string text) {
-      _setup();
+      _setup()
 
       // Use WriteConsoleA() instead of std::cout for a huge performance boost
-      `WriteConsoleA`(_handle, `text`.c_str(), `text`.size(), null, null);
+      `WriteConsoleA`(_handle, `text`.c_str(), `text`.size(), null, null)
     }
 
   #elif TARGET_CPP && (CONFIG_OSX || CONFIG_LINUX)
 
-    int _width;
-    int _height;
-    bool _isTTY;
-    bool _isSetup;
+    int _width
+    int _height
+    bool _isTTY
+    bool _isSetup
 
     @NeedsInclude("<sys/ioctl.h>")
     @NeedsInclude("<unistd.h>")
     void _setup() {
       if (!_isSetup) {
-        `winsize` size;
+        `winsize` size
         if (!`ioctl`(2, `TIOCGWINSZ`, &size)) {
-          _width = size.ws_col;
-          _height = size.ws_row;
+          _width = size.ws_col
+          _height = size.ws_row
         }
-        _isTTY = `isatty(STDOUT_FILENO)`;
-        _isSetup = true;
+        _isTTY = `isatty(STDOUT_FILENO)`
+        _isSetup = true
       }
     }
 
     int width() {
-      _setup();
-      return _width;
+      _setup()
+      return _width
     }
 
     int height() {
-      _setup();
-      return _height;
+      _setup()
+      return _height
     }
 
     void setColor(Color color) {
-      _setup();
+      _setup()
       if (_isTTY) {
-        write("\x1B[0;" + (int)color + "m");
+        write("\x1B[0;" + (int)color + "m")
       }
     }
 
     @NeedsInclude("<iostream>")
     inline {
       void flush() {
-        `std`::cout.flush();
+        `std`::cout.flush()
       }
 
       void print(string text) {
-        `std`::cout << text << `std`::endl;
+        `std`::cout << text << `std`::endl
       }
 
       void write(string text) {
-        `std`::cout << text;
+        `std`::cout << text
       }
     }
 
@@ -168,37 +168,37 @@ namespace terminal {
 
     void setColor(Color color) {
       if (`STDOUT`.isatty) {
-        write("\x1B[0;" + (int)color + "m");
+        write("\x1B[0;" + (int)color + "m")
       }
     }
 
     inline {
       int width() {
-        `require`("io/console");
-        return `STDIN`.winsize[1];
+        `require`("io/console")
+        return `STDIN`.winsize[1]
       }
 
       int height() {
-        `require`("io/console");
-        return `STDIN`.winsize[0];
+        `require`("io/console")
+        return `STDIN`.winsize[0]
       }
 
       void flush() {
       }
 
       void print(string text) {
-        `puts`(text);
+        `puts`(text)
       }
 
       void write(string text) {
-        `print`(text);
+        `print`(text)
       }
     }
 
   #else
 
-    int width() { return 0; }
-    int height() { return 0; }
+    int width() { return 0 }
+    int height() { return 0 }
     void setColor(Color color) {}
     void flush() {}
     void print(string text) {}

@@ -11,7 +11,7 @@ export bool foo(int a, int b, int c, int d) {
 def foo(a, b, c, d)
   return (a == b) == (c == d)
 end
-");
+")
 
 testRuby("
 export var foo = \"'\";
@@ -21,7 +21,7 @@ export var baz = \"#{test}\";
 $foo = \"'\"
 $bar = \"\\\"\"
 $baz = \"\\#{test}\"
-");
+")
 
 testRuby("
 export List<float> foo(int x, float y) {
@@ -38,7 +38,7 @@ end
 def bar(x, y)
   return [1.0, Float(1 + 2), 1.0 + 2.0, 1.0 + 2.0, Float(x) + 2.0, 1.0 + y]
 end
-");
+")
 
 testRuby("
 export void foo(int x) {
@@ -51,7 +51,7 @@ def foo(x)
   x += 1
   x -= 1
 end
-");
+")
 
 testRuby("
 class Foo<T> {
@@ -73,7 +73,7 @@ end
 def bar(x)
   return x == 0 ? 1 : 0
 end
-");
+")
 
 testRuby("
 export dynamic foo() {
@@ -83,7 +83,7 @@ export dynamic foo() {
 def foo
   return { \"x\" => 1, 2 => \"y\" }
 end
-");
+")
 
 testRuby("
 export StringMap<int> foo() {
@@ -93,6 +93,6 @@ export StringMap<int> foo() {
 def foo
   return { \"x\" => 1, \"y\" => 2 }
 end
-");
+")
 
 }}

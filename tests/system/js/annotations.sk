@@ -10,7 +10,7 @@ void foo() {}
 
   foo();
 }());
-");
+")
 
 testJS("
 @EntryPoint
@@ -25,7 +25,7 @@ int foo() {
 
   process.exit(foo());
 }());
-");
+")
 
 testJS("
 @EntryPoint
@@ -37,7 +37,7 @@ void foo(List<string> args) {}
 
   foo(process.argv.slice(2));
 }());
-");
+")
 
 testJS("
 @EntryPoint
@@ -52,6 +52,6 @@ int foo(List<string> args) {
 
   process.exit(foo(process.argv.slice(2)));
 }());
-");
+")
 
 }}

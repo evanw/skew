@@ -10,7 +10,7 @@ import int bar() {}
 <stdin>:2:12: error: All control paths for \"bar\" must return a value of type \"int\"
 import int bar() {}
            ~~~
-");
+")
 
 test("
 int foo() {}
@@ -19,7 +19,7 @@ void bar() {}
 <stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo() {}
     ~~~
-");
+")
 
 test("
 int foo(bool bar) {
@@ -29,7 +29,7 @@ int foo(bool bar) {
 <stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(bool bar) {
     ~~~
-");
+")
 
 test("
 int foo(bool bar) {
@@ -40,7 +40,7 @@ int foo(bool bar) {
 <stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(bool bar) {
     ~~~
-");
+")
 
 test("
 int foo(bool bar) {
@@ -49,7 +49,7 @@ int foo(bool bar) {
   else return 0;
 }
 ", "
-");
+")
 
 test("
 int foo(int bar) {
@@ -61,7 +61,7 @@ int foo(int bar) {
 <stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(int bar) {
     ~~~
-");
+")
 
 test("
 int foo(int bar) {
@@ -74,7 +74,7 @@ int foo(int bar) {
 <stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(int bar) {
     ~~~
-");
+")
 
 test("
 int foo(int bar) {
@@ -87,7 +87,7 @@ int foo(int bar) {
 <stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(int bar) {
     ~~~
-");
+")
 
 test("
 int foo(int bar) {
@@ -100,7 +100,7 @@ int foo(int bar) {
 <stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo(int bar) {
     ~~~
-");
+")
 
 test("
 int foo(int bar) {
@@ -110,7 +110,7 @@ int foo(int bar) {
   }
 }
 ", "
-");
+")
 
 test("
 int foo() {
@@ -121,7 +121,7 @@ int foo() {
 <stdin>:3:3: warning: Unused expression
   1;
   ^
-");
+")
 
 test("
 void foo();
@@ -129,7 +129,7 @@ void foo();
 <stdin>:1:6: error: Use the \"import\" modifier to import functions
 void foo();
      ~~~
-");
+")
 
 test("
 class Foo { void foo(); }
@@ -141,13 +141,13 @@ class Foo { void foo(); }
 <stdin>:2:22: error: Abstract functions must use the \"virtual\" modifier
 interface Baz { void foo(); }
                      ~~~
-");
+")
 
 test("
 class Foo { virtual void foo(); }
 interface Baz { virtual void foo(); }
 ", "
-");
+")
 
 test("
 import class A { new(); }
@@ -160,7 +160,7 @@ import class B { import new(); }
 <stdin>:3:18: error: Cannot use the \"export\" modifier inside an imported type
 import class C { export new(); }
                  ~~~~~~
-");
+")
 
 test("
 export class A { new(); }
@@ -182,7 +182,7 @@ export class C { export new(); }
 <stdin>:3:25: error: Every constructor must have an implementation
 export class C { export new(); }
                         ~~~
-");
+")
 
 test("
 import class Foo {
@@ -193,7 +193,7 @@ export void foo() {
   Foo();
 }
 ", "
-");
+")
 
 test("
 import class Foo {}
@@ -202,7 +202,7 @@ in Foo { export void foo() {} }
 <stdin>:2:10: error: Cannot use the \"export\" modifier inside an imported type
 in Foo { export void foo() {} }
          ~~~~~~
-");
+")
 
 test("
 import namespace Foo {}
@@ -211,7 +211,7 @@ in Foo { export void foo() {} }
 <stdin>:2:10: error: Cannot use the \"export\" modifier inside an imported type
 in Foo { export void foo() {} }
          ~~~~~~
-");
+")
 
 test("
 class Foo {
@@ -227,14 +227,14 @@ class Baz : Foo {
 <stdin>:8:11: error: Cannot use \"super\" here
   new() { super(); }
           ~~~~~~~
-");
+")
 
 test("
 interface Foo {
   void foo() {}
 }
 ", "
-");
+")
 
 test("
 interface Foo {
@@ -244,7 +244,7 @@ interface Foo {
 <stdin>:2:22: error: Virtual interface functions cannot have an implementation
   virtual void foo() {}
                      ~~
-");
+")
 
 test("
 in Foo {
@@ -255,6 +255,6 @@ interface Foo {}
 <stdin>:2:22: error: Virtual interface functions cannot have an implementation
   virtual void foo() {}
                      ~~
-");
+")
 
 }}

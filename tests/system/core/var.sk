@@ -6,7 +6,7 @@ var foo;
 <stdin>:1:5: error: Implicitly typed variables must be initialized
 var foo;
     ~~~
-");
+")
 
 test("
 var foo = [];
@@ -14,7 +14,7 @@ var foo = [];
 <stdin>:1:11: error: Cannot infer a common element type for this list literal
 var foo = [];
           ~~
-");
+")
 
 test("
 export void test() {
@@ -22,7 +22,7 @@ export void test() {
   int bar = foo;
 }
 ", "
-");
+")
 
 test("
 export void test() {
@@ -33,7 +33,7 @@ export void test() {
 <stdin>:3:14: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   bool bar = foo;
              ~~~
-");
+")
 
 test("
 var foo = null, bar = null;
@@ -44,7 +44,7 @@ var foo = null, bar = null;
 <stdin>:1:17: error: Implicitly typed variables cannot be of type \"null\"
 var foo = null, bar = null;
                 ~~~
-");
+")
 
 test("
 var foo() {
@@ -54,7 +54,7 @@ var foo() {
 <stdin>:1:1: error: Unexpected VAR
 var foo() {
 ~~~
-");
+")
 
 test("
 void foo(var bar) {}
@@ -62,7 +62,7 @@ void foo(var bar) {}
 <stdin>:1:14: error: Implicitly typed variables must be initialized
 void foo(var bar) {}
              ~~~
-");
+")
 
 test("
 export void test() {
@@ -73,6 +73,6 @@ void bar() {}
 <stdin>:2:7: error: Implicitly typed variables cannot be of type \"void\"
   var foo = bar();
       ~~~
-");
+")
 
 }}

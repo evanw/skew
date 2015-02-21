@@ -8,7 +8,7 @@ void test() {
 <stdin>:2:3: error: Cannot call type \"int\"
   0();
   ^
-");
+")
 
 test("
 void foo() {}
@@ -20,7 +20,7 @@ int bar = foo(100);
 <stdin>:2:11: error: Cannot convert from type \"void\" to type \"int\"
 int bar = foo(100);
           ~~~~~~~~
-");
+")
 
 test("
 bool foo(int x, bool y) { return false; }
@@ -35,7 +35,7 @@ int bar = foo(false, 100);
 <stdin>:2:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
 int bar = foo(false, 100);
           ~~~~~~~~~~~~~~~
-");
+")
 
 test("
 void foo() {}
@@ -44,7 +44,7 @@ var bar = foo;
 <stdin>:2:11: error: Raw function references are not allowed (call the function instead)
 var bar = foo;
           ~~~
-");
+")
 
 test("
 var x = super();
@@ -52,7 +52,7 @@ var x = super();
 <stdin>:1:9: error: Cannot use \"super\" here
 var x = super();
         ~~~~~~~
-");
+")
 
 test("
 int foo() { return super(); }
@@ -60,7 +60,7 @@ int foo() { return super(); }
 <stdin>:1:20: error: Cannot use \"super\" here
 int foo() { return super(); }
                    ~~~~~~~
-");
+")
 
 test("
 int foo() { int foo() { return super(); } }
@@ -74,7 +74,7 @@ int foo() { int foo() { return super(); } }
 <stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
 int foo() { int foo() { return super(); } }
     ~~~
-");
+")
 
 test("
 namespace ns {
@@ -84,7 +84,7 @@ namespace ns {
 <stdin>:2:22: error: Cannot use \"super\" here
   int foo() { return super(); }
                      ~~~~~~~
-");
+")
 
 test("
 class Foo {
@@ -94,7 +94,7 @@ class Foo {
 <stdin>:2:22: error: Cannot use \"super\" here
   int foo() { return super(); }
                      ~~~~~~~
-");
+")
 
 test("
 class Foo {
@@ -110,7 +110,7 @@ class Bar : Foo {
 <stdin>:5:42: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   override int foo(int bar) { bool foo = super(false); return 0; }
                                          ~~~~~~~~~~~~
-");
+")
 
 test("
 interface IFoo {
@@ -126,6 +126,6 @@ class Bar : IFoo {
 <stdin>:2:15: note: The overridden member is here
   virtual int foo();
               ~~~
-");
+")
 
 }}

@@ -1,322 +1,322 @@
 class Type {
-  final var members = StringMap<Member>();
+  final var members = StringMap<Member>()
 
   // The symbol that declared this type, if any. Non-generic function types
   // don't have a declaring symbol, so this will be null for those types.
-  Symbol symbol;
+  Symbol symbol
 
   // This contains types used in the definition of this type. Classes derive
   // from at most one base class and implement any number of interfaces.
   // Interfaces can extend any number of other interfaces. Functions have one
   // return type followed by a relevant type for each argument variable. Type
   // parameters are either unbounded or have a single type bound.
-  List<Type> relevantTypes = null;
+  List<Type> relevantTypes = null
 
   // Types that have been substituted for the type parameters of this symbol.
   // If non-null, the length must equal symbol.parameters.size().
-  List<Type> substitutions = null;
+  List<Type> substitutions = null
 
   // Maps the Symbol uniqueID for an overload to a Member on this type. The
   // member will store the symbol type parameterized for this type.
-  IntMap<Member> operatorOverloadCache = null;
+  IntMap<Member> operatorOverloadCache = null
 
   // Give each type a unique integer as a hash code
-  static var nextUniqueID = -1;
-  var uniqueID = generateUniqueID();
+  static var nextUniqueID = -1
+  var uniqueID = generateUniqueID()
 
   static int generateUniqueID() {
-    nextUniqueID++;
-    return nextUniqueID;
+    nextUniqueID++
+    return nextUniqueID
   }
 
   Member findOperatorOverload(Symbol symbol) {
     if (operatorOverloadCache == null) {
-      operatorOverloadCache = IntMap<Member>();
+      operatorOverloadCache = IntMap<Member>()
     }
-    var member = operatorOverloadCache.getOrDefault(symbol.uniqueID, null);
+    var member = operatorOverloadCache.getOrDefault(symbol.uniqueID, null)
     if (member == null) {
-      var list = members.values();
+      var list = members.values()
       for (var i = 0; i < list.size(); i++) {
         if (list[i].symbol == symbol) {
-          member = list[i];
-          break;
+          member = list[i]
+          break
         }
       }
     }
-    operatorOverloadCache[symbol.uniqueID] = member;
-    return member;
+    operatorOverloadCache[symbol.uniqueID] = member
+    return member
   }
 
   // Enforce a consistent symbol iteration order
   List<Member> sortedMembers() {
-    var result = members.values();
-    result.sort(MemberComparison.INSTANCE);
-    return result;
+    var result = members.values()
+    result.sort(MemberComparison.INSTANCE)
+    return result
   }
 
   Member constructor() {
-    if (symbol == null) return null;
-    return members.getOrDefault("new", null);
+    if (symbol == null) return null
+    return members.getOrDefault("new", null)
   }
 
   bool hasBaseType(Type type) {
     if (isParameter()) {
-      var upper = bound();
-      return upper != null && upper.hasBaseType(type);
+      var upper = bound()
+      return upper != null && upper.hasBaseType(type)
     }
     if (!isClass() && !isInterface()) {
-      return false;
+      return false
     }
     if (this == type) {
-      return true;
+      return true
     }
     if (relevantTypes != null) {
       for (var i = 0; i < relevantTypes.size(); i++) {
         if (relevantTypes[i].hasBaseType(type)) {
-          return true;
+          return true
         }
       }
     }
-    return false;
+    return false
   }
 
   bool hasBaseSymbol(Symbol symbol) {
     if (isParameter()) {
-      var upper = bound();
-      return upper != null && upper.hasBaseSymbol(symbol);
+      var upper = bound()
+      return upper != null && upper.hasBaseSymbol(symbol)
     }
     if (!isClass() && !isInterface()) {
-      return false;
+      return false
     }
     if (this.symbol == symbol) {
-      return true;
+      return true
     }
     if (relevantTypes != null) {
       for (var i = 0; i < relevantTypes.size(); i++) {
         if (relevantTypes[i].hasBaseSymbol(symbol)) {
-          return true;
+          return true
         }
       }
     }
-    return false;
+    return false
   }
 
   void addMember(Member member) {
-    members[member.symbol.name] = member;
+    members[member.symbol.name] = member
   }
 
   void copyMembersFrom(Type other) {
-    var otherMembers = other.members.values();
+    var otherMembers = other.members.values()
     for (var i = 0; i < otherMembers.size(); i++) {
-      var member = otherMembers[i];
+      var member = otherMembers[i]
       if (!(member.symbol.name in members)) {
-        members[member.symbol.name] = member;
+        members[member.symbol.name] = member
       }
     }
   }
 
   Member findMember(string name) {
-    return members.getOrDefault(name, null);
+    return members.getOrDefault(name, null)
   }
 
   static string environmentToString(List<Symbol> parameters, List<Type> substitutions) {
-    assert parameters.size() == substitutions.size();
-    var text = "[";
+    assert parameters.size() == substitutions.size()
+    var text = "["
     for (var i = 0; i < parameters.size(); i++) {
-      if (i != 0) text += ", ";
-      text += parameters[i].name + " => " + substitutions[i];
+      if (i != 0) text += ", "
+      text += parameters[i].name + " => " + substitutions[i]
     }
-    return text + "]";
+    return text + "]"
   }
 
   string toString() {
-    assert substitutions == null || substitutions.size() == symbol.parameters.size();
+    assert substitutions == null || substitutions.size() == symbol.parameters.size()
 
     // Special-case generic types
-    var parameterText = "";
+    var parameterText = ""
     if (hasParameters()) {
-      parameterText = "<";
+      parameterText = "<"
       for (var i = 0; i < symbol.parameters.size(); i++) {
-        if (i != 0) parameterText += ", ";
-        parameterText += isParameterized() ? substitutions[i].toString() : symbol.parameters[i].name;
+        if (i != 0) parameterText += ", "
+        parameterText += isParameterized() ? substitutions[i].toString() : symbol.parameters[i].name
       }
-      parameterText += ">";
+      parameterText += ">"
     }
 
     // Special-case functions
     if (isFunction()) {
-      var text = resultType() + " fn" + parameterText + "(";
-      var arguments = argumentTypes();
+      var text = resultType() + " fn" + parameterText + "("
+      var arguments = argumentTypes()
       for (var i = 0; i < arguments.size(); i++) {
-        if (i != 0) text += ", ";
-        text += arguments[i];
+        if (i != 0) text += ", "
+        text += arguments[i]
       }
-      return text + ")";
+      return text + ")"
     }
 
-    return symbol.fullName() + parameterText;
+    return symbol.fullName() + parameterText
   }
 
   bool hasParameters() {
-    return symbol != null && symbol.hasParameters();
+    return symbol != null && symbol.hasParameters()
   }
 
   bool isParameterized() {
-    return substitutions != null;
+    return substitutions != null
   }
 
   bool hasRelevantTypes() {
-    return relevantTypes != null && relevantTypes.size() > 0;
+    return relevantTypes != null && relevantTypes.size() > 0
   }
 
   Type baseClass() {
-    assert isClass();
-    if (!hasRelevantTypes()) return null;
-    var first = relevantTypes[0];
-    return first.isClass() ? first : null;
+    assert isClass()
+    if (!hasRelevantTypes()) return null
+    var first = relevantTypes[0]
+    return first.isClass() ? first : null
   }
 
   Type bound() {
-    assert isParameter();
-    return hasRelevantTypes() ? relevantTypes[0] : null;
+    assert isParameter()
+    return hasRelevantTypes() ? relevantTypes[0] : null
   }
 
   bool dependsOnParameter(Symbol parameter) {
     if (symbol == parameter ||
         hasParameters() && parameter in symbol.parameters ||
         isParameterized() && parameter.type in substitutions) {
-      return true;
+      return true
     }
     if (hasRelevantTypes()) {
       for (var i = 0; i < relevantTypes.size(); i++) {
-        var type = relevantTypes[i];
+        var type = relevantTypes[i]
         if (type.dependsOnParameter(parameter)) {
-          return true;
+          return true
         }
       }
     }
-    return false;
+    return false
   }
 
   Type resultType() {
-    assert isFunction();
-    assert hasRelevantTypes();
-    return relevantTypes[0];
+    assert isFunction()
+    assert hasRelevantTypes()
+    return relevantTypes[0]
   }
 
   List<Type> argumentTypes() {
-    assert isFunction();
-    assert hasRelevantTypes();
-    return relevantTypes.slice(1, relevantTypes.size());
+    assert isFunction()
+    assert hasRelevantTypes()
+    return relevantTypes.slice(1, relevantTypes.size())
   }
 
   bool isVoid(TypeCache cache) {
-    return this == cache.voidType;
+    return this == cache.voidType
   }
 
   bool isInt(TypeCache cache) {
-    return this == cache.intType;
+    return this == cache.intType
   }
 
   bool isNull(TypeCache cache) {
-    return this == cache.nullType;
+    return this == cache.nullType
   }
 
   bool isBool(TypeCache cache) {
-    return this == cache.boolType;
+    return this == cache.boolType
   }
 
   bool isFloat(TypeCache cache) {
-    return this == cache.floatType;
+    return this == cache.floatType
   }
 
   bool isDouble(TypeCache cache) {
-    return this == cache.doubleType;
+    return this == cache.doubleType
   }
 
   bool isString(TypeCache cache) {
-    return this == cache.stringType;
+    return this == cache.stringType
   }
 
   bool isPrimitive() {
-    return symbol != null && symbol.isPrimitive();
+    return symbol != null && symbol.isPrimitive()
   }
 
   bool isList(TypeCache cache) {
-    return symbol == cache.listType.symbol;
+    return symbol == cache.listType.symbol
   }
 
   bool isStringMap(TypeCache cache) {
-    return symbol == cache.stringMapType.symbol;
+    return symbol == cache.stringMapType.symbol
   }
 
   bool isIntMap(TypeCache cache) {
-    return symbol == cache.intMapType.symbol;
+    return symbol == cache.intMapType.symbol
   }
 
   bool isError(TypeCache cache) {
-    return this == cache.errorType;
+    return this == cache.errorType
   }
 
   bool isIgnored(TypeCache cache) {
-    return isError(cache) || isQuoted();
+    return isError(cache) || isQuoted()
   }
 
   bool isQuoted() {
-    return symbol != null && symbol.kind == .QUOTED_TYPE;
+    return symbol != null && symbol.kind == .QUOTED_TYPE
   }
 
   bool isFunction() {
     // Generic function types have a symbol but non-generic function types don't
-    return symbol == null || symbol.kind.isFunction();
+    return symbol == null || symbol.kind.isFunction()
   }
 
   bool isNamespace() {
-    return symbol != null && symbol.kind.isNamespace();
+    return symbol != null && symbol.kind.isNamespace()
   }
 
   bool isEnum() {
-    return symbol != null && symbol.kind.isEnum();
+    return symbol != null && symbol.kind.isEnum()
   }
 
   bool isRegularEnum() {
-    return symbol != null && symbol.kind == .ENUM;
+    return symbol != null && symbol.kind == .ENUM
   }
 
   bool isEnumFlags() {
-    return symbol != null && symbol.kind == .ENUM_FLAGS;
+    return symbol != null && symbol.kind == .ENUM_FLAGS
   }
 
   bool isParameter() {
-    return symbol != null && symbol.kind.isParameter();
+    return symbol != null && symbol.kind.isParameter()
   }
 
   bool isObject() {
-    return symbol != null && symbol.kind.isObject();
+    return symbol != null && symbol.kind.isObject()
   }
 
   bool isClass() {
-    return symbol != null && symbol.kind == .CLASS;
+    return symbol != null && symbol.kind == .CLASS
   }
 
   bool isInterface() {
-    return symbol != null && symbol.kind == .INTERFACE;
+    return symbol != null && symbol.kind == .INTERFACE
   }
 
   bool isReference() {
-    if (isClass()) return !isPrimitive();
-    return isInterface() || isFunction() || isParameter() && bound() != null;
+    if (isClass()) return !isPrimitive()
+    return isInterface() || isFunction() || isParameter() && bound() != null
   }
 
   bool isInteger(TypeCache cache) {
-    return isInt(cache) || isEnum();
+    return isInt(cache) || isEnum()
   }
 
   bool isReal(TypeCache cache) {
-    return isFloat(cache) || isDouble(cache);
+    return isFloat(cache) || isDouble(cache)
   }
 
   bool isNumeric(TypeCache cache) {
-    return isInteger(cache) || isReal(cache);
+    return isInteger(cache) || isReal(cache)
   }
 }

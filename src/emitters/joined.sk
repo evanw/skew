@@ -4,38 +4,38 @@
 // to avoid depending on the file system.
 namespace joined {
   class Emitter : IEmitter {
-    private Resolver resolver;
+    private Resolver resolver
 
     override List<Source> emitProgram(Node program) {
       if (!resolver.options.includeLibraries) {
-        program.removeLibraryFiles();
+        program.removeLibraryFiles()
       }
 
-      var builder = StringBuilder();
+      var builder = StringBuilder()
       for (var i = 0; i < program.children.size(); i++) {
-        var file = program.children[i];
-        var input = file.range.source;
-        var contents = input.contents;
-        var substitutions = resolver.sourceSubstitutions.getOrDefault(input.name, null);
+        var file = program.children[i]
+        var input = file.range.source
+        var contents = input.contents
+        var substitutions = resolver.sourceSubstitutions.getOrDefault(input.name, null)
 
         if (substitutions != null) {
-          substitutions.sort(SourceSubstitutionComparison.INSTANCE);
+          substitutions.sort(SourceSubstitutionComparison.INSTANCE)
           for (var j = substitutions.size() - 1; j >= 0; j--) {
-            var substitution = substitutions[j];
+            var substitution = substitutions[j]
             contents =
               contents.slice(0, substitution.range.start) +
               quoteString(substitution.content, '"') +
-              contents.slice(substitution.range.end, contents.size());
+              contents.slice(substitution.range.end, contents.size())
           }
         }
 
-        builder.append(contents);
+        builder.append(contents)
         if (contents != "" && contents[contents.size() - 1] != '\n') {
-          builder.append("\n");
+          builder.append("\n")
         }
       }
 
-      return [Source(resolver.options.outputFile, builder.toString())];
+      return [Source(resolver.options.outputFile, builder.toString())]
     }
   }
 }
