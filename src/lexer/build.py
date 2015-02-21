@@ -12,8 +12,8 @@ enum TokenKind {
 %(actions)s
 
   // Token kinds not used by flex
-  START_PARAMETER_LIST,
-  END_PARAMETER_LIST,
+  START_PARAMETER_LIST
+  END_PARAMETER_LIST
 }
 
 %(yy_accept)s
@@ -143,7 +143,7 @@ if result['yy_end_of_buffer'] != len(result['actions']) + 1:
 # Patch the results
 result['actions'] = dict((k, v if v != 'ECHO' else 'ERROR') for k, v in result['actions'] + [(0, 'YY_INVALID_ACTION'), (result['yy_end_of_buffer'], 'END_OF_FILE')])
 result['yy_accept'] = ['.%s' % result['actions'][x] for x in result['yy_accept']]
-result['actions'] = '\n'.join('  %s,' % x for x in sorted(set(result['actions'].values())))
+result['actions'] = '\n'.join('  %s' % x for x in sorted(set(result['actions'].values())))
 result['yy_accept_length'] = len(result['yy_accept'])
 result['yy_accept'] = create_table(result, 'yy_accept', type='List<TokenKind>')
 result['yy_ec'] = create_table(result, 'yy_ec')

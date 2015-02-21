@@ -1,6 +1,6 @@
 enum DiagnosticKind {
-  ERROR,
-  WARNING,
+  ERROR
+  WARNING
 }
 
 class Diagnostic {

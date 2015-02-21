@@ -1,10 +1,10 @@
 enum OperatingSystem {
-  ANDROID,
-  IOS,
-  LINUX,
-  OSX,
-  UNKNOWN,
-  WINDOWS,
+  ANDROID
+  IOS
+  LINUX
+  OSX
+  UNKNOWN
+  WINDOWS
 }
 
 in OperatingSystem {

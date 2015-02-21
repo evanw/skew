@@ -1,13 +1,13 @@
 namespace js {
   enum BooleanSwap {
-    SWAP,
-    NO_SWAP,
+    SWAP
+    NO_SWAP
   }
 
   enum ExtractGroupsMode {
-    ALL_SYMBOLS,
-    ONLY_LOCAL_VARIABLES,
-    ONLY_INSTANCE_VARIABLES,
+    ALL_SYMBOLS
+    ONLY_LOCAL_VARIABLES
+    ONLY_INSTANCE_VARIABLES
   }
 
   class SymbolGroup {

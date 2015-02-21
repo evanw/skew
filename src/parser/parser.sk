@@ -1,21 +1,21 @@
 // The same operator precedence as C for the most part
 enum Precedence {
-  LOWEST,
-  COMMA,
-  ASSIGN,
-  LOGICAL_OR,
-  LOGICAL_AND,
-  BITWISE_OR,
-  BITWISE_XOR,
-  BITWISE_AND,
-  EQUAL,
-  COMPARE,
-  SHIFT,
-  ADD,
-  MULTIPLY,
-  UNARY_PREFIX,
-  UNARY_POSTFIX,
-  MEMBER,
+  LOWEST
+  COMMA
+  ASSIGN
+  LOGICAL_OR
+  LOGICAL_AND
+  BITWISE_OR
+  BITWISE_XOR
+  BITWISE_AND
+  EQUAL
+  COMPARE
+  SHIFT
+  ADD
+  MULTIPLY
+  UNARY_PREFIX
+  UNARY_POSTFIX
+  MEMBER
 }
 
 in Precedence {
@@ -29,16 +29,16 @@ in Precedence {
 }
 
 enum StatementHint {
-  NORMAL,
-  IN_IF,
-  IN_ENUM,
-  IN_OBJECT,
-  IN_SWITCH,
+  NORMAL
+  IN_IF
+  IN_ENUM
+  IN_OBJECT
+  IN_SWITCH
 }
 
 enum ListMode {
-  NORMAL,
-  KEY_VALUE,
+  NORMAL
+  KEY_VALUE
 }
 
 bool peekEndOfLine(ParserContext context) {
@@ -53,9 +53,9 @@ bool eatEndOfLine(ParserContext context) {
   // One semicolon may be used instead of a newline to glue statements together
   if (context.eat(.SEMICOLON)) {
     if (peekEndOfLine(context)) {
-      context.undo() // Go back to semicolon
+      context.undo() // Go back to the semicolon
       context.unexpectedToken() // Emit the error
-      context.next() // Go past semicolon again
+      context.next() // Go past the semicolon again
       eatEndOfLine(context) // Go past the newline
     }
     return true
@@ -145,11 +145,28 @@ Node parseCaseStatement(ParserContext context) {
       }
 
       values.push(pratt.parse(context, .COMMA))
-    } while (context.eat(.COMMA))
+    } while (eatCommaAndMaybeNewline(context))
   }
   var block = parseBlock(context, .NORMAL)
   if (block == null) return null
   return Node.createCase(values, block).withRange(context.spanSince(token.range))
+}
+
+bool eatCommaAndMaybeNewline(ParserContext context) {
+  if (!context.eat(.COMMA)) return false
+  context.eat(.NEWLINE)
+  return true
+}
+
+bool expectCommaWithoutNewline(ParserContext context) {
+  if (!context.expect(.COMMA)) return false
+  if (context.peek(.NEWLINE)) {
+    context.undo() // Go back to the comma
+    context.unexpectedToken() // Emit the error
+    context.next() // Go past the comma again
+    context.next() // Go past the newline
+  }
+  return true
 }
 
 List<Node> parseStatements(ParserContext context, StatementHint hint) {
@@ -168,8 +185,7 @@ List<Node> parseStatements(ParserContext context, StatementHint hint) {
       var declaration = parseEnumValueDeclaration(context)
       if (declaration == null) break
       statements.push(declaration)
-      if (context.peek(.RIGHT_BRACE) || !context.expect(.COMMA)) break
-      eatEndOfLine(context)
+      if (!context.eat(.NEWLINE) && (context.peek(.RIGHT_BRACE) || !expectCommaWithoutNewline(context))) break
     } else {
       var statement = hint == .IN_SWITCH ? parseCaseStatement(context) : parseStatement(context, hint)
       if (statement == null) break

@@ -4,16 +4,16 @@ interface IEmitter {
 
 enum CompilerTarget {
   // Targets that run the resolver
-  NONE,
-  CPP,
-  JAVASCRIPT,
-  JOINED,
-  RUBY,
+  NONE
+  CPP
+  JAVASCRIPT
+  JOINED
+  RUBY
 
   // AST-only targets
-  JSON_AST,
-  LISP_AST,
-  XML_AST,
+  JSON_AST
+  LISP_AST
+  XML_AST
 }
 
 in CompilerTarget {
@@ -54,20 +54,20 @@ interface FileAccess {
 }
 
 enum CompilerConfig {
-  AUTOMATIC,
-  ANDROID,
-  BROWSER,
-  IOS,
-  LINUX,
-  NODE,
-  OSX,
-  WINDOWS,
+  AUTOMATIC
+  ANDROID
+  BROWSER
+  IOS
+  LINUX
+  NODE
+  OSX
+  WINDOWS
 }
 
 enum MemoryManagement {
-  NONE,
-  NONE_FAST,
-  MARK_SWEEP,
+  NONE
+  NONE_FAST
+  MARK_SWEEP
 }
 
 class CompilerOptions {

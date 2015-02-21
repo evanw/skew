@@ -1,8 +1,8 @@
 namespace unicode {
   enum Encoding {
-    UTF8,
-    UTF16,
-    UTF32,
+    UTF8
+    UTF16
+    UTF32
   }
 
   const Encoding STRING_ENCODING =

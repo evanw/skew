@@ -1,14 +1,14 @@
 namespace terminal {
   enum Color {
-    DEFAULT = 0,
-    BOLD = 1,
-    GRAY = 90,
-    RED = 91,
-    GREEN = 92,
-    YELLOW = 93,
-    BLUE = 94,
-    MAGENTA = 95,
-    CYAN = 96,
+    DEFAULT = 0
+    BOLD = 1
+    GRAY = 90
+    RED = 91
+    GREEN = 92
+    YELLOW = 93
+    BLUE = 94
+    MAGENTA = 95
+    CYAN = 96
   }
 
   #if TARGET_JS && CONFIG_BROWSER

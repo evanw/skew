@@ -1,15 +1,15 @@
 namespace cpp {
   enum Pass {
-    NONE,
-    FORWARD_DECLARE_TYPES,
-    FORWARD_DECLARE_CODE,
-    IMPLEMENT_CODE,
+    NONE
+    FORWARD_DECLARE_TYPES
+    FORWARD_DECLARE_CODE
+    IMPLEMENT_CODE
   }
 
   enum CppEmitType {
-    BARE,
-    NORMAL,
-    DECLARATION,
+    BARE
+    NORMAL
+    DECLARATION
   }
 
   class Emitter : base.Emitter {

@@ -37,7 +37,7 @@ void foo(int foo, int bar) {
 
 testCPP("
 export enum Foo {
-  FOO,
+  FOO
 }
 export Bar foo() {
   return .FOO

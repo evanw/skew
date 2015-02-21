@@ -626,15 +626,46 @@ int foo int bar
 ")
 
 test("
+enum Foo { FOO; BAR; BAZ }
+", "
+<stdin>:1:15: error: Expected COMMA but found SEMICOLON
+enum Foo { FOO; BAR; BAZ }
+              ^
+")
+
+test("
+enum Foo { FOO,; BAR, BAZ }
+", "
+<stdin>:1:16: error: Expected IDENTIFIER but found SEMICOLON
+enum Foo { FOO,; BAR, BAZ }
+               ^
+")
+
+test("
+enum Foo {
+  FOO,
+  BAR,
+  BAZ,
+}
+", "
+<stdin>:2:6: error: Unexpected COMMA
+  FOO,
+     ^
+<stdin>:3:6: error: Unexpected COMMA
+  BAR,
+     ^
+<stdin>:4:6: error: Unexpected COMMA
+  BAZ,
+     ^
+")
+
+test("
 enum Foo {
   FOO
   BAR
   BAZ
 }
 ", "
-<stdin>:2:6: error: Expected COMMA but found NEWLINE
-  FOO
-     ^
 ")
 
 test("

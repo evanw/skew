@@ -1,39 +1,39 @@
 enum SymbolKind {
-  OTHER,
-  DEFINE,
-  AUTOMATIC,
-  AMBIGUOUS,
-  UNMERGED,
-  FORWARDED,
-  QUOTED_TYPE,
-  ALIAS,
+  OTHER
+  DEFINE
+  AUTOMATIC
+  AMBIGUOUS
+  UNMERGED
+  FORWARDED
+  QUOTED_TYPE
+  ALIAS
 
   // Parameter kinds
-  OBJECT_PARAMETER,
-  FUNCTION_PARAMETER,
+  OBJECT_PARAMETER
+  FUNCTION_PARAMETER
 
   // Namespace kinds
-  GLOBAL_NAMESPACE,
-  NAMESPACE,
+  GLOBAL_NAMESPACE
+  NAMESPACE
 
   // Enum kinds
-  ENUM,
-  ENUM_FLAGS,
+  ENUM
+  ENUM_FLAGS
 
   // Object kinds
-  CLASS,
-  INTERFACE,
+  CLASS
+  INTERFACE
 
   // Function kinds
-  GLOBAL_FUNCTION,
-  INSTANCE_FUNCTION,
-  CONSTRUCTOR_FUNCTION,
-  MERGED_INSTANCE_FUNCTION,
+  GLOBAL_FUNCTION
+  INSTANCE_FUNCTION
+  CONSTRUCTOR_FUNCTION
+  MERGED_INSTANCE_FUNCTION
 
   // Variable kinds
-  LOCAL_VARIABLE,
-  GLOBAL_VARIABLE,
-  INSTANCE_VARIABLE,
+  LOCAL_VARIABLE
+  GLOBAL_VARIABLE
+  INSTANCE_VARIABLE
 }
 
 in SymbolKind {
@@ -80,42 +80,42 @@ in SymbolKind {
 
 enum flags SymbolFlag {
   // Access flags
-  PUBLIC,
-  PRIVATE,
-  PROTECTED,
+  PUBLIC
+  PRIVATE
+  PROTECTED
 
   // Structural flags
-  ABSTRACT,
-  FROM_EXTENSION,
-  OVERRIDE,
-  STATIC,
-  VIRTUAL,
+  ABSTRACT
+  FROM_EXTENSION
+  OVERRIDE
+  STATIC
+  VIRTUAL
 
   // Optimization flags
-  FINAL,
-  INLINE,
-  CONST,
-  PURE,
+  FINAL
+  INLINE
+  CONST
+  PURE
 
   // Binding flags
-  EXPORT,
-  IMPORT,
+  EXPORT
+  IMPORT
 
   // Symbols have a temporary initializing state to detect cyclic declarations
   // such as "foo foo;" or "class Foo : Foo {}". Symbols can only be
   // uninitialized if they have a declaration.
-  INITIALIZING,
-  INITIALIZED,
+  INITIALIZING
+  INITIALIZED
 
   // Other flags
-  EXTERN_C,
-  PRIMITIVE,
-  ENTRY_POINT,
-  HAS_ANNOTATIONS,
-  HAS_LOCATION_ERROR,
+  EXTERN_C
+  PRIMITIVE
+  ENTRY_POINT
+  HAS_ANNOTATIONS
+  HAS_LOCATION_ERROR
 
   // Masks
-  INITIALIZE_MASK = INITIALIZING | INITIALIZED,
+  INITIALIZE_MASK = INITIALIZING | INITIALIZED
 }
 
 class Symbol {

@@ -1,8 +1,8 @@
 enum ContentType {
-  BOOL,
-  INT,
-  DOUBLE,
-  STRING,
+  BOOL
+  INT
+  DOUBLE
+  STRING
 }
 
 class Content {

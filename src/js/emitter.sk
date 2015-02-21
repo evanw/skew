@@ -1,18 +1,18 @@
 namespace js {
   enum ClusterState {
-    NONE,
-    VAR_CHAIN,
-    COMPOUND_NAME,
+    NONE
+    VAR_CHAIN
+    COMPOUND_NAME
   }
 
   enum AfterToken {
-    AFTER_KEYWORD,
-    AFTER_PARENTHESIS,
+    AFTER_KEYWORD
+    AFTER_PARENTHESIS
   }
 
   enum BracesMode {
-    MUST_KEEP_BRACES,
-    CAN_OMIT_BRACES,
+    MUST_KEEP_BRACES
+    CAN_OMIT_BRACES
   }
 
   class Emitter : IEmitter {

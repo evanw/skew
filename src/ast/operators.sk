@@ -1,7 +1,7 @@
 enum Associativity {
-  NONE,
-  LEFT,
-  RIGHT,
+  NONE
+  LEFT
+  RIGHT
 }
 
 class OperatorInfo {

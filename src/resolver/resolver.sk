@@ -1,28 +1,28 @@
 enum MatchKind {
-  NONE,
-  INEXACT,
-  EXACT,
+  NONE
+  INEXACT
+  EXACT
 }
 
 enum CastKind {
-  IMPLICIT_CAST,
-  EXPLICIT_CAST,
+  IMPLICIT_CAST
+  EXPLICIT_CAST
 }
 
 enum AllowDeclaration {
-  ALLOW_TOP_LEVEL,
-  ALLOW_TOP_OR_OBJECT_LEVEL,
+  ALLOW_TOP_LEVEL
+  ALLOW_TOP_OR_OBJECT_LEVEL
 }
 
 enum PreprocessorResult {
-  FALSE,
-  TRUE,
-  ERROR,
+  FALSE
+  TRUE
+  ERROR
 }
 
 enum LogErrors {
-  SILENT_ERRORS,
-  LOG_ERRORS,
+  SILENT_ERRORS
+  LOG_ERRORS
 }
 
 class ResolveContext {

@@ -106,18 +106,18 @@ Functions don't have to be declared inside a class and can exist on their own li
 An enum is a compile-time integer constant. Enums automatically convert to ints but ints don't automatically convert to enums. Each enum type has a toString() method that is automatically generated when referenced, so using operator + with a string automatically substitutes the name of the enum. The special enum flags declaration generates values suitable for bitwise masks and includes type-safe bitwise operators.
 
     enum EntryType {
-      FILE,      // 0
-      DIRECTORY, // 1
-      SOFT_LINK, // 2
-      HARD_LINK, // 3
+      FILE      // 0
+      DIRECTORY // 1
+      SOFT_LINK // 2
+      HARD_LINK // 3
     }
 
     enum flags EntryFlags {
-      HIDDEN,  // 1
-      READ,    // 2
-      WRITE,   // 4
-      EXECUTE, // 8
-      PERMISSION_MASK = READ | WRITE | EXECUTE,
+      HIDDEN  // 1
+      READ    // 2
+      WRITE   // 4
+      EXECUTE // 8
+      PERMISSION_MASK = READ | WRITE | EXECUTE
     }
 
     bool isReadWrite(EntryFlags flags) {

@@ -1,8 +1,8 @@
 enum OptionType {
-  BOOL,
-  INT,
-  STRING,
-  STRING_LIST,
+  BOOL
+  INT
+  STRING
+  STRING_LIST
 }
 
 class OptionData {

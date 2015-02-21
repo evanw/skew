@@ -128,7 +128,7 @@ export class Foo {
 
 testJS("
 export enum Foo {
-  FOO,
+  FOO
 }
 export Bar foo() {
   return .FOO
