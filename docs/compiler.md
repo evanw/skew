@@ -49,11 +49,11 @@ Type checking starts by creating a symbol for each declaration, creating a scope
 
 Once all symbols and scopes are prepared, type checking is done using a single tree traversal. Type checking is made order-independent by applying it recursively. For example, resolving the body of a function may require resolving the type of a variable, which may require resolving its initializer, which may require resolving a constructor, which would then require resolving the enclosing type, which may require resolving base types, and so on:
 
-    void foo() { bar.baz(); }
-    var bar = Bar();
+    void foo() { bar.baz() }
+    var bar = Bar()
     class Bar : Baz {}
     class Baz { void baz() {} }
 
-To prevent cycles, symbol resolution is separated into an initialization phase and a resolution phase. The initialization phase resolves just enough to know the type of the symbol while the resolution phase fully resolves the symbol's contents. Using a symbol requires initializing it but not resolving it. Cycles are detected by giving each symbol three states: uninitialized, initializing, and initialized. Encountering an initializing symbol is an error. These rules ensure that `class Foo { Foo foo; }` is valid but `class Foo : Foo {}` is an error.
+To prevent cycles, symbol resolution is separated into an initialization phase and a resolution phase. The initialization phase resolves just enough to know the type of the symbol while the resolution phase fully resolves the symbol's contents. Using a symbol requires initializing it but not resolving it. Cycles are detected by giving each symbol three states: uninitialized, initializing, and initialized. Encountering an initializing symbol is an error. These rules ensure that `class Foo { Foo foo }` is valid but `class Foo : Foo {}` is an error.
 
-Limited type inference is performed using type context propagation. A type hint can optionally be provided during expression resolution and will be used to provide missing information if available. For example, type context from the variable type in `List<double> foo = [0];` ensures that the list literal contains doubles instead of ints.
+Limited type inference is performed using type context propagation. A type hint can optionally be provided during expression resolution and will be used to provide missing information if available. For example, type context from the variable type in `List<double> foo = [0]` ensures that the list literal contains doubles instead of ints.

@@ -10,13 +10,13 @@ The compiler currently contains a production-quality JavaScript target and parti
 
 This language has curly-brace syntax, classes, interfaces, namespaces, enums, type inference, garbage collection, preprocessing, order independent declarations, and more. It looks like this:
 
-    using terminal;
+    using terminal
 
     @EntryPoint
     void fizzBuzz() {
       for (var i = 1; i <= 100; i++) {
-        var text = (i % 3 > 0 ? "" : "Fizz") + (i % 5 > 0 ? "" : "Buzz");
-        print(text == "" ? i.toString() : text);
+        var text = (i % 3 > 0 ? "" : "Fizz") + (i % 5 > 0 ? "" : "Buzz")
+        print(text == "" ? i.toString() : text)
       }
     }
 
