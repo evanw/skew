@@ -102,6 +102,7 @@ var TEST_SOURCES = SOURCES.concat([
   'tests/system/core/statements.sk',
   'tests/system/core/static.sk',
   'tests/system/core/switch.sk',
+  'tests/system/core/trycatch.sk',
   'tests/system/core/types.sk',
   'tests/system/core/using.sk',
   'tests/system/core/var.sk',

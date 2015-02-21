@@ -1,0 +1,100 @@
+namespace core { void testTryCatch() {
+
+test("
+void foo() {
+  try {}
+}
+", "
+<stdin>:2:9: error: Expected CATCH but found NEWLINE
+  try {}
+        ^
+")
+
+test("
+void foo() {
+  try {} finally {}
+}
+", "
+")
+
+test("
+void foo() {
+  try {} catch {}
+}
+", "
+")
+
+test("
+void foo() {
+  try {} catch {} finally {}
+}
+", "
+")
+
+test("
+class Foo {}
+void foo() {
+  try {} catch (Foo foo) {} finally {}
+}
+", "
+")
+
+test("
+class Foo {}
+void foo() {
+  try {} catch (Foo foo) {} catch {} finally {}
+}
+", "
+")
+
+test("
+class Foo {}
+void foo() {
+  try {} catch {} catch (Foo foo) {}
+}
+", "
+<stdin>:3:19: error: Expected FINALLY but found CATCH
+  try {} catch {} catch (Foo foo) {}
+                  ~~~~~
+")
+
+test("
+int a() { try { return 0 } catch { return 1 } }
+int b() { try { return 0 } catch {} finally { return 3 } }
+int c() { try {} catch { return 1 } finally { return 3 } }
+int d() { try {} catch {} finally { return 3 } }
+int e() { try {} catch (Foo foo) {} catch {} finally { return 3 } }
+class Foo {}
+", "
+")
+
+test("
+int a() { try {} catch { return 1 } }
+int b() { try { return 0 } catch {} }
+int c() { try {} catch {} }
+int d() { try {} finally {} }
+int e() { try { return 0 } catch (Foo foo) { return 1 } catch {} }
+int f() { try { return 0 } catch (Foo foo) {} catch { return 1 } }
+class Foo {}
+", "
+<stdin>:1:5: error: All control paths for \"a\" must return a value of type \"int\"
+int a() { try {} catch { return 1 } }
+    ^
+<stdin>:2:5: error: All control paths for \"b\" must return a value of type \"int\"
+int b() { try { return 0 } catch {} }
+    ^
+<stdin>:3:5: error: All control paths for \"c\" must return a value of type \"int\"
+int c() { try {} catch {} }
+    ^
+<stdin>:4:5: error: All control paths for \"d\" must return a value of type \"int\"
+int d() { try {} finally {} }
+    ^
+<stdin>:5:5: error: All control paths for \"e\" must return a value of type \"int\"
+int e() { try { return 0 } catch (Foo foo) { return 1 } catch {} }
+    ^
+<stdin>:6:5: error: All control paths for \"f\" must return a value of type \"int\"
+int f() { try { return 0 } catch (Foo foo) {} catch { return 1 } }
+    ^
+")
+
+}}

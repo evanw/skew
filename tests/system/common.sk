@@ -281,6 +281,7 @@ int start() {
   core.testStatements()
   core.testStatic()
   core.testSwitch()
+  core.testTryCatch()
   core.testTypes()
   core.testUsing()
   core.testVar()
