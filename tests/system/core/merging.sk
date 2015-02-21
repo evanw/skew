@@ -31,23 +31,23 @@ enum flags Foo {}
 ")
 
 test("
-int foo;
+int foo
 in foo {}
 ", "
 <stdin>:2:4: error: \"foo\" is already declared
 in foo {}
    ~~~
 <stdin>:1:5: note: The previous declaration is here
-int foo;
+int foo
     ~~~
 ")
 
 test("
 in foo {}
-int foo;
+int foo
 ", "
 <stdin>:2:5: error: \"foo\" is already declared
-int foo;
+int foo
     ~~~
 <stdin>:1:4: note: The previous declaration is here
 in foo {}
@@ -73,38 +73,38 @@ in foo {}
 ")
 
 test("
-void foo() { return 100; }
-int foo = false;
+void foo() { return 100 }
+int foo = false
 ", "
 <stdin>:2:5: error: \"foo\" is already declared
-int foo = false;
+int foo = false
     ~~~
 <stdin>:1:6: note: The previous declaration is here
-void foo() { return 100; }
+void foo() { return 100 }
      ~~~
 <stdin>:1:21: error: Cannot convert from type \"int\" to type \"void\"
-void foo() { return 100; }
+void foo() { return 100 }
                     ~~~
 <stdin>:2:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-int foo = false;
+int foo = false
           ~~~~~
 ")
 
 test("
-int foo = false;
-void foo() { return 100; }
+int foo = false
+void foo() { return 100 }
 ", "
 <stdin>:2:6: error: \"foo\" is already declared
-void foo() { return 100; }
+void foo() { return 100 }
      ~~~
 <stdin>:1:5: note: The previous declaration is here
-int foo = false;
+int foo = false
     ~~~
 <stdin>:1:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-int foo = false;
+int foo = false
           ~~~~~
 <stdin>:2:21: error: Cannot convert from type \"int\" to type \"void\"
-void foo() { return 100; }
+void foo() { return 100 }
                     ~~~
 ")
 
@@ -199,20 +199,20 @@ export in Foo {}
 
 test("
 class Foo<T> {}
-int T;
+int T
 ", "
 ")
 
 test("
 class Foo<T> {
-  int T;
+  int T
 }
 ", "
 <stdin>:1:11: error: \"T\" is already declared
 class Foo<T> {
           ^
 <stdin>:2:7: note: The previous declaration is here
-  int T;
+  int T
       ^
 ")
 
@@ -242,14 +242,14 @@ class Foo<T, T> {}
 
 test("
 void test() {
-  bool foo;
+  bool foo
   for (int foo = 0;;) {
-    string foo;
+    string foo
   }
 }
 ", "
 <stdin>:4:12: error: \"foo\" is already declared
-    string foo;
+    string foo
            ~~~
 <stdin>:3:12: note: The previous declaration is here
   for (int foo = 0;;) {
@@ -257,16 +257,16 @@ void test() {
 ")
 
 test("
-foo void;
+foo void
 ", "
 <stdin>:1:5: error: \"void\" is already declared
-foo void;
+foo void
     ~~~~
 <compiler>/primitives.sk:1:14: note: The previous declaration is here
 import class void {}
              ~~~~
 <stdin>:1:1: error: \"foo\" is not declared
-foo void;
+foo void
 ~~~
 ")
 

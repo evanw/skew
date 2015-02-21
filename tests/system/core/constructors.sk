@@ -2,30 +2,30 @@ namespace core { void testConstructors() {
 
 test("
 class Foo {
-  new() { return 0; }
+  new() { return 0 }
 }
 class Bar {
-  new() { return 0; foo; }
+  new() { return 0; foo }
 }
 ", "
 <stdin>:2:18: error: Cannot convert from type \"int\" to type \"void\"
-  new() { return 0; }
+  new() { return 0 }
                  ^
 <stdin>:5:18: error: Cannot convert from type \"int\" to type \"void\"
-  new() { return 0; foo; }
+  new() { return 0; foo }
                  ^
 <stdin>:5:21: error: \"foo\" is not declared
-  new() { return 0; foo; }
+  new() { return 0; foo }
                     ~~~
 ")
 
 test("
 void test() {
-  void();
+  void()
 }
 ", "
 <stdin>:2:3: error: Cannot construct type \"void\"
-  void();
+  void()
   ~~~~
 ")
 
@@ -33,13 +33,13 @@ test("
 class Foo {
   new(int x) {}
 }
-int foo = Foo();
+int foo = Foo()
 ", "
 <stdin>:4:14: error: Expected 1 argument but found 0 arguments
-int foo = Foo();
+int foo = Foo()
              ~~
 <stdin>:4:11: error: Cannot convert from type \"Foo\" to type \"int\"
-int foo = Foo();
+int foo = Foo()
           ~~~~~
 ")
 
@@ -47,61 +47,61 @@ test("
 class Foo {
   new() {}
 }
-int foo = Foo(1);
+int foo = Foo(1)
 ", "
 <stdin>:4:14: error: Expected 0 arguments but found 1 argument
-int foo = Foo(1);
+int foo = Foo(1)
              ~~~
 <stdin>:4:11: error: Cannot convert from type \"Foo\" to type \"int\"
-int foo = Foo(1);
+int foo = Foo(1)
           ~~~~~~
 ")
 
 test("
 class Foo {}
-int foo = Foo(1);
+int foo = Foo(1)
 ", "
 <stdin>:2:14: error: Expected 0 arguments but found 1 argument
-int foo = Foo(1);
+int foo = Foo(1)
              ~~~
 <stdin>:2:11: error: Cannot convert from type \"Foo\" to type \"int\"
-int foo = Foo(1);
+int foo = Foo(1)
           ~~~~~~
 ")
 
 test("
-int i = int();
-bool b = bool();
-float f = float();
-double d = double();
-string s = string();
+int i = int()
+bool b = bool()
+float f = float()
+double d = double()
+string s = string()
 ", "
 <stdin>:1:9: error: Cannot construct type \"int\"
-int i = int();
+int i = int()
         ~~~
 <stdin>:2:10: error: Cannot construct type \"bool\"
-bool b = bool();
+bool b = bool()
          ~~~~
 <stdin>:3:11: error: Cannot construct type \"float\"
-float f = float();
+float f = float()
           ~~~~~
 <stdin>:4:12: error: Cannot construct type \"double\"
-double d = double();
+double d = double()
            ~~~~~~
 <stdin>:5:12: error: Cannot construct type \"string\"
-string s = string();
+string s = string()
            ~~~~~~
 ")
 
 test("
 class Foo {
-  static int foo;
-  int bar;
+  static int foo
+  int bar
 }
-Foo foo() { return Foo(1, 2); }
+Foo foo() { return Foo(1, 2) }
 ", "
 <stdin>:5:23: error: Expected 1 argument but found 2 arguments
-Foo foo() { return Foo(1, 2); }
+Foo foo() { return Foo(1, 2) }
                       ~~~~~~
 ")
 
@@ -112,17 +112,17 @@ class Foo : Bar {
 class Bar {
   new(bool foo) {}
 }
-Foo foo() { return Foo(false); }
-Bar bar() { return Bar(0); }
+Foo foo() { return Foo(false) }
+Bar bar() { return Bar(0) }
 ", "
 <stdin>:2:24: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   new(int foo) : super(foo) {}
                        ~~~
 <stdin>:7:24: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-Foo foo() { return Foo(false); }
+Foo foo() { return Foo(false) }
                        ~~~~~
 <stdin>:8:24: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-Bar bar() { return Bar(0); }
+Bar bar() { return Bar(0) }
                        ^
 ")
 
@@ -150,7 +150,7 @@ class Foo : Bar {
   new() {}
 }
 class Bar {
-  int foo;
+  int foo
 }
 ", "
 <stdin>:2:3: error: Missing call to \"super\" in initializer list
@@ -160,52 +160,52 @@ class Bar {
 
 test("
 class Foo {
-  int foo;
-  new() : foo = 0;
+  int foo
+  new() : foo = 0
 }
 ", "
 <stdin>:3:3: error: Every constructor must have an implementation
-  new() : foo = 0;
+  new() : foo = 0
   ~~~
 <stdin>:3:11: error: An abstract constructor must not have initializer list
-  new() : foo = 0;
+  new() : foo = 0
           ~~~~~~~
 ")
 
 test("
 class Foo : Bar {
-  new() : super();
+  new() : super()
 }
 class Bar {
 }
 ", "
 <stdin>:2:3: error: Every constructor must have an implementation
-  new() : super();
+  new() : super()
   ~~~
 <stdin>:2:11: error: An abstract constructor must not have initializer list
-  new() : super();
+  new() : super()
           ~~~~~~~
 ")
 
 test("
 class Foo : Bar {
-  int foo;
-  new() : super(), foo = 0;
+  int foo
+  new() : super(), foo = 0
 }
 class Bar {
 }
 ", "
 <stdin>:3:3: error: Every constructor must have an implementation
-  new() : super(), foo = 0;
+  new() : super(), foo = 0
   ~~~
 <stdin>:3:11: error: An abstract constructor must not have initializer list
-  new() : super(), foo = 0;
+  new() : super(), foo = 0
           ~~~~~~~~~~~~~~~~
 ")
 
 test("
 class Foo : Bar {
-  int x;
+  int x
   new() : x = 0 {}
 }
 class Bar {
@@ -219,7 +219,7 @@ class Bar {
 
 test("
 class Foo {
-  Bar bar;
+  Bar bar
   new() : bar = .FOO {}
 }
 enum Bar { FOO }
@@ -228,7 +228,7 @@ enum Bar { FOO }
 
 test("
 class Foo {
-  int foo;
+  int foo
   new() : foo = 0, foo = 1 {}
 }
 ", "
@@ -242,7 +242,7 @@ class Foo {
 
 test("
 class Foo {
-  int foo = 0;
+  int foo = 0
   new() : foo = 1 {}
 }
 ", "
@@ -250,56 +250,56 @@ class Foo {
   new() : foo = 1 {}
                 ^
 <stdin>:2:13: note: The previous initialization is here
-  int foo = 0;
+  int foo = 0
             ^
 ")
 
 test("
 class Foo {
-  int foo = 0;
+  int foo = 0
   new() : bar = 3, foo = 2 {}
-  int bar = 1;
+  int bar = 1
 }
 ", "
 <stdin>:3:17: error: \"bar\" is already initialized
   new() : bar = 3, foo = 2 {}
                 ^
 <stdin>:4:13: note: The previous initialization is here
-  int bar = 1;
+  int bar = 1
             ^
 <stdin>:3:26: error: \"foo\" is already initialized
   new() : bar = 3, foo = 2 {}
                          ^
 <stdin>:2:13: note: The previous initialization is here
-  int foo = 0;
+  int foo = 0
             ^
 ")
 
 test("
 class Foo {
-  int foo = bar;
+  int foo = bar
   new(int bar) {}
 }
 ", "
 <stdin>:2:13: error: \"bar\" is not declared
-  int foo = bar;
+  int foo = bar
             ~~~
 ")
 
 test("
 class Foo {
   new(int bar) {}
-  int foo = bar;
+  int foo = bar
 }
 ", "
 <stdin>:3:13: error: \"bar\" is not declared
-  int foo = bar;
+  int foo = bar
             ~~~
 ")
 
 test("
 class Foo {
-  int foo;
+  int foo
   new() : foo = this {}
 }
 ", "
@@ -320,7 +320,7 @@ class Foo {
 
 test("
 class Foo {
-  int foo;
+  int foo
   new() : foo = this {}
 }
 ", "
@@ -331,44 +331,44 @@ class Foo {
 
 test("
 class Foo {
-  Foo foo = this;
+  Foo foo = this
 }
 ", "
 <stdin>:2:13: error: Cannot access \"this\" from a static context
-  Foo foo = this;
+  Foo foo = this
             ~~~~
 ")
 
 test("
 class Foo {}
 in Foo {
-  Foo foo = this;
+  Foo foo = this
 }
 ", "
 <stdin>:3:13: error: Cannot access \"this\" from a static context
-  Foo foo = this;
+  Foo foo = this
             ~~~~
 ")
 
 test("
 in Foo {
-  Foo foo = this;
+  Foo foo = this
 }
 class Foo {}
 ", "
 <stdin>:2:13: error: Cannot access \"this\" from a static context
-  Foo foo = this;
+  Foo foo = this
             ~~~~
 ")
 
 test("
 class Foo {
   new() {}
-  Foo foo = this;
+  Foo foo = this
 }
 ", "
 <stdin>:3:13: error: Cannot access \"this\" from a static context
-  Foo foo = this;
+  Foo foo = this
             ~~~~
 ")
 
@@ -377,76 +377,76 @@ class Foo {
   new() {}
 }
 in Foo {
-  Foo foo = this;
+  Foo foo = this
 }
 ", "
 <stdin>:5:13: error: Cannot access \"this\" from a static context
-  Foo foo = this;
+  Foo foo = this
             ~~~~
 ")
 
 test("
 in Foo {
-  Foo foo = this;
+  Foo foo = this
 }
 class Foo {
   new() {}
 }
 ", "
 <stdin>:2:13: error: Cannot access \"this\" from a static context
-  Foo foo = this;
+  Foo foo = this
             ~~~~
 ")
 
 test("
 class Foo {
-  virtual void foo();
+  virtual void foo()
 }
-Foo foo() { return Foo(); }
+Foo foo() { return Foo() }
 ", "
 <stdin>:4:20: error: Cannot construct abstract type \"Foo\"
-Foo foo() { return Foo(); }
+Foo foo() { return Foo() }
                    ~~~
 <stdin>:2:16: note: The type \"Foo\" is abstract due to member \"Foo.foo\"
-  virtual void foo();
+  virtual void foo()
                ~~~
 ")
 
 test("
 class Foo {
-  virtual void foo();
+  virtual void foo()
 }
 class Bar : Foo {
 }
-Foo foo() { return Bar(); }
+Foo foo() { return Bar() }
 ", "
 <stdin>:6:20: error: Cannot construct abstract type \"Bar\"
-Foo foo() { return Bar(); }
+Foo foo() { return Bar() }
                    ~~~
 <stdin>:2:16: note: The type \"Bar\" is abstract due to member \"Foo.foo\"
-  virtual void foo();
+  virtual void foo()
                ~~~
 ")
 
 test("
 class Foo {
-  virtual void foo();
+  virtual void foo()
 }
 class Bar : Foo {
   override void foo() {}
 }
-Foo foo() { return Bar(); }
+Foo foo() { return Bar() }
 ", "
 ")
 
 test("
 interface IFoo {
-  virtual void foo();
+  virtual void foo()
 }
 class Bar : IFoo {
   override void foo() {}
 }
-IFoo foo() { return Bar(); }
+IFoo foo() { return Bar() }
 ", "
 ")
 

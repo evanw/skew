@@ -55,109 +55,109 @@ class Foo<A is B, B> {}
 
 test("
 interface IFoo {
-  virtual bool foo(int bar);
+  virtual bool foo(int bar)
 }
 class Foo<T is IFoo> {
   int foo(T value) {
-    return value.foo(false);
+    return value.foo(false)
   }
 }
 ", "
 <stdin>:6:22: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-    return value.foo(false);
+    return value.foo(false)
                      ~~~~~
 <stdin>:6:12: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-    return value.foo(false);
+    return value.foo(false)
            ~~~~~~~~~~~~~~~~
 ")
 
 test("
-int<int> foo = 0;
+int<int> foo = 0
 ", "
 <stdin>:1:1: error: Cannot parameterize type \"int\" because it has no type parameters
-int<int> foo = 0;
+int<int> foo = 0
 ~~~
 ")
 
 test("
 class Foo<T> {}
-Foo<int, int> foo = 0;
+Foo<int, int> foo = 0
 ", "
 <stdin>:2:4: error: Expected 1 type parameter but found 2 type parameters
-Foo<int, int> foo = 0;
+Foo<int, int> foo = 0
    ~~~~~~~~~~
 ")
 
 test("
-Foo<Bar> foo = 0;
-Foo<Baz> bar = 0;
+Foo<Bar> foo = 0
+Foo<Baz> bar = 0
 class Foo<T is IFoo> {}
 interface IFoo {}
 class Bar : IFoo {}
 class Baz {}
 ", "
 <stdin>:1:16: error: Cannot convert from type \"int\" to type \"Foo<Bar>\"
-Foo<Bar> foo = 0;
+Foo<Bar> foo = 0
                ^
 <stdin>:2:5: error: Cannot convert from type \"Baz\" to type \"IFoo\"
-Foo<Baz> bar = 0;
+Foo<Baz> bar = 0
     ~~~
 ")
 
 test("
-Foo<Bar><Bar> foo = 0;
-Foo<Bar><Baz> bar = 0;
+Foo<Bar><Bar> foo = 0
+Foo<Bar><Baz> bar = 0
 class Foo<T> {}
 class Bar {}
 class Baz {}
 ", "
 <stdin>:1:1: error: Cannot parameterize type \"Foo<Bar>\" because it is already parameterized
-Foo<Bar><Bar> foo = 0;
+Foo<Bar><Bar> foo = 0
 ~~~~~~~~
 <stdin>:2:1: error: Cannot parameterize type \"Foo<Bar>\" because it is already parameterized
-Foo<Bar><Baz> bar = 0;
+Foo<Bar><Baz> bar = 0
 ~~~~~~~~
 ")
 
 test("
-Foo<int, bool> foo = bar;
-Foo<bool, int> bar = foo;
+Foo<int, bool> foo = bar
+Foo<bool, int> bar = foo
 class Foo<A, B> {}
 ", "
 <stdin>:1:22: error: Cannot convert from type \"Foo<bool, int>\" to type \"Foo<int, bool>\"
-Foo<int, bool> foo = bar;
+Foo<int, bool> foo = bar
                      ~~~
 <stdin>:2:22: error: Cannot convert from type \"Foo<int, bool>\" to type \"Foo<bool, int>\"
-Foo<bool, int> bar = foo;
+Foo<bool, int> bar = foo
                      ~~~
 ")
 
 test("
-class Foo<A, B> { virtual A foo(B foo); }
-bool foo(Foo<int, bool> foo) { return foo.foo(0); }
+class Foo<A, B> { virtual A foo(B foo) }
+bool foo(Foo<int, bool> foo) { return foo.foo(0) }
 ", "
 <stdin>:2:47: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool foo(Foo<int, bool> foo) { return foo.foo(0); }
+bool foo(Foo<int, bool> foo) { return foo.foo(0) }
                                               ^
 <stdin>:2:39: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool foo(Foo<int, bool> foo) { return foo.foo(0); }
+bool foo(Foo<int, bool> foo) { return foo.foo(0) }
                                       ~~~~~~~~~~
 ")
 
 test("
 class Foo<A, B> {
-  A baz;
-  A foo(B bar) { return baz; }
+  A baz
+  A foo(B bar) { return baz }
 }
 class Bar<T> : Foo<int, T> {}
 class Baz : Bar<bool> {}
-bool bar = Baz(0).foo(0);
+bool bar = Baz(0).foo(0)
 ", "
 <stdin>:7:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool bar = Baz(0).foo(0);
+bool bar = Baz(0).foo(0)
                       ^
 <stdin>:7:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool bar = Baz(0).foo(0);
+bool bar = Baz(0).foo(0)
            ~~~~~~~~~~~~~
 ")
 
@@ -171,47 +171,47 @@ class Bar : Foo<int> { void foo(T foo) {} }
 ")
 
 test("
-class Foo<T> { virtual T foo(); }
-bool foo = Foo.foo();
+class Foo<T> { virtual T foo() }
+bool foo = Foo.foo()
 ", "
 <stdin>:2:16: error: Cannot access instance member \"foo\" from a static context
-bool foo = Foo.foo();
+bool foo = Foo.foo()
                ~~~
 <stdin>:2:12: error: Cannot convert from type \"T\" to type \"bool\"
-bool foo = Foo.foo();
+bool foo = Foo.foo()
            ~~~~~~~~~
 ")
 
 test("
 class Foo<T> {
-  T foo = 0;
+  T foo = 0
 }
-Foo.T foo = 0;
+Foo.T foo = 0
 ", "
 <stdin>:2:11: error: Cannot convert from type \"int\" to type \"T\"
-  T foo = 0;
+  T foo = 0
           ^
 <stdin>:4:13: error: Cannot convert from type \"int\" to type \"T\"
-Foo.T foo = 0;
+Foo.T foo = 0
             ^
 ")
 
 test("
 class Foo<T> {
-  static T foo;
-  static T bar(T foo) { return foo; }
+  static T foo
+  static T bar(T foo) { return foo }
 }
-bool foo = Foo.foo;
-bool bar = Foo.bar(null);
+bool foo = Foo.foo
+bool bar = Foo.bar(null)
 ", "
 <stdin>:2:10: error: Cannot access \"T\" from a static context
-  static T foo;
+  static T foo
          ^
 <stdin>:3:10: error: Cannot access \"T\" from a static context
-  static T bar(T foo) { return foo; }
+  static T bar(T foo) { return foo }
          ^
 <stdin>:3:16: error: Cannot access \"T\" from a static context
-  static T bar(T foo) { return foo; }
+  static T bar(T foo) { return foo }
                ^
 ")
 
@@ -227,7 +227,7 @@ in Foo { T foo() {} }
 test("
 class Foo<F> {
   class Bar<B is F> : F {
-    B bar() { return F(); }
+    B bar() { return F() }
   }
 }
 ", "
@@ -241,195 +241,195 @@ class Foo<F> {
   class Bar<B is F> : F {
                       ^
 <stdin>:3:22: error: Cannot access \"F\" from a static context
-    B bar() { return F(); }
+    B bar() { return F() }
                      ^
 ")
 
 test("
 class Foo<T> { new(bool foo) {} }
-int foo = Foo(0);
-int bar = Foo<int>(0);
+int foo = Foo(0)
+int bar = Foo<int>(0)
 ", "
 <stdin>:2:11: error: Cannot use unparameterized type \"Foo<T>\"
-int foo = Foo(0);
+int foo = Foo(0)
           ~~~
 <stdin>:3:20: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-int bar = Foo<int>(0);
+int bar = Foo<int>(0)
                    ^
 <stdin>:3:11: error: Cannot convert from type \"Foo<int>\" to type \"int\"
-int bar = Foo<int>(0);
+int bar = Foo<int>(0)
           ~~~~~~~~~~~
 ")
 
 test("
 class Foo<A, B is IFoo<A>> {}
-interface IFoo<T> { virtual T foo(); }
-Foo<int, IFoo<bool>> foo;
+interface IFoo<T> { virtual T foo() }
+Foo<int, IFoo<bool>> foo
 ", "
 <stdin>:3:10: error: Cannot convert from type \"IFoo<bool>\" to type \"IFoo<int>\"
-Foo<int, IFoo<bool>> foo;
+Foo<int, IFoo<bool>> foo
          ~~~~~~~~~~
 ")
 
 test("
 class Foo<A is IFoo<B>, B> {}
-interface IFoo<T> { virtual T foo(); }
-Foo<IFoo<bool>, int> foo;
+interface IFoo<T> { virtual T foo() }
+Foo<IFoo<bool>, int> foo
 ", "
 <stdin>:3:5: error: Cannot convert from type \"IFoo<bool>\" to type \"IFoo<int>\"
-Foo<IFoo<bool>, int> foo;
+Foo<IFoo<bool>, int> foo
     ~~~~~~~~~~
 ")
 
 test("
 class Foo<A, B is IFoo<A>, C is IFoo<B>> {}
-interface IFoo<T> { virtual T foo(); }
-Foo<int, bool, float> a;
-Foo<int, IFoo<int>, float> b;
-Foo<int, IFoo<int>, IFoo<float>> c;
-Foo<int, IFoo<int>, IFoo<IFoo<int>>> d;
+interface IFoo<T> { virtual T foo() }
+Foo<int, bool, float> a
+Foo<int, IFoo<int>, float> b
+Foo<int, IFoo<int>, IFoo<float>> c
+Foo<int, IFoo<int>, IFoo<IFoo<int>>> d
 ", "
 <stdin>:3:10: error: Cannot convert from type \"bool\" to type \"IFoo<int>\"
-Foo<int, bool, float> a;
+Foo<int, bool, float> a
          ~~~~
 <stdin>:4:21: error: Cannot convert from type \"float\" to type \"IFoo<IFoo<int>>\"
-Foo<int, IFoo<int>, float> b;
+Foo<int, IFoo<int>, float> b
                     ~~~~~
 <stdin>:5:21: error: Cannot convert from type \"IFoo<float>\" to type \"IFoo<IFoo<int>>\"
-Foo<int, IFoo<int>, IFoo<float>> c;
+Foo<int, IFoo<int>, IFoo<float>> c
                     ~~~~~~~~~~~
 ")
 
 test("
 class Foo<C is IFoo<B>, B is IFoo<A>, A> {}
-interface IFoo<T> { virtual T foo(); }
-Foo<float, bool, int> a;
-Foo<float, IFoo<int>, int> b;
-Foo<IFoo<float>, IFoo<int>, int> c;
-Foo<IFoo<IFoo<int>>, IFoo<int>, int> d;
+interface IFoo<T> { virtual T foo() }
+Foo<float, bool, int> a
+Foo<float, IFoo<int>, int> b
+Foo<IFoo<float>, IFoo<int>, int> c
+Foo<IFoo<IFoo<int>>, IFoo<int>, int> d
 ", "
 <stdin>:3:12: error: Cannot convert from type \"bool\" to type \"IFoo<int>\"
-Foo<float, bool, int> a;
+Foo<float, bool, int> a
            ~~~~
 <stdin>:4:5: error: Cannot convert from type \"float\" to type \"IFoo<IFoo<int>>\"
-Foo<float, IFoo<int>, int> b;
+Foo<float, IFoo<int>, int> b
     ~~~~~
 <stdin>:5:5: error: Cannot convert from type \"IFoo<float>\" to type \"IFoo<IFoo<int>>\"
-Foo<IFoo<float>, IFoo<int>, int> c;
+Foo<IFoo<float>, IFoo<int>, int> c
     ~~~~~~~~~~~
 ")
 
 test("
 class Foo<T> {
-  Foo<Foo<T>> foo(Foo<Foo<T>> foo) { return foo; }
+  Foo<Foo<T>> foo(Foo<Foo<T>> foo) { return foo }
 }
-int x = Foo<int>().foo(null);
+int x = Foo<int>().foo(null)
 ", "
 <stdin>:4:9: error: Cannot convert from type \"Foo<Foo<int>>\" to type \"int\"
-int x = Foo<int>().foo(null);
+int x = Foo<int>().foo(null)
         ~~~~~~~~~~~~~~~~~~~~
 ")
 
 test("
 class Foo<A> {
-  Bar<A> foo() { return Bar<A>(); }
+  Bar<A> foo() { return Bar<A>() }
 }
 class Bar<B> {
-  B bar(B foo) { return foo; }
+  B bar(B foo) { return foo }
 }
-bool a = Foo<int>().foo().bar(0);
-bool b = Bar<int>().bar(0);
-bool c = Foo<double>().foo().bar(0);
-bool d = Bar<double>().bar(0);
+bool a = Foo<int>().foo().bar(0)
+bool b = Bar<int>().bar(0)
+bool c = Foo<double>().foo().bar(0)
+bool d = Bar<double>().bar(0)
 ", "
 <stdin>:7:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool a = Foo<int>().foo().bar(0);
+bool a = Foo<int>().foo().bar(0)
          ~~~~~~~~~~~~~~~~~~~~~~~
 <stdin>:8:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool b = Bar<int>().bar(0);
+bool b = Bar<int>().bar(0)
          ~~~~~~~~~~~~~~~~~
 <stdin>:9:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-bool c = Foo<double>().foo().bar(0);
+bool c = Foo<double>().foo().bar(0)
          ~~~~~~~~~~~~~~~~~~~~~~~~~~
 <stdin>:10:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-bool d = Bar<double>().bar(0);
+bool d = Bar<double>().bar(0)
          ~~~~~~~~~~~~~~~~~~~~
 ")
 
 test("
 class Foo<A, B, C> {
-  Bar<A, B> foo() { return Bar<A, B>(); }
+  Bar<A, B> foo() { return Bar<A, B>() }
 }
 class Bar<D, E> {
-  Baz<D> bar() { return Baz<D>(); }
+  Baz<D> bar() { return Baz<D>() }
 }
 class Baz<F> {
-  F baz(F foo) { return foo; }
+  F baz(F foo) { return foo }
 }
-bool foo = Foo<int, bool, float>().foo().bar().baz(0);
+bool foo = Foo<int, bool, float>().foo().bar().baz(0)
 ", "
 <stdin>:10:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool foo = Foo<int, bool, float>().foo().bar().baz(0);
+bool foo = Foo<int, bool, float>().foo().bar().baz(0)
            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ")
 
 test("
 class Foo<A, B, C> {
-  Bar<A, string> foo() { return Bar<A, string>(); }
+  Bar<A, string> foo() { return Bar<A, string>() }
 }
 class Bar<D, E> {
-  Baz<D> bar() { return Baz<D>(); }
+  Baz<D> bar() { return Baz<D>() }
 }
 class Baz<F> {
-  F baz(F foo) { return foo; }
+  F baz(F foo) { return foo }
 }
-bool foo = Foo<int, bool, float>().foo().bar().baz(0);
+bool foo = Foo<int, bool, float>().foo().bar().baz(0)
 ", "
 <stdin>:10:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool foo = Foo<int, bool, float>().foo().bar().baz(0);
+bool foo = Foo<int, bool, float>().foo().bar().baz(0)
            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ")
 
 test("
-T foo;
-T bar<T>(int x) { return x; }
-T baz;
+T foo
+T bar<T>(int x) { return x }
+T baz
 ", "
 <stdin>:1:1: error: \"T\" is not declared
-T foo;
+T foo
 ^
 <stdin>:2:26: error: Cannot convert from type \"int\" to type \"T\"
-T bar<T>(int x) { return x; }
+T bar<T>(int x) { return x }
                          ^
 <stdin>:3:1: error: \"T\" is not declared
-T baz;
+T baz
 ^
 ")
 
 test("
 void foo<T>() {}
-void bar() { foo(); }
-void baz() { foo<int>(); }
-void bat() { foo<int><int>(); }
+void bar() { foo() }
+void baz() { foo<int>() }
+void bat() { foo<int><int>() }
 ", "
 <stdin>:2:14: error: Cannot use unparameterized type \"void fn<T>()\"
-void bar() { foo(); }
+void bar() { foo() }
              ~~~
 <stdin>:4:14: error: Cannot parameterize type \"void fn<int>()\" because it is already parameterized
-void bat() { foo<int><int>(); }
+void bat() { foo<int><int>() }
              ~~~~~~~~
 ")
 
 test("
 void foo<T>(T foo) {}
-void bar() { foo(false); }
-void baz() { foo<int>(false); }
+void bar() { foo(false) }
+void baz() { foo<int>(false) }
 ", "
 <stdin>:2:14: error: Cannot use unparameterized type \"void fn<T>(T)\"
-void bar() { foo(false); }
+void bar() { foo(false) }
              ~~~
 <stdin>:3:23: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-void baz() { foo<int>(false); }
+void baz() { foo<int>(false) }
                       ~~~~~
 ")
 
@@ -439,11 +439,11 @@ in Foo {
   void foo<T>() {}
 }
 export void bar() {
-  Foo().foo();
+  Foo().foo()
 }
 ", "
 <stdin>:6:3: error: Cannot use unparameterized type \"void fn<T>()\"
-  Foo().foo();
+  Foo().foo()
   ~~~~~~~~~
 ")
 
@@ -452,11 +452,11 @@ class Foo<X> {
   void foo<T>() {}
 }
 export void bar() {
-  Foo<int>().foo();
+  Foo<int>().foo()
 }
 ", "
 <stdin>:5:3: error: Cannot use unparameterized type \"void fn<T>()\"
-  Foo<int>().foo();
+  Foo<int>().foo()
   ~~~~~~~~~~~~~~
 ")
 
@@ -465,7 +465,7 @@ class Foo<X> {
   void foo<T>() {}
 }
 export void bar() {
-  Foo<int>().foo<float>();
+  Foo<int>().foo<float>()
 }
 ", "
 ")
@@ -476,7 +476,7 @@ in Foo {
   void foo<T>() {}
 }
 export void bar() {
-  Foo<int>().foo<float>();
+  Foo<int>().foo<float>()
 }
 ", "
 ")
@@ -486,14 +486,14 @@ class Foo<X> {
   void foo<T>(X x, T t) {}
 }
 export void bar() {
-  Foo<int>().foo<float>(false, false);
+  Foo<int>().foo<float>(false, false)
 }
 ", "
 <stdin>:5:25: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-  Foo<int>().foo<float>(false, false);
+  Foo<int>().foo<float>(false, false)
                         ~~~~~
 <stdin>:5:32: error: Cannot convert from type \"bool\" to type \"float\" without a cast
-  Foo<int>().foo<float>(false, false);
+  Foo<int>().foo<float>(false, false)
                                ~~~~~
 ")
 
@@ -502,12 +502,12 @@ interface IFoo<T> {}
 class Foo {}
 class Bar<T> { void foo(IFoo<T> foo) {} }
 class Baz : IFoo<Foo> {}
-export void bar() { Bar<Foo>().foo(Baz()); }
+export void bar() { Bar<Foo>().foo(Baz()) }
 ", "
 ")
 
 test("
-export void bar() { Bar<Foo>().foo(Baz()); }
+export void bar() { Bar<Foo>().foo(Baz()) }
 class Baz : IFoo<Foo> {}
 class Bar<T> { void foo(IFoo<T> foo) {} }
 class Foo {}
@@ -537,22 +537,22 @@ interface IFoo<X> {}
 
 test("
 class Foo<T> {
-  T foo;
+  T foo
 }
 class Bar<X> : Foo<X> {
-  X bar() { return foo; }
-  X baz() { return this.foo; }
+  X bar() { return foo }
+  X baz() { return this.foo }
 }
 ", "
 ")
 
 test("
 interface Foo<T> {
-  virtual T foo();
+  virtual T foo()
 }
 class Bar<X> : Foo<X> {
-  X bar() { return foo(); }
-  X baz() { return this.foo(); }
+  X bar() { return foo() }
+  X baz() { return this.foo() }
 }
 ", "
 ")
@@ -576,7 +576,7 @@ class Foo<A, B> : IFoo<A, B>, IFoo<B, A> {}
 ")
 
 test("
-interface A<T> { virtual void foo(T foo); }
+interface A<T> { virtual void foo(T foo) }
 interface B : A<int> {}
 interface C : A<float> {}
 class Diamond : B, C { override void foo() {} }
@@ -587,7 +587,7 @@ class Diamond : B, C { override void foo() {} }
 ")
 
 test("
-interface A<T> { virtual void foo(T foo); }
+interface A<T> { virtual void foo(T foo) }
 interface B<X> : A<X> {}
 interface C<Y> : A<Y> {}
 class Diamond<Z> : B<Z>, C<Z> { override void foo() {} }
@@ -596,12 +596,12 @@ class Diamond<Z> : B<Z>, C<Z> { override void foo() {} }
 class Diamond<Z> : B<Z>, C<Z> { override void foo() {} }
                                               ~~~
 <stdin>:1:31: note: The overridden declaration is here
-interface A<T> { virtual void foo(T foo); }
+interface A<T> { virtual void foo(T foo) }
                               ~~~
 ")
 
 test("
-interface A<T> { virtual void foo(T foo); }
+interface A<T> { virtual void foo(T foo) }
 interface B<X> : A<X> {}
 interface C<Y> : A<Y> {}
 class Diamond<Z> : B<Z>, C<int> { override void foo() {} }

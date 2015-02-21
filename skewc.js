@@ -8653,9 +8653,10 @@
 
   var StatementHint = {
     NORMAL: 0,
-    IN_ENUM: 1,
-    IN_OBJECT: 2,
-    IN_SWITCH: 3
+    IN_IF: 1,
+    IN_ENUM: 2,
+    IN_OBJECT: 3,
+    IN_SWITCH: 4
   };
 
   var ListMode = {
@@ -8664,7 +8665,7 @@
   };
 
   function ParserContext(_0, _1) {
-    this.inVoidFunction = false;
+    this.inNonVoidFunction = false;
     this.needsPreprocessor = false;
     this.index = 0;
     this.previousSyntaxError = null;
@@ -8702,6 +8703,14 @@
     }
 
     return false;
+  };
+
+  ParserContext.prototype.undo = function() {
+    if (this.index <= 0) {
+      throw new Error('assert index > 0 (src/parser/pratt.sk:47:5)');
+    }
+
+    this.index = this.index - 1 | 0;
   };
 
   ParserContext.prototype.expect = function(kind) {
@@ -8822,12 +8831,20 @@
   function IfParselet() {
   }
 
+  IfParselet.parseExpression = function(context) {
+    expectEndOfLine(context);
+
+    var node = pratt.parse(context, Precedence.LOWEST);
+    expectEndOfLine(context);
+    return node;
+  };
+
   IfParselet.prototype.parse = function(context) {
     context.needsPreprocessor = true;
 
     var token = context.next();
     var value = pratt.parse(context, Precedence.COMMA);
-    var trueNode = pratt.parse(context, Precedence.LOWEST);
+    var trueNode = IfParselet.parseExpression(context);
     var falseNode = null;
 
     if (context.peek(TokenKind.PREPROCESSOR_ELIF)) {
@@ -8837,7 +8854,7 @@
         return errorExpressionSinceToken(context, token);
       }
 
-      falseNode = pratt.parse(context, Precedence.LOWEST);
+      falseNode = IfParselet.parseExpression(context);
 
       if (!context.expect(TokenKind.PREPROCESSOR_ENDIF)) {
         return errorExpressionSinceToken(context, token);
@@ -8980,11 +8997,11 @@
     var node = this.resume(context, precedence, parselet.prefix.parse(context));
 
     if (node === null) {
-      throw new Error('assert node != null (src/parser/pratt.sk:123:5)');
+      throw new Error('assert node != null (src/parser/pratt.sk:128:5)');
     }
 
     if (node.range.isEmpty()) {
-      throw new Error('assert !node.range.isEmpty() (src/parser/pratt.sk:124:5)');
+      throw new Error('assert !node.range.isEmpty() (src/parser/pratt.sk:129:5)');
     }
 
     return node;
@@ -8992,7 +9009,7 @@
 
   Pratt.prototype.resume = function(context, precedence, left) {
     if (left === null) {
-      throw new Error('assert left != null (src/parser/pratt.sk:129:5)');
+      throw new Error('assert left != null (src/parser/pratt.sk:134:5)');
     }
 
     while (left.kind !== NodeKind.ERROR) {
@@ -9006,11 +9023,11 @@
       left = parselet.infix.parse(context, left);
 
       if (left === null) {
-        throw new Error('assert left != null (src/parser/pratt.sk:137:7)');
+        throw new Error('assert left != null (src/parser/pratt.sk:142:7)');
       }
 
       if (left.range.isEmpty()) {
-        throw new Error('assert !left.range.isEmpty() (src/parser/pratt.sk:138:7)');
+        throw new Error('assert !left.range.isEmpty() (src/parser/pratt.sk:143:7)');
       }
     }
 
@@ -16903,14 +16920,9 @@
       if (token.kind === TokenKind.NEWLINE && previousKind in REMOVE_NEWLINE_AFTER) {
         count = count - 1 | 0;
         continue;
-      } else if (token.kind in REMOVE_NEWLINE_BEFORE && previousKind === TokenKind.NEWLINE) {
+      } else if (previousKind === TokenKind.NEWLINE && token.kind in REMOVE_NEWLINE_BEFORE) {
         tokens[count - 2 | 0] = token;
         count = count - 1 | 0;
-
-        while (count >= 2 && tokens[count - 2 | 0].kind === TokenKind.NEWLINE) {
-          tokens[count - 2 | 0] = token;
-          count = count - 1 | 0;
-        }
       }
 
       previousKind = tokenKind;
@@ -16952,15 +16964,15 @@
               var start = range.start;
 
               if ((i + 1 | 0) >= tokens.length) {
-                throw new Error('assert i + 1 < tokens.size() (src/lexer/token.sk:164:13)');
+                throw new Error('assert i + 1 < tokens.size() (src/lexer/token.sk:156:13)');
               }
 
               if (tokens[i + 1 | 0] !== null) {
-                throw new Error('assert tokens[i + 1] == null (src/lexer/token.sk:165:13)');
+                throw new Error('assert tokens[i + 1] == null (src/lexer/token.sk:157:13)');
               }
 
               if (tokenKind !== TokenKind.SHIFT_RIGHT && tokenKind !== TokenKind.GREATER_THAN_OR_EQUAL && tokenKind !== TokenKind.ASSIGN_SHIFT_RIGHT) {
-                throw new Error('assert\n              tokenKind == .SHIFT_RIGHT ||\n              tokenKind == .GREATER_THAN_OR_EQUAL ||\n              tokenKind == .ASSIGN_SHIFT_RIGHT (src/lexer/token.sk:166:13)');
+                throw new Error('assert\n              tokenKind == .SHIFT_RIGHT ||\n              tokenKind == .GREATER_THAN_OR_EQUAL ||\n              tokenKind == .ASSIGN_SHIFT_RIGHT (src/lexer/token.sk:158:13)');
               }
 
               tokens[i + 1 | 0] = new Token(new Range(range.source, start + 1 | 0, range.end), tokenKind === TokenKind.SHIFT_RIGHT ? TokenKind.GREATER_THAN : tokenKind === TokenKind.GREATER_THAN_OR_EQUAL ? TokenKind.ASSIGN : TokenKind.GREATER_THAN_OR_EQUAL);
@@ -17034,10 +17046,21 @@
   };
 
   function peekEndOfLine(context) {
-    return context.peek(TokenKind.NEWLINE) || context.peek(TokenKind.RIGHT_BRACE) || context.peek(TokenKind.END_OF_FILE);
+    return context.peek(TokenKind.SEMICOLON) || context.peek(TokenKind.NEWLINE) || context.peek(TokenKind.RIGHT_BRACE) || context.peek(TokenKind.END_OF_FILE);
   }
 
   function eatEndOfLine(context) {
+    if (context.eat(TokenKind.SEMICOLON)) {
+      if (peekEndOfLine(context)) {
+        context.undo();
+        context.unexpectedToken();
+        context.next();
+        eatEndOfLine(context);
+      }
+
+      return true;
+    }
+
     return context.eat(TokenKind.NEWLINE) || context.peek(TokenKind.RIGHT_BRACE) || context.peek(TokenKind.END_OF_FILE);
   }
 
@@ -17056,8 +17079,7 @@
       return true;
     }
 
-    while (!eatEndOfLine(context)) {
-      context.next();
+    while (!context.eat(kind) && context.next().kind !== TokenKind.END_OF_FILE) {
     }
 
     return false;
@@ -17122,6 +17144,10 @@
       return null;
     }
 
+    if (hint === StatementHint.IN_IF && context.peek(TokenKind.ELSE)) {
+      context.unexpectedToken();
+    }
+
     return Node.createBlock([statement]).withRange(statement.range);
   }
 
@@ -17156,16 +17182,13 @@
 
   function parseStatements(context, hint) {
     var statements = [];
+    context.eat(TokenKind.NEWLINE);
 
     while (true) {
       var kind = context.current().kind;
 
       if (kind === TokenKind.RIGHT_BRACE || kind === TokenKind.PREPROCESSOR_ELIF || kind === TokenKind.PREPROCESSOR_ELSE || kind === TokenKind.PREPROCESSOR_ENDIF || kind === TokenKind.END_OF_FILE) {
         break;
-      }
-
-      if (context.eat(TokenKind.NEWLINE)) {
-        continue;
       }
 
       if (hint === StatementHint.IN_ENUM) {
@@ -17293,7 +17316,7 @@
 
     var token = context.next();
     var value = pratt.parse(context, Precedence.COMMA);
-    var trueNodes = parseCommaSeparatedNodeList(context, mode);
+    var trueNodes = parsePreprocessorCommaSeparatedList(context, mode);
     var falseNodes = null;
 
     if (context.peek(TokenKind.PREPROCESSOR_ELIF)) {
@@ -17301,7 +17324,7 @@
       falseNodes = Node.createNodeList([node]).withRange(node.range);
     } else {
       if (context.eat(TokenKind.PREPROCESSOR_ELSE)) {
-        falseNodes = parseCommaSeparatedNodeList(context, mode);
+        falseNodes = parsePreprocessorCommaSeparatedList(context, mode);
       }
 
       if (!context.expect(TokenKind.PREPROCESSOR_ENDIF)) {
@@ -17314,7 +17337,7 @@
 
   function isEndOfCommaSeparatedList(context) {
     var kind = context.current().kind;
-    return kind === TokenKind.RIGHT_PARENTHESIS || kind === TokenKind.RIGHT_BRACKET || kind === TokenKind.RIGHT_BRACE || kind === TokenKind.PREPROCESSOR_ELIF || kind === TokenKind.PREPROCESSOR_ELSE || kind === TokenKind.PREPROCESSOR_ENDIF;
+    return kind === TokenKind.PREPROCESSOR_ELIF || kind === TokenKind.PREPROCESSOR_ELSE || kind === TokenKind.PREPROCESSOR_ENDIF || kind === TokenKind.RIGHT_BRACE || kind === TokenKind.RIGHT_BRACKET || kind === TokenKind.RIGHT_PARENTHESIS;
   }
 
   function parseCommaSeparatedList(context, mode) {
@@ -17325,18 +17348,32 @@
       var value = isPreprocessorSequence ? parsePreprocessorSequence(context, mode) : mode === ListMode.KEY_VALUE ? parseMapKeyValuePair(context) : pratt.parse(context, Precedence.COMMA);
       values.push(value);
 
-      if (value.kind === NodeKind.ERROR || !isPreprocessorSequence && !isEndOfCommaSeparatedList(context) && !context.expect(TokenKind.COMMA)) {
+      if (value.kind === NodeKind.ERROR) {
         break;
       }
 
-      eatEndOfLine(context);
+      var ateNewline = context.eat(TokenKind.NEWLINE);
+
+      if (!isPreprocessorSequence && !isEndOfCommaSeparatedList(context)) {
+        if (ateNewline) {
+          context.undo();
+        }
+
+        if (!context.expect(TokenKind.COMMA)) {
+          break;
+        }
+
+        context.eat(TokenKind.NEWLINE);
+      }
     }
 
     return values;
   }
 
-  function parseCommaSeparatedNodeList(context, mode) {
+  function parsePreprocessorCommaSeparatedList(context, mode) {
     var token = context.current();
+    expectEndOfLine(context);
+
     var values = parseCommaSeparatedList(context, mode);
     return Node.createNodeList(values).withRange(context.spanSince(token.range));
   }
@@ -17476,9 +17513,7 @@
     var block = null;
 
     if (!peekEndOfLine(context)) {
-      context.inVoidFunction = true;
       block = parseBlock(context, StatementHint.NORMAL);
-      context.inVoidFunction = false;
 
       if (block === null) {
         return null;
@@ -17537,7 +17572,7 @@
     var token = context.next();
     var value = null;
 
-    if (!context.inVoidFunction) {
+    if (context.inNonVoidFunction) {
       eatEndOfLine(context);
     }
 
@@ -17623,13 +17658,17 @@
       return null;
     }
 
-    var trueBlock = parseBlockOrStatement(context, StatementHint.NORMAL);
+    var trueBlock = parseBlockOrStatement(context, StatementHint.IN_IF);
 
     if (trueBlock === null) {
       return null;
     }
 
     var falseBlock = null;
+
+    if ((context.eat(TokenKind.NEWLINE) || context.eat(TokenKind.SEMICOLON)) && !context.peek(TokenKind.ELSE)) {
+      context.undo();
+    }
 
     if (context.eat(TokenKind.ELSE)) {
       falseBlock = parseBlockOrStatement(context, StatementHint.NORMAL);
@@ -17814,9 +17853,9 @@
       var block = null;
 
       if (!peekEndOfLine(context)) {
-        context.inVoidFunction = type.kind === NodeKind.NAME && type.asString() === 'void';
+        context.inNonVoidFunction = type.kind !== NodeKind.NAME || type.asString() !== 'void';
         block = parseBlock(context, StatementHint.NORMAL);
-        context.inVoidFunction = false;
+        context.inNonVoidFunction = false;
 
         if (block === null) {
           return null;
@@ -17921,6 +17960,8 @@
   }
 
   function parsePreprocessorBlock(context, hint) {
+    expectEndOfLine(context);
+
     var token = context.current();
     var statements = parseStatements(context, hint);
     return Node.createBlock(statements).withRange(context.spanSince(token.range));
@@ -19306,8 +19347,8 @@
   var yy_def = [0, 308, 1, 308, 308, 308, 308, 308, 309, 310, 308, 308, 311, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 312, 313, 308, 308, 308, 308, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 308, 308, 308, 308, 308, 308, 308, 309, 308, 309, 314, 314, 314, 314, 314, 308, 308, 308, 311, 308, 311, 308, 308, 308, 308, 308, 308, 308, 315, 316, 308, 308, 308, 308, 308, 308, 308, 317, 308, 308, 308, 308, 308, 308, 318, 313, 308, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 308, 308, 314, 314, 314, 314, 314, 314, 314, 308, 308, 315, 319, 315, 316, 308, 308, 308, 308, 317, 308, 308, 318, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 314, 314, 314, 314, 314, 314, 308, 308, 308, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 314, 314, 314, 314, 314, 314, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 314, 314, 314, 314, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 313, 314, 314, 313, 313, 313, 313, 313, 313, 313, 313, 314, 313, 313, 313, 313, 313, 313, 313, 313, 0, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308];
   var yy_nxt = [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 22, 22, 23, 24, 25, 26, 27, 28, 29, 30, 30, 30, 31, 4, 32, 33, 34, 35, 36, 37, 38, 39, 40, 30, 30, 41, 30, 30, 30, 42, 43, 44, 45, 46, 47, 48, 49, 50, 30, 30, 51, 52, 53, 54, 56, 56, 59, 62, 63, 67, 73, 70, 64, 78, 78, 78, 78, 75, 79, 90, 91, 307, 74, 80, 65, 126, 68, 76, 77, 93, 94, 81, 306, 127, 60, 71, 82, 98, 83, 83, 83, 83, 82, 99, 83, 83, 83, 83, 104, 106, 84, 107, 132, 101, 305, 116, 84, 105, 85, 117, 108, 84, 86, 102, 109, 59, 103, 84, 86, 112, 87, 120, 110, 118, 121, 113, 114, 111, 88, 129, 115, 123, 124, 70, 125, 56, 56, 130, 133, 136, 144, 137, 179, 60, 138, 145, 78, 78, 78, 78, 78, 78, 78, 78, 149, 149, 180, 71, 141, 82, 193, 83, 83, 83, 83, 150, 150, 150, 194, 141, 142, 304, 147, 84, 147, 158, 159, 148, 148, 148, 148, 162, 171, 177, 84, 86, 163, 186, 178, 172, 198, 187, 198, 303, 144, 199, 199, 199, 199, 145, 144, 144, 149, 149, 302, 200, 145, 148, 148, 148, 148, 148, 148, 148, 148, 150, 150, 150, 207, 208, 199, 199, 199, 199, 199, 199, 199, 199, 301, 300, 299, 298, 297, 296, 295, 86, 294, 293, 292, 291, 290, 289, 288, 287, 286, 285, 284, 283, 142, 58, 58, 58, 58, 58, 61, 61, 69, 69, 69, 69, 69, 95, 95, 96, 96, 96, 134, 134, 134, 143, 143, 143, 143, 143, 146, 282, 146, 146, 146, 151, 151, 154, 154, 154, 145, 145, 145, 145, 145, 281, 280, 279, 278, 277, 276, 275, 274, 273, 272, 271, 270, 269, 268, 267, 266, 265, 264, 263, 262, 261, 260, 259, 258, 257, 256, 255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 206, 205, 204, 203, 202, 201, 197, 196, 195, 192, 191, 190, 189, 188, 185, 184, 183, 182, 181, 176, 175, 174, 173, 170, 169, 168, 167, 166, 165, 164, 161, 160, 157, 156, 155, 153, 152, 308, 140, 139, 135, 308, 55, 131, 128, 122, 119, 100, 97, 92, 89, 72, 66, 57, 55, 308, 3, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308];
   var yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 6, 8, 9, 9, 11, 16, 12, 9, 19, 19, 19, 19, 18, 20, 25, 25, 304, 16, 20, 9, 47, 11, 18, 18, 27, 27, 20, 302, 47, 8, 12, 21, 35, 21, 21, 21, 21, 22, 35, 22, 22, 22, 22, 38, 39, 21, 39, 52, 37, 301, 42, 22, 38, 21, 42, 39, 21, 21, 37, 40, 58, 37, 22, 22, 41, 21, 44, 40, 42, 44, 41, 41, 40, 21, 49, 41, 46, 46, 69, 46, 56, 56, 49, 52, 63, 79, 63, 121, 58, 63, 79, 78, 78, 78, 78, 82, 82, 82, 82, 85, 85, 121, 69, 78, 83, 136, 83, 83, 83, 83, 87, 87, 87, 136, 78, 78, 297, 84, 83, 84, 101, 101, 84, 84, 84, 84, 104, 114, 120, 83, 83, 104, 127, 120, 114, 141, 127, 141, 295, 143, 141, 141, 141, 141, 143, 144, 145, 149, 149, 294, 144, 145, 147, 147, 147, 147, 148, 148, 148, 148, 150, 150, 150, 161, 161, 198, 198, 198, 198, 199, 199, 199, 199, 293, 291, 290, 288, 283, 282, 281, 148, 280, 279, 274, 273, 271, 268, 266, 264, 262, 261, 260, 259, 199, 309, 309, 309, 309, 309, 310, 310, 311, 311, 311, 311, 311, 312, 312, 313, 313, 313, 314, 314, 314, 315, 315, 315, 315, 315, 316, 258, 316, 316, 316, 317, 317, 318, 318, 318, 319, 319, 319, 319, 319, 257, 256, 255, 254, 253, 250, 249, 248, 247, 242, 240, 239, 238, 235, 234, 233, 232, 229, 228, 227, 226, 224, 223, 222, 221, 219, 218, 217, 216, 215, 214, 213, 210, 209, 208, 207, 206, 205, 203, 202, 201, 197, 196, 195, 194, 193, 192, 191, 190, 188, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 173, 172, 171, 170, 168, 167, 166, 165, 164, 163, 162, 160, 159, 158, 157, 156, 155, 140, 138, 137, 135, 131, 130, 129, 128, 126, 125, 124, 123, 122, 119, 118, 117, 116, 113, 111, 110, 109, 108, 107, 106, 103, 102, 100, 99, 98, 94, 90, 71, 65, 64, 62, 60, 55, 50, 48, 45, 43, 36, 33, 26, 23, 15, 10, 7, 5, 3, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308, 308];
-  var REMOVE_NEWLINE_BEFORE = in_IntMap.literal([20, 23, 35, 88, 91, 92, 93], [0, 0, 0, 0, 0, 0, 0]);
-  var REMOVE_NEWLINE_AFTER = in_IntMap.literal([3, 19, 20, 23, 24, 71, 94, 105, 60, 61, 62, 76, 15, 16, 17, 30, 38, 45, 46, 50, 59, 63, 64, 65, 66, 68, 73, 89, 95, 96, 67, 4, 11, 5, 6, 7, 8, 10, 12, 13, 14, 9], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  var REMOVE_NEWLINE_BEFORE = in_IntMap.literal([20, 23, 88, 91, 92, 93], [0, 0, 0, 0, 0, 0]);
+  var REMOVE_NEWLINE_AFTER = in_IntMap.literal([3, 19, 20, 23, 24, 71, 105, 60, 61, 62, 76, 15, 16, 17, 30, 38, 45, 46, 50, 59, 63, 64, 65, 66, 68, 73, 89, 95, 96, 67, 4, 11, 5, 6, 7, 8, 10, 12, 13, 14, 9], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   var pratt = createParser();
   MemberComparison.INSTANCE = new MemberComparison();
   MemberRangeComparison.INSTANCE = new MemberRangeComparison();

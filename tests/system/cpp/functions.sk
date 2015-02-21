@@ -5,7 +5,7 @@ class Foo {
   void foo() {}
 }
 export void test() {
-  Foo().foo();
+  Foo().foo()
 }
 ", "
 struct Foo;
@@ -30,9 +30,9 @@ void test() {
 
 testCPP("
 export class Foo {
-  Foo foo;
+  Foo foo
   void bar() {
-    foo.bar();
+    foo.bar()
   }
 }
 ", "
@@ -56,7 +56,7 @@ Foo::Foo(Foo *_0) : foo(_0) {
 testCPP("
 void foo(int foo) {}
 export void test() {
-  foo((1, 2));
+  foo((1, 2))
 }
 ", "
 void foo(int foo);
@@ -74,11 +74,11 @@ testCPP("
 enum Foo { A, B, C }
 in Foo {
   int foo() {
-    return this;
+    return this
   }
 }
 export void test() {
-  Foo.A.foo();
+  Foo.A.foo()
 }
 ", "
 enum struct Foo {
@@ -103,7 +103,7 @@ void test() {
 testCPP("
 export enum Foo { FOO }
 in Foo {
-  export string foo() { return toString(); }
+  export string foo() { return toString() }
 }
 ", "
 #include <cassert>
@@ -164,13 +164,13 @@ List<std::string> *in_Foo::_toString_ = (new List<std::string>())->literal({ std
 
 testCPP("
 import class Foo {
-  new();
+  new()
 }
 in Foo {
   void foo() {}
 }
 export void test() {
-  Foo().foo();
+  Foo().foo()
 }
 ", "
 namespace in_Foo {
@@ -199,7 +199,7 @@ class Baz : Foo {
   override void foo() {}
 }
 export void test() {
-  Bar().foo();
+  Bar().foo()
 }
 ", "
 struct Foo;
@@ -233,7 +233,7 @@ void test() {
 // This must not generate "Foo::Foo(int _0) : ns::Foo::Foo(_0) {}" because MSVC will choke on it
 testCPP("
 namespace ns {
-  class Foo { int foo; }
+  class Foo { int foo }
 }
 export class Foo : ns.Foo {}
 ", "
@@ -266,12 +266,12 @@ testCPP("
 in Foo {
   void foo() {}
   static void bar() {}
-  static int baz;
+  static int baz
 }
 export void foo() {
-  Bar().foo();
-  Bar.bar();
-  Bar.baz;
+  Bar().foo()
+  Bar.bar()
+  Bar.baz
 }
 class Bar : Foo {}
 interface Foo {}

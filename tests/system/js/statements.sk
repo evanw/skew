@@ -1,14 +1,14 @@
 namespace js { void testStatements() {
 
 testJS("
-import int foo;
+import int foo
 ", "
 (function() {
 }());
 ")
 
 testJS("
-int foo = 0;
+int foo = 0
 class Foo {}
 class Bar : Foo {}
 ", "
@@ -18,8 +18,8 @@ class Bar : Foo {}
 
 testJS("
 enum Foo { A, B, C }
-export Foo foo() { return .A; }
-export Foo bar() { return .C; }
+export Foo foo() { return .A }
+export Foo bar() { return .C }
 ", "
 (function() {
   var Foo = {
@@ -39,12 +39,12 @@ export Foo bar() { return .C; }
 
 testJS("
 export int foo(int x) {
-  int y;
+  int y
   switch (x) {
-    case 1 { y = 1; }
-    case 2 { y = 2; }
+    case 1 { y = 1 }
+    case 2 { y = 2 }
   }
-  return y;
+  return y
 }
 ", "
 (function() {
@@ -70,8 +70,8 @@ testJS("
 interface IFoo {}
 export class Foo<T is IFoo> {
   T foo() {
-    T foo;
-    return foo;
+    T foo
+    return foo
   }
 }
 ", "
@@ -88,11 +88,11 @@ export class Foo<T is IFoo> {
 
 testJS("
 class Foo {
-  var bar = 0;
-  void foo() { assert bar > 0; }
+  var bar = 0
+  void foo() { assert bar > 0 }
 }
 export void foo() {
-  Foo().foo();
+  Foo().foo()
 }
 ", "
 (function() {
@@ -102,7 +102,7 @@ export void foo() {
 
   Foo.prototype.foo = function() {
     if (this.bar <= 0) {
-      throw new Error('assert bar > 0; (<stdin>:3:16)');
+      throw new Error('assert bar > 0 (<stdin>:3:16)');
     }
   };
 
@@ -114,8 +114,8 @@ export void foo() {
 
 testJS("
 export class Foo {
-  `var` foo;
-  dynamic bar;
+  `var` foo
+  dynamic bar
 }
 ", "
 (function() {
@@ -131,9 +131,9 @@ export enum Foo {
   FOO,
 }
 export Bar foo() {
-  return .FOO;
+  return .FOO
 }
-alias Bar = Foo;
+alias Bar = Foo
 ", "
 (function() {
   Foo = {
@@ -148,11 +148,11 @@ alias Bar = Foo;
 
 testJS("
 pure int foo() {
-  const var bar = 1;
-  return baz + bar;
+  const var bar = 1
+  return baz + bar
 }
-export var bar = foo();
-const var baz = 0;
+export var bar = foo()
+const var baz = 0
 ", "
 (function() {
   function foo() {

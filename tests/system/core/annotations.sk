@@ -1,14 +1,14 @@
 namespace core { void testAnnotations() {
 
 test("
-@OperatorGet int foo;
+@OperatorGet int foo
 @OperatorGet void bar() {}
 @OperatorGet class Foo {}
 @OperatorGet enum Bar {}
 @OperatorGet namespace ns {}
 ", "
 <stdin>:1:1: error: Operator overloading only applies to instance functions
-@OperatorGet int foo;
+@OperatorGet int foo
 ~~~~~~~~~~~~
 <stdin>:2:1: error: Operator overloading only applies to instance functions
 @OperatorGet void bar() {}
@@ -35,7 +35,7 @@ class Foo {
 ")
 
 test("
-@EntryPoint int foo;
+@EntryPoint int foo
 @EntryPoint void bar() {}
 @EntryPoint class Foo {
   @EntryPoint void foo() {}
@@ -44,7 +44,7 @@ test("
 @EntryPoint namespace ns {}
 ", "
 <stdin>:1:1: error: The entry point must be a global function
-@EntryPoint int foo;
+@EntryPoint int foo
 ~~~~~~~~~~~
 <stdin>:4:3: error: The entry point must be a global function
   @EntryPoint void foo() {}
@@ -88,7 +88,7 @@ test("
 
 test("
 @EntryPoint int foo() {
-  return 0;
+  return 0
 }
 ", "
 ")
@@ -101,14 +101,14 @@ test("
 
 test("
 @EntryPoint int foo(List<string> args) {
-  return 0;
+  return 0
 }
 ", "
 ")
 
 test("
 @EntryPoint float foo() {
-  return 0;
+  return 0
 }
 ", "
 <stdin>:1:19: error: Unexpected entry point type \"float fn()\", expected type \"void fn()\", type \"int fn()\", type \"void fn(List<string>)\", or type \"int fn(List<string>)\"
@@ -117,17 +117,17 @@ test("
 ")
 
 test("
-@ExternC int foo;
+@ExternC int foo
 @ExternC void bar() {}
 @ExternC class Foo {
-  @ExternC int a;
+  @ExternC int a
   @ExternC void b() {}
-  @ExternC static int c;
+  @ExternC static int c
   @ExternC static void d() {}
 }
 @ExternC enum Bar {}
 @ExternC namespace ns {
-  @ExternC int foo;
+  @ExternC int foo
   @ExternC void bar() {}
 }
 ", "
@@ -138,10 +138,10 @@ test("
 @ExternC class Foo {
 ~~~~~~~~
 <stdin>:4:3: error: An external C-style symbol must be a top-level function or variable
-  @ExternC int a;
+  @ExternC int a
   ~~~~~~~~
 <stdin>:6:3: error: An external C-style symbol must be a top-level function or variable
-  @ExternC static int c;
+  @ExternC static int c
   ~~~~~~~~
 <stdin>:7:3: error: An external C-style symbol must be a top-level function or variable
   @ExternC static void d() {}
@@ -153,7 +153,7 @@ test("
 @ExternC namespace ns {
 ~~~~~~~~
 <stdin>:11:3: error: An external C-style symbol must be a top-level function or variable
-  @ExternC int foo;
+  @ExternC int foo
   ~~~~~~~~
 <stdin>:12:3: error: An external C-style symbol must be a top-level function or variable
   @ExternC void bar() {}
@@ -169,52 +169,52 @@ test("
 ")
 
 test("
-@NeedsInclude int a;
-@NeedsInclude(1) string b;
-@NeedsInclude(1, 2) const string c = \"\";
-@NeedsInclude(a) int d;
-@NeedsInclude(b) int e;
-@NeedsInclude(c) int f;
+@NeedsInclude int a
+@NeedsInclude(1) string b
+@NeedsInclude(1, 2) const string c = \"\"
+@NeedsInclude(a) int d
+@NeedsInclude(b) int e
+@NeedsInclude(c) int f
 ", "
 <stdin>:1:1: error: The annotation \"@NeedsInclude\" must take 1 argument
-@NeedsInclude int a;
+@NeedsInclude int a
 ~~~~~~~~~~~~~
 <stdin>:2:15: error: Cannot convert from type \"int\" to type \"string\"
-@NeedsInclude(1) string b;
+@NeedsInclude(1) string b
               ^
 <stdin>:3:14: error: The annotation \"@NeedsInclude\" must take 1 argument
-@NeedsInclude(1, 2) const string c = \"\";
+@NeedsInclude(1, 2) const string c = \"\"
              ~~~~~~
 <stdin>:4:15: error: Cannot convert from type \"int\" to type \"string\"
-@NeedsInclude(a) int d;
+@NeedsInclude(a) int d
               ^
 <stdin>:5:15: error: This value must be a compile-time constant string
-@NeedsInclude(b) int e;
+@NeedsInclude(b) int e
               ^
 ")
 
 test("
-@EmitAs int a;
-@EmitAs(1) string b;
-@EmitAs(1, 2) const string c = \"\";
-@EmitAs(a) int d;
-@EmitAs(b) int e;
-@EmitAs(c) int f;
+@EmitAs int a
+@EmitAs(1) string b
+@EmitAs(1, 2) const string c = \"\"
+@EmitAs(a) int d
+@EmitAs(b) int e
+@EmitAs(c) int f
 ", "
 <stdin>:1:1: error: The annotation \"@EmitAs\" must take 1 argument
-@EmitAs int a;
+@EmitAs int a
 ~~~~~~~
 <stdin>:2:9: error: Cannot convert from type \"int\" to type \"string\"
-@EmitAs(1) string b;
+@EmitAs(1) string b
         ^
 <stdin>:3:8: error: The annotation \"@EmitAs\" must take 1 argument
-@EmitAs(1, 2) const string c = \"\";
+@EmitAs(1, 2) const string c = \"\"
        ~~~~~~
 <stdin>:4:9: error: Cannot convert from type \"int\" to type \"string\"
-@EmitAs(a) int d;
+@EmitAs(a) int d
         ^
 <stdin>:5:9: error: This value must be a compile-time constant string
-@EmitAs(b) int e;
+@EmitAs(b) int e
         ^
 ")
 
@@ -228,78 +228,78 @@ test("
 
 test("
 class Foo {
-  @OperatorGet int foo(int x) { return x; }
+  @OperatorGet int foo(int x) { return x }
 }
 class Bar : Foo {
-  bool bar() { return this[0]; }
+  bool bar() { return this[0] }
 }
 ", "
 <stdin>:5:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  bool bar() { return this[0]; }
+  bool bar() { return this[0] }
                       ~~~~~~~
 ")
 
 test("
 interface Foo {
-  @OperatorGet virtual int foo(int x);
+  @OperatorGet virtual int foo(int x)
 }
 interface Bar : Foo {
-  override int foo(int x);
+  override int foo(int x)
 }
 class Baz : Bar {
-  bool bar() { return this[0]; }
+  bool bar() { return this[0] }
 }
 ", "
 <stdin>:8:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  bool bar() { return this[0]; }
+  bool bar() { return this[0] }
                       ~~~~~~~
 ")
 
 test("
 interface Foo {
-  virtual int foo(int x);
+  virtual int foo(int x)
 }
 interface Bar : Foo {
-  @OperatorGet override int foo(int x);
+  @OperatorGet override int foo(int x)
 }
 class Baz : Bar {
-  bool bar() { return this[0]; }
+  bool bar() { return this[0] }
 }
 ", "
 <stdin>:8:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  bool bar() { return this[0]; }
+  bool bar() { return this[0] }
                       ~~~~~~~
 ")
 
 test("
 interface Foo {
-  @OperatorGet virtual int foo(int x);
+  @OperatorGet virtual int foo(int x)
 }
 interface Bar {
-  virtual int foo(int x);
+  virtual int foo(int x)
 }
 class Baz : Foo, Bar {
-  bool bar() { return this[0]; }
+  bool bar() { return this[0] }
 }
 ", "
 <stdin>:8:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  bool bar() { return this[0]; }
+  bool bar() { return this[0] }
                       ~~~~~~~
 ")
 
 test("
 interface Foo {
-  virtual int foo(int x);
+  virtual int foo(int x)
 }
 interface Bar {
-  @OperatorGet virtual int foo(int x);
+  @OperatorGet virtual int foo(int x)
 }
 class Baz : Foo, Bar {
-  bool bar() { return this[0]; }
+  bool bar() { return this[0] }
 }
 ", "
 <stdin>:8:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  bool bar() { return this[0]; }
+  bool bar() { return this[0] }
                       ~~~~~~~
 ")
 

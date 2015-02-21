@@ -1,51 +1,51 @@
 namespace core { void testConst() {
 
 test("
-const int foo = 1;
+const int foo = 1
 void bar() {
-  foo = 2;
+  foo = 2
 }
 ", "
 <stdin>:3:3: error: Cannot store to a symbol marked as \"const\"
-  foo = 2;
+  foo = 2
   ~~~
 ")
 
 test("
-const final int x = 1;
+const final int x = 1
 ", "
 <stdin>:1:7: error: Redundant modifier \"final\" on a const variable declaration
-const final int x = 1;
+const final int x = 1
       ~~~~~
 ")
 
 test("
-const int foo;
+const int foo
 ", "
 <stdin>:1:11: error: Variables with the \"const\" modifier must be initialized
-const int foo;
+const int foo
           ~~~
 ")
 
 test("
-import int bar;
-const int foo = bar;
+import int bar
+const int foo = bar
 ", "
 <stdin>:2:17: error: Variables with the \"const\" modifier must be initialized to a compile-time constant
-const int foo = bar;
+const int foo = bar
                 ~~~
 ")
 
 test("
-const int foo = 1 + 2 + 3;
+const int foo = 1 + 2 + 3
 enum Foo { FOO = foo }
 ", "
 ")
 
 test("
-import int baz;
-const int foo = 1 + bar - 1;
-const int bar = 9 - 3;
+import int baz
+const int foo = 1 + bar - 1
+const int bar = 9 - 3
 void test() {
   switch (baz) {
     case foo {}
@@ -62,63 +62,63 @@ void test() {
 ")
 
 test("
-assert const true;
-assert const false;
-assert const 2 + 2 == 4;
-assert const 2 + 2 != 4;
-assert const foo;
-assert const bar;
-import bool bar;
+assert const true
+assert const false
+assert const 2 + 2 == 4
+assert const 2 + 2 != 4
+assert const foo
+assert const bar
+import bool bar
 ", "
 <stdin>:2:14: error: Assertion failed
-assert const false;
+assert const false
              ~~~~~
 <stdin>:4:14: error: Assertion failed
-assert const 2 + 2 != 4;
+assert const 2 + 2 != 4
              ~~~~~~~~~~
 <stdin>:5:14: error: \"foo\" is not declared
-assert const foo;
+assert const foo
              ~~~
 <stdin>:6:14: error: The argument to a compile-time assert must be a constant
-assert const bar;
+assert const bar
              ~~~
 ")
 
 test("
-const string a = false + \"\";
-const string b = 1 + \"\";
-const string c = 1.0f + \"\";
-const string d = 1.0 + \"\";
-const string e = \"x\" + \"\";
+const string a = false + \"\"
+const string b = 1 + \"\"
+const string c = 1.0f + \"\"
+const string d = 1.0 + \"\"
+const string e = \"x\" + \"\"
 
-assert const a == \"false\";
-assert const b == \"1\";
-assert const c == \"1\";
-assert const d == \"1\";
-assert const e == \"x\";
+assert const a == \"false\"
+assert const b == \"1\"
+assert const c == \"1\"
+assert const d == \"1\"
+assert const e == \"x\"
 ", "
 ")
 
 test("
-const string a = false.toString() + \"\";
-const string b = 1.toString() + \"\";
-const string c = 1.0f.toString() + \"\";
-const string d = 1.0.toString() + \"\";
-const string e = \"x\".toString() + \"\";
+const string a = false.toString() + \"\"
+const string b = 1.toString() + \"\"
+const string c = 1.0f.toString() + \"\"
+const string d = 1.0.toString() + \"\"
+const string e = \"x\".toString() + \"\"
 
-assert const a == \"false\";
-assert const b == \"1\";
-assert const c == \"1\";
-assert const d == \"1\";
-assert const e == \"x\";
+assert const a == \"false\"
+assert const b == \"1\"
+assert const c == \"1\"
+assert const d == \"1\"
+assert const e == \"x\"
 ", "
 ")
 
 test("
-const var foo = bar + \"\";
-const var bar = (int)baz;
-const var baz = true;
-assert const foo == \"1\";
+const var foo = bar + \"\"
+const var bar = (int)baz
+const var baz = true
+assert const foo == \"1\"
 ", "
 ")
 

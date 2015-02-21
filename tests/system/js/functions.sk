@@ -5,7 +5,7 @@ class Foo {
   void foo() {}
 }
 export void test() {
-  Foo().foo();
+  Foo().foo()
 }
 ", "
 (function() {
@@ -23,9 +23,9 @@ export void test() {
 
 testJS("
 export class Foo {
-  Foo foo;
+  Foo foo
   void bar() {
-    foo.bar();
+    foo.bar()
   }
 }
 ", "
@@ -43,7 +43,7 @@ export class Foo {
 testJS("
 void foo(int foo) {}
 export void test() {
-  foo((1, 2));
+  foo((1, 2))
 }
 ", "
 (function() {
@@ -60,11 +60,11 @@ testJS("
 enum Foo { A, B, C }
 in Foo {
   int foo() {
-    return this;
+    return this
   }
 }
 export void test() {
-  Foo.A.foo();
+  Foo.A.foo()
 }
 ", "
 (function() {
@@ -87,7 +87,7 @@ export void test() {
 testJS("
 export enum Foo { FOO }
 in Foo {
-  export string foo() { return toString(); }
+  export string foo() { return toString() }
 }
 ", "
 (function() {
@@ -107,13 +107,13 @@ in Foo {
 
 testJS("
 import class Foo {
-  new();
+  new()
 }
 in Foo {
   void foo() {}
 }
 export void test() {
-  Foo().foo();
+  Foo().foo()
 }
 ", "
 (function() {
@@ -130,13 +130,13 @@ export void test() {
 
 testJS("
 class Foo {
-  virtual int foo(int bar) { return bar; }
+  virtual int foo(int bar) { return bar }
 }
 class Bar : Foo {
-  override int foo(int bar) { return super(bar); }
+  override int foo(int bar) { return super(bar) }
 }
 export void test() {
-  Bar().foo(1);
+  Bar().foo(1)
 }
 ", "
 (function() {
@@ -179,7 +179,7 @@ class Baz : Foo {
   override void foo() {}
 }
 export void test() {
-  Bar().foo();
+  Bar().foo()
 }
 ", "
 (function() {
@@ -208,7 +208,7 @@ export void test() {
 
 testJS("
 interface IFoo {
-  virtual void foo();
+  virtual void foo()
 }
 class Bar : IFoo {
   override void foo() {}
@@ -217,7 +217,7 @@ class Baz : IFoo {
   override void foo() {}
 }
 export void test() {
-  ((IFoo)Bar()).foo();
+  ((IFoo)Bar()).foo()
 }
 ", "
 (function() {
@@ -235,10 +235,10 @@ export void test() {
 
 testJS("
 interface IFoo {
-  virtual void foo();
+  virtual void foo()
 }
 interface IBar {
-  virtual void bar();
+  virtual void bar()
 }
 class Foo : IFoo {
   override void foo() {}
@@ -247,19 +247,19 @@ class Foo2 : IFoo {
   override void foo() {}
 }
 class Bar : IBar {
-  IFoo foo;
+  IFoo foo
   override void bar() {
-    foo.foo();
+    foo.foo()
   }
 }
 class Bar2 : IBar {
   override void bar() {}
 }
 export void foo() {
-  bar(Bar(Foo()));
+  bar(Bar(Foo()))
 }
 void bar(IBar bar) {
-  bar.bar();
+  bar.bar()
 }
 ", "
 (function() {
@@ -289,15 +289,15 @@ void bar(IBar bar) {
 
 testJS("
 interface IFoo {
-  virtual void foo();
+  virtual void foo()
 }
 interface IBar {
-  virtual void bar();
+  virtual void bar()
 }
 class Bar : IBar {
-  IFoo foo;
+  IFoo foo
   override void bar() {
-    foo.foo();
+    foo.foo()
   }
 }
 class Bar2 : IBar {
@@ -310,10 +310,10 @@ class Foo2 : IFoo {
   override void foo() {}
 }
 export void foo() {
-  bar(Bar(Foo()));
+  bar(Bar(Foo()))
 }
 void bar(IBar bar) {
-  bar.bar();
+  bar.bar()
 }
 ", "
 (function() {
@@ -343,13 +343,13 @@ void bar(IBar bar) {
 
 testJS("
 import interface IFoo {
-  virtual void foo();
+  virtual void foo()
 }
 class Foo : IFoo {
   override void foo() {}
 }
 export IFoo foo() {
-  return Foo();
+  return Foo()
 }
 ", "
 (function() {
@@ -367,15 +367,15 @@ export IFoo foo() {
 
 testJS("
 import interface IFoo {
-  virtual void foo();
+  virtual void foo()
 }
 class Foo : IFoo {
   override void foo() {}
 }
 export void foo() {
-  bar(Foo());
+  bar(Foo())
 }
-import void bar(IFoo foo);
+import void bar(IFoo foo)
 ", "
 (function() {
   function Foo() {
@@ -394,12 +394,12 @@ testJS("
 in Foo {
   void foo() {}
   static void bar() {}
-  static int baz;
+  static int baz
 }
 export void foo() {
-  Bar().foo();
-  Bar.bar();
-  Bar.baz;
+  Bar().foo()
+  Bar.bar()
+  Bar.baz
 }
 class Bar : Foo {}
 interface Foo {}
@@ -429,10 +429,10 @@ interface Foo {}
 testJS("
 import class Foo {}
 in Foo {
-  new() { return `100`; }
+  new() { return `100` }
 }
 export Foo bar() {
-  return Foo();
+  return Foo()
 }
 ", "
 (function() {

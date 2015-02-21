@@ -3,14 +3,14 @@ namespace cpp { void testRelease() {
 testCPP("
 export int foo(int y) {
   if (true) {
-    var x = 1;
-    y += x;
+    var x = 1
+    y += x
   }
   if (true) {
-    var x = 1;
-    y += x;
+    var x = 1
+    y += x
   }
-  return y;
+  return y
 }
 ", "
 int foo(int y);
@@ -34,15 +34,15 @@ testCPP("
 export int foo(int y) {
   if (false) {
   } else {
-    var x = 1;
-    y += x;
+    var x = 1
+    y += x
   }
   if (false) {
   } else {
-    var x = 1;
-    y += x;
+    var x = 1
+    y += x
   }
-  return y;
+  return y
 }
 ", "
 int foo(int y);
@@ -65,9 +65,9 @@ int foo(int y) {
 testCPP("
 export int foo(int y) {
   for (var x = 100; false; x++) {
-    y += x;
+    y += x
   }
-  return y;
+  return y
 }
 ", "
 int foo(int y);

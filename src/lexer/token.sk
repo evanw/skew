@@ -16,7 +16,6 @@ class Token {
 var REMOVE_NEWLINE_BEFORE = {
   TokenKind.CATCH: 0,
   TokenKind.COLON: 0,
-  TokenKind.ELSE: 0,
   TokenKind.QUESTION_MARK: 0,
   TokenKind.RIGHT_BRACE: 0,
   TokenKind.RIGHT_BRACKET: 0,
@@ -30,7 +29,6 @@ var REMOVE_NEWLINE_AFTER = {
   TokenKind.COLON: 0,
   TokenKind.COMMA: 0,
   TokenKind.NEWLINE: 0,
-  TokenKind.SEMICOLON: 0,
   TokenKind.TRY: 0,
 
   TokenKind.LEFT_BRACE: 0,
@@ -102,15 +100,9 @@ void prepareTokens(List<Token> tokens) {
     if (token.kind == .NEWLINE && previousKind in REMOVE_NEWLINE_AFTER) {
       count--
       continue
-    } else if (token.kind in REMOVE_NEWLINE_BEFORE && previousKind == .NEWLINE) {
+    } else if (previousKind == .NEWLINE && token.kind in REMOVE_NEWLINE_BEFORE) {
       tokens[count - 2] = token
       count--
-
-      // Hack for comments after else (TODO: FIXME)
-      while (count >= 2 && tokens[count - 2].kind == .NEWLINE) {
-        tokens[count - 2] = token
-        count--
-      }
     }
     previousKind = tokenKind
 
@@ -152,7 +144,7 @@ void prepareTokens(List<Token> tokens) {
         // Special-case angle brackets matches
         if (topKind == .LESS_THAN) {
 
-          // Retentative matches that didn't work out
+          // Remove tentative matches that didn't work out
           if (!tokenStartsWithGreaterThan) {
             continue
           }

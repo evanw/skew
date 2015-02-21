@@ -2,17 +2,17 @@ namespace core { void testPurity() {
 
 test("
 class Foo {
-  int foo;
+  int foo
 }
-var foo = Foo(0);
+var foo = Foo(0)
 ", "
 ")
 
 test("
 class Foo {
-  int foo = 0;
+  int foo = 0
 }
-var foo = Foo();
+var foo = Foo()
 ", "
 ")
 
@@ -20,9 +20,9 @@ var foo = Foo();
 // variable initializer during initialization to determine purity status
 test("
 class Foo {
-  var foo = Foo();
+  var foo = Foo()
 }
-var foo = Foo();
+var foo = Foo()
 ", "
 <stdin>:1:7: error: Cyclic declaration of \"new\"
 class Foo {
@@ -30,129 +30,129 @@ class Foo {
 ")
 
 test("
-var foo = Foo();
+var foo = Foo()
 class Foo {
-  var foo = bar();
+  var foo = bar()
 }
-inline int bar() { return 0; }
+inline int bar() { return 0 }
 ", "
 <stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
-var foo = Foo();
+var foo = Foo()
           ~~~~~
 ")
 
 test("
 class Foo { new() {} }
-var foo = Foo();
+var foo = Foo()
 ", "
 <stdin>:2:11: error: Global variables must be initialized to a pure expression (one without side effects)
-var foo = Foo();
+var foo = Foo()
           ~~~~~
 ")
 
 test("
-var foo = Foo();
+var foo = Foo()
 class Foo {
-  var foo = bar();
+  var foo = bar()
 }
-import int bar();
+import int bar()
 ", "
 <stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
-var foo = Foo();
+var foo = Foo()
           ~~~~~
 ")
 
 test("
-var foo = Foo();
+var foo = Foo()
 class Foo {
-  var foo = bar();
+  var foo = bar()
 }
-import pure int bar();
+import pure int bar()
 ", "
 ")
 
 test("
-var foo = Foo();
+var foo = Foo()
 class Foo {
-  var foo = 0 + 1;
-}
-", "
-")
-
-test("
-var foo = Foo();
-class Foo {
-  var foo = math.cos(30) + 1;
+  var foo = 0 + 1
 }
 ", "
 ")
 
 test("
-var foo = Foo();
+var foo = Foo()
 class Foo {
-  var foo = bar() + 1;
+  var foo = math.cos(30) + 1
 }
-import pure int bar();
 ", "
 ")
 
 test("
-var foo = Foo();
-var bar = 0;
+var foo = Foo()
 class Foo {
-  var foo = bar + 1;
+  var foo = bar() + 1
+}
+import pure int bar()
+", "
+")
+
+test("
+var foo = Foo()
+var bar = 0
+class Foo {
+  var foo = bar + 1
 }
 ", "
 <stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
-var foo = Foo();
+var foo = Foo()
           ~~~~~
 ")
 
 test("
 pure int foo(int foo) {
-  foo++;
-  return foo;
+  foo++
+  return foo
 }
 ", "
 ")
 
 test("
-int bar;
+int bar
 pure int foo() {
-  return bar;
+  return bar
 }
 ", "
 <stdin>:3:10: error: Cannot use an impure value inside a pure function
-  return bar;
+  return bar
          ~~~
 ")
 
 test("
-int bar;
+int bar
 pure int foo() {
-  bar++;
-  return bar;
+  bar++
+  return bar
 }
 ", "
 <stdin>:3:3: error: Cannot use an impure value inside a pure function
-  bar++;
+  bar++
   ~~~
 <stdin>:4:10: error: Cannot use an impure value inside a pure function
-  return bar;
+  return bar
          ~~~
 ")
 
 test("
-const var bar = 0;
+const var bar = 0
 pure int foo() {
-  return bar;
+  return bar
 }
 ", "
 ")
 
 test("
 pure int foo() {
-  return foo();
+  return foo()
 }
 ", "
 ")
@@ -162,11 +162,11 @@ class Foo {
   void foo() {}
 }
 pure void foo(Foo foo) {
-  foo.foo();
+  foo.foo()
 }
 ", "
 <stdin>:5:7: error: Cannot use an impure value inside a pure function
-  foo.foo();
+  foo.foo()
       ~~~
 ")
 
@@ -175,40 +175,40 @@ class Foo {
   pure void foo() {}
 }
 pure void foo(Foo foo) {
-  foo.foo();
+  foo.foo()
 }
 ", "
 ")
 
 test("
 class Foo {
-  static int foo;
+  static int foo
 }
 pure int foo() {
-  return Foo.foo;
+  return Foo.foo
 }
 ", "
 <stdin>:5:14: error: Cannot use an impure value inside a pure function
-  return Foo.foo;
+  return Foo.foo
              ~~~
 ")
 
 test("
 class Foo {
-  static const var foo = 0;
+  static const var foo = 0
 }
 pure int foo() {
-  return Foo.foo;
+  return Foo.foo
 }
 ", "
 ")
 
 test("
 class Foo {
-  static const var foo = 0;
+  static const var foo = 0
 }
 pure int foo() {
-  return Foo.foo;
+  return Foo.foo
 }
 ", "
 ")
@@ -218,7 +218,7 @@ enum Foo {
   FOO
 }
 pure Foo foo() {
-  return .FOO;
+  return .FOO
 }
 ", "
 ")
@@ -228,11 +228,11 @@ class Foo {
   new() {}
 }
 pure Foo foo() {
-  return Foo();
+  return Foo()
 }
 ", "
 <stdin>:5:10: error: Cannot use an impure value inside a pure function
-  return Foo();
+  return Foo()
          ~~~
 ")
 
@@ -241,44 +241,44 @@ class Foo {
   pure new() {}
 }
 pure Foo foo() {
-  return Foo();
+  return Foo()
 }
 ", "
 ")
 
 test("
-var foo = Foo();
+var foo = Foo()
 class Foo {
-  var foo = (true ? baz : baz)();
+  var foo = (true ? baz : baz)()
 }
-import int baz();
+import int baz()
 ", "
 <stdin>:3:21: error: Raw function references are not allowed (call the function instead)
-  var foo = (true ? baz : baz)();
+  var foo = (true ? baz : baz)()
                     ~~~
 <stdin>:3:27: error: Raw function references are not allowed (call the function instead)
-  var foo = (true ? baz : baz)();
+  var foo = (true ? baz : baz)()
                           ~~~
 <stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
-var foo = Foo();
+var foo = Foo()
           ~~~~~
 ")
 
 test("
-var foo = Foo();
+var foo = Foo()
 class Foo {
-  var foo = (true ? baz : baz)();
+  var foo = (true ? baz : baz)()
 }
-import pure int baz();
+import pure int baz()
 ", "
 <stdin>:3:21: error: Raw function references are not allowed (call the function instead)
-  var foo = (true ? baz : baz)();
+  var foo = (true ? baz : baz)()
                     ~~~
 <stdin>:3:27: error: Raw function references are not allowed (call the function instead)
-  var foo = (true ? baz : baz)();
+  var foo = (true ? baz : baz)()
                           ~~~
 <stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
-var foo = Foo();
+var foo = Foo()
           ~~~~~
 ")
 
@@ -325,7 +325,7 @@ class Bar : Foo {
 ")
 
 test("
-var foo = Bar();
+var foo = Bar()
 class Foo {
 }
 class Bar : Foo {
@@ -334,7 +334,7 @@ class Bar : Foo {
 ")
 
 test("
-var foo = Bar();
+var foo = Bar()
 class Foo {
   pure new() {}
 }
@@ -344,7 +344,7 @@ class Bar : Foo {
 ")
 
 test("
-var foo = Bar();
+var foo = Bar()
 class Foo {
 }
 class Bar : Foo {
@@ -354,7 +354,7 @@ class Bar : Foo {
 ")
 
 test("
-var foo = Bar();
+var foo = Bar()
 class Foo {
   pure new() {}
 }
@@ -365,7 +365,7 @@ class Bar : Foo {
 ")
 
 test("
-var foo = Bar();
+var foo = Bar()
 class Foo {
   new() {}
 }
@@ -373,12 +373,12 @@ class Bar : Foo {
 }
 ", "
 <stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
-var foo = Bar();
+var foo = Bar()
           ~~~~~
 ")
 
 test("
-var foo = Bar();
+var foo = Bar()
 class Foo {
 }
 class Bar : Foo {
@@ -386,44 +386,44 @@ class Bar : Foo {
 }
 ", "
 <stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
-var foo = Bar();
+var foo = Bar()
           ~~~~~
 ")
 
 test("
-var foo = Bar();
+var foo = Bar()
 class Foo {
-  var foo = bar();
+  var foo = bar()
 }
 class Bar : Foo {
 }
-import int bar();
+import int bar()
 ", "
 <stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
-var foo = Bar();
+var foo = Bar()
           ~~~~~
 ")
 
 test("
-var foo = Bar();
+var foo = Bar()
 class Foo {
 }
 class Bar : Foo {
-  var foo = bar();
+  var foo = bar()
 }
-import int bar();
+import int bar()
 ", "
 <stdin>:1:11: error: Global variables must be initialized to a pure expression (one without side effects)
-var foo = Bar();
+var foo = Bar()
           ~~~~~
 ")
 
 test("
 interface Foo {
-  virtual void foo();
+  virtual void foo()
 }
 interface Bar {
-  pure virtual void foo();
+  pure virtual void foo()
 }
 interface Baz : Foo, Bar {
 }

@@ -1,182 +1,182 @@
 namespace core { void testExpressions() {
 
 test("
-bool foo = (1, 2.0);
+bool foo = (1, 2.0)
 ", "
 <stdin>:1:13: warning: Unused expression
-bool foo = (1, 2.0);
+bool foo = (1, 2.0)
             ^
 <stdin>:1:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-bool foo = (1, 2.0);
+bool foo = (1, 2.0)
                ~~~
 ")
 
 test("
-assert const 100 == 0b1100100;
-assert const 100 == 0100;
-assert const 100 == 0o144;
-assert const 100 == 0x64;
-assert const 2748 == 0xabc;
-assert const 2748 == 0xABC;
+assert const 100 == 0b1100100
+assert const 100 == 0100
+assert const 100 == 0o144
+assert const 100 == 0x64
+assert const 2748 == 0xabc
+assert const 2748 == 0xABC
 ", "
 <stdin>:2:21: warning: Number interpreted as decimal (use the prefix \"0o\" for octal numbers)
-assert const 100 == 0100;
+assert const 100 == 0100
                     ~~~~
 ")
 
 test("
 void foo() {
-  int x;
-  x++;
-  x--;
-  ++x;
-  --x;
-  x = x++;
-  x = x--;
-  x = ++x;
-  x = --x;
+  int x
+  x++
+  x--
+  ++x
+  --x
+  x = x++
+  x = x--
+  x = ++x
+  x = --x
 }
 ", "
 <stdin>:7:7: error: Assignment expressions are not allowed inside other expressions
-  x = x++;
+  x = x++
       ~~~
 <stdin>:8:7: error: Assignment expressions are not allowed inside other expressions
-  x = x--;
+  x = x--
       ~~~
 <stdin>:9:7: error: Assignment expressions are not allowed inside other expressions
-  x = ++x;
+  x = ++x
       ~~~
 <stdin>:10:7: error: Assignment expressions are not allowed inside other expressions
-  x = --x;
+  x = --x
       ~~~
 ")
 
 test("
 void foo() {
-  int x;
-  x = (x = 1);
-  x = (x += 1);
-  x = (x -= 1);
-  x = (x *= 1);
-  x = (x /= 1);
-  x = (x %= 1);
-  x = (x <<= 1);
-  x = (x >>= 1);
-  x = (x &= 1);
-  x = (x |= 1);
-  x = (x ^= 1);
+  int x
+  x = (x = 1)
+  x = (x += 1)
+  x = (x -= 1)
+  x = (x *= 1)
+  x = (x /= 1)
+  x = (x %= 1)
+  x = (x <<= 1)
+  x = (x >>= 1)
+  x = (x &= 1)
+  x = (x |= 1)
+  x = (x ^= 1)
 }
 ", "
 <stdin>:3:7: error: Assignment expressions are not allowed inside other expressions
-  x = (x = 1);
+  x = (x = 1)
       ~~~~~~~
 <stdin>:4:7: error: Assignment expressions are not allowed inside other expressions
-  x = (x += 1);
+  x = (x += 1)
       ~~~~~~~~
 <stdin>:5:7: error: Assignment expressions are not allowed inside other expressions
-  x = (x -= 1);
+  x = (x -= 1)
       ~~~~~~~~
 <stdin>:6:7: error: Assignment expressions are not allowed inside other expressions
-  x = (x *= 1);
+  x = (x *= 1)
       ~~~~~~~~
 <stdin>:7:7: error: Assignment expressions are not allowed inside other expressions
-  x = (x /= 1);
+  x = (x /= 1)
       ~~~~~~~~
 <stdin>:8:7: error: Assignment expressions are not allowed inside other expressions
-  x = (x %= 1);
+  x = (x %= 1)
       ~~~~~~~~
 <stdin>:9:7: error: Assignment expressions are not allowed inside other expressions
-  x = (x <<= 1);
+  x = (x <<= 1)
       ~~~~~~~~~
 <stdin>:10:7: error: Assignment expressions are not allowed inside other expressions
-  x = (x >>= 1);
+  x = (x >>= 1)
       ~~~~~~~~~
 <stdin>:11:7: error: Assignment expressions are not allowed inside other expressions
-  x = (x &= 1);
+  x = (x &= 1)
       ~~~~~~~~
 <stdin>:12:7: error: Assignment expressions are not allowed inside other expressions
-  x = (x |= 1);
+  x = (x |= 1)
       ~~~~~~~~
 <stdin>:13:7: error: Assignment expressions are not allowed inside other expressions
-  x = (x ^= 1);
+  x = (x ^= 1)
       ~~~~~~~~
 ")
 
 test("
 void foo(int x) {
-  x += 1;
-  x -= 1;
-  x *= 1;
-  x /= 1;
-  x %= 1;
-  x <<= 1;
-  x >>= 1;
-  x &= 1;
-  x |= 1;
-  x ^= 1;
+  x += 1
+  x -= 1
+  x *= 1
+  x /= 1
+  x %= 1
+  x <<= 1
+  x >>= 1
+  x &= 1
+  x |= 1
+  x ^= 1
 }
 ", "
 ")
 
 test("
 void foo(float x) {
-  x += 1;
-  x -= 1;
-  x *= 1;
-  x /= 1;
-  x %= 1;
-  x <<= 1;
-  x >>= 1;
-  x &= 1;
-  x |= 1;
-  x ^= 1;
+  x += 1
+  x -= 1
+  x *= 1
+  x /= 1
+  x %= 1
+  x <<= 1
+  x >>= 1
+  x &= 1
+  x |= 1
+  x ^= 1
 }
 ", "
 <stdin>:7:3: error: No binary operator \"<<=\" for type \"float\" and type \"int\"
-  x <<= 1;
+  x <<= 1
   ~~~~~~~
 <stdin>:8:3: error: No binary operator \">>=\" for type \"float\" and type \"int\"
-  x >>= 1;
+  x >>= 1
   ~~~~~~~
 <stdin>:9:3: error: No binary operator \"&=\" for type \"float\" and type \"int\"
-  x &= 1;
+  x &= 1
   ~~~~~~
 <stdin>:10:3: error: No binary operator \"|=\" for type \"float\" and type \"int\"
-  x |= 1;
+  x |= 1
   ~~~~~~
 <stdin>:11:3: error: No binary operator \"^=\" for type \"float\" and type \"int\"
-  x ^= 1;
+  x ^= 1
   ~~~~~~
 ")
 
 test("
 void foo(double x) {
-  x += 1;
-  x -= 1;
-  x *= 1;
-  x /= 1;
-  x %= 1;
-  x <<= 1;
-  x >>= 1;
-  x &= 1;
-  x |= 1;
-  x ^= 1;
+  x += 1
+  x -= 1
+  x *= 1
+  x /= 1
+  x %= 1
+  x <<= 1
+  x >>= 1
+  x &= 1
+  x |= 1
+  x ^= 1
 }
 ", "
 <stdin>:7:3: error: No binary operator \"<<=\" for type \"double\" and type \"int\"
-  x <<= 1;
+  x <<= 1
   ~~~~~~~
 <stdin>:8:3: error: No binary operator \">>=\" for type \"double\" and type \"int\"
-  x >>= 1;
+  x >>= 1
   ~~~~~~~
 <stdin>:9:3: error: No binary operator \"&=\" for type \"double\" and type \"int\"
-  x &= 1;
+  x &= 1
   ~~~~~~
 <stdin>:10:3: error: No binary operator \"|=\" for type \"double\" and type \"int\"
-  x |= 1;
+  x |= 1
   ~~~~~~
 <stdin>:11:3: error: No binary operator \"^=\" for type \"double\" and type \"int\"
-  x ^= 1;
+  x ^= 1
   ~~~~~~
 ")
 
@@ -187,14 +187,14 @@ class Foo {
   @OperatorNegative void baz(int x) {}
 }
 void foo(Foo foo) {
-  -foo;
+  -foo
 }
 ", "
 <stdin>:4:29: error: Expected 0 arguments because of \"@OperatorNegative\" but found 1 argument
   @OperatorNegative void baz(int x) {}
                             ~~~~~~~
 <stdin>:7:3: error: Binary operator \"-\" is ambiguous, could be \"Foo.foo\" or \"Foo.bar\"
-  -foo;
+  -foo
   ~~~~
 ")
 
@@ -205,7 +205,7 @@ class Foo {
   @OperatorAdd void baz(int x, int y) {}
 }
 void foo(Foo foo) {
-  foo + 0;
+  foo + 0
 }
 ", "
 <stdin>:2:24: error: Expected 1 argument because of \"@OperatorAdd\" but found 0 arguments
@@ -223,13 +223,13 @@ class Foo {
 }
 enum Bar { FOO }
 void foo(Foo foo) {
-  foo + Bar.FOO;
-  foo + (int)Bar.FOO;
-  foo + (double)Bar.FOO;
+  foo + Bar.FOO
+  foo + (int)Bar.FOO
+  foo + (double)Bar.FOO
 }
 ", "
 <stdin>:7:3: error: Binary operator \"+\" is ambiguous, could be \"Foo.foo\" or \"Foo.bar\"
-  foo + Bar.FOO;
+  foo + Bar.FOO
   ~~~~~~~~~~~~~
 ")
 
@@ -241,108 +241,108 @@ class Foo {
 }
 enum Bar { FOO }
 void foo(Foo foo) {
-  foo + Bar.FOO;
-  foo + (int)Bar.FOO;
-  foo + (double)Bar.FOO;
+  foo + Bar.FOO
+  foo + (int)Bar.FOO
+  foo + (double)Bar.FOO
 }
 ", "
 ")
 
 test("
 namespace ns {
-  interface Foo { virtual Bar foo(); }
+  interface Foo { virtual Bar foo() }
   interface Bar {}
 }
 class Bar : ns.Foo {
-  bool bar(ns.Bar bar) { return foo != bar; }
+  bool bar(ns.Bar bar) { return foo != bar }
 }
 ", "
 <stdin>:6:33: error: No binary operator \"!=\" for type \"ns.Bar fn()\" and type \"ns.Bar\"
-  bool bar(ns.Bar bar) { return foo != bar; }
+  bool bar(ns.Bar bar) { return foo != bar }
                                 ~~~~~~~~~~
 ")
 
 test("
 void foo() {
-  var foo = {};
+  var foo = {}
 }
 ", "
 <stdin>:2:13: error: Cannot infer a common key type for this map literal
-  var foo = {};
+  var foo = {}
             ~~
 ")
 
 test("
 enum Foo { FOO, BAR }
 void foo() {
-  var foo = { 0: false, 1: true };
-  var bar = { \"a\": false, \"b\": true };
-  var baz = { Foo.FOO: false, Foo.BAR: true };
+  var foo = { 0: false, 1: true }
+  var bar = { \"a\": false, \"b\": true }
+  var baz = { Foo.FOO: false, Foo.BAR: true }
 }
 ", "
 ")
 
 test("
 void foo() {
-  StringMap<bool> foo = { 0: 0, 1: 1 };
+  StringMap<bool> foo = { 0: 0, 1: 1 }
 }
 ", "
 <stdin>:2:27: error: Cannot convert from type \"int\" to type \"string\"
-  StringMap<bool> foo = { 0: 0, 1: 1 };
+  StringMap<bool> foo = { 0: 0, 1: 1 }
                           ^
 <stdin>:2:30: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  StringMap<bool> foo = { 0: 0, 1: 1 };
+  StringMap<bool> foo = { 0: 0, 1: 1 }
                              ^
 <stdin>:2:33: error: Cannot convert from type \"int\" to type \"string\"
-  StringMap<bool> foo = { 0: 0, 1: 1 };
+  StringMap<bool> foo = { 0: 0, 1: 1 }
                                 ^
 <stdin>:2:36: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  StringMap<bool> foo = { 0: 0, 1: 1 };
+  StringMap<bool> foo = { 0: 0, 1: 1 }
                                    ^
 ")
 
 test("
 void foo() {
-  IntMap<bool> foo = { false: 0, true: 1 };
+  IntMap<bool> foo = { false: 0, true: 1 }
 }
 ", "
 <stdin>:2:24: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-  IntMap<bool> foo = { false: 0, true: 1 };
+  IntMap<bool> foo = { false: 0, true: 1 }
                        ~~~~~
 <stdin>:2:31: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  IntMap<bool> foo = { false: 0, true: 1 };
+  IntMap<bool> foo = { false: 0, true: 1 }
                               ^
 <stdin>:2:34: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-  IntMap<bool> foo = { false: 0, true: 1 };
+  IntMap<bool> foo = { false: 0, true: 1 }
                                  ~~~~
 <stdin>:2:40: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  IntMap<bool> foo = { false: 0, true: 1 };
+  IntMap<bool> foo = { false: 0, true: 1 }
                                        ^
 ")
 
 test("
 void foo() {
-  var foo = { 0: false, true: 1 };
+  var foo = { 0: false, true: 1 }
 }
 ", "
 <stdin>:2:13: error: Cannot infer a common key type for this map literal
-  var foo = { 0: false, true: 1 };
+  var foo = { 0: false, true: 1 }
             ~~~~~~~~~~~~~~~~~~~~~
 <stdin>:2:13: error: Cannot infer a common value type for this map literal
-  var foo = { 0: false, true: 1 };
+  var foo = { 0: false, true: 1 }
             ~~~~~~~~~~~~~~~~~~~~~
 ")
 
 test("
 int foo(int foo) {
-  return foo is int;
+  return foo is int
 }
 ", "
 <stdin>:2:10: error: No binary operator \"is\" for type \"int\" and type \"int\"
-  return foo is int;
+  return foo is int
          ~~~~~~~~~~
 <stdin>:2:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-  return foo is int;
+  return foo is int
          ~~~~~~~~~~
 ")
 

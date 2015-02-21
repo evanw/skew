@@ -1,7 +1,7 @@
 namespace core { void testFunctions() {
 
 test("
-import int foo();
+import int foo()
 import int bar() {}
 ", "
 <stdin>:2:18: error: Imported functions cannot have an implementation
@@ -23,7 +23,7 @@ int foo() {}
 
 test("
 int foo(bool bar) {
-  if (bar) return 0;
+  if (bar) return 0
 }
 ", "
 <stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
@@ -33,7 +33,7 @@ int foo(bool bar) {
 
 test("
 int foo(bool bar) {
-  if (bar) return 0;
+  if (bar) return 0
   else {}
 }
 ", "
@@ -44,9 +44,9 @@ int foo(bool bar) {
 
 test("
 int foo(bool bar) {
-  if (bar) return 0;
-  else if (bar) return 0;
-  else return 0;
+  if (bar) return 0
+  else if (bar) return 0
+  else return 0
 }
 ", "
 ")
@@ -54,7 +54,7 @@ int foo(bool bar) {
 test("
 int foo(int bar) {
   switch (bar) {
-    case 0 { return 0; }
+    case 0 { return 0 }
   }
 }
 ", "
@@ -66,7 +66,7 @@ int foo(int bar) {
 test("
 int foo(int bar) {
   switch (bar) {
-    case 0 { return 0; }
+    case 0 { return 0 }
     case 1 {}
   }
 }
@@ -79,7 +79,7 @@ int foo(int bar) {
 test("
 int foo(int bar) {
   switch (bar) {
-    case 0 { return 0; }
+    case 0 { return 0 }
     default {}
   }
 }
@@ -92,8 +92,8 @@ int foo(int bar) {
 test("
 int foo(int bar) {
   switch (bar) {
-    case 0 { return 0; }
-    default { if (bar < 5) return 1; }
+    case 0 { return 0 }
+    default { if (bar < 5) return 1 }
   }
 }
 ", "
@@ -105,8 +105,8 @@ int foo(int bar) {
 test("
 int foo(int bar) {
   switch (bar) {
-    case 0 { return 0; }
-    default { if (bar < 5) return 1; else return 2; }
+    case 0 { return 0 }
+    default { if (bar < 5) return 1; else return 2 }
   }
 }
 ", "
@@ -114,83 +114,83 @@ int foo(int bar) {
 
 test("
 int foo() {
-  return 0;
-  1;
+  return 0
+  1
 }
 ", "
 <stdin>:3:3: warning: Unused expression
-  1;
+  1
   ^
 ")
 
 test("
-void foo();
+void foo()
 ", "
 <stdin>:1:6: error: Use the \"import\" modifier to import functions
-void foo();
+void foo()
      ~~~
 ")
 
 test("
-class Foo { void foo(); }
-interface Baz { void foo(); }
+class Foo { void foo() }
+interface Baz { void foo() }
 ", "
 <stdin>:1:18: error: Abstract functions must use the \"virtual\" modifier
-class Foo { void foo(); }
+class Foo { void foo() }
                  ~~~
 <stdin>:2:22: error: Abstract functions must use the \"virtual\" modifier
-interface Baz { void foo(); }
+interface Baz { void foo() }
                      ~~~
 ")
 
 test("
-class Foo { virtual void foo(); }
-interface Baz { virtual void foo(); }
+class Foo { virtual void foo() }
+interface Baz { virtual void foo() }
 ", "
 ")
 
 test("
-import class A { new(); }
-import class B { import new(); }
-import class C { export new(); }
+import class A { new() }
+import class B { import new() }
+import class C { export new() }
 ", "
 <stdin>:2:18: error: Redundant modifier \"import\" inside an imported type
-import class B { import new(); }
+import class B { import new() }
                  ~~~~~~
 <stdin>:3:18: error: Cannot use the \"export\" modifier inside an imported type
-import class C { export new(); }
+import class C { export new() }
                  ~~~~~~
 ")
 
 test("
-export class A { new(); }
-export class B { import new(); }
-export class C { export new(); }
+export class A { new() }
+export class B { import new() }
+export class C { export new() }
 ", "
 <stdin>:1:18: error: Every constructor must have an implementation
-export class A { new(); }
+export class A { new() }
                  ~~~
 <stdin>:2:18: error: Cannot use the \"import\" modifier inside a non-imported type
-export class B { import new(); }
+export class B { import new() }
                  ~~~~~~
 <stdin>:2:25: error: Every constructor must have an implementation
-export class B { import new(); }
+export class B { import new() }
                         ~~~
 <stdin>:3:18: error: Redundant modifier \"export\" inside an exported type
-export class C { export new(); }
+export class C { export new() }
                  ~~~~~~
 <stdin>:3:25: error: Every constructor must have an implementation
-export class C { export new(); }
+export class C { export new() }
                         ~~~
 ")
 
 test("
 import class Foo {
-  new();
-  void foo();
+  new()
+  void foo()
 }
 export void foo() {
-  Foo();
+  Foo()
 }
 ", "
 ")
@@ -221,11 +221,11 @@ class Bar : Foo {
   new() : super() {}
 }
 class Baz : Foo {
-  new() { super(); }
+  new() { super() }
 }
 ", "
 <stdin>:8:11: error: Cannot use \"super\" here
-  new() { super(); }
+  new() { super() }
           ~~~~~~~
 ")
 

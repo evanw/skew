@@ -1,307 +1,307 @@
 namespace core { void testConversions() {
 
 test("
-assert const (bool)false == false;
-assert const (bool)true == true;
-assert const (bool)-1 == true;
-assert const (bool)0 == false;
-assert const (bool)1 == true;
-assert const (bool)2 == true;
-assert const (bool)2.5f == true;
-assert const (bool)2.5 == true;
+assert const (bool)false == false
+assert const (bool)true == true
+assert const (bool)-1 == true
+assert const (bool)0 == false
+assert const (bool)1 == true
+assert const (bool)2 == true
+assert const (bool)2.5f == true
+assert const (bool)2.5 == true
 ", "
 ")
 
 test("
-assert const (int)false == 0;
-assert const (int)true == 1;
-assert const (int)-2 == -2;
-assert const (int)-2.5f == -2;
-assert const (int)-2.5 == -2;
-assert const (int)2 == 2;
-assert const (int)2.5f == 2;
-assert const (int)2.5 == 2;
+assert const (int)false == 0
+assert const (int)true == 1
+assert const (int)-2 == -2
+assert const (int)-2.5f == -2
+assert const (int)-2.5 == -2
+assert const (int)2 == 2
+assert const (int)2.5f == 2
+assert const (int)2.5 == 2
 ", "
 ")
 
 test("
-assert const (float)false == 0.0f;
-assert const (float)true == 1.0f;
-assert const (float)-2 == -2.0f;
-assert const (float)-2.5f == -2.5f;
-assert const (float)-2.5 == -2.5f;
-assert const (float)2 == 2.0f;
-assert const (float)2.5f == 2.5f;
-assert const (float)2.5 == 2.5f;
+assert const (float)false == 0.0f
+assert const (float)true == 1.0f
+assert const (float)-2 == -2.0f
+assert const (float)-2.5f == -2.5f
+assert const (float)-2.5 == -2.5f
+assert const (float)2 == 2.0f
+assert const (float)2.5f == 2.5f
+assert const (float)2.5 == 2.5f
 ", "
 ")
 
 test("
-assert const (double)false == 0.0;
-assert const (double)true == 1.0;
-assert const (double)-2 == -2.0;
-assert const (double)-2.5f == -2.5;
-assert const (double)-2.5 == -2.5;
-assert const (double)2 == 2.0;
-assert const (double)2.5f == 2.5;
-assert const (double)2.5 == 2.5;
+assert const (double)false == 0.0
+assert const (double)true == 1.0
+assert const (double)-2 == -2.0
+assert const (double)-2.5f == -2.5
+assert const (double)-2.5 == -2.5
+assert const (double)2 == 2.0
+assert const (double)2.5f == 2.5
+assert const (double)2.5 == 2.5
 ", "
 ")
 
 test("
-assert const 3 / 2 == 1;
-assert const 3f / 2 == 1.5;
-assert const 3.0 / 2 == 1.5;
-assert const 3 / 2f == 1.5;
-assert const 3 / 2.0 == 1.5;
-assert const 3f / 2f == 1.5;
-assert const 3.0 / 2.0 == 1.5;
+assert const 3 / 2 == 1
+assert const 3f / 2 == 1.5
+assert const 3.0 / 2 == 1.5
+assert const 3 / 2f == 1.5
+assert const 3 / 2.0 == 1.5
+assert const 3f / 2f == 1.5
+assert const 3.0 / 2.0 == 1.5
 ", "
 ")
 
 test("
-int a = 0;
-int b = false;
-int c = 0.0f;
-int d = 0.0;
-int e = null;
-int f = \"\";
+int a = 0
+int b = false
+int c = 0.0f
+int d = 0.0
+int e = null
+int f = \"\"
 ", "
 <stdin>:2:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-int b = false;
+int b = false
         ~~~~~
 <stdin>:3:9: error: Cannot convert from type \"float\" to type \"int\" without a cast
-int c = 0.0f;
+int c = 0.0f
         ~~~~
 <stdin>:4:9: error: Cannot convert from type \"double\" to type \"int\" without a cast
-int d = 0.0;
+int d = 0.0
         ~~~
 <stdin>:5:9: error: Cannot convert from type \"null\" to type \"int\"
-int e = null;
+int e = null
         ~~~~
 <stdin>:6:9: error: Cannot convert from type \"string\" to type \"int\"
-int f = \"\";
+int f = \"\"
         ~~
 ")
 
 test("
-bool a = 0;
-bool b = false;
-bool c = 0.0f;
-bool d = 0.0;
-bool e = null;
-bool f = \"\";
+bool a = 0
+bool b = false
+bool c = 0.0f
+bool d = 0.0
+bool e = null
+bool f = \"\"
 ", "
 <stdin>:1:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool a = 0;
+bool a = 0
          ^
 <stdin>:3:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
-bool c = 0.0f;
+bool c = 0.0f
          ~~~~
 <stdin>:4:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-bool d = 0.0;
+bool d = 0.0
          ~~~
 <stdin>:5:10: error: Cannot convert from type \"null\" to type \"bool\"
-bool e = null;
+bool e = null
          ~~~~
 <stdin>:6:10: error: Cannot convert from type \"string\" to type \"bool\"
-bool f = \"\";
+bool f = \"\"
          ~~
 ")
 
 test("
-float a = 0;
-float b = false;
-float c = 0.0f;
-float d = 0.0;
-float e = null;
-float f = \"\";
+float a = 0
+float b = false
+float c = 0.0f
+float d = 0.0
+float e = null
+float f = \"\"
 ", "
 <stdin>:2:11: error: Cannot convert from type \"bool\" to type \"float\" without a cast
-float b = false;
+float b = false
           ~~~~~
 <stdin>:5:11: error: Cannot convert from type \"null\" to type \"float\"
-float e = null;
+float e = null
           ~~~~
 <stdin>:6:11: error: Cannot convert from type \"string\" to type \"float\"
-float f = \"\";
+float f = \"\"
           ~~
 ")
 
 test("
-double a = 0;
-double b = false;
-double c = 0.0f;
-double d = 0.0;
-double e = null;
-double f = \"\";
+double a = 0
+double b = false
+double c = 0.0f
+double d = 0.0
+double e = null
+double f = \"\"
 ", "
 <stdin>:2:12: error: Cannot convert from type \"bool\" to type \"double\" without a cast
-double b = false;
+double b = false
            ~~~~~
 <stdin>:5:12: error: Cannot convert from type \"null\" to type \"double\"
-double e = null;
+double e = null
            ~~~~
 <stdin>:6:12: error: Cannot convert from type \"string\" to type \"double\"
-double f = \"\";
+double f = \"\"
            ~~
 ")
 
 test("
-string a = 0;
-string b = false;
-string c = 0.0f;
-string d = 0.0;
-string e = null;
-string f = \"\";
+string a = 0
+string b = false
+string c = 0.0f
+string d = 0.0
+string e = null
+string f = \"\"
 ", "
 <stdin>:1:12: error: Cannot convert from type \"int\" to type \"string\"
-string a = 0;
+string a = 0
            ^
 <stdin>:2:12: error: Cannot convert from type \"bool\" to type \"string\"
-string b = false;
+string b = false
            ~~~~~
 <stdin>:3:12: error: Cannot convert from type \"float\" to type \"string\"
-string c = 0.0f;
+string c = 0.0f
            ~~~~
 <stdin>:4:12: error: Cannot convert from type \"double\" to type \"string\"
-string d = 0.0;
+string d = 0.0
            ~~~
 <stdin>:5:12: error: Cannot convert from type \"null\" to type \"string\"
-string e = null;
+string e = null
            ~~~~
 ")
 
 test("
-int a = (int)0;
-int b = (int)false;
-int c = (int)0.0f;
-int d = (int)0.0;
-int e = (int)null;
-int f = (int)\"\";
+int a = (int)0
+int b = (int)false
+int c = (int)0.0f
+int d = (int)0.0
+int e = (int)null
+int f = (int)\"\"
 ", "
 <stdin>:5:14: error: Cannot convert from type \"null\" to type \"int\"
-int e = (int)null;
+int e = (int)null
              ~~~~
 <stdin>:6:14: error: Cannot convert from type \"string\" to type \"int\"
-int f = (int)\"\";
+int f = (int)\"\"
              ~~
 ")
 
 test("
-bool a = (bool)0;
-bool b = (bool)false;
-bool c = (bool)0.0f;
-bool d = (bool)0.0;
-bool e = (bool)null;
-bool f = (bool)\"\";
+bool a = (bool)0
+bool b = (bool)false
+bool c = (bool)0.0f
+bool d = (bool)0.0
+bool e = (bool)null
+bool f = (bool)\"\"
 ", "
 <stdin>:5:16: error: Cannot convert from type \"null\" to type \"bool\"
-bool e = (bool)null;
+bool e = (bool)null
                ~~~~
 <stdin>:6:16: error: Cannot convert from type \"string\" to type \"bool\"
-bool f = (bool)\"\";
+bool f = (bool)\"\"
                ~~
 ")
 
 test("
-float a = (float)0;
-float b = (float)false;
-float c = (float)0.0f;
-float d = (float)0.0;
-float e = (float)null;
-float f = (float)\"\";
+float a = (float)0
+float b = (float)false
+float c = (float)0.0f
+float d = (float)0.0
+float e = (float)null
+float f = (float)\"\"
 ", "
 <stdin>:5:18: error: Cannot convert from type \"null\" to type \"float\"
-float e = (float)null;
+float e = (float)null
                  ~~~~
 <stdin>:6:18: error: Cannot convert from type \"string\" to type \"float\"
-float f = (float)\"\";
+float f = (float)\"\"
                  ~~
 ")
 
 test("
-double a = (double)0;
-double b = (double)false;
-double c = (double)0.0f;
-double d = (double)0.0;
-double e = (double)null;
-double f = (double)\"\";
+double a = (double)0
+double b = (double)false
+double c = (double)0.0f
+double d = (double)0.0
+double e = (double)null
+double f = (double)\"\"
 ", "
 <stdin>:5:20: error: Cannot convert from type \"null\" to type \"double\"
-double e = (double)null;
+double e = (double)null
                    ~~~~
 <stdin>:6:20: error: Cannot convert from type \"string\" to type \"double\"
-double f = (double)\"\";
+double f = (double)\"\"
                    ~~
 ")
 
 test("
-string a = (string)0;
-string b = (string)false;
-string c = (string)0.0f;
-string d = (string)0.0;
-string e = (string)null;
-string f = (string)\"\";
+string a = (string)0
+string b = (string)false
+string c = (string)0.0f
+string d = (string)0.0
+string e = (string)null
+string f = (string)\"\"
 ", "
 <stdin>:1:20: error: Cannot convert from type \"int\" to type \"string\"
-string a = (string)0;
+string a = (string)0
                    ^
 <stdin>:2:20: error: Cannot convert from type \"bool\" to type \"string\"
-string b = (string)false;
+string b = (string)false
                    ~~~~~
 <stdin>:3:20: error: Cannot convert from type \"float\" to type \"string\"
-string c = (string)0.0f;
+string c = (string)0.0f
                    ~~~~
 <stdin>:4:20: error: Cannot convert from type \"double\" to type \"string\"
-string d = (string)0.0;
+string d = (string)0.0
                    ~~~
 <stdin>:5:20: error: Cannot convert from type \"null\" to type \"string\"
-string e = (string)null;
+string e = (string)null
                    ~~~~
 ")
 
 test("
 class C {}
 interface I {}
-C c = null;
-I i = null;
+C c = null
+I i = null
 ", "
 ")
 
 test("
-int x = true ? true : false;
+int x = true ? true : false
 ", "
 <stdin>:1:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-int x = true ? true : false;
+int x = true ? true : false
         ~~~~~~~~~~~~~~~~~~~
 ")
 
 test("
-bool x = true ? 0 : 1.0f;
+bool x = true ? 0 : 1.0f
 ", "
 <stdin>:1:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
-bool x = true ? 0 : 1.0f;
+bool x = true ? 0 : 1.0f
          ~~~~~~~~~~~~~~~
 ")
 
 test("
-int x = true ? 1 : false;
+int x = true ? 1 : false
 ", "
 <stdin>:1:16: error: No common type for type \"int\" and type \"bool\"
-int x = true ? 1 : false;
+int x = true ? 1 : false
                ~~~~~~~~~
 ")
 
 test("
 class Foo {
   void baz() {
-    int x = this;
+    int x = this
   }
 }
 ", "
 <stdin>:3:13: error: Cannot convert from type \"Foo\" to type \"int\"
-    int x = this;
+    int x = this
             ~~~~
 ")
 
@@ -319,75 +319,75 @@ enum Foo {
 
 test("
 void test() {
-  assert 0;
+  assert 0
 }
 ", "
 <stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  assert 0;
+  assert 0
          ^
 ")
 
 test("
-int foo() { return; }
-void bar() { return 100; }
-void baz() { return bar(); }
+int foo() { return }
+void bar() { return 100 }
+void baz() { return bar() }
 ", "
 <stdin>:1:13: error: Return statement must return type \"int\"
-int foo() { return; }
-            ~~~~~~~
+int foo() { return }
+            ~~~~~~
 <stdin>:2:21: error: Cannot convert from type \"int\" to type \"void\"
-void bar() { return 100; }
+void bar() { return 100 }
                     ~~~
 <stdin>:3:21: error: Unexpected expression of type \"void\"
-void baz() { return bar(); }
+void baz() { return bar() }
                     ~~~~~
 ")
 
 test("
 class Foo {
-  int toString() { return 0; }
+  int toString() { return 0 }
 }
 void foo() {
-  Foo() + \"\";
-  \"\" + Foo();
+  Foo() + \"\"
+  \"\" + Foo()
 }
 ", "
 <stdin>:5:3: error: Expected toString() to have type \"string fn()\" but found type \"int fn()\"
-  Foo() + \"\";
+  Foo() + \"\"
   ~~~~~
 <stdin>:2:7: note: The declaration for toString() is here
-  int toString() { return 0; }
+  int toString() { return 0 }
       ~~~~~~~~
 <stdin>:6:8: error: Expected toString() to have type \"string fn()\" but found type \"int fn()\"
-  \"\" + Foo();
+  \"\" + Foo()
        ~~~~~
 <stdin>:2:7: note: The declaration for toString() is here
-  int toString() { return 0; }
+  int toString() { return 0 }
       ~~~~~~~~
 ")
 
 test("
-var foo = null + \"\";
-var bar = null.toString() + \"\";
+var foo = null + \"\"
+var bar = null.toString() + \"\"
 ", "
 <stdin>:1:11: error: Expression of type \"null\" has no toString() member to call
-var foo = null + \"\";
+var foo = null + \"\"
           ~~~~
 <stdin>:2:16: error: \"toString\" is not declared on type \"null\"
-var bar = null.toString() + \"\";
+var bar = null.toString() + \"\"
                ~~~~~~~~
 ")
 
 test("
 class Foo {
-  static string toString() { return \"nope\"; }
+  static string toString() { return \"nope\" }
 }
 string foo(Foo foo) {
-  return foo + \"!\";
+  return foo + \"!\"
 }
 ", "
 <stdin>:5:10: error: Expression of type \"Foo\" has no toString() member to call
-  return foo + \"!\";
+  return foo + \"!\"
          ~~~
 ")
 

@@ -15,7 +15,7 @@ void foo() {}
 testJS("
 @EntryPoint
 int foo() {
-  return 0;
+  return 0
 }
 ", "
 (function() {
@@ -42,7 +42,7 @@ void foo(List<string> args) {}
 testJS("
 @EntryPoint
 int foo(List<string> args) {
-  return 0;
+  return 0
 }
 ", "
 (function() {

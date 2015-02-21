@@ -1,6 +1,6 @@
 class ParserContext {
   Log log
-  var inVoidFunction = false
+  var inNonVoidFunction = false
   var needsPreprocessor = false
   private List<Token> tokens
   private var index = 0
@@ -41,6 +41,11 @@ class ParserContext {
       return true
     }
     return false
+  }
+
+  void undo() {
+    assert index > 0
+    index--
   }
 
   bool expect(TokenKind kind) {

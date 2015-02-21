@@ -287,7 +287,7 @@ int foo(bool bar) {
       0
     #else
       1
-    #endif;
+    #endif
 }
 ", "
 <stdin>:3:9: error: \"bar\" is not a valid preprocessor symbol
@@ -302,7 +302,7 @@ int foo(bool bar) {
       0
     #else
       1
-    #endif;
+    #endif
 }
 namespace ns {
   #define bar true
@@ -316,7 +316,7 @@ List<int> foo(bool bar) {
     #if bar
       0
     #endif
-  ];
+  ]
 }
 ", "
 <stdin>:3:9: error: \"bar\" is not a valid preprocessor symbol
@@ -330,7 +330,7 @@ List<int> foo(bool bar) {
     #if bar
       0
     #endif
-  ];
+  ]
 }
 namespace ns {
   #define bar true
@@ -341,15 +341,15 @@ namespace ns {
 test("
 namespace ns {
   #if true
-    int foo;
+    int foo
   #endif
 }
 bool foo() {
-  return ns.foo;
+  return ns.foo
 }
 ", "
 <stdin>:7:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  return ns.foo;
+  return ns.foo
          ~~~~~~
 ")
 
@@ -358,7 +358,7 @@ bool foo = [
   #if true
     1, false,
   #endif
-];
+]
 ", "
 <stdin>:1:12: error: Cannot infer a common element type for this list literal
 bool foo = [
@@ -372,7 +372,7 @@ bool foo = [
     2, false,
   #endif
   3,
-];
+]
 ", "
 <stdin>:1:12: error: Cannot infer a common element type for this list literal
 bool foo = [
@@ -385,7 +385,7 @@ bool foo = [
   #if true
   #endif
   3,
-];
+]
 ", "
 <stdin>:1:12: error: Cannot convert from type \"List<int>\" to type \"bool\"
 bool foo = [
@@ -399,7 +399,7 @@ bool foo = [
     2, false,
   #endif
   3,
-];
+]
 ", "
 <stdin>:1:12: error: Cannot convert from type \"List<int>\" to type \"bool\"
 bool foo = [
@@ -414,7 +414,7 @@ bool foo = [
     2, false,
   #endif
   3,
-];
+]
 ", "
 <stdin>:1:12: error: Cannot infer a common element type for this list literal
 bool foo = [
@@ -422,13 +422,13 @@ bool foo = [
 ")
 
 test("
-import void foo(int x, int y);
+import void foo(int x, int y)
 void bar() {
   foo(
     #if true
       true, false
     #endif
-  );
+  )
 }
 ", "
 <stdin>:5:7: error: Cannot convert from type \"bool\" to type \"int\" without a cast
@@ -494,11 +494,11 @@ test("
 ")
 
 test("
-var foo = foo;
+var foo = foo
 #define foo true
 ", "
 <stdin>:1:5: error: \"foo\" is already declared
-var foo = foo;
+var foo = foo
     ~~~
 <stdin>:2:9: note: The previous declaration is here
 #define foo true
@@ -507,10 +507,10 @@ var foo = foo;
 
 test("
 #define foo true
-var foo = foo;
+var foo = foo
 ", "
 <stdin>:2:5: error: \"foo\" is already declared
-var foo = foo;
+var foo = foo
     ~~~
 <stdin>:1:9: note: The previous declaration is here
 #define foo true
@@ -518,7 +518,7 @@ var foo = foo;
 ")
 
 test("
-int x = baz;
+int x = baz
 #if foo
   #define bar true
 #endif
@@ -528,7 +528,7 @@ int x = baz;
 #define foo true
 ", "
 <stdin>:1:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-int x = baz;
+int x = baz
         ~~~
 ")
 
@@ -561,9 +561,9 @@ test("
 ")
 
 test("
-assert const TARGET_NONE == true;
-assert const foo == true;
-const var foo = TARGET_NONE;
+assert const TARGET_NONE == true
+assert const foo == true
+const var foo = TARGET_NONE
 ", "
 ")
 

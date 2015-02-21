@@ -30,6 +30,7 @@ in Precedence {
 
 enum StatementHint {
   NORMAL,
+  IN_IF,
   IN_ENUM,
   IN_OBJECT,
   IN_SWITCH,
@@ -42,12 +43,24 @@ enum ListMode {
 
 bool peekEndOfLine(ParserContext context) {
   return
+    context.peek(.SEMICOLON) ||
     context.peek(.NEWLINE) ||
     context.peek(.RIGHT_BRACE) ||
     context.peek(.END_OF_FILE)
 }
 
 bool eatEndOfLine(ParserContext context) {
+  // One semicolon may be used instead of a newline to glue statements together
+  if (context.eat(.SEMICOLON)) {
+    if (peekEndOfLine(context)) {
+      context.undo() // Go back to semicolon
+      context.unexpectedToken() // Emit the error
+      context.next() // Go past semicolon again
+      eatEndOfLine(context) // Go past the newline
+    }
+    return true
+  }
+
   return
     context.eat(.NEWLINE) ||
     context.peek(.RIGHT_BRACE) ||
@@ -67,8 +80,7 @@ bool scanForToken(ParserContext context, TokenKind kind) {
   if (context.expect(kind)) {
     return true
   }
-  while (!eatEndOfLine(context)) {
-    context.next()
+  while (!context.eat(kind) && context.next().kind != .END_OF_FILE) {
   }
   return false
 }
@@ -109,6 +121,7 @@ Node parseBlockOrStatement(ParserContext context, StatementHint hint) {
   if (context.peek(.LEFT_BRACE)) return parseBlock(context, hint)
   var statement = parseStatement(context, hint)
   if (statement == null) return null
+  if (hint == .IN_IF && context.peek(.ELSE)) context.unexpectedToken()
   return Node.createBlock([statement]).withRange(statement.range)
 }
 
@@ -139,6 +152,7 @@ Node parseCaseStatement(ParserContext context) {
 
 List<Node> parseStatements(ParserContext context, StatementHint hint) {
   List<Node> statements = []
+  context.eat(.NEWLINE)
   while (true) {
     var kind = context.current().kind
     if (kind == .RIGHT_BRACE ||
@@ -147,9 +161,6 @@ List<Node> parseStatements(ParserContext context, StatementHint hint) {
         kind == .PREPROCESSOR_ENDIF ||
         kind == .END_OF_FILE) {
       break
-    }
-    if (context.eat(.NEWLINE)) {
-      continue
     }
     if (hint == .IN_ENUM) {
       var declaration = parseEnumValueDeclaration(context)
@@ -226,14 +237,14 @@ Node parsePreprocessorSequence(ParserContext context, ListMode mode) {
   context.needsPreprocessor = true
   var token = context.next()
   var value = pratt.parse(context, .COMMA)
-  var trueNodes = parseCommaSeparatedNodeList(context, mode)
+  var trueNodes = parsePreprocessorCommaSeparatedList(context, mode)
   Node falseNodes
   if (context.peek(.PREPROCESSOR_ELIF)) {
     var node = parsePreprocessorSequence(context, mode)
     falseNodes = Node.createNodeList([node]).withRange(node.range)
   } else {
     if (context.eat(.PREPROCESSOR_ELSE)) {
-      falseNodes = parseCommaSeparatedNodeList(context, mode)
+      falseNodes = parsePreprocessorCommaSeparatedList(context, mode)
     }
     if (!context.expect(.PREPROCESSOR_ENDIF)) {
       return errorExpressionSinceToken(context, token)
@@ -245,12 +256,12 @@ Node parsePreprocessorSequence(ParserContext context, ListMode mode) {
 bool isEndOfCommaSeparatedList(ParserContext context) {
   var kind = context.current().kind
   return
-    kind == .RIGHT_PARENTHESIS ||
-    kind == .RIGHT_BRACKET ||
-    kind == .RIGHT_BRACE ||
     kind == .PREPROCESSOR_ELIF ||
     kind == .PREPROCESSOR_ELSE ||
-    kind == .PREPROCESSOR_ENDIF
+    kind == .PREPROCESSOR_ENDIF ||
+    kind == .RIGHT_BRACE ||
+    kind == .RIGHT_BRACKET ||
+    kind == .RIGHT_PARENTHESIS
 }
 
 List<Node> parseCommaSeparatedList(ParserContext context, ListMode mode) {
@@ -262,14 +273,20 @@ List<Node> parseCommaSeparatedList(ParserContext context, ListMode mode) {
       mode == .KEY_VALUE ? parseMapKeyValuePair(context) :
       pratt.parse(context, .COMMA)
     values.push(value)
-    if (value.kind == .ERROR || !isPreprocessorSequence && !isEndOfCommaSeparatedList(context) && !context.expect(.COMMA)) break
-    eatEndOfLine(context)
+    if (value.kind == .ERROR) break
+    var ateNewline = context.eat(.NEWLINE)
+    if (!isPreprocessorSequence && !isEndOfCommaSeparatedList(context)) {
+      if (ateNewline) context.undo()
+      if (!context.expect(.COMMA)) break
+      context.eat(.NEWLINE)
+    }
   }
   return values
 }
 
-Node parseCommaSeparatedNodeList(ParserContext context, ListMode mode) {
+Node parsePreprocessorCommaSeparatedList(ParserContext context, ListMode mode) {
   var token = context.current()
+  expectEndOfLine(context)
   var values = parseCommaSeparatedList(context, mode)
   return Node.createNodeList(values).withRange(context.spanSince(token.range))
 }
@@ -380,9 +397,7 @@ Node parseConstructor(ParserContext context, StatementHint hint) {
 
   Node block = null
   if (!peekEndOfLine(context)) {
-    context.inVoidFunction = true
     block = parseBlock(context, .NORMAL)
-    context.inVoidFunction = false
     if (block == null) return null
   }
   return Node.createConstructor(name, arguments, block, superInitializer, memberInitializers).withRange(context.spanSince(token.range))
@@ -438,7 +453,7 @@ Node parseReturn(ParserContext context) {
   // better off than JavaScript since we know the type of the function. Parse
   // a single statement in a non-void function but two statements in a void
   // function.
-  if (!context.inVoidFunction) {
+  if (context.inNonVoidFunction) {
     eatEndOfLine(context)
   }
 
@@ -496,9 +511,12 @@ Node parseIf(ParserContext context) {
   var token = context.next()
   var value = parseGroup(context)
   if (value == null) return null
-  var trueBlock = parseBlockOrStatement(context, .NORMAL)
+  var trueBlock = parseBlockOrStatement(context, .IN_IF)
   if (trueBlock == null) return null
   Node falseBlock = null
+  if ((context.eat(.NEWLINE) || context.eat(.SEMICOLON)) && !context.peek(.ELSE)) {
+    context.undo()
+  }
   if (context.eat(.ELSE)) {
     falseBlock = parseBlockOrStatement(context, .NORMAL)
     if (falseBlock == null) return null
@@ -611,9 +629,9 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
     if (arguments == null) return null
     Node block = null
     if (!peekEndOfLine(context)) {
-      context.inVoidFunction = type.kind == .NAME && type.asString() == "void"
+      context.inNonVoidFunction = type.kind != .NAME || type.asString() != "void"
       block = parseBlock(context, .NORMAL)
-      context.inVoidFunction = false
+      context.inNonVoidFunction = false
       if (block == null) return null
     }
     return Node.createFunction(name, arguments, block, type, parameters).withRange(context.spanSince(type.range))
@@ -689,6 +707,7 @@ Node parsePreprocessorDiagnostic(ParserContext context, NodeKind kind) {
 }
 
 Node parsePreprocessorBlock(ParserContext context, StatementHint hint) {
+  expectEndOfLine(context)
   var token = context.current()
   var statements = parseStatements(context, hint)
   return Node.createBlock(statements).withRange(context.spanSince(token.range))
@@ -999,17 +1018,24 @@ class SuperParselet : PrefixParselet {
 }
 
 class IfParselet : PrefixParselet {
+  static Node parseExpression(ParserContext context) {
+    expectEndOfLine(context)
+    var node = pratt.parse(context, .LOWEST)
+    expectEndOfLine(context)
+    return node
+  }
+
   override Node parse(ParserContext context) {
     context.needsPreprocessor = true
     var token = context.next()
     var value = pratt.parse(context, .COMMA)
-    var trueNode = pratt.parse(context, .LOWEST)
+    var trueNode = parseExpression(context)
     Node falseNode = null
     if (context.peek(.PREPROCESSOR_ELIF)) {
       falseNode = parse(context)
     } else {
       if (!context.expect(.PREPROCESSOR_ELSE)) return errorExpressionSinceToken(context, token)
-      falseNode = pratt.parse(context, .LOWEST)
+      falseNode = parseExpression(context)
       if (!context.expect(.PREPROCESSOR_ENDIF)) return errorExpressionSinceToken(context, token)
     }
     return Node.createHook(.PREPROCESSOR_HOOK, value, trueNode, falseNode).withRange(context.spanSince(token.range))

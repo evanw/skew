@@ -30,21 +30,21 @@ public class Foo {
 ")
 
 test("
-import export alias a = int;
-import export int v;
-import export void f();
+import export alias a = int
+import export int v
+import export void f()
 import export enum E {}
 import export class C {}
 import export namespace n {}
 ", "
 <stdin>:1:8: error: Cannot use the \"export\" modifier on an imported declaration
-import export alias a = int;
+import export alias a = int
        ~~~~~~
 <stdin>:2:8: error: Cannot use the \"export\" modifier on an imported declaration
-import export int v;
+import export int v
        ~~~~~~
 <stdin>:3:8: error: Cannot use the \"export\" modifier on an imported declaration
-import export void f();
+import export void f()
        ~~~~~~
 <stdin>:4:8: error: Cannot use the \"export\" modifier on an imported declaration
 import export enum E {}
@@ -58,18 +58,18 @@ import export namespace n {}
 ")
 
 test("
-inline alias a = int;
-inline int v;
+inline alias a = int
+inline int v
 inline void f() {}
 inline enum E {}
 inline class C {}
 inline namespace n {}
 ", "
 <stdin>:1:1: error: Cannot use the \"inline\" modifier on an alias declaration
-inline alias a = int;
+inline alias a = int
 ~~~~~~
 <stdin>:2:1: error: Cannot use the \"inline\" modifier on a variable declaration
-inline int v;
+inline int v
 ~~~~~~
 <stdin>:4:1: error: Cannot use the \"inline\" modifier on an enum declaration
 inline enum E {}
@@ -83,18 +83,18 @@ inline namespace n {}
 ")
 
 test("
-const alias a = int;
-const int v;
+const alias a = int
+const int v
 const void f() {}
 const enum E {}
 const class C {}
 const namespace n {}
 ", "
 <stdin>:1:1: error: Cannot use the \"const\" modifier on an alias declaration
-const alias a = int;
+const alias a = int
 ~~~~~
 <stdin>:2:11: error: Variables with the \"const\" modifier must be initialized
-const int v;
+const int v
           ^
 <stdin>:3:1: error: Cannot use the \"const\" modifier on a function declaration
 const void f() {}
@@ -111,15 +111,15 @@ const namespace n {}
 ")
 
 test("
-final alias a = int;
-final int v;
+final alias a = int
+final int v
 final void f() {}
 final enum E {}
 final class C {}
 final namespace n {}
 ", "
 <stdin>:1:1: error: Cannot use the \"final\" modifier on an alias declaration
-final alias a = int;
+final alias a = int
 ~~~~~
 <stdin>:3:1: error: Cannot use the \"final\" modifier on a function declaration
 final void f() {}
@@ -136,18 +136,18 @@ final namespace n {}
 ")
 
 test("
-virtual alias a = int;
-virtual int v;
+virtual alias a = int
+virtual int v
 virtual void f() {}
 virtual enum E {}
 virtual class C {}
 virtual namespace n {}
 ", "
 <stdin>:1:1: error: Cannot use the \"virtual\" modifier on an alias declaration
-virtual alias a = int;
+virtual alias a = int
 ~~~~~~~
 <stdin>:2:1: error: Cannot use the \"virtual\" modifier on a variable declaration
-virtual int v;
+virtual int v
 ~~~~~~~
 <stdin>:3:1: error: Cannot use the \"virtual\" modifier outside an object declaration
 virtual void f() {}
@@ -164,18 +164,18 @@ virtual namespace n {}
 ")
 
 test("
-override alias a = int;
-override int v;
+override alias a = int
+override int v
 override void f() {}
 override enum E {}
 override class C {}
 override namespace n {}
 ", "
 <stdin>:1:1: error: Cannot use the \"override\" modifier on an alias declaration
-override alias a = int;
+override alias a = int
 ~~~~~~~~
 <stdin>:2:1: error: Cannot use the \"override\" modifier on a variable declaration
-override int v;
+override int v
 ~~~~~~~~
 <stdin>:3:1: error: Cannot use the \"override\" modifier outside an object declaration
 override void f() {}
@@ -192,18 +192,18 @@ override namespace n {}
 ")
 
 test("
-static alias a = int;
-static int v;
+static alias a = int
+static int v
 static void f() {}
 static enum E {}
 static class C {}
 static namespace n {}
 ", "
 <stdin>:1:1: error: Cannot use the \"static\" modifier on an alias declaration
-static alias a = int;
+static alias a = int
 ~~~~~~
 <stdin>:2:1: error: Cannot use the \"static\" modifier outside an object declaration
-static int v;
+static int v
 ~~~~~~
 <stdin>:3:1: error: Cannot use the \"static\" modifier outside an object declaration
 static void f() {}
@@ -222,12 +222,12 @@ static namespace n {}
 test("
 namespace foo {}
 in foo {
-  static int foo;
+  static int foo
   static void bar() {}
 }
 ", "
 <stdin>:3:3: error: Cannot use the \"static\" modifier outside an object declaration
-  static int foo;
+  static int foo
   ~~~~~~
 <stdin>:4:3: error: Cannot use the \"static\" modifier outside an object declaration
   static void bar() {}
@@ -235,18 +235,18 @@ in foo {
 ")
 
 test("
-pure alias a = int;
-pure int v;
+pure alias a = int
+pure int v
 pure void f() {}
 pure enum E {}
 pure class C {}
 pure namespace n {}
 ", "
 <stdin>:1:1: error: Cannot use the \"pure\" modifier on an alias declaration
-pure alias a = int;
+pure alias a = int
 ~~~~
 <stdin>:2:1: error: Cannot use the \"pure\" modifier on a variable declaration
-pure int v;
+pure int v
 ~~~~
 <stdin>:4:1: error: Cannot use the \"pure\" modifier on an enum declaration
 pure enum E {}
@@ -261,20 +261,20 @@ pure namespace n {}
 
 test("
 class Foo {
-  import int foo;
+  import int foo
   import void bar() {}
-  import static int foo2;
+  import static int foo2
   import static void bar2() {}
 }
 ", "
 <stdin>:2:3: error: Cannot use the \"import\" modifier inside a non-imported type
-  import int foo;
+  import int foo
   ~~~~~~
 <stdin>:3:3: error: Cannot use the \"import\" modifier inside a non-imported type
   import void bar() {}
   ~~~~~~
 <stdin>:4:3: error: Cannot use the \"import\" modifier inside a non-imported type
-  import static int foo2;
+  import static int foo2
   ~~~~~~
 <stdin>:5:3: error: Cannot use the \"import\" modifier inside a non-imported type
   import static void bar2() {}
@@ -283,14 +283,14 @@ class Foo {
 
 test("
 class Foo {
-  export int foo;
+  export int foo
   export void bar() {}
-  export static int foo2;
+  export static int foo2
   export static void bar2() {}
 }
 ", "
 <stdin>:4:3: error: Cannot use the \"export\" modifier inside a non-exported type
-  export static int foo2;
+  export static int foo2
   ~~~~~~
 <stdin>:5:3: error: Cannot use the \"export\" modifier inside a non-exported type
   export static void bar2() {}

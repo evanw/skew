@@ -5,80 +5,80 @@ void test() {
   switch (0) {
     default {}
     case 1 {}
-    default { foo; }
+    default { foo }
     case 2 {}
     default {}
   }
 }
 ", "
 <stdin>:5:15: error: \"foo\" is not declared
-    default { foo; }
+    default { foo }
               ~~~
 <stdin>:3:5: error: Only the last case can be a default case
     default {}
     ~~~~~~~~~~
 <stdin>:5:5: error: Only the last case can be a default case
-    default { foo; }
-    ~~~~~~~~~~~~~~~~
+    default { foo }
+    ~~~~~~~~~~~~~~~
 ")
 
 test("
 void test() {
   switch (0) {
-    case 1 { foo; }
-    case 2, 3, 1, 1 { foo; }
-    case 1 { foo; }
+    case 1 { foo }
+    case 2, 3, 1, 1 { foo }
+    case 1 { foo }
   }
 }
 ", "
 <stdin>:3:14: error: \"foo\" is not declared
-    case 1 { foo; }
+    case 1 { foo }
              ~~~
 <stdin>:4:23: error: \"foo\" is not declared
-    case 2, 3, 1, 1 { foo; }
+    case 2, 3, 1, 1 { foo }
                       ~~~
 <stdin>:5:14: error: \"foo\" is not declared
-    case 1 { foo; }
+    case 1 { foo }
              ~~~
 <stdin>:4:16: error: Duplicate case value
-    case 2, 3, 1, 1 { foo; }
+    case 2, 3, 1, 1 { foo }
                ^
 <stdin>:3:10: note: The first occurrence is here
-    case 1 { foo; }
+    case 1 { foo }
          ^
 <stdin>:4:19: error: Duplicate case value
-    case 2, 3, 1, 1 { foo; }
+    case 2, 3, 1, 1 { foo }
                   ^
 <stdin>:3:10: note: The first occurrence is here
-    case 1 { foo; }
+    case 1 { foo }
          ^
 <stdin>:5:10: error: Duplicate case value
-    case 1 { foo; }
+    case 1 { foo }
          ^
 <stdin>:3:10: note: The first occurrence is here
-    case 1 { foo; }
+    case 1 { foo }
          ^
 ")
 
 test("
 void test() {
   switch (0) {
-    case false { foo; }
-    case false { foo; }
+    case false { foo }
+    case false { foo }
   }
 }
 ", "
 <stdin>:3:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-    case false { foo; }
+    case false { foo }
          ~~~~~
 <stdin>:3:18: error: \"foo\" is not declared
-    case false { foo; }
+    case false { foo }
                  ~~~
 <stdin>:4:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-    case false { foo; }
+    case false { foo }
          ~~~~~
 <stdin>:4:18: error: \"foo\" is not declared
-    case false { foo; }
+    case false { foo }
                  ~~~
 ")
 

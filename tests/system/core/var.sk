@@ -1,54 +1,54 @@
 namespace core { void testVar() {
 
 test("
-var foo;
+var foo
 ", "
 <stdin>:1:5: error: Implicitly typed variables must be initialized
-var foo;
+var foo
     ~~~
 ")
 
 test("
-var foo = [];
+var foo = []
 ", "
 <stdin>:1:11: error: Cannot infer a common element type for this list literal
-var foo = [];
+var foo = []
           ~~
 ")
 
 test("
 export void test() {
-  var foo = bar;
-  int bar = foo;
+  var foo = bar
+  int bar = foo
 }
 ", "
 ")
 
 test("
 export void test() {
-  var foo = 0;
-  bool bar = foo;
+  var foo = 0
+  bool bar = foo
 }
 ", "
 <stdin>:3:14: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-  bool bar = foo;
+  bool bar = foo
              ~~~
 ")
 
 test("
-var foo = null, bar = null;
+var foo = null, bar = null
 ", "
 <stdin>:1:5: error: Implicitly typed variables cannot be of type \"null\"
-var foo = null, bar = null;
+var foo = null, bar = null
     ~~~
 <stdin>:1:17: error: Implicitly typed variables cannot be of type \"null\"
-var foo = null, bar = null;
+var foo = null, bar = null
                 ~~~
 ")
 
 test("
 var foo() {
-  return 100;
+  return 100
 }
 ", "
 <stdin>:1:1: error: Unexpected VAR
@@ -66,12 +66,12 @@ void foo(var bar) {}
 
 test("
 export void test() {
-  var foo = bar();
+  var foo = bar()
 }
 void bar() {}
 ", "
 <stdin>:2:7: error: Implicitly typed variables cannot be of type \"void\"
-  var foo = bar();
+  var foo = bar()
       ~~~
 ")
 

@@ -2,51 +2,51 @@ namespace core { void testTypes() {
 
 test("
 class Foo {}
-int a;
-bool b;
-float c;
-double d;
-string e;
-Foo f;
-Foo g = Foo();
+int a
+bool b
+float c
+double d
+string e
+Foo f
+Foo g = Foo()
 ", "
 ")
 
 test("
 void test() {
-  (void)null;
+  (void)null
 }
 ", "
 <stdin>:2:3: error: Cannot use type \"void\" here
-  (void)null;
+  (void)null
   ~~~~~~
 ")
 
 test("
 void test() {
-  (ns)null;
+  (ns)null
 }
 namespace ns {}
 ", "
 <stdin>:2:3: error: Cannot use type \"ns\" here
-  (ns)null;
+  (ns)null
   ~~~~
 ")
 
 test("
-void foo;
+void foo
 ", "
 <stdin>:1:1: error: Cannot use type \"void\" here
-void foo;
+void foo
 ~~~~
 ")
 
 test("
-ns foo;
+ns foo
 namespace ns {}
 ", "
 <stdin>:1:1: error: Cannot use type \"ns\" here
-ns foo;
+ns foo
 ~~
 ")
 
@@ -84,12 +84,12 @@ ns foo(ns bar, ns baz) {}
 test("
 class Foo<T> {
   void foo() {
-    T foo;
+    T foo
   }
 }
 ", "
 <stdin>:3:7: error: Cannot create a default value for type \"T\"
-    T foo;
+    T foo
       ~~~
 ")
 
@@ -97,7 +97,7 @@ test("
 interface IFoo {}
 class Foo<T is IFoo> {
   void foo() {
-    T foo;
+    T foo
   }
 }
 ", "
@@ -106,7 +106,7 @@ class Foo<T is IFoo> {
 test("
 class Foo<T> {
   bool foo(T a, T b) {
-    return a == b;
+    return a == b
   }
 }
 ", "
@@ -116,7 +116,7 @@ test("
 interface IFoo {}
 class Foo<T is IFoo> {
   bool foo(T a, T b) {
-    return a == b;
+    return a == b
   }
 }
 ", "
@@ -124,7 +124,7 @@ class Foo<T is IFoo> {
 
 test("
 bool foo<T>(T a, T b) {
-  return a == b;
+  return a == b
 }
 ", "
 ")
@@ -132,7 +132,7 @@ bool foo<T>(T a, T b) {
 test("
 interface IFoo {}
 bool foo<T is IFoo>(T a, T b) {
-  return a == b;
+  return a == b
 }
 ", "
 ")

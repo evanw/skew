@@ -1,38 +1,38 @@
 namespace core { void testParsing() {
 
 test("
-assert const 1.0e1 == 10.0;
-assert const 1.0e+1 == 10.0;
-assert const 1.0e-1 == 0.1;
-assert const 1e1 == 10.0;
-assert const 1e+1 == 10.0;
-assert const 1e-1 == 0.1;
+assert const 1.0e1 == 10.0
+assert const 1.0e+1 == 10.0
+assert const 1.0e-1 == 0.1
+assert const 1e1 == 10.0
+assert const 1e+1 == 10.0
+assert const 1e-1 == 0.1
 ", "
 ")
 
 test("
-assert const 1.0e1f == 10.0f;
-assert const 1.0e+1f == 10.0f;
-assert const 1.0e-1f == 0.1f;
-assert const 1e1f == 10.0f;
-assert const 1e+1f == 10.0f;
-assert const 1e-1f == 0.1f;
+assert const 1.0e1f == 10.0f
+assert const 1.0e+1f == 10.0f
+assert const 1.0e-1f == 0.1f
+assert const 1e1f == 10.0f
+assert const 1e+1f == 10.0f
+assert const 1e-1f == 0.1f
 ", "
 ")
 
 test("
-var π = Math.PI;
+var π = Math.PI
 ", "
 <stdin>:1:5: error: Syntax error \"π\"
-var π = Math.PI;
+var π = Math.PI
     ^
 ")
 
 test("
-var 💩 = Math.PI;
+var 💩 = Math.PI
 ", "
 <stdin>:1:5: error: Syntax error \"💩\"
-var 💩 = Math.PI;
+var 💩 = Math.PI
     ^
 ")
 
@@ -42,202 +42,209 @@ test("
 ")
 
 test("
-bool foo = \"💩\";
+bool foo = \"💩\"
 ", "
 <stdin>:1:12: error: Cannot convert from type \"string\" to type \"bool\"
-bool foo = \"💩\";
+bool foo = \"💩\"
            ~~~
 ")
 
 test("
-var x = [0, 0.0, .0, 0.];
-var y = [0f, 0.0f, .0f, 0.f];
+var x = [0, 0.0, .0, 0.]
+var y = [0f, 0.0f, .0f, 0.f]
 ", "
 <stdin>:1:24: error: Expected IDENTIFIER but found RIGHT_BRACKET
-var x = [0, 0.0, .0, 0.];
+var x = [0, 0.0, .0, 0.]
                        ^
 <stdin>:2:27: error: \"f\" is not declared on type \"int\"
-var y = [0f, 0.0f, .0f, 0.f];
+var y = [0f, 0.0f, .0f, 0.f]
                           ^
 ")
 
 test("
-int foo = 0123;
+int foo = 0123
 ", "
 <stdin>:1:11: warning: Number interpreted as decimal (use the prefix \"0o\" for octal numbers)
-int foo = 0123;
+int foo = 0123
           ~~~~
 ")
 
 test("
-bool a = 0b1101;
-bool b = 0xFF01;
-bool c = 0o7071;
+bool a = 0b1101
+bool b = 0xFF01
+bool c = 0o7071
 ", "
 <stdin>:1:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool a = 0b1101;
+bool a = 0b1101
          ~~~~~~
 <stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool b = 0xFF01;
+bool b = 0xFF01
          ~~~~~~
 <stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool c = 0o7071;
+bool c = 0o7071
          ~~~~~~
 ")
 
 test("
-bool a = 0b1102;
-bool b = 0xFF0G;
-bool c = 0o7078;
+bool a = 0b1102
+bool b = 0xFF0G
+bool c = 0o7078
 ", "
-<stdin>:1:15: error: Expected SEMICOLON but found INT_DECIMAL
-bool a = 0b1102;
+<stdin>:1:15: error: Expected COMMA but found INT_DECIMAL
+bool a = 0b1102
               ^
-<stdin>:2:15: error: Expected SEMICOLON but found IDENTIFIER
-bool b = 0xFF0G;
+<stdin>:2:15: error: Expected COMMA but found IDENTIFIER
+bool b = 0xFF0G
               ^
-<stdin>:3:15: error: Expected SEMICOLON but found INT_DECIMAL
-bool c = 0o7078;
+<stdin>:3:15: error: Expected COMMA but found INT_DECIMAL
+bool c = 0o7078
               ^
 <stdin>:1:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool a = 0b1102;
+bool a = 0b1102
          ~~~~~
 <stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool b = 0xFF0G;
+bool b = 0xFF0G
          ~~~~~
 <stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool c = 0o7078;
+bool c = 0o7078
          ~~~~~
 ")
 
 test("
-bool a = 0b11.01;
-bool b = 0xFF.01;
-bool c = 0o70.71;
+bool a = 0b11.01
+bool b = 0xFF.01
+bool c = 0o70.71
 ", "
-<stdin>:1:14: error: Expected SEMICOLON but found DOUBLE
-bool a = 0b11.01;
+<stdin>:1:14: error: Expected COMMA but found DOUBLE
+bool a = 0b11.01
              ~~~
-<stdin>:2:14: error: Expected SEMICOLON but found DOUBLE
-bool b = 0xFF.01;
+<stdin>:2:14: error: Expected COMMA but found DOUBLE
+bool b = 0xFF.01
              ~~~
-<stdin>:3:14: error: Expected SEMICOLON but found DOUBLE
-bool c = 0o70.71;
+<stdin>:3:14: error: Expected COMMA but found DOUBLE
+bool c = 0o70.71
              ~~~
 <stdin>:1:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool a = 0b11.01;
+bool a = 0b11.01
          ~~~~
 <stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool b = 0xFF.01;
+bool b = 0xFF.01
          ~~~~
 <stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool c = 0o70.71;
+bool c = 0o70.71
          ~~~~
 ")
 
 test("
-bool a = 0b11.01f;
-bool b = 0xFF.01f;
-bool c = 0o70.71f;
+bool a = 0b11.01f
+bool b = 0xFF.01f
+bool c = 0o70.71f
 ", "
-<stdin>:1:14: error: Expected SEMICOLON but found FLOAT
-bool a = 0b11.01f;
+<stdin>:1:14: error: Expected COMMA but found FLOAT
+bool a = 0b11.01f
              ~~~~
-<stdin>:2:14: error: Expected SEMICOLON but found FLOAT
-bool b = 0xFF.01f;
+<stdin>:2:14: error: Expected COMMA but found FLOAT
+bool b = 0xFF.01f
              ~~~~
-<stdin>:3:14: error: Expected SEMICOLON but found FLOAT
-bool c = 0o70.71f;
+<stdin>:3:14: error: Expected COMMA but found FLOAT
+bool c = 0o70.71f
              ~~~~
 <stdin>:1:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool a = 0b11.01f;
+bool a = 0b11.01f
          ~~~~
 <stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool b = 0xFF.01f;
+bool b = 0xFF.01f
          ~~~~
 <stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool c = 0o70.71f;
+bool c = 0o70.71f
          ~~~~
 ")
 
 test("
-bool a = 1e+6;
-bool b = 1e-6;
-bool c = 1.5e+6;
-bool d = 1.5e-6;
-bool e = 1e-6.2;
+bool a = 1e+6
+bool b = 1e-6
+bool c = 1.5e+6
+bool d = 1.5e-6
+bool e = 1e-6.2
 ", "
-<stdin>:5:14: error: Expected SEMICOLON but found DOUBLE
-bool e = 1e-6.2;
+<stdin>:5:14: error: Expected COMMA but found DOUBLE
+bool e = 1e-6.2
              ~~
 <stdin>:1:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-bool a = 1e+6;
+bool a = 1e+6
          ~~~~
 <stdin>:2:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-bool b = 1e-6;
+bool b = 1e-6
          ~~~~
 <stdin>:3:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-bool c = 1.5e+6;
+bool c = 1.5e+6
          ~~~~~~
 <stdin>:4:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-bool d = 1.5e-6;
+bool d = 1.5e-6
          ~~~~~~
 <stdin>:5:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-bool e = 1e-6.2;
+bool e = 1e-6.2
          ~~~~
 ")
 
 test("
-bool a = 1e+6f;
-bool b = 1e-6f;
-bool c = 1.5e+6f;
-bool d = 1.5e-6f;
-bool e = 1e-6.2f;
+bool a = 1e+6f
+bool b = 1e-6f
+bool c = 1.5e+6f
+bool d = 1.5e-6f
+bool e = 1e-6.2f
 ", "
-<stdin>:5:14: error: Expected SEMICOLON but found FLOAT
-bool e = 1e-6.2f;
+<stdin>:5:14: error: Expected COMMA but found FLOAT
+bool e = 1e-6.2f
              ~~~
 <stdin>:1:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
-bool a = 1e+6f;
+bool a = 1e+6f
          ~~~~~
 <stdin>:2:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
-bool b = 1e-6f;
+bool b = 1e-6f
          ~~~~~
 <stdin>:3:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
-bool c = 1.5e+6f;
+bool c = 1.5e+6f
          ~~~~~~~
 <stdin>:4:10: error: Cannot convert from type \"float\" to type \"bool\" without a cast
-bool d = 1.5e-6f;
+bool d = 1.5e-6f
          ~~~~~~~
 <stdin>:5:10: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-bool e = 1e-6.2f;
+bool e = 1e-6.2f
          ~~~~
 ")
 
 test("
-int foo = \"\\x\";
-int bar = \"\\xx\";
-int baz = \"\\xxx\";
+int foo = \"\\x\"
+int bar = \"\\xx\"
+int baz = \"\\xxx\"
 ", "
 <stdin>:1:12: error: Invalid escape sequence \"\\x\"
-int foo = \"\\x\";
+int foo = \"\\x\"
            ~~
 <stdin>:2:12: error: Invalid escape sequence \"\\xx\"
-int bar = \"\\xx\";
+int bar = \"\\xx\"
            ~~~
 <stdin>:3:12: error: Invalid escape sequence \"\\xxx\"
-int baz = \"\\xxx\";
+int baz = \"\\xxx\"
            ~~~~
 ")
 
 test("
-int x = (in)1.5;
+int x = (in)1.5
+int y = (in)1.5
 ", "
 <stdin>:1:10: error: Unexpected IN
-int x = (in)1.5;
+int x = (in)1.5
          ~~
-<stdin>:1:13: error: Expected SEMICOLON but found DOUBLE
-int x = (in)1.5;
+<stdin>:1:13: error: Expected COMMA but found DOUBLE
+int x = (in)1.5
+            ~~~
+<stdin>:2:10: error: Unexpected IN
+int y = (in)1.5
+         ~~
+<stdin>:2:13: error: Expected COMMA but found DOUBLE
+int y = (in)1.5
             ~~~
 ")
 
@@ -250,33 +257,33 @@ int x = .
 ")
 
 test("
-int x = .;
+int x = .
 ", "
-<stdin>:1:10: error: Expected IDENTIFIER but found SEMICOLON
-int x = .;
+<stdin>:1:10: error: Expected IDENTIFIER but found END_OF_FILE
+int x = .
          ^
 ")
 
 test("
 enum Foo { FOO }
-Foo x = Foo.;
+Foo x = Foo.
 ", "
-<stdin>:2:13: error: Expected IDENTIFIER but found SEMICOLON
-Foo x = Foo.;
+<stdin>:2:13: error: Expected IDENTIFIER but found END_OF_FILE
+Foo x = Foo.
             ^
 ")
 
 test("
 enum Foo { FOO }
-Foo x = .FOO;
-bool y = (Foo).FOO;
-bool z = (Foo)(.FOO);
+Foo x = .FOO
+bool y = (Foo).FOO
+bool z = (Foo)(.FOO)
 ", "
 <stdin>:3:10: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
-bool y = (Foo).FOO;
+bool y = (Foo).FOO
          ~~~~~~~~~
 <stdin>:4:10: error: Cannot convert from type \"Foo\" to type \"bool\" without a cast
-bool z = (Foo)(.FOO);
+bool z = (Foo)(.FOO)
          ~~~~~~~~~~~
 ")
 
@@ -329,21 +336,21 @@ do {} while
 ")
 
 test("
-do {} while;
-do {} while (;
+do {} while
+do {} while (
 ", "
-<stdin>:1:12: error: Expected LEFT_PARENTHESIS but found SEMICOLON
-do {} while;
+<stdin>:1:12: error: Expected LEFT_PARENTHESIS but found NEWLINE
+do {} while
            ^
-<stdin>:2:14: error: Unexpected SEMICOLON
-do {} while (;
+<stdin>:2:14: error: Unexpected END_OF_FILE
+do {} while (
              ^
 <stdin>:1:1: error: Cannot use this statement here
-do {} while;
-~~~~~~~~~~~~
+do {} while
+~~~~~~~~~~~
 <stdin>:2:1: error: Cannot use this statement here
-do {} while (;
-~~~~~~~~~~~~~~
+do {} while (
+~~~~~~~~~~~~~
 ")
 
 test("
@@ -400,14 +407,14 @@ void test() {
 ")
 
 test("
-Foo<Bar Baz> foo;
-Foo<Bar Baz> bar;
+Foo<Bar Baz> foo
+Foo<Bar Baz> bar
 ", "
 <stdin>:1:9: error: Expected END_PARAMETER_LIST but found IDENTIFIER
-Foo<Bar Baz> foo;
+Foo<Bar Baz> foo
         ~~~
 <stdin>:2:9: error: Expected END_PARAMETER_LIST but found IDENTIFIER
-Foo<Bar Baz> bar;
+Foo<Bar Baz> bar
         ~~~
 ")
 
@@ -476,53 +483,53 @@ void test() {
 
 test("
 void test() {
-  int x;
-  (x < x) > x;
-  x < (x > x);
+  int x
+  (x < x) > x
+  x < (x > x)
 }
 ", "
 <stdin>:3:3: error: No binary operator \">\" for type \"bool\" and type \"int\"
-  (x < x) > x;
+  (x < x) > x
   ~~~~~~~~~~~
 <stdin>:4:3: error: No binary operator \"<\" for type \"int\" and type \"bool\"
-  x < (x > x);
+  x < (x > x)
   ~~~~~~~~~~~
 ")
 
 test("
 void test() {
-  int x;
-  x < (x) > x;
+  int x
+  x < (x) > x
 }
 ", "
 <stdin>:3:3: error: No binary operator \">\" for type \"bool\" and type \"int\"
-  x < (x) > x;
+  x < (x) > x
   ~~~~~~~~~~~
 ")
 
 test("
 void test() {
-  int x;
-  x < x > x;
+  int x
+  x < x > x
 }
 ", "
 <stdin>:3:11: error: \"x\" is already declared
-  x < x > x;
+  x < x > x
           ^
 <stdin>:2:7: note: The previous declaration is here
-  int x;
+  int x
       ^
 <stdin>:3:7: error: Unexpected expression of type \"int\"
-  x < x > x;
+  x < x > x
       ^
 <stdin>:3:3: error: Cannot parameterize type \"int\" because it has no type parameters
-  x < x > x;
+  x < x > x
   ^
 ")
 
 test("
 class Foo<A is> {}
-Foo<int> foo;
+Foo<int> foo
 ", "
 <stdin>:1:15: error: Unexpected END_PARAMETER_LIST
 class Foo<A is> {}
@@ -531,15 +538,15 @@ class Foo<A is> {}
 
 test("
 class Foo {
-  int foo;
+  int foo
 }
-int foo = new Foo(false);
+int foo = new Foo(false)
 ", "
 <stdin>:4:19: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-int foo = new Foo(false);
+int foo = new Foo(false)
                   ~~~~~
 <stdin>:4:11: error: No unary operator \"new\" for type \"Foo\"
-int foo = new Foo(false);
+int foo = new Foo(false)
           ~~~~~~~~~~~~~~
 ")
 
@@ -583,47 +590,38 @@ namespace foo.bar. {
   void foo() {}
 }
 void test() {
-  foo.bar.foo();
+  foo.bar.foo()
 }
 ", "
 <stdin>:1:20: error: Expected IDENTIFIER but found LEFT_BRACE
 namespace foo.bar. {
                    ^
 <stdin>:5:11: error: \"foo\" is not declared on type \"foo.bar\"
-  foo.bar.foo();
+  foo.bar.foo()
           ~~~
 ")
 
 test("
-(`foo`)0;
+(`foo`)0
 ", "
 <stdin>:1:1: error: Cannot use this statement here
-(`foo`)0;
-~~~~~~~~~
+(`foo`)0
+~~~~~~~~
 ")
 
 test("
-export Foo<`foo`> bar;
+export Foo<`foo`> bar
 ", "
 <stdin>:1:8: error: \"Foo\" is not declared
-export Foo<`foo`> bar;
+export Foo<`foo`> bar
        ~~~
 ")
 
 test("
-int foo
-int bar;
+int foo int bar
 ", "
-<stdin>:1:8: error: Expected SEMICOLON but found IDENTIFIER
-int foo
-       ^
-")
-
-test("
-int foo int bar;
-", "
-<stdin>:1:9: error: Expected SEMICOLON but found IDENTIFIER
-int foo int bar;
+<stdin>:1:9: error: Expected COMMA but found IDENTIFIER
+int foo int bar
         ~~~
 ")
 
@@ -634,7 +632,7 @@ enum Foo {
   BAZ
 }
 ", "
-<stdin>:2:6: error: Expected COMMA but found IDENTIFIER
+<stdin>:2:6: error: Expected COMMA but found NEWLINE
   FOO
      ^
 ")
@@ -652,19 +650,120 @@ var foo = [
   1
   2
   3
-];
+]
 ", "
-<stdin>:2:4: error: Expected COMMA but found INT_DECIMAL
+<stdin>:2:4: error: Expected COMMA but found NEWLINE
   1
    ^
 ")
 
 test("
-var foo = [ 1 2 3 ];
+var foo = [ 1 2 3 ]
 ", "
 <stdin>:1:15: error: Expected COMMA but found INT_DECIMAL
-var foo = [ 1 2 3 ];
+var foo = [ 1 2 3 ]
               ^
+")
+
+// Stray semicolons shouldn't mess up further parsing, should scan to newline and resume
+test("
+void foo() {
+  foo();
+  if (true) {
+  }
+  foo();
+  if (true) {
+  }
+}
+", "
+<stdin>:2:8: error: Unexpected SEMICOLON
+  foo();
+       ^
+<stdin>:5:8: error: Unexpected SEMICOLON
+  foo();
+       ^
+")
+
+// Return statements inside non-void functions are parsed differently
+test("
+int foo() {
+  return
+  100
+}
+void bar() {
+  return
+  100
+}
+", "
+<stdin>:7:3: warning: Unused expression
+  100
+  ~~~
+")
+
+test("
+return
+100
+", "
+<stdin>:1:1: error: Cannot use this statement here
+return
+~~~~~~
+<stdin>:2:1: error: Cannot use this statement here
+100
+~~~
+<stdin>:2:1: warning: Unused expression
+100
+~~~
+")
+
+test("
+int foo() {
+  return
+}
+void bar() {
+  return
+}
+", "
+<stdin>:2:3: error: Return statement must return type \"int\"
+  return
+  ~~~~~~
+")
+
+test("
+void foo() {
+  if (true) foo()
+  else foo()
+}
+void bar() { if (true) bar(); else bar() }
+", "
+")
+
+test("
+void foo() {
+  if (true) foo();
+  else foo();
+}
+void bar() { if (true) bar(); else bar(); }
+", "
+<stdin>:2:18: error: Unexpected SEMICOLON
+  if (true) foo();
+                 ^
+<stdin>:3:3: error: Unexpected ELSE
+  else foo();
+  ~~~~
+<stdin>:3:13: error: Unexpected SEMICOLON
+  else foo();
+            ^
+<stdin>:5:41: error: Unexpected SEMICOLON
+void bar() { if (true) bar(); else bar(); }
+                                        ^
+")
+
+test("
+void foo() { if (true) foo() else foo() }
+", "
+<stdin>:1:30: error: Unexpected ELSE
+void foo() { if (true) foo() else foo() }
+                             ~~~~
 ")
 
 }}

@@ -1,8 +1,8 @@
 namespace cpp { void testNeedsInclude() {
 
 testCPP("
-export void foo() { var baz = bar(); }
-@NeedsInclude(\"<test>\") inline int bar() { return 0; }
+export void foo() { var baz = bar() }
+@NeedsInclude(\"<test>\") inline int bar() { return 0 }
 ", "
 #include <test>
 
@@ -14,7 +14,7 @@ void foo() {
 ")
 
 testCPP("
-export Foo foo;
+export Foo foo
 @NeedsInclude(\"<test>\") import class Foo {}
 ", "
 #include <test>
@@ -25,7 +25,7 @@ Foo *foo = nullptr;
 ")
 
 testCPP("
-export Foo foo;
+export Foo foo
 @NeedsInclude(\"<test>\") class Foo {}
 ", "
 #include <test>
@@ -45,7 +45,7 @@ Foo *foo = nullptr;
 ")
 
 testCPP("
-export Foo<Bar> foo;
+export Foo<Bar> foo
 import class Foo<T> {}
 @NeedsInclude(\"<test>\") import class Bar {}
 ", "
@@ -57,7 +57,7 @@ Foo<Bar *> *foo = nullptr;
 ")
 
 testCPP("
-export Foo<Bar> foo;
+export Foo<Bar> foo
 class Foo<T> {}
 @NeedsInclude(\"<test>\") class Bar {}
 ", "
@@ -136,8 +136,8 @@ void foo(Foo<Bar *> *bar) {
 
 testCPP("
 @NeedsInclude(\"<test>\")
-alias foo = `foo`;
-export foo bar;
+alias foo = `foo`
+export foo bar
 ", "
 #include <test>
 
@@ -147,7 +147,7 @@ foo bar;
 ")
 
 testCPP("
-export var foo = \"\";
+export var foo = \"\"
 ", "
 #include <string>
 
@@ -157,7 +157,7 @@ std::string foo = \"\";
 ")
 
 testCPP("
-export void foo() { var bar = string.fromCodeUnit('a'); }
+export void foo() { var bar = string.fromCodeUnit('a') }
 ", "
 #include <string>
 
@@ -169,9 +169,9 @@ void foo() {
 ")
 
 testCPP("
-export var foo = [0];
-export var bar = List<int>();
-export List<int> baz = [];
+export var foo = [0]
+export var bar = List<int>()
+export List<int> baz = []
 ", "
 #include <initializer_list>
 #include <vector>

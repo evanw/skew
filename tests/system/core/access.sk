@@ -2,167 +2,167 @@ namespace core { void testAccess() {
 
 test("
 class Foo {
-  private int foo;
-  int bar() { return foo + this.foo; }
+  private int foo
+  int bar() { return foo + this.foo }
 }
 class Bar : Foo {
-  int baz() { return foo + this.foo; }
+  int baz() { return foo + this.foo }
 }
-int foo(Foo foo, Bar bar) { return foo.foo + bar.foo; }
+int foo(Foo foo, Bar bar) { return foo.foo + bar.foo }
 ", "
 <stdin>:6:22: error: Cannot access private symbol \"Foo.foo\" here
-  int baz() { return foo + this.foo; }
+  int baz() { return foo + this.foo }
                      ~~~
 <stdin>:6:33: error: Cannot access private symbol \"Foo.foo\" here
-  int baz() { return foo + this.foo; }
+  int baz() { return foo + this.foo }
                                 ~~~
 <stdin>:8:40: error: Cannot access private symbol \"Foo.foo\" here
-int foo(Foo foo, Bar bar) { return foo.foo + bar.foo; }
+int foo(Foo foo, Bar bar) { return foo.foo + bar.foo }
                                        ~~~
 <stdin>:8:50: error: Cannot access private symbol \"Foo.foo\" here
-int foo(Foo foo, Bar bar) { return foo.foo + bar.foo; }
+int foo(Foo foo, Bar bar) { return foo.foo + bar.foo }
                                                  ~~~
 ")
 
 test("
 class Foo {
-  protected int foo;
-  int bar() { return foo + this.foo; }
+  protected int foo
+  int bar() { return foo + this.foo }
 }
 class Bar : Foo {
-  int baz() { return foo + this.foo; }
+  int baz() { return foo + this.foo }
 }
-int foo(Foo foo, Bar bar) { return foo.foo + bar.foo; }
+int foo(Foo foo, Bar bar) { return foo.foo + bar.foo }
 ", "
 <stdin>:8:40: error: Cannot access protected symbol \"Foo.foo\" here
-int foo(Foo foo, Bar bar) { return foo.foo + bar.foo; }
+int foo(Foo foo, Bar bar) { return foo.foo + bar.foo }
                                        ~~~
 <stdin>:8:50: error: Cannot access protected symbol \"Foo.foo\" here
-int foo(Foo foo, Bar bar) { return foo.foo + bar.foo; }
+int foo(Foo foo, Bar bar) { return foo.foo + bar.foo }
                                                  ~~~
 ")
 
 test("
 class Foo {
-  int bar(Bar bar) { return bar.foo; }
+  int bar(Bar bar) { return bar.foo }
 }
 class Bar : Foo {
-  private int foo;
-  int baz() { return foo + this.foo; }
+  private int foo
+  int baz() { return foo + this.foo }
 }
 class Baz : Foo {
-  int baz(Bar bar) { return bar.foo; }
+  int baz(Bar bar) { return bar.foo }
 }
-int foo(Bar bar) { return bar.foo; }
+int foo(Bar bar) { return bar.foo }
 ", "
 <stdin>:2:33: error: Cannot access private symbol \"Bar.foo\" here
-  int bar(Bar bar) { return bar.foo; }
+  int bar(Bar bar) { return bar.foo }
                                 ~~~
 <stdin>:9:33: error: Cannot access private symbol \"Bar.foo\" here
-  int baz(Bar bar) { return bar.foo; }
+  int baz(Bar bar) { return bar.foo }
                                 ~~~
 <stdin>:11:31: error: Cannot access private symbol \"Bar.foo\" here
-int foo(Bar bar) { return bar.foo; }
+int foo(Bar bar) { return bar.foo }
                               ~~~
 ")
 
 test("
 class Foo {
-  int bar(Bar bar) { return bar.foo; }
+  int bar(Bar bar) { return bar.foo }
 }
 class Bar : Foo {
-  protected int foo;
-  int baz() { return foo + this.foo; }
+  protected int foo
+  int baz() { return foo + this.foo }
 }
 class Baz : Foo {
-  int baz(Bar bar) { return bar.foo; }
+  int baz(Bar bar) { return bar.foo }
 }
-int foo(Bar bar) { return bar.foo; }
+int foo(Bar bar) { return bar.foo }
 ", "
 <stdin>:2:33: error: Cannot access protected symbol \"Bar.foo\" here
-  int bar(Bar bar) { return bar.foo; }
+  int bar(Bar bar) { return bar.foo }
                                 ~~~
 <stdin>:9:33: error: Cannot access protected symbol \"Bar.foo\" here
-  int baz(Bar bar) { return bar.foo; }
+  int baz(Bar bar) { return bar.foo }
                                 ~~~
 <stdin>:11:31: error: Cannot access protected symbol \"Bar.foo\" here
-int foo(Bar bar) { return bar.foo; }
+int foo(Bar bar) { return bar.foo }
                               ~~~
 ")
 
 test("
 class Foo {
-  private void foo() { foo(); }
+  private void foo() { foo() }
 }
 class Bar : Foo {
-  void bar() { foo(); this.foo(); }
+  void bar() { foo(); this.foo() }
 }
-void foo(Foo foo, Bar bar) { foo.foo(); bar.foo(); }
+void foo(Foo foo, Bar bar) { foo.foo(); bar.foo() }
 ", "
 <stdin>:5:16: error: Cannot access private symbol \"Foo.foo\" here
-  void bar() { foo(); this.foo(); }
+  void bar() { foo(); this.foo() }
                ~~~
 <stdin>:5:28: error: Cannot access private symbol \"Foo.foo\" here
-  void bar() { foo(); this.foo(); }
+  void bar() { foo(); this.foo() }
                            ~~~
 <stdin>:7:34: error: Cannot access private symbol \"Foo.foo\" here
-void foo(Foo foo, Bar bar) { foo.foo(); bar.foo(); }
+void foo(Foo foo, Bar bar) { foo.foo(); bar.foo() }
                                  ~~~
 <stdin>:7:45: error: Cannot access private symbol \"Foo.foo\" here
-void foo(Foo foo, Bar bar) { foo.foo(); bar.foo(); }
+void foo(Foo foo, Bar bar) { foo.foo(); bar.foo() }
                                             ~~~
 ")
 
 test("
 class Foo {
-  protected void foo() { foo(); }
+  protected void foo() { foo() }
 }
 class Bar : Foo {
-  void bar() { foo(); this.foo(); }
+  void bar() { foo(); this.foo() }
 }
-void foo(Foo foo, Bar bar) { foo.foo(); bar.foo(); }
+void foo(Foo foo, Bar bar) { foo.foo(); bar.foo() }
 ", "
 <stdin>:7:34: error: Cannot access protected symbol \"Foo.foo\" here
-void foo(Foo foo, Bar bar) { foo.foo(); bar.foo(); }
+void foo(Foo foo, Bar bar) { foo.foo(); bar.foo() }
                                  ~~~
 <stdin>:7:45: error: Cannot access protected symbol \"Foo.foo\" here
-void foo(Foo foo, Bar bar) { foo.foo(); bar.foo(); }
+void foo(Foo foo, Bar bar) { foo.foo(); bar.foo() }
                                             ~~~
 ")
 
 test("
 class Foo<T> {
-  private T foo;
-  private T bar() { return foo; }
+  private T foo
+  private T bar() { return foo }
 }
 class Bar<X> : Foo<X> {
   X baz(bool x, bool y) {
-    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+    return x ? y ? foo : bar() : y ? this.foo : this.bar()
   }
 }
 ", "
 <stdin>:7:20: error: Cannot access private symbol \"Foo.foo\" here
-    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+    return x ? y ? foo : bar() : y ? this.foo : this.bar()
                    ~~~
 <stdin>:7:26: error: Cannot access private symbol \"Foo.bar\" here
-    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+    return x ? y ? foo : bar() : y ? this.foo : this.bar()
                          ~~~
 <stdin>:7:43: error: Cannot access private symbol \"Foo.foo\" here
-    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+    return x ? y ? foo : bar() : y ? this.foo : this.bar()
                                           ~~~
 <stdin>:7:54: error: Cannot access private symbol \"Foo.bar\" here
-    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+    return x ? y ? foo : bar() : y ? this.foo : this.bar()
                                                      ~~~
 ")
 
 test("
 class Foo<T> {
-  protected T foo;
-  protected T bar() { return foo; }
+  protected T foo
+  protected T bar() { return foo }
 }
 class Bar<X> : Foo<X> {
   X baz(bool x, bool y) {
-    return x ? y ? foo : bar() : y ? this.foo : this.bar();
+    return x ? y ? foo : bar() : y ? this.foo : this.bar()
   }
 }
 ", "
@@ -171,44 +171,44 @@ class Bar<X> : Foo<X> {
 test("
 class Foo {
   private pure new() {}
-  static pure Foo create() { return Foo(); }
+  static pure Foo create() { return Foo() }
 }
-var foo = Foo();
-var bar = Foo.create();
+var foo = Foo()
+var bar = Foo.create()
 ", "
 <stdin>:5:11: error: Cannot access private symbol \"Foo.new\" here
-var foo = Foo();
+var foo = Foo()
           ~~~
 ")
 
 test("
 class Foo {
-  private static var foo = bar();
-  private static pure int bar() { return 0; }
+  private static var foo = bar()
+  private static pure int bar() { return 0 }
 }
 class Bar {
-  private static var foo = Foo.bar();
-  private static int bar() { return Foo.foo; }
+  private static var foo = Foo.bar()
+  private static int bar() { return Foo.foo }
 }
 ", "
 <stdin>:6:32: error: Cannot access private symbol \"Foo.bar\" here
-  private static var foo = Foo.bar();
+  private static var foo = Foo.bar()
                                ~~~
 <stdin>:7:41: error: Cannot access private symbol \"Foo.foo\" here
-  private static int bar() { return Foo.foo; }
+  private static int bar() { return Foo.foo }
                                         ~~~
 ")
 
 test("
 export class Bar {
-  private static const var foo = Foo.bar;
+  private static const var foo = Foo.bar
 }
 export class Foo {
-  private static const var foo = 1, bar = foo;
+  private static const var foo = 1, bar = foo
 }
 ", "
 <stdin>:2:38: error: Cannot access private symbol \"Foo.bar\" here
-  private static const var foo = Foo.bar;
+  private static const var foo = Foo.bar
                                      ~~~
 ")
 

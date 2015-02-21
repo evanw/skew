@@ -3,7 +3,7 @@ namespace cpp { void testStatements() {
 testCPP("
 class Foo {}
 export void foo(int foo, int bar) {
-  `(void *)` a = null, b = null;
+  `(void *)` a = null, b = null
   for (Foo x = null, y = null; x == y; x = y) {}
   for (`(void *)` x = null, y = null; x == y; x = y) {}
   for (`(int &)` x = foo, y = bar; foo == bar; foo++, bar--) {}
@@ -40,9 +40,9 @@ export enum Foo {
   FOO,
 }
 export Bar foo() {
-  return .FOO;
+  return .FOO
 }
-alias Bar = Foo;
+alias Bar = Foo
 ", "
 enum struct Foo {
   FOO
@@ -57,11 +57,11 @@ Foo foo() {
 
 testCPP("
 pure int foo() {
-  const var bar = 1;
-  return baz + bar;
+  const var bar = 1
+  return baz + bar
 }
-export var bar = foo();
-const var baz = 0;
+export var bar = foo()
+const var baz = 0
 ", "
 int foo();
 

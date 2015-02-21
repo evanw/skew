@@ -1,68 +1,68 @@
 namespace core { void testStatic() {
 
 test("
-namespace ns { int x; }
-bool y = ns.x;
+namespace ns { int x }
+bool y = ns.x
 ", "
 <stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool y = ns.x;
+bool y = ns.x
          ~~~~
 ")
 
 test("
-class Foo { int x; }
-bool y = Foo.x;
+class Foo { int x }
+bool y = Foo.x
 ", "
 <stdin>:2:14: error: Cannot access instance member \"x\" from a static context
-bool y = Foo.x;
+bool y = Foo.x
              ^
 <stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool y = Foo.x;
+bool y = Foo.x
          ~~~~~
 ")
 
 test("
-class Foo { static int x; }
-bool y = Foo.x;
+class Foo { static int x }
+bool y = Foo.x
 ", "
 <stdin>:2:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool y = Foo.x;
+bool y = Foo.x
          ~~~~~
 ")
 
 test("
-class Foo { int x; }
-Foo foo;
-bool y = foo.x;
+class Foo { int x }
+Foo foo
+bool y = foo.x
 ", "
 <stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool y = foo.x;
+bool y = foo.x
          ~~~~~
 ")
 
 test("
-class Foo { static int x; }
-Foo foo;
-bool y = foo.x;
+class Foo { static int x }
+Foo foo
+bool y = foo.x
 ", "
 <stdin>:3:14: error: Cannot access static member \"x\" from an instance context
-bool y = foo.x;
+bool y = foo.x
              ^
 <stdin>:3:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-bool y = foo.x;
+bool y = foo.x
          ~~~~~
 ")
 
 test("
-class Foo { var foo = 0; }
-class Bar : Foo { void bar() { foo; } }
-class Baz : Foo { static void bar() { foo; } }
+class Foo { var foo = 0 }
+class Bar : Foo { void bar() { foo } }
+class Baz : Foo { static void bar() { foo } }
 ", "
 <stdin>:2:32: warning: Unused expression
-class Bar : Foo { void bar() { foo; } }
+class Bar : Foo { void bar() { foo } }
                                ~~~
 <stdin>:3:39: error: Cannot access \"foo\" from a static context
-class Baz : Foo { static void bar() { foo; } }
+class Baz : Foo { static void bar() { foo } }
                                       ~~~
 ")
 

@@ -2,7 +2,7 @@ namespace cpp { void testAnnotations() {
 
 testCPP("
 @ExternC export {
-  int foo;
+  int foo
   void bar() {}
 }
 ", "
@@ -33,7 +33,7 @@ int main() {
 testCPP("
 @EntryPoint
 int foo() {
-  return 0;
+  return 0
 }
 ", "
 int foo();
@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
 testCPP("
 @EntryPoint
 int foo(List<string> args) {
-  return 0;
+  return 0
 }
 ", "
 #include <string>

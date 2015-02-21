@@ -2,7 +2,7 @@ namespace js { void testExpressions() {
 
 testJS("
 export bool foo(int a, int b, int c, int d) {
-  return (a == b) == (c == d);
+  return (a == b) == (c == d)
 }
 ", "
 (function() {
@@ -20,7 +20,7 @@ export var x = [
   0x64,
   0xabc,
   0xABC,
-];
+]
 ", "
 (function() {
   x = [100, 100, 100, 100, 2748, 2748];
@@ -28,8 +28,8 @@ export var x = [
 ")
 
 testJS("
-export var foo = \"'\";
-export var bar = \"\\\"\";
+export var foo = \"'\"
+export var bar = \"\\\"\"
 ", "
 (function() {
   foo = \"'\";
@@ -39,11 +39,11 @@ export var bar = \"\\\"\";
 
 testJS("
 export void test() {
-  double x = 0;
-  - -1;
-  + +1;
-  - +1;
-  + -1;
+  double x = 0
+  - -1
+  + +1
+  - +1
+  + -1
 }
 ", "
 (function() {
@@ -59,8 +59,8 @@ export void test() {
 
 testJS("
 export void test() {
-  -0x80000000;
-  - -0x80000000;
+  -0x80000000
+  - -0x80000000
 }
 ", "
 (function() {
@@ -73,11 +73,11 @@ export void test() {
 
 testJS("
 export void test() {
-  double x = 0;
-  (1.0 - 2.0) - 3.0;
-  (1.0 / 2.0) * 3.0;
-  1.0 - (2.0 - 3.0);
-  1.0 / (2.0 * 3.0);
+  double x = 0
+  (1.0 - 2.0) - 3.0
+  (1.0 / 2.0) * 3.0
+  1.0 - (2.0 - 3.0)
+  1.0 / (2.0 * 3.0)
 }
 ", "
 (function() {
@@ -93,9 +93,9 @@ export void test() {
 
 testJS("
 export void test() {
-  (bool)1;
-  (int)false;
-  (float)false;
+  (bool)1
+  (int)false
+  (float)false
 }
 ", "
 (function() {
@@ -109,13 +109,13 @@ export void test() {
 
 testJS("
 export void test() {
-  assert (bool)1;
+  assert (bool)1
 }
 ", "
 (function() {
   test = function() {
     if (!1) {
-      throw new Error('assert (bool)1; (<stdin>:2:3)');
+      throw new Error('assert (bool)1 (<stdin>:2:3)');
     }
   };
 }());
@@ -123,17 +123,17 @@ export void test() {
 
 testJS("
 export void foo(bool foo) {
-  (int)foo + 1;
-  (int)foo - 1;
-  (int)foo * 1;
-  (int)foo / 1;
-  (int)foo % 1;
-  (int)foo | 1;
-  (int)foo ^ 1;
-  (int)foo & 1;
-  (int)foo << 1;
-  (int)foo >> 1;
-  (int)foo, (int)true;
+  (int)foo + 1
+  (int)foo - 1
+  (int)foo * 1
+  (int)foo / 1
+  (int)foo % 1
+  (int)foo | 1
+  (int)foo ^ 1
+  (int)foo & 1
+  (int)foo << 1
+  (int)foo >> 1
+  (int)foo, (int)true
 }
 ", "
 (function() {
@@ -160,11 +160,11 @@ export void foo(bool foo) {
 
 testJS("
 export void foo(int foo) {
-  foo + 1 | 1;
-  foo - 1 | 1;
-  foo * 1 | 1;
-  foo / 1 | 1;
-  foo % 1 | 1;
+  foo + 1 | 1
+  foo - 1 | 1
+  foo * 1 | 1
+  foo / 1 | 1
+  foo % 1 | 1
 }
 ", "
 (function() {
@@ -185,16 +185,16 @@ export void foo(int foo) {
 
 testJS("
 export void foo(int foo, bool bar) {
-  foo += (int)bar;
-  foo -= (int)bar;
-  foo *= (int)bar;
-  foo /= (int)bar;
-  foo %= (int)bar;
-  foo |= (int)bar;
-  foo &= (int)bar;
-  foo ^= (int)bar;
-  foo <<= (int)bar;
-  foo >>= (int)bar;
+  foo += (int)bar
+  foo -= (int)bar
+  foo *= (int)bar
+  foo /= (int)bar
+  foo %= (int)bar
+  foo |= (int)bar
+  foo &= (int)bar
+  foo ^= (int)bar
+  foo <<= (int)bar
+  foo >>= (int)bar
 }
 ", "
 (function() {
@@ -220,9 +220,9 @@ export void foo(int foo, bool bar) {
 
 testJS("
 enum Foo {}
-export int foo(bool x) { return (int)x; }
-export Foo bar(bool x) { return (Foo)x; }
-export Foo baz(bool x) { return (Foo)(int)x; }
+export int foo(bool x) { return (int)x }
+export Foo bar(bool x) { return (Foo)x }
+export Foo baz(bool x) { return (Foo)(int)x }
 ", "
 (function() {
   var Foo = {
@@ -244,10 +244,10 @@ export Foo baz(bool x) { return (Foo)(int)x; }
 
 testJS("
 export void foo(int bar) {
-  bar++;
-  bar--;
-  ++bar;
-  --bar;
+  bar++
+  bar--
+  ++bar
+  --bar
 }
 ", "
 (function() {
@@ -262,12 +262,12 @@ export void foo(int bar) {
 
 testJS("
 export class Foo {
-  int bar;
+  int bar
   void baz() {
-    bar++;
-    bar--;
-    ++bar;
-    --bar;
+    bar++
+    bar--
+    ++bar
+    --bar
   }
 }
 ", "
@@ -287,16 +287,16 @@ export class Foo {
 
 testJS("
 class Foo {
-  int foo = 0;
+  int foo = 0
 }
 export void foo(int baz) {
-  bar().foo++;
-  bar().foo--;
-  ++bar().foo;
-  --bar().foo;
+  bar().foo++
+  bar().foo--
+  ++bar().foo
+  --bar().foo
 }
 Foo bar() {
-  return Foo();
+  return Foo()
 }
 ", "
 (function() {
@@ -326,11 +326,11 @@ Foo bar() {
 
 testJS("
 export void foo(int bar) {
-  bar += 1;
-  bar -= 1;
-  bar *= 1;
-  bar /= 1;
-  bar %= 1;
+  bar += 1
+  bar -= 1
+  bar *= 1
+  bar /= 1
+  bar %= 1
 }
 ", "
 (function() {
@@ -351,13 +351,13 @@ export void foo(int bar) {
 
 testJS("
 export class Foo {
-  int bar;
+  int bar
   void baz() {
-    bar += 1;
-    bar -= 1;
-    bar *= 1;
-    bar /= 1;
-    bar %= 1;
+    bar += 1
+    bar -= 1
+    bar *= 1
+    bar /= 1
+    bar %= 1
   }
 }
 ", "
@@ -383,17 +383,17 @@ export class Foo {
 
 testJS("
 export class Foo {
-  int foo = 0;
+  int foo = 0
   void bar() {
-    baz().foo += foo;
-    baz().foo -= foo;
-    baz().foo *= foo;
-    baz().foo /= foo;
-    baz().foo %= foo;
+    baz().foo += foo
+    baz().foo -= foo
+    baz().foo *= foo
+    baz().foo /= foo
+    baz().foo %= foo
   }
 }
 Foo baz() {
-  return Foo();
+  return Foo()
 }
 ", "
 (function() {
@@ -431,9 +431,9 @@ Foo baz() {
 
 testJS("
 export void test() {
-  int foo = (1, 2);
-  foo = (1, 2);
-  (1, 2), (3, 4);
+  int foo = (1, 2)
+  foo = (1, 2)
+  (1, 2), (3, 4)
 }
 ", "
 (function() {
@@ -447,9 +447,9 @@ export void test() {
 
 testJS("
 export void test() {
-  0.toString();
-  0.0.toString();
-  0.5.toString();
+  0.toString()
+  0.0.toString()
+  0.5.toString()
 }
 ", "
 (function() {
@@ -463,9 +463,9 @@ export void test() {
 
 testJS("
 export void test() {
-  var a = \"\" + (1 + 2.toString());
-  var b = \"\" + (1 + 2).toString();
-  var c = \"\" + 1 + 2;
+  var a = \"\" + (1 + 2.toString())
+  var b = \"\" + (1 + 2).toString()
+  var c = \"\" + 1 + 2
 }
 ", "
 (function() {
@@ -479,9 +479,9 @@ export void test() {
 
 testJS("
 export void test() {
-  var a = (1 + 2.toString()) + \"\";
-  var b = (1 + 2).toString() + \"\";
-  var c = 1 + 2 + \"\";
+  var a = (1 + 2.toString()) + \"\"
+  var b = (1 + 2).toString() + \"\"
+  var c = 1 + 2 + \"\"
 }
 ", "
 (function() {
@@ -495,9 +495,9 @@ export void test() {
 
 testJS("
 export string foo() {
-  string t;
-  t += 100.toString();
-  return t;
+  string t
+  t += 100.toString()
+  return t
 }
 ", "
 (function() {
@@ -542,38 +542,38 @@ class Foo {
   @OperatorSet void set(int x, int y) {}
 }
 export void foo(Foo foo) {
-  -foo;
-  ~foo;
+  -foo
+  ~foo
 
-  foo + 0;
-  foo - 0;
-  foo * 0;
-  foo / 0;
-  foo % 0;
-  foo & 0;
-  foo | 0;
-  foo ^ 0;
-  foo << 0;
-  foo >> 0;
-  0 in foo;
-  foo < 0;
-  foo <= 0;
-  foo > 0;
-  foo >= 0;
+  foo + 0
+  foo - 0
+  foo * 0
+  foo / 0
+  foo % 0
+  foo & 0
+  foo | 0
+  foo ^ 0
+  foo << 0
+  foo >> 0
+  0 in foo
+  foo < 0
+  foo <= 0
+  foo > 0
+  foo >= 0
 
-  foo += 0;
-  foo -= 0;
-  foo *= 0;
-  foo /= 0;
-  foo %= 0;
-  foo &= 0;
-  foo |= 0;
-  foo ^= 0;
-  foo <<= 0;
-  foo >>= 0;
+  foo += 0
+  foo -= 0
+  foo *= 0
+  foo /= 0
+  foo %= 0
+  foo &= 0
+  foo |= 0
+  foo ^= 0
+  foo <<= 0
+  foo >>= 0
 
-  foo[0];
-  foo[0] = 1;
+  foo[0]
+  foo[0] = 1
 }
 ", "
 (function() {
@@ -694,8 +694,8 @@ export void foo(Foo foo) {
 
 testJS("
 #define FOO false
-export var foo = FOO;
-export bool bar() { return FOO; }
+export var foo = FOO
+export bool bar() { return FOO }
 ", "
 (function() {
   bar = function() {
@@ -708,8 +708,8 @@ export bool bar() { return FOO; }
 
 testJS("
 export bool foo() {
-  const var foo = false;
-  return foo;
+  const var foo = false
+  return foo
 }
 ", "
 (function() {

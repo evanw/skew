@@ -2,10 +2,10 @@ namespace js { void testInlining() {
 
 testJS("
 inline int foo(int foo) {
-  return foo;
+  return foo
 }
 export void test() {
-  var bar = foo(foo(1));
+  var bar = foo(foo(1))
 }
 ", "
 (function() {
@@ -17,10 +17,10 @@ export void test() {
 
 testJS("
 inline int foo(int bar) {
-  return bar > 0 ? foo(bar - 1) : 0;
+  return bar > 0 ? foo(bar - 1) : 0
 }
 export void test() {
-  var bar = foo(foo(1));
+  var bar = foo(foo(1))
 }
 ", "
 (function() {
@@ -35,12 +35,12 @@ export void test() {
 ")
 
 testJS("
-import bool baz();
+import bool baz()
 inline int foo(int bar) {
-  return baz() ? foo(bar) : 0;
+  return baz() ? foo(bar) : 0
 }
 export void test() {
-  var bar = foo(foo(1));
+  var bar = foo(foo(1))
 }
 ", "
 (function() {
@@ -56,10 +56,10 @@ export void test() {
 
 testJS("
 inline int foo(int x, int y) {
-  return x + y;
+  return x + y
 }
 export void test() {
-  foo(1, 2);
+  foo(1, 2)
 }
 ", "
 (function() {
@@ -71,10 +71,10 @@ export void test() {
 
 testJS("
 inline void foo(int x, int y) {
-  x += y;
+  x += y
 }
 export void test() {
-  foo(1, 2);
+  foo(1, 2)
 }
 ", "
 (function() {
@@ -96,7 +96,7 @@ class Bar : Foo {
   inline override void foo() {}
 }
 export void test() {
-  Bar().foo();
+  Bar().foo()
 }
 ", "
 (function() {
@@ -125,13 +125,13 @@ export void test() {
 
 testJS("
 inline int foo(int a, int b) {
-  return a + b;
+  return a + b
 }
 inline int baz(int a) {
-  return foo(2, a);
+  return foo(2, a)
 }
 export int bar(int a) {
-  return foo(1, baz(a));
+  return foo(1, baz(a))
 }
 ", "
 (function() {
@@ -143,13 +143,13 @@ export int bar(int a) {
 
 testJS("
 inline int foo(int a, int b) {
-  return a + b;
+  return a + b
 }
 export int bar(int a) {
-  return foo(1, baz(a));
+  return foo(1, baz(a))
 }
 inline int baz(int a) {
-  return foo(2, a);
+  return foo(2, a)
 }
 ", "
 (function() {
@@ -161,13 +161,13 @@ inline int baz(int a) {
 
 testJS("
 inline int foo(int a, int b) {
-  return a + b;
+  return a + b
 }
 export int bar(int a) {
-  return foo(1, baz(baz(a)));
+  return foo(1, baz(baz(a)))
 }
 inline int baz(int a) {
-  return foo(2, a);
+  return foo(2, a)
 }
 ", "
 (function() {
@@ -179,13 +179,13 @@ inline int baz(int a) {
 
 testJS("
 inline int foo(int baz) {
-  return bar(baz);
+  return bar(baz)
 }
 inline int bar(int baz) {
-  return foo(baz);
+  return foo(baz)
 }
 export void test() {
-  foo(bar(foo(bar(0))));
+  foo(bar(foo(bar(0))))
 }
 ", "
 (function() {
@@ -205,13 +205,13 @@ export void test() {
 
 testJS("
 inline int foo(int baz) {
-  return bar(foo(baz));
+  return bar(foo(baz))
 }
 inline int bar(int baz) {
-  return foo(bar(baz));
+  return foo(bar(baz))
 }
 export void test() {
-  foo(bar(foo(bar(0))));
+  foo(bar(foo(bar(0))))
 }
 ", "
 (function() {
@@ -231,13 +231,13 @@ export void test() {
 
 testJS("
 inline int foo(int x) {
-  return x + 1;
+  return x + 1
 }
 export int bar(int y) {
-  return foo(baz(y));
+  return foo(baz(y))
 }
 inline int baz(int z) {
-  return z + 2;
+  return z + 2
 }
 ", "
 (function() {
@@ -249,13 +249,13 @@ inline int baz(int z) {
 
 testJS("
 inline int foo(int x) {
-  return x + 1;
+  return x + 1
 }
 export int bar(int y) {
-  return baz(foo(y));
+  return baz(foo(y))
 }
 inline int baz(int z) {
-  return z + 2;
+  return z + 2
 }
 ", "
 (function() {
@@ -266,10 +266,10 @@ inline int baz(int z) {
 ")
 
 testJS("
-inline void foo(int x) { bar(1, x); }
-int bar(int x, int y) { return x + y; }
+inline void foo(int x) { bar(1, x) }
+int bar(int x, int y) { return x + y }
 export void test() {
-  foo(2);
+  foo(2)
 }
 ", "
 (function() {
@@ -284,10 +284,10 @@ export void test() {
 ")
 
 testJS("
-inline void foo() { x = 0; }
-int x = 0;
+inline void foo() { x = 0 }
+int x = 0
 export void test() {
-  foo();
+  foo()
 }
 ", "
 (function() {
@@ -300,11 +300,11 @@ export void test() {
 ")
 
 testJS("
-inline void foo() { bar(); }
-inline void bar() { x = 0; }
-int x = 0;
+inline void foo() { bar() }
+inline void bar() { x = 0 }
+int x = 0
 export void test() {
-  foo();
+  foo()
 }
 ", "
 (function() {
@@ -317,12 +317,12 @@ export void test() {
 ")
 
 testJS("
-inline void foo() { bar(); }
-inline void bar() { baz(); }
-inline void baz() { x = 0; }
-int x = 0;
+inline void foo() { bar() }
+inline void bar() { baz() }
+inline void baz() { x = 0 }
+int x = 0
 export void test() {
-  foo();
+  foo()
 }
 ", "
 (function() {
@@ -335,10 +335,10 @@ export void test() {
 ")
 
 testJS("
-import int foo();
-inline int bar(int a, int b) { return a; }
+import int foo()
+inline int bar(int a, int b) { return a }
 export void test() {
-  var baz = bar(1, foo());
+  var baz = bar(1, foo())
 }
 ", "
 (function() {
@@ -349,10 +349,10 @@ export void test() {
 ")
 
 testJS("
-inline int foo() { return 2; }
-inline int bar(int a, int b) { return a; }
+inline int foo() { return 2 }
+inline int bar(int a, int b) { return a }
 export void test() {
-  var baz = bar(1, foo());
+  var baz = bar(1, foo())
 }
 ", "
 (function() {

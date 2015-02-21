@@ -1,7 +1,7 @@
 namespace js { void testMinify() {
 
 testJS("
-export var foo = 1.toString();
+export var foo = 1.toString()
 ", "
 (function(){foo='1'}());
 ").release()
@@ -17,8 +17,8 @@ export void foo() {
 testJS("
 export class Foo {}
 in Foo {
-  Foo foo = null;
-  Foo bar = null;
+  Foo foo = null
+  Foo bar = null
 }
 ", "
 (function(){Foo=function(){this.a=this.b=null}}());
@@ -27,14 +27,14 @@ in Foo {
 testJS("
 export class Foo {}
 in Foo {
-  var xa = 0;
-  var xb = false;
-  var xc = 0;
-  var xd = 0;
-  var xe = 0;
-  var xf = false;
-  var xg = false;
-  var xh = 0;
+  var xa = 0
+  var xb = false
+  var xc = 0
+  var xd = 0
+  var xe = 0
+  var xf = false
+  var xg = false
+  var xh = 0
 }
 ", "
 (function(){Foo=function(){this.a=0,this.b=!1,this.c=this.d=this.e=0,this.f=this.g=!1,this.h=0}}());
@@ -42,7 +42,7 @@ in Foo {
 
 testJS("
 export int foo(StringMap<int> map) {
-  return map.get(\"x\") + map.get(\"_\") + map.get(\"x\") + map.get(\"0\") + map.get(\"x0\") + map.get(\"if\");
+  return map[\"x\"] + map[\"_\"] + map[\"x\"] + map[\"0\"] + map[\"x0\"] + map[\"if\"]
 }
 ", "
 (function(){foo=function(a){return ((((a.x+a._|0)+a.x|0)+a['0']|0)+a.x0|0)+a['if']|0}}());
@@ -50,12 +50,12 @@ export int foo(StringMap<int> map) {
 
 testJS("
 export void foo(StringMap<int> map) {
-  map.set(\"x\", 0);
-  map.set(\"_\", 0);
-  map.set(\"x\", 0);
-  map.set(\"0\", 0);
-  map.set(\"x0\", 0);
-  map.set(\"if\", 0);
+  map[\"x\"] = 0
+  map[\"_\"] = 0
+  map[\"x\"] = 0
+  map[\"0\"] = 0
+  map[\"x0\"] = 0
+  map[\"if\"] = 0
 }
 ", "
 (function(){foo=function(a){a.x=a._=a.x=a['0']=a.x0=a['if']=0}}());
@@ -63,12 +63,12 @@ export void foo(StringMap<int> map) {
 
 testJS("
 export void foo() {
-  var map = StringMap<bool>();
-  bool a;
-  a = false;
-  map.set(\"a\", false);
-  a = true;
-  map.set(\"a\", true);
+  var map = StringMap<bool>()
+  bool a
+  a = false
+  map[\"a\"] = false
+  a = true
+  map[\"a\"] = true
 }
 ", "
 (function(){foo=function(){var a=Object.create(null),b=!1;b=a.a=!1,b=a.a=!0}}());
@@ -76,25 +76,28 @@ export void foo() {
 
 testJS("
 export void foo() {
-  do {} while (true);
+  do {} while (true)
 }
 ", "
 (function(){foo=function(){do;while(!0)}}());
 ").release()
 
 testJS("
-import void x();
+import void x()
 export void foo() {
-  do { x(); } while (true);
+  do { x() } while (true)
 }
 ", "
 (function(){foo=function(){do x();while(!0)}}());
 ").release()
 
 testJS("
-import void x();
+import void x()
 export void foo() {
-  do { x(); break; } while (true);
+  do {
+    x()
+    break
+  } while (true)
 }
 ", "
 (function(){foo=function(){do{x();break}while(!0)}}());
@@ -102,13 +105,13 @@ export void foo() {
 
 testJS("
 class Foo {
-  int foo;
+  int foo
 }
 class Bar {
-  int bar;
+  int bar
 }
 export int foo() {
-  return Foo(100).foo + Bar(200).bar;
+  return Foo(100).foo + Bar(200).bar
 }
 ", "
 (function(){function b(a){this.a=a}function c(a){this.a=a}foo=function(){return new b(100).a+new c(200).a|0}}());
@@ -116,22 +119,22 @@ export int foo() {
 
 testJS("
 class Foo {
-  int foo;
+  int foo
 }
 class Bar : Foo {
-  int bar;
+  int bar
 }
 export int foo() {
-  return Foo(100).foo + Bar(200, 300).foo;
+  return Foo(100).foo + Bar(200, 300).foo
 }
 ", "
 (function(){function $e(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function c(a){this.a=a}function d(a,b){c.call(this,a),this.b=b}$e(d,c);foo=function(){return new c(100).a+new d(200,300).a|0}}());
 ").release()
 
 testJS("
-import int a();
+import int a()
 export int foo(int x) {
-  return a() + x;
+  return a() + x
 }
 ", "
 (function(){foo=function(b){return a()+b|0}}());
@@ -139,18 +142,18 @@ export int foo(int x) {
 
 testJS("
 import namespace a {
-  int b();
+  int b()
 }
 export int foo(int b) {
-  return a.b() + b;
+  return a.b() + b
 }
 ", "
 (function(){foo=function(b){return a.b()+b|0}}());
 ").release()
 
 testJS("
-export void foo(int foo) { int bar, baz; }
-export void bar(int foo, int bar) { int baz; }
+export void foo(int foo) { int bar, baz }
+export void bar(int foo, int bar) { int baz }
 export void baz(int foo, int bar, int baz) {}
 ", "
 (function(){foo=function(a){var b=0,c=0};bar=function(a,b){var c=0};baz=function(a,b,c){}}());
@@ -158,7 +161,7 @@ export void baz(int foo, int bar, int baz) {}
 
 testJS("
 export int foo() {
-  return `0` in 1;
+  return `0` in 1
 }
 ", "
 (function(){foo=function(){return 0 in 1}}());
@@ -166,7 +169,7 @@ export int foo() {
 
 testJS("
 export int foo(int foo) {
-  return foo + +1;
+  return foo + +1
 }
 ", "
 (function(){foo=function(a){return a+1|0}}());
@@ -174,28 +177,28 @@ export int foo(int foo) {
 
 testJS("
 export int foo(int foo) {
-  return foo - -1;
+  return foo - -1
 }
 ", "
 (function(){foo=function(a){return a+1|0}}());
 ").release()
 
 testJS("
-import void x();
+import void x()
 export int foo() {
-  x();
-  return 1;
+  x()
+  return 1
 }
 ", "
 (function(){foo=function(){return x(),1}}());
 ").release()
 
 testJS("
-import void x();
+import void x()
 export int foo() {
-  x();
-  x();
-  return 1;
+  x()
+  x()
+  return 1
 }
 ", "
 (function(){foo=function(){return x(),x(),1}}());
@@ -203,9 +206,9 @@ export int foo() {
 
 testJS("
 export int foo(int foo) {
-  if (foo < 0) return -1;
-  else if (foo > 0) return 1;
-  else return 0;
+  if (foo < 0) return -1
+  else if (foo > 0) return 1
+  else return 0
 }
 ", "
 (function(){foo=function(a){return a<0?-1:a>0?1:0}}());
@@ -213,22 +216,22 @@ export int foo(int foo) {
 
 testJS("
 export int foo(int foo) {
-  if (foo < 0) return -1;
-  if (foo > 0) return 1;
-  return 0;
+  if (foo < 0) return -1
+  if (foo > 0) return 1
+  return 0
 }
 ", "
 (function(){foo=function(a){return a<0?-1:a>0?1:0}}());
 ").release()
 
 testJS("
-import void y();
+import void y()
 export int foo(int x) {
   if (x < 0) {
-    y();
-    return 1;
+    y()
+    return 1
   }
-  return 2;
+  return 2
 }
 ", "
 (function(){foo=function(a){return a<0?(y(),1):2}}());
@@ -236,23 +239,23 @@ export int foo(int x) {
 
 testJS("
 export int foo() {
-  int foo;
-  int bar;
-  return foo + bar;
+  int foo
+  int bar
+  return foo + bar
 }
 ", "
 (function(){foo=function(){var a=0,b=0;return a+b|0}}());
 ").release()
 
 testJS("
-const bool bar = false;
+const bool bar = false
 export int foo(int y) {
   if (y < 0) {
-    return -y;
+    return -y
   } else if (bar) {
-    return 100;
+    return 100
   }
-  return y;
+  return y
 }
 ", "
 (function(){foo=function(a){return a<0?-a|0:a}}());
@@ -260,10 +263,10 @@ export int foo(int y) {
 
 testJS("
 export int foo(int y) {
-  if (y > 0) y++;
-  else if (y < 0) y += 2;
-  else y--;
-  return y;
+  if (y > 0) y++
+  else if (y < 0) y += 2
+  else y--
+  return y
 }
 ", "
 (function(){foo=function(a){return a=(a>0?a+1:a<0?a+2:a-1)|0,a}}());
@@ -272,15 +275,15 @@ export int foo(int y) {
 testJS("
 export int foo(int x, int y) {
   if (x < 0) {
-    x++;
-    y--;
+    x++
+    y--
   } else if (y < 0) {
-    x -= y;
+    x -= y
   } else {
-    x--;
-    y++;
+    x--
+    y++
   }
-  return y;
+  return y
 }
 ", "
 (function(){foo=function(a,b){return a<0?(a=a+1|0,b=b-1|0):b<0?a=a-b|0:(a=a-1|0,b=b+1|0),b}}());
@@ -288,9 +291,9 @@ export int foo(int x, int y) {
 
 testJS("
 export bool foo(int x, int y) {
-  var bar = x == 0 && y != 0;
-  if (x == 0 && y != 0) return true;
-  else return bar;
+  var bar = x == 0 && y != 0
+  if (x == 0 && y != 0) return true
+  else return bar
 }
 ", "
 (function(){foo=function(a,b){var c=a===0&&b!==0;return !a&&b?!0:c}}());
@@ -298,21 +301,21 @@ export bool foo(int x, int y) {
 
 testJS("
 export bool foo(float x, double y) {
-  var bar = x == 0 && y != 0;
-  if (x == 0 && y != 0) return true;
-  else return bar;
+  var bar = x == 0 && y != 0
+  if (x == 0 && y != 0) return true
+  else return bar
 }
 ", "
 (function(){foo=function(a,b){var c=a===0&&b!==0;return a===0&&b!==0?!0:c}}());
 ").release()
 
 testJS("
-import class Foo { Foo y(); }
-import Foo x;
+import class Foo { Foo y() }
+import Foo x
 export bool foo() {
-  var bar = x != null && x.y() == null;
-  if (x != null && x.y() == null) return true;
-  else return bar;
+  var bar = x != null && x.y() == null
+  if (x != null && x.y() == null) return true
+  else return bar
 }
 ", "
 (function(){foo=function(){var a=x!==null&&x.y()===null;return x&&!x.y()?!0:a}}());
@@ -320,23 +323,23 @@ export bool foo() {
 
 testJS("
 export bool foo(string x) {
-  var bar = x == \"\" || x.slice(1, 2) == \"\";
-  if (x == \"\" || x.slice(1, 2) == \"\") return true;
-  else return bar;
+  var bar = x == \"\" || x.slice(1, 2) == \"\"
+  if (x == \"\" || x.slice(1, 2) == \"\") return true
+  else return bar
 }
 ", "
 (function(){foo=function(a){var b=a===''||a.slice(1,2)==='';return !a||!a.slice(1,2)?!0:b}}());
 ").release()
 
 testJS("
-import bool x();
-import void y();
+import bool x()
+import void y()
 export void foo() {
   if (x()) {
-    y();
+    y()
     if (x()) {
-      y();
-      if (x()) y();
+      y()
+      if (x()) y()
     }
   }
 }
@@ -345,12 +348,12 @@ export void foo() {
 ").release()
 
 testJS("
-import void x();
-import void y();
+import void x()
+import void y()
 export void foo(int a) {
-  if (a < 1) x();
+  if (a < 1) x()
   else if (a < 2) {}
-  else y();
+  else y()
 }
 ", "
 (function(){foo=function(a){a<1?x():a>1&&y()}}());
@@ -358,38 +361,38 @@ export void foo(int a) {
 
 testJS("
 export int foo(int a, int b) {
-  return a != b ? 1 : 2;
+  return a != b ? 1 : 2
 }
 ", "
 (function(){foo=function(a,b){return a^b?1:2}}());
 ").release()
 
 testJS("
-import void b();
+import void b()
 export void foo(bool a) {
-  if (a) b();
+  if (a) b()
 }
 ", "
 (function(){foo=function(a){a&&b()}}());
 ").release()
 
 testJS("
-import void b();
+import void b()
 export void foo(bool a) {
-  if (!a) b();
+  if (!a) b()
 }
 ", "
 (function(){foo=function(a){a||b()}}());
 ").release()
 
 testJS("
-import void b();
+import void b()
 export int foo(bool a) {
   if (!a) {
-    b();
-    return 1;
+    b()
+    return 1
   } else {
-    return 2;
+    return 2
   }
 }
 ", "
@@ -398,28 +401,28 @@ export int foo(bool a) {
 
 testJS("
 export int foo(bool a) {
-  return !a ? 1 : 2;
+  return !a ? 1 : 2
 }
 ", "
 (function(){foo=function(a){return a?2:1}}());
 ").release()
 
 testJS("
-import int y();
-import int z();
+import int y()
+import int z()
 export int foo(int x) {
-  return x == 0 ? y() : z();
+  return x == 0 ? y() : z()
 }
 ", "
 (function(){foo=function(a){return a?z():y()}}());
 ").release()
 
 testJS("
-import void c();
-import void d();
+import void c()
+import void d()
 export void foo(Foo a, Foo b) {
-  if (a == b) c();
-  else d();
+  if (a == b) c()
+  else d()
 }
 enum Foo {}
 ", "
@@ -428,12 +431,12 @@ enum Foo {}
 
 testJS("
 export int foo(int x) {
-  int y;
+  int y
   switch (x) {
-    case 1 { y = 1; }
-    case 2 { y = 2; }
+    case 1 { y = 1 }
+    case 2 { y = 2 }
   }
-  return y;
+  return y
 }
 ", "
 (function(){foo=function(b){var a=0;switch(b){case 1:a=1;break;case 2:a=2}return a}}());
@@ -441,21 +444,21 @@ export int foo(int x) {
 
 testJS("
 export bool foo(int a) {
-  return a >= 5 && a <= 8;
+  return a >= 5 && a <= 8
 }
 export bool bar(int a) {
-  return 5 <= a && 8 >= a;
+  return 5 <= a && 8 >= a
 }
 ", "
 (function(){foo=function(a){return a>4&&a<9};bar=function(a){return 4<a&&9>a}}());
 ").release()
 
 testJS("
-import void y();
+import void y()
 export void foo(bool x) {
   if (x) {
-    y();
-    return;
+    y()
+    return
   }
 }
 ", "
@@ -463,35 +466,35 @@ export void foo(bool x) {
 ").release()
 
 testJS("
-import void y();
+import void y()
 export void foo(bool x) {
-  if (x) return;
-  y();
-  y();
+  if (x) return
+  y()
+  y()
 }
 ", "
 (function(){foo=function(a){a||(y(),y())}}());
 ").release()
 
 testJS("
-import void y();
+import void y()
 export void foo(bool x) {
-  if (x) return;
-  y();
-  if (x) return;
-  y();
+  if (x) return
+  y()
+  if (x) return
+  y()
 }
 ", "
 (function(){foo=function(a){a||(y(),a||y())}}());
 ").release()
 
 testJS("
-import void z();
+import void z()
 export void foo(bool x, bool y) {
   if (x) {
-    if (y) return;
-    z();
-    z();
+    if (y) return
+    z()
+    z()
   }
 }
 ", "
@@ -499,40 +502,40 @@ export void foo(bool x, bool y) {
 ").release()
 
 testJS("
-import void z();
+import void z()
 export void foo(bool x, bool y) {
   if (x) {
-    if (y) return;
-    z();
-    z();
+    if (y) return
+    z()
+    z()
   }
-  z();
+  z()
 }
 ", "
 (function(){foo=function(a,b){if(a){if(b)return;z(),z()}z()}}());
 ").release()
 
 testJS("
-import void y();
+import void y()
 export void foo(bool x) {
   if (x) {
-    y();
-    return;
+    y()
+    return
   }
-  y();
-  y();
+  y()
+  y()
 }
 ", "
 (function(){foo=function(a){a?y():(y(),y())}}());
 ").release()
 
 testJS("
-import void z();
+import void z()
 export void foo(bool x, bool y) {
   while (x) {
     if (y) {
-      z();
-      continue;
+      z()
+      continue
     }
   }
 }
@@ -541,12 +544,12 @@ export void foo(bool x, bool y) {
 ").release()
 
 testJS("
-import void z();
+import void z()
 export void foo(bool x, bool y) {
   while (x) {
-    if (y) return;
-    z();
-    z();
+    if (y) return
+    z()
+    z()
   }
 }
 ", "
@@ -554,12 +557,12 @@ export void foo(bool x, bool y) {
 ").release()
 
 testJS("
-import void z();
+import void z()
 export void foo(bool x, bool y) {
   while (x) {
-    if (y) continue;
-    z();
-    z();
+    if (y) continue
+    z()
+    z()
   }
 }
 ", "
@@ -567,13 +570,13 @@ export void foo(bool x, bool y) {
 ").release()
 
 testJS("
-import void z();
+import void z()
 export void foo(bool x, bool y) {
   while (x) {
-    if (y) continue;
-    z();
-    if (y) continue;
-    z();
+    if (y) continue
+    z()
+    if (y) continue
+    z()
   }
 }
 ", "
@@ -581,14 +584,14 @@ export void foo(bool x, bool y) {
 ").release()
 
 testJS("
-import void z();
+import void z()
 export void foo(bool x, bool y) {
   while (x) {
     if (y) {
-      z();
-      if (y) continue;
-      z();
-      z();
+      z()
+      if (y) continue
+      z()
+      z()
     }
   }
 }
@@ -597,16 +600,16 @@ export void foo(bool x, bool y) {
 ").release()
 
 testJS("
-import void z();
+import void z()
 export void foo(bool x, bool y) {
   while (x) {
     if (y) {
-      z();
-      if (y) continue;
-      z();
-      z();
+      z()
+      if (y) continue
+      z()
+      z()
     }
-    z();
+    z()
   }
 }
 ", "
@@ -614,15 +617,15 @@ export void foo(bool x, bool y) {
 ").release()
 
 testJS("
-import void z();
+import void z()
 export void foo(bool x, bool y) {
   while (x) {
     if (y) {
-      z();
-      continue;
+      z()
+      continue
     }
-    z();
-    z();
+    z()
+    z()
   }
 }
 ", "
@@ -631,18 +634,18 @@ export void foo(bool x, bool y) {
 
 testJS("
 class Foo {
-  int foo = 0;
+  int foo = 0
 }
 export void foo() {
-  Foo().foo++;
-  Foo().foo++;
+  Foo().foo++
+  Foo().foo++
 }
 ", "
 (function(){function c(){this.a=0}foo=function(){var a;a=new c(),a.a=a.a+1|0;var b;b=new c(),b.a=b.a+1|0}}());
 ").release()
 
 testJS("
-export int foo(int a, int b) { return a * b; }
+export int foo(int a, int b) { return a * b }
 ", "
 (function(){var $i=Math.imul||function(a,b){var ah=a>>>16,al=a&65535,bh=b>>>16,bl=b&65535;return al*bl+(ah*bl+al*bh<<16)|0};foo=function(a,b){return $i(a,b)}}());
 ").release()
@@ -658,7 +661,7 @@ class Baz : Foo {
   override void foo() {}
 }
 export void test() {
-  Bar().foo();
+  Bar().foo()
 }
 ", "
 (function(){function $e(d,b){d.prototype=Object.create(b.prototype);d.prototype.constructor=d}function b(){}function c(){b.call(this)}$e(c,b);c.prototype.a=function(){};test=function(){new c().a()}}());
@@ -666,7 +669,7 @@ export void test() {
 
 testJS("
 interface IFoo {
-  virtual void foo();
+  virtual void foo()
 }
 class Bar : IFoo {
   override void foo() {}
@@ -675,18 +678,18 @@ class Baz : IFoo {
   override void foo() {}
 }
 export void test() {
-  ((IFoo)Bar()).foo();
+  ((IFoo)Bar()).foo()
 }
 ", "
 (function(){function c(){}c.prototype.a=function(){};test=function(){new c().a()}}());
 ").release()
 
 testJS("
-import void bar(int foo);
+import void bar(int foo)
 export void foo() {
-  var n = 10;
+  var n = 10
   for (var i = 0; i < n; i++) {
-    bar(i);
+    bar(i)
   }
 }
 ", "
@@ -703,18 +706,18 @@ export List<double> foo(float x) {
     x - -2.0f,
     x - -2.5f,
     x - -math.INFINITY,
-  ];
+  ]
 }
 ", "
 (function(){foo=function(a){return[- -a,a- -2,a- -2,a- -2.5,a- -2,a- -2.5,a- -Infinity]}}());
 ").release()
 
 testJS("
-import void bar();
+import void bar()
 export void foo(int x) {
   switch (x) {
     case 0 {}
-    default { bar(); }
+    default { bar() }
   }
 }
 ", "
@@ -733,7 +736,7 @@ export void foo(int x) {
 ").release()
 
 testJS("
-import int bar();
+import int bar()
 export void foo() {
   switch (bar()) {
     case 0 {}
@@ -745,10 +748,10 @@ export void foo() {
 ").release()
 
 testJS("
-import void bar();
+import void bar()
 export void foo(int x) {
   switch (x) {
-    case 0 { bar(); }
+    case 0 { bar() }
     default {}
   }
 }
@@ -757,12 +760,12 @@ export void foo(int x) {
 ").release()
 
 testJS("
-import bool bar();
-import bool baz();
+import bool bar()
+import bool baz()
 export bool foo() {
-  if (bar()) return true;
-  if (baz()) return true;
-  return false;
+  if (bar()) return true
+  if (baz()) return true
+  return false
 }
 ", "
 (function(){foo=function(){return bar()||baz()?!0:!1}}());
@@ -770,9 +773,9 @@ export bool foo() {
 
 testJS("
 export bool foo(bool bar, bool baz) {
-  if (bar) return true;
-  if (baz) return true;
-  return false;
+  if (bar) return true
+  if (baz) return true
+  return false
 }
 ", "
 (function(){foo=function(a,b){return a||b?!0:!1}}());
@@ -780,21 +783,21 @@ export bool foo(bool bar, bool baz) {
 
 testJS("
 export bool foo(bool bar, bool baz) {
-  if (bar) return true;
-  if (baz) return true;
-  return true;
+  if (bar) return true
+  if (baz) return true
+  return true
 }
 ", "
 (function(){foo=function(a,b){return !0}}());
 ").release()
 
 testJS("
-import bool bar();
-import bool baz();
+import bool bar()
+import bool baz()
 export bool foo() {
-  if (bar()) return true;
-  if (baz()) return true;
-  return true;
+  if (bar()) return true
+  if (baz()) return true
+  return true
 }
 ", "
 (function(){foo=function(){return bar()?!0:(baz(),!0)}}());
@@ -825,7 +828,7 @@ export List<int> foo(int x) {
     1 + 2 - x,
     1 - 2 + x,
     1 - 2 - x,
-  ];
+  ]
 }
 ", "
 (function(){foo=function(a){return[a,a,a-2|0,2-a|0,2-a|0,a-2|0,a+3|0,a-1|0,a+1|0,a-3|0,3+a|0,a-1|0,3-a|0,-1-a|0,3+a|0,3-a|0,a-1|0,-1-a|0]}}());
@@ -849,7 +852,7 @@ export List<double> foo(double x, bool y) {
      1 - 2 * (-x),
     1 + 2 * (+x),
     1 + 2 * (double)y,
- ];
+ ]
 }
 ", "
 (function(){foo=function(a,b){return[1- -a*2,1+ +a*2,1+ +b*2,1- -a*2/3,1+ +a*2/3,1+ +b*2/3,-a*2-1,+a*2+1,+b*2+1,1-2*-a,1+2*+a,1+2*+b]}}());
@@ -865,47 +868,47 @@ export dynamic foo() {
     \"01\": 0,
     \"$\": 0,
     \"_\": 0,
-  };
+  }
 }
 ", "
 (function(){foo=function(){return{abc:0,456:0,'x y':0,-1:0,'01':0,$:0,_:0}}}());
 ").release()
 
 testJS("
-export string foo(Foo foo) { return foo.toString(); }
+export string foo(Foo foo) { return foo.toString() }
 enum Foo { A, B, C, D, E, F }
 ", "
 (function(){foo=function(a){return c[a]};var c='A B C D E F'.split(' ')}());
 ").release()
 
 testJS("
-export string foo(Foo foo) { return foo.toString(); }
+export string foo(Foo foo) { return foo.toString() }
 enum Foo { A, B, C, D, E }
 ", "
 (function(){foo=function(a){return c[a]};var c=['A','B','C','D','E']}());
 ").release()
 
 testJS("
-export var foo = [\"a\", \"b\", \"c\", \"d\", \"e\", \"f\"];
+export var foo = [\"a\", \"b\", \"c\", \"d\", \"e\", \"f\"]
 ", "
 (function(){foo='a b c d e f'.split(' ')}());
 ").release()
 
 testJS("
-export var foo = [\"a\", \" \", \"c\", \" \", \"e\", \" \"];
+export var foo = [\"a\", \" \", \"c\", \" \", \"e\", \" \"]
 ", "
 (function(){foo='a; ;c; ;e; '.split(';')}());
 ").release()
 
 testJS("
-export var foo = [\" \", \";\", \",\", \"{\", \"}\", \" \"];
+export var foo = [\" \", \";\", \",\", \"{\", \"}\", \" \"]
 ", "
 (function(){foo=[' ',';',',','{','}',' ']}());
 ").release()
 
 testJS("
 export bool foo(dynamic foo) {
-  return foo is `Array`;
+  return foo is `Array`
 }
 ", "
 (function(){foo=function(a){return a instanceof Array}}());
@@ -921,7 +924,7 @@ export List<bool> foo(dynamic foo) {
     !(foo || null),
     !(foo || math.NAN),
     !(foo || math.INFINITY),
-  ];
+  ]
 }
 ", "
 (function(){foo=function(a){return[!a,!(a||1),!a,!(a||!0),!a,!a,!(a||Infinity)]}}());
@@ -930,7 +933,7 @@ export List<bool> foo(dynamic foo) {
 // This must not become +foo because false and NaN give different results
 testJS("
 export double foo(dynamic foo) {
-  return +(foo || null);
+  return +(foo || null)
 }
 ", "
 (function(){foo=function(a){return +(a||null)}}());
@@ -948,7 +951,7 @@ export List<int> foo(dynamic foo) {
     (foo || null) & 0,
     (foo || math.NAN) & 0,
     (foo || math.INFINITY) & 0,
-  ];
+  ]
 }
 ", "
 (function(){foo=function(a){return[~a,~(a||1),a|0,(a||1)|0,a^0,(a||!0)^0,a&0,a&0,(a||Infinity)&0]}}());
@@ -961,7 +964,7 @@ export List<bool> foo(bool foo) {
     !!foo,
     !`window`.foo,
     !!`window`.foo,
-  ];
+  ]
 }
 ", "
 (function(){foo=function(a){return[!a,a,!window.foo,!!window.foo]}}());
@@ -969,16 +972,16 @@ export List<bool> foo(bool foo) {
 
 testJS("
 #define FOO false
-export var foo = FOO;
-export bool bar() { return FOO; }
+export var foo = FOO
+export bool bar() { return FOO }
 ", "
 (function(){bar=function(){return !1};foo=!1}());
 ").release()
 
 testJS("
 export bool foo() {
-  const var foo = false;
-  return foo;
+  const var foo = false
+  return foo
 }
 ", "
 (function(){foo=function(){return !1}}());
@@ -987,10 +990,10 @@ export bool foo() {
 testJS("
 export int foo(int y) {
   if (true) {
-    var x = 100;
-    y += x;
+    var x = 100
+    y += x
   }
-  return y;
+  return y
 }
 ", "
 (function(){foo=function(a){var b=100;return a=a+b|0,a}}());
@@ -1000,10 +1003,10 @@ testJS("
 export int foo(int y) {
   if (false) {
   } else {
-    var x = 100;
-    y += x;
+    var x = 100
+    y += x
   }
-  return y;
+  return y
 }
 ", "
 (function(){foo=function(a){var b=100;return a=a+b|0,a}}());
@@ -1012,9 +1015,9 @@ export int foo(int y) {
 testJS("
 export int foo(int y) {
   for (var x = 100; false; x++) {
-    y += x;
+    y += x
   }
-  return y;
+  return y
 }
 ", "
 (function(){foo=function(a){var b=100;return a}}());
@@ -1022,7 +1025,7 @@ export int foo(int y) {
 
 testJS("
 export bool foo(bool bar, bool baz) {
-  return bar ? bar : baz;
+  return bar ? bar : baz
 }
 ", "
 (function(){foo=function(a,b){return a||b}}());
@@ -1030,18 +1033,18 @@ export bool foo(bool bar, bool baz) {
 
 testJS("
 export Foo foo(Foo bar, Foo baz) {
-  return bar != null ? bar : baz;
+  return bar != null ? bar : baz
 }
-alias Foo = List<int>;
+alias Foo = List<int>
 ", "
 (function(){foo=function(a,b){return a||b}}());
 ").release()
 
 testJS("
 export Foo foo(Foo bar, Foo baz) {
-  return bar == null ? bar : baz;
+  return bar == null ? bar : baz
 }
-alias Foo = List<int>;
+alias Foo = List<int>
 ", "
 (function(){foo=function(a,b){return a&&b}}());
 ").release()
@@ -1049,11 +1052,11 @@ alias Foo = List<int>;
 testJS("
 class Foo {
   new() : bar = foo {}
-  int bar;
-  const var foo = 1;
+  int bar
+  const var foo = 1
 }
 export int foo() {
-  return Foo().bar;
+  return Foo().bar
 }
 ", "
 (function(){function b(){this.a=1}foo=function(){return new b().a}}());
@@ -1062,8 +1065,8 @@ export int foo() {
 testJS("
 export class Foo {
   new() : bar = foo {}
-  int bar;
-  const var foo = 1;
+  int bar
+  const var foo = 1
 }
 ", "
 (function(){Foo=function(){this.foo=this.bar=1}}());
@@ -1071,23 +1074,23 @@ export class Foo {
 
 testJS("
 class Foo {
-  const var foo = 1;
-  int bar() { return foo; }
+  const var foo = 1
+  int bar() { return foo }
 }
 export int foo() {
-  return Foo().bar();
+  return Foo().bar()
 }
 ", "
 (function(){function a(){}foo=function(){return new a(),1}}());
 ").release()
 
 testJS("
-import void bar(int x);
+import void bar(int x)
 export void foo(int x) {
   switch (x) {
-    case 0 { bar(0); }
-    case 1 { assert false; }
-    case 2 { bar(1); }
+    case 0 { bar(0) }
+    case 1 { assert false }
+    case 2 { bar(1) }
   }
 }
 ", "
@@ -1095,12 +1098,12 @@ export void foo(int x) {
 ").release()
 
 testJS("
-import void bar(int x);
+import void bar(int x)
 export void foo(int x) {
   switch (x) {
-    case 0 { bar(0); }
-    case 1 { assert false; }
-    case 2 { bar(1); }
+    case 0 { bar(0) }
+    case 1 { assert false }
+    case 2 { bar(1) }
     default {}
   }
 }
@@ -1109,13 +1112,13 @@ export void foo(int x) {
 ").release()
 
 testJS("
-import void bar(int x);
+import void bar(int x)
 export void foo(int x) {
   switch (x) {
-    case 0 { bar(0); }
-    case 1 { assert false; }
-    case 2 { bar(1); }
-    default { bar(2); }
+    case 0 { bar(0) }
+    case 1 { assert false }
+    case 2 { bar(1) }
+    default { bar(2) }
   }
 }
 ", "
@@ -1124,10 +1127,10 @@ export void foo(int x) {
 
 testJS("
 export void foo(int x) {
-  if (x == 3) foo(x - 1);
+  if (x == 3) foo(x - 1)
 }
 export void bar(double x) {
-  if (x == 3) bar(x - 1);
+  if (x == 3) bar(x - 1)
 }
 ", "
 (function(){foo=function(a){a^3||foo(a-1|0)};bar=function(a){a===3&&bar(a-1)}}());
@@ -1135,10 +1138,10 @@ export void bar(double x) {
 
 testJS("
 export void foo(int x) {
-  if (x != -1) foo(x);
-  if (x == -1) foo(x);
-  if (-1 != x) foo(x);
-  if (-1 == x) foo(x);
+  if (x != -1) foo(x)
+  if (x == -1) foo(x)
+  if (-1 != x) foo(x)
+  if (-1 == x) foo(x)
 }
 ", "
 (function(){foo=function(a){~a&&foo(a),~a||foo(a),~a&&foo(a),~a||foo(a)}}());
@@ -1146,10 +1149,10 @@ export void foo(int x) {
 
 testJS("
 export void foo(double x) {
-  if (x != -1) foo(x);
-  if (x == -1) foo(x);
-  if (-1 != x) foo(x);
-  if (-1 == x) foo(x);
+  if (x != -1) foo(x)
+  if (x == -1) foo(x)
+  if (-1 != x) foo(x)
+  if (-1 == x) foo(x)
 }
 ", "
 (function(){foo=function(a){a!==-1&&foo(a),a===-1&&foo(a),-1!==a&&foo(a),-1===a&&foo(a)}}());
@@ -1157,16 +1160,16 @@ export void foo(double x) {
 
 testJS("
 enum Foo { FOO }
-class Bar { static var foo = 0; }
-export int foo() { return Foo.FOO + Bar.foo; }
+class Bar { static var foo = 0 }
+export int foo() { return Foo.FOO + Bar.foo }
 ", "
 (function(){var Foo={FOO:0};function Bar(){}foo=function(){return Foo.FOO+Bar.foo|0};Bar.foo=0}());
 ").minify()
 
 testJS("
 enum Foo { FOO }
-class Bar { static var foo = 0; }
-export int foo() { return Foo.FOO + Bar.foo; }
+class Bar { static var foo = 0 }
+export int foo() { return Foo.FOO + Bar.foo }
 ", "
 (function() {
   var a = 0;
@@ -1184,16 +1187,16 @@ export int foo() { return Foo.FOO + Bar.foo; }
 
 testJS("
 enum Foo { FOO }
-class Bar { static var foo = 0; }
-export int foo() { return Foo.FOO + Bar.foo; }
+class Bar { static var foo = 0 }
+export int foo() { return Foo.FOO + Bar.foo }
 ", "
 (function(){var a=0;function d(){}foo=function(){return a+b|0};var b=0}());
 ").minify().mangle()
 
 testJS("
 export enum Foo { FOO }
-class Bar { static var foo = 0; }
-export int foo() { return Foo.FOO + Bar.foo; }
+class Bar { static var foo = 0 }
+export int foo() { return Foo.FOO + Bar.foo }
 ", "
 (function(){Foo={FOO:0};function b(){}foo=function(){return Foo.FOO+a|0};var a=0}());
 ").minify().mangle()

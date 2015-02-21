@@ -84,13 +84,13 @@ in Foo { class Bar {} }
 ")
 
 test("
-interface A { virtual void foo(); }
-interface B { void foo(); }
+interface A { virtual void foo() }
+interface B { void foo() }
 interface C : A, B {}
-int foo(C foo) { return foo.foo(); }
+int foo(C foo) { return foo.foo() }
 ", "
 <stdin>:2:20: error: Abstract functions must use the \"virtual\" modifier
-interface B { void foo(); }
+interface B { void foo() }
                    ~~~
 <stdin>:3:11: error: Cannot merge \"A.foo\" and \"B.foo\" for \"C.foo\"
 interface C : A, B {}
@@ -98,21 +98,21 @@ interface C : A, B {}
 ")
 
 test("
-interface A { virtual void foo(); }
-interface B { virtual void foo(); }
+interface A { virtual void foo() }
+interface B { virtual void foo() }
 interface C : A, B {}
-int foo(C foo) { return foo.foo(); }
+int foo(C foo) { return foo.foo() }
 ", "
 <stdin>:4:25: error: Cannot convert from type \"void\" to type \"int\"
-int foo(C foo) { return foo.foo(); }
+int foo(C foo) { return foo.foo() }
                         ~~~~~~~~~
 ")
 
 test("
-void foo(C foo) { foo.foo(); }
+void foo(C foo) { foo.foo() }
 interface C : A, B {}
-interface A { virtual void foo(); }
-interface B { virtual int foo(); }
+interface A { virtual void foo() }
+interface B { virtual int foo() }
 ", "
 <stdin>:2:11: error: Member \"C.foo\" has an ambiguous inherited type, could be type \"void fn()\" or type \"int fn()\"
 interface C : A, B {}
@@ -121,14 +121,14 @@ interface C : A, B {}
 
 test("
 interface G : C, F {}
-void foo(G foo) { foo.foo(); }
+void foo(G foo) { foo.foo() }
 
-interface A { virtual void foo(); }
-interface B { virtual int foo(); }
+interface A { virtual void foo() }
+interface B { virtual int foo() }
 interface C : A, B {}
 
-interface D { virtual bool foo(); }
-interface E { virtual float foo(); }
+interface D { virtual bool foo() }
+interface E { virtual float foo() }
 interface F : E, D {}
 ", "
 <stdin>:6:11: error: Member \"C.foo\" has an ambiguous inherited type, could be type \"void fn()\" or type \"int fn()\"
@@ -140,15 +140,15 @@ interface F : E, D {}
 ")
 
 test("
-void foo(G foo) { foo.foo(); }
+void foo(G foo) { foo.foo() }
 interface G : C, F {}
 
-interface A { virtual int foo(); }
-interface B { virtual int foo(); }
+interface A { virtual int foo() }
+interface B { virtual int foo() }
 interface C : A, B {}
 
-interface D { virtual bool foo(); }
-interface E { virtual bool foo(); }
+interface D { virtual bool foo() }
+interface E { virtual bool foo() }
 interface F : E, D {}
 ", "
 <stdin>:2:11: error: Member \"G.foo\" has an ambiguous inherited type, could be type \"int fn()\" or type \"bool fn()\"
@@ -157,8 +157,8 @@ interface G : C, F {}
 ")
 
 test("
-interface Foo { virtual bool foo(); }
-interface Bar { virtual int foo(); }
+interface Foo { virtual bool foo() }
+interface Bar { virtual int foo() }
 interface Baz : Foo, Bar {}
 ", "
 <stdin>:3:11: error: Member \"Baz.foo\" has an ambiguous inherited type, could be type \"bool fn()\" or type \"int fn()\"
@@ -170,7 +170,7 @@ test("
 interface Foo {}
 in Foo { namespace foo {} }
 interface Bar {}
-in Bar { virtual int foo(); }
+in Bar { virtual int foo() }
 interface Baz : Foo, Bar {}
 ", "
 <stdin>:5:11: error: Cannot merge \"Foo.foo\" and \"Bar.foo\" for \"Baz.foo\"
@@ -249,7 +249,7 @@ class Baz : Bar { override void foo() {} }
 ")
 
 test("
-interface IFoo { virtual void foo(); }
+interface IFoo { virtual void foo() }
 class Foo {}
 in Foo { override void foo() {} }
 in Foo : IFoo {}
@@ -271,10 +271,10 @@ class Foo { virtual void foo() {} }
 
 test("
 class Foo { void foo() {} }
-class Bar : Foo { int foo() { return 0; } }
+class Bar : Foo { int foo() { return 0 } }
 ", "
 <stdin>:2:23: error: \"foo\" must have the same signature as the function it overrides (expected type \"void fn()\" but found type \"int fn()\")
-class Bar : Foo { int foo() { return 0; } }
+class Bar : Foo { int foo() { return 0 } }
                       ~~~
 <stdin>:1:18: note: The overridden declaration is here
 class Foo { void foo() {} }
@@ -282,24 +282,24 @@ class Foo { void foo() {} }
 ")
 
 test("
-class Foo { int foo; }
-class Bar : Foo { int foo() { return 0; } }
+class Foo { int foo }
+class Bar : Foo { int foo() { return 0 } }
 ", "
 <stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
-class Bar : Foo { int foo() { return 0; } }
+class Bar : Foo { int foo() { return 0 } }
                       ~~~
 <stdin>:1:17: note: The overridden declaration is here
-class Foo { int foo; }
+class Foo { int foo }
                 ~~~
 ")
 
 test("
 class Foo {}
-class Bar : Foo { int foo() { return 0; } }
+class Bar : Foo { int foo() { return 0 } }
 in Foo { namespace foo {} }
 ", "
 <stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
-class Bar : Foo { int foo() { return 0; } }
+class Bar : Foo { int foo() { return 0 } }
                       ~~~
 <stdin>:3:20: note: The overridden declaration is here
 in Foo { namespace foo {} }
@@ -351,23 +351,23 @@ class Foo { static void foo() {} }
 ")
 
 test("
-class Foo { int foo; }
-class Bar : Foo { int foo; }
+class Foo { int foo }
+class Bar : Foo { int foo }
 ", "
 <stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
-class Bar : Foo { int foo; }
+class Bar : Foo { int foo }
                       ~~~
 <stdin>:1:17: note: The overridden declaration is here
-class Foo { int foo; }
+class Foo { int foo }
                 ~~~
 ")
 
 test("
 class Foo { void foo() {} }
-class Bar : Foo { int foo; }
+class Bar : Foo { int foo }
 ", "
 <stdin>:2:23: error: \"foo\" overrides another declaration with the same name in base type \"Foo\"
-class Bar : Foo { int foo; }
+class Bar : Foo { int foo }
                       ~~~
 <stdin>:1:18: note: The overridden declaration is here
 class Foo { void foo() {} }
@@ -387,14 +387,14 @@ override void bar() {}
 ")
 
 test("
-virtual int foo;
-override int bar;
+virtual int foo
+override int bar
 ", "
 <stdin>:1:1: error: Cannot use the \"virtual\" modifier on a variable declaration
-virtual int foo;
+virtual int foo
 ~~~~~~~
 <stdin>:2:1: error: Cannot use the \"override\" modifier on a variable declaration
-override int bar;
+override int bar
 ~~~~~~~~
 ")
 
@@ -512,43 +512,43 @@ in Foo : int {}
 
 test("
 class Foo {
-  int foo;
-  int bar = foo;
+  int foo
+  int bar = foo
 }
 ", "
 <stdin>:3:13: error: Cannot access \"foo\" from a static context
-  int bar = foo;
+  int bar = foo
             ~~~
 ")
 
 test("
-class Foo { bool foo; int bar; }
-Foo foo() { return Foo(1, false); }
+class Foo { bool foo; int bar }
+Foo foo() { return Foo(1, false) }
 ", "
 <stdin>:2:24: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-Foo foo() { return Foo(1, false); }
+Foo foo() { return Foo(1, false) }
                        ^
 <stdin>:2:27: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-Foo foo() { return Foo(1, false); }
+Foo foo() { return Foo(1, false) }
                           ~~~~~
 ")
 
 test("
-class Foo { var foo; }
-class Bar : Foo { int bar; }
-Bar foo = Bar();
+class Foo { var foo }
+class Bar : Foo { int bar }
+Bar foo = Bar()
 ", "
 <stdin>:1:17: error: Implicitly typed variables must be initialized
-class Foo { var foo; }
+class Foo { var foo }
                 ~~~
 ")
 
 test("
 class Foo {}
-in Foo { int foo() { return this; } }
+in Foo { int foo() { return this } }
 ", "
 <stdin>:2:29: error: Cannot convert from type \"Foo\" to type \"int\"
-in Foo { int foo() { return this; } }
+in Foo { int foo() { return this } }
                             ~~~~
 ")
 
@@ -558,9 +558,9 @@ in Bar : Baz {}
 class Bar : Foo {}
 interface Baz {}
 export void test() {
-  Foo foo = Bar();
-  Bar bar = Bar();
-  Baz baz = Bar();
+  Foo foo = Bar()
+  Bar bar = Bar()
+  Baz baz = Bar()
 }
 ", "
 ")
@@ -578,17 +578,17 @@ in Foo {}
 ")
 
 test("
-interface Foo { virtual void foo(); }
-interface Bar { virtual void foo(); }
-interface Baz : Foo, Bar { virtual void foo(); }
+interface Foo { virtual void foo() }
+interface Bar { virtual void foo() }
+interface Baz : Foo, Bar { virtual void foo() }
 ", "
 <stdin>:3:41: error: \"foo\" overrides another symbol with the same name but is missing the \"override\" modifier
-interface Baz : Foo, Bar { virtual void foo(); }
+interface Baz : Foo, Bar { virtual void foo() }
                                         ~~~
 ")
 
 test("
-interface A { virtual void foo(int foo); }
+interface A { virtual void foo(int foo) }
 interface B : A {}
 interface C : A {}
 class Diamond : B, C { override void foo() {} }
@@ -597,57 +597,57 @@ class Diamond : B, C { override void foo() {} }
 class Diamond : B, C { override void foo() {} }
                                      ~~~
 <stdin>:1:28: note: The overridden declaration is here
-interface A { virtual void foo(int foo); }
+interface A { virtual void foo(int foo) }
                            ~~~
 ")
 
 test("
 interface A {}
 interface B {}
-class C : A, B { void bar() { foo(); } }
-in A { virtual void foo(); }
-in B { virtual void foo(); }
-var c = C();
+class C : A, B { void bar() { foo() } }
+in A { virtual void foo() }
+in B { virtual void foo() }
+var c = C()
 ", "
 <stdin>:6:9: error: Cannot construct abstract type \"C\"
-var c = C();
+var c = C()
         ^
 <stdin>:3:7: note: The type \"C\" is abstract due to member \"C.foo\"
-class C : A, B { void bar() { foo(); } }
+class C : A, B { void bar() { foo() } }
       ^
 ")
 
 test("
 class A {}
 interface B {}
-class C : A, B { void bar() { foo(); } }
+class C : A, B { void bar() { foo() } }
 in A { virtual void foo() {} }
-in B { virtual void foo(); }
-var c = C();
+in B { virtual void foo() }
+var c = C()
 ", "
 ")
 
 test("
 interface A {}
 interface B {}
-class C : A, B { void bar() { foo(); } }
+class C : A, B { void bar() { foo() } }
 in A { static void foo() {} }
 in B { static void foo() {} }
 ", "
 <stdin>:3:31: error: Reference to \"foo\" is ambiguous, could be \"A.foo\" or \"B.foo\"
-class C : A, B { void bar() { foo(); } }
+class C : A, B { void bar() { foo() } }
                               ~~~
 ")
 
 test("
 interface A {}
 interface B {}
-class C : A, B { int bar() { return foo; } }
-in A { static int foo; }
-in B { static int foo; }
+class C : A, B { int bar() { return foo } }
+in A { static int foo }
+in B { static int foo }
 ", "
 <stdin>:3:37: error: Reference to \"foo\" is ambiguous, could be \"A.foo\" or \"B.foo\"
-class C : A, B { int bar() { return foo; } }
+class C : A, B { int bar() { return foo } }
                                     ~~~
 ")
 

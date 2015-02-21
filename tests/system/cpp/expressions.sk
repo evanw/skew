@@ -2,7 +2,7 @@ namespace cpp { void testExpressions() {
 
 testCPP("
 export bool foo(int a, int b, int c, int d) {
-  return (a == b) == (c == d);
+  return (a == b) == (c == d)
 }
 ", "
 bool foo(int a, int b, int c, int d);
@@ -20,7 +20,7 @@ export var x = [
   0x64,
   0xabc,
   0xABC,
-];
+]
 ", "
 #include <initializer_list>
 #include <vector>
@@ -53,9 +53,9 @@ List<int> *x = (new List<int>())->literal({ 100, 100, 100, 100, 2748, 2748 });
 
 // Need to special-case strings with '\0' in them to avoid truncation
 testCPP("
-export var foo = \"'\";
-export var bar = \"\\\"\";
-export var baz = \"abc \\0 def\";
+export var foo = \"'\"
+export var bar = \"\\\"\"
+export var baz = \"abc \\0 def\"
 ", "
 #include <string>
 
@@ -70,11 +70,11 @@ std::string baz = std::string(\"abc \\0 def\", 9);
 
 testCPP("
 export void test() {
-  double x = 0;
-  - -1;
-  + +1;
-  - +1;
-  + -1;
+  double x = 0
+  - -1
+  + +1
+  - +1
+  + -1
 }
 ", "
 void test();
@@ -90,8 +90,8 @@ void test() {
 
 testCPP("
 export void test() {
-  -0x80000000;
-  - -0x80000000;
+  -0x80000000
+  - -0x80000000
 }
 ", "
 void test();
@@ -104,11 +104,11 @@ void test() {
 
 testCPP("
 export void test() {
-  float x = 0;
-  (1f - 2f) - 3f;
-  (1f / 2f) * 3f;
-  1e30f - (2e30f - 3e30f);
-  1e-30f / (2e-30f * 3e-30f);
+  float x = 0
+  (1f - 2f) - 3f
+  (1f / 2f) * 3f
+  1e30f - (2e30f - 3e30f)
+  1e-30f / (2e-30f * 3e-30f)
 }
 ", "
 void test();
@@ -124,11 +124,11 @@ void test() {
 
 testCPP("
 export void test() {
-  double x = 0;
-  (1.0 - 2.0) - 3.0;
-  (1.0 / 2.0) * 3.0;
-  1e30 - (2e30 - 3e30);
-  1e-30 / (2e-30 * 3e-30);
+  double x = 0
+  (1.0 - 2.0) - 3.0
+  (1.0 / 2.0) * 3.0
+  1e30 - (2e30 - 3e30)
+  1e-30 / (2e-30 * 3e-30)
 }
 ", "
 void test();
@@ -144,9 +144,9 @@ void test() {
 
 testCPP("
 export void test() {
-  (bool)1;
-  (int)false;
-  (float)false;
+  (bool)1
+  (int)false
+  (float)false
 }
 ", "
 void test();
@@ -160,7 +160,7 @@ void test() {
 
 testCPP("
 export void test() {
-  (bool)1;
+  (bool)1
 }
 ", "
 void test();
@@ -172,7 +172,7 @@ void test() {
 
 testCPP("
 export void test() {
-  assert (bool)1;
+  assert (bool)1
 }
 ", "
 #include <cassert>
@@ -186,10 +186,10 @@ void test() {
 
 testCPP("
 enum Foo {}
-export int a(Foo x) { return (int)x; }
-export Foo b(int x) { return (Foo)x; }
-export int c(int x) { return (int)(Foo)x; }
-export Foo d(Foo x) { return (Foo)(int)x; }
+export int a(Foo x) { return (int)x }
+export Foo b(int x) { return (Foo)x }
+export int c(int x) { return (int)(Foo)x }
+export Foo d(Foo x) { return (Foo)(int)x }
 ", "
 enum struct Foo {
 };
@@ -218,10 +218,10 @@ Foo d(Foo x) {
 
 testCPP("
 enum flags Foo {}
-export int a(Foo x) { return (int)x; }
-export Foo b(int x) { return (Foo)x; }
-export int c(int x) { return (int)(Foo)x; }
-export Foo d(Foo x) { return (Foo)(int)x; }
+export int a(Foo x) { return (int)x }
+export Foo b(int x) { return (Foo)x }
+export int c(int x) { return (int)(Foo)x }
+export Foo d(Foo x) { return (Foo)(int)x }
 ", "
 namespace Foo {
   enum {
@@ -252,7 +252,7 @@ int d(int x) {
 
 testCPP("
 enum flags Foo {}
-export int a(Foo x) { return x; }
+export int a(Foo x) { return x }
 ", "
 namespace Foo {
   enum {
@@ -268,9 +268,9 @@ int a(int x) {
 
 testCPP("
 export void test() {
-  int foo = (1, 2);
-  foo = (1, 2);
-  (1, 2), (3, 4);
+  int foo = (1, 2)
+  foo = (1, 2)
+  (1, 2), (3, 4)
 }
 ", "
 void test();
@@ -284,9 +284,9 @@ void test() {
 
 testCPP("
 export void test() {
-  0.toString();
-  0.0f.toString();
-  0.0.toString();
+  0.toString()
+  0.0f.toString()
+  0.0.toString()
 }
 ", "
 #include <cstdio>
@@ -323,9 +323,9 @@ void test() {
 
 testCPP("
 export void test() {
-  0.toString();
-  0.0f.toString();
-  0.0.toString();
+  0.toString()
+  0.0f.toString()
+  0.0.toString()
 }
 ", "
 #include <stdio.h>
@@ -362,7 +362,7 @@ void test() {
 
 testCPP("
 export void test(bool a) {
-  var b = a ? \"1\" : \"2\";
+  var b = a ? \"1\" : \"2\"
 }
 ", "
 #include <string>
@@ -380,13 +380,13 @@ class Foo {}
 class Bar : Foo {}
 class Baz : Foo {}
 export void foo(Foo foo) {
-  foo = true ? Foo() : Foo();
-  foo = true ? Foo() : Baz();
-  foo = true ? Bar() : Foo();
-  foo = true ? Bar() : Baz();
-  foo = true ? Bar() : null;
-  foo = true ? null : Baz();
-  foo = true ? null : null;
+  foo = true ? Foo() : Foo()
+  foo = true ? Foo() : Baz()
+  foo = true ? Bar() : Foo()
+  foo = true ? Bar() : Baz()
+  foo = true ? Bar() : null
+  foo = true ? null : Baz()
+  foo = true ? null : null
 }
 ", "
 struct Foo;
@@ -428,8 +428,8 @@ void foo(Foo *foo) {
 ")
 
 testCPP("
-alias foo = `foo`;
-export void bar() { foo(); }
+alias foo = `foo`
+export void bar() { foo() }
 ", "
 void bar();
 
@@ -440,7 +440,7 @@ void bar() {
 
 testCPP("
 class Foo<T> {}
-export Foo<`foo`> bar;
+export Foo<`foo`> bar
 ", "
 template <typename T>
 struct Foo;
@@ -461,7 +461,7 @@ Foo<foo> *bar = nullptr;
 
 testCPP("
 export int foo() {
-  return List<int>().size(); // The constructor call must be wrapped in parentheses
+  return List<int>().size() // The constructor call must be wrapped in parentheses
 }
 ", "
 #include <initializer_list>
@@ -503,8 +503,8 @@ int foo() {
 
 testCPP("
 #define FOO false
-export var foo = FOO;
-export bool bar() { return FOO; }
+export var foo = FOO
+export bool bar() { return FOO }
 ", "
 bool bar();
 
@@ -519,8 +519,8 @@ bool foo = false;
 
 testCPP("
 export bool foo() {
-  const var foo = false;
-  return foo;
+  const var foo = false
+  return foo
 }
 ", "
 bool foo();

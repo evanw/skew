@@ -24,7 +24,7 @@ Foo::Foo() {
 
 testCPP("
 export class Foo : Bar {}
-class Bar { int x; }
+class Bar { int x }
 ", "
 struct Bar;
 struct Foo;
@@ -47,7 +47,7 @@ Foo::Foo(int _0) : Bar(_0) {
 ")
 
 testCPP("
-export class Foo : Bar { int y; }
+export class Foo : Bar { int y }
 class Bar {}
 ", "
 struct Bar;
@@ -71,8 +71,8 @@ Foo::Foo(int _0) : y(_0) {
 ")
 
 testCPP("
-export class Foo : Bar { int y; }
-class Bar { int x; }
+export class Foo : Bar { int y }
+class Bar { int x }
 ", "
 struct Bar;
 struct Foo;
@@ -194,7 +194,7 @@ Bar::Bar() {
 
 testCPP("
 export class Foo {
-  int foo;
+  int foo
   new() {}
 }
 ", "

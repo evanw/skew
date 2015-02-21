@@ -5,7 +5,7 @@ namespace ruby { void testExpressions() {
 // in Ruby also don't seem to have this issue.
 testRuby("
 export bool foo(int a, int b, int c, int d) {
-  return (a == b) == (c == d);
+  return (a == b) == (c == d)
 }
 ", "
 def foo(a, b, c, d)
@@ -14,9 +14,9 @@ end
 ")
 
 testRuby("
-export var foo = \"'\";
-export var bar = \"\\\"\";
-export var baz = \"#{test}\";
+export var foo = \"'\"
+export var bar = \"\\\"\"
+export var baz = \"#{test}\"
 ", "
 $foo = \"'\"
 $bar = \"\\\"\"
@@ -25,10 +25,10 @@ $baz = \"\\#{test}\"
 
 testRuby("
 export List<float> foo(int x, float y) {
-  return [1, 1 + 2, 1 + 2f, 1 + 2.0, x + 2.0, 1 + y];
+  return [1, 1 + 2, 1 + 2f, 1 + 2.0, x + 2.0, 1 + y]
 }
 export List<double> bar(int x, double y) {
-  return [1, 1 + 2, 1 + 2f, 1 + 2.0, x + 2.0, 1 + y];
+  return [1, 1 + 2, 1 + 2f, 1 + 2.0, x + 2.0, 1 + y]
 }
 ", "
 def foo(x, y)
@@ -42,8 +42,8 @@ end
 
 testRuby("
 export void foo(int x) {
-  x = (1, 2);
-  x++, --x;
+  x = (1, 2)
+  x++, --x
 }
 ", "
 def foo(x)
@@ -55,11 +55,11 @@ end
 
 testRuby("
 class Foo<T> {
-  inline T foo() { return `this`.untyped; }
+  inline T foo() { return `this`.untyped }
 }
-export int foo(Foo<bool> foo) { return (int)foo.foo(); }
-export int bar(int x) { return (int)baz(x); }
-inline bool baz(int x) { return x == 0; }
+export int foo(Foo<bool> foo) { return (int)foo.foo() }
+export int bar(int x) { return (int)baz(x) }
+inline bool baz(int x) { return x == 0 }
 ", "
 class Foo
   def initialize
@@ -77,7 +77,7 @@ end
 
 testRuby("
 export dynamic foo() {
-  return `{ \"x\": 1, 2: \"y\" }`;
+  return `{ \"x\": 1, 2: \"y\" }`
 }
 ", "
 def foo
@@ -87,7 +87,7 @@ end
 
 testRuby("
 export StringMap<int> foo() {
-  return { \"x\": 1, \"y\": 2 };
+  return { \"x\": 1, \"y\": 2 }
 }
 ", "
 def foo

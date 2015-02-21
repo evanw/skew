@@ -1,43 +1,43 @@
 namespace core { void testCyclic() {
 
 test("
-var foo = foo;
+var foo = foo
 ", "
 <stdin>:1:5: error: Cyclic declaration of \"foo\"
-var foo = foo;
+var foo = foo
     ~~~
 ")
 
 test("
-foo foo = foo;
+foo foo = foo
 ", "
 <stdin>:1:5: error: Cyclic declaration of \"foo\"
-foo foo = foo;
+foo foo = foo
     ~~~
 ")
 
 test("
-foo foo = foo, bar = bar;
+foo foo = foo, bar = bar
 ", "
 <stdin>:1:5: error: Cyclic declaration of \"foo\"
-foo foo = foo, bar = bar;
+foo foo = foo, bar = bar
     ~~~
 ")
 
 test("
-bar foo = foo, bar = bar;
+bar foo = foo, bar = bar
 ", "
 <stdin>:1:16: error: Cyclic declaration of \"bar\"
-bar foo = foo, bar = bar;
+bar foo = foo, bar = bar
                ~~~
 ")
 
 test("
-bar foo = foo;
-foo bar = bar;
+bar foo = foo
+foo bar = bar
 ", "
 <stdin>:1:5: error: Cyclic declaration of \"foo\"
-bar foo = foo;
+bar foo = foo
     ~~~
 ")
 
@@ -155,28 +155,28 @@ class A : C.D {}
 ")
 
 test("
-alias foo = foo;
-alias bar = baz;
-alias baz = bar;
+alias foo = foo
+alias bar = baz
+alias baz = bar
 ", "
 <stdin>:1:7: error: Cyclic declaration of \"foo\"
-alias foo = foo;
+alias foo = foo
       ~~~
 <stdin>:2:7: error: Cyclic declaration of \"bar\"
-alias bar = baz;
+alias bar = baz
       ~~~
 ")
 
 test("
-const int foo = foo;
-const int bar = baz;
-const int baz = bar;
+const int foo = foo
+const int bar = baz
+const int baz = bar
 ", "
 <stdin>:1:11: error: Cyclic declaration of \"foo\"
-const int foo = foo;
+const int foo = foo
           ~~~
 <stdin>:2:11: error: Cyclic declaration of \"bar\"
-const int bar = baz;
+const int bar = baz
           ~~~
 ")
 
