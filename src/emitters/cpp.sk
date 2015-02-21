@@ -429,10 +429,27 @@ namespace cpp {
     }
 
     override void emitTry(Node node) {
+      var catches = node.catches()
+      var finallyBlock = node.finallyBlock()
       emit(indent + "try")
       emitBlock(node.tryBlock())
-      emit(" catch (...)")
-      emitBlock(node.catchBlock())
+      for (var i = 0; i < catches.size(); i++) {
+        var catchNode = catches[i]
+        var variable = catchNode.catchVariable()
+        emit(" catch (")
+        if (variable != null) {
+          emitCppType(variable.symbol.type, .DECLARATION)
+          emit(mangleName(variable.symbol))
+        } else {
+          emit("...")
+        }
+        emit(")")
+        emitBlock(catchNode.catchBlock())
+      }
+      if (finallyBlock != null) {
+        emit(" finally")
+        emitBlock(finallyBlock)
+      }
       emit("\n")
     }
 

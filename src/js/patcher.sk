@@ -276,6 +276,7 @@ namespace js {
         case .CAST { patchCast(node) }
         case .CLASS { patchClass(node) }
         case .NAME { patchName(node) }
+        case .TRY { patchTry(node) }
         case .LIST { mangleStringList(node) }
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinaryArithmetic(node) }
         case .POSITIVE, .NEGATIVE, .PREFIX_INCREMENT, .PREFIX_DECREMENT, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT { patchUnary(node) }
@@ -296,7 +297,7 @@ namespace js {
         setCurrentFunction(null)
       } else if (options.mangle) {
         switch (node.kind) {
-          case .VARIABLE { unionVariableWithFunction(node) }
+          case .VARIABLE { unionVariableWithFunction(node.symbol) }
           case .IF { peepholeMangleIf(node) }
           case .FOR { peepholeMangleFor(node) }
           case .GREATER_THAN_OR_EQUAL, .LESS_THAN_OR_EQUAL { peepholeMangleBinaryRelational(node) }
@@ -781,6 +782,42 @@ namespace js {
       }
     }
 
+    static void recursivelyReplaceCatchVariable(Node node, Symbol oldSymbol, Symbol newSymbol) {
+      if (node.symbol == oldSymbol) {
+        node.symbol = newSymbol
+      }
+      if (node.hasChildren()) {
+        for (var i = 0; i < node.children.size(); i++) {
+          var child = node.children[i]
+          if (child != null) {
+            recursivelyReplaceCatchVariable(child, oldSymbol, newSymbol)
+          }
+        }
+      }
+    }
+
+    void patchTry(Node node) {
+      var catches = node.catches()
+      if (catches.size() != 0) {
+        var name = options.minify ? "$x" : "$exception"
+        var symbol = createLocalVariable(name)
+        Node block = null
+        for (var i = catches.size() - 1; i >= 0; i--) {
+          var catchNode = catches[i]
+          var variable = catchNode.catchVariable()
+          var catchBlock = catchNode.catchBlock().replaceWith(null)
+          if (variable != null) {
+            recursivelyReplaceCatchVariable(catchBlock, variable.symbol, symbol)
+            block = variable.symbol.type.isDynamic() ? catchBlock :
+              Node.createBlock([Node.createIf(.IF, Node.createBinary(.IS, Node.createName(name).withSymbol(symbol), Node.createType(variable.symbol.type)), catchBlock, block)])
+          } else {
+            block = catchBlock
+          }
+        }
+        node.replaceChild(1, Node.createNodeList([Node.createCatch(Node.createVariable(Node.createName(name), null, null).withSymbol(symbol), block)]))
+      }
+    }
+
     void mangleStringList(Node node) {
       var values = node.listValues()
       var count = values.size()
@@ -824,11 +861,11 @@ namespace js {
       }
     }
 
-    void unionVariableWithFunction(Node node) {
-      assert (node.symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null)
+    void unionVariableWithFunction(Symbol symbol) {
+      assert (symbol.kind == .LOCAL_VARIABLE) == (currentFunction != null)
       if (currentFunction != null) {
         var left = namingGroupIndexForSymbol[currentFunction.uniqueID]
-        var right = namingGroupIndexForSymbol[node.symbol.uniqueID]
+        var right = namingGroupIndexForSymbol[symbol.uniqueID]
         localVariableUnionFind.union(left, right)
       }
     }
@@ -961,7 +998,7 @@ namespace js {
       }
       var name = "$temp" + nextTempID
       nextTempID++
-      var symbol = resolver.createSymbol(name, .LOCAL_VARIABLE)
+      var symbol = createLocalVariable(name)
       var reference = Node.createName(name).withSymbol(symbol)
       var property = Node.createDot(reference, left.dotName().replaceWith(null))
       symbol.node = Node.createVariable(reference.clone(), Node.createType(cache.intType), null).withSymbol(symbol)
@@ -969,10 +1006,15 @@ namespace js {
       target.become(Node.createSequence([
         Node.createBinary(.ASSIGN, reference.clone(), left.dotTarget().replaceWith(null)),
         Node.createBinary(.ASSIGN, property.clone(), createBinaryInt(kind, property, right))]).withRange(target.range))
+    }
+
+    Symbol createLocalVariable(string name) {
+      var symbol = resolver.createSymbol(name, .LOCAL_VARIABLE)
       if (options.mangle) {
         namingGroupIndexForSymbol[symbol.uniqueID] = localVariableUnionFind.allocate()
-        unionVariableWithFunction(reference)
+        unionVariableWithFunction(symbol)
       }
+      return symbol
     }
 
     bool alwaysConvertsOperandsToInt(NodeKind kind) {

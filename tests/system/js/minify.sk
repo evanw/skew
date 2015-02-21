@@ -1159,6 +1159,71 @@ export void foo(double x) {
 ").release()
 
 testJS("
+import void bar(int x)
+export void foo() {
+  try { throw Foo(1) }
+  catch (Foo foo) { bar(foo.x) }
+  catch { bar(2) }
+  finally { bar(3) }
+}
+class Foo { int x }
+", "
+(function(){function b(a){this.a=a}foo=function(){try{throw new b(1)}catch(a){a instanceof b?bar(a.a):bar(2)}finally{bar(3)}}}());
+").release()
+
+testJS("
+import void bar(int x)
+export void foo() {
+  try { throw Foo(1) }
+  catch (Foo foo) { bar(foo.x) }
+  catch { bar(2) }
+  finally {}
+}
+class Foo { int x }
+", "
+(function(){function b(a){this.a=a}foo=function(){try{throw new b(1)}catch(a){a instanceof b?bar(a.a):bar(2)}}}());
+").release()
+
+testJS("
+import void bar(int x)
+export void foo() {
+  try { throw Foo(1) }
+  catch (Foo foo) { bar(foo.x) }
+  catch {}
+  finally { bar(3) }
+}
+class Foo { int x }
+", "
+(function(){function b(a){this.a=a}foo=function(){try{throw new b(1)}catch(a){a instanceof b&&bar(a.a)}finally{bar(3)}}}());
+").release()
+
+testJS("
+import void bar(int x)
+export void foo() {
+  try { throw Foo(1) }
+  catch (Foo foo) {}
+  catch { bar(2) }
+  finally {}
+}
+class Foo { int x }
+", "
+(function(){function b(a){this.a=a}foo=function(){try{throw new b(1)}catch(a){if(a instanceof b);else bar(2)}}}());
+").release()
+
+testJS("
+import void bar(int x)
+export void foo() {
+  try { throw Foo(1) }
+  catch (Foo foo) {}
+  catch {}
+  finally {}
+}
+class Foo { int x }
+", "
+(function(){function b(a){this.a=a}foo=function(){throw new b(1)}}());
+").release()
+
+testJS("
 enum Foo { FOO }
 class Bar { static var foo = 0 }
 export int foo() { return Foo.FOO + Bar.foo }

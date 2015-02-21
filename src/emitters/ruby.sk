@@ -247,14 +247,34 @@ end
       }
     }
 
+    override void emitThrow(Node node) {
+      emit(indent + "raise ")
+      emitExpression(node.throwValue(), .LOWEST)
+      emit("\n")
+    }
+
     override void emitTry(Node node) {
       var tryBlock = node.tryBlock()
-      var catchBlock = node.catchBlock()
-      emit(indent + "begin\n")
+      var catches = node.catches()
+      var finallyBlock = node.finallyBlock()
+      emit(indent + "begin")
       skipEnd = tryBlock
       emitBlock(tryBlock)
-      emit(indent + "rescue\n")
-      emitBlock(catchBlock)
+      for (var i = 0; i < catches.size(); i++) {
+        var catchNode = catches[i]
+        var variable = catchNode.catchVariable()
+        var catchBlock = catchNode.catchBlock()
+        emit(indent + "rescue")
+        if (variable != null) {
+          emit(" " + fullName(variable.symbol.type.symbol) + " => " + mangleName(variable.symbol))
+        }
+        skipEnd = i + 1 < catches.size() || finallyBlock != null ? catchBlock : null
+        emitBlock(catchBlock)
+      }
+      if (finallyBlock != null) {
+        emit(indent + "ensure")
+        emitBlock(finallyBlock)
+      }
     }
 
     override void endStatement() {

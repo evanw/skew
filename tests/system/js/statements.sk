@@ -165,4 +165,56 @@ const var baz = 0
 }());
 ")
 
+testJS("
+import void bar(int x)
+export void foo() {
+  try { throw Foo(1) }
+  catch (Foo foo) { bar(foo.x) }
+  catch { bar(2) }
+  finally { bar(3) }
+}
+class Foo { int x }
+", "
+(function() {
+  function Foo(_0) {
+    this.x = _0;
+  }
+
+  foo = function() {
+    try {
+      throw new Foo(1);
+    } catch ($exception) {
+      if ($exception instanceof Foo) {
+        bar($exception.x);
+      } else {
+        bar(2);
+      }
+    } finally {
+      bar(3);
+    }
+  };
+}());
+")
+
+testJS("
+export void foo() {
+  try { throw Foo() }
+  catch (dynamic e) { terminal.print(e.stack) }
+}
+class Foo {}
+", "
+(function() {
+  function Foo() {
+  }
+
+  foo = function() {
+    try {
+      throw new Foo();
+    } catch ($exception) {
+      console.log($exception.stack);
+    }
+  };
+}());
+")
+
 }}

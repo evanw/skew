@@ -319,4 +319,8 @@ class Type {
   bool isNumeric(TypeCache cache) {
     return isInteger(cache) || isReal(cache)
   }
+
+  bool isDynamic() {
+    return isQuoted() && symbol.node.kind == .NAME && symbol.node.asString() == "dynamic"
+  }
 }

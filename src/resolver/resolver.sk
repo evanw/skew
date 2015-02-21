@@ -638,64 +638,66 @@ class Resolver {
 
     // Separating the case bodies into separate functions makes the JavaScript JIT go faster
     switch (kind) {
-      case .PROGRAM { resolveProgram(node) }
-      case .FILE { resolveFile(node) }
       case .BLOCK { resolveBlock(node) }
-      case .NODE_LIST { resolveChildren(node) }
       case .CASE { resolveCase(node) }
+      case .FILE { resolveFile(node) }
+      case .NODE_LIST { resolveChildren(node) }
+      case .PROGRAM { resolveProgram(node) }
       case .USING {}
 
-      case .NAMESPACE { resolveNamespace(node) }
-      case .ENUM, .ENUM_FLAGS { resolveEnum(node) }
       case .CLASS, .INTERFACE { resolveObject(node) }
+      case .ENUM, .ENUM_FLAGS { resolveEnum(node) }
+      case .NAMESPACE { resolveNamespace(node) }
 
-      case .EXTENSION { resolveExtension(node) }
+      case .ALIAS { resolveAlias(node) }
       case .CONSTRUCTOR, .FUNCTION { resolveFunction(node) }
-      case .VARIABLE { resolveVariable(node) }
-      case .VARIABLE_CLUSTER { resolveVariableCluster(node) }
+      case .EXTENSION { resolveExtension(node) }
       case .PARAMETER { resolveParameter(node) }
       case .PREPROCESSOR_DEFINE { resolveDefine(node) }
-      case .ALIAS { resolveAlias(node) }
+      case .VARIABLE { resolveVariable(node) }
+      case .VARIABLE_CLUSTER { resolveVariableCluster(node) }
 
-      case .IF { resolveIf(node) }
-      case .TRY { resolveTry(node) }
-      case .FOR { resolveFor(node) }
-      case .FOR_EACH { resolveForEach(node) }
-      case .WHILE { resolveWhile(node) }
-      case .DO_WHILE { resolveWhile(node) }
-      case .RETURN { resolveReturn(node) }
+      case .ASSERT, .ASSERT_CONST { resolveAssert(node) }
       case .BREAK { resolveBreak(node) }
       case .CONTINUE { resolveContinue(node) }
-      case .ASSERT, .ASSERT_CONST { resolveAssert(node) }
+      case .DO_WHILE { resolveWhile(node) }
       case .EXPRESSION { resolveExpression(node) }
-      case .SWITCH { resolveSwitch(node) }
+      case .FOR { resolveFor(node) }
+      case .FOR_EACH { resolveForEach(node) }
+      case .IF { resolveIf(node) }
       case .MODIFIER { resolveModifier(node) }
-      case .PREPROCESSOR_WARNING, .PREPROCESSOR_ERROR { resolvePreprocessorDiagnostic(node) }
       case .PREPROCESSOR_IF {} // If this is still here, the errors have already been logged
+      case .PREPROCESSOR_WARNING, .PREPROCESSOR_ERROR { resolvePreprocessorDiagnostic(node) }
+      case .RETURN { resolveReturn(node) }
+      case .SWITCH { resolveSwitch(node) }
+      case .THROW { resolveThrow(node) }
+      case .TRY { resolveTry(node) }
+      case .WHILE { resolveWhile(node) }
 
-      case .NAME { resolveName(node) }
-      case .NULL { node.type = cache.nullType }
-      case .THIS { resolveThis(node) }
       case .ANNOTATION { resolveAnnotation(node) }
       case .BOOL { node.type = cache.boolType }
-      case .HOOK { resolveHook(node) }
-      case .PREPROCESSOR_HOOK { resolvePreprocessorHook(node) }
-      case .INT { resolveInt(node) }
-      case .FLOAT { node.type = cache.floatType }
+      case .CALL { resolveCall(node) }
+      case .CAST { resolveCast(node) }
+      case .DOT, .DOT_ARROW, .DOT_COLON { resolveDot(node) }
       case .DOUBLE { node.type = cache.doubleType }
-      case .STRING { node.type = cache.stringType }
+      case .ERROR {} // Ignore parse errors
+      case .FLOAT { node.type = cache.floatType }
+      case .HOOK { resolveHook(node) }
+      case .INT { resolveInt(node) }
+      case .KEY_VALUE { resolveKeyValue(node) }
       case .LIST { resolveList(node) }
       case .MAP { resolveMap(node) }
-      case .KEY_VALUE { resolveKeyValue(node) }
-      case .DOT, .DOT_ARROW, .DOT_COLON { resolveDot(node) }
-      case .CALL { resolveCall(node) }
-      case .SUPER_CALL { resolveSuperCall(node) }
-      case .ERROR {} // Ignore parse errors
-      case .SEQUENCE { resolveSequence(node) }
+      case .NAME { resolveName(node) }
+      case .NULL { node.type = cache.nullType }
       case .PARAMETERIZE { resolveParameterize(node) }
-      case .CAST { resolveCast(node) }
+      case .PREPROCESSOR_HOOK { resolvePreprocessorHook(node) }
       case .QUOTED { resolveQuoted(node) }
+      case .SEQUENCE { resolveSequence(node) }
+      case .STRING { node.type = cache.stringType }
+      case .SUPER_CALL { resolveSuperCall(node) }
+      case .THIS { resolveThis(node) }
       case .VAR { resolveVar(node) }
+
       default {
         if (kind.isUnaryOperator()) resolveUnary(node)
         else if (kind.isBinaryOperator()) resolveBinary(node)
@@ -2942,10 +2944,26 @@ class Resolver {
     if (node.ifFalse() != null) resolve(node.ifFalse(), null)
   }
 
+  void resolveThrow(Node node) {
+    resolveAsParameterizedExpression(node.throwValue())
+  }
+
   void resolveTry(Node node) {
+    var catches = node.catches()
+    var finallyBlock = node.finallyBlock()
     checkStatementLocation(node)
     resolve(node.tryBlock(), null)
-    resolve(node.catchBlock(), null)
+    for (var i = 0; i < catches.size(); i++) {
+      var catchNode = catches[i]
+      var variable = catchNode.catchVariable()
+      if (variable != null) {
+        resolveVariable(variable)
+      }
+      resolve(catchNode.catchBlock(), null)
+    }
+    if (finallyBlock != null) {
+      resolve(finallyBlock, null)
+    }
   }
 
   void resolveFor(Node node) {

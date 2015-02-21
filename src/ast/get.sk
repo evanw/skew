@@ -245,13 +245,36 @@ in Node {
 
   Node tryBlock() {
     assert kind == .TRY
+    assert children.size() == 3
+    assert children[0].kind == .BLOCK
+    return children[0]
+  }
+
+  List<Node> catches() {
+    assert kind == .TRY
+    assert children.size() == 3
+    assert children[1].kind == .NODE_LIST
+    return children[1].children
+  }
+
+  Node finallyBlock() {
+    assert kind == .TRY
+    assert children.size() == 3
+    assert children[2] == null || children[2].kind == .BLOCK
+    return children[2]
+  }
+
+  Node catchVariable() {
+    assert kind == .CATCH
     assert children.size() == 2
+    assert children[0] == null || children[0].kind == .VARIABLE
     return children[0]
   }
 
   Node catchBlock() {
-    assert kind == .TRY
+    assert kind == .CATCH
     assert children.size() == 2
+    assert children[1].kind == .BLOCK
     return children[1]
   }
 
@@ -381,6 +404,12 @@ in Node {
     assert kind == .MEMBER_INITIALIZER
     assert children.size() == 2
     return children[1]
+  }
+
+  Node throwValue() {
+    assert kind == .THROW
+    assert children.size() == 1
+    return children[0]
   }
 
   Node assertValue() {

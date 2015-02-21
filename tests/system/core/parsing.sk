@@ -873,6 +873,28 @@ void foo()
 ")
 
 test("
+void foo()
+{
+  try
+  {
+  }
+
+  catch (dynamic foo)
+  {
+  }
+
+  catch
+  {
+  }
+
+  finally
+  {
+  }
+}
+", "
+")
+
+test("
 class Foo
 {
   new()

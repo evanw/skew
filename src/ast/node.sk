@@ -5,6 +5,7 @@ enum NodeKind {
   BLOCK,
   NODE_LIST,
   CASE,
+  CATCH,
   MEMBER_INITIALIZER,
   VARIABLE_CLUSTER,
 
@@ -34,6 +35,7 @@ enum NodeKind {
   RETURN,
   BREAK,
   CONTINUE,
+  THROW,
   ASSERT,
   ASSERT_CONST,
   EXPRESSION,
@@ -212,7 +214,7 @@ in NodeKind {
   }
 
   bool isJump() {
-    return this >= RETURN && this <= CONTINUE
+    return this >= RETURN && this <= THROW
   }
 
   bool isDot() {

@@ -257,6 +257,7 @@ namespace base {
         case .MODIFIER { emitStatements(node.modifierStatements()) }
         case .RETURN { emitReturn(node) }
         case .SWITCH { emitSwitch(node) }
+        case .THROW { emitThrow(node) }
         case .TRY { emitTry(node) }
         case .VARIABLE { emitVariable(node.symbol) }
         case .VARIABLE_CLUSTER { emitStatements(node.clusterVariables()) }
@@ -319,6 +320,12 @@ namespace base {
           emitBlock(falseBlock)
         }
       }
+    }
+
+    virtual void emitThrow(Node node) {
+      emit(indent + "throw ")
+      emitExpression(node.throwValue(), .LOWEST)
+      endStatement()
     }
 
     virtual void emitTry(Node node)

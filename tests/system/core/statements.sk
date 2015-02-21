@@ -377,4 +377,62 @@ void foo() {
        ~~~~~~~~~~~~~~~~~~~~
 ")
 
+test("
+void foo() {
+  try {}
+}
+", "
+<stdin>:3:1: error: Expected CATCH but found RIGHT_BRACE
+}
+^
+")
+
+test("
+void foo() {
+  try {} finally {}
+}
+", "
+")
+
+test("
+void foo() {
+  try {} catch {}
+}
+", "
+")
+
+test("
+void foo() {
+  try {} catch {} finally {}
+}
+", "
+")
+
+test("
+class Foo {}
+void foo() {
+  try {} catch (Foo foo) {} finally {}
+}
+", "
+")
+
+test("
+class Foo {}
+void foo() {
+  try {} catch (Foo foo) {} catch {} finally {}
+}
+", "
+")
+
+test("
+class Foo {}
+void foo() {
+  try {} catch {} catch (Foo foo) {}
+}
+", "
+<stdin>:3:19: error: Expected FINALLY but found CATCH
+  try {} catch {} catch (Foo foo) {}
+                  ~~~~~
+")
+
 }}

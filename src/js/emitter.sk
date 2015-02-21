@@ -321,26 +321,27 @@ namespace js {
 
       // Separating the case bodies into separate functions makes the JavaScript JIT go faster
       switch (node.kind) {
+        case .ASSERT { emitAssert(node) }
+        case .BREAK { emitBreak(node) }
         case .CASE { emitCase(node) }
-        case .VARIABLE_CLUSTER { emitVariables(node.clusterVariables()) }
-        case .NAMESPACE { emitNamespace(node) }
-        case .ENUM, .ENUM_FLAGS { emitEnum(node) }
         case .CONSTRUCTOR, .FUNCTION { emitFunction(node) }
-        case .VARIABLE { emitVariable(node) }
-        case .IF { emitIf(node) }
-        case .TRY { emitTry(node) }
+        case .CONTINUE { emitContinue(node) }
+        case .DO_WHILE { emitDoWhile(node) }
+        case .ENUM, .ENUM_FLAGS { emitEnum(node) }
+        case .EXPRESSION { emitExpressionStatement(node) }
         case .FOR { emitFor(node) }
         case .FOR_EACH { emitForEach(node) }
-        case .WHILE { emitWhile(node) }
-        case .DO_WHILE { emitDoWhile(node) }
-        case .RETURN { emitReturn(node) }
-        case .BREAK { emitBreak(node) }
-        case .CONTINUE { emitContinue(node) }
-        case .ASSERT { emitAssert(node) }
-        case .EXPRESSION { emitExpressionStatement(node) }
-        case .SWITCH { emitSwitch(node) }
+        case .IF { emitIf(node) }
         case .MODIFIER { emitModifier(node) }
+        case .NAMESPACE { emitNamespace(node) }
         case .PARAMETER, .ALIAS, .USING {}
+        case .RETURN { emitReturn(node) }
+        case .SWITCH { emitSwitch(node) }
+        case .THROW { emitThrow(node) }
+        case .TRY { emitTry(node) }
+        case .VARIABLE { emitVariable(node) }
+        case .VARIABLE_CLUSTER { emitVariables(node.clusterVariables()) }
+        case .WHILE { emitWhile(node) }
         default { assert false }
       }
     }
@@ -539,11 +540,26 @@ namespace js {
       emit(newline)
     }
 
+    void emitThrow(Node node) {
+      emit(indent + "throw")
+      emitExpressionAfterKeyword(node.throwValue())
+      emitSemicolonAfterStatement()
+    }
+
     void emitTry(Node node) {
+      var catches = node.catches()
+      var finallyBlock = node.finallyBlock()
       emit(indent + "try")
       emitBlock(node.tryBlock(), .AFTER_KEYWORD, .MUST_KEEP_BRACES)
-      emit(space + "catch" + space + "(" + (options.minify ? "$x" : "$exception") + ")")
-      emitBlock(node.catchBlock(), .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
+      for (var i = 0; i < catches.size(); i++) {
+        var catchNode = catches[i]
+        emit(space + "catch" + space + "(" + mangleName(catchNode.catchVariable().symbol) + ")")
+        emitBlock(catchNode.catchBlock(), .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
+      }
+      if (finallyBlock != null) {
+        emit(space + "finally")
+        emitBlock(finallyBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
+      }
       emit(newline)
     }
 
@@ -607,14 +623,17 @@ namespace js {
       emitSemicolonAfterStatement()
     }
 
+    void emitExpressionAfterKeyword(Node node) {
+      emit(node.kind == .MAP || node.kind == .LIST ? space : " ")
+      emitExpression(node, .LOWEST)
+    }
+
     void emitReturn(Node node) {
       var value = node.returnValue()
       emit(indent)
+      emit("return")
       if (value != null) {
-        emit("return" + (value.kind == .MAP || value.kind == .LIST ? space : " "))
-        emitExpression(value, .LOWEST)
-      } else {
-        emit("return")
+        emitExpressionAfterKeyword(value)
       }
       emitSemicolonAfterStatement()
     }

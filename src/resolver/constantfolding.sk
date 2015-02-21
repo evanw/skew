@@ -171,10 +171,39 @@ class ConstantFolder {
   }
 
   int foldTry(Node node) {
+    var tryBlock = node.tryBlock()
+    var catches = node.catches()
+    var finallyBlock = node.finallyBlock()
+
     // A try block without any statements cannot possibly throw
-    if (node.tryBlock().blockStatements().size() == 0) {
+    if (tryBlock.blockStatements().size() == 0) {
       node.remove()
       return -1
+    }
+
+    // Remove empty catches from the end
+    for (var i = catches.size() - 1; i >= 0; i--) {
+      var catchNode = catches[i]
+      if (catchNode.catchBlock().blockStatements().size() != 0) {
+        break
+      }
+      catchNode.remove()
+    }
+
+    // No need to keep an empty finally block around
+    if (finallyBlock != null && finallyBlock.blockStatements().size() == 0) {
+      finallyBlock.replaceWith(null)
+    }
+
+    // Inline the contents of the try block into the parent if possible
+    if (node.catches().size() == 0 && node.finallyBlock() == null) {
+      if (options.target.hasNoNestedScopes() || !blockContainsVariableCluster(tryBlock)) {
+        var replacements = tryBlock.removeChildren()
+        node.replaceWithNodes(replacements)
+        return replacements.size() - 1
+      } else {
+        node.replaceWith(Node.createIf(.IF, Node.createBool(true), tryBlock.replaceWith(null), null))
+      }
     }
 
     return 0

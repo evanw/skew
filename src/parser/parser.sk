@@ -643,13 +643,49 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
   return cluster
 }
 
+Node parseThrow(ParserContext context) {
+  var token = context.next()
+  var value = pratt.parse(context, .LOWEST)
+  return Node.createThrow(value).withRange(context.spanSince(token.range))
+}
+
 Node parseTry(ParserContext context) {
   var token = context.next()
+  var noMoreCatches = false
+  var error = false
+  List<Node> catches = []
+  Node finallyBlock = null
   var tryBlock = parseBlock(context, .NORMAL)
-  if (tryBlock == null || !context.expect(.CATCH)) return null
-  var catchBlock = parseBlock(context, .NORMAL)
-  if (catchBlock == null) return null
-  return Node.createTry(tryBlock, catchBlock).withRange(context.spanSince(token.range))
+  if (tryBlock == null) return null
+  while (context.peek(.CATCH)) {
+    if (noMoreCatches) {
+      context.expect(.FINALLY)
+      error = true
+    }
+    var catchToken = context.next()
+    Node variable = null
+    if (context.eat(.LEFT_PARENTHESIS)) {
+      var type = parseType(context)
+      var name = parseName(context)
+      if (name == null) break
+      variable = Node.createVariable(name, type, null).withRange(context.spanSince(type.range))
+      if (!context.expect(.RIGHT_PARENTHESIS)) return null
+    }
+    var block = parseBlock(context, .NORMAL)
+    if (block == null) return null
+    catches.push(Node.createCatch(variable, block).withRange(context.spanSince(catchToken.range)))
+    noMoreCatches = variable == null // Catches after a catch-all are errors
+  }
+  if (context.eat(.FINALLY)) {
+    finallyBlock = parseBlock(context, .NORMAL)
+    if (finallyBlock == null) return null
+  }
+  if (catches.size() == 0 && finallyBlock == null) {
+    context.expect(.CATCH)
+    return null
+  }
+  if (error) return errorStatementSinceToken(context, token) // Don't attempt to resolve a malformed statement
+  return Node.createTry(tryBlock, catches, finallyBlock).withRange(context.spanSince(token.range))
 }
 
 Node parseUsing(ParserContext context) {
@@ -758,6 +794,7 @@ Node parseStatement(ParserContext context, StatementHint hint) {
     case .PREPROCESSOR_WARNING { return parsePreprocessorDiagnostic(context, .PREPROCESSOR_WARNING) }
     case .RETURN { return parseReturn(context) }
     case .SWITCH { return parseSwitch(context) }
+    case .THROW { return parseThrow(context) }
     case .TRY { return parseTry(context) }
     case .USING { return parseUsing(context) }
     case .WHILE { return parseWhile(context) }

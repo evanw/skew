@@ -28,6 +28,7 @@
 "export"                             EXPORT;
 "false"                              FALSE;
 "final"                              FINAL;
+"finally"                            FINALLY;
 "for"                                FOR;
 "if"                                 IF;
 "import"                             IMPORT;
@@ -48,6 +49,7 @@
 "super"                              SUPER;
 "switch"                             SWITCH;
 "this"                               THIS;
+"throw"                              THROW;
 "true"                               TRUE;
 "try"                                TRY;
 "using"                              USING;

@@ -77,4 +77,40 @@ int bar = foo();
 int baz = 0;
 ")
 
+testCPP("
+import void bar(int x)
+export void foo() {
+  try { throw Foo(1) }
+  catch (Foo foo) { bar(foo.x) }
+  catch { bar(2) }
+  finally { bar(3) }
+}
+class Foo { int x }
+", "
+struct Foo;
+
+struct Foo {
+  int x;
+
+  Foo(int _0);
+};
+
+void foo();
+
+Foo::Foo(int _0) : x(_0) {
+}
+
+void foo() {
+  try {
+    throw new Foo(1);
+  } catch (Foo *foo) {
+    bar(foo->x);
+  } catch (...) {
+    bar(2);
+  } finally {
+    bar(3);
+  }
+}
+")
+
 }}

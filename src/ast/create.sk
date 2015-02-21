@@ -149,10 +149,16 @@ in Node {
     return Node(kind).withChildren([test, trueNode, falseNode])
   }
 
-  static Node createTry(Node tryBlock, Node catchBlock) {
+  static Node createTry(Node tryBlock, List<Node> catches, Node finallyBlock) {
     assert tryBlock.kind == .BLOCK
-    assert catchBlock.kind == .BLOCK
-    return Node(.TRY).withChildren([tryBlock, catchBlock])
+    assert checkAllNodeKinds(catches, NodeKindIs(.CATCH))
+    return Node(.TRY).withChildren([tryBlock, Node.createNodeList(catches), finallyBlock])
+  }
+
+  static Node createCatch(Node variable, Node block) {
+    assert variable == null || variable.kind == .VARIABLE
+    assert block.kind == .BLOCK
+    return Node(.CATCH).withChildren([variable, block])
   }
 
   static Node createFor(Node setup, Node test, Node update, Node block) {
@@ -193,6 +199,11 @@ in Node {
 
   static Node createContinue() {
     return Node(.CONTINUE)
+  }
+
+  static Node createThrow(Node value) {
+    assert value.kind.isExpression()
+    return Node(.THROW).withChildren([value])
   }
 
   static Node createAssert(NodeKind kind, Node value) {

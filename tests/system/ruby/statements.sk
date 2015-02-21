@@ -15,4 +15,35 @@ def foo
 end
 ")
 
+testRuby("
+import void bar(int x)
+export void foo() {
+  try { throw Foo(1) }
+  catch (Foo foo) { bar(foo.x) }
+  catch { bar(2) }
+  finally { bar(3) }
+}
+class Foo { int x }
+", "
+class Foo
+  attr_accessor :x
+
+  def initialize(_0)
+    @x = _0
+  end
+end
+
+def foo
+  begin
+    raise Foo.new(1)
+  rescue Foo => foo
+    bar(foo.x)
+  rescue
+    bar(2)
+  ensure
+    bar(3)
+  end
+end
+")
+
 }}

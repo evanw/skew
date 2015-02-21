@@ -97,7 +97,17 @@ in Node {
         }
 
         case .TRY {
-          if (child.tryBlock().blockAlwaysEndsWithReturn() && child.catchBlock().blockAlwaysEndsWithReturn()) {
+          var catches = child.catches()
+          var finallyBlock = child.finallyBlock()
+          if (finallyBlock != null && finallyBlock.blockAlwaysEndsWithReturn()) {
+            return true
+          }
+          if (child.tryBlock().blockAlwaysEndsWithReturn()) {
+            for (var j = 0; j < catches.size(); j++) {
+              if (!catches[j].catchBlock().blockAlwaysEndsWithReturn()) {
+                return false
+              }
+            }
             return true
           }
         }
