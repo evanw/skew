@@ -766,4 +766,22 @@ void foo() { if (true) foo() else foo() }
                              ~~~~
 ")
 
+test("
+int foo() {
+  return true
+  ? 1
+  : 0
+}
+", "
+")
+
+test("
+int foo() {
+  return true ?
+  1 :
+  0
+}
+", "
+")
+
 }}

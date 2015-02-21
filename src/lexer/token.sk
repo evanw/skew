@@ -29,6 +29,7 @@ var REMOVE_NEWLINE_AFTER = {
   TokenKind.COLON: 0,
   TokenKind.COMMA: 0,
   TokenKind.NEWLINE: 0,
+  TokenKind.QUESTION_MARK: 0,
   TokenKind.TRY: 0,
 
   TokenKind.LEFT_BRACE: 0,
