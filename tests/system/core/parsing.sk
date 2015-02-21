@@ -784,4 +784,132 @@ int foo() {
 ", "
 ")
 
+test("
+int foo() {
+  return true
+  ?
+  1
+  :
+  0
+}
+", "
+")
+
+test("
+void foo()
+{
+  if (true)
+  {
+  }
+
+  else if (false)
+  {
+  }
+
+  else
+  {
+  }
+}
+", "
+")
+
+test("
+void foo()
+{
+  while (true)
+  {
+  }
+}
+", "
+")
+
+test("
+void foo()
+{
+  for (;;)
+  {
+  }
+}
+", "
+")
+
+test("
+void foo()
+{
+  do
+  {
+  } while (true)
+}
+", "
+")
+
+test("
+void foo()
+{
+  do {}
+  while (true)
+}
+", "
+<stdin>:3:8: error: Expected WHILE but found NEWLINE
+  do {}
+       ^
+")
+
+test("
+void foo()
+{
+  switch (0)
+  {
+    case 0
+    {
+    }
+
+    default
+    {
+    }
+  }
+}
+", "
+")
+
+test("
+class Foo
+{
+  new()
+    : bar = 0
+    , baz = 1
+  {
+  }
+
+  void foo()
+  {
+  }
+
+  int bar, baz
+}
+
+in Foo
+{
+}
+
+namespace Bar
+{
+}
+
+enum Baz
+{
+}
+", "
+")
+
+test("
+export void foo() {
+  { 1: 2 }[1] - false
+}
+", "
+<stdin>:2:3: error: No binary operator \"-\" for type \"int\" and type \"bool\"
+  { 1: 2 }[1] - false
+  ~~~~~~~~~~~~~~~~~~~
+")
+
 }}

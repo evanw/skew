@@ -111,6 +111,7 @@ Node parseNameOrString(ParserContext context) {
 
 Node parseBlock(ParserContext context, StatementHint hint) {
   var token = context.current()
+  context.eat(.NEWLINE)
   if (!context.expect(.LEFT_BRACE)) return null
   var statements = parseStatements(context, hint)
   scanForToken(context, .RIGHT_BRACE)
@@ -118,6 +119,7 @@ Node parseBlock(ParserContext context, StatementHint hint) {
 }
 
 Node parseBlockOrStatement(ParserContext context, StatementHint hint) {
+  context.eat(.NEWLINE)
   if (context.peek(.LEFT_BRACE)) return parseBlock(context, hint)
   var statement = parseStatement(context, hint)
   if (statement == null) return null
@@ -396,24 +398,17 @@ Node parseConstructor(ParserContext context, StatementHint hint) {
   }
 
   Node block = null
-  if (!peekEndOfLine(context)) {
+  var ateNewline = context.eat(.NEWLINE)
+  if (context.peek(.LEFT_BRACE)) {
     block = parseBlock(context, .NORMAL)
     if (block == null) return null
+  } else if (ateNewline) {
+    context.undo()
   }
   return Node.createConstructor(name, arguments, block, superInitializer, memberInitializers).withRange(context.spanSince(token.range))
 }
 
 Node parseExpression(ParserContext context) {
-  // Make sure we don't parse an initializer expression. The user is likely
-  // trying to type a C-style block statement, which is not supported. An
-  // initializer expression wouldn't make sense here anyway since there's no
-  // type context yet at the start of an expression statement.
-  if (context.peek(.LEFT_BRACE)) {
-    context.unexpectedToken()
-    return null
-  }
-
-  // Parse an expression
   var token = context.current()
   var value = pratt.parse(context, .LOWEST)
   return Node.createExpression(value).withRange(context.spanSince(token.range))
@@ -436,7 +431,7 @@ Node parseAnnotation(ParserContext context, StatementHint hint) {
     var values = parseWrappedCommaSeparatedList(context, .LEFT_PARENTHESIS, .RIGHT_PARENTHESIS, .NORMAL)
     arguments = Node.createNodeList(values).withRange(context.spanSince(parenthesis.range))
   }
-  eatEndOfLine(context)
+  context.eat(.NEWLINE)
   var block = parseBlockOrStatement(context, hint)
   if (block == null) return null
   return Node.createModifier(name, arguments, block.removeChildren()).withRange(context.spanSince(token.range))
@@ -454,7 +449,7 @@ Node parseReturn(ParserContext context) {
   // a single statement in a non-void function but two statements in a void
   // function.
   if (context.inNonVoidFunction) {
-    eatEndOfLine(context)
+    context.eat(.NEWLINE)
   }
 
   if (!peekEndOfLine(context)) {
@@ -528,6 +523,7 @@ Node parseExtension(ParserContext context) {
   var token = context.next()
   var name = parseName(context)
   if (name == null) return null
+  context.eat(.NEWLINE)
   var bases = context.eat(.COLON) ? Node.createNodeList(parseTypeList(context, .LEFT_BRACE)) : null
   var block = parseBlock(context, .IN_OBJECT)
   if (block == null) return null
@@ -628,11 +624,14 @@ Node parsePossibleTypedDeclaration(ParserContext context, StatementHint hint) {
     var arguments = parseArgumentVariables(context)
     if (arguments == null) return null
     Node block = null
-    if (!peekEndOfLine(context)) {
+    var ateNewline = context.eat(.NEWLINE)
+    if (context.peek(.LEFT_BRACE)) {
       context.inNonVoidFunction = type.kind != .NAME || type.asString() != "void"
       block = parseBlock(context, .NORMAL)
       context.inNonVoidFunction = false
       if (block == null) return null
+    } else if (ateNewline) {
+      context.undo()
     }
     return Node.createFunction(name, arguments, block, type, parameters).withRange(context.spanSince(type.range))
   }

@@ -16,6 +16,7 @@ class Token {
 var REMOVE_NEWLINE_BEFORE = {
   TokenKind.CATCH: 0,
   TokenKind.COLON: 0,
+  TokenKind.COMMA: 0,
   TokenKind.QUESTION_MARK: 0,
   TokenKind.RIGHT_BRACE: 0,
   TokenKind.RIGHT_BRACKET: 0,
