@@ -95,4 +95,14 @@ def foo
 end
 ")
 
+testRuby("
+export void foo() {
+  -0 ** 1 ** -2
+}
+", "
+def foo
+  Float(-0) ** 1.0 ** Float(-2)
+end
+")
+
 }}

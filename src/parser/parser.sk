@@ -1115,6 +1115,7 @@ pure Pratt createParser() {
   pratt.infix(.REMAINDER, .MULTIPLY, BinaryInfix(.REMAINDER))
   pratt.infix(.SHIFT_LEFT, .SHIFT, BinaryInfix(.SHIFT_LEFT))
   pratt.infix(.SHIFT_RIGHT, .SHIFT, BinaryInfix(.SHIFT_RIGHT))
+  pratt.infixRight(.POWER, .UNARY_PREFIX, BinaryInfix(.POWER))
 
   ////////////////////////////////////////////////////////////////////////////////
   // Assignment expressions

@@ -23,10 +23,10 @@ class TreeShakingPass {
     // IFoo.foo() will cause Bar.foo() to be included because Bar() is used
     // but will not cause Baz.foo() to be included because Baz() isn't used.
     //
-    //   class IFoo { virtual void foo(); }
+    //   class IFoo { virtual void foo() }
     //   class Bar : IFoo { override void foo() {} }
     //   class Baz : IFoo { override void foo() {} }
-    //   export void test() { ((IFoo)Bar()).foo(); }
+    //   export void test() { ((IFoo)Bar()).foo() }
     //
     // This iterates until a fixed point is reached because there may be
     // complex dependency issues. The work list is narrowed down before the

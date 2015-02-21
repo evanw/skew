@@ -206,7 +206,7 @@ class TypeCache {
         //
         //   class Foo<A, B> {
         //     A baz
-        //     A foo(B bar) { return baz; }
+        //     A foo(B bar) { return baz }
         //   }
         //   class Bar<T> : Foo<int, T> {}
         //   class Baz : Bar<bool> {}

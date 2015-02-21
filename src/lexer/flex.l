@@ -70,6 +70,7 @@
 ":"                                  COLON;
 "++"                                 INCREMENT;
 "--"                                 DECREMENT;
+"**"                                 POWER;
 "&&"                                 LOGICAL_AND;
 "||"                                 LOGICAL_OR;
 "+="                                 ASSIGN_PLUS;

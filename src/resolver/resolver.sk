@@ -4015,6 +4015,16 @@ class Resolver {
       }
     }
 
+    else if (kind == .POWER) {
+      if (leftType.isNumeric(cache) && rightType.isNumeric(cache)) {
+        var pow = cache.globalType.findMember("math").symbol.type.findMember("pow").symbol
+        initializeSymbol(pow)
+        commonType = cache.doubleType
+        node.become(Node.createCall(Node.createName(pow.name).withSymbol(pow).withType(pow.type), [
+          left.replaceWith(null), right.replaceWith(null)]).withRange(node.range).withType(commonType))
+      }
+    }
+
     // Fall back to user operators if nothing matched
     if (node.type.isIgnored(cache)) {
       checkForOperatorOverload(node)

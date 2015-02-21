@@ -43,6 +43,7 @@ IntMap<OperatorInfo> operatorInfo = {
   NodeKind.LOGICAL_OR:            OperatorInfo("||", .LOGICAL_OR, .LEFT),
   NodeKind.MULTIPLY:              OperatorInfo("*", .MULTIPLY, .LEFT),
   NodeKind.NOT_EQUAL:             OperatorInfo("!=", .EQUAL, .LEFT),
+  NodeKind.POWER:                 OperatorInfo("**", .UNARY_PREFIX, .RIGHT),
   NodeKind.REMAINDER:             OperatorInfo("%", .MULTIPLY, .LEFT),
   NodeKind.SHIFT_LEFT:            OperatorInfo("<<", .SHIFT, .LEFT),
   NodeKind.SHIFT_RIGHT:           OperatorInfo(">>", .SHIFT, .LEFT),

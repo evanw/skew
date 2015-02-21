@@ -615,4 +615,18 @@ IntMap<X> *in_IntMap::literal(List<int> *keys, List<X> *values) {
 IntMap<int> *foo = in_IntMap::literal<int>((new List<int>())->literal({ 1 }), (new List<int>())->literal({ 2 }));
 ")
 
+testCPP("
+export void foo() {
+  -0 ** 1 ** -2
+}
+", "
+#include <cmath>
+
+void foo();
+
+void foo() {
+  std::pow(-0, std::pow(1, -2));
+}
+")
+
 }}
