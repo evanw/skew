@@ -3360,12 +3360,9 @@ class Resolver {
       // Try to infer the type
       for (var i = 0; i < items.size(); i++) {
         var item = items[i]
-        var key = item.itemKey()
-        var value = item.itemValue()
-        resolveAsParameterizedExpression(key)
-        resolveAsParameterizedExpression(value)
-        keyType = mergeCommonLiteralType(keyType, key, node)
-        valueType = mergeCommonLiteralType(valueType, value, node)
+        resolveKeyValue(item)
+        keyType = mergeCommonLiteralType(keyType, item.itemKey(), node)
+        valueType = mergeCommonLiteralType(valueType, item.itemValue(), node)
         item.type = cache.errorType
       }
 
@@ -3383,9 +3380,18 @@ class Resolver {
 
       // Emit an error for a map literal with keys that aren't strings or ints
       var isString = keyType.isString(cache)
-      if (!isString && !keyType.isInteger(cache)) {
+      var isInteger = keyType.isInteger(cache)
+      if (!isString && !isInteger) {
         semanticErrorMapLiteralBadKeyType(log, node.range, keyType)
         return
+      }
+
+      // The key type must not be an enum type
+      if (isInteger && !keyType.isInt(cache)) {
+        keyType = cache.intType
+        for (var i = 0; i < items.size(); i++) {
+          checkConversion(keyType, items[i].itemKey(), .IMPLICIT_CAST)
+        }
       }
 
       // The map is either a StringMap or an IntMap

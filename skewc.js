@@ -13791,12 +13791,9 @@
 
       for (var i = 0; i < items.length; i = i + 1 | 0) {
         var item = items[i];
-        var key = item.itemKey();
-        var value = item.itemValue();
-        this.resolveAsParameterizedExpression(key);
-        this.resolveAsParameterizedExpression(value);
-        keyType = this.mergeCommonLiteralType(keyType, key, node);
-        valueType = this.mergeCommonLiteralType(valueType, value, node);
+        this.resolveKeyValue(item);
+        keyType = this.mergeCommonLiteralType(keyType, item.itemKey(), node);
+        valueType = this.mergeCommonLiteralType(valueType, item.itemValue(), node);
         item.type = this.cache.errorType;
       }
 
@@ -13810,10 +13807,19 @@
       }
 
       var isString = keyType.isString(this.cache);
+      var isInteger = keyType.isInteger(this.cache);
 
-      if (!isString && !keyType.isInteger(this.cache)) {
+      if (!isString && !isInteger) {
         semanticErrorMapLiteralBadKeyType(this.log, node.range, keyType);
         return;
+      }
+
+      if (isInteger && !keyType.isInt(this.cache)) {
+        keyType = this.cache.intType;
+
+        for (var i = 0; i < items.length; i = i + 1 | 0) {
+          this.checkConversion(keyType, items[i].itemKey(), CastKind.IMPLICIT_CAST);
+        }
       }
 
       node.type = this.cache.parameterize(isString ? this.cache.stringMapType : this.cache.intMapType, [valueType]);
@@ -13937,7 +13943,7 @@
     var $arguments = node.callArguments();
 
     if (!in_NodeKind.isExpression(value.kind)) {
-      throw new Error('assert value.kind.isExpression() (src/resolver/resolver.sk:3523:5)');
+      throw new Error('assert value.kind.isExpression() (src/resolver/resolver.sk:3529:5)');
     }
 
     this.resolve(value, null);
@@ -14076,7 +14082,7 @@
     }
 
     if (parameters.length !== sortedParameters.length) {
-      throw new Error('assert parameters.size() == sortedParameters.size() (src/resolver/resolver.sk:3671:5)');
+      throw new Error('assert parameters.size() == sortedParameters.size() (src/resolver/resolver.sk:3677:5)');
     }
 
     var sortedTypes = [];
@@ -14394,7 +14400,7 @@
 
   Resolver.prototype.assessOperatorOverloadMatch = function(nodeTypes, argumentTypes) {
     if (nodeTypes.length !== (1 + argumentTypes.length | 0)) {
-      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size() (src/resolver/resolver.sk:4036:5)');
+      throw new Error('assert nodeTypes.size() == 1 + argumentTypes.size() (src/resolver/resolver.sk:4042:5)');
     }
 
     var foundImplicitConversion = false;
@@ -14481,18 +14487,18 @@
       var overload = overloads[i];
 
       if (!overload.type.isFunction()) {
-        throw new Error('assert overload.type.isFunction() (src/resolver/resolver.sk:4119:7)');
+        throw new Error('assert overload.type.isFunction() (src/resolver/resolver.sk:4125:7)');
       }
 
       if ((overload.type.argumentTypes().length + 1 | 0) !== children.length) {
-        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size() (src/resolver/resolver.sk:4120:7)');
+        throw new Error('assert overload.type.argumentTypes().size() + 1 == children.size() (src/resolver/resolver.sk:4126:7)');
       }
 
       var member = targetType.findOperatorOverload(overload);
       this.initializeMember(member);
 
       if (!member.type.isFunction()) {
-        throw new Error('assert member.type.isFunction() (src/resolver/resolver.sk:4123:7)');
+        throw new Error('assert member.type.isFunction() (src/resolver/resolver.sk:4129:7)');
       }
 
       var match = this.assessOperatorOverloadMatch(typeForMatching, member.type.argumentTypes());

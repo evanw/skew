@@ -531,4 +531,88 @@ bool foo() {
 }
 ")
 
+testCPP("
+enum Foo { FOO = 1 }
+export var foo = { Foo.FOO: 2 }
+", "
+#include <cassert>
+#include <initializer_list>
+#include <unordered_map>
+#include <vector>
+
+template <typename T>
+struct List;
+template <typename T>
+struct IntMap;
+
+template <typename T>
+struct List {
+  List();
+  int size();
+  T get(int index);
+  List<T> *literal(std::initializer_list<T> list);
+
+  std::vector<T> _data;
+};
+
+template <typename T>
+struct IntMap {
+  IntMap();
+  void set(int key, T value);
+
+  std::unordered_map<int, T> _table;
+};
+
+namespace in_IntMap {
+  template <typename X>
+  IntMap<X> *literal(List<int> *keys, List<X> *values);
+}
+
+extern IntMap<int> *foo;
+
+template <typename T>
+List<T>::List() : _data() {
+}
+
+template <typename T>
+int List<T>::size() {
+  return static_cast<int>(_data.size());
+}
+
+template <typename T>
+T List<T>::get(int index) {
+  assert(index >= 0 && index < size());
+  return _data[index];
+}
+
+template <typename T>
+List<T> *List<T>::literal(std::initializer_list<T> list) {
+  _data.insert(_data.end(), list.begin(), list.end());
+  return this;
+}
+
+template <typename T>
+IntMap<T>::IntMap() : _table() {
+}
+
+template <typename T>
+void IntMap<T>::set(int key, T value) {
+  _table[key] = value;
+}
+
+template <typename X>
+IntMap<X> *in_IntMap::literal(List<int> *keys, List<X> *values) {
+  IntMap<X> *map = new IntMap<X>();
+  assert(keys->size() == values->size());
+
+  for (int i = 0; i < keys->size(); i++) {
+    map->set(keys->get(i), values->get(i));
+  }
+
+  return map;
+}
+
+IntMap<int> *foo = in_IntMap::literal<int>((new List<int>())->literal({ 1 }), (new List<int>())->literal({ 2 }));
+")
+
 }}
