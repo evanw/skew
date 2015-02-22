@@ -973,4 +973,16 @@ export void foo() {
   ~~~~~~~~~~~~~~~~~~~
 ")
 
+test("
+export void foo() {
+  `a &` b
+  `1 & (`2`) + 3`
+  `x & `y` + z`
+}
+", "
+<stdin>:4:10: error: Expected COMMA but found TICK
+  `x & `y` + z`
+         ^
+")
+
 }}

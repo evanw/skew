@@ -747,13 +747,16 @@ class Resolver {
     }
   }
 
+  void promoteToQuotedType(Node node, Node type) {
+    var symbol = createSymbol("<quoted>", .QUOTED_TYPE)
+    symbol.node = type
+    symbol.type = Type(symbol)
+    node.become(Node.createType(symbol.type))
+  }
+
   void checkIsType(Node node) {
     if (node.kind == .QUOTED) {
-      var symbol = createSymbol("<quoted>", .QUOTED_TYPE)
-      symbol.node = node.quotedValue().remove()
-      symbol.type = Type(symbol)
-      node.kind = .TYPE
-      node.type = symbol.type
+      promoteToQuotedType(node, node.quotedValue().remove())
     }
 
     else if (!node.type.isIgnored(cache) && node.kind != .TYPE) {
@@ -3755,6 +3758,12 @@ class Resolver {
       return
     }
 
+    // Make sure to create a type for casts
+    if (node.kind == .CAST) {
+      var type = node.castType()
+      promoteToQuotedType(type, type.clone())
+    }
+
     // Recursively mark everything with the error type
     if (node.hasChildren()) {
       for (var i = 0; i < node.children.size(); i++) {
@@ -3765,7 +3774,10 @@ class Resolver {
       }
     }
 
-    node.type = cache.errorType
+    // Don't overwrite the quoted cast type
+    if (node.type == null) {
+      node.type = cache.errorType
+    }
   }
 
   void resolveQuoted(Node node) {

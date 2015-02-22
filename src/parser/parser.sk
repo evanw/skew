@@ -728,7 +728,7 @@ bool looksLikeType(Node node) {
       var target = node.dotTarget()
       return target != null && looksLikeType(target)
     }
-    case .NAME, .PARAMETERIZE, .QUOTED {
+    case .NAME, .PARAMETERIZE, .QUOTED, .POSTFIX_REFERENCE, .POSTFIX_DEREFERENCE {
       return true
     }
   }
@@ -946,7 +946,18 @@ class BinaryInfixOrUnaryPostfix : InfixParselet {
 
   override Node parse(ParserContext context, Node left) {
     context.next()
-    if (!pratt.hasPrefixParselet(context)) return Node.createUnary(unary, left).withRange(context.spanSince(left.range))
+
+    // Parse a unary postfix if there's a tick mark since the user is most
+    // likely trying to write a type, and needs to end the quoted expression.
+    // Nested quoted expressions are still possible via parentheses.
+    //
+    //   `a *` b      =>  declaration
+    //   `a * (`b`)`  =>  multiplication
+    //
+    if (context.peek(.TICK) || !pratt.hasPrefixParselet(context)) {
+      return Node.createUnary(unary, left).withRange(context.spanSince(left.range))
+    }
+
     var right = pratt.parse(context, precedence)
     return right != null ? Node.createBinary(binary, left, right).withRange(context.spanSince(left.range)) : null
   }

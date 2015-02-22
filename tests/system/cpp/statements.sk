@@ -3,10 +3,10 @@ namespace cpp { void testStatements() {
 testCPP("
 class Foo {}
 export void foo(int foo, int bar) {
-  `(void *)` a = null, b = null
+  `void *` a = null, b = null
   for (Foo x = null, y = null; x == y; x = y) {}
-  for (`(void *)` x = null, y = null; x == y; x = y) {}
-  for (`(int &)` x = foo, y = bar; foo == bar; foo++, bar--) {}
+  for (`void *` x = null, y = null; x == y; x = y) {}
+  for (`int &` x = foo, y = bar; foo == bar; foo++, bar--) {}
 }
 ", "
 struct Foo;

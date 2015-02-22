@@ -50,12 +50,12 @@
       void remove(int key) { _table.erase(key) }
       List<int> keys() {
         List<int> keys = []
-        for (`(auto &)` it in _table) keys.push(it.first)
+        for (`auto &` it in _table) keys.push(it.first)
         return keys
       }
       List<T> values() {
         List<T> values = []
-        for (`(auto &)` it in _table) values.push(it.second)
+        for (`auto &` it in _table) values.push(it.second)
         return values
       }
       IntMap<T> clone() {

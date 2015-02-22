@@ -53,7 +53,7 @@
 
     @NeedsInclude("<random>") {
       `std::uniform_real_distribution<double>` _distribution_
-      `(std::mt19937 *)` _generator_ = null
+      `std::mt19937 *` _generator_ = null
 
       double random() {
         if (_generator_ == null) {

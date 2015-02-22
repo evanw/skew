@@ -629,4 +629,16 @@ void foo() {
 }
 ")
 
+testCPP("
+export void foo() {
+  `*(int *)0 = 1`
+}
+", "
+void foo();
+
+void foo() {
+  *(int *)0 = 1;
+}
+")
+
 }}

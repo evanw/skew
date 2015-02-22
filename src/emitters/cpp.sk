@@ -604,12 +604,22 @@ namespace cpp {
       }
 
       // Emit a normal cast
-      else {
+      else if (!type.isIgnored(cache)) {
         emit("static_cast<")
         emitNormalType(type)
         emit(">(")
         emitExpression(node, .LOWEST)
         emit(")")
+      }
+
+      // Emit a C-style cast
+      else {
+        if (.UNARY_PREFIX < precedence) emit("(")
+        emit("(")
+        emitNormalType(type)
+        emit(")")
+        emitExpression(node, .UNARY_PREFIX)
+        if (.UNARY_PREFIX < precedence) emit(")")
       }
     }
 
