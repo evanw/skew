@@ -106,14 +106,14 @@ namespace cpp {
         prepended.append("\n")
       }
       if (isMarkSweep) {
-        prepended.append(@ContentsOfFile("../../lib/mark-sweep.h"))
+        prepended.append(@ContentsOfFile("../../lib/other/mark-sweep.h"))
         prepended.append("\n")
         emit("\n")
-        emit(@ContentsOfFile("../../lib/mark-sweep.cpp"))
+        emit(@ContentsOfFile("../../lib/other/mark-sweep.cpp"))
       }
       if (useFastHack) {
         emit("\n")
-        emit(@ContentsOfFile("../../lib/fast.cpp"))
+        emit(@ContentsOfFile("../../lib/other/fast.cpp"))
       }
     }
 

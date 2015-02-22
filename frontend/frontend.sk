@@ -369,6 +369,6 @@ namespace frontend {
   }
 
   IntMap<List<OptionalLibrary>> OPTIONAL_LIBRARY_DEPENDENCIES = {
-    OptionalLibrary.UNIT: [.TIMESTAMP],
+    OptionalLibrary.UNIT: [.TERMINAL, .TIMESTAMP],
   }
 }

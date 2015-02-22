@@ -337,19 +337,19 @@ class Compiler {
   // Cache the parsed standard libraries for a speed boost during recompilation
   static List<CachedLibrary> cachedLibraries = [
     // Required libraries
-    CachedLibrary("defines.sk", @ContentsOfFile("../../lib/defines.sk"), .NONE),
-    CachedLibrary("primitives.sk", @ContentsOfFile("../../lib/primitives.sk"), .NONE),
-    CachedLibrary("math.sk", @ContentsOfFile("../../lib/math.sk"), .NONE),
-    CachedLibrary("list.sk", @ContentsOfFile("../../lib/list.sk"), .NONE),
-    CachedLibrary("stringmap.sk", @ContentsOfFile("../../lib/stringmap.sk"), .NONE),
-    CachedLibrary("intmap.sk", @ContentsOfFile("../../lib/intmap.sk"), .NONE),
+    CachedLibrary("defines.sk", @ContentsOfFile("../../lib/required/defines.sk"), .NONE),
+    CachedLibrary("primitives.sk", @ContentsOfFile("../../lib/required/primitives.sk"), .NONE),
+    CachedLibrary("math.sk", @ContentsOfFile("../../lib/required/math.sk"), .NONE),
+    CachedLibrary("list.sk", @ContentsOfFile("../../lib/required/list.sk"), .NONE),
+    CachedLibrary("stringmap.sk", @ContentsOfFile("../../lib/required/stringmap.sk"), .NONE),
+    CachedLibrary("intmap.sk", @ContentsOfFile("../../lib/required/intmap.sk"), .NONE),
 
     // Optional libraries
-    CachedLibrary("os.sk", @ContentsOfFile("../../lib/os.sk"), .OS),
-    CachedLibrary("terminal.sk", @ContentsOfFile("../../lib/terminal.sk"), .TERMINAL),
-    CachedLibrary("timestamp.sk", @ContentsOfFile("../../lib/timestamp.sk"), .TIMESTAMP),
-    CachedLibrary("unicode.sk", @ContentsOfFile("../../lib/unicode.sk"), .UNICODE),
-    CachedLibrary("unit.sk", @ContentsOfFile("../../lib/unit.sk"), .UNIT),
+    CachedLibrary("os.sk", @ContentsOfFile("../../lib/optional/os.sk"), .OS),
+    CachedLibrary("terminal.sk", @ContentsOfFile("../../lib/optional/terminal.sk"), .TERMINAL),
+    CachedLibrary("timestamp.sk", @ContentsOfFile("../../lib/optional/timestamp.sk"), .TIMESTAMP),
+    CachedLibrary("unicode.sk", @ContentsOfFile("../../lib/optional/unicode.sk"), .UNICODE),
+    CachedLibrary("unit.sk", @ContentsOfFile("../../lib/optional/unit.sk"), .UNIT),
   ]
 
   static int totalLineCount(List<Source> sources) {
