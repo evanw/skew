@@ -1,0 +1,195 @@
+namespace unit {
+  enum Status {
+    FAILURE
+    SUCCESS
+  }
+
+  interface Report {
+    virtual void begin(int count)
+    virtual void completed(Test test, Status status)
+    virtual void end()
+  }
+
+  class Failure {
+    final string expected
+    final string observed
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////
+
+  class Test {
+    new() {
+      all.push(this)
+    }
+
+    inline string name() { return _name }
+    inline Failure failure() { return _failure }
+    inline void rename(string name) { _name = name }
+
+    virtual void before() {}
+    virtual void after() {}
+    virtual void run()
+
+    static void runAll(Report report) {
+      var tests = all
+      var count = tests.size()
+
+      all = []
+      report.begin(count)
+
+      for (var i = 0; i < count; i++) {
+        var test = tests[i]
+        test.before()
+        try {
+          test.run()
+        } catch (Failure failure) {
+          test._failure = failure
+        } catch {
+          test._failure = Failure("", "(runtime error)")
+        }
+        test.after()
+        report.completed(test, test._failure == null ? .SUCCESS : .FAILURE)
+      }
+
+      report.end()
+    }
+
+    static void expectString(string expected, string observed) {
+      if (expected != observed) {
+        throw Failure(expected, observed)
+      }
+    }
+
+    private {
+      string _name
+      Failure _failure
+      static List<Test> all = []
+    }
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////
+
+  class TerminalReport : Report {
+    using terminal
+
+    inline int failedCount() {
+      return _failed.size()
+    }
+
+    override void begin(int count) {
+      _wrapWidth = width() * 3 / 4
+      _startTime = now()
+      _count = count
+      _completed = 0
+      write("\n  ")
+    }
+
+    override void completed(Test test, Status status) {
+      _completed++
+      if (status == .FAILURE) {
+        _failed.push(test)
+        setColor(.RED)
+        write("x")
+      } else {
+        setColor(.GREEN)
+        write(".")
+      }
+      if (_completed < _count && _wrapWidth != 0 && _completed % _wrapWidth == 0) {
+        write("\n  ")
+      }
+      setColor(.DEFAULT)
+      flush()
+    }
+
+    override void end() {
+      print("\n")
+
+      // Print the summary
+      var totalTime = now() - _startTime
+      setColor(.GREEN)
+      write("  " + (_count - _failed.size()) + " passing")
+      setColor(.GRAY)
+      print("  (" + formatNumber(totalTime / 1000) + "s)")
+      if (_failed.size() != 0) {
+        setColor(.RED)
+        print("  " + _failed.size() + " failing")
+      }
+      setColor(.DEFAULT)
+      print("")
+
+      // Print the failed tests
+      var indent = " ".repeat(_failed.size().toString().size() + 5)
+      for (var i = 0; i < _failed.size(); i++) {
+        var test = _failed[i]
+        var text = "  " + (i + 1) + ")"
+        var failure = test.failure()
+        setColor(.BOLD)
+        print(text + " ".repeat(indent.size() - text.size()) + test.name() + "\n")
+        printDiff(indent,
+          failure.expected == "" ? [] : failure.expected.split("\n"),
+          failure.observed == "" ? [] : failure.observed.split("\n"))
+        setColor(.DEFAULT)
+        print("")
+      }
+    }
+
+    private {
+      static void printDiff(string indent, List<string> expected, List<string> observed) {
+        var m = expected.size()
+        var n = observed.size()
+        List<int> matrix = []
+
+        // Solve for the lowest common subsequence length
+        for (var i = 0, ij = 0; i < m; i++) {
+          for (var j = 0; j < n; j++, ij++) {
+            matrix.push(expected[i] == observed[j]
+              ? i > 0 && j > 0 ? matrix[ij - n - 1] + 1 : 1
+              : math.imax(i > 0 ? matrix[ij - n] : 0, j > 0 ? matrix[ij - 1] : 0))
+          }
+        }
+
+        // Extract the diff in reverse
+        List<string> reversed = []
+        var i = m - 1
+        var j = n - 1
+        while (i >= 0 || j >= 0) {
+          var ij = i * n + j
+
+          // Common
+          if (i >= 0 && j >= 0 && expected[i] == observed[j]) {
+            reversed.push(" " + expected[i])
+            i--
+            j--
+          }
+
+          // Removal
+          else if (j >= 0 && (i < 0 || (j > 0 ? matrix[ij - 1] : 0) > (i > 0 ? matrix[ij - n] : 0))) {
+            reversed.push("-" + observed[j])
+            j--
+          }
+
+          // Insertion
+          else {
+            assert i >= 0 && (j < 0 || (j > 0 ? matrix[ij - 1] : 0) <= (i > 0 ? matrix[ij - n] : 0))
+            reversed.push("+" + expected[i])
+            i--
+          }
+        }
+
+        // Print out the diff
+        for (var i = reversed.size() - 1; i >= 0; i--) {
+          var text = reversed[i]
+          var c = text[0]
+          setColor(c == '+' ? .GREEN : c == '-' ? .RED : .GRAY)
+          print(indent + text)
+        }
+      }
+
+      List<Test> _failed = []
+      var _wrapWidth = 0
+      var _startTime = 0.0
+      var _completed = 0
+      var _count = 0
+    }
+  }
+}

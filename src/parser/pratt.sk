@@ -11,7 +11,7 @@ class ParserContext {
   //   int x = (1 + (2 +
   //
   // In the code above, the only syntax error should be about an unexpected
-  // semicolon and not also about the two missing right parentheses.
+  // end of file and not also about the two missing right parentheses.
   private Token previousSyntaxError = null
 
   Token current() {

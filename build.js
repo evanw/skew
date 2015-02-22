@@ -81,6 +81,8 @@ var LIVE_SOURCES = SOURCES.concat([
 
 var TEST_SOURCES = SOURCES.concat([
   'tests/system/common.sk',
+  'tests/system/unit.sk',
+
   'tests/system/core/access.sk',
   'tests/system/core/annotations.sk',
   'tests/system/core/calls.sk',

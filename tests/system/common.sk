@@ -1,202 +1,85 @@
 using tests
+using unit
 
 namespace tests {
-  enum Status {
-    PENDING
-    FAILED
-    SUCCEEDED
-  }
-
-  class Test {
-    string input
-    string expected
-    var output = ""
-    Status status = .PENDING
-
-    virtual void run()
-  }
-
   class FormatTest : Test {
-    int start
-    int end
-    int maxLength
-
     override void run() {
-      var range = Range(Source("<stdin>", input), start, end)
-      var formatted = range.format(maxLength)
-      output = trim(formatted.line + "\n" + formatted.range)
-      expected = trim(expected)
-      status = output == expected ? .SUCCEEDED : .FAILED
+      rename(compactWhitespace(_input))
+      var formatted = Range(Source("<stdin>", _input), _start, _end).format(_maxLength)
+      expectString(trim(_expected), trim(formatted.line + "\n" + formatted.range))
+    }
+
+    private {
+      string _input
+      string _expected
+      int _start
+      int _end
+      int _maxLength
     }
   }
 
   class CompilerTest : Test {
-    var options = CompilerOptions()
-
     override void run() {
-      try {
-        var compiler = Compiler(options)
-        compiler.addInput(Source("<stdin>", input))
-        var result = compiler.compile()
-        if (result.outputs.size() != 0) {
-          for (var i = 0; i < result.outputs.size(); i++) {
-            output += result.outputs[i].contents + "\n"
-          }
-        } else {
-          output = options.log.toString()
+      rename(compactWhitespace(_input))
+      var compiler = Compiler(_options)
+      compiler.addInput(Source("<stdin>", _input))
+      var result = compiler.compile()
+      var output = ""
+      if (result.outputs.size() != 0) {
+        for (var i = 0; i < result.outputs.size(); i++) {
+          output += result.outputs[i].contents + "\n"
         }
-      } catch {
-        output = "(internal compiler error)"
+      } else {
+        output = _options.log.toString()
       }
-      output = trim(output)
-      expected = trim(expected)
-      status = output == expected ? .SUCCEEDED : .FAILED
+      expectString(trim(_expected), trim(output))
     }
 
     CompilerTest js() {
-      options.target = .JAVASCRIPT
+      _options.target = .JAVASCRIPT
       return this
     }
 
     CompilerTest cpp() {
-      options.target = .CPP
-      options.config = .OSX
+      _options.target = .CPP
+      _options.config = .OSX
       return this
     }
 
     CompilerTest ruby() {
-      options.target = .RUBY
+      _options.target = .RUBY
       return this
     }
 
     CompilerTest windows() {
-      options.config = .WINDOWS
+      _options.config = .WINDOWS
       return this
     }
 
     CompilerTest release() {
-      options.minify = true
-      options.mangle = true
-      options.removeAsserts = true
-      options.foldAllConstants = true
-      options.inlineAllFunctions = true
-      options.globalizeAllFunctions = true
+      _options.minify = true
+      _options.mangle = true
+      _options.removeAsserts = true
+      _options.foldAllConstants = true
+      _options.inlineAllFunctions = true
+      _options.globalizeAllFunctions = true
       return this
     }
 
     CompilerTest minify() {
-      options.minify = true
+      _options.minify = true
       return this
     }
 
     CompilerTest mangle() {
-      options.mangle = true
+      _options.mangle = true
       return this
     }
-  }
 
-  List<Test> registeredTests = []
-
-  int runAllTests() {
-    // Run the tests
-    List<Test> failing = []
-    var width = terminal.width() * 3 / 4
-    var startTime = now()
-    terminal.write("\n  ")
-    for (var i = 0; i < registeredTests.size(); i++) {
-      var test = registeredTests[i]
-      test.run()
-      var failed = test.status == .FAILED
-      terminal.setColor(failed ? .RED : .GREEN)
-      terminal.write(failed ? "x" : ".")
-      if (i + 1 < registeredTests.size() && width != 0 && i % width == width - 1) {
-        terminal.write("\n  ")
-      }
-      terminal.setColor(.DEFAULT)
-      terminal.flush()
-      if (failed) {
-        failing.push(test)
-      }
-    }
-    terminal.print("\n")
-
-    // Print the summary
-    var totalTime = now() - startTime
-    terminal.setColor(.GREEN)
-    terminal.write("  " + (registeredTests.size() - failing.size()) + " passing")
-    terminal.setColor(.GRAY)
-    terminal.print("  (" + formatNumber(totalTime / 1000) + "s)")
-    if (failing.size() != 0) {
-      terminal.setColor(.RED)
-      terminal.print("  " + failing.size() + " failing")
-    }
-    terminal.setColor(.DEFAULT)
-    terminal.print("")
-
-    // Print the failed tests
-    var indent = " ".repeat(failing.size().toString().size() + 5)
-    for (var i = 0; i < failing.size(); i++) {
-      var test = failing[i]
-      var text = "  " + (i + 1) + ")"
-      terminal.setColor(.BOLD)
-      terminal.print(text + " ".repeat(indent.size() - text.size()) + compactWhitespace(test.input) + "\n")
-      printDiff(indent,
-        test.expected == "" ? [] : test.expected.split("\n"),
-        test.output == "" ? [] : test.output.split("\n"))
-      terminal.setColor(.DEFAULT)
-      terminal.print("")
-    }
-    return failing.size()
-  }
-
-  void printDiff(string indent, List<string> expected, List<string> output) {
-    var m = expected.size()
-    var n = output.size()
-    List<int> matrix = []
-
-    // Solve for the lowest common subsequence length
-    for (var i = 0, ij = 0; i < m; i++) {
-      for (var j = 0; j < n; j++, ij++) {
-        matrix.push(expected[i] == output[j]
-          ? i > 0 && j > 0 ? matrix[ij - n - 1] + 1 : 1
-          : math.imax(i > 0 ? matrix[ij - n] : 0, j > 0 ? matrix[ij - 1] : 0))
-      }
-    }
-
-    // Extract the diff in reverse
-    List<string> reversed = []
-    var i = m - 1
-    var j = n - 1
-    while (i >= 0 || j >= 0) {
-      var ij = i * n + j
-
-      // Common
-      if (i >= 0 && j >= 0 && expected[i] == output[j]) {
-        reversed.push(" " + expected[i])
-        i--
-        j--
-      }
-
-      // Removal
-      else if (j >= 0 && (i < 0 || (j > 0 ? matrix[ij - 1] : 0) > (i > 0 ? matrix[ij - n] : 0))) {
-        reversed.push("-" + output[j])
-        j--
-      }
-
-      // Insertion
-      else {
-        assert i >= 0 && (j < 0 || (j > 0 ? matrix[ij - 1] : 0) <= (i > 0 ? matrix[ij - n] : 0))
-        reversed.push("+" + expected[i])
-        i--
-      }
-    }
-
-    // Print out the diff
-    for (var i = reversed.size() - 1; i >= 0; i--) {
-      var text = reversed[i]
-      var c = text[0]
-      terminal.setColor(c == '+' ? .GREEN : c == '-' ? .RED : .GRAY)
-      terminal.print(indent + text)
+    private {
+      string _input
+      string _expected
+      var _options = CompilerOptions()
     }
   }
 
@@ -233,28 +116,24 @@ namespace tests {
   }
 }
 
-FormatTest testFormat(string input, string expected, int start, int end, int maxLength) {
-  var test = FormatTest(trim(input), expected, start, end, maxLength)
-  registeredTests.push(test)
-  return test
+FormatTest testFormat(string input, string _expected, int start, int end, int maxLength) {
+  return FormatTest(trim(input), _expected, start, end, maxLength)
 }
 
-CompilerTest test(string input, string expected) {
-  var test = CompilerTest(trim(input), expected)
-  registeredTests.push(test)
-  return test
+CompilerTest test(string input, string _expected) {
+  return CompilerTest(trim(input), _expected)
 }
 
-CompilerTest testJS(string input, string expected) {
-  return test(input, expected).js()
+CompilerTest testJS(string input, string _expected) {
+  return test(input, _expected).js()
 }
 
-CompilerTest testCPP(string input, string expected) {
-  return test(input, expected).cpp()
+CompilerTest testCPP(string input, string _expected) {
+  return test(input, _expected).cpp()
 }
 
-CompilerTest testRuby(string input, string expected) {
-  return test(input, expected).ruby()
+CompilerTest testRuby(string input, string _expected) {
+  return test(input, _expected).ruby()
 }
 
 @EntryPoint
@@ -305,5 +184,7 @@ int start() {
   ruby.testExpressions()
   ruby.testStatements()
 
-  return runAllTests()
+  var report = TerminalReport()
+  Test.runAll(report)
+  return report.failedCount()
 }
