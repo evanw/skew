@@ -7,6 +7,15 @@ export void onmessage(`var` event) {
     var js = data.js
     var cpp = data.cpp
 
+    // Include all optional libraries
+    options.optionalLibraries = [
+      .OS,
+      .TERMINAL,
+      .TIMESTAMP,
+      .UNICODE,
+      .UNIT,
+    ]
+
     // Prepare the input for the compiler
     if (data.format == "js") {
       options.target = .JAVASCRIPT

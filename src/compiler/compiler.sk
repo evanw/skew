@@ -75,6 +75,7 @@ class CompilerOptions {
   CompilerTarget target = .NONE
   CompilerConfig config = .AUTOMATIC
   MemoryManagement memoryManagement = .NONE
+  List<OptionalLibrary> optionalLibraries = []
   var overriddenDefines = StringMap<OverriddenDefine>()
   var outputDirectory = ""
   var outputFile = ""
@@ -100,28 +101,39 @@ class CompilerResult {
   Resolver resolver
 }
 
+enum OptionalLibrary {
+  NONE
+  OS
+  TERMINAL
+  TIMESTAMP
+  UNICODE
+  UNIT
+}
+
 // This caches the parse tree for a bundled source file to speed up recompilation
 class CachedLibrary {
   string name
   string contents
+  OptionalLibrary optionalLibrary
   Node file = null
 
-  void compile(Compiler compiler) {
-    if (file == null) {
-      file = compiler.addInput(Source("<compiler>/" + name, contents))
+  void compileAndInclude(Compiler compiler) {
+    if (optionalLibrary == .NONE || optionalLibrary in compiler.options.optionalLibraries) {
       if (file == null) {
-        terminal.print("could not compile " + name + ":\n" + compiler._options.log.toString())
-        assert false
+        file = compiler.addInput(Source("<compiler>/" + name, contents))
+        file.flags |= .IS_LIBRARY_FILE
+        file = file.clone()
+      } else {
+        compiler.addCachedInput(file.clone())
       }
-      file.flags |= .IS_LIBRARY_FILE
-      file = file.clone()
-    } else {
-      compiler.addCachedInput(file.clone())
     }
   }
 }
 
 class Compiler {
+  using timestamp
+
+  final CompilerOptions options
   var tokenizingTime = 0.0
   var parsingTime = 0.0
   var resolvingTime = 0.0
@@ -135,14 +147,12 @@ class Compiler {
   var lineCountingTime = 0.0
   var totalTime = 0.0
 
-    CompilerOptions _options
   private {
-    // CompilerOptions _options
     List<Source> _inputs = []
     var _program = Node.createProgram([])
   }
 
-  new(CompilerOptions options) : _options = options {
+  new(CompilerOptions options) : options = options {
     var target = options.target
     var config = options.config
 
@@ -177,12 +187,12 @@ class Compiler {
 
     // Add all libraries before any other code
     for (var i = 0; i < cachedLibraries.size(); i++) {
-      cachedLibraries[i].compile(this)
+      cachedLibraries[i].compileAndInclude(this)
     }
   }
 
   Node addInput(Source source) {
-    var log = _options.log
+    var log = options.log
     var errorCount = log.errorCount
 
     // Tokenize the source
@@ -223,16 +233,16 @@ class Compiler {
 
     // Resolve everything together
     Resolver resolver = null
-    if (_options.target.shouldRunResolver()) {
+    if (options.target.shouldRunResolver()) {
       var resolveStart = now()
-      resolver = Resolver(_options.log, _options)
+      resolver = Resolver(options.log, options)
       resolver.run(_program)
       resolvingTime += now() - resolveStart
     }
-    if (!_options.log.hasErrors()) {
+    if (!options.log.hasErrors()) {
 
       // Optimize the module if the target format requires it
-      if (_options.target.shouldRunResolver()) {
+      if (options.target.shouldRunResolver()) {
         // Build a call graph
         var callGraphStart = now()
         var graph = CallGraph(_program)
@@ -250,11 +260,11 @@ class Compiler {
 
         // Inline functions
         var functionInliningStart = now()
-        FunctionInliningPass.run(graph, _options)
+        FunctionInliningPass.run(graph, options)
         functionInliningTime += now() - functionInliningStart
 
         // Fold constants
-        if (_options.foldAllConstants) {
+        if (options.foldAllConstants) {
           var constantFoldingStart = now()
           resolver.constantFolder.foldConstants(_program)
           constantFoldingTime += now() - constantFoldingStart
@@ -262,21 +272,21 @@ class Compiler {
 
         // Tree shaking
         var treeShakingStart = now()
-        TreeShakingPass.run(_program, _options, resolver)
+        TreeShakingPass.run(_program, options, resolver)
         treeShakingTime += now() - treeShakingStart
       }
 
       // Emit the module in the target format
       IEmitter emitter = null
-      switch (_options.target) {
+      switch (options.target) {
         case .NONE {}
         case .CPP { emitter = cpp.Emitter(resolver) }
         case .JAVASCRIPT { emitter = js.Emitter(resolver) }
         case .JOINED { emitter = joined.Emitter(resolver) }
         case .RUBY { emitter = ruby.Emitter(resolver) }
-        case .JSON_AST { emitter = json.Emitter(_options) }
-        case .LISP_AST { emitter = lisp.Emitter(_options) }
-        case .XML_AST { emitter = xml.Emitter(_options) }
+        case .JSON_AST { emitter = json.Emitter(options) }
+        case .LISP_AST { emitter = lisp.Emitter(options) }
+        case .XML_AST { emitter = xml.Emitter(options) }
         default { assert false }
       }
       if (emitter != null) {
@@ -326,15 +336,20 @@ class Compiler {
 
   // Cache the parsed standard libraries for a speed boost during recompilation
   static List<CachedLibrary> cachedLibraries = [
-    CachedLibrary("defines.sk", @ContentsOfFile("../../lib/defines.sk")),
-    CachedLibrary("primitives.sk", @ContentsOfFile("../../lib/primitives.sk")),
-    CachedLibrary("math.sk", @ContentsOfFile("../../lib/math.sk")),
-    CachedLibrary("list.sk", @ContentsOfFile("../../lib/list.sk")),
-    CachedLibrary("stringmap.sk", @ContentsOfFile("../../lib/stringmap.sk")),
-    CachedLibrary("intmap.sk", @ContentsOfFile("../../lib/intmap.sk")),
-    CachedLibrary("os.sk", @ContentsOfFile("../../lib/os.sk")),
-    CachedLibrary("terminal.sk", @ContentsOfFile("../../lib/terminal.sk")),
-    CachedLibrary("unicode.sk", @ContentsOfFile("../../lib/unicode.sk")),
+    // Required libraries
+    CachedLibrary("defines.sk", @ContentsOfFile("../../lib/defines.sk"), .NONE),
+    CachedLibrary("primitives.sk", @ContentsOfFile("../../lib/primitives.sk"), .NONE),
+    CachedLibrary("math.sk", @ContentsOfFile("../../lib/math.sk"), .NONE),
+    CachedLibrary("list.sk", @ContentsOfFile("../../lib/list.sk"), .NONE),
+    CachedLibrary("stringmap.sk", @ContentsOfFile("../../lib/stringmap.sk"), .NONE),
+    CachedLibrary("intmap.sk", @ContentsOfFile("../../lib/intmap.sk"), .NONE),
+
+    // Optional libraries
+    CachedLibrary("os.sk", @ContentsOfFile("../../lib/os.sk"), .OS),
+    CachedLibrary("terminal.sk", @ContentsOfFile("../../lib/terminal.sk"), .TERMINAL),
+    CachedLibrary("timestamp.sk", @ContentsOfFile("../../lib/timestamp.sk"), .TIMESTAMP),
+    CachedLibrary("unicode.sk", @ContentsOfFile("../../lib/unicode.sk"), .UNICODE),
+    CachedLibrary("unit.sk", @ContentsOfFile("../../lib/unit.sk"), .UNIT),
   ]
 
   static int totalLineCount(List<Source> sources) {

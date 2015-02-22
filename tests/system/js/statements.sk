@@ -197,9 +197,10 @@ class Foo { int x }
 ")
 
 testJS("
+import void bar(dynamic x)
 export void foo() {
   try { throw Foo() }
-  catch (dynamic e) { terminal.print(e.stack) }
+  catch (dynamic e) { bar(e.stack) }
 }
 class Foo {}
 ", "
@@ -211,7 +212,7 @@ class Foo {}
     try {
       throw new Foo();
     } catch ($exception) {
-      console.log($exception.stack);
+      bar($exception.stack);
     }
   };
 }());

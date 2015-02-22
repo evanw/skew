@@ -16,6 +16,7 @@ enum Option {
   HELP
   INCLUDE_LIBRARIES
   INLINE
+  LIBRARY
   MANGLE
   MINIFY
   OUTPUT_DIRECTORY
@@ -85,32 +86,6 @@ namespace frontend {
   }
 
   CompilerOptions parseOptions(Log log, OptionParser parser, List<string> arguments) {
-    StringMap<CompilerTarget> VALID_TARGETS = {
-      "cpp": .CPP,
-      "joined": .JOINED,
-      "js": .JAVASCRIPT,
-      "json-ast": .JSON_AST,
-      "lisp-ast": .LISP_AST,
-      "ruby": .RUBY,
-      "xml-ast": .XML_AST,
-    }
-    StringMap<CompilerConfig> VALID_JS_CONFIGS = {
-      "browser": .BROWSER,
-      "node": .NODE,
-    }
-    StringMap<CompilerConfig> VALID_CPP_CONFIGS = {
-      "android": .ANDROID,
-      "ios": .IOS,
-      "linux": .LINUX,
-      "osx": .OSX,
-      "windows": .WINDOWS,
-    }
-    StringMap<MemoryManagement> VALID_GC_STRATEGIES = {
-      "mark-sweep": .MARK_SWEEP,
-      "none": .NONE,
-      "none-fast": .NONE_FAST,
-    }
-
     // Configure the parser
     parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"])
     parser.define(.STRING, .TARGET, "--target", "Sets the target format. Valid targets are " + joinKeys(VALID_TARGETS.keys()) + ".")
@@ -130,6 +105,7 @@ namespace frontend {
     parser.define(.BOOL, .MINIFY, "--minify", "Omits whitespace so the emitted JavaScript takes up less space.")
     parser.define(.BOOL, .MANGLE, "--mangle", "Transforms your JavaScript code to be as small as possible. The \"export\" modifier prevents renaming a symbol.")
     parser.define(.INT, .ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is 20.")
+    parser.define(.STRING_LIST, .LIBRARY, "--lib", "Include a library in the compilation. Valid library names are " + joinKeys(VALID_OPTIONAL_LIBRARIES.keys()) + ".")
 
     // Parse the command line arguments
     parser.parse(log, arguments)
@@ -229,6 +205,25 @@ namespace frontend {
         options.memoryManagement = parseEnum<MemoryManagement>(log, "garbage collection strategy", VALID_GC_STRATEGIES, gc, .NONE)
       } else if (options.target != .NONE) {
         commandLineErrorUnexpectedGarbageCollectionStrategy(log, gc, target.toString())
+      }
+    }
+
+    // Parse the libraries
+    var libraries = parser.stringRangeListForOption(.LIBRARY)
+    if (libraries != null) {
+      for (var i = 0; i < libraries.size(); i++) {
+        var range = libraries[i]
+        var name = range.toString()
+        var library = parseEnum<OptionalLibrary>(log, "library name", VALID_OPTIONAL_LIBRARIES, range, .NONE)
+        var dependencies = OPTIONAL_LIBRARY_DEPENDENCIES.getOrDefault(library, null)
+        if (library != .NONE) {
+          options.optionalLibraries.pushOnce(library)
+          if (dependencies != null) {
+            for (var j = 0; j < dependencies.size(); j++) {
+              options.optionalLibraries.pushOnce(dependencies[j])
+            }
+          }
+        }
       }
     }
 
@@ -334,5 +329,46 @@ namespace frontend {
   // in the last column of a row, so don't put any text there just to be safe
   int terminalWidthPadding() {
     return OperatingSystem.current() == .WINDOWS ? 1 : 0
+  }
+
+  StringMap<CompilerTarget> VALID_TARGETS = {
+    "cpp": .CPP,
+    "joined": .JOINED,
+    "js": .JAVASCRIPT,
+    "json-ast": .JSON_AST,
+    "lisp-ast": .LISP_AST,
+    "ruby": .RUBY,
+    "xml-ast": .XML_AST,
+  }
+
+  StringMap<CompilerConfig> VALID_JS_CONFIGS = {
+    "browser": .BROWSER,
+    "node": .NODE,
+  }
+
+  StringMap<CompilerConfig> VALID_CPP_CONFIGS = {
+    "android": .ANDROID,
+    "ios": .IOS,
+    "linux": .LINUX,
+    "osx": .OSX,
+    "windows": .WINDOWS,
+  }
+
+  StringMap<MemoryManagement> VALID_GC_STRATEGIES = {
+    "mark-sweep": .MARK_SWEEP,
+    "none": .NONE,
+    "none-fast": .NONE_FAST,
+  }
+
+  StringMap<OptionalLibrary> VALID_OPTIONAL_LIBRARIES = {
+    "os": .OS,
+    "terminal": .TERMINAL,
+    "timestamp": .TIMESTAMP,
+    "unicode": .UNICODE,
+    "unit": .UNIT,
+  }
+
+  IntMap<List<OptionalLibrary>> OPTIONAL_LIBRARY_DEPENDENCIES = {
+    OptionalLibrary.UNIT: [.TIMESTAMP],
   }
 }

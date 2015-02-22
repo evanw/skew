@@ -42,10 +42,10 @@ namespace unit {
         test.before()
         try {
           test.run()
-        } catch (Failure failure) {
-          test._failure = failure
         } catch {
-          test._failure = Failure("", "(runtime error)")
+          if (test._failure == null) {
+            test._failure = Failure("", "(runtime error)")
+          }
         }
         test.after()
         report.completed(test, test._failure == null ? .SUCCESS : .FAILURE)
@@ -54,9 +54,10 @@ namespace unit {
       report.end()
     }
 
-    static void expectString(string expected, string observed) {
+    void expectString(string expected, string observed) {
       if (expected != observed) {
-        throw Failure(expected, observed)
+        _failure = Failure(expected, observed)
+        throw _failure
       }
     }
 
@@ -70,7 +71,9 @@ namespace unit {
   ////////////////////////////////////////////////////////////////////////////////
 
   class TerminalReport : Report {
+    using math
     using terminal
+    using timestamp
 
     inline int failedCount() {
       return _failed.size()
@@ -105,11 +108,11 @@ namespace unit {
       print("\n")
 
       // Print the summary
-      var totalTime = now() - _startTime
+      var totalTime = (int)floor((now() - _startTime) / 100)
       setColor(.GREEN)
       write("  " + (_count - _failed.size()) + " passing")
       setColor(.GRAY)
-      print("  (" + formatNumber(totalTime / 1000) + "s)")
+      print("  (" + totalTime / 10 + "." + totalTime % 10 + "s)")
       if (_failed.size() != 0) {
         setColor(.RED)
         print("  " + _failed.size() + " failing")

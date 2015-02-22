@@ -26,7 +26,6 @@ var SOURCES = [
 
   'src/compiler/collector.sk',
   'src/compiler/compiler.sk',
-  'src/compiler/now.sk',
 
   'src/core/log.sk',
   'src/core/range.sk',
@@ -81,7 +80,6 @@ var LIVE_SOURCES = SOURCES.concat([
 
 var TEST_SOURCES = SOURCES.concat([
   'tests/system/common.sk',
-  'tests/system/unit.sk',
 
   'tests/system/core/access.sk',
   'tests/system/core/annotations.sk',
@@ -154,6 +152,7 @@ var TEST_SOURCES = SOURCES.concat([
 
     task(target + suffix + '-test', function(done) {
       compile(Object.create(options, {
+        libraries: { value: ['unit'] },
         sources: { value: TEST_SOURCES },
         binary: { value: directory + '/tests' },
         output: { value: directory + '/tests.' + extension },
@@ -331,6 +330,15 @@ function compile(options, done) {
     };
     var flags = options.sources.slice();
 
+    flags.push('--lib:os');
+    flags.push('--lib:terminal');
+    flags.push('--lib:timestamp');
+    flags.push('--lib:unicode');
+    if (options.libraries) {
+      options.libraries.forEach(function(name) {
+        flags.push('--lib:' + name);
+      });
+    }
     if (!options.quiet) {
       flags.push('--verbose');
     }
@@ -381,7 +389,10 @@ function compile(options, done) {
               } else {
                 var clang = ['clang++', options.output, '-std=c++11', '-ferror-limit=0', '-o', options.binary];
                 if (options.release) {
-                  clang.push('-O3', '-DNDEBUG', '-fno-exceptions', '-fno-rtti', '-fomit-frame-pointer', '-fvisibility=hidden');
+                  clang.push('-O3', '-DNDEBUG', '-fno-rtti', '-fomit-frame-pointer', '-fvisibility=hidden');
+                  if (!options.libraries || options.libraries.indexOf('unit') < 0) {
+                    clang.push('-fno-exceptions');
+                  }
                 }
                 run(clang, function() {
                   done({
@@ -521,7 +532,7 @@ function run(command, options, done) {
   }
   options = options || {};
   log('info', command.map(function(arg) {
-    return /[^\.\w\/\-\+=]/.test(arg) ? "'" + arg.replace(/'/g, "'\\''") + "'" : arg;
+    return /[^\.\w\/\-\+=:]/.test(arg) ? "'" + arg.replace(/'/g, "'\\''") + "'" : arg;
   }).join(' '));
   child_process.spawn(command[0], command.slice(1), { stdio: 'inherit', cwd: options.cwd }).on('exit', function(code) {
     if (code !== 0) {
