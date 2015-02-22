@@ -4,6 +4,7 @@ var child_process = require('child_process');
 var path = require('path');
 var fs = require('fs');
 var tasks = {};
+var isWindows = process.platform === 'win32';
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -181,11 +182,13 @@ task('live', function(done) {
 }).describe('Build the frontend for tests/live/index.html');
 
 task('clean', function(done) {
-  run(['rm', '-fr', BUILD_DIR], done);
+  removeDirectory(BUILD_DIR);
+  done();
 }).describe('Remove the build directory');
 
 task('replace', function(done) {
-  run(['cp', DEBUG_DIR + '/skewc.js', 'skewc.js'], done);
+  copyFile(DEBUG_DIR + '/skewc.js', 'skewc.js');
+  done();
 }).requires(['js-check']).describe('Replace the current frontend with a newer version of itself');
 
 task('publish', function(done) {
@@ -203,6 +206,40 @@ task('publish', function(done) {
 }).describe('Bump the npm patch number and publish the build to npm');
 
 ////////////////////////////////////////////////////////////////////////////////
+
+
+function removeDirectory(directory) {
+  if (fs.existsSync(directory)) {
+    fs.readdirSync(directory).forEach(function(entry) {
+      entry = path.join(directory, entry);
+      if (fs.statSync(entry).isDirectory()) {
+        removeDirectory(entry);
+      } else {
+        log('info', 'rm ' + entry);
+        fs.unlinkSync(entry);
+      }
+    });
+    log('info', 'rmdir ' + directory);
+    fs.rmdirSync(directory);
+  }
+}
+
+function makeDirectory(directory) {
+  var parent = path.dirname(directory);
+  if (parent !== '.' && parent !== '/') {
+    makeDirectory(parent);
+  }
+  if (!fs.existsSync(directory)) {
+    log('info', 'mkdir ' + directory);
+    fs.mkdirSync(directory);
+  }
+}
+
+function copyFile(from, to) {
+  log('info', 'cp ' + from + ' ' + to);
+  var content = fs.readFileSync(from);
+  fs.writeFileSync(to, content);
+}
 
 function stressCompile(options, done) {
   function duplicateCode(code, times) {
@@ -324,18 +361,34 @@ function compile(options, done) {
       case 'cpp': {
         skewc(flags, function() {
           if (options.binary) {
-            var clang = ['clang++', options.output, '-std=c++11', '-ferror-limit=0', '-o', options.binary];
-            if (options.release) {
-              clang.push('-O3', '-DNDEBUG', '-fno-exceptions', '-fno-rtti', '-fomit-frame-pointer', '-fvisibility=hidden');
-            }
             prepareForFile(options.binary, function() {
-              run(clang, function() {
-                done({
-                  run: function(args, done) {
-                    run([options.binary].concat(args), done);
-                  },
+              if (isWindows) {
+                var msvc = [options.output, '/Fe' + options.binary];
+                if (options.release) {
+                  msvc.push('/O2');
+                } else {
+                  msvc.push('/EHsc');
+                }
+                runVisualStudio(msvc, function() {
+                  done({
+                    run: function(args, done) {
+                      run([options.binary].concat(args), done);
+                    },
+                  });
                 });
-              });
+              } else {
+                var clang = ['clang++', options.output, '-std=c++11', '-ferror-limit=0', '-o', options.binary];
+                if (options.release) {
+                  clang.push('-O3', '-DNDEBUG', '-fno-exceptions', '-fno-rtti', '-fomit-frame-pointer', '-fvisibility=hidden');
+                }
+                run(clang, function() {
+                  done({
+                    run: function(args, done) {
+                      run([options.binary].concat(args), done);
+                    },
+                  });
+                });
+              }
             });
           } else {
             done();
@@ -370,8 +423,55 @@ function compile(options, done) {
   });
 }
 
+function runVisualStudio(args, callback) {
+  // Find all installed Visual Studio versions
+  var versions = [];
+  Object.keys(process.env).forEach(function(key) {
+    var match = /^VS(\d+)COMNTOOLS$/.exec(key);
+    if (match) {
+      var version = match[1] | 0;
+      if (version >= 120) { // Versions before 12 don't have std::initializer_list
+        versions.push(version);
+      } else {
+        log('warning', 'ignoring incompatible Visual Studio version ' + version);
+      }
+    }
+  });
+
+  // Try the compilers in descending order
+  versions.sort(function(a, b) {
+    return b - a;
+  });
+  next();
+
+  function next() {
+    if (!versions.length) {
+      die('could not find a working Visual Studio installation');
+    }
+
+    var version = versions.shift();
+    log('info', 'trying Visual Studio version ' + version);
+
+    var folder = process.env['VS' + version + 'COMNTOOLS'];
+    var child = child_process.spawn('cmd.exe', [], { cwd: process.cwd() });
+    child.stdin.write('"' + path.join(folder, '..', '..', 'VC', 'bin', 'vcvars32.bat') + '"\n');
+    child.stdin.write('cl.exe ' + args.map(function(x) { return '"' + x + '"' }).join(' ') + '\n');
+    child.stdin.end();
+    child.stdout.pipe(process.stdout);
+    child.stderr.pipe(process.stderr);
+    child.on('close', function(code) {
+      if (code !== 0) {
+        log('warning', 'failed to compile using Visual Studio version ' + version);
+        next();
+      } else {
+        callback();
+      }
+    });
+  }
+}
+
 function log(kind, text) {
-  console.log((process.stdout.isTTY ? '\x1B[0;' + { info: 90, error: 91 }[kind] + 'm[' + kind + ']\x1B[0m ' : '[' + kind + '] ') + text);
+  console.log((process.stdout.isTTY ? '\x1B[0;' + { info: 90, error: 91, warning: 93 }[kind] + 'm[' + kind + ']\x1B[0m ' : '[' + kind + '] ') + text);
 }
 
 function task(name, callback) {
@@ -408,14 +508,8 @@ function task(name, callback) {
 }
 
 function prepareForFile(file, done) {
-  var directory = path.dirname(file);
-  if (!fs.existsSync(directory)) {
-    run(['mkdir', '-p', directory], function() {
-      done();
-    });
-  } else {
-    done();
-  }
+  makeDirectory(path.dirname(file));
+  done();
 }
 
 function run(command, options, done) {

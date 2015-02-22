@@ -108,7 +108,7 @@ class CachedLibrary {
 
   void compile(Compiler compiler) {
     if (file == null) {
-      file = compiler.addInput(Source(joinPath("<compiler>", name), contents))
+      file = compiler.addInput(Source("<compiler>/" + name, contents))
       if (file == null) {
         terminal.print("could not compile " + name + ":\n" + compiler._options.log.toString())
         assert false

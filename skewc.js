@@ -2901,7 +2901,7 @@
 
   CachedLibrary.prototype.compile = function(compiler) {
     if (this.file === null) {
-      this.file = compiler.addInput(new Source(joinPath('<compiler>', this.name), this.contents));
+      this.file = compiler.addInput(new Source('<compiler>/' + this.name, this.contents));
 
       if (this.file === null) {
         process.stdout.write('could not compile ' + this.name + ':\n' + compiler._options.log + '\n');
@@ -16827,10 +16827,13 @@
 
   function doubleToStringWithDot(value) {
     var text = value.toString();
+    var e = math.imax(text.indexOf('e'), text.indexOf('E'));
+
+    if (e !== -1 && (e + 2 | 0) < text.length && text.charCodeAt(e + 2 | 0) === 48) {
+      text = text.slice(0, e + 2 | 0) + text.slice(e + 3 | 0, text.length);
+    }
 
     if (!(text.indexOf('.') !== -1)) {
-      var e = math.imax(text.indexOf('e'), text.indexOf('E'));
-
       if (e === -1) {
         text += '.0';
       } else {
@@ -16843,15 +16846,15 @@
 
   function parseStringLiteral(log, range, text) {
     if (text.length < 2) {
-      throw new Error('assert text.size() >= 2 (src/core/support.sk:82:3)');
+      throw new Error('assert text.size() >= 2 (src/core/support.sk:87:3)');
     }
 
     if (text.charCodeAt(0) !== 34 && text.charCodeAt(0) !== 39) {
-      throw new Error("assert text[0] == '\"' || text[0] == '\\'' (src/core/support.sk:83:3)");
+      throw new Error("assert text[0] == '\"' || text[0] == '\\'' (src/core/support.sk:88:3)");
     }
 
     if (text.charCodeAt(text.length - 1 | 0) !== 34 && text.charCodeAt(text.length - 1 | 0) !== 39) {
-      throw new Error("assert text[text.size() - 1] == '\"' || text[text.size() - 1] == '\\'' (src/core/support.sk:84:3)");
+      throw new Error("assert text[text.size() - 1] == '\"' || text[text.size() - 1] == '\\'' (src/core/support.sk:89:3)");
     }
 
     var isValidString = true;
