@@ -328,7 +328,7 @@ namespace frontend {
   // The windows command prompt inserts an extra line break if text is present
   // in the last column of a row, so don't put any text there just to be safe
   int terminalWidthPadding() {
-    return OperatingSystem.current() == .WINDOWS ? 1 : 0
+    return os.current() == .WINDOWS ? 1 : 0
   }
 
   StringMap<CompilerTarget> VALID_TARGETS = {

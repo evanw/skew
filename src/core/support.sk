@@ -269,7 +269,7 @@ SplitPath splitPath(string path) {
 }
 
 string joinPath(string directory, string entry) {
-  return directory + (OperatingSystem.current() == .WINDOWS ? "\\" : "/") + entry
+  return directory + (os.current() == .WINDOWS ? "\\" : "/") + entry
 }
 
 string formatNumber(double number) {

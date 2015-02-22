@@ -1,14 +1,14 @@
-enum OperatingSystem {
-  ANDROID
-  IOS
-  LINUX
-  OSX
-  UNKNOWN
-  WINDOWS
-}
+namespace os {
+  enum OS {
+    ANDROID
+    IOS
+    LINUX
+    OSX
+    UNKNOWN
+    WINDOWS
+  }
 
-in OperatingSystem {
-  static pure OperatingSystem current() {
+  pure OS current() {
     #if CONFIG_ANDROID
 
       return .ANDROID

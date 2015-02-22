@@ -161,13 +161,13 @@ class Compiler {
       if (target == .JAVASCRIPT) {
         config = .BROWSER
       } else if (target == .CPP || target == .RUBY) {
-        var os = OperatingSystem.current()
+        var current = os.current()
         config =
-          os == .ANDROID ? .ANDROID :
-          os == .IOS ? .IOS :
-          os == .LINUX ? .LINUX :
-          os == .OSX ? .OSX :
-          os == .WINDOWS ? .WINDOWS :
+          current == .ANDROID ? .ANDROID :
+          current == .IOS ? .IOS :
+          current == .LINUX ? .LINUX :
+          current == .OSX ? .OSX :
+          current == .WINDOWS ? .WINDOWS :
           .AUTOMATIC
       }
       options.config = config
