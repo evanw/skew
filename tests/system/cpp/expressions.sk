@@ -641,4 +641,44 @@ void foo() {
 }
 ")
 
+testCPP("
+export List<float> foo(int x, float y, double z) { return [x, y, z] }
+export List<double> bar(int x, float y, double z) { return [x, y, z] }
+", "
+#include <initializer_list>
+#include <vector>
+
+template <typename T>
+struct List;
+
+template <typename T>
+struct List {
+  List();
+  List<T> *literal(std::initializer_list<T> list);
+
+  std::vector<T> _data;
+};
+
+List<float> *foo(int x, float y, double z);
+List<double> *bar(int x, float y, double z);
+
+template <typename T>
+List<T>::List() : _data() {
+}
+
+template <typename T>
+List<T> *List<T>::literal(std::initializer_list<T> list) {
+  _data.insert(_data.end(), list.begin(), list.end());
+  return this;
+}
+
+List<float> *foo(int x, float y, double z) {
+  return (new List<float>())->literal({ static_cast<float>(x), y, static_cast<float>(z) });
+}
+
+List<double> *bar(int x, float y, double z) {
+  return (new List<double>())->literal({ static_cast<double>(x), static_cast<double>(y), z });
+}
+")
+
 }}

@@ -5240,11 +5240,19 @@
   };
 
   cpp.Emitter.prototype.shouldEmitCast = function(node) {
-    if (node.type.isInt(this.cache) && node.castValue().type.isRegularEnum()) {
+    var value = node.castValue();
+    var from = value.type;
+    var to = node.type;
+
+    if (to.isInt(this.cache) && from.isRegularEnum()) {
       return true;
     }
 
-    if (node.type.isReference() && node.parent.kind === NodeKind.HOOK && node.castValue().kind !== NodeKind.NULL && node === node.parent.hookTrue()) {
+    if (to.isNumeric(this.cache) && from !== to && node.parent.kind === NodeKind.LIST) {
+      return true;
+    }
+
+    if (to.isReference() && node.parent.kind === NodeKind.HOOK && value.kind !== NodeKind.NULL && node === node.parent.hookTrue()) {
       return true;
     }
 

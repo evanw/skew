@@ -624,8 +624,17 @@ namespace cpp {
     }
 
     override bool shouldEmitCast(Node node) {
+      var value = node.castValue()
+      var from = value.type
+      var to = node.type
+
       // C++11 doesn't auto-convert enums to ints for some reason
-      if (node.type.isInt(cache) && node.castValue().type.isRegularEnum()) {
+      if (to.isInt(cache) && from.isRegularEnum()) {
+        return true
+      }
+
+      // C++11 doesn't auto-convert anything inside initializer lists
+      if (to.isNumeric(cache) && from != to && node.parent.kind == .LIST) {
         return true
       }
 
@@ -640,7 +649,7 @@ namespace cpp {
       //
       //   Foo *foo = ... ? static_cast<Foo *>(new Bar) : new Baz
       //
-      if (node.type.isReference() && node.parent.kind == .HOOK && node.castValue().kind != .NULL && node == node.parent.hookTrue()) {
+      if (to.isReference() && node.parent.kind == .HOOK && value.kind != .NULL && node == node.parent.hookTrue()) {
         return true
       }
 
