@@ -105,7 +105,22 @@ Node parseName(ParserContext context) {
 
 Node parseNameOrString(ParserContext context) {
   var token = context.current()
-  if (context.eat(.STRING)) return parseStringToken(context, token)
+
+  // Parse quoted property names, optionally trailed by '?' or '!' for Ruby
+  if (context.eat(.TICK)) {
+    var name = context.current().text()
+    if (context.expect(.IDENTIFIER)) {
+      var suffix = context.current()
+      if (context.eat(.QUESTION_MARK) || context.eat(.NOT)) {
+        name += suffix.text()
+      }
+      if (context.expect(.TICK)) {
+        return Node.createString(name).withRange(context.spanSince(token.range))
+      }
+    }
+    return null
+  }
+
   return parseName(context)
 }
 

@@ -286,11 +286,11 @@ An expression can be quoted by surrounding it with backtick characters. Quoting 
       }
     }
 
-The type of a quoted expression is the error type, which causes type checking to be ignored for all uses of that expression. Use of quoting should be limited as much as possible since it avoids the type checker. It is very useful for library binding code, however. Property names can be quoted too, although they use double quotes instead of backticks and can contain arbitrary characters to make binding easier:
+The type of a quoted expression is the error type, which causes type checking to be ignored for all uses of that expression. Use of quoting should be limited as much as possible since it avoids the type checker. It is very useful for library binding code, however. Property names can be quoted too:
 
     namespace math {
       inline pure bool isNaN(double x) {
-        return x."nan?"
+        return x.`nan?`
       }
     }
 

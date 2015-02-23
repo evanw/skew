@@ -25,7 +25,7 @@ alias dynamic = `dynamic`
       int indexOfFrom(string value, int fromIndex) { return `this`.indexOf(value, fromIndex) }
       int lastIndexOfFrom(string value, int fromIndex) { return `this`.lastIndexOf(value, fromIndex) }
       string sliceCodeUnit(int index) { return `this`[index] }
-      string join(List<string> values) { return values."join"(this) }
+      string join(List<string> values) { return values.`join`(this) }
       @OperatorGet int codeUnitAt(int index) { return `this`.charCodeAt(index) }
       static string fromCodeUnit(int value) { return `String`.fromCharCode(value) }
     }
@@ -185,11 +185,11 @@ alias dynamic = `dynamic`
 
   in string {
     pure inline {
-      string join(List<string> values) { return values."join"(this) }
+      string join(List<string> values) { return values.`join`(this) }
       string slice(int start, int end) { return `this`.slice(start, end - start) }
       string sliceCodeUnit(int index) { return `this`[index] }
-      @OperatorGet int codeUnitAt(int index) { return sliceCodeUnit(index)."ord" }
-      static string fromCodeUnit(int value) { return value."chr"("UTF-8") }
+      @OperatorGet int codeUnitAt(int index) { return sliceCodeUnit(index).`ord` }
+      static string fromCodeUnit(int value) { return value.`chr`("UTF-8") }
 
       int indexOf(string value) {
         var i = `this`.index(value)
@@ -219,7 +219,7 @@ alias dynamic = `dynamic`
     pure inline {
       new() { return `""` }
       void append(string text) { `this` << text }
-      string toString() { return this."dup" }
+      string toString() { return this.`dup` }
     }
   }
 

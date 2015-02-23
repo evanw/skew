@@ -62,7 +62,7 @@
   }
 
   double parseDoubleLiteral(string text) {
-    return text."to_f"
+    return text.`to_f`
   }
 
 #else
@@ -79,7 +79,7 @@
   var doubleToStringRegex = new `Regexp`("\\.0(?:e|$)")
 
   string doubleToStringWithoutDotZero(double value) {
-    return value.toString()."gsub"(doubleToStringRegex, "")
+    return value.toString().`gsub`(doubleToStringRegex, "")
   }
 
 #else

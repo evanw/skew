@@ -26,7 +26,7 @@
     @NeedsInclude("<fstream>") {
       Box<string> readFile(string path) {
         `std::ifstream` file
-        file.open(path."c_str"())
+        file.open(path.`c_str`())
         if (!file) return null
         var contents = ""
         `contents.append(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>())`
@@ -35,7 +35,7 @@
 
       bool writeFile(string path, string contents) {
         `std::ofstream` file
-        file.open(path."c_str"())
+        file.open(path.`c_str`())
         if (!file) return false
         file << contents
         return true

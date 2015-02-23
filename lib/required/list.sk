@@ -11,7 +11,7 @@ interface Comparison<T> {
 #if TARGET_JS
 
   void bindCompare<T>(Comparison<T> comparison) {
-    return comparison.compare."bind"(comparison)
+    return comparison.compare.`bind`(comparison)
   }
 
   import class List<T> {
@@ -225,7 +225,7 @@ interface Comparison<T> {
       }
 
       void removeRange(int start, int end) {
-        this."slice!"(start, end - start)
+        this.`slice!`(start, end - start)
       }
 
       void swap(int a, int b) {

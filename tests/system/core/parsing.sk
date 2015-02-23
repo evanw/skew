@@ -985,4 +985,27 @@ export void foo() {
          ^
 ")
 
+test("
+export void foo(int a) {
+  a.`b`.c
+  a.`b?`.c
+  a.`b!`.c
+  a.`?b`.c
+  a.`!b`.c
+}
+", "
+<stdin>:5:6: error: Expected IDENTIFIER but found QUESTION_MARK
+  a.`?b`.c
+     ^
+<stdin>:5:8: error: Expected COLON but found TICK
+  a.`?b`.c
+       ^
+<stdin>:6:6: error: Expected IDENTIFIER but found NOT
+  a.`!b`.c
+     ^
+<stdin>:5:7: error: \"b\" is not declared
+  a.`?b`.c
+      ^
+")
+
 }}

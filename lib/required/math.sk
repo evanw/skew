@@ -68,7 +68,7 @@
 
   namespace math {
     inline pure {
-      double abs(double x) { return x."abs" }
+      double abs(double x) { return x.`abs` }
       double sin(double x) { return `Math`.sin(x) }
       double cos(double x) { return `Math`.cos(x) }
       double tan(double x) { return `Math`.tan(x) }
@@ -80,13 +80,13 @@
       double exp(double x) { return `Math`.exp(x) }
       double log(double x) { return `Math`.log(x) }
       double pow(double x, double y) { return ``x` ** `y`` }
-      double floor(double x) { return x."floor" }
-      double round(double x) { return x."round" }
-      double ceil(double x) { return x."ceil" }
+      double floor(double x) { return x.`floor` }
+      double round(double x) { return x.`round` }
+      double ceil(double x) { return x.`ceil` }
       double min(double x, double y) { return x < y ? x : y }
       double max(double x, double y) { return x > y ? x : y }
-      bool isNaN(double x) { return x."nan?" }
-      bool isFinite(double x) { return x."finite?" }
+      bool isNaN(double x) { return x.`nan?` }
+      bool isFinite(double x) { return x.`finite?` }
       double random() { return `Random`.rand }
     }
   }
