@@ -233,7 +233,7 @@ class Resolver {
   }
 
   void prepareNode(Node node, Scope scope) {
-    setupScopesAndSymbols(node, scope)
+    setupScopesAndSymbols(node, scope, null)
     accumulateSymbolFlags()
     setSymbolKindsAndMergeSiblings()
     processUsingStatements()
@@ -265,14 +265,14 @@ class Resolver {
     return scope
   }
 
-  void setupNamedDeclaration(Node node, Scope scope) {
+  void setupNamedDeclaration(Node node, Scope scope, Scope enclosingFunction) {
     var declarationName = node.declarationName()
     if (declarationName != null && node.symbol == null) {
       var name = declarationName.asString()
       var member = scope.findLocal(name)
       Symbol symbol
 
-      // Append this symbol the linked list of sibling nodes
+      // Append this symbol to the linked list of sibling nodes
       if (member != null) {
         symbol = member.symbol
         symbol.node.appendToSiblingChain(node)
@@ -286,6 +286,20 @@ class Resolver {
           symbol.enclosingSymbol = scope.type.symbol
         }
         scope.insert(Member(symbol))
+
+        // Avoid shadowing inside functions
+        if (enclosingFunction != null && enclosingFunction != scope) {
+          for (var s = scope.lexicalParent; s != null; s = s.lexicalParent) {
+            var member = s.findLocal(name)
+            if (member != null) {
+              semanticErrorShadowedLocal(log, declarationName.range, name, member.symbol.node.declarationName().range)
+              break
+            }
+            if (s == enclosingFunction) {
+              break
+            }
+          }
+        }
       }
 
       // Link the node with its symbol
@@ -307,7 +321,7 @@ class Resolver {
     }
   }
 
-  void setupScopesAndSymbols(Node node, Scope scope) {
+  void setupScopesAndSymbols(Node node, Scope scope, Scope enclosingFunction) {
     var kind = node.kind
 
     // The root program introduces the global scope
@@ -322,7 +336,7 @@ class Resolver {
 
     // Declare this node if needed
     if (kind.isNamedDeclaration()) {
-      setupNamedDeclaration(node, scope) // Outlined for JIT performance
+      setupNamedDeclaration(node, scope, enclosingFunction) // Outlined for JIT performance
     }
 
     // Also introduce a scope on object declarations for the type parameters
@@ -330,6 +344,9 @@ class Resolver {
     if (kind.isNamedBlockDeclaration() || kind.isFunction() || kind.isLoop()) {
       scope = Scope(scope)
       node.scope = scope
+      if (kind.isFunction()) {
+        enclosingFunction = scope
+      }
     }
 
     // Automatically traverse the children of all nodes. There can't be any
@@ -339,7 +356,7 @@ class Resolver {
       var children = node.children
       for (var i = 0, n = children.size(); i < n; i++) {
         var child = children[i]
-        if (child != null) setupScopesAndSymbols(child, scope)
+        if (child != null) setupScopesAndSymbols(child, scope, enclosingFunction)
       }
     }
   }

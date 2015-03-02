@@ -1,0 +1,64 @@
+namespace core { void testShadowing() {
+
+test("
+void foo(int x) {
+  int x
+}
+", "
+<stdin>:2:7: error: Cannot create another variable named \"x\" in a nested scope
+  int x
+      ^
+<stdin>:1:14: note: The original variable is here
+void foo(int x) {
+             ^
+")
+
+test("
+void foo(int x) {
+  if (true) if (true) if (true) int x
+}
+", "
+<stdin>:2:37: error: Cannot create another variable named \"x\" in a nested scope
+  if (true) if (true) if (true) int x
+                                    ^
+<stdin>:1:14: note: The original variable is here
+void foo(int x) {
+             ^
+")
+
+test("
+class Foo {
+  int x
+  void foo(int x) {
+    int x
+  }
+}
+", "
+<stdin>:4:9: error: Cannot create another variable named \"x\" in a nested scope
+    int x
+        ^
+<stdin>:3:16: note: The original variable is here
+  void foo(int x) {
+               ^
+")
+
+test("
+class Foo {
+  int x
+  void foo() {}
+  void bar() {
+    int x
+  }
+  void baz() {
+    if (true) int x
+    if (true) int x
+  }
+}
+void foo() {
+  if (true) int x
+  if (true) int x
+}
+", "
+")
+
+}}

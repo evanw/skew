@@ -248,6 +248,12 @@ void test() {
   }
 }
 ", "
+<stdin>:3:12: error: Cannot create another variable named \"foo\" in a nested scope
+  for (int foo = 0;;) {
+           ~~~
+<stdin>:2:8: note: The original variable is here
+  bool foo
+       ~~~
 <stdin>:4:12: error: \"foo\" is already declared
     string foo
            ~~~

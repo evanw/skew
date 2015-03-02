@@ -157,6 +157,7 @@ int start() {
   core.testParsing()
   core.testPreprocessor()
   core.testPurity()
+  core.testShadowing()
   core.testStatements()
   core.testStatic()
   core.testSwitch()

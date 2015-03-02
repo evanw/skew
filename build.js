@@ -100,6 +100,7 @@ var TEST_SOURCES = SOURCES.concat([
   'tests/system/core/parsing.sk',
   'tests/system/core/preprocessor.sk',
   'tests/system/core/purity.sk',
+  'tests/system/core/shadowing.sk',
   'tests/system/core/statements.sk',
   'tests/system/core/static.sk',
   'tests/system/core/switch.sk',
