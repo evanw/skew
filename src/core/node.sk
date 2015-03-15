@@ -1,0 +1,331 @@
+namespace astral {
+  enum NodeKind {
+    // Other
+    BLOCK
+
+    // Statements
+    BREAK
+    CONTINUE
+    EXPRESSION
+    IF
+    RETURN
+    VAR
+    WHILE
+
+    // Expressions
+    CALL // If node has decl then decl.args matches node.children, otherwise node.children.first is the function and other children are args
+    CAST
+    CONSTANT
+    DOT
+    HOOK
+    LAMBDA
+    LAMBDA_TYPE
+    NAME
+    NULL
+
+    // Unary operators
+    COMPLEMENT
+    NEGATIVE
+    NOT
+
+    // Binary operators
+    ADD
+    ASSIGN
+    BITWISE_AND
+    BITWISE_OR
+    BITWISE_XOR
+    DIVIDE
+    EQUAL
+    GREATER_THAN
+    GREATER_THAN_OR_EQUAL
+    LESS_THAN
+    LESS_THAN_OR_EQUAL
+    LOGICAL_AND
+    LOGICAL_OR
+    MULTIPLY
+    NOT_EQUAL
+    REMAINDER
+    SHIFT_LEFT
+    SHIFT_RIGHT
+    SUBTRACT
+  }
+
+  in NodeKind {
+    bool isStatement() {
+      return this >= ASSIGN && this <= WHILE
+    }
+
+    bool isExpression() {
+      return this >= CALL && this <= SUBTRACT
+    }
+
+    bool isUnary() {
+      return this >= COMPLEMENT && this <= NOT
+    }
+
+    bool isBinary() {
+      return this >= ADD && this <= SUBTRACT
+    }
+  }
+
+  // Nodes represent executable code (variable initializers and function bodies)
+  class Node {
+    NodeKind kind
+    Range range = null
+    Decl decl = null // For names, calls, and dots
+    Node parent = null
+    Content content = null
+    Scope scope = null // Used with loops and lambdas
+    List<Node> children = []
+
+    Node withDecl(Decl value) {
+      decl = value
+      return this
+    }
+
+    Node withContent(Content value) {
+      content = value
+      return this
+    }
+
+    Node withRange(Range value) {
+      range = value
+      return this
+    }
+
+    Node withChildren(List<Node> nodes) {
+      for (var i = 0; i < nodes.size(); i++) {
+        updateParent(nodes[i], this)
+      }
+      children = nodes
+      return this
+    }
+
+    string asString() {
+      assert kind == .NAME || kind == .DOT
+      return content.asString()
+    }
+
+    private static void updateParent(Node node, Node parent) {
+      if (node != null) {
+        assert node.parent == null
+        node.parent = parent
+      }
+    }
+  }
+
+  // Factory functions
+  in Node {
+    static Node createBlock(List<Node> statements) {
+      return Node(.BLOCK).withChildren(statements)
+    }
+
+    static Node createBreak() {
+      return Node(.BLOCK)
+    }
+
+    static Node createContinue() {
+      return Node(.CONTINUE)
+    }
+
+    static Node createExpression(Node value) {
+      assert value.kind.isExpression()
+      return Node(.EXPRESSION).withChildren([value])
+    }
+
+    static Node createIf(Node test, Node trueBlock, Node falseBlock) {
+      assert test.kind.isExpression()
+      assert trueBlock.kind == .BLOCK
+      assert falseBlock == null || falseBlock.kind == .BLOCK
+      return Node(.IF).withChildren([test, trueBlock, falseBlock])
+    }
+
+    static Node createReturn(Node value) {
+      assert value == null || value.kind.isExpression()
+      return Node(.RETURN).withChildren([value])
+    }
+
+    static Node createVar(Decl decl) {
+      assert decl.kind.isVar()
+      return Node(.VAR).withDecl(decl)
+    }
+
+    static Node createWhile(Node test, Node block) {
+      return Node(.WHILE).withChildren([test, block])
+    }
+
+    static Node createCall(Node target, List<Node> args) {
+      assert target.kind.isExpression()
+      args.unshift(target)
+      return Node(.CALL).withChildren(args)
+    }
+
+    static Node createCast(Node value, Node type) {
+      assert value.kind.isExpression()
+      assert type.kind.isExpression()
+      return Node(.CAST).withChildren([value, type])
+    }
+
+    static Node createBool(bool value) {
+      return createConstant(BoolContent(value))
+    }
+
+    static Node createInt(int value) {
+      return createConstant(IntContent(value))
+    }
+
+    static Node createDouble(double value) {
+      return createConstant(DoubleContent(value))
+    }
+
+    static Node createString(string value) {
+      return createConstant(StringContent(value))
+    }
+
+    static Node createConstant(Content value) {
+      return Node(.CONSTANT).withContent(value)
+    }
+
+    static Node createDot(Node target, string name) {
+      return Node(.DOT).withContent(StringContent(name)).withChildren([target])
+    }
+
+    static Node createHook(Node test, Node trueValue, Node falseValue) {
+      assert test.kind.isExpression()
+      assert trueValue.kind.isExpression()
+      assert falseValue.kind.isExpression()
+      return Node(.HOOK).withChildren([test, trueValue, falseValue])
+    }
+
+    static Node createLambda(FuncDecl decl) {
+      return Node(.LAMBDA).withDecl(decl)
+    }
+
+    static Node createName(string text) {
+      return Node(.NAME).withContent(StringContent(text))
+    }
+
+    static Node createNull() {
+      return Node(.NULL)
+    }
+
+    static Node createUnary(NodeKind kind, Node value) {
+      assert kind.isUnary()
+      assert value.kind.isExpression()
+      return Node(kind).withChildren([value])
+    }
+
+    static Node createBinary(NodeKind kind, Node left, Node right) {
+      assert kind.isBinary()
+      assert left.kind.isExpression()
+      assert right.kind.isExpression()
+      return Node(kind).withChildren([left, right])
+    }
+
+    static Node createLambdaType(List<Node> argTypes, Node returnType) {
+      argTypes.push(returnType)
+      return Node(.LAMBDA_TYPE).withChildren(argTypes)
+    }
+  }
+
+  // Getters
+  in Node {
+    Node dotTarget() {
+      assert kind == .DOT
+      assert children.size() == 1
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node expressionValue() {
+      assert kind == .EXPRESSION
+      assert children.size() == 1
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node returnValue() {
+      assert kind == .RETURN
+      assert children.size() == 1
+      assert children[0] == null || children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node unaryValue() {
+      assert kind.isUnary()
+      assert children.size() == 1
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node binaryLeft() {
+      assert kind.isBinary()
+      assert children.size() == 2
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node binaryRight() {
+      assert kind.isBinary()
+      assert children.size() == 2
+      assert children[1].kind.isExpression()
+      return children[1]
+    }
+
+    Node whileTest() {
+      assert kind == .WHILE
+      assert children.size() == 2
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node whileBlock() {
+      assert kind == .WHILE
+      assert children.size() == 2
+      assert children[1].kind == .BLOCK
+      return children[1]
+    }
+
+    Node ifTest() {
+      assert kind == .IF
+      assert children.size() == 3
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node ifTrue() {
+      assert kind == .IF
+      assert children.size() == 3
+      assert children[1].kind == .BLOCK
+      return children[1]
+    }
+
+    Node ifFalse() {
+      assert kind == .IF
+      assert children.size() == 3
+      assert children[2] == null || children[2].kind == .BLOCK
+      return children[2]
+    }
+
+    Node hookTest() {
+      assert kind == .HOOK
+      assert children.size() == 3
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node hookTrue() {
+      assert kind == .HOOK
+      assert children.size() == 3
+      assert children[1].kind.isExpression()
+      return children[1]
+    }
+
+    Node hookFalse() {
+      assert kind == .HOOK
+      assert children.size() == 3
+      assert children[2].kind.isExpression()
+      return children[2]
+    }
+  }
+}

@@ -1,0 +1,67 @@
+namespace astral {
+  enum DeclKind {
+    NONE
+
+    TYPE_CLASS
+    TYPE_GLOBAL
+    TYPE_INTERFACE
+    TYPE_NAMESPACE
+
+    FUNC_CTOR
+    FUNC_GLOBAL
+    FUNC_INSTANCE
+    FUNC_LOCAL
+
+    VAR_GLOBAL
+    VAR_INSTANCE
+    VAR_LOCAL
+  }
+
+  in DeclKind {
+    bool isType() {
+      return this >= TYPE_CLASS && this <= TYPE_NAMESPACE
+    }
+
+    bool isFunc() {
+      return this >= FUNC_CTOR && this <= FUNC_LOCAL
+    }
+
+    bool isVar() {
+      return this >= VAR_GLOBAL && this <= VAR_LOCAL
+    }
+  }
+
+  class Decl {
+    int id = createID()
+    DeclKind kind
+    string name
+    Range range = null
+
+    private static {
+      int createID() {
+        nextID++
+        return nextID
+      }
+
+      int nextID = 0
+    }
+  }
+
+  class TypeDecl : Decl {
+    Node base = null
+    List<TypeDecl> types = []
+    List<FuncDecl> funcs = []
+    List<VarDecl> vars = []
+  }
+
+  class FuncDecl : Decl {
+    List<VarDecl> args = []
+    Node returnType = null
+    Node block = null
+  }
+
+  class VarDecl : Decl {
+    Node type = null
+    Node value = null
+  }
+}

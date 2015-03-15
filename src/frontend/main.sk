@@ -1,0 +1,66 @@
+namespace astral {
+  using terminal
+
+  #if CONFIG_BROWSER
+
+    var input = `document`.getElementById("input")
+    var output1 = `document`.getElementById("output1")
+    var output2 = `document`.getElementById("output2")
+
+    void update() {
+      var log = Log()
+      var tokens = tokenize(log, Source("<stdin>", input.value))
+      var global = TypeDecl(.TYPE_GLOBAL, "<global>")
+      prepareTokens(tokens)
+      parseFile(log, tokens, global)
+      output1.value = log.hasErrors() ? log.toString() : DebugEmitter().dump(global)
+      output2.value = log.hasErrors() ? "" : JsEmitter().dump(global)
+    }
+
+    @EntryPoint
+    void main() {
+      input.oninput = update
+      update()
+    }
+
+  #else
+
+    @EntryPoint
+    void main() {
+      var log = Log()
+      var tokens = tokenize(log, Source("<stdin>", "
+        var xxx
+        ivar yyy
+        class bar {}
+        class foo {
+          var zzz
+        }
+        namespace ns {
+          def foo() {}
+          idef foo() {}
+        }
+      "))
+
+      prepareTokens(tokens)
+      for (var i = 0; i < tokens.size(); i++) {
+        var token = tokens[i]
+        terminal.print("token " + i + " is " + token.kind)
+      }
+
+      var global = TypeDecl(.TYPE_GLOBAL, "<global>")
+      parseFile(log, tokens, global)
+      terminal.print(log.toString())
+
+      print("isValid: " + Validator(PrintingReport()).validate(global))
+
+      print("")
+      print("[Debug]")
+      print(DebugEmitter().dump(global))
+
+      print("")
+      print("[JavaScript]")
+      print(JsEmitter().dump(global))
+    }
+
+  #endif
+}

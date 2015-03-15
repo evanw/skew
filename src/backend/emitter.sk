@@ -1,0 +1,109 @@
+namespace astral {
+  class Emitter {
+    List<Source> sources() {
+      return _sources
+    }
+
+    protected {
+      var indent = ""
+
+      void increaseIndent() {
+        indent += "  "
+      }
+
+      void decreaseIndent() {
+        indent = indent.slice(2, indent.size())
+      }
+
+      void emit(string text) {
+        _code += text
+      }
+
+      void createSource(string name) {
+        _sources.push(Source(name, _code))
+        _code = ""
+      }
+    }
+
+    private {
+      List<Source> _sources = []
+      var _code = ""
+    }
+  }
+
+  final string HEX = "0123456789ABCDEF"
+
+  string quoteString(string text, int quote) {
+    var builder = StringBuilder()
+    var quoteString = string.fromCodeUnit(quote)
+    var escaped = ""
+    var start = 0 // Append long runs of unescaped characters using a single slice() for speed
+    int i
+    builder.append(quoteString)
+    for (i = 0; i < text.size(); i++) {
+      var c = text[i]
+      if (c == quote) escaped = "\\" + quoteString
+      else if (c == '\n') escaped = "\\n"
+      else if (c == '\r') escaped = "\\r"
+      else if (c == '\t') escaped = "\\t"
+      else if (c == '\0') escaped = "\\0"
+      else if (c == '\\') escaped = "\\\\"
+      else if (c < ' ') escaped = "\\x" + HEX.sliceCodeUnit(c >> 4) + HEX.sliceCodeUnit(c & 15)
+      else continue
+      builder.append(text.slice(start, i))
+      builder.append(escaped)
+      start = i + 1
+    }
+    builder.append(text.slice(start, i))
+    builder.append(quoteString)
+    return builder.toString()
+  }
+
+  enum Associativity {
+    NONE
+    LEFT
+    RIGHT
+  }
+
+  in Precedence {
+    Precedence incrementIfLeftAssociative(Associativity associativity) {
+      return (Precedence)(this + (int)(associativity == .LEFT))
+    }
+
+    Precedence incrementIfRightAssociative(Associativity associativity) {
+      return (Precedence)(this + (int)(associativity == .RIGHT))
+    }
+  }
+
+  class OperatorInfo {
+    final string text
+    final Precedence precedence
+    final Associativity associativity
+  }
+
+  IntMap<OperatorInfo> operatorInfo = {
+    NodeKind.NOT:                   OperatorInfo("!", .UNARY_PREFIX, .NONE),
+    NodeKind.NEGATIVE:              OperatorInfo("-", .UNARY_PREFIX, .NONE),
+    NodeKind.COMPLEMENT:            OperatorInfo("~", .UNARY_PREFIX, .NONE),
+
+    NodeKind.ADD:                   OperatorInfo("+", .ADD, .LEFT),
+    NodeKind.BITWISE_AND:           OperatorInfo("&", .BITWISE_AND, .LEFT),
+    NodeKind.BITWISE_OR:            OperatorInfo("|", .BITWISE_OR, .LEFT),
+    NodeKind.BITWISE_XOR:           OperatorInfo("^", .BITWISE_XOR, .LEFT),
+    NodeKind.DIVIDE:                OperatorInfo("/", .MULTIPLY, .LEFT),
+    NodeKind.EQUAL:                 OperatorInfo("==", .EQUAL, .LEFT),
+    NodeKind.GREATER_THAN:          OperatorInfo(">", .COMPARE, .LEFT),
+    NodeKind.GREATER_THAN_OR_EQUAL: OperatorInfo(">=", .COMPARE, .LEFT),
+    NodeKind.LESS_THAN:             OperatorInfo("<", .COMPARE, .LEFT),
+    NodeKind.LESS_THAN_OR_EQUAL:    OperatorInfo("<=", .COMPARE, .LEFT),
+    NodeKind.LOGICAL_AND:           OperatorInfo("&&", .LOGICAL_AND, .LEFT),
+    NodeKind.LOGICAL_OR:            OperatorInfo("||", .LOGICAL_OR, .LEFT),
+    NodeKind.MULTIPLY:              OperatorInfo("*", .MULTIPLY, .LEFT),
+    NodeKind.NOT_EQUAL:             OperatorInfo("!=", .EQUAL, .LEFT),
+    NodeKind.REMAINDER:             OperatorInfo("%", .MULTIPLY, .LEFT),
+    NodeKind.SHIFT_LEFT:            OperatorInfo("<<", .SHIFT, .LEFT),
+    NodeKind.SHIFT_RIGHT:           OperatorInfo(">>", .SHIFT, .LEFT),
+    NodeKind.SUBTRACT:              OperatorInfo("-", .ADD, .LEFT),
+    NodeKind.ASSIGN:                OperatorInfo("=", .ASSIGN, .RIGHT),
+  }
+}

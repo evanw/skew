@@ -1,0 +1,187 @@
+namespace astral {
+  using terminal
+
+  interface ValidatorReport {
+    virtual void reportNestingError(DeclKind parent, Decl child)
+    virtual void reportKindError(string expected, Decl decl)
+  }
+
+  class PrintingReport : ValidatorReport {
+    override void reportNestingError(DeclKind parent, Decl child) {
+      print("Cannot nest " + child.kind + " inside " + parent)
+    }
+
+    override void reportKindError(string expected, Decl decl) {
+      print("Invalid " + expected + " with kind " + decl.kind)
+    }
+  }
+
+  class Validator {
+    ValidatorReport report
+
+    bool validate(TypeDecl decl) {
+      return validateType(decl, .NONE)
+    }
+
+    private {
+      bool validateType(TypeDecl decl, DeclKind parent) {
+        var isValidNesting = false
+
+        switch (decl.kind) {
+          case .TYPE_CLASS, .TYPE_INTERFACE {
+            isValidNesting =
+              parent == .TYPE_CLASS ||
+              parent == .TYPE_GLOBAL ||
+              parent == .TYPE_INTERFACE ||
+              parent == .TYPE_NAMESPACE ||
+              parent == .NONE
+          }
+
+          case .TYPE_GLOBAL {
+            isValidNesting =
+              parent == .NONE
+          }
+
+          case .TYPE_NAMESPACE {
+            isValidNesting =
+              parent == .TYPE_GLOBAL ||
+              parent == .TYPE_NAMESPACE ||
+              parent == .NONE
+          }
+
+          default {
+            if (report != null) {
+              report.reportKindError("type", decl)
+            }
+            return false
+          }
+        }
+
+        if (!isValidNesting) {
+          if (report != null) {
+            report.reportNestingError(parent, decl)
+          }
+          return false
+        }
+
+        for (var i = 0; i < decl.types.size(); i++) {
+          if (!validateType(decl.types[i], decl.kind)) {
+            return false
+          }
+        }
+
+        for (var i = 0; i < decl.funcs.size(); i++) {
+          if (!validateFunc(decl.funcs[i], decl.kind)) {
+            return false
+          }
+        }
+
+        for (var i = 0; i < decl.vars.size(); i++) {
+          if (!validateVar(decl.vars[i], decl.kind)) {
+            return false
+          }
+        }
+
+        return true
+      }
+
+      bool validateFunc(FuncDecl decl, DeclKind parent) {
+        var isValidNesting = false
+
+        switch (decl.kind) {
+          case .FUNC_CTOR {
+            isValidNesting =
+              parent == .TYPE_CLASS
+          }
+
+          case .FUNC_GLOBAL {
+            isValidNesting =
+              parent == .NONE ||
+              parent == .TYPE_CLASS ||
+              parent == .TYPE_GLOBAL ||
+              parent == .TYPE_NAMESPACE
+          }
+
+          case .FUNC_INSTANCE {
+            isValidNesting =
+              parent == .TYPE_CLASS ||
+              parent == .TYPE_INTERFACE
+          }
+
+          case .FUNC_LOCAL {
+            isValidNesting =
+              parent.isFunc()
+          }
+
+          default {
+            if (report != null) {
+              report.reportKindError("function", decl)
+            }
+            return false
+          }
+        }
+
+        if (!isValidNesting) {
+          if (report != null) {
+            report.reportNestingError(parent, decl)
+          }
+          return false
+        }
+
+        for (var i = 0; i < decl.args.size(); i++) {
+          var arg = decl.args[i]
+          if (arg.kind != .VAR_LOCAL) {
+            if (report != null) {
+              report.reportNestingError(decl.kind, arg)
+            }
+            return false
+          }
+        }
+
+        return true
+      }
+
+      bool validateVar(VarDecl decl, DeclKind parent) {
+        var isValidNesting = false
+
+        switch (decl.kind) {
+          case .VAR_GLOBAL {
+            isValidNesting =
+              parent == .NONE ||
+              parent == .TYPE_CLASS ||
+              parent == .TYPE_GLOBAL ||
+              parent == .TYPE_INTERFACE ||
+              parent == .TYPE_NAMESPACE
+          }
+
+          case .VAR_INSTANCE {
+            isValidNesting =
+              parent == .TYPE_CLASS ||
+              parent == .TYPE_INTERFACE
+          }
+
+          case .VAR_LOCAL {
+            isValidNesting =
+              parent.isFunc()
+          }
+
+          default {
+            if (report != null) {
+              report.reportKindError("function", decl)
+            }
+            return false
+          }
+        }
+
+        if (!isValidNesting) {
+          if (report != null) {
+            report.reportNestingError(parent, decl)
+          }
+          return false
+        }
+
+        return true
+      }
+    }
+  }
+}

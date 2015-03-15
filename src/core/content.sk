@@ -1,0 +1,64 @@
+namespace astral {
+  enum ContentKind {
+    BOOL
+    INT
+    DOUBLE
+    STRING
+  }
+
+  class Content {
+    virtual ContentKind kind()
+
+    bool asBool() {
+      assert kind() == .BOOL
+      return ((BoolContent)this).value
+    }
+
+    int asInt() {
+      assert kind() == .INT
+      return ((IntContent)this).value
+    }
+
+    double asDouble() {
+      assert kind() == .DOUBLE
+      return ((DoubleContent)this).value
+    }
+
+    string asString() {
+      assert kind() == .STRING
+      return ((StringContent)this).value
+    }
+  }
+
+  class BoolContent : Content {
+    final bool value
+
+    override ContentKind kind() {
+      return .BOOL
+    }
+  }
+
+  class IntContent : Content {
+    final int value
+
+    override ContentKind kind() {
+      return .INT
+    }
+  }
+
+  class DoubleContent : Content {
+    final double value
+
+    override ContentKind kind() {
+      return .DOUBLE
+    }
+  }
+
+  class StringContent : Content {
+    final string value
+
+    override ContentKind kind() {
+      return .STRING
+    }
+  }
+}

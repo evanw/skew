@@ -1,0 +1,254 @@
+namespace astral {
+  class DebugEmitter : Emitter {
+    string dump(TypeDecl global) {
+      emitType(global)
+      createSource("out.sk")
+      return sources()[0].contents
+    }
+
+    private {
+      void emitType(TypeDecl decl) {
+        switch (decl.kind) {
+          case .TYPE_CLASS {
+            emit(indent + "class " + decl.name + " {\n")
+            increaseIndent()
+          }
+
+          case .TYPE_INTERFACE {
+            emit(indent + "interface " + decl.name + " {\n")
+            increaseIndent()
+          }
+
+          case .TYPE_NAMESPACE {
+            emit(indent + "namespace " + decl.name + " {\n")
+            increaseIndent()
+          }
+        }
+
+        for (var i = 0; i < decl.types.size(); i++) {
+          emitType(decl.types[i])
+        }
+
+        for (var i = 0; i < decl.funcs.size(); i++) {
+          emitFunc(decl.funcs[i])
+        }
+
+        for (var i = 0; i < decl.vars.size(); i++) {
+          emitVar(decl.vars[i])
+        }
+
+        switch (decl.kind) {
+          case .TYPE_CLASS, .TYPE_INTERFACE, .TYPE_NAMESPACE {
+            decreaseIndent()
+            emit(indent + "}\n")
+          }
+        }
+      }
+
+      void emitArgumentList(List<VarDecl> args) {
+        for (var i = 0; i < args.size(); i++) {
+          if (i > 0) emit(", ")
+          var arg = args[i]
+          emit(arg.name)
+          if (arg.type != null) {
+            emit(" ")
+            emitExpression(arg.type, .LOWEST)
+          }
+        }
+      }
+
+      void emitFunc(FuncDecl decl) {
+        emit(indent)
+        switch (decl.kind) {
+          case .FUNC_CTOR { emit("ctor ") }
+          case .FUNC_INSTANCE { emit("idef ") }
+          case .FUNC_GLOBAL { emit("def ") }
+        }
+        emit(decl.name + "(")
+        emitArgumentList(decl.args)
+        emit(")")
+        if (decl.returnType != null) {
+          emit(" ")
+          emitExpression(decl.returnType, .LOWEST)
+        }
+        if (decl.block != null) {
+          emitBlock(decl.block)
+        }
+        emit("\n")
+      }
+
+      void emitVar(VarDecl decl) {
+        emit(indent + (decl.kind == .VAR_INSTANCE ? "ivar " : "var ") + decl.name)
+        if (decl.value != null) {
+          emit(" = ")
+          emitExpression(decl.value, .LOWEST)
+        }
+        emit("\n")
+      }
+
+      void emitBlock(Node node) {
+        emit(" {\n")
+        increaseIndent()
+        for (var i = 0; i < node.children.size(); i++) {
+          emitStatement(node.children[i])
+        }
+        decreaseIndent()
+        emit(indent + "}")
+      }
+
+      void emitStatement(Node node) {
+        switch (node.kind) {
+          case .VAR {
+            emitVar((VarDecl)node.decl)
+          }
+
+          case .EXPRESSION {
+            emit(indent)
+            emitExpression(node.expressionValue(), .LOWEST)
+            emit("\n")
+          }
+
+          case .BREAK {
+            emit(indent + "break\n")
+          }
+
+          case .CONTINUE {
+            emit(indent + "continue\n")
+          }
+
+          case .RETURN {
+            emit(indent + "return")
+            var value = node.returnValue()
+            if (value != null) {
+              emit(" ")
+              emitExpression(value, .LOWEST)
+            }
+            emit("\n")
+          }
+
+          case .IF {
+            emit(indent + "if ")
+            emitExpression(node.ifTest(), .LOWEST)
+            emitBlock(node.ifTrue())
+            var block = node.ifFalse()
+            if (block != null) {
+              emit(" else")
+              emitBlock(block)
+            }
+            emit("\n")
+          }
+
+          case .WHILE {
+            emit(indent + "while ")
+            emitExpression(node.whileTest(), .LOWEST)
+            emitBlock(node.whileBlock())
+            emit("\n")
+          }
+
+          default {
+            assert false
+          }
+        }
+      }
+
+      void emitExpression(Node node, Precedence precedence) {
+        switch (node.kind) {
+          case .NULL {
+            emit("null")
+          }
+
+          case .NAME {
+            emit(node.asString())
+          }
+
+          case .DOT {
+            emitExpression(node.dotTarget(), .MEMBER)
+            emit("." + node.asString())
+          }
+
+          case .CONSTANT {
+            var value = node.content
+            switch (value.kind()) {
+              case .BOOL { emit(value.asBool().toString()) }
+              case .INT { emit(value.asInt().toString()) }
+              case .DOUBLE { emit(value.asDouble().toString()) }
+              case .STRING { emit(quoteString(value.asString(), '"')) }
+            }
+          }
+
+          case .CALL {
+            emitExpression(node.children[0], .UNARY_POSTFIX)
+            emit("(")
+            for (var i = 1; i < node.children.size(); i++) {
+              if (i > 1) {
+                emit(", ")
+              }
+              emitExpression(node.children[i], .LOWEST)
+            }
+            emit(")")
+          }
+
+          case .HOOK {
+            if (.ASSIGN < precedence) emit("(")
+            emitExpression(node.hookTest(), .LOGICAL_OR)
+            emit(" ? ")
+            emitExpression(node.hookTrue(), .ASSIGN)
+            emit(" : ")
+            emitExpression(node.hookFalse(), .ASSIGN)
+            if (.ASSIGN < precedence) emit(")")
+          }
+
+          case .LAMBDA {
+            var decl = (FuncDecl)node.decl
+            emit("def(")
+            emitArgumentList(decl.args)
+            emit(")")
+            if (decl.returnType != null) {
+              emit(" ")
+              emitExpression(decl.returnType, .LOWEST)
+            }
+            emitBlock(decl.block)
+          }
+
+          case .LAMBDA_TYPE {
+            emit("def(")
+            for (var i = 0; i + 1 < node.children.size(); i++) {
+              if (i > 0) emit(", ")
+              emitExpression(node.children[i], .LOWEST)
+            }
+            emit(")")
+            var returnType = node.children[node.children.size() - 1]
+            if (returnType != null) {
+              emit(" ")
+              emitExpression(returnType, .LOWEST)
+            }
+          }
+
+          default {
+            if (node.kind.isUnary()) {
+              var value = node.unaryValue()
+              var info = operatorInfo[node.kind]
+              if (info.precedence < precedence) emit("(")
+              emit(info.text)
+              emitExpression(value, info.precedence)
+              if (info.precedence < precedence) emit(")")
+            }
+
+            else if (node.kind.isBinary()) {
+              var info = operatorInfo[node.kind]
+              if (info.precedence < precedence) emit("(")
+              emitExpression(node.binaryLeft(), info.precedence.incrementIfRightAssociative(info.associativity))
+              emit(" " + info.text + " ")
+              emitExpression(node.binaryRight(), info.precedence.incrementIfLeftAssociative(info.associativity))
+              if (info.precedence < precedence) emit(")")
+            }
+
+            else {
+              assert false
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,256 @@
+- lambda syntax: use |...| like ruby/rust
+
+  var square = |x| x * x
+  var lengths = values.map(|v| v.length)
+  range(0, lengths.size()).each(|i| {
+    print(i + ": " + lengths[i])
+  })
+
+  def apply(x |int, int| int, a int, b int) int {
+    return x(a, b)
+  }
+
+  - benefits:
+    - familiar to many users
+    - doesn't prevent adding tuples down the road using parentheses
+    - very short, doesn't involve a keyword like javascript/python
+  - drawbacks
+    - what about lambdas which take lambdas as arguments? is the type ||int| int|? no way to distinguish open from close
+    - even simpler, can't differentiate between xomething with and without a type: "var x = |x| x * x" and "var y = |y |int| int| y(100)"
+    - what about specifying the return type? right now it would look like the return value the the parser
+
+
+
+
+
+- lambda syntax: use <...>, never seen this one before
+
+  var square = <x> x * x
+  var lengths = values.map(<v> v.length)
+  range(0, lengths.size()).each(<i> {
+    print(i + ": " + lengths[i])
+  })
+
+  def apply(x <int, int> int, a int, b int) int {
+    return x(a, b)
+  }
+
+  - benefits:
+    - syntactically unambiguous
+  - drawbacks
+    - unfamiliar
+
+
+
+
+
+
+
+- lambda syntax: use a keyword like javascript
+
+  var square = def(x) x * x
+  var lengths = values.map(def(v) v.length)
+  range(0, lengths.size()).each(def(i) {
+    print(i + ": " + lengths[i])
+  })
+
+  def apply(x def(int, int) int, a int, b int) int {
+    return x(a, b)
+  }
+
+  - benefits:
+    - similar to function declaration
+    - syntactically unambiguous
+    - naturally allows specifying the return type
+  - drawbacks
+    - very wordy
+
+
+
+
+
+
+
+
+- lambda syntax: use a slash like haskell
+
+  var square = \x -> x * x
+  var lengths = values.map(\v -> v.length)
+  range(0, lengths.size()).each(\i -> {
+    print(i + ": " + lengths[i])
+  })
+
+  def apply(x \int, int -> int, a int, b int) int {
+    return x(a, b)
+  }
+
+  - benefits:
+    - very short
+  - drawbacks
+    - slash looks strange, kind of unbalanced
+    - type syntax doesn't make sense, very hard to parse with commas in the middle
+
+
+
+
+
+
+
+- lambda syntax: use an arrow like c#/coffeescript
+
+  var square = x => x * x
+  var lengths = values.map(v => v.length)
+  range(0, lengths.size()).each(i => {
+    print(i + ": " + lengths[i])
+  })
+
+  def apply(x (int, int) => int, a int, b int) int {
+    return x(a, b)
+  }
+
+  - benefits:
+    - short and familiar
+  - drawbacks
+    - open parenthesis would need help from the pre-parser pass to work
+    - what about specifying the return type? right now it would look like the return value the the parser
+    - awkward when return type is void, leaving it off looks like a tuple instead
+
+
+
+
+
+
+
+
+
+
+
+
+
+- lambda syntax: use an arrow like c#/coffeescript for lambdas and a keyword for types
+
+  var square = x => x * x
+  var lengths = values.map(v => v.length)
+  range(0, lengths.size()).each(i => {
+    print(i + ": " + lengths[i])
+  })
+
+  def apply(x def(int, int) int, a int, b int) int {
+    return x(a, b)
+  }
+
+  - benefits:
+    - short and familiar
+  - drawbacks
+    - open parenthesis may need help from the pre-parser pass to work
+
+
+
+
+
+
+
+- lambda syntax: use a keyword like go/tart
+
+  var square = fn(x) x * x
+  var lengths = values.map(fn(v) v.length)
+  range(0, lengths.size()).each(fn(i) {
+    print(i + ": " + lengths[i])
+  })
+
+  def apply(x fn(int, int) int, a int, b int) int {
+    return x(a, b)
+  }
+
+  - benefits:
+    - short
+    - syntactically unambiguous
+  - drawbacks
+    - looks a little odd, and longer than I'd like
+
+
+
+
+
+
+
+
+
+
+
+
+
+- lambda syntax: use a keyword and arrow like dart, unify that into
+
+  var square = def(x) => x * x
+  var lengths = values.map(def(v) => v.length)
+  range(0, lengths.size()).each(def(i) {
+    print(i + ": " + lengths[i])
+  })
+
+  def apply(x def(int, int) int, a int, b int) int => x(a, b)
+
+  - benefits:
+    - short
+    - syntactically unambiguous
+    - unified with regular functions
+  - drawbacks
+    - looks a little odd, and longer than I'd like
+
+
+
+
+
+
+
+- lambda syntax: use a keyword like python
+
+  var square = fn x: x * x
+  var lengths = values.map(fn v: v.length)
+  range(0, lengths.size()).each(fn i: {
+    print(i + ": " + lengths[i])
+  })
+
+  def apply(x fn int, int: int, a int, b int) int {
+    return x(a, b)
+  }
+
+  - benefits:
+    - lack of parentheses make it easier to parse
+  - drawbacks
+    - nested types would look like
+
+        var x fn fn a: b, fn a: b: c
+
+      which is parsed as
+
+        var x fn (fn a: b), (fn a: b) -> c
+
+
+
+
+
+
+
+- lambda syntax: use a keyword like python but with an arrow
+
+  var square = fn x -> x * x
+  var lengths = values.map(fn v -> v.length)
+  range(0, lengths.size()).each(fn i -> {
+    print(i + ": " + lengths[i])
+  })
+
+  def apply(x fn int, int -> int, a int, b int) int {
+    return x(a, b)
+  }
+
+  - benefits:
+    - lack of parentheses make it easier to parse
+  - drawbacks
+    - nested types would look like
+
+        var x fn fn a -> b, fn a -> b -> c
+
+      which is parsed as
+
+        var x fn (fn a -> b), (fn a -> b) -> c

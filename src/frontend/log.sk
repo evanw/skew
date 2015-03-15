@@ -1,0 +1,75 @@
+namespace astral {
+  enum DiagnosticKind {
+    ERROR
+    WARNING
+  }
+
+  class Diagnostic {
+    DiagnosticKind kind
+    Range range
+    string text
+
+    string toString() {
+      var prefix = kind == .ERROR ? "error" : "warning"
+      if (range == null) {
+        return prefix + ": " + text + "\n"
+      }
+      var formatted = range.format(0)
+      return range.locationString() + ": " + prefix + ": " + text + "\n" + formatted.line + "\n" + formatted.range + "\n"
+    }
+  }
+
+  class Log {
+    List<Diagnostic> diagnostics = []
+    var warningCount = 0
+    var errorCount = 0
+
+    string toString() {
+      var builder = StringBuilder()
+      for (var i = 0; i < diagnostics.size(); i++) {
+        builder.append(diagnostics[i].toString())
+      }
+      return builder.toString()
+    }
+
+    bool isEmpty() {
+      return diagnostics.size() == 0
+    }
+
+    bool hasErrors() {
+      return errorCount != 0
+    }
+
+    bool hasWarnings() {
+      return warningCount != 0
+    }
+
+    void error(Range range, string text) {
+      diagnostics.push(Diagnostic(.ERROR, range, text))
+      errorCount++
+    }
+
+    void warning(Range range, string text) {
+      diagnostics.push(Diagnostic(.WARNING, range, text))
+      warningCount++
+    }
+  }
+
+  in Log {
+    void syntaxErrorInvalidEscapeSequence(Range range) {
+      error(range, "Invalid escape sequence")
+    }
+
+    void syntaxErrorExtraData(Range range, string text) {
+      error(range, "Syntax error \"" + text + "\"")
+    }
+
+    void syntaxErrorUnexpectedToken(Token token) {
+      error(token.range, "Unexpected " + token.kind)
+    }
+
+    void syntaxErrorExpectedToken(Range range, TokenKind found, TokenKind expected) {
+      error(range, "Expected " + expected + " but found " + found)
+    }
+  }
+}

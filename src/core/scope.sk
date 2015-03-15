@@ -1,0 +1,5 @@
+namespace astral {
+  class Scope {
+    List<Decl> decls = []
+  }
+}

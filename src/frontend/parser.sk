@@ -1,0 +1,612 @@
+namespace astral {
+  #if TARGET_JS
+    double parseDoubleLiteral(string text) {
+      return `+`text``
+    }
+  #else
+    import double parseDoubleLiteral(string text)
+  #endif
+
+  // The same operator precedence as C for the most part
+  enum Precedence {
+    LOWEST
+    ASSIGN
+    LOGICAL_OR
+    LOGICAL_AND
+    BITWISE_OR
+    BITWISE_XOR
+    BITWISE_AND
+    EQUAL
+    COMPARE
+    SHIFT
+    ADD
+    MULTIPLY
+    UNARY_PREFIX
+    UNARY_POSTFIX
+    MEMBER
+  }
+
+  Node parseLocalVar(ParserContext context) {
+    var token = context.next()
+    var name = token.range.toString()
+    if (!context.expect(.IDENTIFIER)) {
+      return null
+    }
+    var decl = VarDecl(.VAR_LOCAL, name)
+
+    if (!context.peek(.ASSIGN) && !context.peek(.NEWLINE)) {
+      decl.type = pratt.parse(context, .ASSIGN)
+      if (decl.type == null) {
+        return null
+      }
+    }
+
+    if (context.eat(.ASSIGN)) {
+      decl.value = pratt.parse(context, .LOWEST)
+      if (decl.value == null) {
+        return null
+      }
+    }
+
+    return Node.createVar(decl).withRange(context.spanSince(token.range))
+  }
+
+  Node parseReturn(ParserContext context) {
+    var token = context.next()
+    Node value = null
+    if (!context.peek(.NEWLINE) && !context.peek(.RIGHT_BRACE)) {
+      value = pratt.parse(context, .LOWEST)
+      if (value == null) {
+        return null
+      }
+    }
+    return Node.createReturn(value).withRange(context.spanSince(token.range))
+  }
+
+  Node parseIf(ParserContext context) {
+    var token = context.next()
+    var test = pratt.parse(context, .LOWEST)
+    if (test == null) {
+      return null
+    }
+    var trueBlock = parseBlock(context)
+    if (trueBlock == null) {
+      return null
+    }
+    Node falseBlock = null
+    if (context.eat(.ELSE)) {
+      falseBlock = parseBlock(context)
+      if (falseBlock == null) {
+        return null
+      }
+    }
+    return Node.createIf(test, trueBlock, falseBlock).withRange(context.spanSince(token.range))
+  }
+
+  Node parseWhile(ParserContext context) {
+    var token = context.next()
+    var test = pratt.parse(context, .LOWEST)
+    if (test == null) {
+      return null
+    }
+    var block = parseBlock(context)
+    if (block == null) {
+      return null
+    }
+    return Node.createWhile(test, block).withRange(context.spanSince(token.range))
+  }
+
+  Node parseStatement(ParserContext context) {
+    var token = context.current()
+
+    switch (token.kind) {
+      case .VAR { return parseLocalVar(context) }
+      case .RETURN { return parseReturn(context) }
+      case .IF { return parseIf(context) }
+      case .WHILE { return parseWhile(context) }
+    }
+
+    var value = pratt.parse(context, .LOWEST)
+    if (value == null) {
+      return null
+    }
+    return Node.createExpression(value).withRange(value.range)
+  }
+
+  List<Node> parseStatements(ParserContext context) {
+    List<Node> statements = []
+    context.eat(.NEWLINE)
+    while (!context.peek(.RIGHT_BRACE)) {
+      var statement = parseStatement(context)
+      if (statement == null) {
+        break
+      }
+      statements.push(statement)
+      if (context.peek(.RIGHT_BRACE) || !context.expect(.NEWLINE)) {
+        break
+      }
+    }
+    return statements
+  }
+
+  Node parseBlock(ParserContext context) {
+    var token = context.current()
+    if (!context.expect(.LEFT_BRACE)) {
+      return null
+    }
+    var statements = parseStatements(context)
+    if (!context.expect(.RIGHT_BRACE)) {
+      return null
+    }
+    return Node.createBlock(statements).withRange(context.spanSince(token.range))
+  }
+
+  Node parseType(ParserContext context) {
+    return typePratt.parse(context, .LOWEST)
+  }
+
+  bool peekType(ParserContext context) {
+    return context.peek(.IDENTIFIER) || context.peek(.DEF)
+  }
+
+  bool parseFuncDecl(ParserContext context, FuncDecl decl) {
+    if (!context.expect(.LEFT_PARENTHESIS)) {
+      return false
+    }
+
+    while (!context.eat(.RIGHT_PARENTHESIS)) {
+      if (decl.args.size() != 0 && !context.expect(.COMMA)) {
+        return false
+      }
+
+      var range = context.current().range
+      var name = range.toString()
+
+      if (!context.expect(.IDENTIFIER)) {
+        return false
+      }
+
+      var arg = VarDecl(.VAR_LOCAL, name)
+      arg.range = range
+
+      // Parse argument type
+      if (peekType(context)) {
+        arg.type = parseType(context)
+      }
+
+      decl.args.push(arg)
+    }
+
+    // Parse return type
+    if (peekType(context)) {
+      decl.returnType = parseType(context)
+    }
+
+    // Parse function body if present
+    if (context.peek(.LEFT_BRACE)) {
+      decl.block = parseBlock(context)
+      if (decl.block == null) {
+        return false
+      }
+    }
+
+    // "=> x" is the same as "{ return x }"
+    else if (context.eat(.ARROW)) {
+      var value = pratt.parse(context, .LOWEST)
+      if (value == null) {
+        return false
+      }
+      decl.block = Node.createBlock([Node.createReturn(value).withRange(value.range)]).withRange(value.range)
+    }
+
+    // Each lambda must have a body
+    else if (decl.kind == .FUNC_LOCAL) {
+      context.expect(.ARROW)
+      return false
+    }
+
+    return true
+  }
+
+  bool parseDecl(ParserContext context, TypeDecl parent) {
+    var kind = context.current().kind
+    if (kind != .VAR && kind != .IVAR && kind != .DEF && kind != .IDEF && kind != .CLASS && kind != .INTERFACE && kind != .NAMESPACE) {
+      context.unexpectedToken()
+      return false
+    }
+    context.next()
+
+    var name = context.current().range.toString()
+    if (!context.expect(.IDENTIFIER)) {
+      return false
+    }
+
+    switch (kind) {
+      case .VAR, .IVAR {
+        var decl = VarDecl(kind == .VAR ? .VAR_GLOBAL : .VAR_INSTANCE, name)
+
+        if (!context.peek(.ASSIGN) && !context.peek(.NEWLINE)) {
+          decl.type = parseType(context)
+        }
+
+        if (context.eat(.ASSIGN)) {
+          decl.value = pratt.parse(context, .LOWEST)
+        }
+
+        parent.vars.push(decl)
+      }
+
+      case .DEF, .IDEF {
+        var decl = FuncDecl(kind == .DEF ? .FUNC_GLOBAL : kind == .IDEF ? .FUNC_INSTANCE : .FUNC_CTOR, name)
+        if (!parseFuncDecl(context, decl)) {
+          return false
+        }
+        parent.funcs.push(decl)
+      }
+
+      case .CLASS, .INTERFACE, .NAMESPACE {
+        var decl = TypeDecl(kind == .CLASS ? .TYPE_CLASS : kind == .INTERFACE ? .TYPE_INTERFACE : .TYPE_NAMESPACE, name)
+        if (!context.expect(.LEFT_BRACE)) {
+          return false
+        }
+
+        parseDecls(context, decl)
+
+        if (!context.expect(.RIGHT_BRACE)) {
+          return false
+        }
+
+        parent.types.push(decl)
+      }
+    }
+
+    if (!context.peek(.END_OF_FILE) && !context.peek(.RIGHT_BRACE) && !context.expect(.NEWLINE)) {
+      return false
+    }
+
+    return true
+  }
+
+  void parseDecls(ParserContext context, TypeDecl parent) {
+    context.eat(.NEWLINE)
+
+    while (!context.peek(.END_OF_FILE) && !context.peek(.RIGHT_BRACE)) {
+      if (!parseDecl(context, parent)) {
+        break
+      }
+    }
+  }
+
+  void parseFile(Log log, List<Token> tokens, TypeDecl global) {
+    var context = ParserContext(log, tokens)
+    parseDecls(context, global)
+    context.expect(.END_OF_FILE)
+  }
+
+  List<Node> parseCommaSeparatedList(ParserContext context, TokenKind stop) {
+    List<Node> values = []
+    while (!context.peek(stop)) {
+      if (values.size() != 0) {
+        if (!context.expect(.COMMA)) {
+          return null
+        }
+        context.eat(.NEWLINE)
+      }
+      var value = pratt.parse(context, .LOWEST)
+      values.push(value)
+      if (value == null) {
+        break
+      }
+    }
+    if (!context.expect(stop)) {
+      return null
+    }
+    return values
+  }
+
+  int parseHexCharacter(int c) {
+    if (c >= '0' && c <= '9') return c - '0'
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10
+    return -1
+  }
+
+  StringContent parseStringLiteral(Log log, Range range) {
+    var text = range.toString()
+    assert text.size() >= 2
+    assert text[0] == '"' || text[0] == '\''
+    assert text[text.size() - 1] == text[0]
+    var isValidString = true
+    var builder = StringBuilder()
+    var start = 1 // Append long runs of unescaped characters using a single slice() for speed
+    var i = 1
+    while (i + 1 < text.size()) {
+      var c = text[i]
+      i++
+      if (c == '\\') {
+        var escape = i - 1
+        builder.append(text.slice(start, escape))
+        if (i + 1 < text.size()) {
+          c = text[i]
+          i++
+          if (c == 'n') {
+            builder.append("\n")
+            start = i
+          }
+          else if (c == 'r') {
+            builder.append("\r")
+            start = i
+          }
+          else if (c == 't') {
+            builder.append("\t")
+            start = i
+          }
+          else if (c == 'e') {
+            builder.append("\e")
+            start = i
+          }
+          else if (c == '0') {
+            builder.append("\0")
+            start = i
+          }
+          else if (c == '\\' || c == '"' || c == '\'') {
+            builder.append(string.fromCodeUnit(c))
+            start = i
+          }
+          else if (c == 'x') {
+            if (i + 1 < text.size()) {
+              var c0 = parseHexCharacter(text[i])
+              i++
+              if (i + 1 < text.size()) {
+                var c1 = parseHexCharacter(text[i])
+                i++
+                if (c0 != -1 && c1 != -1) {
+                  builder.append(string.fromCodeUnit(c0 << 4 | c1))
+                  start = i
+                }
+              }
+            }
+          }
+        }
+        if (start < i) {
+          log.syntaxErrorInvalidEscapeSequence(Range(range.source, range.start + escape, range.start + i))
+          isValidString = false
+        }
+      }
+    }
+    builder.append(text.slice(start, i))
+    return isValidString ? StringContent(builder.toString()) : null
+  }
+
+  class TokenLiteral : LiteralCallback {
+    NodeKind kind
+
+    override Node parse(ParserContext context, Token token) {
+      return Node(kind).withRange(token.range)
+    }
+  }
+
+  class NameLiteral : LiteralCallback {
+    override Node parse(ParserContext context, Token token) {
+      return Node.createName(token.range.toString()).withRange(token.range)
+    }
+  }
+
+  class CallParselet : InfixParselet {
+    override Node parse(ParserContext context, Node left) {
+      context.next()
+      var arguments = parseCommaSeparatedList(context, .RIGHT_PARENTHESIS)
+      if (arguments == null) {
+        return null
+      }
+      return Node.createCall(left, arguments).withRange(context.spanSince(left.range))
+    }
+  }
+
+  class BoolLiteral : LiteralCallback {
+    bool value
+
+    override Node parse(ParserContext context, Token token) {
+      return Node.createBool(value).withRange(token.range)
+    }
+  }
+
+  class IntLiteral : LiteralCallback {
+    override Node parse(ParserContext context, Token token) {
+      var text = token.range.toString()
+      var value = 0
+      for (var i = 0; i < text.size(); i++) {
+        value = value * 10 + text[i] - '0'
+      }
+      return Node.createInt(value).withRange(token.range)
+    }
+  }
+
+  class DoubleLiteral : LiteralCallback {
+    override Node parse(ParserContext context, Token token) {
+      return Node.createDouble(parseDoubleLiteral(token.range.toString())).withRange(token.range)
+    }
+  }
+
+  class StringLiteral : LiteralCallback {
+    override Node parse(ParserContext context, Token token) {
+      var result = parseStringLiteral(context.log, token.range)
+      if (result == null) {
+        return null
+      }
+      return Node.createString(result.value).withRange(token.range)
+    }
+  }
+
+  class DotParselet : InfixParselet {
+    override Node parse(ParserContext context, Node left) {
+      context.next()
+      var name = context.current().range.toString()
+      if (!context.expect(.IDENTIFIER)) {
+        return null
+      }
+      return Node.createDot(left, name).withRange(context.spanSince(left.range))
+    }
+  }
+
+  class UnaryPrefix : PrefixCallback {
+    NodeKind kind
+
+    override Node parse(ParserContext context, Token token, Node value) {
+      return Node.createUnary(kind, value).withRange(Range.span(token.range, value.range))
+    }
+  }
+
+  class BinaryInfix : InfixCallback {
+    NodeKind kind
+
+    override Node parse(ParserContext context, Node left, Token token, Node right) {
+      return Node.createBinary(kind, left, right).withRange(Range.span(left.range, right.range))
+    }
+  }
+
+  class HookParselet : InfixParselet {
+    override Node parse(ParserContext context, Node left) {
+      context.next()
+      var middle = pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1))
+      if (middle == null || !context.expect(.COLON)) {
+        return null
+      }
+      var right = pratt.parse(context, (Precedence)(Precedence.ASSIGN - 1))
+      if (right == null) {
+        return null
+      }
+      return Node.createHook(left, middle, right).withRange(context.spanSince(left.range))
+    }
+  }
+
+  class ParenthesisParselet : PrefixParselet {
+    Pratt pratt
+
+    override Node parse(ParserContext context) {
+      var token = context.current()
+      if (!context.expect(.LEFT_PARENTHESIS)) {
+        return null
+      }
+      var value = pratt.parse(context, .LOWEST)
+      if (value == null || !context.expect(.RIGHT_PARENTHESIS)) {
+        return null
+      }
+      return value.withRange(context.spanSince(token.range))
+    }
+  }
+
+  class LambdaParselet : PrefixParselet {
+    override Node parse(ParserContext context) {
+      var token = context.next()
+      var decl = FuncDecl(.FUNC_LOCAL, "")
+      if (!parseFuncDecl(context, decl)) {
+        return null
+      }
+      return Node.createLambda(decl).withRange(context.spanSince(token.range))
+    }
+  }
+
+  class LambdaTypeParselet : PrefixParselet {
+    override Node parse(ParserContext context) {
+      var token = context.next()
+      if (!context.expect(.LEFT_PARENTHESIS)) {
+        return null
+      }
+
+      // Parse argument types
+      List<Node> argTypes = []
+      while (!context.eat(.RIGHT_PARENTHESIS)) {
+        if (argTypes.size() != 0 && !context.expect(.COMMA)) {
+          return null
+        }
+        var type = parseType(context)
+        if (type == null) {
+          return null
+        }
+        argTypes.push(type)
+      }
+      Node returnType = null
+
+      // Parse return type if present
+      if (peekType(context)) {
+        returnType = parseType(context)
+        if (returnType == null) {
+          return null
+        }
+      }
+
+      return Node.createLambdaType(argTypes, returnType).withRange(context.spanSince(token.range))
+    }
+  }
+
+  pure Pratt createExpressionParser() {
+    var pratt = Pratt()
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Literals
+    ////////////////////////////////////////////////////////////////////////////////
+
+    pratt.literal(.NULL, TokenLiteral(.NULL))
+    pratt.literal(.TRUE, BoolLiteral(true))
+    pratt.literal(.FALSE, BoolLiteral(false))
+    pratt.literal(.INT, IntLiteral())
+    pratt.literal(.DOUBLE, DoubleLiteral())
+    pratt.literal(.STRING, StringLiteral())
+    pratt.literal(.IDENTIFIER, NameLiteral())
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Unary expressions
+    ////////////////////////////////////////////////////////////////////////////////
+
+    pratt.prefix(.MINUS, .UNARY_PREFIX, UnaryPrefix(.NEGATIVE))
+    pratt.prefix(.NOT, .UNARY_PREFIX, UnaryPrefix(.NOT))
+    pratt.prefix(.TILDE, .UNARY_PREFIX, UnaryPrefix(.COMPLEMENT))
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Binary expressions
+    ////////////////////////////////////////////////////////////////////////////////
+
+    pratt.infix(.BITWISE_OR, .BITWISE_OR, BinaryInfix(.BITWISE_OR))
+    pratt.infix(.BITWISE_XOR, .BITWISE_XOR, BinaryInfix(.BITWISE_XOR))
+    pratt.infix(.DIVIDE, .MULTIPLY, BinaryInfix(.DIVIDE))
+    pratt.infix(.EQUAL, .EQUAL, BinaryInfix(.EQUAL))
+    pratt.infix(.GREATER_THAN, .COMPARE, BinaryInfix(.GREATER_THAN))
+    pratt.infix(.GREATER_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.GREATER_THAN_OR_EQUAL))
+    pratt.infix(.LESS_THAN, .COMPARE, BinaryInfix(.LESS_THAN))
+    pratt.infix(.LESS_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.LESS_THAN_OR_EQUAL))
+    pratt.infix(.LOGICAL_AND, .LOGICAL_AND, BinaryInfix(.LOGICAL_AND))
+    pratt.infix(.LOGICAL_OR, .LOGICAL_OR, BinaryInfix(.LOGICAL_OR))
+    pratt.infix(.MINUS, .ADD, BinaryInfix(.SUBTRACT))
+    pratt.infix(.NOT_EQUAL, .EQUAL, BinaryInfix(.NOT_EQUAL))
+    pratt.infix(.PLUS, .ADD, BinaryInfix(.ADD))
+    pratt.infix(.REMAINDER, .MULTIPLY, BinaryInfix(.REMAINDER))
+    pratt.infix(.SHIFT_LEFT, .SHIFT, BinaryInfix(.SHIFT_LEFT))
+    pratt.infix(.SHIFT_RIGHT, .SHIFT, BinaryInfix(.SHIFT_RIGHT))
+    pratt.infix(.ASSIGN, .ASSIGN, BinaryInfix(.ASSIGN))
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Other expressions
+    ////////////////////////////////////////////////////////////////////////////////
+
+    pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
+    pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet(pratt)
+    pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet()
+    pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet()
+    pratt.parselet(.DEF, .LOWEST).prefix = LambdaParselet()
+
+    return pratt
+  }
+
+  pure Pratt createTypeParser() {
+    var pratt = Pratt()
+    pratt.literal(.IDENTIFIER, NameLiteral())
+    pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
+    pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet(pratt)
+    pratt.parselet(.DEF, .LOWEST).prefix = LambdaTypeParselet()
+    return pratt
+  }
+
+  var pratt = createExpressionParser()
+  var typePratt = createTypeParser()
+}

@@ -1,0 +1,219 @@
+namespace astral {
+  class JsEmitter : Emitter {
+    string dump(TypeDecl global) {
+      emitType(global)
+      createSource("out.js")
+      return sources()[0].contents
+    }
+
+    private {
+      var prefix = ""
+
+      void emitType(TypeDecl decl) {
+        var old = prefix
+
+        if (decl.kind == .TYPE_NAMESPACE) {
+          emit(indent + (prefix == "" ? "var " : prefix) + decl.name + " = {};\n")
+        }
+
+        if (decl.kind != .TYPE_GLOBAL) {
+          prefix += decl.name + "."
+        }
+
+        for (var i = 0; i < decl.types.size(); i++) {
+          emitType(decl.types[i])
+        }
+
+        for (var i = 0; i < decl.funcs.size(); i++) {
+          emitFunc(decl.funcs[i])
+        }
+
+        for (var i = 0; i < decl.vars.size(); i++) {
+          emitVar(decl.vars[i])
+        }
+
+        prefix = old
+      }
+
+      void emitArgumentList(List<VarDecl> args) {
+        for (var i = 0; i < args.size(); i++) {
+          if (i > 0) emit(", ")
+          emit(args[i].name)
+        }
+      }
+
+      void emitFunc(FuncDecl decl) {
+        if (decl.block == null) {
+          return
+        }
+        var isExpression = prefix != ""
+        if (isExpression) {
+          emit(prefix + (decl.kind == .FUNC_INSTANCE ? "prototype." : "") + decl.name + " = function(")
+        } else {
+          emit("function " + decl.name + "(")
+        }
+        emitArgumentList(decl.args)
+        emit(")")
+        emitBlock(decl.block)
+        emit(isExpression ? ";\n" : "\n")
+      }
+
+      void emitVar(VarDecl decl) {
+        if (decl.kind != .VAR_INSTANCE) {
+          emit(indent + (prefix == "" ? "var " : prefix) + decl.name)
+          if (decl.value != null) {
+            emit(" = ")
+            emitExpression(decl.value, .LOWEST)
+          }
+          emit(";\n")
+        }
+      }
+
+      void emitBlock(Node node) {
+        emit(" {\n")
+        increaseIndent()
+        for (var i = 0; i < node.children.size(); i++) {
+          emitStatement(node.children[i])
+        }
+        decreaseIndent()
+        emit(indent + "}")
+      }
+
+      void emitStatement(Node node) {
+        switch (node.kind) {
+          case .VAR {
+            emitVar((VarDecl)node.decl)
+          }
+
+          case .EXPRESSION {
+            emit(indent)
+            emitExpression(node.expressionValue(), .LOWEST)
+            emit(";\n")
+          }
+
+          case .BREAK {
+            emit(indent + "break;\n")
+          }
+
+          case .CONTINUE {
+            emit(indent + "continue;\n")
+          }
+
+          case .RETURN {
+            emit(indent + "return")
+            var value = node.returnValue()
+            if (value != null) {
+              emit(" ")
+              emitExpression(value, .LOWEST)
+            }
+            emit(";\n")
+          }
+
+          case .IF {
+            emit(indent + "if ")
+            emitExpression(node.ifTest(), .LOWEST)
+            emitBlock(node.ifTrue())
+            var block = node.ifFalse()
+            if (block != null) {
+              emit(" else")
+              emitBlock(block)
+            }
+            emit("\n")
+          }
+
+          case .WHILE {
+            emit(indent + "while ")
+            emitExpression(node.whileTest(), .LOWEST)
+            emitBlock(node.whileBlock())
+            emit("\n")
+          }
+
+          default {
+            assert false
+          }
+        }
+      }
+
+      void emitExpression(Node node, Precedence precedence) {
+        switch (node.kind) {
+          case .NULL {
+            emit("null")
+          }
+
+          case .NAME {
+            emit(node.asString())
+          }
+
+          case .DOT {
+            emitExpression(node.dotTarget(), .MEMBER)
+            emit("." + node.asString())
+          }
+
+          case .CONSTANT {
+            var value = node.content
+            switch (value.kind()) {
+              case .BOOL { emit(value.asBool().toString()) }
+              case .INT { emit(value.asInt().toString()) }
+              case .DOUBLE { emit(value.asDouble().toString()) }
+              case .STRING { emit(quoteString(value.asString(), '"')) }
+            }
+          }
+
+          case .CALL {
+            emitExpression(node.children[0], .UNARY_POSTFIX)
+            emit("(")
+            for (var i = 1; i < node.children.size(); i++) {
+              if (i > 1) {
+                emit(", ")
+              }
+              emitExpression(node.children[i], .LOWEST)
+            }
+            emit(")")
+          }
+
+          case .HOOK {
+            if (.ASSIGN < precedence) emit("(")
+            emitExpression(node.hookTest(), .LOGICAL_OR)
+            emit(" ? ")
+            emitExpression(node.hookTrue(), .ASSIGN)
+            emit(" : ")
+            emitExpression(node.hookFalse(), .ASSIGN)
+            if (.ASSIGN < precedence) emit(")")
+          }
+
+          case .LAMBDA {
+            var decl = (FuncDecl)node.decl
+            emit("function(")
+            emitArgumentList(decl.args)
+            emit(")")
+            emitBlock(decl.block)
+          }
+
+          default {
+            if (node.kind.isUnary()) {
+              var value = node.unaryValue()
+              var info = operatorInfo[node.kind]
+              if (info.precedence < precedence) emit("(")
+              emit(info.text)
+              emitExpression(value, info.precedence)
+              if (info.precedence < precedence) emit(")")
+            }
+
+            else if (node.kind.isBinary()) {
+              var info = operatorInfo[node.kind]
+              if (info.precedence < precedence) emit("(")
+              emitExpression(node.binaryLeft(), info.precedence.incrementIfRightAssociative(info.associativity))
+              emit(" " + info.text + " ")
+              emitExpression(node.binaryRight(), info.precedence.incrementIfLeftAssociative(info.associativity))
+              if (info.precedence < precedence) emit(")")
+            }
+
+            else {
+              assert false
+            }
+          }
+        }
+      }
+    }
+  }
+}
