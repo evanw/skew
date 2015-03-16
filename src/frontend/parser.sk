@@ -146,14 +146,42 @@ namespace astral {
   }
 
   bool peekType(ParserContext context) {
-    return context.peek(.IDENTIFIER) || context.peek(.DEF)
+    return context.peek(.IDENTIFIER) || context.peek(.FN)
   }
 
-  bool parseFuncDecl(ParserContext context, FuncDecl decl) {
-    if (!context.expect(.LEFT_PARENTHESIS)) {
-      return false
+  bool parseFunctionBlock(ParserContext context, FuncDecl decl) {
+    // "=> x" is the same as "{ return x }"
+    if (decl.kind == .FUNC_LOCAL) {
+      if (!context.expect(.ARROW)) {
+        return false
+      }
+      if (context.peek(.LEFT_BRACE)) {
+        decl.block = parseBlock(context)
+        if (decl.block == null) {
+          return false
+        }
+      } else {
+        var value = pratt.parse(context, .LOWEST)
+        if (value == null) {
+          return false
+        }
+        decl.block = Node.createBlock([Node.createReturn(value).withRange(value.range)]).withRange(value.range)
+      }
     }
 
+    // Parse function body if present
+    else if (context.peek(.LEFT_BRACE)) {
+      decl.block = parseBlock(context)
+      if (decl.block == null) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  bool parseFunction(ParserContext context, FuncDecl decl) {
+    var usingTypes = false
     while (!context.eat(.RIGHT_PARENTHESIS)) {
       if (decl.args.size() != 0 && !context.expect(.COMMA)) {
         return false
@@ -170,8 +198,12 @@ namespace astral {
       arg.range = range
 
       // Parse argument type
-      if (peekType(context)) {
+      if (decl.kind != .FUNC_LOCAL || (decl.args.size() != 0 ? usingTypes : peekType(context))) {
         arg.type = parseType(context)
+        if (arg.type == null) {
+          return false
+        }
+        usingTypes = true
       }
 
       decl.args.push(arg)
@@ -182,30 +214,7 @@ namespace astral {
       decl.returnType = parseType(context)
     }
 
-    // Parse function body if present
-    if (context.peek(.LEFT_BRACE)) {
-      decl.block = parseBlock(context)
-      if (decl.block == null) {
-        return false
-      }
-    }
-
-    // "=> x" is the same as "{ return x }"
-    else if (context.eat(.ARROW)) {
-      var value = pratt.parse(context, .LOWEST)
-      if (value == null) {
-        return false
-      }
-      decl.block = Node.createBlock([Node.createReturn(value).withRange(value.range)]).withRange(value.range)
-    }
-
-    // Each lambda must have a body
-    else if (decl.kind == .FUNC_LOCAL) {
-      context.expect(.ARROW)
-      return false
-    }
-
-    return true
+    return parseFunctionBlock(context, decl)
   }
 
   bool parseDecl(ParserContext context, TypeDecl parent) {
@@ -216,7 +225,9 @@ namespace astral {
     }
     context.next()
 
-    var name = context.current().range.toString()
+    var range = context.current().range
+    var name = range.toString()
+
     if (!context.expect(.IDENTIFIER)) {
       return false
     }
@@ -224,8 +235,9 @@ namespace astral {
     switch (kind) {
       case .VAR, .IVAR {
         var decl = VarDecl(kind == .VAR ? .VAR_GLOBAL : .VAR_INSTANCE, name)
+        decl.range = range
 
-        if (!context.peek(.ASSIGN) && !context.peek(.NEWLINE)) {
+        if (peekType(context)) {
           decl.type = parseType(context)
         }
 
@@ -238,14 +250,19 @@ namespace astral {
 
       case .DEF, .IDEF {
         var decl = FuncDecl(kind == .DEF ? .FUNC_GLOBAL : kind == .IDEF ? .FUNC_INSTANCE : .FUNC_CTOR, name)
-        if (!parseFuncDecl(context, decl)) {
+        decl.range = range
+
+        if (!context.expect(.LEFT_PARENTHESIS) || !parseFunction(context, decl)) {
           return false
         }
+
         parent.funcs.push(decl)
       }
 
       case .CLASS, .INTERFACE, .NAMESPACE {
         var decl = TypeDecl(kind == .CLASS ? .TYPE_CLASS : kind == .INTERFACE ? .TYPE_INTERFACE : .TYPE_NAMESPACE, name)
+        decl.range = range
+
         if (!context.expect(.LEFT_BRACE)) {
           return false
         }
@@ -465,6 +482,17 @@ namespace astral {
     }
   }
 
+  class CastParselet : InfixParselet {
+    override Node parse(ParserContext context, Node left) {
+      context.next()
+      var type = parseType(context)
+      if (type == null) {
+        return null
+      }
+      return Node.createCast(left, type).withRange(context.spanSince(left.range))
+    }
+  }
+
   class HookParselet : InfixParselet {
     override Node parse(ParserContext context, Node left) {
       context.next()
@@ -480,34 +508,70 @@ namespace astral {
     }
   }
 
-  class ParenthesisParselet : PrefixParselet {
-    Pratt pratt
-
-    override Node parse(ParserContext context) {
-      var token = context.current()
-      if (!context.expect(.LEFT_PARENTHESIS)) {
-        return null
-      }
-      var value = pratt.parse(context, .LOWEST)
-      if (value == null || !context.expect(.RIGHT_PARENTHESIS)) {
-        return null
-      }
-      return value.withRange(context.spanSince(token.range))
-    }
-  }
-
   class LambdaParselet : PrefixParselet {
     override Node parse(ParserContext context) {
-      var token = context.next()
+      var token = context.current()
       var decl = FuncDecl(.FUNC_LOCAL, "")
-      if (!parseFuncDecl(context, decl)) {
+      if (!parseFunctionBlock(context, decl)) {
         return null
       }
       return Node.createLambda(decl).withRange(context.spanSince(token.range))
     }
   }
 
-  class LambdaTypeParselet : PrefixParselet {
+  class NameOrLambdaParselet : PrefixParselet {
+    override Node parse(ParserContext context) {
+      var range = context.next().range
+      var name = range.toString()
+
+      // Parse a lambda of the form "x => x * x"
+      if (context.peek(.ARROW)) {
+        var decl = FuncDecl(.FUNC_LOCAL, "")
+        var arg = VarDecl(.VAR_LOCAL, name)
+        arg.range = range
+        decl.args.push(arg)
+        if (!parseFunctionBlock(context, decl)) {
+          return null
+        }
+        return Node.createLambda(decl).withRange(context.spanSince(range))
+      }
+
+      return Node.createName(name).withRange(range)
+    }
+  }
+
+  class ParenthesisParselet : PrefixParselet {
+    override Node parse(ParserContext context) {
+      var token = context.current()
+      if (!context.expect(.LEFT_PARENTHESIS)) {
+        return null
+      }
+
+      // Try to parse a group
+      if (!context.peek(.RIGHT_PARENTHESIS)) {
+        var value = pratt.parse(context, .LOWEST)
+        if (value == null) {
+          return null
+        }
+        if ((value.kind != .NAME || !peekType(context)) && context.eat(.RIGHT_PARENTHESIS)) {
+          if (value.kind != .NAME || !context.peek(.ARROW)) {
+            return value.withRange(context.spanSince(token.range))
+          }
+          context.undo()
+        }
+        context.undo()
+      }
+
+      // Parse a lambda instead
+      var decl = FuncDecl(.FUNC_LOCAL, "")
+      if (!parseFunction(context, decl)) {
+        return null
+      }
+      return Node.createLambda(decl).withRange(context.spanSince(token.range))
+    }
+  }
+
+  class FunctionTypeParselet : PrefixParselet {
     override Node parse(ParserContext context) {
       var token = context.next()
       if (!context.expect(.LEFT_PARENTHESIS)) {
@@ -553,7 +617,6 @@ namespace astral {
     pratt.literal(.INT, IntLiteral())
     pratt.literal(.DOUBLE, DoubleLiteral())
     pratt.literal(.STRING, StringLiteral())
-    pratt.literal(.IDENTIFIER, NameLiteral())
 
     ////////////////////////////////////////////////////////////////////////////////
     // Unary expressions
@@ -561,12 +624,14 @@ namespace astral {
 
     pratt.prefix(.MINUS, .UNARY_PREFIX, UnaryPrefix(.NEGATIVE))
     pratt.prefix(.NOT, .UNARY_PREFIX, UnaryPrefix(.NOT))
+    pratt.prefix(.PLUS, .UNARY_PREFIX, UnaryPrefix(.POSITIVE))
     pratt.prefix(.TILDE, .UNARY_PREFIX, UnaryPrefix(.COMPLEMENT))
 
     ////////////////////////////////////////////////////////////////////////////////
     // Binary expressions
     ////////////////////////////////////////////////////////////////////////////////
 
+    pratt.infix(.ASSIGN, .ASSIGN, BinaryInfix(.ASSIGN))
     pratt.infix(.BITWISE_OR, .BITWISE_OR, BinaryInfix(.BITWISE_OR))
     pratt.infix(.BITWISE_XOR, .BITWISE_XOR, BinaryInfix(.BITWISE_XOR))
     pratt.infix(.DIVIDE, .MULTIPLY, BinaryInfix(.DIVIDE))
@@ -578,22 +643,24 @@ namespace astral {
     pratt.infix(.LOGICAL_AND, .LOGICAL_AND, BinaryInfix(.LOGICAL_AND))
     pratt.infix(.LOGICAL_OR, .LOGICAL_OR, BinaryInfix(.LOGICAL_OR))
     pratt.infix(.MINUS, .ADD, BinaryInfix(.SUBTRACT))
+    pratt.infix(.MULTIPLY, .MULTIPLY, BinaryInfix(.MULTIPLY))
     pratt.infix(.NOT_EQUAL, .EQUAL, BinaryInfix(.NOT_EQUAL))
     pratt.infix(.PLUS, .ADD, BinaryInfix(.ADD))
     pratt.infix(.REMAINDER, .MULTIPLY, BinaryInfix(.REMAINDER))
     pratt.infix(.SHIFT_LEFT, .SHIFT, BinaryInfix(.SHIFT_LEFT))
     pratt.infix(.SHIFT_RIGHT, .SHIFT, BinaryInfix(.SHIFT_RIGHT))
-    pratt.infix(.ASSIGN, .ASSIGN, BinaryInfix(.ASSIGN))
 
     ////////////////////////////////////////////////////////////////////////////////
     // Other expressions
     ////////////////////////////////////////////////////////////////////////////////
 
+    pratt.parselet(.ARROW, .LOWEST).prefix = LambdaParselet()
+    pratt.parselet(.AS, .COMPARE).infix = CastParselet()
     pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
-    pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet(pratt)
+    pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrLambdaParselet()
+    pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet()
     pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet()
-    pratt.parselet(.DEF, .LOWEST).prefix = LambdaParselet()
 
     return pratt
   }
@@ -602,8 +669,7 @@ namespace astral {
     var pratt = Pratt()
     pratt.literal(.IDENTIFIER, NameLiteral())
     pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
-    pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet(pratt)
-    pratt.parselet(.DEF, .LOWEST).prefix = LambdaTypeParselet()
+    pratt.parselet(.FN, .LOWEST).prefix = FunctionTypeParselet()
     return pratt
   }
 

@@ -4,12 +4,14 @@
 [ \t\r]+                      WHITESPACE;
 "//".*                        COMMENT;
 
+"as"                          AS;
 "break"                       BREAK;
 "class"                       CLASS;
 "continue"                    CONTINUE;
 "def"                         DEF;
 "else"                        ELSE;
 "false"                       FALSE;
+"fn"                          FN;
 "idef"                        IDEF;
 "if"                          IF;
 "interface"                   INTERFACE;

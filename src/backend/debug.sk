@@ -188,6 +188,14 @@ namespace astral {
             emit(")")
           }
 
+          case .CAST {
+            if (.COMPARE < precedence) emit("(")
+            emitExpression(node.castValue(), .COMPARE)
+            emit(" as ")
+            emitExpression(node.castType(), .COMPARE)
+            if (.COMPARE < precedence) emit(")")
+          }
+
           case .HOOK {
             if (.ASSIGN < precedence) emit("(")
             emitExpression(node.hookTest(), .LOGICAL_OR)
@@ -200,18 +208,19 @@ namespace astral {
 
           case .LAMBDA {
             var decl = (FuncDecl)node.decl
-            emit("def(")
+            emit("(")
             emitArgumentList(decl.args)
             emit(")")
             if (decl.returnType != null) {
               emit(" ")
               emitExpression(decl.returnType, .LOWEST)
             }
+            emit(" =>")
             emitBlock(decl.block)
           }
 
           case .LAMBDA_TYPE {
-            emit("def(")
+            emit("fn(")
             for (var i = 0; i + 1 < node.children.size(); i++) {
               if (i > 0) emit(", ")
               emitExpression(node.children[i], .LOWEST)

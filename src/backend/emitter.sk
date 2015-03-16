@@ -82,9 +82,10 @@ namespace astral {
   }
 
   IntMap<OperatorInfo> operatorInfo = {
-    NodeKind.NOT:                   OperatorInfo("!", .UNARY_PREFIX, .NONE),
-    NodeKind.NEGATIVE:              OperatorInfo("-", .UNARY_PREFIX, .NONE),
     NodeKind.COMPLEMENT:            OperatorInfo("~", .UNARY_PREFIX, .NONE),
+    NodeKind.NEGATIVE:              OperatorInfo("-", .UNARY_PREFIX, .NONE),
+    NodeKind.NOT:                   OperatorInfo("!", .UNARY_PREFIX, .NONE),
+    NodeKind.POSITIVE:              OperatorInfo("+", .UNARY_PREFIX, .NONE),
 
     NodeKind.ADD:                   OperatorInfo("+", .ADD, .LEFT),
     NodeKind.BITWISE_AND:           OperatorInfo("&", .BITWISE_AND, .LEFT),
