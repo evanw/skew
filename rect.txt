@@ -1,0 +1,51 @@
+class Rect {
+  ivar x = 0.0
+  ivar y = 0.0
+  ivar width = 0.0
+  ivar height = 0.0
+
+  cdef zero() {
+  }
+
+  cdef new(x double, y double, w double, h double) {
+    self.x = x
+    self.y = y
+    self.w = w
+    self.h = h
+  }
+
+  cdef withSize(w double, h double) {
+    width = w
+    height = h
+  }
+
+  cdef aroundPoints(points PointArray) {
+    var xmin = double.INF
+    var ymin = double.INF
+    var xmax = -double.INF
+    var ymax = -double.INF
+
+    var i = 0
+    while i < points.length {
+      var p = points.get(i)
+      xmin = double.min(xmin, p.x)
+      ymin = double.min(ymin, p.y)
+      xmax = double.max(xmax, p.x)
+      ymax = double.max(ymax, p.y)
+      i = i + 1
+    }
+
+    x = xmin
+    y = ymin
+    width = xmax - xmin
+    height = ymax - ymin
+  }
+
+  idef area() {
+    return width * height
+  }
+
+  def invalid() {
+    return new(double.INF, double.INF, -double.INF, -double.INF)
+  }
+}

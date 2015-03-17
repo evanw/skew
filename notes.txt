@@ -1,3 +1,206 @@
+- todo: figure out how generic types, scopes, and constructors work
+
+
+
+
+
+
+
+- ideas for constructors syntax:
+
+
+class Rect {
+  new xywh(x double, y double, w double, h double) {
+    ...
+  }
+}
+
+class Rect {
+  ctor xywh(x double, y double, w double, h double) {
+    ...
+  }
+}
+
+// I like this one the best. It makes replacing a constructor to a static method and back really easy.
+class Rect {
+  cdef new(x double, y double, w double, h double) {
+    ...
+  }
+}
+
+class Rect {
+  def new(x double, y double, w double, h double) {
+    ...
+  }
+}
+
+class Rect {
+  idef new(x double, y double, w double, h double) {
+    ...
+  }
+}
+
+class Rect {
+  def Rect(x double, y double, w double, h double) {
+    ...
+  }
+}
+
+class Rect {
+  idef Rect(x double, y double, w double, h double) {
+    ...
+  }
+}
+
+class Rect {
+  new(x double, y double, w double, h double) {
+    ...
+  }
+}
+
+
+
+
+
+var a = Rect.xywh(50, 50, 200, 200)
+var b = Rect.centerSize(Vector.new(100, 100), Vector.new(150, 150))
+var c = Rect.originSize(Vector.new(100, 100), Vector.new(200, 200))
+
+var a = Rect(x: 50, y: 50, w: 200, h: 200)
+var b = Rect(center: Vector(x: 100, y: 100), size: Vector(x: 150, y: 150))
+var c = Rect(origin: Vector(x: 100, y: 100), size: Vector(x: 200, y: 200))
+
+var a = Rect(50, 50, 200, 200)
+var b = Rect(Vector(100, 100), Vector(150, 150)) // These would be ambiguous
+var c = Rect(Vector(100, 100), Vector(200, 200)) // These would be ambiguous
+
+
+
+
+
+
+class Uint8Array {
+  new(length int)
+  new(values int[])
+  new(buffer ArrayBuffer)
+  idef subarray(start int, end int) Uint8Array
+}
+
+class Uint8Array {
+  new withLength(length int)
+  new withValues(values int[])
+  new withBuffer(buffer ArrayBuffer)
+  idef subarray(start int, end int) Uint8Array
+}
+
+class Uint8Array {
+  cdef new(length int)
+  cdef new(values int[])
+  cdef new(buffer ArrayBuffer)
+  idef subarray(start int, end int) Uint8Array
+}
+
+var bytes = Uint8Array.new(100)
+
+class Uint8Array {
+  def Uint8Array(length int)
+  def Uint8Array(values int[])
+  def Uint8Array(buffer ArrayBuffer)
+  idef subarray(start int, end int) Uint8Array
+}
+
+
+
+
+
+
+
+
+- ideas for constructors semantics:
+  - all classes without a user-defined constructor have a default constructor with named arguments that are optional if the variable declaration has an initializer
+  - user-defined constructors may be overloaded
+  - each constructor initializes all variables to their default values before entering the function body
+  - a call to super() must be the first statement in the constructor for classes with base classes
+  - it would also be awesome to be able to easily turn a constructor into a factory constructor that could return other objects, good for wrapping Object.create(), for example
+    - could do this through a haxe-style abstract types http://haxe.org/manual/types-abstract.html
+
+    class Derived extends Base {}
+    class SafeString wraps string {}
+
+    class Derived : Base {}
+    class SafeString(string) {}
+
+    class Derived : Base {}
+    class SafeString is string {}
+
+
+
+
+
+
+
+
+- idea for getter/setter syntax:
+
+  // Getter
+  def length double {
+    return sqrt(x * x + y * y)
+  }
+
+  // Setter
+  def length = v double {
+    var scale = v / length
+    x *= scale
+    y *= scale
+  }
+
+  // Could maybe shorten to this with type inference
+  def length {
+    return sqrt(x * x + y * y)
+  }
+
+
+
+
+
+
+- idea for getter/setter syntax (I like this one better at the moment):
+
+  // Getter
+  get length() double {
+    return sqrt(x * x + y * y)
+  }
+
+  // Setter
+  set length(v double) {
+    var scale = v / length
+    x *= scale
+    y *= scale
+  }
+
+
+
+
+
+
+
+- idea: use "soft keywords" so you could reuse keywords as identifiers without needing to obfuscate them
+
+  var class = "hover"
+  var set = HashSet()
+  var def = FuncDef()
+
+  - list: ivar, def, idef, interface, namespace, class, fn, set, get
+
+
+
+
+
+
+
+
+
+
 - lambda syntax: use |...| like ruby/rust
 
   var square = |x| x * x

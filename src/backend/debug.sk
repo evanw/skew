@@ -54,13 +54,17 @@ namespace astral {
             emit(" ")
             emitExpression(arg.type, .LOWEST)
           }
+          if (arg.value != null) {
+            emit(" = ")
+            emitExpression(arg.value, .LOWEST)
+          }
         }
       }
 
       void emitFunc(FuncDecl decl) {
         emit(indent)
         switch (decl.kind) {
-          case .FUNC_CTOR { emit("ctor ") }
+          case .FUNC_CTOR { emit("cdef ") }
           case .FUNC_INSTANCE { emit("idef ") }
           case .FUNC_GLOBAL { emit("def ") }
         }
@@ -79,6 +83,10 @@ namespace astral {
 
       void emitVar(VarDecl decl) {
         emit(indent + (decl.kind == .VAR_INSTANCE ? "ivar " : "var ") + decl.name)
+        if (decl.type != null) {
+          emit(" ")
+          emitExpression(decl.type, .LOWEST)
+        }
         if (decl.value != null) {
           emit(" = ")
           emitExpression(decl.value, .LOWEST)

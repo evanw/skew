@@ -146,7 +146,7 @@ namespace astral {
   }
 
   bool peekType(ParserContext context) {
-    return context.peek(.IDENTIFIER) || context.peek(.FN)
+    return context.peek(.IDENTIFIER)
   }
 
   bool parseFunctionBlock(ParserContext context, FuncDecl decl) {
@@ -206,6 +206,14 @@ namespace astral {
         usingTypes = true
       }
 
+      // Parse default value
+      if (context.eat(.ASSIGN)) {
+        arg.value = pratt.parse(context, .LOWEST)
+        if (arg.value == null) {
+          return false
+        }
+      }
+
       decl.args.push(arg)
     }
 
@@ -217,9 +225,21 @@ namespace astral {
     return parseFunctionBlock(context, decl)
   }
 
+  StringMap<DeclKind> declKinds = {
+    "cdef": .FUNC_CTOR,
+    "class": .TYPE_CLASS,
+    "def": .FUNC_GLOBAL,
+    "idef": .FUNC_INSTANCE,
+    "interface": .TYPE_INTERFACE,
+    "ivar": .VAR_INSTANCE,
+    "namespace": .TYPE_NAMESPACE,
+  }
+
   bool parseDecl(ParserContext context, TypeDecl parent) {
-    var kind = context.current().kind
-    if (kind != .VAR && kind != .IVAR && kind != .DEF && kind != .IDEF && kind != .CLASS && kind != .INTERFACE && kind != .NAMESPACE) {
+    var token = context.current()
+    var kind = token.kind == .VAR ? .VAR_GLOBAL : token.kind == .IDENTIFIER ? declKinds.getOrDefault(token.range.toString(), .NONE) : .NONE
+    terminal.print(kind + " " + token.range.toString())
+    if (kind == .NONE) {
       context.unexpectedToken()
       return false
     }
@@ -233,8 +253,8 @@ namespace astral {
     }
 
     switch (kind) {
-      case .VAR, .IVAR {
-        var decl = VarDecl(kind == .VAR ? .VAR_GLOBAL : .VAR_INSTANCE, name)
+      case .VAR_GLOBAL, .VAR_INSTANCE {
+        var decl = VarDecl(kind, name)
         decl.range = range
 
         if (peekType(context)) {
@@ -248,8 +268,8 @@ namespace astral {
         parent.vars.push(decl)
       }
 
-      case .DEF, .IDEF {
-        var decl = FuncDecl(kind == .DEF ? .FUNC_GLOBAL : kind == .IDEF ? .FUNC_INSTANCE : .FUNC_CTOR, name)
+      case .FUNC_CTOR, .FUNC_GLOBAL, .FUNC_INSTANCE {
+        var decl = FuncDecl(kind, name)
         decl.range = range
 
         if (!context.expect(.LEFT_PARENTHESIS) || !parseFunction(context, decl)) {
@@ -259,8 +279,8 @@ namespace astral {
         parent.funcs.push(decl)
       }
 
-      case .CLASS, .INTERFACE, .NAMESPACE {
-        var decl = TypeDecl(kind == .CLASS ? .TYPE_CLASS : kind == .INTERFACE ? .TYPE_INTERFACE : .TYPE_NAMESPACE, name)
+      case .TYPE_CLASS, .TYPE_INTERFACE, .TYPE_NAMESPACE {
+        var decl = TypeDecl(kind, name)
         decl.range = range
 
         if (!context.expect(.LEFT_BRACE)) {
@@ -400,12 +420,6 @@ namespace astral {
 
     override Node parse(ParserContext context, Token token) {
       return Node(kind).withRange(token.range)
-    }
-  }
-
-  class NameLiteral : LiteralCallback {
-    override Node parse(ParserContext context, Token token) {
-      return Node.createName(token.range.toString()).withRange(token.range)
     }
   }
 
@@ -571,9 +585,15 @@ namespace astral {
     }
   }
 
-  class FunctionTypeParselet : PrefixParselet {
+  class NameOrFunctionTypeParselet : PrefixParselet {
     override Node parse(ParserContext context) {
       var token = context.next()
+      var name = token.range.toString()
+
+      if (name != "fn") {
+        return Node.createName(name).withRange(token.range)
+      }
+
       if (!context.expect(.LEFT_PARENTHESIS)) {
         return null
       }
@@ -667,9 +687,8 @@ namespace astral {
 
   pure Pratt createTypeParser() {
     var pratt = Pratt()
-    pratt.literal(.IDENTIFIER, NameLiteral())
     pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
-    pratt.parselet(.FN, .LOWEST).prefix = FunctionTypeParselet()
+    pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrFunctionTypeParselet()
     return pratt
   }
 

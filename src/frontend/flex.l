@@ -6,17 +6,10 @@
 
 "as"                          AS;
 "break"                       BREAK;
-"class"                       CLASS;
 "continue"                    CONTINUE;
-"def"                         DEF;
 "else"                        ELSE;
 "false"                       FALSE;
-"fn"                          FN;
-"idef"                        IDEF;
 "if"                          IF;
-"interface"                   INTERFACE;
-"ivar"                        IVAR;
-"namespace"                   NAMESPACE;
 "null"                        NULL;
 "return"                      RETURN;
 "super"                       SUPER;

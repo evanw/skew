@@ -122,8 +122,9 @@ namespace astral {
           }
 
           case .WHILE {
-            emit(indent + "while ")
+            emit(indent + "while (")
             emitExpression(node.whileTest(), .LOWEST)
+            emit(")")
             emitBlock(node.whileBlock())
             emit("\n")
           }
