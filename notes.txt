@@ -1,4 +1,73 @@
-- todo: figure out how generic types, scopes, and constructors work
+- todo: figure out how these work
+  x constructors
+  x annotations
+  - generic types
+  - scopes
+  - preprocessor
+    - can just use normal if statements?
+
+
+
+
+
+
+
+- ideas for annotation syntax:
+
+
+adef @ExportAs(text string)
+adef @ExportIf(x bool) = @If(x, @Export)
+adef @ExportIf(x bool) = x ? @Export : null
+adef @ExportIf(x bool) = x ? @Export : @
+adef @IfElse(x bool, y dynamic, z dynamic) = @If(x, y) @If(!x, z)
+adef @IfElse(x bool, y dynamic, z dynamic) = x ? y : z
+adef @ExportIf(x bool) = x ? [@Export] : []
+adef @IfElse(x bool, y dynamic, z dynamic) = [@If(x, y), @If(!x, z)]
+
+// Like Python, seems sort of appropriate because it is a global function
+def @ExportAs(text string)
+def @ContentsOfFile(relativePath string) string
+def @CallerFile() string
+def @CallerLine() int
+def @CallerText() string
+def @If(value bool)
+def @Import()
+def @Export()
+def @Flags()
+def @ToString()
+
+@If(BUILD_DEBUG)
+def assert(value bool, file = @CallerFile, line = @CallerLine, text = @CallerText) {
+  if (!value) {
+    throw AssertionError.new(value, file, line, text)
+  }
+}
+
+@Flags
+@ToString
+enum Foo {
+  FOO
+  BAR
+}
+
+// This is like C#/Java
+class @ExportAs {
+  var text string
+}
+
+- wait, why do annotations have to be different than normal forward-declared functions?
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

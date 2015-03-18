@@ -89,7 +89,7 @@ namespace astral {
         var isValidNesting = false
 
         switch (decl.kind) {
-          case .FUNC_CTOR {
+          case .FUNC_CONSTRUCTOR {
             isValidNesting =
               parent == .TYPE_CLASS
           }

@@ -7,7 +7,7 @@ namespace astral {
     TYPE_INTERFACE
     TYPE_NAMESPACE
 
-    FUNC_CTOR
+    FUNC_CONSTRUCTOR
     FUNC_GLOBAL
     FUNC_INSTANCE
     FUNC_LOCAL
@@ -23,7 +23,7 @@ namespace astral {
     }
 
     bool isFunc() {
-      return this >= FUNC_CTOR && this <= FUNC_LOCAL
+      return this >= FUNC_CONSTRUCTOR && this <= FUNC_LOCAL
     }
 
     bool isVar() {

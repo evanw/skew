@@ -226,7 +226,7 @@ namespace astral {
   }
 
   StringMap<DeclKind> declKinds = {
-    "cdef": .FUNC_CTOR,
+    "cdef": .FUNC_CONSTRUCTOR,
     "class": .TYPE_CLASS,
     "def": .FUNC_GLOBAL,
     "idef": .FUNC_INSTANCE,
@@ -238,7 +238,6 @@ namespace astral {
   bool parseDecl(ParserContext context, TypeDecl parent) {
     var token = context.current()
     var kind = token.kind == .VAR ? .VAR_GLOBAL : token.kind == .IDENTIFIER ? declKinds.getOrDefault(token.range.toString(), .NONE) : .NONE
-    terminal.print(kind + " " + token.range.toString())
     if (kind == .NONE) {
       context.unexpectedToken()
       return false
@@ -268,7 +267,7 @@ namespace astral {
         parent.vars.push(decl)
       }
 
-      case .FUNC_CTOR, .FUNC_GLOBAL, .FUNC_INSTANCE {
+      case .FUNC_CONSTRUCTOR, .FUNC_GLOBAL, .FUNC_INSTANCE {
         var decl = FuncDecl(kind, name)
         decl.range = range
 

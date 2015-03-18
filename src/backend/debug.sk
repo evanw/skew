@@ -64,9 +64,9 @@ namespace astral {
       void emitFunc(FuncDecl decl) {
         emit(indent)
         switch (decl.kind) {
-          case .FUNC_CTOR { emit("cdef ") }
-          case .FUNC_INSTANCE { emit("idef ") }
+          case .FUNC_CONSTRUCTOR { emit("cdef ") }
           case .FUNC_GLOBAL { emit("def ") }
+          case .FUNC_INSTANCE { emit("idef ") }
         }
         emit(decl.name + "(")
         emitArgumentList(decl.args)
