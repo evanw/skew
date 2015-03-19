@@ -11,6 +11,9 @@ namespace astral {
     FUNC_GLOBAL
     FUNC_INSTANCE
     FUNC_LOCAL
+    FUNC_OVERLOADED_CONSTRUCTOR
+    FUNC_OVERLOADED_GLOBAL
+    FUNC_OVERLOADED_INSTANCE
 
     VAR_GLOBAL
     VAR_INSTANCE
@@ -23,11 +26,29 @@ namespace astral {
     }
 
     bool isFunc() {
-      return this >= FUNC_CONSTRUCTOR && this <= FUNC_LOCAL
+      return this >= FUNC_CONSTRUCTOR && this <= FUNC_OVERLOADED_INSTANCE
     }
 
     bool isVar() {
       return this >= VAR_GLOBAL && this <= VAR_LOCAL
+    }
+
+    bool isOverloadable() {
+      return this >= FUNC_CONSTRUCTOR && this <= FUNC_INSTANCE
+    }
+
+    bool isOverloaded() {
+      return this >= FUNC_OVERLOADED_CONSTRUCTOR && this <= FUNC_OVERLOADED_INSTANCE
+    }
+
+    DeclKind toOverloaded() {
+      assert isOverloadable()
+      return (DeclKind)(FUNC_OVERLOADED_CONSTRUCTOR - FUNC_CONSTRUCTOR + this)
+    }
+
+    DeclKind fromOverloaded() {
+      assert isOverloaded()
+      return (DeclKind)(FUNC_CONSTRUCTOR - FUNC_OVERLOADED_CONSTRUCTOR + this)
     }
   }
 
@@ -49,12 +70,14 @@ namespace astral {
 
   class TypeDecl : Decl {
     Node base = null
+    StringMap<Decl> cache = {}
     List<TypeDecl> types = []
     List<FuncDecl> funcs = []
     List<VarDecl> vars = []
   }
 
   class FuncDecl : Decl {
+    OverloadedFuncDecl overloaded = null
     List<VarDecl> args = []
     Node returnType = null
     Node block = null
@@ -63,5 +86,9 @@ namespace astral {
   class VarDecl : Decl {
     Node type = null
     Node value = null
+  }
+
+  class OverloadedFuncDecl : Decl {
+    List<FuncDecl> decls
   }
 }

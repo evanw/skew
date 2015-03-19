@@ -8,14 +8,15 @@ namespace astral {
     DiagnosticKind kind
     Range range
     string text
+    Range noteRange = null
+    var noteText = ""
 
-    string toString() {
-      var prefix = kind == .ERROR ? "error" : "warning"
+    static string format(string kind, Range range, string text) {
       if (range == null) {
-        return prefix + ": " + text + "\n"
+        return kind + ": " + text + "\n"
       }
       var formatted = range.format(0)
-      return range.locationString() + ": " + prefix + ": " + text + "\n" + formatted.line + "\n" + formatted.range + "\n"
+      return range.locationString() + ": " + kind + ": " + text + "\n" + formatted.line + "\n" + formatted.range + "\n"
     }
   }
 
@@ -26,9 +27,18 @@ namespace astral {
 
     string toString() {
       var builder = StringBuilder()
+
+      // Emit the log assuming an infinite terminal width
       for (var i = 0; i < diagnostics.size(); i++) {
-        builder.append(diagnostics[i].toString())
+        var diagnostic = diagnostics[i]
+        builder.append(Diagnostic.format(diagnostic.kind == .ERROR ? "error" : "warning", diagnostic.range, diagnostic.text))
+
+        // Append notes after the diagnostic they apply to
+        if (diagnostic.noteRange != null) {
+          builder.append(Diagnostic.format("note", diagnostic.noteRange, diagnostic.noteText))
+        }
       }
+
       return builder.toString()
     }
 
@@ -53,6 +63,12 @@ namespace astral {
       diagnostics.push(Diagnostic(.WARNING, range, text))
       warningCount++
     }
+
+    void note(Range range, string text) {
+      var last = diagnostics.last()
+      last.noteRange = range
+      last.noteText = text
+    }
   }
 
   in Log {
@@ -70,6 +86,15 @@ namespace astral {
 
     void syntaxErrorExpectedToken(Range range, TokenKind found, TokenKind expected) {
       error(range, "Expected " + expected + " but found " + found)
+    }
+  }
+
+  in Log {
+    void semanticErrorDuplicateSymbol(Range range, string name, Range previous) {
+      error(range, "\"" + name + "\" is already declared")
+      if (previous != null) {
+        note(previous, "The previous declaration is here")
+      }
     }
   }
 }

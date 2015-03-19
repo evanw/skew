@@ -1,0 +1,7 @@
+in List {
+  void pushAll(List<T> all) {
+    for (var i = 0, n = all.size(); i < n; i++) {
+      push(all[i])
+    }
+  }
+}

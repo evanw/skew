@@ -1,0 +1,100 @@
+namespace astral {
+  void mergeType(Log log, TypeDecl decl) {
+    mergeTypes(log, decl, decl.types)
+    mergeFuncs(log, decl, decl.funcs)
+    mergeVars(log, decl, decl.vars)
+  }
+
+  void mergeTypes(Log log, TypeDecl parent, List<TypeDecl> children) {
+    var cache = parent.cache
+    var n = children.size()
+    var count = 0
+
+    for (var i = 0; i < n; i++) {
+      var child = children[i]
+      var other = cache.getOrDefault(child.name, null)
+
+      // Simple case: no merging
+      if (other == null) {
+        cache[child.name] = child
+        children[count] = child
+        count++
+        mergeType(log, child)
+        continue
+      }
+
+      // Can only merge with another of the same type
+      if (child.kind != other.kind) {
+        log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
+        continue
+      }
+
+      // Simulate mergeType()
+      var type = (TypeDecl)other
+      mergeTypes(log, type, child.types)
+      mergeFuncs(log, type, child.funcs)
+      mergeVars(log, type, child.vars)
+
+      // Merge "child" into "other"
+      type.types.pushAll(child.types)
+      type.funcs.pushAll(child.funcs)
+      type.vars.pushAll(child.vars)
+    }
+
+    // Remove merged declarations using O(n), would be O(n^2) if removeAt() was used
+    while (n > count) {
+      children.pop()
+      n--
+    }
+  }
+
+  void mergeFuncs(Log log, TypeDecl parent, List<FuncDecl> children) {
+    var cache = parent.cache
+
+    for (var i = 0, n = children.size(); i < n; i++) {
+      var child = children[i]
+      var other = cache.getOrDefault(child.name, null)
+
+      // Simple case: no merging
+      if (other == null) {
+        cache[child.name] = child
+        continue
+      }
+
+      // Merge with another symbol of the same type
+      if (child.kind == other.kind) {
+        var overloaded = OverloadedFuncDecl(child.kind.toOverloaded(), child.name, [(FuncDecl)other, child])
+        cache[child.name] = overloaded
+        ((FuncDecl)other).overloaded = overloaded
+        child.overloaded = overloaded
+        continue
+      }
+
+      // Merge with a group of overloaded functions
+      if (other.kind.isOverloaded() && child.kind == other.kind.fromOverloaded()) {
+        ((OverloadedFuncDecl)other).decls.push(child)
+        child.overloaded = (OverloadedFuncDecl)other
+        continue
+      }
+
+      log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
+    }
+  }
+
+  void mergeVars(Log log, TypeDecl parent, List<VarDecl> children) {
+    var cache = parent.cache
+
+    for (var i = 0, n = children.size(); i < n; i++) {
+      var child = children[i]
+      var other = cache.getOrDefault(child.name, null)
+
+      // Variables never merge
+      if (other != null) {
+        log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
+        continue
+      }
+
+      cache[child.name] = child
+    }
+  }
+}

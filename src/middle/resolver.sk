@@ -1,0 +1,9 @@
+namespace astral {
+  class Resolver {
+    Log log
+
+    void resolve(TypeDecl global) {
+      mergeType(log, global)
+    }
+  }
+}
