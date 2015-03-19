@@ -7,6 +7,7 @@
 "as"                          AS;
 "break"                       BREAK;
 "continue"                    CONTINUE;
+"dynamic"                     DYNAMIC;
 "else"                        ELSE;
 "false"                       FALSE;
 "if"                          IF;

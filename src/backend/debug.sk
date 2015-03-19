@@ -169,6 +169,10 @@ namespace astral {
             emit(node.asString())
           }
 
+          case .DYNAMIC {
+            emit("dynamic")
+          }
+
           case .DOT {
             emitExpression(node.dotTarget(), .MEMBER)
             emit("." + node.asString())

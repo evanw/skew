@@ -1,0 +1,6 @@
+namespace astral {
+  void compile(Log log, TypeDecl global) {
+    mergingPass(log, global)
+    resolvingPass(log, global)
+  }
+}

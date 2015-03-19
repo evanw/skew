@@ -17,6 +17,7 @@ namespace astral {
     CAST
     CONSTANT
     DOT
+    DYNAMIC
     HOOK
     LAMBDA
     LAMBDA_TYPE
@@ -76,6 +77,7 @@ namespace astral {
     Decl decl = null // For names, calls, and dots
     Node parent = null
     Content content = null
+    Type resolvedType = null
     Scope scope = null // Used with loops and lambdas
     List<Node> children = []
 
@@ -204,6 +206,10 @@ namespace astral {
 
     static Node createName(string text) {
       return Node(.NAME).withContent(StringContent(text))
+    }
+
+    static Node createDynamic() {
+      return Node(.DYNAMIC)
     }
 
     static Node createNull() {

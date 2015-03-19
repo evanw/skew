@@ -1,3 +1,41 @@
+- test data:
+
+namespace ns {
+  namespace q {
+    var x
+    var y
+    def foo()
+    class Foo : Bar {}
+  }
+}
+
+namespace ns {
+  namespace q {
+    var z = 100
+    def foo() { return (1.5 as int).toString() }
+    def foo() { return 200 }
+    class Foo { cdef new() {} }
+  }
+  class Bar { cdef new() {} }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 - todo: figure out how these work
   x constructors
   x annotations

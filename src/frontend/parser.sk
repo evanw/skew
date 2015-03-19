@@ -146,7 +146,7 @@ namespace astral {
   }
 
   bool peekType(ParserContext context) {
-    return context.peek(.IDENTIFIER)
+    return context.peek(.IDENTIFIER) || context.peek(.DYNAMIC)
   }
 
   bool parseFunctionBlock(ParserContext context, FuncDecl decl) {
@@ -637,12 +637,13 @@ namespace astral {
     // Literals
     ////////////////////////////////////////////////////////////////////////////////
 
-    pratt.literal(.NULL, TokenLiteral(.NULL))
-    pratt.literal(.TRUE, BoolLiteral(true))
+    pratt.literal(.DOUBLE, DoubleLiteral())
+    pratt.literal(.DYNAMIC, TokenLiteral(.DYNAMIC))
     pratt.literal(.FALSE, BoolLiteral(false))
     pratt.literal(.INT, IntLiteral())
-    pratt.literal(.DOUBLE, DoubleLiteral())
+    pratt.literal(.NULL, TokenLiteral(.NULL))
     pratt.literal(.STRING, StringLiteral())
+    pratt.literal(.TRUE, BoolLiteral(true))
 
     ////////////////////////////////////////////////////////////////////////////////
     // Unary expressions
@@ -693,8 +694,11 @@ namespace astral {
 
   pure Pratt createTypeParser() {
     var pratt = Pratt()
+
+    pratt.literal(.DYNAMIC, TokenLiteral(.DYNAMIC))
     pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrFunctionTypeParselet()
+
     return pratt
   }
 

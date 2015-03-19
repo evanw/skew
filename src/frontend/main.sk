@@ -12,7 +12,7 @@ namespace astral {
     prepareTokens(tokens)
     parseFile(log, tokens, global)
     if (!log.hasErrors()) {
-      Resolver(log).resolve(global)
+      compile(log, global)
     }
     output1.value = log.hasErrors() ? log.toString() : DebugEmitter().dump(global)
     output2.value = log.hasErrors() ? "" : JsEmitter().dump(global)

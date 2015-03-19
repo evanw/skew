@@ -1,25 +1,30 @@
 namespace astral {
-  void mergeType(Log log, TypeDecl decl) {
-    mergeTypes(log, decl, decl.types)
-    mergeFuncs(log, decl, decl.funcs)
-    mergeVars(log, decl, decl.vars)
+  void mergingPass(Log log, TypeDecl global) {
+    mergeType(log, null, global, global)
+  }
+
+  void mergeType(Log log, TypeDecl parent, TypeDecl target, TypeDecl decl) {
+    decl.parent = parent
+    mergeTypes(log, target, decl.types)
+    mergeFuncs(log, target, decl.funcs)
+    mergeVars(log, target, decl.vars)
   }
 
   void mergeTypes(Log log, TypeDecl parent, List<TypeDecl> children) {
-    var cache = parent.cache
+    var members = parent.members
     var n = children.size()
     var count = 0
 
     for (var i = 0; i < n; i++) {
       var child = children[i]
-      var other = cache.getOrDefault(child.name, null)
+      var other = members.getOrDefault(child.name, null)
 
       // Simple case: no merging
       if (other == null) {
-        cache[child.name] = child
+        members[child.name] = child
         children[count] = child
         count++
-        mergeType(log, child)
+        mergeType(log, parent, child, child)
         continue
       }
 
@@ -39,12 +44,8 @@ namespace astral {
         type.base = child.base
       }
 
-      // Simulate mergeType()
-      mergeTypes(log, type, child.types)
-      mergeFuncs(log, type, child.funcs)
-      mergeVars(log, type, child.vars)
-
       // Merge "child" into "other"
+      mergeType(log, parent, type, child)
       type.types.pushAll(child.types)
       type.funcs.pushAll(child.funcs)
       type.vars.pushAll(child.vars)
@@ -58,22 +59,22 @@ namespace astral {
   }
 
   void mergeFuncs(Log log, TypeDecl parent, List<FuncDecl> children) {
-    var cache = parent.cache
+    var members = parent.members
 
     for (var i = 0, n = children.size(); i < n; i++) {
       var child = children[i]
-      var other = cache.getOrDefault(child.name, null)
+      var other = members.getOrDefault(child.name, null)
 
       // Simple case: no merging
       if (other == null) {
-        cache[child.name] = child
+        members[child.name] = child
         continue
       }
 
       // Merge with another symbol of the same type
       if (child.kind == other.kind) {
         var overloaded = OverloadedFuncDecl(child.kind.toOverloaded(), child.name, [(FuncDecl)other, child])
-        cache[child.name] = overloaded
+        members[child.name] = overloaded
         ((FuncDecl)other).overloaded = overloaded
         child.overloaded = overloaded
         continue
@@ -91,11 +92,11 @@ namespace astral {
   }
 
   void mergeVars(Log log, TypeDecl parent, List<VarDecl> children) {
-    var cache = parent.cache
+    var members = parent.members
 
     for (var i = 0, n = children.size(); i < n; i++) {
       var child = children[i]
-      var other = cache.getOrDefault(child.name, null)
+      var other = members.getOrDefault(child.name, null)
 
       // Variables never merge
       if (other != null) {
@@ -103,7 +104,7 @@ namespace astral {
         continue
       }
 
-      cache[child.name] = child
+      members[child.name] = child
     }
   }
 }

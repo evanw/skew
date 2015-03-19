@@ -1,0 +1,90 @@
+namespace astral {
+  class ResolveContext {
+    Log log
+    Decl decl
+  }
+
+  void resolvingPass(Log log, TypeDecl global) {
+    resolveType(ResolveContext(log, null), global)
+  }
+
+  void initializeDecl(ResolveContext context, Decl decl) {
+    // Only initialize the symbol once
+    if (decl.state == .UNINITIALIZED) {
+      decl.state = .INITIALIZING
+      switch (decl.kind) {
+        case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE { initializeType(context, (TypeDecl)decl) }
+        case .FUNC_CONSTRUCTOR, .FUNC_GLOBAL, .FUNC_INSTANCE, .FUNC_LOCAL { initializeFunc(context, (FuncDecl)decl) }
+        case .VAR_GLOBAL, .VAR_INSTANCE, .VAR_LOCAL { initializeVar(context, (VarDecl)decl) }
+        default { assert false }
+      }
+      // TODO: assert decl.resolvedType != null
+      decl.state = .INITIALIZED
+    }
+
+    // Detect cyclic symbol references such as "foo foo;"
+    else if (decl.state == .INITIALIZING) {
+      context.log.semanticErrorCyclicDeclaration(decl.range, decl.name)
+      // TODO: decl.resolvedType = DYNAMIC
+    }
+  }
+
+  void initializeType(ResolveContext context, TypeDecl decl) {
+    if (decl.base != null) resolveNode(context, decl.base)
+  }
+
+  void resolveType(ResolveContext context, TypeDecl decl) {
+    initializeDecl(context, decl)
+    var nested = ResolveContext(context.log, decl)
+    for (var i = 0; i < decl.types.size(); i++) resolveType(nested, decl.types[i])
+    for (var i = 0; i < decl.funcs.size(); i++) resolveFunc(nested, decl.funcs[i])
+    for (var i = 0; i < decl.vars.size(); i++) resolveVar(nested, decl.vars[i])
+  }
+
+  void initializeFunc(ResolveContext context, FuncDecl decl) {
+    for (var i = 0; i < decl.args.size(); i++) resolveVar(context, decl.args[i])
+    if (decl.returnType != null) resolveNode(context, decl.returnType)
+  }
+
+  void resolveFunc(ResolveContext context, FuncDecl decl) {
+    initializeFunc(context, decl)
+    if (decl.block != null) resolveNode(context, decl.block)
+  }
+
+  void initializeVar(ResolveContext context, VarDecl decl) {
+    if (decl.type != null) resolveNode(context, decl.type)
+  }
+
+  void resolveVar(ResolveContext context, VarDecl decl) {
+    initializeVar(context, decl)
+    if (decl.value != null) resolveNode(context, decl.value)
+  }
+
+  void resolveNode(ResolveContext context, Node node) {
+    switch (node.kind) {
+      case .NAME { resolveName(context, node) }
+    }
+  }
+
+  void resolveName(ResolveContext context, Node node) {
+    var name = node.asString()
+
+    for (var decl = context.decl; decl != null; decl = decl.parent) {
+      if (decl.kind.isType()) {
+        node.decl = ((TypeDecl)decl).members.getOrDefault(name, null)
+        if (node.decl != null) {
+          break
+        }
+      }
+    }
+
+    if (node.decl != null) {
+      if (node.decl.state != .INITIALIZED) {
+        initializeDecl(ResolveContext(context.log, node.decl.parent), node.decl)
+      }
+      node.resolvedType = node.decl.resolvedType
+    } else {
+      context.log.semanticErrorUndeclaredSymbol(node.range, name)
+    }
+  }
+}

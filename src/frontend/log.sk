@@ -103,5 +103,13 @@ namespace astral {
         note(previous, "The previous base type is here")
       }
     }
+
+    void semanticErrorCyclicDeclaration(Range range, string name) {
+      error(range, "Cyclic declaration of \"" + name + "\"")
+    }
+
+    void semanticErrorUndeclaredSymbol(Range range, string name) {
+      error(range, "\"" + name + "\" is not declared")
+    }
   }
 }

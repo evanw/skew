@@ -52,11 +52,20 @@ namespace astral {
     }
   }
 
+  enum DeclState {
+    UNINITIALIZED
+    INITIALIZING
+    INITIALIZED
+  }
+
   class Decl {
     int id = createID()
     DeclKind kind
     string name
-    Range range = null
+    Range range = null // The location of the name in the source code
+    Decl parent = null // Automatically set by the merging step
+    Type resolvedType = null // Automatically set by the resolving step
+    DeclState state = .UNINITIALIZED
 
     private static {
       int createID() {
@@ -70,7 +79,7 @@ namespace astral {
 
   class TypeDecl : Decl {
     Node base = null
-    StringMap<Decl> cache = {}
+    StringMap<Decl> members = {}
     List<TypeDecl> types = []
     List<FuncDecl> funcs = []
     List<VarDecl> vars = []
