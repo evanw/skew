@@ -282,6 +282,13 @@ namespace astral {
         var decl = TypeDecl(kind, name)
         decl.range = range
 
+        if (context.eat(.COLON)) {
+          decl.base = parseType(context)
+          if (decl.base == null) {
+            return false
+          }
+        }
+
         if (!context.expect(.LEFT_BRACE)) {
           return false
         }

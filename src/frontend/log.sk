@@ -96,5 +96,12 @@ namespace astral {
         note(previous, "The previous declaration is here")
       }
     }
+
+    void semanticErrorDuplicateBaseType(Range range, string name, Range previous) {
+      error(range, "\"" + name + "\" already has a base type")
+      if (previous != null) {
+        note(previous, "The previous base type is here")
+      }
+    }
   }
 }

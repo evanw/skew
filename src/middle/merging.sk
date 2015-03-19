@@ -29,8 +29,17 @@ namespace astral {
         continue
       }
 
-      // Simulate mergeType()
+      // Classes can only have one base type
       var type = (TypeDecl)other
+      if (child.base != null && type.base != null) {
+        log.semanticErrorDuplicateBaseType(child.base.range, child.name, type.base.range)
+        continue
+      }
+      if (child.base != null) {
+        type.base = child.base
+      }
+
+      // Simulate mergeType()
       mergeTypes(log, type, child.types)
       mergeFuncs(log, type, child.funcs)
       mergeVars(log, type, child.vars)

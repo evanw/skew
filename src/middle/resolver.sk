@@ -4,6 +4,7 @@ namespace astral {
 
     void resolve(TypeDecl global) {
       mergeType(log, global)
+      resolveType(log, global)
     }
   }
 }

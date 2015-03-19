@@ -1,0 +1,4 @@
+namespace astral {
+  void resolveType(Log log, TypeDecl type) {
+  }
+}
