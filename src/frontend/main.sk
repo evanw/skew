@@ -6,14 +6,10 @@ namespace astral {
   var output2 = `document`.getElementById("output2")
 
   void update() {
-    var log = Log()
-    var tokens = tokenize(log, Source("<stdin>", input.value))
     var global = TypeDecl(.TYPE_GLOBAL, "<global>")
-    prepareTokens(tokens)
-    parseFile(log, tokens, global)
-    if (!log.hasErrors()) {
-      compile(log, global)
-    }
+    var log = Log()
+    appendFile(log, global, Source("<stdin>", input.value))
+    compile(log, global)
     output1.value = log.hasErrors() ? log.toString() : DebugEmitter().dump(global)
     output2.value = log.hasErrors() ? "" : JsEmitter().dump(global)
   }

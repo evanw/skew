@@ -111,5 +111,9 @@ namespace astral {
     void semanticErrorUndeclaredSymbol(Range range, string name) {
       error(range, "\"" + name + "\" is not declared")
     }
+
+    void semanticErrorUnknownMemberSymbol(Range range, string name, Type type) {
+      error(range, "\"" + name + "\" is not declared on type \"" + type + "\"")
+    }
   }
 }

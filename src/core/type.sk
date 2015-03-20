@@ -1,5 +1,66 @@
 namespace astral {
+  enum TypeKind {
+    DECL
+    DYNAMIC
+    FUNCTION
+    NULL
+  }
+
   class Type {
-    Decl decl // TODO: Generics
+    TypeKind kind
+
+    static var NULL = Type(.NULL)
+    static var DYNAMIC = Type(.DYNAMIC)
+
+    DeclType asDeclType() {
+      assert kind == .DECL
+      return (DeclType)this
+    }
+
+    FunctionType asFunctionType() {
+      assert kind == .FUNCTION
+      return (FunctionType)this
+    }
+
+    string toString() {
+      switch (kind) {
+        case .DYNAMIC { return "dynamic" }
+        case .DECL { return asDeclType().decl.fullName() }
+        default { return "null" }
+      }
+    }
+  }
+
+  class DeclType : Type {
+    TypeDecl decl
+
+    new(TypeDecl decl) : super(.DECL), decl = decl {
+    }
+  }
+
+  class FunctionType : Type {
+    List<Type> argumentTypes
+    Type returnType
+  }
+
+  class TypeCache {
+    DeclType boolType = null
+    DeclType doubleType = null
+    DeclType intType = null
+    DeclType stringType = null
+
+    void loadGlobals(Log log, TypeDecl global) {
+      boolType = loadGlobalClass(log, global, "bool")
+      doubleType = loadGlobalClass(log, global, "double")
+      intType = loadGlobalClass(log, global, "int")
+      stringType = loadGlobalClass(log, global, "string")
+    }
+
+    private static DeclType loadGlobalClass(Log log, TypeDecl global, string name) {
+      var decl = global.members.getOrDefault(name, null)
+      assert decl != null
+      assert decl.kind == .TYPE_CLASS
+      return DeclType(decl.asType())
+    }
   }
 }

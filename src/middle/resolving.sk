@@ -1,31 +1,40 @@
 namespace astral {
   class ResolveContext {
+    TypeCache cache
     Log log
     Decl decl
+
+    ResolveContext withDecl(Decl other) {
+      return ResolveContext(cache, log, other)
+    }
   }
 
   void resolvingPass(Log log, TypeDecl global) {
-    resolveType(ResolveContext(log, null), global)
+    var cache = TypeCache()
+    cache.loadGlobals(log, global)
+    if (!log.hasErrors()) {
+      resolveType(ResolveContext(cache, log, null), global)
+    }
   }
 
   void initializeDecl(ResolveContext context, Decl decl) {
     // Only initialize the symbol once
     if (decl.state == .UNINITIALIZED) {
       decl.state = .INITIALIZING
+      decl.resolvedType = .DYNAMIC
       switch (decl.kind) {
         case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE { initializeType(context, (TypeDecl)decl) }
         case .FUNC_CONSTRUCTOR, .FUNC_GLOBAL, .FUNC_INSTANCE, .FUNC_LOCAL { initializeFunc(context, (FuncDecl)decl) }
         case .VAR_GLOBAL, .VAR_INSTANCE, .VAR_LOCAL { initializeVar(context, (VarDecl)decl) }
         default { assert false }
       }
-      // TODO: assert decl.resolvedType != null
       decl.state = .INITIALIZED
     }
 
     // Detect cyclic symbol references such as "foo foo;"
     else if (decl.state == .INITIALIZING) {
       context.log.semanticErrorCyclicDeclaration(decl.range, decl.name)
-      // TODO: decl.resolvedType = DYNAMIC
+      decl.resolvedType = .DYNAMIC
     }
   }
 
@@ -35,7 +44,7 @@ namespace astral {
 
   void resolveType(ResolveContext context, TypeDecl decl) {
     initializeDecl(context, decl)
-    var nested = ResolveContext(context.log, decl)
+    var nested = context.withDecl(decl)
     for (var i = 0; i < decl.types.size(); i++) resolveType(nested, decl.types[i])
     for (var i = 0; i < decl.funcs.size(); i++) resolveFunc(nested, decl.funcs[i])
     for (var i = 0; i < decl.vars.size(); i++) resolveVar(nested, decl.vars[i])
@@ -44,10 +53,11 @@ namespace astral {
   void initializeFunc(ResolveContext context, FuncDecl decl) {
     for (var i = 0; i < decl.args.size(); i++) resolveVar(context, decl.args[i])
     if (decl.returnType != null) resolveNode(context, decl.returnType)
+    if (decl.block != null) resolveNode(context, decl.block)
   }
 
   void resolveFunc(ResolveContext context, FuncDecl decl) {
-    initializeFunc(context, decl)
+    initializeDecl(context, decl)
     if (decl.block != null) resolveNode(context, decl.block)
   }
 
@@ -56,14 +66,114 @@ namespace astral {
   }
 
   void resolveVar(ResolveContext context, VarDecl decl) {
-    initializeVar(context, decl)
+    initializeDecl(context, decl)
     if (decl.value != null) resolveNode(context, decl.value)
   }
 
   void resolveNode(ResolveContext context, Node node) {
-    switch (node.kind) {
-      case .NAME { resolveName(context, node) }
+    if (node.resolvedType != null) {
+      return // Only resolve once
     }
+
+    node.resolvedType = .DYNAMIC
+    switch (node.kind) {
+      case .BLOCK { resolveBlock(context, node) }
+
+      case .BREAK {}
+      case .CONTINUE {}
+      case .EXPRESSION { resolveExpression(context, node) }
+      case .IF { resolveIf(context, node) }
+      case .RETURN { resolveReturn(context, node) }
+      case .VAR {}
+      case .WHILE { resolveWhile(context, node) }
+
+      case .CALL { resolveCall(context, node) }
+      case .CAST {}
+      case .CONSTANT { resolveConstant(context, node) }
+      case .DOT { resolveDot(context, node) }
+      case .DYNAMIC {}
+      case .HOOK { resolveHook(context, node) }
+      case .LAMBDA {}
+      case .LAMBDA_TYPE {}
+      case .NAME { resolveName(context, node) }
+      case .NULL { node.resolvedType = .NULL }
+
+      default {
+        if (node.kind.isUnary()) { resolveUnary(context, node) }
+        else if (node.kind.isBinary()) { resolveBinary(context, node) }
+        else { assert false }
+      }
+    }
+  }
+
+  void resolveBlock(ResolveContext context, Node node) {
+    for (var i = 0; i < node.children.size(); i++) {
+      resolveNode(context, node.children[i])
+    }
+  }
+
+  void resolveExpression(ResolveContext context, Node node) {
+    resolveNode(context, node.expressionValue())
+  }
+
+  void resolveIf(ResolveContext context, Node node) {
+    var ifFalse = node.ifFalse()
+    resolveNode(context, node.ifTest())
+    resolveNode(context, node.ifTrue())
+    if (ifFalse != null) {
+      resolveNode(context, ifFalse)
+    }
+  }
+
+  void resolveReturn(ResolveContext context, Node node) {
+    var value = node.returnValue()
+    if (value != null) {
+      resolveNode(context, value)
+    }
+  }
+
+  void resolveWhile(ResolveContext context, Node node) {
+    resolveNode(context, node.whileTest())
+    resolveNode(context, node.whileBlock())
+  }
+
+  void resolveCall(ResolveContext context, Node node) {
+    for (var i = 0; i < node.children.size(); i++) {
+      resolveNode(context, node.children[i])
+    }
+  }
+
+  void resolveConstant(ResolveContext context, Node node) {
+    switch (node.content.kind()) {
+      case .BOOL { node.resolvedType = context.cache.boolType }
+      case .DOUBLE { node.resolvedType = context.cache.doubleType }
+      case .INT { node.resolvedType = context.cache.intType }
+      case .STRING { node.resolvedType = context.cache.stringType }
+    }
+  }
+
+  void resolveDot(ResolveContext context, Node node) {
+    var target = node.dotTarget()
+    var name = node.asString()
+    resolveNode(context, target)
+
+    Decl member = null
+    if (target.resolvedType.kind == .DECL) {
+      member = target.resolvedType.asDeclType().decl.members.getOrDefault(name, null)
+    }
+
+    if (member == null) {
+      context.log.semanticErrorUnknownMemberSymbol(node.range, name, target.resolvedType)
+      return
+    }
+
+    // node.resolvedType = member
+  }
+
+  void resolveHook(ResolveContext context, Node node) {
+    resolveNode(context, node.hookTest())
+    resolveNode(context, node.hookTrue())
+    resolveNode(context, node.hookFalse())
   }
 
   void resolveName(ResolveContext context, Node node) {
@@ -71,20 +181,34 @@ namespace astral {
 
     for (var decl = context.decl; decl != null; decl = decl.parent) {
       if (decl.kind.isType()) {
-        node.decl = ((TypeDecl)decl).members.getOrDefault(name, null)
+        node.decl = decl.asType().members.getOrDefault(name, null)
         if (node.decl != null) {
           break
         }
       }
     }
 
-    if (node.decl != null) {
-      if (node.decl.state != .INITIALIZED) {
-        initializeDecl(ResolveContext(context.log, node.decl.parent), node.decl)
-      }
-      node.resolvedType = node.decl.resolvedType
-    } else {
+    if (node.decl == null) {
       context.log.semanticErrorUndeclaredSymbol(node.range, name)
+      return
     }
+
+    if (node.decl.state != .INITIALIZED) {
+      initializeDecl(context.withDecl(node.decl.parent), node.decl)
+    }
+
+    node.resolvedType = node.decl.resolvedType
+  }
+
+  void resolveUnary(ResolveContext context, Node node) {
+    var value = node.unaryValue()
+    resolveNode(context, value)
+  }
+
+  void resolveBinary(ResolveContext context, Node node) {
+    var left = node.binaryLeft()
+    var right = node.binaryRight()
+    resolveNode(context, left)
+    resolveNode(context, right)
   }
 }

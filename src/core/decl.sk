@@ -67,6 +67,28 @@ namespace astral {
     Type resolvedType = null // Automatically set by the resolving step
     DeclState state = .UNINITIALIZED
 
+    TypeDecl asType() {
+      assert kind.isType()
+      return (TypeDecl)this
+    }
+
+    FuncDecl asFunc() {
+      assert kind.isFunc()
+      return (FuncDecl)this
+    }
+
+    VarDecl asVar() {
+      assert kind.isVar()
+      return (VarDecl)this
+    }
+
+    string fullName() {
+      if (parent != null && parent.kind != .TYPE_GLOBAL) {
+        return parent.fullName() + "." + name
+      }
+      return name
+    }
+
     private static {
       int createID() {
         nextID++

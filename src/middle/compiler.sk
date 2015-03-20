@@ -1,6 +1,28 @@
+var NATIVE_LIBRARY = "
+class bool {}
+class double {}
+class int {}
+class string {}
+"
+
 namespace astral {
   void compile(Log log, TypeDecl global) {
+    appendFile(log, global, Source("<native>", NATIVE_LIBRARY))
+    if (log.hasErrors()) {
+      return
+    }
+
     mergingPass(log, global)
+    if (log.hasErrors()) {
+      return
+    }
+
     resolvingPass(log, global)
+  }
+
+  void appendFile(Log log, TypeDecl global, Source source) {
+    var tokens = tokenize(log, source)
+    prepareTokens(tokens)
+    parseFile(log, tokens, global)
   }
 }
