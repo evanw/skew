@@ -1,6 +1,6 @@
 namespace astral {
   enum TypeKind {
-    DECL
+    SYMBOL
     DYNAMIC
     FUNCTION
     NULL
@@ -13,7 +13,7 @@ namespace astral {
     static var DYNAMIC = Type(.DYNAMIC)
 
     SymbolType asSymbolType() {
-      assert kind == .DECL
+      assert kind == .SYMBOL
       return (SymbolType)this
     }
 
@@ -25,7 +25,7 @@ namespace astral {
     string toString() {
       switch (kind) {
         case .DYNAMIC { return "dynamic" }
-        case .DECL { return asSymbolType().symbol.fullName() }
+        case .SYMBOL { return asSymbolType().symbol.fullName() }
         default { return "null" }
       }
     }
@@ -34,7 +34,7 @@ namespace astral {
   class SymbolType : Type {
     TypeSymbol symbol
 
-    new(TypeSymbol symbol) : super(.DECL), symbol = symbol {
+    new(TypeSymbol symbol) : super(.SYMBOL), symbol = symbol {
     }
   }
 

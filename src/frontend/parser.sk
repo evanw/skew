@@ -294,7 +294,7 @@ namespace astral {
           symbol.value = pratt.parse(context, .LOWEST)
         }
 
-        parent.vars.push(symbol)
+        parent.variables.push(symbol)
       }
 
       case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
@@ -305,7 +305,7 @@ namespace astral {
           return false
         }
 
-        parent.funcs.push(symbol)
+        parent.functions.push(symbol)
       }
 
       case .TYPE_CLASS, .TYPE_INTERFACE, .TYPE_NAMESPACE {

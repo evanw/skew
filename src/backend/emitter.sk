@@ -23,9 +23,23 @@ namespace astral {
         _sources.push(Source(name, _code))
         _code = ""
       }
+
+      List<TypeSymbol> sortedTypes(TypeSymbol global) {
+        List<TypeSymbol> types = []
+        findTypes(types, global)
+        // TODO: Sort types by inheritance and containment
+        return types
+      }
     }
 
     private {
+      void findTypes(List<TypeSymbol> types, TypeSymbol type) {
+        types.push(type)
+        for (var i = 0; i < type.types.size(); i++) {
+          findTypes(types, type.types[i])
+        }
+      }
+
       List<Source> _sources = []
       var _code = ""
     }

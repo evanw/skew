@@ -46,8 +46,8 @@ namespace astral {
     initializeSymbol(context, symbol)
     var nested = context.withSymbol(symbol)
     for (var i = 0; i < symbol.types.size(); i++) resolveType(nested, symbol.types[i])
-    for (var i = 0; i < symbol.funcs.size(); i++) resolveFunction(nested, symbol.funcs[i])
-    for (var i = 0; i < symbol.vars.size(); i++) resolveVariable(nested, symbol.vars[i])
+    for (var i = 0; i < symbol.functions.size(); i++) resolveFunction(nested, symbol.functions[i])
+    for (var i = 0; i < symbol.variables.size(); i++) resolveVariable(nested, symbol.variables[i])
   }
 
   void initializeFunction(ResolveContext context, FunctionSymbol symbol) {
@@ -158,8 +158,12 @@ namespace astral {
     var name = node.asString()
     resolveNode(context, target)
 
+    if (target.resolvedType.kind == .DYNAMIC) {
+      return
+    }
+
     Symbol member = null
-    if (target.resolvedType.kind == .DECL) {
+    if (target.resolvedType.kind == .SYMBOL) {
       member = target.resolvedType.asSymbolType().symbol.members.getOrDefault(name, null)
     }
 

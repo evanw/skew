@@ -112,8 +112,8 @@ namespace astral {
     Node base = null
     StringMap<Symbol> members = {}
     List<TypeSymbol> types = []
-    List<FunctionSymbol> funcs = []
-    List<VariableSymbol> vars = []
+    List<FunctionSymbol> functions = []
+    List<VariableSymbol> variables = []
     List<ParameterSymbol> parameters = []
   }
 

@@ -7,7 +7,27 @@ namespace astral {
     }
 
     private {
+      Symbol previousSymbol = null
+
+      static bool isAbstractFunction(Symbol symbol) {
+        return symbol.kind.isFunction() && symbol.asFunction().block == null
+      }
+
+      void emitNewlineBeforeSymbol(Symbol symbol) {
+        if (previousSymbol != null &&
+            (!isAbstractFunction(previousSymbol) || !isAbstractFunction(symbol)) &&
+            (!previousSymbol.kind.isVariable() || !symbol.kind.isVariable())) {
+          previousSymbol = null
+          emit("\n")
+        }
+      }
+
+      void emitNewlineAfterSymbol(Symbol symbol) {
+        previousSymbol = symbol
+      }
+
       void emitType(TypeSymbol symbol) {
+        emitNewlineBeforeSymbol(symbol)
         switch (symbol.kind) {
           case .TYPE_CLASS {
             emit(indent + "class " + symbol.name)
@@ -33,16 +53,18 @@ namespace astral {
           }
         }
 
+        previousSymbol = null
+
         for (var i = 0; i < symbol.types.size(); i++) {
           emitType(symbol.types[i])
         }
 
-        for (var i = 0; i < symbol.funcs.size(); i++) {
-          emitFunction(symbol.funcs[i])
+        for (var i = 0; i < symbol.functions.size(); i++) {
+          emitFunction(symbol.functions[i])
         }
 
-        for (var i = 0; i < symbol.vars.size(); i++) {
-          emitVariable(symbol.vars[i])
+        for (var i = 0; i < symbol.variables.size(); i++) {
+          emitVariable(symbol.variables[i])
         }
 
         switch (symbol.kind) {
@@ -51,6 +73,7 @@ namespace astral {
             emit(indent + "}\n")
           }
         }
+        emitNewlineAfterSymbol(symbol)
       }
 
       void emitParameterList(List<ParameterSymbol> parameters) {
@@ -81,6 +104,7 @@ namespace astral {
       }
 
       void emitFunction(FunctionSymbol symbol) {
+        emitNewlineBeforeSymbol(symbol)
         emit(indent)
         switch (symbol.kind) {
           case .FUNCTION_CONSTRUCTOR { emit("cdef ") }
@@ -100,9 +124,11 @@ namespace astral {
           emitBlock(symbol.block)
         }
         emit("\n")
+        emitNewlineAfterSymbol(symbol)
       }
 
       void emitVariable(VariableSymbol symbol) {
+        emitNewlineBeforeSymbol(symbol)
         emit(indent + (symbol.kind == .VARIABLE_INSTANCE ? "ivar " : "var ") + symbol.name)
         if (symbol.type != null) {
           emit(" ")
@@ -113,6 +139,7 @@ namespace astral {
           emitExpression(symbol.value, .LOWEST)
         }
         emit("\n")
+        emitNewlineAfterSymbol(symbol)
       }
 
       void emitBlock(Node node) {
