@@ -13,7 +13,7 @@ namespace astral {
     WHILE
 
     // Expressions
-    CALL // If node has symbol then symbol.args matches node.children, otherwise node.children.first is the function and other children are args
+    CALL // If node has symbol then symbol.arguments matches node.children, otherwise node.children.first is the function and other children are arguments
     CAST
     CONSTANT
     DOT
@@ -23,6 +23,7 @@ namespace astral {
     LAMBDA_TYPE
     NAME
     NULL
+    PARAMETERIZE
 
     // Unary operators
     COMPLEMENT
@@ -156,10 +157,10 @@ namespace astral {
       return Node(.WHILE).withChildren([test, block])
     }
 
-    static Node createCall(Node target, List<Node> args) {
+    static Node createCall(Node target, List<Node> arguments) {
       assert target.kind.isExpression()
-      args.unshift(target)
-      return Node(.CALL).withChildren(args)
+      arguments.unshift(target)
+      return Node(.CALL).withChildren(arguments)
     }
 
     static Node createCast(Node value, Node type) {
@@ -213,6 +214,12 @@ namespace astral {
 
     static Node createNull() {
       return Node(.NULL)
+    }
+
+    static Node createParameterize(Node type, List<Node> parameters) {
+      assert type.kind.isExpression()
+      parameters.unshift(type)
+      return Node(.PARAMETERIZE).withChildren(parameters)
     }
 
     static Node createUnary(NodeKind kind, Node value) {

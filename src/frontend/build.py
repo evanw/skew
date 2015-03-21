@@ -93,6 +93,15 @@ namespace astral {
       // Ignore END_OF_FILE since this loop must still perform the last action
       else if (yy_act != .END_OF_FILE) {
         tokens.push(Token(Range(source, yy_bp, yy_cp), yy_act))
+
+        // These tokens start with a ">" and may need to be split if we discover
+        // that they should really be END_PARAMETER_LIST tokens. Save enough room
+        // for these tokens to be split into pieces, that way all of the tokens
+        // don't have to be shifted over repeatedly inside prepareTokens(). The
+        // ">>" token may become ">" + ">" and the ">=" token may become ">" + "=".
+        if (yy_act == .SHIFT_RIGHT || yy_act == .GREATER_THAN_OR_EQUAL) {
+          tokens.push(null)
+        }
       }
     }
 

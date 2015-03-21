@@ -1,6 +1,7 @@
 namespace astral {
   enum SymbolKind {
     NONE
+    PARAMETER
 
     TYPE_CLASS
     TYPE_GLOBAL
@@ -67,6 +68,11 @@ namespace astral {
     Type resolvedType = null // Automatically set by the resolving step
     SymbolState state = .UNINITIALIZED
 
+    ParameterSymbol asParameter() {
+      assert kind == .PARAMETER
+      return (ParameterSymbol)this
+    }
+
     TypeSymbol asType() {
       assert kind.isType()
       return (TypeSymbol)this
@@ -99,17 +105,22 @@ namespace astral {
     }
   }
 
+  class ParameterSymbol : Symbol {
+  }
+
   class TypeSymbol : Symbol {
     Node base = null
     StringMap<Symbol> members = {}
     List<TypeSymbol> types = []
     List<FuncSymbol> funcs = []
     List<VarSymbol> vars = []
+    List<ParameterSymbol> parameters = []
   }
 
   class FuncSymbol : Symbol {
     OverloadedFuncSymbol overloaded = null
-    List<VarSymbol> args = []
+    List<VarSymbol> arguments = []
+    List<ParameterSymbol> parameters = []
     Node returnType = null
     Node block = null
   }

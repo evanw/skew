@@ -35,10 +35,10 @@ namespace astral {
         prefix = old
       }
 
-      void emitArgumentList(List<VarSymbol> args) {
-        for (var i = 0; i < args.size(); i++) {
+      void emitArgumentList(List<VarSymbol> arguments) {
+        for (var i = 0; i < arguments.size(); i++) {
           if (i > 0) emit(", ")
-          emit(args[i].name)
+          emit(arguments[i].name)
         }
       }
 
@@ -52,7 +52,7 @@ namespace astral {
         } else {
           emit("function " + symbol.name + "(")
         }
-        emitArgumentList(symbol.args)
+        emitArgumentList(symbol.arguments)
         emit(")")
         emitBlock(symbol.block)
         emit(isExpression ? ";\n" : "\n")
@@ -189,7 +189,7 @@ namespace astral {
           case .LAMBDA {
             var symbol = (FuncSymbol)node.symbol
             emit("function(")
-            emitArgumentList(symbol.args)
+            emitArgumentList(symbol.arguments)
             emit(")")
             emitBlock(symbol.block)
           }

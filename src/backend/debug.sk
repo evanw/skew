@@ -10,12 +10,20 @@ namespace astral {
       void emitType(TypeSymbol symbol) {
         switch (symbol.kind) {
           case .TYPE_CLASS {
-            emit(indent + "class " + symbol.name + " {\n")
+            emit(indent + "class " + symbol.name)
+            emitParameterList(symbol.parameters)
+            if (symbol.base != null) {
+              emit(" : ")
+              emitExpression(symbol.base, .LOWEST)
+            }
+            emit(" {\n")
             increaseIndent()
           }
 
           case .TYPE_INTERFACE {
-            emit(indent + "interface " + symbol.name + " {\n")
+            emit(indent + "interface " + symbol.name)
+            emitParameterList(symbol.parameters)
+            emit(" {\n")
             increaseIndent()
           }
 
@@ -45,10 +53,21 @@ namespace astral {
         }
       }
 
-      void emitArgumentList(List<VarSymbol> args) {
-        for (var i = 0; i < args.size(); i++) {
+      void emitParameterList(List<ParameterSymbol> parameters) {
+        if (parameters.size() > 0) {
+          emit("<")
+          for (var i = 0; i < parameters.size(); i++) {
+            if (i > 0) emit(", ")
+            emit(parameters[i].name)
+          }
+          emit(">")
+        }
+      }
+
+      void emitArgumentList(List<VarSymbol> arguments) {
+        for (var i = 0; i < arguments.size(); i++) {
           if (i > 0) emit(", ")
-          var arg = args[i]
+          var arg = arguments[i]
           emit(arg.name)
           if (arg.type != null) {
             emit(" ")
@@ -68,8 +87,10 @@ namespace astral {
           case .FUNC_GLOBAL { emit("def ") }
           case .FUNC_INSTANCE { emit("idef ") }
         }
-        emit(symbol.name + "(")
-        emitArgumentList(symbol.args)
+        emit(symbol.name)
+        emitParameterList(symbol.parameters)
+        emit("(")
+        emitArgumentList(symbol.arguments)
         emit(")")
         if (symbol.returnType != null) {
           emit(" ")
@@ -221,7 +242,7 @@ namespace astral {
           case .LAMBDA {
             var symbol = (FuncSymbol)node.symbol
             emit("(")
-            emitArgumentList(symbol.args)
+            emitArgumentList(symbol.arguments)
             emit(")")
             if (symbol.returnType != null) {
               emit(" ")
@@ -243,6 +264,18 @@ namespace astral {
               emit(" ")
               emitExpression(returnType, .LOWEST)
             }
+          }
+
+          case .PARAMETERIZE {
+            emitExpression(node.children[0], .UNARY_POSTFIX)
+            emit("<")
+            for (var i = 1; i < node.children.size(); i++) {
+              if (i > 1) {
+                emit(", ")
+              }
+              emitExpression(node.children[i], .LOWEST)
+            }
+            emit(">")
           }
 
           default {

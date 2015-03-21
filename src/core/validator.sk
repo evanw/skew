@@ -128,8 +128,8 @@ namespace astral {
           return false
         }
 
-        for (var i = 0; i < symbol.args.size(); i++) {
-          var arg = symbol.args[i]
+        for (var i = 0; i < symbol.arguments.size(); i++) {
+          var arg = symbol.arguments[i]
           if (arg.kind != .VAR_LOCAL) {
             if (report != null) {
               report.reportNestingError(symbol.kind, arg)

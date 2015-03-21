@@ -51,7 +51,7 @@ namespace astral {
   }
 
   void initializeFunc(ResolveContext context, FuncSymbol symbol) {
-    for (var i = 0; i < symbol.args.size(); i++) resolveVar(context, symbol.args[i])
+    for (var i = 0; i < symbol.arguments.size(); i++) resolveVar(context, symbol.arguments[i])
     if (symbol.returnType != null) resolveNode(context, symbol.returnType)
     if (symbol.block != null) resolveNode(context, symbol.block)
   }
@@ -97,6 +97,7 @@ namespace astral {
       case .LAMBDA_TYPE {}
       case .NAME { resolveName(context, node) }
       case .NULL { node.resolvedType = .NULL }
+      case .PARAMETERIZE { resolveParameterize(context, node) }
 
       default {
         if (node.kind.isUnary()) { resolveUnary(context, node) }
@@ -198,6 +199,12 @@ namespace astral {
     }
 
     node.resolvedType = node.symbol.resolvedType
+  }
+
+  void resolveParameterize(ResolveContext context, Node node) {
+    for (var i = 0; i < node.children.size(); i++) {
+      resolveNode(context, node.children[i])
+    }
   }
 
   void resolveUnary(ResolveContext context, Node node) {

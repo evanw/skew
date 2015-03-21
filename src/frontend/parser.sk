@@ -183,7 +183,7 @@ namespace astral {
   bool parseFunction(ParserContext context, FuncSymbol symbol) {
     var usingTypes = false
     while (!context.eat(.RIGHT_PARENTHESIS)) {
-      if (symbol.args.size() != 0 && !context.expect(.COMMA)) {
+      if (symbol.arguments.size() != 0 && !context.expect(.COMMA)) {
         return false
       }
 
@@ -198,7 +198,7 @@ namespace astral {
       arg.range = range
 
       // Parse argument type
-      if (symbol.kind != .FUNC_LOCAL || (symbol.args.size() != 0 ? usingTypes : peekType(context))) {
+      if (symbol.kind != .FUNC_LOCAL || (symbol.arguments.size() != 0 ? usingTypes : peekType(context))) {
         arg.type = parseType(context)
         if (arg.type == null) {
           return false
@@ -214,7 +214,7 @@ namespace astral {
         }
       }
 
-      symbol.args.push(arg)
+      symbol.arguments.push(arg)
     }
 
     // Parse return type
@@ -233,6 +233,22 @@ namespace astral {
     "interface": .TYPE_INTERFACE,
     "ivar": .VAR_INSTANCE,
     "namespace": .TYPE_NAMESPACE,
+  }
+
+  bool parseTypeParameters(ParserContext context, List<ParameterSymbol> parameters) {
+    if (context.eat(.START_PARAMETER_LIST)) {
+      do {
+        var name = context.current().range.toString()
+        if (!context.expect(.IDENTIFIER)) {
+          return false
+        }
+        parameters.push(ParameterSymbol(.PARAMETER, name))
+      } while (context.eat(.COMMA))
+      if (!context.expect(.END_PARAMETER_LIST)) {
+        return false
+      }
+    }
+    return true
   }
 
   bool parseSymbol(ParserContext context, TypeSymbol parent) {
@@ -271,7 +287,7 @@ namespace astral {
         var symbol = FuncSymbol(kind, name)
         symbol.range = range
 
-        if (!context.expect(.LEFT_PARENTHESIS) || !parseFunction(context, symbol)) {
+        if (!parseTypeParameters(context, symbol.parameters) || !context.expect(.LEFT_PARENTHESIS) || !parseFunction(context, symbol)) {
           return false
         }
 
@@ -281,6 +297,10 @@ namespace astral {
       case .TYPE_CLASS, .TYPE_INTERFACE, .TYPE_NAMESPACE {
         var symbol = TypeSymbol(kind, name)
         symbol.range = range
+
+        if (kind != .TYPE_NAMESPACE && !parseTypeParameters(context, symbol.parameters)) {
+          return false
+        }
 
         if (context.eat(.COLON)) {
           symbol.base = parseType(context)
@@ -549,7 +569,7 @@ namespace astral {
         var symbol = FuncSymbol(.FUNC_LOCAL, "")
         var arg = VarSymbol(.VAR_LOCAL, name)
         arg.range = range
-        symbol.args.push(arg)
+        symbol.arguments.push(arg)
         if (!parseFunctionBlock(context, symbol)) {
           return null
         }
@@ -630,6 +650,24 @@ namespace astral {
     }
   }
 
+  class ParameterizedTypeParselet : InfixParselet {
+    override Node parse(ParserContext context, Node left) {
+      context.next()
+      List<Node> parameters = []
+      do {
+        var type = parseType(context)
+        if (type == null) {
+          return null
+        }
+        parameters.push(type)
+      } while (context.eat(.COMMA))
+      if (!context.expect(.END_PARAMETER_LIST)) {
+        return null
+      }
+      return Node.createParameterize(left, parameters).withRange(context.spanSince(left.range))
+    }
+  }
+
   pure Pratt createExpressionParser() {
     var pratt = Pratt()
 
@@ -698,6 +736,7 @@ namespace astral {
     pratt.literal(.DYNAMIC, TokenLiteral(.DYNAMIC))
     pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrFunctionTypeParselet()
+    pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizedTypeParselet()
 
     return pratt
   }
