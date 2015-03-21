@@ -34,6 +34,16 @@
 ":"                               COLON;
 "&&"                              LOGICAL_AND;
 "||"                              LOGICAL_OR;
+"+="                              ASSIGN_PLUS;
+"-="                              ASSIGN_MINUS;
+"*="                              ASSIGN_MULTIPLY;
+"/="                              ASSIGN_DIVIDE;
+"%="                              ASSIGN_REMAINDER;
+"&="                              ASSIGN_BITWISE_AND;
+"|="                              ASSIGN_BITWISE_OR;
+"^="                              ASSIGN_BITWISE_XOR;
+"<<="                             ASSIGN_SHIFT_LEFT;
+">>="                             ASSIGN_SHIFT_RIGHT;
 "+"                               PLUS;
 "-"                               MINUS;
 "*"                               MULTIPLY;

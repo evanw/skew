@@ -27,7 +27,6 @@ namespace astral {
     TokenKind.LEFT_BRACKET: 0,
     TokenKind.LEFT_PARENTHESIS: 0,
 
-    TokenKind.ASSIGN: 0,
     TokenKind.BITWISE_AND: 0,
     TokenKind.BITWISE_OR: 0,
     TokenKind.BITWISE_XOR: 0,
@@ -46,6 +45,18 @@ namespace astral {
     TokenKind.REMAINDER: 0,
     TokenKind.SHIFT_LEFT: 0,
     TokenKind.SHIFT_RIGHT: 0,
+
+    TokenKind.ASSIGN: 0,
+    TokenKind.ASSIGN_PLUS: 0,
+    TokenKind.ASSIGN_BITWISE_AND: 0,
+    TokenKind.ASSIGN_BITWISE_OR: 0,
+    TokenKind.ASSIGN_BITWISE_XOR: 0,
+    TokenKind.ASSIGN_DIVIDE: 0,
+    TokenKind.ASSIGN_MULTIPLY: 0,
+    TokenKind.ASSIGN_REMAINDER: 0,
+    TokenKind.ASSIGN_SHIFT_LEFT: 0,
+    TokenKind.ASSIGN_SHIFT_RIGHT: 0,
+    TokenKind.ASSIGN_MINUS: 0,
   }
 
   void prepareTokens(List<Token> tokens) {
@@ -72,19 +83,6 @@ namespace astral {
       var tokenKind = token.kind
       var tokenStartsWithGreaterThan = token.firstCodeUnit() == '>'
 
-      // Remove newlines based on the previous token or the next token to enable
-      // line continuations. Make sure to be conservative. We want to be like
-      // Python, not like JavaScript ASI! Anything that is at all ambiguous
-      // should be disallowed.
-      if (tokenKind == .NEWLINE && previousKind in REMOVE_NEWLINE_AFTER) {
-        count--
-        continue
-      } else if (previousKind == .NEWLINE && tokenKind in REMOVE_NEWLINE_BEFORE) {
-        tokens[count - 2] = token
-        count--
-      }
-      previousKind = tokenKind
-
       // Remove tokens from the stack if they aren't working out
       while (stack.size() != 0) {
         var top = stack.last()
@@ -102,11 +100,10 @@ namespace astral {
       // Group open
       if (tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET || tokenKind == .LESS_THAN) {
         stack.push(token)
-        continue
       }
 
       // Group close
-      if (tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan) {
+      else if (tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan) {
         // Search for a matching opposite token
         while (stack.size() != 0) {
           var top = stack.last()
@@ -134,20 +131,40 @@ namespace astral {
               var start = range.start
               assert i + 1 < tokens.size()
               assert tokens[i + 1] == null
-              assert tokenKind == .SHIFT_RIGHT || tokenKind == .GREATER_THAN_OR_EQUAL
-              tokens[i + 1] = Token(Range(range.source, start + 1, range.end), tokenKind == .SHIFT_RIGHT ? .GREATER_THAN : .ASSIGN)
+              assert
+                tokenKind == .SHIFT_RIGHT ||
+                tokenKind == .GREATER_THAN_OR_EQUAL ||
+                tokenKind == .ASSIGN_SHIFT_RIGHT
+              tokens[i + 1] = Token(Range(range.source, start + 1, range.end),
+                tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
+                tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :
+                .GREATER_THAN_OR_EQUAL)
               token.range = Range(range.source, start, start + 1)
             }
 
             // Convert < and > into bounds for type parameter lists
             top.kind = .START_PARAMETER_LIST
             token.kind = .END_PARAMETER_LIST
+            tokenKind = .END_PARAMETER_LIST
           }
 
           // Stop the search since we found a match
           break
         }
       }
+
+      // Remove newlines based on the previous token or the next token to enable
+      // line continuations. Make sure to be conservative. We want to be like
+      // Python, not like JavaScript ASI! Anything that is at all ambiguous
+      // should be disallowed.
+      if (tokenKind == .NEWLINE && previousKind in REMOVE_NEWLINE_AFTER) {
+        count--
+        continue
+      } else if (previousKind == .NEWLINE && tokenKind in REMOVE_NEWLINE_BEFORE) {
+        tokens[count - 2] = token
+        count--
+      }
+      previousKind = tokenKind
     }
 
     // Trim off the remaining tokens due to null gap removal

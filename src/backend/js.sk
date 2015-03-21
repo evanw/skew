@@ -232,6 +232,10 @@ namespace astral {
             emitExpression(node.castValue(), precedence)
           }
 
+          case .PARAMETERIZE {
+            emitExpression(node.children[0], precedence)
+          }
+
           case .HOOK {
             if (.ASSIGN < precedence) emit("(")
             emitExpression(node.hookTest(), .LOGICAL_OR)

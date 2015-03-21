@@ -121,6 +121,17 @@ namespace astral {
     NodeKind.SHIFT_LEFT:            OperatorInfo("<<", .SHIFT, .LEFT),
     NodeKind.SHIFT_RIGHT:           OperatorInfo(">>", .SHIFT, .LEFT),
     NodeKind.SUBTRACT:              OperatorInfo("-", .ADD, .LEFT),
+
     NodeKind.ASSIGN:                OperatorInfo("=", .ASSIGN, .RIGHT),
+    NodeKind.ASSIGN_ADD:            OperatorInfo("+=", .ASSIGN, .RIGHT),
+    NodeKind.ASSIGN_BITWISE_AND:    OperatorInfo("&=", .ASSIGN, .RIGHT),
+    NodeKind.ASSIGN_BITWISE_OR:     OperatorInfo("|=", .ASSIGN, .RIGHT),
+    NodeKind.ASSIGN_BITWISE_XOR:    OperatorInfo("^=", .ASSIGN, .RIGHT),
+    NodeKind.ASSIGN_DIVIDE:         OperatorInfo("/=", .ASSIGN, .RIGHT),
+    NodeKind.ASSIGN_MULTIPLY:       OperatorInfo("*=", .ASSIGN, .RIGHT),
+    NodeKind.ASSIGN_REMAINDER:      OperatorInfo("%=", .ASSIGN, .RIGHT),
+    NodeKind.ASSIGN_SHIFT_LEFT:     OperatorInfo("<<=", .ASSIGN, .RIGHT),
+    NodeKind.ASSIGN_SHIFT_RIGHT:    OperatorInfo(">>=", .ASSIGN, .RIGHT),
+    NodeKind.ASSIGN_SUBTRACT:       OperatorInfo("-=", .ASSIGN, .RIGHT),
   }
 }

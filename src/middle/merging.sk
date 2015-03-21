@@ -1,8 +1,12 @@
 namespace astral {
+  using astral.merging
+
   void mergingPass(Log log, TypeSymbol global) {
     mergeType(log, null, global, global)
   }
+}
 
+namespace astral.merging {
   void mergeType(Log log, TypeSymbol parent, TypeSymbol target, TypeSymbol symbol) {
     symbol.parent = parent
 

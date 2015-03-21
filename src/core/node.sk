@@ -33,7 +33,6 @@ namespace astral {
 
     // Binary operators
     ADD
-    ASSIGN
     BITWISE_AND
     BITWISE_OR
     BITWISE_XOR
@@ -51,6 +50,19 @@ namespace astral {
     SHIFT_LEFT
     SHIFT_RIGHT
     SUBTRACT
+
+    // Binary assigment operators
+    ASSIGN
+    ASSIGN_ADD
+    ASSIGN_BITWISE_AND
+    ASSIGN_BITWISE_OR
+    ASSIGN_BITWISE_XOR
+    ASSIGN_DIVIDE
+    ASSIGN_MULTIPLY
+    ASSIGN_REMAINDER
+    ASSIGN_SHIFT_LEFT
+    ASSIGN_SHIFT_RIGHT
+    ASSIGN_SUBTRACT
   }
 
   in NodeKind {
@@ -59,7 +71,7 @@ namespace astral {
     }
 
     bool isExpression() {
-      return this >= CALL && this <= SUBTRACT
+      return this >= CALL && this <= ASSIGN_SUBTRACT
     }
 
     bool isUnary() {
@@ -67,7 +79,7 @@ namespace astral {
     }
 
     bool isBinary() {
-      return this >= ADD && this <= SUBTRACT
+      return this >= ADD && this <= ASSIGN_SUBTRACT
     }
   }
 

@@ -1,4 +1,16 @@
 namespace astral {
+  using astral.resolving
+
+  void resolvingPass(Log log, TypeSymbol global) {
+    var cache = TypeCache()
+    cache.loadGlobals(log, global)
+    if (!log.hasErrors()) {
+      resolveType(ResolveContext(cache, log, null), global)
+    }
+  }
+}
+
+namespace astral.resolving {
   class ResolveContext {
     TypeCache cache
     Log log
@@ -6,14 +18,6 @@ namespace astral {
 
     ResolveContext withSymbol(Symbol other) {
       return ResolveContext(cache, log, other)
-    }
-  }
-
-  void resolvingPass(Log log, TypeSymbol global) {
-    var cache = TypeCache()
-    cache.loadGlobals(log, global)
-    if (!log.hasErrors()) {
-      resolveType(ResolveContext(cache, log, null), global)
     }
   }
 
@@ -122,6 +126,7 @@ namespace astral {
     switch (node.kind) {
       case .BLOCK { resolveBlock(context, node) }
 
+      // Statements
       case .BREAK {}
       case .CONTINUE {}
       case .EXPRESSION { resolveExpression(context, node) }
@@ -130,6 +135,7 @@ namespace astral {
       case .VAR {}
       case .WHILE { resolveWhile(context, node) }
 
+      // Expressions
       case .CALL { resolveCall(context, node) }
       case .CAST {}
       case .CONSTANT { resolveConstant(context, node) }

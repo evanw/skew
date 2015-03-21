@@ -98,9 +98,13 @@ namespace astral {
         // that they should really be END_PARAMETER_LIST tokens. Save enough room
         // for these tokens to be split into pieces, that way all of the tokens
         // don't have to be shifted over repeatedly inside prepareTokens(). The
-        // ">>" token may become ">" + ">" and the ">=" token may become ">" + "=".
-        if (yy_act == .SHIFT_RIGHT || yy_act == .GREATER_THAN_OR_EQUAL) {
+        // ">>" token may become ">" + ">", the ">=" token may become ">" + "=",
+        // and the ">>=" token may become ">" + ">=" and so ">" + ">" + "=".
+        if (yy_act == .ASSIGN_SHIFT_RIGHT || yy_act == .SHIFT_RIGHT || yy_act == .GREATER_THAN_OR_EQUAL) {
           tokens.push(null)
+          if (yy_act == .ASSIGN_SHIFT_RIGHT) {
+            tokens.push(null)
+          }
         }
       }
     }
