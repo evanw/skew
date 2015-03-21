@@ -266,6 +266,24 @@ namespace astral {
   }
 
   bool parseSymbol(ParserContext context, TypeSymbol parent) {
+    // Parse comments before the symbol declaration
+    List<string> comments = null
+    while (context.peek(.COMMENT)) {
+      var range = context.next().range
+      if (comments == null) {
+        comments = []
+      }
+      comments.push(range.source.contents.slice(range.start + 2, range.end))
+      if (context.eat(.NEWLINE)) {
+        comments = null
+      }
+    }
+
+    // Ignore trailing comments
+    if (context.peek(.RIGHT_BRACE) || context.peek(.END_OF_FILE)) {
+      return false
+    }
+
     var token = context.current()
     var kind = token.kind == .VAR ? .VARIABLE_GLOBAL : token.kind == .IDENTIFIER ? symbolKinds.getOrDefault(token.range.toString(), .NONE) : .NONE
     if (kind == .NONE) {
@@ -294,6 +312,7 @@ namespace astral {
           symbol.value = pratt.parse(context, .LOWEST)
         }
 
+        symbol.comments = comments
         parent.variables.push(symbol)
       }
 
@@ -305,6 +324,7 @@ namespace astral {
           return false
         }
 
+        symbol.comments = comments
         parent.functions.push(symbol)
       }
 
@@ -333,6 +353,7 @@ namespace astral {
           return false
         }
 
+        symbol.comments = comments
         parent.types.push(symbol)
       }
     }

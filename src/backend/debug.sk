@@ -15,8 +15,8 @@ namespace astral {
 
       void emitNewlineBeforeSymbol(Symbol symbol) {
         if (previousSymbol != null &&
-            (!isAbstractFunction(previousSymbol) || !isAbstractFunction(symbol)) &&
-            (!previousSymbol.kind.isVariable() || !symbol.kind.isVariable())) {
+            (!isAbstractFunction(previousSymbol) || !isAbstractFunction(symbol) || symbol.comments != null) &&
+            (!previousSymbol.kind.isVariable() || !symbol.kind.isVariable() || symbol.comments != null)) {
           previousSymbol = null
           emit("\n")
         }
@@ -26,8 +26,18 @@ namespace astral {
         previousSymbol = symbol
       }
 
+      void emitComments(Symbol symbol) {
+        var comments = symbol.comments
+        if (comments != null) {
+          for (var i = 0; i < comments.size(); i++) {
+            emit(indent + "//" + comments[i])
+          }
+        }
+      }
+
       void emitType(TypeSymbol symbol) {
         emitNewlineBeforeSymbol(symbol)
+        emitComments(symbol)
         switch (symbol.kind) {
           case .TYPE_CLASS {
             emit(indent + "class " + symbol.name)
@@ -105,6 +115,7 @@ namespace astral {
 
       void emitFunction(FunctionSymbol symbol) {
         emitNewlineBeforeSymbol(symbol)
+        emitComments(symbol)
         emit(indent)
         switch (symbol.kind) {
           case .FUNCTION_CONSTRUCTOR { emit("cdef ") }
@@ -129,6 +140,7 @@ namespace astral {
 
       void emitVariable(VariableSymbol symbol) {
         emitNewlineBeforeSymbol(symbol)
+        emitComments(symbol)
         emit(indent + (symbol.kind == .VARIABLE_INSTANCE ? "ivar " : "var ") + symbol.name)
         if (symbol.type != null) {
           emit(" ")

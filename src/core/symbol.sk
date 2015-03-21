@@ -67,6 +67,7 @@ namespace astral {
     Symbol parent = null // Automatically set by the merging step
     Type resolvedType = null // Automatically set by the resolving step
     SymbolState state = .UNINITIALIZED
+    List<string> comments = null
 
     ParameterSymbol asParameter() {
       assert kind == .PARAMETER

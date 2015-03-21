@@ -2,6 +2,7 @@
 
 \n[ \t\r\n]*                  NEWLINE;
 [ \t\r]+                      WHITESPACE;
+"//".*\n                      COMMENT;
 "//".*                        COMMENT;
 
 "as"                          AS;

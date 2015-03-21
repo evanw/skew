@@ -15,8 +15,8 @@ namespace astral {
 
       void emitNewlineBeforeSymbol(Symbol symbol) {
         if (previousSymbol != null &&
-            (!previousSymbol.kind.isType() || !symbol.kind.isType()) &&
-            (!previousSymbol.kind.isVariable() || !symbol.kind.isVariable())) {
+            (!previousSymbol.kind.isType() || !symbol.kind.isType() || symbol.comments != null) &&
+            (!previousSymbol.kind.isVariable() || !symbol.kind.isVariable() || symbol.comments != null)) {
           previousSymbol = null
           emit("\n")
         }
@@ -26,31 +26,37 @@ namespace astral {
         previousSymbol = symbol
       }
 
-      void emitNamespace(TypeSymbol symbol) {
-        emitNewlineBeforeSymbol(symbol)
-        emit(indent + (prefix == "" ? "var " : prefix) + symbol.name + " = {};\n")
-        emitNewlineAfterSymbol(symbol)
+      void emitComments(Symbol symbol) {
+        var comments = symbol.comments
+        if (comments != null) {
+          for (var i = 0; i < comments.size(); i++) {
+            emit(indent + "//" + comments[i])
+          }
+        }
+      }
+
+      static string computePrefix(TypeSymbol symbol) {
+        assert symbol.kind.isType()
+        return symbol.kind == .TYPE_GLOBAL ? "" : computePrefix(symbol.parent.asType()) + symbol.name + "."
       }
 
       void emitType(TypeSymbol symbol) {
-        var old = prefix
+        prefix = symbol.parent != null ? computePrefix(symbol.parent.asType()) : ""
 
         switch (symbol.kind) {
           case .TYPE_NAMESPACE, .TYPE_INTERFACE {
-            emitNamespace(symbol)
+            emitNewlineBeforeSymbol(symbol)
+            emitComments(symbol)
+            emit(indent + (prefix == "" ? "var " : prefix) + symbol.name + " = {};\n")
+            emitNewlineAfterSymbol(symbol)
           }
 
           case .TYPE_CLASS {
-            var found = false
             for (var i = 0; i < symbol.functions.size(); i++) {
               var function = symbol.functions[i]
               if (function.kind == .FUNCTION_CONSTRUCTOR) {
                 emitFunction(function)
-                found = true
               }
-            }
-            if (!found) {
-              emitNamespace(symbol)
             }
           }
         }
@@ -69,8 +75,6 @@ namespace astral {
         for (var i = 0; i < symbol.variables.size(); i++) {
           emitVariable(symbol.variables[i])
         }
-
-        prefix = old
       }
 
       void emitArgumentList(List<VariableSymbol> arguments) {
@@ -85,6 +89,7 @@ namespace astral {
           return
         }
         emitNewlineBeforeSymbol(symbol)
+        emitComments(symbol)
         var isExpression = prefix != ""
         var name = symbol.kind == .FUNCTION_CONSTRUCTOR ? symbol.parent.name : symbol.name
         if (isExpression) {
@@ -100,8 +105,9 @@ namespace astral {
       }
 
       void emitVariable(VariableSymbol symbol) {
-        if (symbol.kind != .VARIABLE_INSTANCE) {
+        if (symbol.kind != .VARIABLE_INSTANCE && (symbol.value != null || prefix == "")) {
           emitNewlineBeforeSymbol(symbol)
+          emitComments(symbol)
           emit(indent + (prefix == "" ? "var " : prefix) + symbol.name)
           if (symbol.value != null) {
             emit(" = ")
@@ -205,7 +211,11 @@ namespace astral {
           }
 
           case .CALL {
-            emitExpression(node.children[0], .UNARY_POSTFIX)
+            var target = node.children[0]
+            var wrap = target.kind == .LAMBDA && node.parent.kind == .EXPRESSION
+            if (wrap) emit("(")
+            emitExpression(target, .UNARY_POSTFIX)
+            if (wrap) emit(")")
             emit("(")
             for (var i = 1; i < node.children.size(); i++) {
               if (i > 1) {
