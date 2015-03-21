@@ -5,6 +5,21 @@ namespace astral {
 
   void mergeType(Log log, TypeSymbol parent, TypeSymbol target, TypeSymbol symbol) {
     symbol.parent = parent
+
+    if (symbol.parameters != null) {
+      for (var i = 0; i < symbol.parameters.size(); i++) {
+        var parameter = symbol.parameters[i]
+        var other = target.members.getOrDefault(parameter.name, null)
+
+        if (other != null) {
+          log.semanticErrorDuplicateSymbol(parameter.range, parameter.name, other.range)
+          continue
+        }
+
+        target.members[parameter.name] = parameter
+      }
+    }
+
     mergeTypes(log, target, symbol.types)
     mergeFunctions(log, target, symbol.functions)
     mergeVariables(log, target, symbol.variables)
@@ -44,11 +59,20 @@ namespace astral {
         type.base = child.base
       }
 
+      // Cannot merge two types that both have type parameters
+      if (child.parameters != null && type.parameters != null) {
+        log.semanticErrorDuplicateTypeParameters(child.range, child.name, type.range)
+        continue
+      }
+
       // Merge "child" into "other"
       mergeType(log, parent, type, child)
       type.types.pushAll(child.types)
       type.functions.pushAll(child.functions)
       type.variables.pushAll(child.variables)
+      if (child.parameters != null) {
+        type.parameters = child.parameters
+      }
     }
 
     // Remove merged declarations using O(n), would be O(n^2) if removeAt() was used

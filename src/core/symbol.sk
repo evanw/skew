@@ -115,13 +115,13 @@ namespace astral {
     List<TypeSymbol> types = []
     List<FunctionSymbol> functions = []
     List<VariableSymbol> variables = []
-    List<ParameterSymbol> parameters = []
+    List<ParameterSymbol> parameters = null
   }
 
   class FunctionSymbol : Symbol {
     OverloadedFunctionSymbol overloaded = null
     List<VariableSymbol> arguments = []
-    List<ParameterSymbol> parameters = []
+    List<ParameterSymbol> parameters = null
     Node returnType = null
     Node block = null
   }

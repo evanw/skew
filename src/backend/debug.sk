@@ -38,6 +38,7 @@ namespace astral {
       void emitType(TypeSymbol symbol) {
         emitNewlineBeforeSymbol(symbol)
         emitComments(symbol)
+
         switch (symbol.kind) {
           case .TYPE_CLASS {
             emit(indent + "class " + symbol.name)
@@ -69,12 +70,12 @@ namespace astral {
           emitType(symbol.types[i])
         }
 
-        for (var i = 0; i < symbol.functions.size(); i++) {
-          emitFunction(symbol.functions[i])
-        }
-
         for (var i = 0; i < symbol.variables.size(); i++) {
           emitVariable(symbol.variables[i])
+        }
+
+        for (var i = 0; i < symbol.functions.size(); i++) {
+          emitFunction(symbol.functions[i])
         }
 
         switch (symbol.kind) {
@@ -83,11 +84,12 @@ namespace astral {
             emit(indent + "}\n")
           }
         }
+
         emitNewlineAfterSymbol(symbol)
       }
 
       void emitParameterList(List<ParameterSymbol> parameters) {
-        if (parameters.size() > 0) {
+        if (parameters != null) {
           emit("<")
           for (var i = 0; i < parameters.size(); i++) {
             if (i > 0) emit(", ")

@@ -55,6 +55,9 @@ namespace astral {
             for (var i = 0; i < symbol.functions.size(); i++) {
               var function = symbol.functions[i]
               if (function.kind == .FUNCTION_CONSTRUCTOR) {
+                if (function.comments == null && symbol.comments != null) {
+                  function.comments = symbol.comments
+                }
                 emitFunction(function)
               }
             }

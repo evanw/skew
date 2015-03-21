@@ -23,9 +23,10 @@ namespace astral {
       symbol.state = .INITIALIZING
       symbol.resolvedType = .DYNAMIC
       switch (symbol.kind) {
-        case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE { initializeType(context, (TypeSymbol)symbol) }
-        case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL { initializeFunction(context, (FunctionSymbol)symbol) }
-        case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL { initializeVariable(context, (VariableSymbol)symbol) }
+        case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE { initializeType(context, symbol.asType()) }
+        case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL { initializeFunction(context, symbol.asFunction()) }
+        case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL { initializeVariable(context, symbol.asVariable()) }
+        case .PARAMETER { initializeParameter(context, symbol.asParameter()) }
         default { assert false }
       }
       symbol.state = .INITIALIZED
@@ -38,36 +39,78 @@ namespace astral {
     }
   }
 
+  void resolveParameters(ResolveContext context, List<ParameterSymbol> parameters) {
+    if (parameters != null) {
+      for (var i = 0; i < parameters.size(); i++) {
+        resolveParameter(context, parameters[i])
+      }
+    }
+  }
+
+  void initializeParameter(ResolveContext context, ParameterSymbol symbol) {
+  }
+
+  void resolveParameter(ResolveContext context, ParameterSymbol symbol) {
+    initializeSymbol(context, symbol)
+  }
+
   void initializeType(ResolveContext context, TypeSymbol symbol) {
-    if (symbol.base != null) resolveNode(context, symbol.base)
+    if (symbol.base != null) {
+      resolveNode(context, symbol.base)
+    }
   }
 
   void resolveType(ResolveContext context, TypeSymbol symbol) {
     initializeSymbol(context, symbol)
     var nested = context.withSymbol(symbol)
-    for (var i = 0; i < symbol.types.size(); i++) resolveType(nested, symbol.types[i])
-    for (var i = 0; i < symbol.functions.size(); i++) resolveFunction(nested, symbol.functions[i])
-    for (var i = 0; i < symbol.variables.size(); i++) resolveVariable(nested, symbol.variables[i])
+    resolveParameters(nested, symbol.parameters)
+
+    for (var i = 0; i < symbol.types.size(); i++) {
+      resolveType(nested, symbol.types[i])
+    }
+
+    for (var i = 0; i < symbol.functions.size(); i++) {
+      resolveFunction(nested, symbol.functions[i])
+    }
+
+    for (var i = 0; i < symbol.variables.size(); i++) {
+      resolveVariable(nested, symbol.variables[i])
+    }
   }
 
   void initializeFunction(ResolveContext context, FunctionSymbol symbol) {
-    for (var i = 0; i < symbol.arguments.size(); i++) resolveVariable(context, symbol.arguments[i])
-    if (symbol.returnType != null) resolveNode(context, symbol.returnType)
-    if (symbol.block != null) resolveNode(context, symbol.block)
+    resolveParameters(context, symbol.parameters)
+
+    for (var i = 0; i < symbol.arguments.size(); i++) {
+      resolveVariable(context, symbol.arguments[i])
+    }
+
+    if (symbol.returnType != null) {
+      resolveNode(context, symbol.returnType)
+    }
   }
 
   void resolveFunction(ResolveContext context, FunctionSymbol symbol) {
     initializeSymbol(context, symbol)
-    if (symbol.block != null) resolveNode(context, symbol.block)
+
+    if (symbol.block != null) {
+      resolveNode(context, symbol.block)
+    }
   }
 
   void initializeVariable(ResolveContext context, VariableSymbol symbol) {
-    if (symbol.type != null) resolveNode(context, symbol.type)
+
+    if (symbol.type != null) {
+      resolveNode(context, symbol.type)
+    }
   }
 
   void resolveVariable(ResolveContext context, VariableSymbol symbol) {
     initializeSymbol(context, symbol)
-    if (symbol.value != null) resolveNode(context, symbol.value)
+
+    if (symbol.value != null) {
+      resolveNode(context, symbol.value)
+    }
   }
 
   void resolveNode(ResolveContext context, Node node) {

@@ -28,7 +28,7 @@ namespace astral {
 
   Node parseLocalVar(ParserContext context) {
     var token = context.next()
-    var name = token.range.toString()
+    var name = context.current().range.toString()
     if (!context.expect(.IDENTIFIER)) {
       return null
     }
@@ -249,20 +249,22 @@ namespace astral {
     "namespace": .TYPE_NAMESPACE,
   }
 
-  bool parseTypeParameters(ParserContext context, List<ParameterSymbol> parameters) {
-    if (context.eat(.START_PARAMETER_LIST)) {
-      do {
-        var name = context.current().range.toString()
-        if (!context.expect(.IDENTIFIER)) {
-          return false
-        }
-        parameters.push(ParameterSymbol(.PARAMETER, name))
-      } while (context.eat(.COMMA))
-      if (!context.expect(.END_PARAMETER_LIST)) {
-        return false
+  List<ParameterSymbol> parseTypeParameters(ParserContext context) {
+    List<ParameterSymbol> parameters = []
+    do {
+      var range = context.current().range
+      var name = range.toString()
+      if (!context.expect(.IDENTIFIER)) {
+        return null
       }
+      var symbol = ParameterSymbol(.PARAMETER, name)
+      symbol.range = range
+      parameters.push(symbol)
+    } while (context.eat(.COMMA))
+    if (!context.expect(.END_PARAMETER_LIST)) {
+      return null
     }
-    return true
+    return parameters
   }
 
   bool parseSymbol(ParserContext context, TypeSymbol parent) {
@@ -320,7 +322,14 @@ namespace astral {
         var symbol = FunctionSymbol(kind, name)
         symbol.range = range
 
-        if (!parseTypeParameters(context, symbol.parameters) || !context.expect(.LEFT_PARENTHESIS) || !parseFunction(context, symbol)) {
+        if (context.eat(.START_PARAMETER_LIST)) {
+          symbol.parameters = parseTypeParameters(context)
+          if (symbol.parameters == null) {
+            return false
+          }
+        }
+
+        if (!context.expect(.LEFT_PARENTHESIS) || !parseFunction(context, symbol)) {
           return false
         }
 
@@ -332,8 +341,11 @@ namespace astral {
         var symbol = TypeSymbol(kind, name)
         symbol.range = range
 
-        if (kind != .TYPE_NAMESPACE && !parseTypeParameters(context, symbol.parameters)) {
-          return false
+        if (kind != .TYPE_NAMESPACE && context.eat(.START_PARAMETER_LIST)) {
+          symbol.parameters = parseTypeParameters(context)
+          if (symbol.parameters == null) {
+            return false
+          }
         }
 
         if (context.eat(.COLON)) {
@@ -685,7 +697,7 @@ namespace astral {
     }
   }
 
-  class ParameterizedTypeParselet : InfixParselet {
+  class ParameterizedParselet : InfixParselet {
     override Node parse(ParserContext context, Node left) {
       context.next()
       List<Node> parameters = []
@@ -760,6 +772,7 @@ namespace astral {
     pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet()
     pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet()
+    pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizedParselet()
 
     return pratt
   }
@@ -770,7 +783,7 @@ namespace astral {
     pratt.literal(.DYNAMIC, TokenLiteral(.DYNAMIC))
     pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrFunctionTypeParselet()
-    pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizedTypeParselet()
+    pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizedParselet()
 
     return pratt
   }
