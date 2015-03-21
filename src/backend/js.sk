@@ -25,30 +25,30 @@ namespace astral {
         }
 
         for (var i = 0; i < symbol.funcs.size(); i++) {
-          emitFunc(symbol.funcs[i])
+          emitFunction(symbol.funcs[i])
         }
 
         for (var i = 0; i < symbol.vars.size(); i++) {
-          emitVar(symbol.vars[i])
+          emitVariable(symbol.vars[i])
         }
 
         prefix = old
       }
 
-      void emitArgumentList(List<VarSymbol> arguments) {
+      void emitArgumentList(List<VariableSymbol> arguments) {
         for (var i = 0; i < arguments.size(); i++) {
           if (i > 0) emit(", ")
           emit(arguments[i].name)
         }
       }
 
-      void emitFunc(FuncSymbol symbol) {
+      void emitFunction(FunctionSymbol symbol) {
         if (symbol.block == null) {
           return
         }
         var isExpression = prefix != ""
         if (isExpression) {
-          emit(prefix + (symbol.kind == .FUNC_INSTANCE ? "prototype." : "") + symbol.name + " = function(")
+          emit(prefix + (symbol.kind == .FUNCTION_INSTANCE ? "prototype." : "") + symbol.name + " = function(")
         } else {
           emit("function " + symbol.name + "(")
         }
@@ -58,8 +58,8 @@ namespace astral {
         emit(isExpression ? ";\n" : "\n")
       }
 
-      void emitVar(VarSymbol symbol) {
-        if (symbol.kind != .VAR_INSTANCE) {
+      void emitVariable(VariableSymbol symbol) {
+        if (symbol.kind != .VARIABLE_INSTANCE) {
           emit(indent + (prefix == "" ? "var " : prefix) + symbol.name)
           if (symbol.value != null) {
             emit(" = ")
@@ -82,7 +82,7 @@ namespace astral {
       void emitStatement(Node node) {
         switch (node.kind) {
           case .VAR {
-            emitVar((VarSymbol)node.symbol)
+            emitVariable((VariableSymbol)node.symbol)
           }
 
           case .EXPRESSION {
@@ -187,7 +187,7 @@ namespace astral {
           }
 
           case .LAMBDA {
-            var symbol = (FuncSymbol)node.symbol
+            var symbol = (FunctionSymbol)node.symbol
             emit("function(")
             emitArgumentList(symbol.arguments)
             emit(")")

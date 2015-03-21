@@ -6,8 +6,8 @@ namespace astral {
   void mergeType(Log log, TypeSymbol parent, TypeSymbol target, TypeSymbol symbol) {
     symbol.parent = parent
     mergeTypes(log, target, symbol.types)
-    mergeFuncs(log, target, symbol.funcs)
-    mergeVars(log, target, symbol.vars)
+    mergeFunctions(log, target, symbol.funcs)
+    mergeVariables(log, target, symbol.vars)
   }
 
   void mergeTypes(Log log, TypeSymbol parent, List<TypeSymbol> children) {
@@ -58,7 +58,7 @@ namespace astral {
     }
   }
 
-  void mergeFuncs(Log log, TypeSymbol parent, List<FuncSymbol> children) {
+  void mergeFunctions(Log log, TypeSymbol parent, List<FunctionSymbol> children) {
     var members = parent.members
 
     for (var i = 0, n = children.size(); i < n; i++) {
@@ -73,17 +73,17 @@ namespace astral {
 
       // Merge with another symbol of the same type
       if (child.kind == other.kind) {
-        var overloaded = OverloadedFuncSymbol(child.kind.toOverloaded(), child.name, [(FuncSymbol)other, child])
+        var overloaded = OverloadedFunctionSymbol(child.kind.toOverloaded(), child.name, [(FunctionSymbol)other, child])
         members[child.name] = overloaded
-        ((FuncSymbol)other).overloaded = overloaded
+        ((FunctionSymbol)other).overloaded = overloaded
         child.overloaded = overloaded
         continue
       }
 
       // Merge with a group of overloaded functions
       if (other.kind.isOverloaded() && child.kind == other.kind.fromOverloaded()) {
-        ((OverloadedFuncSymbol)other).symbols.push(child)
-        child.overloaded = (OverloadedFuncSymbol)other
+        ((OverloadedFunctionSymbol)other).symbols.push(child)
+        child.overloaded = (OverloadedFunctionSymbol)other
         continue
       }
 
@@ -91,7 +91,7 @@ namespace astral {
     }
   }
 
-  void mergeVars(Log log, TypeSymbol parent, List<VarSymbol> children) {
+  void mergeVariables(Log log, TypeSymbol parent, List<VariableSymbol> children) {
     var members = parent.members
 
     for (var i = 0, n = children.size(); i < n; i++) {

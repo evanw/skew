@@ -24,8 +24,8 @@ namespace astral {
       symbol.resolvedType = .DYNAMIC
       switch (symbol.kind) {
         case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE { initializeType(context, (TypeSymbol)symbol) }
-        case .FUNC_CONSTRUCTOR, .FUNC_GLOBAL, .FUNC_INSTANCE, .FUNC_LOCAL { initializeFunc(context, (FuncSymbol)symbol) }
-        case .VAR_GLOBAL, .VAR_INSTANCE, .VAR_LOCAL { initializeVar(context, (VarSymbol)symbol) }
+        case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL { initializeFunction(context, (FunctionSymbol)symbol) }
+        case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL { initializeVariable(context, (VariableSymbol)symbol) }
         default { assert false }
       }
       symbol.state = .INITIALIZED
@@ -46,26 +46,26 @@ namespace astral {
     initializeSymbol(context, symbol)
     var nested = context.withSymbol(symbol)
     for (var i = 0; i < symbol.types.size(); i++) resolveType(nested, symbol.types[i])
-    for (var i = 0; i < symbol.funcs.size(); i++) resolveFunc(nested, symbol.funcs[i])
-    for (var i = 0; i < symbol.vars.size(); i++) resolveVar(nested, symbol.vars[i])
+    for (var i = 0; i < symbol.funcs.size(); i++) resolveFunction(nested, symbol.funcs[i])
+    for (var i = 0; i < symbol.vars.size(); i++) resolveVariable(nested, symbol.vars[i])
   }
 
-  void initializeFunc(ResolveContext context, FuncSymbol symbol) {
-    for (var i = 0; i < symbol.arguments.size(); i++) resolveVar(context, symbol.arguments[i])
+  void initializeFunction(ResolveContext context, FunctionSymbol symbol) {
+    for (var i = 0; i < symbol.arguments.size(); i++) resolveVariable(context, symbol.arguments[i])
     if (symbol.returnType != null) resolveNode(context, symbol.returnType)
     if (symbol.block != null) resolveNode(context, symbol.block)
   }
 
-  void resolveFunc(ResolveContext context, FuncSymbol symbol) {
+  void resolveFunction(ResolveContext context, FunctionSymbol symbol) {
     initializeSymbol(context, symbol)
     if (symbol.block != null) resolveNode(context, symbol.block)
   }
 
-  void initializeVar(ResolveContext context, VarSymbol symbol) {
+  void initializeVariable(ResolveContext context, VariableSymbol symbol) {
     if (symbol.type != null) resolveNode(context, symbol.type)
   }
 
-  void resolveVar(ResolveContext context, VarSymbol symbol) {
+  void resolveVariable(ResolveContext context, VariableSymbol symbol) {
     initializeSymbol(context, symbol)
     if (symbol.value != null) resolveNode(context, symbol.value)
   }

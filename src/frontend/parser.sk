@@ -32,7 +32,7 @@ namespace astral {
     if (!context.expect(.IDENTIFIER)) {
       return null
     }
-    var symbol = VarSymbol(.VAR_LOCAL, name)
+    var symbol = VariableSymbol(.VARIABLE_LOCAL, name)
 
     if (!context.peek(.ASSIGN) && !context.peek(.NEWLINE)) {
       symbol.type = pratt.parse(context, .ASSIGN)
@@ -149,9 +149,9 @@ namespace astral {
     return context.peek(.IDENTIFIER) || context.peek(.DYNAMIC)
   }
 
-  bool parseFunctionBlock(ParserContext context, FuncSymbol symbol) {
+  bool parseFunctionBlock(ParserContext context, FunctionSymbol symbol) {
     // "=> x" is the same as "{ return x }"
-    if (symbol.kind == .FUNC_LOCAL) {
+    if (symbol.kind == .FUNCTION_LOCAL) {
       if (!context.expect(.ARROW)) {
         return false
       }
@@ -180,7 +180,7 @@ namespace astral {
     return true
   }
 
-  bool parseFunction(ParserContext context, FuncSymbol symbol) {
+  bool parseFunction(ParserContext context, FunctionSymbol symbol) {
     var usingTypes = false
     while (!context.eat(.RIGHT_PARENTHESIS)) {
       if (symbol.arguments.size() != 0 && !context.expect(.COMMA)) {
@@ -194,11 +194,11 @@ namespace astral {
         return false
       }
 
-      var arg = VarSymbol(.VAR_LOCAL, name)
+      var arg = VariableSymbol(.VARIABLE_LOCAL, name)
       arg.range = range
 
       // Parse argument type
-      if (symbol.kind != .FUNC_LOCAL || (symbol.arguments.size() != 0 ? usingTypes : peekType(context))) {
+      if (symbol.kind != .FUNCTION_LOCAL || (symbol.arguments.size() != 0 ? usingTypes : peekType(context))) {
         arg.type = parseType(context)
         if (arg.type == null) {
           return false
@@ -226,12 +226,12 @@ namespace astral {
   }
 
   StringMap<SymbolKind> symbolKinds = {
-    "cdef": .FUNC_CONSTRUCTOR,
+    "cdef": .FUNCTION_CONSTRUCTOR,
     "class": .TYPE_CLASS,
-    "def": .FUNC_GLOBAL,
-    "idef": .FUNC_INSTANCE,
+    "def": .FUNCTION_GLOBAL,
+    "idef": .FUNCTION_INSTANCE,
     "interface": .TYPE_INTERFACE,
-    "ivar": .VAR_INSTANCE,
+    "ivar": .VARIABLE_INSTANCE,
     "namespace": .TYPE_NAMESPACE,
   }
 
@@ -253,7 +253,7 @@ namespace astral {
 
   bool parseSymbol(ParserContext context, TypeSymbol parent) {
     var token = context.current()
-    var kind = token.kind == .VAR ? .VAR_GLOBAL : token.kind == .IDENTIFIER ? symbolKinds.getOrDefault(token.range.toString(), .NONE) : .NONE
+    var kind = token.kind == .VAR ? .VARIABLE_GLOBAL : token.kind == .IDENTIFIER ? symbolKinds.getOrDefault(token.range.toString(), .NONE) : .NONE
     if (kind == .NONE) {
       context.unexpectedToken()
       return false
@@ -268,8 +268,8 @@ namespace astral {
     }
 
     switch (kind) {
-      case .VAR_GLOBAL, .VAR_INSTANCE {
-        var symbol = VarSymbol(kind, name)
+      case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE {
+        var symbol = VariableSymbol(kind, name)
         symbol.range = range
 
         if (peekType(context)) {
@@ -283,8 +283,8 @@ namespace astral {
         parent.vars.push(symbol)
       }
 
-      case .FUNC_CONSTRUCTOR, .FUNC_GLOBAL, .FUNC_INSTANCE {
-        var symbol = FuncSymbol(kind, name)
+      case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
+        var symbol = FunctionSymbol(kind, name)
         symbol.range = range
 
         if (!parseTypeParameters(context, symbol.parameters) || !context.expect(.LEFT_PARENTHESIS) || !parseFunction(context, symbol)) {
@@ -551,7 +551,7 @@ namespace astral {
   class LambdaParselet : PrefixParselet {
     override Node parse(ParserContext context) {
       var token = context.current()
-      var symbol = FuncSymbol(.FUNC_LOCAL, "")
+      var symbol = FunctionSymbol(.FUNCTION_LOCAL, "")
       if (!parseFunctionBlock(context, symbol)) {
         return null
       }
@@ -566,8 +566,8 @@ namespace astral {
 
       // Parse a lambda of the form "x => x * x"
       if (context.peek(.ARROW)) {
-        var symbol = FuncSymbol(.FUNC_LOCAL, "")
-        var arg = VarSymbol(.VAR_LOCAL, name)
+        var symbol = FunctionSymbol(.FUNCTION_LOCAL, "")
+        var arg = VariableSymbol(.VARIABLE_LOCAL, name)
         arg.range = range
         symbol.arguments.push(arg)
         if (!parseFunctionBlock(context, symbol)) {
@@ -603,7 +603,7 @@ namespace astral {
       }
 
       // Parse a lambda instead
-      var symbol = FuncSymbol(.FUNC_LOCAL, "")
+      var symbol = FunctionSymbol(.FUNCTION_LOCAL, "")
       if (!parseFunction(context, symbol)) {
         return null
       }

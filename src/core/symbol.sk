@@ -8,17 +8,17 @@ namespace astral {
     TYPE_INTERFACE
     TYPE_NAMESPACE
 
-    FUNC_CONSTRUCTOR
-    FUNC_GLOBAL
-    FUNC_INSTANCE
-    FUNC_LOCAL
-    FUNC_OVERLOADED_CONSTRUCTOR
-    FUNC_OVERLOADED_GLOBAL
-    FUNC_OVERLOADED_INSTANCE
+    FUNCTION_CONSTRUCTOR
+    FUNCTION_GLOBAL
+    FUNCTION_INSTANCE
+    FUNCTION_LOCAL
+    FUNCTION_OVERLOADED_CONSTRUCTOR
+    FUNCTION_OVERLOADED_GLOBAL
+    FUNCTION_OVERLOADED_INSTANCE
 
-    VAR_GLOBAL
-    VAR_INSTANCE
-    VAR_LOCAL
+    VARIABLE_GLOBAL
+    VARIABLE_INSTANCE
+    VARIABLE_LOCAL
   }
 
   in SymbolKind {
@@ -26,30 +26,30 @@ namespace astral {
       return this >= TYPE_CLASS && this <= TYPE_NAMESPACE
     }
 
-    bool isFunc() {
-      return this >= FUNC_CONSTRUCTOR && this <= FUNC_OVERLOADED_INSTANCE
+    bool isFunction() {
+      return this >= FUNCTION_CONSTRUCTOR && this <= FUNCTION_OVERLOADED_INSTANCE
     }
 
-    bool isVar() {
-      return this >= VAR_GLOBAL && this <= VAR_LOCAL
+    bool isVariable() {
+      return this >= VARIABLE_GLOBAL && this <= VARIABLE_LOCAL
     }
 
     bool isOverloadable() {
-      return this >= FUNC_CONSTRUCTOR && this <= FUNC_INSTANCE
+      return this >= FUNCTION_CONSTRUCTOR && this <= FUNCTION_INSTANCE
     }
 
     bool isOverloaded() {
-      return this >= FUNC_OVERLOADED_CONSTRUCTOR && this <= FUNC_OVERLOADED_INSTANCE
+      return this >= FUNCTION_OVERLOADED_CONSTRUCTOR && this <= FUNCTION_OVERLOADED_INSTANCE
     }
 
     SymbolKind toOverloaded() {
       assert isOverloadable()
-      return (SymbolKind)(FUNC_OVERLOADED_CONSTRUCTOR - FUNC_CONSTRUCTOR + this)
+      return (SymbolKind)(FUNCTION_OVERLOADED_CONSTRUCTOR - FUNCTION_CONSTRUCTOR + this)
     }
 
     SymbolKind fromOverloaded() {
       assert isOverloaded()
-      return (SymbolKind)(FUNC_CONSTRUCTOR - FUNC_OVERLOADED_CONSTRUCTOR + this)
+      return (SymbolKind)(FUNCTION_CONSTRUCTOR - FUNCTION_OVERLOADED_CONSTRUCTOR + this)
     }
   }
 
@@ -78,14 +78,14 @@ namespace astral {
       return (TypeSymbol)this
     }
 
-    FuncSymbol asFunc() {
-      assert kind.isFunc()
-      return (FuncSymbol)this
+    FunctionSymbol asFunction() {
+      assert kind.isFunction()
+      return (FunctionSymbol)this
     }
 
-    VarSymbol asVar() {
-      assert kind.isVar()
-      return (VarSymbol)this
+    VariableSymbol asVariable() {
+      assert kind.isVariable()
+      return (VariableSymbol)this
     }
 
     string fullName() {
@@ -112,25 +112,25 @@ namespace astral {
     Node base = null
     StringMap<Symbol> members = {}
     List<TypeSymbol> types = []
-    List<FuncSymbol> funcs = []
-    List<VarSymbol> vars = []
+    List<FunctionSymbol> funcs = []
+    List<VariableSymbol> vars = []
     List<ParameterSymbol> parameters = []
   }
 
-  class FuncSymbol : Symbol {
-    OverloadedFuncSymbol overloaded = null
-    List<VarSymbol> arguments = []
+  class FunctionSymbol : Symbol {
+    OverloadedFunctionSymbol overloaded = null
+    List<VariableSymbol> arguments = []
     List<ParameterSymbol> parameters = []
     Node returnType = null
     Node block = null
   }
 
-  class VarSymbol : Symbol {
+  class VariableSymbol : Symbol {
     Node type = null
     Node value = null
   }
 
-  class OverloadedFuncSymbol : Symbol {
-    List<FuncSymbol> symbols
+  class OverloadedFunctionSymbol : Symbol {
+    List<FunctionSymbol> symbols
   }
 }

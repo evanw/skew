@@ -149,7 +149,7 @@ namespace astral {
     }
 
     static Node createVar(Symbol symbol) {
-      assert symbol.kind.isVar()
+      assert symbol.kind.isVariable()
       return Node(.VAR).withSymbol(symbol)
     }
 
@@ -200,7 +200,7 @@ namespace astral {
       return Node(.HOOK).withChildren([test, trueValue, falseValue])
     }
 
-    static Node createLambda(FuncSymbol symbol) {
+    static Node createLambda(FunctionSymbol symbol) {
       return Node(.LAMBDA).withSymbol(symbol)
     }
 
