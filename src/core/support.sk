@@ -5,3 +5,9 @@ in List {
     }
   }
 }
+
+namespace prettyPrint {
+  string plural(int value) {
+    return value == 1 ? "" : "s"
+  }
+}

@@ -213,10 +213,10 @@ namespace astral {
           }
 
           case .CALL {
-            var target = node.children[0]
-            var wrap = target.kind == .LAMBDA && node.parent.kind == .EXPRESSION
+            var value = node.callValue()
+            var wrap = value.kind == .LAMBDA && node.parent.kind == .EXPRESSION
             if (wrap) emit("(")
-            emitExpression(target, .UNARY_POSTFIX)
+            emitExpression(value, .UNARY_POSTFIX)
             if (wrap) emit(")")
             emit("(")
             for (var i = 1; i < node.children.size(); i++) {

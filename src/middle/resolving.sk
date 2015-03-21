@@ -21,18 +21,45 @@ namespace astral.resolving {
     }
   }
 
+  // This avoids allocating a ResolveContext if it's not needed
+  void initializeSymbolFromCurrentContext(ResolveContext context, Symbol symbol) {
+    if (symbol.state != .INITIALIZED) {
+      initializeSymbol(context.withSymbol(symbol.parent), symbol)
+    }
+  }
+
   void initializeSymbol(ResolveContext context, Symbol symbol) {
     // Only initialize the symbol once
     if (symbol.state == .UNINITIALIZED) {
       symbol.state = .INITIALIZING
-      symbol.resolvedType = .DYNAMIC
+
       switch (symbol.kind) {
-        case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE { initializeType(context, symbol.asType()) }
-        case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL { initializeFunction(context, symbol.asFunction()) }
-        case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL { initializeVariable(context, symbol.asVariable()) }
-        case .PARAMETER { initializeParameter(context, symbol.asParameter()) }
-        default { assert false }
+        case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE {
+          initializeType(context, symbol.asType())
+        }
+
+        case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL {
+          initializeFunction(context, symbol.asFunction())
+        }
+
+        case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
+          initializeVariable(context, symbol.asVariable())
+        }
+
+        case .PARAMETER {
+          initializeParameter(context, symbol.asParameter())
+        }
+
+        case .OVERLOADED_CONSTRUCTOR, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
+          initializeOverloadedFunction(context, symbol.asOverloadedFunction())
+        }
+
+        default {
+          assert false
+        }
       }
+
+      assert symbol.resolvedType != null
       symbol.state = .INITIALIZED
     }
 
@@ -52,6 +79,9 @@ namespace astral.resolving {
   }
 
   void initializeParameter(ResolveContext context, ParameterSymbol symbol) {
+    if (symbol.resolvedType == null) {
+      symbol.resolvedType = SymbolType(symbol)
+    }
   }
 
   void resolveParameter(ResolveContext context, ParameterSymbol symbol) {
@@ -59,6 +89,10 @@ namespace astral.resolving {
   }
 
   void initializeType(ResolveContext context, TypeSymbol symbol) {
+    if (symbol.resolvedType == null) {
+      symbol.resolvedType = SymbolType(symbol)
+    }
+
     if (symbol.base != null) {
       resolveNode(context, symbol.base)
     }
@@ -83,6 +117,10 @@ namespace astral.resolving {
   }
 
   void initializeFunction(ResolveContext context, FunctionSymbol symbol) {
+    if (symbol.resolvedType == null) {
+      symbol.resolvedType = SymbolType(symbol)
+    }
+
     resolveParameters(context, symbol.parameters)
 
     for (var i = 0; i < symbol.arguments.size(); i++) {
@@ -90,7 +128,14 @@ namespace astral.resolving {
     }
 
     if (symbol.returnType != null) {
-      resolveNode(context, symbol.returnType)
+      if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+        context.log.semanticErrorConstructorReturnType(symbol.returnType.range)
+        symbol.returnType = null
+      }
+
+      else {
+        resolveNode(context, symbol.returnType)
+      }
     }
   }
 
@@ -103,9 +148,19 @@ namespace astral.resolving {
   }
 
   void initializeVariable(ResolveContext context, VariableSymbol symbol) {
-
     if (symbol.type != null) {
       resolveNode(context, symbol.type)
+      symbol.resolvedType = symbol.type.resolvedType
+    }
+
+    // Implicitly-typed variables take their type from their initializer
+    else if (symbol.value != null) {
+      resolveNode(context, symbol.value)
+      symbol.resolvedType = symbol.value.resolvedType
+    }
+
+    else {
+      context.log.semanticErrorVarMissingValue(symbol.range)
     }
   }
 
@@ -114,6 +169,28 @@ namespace astral.resolving {
 
     if (symbol.value != null) {
       resolveNode(context, symbol.value)
+    }
+
+    // Default-initialize varliables that aren't explicitly initialized
+    else if (symbol.kind != .VARIABLE_LOCAL) {
+      symbol.value =
+        symbol.resolvedType == context.cache.boolType ? Node.createBool(false) :
+        symbol.resolvedType == context.cache.doubleType ? Node.createDouble(0.0) :
+        symbol.resolvedType == context.cache.intType ? Node.createInt(0) :
+        symbol.resolvedType == context.cache.stringType ? Node.createString("") :
+        Node.createNull()
+    }
+  }
+
+  void initializeOverloadedFunction(ResolveContext context, OverloadedFunctionSymbol symbol) {
+    var symbols = symbol.symbols
+
+    if (symbol.resolvedType == null) {
+      symbol.resolvedType = SymbolType(symbol)
+    }
+
+    for (var i = 0; i < symbols.size(); i++) {
+      initializeSymbol(context, symbols[i])
     }
   }
 
@@ -154,6 +231,8 @@ namespace astral.resolving {
         else { assert false }
       }
     }
+
+    assert node.resolvedType != null
   }
 
   void resolveBlock(ResolveContext context, Node node) {
@@ -188,7 +267,49 @@ namespace astral.resolving {
   }
 
   void resolveCall(ResolveContext context, Node node) {
-    for (var i = 0; i < node.children.size(); i++) {
+    var value = node.callValue()
+    resolveNode(context, value)
+    var type = value.resolvedType
+
+    if (type.kind == .SYMBOL) {
+      var symbol = type.asSymbolType().symbol
+
+      if (symbol.kind.isFunction()) {
+        var function = symbol.asFunction()
+        var expected = function.arguments.size()
+        var found = node.children.size() - 1
+
+        // Check argument count
+        if (expected != found) {
+          context.log.semanticErrorArgumentCount(node.internalRange, expected, found)
+        }
+
+        // Use the return type even if there were errors
+        if (function.returnType != null) {
+          node.resolvedType = function.returnType.resolvedType
+        }
+
+        // Constructors have an implicit return type
+        else if (function.kind == .FUNCTION_CONSTRUCTOR) {
+          node.resolvedType = function.parent.resolvedType
+        }
+
+        // There is no "void" type, so make sure this return value isn't used
+        else if (node.parent.kind != .EXPRESSION) {
+          context.log.semanticErrorUseOfVoid(node.range, function.name)
+        }
+      }
+
+      else {
+        context.log.semanticErrorInvalidCall(value.range, value.resolvedType)
+      }
+    }
+
+    else if (type != .DYNAMIC) {
+      context.log.semanticErrorInvalidCall(value.range, value.resolvedType)
+    }
+
+    for (var i = 1; i < node.children.size(); i++) {
       resolveNode(context, node.children[i])
     }
   }
@@ -213,15 +334,29 @@ namespace astral.resolving {
 
     Symbol member = null
     if (target.resolvedType.kind == .SYMBOL) {
-      member = target.resolvedType.asSymbolType().symbol.members.getOrDefault(name, null)
+      var symbol = target.resolvedType.asSymbolType().symbol
+      if (symbol.kind.isType()) {
+        member = symbol.asType().members.getOrDefault(name, null)
+      }
     }
 
     if (member == null) {
-      context.log.semanticErrorUnknownMemberSymbol(node.range, name, target.resolvedType)
+      context.log.semanticErrorUnknownMemberSymbol(node.internalRange, name, target.resolvedType)
       return
     }
 
-    // node.resolvedType = member
+    initializeSymbolFromCurrentContext(context, member)
+
+    var isType = target.symbol != null && target.symbol.kind.isType()
+    var needsType = member.kind != .FUNCTION_INSTANCE && member.kind != .VARIABLE_INSTANCE
+
+    if (isType && !needsType) {
+      context.log.semanticErrorMemberUnexpectedInstance(node.internalRange, member.name)
+    } else if (!isType && needsType) {
+      context.log.semanticErrorMemberUnexpectedGlobal(node.internalRange, member.name)
+    }
+
+    node.resolvedType = member.resolvedType
   }
 
   void resolveHook(ResolveContext context, Node node) {
@@ -247,10 +382,7 @@ namespace astral.resolving {
       return
     }
 
-    if (node.symbol.state != .INITIALIZED) {
-      initializeSymbol(context.withSymbol(node.symbol.parent), node.symbol)
-    }
-
+    initializeSymbolFromCurrentContext(context, node.symbol)
     node.resolvedType = node.symbol.resolvedType
   }
 

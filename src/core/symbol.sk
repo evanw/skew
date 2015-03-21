@@ -12,9 +12,10 @@ namespace astral {
     FUNCTION_GLOBAL
     FUNCTION_INSTANCE
     FUNCTION_LOCAL
-    FUNCTION_OVERLOADED_CONSTRUCTOR
-    FUNCTION_OVERLOADED_GLOBAL
-    FUNCTION_OVERLOADED_INSTANCE
+
+    OVERLOADED_CONSTRUCTOR
+    OVERLOADED_GLOBAL
+    OVERLOADED_INSTANCE
 
     VARIABLE_GLOBAL
     VARIABLE_INSTANCE
@@ -27,29 +28,29 @@ namespace astral {
     }
 
     bool isFunction() {
-      return this >= FUNCTION_CONSTRUCTOR && this <= FUNCTION_OVERLOADED_INSTANCE
+      return this >= FUNCTION_CONSTRUCTOR && this <= FUNCTION_LOCAL
+    }
+
+    bool isOverloadedFunction() {
+      return this >= OVERLOADED_CONSTRUCTOR && this <= OVERLOADED_INSTANCE
     }
 
     bool isVariable() {
       return this >= VARIABLE_GLOBAL && this <= VARIABLE_LOCAL
     }
 
-    bool isOverloadable() {
+    bool isOverloadableFunction() {
       return this >= FUNCTION_CONSTRUCTOR && this <= FUNCTION_INSTANCE
     }
 
-    bool isOverloaded() {
-      return this >= FUNCTION_OVERLOADED_CONSTRUCTOR && this <= FUNCTION_OVERLOADED_INSTANCE
+    SymbolKind toOverloadedFunction() {
+      assert isOverloadableFunction()
+      return (SymbolKind)(OVERLOADED_CONSTRUCTOR - FUNCTION_CONSTRUCTOR + this)
     }
 
-    SymbolKind toOverloaded() {
-      assert isOverloadable()
-      return (SymbolKind)(FUNCTION_OVERLOADED_CONSTRUCTOR - FUNCTION_CONSTRUCTOR + this)
-    }
-
-    SymbolKind fromOverloaded() {
-      assert isOverloaded()
-      return (SymbolKind)(FUNCTION_CONSTRUCTOR - FUNCTION_OVERLOADED_CONSTRUCTOR + this)
+    SymbolKind fromOverloadedFunction() {
+      assert isOverloadedFunction()
+      return (SymbolKind)(FUNCTION_CONSTRUCTOR - OVERLOADED_CONSTRUCTOR + this)
     }
   }
 
@@ -82,6 +83,11 @@ namespace astral {
     FunctionSymbol asFunction() {
       assert kind.isFunction()
       return (FunctionSymbol)this
+    }
+
+    OverloadedFunctionSymbol asOverloadedFunction() {
+      assert kind.isOverloadedFunction()
+      return (OverloadedFunctionSymbol)this
     }
 
     VariableSymbol asVariable() {

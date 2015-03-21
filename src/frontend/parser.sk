@@ -509,12 +509,12 @@ namespace astral {
 
   class CallParselet : InfixParselet {
     override Node parse(ParserContext context, Node left) {
-      context.next()
+      var token = context.next()
       var arguments = parseCommaSeparatedList(context, .RIGHT_PARENTHESIS)
       if (arguments == null) {
         return null
       }
-      return Node.createCall(left, arguments).withRange(context.spanSince(left.range))
+      return Node.createCall(left, arguments).withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range))
     }
   }
 
@@ -556,11 +556,11 @@ namespace astral {
   class DotParselet : InfixParselet {
     override Node parse(ParserContext context, Node left) {
       context.next()
-      var name = context.current().range.toString()
+      var range = context.current().range
       if (!context.expect(.IDENTIFIER)) {
         return null
       }
-      return Node.createDot(left, name).withRange(context.spanSince(left.range))
+      return Node.createDot(left, range.toString()).withRange(context.spanSince(left.range)).withInternalRange(range)
     }
   }
 

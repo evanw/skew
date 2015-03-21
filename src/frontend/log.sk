@@ -94,6 +94,11 @@ namespace astral {
   }
 
   in Log {
+    private static string expectedCountText(string singular, int expected, int found, string because) {
+      return "Expected " + expected + " " + singular + prettyPrint.plural(expected) +
+        because + " but found " + found + " " + singular + prettyPrint.plural(found)
+    }
+
     void semanticErrorDuplicateSymbol(Range range, string name, Range previous) {
       error(range, "\"" + name + "\" is already declared")
       if (previous != null) {
@@ -125,6 +130,34 @@ namespace astral {
 
     void semanticErrorUnknownMemberSymbol(Range range, string name, Type type) {
       error(range, "\"" + name + "\" is not declared on type \"" + type + "\"")
+    }
+
+    void semanticErrorVarMissingValue(Range range) {
+      error(range, "Implicitly typed variables must be initialized")
+    }
+
+    void semanticErrorInvalidCall(Range range, Type type) {
+      error(range, "Cannot call type \"" + type + "\"")
+    }
+
+    void semanticErrorArgumentCount(Range range, int expected, int found) {
+      error(range, expectedCountText("argument", expected, found, ""))
+    }
+
+    void semanticErrorUseOfVoid(Range range, string name) {
+      error(range, "The function \"" + name + "\" does not return a value")
+    }
+
+    void semanticErrorMemberUnexpectedGlobal(Range range, string name) {
+      error(range, "Cannot access global member \"" + name + "\" from an instance context")
+    }
+
+    void semanticErrorMemberUnexpectedInstance(Range range, string name) {
+      error(range, "Cannot access instance member \"" + name + "\" from a global context")
+    }
+
+    void semanticErrorConstructorReturnType(Range range) {
+      error(range, "Constructors must have no return type")
     }
   }
 }

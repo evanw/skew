@@ -1,16 +1,16 @@
 namespace astral {
   enum TypeKind {
-    SYMBOL
     DYNAMIC
     FUNCTION
     NULL
+    SYMBOL
   }
 
   class Type {
     TypeKind kind
 
-    static var NULL = Type(.NULL)
     static var DYNAMIC = Type(.DYNAMIC)
+    static var NULL = Type(.NULL)
 
     SymbolType asSymbolType() {
       assert kind == .SYMBOL
@@ -32,9 +32,9 @@ namespace astral {
   }
 
   class SymbolType : Type {
-    TypeSymbol symbol
+    Symbol symbol
 
-    new(TypeSymbol symbol) : super(.SYMBOL), symbol = symbol {
+    new(Symbol symbol) : super(.SYMBOL), symbol = symbol {
     }
   }
 
@@ -60,7 +60,9 @@ namespace astral {
       var symbol = global.members.getOrDefault(name, null)
       assert symbol != null
       assert symbol.kind == .TYPE_CLASS
-      return SymbolType(symbol.asType())
+      var type = SymbolType(symbol.asType())
+      symbol.resolvedType = type
+      return type
     }
   }
 }
