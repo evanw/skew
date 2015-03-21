@@ -51,6 +51,11 @@ namespace astral {
     return Node.createVar(symbol).withRange(context.spanSince(token.range))
   }
 
+  Node parseJump(ParserContext context) {
+    var token = context.next()
+    return (token.kind == .BREAK ? Node.createBreak() : Node.createContinue()).withRange(token.range)
+  }
+
   Node parseReturn(ParserContext context) {
     var token = context.next()
     Node value = null
@@ -75,9 +80,17 @@ namespace astral {
     }
     Node falseBlock = null
     if (context.eat(.ELSE)) {
-      falseBlock = parseBlock(context)
-      if (falseBlock == null) {
-        return null
+      if (context.peek(.IF)) {
+        var statement = parseIf(context)
+        if (statement == null) {
+          return null
+        }
+        falseBlock = Node.createBlock([statement]).withRange(statement.range)
+      } else {
+        falseBlock = parseBlock(context)
+        if (falseBlock == null) {
+          return null
+        }
       }
     }
     return Node.createIf(test, trueBlock, falseBlock).withRange(context.spanSince(token.range))
@@ -100,9 +113,10 @@ namespace astral {
     var token = context.current()
 
     switch (token.kind) {
-      case .VAR { return parseLocalVar(context) }
-      case .RETURN { return parseReturn(context) }
+      case .BREAK, .CONTINUE { return parseJump(context) }
       case .IF { return parseIf(context) }
+      case .RETURN { return parseReturn(context) }
+      case .VAR { return parseLocalVar(context) }
       case .WHILE { return parseWhile(context) }
     }
 
@@ -676,7 +690,6 @@ namespace astral {
     ////////////////////////////////////////////////////////////////////////////////
 
     pratt.literal(.DOUBLE, DoubleLiteral())
-    pratt.literal(.DYNAMIC, TokenLiteral(.DYNAMIC))
     pratt.literal(.FALSE, BoolLiteral(false))
     pratt.literal(.INT, IntLiteral())
     pratt.literal(.NULL, TokenLiteral(.NULL))

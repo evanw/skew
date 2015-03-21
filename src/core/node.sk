@@ -124,7 +124,7 @@ namespace astral {
     }
 
     static Node createBreak() {
-      return Node(.BLOCK)
+      return Node(.BREAK)
     }
 
     static Node createContinue() {

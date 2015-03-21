@@ -110,8 +110,9 @@ namespace astral {
           }
 
           case .IF {
-            emit(indent + "if ")
+            emit(indent + "if (")
             emitExpression(node.ifTest(), .LOWEST)
+            emit(")")
             emitBlock(node.ifTrue())
             var block = node.ifFalse()
             if (block != null) {
