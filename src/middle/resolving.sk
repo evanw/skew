@@ -161,6 +161,7 @@ namespace astral.resolving {
 
     else {
       context.log.semanticErrorVarMissingValue(symbol.range)
+      symbol.resolvedType = .DYNAMIC
     }
   }
 
@@ -219,8 +220,8 @@ namespace astral.resolving {
       case .DOT { resolveDot(context, node) }
       case .DYNAMIC {}
       case .HOOK { resolveHook(context, node) }
-      case .LAMBDA {}
-      case .LAMBDA_TYPE {}
+      case .LAMBDA { resolveFunction(context, node.symbol.asFunction()) }
+      case .LAMBDA_TYPE { resolveLambdaType(context, node) }
       case .NAME { resolveName(context, node) }
       case .NULL { node.resolvedType = .NULL }
       case .PARAMETERIZE { resolveParameterize(context, node) }
@@ -271,7 +272,7 @@ namespace astral.resolving {
     resolveNode(context, value)
     var type = value.resolvedType
 
-    if (type.kind == .SYMBOL) {
+    if (type.kind() == .SYMBOL) {
       var symbol = type.asSymbolType().symbol
 
       if (symbol.kind.isFunction()) {
@@ -328,12 +329,12 @@ namespace astral.resolving {
     var name = node.asString()
     resolveNode(context, target)
 
-    if (target.resolvedType.kind == .DYNAMIC) {
+    if (target.resolvedType == .DYNAMIC) {
       return
     }
 
     Symbol member = null
-    if (target.resolvedType.kind == .SYMBOL) {
+    if (target.resolvedType.kind() == .SYMBOL) {
       var symbol = target.resolvedType.asSymbolType().symbol
       if (symbol.kind.isType()) {
         member = symbol.asType().members.getOrDefault(name, null)
@@ -363,6 +364,24 @@ namespace astral.resolving {
     resolveNode(context, node.hookTest())
     resolveNode(context, node.hookTrue())
     resolveNode(context, node.hookFalse())
+  }
+
+  void resolveLambdaType(ResolveContext context, Node node) {
+    var children = node.children
+    List<Type> types = []
+
+    for (var i = 0; i < children.size(); i++) {
+      var child = children[i]
+      if (child != null) {
+        resolveNode(context, child)
+        types.push(child.resolvedType)
+      } else {
+        types.push(null)
+      }
+    }
+
+    var returnType = types.pop()
+    node.resolvedType = LambdaType(types, returnType)
   }
 
   void resolveName(ResolveContext context, Node node) {

@@ -1,46 +1,71 @@
 namespace astral {
   enum TypeKind {
     DYNAMIC
-    FUNCTION
+    LAMBDA
     NULL
     SYMBOL
   }
 
   class Type {
-    TypeKind kind
+    static var DYNAMIC = SpecialType(.DYNAMIC)
+    static var NULL = SpecialType(.NULL)
 
-    static var DYNAMIC = Type(.DYNAMIC)
-    static var NULL = Type(.NULL)
+    virtual TypeKind kind()
+    virtual string toString()
 
     SymbolType asSymbolType() {
-      assert kind == .SYMBOL
+      assert kind() == .SYMBOL
       return (SymbolType)this
     }
 
-    FunctionType asFunctionType() {
-      assert kind == .FUNCTION
-      return (FunctionType)this
+    LambdaType asLambdaType() {
+      assert kind() == .LAMBDA
+      return (LambdaType)this
+    }
+  }
+
+  class SpecialType : Type {
+    TypeKind specialKind
+
+    override TypeKind kind() {
+      return specialKind
     }
 
-    string toString() {
-      switch (kind) {
-        case .DYNAMIC { return "dynamic" }
-        case .SYMBOL { return asSymbolType().symbol.fullName() }
-        default { return "null" }
-      }
+    override string toString() {
+      return specialKind == .DYNAMIC ? "dynamic" : "null"
     }
   }
 
   class SymbolType : Type {
     Symbol symbol
 
-    new(Symbol symbol) : super(.SYMBOL), symbol = symbol {
+    override TypeKind kind() {
+      return .SYMBOL
+    }
+
+    override string toString() {
+      return symbol.fullName()
     }
   }
 
-  class FunctionType : Type {
+  class LambdaType : Type {
     List<Type> argumentTypes
     Type returnType
+
+    override TypeKind kind() {
+      return .LAMBDA
+    }
+
+    override string toString() {
+      var result = "fn("
+      for (var i = 0; i < argumentTypes.size(); i++) {
+        if (i != 0) {
+          result += ", "
+        }
+        result += argumentTypes[i]
+      }
+      return result + (returnType != null ? ") " + returnType : ")")
+    }
   }
 
   class TypeCache {
