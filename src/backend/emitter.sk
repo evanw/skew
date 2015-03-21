@@ -4,6 +4,8 @@ namespace astral {
       return _sources
     }
 
+    virtual void visit(TypeSymbol global)
+
     protected {
       var indent = ""
 

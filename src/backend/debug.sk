@@ -1,9 +1,8 @@
 namespace astral {
   class DebugEmitter : Emitter {
-    string dump(TypeSymbol global) {
+    override void visit(TypeSymbol global) {
       emitType(global)
       createSource("out.sk")
-      return sources()[0].contents
     }
 
     private {

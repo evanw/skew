@@ -80,6 +80,10 @@ namespace astral {
       error(range, "Syntax error \"" + text + "\"")
     }
 
+    void syntaxErrorUnexpectedDeclaration(Range range) {
+      error(range, "Cannot use \"" + range.toString() + "\" here")
+    }
+
     void syntaxErrorUnexpectedToken(Token token) {
       error(token.range, "Unexpected " + token.kind)
     }

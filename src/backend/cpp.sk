@@ -1,0 +1,11 @@
+namespace astral {
+  class CppEmitter : Emitter {
+    override void visit(TypeSymbol global) {
+      var types = sortedTypes(global)
+      for (var i = 0; i < types.size(); i++) {
+        // TODO
+      }
+      createSource("out.cpp")
+    }
+  }
+}

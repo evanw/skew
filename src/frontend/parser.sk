@@ -316,6 +316,11 @@ namespace astral {
 
         symbol.comments = comments
         parent.variables.push(symbol)
+
+        // Forbid these at the parser level to avoid neading to deal with them later
+        if (kind == .VARIABLE_INSTANCE && parent.kind != .TYPE_CLASS) {
+          context.log.syntaxErrorUnexpectedDeclaration(token.range)
+        }
       }
 
       case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
@@ -335,6 +340,12 @@ namespace astral {
 
         symbol.comments = comments
         parent.functions.push(symbol)
+
+        // Forbid these at the parser level to avoid neading to deal with them later
+        if (kind == .FUNCTION_INSTANCE && parent.kind != .TYPE_CLASS && parent.kind != .TYPE_INTERFACE ||
+            kind == .FUNCTION_CONSTRUCTOR && parent.kind != .TYPE_CLASS) {
+          context.log.syntaxErrorUnexpectedDeclaration(token.range)
+        }
       }
 
       case .TYPE_CLASS, .TYPE_INTERFACE, .TYPE_NAMESPACE {

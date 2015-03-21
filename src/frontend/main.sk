@@ -4,14 +4,30 @@ namespace astral {
   var input = `document`.getElementById("input")
   var output1 = `document`.getElementById("output1")
   var output2 = `document`.getElementById("output2")
+  var output3 = `document`.getElementById("output3")
+
+  string runEmitter(Emitter emitter, TypeSymbol global) {
+    emitter.visit(global)
+    var sources = emitter.sources()
+    var text = ""
+    for (var i = 0; i < sources.size(); i++) {
+      var source = sources[i]
+      if (i != 0) {
+        text += "\n"
+      }
+      text += "[" + source.name + "]\n" + source.contents
+    }
+    return text
+  }
 
   void update() {
     var global = TypeSymbol(.TYPE_GLOBAL, "<global>")
     var log = Log()
     appendFile(log, global, Source("<stdin>", input.value))
     compile(log, global)
-    output1.value = log.hasErrors() ? log.toString() : DebugEmitter().dump(global)
-    output2.value = log.hasErrors() ? "" : JsEmitter().dump(global)
+    output1.value = log.hasErrors() ? log.toString() : runEmitter(DebugEmitter(), global)
+    output2.value = log.hasErrors() ? "" : runEmitter(JsEmitter(), global)
+    output3.value = log.hasErrors() ? "" : runEmitter(CppEmitter(), global)
   }
 
   @EntryPoint

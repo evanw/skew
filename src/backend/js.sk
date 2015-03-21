@@ -1,12 +1,11 @@
 namespace astral {
   class JsEmitter : Emitter {
-    string dump(TypeSymbol global) {
+    override void visit(TypeSymbol global) {
       var types = sortedTypes(global)
       for (var i = 0; i < types.size(); i++) {
         emitType(types[i])
       }
       createSource("out.js")
-      return sources()[0].contents
     }
 
     private {
