@@ -1,5 +1,5 @@
 namespace astral {
-  enum DeclKind {
+  enum SymbolKind {
     NONE
 
     TYPE_CLASS
@@ -20,7 +20,7 @@ namespace astral {
     VAR_LOCAL
   }
 
-  in DeclKind {
+  in SymbolKind {
     bool isType() {
       return this >= TYPE_CLASS && this <= TYPE_NAMESPACE
     }
@@ -41,45 +41,45 @@ namespace astral {
       return this >= FUNC_OVERLOADED_CONSTRUCTOR && this <= FUNC_OVERLOADED_INSTANCE
     }
 
-    DeclKind toOverloaded() {
+    SymbolKind toOverloaded() {
       assert isOverloadable()
-      return (DeclKind)(FUNC_OVERLOADED_CONSTRUCTOR - FUNC_CONSTRUCTOR + this)
+      return (SymbolKind)(FUNC_OVERLOADED_CONSTRUCTOR - FUNC_CONSTRUCTOR + this)
     }
 
-    DeclKind fromOverloaded() {
+    SymbolKind fromOverloaded() {
       assert isOverloaded()
-      return (DeclKind)(FUNC_CONSTRUCTOR - FUNC_OVERLOADED_CONSTRUCTOR + this)
+      return (SymbolKind)(FUNC_CONSTRUCTOR - FUNC_OVERLOADED_CONSTRUCTOR + this)
     }
   }
 
-  enum DeclState {
+  enum SymbolState {
     UNINITIALIZED
     INITIALIZING
     INITIALIZED
   }
 
-  class Decl {
+  class Symbol {
     int id = createID()
-    DeclKind kind
+    SymbolKind kind
     string name
     Range range = null // The location of the name in the source code
-    Decl parent = null // Automatically set by the merging step
+    Symbol parent = null // Automatically set by the merging step
     Type resolvedType = null // Automatically set by the resolving step
-    DeclState state = .UNINITIALIZED
+    SymbolState state = .UNINITIALIZED
 
-    TypeDecl asType() {
+    TypeSymbol asType() {
       assert kind.isType()
-      return (TypeDecl)this
+      return (TypeSymbol)this
     }
 
-    FuncDecl asFunc() {
+    FuncSymbol asFunc() {
       assert kind.isFunc()
-      return (FuncDecl)this
+      return (FuncSymbol)this
     }
 
-    VarDecl asVar() {
+    VarSymbol asVar() {
       assert kind.isVar()
-      return (VarDecl)this
+      return (VarSymbol)this
     }
 
     string fullName() {
@@ -99,27 +99,27 @@ namespace astral {
     }
   }
 
-  class TypeDecl : Decl {
+  class TypeSymbol : Symbol {
     Node base = null
-    StringMap<Decl> members = {}
-    List<TypeDecl> types = []
-    List<FuncDecl> funcs = []
-    List<VarDecl> vars = []
+    StringMap<Symbol> members = {}
+    List<TypeSymbol> types = []
+    List<FuncSymbol> funcs = []
+    List<VarSymbol> vars = []
   }
 
-  class FuncDecl : Decl {
-    OverloadedFuncDecl overloaded = null
-    List<VarDecl> args = []
+  class FuncSymbol : Symbol {
+    OverloadedFuncSymbol overloaded = null
+    List<VarSymbol> args = []
     Node returnType = null
     Node block = null
   }
 
-  class VarDecl : Decl {
+  class VarSymbol : Symbol {
     Node type = null
     Node value = null
   }
 
-  class OverloadedFuncDecl : Decl {
-    List<FuncDecl> decls
+  class OverloadedFuncSymbol : Symbol {
+    List<FuncSymbol> symbols
   }
 }

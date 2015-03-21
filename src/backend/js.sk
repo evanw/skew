@@ -1,6 +1,6 @@
 namespace astral {
   class JsEmitter : Emitter {
-    string dump(TypeDecl global) {
+    string dump(TypeSymbol global) {
       emitType(global)
       createSource("out.js")
       return sources()[0].contents
@@ -9,61 +9,61 @@ namespace astral {
     private {
       var prefix = ""
 
-      void emitType(TypeDecl decl) {
+      void emitType(TypeSymbol symbol) {
         var old = prefix
 
-        if (decl.kind == .TYPE_NAMESPACE) {
-          emit(indent + (prefix == "" ? "var " : prefix) + decl.name + " = {};\n")
+        if (symbol.kind == .TYPE_NAMESPACE) {
+          emit(indent + (prefix == "" ? "var " : prefix) + symbol.name + " = {};\n")
         }
 
-        if (decl.kind != .TYPE_GLOBAL) {
-          prefix += decl.name + "."
+        if (symbol.kind != .TYPE_GLOBAL) {
+          prefix += symbol.name + "."
         }
 
-        for (var i = 0; i < decl.types.size(); i++) {
-          emitType(decl.types[i])
+        for (var i = 0; i < symbol.types.size(); i++) {
+          emitType(symbol.types[i])
         }
 
-        for (var i = 0; i < decl.funcs.size(); i++) {
-          emitFunc(decl.funcs[i])
+        for (var i = 0; i < symbol.funcs.size(); i++) {
+          emitFunc(symbol.funcs[i])
         }
 
-        for (var i = 0; i < decl.vars.size(); i++) {
-          emitVar(decl.vars[i])
+        for (var i = 0; i < symbol.vars.size(); i++) {
+          emitVar(symbol.vars[i])
         }
 
         prefix = old
       }
 
-      void emitArgumentList(List<VarDecl> args) {
+      void emitArgumentList(List<VarSymbol> args) {
         for (var i = 0; i < args.size(); i++) {
           if (i > 0) emit(", ")
           emit(args[i].name)
         }
       }
 
-      void emitFunc(FuncDecl decl) {
-        if (decl.block == null) {
+      void emitFunc(FuncSymbol symbol) {
+        if (symbol.block == null) {
           return
         }
         var isExpression = prefix != ""
         if (isExpression) {
-          emit(prefix + (decl.kind == .FUNC_INSTANCE ? "prototype." : "") + decl.name + " = function(")
+          emit(prefix + (symbol.kind == .FUNC_INSTANCE ? "prototype." : "") + symbol.name + " = function(")
         } else {
-          emit("function " + decl.name + "(")
+          emit("function " + symbol.name + "(")
         }
-        emitArgumentList(decl.args)
+        emitArgumentList(symbol.args)
         emit(")")
-        emitBlock(decl.block)
+        emitBlock(symbol.block)
         emit(isExpression ? ";\n" : "\n")
       }
 
-      void emitVar(VarDecl decl) {
-        if (decl.kind != .VAR_INSTANCE) {
-          emit(indent + (prefix == "" ? "var " : prefix) + decl.name)
-          if (decl.value != null) {
+      void emitVar(VarSymbol symbol) {
+        if (symbol.kind != .VAR_INSTANCE) {
+          emit(indent + (prefix == "" ? "var " : prefix) + symbol.name)
+          if (symbol.value != null) {
             emit(" = ")
-            emitExpression(decl.value, .LOWEST)
+            emitExpression(symbol.value, .LOWEST)
           }
           emit(";\n")
         }
@@ -82,7 +82,7 @@ namespace astral {
       void emitStatement(Node node) {
         switch (node.kind) {
           case .VAR {
-            emitVar((VarDecl)node.decl)
+            emitVar((VarSymbol)node.symbol)
           }
 
           case .EXPRESSION {
@@ -187,11 +187,11 @@ namespace astral {
           }
 
           case .LAMBDA {
-            var decl = (FuncDecl)node.decl
+            var symbol = (FuncSymbol)node.symbol
             emit("function(")
-            emitArgumentList(decl.args)
+            emitArgumentList(symbol.args)
             emit(")")
-            emitBlock(decl.block)
+            emitBlock(symbol.block)
           }
 
           default {

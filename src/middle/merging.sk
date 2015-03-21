@@ -1,16 +1,16 @@
 namespace astral {
-  void mergingPass(Log log, TypeDecl global) {
+  void mergingPass(Log log, TypeSymbol global) {
     mergeType(log, null, global, global)
   }
 
-  void mergeType(Log log, TypeDecl parent, TypeDecl target, TypeDecl decl) {
-    decl.parent = parent
-    mergeTypes(log, target, decl.types)
-    mergeFuncs(log, target, decl.funcs)
-    mergeVars(log, target, decl.vars)
+  void mergeType(Log log, TypeSymbol parent, TypeSymbol target, TypeSymbol symbol) {
+    symbol.parent = parent
+    mergeTypes(log, target, symbol.types)
+    mergeFuncs(log, target, symbol.funcs)
+    mergeVars(log, target, symbol.vars)
   }
 
-  void mergeTypes(Log log, TypeDecl parent, List<TypeDecl> children) {
+  void mergeTypes(Log log, TypeSymbol parent, List<TypeSymbol> children) {
     var members = parent.members
     var n = children.size()
     var count = 0
@@ -35,7 +35,7 @@ namespace astral {
       }
 
       // Classes can only have one base type
-      var type = (TypeDecl)other
+      var type = (TypeSymbol)other
       if (child.base != null && type.base != null) {
         log.semanticErrorDuplicateBaseType(child.base.range, child.name, type.base.range)
         continue
@@ -58,7 +58,7 @@ namespace astral {
     }
   }
 
-  void mergeFuncs(Log log, TypeDecl parent, List<FuncDecl> children) {
+  void mergeFuncs(Log log, TypeSymbol parent, List<FuncSymbol> children) {
     var members = parent.members
 
     for (var i = 0, n = children.size(); i < n; i++) {
@@ -73,17 +73,17 @@ namespace astral {
 
       // Merge with another symbol of the same type
       if (child.kind == other.kind) {
-        var overloaded = OverloadedFuncDecl(child.kind.toOverloaded(), child.name, [(FuncDecl)other, child])
+        var overloaded = OverloadedFuncSymbol(child.kind.toOverloaded(), child.name, [(FuncSymbol)other, child])
         members[child.name] = overloaded
-        ((FuncDecl)other).overloaded = overloaded
+        ((FuncSymbol)other).overloaded = overloaded
         child.overloaded = overloaded
         continue
       }
 
       // Merge with a group of overloaded functions
       if (other.kind.isOverloaded() && child.kind == other.kind.fromOverloaded()) {
-        ((OverloadedFuncDecl)other).decls.push(child)
-        child.overloaded = (OverloadedFuncDecl)other
+        ((OverloadedFuncSymbol)other).symbols.push(child)
+        child.overloaded = (OverloadedFuncSymbol)other
         continue
       }
 
@@ -91,7 +91,7 @@ namespace astral {
     }
   }
 
-  void mergeVars(Log log, TypeDecl parent, List<VarDecl> children) {
+  void mergeVars(Log log, TypeSymbol parent, List<VarSymbol> children) {
     var members = parent.members
 
     for (var i = 0, n = children.size(); i < n; i++) {

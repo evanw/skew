@@ -2,14 +2,14 @@ namespace astral {
   class ResolveContext {
     TypeCache cache
     Log log
-    Decl decl
+    Symbol symbol
 
-    ResolveContext withDecl(Decl other) {
+    ResolveContext withSymbol(Symbol other) {
       return ResolveContext(cache, log, other)
     }
   }
 
-  void resolvingPass(Log log, TypeDecl global) {
+  void resolvingPass(Log log, TypeSymbol global) {
     var cache = TypeCache()
     cache.loadGlobals(log, global)
     if (!log.hasErrors()) {
@@ -17,57 +17,57 @@ namespace astral {
     }
   }
 
-  void initializeDecl(ResolveContext context, Decl decl) {
+  void initializeSymbol(ResolveContext context, Symbol symbol) {
     // Only initialize the symbol once
-    if (decl.state == .UNINITIALIZED) {
-      decl.state = .INITIALIZING
-      decl.resolvedType = .DYNAMIC
-      switch (decl.kind) {
-        case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE { initializeType(context, (TypeDecl)decl) }
-        case .FUNC_CONSTRUCTOR, .FUNC_GLOBAL, .FUNC_INSTANCE, .FUNC_LOCAL { initializeFunc(context, (FuncDecl)decl) }
-        case .VAR_GLOBAL, .VAR_INSTANCE, .VAR_LOCAL { initializeVar(context, (VarDecl)decl) }
+    if (symbol.state == .UNINITIALIZED) {
+      symbol.state = .INITIALIZING
+      symbol.resolvedType = .DYNAMIC
+      switch (symbol.kind) {
+        case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE { initializeType(context, (TypeSymbol)symbol) }
+        case .FUNC_CONSTRUCTOR, .FUNC_GLOBAL, .FUNC_INSTANCE, .FUNC_LOCAL { initializeFunc(context, (FuncSymbol)symbol) }
+        case .VAR_GLOBAL, .VAR_INSTANCE, .VAR_LOCAL { initializeVar(context, (VarSymbol)symbol) }
         default { assert false }
       }
-      decl.state = .INITIALIZED
+      symbol.state = .INITIALIZED
     }
 
     // Detect cyclic symbol references such as "foo foo;"
-    else if (decl.state == .INITIALIZING) {
-      context.log.semanticErrorCyclicDeclaration(decl.range, decl.name)
-      decl.resolvedType = .DYNAMIC
+    else if (symbol.state == .INITIALIZING) {
+      context.log.semanticErrorCyclicDeclaration(symbol.range, symbol.name)
+      symbol.resolvedType = .DYNAMIC
     }
   }
 
-  void initializeType(ResolveContext context, TypeDecl decl) {
-    if (decl.base != null) resolveNode(context, decl.base)
+  void initializeType(ResolveContext context, TypeSymbol symbol) {
+    if (symbol.base != null) resolveNode(context, symbol.base)
   }
 
-  void resolveType(ResolveContext context, TypeDecl decl) {
-    initializeDecl(context, decl)
-    var nested = context.withDecl(decl)
-    for (var i = 0; i < decl.types.size(); i++) resolveType(nested, decl.types[i])
-    for (var i = 0; i < decl.funcs.size(); i++) resolveFunc(nested, decl.funcs[i])
-    for (var i = 0; i < decl.vars.size(); i++) resolveVar(nested, decl.vars[i])
+  void resolveType(ResolveContext context, TypeSymbol symbol) {
+    initializeSymbol(context, symbol)
+    var nested = context.withSymbol(symbol)
+    for (var i = 0; i < symbol.types.size(); i++) resolveType(nested, symbol.types[i])
+    for (var i = 0; i < symbol.funcs.size(); i++) resolveFunc(nested, symbol.funcs[i])
+    for (var i = 0; i < symbol.vars.size(); i++) resolveVar(nested, symbol.vars[i])
   }
 
-  void initializeFunc(ResolveContext context, FuncDecl decl) {
-    for (var i = 0; i < decl.args.size(); i++) resolveVar(context, decl.args[i])
-    if (decl.returnType != null) resolveNode(context, decl.returnType)
-    if (decl.block != null) resolveNode(context, decl.block)
+  void initializeFunc(ResolveContext context, FuncSymbol symbol) {
+    for (var i = 0; i < symbol.args.size(); i++) resolveVar(context, symbol.args[i])
+    if (symbol.returnType != null) resolveNode(context, symbol.returnType)
+    if (symbol.block != null) resolveNode(context, symbol.block)
   }
 
-  void resolveFunc(ResolveContext context, FuncDecl decl) {
-    initializeDecl(context, decl)
-    if (decl.block != null) resolveNode(context, decl.block)
+  void resolveFunc(ResolveContext context, FuncSymbol symbol) {
+    initializeSymbol(context, symbol)
+    if (symbol.block != null) resolveNode(context, symbol.block)
   }
 
-  void initializeVar(ResolveContext context, VarDecl decl) {
-    if (decl.type != null) resolveNode(context, decl.type)
+  void initializeVar(ResolveContext context, VarSymbol symbol) {
+    if (symbol.type != null) resolveNode(context, symbol.type)
   }
 
-  void resolveVar(ResolveContext context, VarDecl decl) {
-    initializeDecl(context, decl)
-    if (decl.value != null) resolveNode(context, decl.value)
+  void resolveVar(ResolveContext context, VarSymbol symbol) {
+    initializeSymbol(context, symbol)
+    if (symbol.value != null) resolveNode(context, symbol.value)
   }
 
   void resolveNode(ResolveContext context, Node node) {
@@ -157,9 +157,9 @@ namespace astral {
     var name = node.asString()
     resolveNode(context, target)
 
-    Decl member = null
+    Symbol member = null
     if (target.resolvedType.kind == .DECL) {
-      member = target.resolvedType.asDeclType().decl.members.getOrDefault(name, null)
+      member = target.resolvedType.asSymbolType().symbol.members.getOrDefault(name, null)
     }
 
     if (member == null) {
@@ -179,25 +179,25 @@ namespace astral {
   void resolveName(ResolveContext context, Node node) {
     var name = node.asString()
 
-    for (var decl = context.decl; decl != null; decl = decl.parent) {
-      if (decl.kind.isType()) {
-        node.decl = decl.asType().members.getOrDefault(name, null)
-        if (node.decl != null) {
+    for (var symbol = context.symbol; symbol != null; symbol = symbol.parent) {
+      if (symbol.kind.isType()) {
+        node.symbol = symbol.asType().members.getOrDefault(name, null)
+        if (node.symbol != null) {
           break
         }
       }
     }
 
-    if (node.decl == null) {
+    if (node.symbol == null) {
       context.log.semanticErrorUndeclaredSymbol(node.range, name)
       return
     }
 
-    if (node.decl.state != .INITIALIZED) {
-      initializeDecl(context.withDecl(node.decl.parent), node.decl)
+    if (node.symbol.state != .INITIALIZED) {
+      initializeSymbol(context.withSymbol(node.symbol.parent), node.symbol)
     }
 
-    node.resolvedType = node.decl.resolvedType
+    node.resolvedType = node.symbol.resolvedType
   }
 
   void resolveUnary(ResolveContext context, Node node) {

@@ -2,32 +2,32 @@ namespace astral {
   using terminal
 
   interface ValidatorReport {
-    virtual void reportNestingError(DeclKind parent, Decl child)
-    virtual void reportKindError(string expected, Decl decl)
+    virtual void reportNestingError(SymbolKind parent, Symbol child)
+    virtual void reportKindError(string expected, Symbol symbol)
   }
 
   class PrintingReport : ValidatorReport {
-    override void reportNestingError(DeclKind parent, Decl child) {
+    override void reportNestingError(SymbolKind parent, Symbol child) {
       print("Cannot nest " + child.kind + " inside " + parent)
     }
 
-    override void reportKindError(string expected, Decl decl) {
-      print("Invalid " + expected + " with kind " + decl.kind)
+    override void reportKindError(string expected, Symbol symbol) {
+      print("Invalid " + expected + " with kind " + symbol.kind)
     }
   }
 
   class Validator {
     ValidatorReport report
 
-    bool validate(TypeDecl decl) {
-      return validateType(decl, .NONE)
+    bool validate(TypeSymbol symbol) {
+      return validateType(symbol, .NONE)
     }
 
     private {
-      bool validateType(TypeDecl decl, DeclKind parent) {
+      bool validateType(TypeSymbol symbol, SymbolKind parent) {
         var isValidNesting = false
 
-        switch (decl.kind) {
+        switch (symbol.kind) {
           case .TYPE_CLASS, .TYPE_INTERFACE {
             isValidNesting =
               parent == .TYPE_CLASS ||
@@ -51,7 +51,7 @@ namespace astral {
 
           default {
             if (report != null) {
-              report.reportKindError("type", decl)
+              report.reportKindError("type", symbol)
             }
             return false
           }
@@ -59,25 +59,25 @@ namespace astral {
 
         if (!isValidNesting) {
           if (report != null) {
-            report.reportNestingError(parent, decl)
+            report.reportNestingError(parent, symbol)
           }
           return false
         }
 
-        for (var i = 0; i < decl.types.size(); i++) {
-          if (!validateType(decl.types[i], decl.kind)) {
+        for (var i = 0; i < symbol.types.size(); i++) {
+          if (!validateType(symbol.types[i], symbol.kind)) {
             return false
           }
         }
 
-        for (var i = 0; i < decl.funcs.size(); i++) {
-          if (!validateFunc(decl.funcs[i], decl.kind)) {
+        for (var i = 0; i < symbol.funcs.size(); i++) {
+          if (!validateFunc(symbol.funcs[i], symbol.kind)) {
             return false
           }
         }
 
-        for (var i = 0; i < decl.vars.size(); i++) {
-          if (!validateVar(decl.vars[i], decl.kind)) {
+        for (var i = 0; i < symbol.vars.size(); i++) {
+          if (!validateVar(symbol.vars[i], symbol.kind)) {
             return false
           }
         }
@@ -85,10 +85,10 @@ namespace astral {
         return true
       }
 
-      bool validateFunc(FuncDecl decl, DeclKind parent) {
+      bool validateFunc(FuncSymbol symbol, SymbolKind parent) {
         var isValidNesting = false
 
-        switch (decl.kind) {
+        switch (symbol.kind) {
           case .FUNC_CONSTRUCTOR {
             isValidNesting =
               parent == .TYPE_CLASS
@@ -115,7 +115,7 @@ namespace astral {
 
           default {
             if (report != null) {
-              report.reportKindError("function", decl)
+              report.reportKindError("function", symbol)
             }
             return false
           }
@@ -123,16 +123,16 @@ namespace astral {
 
         if (!isValidNesting) {
           if (report != null) {
-            report.reportNestingError(parent, decl)
+            report.reportNestingError(parent, symbol)
           }
           return false
         }
 
-        for (var i = 0; i < decl.args.size(); i++) {
-          var arg = decl.args[i]
+        for (var i = 0; i < symbol.args.size(); i++) {
+          var arg = symbol.args[i]
           if (arg.kind != .VAR_LOCAL) {
             if (report != null) {
-              report.reportNestingError(decl.kind, arg)
+              report.reportNestingError(symbol.kind, arg)
             }
             return false
           }
@@ -141,10 +141,10 @@ namespace astral {
         return true
       }
 
-      bool validateVar(VarDecl decl, DeclKind parent) {
+      bool validateVar(VarSymbol symbol, SymbolKind parent) {
         var isValidNesting = false
 
-        switch (decl.kind) {
+        switch (symbol.kind) {
           case .VAR_GLOBAL {
             isValidNesting =
               parent == .NONE ||
@@ -167,7 +167,7 @@ namespace astral {
 
           default {
             if (report != null) {
-              report.reportKindError("function", decl)
+              report.reportKindError("function", symbol)
             }
             return false
           }
@@ -175,7 +175,7 @@ namespace astral {
 
         if (!isValidNesting) {
           if (report != null) {
-            report.reportNestingError(parent, decl)
+            report.reportNestingError(parent, symbol)
           }
           return false
         }

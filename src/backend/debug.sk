@@ -1,43 +1,43 @@
 namespace astral {
   class DebugEmitter : Emitter {
-    string dump(TypeDecl global) {
+    string dump(TypeSymbol global) {
       emitType(global)
       createSource("out.sk")
       return sources()[0].contents
     }
 
     private {
-      void emitType(TypeDecl decl) {
-        switch (decl.kind) {
+      void emitType(TypeSymbol symbol) {
+        switch (symbol.kind) {
           case .TYPE_CLASS {
-            emit(indent + "class " + decl.name + " {\n")
+            emit(indent + "class " + symbol.name + " {\n")
             increaseIndent()
           }
 
           case .TYPE_INTERFACE {
-            emit(indent + "interface " + decl.name + " {\n")
+            emit(indent + "interface " + symbol.name + " {\n")
             increaseIndent()
           }
 
           case .TYPE_NAMESPACE {
-            emit(indent + "namespace " + decl.name + " {\n")
+            emit(indent + "namespace " + symbol.name + " {\n")
             increaseIndent()
           }
         }
 
-        for (var i = 0; i < decl.types.size(); i++) {
-          emitType(decl.types[i])
+        for (var i = 0; i < symbol.types.size(); i++) {
+          emitType(symbol.types[i])
         }
 
-        for (var i = 0; i < decl.funcs.size(); i++) {
-          emitFunc(decl.funcs[i])
+        for (var i = 0; i < symbol.funcs.size(); i++) {
+          emitFunc(symbol.funcs[i])
         }
 
-        for (var i = 0; i < decl.vars.size(); i++) {
-          emitVar(decl.vars[i])
+        for (var i = 0; i < symbol.vars.size(); i++) {
+          emitVar(symbol.vars[i])
         }
 
-        switch (decl.kind) {
+        switch (symbol.kind) {
           case .TYPE_CLASS, .TYPE_INTERFACE, .TYPE_NAMESPACE {
             decreaseIndent()
             emit(indent + "}\n")
@@ -45,7 +45,7 @@ namespace astral {
         }
       }
 
-      void emitArgumentList(List<VarDecl> args) {
+      void emitArgumentList(List<VarSymbol> args) {
         for (var i = 0; i < args.size(); i++) {
           if (i > 0) emit(", ")
           var arg = args[i]
@@ -61,35 +61,35 @@ namespace astral {
         }
       }
 
-      void emitFunc(FuncDecl decl) {
+      void emitFunc(FuncSymbol symbol) {
         emit(indent)
-        switch (decl.kind) {
+        switch (symbol.kind) {
           case .FUNC_CONSTRUCTOR { emit("cdef ") }
           case .FUNC_GLOBAL { emit("def ") }
           case .FUNC_INSTANCE { emit("idef ") }
         }
-        emit(decl.name + "(")
-        emitArgumentList(decl.args)
+        emit(symbol.name + "(")
+        emitArgumentList(symbol.args)
         emit(")")
-        if (decl.returnType != null) {
+        if (symbol.returnType != null) {
           emit(" ")
-          emitExpression(decl.returnType, .LOWEST)
+          emitExpression(symbol.returnType, .LOWEST)
         }
-        if (decl.block != null) {
-          emitBlock(decl.block)
+        if (symbol.block != null) {
+          emitBlock(symbol.block)
         }
         emit("\n")
       }
 
-      void emitVar(VarDecl decl) {
-        emit(indent + (decl.kind == .VAR_INSTANCE ? "ivar " : "var ") + decl.name)
-        if (decl.type != null) {
+      void emitVar(VarSymbol symbol) {
+        emit(indent + (symbol.kind == .VAR_INSTANCE ? "ivar " : "var ") + symbol.name)
+        if (symbol.type != null) {
           emit(" ")
-          emitExpression(decl.type, .LOWEST)
+          emitExpression(symbol.type, .LOWEST)
         }
-        if (decl.value != null) {
+        if (symbol.value != null) {
           emit(" = ")
-          emitExpression(decl.value, .LOWEST)
+          emitExpression(symbol.value, .LOWEST)
         }
         emit("\n")
       }
@@ -107,7 +107,7 @@ namespace astral {
       void emitStatement(Node node) {
         switch (node.kind) {
           case .VAR {
-            emitVar((VarDecl)node.decl)
+            emitVar((VarSymbol)node.symbol)
           }
 
           case .EXPRESSION {
@@ -219,16 +219,16 @@ namespace astral {
           }
 
           case .LAMBDA {
-            var decl = (FuncDecl)node.decl
+            var symbol = (FuncSymbol)node.symbol
             emit("(")
-            emitArgumentList(decl.args)
+            emitArgumentList(symbol.args)
             emit(")")
-            if (decl.returnType != null) {
+            if (symbol.returnType != null) {
               emit(" ")
-              emitExpression(decl.returnType, .LOWEST)
+              emitExpression(symbol.returnType, .LOWEST)
             }
             emit(" =>")
-            emitBlock(decl.block)
+            emitBlock(symbol.block)
           }
 
           case .LAMBDA_TYPE {

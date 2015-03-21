@@ -32,23 +32,23 @@ namespace astral {
     if (!context.expect(.IDENTIFIER)) {
       return null
     }
-    var decl = VarDecl(.VAR_LOCAL, name)
+    var symbol = VarSymbol(.VAR_LOCAL, name)
 
     if (!context.peek(.ASSIGN) && !context.peek(.NEWLINE)) {
-      decl.type = pratt.parse(context, .ASSIGN)
-      if (decl.type == null) {
+      symbol.type = pratt.parse(context, .ASSIGN)
+      if (symbol.type == null) {
         return null
       }
     }
 
     if (context.eat(.ASSIGN)) {
-      decl.value = pratt.parse(context, .LOWEST)
-      if (decl.value == null) {
+      symbol.value = pratt.parse(context, .LOWEST)
+      if (symbol.value == null) {
         return null
       }
     }
 
-    return Node.createVar(decl).withRange(context.spanSince(token.range))
+    return Node.createVar(symbol).withRange(context.spanSince(token.range))
   }
 
   Node parseReturn(ParserContext context) {
@@ -149,15 +149,15 @@ namespace astral {
     return context.peek(.IDENTIFIER) || context.peek(.DYNAMIC)
   }
 
-  bool parseFunctionBlock(ParserContext context, FuncDecl decl) {
+  bool parseFunctionBlock(ParserContext context, FuncSymbol symbol) {
     // "=> x" is the same as "{ return x }"
-    if (decl.kind == .FUNC_LOCAL) {
+    if (symbol.kind == .FUNC_LOCAL) {
       if (!context.expect(.ARROW)) {
         return false
       }
       if (context.peek(.LEFT_BRACE)) {
-        decl.block = parseBlock(context)
-        if (decl.block == null) {
+        symbol.block = parseBlock(context)
+        if (symbol.block == null) {
           return false
         }
       } else {
@@ -165,14 +165,14 @@ namespace astral {
         if (value == null) {
           return false
         }
-        decl.block = Node.createBlock([Node.createReturn(value).withRange(value.range)]).withRange(value.range)
+        symbol.block = Node.createBlock([Node.createReturn(value).withRange(value.range)]).withRange(value.range)
       }
     }
 
     // Parse function body if present
     else if (context.peek(.LEFT_BRACE)) {
-      decl.block = parseBlock(context)
-      if (decl.block == null) {
+      symbol.block = parseBlock(context)
+      if (symbol.block == null) {
         return false
       }
     }
@@ -180,10 +180,10 @@ namespace astral {
     return true
   }
 
-  bool parseFunction(ParserContext context, FuncDecl decl) {
+  bool parseFunction(ParserContext context, FuncSymbol symbol) {
     var usingTypes = false
     while (!context.eat(.RIGHT_PARENTHESIS)) {
-      if (decl.args.size() != 0 && !context.expect(.COMMA)) {
+      if (symbol.args.size() != 0 && !context.expect(.COMMA)) {
         return false
       }
 
@@ -194,11 +194,11 @@ namespace astral {
         return false
       }
 
-      var arg = VarDecl(.VAR_LOCAL, name)
+      var arg = VarSymbol(.VAR_LOCAL, name)
       arg.range = range
 
       // Parse argument type
-      if (decl.kind != .FUNC_LOCAL || (decl.args.size() != 0 ? usingTypes : peekType(context))) {
+      if (symbol.kind != .FUNC_LOCAL || (symbol.args.size() != 0 ? usingTypes : peekType(context))) {
         arg.type = parseType(context)
         if (arg.type == null) {
           return false
@@ -214,18 +214,18 @@ namespace astral {
         }
       }
 
-      decl.args.push(arg)
+      symbol.args.push(arg)
     }
 
     // Parse return type
     if (peekType(context)) {
-      decl.returnType = parseType(context)
+      symbol.returnType = parseType(context)
     }
 
-    return parseFunctionBlock(context, decl)
+    return parseFunctionBlock(context, symbol)
   }
 
-  StringMap<DeclKind> declKinds = {
+  StringMap<SymbolKind> symbolKinds = {
     "cdef": .FUNC_CONSTRUCTOR,
     "class": .TYPE_CLASS,
     "def": .FUNC_GLOBAL,
@@ -235,9 +235,9 @@ namespace astral {
     "namespace": .TYPE_NAMESPACE,
   }
 
-  bool parseDecl(ParserContext context, TypeDecl parent) {
+  bool parseSymbol(ParserContext context, TypeSymbol parent) {
     var token = context.current()
-    var kind = token.kind == .VAR ? .VAR_GLOBAL : token.kind == .IDENTIFIER ? declKinds.getOrDefault(token.range.toString(), .NONE) : .NONE
+    var kind = token.kind == .VAR ? .VAR_GLOBAL : token.kind == .IDENTIFIER ? symbolKinds.getOrDefault(token.range.toString(), .NONE) : .NONE
     if (kind == .NONE) {
       context.unexpectedToken()
       return false
@@ -253,38 +253,38 @@ namespace astral {
 
     switch (kind) {
       case .VAR_GLOBAL, .VAR_INSTANCE {
-        var decl = VarDecl(kind, name)
-        decl.range = range
+        var symbol = VarSymbol(kind, name)
+        symbol.range = range
 
         if (peekType(context)) {
-          decl.type = parseType(context)
+          symbol.type = parseType(context)
         }
 
         if (context.eat(.ASSIGN)) {
-          decl.value = pratt.parse(context, .LOWEST)
+          symbol.value = pratt.parse(context, .LOWEST)
         }
 
-        parent.vars.push(decl)
+        parent.vars.push(symbol)
       }
 
       case .FUNC_CONSTRUCTOR, .FUNC_GLOBAL, .FUNC_INSTANCE {
-        var decl = FuncDecl(kind, name)
-        decl.range = range
+        var symbol = FuncSymbol(kind, name)
+        symbol.range = range
 
-        if (!context.expect(.LEFT_PARENTHESIS) || !parseFunction(context, decl)) {
+        if (!context.expect(.LEFT_PARENTHESIS) || !parseFunction(context, symbol)) {
           return false
         }
 
-        parent.funcs.push(decl)
+        parent.funcs.push(symbol)
       }
 
       case .TYPE_CLASS, .TYPE_INTERFACE, .TYPE_NAMESPACE {
-        var decl = TypeDecl(kind, name)
-        decl.range = range
+        var symbol = TypeSymbol(kind, name)
+        symbol.range = range
 
         if (context.eat(.COLON)) {
-          decl.base = parseType(context)
-          if (decl.base == null) {
+          symbol.base = parseType(context)
+          if (symbol.base == null) {
             return false
           }
         }
@@ -293,13 +293,13 @@ namespace astral {
           return false
         }
 
-        parseDecls(context, decl)
+        parseSymbols(context, symbol)
 
         if (!context.expect(.RIGHT_BRACE)) {
           return false
         }
 
-        parent.types.push(decl)
+        parent.types.push(symbol)
       }
     }
 
@@ -310,19 +310,19 @@ namespace astral {
     return true
   }
 
-  void parseDecls(ParserContext context, TypeDecl parent) {
+  void parseSymbols(ParserContext context, TypeSymbol parent) {
     context.eat(.NEWLINE)
 
     while (!context.peek(.END_OF_FILE) && !context.peek(.RIGHT_BRACE)) {
-      if (!parseDecl(context, parent)) {
+      if (!parseSymbol(context, parent)) {
         break
       }
     }
   }
 
-  void parseFile(Log log, List<Token> tokens, TypeDecl global) {
+  void parseFile(Log log, List<Token> tokens, TypeSymbol global) {
     var context = ParserContext(log, tokens)
-    parseDecls(context, global)
+    parseSymbols(context, global)
     context.expect(.END_OF_FILE)
   }
 
@@ -531,11 +531,11 @@ namespace astral {
   class LambdaParselet : PrefixParselet {
     override Node parse(ParserContext context) {
       var token = context.current()
-      var decl = FuncDecl(.FUNC_LOCAL, "")
-      if (!parseFunctionBlock(context, decl)) {
+      var symbol = FuncSymbol(.FUNC_LOCAL, "")
+      if (!parseFunctionBlock(context, symbol)) {
         return null
       }
-      return Node.createLambda(decl).withRange(context.spanSince(token.range))
+      return Node.createLambda(symbol).withRange(context.spanSince(token.range))
     }
   }
 
@@ -546,14 +546,14 @@ namespace astral {
 
       // Parse a lambda of the form "x => x * x"
       if (context.peek(.ARROW)) {
-        var decl = FuncDecl(.FUNC_LOCAL, "")
-        var arg = VarDecl(.VAR_LOCAL, name)
+        var symbol = FuncSymbol(.FUNC_LOCAL, "")
+        var arg = VarSymbol(.VAR_LOCAL, name)
         arg.range = range
-        decl.args.push(arg)
-        if (!parseFunctionBlock(context, decl)) {
+        symbol.args.push(arg)
+        if (!parseFunctionBlock(context, symbol)) {
           return null
         }
-        return Node.createLambda(decl).withRange(context.spanSince(range))
+        return Node.createLambda(symbol).withRange(context.spanSince(range))
       }
 
       return Node.createName(name).withRange(range)
@@ -583,11 +583,11 @@ namespace astral {
       }
 
       // Parse a lambda instead
-      var decl = FuncDecl(.FUNC_LOCAL, "")
-      if (!parseFunction(context, decl)) {
+      var symbol = FuncSymbol(.FUNC_LOCAL, "")
+      if (!parseFunction(context, symbol)) {
         return null
       }
-      return Node.createLambda(decl).withRange(context.spanSince(token.range))
+      return Node.createLambda(symbol).withRange(context.spanSince(token.range))
     }
   }
 

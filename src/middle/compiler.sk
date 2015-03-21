@@ -6,7 +6,7 @@ class string {}
 "
 
 namespace astral {
-  void compile(Log log, TypeDecl global) {
+  void compile(Log log, TypeSymbol global) {
     appendFile(log, global, Source("<native>", NATIVE_LIBRARY))
     if (log.hasErrors()) {
       return
@@ -20,7 +20,7 @@ namespace astral {
     resolvingPass(log, global)
   }
 
-  void appendFile(Log log, TypeDecl global, Source source) {
+  void appendFile(Log log, TypeSymbol global, Source source) {
     var tokens = tokenize(log, source)
     prepareTokens(tokens)
     parseFile(log, tokens, global)

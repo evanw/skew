@@ -6,7 +6,7 @@ namespace astral {
   var output2 = `document`.getElementById("output2")
 
   void update() {
-    var global = TypeDecl(.TYPE_GLOBAL, "<global>")
+    var global = TypeSymbol(.TYPE_GLOBAL, "<global>")
     var log = Log()
     appendFile(log, global, Source("<stdin>", input.value))
     compile(log, global)
