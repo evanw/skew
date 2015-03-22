@@ -292,14 +292,15 @@ namespace astral.resolving {
       if (type.kind() == .SYMBOL) {
         var symbol = type.asSymbolType().symbol
 
+        // Check for calling a function directly
         if (symbol.kind.isFunction()) {
           var function = symbol.asFunction()
           var expected = function.arguments.size()
-          var found = node.children.size() - 1
+          var count = node.children.size() - 1
 
           // Check argument count
-          if (expected != found) {
-            log.semanticErrorArgumentCount(node.internalRange, expected, found)
+          if (expected != count) {
+            log.semanticErrorArgumentCount(node.internalRange, expected, count)
           }
 
           // Use the return type even if there were errors
@@ -318,11 +319,49 @@ namespace astral.resolving {
           }
         }
 
+        // Check for calling a set of functions, must not be ambiguous
+        else if (symbol.kind.isOverloadedFunction()) {
+          var overloaded = symbol.asOverloadedFunction()
+          var count = node.children.size() - 1
+          List<FunctionSymbol> candidates = []
+
+          // Filter by argument length
+          for (var i = 0; i < overloaded.symbols.size(); i++) {
+            var overload = overloaded.symbols[i]
+            if (overload.arguments.size() == count) {
+              candidates.push(overload)
+            }
+          }
+
+          // Check for matches
+          if (candidates.size() < 1) {
+            log.semanticErrorNoMatchingOverload(value.range, symbol.name, count)
+          }
+
+          // Check for ambiguity
+          else if (candidates.size() > 1) {
+            log.semanticErrorAmbiguousOperator(value.range, symbol.name, count)
+          }
+
+          // Target is unambiguous
+          else {
+            var overload = candidates[0]
+            var expected = overload.arguments.size()
+
+            // Check argument count
+            if (expected != count) {
+              log.semanticErrorArgumentCount(node.internalRange, expected, count)
+            }
+          }
+        }
+
+        // Can't call other symbols
         else {
           log.semanticErrorInvalidCall(value.range, value.resolvedType)
         }
       }
 
+      // Can't call other types (the null type, for example)
       else if (type != .DYNAMIC) {
         log.semanticErrorInvalidCall(value.range, value.resolvedType)
       }
@@ -470,7 +509,7 @@ namespace astral.resolving {
         var name = operatorOverloadNames.getOrDefault(node.kind, "")
         if (name != "") {
           node.kind = .CALL
-          node.appendChild(Node.createDot(value.remove(), name).withRange(node.range).withInternalRange(node.internalRange))
+          node.appendChild(Node.createDot(value.remove(), name).withRange(node.internalRange).withInternalRange(node.internalRange))
           node.resolvedType = null
           resolveNode(node, scope)
         }
@@ -488,7 +527,7 @@ namespace astral.resolving {
         var name = operatorOverloadNames.getOrDefault(node.kind, "")
         if (name != "") {
           node.kind = .CALL
-          node.appendChild(Node.createDot(left.remove(), name).withRange(node.range).withInternalRange(node.internalRange))
+          node.appendChild(Node.createDot(left.remove(), name).withRange(node.internalRange).withInternalRange(node.internalRange))
           node.appendChild(right.remove())
           node.resolvedType = null
           resolveNode(node, scope)
