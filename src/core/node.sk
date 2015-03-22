@@ -85,6 +85,10 @@ namespace astral {
     bool isBinary() {
       return this >= ADD && this <= ASSIGN_SUBTRACT
     }
+
+    bool isBinaryComparison() {
+      return this >= GREATER_THAN && this <= LESS_THAN_OR_EQUAL
+    }
   }
 
   // Nodes represent executable code (variable initializers and function bodies)
@@ -97,6 +101,11 @@ namespace astral {
     Content content = null
     Type resolvedType = null
     List<Node> children = []
+
+    Node withType(Type value) {
+      resolvedType = value
+      return this
+    }
 
     Node withSymbol(Symbol value) {
       symbol = value
@@ -144,9 +153,7 @@ namespace astral {
     Node removeChildAtIndex(int index) {
       assert index >= 0 && index < children.size()
       var child = children[index]
-      if (child != null) {
-        child.parent = null
-      }
+      updateParent(child, null)
       children.removeAt(index)
       return child
     }
@@ -156,13 +163,20 @@ namespace astral {
       return this
     }
 
+    List<Node> removeChildren() {
+      var result = children
+      for (var i = 0; i < children.size(); i++) {
+        updateParent(children[i], null)
+      }
+      children = []
+      return result
+    }
+
     Node replaceChild(int index, Node node) {
       assert index >= 0 && index < children.size()
       updateParent(node, this)
       var child = children[index]
-      if (child != null) {
-        child.parent = null
-      }
+      updateParent(child, null)
       children[index] = node
       return child
     }
@@ -172,14 +186,9 @@ namespace astral {
       return this
     }
 
-    string asString() {
-      assert kind == .NAME || kind == .DOT
-      return content.asString()
-    }
-
     private static void updateParent(Node node, Node parent) {
       if (node != null) {
-        assert node.parent == null
+        assert (node.parent == null) != (parent == null)
         node.parent = parent
       }
     }
@@ -324,6 +333,11 @@ namespace astral {
 
   // Getters
   in Node {
+    string asString() {
+      assert kind == .NAME || kind == .DOT
+      return content.asString()
+    }
+
     Node dotTarget() {
       assert kind == .DOT
       assert children.size() == 1
@@ -347,6 +361,13 @@ namespace astral {
 
     Node callValue() {
       assert kind == .CALL
+      assert children.size() >= 1
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node indexValue() {
+      assert kind == .INDEX
       assert children.size() >= 1
       assert children[0].kind.isExpression()
       return children[0]

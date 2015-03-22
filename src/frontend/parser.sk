@@ -822,6 +822,7 @@ namespace astral {
     pratt.infix(.REMAINDER, .MULTIPLY, BinaryInfix(.REMAINDER))
     pratt.infix(.SHIFT_LEFT, .SHIFT, BinaryInfix(.SHIFT_LEFT))
     pratt.infix(.SHIFT_RIGHT, .SHIFT, BinaryInfix(.SHIFT_RIGHT))
+    pratt.infix(.POWER, .UNARY_PREFIX, BinaryInfix(.POWER))
 
     pratt.infixRight(.ASSIGN, .ASSIGN, BinaryInfix(.ASSIGN))
     pratt.infixRight(.ASSIGN_BITWISE_AND, .ASSIGN, BinaryInfix(.ASSIGN_BITWISE_AND))
@@ -831,6 +832,7 @@ namespace astral {
     pratt.infixRight(.ASSIGN_MINUS, .ASSIGN, BinaryInfix(.ASSIGN_SUBTRACT))
     pratt.infixRight(.ASSIGN_MULTIPLY, .ASSIGN, BinaryInfix(.ASSIGN_MULTIPLY))
     pratt.infixRight(.ASSIGN_PLUS, .ASSIGN, BinaryInfix(.ASSIGN_ADD))
+    pratt.infixRight(.ASSIGN_POWER, .ASSIGN, BinaryInfix(.ASSIGN_POWER))
     pratt.infixRight(.ASSIGN_REMAINDER, .ASSIGN, BinaryInfix(.ASSIGN_REMAINDER))
     pratt.infixRight(.ASSIGN_SHIFT_LEFT, .ASSIGN, BinaryInfix(.ASSIGN_SHIFT_LEFT))
     pratt.infixRight(.ASSIGN_SHIFT_RIGHT, .ASSIGN, BinaryInfix(.ASSIGN_SHIFT_RIGHT))

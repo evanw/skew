@@ -290,11 +290,6 @@ namespace astral.resolving {
       resolveNode(node.whileBlock(), scope)
     }
 
-    void resolveIndex(Node node, Scope scope) {
-      resolveChildren(node, scope)
-      resolveOperatorOverload(node, scope)
-    }
-
     void resolveCall(Node node, Scope scope) {
       var value = node.callValue()
       resolveNode(value, scope)
@@ -487,57 +482,53 @@ namespace astral.resolving {
       resolveChildren(node, scope)
     }
 
-    static var operatorOverloadNames = {
-      NodeKind.ADD: "+",
-      NodeKind.ASSIGN_ADD: "+=",
-      NodeKind.ASSIGN_BITWISE_AND: "&=",
-      NodeKind.ASSIGN_BITWISE_OR: "|=",
-      NodeKind.ASSIGN_BITWISE_XOR: "^=",
-      NodeKind.ASSIGN_DIVIDE: "/=",
-      NodeKind.ASSIGN_INDEX: "[]=",
-      NodeKind.ASSIGN_MULTIPLY: "*=",
-      NodeKind.ASSIGN_POWER: "**=",
-      NodeKind.ASSIGN_REMAINDER: "%=",
-      NodeKind.ASSIGN_SHIFT_LEFT: "<<=",
-      NodeKind.ASSIGN_SHIFT_RIGHT: ">>=",
-      NodeKind.ASSIGN_SUBTRACT: "-=",
-      NodeKind.BITWISE_AND: "&",
-      NodeKind.BITWISE_OR: "|",
-      NodeKind.BITWISE_XOR: "^",
-      NodeKind.DIVIDE: "/",
-      NodeKind.INDEX: "[]",
-      NodeKind.MULTIPLY: "*",
-      NodeKind.NEGATIVE: "-",
-      NodeKind.POSITIVE: "+",
-      NodeKind.POWER: "**",
-      NodeKind.REMAINDER: "%",
-      NodeKind.SHIFT_LEFT: "<<",
-      NodeKind.SHIFT_RIGHT: ">>",
-      NodeKind.SUBTRACT: "-",
-    }
-
     void resolveUnary(Node node, Scope scope) {
       resolveNode(node.unaryValue(), scope)
       resolveOperatorOverload(node, scope)
     }
 
     void resolveBinary(Node node, Scope scope) {
-      resolveNode(node.binaryLeft(), scope)
-      resolveNode(node.binaryRight(), scope)
+      var left = node.binaryLeft()
+      var right = node.binaryRight()
+
+      resolveNode(left, scope)
+      resolveNode(right, scope)
+
+      if (node.kind != .ASSIGN) {
+        resolveOperatorOverload(node, scope)
+      }
+    }
+
+    void resolveIndex(Node node, Scope scope) {
+      resolveChildren(node, scope)
       resolveOperatorOverload(node, scope)
     }
 
     void resolveOperatorOverload(Node node, Scope scope) {
       var target = node.children[0]
-      if (target.resolvedType != .DYNAMIC) {
-        var name = operatorOverloadNames.getOrDefault(node.kind, "")
-        if (name != "") {
-          node.kind = .CALL
-          node.replaceChild(0, Node.createDot(target.replaceWithNull(), name).withRange(node.internalRange).withInternalRange(node.internalRange))
-          node.resolvedType = null
-          resolveNode(node, scope)
-        }
+      var type = target.resolvedType
+      if (type == .DYNAMIC) {
+        return
       }
+
+      // Check if the operator can be overridden at all
+      var info = operatorInfo[node.kind]
+      if (info.kind != .OVERRIDABLE) {
+        log.semanticErrorUnknownMemberSymbol(node.internalRange, info.text, type)
+        return
+      }
+
+      // Find the operator method
+      var symbol = findMember(type, info.text, node.internalRange)
+      if (symbol == null) {
+        return
+      }
+
+      // Resolve the method call
+      node.kind = .CALL
+      node.replaceChild(0, Node.createDot(target.replaceWithNull(), info.text).withRange(node.internalRange).withInternalRange(node.internalRange))
+      node.resolvedType = null
+      resolveNode(node, scope)
     }
 
     Node defaultValueForType(Type type) {
