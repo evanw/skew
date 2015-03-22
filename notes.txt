@@ -3,15 +3,31 @@
   - make "self" explicit for sanity (all instance member NAME nodes become DOT nodes)
   - generics
   - argument type checking
+    - real overload resolution involving types
   - return type and presence checking
   - function types including calling values of those types
-  - lambdas including type context
+  - lambda checking including type context
   - interface auto-conversion and checking
+  - automatic operator conversion so += can map to = and + if += isn't defined
   - throw/try/catch/finally
   - js generation
   - c++ generation
+  - annotations
+  - compile-time constants
+  - top-level if statements instead of c-style preprocessor, conditions must be constants and are evaluated from the outside in
   - inlining
   - renaming
+    - could probably get by with just @EmitAs for quite a while
+  - lambda conversion to classes
+  - abstract functions/types
+  - import/export
+  - standard library
+    - use uppercase for namespaces now, camelCase is just too strange for namespaces for me
+  - bootstrap the compiler
+  - switch to keyword operators not/and/or so ?: can be if/else and names can use a trailing "?" like ruby
+  - alias types using the "type" declaration prefix, not available inside functions?
+  - namespace imports via the "use" declaration prefix
+  - union and intersection types with | and &
 
 
 
