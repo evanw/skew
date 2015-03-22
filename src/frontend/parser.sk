@@ -197,7 +197,7 @@ namespace astral {
     return true
   }
 
-  bool parseFunction(ParserContext context, FunctionSymbol symbol) {
+  bool parseFunctionArguments(ParserContext context, FunctionSymbol symbol) {
     var usingTypes = false
     while (!context.eat(.RIGHT_PARENTHESIS)) {
       if (symbol.arguments.size() != 0 && !context.expect(.COMMA)) {
@@ -233,12 +233,13 @@ namespace astral {
 
       symbol.arguments.push(arg)
     }
+    return true
+  }
 
-    // Parse return type
+  bool parseFunctionReturnTypeAndBlock(ParserContext context, FunctionSymbol symbol) {
     if (peekType(context)) {
       symbol.returnType = parseType(context)
     }
-
     return parseFunctionBlock(context, symbol)
   }
 
@@ -352,11 +353,6 @@ namespace astral {
 
         symbol.comments = comments
         parent.variables.push(symbol)
-
-        // Forbid these at the parser level to avoid neading to deal with them later
-        if (kind == .VARIABLE_INSTANCE && parent.kind != .TYPE_CLASS) {
-          context.log.syntaxErrorUnexpectedDeclaration(token.range)
-        }
       }
 
       case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
@@ -370,18 +366,37 @@ namespace astral {
           }
         }
 
-        if (!context.expect(.LEFT_PARENTHESIS) || !parseFunction(context, symbol)) {
+        // Check for a setter, should look like "def foo=() {}"
+        if (context.peek(.ASSIGN)) {
+
+          // Don't allow a space between the name and the assignment operator
+          if (context.current().range.start == nameToken.range.end) {
+            context.next()
+            symbol.flags |= .SETTER
+            symbol.name += "="
+          }
+
+          // This isn't a getter so it must have parentheses
+          if (!context.expect(.LEFT_PARENTHESIS)) {
+            return false
+          }
+        }
+
+        // Check for a setter, should look like "def foo {}"
+        else if (!context.eat(.LEFT_PARENTHESIS)) {
+          symbol.flags |= .GETTER
+        }
+
+        if (!symbol.isGetter() && !parseFunctionArguments(context, symbol)) {
+          return false
+        }
+
+        if (!parseFunctionReturnTypeAndBlock(context, symbol)) {
           return false
         }
 
         symbol.comments = comments
         parent.functions.push(symbol)
-
-        // Forbid these at the parser level to avoid neading to deal with them later
-        if (kind == .FUNCTION_INSTANCE && parent.kind != .TYPE_CLASS && parent.kind != .TYPE_INTERFACE ||
-            kind == .FUNCTION_CONSTRUCTOR && parent.kind != .TYPE_CLASS) {
-          context.log.syntaxErrorUnexpectedDeclaration(token.range)
-        }
       }
 
       case .TYPE_CLASS, .TYPE_INTERFACE, .TYPE_NAMESPACE {
@@ -714,7 +729,7 @@ namespace astral {
 
       // Parse a lambda instead
       var symbol = FunctionSymbol(.FUNCTION_LOCAL, "")
-      if (!parseFunction(context, symbol)) {
+      if (!parseFunctionArguments(context, symbol) || !parseFunctionReturnTypeAndBlock(context, symbol)) {
         return null
       }
       return Node.createLambda(symbol).withRange(context.spanSince(token.range))

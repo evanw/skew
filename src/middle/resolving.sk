@@ -16,6 +16,11 @@ namespace astral.resolving {
     EXPLICIT
   }
 
+  enum FailureMode {
+    SILENT_FAILURE
+    ERROR_FAILURE
+  }
+
   class Resolver {
     TypeCache cache
     Log log
@@ -132,6 +137,12 @@ namespace astral.resolving {
         else {
           resolveAsParameterizedType(symbol.returnType, symbol.scope)
         }
+      }
+
+      // Setters must have one argument
+      if (symbol.isSetter() && symbol.arguments.size() != 1) {
+        log.semanticErrorSetterWrongArgumentCount(symbol.range, symbol.name)
+        symbol.flags &= ~.SETTER
       }
     }
 
@@ -313,7 +324,7 @@ namespace astral.resolving {
 
       // Make the implicit conversion explicit for convenience later on
       if (kind == .IMPLICIT) {
-        var value = Node(.NULL)
+        var value = Node.createNull()
         value.become(node)
         node.become(Node.createCast(value, Node.createType(to)).withType(to).withRange(node.range))
       }
@@ -469,7 +480,7 @@ namespace astral.resolving {
       }
     }
 
-    Symbol findMember(Type type, string name, Range range) {
+    Symbol findMember(Type type, string name, Range range, FailureMode mode) {
       if (type.kind() == .SYMBOL) {
         var symbol = type.asSymbolType().symbol
         if (symbol.kind.isType()) {
@@ -480,11 +491,9 @@ namespace astral.resolving {
           }
         }
       }
-
-      if (type != .DYNAMIC) {
+      if (mode == .ERROR_FAILURE && type != .DYNAMIC) {
         log.semanticErrorUnknownMemberSymbol(range, name, type)
       }
-
       return null
     }
 
@@ -493,22 +502,31 @@ namespace astral.resolving {
       var name = node.asString()
       resolveNode(target, scope)
 
-      var member = findMember(target.resolvedType, name, node.internalRange)
-      if (member == null) {
-        return
+      // Search for a setter first, then search for a normal member
+      Symbol symbol = null
+      if (shouldCheckForSetter(node)) {
+        symbol = findMember(target.resolvedType, name + "=", node.internalRange, .SILENT_FAILURE)
+      }
+      if (symbol == null) {
+        symbol = findMember(target.resolvedType, name, node.internalRange, .ERROR_FAILURE)
+        if (symbol == null) {
+          return
+        }
       }
 
       var isType = target.isType()
-      var needsType = !member.kind.isOnInstances()
+      var needsType = !symbol.kind.isOnInstances()
 
       // Make sure the global/instance context matches the intended usage
       if (isType && !needsType) {
-        log.semanticErrorMemberUnexpectedInstance(node.internalRange, member.name)
+        log.semanticErrorMemberUnexpectedInstance(node.internalRange, symbol.name)
       } else if (!isType && needsType) {
-        log.semanticErrorMemberUnexpectedGlobal(node.internalRange, member.name)
+        log.semanticErrorMemberUnexpectedGlobal(node.internalRange, symbol.name)
       }
 
-      node.resolvedType = member.resolvedType
+      node.symbol = symbol
+      node.resolvedType = symbol.resolvedType
+      automaticallyCallGetter(node, scope)
     }
 
     void resolveHook(Node node, Scope scope) {
@@ -543,16 +561,24 @@ namespace astral.resolving {
 
     void resolveName(Node node, Scope scope) {
       var name = node.asString()
-      var symbol = scope.find(name)
+      Symbol symbol = null
 
-      if (symbol == null) {
-        log.semanticErrorUndeclaredSymbol(node.range, name)
-        return
+      // Search for a setter first, then search for a normal symbol
+      if (shouldCheckForSetter(node)) {
+        symbol = scope.find(name + "=")
       }
-
+      if (symbol == null) {
+        symbol = scope.find(name)
+        if (symbol == null) {
+          log.semanticErrorUndeclaredSymbol(node.range, name)
+          return
+        }
+      }
       initializeSymbol(symbol)
+
       node.symbol = symbol
       node.resolvedType = symbol.resolvedType
+      automaticallyCallGetter(node, scope)
     }
 
     void resolveParameterize(Node node, Scope scope) {
@@ -573,7 +599,14 @@ namespace astral.resolving {
       resolveAsParameterizedExpression(left, scope)
       resolveAsParameterizedExpression(right, scope)
 
-      if (node.kind != .ASSIGN) {
+      if (node.kind == .ASSIGN) {
+        if (left.symbol != null && left.symbol.isSetter()) {
+          node.become(Node.createCall(left.replaceWithNull(), [right.replaceWithNull()]).withRange(node.range).withInternalRange(right.range))
+          resolveAsParameterizedExpression(node, scope)
+        }
+      }
+
+      else {
         resolveOperatorOverload(node, scope)
       }
     }
@@ -601,7 +634,7 @@ namespace astral.resolving {
       }
 
       // Find the operator method
-      var symbol = findMember(type, info.text, node.internalRange)
+      var symbol = findMember(type, info.text, node.internalRange, .ERROR_FAILURE)
       if (symbol == null) {
         return
       }
@@ -620,6 +653,19 @@ namespace astral.resolving {
         type == cache.intType ? Node.createInt(0) :
         type == cache.stringType ? Node.createString("") :
         Node.createNull()
+    }
+
+    void automaticallyCallGetter(Node node, Scope scope) {
+      if (node.symbol != null && node.symbol.isGetter()) {
+        var value = Node.createNull()
+        value.become(node)
+        node.become(Node.createCall(value, []).withRange(node.range))
+        resolveAsParameterizedExpression(node, scope)
+      }
+    }
+
+    static bool shouldCheckForSetter(Node node) {
+      return node.parent != null && node.parent.kind == .ASSIGN && node == node.parent.binaryLeft()
     }
   }
 }

@@ -64,6 +64,8 @@ namespace astral {
 
   enum flags SymbolFlags {
     VALUE_TYPE
+    GETTER
+    SETTER
   }
 
   enum SymbolState {
@@ -118,6 +120,14 @@ namespace astral {
 
     bool isValueType() {
       return (flags & .VALUE_TYPE) != 0
+    }
+
+    bool isGetter() {
+      return (flags & .GETTER) != 0
+    }
+
+    bool isSetter() {
+      return (flags & .SETTER) != 0
     }
 
     private static {

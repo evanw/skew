@@ -227,7 +227,7 @@ namespace astral {
           }
 
           case .NAME {
-            emit(node.asString())
+            emit(node.symbol != null ? node.symbol.fullName() : node.asString())
           }
 
           case .DYNAMIC {
@@ -236,7 +236,7 @@ namespace astral {
 
           case .DOT {
             emitExpression(node.dotTarget(), .MEMBER)
-            emit("." + node.asString())
+            emit("." + (node.symbol != null ? node.symbol.name : node.asString()))
           }
 
           case .CONSTANT {
