@@ -244,6 +244,10 @@ namespace astral.resolving {
     }
 
     void resolveBlock(Node node, Scope scope) {
+      if (node.parent != null) {
+        scope = LocalScope(scope)
+      }
+
       for (var i = 0; i < node.children.size(); i++) {
         resolveNode(node.children[i], scope)
       }
