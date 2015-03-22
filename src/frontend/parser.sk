@@ -239,16 +239,6 @@ namespace astral {
     return parseFunctionBlock(context, symbol)
   }
 
-  StringMap<SymbolKind> symbolKinds = {
-    "cdef": .FUNCTION_CONSTRUCTOR,
-    "class": .TYPE_CLASS,
-    "def": .FUNCTION_GLOBAL,
-    "idef": .FUNCTION_INSTANCE,
-    "interface": .TYPE_INTERFACE,
-    "ivar": .VARIABLE_INSTANCE,
-    "namespace": .TYPE_NAMESPACE,
-  }
-
   List<ParameterSymbol> parseTypeParameters(ParserContext context) {
     List<ParameterSymbol> parameters = []
     do {
@@ -286,21 +276,33 @@ namespace astral {
       return false
     }
 
+    // Parse the symbol kind
     var token = context.current()
-    var kind = token.kind == .VAR ? .VARIABLE_GLOBAL : token.kind == .IDENTIFIER ? symbolKinds.getOrDefault(token.range.toString(), .NONE) : .NONE
-    if (kind == .NONE) {
-      context.unexpectedToken()
-      return false
+    SymbolKind kind
+    switch (token.kind) {
+      case .CLASS { kind = .TYPE_CLASS }
+      case .DEF { kind = parent.kind.hasInstances() ? .FUNCTION_INSTANCE : .FUNCTION_GLOBAL }
+      case .INTERFACE { kind = .TYPE_INTERFACE }
+      case .NAMESPACE { kind = .TYPE_NAMESPACE }
+      case .VAR { kind = parent.kind.hasInstances() ? .VARIABLE_INSTANCE : .VARIABLE_GLOBAL }
+      default {
+        context.unexpectedToken()
+        return false
+      }
     }
     context.next()
 
+    // Parse the symbol name
     var range = context.current().range
     var name = range.toString()
-
     if (!context.expect(.IDENTIFIER)) {
       return false
     }
+    if (kind == .FUNCTION_INSTANCE && name == "new") {
+      kind = .FUNCTION_CONSTRUCTOR
+    }
 
+    // Parse the symbol body
     switch (kind) {
       case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE {
         var symbol = VariableSymbol(kind, name)

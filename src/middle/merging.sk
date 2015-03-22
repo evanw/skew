@@ -14,6 +14,7 @@ namespace astral.merging {
       for (var i = 0; i < symbol.parameters.size(); i++) {
         var parameter = symbol.parameters[i]
         var other = target.members.getOrDefault(parameter.name, null)
+        parameter.parent = target
 
         if (other != null) {
           log.semanticErrorDuplicateSymbol(parameter.range, parameter.name, other.range)
@@ -47,8 +48,10 @@ namespace astral.merging {
         continue
       }
 
-      // Can only merge with another of the same type
-      if (child.kind != other.kind) {
+      // Can only merge with another of the same type or with a namespace
+      if (other.kind == .TYPE_NAMESPACE) {
+        other.kind = child.kind
+      } else if (child.kind != .TYPE_NAMESPACE && child.kind != other.kind) {
         log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
         continue
       }
@@ -106,6 +109,7 @@ namespace astral.merging {
         members[child.name] = overloaded
         ((FunctionSymbol)other).overloaded = overloaded
         child.overloaded = overloaded
+        overloaded.parent = parent
         continue
       }
 

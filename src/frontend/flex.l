@@ -8,11 +8,15 @@
 
 "as"                              AS;
 "break"                           BREAK;
+"class"                           CLASS;
 "continue"                        CONTINUE;
+"def"                             DEF;
 "dynamic"                         DYNAMIC;
 "else"                            ELSE;
 "false"                           FALSE;
 "if"                              IF;
+"interface"                       INTERFACE;
+"namespace"                       NAMESPACE;
 "null"                            NULL;
 "return"                          RETURN;
 "super"                           SUPER;

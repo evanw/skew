@@ -137,7 +137,7 @@ namespace astral {
     }
 
     void semanticErrorInvalidCall(Range range, Type type) {
-      error(range, "Cannot call type \"" + type + "\"")
+      error(range, "Cannot call value of type \"" + type + "\"")
     }
 
     void semanticErrorArgumentCount(Range range, int expected, int found) {
@@ -157,7 +157,7 @@ namespace astral {
     }
 
     void semanticErrorConstructorReturnType(Range range) {
-      error(range, "Constructors must have no return type")
+      error(range, "Constructors cannot have a return type")
     }
   }
 }

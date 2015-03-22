@@ -174,12 +174,7 @@ namespace astral.resolving {
 
     // Default-initialize varliables that aren't explicitly initialized
     else if (symbol.kind != .VARIABLE_LOCAL) {
-      symbol.value =
-        symbol.resolvedType == context.cache.boolType ? Node.createBool(false) :
-        symbol.resolvedType == context.cache.doubleType ? Node.createDouble(0.0) :
-        symbol.resolvedType == context.cache.intType ? Node.createInt(0) :
-        symbol.resolvedType == context.cache.stringType ? Node.createString("") :
-        Node.createNull()
+      symbol.value = defaultValueForType(context, symbol.resolvedType)
     }
   }
 
@@ -215,7 +210,7 @@ namespace astral.resolving {
 
       // Expressions
       case .CALL { resolveCall(context, node) }
-      case .CAST {}
+      case .CAST { resolveCast(context, node) }
       case .CONSTANT { resolveConstant(context, node) }
       case .DOT { resolveDot(context, node) }
       case .DYNAMIC {}
@@ -313,6 +308,11 @@ namespace astral.resolving {
     for (var i = 1; i < node.children.size(); i++) {
       resolveNode(context, node.children[i])
     }
+  }
+
+  void resolveCast(ResolveContext context, Node node) {
+    resolveNode(context, node.castValue())
+    resolveNode(context, node.castType())
   }
 
   void resolveConstant(ResolveContext context, Node node) {
@@ -421,5 +421,14 @@ namespace astral.resolving {
     var right = node.binaryRight()
     resolveNode(context, left)
     resolveNode(context, right)
+  }
+
+  Node defaultValueForType(ResolveContext context, Type type) {
+    return
+      type == context.cache.boolType ? Node.createBool(false) :
+      type == context.cache.doubleType ? Node.createDouble(0.0) :
+      type == context.cache.intType ? Node.createInt(0) :
+      type == context.cache.stringType ? Node.createString("") :
+      Node.createNull()
   }
 }
