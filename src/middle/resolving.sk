@@ -381,8 +381,15 @@ namespace astral.resolving {
       if (type.kind() == .SYMBOL) {
         var symbol = type.asSymbolType().symbol
 
+        // Getters are called implicitly, so explicitly calling one is an error.
+        // This error prevents a getter returning a lambda which is then called,
+        // but that's really strange and I think this error is more useful.
+        if (symbol.isGetter() && node.parent != null && node.parent.kind == .CALL && node == node.parent.callValue()) {
+          log.semanticErrorGetterCalledTwice(node.parent.internalRange, symbol.name)
+        }
+
         // Check for calling a function directly
-        if (symbol.kind.isFunction()) {
+        else if (symbol.kind.isFunction()) {
           var function = symbol.asFunction()
           var expected = function.arguments.size()
           var count = node.children.size() - 1
@@ -656,7 +663,31 @@ namespace astral.resolving {
     }
 
     void automaticallyCallGetter(Node node, Scope scope) {
-      if (node.symbol != null && node.symbol.isGetter()) {
+      var symbol = node.symbol
+      if (symbol == null) {
+        return
+      }
+      var isGetter = symbol.isGetter()
+
+      // The check for getters is complicated by overloaded functions
+      if (!isGetter && symbol.kind.isOverloadedFunction() && (node.parent.kind != .CALL || node != node.parent.callValue() || node.parent.children.size() == 1)) {
+        var overloaded = symbol.asOverloadedFunction()
+        for (var i = 0; i < overloaded.symbols.size(); i++) {
+          var getter = overloaded.symbols[i]
+
+          // Just return the first getter assuming errors for duplicate getters
+          // were already logged when the overloaded symbol was initialized
+          if (getter.isGetter()) {
+            node.resolvedType = getter.resolvedType
+            node.symbol = getter
+            isGetter = true
+            break
+          }
+        }
+      }
+
+      // Automatically wrap the getter in a call expression
+      if (isGetter) {
         var value = Node.createNull()
         value.become(node)
         node.become(Node.createCall(value, []).withRange(node.range))

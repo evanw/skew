@@ -147,6 +147,10 @@ namespace astral {
       error(range, expectedCountText("argument", expected, found, ""))
     }
 
+    void semanticErrorGetterCalledTwice(Range range, string name) {
+      error(range, "The function \"" + name + "\" is already called implicitly")
+    }
+
     void semanticErrorUseOfVoid(Range range, string name) {
       error(range, "The function \"" + name + "\" does not return a value")
     }

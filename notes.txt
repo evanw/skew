@@ -4,6 +4,7 @@
   - generics
   - argument type checking
     - real overload resolution involving types
+    - need errors for ambiguous overloads at initialization time
   - return type and presence checking
   - function types including calling values of those types
   - lambda checking including type context
@@ -28,6 +29,74 @@
   - alias types using the "type" declaration prefix, not available inside functions?
   - namespace imports via the "use" declaration prefix
   - union and intersection types with | and &
+
+
+
+
+
+
+
+
+- test data:
+
+class List {
+  def new
+  def new(count int)
+  def foo
+  def foo(count int)
+
+  def bar {
+    foo()
+  }
+}
+
+def main(args List) {
+  args.foo()
+  start
+}
+
+def start {
+  main(List.new())
+}
+
+
+
+
+
+
+
+
+
+
+- test data:
+
+class List {
+  def new
+  def new(count int)
+  def foo
+  def foo(count int)
+
+  def bar {
+    foo
+    foo(100)
+  }
+}
+
+def main(args List) {
+  args.foo
+  args.foo(100)
+  start
+}
+
+def start {
+  main(List.new)
+  main(List.new(100))
+}
+
+
+
+
+
 
 
 
