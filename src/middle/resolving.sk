@@ -221,14 +221,14 @@ namespace astral.resolving {
         case .WHILE { resolveWhile(node, scope) }
 
         // Expressions
-        case .ASSIGN_INDEX { resolveOperatorOverload(node, scope) }
+        case .ASSIGN_INDEX { resolveIndex(node, scope) }
         case .CALL { resolveCall(node, scope) }
         case .CAST { resolveCast(node, scope) }
         case .CONSTANT { resolveConstant(node, scope) }
         case .DOT { resolveDot(node, scope) }
         case .DYNAMIC {}
         case .HOOK { resolveHook(node, scope) }
-        case .INDEX { resolveOperatorOverload(node, scope) }
+        case .INDEX { resolveIndex(node, scope) }
         case .LAMBDA { resolveLambda(node, scope) }
         case .LAMBDA_TYPE { resolveLambdaType(node, scope) }
         case .NAME { resolveName(node, scope) }
@@ -245,14 +245,18 @@ namespace astral.resolving {
       assert node.resolvedType != null
     }
 
+    void resolveChildren(Node node, Scope scope) {
+      for (var i = 0; i < node.children.size(); i++) {
+        resolveNode(node.children[i], scope)
+      }
+    }
+
     void resolveBlock(Node node, Scope scope) {
       if (node.parent != null) {
         scope = LocalScope(scope)
       }
 
-      for (var i = 0; i < node.children.size(); i++) {
-        resolveNode(node.children[i], scope)
-      }
+      resolveChildren(node, scope)
     }
 
     void resolveExpression(Node node, Scope scope) {
@@ -286,6 +290,11 @@ namespace astral.resolving {
       resolveNode(node.whileBlock(), scope)
     }
 
+    void resolveIndex(Node node, Scope scope) {
+      resolveChildren(node, scope)
+      resolveOperatorOverload(node, scope)
+    }
+
     void resolveCall(Node node, Scope scope) {
       var value = node.callValue()
       resolveNode(value, scope)
@@ -316,7 +325,8 @@ namespace astral.resolving {
           }
 
           // There is no "void" type, so make sure this return value isn't used
-          else if (node.parent.kind != .EXPRESSION) {
+          // (the parent will be null for variable initializers)
+          else if (node.parent == null || node.parent.kind != .EXPRESSION) {
             log.semanticErrorUseOfVoid(node.range, function.name)
           }
         }
@@ -387,30 +397,34 @@ namespace astral.resolving {
       }
     }
 
+    Symbol findMember(Type type, string name, Range range) {
+      if (type.kind() == .SYMBOL) {
+        var symbol = type.asSymbolType().symbol
+        if (symbol.kind.isType()) {
+          var member = symbol.asType().members.getOrDefault(name, null)
+          if (member != null) {
+            initializeSymbol(member)
+            return member
+          }
+        }
+      }
+
+      if (type != .DYNAMIC) {
+        log.semanticErrorUnknownMemberSymbol(range, name, type)
+      }
+
+      return null
+    }
+
     void resolveDot(Node node, Scope scope) {
       var target = node.dotTarget()
       var name = node.asString()
       resolveNode(target, scope)
 
-      if (target.resolvedType == .DYNAMIC) {
-        return
-      }
-
-      // Search for the member in the target type
-      Symbol member = null
-      if (target.resolvedType.kind() == .SYMBOL) {
-        var symbol = target.resolvedType.asSymbolType().symbol
-        if (symbol.kind.isType()) {
-          member = symbol.asType().members.getOrDefault(name, null)
-        }
-      }
-
+      var member = findMember(target.resolvedType, name, node.internalRange)
       if (member == null) {
-        log.semanticErrorUnknownMemberSymbol(node.internalRange, name, target.resolvedType)
         return
       }
-
-      initializeSymbol(member)
 
       var isType = target.symbol != null && target.symbol.kind.isType()
       var needsType = !member.kind.isOnInstances()
@@ -470,9 +484,7 @@ namespace astral.resolving {
     }
 
     void resolveParameterize(Node node, Scope scope) {
-      for (var i = 0; i < node.children.size(); i++) {
-        resolveNode(node.children[i], scope)
-      }
+      resolveChildren(node, scope)
     }
 
     static var operatorOverloadNames = {
@@ -516,12 +528,15 @@ namespace astral.resolving {
     }
 
     void resolveOperatorOverload(Node node, Scope scope) {
-      var name = operatorOverloadNames.getOrDefault(node.kind, "")
-      if (name != "") {
-        node.kind = .CALL
-        node.replaceChild(0, Node.createDot(node.children[0].replaceWithNull(), name).withRange(node.internalRange).withInternalRange(node.internalRange))
-        node.resolvedType = null
-        resolveNode(node, scope)
+      var target = node.children[0]
+      if (target.resolvedType != .DYNAMIC) {
+        var name = operatorOverloadNames.getOrDefault(node.kind, "")
+        if (name != "") {
+          node.kind = .CALL
+          node.replaceChild(0, Node.createDot(target.replaceWithNull(), name).withRange(node.internalRange).withInternalRange(node.internalRange))
+          node.resolvedType = null
+          resolveNode(node, scope)
+        }
       }
     }
 
