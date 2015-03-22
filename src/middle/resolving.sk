@@ -351,6 +351,7 @@ namespace astral.resolving {
         return
       }
 
+      // Search for the member in the target type
       Symbol member = null
       if (target.resolvedType.kind() == .SYMBOL) {
         var symbol = target.resolvedType.asSymbolType().symbol
@@ -369,6 +370,7 @@ namespace astral.resolving {
       var isType = target.symbol != null && target.symbol.kind.isType()
       var needsType = member.kind != .FUNCTION_INSTANCE && member.kind != .VARIABLE_INSTANCE
 
+      // Make sure the global/instance context matches the intended usage
       if (isType && !needsType) {
         log.semanticErrorMemberUnexpectedInstance(node.internalRange, member.name)
       } else if (!isType && needsType) {

@@ -106,6 +106,13 @@ namespace astral {
       }
     }
 
+    void semanticErrorShadowedSymbol(Range range, string name, Range previous) {
+      error(range, "\"" + name + "\" shadows a previous declaration")
+      if (previous != null) {
+        note(previous, "The previous declaration is here")
+      }
+    }
+
     void semanticErrorDuplicateTypeParameters(Range range, string name, Range previous) {
       error(range, "\"" + name + "\" already has type parameters")
       if (previous != null) {

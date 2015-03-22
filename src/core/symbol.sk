@@ -133,7 +133,6 @@ namespace astral {
     OverloadedFunctionSymbol overloaded = null
     List<ParameterSymbol> parameters = null
     List<VariableSymbol> arguments = []
-    List<VariableSymbol> locals = []
     VariableSymbol self = null // For instance functions and constructors
     Node returnType = null
     Node block = null

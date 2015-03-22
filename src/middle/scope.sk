@@ -67,13 +67,25 @@ namespace astral {
     }
 
     void define(VariableSymbol symbol, Log log) {
-      var other = locals.getOrDefault(symbol.name, null)
       symbol.scope = this
+
+      // Check for duplicates
+      var other = locals.getOrDefault(symbol.name, null)
       if (other != null) {
         log.semanticErrorDuplicateSymbol(symbol.range, symbol.name, other.range)
-      } else {
-        locals[symbol.name] = symbol
+        return
       }
+
+      // Check for shadowing
+      for (var scope = parent; scope.kind() == .LOCAL; scope = scope.parent) {
+        var other = scope.asLocal().locals.getOrDefault(symbol.name, null)
+        if (other != null) {
+          log.semanticErrorShadowedSymbol(symbol.range, symbol.name, other.range)
+          return
+        }
+      }
+
+      locals[symbol.name] = symbol
     }
   }
 }
