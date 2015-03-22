@@ -221,12 +221,14 @@ namespace astral.resolving {
         case .WHILE { resolveWhile(node, scope) }
 
         // Expressions
+        case .ASSIGN_INDEX { resolveOperatorOverload(node, scope) }
         case .CALL { resolveCall(node, scope) }
         case .CAST { resolveCast(node, scope) }
         case .CONSTANT { resolveConstant(node, scope) }
         case .DOT { resolveDot(node, scope) }
         case .DYNAMIC {}
         case .HOOK { resolveHook(node, scope) }
+        case .INDEX { resolveOperatorOverload(node, scope) }
         case .LAMBDA { resolveLambda(node, scope) }
         case .LAMBDA_TYPE { resolveLambdaType(node, scope) }
         case .NAME { resolveName(node, scope) }
@@ -480,6 +482,7 @@ namespace astral.resolving {
       NodeKind.ASSIGN_BITWISE_OR: "|=",
       NodeKind.ASSIGN_BITWISE_XOR: "^=",
       NodeKind.ASSIGN_DIVIDE: "/=",
+      NodeKind.ASSIGN_INDEX: "[]=",
       NodeKind.ASSIGN_MULTIPLY: "*=",
       NodeKind.ASSIGN_POWER: "**=",
       NodeKind.ASSIGN_REMAINDER: "%=",
@@ -490,6 +493,7 @@ namespace astral.resolving {
       NodeKind.BITWISE_OR: "|",
       NodeKind.BITWISE_XOR: "^",
       NodeKind.DIVIDE: "/",
+      NodeKind.INDEX: "[]",
       NodeKind.MULTIPLY: "*",
       NodeKind.NEGATIVE: "-",
       NodeKind.POSITIVE: "+",
@@ -501,37 +505,23 @@ namespace astral.resolving {
     }
 
     void resolveUnary(Node node, Scope scope) {
-      var value = node.unaryValue()
-      resolveNode(value, scope)
-
-      // Check for operator overloading
-      if (value.resolvedType != .DYNAMIC) {
-        var name = operatorOverloadNames.getOrDefault(node.kind, "")
-        if (name != "") {
-          node.kind = .CALL
-          node.appendChild(Node.createDot(value.remove(), name).withRange(node.internalRange).withInternalRange(node.internalRange))
-          node.resolvedType = null
-          resolveNode(node, scope)
-        }
-      }
+      resolveNode(node.unaryValue(), scope)
+      resolveOperatorOverload(node, scope)
     }
 
     void resolveBinary(Node node, Scope scope) {
-      var left = node.binaryLeft()
-      var right = node.binaryRight()
-      resolveNode(left, scope)
-      resolveNode(right, scope)
+      resolveNode(node.binaryLeft(), scope)
+      resolveNode(node.binaryRight(), scope)
+      resolveOperatorOverload(node, scope)
+    }
 
-      // Check for operator overloading
-      if (left.resolvedType != .DYNAMIC && right.resolvedType != .DYNAMIC) {
-        var name = operatorOverloadNames.getOrDefault(node.kind, "")
-        if (name != "") {
-          node.kind = .CALL
-          node.appendChild(Node.createDot(left.remove(), name).withRange(node.internalRange).withInternalRange(node.internalRange))
-          node.appendChild(right.remove())
-          node.resolvedType = null
-          resolveNode(node, scope)
-        }
+    void resolveOperatorOverload(Node node, Scope scope) {
+      var name = operatorOverloadNames.getOrDefault(node.kind, "")
+      if (name != "") {
+        node.kind = .CALL
+        node.replaceChild(0, Node.createDot(node.children[0].replaceWithNull(), name).withRange(node.internalRange).withInternalRange(node.internalRange))
+        node.resolvedType = null
+        resolveNode(node, scope)
       }
     }
 

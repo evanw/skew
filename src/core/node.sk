@@ -13,12 +13,14 @@ namespace astral {
     WHILE
 
     // Expressions
+    ASSIGN_INDEX
     CALL // If node has symbol then symbol.arguments matches node.children, otherwise node.children.first is the function and other children are arguments
     CAST
     CONSTANT
     DOT
     DYNAMIC
     HOOK
+    INDEX
     LAMBDA
     LAMBDA_TYPE
     NAME
@@ -73,7 +75,7 @@ namespace astral {
     }
 
     bool isExpression() {
-      return this >= CALL && this <= ASSIGN_SUBTRACT
+      return this >= ASSIGN_INDEX && this <= ASSIGN_SUBTRACT
     }
 
     bool isUnary() {
@@ -154,6 +156,22 @@ namespace astral {
       return this
     }
 
+    Node replaceChild(int index, Node node) {
+      assert index >= 0 && index < children.size()
+      updateParent(node, this)
+      var child = children[index]
+      if (child != null) {
+        child.parent = null
+      }
+      children[index] = node
+      return child
+    }
+
+    Node replaceWithNull() {
+      parent.replaceChild(indexInParent(), null)
+      return this
+    }
+
     string asString() {
       assert kind == .NAME || kind == .DOT
       return content.asString()
@@ -204,6 +222,20 @@ namespace astral {
 
     static Node createWhile(Node test, Node block) {
       return Node(.WHILE).withChildren([test, block])
+    }
+
+    static Node createAssignIndex(Node target, List<Node> arguments, Node value) {
+      assert target.kind.isExpression()
+      assert value.kind.isExpression()
+      arguments.unshift(target)
+      arguments.push(value)
+      return Node(.ASSIGN_INDEX).withChildren(arguments)
+    }
+
+    static Node createIndex(Node target, List<Node> arguments) {
+      assert target.kind.isExpression()
+      arguments.unshift(target)
+      return Node(.INDEX).withChildren(arguments)
     }
 
     static Node createCall(Node target, List<Node> arguments) {

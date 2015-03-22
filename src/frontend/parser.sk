@@ -612,6 +612,11 @@ namespace astral {
     NodeKind kind
 
     override Node parse(ParserContext context, Node left, Token token, Node right) {
+      if (kind == .ASSIGN && left.kind == .INDEX) {
+        left.appendChild(right)
+        left.kind = .ASSIGN_INDEX
+        return left.withRange(Range.span(left.range, right.range)).withInternalRange(Range.span(left.internalRange, right.range))
+      }
       return Node.createBinary(kind, left, right).withRange(Range.span(left.range, right.range)).withInternalRange(token.range)
     }
   }
@@ -671,6 +676,17 @@ namespace astral {
       }
 
       return Node.createName(name).withRange(range)
+    }
+  }
+
+  class IndexParselet : InfixParselet {
+    override Node parse(ParserContext context, Node left) {
+      var token = context.next()
+      var arguments = parseCommaSeparatedList(context, .RIGHT_BRACKET)
+      if (arguments == null) {
+        return null
+      }
+      return Node.createIndex(left, arguments).withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range))
     }
   }
 
@@ -827,6 +843,7 @@ namespace astral {
     pratt.parselet(.AS, .COMPARE).infix = CastParselet()
     pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrLambdaParselet()
+    pratt.parselet(.LEFT_BRACKET, .MEMBER).infix = IndexParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet()
     pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet()
