@@ -5,7 +5,7 @@ namespace astral {
     var cache = TypeCache()
     cache.loadGlobals(log, global)
     if (!log.hasErrors()) {
-      resolveType(ResolveContext(cache, log, null), global)
+      Resolver(cache, log).resolveType(global)
     }
   }
 }
@@ -14,421 +14,439 @@ namespace astral.resolving {
   class ResolveContext {
     TypeCache cache
     Log log
-    Symbol symbol
-
-    ResolveContext withSymbol(Symbol other) {
-      return ResolveContext(cache, log, other)
-    }
   }
 
-  // This avoids allocating a ResolveContext if it's not needed
-  void initializeSymbolFromCurrentContext(ResolveContext context, Symbol symbol) {
-    if (symbol.state != .INITIALIZED) {
-      initializeSymbol(context.withSymbol(symbol.parent), symbol)
+  class Resolver {
+    TypeCache cache
+    Log log
+
+    void initializeSymbol(Symbol symbol) {
+      // The scope should have been set by the merging pass (or by this pass for local variables)
+      assert symbol.scope != null
+
+      // Only initialize the symbol once
+      if (symbol.state == .UNINITIALIZED) {
+        symbol.state = .INITIALIZING
+
+        switch (symbol.kind) {
+          case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE {
+            initializeType(symbol.asType())
+          }
+
+          case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL {
+            initializeFunction(symbol.asFunction())
+          }
+
+          case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
+            initializeVariable(symbol.asVariable())
+          }
+
+          case .PARAMETER {
+            initializeParameter(symbol.asParameter())
+          }
+
+          case .OVERLOADED_CONSTRUCTOR, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
+            initializeOverloadedFunction(symbol.asOverloadedFunction())
+          }
+
+          default {
+            assert false
+          }
+        }
+
+        assert symbol.resolvedType != null
+        symbol.state = .INITIALIZED
+      }
+
+      // Detect cyclic symbol references such as "foo foo;"
+      else if (symbol.state == .INITIALIZING) {
+        log.semanticErrorCyclicDeclaration(symbol.range, symbol.name)
+        symbol.resolvedType = .DYNAMIC
+      }
     }
-  }
 
-  void initializeSymbol(ResolveContext context, Symbol symbol) {
-    // Only initialize the symbol once
-    if (symbol.state == .UNINITIALIZED) {
-      symbol.state = .INITIALIZING
+    void resolveParameters(List<ParameterSymbol> parameters) {
+      if (parameters != null) {
+        for (var i = 0; i < parameters.size(); i++) {
+          resolveParameter(parameters[i])
+        }
+      }
+    }
 
-      switch (symbol.kind) {
-        case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE {
-          initializeType(context, symbol.asType())
+    void initializeParameter(ParameterSymbol symbol) {
+      if (symbol.resolvedType == null) {
+        symbol.resolvedType = SymbolType(symbol)
+      }
+    }
+
+    void resolveParameter(ParameterSymbol symbol) {
+      initializeSymbol(symbol)
+    }
+
+    void initializeType(TypeSymbol symbol) {
+      if (symbol.resolvedType == null) {
+        symbol.resolvedType = SymbolType(symbol)
+      }
+
+      if (symbol.base != null) {
+        resolveNode(symbol.base, symbol.scope)
+      }
+    }
+
+    void resolveType(TypeSymbol symbol) {
+      initializeSymbol(symbol)
+      resolveParameters(symbol.parameters)
+
+      for (var i = 0; i < symbol.types.size(); i++) {
+        resolveType(symbol.types[i])
+      }
+
+      for (var i = 0; i < symbol.functions.size(); i++) {
+        resolveFunction(symbol.functions[i])
+      }
+
+      for (var i = 0; i < symbol.variables.size(); i++) {
+        resolveVariable(symbol.variables[i])
+      }
+    }
+
+    void initializeFunction(FunctionSymbol symbol) {
+      if (symbol.resolvedType == null) {
+        symbol.resolvedType = SymbolType(symbol)
+      }
+
+      resolveParameters(symbol.parameters)
+
+      for (var i = 0; i < symbol.arguments.size(); i++) {
+        var argument = symbol.arguments[i]
+        argument.scope = symbol.scope
+        resolveVariable(argument)
+      }
+
+      if (symbol.returnType != null) {
+        if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+          log.semanticErrorConstructorReturnType(symbol.returnType.range)
+          symbol.returnType = null
         }
 
-        case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL {
-          initializeFunction(context, symbol.asFunction())
+        else {
+          resolveNode(symbol.returnType, symbol.scope)
         }
+      }
+    }
 
-        case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
-          initializeVariable(context, symbol.asVariable())
-        }
+    void resolveFunction(FunctionSymbol symbol) {
+      initializeSymbol(symbol)
 
-        case .PARAMETER {
-          initializeParameter(context, symbol.asParameter())
-        }
+      var scope = LocalScope(symbol.scope)
 
-        case .OVERLOADED_CONSTRUCTOR, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
-          initializeOverloadedFunction(context, symbol.asOverloadedFunction())
-        }
+      if (symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR) {
+        symbol.self = VariableSymbol(.VARIABLE_LOCAL, "self")
+        symbol.self.resolvedType = symbol.parent.resolvedType
+        symbol.self.state = .INITIALIZED
+        scope.define(symbol.self, log)
+      }
+
+      // Default values for argument variables aren't resolved with this local
+      // scope since they are evaluated at the call site, not inside the
+      // function body, and shouldn't have access to other arguments
+      for (var i = 0; i < symbol.arguments.size(); i++) {
+        scope.define(symbol.arguments[i], log)
+      }
+
+      if (symbol.block != null) {
+        resolveNode(symbol.block, scope)
+      }
+    }
+
+    void initializeVariable(VariableSymbol symbol) {
+      if (symbol.type != null) {
+        resolveNode(symbol.type, symbol.scope)
+        symbol.resolvedType = symbol.type.resolvedType
+      }
+
+      // Implicitly-typed variables take their type from their initializer
+      else if (symbol.value != null) {
+        resolveNode(symbol.value, symbol.scope)
+        symbol.resolvedType = symbol.value.resolvedType
+      }
+
+      else {
+        log.semanticErrorVarMissingValue(symbol.range)
+        symbol.resolvedType = .DYNAMIC
+      }
+    }
+
+    void resolveVariable(VariableSymbol symbol) {
+      initializeSymbol(symbol)
+
+      if (symbol.value != null) {
+        resolveNode(symbol.value, symbol.scope)
+      }
+
+      // Default-initialize varliables that aren't explicitly initialized
+      else if (symbol.kind != .VARIABLE_LOCAL) {
+        symbol.value = defaultValueForType(symbol.resolvedType)
+      }
+    }
+
+    void initializeOverloadedFunction(OverloadedFunctionSymbol symbol) {
+      var symbols = symbol.symbols
+
+      if (symbol.resolvedType == null) {
+        symbol.resolvedType = SymbolType(symbol)
+      }
+
+      for (var i = 0; i < symbols.size(); i++) {
+        initializeSymbol(symbols[i])
+      }
+    }
+
+    void resolveNode(Node node, Scope scope) {
+      if (node.resolvedType != null) {
+        return // Only resolve once
+      }
+
+      node.resolvedType = .DYNAMIC
+      switch (node.kind) {
+        case .BLOCK { resolveBlock(node, scope) }
+
+        // Statements
+        case .BREAK {}
+        case .CONTINUE {}
+        case .EXPRESSION { resolveExpression(node, scope) }
+        case .IF { resolveIf(node, scope) }
+        case .RETURN { resolveReturn(node, scope) }
+        case .VAR { resolveVar(node, scope) }
+        case .WHILE { resolveWhile(node, scope) }
+
+        // Expressions
+        case .CALL { resolveCall(node, scope) }
+        case .CAST { resolveCast(node, scope) }
+        case .CONSTANT { resolveConstant(node, scope) }
+        case .DOT { resolveDot(node, scope) }
+        case .DYNAMIC {}
+        case .HOOK { resolveHook(node, scope) }
+        case .LAMBDA { resolveLambda(node, scope) }
+        case .LAMBDA_TYPE { resolveLambdaType(node, scope) }
+        case .NAME { resolveName(node, scope) }
+        case .NULL { node.resolvedType = .NULL }
+        case .PARAMETERIZE { resolveParameterize(node, scope) }
 
         default {
-          assert false
+          if (node.kind.isUnary()) { resolveUnary(node, scope) }
+          else if (node.kind.isBinary()) { resolveBinary(node, scope) }
+          else { assert false }
         }
       }
 
-      assert symbol.resolvedType != null
-      symbol.state = .INITIALIZED
+      assert node.resolvedType != null
     }
 
-    // Detect cyclic symbol references such as "foo foo;"
-    else if (symbol.state == .INITIALIZING) {
-      context.log.semanticErrorCyclicDeclaration(symbol.range, symbol.name)
-      symbol.resolvedType = .DYNAMIC
-    }
-  }
-
-  void resolveParameters(ResolveContext context, List<ParameterSymbol> parameters) {
-    if (parameters != null) {
-      for (var i = 0; i < parameters.size(); i++) {
-        resolveParameter(context, parameters[i])
-      }
-    }
-  }
-
-  void initializeParameter(ResolveContext context, ParameterSymbol symbol) {
-    if (symbol.resolvedType == null) {
-      symbol.resolvedType = SymbolType(symbol)
-    }
-  }
-
-  void resolveParameter(ResolveContext context, ParameterSymbol symbol) {
-    initializeSymbol(context, symbol)
-  }
-
-  void initializeType(ResolveContext context, TypeSymbol symbol) {
-    if (symbol.resolvedType == null) {
-      symbol.resolvedType = SymbolType(symbol)
-    }
-
-    if (symbol.base != null) {
-      resolveNode(context, symbol.base)
-    }
-  }
-
-  void resolveType(ResolveContext context, TypeSymbol symbol) {
-    initializeSymbol(context, symbol)
-    var nested = context.withSymbol(symbol)
-    resolveParameters(nested, symbol.parameters)
-
-    for (var i = 0; i < symbol.types.size(); i++) {
-      resolveType(nested, symbol.types[i])
-    }
-
-    for (var i = 0; i < symbol.functions.size(); i++) {
-      resolveFunction(nested, symbol.functions[i])
-    }
-
-    for (var i = 0; i < symbol.variables.size(); i++) {
-      resolveVariable(nested, symbol.variables[i])
-    }
-  }
-
-  void initializeFunction(ResolveContext context, FunctionSymbol symbol) {
-    if (symbol.resolvedType == null) {
-      symbol.resolvedType = SymbolType(symbol)
-    }
-
-    resolveParameters(context, symbol.parameters)
-
-    for (var i = 0; i < symbol.arguments.size(); i++) {
-      resolveVariable(context, symbol.arguments[i])
-    }
-
-    if (symbol.returnType != null) {
-      if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
-        context.log.semanticErrorConstructorReturnType(symbol.returnType.range)
-        symbol.returnType = null
-      }
-
-      else {
-        resolveNode(context, symbol.returnType)
-      }
-    }
-  }
-
-  void resolveFunction(ResolveContext context, FunctionSymbol symbol) {
-    initializeSymbol(context, symbol)
-
-    if (symbol.block != null) {
-      resolveNode(context, symbol.block)
-    }
-  }
-
-  void initializeVariable(ResolveContext context, VariableSymbol symbol) {
-    if (symbol.type != null) {
-      resolveNode(context, symbol.type)
-      symbol.resolvedType = symbol.type.resolvedType
-    }
-
-    // Implicitly-typed variables take their type from their initializer
-    else if (symbol.value != null) {
-      resolveNode(context, symbol.value)
-      symbol.resolvedType = symbol.value.resolvedType
-    }
-
-    else {
-      context.log.semanticErrorVarMissingValue(symbol.range)
-      symbol.resolvedType = .DYNAMIC
-    }
-  }
-
-  void resolveVariable(ResolveContext context, VariableSymbol symbol) {
-    initializeSymbol(context, symbol)
-
-    if (symbol.value != null) {
-      resolveNode(context, symbol.value)
-    }
-
-    // Default-initialize varliables that aren't explicitly initialized
-    else if (symbol.kind != .VARIABLE_LOCAL) {
-      symbol.value = defaultValueForType(context, symbol.resolvedType)
-    }
-  }
-
-  void initializeOverloadedFunction(ResolveContext context, OverloadedFunctionSymbol symbol) {
-    var symbols = symbol.symbols
-
-    if (symbol.resolvedType == null) {
-      symbol.resolvedType = SymbolType(symbol)
-    }
-
-    for (var i = 0; i < symbols.size(); i++) {
-      initializeSymbol(context, symbols[i])
-    }
-  }
-
-  void resolveNode(ResolveContext context, Node node) {
-    if (node.resolvedType != null) {
-      return // Only resolve once
-    }
-
-    node.resolvedType = .DYNAMIC
-    switch (node.kind) {
-      case .BLOCK { resolveBlock(context, node) }
-
-      // Statements
-      case .BREAK {}
-      case .CONTINUE {}
-      case .EXPRESSION { resolveExpression(context, node) }
-      case .IF { resolveIf(context, node) }
-      case .RETURN { resolveReturn(context, node) }
-      case .VAR {}
-      case .WHILE { resolveWhile(context, node) }
-
-      // Expressions
-      case .CALL { resolveCall(context, node) }
-      case .CAST { resolveCast(context, node) }
-      case .CONSTANT { resolveConstant(context, node) }
-      case .DOT { resolveDot(context, node) }
-      case .DYNAMIC {}
-      case .HOOK { resolveHook(context, node) }
-      case .LAMBDA { resolveFunction(context, node.symbol.asFunction()) }
-      case .LAMBDA_TYPE { resolveLambdaType(context, node) }
-      case .NAME { resolveName(context, node) }
-      case .NULL { node.resolvedType = .NULL }
-      case .PARAMETERIZE { resolveParameterize(context, node) }
-
-      default {
-        if (node.kind.isUnary()) { resolveUnary(context, node) }
-        else if (node.kind.isBinary()) { resolveBinary(context, node) }
-        else { assert false }
+    void resolveBlock(Node node, Scope scope) {
+      for (var i = 0; i < node.children.size(); i++) {
+        resolveNode(node.children[i], scope)
       }
     }
 
-    assert node.resolvedType != null
-  }
-
-  void resolveBlock(ResolveContext context, Node node) {
-    for (var i = 0; i < node.children.size(); i++) {
-      resolveNode(context, node.children[i])
+    void resolveExpression(Node node, Scope scope) {
+      resolveNode(node.expressionValue(), scope)
     }
-  }
 
-  void resolveExpression(ResolveContext context, Node node) {
-    resolveNode(context, node.expressionValue())
-  }
-
-  void resolveIf(ResolveContext context, Node node) {
-    var ifFalse = node.ifFalse()
-    resolveNode(context, node.ifTest())
-    resolveNode(context, node.ifTrue())
-    if (ifFalse != null) {
-      resolveNode(context, ifFalse)
+    void resolveIf(Node node, Scope scope) {
+      var ifFalse = node.ifFalse()
+      resolveNode(node.ifTest(), scope)
+      resolveNode(node.ifTrue(), scope)
+      if (ifFalse != null) {
+        resolveNode(ifFalse, scope)
+      }
     }
-  }
 
-  void resolveReturn(ResolveContext context, Node node) {
-    var value = node.returnValue()
-    if (value != null) {
-      resolveNode(context, value)
+    void resolveReturn(Node node, Scope scope) {
+      var value = node.returnValue()
+      if (value != null) {
+        resolveNode(value, scope)
+      }
     }
-  }
 
-  void resolveWhile(ResolveContext context, Node node) {
-    resolveNode(context, node.whileTest())
-    resolveNode(context, node.whileBlock())
-  }
+    void resolveVar(Node node, Scope scope) {
+      var symbol = node.symbol.asVariable()
+      scope.asLocal().define(symbol, log)
+      resolveVariable(symbol)
+    }
 
-  void resolveCall(ResolveContext context, Node node) {
-    var value = node.callValue()
-    resolveNode(context, value)
-    var type = value.resolvedType
+    void resolveWhile(Node node, Scope scope) {
+      resolveNode(node.whileTest(), scope)
+      resolveNode(node.whileBlock(), scope)
+    }
 
-    if (type.kind() == .SYMBOL) {
-      var symbol = type.asSymbolType().symbol
+    void resolveCall(Node node, Scope scope) {
+      var value = node.callValue()
+      resolveNode(value, scope)
+      var type = value.resolvedType
 
-      if (symbol.kind.isFunction()) {
-        var function = symbol.asFunction()
-        var expected = function.arguments.size()
-        var found = node.children.size() - 1
+      if (type.kind() == .SYMBOL) {
+        var symbol = type.asSymbolType().symbol
 
-        // Check argument count
-        if (expected != found) {
-          context.log.semanticErrorArgumentCount(node.internalRange, expected, found)
+        if (symbol.kind.isFunction()) {
+          var function = symbol.asFunction()
+          var expected = function.arguments.size()
+          var found = node.children.size() - 1
+
+          // Check argument count
+          if (expected != found) {
+            log.semanticErrorArgumentCount(node.internalRange, expected, found)
+          }
+
+          // Use the return type even if there were errors
+          if (function.returnType != null) {
+            node.resolvedType = function.returnType.resolvedType
+          }
+
+          // Constructors have an implicit return type
+          else if (function.kind == .FUNCTION_CONSTRUCTOR) {
+            node.resolvedType = function.parent.resolvedType
+          }
+
+          // There is no "void" type, so make sure this return value isn't used
+          else if (node.parent.kind != .EXPRESSION) {
+            log.semanticErrorUseOfVoid(node.range, function.name)
+          }
         }
 
-        // Use the return type even if there were errors
-        if (function.returnType != null) {
-          node.resolvedType = function.returnType.resolvedType
-        }
-
-        // Constructors have an implicit return type
-        else if (function.kind == .FUNCTION_CONSTRUCTOR) {
-          node.resolvedType = function.parent.resolvedType
-        }
-
-        // There is no "void" type, so make sure this return value isn't used
-        else if (node.parent.kind != .EXPRESSION) {
-          context.log.semanticErrorUseOfVoid(node.range, function.name)
+        else {
+          log.semanticErrorInvalidCall(value.range, value.resolvedType)
         }
       }
 
-      else {
-        context.log.semanticErrorInvalidCall(value.range, value.resolvedType)
+      else if (type != .DYNAMIC) {
+        log.semanticErrorInvalidCall(value.range, value.resolvedType)
+      }
+
+      for (var i = 1; i < node.children.size(); i++) {
+        resolveNode(node.children[i], scope)
       }
     }
 
-    else if (type != .DYNAMIC) {
-      context.log.semanticErrorInvalidCall(value.range, value.resolvedType)
+    void resolveCast(Node node, Scope scope) {
+      resolveNode(node.castValue(), scope)
+      resolveNode(node.castType(), scope)
     }
 
-    for (var i = 1; i < node.children.size(); i++) {
-      resolveNode(context, node.children[i])
+    void resolveConstant(Node node, Scope scope) {
+      switch (node.content.kind()) {
+        case .BOOL { node.resolvedType = cache.boolType }
+        case .DOUBLE { node.resolvedType = cache.doubleType }
+        case .INT { node.resolvedType = cache.intType }
+        case .STRING { node.resolvedType = cache.stringType }
+      }
     }
-  }
 
-  void resolveCast(ResolveContext context, Node node) {
-    resolveNode(context, node.castValue())
-    resolveNode(context, node.castType())
-  }
+    void resolveDot(Node node, Scope scope) {
+      var target = node.dotTarget()
+      var name = node.asString()
+      resolveNode(target, scope)
 
-  void resolveConstant(ResolveContext context, Node node) {
-    switch (node.content.kind()) {
-      case .BOOL { node.resolvedType = context.cache.boolType }
-      case .DOUBLE { node.resolvedType = context.cache.doubleType }
-      case .INT { node.resolvedType = context.cache.intType }
-      case .STRING { node.resolvedType = context.cache.stringType }
+      if (target.resolvedType == .DYNAMIC) {
+        return
+      }
+
+      Symbol member = null
+      if (target.resolvedType.kind() == .SYMBOL) {
+        var symbol = target.resolvedType.asSymbolType().symbol
+        if (symbol.kind.isType()) {
+          member = symbol.asType().members.getOrDefault(name, null)
+        }
+      }
+
+      if (member == null) {
+        log.semanticErrorUnknownMemberSymbol(node.internalRange, name, target.resolvedType)
+        return
+      }
+
+      initializeSymbol(member)
+
+      var isType = target.symbol != null && target.symbol.kind.isType()
+      var needsType = member.kind != .FUNCTION_INSTANCE && member.kind != .VARIABLE_INSTANCE
+
+      if (isType && !needsType) {
+        log.semanticErrorMemberUnexpectedInstance(node.internalRange, member.name)
+      } else if (!isType && needsType) {
+        log.semanticErrorMemberUnexpectedGlobal(node.internalRange, member.name)
+      }
+
+      node.resolvedType = member.resolvedType
     }
-  }
 
-  void resolveDot(ResolveContext context, Node node) {
-    var target = node.dotTarget()
-    var name = node.asString()
-    resolveNode(context, target)
+    void resolveHook(Node node, Scope scope) {
+      resolveNode(node.hookTest(), scope)
+      resolveNode(node.hookTrue(), scope)
+      resolveNode(node.hookFalse(), scope)
+    }
 
-    if (target.resolvedType == .DYNAMIC) {
+    void resolveLambda(Node node, Scope scope) {
+      var symbol = node.symbol.asFunction()
+      symbol.scope = scope
+      resolveFunction(symbol)
+    }
+
+    void resolveLambdaType(Node node, Scope scope) {
+      var children = node.children
+      List<Type> types = []
+
+      for (var i = 0; i < children.size(); i++) {
+        var child = children[i]
+        if (child != null) {
+          resolveNode(child, scope)
+          types.push(child.resolvedType)
+        } else {
+          types.push(null)
+        }
+      }
+
+      var returnType = types.pop()
+      node.resolvedType = LambdaType(types, returnType)
+    }
+
+    void resolveName(Node node, Scope scope) {
+      var name = node.asString()
+      var symbol = scope.find(name)
+
+      if (symbol == null) {
+        log.semanticErrorUndeclaredSymbol(node.range, name)
+        return
+      }
+
+      initializeSymbol(symbol)
+      node.symbol = symbol
+      node.resolvedType = symbol.resolvedType
+    }
+
+    void resolveParameterize(Node node, Scope scope) {
+      for (var i = 0; i < node.children.size(); i++) {
+        resolveNode(node.children[i], scope)
+      }
+    }
+
+    void resolveUnary(Node node, Scope scope) {
+      var value = node.unaryValue()
+      resolveNode(value, scope)
+    }
+
+    void resolveBinary(Node node, Scope scope) {
+      var left = node.binaryLeft()
+      var right = node.binaryRight()
+      resolveNode(left, scope)
+      resolveNode(right, scope)
+    }
+
+    Node defaultValueForType(Type type) {
       return
+        type == cache.boolType ? Node.createBool(false) :
+        type == cache.doubleType ? Node.createDouble(0.0) :
+        type == cache.intType ? Node.createInt(0) :
+        type == cache.stringType ? Node.createString("") :
+        Node.createNull()
     }
-
-    Symbol member = null
-    if (target.resolvedType.kind() == .SYMBOL) {
-      var symbol = target.resolvedType.asSymbolType().symbol
-      if (symbol.kind.isType()) {
-        member = symbol.asType().members.getOrDefault(name, null)
-      }
-    }
-
-    if (member == null) {
-      context.log.semanticErrorUnknownMemberSymbol(node.internalRange, name, target.resolvedType)
-      return
-    }
-
-    initializeSymbolFromCurrentContext(context, member)
-
-    var isType = target.symbol != null && target.symbol.kind.isType()
-    var needsType = member.kind != .FUNCTION_INSTANCE && member.kind != .VARIABLE_INSTANCE
-
-    if (isType && !needsType) {
-      context.log.semanticErrorMemberUnexpectedInstance(node.internalRange, member.name)
-    } else if (!isType && needsType) {
-      context.log.semanticErrorMemberUnexpectedGlobal(node.internalRange, member.name)
-    }
-
-    node.resolvedType = member.resolvedType
-  }
-
-  void resolveHook(ResolveContext context, Node node) {
-    resolveNode(context, node.hookTest())
-    resolveNode(context, node.hookTrue())
-    resolveNode(context, node.hookFalse())
-  }
-
-  void resolveLambdaType(ResolveContext context, Node node) {
-    var children = node.children
-    List<Type> types = []
-
-    for (var i = 0; i < children.size(); i++) {
-      var child = children[i]
-      if (child != null) {
-        resolveNode(context, child)
-        types.push(child.resolvedType)
-      } else {
-        types.push(null)
-      }
-    }
-
-    var returnType = types.pop()
-    node.resolvedType = LambdaType(types, returnType)
-  }
-
-  void resolveName(ResolveContext context, Node node) {
-    var name = node.asString()
-
-    for (var symbol = context.symbol; symbol != null; symbol = symbol.parent) {
-      if (symbol.kind.isType()) {
-        node.symbol = symbol.asType().members.getOrDefault(name, null)
-        if (node.symbol != null) {
-          break
-        }
-      }
-    }
-
-    if (node.symbol == null) {
-      context.log.semanticErrorUndeclaredSymbol(node.range, name)
-      return
-    }
-
-    initializeSymbolFromCurrentContext(context, node.symbol)
-    node.resolvedType = node.symbol.resolvedType
-  }
-
-  void resolveParameterize(ResolveContext context, Node node) {
-    for (var i = 0; i < node.children.size(); i++) {
-      resolveNode(context, node.children[i])
-    }
-  }
-
-  void resolveUnary(ResolveContext context, Node node) {
-    var value = node.unaryValue()
-    resolveNode(context, value)
-  }
-
-  void resolveBinary(ResolveContext context, Node node) {
-    var left = node.binaryLeft()
-    var right = node.binaryRight()
-    resolveNode(context, left)
-    resolveNode(context, right)
-  }
-
-  Node defaultValueForType(ResolveContext context, Type type) {
-    return
-      type == context.cache.boolType ? Node.createBool(false) :
-      type == context.cache.doubleType ? Node.createDouble(0.0) :
-      type == context.cache.intType ? Node.createInt(0) :
-      type == context.cache.stringType ? Node.createString("") :
-      Node.createNull()
   }
 }

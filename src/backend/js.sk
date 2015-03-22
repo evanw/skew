@@ -110,7 +110,7 @@ namespace astral {
         if (symbol.kind != .VARIABLE_INSTANCE && (symbol.value != null || prefix == "")) {
           emitNewlineBeforeSymbol(symbol)
           emitComments(symbol)
-          emit(indent + (prefix == "" ? "var " : prefix) + symbol.name)
+          emit(indent + (prefix == "" || symbol.kind == .VARIABLE_LOCAL ? "var " : prefix) + symbol.name)
           if (symbol.value != null) {
             emit(" = ")
             emitExpression(symbol.value, .LOWEST)

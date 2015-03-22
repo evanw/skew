@@ -1,9 +1,9 @@
 build:
-	skewc src/**/*.sk --output-file=out.js --lib:terminal --lib:unicode --target=js --config=node
-	skewc src/**/*.sk --output-file=browser.js --lib:terminal --lib:unicode --target=js --config=browser
+	skewc src/**/*.sk --output-file=browser.js --lib:terminal --lib:unicode --target=js --error-limit=18
+	skewc src/**/*.sk --output-file=browser.min.js --lib:terminal --lib:unicode --target=js --error-limit=18 --release
 
 watch:
-	watch src make build
+	watch 'clear && make build' src
 
 run: build
 	node out.js

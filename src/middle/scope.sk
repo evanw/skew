@@ -1,0 +1,79 @@
+namespace astral {
+  enum ScopeKind {
+    FUNCTION
+    LOCAL
+    TYPE
+  }
+
+  class Scope {
+    Scope parent
+
+    virtual ScopeKind kind()
+    virtual Symbol find(string name)
+
+    TypeScope asType() {
+      assert kind() == .TYPE
+      return (TypeScope)this
+    }
+
+    FunctionScope asFunction() {
+      assert kind() == .FUNCTION
+      return (FunctionScope)this
+    }
+
+    LocalScope asLocal() {
+      assert kind() == .LOCAL
+      return (LocalScope)this
+    }
+  }
+
+  class TypeScope : Scope {
+    TypeSymbol symbol
+
+    override ScopeKind kind() {
+      return .TYPE
+    }
+
+    override Symbol find(string name) {
+      var result = symbol.members.getOrDefault(name, null)
+      return result != null ? result : parent != null ? parent.find(name) : null
+    }
+  }
+
+  class FunctionScope : Scope {
+    FunctionSymbol symbol
+    StringMap<ParameterSymbol> parameters = {}
+
+    override ScopeKind kind() {
+      return .FUNCTION
+    }
+
+    override Symbol find(string name) {
+      var result = parameters.getOrDefault(name, null)
+      return result != null ? result : parent != null ? parent.find(name) : null
+    }
+  }
+
+  class LocalScope : Scope {
+    StringMap<VariableSymbol> locals = {}
+
+    override ScopeKind kind() {
+      return .LOCAL
+    }
+
+    override Symbol find(string name) {
+      var result = locals.getOrDefault(name, null)
+      return result != null ? result : parent != null ? parent.find(name) : null
+    }
+
+    void define(VariableSymbol symbol, Log log) {
+      var other = locals.getOrDefault(symbol.name, null)
+      symbol.scope = this
+      if (other != null) {
+        log.semanticErrorDuplicateSymbol(symbol.range, symbol.name, other.range)
+      } else {
+        locals[symbol.name] = symbol
+      }
+    }
+  }
+}

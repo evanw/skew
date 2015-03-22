@@ -26,13 +26,16 @@ namespace astral {
     MEMBER
   }
 
-  Node parseLocalVar(ParserContext context) {
+  Node parseVar(ParserContext context) {
     var token = context.next()
-    var name = context.current().range.toString()
+    var range = context.current().range
+
     if (!context.expect(.IDENTIFIER)) {
       return null
     }
-    var symbol = VariableSymbol(.VARIABLE_LOCAL, name)
+
+    var symbol = VariableSymbol(.VARIABLE_LOCAL, range.toString())
+    symbol.range = range
 
     if (!context.peek(.ASSIGN) && !context.peek(.NEWLINE)) {
       symbol.type = pratt.parse(context, .ASSIGN)
@@ -116,7 +119,7 @@ namespace astral {
       case .BREAK, .CONTINUE { return parseJump(context) }
       case .IF { return parseIf(context) }
       case .RETURN { return parseReturn(context) }
-      case .VAR { return parseLocalVar(context) }
+      case .VAR { return parseVar(context) }
       case .WHILE { return parseWhile(context) }
     }
 

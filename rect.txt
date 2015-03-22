@@ -1,29 +1,46 @@
-class Rect {
-  ivar x = 0.0
-  ivar y = 0.0
-  ivar width = 0.0
-  ivar height = 0.0
+namespace double {
+  var INFINITY double
+  def min(a double, b double) double
+  def max(a double, b double) double
+}
 
-  cdef zero() {
+class List<T> {
+}
+
+class Point {
+  var x double
+  var y double
+
+  def new() {
+  }
+}
+
+class Rect {
+  var x double
+  var y double
+  var width double
+  var height double
+
+  def new() {
   }
 
-  cdef new(x double, y double, w double, h double) {
+  def new(x double, y double, w double, h double) {
     self.x = x
     self.y = y
-    self.w = w
-    self.h = h
-  }
-
-  cdef withSize(w double, h double) {
     width = w
     height = h
   }
 
-  cdef aroundPoints(points PointArray) {
-    var xmin = double.INF
-    var ymin = double.INF
-    var xmax = -double.INF
-    var ymax = -double.INF
+  def new(w double, h double) {
+    width = w
+    height = h
+  }
+
+  def new(points List<Point>) {
+    var xmin = double.INFINITY
+    var ymin = double.INFINITY
+    var xmax = -double.INFINITY
+    var ymax = -double.INFINITY
 
     var i = 0
     while i < points.length {
@@ -32,7 +49,7 @@ class Rect {
       ymin = double.min(ymin, p.y)
       xmax = double.max(xmax, p.x)
       ymax = double.max(ymax, p.y)
-      i = i + 1
+      i += 1
     }
 
     x = xmin
@@ -41,11 +58,17 @@ class Rect {
     height = ymax - ymin
   }
 
-  idef area() {
+  def area() {
     return width * height
   }
+}
 
+namespace Rect {
   def invalid() {
-    return new(double.INF, double.INF, -double.INF, -double.INF)
+    return new(
+      double.INFINITY,
+      double.INFINITY,
+      -double.INFINITY,
+      -double.INFINITY)
   }
 }

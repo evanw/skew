@@ -71,6 +71,7 @@ namespace astral {
     Range range = null // The location of the name in the source code
     Symbol parent = null // Automatically set by the merging step
     Type resolvedType = null // Automatically set by the resolving step
+    Scope scope = null // Automatically set by the merging step (resolving step for local variables)
     SymbolState state = .UNINITIALIZED
     List<string> comments = null
 
@@ -130,8 +131,10 @@ namespace astral {
 
   class FunctionSymbol : Symbol {
     OverloadedFunctionSymbol overloaded = null
-    List<VariableSymbol> arguments = []
     List<ParameterSymbol> parameters = null
+    List<VariableSymbol> arguments = []
+    List<VariableSymbol> locals = []
+    VariableSymbol self = null // For instance functions and constructors
     Node returnType = null
     Node block = null
   }

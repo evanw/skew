@@ -166,8 +166,7 @@ namespace astral {
       return Node(.RETURN).withChildren([value])
     }
 
-    static Node createVar(Symbol symbol) {
-      assert symbol.kind.isVariable()
+    static Node createVar(VariableSymbol symbol) {
       return Node(.VAR).withSymbol(symbol)
     }
 

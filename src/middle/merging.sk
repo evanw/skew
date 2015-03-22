@@ -8,14 +8,17 @@ namespace astral {
 
 namespace astral.merging {
   void mergeType(Log log, TypeSymbol parent, TypeSymbol target, TypeSymbol symbol) {
+    target.scope = TypeScope(parent != null ? parent.scope : null, target)
     symbol.parent = parent
 
     if (symbol.parameters != null) {
       for (var i = 0; i < symbol.parameters.size(); i++) {
         var parameter = symbol.parameters[i]
-        var other = target.members.getOrDefault(parameter.name, null)
+        parameter.scope = parent.scope
         parameter.parent = target
 
+        // Type parameters cannot merge with any members
+        var other = target.members.getOrDefault(parameter.name, null)
         if (other != null) {
           log.semanticErrorDuplicateSymbol(parameter.range, parameter.name, other.range)
           continue
@@ -95,7 +98,26 @@ namespace astral.merging {
     for (var i = 0, n = children.size(); i < n; i++) {
       var child = children[i]
       var other = members.getOrDefault(child.name, null)
+      var scope = FunctionScope(parent.scope, child)
+      child.scope = scope
       child.parent = parent
+
+      if (child.parameters != null) {
+        for (var i = 0; i < child.parameters.size(); i++) {
+          var parameter = child.parameters[i]
+          parameter.scope = scope
+          parameter.parent = child
+
+          // Type parameters cannot merge with other parameters on this function
+          var previous = scope.parameters.getOrDefault(parameter.name, null)
+          if (previous != null) {
+            log.semanticErrorDuplicateSymbol(parameter.range, parameter.name, previous.range)
+            continue
+          }
+
+          scope.parameters[parameter.name] = parameter
+        }
+      }
 
       // Simple case: no merging
       if (other == null) {
@@ -109,6 +131,7 @@ namespace astral.merging {
         members[child.name] = overloaded
         ((FunctionSymbol)other).overloaded = overloaded
         child.overloaded = overloaded
+        overloaded.scope = parent.scope
         overloaded.parent = parent
         continue
       }
@@ -130,6 +153,7 @@ namespace astral.merging {
     for (var i = 0, n = children.size(); i < n; i++) {
       var child = children[i]
       var other = members.getOrDefault(child.name, null)
+      child.scope = parent.scope
       child.parent = parent
 
       // Variables never merge
