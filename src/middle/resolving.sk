@@ -169,6 +169,12 @@ namespace astral.resolving {
       else if (symbol.value != null) {
         resolveNode(symbol.value, symbol.scope)
         symbol.resolvedType = symbol.value.resolvedType
+
+        // Forbid the null type since it's definitely a mistake
+        if (symbol.resolvedType == .NULL) {
+          log.semanticErrorBadVariableType(symbol.range, symbol.resolvedType)
+          symbol.resolvedType = .DYNAMIC
+        }
       }
 
       else {
@@ -379,8 +385,11 @@ namespace astral.resolving {
     }
 
     void resolveCast(Node node, Scope scope) {
-      resolveNode(node.castValue(), scope)
-      resolveNode(node.castType(), scope)
+      var value = node.castValue()
+      var type = node.castType()
+      resolveNode(value, scope)
+      resolveNode(type, scope)
+      node.resolvedType = type.resolvedType
     }
 
     void resolveConstant(Node node, Scope scope) {
@@ -389,6 +398,7 @@ namespace astral.resolving {
         case .DOUBLE { node.resolvedType = cache.doubleType }
         case .INT { node.resolvedType = cache.intType }
         case .STRING { node.resolvedType = cache.stringType }
+        default { assert false }
       }
     }
 

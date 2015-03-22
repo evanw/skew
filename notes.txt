@@ -14,9 +14,9 @@ namespace ns {
     var z = 100
     def foo() { return (1.5 as int).toString() }
     def foo() { return 200 }
-    class Foo { cdef new() {} }
+    class Foo { def new() {} }
   }
-  class Bar { cdef new() {} }
+  class Bar { def new() {} }
 }
 
 

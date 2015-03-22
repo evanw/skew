@@ -1,8 +1,8 @@
 var NATIVE_LIBRARY = "
-class bool { def new() }
-class double { def new() }
-class int { def new() }
-class string { def new() }
+class bool {}
+class double {}
+class int {}
+class string {}
 "
 
 namespace astral {

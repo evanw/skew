@@ -155,6 +155,10 @@ namespace astral {
       error(range, "The function \"" + name + "\" does not return a value")
     }
 
+    void semanticErrorBadVariableType(Range range, Type type) {
+      error(range, "Implicitly typed variables cannot be of type \"" + type + "\"")
+    }
+
     void semanticErrorMemberUnexpectedGlobal(Range range, string name) {
       error(range, "Cannot access global member \"" + name + "\" from an instance context")
     }
