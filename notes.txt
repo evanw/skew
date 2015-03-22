@@ -1,3 +1,22 @@
+- todo
+  - comment parsing inside functions
+  - make "self" explicit for sanity (all instance member NAME nodes become DOT nodes)
+  - generics
+  - argument type checking
+  - return type and presence checking
+  - function types including calling values of those types
+  - lambdas including type context
+  - interface auto-conversion and checking
+  - throw/try/catch/finally
+  - js generation
+  - c++ generation
+  - inlining
+  - renaming
+
+
+
+
+
 - test data:
 
 namespace ns {
