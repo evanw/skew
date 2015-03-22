@@ -72,3 +72,9 @@ namespace Rect {
       -double.INFINITY)
   }
 }
+
+class double {
+  def -() double
+  def -(v double) double
+  def *(v double) double
+}

@@ -11,9 +11,9 @@ namespace astral {
 }
 
 namespace astral.resolving {
-  class ResolveContext {
-    TypeCache cache
-    Log log
+  enum ConversionKind {
+    IMPLICIT
+    EXPLICIT
   }
 
   class Resolver {
@@ -89,7 +89,7 @@ namespace astral.resolving {
       }
 
       if (symbol.base != null) {
-        resolveNode(symbol.base, symbol.scope)
+        resolveAsParameterizedType(symbol.base, symbol.scope)
       }
     }
 
@@ -130,7 +130,7 @@ namespace astral.resolving {
         }
 
         else {
-          resolveNode(symbol.returnType, symbol.scope)
+          resolveAsParameterizedType(symbol.returnType, symbol.scope)
         }
       }
     }
@@ -161,13 +161,13 @@ namespace astral.resolving {
 
     void initializeVariable(VariableSymbol symbol) {
       if (symbol.type != null) {
-        resolveNode(symbol.type, symbol.scope)
+        resolveAsParameterizedType(symbol.type, symbol.scope)
         symbol.resolvedType = symbol.type.resolvedType
       }
 
       // Implicitly-typed variables take their type from their initializer
       else if (symbol.value != null) {
-        resolveNode(symbol.value, symbol.scope)
+        resolveAsParameterizedExpression(symbol.value, symbol.scope)
         symbol.resolvedType = symbol.value.resolvedType
 
         // Forbid the null type since it's definitely a mistake
@@ -187,7 +187,7 @@ namespace astral.resolving {
       initializeSymbol(symbol)
 
       if (symbol.value != null) {
-        resolveNode(symbol.value, symbol.scope)
+        resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
       }
 
       // Default-initialize varliables that aren't explicitly initialized
@@ -251,37 +251,103 @@ namespace astral.resolving {
       assert node.resolvedType != null
     }
 
-    void resolveChildren(Node node, Scope scope) {
+    void resolveAsParameterizedType(Node node, Scope scope) {
+      assert node.kind.isExpression()
+      resolveNode(node, scope)
+      checkIsType(node)
+      checkIsParameterized(node)
+    }
+
+    void resolveAsParameterizedExpression(Node node, Scope scope) {
+      assert node.kind.isExpression()
+      resolveNode(node, scope)
+      checkIsInstance(node)
+      checkIsParameterized(node)
+    }
+
+    void resolveAsParameterizedExpressionWithConversion(Node node, Scope scope, Type type) {
+      resolveAsParameterizedExpression(node, scope)
+      checkConversion(node, type, .IMPLICIT)
+    }
+
+    void checkIsInstance(Node node) {
+      if (node.isType()) {
+        log.semanticErrorUnexpectedType(node.range, node.resolvedType)
+        node.resolvedType = .DYNAMIC
+      }
+    }
+
+    void checkIsType(Node node) {
+      if (node.resolvedType != .DYNAMIC && !node.isType()) {
+        log.semanticErrorUnexpectedExpression(node.range, node.resolvedType)
+        node.resolvedType = .DYNAMIC
+      }
+    }
+
+    void checkIsParameterized(Node node) {
+      // TODO
+    }
+
+    void checkConversion(Node node, Type to, ConversionKind kind) {
+      var from = node.resolvedType
+      assert from != null
+      assert to != null
+
+      // The "dynamic" type is a hole in the type system
+      if (from == .DYNAMIC || to == .DYNAMIC) {
+        return
+      }
+
+      // No conversion is needed for identical types
+      if (from == to) {
+        return
+      }
+
+      // The implicit conversion must be valid
+      if (kind == .IMPLICIT && !cache.canImplicitlyConvert(from, to) ||
+          kind == .EXPLICIT && !cache.canExplicitlyConvert(from, to)) {
+        log.semanticErrorIncompatibleTypes(node.range, from, to, cache.canExplicitlyConvert(from, to))
+        node.resolvedType = .DYNAMIC
+        return
+      }
+
+      // Make the implicit conversion explicit for convenience later on
+      if (kind == .IMPLICIT) {
+        var value = Node(.NULL)
+        value.become(node)
+        node.become(Node.createCast(value, Node.createType(to)).withType(to).withRange(node.range))
+      }
+    }
+
+    void resolveBlock(Node node, Scope scope) {
+      assert node.kind == .BLOCK
+
+      if (node.parent != null) {
+        scope = LocalScope(scope)
+      }
+
       for (var i = 0; i < node.children.size(); i++) {
         resolveNode(node.children[i], scope)
       }
     }
 
-    void resolveBlock(Node node, Scope scope) {
-      if (node.parent != null) {
-        scope = LocalScope(scope)
-      }
-
-      resolveChildren(node, scope)
-    }
-
     void resolveExpression(Node node, Scope scope) {
-      resolveNode(node.expressionValue(), scope)
+      resolveAsParameterizedExpression(node.expressionValue(), scope)
     }
 
     void resolveIf(Node node, Scope scope) {
       var ifFalse = node.ifFalse()
-      resolveNode(node.ifTest(), scope)
-      resolveNode(node.ifTrue(), scope)
+      resolveAsParameterizedExpressionWithConversion(node.ifTest(), scope, cache.boolType)
+      resolveBlock(node.ifTrue(), scope)
       if (ifFalse != null) {
-        resolveNode(ifFalse, scope)
+        resolveBlock(ifFalse, scope)
       }
     }
 
     void resolveReturn(Node node, Scope scope) {
       var value = node.returnValue()
       if (value != null) {
-        resolveNode(value, scope)
+        resolveAsParameterizedExpression(value, scope) // TODO: resolveAsParameterizedExpressionWithConversion()
       }
     }
 
@@ -292,13 +358,13 @@ namespace astral.resolving {
     }
 
     void resolveWhile(Node node, Scope scope) {
-      resolveNode(node.whileTest(), scope)
-      resolveNode(node.whileBlock(), scope)
+      resolveAsParameterizedExpressionWithConversion(node.whileTest(), scope, cache.boolType)
+      resolveBlock(node.whileBlock(), scope)
     }
 
     void resolveCall(Node node, Scope scope) {
       var value = node.callValue()
-      resolveNode(value, scope)
+      resolveAsParameterizedExpression(value, scope)
       var type = value.resolvedType
 
       if (type.kind() == .SYMBOL) {
@@ -380,15 +446,16 @@ namespace astral.resolving {
       }
 
       for (var i = 1; i < node.children.size(); i++) {
-        resolveNode(node.children[i], scope)
+        resolveAsParameterizedExpression(node.children[i], scope) // TODO: resolveAsParameterizedExpressionWithConversion()
       }
     }
 
     void resolveCast(Node node, Scope scope) {
       var value = node.castValue()
       var type = node.castType()
-      resolveNode(value, scope)
-      resolveNode(type, scope)
+      resolveAsParameterizedExpression(value, scope) // TODO: Provide type context
+      resolveAsParameterizedType(type, scope)
+      checkConversion(value, type.resolvedType, .EXPLICIT)
       node.resolvedType = type.resolvedType
     }
 
@@ -431,7 +498,7 @@ namespace astral.resolving {
         return
       }
 
-      var isType = target.symbol != null && target.symbol.kind.isType()
+      var isType = target.isType()
       var needsType = !member.kind.isOnInstances()
 
       // Make sure the global/instance context matches the intended usage
@@ -445,9 +512,9 @@ namespace astral.resolving {
     }
 
     void resolveHook(Node node, Scope scope) {
-      resolveNode(node.hookTest(), scope)
-      resolveNode(node.hookTrue(), scope)
-      resolveNode(node.hookFalse(), scope)
+      resolveAsParameterizedExpressionWithConversion(node.hookTest(), scope, cache.boolType)
+      resolveAsParameterizedExpression(node.hookTrue(), scope) // TODO: resolveAsParameterizedExpressionWithConversion()
+      resolveAsParameterizedExpression(node.hookFalse(), scope) // TODO: resolveAsParameterizedExpressionWithConversion()
     }
 
     void resolveLambda(Node node, Scope scope) {
@@ -463,7 +530,7 @@ namespace astral.resolving {
       for (var i = 0; i < children.size(); i++) {
         var child = children[i]
         if (child != null) {
-          resolveNode(child, scope)
+          resolveAsParameterizedType(child, scope)
           types.push(child.resolvedType)
         } else {
           types.push(null)
@@ -489,11 +556,13 @@ namespace astral.resolving {
     }
 
     void resolveParameterize(Node node, Scope scope) {
-      resolveChildren(node, scope)
+      for (var i = 0; i < node.children.size(); i++) {
+        resolveNode(node.children[i], scope) // TODO: resolveAsParameterizedType() for parameters
+      }
     }
 
     void resolveUnary(Node node, Scope scope) {
-      resolveNode(node.unaryValue(), scope)
+      resolveAsParameterizedExpression(node.unaryValue(), scope)
       resolveOperatorOverload(node, scope)
     }
 
@@ -501,8 +570,8 @@ namespace astral.resolving {
       var left = node.binaryLeft()
       var right = node.binaryRight()
 
-      resolveNode(left, scope)
-      resolveNode(right, scope)
+      resolveAsParameterizedExpression(left, scope)
+      resolveAsParameterizedExpression(right, scope)
 
       if (node.kind != .ASSIGN) {
         resolveOperatorOverload(node, scope)
@@ -510,7 +579,10 @@ namespace astral.resolving {
     }
 
     void resolveIndex(Node node, Scope scope) {
-      resolveChildren(node, scope)
+      for (var i = 0; i < node.children.size(); i++) {
+        resolveAsParameterizedExpression(node.children[i], scope)
+      }
+
       resolveOperatorOverload(node, scope)
     }
 
@@ -538,7 +610,7 @@ namespace astral.resolving {
       node.kind = .CALL
       node.replaceChild(0, Node.createDot(target.replaceWithNull(), info.text).withRange(node.internalRange).withInternalRange(node.internalRange))
       node.resolvedType = null
-      resolveNode(node, scope)
+      resolveAsParameterizedExpression(node, scope)
     }
 
     Node defaultValueForType(Type type) {

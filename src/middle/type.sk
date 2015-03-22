@@ -22,6 +22,10 @@ namespace astral {
       assert kind() == .LAMBDA
       return (LambdaType)this
     }
+
+    bool isReference() {
+      return kind() != .SYMBOL || !asSymbolType().symbol.isValueType()
+    }
   }
 
   class SpecialType : Type {
@@ -75,19 +79,41 @@ namespace astral {
     SymbolType stringType = null
 
     void loadGlobals(Log log, TypeSymbol global) {
-      boolType = loadGlobalClass(log, global, "bool")
-      doubleType = loadGlobalClass(log, global, "double")
-      intType = loadGlobalClass(log, global, "int")
-      stringType = loadGlobalClass(log, global, "string")
+      boolType = loadGlobalClass(log, global, "bool", .VALUE_TYPE)
+      doubleType = loadGlobalClass(log, global, "double", .VALUE_TYPE)
+      intType = loadGlobalClass(log, global, "int", .VALUE_TYPE)
+      stringType = loadGlobalClass(log, global, "string", .VALUE_TYPE)
     }
 
-    private static SymbolType loadGlobalClass(Log log, TypeSymbol global, string name) {
-      var symbol = global.members.getOrDefault(name, null)
-      assert symbol != null
-      assert symbol.kind == .TYPE_CLASS
-      var type = SymbolType(symbol.asType())
-      symbol.resolvedType = type
-      return type
+    bool canImplicitlyConvert(Type from, Type to) {
+      if (from == to) return true
+      if (from == .NULL && to.isReference()) return true
+      if (from == intType && to == doubleType) return true
+      // if (from.hasBaseType(to)) return true
+      return false
+    }
+
+    bool canExplicitlyConvert(Type from, Type to) {
+      if (canImplicitlyConvert(from, to)) return true
+      if (canCastToNumeric(from) && canCastToNumeric(to)) return true
+      // if (to.hasBaseType(from)) return true
+      return false
+    }
+
+    private {
+      bool canCastToNumeric(Type type) {
+        return type == intType || type == doubleType || type == boolType
+      }
+
+      static SymbolType loadGlobalClass(Log log, TypeSymbol global, string name, SymbolFlags flags) {
+        var symbol = global.members.getOrDefault(name, null)
+        assert symbol != null
+        assert symbol.kind == .TYPE_CLASS
+        var type = SymbolType(symbol.asType())
+        symbol.resolvedType = type
+        symbol.flags |= flags
+        return type
+      }
     }
   }
 }

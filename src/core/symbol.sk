@@ -62,6 +62,10 @@ namespace astral {
     }
   }
 
+  enum flags SymbolFlags {
+    VALUE_TYPE
+  }
+
   enum SymbolState {
     UNINITIALIZED
     INITIALIZING
@@ -77,6 +81,7 @@ namespace astral {
     Type resolvedType = null // Automatically set by the resolving step
     Scope scope = null // Automatically set by the merging step (resolving step for local variables)
     SymbolState state = .UNINITIALIZED
+    SymbolFlags flags = 0
     List<string> comments = null
 
     ParameterSymbol asParameter() {
@@ -109,6 +114,10 @@ namespace astral {
         return parent.fullName() + "." + name
       }
       return name
+    }
+
+    bool isValueType() {
+      return (flags & .VALUE_TYPE) != 0
     }
 
     private static {

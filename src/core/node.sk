@@ -26,6 +26,7 @@ namespace astral {
     NAME
     NULL
     PARAMETERIZE
+    TYPE
 
     // Unary operators
     COMPLEMENT
@@ -102,6 +103,21 @@ namespace astral {
     Type resolvedType = null
     List<Node> children = []
 
+    // Change this node in place to become the provided node. The parent node is
+    // not changed, so become() can be called within a nested method and does not
+    // need to report the updated node reference to the caller since the reference
+    // does not change.
+    void become(Node node) {
+      kind = node.kind
+      range = node.range
+      internalRange = node.internalRange
+      symbol = node.symbol
+      content = node.content
+      resolvedType = node.resolvedType
+      removeChildren()
+      withChildren(node.removeChildren())
+    }
+
     Node withType(Type value) {
       resolvedType = value
       return this
@@ -128,11 +144,16 @@ namespace astral {
     }
 
     Node withChildren(List<Node> nodes) {
+      assert children.size() == 0
       for (var i = 0; i < nodes.size(); i++) {
         updateParent(nodes[i], this)
       }
       children = nodes
       return this
+    }
+
+    bool isType() {
+      return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT) && symbol != null && symbol.kind.isType()
     }
 
     int indexInParent() {
@@ -310,6 +331,10 @@ namespace astral {
       assert type.kind.isExpression()
       parameters.unshift(type)
       return Node(.PARAMETERIZE).withChildren(parameters)
+    }
+
+    static Node createType(Type type) {
+      return Node(.TYPE).withType(type)
     }
 
     static Node createUnary(NodeKind kind, Node value) {

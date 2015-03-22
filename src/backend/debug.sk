@@ -346,6 +346,10 @@ namespace astral {
             if (.ASSIGN < precedence) emit(")")
           }
 
+          case .TYPE {
+            emit(node.resolvedType.toString())
+          }
+
           default {
             if (node.kind.isUnary()) {
               var value = node.unaryValue()
