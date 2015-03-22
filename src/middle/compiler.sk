@@ -1,28 +1,28 @@
 var NATIVE_LIBRARY = "
-class bool {}
-class double {}
-class int {}
-class string {}
+class bool { def new() }
+class double { def new() }
+class int { def new() }
+class string { def new() }
 "
 
 namespace astral {
-  void compile(Log log, TypeSymbol global) {
-    appendFile(log, global, Source("<native>", NATIVE_LIBRARY))
-    if (log.hasErrors()) {
-      return
+  TypeSymbol compile(Log log, List<Source> sources) {
+    var global = TypeSymbol(.TYPE_GLOBAL, "<global>")
+
+    sources.unshift(Source("<native>", NATIVE_LIBRARY))
+    for (var i = 0; i < sources.size(); i++) {
+      var tokens = tokenize(log, sources[i])
+      prepareTokens(tokens)
+      parseFile(log, tokens, global)
     }
 
-    mergingPass(log, global)
-    if (log.hasErrors()) {
-      return
+    if (!log.hasErrors()) {
+      mergingPass(log, global)
+      if (!log.hasErrors()) {
+        resolvingPass(log, global)
+      }
     }
 
-    resolvingPass(log, global)
-  }
-
-  void appendFile(Log log, TypeSymbol global, Source source) {
-    var tokens = tokenize(log, source)
-    prepareTokens(tokens)
-    parseFile(log, tokens, global)
+    return global
   }
 }

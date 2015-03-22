@@ -21,10 +21,8 @@ namespace astral {
   }
 
   void update() {
-    var global = TypeSymbol(.TYPE_GLOBAL, "<global>")
     var log = Log()
-    appendFile(log, global, Source("<stdin>", input.value))
-    compile(log, global)
+    var global = compile(log, [Source("<stdin>", input.value)])
     output1.value = log.hasErrors() ? log.toString() : runEmitter(DebugEmitter(), global)
     output2.value = log.hasErrors() ? "" : runEmitter(JsEmitter(), global)
     output3.value = log.hasErrors() ? "" : runEmitter(CppEmitter(), global)
