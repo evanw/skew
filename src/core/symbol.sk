@@ -47,6 +47,10 @@ namespace astral {
       return this == TYPE_CLASS || this == TYPE_INTERFACE
     }
 
+    bool isOnInstances() {
+      return this == FUNCTION_INSTANCE || this == VARIABLE_INSTANCE || this == OVERLOADED_INSTANCE
+    }
+
     SymbolKind toOverloadedFunction() {
       assert isOverloadableFunction()
       return (SymbolKind)(OVERLOADED_CONSTRUCTOR - FUNCTION_CONSTRUCTOR + this)

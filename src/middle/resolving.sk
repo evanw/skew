@@ -372,7 +372,7 @@ namespace astral.resolving {
       initializeSymbol(member)
 
       var isType = target.symbol != null && target.symbol.kind.isType()
-      var needsType = member.kind != .FUNCTION_INSTANCE && member.kind != .VARIABLE_INSTANCE
+      var needsType = !member.kind.isOnInstances()
 
       // Make sure the global/instance context matches the intended usage
       if (isType && !needsType) {
@@ -434,9 +434,47 @@ namespace astral.resolving {
       }
     }
 
+    static var operatorOverloadNames = {
+      NodeKind.ADD: "+",
+      NodeKind.ASSIGN_ADD: "+=",
+      NodeKind.ASSIGN_BITWISE_AND: "&=",
+      NodeKind.ASSIGN_BITWISE_OR: "|=",
+      NodeKind.ASSIGN_BITWISE_XOR: "^=",
+      NodeKind.ASSIGN_DIVIDE: "/=",
+      NodeKind.ASSIGN_MULTIPLY: "*=",
+      NodeKind.ASSIGN_POWER: "**=",
+      NodeKind.ASSIGN_REMAINDER: "%=",
+      NodeKind.ASSIGN_SHIFT_LEFT: "<<=",
+      NodeKind.ASSIGN_SHIFT_RIGHT: ">>=",
+      NodeKind.ASSIGN_SUBTRACT: "-=",
+      NodeKind.BITWISE_AND: "&",
+      NodeKind.BITWISE_OR: "|",
+      NodeKind.BITWISE_XOR: "^",
+      NodeKind.DIVIDE: "/",
+      NodeKind.MULTIPLY: "*",
+      NodeKind.NEGATIVE: "-",
+      NodeKind.POSITIVE: "+",
+      NodeKind.POWER: "**",
+      NodeKind.REMAINDER: "%",
+      NodeKind.SHIFT_LEFT: "<<",
+      NodeKind.SHIFT_RIGHT: ">>",
+      NodeKind.SUBTRACT: "-",
+    }
+
     void resolveUnary(Node node, Scope scope) {
       var value = node.unaryValue()
       resolveNode(value, scope)
+
+      // Check for operator overloading
+      if (value.resolvedType != .DYNAMIC) {
+        var name = operatorOverloadNames.getOrDefault(node.kind, "")
+        if (name != "") {
+          node.kind = .CALL
+          node.appendChild(Node.createDot(value.remove(), name).withRange(node.range).withInternalRange(node.internalRange))
+          node.resolvedType = null
+          resolveNode(node, scope)
+        }
+      }
     }
 
     void resolveBinary(Node node, Scope scope) {
@@ -444,6 +482,18 @@ namespace astral.resolving {
       var right = node.binaryRight()
       resolveNode(left, scope)
       resolveNode(right, scope)
+
+      // Check for operator overloading
+      if (left.resolvedType != .DYNAMIC && right.resolvedType != .DYNAMIC) {
+        var name = operatorOverloadNames.getOrDefault(node.kind, "")
+        if (name != "") {
+          node.kind = .CALL
+          node.appendChild(Node.createDot(left.remove(), name).withRange(node.range).withInternalRange(node.internalRange))
+          node.appendChild(right.remove())
+          node.resolvedType = null
+          resolveNode(node, scope)
+        }
+      }
     }
 
     Node defaultValueForType(Type type) {

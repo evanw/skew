@@ -46,6 +46,7 @@ namespace astral {
     LOGICAL_OR
     MULTIPLY
     NOT_EQUAL
+    POWER
     REMAINDER
     SHIFT_LEFT
     SHIFT_RIGHT
@@ -59,6 +60,7 @@ namespace astral {
     ASSIGN_BITWISE_XOR
     ASSIGN_DIVIDE
     ASSIGN_MULTIPLY
+    ASSIGN_POWER
     ASSIGN_REMAINDER
     ASSIGN_SHIFT_LEFT
     ASSIGN_SHIFT_RIGHT
@@ -119,6 +121,36 @@ namespace astral {
         updateParent(nodes[i], this)
       }
       children = nodes
+      return this
+    }
+
+    int indexInParent() {
+      assert parent != null
+      return parent.children.indexOf(this)
+    }
+
+    void insertChild(int index, Node node) {
+      assert index >= 0 && index <= children.size()
+      updateParent(node, this)
+      children.insert(index, node)
+    }
+
+    void appendChild(Node node) {
+      insertChild(children.size(), node)
+    }
+
+    Node removeChildAtIndex(int index) {
+      assert index >= 0 && index < children.size()
+      var child = children[index]
+      if (child != null) {
+        child.parent = null
+      }
+      children.removeAt(index)
+      return child
+    }
+
+    Node remove() {
+      parent.removeChildAtIndex(indexInParent())
       return this
     }
 

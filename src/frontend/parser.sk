@@ -260,6 +260,34 @@ namespace astral {
     return parameters
   }
 
+  var operatorOverloadTokenKinds = {
+    TokenKind.ASSIGN_BITWISE_AND: 0,
+    TokenKind.ASSIGN_BITWISE_OR: 0,
+    TokenKind.ASSIGN_BITWISE_XOR: 0,
+    TokenKind.ASSIGN_DIVIDE: 0,
+    TokenKind.ASSIGN_INDEX: 0,
+    TokenKind.ASSIGN_MINUS: 0,
+    TokenKind.ASSIGN_MULTIPLY: 0,
+    TokenKind.ASSIGN_PLUS: 0,
+    TokenKind.ASSIGN_POWER: 0,
+    TokenKind.ASSIGN_REMAINDER: 0,
+    TokenKind.ASSIGN_SHIFT_LEFT: 0,
+    TokenKind.ASSIGN_SHIFT_RIGHT: 0,
+    TokenKind.BITWISE_AND: 0,
+    TokenKind.BITWISE_OR: 0,
+    TokenKind.BITWISE_XOR: 0,
+    TokenKind.DIVIDE: 0,
+    TokenKind.INDEX: 0,
+    TokenKind.MINUS: 0,
+    TokenKind.MULTIPLY: 0,
+    TokenKind.PLUS: 0,
+    TokenKind.POWER: 0,
+    TokenKind.REMAINDER: 0,
+    TokenKind.SHIFT_LEFT: 0,
+    TokenKind.SHIFT_RIGHT: 0,
+    TokenKind.TILDE: 0,
+  }
+
   bool parseSymbol(ParserContext context, TypeSymbol parent) {
     // Parse comments before the symbol declaration
     List<string> comments = null
@@ -296,9 +324,12 @@ namespace astral {
     context.next()
 
     // Parse the symbol name
-    var range = context.current().range
+    var nameToken = context.current()
+    var range = nameToken.range
     var name = range.toString()
-    if (!context.expect(.IDENTIFIER)) {
+    if (kind == .FUNCTION_INSTANCE && nameToken.kind in operatorOverloadTokenKinds) {
+      context.next()
+    } else if (!context.expect(.IDENTIFIER)) {
       return false
     }
     if (kind == .FUNCTION_INSTANCE && name == "new") {
@@ -573,7 +604,7 @@ namespace astral {
     NodeKind kind
 
     override Node parse(ParserContext context, Token token, Node value) {
-      return Node.createUnary(kind, value).withRange(Range.span(token.range, value.range))
+      return Node.createUnary(kind, value).withRange(Range.span(token.range, value.range)).withInternalRange(token.range)
     }
   }
 
@@ -581,7 +612,7 @@ namespace astral {
     NodeKind kind
 
     override Node parse(ParserContext context, Node left, Token token, Node right) {
-      return Node.createBinary(kind, left, right).withRange(Range.span(left.range, right.range))
+      return Node.createBinary(kind, left, right).withRange(Range.span(left.range, right.range)).withInternalRange(token.range)
     }
   }
 

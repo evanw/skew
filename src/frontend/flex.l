@@ -24,6 +24,8 @@
 "var"                             VAR;
 "while"                           WHILE;
 
+"[]="                             ASSIGN_INDEX;
+"[]"                              INDEX;
 "("                               LEFT_PARENTHESIS;
 ")"                               RIGHT_PARENTHESIS;
 "{"                               LEFT_BRACE;
@@ -38,6 +40,7 @@
 ":"                               COLON;
 "&&"                              LOGICAL_AND;
 "||"                              LOGICAL_OR;
+"**="                             ASSIGN_POWER;
 "+="                              ASSIGN_PLUS;
 "-="                              ASSIGN_MINUS;
 "*="                              ASSIGN_MULTIPLY;
@@ -48,6 +51,7 @@
 "^="                              ASSIGN_BITWISE_XOR;
 "<<="                             ASSIGN_SHIFT_LEFT;
 ">>="                             ASSIGN_SHIFT_RIGHT;
+"**"                              POWER;
 "+"                               PLUS;
 "-"                               MINUS;
 "*"                               MULTIPLY;

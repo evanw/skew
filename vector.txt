@@ -1,0 +1,37 @@
+class Vector {
+  var x double
+  var y double
+
+  def new(x double, y double) {
+  }
+
+  def +(v Vector) Vector {
+    return new(x + v.x, y + v.y)
+  }
+
+  def -(v Vector) Vector {
+    return new(x - v.x, y - v.y)
+  }
+
+  def -() Vector {
+    return new(-x, -y)
+  }
+
+  def +=(v Vector) {
+    x += v.x
+    y += v.y
+  }
+}
+
+def main() {
+  var v Vector
+  v += v
+}
+
+class double {
+  def +=(v double)
+  def +(v double) double
+  def -(v double) double
+  def +() double
+  def -() double
+}
