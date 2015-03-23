@@ -2,9 +2,8 @@
 
 \n[ \t\r\n]*                      NEWLINE;
 [ \t\r]+                          WHITESPACE;
-"/""*"([^*]|"*"*[^*/])*"*"+"/"    WHITESPACE;
-"//".*\n                          COMMENT;
-"//".*                            COMMENT;
+#.*\n                             COMMENT;
+#.*                               COMMENT;
 
 "as"                              AS;
 "break"                           BREAK;

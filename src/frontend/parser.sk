@@ -297,7 +297,7 @@ namespace astral {
       if (comments == null) {
         comments = []
       }
-      comments.push(range.source.contents.slice(range.start + 2, range.end))
+      comments.push(range.source.contents.slice(range.start + 1, range.end))
       if (context.eat(.NEWLINE)) {
         comments = null
       }
