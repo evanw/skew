@@ -184,11 +184,12 @@ namespace skew.resolving {
       // Implicitly-typed variables take their type from their initializer
       else if (symbol.value != null) {
         resolveAsParameterizedExpression(symbol.value, symbol.scope)
-        symbol.resolvedType = symbol.value.resolvedType
+        var type = symbol.value.resolvedType
+        symbol.resolvedType = type
 
-        // Forbid the null type since it's definitely a mistake
-        if (symbol.resolvedType == .NULL) {
-          log.semanticErrorBadVariableType(symbol.range, symbol.resolvedType)
+        // Forbid certain types
+        if (!isValidVariableType(type)) {
+          log.semanticErrorBadVariableType(symbol.range, type)
           symbol.resolvedType = .DYNAMIC
         }
       }
@@ -301,7 +302,7 @@ namespace skew.resolving {
     }
 
     void checkIsInstance(Node node) {
-      if (node.isType()) {
+      if (node.resolvedType != .DYNAMIC && node.isType()) {
         log.semanticErrorUnexpectedType(node.range, node.resolvedType)
         node.resolvedType = .DYNAMIC
       }
@@ -432,8 +433,16 @@ namespace skew.resolving {
         return
       }
 
+      // Check for an invalid return type
+      var type = value.resolvedType
+      if (!isValidVariableType(type)) {
+        log.semanticErrorBadReturnType(value.range, type)
+        node.kind = .EXPRESSION
+        return
+      }
+
       // Mutate the return type to the type from the returned value
-      function.returnType = Node.createType(value.resolvedType)
+      function.returnType = Node.createType(type)
     }
 
     void resolveVar(Node node, Scope scope) {
@@ -857,7 +866,7 @@ namespace skew.resolving {
       var isGetter = symbol.isGetter()
 
       // The check for getters is complicated by overloaded functions
-      if (!isGetter && symbol.kind.isOverloadedFunction() && (node.parent.kind != .CALL || node != node.parent.callValue() || node.parent.children.size() == 1)) {
+      if (!isGetter && symbol.kind.isOverloadedFunction() && (node.parent == null || node.parent.kind != .CALL || node != node.parent.callValue() || node.parent.children.size() == 1)) {
         var overloaded = symbol.asOverloadedFunction()
         for (var i = 0; i < overloaded.symbols.size(); i++) {
           var getter = overloaded.symbols[i]
@@ -889,6 +898,10 @@ namespace skew.resolving {
     static bool isVoidExpressionUsed(Node node) {
       // Check for a null parent to handle variable initializers
       return node.parent == null || node.parent.kind != .EXPRESSION && node.parent.kind != .IMPLICIT_RETURN
+    }
+
+    static bool isValidVariableType(Type type) {
+      return type != .NULL && (type.kind() != .SYMBOL || !type.asSymbolType().symbol.kind.isFunctionOrOverloadedFunction())
     }
   }
 }

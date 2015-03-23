@@ -35,6 +35,44 @@ x done
 
 
 
+
+- test data:
+
+def foo() {}
+def foo(x int) {}
+
+def main() {
+  var w = => null
+  var x = => main
+  var y = => int
+  var z = => foo
+}
+
+
+
+
+
+
+
+- test data:
+
+def foo() {}
+def foo(x int) {}
+
+def main() {
+  var x = main
+  var y = int
+  var z = foo
+  main = main
+}
+
+
+
+
+
+
+
+
 - test data:
 
 var a = (q int) => 100

@@ -34,6 +34,10 @@ namespace skew {
       return this >= OVERLOADED_GLOBAL && this <= OVERLOADED_INSTANCE
     }
 
+    bool isFunctionOrOverloadedFunction() {
+      return this >= FUNCTION_CONSTRUCTOR && this <= OVERLOADED_INSTANCE
+    }
+
     bool isVariable() {
       return this >= VARIABLE_GLOBAL && this <= VARIABLE_LOCAL
     }

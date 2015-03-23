@@ -215,6 +215,10 @@ namespace skew {
       error(range, "Cannot return a value inside a function without a return type")
     }
 
+    void semanticErrorBadReturnType(Range range, Type type) {
+      error(range, "Cannot create a function with a return type of \"" + type + "\"")
+    }
+
     void semanticErrorExpectedReturnValue(Range range, Type type) {
       error(range, "Must return a value of type \"" + type + "\"")
     }
