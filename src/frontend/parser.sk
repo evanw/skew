@@ -368,8 +368,15 @@ namespace astral {
           }
         }
 
+        // Don't allow operator overloads to be getters since that doesn't make sense
+        if (nameToken.kind != .IDENTIFIER) {
+          if (!context.expect(.LEFT_PARENTHESIS)) {
+            return false
+          }
+        }
+
         // Check for a setter, should look like "def foo=() {}"
-        if (context.peek(.ASSIGN)) {
+        else if (context.peek(.ASSIGN)) {
 
           // Don't allow a space between the name and the assignment operator
           if (context.current().range.start == nameToken.range.end) {
@@ -384,7 +391,7 @@ namespace astral {
           }
         }
 
-        // Check for a setter, should look like "def foo {}"
+        // Check for a getter, should look like "def foo {}"
         else if (!context.eat(.LEFT_PARENTHESIS)) {
           symbol.flags |= .GETTER
         }
@@ -720,7 +727,7 @@ namespace astral {
   class IndexParselet : InfixParselet {
     override Node parse(ParserContext context, Node left) {
       var token = context.next()
-      var arguments = parseCommaSeparatedList(context, .RIGHT_BRACKET)
+      var arguments = token.kind == .INDEX ? [] : parseCommaSeparatedList(context, .RIGHT_BRACKET)
       if (arguments == null) {
         return null
       }
@@ -881,6 +888,7 @@ namespace astral {
     pratt.parselet(.AS, .COMPARE).infix = CastParselet()
     pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrLambdaParselet()
+    pratt.parselet(.INDEX, .MEMBER).infix = IndexParselet()
     pratt.parselet(.LEFT_BRACKET, .MEMBER).infix = IndexParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet()
