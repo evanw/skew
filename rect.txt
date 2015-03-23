@@ -58,13 +58,13 @@ class Rect {
     height = ymax - ymin
   }
 
-  def area() {
+  def area() double {
     return width * height
   }
 }
 
 namespace Rect {
-  def invalid() {
+  def invalid() Rect {
     return new(
       double.INFINITY,
       double.INFINITY,

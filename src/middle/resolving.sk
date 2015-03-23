@@ -50,7 +50,7 @@ namespace astral.resolving {
             initializeParameter(symbol.asParameter())
           }
 
-          case .OVERLOADED_CONSTRUCTOR, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
+          case .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
             initializeOverloadedFunction(symbol.asOverloadedFunction())
           }
 

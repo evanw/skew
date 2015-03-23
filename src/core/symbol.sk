@@ -13,7 +13,6 @@ namespace astral {
     FUNCTION_INSTANCE
     FUNCTION_LOCAL
 
-    OVERLOADED_CONSTRUCTOR
     OVERLOADED_GLOBAL
     OVERLOADED_INSTANCE
 
@@ -32,7 +31,7 @@ namespace astral {
     }
 
     bool isOverloadedFunction() {
-      return this >= OVERLOADED_CONSTRUCTOR && this <= OVERLOADED_INSTANCE
+      return this >= OVERLOADED_GLOBAL && this <= OVERLOADED_INSTANCE
     }
 
     bool isVariable() {
@@ -49,16 +48,6 @@ namespace astral {
 
     bool isOnInstances() {
       return this == FUNCTION_INSTANCE || this == VARIABLE_INSTANCE || this == OVERLOADED_INSTANCE
-    }
-
-    SymbolKind toOverloadedFunction() {
-      assert isOverloadableFunction()
-      return (SymbolKind)(OVERLOADED_CONSTRUCTOR - FUNCTION_CONSTRUCTOR + this)
-    }
-
-    SymbolKind fromOverloadedFunction() {
-      assert isOverloadedFunction()
-      return (SymbolKind)(FUNCTION_CONSTRUCTOR - OVERLOADED_CONSTRUCTOR + this)
     }
   }
 

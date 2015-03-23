@@ -125,9 +125,10 @@ namespace astral.merging {
         continue
       }
 
-      // Merge with another symbol of the same type
-      if (child.kind == other.kind) {
-        var overloaded = OverloadedFunctionSymbol(child.kind.toOverloadedFunction(), child.name, [(FunctionSymbol)other, child])
+      // Merge with another symbol of the same instance/global status
+      var isInstance = child.kind == .FUNCTION_INSTANCE
+      if (isInstance == (other.kind == .FUNCTION_INSTANCE)) {
+        var overloaded = OverloadedFunctionSymbol(isInstance ? .OVERLOADED_INSTANCE : .OVERLOADED_GLOBAL, child.name, [(FunctionSymbol)other, child])
         members[child.name] = overloaded
         ((FunctionSymbol)other).overloaded = overloaded
         child.overloaded = overloaded
@@ -137,7 +138,7 @@ namespace astral.merging {
       }
 
       // Merge with a group of overloaded functions
-      if (other.kind.isOverloadedFunction() && child.kind == other.kind.fromOverloadedFunction()) {
+      if (other.kind.isOverloadedFunction() && isInstance == (other.kind == .OVERLOADED_INSTANCE)) {
         ((OverloadedFunctionSymbol)other).symbols.push(child)
         child.overloaded = (OverloadedFunctionSymbol)other
         continue
