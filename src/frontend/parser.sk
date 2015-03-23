@@ -806,7 +806,7 @@ namespace skew {
 
   class ParameterizedParselet : InfixParselet {
     override Node parse(ParserContext context, Node left) {
-      context.next()
+      var token = context.next()
       List<Node> parameters = []
       do {
         var type = parseType(context)
@@ -818,7 +818,7 @@ namespace skew {
       if (!context.expect(.END_PARAMETER_LIST)) {
         return null
       }
-      return Node.createParameterize(left, parameters).withRange(context.spanSince(left.range))
+      return Node.createParameterize(left, parameters).withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range))
     }
   }
 

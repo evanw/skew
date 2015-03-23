@@ -94,9 +94,9 @@ namespace skew {
   }
 
   in Log {
-    private static string expectedCountText(string singular, int expected, int found, string because) {
+    private static string expectedCountText(string singular, int expected, int found) {
       return "Expected " + expected + " " + singular + prettyPrint.plural(expected) +
-        because + " but found " + found + " " + singular + prettyPrint.plural(found)
+        " but found " + found + " " + singular + prettyPrint.plural(found)
     }
 
     void semanticErrorDuplicateSymbol(Range range, string name, Range previous) {
@@ -151,8 +151,17 @@ namespace skew {
       error(range, "Cannot call value of type \"" + type + "\"")
     }
 
+    void semanticErrorCannotParameterize(Range range, Type type) {
+      error(range, "Cannot parameterize \"" + type + (
+        type.hasParameters() ? "\" because it is already parameterized" : "\" because it has no type parameters"))
+    }
+
+    void semanticErrorParameterCount(Range range, int expected, int found) {
+      error(range, expectedCountText("type parameter", expected, found))
+    }
+
     void semanticErrorArgumentCount(Range range, int expected, int found) {
-      error(range, expectedCountText("argument", expected, found, ""))
+      error(range, expectedCountText("argument", expected, found))
     }
 
     void semanticErrorGetterCalledTwice(Range range, string name) {
@@ -229,6 +238,10 @@ namespace skew {
 
     void semanticErrorBadStorage(Range range) {
       error(range, "Cannot store to this location")
+    }
+
+    void semanticErrorUnparameterizedType(Range range, Type type) {
+      error(range, "Cannot use unparameterized type \"" + type + "\"")
     }
   }
 }

@@ -93,6 +93,7 @@ namespace skew.resolving {
         symbol.resolvedType = SymbolType(symbol)
       }
 
+      // Resolve the base type (only for classes)
       if (symbol.base != null) {
         resolveAsParameterizedType(symbol.base, symbol.scope)
       }
@@ -122,19 +123,19 @@ namespace skew.resolving {
 
       resolveParameters(symbol.parameters)
 
+      // Resolve the argument variables
       for (var i = 0; i < symbol.arguments.size(); i++) {
         var argument = symbol.arguments[i]
         argument.scope = symbol.scope
         resolveVariable(argument)
       }
 
+      // Resolve the return type if present (no return type means "void")
       if (symbol.returnType != null) {
         if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
           log.semanticErrorConstructorReturnType(symbol.returnType.range)
           symbol.returnType = null
-        }
-
-        else {
+        } else {
           resolveAsParameterizedType(symbol.returnType, symbol.scope)
         }
       }
@@ -151,6 +152,8 @@ namespace skew.resolving {
 
       var scope = LocalScope(symbol.scope)
 
+      // Referencing a normal variable instead of a special node kind for "this"
+      // makes many things much easier including lambda capture and devirtualization
       if (symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR) {
         symbol.self = VariableSymbol(.VARIABLE_LOCAL, "self")
         symbol.self.resolvedType = symbol.parent.resolvedType
@@ -165,6 +168,7 @@ namespace skew.resolving {
         scope.define(symbol.arguments[i], log)
       }
 
+      // The function is considered abstract if the body is missing
       if (symbol.block != null) {
         resolveNode(symbol.block, scope, null)
 
@@ -227,6 +231,7 @@ namespace skew.resolving {
         symbol.resolvedType = SymbolType(symbol)
       }
 
+      // Ensure each overload has a valid type
       for (var i = 0; i < symbols.size(); i++) {
         initializeSymbol(symbols[i])
       }
@@ -316,7 +321,9 @@ namespace skew.resolving {
     }
 
     void checkIsParameterized(Node node) {
-      // TODO
+      if (node.resolvedType.hasParameters() && !node.resolvedType.isParameterized()) {
+        log.semanticErrorUnparameterizedType(node.range, node.resolvedType)
+      }
     }
 
     void checkStorage(Node node) {
@@ -762,11 +769,32 @@ namespace skew.resolving {
       resolveNode(value, scope, null)
 
       // Resolve parameter types
-      for (var i = 1; i < node.children.size(); i++) {
-        resolveAsParameterizedType(node.children[i], scope)
+      List<Type> substitutions = []
+      var count = node.children.size() - 1
+      for (var i = 0; i < count; i++) {
+        var child = node.children[i + 1]
+        resolveAsParameterizedType(child, scope)
+        substitutions.push(child.resolvedType)
       }
 
-      node.resolvedType = value.resolvedType // TODO: Parameterize this type
+      // Check for type parameters
+      var type = value.resolvedType
+      var parameters = type.typeParameters()
+      if (parameters == null || type.isParameterized()) {
+        log.semanticErrorCannotParameterize(node.range, type)
+        return
+      }
+
+      // Check parameter count
+      var expected = parameters.size()
+      if (count != expected) {
+        log.semanticErrorParameterCount(node.internalRange, expected, count)
+        return
+      }
+
+      // Include the symbol for use with Node.isType()
+      node.resolvedType = cache.parameterize(type.asSymbolType(), substitutions)
+      node.symbol = value.symbol
     }
 
     void resolveUnary(Node node, Scope scope) {

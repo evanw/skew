@@ -224,7 +224,7 @@ namespace skew {
     }
 
     bool isType() {
-      return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT) && symbol != null && (symbol.kind.isType() || symbol.kind == .PARAMETER)
+      return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT || kind == .PARAMETERIZE) && symbol != null && (symbol.kind.isType() || symbol.kind == .PARAMETER)
     }
 
     bool blockAlwaysEndsWithReturn() {

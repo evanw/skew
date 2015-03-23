@@ -123,6 +123,10 @@ namespace skew {
       return (flags & .SETTER) != 0
     }
 
+    virtual List<ParameterSymbol> typeParameters() {
+      return null
+    }
+
     private static {
       int createID() {
         nextID++
@@ -143,6 +147,10 @@ namespace skew {
     List<FunctionSymbol> functions = []
     List<VariableSymbol> variables = []
     List<ParameterSymbol> parameters = null
+
+    override List<ParameterSymbol> typeParameters() {
+      return parameters
+    }
   }
 
   class FunctionSymbol : Symbol {
@@ -152,6 +160,10 @@ namespace skew {
     VariableSymbol self = null // For instance functions and constructors
     Node returnType = null
     Node block = null
+
+    override List<ParameterSymbol> typeParameters() {
+      return parameters
+    }
   }
 
   class VariableSymbol : Symbol {

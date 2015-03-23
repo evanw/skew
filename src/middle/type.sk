@@ -39,6 +39,18 @@ namespace skew {
       return !symbol.isValueType() && symbol.kind != .PARAMETER
     }
 
+    bool hasParameters() {
+      return typeParameters() != null
+    }
+
+    virtual List<ParameterSymbol> typeParameters() {
+      return null
+    }
+
+    virtual bool isParameterized() {
+      return false
+    }
+
     static void intialize() {
       if (DYNAMIC == null) {
         DYNAMIC = SpecialType(.DYNAMIC)
@@ -71,20 +83,56 @@ namespace skew {
   }
 
   class SymbolType : Type {
-    Symbol symbol
+    // This must not be changed because that would change the hash code
+    final Symbol symbol
+
+    // Types that have been substituted for the type parameters of this symbol.
+    // If non-null, the length must equal symbol.parameters.size().
+    List<Type> substitutions = null
+
+    // Generics are implemented with type erasure. Classes, interfaces, and
+    // functions can all have type parameters. Every generic symbol has one
+    // canonical unparameterized SymbolType stored as its resolvedType. When
+    // this type is parameterized, a new SymbolType is created that references
+    // the same symbol but contains the parameterization type environment.
+    //
+    // This maps the members of this TypeSymbol to the parameterized type of
+    // that member. The "members" of a FunctionSymbol are just the argument
+    // variables.
+    IntMap<Type> cache = null
 
     override TypeKind kind() {
       return .SYMBOL
     }
 
     override string toString() {
-      return symbol.fullName()
+      if (substitutions != null) {
+        assert symbol.typeParameters().size() == substitutions.size()
+        var name = symbol.name + "<"
+        for (var i = 0; i < substitutions.size(); i++) {
+          if (i != 0) {
+            name += ", "
+          }
+          name += substitutions[i]
+        }
+        return name + ">"
+      }
+      return symbol.name
+    }
+
+    override List<ParameterSymbol> typeParameters() {
+      return symbol.typeParameters()
+    }
+
+    override bool isParameterized() {
+      return substitutions != null
     }
   }
 
   class LambdaType : Type {
-    List<Type> argumentTypes
-    Type returnType
+    // These must not be changed because that would change the hash code
+    final List<Type> argumentTypes
+    final Type returnType
 
     override TypeKind kind() {
       return .LAMBDA
@@ -135,17 +183,14 @@ namespace skew {
     }
 
     LambdaType createLambdaType(List<Type> argumentTypes, Type returnType) {
-      var hash = returnType != null ? returnType.id : -1
-      for (var i = 0; i < argumentTypes.size(); i++) {
-        hash = hashCombine(hash, argumentTypes[i].id)
-      }
+      var hash = hashTypes(returnType != null ? returnType.id : -1, argumentTypes)
       var bucket = lambdaTypes.getOrDefault(hash, null)
 
       // Check existing types in the bucket for a match
       if (bucket != null) {
         for (var i = 0; i < bucket.size(); i++) {
           var existing = bucket[i]
-          if (areTypeListsEqual(argumentTypes, existing.argumentTypes) && returnType == existing.returnType) {
+          if (areTypesEqual(argumentTypes, existing.argumentTypes) && returnType == existing.returnType) {
             return existing
           }
         }
@@ -162,8 +207,41 @@ namespace skew {
       return type
     }
 
+    SymbolType parameterize(SymbolType unparameterized, List<Type> substitutions) {
+      assert unparameterized.symbol.typeParameters().size() == substitutions.size()
+      assert unparameterized.substitutions == null
+
+      // Hash the symbol along with all types
+      var symbol = unparameterized.symbol
+      var hash = hashTypes(symbol.id, substitutions)
+      var bucket = symbolTypes.getOrDefault(hash, null)
+
+      // Check existing types in the bucket for a match
+      if (bucket != null) {
+        for (var i = 0; i < bucket.size(); i++) {
+          var existing = bucket[i]
+          if (symbol == existing.symbol && areTypesEqual(substitutions, existing.substitutions)) {
+            return existing
+          }
+        }
+      }
+
+      // Make a new bucket
+      else {
+        bucket = []
+        symbolTypes[hash] = bucket
+      }
+
+      // We didn't find a match, so make the type for the first time
+      var type = SymbolType(symbol)
+      type.substitutions = substitutions
+      bucket.push(type)
+      return type
+    }
+
     private {
       final var lambdaTypes = IntMap<List<LambdaType>>()
+      final var symbolTypes = IntMap<List<SymbolType>>()
 
       bool canCastToNumeric(Type type) {
         return type == intType || type == doubleType || type == boolType
@@ -179,7 +257,7 @@ namespace skew {
         return type
       }
 
-      static bool areTypeListsEqual(List<Type> left, List<Type> right) {
+      static bool areTypesEqual(List<Type> left, List<Type> right) {
         var n = left.size()
         if (n != right.size()) {
           return false
@@ -190,6 +268,13 @@ namespace skew {
           }
         }
         return true
+      }
+
+      static int hashTypes(int hash, List<Type> types) {
+        for (var i = 0; i < types.size(); i++) {
+          hash = hashCombine(hash, types[i].id)
+        }
+        return hash
       }
     }
   }
