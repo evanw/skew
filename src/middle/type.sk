@@ -29,12 +29,23 @@ namespace astral {
     }
 
     bool isReference() {
-      return kind() != .SYMBOL || !asSymbolType().symbol.isValueType()
+      if (kind() != .SYMBOL) {
+        return true
+      }
+
+      // Type parameters are not guaranteed to be nullable since generics are
+      // implemented through type erasure and the substituted type may be "int"
+      var symbol = asSymbolType().symbol
+      return !symbol.isValueType() && symbol.kind != .PARAMETER
     }
 
     static void intialize() {
-      if (DYNAMIC == null) DYNAMIC = SpecialType(.DYNAMIC)
-      if (NULL == null) NULL = SpecialType(.NULL)
+      if (DYNAMIC == null) {
+        DYNAMIC = SpecialType(.DYNAMIC)
+      }
+      if (NULL == null) {
+        NULL = SpecialType(.NULL)
+      }
     }
 
     private static {

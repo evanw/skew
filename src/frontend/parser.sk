@@ -361,6 +361,25 @@ namespace astral {
         var symbol = FunctionSymbol(kind, name)
         symbol.range = range
 
+        // Check for getters like "def foo {}" and setters like "def foo=() {}"
+        if (nameToken.kind == .IDENTIFIER) {
+          if (context.peek(.ASSIGN)) {
+
+            // Don't allow a space between the name and the assignment operator
+            if (context.current().range.start == nameToken.range.end) {
+              context.next()
+              symbol.flags |= .SETTER
+              symbol.name += "="
+            }
+          }
+
+          // Don't allow generic getters since those are useless
+          else if (!context.peek(.LEFT_PARENTHESIS) && !context.peek(.START_PARAMETER_LIST)) {
+            symbol.flags |= .GETTER
+          }
+        }
+
+        // Parse type parameters
         if (context.eat(.START_PARAMETER_LIST)) {
           symbol.parameters = parseTypeParameters(context)
           if (symbol.parameters == null) {
@@ -368,35 +387,8 @@ namespace astral {
           }
         }
 
-        // Don't allow operator overloads to be getters since that doesn't make sense
-        if (nameToken.kind != .IDENTIFIER) {
-          if (!context.expect(.LEFT_PARENTHESIS)) {
-            return false
-          }
-        }
-
-        // Check for a setter, should look like "def foo=() {}"
-        else if (context.peek(.ASSIGN)) {
-
-          // Don't allow a space between the name and the assignment operator
-          if (context.current().range.start == nameToken.range.end) {
-            context.next()
-            symbol.flags |= .SETTER
-            symbol.name += "="
-          }
-
-          // This isn't a getter so it must have parentheses
-          if (!context.expect(.LEFT_PARENTHESIS)) {
-            return false
-          }
-        }
-
-        // Check for a getter, should look like "def foo {}"
-        else if (!context.eat(.LEFT_PARENTHESIS)) {
-          symbol.flags |= .GETTER
-        }
-
-        if (!symbol.isGetter() && !parseFunctionArguments(context, symbol)) {
+        // Parse function arguments
+        if (!symbol.isGetter() && (!context.expect(.LEFT_PARENTHESIS) || !parseFunctionArguments(context, symbol))) {
           return false
         }
 

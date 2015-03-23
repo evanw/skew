@@ -220,7 +220,7 @@ namespace astral {
     }
 
     bool isType() {
-      return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT) && symbol != null && symbol.kind.isType()
+      return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT) && symbol != null && (symbol.kind.isType() || symbol.kind == .PARAMETER)
     }
 
     bool blockAlwaysEndsWithReturn() {

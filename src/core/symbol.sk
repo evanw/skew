@@ -101,7 +101,7 @@ namespace astral {
     }
 
     string fullName() {
-      if (parent != null && parent.kind != .TYPE_GLOBAL) {
+      if (parent != null && parent.kind != .TYPE_GLOBAL && kind != .PARAMETER) {
         return parent.fullName() + "." + name
       }
       return name
