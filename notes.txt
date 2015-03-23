@@ -8,7 +8,7 @@
   x return type and presence checking
   x function types including calling values of those types
   x lambda argument types from type context
-  - deduplicate lambda types so equivalence checks using equality work
+  x deduplicate lambda types so equivalence checks using equality work
   - interface auto-conversion and checking
   - automatic operator conversion so += can map to = and + if += isn't defined
   - throw/try/catch/finally
@@ -36,11 +36,18 @@
 
 - test data:
 
+var a = (q int) => 100
+var b = => main
+
 def main {
   var f = (q int) => 100
   var g = => main
-  var x bool = f(false)
-  var y = g()
+
+  var x bool = a(false)
+  var y = b()
+
+  var z bool = f(false)
+  var w = g()
 }
 
 

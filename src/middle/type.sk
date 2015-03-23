@@ -7,8 +7,13 @@ namespace astral {
   }
 
   class Type {
-    static var DYNAMIC = SpecialType(.DYNAMIC)
-    static var NULL = SpecialType(.NULL)
+    final int id
+
+    new() : id = createID() {
+    }
+
+    static Type DYNAMIC
+    static Type NULL
 
     virtual TypeKind kind()
     virtual string toString()
@@ -26,10 +31,24 @@ namespace astral {
     bool isReference() {
       return kind() != .SYMBOL || !asSymbolType().symbol.isValueType()
     }
+
+    static void intialize() {
+      if (DYNAMIC == null) DYNAMIC = SpecialType(.DYNAMIC)
+      if (NULL == null) NULL = SpecialType(.NULL)
+    }
+
+    private static {
+      int createID() {
+        nextID++
+        return nextID
+      }
+
+      int nextID = 0
+    }
   }
 
   class SpecialType : Type {
-    TypeKind specialKind
+    private final TypeKind specialKind
 
     override TypeKind kind() {
       return specialKind
@@ -78,6 +97,10 @@ namespace astral {
     SymbolType intType = null
     SymbolType stringType = null
 
+    new() {
+      Type.intialize()
+    }
+
     void loadGlobals(Log log, TypeSymbol global) {
       boolType = loadGlobalClass(log, global, "bool", .VALUE_TYPE)
       doubleType = loadGlobalClass(log, global, "double", .VALUE_TYPE)
@@ -101,10 +124,36 @@ namespace astral {
     }
 
     LambdaType createLambdaType(List<Type> argumentTypes, Type returnType) {
-      return LambdaType(argumentTypes, returnType) // TODO: Deduplicate this so equality comparison works
+      var hash = returnType != null ? returnType.id : -1
+      for (var i = 0; i < argumentTypes.size(); i++) {
+        hash = hashCombine(hash, argumentTypes[i].id)
+      }
+      var bucket = lambdaTypes.getOrDefault(hash, null)
+
+      // Check existing types in the bucket for a match
+      if (bucket != null) {
+        for (var i = 0; i < bucket.size(); i++) {
+          var existing = bucket[i]
+          if (areTypeListsEqual(argumentTypes, existing.argumentTypes) && returnType == existing.returnType) {
+            return existing
+          }
+        }
+      }
+
+      // Make a new bucket
+      else {
+        bucket = []
+        lambdaTypes[hash] = bucket
+      }
+
+      var type = LambdaType(argumentTypes, returnType)
+      bucket.push(type)
+      return type
     }
 
     private {
+      final var lambdaTypes = IntMap<List<LambdaType>>()
+
       bool canCastToNumeric(Type type) {
         return type == intType || type == doubleType || type == boolType
       }
@@ -117,6 +166,19 @@ namespace astral {
         symbol.resolvedType = type
         symbol.flags |= flags
         return type
+      }
+
+      static bool areTypeListsEqual(List<Type> left, List<Type> right) {
+        var n = left.size()
+        if (n != right.size()) {
+          return false
+        }
+        for (var i = 0; i < n; i++) {
+          if (left[i] != right[i]) {
+            return false
+          }
+        }
+        return true
       }
     }
   }

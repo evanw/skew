@@ -11,3 +11,7 @@ namespace prettyPrint {
     return value == 1 ? "" : "s"
   }
 }
+
+int hashCombine(int left, int right) {
+  return left ^ right - 0x61c88647 + (left << 6) + (left >> 2)
+}

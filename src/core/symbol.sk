@@ -64,7 +64,7 @@ namespace astral {
   }
 
   class Symbol {
-    int id = createID()
+    final int id = createID()
     SymbolKind kind
     string name
     Range range = null // The location of the name in the source code
