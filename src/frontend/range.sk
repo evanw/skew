@@ -1,4 +1,4 @@
-namespace astral {
+namespace skew {
   class FormattedRange {
     final string line
     final string range

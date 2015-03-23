@@ -1,5 +1,5 @@
-namespace astral {
-  using astral.resolving
+namespace skew {
+  using skew.resolving
 
   void resolvingPass(Log log, TypeSymbol global) {
     var cache = TypeCache()
@@ -10,7 +10,7 @@ namespace astral {
   }
 }
 
-namespace astral.resolving {
+namespace skew.resolving {
   enum ConversionKind {
     IMPLICIT
     EXPLICIT

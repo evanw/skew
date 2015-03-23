@@ -5,7 +5,7 @@ class int {}
 class string {}
 "
 
-namespace astral {
+namespace skew {
   TypeSymbol compile(Log log, List<Source> sources) {
     var global = TypeSymbol(.TYPE_GLOBAL, "<global>")
 

@@ -1,4 +1,4 @@
-namespace astral {
+namespace skew {
   #if TARGET_JS
     double parseDoubleLiteral(string text) {
       return `+`text``

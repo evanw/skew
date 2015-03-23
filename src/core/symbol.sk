@@ -1,4 +1,4 @@
-namespace astral {
+namespace skew {
   enum SymbolKind {
     NONE
     PARAMETER

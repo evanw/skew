@@ -1,4 +1,4 @@
-namespace astral {
+namespace skew {
   class CppEmitter : Emitter {
     override void visit(TypeSymbol global) {
       var types = sortedTypes(global)

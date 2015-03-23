@@ -1,9 +1,16 @@
+BUILD += node_modules/.bin/skewc
+BUILD += src/**/*.sk
+BUILD += --lib:terminal
+BUILD += --lib:unicode
+BUILD += --target=js
+BUILD += --error-limit=18
+
 build:
-	skewc src/**/*.sk --output-file=browser.js --lib:terminal --lib:unicode --target=js --error-limit=18
-	skewc src/**/*.sk --output-file=browser.min.js --lib:terminal --lib:unicode --target=js --error-limit=18 --release
+	$(BUILD) --output-file=browser.js
+	$(BUILD) --output-file=browser.min.js --release
 
 watch:
-	watch 'clear && make build' src
+	node_modules/.bin/watch 'clear && make build' src
 
 run: build
 	node out.js

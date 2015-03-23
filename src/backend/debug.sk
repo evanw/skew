@@ -1,4 +1,4 @@
-namespace astral {
+namespace skew {
   class DebugEmitter : Emitter {
     override void visit(TypeSymbol global) {
       emitType(global)

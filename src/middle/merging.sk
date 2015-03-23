@@ -1,12 +1,12 @@
-namespace astral {
-  using astral.merging
+namespace skew {
+  using skew.merging
 
   void mergingPass(Log log, TypeSymbol global) {
     mergeType(log, null, global, global)
   }
 }
 
-namespace astral.merging {
+namespace skew.merging {
   void mergeType(Log log, TypeSymbol parent, TypeSymbol target, TypeSymbol symbol) {
     target.scope = TypeScope(parent != null ? parent.scope : null, target)
     symbol.parent = parent

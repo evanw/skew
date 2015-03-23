@@ -1,4 +1,4 @@
-namespace astral {
+namespace skew {
   class JsEmitter : Emitter {
     override void visit(TypeSymbol global) {
       var types = sortedTypes(global)
