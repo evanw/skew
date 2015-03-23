@@ -410,94 +410,151 @@ namespace astral.resolving {
       resolveAsParameterizedExpression(value, scope)
       var type = value.resolvedType
 
-      if (type.kind() == .SYMBOL) {
-        var symbol = type.asSymbolType().symbol
-
-        // Getters are called implicitly, so explicitly calling one is an error.
-        // This error prevents a getter returning a lambda which is then called,
-        // but that's really strange and I think this error is more useful.
-        if (symbol.isGetter() && node.parent != null && node.parent.kind == .CALL && node == node.parent.callValue()) {
-          log.semanticErrorGetterCalledTwice(node.parent.internalRange, symbol.name)
-        }
-
-        // Check for calling a function directly
-        else if (symbol.kind.isFunction()) {
-          var function = symbol.asFunction()
-          var expected = function.arguments.size()
-          var count = node.children.size() - 1
-
-          // Check argument count
-          if (expected != count) {
-            log.semanticErrorArgumentCount(node.internalRange, expected, count)
-          }
-
-          // Use the return type even if there were errors
-          if (function.returnType != null) {
-            node.resolvedType = function.returnType.resolvedType
-          }
-
-          // Constructors have an implicit return type
-          else if (function.kind == .FUNCTION_CONSTRUCTOR) {
-            node.resolvedType = function.parent.resolvedType
-          }
-
-          // There is no "void" type, so make sure this return value isn't used
-          // (the parent will be null for variable initializers)
-          else if (node.parent == null || node.parent.kind != .EXPRESSION) {
-            log.semanticErrorUseOfVoid(node.range, function.name)
+      switch (type.kind()) {
+        // Each function has its own type for simplicity
+        case .SYMBOL {
+          if (resolveSymbolCall(node, scope, type.asSymbolType())) {
+            return
           }
         }
 
-        // Check for calling a set of functions, must not be ambiguous
-        else if (symbol.kind.isOverloadedFunction()) {
-          var overloaded = symbol.asOverloadedFunction()
-          var count = node.children.size() - 1
-          List<FunctionSymbol> candidates = []
-
-          // Filter by argument length
-          for (var i = 0; i < overloaded.symbols.size(); i++) {
-            var overload = overloaded.symbols[i]
-            if (overload.arguments.size() == count) {
-              candidates.push(overload)
-            }
-          }
-
-          // Check for matches
-          if (candidates.size() < 1) {
-            log.semanticErrorNoMatchingOverload(value.range, symbol.name, count)
-          }
-
-          // Check for ambiguity
-          else if (candidates.size() > 1) {
-            log.semanticErrorAmbiguousOperator(value.range, symbol.name, count)
-          }
-
-          // Target is unambiguous
-          else {
-            var overload = candidates[0]
-            var expected = overload.arguments.size()
-
-            // Check argument count
-            if (expected != count) {
-              log.semanticErrorArgumentCount(node.internalRange, expected, count)
-            }
+        // Lambda types look like "fn(int, int) int"
+        case .LAMBDA {
+          if (resolveLambdaCall(node, scope, type.asLambdaType())) {
+            return
           }
         }
 
-        // Can't call other symbols
-        else {
-          log.semanticErrorInvalidCall(value.range, value.resolvedType)
+        // Can't call other types (the null type, for example)
+        default {
+          if (type != .DYNAMIC) {
+            log.semanticErrorInvalidCall(node.internalRange, value.resolvedType)
+          }
         }
       }
 
-      // Can't call other types (the null type, for example)
-      else if (type != .DYNAMIC) {
-        log.semanticErrorInvalidCall(value.range, value.resolvedType)
-      }
-
+      // If there was an error, resolve the arguments to check for further
+      // errors but use a dynamic type context to avoid introducing errors
       for (var i = 1; i < node.children.size(); i++) {
-        resolveAsParameterizedExpression(node.children[i], scope) // TODO: resolveAsParameterizedExpressionWithConversion()
+        resolveAsParameterizedExpressionWithConversion(node.children[i], scope, .DYNAMIC)
       }
+    }
+
+    bool resolveSymbolCall(Node node, Scope scope, SymbolType type) {
+      var symbol = type.symbol
+
+      // Getters are called implicitly, so explicitly calling one is an error.
+      // This error prevents a getter returning a lambda which is then called,
+      // but that's really strange and I think this error is more useful.
+      if (symbol.isGetter() && node.parent != null && node.parent.kind == .CALL && node == node.parent.callValue()) {
+        log.semanticErrorGetterCalledTwice(node.parent.internalRange, symbol.name)
+        return false
+      }
+
+      // Check for calling a function directly
+      if (symbol.kind.isFunction()) {
+        return resolveFunctionCall(node, scope, symbol.asFunction())
+      }
+
+      // Check for calling a set of functions, must not be ambiguous
+      if (symbol.kind.isOverloadedFunction()) {
+        return resolveOverloadedFunctionCall(node, scope, symbol.asOverloadedFunction())
+      }
+
+      // Can't call other symbols
+      log.semanticErrorInvalidCall(node.internalRange, node.callValue().resolvedType)
+      return false
+    }
+
+    bool resolveFunctionCall(Node node, Scope scope, FunctionSymbol function) {
+      var expected = function.arguments.size()
+      var count = node.children.size() - 1
+
+      // Use the return type even if there were errors
+      if (function.returnType != null) {
+        node.resolvedType = function.returnType.resolvedType
+      }
+
+      // Constructors have an implicit return type
+      else if (function.kind == .FUNCTION_CONSTRUCTOR) {
+        node.resolvedType = function.parent.resolvedType
+      }
+
+      // There is no "void" type, so make sure this return value isn't used
+      // (the parent will be null for variable initializers)
+      else if (node.parent == null || node.parent.kind != .EXPRESSION) {
+        log.semanticErrorUseOfVoidFunction(node.range, function.name)
+      }
+
+      // Check argument count
+      if (expected != count) {
+        log.semanticErrorArgumentCount(node.internalRange, expected, count)
+        return false
+      }
+
+      // Check argument types
+      for (var i = 0; i < count; i++) {
+        resolveAsParameterizedExpressionWithConversion(node.children[i + 1], scope, function.arguments[i].resolvedType)
+      }
+
+      return true
+    }
+
+    bool resolveOverloadedFunctionCall(Node node, Scope scope, OverloadedFunctionSymbol overloaded) {
+      var count = node.children.size() - 1
+      List<FunctionSymbol> candidates = []
+
+      // Filter by argument length
+      for (var i = 0; i < overloaded.symbols.size(); i++) {
+        var overload = overloaded.symbols[i]
+        if (overload.arguments.size() == count) {
+          candidates.push(overload)
+        }
+      }
+
+      // Check for matches
+      if (candidates.size() < 1) {
+        log.semanticErrorNoMatchingOverload(node.callValue().range, overloaded.name, count)
+        return false
+      }
+
+      // Check for ambiguity
+      if (candidates.size() > 1) {
+        log.semanticErrorAmbiguousOperator(node.callValue().range, overloaded.name, count)
+        return false
+      }
+
+      // Target is unambiguous
+      return resolveFunctionCall(node, scope, candidates[0])
+    }
+
+    bool resolveLambdaCall(Node node, Scope scope, LambdaType type) {
+      var expected = type.argumentTypes.size()
+      var count = node.children.size() - 1
+
+      // Use the return type even if there were errors
+      if (type.returnType != null) {
+        node.resolvedType = type.returnType
+      }
+
+      // There is no "void" type, so make sure this return value isn't used
+      // (the parent will be null for variable initializers)
+      else if (node.parent == null || node.parent.kind != .EXPRESSION) {
+        log.semanticErrorUseOfVoidLambda(node.range)
+      }
+
+      // Check argument count
+      if (expected != count) {
+        log.semanticErrorArgumentCount(node.internalRange, expected, count)
+        return false
+      }
+
+      // Check argument types
+      for (var i = 0; i < count; i++) {
+        resolveAsParameterizedExpressionWithConversion(node.children[i + 1], scope, type.argumentTypes[i])
+      }
+
+      return true
     }
 
     void resolveCast(Node node, Scope scope) {

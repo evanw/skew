@@ -155,8 +155,12 @@ namespace astral {
       error(range, "The function \"" + name + "\" is already called implicitly")
     }
 
-    void semanticErrorUseOfVoid(Range range, string name) {
+    void semanticErrorUseOfVoidFunction(Range range, string name) {
       error(range, "The function \"" + name + "\" does not return a value")
+    }
+
+    void semanticErrorUseOfVoidLambda(Range range) {
+      error(range, "This call does not return a value")
     }
 
     void semanticErrorBadVariableType(Range range, Type type) {

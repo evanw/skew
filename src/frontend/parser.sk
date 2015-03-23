@@ -37,8 +37,8 @@ namespace astral {
     var symbol = VariableSymbol(.VARIABLE_LOCAL, range.toString())
     symbol.range = range
 
-    if (!context.peek(.ASSIGN) && !context.peek(.NEWLINE)) {
-      symbol.type = pratt.parse(context, .ASSIGN)
+    if (peekType(context)) {
+      symbol.type = parseType(context)
       if (symbol.type == null) {
         return null
       }
@@ -765,12 +765,8 @@ namespace astral {
       var token = context.next()
       var name = token.range.toString()
 
-      if (name != "fn") {
+      if (name != "fn" || !context.eat(.LEFT_PARENTHESIS)) {
         return Node.createName(name).withRange(token.range)
-      }
-
-      if (!context.expect(.LEFT_PARENTHESIS)) {
-        return null
       }
 
       // Parse argument types
