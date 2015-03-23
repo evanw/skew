@@ -182,7 +182,7 @@ namespace astral {
         if (value == null) {
           return false
         }
-        symbol.block = Node.createBlock([Node.createReturn(value).withRange(value.range)]).withRange(value.range)
+        symbol.block = Node.createBlock([Node.createImplicitReturn(value).withRange(value.range)]).withRange(value.range)
       }
     }
 

@@ -8,6 +8,7 @@ namespace astral {
     CONTINUE
     EXPRESSION
     IF
+    IMPLICIT_RETURN
     RETURN
     VAR
     WHILE
@@ -231,7 +232,7 @@ namespace astral {
       for (var i = children.size() - 1; i >= 0; i--) {
         var child = children[i]
         switch (child.kind) {
-          case .RETURN {
+          case .RETURN, .IMPLICIT_RETURN {
             return true
           }
 
@@ -278,6 +279,11 @@ namespace astral {
     static Node createReturn(Node value) {
       assert value == null || value.kind.isExpression()
       return Node(.RETURN).withChildren([value])
+    }
+
+    static Node createImplicitReturn(Node value) {
+      assert value.kind.isExpression()
+      return Node(.IMPLICIT_RETURN).withChildren([value])
     }
 
     static Node createVar(VariableSymbol symbol) {
@@ -412,7 +418,7 @@ namespace astral {
     }
 
     Node returnValue() {
-      assert kind == .RETURN
+      assert kind == .RETURN || kind == .IMPLICIT_RETURN
       assert children.size() == 1
       assert children[0] == null || children[0].kind.isExpression()
       return children[0]

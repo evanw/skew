@@ -36,6 +36,21 @@
 
 - test data:
 
+def main {
+  var f = (q int) => 100
+  var g = => main
+  var x bool = f(false)
+  var y = g()
+}
+
+
+
+
+
+
+
+- test data:
+
 class Foo {
   def new {}
   def []=() {}

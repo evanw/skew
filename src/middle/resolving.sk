@@ -245,7 +245,7 @@ namespace astral.resolving {
         case .CONTINUE {}
         case .EXPRESSION { resolveExpression(node, scope) }
         case .IF { resolveIf(node, scope) }
-        case .RETURN { resolveReturn(node, scope) }
+        case .IMPLICIT_RETURN, .RETURN { resolveReturn(node, scope) }
         case .VAR { resolveVar(node, scope) }
         case .WHILE { resolveWhile(node, scope) }
 
@@ -370,7 +370,7 @@ namespace astral.resolving {
         // statement. Luckily, we're better off than JavaScript since we know
         // the type of the function. Parse a single statement in a non-void
         // function but two statements in a void function.
-        if (child.kind == .RETURN && i + 1 < n && child.returnValue() == null && children[i + 1].kind == .EXPRESSION && findReturnType(scope) != null) {
+        if (child.kind == .RETURN && i + 1 < n && child.returnValue() == null && children[i + 1].kind == .EXPRESSION && scope.findEnclosingFunction().symbol.returnType != null) {
           child.replaceChild(0, node.removeChildAtIndex(i + 1).expressionValue().replaceWithNull())
           n--
         }
@@ -394,18 +394,40 @@ namespace astral.resolving {
 
     void resolveReturn(Node node, Scope scope) {
       var value = node.returnValue()
-      var returnType = findReturnType(scope)
+      var function = scope.findEnclosingFunction().symbol
+      var returnType = function.returnType != null ? function.returnType.resolvedType : null
 
-      if (value != null) {
+      // Check for a returned value
+      if (value == null) {
         if (returnType != null) {
-          resolveAsParameterizedExpressionWithConversion(value, scope, returnType)
-        } else {
-          log.semanticErrorUnexpectedReturnValue(value.range)
-          resolveAsParameterizedExpression(value, scope)
+          log.semanticErrorExpectedReturnValue(node.range, returnType)
         }
-      } else if (returnType != null) {
-        log.semanticErrorExpectedReturnValue(node.range, returnType)
+        return
       }
+
+      // Check the type of the returned value
+      if (returnType != null) {
+        resolveAsParameterizedExpressionWithConversion(value, scope, returnType)
+        return
+      }
+
+      // If there's no return type, still check for other errors
+      resolveAsParameterizedExpression(value, scope)
+
+      // Lambdas without a return type or an explicit "return" statement get special treatment
+      if (node.kind == .RETURN) {
+        log.semanticErrorUnexpectedReturnValue(value.range)
+        return
+      }
+
+      // Check for a return value of type "void"
+      if (value.kind == .CALL && value.symbol != null && value.symbol.asFunction().returnType == null) {
+        node.kind = .EXPRESSION
+        return
+      }
+
+      // Mutate the return type to the type from the returned value
+      function.returnType = Node.createType(value.resolvedType)
     }
 
     void resolveVar(Node node, Scope scope) {
@@ -483,6 +505,7 @@ namespace astral.resolving {
     bool resolveFunctionCall(Node node, Scope scope, FunctionSymbol function) {
       var expected = function.arguments.size()
       var count = node.children.size() - 1
+      node.symbol = function
 
       // Use the return type even if there were errors
       if (function.returnType != null) {
@@ -496,7 +519,7 @@ namespace astral.resolving {
 
       // There is no "void" type, so make sure this return value isn't used
       // (the parent will be null for variable initializers)
-      else if (node.parent == null || node.parent.kind != .EXPRESSION) {
+      else if (node.parent == null || node.parent.kind != .EXPRESSION && node.parent.kind != .IMPLICIT_RETURN) {
         log.semanticErrorUseOfVoidFunction(node.range, function.name)
       }
 
@@ -647,15 +670,15 @@ namespace astral.resolving {
 
     void resolveLambda(Node node, Scope scope, Type context) {
       var symbol = node.symbol.asFunction()
+      var count = symbol.arguments.size()
       symbol.scope = FunctionScope(scope, symbol)
 
       // Use type context to implicitly set missing types
       if (context != null && context.kind() == .LAMBDA) {
         var lambda = context.asLambdaType()
-        var count = lambda.argumentTypes.size()
 
         // Copy over the argument types if they line up
-        if (symbol.arguments.size() == count) {
+        if (lambda.argumentTypes.size() == count) {
           for (var i = 0; i < count; i++) {
             var argument = symbol.arguments[i]
             if (argument.type == null) {
@@ -671,6 +694,14 @@ namespace astral.resolving {
       }
 
       resolveFunction(symbol)
+
+      // Use a LambdaType instead of a SymbolType for the node
+      List<Type> argumentTypes = []
+      var returnType = symbol.returnType
+      for (var i = 0; i < count; i++) {
+        argumentTypes.push(symbol.arguments[i].resolvedType)
+      }
+      node.resolvedType = cache.createLambdaType(argumentTypes, returnType != null ? returnType.resolvedType : null)
     }
 
     void resolveLambdaType(Node node, Scope scope) {
@@ -688,7 +719,7 @@ namespace astral.resolving {
       }
 
       var returnType = types.pop()
-      node.resolvedType = LambdaType(types, returnType)
+      node.resolvedType = cache.createLambdaType(types, returnType)
     }
 
     void resolveName(Node node, Scope scope) {
@@ -833,11 +864,6 @@ namespace astral.resolving {
 
     static bool shouldCheckForSetter(Node node) {
       return node.parent != null && node.parent.kind == .ASSIGN && node == node.parent.binaryLeft()
-    }
-
-    static Type findReturnType(Scope scope) {
-      var returnType = scope.findEnclosingFunction().symbol.returnType
-      return returnType != null ? returnType.resolvedType : null
     }
   }
 }

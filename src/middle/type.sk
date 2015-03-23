@@ -100,6 +100,10 @@ namespace astral {
       return false
     }
 
+    LambdaType createLambdaType(List<Type> argumentTypes, Type returnType) {
+      return LambdaType(argumentTypes, returnType) // TODO: Deduplicate this so equality comparison works
+    }
+
     private {
       bool canCastToNumeric(Type type) {
         return type == intType || type == doubleType || type == boolType

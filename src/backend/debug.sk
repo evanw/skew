@@ -185,7 +185,7 @@ namespace astral {
             emit(indent + "continue\n")
           }
 
-          case .RETURN {
+          case .IMPLICIT_RETURN, .RETURN {
             emit(indent + "return")
             var value = node.returnValue()
             if (value != null) {
