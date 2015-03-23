@@ -43,6 +43,7 @@ namespace astral {
     EQUAL
     GREATER_THAN
     GREATER_THAN_OR_EQUAL
+    IN
     LESS_THAN
     LESS_THAN_OR_EQUAL
     LOGICAL_AND
@@ -85,10 +86,6 @@ namespace astral {
 
     bool isBinary() {
       return this >= ADD && this <= ASSIGN_SUBTRACT
-    }
-
-    bool isBinaryComparison() {
-      return this >= GREATER_THAN && this <= LESS_THAN_OR_EQUAL
     }
   }
 

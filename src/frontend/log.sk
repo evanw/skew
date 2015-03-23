@@ -87,6 +87,10 @@ namespace astral {
     void syntaxErrorExpectedToken(Range range, TokenKind found, TokenKind expected) {
       error(range, "Expected " + expected + " but found " + found)
     }
+
+    void syntaxWarningPreferNotIn(Range range) {
+      warning(range, "The \"not in\" operator is preferred over nesting \"in\" inside \"not\"")
+    }
   }
 
   in Log {

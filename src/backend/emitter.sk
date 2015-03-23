@@ -106,7 +106,7 @@ namespace astral {
   IntMap<OperatorInfo> operatorInfo = {
     NodeKind.COMPLEMENT:            OperatorInfo("~", .UNARY_PREFIX, .NONE, .OVERRIDABLE),
     NodeKind.NEGATIVE:              OperatorInfo("-", .UNARY_PREFIX, .NONE, .OVERRIDABLE),
-    NodeKind.NOT:                   OperatorInfo("!", .UNARY_PREFIX, .NONE, .FIXED),
+    NodeKind.NOT:                   OperatorInfo("not", .UNARY_PREFIX, .NONE, .OVERRIDABLE),
     NodeKind.POSITIVE:              OperatorInfo("+", .UNARY_PREFIX, .NONE, .OVERRIDABLE),
 
     NodeKind.ADD:                   OperatorInfo("+", .ADD, .LEFT, .OVERRIDABLE),
@@ -117,10 +117,11 @@ namespace astral {
     NodeKind.EQUAL:                 OperatorInfo("==", .EQUAL, .LEFT, .FIXED),
     NodeKind.GREATER_THAN:          OperatorInfo(">", .COMPARE, .LEFT, .FIXED),
     NodeKind.GREATER_THAN_OR_EQUAL: OperatorInfo(">=", .COMPARE, .LEFT, .FIXED),
+    NodeKind.IN:                    OperatorInfo("in", .COMPARE, .LEFT, .OVERRIDABLE),
     NodeKind.LESS_THAN:             OperatorInfo("<", .COMPARE, .LEFT, .FIXED),
     NodeKind.LESS_THAN_OR_EQUAL:    OperatorInfo("<=", .COMPARE, .LEFT, .FIXED),
-    NodeKind.LOGICAL_AND:           OperatorInfo("&&", .LOGICAL_AND, .LEFT, .FIXED),
-    NodeKind.LOGICAL_OR:            OperatorInfo("||", .LOGICAL_OR, .LEFT, .FIXED),
+    NodeKind.LOGICAL_AND:           OperatorInfo("and", .LOGICAL_AND, .LEFT, .FIXED),
+    NodeKind.LOGICAL_OR:            OperatorInfo("or", .LOGICAL_OR, .LEFT, .FIXED),
     NodeKind.MULTIPLY:              OperatorInfo("*", .MULTIPLY, .LEFT, .OVERRIDABLE),
     NodeKind.NOT_EQUAL:             OperatorInfo("!=", .EQUAL, .LEFT, .FIXED),
     NodeKind.POWER:                 OperatorInfo("**", .UNARY_PREFIX, .RIGHT, .OVERRIDABLE),

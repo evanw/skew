@@ -5,6 +5,7 @@
 #.*\n                             COMMENT;
 #.*                               COMMENT;
 
+"and"                             LOGICAL_AND;
 "as"                              AS;
 "break"                           BREAK;
 "class"                           CLASS;
@@ -14,9 +15,13 @@
 "else"                            ELSE;
 "false"                           FALSE;
 "if"                              IF;
+"in"                              IN;
 "interface"                       INTERFACE;
+"is"                              IS;
 "namespace"                       NAMESPACE;
+"not"                             NOT;
 "null"                            NULL;
+"or"                              LOGICAL_OR;
 "return"                          RETURN;
 "super"                           SUPER;
 "true"                            TRUE;
@@ -37,8 +42,6 @@
 ","                               COMMA;
 "?"                               QUESTION_MARK;
 ":"                               COLON;
-"&&"                              LOGICAL_AND;
-"||"                              LOGICAL_OR;
 "**="                             ASSIGN_POWER;
 "+="                              ASSIGN_PLUS;
 "-="                              ASSIGN_MINUS;
@@ -67,7 +70,6 @@
 ">="                              GREATER_THAN_OR_EQUAL;
 "<"                               LESS_THAN;
 ">"                               GREATER_THAN;
-"!"                               NOT;
 "="                               ASSIGN;
 
 ['](\\.|[^\\'])*[']               CHARACTER;

@@ -627,7 +627,9 @@ namespace astral.resolving {
     }
 
     void resolveOperatorOverload(Node node, Scope scope) {
-      var target = node.children[0]
+      // The order of operands are reversed for the "in" operator
+      var reverseBinaryOrder = node.kind == .IN
+      var target = node.children[reverseBinaryOrder ? 1 : 0]
       var type = target.resolvedType
       if (type == .DYNAMIC) {
         return
@@ -647,8 +649,11 @@ namespace astral.resolving {
       }
 
       // Resolve the method call
+      var value = node.replaceChild(0, Node.createDot(target.replaceWithNull(), info.text).withRange(node.internalRange).withInternalRange(node.internalRange))
+      if (reverseBinaryOrder) {
+        node.replaceChild(1, value)
+      }
       node.kind = .CALL
-      node.replaceChild(0, Node.createDot(target.replaceWithNull(), info.text).withRange(node.internalRange).withInternalRange(node.internalRange))
       node.resolvedType = null
       resolveAsParameterizedExpression(node, scope)
     }

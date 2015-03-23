@@ -278,9 +278,11 @@ namespace astral {
     TokenKind.BITWISE_OR: 0,
     TokenKind.BITWISE_XOR: 0,
     TokenKind.DIVIDE: 0,
+    TokenKind.IN: 0,
     TokenKind.INDEX: 0,
     TokenKind.MINUS: 0,
     TokenKind.MULTIPLY: 0,
+    TokenKind.NOT: 0,
     TokenKind.PLUS: 0,
     TokenKind.POWER: 0,
     TokenKind.REMAINDER: 0,
@@ -619,6 +621,9 @@ namespace astral {
     NodeKind kind
 
     override Node parse(ParserContext context, Token token, Node value) {
+      if (kind == .NOT && value.kind == .IN) {
+        context.log.syntaxWarningPreferNotIn(value.internalRange)
+      }
       return Node.createUnary(kind, value).withRange(Range.span(token.range, value.range)).withInternalRange(token.range)
     }
   }
@@ -644,6 +649,22 @@ namespace astral {
         return null
       }
       return Node.createCast(left, type).withRange(context.spanSince(left.range))
+    }
+  }
+
+  class NotParselet : InfixParselet {
+    override Node parse(ParserContext context, Node left) {
+      var notToken = context.next()
+      var inToken = context.current()
+      if (!context.expect(.IN)) {
+        return null
+      }
+      var right = pratt.parse(context, .COMPARE)
+      if (right == null) {
+        return null
+      }
+      var range = context.spanSince(left.range)
+      return Node.createUnary(.NOT, Node.createBinary(.IN, left, right).withRange(range).withInternalRange(inToken.range)).withRange(range).withInternalRange(notToken.range)
     }
   }
 
@@ -826,6 +847,7 @@ namespace astral {
     pratt.infix(.EQUAL, .EQUAL, BinaryInfix(.EQUAL))
     pratt.infix(.GREATER_THAN, .COMPARE, BinaryInfix(.GREATER_THAN))
     pratt.infix(.GREATER_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.GREATER_THAN_OR_EQUAL))
+    pratt.infix(.IN, .COMPARE, BinaryInfix(.IN))
     pratt.infix(.LESS_THAN, .COMPARE, BinaryInfix(.LESS_THAN))
     pratt.infix(.LESS_THAN_OR_EQUAL, .COMPARE, BinaryInfix(.LESS_THAN_OR_EQUAL))
     pratt.infix(.LOGICAL_AND, .LOGICAL_AND, BinaryInfix(.LOGICAL_AND))
@@ -834,10 +856,10 @@ namespace astral {
     pratt.infix(.MULTIPLY, .MULTIPLY, BinaryInfix(.MULTIPLY))
     pratt.infix(.NOT_EQUAL, .EQUAL, BinaryInfix(.NOT_EQUAL))
     pratt.infix(.PLUS, .ADD, BinaryInfix(.ADD))
+    pratt.infix(.POWER, .UNARY_PREFIX, BinaryInfix(.POWER))
     pratt.infix(.REMAINDER, .MULTIPLY, BinaryInfix(.REMAINDER))
     pratt.infix(.SHIFT_LEFT, .SHIFT, BinaryInfix(.SHIFT_LEFT))
     pratt.infix(.SHIFT_RIGHT, .SHIFT, BinaryInfix(.SHIFT_RIGHT))
-    pratt.infix(.POWER, .UNARY_PREFIX, BinaryInfix(.POWER))
 
     pratt.infixRight(.ASSIGN, .ASSIGN, BinaryInfix(.ASSIGN))
     pratt.infixRight(.ASSIGN_BITWISE_AND, .ASSIGN, BinaryInfix(.ASSIGN_BITWISE_AND))
@@ -863,6 +885,7 @@ namespace astral {
     pratt.parselet(.LEFT_BRACKET, .MEMBER).infix = IndexParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet()
+    pratt.parselet(.NOT, .COMPARE).infix = NotParselet()
     pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet()
     pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizedParselet()
 
