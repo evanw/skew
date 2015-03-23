@@ -167,6 +167,11 @@ namespace astral.resolving {
 
       if (symbol.block != null) {
         resolveNode(symbol.block, scope)
+
+        // Missing a return statement is an error
+        if (symbol.returnType != null && symbol.returnType.resolvedType != .DYNAMIC && !symbol.block.blockAlwaysEndsWithReturn()) {
+          log.semanticErrorMissingReturn(symbol.range, symbol.name, symbol.returnType.resolvedType)
+        }
       }
     }
 
@@ -333,12 +338,30 @@ namespace astral.resolving {
     void resolveBlock(Node node, Scope scope) {
       assert node.kind == .BLOCK
 
+      // Introduce a new scope for nested blocks
       if (node.parent != null) {
         scope = LocalScope(scope)
       }
 
-      for (var i = 0; i < node.children.size(); i++) {
-        resolveNode(node.children[i], scope)
+      var children = node.children
+      var n = children.size()
+
+      for (var i = 0; i < n; i++) {
+        var child = children[i]
+
+        // There is a well-known ambiguity in languages like JavaScript where
+        // a return statement followed by a newline and a value can either be
+        // parsed as a single return statement with a value or as two
+        // statements, a return statement without a value and an expression
+        // statement. Luckily, we're better off than JavaScript since we know
+        // the type of the function. Parse a single statement in a non-void
+        // function but two statements in a void function.
+        if (child.kind == .RETURN && i + 1 < n && child.returnValue() == null && children[i + 1].kind == .EXPRESSION && findReturnType(scope) != null) {
+          child.replaceChild(0, node.removeChildAtIndex(i + 1).expressionValue().replaceWithNull())
+          n--
+        }
+
+        resolveNode(child, scope)
       }
     }
 
@@ -357,8 +380,17 @@ namespace astral.resolving {
 
     void resolveReturn(Node node, Scope scope) {
       var value = node.returnValue()
+      var returnType = findReturnType(scope)
+
       if (value != null) {
-        resolveAsParameterizedExpression(value, scope) // TODO: resolveAsParameterizedExpressionWithConversion()
+        if (returnType != null) {
+          resolveAsParameterizedExpressionWithConversion(value, scope, returnType)
+        } else {
+          log.semanticErrorUnexpectedReturnValue(value.range)
+          resolveAsParameterizedExpression(value, scope)
+        }
+      } else if (returnType != null) {
+        log.semanticErrorExpectedReturnValue(node.range, returnType)
       }
     }
 
@@ -544,7 +576,7 @@ namespace astral.resolving {
 
     void resolveLambda(Node node, Scope scope) {
       var symbol = node.symbol.asFunction()
-      symbol.scope = scope
+      symbol.scope = FunctionScope(scope, symbol)
       resolveFunction(symbol)
     }
 
@@ -702,6 +734,11 @@ namespace astral.resolving {
 
     static bool shouldCheckForSetter(Node node) {
       return node.parent != null && node.parent.kind == .ASSIGN && node == node.parent.binaryLeft()
+    }
+
+    static Type findReturnType(Scope scope) {
+      var returnType = scope.findEnclosingFunction().symbol.returnType
+      return returnType != null ? returnType.resolvedType : null
     }
   }
 }

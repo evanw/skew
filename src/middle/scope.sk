@@ -25,6 +25,15 @@ namespace astral {
       assert kind() == .LOCAL
       return (LocalScope)this
     }
+
+    FunctionScope findEnclosingFunction() {
+      for (var scope = this; scope != null; scope = scope.parent) {
+        if (scope.kind() == .FUNCTION) {
+          return scope.asFunction()
+        }
+      }
+      return null
+    }
   }
 
   class TypeScope : Scope {

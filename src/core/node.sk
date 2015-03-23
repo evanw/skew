@@ -149,10 +149,6 @@ namespace astral {
       return this
     }
 
-    bool isType() {
-      return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT) && symbol != null && symbol.kind.isType()
-    }
-
     int indexInParent() {
       assert parent != null
       return parent.children.indexOf(this)
@@ -209,6 +205,47 @@ namespace astral {
         assert (node.parent == null) != (parent == null)
         node.parent = parent
       }
+    }
+  }
+
+  // Node-specific queries
+  in Node {
+    bool isTrue() {
+      return kind == .CONSTANT && content.kind() == .BOOL && content.asBool()
+    }
+
+    bool isFalse() {
+      return kind == .CONSTANT && content.kind() == .BOOL && !content.asBool()
+    }
+
+    bool isType() {
+      return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT) && symbol != null && symbol.kind.isType()
+    }
+
+    bool blockAlwaysEndsWithReturn() {
+      assert kind == .BLOCK
+      if (children.size() == 0) {
+        return false
+      }
+
+      for (var i = children.size() - 1; i >= 0; i--) {
+        var child = children[i]
+        switch (child.kind) {
+          case .RETURN {
+            return true
+          }
+
+          case .IF {
+            var trueBlock = child.ifTrue()
+            var falseBlock = child.ifFalse()
+            if (falseBlock != null && trueBlock.blockAlwaysEndsWithReturn() && falseBlock.blockAlwaysEndsWithReturn()) {
+              return true
+            }
+          }
+        }
+      }
+
+      return false
     }
   }
 

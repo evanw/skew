@@ -1,11 +1,11 @@
 - todo
   - comment parsing inside functions
-  - make "self" explicit for sanity (all instance member NAME nodes become DOT nodes)
+  - make "self" explicit inside the compiler for sanity (all instance member NAME nodes become DOT nodes)
   - generics
   - argument type checking
     - real overload resolution involving types
     - need errors for ambiguous overloads at initialization time
-  - return type and presence checking
+  x return type and presence checking
   - function types including calling values of those types
   - lambda checking including type context
   - interface auto-conversion and checking

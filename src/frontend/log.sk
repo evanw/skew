@@ -198,5 +198,17 @@ namespace astral {
     void semanticErrorSetterWrongArgumentCount(Range range, string name) {
       error(range, "Expected \"" + name + "\" to take 1 argument")
     }
+
+    void semanticErrorUnexpectedReturnValue(Range range) {
+      error(range, "Cannot return a value inside a function without a return type")
+    }
+
+    void semanticErrorExpectedReturnValue(Range range, Type type) {
+      error(range, "Expected a return value of type \"" + type + "\"")
+    }
+
+    void semanticErrorMissingReturn(Range range, string name, Type type) {
+      error(range, "All control paths for \"" + name + "\" must return a value of type \"" + type + "\"")
+    }
   }
 }

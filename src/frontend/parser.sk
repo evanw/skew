@@ -686,11 +686,12 @@ namespace astral {
   class LambdaParselet : PrefixParselet {
     override Node parse(ParserContext context) {
       var token = context.current()
-      var symbol = FunctionSymbol(.FUNCTION_LOCAL, "")
+      var symbol = FunctionSymbol(.FUNCTION_LOCAL, "<lambda>")
       if (!parseFunctionBlock(context, symbol)) {
         return null
       }
-      return Node.createLambda(symbol).withRange(context.spanSince(token.range))
+      symbol.range = context.spanSince(token.range)
+      return Node.createLambda(symbol).withRange(symbol.range)
     }
   }
 
@@ -701,14 +702,15 @@ namespace astral {
 
       // Parse a lambda of the form "x => x * x"
       if (context.peek(.ARROW)) {
-        var symbol = FunctionSymbol(.FUNCTION_LOCAL, "")
+        var symbol = FunctionSymbol(.FUNCTION_LOCAL, "<lambda>")
         var arg = VariableSymbol(.VARIABLE_LOCAL, name)
         arg.range = range
         symbol.arguments.push(arg)
         if (!parseFunctionBlock(context, symbol)) {
           return null
         }
-        return Node.createLambda(symbol).withRange(context.spanSince(range))
+        symbol.range = context.spanSince(range)
+        return Node.createLambda(symbol).withRange(symbol.range)
       }
 
       return Node.createName(name).withRange(range)
@@ -749,11 +751,12 @@ namespace astral {
       }
 
       // Parse a lambda instead
-      var symbol = FunctionSymbol(.FUNCTION_LOCAL, "")
+      var symbol = FunctionSymbol(.FUNCTION_LOCAL, "<lambda>")
       if (!parseFunctionArguments(context, symbol) || !parseFunctionReturnTypeAndBlock(context, symbol)) {
         return null
       }
-      return Node.createLambda(symbol).withRange(context.spanSince(token.range))
+      symbol.range = context.spanSince(token.range)
+      return Node.createLambda(symbol).withRange(symbol.range)
     }
   }
 
