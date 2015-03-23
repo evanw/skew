@@ -376,7 +376,7 @@ class Node {
 
   void replaceChild(int index, Node node) {
     assert children != null
-    assert index >= 0 && index <= children.size()
+    assert index >= 0 && index < children.size()
     updateParent(node, this)
     var old = children[index]
     if (old != null) old.parent = null
