@@ -88,6 +88,10 @@ namespace skew {
     bool isBinary() {
       return this >= ADD && this <= ASSIGN_SUBTRACT
     }
+
+    bool isBinaryAssign() {
+      return this >= ASSIGN && this <= ASSIGN_SUBTRACT
+    }
   }
 
   // Nodes represent executable code (variable initializers and function bodies)

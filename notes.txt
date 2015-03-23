@@ -43,6 +43,7 @@ var b = => main
 def main {
   var f = (q int) => 100
   var g = => main
+  var h = => g()
 
   var x bool = a(false)
   var y = b()

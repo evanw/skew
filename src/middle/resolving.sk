@@ -318,6 +318,12 @@ namespace skew.resolving {
       // TODO
     }
 
+    void checkStorage(Node node) {
+      if (node.kind != .NAME && node.kind != .DOT || node.symbol != null && !node.symbol.kind.isVariable()) {
+        log.semanticErrorBadStorage(node.range)
+      }
+    }
+
     void checkConversion(Node node, Type to, ConversionKind kind) {
       var from = node.resolvedType
       assert from != null
@@ -518,8 +524,7 @@ namespace skew.resolving {
       }
 
       // There is no "void" type, so make sure this return value isn't used
-      // (the parent will be null for variable initializers)
-      else if (node.parent == null || node.parent.kind != .EXPRESSION && node.parent.kind != .IMPLICIT_RETURN) {
+      else if (isVoidExpressionUsed(node)) {
         log.semanticErrorUseOfVoidFunction(node.range, function.name)
       }
 
@@ -575,8 +580,7 @@ namespace skew.resolving {
       }
 
       // There is no "void" type, so make sure this return value isn't used
-      // (the parent will be null for variable initializers)
-      else if (node.parent == null || node.parent.kind != .EXPRESSION) {
+      else if (isVoidExpressionUsed(node)) {
         log.semanticErrorUseOfVoidLambda(node.range)
       }
 
@@ -765,22 +769,38 @@ namespace skew.resolving {
       var left = node.binaryLeft()
       var right = node.binaryRight()
 
+      // To make code emission easier, assignments are only allowed in statement position
+      if (node.kind.isBinaryAssign() && isVoidExpressionUsed(node)) {
+        log.semanticErrorUseOfVoidAssignment(node.range, operatorInfo[node.kind].text)
+      }
+
       resolveAsParameterizedExpression(left, scope)
-      resolveAsParameterizedExpression(right, scope)
 
       if (node.kind == .ASSIGN) {
+        // Automatically call setters
         if (left.symbol != null && left.symbol.isSetter()) {
           node.become(Node.createCall(left.replaceWithNull(), [right.replaceWithNull()]).withRange(node.range).withInternalRange(right.range))
           resolveAsParameterizedExpression(node, scope)
+          return
         }
+
+        // Resolve the right side using type context from the left side
+        resolveAsParameterizedExpressionWithConversion(right, scope, left.resolvedType)
+        checkStorage(left)
       }
 
       else {
+        resolveAsParameterizedExpression(right, scope) // TODO: Pass type context if the member is unambiguous
         resolveOperatorOverload(node, scope)
       }
     }
 
     void resolveIndex(Node node, Scope scope) {
+      // To make code emission easier, assignments are only allowed in statement position
+      if (node.kind == .ASSIGN_INDEX && isVoidExpressionUsed(node)) {
+        log.semanticErrorUseOfVoidAssignment(node.range, operatorInfo[node.kind].text)
+      }
+
       for (var i = 0; i < node.children.size(); i++) {
         resolveAsParameterizedExpression(node.children[i], scope)
       }
@@ -864,6 +884,11 @@ namespace skew.resolving {
 
     static bool shouldCheckForSetter(Node node) {
       return node.parent != null && node.parent.kind == .ASSIGN && node == node.parent.binaryLeft()
+    }
+
+    static bool isVoidExpressionUsed(Node node) {
+      // Check for a null parent to handle variable initializers
+      return node.parent == null || node.parent.kind != .EXPRESSION && node.parent.kind != .IMPLICIT_RETURN
     }
   }
 }
