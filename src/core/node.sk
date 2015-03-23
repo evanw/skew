@@ -418,6 +418,13 @@ namespace astral {
       return children[0]
     }
 
+    Node parameterizeValue() {
+      assert kind == .PARAMETERIZE
+      assert children.size() >= 1
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
     Node callValue() {
       assert kind == .CALL
       assert children.size() >= 1

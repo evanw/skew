@@ -166,7 +166,7 @@ namespace astral.resolving {
       }
 
       if (symbol.block != null) {
-        resolveNode(symbol.block, scope)
+        resolveNode(symbol.block, scope, null)
 
         // Missing a return statement is an error
         if (symbol.returnType != null && symbol.returnType.resolvedType != .DYNAMIC && !symbol.block.blockAlwaysEndsWithReturn()) {
@@ -193,6 +193,13 @@ namespace astral.resolving {
         }
       }
 
+      // Use a different error for lambda arguments which cannot have an initializer
+      else if (symbol.scope.kind() == .FUNCTION && symbol.scope.asFunction().symbol.kind == .FUNCTION_LOCAL) {
+        log.semanticErrorVarMissingType(symbol.range, symbol.name)
+        symbol.resolvedType = .DYNAMIC
+      }
+
+      // Variables without a type are an error
       else {
         log.semanticErrorVarMissingValue(symbol.range)
         symbol.resolvedType = .DYNAMIC
@@ -224,7 +231,7 @@ namespace astral.resolving {
       }
     }
 
-    void resolveNode(Node node, Scope scope) {
+    void resolveNode(Node node, Scope scope, Type context) {
       if (node.resolvedType != null) {
         return // Only resolve once
       }
@@ -251,7 +258,7 @@ namespace astral.resolving {
         case .DYNAMIC {}
         case .HOOK { resolveHook(node, scope) }
         case .INDEX { resolveIndex(node, scope) }
-        case .LAMBDA { resolveLambda(node, scope) }
+        case .LAMBDA { resolveLambda(node, scope, context) }
         case .LAMBDA_TYPE { resolveLambdaType(node, scope) }
         case .NAME { resolveName(node, scope) }
         case .NULL { node.resolvedType = .NULL }
@@ -269,20 +276,27 @@ namespace astral.resolving {
 
     void resolveAsParameterizedType(Node node, Scope scope) {
       assert node.kind.isExpression()
-      resolveNode(node, scope)
+      resolveNode(node, scope, null)
       checkIsType(node)
       checkIsParameterized(node)
     }
 
     void resolveAsParameterizedExpression(Node node, Scope scope) {
       assert node.kind.isExpression()
-      resolveNode(node, scope)
+      resolveNode(node, scope, null)
+      checkIsInstance(node)
+      checkIsParameterized(node)
+    }
+
+    void resolveAsParameterizedExpressionWithTypeContext(Node node, Scope scope, Type type) {
+      assert node.kind.isExpression()
+      resolveNode(node, scope, type)
       checkIsInstance(node)
       checkIsParameterized(node)
     }
 
     void resolveAsParameterizedExpressionWithConversion(Node node, Scope scope, Type type) {
-      resolveAsParameterizedExpression(node, scope)
+      resolveAsParameterizedExpressionWithTypeContext(node, scope, type)
       checkConversion(node, type, .IMPLICIT)
     }
 
@@ -361,7 +375,7 @@ namespace astral.resolving {
           n--
         }
 
-        resolveNode(child, scope)
+        resolveNode(child, scope, null)
       }
     }
 
@@ -560,8 +574,8 @@ namespace astral.resolving {
     void resolveCast(Node node, Scope scope) {
       var value = node.castValue()
       var type = node.castType()
-      resolveAsParameterizedExpression(value, scope) // TODO: Provide type context
       resolveAsParameterizedType(type, scope)
+      resolveAsParameterizedExpressionWithTypeContext(value, scope, type.resolvedType)
       checkConversion(value, type.resolvedType, .EXPLICIT)
       node.resolvedType = type.resolvedType
     }
@@ -596,7 +610,7 @@ namespace astral.resolving {
     void resolveDot(Node node, Scope scope) {
       var target = node.dotTarget()
       var name = node.asString()
-      resolveNode(target, scope)
+      resolveNode(target, scope, null)
 
       // Search for a setter first, then search for a normal member
       Symbol symbol = null
@@ -631,9 +645,31 @@ namespace astral.resolving {
       resolveAsParameterizedExpression(node.hookFalse(), scope) // TODO: resolveAsParameterizedExpressionWithConversion()
     }
 
-    void resolveLambda(Node node, Scope scope) {
+    void resolveLambda(Node node, Scope scope, Type context) {
       var symbol = node.symbol.asFunction()
       symbol.scope = FunctionScope(scope, symbol)
+
+      // Use type context to implicitly set missing types
+      if (context != null && context.kind() == .LAMBDA) {
+        var lambda = context.asLambdaType()
+        var count = lambda.argumentTypes.size()
+
+        // Copy over the argument types if they line up
+        if (symbol.arguments.size() == count) {
+          for (var i = 0; i < count; i++) {
+            var argument = symbol.arguments[i]
+            if (argument.type == null) {
+              argument.type = Node.createType(lambda.argumentTypes[i])
+            }
+          }
+        }
+
+        // Copy over the return type
+        if (symbol.returnType == null && lambda.returnType != null) {
+          symbol.returnType = Node.createType(lambda.returnType)
+        }
+      }
+
       resolveFunction(symbol)
     }
 
@@ -678,9 +714,15 @@ namespace astral.resolving {
     }
 
     void resolveParameterize(Node node, Scope scope) {
-      for (var i = 0; i < node.children.size(); i++) {
-        resolveNode(node.children[i], scope) // TODO: resolveAsParameterizedType() for parameters
+      var value = node.parameterizeValue()
+      resolveNode(value, scope, null)
+
+      // Resolve parameter types
+      for (var i = 1; i < node.children.size(); i++) {
+        resolveAsParameterizedType(node.children[i], scope)
       }
+
+      node.resolvedType = value.resolvedType // TODO: Parameterize this type
     }
 
     void resolveUnary(Node node, Scope scope) {

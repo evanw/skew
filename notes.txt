@@ -7,7 +7,7 @@
     - need errors for ambiguous overloads at initialization time
   x return type and presence checking
   x function types including calling values of those types
-  - lambda argument types from type context
+  x lambda argument types from type context
   - deduplicate lambda types so equivalence checks using equality work
   - interface auto-conversion and checking
   - automatic operator conversion so += can map to = and + if += isn't defined

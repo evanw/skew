@@ -307,7 +307,7 @@ namespace astral {
           }
 
           case .PARAMETERIZE {
-            emitExpression(node.children[0], .UNARY_POSTFIX)
+            emitExpression(node.parameterizeValue(), .UNARY_POSTFIX)
             emit("<")
             for (var i = 1; i < node.children.size(); i++) {
               if (i > 1) {

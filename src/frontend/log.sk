@@ -139,6 +139,10 @@ namespace astral {
       error(range, "\"" + name + "\" is not declared on type \"" + type + "\"")
     }
 
+    void semanticErrorVarMissingType(Range range, string name) {
+      error(range, "Unable to determine the type of \"" + name + "\"")
+    }
+
     void semanticErrorVarMissingValue(Range range) {
       error(range, "Implicitly typed variables must be initialized")
     }
@@ -208,7 +212,7 @@ namespace astral {
     }
 
     void semanticErrorExpectedReturnValue(Range range, Type type) {
-      error(range, "Expected a return value of type \"" + type + "\"")
+      error(range, "Must return a value of type \"" + type + "\"")
     }
 
     void semanticErrorMissingReturn(Range range, string name, Type type) {

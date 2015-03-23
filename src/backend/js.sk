@@ -261,7 +261,7 @@ namespace astral {
           }
 
           case .PARAMETERIZE {
-            emitExpression(node.children[0], precedence)
+            emitExpression(node.parameterizeValue(), precedence)
           }
 
           case .HOOK {
