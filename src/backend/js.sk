@@ -1,9 +1,9 @@
 namespace skew {
   class JsEmitter : Emitter {
-    override void visit(TypeSymbol global) {
-      var types = sortedTypes(global)
-      for (var i = 0; i < types.size(); i++) {
-        emitType(types[i])
+    override void visit(ObjectSymbol global) {
+      var objects = sortedObjects(global)
+      for (var i = 0; i < objects.size(); i++) {
+        emitObject(objects[i])
       }
       createSource("out.js")
     }
@@ -14,7 +14,7 @@ namespace skew {
 
       void emitNewlineBeforeSymbol(Symbol symbol) {
         if (previousSymbol != null &&
-            (!previousSymbol.kind.isType() || !symbol.kind.isType() || symbol.comments != null) &&
+            (!previousSymbol.kind.isObject() || !symbol.kind.isObject() || symbol.comments != null) &&
             (!previousSymbol.kind.isVariable() || !symbol.kind.isVariable() || symbol.comments != null)) {
           previousSymbol = null
           emit("\n")
@@ -34,23 +34,23 @@ namespace skew {
         }
       }
 
-      static string computePrefix(TypeSymbol symbol) {
-        assert symbol.kind.isType()
-        return symbol.kind == .TYPE_GLOBAL ? "" : computePrefix(symbol.parent.asType()) + symbol.name + "."
+      static string computePrefix(ObjectSymbol symbol) {
+        assert symbol.kind.isObject()
+        return symbol.kind == .OBJECT_GLOBAL ? "" : computePrefix(symbol.parent.asObjectSymbol()) + symbol.name + "."
       }
 
-      void emitType(TypeSymbol symbol) {
-        prefix = symbol.parent != null ? computePrefix(symbol.parent.asType()) : ""
+      void emitObject(ObjectSymbol symbol) {
+        prefix = symbol.parent != null ? computePrefix(symbol.parent.asObjectSymbol()) : ""
 
         switch (symbol.kind) {
-          case .TYPE_NAMESPACE, .TYPE_INTERFACE {
+          case .OBJECT_NAMESPACE, .OBJECT_INTERFACE {
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol)
             emit(indent + (prefix == "" ? "var " : prefix) + symbol.name + " = {};\n")
             emitNewlineAfterSymbol(symbol)
           }
 
-          case .TYPE_CLASS {
+          case .OBJECT_CLASS {
             for (var i = 0; i < symbol.functions.size(); i++) {
               var function = symbol.functions[i]
               if (function.kind == .FUNCTION_CONSTRUCTOR) {
@@ -63,7 +63,7 @@ namespace skew {
           }
         }
 
-        if (symbol.kind != .TYPE_GLOBAL) {
+        if (symbol.kind != .OBJECT_GLOBAL) {
           prefix += symbol.name + "."
         }
 

@@ -1,7 +1,7 @@
 namespace skew {
   class DebugEmitter : Emitter {
-    override void visit(TypeSymbol global) {
-      emitType(global)
+    override void visit(ObjectSymbol global) {
+      emitObject(global)
       createSource("out.sk")
     }
 
@@ -9,7 +9,7 @@ namespace skew {
       Symbol previousSymbol = null
 
       static bool isAbstractFunction(Symbol symbol) {
-        return symbol.kind.isFunction() && symbol.asFunction().block == null
+        return symbol.kind.isFunction() && symbol.asFunctionSymbol().block == null
       }
 
       void emitNewlineBeforeSymbol(Symbol symbol) {
@@ -34,12 +34,12 @@ namespace skew {
         }
       }
 
-      void emitType(TypeSymbol symbol) {
+      void emitObject(ObjectSymbol symbol) {
         emitNewlineBeforeSymbol(symbol)
         emitComments(symbol)
 
         switch (symbol.kind) {
-          case .TYPE_CLASS {
+          case .OBJECT_CLASS {
             emit(indent + "class " + symbol.name)
             emitParameterList(symbol.parameters)
             if (symbol.base != null) {
@@ -50,14 +50,14 @@ namespace skew {
             increaseIndent()
           }
 
-          case .TYPE_INTERFACE {
+          case .OBJECT_INTERFACE {
             emit(indent + "interface " + symbol.name)
             emitParameterList(symbol.parameters)
             emit(" {\n")
             increaseIndent()
           }
 
-          case .TYPE_NAMESPACE {
+          case .OBJECT_NAMESPACE {
             emit(indent + "namespace " + symbol.name + " {\n")
             increaseIndent()
           }
@@ -65,8 +65,8 @@ namespace skew {
 
         previousSymbol = null
 
-        for (var i = 0; i < symbol.types.size(); i++) {
-          emitType(symbol.types[i])
+        for (var i = 0; i < symbol.objects.size(); i++) {
+          emitObject(symbol.objects[i])
         }
 
         for (var i = 0; i < symbol.variables.size(); i++) {
@@ -78,7 +78,7 @@ namespace skew {
         }
 
         switch (symbol.kind) {
-          case .TYPE_CLASS, .TYPE_INTERFACE, .TYPE_NAMESPACE {
+          case .OBJECT_CLASS, .OBJECT_INTERFACE, .OBJECT_NAMESPACE {
             decreaseIndent()
             emit(indent + "}\n")
           }

@@ -96,7 +96,7 @@ namespace skew {
     // this type is parameterized, a new SymbolType is created that references
     // the same symbol but contains the parameterization type environment.
     //
-    // This maps the members of this TypeSymbol to the parameterized type of
+    // This maps the members of this ObjectSymbol to the parameterized type of
     // that member. The "members" of a FunctionSymbol are just the argument
     // variables.
     IntMap<Type> cache = null
@@ -160,7 +160,7 @@ namespace skew {
       Type.intialize()
     }
 
-    void loadGlobals(Log log, TypeSymbol global) {
+    void loadGlobals(Log log, ObjectSymbol global) {
       boolType = loadGlobalClass(log, global, "bool", .VALUE_TYPE)
       doubleType = loadGlobalClass(log, global, "double", .VALUE_TYPE)
       intType = loadGlobalClass(log, global, "int", .VALUE_TYPE)
@@ -247,11 +247,11 @@ namespace skew {
         return type == intType || type == doubleType || type == boolType
       }
 
-      static SymbolType loadGlobalClass(Log log, TypeSymbol global, string name, SymbolFlags flags) {
+      static SymbolType loadGlobalClass(Log log, ObjectSymbol global, string name, SymbolFlags flags) {
         var symbol = global.members.getOrDefault(name, null)
         assert symbol != null
-        assert symbol.kind == .TYPE_CLASS
-        var type = SymbolType(symbol.asType())
+        assert symbol.kind == .OBJECT_CLASS
+        var type = SymbolType(symbol.asObjectSymbol())
         symbol.resolvedType = type
         symbol.flags |= flags
         return type

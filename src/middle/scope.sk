@@ -2,7 +2,7 @@ namespace skew {
   enum ScopeKind {
     FUNCTION
     LOCAL
-    TYPE
+    OBJECT
   }
 
   class Scope {
@@ -11,17 +11,17 @@ namespace skew {
     virtual ScopeKind kind()
     virtual Symbol find(string name)
 
-    TypeScope asType() {
-      assert kind() == .TYPE
-      return (TypeScope)this
+    ObjectScope asObjectScope() {
+      assert kind() == .OBJECT
+      return (ObjectScope)this
     }
 
-    FunctionScope asFunction() {
+    FunctionScope asFunctionScope() {
       assert kind() == .FUNCTION
       return (FunctionScope)this
     }
 
-    LocalScope asLocal() {
+    LocalScope asLocalScope() {
       assert kind() == .LOCAL
       return (LocalScope)this
     }
@@ -29,18 +29,18 @@ namespace skew {
     FunctionScope findEnclosingFunction() {
       for (var scope = this; scope != null; scope = scope.parent) {
         if (scope.kind() == .FUNCTION) {
-          return scope.asFunction()
+          return scope.asFunctionScope()
         }
       }
       return null
     }
   }
 
-  class TypeScope : Scope {
-    TypeSymbol symbol
+  class ObjectScope : Scope {
+    ObjectSymbol symbol
 
     override ScopeKind kind() {
-      return .TYPE
+      return .OBJECT
     }
 
     override Symbol find(string name) {
@@ -87,7 +87,7 @@ namespace skew {
 
       // Check for shadowing
       for (var scope = parent; scope.kind() == .LOCAL; scope = scope.parent) {
-        var other = scope.asLocal().locals.getOrDefault(symbol.name, null)
+        var other = scope.asLocalScope().locals.getOrDefault(symbol.name, null)
         if (other != null) {
           log.semanticErrorShadowedSymbol(symbol.range, symbol.name, other.range)
           return

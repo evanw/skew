@@ -1,11 +1,11 @@
 namespace skew {
   using skew.resolving
 
-  void resolvingPass(Log log, TypeSymbol global) {
+  void resolvingPass(Log log, ObjectSymbol global) {
     var cache = TypeCache()
     cache.loadGlobals(log, global)
     if (!log.hasErrors()) {
-      Resolver(cache, log).resolveType(global)
+      Resolver(cache, log).resolveObject(global)
     }
   }
 }
@@ -34,24 +34,24 @@ namespace skew.resolving {
         symbol.state = .INITIALIZING
 
         switch (symbol.kind) {
-          case .TYPE_CLASS, .TYPE_GLOBAL, .TYPE_INTERFACE, .TYPE_NAMESPACE {
-            initializeType(symbol.asType())
+          case .OBJECT_CLASS, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE {
+            initializeObject(symbol.asObjectSymbol())
           }
 
           case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL {
-            initializeFunction(symbol.asFunction())
+            initializeFunction(symbol.asFunctionSymbol())
           }
 
           case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
-            initializeVariable(symbol.asVariable())
+            initializeVariable(symbol.asVariableSymbol())
           }
 
           case .PARAMETER {
-            initializeParameter(symbol.asParameter())
+            initializeParameter(symbol.asParameterSymbol())
           }
 
           case .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
-            initializeOverloadedFunction(symbol.asOverloadedFunction())
+            initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol())
           }
 
           default {
@@ -88,7 +88,7 @@ namespace skew.resolving {
       initializeSymbol(symbol)
     }
 
-    void initializeType(TypeSymbol symbol) {
+    void initializeObject(ObjectSymbol symbol) {
       if (symbol.resolvedType == null) {
         symbol.resolvedType = SymbolType(symbol)
       }
@@ -99,12 +99,12 @@ namespace skew.resolving {
       }
     }
 
-    void resolveType(TypeSymbol symbol) {
+    void resolveObject(ObjectSymbol symbol) {
       initializeSymbol(symbol)
       resolveParameters(symbol.parameters)
 
-      for (var i = 0; i < symbol.types.size(); i++) {
-        resolveType(symbol.types[i])
+      for (var i = 0; i < symbol.objects.size(); i++) {
+        resolveObject(symbol.objects[i])
       }
 
       for (var i = 0; i < symbol.functions.size(); i++) {
@@ -199,7 +199,7 @@ namespace skew.resolving {
       }
 
       // Use a different error for lambda arguments which cannot have an initializer
-      else if (symbol.scope.kind() == .FUNCTION && symbol.scope.asFunction().symbol.kind == .FUNCTION_LOCAL) {
+      else if (symbol.scope.kind() == .FUNCTION && symbol.scope.asFunctionScope().symbol.kind == .FUNCTION_LOCAL) {
         log.semanticErrorVarMissingType(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
       }
@@ -435,7 +435,7 @@ namespace skew.resolving {
       }
 
       // Check for a return value of type "void"
-      if (value.kind == .CALL && value.symbol != null && value.symbol.asFunction().returnType == null) {
+      if (value.kind == .CALL && value.symbol != null && value.symbol.asFunctionSymbol().returnType == null) {
         node.kind = .EXPRESSION
         return
       }
@@ -453,8 +453,8 @@ namespace skew.resolving {
     }
 
     void resolveVar(Node node, Scope scope) {
-      var symbol = node.symbol.asVariable()
-      scope.asLocal().define(symbol, log)
+      var symbol = node.symbol.asVariableSymbol()
+      scope.asLocalScope().define(symbol, log)
       resolveVariable(symbol)
     }
 
@@ -511,12 +511,12 @@ namespace skew.resolving {
 
       // Check for calling a function directly
       if (symbol.kind.isFunction()) {
-        return resolveFunctionCall(node, scope, symbol.asFunction())
+        return resolveFunctionCall(node, scope, symbol.asFunctionSymbol())
       }
 
       // Check for calling a set of functions, must not be ambiguous
       if (symbol.kind.isOverloadedFunction()) {
-        return resolveOverloadedFunctionCall(node, scope, symbol.asOverloadedFunction())
+        return resolveOverloadedFunctionCall(node, scope, symbol.asOverloadedFunctionSymbol())
       }
 
       // Can't call other symbols
@@ -636,17 +636,20 @@ namespace skew.resolving {
     Symbol findMember(Type type, string name, Range range, FailureMode mode) {
       if (type.kind() == .SYMBOL) {
         var symbol = type.asSymbolType().symbol
-        if (symbol.kind.isType()) {
-          var member = symbol.asType().members.getOrDefault(name, null)
+        if (symbol.kind.isObject()) {
+          var member = symbol.asObjectSymbol().members.getOrDefault(name, null)
           if (member != null) {
             initializeSymbol(member)
             return member
           }
         }
       }
+
+      // Member lookup can optionally be performed silently to try different names
       if (mode == .ERROR_FAILURE && type != .DYNAMIC) {
         log.semanticErrorUnknownMemberSymbol(range, name, type)
       }
+
       return null
     }
 
@@ -689,7 +692,7 @@ namespace skew.resolving {
     }
 
     void resolveLambda(Node node, Scope scope, Type context) {
-      var symbol = node.symbol.asFunction()
+      var symbol = node.symbol.asFunctionSymbol()
       var count = symbol.arguments.size()
       symbol.scope = FunctionScope(scope, symbol)
 
@@ -750,6 +753,8 @@ namespace skew.resolving {
       if (shouldCheckForSetter(node)) {
         symbol = scope.find(name + "=")
       }
+
+      // If a setter wasn't found, search for a normal symbol
       if (symbol == null) {
         symbol = scope.find(name)
         if (symbol == null) {
@@ -757,8 +762,8 @@ namespace skew.resolving {
           return
         }
       }
-      initializeSymbol(symbol)
 
+      initializeSymbol(symbol)
       node.symbol = symbol
       node.resolvedType = symbol.resolvedType
       automaticallyCallGetter(node, scope)
@@ -895,7 +900,7 @@ namespace skew.resolving {
 
       // The check for getters is complicated by overloaded functions
       if (!isGetter && symbol.kind.isOverloadedFunction() && (node.parent == null || node.parent.kind != .CALL || node != node.parent.callValue() || node.parent.children.size() == 1)) {
-        var overloaded = symbol.asOverloadedFunction()
+        var overloaded = symbol.asOverloadedFunctionSymbol()
         for (var i = 0; i < overloaded.symbols.size(); i++) {
           var getter = overloaded.symbols[i]
 

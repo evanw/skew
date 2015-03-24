@@ -6,7 +6,7 @@ namespace skew {
   var output2 = `document`.getElementById("output2")
   var output3 = `document`.getElementById("output3")
 
-  string runEmitter(Emitter emitter, TypeSymbol global) {
+  string runEmitter(Emitter emitter, ObjectSymbol global) {
     emitter.visit(global)
     var sources = emitter.sources()
     var text = ""

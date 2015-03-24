@@ -1,14 +1,14 @@
 namespace skew {
   using skew.merging
 
-  void mergingPass(Log log, TypeSymbol global) {
-    mergeType(log, null, global, global)
+  void mergingPass(Log log, ObjectSymbol global) {
+    mergeObject(log, null, global, global)
   }
 }
 
 namespace skew.merging {
-  void mergeType(Log log, TypeSymbol parent, TypeSymbol target, TypeSymbol symbol) {
-    target.scope = TypeScope(parent != null ? parent.scope : null, target)
+  void mergeObject(Log log, ObjectSymbol parent, ObjectSymbol target, ObjectSymbol symbol) {
+    target.scope = ObjectScope(parent != null ? parent.scope : null, target)
     symbol.parent = parent
 
     if (symbol.parameters != null) {
@@ -28,12 +28,12 @@ namespace skew.merging {
       }
     }
 
-    mergeTypes(log, target, symbol.types)
+    mergeObjects(log, target, symbol.objects)
     mergeFunctions(log, target, symbol.functions)
     mergeVariables(log, target, symbol.variables)
   }
 
-  void mergeTypes(Log log, TypeSymbol parent, List<TypeSymbol> children) {
+  void mergeObjects(Log log, ObjectSymbol parent, List<ObjectSymbol> children) {
     var members = parent.members
     var n = children.size()
     var count = 0
@@ -47,41 +47,41 @@ namespace skew.merging {
         members[child.name] = child
         children[count] = child
         count++
-        mergeType(log, parent, child, child)
+        mergeObject(log, parent, child, child)
         continue
       }
 
-      // Can only merge with another of the same type or with a namespace
-      if (other.kind == .TYPE_NAMESPACE) {
+      // Can only merge with another of the same kind or with a namespace
+      if (other.kind == .OBJECT_NAMESPACE) {
         other.kind = child.kind
-      } else if (child.kind != .TYPE_NAMESPACE && child.kind != other.kind) {
+      } else if (child.kind != .OBJECT_NAMESPACE && child.kind != other.kind) {
         log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
         continue
       }
 
       // Classes can only have one base type
-      var type = (TypeSymbol)other
-      if (child.base != null && type.base != null) {
-        log.semanticErrorDuplicateBaseType(child.base.range, child.name, type.base.range)
+      var object = (ObjectSymbol)other
+      if (child.base != null && object.base != null) {
+        log.semanticErrorDuplicateBaseType(child.base.range, child.name, object.base.range)
         continue
       }
       if (child.base != null) {
-        type.base = child.base
+        object.base = child.base
       }
 
-      // Cannot merge two types that both have type parameters
-      if (child.parameters != null && type.parameters != null) {
-        log.semanticErrorDuplicateTypeParameters(child.range, child.name, type.range)
+      // Cannot merge two objects that both have type parameters
+      if (child.parameters != null && object.parameters != null) {
+        log.semanticErrorDuplicateTypeParameters(child.range, child.name, object.range)
         continue
       }
 
       // Merge "child" into "other"
-      mergeType(log, parent, type, child)
-      type.types.pushAll(child.types)
-      type.functions.pushAll(child.functions)
-      type.variables.pushAll(child.variables)
+      mergeObject(log, parent, object, child)
+      object.objects.pushAll(child.objects)
+      object.functions.pushAll(child.functions)
+      object.variables.pushAll(child.variables)
       if (child.parameters != null) {
-        type.parameters = child.parameters
+        object.parameters = child.parameters
       }
     }
 
@@ -92,7 +92,7 @@ namespace skew.merging {
     }
   }
 
-  void mergeFunctions(Log log, TypeSymbol parent, List<FunctionSymbol> children) {
+  void mergeFunctions(Log log, ObjectSymbol parent, List<FunctionSymbol> children) {
     var members = parent.members
 
     for (var i = 0, n = children.size(); i < n; i++) {
@@ -148,7 +148,7 @@ namespace skew.merging {
     }
   }
 
-  void mergeVariables(Log log, TypeSymbol parent, List<VariableSymbol> children) {
+  void mergeVariables(Log log, ObjectSymbol parent, List<VariableSymbol> children) {
     var members = parent.members
 
     for (var i = 0, n = children.size(); i < n; i++) {

@@ -4,7 +4,7 @@ namespace skew {
       return _sources
     }
 
-    virtual void visit(TypeSymbol global)
+    virtual void visit(ObjectSymbol global)
 
     protected {
       var indent = ""
@@ -26,19 +26,19 @@ namespace skew {
         _code = ""
       }
 
-      List<TypeSymbol> sortedTypes(TypeSymbol global) {
-        List<TypeSymbol> types = []
-        findTypes(types, global)
-        // TODO: Sort types by inheritance and containment
-        return types
+      List<ObjectSymbol> sortedObjects(ObjectSymbol global) {
+        List<ObjectSymbol> objects = []
+        findObjects(objects, global)
+        // TODO: Sort objects by inheritance and containment
+        return objects
       }
     }
 
     private {
-      void findTypes(List<TypeSymbol> types, TypeSymbol type) {
-        types.push(type)
-        for (var i = 0; i < type.types.size(); i++) {
-          findTypes(types, type.types[i])
+      void findObjects(List<ObjectSymbol> objects, ObjectSymbol object) {
+        objects.push(object)
+        for (var i = 0; i < object.objects.size(); i++) {
+          findObjects(objects, object.objects[i])
         }
       }
 

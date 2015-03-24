@@ -291,7 +291,7 @@ namespace skew {
     TokenKind.TILDE: 0,
   }
 
-  bool parseSymbol(ParserContext context, TypeSymbol parent) {
+  bool parseSymbol(ParserContext context, ObjectSymbol parent) {
     // Parse comments before the symbol declaration
     List<string> comments = null
     while (context.peek(.COMMENT)) {
@@ -314,10 +314,10 @@ namespace skew {
     var token = context.current()
     SymbolKind kind
     switch (token.kind) {
-      case .CLASS { kind = .TYPE_CLASS }
+      case .CLASS { kind = .OBJECT_CLASS }
       case .DEF { kind = parent.kind.hasInstances() ? .FUNCTION_INSTANCE : .FUNCTION_GLOBAL }
-      case .INTERFACE { kind = .TYPE_INTERFACE }
-      case .NAMESPACE { kind = .TYPE_NAMESPACE }
+      case .INTERFACE { kind = .OBJECT_INTERFACE }
+      case .NAMESPACE { kind = .OBJECT_NAMESPACE }
       case .VAR { kind = parent.kind.hasInstances() ? .VARIABLE_INSTANCE : .VARIABLE_GLOBAL }
       default {
         context.unexpectedToken()
@@ -400,11 +400,11 @@ namespace skew {
         parent.functions.push(symbol)
       }
 
-      case .TYPE_CLASS, .TYPE_INTERFACE, .TYPE_NAMESPACE {
-        var symbol = TypeSymbol(kind, name)
+      case .OBJECT_CLASS, .OBJECT_INTERFACE, .OBJECT_NAMESPACE {
+        var symbol = ObjectSymbol(kind, name)
         symbol.range = range
 
-        if (kind != .TYPE_NAMESPACE && context.eat(.START_PARAMETER_LIST)) {
+        if (kind != .OBJECT_NAMESPACE && context.eat(.START_PARAMETER_LIST)) {
           symbol.parameters = parseTypeParameters(context)
           if (symbol.parameters == null) {
             return false
@@ -429,7 +429,7 @@ namespace skew {
         }
 
         symbol.comments = comments
-        parent.types.push(symbol)
+        parent.objects.push(symbol)
       }
     }
 
@@ -440,7 +440,7 @@ namespace skew {
     return true
   }
 
-  void parseSymbols(ParserContext context, TypeSymbol parent) {
+  void parseSymbols(ParserContext context, ObjectSymbol parent) {
     context.eat(.NEWLINE)
 
     while (!context.peek(.END_OF_FILE) && !context.peek(.RIGHT_BRACE)) {
@@ -450,7 +450,7 @@ namespace skew {
     }
   }
 
-  void parseFile(Log log, List<Token> tokens, TypeSymbol global) {
+  void parseFile(Log log, List<Token> tokens, ObjectSymbol global) {
     var context = ParserContext(log, tokens)
     parseSymbols(context, global)
     context.expect(.END_OF_FILE)

@@ -3,10 +3,10 @@ namespace skew {
     NONE
     PARAMETER
 
-    TYPE_CLASS
-    TYPE_GLOBAL
-    TYPE_INTERFACE
-    TYPE_NAMESPACE
+    OBJECT_CLASS
+    OBJECT_GLOBAL
+    OBJECT_INTERFACE
+    OBJECT_NAMESPACE
 
     FUNCTION_CONSTRUCTOR
     FUNCTION_GLOBAL
@@ -22,8 +22,8 @@ namespace skew {
   }
 
   in SymbolKind {
-    bool isType() {
-      return this >= TYPE_CLASS && this <= TYPE_NAMESPACE
+    bool isObject() {
+      return this >= OBJECT_CLASS && this <= OBJECT_NAMESPACE
     }
 
     bool isFunction() {
@@ -47,7 +47,7 @@ namespace skew {
     }
 
     bool hasInstances() {
-      return this == TYPE_CLASS || this == TYPE_INTERFACE
+      return this == OBJECT_CLASS || this == OBJECT_INTERFACE
     }
 
     bool isOnInstances() {
@@ -79,33 +79,33 @@ namespace skew {
     SymbolFlags flags = 0
     List<string> comments = null
 
-    ParameterSymbol asParameter() {
+    ParameterSymbol asParameterSymbol() {
       assert kind == .PARAMETER
       return (ParameterSymbol)this
     }
 
-    TypeSymbol asType() {
-      assert kind.isType()
-      return (TypeSymbol)this
+    ObjectSymbol asObjectSymbol() {
+      assert kind.isObject()
+      return (ObjectSymbol)this
     }
 
-    FunctionSymbol asFunction() {
+    FunctionSymbol asFunctionSymbol() {
       assert kind.isFunction()
       return (FunctionSymbol)this
     }
 
-    OverloadedFunctionSymbol asOverloadedFunction() {
+    OverloadedFunctionSymbol asOverloadedFunctionSymbol() {
       assert kind.isOverloadedFunction()
       return (OverloadedFunctionSymbol)this
     }
 
-    VariableSymbol asVariable() {
+    VariableSymbol asVariableSymbol() {
       assert kind.isVariable()
       return (VariableSymbol)this
     }
 
     string fullName() {
-      if (parent != null && parent.kind != .TYPE_GLOBAL && kind != .PARAMETER) {
+      if (parent != null && parent.kind != .OBJECT_GLOBAL && kind != .PARAMETER) {
         return parent.fullName() + "." + name
       }
       return name
@@ -140,10 +140,10 @@ namespace skew {
   class ParameterSymbol : Symbol {
   }
 
-  class TypeSymbol : Symbol {
+  class ObjectSymbol : Symbol {
     Node base = null
     StringMap<Symbol> members = {}
-    List<TypeSymbol> types = []
+    List<ObjectSymbol> objects = []
     List<FunctionSymbol> functions = []
     List<VariableSymbol> variables = []
     List<ParameterSymbol> parameters = null
