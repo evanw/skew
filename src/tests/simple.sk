@@ -1,0 +1,109 @@
+namespace tests {
+  void testSimple() {
+
+test("
+class Foo<T> {
+  def foo T
+}
+
+class Bar<T> {
+  def bar T
+}
+
+def main {
+  var x Foo<Bar<Foo<int>>>
+  var a bool = x
+  var b bool = x.foo
+  var c bool = x.foo.bar
+  var d bool = x.foo.bar.foo
+}
+", "
+<stdin>:11:16: error: Cannot convert from type \"Foo<Bar<Foo<int>>>\" to type \"bool\"
+  var a bool = x
+               ^
+<stdin>:12:16: error: Cannot convert from type \"Bar<Foo<int>>\" to type \"bool\"
+  var b bool = x.foo
+               ~~~~~
+<stdin>:13:16: error: Cannot convert from type \"Foo<int>\" to type \"bool\"
+  var c bool = x.foo.bar
+               ~~~~~~~~~
+<stdin>:14:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var d bool = x.foo.bar.foo
+               ~~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  def new {}
+  def []=() {}
+}
+
+def main {
+  Foo.new[ ]= false
+  Foo.new[] = false
+  Foo.new[]= false
+}
+", "
+<stdin>:7:10: error: Expected 0 arguments but found 1 argument
+  Foo.new[ ]= false
+         ~~~~~~~~~~
+<stdin>:8:10: error: Expected 0 arguments but found 1 argument
+  Foo.new[] = false
+         ~~~~~~~~~~
+<stdin>:9:10: error: Expected 0 arguments but found 1 argument
+  Foo.new[]= false
+         ~~~~~~~~~
+")
+
+test("
+class Foo {
+  def new {}
+}
+
+namespace Foo {
+  def new(x int) Foo {
+    return new
+  }
+}
+
+def main {
+  Foo.new
+  Foo.new(100)
+}
+", "
+")
+
+test("
+class List<T> {
+  def size int
+  def pop() T
+  def shift() T
+  def push(value T)
+  def unshift(value T)
+  def map<R>(callback fn(T) R) List<R>
+  def filter(callback fn(T) bool) List<T>
+}
+
+def main {
+  var x List<int>
+  x.push(x.size)
+  x.filter(1.0)
+  x.map(1.0)
+  x.map<string>(1.0)
+  x.filter(x => x + 100)
+  x.map(x => x + 100)
+}
+", "
+<stdin>:14:12: error: Cannot convert from type \"double\" to type \"fn(int) bool\"
+  x.filter(1.0)
+           ~~~
+<stdin>:17:19: error: \"+\" is not declared on type \"int\"
+  x.filter(x => x + 100)
+                  ^
+<stdin>:18:16: error: \"+\" is not declared on type \"int\"
+  x.map(x => x + 100)
+               ^
+")
+
+  }
+}
