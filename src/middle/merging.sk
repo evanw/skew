@@ -103,8 +103,8 @@ namespace skew.merging {
       child.parent = parent
 
       if (child.parameters != null) {
-        for (var i = 0; i < child.parameters.size(); i++) {
-          var parameter = child.parameters[i]
+        for (var j = 0; j < child.parameters.size(); j++) {
+          var parameter = child.parameters[j]
           parameter.scope = scope
           parameter.parent = child
 

@@ -1,4 +1,17 @@
 in List {
+  bool isEqualTo(List<T> other) {
+    var n = size()
+    if (n != other.size()) {
+      return false
+    }
+    for (var i = 0; i < n; i++) {
+      if (this[i] != other[i]) {
+        return false
+      }
+    }
+    return true
+  }
+
   void pushAll(List<T> all) {
     for (var i = 0, n = all.size(); i < n; i++) {
       push(all[i])

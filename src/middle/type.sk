@@ -1,62 +1,80 @@
 namespace skew {
   enum TypeKind {
-    DYNAMIC
     LAMBDA
-    NULL
+    SPECIAL
     SYMBOL
   }
 
   class Type {
     final int id
+    TypeKind kind
+    Symbol symbol
+    Environment environment = null
+    List<Type> substitutions = null
+    List<Type> argumentTypes = null
+    Type returnType = null
+    IntMap<Type> substitutionCache = null // Maps a type environment id to this type in that environment
 
-    new() : id = createID() {
+    // TODO: The skewc compiler has a bug that makes this necessary, fix this
+    new(TypeKind kind, Symbol symbol) : id = createID(), kind = kind, symbol = symbol {
     }
 
     static Type DYNAMIC
     static Type NULL
 
-    virtual TypeKind kind()
-    virtual string toString()
-
-    SymbolType asSymbolType() {
-      assert kind() == .SYMBOL
-      return (SymbolType)this
+    List<ParameterSymbol> parameters() {
+      return
+        symbol == null ? null :
+        symbol.kind.isObject() ? symbol.asObjectSymbol().parameters :
+        symbol.kind.isFunction() ? symbol.asFunctionSymbol().parameters :
+        null
     }
 
-    LambdaType asLambdaType() {
-      assert kind() == .LAMBDA
-      return (LambdaType)this
+    bool isParameterized() {
+      return environment != null
     }
 
+    // Type parameters are not guaranteed to be nullable since generics are
+    // implemented through type erasure and the substituted type may be "int"
     bool isReference() {
-      if (kind() != .SYMBOL) {
-        return true
+      return symbol == null || !symbol.isValueType() && symbol.kind != .PARAMETER
+    }
+
+    string toString() {
+      if (kind == .SYMBOL) {
+        if (substitutions != null) {
+          var name = symbol.name + "<"
+          for (var i = 0; i < substitutions.size(); i++) {
+            if (i != 0) {
+              name += ", "
+            }
+            name += substitutions[i]
+          }
+          return name + ">"
+        }
+        return symbol.name
       }
 
-      // Type parameters are not guaranteed to be nullable since generics are
-      // implemented through type erasure and the substituted type may be "int"
-      var symbol = asSymbolType().symbol
-      return !symbol.isValueType() && symbol.kind != .PARAMETER
-    }
+      if (kind == .LAMBDA) {
+        var result = "fn("
+        for (var i = 0; i < argumentTypes.size(); i++) {
+          if (i != 0) {
+            result += ", "
+          }
+          result += argumentTypes[i]
+        }
+        return result + (returnType != null ? ") " + returnType : ")")
+      }
 
-    bool hasParameters() {
-      return typeParameters() != null
-    }
-
-    virtual List<ParameterSymbol> typeParameters() {
-      return null
-    }
-
-    virtual bool isParameterized() {
-      return false
+      return this == DYNAMIC ? "dynamic" : "null"
     }
 
     static void intialize() {
       if (DYNAMIC == null) {
-        DYNAMIC = SpecialType(.DYNAMIC)
+        DYNAMIC = Type(.SPECIAL, null)
       }
       if (NULL == null) {
-        NULL = SpecialType(.NULL)
+        NULL = Type(.SPECIAL, null)
       }
     }
 
@@ -70,91 +88,51 @@ namespace skew {
     }
   }
 
-  class SpecialType : Type {
-    private final TypeKind specialKind
+  class Environment {
+    final int id = createID()
+    final List<ParameterSymbol> parameters
+    final List<Type> substitutions
 
-    override TypeKind kind() {
-      return specialKind
-    }
+    // final IntMap<Environment> mergeCache = {}
 
-    override string toString() {
-      return specialKind == .DYNAMIC ? "dynamic" : "null"
-    }
-  }
+    // Environment clone() {
+    //   return Environment(parameters.clone(), substitutions.clone())
+    // }
 
-  class SymbolType : Type {
-    // This must not be changed because that would change the hash code
-    final Symbol symbol
+    // Environment mergeWith(Environment other) {
+    //   var merged = mergeCache.getOrDefault(other, null)
+    //   if (merged != null) {
+    //     return merged
+    //   }
 
-    // Types that have been substituted for the type parameters of this symbol.
-    // If non-null, the length must equal symbol.parameters.size().
-    List<Type> substitutions = null
+    //   for (var i = 0; i < other.parameters.size(); i++) {
+    //     var parameter = other.parameters[i]
+    //     var substitution = other.substitutions[i]
+    //     var index = parameters.indexOf(parameter)
+    //     if (index != -1) {
+    //       substitutions[index] = substitution
+    //     } else {
+    //       parameters.push(parameter)
+    //       substitutions.push(substitution)
+    //     }
+    //   }
+    // }
 
-    // Generics are implemented with type erasure. Classes, interfaces, and
-    // functions can all have type parameters. Every generic symbol has one
-    // canonical unparameterized SymbolType stored as its resolvedType. When
-    // this type is parameterized, a new SymbolType is created that references
-    // the same symbol but contains the parameterization type environment.
-    //
-    // This maps the members of this ObjectSymbol to the parameterized type of
-    // that member. The "members" of a FunctionSymbol are just the argument
-    // variables.
-    IntMap<Type> cache = null
-
-    override TypeKind kind() {
-      return .SYMBOL
-    }
-
-    override string toString() {
-      if (substitutions != null) {
-        assert symbol.typeParameters().size() == substitutions.size()
-        var name = symbol.name + "<"
-        for (var i = 0; i < substitutions.size(); i++) {
-          if (i != 0) {
-            name += ", "
-          }
-          name += substitutions[i]
-        }
-        return name + ">"
+    private static {
+      int createID() {
+        nextID++
+        return nextID
       }
-      return symbol.name
-    }
 
-    override List<ParameterSymbol> typeParameters() {
-      return symbol.typeParameters()
-    }
-
-    override bool isParameterized() {
-      return substitutions != null
-    }
-  }
-
-  class LambdaType : Type {
-    // These must not be changed because that would change the hash code
-    final List<Type> argumentTypes
-    final Type returnType
-
-    override TypeKind kind() {
-      return .LAMBDA
-    }
-
-    override string toString() {
-      var result = "fn("
-      for (var i = 0; i < argumentTypes.size(); i++) {
-        if (i != 0) {
-          result += ", "
-        }
-        result += argumentTypes[i]
-      }
-      return result + (returnType != null ? ") " + returnType : ")")
+      int nextID = 0
     }
   }
 
   class TypeCache {
-    SymbolType boolType = null
-    SymbolType doubleType = null
-    SymbolType intType = null
-    SymbolType stringType = null
+    Type boolType = null
+    Type doubleType = null
+    Type intType = null
+    Type stringType = null
 
     new() {
       Type.intialize()
@@ -182,7 +160,36 @@ namespace skew {
       return false
     }
 
-    LambdaType createLambdaType(List<Type> argumentTypes, Type returnType) {
+    Environment createEnvironment(List<ParameterSymbol> parameters, List<Type> substitutions) {
+      assert parameters.size() == substitutions.size()
+
+      // Hash the inputs
+      var hash = hashTypes(hashParameters(parameters), substitutions)
+      var bucket = environments.getOrDefault(hash, null)
+
+      // Check existing environments in the bucket for a match
+      if (bucket != null) {
+        for (var i = 0; i < bucket.size(); i++) {
+          var existing = bucket[i]
+          if (parameters.isEqualTo(existing.parameters) && substitutions.isEqualTo(existing.substitutions)) {
+            return existing
+          }
+        }
+      }
+
+      // Make a new bucket
+      else {
+        bucket = []
+        environments[hash] = bucket
+      }
+
+      // Make a new environment
+      var environment = Environment(parameters, substitutions)
+      bucket.push(environment)
+      return environment
+    }
+
+    Type createLambdaType(List<Type> argumentTypes, Type returnType) {
       var hash = hashTypes(returnType != null ? returnType.id : -1, argumentTypes)
       var bucket = lambdaTypes.getOrDefault(hash, null)
 
@@ -190,7 +197,7 @@ namespace skew {
       if (bucket != null) {
         for (var i = 0; i < bucket.size(); i++) {
           var existing = bucket[i]
-          if (areTypesEqual(argumentTypes, existing.argumentTypes) && returnType == existing.returnType) {
+          if (argumentTypes.isEqualTo(existing.argumentTypes) && returnType == existing.returnType) {
             return existing
           }
         }
@@ -202,72 +209,123 @@ namespace skew {
         lambdaTypes[hash] = bucket
       }
 
-      var type = LambdaType(argumentTypes, returnType)
+      // Make a new lambda type
+      var type = Type(.LAMBDA, null)
+      type.argumentTypes = argumentTypes
+      type.returnType = returnType
       bucket.push(type)
       return type
     }
 
-    SymbolType parameterize(SymbolType unparameterized, List<Type> substitutions) {
-      assert unparameterized.symbol.typeParameters().size() == substitutions.size()
-      assert unparameterized.substitutions == null
+    Type substitute(Type type, Environment environment) {
+      if (environment == null || environment == type.environment) {
+        return type
+      }
 
-      // Hash the symbol along with all types
-      var symbol = unparameterized.symbol
-      var hash = hashTypes(symbol.id, substitutions)
-      var bucket = symbolTypes.getOrDefault(hash, null)
+      // Check to see if this has been computed before
+      if (type.substitutionCache == null) {
+        type.substitutionCache = {}
+      }
+      var substituted = type.substitutionCache.getOrDefault(environment.id, null)
+      if (substituted != null) {
+        return substituted
+      }
+      substituted = type
 
-      // Check existing types in the bucket for a match
-      if (bucket != null) {
-        for (var i = 0; i < bucket.size(); i++) {
-          var existing = bucket[i]
-          if (symbol == existing.symbol && areTypesEqual(substitutions, existing.substitutions)) {
-            return existing
+      if (type.kind == .LAMBDA) {
+        List<Type> argumentTypes = []
+        Type returnType = null
+
+        // Substitute function arguments
+        for (var i = 0; i < type.argumentTypes.size(); i++) {
+          argumentTypes.push(substitute(type.argumentTypes[i], environment))
+        }
+
+        // Substitute return type
+        if (type.returnType != null) {
+          returnType = substitute(type.returnType, environment)
+        }
+
+        substituted = createLambdaType(argumentTypes, returnType)
+      }
+
+      else if (type.kind == .SYMBOL) {
+        var symbol = type.symbol
+
+        // Parameters just need simple substitution
+        if (symbol.kind == .PARAMETER) {
+          var index = environment.parameters.indexOf(symbol.asParameterSymbol())
+          if (index != -1) {
+            substituted = environment.substitutions[index]
+          }
+        }
+
+        // Symbols with type parameters are more complicated
+        else {
+          var parameters = type.parameters()
+
+          // Don't need to substitute non-generic types
+          if (parameters != null || symbol.kind.isFunction()) {
+            substituted = Type(.SYMBOL, symbol)
+            substituted.environment = environment
+
+            // Generate type substitutions
+            if (parameters != null) {
+              substituted.substitutions = []
+              for (var i = 0; i < parameters.size(); i++) {
+                substituted.substitutions.push(substitute(parameters[i].resolvedType, environment))
+              }
+            }
+
+            // Substitute function arguments
+            if (type.argumentTypes != null) {
+              substituted.argumentTypes = []
+              for (var i = 0; i < type.argumentTypes.size(); i++) {
+                substituted.argumentTypes.push(substitute(type.argumentTypes[i], environment))
+              }
+            }
+
+            // Substitute return type
+            if (type.returnType != null) {
+              substituted.returnType = substitute(type.returnType, environment)
+            }
           }
         }
       }
 
-      // Make a new bucket
-      else {
-        bucket = []
-        symbolTypes[hash] = bucket
-      }
+      // var clone = environment.clone()
+      // clone.mergeWith(environment)
+      // return symbol.substitute(clone)
+      // return symbol.substitute(environment)
 
-      // We didn't find a match, so make the type for the first time
-      var type = SymbolType(symbol)
-      type.substitutions = substitutions
-      bucket.push(type)
-      return type
+      type.substitutionCache[environment.id] = substituted
+      return substituted
     }
 
     private {
-      final var lambdaTypes = IntMap<List<LambdaType>>()
-      final var symbolTypes = IntMap<List<SymbolType>>()
+      final var environments = IntMap<List<Environment>>()
+      final var lambdaTypes = IntMap<List<Type>>()
 
       bool canCastToNumeric(Type type) {
         return type == intType || type == doubleType || type == boolType
       }
 
-      static SymbolType loadGlobalClass(Log log, ObjectSymbol global, string name, SymbolFlags flags) {
+      static Type loadGlobalClass(Log log, ObjectSymbol global, string name, SymbolFlags flags) {
         var symbol = global.members.getOrDefault(name, null)
         assert symbol != null
         assert symbol.kind == .OBJECT_CLASS
-        var type = SymbolType(symbol.asObjectSymbol())
+        var type = Type(.SYMBOL, symbol.asObjectSymbol())
         symbol.resolvedType = type
         symbol.flags |= flags
         return type
       }
 
-      static bool areTypesEqual(List<Type> left, List<Type> right) {
-        var n = left.size()
-        if (n != right.size()) {
-          return false
+      static int hashParameters(List<ParameterSymbol> parameters) {
+        var hash = 0
+        for (var i = 0; i < parameters.size(); i++) {
+          hash = hashCombine(hash, parameters[i].id)
         }
-        for (var i = 0; i < n; i++) {
-          if (left[i] != right[i]) {
-            return false
-          }
-        }
-        return true
+        return hash
       }
 
       static int hashTypes(int hash, List<Type> types) {

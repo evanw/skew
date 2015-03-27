@@ -80,7 +80,7 @@ namespace skew.resolving {
 
     void initializeParameter(ParameterSymbol symbol) {
       if (symbol.resolvedType == null) {
-        symbol.resolvedType = SymbolType(symbol)
+        symbol.resolvedType = Type(.SYMBOL, symbol)
       }
     }
 
@@ -90,7 +90,7 @@ namespace skew.resolving {
 
     void initializeObject(ObjectSymbol symbol) {
       if (symbol.resolvedType == null) {
-        symbol.resolvedType = SymbolType(symbol)
+        symbol.resolvedType = Type(.SYMBOL, symbol)
       }
 
       // Resolve the base type (only for classes)
@@ -118,16 +118,18 @@ namespace skew.resolving {
 
     void initializeFunction(FunctionSymbol symbol) {
       if (symbol.resolvedType == null) {
-        symbol.resolvedType = SymbolType(symbol)
+        symbol.resolvedType = Type(.SYMBOL, symbol)
       }
 
       resolveParameters(symbol.parameters)
 
       // Resolve the argument variables
+      symbol.resolvedType.argumentTypes = []
       for (var i = 0; i < symbol.arguments.size(); i++) {
         var argument = symbol.arguments[i]
         argument.scope = symbol.scope
         resolveVariable(argument)
+        symbol.resolvedType.argumentTypes.push(argument.resolvedType)
       }
 
       // Resolve the return type if present (no return type means "void")
@@ -137,6 +139,7 @@ namespace skew.resolving {
           symbol.returnType = null
         } else {
           resolveAsParameterizedType(symbol.returnType, symbol.scope)
+          symbol.resolvedType.returnType = symbol.returnType.resolvedType
         }
       }
 
@@ -173,8 +176,9 @@ namespace skew.resolving {
         resolveNode(symbol.block, scope, null)
 
         // Missing a return statement is an error
-        if (symbol.returnType != null && symbol.returnType.resolvedType != .DYNAMIC && !symbol.block.blockAlwaysEndsWithReturn()) {
-          log.semanticErrorMissingReturn(symbol.range, symbol.name, symbol.returnType.resolvedType)
+        var returnType = symbol.resolvedType.returnType
+        if (returnType != null && returnType != .DYNAMIC && !symbol.block.blockAlwaysEndsWithReturn()) {
+          log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType)
         }
       }
     }
@@ -228,7 +232,7 @@ namespace skew.resolving {
       var symbols = symbol.symbols
 
       if (symbol.resolvedType == null) {
-        symbol.resolvedType = SymbolType(symbol)
+        symbol.resolvedType = Type(.SYMBOL, symbol)
       }
 
       // Ensure each overload has a valid type
@@ -321,7 +325,7 @@ namespace skew.resolving {
     }
 
     void checkIsParameterized(Node node) {
-      if (node.resolvedType.hasParameters() && !node.resolvedType.isParameterized()) {
+      if (node.resolvedType.parameters() != null && !node.resolvedType.isParameterized()) {
         log.semanticErrorUnparameterizedType(node.range, node.resolvedType)
       }
     }
@@ -468,17 +472,17 @@ namespace skew.resolving {
       resolveAsParameterizedExpression(value, scope)
       var type = value.resolvedType
 
-      switch (type.kind()) {
+      switch (type.kind) {
         // Each function has its own type for simplicity
         case .SYMBOL {
-          if (resolveSymbolCall(node, scope, type.asSymbolType())) {
+          if (resolveSymbolCall(node, scope, type)) {
             return
           }
         }
 
         // Lambda types look like "fn(int, int) int"
         case .LAMBDA {
-          if (resolveLambdaCall(node, scope, type.asLambdaType())) {
+          if (resolveLambdaCall(node, scope, type)) {
             return
           }
         }
@@ -498,7 +502,7 @@ namespace skew.resolving {
       }
     }
 
-    bool resolveSymbolCall(Node node, Scope scope, SymbolType type) {
+    bool resolveSymbolCall(Node node, Scope scope, Type type) {
       var symbol = type.symbol
 
       // Getters are called implicitly, so explicitly calling one is an error.
@@ -511,7 +515,7 @@ namespace skew.resolving {
 
       // Check for calling a function directly
       if (symbol.kind.isFunction()) {
-        return resolveFunctionCall(node, scope, symbol.asFunctionSymbol())
+        return resolveFunctionCall(node, scope, type)
       }
 
       // Check for calling a set of functions, must not be ambiguous
@@ -524,14 +528,15 @@ namespace skew.resolving {
       return false
     }
 
-    bool resolveFunctionCall(Node node, Scope scope, FunctionSymbol function) {
-      var expected = function.arguments.size()
+    bool resolveFunctionCall(Node node, Scope scope, Type type) {
+      var function = type.symbol.asFunctionSymbol()
+      var expected = type.argumentTypes.size()
       var count = node.children.size() - 1
       node.symbol = function
 
       // Use the return type even if there were errors
-      if (function.returnType != null) {
-        node.resolvedType = function.returnType.resolvedType
+      if (type.returnType != null) {
+        node.resolvedType = type.returnType
       }
 
       // Constructors have an implicit return type
@@ -552,7 +557,7 @@ namespace skew.resolving {
 
       // Check argument types
       for (var i = 0; i < count; i++) {
-        resolveAsParameterizedExpressionWithConversion(node.children[i + 1], scope, function.arguments[i].resolvedType)
+        resolveAsParameterizedExpressionWithConversion(node.children[i + 1], scope, type.argumentTypes[i])
       }
 
       return true
@@ -583,10 +588,10 @@ namespace skew.resolving {
       }
 
       // Target is unambiguous
-      return resolveFunctionCall(node, scope, candidates[0])
+      return resolveFunctionCall(node, scope, candidates[0].resolvedType) // TODO: This doesn't work for generic types
     }
 
-    bool resolveLambdaCall(Node node, Scope scope, LambdaType type) {
+    bool resolveLambdaCall(Node node, Scope scope, Type type) {
       var expected = type.argumentTypes.size()
       var count = node.children.size() - 1
 
@@ -634,8 +639,8 @@ namespace skew.resolving {
     }
 
     Symbol findMember(Type type, string name, Range range, FailureMode mode) {
-      if (type.kind() == .SYMBOL) {
-        var symbol = type.asSymbolType().symbol
+      if (type.kind == .SYMBOL) {
+        var symbol = type.symbol
         if (symbol.kind.isObject()) {
           var member = symbol.asObjectSymbol().members.getOrDefault(name, null)
           if (member != null) {
@@ -681,7 +686,7 @@ namespace skew.resolving {
       }
 
       node.symbol = symbol
-      node.resolvedType = symbol.resolvedType
+      node.resolvedType = cache.substitute(symbol.resolvedType, target.resolvedType.environment)
       automaticallyCallGetter(node, scope)
     }
 
@@ -697,22 +702,21 @@ namespace skew.resolving {
       symbol.scope = FunctionScope(scope, symbol)
 
       // Use type context to implicitly set missing types
-      if (context != null && context.kind() == .LAMBDA) {
-        var lambda = context.asLambdaType()
+      if (context != null && context.kind == .LAMBDA) {
 
         // Copy over the argument types if they line up
-        if (lambda.argumentTypes.size() == count) {
+        if (context.argumentTypes.size() == count) {
           for (var i = 0; i < count; i++) {
             var argument = symbol.arguments[i]
             if (argument.type == null) {
-              argument.type = Node.createType(lambda.argumentTypes[i])
+              argument.type = Node.createType(context.argumentTypes[i])
             }
           }
         }
 
         // Copy over the return type
-        if (symbol.returnType == null && lambda.returnType != null) {
-          symbol.returnType = Node.createType(lambda.returnType)
+        if (symbol.returnType == null && context.returnType != null) {
+          symbol.returnType = Node.createType(context.returnType)
         }
       }
 
@@ -784,7 +788,15 @@ namespace skew.resolving {
 
       // Check for type parameters
       var type = value.resolvedType
-      var parameters = type.typeParameters()
+      if (type.kind != .SYMBOL) {
+        log.semanticErrorCannotParameterize(node.range, type)
+        return
+      }
+      if (!type.symbol.kind.isObject()) {
+        log.semanticErrorCannotParameterize(node.range, type)
+        return
+      }
+      var parameters = type.symbol.asObjectSymbol().parameters
       if (parameters == null || type.isParameterized()) {
         log.semanticErrorCannotParameterize(node.range, type)
         return
@@ -798,7 +810,7 @@ namespace skew.resolving {
       }
 
       // Include the symbol for use with Node.isType()
-      node.resolvedType = cache.parameterize(type.asSymbolType(), substitutions)
+      node.resolvedType = cache.substitute(type, cache.createEnvironment(parameters, substitutions))
       node.symbol = value.symbol
     }
 
@@ -934,7 +946,7 @@ namespace skew.resolving {
     }
 
     static bool isValidVariableType(Type type) {
-      return type != .NULL && (type.kind() != .SYMBOL || !type.asSymbolType().symbol.kind.isFunctionOrOverloadedFunction())
+      return type != .NULL && (type.kind != .SYMBOL || !type.symbol.kind.isFunctionOrOverloadedFunction())
     }
   }
 }

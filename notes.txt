@@ -1,3 +1,13 @@
+class Foo<T> {
+  var foo T // need an error here, can't just use null
+}
+
+var x = => Foo.new should not be a void lambda
+
+
+
+
+
 - todo
   - comment parsing inside functions
   - make "self" explicit inside the compiler for sanity (all instance member NAME nodes become DOT nodes)
@@ -31,6 +41,75 @@ x done
   x function types including calling values of those types
   x lambda argument types from type context
   x deduplicate lambda types so equivalence checks using equality work
+
+
+
+
+- test data:
+
+class Foo<T> {
+  def foo T
+}
+
+class Bar<T> {
+  def bar T
+}
+
+def main {
+  var x Foo<Bar<Foo<int>>>
+  var a bool = x
+  var b bool = x.foo
+  var c bool = x.foo.bar
+  var d bool = x.foo.bar.foo
+}
+
+
+
+
+
+
+
+- test data:
+
+class List<T> {
+  def size int
+  def pop() T
+  def shift() T
+  def push(value T)
+  def unshift(value T)
+  def map<R>(callback fn(T) R) List<R>
+  def filter(callback fn(T) bool) List<T>
+}
+
+def main {
+  var x List<int>
+  x.push(x.size)
+  x.filter("")
+  x.map("")
+  x.filter(x => x + 100)
+  x.map(x => x + 100)
+}
+
+
+
+
+
+
+
+
+- test data:
+
+class Foo<T> {
+  var foo T
+  def bar T
+}
+
+def main(foo Foo<int>) {
+  var x int = foo
+  var y int = foo.foo
+  var z int = foo.bar
+}
+
 
 
 
