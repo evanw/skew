@@ -92,31 +92,7 @@ namespace skew {
     final int id = createID()
     final List<ParameterSymbol> parameters
     final List<Type> substitutions
-
-    // final IntMap<Environment> mergeCache = {}
-
-    // Environment clone() {
-    //   return Environment(parameters.clone(), substitutions.clone())
-    // }
-
-    // Environment mergeWith(Environment other) {
-    //   var merged = mergeCache.getOrDefault(other, null)
-    //   if (merged != null) {
-    //     return merged
-    //   }
-
-    //   for (var i = 0; i < other.parameters.size(); i++) {
-    //     var parameter = other.parameters[i]
-    //     var substitution = other.substitutions[i]
-    //     var index = parameters.indexOf(parameter)
-    //     if (index != -1) {
-    //       substitutions[index] = substitution
-    //     } else {
-    //       parameters.push(parameter)
-    //       substitutions.push(substitution)
-    //     }
-    //   }
-    // }
+    final IntMap<Environment> mergeCache = null
 
     private static {
       int createID() {
@@ -217,9 +193,31 @@ namespace skew {
       return type
     }
 
+    Environment mergeEnvironments(Environment a, Environment b) {
+      List<ParameterSymbol> parameters = a.parameters.clone()
+      List<Type> substitutions = a.substitutions.clone()
+      for (var i = 0; i < b.parameters.size(); i++) {
+        var parameter = b.parameters[i]
+        var substitution = b.substitutions[i]
+        var index = parameters.indexOf(parameter)
+        if (index != -1) {
+          substitutions[index] = substitution
+        } else {
+          parameters.push(parameter)
+          substitutions.push(substitution)
+        }
+      }
+      return createEnvironment(parameters, substitutions)
+    }
+
     Type substitute(Type type, Environment environment) {
       if (environment == null || environment == type.environment) {
         return type
+      }
+
+      // Merge the type environments, which matters for nested generics
+      if (type.environment != null) {
+        environment = mergeEnvironments(type.environment, environment)
       }
 
       // Check to see if this has been computed before
@@ -298,11 +296,6 @@ namespace skew {
           }
         }
       }
-
-      // var clone = environment.clone()
-      // clone.mergeWith(environment)
-      // return symbol.substitute(clone)
-      // return symbol.substitute(environment)
 
       type.substitutionCache[environment.id] = substituted
       return substituted
