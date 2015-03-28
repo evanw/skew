@@ -809,6 +809,11 @@ namespace skew.resolving {
         return
       }
 
+      // Make sure all parameters have types
+      for (var i = 0; i < parameters.size(); i++) {
+        initializeSymbol(parameters[i])
+      }
+
       // Include the symbol for use with Node.isType()
       node.resolvedType = cache.substitute(type, cache.createEnvironment(parameters, substitutions))
       node.symbol = value.symbol

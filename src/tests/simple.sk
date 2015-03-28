@@ -104,9 +104,9 @@ def main {
 <stdin>:16:17: error: Cannot convert from type \"double\" to type \"fn(int) string\"
   x.map<string>(1.0)
                 ~~~
-<stdin>:17:19: error: \"+\" is not declared on type \"int\"
+<stdin>:17:17: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   x.filter(x => x + 100)
-                  ^
+                ~~~~~~~
 <stdin>:18:3: error: Cannot use unparameterized type \"map\"
   x.map(x => x + 100)
   ~~~~~
@@ -183,6 +183,20 @@ def main {
 <stdin>:10:15: error: Cannot convert from type \"fn()\" to type \"int\"
   var z int = => Foo.new.bar
               ~~~~~~~~~~~~~~
+")
+
+test("
+def main {
+  bar(x => foo(x))
+}
+
+def foo(x int) int {
+  return 0
+}
+
+def bar(x fn(int)) {
+}
+", "
 ")
 
   }
