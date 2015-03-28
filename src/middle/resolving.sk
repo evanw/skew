@@ -541,7 +541,7 @@ namespace skew.resolving {
 
       // Constructors have an implicit return type
       else if (function.kind == .FUNCTION_CONSTRUCTOR) {
-        node.resolvedType = function.parent.resolvedType
+        node.resolvedType = function.parent.resolvedType // TODO: This needs to be parameterized
       }
 
       // There is no "void" type, so make sure this return value isn't used
@@ -788,17 +788,10 @@ namespace skew.resolving {
 
       // Check for type parameters
       var type = value.resolvedType
-      if (type.kind != .SYMBOL) {
-        log.semanticErrorCannotParameterize(node.range, type)
-        return
-      }
-      if (!type.symbol.kind.isObject()) {
-        log.semanticErrorCannotParameterize(node.range, type)
-        return
-      }
-      var parameters = type.symbol.asObjectSymbol().parameters
+      var parameters = type.parameters()
       if (parameters == null || type.isParameterized()) {
         log.semanticErrorCannotParameterize(node.range, type)
+        value.resolvedType = .DYNAMIC
         return
       }
 
@@ -806,6 +799,7 @@ namespace skew.resolving {
       var expected = parameters.size()
       if (count != expected) {
         log.semanticErrorParameterCount(node.internalRange, expected, count)
+        value.resolvedType = .DYNAMIC
         return
       }
 

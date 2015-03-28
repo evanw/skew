@@ -31,7 +31,7 @@ namespace skew {
     }
 
     bool isParameterized() {
-      return environment != null
+      return substitutions != null
     }
 
     // Type parameters are not guaranteed to be nullable since generics are
@@ -271,9 +271,15 @@ namespace skew {
 
             // Generate type substitutions
             if (parameters != null) {
-              substituted.substitutions = []
-              for (var i = 0; i < parameters.size(); i++) {
-                substituted.substitutions.push(substitute(parameters[i].resolvedType, environment))
+              var found = true
+              for (var i = 0; found && i < parameters.size(); i++) {
+                found = parameters[i] in environment.parameters
+              }
+              if (found) {
+                substituted.substitutions = []
+                for (var i = 0; i < parameters.size(); i++) {
+                  substituted.substitutions.push(substitute(parameters[i].resolvedType, environment))
+                }
               }
             }
 

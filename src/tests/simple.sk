@@ -92,6 +92,7 @@ def main {
   x.map<string>(1.0)
   x.filter(x => x + 100)
   x.map(x => x + 100)
+  var y int = x.map<string>(1.0)
 }
 ", "
 <stdin>:14:12: error: Cannot convert from type \"double\" to type \"fn(int) bool\"
