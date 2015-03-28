@@ -136,11 +136,15 @@ namespace skew.resolving {
       if (symbol.returnType != null) {
         if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
           log.semanticErrorConstructorReturnType(symbol.returnType.range)
-          symbol.returnType = null
         } else {
           resolveAsParameterizedType(symbol.returnType, symbol.scope)
           symbol.resolvedType.returnType = symbol.returnType.resolvedType
         }
+      }
+
+      // Constructors always return the type they construct
+      if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+        symbol.resolvedType.returnType = cache.parameterize(symbol.parent.resolvedType)
       }
 
       // Setters must have one argument
@@ -176,9 +180,11 @@ namespace skew.resolving {
         resolveNode(symbol.block, scope, null)
 
         // Missing a return statement is an error
-        var returnType = symbol.resolvedType.returnType
-        if (returnType != null && returnType != .DYNAMIC && !symbol.block.blockAlwaysEndsWithReturn()) {
-          log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType)
+        if (symbol.kind != .FUNCTION_CONSTRUCTOR) {
+          var returnType = symbol.resolvedType.returnType
+          if (returnType != null && returnType != .DYNAMIC && !symbol.block.blockAlwaysEndsWithReturn()) {
+            log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType)
+          }
         }
       }
     }
@@ -327,6 +333,7 @@ namespace skew.resolving {
     void checkIsParameterized(Node node) {
       if (node.resolvedType.parameters() != null && !node.resolvedType.isParameterized()) {
         log.semanticErrorUnparameterizedType(node.range, node.resolvedType)
+        node.resolvedType = .DYNAMIC
       }
     }
 
@@ -388,9 +395,12 @@ namespace skew.resolving {
         // statement. Luckily, we're better off than JavaScript since we know
         // the type of the function. Parse a single statement in a non-void
         // function but two statements in a void function.
-        if (child.kind == .RETURN && i + 1 < n && child.returnValue() == null && children[i + 1].kind == .EXPRESSION && scope.findEnclosingFunction().symbol.returnType != null) {
-          child.replaceChild(0, node.removeChildAtIndex(i + 1).expressionValue().replaceWithNull())
-          n--
+        if (child.kind == .RETURN && i + 1 < n && child.returnValue() == null && children[i + 1].kind == .EXPRESSION) {
+          var function = scope.findEnclosingFunction().symbol
+          if (function.kind != .FUNCTION_CONSTRUCTOR && function.resolvedType.returnType != null) {
+            child.replaceChild(0, node.removeChildAtIndex(i + 1).expressionValue().replaceWithNull())
+            n--
+          }
         }
 
         resolveNode(child, scope, null)
@@ -413,7 +423,7 @@ namespace skew.resolving {
     void resolveReturn(Node node, Scope scope) {
       var value = node.returnValue()
       var function = scope.findEnclosingFunction().symbol
-      var returnType = function.returnType != null ? function.returnType.resolvedType : null
+      var returnType = function.kind != .FUNCTION_CONSTRUCTOR ? function.resolvedType.returnType : null
 
       // Check for a returned value
       if (value == null) {
@@ -439,7 +449,7 @@ namespace skew.resolving {
       }
 
       // Check for a return value of type "void"
-      if (value.kind == .CALL && value.symbol != null && value.symbol.asFunctionSymbol().returnType == null) {
+      if (value.kind == .CALL && value.symbol != null && value.symbol.resolvedType.returnType == null) {
         node.kind = .EXPRESSION
         return
       }
@@ -537,11 +547,6 @@ namespace skew.resolving {
       // Use the return type even if there were errors
       if (type.returnType != null) {
         node.resolvedType = type.returnType
-      }
-
-      // Constructors have an implicit return type
-      else if (function.kind == .FUNCTION_CONSTRUCTOR) {
-        node.resolvedType = function.parent.resolvedType // TODO: This needs to be parameterized
       }
 
       // There is no "void" type, so make sure this return value isn't used
@@ -662,6 +667,7 @@ namespace skew.resolving {
       var target = node.dotTarget()
       var name = node.asString()
       resolveNode(target, scope, null)
+      checkIsParameterized(target)
 
       // Search for a setter first, then search for a normal member
       Symbol symbol = null

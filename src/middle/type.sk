@@ -210,6 +210,19 @@ namespace skew {
       return createEnvironment(parameters, substitutions)
     }
 
+    Type parameterize(Type type) {
+      var parameters = type.parameters()
+      if (parameters == null) {
+        return type
+      }
+      assert !type.isParameterized()
+      List<Type> substitutions = []
+      for (var i = 0; i < parameters.size(); i++) {
+        substitutions.push(parameters[i].resolvedType)
+      }
+      return substitute(type, createEnvironment(parameters, substitutions))
+    }
+
     Type substitute(Type type, Environment environment) {
       if (environment == null || environment == type.environment) {
         return type

@@ -74,18 +74,18 @@ def main {
 ")
 
 test("
-class List<T> {
+class Foo<T> {
   def size int
   def pop() T
   def shift() T
   def push(value T)
   def unshift(value T)
-  def map<R>(callback fn(T) R) List<R>
-  def filter(callback fn(T) bool) List<T>
+  def map<R>(callback fn(T) R) Foo<R>
+  def filter(callback fn(T) bool) Foo<T>
 }
 
 def main {
-  var x List<int>
+  var x Foo<int>
   x.push(x.size)
   x.filter(1.0)
   x.map(1.0)
@@ -98,12 +98,91 @@ def main {
 <stdin>:14:12: error: Cannot convert from type \"double\" to type \"fn(int) bool\"
   x.filter(1.0)
            ~~~
+<stdin>:15:3: error: Cannot use unparameterized type \"map\"
+  x.map(1.0)
+  ~~~~~
+<stdin>:16:17: error: Cannot convert from type \"double\" to type \"fn(int) string\"
+  x.map<string>(1.0)
+                ~~~
 <stdin>:17:19: error: \"+\" is not declared on type \"int\"
   x.filter(x => x + 100)
                   ^
-<stdin>:18:16: error: \"+\" is not declared on type \"int\"
+<stdin>:18:3: error: Cannot use unparameterized type \"map\"
   x.map(x => x + 100)
-               ^
+  ~~~~~
+<stdin>:18:9: error: Unable to determine the type of \"x\"
+  x.map(x => x + 100)
+        ^
+<stdin>:19:29: error: Cannot convert from type \"double\" to type \"fn(int) string\"
+  var y int = x.map<string>(1.0)
+                            ~~~
+<stdin>:19:15: error: Cannot convert from type \"Foo<int>\" to type \"int\"
+  var y int = x.map<string>(1.0)
+              ~~~~~~~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  def new
+  def foo<T>(t T) Foo
+}
+
+def main {
+  Foo.new.foo(0).foo(0.0)
+  Foo.new.foo<bool>(0).foo<int>(0.0)
+}
+", "
+<stdin>:7:3: error: Cannot use unparameterized type \"foo\"
+  Foo.new.foo(0).foo(0.0)
+  ~~~~~~~~~~~
+<stdin>:8:21: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  Foo.new.foo<bool>(0).foo<int>(0.0)
+                    ^
+<stdin>:8:33: error: Cannot convert from type \"double\" to type \"int\" without a cast
+  Foo.new.foo<bool>(0).foo<int>(0.0)
+                                ~~~
+")
+
+test("
+class Foo<T> {
+  def new
+}
+
+def main {
+  var x int = Foo.new
+  var y int = Foo<int>.new
+}
+", "
+<stdin>:6:15: error: Cannot use unparameterized type \"Foo\"
+  var x int = Foo.new
+              ~~~
+<stdin>:7:15: error: Cannot convert from type \"Foo<int>\" to type \"int\"
+  var y int = Foo<int>.new
+              ~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  def new
+  def foo Foo
+  def bar
+}
+
+def main {
+  var x int = => Foo.new
+  var y int = => Foo.new.foo
+  var z int = => Foo.new.bar
+}
+", "
+<stdin>:8:15: error: Cannot convert from type \"fn() Foo\" to type \"int\"
+  var x int = => Foo.new
+              ~~~~~~~~~~
+<stdin>:9:15: error: Cannot convert from type \"fn() Foo\" to type \"int\"
+  var y int = => Foo.new.foo
+              ~~~~~~~~~~~~~~
+<stdin>:10:15: error: Cannot convert from type \"fn()\" to type \"int\"
+  var z int = => Foo.new.bar
+              ~~~~~~~~~~~~~~
 ")
 
   }
