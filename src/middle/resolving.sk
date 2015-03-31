@@ -316,6 +316,16 @@ namespace skew.resolving {
       checkConversion(node, type, .IMPLICIT)
     }
 
+    void checkUnusedExpression(Node node) {
+      var kind = node.kind
+      if (kind == .HOOK) {
+        checkUnusedExpression(node.hookTrue())
+        checkUnusedExpression(node.hookFalse())
+      } else if (node.range != null && node.resolvedType != .DYNAMIC && kind != .CALL && !kind.isBinaryAssign()) {
+        log.semanticWarningUnusedExpression(node.range)
+      }
+    }
+
     void checkIsInstance(Node node) {
       if (node.resolvedType != .DYNAMIC && node.isType()) {
         log.semanticErrorUnexpectedType(node.range, node.resolvedType)
@@ -408,7 +418,9 @@ namespace skew.resolving {
     }
 
     void resolveExpression(Node node, Scope scope) {
-      resolveAsParameterizedExpression(node.expressionValue(), scope)
+      var value = node.expressionValue()
+      resolveAsParameterizedExpression(value, scope)
+      checkUnusedExpression(value)
     }
 
     void resolveIf(Node node, Scope scope) {
@@ -443,13 +455,14 @@ namespace skew.resolving {
       resolveAsParameterizedExpression(value, scope)
 
       // Lambdas without a return type or an explicit "return" statement get special treatment
-      if (node.kind == .RETURN) {
+      if (node.kind != .IMPLICIT_RETURN) {
         log.semanticErrorUnexpectedReturnValue(value.range)
         return
       }
 
       // Check for a return value of type "void"
-      if (value.kind == .CALL && value.symbol != null && value.symbol.resolvedType.returnType == null) {
+      if (!function.shouldInferReturnType() || value.kind == .CALL && value.symbol != null && value.symbol.resolvedType.returnType == null) {
+        checkUnusedExpression(value)
         node.kind = .EXPRESSION
         return
       }
@@ -724,6 +737,11 @@ namespace skew.resolving {
         if (symbol.returnType == null && context.returnType != null) {
           symbol.returnType = Node.createType(context.returnType)
         }
+      }
+
+      // Only infer non-void return types if there's no type context
+      else if (symbol.returnType == null) {
+        symbol.flags |= .INFER_RETURN_TYPE
       }
 
       resolveFunction(symbol)

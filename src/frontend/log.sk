@@ -99,6 +99,10 @@ namespace skew {
         " but found " + found + " " + singular + prettyPrint.plural(found)
     }
 
+    void semanticWarningUnusedExpression(Range range) {
+      warning(range, "Unused expression")
+    }
+
     void semanticErrorDuplicateSymbol(Range range, string name, Range previous) {
       error(range, "\"" + name + "\" is already declared")
       if (previous != null) {

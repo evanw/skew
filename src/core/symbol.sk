@@ -56,9 +56,10 @@ namespace skew {
   }
 
   enum flags SymbolFlags {
-    VALUE_TYPE
     GETTER
+    INFER_RETURN_TYPE
     SETTER
+    VALUE_TYPE
   }
 
   enum SymbolState {
@@ -121,6 +122,10 @@ namespace skew {
 
     bool isSetter() {
       return (flags & .SETTER) != 0
+    }
+
+    bool shouldInferReturnType() {
+      return (flags & .INFER_RETURN_TYPE) != 0
     }
 
     private static {

@@ -186,8 +186,35 @@ def main {
 ")
 
 test("
+def main(x int) {
+  main
+  x
+  x + 1
+  x ? x : x
+}
+", "
+<stdin>:2:3: warning: Unused expression
+  main
+  ~~~~
+<stdin>:3:3: warning: Unused expression
+  x
+  ^
+<stdin>:5:3: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  x ? x : x
+  ^
+<stdin>:5:7: warning: Unused expression
+  x ? x : x
+      ^
+<stdin>:5:11: warning: Unused expression
+  x ? x : x
+          ^
+")
+
+test("
 def main {
   bar(x => foo(x))
+  bar(x => x + 1)
+  bar(x => x)
 }
 
 def foo(x int) int {
@@ -197,6 +224,23 @@ def foo(x int) int {
 def bar(x fn(int)) {
 }
 ", "
+<stdin>:4:12: warning: Unused expression
+  bar(x => x)
+           ^
+")
+
+test("
+def main {
+  var x = null
+  var y = => null
+}
+", "
+<stdin>:2:7: error: Implicitly typed variables cannot be of type \"null\"
+  var x = null
+      ^
+<stdin>:3:14: error: Cannot create a function with a return type of \"null\"
+  var y = => null
+             ~~~~
 ")
 
   }
