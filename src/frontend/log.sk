@@ -88,6 +88,10 @@ namespace skew {
       error(range, "Expected " + expected + " but found " + found)
     }
 
+    void syntaxErrorEmptyFunctionParentheses(Range range) {
+      error(range, "Functions without arguments do not use parentheses")
+    }
+
     void syntaxWarningPreferNotIn(Range range) {
       warning(range, "The \"not in\" operator is preferred over nesting \"in\" inside \"not\"")
     }
@@ -169,7 +173,7 @@ namespace skew {
     }
 
     void semanticErrorGetterCalledTwice(Range range, string name) {
-      error(range, "The function \"" + name + "\" is already called implicitly")
+      error(range, "The function \"" + name + "\" takes no arguments and is already called implicitly")
     }
 
     void semanticErrorUseOfVoidFunction(Range range, string name) {

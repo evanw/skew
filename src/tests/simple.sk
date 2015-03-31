@@ -35,7 +35,7 @@ def main {
 test("
 class Foo {
   def new {}
-  def []=() {}
+  def []=(x int) {}
 }
 
 def main {
@@ -44,15 +44,15 @@ def main {
   Foo.new[]= false
 }
 ", "
-<stdin>:7:10: error: Expected 0 arguments but found 1 argument
+<stdin>:7:15: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   Foo.new[ ]= false
-         ~~~~~~~~~~
-<stdin>:8:10: error: Expected 0 arguments but found 1 argument
+              ~~~~~
+<stdin>:8:15: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   Foo.new[] = false
-         ~~~~~~~~~~
-<stdin>:9:10: error: Expected 0 arguments but found 1 argument
+              ~~~~~
+<stdin>:9:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   Foo.new[]= false
-         ~~~~~~~~~
+             ~~~~~
 ")
 
 test("
@@ -76,8 +76,8 @@ def main {
 test("
 class Foo<T> {
   def size int
-  def pop() T
-  def shift() T
+  def pop T
+  def shift T
   def push(value T)
   def unshift(value T)
   def map<R>(callback fn(T) R) Foo<R>
@@ -241,6 +241,29 @@ def main {
 <stdin>:3:14: error: Cannot create a function with a return type of \"null\"
   var y = => null
              ~~~~
+")
+
+test("
+def main {
+  var a = => 0
+  var b = => {}
+  var c = () => 0
+  var d = () => {}
+  var e = () int => 0
+  var f = () int => { return 0 }
+  var g fn(int) = x => 0
+  var h fn(int) = x => {}
+  var i fn(int) int = (x) => 0
+  var j fn(int) int = (x) => { return 0 }
+  var k = (x int) => 0
+  var l = (x int) => {}
+  var m = (x int) int => 0
+  var n = (x int) int => { return 0 }
+}
+", "
+<stdin>:8:24: warning: Unused expression
+  var g fn(int) = x => 0
+                       ^
 ")
 
   }

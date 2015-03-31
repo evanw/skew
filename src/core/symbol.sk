@@ -56,7 +56,6 @@ namespace skew {
   }
 
   enum flags SymbolFlags {
-    GETTER
     INFER_RETURN_TYPE
     SETTER
     VALUE_TYPE
@@ -116,16 +115,16 @@ namespace skew {
       return (flags & .VALUE_TYPE) != 0
     }
 
-    bool isGetter() {
-      return (flags & .GETTER) != 0
-    }
-
     bool isSetter() {
       return (flags & .SETTER) != 0
     }
 
     bool shouldInferReturnType() {
       return (flags & .INFER_RETURN_TYPE) != 0
+    }
+
+    virtual bool isGetter() {
+      return false
     }
 
     private static {
@@ -157,6 +156,10 @@ namespace skew {
     VariableSymbol self = null // For instance functions and constructors
     Node returnType = null
     Node block = null
+
+    override bool isGetter() {
+      return arguments.size() == 0
+    }
   }
 
   class VariableSymbol : Symbol {

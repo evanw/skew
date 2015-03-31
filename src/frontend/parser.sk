@@ -361,7 +361,7 @@ namespace skew {
         var symbol = FunctionSymbol(kind, name)
         symbol.range = range
 
-        // Check for getters like "def foo {}" and setters like "def foo=() {}"
+        // Check for setters like "def foo=(x int) {}"
         if (nameToken.kind == .IDENTIFIER) {
           if (context.peek(.ASSIGN)) {
 
@@ -371,11 +371,6 @@ namespace skew {
               symbol.flags |= .SETTER
               symbol.name += "="
             }
-          }
-
-          // Don't allow generic getters since those are useless
-          else if (!context.peek(.LEFT_PARENTHESIS) && !context.peek(.START_PARAMETER_LIST)) {
-            symbol.flags |= .GETTER
           }
         }
 
@@ -388,8 +383,16 @@ namespace skew {
         }
 
         // Parse function arguments
-        if (!symbol.isGetter() && (!context.expect(.LEFT_PARENTHESIS) || !parseFunctionArguments(context, symbol))) {
-          return false
+        var before = context.current()
+        if (context.eat(.LEFT_PARENTHESIS)) {
+          if (!parseFunctionArguments(context, symbol)) {
+            return false
+          }
+
+          // Functions without arguments are "getters" and don't use parentheses
+          if (symbol.arguments.size() == 0) {
+            context.log.syntaxErrorEmptyFunctionParentheses(context.spanSince(before.range))
+          }
         }
 
         if (!parseFunctionReturnTypeAndBlock(context, symbol)) {
@@ -411,7 +414,7 @@ namespace skew {
           }
         }
 
-        if (context.eat(.COLON)) {
+        if (context.eat(.IS)) {
           symbol.base = parseType(context)
           if (symbol.base == null) {
             return false
@@ -739,10 +742,7 @@ namespace skew {
 
   class ParenthesisParselet : PrefixParselet {
     override Node parse(ParserContext context) {
-      var token = context.current()
-      if (!context.expect(.LEFT_PARENTHESIS)) {
-        return null
-      }
+      var token = context.next()
 
       // Try to parse a group
       if (!context.peek(.RIGHT_PARENTHESIS)) {

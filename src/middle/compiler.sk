@@ -16,7 +16,7 @@ namespace Math {
   def min(x double, y double) double
   def min(x int, y int) int
   def pow(x double, y double) double
-  def random() double
+  def random double
   def round(x double) double
   def sin(x double) double
   def sqrt(x double) double
@@ -26,7 +26,7 @@ namespace Math {
 }
 
 class bool {
-  def not() bool
+  def not bool
 }
 
 class int {
@@ -105,13 +105,13 @@ class List<T> {
   def prepend(x T)
   def removeAll(x T)
   def removeAt(x int)
-  def removeDuplicates()
-  def removeFirst()
-  def removeLast()
+  def removeDuplicates
+  def removeFirst
+  def removeLast
   def removeOne(x T)
   def removeRange(start int, end int)
   def resize(size int, default T)
-  def shuffle()
+  def shuffle
   def size int
   def slice(start int, end int) List<T>
   def sort(x fn(T, T) int)

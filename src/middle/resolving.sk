@@ -527,12 +527,13 @@ namespace skew.resolving {
 
     bool resolveSymbolCall(Node node, Scope scope, Type type) {
       var symbol = type.symbol
+      var parent = node.parent
 
       // Getters are called implicitly, so explicitly calling one is an error.
       // This error prevents a getter returning a lambda which is then called,
       // but that's really strange and I think this error is more useful.
-      if (symbol.isGetter() && node.parent != null && node.parent.kind == .CALL && node == node.parent.callValue()) {
-        log.semanticErrorGetterCalledTwice(node.parent.internalRange, symbol.name)
+      if (symbol.isGetter() && parent != null && parent.kind == .CALL && node == parent.callValue()) {
+        log.semanticErrorGetterCalledTwice(parent.internalRange, symbol.name)
         return false
       }
 
