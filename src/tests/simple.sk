@@ -34,8 +34,7 @@ def main {
 
 test("
 class Foo {
-  def new {}
-  def []=(x int) {}
+  def new
 }
 
 def main {
@@ -44,15 +43,15 @@ def main {
   Foo.new[]= false
 }
 ", "
-<stdin>:7:15: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+<stdin>:6:10: error: \"[]=\" is not declared on type \"Foo\"
   Foo.new[ ]= false
-              ~~~~~
-<stdin>:8:15: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+         ~~~~~~~~~~
+<stdin>:7:10: error: \"[]=\" is not declared on type \"Foo\"
   Foo.new[] = false
-              ~~~~~
-<stdin>:9:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+         ~~~~~~~~~~
+<stdin>:8:10: error: \"[]=\" is not declared on type \"Foo\"
   Foo.new[]= false
-             ~~~~~
+         ~~~~~~~~~
 ")
 
 test("
