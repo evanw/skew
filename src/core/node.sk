@@ -103,6 +103,7 @@ namespace skew {
     Node parent = null
     Content content = null
     Type resolvedType = null
+    List<string> comments = null
     List<Node> children = []
 
     // Change this node in place to become the provided node. The parent node is
@@ -116,6 +117,7 @@ namespace skew {
       symbol = node.symbol
       content = node.content
       resolvedType = node.resolvedType
+      comments = node.comments
       removeChildren()
       withChildren(node.removeChildren())
     }

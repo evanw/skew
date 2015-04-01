@@ -1,11 +1,4 @@
-class Foo<T> {
-  var foo T // need an error here, can't just use null
-}
-
-
-
 - todo
-  - comment parsing inside functions
   - make "self" explicit inside the compiler for sanity (all instance member NAME nodes become DOT nodes)
   - generics
   - real overload resolution involving types
@@ -32,8 +25,18 @@ class Foo<T> {
   - namespace imports via the "use" declaration prefix
 
 x done
+  x comment parsing inside functions
   x argument type checking
   x return type and presence checking
   x function types including calling values of those types
   x lambda argument types from type context
   x deduplicate lambda types so equivalence checks using equality work
+
+
+
+
+
+
+class Foo<T> {
+  var foo T // need an error here, can't just use null
+}

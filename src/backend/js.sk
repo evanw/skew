@@ -25,8 +25,7 @@ namespace skew {
         previousSymbol = symbol
       }
 
-      void emitComments(Symbol symbol) {
-        var comments = symbol.comments
+      void emitComments(List<string> comments) {
         if (comments != null) {
           for (var i = 0; i < comments.size(); i++) {
             emit(indent + "//" + comments[i])
@@ -45,7 +44,7 @@ namespace skew {
         switch (symbol.kind) {
           case .OBJECT_NAMESPACE, .OBJECT_INTERFACE {
             emitNewlineBeforeSymbol(symbol)
-            emitComments(symbol)
+            emitComments(symbol.comments)
             emit(indent + (prefix == "" ? "var " : prefix) + symbol.name + " = {};\n")
             emitNewlineAfterSymbol(symbol)
           }
@@ -91,7 +90,7 @@ namespace skew {
           return
         }
         emitNewlineBeforeSymbol(symbol)
-        emitComments(symbol)
+        emitComments(symbol.comments)
         var isExpression = prefix != ""
         var name = symbol.kind == .FUNCTION_CONSTRUCTOR ? symbol.parent.name : symbol.name
         if (isExpression) {
@@ -109,7 +108,7 @@ namespace skew {
       void emitVariable(VariableSymbol symbol) {
         if (symbol.kind != .VARIABLE_INSTANCE && (symbol.value != null || prefix == "")) {
           emitNewlineBeforeSymbol(symbol)
-          emitComments(symbol)
+          emitComments(symbol.comments)
           emit(indent + (prefix == "" || symbol.kind == .VARIABLE_LOCAL ? "var " : prefix) + symbol.name)
           if (symbol.value != null) {
             emit(" = ")
@@ -124,7 +123,9 @@ namespace skew {
         emit(" {\n")
         increaseIndent()
         for (var i = 0; i < node.children.size(); i++) {
-          emitStatement(node.children[i])
+          var statement = node.children[i]
+          emitComments(statement.comments)
+          emitStatement(statement)
         }
         decreaseIndent()
         emit(indent + "}")

@@ -26,6 +26,23 @@ namespace skew {
     MEMBER
   }
 
+  List<string> parseLeadingComments(ParserContext context) {
+    List<string> comments = null
+    while (context.peek(.COMMENT)) {
+      var range = context.next().range
+      if (comments == null) {
+        comments = []
+      }
+      comments.push(range.source.contents.slice(range.start + 1, range.end))
+
+      // Ignore blocks of comments with extra lines afterward
+      if (context.eat(.NEWLINE)) {
+        comments = null
+      }
+    }
+    return comments
+  }
+
   Node parseVar(ParserContext context) {
     var token = context.next()
     var range = context.current().range
@@ -134,11 +151,21 @@ namespace skew {
     List<Node> statements = []
     context.eat(.NEWLINE)
     while (!context.peek(.RIGHT_BRACE)) {
+      List<string> comments = parseLeadingComments(context)
+
+      // Ignore trailing comments
+      if (context.peek(.RIGHT_BRACE) || context.peek(.END_OF_FILE)) {
+        break
+      }
+
       var statement = parseStatement(context)
       if (statement == null) {
         break
       }
+
+      statement.comments = comments
       statements.push(statement)
+
       if (context.peek(.RIGHT_BRACE) || !context.expect(.NEWLINE)) {
         break
       }
@@ -293,17 +320,7 @@ namespace skew {
 
   bool parseSymbol(ParserContext context, ObjectSymbol parent) {
     // Parse comments before the symbol declaration
-    List<string> comments = null
-    while (context.peek(.COMMENT)) {
-      var range = context.next().range
-      if (comments == null) {
-        comments = []
-      }
-      comments.push(range.source.contents.slice(range.start + 1, range.end))
-      if (context.eat(.NEWLINE)) {
-        comments = null
-      }
-    }
+    List<string> comments = parseLeadingComments(context)
 
     // Ignore trailing comments
     if (context.peek(.RIGHT_BRACE) || context.peek(.END_OF_FILE)) {
