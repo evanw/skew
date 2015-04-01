@@ -1,5 +1,4 @@
 - todo
-  - make "self" explicit inside the compiler for sanity (all instance member NAME nodes become DOT nodes)
   - generics
   - real overload resolution involving types
   - need errors for ambiguous overloads at initialization time
@@ -25,6 +24,7 @@
   - namespace imports via the "use" declaration prefix
 
 x done
+  x make "self" explicit inside the compiler for sanity (all instance member NAME nodes become DOT nodes)
   x comment parsing inside functions
   x argument type checking
   x return type and presence checking

@@ -793,6 +793,16 @@ namespace skew.resolving {
       }
 
       initializeSymbol(symbol)
+
+      // Automatically insert "self." before instance symbols
+      if (symbol.kind.isOnInstances()) {
+        var function = scope.findEnclosingFunction().symbol
+        var self = function != null ? function.self : null
+        if (self != null) {
+          node.withChildren([Node.createName(self.name).withSymbol(self).withType(self.resolvedType)]).kind = .DOT
+        }
+      }
+
       node.symbol = symbol
       node.resolvedType = symbol.resolvedType
       automaticallyCallGetter(node, scope)
