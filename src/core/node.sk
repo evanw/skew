@@ -44,11 +44,7 @@ namespace skew {
     COMPARE
     DIVIDE
     EQUAL
-    GREATER_THAN
-    GREATER_THAN_OR_EQUAL
     IN
-    LESS_THAN
-    LESS_THAN_OR_EQUAL
     LOGICAL_AND
     LOGICAL_OR
     MULTIPLY
@@ -58,6 +54,12 @@ namespace skew {
     SHIFT_LEFT
     SHIFT_RIGHT
     SUBTRACT
+
+    // Binary comparison operators
+    GREATER_THAN
+    GREATER_THAN_OR_EQUAL
+    LESS_THAN
+    LESS_THAN_OR_EQUAL
 
     // Binary assigment operators
     ASSIGN

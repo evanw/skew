@@ -280,5 +280,25 @@ def main {
                       ~~~~~~~~~~~~
 ")
 
+test("
+class Foo {
+  def in(x int) bool
+}
+
+def main(foo Foo) {
+  false in foo
+  0 in foo
+  not (0 in foo)
+  0 not in foo
+}
+", "
+<stdin>:8:10: warning: The \"not in\" operator is preferred over nesting \"in\" inside \"not\"
+  not (0 in foo)
+         ~~
+<stdin>:6:3: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  false in foo
+  ~~~~~
+")
+
   }
 }
