@@ -37,6 +37,7 @@ class int {
   def -(x int) int
   def /(x int) int
   def <<(x int) int
+  def <=>(x int) int
   def >>(x int) int
   def ^(x int) int
   def |(x int) int
@@ -59,6 +60,7 @@ class double {
   def +(x double) double
   def -(x double) double
   def /(x double) double
+  def <=>(x double) double
 
   def **=(x double)
   def *=(x double)
@@ -69,6 +71,7 @@ class double {
 
 class string {
   def +(x string) string
+  def <=>(x string) int
   def [](x int) int
   def codePoints List<int>
   def endsWith(x string) bool

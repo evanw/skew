@@ -1,0 +1,57 @@
+namespace skew {
+  class OperatorInfo {
+    final string text
+    final Precedence precedence
+    final Associativity associativity
+    final OperatorKind kind
+  }
+
+  enum OperatorKind {
+    FIXED
+    OVERRIDABLE
+  }
+
+  IntMap<OperatorInfo> operatorInfo = {
+    NodeKind.COMPLEMENT:            OperatorInfo("~", .UNARY_PREFIX, .NONE, .OVERRIDABLE),
+    NodeKind.NEGATIVE:              OperatorInfo("-", .UNARY_PREFIX, .NONE, .OVERRIDABLE),
+    NodeKind.NOT:                   OperatorInfo("not", .UNARY_PREFIX, .NONE, .OVERRIDABLE),
+    NodeKind.POSITIVE:              OperatorInfo("+", .UNARY_PREFIX, .NONE, .OVERRIDABLE),
+
+    NodeKind.ADD:                   OperatorInfo("+", .ADD, .LEFT, .OVERRIDABLE),
+    NodeKind.BITWISE_AND:           OperatorInfo("&", .BITWISE_AND, .LEFT, .OVERRIDABLE),
+    NodeKind.BITWISE_OR:            OperatorInfo("|", .BITWISE_OR, .LEFT, .OVERRIDABLE),
+    NodeKind.BITWISE_XOR:           OperatorInfo("^", .BITWISE_XOR, .LEFT, .OVERRIDABLE),
+    NodeKind.DIVIDE:                OperatorInfo("/", .MULTIPLY, .LEFT, .OVERRIDABLE),
+    NodeKind.EQUAL:                 OperatorInfo("==", .EQUAL, .LEFT, .FIXED),
+    NodeKind.GREATER_THAN:          OperatorInfo(">", .COMPARE, .LEFT, .OVERRIDABLE),
+    NodeKind.GREATER_THAN_OR_EQUAL: OperatorInfo(">=", .COMPARE, .LEFT, .OVERRIDABLE),
+    NodeKind.IN:                    OperatorInfo("in", .COMPARE, .LEFT, .OVERRIDABLE),
+    NodeKind.LESS_THAN:             OperatorInfo("<", .COMPARE, .LEFT, .OVERRIDABLE),
+    NodeKind.LESS_THAN_OR_EQUAL:    OperatorInfo("<=", .COMPARE, .LEFT, .OVERRIDABLE),
+    NodeKind.LOGICAL_AND:           OperatorInfo("and", .LOGICAL_AND, .LEFT, .FIXED),
+    NodeKind.LOGICAL_OR:            OperatorInfo("or", .LOGICAL_OR, .LEFT, .FIXED),
+    NodeKind.MULTIPLY:              OperatorInfo("*", .MULTIPLY, .LEFT, .OVERRIDABLE),
+    NodeKind.NOT_EQUAL:             OperatorInfo("!=", .EQUAL, .LEFT, .FIXED),
+    NodeKind.POWER:                 OperatorInfo("**", .UNARY_PREFIX, .RIGHT, .OVERRIDABLE),
+    NodeKind.REMAINDER:             OperatorInfo("%", .MULTIPLY, .LEFT, .OVERRIDABLE),
+    NodeKind.SHIFT_LEFT:            OperatorInfo("<<", .SHIFT, .LEFT, .OVERRIDABLE),
+    NodeKind.SHIFT_RIGHT:           OperatorInfo(">>", .SHIFT, .LEFT, .OVERRIDABLE),
+    NodeKind.SUBTRACT:              OperatorInfo("-", .ADD, .LEFT, .OVERRIDABLE),
+
+    NodeKind.ASSIGN:                OperatorInfo("=", .ASSIGN, .RIGHT, .FIXED),
+    NodeKind.ASSIGN_ADD:            OperatorInfo("+=", .ASSIGN, .RIGHT, .OVERRIDABLE),
+    NodeKind.ASSIGN_BITWISE_AND:    OperatorInfo("&=", .ASSIGN, .RIGHT, .OVERRIDABLE),
+    NodeKind.ASSIGN_BITWISE_OR:     OperatorInfo("|=", .ASSIGN, .RIGHT, .OVERRIDABLE),
+    NodeKind.ASSIGN_BITWISE_XOR:    OperatorInfo("^=", .ASSIGN, .RIGHT, .OVERRIDABLE),
+    NodeKind.ASSIGN_DIVIDE:         OperatorInfo("/=", .ASSIGN, .RIGHT, .OVERRIDABLE),
+    NodeKind.ASSIGN_MULTIPLY:       OperatorInfo("*=", .ASSIGN, .RIGHT, .OVERRIDABLE),
+    NodeKind.ASSIGN_POWER:          OperatorInfo("**=", .ASSIGN, .RIGHT, .OVERRIDABLE),
+    NodeKind.ASSIGN_REMAINDER:      OperatorInfo("%=", .ASSIGN, .RIGHT, .OVERRIDABLE),
+    NodeKind.ASSIGN_SHIFT_LEFT:     OperatorInfo("<<=", .ASSIGN, .RIGHT, .OVERRIDABLE),
+    NodeKind.ASSIGN_SHIFT_RIGHT:    OperatorInfo(">>=", .ASSIGN, .RIGHT, .OVERRIDABLE),
+    NodeKind.ASSIGN_SUBTRACT:       OperatorInfo("-=", .ASSIGN, .RIGHT, .OVERRIDABLE),
+
+    NodeKind.ASSIGN_INDEX:          OperatorInfo("[]=", .MEMBER, .NONE, .OVERRIDABLE),
+    NodeKind.INDEX:                 OperatorInfo("[]", .MEMBER, .NONE, .OVERRIDABLE),
+  }
+}

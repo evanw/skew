@@ -66,6 +66,7 @@
 ">>"                              SHIFT_RIGHT;
 "!="                              NOT_EQUAL;
 "=="                              EQUAL;
+"<=>"                             COMPARE;
 "<="                              LESS_THAN_OR_EQUAL;
 ">="                              GREATER_THAN_OR_EQUAL;
 "<"                               LESS_THAN;

@@ -99,6 +99,10 @@ namespace skew {
     void syntaxWarningPreferNotIn(Range range) {
       warning(range, "The \"not in\" operator is preferred over nesting \"in\" inside \"not\"")
     }
+
+    void semanticErrorComparisonOperatorNotNumeric(Range range) {
+      error(range, "The comparison operator must have a numeric return type")
+    }
   }
 
   in Log {

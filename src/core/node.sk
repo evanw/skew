@@ -40,6 +40,7 @@ namespace skew {
     BITWISE_AND
     BITWISE_OR
     BITWISE_XOR
+    COMPARE
     DIVIDE
     EQUAL
     GREATER_THAN
@@ -91,6 +92,10 @@ namespace skew {
 
     bool isBinaryAssign() {
       return this >= ASSIGN && this <= ASSIGN_SUBTRACT
+    }
+
+    bool isBinaryComparison() {
+      return this >= GREATER_THAN && this <= LESS_THAN_OR_EQUAL
     }
   }
 

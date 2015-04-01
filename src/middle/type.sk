@@ -121,6 +121,10 @@ namespace skew {
       stringType = loadGlobalClass(log, global, "string", .VALUE_TYPE)
     }
 
+    bool isNumeric(Type type) {
+      return type == intType || type == doubleType
+    }
+
     bool canImplicitlyConvert(Type from, Type to) {
       if (from == to) return true
       if (from == .NULL && to.isReference()) return true

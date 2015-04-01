@@ -133,18 +133,27 @@ namespace skew.resolving {
       }
 
       // Resolve the return type if present (no return type means "void")
+      Type returnType = null
       if (symbol.returnType != null) {
         if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
           log.semanticErrorConstructorReturnType(symbol.returnType.range)
         } else {
           resolveAsParameterizedType(symbol.returnType, symbol.scope)
-          symbol.resolvedType.returnType = symbol.returnType.resolvedType
+          returnType = symbol.returnType.resolvedType
         }
       }
 
       // Constructors always return the type they construct
       if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
-        symbol.resolvedType.returnType = cache.parameterize(symbol.parent.resolvedType)
+        returnType = cache.parameterize(symbol.parent.resolvedType)
+      }
+
+      // The "<=>" operator must return a numeric value for comparison with zero
+      if (symbol.name == "<=>") {
+        if (returnType == null || !cache.isNumeric(returnType)) {
+          log.semanticErrorComparisonOperatorNotNumeric(symbol.returnType != null ? symbol.returnType.range : symbol.range)
+          returnType = .DYNAMIC
+        }
       }
 
       // Setters must have one argument
@@ -152,6 +161,8 @@ namespace skew.resolving {
         log.semanticErrorSetterWrongArgumentCount(symbol.range, symbol.name)
         symbol.flags &= ~.SETTER
       }
+
+      symbol.resolvedType.returnType = returnType
     }
 
     void resolveFunction(FunctionSymbol symbol) {
@@ -908,18 +919,38 @@ namespace skew.resolving {
         return
       }
 
+      // Avoid infinite expansion
+      var isComparison = node.kind.isBinaryComparison()
+      if (isComparison && cache.isNumeric(target.resolvedType) && cache.isNumeric(node.binaryRight().resolvedType)) {
+        return
+      }
+
       // Find the operator method
-      var symbol = findMember(type, info.text, node.internalRange, .ERROR_FAILURE)
+      var name = isComparison ? "<=>" : info.text
+      var symbol = findMember(type, name, node.internalRange, .ERROR_FAILURE)
       if (symbol == null) {
         return
       }
 
       // Resolve the method call
-      var value = node.replaceChild(0, Node.createDot(target.replaceWithNull(), info.text).withRange(node.internalRange).withInternalRange(node.internalRange))
+      var children = node.removeChildren()
       if (reverseBinaryOrder) {
-        node.replaceChild(1, value)
+        children.reverse()
       }
-      node.kind = .CALL
+      children[0] = Node.createDot(children[0], name).withRange(node.internalRange).withInternalRange(node.internalRange)
+
+      // Implement the logic for the "<=>" operator
+      if (isComparison) {
+        node.appendChild(Node(.CALL).withChildren(children))
+        node.appendChild(Node.createInt(0))
+      }
+
+      // All other operators are just normal method calls
+      else {
+        node.kind = .CALL
+        node.withChildren(children)
+      }
+
       node.resolvedType = null
       resolveAsParameterizedExpression(node, scope)
     }

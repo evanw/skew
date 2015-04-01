@@ -304,6 +304,7 @@ namespace skew {
     TokenKind.BITWISE_AND: 0,
     TokenKind.BITWISE_OR: 0,
     TokenKind.BITWISE_XOR: 0,
+    TokenKind.COMPARE: 0,
     TokenKind.DIVIDE: 0,
     TokenKind.IN: 0,
     TokenKind.INDEX: 0,
@@ -889,6 +890,7 @@ namespace skew {
 
     pratt.infix(.BITWISE_OR, .BITWISE_OR, BinaryInfix(.BITWISE_OR))
     pratt.infix(.BITWISE_XOR, .BITWISE_XOR, BinaryInfix(.BITWISE_XOR))
+    pratt.infix(.COMPARE, .COMPARE, BinaryInfix(.COMPARE))
     pratt.infix(.DIVIDE, .MULTIPLY, BinaryInfix(.DIVIDE))
     pratt.infix(.EQUAL, .EQUAL, BinaryInfix(.EQUAL))
     pratt.infix(.GREATER_THAN, .COMPARE, BinaryInfix(.GREATER_THAN))
