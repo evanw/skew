@@ -33,7 +33,6 @@ namespace skew.resolving {
       if (symbol.state == .UNINITIALIZED) {
         symbol.state = .INITIALIZING
 
-        resolveAnnotations(symbol.annotations, symbol.scope)
         switch (symbol.kind) {
           case .OBJECT_CLASS, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE {
             initializeObject(symbol.asObjectSymbol())
@@ -51,7 +50,7 @@ namespace skew.resolving {
             initializeParameter(symbol.asParameterSymbol())
           }
 
-          case .OVERLOADED_ANNOTATION, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
+          case .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
             initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol())
           }
 
@@ -62,6 +61,7 @@ namespace skew.resolving {
 
         assert symbol.resolvedType != null
         symbol.state = .INITIALIZED
+        resolveAnnotations(symbol)
       }
 
       // Detect cyclic symbol references such as "foo foo;"
@@ -71,10 +71,10 @@ namespace skew.resolving {
       }
     }
 
-    void resolveAnnotations(List<Node> annotations, Scope scope) {
-      if (annotations != null) {
-        for (var i = 0; i < annotations.size(); i++) {
-          resolveAnnotation(annotations[i], scope)
+    void resolveAnnotations(Symbol symbol) {
+      if (symbol.annotations != null) {
+        for (var i = 0; i < symbol.annotations.size(); i++) {
+          resolveAnnotation(symbol.annotations[i], symbol)
         }
       }
     }
@@ -404,13 +404,13 @@ namespace skew.resolving {
       }
     }
 
-    void resolveAnnotation(Node node, Scope scope) {
+    void resolveAnnotation(Node node, Symbol symbol) {
       var value = node.annotationValue()
       var test = node.annotationTest()
 
-      resolveNode(value, scope, null)
+      resolveNode(value, symbol.scope, null)
       if (test != null) {
-        resolveAsParameterizedExpressionWithConversion(test, scope, cache.boolType)
+        resolveAsParameterizedExpressionWithConversion(test, symbol.scope, cache.boolType)
       }
     }
 

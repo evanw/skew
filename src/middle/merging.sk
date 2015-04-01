@@ -129,7 +129,7 @@ namespace skew.merging {
       var otherKind = overloadedKind(other.kind)
 
       // Merge with another symbol of the same overloaded group type
-      if (childKind != otherKind) {
+      if (childKind != otherKind || !childKind.isOverloadedFunction()) {
         log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
         continue
       }
@@ -152,12 +152,10 @@ namespace skew.merging {
   }
 
   SymbolKind overloadedKind(SymbolKind kind) {
-    switch (kind) {
-      case .FUNCTION_ANNOTATION { return .OVERLOADED_ANNOTATION }
-      case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL { return .OVERLOADED_GLOBAL }
-      case .FUNCTION_INSTANCE { return .OVERLOADED_INSTANCE }
-    }
-    return kind
+    return
+      kind == .FUNCTION_CONSTRUCTOR || kind == .FUNCTION_GLOBAL ? .OVERLOADED_GLOBAL :
+      kind == .FUNCTION_INSTANCE ? .OVERLOADED_INSTANCE :
+      kind
   }
 
   void mergeVariables(Log log, ObjectSymbol parent, List<VariableSymbol> children) {

@@ -14,7 +14,6 @@ namespace skew {
     FUNCTION_INSTANCE
     FUNCTION_LOCAL
 
-    OVERLOADED_ANNOTATION
     OVERLOADED_GLOBAL
     OVERLOADED_INSTANCE
 
@@ -33,7 +32,7 @@ namespace skew {
     }
 
     bool isOverloadedFunction() {
-      return this >= OVERLOADED_ANNOTATION && this <= OVERLOADED_INSTANCE
+      return this >= OVERLOADED_GLOBAL && this <= OVERLOADED_INSTANCE
     }
 
     bool isFunctionOrOverloadedFunction() {

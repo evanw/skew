@@ -1,4 +1,9 @@
 var NATIVE_LIBRARY = "
+def @export
+def @import
+def @rename(name string)
+def @skip
+
 namespace Math {
   def abs(x double) double
   def abs(x int) int
