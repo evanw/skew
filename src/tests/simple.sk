@@ -265,5 +265,20 @@ def main {
                        ^
 ")
 
+test("
+class Foo<T> {
+  def new
+}
+
+def main {
+  var foo Foo<int> = Foo<int>.new
+  var bar Foo<bool> = Foo<int>.new
+}
+", "
+<stdin>:7:23: error: Cannot convert from type \"Foo<int>\" to type \"Foo<bool>\"
+  var bar Foo<bool> = Foo<int>.new
+                      ~~~~~~~~~~~~
+")
+
   }
 }

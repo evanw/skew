@@ -54,18 +54,6 @@ namespace skew {
         var token = current()
         if (previousSyntaxError != token) {
           var range = token.range
-
-          // Show expected newline errors at the end of the previous line instead
-          // of at the start of the next line. This is especially important for
-          // interactive editing.
-          if (kind == .NEWLINE && index > 0) {
-            var end = tokens[index - 1].range.end
-            var source = range.source
-            if (source.indexToLineColumn(range.end).line != source.indexToLineColumn(end).line) {
-              range = Range(source, end, end)
-            }
-          }
-
           log.syntaxErrorExpectedToken(range, token.kind, kind)
           previousSyntaxError = token
         }

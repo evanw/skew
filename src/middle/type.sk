@@ -234,10 +234,11 @@ namespace skew {
       }
 
       // Check to see if this has been computed before
-      if (type.substitutionCache == null) {
-        type.substitutionCache = {}
+      var rootType = type.kind == .SYMBOL ? type.symbol.resolvedType : type
+      if (rootType.substitutionCache == null) {
+        rootType.substitutionCache = {}
       }
-      var substituted = type.substitutionCache.getOrDefault(environment.id, null)
+      var substituted = rootType.substitutionCache.getOrDefault(environment.id, null)
       if (substituted != null) {
         return substituted
       }
@@ -310,7 +311,7 @@ namespace skew {
         }
       }
 
-      type.substitutionCache[environment.id] = substituted
+      rootType.substitutionCache[environment.id] = substituted
       return substituted
     }
 
