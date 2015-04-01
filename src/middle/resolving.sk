@@ -857,11 +857,6 @@ namespace skew.resolving {
       var left = node.binaryLeft()
       var right = node.binaryRight()
 
-      // To make code emission easier, assignments are only allowed in statement position
-      if (node.kind.isBinaryAssign() && isVoidExpressionUsed(node)) {
-        log.semanticErrorUseOfVoidAssignment(node.range, operatorInfo[node.kind].text)
-      }
-
       resolveAsParameterizedExpression(left, scope)
 
       if (node.kind == .ASSIGN) {
@@ -881,14 +876,15 @@ namespace skew.resolving {
         resolveAsParameterizedExpression(right, scope) // TODO: Pass type context if the member is unambiguous
         resolveOperatorOverload(node, scope)
       }
+
+      // To make code emission easier, assignments are only allowed in statement position
+      if (node.kind == .ASSIGN && isVoidExpressionUsed(node)) {
+        log.semanticErrorUseOfVoidAssignment(node.range)
+        node.resolvedType = .DYNAMIC
+      }
     }
 
     void resolveIndex(Node node, Scope scope) {
-      // To make code emission easier, assignments are only allowed in statement position
-      if (node.kind == .ASSIGN_INDEX && isVoidExpressionUsed(node)) {
-        log.semanticErrorUseOfVoidAssignment(node.range, operatorInfo[node.kind].text)
-      }
-
       for (var i = 0; i < node.children.size(); i++) {
         resolveAsParameterizedExpression(node.children[i], scope)
       }

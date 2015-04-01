@@ -615,6 +615,26 @@ namespace skew {
     }
   }
 
+  class CharacterLiteral : LiteralCallback {
+    override Node parse(ParserContext context, Token token) {
+      var result = parseStringLiteral(context.log, token.range)
+      var codePoint = 0
+
+      // There must be exactly one unicode code point
+      if (result != null) {
+        var iterator = unicode.StringIterator.INSTANCE.reset(result.value, 0)
+        codePoint = iterator.nextCodePoint()
+        if (codePoint == -1 || iterator.nextCodePoint() != -1) {
+          context.log.syntaxErrorInvalidCharacter(token.range)
+        }
+      }
+
+      // Don't return null when there's an error because that
+      // error won't affect the rest of the compilation
+      return Node.createInt(codePoint).withRange(token.range)
+    }
+  }
+
   class StringLiteral : LiteralCallback {
     override Node parse(ParserContext context, Token token) {
       var result = parseStringLiteral(context.log, token.range)
@@ -851,6 +871,7 @@ namespace skew {
     pratt.literal(.INT, IntLiteral())
     pratt.literal(.NULL, TokenLiteral(.NULL))
     pratt.literal(.STRING, StringLiteral())
+    pratt.literal(.CHARACTER, CharacterLiteral())
     pratt.literal(.TRUE, BoolLiteral(true))
 
     ////////////////////////////////////////////////////////////////////////////////

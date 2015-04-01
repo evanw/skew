@@ -76,6 +76,10 @@ namespace skew {
       error(range, "Invalid escape sequence")
     }
 
+    void syntaxErrorInvalidCharacter(Range range) {
+      error(range, "Invalid character literal")
+    }
+
     void syntaxErrorExtraData(Range range, string text) {
       error(range, "Syntax error \"" + text + "\"")
     }
@@ -188,8 +192,8 @@ namespace skew {
       error(range, "Implicitly typed variables cannot be of type \"" + type + "\"")
     }
 
-    void semanticErrorUseOfVoidAssignment(Range range, string name) {
-      error(range, "Cannot use the return value of the assignment operator \"" + name + "\"")
+    void semanticErrorUseOfVoidAssignment(Range range) {
+      error(range, "Cannot use the return value of the assignment operator")
     }
 
     void semanticErrorMemberUnexpectedGlobal(Range range, string name) {

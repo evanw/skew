@@ -40,18 +40,31 @@ class int {
   def >>(x int) int
   def ^(x int) int
   def |(x int) int
+
+  def %=(x int)
+  def &=(x int)
+  def *=(x int)
+  def +=(x int)
+  def -=(x int)
+  def /=(x int)
+  def <<=(x int)
+  def >>=(x int)
+  def ^=(x int)
+  def |=(x int)
 }
 
 class double {
   def *(x double) double
   def **(x double) double
-  def *=(x double) double
   def +(x double) double
-  def +=(x double) double
   def -(x double) double
-  def -=(x double) double
   def /(x double) double
-  def /=(x double) double
+
+  def **=(x double)
+  def *=(x double)
+  def +=(x double)
+  def -=(x double)
+  def /=(x double)
 }
 
 class string {
