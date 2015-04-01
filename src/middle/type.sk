@@ -140,6 +140,27 @@ namespace skew {
       return false
     }
 
+    Type commonImplicitType(Type left, Type right) {
+      // Short-circuit early for identical types
+      if (left == right) return left
+
+      // Check implicit conversions
+      if (canImplicitlyConvert(left, right)) return right
+      if (canImplicitlyConvert(right, left)) return left
+
+      // Implement common implicit types for numeric types
+      if (isNumeric(left) && isNumeric(right)) {
+        return left == intType && right == intType ? intType : doubleType
+      }
+
+      // // Check for a common base class
+      // if (left.isClass() && right.isClass()) {
+      //   return commonBaseClass(left, right)
+      // }
+
+      return null
+    }
+
     Environment createEnvironment(List<ParameterSymbol> parameters, List<Type> substitutions) {
       assert parameters.size() == substitutions.size()
 

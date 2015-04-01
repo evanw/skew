@@ -865,12 +865,28 @@ namespace skew.resolving {
     }
 
     void resolveBinary(Node node, Scope scope) {
+      var kind = node.kind
       var left = node.binaryLeft()
       var right = node.binaryRight()
 
+      // Special-case the equality operators
+      if (kind == .EQUAL || kind == .NOT_EQUAL) {
+        resolveAsParameterizedExpression(left, scope)
+        resolveAsParameterizedExpression(right, scope)
+        if (left.resolvedType != .DYNAMIC && right.resolvedType != .DYNAMIC) {
+          var commonType = cache.commonImplicitType(left.resolvedType, right.resolvedType)
+          if (commonType != null) {
+            node.resolvedType = cache.boolType
+          } else {
+            log.semanticErrorNoCommonType(node.range, left.resolvedType, right.resolvedType)
+          }
+        }
+        return
+      }
+
       resolveAsParameterizedExpression(left, scope)
 
-      if (node.kind == .ASSIGN) {
+      if (kind == .ASSIGN) {
         // Automatically call setters
         if (left.symbol != null && left.symbol.isSetter()) {
           node.become(Node.createCall(left.replaceWithNull(), [right.replaceWithNull()]).withRange(node.range).withInternalRange(right.range))
@@ -881,17 +897,17 @@ namespace skew.resolving {
         // Resolve the right side using type context from the left side
         resolveAsParameterizedExpressionWithConversion(right, scope, left.resolvedType)
         checkStorage(left)
+
+        // To make code emission easier, assignments are only allowed in statement position
+        if (isVoidExpressionUsed(node)) {
+          log.semanticErrorUseOfVoidAssignment(node.range)
+          node.resolvedType = .DYNAMIC
+        }
       }
 
       else {
         resolveAsParameterizedExpression(right, scope) // TODO: Pass type context if the member is unambiguous
         resolveOperatorOverload(node, scope)
-      }
-
-      // To make code emission easier, assignments are only allowed in statement position
-      if (node.kind == .ASSIGN && isVoidExpressionUsed(node)) {
-        log.semanticErrorUseOfVoidAssignment(node.range)
-        node.resolvedType = .DYNAMIC
       }
     }
 
