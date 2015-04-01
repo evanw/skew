@@ -33,12 +33,13 @@ namespace skew.resolving {
       if (symbol.state == .UNINITIALIZED) {
         symbol.state = .INITIALIZING
 
+        resolveAnnotations(symbol.annotations, symbol.scope)
         switch (symbol.kind) {
           case .OBJECT_CLASS, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE {
             initializeObject(symbol.asObjectSymbol())
           }
 
-          case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL {
+          case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL {
             initializeFunction(symbol.asFunctionSymbol())
           }
 
@@ -50,7 +51,7 @@ namespace skew.resolving {
             initializeParameter(symbol.asParameterSymbol())
           }
 
-          case .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
+          case .OVERLOADED_ANNOTATION, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
             initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol())
           }
 
@@ -67,6 +68,14 @@ namespace skew.resolving {
       else if (symbol.state == .INITIALIZING) {
         log.semanticErrorCyclicDeclaration(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
+      }
+    }
+
+    void resolveAnnotations(List<Node> annotations, Scope scope) {
+      if (annotations != null) {
+        for (var i = 0; i < annotations.size(); i++) {
+          resolveAnnotation(annotations[i], scope)
+        }
       }
     }
 
@@ -392,6 +401,16 @@ namespace skew.resolving {
         var value = Node.createNull()
         value.become(node)
         node.become(Node.createCast(value, Node.createType(to)).withType(to).withRange(node.range))
+      }
+    }
+
+    void resolveAnnotation(Node node, Scope scope) {
+      var value = node.annotationValue()
+      var test = node.annotationTest()
+
+      resolveNode(value, scope, null)
+      if (test != null) {
+        resolveAsParameterizedExpressionWithConversion(test, scope, cache.boolType)
       }
     }
 
@@ -1019,7 +1038,8 @@ namespace skew.resolving {
 
     static bool isVoidExpressionUsed(Node node) {
       // Check for a null parent to handle variable initializers
-      return node.parent == null || node.parent.kind != .EXPRESSION && node.parent.kind != .IMPLICIT_RETURN
+      var parent = node.parent
+      return parent == null || parent.kind != .EXPRESSION && parent.kind != .IMPLICIT_RETURN && (parent.kind != .ANNOTATION || node != parent.annotationValue())
     }
 
     static bool isValidVariableType(Type type) {

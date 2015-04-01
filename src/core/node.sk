@@ -1,6 +1,7 @@
 namespace skew {
   enum NodeKind {
     // Other
+    ANNOTATION
     BLOCK
 
     // Statements
@@ -263,6 +264,12 @@ namespace skew {
 
   // Factory functions
   in Node {
+    static Node createAnnotation(Node value, Node test) {
+      assert value.kind.isExpression()
+      assert test == null || test.kind.isExpression()
+      return Node(.ANNOTATION).withChildren([value, test])
+    }
+
     static Node createBlock(List<Node> statements) {
       return Node(.BLOCK).withChildren(statements)
     }
@@ -419,6 +426,20 @@ namespace skew {
       assert children.size() == 1
       assert children[0].kind.isExpression()
       return children[0]
+    }
+
+    Node annotationValue() {
+      assert kind == .ANNOTATION
+      assert children.size() == 2
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node annotationTest() {
+      assert kind == .ANNOTATION
+      assert children.size() == 2
+      assert children[1] == null || children[1].kind.isExpression()
+      return children[1]
     }
 
     Node expressionValue() {

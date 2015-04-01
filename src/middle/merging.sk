@@ -125,27 +125,39 @@ namespace skew.merging {
         continue
       }
 
-      // Merge with another symbol of the same instance/global status
-      var isInstance = child.kind == .FUNCTION_INSTANCE
-      if (isInstance == (other.kind == .FUNCTION_INSTANCE)) {
-        var overloaded = OverloadedFunctionSymbol(isInstance ? .OVERLOADED_INSTANCE : .OVERLOADED_GLOBAL, child.name, [(FunctionSymbol)other, child])
-        members[child.name] = overloaded
-        ((FunctionSymbol)other).overloaded = overloaded
-        child.overloaded = overloaded
-        overloaded.scope = parent.scope
-        overloaded.parent = parent
+      var childKind = overloadedKind(child.kind)
+      var otherKind = overloadedKind(other.kind)
+
+      // Merge with another symbol of the same overloaded group type
+      if (childKind != otherKind) {
+        log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
         continue
       }
 
       // Merge with a group of overloaded functions
-      if (other.kind.isOverloadedFunction() && isInstance == (other.kind == .OVERLOADED_INSTANCE)) {
+      if (other.kind.isOverloadedFunction()) {
         ((OverloadedFunctionSymbol)other).symbols.push(child)
         child.overloaded = (OverloadedFunctionSymbol)other
         continue
       }
 
-      log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
+      // Create an overload group
+      var overloaded = OverloadedFunctionSymbol(childKind, child.name, [(FunctionSymbol)other, child])
+      members[child.name] = overloaded
+      ((FunctionSymbol)other).overloaded = overloaded
+      child.overloaded = overloaded
+      overloaded.scope = parent.scope
+      overloaded.parent = parent
     }
+  }
+
+  SymbolKind overloadedKind(SymbolKind kind) {
+    switch (kind) {
+      case .FUNCTION_ANNOTATION { return .OVERLOADED_ANNOTATION }
+      case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL { return .OVERLOADED_GLOBAL }
+      case .FUNCTION_INSTANCE { return .OVERLOADED_INSTANCE }
+    }
+    return kind
   }
 
   void mergeVariables(Log log, ObjectSymbol parent, List<VariableSymbol> children) {

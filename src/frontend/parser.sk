@@ -43,6 +43,38 @@ namespace skew {
     return comments
   }
 
+  List<Node> parseAnnotations(ParserContext context) {
+    if (!context.peek(.ANNOTATION)) {
+      return null
+    }
+    List<Node> annotations = []
+    while (context.peek(.ANNOTATION)) {
+      var range = context.next().range
+      var value = Node.createName(range.toString()).withRange(range)
+      var token = context.current()
+      if (context.eat(.LEFT_PARENTHESIS)) {
+        var arguments = parseCommaSeparatedList(context, .RIGHT_PARENTHESIS)
+        if (arguments == null) {
+          return null
+        }
+        value = Node.createCall(value, arguments).withRange(context.spanSince(range)).withInternalRange(context.spanSince(token.range))
+      }
+      Node test = null
+      if (context.eat(.IF)) {
+        test = pratt.parse(context, .LOWEST)
+        if (test == null) {
+          return null
+        }
+      }
+      if (!context.expect(.NEWLINE)) {
+        return null
+      }
+      annotations.push(Node.createAnnotation(value, test).withRange(context.spanSince(range)))
+    }
+    return annotations
+  }
+
+
   Node parseVar(ParserContext context) {
     var token = context.next()
     var range = context.current().range
@@ -328,6 +360,9 @@ namespace skew {
       return false
     }
 
+    // Parse annotations before the symbol declaration
+    List<Node> annotations = parseAnnotations(context)
+
     // Parse the symbol kind
     var token = context.current()
     SymbolKind kind
@@ -350,6 +385,8 @@ namespace skew {
     var name = range.toString()
     if (kind == .FUNCTION_INSTANCE && nameToken.kind in operatorOverloadTokenKinds) {
       context.next()
+    } else if (kind == .FUNCTION_GLOBAL && context.eat(.ANNOTATION)) {
+      kind = .FUNCTION_ANNOTATION
     } else if (!context.expect(.IDENTIFIER)) {
       return false
     }
@@ -371,25 +408,21 @@ namespace skew {
           symbol.value = pratt.parse(context, .LOWEST)
         }
 
+        symbol.annotations = annotations
         symbol.comments = comments
         parent.variables.push(symbol)
       }
 
-      case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
+      case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
         var symbol = FunctionSymbol(kind, name)
         symbol.range = range
 
-        // Check for setters like "def foo=(x int) {}"
-        if (nameToken.kind == .IDENTIFIER) {
-          if (context.peek(.ASSIGN)) {
-
-            // Don't allow a space between the name and the assignment operator
-            if (context.current().range.start == nameToken.range.end) {
-              context.next()
-              symbol.flags |= .SETTER
-              symbol.name += "="
-            }
-          }
+        // Check for setters like "def foo=(x int) {}" but don't allow a space
+        // between the name and the assignment operator
+        if (kind != .FUNCTION_ANNOTATION && nameToken.kind == .IDENTIFIER && context.peek(.ASSIGN) && context.current().range.start == nameToken.range.end) {
+          context.next()
+          symbol.flags |= .SETTER
+          symbol.name += "="
         }
 
         // Parse type parameters
@@ -413,10 +446,11 @@ namespace skew {
           }
         }
 
-        if (!parseFunctionReturnTypeAndBlock(context, symbol)) {
+        if (kind != .FUNCTION_ANNOTATION && !parseFunctionReturnTypeAndBlock(context, symbol)) {
           return false
         }
 
+        symbol.annotations = annotations
         symbol.comments = comments
         parent.functions.push(symbol)
       }
@@ -449,8 +483,13 @@ namespace skew {
           return false
         }
 
+        symbol.annotations = annotations
         symbol.comments = comments
         parent.objects.push(symbol)
+      }
+
+      default {
+        assert false
       }
     }
 

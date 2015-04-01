@@ -8,11 +8,13 @@ namespace skew {
     OBJECT_INTERFACE
     OBJECT_NAMESPACE
 
+    FUNCTION_ANNOTATION
     FUNCTION_CONSTRUCTOR
     FUNCTION_GLOBAL
     FUNCTION_INSTANCE
     FUNCTION_LOCAL
 
+    OVERLOADED_ANNOTATION
     OVERLOADED_GLOBAL
     OVERLOADED_INSTANCE
 
@@ -27,15 +29,15 @@ namespace skew {
     }
 
     bool isFunction() {
-      return this >= FUNCTION_CONSTRUCTOR && this <= FUNCTION_LOCAL
+      return this >= FUNCTION_ANNOTATION && this <= FUNCTION_LOCAL
     }
 
     bool isOverloadedFunction() {
-      return this >= OVERLOADED_GLOBAL && this <= OVERLOADED_INSTANCE
+      return this >= OVERLOADED_ANNOTATION && this <= OVERLOADED_INSTANCE
     }
 
     bool isFunctionOrOverloadedFunction() {
-      return this >= FUNCTION_CONSTRUCTOR && this <= OVERLOADED_INSTANCE
+      return this >= FUNCTION_ANNOTATION && this <= OVERLOADED_INSTANCE
     }
 
     bool isVariable() {
@@ -77,6 +79,7 @@ namespace skew {
     Scope scope = null // Automatically set by the merging step (resolving step for local variables)
     SymbolState state = .UNINITIALIZED
     SymbolFlags flags = 0
+    List<Node> annotations = null
     List<string> comments = null
 
     ParameterSymbol asParameterSymbol() {

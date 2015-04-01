@@ -75,6 +75,7 @@
 
 ['](\\.|[^\\'])*[']               CHARACTER;
 ["](\\.|[^\\"])*["]               STRING;
+@[A-Za-z_][A-Za-z0-9_]*           ANNOTATION;
 [A-Za-z_][A-Za-z0-9_]*            IDENTIFIER;
 [0-9]+\.[0-9]+                    DOUBLE;
 [0-9]+                            INT;
