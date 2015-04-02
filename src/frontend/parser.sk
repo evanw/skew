@@ -407,7 +407,8 @@ namespace skew {
     var nameToken = context.current()
     var range = nameToken.range
     var name = range.toString()
-    if (kind == .FUNCTION_INSTANCE && nameToken.kind in operatorOverloadTokenKinds) {
+    var isOperator = kind == .FUNCTION_INSTANCE && nameToken.kind in operatorOverloadTokenKinds
+    if (isOperator) {
       context.next()
     } else if (kind == .FUNCTION_GLOBAL && context.eat(.ANNOTATION)) {
       kind = .FUNCTION_ANNOTATION
@@ -472,6 +473,11 @@ namespace skew {
 
         if (kind != .FUNCTION_ANNOTATION && !parseFunctionReturnTypeAndBlock(context, symbol)) {
           return false
+        }
+
+        // Don't mark operators as getters to avoid confusion with unary operators and compiler-generated call expressions
+        if (!isOperator && symbol.arguments.size() == 0) {
+          symbol.flags |= .GETTER
         }
 
         symbol.annotations = annotations
