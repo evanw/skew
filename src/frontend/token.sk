@@ -18,6 +18,16 @@ namespace skew {
     TokenKind.RIGHT_PARENTHESIS: 0,
   }
 
+  var KEEP_NEWLINE_BEFORE = {
+    TokenKind.ANNOTATION: 0,
+    TokenKind.CLASS: 0,
+    TokenKind.COMMENT: 0,
+    TokenKind.DEF: 0,
+    TokenKind.INTERFACE: 0,
+    TokenKind.NAMESPACE: 0,
+    TokenKind.VAR: 0,
+  }
+
   var REMOVE_NEWLINE_AFTER = {
     TokenKind.COLON: 0,
     TokenKind.NEWLINE: 0,
@@ -157,7 +167,7 @@ namespace skew {
       // line continuations. Make sure to be conservative. We want to be like
       // Python, not like JavaScript ASI! Anything that is at all ambiguous
       // should be disallowed.
-      if (tokenKind == .NEWLINE && previousKind in REMOVE_NEWLINE_AFTER) {
+      if (tokenKind == .NEWLINE && previousKind in REMOVE_NEWLINE_AFTER && !(tokens[i + 1].kind in KEEP_NEWLINE_BEFORE)) {
         count--
         continue
       } else if (previousKind == .NEWLINE && tokenKind in REMOVE_NEWLINE_BEFORE) {

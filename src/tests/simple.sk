@@ -336,5 +336,38 @@ def main
     ~~~
 ")
 
+// These shouldn't cause missing newline errors
+test("
+def @foo
+
+class foo {
+  def -
+  def new
+}
+
+class bar {
+  def -
+
+  @foo
+  def new
+}
+
+class baz {
+  def -
+
+  # foo
+  def new
+}
+
+def main bool {
+  return 1 -
+    1
+}
+", "
+<stdin>:23:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  return 1 -
+         ~~~
+")
+
   }
 }
