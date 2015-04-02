@@ -316,5 +316,25 @@ def main
          ~~~
 ")
 
+test("
+def @foo(x int)
+def @bar
+
+@foo
+@foo(1, 2)
+@bar(1)
+def main
+", "
+<stdin>:4:1: error: Expected 1 argument but found 0 arguments
+@foo
+~~~~
+<stdin>:5:5: error: Expected 1 argument but found 2 arguments
+@foo(1, 2)
+    ~~~~~~
+<stdin>:6:5: error: The function \"@bar\" takes no arguments and is already called implicitly
+@bar(1)
+    ~~~
+")
+
   }
 }

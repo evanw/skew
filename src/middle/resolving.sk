@@ -412,6 +412,11 @@ namespace skew.resolving {
       if (test != null) {
         resolveAsParameterizedExpressionWithConversion(test, symbol.scope, cache.boolType)
       }
+
+      // Make sure annotations have the arguments they need
+      if (value.symbol != null && value.kind != .CALL) {
+        log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.size(), 0)
+      }
     }
 
     void resolveBlock(Node node, Scope scope) {
