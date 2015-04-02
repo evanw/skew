@@ -47,10 +47,28 @@ namespace skew {
     if (!context.peek(.ANNOTATION)) {
       return null
     }
+
     List<Node> annotations = []
+
     while (context.peek(.ANNOTATION)) {
       var range = context.next().range
       var value = Node.createName(range.toString()).withRange(range)
+
+      // Change "@foo.bar.baz" into "foo.bar.@baz"
+      if (context.peek(.DOT)) {
+        var root = value.asString()
+        value.content = StringContent(root.slice(1, root.size()))
+        while (context.eat(.DOT)) {
+          var name = context.current().range
+          if (!context.expect(.IDENTIFIER)) {
+            return null
+          }
+          value = Node.createDot(value, name.toString()).withRange(context.spanSince(range)).withInternalRange(name)
+        }
+        value.content = StringContent("@" + value.asString())
+      }
+
+      // Parse parentheses if present
       var token = context.current()
       if (context.eat(.LEFT_PARENTHESIS)) {
         var arguments = parseCommaSeparatedList(context, .RIGHT_PARENTHESIS)
@@ -59,6 +77,8 @@ namespace skew {
         }
         value = Node.createCall(value, arguments).withRange(context.spanSince(range)).withInternalRange(context.spanSince(token.range))
       }
+
+      // Parse a trailing if condition
       Node test = null
       if (context.eat(.IF)) {
         test = pratt.parse(context, .LOWEST)
@@ -66,11 +86,15 @@ namespace skew {
           return null
         }
       }
+
+      // All annotations must end in a newline to avoid confusion with the trailing if
       if (!context.expect(.NEWLINE)) {
         return null
       }
+
       annotations.push(Node.createAnnotation(value, test).withRange(context.spanSince(range)))
     }
+
     return annotations
   }
 

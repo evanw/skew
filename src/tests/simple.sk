@@ -300,5 +300,21 @@ def main(foo Foo) {
   ~~~~~
 ")
 
+test("
+namespace foo {
+  namespace bar {
+    def @baz
+  }
+}
+
+@foo.bar.bax
+@foo.bar.baz
+def main
+", "
+<stdin>:7:10: error: \"@bax\" is not declared on type \"bar\"
+@foo.bar.bax
+         ~~~
+")
+
   }
 }
