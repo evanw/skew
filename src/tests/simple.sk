@@ -369,5 +369,85 @@ def main bool {
          ~~~
 ")
 
+test("
+class Foo {
+  def foo {
+    var self int
+  }
+
+  def bar(self int) {
+  }
+
+  def baz {
+    if true {
+      var self int
+    }
+  }
+}
+", "
+<stdin>:3:9: error: \"self\" is already declared
+    var self int
+        ~~~~
+<stdin>:6:11: error: \"self\" is already declared
+  def bar(self int) {
+          ~~~~
+<stdin>:11:11: error: \"self\" shadows a previous declaration
+      var self int
+          ~~~~
+")
+
+test("
+namespace a {
+  class Foo.Bar {}
+  class Foo.Baz {}
+  class Foo {}
+  def main(foo Foo.Bar, bar Foo.Baz) {}
+}
+namespace b {
+  class Foo {
+    class Bar {}
+    class Baz {}
+  }
+  def main(foo Foo.Bar, bar Foo.Baz) {}
+}
+", "
+")
+
+test("
+class ns1.Foo {}
+var ns1 int
+var ns2 int
+class ns2.Foo {}
+", "
+<stdin>:2:5: error: \"ns1\" is already declared
+var ns1 int
+    ~~~
+<stdin>:1:7: note: The previous declaration is here
+class ns1.Foo {}
+      ~~~
+<stdin>:3:5: error: \"ns2\" is already declared
+var ns2 int
+    ~~~
+<stdin>:4:7: note: The previous declaration is here
+class ns2.Foo {}
+      ~~~
+")
+
+test("
+var ns.foo int
+", "
+<stdin>:1:7: error: Expected NEWLINE but found DOT
+var ns.foo int
+      ^
+")
+
+test("
+def ns.foo int
+", "
+<stdin>:1:7: error: Expected NEWLINE but found DOT
+def ns.foo int
+      ^
+")
+
   }
 }

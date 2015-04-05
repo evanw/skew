@@ -419,6 +419,27 @@ namespace skew {
       kind = .FUNCTION_CONSTRUCTOR
     }
 
+    // Parse shorthand nested namespace declarations
+    if (kind.isObject()) {
+      while (context.eat(.DOT)) {
+        var nextToken = context.current()
+        if (!context.expect(.IDENTIFIER)) {
+          return false
+        }
+
+        // Wrap this declaration in a namespace
+        var nextParent = ObjectSymbol(.OBJECT_NAMESPACE, name)
+        nextParent.range = range
+        parent.objects.push(nextParent)
+        parent = nextParent
+
+        // Update the declaration token
+        nameToken = nextToken
+        range = nextToken.range
+        name = range.toString()
+      }
+    }
+
     // Parse the symbol body
     switch (kind) {
       case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE {

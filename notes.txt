@@ -18,7 +18,6 @@
   - abstract functions/types
   - import/export
   - standard library
-    - use uppercase for namespaces now, camelCase is just too strange for namespaces for me
   - bootstrap the compiler
   - alias types using the "type" declaration prefix, not available inside functions?
   - namespace imports via the "use" declaration prefix
