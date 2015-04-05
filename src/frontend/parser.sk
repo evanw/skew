@@ -669,11 +669,23 @@ namespace skew {
   }
 
   class IntLiteral : LiteralCallback {
+    int base
+
     override Node parse(ParserContext context, Token token) {
       var text = token.range.toString()
       var value = 0
-      for (var i = 0; i < text.size(); i++) {
-        value = value * 10 + text[i] - '0'
+      switch (base) {
+        case 2, 8, 10 {
+          for (var i = base == 10 ? 0 : 2; i < text.size(); i++) {
+            value = value * base + text[i] - '0'
+          }
+        }
+        case 16 {
+          for (var i = 2; i < text.size(); i++) {
+            var c = text[i]
+            value = value * 16 + c - (c <= '9' ? '0' : c <= 'F' ? 'A' - 10 : 'a' - 10)
+          }
+        }
       }
       return Node.createInt(value).withRange(token.range)
     }
@@ -938,7 +950,10 @@ namespace skew {
 
     pratt.literal(.DOUBLE, DoubleLiteral())
     pratt.literal(.FALSE, BoolLiteral(false))
-    pratt.literal(.INT, IntLiteral())
+    pratt.literal(.INT_BINARY, IntLiteral(2))
+    pratt.literal(.INT_OCTAL, IntLiteral(8))
+    pratt.literal(.INT_HEX, IntLiteral(16))
+    pratt.literal(.INT, IntLiteral(10))
     pratt.literal(.NULL, TokenLiteral(.NULL))
     pratt.literal(.STRING, StringLiteral())
     pratt.literal(.CHARACTER, CharacterLiteral())

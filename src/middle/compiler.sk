@@ -35,6 +35,10 @@ class bool {
 }
 
 class int {
+  def + int
+  def - int
+  def ~ int
+
   def %(x int) int
   def &(x int) int
   def *(x int) int
@@ -60,6 +64,9 @@ class int {
 }
 
 class double {
+  def + double
+  def - double
+
   def *(x double) double
   def **(x double) double
   def +(x double) double
@@ -84,7 +91,7 @@ class string {
   def join(x List<string>) string
   def repeat(x int) string
   def replaceAll(before string, after string) string
-  def size int
+  def count int
   def slice(start int, end int) string
   def split(x string) List<string>
   def startsWith(x string) bool
@@ -118,7 +125,6 @@ class List<T> {
   def indexOf(x T) int
   def insert(x int, value T)
   def isEmpty bool
-  def isEqualTo(x List<T>)
   def last T
   def lastIndexOf(x T) int
   def map<R>(x fn(T) R) List<R>
@@ -133,7 +139,7 @@ class List<T> {
   def removeRange(start int, end int)
   def resize(size int, default T)
   def shuffle
-  def size int
+  def count int
   def slice(start int, end int) List<T>
   def sort(x fn(T, T) int)
   def swap(x int, y int)
@@ -146,11 +152,10 @@ class StringMap<T> {
   def get(key string, default T)
   def in(key string) bool
   def isEmpty bool
-  def isEqualTo(x StringMap<T>) bool
   def keys List<string>
   def new
   def remove(key string)
-  def size int
+  def count int
   def values List<T>
 }
 
@@ -161,11 +166,10 @@ class IntMap<T> {
   def get(key int, default T)
   def in(key int) bool
   def isEmpty bool
-  def isEqualTo(x IntMap<T>) bool
   def keys List<int>
   def new
   def remove(key int)
-  def size int
+  def count int
   def values List<T>
 }
 "
