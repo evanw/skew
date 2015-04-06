@@ -30,10 +30,12 @@ namespace Math {
   var PI double
 }
 
+@import
 class bool {
   def not bool
 }
 
+@import
 class int {
   def + int
   def - int
@@ -63,6 +65,7 @@ class int {
   def |=(x int)
 }
 
+@import
 class double {
   def + double
   def - double
@@ -81,6 +84,7 @@ class double {
   def /=(x double)
 }
 
+@import
 class string {
   def +(x string) string
   def <=>(x string) int

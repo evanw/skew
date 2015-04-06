@@ -25,6 +25,13 @@ namespace skew.resolving {
     TypeCache cache
     Log log
 
+    static StringMap<SymbolFlags> annotationSymbolFlags = {
+      "@export": .EXPORT,
+      "@import": .IMPORT,
+      "@rename": .RENAME,
+      "@skip": .SKIP,
+    }
+
     void initializeSymbol(Symbol symbol) {
       // The scope should have been set by the merging pass (or by this pass for local variables)
       assert symbol.scope != null
@@ -72,9 +79,18 @@ namespace skew.resolving {
     }
 
     void resolveAnnotations(Symbol symbol) {
-      if (symbol.annotations != null) {
-        for (var i = 0; i < symbol.annotations.size(); i++) {
-          resolveAnnotation(symbol.annotations[i], symbol)
+      var parent = symbol.parent
+      var annotations = symbol.annotations
+
+      // The import/export annotations are inherited
+      if (parent != null && symbol.kind.isFunction() && symbol.asFunctionSymbol().block == null) {
+        symbol.flags |= parent.flags & (.IMPORT | .EXPORT)
+      }
+
+      // Resolve annotations on this symbol after annotation inheritance
+      if (annotations != null) {
+        for (var i = 0; i < annotations.size(); i++) {
+          resolveAnnotation(annotations[i], symbol)
         }
       }
     }
@@ -413,9 +429,34 @@ namespace skew.resolving {
         resolveAsParameterizedExpressionWithConversion(test, symbol.scope, cache.boolType)
       }
 
+      // Terminate early when there were errors
+      if (value.symbol == null) {
+        return
+      }
+
       // Make sure annotations have the arguments they need
-      if (value.symbol != null && value.kind != .CALL) {
+      if (value.kind != .CALL) {
         log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.size(), 0)
+        return
+      }
+
+      // Apply built-in annotation logic
+      var flag = annotationSymbolFlags.getOrDefault(value.symbol.fullName(), 0)
+      if (flag != 0) {
+        var isValid = true
+        switch (flag) {
+          case .EXPORT { isValid = !symbol.isImported() }
+          case .IMPORT { isValid = !symbol.isExported() }
+          case .RENAME {}
+          case .SKIP { isValid = symbol.kind.isFunction() && symbol.resolvedType.returnType == null }
+        }
+        if (!isValid) {
+          log.semanticErrorInvalidAnnotation(value.range, value.symbol.name)
+        } else if ((symbol.flags & flag) != 0) {
+          log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name)
+        } else {
+          symbol.flags |= flag
+        }
       }
     }
 
@@ -617,8 +658,7 @@ namespace skew.resolving {
       return true
     }
 
-    bool resolveOverloadedFunctionCall(Node node, Scope scope, OverloadedFunctionSymbol overloaded) {
-      var count = node.children.size() - 1
+    FunctionSymbol resolveOverloadedFunction(Range range, int count, OverloadedFunctionSymbol overloaded) {
       List<FunctionSymbol> candidates = []
 
       // Filter by argument length
@@ -631,18 +671,22 @@ namespace skew.resolving {
 
       // Check for matches
       if (candidates.size() < 1) {
-        log.semanticErrorNoMatchingOverload(node.callValue().range, overloaded.name, count)
-        return false
+        log.semanticErrorNoMatchingOverload(range, overloaded.name, count)
+        return null
       }
 
       // Check for ambiguity
       if (candidates.size() > 1) {
-        log.semanticErrorAmbiguousOperator(node.callValue().range, overloaded.name, count)
-        return false
+        log.semanticErrorAmbiguousOperator(range, overloaded.name, count)
+        return null
       }
 
-      // Target is unambiguous
-      return resolveFunctionCall(node, scope, candidates[0].resolvedType) // TODO: This doesn't work for generic types
+      return candidates[0]
+    }
+
+    bool resolveOverloadedFunctionCall(Node node, Scope scope, OverloadedFunctionSymbol overloaded) {
+      var symbol = resolveOverloadedFunction(node.callValue().range, node.children.size() - 1, overloaded)
+      return symbol != null && resolveFunctionCall(node, scope, symbol.resolvedType) // TODO: This doesn't work for generic types
     }
 
     bool resolveLambdaCall(Node node, Scope scope, Type type) {
@@ -972,6 +1016,20 @@ namespace skew.resolving {
         return
       }
 
+      // Resolve the overload now so the symbol's properties can be inspected
+      if (symbol.kind.isOverloadedFunction()) {
+        symbol = resolveOverloadedFunction(node.internalRange, node.children.size() - 1, symbol.asOverloadedFunctionSymbol())
+        if (symbol == null) {
+          return
+        }
+      }
+
+      // Don't replace the operator with a call if it's just used for type checking
+      if (symbol.isImported() && !symbol.isRenamed()) {
+        node.resolvedType = symbol.resolvedType.returnType
+        return
+      }
+
       // Resolve the method call
       var children = node.removeChildren()
       if (reverseBinaryOrder) {
@@ -991,8 +1049,9 @@ namespace skew.resolving {
         node.withChildren(children)
       }
 
+      // Resolve the function call directly because overload resolution is already done
       node.resolvedType = null
-      resolveAsParameterizedExpression(node, scope)
+      resolveFunctionCall(node, scope, symbol.resolvedType)
     }
 
     Node defaultValueForType(Type type) {

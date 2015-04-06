@@ -61,6 +61,12 @@ namespace skew {
     INFER_RETURN_TYPE
     SETTER
     VALUE_TYPE
+
+    // Modifiers
+    EXPORT
+    IMPORT
+    RENAME
+    SKIP
   }
 
   enum SymbolState {
@@ -128,6 +134,22 @@ namespace skew {
 
     bool shouldInferReturnType() {
       return (flags & .INFER_RETURN_TYPE) != 0
+    }
+
+    bool isExported() {
+      return (flags & .EXPORT) != 0
+    }
+
+    bool isImported() {
+      return (flags & .IMPORT) != 0
+    }
+
+    bool isRenamed() {
+      return (flags & .RENAME) != 0
+    }
+
+    bool isSkipped() {
+      return (flags & .SKIP) != 0
     }
 
     private static {

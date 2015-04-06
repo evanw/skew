@@ -198,6 +198,9 @@ def main(x int) {
 <stdin>:3:3: warning: Unused expression
   x
   ^
+<stdin>:4:3: warning: Unused expression
+  x + 1
+  ~~~~~
 <stdin>:5:3: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   x ? x : x
   ^
@@ -223,6 +226,9 @@ def foo(x int) int {
 def bar(x fn(int)) {
 }
 ", "
+<stdin>:3:12: warning: Unused expression
+  bar(x => x + 1)
+           ~~~~~
 <stdin>:4:12: warning: Unused expression
   bar(x => x)
            ^
@@ -298,6 +304,12 @@ def main(foo Foo) {
 <stdin>:6:3: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   false in foo
   ~~~~~
+<stdin>:8:3: warning: Unused expression
+  not (0 in foo)
+  ~~~~~~~~~~~~~~
+<stdin>:9:3: warning: Unused expression
+  0 not in foo
+  ~~~~~~~~~~~~
 ")
 
 test("

@@ -263,5 +263,13 @@ namespace skew {
     void semanticErrorNoCommonType(Range range, Type left, Type right) {
       error(range, "No common type for \"" + left + "\" and \"" + right + "\"")
     }
+
+    void semanticErrorInvalidAnnotation(Range range, string name) {
+      error(range, "Cannot use the annotation \"" + name + "\" here")
+    }
+
+    void semanticErrorDuplicateAnnotation(Range range, string name) {
+      error(range, "Duplicate annotation \"" + name + "\"")
+    }
   }
 }
