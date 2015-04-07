@@ -66,6 +66,8 @@ namespace skew {
     EXPORT
     FINAL
     IMPORT
+    PRIVATE
+    PROTECTED
     RENAME
     SKIP
   }
@@ -147,6 +149,18 @@ namespace skew {
 
     bool isImported() {
       return (flags & .IMPORT) != 0
+    }
+
+    bool isPrivate() {
+      return (flags & .PRIVATE) != 0
+    }
+
+    bool isProtected() {
+      return (flags & .PROTECTED) != 0
+    }
+
+    bool isPrivateOrProtected() {
+      return (flags & (.PRIVATE | .PROTECTED)) != 0
     }
 
     bool isRenamed() {

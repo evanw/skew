@@ -7,7 +7,9 @@
   - throw/try/catch/finally
   - js generation
   - c++ generation
-  - calling base class methods with "super"
+  - base classes
+    - calling base class methods with "super"
+    - support for protected access level
   - annotations
   - compile-time constants
   - top-level if statements instead of c-style preprocessor, conditions must be constants and are evaluated from the outside in

@@ -257,7 +257,11 @@ namespace skew {
     }
 
     void semanticErrorStorageToFinalSymbol(Range range, string name) {
-      error(range, "Cannot store to \"" + name + "\" because it is marked as \"@final\"")
+      error(range, "Cannot store to \"@final\" symbol \"" + name + "\"")
+    }
+
+    void semanticErrorAccessViolation(Range range, string level, string name) {
+      error(range, "Cannot access \"" + level + "\" symbol \"" + name + "\" here")
     }
 
     void semanticErrorUnparameterizedType(Range range, Type type) {

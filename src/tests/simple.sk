@@ -502,19 +502,80 @@ test("
   def b int
 }
 
+class Foo {
+  @final
+  var x int
+}
+
 var c int
 
-def main {
+def main(foo Foo) {
   a = 0
   c = 0
+  foo.x = 0
 }
 ", "
 <stdin>:1:1: error: Cannot use the annotation \"@final\" on \"b\"
 @final {
 ~~~~~~
-<stdin>:9:3: error: Cannot store to \"a\" because it is marked as \"@final\"
+<stdin>:14:3: error: Cannot store to \"@final\" symbol \"a\"
   a = 0
   ^
+<stdin>:16:7: error: Cannot store to \"@final\" symbol \"x\"
+  foo.x = 0
+      ^
+")
+
+test("
+@private
+class Foo {
+  @private
+  var x int
+
+  @private
+  def foo {
+    x = 0
+    foo
+    var y = => x
+  }
+
+  @private
+  class Bar {}
+
+  var bar Bar
+}
+
+@private
+def main(foo Foo) {
+  foo.x = 0
+  foo.foo
+  var x = => foo.x
+  var y = => foo.foo
+  var z Foo.Bar
+}
+", "
+<stdin>:1:1: error: Cannot use the annotation \"@private\" on \"Foo\"
+@private
+~~~~~~~~
+<stdin>:19:1: error: Cannot use the annotation \"@private\" on \"main\"
+@private
+~~~~~~~~
+<stdin>:21:7: error: Cannot access \"@private\" symbol \"x\" here
+  foo.x = 0
+      ^
+<stdin>:22:7: error: Cannot access \"@private\" symbol \"foo\" here
+  foo.foo
+      ~~~
+<stdin>:23:18: error: Cannot access \"@private\" symbol \"x\" here
+  var x = => foo.x
+                 ^
+<stdin>:24:18: error: Cannot access \"@private\" symbol \"foo\" here
+  var y = => foo.foo
+                 ~~~
+<stdin>:25:13: error: Cannot access \"@private\" symbol \"Bar\" here
+  var z Foo.Bar
+            ~~~
+
 ")
 
   }

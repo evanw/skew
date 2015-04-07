@@ -25,14 +25,6 @@ namespace skew.resolving {
     TypeCache cache
     Log log
 
-    static StringMap<SymbolFlags> annotationSymbolFlags = {
-      "@export": .EXPORT,
-      "@final": .FINAL,
-      "@import": .IMPORT,
-      "@rename": .RENAME,
-      "@skip": .SKIP,
-    }
-
     void initializeSymbol(Symbol symbol) {
       // The scope should have been set by the merging pass (or by this pass for local variables)
       assert symbol.scope != null
@@ -385,14 +377,30 @@ namespace skew.resolving {
     }
 
     void checkStorage(Node node) {
+      var symbol = node.symbol
+
       // Only allow storage to variables
-      if (node.kind != .NAME && node.kind != .DOT || node.symbol != null && !node.symbol.kind.isVariable()) {
+      if (node.kind != .NAME && node.kind != .DOT || symbol != null && !symbol.kind.isVariable()) {
         log.semanticErrorBadStorage(node.range)
       }
 
       // Forbid storage to final symbols
-      if (node.symbol != null && node.symbol.isFinal()) {
-        log.semanticErrorStorageToFinalSymbol(node.range, node.symbol.name)
+      else if (symbol != null && symbol.isFinal()) {
+        log.semanticErrorStorageToFinalSymbol(node.internalRange != null ? node.internalRange : node.range, symbol.name)
+      }
+    }
+
+    void checkAccess(Node node, Scope scope) {
+      var symbol = node.symbol
+      if (symbol != null && symbol.isPrivateOrProtected()) {
+        var isPrivate = symbol.isPrivate()
+        while (scope != null) {
+          if (scope.kind() == .OBJECT && scope.asObjectScope().symbol == symbol.parent) {
+            return // TODO: Implement @protected once base classes work
+          }
+          scope = scope.parent
+        }
+        log.semanticErrorAccessViolation(node.internalRange != null ? node.internalRange : node.range, isPrivate ? "@private" : "@protected", symbol.name)
       }
     }
 
@@ -427,6 +435,16 @@ namespace skew.resolving {
       }
     }
 
+    static StringMap<SymbolFlags> annotationSymbolFlags = {
+      "@export": .EXPORT,
+      "@final": .FINAL,
+      "@import": .IMPORT,
+      "@private": .PRIVATE,
+      "@protected": .PROTECTED,
+      "@rename": .RENAME,
+      "@skip": .SKIP,
+    }
+
     void resolveAnnotation(Node node, Symbol symbol) {
       var value = node.annotationValue()
       var test = node.annotationTest()
@@ -455,6 +473,8 @@ namespace skew.resolving {
           case .EXPORT { isValid = !symbol.isImported() }
           case .FINAL { isValid = symbol.kind.isVariable() }
           case .IMPORT { isValid = !symbol.isExported() }
+          case .PRIVATE { isValid = !symbol.isProtected() && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
+          case .PROTECTED { isValid = !symbol.isPrivate() && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
           case .RENAME {}
           case .SKIP { isValid = symbol.kind.isFunction() && symbol.resolvedType.returnType == null }
         }
@@ -794,6 +814,7 @@ namespace skew.resolving {
 
       node.symbol = symbol
       node.resolvedType = cache.substitute(symbol.resolvedType, target.resolvedType.environment)
+      checkAccess(node, scope)
       automaticallyCallGetter(node, scope)
     }
 
@@ -892,6 +913,7 @@ namespace skew.resolving {
 
       node.symbol = symbol
       node.resolvedType = symbol.resolvedType
+      checkAccess(node, scope)
       automaticallyCallGetter(node, scope)
     }
 
