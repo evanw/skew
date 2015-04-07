@@ -497,33 +497,90 @@ def b
 ")
 
 test("
-@final {
-  var a int
-  def b int
-}
-
 class Foo {
-  @final
-  var x int
+  const a
+  const b int
+  const c = 0
+  const d bool = 0
 }
 
-var c int
+@import
+class Bar {
+  const a
+  const b int
+  const c = 0
+  const d bool = 0
+}
 
-def main(foo Foo) {
-  a = 0
-  c = 0
-  foo.x = 0
+const a
+const b int
+const c = 0
+const d bool = 0
+
+@import {
+  const w
+  const x int
+  const y = 0
+  const z bool = 0
 }
 ", "
-<stdin>:1:1: error: Cannot use the annotation \"@final\" on \"b\"
-@final {
-~~~~~~
-<stdin>:14:3: error: Cannot store to \"@final\" symbol \"a\"
+<stdin>:2:9: error: Unable to determine the type of \"a\"
+  const a
+        ^
+<stdin>:3:9: error: The constant \"b\" must be initialized
+  const b int
+        ^
+<stdin>:5:18: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  const d bool = 0
+                 ^
+<stdin>:10:9: error: Unable to determine the type of \"a\"
+  const a
+        ^
+<stdin>:13:18: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  const d bool = 0
+                 ^
+<stdin>:16:7: error: Unable to determine the type of \"a\"
+const a
+      ^
+<stdin>:17:7: error: The constant \"b\" must be initialized
+const b int
+      ^
+<stdin>:19:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+const d bool = 0
+               ^
+<stdin>:22:9: error: Unable to determine the type of \"w\"
+  const w
+        ^
+<stdin>:25:18: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  const z bool = 0
+                 ^
+")
+
+test("
+const a = 0
+var b = 0
+
+class Foo {
+  const x = 0
+}
+
+def main(foo Foo) {
+  const y = 0
+  a = 0
+  b = 0
+  foo.x = 0
+  y = 0
+}
+", "
+<stdin>:10:3: error: Cannot store to constant symbol \"a\"
   a = 0
   ^
-<stdin>:16:7: error: Cannot store to \"@final\" symbol \"x\"
+<stdin>:12:7: error: Cannot store to constant symbol \"x\"
   foo.x = 0
       ^
+<stdin>:13:3: error: Cannot store to constant symbol \"y\"
+  y = 0
+  ^
 ")
 
 test("

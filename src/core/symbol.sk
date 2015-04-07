@@ -57,6 +57,7 @@ namespace skew {
   }
 
   enum flags SymbolFlags {
+    CONST
     GETTER
     INFER_RETURN_TYPE
     SETTER
@@ -64,7 +65,6 @@ namespace skew {
 
     // Modifiers
     EXPORT
-    FINAL
     IMPORT
     PRIVATE
     PROTECTED
@@ -127,6 +127,10 @@ namespace skew {
       return (flags & .VALUE_TYPE) != 0
     }
 
+    bool isConst() {
+      return (flags & .CONST) != 0
+    }
+
     bool isGetter() {
       return (flags & .GETTER) != 0
     }
@@ -141,10 +145,6 @@ namespace skew {
 
     bool isExported() {
       return (flags & .EXPORT) != 0
-    }
-
-    bool isFinal() {
-      return (flags & .FINAL) != 0
     }
 
     bool isImported() {

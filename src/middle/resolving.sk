@@ -61,7 +61,6 @@ namespace skew.resolving {
 
         assert symbol.resolvedType != null
         symbol.state = .INITIALIZED
-        resolveAnnotations(symbol)
       }
 
       // Detect cyclic symbol references such as "foo foo;"
@@ -76,7 +75,7 @@ namespace skew.resolving {
       var annotations = symbol.annotations
 
       // The import/export annotations are inherited
-      if (parent != null && symbol.kind.isFunction() && symbol.asFunctionSymbol().block == null) {
+      if (parent != null && (symbol.kind.isVariable() || symbol.kind.isFunction() && symbol.asFunctionSymbol().block == null)) {
         symbol.flags |= parent.flags & (.IMPORT | .EXPORT)
       }
 
@@ -100,6 +99,8 @@ namespace skew.resolving {
       if (symbol.resolvedType == null) {
         symbol.resolvedType = Type(.SYMBOL, symbol)
       }
+
+      resolveAnnotations(symbol)
     }
 
     void resolveParameter(ParameterSymbol symbol) {
@@ -115,6 +116,8 @@ namespace skew.resolving {
       if (symbol.base != null) {
         resolveAsParameterizedType(symbol.base, symbol.scope)
       }
+
+      resolveAnnotations(symbol)
     }
 
     void resolveObject(ObjectSymbol symbol) {
@@ -181,6 +184,7 @@ namespace skew.resolving {
       }
 
       symbol.resolvedType.returnType = returnType
+      resolveAnnotations(symbol)
     }
 
     void resolveFunction(FunctionSymbol symbol) {
@@ -219,9 +223,15 @@ namespace skew.resolving {
     }
 
     void initializeVariable(VariableSymbol symbol) {
+      // Normal variables may omit the initializer if the type is present
       if (symbol.type != null) {
         resolveAsParameterizedType(symbol.type, symbol.scope)
         symbol.resolvedType = symbol.type.resolvedType
+
+        // Resolve the constant now so initialized constants always have a value
+        if (symbol.isConst() && symbol.value != null) {
+          resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
+        }
       }
 
       // Implicitly-typed variables take their type from their initializer
@@ -237,16 +247,23 @@ namespace skew.resolving {
         }
       }
 
-      // Use a different error for lambda arguments which cannot have an initializer
-      else if (symbol.scope.kind() == .FUNCTION && symbol.scope.asFunctionScope().symbol.kind == .FUNCTION_LOCAL) {
+      // Use a different error for constants which must have a type and lambda arguments which cannot have an initializer
+      else if (symbol.isConst() || symbol.scope.kind() == .FUNCTION && symbol.scope.asFunctionScope().symbol.kind == .FUNCTION_LOCAL) {
         log.semanticErrorVarMissingType(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
       }
 
       // Variables without a type are an error
       else {
-        log.semanticErrorVarMissingValue(symbol.range)
+        log.semanticErrorVarMissingValue(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
+      }
+
+      resolveAnnotations(symbol)
+
+      // Run post-annotation checks
+      if (symbol.resolvedType != .DYNAMIC && symbol.isConst() && !symbol.isImported() && symbol.value == null) {
+        log.semanticErrorConstMissingValue(symbol.range, symbol.name)
       }
     }
 
@@ -274,6 +291,8 @@ namespace skew.resolving {
       for (var i = 0; i < symbols.size(); i++) {
         initializeSymbol(symbols[i])
       }
+
+      resolveAnnotations(symbol)
     }
 
     void resolveNode(Node node, Scope scope, Type context) {
@@ -385,8 +404,8 @@ namespace skew.resolving {
       }
 
       // Forbid storage to final symbols
-      else if (symbol != null && symbol.isFinal()) {
-        log.semanticErrorStorageToFinalSymbol(node.internalRange != null ? node.internalRange : node.range, symbol.name)
+      else if (symbol != null && symbol.isConst()) {
+        log.semanticErrorStorageToConstSymbol(node.internalRange != null ? node.internalRange : node.range, symbol.name)
       }
     }
 
@@ -437,7 +456,6 @@ namespace skew.resolving {
 
     static StringMap<SymbolFlags> annotationSymbolFlags = {
       "@export": .EXPORT,
-      "@final": .FINAL,
       "@import": .IMPORT,
       "@private": .PRIVATE,
       "@protected": .PROTECTED,
@@ -471,7 +489,6 @@ namespace skew.resolving {
         var isValid = true
         switch (flag) {
           case .EXPORT { isValid = !symbol.isImported() }
-          case .FINAL { isValid = symbol.kind.isVariable() }
           case .IMPORT { isValid = !symbol.isExported() }
           case .PRIVATE { isValid = !symbol.isProtected() && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
           case .PROTECTED { isValid = !symbol.isPrivate() && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }

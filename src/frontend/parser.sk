@@ -95,7 +95,7 @@ namespace skew {
   }
 
 
-  Node parseVar(ParserContext context) {
+  Node parseVarOrConst(ParserContext context) {
     var token = context.next()
     var range = context.current().range
 
@@ -105,6 +105,10 @@ namespace skew {
 
     var symbol = VariableSymbol(.VARIABLE_LOCAL, range.toString())
     symbol.range = range
+
+    if (token.kind == .CONST) {
+      symbol.flags |= .CONST
+    }
 
     if (peekType(context)) {
       symbol.type = parseType(context)
@@ -186,9 +190,9 @@ namespace skew {
 
     switch (token.kind) {
       case .BREAK, .CONTINUE { return parseJump(context) }
+      case .CONST, .VAR { return parseVarOrConst(context) }
       case .IF { return parseIf(context) }
       case .RETURN { return parseReturn(context) }
-      case .VAR { return parseVar(context) }
       case .WHILE { return parseWhile(context) }
     }
 
@@ -381,18 +385,17 @@ namespace skew {
     }
 
     // Parse annotations before the symbol declaration
-    var hasAnnotationPrefix = context.peek(.ANNOTATION)
-    if (hasAnnotationPrefix) {
+    if (context.peek(.ANNOTATION)) {
       annotations = parseAnnotations(context, annotations)
       if (annotations == null) {
         return false
       }
-    }
 
-    // Parse an annotation block
-    if (hasAnnotationPrefix && context.eat(.LEFT_BRACE)) {
-      parseSymbols(context, parent, annotations)
-      return context.expect(.RIGHT_BRACE) && (context.peek(.END_OF_FILE) || context.peek(.RIGHT_BRACE) || context.expect(.NEWLINE))
+      // Parse an annotation block
+      if (context.eat(.LEFT_BRACE)) {
+        parseSymbols(context, parent, annotations)
+        return context.expect(.RIGHT_BRACE) && (context.peek(.END_OF_FILE) || context.peek(.RIGHT_BRACE) || context.expect(.NEWLINE))
+      }
     }
 
     // Parse the symbol kind
@@ -400,10 +403,10 @@ namespace skew {
     SymbolKind kind
     switch (token.kind) {
       case .CLASS { kind = .OBJECT_CLASS }
+      case .CONST, .VAR { kind = parent.kind.hasInstances() ? .VARIABLE_INSTANCE : .VARIABLE_GLOBAL }
       case .DEF { kind = parent.kind.hasInstances() ? .FUNCTION_INSTANCE : .FUNCTION_GLOBAL }
       case .INTERFACE { kind = .OBJECT_INTERFACE }
       case .NAMESPACE { kind = .OBJECT_NAMESPACE }
-      case .VAR { kind = parent.kind.hasInstances() ? .VARIABLE_INSTANCE : .VARIABLE_GLOBAL }
       default {
         context.unexpectedToken()
         return false
@@ -453,6 +456,10 @@ namespace skew {
       case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE {
         var symbol = VariableSymbol(kind, name)
         symbol.range = range
+
+        if (token.kind == .CONST) {
+          symbol.flags |= .CONST
+        }
 
         if (peekType(context)) {
           symbol.type = parseType(context)

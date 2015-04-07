@@ -159,8 +159,12 @@ namespace skew {
       error(range, "Unable to determine the type of \"" + name + "\"")
     }
 
-    void semanticErrorVarMissingValue(Range range) {
-      error(range, "Implicitly typed variables must be initialized")
+    void semanticErrorVarMissingValue(Range range, string name) {
+      error(range, "The implicitly typed variable \"" + name + "\" must be initialized")
+    }
+
+    void semanticErrorConstMissingValue(Range range, string name) {
+      error(range, "The constant \"" + name + "\" must be initialized")
     }
 
     void semanticErrorInvalidCall(Range range, Type type) {
@@ -256,8 +260,8 @@ namespace skew {
       error(range, "Cannot store to this location")
     }
 
-    void semanticErrorStorageToFinalSymbol(Range range, string name) {
-      error(range, "Cannot store to \"@final\" symbol \"" + name + "\"")
+    void semanticErrorStorageToConstSymbol(Range range, string name) {
+      error(range, "Cannot store to constant symbol \"" + name + "\"")
     }
 
     void semanticErrorAccessViolation(Range range, string level, string name) {

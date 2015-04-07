@@ -8,6 +8,7 @@
 "as"                              AS;
 "break"                           BREAK;
 "class"                           CLASS;
+"const"                           CONST;
 "continue"                        CONTINUE;
 "def"                             DEF;
 "dynamic"                         DYNAMIC;
