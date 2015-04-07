@@ -27,6 +27,7 @@ namespace skew.resolving {
 
     static StringMap<SymbolFlags> annotationSymbolFlags = {
       "@export": .EXPORT,
+      "@final": .FINAL,
       "@import": .IMPORT,
       "@rename": .RENAME,
       "@skip": .SKIP,
@@ -384,8 +385,14 @@ namespace skew.resolving {
     }
 
     void checkStorage(Node node) {
+      // Only allow storage to variables
       if (node.kind != .NAME && node.kind != .DOT || node.symbol != null && !node.symbol.kind.isVariable()) {
         log.semanticErrorBadStorage(node.range)
+      }
+
+      // Forbid storage to final symbols
+      if (node.symbol != null && node.symbol.isFinal()) {
+        log.semanticErrorStorageToFinalSymbol(node.range, node.symbol.name)
       }
     }
 
@@ -446,6 +453,7 @@ namespace skew.resolving {
         var isValid = true
         switch (flag) {
           case .EXPORT { isValid = !symbol.isImported() }
+          case .FINAL { isValid = symbol.kind.isVariable() }
           case .IMPORT { isValid = !symbol.isExported() }
           case .RENAME {}
           case .SKIP { isValid = symbol.kind.isFunction() && symbol.resolvedType.returnType == null }

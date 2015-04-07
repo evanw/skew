@@ -64,6 +64,7 @@ namespace skew {
 
     // Modifiers
     EXPORT
+    FINAL
     IMPORT
     RENAME
     SKIP
@@ -138,6 +139,10 @@ namespace skew {
 
     bool isExported() {
       return (flags & .EXPORT) != 0
+    }
+
+    bool isFinal() {
+      return (flags & .FINAL) != 0
     }
 
     bool isImported() {

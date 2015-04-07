@@ -496,5 +496,26 @@ def b
 ~~~~~
 ")
 
+test("
+@final {
+  var a int
+  def b int
+}
+
+var c int
+
+def main {
+  a = 0
+  c = 0
+}
+", "
+<stdin>:1:1: error: Cannot use the annotation \"@final\" on \"b\"
+@final {
+~~~~~~
+<stdin>:9:3: error: Cannot store to \"a\" because it is marked as \"@final\"
+  a = 0
+  ^
+")
+
   }
 }

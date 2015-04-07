@@ -256,6 +256,10 @@ namespace skew {
       error(range, "Cannot store to this location")
     }
 
+    void semanticErrorStorageToFinalSymbol(Range range, string name) {
+      error(range, "Cannot store to \"" + name + "\" because it is marked as \"@final\"")
+    }
+
     void semanticErrorUnparameterizedType(Range range, Type type) {
       error(range, "Cannot use unparameterized type \"" + type + "\"")
     }

@@ -1,5 +1,6 @@
 var NATIVE_LIBRARY = "
 def @export
+def @final
 def @import
 def @rename(name string)
 def @skip
