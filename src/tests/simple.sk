@@ -461,5 +461,40 @@ def ns.foo int
       ^
 ")
 
+test("
+@skip
+var a int
+
+@skip {
+  var x int
+  var y int
+}
+
+@skip
+@skip
+def b
+
+@skip
+@skip {
+  def c
+}
+", "
+<stdin>:10:1: error: Duplicate annotation \"@skip\" on \"b\"
+@skip
+~~~~~
+<stdin>:14:1: error: Duplicate annotation \"@skip\" on \"c\"
+@skip {
+~~~~~
+<stdin>:1:1: error: Cannot use the annotation \"@skip\" on \"a\"
+@skip
+~~~~~
+<stdin>:4:1: error: Cannot use the annotation \"@skip\" on \"x\"
+@skip {
+~~~~~
+<stdin>:4:1: error: Cannot use the annotation \"@skip\" on \"y\"
+@skip {
+~~~~~
+")
+
   }
 }

@@ -43,12 +43,8 @@ namespace skew {
     return comments
   }
 
-  List<Node> parseAnnotations(ParserContext context) {
-    if (!context.peek(.ANNOTATION)) {
-      return null
-    }
-
-    List<Node> annotations = []
+  List<Node> parseAnnotations(ParserContext context, List<Node> annotations) {
+    annotations = annotations != null ? annotations.clone() : []
 
     while (context.peek(.ANNOTATION)) {
       var range = context.next().range
@@ -88,7 +84,7 @@ namespace skew {
       }
 
       // All annotations must end in a newline to avoid confusion with the trailing if
-      if (!context.expect(.NEWLINE)) {
+      if (!context.peek(.LEFT_BRACE) && !context.expect(.NEWLINE)) {
         return null
       }
 
@@ -375,7 +371,7 @@ namespace skew {
     TokenKind.TILDE: 0,
   }
 
-  bool parseSymbol(ParserContext context, ObjectSymbol parent) {
+  bool parseSymbol(ParserContext context, ObjectSymbol parent, List<Node> annotations) {
     // Parse comments before the symbol declaration
     List<string> comments = parseLeadingComments(context)
 
@@ -385,7 +381,19 @@ namespace skew {
     }
 
     // Parse annotations before the symbol declaration
-    List<Node> annotations = parseAnnotations(context)
+    var hasAnnotationPrefix = context.peek(.ANNOTATION)
+    if (hasAnnotationPrefix) {
+      annotations = parseAnnotations(context, annotations)
+      if (annotations == null) {
+        return false
+      }
+    }
+
+    // Parse an annotation block
+    if (hasAnnotationPrefix && context.eat(.LEFT_BRACE)) {
+      parseSymbols(context, parent, annotations)
+      return context.expect(.RIGHT_BRACE) && (context.peek(.END_OF_FILE) || context.peek(.RIGHT_BRACE) || context.expect(.NEWLINE))
+    }
 
     // Parse the symbol kind
     var token = context.current()
@@ -528,7 +536,7 @@ namespace skew {
           return false
         }
 
-        parseSymbols(context, symbol)
+        parseSymbols(context, symbol, null)
 
         if (!context.expect(.RIGHT_BRACE)) {
           return false
@@ -551,11 +559,11 @@ namespace skew {
     return true
   }
 
-  void parseSymbols(ParserContext context, ObjectSymbol parent) {
+  void parseSymbols(ParserContext context, ObjectSymbol parent, List<Node> annotations) {
     context.eat(.NEWLINE)
 
     while (!context.peek(.END_OF_FILE) && !context.peek(.RIGHT_BRACE)) {
-      if (!parseSymbol(context, parent)) {
+      if (!parseSymbol(context, parent, annotations)) {
         break
       }
     }
@@ -563,7 +571,7 @@ namespace skew {
 
   void parseFile(Log log, List<Token> tokens, ObjectSymbol global) {
     var context = ParserContext(log, tokens)
-    parseSymbols(context, global)
+    parseSymbols(context, global, null)
     context.expect(.END_OF_FILE)
   }
 

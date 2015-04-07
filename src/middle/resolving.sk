@@ -451,9 +451,9 @@ namespace skew.resolving {
           case .SKIP { isValid = symbol.kind.isFunction() && symbol.resolvedType.returnType == null }
         }
         if (!isValid) {
-          log.semanticErrorInvalidAnnotation(value.range, value.symbol.name)
+          log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name)
         } else if ((symbol.flags & flag) != 0) {
-          log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name)
+          log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name)
         } else {
           symbol.flags |= flag
         }
