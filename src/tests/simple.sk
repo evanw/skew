@@ -635,5 +635,65 @@ def main(foo Foo) {
 
 ")
 
+test("
+class bool {
+  def +(x int, y int)
+  def -(x int, y int) {}
+}
+
+def main {
+  false + false
+  false - false
+}
+", "
+<stdin>:7:9: error: Expected 2 arguments but found 1 argument
+  false + false
+        ^
+<stdin>:8:9: error: Expected 2 arguments but found 1 argument
+  false - false
+        ^
+")
+
+test("
+class bool {
+  def +(x bool)
+  def -(x bool) {}
+}
+
+def main {
+  false + false + false
+  false - false - false
+}
+", "
+<stdin>:7:3: error: The function \"+\" does not return a value
+  false + false + false
+  ~~~~~~~~~~~~~
+<stdin>:8:3: error: The function \"-\" does not return a value
+  false - false - false
+  ~~~~~~~~~~~~~
+")
+
+test("
+def main {
+  0 + 0
+  0 + 0.5
+  0.5 + 0
+  0.5 + 0.5
+}
+", "
+<stdin>:2:3: warning: Unused expression
+  0 + 0
+  ~~~~~
+<stdin>:3:3: warning: Unused expression
+  0 + 0.5
+  ~~~~~~~
+<stdin>:4:3: warning: Unused expression
+  0.5 + 0
+  ~~~~~~~
+<stdin>:5:3: warning: Unused expression
+  0.5 + 0.5
+  ~~~~~~~~~
+")
+
   }
 }

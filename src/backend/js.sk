@@ -39,6 +39,10 @@ namespace skew {
       }
 
       void emitObject(ObjectSymbol symbol) {
+        if (symbol.isImported()) {
+          return
+        }
+
         prefix = symbol.parent != null ? computePrefix(symbol.parent.asObjectSymbol()) : ""
 
         switch (symbol.kind) {
@@ -89,6 +93,7 @@ namespace skew {
         if (symbol.block == null) {
           return
         }
+
         emitNewlineBeforeSymbol(symbol)
         emitComments(symbol.comments)
         var isExpression = prefix != ""
@@ -106,6 +111,10 @@ namespace skew {
       }
 
       void emitVariable(VariableSymbol symbol) {
+        if (symbol.isImported()) {
+          return
+        }
+
         if (symbol.kind != .VARIABLE_INSTANCE && (symbol.value != null || prefix == "")) {
           emitNewlineBeforeSymbol(symbol)
           emitComments(symbol.comments)

@@ -6,6 +6,7 @@ def @protected
 def @rename(name string)
 def @skip
 
+@import
 namespace Math {
   def abs(x double) double
   def abs(x int) int
@@ -28,8 +29,9 @@ namespace Math {
   def sin(x double) double
   def sqrt(x double) double
   def tan(x double) double
-  var E double
-  var PI double
+
+  const E = 2.718281828459045
+  const PI = 3.141592653589793
 }
 
 @import
@@ -92,12 +94,12 @@ class string {
   def <=>(x string) int
   def [](x int) int
   def codePoints List<int>
+  def count int
   def endsWith(x string) bool
   def in(x string) bool
   def join(x List<string>) string
   def repeat(x int) string
   def replaceAll(before string, after string) string
-  def count int
   def slice(start int, end int) string
   def split(x string) List<string>
   def startsWith(x string) bool
@@ -124,6 +126,7 @@ class List<T> {
   def append(x T)
   def appendOne(x T)
   def copy List<T>
+  def count int
   def each(x fn(T))
   def filter(x fn(T) bool) List<T>
   def first T
@@ -145,7 +148,6 @@ class List<T> {
   def removeRange(start int, end int)
   def resize(size int, default T)
   def shuffle
-  def count int
   def slice(start int, end int) List<T>
   def sort(x fn(T, T) int)
   def swap(x int, y int)

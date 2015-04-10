@@ -1037,8 +1037,9 @@ namespace skew.resolving {
     void resolveOperatorOverload(Node node, Scope scope) {
       // The order of operands are reversed for the "in" operator
       var reverseBinaryOrder = node.kind == .IN
-      var target = node.children[reverseBinaryOrder ? 1 : 0]
+      var target = node.children[(int)reverseBinaryOrder]
       var type = target.resolvedType
+
       if (type == .DYNAMIC) {
         return
       }
@@ -1073,7 +1074,13 @@ namespace skew.resolving {
 
       // Don't replace the operator with a call if it's just used for type checking
       if (symbol.isImported() && !symbol.isRenamed()) {
-        node.resolvedType = symbol.resolvedType.returnType
+        if (reverseBinaryOrder) {
+          node.children.reverse()
+        }
+        resolveFunctionCall(node, scope, symbol.resolvedType)
+        if (reverseBinaryOrder) {
+          node.children.reverse()
+        }
         return
       }
 
@@ -1097,7 +1104,6 @@ namespace skew.resolving {
       }
 
       // Resolve the function call directly because overload resolution is already done
-      node.resolvedType = null
       resolveFunctionCall(node, scope, symbol.resolvedType)
     }
 
