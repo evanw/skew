@@ -626,7 +626,7 @@ namespace skew.resolving {
 
         // Lambda types look like "fn(int, int) int"
         case .LAMBDA {
-          if (resolveLambdaCall(node, scope, type)) {
+          if (resolveFunctionCall(node, scope, type)) {
             return
           }
         }
@@ -674,7 +674,7 @@ namespace skew.resolving {
     }
 
     bool resolveFunctionCall(Node node, Scope scope, Type type) {
-      var function = type.symbol.asFunctionSymbol()
+      var function = type.symbol != null ? type.symbol.asFunctionSymbol() : null
       var expected = type.argumentTypes.size()
       var count = node.children.size() - 1
       node.symbol = function
@@ -686,7 +686,11 @@ namespace skew.resolving {
 
       // There is no "void" type, so make sure this return value isn't used
       else if (isVoidExpressionUsed(node)) {
-        log.semanticErrorUseOfVoidFunction(node.range, function.name)
+        if (function != null) {
+          log.semanticErrorUseOfVoidFunction(node.range, function.name)
+        } else {
+          log.semanticErrorUseOfVoidLambda(node.range)
+        }
       }
 
       // Check argument count
@@ -732,34 +736,6 @@ namespace skew.resolving {
     bool resolveOverloadedFunctionCall(Node node, Scope scope, OverloadedFunctionSymbol overloaded) {
       var symbol = resolveOverloadedFunction(node.callValue().range, node.children.size() - 1, overloaded)
       return symbol != null && resolveFunctionCall(node, scope, symbol.resolvedType) // TODO: This doesn't work for generic types
-    }
-
-    bool resolveLambdaCall(Node node, Scope scope, Type type) {
-      var expected = type.argumentTypes.size()
-      var count = node.children.size() - 1
-
-      // Use the return type even if there were errors
-      if (type.returnType != null) {
-        node.resolvedType = type.returnType
-      }
-
-      // There is no "void" type, so make sure this return value isn't used
-      else if (isVoidExpressionUsed(node)) {
-        log.semanticErrorUseOfVoidLambda(node.range)
-      }
-
-      // Check argument count
-      if (expected != count) {
-        log.semanticErrorArgumentCount(node.internalRange, expected, count)
-        return false
-      }
-
-      // Check argument types
-      for (var i = 0; i < count; i++) {
-        resolveAsParameterizedExpressionWithConversion(node.children[i + 1], scope, type.argumentTypes[i])
-      }
-
-      return true
     }
 
     void resolveCast(Node node, Scope scope) {
