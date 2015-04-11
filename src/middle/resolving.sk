@@ -1031,13 +1031,8 @@ namespace skew.resolving {
 
         // Resolve the right side using type context from the left side
         resolveAsParameterizedExpressionWithConversion(right, scope, left.resolvedType)
+        node.resolvedType = left.resolvedType
         checkStorage(left)
-
-        // To make code emission easier, assignments are only allowed in statement position
-        if (isVoidExpressionUsed(node)) {
-          log.semanticErrorUseOfVoidAssignment(node.range)
-          node.resolvedType = .DYNAMIC
-        }
       }
 
       else {
