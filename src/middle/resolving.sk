@@ -197,16 +197,18 @@ namespace skew.resolving {
             }
           }
 
-          case .ZERO_OR_ONE {
-            if (count > 1) {
-              log.semanticErrorExpectedAtMostArgumentCount(symbol.range, symbol.name, 1)
+          case .ZERO_OR_ONE, .ONE_OR_TWO {
+            var lower = argumentCount == .ZERO_OR_ONE ? 0 : 1
+            var upper = argumentCount == .ZERO_OR_ONE ? 1 : 2
+            if (count < lower || count > upper) {
+              log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, lower, upper)
             }
           }
 
           case .ONE_OR_MORE, .TWO_OR_MORE {
             var expected = argumentCount == .ONE_OR_MORE ? 1 : 2
             if (count < expected) {
-              log.semanticErrorExpectedAtLeastArgumentCount(symbol.range, symbol.name, expected)
+              log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, expected, -1)
             }
           }
         }

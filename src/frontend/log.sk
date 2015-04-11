@@ -240,12 +240,14 @@ namespace skew {
       error(range, "Expected \"" + name + "\" to take " + count + " argument" + prettyPrint.plural(count))
     }
 
-    void semanticErrorExpectedAtLeastArgumentCount(Range range, string name, int count) {
-      error(range, "Expected \"" + name + "\" to take at least " + count + " argument" + prettyPrint.plural(count))
-    }
-
-    void semanticErrorExpectedAtMostArgumentCount(Range range, string name, int count) {
-      error(range, "Expected \"" + name + "\" to take at most " + count + " argument" + prettyPrint.plural(count))
+    void semanticErrorWrongArgumentCountRange(Range range, string name, int lower, int upper) {
+      if (lower == 0) {
+        error(range, "Expected \"" + name + "\" to take at most " + upper + " argument" + prettyPrint.plural(upper))
+      } else if (upper == -1) {
+        error(range, "Expected \"" + name + "\" to take at least " + lower + " argument" + prettyPrint.plural(lower))
+      } else {
+        error(range, "Expected \"" + name + "\" to take between " + lower + " and " + upper + " arguments")
+      }
     }
 
     void semanticErrorUnexpectedReturnValue(Range range) {

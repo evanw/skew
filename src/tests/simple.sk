@@ -679,5 +679,60 @@ def main {
   ~~~~~~~~~
 ")
 
+test("
+class Foo {
+  def *
+  def -(x int, y int)
+  def <=> int
+  def [...]
+  def []
+  def []=
+  def foo=
+  def not(x int)
+  def {...}
+}
+", "
+<stdin>:2:7: error: Expected \"*\" to take 1 argument
+  def *
+      ^
+<stdin>:3:7: error: Expected \"-\" to take at most 1 argument
+  def -(x int, y int)
+      ^
+<stdin>:4:7: error: Expected \"<=>\" to take 1 argument
+  def <=> int
+      ~~~
+<stdin>:5:7: error: Expected \"[...]\" to take 1 argument
+  def [...]
+      ~~~~~
+<stdin>:6:7: error: Expected \"[]\" to take at least 1 argument
+  def []
+      ~~
+<stdin>:7:7: error: Expected \"[]=\" to take at least 2 arguments
+  def []=
+      ~~~
+<stdin>:8:7: error: Expected \"foo=\" to take 1 argument
+  def foo=
+      ~~~~
+<stdin>:9:7: error: Expected \"not\" to take 0 arguments
+  def not(x int)
+      ~~~
+<stdin>:10:7: error: Expected \"{...}\" to take between 1 and 2 arguments
+  def {...}
+      ~~~~~
+")
+
+test("
+def main(x List<double>) {
+  var y bool = x[false]
+}
+", "
+<stdin>:2:18: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var y bool = x[false]
+                 ~~~~~
+<stdin>:2:16: error: Cannot convert from type \"double\" to type \"bool\"
+  var y bool = x[false]
+               ~~~~~~~~
+")
+
   }
 }

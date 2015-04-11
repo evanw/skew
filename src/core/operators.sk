@@ -10,6 +10,7 @@ namespace skew {
   enum ArgumentCount {
     ONE
     ONE_OR_MORE
+    ONE_OR_TWO
     TWO_OR_MORE
     ZERO
     ZERO_OR_MORE
@@ -63,6 +64,9 @@ namespace skew {
 
     NodeKind.ASSIGN_INDEX:          OperatorInfo("[]=", .MEMBER, .NONE, .OVERRIDABLE, .TWO_OR_MORE),
     NodeKind.INDEX:                 OperatorInfo("[]", .MEMBER, .NONE, .OVERRIDABLE, .ONE_OR_MORE),
+
+    NodeKind.INITIALIZER_LIST:      OperatorInfo("[...]", .LOWEST, .NONE, .OVERRIDABLE, .ONE),
+    NodeKind.INITIALIZER_SET:       OperatorInfo("{...}", .LOWEST, .NONE, .OVERRIDABLE, .ONE_OR_TWO),
   }
 
   StringMap<ArgumentCount> operatorArgumentCounts = null
