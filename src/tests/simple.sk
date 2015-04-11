@@ -34,28 +34,6 @@ def main {
 
 test("
 class Foo {
-  def new
-}
-
-def main {
-  Foo.new[ ]= false
-  Foo.new[] = false
-  Foo.new[]= false
-}
-", "
-<stdin>:6:10: error: \"[]=\" is not declared on type \"Foo\"
-  Foo.new[ ]= false
-         ~~~~~~~~~~
-<stdin>:7:10: error: \"[]=\" is not declared on type \"Foo\"
-  Foo.new[] = false
-         ~~~~~~~~~~
-<stdin>:8:10: error: \"[]=\" is not declared on type \"Foo\"
-  Foo.new[]= false
-         ~~~~~~~~~
-")
-
-test("
-class Foo {
   def new {}
 }
 
@@ -646,6 +624,12 @@ def main {
   false - false
 }
 ", "
+<stdin>:2:7: error: Expected \"+\" to take at most 1 argument
+  def +(x int, y int)
+      ^
+<stdin>:3:7: error: Expected \"-\" to take at most 1 argument
+  def -(x int, y int) {}
+      ^
 <stdin>:7:9: error: Expected 2 arguments but found 1 argument
   false + false
         ^

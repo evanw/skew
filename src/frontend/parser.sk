@@ -483,7 +483,7 @@ namespace skew {
         // Check for setters like "def foo=(x int) {}" but don't allow a space
         // between the name and the assignment operator
         if (kind != .FUNCTION_ANNOTATION && nameToken.kind == .IDENTIFIER && context.peek(.ASSIGN) && context.current().range.start == nameToken.range.end) {
-          context.next()
+          symbol.range = Range.span(symbol.range, context.next().range)
           symbol.flags |= .SETTER
           symbol.name += "="
         }
@@ -920,21 +920,11 @@ namespace skew {
   class IndexParselet : InfixParselet {
     override Node parse(ParserContext context, Node left) {
       var token = context.next()
-      var arguments = token.kind == .LEFT_BRACKET ? parseCommaSeparatedList(context, .RIGHT_BRACKET) : []
+      var arguments = parseCommaSeparatedList(context, .RIGHT_BRACKET)
       if (arguments == null) {
         return null
       }
-      var node = Node.createIndex(left, arguments).withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range))
-      if (token.kind != .ASSIGN_INDEX) {
-        return node
-      }
-      var right = pratt.parse(context, .ASSIGN)
-      if (right == null) {
-        return null
-      }
-      node.kind = .ASSIGN_INDEX
-      node.appendChild(right)
-      return node.withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range))
+      return Node.createIndex(left, arguments).withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range))
     }
   }
 
@@ -1091,11 +1081,9 @@ namespace skew {
 
     pratt.parselet(.ARROW, .LOWEST).prefix = LambdaParselet()
     pratt.parselet(.AS, .COMPARE).infix = CastParselet()
-    pratt.parselet(.ASSIGN_INDEX, .MEMBER).infix = IndexParselet()
     pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrLambdaParselet()
     pratt.parselet(.INDEX, .LOWEST).prefix = InitializerParselet()
-    pratt.parselet(.INDEX, .MEMBER).infix = IndexParselet()
     pratt.parselet(.LEFT_BRACE, .LOWEST).prefix = InitializerParselet()
     pratt.parselet(.LEFT_BRACKET, .LOWEST).prefix = InitializerParselet()
     pratt.parselet(.LEFT_BRACKET, .MEMBER).infix = IndexParselet()

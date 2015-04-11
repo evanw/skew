@@ -145,8 +145,9 @@ namespace skew.resolving {
       resolveParameters(symbol.parameters)
 
       // Resolve the argument variables
+      var count = symbol.arguments.size()
       symbol.resolvedType.argumentTypes = []
-      for (var i = 0; i < symbol.arguments.size(); i++) {
+      for (var i = 0; i < count; i++) {
         var argument = symbol.arguments[i]
         argument.scope = symbol.scope
         resolveVariable(argument)
@@ -170,17 +171,45 @@ namespace skew.resolving {
       }
 
       // The "<=>" operator must return a numeric value for comparison with zero
-      if (symbol.name == "<=>") {
+      else if (symbol.name == "<=>") {
         if (returnType == null || !cache.isNumeric(returnType)) {
           log.semanticErrorComparisonOperatorNotNumeric(symbol.returnType != null ? symbol.returnType.range : symbol.range)
           returnType = .DYNAMIC
+        } else if (count != 1) {
+          log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, 1)
         }
       }
 
       // Setters must have one argument
-      if (symbol.isSetter() && symbol.arguments.size() != 1) {
-        log.semanticErrorSetterWrongArgumentCount(symbol.range, symbol.name)
+      else if (symbol.isSetter() && count != 1) {
+        log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, 1)
         symbol.flags &= ~.SETTER
+      }
+
+      // Validate argument count
+      else {
+        var argumentCount = argumentCountForOperator(symbol.name)
+        switch (argumentCount) {
+          case .ZERO, .ONE {
+            var expected = argumentCount == .ZERO ? 0 : 1
+            if (count != expected) {
+              log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, expected)
+            }
+          }
+
+          case .ZERO_OR_ONE {
+            if (count > 1) {
+              log.semanticErrorExpectedAtMostArgumentCount(symbol.range, symbol.name, 1)
+            }
+          }
+
+          case .ONE_OR_MORE, .TWO_OR_MORE {
+            var expected = argumentCount == .ONE_OR_MORE ? 1 : 2
+            if (count < expected) {
+              log.semanticErrorExpectedAtLeastArgumentCount(symbol.range, symbol.name, expected)
+            }
+          }
+        }
       }
 
       symbol.resolvedType.returnType = returnType
