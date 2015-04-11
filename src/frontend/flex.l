@@ -28,6 +28,8 @@
 "var"                             VAR;
 "while"                           WHILE;
 
+"[...]"                           LIST;
+"{...}"                           SET;
 "[]="                             ASSIGN_INDEX;
 "[]"                              INDEX;
 "("                               LEFT_PARENTHESIS;

@@ -119,6 +119,7 @@ class List<T> {
   def +(x T) List<T>
   def +=(x List<T>)
   def +=(x T)
+  def [...](x T) List<T>
   def [](x int) T
   def []=(x int, y T)
   def all(x fn(T) bool) bool
@@ -156,6 +157,7 @@ class List<T> {
 class StringMap<T> {
   def [](key string) T
   def []=(key string, value T)
+  def count int
   def each(x fn(string, T))
   def get(key string, default T)
   def in(key string) bool
@@ -163,13 +165,14 @@ class StringMap<T> {
   def keys List<string>
   def new
   def remove(key string)
-  def count int
   def values List<T>
+  def {...}(key string, value T) StringMap<T>
 }
 
 class IntMap<T> {
   def [](key int) T
   def []=(key int, value T)
+  def count int
   def each(x fn(int, T))
   def get(key int, default T)
   def in(key int) bool
@@ -177,8 +180,8 @@ class IntMap<T> {
   def keys List<int>
   def new
   def remove(key int)
-  def count int
   def values List<T>
+  def {...}(key int, value T) IntMap<T>
 }
 "
 

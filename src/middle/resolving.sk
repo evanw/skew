@@ -196,7 +196,7 @@ namespace skew.resolving {
       // makes many things much easier including lambda capture and devirtualization
       if (symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR) {
         symbol.self = VariableSymbol(.VARIABLE_LOCAL, "self")
-        symbol.self.resolvedType = symbol.parent.resolvedType
+        symbol.self.resolvedType = cache.parameterize(symbol.parent.resolvedType)
         symbol.self.state = .INITIALIZED
         scope.define(symbol.self, log)
       }
