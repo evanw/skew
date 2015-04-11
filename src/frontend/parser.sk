@@ -908,6 +908,7 @@ namespace skew {
             break
           }
         }
+        context.eat(.NEWLINE)
         if (!context.expect(end)) {
           return null
         }

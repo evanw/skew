@@ -109,11 +109,13 @@ namespace string {
   def fromCodePoints(x List<int>) string
 }
 
+@import
 class StringBuilder {
   def +=(x string) string
   def toString string
 }
 
+@import
 class List<T> {
   def +(x List<T>) List<T>
   def +(x T) List<T>
@@ -154,6 +156,7 @@ class List<T> {
   def swap(x int, y int)
 }
 
+@import
 class StringMap<T> {
   def [](key string) T
   def []=(key string, value T)
@@ -169,6 +172,7 @@ class StringMap<T> {
   def {...}(key string, value T) StringMap<T>
 }
 
+@import
 class IntMap<T> {
   def [](key int) T
   def []=(key int, value T)
