@@ -322,6 +322,7 @@ namespace skew.resolving {
         case .DYNAMIC {}
         case .HOOK { resolveHook(node, scope) }
         case .INDEX { resolveIndex(node, scope) }
+        case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET { resolveInitializer(node, scope) }
         case .LAMBDA { resolveLambda(node, scope, context) }
         case .LAMBDA_TYPE { resolveLambdaType(node, scope) }
         case .NAME { resolveName(node, scope) }
@@ -815,6 +816,18 @@ namespace skew.resolving {
       resolveAsParameterizedExpressionWithConversion(node.hookTest(), scope, cache.boolType)
       resolveAsParameterizedExpression(node.hookTrue(), scope) // TODO: resolveAsParameterizedExpressionWithConversion()
       resolveAsParameterizedExpression(node.hookFalse(), scope) // TODO: resolveAsParameterizedExpressionWithConversion()
+    }
+
+    void resolveInitializer(Node node, Scope scope) {
+      for (var i = 0; i < node.children.size(); i++) {
+        var value = node.children[i]
+        if (value.kind == .PAIR) {
+          resolveAsParameterizedExpression(value.firstValue(), scope)
+          resolveAsParameterizedExpression(value.secondValue(), scope)
+        } else {
+          resolveAsParameterizedExpression(value, scope)
+        }
+      }
     }
 
     void resolveLambda(Node node, Scope scope, Type context) {

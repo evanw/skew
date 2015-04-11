@@ -319,6 +319,23 @@ namespace skew {
             emit(">")
           }
 
+          case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET {
+            emit("[")
+            for (var i = 0; i < node.children.size(); i++) {
+              if (i != 0) {
+                emit(", ")
+              }
+              emitExpression(node.children[i], .LOWEST)
+            }
+            emit("]")
+          }
+
+          case .PAIR {
+            emitExpression(node.firstValue(), .LOWEST)
+            emit(": ")
+            emitExpression(node.secondValue(), .LOWEST)
+          }
+
           case .INDEX {
             emitExpression(node.children[0], .UNARY_POSTFIX)
             emit("[")

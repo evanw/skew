@@ -23,6 +23,8 @@
   - bootstrap the compiler
   - alias types using the "type" declaration prefix, not available inside functions?
   - namespace imports via the "use" declaration prefix
+  - do [list] and {initializer} expressions, require argument-less "new" and use [...] and {...} as operator names for appending
+    - {...} can take one argument or two arguments using ":" as a separator
 
 x done
   x make "self" explicit inside the compiler for sanity (all instance member NAME nodes become DOT nodes)

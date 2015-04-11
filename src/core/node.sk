@@ -23,10 +23,14 @@ namespace skew {
     DYNAMIC
     HOOK
     INDEX
+    INITIALIZER_LIST
+    INITIALIZER_MAP
+    INITIALIZER_SET
     LAMBDA
     LAMBDA_TYPE
     NAME
     NULL
+    PAIR
     PARAMETERIZE
     TYPE
 
@@ -371,6 +375,11 @@ namespace skew {
       return Node(.HOOK).withChildren([test, trueValue, falseValue])
     }
 
+    static Node createInitializer(NodeKind kind, List<Node> values) {
+      assert kind == .INITIALIZER_LIST || kind == .INITIALIZER_MAP || kind == .INITIALIZER_SET
+      return Node(kind).withChildren(values)
+    }
+
     static Node createLambda(FunctionSymbol symbol) {
       return Node(.LAMBDA).withSymbol(symbol)
     }
@@ -385,6 +394,12 @@ namespace skew {
 
     static Node createNull() {
       return Node(.NULL)
+    }
+
+    static Node createPair(Node first, Node second) {
+      assert first.kind.isExpression()
+      assert second.kind.isExpression()
+      return Node(.PAIR).withChildren([first, second])
     }
 
     static Node createParameterize(Node type, List<Node> parameters) {
@@ -421,6 +436,20 @@ namespace skew {
     string asString() {
       assert kind == .NAME || kind == .DOT
       return content.asString()
+    }
+
+    Node firstValue() {
+      assert kind == .PAIR
+      assert children.size() == 2
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node secondValue() {
+      assert kind == .PAIR
+      assert children.size() == 2
+      assert children[1].kind.isExpression()
+      return children[1]
     }
 
     Node dotTarget() {

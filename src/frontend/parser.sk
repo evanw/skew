@@ -874,6 +874,46 @@ namespace skew {
     }
   }
 
+  class InitializerParselet : PrefixParselet {
+    override Node parse(ParserContext context) {
+      var token = context.next()
+      List<Node> values = []
+      NodeKind kind = token.kind == .LEFT_BRACE ? .INITIALIZER_SET : .INITIALIZER_LIST
+      if (token.kind != .INDEX) {
+        var checkForColon = kind != .INITIALIZER_LIST
+        TokenKind end = checkForColon ? .RIGHT_BRACE : .RIGHT_BRACKET
+        while (!context.peek(end)) {
+          var first = pratt.parse(context, .LOWEST)
+          if (first == null) {
+            return null
+          }
+          var colon = context.current()
+          if (!checkForColon || values.size() == 0 && !context.peek(.COLON)) {
+            values.push(first)
+            checkForColon = false
+          } else {
+            if (!context.expect(.COLON)) {
+              return null
+            }
+            var second = pratt.parse(context, .LOWEST)
+            if (second == null) {
+              return null
+            }
+            values.push(Node.createPair(first, second).withRange(Range.span(first.range, second.range)).withInternalRange(colon.range))
+            kind = .INITIALIZER_MAP
+          }
+          if (!context.eat(.COMMA)) {
+            break
+          }
+        }
+        if (!context.expect(end)) {
+          return null
+        }
+      }
+      return Node.createInitializer(kind, values).withRange(context.spanSince(token.range))
+    }
+  }
+
   class IndexParselet : InfixParselet {
     override Node parse(ParserContext context, Node left) {
       var token = context.next()
@@ -1051,7 +1091,10 @@ namespace skew {
     pratt.parselet(.ASSIGN_INDEX, .MEMBER).infix = IndexParselet()
     pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrLambdaParselet()
+    pratt.parselet(.INDEX, .LOWEST).prefix = InitializerParselet()
     pratt.parselet(.INDEX, .MEMBER).infix = IndexParselet()
+    pratt.parselet(.LEFT_BRACE, .LOWEST).prefix = InitializerParselet()
+    pratt.parselet(.LEFT_BRACKET, .LOWEST).prefix = InitializerParselet()
     pratt.parselet(.LEFT_BRACKET, .MEMBER).infix = IndexParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet()
