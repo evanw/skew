@@ -1073,8 +1073,14 @@ namespace skew.resolving {
 
       // Avoid infinite expansion
       var isComparison = node.kind.isBinaryComparison()
-      if (isComparison && cache.isNumeric(target.resolvedType) && cache.isNumeric(node.binaryRight().resolvedType)) {
+      if (isComparison && cache.isNumeric(type) && cache.isNumeric(node.binaryRight().resolvedType)) {
         return
+      }
+
+      // Auto-convert int to double when it appears as the target
+      if (node.kind.isBinary() && type == cache.intType && node.binaryRight().resolvedType == cache.doubleType) {
+        checkConversion(target, cache.doubleType, .IMPLICIT)
+        type = cache.doubleType
       }
 
       // Find the operator method
