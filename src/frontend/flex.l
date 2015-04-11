@@ -14,6 +14,7 @@
 "dynamic"                         DYNAMIC;
 "else"                            ELSE;
 "false"                           FALSE;
+"for"                             FOR;
 "if"                              IF;
 "in"                              IN;
 "interface"                       INTERFACE;
@@ -40,6 +41,7 @@
 "]"                               RIGHT_BRACKET;
 "=>"                              ARROW;
 "~"                               TILDE;
+".."                              DOT_DOT;
 "."                               DOT;
 ","                               COMMA;
 "?"                               QUESTION_MARK;

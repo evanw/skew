@@ -108,6 +108,7 @@ namespace skew {
     Type boolType = null
     Type doubleType = null
     Type intType = null
+    Type listType = null
     Type stringType = null
 
     new() {
@@ -118,11 +119,16 @@ namespace skew {
       boolType = loadGlobalClass(log, global, "bool", .VALUE_TYPE)
       doubleType = loadGlobalClass(log, global, "double", .VALUE_TYPE)
       intType = loadGlobalClass(log, global, "int", .VALUE_TYPE)
+      listType = loadGlobalClass(log, global, "List", 0)
       stringType = loadGlobalClass(log, global, "string", .VALUE_TYPE)
     }
 
     bool isNumeric(Type type) {
       return type == intType || type == doubleType
+    }
+
+    bool isList(Type type) {
+      return type.symbol == listType.symbol
     }
 
     bool canImplicitlyConvert(Type from, Type to) {

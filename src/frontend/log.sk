@@ -289,5 +289,13 @@ namespace skew {
     void semanticErrorDuplicateAnnotation(Range range, string annotation, string name) {
       error(range, "Duplicate annotation \"" + annotation + "\" on \"" + name + "\"")
     }
+
+    void semanticErrorBadForValue(Range range, Type type) {
+      error(range, "Cannot iterate over type \"" + type + "\"")
+    }
+
+    void semanticWarningEmptyRange(Range range) {
+      warning(range, "This range is empty")
+    }
   }
 }

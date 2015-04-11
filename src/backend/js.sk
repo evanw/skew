@@ -170,6 +170,23 @@ namespace skew {
             emit(";\n")
           }
 
+          case .FOR {
+            var value = node.forValue()
+            if (value.kind == .PAIR) {
+              emit(indent + "for (var " + node.symbol.name + " = ")
+              emitExpression(value.firstValue(), .LOWEST)
+              emit("; " + node.symbol.name + " < ")
+              emitExpression(value.secondValue(), .LOWEST)
+              emit("; " + node.symbol.name + "++")
+            } else {
+              emit(indent + "for (var " + node.symbol.name + " in ")
+              emitExpression(value, .LOWEST)
+            }
+            emit(")")
+            emitBlock(node.forBlock())
+            emit("\n")
+          }
+
           case .IF {
             emit(indent + "if (")
             emitExpression(node.ifTest(), .LOWEST)

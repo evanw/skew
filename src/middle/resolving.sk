@@ -334,11 +334,13 @@ namespace skew.resolving {
       node.resolvedType = .DYNAMIC
       switch (node.kind) {
         case .BLOCK { resolveBlock(node, scope) }
+        case .PAIR { resolvePair(node, scope) }
 
         // Statements
         case .BREAK {}
         case .CONTINUE {}
         case .EXPRESSION { resolveExpression(node, scope) }
+        case .FOR { resolveFor(node, scope) }
         case .IF { resolveIf(node, scope) }
         case .IMPLICIT_RETURN, .RETURN { resolveReturn(node, scope) }
         case .VAR { resolveVar(node, scope) }
@@ -540,11 +542,6 @@ namespace skew.resolving {
     void resolveBlock(Node node, Scope scope) {
       assert node.kind == .BLOCK
 
-      // Introduce a new scope for nested blocks
-      if (node.parent != null) {
-        scope = LocalScope(scope)
-      }
-
       var children = node.children
       var n = children.size()
 
@@ -570,18 +567,66 @@ namespace skew.resolving {
       }
     }
 
+    void resolvePair(Node node, Scope scope) {
+      resolveAsParameterizedExpression(node.firstValue(), scope)
+      resolveAsParameterizedExpression(node.secondValue(), scope)
+    }
+
     void resolveExpression(Node node, Scope scope) {
       var value = node.expressionValue()
       resolveAsParameterizedExpression(value, scope)
       checkUnusedExpression(value)
     }
 
+    void resolveFor(Node node, Scope scope) {
+      Type type = .DYNAMIC
+      scope = LocalScope(scope)
+
+      var value = node.forValue()
+      resolveAsParameterizedExpression(value, scope)
+
+      // Support "for i in 0..10"
+      if (value.kind == .PAIR) {
+        var first = value.firstValue()
+        var second = value.secondValue()
+        type = cache.intType
+        checkConversion(first, cache.intType, .IMPLICIT)
+        checkConversion(second, cache.intType, .IMPLICIT)
+
+        // The ".." syntax only counts up, unlike CoffeeScript
+        if (first.kind == .CONSTANT && first.content.kind() == .INT &&
+            second.kind == .CONSTANT && second.content.kind() == .INT &&
+            first.content.asInt() >= second.content.asInt()) {
+          log.semanticWarningEmptyRange(value.range)
+        }
+      }
+
+      // Support "for i in [1, 2, 3]"
+      else if (cache.isList(value.resolvedType)) {
+        type = value.resolvedType.substitutions[0]
+      }
+
+      // Anything else is an error
+      else if (value.resolvedType != .DYNAMIC) {
+        log.semanticErrorBadForValue(value.range, value.resolvedType)
+      }
+
+      // Special-case symbol initialization with the type
+      var symbol = node.symbol.asVariableSymbol()
+      scope.asLocalScope().define(symbol, log)
+      symbol.resolvedType = type
+      symbol.flags |= .CONST
+      symbol.state = .INITIALIZED
+
+      resolveBlock(node.forBlock(), scope)
+    }
+
     void resolveIf(Node node, Scope scope) {
       var ifFalse = node.ifFalse()
       resolveAsParameterizedExpressionWithConversion(node.ifTest(), scope, cache.boolType)
-      resolveBlock(node.ifTrue(), scope)
+      resolveBlock(node.ifTrue(), LocalScope(scope))
       if (ifFalse != null) {
-        resolveBlock(ifFalse, scope)
+        resolveBlock(ifFalse, LocalScope(scope))
       }
     }
 
@@ -640,7 +685,7 @@ namespace skew.resolving {
 
     void resolveWhile(Node node, Scope scope) {
       resolveAsParameterizedExpressionWithConversion(node.whileTest(), scope, cache.boolType)
-      resolveBlock(node.whileBlock(), scope)
+      resolveBlock(node.whileBlock(), LocalScope(scope))
     }
 
     void resolveCall(Node node, Scope scope) {
@@ -851,13 +896,7 @@ namespace skew.resolving {
 
     void resolveInitializer(Node node, Scope scope) {
       for (var i = 0; i < node.children.size(); i++) {
-        var value = node.children[i]
-        if (value.kind == .PAIR) {
-          resolveAsParameterizedExpression(value.firstValue(), scope)
-          resolveAsParameterizedExpression(value.secondValue(), scope)
-        } else {
-          resolveAsParameterizedExpression(value, scope)
-        }
+        resolveAsParameterizedExpression(node.children[i], scope)
       }
     }
 

@@ -144,16 +144,50 @@ namespace skew {
     return Node.createReturn(value).withRange(context.spanSince(token.range))
   }
 
+  Node parseFor(ParserContext context) {
+    var token = context.next()
+    var range = context.current().range
+
+    if (!context.expect(.IDENTIFIER) || !context.expect(.IN)) {
+      return null
+    }
+
+    var symbol = VariableSymbol(.VARIABLE_LOCAL, range.toString())
+    symbol.range = range
+
+    var value = pratt.parse(context, .LOWEST)
+    if (value == null) {
+      return null
+    }
+
+    if (context.eat(.DOT_DOT)) {
+      var second = pratt.parse(context, .LOWEST)
+      if (second == null) {
+        return null
+      }
+      value = Node.createPair(value, second).withRange(Range.span(value.range, second.range))
+    }
+
+    var block = parseBlock(context)
+    if (block == null) {
+      return null
+    }
+
+    return Node.createFor(symbol, value, block).withRange(context.spanSince(token.range))
+  }
+
   Node parseIf(ParserContext context) {
     var token = context.next()
     var test = pratt.parse(context, .LOWEST)
     if (test == null) {
       return null
     }
+
     var trueBlock = parseBlock(context)
     if (trueBlock == null) {
       return null
     }
+
     Node falseBlock = null
     if (context.eat(.ELSE)) {
       if (context.peek(.IF)) {
@@ -169,6 +203,7 @@ namespace skew {
         }
       }
     }
+
     return Node.createIf(test, trueBlock, falseBlock).withRange(context.spanSince(token.range))
   }
 
@@ -178,10 +213,12 @@ namespace skew {
     if (test == null) {
       return null
     }
+
     var block = parseBlock(context)
     if (block == null) {
       return null
     }
+
     return Node.createWhile(test, block).withRange(context.spanSince(token.range))
   }
 
@@ -191,6 +228,7 @@ namespace skew {
     switch (token.kind) {
       case .BREAK, .CONTINUE { return parseJump(context) }
       case .CONST, .VAR { return parseVarOrConst(context) }
+      case .FOR { return parseFor(context) }
       case .IF { return parseIf(context) }
       case .RETURN { return parseReturn(context) }
       case .WHILE { return parseWhile(context) }

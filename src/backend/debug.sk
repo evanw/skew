@@ -196,6 +196,13 @@ namespace skew {
             emit("\n")
           }
 
+          case .FOR {
+            emit(indent + "for " + node.symbol.name + " in ")
+            emitExpression(node.forValue(), .LOWEST)
+            emitBlock(node.forBlock())
+            emit("\n")
+          }
+
           case .IF {
             emit(indent + "if ")
             emitExpression(node.ifTest(), .LOWEST)

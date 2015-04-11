@@ -734,5 +734,61 @@ def main(x List<double>) {
                ~~~~~~~~
 ")
 
+test("
+def main(i int) {
+  for i in false..false {
+    i = false
+  }
+  for i in List<string>.new {
+    i = false
+  }
+  for i in 0 {
+    i = false
+  }
+  for j in 0..10 {}
+  for j in 10..0 {}
+}
+", "
+<stdin>:2:12: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  for i in false..false {
+           ~~~~~
+<stdin>:2:19: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  for i in false..false {
+                  ~~~~~
+<stdin>:2:7: error: \"i\" shadows a previous declaration
+  for i in false..false {
+      ^
+<stdin>:1:10: note: The previous declaration is here
+def main(i int) {
+         ^
+<stdin>:3:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    i = false
+        ~~~~~
+<stdin>:5:7: error: \"i\" shadows a previous declaration
+  for i in List<string>.new {
+      ^
+<stdin>:1:10: note: The previous declaration is here
+def main(i int) {
+         ^
+<stdin>:6:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    i = false
+        ~~~~~
+<stdin>:8:12: error: Cannot iterate over type \"int\"
+  for i in 0 {
+           ^
+<stdin>:8:7: error: \"i\" shadows a previous declaration
+  for i in 0 {
+      ^
+<stdin>:1:10: note: The previous declaration is here
+def main(i int) {
+         ^
+<stdin>:9:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    i = false
+        ~~~~~
+<stdin>:12:12: warning: This range is empty
+  for j in 10..0 {}
+           ~~~~~
+")
+
   }
 }

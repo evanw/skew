@@ -8,6 +8,7 @@ namespace skew {
     BREAK
     CONTINUE
     EXPRESSION
+    FOR
     IF
     IMPLICIT_RETURN
     RETURN
@@ -293,6 +294,12 @@ namespace skew {
       return Node(.EXPRESSION).withChildren([value])
     }
 
+    static Node createFor(VariableSymbol symbol, Node value, Node block) {
+      assert value.kind.isExpression()
+      assert block.kind == .BLOCK
+      return Node(.FOR).withSymbol(symbol).withChildren([value, block])
+    }
+
     static Node createIf(Node test, Node trueBlock, Node falseBlock) {
       assert test.kind.isExpression()
       assert trueBlock.kind == .BLOCK
@@ -552,6 +559,20 @@ namespace skew {
 
     Node whileBlock() {
       assert kind == .WHILE
+      assert children.size() == 2
+      assert children[1].kind == .BLOCK
+      return children[1]
+    }
+
+    Node forValue() {
+      assert kind == .FOR
+      assert children.size() == 2
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node forBlock() {
+      assert kind == .FOR
       assert children.size() == 2
       assert children[1].kind == .BLOCK
       return children[1]
