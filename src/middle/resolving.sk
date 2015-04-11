@@ -1097,7 +1097,7 @@ namespace skew.resolving {
         if (reverseBinaryOrder) {
           node.children.reverse()
         }
-        resolveFunctionCall(node, scope, symbol.resolvedType)
+        resolveFunctionCall(node, scope, cache.substitute(symbol.resolvedType, type.environment))
         if (reverseBinaryOrder) {
           node.children.reverse()
         }

@@ -729,7 +729,7 @@ def main(x List<double>) {
 <stdin>:2:18: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   var y bool = x[false]
                  ~~~~~
-<stdin>:2:16: error: Cannot convert from type \"double\" to type \"bool\"
+<stdin>:2:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
   var y bool = x[false]
                ~~~~~~~~
 ")
