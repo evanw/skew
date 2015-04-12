@@ -353,7 +353,7 @@ namespace skew.resolving {
         case .CONSTANT { resolveConstant(node, scope) }
         case .DOT { resolveDot(node, scope) }
         case .DYNAMIC {}
-        case .HOOK { resolveHook(node, scope) }
+        case .HOOK { resolveHook(node, scope, context) }
         case .INDEX { resolveIndex(node, scope) }
         case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET { resolveInitializer(node, scope) }
         case .LAMBDA { resolveLambda(node, scope, context) }
@@ -888,10 +888,31 @@ namespace skew.resolving {
       automaticallyCallGetter(node, scope)
     }
 
-    void resolveHook(Node node, Scope scope) {
+    void resolveHook(Node node, Scope scope, Type context) {
       resolveAsParameterizedExpressionWithConversion(node.hookTest(), scope, cache.boolType)
-      resolveAsParameterizedExpression(node.hookTrue(), scope) // TODO: resolveAsParameterizedExpressionWithConversion()
-      resolveAsParameterizedExpression(node.hookFalse(), scope) // TODO: resolveAsParameterizedExpressionWithConversion()
+
+      var trueValue = node.hookTrue()
+      var falseValue = node.hookFalse()
+
+      // Use the type context from the parent
+      if (context != null) {
+        resolveAsParameterizedExpressionWithConversion(trueValue, scope, context)
+        resolveAsParameterizedExpressionWithConversion(falseValue, scope, context)
+        node.resolvedType = context
+      }
+
+      // Find the common type from both branches
+      else {
+        resolveAsParameterizedExpression(trueValue, scope)
+        resolveAsParameterizedExpression(falseValue, scope)
+        var common = cache.commonImplicitType(trueValue.resolvedType, falseValue.resolvedType)
+
+        if (common != null) {
+          node.resolvedType = common
+        } else {
+          log.semanticErrorNoCommonType(Range.span(trueValue.range, falseValue.range), trueValue.resolvedType, falseValue.resolvedType)
+        }
+      }
     }
 
     void resolveInitializer(Node node, Scope scope) {

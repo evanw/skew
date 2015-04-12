@@ -790,5 +790,22 @@ def main(i int) {
            ~~~~~
 ")
 
+test("
+def main {
+  var foo = true ? false : 0
+  var bar bool = true ? 0 : 0.5
+}
+", "
+<stdin>:2:20: error: No common type for \"bool\" and \"int\"
+  var foo = true ? false : 0
+                   ~~~~~~~~~
+<stdin>:3:25: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var bar bool = true ? 0 : 0.5
+                        ^
+<stdin>:3:29: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var bar bool = true ? 0 : 0.5
+                            ~~~
+")
+
   }
 }
