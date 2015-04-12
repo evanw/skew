@@ -107,8 +107,10 @@ namespace skew {
   class TypeCache {
     Type boolType = null
     Type doubleType = null
+    Type intMapType = null
     Type intType = null
     Type listType = null
+    Type stringMapType = null
     Type stringType = null
 
     new() {
@@ -118,8 +120,10 @@ namespace skew {
     void loadGlobals(Log log, ObjectSymbol global) {
       boolType = loadGlobalClass(log, global, "bool", .VALUE_TYPE)
       doubleType = loadGlobalClass(log, global, "double", .VALUE_TYPE)
+      intMapType = loadGlobalClass(log, global, "IntMap", 0)
       intType = loadGlobalClass(log, global, "int", .VALUE_TYPE)
       listType = loadGlobalClass(log, global, "List", 0)
+      stringMapType = loadGlobalClass(log, global, "StringMap", 0)
       stringType = loadGlobalClass(log, global, "string", .VALUE_TYPE)
     }
 
@@ -165,6 +169,18 @@ namespace skew {
       // }
 
       return null
+    }
+
+    Type createListType(Type itemType) {
+      return substitute(listType, createEnvironment(listType.parameters(), [itemType]))
+    }
+
+    Type createIntMapType(Type valueType) {
+      return substitute(intMapType, createEnvironment(intMapType.parameters(), [valueType]))
+    }
+
+    Type createStringMapType(Type valueType) {
+      return substitute(stringMapType, createEnvironment(stringMapType.parameters(), [valueType]))
     }
 
     Environment createEnvironment(List<ParameterSymbol> parameters, List<Type> substitutions) {

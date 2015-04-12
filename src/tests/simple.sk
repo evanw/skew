@@ -807,5 +807,129 @@ def main {
                             ~~~
 ")
 
+test("
+def main {
+  var a int = [false]
+  var b List<int> = [false]
+  var c List<List<int>> = [[false]]
+  var d int = {1: 2}
+  var e IntMap<bool> = {\"a\": \"b\"}
+  var f StringMap<bool> = {1: 2}
+  [false, 0]
+  [0, 0.5] - 1
+  [null, [1], [0.5]]
+  [null]
+  []
+  {0: 1} - 1
+  {\"a\": 1} - 1
+  {0.5: 1} - 1
+}
+", "
+<stdin>:2:15: error: \"[...]\" is not declared on type \"int\"
+  var a int = [false]
+              ~~~~~~~
+<stdin>:3:22: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var b List<int> = [false]
+                     ~~~~~
+<stdin>:4:29: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var c List<List<int>> = [[false]]
+                            ~~~~~
+<stdin>:5:15: error: \"{...}\" is not declared on type \"int\"
+  var d int = {1: 2}
+              ~~~~~~
+<stdin>:6:25: error: Cannot convert from type \"string\" to type \"int\"
+  var e IntMap<bool> = {\"a\": \"b\"}
+                        ~~~
+<stdin>:6:30: error: Cannot convert from type \"string\" to type \"bool\"
+  var e IntMap<bool> = {\"a\": \"b\"}
+                             ~~~
+<stdin>:7:28: error: Cannot convert from type \"int\" to type \"string\"
+  var f StringMap<bool> = {1: 2}
+                           ^
+<stdin>:7:31: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var f StringMap<bool> = {1: 2}
+                              ^
+<stdin>:8:11: error: No common type for \"bool\" and \"int\"
+  [false, 0]
+          ^
+<stdin>:8:3: warning: Unused expression
+  [false, 0]
+  ~~~~~~~~~~
+<stdin>:9:12: error: \"-\" is not declared on type \"List<double>\"
+  [0, 0.5] - 1
+           ^
+<stdin>:10:15: error: No common type for \"List<int>\" and \"List<double>\"
+  [null, [1], [0.5]]
+              ~~~~~
+<stdin>:10:3: warning: Unused expression
+  [null, [1], [0.5]]
+  ~~~~~~~~~~~~~~~~~~
+<stdin>:11:3: error: Cannot infer a type for this literal
+  [null]
+  ~~~~~~
+<stdin>:12:3: error: Cannot infer a type for this literal
+  []
+  ~~
+<stdin>:13:10: error: \"-\" is not declared on type \"IntMap<int>\"
+  {0: 1} - 1
+         ^
+<stdin>:14:12: error: \"-\" is not declared on type \"StringMap<int>\"
+  {\"a\": 1} - 1
+           ^
+<stdin>:15:3: error: Cannot infer a type for this literal
+  {0.5: 1} - 1
+  ~~~~~~~~
+")
+
+test("
+class A {}
+
+class B {
+  def [...] {}
+}
+
+class C {
+  def new {}
+  def [...] {}
+}
+
+class D {
+  def new {}
+  def [...](x bool) D { return self }
+}
+
+def main {
+  var a A = [1, 2]
+  var b B = [1, 2]
+  var c C = [1, 2]
+  var d D = [1, 2]
+}
+", "
+<stdin>:4:7: error: Expected \"[...]\" to take 1 argument
+  def [...] {}
+      ~~~~~
+<stdin>:9:7: error: Expected \"[...]\" to take 1 argument
+  def [...] {}
+      ~~~~~
+<stdin>:18:13: error: \"[...]\" is not declared on type \"A\"
+  var a A = [1, 2]
+            ~~~~~~
+<stdin>:19:13: error: \"new\" is not declared on type \"B\"
+  var b B = [1, 2]
+            ~~~~~~
+<stdin>:20:14: error: The function \"[...]\" does not return a value
+  var c C = [1, 2]
+             ^
+<stdin>:20:14: error: Expected 0 arguments but found 1 argument
+  var c C = [1, 2]
+             ^
+<stdin>:21:14: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var d D = [1, 2]
+             ^
+<stdin>:21:17: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var d D = [1, 2]
+                ^
+")
+
   }
 }

@@ -216,6 +216,10 @@ namespace skew {
 
       void emitExpression(Node node, Precedence precedence) {
         switch (node.kind) {
+          case .TYPE {
+            emit(node.resolvedType.symbol.fullName())
+          }
+
           case .NULL {
             emit("null")
           }

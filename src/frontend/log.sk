@@ -297,5 +297,9 @@ namespace skew {
     void semanticWarningEmptyRange(Range range) {
       warning(range, "This range is empty")
     }
+
+    void semanticErrorInitializerTypeInferenceFailed(Range range) {
+      error(range, "Cannot infer a type for this literal")
+    }
   }
 }

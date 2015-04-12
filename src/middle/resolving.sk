@@ -355,7 +355,7 @@ namespace skew.resolving {
         case .DYNAMIC {}
         case .HOOK { resolveHook(node, scope, context) }
         case .INDEX { resolveIndex(node, scope) }
-        case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET { resolveInitializer(node, scope) }
+        case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET { resolveInitializer(node, scope, context) }
         case .LAMBDA { resolveLambda(node, scope, context) }
         case .LAMBDA_TYPE { resolveLambdaType(node, scope) }
         case .NAME { resolveName(node, scope) }
@@ -915,10 +915,116 @@ namespace skew.resolving {
       }
     }
 
-    void resolveInitializer(Node node, Scope scope) {
-      for (var i = 0; i < node.children.size(); i++) {
+    void resolveInitializer(Node node, Scope scope, Type context) {
+      var count = node.children.size()
+
+      if (context != null) {
+        node.resolvedType = context
+
+        // Find the operator method
+        if (context != .DYNAMIC) {
+          var name = node.kind == .INITIALIZER_LIST ? "[...]" : "{...}"
+          var symbol = findMember(context, name, node.range, .ERROR_FAILURE)
+          if (symbol != null) {
+
+            // Special-case for imported literals (List, IntMap, and StringMap)
+            if (symbol.isImported() && symbol.kind == .FUNCTION_INSTANCE) {
+              var function = symbol.asFunctionSymbol()
+              if (function.arguments.size() == (node.kind == .INITIALIZER_MAP ? 2 : 1)) {
+                var functionType = cache.substitute(function.resolvedType, context.environment)
+                for (var i = 0; i < count; i++) {
+                  var child = node.children[i]
+                  if (child.kind == .PAIR) {
+                    resolveAsParameterizedExpressionWithConversion(child.firstValue(), scope, functionType.argumentTypes[0])
+                    resolveAsParameterizedExpressionWithConversion(child.secondValue(), scope, functionType.argumentTypes[1])
+                  } else {
+                    resolveAsParameterizedExpressionWithConversion(child, scope, functionType.argumentTypes[0])
+                  }
+                }
+                return
+              }
+            }
+
+            // Use simple call chaining for normal list literals
+            var chain = Node.createDot(Node.createType(context).withRange(node.range), "new").withRange(node.range).withInternalRange(node.range)
+            for (var i = 0; i < count; i++) {
+              var child = node.children[i]
+              var dot = Node.createDot(chain, name).withRange(child.range).withInternalRange(child.range)
+              var arguments = child.kind == .PAIR ? [child.firstValue().replaceWithNull(), child.secondValue().replaceWithNull()] : [child.replaceWithNull()]
+              chain = Node.createCall(dot, arguments).withRange(child.range).withInternalRange(child.range)
+            }
+            node.become(chain)
+            resolveAsParameterizedExpressionWithConversion(node, scope, context)
+            return
+          }
+        }
+
+        // Make sure to resolve the children even if the initializer is invalid
+        for (var i = 0; i < count; i++) {
+          resolveAsParameterizedExpression(node.children[i], scope)
+        }
+        return
+      }
+
+      // Resolve the children first so their types can be inspected
+      for (var i = 0; i < count; i++) {
         resolveAsParameterizedExpression(node.children[i], scope)
       }
+
+      switch (node.kind) {
+        case .INITIALIZER_LIST {
+          Type type = null
+
+          for (var i = 0; i < count; i++) {
+            type = mergeCommonType(type, node.children[i])
+          }
+
+          if (count != 0 && type != .NULL) {
+            node.resolvedType = cache.createListType(type)
+            return
+          }
+        }
+
+        case .INITIALIZER_MAP {
+          Type key = null
+          Type value = null
+
+          for (var i = 0; i < count; i++) {
+            var child = node.children[i]
+            key = mergeCommonType(key, child.firstValue())
+            value = mergeCommonType(value, child.secondValue())
+          }
+
+          if (count != 0 && key != .NULL && value != .NULL) {
+            if (key == cache.intType) {
+              node.resolvedType = cache.createIntMapType(value)
+              return
+            }
+            if (key == cache.stringType) {
+              node.resolvedType = cache.createStringMapType(value)
+              return
+            }
+          }
+        }
+      }
+
+      log.semanticErrorInitializerTypeInferenceFailed(node.range)
+    }
+
+    Type mergeCommonType(Type commonType, Node child) {
+      if (commonType == null || child.resolvedType == .DYNAMIC) {
+        return child.resolvedType
+      }
+
+      if (commonType != .DYNAMIC) {
+        var result = cache.commonImplicitType(commonType, child.resolvedType)
+        if (result != null) {
+          return result
+        }
+        log.semanticErrorNoCommonType(child.range, commonType, child.resolvedType)
+      }
+
+      return .DYNAMIC
     }
 
     void resolveLambda(Node node, Scope scope, Type context) {
@@ -1068,6 +1174,8 @@ namespace skew.resolving {
       if (kind == .EQUAL || kind == .NOT_EQUAL) {
         resolveAsParameterizedExpression(left, scope)
         resolveAsParameterizedExpression(right, scope)
+
+        // The two types must be compatible
         if (left.resolvedType != .DYNAMIC && right.resolvedType != .DYNAMIC) {
           var commonType = cache.commonImplicitType(left.resolvedType, right.resolvedType)
           if (commonType != null) {
@@ -1076,29 +1184,32 @@ namespace skew.resolving {
             log.semanticErrorNoCommonType(node.range, left.resolvedType, right.resolvedType)
           }
         }
+
         return
       }
 
-      resolveAsParameterizedExpression(left, scope)
-
       if (kind == .ASSIGN) {
+        resolveAsParameterizedExpression(left, scope)
+
         // Automatically call setters
         if (left.symbol != null && left.symbol.isSetter()) {
           node.become(Node.createCall(left.replaceWithNull(), [right.replaceWithNull()]).withRange(node.range).withInternalRange(right.range))
           resolveAsParameterizedExpression(node, scope)
-          return
         }
 
         // Resolve the right side using type context from the left side
-        resolveAsParameterizedExpressionWithConversion(right, scope, left.resolvedType)
-        node.resolvedType = left.resolvedType
-        checkStorage(left)
+        else {
+          resolveAsParameterizedExpressionWithConversion(right, scope, left.resolvedType)
+          node.resolvedType = left.resolvedType
+          checkStorage(left)
+        }
+
+        return
       }
 
-      else {
-        resolveAsParameterizedExpression(right, scope) // TODO: Pass type context if the member is unambiguous
-        resolveOperatorOverload(node, scope)
-      }
+      resolveAsParameterizedExpression(left, scope)
+      resolveAsParameterizedExpression(right, scope) // TODO: Pass type context if the member is unambiguous
+      resolveOperatorOverload(node, scope)
     }
 
     void resolveIndex(Node node, Scope scope) {
