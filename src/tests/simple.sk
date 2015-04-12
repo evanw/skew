@@ -936,6 +936,10 @@ class Foo {
   def foo int {
     return Bar<int>.new.foo
   }
+
+  def bar List<int> {
+    return Bar<int>.new.foo
+  }
 }
 
 class Bar<X> {
