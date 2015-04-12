@@ -931,5 +931,22 @@ def main {
                 ^
 ")
 
+test("
+class Foo {
+  def foo int {
+    return Bar<int>.new.foo
+  }
+}
+
+class Bar<X> {
+  def new
+  def foo List<X>
+}
+", "
+<stdin>:3:12: error: Cannot convert from type \"List<int>\" to type \"int\"
+    return Bar<int>.new.foo
+           ~~~~~~~~~~~~~~~~
+")
+
   }
 }

@@ -94,6 +94,18 @@ namespace skew {
     final List<Type> substitutions
     final IntMap<Environment> mergeCache = null
 
+    // This is just for debugging
+    string toString() {
+      var text = "("
+      for (var i = 0; i < parameters.size(); i++) {
+        if (i != 0) {
+          text += ", "
+        }
+        text += parameters[i].name + " => " + substitutions[i]
+      }
+      return text + ")"
+    }
+
     private static {
       int createID() {
         nextID++
@@ -243,6 +255,13 @@ namespace skew {
     Environment mergeEnvironments(Environment a, Environment b) {
       List<ParameterSymbol> parameters = a.parameters.clone()
       List<Type> substitutions = a.substitutions.clone()
+
+      // Include environment A
+      for (var i = 0; i < substitutions.size(); i++) {
+        substitutions[i] = substitute(substitutions[i], b)
+      }
+
+      // Include environment B
       for (var i = 0; i < b.parameters.size(); i++) {
         var parameter = b.parameters[i]
         var substitution = b.substitutions[i]
@@ -254,6 +273,7 @@ namespace skew {
           substitutions.push(substitution)
         }
       }
+
       return createEnvironment(parameters, substitutions)
     }
 
