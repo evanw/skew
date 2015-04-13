@@ -93,7 +93,7 @@ def main {
 <stdin>:19:29: error: Cannot convert from type \"double\" to type \"fn(int) string\"
   var y int = x.map<string>(1.0)
                             ~~~
-<stdin>:19:15: error: Cannot convert from type \"Foo<int>\" to type \"int\"
+<stdin>:19:15: error: Cannot convert from type \"Foo<string>\" to type \"int\"
   var y int = x.map<string>(1.0)
               ~~~~~~~~~~~~~~~~~~
 ")

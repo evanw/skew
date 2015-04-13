@@ -254,14 +254,7 @@ namespace skew {
 
     Environment mergeEnvironments(Environment a, Environment b) {
       List<ParameterSymbol> parameters = a.parameters.clone()
-      List<Type> substitutions = a.substitutions.clone()
-
-      // Include environment A
-      for (var i = 0; i < substitutions.size(); i++) {
-        substitutions[i] = substitute(substitutions[i], b)
-      }
-
-      // Include environment B
+      List<Type> substitutions = substituteAll(a.substitutions, b)
       for (var i = 0; i < b.parameters.size(); i++) {
         var parameter = b.parameters[i]
         var substitution = b.substitutions[i]
@@ -273,7 +266,6 @@ namespace skew {
           substitutions.push(substitution)
         }
       }
-
       return createEnvironment(parameters, substitutions)
     }
 
@@ -290,14 +282,27 @@ namespace skew {
       return substitute(type, createEnvironment(parameters, substitutions))
     }
 
+    List<Type> substituteAll(List<Type> types, Environment environment) {
+      List<Type> substitutions = []
+      for (var i = 0; i < types.size(); i++) {
+        substitutions.push(substitute(types[i], environment))
+      }
+      return substitutions
+    }
+
     Type substitute(Type type, Environment environment) {
-      if (environment == null || environment == type.environment) {
+      var existing = type.environment
+      if (environment == null || environment == existing) {
         return type
       }
 
-      // Merge the type environments, which matters for nested generics
-      if (type.environment != null) {
-        environment = mergeEnvironments(type.environment, environment)
+      // Merge the type environments (this matters for nested generics)
+      if (existing != null) {
+        if (type.kind == .SYMBOL && type.symbol.kind.isFunctionOrOverloadedFunction()) {
+          environment = mergeEnvironments(existing, environment)
+        } else {
+          environment = createEnvironment(existing.parameters, substituteAll(existing.substitutions, environment))
+        }
       }
 
       // Check to see if this has been computed before
