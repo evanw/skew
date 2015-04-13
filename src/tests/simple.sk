@@ -805,6 +805,10 @@ def main {
   {0: 1} - 1
   {\"a\": 1} - 1
   {0.5: 1} - 1
+  [foo]
+}
+
+def foo(x int) {
 }
 ", "
 <stdin>:2:15: error: Cannot infer a type for this literal
@@ -861,6 +865,9 @@ def main {
 <stdin>:15:3: error: Cannot infer a type for this literal
   {0.5: 1} - 1
   ~~~~~~~~
+<stdin>:16:3: error: Cannot infer a type for this literal
+  [foo]
+  ~~~~~
 ")
 
 test("

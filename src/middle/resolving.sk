@@ -1018,7 +1018,7 @@ namespace skew.resolving {
             type = mergeCommonType(type, node.children[i])
           }
 
-          if (count != 0 && type != .NULL) {
+          if (count != 0 && isValidVariableType(type)) {
             node.resolvedType = cache.createListType(type)
             return
           }
@@ -1034,7 +1034,7 @@ namespace skew.resolving {
             value = mergeCommonType(value, child.secondValue())
           }
 
-          if (count != 0 && key != .NULL && value != .NULL) {
+          if (count != 0 && isValidVariableType(key) && isValidVariableType(value)) {
             if (key == cache.intType) {
               node.resolvedType = cache.createIntMapType(value)
               return
