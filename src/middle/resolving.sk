@@ -527,7 +527,7 @@ namespace skew.resolving {
 
       // Make sure annotations have the arguments they need
       if (value.kind != .CALL) {
-        log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.size(), 0, value.symbol)
+        log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.size(), 0, value.symbol.name)
         return
       }
 
@@ -786,7 +786,7 @@ namespace skew.resolving {
 
       // Check argument count
       if (expected != count) {
-        log.semanticErrorArgumentCount(node.internalRangeOrRange(), expected, count, function)
+        log.semanticErrorArgumentCount(node.internalRangeOrRange(), expected, count, function != null ? function.name : "")
         return false
       }
 
