@@ -34,6 +34,10 @@ namespace skew {
       return substitutions != null
     }
 
+    bool isClass() {
+      return symbol != null && symbol.kind == .OBJECT_CLASS
+    }
+
     // Type parameters are not guaranteed to be nullable since generics are
     // implemented through type erasure and the substituted type may be "int"
     bool isReference() {
@@ -67,6 +71,21 @@ namespace skew {
       }
 
       return this == DYNAMIC ? "dynamic" : "null"
+    }
+
+    Type baseClass() {
+      if (isClass()) {
+        var base = symbol.asObjectSymbol().base
+        if (base != null) {
+          return base.resolvedType
+        }
+      }
+      return null
+    }
+
+    bool hasBaseType(Type type) {
+      var base = baseClass()
+      return base != null && (base == type || base.hasBaseType(type))
     }
 
     static void intialize() {
@@ -151,14 +170,14 @@ namespace skew {
       if (from == to) return true
       if (from == .NULL && to.isReference()) return true
       if (from == intType && to == doubleType) return true
-      // if (from.hasBaseType(to)) return true
+      if (from.hasBaseType(to)) return true
       return false
     }
 
     bool canExplicitlyConvert(Type from, Type to) {
       if (canImplicitlyConvert(from, to)) return true
       if (canCastToNumeric(from) && canCastToNumeric(to)) return true
-      // if (to.hasBaseType(from)) return true
+      if (to.hasBaseType(from)) return true
       return false
     }
 
@@ -175,10 +194,10 @@ namespace skew {
         return left == intType && right == intType ? intType : doubleType
       }
 
-      // // Check for a common base class
-      // if (left.isClass() && right.isClass()) {
-      //   return commonBaseClass(left, right)
-      // }
+      // Check for a common base class
+      if (left.isClass() && right.isClass()) {
+        return commonBaseClass(left, right)
+      }
 
       return null
     }
@@ -418,6 +437,17 @@ namespace skew {
           hash = hashCombine(hash, types[i].id)
         }
         return hash
+      }
+
+      static Type commonBaseClass(Type left, Type right) {
+        for (var a = left; a != null; a = a.baseClass()) {
+          for (var b = right; b != null; b = b.baseClass()) {
+            if (a == b) {
+              return a
+            }
+          }
+        }
+        return null
       }
     }
   }

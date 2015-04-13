@@ -118,6 +118,10 @@ namespace skew.resolving {
       // Resolve the base type (only for classes)
       if (symbol.base != null) {
         resolveAsParameterizedType(symbol.base, symbol.scope)
+        var baseType = symbol.base.resolvedType
+        if (baseType != .DYNAMIC && (baseType.kind != .SYMBOL || baseType.symbol.kind != .OBJECT_CLASS || baseType.symbol.isValueType())) {
+          log.semanticErrorInvalidBaseType(symbol.base.range, baseType)
+        }
       }
 
       resolveAnnotations(symbol)
@@ -909,13 +913,15 @@ namespace skew.resolving {
     }
 
     Symbol findMember(Type type, string name, Range range) {
-      if (type.kind == .SYMBOL) {
-        var symbol = type.symbol
-        if (symbol.kind.isObject()) {
-          var member = symbol.asObjectSymbol().members.getOrDefault(name, null)
-          if (member != null) {
-            initializeSymbol(member)
-            return member
+      for (var check = type; check != null; check = check.baseClass()) {
+        if (check.kind == .SYMBOL) {
+          var symbol = check.symbol
+          if (symbol.kind.isObject()) {
+            var member = symbol.asObjectSymbol().members.getOrDefault(name, null)
+            if (member != null) {
+              initializeSymbol(member)
+              return member
+            }
           }
         }
       }

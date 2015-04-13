@@ -312,5 +312,9 @@ namespace skew {
         note(previous, "The previous declaration is here")
       }
     }
+
+    void semanticErrorInvalidBaseType(Range range, Type type) {
+      error(range, "Cannot derive from type \"" + type + "\"")
+    }
   }
 }

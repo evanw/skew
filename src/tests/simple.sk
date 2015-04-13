@@ -1092,5 +1092,95 @@ def main(foo Foo<int>) {
            ~~~~
 ")
 
+test("
+class Foo is int {}
+class Bar is fn() {}
+class Baz is Baz {}
+", "
+<stdin>:1:14: error: Cannot derive from type \"int\"
+class Foo is int {}
+             ~~~
+<stdin>:2:14: error: Cannot derive from type \"fn()\"
+class Bar is fn() {}
+             ~~~~
+<stdin>:3:7: error: Cyclic declaration of \"Baz\"
+class Baz is Baz {}
+      ~~~
+")
+
+test("
+class Foo { def foo }
+class Bar is Foo { def bar }
+class Baz is Foo { def baz }
+
+def main(foo Foo, bar Bar, baz Baz) {
+  foo.foo
+  foo.bar
+  bar.foo
+  bar.bar
+  baz.foo
+  baz.bar
+}
+", "
+<stdin>:7:7: error: \"bar\" is not declared on type \"Foo\"
+  foo.bar
+      ~~~
+<stdin>:11:7: error: \"bar\" is not declared on type \"Baz\"
+  baz.bar
+      ~~~
+")
+
+test("
+class Foo { def new }
+class Bar is Foo { def new }
+class Baz is Foo { def new }
+
+def main {
+  var a Foo = Foo.new
+  var b Foo = Bar.new
+  var c Foo = Baz.new
+  var d Bar = Foo.new
+  var e Bar = Bar.new
+  var f Bar = Baz.new
+}
+", "
+<stdin>:9:15: error: Cannot convert from type \"Foo\" to type \"Bar\" without a cast
+  var d Bar = Foo.new
+              ~~~~~~~
+<stdin>:11:15: error: Cannot convert from type \"Baz\" to type \"Bar\"
+  var f Bar = Baz.new
+              ~~~~~~~
+")
+
+test("
+class Foo<T> { def new }
+class Bar is Foo<int> { def new }
+class Baz is Foo<int> { def new }
+
+def main {
+  var foo = true ? Bar.new : Baz.new
+  var bar int = foo
+}
+", "
+<stdin>:7:17: error: Cannot convert from type \"Foo<int>\" to type \"int\"
+  var bar int = foo
+                ~~~
+")
+
+test("
+class Foo<T> { def new }
+class Bar is Foo<int> { def new }
+class Baz is Foo<bool> { def new }
+
+def main {
+  var foo = true ? Bar.new : Baz.new
+  var bar int = foo
+}
+", "
+<stdin>:6:20: error: No common type for \"Bar\" and \"Baz\"
+  var foo = true ? Bar.new : Baz.new
+                   ~~~~~~~~~~~~~~~~~
+")
+
   }
 }
