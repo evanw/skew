@@ -1219,5 +1219,19 @@ def main(foo Foo) {
       ~~~
 ")
 
+test("
+class Foo<A, B> {
+  def new(a A)
+  def foo(b B) A
+}
+class Bar<T> is Foo<int, T> {}
+class Baz is Bar<bool> {}
+def foo int {
+  return Baz.new(0).foo(false)
+}
+", "
+TODO
+")
+
   }
 }
