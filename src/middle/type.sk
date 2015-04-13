@@ -271,16 +271,15 @@ namespace skew {
       return type
     }
 
-    Environment mergeEnvironments(Environment a, Environment b) {
+    Environment mergeEnvironments(Environment a, Environment b, List<ParameterSymbol> restrictions) {
+      if (a == null) return b
+      if (b == null) return a
       List<ParameterSymbol> parameters = a.parameters.clone()
       List<Type> substitutions = substituteAll(a.substitutions, b)
       for (var i = 0; i < b.parameters.size(); i++) {
         var parameter = b.parameters[i]
         var substitution = b.substitutions[i]
-        var index = parameters.indexOf(parameter)
-        if (index != -1) {
-          substitutions[index] = substitution
-        } else {
+        if (!(parameter in parameters) && (restrictions == null || parameter in restrictions)) {
           parameters.push(parameter)
           substitutions.push(substitution)
         }
@@ -315,13 +314,12 @@ namespace skew {
         return type
       }
 
-      // Merge the type environments (this matters for nested generics)
+      // Merge the type environments (this matters for nested generics). For
+      // object types, limit the parameters in the environment to just those
+      // on this type and the base type.
+      var parameters = type.parameters()
       if (existing != null) {
-        if (type.kind == .SYMBOL && type.symbol.kind.isFunctionOrOverloadedFunction()) {
-          environment = mergeEnvironments(existing, environment)
-        } else {
-          environment = createEnvironment(existing.parameters, substituteAll(existing.substitutions, environment))
-        }
+        environment = mergeEnvironments(existing, environment, type.kind == .SYMBOL && type.symbol.kind.isFunctionOrOverloadedFunction() ? null : parameters)
       }
 
       // Check to see if this has been computed before

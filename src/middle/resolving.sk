@@ -119,7 +119,10 @@ namespace skew.resolving {
       if (symbol.base != null) {
         resolveAsParameterizedType(symbol.base, symbol.scope)
         var baseType = symbol.base.resolvedType
-        if (baseType != .DYNAMIC && (baseType.kind != .SYMBOL || baseType.symbol.kind != .OBJECT_CLASS || baseType.symbol.isValueType())) {
+        if (baseType.kind == .SYMBOL && baseType.symbol.kind == .OBJECT_CLASS && !baseType.symbol.isValueType()) {
+          symbol.baseClass = baseType.symbol.asObjectSymbol()
+          symbol.resolvedType.environment = baseType.environment // Don't lose the type parameters from the base type
+        } else if (baseType != .DYNAMIC) {
           log.semanticErrorInvalidBaseType(symbol.base.range, baseType)
         }
       }
@@ -461,8 +464,11 @@ namespace skew.resolving {
       if (symbol != null && symbol.isPrivateOrProtected()) {
         var isPrivate = symbol.isPrivate()
         while (scope != null) {
-          if (scope.kind() == .OBJECT && scope.asObjectScope().symbol == symbol.parent) {
-            return // TODO: Implement @protected once base classes work
+          if (scope.kind() == .OBJECT) {
+            var object = scope.asObjectScope().symbol
+            if (object == symbol.parent || !isPrivate && object.hasBaseClass(symbol.parent)) {
+              return
+            }
           }
           scope = scope.parent
         }
@@ -1288,7 +1294,7 @@ namespace skew.resolving {
       }
 
       // Include the symbol for use with Node.isType()
-      node.resolvedType = cache.substitute(type, cache.createEnvironment(parameters, substitutions))
+      node.resolvedType = cache.substitute(type, cache.mergeEnvironments(type.environment, cache.createEnvironment(parameters, substitutions), null))
       node.symbol = value.symbol
     }
 

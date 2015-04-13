@@ -1221,16 +1221,24 @@ def main(foo Foo) {
 
 test("
 class Foo<A, B> {
-  def new(a A)
-  def foo(b B) A
+  def foo(a A) Foo<A, B>
+  def bar(b B) A
 }
 class Bar<T> is Foo<int, T> {}
-class Baz is Bar<bool> {}
-def foo int {
-  return Baz.new(0).foo(false)
+class Baz is Bar<bool> { def new }
+def foo string {
+  return Baz.new.foo(0.5).bar(null)
 }
 ", "
-TODO
+<stdin>:8:22: error: Cannot convert from type \"double\" to type \"int\" without a cast
+  return Baz.new.foo(0.5).bar(null)
+                     ~~~
+<stdin>:8:31: error: Cannot convert from type \"null\" to type \"bool\"
+  return Baz.new.foo(0.5).bar(null)
+                              ~~~~
+<stdin>:8:10: error: Cannot convert from type \"int\" to type \"string\"
+  return Baz.new.foo(0.5).bar(null)
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~
 ")
 
   }

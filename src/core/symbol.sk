@@ -186,11 +186,16 @@ namespace skew {
 
   class ObjectSymbol : Symbol {
     Node base = null
+    ObjectSymbol baseClass = null
     StringMap<Symbol> members = {}
     List<ObjectSymbol> objects = []
     List<FunctionSymbol> functions = []
     List<VariableSymbol> variables = []
     List<ParameterSymbol> parameters = null
+
+    bool hasBaseClass(Symbol symbol) {
+      return baseClass != null && (baseClass == symbol || baseClass.hasBaseClass(symbol))
+    }
   }
 
   class FunctionSymbol : Symbol {
