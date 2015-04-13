@@ -216,7 +216,7 @@ namespace skew {
       error(range, "No overload of \"" + name + "\" was found that takes " + count + " argument" + prettyPrint.plural(count))
     }
 
-    void semanticErrorAmbiguousOperator(Range range, string name, int count) {
+    void semanticErrorAmbiguousOverload(Range range, string name, int count) {
       error(range, "Multiple matching overloads of \"" + name + "\" were found that take " + count + " argument" + prettyPrint.plural(count))
     }
 

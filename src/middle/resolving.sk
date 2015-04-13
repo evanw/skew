@@ -16,11 +16,6 @@ namespace skew.resolving {
     EXPLICIT
   }
 
-  enum FailureMode {
-    SILENT_FAILURE
-    ERROR_FAILURE
-  }
-
   class Resolver {
     TypeCache cache
     Log log
@@ -798,14 +793,15 @@ namespace skew.resolving {
       return true
     }
 
-    FunctionSymbol resolveOverloadedFunction(Range range, int count, OverloadedFunctionSymbol overloaded) {
-      List<FunctionSymbol> candidates = []
+    FunctionSymbol resolveOverloadedFunction(Range range, List<Node> children, Scope scope, OverloadedFunctionSymbol overloaded) {
+      var count = children.size() - 1
+      var candidates = overloaded.symbols.clone()
 
       // Filter by argument length
-      for (var i = 0; i < overloaded.symbols.size(); i++) {
-        var overload = overloaded.symbols[i]
-        if (overload.arguments.size() == count) {
-          candidates.push(overload)
+      for (var i = 0; i < candidates.size(); i++) {
+        if (candidates[i].arguments.size() != count) {
+          candidates.removeAt(i)
+          i--
         }
       }
 
@@ -816,16 +812,80 @@ namespace skew.resolving {
       }
 
       // Check for ambiguity
-      if (candidates.size() > 1) {
-        log.semanticErrorAmbiguousOperator(range, overloaded.name, count)
-        return null
+      if (candidates.size() == 1) {
+        return candidates[0]
       }
 
-      return candidates[0]
+      // First filter by syntactic structure impossibilities. This helps break
+      // the chicken-and-egg problem of needing to resolve argument types to
+      // get a match and needing a match to resolve argument types. For example,
+      // a list literal needs type context to resolve correctly.
+      for (var i = 0; i < candidates.size(); i++) {
+        var argumentTypes = candidates[i].resolvedType.argumentTypes
+        for (var j = 0; j < count; j++) {
+          var kind = children[j + 1].kind
+          var type = argumentTypes[j]
+          if (kind == .NULL && !type.isReference() ||
+              kind == .INITIALIZER_LIST && findMember(type, "[new]", null) == null && findMember(type, "[...]", null) == null ||
+              (kind == .INITIALIZER_SET || kind == .INITIALIZER_MAP) && findMember(type, "{new}", null) == null && findMember(type, "{...}", null) == null) {
+            candidates.removeAt(i)
+            i--
+            break
+          }
+        }
+      }
+
+      // Check for ambiguity
+      if (candidates.size() == 1) {
+        return candidates[0]
+      }
+
+      // If that still didn't work, resolve the arguments without type context
+      for (var i = 0; i < count; i++) {
+        resolveAsParameterizedExpression(children[i + 1], scope)
+      }
+
+      // Try again, this time discarding all implicit conversion failures
+      for (var i = 0; i < candidates.size(); i++) {
+        var argumentTypes = candidates[i].resolvedType.argumentTypes
+        for (var j = 0; j < count; j++) {
+          if (!cache.canImplicitlyConvert(children[j + 1].resolvedType, argumentTypes[j])) {
+            candidates.removeAt(i)
+            i--
+            break
+          }
+        }
+      }
+
+      // Check for ambiguity
+      if (candidates.size() == 1) {
+        return candidates[0]
+      }
+
+      // If that still didn't work, try type equality
+      for (var i = 0; i < candidates.size(); i++) {
+        var argumentTypes = candidates[i].resolvedType.argumentTypes
+        for (var j = 0; j < count; j++) {
+          if (children[j + 1].resolvedType != argumentTypes[j]) {
+            candidates.removeAt(i)
+            i--
+            break
+          }
+        }
+      }
+
+      // Check for ambiguity
+      if (candidates.size() == 1) {
+        return candidates[0]
+      }
+
+      // Give up without a match
+      log.semanticErrorAmbiguousOverload(range, overloaded.name, count)
+      return null
     }
 
     bool resolveOverloadedFunctionCall(Node node, Scope scope, OverloadedFunctionSymbol overloaded) {
-      var symbol = resolveOverloadedFunction(node.callValue().range, node.children.size() - 1, overloaded)
+      var symbol = resolveOverloadedFunction(node.callValue().range, node.children, scope, overloaded)
       return symbol != null && resolveFunctionCall(node, scope, symbol.resolvedType) // TODO: This doesn't work for generic types
     }
 
@@ -848,7 +908,7 @@ namespace skew.resolving {
       }
     }
 
-    Symbol findMember(Type type, string name, Range range, FailureMode mode) {
+    Symbol findMember(Type type, string name, Range range) {
       if (type.kind == .SYMBOL) {
         var symbol = type.symbol
         if (symbol.kind.isObject()) {
@@ -861,7 +921,7 @@ namespace skew.resolving {
       }
 
       // Member lookup can optionally be performed silently to try different names
-      if (mode == .ERROR_FAILURE && type != .DYNAMIC) {
+      if (range != null && type != .DYNAMIC) {
         log.semanticErrorUnknownMemberSymbol(range, name, type)
       }
 
@@ -877,10 +937,10 @@ namespace skew.resolving {
       // Search for a setter first, then search for a normal member
       Symbol symbol = null
       if (shouldCheckForSetter(node)) {
-        symbol = findMember(target.resolvedType, name + "=", node.internalRangeOrRange(), .SILENT_FAILURE)
+        symbol = findMember(target.resolvedType, name + "=", null)
       }
       if (symbol == null) {
-        symbol = findMember(target.resolvedType, name, node.internalRangeOrRange(), .ERROR_FAILURE)
+        symbol = findMember(target.resolvedType, name, node.internalRangeOrRange())
         if (symbol == null) {
           return
         }
@@ -1004,8 +1064,8 @@ namespace skew.resolving {
     bool resolveInitializerWithContext(Node node, Scope scope, Type context) {
       var count = node.children.size()
       var isList = node.kind == .INITIALIZER_LIST
-      var create = findMember(context, isList ? "[new]" : "{new}", node.range, .SILENT_FAILURE)
-      var add = findMember(context, isList ? "[...]" : "{...}", node.range, .SILENT_FAILURE)
+      var create = findMember(context, isList ? "[new]" : "{new}", null)
+      var add = findMember(context, isList ? "[...]" : "{...}", null)
 
       // Special-case imported literals to prevent an infinite loop for list literals
       if (add != null && add.isImported()) {
@@ -1312,14 +1372,16 @@ namespace skew.resolving {
 
       // Find the operator method
       var name = isComparison ? "<=>" : info.text
-      var symbol = findMember(type, name, node.internalRangeOrRange(), .ERROR_FAILURE)
+      var symbol = findMember(type, name, node.internalRangeOrRange())
       if (symbol == null) {
         return
       }
 
       // Resolve the overload now so the symbol's properties can be inspected
       if (symbol.kind.isOverloadedFunction()) {
-        symbol = resolveOverloadedFunction(node.internalRangeOrRange(), node.children.size() - 1, symbol.asOverloadedFunctionSymbol())
+        if (reverseBinaryOrder) node.children.reverse()
+        symbol = resolveOverloadedFunction(node.internalRangeOrRange(), node.children, scope, symbol.asOverloadedFunctionSymbol())
+        if (reverseBinaryOrder) node.children.reverse()
         if (symbol == null) {
           return
         }
@@ -1327,13 +1389,9 @@ namespace skew.resolving {
 
       // Don't replace the operator with a call if it's just used for type checking
       if (symbol.isImported() && !symbol.isRenamed()) {
-        if (reverseBinaryOrder) {
-          node.children.reverse()
-        }
+        if (reverseBinaryOrder) node.children.reverse()
         resolveFunctionCall(node, scope, cache.substitute(symbol.resolvedType, type.environment))
-        if (reverseBinaryOrder) {
-          node.children.reverse()
-        }
+        if (reverseBinaryOrder) node.children.reverse()
         return
       }
 

@@ -995,5 +995,31 @@ class Foo {
       ~~~
 ")
 
+test("
+def bar(x int) int
+def bar(x double) double
+def bar(x List<int>) List<int>
+
+def main {
+  var w bool = bar(null)
+  var x bool = bar(0)
+  var y bool = bar(0.5)
+  var z bool = bar([])
+}
+", "
+<stdin>:6:16: error: Cannot convert from type \"List<int>\" to type \"bool\"
+  var w bool = bar(null)
+               ~~~~~~~~~
+<stdin>:7:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var x bool = bar(0)
+               ~~~~~~
+<stdin>:8:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var y bool = bar(0.5)
+               ~~~~~~~~
+<stdin>:9:16: error: Cannot convert from type \"List<int>\" to type \"bool\"
+  var z bool = bar([])
+               ~~~~~~~
+")
+
   }
 }

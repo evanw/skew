@@ -1,6 +1,5 @@
 - todo
   - generics
-  - real overload resolution involving types
   - interface auto-conversion and checking
   - automatic operator conversion so += can map to = and + if += isn't defined
   - throw/try/catch/finally
@@ -26,6 +25,7 @@
     - {...} can take one argument or two arguments using ":" as a separator
 
 x done
+  x real overload resolution involving types
   x need errors for ambiguous overloads at initialization time
   x make "self" explicit inside the compiler for sanity (all instance member NAME nodes become DOT nodes)
   x comment parsing inside functions
