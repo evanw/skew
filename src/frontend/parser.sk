@@ -463,8 +463,10 @@ namespace skew {
       context.next()
     } else if (kind == .FUNCTION_GLOBAL && context.eat(.ANNOTATION)) {
       kind = .FUNCTION_ANNOTATION
-    } else if (kind == .FUNCTION_INSTANCE && (context.eat(.LIST_NEW) || context.eat(.SET_NEW))) {
-      kind = .FUNCTION_CONSTRUCTOR
+    } else if (context.eat(.LIST_NEW) || context.eat(.SET_NEW)) {
+      if (kind == .FUNCTION_INSTANCE) {
+        kind = .FUNCTION_CONSTRUCTOR
+      }
     } else {
       if (!context.expect(.IDENTIFIER)) {
         return false

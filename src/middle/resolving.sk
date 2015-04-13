@@ -1048,7 +1048,7 @@ namespace skew.resolving {
     }
 
     bool shouldUseMapConstructor(Symbol symbol) {
-      if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+      if (symbol.kind.isFunction()) {
         return symbol.asFunctionSymbol().arguments.size() == 2
       }
 

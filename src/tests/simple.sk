@@ -1021,5 +1021,21 @@ def main {
                ~~~~~~~
 ")
 
+test("
+namespace Foo {
+  def [new](x List<int>)
+}
+
+class Foo {}
+
+def main(foo Foo) {
+  foo = []
+}
+", "
+<stdin>:8:9: error: The function \"[new]\" does not return a value
+  foo = []
+        ~~
+")
+
   }
 }
