@@ -972,5 +972,28 @@ class Bar<X> {
            ~~~~~~~~~~~~~~~~
 ")
 
+test("
+class Foo {
+  def foo int
+  def foo double
+  def bar(x int)
+  def bar(x double)
+  def bar(x int)
+}
+", "
+<stdin>:3:7: error: Duplicate overloaded function \"foo\"
+  def foo double
+      ~~~
+<stdin>:2:7: note: The previous declaration is here
+  def foo int
+      ~~~
+<stdin>:6:7: error: Duplicate overloaded function \"bar\"
+  def bar(x int)
+      ~~~
+<stdin>:4:7: note: The previous declaration is here
+  def bar(x int)
+      ~~~
+")
+
   }
 }

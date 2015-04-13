@@ -61,6 +61,14 @@ namespace skew.resolving {
 
         assert symbol.resolvedType != null
         symbol.state = .INITIALIZED
+
+        // After initializing a function symbol, ensure the entire overload set is initialized
+        if (symbol.kind.isFunction()) {
+          var overloaded = symbol.asFunctionSymbol().overloaded
+          if (overloaded != null && overloaded.state == .UNINITIALIZED) {
+            initializeSymbol(overloaded)
+          }
+        }
       }
 
       // Detect cyclic symbol references such as "foo foo;"
@@ -318,12 +326,18 @@ namespace skew.resolving {
         symbol.resolvedType = Type(.SYMBOL, symbol)
       }
 
-      // Ensure each overload has a valid type
+      // Ensure no two overloads have the same argument types
+      List<Type> types = []
       for (var i = 0; i < symbols.size(); i++) {
-        initializeSymbol(symbols[i])
+        var function = symbols[i]
+        initializeSymbol(function)
+        var type = cache.createLambdaType(function.resolvedType.argumentTypes, null)
+        var index = types.indexOf(type)
+        if (index != -1) {
+          log.semanticErrorDuplicateOverload(function.range, symbol.name, symbols[index].range)
+        }
+        types.push(type)
       }
-
-      resolveAnnotations(symbol)
     }
 
     void resolveNode(Node node, Scope scope, Type context) {

@@ -301,5 +301,12 @@ namespace skew {
     void semanticErrorInitializerTypeInferenceFailed(Range range) {
       error(range, "Cannot infer a type for this literal")
     }
+
+    void semanticErrorDuplicateOverload(Range range, string name, Range previous) {
+      error(range, "Duplicate overloaded function \"" + name + "\"")
+      if (previous != null) {
+        note(previous, "The previous declaration is here")
+      }
+    }
   }
 }
