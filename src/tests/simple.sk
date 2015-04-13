@@ -75,7 +75,7 @@ def main {
 <stdin>:14:12: error: Cannot convert from type \"double\" to type \"fn(int) bool\"
   x.filter(1.0)
            ~~~
-<stdin>:15:3: error: Cannot use unparameterized type \"map\"
+<stdin>:15:3: error: Cannot use unparameterized type \"map\" here
   x.map(1.0)
   ~~~~~
 <stdin>:16:17: error: Cannot convert from type \"double\" to type \"fn(int) string\"
@@ -84,7 +84,7 @@ def main {
 <stdin>:17:17: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   x.filter(x => x + 100)
                 ~~~~~~~
-<stdin>:18:3: error: Cannot use unparameterized type \"map\"
+<stdin>:18:3: error: Cannot use unparameterized type \"map\" here
   x.map(x => x + 100)
   ~~~~~
 <stdin>:18:9: error: Unable to determine the type of \"x\"
@@ -109,7 +109,7 @@ def main {
   Foo.new.foo<bool>(0).foo<int>(0.0)
 }
 ", "
-<stdin>:7:3: error: Cannot use unparameterized type \"foo\"
+<stdin>:7:3: error: Cannot use unparameterized type \"foo\" here
   Foo.new.foo(0).foo(0.0)
   ~~~~~~~~~~~
 <stdin>:8:21: error: Cannot convert from type \"int\" to type \"bool\" without a cast
@@ -118,24 +118,6 @@ def main {
 <stdin>:8:33: error: Cannot convert from type \"double\" to type \"int\" without a cast
   Foo.new.foo<bool>(0).foo<int>(0.0)
                                 ~~~
-")
-
-test("
-class Foo<T> {
-  def new
-}
-
-def main {
-  var x int = Foo.new
-  var y int = Foo<int>.new
-}
-", "
-<stdin>:6:15: error: Cannot use unparameterized type \"Foo\"
-  var x int = Foo.new
-              ~~~
-<stdin>:7:15: error: Cannot convert from type \"Foo<int>\" to type \"int\"
-  var y int = Foo<int>.new
-              ~~~~~~~~~~~~
 ")
 
 test("
@@ -1035,6 +1017,72 @@ def main(foo Foo) {
 <stdin>:8:9: error: The function \"[new]\" does not return a value
   foo = []
         ~~
+")
+
+test("
+namespace Foo {
+  def foo
+  var bar = 0
+}
+
+class Foo<T> {
+  def new
+  def ifoo
+  var ibar = 0
+}
+
+def main(foo Foo<int>) {
+  foo.new
+  Foo.new
+  Foo<int>.new
+
+  foo.foo
+  Foo.foo
+  Foo<int>.foo
+
+  foo.bar = 0
+  Foo.bar = 0
+  Foo<int>.bar = 0
+
+  foo.ifoo
+  Foo.ifoo
+  Foo<int>.ifoo
+
+  foo.ibar = 0
+  Foo.ibar = 0
+  Foo<int>.ibar = 0
+}
+", "
+<stdin>:13:7: error: Cannot access global member \"new\" from an instance context
+  foo.new
+      ~~~
+<stdin>:14:3: error: Cannot use unparameterized type \"Foo\" here
+  Foo.new
+  ~~~
+<stdin>:17:7: error: Cannot access global member \"foo\" from an instance context
+  foo.foo
+      ~~~
+<stdin>:19:3: error: Cannot use parameterized type \"Foo<int>\" here
+  Foo<int>.foo
+  ~~~~~~~~
+<stdin>:21:7: error: Cannot access global member \"bar\" from an instance context
+  foo.bar = 0
+      ~~~
+<stdin>:23:3: error: Cannot use parameterized type \"Foo<int>\" here
+  Foo<int>.bar = 0
+  ~~~~~~~~
+<stdin>:26:7: error: Cannot access instance member \"ifoo\" from a global context
+  Foo.ifoo
+      ~~~~
+<stdin>:27:12: error: Cannot access instance member \"ifoo\" from a global context
+  Foo<int>.ifoo
+           ~~~~
+<stdin>:30:7: error: Cannot access instance member \"ibar\" from a global context
+  Foo.ibar = 0
+      ~~~~
+<stdin>:31:12: error: Cannot access instance member \"ibar\" from a global context
+  Foo<int>.ibar = 0
+           ~~~~
 ")
 
   }

@@ -932,7 +932,6 @@ namespace skew.resolving {
       var target = node.dotTarget()
       var name = node.asString()
       resolveNode(target, scope, null)
-      checkIsParameterized(target)
 
       // Search for a setter first, then search for a normal member
       Symbol symbol = null
@@ -954,6 +953,10 @@ namespace skew.resolving {
         log.semanticErrorMemberUnexpectedInstance(node.internalRangeOrRange(), symbol.name)
       } else if (!isType && needsType) {
         log.semanticErrorMemberUnexpectedGlobal(node.internalRangeOrRange(), symbol.name)
+      } else if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+        checkIsParameterized(target)
+      } else if (isType && target.resolvedType.isParameterized()) {
+        log.semanticErrorParameterizedType(target.range, target.resolvedType)
       }
 
       node.symbol = symbol
@@ -1258,7 +1261,9 @@ namespace skew.resolving {
       var type = value.resolvedType
       var parameters = type.parameters()
       if (parameters == null || type.isParameterized()) {
-        log.semanticErrorCannotParameterize(node.range, type)
+        if (type != .DYNAMIC) {
+          log.semanticErrorCannotParameterize(node.range, type)
+        }
         value.resolvedType = .DYNAMIC
         return
       }

@@ -1,5 +1,4 @@
 - todo
-  - generics
   - interface auto-conversion and checking
   - automatic operator conversion so += can map to = and + if += isn't defined
   - throw/try/catch/finally
@@ -8,7 +7,6 @@
   - base classes
     - calling base class methods with "super"
     - support for protected access level
-  - annotations
   - compile-time constants
   - top-level if statements instead of c-style preprocessor, conditions must be constants and are evaluated from the outside in
   - inlining
@@ -16,15 +14,16 @@
     - could probably get by with just @rename for quite a while
   - lambda conversion to classes
   - abstract functions/types
-  - import/export
   - standard library
   - bootstrap the compiler
   - alias types using the "type" declaration prefix, not available inside functions?
   - namespace imports via the "use" declaration prefix
-  - do [list] and {initializer} expressions, require argument-less "new" and use [...] and {...} as operator names for appending
-    - {...} can take one argument or two arguments using ":" as a separator
 
 x done
+  x annotations
+  x do [list] and {initializer} expressions, require [new] and {new} constructors and use [...] and {...} as operator names for appending
+    x {...} can take one argument or two arguments using ":" as a separator
+  x generics
   x real overload resolution involving types
   x need errors for ambiguous overloads at initialization time
   x make "self" explicit inside the compiler for sanity (all instance member NAME nodes become DOT nodes)

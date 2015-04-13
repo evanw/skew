@@ -275,7 +275,11 @@ namespace skew {
     }
 
     void semanticErrorUnparameterizedType(Range range, Type type) {
-      error(range, "Cannot use unparameterized type \"" + type + "\"")
+      error(range, "Cannot use unparameterized type \"" + type + "\" here")
+    }
+
+    void semanticErrorParameterizedType(Range range, Type type) {
+      error(range, "Cannot use parameterized type \"" + type + "\" here")
     }
 
     void semanticErrorNoCommonType(Range range, Type left, Type right) {
