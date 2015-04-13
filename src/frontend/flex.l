@@ -30,7 +30,9 @@
 "while"                           WHILE;
 
 "[...]"                           LIST;
+"[new]"                           LIST_NEW;
 "{...}"                           SET;
+"{new}"                           SET_NEW;
 "[]="                             ASSIGN_INDEX;
 "[]"                              INDEX;
 "("                               LEFT_PARENTHESIS;

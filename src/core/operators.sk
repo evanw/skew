@@ -11,6 +11,7 @@ namespace skew {
     ONE
     ONE_OR_MORE
     ONE_OR_TWO
+    TWO_OR_FEWER
     TWO_OR_MORE
     ZERO
     ZERO_OR_MORE
@@ -64,22 +65,23 @@ namespace skew {
 
     NodeKind.ASSIGN_INDEX:          OperatorInfo("[]=", .MEMBER, .NONE, .OVERRIDABLE, .TWO_OR_MORE),
     NodeKind.INDEX:                 OperatorInfo("[]", .MEMBER, .NONE, .OVERRIDABLE, .ONE_OR_MORE),
-
-    NodeKind.INITIALIZER_LIST:      OperatorInfo("[...]", .LOWEST, .NONE, .OVERRIDABLE, .ONE),
-    NodeKind.INITIALIZER_SET:       OperatorInfo("{...}", .LOWEST, .NONE, .OVERRIDABLE, .ONE_OR_TWO),
   }
 
-  StringMap<ArgumentCount> operatorArgumentCounts = null
+  StringMap<ArgumentCount> argumentCounts = null
 
   ArgumentCount argumentCountForOperator(string text) {
-    if (operatorArgumentCounts == null) {
+    if (argumentCounts == null) {
       var values = operatorInfo.values()
-      operatorArgumentCounts = {}
+      argumentCounts = {}
       for (var i = 0; i < values.size(); i++) {
         var value = values[i]
-        operatorArgumentCounts[value.text] = value.count
+        argumentCounts[value.text] = value.count
       }
+      argumentCounts.set("[...]", .ONE)
+      argumentCounts.set("[new]", .ZERO_OR_ONE)
+      argumentCounts.set("{...}", .ONE_OR_TWO)
+      argumentCounts.set("{new}", .TWO_OR_FEWER)
     }
-    return operatorArgumentCounts.getOrDefault(text, .ZERO_OR_MORE)
+    return argumentCounts.getOrDefault(text, .ZERO_OR_MORE)
   }
 }

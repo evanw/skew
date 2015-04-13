@@ -180,8 +180,8 @@ namespace skew {
       error(range, expectedCountText("type parameter", expected, found))
     }
 
-    void semanticErrorArgumentCount(Range range, int expected, int found) {
-      error(range, expectedCountText("argument", expected, found))
+    void semanticErrorArgumentCount(Range range, int expected, int found, Symbol symbol) {
+      error(range, expectedCountText("argument", expected, found) + (symbol != null ? " when calling \"" + symbol.name + "\"" : ""))
     }
 
     void semanticErrorGetterCalledTwice(Range range, string name) {

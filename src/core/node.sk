@@ -169,6 +169,10 @@ namespace skew {
       return this
     }
 
+    Range internalRangeOrRange() {
+      return internalRange != null ? internalRange : range
+    }
+
     int indexInParent() {
       assert parent != null
       return parent.children.indexOf(this)
@@ -380,6 +384,10 @@ namespace skew {
       assert trueValue.kind.isExpression()
       assert falseValue.kind.isExpression()
       return Node(.HOOK).withChildren([test, trueValue, falseValue])
+    }
+
+    static Node createList(List<Node> values) {
+      return Node(.INITIALIZER_LIST).withChildren(values)
     }
 
     static Node createInitializer(NodeKind kind, List<Node> values) {

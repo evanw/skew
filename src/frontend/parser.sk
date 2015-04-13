@@ -463,11 +463,15 @@ namespace skew {
       context.next()
     } else if (kind == .FUNCTION_GLOBAL && context.eat(.ANNOTATION)) {
       kind = .FUNCTION_ANNOTATION
-    } else if (!context.expect(.IDENTIFIER)) {
-      return false
-    }
-    if (kind == .FUNCTION_INSTANCE && name == "new") {
+    } else if (kind == .FUNCTION_INSTANCE && (context.eat(.LIST_NEW) || context.eat(.SET_NEW))) {
       kind = .FUNCTION_CONSTRUCTOR
+    } else {
+      if (!context.expect(.IDENTIFIER)) {
+        return false
+      }
+      if (kind == .FUNCTION_INSTANCE && name == "new") {
+        kind = .FUNCTION_CONSTRUCTOR
+      }
     }
 
     // Parse shorthand nested namespace declarations
@@ -918,8 +922,8 @@ namespace skew {
     override Node parse(ParserContext context) {
       var token = context.next()
       List<Node> values = []
-      NodeKind kind = token.kind == .LEFT_BRACE ? .INITIALIZER_SET : .INITIALIZER_LIST
-      if (token.kind != .INDEX) {
+      NodeKind kind = token.kind == .LEFT_BRACE || token.kind == .SET_NEW ? .INITIALIZER_SET : .INITIALIZER_LIST
+      if (token.kind == .LEFT_BRACE || token.kind == .LEFT_BRACKET) {
         var checkForColon = kind != .INITIALIZER_LIST
         TokenKind end = checkForColon ? .RIGHT_BRACE : .RIGHT_BRACKET
         while (!context.peek(end)) {
@@ -950,6 +954,8 @@ namespace skew {
         if (!context.expect(end)) {
           return null
         }
+      } else if (token.kind == .LIST_NEW || token.kind == .SET_NEW) {
+        values.push(Node.createName("new").withRange(Range(token.range.source, token.range.start + 1, token.range.end - 1)))
       }
       return Node.createInitializer(kind, values).withRange(context.spanSince(token.range))
     }
@@ -1127,8 +1133,10 @@ namespace skew {
     pratt.parselet(.LEFT_BRACKET, .MEMBER).infix = IndexParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet()
+    pratt.parselet(.LIST_NEW, .LOWEST).prefix = InitializerParselet()
     pratt.parselet(.NOT, .COMPARE).infix = NotParselet()
     pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet()
+    pratt.parselet(.SET_NEW, .LOWEST).prefix = InitializerParselet()
     pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizedParselet()
 
     return pratt

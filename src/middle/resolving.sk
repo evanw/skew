@@ -171,7 +171,7 @@ namespace skew.resolving {
       }
 
       // The "<=>" operator must return a numeric value for comparison with zero
-      else if (symbol.name == "<=>") {
+      if (symbol.name == "<=>") {
         if (returnType == null || !cache.isNumeric(returnType)) {
           log.semanticErrorComparisonOperatorNotNumeric(symbol.returnType != null ? symbol.returnType.range : symbol.range)
           returnType = .DYNAMIC
@@ -197,8 +197,8 @@ namespace skew.resolving {
             }
           }
 
-          case .ZERO_OR_ONE, .ONE_OR_TWO {
-            var lower = argumentCount == .ZERO_OR_ONE ? 0 : 1
+          case .ZERO_OR_ONE, .ONE_OR_TWO, .TWO_OR_FEWER {
+            var lower = argumentCount == .ONE_OR_TWO ? 1 : 0
             var upper = argumentCount == .ZERO_OR_ONE ? 1 : 2
             if (count < lower || count > upper) {
               log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, lower, upper)
@@ -439,7 +439,7 @@ namespace skew.resolving {
 
       // Forbid storage to final symbols
       else if (symbol != null && symbol.isConst()) {
-        log.semanticErrorStorageToConstSymbol(node.internalRange != null ? node.internalRange : node.range, symbol.name)
+        log.semanticErrorStorageToConstSymbol(node.internalRangeOrRange(), symbol.name)
       }
     }
 
@@ -453,7 +453,7 @@ namespace skew.resolving {
           }
           scope = scope.parent
         }
-        log.semanticErrorAccessViolation(node.internalRange != null ? node.internalRange : node.range, isPrivate ? "@private" : "@protected", symbol.name)
+        log.semanticErrorAccessViolation(node.internalRangeOrRange(), isPrivate ? "@private" : "@protected", symbol.name)
       }
     }
 
@@ -513,7 +513,7 @@ namespace skew.resolving {
 
       // Make sure annotations have the arguments they need
       if (value.kind != .CALL) {
-        log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.size(), 0)
+        log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.size(), 0, value.symbol)
         return
       }
 
@@ -711,7 +711,7 @@ namespace skew.resolving {
         // Can't call other types (the null type, for example)
         default {
           if (type != .DYNAMIC) {
-            log.semanticErrorInvalidCall(node.internalRange, value.resolvedType)
+            log.semanticErrorInvalidCall(node.internalRangeOrRange(), value.resolvedType)
           }
         }
       }
@@ -731,7 +731,7 @@ namespace skew.resolving {
       // This error prevents a getter returning a lambda which is then called,
       // but that's really strange and I think this error is more useful.
       if (symbol.isGetter() && parent != null && parent.kind == .CALL && node == parent.callValue()) {
-        log.semanticErrorGetterCalledTwice(parent.internalRange, symbol.name)
+        log.semanticErrorGetterCalledTwice(parent.internalRangeOrRange(), symbol.name)
         return false
       }
 
@@ -746,7 +746,7 @@ namespace skew.resolving {
       }
 
       // Can't call other symbols
-      log.semanticErrorInvalidCall(node.internalRange, node.callValue().resolvedType)
+      log.semanticErrorInvalidCall(node.internalRangeOrRange(), node.callValue().resolvedType)
       return false
     }
 
@@ -772,7 +772,7 @@ namespace skew.resolving {
 
       // Check argument count
       if (expected != count) {
-        log.semanticErrorArgumentCount(node.internalRange, expected, count)
+        log.semanticErrorArgumentCount(node.internalRangeOrRange(), expected, count, function)
         return false
       }
 
@@ -863,10 +863,10 @@ namespace skew.resolving {
       // Search for a setter first, then search for a normal member
       Symbol symbol = null
       if (shouldCheckForSetter(node)) {
-        symbol = findMember(target.resolvedType, name + "=", node.internalRange, .SILENT_FAILURE)
+        symbol = findMember(target.resolvedType, name + "=", node.internalRangeOrRange(), .SILENT_FAILURE)
       }
       if (symbol == null) {
-        symbol = findMember(target.resolvedType, name, node.internalRange, .ERROR_FAILURE)
+        symbol = findMember(target.resolvedType, name, node.internalRangeOrRange(), .ERROR_FAILURE)
         if (symbol == null) {
           return
         }
@@ -877,9 +877,9 @@ namespace skew.resolving {
 
       // Make sure the global/instance context matches the intended usage
       if (isType && !needsType) {
-        log.semanticErrorMemberUnexpectedInstance(node.internalRange, symbol.name)
+        log.semanticErrorMemberUnexpectedInstance(node.internalRangeOrRange(), symbol.name)
       } else if (!isType && needsType) {
-        log.semanticErrorMemberUnexpectedGlobal(node.internalRange, symbol.name)
+        log.semanticErrorMemberUnexpectedGlobal(node.internalRangeOrRange(), symbol.name)
       }
 
       node.symbol = symbol
@@ -918,50 +918,12 @@ namespace skew.resolving {
     void resolveInitializer(Node node, Scope scope, Type context) {
       var count = node.children.size()
 
+      // Make sure to resolve the children even if the initializer is invalid
       if (context != null) {
-        node.resolvedType = context
-
-        // Find the operator method
-        if (context != .DYNAMIC) {
-          var name = node.kind == .INITIALIZER_LIST ? "[...]" : "{...}"
-          var symbol = findMember(context, name, node.range, .ERROR_FAILURE)
-          if (symbol != null) {
-
-            // Special-case for imported literals (List, IntMap, and StringMap)
-            if (symbol.isImported() && symbol.kind == .FUNCTION_INSTANCE) {
-              var function = symbol.asFunctionSymbol()
-              if (function.arguments.size() == (node.kind == .INITIALIZER_MAP ? 2 : 1)) {
-                var functionType = cache.substitute(function.resolvedType, context.environment)
-                for (var i = 0; i < count; i++) {
-                  var child = node.children[i]
-                  if (child.kind == .PAIR) {
-                    resolveAsParameterizedExpressionWithConversion(child.firstValue(), scope, functionType.argumentTypes[0])
-                    resolveAsParameterizedExpressionWithConversion(child.secondValue(), scope, functionType.argumentTypes[1])
-                  } else {
-                    resolveAsParameterizedExpressionWithConversion(child, scope, functionType.argumentTypes[0])
-                  }
-                }
-                return
-              }
-            }
-
-            // Use simple call chaining for normal list literals
-            var chain = Node.createDot(Node.createType(context).withRange(node.range), "new").withRange(node.range).withInternalRange(node.range)
-            for (var i = 0; i < count; i++) {
-              var child = node.children[i]
-              var dot = Node.createDot(chain, name).withRange(child.range).withInternalRange(child.range)
-              var arguments = child.kind == .PAIR ? [child.firstValue().replaceWithNull(), child.secondValue().replaceWithNull()] : [child.replaceWithNull()]
-              chain = Node.createCall(dot, arguments).withRange(child.range).withInternalRange(child.range)
-            }
-            node.become(chain)
-            resolveAsParameterizedExpressionWithConversion(node, scope, context)
-            return
+        if (context == .DYNAMIC || !resolveInitializerWithContext(node, scope, context)) {
+          for (var i = 0; i < count; i++) {
+            resolveAsParameterizedExpression(node.children[i], scope)
           }
-        }
-
-        // Make sure to resolve the children even if the initializer is invalid
-        for (var i = 0; i < count; i++) {
-          resolveAsParameterizedExpression(node.children[i], scope)
         }
         return
       }
@@ -1009,6 +971,91 @@ namespace skew.resolving {
       }
 
       log.semanticErrorInitializerTypeInferenceFailed(node.range)
+    }
+
+    bool shouldUseMapConstructor(Symbol symbol) {
+      if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+        return symbol.asFunctionSymbol().arguments.size() == 2
+      }
+
+      var overloaded = symbol.asOverloadedFunctionSymbol()
+      for (var i = 0; i < overloaded.symbols.size(); i++) {
+        if (overloaded.symbols[i].arguments.size() == 2) {
+          return true
+        }
+      }
+      return false
+    }
+
+    bool resolveInitializerWithContext(Node node, Scope scope, Type context) {
+      var count = node.children.size()
+      var isList = node.kind == .INITIALIZER_LIST
+      var create = findMember(context, isList ? "[new]" : "{new}", node.range, .SILENT_FAILURE)
+      var add = findMember(context, isList ? "[...]" : "{...}", node.range, .SILENT_FAILURE)
+
+      // Special-case imported literals to prevent an infinite loop for list literals
+      if (add != null && add.isImported()) {
+        var function = add.asFunctionSymbol()
+        if (function.arguments.size() == (isList ? 1 : 2)) {
+          var functionType = cache.substitute(function.resolvedType, context.environment)
+          for (var i = 0; i < count; i++) {
+            var child = node.children[i]
+            if (child.kind == .PAIR) {
+              resolveAsParameterizedExpressionWithConversion(child.firstValue(), scope, functionType.argumentTypes[0])
+              resolveAsParameterizedExpressionWithConversion(child.secondValue(), scope, functionType.argumentTypes[1])
+            } else {
+              resolveAsParameterizedExpressionWithConversion(child, scope, functionType.argumentTypes[0])
+            }
+          }
+          node.resolvedType = context
+          return true
+        }
+      }
+
+      // Use simple call chaining when there's an add operator present
+      if (add != null) {
+        var chain = Node.createDot(Node.createType(context).withRange(node.range), create != null ? create.name : "new").withRange(node.range)
+        for (var i = 0; i < count; i++) {
+          var child = node.children[i]
+          var dot = Node.createDot(chain, add.name).withRange(child.range)
+          var arguments = child.kind == .PAIR ? [child.firstValue().replaceWithNull(), child.secondValue().replaceWithNull()] : [child.replaceWithNull()]
+          chain = Node.createCall(dot, arguments).withRange(child.range)
+        }
+        node.become(chain)
+        resolveAsParameterizedExpressionWithConversion(node, scope, context)
+        return true
+      }
+
+      // Make sure there's a constructor to call
+      if (create == null) {
+        log.semanticErrorInitializerTypeInferenceFailed(node.range)
+        return false
+      }
+
+      var dot = Node.createDot(Node.createType(context).withRange(node.range), create.name).withRange(node.range)
+
+      // The literal "{}" is ambiguous and may be a map or a set
+      if (count == 0 && !isList && shouldUseMapConstructor(create)) {
+        node.become(Node.createCall(dot, [Node.createList([]).withRange(node.range), Node.createList([]).withRange(node.range)]).withRange(node.range))
+        resolveAsParameterizedExpressionWithConversion(node, scope, context)
+        return true
+      }
+
+      // Call the initializer constructor
+      if (node.kind == .INITIALIZER_MAP) {
+        List<Node> firstValues = []
+        List<Node> secondValues = []
+        for (var i = 0; i < count; i++) {
+          var child = node.children[i]
+          firstValues.push(child.firstValue().replaceWithNull())
+          secondValues.push(child.secondValue().replaceWithNull())
+        }
+        node.become(Node.createCall(dot, [Node.createList(firstValues).withRange(node.range), Node.createList(secondValues).withRange(node.range)]).withRange(node.range))
+      } else {
+        node.become(Node.createCall(dot, [Node.createList(node.removeChildren()).withRange(node.range)]).withRange(node.range))
+      }
+      resolveAsParameterizedExpressionWithConversion(node, scope, context)
+      return true
     }
 
     Type mergeCommonType(Type commonType, Node child) {
@@ -1145,7 +1192,7 @@ namespace skew.resolving {
       // Check parameter count
       var expected = parameters.size()
       if (count != expected) {
-        log.semanticErrorParameterCount(node.internalRange, expected, count)
+        log.semanticErrorParameterCount(node.internalRangeOrRange(), expected, count)
         value.resolvedType = .DYNAMIC
         return
       }
@@ -1233,7 +1280,7 @@ namespace skew.resolving {
       // Check if the operator can be overridden at all
       var info = operatorInfo[node.kind]
       if (info.kind != .OVERRIDABLE) {
-        log.semanticErrorUnknownMemberSymbol(node.internalRange, info.text, type)
+        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), info.text, type)
         return
       }
 
@@ -1251,14 +1298,14 @@ namespace skew.resolving {
 
       // Find the operator method
       var name = isComparison ? "<=>" : info.text
-      var symbol = findMember(type, name, node.internalRange, .ERROR_FAILURE)
+      var symbol = findMember(type, name, node.internalRangeOrRange(), .ERROR_FAILURE)
       if (symbol == null) {
         return
       }
 
       // Resolve the overload now so the symbol's properties can be inspected
       if (symbol.kind.isOverloadedFunction()) {
-        symbol = resolveOverloadedFunction(node.internalRange, node.children.size() - 1, symbol.asOverloadedFunctionSymbol())
+        symbol = resolveOverloadedFunction(node.internalRangeOrRange(), node.children.size() - 1, symbol.asOverloadedFunctionSymbol())
         if (symbol == null) {
           return
         }
@@ -1281,7 +1328,7 @@ namespace skew.resolving {
       if (reverseBinaryOrder) {
         children.reverse()
       }
-      children[0] = Node.createDot(children[0], name).withRange(node.internalRange).withInternalRange(node.internalRange)
+      children[0] = Node.createDot(children[0], name).withRange(node.internalRangeOrRange())
 
       // Implement the logic for the "<=>" operator
       if (isComparison) {

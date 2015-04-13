@@ -315,10 +315,10 @@ def @bar
 @bar(1)
 def main
 ", "
-<stdin>:4:1: error: Expected 1 argument but found 0 arguments
+<stdin>:4:1: error: Expected 1 argument but found 0 arguments when calling \"@foo\"
 @foo
 ~~~~
-<stdin>:5:5: error: Expected 1 argument but found 2 arguments
+<stdin>:5:5: error: Expected 1 argument but found 2 arguments when calling \"@foo\"
 @foo(1, 2)
     ~~~~~~
 <stdin>:6:5: error: The function \"@bar\" takes no arguments and is already called implicitly
@@ -630,10 +630,10 @@ def main {
 <stdin>:3:7: error: Expected \"-\" to take at most 1 argument
   def -(x int, y int) {}
       ^
-<stdin>:7:9: error: Expected 2 arguments but found 1 argument
+<stdin>:7:9: error: Expected 2 arguments but found 1 argument when calling \"+\"
   false + false
         ^
-<stdin>:8:9: error: Expected 2 arguments but found 1 argument
+<stdin>:8:9: error: Expected 2 arguments but found 1 argument when calling \"-\"
   false - false
         ^
 ")
@@ -825,7 +825,7 @@ def main {
   {0.5: 1} - 1
 }
 ", "
-<stdin>:2:15: error: \"[...]\" is not declared on type \"int\"
+<stdin>:2:15: error: Cannot infer a type for this literal
   var a int = [false]
               ~~~~~~~
 <stdin>:3:22: error: Cannot convert from type \"bool\" to type \"int\" without a cast
@@ -834,7 +834,7 @@ def main {
 <stdin>:4:29: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   var c List<List<int>> = [[false]]
                             ~~~~~
-<stdin>:5:15: error: \"{...}\" is not declared on type \"int\"
+<stdin>:5:15: error: Cannot infer a type for this literal
   var d int = {1: 2}
               ~~~~~~
 <stdin>:6:25: error: Cannot convert from type \"string\" to type \"int\"
@@ -911,7 +911,7 @@ def main {
 <stdin>:9:7: error: Expected \"[...]\" to take 1 argument
   def [...] {}
       ~~~~~
-<stdin>:18:13: error: \"[...]\" is not declared on type \"A\"
+<stdin>:18:13: error: Cannot infer a type for this literal
   var a A = [1, 2]
             ~~~~~~
 <stdin>:19:13: error: \"new\" is not declared on type \"B\"
@@ -920,7 +920,7 @@ def main {
 <stdin>:20:14: error: The function \"[...]\" does not return a value
   var c C = [1, 2]
              ^
-<stdin>:20:14: error: Expected 0 arguments but found 1 argument
+<stdin>:20:14: error: Expected 0 arguments but found 1 argument when calling \"[...]\"
   var c C = [1, 2]
              ^
 <stdin>:21:14: error: Cannot convert from type \"int\" to type \"bool\" without a cast
@@ -929,6 +929,26 @@ def main {
 <stdin>:21:17: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   var d D = [1, 2]
                 ^
+")
+
+test("
+class Foo {
+  def [new](x int, y int, z int) int
+  def {new}(x int, y int, z int) int
+}
+", "
+<stdin>:2:34: error: Constructors cannot have a return type
+  def [new](x int, y int, z int) int
+                                 ~~~
+<stdin>:2:7: error: Expected \"[new]\" to take at most 1 argument
+  def [new](x int, y int, z int) int
+      ~~~~~
+<stdin>:3:34: error: Constructors cannot have a return type
+  def {new}(x int, y int, z int) int
+                                 ~~~
+<stdin>:3:7: error: Expected \"{new}\" to take at most 2 arguments
+  def {new}(x int, y int, z int) int
+      ~~~~~
 ")
 
 test("
