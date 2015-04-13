@@ -1182,5 +1182,42 @@ def main {
                    ~~~~~~~~~~~~~~~~~
 ")
 
+test("
+class Foo {
+  @protected
+  def foo
+
+  @private
+  def bar
+}
+
+class Bar is Foo {
+  def baz {
+    foo
+    bar
+    self.foo
+    self.bar
+  }
+}
+
+def main(foo Foo) {
+  foo.foo
+  foo.bar
+}
+", "
+<stdin>:12:5: error: Cannot access \"@private\" symbol \"bar\" here
+    bar
+    ~~~
+<stdin>:14:10: error: Cannot access \"@private\" symbol \"bar\" here
+    self.bar
+         ~~~
+<stdin>:19:7: error: Cannot access \"@protected\" symbol \"foo\" here
+  foo.foo
+      ~~~
+<stdin>:20:7: error: Cannot access \"@private\" symbol \"bar\" here
+  foo.bar
+      ~~~
+")
+
   }
 }
