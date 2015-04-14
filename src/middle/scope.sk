@@ -44,8 +44,13 @@ namespace skew {
     }
 
     override Symbol find(string name) {
-      var result = symbol.members.getOrDefault(name, null)
-      return result != null ? result : parent != null ? parent.find(name) : null
+      for (var check = symbol; check != null; check = check.baseClass) {
+        var result = check.members.getOrDefault(name, null)
+        if (result != null) {
+          return result
+        }
+      }
+      return parent != null ? parent.find(name) : null
     }
   }
 
