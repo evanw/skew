@@ -1241,5 +1241,16 @@ def foo string {
          ~~~~~~~~~~~~~~~~~~~~~~~~~~
 ")
 
+test("
+var a = 0 # a
+var b = 0 # b
+# comment
+var c = 0 # c
+
+# comment
+var d = 0 # d
+", "
+")
+
   }
 }

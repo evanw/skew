@@ -6,7 +6,7 @@
   - c++ generation
   - base classes
     - calling base class methods with "super"
-    - support for protected access level
+    - method overloading with base and derived methods
   - compile-time constants
   - top-level if statements instead of c-style preprocessor, conditions must be constants and are evaluated from the outside in
   - inlining
@@ -20,6 +20,7 @@
   - namespace imports via the "use" declaration prefix
 
 x done
+  x support for protected access level
   x annotations
   x do [list] and {initializer} expressions, require [new] and {new} constructors and use [...] and {...} as operator names for appending
     x {...} can take one argument or two arguments using ":" as a separator

@@ -43,6 +43,22 @@ namespace skew {
     return comments
   }
 
+  bool parseTrailingComment(ParserContext context, Symbol symbol) {
+    if (context.peek(.COMMENT)) {
+      var range = context.next().range
+      if (symbol.comments == null) {
+        symbol.comments = []
+      }
+      var text = range.source.contents.slice(range.start + 1, range.end)
+      if (text[text.size() - 1] != '\n') {
+        text += "\n"
+      }
+      symbol.comments.push(text)
+      return true
+    }
+    return false
+  }
+
   List<Node> parseAnnotations(ParserContext context, List<Node> annotations) {
     annotations = annotations != null ? annotations.clone() : []
 
@@ -498,44 +514,44 @@ namespace skew {
     }
 
     // Parse the symbol body
+    Symbol symbol
     switch (kind) {
       case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE {
-        var symbol = VariableSymbol(kind, name)
-        symbol.range = range
+        var variable = VariableSymbol(kind, name)
+        variable.range = range
 
         if (token.kind == .CONST) {
-          symbol.flags |= .CONST
+          variable.flags |= .CONST
         }
 
         if (peekType(context)) {
-          symbol.type = parseType(context)
+          variable.type = parseType(context)
         }
 
         if (context.eat(.ASSIGN)) {
-          symbol.value = pratt.parse(context, .LOWEST)
+          variable.value = pratt.parse(context, .LOWEST)
         }
 
-        symbol.annotations = annotations
-        symbol.comments = comments
-        parent.variables.push(symbol)
+        parent.variables.push(variable)
+        symbol = variable
       }
 
       case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
-        var symbol = FunctionSymbol(kind, name)
-        symbol.range = range
+        var function = FunctionSymbol(kind, name)
+        function.range = range
 
         // Check for setters like "def foo=(x int) {}" but don't allow a space
         // between the name and the assignment operator
         if (kind != .FUNCTION_ANNOTATION && nameToken.kind == .IDENTIFIER && context.peek(.ASSIGN) && context.current().range.start == nameToken.range.end) {
-          symbol.range = Range.span(symbol.range, context.next().range)
-          symbol.flags |= .SETTER
-          symbol.name += "="
+          function.range = Range.span(function.range, context.next().range)
+          function.flags |= .SETTER
+          function.name += "="
         }
 
         // Parse type parameters
         if (context.eat(.START_PARAMETER_LIST)) {
-          symbol.parameters = parseTypeParameters(context)
-          if (symbol.parameters == null) {
+          function.parameters = parseTypeParameters(context)
+          if (function.parameters == null) {
             return false
           }
         }
@@ -543,44 +559,43 @@ namespace skew {
         // Parse function arguments
         var before = context.current()
         if (context.eat(.LEFT_PARENTHESIS)) {
-          if (!parseFunctionArguments(context, symbol)) {
+          if (!parseFunctionArguments(context, function)) {
             return false
           }
 
           // Functions without arguments are "getters" and don't use parentheses
-          if (symbol.arguments.size() == 0) {
+          if (function.arguments.size() == 0) {
             context.log.syntaxErrorEmptyFunctionParentheses(context.spanSince(before.range))
           }
         }
 
-        if (kind != .FUNCTION_ANNOTATION && !parseFunctionReturnTypeAndBlock(context, symbol)) {
+        if (kind != .FUNCTION_ANNOTATION && !parseFunctionReturnTypeAndBlock(context, function)) {
           return false
         }
 
         // Don't mark operators as getters to avoid confusion with unary operators and compiler-generated call expressions
-        if (!isOperator && symbol.arguments.size() == 0) {
-          symbol.flags |= .GETTER
+        if (!isOperator && function.arguments.size() == 0) {
+          function.flags |= .GETTER
         }
 
-        symbol.annotations = annotations
-        symbol.comments = comments
-        parent.functions.push(symbol)
+        parent.functions.push(function)
+        symbol = function
       }
 
       case .OBJECT_CLASS, .OBJECT_INTERFACE, .OBJECT_NAMESPACE {
-        var symbol = ObjectSymbol(kind, name)
-        symbol.range = range
+        var object = ObjectSymbol(kind, name)
+        object.range = range
 
         if (kind != .OBJECT_NAMESPACE && context.eat(.START_PARAMETER_LIST)) {
-          symbol.parameters = parseTypeParameters(context)
-          if (symbol.parameters == null) {
+          object.parameters = parseTypeParameters(context)
+          if (object.parameters == null) {
             return false
           }
         }
 
         if (context.eat(.IS)) {
-          symbol.base = parseType(context)
-          if (symbol.base == null) {
+          object.base = parseType(context)
+          if (object.base == null) {
             return false
           }
         }
@@ -589,15 +604,14 @@ namespace skew {
           return false
         }
 
-        parseSymbols(context, symbol, null)
+        parseSymbols(context, object, null)
 
         if (!context.expect(.RIGHT_BRACE)) {
           return false
         }
 
-        symbol.annotations = annotations
-        symbol.comments = comments
-        parent.objects.push(symbol)
+        parent.objects.push(object)
+        symbol = object
       }
 
       default {
@@ -605,7 +619,12 @@ namespace skew {
       }
     }
 
-    if (!context.peek(.END_OF_FILE) && !context.peek(.RIGHT_BRACE) && !context.expect(.NEWLINE)) {
+    symbol.annotations = annotations
+    symbol.comments = comments
+
+    if (parseTrailingComment(context, symbol)) {
+      context.eat(.NEWLINE)
+    } else if (!context.peek(.END_OF_FILE) && !context.peek(.RIGHT_BRACE) && !context.expect(.NEWLINE)) {
       return false
     }
 
