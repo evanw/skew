@@ -1336,6 +1336,7 @@ namespace skew.resolving {
         return
       }
 
+      // Special-case assignment since it's not overridable
       if (kind == .ASSIGN) {
         resolveAsParameterizedExpression(left, scope)
 
@@ -1352,6 +1353,14 @@ namespace skew.resolving {
           checkStorage(left)
         }
 
+        return
+      }
+
+      // Special-case short-circuit logical operators since they aren't overridable
+      if (kind == .LOGICAL_AND || kind == .LOGICAL_OR) {
+        resolveAsParameterizedExpressionWithConversion(left, scope, cache.boolType)
+        resolveAsParameterizedExpressionWithConversion(right, scope, cache.boolType)
+        node.resolvedType = cache.boolType
         return
       }
 
