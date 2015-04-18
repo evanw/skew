@@ -4,7 +4,6 @@
 [ \t\r]+                          WHITESPACE;
 #.*\n?                            COMMENT;
 
-"and"                             LOGICAL_AND;
 "as"                              AS;
 "break"                           BREAK;
 "class"                           CLASS;
@@ -20,9 +19,7 @@
 "interface"                       INTERFACE;
 "is"                              IS;
 "namespace"                       NAMESPACE;
-"not"                             NOT;
 "null"                            NULL;
-"or"                              LOGICAL_OR;
 "return"                          RETURN;
 "super"                           SUPER;
 "true"                            TRUE;
@@ -65,6 +62,8 @@
 "*"                               MULTIPLY;
 "/"                               DIVIDE;
 "%"                               REMAINDER;
+"||"                              LOGICAL_OR;
+"&&"                              LOGICAL_AND;
 "&"                               BITWISE_AND;
 "|"                               BITWISE_OR;
 "^"                               BITWISE_XOR;
@@ -77,6 +76,7 @@
 ">="                              GREATER_THAN_OR_EQUAL;
 "<"                               LESS_THAN;
 ">"                               GREATER_THAN;
+"!"                               NOT;
 "="                               ASSIGN;
 
 ['](\\.|[^\\'])*[']               CHARACTER;

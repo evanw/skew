@@ -843,9 +843,6 @@ namespace skew {
     NodeKind kind
 
     override Node parse(ParserContext context, Token token, Node value) {
-      if (kind == .NOT && value.kind == .IN) {
-        context.log.syntaxWarningPreferNotIn(value.internalRange)
-      }
       return Node.createUnary(kind, value).withRange(Range.span(token.range, value.range)).withInternalRange(token.range)
     }
   }
@@ -871,22 +868,6 @@ namespace skew {
         return null
       }
       return Node.createCast(left, type).withRange(context.spanSince(left.range))
-    }
-  }
-
-  class NotParselet : InfixParselet {
-    override Node parse(ParserContext context, Node left) {
-      var notToken = context.next()
-      var inToken = context.current()
-      if (!context.expect(.IN)) {
-        return null
-      }
-      var right = pratt.parse(context, .COMPARE)
-      if (right == null) {
-        return null
-      }
-      var range = context.spanSince(left.range)
-      return Node.createUnary(.NOT, Node.createBinary(.IN, left, right).withRange(range).withInternalRange(inToken.range)).withRange(range).withInternalRange(notToken.range)
     }
   }
 
@@ -1155,7 +1136,6 @@ namespace skew {
     pratt.parselet(.LEFT_PARENTHESIS, .LOWEST).prefix = ParenthesisParselet()
     pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = CallParselet()
     pratt.parselet(.LIST_NEW, .LOWEST).prefix = InitializerParselet()
-    pratt.parselet(.NOT, .COMPARE).infix = NotParselet()
     pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet()
     pratt.parselet(.SET_NEW, .LOWEST).prefix = InitializerParselet()
     pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizedParselet()

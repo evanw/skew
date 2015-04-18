@@ -36,7 +36,7 @@ namespace Math {
 
 @import
 class bool {
-  def not bool
+  def ! bool
 }
 
 @import

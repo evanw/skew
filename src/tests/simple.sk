@@ -254,22 +254,11 @@ class Foo {
 def main(foo Foo) {
   false in foo
   0 in foo
-  not (0 in foo)
-  0 not in foo
 }
 ", "
-<stdin>:8:10: warning: The \"not in\" operator is preferred over nesting \"in\" inside \"not\"
-  not (0 in foo)
-         ~~
 <stdin>:6:3: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   false in foo
   ~~~~~
-<stdin>:8:3: warning: Unused expression
-  not (0 in foo)
-  ~~~~~~~~~~~~~~
-<stdin>:9:3: warning: Unused expression
-  0 not in foo
-  ~~~~~~~~~~~~
 ")
 
 test("
@@ -670,7 +659,7 @@ class Foo {
   def []
   def []=
   def foo=
-  def not(x int)
+  def !(x int)
   def {...}
 }
 ", "
@@ -695,9 +684,9 @@ class Foo {
 <stdin>:8:7: error: Expected \"foo=\" to take 1 argument
   def foo=
       ~~~~
-<stdin>:9:7: error: Expected \"not\" to take 0 arguments
-  def not(x int)
-      ~~~
+<stdin>:9:7: error: Expected \"!\" to take 0 arguments
+  def !(x int)
+      ^
 <stdin>:10:7: error: Expected \"{...}\" to take between 1 and 2 arguments
   def {...}
       ~~~~~

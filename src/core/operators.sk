@@ -26,7 +26,7 @@ namespace skew {
   IntMap<OperatorInfo> operatorInfo = {
     NodeKind.COMPLEMENT:            OperatorInfo("~", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO),
     NodeKind.NEGATIVE:              OperatorInfo("-", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO_OR_ONE),
-    NodeKind.NOT:                   OperatorInfo("not", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO),
+    NodeKind.NOT:                   OperatorInfo("!", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO),
     NodeKind.POSITIVE:              OperatorInfo("+", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO_OR_ONE),
 
     NodeKind.ADD:                   OperatorInfo("+", .ADD, .LEFT, .OVERRIDABLE, .ZERO_OR_ONE),
@@ -40,8 +40,8 @@ namespace skew {
     NodeKind.IN:                    OperatorInfo("in", .COMPARE, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.LESS_THAN:             OperatorInfo("<", .COMPARE, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.LESS_THAN_OR_EQUAL:    OperatorInfo("<=", .COMPARE, .LEFT, .OVERRIDABLE, .ONE),
-    NodeKind.LOGICAL_AND:           OperatorInfo("and", .LOGICAL_AND, .LEFT, .FIXED, .ONE),
-    NodeKind.LOGICAL_OR:            OperatorInfo("or", .LOGICAL_OR, .LEFT, .FIXED, .ONE),
+    NodeKind.LOGICAL_AND:           OperatorInfo("&&", .LOGICAL_AND, .LEFT, .FIXED, .ONE),
+    NodeKind.LOGICAL_OR:            OperatorInfo("||", .LOGICAL_OR, .LEFT, .FIXED, .ONE),
     NodeKind.MULTIPLY:              OperatorInfo("*", .MULTIPLY, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.NOT_EQUAL:             OperatorInfo("!=", .EQUAL, .LEFT, .FIXED, .ONE),
     NodeKind.POWER:                 OperatorInfo("**", .UNARY_PREFIX, .RIGHT, .OVERRIDABLE, .ONE),

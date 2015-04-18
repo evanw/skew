@@ -96,10 +96,6 @@ namespace skew {
       error(range, "Functions without arguments do not use parentheses")
     }
 
-    void syntaxWarningPreferNotIn(Range range) {
-      warning(range, "The \"not in\" operator is preferred over nesting \"in\" inside \"not\"")
-    }
-
     void semanticErrorComparisonOperatorNotNumeric(Range range) {
       error(range, "The comparison operator must have a numeric return type")
     }
@@ -217,7 +213,7 @@ namespace skew {
     }
 
     void semanticErrorAmbiguousOverload(Range range, string name, int count) {
-      error(range, "Multiple matching overloads of \"" + name + "\" were found that take " + count + " argument" + prettyPrint.plural(count))
+      error(range, "Multiple overloads of \"" + name + "\" were found that take " + count + " argument" + prettyPrint.plural(count))
     }
 
     void semanticErrorUnexpectedExpression(Range range, Type type) {
