@@ -1373,12 +1373,18 @@ namespace skew.resolving {
 
     void resolveOperatorOverload(Node node, Scope scope) {
       // The order of operands are reversed for the "in" operator
-      var reverseBinaryOrder = node.kind == .IN
+      var kind = node.kind
+      var reverseBinaryOrder = kind == .IN
       var target = node.children[(int)reverseBinaryOrder]
-      var other = node.kind.isBinary() ? node.children[1 - (int)reverseBinaryOrder] : null
+      var other = kind.isBinary() ? node.children[1 - (int)reverseBinaryOrder] : null
 
       // Resolve just the target since the other arguments may need type context from overload resolution
       resolveAsParameterizedExpression(target, scope)
+
+      // Check for a valid storage location even for overloadable operators
+      if (kind.isBinaryAssign()) {
+        checkStorage(target)
+      }
 
       // Can't do overload resolution on the dynamic type
       var type = target.resolvedType
@@ -1388,7 +1394,7 @@ namespace skew.resolving {
       }
 
       // Check if the operator can be overridden at all
-      var info = operatorInfo[node.kind]
+      var info = operatorInfo[kind]
       if (info.kind != .OVERRIDABLE) {
         log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), info.text, type)
         resolveChildrenAsParameterizedExpressions(node, scope)
@@ -1396,7 +1402,7 @@ namespace skew.resolving {
       }
 
       // Avoid infinite expansion
-      var isComparison = node.kind.isBinaryComparison()
+      var isComparison = kind.isBinaryComparison()
       if (isComparison && cache.isNumeric(type)) {
         resolveAsParameterizedExpression(other, scope)
         if (cache.isNumeric(other.resolvedType)) {

@@ -97,7 +97,9 @@ class string {
   def count int
   def endsWith(x string) bool
   def in(x string) bool
+  def indexOf(x string) int
   def join(x List<string>) string
+  def lastIndexOf(x string) int
   def repeat(x int) string
   def replaceAll(before string, after string) string
   def slice(start int, end int) string

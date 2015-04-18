@@ -1360,5 +1360,29 @@ def main(x List<List<int>>) {
              ~~~~~
 ")
 
+test("
+def main {
+  for i in 0..10 {
+    0 += 1
+    0 = 1
+    i += 1
+    i = 1
+  }
+}
+", "
+<stdin>:3:5: error: Cannot store to this location
+    0 += 1
+    ^
+<stdin>:4:5: error: Cannot store to this location
+    0 = 1
+    ^
+<stdin>:5:5: error: Cannot store to constant symbol \"i\"
+    i += 1
+    ^
+<stdin>:6:5: error: Cannot store to constant symbol \"i\"
+    i = 1
+    ^
+")
+
   }
 }
