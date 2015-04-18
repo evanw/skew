@@ -26,9 +26,18 @@ namespace skew {
       return (LocalScope)this
     }
 
-    FunctionScope findEnclosingFunction() {
+    FunctionScope findEnclosingFunctionOrLambda() {
       for (var scope = this; scope != null; scope = scope.parent) {
         if (scope.kind() == .FUNCTION) {
+          return scope.asFunctionScope()
+        }
+      }
+      return null
+    }
+
+    FunctionScope findEnclosingFunction() {
+      for (var scope = this; scope != null; scope = scope.parent) {
+        if (scope.kind() == .FUNCTION && scope.asFunctionScope().symbol.kind != .FUNCTION_LOCAL) {
           return scope.asFunctionScope()
         }
       }

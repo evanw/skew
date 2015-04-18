@@ -91,8 +91,10 @@ class double {
 @import
 class string {
   def +(x string) string
+  def +=(x string)
   def <=>(x string) int
   def [](x int) int
+  def at(x int) string
   def codePoints List<int>
   def count int
   def endsWith(x string) bool

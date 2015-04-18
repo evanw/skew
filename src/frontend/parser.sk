@@ -1063,15 +1063,15 @@ namespace skew {
     // Literals
     ////////////////////////////////////////////////////////////////////////////////
 
+    pratt.literal(.CHARACTER, CharacterLiteral())
     pratt.literal(.DOUBLE, DoubleLiteral())
     pratt.literal(.FALSE, BoolLiteral(false))
-    pratt.literal(.INT_BINARY, IntLiteral(2))
-    pratt.literal(.INT_OCTAL, IntLiteral(8))
-    pratt.literal(.INT_HEX, IntLiteral(16))
     pratt.literal(.INT, IntLiteral(10))
+    pratt.literal(.INT_BINARY, IntLiteral(2))
+    pratt.literal(.INT_HEX, IntLiteral(16))
+    pratt.literal(.INT_OCTAL, IntLiteral(8))
     pratt.literal(.NULL, TokenLiteral(.NULL))
     pratt.literal(.STRING, StringLiteral())
-    pratt.literal(.CHARACTER, CharacterLiteral())
     pratt.literal(.TRUE, BoolLiteral(true))
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -1087,6 +1087,7 @@ namespace skew {
     // Binary expressions
     ////////////////////////////////////////////////////////////////////////////////
 
+    pratt.infix(.BITWISE_AND, .BITWISE_AND, BinaryInfix(.BITWISE_AND))
     pratt.infix(.BITWISE_OR, .BITWISE_OR, BinaryInfix(.BITWISE_OR))
     pratt.infix(.BITWISE_XOR, .BITWISE_XOR, BinaryInfix(.BITWISE_XOR))
     pratt.infix(.COMPARE, .COMPARE, BinaryInfix(.COMPARE))

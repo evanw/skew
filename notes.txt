@@ -1,4 +1,5 @@
 - todo
+  - automatic constructor generation
   - interface auto-conversion and checking
   - automatic operator conversion so += can map to = and + if += isn't defined
   - throw/try/catch/finally
@@ -34,12 +35,3 @@ x done
   x function types including calling values of those types
   x lambda argument types from type context
   x deduplicate lambda types so equivalence checks using equality work
-
-
-
-
-
-
-class Foo<T> {
-  var foo T // need an error here, can't just use null
-}

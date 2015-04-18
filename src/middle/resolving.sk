@@ -314,11 +314,6 @@ namespace skew.resolving {
       if (symbol.value != null) {
         resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
       }
-
-      // Default-initialize varliables that aren't explicitly initialized
-      else if (symbol.kind != .VARIABLE_LOCAL) {
-        symbol.value = defaultValueForType(symbol.resolvedType)
-      }
     }
 
     void initializeOverloadedFunction(OverloadedFunctionSymbol symbol) {
@@ -581,7 +576,7 @@ namespace skew.resolving {
         // the type of the function. Parse a single statement in a non-void
         // function but two statements in a void function.
         if (child.kind == .RETURN && i + 1 < n && child.returnValue() == null && children[i + 1].kind == .EXPRESSION) {
-          var function = scope.findEnclosingFunction().symbol
+          var function = scope.findEnclosingFunctionOrLambda().symbol
           if (function.kind != .FUNCTION_CONSTRUCTOR && function.resolvedType.returnType != null) {
             child.replaceChild(0, node.removeChildAtIndex(i + 1).expressionValue().replaceWithNull())
             n--
@@ -657,7 +652,7 @@ namespace skew.resolving {
 
     void resolveReturn(Node node, Scope scope) {
       var value = node.returnValue()
-      var function = scope.findEnclosingFunction().symbol
+      var function = scope.findEnclosingFunctionOrLambda().symbol
       var returnType = function.kind != .FUNCTION_CONSTRUCTOR ? function.resolvedType.returnType : null
 
       // Check for a returned value
@@ -1473,15 +1468,6 @@ namespace skew.resolving {
       node.kind = .CALL
       node.withChildren(children)
       resolveFunctionCall(node, scope, symbolType)
-    }
-
-    Node defaultValueForType(Type type) {
-      return
-        type == cache.boolType ? Node.createBool(false) :
-        type == cache.doubleType ? Node.createDouble(0.0) :
-        type == cache.intType ? Node.createInt(0) :
-        type == cache.stringType ? Node.createString("") :
-        Node.createNull()
     }
 
     void automaticallyCallGetter(Node node, Scope scope) {
