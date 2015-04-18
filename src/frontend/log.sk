@@ -325,5 +325,10 @@ namespace skew {
     void semanticErrorInvalidBaseType(Range range, Type type) {
       error(range, "Cannot derive from type \"" + type + "\"")
     }
+
+    void semanticErrorBadOverride(Range range, string name, Type base, Range overridden) {
+      error(range, "\"" + name + "\" overrides another declaration with the same name in base type \"" + base + "\"")
+      if (overridden != null) note(overridden, "The overridden declaration is here")
+    }
   }
 }

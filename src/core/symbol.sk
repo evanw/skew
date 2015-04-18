@@ -199,6 +199,7 @@ namespace skew {
   }
 
   class FunctionSymbol : Symbol {
+    OverloadedFunctionSymbol overridden = null
     OverloadedFunctionSymbol overloaded = null
     List<ParameterSymbol> parameters = null
     List<VariableSymbol> arguments = []
@@ -213,6 +214,7 @@ namespace skew {
   }
 
   class OverloadedFunctionSymbol : Symbol {
+    OverloadedFunctionSymbol overridden = null
     List<FunctionSymbol> symbols
   }
 }

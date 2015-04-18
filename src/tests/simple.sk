@@ -1384,5 +1384,246 @@ def main {
     ^
 ")
 
+test("
+def main {
+  for i in 0..10 {
+    0 += 1
+    0 = 1
+    i += 1
+    i = 1
+  }
+}
+", "
+<stdin>:3:5: error: Cannot store to this location
+    0 += 1
+    ^
+<stdin>:4:5: error: Cannot store to this location
+    0 = 1
+    ^
+<stdin>:5:5: error: Cannot store to constant symbol \"i\"
+    i += 1
+    ^
+<stdin>:6:5: error: Cannot store to constant symbol \"i\"
+    i = 1
+    ^
+")
+
+test("
+class Foo {
+  def foo(x int)
+}
+
+class Bar : Foo {
+  def foo(x bool)
+}
+
+def main(x Bar) {
+  x.foo(0)
+  x.foo(0.5)
+  x.foo(false)
+}
+", "
+<stdin>:11:3: error: No overload of \"foo\" was found that takes 1 argument of type double
+  x.foo(0.5)
+  ~~~~~
+")
+
+test("
+class Foo {
+  def foo(x string)
+  def foo(x int)
+}
+
+class Bar : Foo {
+  def foo(x bool)
+}
+
+def main(x Bar) {
+  x.foo(0)
+  x.foo(\"\")
+  x.foo(0.5)
+  x.foo(false)
+}
+", "
+<stdin>:13:3: error: No overload of \"foo\" was found that takes 1 argument of type double
+  x.foo(0.5)
+  ~~~~~
+")
+
+test("
+class Foo {
+  def foo(x int)
+}
+
+class Bar : Foo {
+  def foo(x string)
+  def foo(x bool)
+}
+
+def main(x Bar) {
+  x.foo(0)
+  x.foo(\"\")
+  x.foo(0.5)
+  x.foo(false)
+}
+", "
+<stdin>:13:3: error: No overload of \"foo\" was found that takes 1 argument of type double
+  x.foo(0.5)
+  ~~~~~
+")
+
+test("
+class Foo {
+  def foo(x Foo)
+  def foo(x int)
+}
+
+class Bar : Foo {
+  def foo(x string)
+  def foo(x bool)
+}
+
+def main(x Bar) {
+  x.foo(0)
+  x.foo(\"\")
+  x.foo(0.5)
+  x.foo(null)
+  x.foo(false)
+}
+", "
+<stdin>:14:3: error: No overload of \"foo\" was found that takes 1 argument of type double
+  x.foo(0.5)
+  ~~~~~
+")
+
+test("
+class Foo<T> {
+  var foo int
+}
+
+class Bar : Foo<int> {
+  def foo
+}
+", "
+<stdin>:6:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  def foo
+      ~~~
+<stdin>:2:7: note: The overridden declaration is here
+  var foo int
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def foo
+}
+
+class Bar : Foo<int> {
+  var foo int
+}
+", "
+<stdin>:6:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  var foo int
+      ~~~
+<stdin>:2:7: note: The overridden declaration is here
+  def foo
+      ~~~
+")
+
+test("
+class Foo<T> {
+  class foo {}
+}
+
+class Bar : Foo<int> {
+  def foo
+}
+", "
+<stdin>:6:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  def foo
+      ~~~
+<stdin>:2:9: note: The overridden declaration is here
+  class foo {}
+        ~~~
+")
+
+test("
+class Foo<T> {
+  def foo
+}
+
+class Bar : Foo<int> {
+  class foo {}
+}
+", "
+<stdin>:6:9: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  class foo {}
+        ~~~
+<stdin>:2:7: note: The overridden declaration is here
+  def foo
+      ~~~
+")
+
+test("
+class Foo<T> {
+}
+
+namespace Foo {
+  def foo
+}
+
+class Bar : Foo<int> {
+  def foo
+}
+", "
+<stdin>:9:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  def foo
+      ~~~
+<stdin>:5:7: note: The overridden declaration is here
+  def foo
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def foo
+}
+
+class Bar : Foo<int> {
+}
+
+namespace Bar {
+  def foo
+}
+", "
+<stdin>:9:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  def foo
+      ~~~
+<stdin>:2:7: note: The overridden declaration is here
+  def foo
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def new
+  def foo
+}
+
+class Bar : Foo<int> {
+  def new
+  def foo
+}
+
+namespace Foo {
+  def bar
+}
+
+namespace Bar {
+  def bar
+}
+", "
+")
+
   }
 }

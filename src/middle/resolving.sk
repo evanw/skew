@@ -115,6 +115,8 @@ namespace skew.resolving {
         symbol.resolvedType = Type(.SYMBOL, symbol)
       }
 
+      forbidOverriddenSymbol(symbol)
+
       // Resolve the base type (only for classes)
       if (symbol.base != null) {
         resolveAsParameterizedType(symbol.base, symbol.scope)
@@ -150,6 +152,37 @@ namespace skew.resolving {
     void initializeFunction(FunctionSymbol symbol) {
       if (symbol.resolvedType == null) {
         symbol.resolvedType = Type(.SYMBOL, symbol)
+      }
+
+      // Find the overridden function or overloaded function in the base class
+      var overridden = findOverriddenMember(symbol)
+      if (overridden != null) {
+        var symbolKind = merging.overloadedKind(symbol.kind)
+        var overriddenKind = merging.overloadedKind(overridden.kind)
+
+        // Make sure the overridden symbol can be merged with this symbol
+        if (symbolKind != overriddenKind) {
+          log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol().base.resolvedType, overridden.range)
+        }
+
+        else if (overridden.kind.isFunction()) {
+          var function = overridden.asFunctionSymbol()
+
+          // The overridden symbol is always an overloaded function for simplicity
+          if (function.overloaded == null) {
+            var overloaded = OverloadedFunctionSymbol(overriddenKind, function.name, [function])
+            overloaded.scope = function.scope
+            overloaded.parent = function.parent
+            function.overloaded = overloaded
+            initializeSymbol(overloaded)
+          }
+
+          symbol.overridden = function.overloaded
+        }
+
+        else {
+          symbol.overridden = overridden.asOverloadedFunctionSymbol()
+        }
       }
 
       resolveParameters(symbol.parameters)
@@ -264,6 +297,8 @@ namespace skew.resolving {
     }
 
     void initializeVariable(VariableSymbol symbol) {
+      forbidOverriddenSymbol(symbol)
+
       // Normal variables may omit the initializer if the type is present
       if (symbol.type != null) {
         resolveAsParameterizedType(symbol.type, symbol.scope)
@@ -324,16 +359,33 @@ namespace skew.resolving {
       }
 
       // Ensure no two overloads have the same argument types
+      OverloadedFunctionSymbol overridden = null
       List<Type> types = []
       for (var i = 0; i < symbols.size(); i++) {
         var function = symbols[i]
         initializeSymbol(function)
+        overridden = function.overridden
         var type = cache.createLambdaType(function.resolvedType.argumentTypes, null)
         var index = types.indexOf(type)
-        if (index != -1) {
+        if (index == -1) {
+          types.push(type)
+        } else {
           log.semanticErrorDuplicateOverload(function.range, symbol.name, symbols[index].range)
         }
-        types.push(type)
+      }
+
+      // Include overrides from the base class
+      if (overridden != null) {
+        for (var i = 0; i < overridden.symbols.size(); i++) {
+          var function = overridden.symbols[i]
+          initializeSymbol(function)
+          var type = cache.createLambdaType(function.resolvedType.argumentTypes, null)
+          var index = types.indexOf(type)
+          if (index == -1) {
+            symbols.push(function)
+            types.push(type)
+          }
+        }
       }
     }
 
@@ -929,6 +981,23 @@ namespace skew.resolving {
         case .INT { node.resolvedType = cache.intType }
         case .STRING { node.resolvedType = cache.stringType }
         default { assert false }
+      }
+    }
+
+    Symbol findOverriddenMember(Symbol symbol) {
+      if (symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS) {
+        var object = symbol.parent.asObjectSymbol()
+        if (object.baseClass != null) {
+          return findMember(object.baseClass.resolvedType, symbol.name, null)
+        }
+      }
+      return null
+    }
+
+    void forbidOverriddenSymbol(Symbol symbol) {
+      var overridden = findOverriddenMember(symbol)
+      if (overridden != null) {
+        log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol().base.resolvedType, overridden.range)
       }
     }
 
