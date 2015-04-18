@@ -1366,10 +1366,12 @@ namespace skew.resolving {
       // The order of operands are reversed for the "in" operator
       var reverseBinaryOrder = node.kind == .IN
       var target = node.children[(int)reverseBinaryOrder]
+      var other = node.kind.isBinary() ? node.children[1 - (int)reverseBinaryOrder] : null
 
       // Resolve just the target since the other arguments may need type context from overload resolution
       resolveAsParameterizedExpression(target, scope)
 
+      // Can't do overload resolution on the dynamic type
       var type = target.resolvedType
       if (type == .DYNAMIC) {
         resolveChildrenAsParameterizedExpressions(node, scope)
@@ -1386,16 +1388,19 @@ namespace skew.resolving {
 
       // Avoid infinite expansion
       var isComparison = node.kind.isBinaryComparison()
-      if (isComparison && cache.isNumeric(type) && cache.isNumeric(node.binaryRight().resolvedType)) {
-        resolveChildrenAsParameterizedExpressions(node, scope)
-        return
+      if (isComparison && cache.isNumeric(type)) {
+        resolveAsParameterizedExpression(other, scope)
+        if (cache.isNumeric(other.resolvedType)) {
+          resolveChildrenAsParameterizedExpressions(node, scope)
+          node.resolvedType = cache.boolType
+          return
+        }
       }
 
       // Auto-convert int to double when it appears as the target
-      if (node.kind.isBinary() && type == cache.intType) {
-        var right = node.binaryRight()
-        resolveAsParameterizedExpression(right, scope)
-        if (right.resolvedType == cache.doubleType) {
+      if (other != null && type == cache.intType) {
+        resolveAsParameterizedExpression(other, scope)
+        if (other.resolvedType == cache.doubleType) {
           checkConversion(target, cache.doubleType, .IMPLICIT)
           type = cache.doubleType
         }
@@ -1441,17 +1446,17 @@ namespace skew.resolving {
 
       // Implement the logic for the "<=>" operator
       if (isComparison) {
-        node.appendChild(Node(.CALL).withChildren(children))
+        var call = Node(.CALL).withChildren(children).withRange(node.range)
+        node.appendChild(call)
         node.appendChild(Node.createInt(0))
+        node.resolvedType = cache.boolType
+        resolveFunctionCall(call, scope, symbolType)
+        return
       }
 
       // All other operators are just normal method calls
-      else {
-        node.kind = .CALL
-        node.withChildren(children)
-      }
-
-      // Resolve the function call directly because overload resolution is already done
+      node.kind = .CALL
+      node.withChildren(children)
       resolveFunctionCall(node, scope, symbolType)
     }
 

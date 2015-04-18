@@ -33,6 +33,7 @@ namespace skew {
     NodeKind.BITWISE_AND:           OperatorInfo("&", .BITWISE_AND, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.BITWISE_OR:            OperatorInfo("|", .BITWISE_OR, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.BITWISE_XOR:           OperatorInfo("^", .BITWISE_XOR, .LEFT, .OVERRIDABLE, .ONE),
+    NodeKind.COMPARE:               OperatorInfo("<=>", .COMPARE, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.DIVIDE:                OperatorInfo("/", .MULTIPLY, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.EQUAL:                 OperatorInfo("==", .EQUAL, .LEFT, .FIXED, .ONE),
     NodeKind.GREATER_THAN:          OperatorInfo(">", .COMPARE, .LEFT, .OVERRIDABLE, .ONE),

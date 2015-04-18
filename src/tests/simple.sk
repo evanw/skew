@@ -1329,5 +1329,36 @@ def foo(foo Foo) {
       ~~
 ")
 
+test("
+class Foo {
+  def new
+  def <=>(x Foo) int
+}
+
+var foo int = Foo.new < Foo.new
+var bar bool = Foo.new <=> Foo.new
+var baz int = 1 < 2
+", "
+<stdin>:6:15: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+var foo int = Foo.new < Foo.new
+              ~~~~~~~~~~~~~~~~~
+<stdin>:7:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+var bar bool = Foo.new <=> Foo.new
+               ~~~~~~~~~~~~~~~~~~~
+<stdin>:8:15: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+var baz int = 1 < 2
+              ~~~~~
+")
+
+test("
+def main(x List<List<int>>) {
+  var foo = [false] in x
+}
+", "
+<stdin>:2:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var foo = [false] in x
+             ~~~~~
+")
+
   }
 }
