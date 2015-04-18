@@ -1264,5 +1264,70 @@ def foo(foo Foo<bool>) {
   ~~~~~~~
 ")
 
+test("
+class Foo {
+  def +=(x int)
+  def +=(x List<int>)
+}
+
+def foo(foo Foo) {
+  foo += false
+  foo += []
+  foo += [false]
+  foo += {}
+  foo += {false}
+}
+", "
+<stdin>:7:7: error: No overload of \"+=\" was found that takes 1 argument of type bool
+  foo += false
+      ~~
+<stdin>:9:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  foo += [false]
+          ~~~~~
+<stdin>:10:10: error: Cannot infer a type for this literal
+  foo += {}
+         ~~
+<stdin>:10:7: error: No overload of \"+=\" was found that takes 1 argument of type dynamic
+  foo += {}
+      ~~
+<stdin>:11:10: error: Cannot infer a type for this literal
+  foo += {false}
+         ~~~~~~~
+<stdin>:11:7: error: No overload of \"+=\" was found that takes 1 argument of type dynamic
+  foo += {false}
+      ~~
+")
+
+test("
+class Foo {
+  def +=(x dynamic)
+  def +=(x List<int>)
+}
+
+def foo(foo Foo) {
+  foo += false
+  foo += [false]
+}
+", "
+<stdin>:8:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  foo += [false]
+          ~~~~~
+")
+
+test("
+class Foo {
+  def +=(x dynamic)
+  def +=(x double)
+}
+
+def foo(foo Foo) {
+  foo += 0
+}
+", "
+<stdin>:7:7: error: Multiple matching overloads of \"+=\" were found that can take 1 argument of type int
+  foo += 0
+      ~~
+")
+
   }
 }

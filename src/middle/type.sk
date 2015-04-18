@@ -168,6 +168,7 @@ namespace skew {
 
     bool canImplicitlyConvert(Type from, Type to) {
       if (from == to) return true
+      if (from == .DYNAMIC || to == .DYNAMIC) return true
       if (from == .NULL && to.isReference()) return true
       if (from == intType && to == doubleType) return true
       if (from.hasBaseType(to)) return true
@@ -184,6 +185,9 @@ namespace skew {
     Type commonImplicitType(Type left, Type right) {
       // Short-circuit early for identical types
       if (left == right) return left
+
+      // Dynamic is a hole in the type system
+      if (left == .DYNAMIC || right == .DYNAMIC) return .DYNAMIC
 
       // Check implicit conversions
       if (canImplicitlyConvert(left, right)) return right

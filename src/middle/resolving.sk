@@ -414,6 +414,12 @@ namespace skew.resolving {
       checkConversion(node, type, .IMPLICIT)
     }
 
+    void resolveChildrenAsParameterizedExpressions(Node node, Scope scope) {
+      for (var i = 0; i < node.children.size(); i++) {
+        resolveAsParameterizedExpression(node.children[i], scope)
+      }
+    }
+
     void checkUnusedExpression(Node node) {
       var kind = node.kind
       if (kind == .HOOK) {
@@ -822,7 +828,7 @@ namespace skew.resolving {
         return null
       }
 
-      // Check for ambiguity
+      // Check for an unambiguous match
       if (candidates.size() == 1) {
         return candidates[0]
       }
@@ -846,7 +852,7 @@ namespace skew.resolving {
         }
       }
 
-      // Check for ambiguity
+      // Check for an unambiguous match
       if (candidates.size() == 1) {
         return candidates[0]
       }
@@ -868,9 +874,21 @@ namespace skew.resolving {
         }
       }
 
-      // Check for ambiguity
+      // Check for an unambiguous match
       if (candidates.size() == 1) {
         return candidates[0]
+      }
+
+      // Extract argument types for an error if there is one
+      List<Type> childTypes = []
+      for (var i = 0; i < count; i++) {
+        childTypes.push(children[i + 1].resolvedType)
+      }
+
+      // Give up without a match
+      if (candidates.size() == 0) {
+        log.semanticErrorNoMatchingOverload(range, overloaded.name, count, childTypes)
+        return null
       }
 
       // If that still didn't work, try type equality
@@ -885,17 +903,13 @@ namespace skew.resolving {
         }
       }
 
-      // Check for ambiguity
+      // Check for an unambiguous match
       if (candidates.size() == 1) {
         return candidates[0]
       }
 
-      // Give up without a match
-      List<Type> argumentTypes = []
-      for (var i = 0; i < count; i++) {
-        argumentTypes.push(children[i + 1].resolvedType)
-      }
-      log.semanticErrorNoMatchingOverload(range, overloaded.name, count, argumentTypes)
+      // Give up since the overload is ambiguous
+      log.semanticErrorAmbiguousOverload(range, overloaded.name, count, childTypes)
       return null
     }
 
@@ -1015,17 +1029,13 @@ namespace skew.resolving {
       // Make sure to resolve the children even if the initializer is invalid
       if (context != null) {
         if (context == .DYNAMIC || !resolveInitializerWithContext(node, scope, context)) {
-          for (var i = 0; i < count; i++) {
-            resolveAsParameterizedExpression(node.children[i], scope)
-          }
+          resolveChildrenAsParameterizedExpressions(node, scope)
         }
         return
       }
 
       // Resolve the children first so their types can be inspected
-      for (var i = 0; i < count; i++) {
-        resolveAsParameterizedExpression(node.children[i], scope)
-      }
+      resolveChildrenAsParameterizedExpressions(node, scope)
 
       switch (node.kind) {
         case .INITIALIZER_LIST {
@@ -1157,14 +1167,12 @@ namespace skew.resolving {
         return child.resolvedType
       }
 
-      if (commonType != .DYNAMIC) {
-        var result = cache.commonImplicitType(commonType, child.resolvedType)
-        if (result != null) {
-          return result
-        }
-        log.semanticErrorNoCommonType(child.range, commonType, child.resolvedType)
+      var result = cache.commonImplicitType(commonType, child.resolvedType)
+      if (result != null) {
+        return result
       }
 
+      log.semanticErrorNoCommonType(child.range, commonType, child.resolvedType)
       return .DYNAMIC
     }
 
@@ -1304,7 +1312,6 @@ namespace skew.resolving {
     }
 
     void resolveUnary(Node node, Scope scope) {
-      resolveAsParameterizedExpression(node.unaryValue(), scope)
       resolveOperatorOverload(node, scope)
     }
 
@@ -1319,13 +1326,11 @@ namespace skew.resolving {
         resolveAsParameterizedExpression(right, scope)
 
         // The two types must be compatible
-        if (left.resolvedType != .DYNAMIC && right.resolvedType != .DYNAMIC) {
-          var commonType = cache.commonImplicitType(left.resolvedType, right.resolvedType)
-          if (commonType != null) {
-            node.resolvedType = cache.boolType
-          } else {
-            log.semanticErrorNoCommonType(node.range, left.resolvedType, right.resolvedType)
-          }
+        var commonType = cache.commonImplicitType(left.resolvedType, right.resolvedType)
+        if (commonType != null) {
+          node.resolvedType = cache.boolType
+        } else {
+          log.semanticErrorNoCommonType(node.range, left.resolvedType, right.resolvedType)
         }
 
         return
@@ -1350,16 +1355,10 @@ namespace skew.resolving {
         return
       }
 
-      resolveAsParameterizedExpression(left, scope)
-      resolveAsParameterizedExpression(right, scope) // TODO: Pass type context if the member is unambiguous
       resolveOperatorOverload(node, scope)
     }
 
     void resolveIndex(Node node, Scope scope) {
-      for (var i = 0; i < node.children.size(); i++) {
-        resolveAsParameterizedExpression(node.children[i], scope)
-      }
-
       resolveOperatorOverload(node, scope)
     }
 
@@ -1367,9 +1366,13 @@ namespace skew.resolving {
       // The order of operands are reversed for the "in" operator
       var reverseBinaryOrder = node.kind == .IN
       var target = node.children[(int)reverseBinaryOrder]
-      var type = target.resolvedType
 
+      // Resolve just the target since the other arguments may need type context from overload resolution
+      resolveAsParameterizedExpression(target, scope)
+
+      var type = target.resolvedType
       if (type == .DYNAMIC) {
+        resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
 
@@ -1377,25 +1380,32 @@ namespace skew.resolving {
       var info = operatorInfo[node.kind]
       if (info.kind != .OVERRIDABLE) {
         log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), info.text, type)
+        resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
 
       // Avoid infinite expansion
       var isComparison = node.kind.isBinaryComparison()
       if (isComparison && cache.isNumeric(type) && cache.isNumeric(node.binaryRight().resolvedType)) {
+        resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
 
       // Auto-convert int to double when it appears as the target
-      if (node.kind.isBinary() && type == cache.intType && node.binaryRight().resolvedType == cache.doubleType) {
-        checkConversion(target, cache.doubleType, .IMPLICIT)
-        type = cache.doubleType
+      if (node.kind.isBinary() && type == cache.intType) {
+        var right = node.binaryRight()
+        resolveAsParameterizedExpression(right, scope)
+        if (right.resolvedType == cache.doubleType) {
+          checkConversion(target, cache.doubleType, .IMPLICIT)
+          type = cache.doubleType
+        }
       }
 
       // Find the operator method
       var name = isComparison ? "<=>" : info.text
       var symbol = findMember(type, name, node.internalRangeOrRange())
       if (symbol == null) {
+        resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
       var symbolType = cache.substitute(symbol.resolvedType, type.environment)
@@ -1406,6 +1416,7 @@ namespace skew.resolving {
         symbolType = resolveOverloadedFunction(node.internalRangeOrRange(), node.children, scope, symbolType)
         if (reverseBinaryOrder) node.children.reverse()
         if (symbolType == null) {
+          resolveChildrenAsParameterizedExpressions(node, scope)
           return
         }
         symbol = symbolType.symbol
@@ -1414,7 +1425,9 @@ namespace skew.resolving {
       // Don't replace the operator with a call if it's just used for type checking
       if (symbol.isImported() && !symbol.isRenamed()) {
         if (reverseBinaryOrder) node.children.reverse()
-        resolveFunctionCall(node, scope, symbolType)
+        if (!resolveFunctionCall(node, scope, symbolType)) {
+          resolveChildrenAsParameterizedExpressions(node, scope)
+        }
         if (reverseBinaryOrder) node.children.reverse()
         return
       }

@@ -102,9 +102,22 @@ namespace skew {
   }
 
   in Log {
-    private static string expectedCountText(string singular, int expected, int found) {
-      return "Expected " + expected + " " + singular + prettyPrint.plural(expected) +
-        " but found " + found + " " + singular + prettyPrint.plural(found)
+    private static {
+      string expectedCountText(string singular, int expected, int found) {
+        return "Expected " + expected + " " + singular + prettyPrint.plural(expected) +
+          " but found " + found + " " + singular + prettyPrint.plural(found)
+      }
+
+      string formatArgumentTypes(List<Type> types) {
+        if (types == null) {
+          return ""
+        }
+        List<string> names = []
+        for (var i = 0; i < types.size(); i++) {
+          names.push(types[i].toString())
+        }
+        return " of type" + prettyPrint.plural(types.size()) + " " + prettyPrint.join(names, "and")
+      }
     }
 
     void semanticWarningUnusedExpression(Range range) {
@@ -209,15 +222,11 @@ namespace skew {
     }
 
     void semanticErrorNoMatchingOverload(Range range, string name, int count, List<Type> types) {
-      var text = "No overload of \"" + name + "\" was found that takes " + count + " argument" + prettyPrint.plural(count)
-      if (types != null) {
-        List<string> names = []
-        for (var i = 0; i < types.size(); i++) {
-          names.push(types[i].toString())
-        }
-        text += " of type" + prettyPrint.plural(count) + " " + prettyPrint.join(names, "and")
-      }
-      error(range, text)
+      error(range, "No overload of \"" + name + "\" was found that takes " + count + " argument" + prettyPrint.plural(count) + formatArgumentTypes(types))
+    }
+
+    void semanticErrorAmbiguousOverload(Range range, string name, int count, List<Type> types) {
+      error(range, "Multiple matching overloads of \"" + name + "\" were found that can take " + count + " argument" + prettyPrint.plural(count) + formatArgumentTypes(types))
     }
 
     void semanticErrorUnexpectedExpression(Range range, Type type) {
