@@ -66,6 +66,7 @@ namespace skew {
     // Modifiers
     EXPORT
     IMPORT
+    PREFER
     PRIVATE
     PROTECTED
     RENAME
@@ -149,6 +150,10 @@ namespace skew {
 
     bool isImported() {
       return (flags & .IMPORT) != 0
+    }
+
+    bool isPreferred() {
+      return (flags & .PREFER) != 0
     }
 
     bool isPrivate() {

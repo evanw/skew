@@ -1331,6 +1331,22 @@ def foo(foo Foo) {
 
 test("
 class Foo {
+  def +=(x dynamic) int
+  @prefer
+  def +=(x double) double
+}
+
+def foo(foo Foo) {
+  var bar bool = foo += 0
+}
+", "
+<stdin>:8:18: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var bar bool = foo += 0
+                 ~~~~~~~~
+")
+
+test("
+class Foo {
   def new
   def <=>(x Foo) int
 }

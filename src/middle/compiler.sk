@@ -1,6 +1,7 @@
 var NATIVE_LIBRARY = "
 def @export
 def @import
+def @prefer
 def @private
 def @protected
 def @rename(name string)
@@ -124,6 +125,7 @@ class List<T> {
   def +(x List<T>) List<T>
   def +(x T) List<T>
   def +=(x List<T>)
+  @prefer
   def +=(x T)
   def [...](x T) List<T>
   def [](x int) T

@@ -563,6 +563,7 @@ namespace skew.resolving {
     static StringMap<SymbolFlags> annotationSymbolFlags = {
       "@export": .EXPORT,
       "@import": .IMPORT,
+      "@prefer": .PREFER,
       "@private": .PRIVATE,
       "@protected": .PROTECTED,
       "@rename": .RENAME,
@@ -596,6 +597,7 @@ namespace skew.resolving {
         switch (flag) {
           case .EXPORT { isValid = !symbol.isImported() }
           case .IMPORT { isValid = !symbol.isExported() }
+          case .PREFER { isValid = symbol.kind.isFunction() }
           case .PRIVATE { isValid = !symbol.isProtected() && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
           case .PROTECTED { isValid = !symbol.isPrivate() && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
           case .RENAME {}
@@ -936,6 +938,22 @@ namespace skew.resolving {
       if (candidates.size() == 0) {
         log.semanticErrorNoMatchingOverload(range, overloaded.name, count, childTypes)
         return null
+      }
+
+      // If that still didn't work, try picking the preferred overload
+      Type firstPreferred = null
+      Type secondPreferred = null
+      for (var i = 0; i < candidates.size(); i++) {
+        var type = candidates[i]
+        if (type.symbol.isPreferred()) {
+          secondPreferred = firstPreferred
+          firstPreferred = type
+        }
+      }
+
+      // Check for a single preferred overload
+      if (firstPreferred != null && secondPreferred == null) {
+        return firstPreferred
       }
 
       // If that still didn't work, try type equality
