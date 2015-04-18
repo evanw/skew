@@ -761,7 +761,7 @@ namespace skew.resolving {
 
       // Check for calling a set of functions, must not be ambiguous
       if (symbol.kind.isOverloadedFunction()) {
-        return resolveOverloadedFunctionCall(node, scope, symbol.asOverloadedFunctionSymbol())
+        return resolveOverloadedFunctionCall(node, scope, type)
       }
 
       // Can't call other symbols
@@ -803,21 +803,22 @@ namespace skew.resolving {
       return true
     }
 
-    FunctionSymbol resolveOverloadedFunction(Range range, List<Node> children, Scope scope, OverloadedFunctionSymbol overloaded) {
+    Type resolveOverloadedFunction(Range range, List<Node> children, Scope scope, Type type) {
+      var overloaded = type.symbol.asOverloadedFunctionSymbol()
       var count = children.size() - 1
-      var candidates = overloaded.symbols.clone()
+      List<Type> candidates = []
 
-      // Filter by argument length
-      for (var i = 0; i < candidates.size(); i++) {
-        if (candidates[i].arguments.size() != count) {
-          candidates.removeAt(i)
-          i--
+      // Filter by argument length and substitute using the current type environment
+      for (var i = 0; i < overloaded.symbols.size(); i++) {
+        var symbol = overloaded.symbols[i]
+        if (symbol.arguments.size() == count) {
+          candidates.push(cache.substitute(symbol.resolvedType, type.environment))
         }
       }
 
       // Check for matches
       if (candidates.size() < 1) {
-        log.semanticErrorNoMatchingOverload(range, overloaded.name, count)
+        log.semanticErrorNoMatchingOverload(range, overloaded.name, count, null)
         return null
       }
 
@@ -831,7 +832,7 @@ namespace skew.resolving {
       // get a match and needing a match to resolve argument types. For example,
       // a list literal needs type context to resolve correctly.
       for (var i = 0; i < candidates.size(); i++) {
-        var argumentTypes = candidates[i].resolvedType.argumentTypes
+        var argumentTypes = candidates[i].argumentTypes
         for (var j = 0; j < count; j++) {
           var kind = children[j + 1].kind
           var type = argumentTypes[j]
@@ -857,7 +858,7 @@ namespace skew.resolving {
 
       // Try again, this time discarding all implicit conversion failures
       for (var i = 0; i < candidates.size(); i++) {
-        var argumentTypes = candidates[i].resolvedType.argumentTypes
+        var argumentTypes = candidates[i].argumentTypes
         for (var j = 0; j < count; j++) {
           if (!cache.canImplicitlyConvert(children[j + 1].resolvedType, argumentTypes[j])) {
             candidates.removeAt(i)
@@ -874,7 +875,7 @@ namespace skew.resolving {
 
       // If that still didn't work, try type equality
       for (var i = 0; i < candidates.size(); i++) {
-        var argumentTypes = candidates[i].resolvedType.argumentTypes
+        var argumentTypes = candidates[i].argumentTypes
         for (var j = 0; j < count; j++) {
           if (children[j + 1].resolvedType != argumentTypes[j]) {
             candidates.removeAt(i)
@@ -890,13 +891,17 @@ namespace skew.resolving {
       }
 
       // Give up without a match
-      log.semanticErrorAmbiguousOverload(range, overloaded.name, count)
+      List<Type> argumentTypes = []
+      for (var i = 0; i < count; i++) {
+        argumentTypes.push(children[i + 1].resolvedType)
+      }
+      log.semanticErrorNoMatchingOverload(range, overloaded.name, count, argumentTypes)
       return null
     }
 
-    bool resolveOverloadedFunctionCall(Node node, Scope scope, OverloadedFunctionSymbol overloaded) {
-      var symbol = resolveOverloadedFunction(node.callValue().range, node.children, scope, overloaded)
-      return symbol != null && resolveFunctionCall(node, scope, symbol.resolvedType) // TODO: This doesn't work for generic types
+    bool resolveOverloadedFunctionCall(Node node, Scope scope, Type type) {
+      var match = resolveOverloadedFunction(node.callValue().range, node.children, scope, type)
+      return match != null && resolveFunctionCall(node, scope, match)
     }
 
     void resolveCast(Node node, Scope scope) {
@@ -1393,21 +1398,23 @@ namespace skew.resolving {
       if (symbol == null) {
         return
       }
+      var symbolType = cache.substitute(symbol.resolvedType, type.environment)
 
       // Resolve the overload now so the symbol's properties can be inspected
       if (symbol.kind.isOverloadedFunction()) {
         if (reverseBinaryOrder) node.children.reverse()
-        symbol = resolveOverloadedFunction(node.internalRangeOrRange(), node.children, scope, symbol.asOverloadedFunctionSymbol())
+        symbolType = resolveOverloadedFunction(node.internalRangeOrRange(), node.children, scope, symbolType)
         if (reverseBinaryOrder) node.children.reverse()
-        if (symbol == null) {
+        if (symbolType == null) {
           return
         }
+        symbol = symbolType.symbol
       }
 
       // Don't replace the operator with a call if it's just used for type checking
       if (symbol.isImported() && !symbol.isRenamed()) {
         if (reverseBinaryOrder) node.children.reverse()
-        resolveFunctionCall(node, scope, cache.substitute(symbol.resolvedType, type.environment))
+        resolveFunctionCall(node, scope, symbolType)
         if (reverseBinaryOrder) node.children.reverse()
         return
       }
@@ -1432,7 +1439,7 @@ namespace skew.resolving {
       }
 
       // Resolve the function call directly because overload resolution is already done
-      resolveFunctionCall(node, scope, symbol.resolvedType)
+      resolveFunctionCall(node, scope, symbolType)
     }
 
     Node defaultValueForType(Type type) {

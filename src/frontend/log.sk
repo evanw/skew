@@ -208,12 +208,16 @@ namespace skew {
       error(range, "Constructors cannot have a return type")
     }
 
-    void semanticErrorNoMatchingOverload(Range range, string name, int count) {
-      error(range, "No overload of \"" + name + "\" was found that takes " + count + " argument" + prettyPrint.plural(count))
-    }
-
-    void semanticErrorAmbiguousOverload(Range range, string name, int count) {
-      error(range, "Multiple overloads of \"" + name + "\" were found that take " + count + " argument" + prettyPrint.plural(count))
+    void semanticErrorNoMatchingOverload(Range range, string name, int count, List<Type> types) {
+      var text = "No overload of \"" + name + "\" was found that takes " + count + " argument" + prettyPrint.plural(count)
+      if (types != null) {
+        List<string> names = []
+        for (var i = 0; i < types.size(); i++) {
+          names.push(types[i].toString())
+        }
+        text += " of type" + prettyPrint.plural(count) + " " + prettyPrint.join(names, "and")
+      }
+      error(range, text)
     }
 
     void semanticErrorUnexpectedExpression(Range range, Type type) {

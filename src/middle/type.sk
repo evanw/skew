@@ -365,8 +365,10 @@ namespace skew {
         else {
           var parameters = type.parameters()
 
-          // Don't need to substitute non-generic types
-          if (parameters != null || symbol.kind.isFunction()) {
+          // Overloaded functions are also included even though they don't have
+          // type parameters because the type environment needs to be bundled
+          // for later substitution into individual matched overloads
+          if (parameters != null || symbol.kind.isFunctionOrOverloadedFunction()) {
             substituted = Type(.SYMBOL, symbol)
             substituted.environment = environment
 
