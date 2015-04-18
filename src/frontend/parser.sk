@@ -593,7 +593,7 @@ namespace skew {
           }
         }
 
-        if (context.eat(.IS)) {
+        if (context.eat(.COLON)) {
           object.base = parseType(context)
           if (object.base == null) {
             return false

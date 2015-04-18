@@ -1082,25 +1082,25 @@ def main(foo Foo<int>) {
 ")
 
 test("
-class Foo is int {}
-class Bar is fn() {}
-class Baz is Baz {}
+class Foo : int {}
+class Bar : fn() {}
+class Baz : Baz {}
 ", "
-<stdin>:1:14: error: Cannot derive from type \"int\"
-class Foo is int {}
-             ~~~
-<stdin>:2:14: error: Cannot derive from type \"fn()\"
-class Bar is fn() {}
-             ~~~~
+<stdin>:1:13: error: Cannot derive from type \"int\"
+class Foo : int {}
+            ~~~
+<stdin>:2:13: error: Cannot derive from type \"fn()\"
+class Bar : fn() {}
+            ~~~~
 <stdin>:3:7: error: Cyclic declaration of \"Baz\"
-class Baz is Baz {}
+class Baz : Baz {}
       ~~~
 ")
 
 test("
 class Foo { def foo }
-class Bar is Foo { def bar }
-class Baz is Foo { def baz }
+class Bar : Foo { def bar }
+class Baz : Foo { def baz }
 
 def main(foo Foo, bar Bar, baz Baz) {
   foo.foo
@@ -1121,8 +1121,8 @@ def main(foo Foo, bar Bar, baz Baz) {
 
 test("
 class Foo { def new }
-class Bar is Foo { def new }
-class Baz is Foo { def new }
+class Bar : Foo { def new }
+class Baz : Foo { def new }
 
 def main {
   var a Foo = Foo.new
@@ -1143,8 +1143,8 @@ def main {
 
 test("
 class Foo<T> { def new }
-class Bar is Foo<int> { def new }
-class Baz is Foo<int> { def new }
+class Bar : Foo<int> { def new }
+class Baz : Foo<int> { def new }
 
 def main {
   var foo = true ? Bar.new : Baz.new
@@ -1158,8 +1158,8 @@ def main {
 
 test("
 class Foo<T> { def new }
-class Bar is Foo<int> { def new }
-class Baz is Foo<bool> { def new }
+class Bar : Foo<int> { def new }
+class Baz : Foo<bool> { def new }
 
 def main {
   var foo = true ? Bar.new : Baz.new
@@ -1180,7 +1180,7 @@ class Foo {
   def bar
 }
 
-class Bar is Foo {
+class Bar : Foo {
   def baz {
     foo
     bar
@@ -1214,10 +1214,10 @@ class Foo<A, B> {
   def bar(b B) A
 }
 
-class Bar<T> is Foo<int, T> {
+class Bar<T> : Foo<int, T> {
 }
 
-class Baz is Bar<bool> {
+class Baz : Bar<bool> {
   def new
 }
 
