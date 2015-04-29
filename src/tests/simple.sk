@@ -1641,5 +1641,83 @@ namespace Bar {
 ", "
 ")
 
+test("
+class Foo<T> {
+  def foo int
+}
+
+class Bar : Foo<int> {
+  def foo bool
+}
+", "
+<stdin>:6:7: error: \"foo\" overrides another function with the same name and argument types but a different return type in base type \"Foo<int>\"
+  def foo bool
+      ~~~
+<stdin>:2:7: note: The overridden function is here
+  def foo int
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def foo int
+}
+
+class Bar : Foo<int> {
+  def foo bool
+  def bar int
+}
+", "
+<stdin>:6:7: error: \"foo\" overrides another function with the same name and argument types but a different return type in base type \"Foo<int>\"
+  def foo bool
+      ~~~
+<stdin>:2:7: note: The overridden function is here
+  def foo int
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def foo int
+  def bar int
+}
+
+class Bar : Foo<int> {
+  def foo bool
+}
+", "
+<stdin>:7:7: error: \"foo\" overrides another function with the same name and argument types but a different return type in base type \"Foo<int>\"
+  def foo bool
+      ~~~
+<stdin>:2:7: note: The overridden function is here
+  def foo int
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def foo int
+  def bar bool
+}
+
+class Bar : Foo<int> {
+  def foo bool
+  def bar int
+}
+", "
+<stdin>:7:7: error: \"foo\" overrides another function with the same name and argument types but a different return type in base type \"Foo<int>\"
+  def foo bool
+      ~~~
+<stdin>:2:7: note: The overridden function is here
+  def foo int
+      ~~~
+<stdin>:8:7: error: \"bar\" overrides another function with the same name and argument types but a different return type in base type \"Foo<int>\"
+  def bar int
+      ~~~
+<stdin>:3:7: note: The overridden function is here
+  def bar bool
+      ~~~
+")
+
   }
 }

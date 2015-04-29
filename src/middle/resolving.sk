@@ -57,9 +57,10 @@ namespace skew.resolving {
         assert symbol.resolvedType != null
         symbol.state = .INITIALIZED
 
-        // After initializing a function symbol, ensure the entire overload set is initialized
         if (symbol.kind.isFunction()) {
           var overloaded = symbol.asFunctionSymbol().overloaded
+
+          // After initializing a function symbol, ensure the entire overload set is initialized
           if (overloaded != null && overloaded.state == .UNINITIALIZED) {
             initializeSymbol(overloaded)
           }
@@ -163,25 +164,17 @@ namespace skew.resolving {
         // Make sure the overridden symbol can be merged with this symbol
         if (symbolKind != overriddenKind) {
           log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol().base.resolvedType, overridden.range)
+          overridden = null
         }
 
-        else if (overridden.kind.isFunction()) {
-          var function = overridden.asFunctionSymbol()
-
-          // The overridden symbol is always an overloaded function for simplicity
-          if (function.overloaded == null) {
-            var overloaded = OverloadedFunctionSymbol(overriddenKind, function.name, [function])
-            overloaded.scope = function.scope
-            overloaded.parent = function.parent
-            function.overloaded = overloaded
-            initializeSymbol(overloaded)
-          }
-
-          symbol.overridden = function.overloaded
-        }
-
+        // Overriding something makes both symbols overloaded for simplicity
         else {
-          symbol.overridden = overridden.asOverloadedFunctionSymbol()
+          ensureFunctionIsOverloaded(symbol)
+          if (overridden.kind.isFunction()) {
+            var function = overridden.asFunctionSymbol()
+            ensureFunctionIsOverloaded(function)
+            overridden = function.overloaded
+          }
         }
       }
 
@@ -196,6 +189,7 @@ namespace skew.resolving {
         resolveVariable(argument)
         symbol.resolvedType.argumentTypes.push(argument.resolvedType)
       }
+      symbol.argumentOnlyType = cache.createLambdaType(symbol.resolvedType.argumentTypes, null)
 
       // Resolve the return type if present (no return type means "void")
       Type returnType = null
@@ -253,6 +247,22 @@ namespace skew.resolving {
             if (count < expected) {
               log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, expected, -1)
             }
+          }
+        }
+      }
+
+      // Link this symbol with the overridden symbol if there is one
+      if (overridden != null) {
+        var overloaded = overridden.asOverloadedFunctionSymbol()
+        initializeSymbol(overloaded)
+        for (var i = 0; i < overloaded.symbols.size(); i++) {
+          var overload = overloaded.symbols[i]
+          if (overload.argumentOnlyType == symbol.argumentOnlyType) {
+            symbol.overridden = overload.asFunctionSymbol()
+            if (symbol.kind != .FUNCTION_CONSTRUCTOR && overload.kind != .FUNCTION_CONSTRUCTOR && symbol.overridden.resolvedType.returnType != returnType) {
+              log.semanticErrorBadOverrideReturnType(symbol.range, symbol.name, symbol.parent.asObjectSymbol().base.resolvedType, overload.range)
+            }
+            break
           }
         }
       }
@@ -359,31 +369,29 @@ namespace skew.resolving {
       }
 
       // Ensure no two overloads have the same argument types
-      OverloadedFunctionSymbol overridden = null
       List<Type> types = []
       for (var i = 0; i < symbols.size(); i++) {
         var function = symbols[i]
         initializeSymbol(function)
-        overridden = function.overridden
-        var type = cache.createLambdaType(function.resolvedType.argumentTypes, null)
-        var index = types.indexOf(type)
+        var index = types.indexOf(function.argumentOnlyType)
         if (index == -1) {
-          types.push(type)
+          types.push(function.argumentOnlyType)
         } else {
           log.semanticErrorDuplicateOverload(function.range, symbol.name, symbols[index].range)
         }
       }
 
-      // Include overrides from the base class
-      if (overridden != null) {
-        for (var i = 0; i < overridden.symbols.size(); i++) {
-          var function = overridden.symbols[i]
+      // Include non-overridden overloads from the base class
+      var overridden = findOverriddenMember(symbol)
+      if (overridden != null && overridden.kind.isOverloadedFunction()) {
+        var overriddenSymbols = overridden.asOverloadedFunctionSymbol().symbols
+        for (var i = 0; i < overriddenSymbols.size(); i++) {
+          var function = overriddenSymbols[i]
           initializeSymbol(function)
-          var type = cache.createLambdaType(function.resolvedType.argumentTypes, null)
-          var index = types.indexOf(type)
+          var index = types.indexOf(function.argumentOnlyType)
           if (index == -1) {
             symbols.push(function)
-            types.push(type)
+            types.push(function.argumentOnlyType)
           }
         }
       }
@@ -1587,6 +1595,16 @@ namespace skew.resolving {
         value.become(node)
         node.become(Node.createCall(value, []).withRange(node.range))
         resolveAsParameterizedExpression(node, scope)
+      }
+    }
+
+    static void ensureFunctionIsOverloaded(FunctionSymbol symbol) {
+      if (symbol.overloaded == null) {
+        var overloaded = OverloadedFunctionSymbol(merging.overloadedKind(symbol.kind), symbol.name, [symbol])
+        overloaded.parent = symbol.parent
+        overloaded.scope = overloaded.parent.scope
+        symbol.overloaded = overloaded
+        overloaded.scope.asObjectScope().symbol.members[symbol.name] = overloaded
       }
     }
 

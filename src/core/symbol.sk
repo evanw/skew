@@ -204,11 +204,12 @@ namespace skew {
   }
 
   class FunctionSymbol : Symbol {
-    OverloadedFunctionSymbol overridden = null
+    FunctionSymbol overridden = null
     OverloadedFunctionSymbol overloaded = null
     List<ParameterSymbol> parameters = null
     List<VariableSymbol> arguments = []
     VariableSymbol self = null // For instance functions and constructors
+    Type argumentOnlyType = null // For quickly comparing the argument types of two function symbols
     Node returnType = null
     Node block = null
   }
