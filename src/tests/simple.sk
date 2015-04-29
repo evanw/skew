@@ -1719,5 +1719,74 @@ class Bar : Foo<int> {
       ~~~
 ")
 
+test("
+var x = super
+def foo { super }
+
+class Foo {
+  def new { super }
+  def foo { super }
+}
+
+namespace Foo {
+  def bar { super }
+}
+
+class Bar : Foo {
+  def new { super }
+  def foo { super }
+}
+
+namespace Bar {
+  def bar { super }
+}
+", "
+<stdin>:5:13: error: Cannot use \"super\" here
+  def new { super }
+            ~~~~~
+<stdin>:6:13: error: Cannot use \"super\" here
+  def foo { super }
+            ~~~~~
+<stdin>:10:13: error: Cannot use \"super\" here
+  def bar { super }
+            ~~~~~
+<stdin>:2:11: error: Cannot use \"super\" here
+def foo { super }
+          ~~~~~
+<stdin>:1:9: error: Cannot use \"super\" here
+var x = super
+        ~~~~~
+")
+
+test("
+class Foo {
+  def new(x int) {}
+  def foo(x int) {}
+}
+
+namespace Foo {
+  def bar(x int) {}
+}
+
+class Bar : Foo {
+  def new(x int) { super() }
+  def foo(x int) { super() }
+}
+
+namespace Bar {
+  def bar(x int) { super() }
+}
+", "
+<stdin>:11:25: error: Expected 1 argument but found 0 arguments when calling \"new\"
+  def new(x int) { super() }
+                        ~~
+<stdin>:12:25: error: Expected 1 argument but found 0 arguments when calling \"foo\"
+  def foo(x int) { super() }
+                        ~~
+<stdin>:16:25: error: Expected 1 argument but found 0 arguments when calling \"bar\"
+  def bar(x int) { super() }
+                        ~~
+")
+
   }
 }

@@ -23,6 +23,10 @@ namespace skew {
   }
 
   in SymbolKind {
+    bool isType() {
+      return this >= PARAMETER && this <= OBJECT_NAMESPACE
+    }
+
     bool isObject() {
       return this >= OBJECT_CLASS && this <= OBJECT_NAMESPACE
     }

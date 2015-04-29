@@ -335,5 +335,9 @@ namespace skew {
       error(range, "\"" + name + "\" overrides another function with the same name and argument types but a different return type in base type \"" + base + "\"")
       if (overridden != null) note(overridden, "The overridden function is here")
     }
+
+    void semanticErrorBadSuper(Range range) {
+      error(range, "Cannot use \"super\" here")
+    }
   }
 }

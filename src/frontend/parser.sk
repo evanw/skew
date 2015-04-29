@@ -1072,6 +1072,7 @@ namespace skew {
     pratt.literal(.INT_OCTAL, IntLiteral(8))
     pratt.literal(.NULL, TokenLiteral(.NULL))
     pratt.literal(.STRING, StringLiteral())
+    pratt.literal(.SUPER, TokenLiteral(.SUPER))
     pratt.literal(.TRUE, BoolLiteral(true))
 
     ////////////////////////////////////////////////////////////////////////////////

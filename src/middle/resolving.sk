@@ -432,6 +432,7 @@ namespace skew.resolving {
         case .NAME { resolveName(node, scope) }
         case .NULL { node.resolvedType = .NULL }
         case .PARAMETERIZE { resolveParameterize(node, scope) }
+        case .SUPER { resolveSuper(node, scope) }
 
         default {
           if (node.kind.isUnary()) { resolveUnary(node, scope) }
@@ -1399,6 +1400,26 @@ namespace skew.resolving {
       // Include the symbol for use with Node.isType()
       node.resolvedType = cache.substitute(type, cache.mergeEnvironments(type.environment, cache.createEnvironment(parameters, substitutions), null))
       node.symbol = value.symbol
+    }
+
+    void resolveSuper(Node node, Scope scope) {
+      var function = scope.findEnclosingFunction()
+      var symbol = function == null ? null : function.symbol
+      var overridden = symbol == null ? null : symbol.overridden
+
+      if (overridden == null) {
+        log.semanticErrorBadSuper(node.range)
+        return
+      }
+
+      // Calling a static method doesn't need special handling
+      if (overridden.kind == .FUNCTION_GLOBAL) {
+        node.kind = .NAME
+      }
+
+      node.resolvedType = overridden.resolvedType
+      node.symbol = overridden
+      automaticallyCallGetter(node, scope)
     }
 
     void resolveUnary(Node node, Scope scope) {

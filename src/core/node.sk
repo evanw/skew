@@ -33,6 +33,7 @@ namespace skew {
     NULL
     PAIR
     PARAMETERIZE
+    SUPER
     TYPE
 
     // Unary operators
@@ -243,7 +244,7 @@ namespace skew {
     }
 
     bool isType() {
-      return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT || kind == .PARAMETERIZE) && symbol != null && (symbol.kind.isObject() || symbol.kind == .PARAMETER)
+      return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT || kind == .PARAMETERIZE) && symbol != null && symbol.kind.isType()
     }
 
     bool blockAlwaysEndsWithReturn() {
@@ -421,6 +422,10 @@ namespace skew {
       assert type.kind.isExpression()
       parameters.unshift(type)
       return Node(.PARAMETERIZE).withChildren(parameters)
+    }
+
+    static Node createSuper() {
+      return Node(.SUPER)
     }
 
     static Node createType(Type type) {
