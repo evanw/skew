@@ -2,6 +2,14 @@ namespace skew {
   class JsEmitter : Emitter {
     override void visit(ObjectSymbol global) {
       var objects = sortedObjects(global)
+
+      if (needsExtends(objects)) {
+        emit(indent + "function $extends(derived, base) {\n")
+        emit(indent + "  derived.prototype = Object.create(base.prototype);\n")
+        emit(indent + "  derived.prototype.constructor = derived;\n")
+        emit(indent + "}\n\n")
+      }
+
       for (var i = 0; i < objects.size(); i++) {
         emitObject(objects[i])
       }
@@ -11,6 +19,16 @@ namespace skew {
     private {
       Symbol previousSymbol = null
       var prefix = ""
+
+      static bool needsExtends(List<ObjectSymbol> objects) {
+        for (var i = 0; i < objects.size(); i++) {
+          var object = objects[i]
+          if (!object.isImported() && object.baseClass != null) {
+            return true
+          }
+        }
+        return false
+      }
 
       void emitNewlineBeforeSymbol(Symbol symbol) {
         if (previousSymbol != null &&
@@ -61,6 +79,9 @@ namespace skew {
                   function.comments = symbol.comments
                 }
                 emitFunction(function)
+                if (symbol.baseClass != null) {
+                  emit("\n" + indent + "$extends(" + symbol.fullName() + ", " + symbol.baseClass.fullName() + ");\n")
+                }
               }
             }
           }
@@ -246,7 +267,7 @@ namespace skew {
           case .CALL {
             var value = node.callValue()
             var call = value.kind == .SUPER
-            var wrap = value.kind == .LAMBDA && node.parent.kind == .EXPRESSION
+            var wrap = value.kind == .LAMBDA && node.parent != null && node.parent.kind == .EXPRESSION
             if (wrap) emit("(")
             emitExpression(value, .UNARY_POSTFIX)
             if (call) emit(".call")

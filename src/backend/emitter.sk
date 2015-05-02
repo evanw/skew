@@ -29,7 +29,36 @@ namespace skew {
       List<ObjectSymbol> sortedObjects(ObjectSymbol global) {
         List<ObjectSymbol> objects = []
         findObjects(objects, global)
-        // TODO: Sort objects by inheritance and containment
+
+        // Sort by inheritance and containment
+        for (var i = 0; i < objects.size(); i++) {
+          var j = i
+
+          // Select an object that comes before all other types
+          for (; j < objects.size(); j++) {
+            var object = objects[j]
+            var k = i
+
+            // Check to see if this comes before all other types
+            for (; k < objects.size(); k++) {
+              if (j == k) {
+                continue
+              }
+              if (objectComesBefore(objects[k], object)) {
+                break
+              }
+            }
+            if (k == objects.size()) {
+              break
+            }
+          }
+
+          // Swap the object into the correct order
+          if (j < objects.size()) {
+            objects.swap(i, j)
+          }
+        }
+
         return objects
       }
     }
@@ -40,6 +69,18 @@ namespace skew {
         for (var i = 0; i < object.objects.size(); i++) {
           findObjects(objects, object.objects[i])
         }
+      }
+
+      static bool isContainedBy(ObjectSymbol inner, ObjectSymbol outer) {
+        if (inner.parent == null) return false
+        if (inner.parent == outer) return true
+        return isContainedBy(inner.parent.asObjectSymbol(), outer)
+      }
+
+      static bool objectComesBefore(ObjectSymbol before, ObjectSymbol after) {
+        if (after.hasBaseClass(before)) return true
+        if (isContainedBy(after, before)) return true
+        return false
       }
 
       List<Source> _sources = []
