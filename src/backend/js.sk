@@ -269,8 +269,12 @@ namespace skew {
             var call = value.kind == .SUPER
             var wrap = value.kind == .LAMBDA && node.parent != null && node.parent.kind == .EXPRESSION
             if (wrap) emit("(")
-            emitExpression(value, .UNARY_POSTFIX)
-            if (call) emit(".call")
+            if (!call && value.symbol != null && value.symbol.kind == .FUNCTION_CONSTRUCTOR) {
+              emit("new " + value.symbol.parent.fullName())
+            } else {
+              emitExpression(value, .UNARY_POSTFIX)
+              if (call) emit(".call")
+            }
             if (wrap) emit(")")
             emit("(")
             if (call) emit(value.symbol.asFunctionSymbol().self.name)

@@ -10,7 +10,8 @@
   - inlining
   - automatic renaming, especially important for overloaded functions
     - could probably get by with just @rename for quite a while
-  - lambda conversion to classes
+  - lambda conversion to functions for javascript inside loops
+  - lambda conversion to classes for c++
   - abstract functions/types
   - standard library
   - bootstrap the compiler
