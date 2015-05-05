@@ -634,7 +634,7 @@ namespace skew {
 
       // Forbid certain kinds of symbols inside enums
       if (parent.kind == .OBJECT_ENUM && (kind == .FUNCTION_CONSTRUCTOR || kind == .VARIABLE_INSTANCE)) {
-        context.log.syntaxErrorBadDeclarationInsideEnum(range)
+        context.log.syntaxErrorBadDeclarationInsideEnum(context.spanSince(token.range))
       }
     }
 

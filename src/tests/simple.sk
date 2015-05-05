@@ -1788,5 +1788,91 @@ namespace Bar {
                         ~~
 ")
 
+test("
+enum Foo {
+  FOO
+  BAR
+}
+
+def main {
+  var foo int = Foo.FOO == .BAR
+  var bar int = .FOO == Foo.BAR
+  var baz int = .FOO == .BAR
+}
+", "
+<stdin>:7:17: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var foo int = Foo.FOO == .BAR
+                ~~~~~~~~~~~~~~~
+<stdin>:8:17: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var bar int = .FOO == Foo.BAR
+                ~~~~~~~~~~~~~~~
+<stdin>:9:25: error: Cannot access \"BAR\" without type context
+  var baz int = .FOO == .BAR
+                        ~~~~
+<stdin>:9:17: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var baz int = .FOO == .BAR
+                ~~~~~~~~~~~~
+")
+
+test("
+enum Foo {
+  var foo
+  def bar
+  def new
+}
+
+namespace Foo {
+  var foo2
+  def bar2
+}
+", "
+<stdin>:2:3: error: Cannot use this declaration inside an enum
+  var foo
+  ~~~~~~~
+<stdin>:4:3: error: Cannot use this declaration inside an enum
+  def new
+  ~~~~~~~
+")
+
+test("
+enum Foo {
+  FOO
+}
+
+namespace Foo {
+  var a bool = Foo.FOO as string
+  var b bool = Foo.FOO as int
+  var c bool = Foo.FOO as double
+  var d bool = \"FOO\" as Foo
+  var e bool = 0 as Foo
+  var f bool = 0.0 as Foo
+}
+", "
+<stdin>:6:16: error: Cannot convert from type \"string\" to type \"bool\"
+  var a bool = Foo.FOO as string
+               ~~~~~~~~~~~~~~~~~
+<stdin>:7:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var b bool = Foo.FOO as int
+               ~~~~~~~~~~~~~~
+<stdin>:8:16: error: Cannot convert from type \"Foo\" to type \"double\"
+  var c bool = Foo.FOO as double
+               ~~~~~~~
+<stdin>:8:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var c bool = Foo.FOO as double
+               ~~~~~~~~~~~~~~~~~
+<stdin>:9:16: error: Cannot convert from type \"Foo\" to type \"bool\"
+  var d bool = \"FOO\" as Foo
+               ~~~~~~~~~~~~
+<stdin>:10:16: error: Cannot convert from type \"Foo\" to type \"bool\"
+  var e bool = 0 as Foo
+               ~~~~~~~~
+<stdin>:11:16: error: Cannot convert from type \"double\" to type \"Foo\"
+  var f bool = 0.0 as Foo
+               ~~~
+<stdin>:11:16: error: Cannot convert from type \"Foo\" to type \"bool\"
+  var f bool = 0.0 as Foo
+               ~~~~~~~~~~
+")
+
   }
 }
