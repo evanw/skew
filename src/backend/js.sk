@@ -408,7 +408,7 @@ namespace skew {
               var info = operatorInfo[node.kind]
               if (info.precedence < precedence) emit("(")
               emitExpression(node.binaryLeft(), info.precedence.incrementIfRightAssociative(info.associativity))
-              emit(" " + info.text + " ")
+              emit(node.kind == .EQUAL ? " === " : node.kind == .NOT_EQUAL ? " !== " : " " + info.text + " ")
               emitExpression(node.binaryRight(), info.precedence.incrementIfLeftAssociative(info.associativity))
               if (info.precedence < precedence) emit(")")
             }
