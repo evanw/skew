@@ -38,6 +38,10 @@ namespace skew {
       return symbol != null && symbol.kind == .OBJECT_CLASS
     }
 
+    bool isEnum() {
+      return symbol != null && symbol.kind == .OBJECT_ENUM
+    }
+
     // Type parameters are not guaranteed to be nullable since generics are
     // implemented through type erasure and the substituted type may be "int"
     bool isReference() {
@@ -179,6 +183,8 @@ namespace skew {
       if (canImplicitlyConvert(from, to)) return true
       if (canCastToNumeric(from) && canCastToNumeric(to)) return true
       if (to.hasBaseType(from)) return true
+      if (from.isEnum() && (to == intType || to == stringType)) return true
+      if (to.isEnum() && (from == intType || from == stringType)) return true
       return false
     }
 

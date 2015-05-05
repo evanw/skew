@@ -1158,7 +1158,7 @@ namespace skew {
     ////////////////////////////////////////////////////////////////////////////////
 
     pratt.parselet(.ARROW, .LOWEST).prefix = LambdaParselet()
-    pratt.parselet(.AS, .COMPARE).infix = CastParselet()
+    pratt.parselet(.AS, .UNARY_PREFIX).infix = CastParselet()
     pratt.parselet(.DOT, .MEMBER).infix = DotInfixParselet()
     pratt.parselet(.DOT, .MEMBER).prefix = DotPrefixParselet()
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrLambdaParselet()

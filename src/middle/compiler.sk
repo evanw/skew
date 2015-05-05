@@ -196,7 +196,7 @@ class IntMap<T> {
 "
 
 namespace skew {
-  ObjectSymbol compile(Log log, List<Source> sources) {
+  ObjectSymbol compile(Log log, List<Source> sources, TypeCache cache) {
     var global = ObjectSymbol(.OBJECT_GLOBAL, "<global>")
 
     sources.unshift(Source("<native>", NATIVE_LIBRARY))
@@ -209,7 +209,7 @@ namespace skew {
     if (!log.hasErrors()) {
       mergingPass(log, global)
       if (!log.hasErrors()) {
-        resolvingPass(log, global)
+        resolvingPass(log, global, cache)
       }
     }
 

@@ -21,8 +21,9 @@ namespace skew {
   void update() {
     var log = Log()
     var source = Source("<stdin>", input.value)
-    var global = compile(log, [source])
-    output.value = log.hasErrors() ? log.toString() : runEmitter(JsEmitter(), global)
+    var cache = TypeCache()
+    var global = compile(log, [source], cache)
+    output.value = log.hasErrors() ? log.toString() : runEmitter(JsEmitter(cache), global)
   }
 
   @EntryPoint

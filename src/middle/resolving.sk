@@ -1,8 +1,7 @@
 namespace skew {
   using skew.resolving
 
-  void resolvingPass(Log log, ObjectSymbol global) {
-    var cache = TypeCache()
+  void resolvingPass(Log log, ObjectSymbol global, TypeCache cache) {
     cache.loadGlobals(log, global)
     if (!log.hasErrors()) {
       Resolver(cache, log).resolveObject(global)

@@ -13,6 +13,7 @@ namespace skew {
       for (var i = 0; i < objects.size(); i++) {
         emitObject(objects[i])
       }
+
       createSource("out.js")
     }
 
@@ -358,7 +359,25 @@ namespace skew {
           }
 
           case .CAST {
-            emitExpression(node.castValue(), precedence)
+            var value = node.castValue()
+            var from = value.resolvedType
+            var to = node.resolvedType
+
+            if (from.isEnum() && to == cache.stringType) {
+              emit(from.symbol.fullName() + "[")
+              emitExpression(value, precedence)
+              emit("]")
+            }
+
+            else if (from == cache.stringType && to.isEnum()) {
+              emit(to.symbol.fullName() + "[")
+              emitExpression(value, precedence)
+              emit("]")
+            }
+
+            else {
+              emitExpression(value, precedence)
+            }
           }
 
           case .PARAMETERIZE {

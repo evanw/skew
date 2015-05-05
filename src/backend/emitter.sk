@@ -1,5 +1,7 @@
 namespace skew {
   class Emitter {
+    TypeCache cache
+
     List<Source> sources() {
       return _sources
     }
