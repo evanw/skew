@@ -475,7 +475,7 @@ namespace skew {
     Node dotTarget() {
       assert kind == .DOT
       assert children.size() == 1
-      assert children[0].kind.isExpression()
+      assert children[0] == null || children[0].kind.isExpression()
       return children[0]
     }
 

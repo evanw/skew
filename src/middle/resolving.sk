@@ -440,7 +440,7 @@ namespace skew.resolving {
         case .CALL { resolveCall(node, scope) }
         case .CAST { resolveCast(node, scope) }
         case .CONSTANT { resolveConstant(node, scope) }
-        case .DOT { resolveDot(node, scope) }
+        case .DOT { resolveDot(node, scope, context) }
         case .DYNAMIC {}
         case .HOOK { resolveHook(node, scope, context) }
         case .INDEX { resolveIndex(node, scope) }
@@ -1068,10 +1068,21 @@ namespace skew.resolving {
       return null
     }
 
-    void resolveDot(Node node, Scope scope) {
+    void resolveDot(Node node, Scope scope, Type context) {
       var target = node.dotTarget()
       var name = node.asString()
-      resolveNode(target, scope, null)
+
+      // Infer the target from the type context if it's omitted
+      if (target == null) {
+        if (context == null) {
+          log.semanticErrorMissingDotContext(node.range, name)
+          return
+        }
+        target = Node.createType(context)
+        node.replaceChild(0, target)
+      } else {
+        resolveNode(target, scope, null)
+      }
 
       // Search for a setter first, then search for a normal member
       Symbol symbol = null
@@ -1451,8 +1462,16 @@ namespace skew.resolving {
 
       // Special-case the equality operators
       if (kind == .EQUAL || kind == .NOT_EQUAL) {
-        resolveAsParameterizedExpression(left, scope)
-        resolveAsParameterizedExpression(right, scope)
+        if (needsTypeContext(left)) {
+          resolveAsParameterizedExpression(right, scope)
+          resolveAsParameterizedExpressionWithTypeContext(left, scope, right.resolvedType)
+        } else if (needsTypeContext(right)) {
+          resolveAsParameterizedExpression(left, scope)
+          resolveAsParameterizedExpressionWithTypeContext(right, scope, left.resolvedType)
+        } else {
+          resolveAsParameterizedExpression(left, scope)
+          resolveAsParameterizedExpression(right, scope)
+        }
 
         // The two types must be compatible
         var commonType = cache.commonImplicitType(left.resolvedType, right.resolvedType)
@@ -1635,6 +1654,15 @@ namespace skew.resolving {
         node.become(Node.createCall(value, []).withRange(node.range))
         resolveAsParameterizedExpression(node, scope)
       }
+    }
+
+    static bool needsTypeContext(Node node) {
+      return
+        node.kind == .DOT && node.dotTarget() == null ||
+        node.kind == .HOOK && needsTypeContext(node.hookTrue()) && needsTypeContext(node.hookFalse()) ||
+        node.kind == .INITIALIZER_LIST ||
+        node.kind == .INITIALIZER_MAP ||
+        node.kind == .INITIALIZER_SET
     }
 
     static void ensureFunctionIsOverloaded(FunctionSymbol symbol) {

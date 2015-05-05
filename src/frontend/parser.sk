@@ -847,7 +847,7 @@ namespace skew {
     }
   }
 
-  class DotParselet : InfixParselet {
+  class DotInfixParselet : InfixParselet {
     override Node parse(ParserContext context, Node left) {
       context.next()
       var range = context.current().range
@@ -855,6 +855,17 @@ namespace skew {
         return null
       }
       return Node.createDot(left, range.toString()).withRange(context.spanSince(left.range)).withInternalRange(range)
+    }
+  }
+
+  class DotPrefixParselet : PrefixParselet {
+    override Node parse(ParserContext context) {
+      var token = context.next()
+      var range = context.current().range
+      if (!context.expect(.IDENTIFIER)) {
+        return null
+      }
+      return Node.createDot(null, range.toString()).withRange(context.spanSince(token.range)).withInternalRange(range)
     }
   }
 
@@ -1148,7 +1159,8 @@ namespace skew {
 
     pratt.parselet(.ARROW, .LOWEST).prefix = LambdaParselet()
     pratt.parselet(.AS, .COMPARE).infix = CastParselet()
-    pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
+    pratt.parselet(.DOT, .MEMBER).infix = DotInfixParselet()
+    pratt.parselet(.DOT, .MEMBER).prefix = DotPrefixParselet()
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrLambdaParselet()
     pratt.parselet(.INDEX, .LOWEST).prefix = InitializerParselet()
     pratt.parselet(.LEFT_BRACE, .LOWEST).prefix = InitializerParselet()
@@ -1168,7 +1180,7 @@ namespace skew {
     var pratt = Pratt()
 
     pratt.literal(.DYNAMIC, TokenLiteral(.DYNAMIC))
-    pratt.parselet(.DOT, .MEMBER).infix = DotParselet()
+    pratt.parselet(.DOT, .MEMBER).infix = DotInfixParselet()
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrFunctionTypeParselet()
     pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizedParselet()
 

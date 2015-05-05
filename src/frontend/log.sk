@@ -315,6 +315,10 @@ namespace skew {
       warning(range, "This range is empty")
     }
 
+    void semanticErrorMissingDotContext(Range range, string name) {
+      error(range, "Cannot access \"" + name + "\" without type context")
+    }
+
     void semanticErrorInitializerTypeInferenceFailed(Range range) {
       error(range, "Cannot infer a type for this literal")
     }
