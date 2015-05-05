@@ -19,6 +19,7 @@
   - namespace imports via the "use" declaration prefix
 
 x done
+  x enums
   x base classes
     x calling base class methods with "super"
     x method overloading with base and derived methods

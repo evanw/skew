@@ -29,7 +29,7 @@ namespace skew.resolving {
         symbol.state = .INITIALIZING
 
         switch (symbol.kind) {
-          case .OBJECT_CLASS, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE {
+          case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE {
             initializeObject(symbol.asObjectSymbol())
           }
 
@@ -37,7 +37,7 @@ namespace skew.resolving {
             initializeFunction(symbol.asFunctionSymbol())
           }
 
-          case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
+          case .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
             initializeVariable(symbol.asVariableSymbol())
           }
 
@@ -127,6 +127,18 @@ namespace skew.resolving {
           symbol.resolvedType.environment = baseType.environment // Don't lose the type parameters from the base type
         } else if (baseType != .DYNAMIC) {
           log.semanticErrorInvalidBaseType(symbol.base.range, baseType)
+        }
+      }
+
+      // Assign values for all enums before they are initialized
+      if (symbol.kind == .OBJECT_ENUM) {
+        var nextEnumValue = 0
+        for (var i = 0; i < symbol.variables.size(); i++) {
+          var variable = symbol.variables[i]
+          if (variable.kind == .VARIABLE_ENUM) {
+            variable.enumValue = nextEnumValue
+            nextEnumValue++
+          }
         }
       }
 
@@ -280,6 +292,7 @@ namespace skew.resolving {
       // makes many things much easier including lambda capture and devirtualization
       if (symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR) {
         symbol.self = VariableSymbol(.VARIABLE_LOCAL, "self")
+        symbol.self.flags |= .CONST
         symbol.self.resolvedType = cache.parameterize(symbol.parent.resolvedType)
         symbol.self.state = .INITIALIZED
         scope.define(symbol.self, log)
@@ -320,6 +333,11 @@ namespace skew.resolving {
         }
       }
 
+      // Enums take their type from their parent
+      else if (symbol.kind == .VARIABLE_ENUM) {
+        symbol.resolvedType = symbol.parent.resolvedType
+      }
+
       // Implicitly-typed variables take their type from their initializer
       else if (symbol.value != null) {
         resolveAsParameterizedExpression(symbol.value, symbol.scope)
@@ -348,7 +366,7 @@ namespace skew.resolving {
       resolveAnnotations(symbol)
 
       // Run post-annotation checks
-      if (symbol.resolvedType != .DYNAMIC && symbol.isConst() && !symbol.isImported() && symbol.value == null) {
+      if (symbol.resolvedType != .DYNAMIC && symbol.isConst() && !symbol.isImported() && symbol.value == null && symbol.kind != .VARIABLE_ENUM) {
         log.semanticErrorConstMissingValue(symbol.range, symbol.name)
       }
     }

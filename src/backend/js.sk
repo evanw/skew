@@ -32,11 +32,11 @@ namespace skew {
 
       void emitNewlineBeforeSymbol(Symbol symbol) {
         if (previousSymbol != null &&
-            (!previousSymbol.kind.isObject() || !symbol.kind.isObject() || symbol.comments != null) &&
+            (!previousSymbol.kind.isObject() || !symbol.kind.isObject() || symbol.comments != null || previousSymbol.kind == .OBJECT_ENUM || symbol.kind == .OBJECT_ENUM) &&
             (!previousSymbol.kind.isVariable() || !symbol.kind.isVariable() || symbol.comments != null)) {
-          previousSymbol = null
           emit("\n")
         }
+        previousSymbol = null
       }
 
       void emitNewlineAfterSymbol(Symbol symbol) {
@@ -68,6 +68,30 @@ namespace skew {
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol.comments)
             emit(indent + (prefix == "" ? "var " : prefix) + symbol.name + " = {};\n")
+            emitNewlineAfterSymbol(symbol)
+          }
+
+          case .OBJECT_ENUM {
+            emitNewlineBeforeSymbol(symbol)
+            emitComments(symbol.comments)
+            emit(indent + (prefix == "" ? "var " : prefix) + symbol.name + " = {")
+            increaseIndent()
+            var isFirst = true
+            for (var i = 0; i < symbol.variables.size(); i++) {
+              var variable = symbol.variables[i]
+              if (variable.kind == .VARIABLE_ENUM) {
+                if (isFirst) isFirst = false
+                else emit(",")
+                emit("\n")
+                emitNewlineBeforeSymbol(variable)
+                emitComments(variable.comments)
+                emit(indent + variable.name + ": " + variable.enumValue + ", " + variable.enumValue + ": " + quoteString(variable.name, '"'))
+                emitNewlineAfterSymbol(variable)
+              }
+            }
+            decreaseIndent()
+            if (!isFirst) emit("\n")
+            emit("};\n")
             emitNewlineAfterSymbol(symbol)
           }
 

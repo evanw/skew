@@ -12,6 +12,7 @@
 "def"                             DEF;
 "dynamic"                         DYNAMIC;
 "else"                            ELSE;
+"enum"                            ENUM;
 "false"                           FALSE;
 "for"                             FOR;
 "if"                              IF;

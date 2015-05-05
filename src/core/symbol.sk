@@ -4,6 +4,7 @@ namespace skew {
     PARAMETER
 
     OBJECT_CLASS
+    OBJECT_ENUM
     OBJECT_GLOBAL
     OBJECT_INTERFACE
     OBJECT_NAMESPACE
@@ -17,6 +18,7 @@ namespace skew {
     OVERLOADED_GLOBAL
     OVERLOADED_INSTANCE
 
+    VARIABLE_ENUM
     VARIABLE_GLOBAL
     VARIABLE_INSTANCE
     VARIABLE_LOCAL
@@ -44,7 +46,7 @@ namespace skew {
     }
 
     bool isVariable() {
-      return this >= VARIABLE_GLOBAL && this <= VARIABLE_LOCAL
+      return this >= VARIABLE_ENUM && this <= VARIABLE_LOCAL
     }
 
     bool isOverloadableFunction() {
@@ -52,7 +54,7 @@ namespace skew {
     }
 
     bool hasInstances() {
-      return this == OBJECT_CLASS || this == OBJECT_INTERFACE
+      return this == OBJECT_CLASS || this == OBJECT_ENUM || this == OBJECT_INTERFACE
     }
 
     bool isOnInstances() {
@@ -221,6 +223,7 @@ namespace skew {
   class VariableSymbol : Symbol {
     Node type = null
     Node value = null
+    int enumValue = 0
   }
 
   class OverloadedFunctionSymbol : Symbol {

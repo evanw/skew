@@ -2,8 +2,7 @@ namespace skew {
   using terminal
 
   var input = `document`.getElementById("input")
-  var output1 = `document`.getElementById("output1")
-  var output2 = `document`.getElementById("output2")
+  var output = `document`.getElementById("output")
 
   string runEmitter(Emitter emitter, ObjectSymbol global) {
     emitter.visit(global)
@@ -21,9 +20,9 @@ namespace skew {
 
   void update() {
     var log = Log()
-    var global = compile(log, [Source("<stdin>", input.value)])
-    output1.value = log.hasErrors() ? log.toString() : runEmitter(JsEmitter(), global)
-    output2.value = log.hasErrors() ? "" : runEmitter(CppEmitter(), global)
+    var source = Source("<stdin>", input.value)
+    var global = compile(log, [source])
+    output.value = log.hasErrors() ? log.toString() : runEmitter(JsEmitter(), global)
   }
 
   @EntryPoint
