@@ -204,23 +204,7 @@ namespace skew {
       return null
     }
 
-    Node falseBlock = null
-    if (context.eat(.ELSE)) {
-      if (context.peek(.IF)) {
-        var statement = parseIf(context)
-        if (statement == null) {
-          return null
-        }
-        falseBlock = Node.createBlock([statement]).withRange(statement.range)
-      } else {
-        falseBlock = parseBlock(context)
-        if (falseBlock == null) {
-          return null
-        }
-      }
-    }
-
-    return Node.createIf(test, trueBlock, falseBlock).withRange(context.spanSince(token.range))
+    return Node.createIf(test, trueBlock, null).withRange(context.spanSince(token.range))
   }
 
   Node parseWhile(ParserContext context) {
@@ -259,6 +243,7 @@ namespace skew {
 
   List<Node> parseStatements(ParserContext context) {
     List<Node> statements = []
+    Node previous = null
     context.eat(.NEWLINE)
     while (!context.peek(.RIGHT_BRACE)) {
       var comments = parseLeadingComments(context)
@@ -268,19 +253,54 @@ namespace skew {
         break
       }
 
-      var statement = parseStatement(context)
-      if (statement == null) {
-        break
+      // Merge "else" statements with the previous "if"
+      if (context.peek(.ELSE) && previous != null && previous.kind == .IF && previous.ifFalse() == null) {
+        context.next()
+
+        // Match "else if"
+        if (context.peek(.IF)) {
+          var statement = parseIf(context)
+          if (statement == null) {
+            return null
+          }
+          statement.comments = comments
+          previous.replaceChild(2, Node.createBlock([statement]).withRange(statement.range))
+          previous = statement
+        }
+
+        // Match "else"
+        else {
+          var falseBlock = parseBlock(context)
+          if (falseBlock == null) {
+            return null
+          }
+          if (falseBlock.children.size() > 0) {
+            falseBlock.children[0].comments = comments
+          }
+          previous.replaceChild(2, falseBlock)
+          previous = null
+        }
       }
 
-      statement.comments = comments
-      statements.push(statement)
+      // Parse a new statement
+      else {
+        var statement = parseStatement(context)
+        if (statement == null) {
+          break
+        }
+        previous = statement
+        statement.comments = comments
+        statements.push(statement)
+      }
 
+      // Parse trailing comments and/or newline
       comments = parseTrailingComment(context, comments)
       if (comments != null) {
-        statement.comments = comments
+        if (previous != null) {
+          previous.comments = comments
+        }
         context.eat(.NEWLINE)
-      } else if (context.peek(.RIGHT_BRACE) || !context.expect(.NEWLINE)) {
+      } else if (context.peek(.RIGHT_BRACE) || !context.peek(.ELSE) && !context.expect(.NEWLINE)) {
         break
       }
     }

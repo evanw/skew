@@ -244,15 +244,8 @@ namespace skew {
           }
 
           case .IF {
-            emit(indent + "if (")
-            emitExpression(node.ifTest(), .LOWEST)
-            emit(")")
-            emitBlock(node.ifTrue())
-            var block = node.ifFalse()
-            if (block != null) {
-              emit(" else")
-              emitBlock(block)
-            }
+            emit(indent)
+            emitIf(node)
             emit("\n")
           }
 
@@ -266,6 +259,30 @@ namespace skew {
 
           default {
             assert false
+          }
+        }
+      }
+
+      void emitIf(Node node) {
+        emit("if (")
+        emitExpression(node.ifTest(), .LOWEST)
+        emit(")")
+        emitBlock(node.ifTrue())
+        var block = node.ifFalse()
+        if (block != null) {
+          if (block.children.size() == 1 && block.children[0].kind == .IF) {
+            var child = block.children[0]
+            if (child.comments != null) {
+              emit("\n")
+              emitComments(child.comments)
+              emit(indent + "else ")
+            } else {
+              emit(" else ")
+            }
+            emitIf(child)
+          } else {
+            emit(" else")
+            emitBlock(block)
           }
         }
       }

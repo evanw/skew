@@ -1874,5 +1874,31 @@ def main {
                ~~~~~~~~~~
 ")
 
+test("
+def main {
+  if true {} else if true {} else {}
+
+  # A
+  if true {} # AA
+
+  # B
+  else if true {} # BB
+
+  # C
+  else {} # CC
+}
+", "
+")
+
+test("
+def main {
+  while true {} else {}
+}
+", "
+<stdin>:2:17: error: Unexpected ELSE
+  while true {} else {}
+                ~~~~
+")
+
   }
 }
