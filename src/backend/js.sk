@@ -270,18 +270,17 @@ namespace skew {
         emitBlock(node.ifTrue())
         var block = node.ifFalse()
         if (block != null) {
-          if (block.children.size() == 1 && block.children[0].kind == .IF) {
-            var child = block.children[0]
-            if (child.comments != null) {
-              emit("\n")
-              emitComments(child.comments)
-              emit(indent + "else ")
-            } else {
-              emit(" else ")
-            }
-            emitIf(child)
+          if (block.comments != null) {
+            emit("\n")
+            emitComments(block.comments)
+            emit(indent + "else")
           } else {
             emit(" else")
+          }
+          if (block.children.size() == 1 && block.children[0].kind == .IF) {
+            emit(" ")
+            emitIf(block.children[0])
+          } else {
             emitBlock(block)
           }
         }

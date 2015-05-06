@@ -263,8 +263,9 @@ namespace skew {
           if (statement == null) {
             return null
           }
-          statement.comments = comments
-          previous.replaceChild(2, Node.createBlock([statement]).withRange(statement.range))
+          var falseBlock = Node.createBlock([statement]).withRange(statement.range)
+          falseBlock.comments = comments
+          previous.replaceChild(2, falseBlock)
           previous = statement
         }
 
@@ -274,9 +275,7 @@ namespace skew {
           if (falseBlock == null) {
             return null
           }
-          if (falseBlock.children.size() > 0) {
-            falseBlock.children[0].comments = comments
-          }
+          falseBlock.comments = comments
           previous.replaceChild(2, falseBlock)
           previous = null
         }
