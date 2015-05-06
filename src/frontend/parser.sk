@@ -43,20 +43,20 @@ namespace skew {
     return comments
   }
 
-  bool parseTrailingComment(ParserContext context, Symbol symbol) {
+  List<string> parseTrailingComment(ParserContext context, List<string> comments) {
     if (context.peek(.COMMENT)) {
       var range = context.next().range
-      if (symbol.comments == null) {
-        symbol.comments = []
+      if (comments == null) {
+        comments = []
       }
       var text = range.source.contents.slice(range.start + 1, range.end)
       if (text[text.size() - 1] != '\n') {
         text += "\n"
       }
-      symbol.comments.push(text)
-      return true
+      comments.push(text)
+      return comments
     }
-    return false
+    return null
   }
 
   List<Node> parseAnnotations(ParserContext context, List<Node> annotations) {
@@ -261,7 +261,7 @@ namespace skew {
     List<Node> statements = []
     context.eat(.NEWLINE)
     while (!context.peek(.RIGHT_BRACE)) {
-      List<string> comments = parseLeadingComments(context)
+      var comments = parseLeadingComments(context)
 
       // Ignore trailing comments
       if (context.peek(.RIGHT_BRACE) || context.peek(.END_OF_FILE)) {
@@ -276,7 +276,11 @@ namespace skew {
       statement.comments = comments
       statements.push(statement)
 
-      if (context.peek(.RIGHT_BRACE) || !context.expect(.NEWLINE)) {
+      comments = parseTrailingComment(context, comments)
+      if (comments != null) {
+        statement.comments = comments
+        context.eat(.NEWLINE)
+      } else if (context.peek(.RIGHT_BRACE) || !context.expect(.NEWLINE)) {
         break
       }
     }
@@ -433,7 +437,7 @@ namespace skew {
 
   bool parseSymbol(ParserContext context, ObjectSymbol parent, List<Node> annotations) {
     // Parse comments before the symbol declaration
-    List<string> comments = parseLeadingComments(context)
+    var comments = parseLeadingComments(context)
 
     // Ignore trailing comments
     if (context.peek(.RIGHT_BRACE) || context.peek(.END_OF_FILE)) {
@@ -641,7 +645,9 @@ namespace skew {
     symbol.annotations = annotations
     symbol.comments = comments
 
-    if (parseTrailingComment(context, symbol)) {
+    comments = parseTrailingComment(context, comments)
+    if (comments != null) {
+      symbol.comments = comments
       context.eat(.NEWLINE)
     } else if (!context.peek(.END_OF_FILE) && !context.peek(.RIGHT_BRACE) && !context.expect(.NEWLINE)) {
       return false

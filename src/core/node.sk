@@ -91,6 +91,10 @@ namespace skew {
       return this >= ASSIGN_INDEX && this <= ASSIGN_SUBTRACT
     }
 
+    bool isInitializer() {
+      return this >= INITIALIZER_LIST && this <= INITIALIZER_SET
+    }
+
     bool isUnary() {
       return this >= COMPLEMENT && this <= NOT
     }
@@ -392,7 +396,7 @@ namespace skew {
     }
 
     static Node createInitializer(NodeKind kind, List<Node> values) {
-      assert kind == .INITIALIZER_LIST || kind == .INITIALIZER_MAP || kind == .INITIALIZER_SET
+      assert kind.isInitializer()
       return Node(kind).withChildren(values)
     }
 

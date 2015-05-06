@@ -1839,7 +1839,7 @@ enum Foo {
   FOO
 }
 
-namespace Foo {
+def main {
   var a bool = Foo.FOO as string
   var b bool = Foo.FOO as int
   var c bool = Foo.FOO as double

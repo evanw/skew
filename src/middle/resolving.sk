@@ -1659,9 +1659,7 @@ namespace skew.resolving {
       return
         node.kind == .DOT && node.dotTarget() == null ||
         node.kind == .HOOK && needsTypeContext(node.hookTrue()) && needsTypeContext(node.hookFalse()) ||
-        node.kind == .INITIALIZER_LIST ||
-        node.kind == .INITIALIZER_MAP ||
-        node.kind == .INITIALIZER_SET
+        node.kind.isInitializer()
     }
 
     static void ensureFunctionIsOverloaded(FunctionSymbol symbol) {

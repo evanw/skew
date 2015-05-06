@@ -150,9 +150,19 @@ namespace skew {
           emit("function " + name + "(")
         }
         emitArgumentList(symbol.arguments)
-        emit(")")
-        emitBlock(symbol.block)
-        emit(isExpression ? ";\n" : "\n")
+        emit(") {\n")
+        increaseIndent()
+        if (symbol.self != null) {
+          emit(indent + "var " + symbol.self.name + " = this;\n")
+        }
+        var statements = symbol.block.children
+        for (var i = 0; i < statements.size(); i++) {
+          var statement = statements[i]
+          emitComments(statement.comments)
+          emitStatement(statement)
+        }
+        decreaseIndent()
+        emit(indent + "}" + (isExpression ? ";\n" : "\n"))
         emitNewlineAfterSymbol(symbol)
       }
 
