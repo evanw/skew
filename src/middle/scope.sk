@@ -43,6 +43,15 @@ namespace skew {
       }
       return null
     }
+
+    LocalScope findEnclosingLoop() {
+      for (var scope = this; scope != null && scope.kind() == .LOCAL; scope = scope.parent) {
+        if (scope.asLocalScope().type == .LOOP) {
+          return scope.asLocalScope()
+        }
+      }
+      return null
+    }
   }
 
   class ObjectScope : Scope {
@@ -77,8 +86,14 @@ namespace skew {
     }
   }
 
+  enum LocalType {
+    LOOP
+    NORMAL
+  }
+
   class LocalScope : Scope {
     StringMap<VariableSymbol> locals = {}
+    LocalType type
 
     override ScopeKind kind() {
       return .LOCAL

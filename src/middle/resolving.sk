@@ -285,7 +285,7 @@ namespace skew.resolving {
     void resolveFunction(FunctionSymbol symbol) {
       initializeSymbol(symbol)
 
-      var scope = LocalScope(symbol.scope)
+      var scope = LocalScope(symbol.scope, .NORMAL)
 
       // Referencing a normal variable instead of a special node kind for "this"
       // makes many things much easier including lambda capture and devirtualization
@@ -426,8 +426,7 @@ namespace skew.resolving {
         case .PAIR { resolvePair(node, scope) }
 
         // Statements
-        case .BREAK {}
-        case .CONTINUE {}
+        case .BREAK, .CONTINUE { resolveJump(node, scope) }
         case .EXPRESSION { resolveExpression(node, scope) }
         case .FOR { resolveFor(node, scope) }
         case .IF { resolveIf(node, scope) }
@@ -673,6 +672,13 @@ namespace skew.resolving {
       resolveAsParameterizedExpression(node.secondValue(), scope)
     }
 
+    void resolveJump(Node node, Scope scope) {
+      var loop = scope.findEnclosingLoop()
+      if (loop == null) {
+        log.semanticErrorBadJump(node.range, node.kind == .BREAK ? "break" : "continue")
+      }
+    }
+
     void resolveExpression(Node node, Scope scope) {
       var value = node.expressionValue()
       resolveAsParameterizedExpression(value, scope)
@@ -681,7 +687,7 @@ namespace skew.resolving {
 
     void resolveFor(Node node, Scope scope) {
       Type type = .DYNAMIC
-      scope = LocalScope(scope)
+      scope = LocalScope(scope, .LOOP)
 
       var value = node.forValue()
       resolveAsParameterizedExpression(value, scope)
@@ -725,9 +731,9 @@ namespace skew.resolving {
     void resolveIf(Node node, Scope scope) {
       var ifFalse = node.ifFalse()
       resolveAsParameterizedExpressionWithConversion(node.ifTest(), scope, cache.boolType)
-      resolveBlock(node.ifTrue(), LocalScope(scope))
+      resolveBlock(node.ifTrue(), LocalScope(scope, .NORMAL))
       if (ifFalse != null) {
-        resolveBlock(ifFalse, LocalScope(scope))
+        resolveBlock(ifFalse, LocalScope(scope, .NORMAL))
       }
     }
 
@@ -786,7 +792,7 @@ namespace skew.resolving {
 
     void resolveWhile(Node node, Scope scope) {
       resolveAsParameterizedExpressionWithConversion(node.whileTest(), scope, cache.boolType)
-      resolveBlock(node.whileBlock(), LocalScope(scope))
+      resolveBlock(node.whileBlock(), LocalScope(scope, .LOOP))
     }
 
     void resolveCall(Node node, Scope scope) {

@@ -1996,5 +1996,60 @@ def main {
                 ~~~~
 ")
 
+test("
+def main {
+  while true {
+    break
+    continue
+  }
+
+  break
+  continue
+
+  if true {
+    break
+    continue
+  }
+
+  while true {
+    if true {
+      break
+      continue
+    }
+  }
+}
+", "
+<stdin>:7:3: error: Cannot use \"break\" outside a loop
+  break
+  ~~~~~
+<stdin>:8:3: error: Cannot use \"continue\" outside a loop
+  continue
+  ~~~~~~~~
+<stdin>:11:5: error: Cannot use \"break\" outside a loop
+    break
+    ~~~~~
+<stdin>:12:5: error: Cannot use \"continue\" outside a loop
+    continue
+    ~~~~~~~~
+")
+
+test("
+def main {
+  while true {
+    var x = => {
+      break
+      continue
+    }
+  }
+}
+", "
+<stdin>:4:7: error: Cannot use \"break\" outside a loop
+      break
+      ~~~~~
+<stdin>:5:7: error: Cannot use \"continue\" outside a loop
+      continue
+      ~~~~~~~~
+")
+
   }
 }
