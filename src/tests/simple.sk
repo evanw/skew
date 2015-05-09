@@ -2051,5 +2051,27 @@ def main {
       ~~~~~~~~
 ")
 
+test("
+enum Foo {
+  FOO
+  BAR
+}
+
+def main {
+  switch Foo.FOO {
+    case .FOO, .BAR, .BAZ {}
+    case 0 {}
+    default {}
+  }
+}
+", "
+<stdin>:8:23: error: \"BAZ\" is not declared on type \"Foo\"
+    case .FOO, .BAR, .BAZ {}
+                      ~~~
+<stdin>:9:10: error: Cannot convert from type \"int\" to type \"Foo\" without a cast
+    case 0 {}
+         ^
+")
+
   }
 }

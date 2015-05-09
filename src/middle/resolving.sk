@@ -431,6 +431,7 @@ namespace skew.resolving {
         case .FOR { resolveFor(node, scope) }
         case .IF { resolveIf(node, scope) }
         case .IMPLICIT_RETURN, .RETURN { resolveReturn(node, scope) }
+        case .SWITCH { resolveSwitch(node, scope) }
         case .VAR { resolveVar(node, scope) }
         case .WHILE { resolveWhile(node, scope) }
 
@@ -782,6 +783,21 @@ namespace skew.resolving {
 
       // Mutate the return type to the type from the returned value
       function.returnType = Node.createType(type)
+    }
+
+    void resolveSwitch(Node node, Scope scope) {
+      var value = node.switchValue()
+      var cases = node.children
+      resolveAsParameterizedExpression(value, scope)
+
+      for (var i = 1; i < cases.size(); i++) {
+        var child = cases[i]
+        var values = child.children
+        for (var j = 1; j < values.size(); j++) {
+          resolveAsParameterizedExpressionWithConversion(values[j], scope, value.resolvedType)
+        }
+        resolveBlock(child.caseBlock(), scope)
+      }
     }
 
     void resolveVar(Node node, Scope scope) {

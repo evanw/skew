@@ -275,6 +275,42 @@ namespace skew {
             emit("\n")
           }
 
+          case .SWITCH {
+            var cases = node.children
+            emit(indent + "switch (")
+            emitExpression(node.switchValue(), .LOWEST)
+            emit(") {\n")
+            increaseIndent()
+            for (var i = 1; i < cases.size(); i++) {
+              var child = cases[i]
+              var values = child.children
+              if (i != 1) emit("\n")
+              if (values.size() == 1) {
+                emit(indent + "default:")
+              } else {
+                for (var j = 1; j < values.size(); j++) {
+                  if (j != 1) emit("\n")
+                  emit(indent + "case ")
+                  emitExpression(values[j], .LOWEST)
+                  emit(":")
+                }
+              }
+              emit(" {\n")
+              increaseIndent()
+              var statements = child.caseBlock().children
+              for (var j = 0; j < statements.size(); j++) {
+                var statement = statements[j]
+                emitComments(statement.comments)
+                emitStatement(statement)
+              }
+              emit(indent + "break;\n")
+              decreaseIndent()
+              emit(indent + "}\n")
+            }
+            decreaseIndent()
+            emit(indent + "}\n")
+          }
+
           case .WHILE {
             emit(indent + "while (")
             emitExpression(node.whileTest(), .LOWEST)

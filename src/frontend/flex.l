@@ -6,10 +6,12 @@
 
 "as"                              AS;
 "break"                           BREAK;
+"case"                            CASE;
 "class"                           CLASS;
 "const"                           CONST;
 "continue"                        CONTINUE;
 "def"                             DEF;
+"default"                         DEFAULT;
 "dynamic"                         DYNAMIC;
 "else"                            ELSE;
 "enum"                            ENUM;
@@ -23,6 +25,7 @@
 "null"                            NULL;
 "return"                          RETURN;
 "super"                           SUPER;
+"switch"                          SWITCH;
 "true"                            TRUE;
 "var"                             VAR;
 "while"                           WHILE;

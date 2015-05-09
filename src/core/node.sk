@@ -3,6 +3,7 @@ namespace skew {
     // Other
     ANNOTATION
     BLOCK
+    CASE
 
     // Statements
     BREAK
@@ -12,6 +13,7 @@ namespace skew {
     IF
     IMPLICIT_RETURN
     RETURN
+    SWITCH
     VAR
     WHILE
 
@@ -301,6 +303,12 @@ namespace skew {
       return Node(.BLOCK).withChildren(statements)
     }
 
+    static Node createCase(List<Node> values, Node block) {
+      assert block.kind == .BLOCK
+      values.unshift(block)
+      return Node(.CASE).withChildren(values)
+    }
+
     static Node createBreak() {
       return Node(.BREAK)
     }
@@ -330,6 +338,12 @@ namespace skew {
     static Node createReturn(Node value) {
       assert value == null || value.kind.isExpression()
       return Node(.RETURN).withChildren([value])
+    }
+
+    static Node createSwitch(Node value, List<Node> cases) {
+      assert value.kind.isExpression()
+      cases.unshift(value)
+      return Node(.SWITCH).withChildren(cases)
     }
 
     static Node createImplicitReturn(Node value) {
@@ -508,6 +522,13 @@ namespace skew {
       return children[1]
     }
 
+    Node caseBlock() {
+      assert kind == .CASE
+      assert children.size() >= 1
+      assert children[0].kind == .BLOCK
+      return children[0]
+    }
+
     Node expressionValue() {
       assert kind == .EXPRESSION
       assert children.size() == 1
@@ -519,6 +540,13 @@ namespace skew {
       assert kind == .RETURN || kind == .IMPLICIT_RETURN
       assert children.size() == 1
       assert children[0] == null || children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node switchValue() {
+      assert kind == .SWITCH
+      assert children.size() >= 1
+      assert children[0].kind.isExpression()
       return children[0]
     }
 

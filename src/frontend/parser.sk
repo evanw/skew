@@ -160,6 +160,74 @@ namespace skew {
     return Node.createReturn(value).withRange(context.spanSince(token.range))
   }
 
+  Node parseSwitch(ParserContext context) {
+    var token = context.next()
+    var value = pratt.parse(context, .LOWEST)
+    if (value == null) {
+      return null
+    }
+
+    if (!context.expect(.LEFT_BRACE)) {
+      return null
+    }
+
+    List<Node> cases = []
+    context.eat(.NEWLINE)
+    while (!context.peek(.RIGHT_BRACE)) {
+      var comments = parseLeadingComments(context)
+
+      // Ignore trailing comments
+      if (context.peek(.RIGHT_BRACE) || context.peek(.END_OF_FILE)) {
+        break
+      }
+
+      // Parse a new case
+      List<Node> values = []
+      var start = context.current()
+      if (context.eat(.CASE)) {
+        do {
+          var constant = pratt.parse(context, .LOWEST)
+          if (constant == null) {
+            return null
+          }
+          values.push(constant)
+        } while (context.eat(.COMMA))
+      }
+
+      // Default cases have no values
+      else if (!context.eat(.DEFAULT)) {
+        context.expect(.CASE)
+        return null
+      }
+
+      // Use a block instead of requiring "break" at the end
+      var block = parseBlock(context)
+      if (block == null) {
+        return null
+      }
+
+      // Create the case
+      var node = Node.createCase(values, block).withRange(context.spanSince(start.range))
+      node.comments = comments
+      cases.push(node)
+
+      // Parse trailing comments and/or newline
+      comments = parseTrailingComment(context, comments)
+      if (comments != null) {
+        node.comments = comments
+        context.eat(.NEWLINE)
+      } else if (context.peek(.RIGHT_BRACE) || !context.peek(.ELSE) && !context.expect(.NEWLINE)) {
+        break
+      }
+    }
+
+    if (!context.expect(.RIGHT_BRACE)) {
+      return null
+    }
+
+    return Node.createSwitch(value, cases).withRange(context.spanSince(token.range))
+  }
+
   Node parseFor(ParserContext context) {
     var token = context.next()
     var range = context.current().range
@@ -231,6 +299,7 @@ namespace skew {
       case .FOR { return parseFor(context) }
       case .IF { return parseIf(context) }
       case .RETURN { return parseReturn(context) }
+      case .SWITCH { return parseSwitch(context) }
       case .WHILE { return parseWhile(context) }
     }
 

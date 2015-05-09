@@ -154,7 +154,7 @@ class List<T> {
   def removeLast
   def removeOne(x T)
   def removeRange(start int, end int)
-  def resize(size int, default T)
+  def resize(size int, defaultValue T)
   def shuffle
   def slice(start int, end int) List<T>
   def sort(x fn(T, T) int)
@@ -175,7 +175,7 @@ class StringMap<T> {
   def []=(key string, value T)
   def count int
   def each(x fn(string, T))
-  def get(key string, default T)
+  def get(key string, defaultValue T)
   def in(key string) bool
   def isEmpty bool
   def keys List<string>
@@ -191,7 +191,7 @@ class IntMap<T> {
   def []=(key int, value T)
   def count int
   def each(x fn(int, T))
-  def get(key int, default T)
+  def get(key int, defaultValue T)
   def in(key int) bool
   def isEmpty bool
   def keys List<int>
