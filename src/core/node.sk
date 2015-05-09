@@ -229,6 +229,17 @@ namespace skew {
       return this
     }
 
+    void swapWith(Node node) {
+      Node parentA = parent
+      Node parentB = node.parent
+      int indexA = indexInParent()
+      int indexB = node.indexInParent()
+      parentA.children[indexA] = node
+      parentB.children[indexB] = this
+      parent = parentB
+      node.parent = parentA
+    }
+
     private static void updateParent(Node node, Node parent) {
       if (node != null) {
         assert (node.parent == null) != (parent == null)

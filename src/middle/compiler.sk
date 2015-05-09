@@ -210,6 +210,9 @@ namespace skew {
       mergingPass(log, global)
       if (!log.hasErrors()) {
         resolvingPass(log, global, cache)
+        if (!log.hasErrors()) {
+          motionPass(global)
+        }
       }
     }
 

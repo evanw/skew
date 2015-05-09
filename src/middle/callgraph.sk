@@ -1,0 +1,67 @@
+namespace skew {
+  class CallInfo {
+    final Symbol symbol
+    final List<Node> callSites = []
+  }
+
+  class CallGraph {
+    final List<CallInfo> callInfo = []
+    final var symbolToInfoIndex = IntMap<int>()
+
+    new(ObjectSymbol global) {
+      visitSymbol(global)
+    }
+
+    private {
+      void visitSymbol(ObjectSymbol symbol) {
+        for (var i = 0; i < symbol.objects.size(); i++) {
+          visitSymbol(symbol.objects[i])
+        }
+
+        for (var i = 0; i < symbol.functions.size(); i++) {
+          var function = symbol.functions[i]
+          recordCallSite(function, null)
+          if (function.block != null) {
+            visitNode(function.block)
+          }
+        }
+
+        for (var i = 0; i < symbol.variables.size(); i++) {
+          var variable = symbol.variables[i]
+          if (variable.value != null) {
+            visitNode(variable.value)
+          }
+        }
+      }
+
+      void visitNode(Node node) {
+        var children = node.children
+        if (children != null) {
+          for (var i = 0, n = children.size(); i < n; i++) {
+            var child = children[i]
+            if (child != null) {
+              visitNode(child)
+            }
+          }
+        }
+
+        if (node.kind == .CALL && node.symbol != null) {
+          assert node.symbol.kind.isFunction()
+          recordCallSite(node.symbol, node)
+        }
+      }
+
+      void recordCallSite(Symbol symbol, Node node) {
+        var index = symbolToInfoIndex.getOrDefault(symbol.id, -1)
+        var info = index < 0 ? CallInfo(symbol) : callInfo[index]
+        if (index < 0) {
+          symbolToInfoIndex[symbol.id] = callInfo.size()
+          callInfo.push(info)
+        }
+        if (node != null) {
+          info.callSites.push(node)
+        }
+      }
+    }
+  }
+}
