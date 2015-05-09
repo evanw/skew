@@ -20,16 +20,20 @@ namespace Math {
   def exp(x double) double
   def floor(x double) double
   def log(x double) double
-  def max(x double, y double) double
-  def max(x int, y int) int
-  def min(x double, y double) double
-  def min(x int, y int) int
   def pow(x double, y double) double
   def random double
   def round(x double) double
   def sin(x double) double
   def sqrt(x double) double
   def tan(x double) double
+
+  @prefer
+  def max(x double, y double) double
+  def max(x int, y int) int
+
+  @prefer
+  def min(x double, y double) double
+  def min(x int, y int) int
 
   const E = 2.718281828459045
   const PI = 3.141592653589793
@@ -122,11 +126,6 @@ class StringBuilder {
 
 @import
 class List<T> {
-  def +(x List<T>) List<T>
-  def +(x T) List<T>
-  def +=(x List<T>)
-  @prefer
-  def +=(x T)
   def [...](x T) List<T>
   def [](x int) T
   def []=(x int, y T)
@@ -160,6 +159,14 @@ class List<T> {
   def slice(start int, end int) List<T>
   def sort(x fn(T, T) int)
   def swap(x int, y int)
+
+  @prefer
+  def +(x T) List<T>
+  def +(x List<T>) List<T>
+
+  @prefer
+  def +=(x T)
+  def +=(x List<T>)
 }
 
 @import
