@@ -230,11 +230,12 @@ namespace skew {
             var value = node.forValue()
 
             if (value.kind == .PAIR) {
+              var limit = "n" + node.symbol.id
               emit(indent + "for (var " + node.symbol.name + " = ")
               emitExpression(value.firstValue(), .LOWEST)
-              emit("; " + node.symbol.name + " < ")
+              emit(", " + limit + " = ")
               emitExpression(value.secondValue(), .LOWEST)
-              emit("; " + node.symbol.name + "++")
+              emit("; " + node.symbol.name + " < " + limit + "; " + node.symbol.name + "++")
               emit(")")
               emitBlock(node.forBlock())
               emit("\n")
