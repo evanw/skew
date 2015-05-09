@@ -44,7 +44,7 @@ namespace skew.resolving {
             initializeParameter(symbol.asParameterSymbol())
           }
 
-          case .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
+          case .OVERLOADED_CONSTRUCTOR, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
             initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol())
           }
 
@@ -401,7 +401,8 @@ namespace skew.resolving {
       // Include non-overridden overloads from the base class
       var overridden = findOverriddenMember(symbol)
       if (overridden != null && overridden.kind.isOverloadedFunction()) {
-        var overriddenSymbols = overridden.asOverloadedFunctionSymbol().symbols
+        symbol.overridden = overridden.asOverloadedFunctionSymbol()
+        var overriddenSymbols = symbol.overridden.symbols
         for (var i = 0; i < overriddenSymbols.size(); i++) {
           var function = overriddenSymbols[i]
           initializeSymbol(function)
@@ -881,6 +882,9 @@ namespace skew.resolving {
         resolveAsParameterizedExpressionWithConversion(node.children[i + 1], scope, type.argumentTypes[i])
       }
 
+      // Update the symbol on the function to replace overloaded symbols with
+      // the overload that ended up being chosen
+      node.children[0].symbol = function
       return true
     }
 
@@ -892,7 +896,7 @@ namespace skew.resolving {
       // Filter by argument length and substitute using the current type environment
       for (var i = 0; i < overloaded.symbols.size(); i++) {
         var symbol = overloaded.symbols[i]
-        if (symbol.arguments.size() == count) {
+        if (symbol.arguments.size() == count || overloaded.symbols.size() == 1) {
           candidates.push(cache.substitute(symbol.resolvedType, type.environment))
         }
       }
@@ -1439,7 +1443,7 @@ namespace skew.resolving {
     void resolveSuper(Node node, Scope scope) {
       var function = scope.findEnclosingFunction()
       var symbol = function == null ? null : function.symbol
-      var overridden = symbol == null ? null : symbol.overridden
+      var overridden = symbol == null ? null : symbol.overloaded != null ? symbol.overloaded.overridden : symbol.overridden
 
       if (overridden == null) {
         log.semanticErrorBadSuper(node.range)

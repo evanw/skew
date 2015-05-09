@@ -15,6 +15,7 @@ namespace skew {
     FUNCTION_INSTANCE
     FUNCTION_LOCAL
 
+    OVERLOADED_CONSTRUCTOR
     OVERLOADED_GLOBAL
     OVERLOADED_INSTANCE
 
@@ -38,7 +39,7 @@ namespace skew {
     }
 
     bool isOverloadedFunction() {
-      return this >= OVERLOADED_GLOBAL && this <= OVERLOADED_INSTANCE
+      return this >= OVERLOADED_CONSTRUCTOR && this <= OVERLOADED_INSTANCE
     }
 
     bool isFunctionOrOverloadedFunction() {
@@ -54,7 +55,11 @@ namespace skew {
     }
 
     bool isGlobalReference() {
-      return this == VARIABLE_GLOBAL || this == FUNCTION_GLOBAL || this == OVERLOADED_GLOBAL || isType()
+      return
+        this == VARIABLE_ENUM || this == VARIABLE_GLOBAL ||
+        this == FUNCTION_GLOBAL || this == FUNCTION_CONSTRUCTOR ||
+        this == OVERLOADED_GLOBAL || this == OVERLOADED_CONSTRUCTOR ||
+        isType()
     }
 
     bool hasInstances() {

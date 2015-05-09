@@ -42,12 +42,13 @@ namespace Foo {
     return new
   }
 }
-
-def main {
-  Foo.new
-  Foo.new(100)
-}
 ", "
+<stdin>:6:7: error: \"new\" is already declared
+  def new(x int) Foo {
+      ~~~
+<stdin>:2:7: note: The previous declaration is here
+  def new {}
+      ~~~
 ")
 
 test("
@@ -1786,6 +1787,101 @@ namespace Bar {
 <stdin>:16:25: error: Expected 1 argument but found 0 arguments when calling \"bar\"
   def bar(x int) { super() }
                         ~~
+")
+
+test("
+class Foo {
+  def new(x int) {}
+}
+
+class Bar : Foo {
+  def new(x bool) {
+    super(x)
+  }
+}
+", "
+<stdin>:7:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    super(x)
+          ^
+")
+
+test("
+class Foo {
+  def new(x int) {}
+}
+
+class Bar : Foo {
+  def new {
+    super(1, 2)
+  }
+}
+", "
+<stdin>:7:10: error: Expected 1 argument but found 2 arguments when calling \"new\"
+    super(1, 2)
+         ~~~~~~
+")
+
+test("
+class Foo {
+  def new(x int) {}
+  def new(x int, y int) {}
+}
+
+class Bar : Foo {
+  def new(z int) {
+    super(false)
+  }
+
+  def new(y int, z int) {
+    super(false, y)
+  }
+
+  def new(x int, y int, z int) {
+    super(x, y, z)
+  }
+}
+", "
+<stdin>:8:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    super(false)
+          ~~~~~
+<stdin>:12:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    super(false, y)
+          ~~~~~
+<stdin>:16:5: error: No overload of \"new\" was found that takes 3 arguments
+    super(x, y, z)
+    ~~~~~
+")
+
+test("
+class Foo {
+  def new(x int) {
+    super
+  }
+}
+", "
+<stdin>:3:5: error: Cannot use \"super\" here
+    super
+    ~~~~~
+")
+
+test("
+class Foo {
+  def foo(x int) {}
+  def foo {}
+}
+
+class Bar : Foo {
+  def foo { super(false) }
+  def foo(x int) { super }
+  def foo(x int, y int) { super(x, y) }
+}
+", "
+<stdin>:7:19: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  def foo { super(false) }
+                  ~~~~~
+<stdin>:9:27: error: No overload of \"foo\" was found that takes 2 arguments
+  def foo(x int, y int) { super(x, y) }
+                          ~~~~~
 ")
 
 test("

@@ -411,7 +411,7 @@ namespace skew {
           }
 
           case .SUPER {
-            var symbol = node.symbol.asFunctionSymbol()
+            var symbol = node.symbol
             emit(symbol.parent.fullName())
             if (symbol.kind == .FUNCTION_INSTANCE) {
               emit(".prototype")
