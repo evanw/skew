@@ -2163,5 +2163,37 @@ class Bar : Foo {
     ^
 ")
 
+test("
+@import
+class Foo {
+  def new
+  def foo { new }
+}
+
+@import
+class Bar : Foo {
+  def foo { new }
+}
+
+@import
+class Baz : Foo {
+  def new
+  def foo { new }
+}
+
+def main {
+  Foo.new
+  Bar.new
+  Baz.new
+}
+", "
+<stdin>:9:13: error: \"new\" is not declared
+  def foo { new }
+            ~~~
+<stdin>:20:7: error: \"new\" is not declared on type \"Bar\"
+  Bar.new
+      ~~~
+")
+
   }
 }

@@ -1199,6 +1199,12 @@ namespace skew.resolving {
         }
       }
 
+      // Forbid referencing a base class constructor from a derived class
+      if (isBaseConstructorReference(target.resolvedType, symbol)) {
+        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType)
+        return
+      }
+
       var isType = target.isType()
       var needsType = !symbol.kind.isOnInstances()
 
@@ -1464,6 +1470,7 @@ namespace skew.resolving {
     }
 
     void resolveName(Node node, Scope scope) {
+      var function = scope.findEnclosingFunction()
       var name = node.asString()
       Symbol symbol = null
 
@@ -1483,10 +1490,15 @@ namespace skew.resolving {
 
       initializeSymbol(symbol)
 
+      // Forbid referencing a base class constructor from a derived class
+      if (function != null && isBaseConstructorReference(function.symbol.parent.resolvedType, symbol)) {
+        log.semanticErrorUndeclaredSymbol(node.range, name)
+        return
+      }
+
       // Automatically insert "self." before instance symbols
       if (symbol.kind.isOnInstances()) {
-        var function = scope.findEnclosingFunction().symbol
-        var self = function != null ? function.self : null
+        var self = function != null ? function.symbol.self : null
         if (self != null) {
           node.withChildren([Node.createName(self.name).withSymbol(self).withType(self.resolvedType)]).kind = .DOT
         }
@@ -1802,6 +1814,10 @@ namespace skew.resolving {
 
     static Node createMemberReference(Symbol self, Symbol member) {
       return Node.createDot(createSymbolReference(self), member.name).withSymbol(member).withType(member.resolvedType)
+    }
+
+    static bool isBaseConstructorReference(Type parent, Symbol member) {
+      return member.kind.isConstructorOrOverloadedConstructor() && member.parent != parent.symbol
     }
   }
 }
