@@ -1,25 +1,27 @@
 namespace skew {
-  void motionPass(ObjectSymbol global) {
-    var graph = CallGraph(global)
+  void motionPass(ObjectSymbol global, CallGraph graph) {
+    var parents = IntMap<ObjectSymbol>()
 
     for (var i = 0; i < graph.callInfo.size(); i++) {
       var info = graph.callInfo[i]
       var symbol = info.symbol
 
-      // Turn certain instance functions into global functions
-      if (symbol.kind == .FUNCTION_INSTANCE && symbol.parent.kind == .OBJECT_ENUM) {
+      // Move global functions with implementations off imported objects
+      if (symbol.kind == .FUNCTION_GLOBAL && symbol.parent.isImported() && !symbol.isImported()) {
         var function = symbol.asFunctionSymbol()
-        function.kind = .FUNCTION_GLOBAL
-        function.arguments.unshift(function.self)
-        function.self = null
+        var parent = parents.getOrDefault(function.parent.id, null)
 
-        // Update all call sites
-        for (var j = 0; j < info.callSites.size(); j++) {
-          var callSite = info.callSites[j]
-          var value = callSite.callValue()
-          value.dotTarget().swapWith(value)
-          callSite.children.unshift(Node.createName(function.name).withSymbol(function))
+        // Create a parallel namespace next to the parent
+        if (parent == null) {
+          parent = ObjectSymbol(.OBJECT_NAMESPACE, "in_" + function.parent.name)
+          function.parent.parent.asObjectSymbol().objects.push(parent)
+          parents[function.parent.id] = parent
         }
+
+        // Move this function into that parallel namespace
+        function.parent.asObjectSymbol().functions.removeOnce(function)
+        parent.functions.push(function)
+        function.parent = parent
       }
     }
   }

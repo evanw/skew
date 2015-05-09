@@ -1109,6 +1109,12 @@ namespace skew.resolving {
         log.semanticErrorParameterizedType(target.range, target.resolvedType)
       }
 
+      // Always access referenced globals directly
+      if (symbol.kind.isGlobalReference()) {
+        node.kind = .NAME
+        node.removeChildren()
+      }
+
       node.symbol = symbol
       node.resolvedType = cache.substitute(symbol.resolvedType, target.resolvedType.environment)
       checkAccess(node, scope)

@@ -218,7 +218,9 @@ namespace skew {
       if (!log.hasErrors()) {
         resolvingPass(log, global, cache)
         if (!log.hasErrors()) {
-          motionPass(global)
+          var graph = CallGraph(global)
+          globalizingPass(global, graph)
+          motionPass(global, graph)
         }
       }
     }

@@ -1,0 +1,24 @@
+namespace skew {
+  void globalizingPass(ObjectSymbol global, CallGraph graph) {
+    for (var i = 0; i < graph.callInfo.size(); i++) {
+      var info = graph.callInfo[i]
+      var symbol = info.symbol
+
+      // Turn certain instance functions into global functions
+      if (symbol.kind == .FUNCTION_INSTANCE && (symbol.parent.kind == .OBJECT_ENUM || symbol.parent.isImported() && !symbol.isImported())) {
+        var function = symbol.asFunctionSymbol()
+        function.kind = .FUNCTION_GLOBAL
+        function.arguments.unshift(function.self)
+        function.self = null
+
+        // Update all call sites
+        for (var j = 0; j < info.callSites.size(); j++) {
+          var callSite = info.callSites[j]
+          var value = callSite.callValue()
+          value.dotTarget().swapWith(value)
+          callSite.children.unshift(Node.createName(function.name).withSymbol(function))
+        }
+      }
+    }
+  }
+}

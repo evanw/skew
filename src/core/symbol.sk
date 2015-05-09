@@ -53,6 +53,10 @@ namespace skew {
       return this >= FUNCTION_CONSTRUCTOR && this <= FUNCTION_INSTANCE
     }
 
+    bool isGlobalReference() {
+      return this == VARIABLE_GLOBAL || this == FUNCTION_GLOBAL || this == OVERLOADED_GLOBAL || isType()
+    }
+
     bool hasInstances() {
       return this == OBJECT_CLASS || this == OBJECT_ENUM || this == OBJECT_INTERFACE
     }
