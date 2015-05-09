@@ -474,14 +474,18 @@ namespace skew.resolving {
       var overridden = findOverriddenMember(symbol)
       if (overridden != null && overridden.kind.isOverloadedFunction()) {
         symbol.overridden = overridden.asOverloadedFunctionSymbol()
-        var overriddenSymbols = symbol.overridden.symbols
-        for (var i = 0; i < overriddenSymbols.size(); i++) {
-          var function = overriddenSymbols[i]
-          initializeSymbol(function)
-          var index = types.indexOf(function.argumentOnlyType)
-          if (index == -1) {
-            symbols.push(function)
-            types.push(function.argumentOnlyType)
+
+        // Forbid referencing a base class constructor from a derived class
+        if (symbol.kind != .OVERLOADED_CONSTRUCTOR) {
+          var overriddenSymbols = symbol.overridden.symbols
+          for (var i = 0; i < overriddenSymbols.size(); i++) {
+            var function = overriddenSymbols[i]
+            initializeSymbol(function)
+            var index = types.indexOf(function.argumentOnlyType)
+            if (index == -1) {
+              symbols.push(function)
+              types.push(function.argumentOnlyType)
+            }
           }
         }
       }

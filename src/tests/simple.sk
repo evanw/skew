@@ -2195,5 +2195,25 @@ def main {
       ~~~
 ")
 
+test("
+class Foo {
+  var x int
+}
+
+class Bar : Foo {
+  var y int
+}
+
+def main {
+  Foo.new(0)
+  Bar.new(0)
+  Bar.new(0, 1)
+}
+", "
+<stdin>:11:10: error: Expected 2 arguments but found 1 argument when calling \"new\"
+  Bar.new(0)
+         ~~~
+")
+
   }
 }

@@ -1,5 +1,4 @@
 - todo
-  - automatic constructor generation
   - interface auto-conversion and checking
   - automatic operator conversion so += can map to = and + if += isn't defined
   - throw/try/catch/finally
@@ -19,6 +18,7 @@
   - namespace imports via the "use" declaration prefix
 
 x done
+  x automatic constructor generation
   x symbol motion pass to move non-imported functions off of imported types
   x globalizing pass to support js code emission of instance methods on enums
   x enums
