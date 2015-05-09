@@ -477,9 +477,6 @@ const d bool = 0
 <stdin>:2:9: error: Unable to determine the type of \"a\"
   const a
         ^
-<stdin>:3:9: error: The constant \"b\" must be initialized
-  const b int
-        ^
 <stdin>:5:18: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   const d bool = 0
                  ^
@@ -893,9 +890,12 @@ def main {
 <stdin>:18:13: error: Cannot infer a type for this literal
   var a A = [1, 2]
             ~~~~~~
-<stdin>:19:13: error: \"new\" is not declared on type \"B\"
+<stdin>:19:14: error: The function \"[...]\" does not return a value
   var b B = [1, 2]
-            ~~~~~~
+             ^
+<stdin>:19:14: error: Expected 0 arguments but found 1 argument when calling \"[...]\"
+  var b B = [1, 2]
+             ^
 <stdin>:20:14: error: The function \"[...]\" does not return a value
   var c C = [1, 2]
              ^
@@ -2109,6 +2109,58 @@ def main {
 <stdin>:15:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
   var z bool = bar(1, 2 as dynamic)
                ~~~~~~~~~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  var a bool
+  var b = 0
+}
+
+class Bar : Foo {
+  var c double
+  var d = \"\"
+}
+
+def main {
+  var foo int = Foo.new(0)
+  var bar int = Bar.new(0, 1)
+}
+", "
+<stdin>:12:25: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var foo int = Foo.new(0)
+                        ^
+<stdin>:12:17: error: Cannot convert from type \"Foo\" to type \"int\"
+  var foo int = Foo.new(0)
+                ~~~~~~~~~~
+<stdin>:13:25: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var bar int = Bar.new(0, 1)
+                        ^
+<stdin>:13:17: error: Cannot convert from type \"Bar\" to type \"int\"
+  var bar int = Bar.new(0, 1)
+                ~~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  const x int
+  def new {
+    x = 100
+  }
+}
+
+class Bar : Foo {
+  const y int
+  def new {
+    super
+    x = 0
+    y = 100
+  }
+}
+", "
+<stdin>:12:5: error: Cannot store to constant symbol \"x\"
+    x = 0
+    ^
 ")
 
   }

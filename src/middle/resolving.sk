@@ -142,6 +142,21 @@ namespace skew.resolving {
       }
 
       resolveAnnotations(symbol)
+
+      // Create a default constructor if one doesn't exist
+      if (symbol.kind == .OBJECT_CLASS && !symbol.isImported() && symbol.constructor() == null) {
+        var baseConstructor = symbol.baseClass != null ? symbol.baseClass.constructor() : null
+
+        // A default constructor can only be created if the base class has a single constructor
+        if (symbol.baseClass == null || baseConstructor != null && baseConstructor.kind == .FUNCTION_CONSTRUCTOR) {
+          var constructor = FunctionSymbol(.FUNCTION_CONSTRUCTOR, "new")
+          constructor.scope = FunctionScope(symbol.scope, constructor)
+          constructor.flags |= .AUTOMATICALLY_GENERATED
+          constructor.parent = symbol
+          symbol.functions.push(constructor)
+          symbol.members[constructor.name] = constructor
+        }
+      }
     }
 
     void resolveObject(ObjectSymbol symbol) {
@@ -164,6 +179,21 @@ namespace skew.resolving {
     void initializeFunction(FunctionSymbol symbol) {
       if (symbol.resolvedType == null) {
         symbol.resolvedType = Type(.SYMBOL, symbol)
+      }
+
+      // Referencing a normal variable instead of a special node kind for "this"
+      // makes many things much easier including lambda capture and devirtualization
+      if (symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR) {
+        symbol.self = VariableSymbol(.VARIABLE_LOCAL, "self")
+        symbol.self.flags |= .CONST
+        symbol.self.resolvedType = cache.parameterize(symbol.parent.resolvedType)
+        symbol.self.state = .INITIALIZED
+      }
+
+      // Lazily-initialize automatically generated functions
+      if (symbol.isAutomaticallyGenerated()) {
+        assert symbol.kind == .FUNCTION_CONSTRUCTOR
+        automaticallyGenerateConstructor(symbol)
       }
 
       // Find the overridden function or overloaded function in the base class
@@ -282,18 +312,60 @@ namespace skew.resolving {
       resolveAnnotations(symbol)
     }
 
+    void automaticallyGenerateConstructor(FunctionSymbol symbol) {
+      var parent = symbol.parent.asObjectSymbol()
+      var baseConstructor = parent.baseClass != null ? parent.baseClass.constructor() : null
+      List<Node> statements = []
+
+      // Mirror the base constructor's arguments
+      if (baseConstructor != null) {
+        var arguments = baseConstructor.asFunctionSymbol().arguments
+        List<Node> values = []
+        for (var i = 0; i < arguments.size(); i++) {
+          var variable = arguments[i]
+          var argument = VariableSymbol(.VARIABLE_LOCAL, variable.name)
+          argument.resolvedType = variable.resolvedType
+          argument.state = .INITIALIZED
+          symbol.arguments.push(argument)
+          values.push(createSymbolReference(argument))
+        }
+        statements.push(Node.createExpression(values.size() != 0 ? Node.createCall(Node.createSuper(), values) : Node.createSuper()))
+      }
+
+      // Add an argument for every uninitialized variable
+      for (var i = 0; i < parent.variables.size(); i++) {
+        var variable = parent.variables[i]
+        initializeSymbol(variable)
+        if (variable.value == null) {
+          var argument = VariableSymbol(.VARIABLE_LOCAL, variable.name)
+          argument.resolvedType = variable.resolvedType
+          argument.state = .INITIALIZED
+          symbol.arguments.push(argument)
+          statements.push(Node.createExpression(Node.createBinary(.ASSIGN,
+            createMemberReference(symbol.self, variable),
+            createSymbolReference(argument))))
+        } else {
+          statements.push(Node.createExpression(Node.createBinary(.ASSIGN,
+            createMemberReference(symbol.self, variable),
+            variable.value)))
+          variable.value = null
+        }
+      }
+
+      // Create the function body
+      symbol.block = Node.createBlock(statements)
+
+      // Make constructors without arguments into getters
+      if (symbol.arguments.size() == 0) {
+        symbol.flags |= .GETTER
+      }
+    }
+
     void resolveFunction(FunctionSymbol symbol) {
       initializeSymbol(symbol)
 
       var scope = LocalScope(symbol.scope, .NORMAL)
-
-      // Referencing a normal variable instead of a special node kind for "this"
-      // makes many things much easier including lambda capture and devirtualization
-      if (symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR) {
-        symbol.self = VariableSymbol(.VARIABLE_LOCAL, "self")
-        symbol.self.flags |= .CONST
-        symbol.self.resolvedType = cache.parameterize(symbol.parent.resolvedType)
-        symbol.self.state = .INITIALIZED
+      if (symbol.self != null) {
         scope.define(symbol.self, log)
       }
 
@@ -365,7 +437,7 @@ namespace skew.resolving {
       resolveAnnotations(symbol)
 
       // Run post-annotation checks
-      if (symbol.resolvedType != .DYNAMIC && symbol.isConst() && !symbol.isImported() && symbol.value == null && symbol.kind != .VARIABLE_ENUM) {
+      if (symbol.resolvedType != .DYNAMIC && symbol.isConst() && !symbol.isImported() && symbol.value == null && symbol.kind != .VARIABLE_ENUM && symbol.kind != .VARIABLE_INSTANCE) {
         log.semanticErrorConstMissingValue(symbol.range, symbol.name)
       }
     }
@@ -525,7 +597,7 @@ namespace skew.resolving {
       }
     }
 
-    void checkStorage(Node node) {
+    void checkStorage(Node node, Scope scope) {
       var symbol = node.symbol
 
       // Only allow storage to variables
@@ -533,9 +605,14 @@ namespace skew.resolving {
         log.semanticErrorBadStorage(node.range)
       }
 
-      // Forbid storage to final symbols
+      // Forbid storage to constants
       else if (symbol != null && symbol.isConst()) {
-        log.semanticErrorStorageToConstSymbol(node.internalRangeOrRange(), symbol.name)
+        var function = scope.findEnclosingFunction()
+
+        // Allow assignments to constants inside constructors
+        if (function == null || function.symbol.kind != .FUNCTION_CONSTRUCTOR || function.symbol.parent != symbol.parent || symbol.kind != .VARIABLE_INSTANCE) {
+          log.semanticErrorStorageToConstSymbol(node.internalRangeOrRange(), symbol.name)
+        }
       }
     }
 
@@ -1130,7 +1207,7 @@ namespace skew.resolving {
         log.semanticErrorMemberUnexpectedInstance(node.internalRangeOrRange(), symbol.name)
       } else if (!isType && needsType) {
         log.semanticErrorMemberUnexpectedGlobal(node.internalRangeOrRange(), symbol.name)
-      } else if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+      } else if (symbol.kind.isConstructorOrOverloadedConstructor()) {
         checkIsParameterized(target)
       } else if (isType && target.resolvedType.isParameterized()) {
         log.semanticErrorParameterizedType(target.range, target.resolvedType)
@@ -1530,7 +1607,7 @@ namespace skew.resolving {
         else {
           resolveAsParameterizedExpressionWithConversion(right, scope, left.resolvedType)
           node.resolvedType = left.resolvedType
-          checkStorage(left)
+          checkStorage(left, scope)
         }
 
         return
@@ -1563,7 +1640,7 @@ namespace skew.resolving {
 
       // Check for a valid storage location even for overloadable operators
       if (kind.isBinaryAssign()) {
-        checkStorage(target)
+        checkStorage(target, scope)
       }
 
       // Can't do overload resolution on the dynamic type
@@ -1717,6 +1794,14 @@ namespace skew.resolving {
 
     static bool isValidVariableType(Type type) {
       return type != .NULL && (type.kind != .SYMBOL || !type.symbol.kind.isFunctionOrOverloadedFunction())
+    }
+
+    static Node createSymbolReference(Symbol symbol) {
+      return Node.createName(symbol.name).withSymbol(symbol).withType(symbol.resolvedType)
+    }
+
+    static Node createMemberReference(Symbol self, Symbol member) {
+      return Node.createDot(createSymbolReference(self), member.name).withSymbol(member).withType(member.resolvedType)
     }
   }
 }

@@ -1030,9 +1030,9 @@ namespace skew {
       // Parse a lambda of the form "x => x * x"
       if (context.peek(.ARROW)) {
         var symbol = FunctionSymbol(.FUNCTION_LOCAL, "<lambda>")
-        var arg = VariableSymbol(.VARIABLE_LOCAL, name)
-        arg.range = range
-        symbol.arguments.push(arg)
+        var argument = VariableSymbol(.VARIABLE_LOCAL, name)
+        argument.range = range
+        symbol.arguments.push(argument)
         if (!parseFunctionBlock(context, symbol)) {
           return null
         }

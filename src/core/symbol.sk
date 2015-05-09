@@ -46,6 +46,10 @@ namespace skew {
       return this >= FUNCTION_ANNOTATION && this <= OVERLOADED_INSTANCE
     }
 
+    bool isConstructorOrOverloadedConstructor() {
+      return this == FUNCTION_CONSTRUCTOR || this == OVERLOADED_CONSTRUCTOR
+    }
+
     bool isVariable() {
       return this >= VARIABLE_ENUM && this <= VARIABLE_LOCAL
     }
@@ -72,6 +76,7 @@ namespace skew {
   }
 
   enum flags SymbolFlags {
+    AUTOMATICALLY_GENERATED
     CONST
     GETTER
     INFER_RETURN_TYPE
@@ -141,6 +146,10 @@ namespace skew {
 
     bool isValueType() {
       return (flags & .VALUE_TYPE) != 0
+    }
+
+    bool isAutomaticallyGenerated() {
+      return (flags & .AUTOMATICALLY_GENERATED) != 0
     }
 
     bool isConst() {
@@ -215,6 +224,11 @@ namespace skew {
 
     bool hasBaseClass(Symbol symbol) {
       return baseClass != null && (baseClass == symbol || baseClass.hasBaseClass(symbol))
+    }
+
+    Symbol constructor() {
+      var symbol = members.getOrDefault("new", null)
+      return symbol != null && symbol.kind.isConstructorOrOverloadedConstructor() ? symbol : null
     }
   }
 
