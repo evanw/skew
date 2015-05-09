@@ -882,9 +882,12 @@ namespace skew.resolving {
         resolveAsParameterizedExpressionWithConversion(node.children[i + 1], scope, type.argumentTypes[i])
       }
 
-      // Update the symbol on the function to replace overloaded symbols with
-      // the overload that ended up being chosen
-      node.children[0].symbol = function
+      // Replace overloaded symbols with the chosen overload
+      var callValue = node.children[0]
+      if (function.overloaded != null && callValue.symbol == function.overloaded) {
+        callValue.symbol = function
+      }
+
       return true
     }
 
