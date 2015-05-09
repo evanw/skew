@@ -1,0 +1,203 @@
+var NATIVE_LIBRARY = "
+def @export
+def @import
+def @prefer
+def @private
+def @protected
+def @rename(name string)
+def @skip
+
+@import
+namespace Math {
+  def abs(x double) double
+  def abs(x int) int
+  def acos(x double) double
+  def asin(x double) double
+  def atan(x double) double
+  def atan2(x double, y double) double
+  def ceil(x double) double
+  def cos(x double) double
+  def exp(x double) double
+  def floor(x double) double
+  def log(x double) double
+  def pow(x double, y double) double
+  def random double
+  def round(x double) double
+  def sin(x double) double
+  def sqrt(x double) double
+  def tan(x double) double
+
+  @prefer
+  def max(x double, y double) double
+  def max(x int, y int) int
+
+  @prefer
+  def min(x double, y double) double
+  def min(x int, y int) int
+
+  const E = 2.718281828459045
+  const PI = 3.141592653589793
+}
+
+@import
+class bool {
+  def ! bool
+}
+
+@import
+class int {
+  def + int
+  def - int
+  def ~ int
+
+  def %(x int) int
+  def &(x int) int
+  def *(x int) int
+  def +(x int) int
+  def -(x int) int
+  def /(x int) int
+  def <<(x int) int
+  def <=>(x int) int
+  def >>(x int) int
+  def ^(x int) int
+  def |(x int) int
+
+  def %=(x int) int
+  def &=(x int) int
+  def *=(x int) int
+  def +=(x int) int
+  def -=(x int) int
+  def /=(x int) int
+  def <<=(x int) int
+  def >>=(x int) int
+  def ^=(x int) int
+  def |=(x int) int
+}
+
+@import
+class double {
+  def + double
+  def - double
+
+  def *(x double) double
+  def **(x double) double
+  def +(x double) double
+  def -(x double) double
+  def /(x double) double
+  def <=>(x double) double
+
+  def **=(x double) double
+  def *=(x double) double
+  def +=(x double) double
+  def -=(x double) double
+  def /=(x double) double
+}
+
+@import
+class string {
+  def +(x string) string
+  def +=(x string)
+  def <=>(x string) int
+  def [](x int) int
+  def at(x int) string
+  def codePoints List<int>
+  def count int
+  def endsWith(x string) bool
+  def in(x string) bool
+  def indexOf(x string) int
+  def join(x List<string>) string
+  def lastIndexOf(x string) int
+  def repeat(x int) string
+  def replaceAll(before string, after string) string
+  def slice(start int, end int) string
+  def split(x string) List<string>
+  def startsWith(x string) bool
+}
+
+namespace string {
+  def fromCodePoints(x List<int>) string
+}
+
+@import
+class StringBuilder {
+  def +=(x string)
+  def toString string
+}
+
+@import
+class List<T> {
+  def [...](x T) List<T>
+  def [](x int) T
+  def []=(x int, y T)
+  def all(x fn(T) bool) bool
+  def any(x fn(T) bool) bool
+  def append(x T)
+  def appendOne(x T)
+  def copy List<T>
+  def count int
+  def each(x fn(T))
+  def filter(x fn(T) bool) List<T>
+  def first T
+  def in(x T) bool
+  def indexOf(x T) int
+  def insert(x int, value T)
+  def isEmpty bool
+  def last T
+  def lastIndexOf(x T) int
+  def map<R>(x fn(T) R) List<R>
+  def new
+  def prepend(x T)
+  def removeAll(x T)
+  def removeAt(x int)
+  def removeDuplicates
+  def removeFirst
+  def removeLast
+  def removeOne(x T)
+  def removeRange(start int, end int)
+  def resize(size int, default T)
+  def shuffle
+  def slice(start int, end int) List<T>
+  def sort(x fn(T, T) int)
+  def swap(x int, y int)
+
+  @prefer
+  def +(x T) List<T>
+  def +(x List<T>) List<T>
+
+  @prefer
+  def +=(x T)
+  def +=(x List<T>)
+}
+
+@import
+class StringMap<T> {
+  def [](key string) T
+  def []=(key string, value T)
+  def count int
+  def each(x fn(string, T))
+  def get(key string, default T)
+  def in(key string) bool
+  def isEmpty bool
+  def keys List<string>
+  def new
+  def remove(key string)
+  def values List<T>
+  def {...}(key string, value T) StringMap<T>
+}
+
+@import
+class IntMap<T> {
+  def [](key int) T
+  def []=(key int, value T)
+  def count int
+  def each(x fn(int, T))
+  def get(key int, default T)
+  def in(key int) bool
+  def isEmpty bool
+  def keys List<int>
+  def new
+  def remove(key int)
+  def values List<T>
+  def {...}(key int, value T) IntMap<T>
+}
+"
