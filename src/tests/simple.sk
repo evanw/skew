@@ -2073,5 +2073,43 @@ def main {
          ^
 ")
 
+test("
+def foo(x double, y double) double
+def foo(x int, y int) int
+
+@prefer
+def bar(x double, y double) double
+def bar(x int, y int) int
+
+def main {
+  var a bool = foo(1, 2)
+  var b bool = foo(1, 2.0)
+  var c bool = foo(1, 2 as dynamic)
+
+  var x bool = bar(1, 2)
+  var y bool = bar(1, 2.0)
+  var z bool = bar(1, 2 as dynamic)
+}
+", "
+<stdin>:9:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var a bool = foo(1, 2)
+               ~~~~~~~~~
+<stdin>:10:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var b bool = foo(1, 2.0)
+               ~~~~~~~~~~~
+<stdin>:11:16: error: Multiple matching overloads of \"foo\" were found that can take 2 arguments of types int and dynamic
+  var c bool = foo(1, 2 as dynamic)
+               ~~~
+<stdin>:13:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var x bool = bar(1, 2)
+               ~~~~~~~~~
+<stdin>:14:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var y bool = bar(1, 2.0)
+               ~~~~~~~~~~~
+<stdin>:15:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var z bool = bar(1, 2 as dynamic)
+               ~~~~~~~~~~~~~~~~~~~~
+")
+
   }
 }

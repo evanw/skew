@@ -995,6 +995,21 @@ namespace skew.resolving {
         return null
       }
 
+      // If that still didn't work, try type equality
+      for (var i = 0; i < candidates.size(); i++) {
+        var argumentTypes = candidates[i].argumentTypes
+        var isMatch = true
+        for (var j = 0; j < count; j++) {
+          if (children[j + 1].resolvedType != argumentTypes[j]) {
+            isMatch = false
+            break
+          }
+        }
+        if (isMatch) {
+          return candidates[i]
+        }
+      }
+
       // If that still didn't work, try picking the preferred overload
       Type firstPreferred = null
       Type secondPreferred = null
@@ -1009,23 +1024,6 @@ namespace skew.resolving {
       // Check for a single preferred overload
       if (firstPreferred != null && secondPreferred == null) {
         return firstPreferred
-      }
-
-      // If that still didn't work, try type equality
-      for (var i = 0; i < candidates.size(); i++) {
-        var argumentTypes = candidates[i].argumentTypes
-        for (var j = 0; j < count; j++) {
-          if (children[j + 1].resolvedType != argumentTypes[j]) {
-            candidates.removeAt(i)
-            i--
-            break
-          }
-        }
-      }
-
-      // Check for an unambiguous match
-      if (candidates.size() == 1) {
-        return candidates[0]
       }
 
       // Give up since the overload is ambiguous
