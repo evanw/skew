@@ -228,19 +228,44 @@ namespace skew {
 
           case .FOR {
             var value = node.forValue()
+
             if (value.kind == .PAIR) {
               emit(indent + "for (var " + node.symbol.name + " = ")
               emitExpression(value.firstValue(), .LOWEST)
               emit("; " + node.symbol.name + " < ")
               emitExpression(value.secondValue(), .LOWEST)
               emit("; " + node.symbol.name + "++")
-            } else {
+              emit(")")
+              emitBlock(node.forBlock())
+              emit("\n")
+            }
+
+            else if (cache.isList(value.resolvedType)) {
+              var statements = node.forBlock().children
+              var id = node.symbol.id
+              var index = "i" + id
+              var list = "x" + id
+              emit(indent + "for (var " + index + " = 0, " + list + " = ")
+              emitExpression(value, .LOWEST)
+              emit("; " + index + " < " + list + ".length; " + index + "++) {\n")
+              increaseIndent()
+              emit(indent + "var " + node.symbol.name + " = " + list + "[" + index + "];\n")
+              for (var i = 0; i < statements.size(); i++) {
+                var statement = statements[i]
+                emitComments(statement.comments)
+                emitStatement(statement)
+              }
+              decreaseIndent()
+              emit(indent + "}\n")
+            }
+
+            else {
               emit(indent + "for (var " + node.symbol.name + " in ")
               emitExpression(value, .LOWEST)
+              emit(")")
+              emitBlock(node.forBlock())
+              emit("\n")
             }
-            emit(")")
-            emitBlock(node.forBlock())
-            emit("\n")
           }
 
           case .IF {
