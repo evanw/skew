@@ -29,6 +29,7 @@ namespace skew {
     INITIALIZER_LIST
     INITIALIZER_MAP
     INITIALIZER_SET
+    INTERPOLATE
     LAMBDA
     LAMBDA_TYPE
     NAME
@@ -425,6 +426,10 @@ namespace skew {
       return Node(kind).withChildren(values)
     }
 
+    static Node createInterpolate(Node left, Node right) {
+      return Node(.INTERPOLATE).withChildren([left, right])
+    }
+
     static Node createLambda(FunctionSymbol symbol) {
       return Node(.LAMBDA).withSymbol(symbol)
     }
@@ -601,6 +606,20 @@ namespace skew {
 
     Node binaryRight() {
       assert kind.isBinary()
+      assert children.size() == 2
+      assert children[1].kind.isExpression()
+      return children[1]
+    }
+
+    Node interpolateLeft() {
+      assert kind == .INTERPOLATE
+      assert children.size() == 2
+      assert children[0].kind.isExpression()
+      return children[0]
+    }
+
+    Node interpolateRight() {
+      assert kind == .INTERPOLATE
       assert children.size() == 2
       assert children[1].kind.isExpression()
       return children[1]

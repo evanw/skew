@@ -532,6 +532,7 @@ namespace skew.resolving {
         case .HOOK { resolveHook(node, scope, context) }
         case .INDEX { resolveIndex(node, scope) }
         case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET { resolveInitializer(node, scope, context) }
+        case .INTERPOLATE { resolveInterpolate(node, scope) }
         case .LAMBDA { resolveLambda(node, scope, context) }
         case .LAMBDA_TYPE { resolveLambdaType(node, scope) }
         case .NAME { resolveName(node, scope) }
@@ -1322,6 +1323,24 @@ namespace skew.resolving {
       }
 
       log.semanticErrorInitializerTypeInferenceFailed(node.range)
+    }
+
+    void wrapWithToString(Node node, Scope scope) {
+      resolveAsParameterizedExpression(node, scope)
+      if (node.resolvedType != .DYNAMIC && node.resolvedType != cache.stringType) {
+        var parent = node.parent
+        var index = node.indexInParent()
+        node = Node.createDot(node.replaceWithNull(), "toString").withRange(node.range)
+        parent.replaceChild(index, node)
+        resolveAsParameterizedExpressionWithConversion(node, scope, cache.stringType)
+      }
+    }
+
+    void resolveInterpolate(Node node, Scope scope) {
+      wrapWithToString(node.interpolateLeft(), scope)
+      wrapWithToString(node.interpolateRight(), scope)
+      node.resolvedType = cache.stringType
+      node.kind = .ADD
     }
 
     bool shouldUseMapConstructor(Symbol symbol) {

@@ -855,6 +855,31 @@ namespace skew {
     return isValidString ? StringContent(builder.toString()) : null
   }
 
+  Node parseInterpolate(ParserContext context, Node left) {
+    var token = context.next()
+    var result = parseStringLiteral(context.log, token.range)
+    if (result == null) {
+      return null
+    }
+
+    // Concatentate the previous value with the string
+    var middle = Node.createString(result.value).withRange(token.range)
+    if (left != null) {
+      middle = Node.createInterpolate(left, middle).withRange(context.spanSince(left.range))
+    }
+
+    // Concatentate further values with the result
+    if (context.peek(.IDENTIFIER) || context.peek(.LEFT_PARENTHESIS)) {
+      var right = pratt.parse(context, .UNARY_PREFIX)
+      if (right == null) {
+        return null
+      }
+      return Node.createInterpolate(middle, right).withRange(context.spanSince(token.range))
+    }
+
+    return middle
+  }
+
   class TokenLiteral : LiteralCallback {
     NodeKind kind
 
@@ -931,13 +956,15 @@ namespace skew {
     }
   }
 
-  class StringLiteral : LiteralCallback {
-    override Node parse(ParserContext context, Token token) {
-      var result = parseStringLiteral(context.log, token.range)
-      if (result == null) {
-        return null
-      }
-      return Node.createString(result.value).withRange(token.range)
+  class StringPrefixParselet : PrefixParselet {
+    override Node parse(ParserContext context) {
+      return parseInterpolate(context, null)
+    }
+  }
+
+  class StringInfixParselet : InfixParselet {
+    override Node parse(ParserContext context, Node left) {
+      return parseInterpolate(context, left)
     }
   }
 
@@ -1195,7 +1222,6 @@ namespace skew {
     pratt.literal(.INT_HEX, IntLiteral(16))
     pratt.literal(.INT_OCTAL, IntLiteral(8))
     pratt.literal(.NULL, TokenLiteral(.NULL))
-    pratt.literal(.STRING, StringLiteral())
     pratt.literal(.SUPER, TokenLiteral(.SUPER))
     pratt.literal(.TRUE, BoolLiteral(true))
 
@@ -1266,6 +1292,8 @@ namespace skew {
     pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = HookParselet()
     pratt.parselet(.SET_NEW, .LOWEST).prefix = InitializerParselet()
     pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = ParameterizedParselet()
+    pratt.parselet(.STRING, .UNARY_PREFIX).infix = StringInfixParselet()
+    pratt.parselet(.STRING, .LOWEST).prefix = StringPrefixParselet()
 
     return pratt
   }
