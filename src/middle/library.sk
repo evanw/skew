@@ -121,6 +121,8 @@ namespace string {
 @import
 class StringBuilder {
   def +=(x string)
+  def append(x string)
+  def new
   def toString string
 }
 
