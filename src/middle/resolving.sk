@@ -352,11 +352,11 @@ namespace skew.resolving {
             argument.state = .INITIALIZED
             symbol.arguments.push(argument)
             statements.push(Node.createExpression(Node.createBinary(.ASSIGN,
-              createMemberReference(symbol.self, variable),
+              createMemberReference(createSymbolReference(symbol.self), variable),
               createSymbolReference(argument))))
           } else {
             statements.push(Node.createExpression(Node.createBinary(.ASSIGN,
-              createMemberReference(symbol.self, variable),
+              createMemberReference(createSymbolReference(symbol.self), variable),
               variable.value)))
             variable.value = null
           }
@@ -1039,8 +1039,8 @@ namespace skew.resolving {
           var kind = children[j + 1].kind
           var type = argumentTypes[j]
           if (kind == .NULL && !type.isReference() ||
-              kind == .INITIALIZER_LIST && findMember(type, "[new]", null) == null && findMember(type, "[...]", null) == null ||
-              (kind == .INITIALIZER_SET || kind == .INITIALIZER_MAP) && findMember(type, "{new}", null) == null && findMember(type, "{...}", null) == null) {
+              kind == .INITIALIZER_LIST && findMember(type, "[new]") == null && findMember(type, "[...]") == null ||
+              (kind == .INITIALIZER_SET || kind == .INITIALIZER_MAP) && findMember(type, "{new}") == null && findMember(type, "{...}") == null) {
             candidates.removeAt(i)
             i--
             break
@@ -1151,7 +1151,7 @@ namespace skew.resolving {
       if (symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS) {
         var object = symbol.parent.asObjectSymbol()
         if (object.baseClass != null) {
-          return findMember(object.baseClass.resolvedType, symbol.name, null)
+          return findMember(object.baseClass.resolvedType, symbol.name)
         }
       }
       return null
@@ -1164,7 +1164,7 @@ namespace skew.resolving {
       }
     }
 
-    Symbol findMember(Type type, string name, Range range) {
+    Symbol findMember(Type type, string name) {
       for (var check = type; check != null; check = check.baseClass()) {
         if (check.kind == .SYMBOL) {
           var symbol = check.symbol
@@ -1177,12 +1177,6 @@ namespace skew.resolving {
           }
         }
       }
-
-      // Member lookup can optionally be performed silently to try different names
-      if (range != null && type != .DYNAMIC) {
-        log.semanticErrorUnknownMemberSymbol(range, name, type)
-      }
-
       return null
     }
 
@@ -1205,11 +1199,14 @@ namespace skew.resolving {
       // Search for a setter first, then search for a normal member
       Symbol symbol = null
       if (shouldCheckForSetter(node)) {
-        symbol = findMember(target.resolvedType, name + "=", null)
+        symbol = findMember(target.resolvedType, name + "=")
       }
       if (symbol == null) {
-        symbol = findMember(target.resolvedType, name, node.internalRangeOrRange())
+        symbol = findMember(target.resolvedType, name)
         if (symbol == null) {
+          if (target.resolvedType != .DYNAMIC) {
+            log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType)
+          }
           return
         }
       }
@@ -1344,8 +1341,8 @@ namespace skew.resolving {
     bool resolveInitializerWithContext(Node node, Scope scope, Type context) {
       var count = node.children.size()
       var isList = node.kind == .INITIALIZER_LIST
-      var create = findMember(context, isList ? "[new]" : "{new}", null)
-      var add = findMember(context, isList ? "[...]" : "{...}", null)
+      var create = findMember(context, isList ? "[new]" : "{new}")
+      var add = findMember(context, isList ? "[...]" : "{...}")
 
       // Special-case imported literals to prevent an infinite loop for list literals
       if (add != null && add.isImported()) {
@@ -1707,8 +1704,9 @@ namespace skew.resolving {
 
       // Find the operator method
       var name = isComparison ? "<=>" : info.text
-      var symbol = findMember(type, name, node.internalRangeOrRange())
+      var symbol = findMember(type, name)
       if (symbol == null) {
+        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, type)
         resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
@@ -1827,8 +1825,8 @@ namespace skew.resolving {
       return Node.createName(symbol.name).withSymbol(symbol).withType(symbol.resolvedType)
     }
 
-    static Node createMemberReference(Symbol self, Symbol member) {
-      return Node.createDot(createSymbolReference(self), member.name).withSymbol(member).withType(member.resolvedType)
+    static Node createMemberReference(Node target, Symbol member) {
+      return Node.createDot(target, member.name).withSymbol(member).withType(member.resolvedType)
     }
 
     static bool isBaseConstructorReference(Type parent, Symbol member) {
