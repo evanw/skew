@@ -17,6 +17,7 @@ namespace skew {
           var graph = CallGraph(global)
           globalizingPass(global, graph)
           motionPass(global, graph)
+          renamingPass(global)
         }
       }
     }

@@ -1,0 +1,49 @@
+namespace skew {
+  using skew.renaming
+
+  void renamingPass(ObjectSymbol global) {
+    renameObject(global)
+  }
+}
+
+namespace skew.renaming {
+  void renameObject(ObjectSymbol symbol) {
+    renameSymbol(symbol)
+
+    for (var i = 0; i < symbol.objects.size(); i++) {
+      renameObject(symbol.objects[i])
+    }
+
+    for (var i = 0; i < symbol.functions.size(); i++) {
+      renameSymbol(symbol.functions[i])
+    }
+
+    for (var i = 0; i < symbol.variables.size(); i++) {
+      renameSymbol(symbol.variables[i])
+    }
+  }
+
+  void renameSymbol(Symbol symbol) {
+    if (!symbol.isImported() && !symbol.isExported() && shouldRenameSymbol(symbol)) {
+      symbol.name = "s" + symbol.id
+    }
+  }
+
+  bool isAlpha(int c) {
+    return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_'
+  }
+
+  bool isNumber(int c) {
+    return c >= '0' && c <= '9'
+  }
+
+  bool shouldRenameSymbol(Symbol symbol) {
+    for (var i = 0; i < symbol.name.size(); i++) {
+      var c = symbol.name[i]
+      if (!isAlpha(c) && (i == 0 || !isNumber(c))) {
+        return true
+      }
+    }
+    return false
+  }
+}

@@ -9,13 +9,13 @@ namespace skew {
     final var symbolToInfoIndex = IntMap<int>()
 
     new(ObjectSymbol global) {
-      visitSymbol(global)
+      visitObject(global)
     }
 
     private {
-      void visitSymbol(ObjectSymbol symbol) {
+      void visitObject(ObjectSymbol symbol) {
         for (var i = 0; i < symbol.objects.size(); i++) {
-          visitSymbol(symbol.objects[i])
+          visitObject(symbol.objects[i])
         }
 
         for (var i = 0; i < symbol.functions.size(); i++) {
@@ -48,6 +48,20 @@ namespace skew {
         if (node.kind == .CALL && node.symbol != null) {
           assert node.symbol.kind.isFunction()
           recordCallSite(node.symbol, node)
+        }
+
+        else if (node.kind == .VAR) {
+          var variable = node.symbol.asVariableSymbol()
+          if (variable.value != null) {
+            visitNode(variable.value)
+          }
+        }
+
+        else if (node.kind == .LAMBDA) {
+          var function = node.symbol.asFunctionSymbol()
+          if (function.block != null) {
+            visitNode(function.block)
+          }
         }
       }
 
