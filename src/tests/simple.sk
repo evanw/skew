@@ -1942,6 +1942,8 @@ def main {
   var d bool = \"FOO\" as Foo
   var e bool = 0 as Foo
   var f bool = 0.0 as Foo
+  var g string = Foo.FOO
+  var h int = Foo.FOO
 }
 ", "
 <stdin>:6:16: error: Cannot convert from type \"string\" to type \"bool\"
@@ -1968,6 +1970,12 @@ def main {
 <stdin>:11:16: error: Cannot convert from type \"Foo\" to type \"bool\"
   var f bool = 0.0 as Foo
                ~~~~~~~~~~
+<stdin>:12:18: error: Cannot convert from type \"Foo\" to type \"string\" without a cast
+  var g string = Foo.FOO
+                 ~~~~~~~
+<stdin>:13:15: error: Cannot convert from type \"Foo\" to type \"int\" without a cast
+  var h int = Foo.FOO
+              ~~~~~~~
 ")
 
 test("
