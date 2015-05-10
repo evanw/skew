@@ -176,6 +176,7 @@ namespace skew {
       if (from == .NULL && to.isReference()) return true
       if (from == intType && to == doubleType) return true
       if (from.hasBaseType(to)) return true
+      if (from.isEnum() && (to == intType || to == stringType)) return true
       return false
     }
 
@@ -183,7 +184,6 @@ namespace skew {
       if (canImplicitlyConvert(from, to)) return true
       if (canCastToNumeric(from) && canCastToNumeric(to)) return true
       if (to.hasBaseType(from)) return true
-      if (from.isEnum() && (to == intType || to == stringType)) return true
       if (to.isEnum() && (from == intType || from == stringType)) return true
       return false
     }

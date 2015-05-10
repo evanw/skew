@@ -1330,15 +1330,39 @@ namespace skew.resolving {
       log.semanticErrorInitializerTypeInferenceFailed(node.range)
     }
 
+    bool isToStringMember(Symbol symbol) {
+      return symbol.kind == .FUNCTION_INSTANCE && symbol.resolvedType.argumentTypes.size() == 0 && symbol.resolvedType.returnType == cache.stringType
+    }
+
+    bool hasToStringMember(Type type) {
+      var member = findMember(type, "toString")
+      if (member != null) {
+        if (isToStringMember(member)) {
+          return true
+        } else if (member.kind == .OVERLOADED_INSTANCE) {
+          var symbols = member.asOverloadedFunctionSymbol().symbols
+          for (var i = 0; i < symbols.size(); i++) {
+            var symbol = symbols[i]
+            if (isToStringMember(symbol)) {
+              return true
+            }
+          }
+        }
+      }
+      return false
+    }
+
     void wrapWithToString(Node node, Scope scope) {
       resolveAsParameterizedExpression(node, scope)
-      if (node.resolvedType != .DYNAMIC && node.resolvedType != cache.stringType) {
+
+      if (node.resolvedType != .DYNAMIC && hasToStringMember(node.resolvedType)) {
         var parent = node.parent
         var index = node.indexInParent()
         node = Node.createDot(node.replaceWithNull(), "toString").withRange(node.range)
         parent.replaceChild(index, node)
-        resolveAsParameterizedExpressionWithConversion(node, scope, cache.stringType)
       }
+
+      resolveAsParameterizedExpressionWithConversion(node, scope, cache.stringType)
     }
 
     void resolveInterpolate(Node node, Scope scope) {

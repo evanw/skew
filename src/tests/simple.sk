@@ -1970,12 +1970,6 @@ def main {
 <stdin>:11:16: error: Cannot convert from type \"Foo\" to type \"bool\"
   var f bool = 0.0 as Foo
                ~~~~~~~~~~
-<stdin>:12:18: error: Cannot convert from type \"Foo\" to type \"string\" without a cast
-  var g string = Foo.FOO
-                 ~~~~~~~
-<stdin>:13:15: error: Cannot convert from type \"Foo\" to type \"int\" without a cast
-  var h int = Foo.FOO
-              ~~~~~~~
 ")
 
 test("
@@ -2286,6 +2280,39 @@ def main {
 <stdin>:10:20: warning: Unnecessary cast from type \"int\" to type \"double\"
   var f double = 0 as double
                    ~~~~~~~~~
+")
+
+test("
+enum A { FOO }
+class B { def toString string }
+class C { def toString }
+class D { def toString(x int) string }
+class E {}
+
+def main {
+  A.FOO \" \"
+  \" \" B.new
+  C.new \" \" D.new \" \" \" \" E.new
+}
+", "
+<stdin>:8:3: warning: Unused expression
+  A.FOO \" \"
+  ~~~~~~~~~
+<stdin>:9:3: warning: Unused expression
+  \" \" B.new
+  ~~~~~~~~~
+<stdin>:10:3: error: Cannot convert from type \"C\" to type \"string\"
+  C.new \" \" D.new \" \" \" \" E.new
+  ~~~~~
+<stdin>:10:13: error: Cannot convert from type \"D\" to type \"string\"
+  C.new \" \" D.new \" \" \" \" E.new
+            ~~~~~
+<stdin>:10:27: error: Cannot convert from type \"E\" to type \"string\"
+  C.new \" \" D.new \" \" \" \" E.new
+                          ~~~~~
+<stdin>:10:3: warning: Unused expression
+  C.new \" \" D.new \" \" \" \" E.new
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ")
 
   }

@@ -874,7 +874,7 @@ namespace skew {
       if (right == null) {
         return null
       }
-      return Node.createInterpolate(middle, right).withRange(context.spanSince(token.range))
+      return Node.createInterpolate(middle, right).withRange(context.spanSince(middle.range))
     }
 
     return middle
