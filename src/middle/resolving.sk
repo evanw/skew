@@ -153,6 +153,7 @@ namespace skew.resolving {
           constructor.scope = FunctionScope(symbol.scope, constructor)
           constructor.flags |= .AUTOMATICALLY_GENERATED
           constructor.parent = symbol
+          constructor.range = symbol.range
           symbol.functions.push(constructor)
           symbol.members[constructor.name] = constructor
         }

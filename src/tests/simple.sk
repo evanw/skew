@@ -2228,5 +2228,15 @@ def main {
 ", "
 ")
 
+test("
+class Foo {
+  var foo = Foo.new
+}
+", "
+<stdin>:1:7: error: Cyclic declaration of \"new\"
+class Foo {
+      ~~~
+")
+
   }
 }
