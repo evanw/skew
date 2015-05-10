@@ -2215,5 +2215,18 @@ def main {
          ~~~
 ")
 
+test("
+class Foo {}
+
+namespace Foo {
+  const x = 0
+}
+
+def main {
+  Foo.new
+}
+", "
+")
+
   }
 }

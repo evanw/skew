@@ -336,19 +336,21 @@ namespace skew.resolving {
       for (var i = 0; i < parent.variables.size(); i++) {
         var variable = parent.variables[i]
         initializeSymbol(variable)
-        if (variable.value == null) {
-          var argument = VariableSymbol(.VARIABLE_LOCAL, variable.name)
-          argument.resolvedType = variable.resolvedType
-          argument.state = .INITIALIZED
-          symbol.arguments.push(argument)
-          statements.push(Node.createExpression(Node.createBinary(.ASSIGN,
-            createMemberReference(symbol.self, variable),
-            createSymbolReference(argument))))
-        } else {
-          statements.push(Node.createExpression(Node.createBinary(.ASSIGN,
-            createMemberReference(symbol.self, variable),
-            variable.value)))
-          variable.value = null
+        if (variable.kind == .VARIABLE_INSTANCE) {
+          if (variable.value == null) {
+            var argument = VariableSymbol(.VARIABLE_LOCAL, variable.name)
+            argument.resolvedType = variable.resolvedType
+            argument.state = .INITIALIZED
+            symbol.arguments.push(argument)
+            statements.push(Node.createExpression(Node.createBinary(.ASSIGN,
+              createMemberReference(symbol.self, variable),
+              createSymbolReference(argument))))
+          } else {
+            statements.push(Node.createExpression(Node.createBinary(.ASSIGN,
+              createMemberReference(symbol.self, variable),
+              variable.value)))
+            variable.value = null
+          }
         }
       }
 
