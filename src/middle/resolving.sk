@@ -145,15 +145,24 @@ namespace skew.resolving {
 
       // Create a default constructor if one doesn't exist
       if (symbol.kind == .OBJECT_CLASS && !symbol.isImported() && symbol.constructor() == null) {
-        var baseConstructor = symbol.baseClass != null ? symbol.baseClass.constructor() : null
+        var overridden = symbol.baseClass != null ? symbol.baseClass.constructor() : null
+
+        // Unwrap the overload group if present
+        if (overridden != null && overridden.kind == .OVERLOADED_CONSTRUCTOR) {
+          var overloaded = overridden.asOverloadedFunctionSymbol()
+          if (overloaded.symbols.size() == 1) {
+            overridden = overloaded.symbols[0]
+          }
+        }
 
         // A default constructor can only be created if the base class has a single constructor
-        if (symbol.baseClass == null || baseConstructor != null && baseConstructor.kind == .FUNCTION_CONSTRUCTOR) {
+        if (symbol.baseClass == null || overridden != null && overridden.kind == .FUNCTION_CONSTRUCTOR) {
           var constructor = FunctionSymbol(.FUNCTION_CONSTRUCTOR, "new")
           constructor.scope = FunctionScope(symbol.scope, constructor)
           constructor.flags |= .AUTOMATICALLY_GENERATED
           constructor.parent = symbol
           constructor.range = symbol.range
+          constructor.overridden = overridden != null ? overridden.asFunctionSymbol() : null
           symbol.functions.push(constructor)
           symbol.members[constructor.name] = constructor
         }
@@ -315,12 +324,11 @@ namespace skew.resolving {
 
     void automaticallyGenerateConstructor(FunctionSymbol symbol) {
       var parent = symbol.parent.asObjectSymbol()
-      var baseConstructor = parent.baseClass != null ? parent.baseClass.constructor() : null
       List<Node> statements = []
 
       // Mirror the base constructor's arguments
-      if (baseConstructor != null) {
-        var arguments = baseConstructor.asFunctionSymbol().arguments
+      if (symbol.overridden != null) {
+        var arguments = symbol.overridden.arguments
         List<Node> values = []
         for (var i = 0; i < arguments.size(); i++) {
           var variable = arguments[i]

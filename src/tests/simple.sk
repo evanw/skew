@@ -2238,5 +2238,23 @@ class Foo {
       ~~~
 ")
 
+test("
+class Foo {
+}
+
+class Bar : Foo {
+}
+
+class Baz : Foo {
+}
+
+def main {
+  Foo.new
+  Bar.new
+  Baz.new
+}
+", "
+")
+
   }
 }
