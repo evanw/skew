@@ -1013,12 +1013,12 @@ namespace skew {
 
   class CastParselet : InfixParselet {
     override Node parse(ParserContext context, Node left) {
-      context.next()
+      var token = context.next()
       var type = parseType(context)
       if (type == null) {
         return null
       }
-      return Node.createCast(left, type).withRange(context.spanSince(left.range))
+      return Node.createCast(left, type).withRange(context.spanSince(left.range)).withInternalRange(token.range)
     }
   }
 

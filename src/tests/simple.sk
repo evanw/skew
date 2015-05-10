@@ -2264,5 +2264,29 @@ def main {
 ", "
 ")
 
+test("
+class Foo {}
+class Bar : Foo {}
+
+def main {
+  var a Foo = null as Foo
+  var b = null as Bar
+  var c = a as Foo
+  var d = a as Bar
+  var e int = 0.5 as int
+  var f double = 0 as double
+}
+", "
+<stdin>:5:20: warning: Unnecessary cast from type \"null\" to type \"Foo\"
+  var a Foo = null as Foo
+                   ~~~~~~
+<stdin>:7:13: warning: Unnecessary cast from type \"Foo\" to type \"Foo\"
+  var c = a as Foo
+            ~~~~~~
+<stdin>:10:20: warning: Unnecessary cast from type \"int\" to type \"double\"
+  var f double = 0 as double
+                   ~~~~~~~~~
+")
+
   }
 }

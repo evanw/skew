@@ -245,6 +245,10 @@ namespace skew {
       error(range, "Cannot convert from type \"" + from + "\" to type \"" + to + "\"" + (isCastAllowed ? " without a cast" : ""))
     }
 
+    void semanticWarningExtraCast(Range range, Type from, Type to) {
+      warning(range, "Unnecessary cast from type \"" + from + "\" to type \"" + to + "\"")
+    }
+
     void semanticErrorWrongArgumentCount(Range range, string name, int count) {
       error(range, "Expected \"" + name + "\" to take " + count + " argument" + prettyPrint.plural(count))
     }

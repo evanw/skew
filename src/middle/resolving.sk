@@ -525,7 +525,7 @@ namespace skew.resolving {
         // Expressions
         case .ASSIGN_INDEX { resolveIndex(node, scope) }
         case .CALL { resolveCall(node, scope) }
-        case .CAST { resolveCast(node, scope) }
+        case .CAST { resolveCast(node, scope, context) }
         case .CONSTANT { resolveConstant(node, scope) }
         case .DOT { resolveDot(node, scope, context) }
         case .DYNAMIC {}
@@ -1129,13 +1129,18 @@ namespace skew.resolving {
       return match != null && resolveFunctionCall(node, scope, match)
     }
 
-    void resolveCast(Node node, Scope scope) {
+    void resolveCast(Node node, Scope scope, Type context) {
       var value = node.castValue()
       var type = node.castType()
       resolveAsParameterizedType(type, scope)
       resolveAsParameterizedExpressionWithTypeContext(value, scope, type.resolvedType)
       checkConversion(value, type.resolvedType, .EXPLICIT)
       node.resolvedType = type.resolvedType
+
+      // Warn about unnecessary casts
+      if (value.resolvedType == type.resolvedType || context == type.resolvedType && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
+        log.semanticWarningExtraCast(Range.span(node.internalRangeOrRange(), type.range), value.resolvedType, type.resolvedType)
+      }
     }
 
     void resolveConstant(Node node, Scope scope) {
