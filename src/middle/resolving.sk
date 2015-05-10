@@ -999,7 +999,7 @@ namespace skew.resolving {
 
       // Replace overloaded symbols with the chosen overload
       var callValue = node.children[0]
-      if (function.overloaded != null && callValue.symbol == function.overloaded) {
+      if (function != null && function.overloaded != null && callValue.symbol == function.overloaded) {
         callValue.symbol = function
       }
 
