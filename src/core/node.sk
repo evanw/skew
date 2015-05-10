@@ -19,7 +19,7 @@ namespace skew {
 
     // Expressions
     ASSIGN_INDEX
-    CALL // If node has symbol then symbol.arguments matches node.children, otherwise node.children.first is the function and other children are arguments
+    CALL
     CAST
     CONSTANT
     DOT

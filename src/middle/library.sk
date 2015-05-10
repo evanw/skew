@@ -175,7 +175,7 @@ class StringMap<T> {
   def []=(key string, value T)
   def count int
   def each(x fn(string, T))
-  def get(key string, defaultValue T)
+  def get(key string, defaultValue T) T
   def in(key string) bool
   def isEmpty bool
   def keys List<string>
@@ -191,7 +191,7 @@ class IntMap<T> {
   def []=(key int, value T)
   def count int
   def each(x fn(int, T))
-  def get(key int, defaultValue T)
+  def get(key int, defaultValue T) T
   def in(key int) bool
   def isEmpty bool
   def keys List<int>
