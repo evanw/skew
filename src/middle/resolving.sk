@@ -344,8 +344,8 @@ namespace skew.resolving {
       // Add an argument for every uninitialized variable
       for (var i = 0; i < parent.variables.size(); i++) {
         var variable = parent.variables[i]
-        initializeSymbol(variable)
         if (variable.kind == .VARIABLE_INSTANCE) {
+          initializeSymbol(variable)
           if (variable.value == null) {
             var argument = VariableSymbol(.VARIABLE_LOCAL, variable.name)
             argument.resolvedType = variable.resolvedType

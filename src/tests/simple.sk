@@ -2234,6 +2234,13 @@ test("
 class Foo {
   var foo = Foo.new
 }
+
+class Bar {
+}
+
+namespace Bar {
+  var foo = Bar.new
+}
 ", "
 <stdin>:1:7: error: Cyclic declaration of \"new\"
 class Foo {
