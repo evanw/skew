@@ -1787,7 +1787,7 @@ namespace skew.resolving {
       if (reverseBinaryOrder) {
         children.reverse()
       }
-      children[0] = Node.createDot(children[0], name).withRange(node.internalRangeOrRange())
+      children[0] = Node.createDot(children[0], name).withSymbol(symbol).withRange(node.internalRangeOrRange())
 
       // Implement the logic for the "<=>" operator
       if (isComparison) {
