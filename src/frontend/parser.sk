@@ -346,7 +346,7 @@ namespace skew {
           }
           falseBlock.comments = comments
           previous.replaceChild(2, falseBlock)
-          previous = null
+          previous = falseBlock
         }
       }
 

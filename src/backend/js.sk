@@ -32,6 +32,7 @@ namespace skew {
 
     private {
       Symbol previousSymbol = null
+      Node previousNode = null
       var prefix = ""
 
       static bool needsExtends(List<ObjectSymbol> objects) {
@@ -55,6 +56,21 @@ namespace skew {
 
       void emitNewlineAfterSymbol(Symbol symbol) {
         previousSymbol = symbol
+      }
+
+      bool isCompactNodeKind(NodeKind kind) {
+        return kind == .EXPRESSION || kind == .VAR || kind.isJump()
+      }
+
+      void emitNewlineBeforeStatement(Node node) {
+        if (previousNode != null && (node.comments != null || !isCompactNodeKind(previousNode.kind) || !isCompactNodeKind(node.kind))) {
+          emit("\n")
+        }
+        previousNode = null
+      }
+
+      void emitNewlineAfterStatement(Node node) {
+        previousNode = node
       }
 
       void emitComments(List<string> comments) {
@@ -164,12 +180,7 @@ namespace skew {
         if (symbol.self != null) {
           emit(indent + "var " + symbol.self.name + " = this;\n")
         }
-        var statements = symbol.block.children
-        for (var i = 0; i < statements.size(); i++) {
-          var statement = statements[i]
-          emitComments(statement.comments)
-          emitStatement(statement)
-        }
+        emitStatements(symbol.block.children)
         decreaseIndent()
         emit(indent + "}" + (isExpression ? ";\n" : "\n"))
         emitNewlineAfterSymbol(symbol)
@@ -193,14 +204,22 @@ namespace skew {
         }
       }
 
+      void emitStatements(List<Node> nodes) {
+        previousNode = null
+        for (var i = 0; i < nodes.size(); i++) {
+          var statement = nodes[i]
+          emitNewlineBeforeStatement(statement)
+          emitComments(statement.comments)
+          emitStatement(statement)
+          emitNewlineAfterStatement(statement)
+        }
+        previousNode = null
+      }
+
       void emitBlock(Node node) {
         emit(" {\n")
         increaseIndent()
-        for (var i = 0; i < node.children.size(); i++) {
-          var statement = node.children[i]
-          emitComments(statement.comments)
-          emitStatement(statement)
-        }
+        emitStatements(node.children)
         decreaseIndent()
         emit(indent + "}")
       }
@@ -251,7 +270,6 @@ namespace skew {
             }
 
             else if (cache.isList(value.resolvedType)) {
-              var statements = node.forBlock().children
               var id = node.symbol.id
               var index = "i" + id
               var list = "x" + id
@@ -260,11 +278,7 @@ namespace skew {
               emit("; " + index + " < " + list + ".length; " + index + "++) {\n")
               increaseIndent()
               emit(indent + "var " + node.symbol.name + " = " + list + "[" + index + "];\n")
-              for (var i = 0; i < statements.size(); i++) {
-                var statement = statements[i]
-                emitComments(statement.comments)
-                emitStatement(statement)
-              }
+              emitStatements(node.forBlock().children)
               decreaseIndent()
               emit(indent + "}\n")
             }
@@ -306,12 +320,7 @@ namespace skew {
               }
               emit(" {\n")
               increaseIndent()
-              var statements = child.caseBlock().children
-              for (var j = 0; j < statements.size(); j++) {
-                var statement = statements[j]
-                emitComments(statement.comments)
-                emitStatement(statement)
-              }
+              emitStatements(child.caseBlock().children)
               emit(indent + "break;\n")
               decreaseIndent()
               emit(indent + "}\n")
@@ -341,16 +350,20 @@ namespace skew {
         emitBlock(node.ifTrue())
         var block = node.ifFalse()
         if (block != null) {
-          if (block.comments != null) {
-            emit("\n")
+          var singleIf = block.children.size() == 1 && block.children[0].kind == .IF ? block.children[0] : null
+          if (block.comments != null || singleIf != null && singleIf.comments != null) {
+            emit("\n\n")
             emitComments(block.comments)
+            if (singleIf != null) {
+              emitComments(singleIf.comments)
+            }
             emit(indent + "else")
           } else {
             emit(" else")
           }
-          if (block.children.size() == 1 && block.children[0].kind == .IF) {
+          if (singleIf != null) {
             emit(" ")
-            emitIf(block.children[0])
+            emitIf(singleIf)
           } else {
             emitBlock(block)
           }

@@ -113,6 +113,10 @@ namespace skew {
     bool isBinaryComparison() {
       return this >= GREATER_THAN && this <= LESS_THAN_OR_EQUAL
     }
+
+    bool isJump() {
+      return this == BREAK || this == CONTINUE || this == IMPLICIT_RETURN || this == RETURN
+    }
   }
 
   // Nodes represent executable code (variable initializers and function bodies)
