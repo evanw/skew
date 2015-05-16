@@ -13,8 +13,10 @@ namespace skew {
 
         // Create a parallel namespace next to the parent
         if (parent == null) {
+          var common = function.parent.parent.asObjectSymbol()
           parent = ObjectSymbol(.OBJECT_NAMESPACE, "in_" + function.parent.name)
-          function.parent.parent.asObjectSymbol().objects.push(parent)
+          parent.parent = common
+          common.objects.push(parent)
           parents[function.parent.id] = parent
         }
 

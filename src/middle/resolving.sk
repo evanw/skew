@@ -1314,7 +1314,7 @@ namespace skew.resolving {
           }
 
           if (count != 0 && isValidVariableType(type)) {
-            node.resolvedType = cache.createListType(type)
+            resolveInitializerWithContext(node, scope, cache.createListType(type))
             return
           }
         }
@@ -1331,11 +1331,11 @@ namespace skew.resolving {
 
           if (count != 0 && isValidVariableType(key) && isValidVariableType(value)) {
             if (key == cache.intType) {
-              node.resolvedType = cache.createIntMapType(value)
+              resolveInitializerWithContext(node, scope, cache.createIntMapType(value))
               return
             }
             if (key == cache.stringType) {
-              node.resolvedType = cache.createStringMapType(value)
+              resolveInitializerWithContext(node, scope, cache.createStringMapType(value))
               return
             }
           }

@@ -10,8 +10,21 @@ namespace skew {
         emit(indent + "}\n\n")
       }
 
+      // Emit objects and functions
       for (var i = 0; i < objects.size(); i++) {
         emitObject(objects[i])
+      }
+
+      // Emit variables
+      for (var i = 0; i < objects.size(); i++) {
+        var object = objects[i]
+        prefix = ""
+        for (var o = object; o.kind != .OBJECT_GLOBAL; o = o.parent.asObjectSymbol()) {
+          prefix = o.name + "." + prefix
+        }
+        for (var j = 0; j < object.variables.size(); j++) {
+          emitVariable(object.variables[j])
+        }
       }
 
       createSource("out.js")
@@ -121,10 +134,6 @@ namespace skew {
           if (function.kind != .FUNCTION_CONSTRUCTOR) {
             emitFunction(function)
           }
-        }
-
-        for (var i = 0; i < symbol.variables.size(); i++) {
-          emitVariable(symbol.variables[i])
         }
       }
 
