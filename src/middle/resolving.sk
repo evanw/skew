@@ -484,10 +484,10 @@ namespace skew.resolving {
           if ((function.block != null) == (other.block != null) || function.resolvedType.returnType != other.resolvedType.returnType) {
             log.semanticErrorDuplicateOverload(function.range, symbol.name, other.range)
           } else if (function.block != null) {
-            function.flags |= other.flags
+            function.flags |= other.flags & ~.IMPORT
             symbols[index] = function
           } else {
-            other.flags |= function.flags
+            other.flags |= function.flags & ~.IMPORT
           }
 
           // Remove the symbol after the merge so "types" still matches "symbols"
