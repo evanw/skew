@@ -477,7 +477,22 @@ namespace skew.resolving {
         if (index == -1) {
           types.push(function.argumentOnlyType)
         } else {
-          log.semanticErrorDuplicateOverload(function.range, symbol.name, symbols[index].range)
+          var other = symbols[index]
+
+          // Allow duplicate function declarations with the same type to merge
+          // as long as there is one declaration that provides an implementation
+          if ((function.block != null) == (other.block != null) || function.resolvedType.returnType != other.resolvedType.returnType) {
+            log.semanticErrorDuplicateOverload(function.range, symbol.name, other.range)
+          } else if (function.block != null) {
+            function.flags |= other.flags
+            symbols[index] = function
+          } else {
+            other.flags |= function.flags
+          }
+
+          // Remove the symbol after the merge so "types" still matches "symbols"
+          symbols.removeAt(i)
+          i--
         }
       }
 

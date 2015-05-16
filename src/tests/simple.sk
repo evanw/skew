@@ -2322,5 +2322,97 @@ def main {
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ")
 
+test("
+def foo
+def foo
+", "
+<stdin>:2:5: error: Duplicate overloaded function \"foo\"
+def foo
+    ~~~
+<stdin>:1:5: note: The previous declaration is here
+def foo
+    ~~~
+")
+
+test("
+def foo {}
+def foo
+", "
+")
+
+test("
+def foo
+def foo {}
+", "
+")
+
+test("
+def foo {}
+def foo {}
+", "
+<stdin>:2:5: error: Duplicate overloaded function \"foo\"
+def foo {}
+    ~~~
+<stdin>:1:5: note: The previous declaration is here
+def foo {}
+    ~~~
+")
+
+test("
+def foo int
+def foo double { return 0 }
+", "
+<stdin>:2:5: error: Duplicate overloaded function \"foo\"
+def foo double { return 0 }
+    ~~~
+<stdin>:1:5: note: The previous declaration is here
+def foo int
+    ~~~
+")
+
+test("
+def foo(x int)
+def foo(x double)
+
+def foo(x int) {}
+def foo(x double) {}
+
+def main {
+  foo(null as dynamic)
+}
+", "
+<stdin>:8:3: error: Multiple matching overloads of \"foo\" were found that can take 1 argument of type dynamic
+  foo(null as dynamic)
+  ~~~
+")
+
+test("
+@prefer
+def foo(x int)
+def foo(x double)
+
+def foo(x int) {}
+def foo(x double) {}
+
+def main {
+  foo(null as dynamic)
+}
+", "
+")
+
+test("
+def foo(x int) {}
+def foo(x double) {}
+
+@prefer
+def foo(x int)
+def foo(x double)
+
+def main {
+  foo(null as dynamic)
+}
+", "
+")
+
   }
 }
