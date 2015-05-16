@@ -153,7 +153,7 @@ def main(x int) {
   x ? x : x
 }
 ", "
-<stdin>:2:3: warning: Unused expression
+<stdin>:2:3: error: The function \"main\" must be called
   main
   ~~~~
 <stdin>:3:3: warning: Unused expression
@@ -852,7 +852,10 @@ def foo(x int) {
 <stdin>:15:3: error: Cannot infer a type for this literal
   {0.5: 1} - 1
   ~~~~~~~~
-<stdin>:16:3: error: Cannot infer a type for this literal
+<stdin>:16:4: error: The function \"foo\" must be called
+  [foo]
+   ~~~
+<stdin>:16:3: warning: Unused expression
   [foo]
   ~~~~~
 ")
@@ -2412,6 +2415,26 @@ def main {
   foo(null as dynamic)
 }
 ", "
+")
+
+test("
+class Foo {
+  def new(x int)
+  def foo(x int)
+  def foo(x double)
+}
+
+def main {
+  Foo.new
+  Foo.new(0).foo
+}
+", "
+<stdin>:8:7: error: The function \"new\" must be called
+  Foo.new
+      ~~~
+<stdin>:9:14: error: The function \"foo\" must be called
+  Foo.new(0).foo
+             ~~~
 ")
 
   }

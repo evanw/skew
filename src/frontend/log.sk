@@ -355,5 +355,9 @@ namespace skew {
     void semanticErrorBadJump(Range range, string name) {
       error(range, "Cannot use \"" + name + "\" outside a loop")
     }
+
+    void semanticErrorMustCallFunction(Range range, string name) {
+      error(range, "The function \"" + name + "\" must be called")
+    }
   }
 }

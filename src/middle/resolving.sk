@@ -956,13 +956,12 @@ namespace skew.resolving {
 
     bool resolveSymbolCall(Node node, Scope scope, Type type) {
       var symbol = type.symbol
-      var parent = node.parent
 
       // Getters are called implicitly, so explicitly calling one is an error.
       // This error prevents a getter returning a lambda which is then called,
       // but that's really strange and I think this error is more useful.
-      if (symbol.isGetter() && parent != null && parent.kind == .CALL && node == parent.callValue()) {
-        log.semanticErrorGetterCalledTwice(parent.internalRangeOrRange(), symbol.name)
+      if (symbol.isGetter() && isCallValue(node)) {
+        log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange(), symbol.name)
         return false
       }
 
@@ -1825,10 +1824,12 @@ namespace skew.resolving {
       if (symbol == null) {
         return
       }
+      var kind = symbol.kind
+      var parent = node.parent
       var isGetter = symbol.isGetter()
 
       // The check for getters is complicated by overloaded functions
-      if (!isGetter && symbol.kind.isOverloadedFunction() && (node.parent == null || node.parent.kind != .CALL || node != node.parent.callValue() || node.parent.children.size() == 1)) {
+      if (!isGetter && kind.isOverloadedFunction() && (!isCallValue(node) || parent.children.size() == 1)) {
         var overloaded = symbol.asOverloadedFunctionSymbol()
         for (var i = 0; i < overloaded.symbols.size(); i++) {
           var getter = overloaded.symbols[i]
@@ -1850,6 +1851,13 @@ namespace skew.resolving {
         value.become(node)
         node.become(Node.createCall(value, []).withRange(node.range))
         resolveAsParameterizedExpression(node, scope)
+      }
+
+      // Forbid bare function references
+      else if (node.resolvedType != .DYNAMIC && kind.isFunctionOrOverloadedFunction() && kind != .FUNCTION_ANNOTATION &&
+          !isCallValue(node) && (parent == null || parent.kind != .PARAMETERIZE || !isCallValue(parent))) {
+        log.semanticErrorMustCallFunction(node.internalRangeOrRange(), symbol.name)
+        node.resolvedType = .DYNAMIC
       }
     }
 
@@ -1894,6 +1902,11 @@ namespace skew.resolving {
 
     static bool isBaseConstructorReference(Type parent, Symbol member) {
       return member.kind.isConstructorOrOverloadedConstructor() && member.parent != parent.symbol
+    }
+
+    static bool isCallValue(Node node) {
+      var parent = node.parent
+      return parent != null && parent.kind == .CALL && node == parent.callValue()
     }
   }
 }
