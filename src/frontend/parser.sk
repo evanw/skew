@@ -472,7 +472,7 @@ namespace skew {
     return parseFunctionBlock(context, symbol)
   }
 
-  List<ParameterSymbol> parseTypeParameters(ParserContext context) {
+  List<ParameterSymbol> parseTypeParameters(ParserContext context, SymbolKind kind) {
     List<ParameterSymbol> parameters = []
     do {
       var range = context.current().range
@@ -480,7 +480,7 @@ namespace skew {
       if (!context.expect(.IDENTIFIER)) {
         return null
       }
-      var symbol = ParameterSymbol(.PARAMETER, name)
+      var symbol = ParameterSymbol(kind, name)
       symbol.range = range
       parameters.push(symbol)
     } while (context.eat(.COMMA))
@@ -655,7 +655,7 @@ namespace skew {
 
           // Parse type parameters
           if (context.eat(.START_PARAMETER_LIST)) {
-            function.parameters = parseTypeParameters(context)
+            function.parameters = parseTypeParameters(context, .PARAMETER_FUNCTION)
             if (function.parameters == null) {
               return false
             }
@@ -692,7 +692,7 @@ namespace skew {
           object.range = range
 
           if (kind != .OBJECT_NAMESPACE && context.eat(.START_PARAMETER_LIST)) {
-            object.parameters = parseTypeParameters(context)
+            object.parameters = parseTypeParameters(context, .PARAMETER_OBJECT)
             if (object.parameters == null) {
               return false
             }

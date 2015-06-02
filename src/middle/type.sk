@@ -45,7 +45,7 @@ namespace skew {
     // Type parameters are not guaranteed to be nullable since generics are
     // implemented through type erasure and the substituted type may be "int"
     bool isReference() {
-      return symbol == null || !symbol.isValueType() && symbol.kind != .PARAMETER
+      return symbol == null || !symbol.isValueType() && !symbol.kind.isParameter()
     }
 
     string toString() {
@@ -364,7 +364,7 @@ namespace skew {
         var symbol = type.symbol
 
         // Parameters just need simple substitution
-        if (symbol.kind == .PARAMETER) {
+        if (symbol.kind.isParameter()) {
           var index = environment.parameters.indexOf(symbol.asParameterSymbol())
           if (index != -1) {
             substituted = environment.substitutions[index]

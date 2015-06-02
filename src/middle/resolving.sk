@@ -40,7 +40,7 @@ namespace skew.resolving {
             initializeVariable(symbol.asVariableSymbol())
           }
 
-          case .PARAMETER {
+          case .PARAMETER_FUNCTION, .PARAMETER_OBJECT {
             initializeParameter(symbol.asParameterSymbol())
           }
 
@@ -278,11 +278,14 @@ namespace skew.resolving {
       // Validate argument count
       else {
         var argumentCount = argumentCountForOperator(symbol.name)
+        var hasArgumentCountError = false
+
         switch (argumentCount) {
           case .ZERO, .ONE {
             var expected = argumentCount == .ZERO ? 0 : 1
             if (count != expected) {
               log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, expected)
+              hasArgumentCountError = true
             }
           }
 
@@ -291,6 +294,7 @@ namespace skew.resolving {
             var upper = argumentCount == .ZERO_OR_ONE ? 1 : 2
             if (count < lower || count > upper) {
               log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, lower, upper)
+              hasArgumentCountError = true
             }
           }
 
@@ -298,6 +302,19 @@ namespace skew.resolving {
             var expected = argumentCount == .ONE_OR_MORE ? 1 : 2
             if (count < expected) {
               log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, expected, -1)
+              hasArgumentCountError = true
+            }
+          }
+        }
+
+        // Enforce that the initializer constructor operators take lists of
+        // values to avoid confusing error messages inside the code generated
+        // for initializer expressions
+        if (!hasArgumentCountError && (symbol.name == "{new}" || symbol.name == "[new]")) {
+          for (var i = 0; i < count; i++) {
+            var argument = symbol.arguments[i]
+            if (argument.resolvedType != .DYNAMIC && !cache.isList(argument.resolvedType)) {
+              log.semanticErrorExpectedList(argument.range, argument.name, argument.resolvedType)
             }
           }
         }
@@ -1246,7 +1263,7 @@ namespace skew.resolving {
         log.semanticErrorMemberUnexpectedInstance(node.internalRangeOrRange(), symbol.name)
       } else if (!isType && needsType) {
         log.semanticErrorMemberUnexpectedGlobal(node.internalRangeOrRange(), symbol.name)
-      } else if (symbol.kind.isConstructorOrOverloadedConstructor()) {
+      } else if (symbol.kind.isConstructorOrOverloadedConstructor() || symbol.needsParameterizedType()) {
         checkIsParameterized(target)
       } else if (isType && target.resolvedType.isParameterized()) {
         log.semanticErrorParameterizedType(target.range, target.resolvedType)
@@ -1545,7 +1562,7 @@ namespace skew.resolving {
     }
 
     void resolveName(Node node, Scope scope) {
-      var function = scope.findEnclosingFunction()
+      var enclosingFunction = scope.findEnclosingFunction()
       var name = node.asString()
       Symbol symbol = null
 
@@ -1566,18 +1583,62 @@ namespace skew.resolving {
       initializeSymbol(symbol)
 
       // Forbid referencing a base class constructor from a derived class
-      if (function != null && isBaseConstructorReference(function.symbol.parent.resolvedType, symbol)) {
+      if (enclosingFunction != null && isBaseConstructorReference(enclosingFunction.symbol.parent.resolvedType, symbol)) {
         log.semanticErrorUndeclaredSymbol(node.range, name)
         return
       }
 
       // Automatically insert "self." before instance symbols
       if (symbol.kind.isOnInstances()) {
-        var self = function != null ? function.symbol.self : null
+        var self = enclosingFunction != null ? enclosingFunction.symbol.self : null
         if (self != null) {
           node.withChildren([Node.createName(self.name).withSymbol(self).withType(self.resolvedType)]).kind = .DOT
         } else {
           log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)
+        }
+      }
+
+      // Type parameters for objects may only be used in certain circumstances
+      else if (symbol.kind == .PARAMETER_OBJECT) {
+        var isValid = false
+        var stop = false
+
+        for (var parent = scope; parent != null && !stop; parent = parent.parent) {
+          switch (parent.kind()) {
+            case .OBJECT {
+              isValid = parent.asObjectScope().symbol == symbol.parent
+              stop = true
+            }
+
+            case .FUNCTION {
+              var function = parent.asFunctionScope().symbol
+              if (function.kind != .FUNCTION_LOCAL) {
+                isValid = function.parent == symbol.parent
+                stop = true
+
+                // Allow using object type parameters inside global functions on
+                // that object. This allows for easily shimming constructors of
+                // generic types with factory functions without code changes.
+                if (isValid && function.kind == .FUNCTION_GLOBAL) {
+                  if (scope == parent) {
+                    function.flags |= .NEEDS_PARAMETERIZED_TYPE
+                  } else if (!function.needsParameterizedType()) {
+                    isValid = false
+                  }
+                }
+              }
+            }
+
+            case .VARIABLE {
+              var variable = parent.asVariableScope().symbol
+              isValid = variable.kind == .VARIABLE_INSTANCE && variable.parent == symbol.parent
+              stop = true
+            }
+          }
+        }
+
+        if (!isValid) {
+          log.semanticErrorMemberUnexpectedTypeParameter(node.range, symbol.name)
         }
       }
 

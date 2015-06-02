@@ -3,6 +3,7 @@ namespace skew {
     FUNCTION
     LOCAL
     OBJECT
+    VARIABLE
   }
 
   class Scope {
@@ -19,6 +20,11 @@ namespace skew {
     FunctionScope asFunctionScope() {
       assert kind() == .FUNCTION
       return (FunctionScope)this
+    }
+
+    VariableScope asVariableScope() {
+      assert kind() == .VARIABLE
+      return (VariableScope)this
     }
 
     LocalScope asLocalScope() {
@@ -83,6 +89,18 @@ namespace skew {
     override Symbol find(string name) {
       var result = parameters.getOrDefault(name, null)
       return result != null ? result : parent != null ? parent.find(name) : null
+    }
+  }
+
+  class VariableScope : Scope {
+    VariableSymbol symbol
+
+    override ScopeKind kind() {
+      return .VARIABLE
+    }
+
+    override Symbol find(string name) {
+      return parent != null ? parent.find(name) : null
     }
   }
 

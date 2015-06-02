@@ -1,7 +1,8 @@
 namespace skew {
   enum SymbolKind {
     NONE
-    PARAMETER
+    PARAMETER_FUNCTION
+    PARAMETER_OBJECT
 
     OBJECT_CLASS
     OBJECT_ENUM
@@ -27,7 +28,11 @@ namespace skew {
 
   in SymbolKind {
     bool isType() {
-      return this >= PARAMETER && this <= OBJECT_NAMESPACE
+      return this >= PARAMETER_FUNCTION && this <= OBJECT_NAMESPACE
+    }
+
+    bool isParameter() {
+      return this >= PARAMETER_FUNCTION && this <= PARAMETER_OBJECT
     }
 
     bool isObject() {
@@ -80,6 +85,7 @@ namespace skew {
     CONST
     GETTER
     INFER_RETURN_TYPE
+    NEEDS_PARAMETERIZED_TYPE
     SETTER
     VALUE_TYPE
 
@@ -113,7 +119,7 @@ namespace skew {
     List<string> comments = null
 
     ParameterSymbol asParameterSymbol() {
-      assert kind == .PARAMETER
+      assert kind.isParameter()
       return (ParameterSymbol)this
     }
 
@@ -138,7 +144,7 @@ namespace skew {
     }
 
     string fullName() {
-      if (parent != null && parent.kind != .OBJECT_GLOBAL && kind != .PARAMETER) {
+      if (parent != null && parent.kind != .OBJECT_GLOBAL && !kind.isParameter()) {
         return parent.fullName() + "." + name
       }
       return name
@@ -166,6 +172,10 @@ namespace skew {
 
     bool shouldInferReturnType() {
       return (flags & .INFER_RETURN_TYPE) != 0
+    }
+
+    bool needsParameterizedType() {
+      return (flags & .NEEDS_PARAMETERIZED_TYPE) != 0
     }
 
     bool isExported() {

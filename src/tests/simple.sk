@@ -2467,5 +2467,203 @@ class Foo {
             ~~~
 ")
 
+test("
+class Foo<T> {
+  var foo T
+
+  class Bar {
+    var foo T
+  }
+
+  namespace Bar {
+    var bar T
+  }
+}
+
+namespace Foo {
+  var bar T
+}
+", "
+<stdin>:5:13: error: Cannot access type parameter \"T\" here
+    var foo T
+            ^
+<stdin>:9:13: error: Cannot access type parameter \"T\" here
+    var bar T
+            ^
+<stdin>:14:11: error: Cannot access type parameter \"T\" here
+  var bar T
+          ^
+")
+
+test("
+# Nested uses of T should be fine inside instance functions
+class Foo<T> {
+  def new {
+    var x = (a T) => {
+      var y = (b T) => {}
+    }
+  }
+}
+
+namespace Foo {
+  var x = (a T) => {
+    var y = (b T) => {}
+  }
+}
+", "
+<stdin>:11:14: error: Cannot access type parameter \"T\" here
+  var x = (a T) => {
+             ^
+<stdin>:12:16: error: Cannot access type parameter \"T\" here
+    var y = (b T) => {}
+               ^
+")
+
+test("
+class Foo<T> {
+}
+
+namespace Foo {
+  def new(x T) T {
+    var y Foo<T>
+    return x
+  }
+
+  def foo {
+    var y Foo<T>
+  }
+}
+", "
+<stdin>:11:15: error: Cannot access type parameter \"T\" here
+    var y Foo<T>
+              ^
+")
+
+test("
+class Foo<T> {
+}
+
+namespace Foo {
+  def foo
+  def bar T
+}
+
+def main {
+  Foo.foo
+  Foo<int>.foo
+  Foo.bar
+  Foo<int>.bar
+}
+", "
+<stdin>:11:3: error: Cannot use parameterized type \"Foo<int>\" here
+  Foo<int>.foo
+  ~~~~~~~~
+<stdin>:12:3: error: Cannot use unparameterized type \"Foo\" here
+  Foo.bar
+  ~~~
+")
+
+test("
+class Foo<A, B, C> {
+}
+
+class Foo<X, Y> {
+}
+", "
+<stdin>:4:11: error: \"Foo\" already has type parameters
+class Foo<X, Y> {
+          ~~~~
+<stdin>:1:11: note: Type parameters were previously declared here
+class Foo<A, B, C> {
+          ~~~~~~~
+")
+
+test("
+class Foo<T> {
+  def [new](t List<T>)
+}
+
+class Bar<T> {
+  def [new](t T)
+}
+
+def main {
+  var foo Foo<int> = [0]
+  var bar Foo<int> = [0]
+}
+", "
+<stdin>:6:13: error: Expected argument \"t\" to be of type \"List<T>\" instead of type \"T\"
+  def [new](t T)
+            ^
+")
+
+test("
+class Foo<T> {
+  def {new}(t List<T>)
+}
+
+class Bar<T> {
+  def {new}(t T)
+}
+
+def main {
+  var foo Foo<int> = {0}
+  var bar Foo<int> = {0}
+}
+", "
+<stdin>:6:13: error: Expected argument \"t\" to be of type \"List<T>\" instead of type \"T\"
+  def {new}(t T)
+            ^
+")
+
+test("
+class Foo<K, V> {
+  def {new}(k List<K>, v List<V>)
+}
+
+class Bar<K, V> {
+  def {new}(k K, v V)
+}
+
+def main {
+  var foo Foo<int, bool> = {1: false}
+  var bar Foo<int, bool> = {1: false}
+}
+", "
+<stdin>:6:13: error: Expected argument \"k\" to be of type \"List<T>\" instead of type \"K\"
+  def {new}(k K, v V)
+            ^
+<stdin>:6:18: error: Expected argument \"v\" to be of type \"List<T>\" instead of type \"V\"
+  def {new}(k K, v V)
+                 ^
+")
+
+test("
+class Foo<K, V> {
+  def []=(key K, value V)
+}
+
+namespace Foo {
+  def {new}(keys List<K>, values List<V>) Foo<K, V> {
+    var foo = Foo<K, V>.new
+    for i in 0..keys.count {
+      foo[keys[i]] = values[i]
+    }
+    return foo
+  }
+}
+
+def main {
+  var foo Foo<int, bool> = {false: 1}
+}
+", "
+<stdin>:16:29: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var foo Foo<int, bool> = {false: 1}
+                            ~~~~~
+<stdin>:16:36: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var foo Foo<int, bool> = {false: 1}
+                                   ^
+")
+
   }
 }

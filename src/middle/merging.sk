@@ -71,7 +71,7 @@ namespace skew.merging {
 
       // Cannot merge two objects that both have type parameters
       if (child.parameters != null && object.parameters != null) {
-        log.semanticErrorDuplicateTypeParameters(child.range, child.name, object.range)
+        log.semanticErrorDuplicateTypeParameters(rangeOfParameters(child.parameters), child.name, rangeOfParameters(object.parameters))
         continue
       }
 
@@ -165,7 +165,7 @@ namespace skew.merging {
     for (var i = 0, n = children.size(); i < n; i++) {
       var child = children[i]
       var other = members.getOrDefault(child.name, null)
-      child.scope = parent.scope
+      child.scope = VariableScope(parent.scope, child)
       child.parent = parent
 
       // Variables never merge
@@ -176,5 +176,9 @@ namespace skew.merging {
 
       members[child.name] = child
     }
+  }
+
+  Range rangeOfParameters(List<ParameterSymbol> parameters) {
+    return Range.span(parameters[0].range, parameters.last().range)
   }
 }

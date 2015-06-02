@@ -221,6 +221,10 @@ namespace skew {
       error(range, "Cannot access instance member \"" + name + "\" from a global context")
     }
 
+    void semanticErrorMemberUnexpectedTypeParameter(Range range, string name) {
+      error(range, "Cannot access type parameter \"" + name + "\" here")
+    }
+
     void semanticErrorConstructorReturnType(Range range) {
       error(range, "Constructors cannot have a return type")
     }
@@ -261,6 +265,10 @@ namespace skew {
       } else {
         error(range, "Expected \"" + name + "\" to take between " + lower + " and " + upper + " arguments")
       }
+    }
+
+    void semanticErrorExpectedList(Range range, string name, Type type) {
+      error(range, "Expected argument \"" + name + "\" to be of type \"List<T>\" instead of type \"" + type + "\"")
     }
 
     void semanticErrorUnexpectedReturnValue(Range range) {
