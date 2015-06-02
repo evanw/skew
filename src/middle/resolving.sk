@@ -1576,6 +1576,8 @@ namespace skew.resolving {
         var self = function != null ? function.symbol.self : null
         if (self != null) {
           node.withChildren([Node.createName(self.name).withSymbol(self).withType(self.resolvedType)]).kind = .DOT
+        } else {
+          log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)
         }
       }
 

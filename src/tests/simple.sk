@@ -2456,5 +2456,16 @@ def main {
                 ~~~
 ")
 
+test("
+class Foo {
+  var foo = 0
+  var bar = foo
+}
+", "
+<stdin>:3:13: error: Cannot access instance member \"foo\" from a global context
+  var bar = foo
+            ~~~
+")
+
   }
 }
