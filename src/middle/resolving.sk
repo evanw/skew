@@ -144,7 +144,8 @@ namespace skew.resolving {
       resolveAnnotations(symbol)
 
       // Create a default constructor if one doesn't exist
-      if (symbol.kind == .OBJECT_CLASS && !symbol.isImported() && symbol.constructor() == null) {
+      var constructor = symbol.members.getOrDefault("new", null)
+      if (symbol.kind == .OBJECT_CLASS && !symbol.isImported() && constructor == null) {
         var overridden = symbol.baseClass != null ? symbol.baseClass.constructor() : null
 
         // Unwrap the overload group if present

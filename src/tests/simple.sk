@@ -2437,5 +2437,24 @@ def main {
              ~~~
 ")
 
+test("
+class Foo {
+}
+
+namespace Foo {
+  def new(x int) Foo {
+    return null
+  }
+}
+
+def main {
+  var foo = Foo.new
+}
+", "
+<stdin>:11:17: error: The function \"new\" must be called
+  var foo = Foo.new
+                ~~~
+")
+
   }
 }
