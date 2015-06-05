@@ -44,7 +44,7 @@ namespace skew.resolving {
             initializeParameter(symbol.asParameterSymbol())
           }
 
-          case .OVERLOADED_CONSTRUCTOR, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
+          case .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
             initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol())
           }
 
@@ -146,24 +146,31 @@ namespace skew.resolving {
       // Create a default constructor if one doesn't exist
       var constructor = symbol.members.getOrDefault("new", null)
       if (symbol.kind == .OBJECT_CLASS && !symbol.isImported() && constructor == null) {
-        var overridden = symbol.baseClass != null ? symbol.baseClass.constructor() : null
+        var baseConstructor = symbol.baseClass != null ? symbol.baseClass.members.getOrDefault("new", null) : null
 
         // Unwrap the overload group if present
-        if (overridden != null && overridden.kind == .OVERLOADED_CONSTRUCTOR) {
-          var overloaded = overridden.asOverloadedFunctionSymbol()
-          if (overloaded.symbols.size() == 1) {
-            overridden = overloaded.symbols[0]
+        if (baseConstructor != null && baseConstructor.kind == .OVERLOADED_GLOBAL) {
+          var overloaded = baseConstructor.asOverloadedFunctionSymbol()
+          for (var i = 0; i < overloaded.symbols.size(); i++) {
+            var overload = overloaded.symbols[i]
+            if (overload.kind == .FUNCTION_CONSTRUCTOR) {
+              if (baseConstructor.kind == .FUNCTION_CONSTRUCTOR) {
+                baseConstructor = null // Signal that there isn't a single base constructor
+                break
+              }
+              baseConstructor = overload
+            }
           }
         }
 
         // A default constructor can only be created if the base class has a single constructor
-        if (symbol.baseClass == null || overridden != null && overridden.kind == .FUNCTION_CONSTRUCTOR) {
+        if (symbol.baseClass == null || baseConstructor != null && baseConstructor.kind == .FUNCTION_CONSTRUCTOR) {
           var constructor = FunctionSymbol(.FUNCTION_CONSTRUCTOR, "new")
           constructor.scope = FunctionScope(symbol.scope, constructor)
           constructor.flags |= .AUTOMATICALLY_GENERATED
           constructor.parent = symbol
           constructor.range = symbol.range
-          constructor.overridden = overridden != null ? overridden.asFunctionSymbol() : null
+          constructor.overridden = baseConstructor != null ? baseConstructor.asFunctionSymbol() : null
           symbol.functions.push(constructor)
           symbol.members[constructor.name] = constructor
         }
@@ -518,12 +525,12 @@ namespace skew.resolving {
       var overridden = findOverriddenMember(symbol)
       if (overridden != null && overridden.kind.isOverloadedFunction()) {
         symbol.overridden = overridden.asOverloadedFunctionSymbol()
+        var overriddenSymbols = symbol.overridden.symbols
+        for (var i = 0; i < overriddenSymbols.size(); i++) {
+          var function = overriddenSymbols[i]
 
-        // Forbid referencing a base class constructor from a derived class
-        if (symbol.kind != .OVERLOADED_CONSTRUCTOR) {
-          var overriddenSymbols = symbol.overridden.symbols
-          for (var i = 0; i < overriddenSymbols.size(); i++) {
-            var function = overriddenSymbols[i]
+          // Constructors are not inherited
+          if (function.kind != .FUNCTION_CONSTRUCTOR) {
             initializeSymbol(function)
             var index = types.indexOf(function.argumentOnlyType)
             if (index == -1) {
@@ -1259,14 +1266,16 @@ namespace skew.resolving {
       var needsType = !symbol.kind.isOnInstances()
 
       // Make sure the global/instance context matches the intended usage
-      if (isType && !needsType) {
-        log.semanticErrorMemberUnexpectedInstance(node.internalRangeOrRange(), symbol.name)
-      } else if (!isType && needsType) {
+      if (isType) {
+        if (!needsType) {
+          log.semanticErrorMemberUnexpectedInstance(node.internalRangeOrRange(), symbol.name)
+        } else if (symbol.kind.isFunctionOrOverloadedFunction()) {
+          checkIsParameterized(target)
+        } else if (target.resolvedType.isParameterized()) {
+          log.semanticErrorParameterizedType(target.range, target.resolvedType)
+        }
+      } else if (needsType) {
         log.semanticErrorMemberUnexpectedGlobal(node.internalRangeOrRange(), symbol.name)
-      } else if (symbol.kind.isConstructorOrOverloadedConstructor() || symbol.needsParameterizedType()) {
-        checkIsParameterized(target)
-      } else if (isType && target.resolvedType.isParameterized()) {
-        log.semanticErrorParameterizedType(target.range, target.resolvedType)
       }
 
       // Always access referenced globals directly
@@ -1615,17 +1624,6 @@ namespace skew.resolving {
               if (function.kind != .FUNCTION_LOCAL) {
                 isValid = function.parent == symbol.parent
                 stop = true
-
-                // Allow using object type parameters inside global functions on
-                // that object. This allows for easily shimming constructors of
-                // generic types with factory functions without code changes.
-                if (isValid && function.kind == .FUNCTION_GLOBAL) {
-                  if (scope == parent) {
-                    function.flags |= .NEEDS_PARAMETERIZED_TYPE
-                  } else if (!function.needsParameterizedType()) {
-                    isValid = false
-                  }
-                }
               }
             }
 
@@ -1901,7 +1899,7 @@ namespace skew.resolving {
           // Just return the first getter assuming errors for duplicate getters
           // were already logged when the overloaded symbol was initialized
           if (getter.isGetter()) {
-            node.resolvedType = getter.resolvedType
+            node.resolvedType = cache.substitute(getter.resolvedType, node.resolvedType.environment)
             node.symbol = getter
             isGetter = true
             break
@@ -1965,7 +1963,16 @@ namespace skew.resolving {
     }
 
     static bool isBaseConstructorReference(Type parent, Symbol member) {
-      return member.kind.isConstructorOrOverloadedConstructor() && member.parent != parent.symbol
+      if (member.kind == .OVERLOADED_GLOBAL) {
+        var overloaded = member.asOverloadedFunctionSymbol()
+        for (var i = 0; i < overloaded.symbols.size(); i++) {
+          if (isBaseConstructorReference(parent, overloaded.symbols[i])) {
+            return true
+          }
+        }
+        return false
+      }
+      return member.kind == .FUNCTION_CONSTRUCTOR && member.parent != parent.symbol
     }
 
     static bool isCallValue(Node node) {

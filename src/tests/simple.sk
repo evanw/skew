@@ -43,12 +43,6 @@ namespace Foo {
   }
 }
 ", "
-<stdin>:6:7: error: \"new\" is already declared
-  def new(x int) Foo {
-      ~~~
-<stdin>:2:7: note: The previous declaration is here
-  def new {}
-      ~~~
 ")
 
 test("
@@ -1062,9 +1056,9 @@ def main(foo Foo<int>) {
 <stdin>:17:7: error: Cannot access global member \"foo\" from an instance context
   foo.foo
       ~~~
-<stdin>:19:3: error: Cannot use parameterized type \"Foo<int>\" here
-  Foo<int>.foo
-  ~~~~~~~~
+<stdin>:18:3: error: Cannot use unparameterized type \"Foo\" here
+  Foo.foo
+  ~~~
 <stdin>:21:7: error: Cannot access global member \"bar\" from an instance context
   foo.bar = 0
       ~~~
@@ -2534,9 +2528,6 @@ namespace Foo {
   }
 }
 ", "
-<stdin>:11:15: error: Cannot access type parameter \"T\" here
-    var y Foo<T>
-              ^
 ")
 
 test("
@@ -2555,9 +2546,9 @@ def main {
   Foo<int>.bar
 }
 ", "
-<stdin>:11:3: error: Cannot use parameterized type \"Foo<int>\" here
-  Foo<int>.foo
-  ~~~~~~~~
+<stdin>:10:3: error: Cannot use unparameterized type \"Foo\" here
+  Foo.foo
+  ~~~
 <stdin>:12:3: error: Cannot use unparameterized type \"Foo\" here
   Foo.bar
   ~~~
@@ -2663,6 +2654,28 @@ def main {
 <stdin>:16:36: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   var foo Foo<int, bool> = {false: 1}
                                    ^
+")
+
+test("
+class Foo<T> {
+  def new
+  def {...}(x int, y T) Foo<T>
+}
+
+class Bar<T> {
+  def new
+  def {...}(x int, y T) Bar<T>
+}
+
+namespace Bar {
+  def new Bar<T> { return null }
+}
+
+def main {
+  var foo Foo<int> = {0: 1}
+  var bar Bar<int> = {0: 1}
+}
+", "
 ")
 
   }

@@ -16,7 +16,6 @@ namespace skew {
     FUNCTION_INSTANCE
     FUNCTION_LOCAL
 
-    OVERLOADED_CONSTRUCTOR
     OVERLOADED_GLOBAL
     OVERLOADED_INSTANCE
 
@@ -44,15 +43,11 @@ namespace skew {
     }
 
     bool isOverloadedFunction() {
-      return this >= OVERLOADED_CONSTRUCTOR && this <= OVERLOADED_INSTANCE
+      return this >= OVERLOADED_GLOBAL && this <= OVERLOADED_INSTANCE
     }
 
     bool isFunctionOrOverloadedFunction() {
       return this >= FUNCTION_ANNOTATION && this <= OVERLOADED_INSTANCE
-    }
-
-    bool isConstructorOrOverloadedConstructor() {
-      return this == FUNCTION_CONSTRUCTOR || this == OVERLOADED_CONSTRUCTOR
     }
 
     bool isVariable() {
@@ -67,8 +62,7 @@ namespace skew {
       return
         this == VARIABLE_ENUM || this == VARIABLE_GLOBAL ||
         this == FUNCTION_GLOBAL || this == FUNCTION_CONSTRUCTOR ||
-        this == OVERLOADED_GLOBAL || this == OVERLOADED_CONSTRUCTOR ||
-        isType()
+        this == OVERLOADED_GLOBAL || isType()
     }
 
     bool hasInstances() {
@@ -85,7 +79,6 @@ namespace skew {
     CONST
     GETTER
     INFER_RETURN_TYPE
-    NEEDS_PARAMETERIZED_TYPE
     SETTER
     VALUE_TYPE
 
@@ -174,10 +167,6 @@ namespace skew {
       return (flags & .INFER_RETURN_TYPE) != 0
     }
 
-    bool needsParameterizedType() {
-      return (flags & .NEEDS_PARAMETERIZED_TYPE) != 0
-    }
-
     bool isExported() {
       return (flags & .EXPORT) != 0
     }
@@ -234,11 +223,6 @@ namespace skew {
 
     bool hasBaseClass(Symbol symbol) {
       return baseClass != null && (baseClass == symbol || baseClass.hasBaseClass(symbol))
-    }
-
-    Symbol constructor() {
-      var symbol = members.getOrDefault("new", null)
-      return symbol != null && symbol.kind.isConstructorOrOverloadedConstructor() ? symbol : null
     }
   }
 

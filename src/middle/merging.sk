@@ -153,8 +153,7 @@ namespace skew.merging {
 
   SymbolKind overloadedKind(SymbolKind kind) {
     return
-      kind == .FUNCTION_CONSTRUCTOR ? .OVERLOADED_CONSTRUCTOR :
-      kind == .FUNCTION_GLOBAL ? .OVERLOADED_GLOBAL :
+      kind == .FUNCTION_CONSTRUCTOR || kind == .FUNCTION_GLOBAL ? .OVERLOADED_GLOBAL :
       kind == .FUNCTION_INSTANCE ? .OVERLOADED_INSTANCE :
       kind
   }
