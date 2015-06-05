@@ -23,6 +23,7 @@
 "is"                              IS;
 "namespace"                       NAMESPACE;
 "null"                            NULL;
+"over"                            OVER;
 "return"                          RETURN;
 "super"                           SUPER;
 "switch"                          SWITCH;

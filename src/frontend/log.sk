@@ -356,6 +356,15 @@ namespace skew {
       if (overridden != null) note(overridden, "The overridden function is here")
     }
 
+    void semanticErrorModifierMissingOverride(Range range, string name, Range overridden) {
+      error(range, "\"" + name + "\" overrides another symbol with the same name but is declared using \"def\" instead of \"over\"")
+      if (overridden != null) note(overridden, "The overridden declaration is here")
+    }
+
+    void semanticErrorModifierUnusedOverride(Range range, string name) {
+      error(range, "\"" + name + "\" is declared using \"over\" instead of \"def\" but does not override anything")
+    }
+
     void semanticErrorBadSuper(Range range) {
       error(range, "Cannot use \"super\" here")
     }

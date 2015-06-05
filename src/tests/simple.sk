@@ -1626,7 +1626,7 @@ class Foo<T> {
 
 class Bar : Foo<int> {
   def new
-  def foo
+  over foo
 }
 
 namespace Foo {
@@ -1732,7 +1732,7 @@ namespace Foo {
 
 class Bar : Foo {
   def new { super }
-  def foo { super }
+  over foo { super }
 }
 
 namespace Bar {
@@ -1768,7 +1768,7 @@ namespace Foo {
 
 class Bar : Foo {
   def new(x int) { super() }
-  def foo(x int) { super() }
+  over foo(x int) { super() }
 }
 
 namespace Bar {
@@ -1778,9 +1778,9 @@ namespace Bar {
 <stdin>:11:25: error: Expected 1 argument but found 0 arguments when calling \"new\"
   def new(x int) { super() }
                         ~~
-<stdin>:12:25: error: Expected 1 argument but found 0 arguments when calling \"foo\"
-  def foo(x int) { super() }
-                        ~~
+<stdin>:12:26: error: Expected 1 argument but found 0 arguments when calling \"foo\"
+  over foo(x int) { super() }
+                         ~~
 <stdin>:16:25: error: Expected 1 argument but found 0 arguments when calling \"bar\"
   def bar(x int) { super() }
                         ~~
@@ -1868,14 +1868,14 @@ class Foo {
 }
 
 class Bar : Foo {
-  def foo { super(false) }
-  def foo(x int) { super }
+  over foo { super(false) }
+  over foo(x int) { super }
   def foo(x int, y int) { super(x, y) }
 }
 ", "
-<stdin>:7:19: error: Cannot convert from type \"bool\" to type \"int\" without a cast
-  def foo { super(false) }
-                  ~~~~~
+<stdin>:7:20: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  over foo { super(false) }
+                   ~~~~~
 <stdin>:9:27: error: No overload of \"foo\" was found that takes 2 arguments
   def foo(x int, y int) { super(x, y) }
                           ~~~~~
@@ -2171,13 +2171,13 @@ class Foo {
 
 @import
 class Bar : Foo {
-  def foo { new }
+  over foo { new }
 }
 
 @import
 class Baz : Foo {
   def new
-  def foo { new }
+  over foo { new }
 }
 
 def main {
@@ -2186,9 +2186,9 @@ def main {
   Baz.new
 }
 ", "
-<stdin>:9:13: error: \"new\" is not declared
-  def foo { new }
-            ~~~
+<stdin>:9:14: error: \"new\" is not declared
+  over foo { new }
+             ~~~
 <stdin>:20:7: error: \"new\" is not declared on type \"Bar\"
   Bar.new
       ~~~
@@ -2676,6 +2676,54 @@ def main {
   var bar Bar<int> = {0: 1}
 }
 ", "
+")
+
+test("
+class Foo {
+  var ivar = 0
+  def ifun
+}
+class Bar : Foo {}
+class Baz : Bar {
+  over ifun
+}
+
+namespace Foo {
+  var gvar = 0
+  def gfun
+}
+namespace Bar {}
+namespace Baz {
+  def gfun
+}
+
+def main {
+  Foo.new.ivar = 0
+  Bar.new.ivar = 0
+  Baz.new.ivar = 0
+
+  Foo.new.ifun
+  Bar.new.ifun
+  Baz.new.ifun
+
+  Foo.gvar = 0
+  Bar.gvar = 0
+  Baz.gvar = 0
+
+  Foo.gfun
+  Bar.gfun
+  Baz.gfun
+}
+", "
+<stdin>:29:7: error: \"gvar\" is not declared on type \"Bar\"
+  Bar.gvar = 0
+      ~~~~
+<stdin>:30:7: error: \"gvar\" is not declared on type \"Baz\"
+  Baz.gvar = 0
+      ~~~~
+<stdin>:33:7: error: \"gfun\" is not declared on type \"Bar\"
+  Bar.gfun
+      ~~~~
 ")
 
   }

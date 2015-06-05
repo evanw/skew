@@ -565,7 +565,7 @@ namespace skew {
       switch (token.kind) {
         case .CLASS { kind = .OBJECT_CLASS }
         case .CONST, .VAR { kind = parent.kind.hasInstances() ? .VARIABLE_INSTANCE : .VARIABLE_GLOBAL }
-        case .DEF { kind = parent.kind.hasInstances() ? .FUNCTION_INSTANCE : .FUNCTION_GLOBAL }
+        case .DEF, .OVER { kind = parent.kind.hasInstances() ? .FUNCTION_INSTANCE : .FUNCTION_GLOBAL }
         case .ENUM { kind = .OBJECT_ENUM }
         case .INTERFACE { kind = .OBJECT_INTERFACE }
         case .NAMESPACE { kind = .OBJECT_NAMESPACE }
@@ -644,6 +644,10 @@ namespace skew {
         case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
           var function = FunctionSymbol(kind, name)
           function.range = range
+
+          if (token.kind == .OVER) {
+            function.flags |= .OVER
+          }
 
           // Check for setters like "def foo=(x int) {}" but don't allow a space
           // between the name and the assignment operator

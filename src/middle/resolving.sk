@@ -328,6 +328,7 @@ namespace skew.resolving {
       }
 
       // Link this symbol with the overridden symbol if there is one
+      var hasOverrideError = false
       if (overridden != null) {
         var overloaded = overridden.asOverloadedFunctionSymbol()
         initializeSymbol(overloaded)
@@ -337,6 +338,7 @@ namespace skew.resolving {
             symbol.overridden = overload.asFunctionSymbol()
             if (symbol.kind != .FUNCTION_CONSTRUCTOR && overload.kind != .FUNCTION_CONSTRUCTOR && symbol.overridden.resolvedType.returnType != returnType) {
               log.semanticErrorBadOverrideReturnType(symbol.range, symbol.name, symbol.parent.asObjectSymbol().base.resolvedType, overload.range)
+              hasOverrideError = true
             }
             break
           }
@@ -345,6 +347,19 @@ namespace skew.resolving {
 
       symbol.resolvedType.returnType = returnType
       resolveAnnotations(symbol)
+
+      // Validate use of "def" vs "over"
+      if (!hasOverrideError) {
+        if (symbol.overridden != null && symbol.kind == .FUNCTION_INSTANCE) {
+          if (!symbol.isOver()) {
+            log.semanticErrorModifierMissingOverride(symbol.range, symbol.name, symbol.overridden.range)
+          }
+        } else {
+          if (symbol.isOver()) {
+            log.semanticErrorModifierUnusedOverride(symbol.range, symbol.name)
+          }
+        }
+      }
     }
 
     void automaticallyGenerateConstructor(FunctionSymbol symbol) {
@@ -1256,8 +1271,8 @@ namespace skew.resolving {
         }
       }
 
-      // Forbid referencing a base class constructor from a derived class
-      if (isBaseConstructorReference(target.resolvedType, symbol)) {
+      // Forbid referencing a base class global or constructor function from a derived class
+      if (isBaseGlobalReference(target.resolvedType, symbol)) {
         log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType)
         return
       }
@@ -1591,8 +1606,8 @@ namespace skew.resolving {
 
       initializeSymbol(symbol)
 
-      // Forbid referencing a base class constructor from a derived class
-      if (enclosingFunction != null && isBaseConstructorReference(enclosingFunction.symbol.parent.resolvedType, symbol)) {
+      // Forbid referencing a base class global or constructor function from a derived class
+      if (enclosingFunction != null && isBaseGlobalReference(enclosingFunction.symbol.parent.resolvedType, symbol)) {
         log.semanticErrorUndeclaredSymbol(node.range, name)
         return
       }
@@ -1962,17 +1977,8 @@ namespace skew.resolving {
       return Node.createDot(target, member.name).withSymbol(member).withType(member.resolvedType)
     }
 
-    static bool isBaseConstructorReference(Type parent, Symbol member) {
-      if (member.kind == .OVERLOADED_GLOBAL) {
-        var overloaded = member.asOverloadedFunctionSymbol()
-        for (var i = 0; i < overloaded.symbols.size(); i++) {
-          if (isBaseConstructorReference(parent, overloaded.symbols[i])) {
-            return true
-          }
-        }
-        return false
-      }
-      return member.kind == .FUNCTION_CONSTRUCTOR && member.parent != parent.symbol
+    static bool isBaseGlobalReference(Type parent, Symbol member) {
+      return member.kind.isGlobalReference() && member.parent != parent.symbol && member.parent.kind == .OBJECT_CLASS
     }
 
     static bool isCallValue(Node node) {
