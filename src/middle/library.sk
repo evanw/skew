@@ -133,7 +133,6 @@ class List<T> {
   def []=(x int, y T)
   def all(x fn(T) bool) bool
   def any(x fn(T) bool) bool
-  def append(x T)
   def appendOne(x T)
   def copy List<T>
   def count int
@@ -148,7 +147,6 @@ class List<T> {
   def lastIndexOf(x T) int
   def map<R>(x fn(T) R) List<R>
   def new
-  def prepend(x T)
   def removeAll(x T)
   def removeAt(x int)
   def removeDuplicates
@@ -161,6 +159,14 @@ class List<T> {
   def slice(start int, end int) List<T>
   def sort(x fn(T, T) int)
   def swap(x int, y int)
+
+  @prefer
+  def append(x T)
+  def append(x List<T>)
+
+  @prefer
+  def prepend(x T)
+  def prepend(x List<T>)
 
   @prefer
   def +(x T) List<T>

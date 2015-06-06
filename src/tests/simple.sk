@@ -2728,7 +2728,45 @@ def main {
 
 test("
 def main {
+  var foo = dynamic
+}
+", "
+<stdin>:2:20: error: Expected DOT but found NEWLINE
+  var foo = dynamic
+                   ^
+")
+
+test("
+def main {
   var bar = dynamic.foo
+}
+", "
+")
+
+test("
+class Bar : Foo {
+  var y int
+}
+
+class Foo {
+  var x int
+}
+
+def main {
+  Bar.new(0, 1) # This used to fail when Bar came before Foo since Foo.new wasn't initialized first and so had no arguments
+}
+", "
+")
+
+test("
+enum Foo {
+  FOO
+  BAR
+}
+
+def main {
+  if Foo.FOO in [.FOO, .BAR] {}
+  if .FOO in [Foo.FOO, Foo.BAR] {}
 }
 ", "
 ")

@@ -363,11 +363,11 @@ namespace skew.resolving {
     }
 
     void automaticallyGenerateConstructor(FunctionSymbol symbol) {
-      var parent = symbol.parent.asObjectSymbol()
       List<Node> statements = []
 
       // Mirror the base constructor's arguments
       if (symbol.overridden != null) {
+        initializeSymbol(symbol.overridden)
         var arguments = symbol.overridden.arguments
         List<Node> values = []
         for (var i = 0; i < arguments.size(); i++) {
@@ -382,6 +382,8 @@ namespace skew.resolving {
       }
 
       // Add an argument for every uninitialized variable
+      var parent = symbol.parent.asObjectSymbol()
+      initializeSymbol(parent)
       for (var i = 0; i < parent.variables.size(); i++) {
         var variable = parent.variables[i]
         if (variable.kind == .VARIABLE_INSTANCE) {
@@ -1802,8 +1804,16 @@ namespace skew.resolving {
       var target = node.children[(int)reverseBinaryOrder]
       var other = kind.isBinary() ? node.children[1 - (int)reverseBinaryOrder] : null
 
+      // Allow "foo in [.FOO, .BAR]"
+      if (kind == .IN && target.kind == .INITIALIZER_LIST && !needsTypeContext(other)) {
+        resolveAsParameterizedExpression(other, scope)
+        resolveAsParameterizedExpressionWithTypeContext(target, scope, other.resolvedType != .DYNAMIC ? cache.createListType(other.resolvedType) : null)
+      }
+
       // Resolve just the target since the other arguments may need type context from overload resolution
-      resolveAsParameterizedExpression(target, scope)
+      else {
+        resolveAsParameterizedExpression(target, scope)
+      }
 
       // Check for a valid storage location even for overloadable operators
       if (kind.isBinaryAssign()) {
