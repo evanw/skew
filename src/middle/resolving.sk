@@ -1267,6 +1267,10 @@ namespace skew.resolving {
           if (target.resolvedType != .DYNAMIC) {
             log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType)
           }
+          if (target.kind == .DYNAMIC) {
+            node.kind = .NAME
+            node.removeChildren()
+          }
           return
         }
       }

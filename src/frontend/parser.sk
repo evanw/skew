@@ -994,6 +994,20 @@ namespace skew {
     }
   }
 
+  class DynamicParselet : PrefixParselet {
+    override Node parse(ParserContext context) {
+      var token = context.next()
+      if (!context.expect(.DOT)) {
+        return null
+      }
+      var range = context.current().range
+      if (!context.expect(.IDENTIFIER)) {
+        return null
+      }
+      return Node.createDot(Node.createDynamic(), range.toString()).withRange(context.spanSince(token.range)).withInternalRange(range)
+    }
+  }
+
   class UnaryPrefix : PrefixCallback {
     NodeKind kind
 
@@ -1285,6 +1299,7 @@ namespace skew {
     pratt.parselet(.AS, .UNARY_PREFIX).infix = CastParselet()
     pratt.parselet(.DOT, .MEMBER).infix = DotInfixParselet()
     pratt.parselet(.DOT, .MEMBER).prefix = DotPrefixParselet()
+    pratt.parselet(.DYNAMIC, .LOWEST).prefix = DynamicParselet()
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = NameOrLambdaParselet()
     pratt.parselet(.INDEX, .LOWEST).prefix = InitializerParselet()
     pratt.parselet(.LEFT_BRACE, .LOWEST).prefix = InitializerParselet()

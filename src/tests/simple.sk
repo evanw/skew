@@ -2726,5 +2726,12 @@ def main {
       ~~~~
 ")
 
+test("
+def main {
+  var bar = dynamic.foo
+}
+", "
+")
+
   }
 }
