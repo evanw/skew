@@ -946,7 +946,7 @@ namespace skew.resolving {
         for (var j = 1; j < values.size(); j++) {
           resolveAsParameterizedExpressionWithConversion(values[j], scope, value.resolvedType)
         }
-        resolveBlock(child.caseBlock(), scope)
+        resolveBlock(child.caseBlock(), LocalScope(scope, .NORMAL))
       }
     }
 

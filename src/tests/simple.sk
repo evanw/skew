@@ -2792,5 +2792,15 @@ enum Foo {
                  ~~~~
 ")
 
+test("
+def main(x int) {
+  switch x {
+    case 0 { var foo = 0 }
+    case 1 { var foo = false }
+  }
+}
+", "
+")
+
   }
 }
