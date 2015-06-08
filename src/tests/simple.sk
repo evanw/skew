@@ -2771,5 +2771,26 @@ def main {
 ", "
 ")
 
+test("
+def main {
+  var a = [.FOO, .BAR]
+  var b = [Foo.FOO, .BAR]
+  var c = [.FOO, Foo.BAR]
+  var d = [Foo.FOO, Foo.BAR]
+}
+
+enum Foo {
+  FOO
+  BAR
+}
+", "
+<stdin>:2:12: error: Cannot access \"FOO\" without type context
+  var a = [.FOO, .BAR]
+           ~~~~
+<stdin>:2:18: error: Cannot access \"BAR\" without type context
+  var a = [.FOO, .BAR]
+                 ~~~~
+")
+
   }
 }

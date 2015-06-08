@@ -1349,41 +1349,58 @@ namespace skew.resolving {
         return
       }
 
-      // Resolve the children first so their types can be inspected
-      resolveChildrenAsParameterizedExpressions(node, scope)
+      // First pass: only children with type context, second pass: all children
+      for (var pass = 0; pass < 2; pass++) {
+        switch (node.kind) {
+          case .INITIALIZER_LIST {
+            Type type = null
+            var found = false
 
-      switch (node.kind) {
-        case .INITIALIZER_LIST {
-          Type type = null
+            // Resolve all children for this pass
+            for (var i = 0; i < count; i++) {
+              var child = node.children[i]
+              if (pass != 0 || !needsTypeContext(child)) {
+                resolveAsParameterizedExpression(child, scope)
+                type = mergeCommonType(type, child)
+              }
+            }
 
-          for (var i = 0; i < count; i++) {
-            type = mergeCommonType(type, node.children[i])
-          }
-
-          if (count != 0 && isValidVariableType(type)) {
-            resolveInitializerWithContext(node, scope, cache.createListType(type))
-            return
-          }
-        }
-
-        case .INITIALIZER_MAP {
-          Type key = null
-          Type value = null
-
-          for (var i = 0; i < count; i++) {
-            var child = node.children[i]
-            key = mergeCommonType(key, child.firstValue())
-            value = mergeCommonType(value, child.secondValue())
-          }
-
-          if (count != 0 && isValidVariableType(key) && isValidVariableType(value)) {
-            if (key == cache.intType) {
-              resolveInitializerWithContext(node, scope, cache.createIntMapType(value))
+            // Resolve remaining children using the type context if valid
+            if (type != null && isValidVariableType(type)) {
+              resolveInitializerWithContext(node, scope, cache.createListType(type))
               return
             }
-            if (key == cache.stringType) {
-              resolveInitializerWithContext(node, scope, cache.createStringMapType(value))
-              return
+          }
+
+          case .INITIALIZER_MAP {
+            Type keyType = null
+            Type valueType = null
+
+            // Resolve all children for this pass
+            for (var i = 0; i < count; i++) {
+              var child = node.children[i]
+              var key = child.firstValue()
+              var value = child.secondValue()
+              if (pass != 0 || !needsTypeContext(key)) {
+                resolveAsParameterizedExpression(key, scope)
+                keyType = mergeCommonType(keyType, key)
+              }
+              if (pass != 0 || !needsTypeContext(value)) {
+                resolveAsParameterizedExpression(value, scope)
+                valueType = mergeCommonType(valueType, value)
+              }
+            }
+
+            // Resolve remaining children using the type context if valid
+            if (keyType != null && valueType != null && isValidVariableType(keyType) && isValidVariableType(valueType)) {
+              if (keyType == cache.intType) {
+                resolveInitializerWithContext(node, scope, cache.createIntMapType(valueType))
+                return
+              }
+              if (keyType == cache.stringType) {
+                resolveInitializerWithContext(node, scope, cache.createStringMapType(valueType))
+                return
+              }
             }
           }
         }
