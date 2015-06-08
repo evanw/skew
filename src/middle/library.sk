@@ -42,12 +42,14 @@ namespace Math {
 @import
 class bool {
   def ! bool
+  def toString string
 }
 
 @import
 class int {
   def + int
   def - int
+  def toString string
   def ~ int
 
   def %(x int) int
@@ -78,6 +80,7 @@ class int {
 class double {
   def + double
   def - double
+  def toString string
 
   def *(x double) double
   def **(x double) double
