@@ -101,6 +101,7 @@ class string {
   def [](x int) int
   def at(x int) string
   def codePoints List<int>
+  def codeUnits List<int>
   def count int
   def endsWith(x string) bool
   def in(x string) bool
@@ -115,7 +116,10 @@ class string {
 }
 
 namespace string {
+  def fromCodePoint(x int) string
   def fromCodePoints(x List<int>) string
+  def fromCodeUnit(x int) string
+  def fromCodeUnits(x List<int>) string
 }
 
 @import

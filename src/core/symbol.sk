@@ -176,6 +176,10 @@ namespace skew {
       return (flags & .IMPORT) != 0
     }
 
+    bool isImportedOrExported() {
+      return (flags & (.IMPORT | .EXPORT)) != 0
+    }
+
     bool isOver() {
       return (flags & .OVER) != 0
     }

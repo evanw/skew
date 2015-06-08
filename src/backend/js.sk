@@ -20,7 +20,7 @@ namespace skew {
         var object = objects[i]
         prefix = ""
         for (var o = object; o.kind != .OBJECT_GLOBAL; o = o.parent.asObjectSymbol()) {
-          prefix = o.name + "." + prefix
+          prefix = mangleName(o) + "." + prefix
         }
         for (var j = 0; j < object.variables.size(); j++) {
           emitVariable(object.variables[j])
@@ -83,7 +83,7 @@ namespace skew {
 
       static string computePrefix(ObjectSymbol symbol) {
         assert symbol.kind.isObject()
-        return symbol.kind == .OBJECT_GLOBAL ? "" : computePrefix(symbol.parent.asObjectSymbol()) + symbol.name + "."
+        return symbol.kind == .OBJECT_GLOBAL ? "" : computePrefix(symbol.parent.asObjectSymbol()) + mangleName(symbol) + "."
       }
 
       void emitObject(ObjectSymbol symbol) {
@@ -97,14 +97,14 @@ namespace skew {
           case .OBJECT_NAMESPACE, .OBJECT_INTERFACE {
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol.comments)
-            emit(indent + (prefix == "" ? "var " : prefix) + symbol.name + " = {};\n")
+            emit(indent + (prefix == "" ? "var " : prefix) + mangleName(symbol) + " = {};\n")
             emitNewlineAfterSymbol(symbol)
           }
 
           case .OBJECT_ENUM {
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol.comments)
-            emit(indent + (prefix == "" ? "var " : prefix) + symbol.name + " = {")
+            emit(indent + (prefix == "" ? "var " : prefix) + mangleName(symbol) + " = {")
             increaseIndent()
             var isFirst = true
             for (var i = 0; i < symbol.variables.size(); i++) {
@@ -115,7 +115,7 @@ namespace skew {
                 emit("\n")
                 emitNewlineBeforeSymbol(variable)
                 emitComments(variable.comments)
-                emit(indent + variable.name + ": " + variable.enumValue + ", " + variable.enumValue + ": " + quoteString(variable.name, '"'))
+                emit(indent + mangleName(variable) + ": " + variable.enumValue + ", " + variable.enumValue + ": " + quoteString(variable.name, '"'))
                 emitNewlineAfterSymbol(variable)
               }
             }
@@ -134,7 +134,7 @@ namespace skew {
                 }
                 emitFunction(function)
                 if (symbol.baseClass != null) {
-                  emit("\n" + indent + "$extends(" + symbol.fullName() + ", " + symbol.baseClass.fullName() + ");\n")
+                  emit("\n" + indent + "$extends(" + fullName(symbol) + ", " + fullName(symbol.baseClass) + ");\n")
                 }
               }
             }
@@ -142,7 +142,7 @@ namespace skew {
         }
 
         if (symbol.kind != .OBJECT_GLOBAL) {
-          prefix += symbol.name + "."
+          prefix += mangleName(symbol) + "."
         }
 
         for (var i = 0; i < symbol.functions.size(); i++) {
@@ -156,7 +156,7 @@ namespace skew {
       void emitArgumentList(List<VariableSymbol> arguments) {
         for (var i = 0; i < arguments.size(); i++) {
           if (i > 0) emit(", ")
-          emit(arguments[i].name)
+          emit(mangleName(arguments[i]))
         }
       }
 
@@ -168,7 +168,7 @@ namespace skew {
         emitNewlineBeforeSymbol(symbol)
         emitComments(symbol.comments)
         var isExpression = prefix != ""
-        var name = symbol.kind == .FUNCTION_CONSTRUCTOR ? symbol.parent.name : symbol.name
+        var name = mangleName(symbol.kind == .FUNCTION_CONSTRUCTOR ? symbol.parent : symbol)
         if (isExpression) {
           emit(prefix + (symbol.kind == .FUNCTION_INSTANCE ? "prototype." : "") + name + " = function(")
         } else {
@@ -178,7 +178,7 @@ namespace skew {
         emit(") {\n")
         increaseIndent()
         if (symbol.self != null) {
-          emit(indent + "var " + symbol.self.name + " = this;\n")
+          emit(indent + "var " + mangleName(symbol.self) + " = this;\n")
         }
         emitStatements(symbol.block.children)
         decreaseIndent()
@@ -194,7 +194,7 @@ namespace skew {
         if (symbol.kind != .VARIABLE_INSTANCE && (symbol.value != null || prefix == "")) {
           emitNewlineBeforeSymbol(symbol)
           emitComments(symbol.comments)
-          emit(indent + (prefix == "" || symbol.kind == .VARIABLE_LOCAL ? "var " : prefix) + symbol.name)
+          emit(indent + (prefix == "" || symbol.kind == .VARIABLE_LOCAL ? "var " : prefix) + mangleName(symbol))
           if (symbol.value != null) {
             emit(" = ")
             emitExpression(symbol.value, .LOWEST)
@@ -256,14 +256,15 @@ namespace skew {
 
           case .FOR {
             var value = node.forValue()
+            var name = mangleName(node.symbol)
 
             if (value.kind == .PAIR) {
               var limit = "n" + node.symbol.id
-              emit(indent + "for (var " + node.symbol.name + " = ")
+              emit(indent + "for (var " + name + " = ")
               emitExpression(value.firstValue(), .LOWEST)
               emit(", " + limit + " = ")
               emitExpression(value.secondValue(), .LOWEST)
-              emit("; " + node.symbol.name + " < " + limit + "; " + node.symbol.name + "++")
+              emit("; " + name + " < " + limit + "; " + name + "++")
               emit(")")
               emitBlock(node.forBlock())
               emit("\n")
@@ -277,14 +278,14 @@ namespace skew {
               emitExpression(value, .LOWEST)
               emit("; " + index + " < " + list + ".length; " + index + "++) {\n")
               increaseIndent()
-              emit(indent + "var " + node.symbol.name + " = " + list + "[" + index + "];\n")
+              emit(indent + "var " + name + " = " + list + "[" + index + "];\n")
               emitStatements(node.forBlock().children)
               decreaseIndent()
               emit(indent + "}\n")
             }
 
             else {
-              emit(indent + "for (var " + node.symbol.name + " in ")
+              emit(indent + "for (var " + name + " in ")
               emitExpression(value, .LOWEST)
               emit(")")
               emitBlock(node.forBlock())
@@ -373,7 +374,7 @@ namespace skew {
       void emitExpression(Node node, Precedence precedence) {
         switch (node.kind) {
           case .TYPE {
-            emit(node.resolvedType.symbol.fullName())
+            emit(fullName(node.resolvedType.symbol))
           }
 
           case .NULL {
@@ -381,12 +382,12 @@ namespace skew {
           }
 
           case .NAME {
-            emit(node.symbol != null ? node.symbol.fullName() : node.asString())
+            emit(node.symbol != null ? fullName(node.symbol) : node.asString())
           }
 
           case .DOT {
             emitExpression(node.dotTarget(), .MEMBER)
-            emit("." + (node.symbol != null ? node.symbol.name : node.asString()))
+            emit("." + (node.symbol != null ? mangleName(node.symbol) : node.asString()))
           }
 
           case .CONSTANT {
@@ -405,14 +406,14 @@ namespace skew {
             var wrap = value.kind == .LAMBDA && node.parent != null && node.parent.kind == .EXPRESSION
             if (wrap) emit("(")
             if (!call && node.symbol != null && node.symbol.kind == .FUNCTION_CONSTRUCTOR) {
-              emit("new " + node.symbol.parent.fullName())
+              emit("new " + fullName(node.symbol))
             } else {
               emitExpression(value, .UNARY_POSTFIX)
               if (call) emit(".call")
             }
             if (wrap) emit(")")
             emit("(")
-            if (call) emit(node.symbol.asFunctionSymbol().self.name)
+            if (call) emit(mangleName(node.symbol.asFunctionSymbol().self))
             for (var i = 1; i < node.children.size(); i++) {
               if (call || i > 1) {
                 emit(", ")
@@ -474,13 +475,13 @@ namespace skew {
             var to = node.resolvedType
 
             if (from.isEnum() && to == cache.stringType) {
-              emit(from.symbol.fullName() + "[")
+              emit(fullName(from.symbol) + "[")
               emitExpression(value, precedence)
               emit("]")
             }
 
             else if (from == cache.stringType && to.isEnum()) {
-              emit(to.symbol.fullName() + "[")
+              emit(fullName(to.symbol) + "[")
               emitExpression(value, precedence)
               emit("]")
             }
@@ -495,14 +496,7 @@ namespace skew {
           }
 
           case .SUPER {
-            var symbol = node.symbol
-            emit(symbol.parent.fullName())
-            if (symbol.kind == .FUNCTION_INSTANCE) {
-              emit(".prototype")
-            }
-            if (symbol.kind != .FUNCTION_CONSTRUCTOR) {
-              emit("." + symbol.name)
-            }
+            emit(fullName(node.symbol))
           }
 
           case .HOOK {
@@ -547,6 +541,81 @@ namespace skew {
             }
           }
         }
+      }
+
+      static string fullName(Symbol symbol) {
+        var parent = symbol.parent
+        if (parent != null && parent.kind != .OBJECT_GLOBAL) {
+          var enclosingName = fullName(parent)
+          if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+            return enclosingName
+          }
+          if (symbol.kind == .FUNCTION_INSTANCE) {
+            enclosingName += ".prototype"
+          }
+          return enclosingName + "." + mangleName(symbol)
+        }
+        return mangleName(symbol)
+      }
+
+      static string mangleName(Symbol symbol) {
+        if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+          return mangleName(symbol.parent)
+        }
+        if (symbol.isImportedOrExported()) {
+          return symbol.name
+        }
+        if (symbol.name in isKeyword) {
+          return "$" + symbol.name
+        }
+        return symbol.name
+      }
+
+      static final var isKeyword = {
+        "apply": 0,
+        "arguments": 0,
+        "Boolean": 0,
+        "break": 0,
+        "call": 0,
+        "case": 0,
+        "catch": 0,
+        "class": 0,
+        "const": 0,
+        "constructor": 0,
+        "continue": 0,
+        "Date": 0,
+        "debugger": 0,
+        "default": 0,
+        "delete": 0,
+        "do": 0,
+        "double": 0,
+        "else": 0,
+        "export": 0,
+        "extends": 0,
+        "false": 0,
+        "finally": 0,
+        "float": 0,
+        "for": 0,
+        "Function": 0,
+        "function": 0,
+        "if": 0,
+        "import": 0,
+        "in": 0,
+        "instanceof": 0,
+        "int": 0,
+        "let": 0,
+        "new": 0,
+        "null": 0,
+        "Number": 0,
+        "Object": 0,
+        "return": 0,
+        "String": 0,
+        "super": 0,
+        "this": 0,
+        "throw": 0,
+        "true": 0,
+        "try": 0,
+        "var": 0,
       }
     }
   }
