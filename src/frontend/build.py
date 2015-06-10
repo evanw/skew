@@ -83,7 +83,9 @@ namespace skew {
 
       # This is the default action in flex, which is usually called ECHO
       else if yy_act == .ERROR {
-        var range = Range.new(source, yy_bp, yy_bp + 1)
+        var iterator = unicode.StringIterator.INSTANCE.reset(text, yy_bp)
+        iterator.nextCodePoint
+        var range = Range.new(source, yy_bp, iterator.index)
         log.syntaxErrorExtraData(range, range.toString)
         break
       }

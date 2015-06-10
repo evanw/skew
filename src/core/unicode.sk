@@ -1,0 +1,146 @@
+namespace unicode {
+  enum Encoding {
+    UTF8
+    UTF16
+    UTF32
+  }
+
+  const STRING_ENCODING = Encoding.UTF16
+
+  class StringIterator {
+    var value = ""
+    var index = 0
+    var stop = 0
+
+    def reset(text string, start int) StringIterator {
+      value = text
+      index = start
+      stop = text.count
+      return self
+    }
+
+    def countCodePointsUntil(stop int) int {
+      var count = 0
+      while index < stop && nextCodePoint >= 0 {
+        count += 1
+      }
+      return count
+    }
+
+    def nextCodePoint int {
+      if STRING_ENCODING == .UTF8 {
+        if index >= stop { return -1 }
+        var a = value[index]
+        index += 1
+        if a < 0xC0 { return a }
+        if index >= stop { return -1 }
+        var b = value[index]
+        index += 1
+        if a < 0xE0 { return ((a & 0x1F) << 6) | (b & 0x3F) }
+        if index >= stop { return -1 }
+        var c = value[index]
+        index += 1
+        if a < 0xF0 { return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F) }
+        if index >= stop { return -1 }
+        var d = value[index]
+        index += 1
+        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F)
+      }
+
+      else if STRING_ENCODING == .UTF16 {
+        if index >= stop { return -1 }
+        var a = value[index]
+        index += 1
+        if a < 0xD800 { return a }
+        if index >= stop { return -1 }
+        var b = value[index]
+        index += 1
+        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00)
+      }
+
+      else {
+        if index >= stop { return -1 }
+        var c = value[index]
+        index += 1
+        return c
+      }
+    }
+  }
+
+  namespace StringIterator {
+    const INSTANCE = StringIterator.new
+  }
+}
+
+class string {
+  def codePoints List<int> {
+    if unicode.STRING_ENCODING == .UTF32 {
+      return codeUnits
+    }
+
+    else {
+      var codePoints List<int> = []
+      var instance = unicode.StringIterator.INSTANCE
+      instance.reset(self, 0)
+
+      while true {
+        var codePoint = instance.nextCodePoint
+        if codePoint < 0 {
+          break
+        }
+        codePoints.append(codePoint)
+      }
+
+      return codePoints
+    }
+  }
+}
+
+namespace string {
+  def fromCodePoints(codePoints List<int>) string {
+    if unicode.STRING_ENCODING == .UTF8 {
+      var builder = StringBuilder.new
+
+      for codePoint in codePoints {
+        if codePoint < 0x80 {
+          builder.append(fromCodeUnit(codePoint))
+        } else {
+          if codePoint < 0x800 {
+            builder.append(fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0))
+          } else {
+            if codePoint < 0x10000 {
+              builder.append(fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0))
+            } else {
+              builder.append(fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0))
+              builder.append(fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80))
+            }
+            builder.append(fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80))
+          }
+          builder.append(fromCodeUnit((codePoint & 0x3F) | 0x80))
+        }
+      }
+
+      return builder.toString
+    }
+
+    else if unicode.STRING_ENCODING == .UTF16 {
+      var builder = StringBuilder.new
+
+      for codePoint in codePoints {
+        if codePoint < 0x10000 {
+          builder.append(fromCodeUnit(codePoint))
+        } else {
+          var adjusted = codePoint - 0x10000
+          builder.append(fromCodeUnit((adjusted >> 10) + 0xD800))
+          builder.append(fromCodeUnit((adjusted & ((1 << 10) - 1)) + 0xDC00))
+        }
+      }
+
+      return builder.toString
+    }
+
+    else {
+      return fromCodeUnits(codePoints)
+    }
+  }
+}

@@ -1014,10 +1014,10 @@ namespace skew {
 
       # There must be exactly one unicode code point
       if result != null {
-        if result.value.count != 1 {
+        var iterator = unicode.StringIterator.INSTANCE.reset(result.value, 0)
+        codePoint = iterator.nextCodePoint
+        if codePoint == -1 || iterator.nextCodePoint != -1 {
           context.log.syntaxErrorInvalidCharacter(token.range)
-        } else {
-          codePoint = result.value[0]
         }
       }
 
