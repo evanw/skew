@@ -1,14 +1,12 @@
 namespace skew {
-  var input = `document`.getElementById("input")
-  var output = `document`.getElementById("output")
+  var input = dynamic.document.getElementById("input")
+  var output = dynamic.document.getElementById("output")
 
-  string runEmitter(Emitter emitter, ObjectSymbol global) {
+  def runEmitter(emitter Emitter, global ObjectSymbol) string {
     emitter.visit(global)
-    var sources = emitter.sources()
     var text = ""
-    for (var i = 0; i < sources.size(); i++) {
-      var source = sources[i]
-      if (i != 0) {
+    for source in emitter.sources {
+      if (text != "") {
         text += "\n"
       }
       text += "[" + source.name + "]\n" + source.contents
@@ -16,17 +14,16 @@ namespace skew {
     return text
   }
 
-  void update() {
-    var log = Log()
-    var source = Source("<stdin>", input.value)
-    var cache = TypeCache()
+  def update {
+    var log = Log.new
+    var source = Source.new("<stdin>", input.value)
+    var cache = TypeCache.new
     var global = compile(log, [source], cache)
-    output.value = log.hasErrors() ? log.toString() : runEmitter(JsEmitter(cache), global)
+    output.value = log.hasErrors ? log.toString : runEmitter(JsEmitter.new(cache), global)
   }
 
-  @EntryPoint
-  void main() {
-    input.oninput = update
-    update()
-  }
+  var main = dynamic.setTimeout(=> {
+    input.oninput = => update
+    update
+  })
 }

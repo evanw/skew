@@ -1,4 +1,4 @@
-var NATIVE_LIBRARY = "
+const NATIVE_LIBRARY = "
 def @export
 def @import
 def @prefer
@@ -141,7 +141,7 @@ class List<T> {
   def all(x fn(T) bool) bool
   def any(x fn(T) bool) bool
   def appendOne(x T)
-  def copy List<T>
+  def clone List<T>
   def count int
   def each(x fn(T))
   def filter(x fn(T) bool) List<T>
@@ -162,10 +162,14 @@ class List<T> {
   def removeOne(x T)
   def removeRange(start int, end int)
   def resize(size int, defaultValue T)
+  def reverse
   def shuffle
   def slice(start int, end int) List<T>
   def sort(x fn(T, T) int)
   def swap(x int, y int)
+  def takeFirst T
+  def takeLast T
+  def takeRange(start int, end int) List<T>
 
   @prefer
   def append(x T)

@@ -1,99 +1,85 @@
 namespace skew {
   class JsEmitter : Emitter {
-    override void visit(ObjectSymbol global) {
+    over visit(global ObjectSymbol) {
       var objects = sortedObjects(global)
 
-      if (needsExtends(objects)) {
+      if needsExtends(objects) {
         emit(indent + "function $extends(derived, base) {\n")
         emit(indent + "  derived.prototype = Object.create(base.prototype);\n")
         emit(indent + "  derived.prototype.constructor = derived;\n")
         emit(indent + "}\n\n")
       }
 
-      // Emit objects and functions
-      for (var i = 0; i < objects.size(); i++) {
-        emitObject(objects[i])
+      # Emit objects and functions
+      for object in objects {
+        emitObject(object)
       }
 
-      // Emit variables
-      for (var i = 0; i < objects.size(); i++) {
-        var object = objects[i]
+      # Emit variables
+      for object in objects {
+        var o = object
         prefix = ""
-        for (var o = object; o.kind != .OBJECT_GLOBAL; o = o.parent.asObjectSymbol()) {
+        while o.kind != .OBJECT_GLOBAL {
           prefix = mangleName(o) + "." + prefix
+          o = o.parent.asObjectSymbol
         }
-        for (var j = 0; j < object.variables.size(); j++) {
-          emitVariable(object.variables[j])
+        for variable in object.variables {
+          emitVariable(variable)
         }
       }
 
       createSource("out.js")
     }
 
-    private {
-      Symbol previousSymbol = null
-      Node previousNode = null
+    @private {
+      var previousSymbol Symbol = null
+      var previousNode Node = null
       var prefix = ""
 
-      static bool needsExtends(List<ObjectSymbol> objects) {
-        for (var i = 0; i < objects.size(); i++) {
-          var object = objects[i]
-          if (!object.isImported() && object.baseClass != null) {
-            return true
-          }
-        }
-        return false
-      }
-
-      void emitNewlineBeforeSymbol(Symbol symbol) {
-        if (previousSymbol != null &&
-            (!previousSymbol.kind.isObject() || !symbol.kind.isObject() || symbol.comments != null || previousSymbol.kind == .OBJECT_ENUM || symbol.kind == .OBJECT_ENUM) &&
-            (!previousSymbol.kind.isVariable() || !symbol.kind.isVariable() || symbol.comments != null)) {
+      def emitNewlineBeforeSymbol(symbol Symbol) {
+        if previousSymbol != null &&
+            (!previousSymbol.kind.isObject || !symbol.kind.isObject || symbol.comments != null || previousSymbol.kind == .OBJECT_ENUM || symbol.kind == .OBJECT_ENUM) &&
+            (!previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) {
           emit("\n")
         }
         previousSymbol = null
       }
 
-      void emitNewlineAfterSymbol(Symbol symbol) {
+      def emitNewlineAfterSymbol(symbol Symbol) {
         previousSymbol = symbol
       }
 
-      bool isCompactNodeKind(NodeKind kind) {
-        return kind == .EXPRESSION || kind == .VAR || kind.isJump()
+      def isCompactNodeKind(kind NodeKind) bool {
+        return kind == .EXPRESSION || kind == .VAR || kind.isJump
       }
 
-      void emitNewlineBeforeStatement(Node node) {
-        if (previousNode != null && (node.comments != null || !isCompactNodeKind(previousNode.kind) || !isCompactNodeKind(node.kind))) {
+      def emitNewlineBeforeStatement(node Node) {
+        if previousNode != null && (node.comments != null || !isCompactNodeKind(previousNode.kind) || !isCompactNodeKind(node.kind)) {
           emit("\n")
         }
         previousNode = null
       }
 
-      void emitNewlineAfterStatement(Node node) {
+      def emitNewlineAfterStatement(node Node) {
         previousNode = node
       }
 
-      void emitComments(List<string> comments) {
-        if (comments != null) {
-          for (var i = 0; i < comments.size(); i++) {
-            emit(indent + "//" + comments[i])
+      def emitComments(comments List<string>) {
+        if comments != null {
+          for comment in comments {
+            emit(indent + "//" + comment)
           }
         }
       }
 
-      static string computePrefix(ObjectSymbol symbol) {
-        assert symbol.kind.isObject()
-        return symbol.kind == .OBJECT_GLOBAL ? "" : computePrefix(symbol.parent.asObjectSymbol()) + mangleName(symbol) + "."
-      }
-
-      void emitObject(ObjectSymbol symbol) {
-        if (symbol.isImported()) {
+      def emitObject(symbol ObjectSymbol) {
+        if symbol.isImported {
           return
         }
 
-        prefix = symbol.parent != null ? computePrefix(symbol.parent.asObjectSymbol()) : ""
+        prefix = symbol.parent != null ? computePrefix(symbol.parent.asObjectSymbol) : ""
 
-        switch (symbol.kind) {
+        switch symbol.kind {
           case .OBJECT_NAMESPACE, .OBJECT_INTERFACE {
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol.comments)
@@ -105,134 +91,139 @@ namespace skew {
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol.comments)
             emit(indent + (prefix == "" ? "var " : prefix) + mangleName(symbol) + " = {")
-            increaseIndent()
+            increaseIndent
             var isFirst = true
-            for (var i = 0; i < symbol.variables.size(); i++) {
-              var variable = symbol.variables[i]
-              if (variable.kind == .VARIABLE_ENUM) {
-                if (isFirst) isFirst = false
-                else emit(",")
+            for variable in symbol.variables {
+              if variable.kind == .VARIABLE_ENUM {
+                if isFirst { isFirst = false }
+                else { emit(",") }
                 emit("\n")
                 emitNewlineBeforeSymbol(variable)
                 emitComments(variable.comments)
-                emit(indent + mangleName(variable) + ": " + variable.enumValue + ", " + variable.enumValue + ": " + quoteString(variable.name, '"'))
+                emit(indent + mangleName(variable) ": " variable.enumValue ", " variable.enumValue ": " quoteString(variable.name, '"'))
                 emitNewlineAfterSymbol(variable)
               }
             }
-            decreaseIndent()
-            if (!isFirst) emit("\n")
+            decreaseIndent
+            if !isFirst { emit("\n") }
             emit("};\n")
             emitNewlineAfterSymbol(symbol)
           }
 
           case .OBJECT_CLASS {
-            for (var i = 0; i < symbol.functions.size(); i++) {
-              var function = symbol.functions[i]
-              if (function.kind == .FUNCTION_CONSTRUCTOR) {
-                if (function.comments == null && symbol.comments != null) {
+            for function in symbol.functions {
+              if function.kind == .FUNCTION_CONSTRUCTOR {
+                if function.comments == null && symbol.comments != null {
                   function.comments = symbol.comments
                 }
                 emitFunction(function)
-                if (symbol.baseClass != null) {
-                  emit("\n" + indent + "$extends(" + fullName(symbol) + ", " + fullName(symbol.baseClass) + ");\n")
+                if symbol.baseClass != null {
+                  emit("\n" indent "$extends(" fullName(symbol) ", " fullName(symbol.baseClass) ");\n")
                 }
               }
             }
           }
         }
 
-        if (symbol.kind != .OBJECT_GLOBAL) {
+        if symbol.kind != .OBJECT_GLOBAL {
           prefix += mangleName(symbol) + "."
         }
 
-        for (var i = 0; i < symbol.functions.size(); i++) {
-          var function = symbol.functions[i]
-          if (function.kind != .FUNCTION_CONSTRUCTOR) {
+        for function in symbol.functions {
+          if function.kind != .FUNCTION_CONSTRUCTOR {
             emitFunction(function)
           }
         }
       }
 
-      void emitArgumentList(List<VariableSymbol> arguments) {
-        for (var i = 0; i < arguments.size(); i++) {
-          if (i > 0) emit(", ")
+      def emitArgumentList(arguments List<VariableSymbol>) {
+        for i in 0..arguments.count {
+          if i > 0 { emit(", ") }
           emit(mangleName(arguments[i]))
         }
       }
 
-      void emitFunction(FunctionSymbol symbol) {
-        if (symbol.block == null) {
+      def emitFunction(symbol FunctionSymbol) {
+        if symbol.block == null {
           return
         }
 
         emitNewlineBeforeSymbol(symbol)
         emitComments(symbol.comments)
+
         var isExpression = prefix != ""
         var name = mangleName(symbol.kind == .FUNCTION_CONSTRUCTOR ? symbol.parent : symbol)
-        if (isExpression) {
+
+        if isExpression {
           emit(prefix + (symbol.kind == .FUNCTION_INSTANCE ? "prototype." : "") + name + " = function(")
         } else {
           emit("function " + name + "(")
         }
+
         emitArgumentList(symbol.arguments)
         emit(") {\n")
-        increaseIndent()
-        if (symbol.self != null) {
+        increaseIndent
+
+        if symbol.self != null {
           emit(indent + "var " + mangleName(symbol.self) + " = this;\n")
         }
+
         emitStatements(symbol.block.children)
-        decreaseIndent()
+        decreaseIndent
         emit(indent + "}" + (isExpression ? ";\n" : "\n"))
         emitNewlineAfterSymbol(symbol)
       }
 
-      void emitVariable(VariableSymbol symbol) {
-        if (symbol.isImported()) {
+      def emitVariable(symbol VariableSymbol) {
+        if symbol.isImported {
           return
         }
 
-        if (symbol.kind != .VARIABLE_INSTANCE && (symbol.value != null || prefix == "")) {
+        if symbol.kind != .VARIABLE_INSTANCE && (symbol.value != null || prefix == "") {
           emitNewlineBeforeSymbol(symbol)
           emitComments(symbol.comments)
           emit(indent + (prefix == "" || symbol.kind == .VARIABLE_LOCAL ? "var " : prefix) + mangleName(symbol))
-          if (symbol.value != null) {
+
+          if symbol.value != null {
             emit(" = ")
             emitExpression(symbol.value, .LOWEST)
           }
+
           emit(";\n")
           emitNewlineAfterSymbol(symbol)
         }
       }
 
-      void emitStatements(List<Node> nodes) {
+      def emitStatements(statements List<Node>) {
         previousNode = null
-        for (var i = 0; i < nodes.size(); i++) {
-          var statement = nodes[i]
+
+        for statement in statements {
           emitNewlineBeforeStatement(statement)
           emitComments(statement.comments)
           emitStatement(statement)
           emitNewlineAfterStatement(statement)
         }
+
         previousNode = null
       }
 
-      void emitBlock(Node node) {
+      def emitBlock(node Node) {
         emit(" {\n")
-        increaseIndent()
+        increaseIndent
         emitStatements(node.children)
-        decreaseIndent()
+        decreaseIndent
         emit(indent + "}")
       }
 
-      void emitStatement(Node node) {
-        switch (node.kind) {
+      def emitStatement(node Node) {
+        switch node.kind {
           case .VAR {
-            emitVariable((VariableSymbol)node.symbol)
+            emitVariable(node.symbol.asVariableSymbol)
           }
 
           case .EXPRESSION {
             emit(indent)
-            emitExpression(node.expressionValue(), .LOWEST)
+            emitExpression(node.expressionValue, .LOWEST)
             emit(";\n")
           }
 
@@ -246,8 +237,8 @@ namespace skew {
 
           case .IMPLICIT_RETURN, .RETURN {
             emit(indent + "return")
-            var value = node.returnValue()
-            if (value != null) {
+            var value = node.returnValue
+            if value != null {
               emit(" ")
               emitExpression(value, .LOWEST)
             }
@@ -255,40 +246,40 @@ namespace skew {
           }
 
           case .FOR {
-            var value = node.forValue()
+            var value = node.forValue
             var name = mangleName(node.symbol)
 
-            if (value.kind == .PAIR) {
-              var limit = "n" + node.symbol.id
-              emit(indent + "for (var " + name + " = ")
-              emitExpression(value.firstValue(), .LOWEST)
-              emit(", " + limit + " = ")
-              emitExpression(value.secondValue(), .LOWEST)
-              emit("; " + name + " < " + limit + "; " + name + "++")
+            if value.kind == .PAIR {
+              var limit = "n" node.symbol.id
+              emit(indent "for (var " name " = ")
+              emitExpression(value.firstValue, .LOWEST)
+              emit(", " limit " = ")
+              emitExpression(value.secondValue, .LOWEST)
+              emit("; " name " < " limit "; " name "++")
               emit(")")
-              emitBlock(node.forBlock())
+              emitBlock(node.forBlock)
               emit("\n")
             }
 
-            else if (cache.isList(value.resolvedType)) {
+            else if cache.isList(value.resolvedType) {
               var id = node.symbol.id
-              var index = "i" + id
-              var list = "x" + id
-              emit(indent + "for (var " + index + " = 0, " + list + " = ")
+              var index = "i" id
+              var list = "x" id
+              emit(indent "for (var " index " = 0, " list " = ")
               emitExpression(value, .LOWEST)
-              emit("; " + index + " < " + list + ".length; " + index + "++) {\n")
-              increaseIndent()
-              emit(indent + "var " + name + " = " + list + "[" + index + "];\n")
-              emitStatements(node.forBlock().children)
-              decreaseIndent()
-              emit(indent + "}\n")
+              emit("; " index " < " list ".length; " index "++) {\n")
+              increaseIndent
+              emit(indent "var " name " = " list "[" index "];\n")
+              emitStatements(node.forBlock.children)
+              decreaseIndent
+              emit(indent "}\n")
             }
 
             else {
-              emit(indent + "for (var " + name + " in ")
+              emit(indent "for (var " name " in ")
               emitExpression(value, .LOWEST)
               emit(")")
-              emitBlock(node.forBlock())
+              emitBlock(node.forBlock)
               emit("\n")
             }
           }
@@ -302,67 +293,72 @@ namespace skew {
           case .SWITCH {
             var cases = node.children
             emit(indent + "switch (")
-            emitExpression(node.switchValue(), .LOWEST)
+            emitExpression(node.switchValue, .LOWEST)
             emit(") {\n")
-            increaseIndent()
-            for (var i = 1; i < cases.size(); i++) {
+            increaseIndent
+            for i in 1..cases.count {
               var child = cases[i]
               var values = child.children
-              if (i != 1) emit("\n")
-              if (values.size() == 1) {
+              if i != 1 {
+                emit("\n")
+              }
+              if values.count == 1 {
                 emit(indent + "default:")
               } else {
-                for (var j = 1; j < values.size(); j++) {
-                  if (j != 1) emit("\n")
+                for j in 1..values.count {
+                  if j != 1 { emit("\n") }
                   emit(indent + "case ")
                   emitExpression(values[j], .LOWEST)
                   emit(":")
                 }
               }
               emit(" {\n")
-              increaseIndent()
-              emitStatements(child.caseBlock().children)
+              increaseIndent
+              emitStatements(child.caseBlock.children)
               emit(indent + "break;\n")
-              decreaseIndent()
+              decreaseIndent
               emit(indent + "}\n")
             }
-            decreaseIndent()
+            decreaseIndent
             emit(indent + "}\n")
           }
 
           case .WHILE {
             emit(indent + "while (")
-            emitExpression(node.whileTest(), .LOWEST)
+            emitExpression(node.whileTest, .LOWEST)
             emit(")")
-            emitBlock(node.whileBlock())
+            emitBlock(node.whileBlock)
             emit("\n")
           }
 
           default {
-            assert false
+            assert(false)
           }
         }
       }
 
-      void emitIf(Node node) {
+      def emitIf(node Node) {
         emit("if (")
-        emitExpression(node.ifTest(), .LOWEST)
+        emitExpression(node.ifTest, .LOWEST)
         emit(")")
-        emitBlock(node.ifTrue())
-        var block = node.ifFalse()
-        if (block != null) {
-          var singleIf = block.children.size() == 1 && block.children[0].kind == .IF ? block.children[0] : null
-          if (block.comments != null || singleIf != null && singleIf.comments != null) {
+        emitBlock(node.ifTrue)
+
+        var block = node.ifFalse
+        if block != null {
+          var singleIf = block.children.count == 1 && block.children[0].kind == .IF ? block.children[0] : null
+
+          if block.comments != null || singleIf != null && singleIf.comments != null {
             emit("\n\n")
             emitComments(block.comments)
-            if (singleIf != null) {
+            if singleIf != null {
               emitComments(singleIf.comments)
             }
             emit(indent + "else")
           } else {
             emit(" else")
           }
-          if (singleIf != null) {
+
+          if singleIf != null {
             emit(" ")
             emitIf(singleIf)
           } else {
@@ -371,7 +367,7 @@ namespace skew {
         }
       }
 
-      void emitExpression(Node node, Precedence precedence) {
+      def emitExpression(node Node, precedence Precedence) {
         switch (node.kind) {
           case .TYPE {
             emit(fullName(node.resolvedType.symbol))
@@ -382,108 +378,141 @@ namespace skew {
           }
 
           case .NAME {
-            emit(node.symbol != null ? fullName(node.symbol) : node.asString())
+            emit(node.symbol != null ? fullName(node.symbol) : node.asString)
           }
 
           case .DOT {
-            emitExpression(node.dotTarget(), .MEMBER)
-            emit("." + (node.symbol != null ? mangleName(node.symbol) : node.asString()))
+            emitExpression(node.dotTarget, .MEMBER)
+            emit("." + (node.symbol != null ? mangleName(node.symbol) : node.asString))
           }
 
           case .CONSTANT {
             var value = node.content
-            switch (value.kind()) {
-              case .BOOL { emit(value.asBool().toString()) }
-              case .INT { emit(value.asInt().toString()) }
-              case .DOUBLE { emit(value.asDouble().toString()) }
-              case .STRING { emit(quoteString(value.asString(), '"')) }
+            switch value.kind {
+              case .BOOL { emit(value.asBool.toString) }
+              case .INT { emit(value.asInt.toString) }
+              case .DOUBLE { emit(value.asDouble.toString) }
+              case .STRING { emit(quoteString(value.asString, '"')) }
             }
           }
 
           case .CALL {
-            var value = node.callValue()
+            var value = node.callValue
             var call = value.kind == .SUPER
             var wrap = value.kind == .LAMBDA && node.parent != null && node.parent.kind == .EXPRESSION
-            if (wrap) emit("(")
-            if (!call && node.symbol != null && node.symbol.kind == .FUNCTION_CONSTRUCTOR) {
+
+            if wrap {
+              emit("(")
+            }
+
+            if !call && node.symbol != null && node.symbol.kind == .FUNCTION_CONSTRUCTOR {
               emit("new " + fullName(node.symbol))
             } else {
               emitExpression(value, .UNARY_POSTFIX)
-              if (call) emit(".call")
+              if call {
+                emit(".call")
+              }
             }
-            if (wrap) emit(")")
+
+            if wrap {
+              emit(")")
+            }
+
             emit("(")
-            if (call) emit(mangleName(node.symbol.asFunctionSymbol().self))
-            for (var i = 1; i < node.children.size(); i++) {
+
+            if call {
+              emit(mangleName(node.symbol.asFunctionSymbol.self))
+            }
+
+            for i in 1..node.children.count {
               if (call || i > 1) {
                 emit(", ")
               }
               emitExpression(node.children[i], .LOWEST)
             }
+
             emit(")")
           }
 
           case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET {
-            var useBraces = node.kind == .INITIALIZER_MAP || node.kind == .INITIALIZER_SET && node.children.size() == 0
+            var useBraces = node.kind == .INITIALIZER_MAP || node.kind == .INITIALIZER_SET && node.children.isEmpty
             emit(useBraces ? "{" : "[")
-            for (var i = 0; i < node.children.size(); i++) {
-              if (i != 0) {
+
+            for i in 0..node.children.count {
+              if i != 0 {
                 emit(", ")
               }
               emitExpression(node.children[i], .LOWEST)
             }
+
             emit(useBraces ? "}" : "]")
           }
 
           case .PAIR {
-            emitExpression(node.firstValue(), .LOWEST)
+            emitExpression(node.firstValue, .LOWEST)
             emit(": ")
-            emitExpression(node.secondValue(), .LOWEST)
+            emitExpression(node.secondValue, .LOWEST)
           }
 
           case .INDEX {
             emitExpression(node.children[0], .UNARY_POSTFIX)
             emit("[")
-            for (var i = 1; i < node.children.size(); i++) {
-              if (i > 1) {
+
+            for i in 1..node.children.count {
+              if i > 1 {
                 emit(", ")
               }
               emitExpression(node.children[i], .LOWEST)
             }
+
             emit("]")
           }
 
           case .ASSIGN_INDEX {
-            var count = node.children.size()
-            if (.ASSIGN < precedence) emit("(")
-            emitExpression(node.children[0], .UNARY_POSTFIX)
+            if Precedence.ASSIGN as int < precedence as int {
+              emit("(")
+            }
+
+            emitExpression(node.children.first, .UNARY_POSTFIX)
             emit("[")
-            for (var i = 1; i + 1 < count; i++) {
-              if (i > 1) {
+
+            for i in 1..node.children.count - 1 {
+              if i > 1 {
                 emit(", ")
               }
               emitExpression(node.children[i], .LOWEST)
             }
+
             emit("] = ")
-            emitExpression(node.children[count - 1], .LOWEST)
-            if (.ASSIGN < precedence) emit(")")
+            emitExpression(node.children.last, .LOWEST)
+
+            if Precedence.ASSIGN as int < precedence as int {
+              emit(")")
+            }
           }
 
           case .CAST {
-            var value = node.castValue()
+            var value = node.castValue
             var from = value.resolvedType
             var to = node.resolvedType
 
-            if (from.isEnum() && to == cache.stringType) {
+            if from.isEnum && to == cache.stringType {
               emit(fullName(from.symbol) + "[")
               emitExpression(value, precedence)
               emit("]")
             }
 
-            else if (from == cache.stringType && to.isEnum()) {
+            else if from == cache.stringType && to.isEnum {
               emit(fullName(to.symbol) + "[")
               emitExpression(value, precedence)
               emit("]")
+            }
+
+            # TODO: Do this better
+            else if to == cache.intType {
+              emit("((")
+              emitExpression(value, precedence)
+              emit(") | 0)")
             }
 
             else {
@@ -492,7 +521,7 @@ namespace skew {
           }
 
           case .PARAMETERIZE {
-            emitExpression(node.parameterizeValue(), precedence)
+            emitExpression(node.parameterizeValue, precedence)
           }
 
           case .SUPER {
@@ -500,17 +529,21 @@ namespace skew {
           }
 
           case .HOOK {
-            if (.ASSIGN < precedence) emit("(")
-            emitExpression(node.hookTest(), .LOGICAL_OR)
+            if Precedence.ASSIGN as int < precedence as int {
+              emit("(")
+            }
+            emitExpression(node.hookTest, .LOGICAL_OR)
             emit(" ? ")
-            emitExpression(node.hookTrue(), .ASSIGN)
+            emitExpression(node.hookTrue, .ASSIGN)
             emit(" : ")
-            emitExpression(node.hookFalse(), .ASSIGN)
-            if (.ASSIGN < precedence) emit(")")
+            emitExpression(node.hookFalse, .ASSIGN)
+            if Precedence.ASSIGN as int < precedence as int {
+              emit(")")
+            }
           }
 
           case .LAMBDA {
-            var symbol = node.symbol.asFunctionSymbol()
+            var symbol = node.symbol.asFunctionSymbol
             emit("function(")
             emitArgumentList(symbol.arguments)
             emit(")")
@@ -518,60 +551,90 @@ namespace skew {
           }
 
           default {
-            if (node.kind.isUnary()) {
-              var value = node.unaryValue()
+            if node.kind.isUnary {
+              var value = node.unaryValue
               var info = operatorInfo[node.kind]
-              if (info.precedence < precedence) emit("(")
+              if info.precedence as int < precedence as int {
+                emit("(")
+              }
               emit(info.text)
               emitExpression(value, info.precedence)
-              if (info.precedence < precedence) emit(")")
+              if info.precedence as int < precedence as int {
+                emit(")")
+              }
             }
 
-            else if (node.kind.isBinary()) {
+            # TODO: Remove hack
+            else if node.kind == .DIVIDE && node.resolvedType == cache.intType {
+              emit("((")
+              emitExpression(node.binaryLeft, .LOWEST)
+              emit(") / (")
+              emitExpression(node.binaryRight, .LOWEST)
+              emit(") | 0)")
+            }
+
+            else if node.kind.isBinary {
               var info = operatorInfo[node.kind]
-              if (info.precedence < precedence) emit("(")
-              emitExpression(node.binaryLeft(), info.precedence.incrementIfRightAssociative(info.associativity))
+              if info.precedence as int < precedence as int {
+                emit("(")
+              }
+              emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
               emit(node.kind == .EQUAL ? " === " : node.kind == .NOT_EQUAL ? " !== " : " " + info.text + " ")
-              emitExpression(node.binaryRight(), info.precedence.incrementIfLeftAssociative(info.associativity))
-              if (info.precedence < precedence) emit(")")
+              emitExpression(node.binaryRight, info.precedence.incrementIfLeftAssociative(info.associativity))
+              if info.precedence as int < precedence as int {
+                emit(")")
+              }
             }
 
             else {
-              assert false
+              assert(false)
             }
           }
         }
       }
+    }
+  }
 
-      static string fullName(Symbol symbol) {
+  namespace JsEmitter {
+    @private {
+      def fullName(symbol Symbol) string {
         var parent = symbol.parent
-        if (parent != null && parent.kind != .OBJECT_GLOBAL) {
+        if parent != null && parent.kind != .OBJECT_GLOBAL {
           var enclosingName = fullName(parent)
-          if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+          if symbol.kind == .FUNCTION_CONSTRUCTOR {
             return enclosingName
           }
-          if (symbol.kind == .FUNCTION_INSTANCE) {
+          if symbol.kind == .FUNCTION_INSTANCE {
             enclosingName += ".prototype"
           }
-          return enclosingName + "." + mangleName(symbol)
+          return enclosingName "." mangleName(symbol)
         }
         return mangleName(symbol)
       }
 
-      static string mangleName(Symbol symbol) {
-        if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+      def mangleName(symbol Symbol) string {
+        if symbol.kind == .FUNCTION_CONSTRUCTOR {
           return mangleName(symbol.parent)
         }
-        if (symbol.isImportedOrExported()) {
+        if symbol.isImportedOrExported {
           return symbol.name
         }
-        if (symbol.name in isKeyword) {
-          return "$" + symbol.name
+        if symbol.name in isKeyword {
+          return "$" symbol.name
+        }
+        if symbol.kind.isFunction {
+          var function = symbol.asFunctionSymbol
+          if function.overridden != null {
+            return mangleName(function.overridden)
+          }
+          if function.overloaded != null {
+            return symbol.name "$" symbol.id
+          }
         }
         return symbol.name
       }
 
-      static final var isKeyword = {
+      const isKeyword = {
         "apply": 0,
         "arguments": 0,
         "Boolean": 0,
@@ -616,6 +679,20 @@ namespace skew {
         "true": 0,
         "try": 0,
         "var": 0,
+      }
+
+      def needsExtends(objects List<ObjectSymbol>) bool {
+        for object in objects {
+          if !object.isImported && object.baseClass != null {
+            return true
+          }
+        }
+        return false
+      }
+
+      def computePrefix(symbol ObjectSymbol) string {
+        assert(symbol.kind.isObject)
+        return symbol.kind == .OBJECT_GLOBAL ? "" : computePrefix(symbol.parent.asObjectSymbol) + mangleName(symbol) + "."
       }
     }
   }

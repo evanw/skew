@@ -1,28 +1,27 @@
 namespace skew {
-  void motionPass(ObjectSymbol global, CallGraph graph) {
-    var parents = IntMap<ObjectSymbol>()
+  def motionPass(global ObjectSymbol, graph CallGraph) {
+    var parents = IntMap<ObjectSymbol>.new
 
-    for (var i = 0; i < graph.callInfo.size(); i++) {
-      var info = graph.callInfo[i]
+    for info in graph.callInfo {
       var symbol = info.symbol
 
-      // Move global functions with implementations off imported objects
-      if (symbol.kind == .FUNCTION_GLOBAL && symbol.parent.isImported() && !symbol.isImported()) {
-        var function = symbol.asFunctionSymbol()
-        var parent = parents.getOrDefault(function.parent.id, null)
+      # Move global functions with implementations off imported objects
+      if symbol.kind == .FUNCTION_GLOBAL && symbol.parent.isImported && !symbol.isImported {
+        var function = symbol.asFunctionSymbol
+        var parent = parents.get(function.parent.id, null)
 
-        // Create a parallel namespace next to the parent
-        if (parent == null) {
-          var common = function.parent.parent.asObjectSymbol()
-          parent = ObjectSymbol(.OBJECT_NAMESPACE, "in_" + function.parent.name)
+        # Create a parallel namespace next to the parent
+        if parent == null {
+          var common = function.parent.parent.asObjectSymbol
+          parent = ObjectSymbol.new(.OBJECT_NAMESPACE, "in_" + function.parent.name)
           parent.parent = common
-          common.objects.push(parent)
+          common.objects.append(parent)
           parents[function.parent.id] = parent
         }
 
-        // Move this function into that parallel namespace
-        function.parent.asObjectSymbol().functions.removeOnce(function)
-        parent.functions.push(function)
+        # Move this function into that parallel namespace
+        function.parent.asObjectSymbol.functions.removeOne(function)
+        parent.functions.append(function)
         function.parent = parent
       }
     }

@@ -1,25 +1,22 @@
 namespace skew {
-  using skew.merging
-
-  void mergingPass(Log log, ObjectSymbol global) {
-    mergeObject(log, null, global, global)
+  def mergingPass(log Log, global ObjectSymbol) {
+    merging.mergeObject(log, null, global, global)
   }
 }
 
 namespace skew.merging {
-  void mergeObject(Log log, ObjectSymbol parent, ObjectSymbol target, ObjectSymbol symbol) {
-    target.scope = ObjectScope(parent != null ? parent.scope : null, target)
+  def mergeObject(log Log, parent ObjectSymbol, target ObjectSymbol, symbol ObjectSymbol) {
+    target.scope = ObjectScope.new(parent != null ? parent.scope : null, target)
     symbol.parent = parent
 
-    if (symbol.parameters != null) {
-      for (var i = 0; i < symbol.parameters.size(); i++) {
-        var parameter = symbol.parameters[i]
+    if symbol.parameters != null {
+      for parameter in symbol.parameters {
         parameter.scope = parent.scope
         parameter.parent = target
 
-        // Type parameters cannot merge with any members
-        var other = target.members.getOrDefault(parameter.name, null)
-        if (other != null) {
+        # Type parameters cannot merge with any members
+        var other = target.members.get(parameter.name, null)
+        if other != null {
           log.semanticErrorDuplicateSymbol(parameter.range, parameter.name, other.range)
           continue
         }
@@ -33,84 +30,82 @@ namespace skew.merging {
     mergeVariables(log, target, symbol.variables)
   }
 
-  void mergeObjects(Log log, ObjectSymbol parent, List<ObjectSymbol> children) {
+  def mergeObjects(log Log, parent ObjectSymbol, children List<ObjectSymbol>) {
     var members = parent.members
-    var n = children.size()
+    var n = children.count
     var count = 0
 
-    for (var i = 0; i < n; i++) {
+    for i in 0..n {
       var child = children[i]
-      var other = members.getOrDefault(child.name, null)
+      var other = members.get(child.name, null)
 
-      // Simple case: no merging
-      if (other == null) {
+      # Simple case: no merging
+      if other == null {
         members[child.name] = child
         children[count] = child
-        count++
+        count += 1
         mergeObject(log, parent, child, child)
         continue
       }
 
-      // Can only merge with another of the same kind or with a namespace
-      if (other.kind == .OBJECT_NAMESPACE) {
+      # Can only merge with another of the same kind or with a namespace
+      if other.kind == .OBJECT_NAMESPACE {
         other.kind = child.kind
-      } else if (child.kind != .OBJECT_NAMESPACE && child.kind != other.kind) {
+      } else if child.kind != .OBJECT_NAMESPACE && child.kind != other.kind {
         log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
         continue
       }
 
-      // Classes can only have one base type
-      var object = (ObjectSymbol)other
-      if (child.base != null && object.base != null) {
+      # Classes can only have one base type
+      var object = other.asObjectSymbol
+      if child.base != null && object.base != null {
         log.semanticErrorDuplicateBaseType(child.base.range, child.name, object.base.range)
         continue
       }
-      if (child.base != null) {
+      if child.base != null {
         object.base = child.base
       }
 
-      // Cannot merge two objects that both have type parameters
-      if (child.parameters != null && object.parameters != null) {
+      # Cannot merge two objects that both have type parameters
+      if child.parameters != null && object.parameters != null {
         log.semanticErrorDuplicateTypeParameters(rangeOfParameters(child.parameters), child.name, rangeOfParameters(object.parameters))
         continue
       }
 
-      // Merge "child" into "other"
+      # Merge "child" into "other"
       mergeObject(log, parent, object, child)
-      object.objects.pushAll(child.objects)
-      object.functions.pushAll(child.functions)
-      object.variables.pushAll(child.variables)
-      if (child.parameters != null) {
+      object.objects.append(child.objects)
+      object.functions.append(child.functions)
+      object.variables.append(child.variables)
+      if child.parameters != null {
         object.parameters = child.parameters
       }
     }
 
-    // Remove merged declarations using O(n), would be O(n^2) if removeAt() was used
-    while (n > count) {
-      children.pop()
-      n--
+    # Remove merged declarations using O(n), would be O(n^2) if removeAt was used
+    while n > count {
+      children.removeLast
+      n -= 1
     }
   }
 
-  void mergeFunctions(Log log, ObjectSymbol parent, List<FunctionSymbol> children) {
+  def mergeFunctions(log Log, parent ObjectSymbol, children List<FunctionSymbol>) {
     var members = parent.members
 
-    for (var i = 0, n = children.size(); i < n; i++) {
-      var child = children[i]
-      var other = members.getOrDefault(child.name, null)
-      var scope = FunctionScope(parent.scope, child)
+    for child in children {
+      var other = members.get(child.name, null)
+      var scope = FunctionScope.new(parent.scope, child)
       child.scope = scope
       child.parent = parent
 
-      if (child.parameters != null) {
-        for (var j = 0; j < child.parameters.size(); j++) {
-          var parameter = child.parameters[j]
+      if child.parameters != null {
+        for parameter in child.parameters {
           parameter.scope = scope
           parameter.parent = child
 
-          // Type parameters cannot merge with other parameters on this function
-          var previous = scope.parameters.getOrDefault(parameter.name, null)
-          if (previous != null) {
+          # Type parameters cannot merge with other parameters on this function
+          var previous = scope.parameters.get(parameter.name, null)
+          if previous != null {
             log.semanticErrorDuplicateSymbol(parameter.range, parameter.name, previous.range)
             continue
           }
@@ -119,8 +114,8 @@ namespace skew.merging {
         }
       }
 
-      // Simple case: no merging
-      if (other == null) {
+      # Simple case: no merging
+      if other == null {
         members[child.name] = child
         continue
       }
@@ -128,47 +123,46 @@ namespace skew.merging {
       var childKind = overloadedKind(child.kind)
       var otherKind = overloadedKind(other.kind)
 
-      // Merge with another symbol of the same overloaded group type
-      if (childKind != otherKind || !childKind.isOverloadedFunction()) {
+      # Merge with another symbol of the same overloaded group type
+      if childKind != otherKind || !childKind.isOverloadedFunction {
         log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
         continue
       }
 
-      // Merge with a group of overloaded functions
-      if (other.kind.isOverloadedFunction()) {
-        ((OverloadedFunctionSymbol)other).symbols.push(child)
-        child.overloaded = (OverloadedFunctionSymbol)other
+      # Merge with a group of overloaded functions
+      if other.kind.isOverloadedFunction {
+        other.asOverloadedFunctionSymbol.symbols.append(child)
+        child.overloaded = other.asOverloadedFunctionSymbol
         continue
       }
 
-      // Create an overload group
-      var overloaded = OverloadedFunctionSymbol(childKind, child.name, [(FunctionSymbol)other, child])
+      # Create an overload group
+      var overloaded = OverloadedFunctionSymbol.new(childKind, child.name, [other.asFunctionSymbol, child])
       members[child.name] = overloaded
-      ((FunctionSymbol)other).overloaded = overloaded
+      other.asFunctionSymbol.overloaded = overloaded
       child.overloaded = overloaded
       overloaded.scope = parent.scope
       overloaded.parent = parent
     }
   }
 
-  SymbolKind overloadedKind(SymbolKind kind) {
+  def overloadedKind(kind SymbolKind) SymbolKind {
     return
       kind == .FUNCTION_CONSTRUCTOR || kind == .FUNCTION_GLOBAL ? .OVERLOADED_GLOBAL :
       kind == .FUNCTION_INSTANCE ? .OVERLOADED_INSTANCE :
       kind
   }
 
-  void mergeVariables(Log log, ObjectSymbol parent, List<VariableSymbol> children) {
+  def mergeVariables(log Log, parent ObjectSymbol, children List<VariableSymbol>) {
     var members = parent.members
 
-    for (var i = 0, n = children.size(); i < n; i++) {
-      var child = children[i]
-      var other = members.getOrDefault(child.name, null)
-      child.scope = VariableScope(parent.scope, child)
+    for child in children {
+      var other = members.get(child.name, null)
+      child.scope = VariableScope.new(parent.scope, child)
       child.parent = parent
 
-      // Variables never merge
-      if (other != null) {
+      # Variables never merge
+      if other != null {
         log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
         continue
       }
@@ -177,7 +171,7 @@ namespace skew.merging {
     }
   }
 
-  Range rangeOfParameters(List<ParameterSymbol> parameters) {
-    return Range.span(parameters[0].range, parameters.last().range)
+  def rangeOfParameters(parameters List<ParameterSymbol>) Range {
+    return Range.span(parameters.first.range, parameters.last.range)
   }
 }

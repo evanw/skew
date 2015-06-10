@@ -1,0 +1,28 @@
+namespace skew {
+  var main = dynamic.setTimeout(=> {
+    var files List<string> = dynamic.process.argv.slice(2)
+    var sources List<Source> = []
+    var fs = dynamic.require("fs")
+
+    for file in files {
+      sources.append(Source.new(file, fs.readFileSync(file, "utf8")))
+    }
+
+    var log = Log.new
+    var cache = TypeCache.new
+    var global = compile(log, sources, cache)
+
+    if log.hasErrors {
+      dynamic.console.log(log.toString)
+    }
+
+    else {
+      var emitter = JsEmitter.new(cache)
+      emitter.visit(global)
+
+      for source in emitter.sources {
+        dynamic.process.stdout.write(source.contents)
+      }
+    }
+  })
+}

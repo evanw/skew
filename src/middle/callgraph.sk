@@ -1,79 +1,79 @@
 namespace skew {
   class CallInfo {
-    final Symbol symbol
-    final List<Node> callSites = []
+    const symbol Symbol
+    const callSites List<Node> = []
   }
 
   class CallGraph {
-    final List<CallInfo> callInfo = []
-    final var symbolToInfoIndex = IntMap<int>()
+    const callInfo List<CallInfo> = []
+    const symbolToInfoIndex IntMap<int> = {}
 
-    new(ObjectSymbol global) {
+    def new(global ObjectSymbol) {
+      # TODO: These should be inserted automatically
+      callInfo = []
+      symbolToInfoIndex = {}
+
       visitObject(global)
     }
 
-    private {
-      void visitObject(ObjectSymbol symbol) {
-        for (var i = 0; i < symbol.objects.size(); i++) {
-          visitObject(symbol.objects[i])
+    @private {
+      def visitObject(symbol ObjectSymbol) {
+        for object in symbol.objects {
+          visitObject(object)
         }
 
-        for (var i = 0; i < symbol.functions.size(); i++) {
-          var function = symbol.functions[i]
+        for function in symbol.functions {
           recordCallSite(function, null)
-          if (function.block != null) {
+          if function.block != null {
             visitNode(function.block)
           }
         }
 
-        for (var i = 0; i < symbol.variables.size(); i++) {
-          var variable = symbol.variables[i]
-          if (variable.value != null) {
+        for variable in symbol.variables {
+          if variable.value != null {
             visitNode(variable.value)
           }
         }
       }
 
-      void visitNode(Node node) {
-        var children = node.children
-        if (children != null) {
-          for (var i = 0, n = children.size(); i < n; i++) {
-            var child = children[i]
-            if (child != null) {
+      def visitNode(node Node) {
+        if node.children != null {
+          for child in node.children {
+            if child != null {
               visitNode(child)
             }
           }
         }
 
-        if (node.kind == .CALL && node.symbol != null) {
-          assert node.symbol.kind.isFunction()
+        if node.kind == .CALL && node.symbol != null {
+          assert(node.symbol.kind.isFunction)
           recordCallSite(node.symbol, node)
         }
 
-        else if (node.kind == .VAR) {
-          var variable = node.symbol.asVariableSymbol()
-          if (variable.value != null) {
+        else if node.kind == .VAR {
+          var variable = node.symbol.asVariableSymbol
+          if variable.value != null {
             visitNode(variable.value)
           }
         }
 
-        else if (node.kind == .LAMBDA) {
-          var function = node.symbol.asFunctionSymbol()
-          if (function.block != null) {
+        else if node.kind == .LAMBDA {
+          var function = node.symbol.asFunctionSymbol
+          if function.block != null {
             visitNode(function.block)
           }
         }
       }
 
-      void recordCallSite(Symbol symbol, Node node) {
-        var index = symbolToInfoIndex.getOrDefault(symbol.id, -1)
-        var info = index < 0 ? CallInfo(symbol) : callInfo[index]
-        if (index < 0) {
-          symbolToInfoIndex[symbol.id] = callInfo.size()
-          callInfo.push(info)
+      def recordCallSite(symbol Symbol, node Node) {
+        var index = symbolToInfoIndex.get(symbol.id, -1)
+        var info = index < 0 ? CallInfo.new(symbol) : callInfo[index]
+        if index < 0 {
+          symbolToInfoIndex[symbol.id] = callInfo.count
+          callInfo.append(info)
         }
-        if (node != null) {
-          info.callSites.push(node)
+        if node != null {
+          info.callSites.append(node)
         }
       }
     }

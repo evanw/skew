@@ -1,11 +1,11 @@
 namespace skew {
   enum NodeKind {
-    // Other
+    # Other
     ANNOTATION
     BLOCK
     CASE
 
-    // Statements
+    # Statements
     BREAK
     CONTINUE
     EXPRESSION
@@ -17,7 +17,7 @@ namespace skew {
     VAR
     WHILE
 
-    // Expressions
+    # Expressions
     ASSIGN_INDEX
     CALL
     CAST
@@ -39,13 +39,13 @@ namespace skew {
     SUPER
     TYPE
 
-    // Unary operators
+    # Unary operators
     COMPLEMENT
     POSITIVE
     NEGATIVE
     NOT
 
-    // Binary operators
+    # Binary operators
     ADD
     BITWISE_AND
     BITWISE_OR
@@ -64,13 +64,13 @@ namespace skew {
     SHIFT_RIGHT
     SUBTRACT
 
-    // Binary comparison operators
+    # Binary comparison operators
     GREATER_THAN
     GREATER_THAN_OR_EQUAL
     LESS_THAN
     LESS_THAN_OR_EQUAL
 
-    // Binary assigment operators
+    # Binary assigment operators
     ASSIGN
     ASSIGN_ADD
     ASSIGN_BITWISE_AND
@@ -83,59 +83,57 @@ namespace skew {
     ASSIGN_SHIFT_LEFT
     ASSIGN_SHIFT_RIGHT
     ASSIGN_SUBTRACT
-  }
 
-  in NodeKind {
-    bool isStatement() {
-      return this >= ASSIGN && this <= WHILE
+    def isStatement bool {
+      return self as int >= ASSIGN as int && self as int <= WHILE as int
     }
 
-    bool isExpression() {
-      return this >= ASSIGN_INDEX && this <= ASSIGN_SUBTRACT
+    def isExpression bool {
+      return self as int >= ASSIGN_INDEX as int && self as int <= ASSIGN_SUBTRACT as int
     }
 
-    bool isInitializer() {
-      return this >= INITIALIZER_LIST && this <= INITIALIZER_SET
+    def isInitializer bool {
+      return self as int >= INITIALIZER_LIST as int && self as int <= INITIALIZER_SET as int
     }
 
-    bool isUnary() {
-      return this >= COMPLEMENT && this <= NOT
+    def isUnary bool {
+      return self as int >= COMPLEMENT as int && self as int <= NOT as int
     }
 
-    bool isBinary() {
-      return this >= ADD && this <= ASSIGN_SUBTRACT
+    def isBinary bool {
+      return self as int >= ADD as int && self as int <= ASSIGN_SUBTRACT as int
     }
 
-    bool isBinaryAssign() {
-      return this >= ASSIGN && this <= ASSIGN_SUBTRACT
+    def isBinaryAssign bool {
+      return self as int >= ASSIGN as int && self as int <= ASSIGN_SUBTRACT as int
     }
 
-    bool isBinaryComparison() {
-      return this >= GREATER_THAN && this <= LESS_THAN_OR_EQUAL
+    def isBinaryComparison bool {
+      return self as int >= GREATER_THAN as int && self as int <= LESS_THAN_OR_EQUAL as int
     }
 
-    bool isJump() {
-      return this == BREAK || this == CONTINUE || this == IMPLICIT_RETURN || this == RETURN
+    def isJump bool {
+      return self == BREAK || self == CONTINUE || self == IMPLICIT_RETURN || self == RETURN
     }
   }
 
-  // Nodes represent executable code (variable initializers and function bodies)
+  # Nodes represent executable code (variable initializers and function bodies)
   class Node {
-    NodeKind kind
-    Range range = null
-    Range internalRange = null
-    Symbol symbol = null // For names, calls, and dots
-    Node parent = null
-    Content content = null
-    Type resolvedType = null
-    List<string> comments = null
-    List<Node> children = []
+    var kind NodeKind
+    var range Range = null
+    var internalRange Range = null
+    var symbol Symbol = null # For names, calls, and dots
+    var parent Node = null
+    var content Content = null
+    var resolvedType Type = null
+    var comments List<string> = null
+    var children List<Node> = []
 
-    // Change this node in place to become the provided node. The parent node is
-    // not changed, so become() can be called within a nested method and does not
-    // need to report the updated node reference to the caller since the reference
-    // does not change.
-    void become(Node node) {
+    # Change self node in place to become the provided node. The parent node is
+    # not changed, so become() can be called within a nested method and does not
+    # need to report the updated node reference to the caller since the reference
+    # does not change.
+    def become(node Node) {
       kind = node.kind
       range = node.range
       internalRange = node.internalRange
@@ -143,149 +141,152 @@ namespace skew {
       content = node.content
       resolvedType = node.resolvedType
       comments = node.comments
-      removeChildren()
-      withChildren(node.removeChildren())
+      removeChildren
+      withChildren(node.removeChildren)
     }
 
-    Node withType(Type value) {
+    def withType(value Type) Node {
       resolvedType = value
-      return this
+      return self
     }
 
-    Node withSymbol(Symbol value) {
+    def withSymbol(value Symbol) Node {
       symbol = value
-      return this
+      return self
     }
 
-    Node withContent(Content value) {
+    def withContent(value Content) Node {
       content = value
-      return this
+      return self
     }
 
-    Node withRange(Range value) {
+    def withRange(value Range) Node {
       range = value
-      return this
+      return self
     }
 
-    Node withInternalRange(Range value) {
+    def withInternalRange(value Range) Node {
       internalRange = value
-      return this
+      return self
     }
 
-    Node withChildren(List<Node> nodes) {
-      assert children.size() == 0
-      for (var i = 0; i < nodes.size(); i++) {
-        updateParent(nodes[i], this)
+    def withChildren(nodes List<Node>) Node {
+      assert(children.isEmpty)
+      for node in nodes {
+        updateParent(node, self)
       }
       children = nodes
-      return this
+      return self
     }
 
-    Range internalRangeOrRange() {
+    def internalRangeOrRange Range {
       return internalRange != null ? internalRange : range
     }
 
-    int indexInParent() {
-      assert parent != null
-      return parent.children.indexOf(this)
+    def indexInParent int {
+      assert(parent != null)
+      return parent.children.indexOf(self)
     }
 
-    void insertChild(int index, Node node) {
-      assert index >= 0 && index <= children.size()
-      updateParent(node, this)
+    def insertChild(index int, node Node) {
+      assert(index >= 0 && index <= children.count)
+      updateParent(node, self)
       children.insert(index, node)
     }
 
-    void appendChild(Node node) {
-      insertChild(children.size(), node)
+    def appendChild(node Node) {
+      insertChild(children.count, node)
     }
 
-    Node removeChildAtIndex(int index) {
-      assert index >= 0 && index < children.size()
+    def removeChildAtIndex(index int) Node {
+      assert(index >= 0 && index < children.count)
       var child = children[index]
       updateParent(child, null)
       children.removeAt(index)
       return child
     }
 
-    Node remove() {
-      parent.removeChildAtIndex(indexInParent())
-      return this
+    def remove Node {
+      parent.removeChildAtIndex(indexInParent)
+      return self
     }
 
-    List<Node> removeChildren() {
+    def removeChildren List<Node> {
       var result = children
-      for (var i = 0; i < children.size(); i++) {
-        updateParent(children[i], null)
+      for child in children {
+        updateParent(child, null)
       }
       children = []
       return result
     }
 
-    Node replaceChild(int index, Node node) {
-      assert index >= 0 && index < children.size()
-      updateParent(node, this)
+    def replaceChild(index int, node Node) Node {
+      assert(index >= 0 && index < children.count)
+      updateParent(node, self)
       var child = children[index]
       updateParent(child, null)
       children[index] = node
       return child
     }
 
-    Node replaceWithNull() {
-      parent.replaceChild(indexInParent(), null)
-      return this
+    def replaceWithNull Node {
+      parent.replaceChild(indexInParent, null)
+      return self
     }
 
-    void swapWith(Node node) {
-      Node parentA = parent
-      Node parentB = node.parent
-      int indexA = indexInParent()
-      int indexB = node.indexInParent()
+    def swapWith(node Node) {
+      var parentA = parent
+      var parentB = node.parent
+      var indexA = indexInParent
+      var indexB = node.indexInParent
       parentA.children[indexA] = node
-      parentB.children[indexB] = this
+      parentB.children[indexB] = self
       parent = parentB
       node.parent = parentA
     }
+  }
 
-    private static void updateParent(Node node, Node parent) {
-      if (node != null) {
-        assert (node.parent == null) != (parent == null)
+  namespace Node {
+    @private
+    def updateParent(node Node, parent Node) {
+      if node != null {
+        assert((node.parent == null) != (parent == null))
         node.parent = parent
       }
     }
   }
 
-  // Node-specific queries
-  in Node {
-    bool isTrue() {
-      return kind == .CONSTANT && content.kind() == .BOOL && content.asBool()
+  # Node-specific queries
+  class Node {
+    def isTrue bool {
+      return kind == .CONSTANT && content.kind == .BOOL && content.asBool
     }
 
-    bool isFalse() {
-      return kind == .CONSTANT && content.kind() == .BOOL && !content.asBool()
+    def isFalse bool {
+      return kind == .CONSTANT && content.kind == .BOOL && !content.asBool
     }
 
-    bool isType() {
-      return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT || kind == .PARAMETERIZE) && symbol != null && symbol.kind.isType()
+    def isType bool {
+      return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT || kind == .PARAMETERIZE) && symbol != null && symbol.kind.isType
     }
 
-    bool blockAlwaysEndsWithReturn() {
-      assert kind == .BLOCK
-      if (children.size() == 0) {
+    def blockAlwaysEndsWithReturn bool {
+      assert(kind == .BLOCK)
+      if children.isEmpty {
         return false
       }
 
-      for (var i = children.size() - 1; i >= 0; i--) {
-        var child = children[i]
+      for i in 0..children.count {
+        var child = children[children.count - i - 1]
         switch (child.kind) {
           case .RETURN, .IMPLICIT_RETURN {
             return true
           }
 
           case .IF {
-            var trueBlock = child.ifTrue()
-            var falseBlock = child.ifFalse()
-            if (falseBlock != null && trueBlock.blockAlwaysEndsWithReturn() && falseBlock.blockAlwaysEndsWithReturn()) {
+            var trueBlock = child.ifTrue
+            var falseBlock = child.ifFalse
+            if falseBlock != null && trueBlock.blockAlwaysEndsWithReturn && falseBlock.blockAlwaysEndsWithReturn {
               return true
             }
           }
@@ -296,406 +297,406 @@ namespace skew {
     }
   }
 
-  // Factory functions
-  in Node {
-    static Node createAnnotation(Node value, Node test) {
-      assert value.kind.isExpression()
-      assert test == null || test.kind.isExpression()
-      return Node(.ANNOTATION).withChildren([value, test])
+  # Factory functions
+  namespace Node {
+    def createAnnotation(value Node, test Node) Node {
+      assert(value.kind.isExpression)
+      assert(test == null || test.kind.isExpression)
+      return Node.new(.ANNOTATION).withChildren([value, test])
     }
 
-    static Node createBlock(List<Node> statements) {
-      return Node(.BLOCK).withChildren(statements)
+    def createBlock(statements List<Node>) Node {
+      return Node.new(.BLOCK).withChildren(statements)
     }
 
-    static Node createCase(List<Node> values, Node block) {
-      assert block.kind == .BLOCK
-      values.unshift(block)
-      return Node(.CASE).withChildren(values)
+    def createCase(values List<Node>, block Node) Node {
+      assert(block.kind == .BLOCK)
+      values.prepend(block)
+      return Node.new(.CASE).withChildren(values)
     }
 
-    static Node createBreak() {
-      return Node(.BREAK)
+    def createBreak Node {
+      return Node.new(.BREAK)
     }
 
-    static Node createContinue() {
-      return Node(.CONTINUE)
+    def createContinue Node {
+      return Node.new(.CONTINUE)
     }
 
-    static Node createExpression(Node value) {
-      assert value.kind.isExpression()
-      return Node(.EXPRESSION).withChildren([value])
+    def createExpression(value Node) Node {
+      assert(value.kind.isExpression)
+      return Node.new(.EXPRESSION).withChildren([value])
     }
 
-    static Node createFor(VariableSymbol symbol, Node value, Node block) {
-      assert value.kind.isExpression()
-      assert block.kind == .BLOCK
-      return Node(.FOR).withSymbol(symbol).withChildren([value, block])
+    def createFor(symbol VariableSymbol, value Node, block Node) Node {
+      assert(value.kind.isExpression)
+      assert(block.kind == .BLOCK)
+      return Node.new(.FOR).withSymbol(symbol).withChildren([value, block])
     }
 
-    static Node createIf(Node test, Node trueBlock, Node falseBlock) {
-      assert test.kind.isExpression()
-      assert trueBlock.kind == .BLOCK
-      assert falseBlock == null || falseBlock.kind == .BLOCK
-      return Node(.IF).withChildren([test, trueBlock, falseBlock])
+    def createIf(test Node, trueBlock Node, falseBlock Node) Node {
+      assert(test.kind.isExpression)
+      assert(trueBlock.kind == .BLOCK)
+      assert(falseBlock == null || falseBlock.kind == .BLOCK)
+      return Node.new(.IF).withChildren([test, trueBlock, falseBlock])
     }
 
-    static Node createReturn(Node value) {
-      assert value == null || value.kind.isExpression()
-      return Node(.RETURN).withChildren([value])
+    def createReturn(value Node) Node {
+      assert(value == null || value.kind.isExpression)
+      return Node.new(.RETURN).withChildren([value])
     }
 
-    static Node createSwitch(Node value, List<Node> cases) {
-      assert value.kind.isExpression()
-      cases.unshift(value)
-      return Node(.SWITCH).withChildren(cases)
+    def createSwitch(value Node, cases List<Node>) Node {
+      assert(value.kind.isExpression)
+      cases.prepend(value)
+      return Node.new(.SWITCH).withChildren(cases)
     }
 
-    static Node createImplicitReturn(Node value) {
-      assert value.kind.isExpression()
-      return Node(.IMPLICIT_RETURN).withChildren([value])
+    def createImplicitReturn(value Node) Node {
+      assert(value.kind.isExpression)
+      return Node.new(.IMPLICIT_RETURN).withChildren([value])
     }
 
-    static Node createVar(VariableSymbol symbol) {
-      return Node(.VAR).withSymbol(symbol)
+    def createVar(symbol VariableSymbol) Node {
+      return Node.new(.VAR).withSymbol(symbol)
     }
 
-    static Node createWhile(Node test, Node block) {
-      return Node(.WHILE).withChildren([test, block])
+    def createWhile(test Node, block Node) Node {
+      return Node.new(.WHILE).withChildren([test, block])
     }
 
-    static Node createAssignIndex(Node target, List<Node> arguments, Node value) {
-      assert target.kind.isExpression()
-      assert value.kind.isExpression()
-      arguments.unshift(target)
-      arguments.push(value)
-      return Node(.ASSIGN_INDEX).withChildren(arguments)
+    def createAssignIndex(target Node, arguments List<Node>, value Node) Node {
+      assert(target.kind.isExpression)
+      assert(value.kind.isExpression)
+      arguments.prepend(target)
+      arguments.append(value)
+      return Node.new(.ASSIGN_INDEX).withChildren(arguments)
     }
 
-    static Node createIndex(Node target, List<Node> arguments) {
-      assert target.kind.isExpression()
-      arguments.unshift(target)
-      return Node(.INDEX).withChildren(arguments)
+    def createIndex(target Node, arguments List<Node>) Node {
+      assert(target.kind.isExpression)
+      arguments.prepend(target)
+      return Node.new(.INDEX).withChildren(arguments)
     }
 
-    static Node createCall(Node target, List<Node> arguments) {
-      assert target.kind.isExpression()
-      arguments.unshift(target)
-      return Node(.CALL).withChildren(arguments)
+    def createCall(target Node, arguments List<Node>) Node {
+      assert(target.kind.isExpression)
+      arguments.prepend(target)
+      return Node.new(.CALL).withChildren(arguments)
     }
 
-    static Node createCast(Node value, Node type) {
-      assert value.kind.isExpression()
-      assert type.kind.isExpression()
-      return Node(.CAST).withChildren([value, type])
+    def createCast(value Node, type Node) Node {
+      assert(value.kind.isExpression)
+      assert(type.kind.isExpression)
+      return Node.new(.CAST).withChildren([value, type])
     }
 
-    static Node createBool(bool value) {
-      return createConstant(BoolContent(value))
+    def createBool(value bool) Node {
+      return createConstant(BoolContent.new(value))
     }
 
-    static Node createInt(int value) {
-      return createConstant(IntContent(value))
+    def createInt(value int) Node {
+      return createConstant(IntContent.new(value))
     }
 
-    static Node createDouble(double value) {
-      return createConstant(DoubleContent(value))
+    def createDouble(value double) Node {
+      return createConstant(DoubleContent.new(value))
     }
 
-    static Node createString(string value) {
-      return createConstant(StringContent(value))
+    def createString(value string) Node {
+      return createConstant(StringContent.new(value))
     }
 
-    static Node createConstant(Content value) {
-      return Node(.CONSTANT).withContent(value)
+    def createConstant(value Content) Node {
+      return Node.new(.CONSTANT).withContent(value)
     }
 
-    static Node createDot(Node target, string name) {
-      return Node(.DOT).withContent(StringContent(name)).withChildren([target])
+    def createDot(target Node, name string) Node {
+      return Node.new(.DOT).withContent(StringContent.new(name)).withChildren([target])
     }
 
-    static Node createHook(Node test, Node trueValue, Node falseValue) {
-      assert test.kind.isExpression()
-      assert trueValue.kind.isExpression()
-      assert falseValue.kind.isExpression()
-      return Node(.HOOK).withChildren([test, trueValue, falseValue])
+    def createHook(test Node, trueValue Node, falseValue Node) Node {
+      assert(test.kind.isExpression)
+      assert(trueValue.kind.isExpression)
+      assert(falseValue.kind.isExpression)
+      return Node.new(.HOOK).withChildren([test, trueValue, falseValue])
     }
 
-    static Node createList(List<Node> values) {
-      return Node(.INITIALIZER_LIST).withChildren(values)
+    def createList(values List<Node>) Node {
+      return Node.new(.INITIALIZER_LIST).withChildren(values)
     }
 
-    static Node createInitializer(NodeKind kind, List<Node> values) {
-      assert kind.isInitializer()
-      return Node(kind).withChildren(values)
+    def createInitializer(kind NodeKind, values List<Node>) Node {
+      assert(kind.isInitializer)
+      return Node.new(kind).withChildren(values)
     }
 
-    static Node createInterpolate(Node left, Node right) {
-      return Node(.INTERPOLATE).withChildren([left, right])
+    def createInterpolate(left Node, right Node) Node {
+      return Node.new(.INTERPOLATE).withChildren([left, right])
     }
 
-    static Node createLambda(FunctionSymbol symbol) {
-      return Node(.LAMBDA).withSymbol(symbol)
+    def createLambda(symbol FunctionSymbol) Node {
+      return Node.new(.LAMBDA).withSymbol(symbol)
     }
 
-    static Node createName(string text) {
-      return Node(.NAME).withContent(StringContent(text))
+    def createName(text string) Node {
+      return Node.new(.NAME).withContent(StringContent.new(text))
     }
 
-    static Node createDynamic() {
-      return Node(.DYNAMIC)
+    def createDynamic Node {
+      return Node.new(.DYNAMIC)
     }
 
-    static Node createNull() {
-      return Node(.NULL)
+    def createNull Node {
+      return Node.new(.NULL)
     }
 
-    static Node createPair(Node first, Node second) {
-      assert first.kind.isExpression()
-      assert second.kind.isExpression()
-      return Node(.PAIR).withChildren([first, second])
+    def createPair(first Node, second Node) Node {
+      assert(first.kind.isExpression)
+      assert(second.kind.isExpression)
+      return Node.new(.PAIR).withChildren([first, second])
     }
 
-    static Node createParameterize(Node type, List<Node> parameters) {
-      assert type.kind.isExpression()
-      parameters.unshift(type)
-      return Node(.PARAMETERIZE).withChildren(parameters)
+    def createParameterize(type Node, parameters List<Node>) Node {
+      assert(type.kind.isExpression)
+      parameters.prepend(type)
+      return Node.new(.PARAMETERIZE).withChildren(parameters)
     }
 
-    static Node createSuper() {
-      return Node(.SUPER)
+    def createSuper Node {
+      return Node.new(.SUPER)
     }
 
-    static Node createType(Type type) {
-      return Node(.TYPE).withType(type)
+    def createType(type Type) Node {
+      return Node.new(.TYPE).withType(type)
     }
 
-    static Node createUnary(NodeKind kind, Node value) {
-      assert kind.isUnary()
-      assert value.kind.isExpression()
-      return Node(kind).withChildren([value])
+    def createUnary(kind NodeKind, value Node) Node {
+      assert(kind.isUnary)
+      assert(value.kind.isExpression)
+      return Node.new(kind).withChildren([value])
     }
 
-    static Node createBinary(NodeKind kind, Node left, Node right) {
-      assert kind.isBinary()
-      assert left.kind.isExpression()
-      assert right.kind.isExpression()
-      return Node(kind).withChildren([left, right])
+    def createBinary(kind NodeKind, left Node, right Node) Node {
+      assert(kind.isBinary)
+      assert(left.kind.isExpression)
+      assert(right.kind.isExpression)
+      return Node.new(kind).withChildren([left, right])
     }
 
-    static Node createLambdaType(List<Node> argTypes, Node returnType) {
-      argTypes.push(returnType)
-      return Node(.LAMBDA_TYPE).withChildren(argTypes)
+    def createLambdaType(argTypes List<Node>, returnType Node) Node {
+      argTypes.append(returnType)
+      return Node.new(.LAMBDA_TYPE).withChildren(argTypes)
     }
   }
 
-  // Getters
-  in Node {
-    string asString() {
-      assert kind == .NAME || kind == .DOT
-      return content.asString()
+  # Getters
+  class Node {
+    def asString string {
+      assert(kind == .NAME || kind == .DOT)
+      return content.asString
     }
 
-    Node firstValue() {
-      assert kind == .PAIR
-      assert children.size() == 2
-      assert children[0].kind.isExpression()
+    def firstValue Node {
+      assert(kind == .PAIR)
+      assert(children.count == 2)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node secondValue() {
-      assert kind == .PAIR
-      assert children.size() == 2
-      assert children[1].kind.isExpression()
+    def secondValue Node {
+      assert(kind == .PAIR)
+      assert(children.count == 2)
+      assert(children[1].kind.isExpression)
       return children[1]
     }
 
-    Node dotTarget() {
-      assert kind == .DOT
-      assert children.size() == 1
-      assert children[0] == null || children[0].kind.isExpression()
+    def dotTarget Node {
+      assert(kind == .DOT)
+      assert(children.count == 1)
+      assert(children[0] == null || children[0].kind.isExpression)
       return children[0]
     }
 
-    Node annotationValue() {
-      assert kind == .ANNOTATION
-      assert children.size() == 2
-      assert children[0].kind.isExpression()
+    def annotationValue Node {
+      assert(kind == .ANNOTATION)
+      assert(children.count == 2)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node annotationTest() {
-      assert kind == .ANNOTATION
-      assert children.size() == 2
-      assert children[1] == null || children[1].kind.isExpression()
+    def annotationTest Node {
+      assert(kind == .ANNOTATION)
+      assert(children.count == 2)
+      assert(children[1] == null || children[1].kind.isExpression)
       return children[1]
     }
 
-    Node caseBlock() {
-      assert kind == .CASE
-      assert children.size() >= 1
-      assert children[0].kind == .BLOCK
+    def caseBlock Node {
+      assert(kind == .CASE)
+      assert(children.count >= 1)
+      assert(children[0].kind == .BLOCK)
       return children[0]
     }
 
-    Node expressionValue() {
-      assert kind == .EXPRESSION
-      assert children.size() == 1
-      assert children[0].kind.isExpression()
+    def expressionValue Node {
+      assert(kind == .EXPRESSION)
+      assert(children.count == 1)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node returnValue() {
-      assert kind == .RETURN || kind == .IMPLICIT_RETURN
-      assert children.size() == 1
-      assert children[0] == null || children[0].kind.isExpression()
+    def returnValue Node {
+      assert(kind == .RETURN || kind == .IMPLICIT_RETURN)
+      assert(children.count == 1)
+      assert(children[0] == null || children[0].kind.isExpression)
       return children[0]
     }
 
-    Node switchValue() {
-      assert kind == .SWITCH
-      assert children.size() >= 1
-      assert children[0].kind.isExpression()
+    def switchValue Node {
+      assert(kind == .SWITCH)
+      assert(children.count >= 1)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node parameterizeValue() {
-      assert kind == .PARAMETERIZE
-      assert children.size() >= 1
-      assert children[0].kind.isExpression()
+    def parameterizeValue Node {
+      assert(kind == .PARAMETERIZE)
+      assert(children.count >= 1)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node callValue() {
-      assert kind == .CALL
-      assert children.size() >= 1
-      assert children[0].kind.isExpression()
+    def callValue Node {
+      assert(kind == .CALL)
+      assert(children.count >= 1)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node indexValue() {
-      assert kind == .INDEX
-      assert children.size() >= 1
-      assert children[0].kind.isExpression()
+    def indexValue Node {
+      assert(kind == .INDEX)
+      assert(children.count >= 1)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node castValue() {
-      assert kind == .CAST
-      assert children.size() == 2
-      assert children[0].kind.isExpression()
+    def castValue Node {
+      assert(kind == .CAST)
+      assert(children.count == 2)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node castType() {
-      assert kind == .CAST
-      assert children.size() == 2
-      assert children[1].kind.isExpression()
+    def castType Node {
+      assert(kind == .CAST)
+      assert(children.count == 2)
+      assert(children[1].kind.isExpression)
       return children[1]
     }
 
-    Node unaryValue() {
-      assert kind.isUnary()
-      assert children.size() == 1
-      assert children[0].kind.isExpression()
+    def unaryValue Node {
+      assert(kind.isUnary)
+      assert(children.count == 1)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node binaryLeft() {
-      assert kind.isBinary()
-      assert children.size() == 2
-      assert children[0].kind.isExpression()
+    def binaryLeft Node {
+      assert(kind.isBinary)
+      assert(children.count == 2)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node binaryRight() {
-      assert kind.isBinary()
-      assert children.size() == 2
-      assert children[1].kind.isExpression()
+    def binaryRight Node {
+      assert(kind.isBinary)
+      assert(children.count == 2)
+      assert(children[1].kind.isExpression)
       return children[1]
     }
 
-    Node interpolateLeft() {
-      assert kind == .INTERPOLATE
-      assert children.size() == 2
-      assert children[0].kind.isExpression()
+    def interpolateLeft Node {
+      assert(kind == .INTERPOLATE)
+      assert(children.count == 2)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node interpolateRight() {
-      assert kind == .INTERPOLATE
-      assert children.size() == 2
-      assert children[1].kind.isExpression()
+    def interpolateRight Node {
+      assert(kind == .INTERPOLATE)
+      assert(children.count == 2)
+      assert(children[1].kind.isExpression)
       return children[1]
     }
 
-    Node whileTest() {
-      assert kind == .WHILE
-      assert children.size() == 2
-      assert children[0].kind.isExpression()
+    def whileTest Node {
+      assert(kind == .WHILE)
+      assert(children.count == 2)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node whileBlock() {
-      assert kind == .WHILE
-      assert children.size() == 2
-      assert children[1].kind == .BLOCK
+    def whileBlock Node {
+      assert(kind == .WHILE)
+      assert(children.count == 2)
+      assert(children[1].kind == .BLOCK)
       return children[1]
     }
 
-    Node forValue() {
-      assert kind == .FOR
-      assert children.size() == 2
-      assert children[0].kind.isExpression()
+    def forValue Node {
+      assert(kind == .FOR)
+      assert(children.count == 2)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node forBlock() {
-      assert kind == .FOR
-      assert children.size() == 2
-      assert children[1].kind == .BLOCK
+    def forBlock Node {
+      assert(kind == .FOR)
+      assert(children.count == 2)
+      assert(children[1].kind == .BLOCK)
       return children[1]
     }
 
-    Node ifTest() {
-      assert kind == .IF
-      assert children.size() == 3
-      assert children[0].kind.isExpression()
+    def ifTest Node {
+      assert(kind == .IF)
+      assert(children.count == 3)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node ifTrue() {
-      assert kind == .IF
-      assert children.size() == 3
-      assert children[1].kind == .BLOCK
+    def ifTrue Node {
+      assert(kind == .IF)
+      assert(children.count == 3)
+      assert(children[1].kind == .BLOCK)
       return children[1]
     }
 
-    Node ifFalse() {
-      assert kind == .IF
-      assert children.size() == 3
-      assert children[2] == null || children[2].kind == .BLOCK
+    def ifFalse Node {
+      assert(kind == .IF)
+      assert(children.count == 3)
+      assert(children[2] == null || children[2].kind == .BLOCK)
       return children[2]
     }
 
-    Node hookTest() {
-      assert kind == .HOOK
-      assert children.size() == 3
-      assert children[0].kind.isExpression()
+    def hookTest Node {
+      assert(kind == .HOOK)
+      assert(children.count == 3)
+      assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    Node hookTrue() {
-      assert kind == .HOOK
-      assert children.size() == 3
-      assert children[1].kind.isExpression()
+    def hookTrue Node {
+      assert(kind == .HOOK)
+      assert(children.count == 3)
+      assert(children[1].kind.isExpression)
       return children[1]
     }
 
-    Node hookFalse() {
-      assert kind == .HOOK
-      assert children.size() == 3
-      assert children[2].kind.isExpression()
+    def hookFalse Node {
+      assert(kind == .HOOK)
+      assert(children.count == 3)
+      assert(children[2].kind.isExpression)
       return children[2]
     }
   }

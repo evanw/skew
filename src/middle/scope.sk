@@ -7,99 +7,107 @@ namespace skew {
   }
 
   class Scope {
-    Scope parent
+    var parent Scope
 
-    virtual ScopeKind kind()
-    virtual Symbol find(string name)
+    def kind ScopeKind
+    def find(name string) Symbol
 
-    ObjectScope asObjectScope() {
-      assert kind() == .OBJECT
-      return (ObjectScope)this
+    def asObjectScope ObjectScope {
+      assert(kind == .OBJECT)
+      return self as ObjectScope
     }
 
-    FunctionScope asFunctionScope() {
-      assert kind() == .FUNCTION
-      return (FunctionScope)this
+    def asFunctionScope FunctionScope {
+      assert(kind == .FUNCTION)
+      return self as FunctionScope
     }
 
-    VariableScope asVariableScope() {
-      assert kind() == .VARIABLE
-      return (VariableScope)this
+    def asVariableScope VariableScope {
+      assert(kind == .VARIABLE)
+      return self as VariableScope
     }
 
-    LocalScope asLocalScope() {
-      assert kind() == .LOCAL
-      return (LocalScope)this
+    def asLocalScope LocalScope {
+      assert(kind == .LOCAL)
+      return self as LocalScope
     }
 
-    FunctionScope findEnclosingFunctionOrLambda() {
-      for (var scope = this; scope != null; scope = scope.parent) {
-        if (scope.kind() == .FUNCTION) {
-          return scope.asFunctionScope()
+    def findEnclosingFunctionOrLambda FunctionScope {
+      var scope = self
+      while scope != null {
+        if (scope.kind == .FUNCTION) {
+          return scope.asFunctionScope
         }
+        scope = scope.parent
       }
       return null
     }
 
-    FunctionScope findEnclosingFunction() {
-      for (var scope = this; scope != null; scope = scope.parent) {
-        if (scope.kind() == .FUNCTION && scope.asFunctionScope().symbol.kind != .FUNCTION_LOCAL) {
-          return scope.asFunctionScope()
+    def findEnclosingFunction FunctionScope {
+      var scope = self
+      while scope != null {
+        if (scope.kind == .FUNCTION && scope.asFunctionScope.symbol.kind != .FUNCTION_LOCAL) {
+          return scope.asFunctionScope
         }
+        scope = scope.parent
       }
       return null
     }
 
-    LocalScope findEnclosingLoop() {
-      for (var scope = this; scope != null && scope.kind() == .LOCAL; scope = scope.parent) {
-        if (scope.asLocalScope().type == .LOOP) {
-          return scope.asLocalScope()
+    def findEnclosingLoop LocalScope {
+      var scope = self
+      while scope != null && scope.kind == .LOCAL {
+        if (scope.asLocalScope.type == .LOOP) {
+          return scope.asLocalScope
         }
+        scope = scope.parent
       }
       return null
     }
   }
 
   class ObjectScope : Scope {
-    ObjectSymbol symbol
+    var symbol ObjectSymbol
 
-    override ScopeKind kind() {
+    over kind ScopeKind {
       return .OBJECT
     }
 
-    override Symbol find(string name) {
-      for (var check = symbol; check != null; check = check.baseClass) {
-        var result = check.members.getOrDefault(name, null)
+    over find(name string) Symbol {
+      var check = symbol
+      while check != null {
+        var result = check.members.get(name, null)
         if (result != null) {
           return result
         }
+        check = check.baseClass
       }
       return parent != null ? parent.find(name) : null
     }
   }
 
   class FunctionScope : Scope {
-    FunctionSymbol symbol
-    StringMap<ParameterSymbol> parameters = {}
+    var symbol FunctionSymbol
+    var parameters StringMap<ParameterSymbol> = {}
 
-    override ScopeKind kind() {
+    over kind ScopeKind {
       return .FUNCTION
     }
 
-    override Symbol find(string name) {
-      var result = parameters.getOrDefault(name, null)
+    over find(name string) Symbol {
+      var result = parameters.get(name, null)
       return result != null ? result : parent != null ? parent.find(name) : null
     }
   }
 
   class VariableScope : Scope {
-    VariableSymbol symbol
+    var symbol VariableSymbol
 
-    override ScopeKind kind() {
+    over kind ScopeKind {
       return .VARIABLE
     }
 
-    override Symbol find(string name) {
+    over find(name string) Symbol {
       return parent != null ? parent.find(name) : null
     }
   }
@@ -110,35 +118,37 @@ namespace skew {
   }
 
   class LocalScope : Scope {
-    StringMap<VariableSymbol> locals = {}
-    LocalType type
+    var locals StringMap<VariableSymbol> = {}
+    var type LocalType
 
-    override ScopeKind kind() {
+    over kind ScopeKind {
       return .LOCAL
     }
 
-    override Symbol find(string name) {
-      var result = locals.getOrDefault(name, null)
+    over find(name string) Symbol {
+      var result = locals.get(name, null)
       return result != null ? result : parent != null ? parent.find(name) : null
     }
 
-    void define(VariableSymbol symbol, Log log) {
-      symbol.scope = this
+    def define(symbol VariableSymbol, log Log) {
+      symbol.scope = self
 
-      // Check for duplicates
-      var other = locals.getOrDefault(symbol.name, null)
+      # Check for duplicates
+      var other = locals.get(symbol.name, null)
       if (other != null) {
         log.semanticErrorDuplicateSymbol(symbol.range, symbol.name, other.range)
         return
       }
 
-      // Check for shadowing
-      for (var scope = parent; scope.kind() == .LOCAL; scope = scope.parent) {
-        var other = scope.asLocalScope().locals.getOrDefault(symbol.name, null)
-        if (other != null) {
-          log.semanticErrorShadowedSymbol(symbol.range, symbol.name, other.range)
+      # Check for shadowing
+      var scope = parent
+      while scope.kind == .LOCAL {
+        var local = scope.asLocalScope.locals.get(symbol.name, null)
+        if (local != null) {
+          log.semanticErrorShadowedSymbol(symbol.range, symbol.name, local.range)
           return
         }
+        scope = scope.parent
       }
 
       locals[symbol.name] = symbol

@@ -1,10 +1,8 @@
 namespace skew {
-  using skew.resolving
-
-  void resolvingPass(Log log, ObjectSymbol global, TypeCache cache) {
+  def resolvingPass(log Log, global ObjectSymbol, cache TypeCache) {
     cache.loadGlobals(log, global)
-    if (!log.hasErrors()) {
-      Resolver(cache, log).resolveObject(global)
+    if !log.hasErrors {
+      resolving.Resolver.new(cache, log).resolveObject(global)
     }
   }
 }
@@ -16,146 +14,144 @@ namespace skew.resolving {
   }
 
   class Resolver {
-    TypeCache cache
-    Log log
+    const cache TypeCache
+    const log Log
 
-    void initializeSymbol(Symbol symbol) {
-      // The scope should have been set by the merging pass (or by this pass for local variables)
-      assert symbol.scope != null
+    def initializeSymbol(symbol Symbol) {
+      # The scope should have been set by the merging pass (or by this pass for local variables)
+      assert(symbol.scope != null)
 
-      // Only initialize the symbol once
-      if (symbol.state == .UNINITIALIZED) {
+      # Only initialize the symbol once
+      if symbol.state == .UNINITIALIZED {
         symbol.state = .INITIALIZING
 
-        switch (symbol.kind) {
+        switch symbol.kind {
           case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE {
-            initializeObject(symbol.asObjectSymbol())
+            initializeObject(symbol.asObjectSymbol)
           }
 
           case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL {
-            initializeFunction(symbol.asFunctionSymbol())
+            initializeFunction(symbol.asFunctionSymbol)
           }
 
           case .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
-            initializeVariable(symbol.asVariableSymbol())
+            initializeVariable(symbol.asVariableSymbol)
           }
 
           case .PARAMETER_FUNCTION, .PARAMETER_OBJECT {
-            initializeParameter(symbol.asParameterSymbol())
+            initializeParameter(symbol.asParameterSymbol)
           }
 
           case .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
-            initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol())
+            initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol)
           }
 
           default {
-            assert false
+            assert(false)
           }
         }
 
-        assert symbol.resolvedType != null
+        assert(symbol.resolvedType != null)
         symbol.state = .INITIALIZED
 
-        if (symbol.kind.isFunction()) {
-          var overloaded = symbol.asFunctionSymbol().overloaded
+        if symbol.kind.isFunction {
+          var overloaded = symbol.asFunctionSymbol.overloaded
 
-          // After initializing a function symbol, ensure the entire overload set is initialized
-          if (overloaded != null && overloaded.state == .UNINITIALIZED) {
+          # After initializing a function symbol, ensure the entire overload set is initialized
+          if overloaded != null && overloaded.state == .UNINITIALIZED {
             initializeSymbol(overloaded)
           }
         }
       }
 
-      // Detect cyclic symbol references such as "foo foo;"
-      else if (symbol.state == .INITIALIZING) {
+      # Detect cyclic symbol references such as "foo foo;"
+      else if symbol.state == .INITIALIZING {
         log.semanticErrorCyclicDeclaration(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
       }
     }
 
-    void resolveAnnotations(Symbol symbol) {
+    def resolveAnnotations(symbol Symbol) {
       var parent = symbol.parent
       var annotations = symbol.annotations
 
-      // The import/export annotations are inherited
-      if (parent != null && (symbol.kind.isVariable() || symbol.kind.isFunction() && symbol.asFunctionSymbol().block == null)) {
-        symbol.flags |= parent.flags & (.IMPORT | .EXPORT)
+      # The import/export annotations are inherited
+      if parent != null && (symbol.kind.isVariable || symbol.kind.isFunction && symbol.asFunctionSymbol.block == null) {
+        symbol.flags |= parent.flags & (Symbol.IS_IMPORTED | Symbol.IS_EXPORTED)
       }
 
-      // Resolve annotations on this symbol after annotation inheritance
-      if (annotations != null) {
-        for (var i = 0; i < annotations.size(); i++) {
-          resolveAnnotation(annotations[i], symbol)
+      # Resolve annotations on this symbol after annotation inheritance
+      if annotations != null {
+        for annotation in annotations {
+          resolveAnnotation(annotation, symbol)
         }
       }
     }
 
-    void resolveParameters(List<ParameterSymbol> parameters) {
-      if (parameters != null) {
-        for (var i = 0; i < parameters.size(); i++) {
-          resolveParameter(parameters[i])
+    def resolveParameters(parameters List<ParameterSymbol>) {
+      if parameters != null {
+        for parameter in parameters {
+          resolveParameter(parameter)
         }
       }
     }
 
-    void initializeParameter(ParameterSymbol symbol) {
-      if (symbol.resolvedType == null) {
-        symbol.resolvedType = Type(.SYMBOL, symbol)
+    def initializeParameter(symbol ParameterSymbol) {
+      if symbol.resolvedType == null {
+        symbol.resolvedType = Type.new(.SYMBOL, symbol)
       }
 
       resolveAnnotations(symbol)
     }
 
-    void resolveParameter(ParameterSymbol symbol) {
+    def resolveParameter(symbol ParameterSymbol) {
       initializeSymbol(symbol)
     }
 
-    void initializeObject(ObjectSymbol symbol) {
-      if (symbol.resolvedType == null) {
-        symbol.resolvedType = Type(.SYMBOL, symbol)
+    def initializeObject(symbol ObjectSymbol) {
+      if symbol.resolvedType == null {
+        symbol.resolvedType = Type.new(.SYMBOL, symbol)
       }
 
       forbidOverriddenSymbol(symbol)
 
-      // Resolve the base type (only for classes)
-      if (symbol.base != null) {
+      # Resolve the base type (only for classes)
+      if symbol.base != null {
         resolveAsParameterizedType(symbol.base, symbol.scope)
         var baseType = symbol.base.resolvedType
-        if (baseType.kind == .SYMBOL && baseType.symbol.kind == .OBJECT_CLASS && !baseType.symbol.isValueType()) {
-          symbol.baseClass = baseType.symbol.asObjectSymbol()
-          symbol.resolvedType.environment = baseType.environment // Don't lose the type parameters from the base type
-        } else if (baseType != .DYNAMIC) {
+        if baseType.kind == .SYMBOL && baseType.symbol.kind == .OBJECT_CLASS && !baseType.symbol.isValueType {
+          symbol.baseClass = baseType.symbol.asObjectSymbol
+          symbol.resolvedType.environment = baseType.environment # Don't lose the type parameters from the base type
+        } else if baseType != .DYNAMIC {
           log.semanticErrorInvalidBaseType(symbol.base.range, baseType)
         }
       }
 
-      // Assign values for all enums before they are initialized
-      if (symbol.kind == .OBJECT_ENUM) {
+      # Assign values for all enums before they are initialized
+      if symbol.kind == .OBJECT_ENUM {
         var nextEnumValue = 0
-        for (var i = 0; i < symbol.variables.size(); i++) {
-          var variable = symbol.variables[i]
-          if (variable.kind == .VARIABLE_ENUM) {
+        for variable in symbol.variables {
+          if variable.kind == .VARIABLE_ENUM {
             variable.enumValue = nextEnumValue
-            nextEnumValue++
+            nextEnumValue += 1
           }
         }
       }
 
       resolveAnnotations(symbol)
 
-      // Create a default constructor if one doesn't exist
-      var constructor = symbol.members.getOrDefault("new", null)
-      if (symbol.kind == .OBJECT_CLASS && !symbol.isImported() && constructor == null) {
-        var baseConstructor = symbol.baseClass != null ? symbol.baseClass.members.getOrDefault("new", null) : null
+      # Create a default constructor if one doesn't exist
+      var constructor = symbol.members.get("new", null)
+      if symbol.kind == .OBJECT_CLASS && !symbol.isImported && constructor == null {
+        var baseConstructor = symbol.baseClass != null ? symbol.baseClass.members.get("new", null) : null
 
-        // Unwrap the overload group if present
-        if (baseConstructor != null && baseConstructor.kind == .OVERLOADED_GLOBAL) {
-          var overloaded = baseConstructor.asOverloadedFunctionSymbol()
-          for (var i = 0; i < overloaded.symbols.size(); i++) {
-            var overload = overloaded.symbols[i]
-            if (overload.kind == .FUNCTION_CONSTRUCTOR) {
-              if (baseConstructor.kind == .FUNCTION_CONSTRUCTOR) {
-                baseConstructor = null // Signal that there isn't a single base constructor
+        # Unwrap the overload group if present
+        if baseConstructor != null && baseConstructor.kind == .OVERLOADED_GLOBAL {
+          var overloaded = baseConstructor.asOverloadedFunctionSymbol
+          for overload in overloaded.symbols {
+            if overload.kind == .FUNCTION_CONSTRUCTOR {
+              if baseConstructor.kind == .FUNCTION_CONSTRUCTOR {
+                baseConstructor = null # Signal that there isn't a single base constructor
                 break
               }
               baseConstructor = overload
@@ -163,74 +159,74 @@ namespace skew.resolving {
           }
         }
 
-        // A default constructor can only be created if the base class has a single constructor
-        if (symbol.baseClass == null || baseConstructor != null && baseConstructor.kind == .FUNCTION_CONSTRUCTOR) {
-          var constructor = FunctionSymbol(.FUNCTION_CONSTRUCTOR, "new")
-          constructor.scope = FunctionScope(symbol.scope, constructor)
-          constructor.flags |= .AUTOMATICALLY_GENERATED
-          constructor.parent = symbol
-          constructor.range = symbol.range
-          constructor.overridden = baseConstructor != null ? baseConstructor.asFunctionSymbol() : null
-          symbol.functions.push(constructor)
-          symbol.members[constructor.name] = constructor
+        # A default constructor can only be created if the base class has a single constructor
+        if symbol.baseClass == null || baseConstructor != null && baseConstructor.kind == .FUNCTION_CONSTRUCTOR {
+          var generated = FunctionSymbol.new(.FUNCTION_CONSTRUCTOR, "new")
+          generated.scope = FunctionScope.new(symbol.scope, generated)
+          generated.flags |= Symbol.IS_AUTOMATICALLY_GENERATED
+          generated.parent = symbol
+          generated.range = symbol.range
+          generated.overridden = baseConstructor != null ? baseConstructor.asFunctionSymbol : null
+          symbol.functions.append(generated)
+          symbol.members[generated.name] = generated
         }
       }
     }
 
-    void resolveObject(ObjectSymbol symbol) {
+    def resolveObject(symbol ObjectSymbol) {
       initializeSymbol(symbol)
       resolveParameters(symbol.parameters)
 
-      for (var i = 0; i < symbol.objects.size(); i++) {
-        resolveObject(symbol.objects[i])
+      for object in symbol.objects {
+        resolveObject(object)
       }
 
-      for (var i = 0; i < symbol.functions.size(); i++) {
-        resolveFunction(symbol.functions[i])
+      for function in symbol.functions {
+        resolveFunction(function)
       }
 
-      for (var i = 0; i < symbol.variables.size(); i++) {
-        resolveVariable(symbol.variables[i])
+      for variable in symbol.variables {
+        resolveVariable(variable)
       }
     }
 
-    void initializeFunction(FunctionSymbol symbol) {
-      if (symbol.resolvedType == null) {
-        symbol.resolvedType = Type(.SYMBOL, symbol)
+    def initializeFunction(symbol FunctionSymbol) {
+      if symbol.resolvedType == null {
+        symbol.resolvedType = Type.new(.SYMBOL, symbol)
       }
 
-      // Referencing a normal variable instead of a special node kind for "this"
-      // makes many things much easier including lambda capture and devirtualization
-      if (symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR) {
-        symbol.self = VariableSymbol(.VARIABLE_LOCAL, "self")
-        symbol.self.flags |= .CONST
+      # Referencing a normal variable instead of a special node kind for "this"
+      # makes many things much easier including lambda capture and devirtualization
+      if symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR {
+        symbol.self = VariableSymbol.new(.VARIABLE_LOCAL, "self")
+        symbol.self.flags |= Symbol.IS_CONST
         symbol.self.resolvedType = cache.parameterize(symbol.parent.resolvedType)
         symbol.self.state = .INITIALIZED
       }
 
-      // Lazily-initialize automatically generated functions
-      if (symbol.isAutomaticallyGenerated()) {
-        assert symbol.kind == .FUNCTION_CONSTRUCTOR
+      # Lazily-initialize automatically generated functions
+      if symbol.isAutomaticallyGenerated {
+        assert(symbol.kind == .FUNCTION_CONSTRUCTOR)
         automaticallyGenerateConstructor(symbol)
       }
 
-      // Find the overridden function or overloaded function in the base class
+      # Find the overridden function or overloaded function in the base class
       var overridden = findOverriddenMember(symbol)
-      if (overridden != null) {
+      if overridden != null {
         var symbolKind = merging.overloadedKind(symbol.kind)
         var overriddenKind = merging.overloadedKind(overridden.kind)
 
-        // Make sure the overridden symbol can be merged with this symbol
-        if (symbolKind != overriddenKind) {
-          log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol().base.resolvedType, overridden.range)
+        # Make sure the overridden symbol can be merged with this symbol
+        if symbolKind != overriddenKind {
+          log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol.base.resolvedType, overridden.range)
           overridden = null
         }
 
-        // Overriding something makes both symbols overloaded for simplicity
+        # Overriding something makes both symbols overloaded for simplicity
         else {
           ensureFunctionIsOverloaded(symbol)
-          if (overridden.kind.isFunction()) {
-            var function = overridden.asFunctionSymbol()
+          if overridden.kind.isFunction {
+            var function = overridden.asFunctionSymbol
             ensureFunctionIsOverloaded(function)
             overridden = function.overloaded
           }
@@ -239,21 +235,19 @@ namespace skew.resolving {
 
       resolveParameters(symbol.parameters)
 
-      // Resolve the argument variables
-      var count = symbol.arguments.size()
+      # Resolve the argument variables
       symbol.resolvedType.argumentTypes = []
-      for (var i = 0; i < count; i++) {
-        var argument = symbol.arguments[i]
+      for argument in symbol.arguments {
         argument.scope = symbol.scope
         resolveVariable(argument)
-        symbol.resolvedType.argumentTypes.push(argument.resolvedType)
+        symbol.resolvedType.argumentTypes.append(argument.resolvedType)
       }
       symbol.argumentOnlyType = cache.createLambdaType(symbol.resolvedType.argumentTypes, null)
 
-      // Resolve the return type if present (no return type means "void")
-      Type returnType = null
-      if (symbol.returnType != null) {
-        if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+      # Resolve the return type if present (no return type means "void")
+      var returnType Type = null
+      if symbol.returnType != null {
+        if symbol.kind == .FUNCTION_CONSTRUCTOR {
           log.semanticErrorConstructorReturnType(symbol.returnType.range)
         } else {
           resolveAsParameterizedType(symbol.returnType, symbol.scope)
@@ -261,36 +255,37 @@ namespace skew.resolving {
         }
       }
 
-      // Constructors always return the type they construct
-      if (symbol.kind == .FUNCTION_CONSTRUCTOR) {
+      # Constructors always return the type they construct
+      if symbol.kind == .FUNCTION_CONSTRUCTOR {
         returnType = cache.parameterize(symbol.parent.resolvedType)
       }
 
-      // The "<=>" operator must return a numeric value for comparison with zero
-      if (symbol.name == "<=>") {
-        if (returnType == null || !cache.isNumeric(returnType)) {
+      # The "<=>" operator must return a numeric value for comparison with zero
+      var count = symbol.arguments.count
+      if symbol.name == "<=>" {
+        if returnType == null || !cache.isNumeric(returnType) {
           log.semanticErrorComparisonOperatorNotNumeric(symbol.returnType != null ? symbol.returnType.range : symbol.range)
           returnType = .DYNAMIC
-        } else if (count != 1) {
+        } else if count != 1 {
           log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, 1)
         }
       }
 
-      // Setters must have one argument
-      else if (symbol.isSetter() && count != 1) {
+      # Setters must have one argument
+      else if symbol.isSetter && count != 1 {
         log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, 1)
-        symbol.flags &= ~.SETTER
+        symbol.flags &= ~Symbol.IS_SETTER
       }
 
-      // Validate argument count
+      # Validate argument count
       else {
         var argumentCount = argumentCountForOperator(symbol.name)
         var hasArgumentCountError = false
 
-        switch (argumentCount) {
+        switch argumentCount {
           case .ZERO, .ONE {
             var expected = argumentCount == .ZERO ? 0 : 1
-            if (count != expected) {
+            if count != expected {
               log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, expected)
               hasArgumentCountError = true
             }
@@ -299,7 +294,7 @@ namespace skew.resolving {
           case .ZERO_OR_ONE, .ONE_OR_TWO, .TWO_OR_FEWER {
             var lower = argumentCount == .ONE_OR_TWO ? 1 : 0
             var upper = argumentCount == .ZERO_OR_ONE ? 1 : 2
-            if (count < lower || count > upper) {
+            if count < lower || count > upper {
               log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, lower, upper)
               hasArgumentCountError = true
             }
@@ -307,37 +302,35 @@ namespace skew.resolving {
 
           case .ONE_OR_MORE, .TWO_OR_MORE {
             var expected = argumentCount == .ONE_OR_MORE ? 1 : 2
-            if (count < expected) {
+            if count < expected {
               log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, expected, -1)
               hasArgumentCountError = true
             }
           }
         }
 
-        // Enforce that the initializer constructor operators take lists of
-        // values to avoid confusing error messages inside the code generated
-        // for initializer expressions
-        if (!hasArgumentCountError && (symbol.name == "{new}" || symbol.name == "[new]")) {
-          for (var i = 0; i < count; i++) {
-            var argument = symbol.arguments[i]
-            if (argument.resolvedType != .DYNAMIC && !cache.isList(argument.resolvedType)) {
+        # Enforce that the initializer constructor operators take lists of
+        # values to avoid confusing error messages inside the code generated
+        # for initializer expressions
+        if !hasArgumentCountError && (symbol.name == "{new}" || symbol.name == "[new]") {
+          for argument in symbol.arguments {
+            if argument.resolvedType != .DYNAMIC && !cache.isList(argument.resolvedType) {
               log.semanticErrorExpectedList(argument.range, argument.name, argument.resolvedType)
             }
           }
         }
       }
 
-      // Link this symbol with the overridden symbol if there is one
+      # Link this symbol with the overridden symbol if there is one
       var hasOverrideError = false
-      if (overridden != null) {
-        var overloaded = overridden.asOverloadedFunctionSymbol()
+      if overridden != null {
+        var overloaded = overridden.asOverloadedFunctionSymbol
         initializeSymbol(overloaded)
-        for (var i = 0; i < overloaded.symbols.size(); i++) {
-          var overload = overloaded.symbols[i]
-          if (overload.argumentOnlyType == symbol.argumentOnlyType) {
-            symbol.overridden = overload.asFunctionSymbol()
-            if (symbol.kind != .FUNCTION_CONSTRUCTOR && overload.kind != .FUNCTION_CONSTRUCTOR && symbol.overridden.resolvedType.returnType != returnType) {
-              log.semanticErrorBadOverrideReturnType(symbol.range, symbol.name, symbol.parent.asObjectSymbol().base.resolvedType, overload.range)
+        for overload in overloaded.symbols {
+          if overload.argumentOnlyType == symbol.argumentOnlyType {
+            symbol.overridden = overload.asFunctionSymbol
+            if symbol.kind != .FUNCTION_CONSTRUCTOR && overload.kind != .FUNCTION_CONSTRUCTOR && symbol.overridden.resolvedType.returnType != returnType {
+              log.semanticErrorBadOverrideReturnType(symbol.range, symbol.name, symbol.parent.asObjectSymbol.base.resolvedType, overload.range)
               hasOverrideError = true
             }
             break
@@ -348,56 +341,54 @@ namespace skew.resolving {
       symbol.resolvedType.returnType = returnType
       resolveAnnotations(symbol)
 
-      // Validate use of "def" vs "over"
-      if (!hasOverrideError) {
-        if (symbol.overridden != null && symbol.kind == .FUNCTION_INSTANCE) {
-          if (!symbol.isOver()) {
+      # Validate use of "def" vs "over"
+      if !hasOverrideError {
+        if symbol.overridden != null && symbol.kind == .FUNCTION_INSTANCE {
+          if !symbol.isOver {
             log.semanticErrorModifierMissingOverride(symbol.range, symbol.name, symbol.overridden.range)
           }
         } else {
-          if (symbol.isOver()) {
+          if symbol.isOver {
             log.semanticErrorModifierUnusedOverride(symbol.range, symbol.name)
           }
         }
       }
     }
 
-    void automaticallyGenerateConstructor(FunctionSymbol symbol) {
-      List<Node> statements = []
+    def automaticallyGenerateConstructor(symbol FunctionSymbol) {
+      var statements List<Node> = []
 
-      // Mirror the base constructor's arguments
-      if (symbol.overridden != null) {
+      # Mirror the base constructor's arguments
+      if symbol.overridden != null {
         initializeSymbol(symbol.overridden)
         var arguments = symbol.overridden.arguments
-        List<Node> values = []
-        for (var i = 0; i < arguments.size(); i++) {
-          var variable = arguments[i]
-          var argument = VariableSymbol(.VARIABLE_LOCAL, variable.name)
+        var values List<Node> = []
+        for variable in arguments {
+          var argument = VariableSymbol.new(.VARIABLE_LOCAL, variable.name)
           argument.resolvedType = variable.resolvedType
           argument.state = .INITIALIZED
-          symbol.arguments.push(argument)
-          values.push(createSymbolReference(argument))
+          symbol.arguments.append(argument)
+          values.append(createSymbolReference(argument))
         }
-        statements.push(Node.createExpression(values.size() != 0 ? Node.createCall(Node.createSuper(), values) : Node.createSuper()))
+        statements.append(Node.createExpression(values.isEmpty ? Node.createSuper : Node.createCall(Node.createSuper, values)))
       }
 
-      // Add an argument for every uninitialized variable
-      var parent = symbol.parent.asObjectSymbol()
+      # Add an argument for every uninitialized variable
+      var parent = symbol.parent.asObjectSymbol
       initializeSymbol(parent)
-      for (var i = 0; i < parent.variables.size(); i++) {
-        var variable = parent.variables[i]
-        if (variable.kind == .VARIABLE_INSTANCE) {
+      for variable in parent.variables {
+        if variable.kind == .VARIABLE_INSTANCE {
           initializeSymbol(variable)
-          if (variable.value == null) {
-            var argument = VariableSymbol(.VARIABLE_LOCAL, variable.name)
+          if variable.value == null {
+            var argument = VariableSymbol.new(.VARIABLE_LOCAL, variable.name)
             argument.resolvedType = variable.resolvedType
             argument.state = .INITIALIZED
-            symbol.arguments.push(argument)
-            statements.push(Node.createExpression(Node.createBinary(.ASSIGN,
+            symbol.arguments.append(argument)
+            statements.append(Node.createExpression(Node.createBinary(.ASSIGN,
               createMemberReference(createSymbolReference(symbol.self), variable),
               createSymbolReference(argument))))
           } else {
-            statements.push(Node.createExpression(Node.createBinary(.ASSIGN,
+            statements.append(Node.createExpression(Node.createBinary(.ASSIGN,
               createMemberReference(createSymbolReference(symbol.self), variable),
               variable.value)))
             variable.value = null
@@ -405,83 +396,83 @@ namespace skew.resolving {
         }
       }
 
-      // Create the function body
+      # Create the function body
       symbol.block = Node.createBlock(statements)
 
-      // Make constructors without arguments into getters
-      if (symbol.arguments.size() == 0) {
-        symbol.flags |= .GETTER
+      # Make constructors without arguments into getters
+      if symbol.arguments.isEmpty {
+        symbol.flags |= Symbol.IS_GETTER
       }
     }
 
-    void resolveFunction(FunctionSymbol symbol) {
+    def resolveFunction(symbol FunctionSymbol) {
       initializeSymbol(symbol)
 
-      var scope = LocalScope(symbol.scope, .NORMAL)
-      if (symbol.self != null) {
+      var scope = LocalScope.new(symbol.scope, .NORMAL)
+      if symbol.self != null {
         scope.define(symbol.self, log)
       }
 
-      // Default values for argument variables aren't resolved with this local
-      // scope since they are evaluated at the call site, not inside the
-      // function body, and shouldn't have access to other arguments
-      for (var i = 0; i < symbol.arguments.size(); i++) {
-        scope.define(symbol.arguments[i], log)
+      # Default values for argument variables aren't resolved with this local
+      # scope since they are evaluated at the call site, not inside the
+      # function body, and shouldn't have access to other arguments
+      for argument in symbol.arguments {
+        scope.define(argument, log)
       }
 
-      // The function is considered abstract if the body is missing
-      if (symbol.block != null) {
+      # The function is considered abstract if the body is missing
+      if symbol.block != null {
         resolveNode(symbol.block, scope, null)
 
-        // Missing a return statement is an error
-        if (symbol.kind != .FUNCTION_CONSTRUCTOR) {
+        # Missing a return statement is an error
+        if symbol.kind != .FUNCTION_CONSTRUCTOR {
           var returnType = symbol.resolvedType.returnType
-          if (returnType != null && returnType != .DYNAMIC && !symbol.block.blockAlwaysEndsWithReturn()) {
+          if returnType != null && returnType != .DYNAMIC && !symbol.block.blockAlwaysEndsWithReturn {
             log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType)
           }
         }
       }
     }
 
-    void initializeVariable(VariableSymbol symbol) {
+    def initializeVariable(symbol VariableSymbol) {
       forbidOverriddenSymbol(symbol)
 
-      // Normal variables may omit the initializer if the type is present
-      if (symbol.type != null) {
+      # Normal variables may omit the initializer if the type is present
+      if symbol.type != null {
         resolveAsParameterizedType(symbol.type, symbol.scope)
         symbol.resolvedType = symbol.type.resolvedType
 
-        // Resolve the constant now so initialized constants always have a value
-        if (symbol.isConst() && symbol.value != null) {
+        # Resolve the constant now so initialized constants always have a value
+        if symbol.isConst && symbol.value != null {
           resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
         }
       }
 
-      // Enums take their type from their parent
-      else if (symbol.kind == .VARIABLE_ENUM) {
+      # Enums take their type from their parent
+      else if symbol.kind == .VARIABLE_ENUM {
         symbol.resolvedType = symbol.parent.resolvedType
       }
 
-      // Implicitly-typed variables take their type from their initializer
-      else if (symbol.value != null) {
+      # Implicitly-typed variables take their type from their initializer
+      else if symbol.value != null {
         resolveAsParameterizedExpression(symbol.value, symbol.scope)
         var type = symbol.value.resolvedType
         symbol.resolvedType = type
 
-        // Forbid certain types
-        if (!isValidVariableType(type)) {
+        # Forbid certain types
+        if !isValidVariableType(type) {
           log.semanticErrorBadVariableType(symbol.range, type)
           symbol.resolvedType = .DYNAMIC
         }
       }
 
-      // Use a different error for constants which must have a type and lambda arguments which cannot have an initializer
-      else if (symbol.isConst() || symbol.scope.kind() == .FUNCTION && symbol.scope.asFunctionScope().symbol.kind == .FUNCTION_LOCAL) {
+      # Use a different error for constants which must have a type and lambda arguments which cannot have an initializer
+      else if symbol.isConst || symbol.scope.kind == .FUNCTION && symbol.scope.asFunctionScope.symbol.kind == .FUNCTION_LOCAL {
         log.semanticErrorVarMissingType(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
       }
 
-      // Variables without a type are an error
+      # Variables without a type are an error
       else {
         log.semanticErrorVarMissingValue(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
@@ -489,87 +480,88 @@ namespace skew.resolving {
 
       resolveAnnotations(symbol)
 
-      // Run post-annotation checks
-      if (symbol.resolvedType != .DYNAMIC && symbol.isConst() && !symbol.isImported() && symbol.value == null && symbol.kind != .VARIABLE_ENUM && symbol.kind != .VARIABLE_INSTANCE) {
+      # Run post-annotation checks
+      if symbol.resolvedType != .DYNAMIC && symbol.isConst && !symbol.isImported && symbol.value == null && symbol.kind != .VARIABLE_ENUM && symbol.kind != .VARIABLE_INSTANCE {
         log.semanticErrorConstMissingValue(symbol.range, symbol.name)
       }
     }
 
-    void resolveVariable(VariableSymbol symbol) {
+    def resolveVariable(symbol VariableSymbol) {
       initializeSymbol(symbol)
 
-      if (symbol.value != null) {
+      if symbol.value != null {
         resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
       }
     }
 
-    void initializeOverloadedFunction(OverloadedFunctionSymbol symbol) {
+    def initializeOverloadedFunction(symbol OverloadedFunctionSymbol) {
       var symbols = symbol.symbols
 
-      if (symbol.resolvedType == null) {
-        symbol.resolvedType = Type(.SYMBOL, symbol)
+      if symbol.resolvedType == null {
+        symbol.resolvedType = Type.new(.SYMBOL, symbol)
       }
 
-      // Ensure no two overloads have the same argument types
-      List<Type> types = []
-      for (var i = 0; i < symbols.size(); i++) {
+      # Ensure no two overloads have the same argument types
+      var types List<Type> = []
+      var i = 0
+      while i < symbols.count {
         var function = symbols[i]
         initializeSymbol(function)
+
         var index = types.indexOf(function.argumentOnlyType)
-        if (index == -1) {
-          types.push(function.argumentOnlyType)
-        } else {
+        if index != -1 {
           var other = symbols[index]
 
-          // Allow duplicate function declarations with the same type to merge
-          // as long as there is one declaration that provides an implementation
-          if ((function.block != null) == (other.block != null) || function.resolvedType.returnType != other.resolvedType.returnType) {
+          # Allow duplicate function declarations with the same type to merge
+          # as long as there is one declaration that provides an implementation
+          if (function.block != null) == (other.block != null) || function.resolvedType.returnType != other.resolvedType.returnType {
             log.semanticErrorDuplicateOverload(function.range, symbol.name, other.range)
-          } else if (function.block != null) {
-            function.flags |= other.flags & ~.IMPORT
+          } else if function.block != null {
+            function.flags |= other.flags & ~Symbol.IS_IMPORTED
             symbols[index] = function
           } else {
-            other.flags |= function.flags & ~.IMPORT
+            other.flags |= function.flags & ~Symbol.IS_IMPORTED
           }
 
-          // Remove the symbol after the merge so "types" still matches "symbols"
+          # Remove the symbol after the merge so "types" still matches "symbols"
           symbols.removeAt(i)
-          i--
+          continue
         }
+
+        types.append(function.argumentOnlyType)
+        i += 1
       }
 
-      // Include non-overridden overloads from the base class
+      # Include non-overridden overloads from the base class
       var overridden = findOverriddenMember(symbol)
-      if (overridden != null && overridden.kind.isOverloadedFunction()) {
-        symbol.overridden = overridden.asOverloadedFunctionSymbol()
-        var overriddenSymbols = symbol.overridden.symbols
-        for (var i = 0; i < overriddenSymbols.size(); i++) {
-          var function = overriddenSymbols[i]
+      if overridden != null && overridden.kind.isOverloadedFunction {
+        symbol.overridden = overridden.asOverloadedFunctionSymbol
+        for function in symbol.overridden.symbols {
 
-          // Constructors are not inherited
-          if (function.kind != .FUNCTION_CONSTRUCTOR) {
+          # Constructors are not inherited
+          if function.kind != .FUNCTION_CONSTRUCTOR {
             initializeSymbol(function)
             var index = types.indexOf(function.argumentOnlyType)
-            if (index == -1) {
-              symbols.push(function)
-              types.push(function.argumentOnlyType)
+            if index == -1 {
+              symbols.append(function)
+              types.append(function.argumentOnlyType)
             }
           }
         }
       }
     }
 
-    void resolveNode(Node node, Scope scope, Type context) {
-      if (node.resolvedType != null) {
-        return // Only resolve once
+    def resolveNode(node Node, scope Scope, context Type) {
+      if node.resolvedType != null {
+        return # Only resolve once
       }
 
       node.resolvedType = .DYNAMIC
-      switch (node.kind) {
+      switch node.kind {
         case .BLOCK { resolveBlock(node, scope) }
         case .PAIR { resolvePair(node, scope) }
 
-        // Statements
+        # Statements
         case .BREAK, .CONTINUE { resolveJump(node, scope) }
         case .EXPRESSION { resolveExpression(node, scope) }
         case .FOR { resolveFor(node, scope) }
@@ -579,7 +571,7 @@ namespace skew.resolving {
         case .VAR { resolveVar(node, scope) }
         case .WHILE { resolveWhile(node, scope) }
 
-        // Expressions
+        # Expressions
         case .ASSIGN_INDEX { resolveIndex(node, scope) }
         case .CALL { resolveCall(node, scope) }
         case .CAST { resolveCast(node, scope, context) }
@@ -598,191 +590,181 @@ namespace skew.resolving {
         case .SUPER { resolveSuper(node, scope) }
 
         default {
-          if (node.kind.isUnary()) { resolveUnary(node, scope) }
-          else if (node.kind.isBinary()) { resolveBinary(node, scope) }
-          else { assert false }
+          if node.kind.isUnary { resolveUnary(node, scope) }
+          else if node.kind.isBinary { resolveBinary(node, scope) }
+          else { assert(false) }
         }
       }
 
-      assert node.resolvedType != null
+      assert(node.resolvedType != null)
     }
 
-    void resolveAsParameterizedType(Node node, Scope scope) {
-      assert node.kind.isExpression()
+    def resolveAsParameterizedType(node Node, scope Scope) {
+      assert(node.kind.isExpression)
       resolveNode(node, scope, null)
       checkIsType(node)
       checkIsParameterized(node)
     }
 
-    void resolveAsParameterizedExpression(Node node, Scope scope) {
-      assert node.kind.isExpression()
+    def resolveAsParameterizedExpression(node Node, scope Scope) {
+      assert(node.kind.isExpression)
       resolveNode(node, scope, null)
       checkIsInstance(node)
       checkIsParameterized(node)
     }
 
-    void resolveAsParameterizedExpressionWithTypeContext(Node node, Scope scope, Type type) {
-      assert node.kind.isExpression()
+    def resolveAsParameterizedExpressionWithTypeContext(node Node, scope Scope, type Type) {
+      assert(node.kind.isExpression)
       resolveNode(node, scope, type)
       checkIsInstance(node)
       checkIsParameterized(node)
     }
 
-    void resolveAsParameterizedExpressionWithConversion(Node node, Scope scope, Type type) {
+    def resolveAsParameterizedExpressionWithConversion(node Node, scope Scope, type Type) {
       resolveAsParameterizedExpressionWithTypeContext(node, scope, type)
       checkConversion(node, type, .IMPLICIT)
     }
 
-    void resolveChildrenAsParameterizedExpressions(Node node, Scope scope) {
-      for (var i = 0; i < node.children.size(); i++) {
-        resolveAsParameterizedExpression(node.children[i], scope)
+    def resolveChildrenAsParameterizedExpressions(node Node, scope Scope) {
+      for child in node.children {
+        resolveAsParameterizedExpression(child, scope)
       }
     }
 
-    void checkUnusedExpression(Node node) {
+    def checkUnusedExpression(node Node) {
       var kind = node.kind
-      if (kind == .HOOK) {
-        checkUnusedExpression(node.hookTrue())
-        checkUnusedExpression(node.hookFalse())
-      } else if (node.range != null && node.resolvedType != .DYNAMIC && kind != .CALL && !kind.isBinaryAssign()) {
+      if kind == .HOOK {
+        checkUnusedExpression(node.hookTrue)
+        checkUnusedExpression(node.hookFalse)
+      } else if node.range != null && node.resolvedType != .DYNAMIC && kind != .CALL && !kind.isBinaryAssign {
         log.semanticWarningUnusedExpression(node.range)
       }
     }
 
-    void checkIsInstance(Node node) {
-      if (node.resolvedType != .DYNAMIC && node.isType()) {
+    def checkIsInstance(node Node) {
+      if node.resolvedType != .DYNAMIC && node.isType {
         log.semanticErrorUnexpectedType(node.range, node.resolvedType)
         node.resolvedType = .DYNAMIC
       }
     }
 
-    void checkIsType(Node node) {
-      if (node.resolvedType != .DYNAMIC && !node.isType()) {
+    def checkIsType(node Node) {
+      if node.resolvedType != .DYNAMIC && !node.isType {
         log.semanticErrorUnexpectedExpression(node.range, node.resolvedType)
         node.resolvedType = .DYNAMIC
       }
     }
 
-    void checkIsParameterized(Node node) {
-      if (node.resolvedType.parameters() != null && !node.resolvedType.isParameterized()) {
+    def checkIsParameterized(node Node) {
+      if node.resolvedType.parameters != null && !node.resolvedType.isParameterized {
         log.semanticErrorUnparameterizedType(node.range, node.resolvedType)
         node.resolvedType = .DYNAMIC
       }
     }
 
-    void checkStorage(Node node, Scope scope) {
+    def checkStorage(node Node, scope Scope) {
       var symbol = node.symbol
 
-      // Only allow storage to variables
-      if (node.kind != .NAME && node.kind != .DOT || symbol != null && !symbol.kind.isVariable()) {
+      # Only allow storage to variables
+      if node.kind != .NAME && node.kind != .DOT || symbol != null && !symbol.kind.isVariable {
         log.semanticErrorBadStorage(node.range)
       }
 
-      // Forbid storage to constants
-      else if (symbol != null && symbol.isConst()) {
-        var function = scope.findEnclosingFunction()
+      # Forbid storage to constants
+      else if symbol != null && symbol.isConst {
+        var function = scope.findEnclosingFunction
 
-        // Allow assignments to constants inside constructors
-        if (function == null || function.symbol.kind != .FUNCTION_CONSTRUCTOR || function.symbol.parent != symbol.parent || symbol.kind != .VARIABLE_INSTANCE) {
-          log.semanticErrorStorageToConstSymbol(node.internalRangeOrRange(), symbol.name)
+        # Allow assignments to constants inside constructors
+        if function == null || function.symbol.kind != .FUNCTION_CONSTRUCTOR || function.symbol.parent != symbol.parent || symbol.kind != .VARIABLE_INSTANCE {
+          log.semanticErrorStorageToConstSymbol(node.internalRangeOrRange, symbol.name)
         }
       }
     }
 
-    void checkAccess(Node node, Scope scope) {
+    def checkAccess(node Node, scope Scope) {
       var symbol = node.symbol
-      if (symbol != null && symbol.isPrivateOrProtected()) {
-        var isPrivate = symbol.isPrivate()
-        while (scope != null) {
-          if (scope.kind() == .OBJECT) {
-            var object = scope.asObjectScope().symbol
-            if (object == symbol.parent || !isPrivate && object.hasBaseClass(symbol.parent)) {
+      if symbol != null && symbol.isPrivateOrProtected {
+        var isPrivate = symbol.isPrivate
+        while scope != null {
+          if scope.kind == .OBJECT {
+            var object = scope.asObjectScope.symbol
+            if object == symbol.parent || !isPrivate && object.hasBaseClass(symbol.parent) {
               return
             }
           }
           scope = scope.parent
         }
-        log.semanticErrorAccessViolation(node.internalRangeOrRange(), isPrivate ? "@private" : "@protected", symbol.name)
+        log.semanticErrorAccessViolation(node.internalRangeOrRange, isPrivate ? "@private" : "@protected", symbol.name)
       }
     }
 
-    void checkConversion(Node node, Type to, ConversionKind kind) {
+    def checkConversion(node Node, to Type, kind ConversionKind) {
       var from = node.resolvedType
-      assert from != null
-      assert to != null
+      assert(from != null)
+      assert(to != null)
 
-      // The "dynamic" type is a hole in the type system
-      if (from == .DYNAMIC || to == .DYNAMIC) {
+      # The "dynamic" type is a hole in the type system
+      if from == .DYNAMIC || to == .DYNAMIC {
         return
       }
 
-      // No conversion is needed for identical types
-      if (from == to) {
+      # No conversion is needed for identical types
+      if from == to {
         return
       }
 
-      // The implicit conversion must be valid
-      if (kind == .IMPLICIT && !cache.canImplicitlyConvert(from, to) ||
-          kind == .EXPLICIT && !cache.canExplicitlyConvert(from, to)) {
+      # The implicit conversion must be valid
+      if kind == .IMPLICIT && !cache.canImplicitlyConvert(from, to) ||
+          kind == .EXPLICIT && !cache.canExplicitlyConvert(from, to) {
         log.semanticErrorIncompatibleTypes(node.range, from, to, cache.canExplicitlyConvert(from, to))
         node.resolvedType = .DYNAMIC
         return
       }
 
-      // Make the implicit conversion explicit for convenience later on
-      if (kind == .IMPLICIT) {
-        var value = Node.createNull()
+      # Make the implicit conversion explicit for convenience later on
+      if kind == .IMPLICIT {
+        var value = Node.createNull
         value.become(node)
         node.become(Node.createCast(value, Node.createType(to)).withType(to).withRange(node.range))
       }
     }
 
-    static StringMap<SymbolFlags> annotationSymbolFlags = {
-      "@export": .EXPORT,
-      "@import": .IMPORT,
-      "@prefer": .PREFER,
-      "@private": .PRIVATE,
-      "@protected": .PROTECTED,
-      "@rename": .RENAME,
-      "@skip": .SKIP,
-    }
-
-    void resolveAnnotation(Node node, Symbol symbol) {
-      var value = node.annotationValue()
-      var test = node.annotationTest()
+    def resolveAnnotation(node Node, symbol Symbol) {
+      var value = node.annotationValue
+      var test = node.annotationTest
 
       resolveNode(value, symbol.scope, null)
-      if (test != null) {
+      if test != null {
         resolveAsParameterizedExpressionWithConversion(test, symbol.scope, cache.boolType)
       }
 
-      // Terminate early when there were errors
-      if (value.symbol == null) {
+      # Terminate early when there were errors
+      if value.symbol == null {
         return
       }
 
-      // Make sure annotations have the arguments they need
-      if (value.kind != .CALL) {
-        log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.size(), 0, value.symbol.name)
+      # Make sure annotations have the arguments they need
+      if value.kind != .CALL {
+        log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.count, 0, value.symbol.name)
         return
       }
 
-      // Apply built-in annotation logic
-      var flag = annotationSymbolFlags.getOrDefault(value.symbol.fullName(), 0)
-      if (flag != 0) {
+      # Apply built-in annotation logic
+      var flag = annotationSymbolFlags.get(value.symbol.fullName, 0)
+      if flag != 0 {
         var isValid = true
-        switch (flag) {
-          case .EXPORT { isValid = !symbol.isImported() }
-          case .IMPORT { isValid = !symbol.isExported() }
-          case .PREFER { isValid = symbol.kind.isFunction() }
-          case .PRIVATE { isValid = !symbol.isProtected() && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
-          case .PROTECTED { isValid = !symbol.isPrivate() && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
-          case .RENAME {}
-          case .SKIP { isValid = symbol.kind.isFunction() && symbol.resolvedType.returnType == null }
+        switch flag {
+          case Symbol.IS_EXPORTED { isValid = !symbol.isImported }
+          case Symbol.IS_IMPORTED { isValid = !symbol.isExported }
+          case Symbol.IS_PREFERRED { isValid = symbol.kind.isFunction }
+          case Symbol.IS_PRIVATE { isValid = !symbol.isProtected && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
+          case Symbol.IS_PROTECTED { isValid = !symbol.isPrivate && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
+          case Symbol.IS_RENAMED {}
+          case Symbol.IS_SKIPPED { isValid = symbol.kind.isFunction && symbol.resolvedType.returnType == null }
         }
-        if (!isValid) {
+        if !isValid {
           log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name)
-        } else if ((symbol.flags & flag) != 0) {
+        } else if (symbol.flags & flag) != 0 {
           log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name)
         } else {
           symbol.flags |= flag
@@ -790,465 +772,469 @@ namespace skew.resolving {
       }
     }
 
-    void resolveBlock(Node node, Scope scope) {
-      assert node.kind == .BLOCK
+    def resolveBlock(node Node, scope Scope) {
+      assert(node.kind == .BLOCK)
 
       var children = node.children
-      var n = children.size()
+      var n = children.count
+      var i = 0
 
-      for (var i = 0; i < n; i++) {
+      while i < n {
         var child = children[i]
 
-        // There is a well-known ambiguity in languages like JavaScript where
-        // a return statement followed by a newline and a value can either be
-        // parsed as a single return statement with a value or as two
-        // statements, a return statement without a value and an expression
-        // statement. Luckily, we're better off than JavaScript since we know
-        // the type of the function. Parse a single statement in a non-void
-        // function but two statements in a void function.
-        if (child.kind == .RETURN && i + 1 < n && child.returnValue() == null && children[i + 1].kind == .EXPRESSION) {
-          var function = scope.findEnclosingFunctionOrLambda().symbol
-          if (function.kind != .FUNCTION_CONSTRUCTOR && function.resolvedType.returnType != null) {
-            child.replaceChild(0, node.removeChildAtIndex(i + 1).expressionValue().replaceWithNull())
-            n--
+        # There is a well-known ambiguity in languages like JavaScript where
+        # a return statement followed by a newline and a value can either be
+        # parsed as a single return statement with a value or as two
+        # statements, a return statement without a value and an expression
+        # statement. Luckily, we're better off than JavaScript since we know
+        # the type of the function. Parse a single statement in a non-void
+        # function but two statements in a void function.
+        if child.kind == .RETURN && i + 1 < n && child.returnValue == null && children[i + 1].kind == .EXPRESSION {
+          var function = scope.findEnclosingFunctionOrLambda.symbol
+          if function.kind != .FUNCTION_CONSTRUCTOR && function.resolvedType.returnType != null {
+            child.replaceChild(0, node.removeChildAtIndex(i + 1).expressionValue.replaceWithNull)
+            n -= 1
           }
         }
 
         resolveNode(child, scope, null)
+        i += 1
       }
     }
 
-    void resolvePair(Node node, Scope scope) {
-      resolveAsParameterizedExpression(node.firstValue(), scope)
-      resolveAsParameterizedExpression(node.secondValue(), scope)
+    def resolvePair(node Node, scope Scope) {
+      resolveAsParameterizedExpression(node.firstValue, scope)
+      resolveAsParameterizedExpression(node.secondValue, scope)
     }
 
-    void resolveJump(Node node, Scope scope) {
-      var loop = scope.findEnclosingLoop()
-      if (loop == null) {
+    def resolveJump(node Node, scope Scope) {
+      if scope.findEnclosingLoop == null {
         log.semanticErrorBadJump(node.range, node.kind == .BREAK ? "break" : "continue")
       }
     }
 
-    void resolveExpression(Node node, Scope scope) {
-      var value = node.expressionValue()
+    def resolveExpression(node Node, scope Scope) {
+      var value = node.expressionValue
       resolveAsParameterizedExpression(value, scope)
       checkUnusedExpression(value)
     }
 
-    void resolveFor(Node node, Scope scope) {
-      Type type = .DYNAMIC
-      scope = LocalScope(scope, .LOOP)
+    def resolveFor(node Node, scope Scope) {
+      var type Type = .DYNAMIC
+      scope = LocalScope.new(scope, .LOOP)
 
-      var value = node.forValue()
+      var value = node.forValue
       resolveAsParameterizedExpression(value, scope)
 
-      // Support "for i in 0..10"
-      if (value.kind == .PAIR) {
-        var first = value.firstValue()
-        var second = value.secondValue()
+      # Support "for i in 0..10"
+      if value.kind == .PAIR {
+        var first = value.firstValue
+        var second = value.secondValue
         type = cache.intType
         checkConversion(first, cache.intType, .IMPLICIT)
         checkConversion(second, cache.intType, .IMPLICIT)
 
-        // The ".." syntax only counts up, unlike CoffeeScript
-        if (first.kind == .CONSTANT && first.content.kind() == .INT &&
-            second.kind == .CONSTANT && second.content.kind() == .INT &&
-            first.content.asInt() >= second.content.asInt()) {
+        # The ".." syntax only counts up, unlike CoffeeScript
+        if first.kind == .CONSTANT && first.content.kind == .INT &&
+            second.kind == .CONSTANT && second.content.kind == .INT &&
+            first.content.asInt >= second.content.asInt {
           log.semanticWarningEmptyRange(value.range)
         }
       }
 
-      // Support "for i in [1, 2, 3]"
-      else if (cache.isList(value.resolvedType)) {
+      # Support "for i in [1, 2, 3]"
+      else if cache.isList(value.resolvedType) {
         type = value.resolvedType.substitutions[0]
       }
 
-      // Anything else is an error
-      else if (value.resolvedType != .DYNAMIC) {
+      # Anything else is an error
+      else if value.resolvedType != .DYNAMIC {
         log.semanticErrorBadForValue(value.range, value.resolvedType)
       }
 
-      // Special-case symbol initialization with the type
-      var symbol = node.symbol.asVariableSymbol()
-      scope.asLocalScope().define(symbol, log)
+      # Special-case symbol initialization with the type
+      var symbol = node.symbol.asVariableSymbol
+      scope.asLocalScope.define(symbol, log)
       symbol.resolvedType = type
-      symbol.flags |= .CONST
+      symbol.flags |= Symbol.IS_CONST
       symbol.state = .INITIALIZED
 
-      resolveBlock(node.forBlock(), scope)
+      resolveBlock(node.forBlock, scope)
     }
 
-    void resolveIf(Node node, Scope scope) {
-      var ifFalse = node.ifFalse()
-      resolveAsParameterizedExpressionWithConversion(node.ifTest(), scope, cache.boolType)
-      resolveBlock(node.ifTrue(), LocalScope(scope, .NORMAL))
-      if (ifFalse != null) {
-        resolveBlock(ifFalse, LocalScope(scope, .NORMAL))
+    def resolveIf(node Node, scope Scope) {
+      var ifFalse = node.ifFalse
+      resolveAsParameterizedExpressionWithConversion(node.ifTest, scope, cache.boolType)
+      resolveBlock(node.ifTrue, LocalScope.new(scope, .NORMAL))
+      if ifFalse != null {
+        resolveBlock(ifFalse, LocalScope.new(scope, .NORMAL))
       }
     }
 
-    void resolveReturn(Node node, Scope scope) {
-      var value = node.returnValue()
-      var function = scope.findEnclosingFunctionOrLambda().symbol
+    def resolveReturn(node Node, scope Scope) {
+      var value = node.returnValue
+      var function = scope.findEnclosingFunctionOrLambda.symbol
       var returnType = function.kind != .FUNCTION_CONSTRUCTOR ? function.resolvedType.returnType : null
 
-      // Check for a returned value
-      if (value == null) {
-        if (returnType != null) {
+      # Check for a returned value
+      if value == null {
+        if returnType != null {
           log.semanticErrorExpectedReturnValue(node.range, returnType)
         }
         return
       }
 
-      // Check the type of the returned value
-      if (returnType != null) {
+      # Check the type of the returned value
+      if returnType != null {
         resolveAsParameterizedExpressionWithConversion(value, scope, returnType)
         return
       }
 
-      // If there's no return type, still check for other errors
+      # If there's no return type, still check for other errors
       resolveAsParameterizedExpression(value, scope)
 
-      // Lambdas without a return type or an explicit "return" statement get special treatment
-      if (node.kind != .IMPLICIT_RETURN) {
+      # Lambdas without a return type or an explicit "return" statement get special treatment
+      if node.kind != .IMPLICIT_RETURN {
         log.semanticErrorUnexpectedReturnValue(value.range)
         return
       }
 
-      // Check for a return value of type "void"
-      if (!function.shouldInferReturnType() || value.kind == .CALL && value.symbol != null && value.symbol.resolvedType.returnType == null) {
+      # Check for a return value of type "void"
+      if !function.shouldInferReturnType || value.kind == .CALL && value.symbol != null && value.symbol.resolvedType.returnType == null {
         checkUnusedExpression(value)
         node.kind = .EXPRESSION
         return
       }
 
-      // Check for an invalid return type
+      # Check for an invalid return type
       var type = value.resolvedType
-      if (!isValidVariableType(type)) {
+      if !isValidVariableType(type) {
         log.semanticErrorBadReturnType(value.range, type)
         node.kind = .EXPRESSION
         return
       }
 
-      // Mutate the return type to the type from the returned value
+      # Mutate the return type to the type from the returned value
       function.returnType = Node.createType(type)
     }
 
-    void resolveSwitch(Node node, Scope scope) {
-      var value = node.switchValue()
+    def resolveSwitch(node Node, scope Scope) {
+      var value = node.switchValue
       var cases = node.children
       resolveAsParameterizedExpression(value, scope)
 
-      for (var i = 1; i < cases.size(); i++) {
+      for i in 1..cases.count {
         var child = cases[i]
         var values = child.children
-        for (var j = 1; j < values.size(); j++) {
+        for j in 1..values.count {
           resolveAsParameterizedExpressionWithConversion(values[j], scope, value.resolvedType)
         }
-        resolveBlock(child.caseBlock(), LocalScope(scope, .NORMAL))
+        resolveBlock(child.caseBlock, LocalScope.new(scope, .NORMAL))
       }
     }
 
-    void resolveVar(Node node, Scope scope) {
-      var symbol = node.symbol.asVariableSymbol()
-      scope.asLocalScope().define(symbol, log)
+    def resolveVar(node Node, scope Scope) {
+      var symbol = node.symbol.asVariableSymbol
+      scope.asLocalScope.define(symbol, log)
       resolveVariable(symbol)
     }
 
-    void resolveWhile(Node node, Scope scope) {
-      resolveAsParameterizedExpressionWithConversion(node.whileTest(), scope, cache.boolType)
-      resolveBlock(node.whileBlock(), LocalScope(scope, .LOOP))
+    def resolveWhile(node Node, scope Scope) {
+      resolveAsParameterizedExpressionWithConversion(node.whileTest, scope, cache.boolType)
+      resolveBlock(node.whileBlock, LocalScope.new(scope, .LOOP))
     }
 
-    void resolveCall(Node node, Scope scope) {
-      var value = node.callValue()
+    def resolveCall(node Node, scope Scope) {
+      var value = node.callValue
       resolveAsParameterizedExpression(value, scope)
       var type = value.resolvedType
 
-      switch (type.kind) {
-        // Each function has its own type for simplicity
+      switch type.kind {
+        # Each function has its own type for simplicity
         case .SYMBOL {
-          if (resolveSymbolCall(node, scope, type)) {
+          if resolveSymbolCall(node, scope, type) {
             return
           }
         }
 
-        // Lambda types look like "fn(int, int) int"
+        # Lambda types look like "fn(int, int) int"
         case .LAMBDA {
-          if (resolveFunctionCall(node, scope, type)) {
+          if resolveFunctionCall(node, scope, type) {
             return
           }
         }
 
-        // Can't call other types (the null type, for example)
+        # Can't call other types (the null type, for example)
         default {
-          if (type != .DYNAMIC) {
-            log.semanticErrorInvalidCall(node.internalRangeOrRange(), value.resolvedType)
+          if type != .DYNAMIC {
+            log.semanticErrorInvalidCall(node.internalRangeOrRange, value.resolvedType)
           }
         }
       }
 
-      // If there was an error, resolve the arguments to check for further
-      // errors but use a dynamic type context to avoid introducing errors
-      for (var i = 1; i < node.children.size(); i++) {
+      # If there was an error, resolve the arguments to check for further
+      # errors but use a dynamic type context to avoid introducing errors
+      for i in 1..node.children.count {
         resolveAsParameterizedExpressionWithConversion(node.children[i], scope, .DYNAMIC)
       }
     }
 
-    bool resolveSymbolCall(Node node, Scope scope, Type type) {
+    def resolveSymbolCall(node Node, scope Scope, type Type) bool {
       var symbol = type.symbol
 
-      // Getters are called implicitly, so explicitly calling one is an error.
-      // This error prevents a getter returning a lambda which is then called,
-      // but that's really strange and I think this error is more useful.
-      if (symbol.isGetter() && isCallValue(node)) {
-        log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange(), symbol.name)
+      # Getters are called implicitly, so explicitly calling one is an error.
+      # This error prevents a getter returning a lambda which is then called,
+      # but that's really strange and I think this error is more useful.
+      if symbol.isGetter && isCallValue(node) {
+        log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange, symbol.name)
         return false
       }
 
-      // Check for calling a function directly
-      if (symbol.kind.isFunction()) {
+      # Check for calling a function directly
+      if symbol.kind.isFunction {
         return resolveFunctionCall(node, scope, type)
       }
 
-      // Check for calling a set of functions, must not be ambiguous
-      if (symbol.kind.isOverloadedFunction()) {
+      # Check for calling a set of functions, must not be ambiguous
+      if symbol.kind.isOverloadedFunction {
         return resolveOverloadedFunctionCall(node, scope, type)
       }
 
-      // Can't call other symbols
-      log.semanticErrorInvalidCall(node.internalRangeOrRange(), node.callValue().resolvedType)
+      # Can't call other symbols
+      log.semanticErrorInvalidCall(node.internalRangeOrRange, node.callValue.resolvedType)
       return false
     }
 
-    bool resolveFunctionCall(Node node, Scope scope, Type type) {
-      var function = type.symbol != null ? type.symbol.asFunctionSymbol() : null
-      var expected = type.argumentTypes.size()
-      var count = node.children.size() - 1
+    def resolveFunctionCall(node Node, scope Scope, type Type) bool {
+      var function = type.symbol != null ? type.symbol.asFunctionSymbol : null
+      var expected = type.argumentTypes.count
+      var count = node.children.count - 1
       node.symbol = function
 
-      // Use the return type even if there were errors
-      if (type.returnType != null) {
+      # Use the return type even if there were errors
+      if type.returnType != null {
         node.resolvedType = type.returnType
       }
 
-      // There is no "void" type, so make sure this return value isn't used
-      else if (isVoidExpressionUsed(node)) {
-        if (function != null) {
+      # There is no "void" type, so make sure this return value isn't used
+      else if isVoidExpressionUsed(node) {
+        if function != null {
           log.semanticErrorUseOfVoidFunction(node.range, function.name)
         } else {
           log.semanticErrorUseOfVoidLambda(node.range)
         }
       }
 
-      // Check argument count
-      if (expected != count) {
-        log.semanticErrorArgumentCount(node.internalRangeOrRange(), expected, count, function != null ? function.name : "")
+      # Check argument count
+      if expected != count {
+        log.semanticErrorArgumentCount(node.internalRangeOrRange, expected, count, function != null ? function.name : "")
         return false
       }
 
-      // Check argument types
-      for (var i = 0; i < count; i++) {
+      # Check argument types
+      for i in 0..count {
         resolveAsParameterizedExpressionWithConversion(node.children[i + 1], scope, type.argumentTypes[i])
       }
 
-      // Replace overloaded symbols with the chosen overload
+      # Replace overloaded symbols with the chosen overload
       var callValue = node.children[0]
-      if (function != null && function.overloaded != null && callValue.symbol == function.overloaded) {
+      if function != null && function.overloaded != null && callValue.symbol == function.overloaded {
         callValue.symbol = function
       }
 
       return true
     }
 
-    Type resolveOverloadedFunction(Range range, List<Node> children, Scope scope, Type type) {
-      var overloaded = type.symbol.asOverloadedFunctionSymbol()
-      var count = children.size() - 1
-      List<Type> candidates = []
+    def resolveOverloadedFunction(range Range, children List<Node>, scope Scope, symbolType Type) Type {
+      var overloaded = symbolType.symbol.asOverloadedFunctionSymbol
+      var count = children.count - 1
+      var candidates List<Type> = []
 
-      // Filter by argument length and substitute using the current type environment
-      for (var i = 0; i < overloaded.symbols.size(); i++) {
-        var symbol = overloaded.symbols[i]
-        if (symbol.arguments.size() == count || overloaded.symbols.size() == 1) {
-          candidates.push(cache.substitute(symbol.resolvedType, type.environment))
+      # Filter by argument length and substitute using the current type environment
+      for symbol in overloaded.symbols {
+        if symbol.arguments.count == count || overloaded.symbols.count == 1 {
+          candidates.append(cache.substitute(symbol.resolvedType, symbolType.environment))
         }
       }
 
-      // Check for matches
-      if (candidates.size() < 1) {
+      # Check for matches
+      if candidates.isEmpty {
         log.semanticErrorNoMatchingOverload(range, overloaded.name, count, null)
         return null
       }
 
-      // Check for an unambiguous match
-      if (candidates.size() == 1) {
+      # Check for an unambiguous match
+      if candidates.count == 1 {
         return candidates[0]
       }
 
-      // First filter by syntactic structure impossibilities. This helps break
-      // the chicken-and-egg problem of needing to resolve argument types to
-      // get a match and needing a match to resolve argument types. For example,
-      // a list literal needs type context to resolve correctly.
-      for (var i = 0; i < candidates.size(); i++) {
-        var argumentTypes = candidates[i].argumentTypes
-        for (var j = 0; j < count; j++) {
-          var kind = children[j + 1].kind
-          var type = argumentTypes[j]
-          if (kind == .NULL && !type.isReference() ||
+      # First filter by syntactic structure impossibilities. This helps break
+      # the chicken-and-egg problem of needing to resolve argument types to
+      # get a match and needing a match to resolve argument types. For example,
+      # a list literal needs type context to resolve correctly.
+      var index = 0
+      while index < candidates.count {
+        var argumentTypes = candidates[index].argumentTypes
+        for i in 0..count {
+          var kind = children[i + 1].kind
+          var type = argumentTypes[i]
+          if kind == .NULL && !type.isReference ||
               kind == .INITIALIZER_LIST && findMember(type, "[new]") == null && findMember(type, "[...]") == null ||
-              (kind == .INITIALIZER_SET || kind == .INITIALIZER_MAP) && findMember(type, "{new}") == null && findMember(type, "{...}") == null) {
-            candidates.removeAt(i)
-            i--
+              (kind == .INITIALIZER_SET || kind == .INITIALIZER_MAP) && findMember(type, "{new}") == null && findMember(type, "{...}") == null {
+            candidates.removeAt(index)
+            index -= 1
             break
           }
         }
+        index += 1
       }
 
-      // Check for an unambiguous match
-      if (candidates.size() == 1) {
+      # Check for an unambiguous match
+      if candidates.count == 1 {
         return candidates[0]
       }
 
-      // If that still didn't work, resolve the arguments without type context
-      for (var i = 0; i < count; i++) {
+      # If that still didn't work, resolve the arguments without type context
+      for i in 0..count {
         resolveAsParameterizedExpression(children[i + 1], scope)
       }
 
-      // Try again, this time discarding all implicit conversion failures
-      for (var i = 0; i < candidates.size(); i++) {
-        var argumentTypes = candidates[i].argumentTypes
-        for (var j = 0; j < count; j++) {
-          if (!cache.canImplicitlyConvert(children[j + 1].resolvedType, argumentTypes[j])) {
-            candidates.removeAt(i)
-            i--
+      # Try again, this time discarding all implicit conversion failures
+      index = 0
+      while index < candidates.count {
+        var argumentTypes = candidates[index].argumentTypes
+        for i in 0..count {
+          if !cache.canImplicitlyConvert(children[i + 1].resolvedType, argumentTypes[i]) {
+            candidates.removeAt(index)
+            index -= 1
             break
           }
         }
+        index += 1
       }
 
-      // Check for an unambiguous match
-      if (candidates.size() == 1) {
+      # Check for an unambiguous match
+      if candidates.count == 1 {
         return candidates[0]
       }
 
-      // Extract argument types for an error if there is one
-      List<Type> childTypes = []
-      for (var i = 0; i < count; i++) {
-        childTypes.push(children[i + 1].resolvedType)
+      # Extract argument types for an error if there is one
+      var childTypes List<Type> = []
+      for i in 0..count {
+        childTypes.append(children[i + 1].resolvedType)
       }
 
-      // Give up without a match
-      if (candidates.size() == 0) {
+      # Give up without a match
+      if candidates.isEmpty {
         log.semanticErrorNoMatchingOverload(range, overloaded.name, count, childTypes)
         return null
       }
 
-      // If that still didn't work, try type equality
-      for (var i = 0; i < candidates.size(); i++) {
-        var argumentTypes = candidates[i].argumentTypes
+      # If that still didn't work, try type equality
+      for type in candidates {
         var isMatch = true
-        for (var j = 0; j < count; j++) {
-          if (children[j + 1].resolvedType != argumentTypes[j]) {
+        for i in 0..count {
+          if children[i + 1].resolvedType != type.argumentTypes[i] {
             isMatch = false
             break
           }
         }
-        if (isMatch) {
-          return candidates[i]
+        if isMatch {
+          return type
         }
       }
 
-      // If that still didn't work, try picking the preferred overload
-      Type firstPreferred = null
-      Type secondPreferred = null
-      for (var i = 0; i < candidates.size(); i++) {
-        var type = candidates[i]
-        if (type.symbol.isPreferred()) {
+      # If that still didn't work, try picking the preferred overload
+      var firstPreferred Type = null
+      var secondPreferred Type = null
+      for type in candidates {
+        if type.symbol.isPreferred {
           secondPreferred = firstPreferred
           firstPreferred = type
         }
       }
 
-      // Check for a single preferred overload
-      if (firstPreferred != null && secondPreferred == null) {
+      # Check for a single preferred overload
+      if firstPreferred != null && secondPreferred == null {
         return firstPreferred
       }
 
-      // Give up since the overload is ambiguous
+      # Give up since the overload is ambiguous
       log.semanticErrorAmbiguousOverload(range, overloaded.name, count, childTypes)
       return null
     }
 
-    bool resolveOverloadedFunctionCall(Node node, Scope scope, Type type) {
-      var match = resolveOverloadedFunction(node.callValue().range, node.children, scope, type)
+    def resolveOverloadedFunctionCall(node Node, scope Scope, type Type) bool {
+      var match = resolveOverloadedFunction(node.callValue.range, node.children, scope, type)
       return match != null && resolveFunctionCall(node, scope, match)
     }
 
-    void resolveCast(Node node, Scope scope, Type context) {
-      var value = node.castValue()
-      var type = node.castType()
+    def resolveCast(node Node, scope Scope, context Type) {
+      var value = node.castValue
+      var type = node.castType
       resolveAsParameterizedType(type, scope)
       resolveAsParameterizedExpressionWithTypeContext(value, scope, type.resolvedType)
       checkConversion(value, type.resolvedType, .EXPLICIT)
       node.resolvedType = type.resolvedType
 
-      // Warn about unnecessary casts
-      if (value.resolvedType == type.resolvedType || context == type.resolvedType && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
-        log.semanticWarningExtraCast(Range.span(node.internalRangeOrRange(), type.range), value.resolvedType, type.resolvedType)
+      # Warn about unnecessary casts
+      if value.resolvedType == type.resolvedType || context == type.resolvedType && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType) {
+        log.semanticWarningExtraCast(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
       }
     }
 
-    void resolveConstant(Node node, Scope scope) {
-      switch (node.content.kind()) {
+    def resolveConstant(node Node, scope Scope) {
+      switch node.content.kind {
         case .BOOL { node.resolvedType = cache.boolType }
         case .DOUBLE { node.resolvedType = cache.doubleType }
         case .INT { node.resolvedType = cache.intType }
         case .STRING { node.resolvedType = cache.stringType }
-        default { assert false }
+        default { assert(false) }
       }
     }
 
-    Symbol findOverriddenMember(Symbol symbol) {
-      if (symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS) {
-        var object = symbol.parent.asObjectSymbol()
-        if (object.baseClass != null) {
+    def findOverriddenMember(symbol Symbol) Symbol {
+      if symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS {
+        var object = symbol.parent.asObjectSymbol
+        if object.baseClass != null {
           return findMember(object.baseClass.resolvedType, symbol.name)
         }
       }
       return null
     }
 
-    void forbidOverriddenSymbol(Symbol symbol) {
+    def forbidOverriddenSymbol(symbol Symbol) {
       var overridden = findOverriddenMember(symbol)
-      if (overridden != null) {
-        log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol().base.resolvedType, overridden.range)
+      if overridden != null {
+        log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol.base.resolvedType, overridden.range)
       }
     }
 
-    Symbol findMember(Type type, string name) {
-      for (var check = type; check != null; check = check.baseClass()) {
-        if (check.kind == .SYMBOL) {
+    def findMember(type Type, name string) Symbol {
+      var check = type
+      while check != null {
+        if check.kind == .SYMBOL {
           var symbol = check.symbol
-          if (symbol.kind.isObject()) {
-            var member = symbol.asObjectSymbol().members.getOrDefault(name, null)
-            if (member != null) {
+          if symbol.kind.isObject {
+            var member = symbol.asObjectSymbol.members.get(name, null)
+            if member != null {
               initializeSymbol(member)
               return member
             }
           }
         }
+        check = check.baseClass
       }
       return null
     }
 
-    void resolveDot(Node node, Scope scope, Type context) {
-      var target = node.dotTarget()
-      var name = node.asString()
+    def resolveDot(node Node, scope Scope, context Type) {
+      var target = node.dotTarget
+      var name = node.asString
 
-      // Infer the target from the type context if it's omitted
-      if (target == null) {
-        if (context == null) {
+      # Infer the target from the type context if it's omitted
+      if target == null {
+        if context == null {
           log.semanticErrorMissingDotContext(node.range, name)
           return
         }
@@ -1258,51 +1244,51 @@ namespace skew.resolving {
         resolveNode(target, scope, null)
       }
 
-      // Search for a setter first, then search for a normal member
-      Symbol symbol = null
-      if (shouldCheckForSetter(node)) {
+      # Search for a setter first, then search for a normal member
+      var symbol Symbol = null
+      if shouldCheckForSetter(node) {
         symbol = findMember(target.resolvedType, name + "=")
       }
-      if (symbol == null) {
+      if symbol == null {
         symbol = findMember(target.resolvedType, name)
-        if (symbol == null) {
-          if (target.resolvedType != .DYNAMIC) {
-            log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType)
+        if symbol == null {
+          if target.resolvedType != .DYNAMIC {
+            log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType)
           }
-          if (target.kind == .DYNAMIC) {
+          if target.kind == .DYNAMIC {
             node.kind = .NAME
-            node.removeChildren()
+            node.removeChildren
           }
           return
         }
       }
 
-      // Forbid referencing a base class global or constructor function from a derived class
-      if (isBaseGlobalReference(target.resolvedType, symbol)) {
-        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType)
+      # Forbid referencing a base class global or constructor function from a derived class
+      if isBaseGlobalReference(target.resolvedType, symbol) {
+        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType)
         return
       }
 
-      var isType = target.isType()
-      var needsType = !symbol.kind.isOnInstances()
+      var isType = target.isType
+      var needsType = !symbol.kind.isOnInstances
 
-      // Make sure the global/instance context matches the intended usage
-      if (isType) {
-        if (!needsType) {
-          log.semanticErrorMemberUnexpectedInstance(node.internalRangeOrRange(), symbol.name)
-        } else if (symbol.kind.isFunctionOrOverloadedFunction()) {
+      # Make sure the global/instance context matches the intended usage
+      if isType {
+        if !needsType {
+          log.semanticErrorMemberUnexpectedInstance(node.internalRangeOrRange, symbol.name)
+        } else if symbol.kind.isFunctionOrOverloadedFunction {
           checkIsParameterized(target)
-        } else if (target.resolvedType.isParameterized()) {
+        } else if target.resolvedType.isParameterized {
           log.semanticErrorParameterizedType(target.range, target.resolvedType)
         }
-      } else if (needsType) {
-        log.semanticErrorMemberUnexpectedGlobal(node.internalRangeOrRange(), symbol.name)
+      } else if needsType {
+        log.semanticErrorMemberUnexpectedGlobal(node.internalRangeOrRange, symbol.name)
       }
 
-      // Always access referenced globals directly
-      if (symbol.kind.isGlobalReference()) {
+      # Always access referenced globals directly
+      if symbol.kind.isGlobalReference {
         node.kind = .NAME
-        node.removeChildren()
+        node.removeChildren
       }
 
       node.symbol = symbol
@@ -1311,26 +1297,26 @@ namespace skew.resolving {
       automaticallyCallGetter(node, scope)
     }
 
-    void resolveHook(Node node, Scope scope, Type context) {
-      resolveAsParameterizedExpressionWithConversion(node.hookTest(), scope, cache.boolType)
+    def resolveHook(node Node, scope Scope, context Type) {
+      resolveAsParameterizedExpressionWithConversion(node.hookTest, scope, cache.boolType)
 
-      var trueValue = node.hookTrue()
-      var falseValue = node.hookFalse()
+      var trueValue = node.hookTrue
+      var falseValue = node.hookFalse
 
-      // Use the type context from the parent
-      if (context != null) {
+      # Use the type context from the parent
+      if context != null {
         resolveAsParameterizedExpressionWithConversion(trueValue, scope, context)
         resolveAsParameterizedExpressionWithConversion(falseValue, scope, context)
         node.resolvedType = context
       }
 
-      // Find the common type from both branches
+      # Find the common type from both branches
       else {
         resolveAsParameterizedExpression(trueValue, scope)
         resolveAsParameterizedExpression(falseValue, scope)
         var common = cache.commonImplicitType(trueValue.resolvedType, falseValue.resolvedType)
 
-        if (common != null) {
+        if common != null {
           node.resolvedType = common
         } else {
           log.semanticErrorNoCommonType(Range.span(trueValue.range, falseValue.range), trueValue.resolvedType, falseValue.resolvedType)
@@ -1338,66 +1324,63 @@ namespace skew.resolving {
       }
     }
 
-    void resolveInitializer(Node node, Scope scope, Type context) {
-      var count = node.children.size()
+    def resolveInitializer(node Node, scope Scope, context Type) {
+      var count = node.children.count
 
-      // Make sure to resolve the children even if the initializer is invalid
-      if (context != null) {
-        if (context == .DYNAMIC || !resolveInitializerWithContext(node, scope, context)) {
+      # Make sure to resolve the children even if the initializer is invalid
+      if context != null {
+        if context == .DYNAMIC || !resolveInitializerWithContext(node, scope, context) {
           resolveChildrenAsParameterizedExpressions(node, scope)
         }
         return
       }
 
-      // First pass: only children with type context, second pass: all children
-      for (var pass = 0; pass < 2; pass++) {
-        switch (node.kind) {
+      # First pass: only children with type context, second pass: all children
+      for pass in 0..2 {
+        switch node.kind {
           case .INITIALIZER_LIST {
-            Type type = null
-            var found = false
+            var type Type = null
 
-            // Resolve all children for this pass
-            for (var i = 0; i < count; i++) {
-              var child = node.children[i]
-              if (pass != 0 || !needsTypeContext(child)) {
+            # Resolve all children for this pass
+            for child in node.children {
+              if pass != 0 || !needsTypeContext(child) {
                 resolveAsParameterizedExpression(child, scope)
                 type = mergeCommonType(type, child)
               }
             }
 
-            // Resolve remaining children using the type context if valid
-            if (type != null && isValidVariableType(type)) {
+            # Resolve remaining children using the type context if valid
+            if type != null && isValidVariableType(type) {
               resolveInitializerWithContext(node, scope, cache.createListType(type))
               return
             }
           }
 
           case .INITIALIZER_MAP {
-            Type keyType = null
-            Type valueType = null
+            var keyType Type = null
+            var valueType Type = null
 
-            // Resolve all children for this pass
-            for (var i = 0; i < count; i++) {
-              var child = node.children[i]
-              var key = child.firstValue()
-              var value = child.secondValue()
-              if (pass != 0 || !needsTypeContext(key)) {
+            # Resolve all children for this pass
+            for child in node.children {
+              var key = child.firstValue
+              var value = child.secondValue
+              if pass != 0 || !needsTypeContext(key) {
                 resolveAsParameterizedExpression(key, scope)
                 keyType = mergeCommonType(keyType, key)
               }
-              if (pass != 0 || !needsTypeContext(value)) {
+              if pass != 0 || !needsTypeContext(value) {
                 resolveAsParameterizedExpression(value, scope)
                 valueType = mergeCommonType(valueType, value)
               }
             }
 
-            // Resolve remaining children using the type context if valid
-            if (keyType != null && valueType != null && isValidVariableType(keyType) && isValidVariableType(valueType)) {
-              if (keyType == cache.intType) {
+            # Resolve remaining children using the type context if valid
+            if keyType != null && valueType != null && isValidVariableType(keyType) && isValidVariableType(valueType) {
+              if keyType == cache.intType {
                 resolveInitializerWithContext(node, scope, cache.createIntMapType(valueType))
                 return
               }
-              if (keyType == cache.stringType) {
+              if keyType == cache.stringType {
                 resolveInitializerWithContext(node, scope, cache.createStringMapType(valueType))
                 return
               }
@@ -1409,20 +1392,19 @@ namespace skew.resolving {
       log.semanticErrorInitializerTypeInferenceFailed(node.range)
     }
 
-    bool isToStringMember(Symbol symbol) {
-      return symbol.kind == .FUNCTION_INSTANCE && symbol.resolvedType.argumentTypes.size() == 0 && symbol.resolvedType.returnType == cache.stringType
+    def isToStringMember(symbol Symbol) bool {
+      return symbol.kind == .FUNCTION_INSTANCE && symbol.resolvedType.argumentTypes.isEmpty && symbol.resolvedType.returnType == cache.stringType
     }
 
-    bool hasToStringMember(Type type) {
+    def hasToStringMember(type Type) bool {
       var member = findMember(type, "toString")
-      if (member != null) {
-        if (isToStringMember(member)) {
+      if member != null {
+        if isToStringMember(member) {
           return true
-        } else if (member.kind == .OVERLOADED_INSTANCE) {
-          var symbols = member.asOverloadedFunctionSymbol().symbols
-          for (var i = 0; i < symbols.size(); i++) {
-            var symbol = symbols[i]
-            if (isToStringMember(symbol)) {
+        }
+        if member.kind == .OVERLOADED_INSTANCE {
+          for symbol in member.asOverloadedFunctionSymbol.symbols {
+            if isToStringMember(symbol) {
               return true
             }
           }
@@ -1431,56 +1413,52 @@ namespace skew.resolving {
       return false
     }
 
-    void wrapWithToString(Node node, Scope scope) {
+    def wrapWithToString(node Node, scope Scope) {
       resolveAsParameterizedExpression(node, scope)
 
-      if (node.resolvedType != .DYNAMIC && hasToStringMember(node.resolvedType)) {
+      if node.resolvedType != .DYNAMIC && hasToStringMember(node.resolvedType) {
         var parent = node.parent
-        var index = node.indexInParent()
-        node = Node.createDot(node.replaceWithNull(), "toString").withRange(node.range)
+        var index = node.indexInParent
+        node = Node.createDot(node.replaceWithNull, "toString").withRange(node.range)
         parent.replaceChild(index, node)
       }
 
       resolveAsParameterizedExpressionWithConversion(node, scope, cache.stringType)
     }
 
-    void resolveInterpolate(Node node, Scope scope) {
-      wrapWithToString(node.interpolateLeft(), scope)
-      wrapWithToString(node.interpolateRight(), scope)
+    def resolveInterpolate(node Node, scope Scope) {
+      wrapWithToString(node.interpolateLeft, scope)
+      wrapWithToString(node.interpolateRight, scope)
       node.resolvedType = cache.stringType
       node.kind = .ADD
     }
 
-    bool shouldUseMapConstructor(Symbol symbol) {
-      if (symbol.kind.isFunction()) {
-        return symbol.asFunctionSymbol().arguments.size() == 2
+    def shouldUseMapConstructor(symbol Symbol) bool {
+      if symbol.kind.isFunction {
+        return symbol.asFunctionSymbol.arguments.count == 2
       }
-
-      var overloaded = symbol.asOverloadedFunctionSymbol()
-      for (var i = 0; i < overloaded.symbols.size(); i++) {
-        if (overloaded.symbols[i].arguments.size() == 2) {
+      for overload in symbol.asOverloadedFunctionSymbol.symbols {
+        if overload.arguments.count == 2 {
           return true
         }
       }
       return false
     }
 
-    bool resolveInitializerWithContext(Node node, Scope scope, Type context) {
-      var count = node.children.size()
+    def resolveInitializerWithContext(node Node, scope Scope, context Type) bool {
       var isList = node.kind == .INITIALIZER_LIST
       var create = findMember(context, isList ? "[new]" : "{new}")
       var add = findMember(context, isList ? "[...]" : "{...}")
 
-      // Special-case imported literals to prevent an infinite loop for list literals
-      if (add != null && add.isImported()) {
-        var function = add.asFunctionSymbol()
-        if (function.arguments.size() == (isList ? 1 : 2)) {
+      # Special-case imported literals to prevent an infinite loop for list literals
+      if add != null && add.isImported {
+        var function = add.asFunctionSymbol
+        if function.arguments.count == (isList ? 1 : 2) {
           var functionType = cache.substitute(function.resolvedType, context.environment)
-          for (var i = 0; i < count; i++) {
-            var child = node.children[i]
-            if (child.kind == .PAIR) {
-              resolveAsParameterizedExpressionWithConversion(child.firstValue(), scope, functionType.argumentTypes[0])
-              resolveAsParameterizedExpressionWithConversion(child.secondValue(), scope, functionType.argumentTypes[1])
+          for child in node.children {
+            if child.kind == .PAIR {
+              resolveAsParameterizedExpressionWithConversion(child.firstValue, scope, functionType.argumentTypes[0])
+              resolveAsParameterizedExpressionWithConversion(child.secondValue, scope, functionType.argumentTypes[1])
             } else {
               resolveAsParameterizedExpressionWithConversion(child, scope, functionType.argumentTypes[0])
             }
@@ -1490,13 +1468,12 @@ namespace skew.resolving {
         }
       }
 
-      // Use simple call chaining when there's an add operator present
-      if (add != null) {
+      # Use simple call chaining when there's an add operator present
+      if add != null {
         var chain = Node.createDot(Node.createType(context).withRange(node.range), create != null ? create.name : "new").withRange(node.range)
-        for (var i = 0; i < count; i++) {
-          var child = node.children[i]
+        for child in node.children {
           var dot = Node.createDot(chain, add.name).withRange(child.range)
-          var arguments = child.kind == .PAIR ? [child.firstValue().replaceWithNull(), child.secondValue().replaceWithNull()] : [child.replaceWithNull()]
+          var arguments = child.kind == .PAIR ? [child.firstValue.replaceWithNull, child.secondValue.replaceWithNull] : [child.replaceWithNull]
           chain = Node.createCall(dot, arguments).withRange(child.range)
         }
         node.become(chain)
@@ -1504,45 +1481,44 @@ namespace skew.resolving {
         return true
       }
 
-      // Make sure there's a constructor to call
-      if (create == null) {
+      # Make sure there's a constructor to call
+      if create == null {
         log.semanticErrorInitializerTypeInferenceFailed(node.range)
         return false
       }
 
       var dot = Node.createDot(Node.createType(context).withRange(node.range), create.name).withRange(node.range)
 
-      // The literal "{}" is ambiguous and may be a map or a set
-      if (count == 0 && !isList && shouldUseMapConstructor(create)) {
+      # The literal "{}" is ambiguous and may be a map or a set
+      if node.children.isEmpty && !isList && shouldUseMapConstructor(create) {
         node.become(Node.createCall(dot, [Node.createList([]).withRange(node.range), Node.createList([]).withRange(node.range)]).withRange(node.range))
         resolveAsParameterizedExpressionWithConversion(node, scope, context)
         return true
       }
 
-      // Call the initializer constructor
-      if (node.kind == .INITIALIZER_MAP) {
-        List<Node> firstValues = []
-        List<Node> secondValues = []
-        for (var i = 0; i < count; i++) {
-          var child = node.children[i]
-          firstValues.push(child.firstValue().replaceWithNull())
-          secondValues.push(child.secondValue().replaceWithNull())
+      # Call the initializer constructor
+      if node.kind == .INITIALIZER_MAP {
+        var firstValues List<Node> = []
+        var secondValues List<Node> = []
+        for child in node.children {
+          firstValues.append(child.firstValue.replaceWithNull)
+          secondValues.append(child.secondValue.replaceWithNull)
         }
         node.become(Node.createCall(dot, [Node.createList(firstValues).withRange(node.range), Node.createList(secondValues).withRange(node.range)]).withRange(node.range))
       } else {
-        node.become(Node.createCall(dot, [Node.createList(node.removeChildren()).withRange(node.range)]).withRange(node.range))
+        node.become(Node.createCall(dot, [Node.createList(node.removeChildren).withRange(node.range)]).withRange(node.range))
       }
       resolveAsParameterizedExpressionWithConversion(node, scope, context)
       return true
     }
 
-    Type mergeCommonType(Type commonType, Node child) {
-      if (commonType == null || child.resolvedType == .DYNAMIC) {
+    def mergeCommonType(commonType Type, child Node) Type {
+      if commonType == null || child.resolvedType == .DYNAMIC {
         return child.resolvedType
       }
 
       var result = cache.commonImplicitType(commonType, child.resolvedType)
-      if (result != null) {
+      if result != null {
         return result
       }
 
@@ -1550,78 +1526,75 @@ namespace skew.resolving {
       return .DYNAMIC
     }
 
-    void resolveLambda(Node node, Scope scope, Type context) {
-      var symbol = node.symbol.asFunctionSymbol()
-      var count = symbol.arguments.size()
-      symbol.scope = FunctionScope(scope, symbol)
+    def resolveLambda(node Node, scope Scope, context Type) {
+      var symbol = node.symbol.asFunctionSymbol
+      symbol.scope = FunctionScope.new(scope, symbol)
 
-      // Use type context to implicitly set missing types
-      if (context != null && context.kind == .LAMBDA) {
+      # Use type context to implicitly set missing types
+      if context != null && context.kind == .LAMBDA {
 
-        // Copy over the argument types if they line up
-        if (context.argumentTypes.size() == count) {
-          for (var i = 0; i < count; i++) {
+        # Copy over the argument types if they line up
+        if context.argumentTypes.count == symbol.arguments.count {
+          for i in 0..symbol.arguments.count {
             var argument = symbol.arguments[i]
-            if (argument.type == null) {
+            if argument.type == null {
               argument.type = Node.createType(context.argumentTypes[i])
             }
           }
         }
 
-        // Copy over the return type
-        if (symbol.returnType == null && context.returnType != null) {
+        # Copy over the return type
+        if symbol.returnType == null && context.returnType != null {
           symbol.returnType = Node.createType(context.returnType)
         }
       }
 
-      // Only infer non-void return types if there's no type context
-      else if (symbol.returnType == null) {
-        symbol.flags |= .INFER_RETURN_TYPE
+      # Only infer non-void return types if there's no type context
+      else if symbol.returnType == null {
+        symbol.flags |= Symbol.SHOULD_INFER_RETURN_TYPE
       }
 
       resolveFunction(symbol)
 
-      // Use a LambdaType instead of a SymbolType for the node
-      List<Type> argumentTypes = []
+      # Use a LambdaType instead of a SymbolType for the node
+      var argumentTypes List<Type> = []
       var returnType = symbol.returnType
-      for (var i = 0; i < count; i++) {
-        argumentTypes.push(symbol.arguments[i].resolvedType)
+      for argument in symbol.arguments {
+        argumentTypes.append(argument.resolvedType)
       }
       node.resolvedType = cache.createLambdaType(argumentTypes, returnType != null ? returnType.resolvedType : null)
     }
 
-    void resolveLambdaType(Node node, Scope scope) {
-      var children = node.children
-      List<Type> types = []
+    def resolveLambdaType(node Node, scope Scope) {
+      var types List<Type> = []
 
-      for (var i = 0; i < children.size(); i++) {
-        var child = children[i]
-        if (child != null) {
+      for child in node.children {
+        if child != null {
           resolveAsParameterizedType(child, scope)
-          types.push(child.resolvedType)
+          types.append(child.resolvedType)
         } else {
-          types.push(null)
+          types.append(null)
         }
       }
 
-      var returnType = types.pop()
+      var returnType = types.takeLast
       node.resolvedType = cache.createLambdaType(types, returnType)
     }
 
-    void resolveName(Node node, Scope scope) {
-      var enclosingFunction = scope.findEnclosingFunction()
-      var name = node.asString()
-      Symbol symbol = null
+    def resolveName(node Node, scope Scope) {
+      var enclosingFunction = scope.findEnclosingFunction
+      var name = node.asString
+      var symbol Symbol = null
 
-      // Search for a setter first, then search for a normal symbol
-      if (shouldCheckForSetter(node)) {
+      # Search for a setter first, then search for a normal symbol
+      if shouldCheckForSetter(node) {
         symbol = scope.find(name + "=")
       }
 
-      // If a setter wasn't found, search for a normal symbol
-      if (symbol == null) {
+      # If a setter wasn't found, search for a normal symbol
+      if symbol == null {
         symbol = scope.find(name)
-        if (symbol == null) {
+        if symbol == null {
           log.semanticErrorUndeclaredSymbol(node.range, name)
           return
         }
@@ -1629,51 +1602,59 @@ namespace skew.resolving {
 
       initializeSymbol(symbol)
 
-      // Forbid referencing a base class global or constructor function from a derived class
-      if (enclosingFunction != null && isBaseGlobalReference(enclosingFunction.symbol.parent.resolvedType, symbol)) {
+      # Forbid referencing a base class global or constructor function from a derived class
+      if enclosingFunction != null && isBaseGlobalReference(enclosingFunction.symbol.parent.resolvedType, symbol) {
         log.semanticErrorUndeclaredSymbol(node.range, name)
         return
       }
 
-      // Automatically insert "self." before instance symbols
-      if (symbol.kind.isOnInstances()) {
-        var self = enclosingFunction != null ? enclosingFunction.symbol.self : null
-        if (self != null) {
-          node.withChildren([Node.createName(self.name).withSymbol(self).withType(self.resolvedType)]).kind = .DOT
+      # Automatically insert "self." before instance symbols
+      if symbol.kind.isOnInstances {
+        var variable = enclosingFunction != null ? enclosingFunction.symbol.self : null
+        if variable != null {
+          node.withChildren([Node.createName(variable.name).withSymbol(variable).withType(variable.resolvedType)]).kind = .DOT
         } else {
           log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)
         }
       }
 
-      // Type parameters for objects may only be used in certain circumstances
-      else if (symbol.kind == .PARAMETER_OBJECT) {
+      # Type parameters for objects may only be used in certain circumstances
+      else if symbol.kind == .PARAMETER_OBJECT {
+        var parent = scope
         var isValid = false
         var stop = false
 
-        for (var parent = scope; parent != null && !stop; parent = parent.parent) {
-          switch (parent.kind()) {
+        while parent != null {
+          switch parent.kind {
             case .OBJECT {
-              isValid = parent.asObjectScope().symbol == symbol.parent
+              isValid = parent.asObjectScope.symbol == symbol.parent
               stop = true
             }
 
             case .FUNCTION {
-              var function = parent.asFunctionScope().symbol
-              if (function.kind != .FUNCTION_LOCAL) {
+              var function = parent.asFunctionScope.symbol
+              if function.kind != .FUNCTION_LOCAL {
                 isValid = function.parent == symbol.parent
                 stop = true
               }
             }
 
             case .VARIABLE {
-              var variable = parent.asVariableScope().symbol
+              var variable = parent.asVariableScope.symbol
               isValid = variable.kind == .VARIABLE_INSTANCE && variable.parent == symbol.parent
               stop = true
             }
           }
+
+          # TODO: Should be able to use "break" above
+          if stop {
+            break
+          }
+
+          parent = parent.parent
         }
 
-        if (!isValid) {
+        if !isValid {
           log.semanticErrorMemberUnexpectedTypeParameter(node.range, symbol.name)
         }
       }
@@ -1684,60 +1665,60 @@ namespace skew.resolving {
       automaticallyCallGetter(node, scope)
     }
 
-    void resolveParameterize(Node node, Scope scope) {
-      var value = node.parameterizeValue()
+    def resolveParameterize(node Node, scope Scope) {
+      var value = node.parameterizeValue
       resolveNode(value, scope, null)
 
-      // Resolve parameter types
-      List<Type> substitutions = []
-      var count = node.children.size() - 1
-      for (var i = 0; i < count; i++) {
+      # Resolve parameter types
+      var substitutions List<Type> = []
+      var count = node.children.count - 1
+      for i in 0..count {
         var child = node.children[i + 1]
         resolveAsParameterizedType(child, scope)
-        substitutions.push(child.resolvedType)
+        substitutions.append(child.resolvedType)
       }
 
-      // Check for type parameters
+      # Check for type parameters
       var type = value.resolvedType
-      var parameters = type.parameters()
-      if (parameters == null || type.isParameterized()) {
-        if (type != .DYNAMIC) {
+      var parameters = type.parameters
+      if parameters == null || type.isParameterized {
+        if type != .DYNAMIC {
           log.semanticErrorCannotParameterize(node.range, type)
         }
         value.resolvedType = .DYNAMIC
         return
       }
 
-      // Check parameter count
-      var expected = parameters.size()
-      if (count != expected) {
-        log.semanticErrorParameterCount(node.internalRangeOrRange(), expected, count)
+      # Check parameter count
+      var expected = parameters.count
+      if count != expected {
+        log.semanticErrorParameterCount(node.internalRangeOrRange, expected, count)
         value.resolvedType = .DYNAMIC
         return
       }
 
-      // Make sure all parameters have types
-      for (var i = 0; i < parameters.size(); i++) {
-        initializeSymbol(parameters[i])
+      # Make sure all parameters have types
+      for parameter in parameters {
+        initializeSymbol(parameter)
       }
 
-      // Include the symbol for use with Node.isType()
+      # Include the symbol for use with Node.isType
       node.resolvedType = cache.substitute(type, cache.mergeEnvironments(type.environment, cache.createEnvironment(parameters, substitutions), null))
       node.symbol = value.symbol
     }
 
-    void resolveSuper(Node node, Scope scope) {
-      var function = scope.findEnclosingFunction()
+    def resolveSuper(node Node, scope Scope) {
+      var function = scope.findEnclosingFunction
       var symbol = function == null ? null : function.symbol
       var overridden = symbol == null ? null : symbol.overloaded != null ? symbol.overloaded.overridden : symbol.overridden
 
-      if (overridden == null) {
+      if overridden == null {
         log.semanticErrorBadSuper(node.range)
         return
       }
 
-      // Calling a static method doesn't need special handling
-      if (overridden.kind == .FUNCTION_GLOBAL) {
+      # Calling a static method doesn't need special handling
+      if overridden.kind == .FUNCTION_GLOBAL {
         node.kind = .NAME
       }
 
@@ -1746,21 +1727,21 @@ namespace skew.resolving {
       automaticallyCallGetter(node, scope)
     }
 
-    void resolveUnary(Node node, Scope scope) {
+    def resolveUnary(node Node, scope Scope) {
       resolveOperatorOverload(node, scope)
     }
 
-    void resolveBinary(Node node, Scope scope) {
+    def resolveBinary(node Node, scope Scope) {
       var kind = node.kind
-      var left = node.binaryLeft()
-      var right = node.binaryRight()
+      var left = node.binaryLeft
+      var right = node.binaryRight
 
-      // Special-case the equality operators
-      if (kind == .EQUAL || kind == .NOT_EQUAL) {
-        if (needsTypeContext(left)) {
+      # Special-case the equality operators
+      if kind == .EQUAL || kind == .NOT_EQUAL {
+        if needsTypeContext(left) {
           resolveAsParameterizedExpression(right, scope)
           resolveAsParameterizedExpressionWithTypeContext(left, scope, right.resolvedType)
-        } else if (needsTypeContext(right)) {
+        } else if needsTypeContext(right) {
           resolveAsParameterizedExpression(left, scope)
           resolveAsParameterizedExpressionWithTypeContext(right, scope, left.resolvedType)
         } else {
@@ -1768,9 +1749,9 @@ namespace skew.resolving {
           resolveAsParameterizedExpression(right, scope)
         }
 
-        // The two types must be compatible
+        # The two types must be compatible
         var commonType = cache.commonImplicitType(left.resolvedType, right.resolvedType)
-        if (commonType != null) {
+        if commonType != null {
           node.resolvedType = cache.boolType
         } else {
           log.semanticErrorNoCommonType(node.range, left.resolvedType, right.resolvedType)
@@ -1779,17 +1760,17 @@ namespace skew.resolving {
         return
       }
 
-      // Special-case assignment since it's not overridable
-      if (kind == .ASSIGN) {
+      # Special-case assignment since it's not overridable
+      if kind == .ASSIGN {
         resolveAsParameterizedExpression(left, scope)
 
-        // Automatically call setters
-        if (left.symbol != null && left.symbol.isSetter()) {
-          node.become(Node.createCall(left.replaceWithNull(), [right.replaceWithNull()]).withRange(node.range).withInternalRange(right.range))
+        # Automatically call setters
+        if left.symbol != null && left.symbol.isSetter {
+          node.become(Node.createCall(left.replaceWithNull, [right.replaceWithNull]).withRange(node.range).withInternalRange(right.range))
           resolveAsParameterizedExpression(node, scope)
         }
 
-        // Resolve the right side using type context from the left side
+        # Resolve the right side using type context from the left side
         else {
           resolveAsParameterizedExpressionWithConversion(right, scope, left.resolvedType)
           node.resolvedType = left.resolvedType
@@ -1799,8 +1780,8 @@ namespace skew.resolving {
         return
       }
 
-      // Special-case short-circuit logical operators since they aren't overridable
-      if (kind == .LOGICAL_AND || kind == .LOGICAL_OR) {
+      # Special-case short-circuit logical operators since they aren't overridable
+      if kind == .LOGICAL_AND || kind == .LOGICAL_OR {
         resolveAsParameterizedExpressionWithConversion(left, scope, cache.boolType)
         resolveAsParameterizedExpressionWithConversion(right, scope, cache.boolType)
         node.resolvedType = cache.boolType
@@ -1810,110 +1791,118 @@ namespace skew.resolving {
       resolveOperatorOverload(node, scope)
     }
 
-    void resolveIndex(Node node, Scope scope) {
+    def resolveIndex(node Node, scope Scope) {
       resolveOperatorOverload(node, scope)
     }
 
-    void resolveOperatorOverload(Node node, Scope scope) {
-      // The order of operands are reversed for the "in" operator
+    def resolveOperatorOverload(node Node, scope Scope) {
+      # The order of operands are reversed for the "in" operator
       var kind = node.kind
       var reverseBinaryOrder = kind == .IN
-      var target = node.children[(int)reverseBinaryOrder]
-      var other = kind.isBinary() ? node.children[1 - (int)reverseBinaryOrder] : null
+      var target = node.children[reverseBinaryOrder as int]
+      var other = kind.isBinary ? node.children[1 - (reverseBinaryOrder as int)] : null
 
-      // Allow "foo in [.FOO, .BAR]"
-      if (kind == .IN && target.kind == .INITIALIZER_LIST && !needsTypeContext(other)) {
+      # Allow "foo in [.FOO, .BAR]"
+      if kind == .IN && target.kind == .INITIALIZER_LIST && !needsTypeContext(other) {
         resolveAsParameterizedExpression(other, scope)
         resolveAsParameterizedExpressionWithTypeContext(target, scope, other.resolvedType != .DYNAMIC ? cache.createListType(other.resolvedType) : null)
       }
 
-      // Resolve just the target since the other arguments may need type context from overload resolution
+      # Resolve just the target since the other arguments may need type context from overload resolution
       else {
         resolveAsParameterizedExpression(target, scope)
       }
 
-      // Check for a valid storage location even for overloadable operators
-      if (kind.isBinaryAssign()) {
+      # Check for a valid storage location even for overloadable operators
+      if kind.isBinaryAssign {
         checkStorage(target, scope)
       }
 
-      // Can't do overload resolution on the dynamic type
+      # Can't do overload resolution on the dynamic type
       var type = target.resolvedType
-      if (type == .DYNAMIC) {
+      if type == .DYNAMIC {
         resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
 
-      // Check if the operator can be overridden at all
+      # Check if the operator can be overridden at all
       var info = operatorInfo[kind]
-      if (info.kind != .OVERRIDABLE) {
-        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), info.text, type)
+      if info.kind != .OVERRIDABLE {
+        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, info.text, type)
         resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
 
-      // Avoid infinite expansion
-      var isComparison = kind.isBinaryComparison()
-      if (isComparison && cache.isNumeric(type)) {
+      # Avoid infinite expansion
+      var isComparison = kind.isBinaryComparison
+      if isComparison && cache.isNumeric(type) {
         resolveAsParameterizedExpression(other, scope)
-        if (cache.isNumeric(other.resolvedType)) {
+        if cache.isNumeric(other.resolvedType) {
           resolveChildrenAsParameterizedExpressions(node, scope)
           node.resolvedType = cache.boolType
           return
         }
       }
 
-      // Auto-convert int to double when it appears as the target
-      if (other != null && type == cache.intType) {
+      # Auto-convert int to double when it appears as the target
+      if other != null && type == cache.intType {
         resolveAsParameterizedExpression(other, scope)
-        if (other.resolvedType == cache.doubleType) {
+        if other.resolvedType == cache.doubleType {
           checkConversion(target, cache.doubleType, .IMPLICIT)
           type = cache.doubleType
         }
       }
 
-      // Find the operator method
+      # Find the operator method
       var name = isComparison ? "<=>" : info.text
       var symbol = findMember(type, name)
-      if (symbol == null) {
-        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, type)
+      if symbol == null {
+        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, type)
         resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
       var symbolType = cache.substitute(symbol.resolvedType, type.environment)
 
-      // Resolve the overload now so the symbol's properties can be inspected
-      if (symbol.kind.isOverloadedFunction()) {
-        if (reverseBinaryOrder) node.children.reverse()
-        symbolType = resolveOverloadedFunction(node.internalRangeOrRange(), node.children, scope, symbolType)
-        if (reverseBinaryOrder) node.children.reverse()
-        if (symbolType == null) {
+      # Resolve the overload now so the symbol's properties can be inspected
+      if symbol.kind.isOverloadedFunction {
+        if reverseBinaryOrder {
+          node.children.reverse
+        }
+        symbolType = resolveOverloadedFunction(node.internalRangeOrRange, node.children, scope, symbolType)
+        if reverseBinaryOrder {
+          node.children.reverse
+        }
+        if symbolType == null {
           resolveChildrenAsParameterizedExpressions(node, scope)
           return
         }
         symbol = symbolType.symbol
       }
 
-      // Don't replace the operator with a call if it's just used for type checking
-      if (symbol.isImported() && !symbol.isRenamed()) {
-        if (reverseBinaryOrder) node.children.reverse()
-        if (!resolveFunctionCall(node, scope, symbolType)) {
+      # Don't replace the operator with a call if it's just used for type checking
+      if symbol.isImported && !symbol.isRenamed {
+        if reverseBinaryOrder {
+          node.children.reverse
+        }
+        if !resolveFunctionCall(node, scope, symbolType) {
           resolveChildrenAsParameterizedExpressions(node, scope)
         }
-        if (reverseBinaryOrder) node.children.reverse()
+        if reverseBinaryOrder {
+          node.children.reverse
+        }
         return
       }
 
-      // Resolve the method call
-      var children = node.removeChildren()
-      if (reverseBinaryOrder) {
-        children.reverse()
+      # Resolve the method call
+      var children = node.removeChildren
+      if reverseBinaryOrder {
+        children.reverse
       }
-      children[0] = Node.createDot(children[0], name).withSymbol(symbol).withRange(node.internalRangeOrRange())
+      children[0] = Node.createDot(children[0], name).withSymbol(symbol).withRange(node.internalRangeOrRange)
 
-      // Implement the logic for the "<=>" operator
-      if (isComparison) {
-        var call = Node(.CALL).withChildren(children).withRange(node.range)
+      # Implement the logic for the "<=>" operator
+      if isComparison {
+        var call = Node.new(.CALL).withChildren(children).withRange(node.range)
         node.appendChild(call)
         node.appendChild(Node.createInt(0))
         node.resolvedType = cache.boolType
@@ -1921,30 +1910,29 @@ namespace skew.resolving {
         return
       }
 
-      // All other operators are just normal method calls
+      # All other operators are just normal method calls
       node.kind = .CALL
       node.withChildren(children)
       resolveFunctionCall(node, scope, symbolType)
     }
 
-    void automaticallyCallGetter(Node node, Scope scope) {
+    def automaticallyCallGetter(node Node, scope Scope) {
       var symbol = node.symbol
-      if (symbol == null) {
+      if symbol == null {
         return
       }
       var kind = symbol.kind
       var parent = node.parent
-      var isGetter = symbol.isGetter()
+      var isGetter = symbol.isGetter
 
-      // The check for getters is complicated by overloaded functions
-      if (!isGetter && kind.isOverloadedFunction() && (!isCallValue(node) || parent.children.size() == 1)) {
-        var overloaded = symbol.asOverloadedFunctionSymbol()
-        for (var i = 0; i < overloaded.symbols.size(); i++) {
-          var getter = overloaded.symbols[i]
+      # The check for getters is complicated by overloaded functions
+      if !isGetter && kind.isOverloadedFunction && (!isCallValue(node) || parent.children.count == 1) {
+        var overloaded = symbol.asOverloadedFunctionSymbol
+        for getter in overloaded.symbols {
 
-          // Just return the first getter assuming errors for duplicate getters
-          // were already logged when the overloaded symbol was initialized
-          if (getter.isGetter()) {
+          # Just return the first getter assuming errors for duplicate getters
+          # were already logged when the overloaded symbol was initialized
+          if getter.isGetter {
             node.resolvedType = cache.substitute(getter.resolvedType, node.resolvedType.environment)
             node.symbol = getter
             isGetter = true
@@ -1953,68 +1941,80 @@ namespace skew.resolving {
         }
       }
 
-      // Automatically wrap the getter in a call expression
-      if (isGetter) {
-        var value = Node.createNull()
+      # Automatically wrap the getter in a call expression
+      if isGetter {
+        var value = Node.createNull
         value.become(node)
         node.become(Node.createCall(value, []).withRange(node.range))
         resolveAsParameterizedExpression(node, scope)
       }
 
-      // Forbid bare function references
-      else if (node.resolvedType != .DYNAMIC && kind.isFunctionOrOverloadedFunction() && kind != .FUNCTION_ANNOTATION &&
-          !isCallValue(node) && (parent == null || parent.kind != .PARAMETERIZE || !isCallValue(parent))) {
-        log.semanticErrorMustCallFunction(node.internalRangeOrRange(), symbol.name)
+      # Forbid bare function references
+      else if node.resolvedType != .DYNAMIC && kind.isFunctionOrOverloadedFunction && kind != .FUNCTION_ANNOTATION &&
+          !isCallValue(node) && (parent == null || parent.kind != .PARAMETERIZE || !isCallValue(parent)) {
+        log.semanticErrorMustCallFunction(node.internalRangeOrRange, symbol.name)
         node.resolvedType = .DYNAMIC
       }
     }
+  }
 
-    static bool needsTypeContext(Node node) {
-      return
-        node.kind == .DOT && node.dotTarget() == null ||
-        node.kind == .HOOK && needsTypeContext(node.hookTrue()) && needsTypeContext(node.hookFalse()) ||
-        node.kind.isInitializer()
+  namespace Resolver {
+    const annotationSymbolFlags = {
+      "@export": Symbol.IS_EXPORTED,
+      "@import": Symbol.IS_IMPORTED,
+      "@prefer": Symbol.IS_PREFERRED,
+      "@private": Symbol.IS_PRIVATE,
+      "@protected": Symbol.IS_PROTECTED,
+      "@rename": Symbol.IS_RENAMED,
+      "@skip": Symbol.IS_SKIPPED,
     }
 
-    static void ensureFunctionIsOverloaded(FunctionSymbol symbol) {
-      if (symbol.overloaded == null) {
-        var overloaded = OverloadedFunctionSymbol(merging.overloadedKind(symbol.kind), symbol.name, [symbol])
-        overloaded.parent = symbol.parent
-        overloaded.scope = overloaded.parent.scope
-        symbol.overloaded = overloaded
-        overloaded.scope.asObjectScope().symbol.members[symbol.name] = overloaded
-      }
+    def shouldCheckForSetter(node Node) bool {
+      return node.parent != null && node.parent.kind == .ASSIGN && node == node.parent.binaryLeft
     }
 
-    static bool shouldCheckForSetter(Node node) {
-      return node.parent != null && node.parent.kind == .ASSIGN && node == node.parent.binaryLeft()
-    }
-
-    static bool isVoidExpressionUsed(Node node) {
-      // Check for a null parent to handle variable initializers
+    def isVoidExpressionUsed(node Node) bool {
+      # Check for a null parent to handle variable initializers
       var parent = node.parent
-      return parent == null || parent.kind != .EXPRESSION && parent.kind != .IMPLICIT_RETURN && (parent.kind != .ANNOTATION || node != parent.annotationValue())
+      return parent == null || parent.kind != .EXPRESSION && parent.kind != .IMPLICIT_RETURN && (parent.kind != .ANNOTATION || node != parent.annotationValue)
     }
 
-    static bool isValidVariableType(Type type) {
-      return type != .NULL && (type.kind != .SYMBOL || !type.symbol.kind.isFunctionOrOverloadedFunction())
+    def isValidVariableType(type Type) bool {
+      return type != .NULL && (type.kind != .SYMBOL || !type.symbol.kind.isFunctionOrOverloadedFunction)
     }
 
-    static Node createSymbolReference(Symbol symbol) {
+    def createSymbolReference(symbol Symbol) Node {
       return Node.createName(symbol.name).withSymbol(symbol).withType(symbol.resolvedType)
     }
 
-    static Node createMemberReference(Node target, Symbol member) {
+    def createMemberReference(target Node, member Symbol) Node {
       return Node.createDot(target, member.name).withSymbol(member).withType(member.resolvedType)
     }
 
-    static bool isBaseGlobalReference(Type parent, Symbol member) {
-      return member.kind.isGlobalReference() && member.parent != parent.symbol && member.parent.kind == .OBJECT_CLASS
+    def isBaseGlobalReference(parent Type, member Symbol) bool {
+      return member.kind.isGlobalReference && member.parent != parent.symbol && member.parent.kind == .OBJECT_CLASS
     }
 
-    static bool isCallValue(Node node) {
+    def isCallValue(node Node) bool {
       var parent = node.parent
-      return parent != null && parent.kind == .CALL && node == parent.callValue()
+      return parent != null && parent.kind == .CALL && node == parent.callValue
+    }
+
+    def needsTypeContext(node Node) bool {
+      return
+        node.kind == .DOT && node.dotTarget == null ||
+        node.kind == .HOOK && needsTypeContext(node.hookTrue) && needsTypeContext(node.hookFalse) ||
+        node.kind.isInitializer
+    }
+
+    def ensureFunctionIsOverloaded(symbol FunctionSymbol) {
+      if symbol.overloaded == null {
+        var overloaded = OverloadedFunctionSymbol.new(merging.overloadedKind(symbol.kind), symbol.name, [symbol])
+        overloaded.parent = symbol.parent
+        overloaded.scope = overloaded.parent.scope
+        symbol.overloaded = overloaded
+        overloaded.scope.asObjectScope.symbol.members[symbol.name] = overloaded
+      }
     }
   }
 }

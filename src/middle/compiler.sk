@@ -1,20 +1,21 @@
 namespace skew {
-  ObjectSymbol compile(Log log, List<Source> sources, TypeCache cache) {
-    var global = ObjectSymbol(.OBJECT_GLOBAL, "<global>")
+  def compile(log Log, sources List<Source>, cache TypeCache) ObjectSymbol {
+    var global = ObjectSymbol.new(.OBJECT_GLOBAL, "<global>")
 
-    sources.unshift(Source("<native>", NATIVE_LIBRARY))
-    for (var i = 0; i < sources.size(); i++) {
-      var tokens = tokenize(log, sources[i])
+    sources.prepend(Source.new("<native>", NATIVE_LIBRARY))
+
+    for source in sources {
+      var tokens = tokenize(log, source)
       prepareTokens(tokens)
       parseFile(log, tokens, global)
     }
 
-    if (!log.hasErrors()) {
+    if !log.hasErrors {
       mergingPass(log, global)
-      if (!log.hasErrors()) {
+      if !log.hasErrors {
         resolvingPass(log, global, cache)
-        if (!log.hasErrors()) {
-          var graph = CallGraph(global)
+        if !log.hasErrors {
+          var graph = CallGraph.new(global)
           globalizingPass(global, graph)
           motionPass(global, graph)
           renamingPass(global)

@@ -1,38 +1,45 @@
-in List {
-  bool isEqualTo(List<T> other) {
-    var n = size()
-    if (n != other.size()) {
+def assert(truth bool) {
+  if !truth {
+    dynamic.throw("Assertion failed")
+  }
+}
+
+class List {
+  # TODO: Remove this
+  def isEqualTo(other List<T>) bool {
+    if count != other.count {
       return false
     }
-    for (var i = 0; i < n; i++) {
-      if (this[i] != other[i]) {
+    for i in 0..count {
+      if self[i] != other[i] {
         return false
       }
     }
     return true
   }
 
-  void pushAll(List<T> all) {
-    for (var i = 0, n = all.size(); i < n; i++) {
-      push(all[i])
+  # TODO: Remove this
+  def pushAll(all List<T>) {
+    for value in all {
+      append(value)
     }
   }
 }
 
 namespace prettyPrint {
-  string plural(int value) {
+  def plural(value int) string {
     return value == 1 ? "" : "s"
   }
 
-  string join(List<string> parts, string trailing) {
-    if (parts.size() < 3) {
+  def join(parts List<string>, trailing string) string {
+    if parts.count < 3 {
       return (" " + trailing + " ").join(parts)
     }
     var text = ""
-    for (var i = 0; i < parts.size(); i++) {
-      if (i != 0) {
+    for i in 0..parts.count {
+      if i != 0 {
         text += ", "
-        if (i + 1 == parts.size()) {
+        if i + 1 == parts.count {
           text += trailing + " "
         }
       }
@@ -42,6 +49,177 @@ namespace prettyPrint {
   }
 }
 
-int hashCombine(int left, int right) {
+def hashCombine(left int, right int) int {
   return left ^ right - 0x61c88647 + (left << 6) + (left >> 2)
+}
+
+# JavaScript-specific library stuff
+
+namespace StringMap {
+  def new StringMap<T> {
+    return dynamic.Object.create(null)
+  }
+}
+
+class StringMap {
+  def {...}(key string, value T) StringMap<T> {
+    self[key] = value
+    return self
+  }
+
+  def get(key string, value T) T {
+    return key in self ? self[key] : value
+  }
+
+  def values List<T> {
+    var values List<T> = []
+    for key in self as dynamic {
+      values.append(self[key])
+    }
+    return values
+  }
+}
+
+namespace IntMap {
+  def new IntMap<T> {
+    return dynamic.Object.create(null)
+  }
+}
+
+class IntMap {
+  def {...}(key int, value T) IntMap<T> {
+    self[key] = value
+    return self
+  }
+
+  def get(key int, value T) T {
+    return key in self ? self[key] : value
+  }
+
+  def values List<T> {
+    var values List<T> = []
+    for key in self as dynamic {
+      values.append(self[key])
+    }
+    return values
+  }
+}
+
+class string {
+  def count int {
+    return (self as dynamic).length
+  }
+
+  def [](index int) int {
+    return (self as dynamic).charCodeAt(index)
+  }
+
+  def at(index int) string {
+    return (self as dynamic)[index]
+  }
+
+  def repeat(times int) string {
+    var result = ""
+    for i in 0..times {
+      result += self
+    }
+    return result
+  }
+}
+
+namespace string {
+  def fromCodeUnit(x int) string {
+    return dynamic.String.fromCharCode(x)
+  }
+}
+
+class List {
+  def in(value T) bool {
+    return indexOf(value) >= 0
+  }
+
+  def isEmpty bool {
+    return count == 0
+  }
+
+  def count int {
+    return (self as dynamic).length
+  }
+
+  def first T {
+    return self[0]
+  }
+
+  def last T {
+    return self[count - 1]
+  }
+
+  def prepend(value T) {
+    (self as dynamic).unshift(value)
+  }
+
+  def append(value T) {
+    (self as dynamic).push(value)
+  }
+
+  def append(values List<T>) {
+    for value in values {
+      append(value)
+    }
+  }
+
+  def removeLast {
+    (self as dynamic).pop()
+  }
+
+  def takeLast T {
+    return (self as dynamic).pop()
+  }
+
+  def swap(i int, j int) {
+    var temp = self[i]
+    self[i] = self[j]
+    self[j] = temp
+  }
+
+  def insert(index int, value T) {
+    (self as dynamic).splice(index, 0, value)
+  }
+
+  def removeAt(index int) {
+    (self as dynamic).splice(index, 1)
+  }
+
+  def removeOne(value T) {
+    var index = indexOf(value)
+    if (index >= 0) {
+      removeAt(index)
+    }
+  }
+
+  def clone List<T> {
+    return (self as dynamic).slice()
+  }
+}
+
+class StringBuilder {
+  var buffer string
+
+  def +=(x string) {
+    append(x)
+  }
+
+  def append(x string) {
+    buffer += x
+  }
+
+  def toString string {
+    return buffer
+  }
+}
+
+namespace StringBuilder {
+  def new StringBuilder {
+    return {"buffer": ""} as dynamic
+  }
 }

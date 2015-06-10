@@ -23,74 +23,53 @@ namespace skew {
     VARIABLE_GLOBAL
     VARIABLE_INSTANCE
     VARIABLE_LOCAL
-  }
 
-  in SymbolKind {
-    bool isType() {
-      return this >= PARAMETER_FUNCTION && this <= OBJECT_NAMESPACE
+    def isType bool {
+      return self as int >= PARAMETER_FUNCTION as int && self as int <= OBJECT_NAMESPACE as int
     }
 
-    bool isParameter() {
-      return this >= PARAMETER_FUNCTION && this <= PARAMETER_OBJECT
+    def isParameter bool {
+      return self as int >= PARAMETER_FUNCTION as int && self as int <= PARAMETER_OBJECT as int
     }
 
-    bool isObject() {
-      return this >= OBJECT_CLASS && this <= OBJECT_NAMESPACE
+    def isObject bool {
+      return self as int >= OBJECT_CLASS as int && self as int <= OBJECT_NAMESPACE as int
     }
 
-    bool isFunction() {
-      return this >= FUNCTION_ANNOTATION && this <= FUNCTION_LOCAL
+    def isFunction bool {
+      return self as int >= FUNCTION_ANNOTATION as int && self as int <= FUNCTION_LOCAL as int
     }
 
-    bool isOverloadedFunction() {
-      return this >= OVERLOADED_GLOBAL && this <= OVERLOADED_INSTANCE
+    def isOverloadedFunction bool {
+      return self as int >= OVERLOADED_GLOBAL as int && self as int <= OVERLOADED_INSTANCE as int
     }
 
-    bool isFunctionOrOverloadedFunction() {
-      return this >= FUNCTION_ANNOTATION && this <= OVERLOADED_INSTANCE
+    def isFunctionOrOverloadedFunction bool {
+      return self as int >= FUNCTION_ANNOTATION as int && self as int <= OVERLOADED_INSTANCE as int
     }
 
-    bool isVariable() {
-      return this >= VARIABLE_ENUM && this <= VARIABLE_LOCAL
+    def isVariable bool {
+      return self as int >= VARIABLE_ENUM as int && self as int <= VARIABLE_LOCAL as int
     }
 
-    bool isOverloadableFunction() {
-      return this >= FUNCTION_CONSTRUCTOR && this <= FUNCTION_INSTANCE
+    def isOverloadableFunction bool {
+      return self as int >= FUNCTION_CONSTRUCTOR as int && self as int <= FUNCTION_INSTANCE as int
     }
 
-    bool isGlobalReference() {
+    def isGlobalReference bool {
       return
-        this == VARIABLE_ENUM || this == VARIABLE_GLOBAL ||
-        this == FUNCTION_GLOBAL || this == FUNCTION_CONSTRUCTOR ||
-        this == OVERLOADED_GLOBAL || isType()
+        self == VARIABLE_ENUM || self == VARIABLE_GLOBAL ||
+        self == FUNCTION_GLOBAL || self == FUNCTION_CONSTRUCTOR ||
+        self == OVERLOADED_GLOBAL || isType
     }
 
-    bool hasInstances() {
-      return this == OBJECT_CLASS || this == OBJECT_ENUM || this == OBJECT_INTERFACE
+    def hasInstances bool {
+      return self == OBJECT_CLASS || self == OBJECT_ENUM || self == OBJECT_INTERFACE
     }
 
-    bool isOnInstances() {
-      return this == FUNCTION_INSTANCE || this == VARIABLE_INSTANCE || this == OVERLOADED_INSTANCE
+    def isOnInstances bool {
+      return self == FUNCTION_INSTANCE || self == VARIABLE_INSTANCE || self == OVERLOADED_INSTANCE
     }
-  }
-
-  enum flags SymbolFlags {
-    AUTOMATICALLY_GENERATED
-    CONST
-    GETTER
-    INFER_RETURN_TYPE
-    OVER
-    SETTER
-    VALUE_TYPE
-
-    // Modifiers
-    EXPORT
-    IMPORT
-    PREFER
-    PRIVATE
-    PROTECTED
-    RENAME
-    SKIP
   }
 
   enum SymbolState {
@@ -99,122 +78,102 @@ namespace skew {
     INITIALIZED
   }
 
+  namespace Symbol {
+    # Flags
+    const IS_AUTOMATICALLY_GENERATED = 1 << 0
+    const IS_CONST = 1 << 1
+    const IS_GETTER = 1 << 2
+    const SHOULD_INFER_RETURN_TYPE = 1 << 3
+    const IS_OVER = 1 << 4
+    const IS_SETTER = 1 << 5
+    const IS_VALUE_TYPE = 1 << 6
+
+    # Modifiers
+    const IS_EXPORTED = 1 << 7
+    const IS_IMPORTED = 1 << 8
+    const IS_PREFERRED = 1 << 9
+    const IS_PRIVATE = 1 << 10
+    const IS_PROTECTED = 1 << 11
+    const IS_RENAMED = 1 << 12
+    const IS_SKIPPED = 1 << 13
+  }
+
   class Symbol {
-    final int id = createID()
-    SymbolKind kind
-    string name
-    Range range = null // The location of the name in the source code
-    Symbol parent = null // Automatically set by the merging step
-    Type resolvedType = null // Automatically set by the resolving step
-    Scope scope = null // Automatically set by the merging step (resolving step for local variables)
-    SymbolState state = .UNINITIALIZED
-    SymbolFlags flags = 0
-    List<Node> annotations = null
-    List<string> comments = null
+    const id = createID
+    var kind SymbolKind
+    var name string
+    var range Range = null # The location of the name in the source code
+    var parent Symbol = null # Automatically set by the merging step
+    var resolvedType Type = null # Automatically set by the resolving step
+    var scope Scope = null # Automatically set by the merging step (resolving step for local variables)
+    var state SymbolState = .UNINITIALIZED
+    var annotations List<Node> = null
+    var comments List<string> = null
+    var flags = 0
 
-    ParameterSymbol asParameterSymbol() {
-      assert kind.isParameter()
-      return (ParameterSymbol)this
+    # Flags
+    def isAutomaticallyGenerated bool { return (flags & IS_AUTOMATICALLY_GENERATED) != 0 }
+    def isConst bool                  { return (flags & IS_CONST) != 0 }
+    def isGetter bool                 { return (flags & IS_GETTER) != 0 }
+    def shouldInferReturnType bool    { return (flags & SHOULD_INFER_RETURN_TYPE) != 0 }
+    def isOver bool                   { return (flags & IS_OVER) != 0 }
+    def isSetter bool                 { return (flags & IS_SETTER) != 0 }
+    def isValueType bool              { return (flags & IS_VALUE_TYPE) != 0 }
+
+    # Modifiers
+    def isExported bool  { return (flags & IS_EXPORTED) != 0 }
+    def isImported bool  { return (flags & IS_IMPORTED) != 0 }
+    def isPreferred bool { return (flags & IS_PREFERRED) != 0 }
+    def isPrivate bool   { return (flags & IS_PRIVATE) != 0 }
+    def isProtected bool { return (flags & IS_PROTECTED) != 0 }
+    def isRenamed bool   { return (flags & IS_RENAMED) != 0 }
+    def isSkipped bool   { return (flags & IS_SKIPPED) != 0 }
+
+    # Combinations
+    def isPrivateOrProtected bool { return (flags & (IS_PRIVATE | IS_PROTECTED)) != 0 }
+    def isImportedOrExported bool { return (flags & (IS_IMPORTED | IS_EXPORTED)) != 0 }
+
+    def asParameterSymbol ParameterSymbol {
+      assert(kind.isParameter)
+      return self as ParameterSymbol
     }
 
-    ObjectSymbol asObjectSymbol() {
-      assert kind.isObject()
-      return (ObjectSymbol)this
+    def asObjectSymbol ObjectSymbol {
+      assert(kind.isObject)
+      return self as ObjectSymbol
     }
 
-    FunctionSymbol asFunctionSymbol() {
-      assert kind.isFunction()
-      return (FunctionSymbol)this
+    def asFunctionSymbol FunctionSymbol {
+      assert(kind.isFunction)
+      return self as FunctionSymbol
     }
 
-    OverloadedFunctionSymbol asOverloadedFunctionSymbol() {
-      assert kind.isOverloadedFunction()
-      return (OverloadedFunctionSymbol)this
+    def asOverloadedFunctionSymbol OverloadedFunctionSymbol {
+      assert(kind.isOverloadedFunction)
+      return self as OverloadedFunctionSymbol
     }
 
-    VariableSymbol asVariableSymbol() {
-      assert kind.isVariable()
-      return (VariableSymbol)this
+    def asVariableSymbol VariableSymbol {
+      assert(kind.isVariable)
+      return self as VariableSymbol
     }
 
-    string fullName() {
-      if (parent != null && parent.kind != .OBJECT_GLOBAL && !kind.isParameter()) {
-        return parent.fullName() + "." + name
+    def fullName string {
+      if parent != null && parent.kind != .OBJECT_GLOBAL && !kind.isParameter {
+        return parent.fullName + "." + name
       }
       return name
     }
+  }
 
-    bool isValueType() {
-      return (flags & .VALUE_TYPE) != 0
-    }
-
-    bool isAutomaticallyGenerated() {
-      return (flags & .AUTOMATICALLY_GENERATED) != 0
-    }
-
-    bool isConst() {
-      return (flags & .CONST) != 0
-    }
-
-    bool isGetter() {
-      return (flags & .GETTER) != 0
-    }
-
-    bool isSetter() {
-      return (flags & .SETTER) != 0
-    }
-
-    bool shouldInferReturnType() {
-      return (flags & .INFER_RETURN_TYPE) != 0
-    }
-
-    bool isExported() {
-      return (flags & .EXPORT) != 0
-    }
-
-    bool isImported() {
-      return (flags & .IMPORT) != 0
-    }
-
-    bool isImportedOrExported() {
-      return (flags & (.IMPORT | .EXPORT)) != 0
-    }
-
-    bool isOver() {
-      return (flags & .OVER) != 0
-    }
-
-    bool isPreferred() {
-      return (flags & .PREFER) != 0
-    }
-
-    bool isPrivate() {
-      return (flags & .PRIVATE) != 0
-    }
-
-    bool isProtected() {
-      return (flags & .PROTECTED) != 0
-    }
-
-    bool isPrivateOrProtected() {
-      return (flags & (.PRIVATE | .PROTECTED)) != 0
-    }
-
-    bool isRenamed() {
-      return (flags & .RENAME) != 0
-    }
-
-    bool isSkipped() {
-      return (flags & .SKIP) != 0
-    }
-
-    private static {
-      int createID() {
-        nextID++
+  namespace Symbol {
+    @private {
+      def createID int {
+        nextID += 1
         return nextID
       }
 
-      int nextID = 0
+      var nextID = 0
     }
   }
 
@@ -222,38 +181,38 @@ namespace skew {
   }
 
   class ObjectSymbol : Symbol {
-    Node base = null
-    ObjectSymbol baseClass = null
-    StringMap<Symbol> members = {}
-    List<ObjectSymbol> objects = []
-    List<FunctionSymbol> functions = []
-    List<VariableSymbol> variables = []
-    List<ParameterSymbol> parameters = null
+    var base Node = null
+    var baseClass ObjectSymbol = null
+    var members StringMap<Symbol> = {}
+    var objects List<ObjectSymbol> = []
+    var functions List<FunctionSymbol> = []
+    var variables List<VariableSymbol> = []
+    var parameters List<ParameterSymbol> = null
 
-    bool hasBaseClass(Symbol symbol) {
+    def hasBaseClass(symbol Symbol) bool {
       return baseClass != null && (baseClass == symbol || baseClass.hasBaseClass(symbol))
     }
   }
 
   class FunctionSymbol : Symbol {
-    FunctionSymbol overridden = null
-    OverloadedFunctionSymbol overloaded = null
-    List<ParameterSymbol> parameters = null
-    List<VariableSymbol> arguments = []
-    VariableSymbol self = null // For instance functions and constructors
-    Type argumentOnlyType = null // For quickly comparing the argument types of two function symbols
-    Node returnType = null
-    Node block = null
+    var overridden FunctionSymbol = null
+    var overloaded OverloadedFunctionSymbol = null
+    var parameters List<ParameterSymbol> = null
+    var arguments List<VariableSymbol> = []
+    var self VariableSymbol = null # For instance functions and constructors
+    var argumentOnlyType Type = null # For quickly comparing the argument types of two function symbols
+    var returnType Node = null
+    var block Node = null
   }
 
   class VariableSymbol : Symbol {
-    Node type = null
-    Node value = null
-    int enumValue = 0
+    var type Node = null
+    var value Node = null
+    var enumValue = 0
   }
 
   class OverloadedFunctionSymbol : Symbol {
-    OverloadedFunctionSymbol overridden = null
-    List<FunctionSymbol> symbols
+    var overridden OverloadedFunctionSymbol = null
+    var symbols List<FunctionSymbol>
   }
 }

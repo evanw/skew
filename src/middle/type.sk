@@ -6,406 +6,402 @@ namespace skew {
   }
 
   class Type {
-    final int id
-    TypeKind kind
-    Symbol symbol
-    Environment environment = null
-    List<Type> substitutions = null
-    List<Type> argumentTypes = null
-    Type returnType = null
-    IntMap<Type> substitutionCache = null // Maps a type environment id to this type in that environment
+    const id = createID
+    var kind TypeKind
+    var symbol Symbol
+    var environment Environment = null
+    var substitutions List<Type> = null
+    var argumentTypes List<Type> = null
+    var returnType Type = null
+    var substitutionCache IntMap<Type> = null # Maps a type environment id to this type in that environment
 
-    // TODO: The skewc compiler has a bug that makes this necessary, fix this
-    new(TypeKind kind, Symbol symbol) : id = createID(), kind = kind, symbol = symbol {
-    }
-
-    static Type DYNAMIC
-    static Type NULL
-
-    List<ParameterSymbol> parameters() {
+    def parameters List<ParameterSymbol> {
       return
         symbol == null ? null :
-        symbol.kind.isObject() ? symbol.asObjectSymbol().parameters :
-        symbol.kind.isFunction() ? symbol.asFunctionSymbol().parameters :
+        symbol.kind.isObject ? symbol.asObjectSymbol.parameters :
+        symbol.kind.isFunction ? symbol.asFunctionSymbol.parameters :
         null
     }
 
-    bool isParameterized() {
+    def isParameterized bool {
       return substitutions != null
     }
 
-    bool isClass() {
+    def isClass bool {
       return symbol != null && symbol.kind == .OBJECT_CLASS
     }
 
-    bool isEnum() {
+    def isEnum bool {
       return symbol != null && symbol.kind == .OBJECT_ENUM
     }
 
-    // Type parameters are not guaranteed to be nullable since generics are
-    // implemented through type erasure and the substituted type may be "int"
-    bool isReference() {
-      return symbol == null || !symbol.isValueType() && !symbol.kind.isParameter()
+    # Type parameters are not guaranteed to be nullable since generics are
+    # implemented through type erasure and the substituted type may be "int"
+    def isReference bool {
+      return symbol == null || !symbol.isValueType && !symbol.kind.isParameter
     }
 
-    string toString() {
-      if (kind == .SYMBOL) {
-        if (substitutions != null) {
+    def toString string {
+      if kind == .SYMBOL {
+        if substitutions != null {
           var name = symbol.name + "<"
-          for (var i = 0; i < substitutions.size(); i++) {
-            if (i != 0) {
+          for i in 0..substitutions.count {
+            if i != 0 {
               name += ", "
             }
-            name += substitutions[i]
+            name += substitutions[i].toString
           }
           return name + ">"
         }
         return symbol.name
       }
 
-      if (kind == .LAMBDA) {
+      if kind == .LAMBDA {
         var result = "fn("
-        for (var i = 0; i < argumentTypes.size(); i++) {
-          if (i != 0) {
+        for i in 0..argumentTypes.count {
+          if i != 0 {
             result += ", "
           }
-          result += argumentTypes[i]
+          result += argumentTypes[i].toString
         }
-        return result + (returnType != null ? ") " + returnType : ")")
+        return result + (returnType != null ? ") " returnType : ")")
       }
 
-      return this == DYNAMIC ? "dynamic" : "null"
+      return self == DYNAMIC ? "dynamic" : "null"
     }
 
-    Type baseClass() {
-      if (isClass()) {
-        var base = symbol.asObjectSymbol().base
-        if (base != null) {
+    def baseClass Type {
+      if isClass {
+        var base = symbol.asObjectSymbol.base
+        if base != null {
           return base.resolvedType
         }
       }
       return null
     }
 
-    bool hasBaseType(Type type) {
-      var base = baseClass()
+    def hasBaseType(type Type) bool {
+      var base = baseClass
       return base != null && (base == type || base.hasBaseType(type))
     }
+  }
 
-    static void intialize() {
-      if (DYNAMIC == null) {
-        DYNAMIC = Type(.SPECIAL, null)
+  namespace Type {
+    var DYNAMIC Type = null
+    var NULL Type = null
+
+    def initialize {
+      if DYNAMIC == null {
+        DYNAMIC = Type.new(.SPECIAL, null)
       }
-      if (NULL == null) {
-        NULL = Type(.SPECIAL, null)
+      if NULL == null {
+        NULL = Type.new(.SPECIAL, null)
       }
     }
 
-    private static {
-      int createID() {
-        nextID++
+    @private {
+      def createID int {
+        nextID += 1
         return nextID
       }
 
-      int nextID = 0
+      var nextID = 0
     }
   }
 
   class Environment {
-    final int id = createID()
-    final List<ParameterSymbol> parameters
-    final List<Type> substitutions
-    final IntMap<Environment> mergeCache = null
+    const id = createID
+    const parameters List<ParameterSymbol>
+    const substitutions List<Type>
+    const mergeCache IntMap<Environment> = null
 
-    // This is just for debugging
-    string toString() {
+    # This is just for debugging
+    def toString string {
       var text = "("
-      for (var i = 0; i < parameters.size(); i++) {
-        if (i != 0) {
+      for i in 0..parameters.count {
+        if i != 0 {
           text += ", "
         }
-        text += parameters[i].name + " => " + substitutions[i]
+        text += parameters[i].name " => " substitutions[i]
       }
       return text + ")"
     }
+  }
 
-    private static {
-      int createID() {
-        nextID++
+  namespace Environment {
+    @private {
+      def createID int {
+        nextID += 1
         return nextID
       }
 
-      int nextID = 0
+      var nextID = 0
     }
   }
 
   class TypeCache {
-    Type boolType = null
-    Type doubleType = null
-    Type intMapType = null
-    Type intType = null
-    Type listType = null
-    Type stringMapType = null
-    Type stringType = null
+    var boolType Type = null
+    var doubleType Type = null
+    var intMapType Type = null
+    var intType Type = null
+    var listType Type = null
+    var stringMapType Type = null
+    var stringType Type = null
 
-    new() {
-      Type.intialize()
-    }
-
-    void loadGlobals(Log log, ObjectSymbol global) {
-      boolType = loadGlobalClass(log, global, "bool", .VALUE_TYPE)
-      doubleType = loadGlobalClass(log, global, "double", .VALUE_TYPE)
+    def loadGlobals(log Log, global ObjectSymbol) {
+      Type.initialize
+      boolType = loadGlobalClass(log, global, "bool", Symbol.IS_VALUE_TYPE)
+      doubleType = loadGlobalClass(log, global, "double", Symbol.IS_VALUE_TYPE)
       intMapType = loadGlobalClass(log, global, "IntMap", 0)
-      intType = loadGlobalClass(log, global, "int", .VALUE_TYPE)
+      intType = loadGlobalClass(log, global, "int", Symbol.IS_VALUE_TYPE)
       listType = loadGlobalClass(log, global, "List", 0)
       stringMapType = loadGlobalClass(log, global, "StringMap", 0)
-      stringType = loadGlobalClass(log, global, "string", .VALUE_TYPE)
+      stringType = loadGlobalClass(log, global, "string", Symbol.IS_VALUE_TYPE)
     }
 
-    bool isNumeric(Type type) {
+    def isNumeric(type Type) bool {
       return type == intType || type == doubleType
     }
 
-    bool isList(Type type) {
+    def isList(type Type) bool {
       return type.symbol == listType.symbol
     }
 
-    bool canImplicitlyConvert(Type from, Type to) {
-      if (from == to) return true
-      if (from == .DYNAMIC || to == .DYNAMIC) return true
-      if (from == .NULL && to.isReference()) return true
-      if (from == intType && to == doubleType) return true
-      if (from.hasBaseType(to)) return true
-      if (from.isEnum() && (to == intType || to == stringType)) return true
+    def canImplicitlyConvert(from Type, to Type) bool {
+      if from == to { return true }
+      if from == .DYNAMIC || to == .DYNAMIC { return true }
+      if from == .NULL && to.isReference { return true }
+      if from == intType && to == doubleType { return true }
+      if from.hasBaseType(to) { return true }
+      if from.isEnum && (to == intType || to == stringType) { return true }
       return false
     }
 
-    bool canExplicitlyConvert(Type from, Type to) {
-      if (canImplicitlyConvert(from, to)) return true
-      if (canCastToNumeric(from) && canCastToNumeric(to)) return true
-      if (to.hasBaseType(from)) return true
-      if (to.isEnum() && (from == intType || from == stringType)) return true
+    def canExplicitlyConvert(from Type, to Type) bool {
+      if canImplicitlyConvert(from, to) { return true }
+      if canCastToNumeric(from) && canCastToNumeric(to) { return true }
+      if to.hasBaseType(from) { return true }
+      if to.isEnum && (from == intType || from == stringType) { return true }
       return false
     }
 
-    Type commonImplicitType(Type left, Type right) {
-      // Short-circuit early for identical types
-      if (left == right) return left
+    def commonImplicitType(left Type, right Type) Type {
+      # Short-circuit early for identical types
+      if left == right { return left }
 
-      // Dynamic is a hole in the type system
-      if (left == .DYNAMIC || right == .DYNAMIC) return .DYNAMIC
+      # Dynamic is a hole in the type system
+      if left == .DYNAMIC || right == .DYNAMIC { return .DYNAMIC }
 
-      // Check implicit conversions
-      if (canImplicitlyConvert(left, right)) return right
-      if (canImplicitlyConvert(right, left)) return left
+      # Check implicit conversions
+      if canImplicitlyConvert(left, right) { return right }
+      if canImplicitlyConvert(right, left) { return left }
 
-      // Implement common implicit types for numeric types
-      if (isNumeric(left) && isNumeric(right)) {
+      # Implement common implicit types for numeric types
+      if isNumeric(left) && isNumeric(right) {
         return left == intType && right == intType ? intType : doubleType
       }
 
-      // Check for a common base class
-      if (left.isClass() && right.isClass()) {
+      # Check for a common base class
+      if left.isClass && right.isClass {
         return commonBaseClass(left, right)
       }
 
       return null
     }
 
-    Type createListType(Type itemType) {
-      return substitute(listType, createEnvironment(listType.parameters(), [itemType]))
+    def createListType(itemType Type) Type {
+      return substitute(listType, createEnvironment(listType.parameters, [itemType]))
     }
 
-    Type createIntMapType(Type valueType) {
-      return substitute(intMapType, createEnvironment(intMapType.parameters(), [valueType]))
+    def createIntMapType(valueType Type) Type {
+      return substitute(intMapType, createEnvironment(intMapType.parameters, [valueType]))
     }
 
-    Type createStringMapType(Type valueType) {
-      return substitute(stringMapType, createEnvironment(stringMapType.parameters(), [valueType]))
+    def createStringMapType(valueType Type) Type {
+      return substitute(stringMapType, createEnvironment(stringMapType.parameters, [valueType]))
     }
 
-    Environment createEnvironment(List<ParameterSymbol> parameters, List<Type> substitutions) {
-      assert parameters.size() == substitutions.size()
+    def createEnvironment(parameters List<ParameterSymbol>, substitutions List<Type>) Environment {
+      assert(parameters.count == substitutions.count)
 
-      // Hash the inputs
+      # Hash the inputs
       var hash = hashTypes(hashParameters(parameters), substitutions)
-      var bucket = environments.getOrDefault(hash, null)
+      var bucket = environments.get(hash, null)
 
-      // Check existing environments in the bucket for a match
-      if (bucket != null) {
-        for (var i = 0; i < bucket.size(); i++) {
-          var existing = bucket[i]
+      # Check existing environments in the bucket for a match
+      if bucket != null {
+        for existing in bucket {
           if (parameters.isEqualTo(existing.parameters) && substitutions.isEqualTo(existing.substitutions)) {
             return existing
           }
         }
       }
 
-      // Make a new bucket
+      # Make a new bucket
       else {
         bucket = []
         environments[hash] = bucket
       }
 
-      // Make a new environment
-      var environment = Environment(parameters, substitutions)
-      bucket.push(environment)
+      # Make a new environment
+      var environment = Environment.new(parameters, substitutions)
+      bucket.append(environment)
       return environment
     }
 
-    Type createLambdaType(List<Type> argumentTypes, Type returnType) {
+    def createLambdaType(argumentTypes List<Type>, returnType Type) Type {
       var hash = hashTypes(returnType != null ? returnType.id : -1, argumentTypes)
-      var bucket = lambdaTypes.getOrDefault(hash, null)
+      var bucket = lambdaTypes.get(hash, null)
 
-      // Check existing types in the bucket for a match
-      if (bucket != null) {
-        for (var i = 0; i < bucket.size(); i++) {
-          var existing = bucket[i]
+      # Check existing types in the bucket for a match
+      if bucket != null {
+        for existing in bucket {
           if (argumentTypes.isEqualTo(existing.argumentTypes) && returnType == existing.returnType) {
             return existing
           }
         }
       }
 
-      // Make a new bucket
+      # Make a new bucket
       else {
         bucket = []
         lambdaTypes[hash] = bucket
       }
 
-      // Make a new lambda type
-      var type = Type(.LAMBDA, null)
+      # Make a new lambda type
+      var type = Type.new(.LAMBDA, null)
       type.argumentTypes = argumentTypes
       type.returnType = returnType
-      bucket.push(type)
+      bucket.append(type)
       return type
     }
 
-    Environment mergeEnvironments(Environment a, Environment b, List<ParameterSymbol> restrictions) {
-      if (a == null) return b
-      if (b == null) return a
-      List<ParameterSymbol> parameters = a.parameters.clone()
-      List<Type> substitutions = substituteAll(a.substitutions, b)
-      for (var i = 0; i < b.parameters.size(); i++) {
+    def mergeEnvironments(a Environment, b Environment, restrictions List<ParameterSymbol>) Environment {
+      if a == null { return b }
+      if b == null { return a }
+      var parameters = a.parameters.clone
+      var substitutions = substituteAll(a.substitutions, b)
+      for i in 0..b.parameters.count {
         var parameter = b.parameters[i]
         var substitution = b.substitutions[i]
         if (!(parameter in parameters) && (restrictions == null || parameter in restrictions)) {
-          parameters.push(parameter)
-          substitutions.push(substitution)
+          parameters.append(parameter)
+          substitutions.append(substitution)
         }
       }
       return createEnvironment(parameters, substitutions)
     }
 
-    Type parameterize(Type type) {
-      var parameters = type.parameters()
+    def parameterize(type Type) Type {
+      var parameters = type.parameters
       if (parameters == null) {
         return type
       }
-      assert !type.isParameterized()
-      List<Type> substitutions = []
-      for (var i = 0; i < parameters.size(); i++) {
-        substitutions.push(parameters[i].resolvedType)
+      assert(!type.isParameterized)
+      var substitutions List<Type> = []
+      for parameter in parameters {
+        substitutions.append(parameter.resolvedType)
       }
       return substitute(type, createEnvironment(parameters, substitutions))
     }
 
-    List<Type> substituteAll(List<Type> types, Environment environment) {
-      List<Type> substitutions = []
-      for (var i = 0; i < types.size(); i++) {
-        substitutions.push(substitute(types[i], environment))
+    def substituteAll(types List<Type>, environment Environment) List<Type> {
+      var substitutions List<Type> = []
+      for type in types {
+        substitutions.append(substitute(type, environment))
       }
       return substitutions
     }
 
-    Type substitute(Type type, Environment environment) {
+    def substitute(type Type, environment Environment) Type {
       var existing = type.environment
-      if (environment == null || environment == existing) {
+      if environment == null || environment == existing {
         return type
       }
 
-      // Merge the type environments (this matters for nested generics). For
-      // object types, limit the parameters in the environment to just those
-      // on this type and the base type.
-      var parameters = type.parameters()
-      if (existing != null) {
-        environment = mergeEnvironments(existing, environment, type.kind == .SYMBOL && type.symbol.kind.isFunctionOrOverloadedFunction() ? null : parameters)
+      # Merge the type environments (this matters for nested generics). For
+      # object types, limit the parameters in the environment to just those
+      # on this type and the base type.
+      var parameters = type.parameters
+      if existing != null {
+        environment = mergeEnvironments(existing, environment, type.kind == .SYMBOL && type.symbol.kind.isFunctionOrOverloadedFunction ? null : parameters)
       }
 
-      // Check to see if this has been computed before
+      # Check to see if this has been computed before
       var rootType = type.kind == .SYMBOL ? type.symbol.resolvedType : type
-      if (rootType.substitutionCache == null) {
+      if rootType.substitutionCache == null {
         rootType.substitutionCache = {}
       }
-      var substituted = rootType.substitutionCache.getOrDefault(environment.id, null)
-      if (substituted != null) {
+      var substituted = rootType.substitutionCache.get(environment.id, null)
+      if substituted != null {
         return substituted
       }
       substituted = type
 
-      if (type.kind == .LAMBDA) {
-        List<Type> argumentTypes = []
-        Type returnType = null
+      if type.kind == .LAMBDA {
+        var argumentTypes List<Type> = []
+        var returnType Type = null
 
-        // Substitute function arguments
-        for (var i = 0; i < type.argumentTypes.size(); i++) {
-          argumentTypes.push(substitute(type.argumentTypes[i], environment))
+        # Substitute function arguments
+        for argumentType in type.argumentTypes {
+          argumentTypes.append(substitute(argumentType, environment))
         }
 
-        // Substitute return type
-        if (type.returnType != null) {
+        # Substitute return type
+        if type.returnType != null {
           returnType = substitute(type.returnType, environment)
         }
 
         substituted = createLambdaType(argumentTypes, returnType)
       }
 
-      else if (type.kind == .SYMBOL) {
+      else if type.kind == .SYMBOL {
         var symbol = type.symbol
 
-        // Parameters just need simple substitution
-        if (symbol.kind.isParameter()) {
-          var index = environment.parameters.indexOf(symbol.asParameterSymbol())
-          if (index != -1) {
+        # Parameters just need simple substitution
+        if symbol.kind.isParameter {
+          var index = environment.parameters.indexOf(symbol.asParameterSymbol)
+          if index != -1 {
             substituted = environment.substitutions[index]
           }
         }
 
-        // Symbols with type parameters are more complicated
+        # Symbols with type parameters are more complicated
         else {
-          var parameters = type.parameters()
-
-          // Overloaded functions are also included even though they don't have
-          // type parameters because the type environment needs to be bundled
-          // for later substitution into individual matched overloads
-          if (parameters != null || symbol.kind.isFunctionOrOverloadedFunction()) {
-            substituted = Type(.SYMBOL, symbol)
+          # Overloaded functions are also included even though they don't have
+          # type parameters because the type environment needs to be bundled
+          # for later substitution into individual matched overloads
+          if parameters != null || symbol.kind.isFunctionOrOverloadedFunction {
+            substituted = Type.new(.SYMBOL, symbol)
             substituted.environment = environment
 
-            // Generate type substitutions
-            if (parameters != null) {
+            # Generate type substitutions
+            if parameters != null {
               var found = true
-              for (var i = 0; found && i < parameters.size(); i++) {
-                found = parameters[i] in environment.parameters
+              for parameter in parameters {
+                found = parameter in environment.parameters
+                if !found {
+                  break
+                }
               }
-              if (found) {
+              if found {
                 substituted.substitutions = []
-                for (var i = 0; i < parameters.size(); i++) {
-                  substituted.substitutions.push(substitute(parameters[i].resolvedType, environment))
+                for parameter in parameters {
+                  substituted.substitutions.append(substitute(parameter.resolvedType, environment))
                 }
               }
             }
 
-            // Substitute function arguments
-            if (type.argumentTypes != null) {
+            # Substitute function arguments
+            if type.argumentTypes != null {
               substituted.argumentTypes = []
-              for (var i = 0; i < type.argumentTypes.size(); i++) {
-                substituted.argumentTypes.push(substitute(type.argumentTypes[i], environment))
+              for argumentType in type.argumentTypes {
+                substituted.argumentTypes.append(substitute(argumentType, environment))
               }
             }
 
-            // Substitute return type
-            if (type.returnType != null) {
+            # Substitute return type
+            if type.returnType != null {
               substituted.returnType = substitute(type.returnType, environment)
             }
           }
@@ -416,46 +412,54 @@ namespace skew {
       return substituted
     }
 
-    private {
-      final var environments = IntMap<List<Environment>>()
-      final var lambdaTypes = IntMap<List<Type>>()
+    @private {
+      const environments = IntMap<List<Environment>>.new
+      const lambdaTypes = IntMap<List<Type>>.new
 
-      bool canCastToNumeric(Type type) {
+      def canCastToNumeric(type Type) bool {
         return type == intType || type == doubleType || type == boolType
       }
+    }
+  }
 
-      static Type loadGlobalClass(Log log, ObjectSymbol global, string name, SymbolFlags flags) {
-        var symbol = global.members.getOrDefault(name, null)
-        assert symbol != null
-        assert symbol.kind == .OBJECT_CLASS
-        var type = Type(.SYMBOL, symbol.asObjectSymbol())
+  namespace TypeCache {
+    @private {
+      def loadGlobalClass(log Log, global ObjectSymbol, name string, flags int) Type {
+        var symbol = global.members.get(name, null)
+        assert(symbol != null)
+        assert(symbol.kind == .OBJECT_CLASS)
+        var type = Type.new(.SYMBOL, symbol.asObjectSymbol)
         symbol.resolvedType = type
         symbol.flags |= flags
         return type
       }
 
-      static int hashParameters(List<ParameterSymbol> parameters) {
+      def hashParameters(parameters List<ParameterSymbol>) int {
         var hash = 0
-        for (var i = 0; i < parameters.size(); i++) {
-          hash = hashCombine(hash, parameters[i].id)
+        for parameter in parameters {
+          hash = hashCombine(hash, parameter.id)
         }
         return hash
       }
 
-      static int hashTypes(int hash, List<Type> types) {
-        for (var i = 0; i < types.size(); i++) {
-          hash = hashCombine(hash, types[i].id)
+      def hashTypes(hash int, types List<Type>) int {
+        for type in types {
+          hash = hashCombine(hash, type.id)
         }
         return hash
       }
 
-      static Type commonBaseClass(Type left, Type right) {
-        for (var a = left; a != null; a = a.baseClass()) {
-          for (var b = right; b != null; b = b.baseClass()) {
-            if (a == b) {
+      def commonBaseClass(left Type, right Type) Type {
+        var a = left
+        while a != null {
+          var b = right
+          while b != null {
+            if a == b {
               return a
             }
+            b = b.baseClass
           }
+          a = a.baseClass
         }
         return null
       }

@@ -1,24 +1,27 @@
-BUILD += node_modules/.bin/skewc
-BUILD += src/backend/*.sk
-BUILD += src/core/*.sk
-BUILD += src/frontend/*.sk
-BUILD += src/middle/*.sk
-BUILD += --lib:terminal
-BUILD += --lib:unicode
-BUILD += --target=js
-BUILD += --error-limit=15
+SOURCES += src/backend/*.sk
+SOURCES += src/core/*.sk
+SOURCES += src/frontend/*.sk
+SOURCES += src/middle/*.sk
 
-build:
-	$(BUILD) src/tests/*.sk --lib:unit --output-file=tests.js --config=node
-	$(BUILD) src/driver/browser.sk --output-file=browser.js
-	$(BUILD) src/driver/browser.sk --output-file=browser.min.js --release
+default: compile
+
+compile: | build
+	node skewc.js $(SOURCES) src/driver/node.sk > build/node.js
+	node skewc.js $(SOURCES) src/driver/browser.sk > build/browser.js
+
+replace: | build
+	node skewc.js $(SOURCES) src/driver/node.sk > build/node.js
+	node build/node.js $(SOURCES) src/driver/node.sk > build/node2.js
+	node build/node2.js $(SOURCES) src/driver/node.sk > build/node3.js
+	cmp -s build/node2.js build/node3.js
+	mv build/node3.js skewc.js
+	rm build/node2.js
 
 watch:
 	node_modules/.bin/watch src 'clear && make build'
 
-test:
-	$(BUILD) src/tests/*.sk --lib:unit --output-file=tests.js --config=node
-	node tests.js
+build:
+	mkdir -p build
 
-run: build
-	node out.js
+flex:
+	cd src/frontend && python build.py && cd -

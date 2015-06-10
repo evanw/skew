@@ -1,16 +1,18 @@
 namespace skew {
   class Token {
-    Range range
-    TokenKind kind
+    var range Range
+    var kind TokenKind
 
-    int firstCodeUnit() {
-      if (kind == .END_OF_FILE) return 0
-      assert range.start < range.source.contents.size()
+    def firstCodeUnit int {
+      if kind == .END_OF_FILE {
+        return 0
+      }
+      assert(range.start < range.source.contents.count)
       return range.source.contents[range.start]
     }
   }
 
-  var REMOVE_NEWLINE_BEFORE = {
+  var REMOVE_NEWLINE_BEFORE IntMap<int> = {
     TokenKind.COLON: 0,
     TokenKind.COMMA: 0,
     TokenKind.QUESTION_MARK: 0,
@@ -18,7 +20,7 @@ namespace skew {
     TokenKind.RIGHT_PARENTHESIS: 0,
   }
 
-  var KEEP_NEWLINE_BEFORE = {
+  var KEEP_NEWLINE_BEFORE IntMap<int> = {
     TokenKind.ANNOTATION: 0,
     TokenKind.CLASS: 0,
     TokenKind.COMMENT: 0,
@@ -28,7 +30,7 @@ namespace skew {
     TokenKind.VAR: 0,
   }
 
-  var REMOVE_NEWLINE_AFTER = {
+  var REMOVE_NEWLINE_AFTER IntMap<int> = {
     TokenKind.COLON: 0,
     TokenKind.COMMA: 0,
     TokenKind.NEWLINE: 0,
@@ -70,117 +72,117 @@ namespace skew {
     TokenKind.ASSIGN_MINUS: 0,
   }
 
-  void prepareTokens(List<Token> tokens) {
-    TokenKind previousKind = .NULL
-    List<Token> stack = []
+  def prepareTokens(tokens List<Token>) {
+    var previousKind TokenKind = .NULL
+    var stack List<Token> = []
     var count = 0
 
-    for (var i = 0, n = tokens.size(); i < n; i++) {
+    for i in 0..tokens.count {
       var token = tokens[i]
 
-      // Skip null placeholders after tokens that start with a greater than. Each
-      // token that may need to split has enough nulls after it for all the pieces.
-      // It's a lot faster to remove null gaps during token preparation than to
-      // insert pieces in the middle of the token stream (O(n) vs O(n^2)).
-      if (token == null) {
+      # Skip null placeholders after tokens that start with a greater than. Each
+      # token that may need to split has enough nulls after it for all the pieces.
+      # It's a lot faster to remove null gaps during token preparation than to
+      # insert pieces in the middle of the token stream (O(n) vs O(n^2)).
+      if token == null {
         continue
       }
 
-      // Compress tokens to eliminate unused null gaps
+      # Compress tokens to eliminate unused null gaps
       tokens[count] = token
-      count++
+      count += 1
 
-      // Tokens that start with a greater than may need to be split
+      # Tokens that start with a greater than may need to be split
       var tokenKind = token.kind
-      var tokenStartsWithGreaterThan = token.firstCodeUnit() == '>'
+      var tokenStartsWithGreaterThan = token.firstCodeUnit == '>'
 
-      // Remove tokens from the stack if they aren't working out
-      while (stack.size() != 0) {
-        var top = stack.last()
+      # Remove tokens from the stack if they aren't working out
+      while !stack.isEmpty {
+        var top = stack.last
         var topKind = top.kind
 
-        // Stop parsing a type if we find a token that no type expression uses
-        if (topKind == .LESS_THAN && tokenKind != .LESS_THAN && tokenKind != .IDENTIFIER && tokenKind != .COMMA &&
-            tokenKind != .DOT && tokenKind != .LEFT_PARENTHESIS && tokenKind != .RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan) {
-          stack.pop()
+        # Stop parsing a type if we find a token that no type expression uses
+        if topKind == .LESS_THAN && tokenKind != .LESS_THAN && tokenKind != .IDENTIFIER && tokenKind != .COMMA &&
+            tokenKind != .DOT && tokenKind != .LEFT_PARENTHESIS && tokenKind != .RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan {
+          stack.removeLast
         } else {
           break
         }
       }
 
-      // Group open
-      if (tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET || tokenKind == .LESS_THAN) {
-        stack.push(token)
+      # Group open
+      if tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET || tokenKind == .LESS_THAN {
+        stack.append(token)
       }
 
-      // Group close
-      else if (tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan) {
-        // Search for a matching opposite token
-        while (stack.size() != 0) {
-          var top = stack.last()
+      # Group close
+      else if tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan {
+        # Search for a matching opposite token
+        while !stack.isEmpty {
+          var top = stack.last
           var topKind = top.kind
 
-          // Don't match closing angle brackets that don't work since they are just operators
-          if (tokenStartsWithGreaterThan && topKind != .LESS_THAN) {
+          # Don't match closing angle brackets that don't work since they are just operators
+          if tokenStartsWithGreaterThan && topKind != .LESS_THAN {
             break
           }
 
-          // Consume the current token
-          stack.pop()
+          # Consume the current token
+          stack.removeLast
 
-          // Special-case angle brackets matches
-          if (topKind == .LESS_THAN) {
+          # Special-case angle brackets matches
+          if topKind == .LESS_THAN {
 
-            // Remove tentative matches that didn't work out
+            # Remove tentative matches that didn't work out
             if (!tokenStartsWithGreaterThan) {
               continue
             }
 
-            // Break apart operators that start with a closing angle bracket
-            if (tokenKind != .GREATER_THAN) {
+            # Break apart operators that start with a closing angle bracket
+            if tokenKind != .GREATER_THAN {
               var range = token.range
               var start = range.start
-              assert i + 1 < tokens.size()
-              assert tokens[i + 1] == null
-              assert
+              assert(i + 1 < tokens.count)
+              assert(tokens[i + 1] == null)
+              assert(
                 tokenKind == .SHIFT_RIGHT ||
                 tokenKind == .GREATER_THAN_OR_EQUAL ||
-                tokenKind == .ASSIGN_SHIFT_RIGHT
-              tokens[i + 1] = Token(Range(range.source, start + 1, range.end),
+                tokenKind == .ASSIGN_SHIFT_RIGHT)
+              tokens[i + 1] = Token.new(Range.new(range.source, start + 1, range.end),
                 tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
                 tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :
                 .GREATER_THAN_OR_EQUAL)
-              token.range = Range(range.source, start, start + 1)
+              token.range = Range.new(range.source, start, start + 1)
             }
 
-            // Convert < and > into bounds for type parameter lists
+            # Convert < and > into bounds for type parameter lists
             top.kind = .START_PARAMETER_LIST
             token.kind = .END_PARAMETER_LIST
             tokenKind = .END_PARAMETER_LIST
           }
 
-          // Stop the search since we found a match
+          # Stop the search since we found a match
           break
         }
       }
 
-      // Remove newlines based on the previous token or the next token to enable
-      // line continuations. Make sure to be conservative. We want to be like
-      // Python, not like JavaScript ASI! Anything that is at all ambiguous
-      // should be disallowed.
-      if (tokenKind == .NEWLINE && previousKind in REMOVE_NEWLINE_AFTER && !(tokens[i + 1].kind in KEEP_NEWLINE_BEFORE)) {
-        count--
+      # Remove newlines based on the previous token or the next token to enable
+      # line continuations. Make sure to be conservative. We want to be like
+      # Python, not like JavaScript ASI! Anything that is at all ambiguous
+      # should be disallowed.
+      if tokenKind == .NEWLINE && previousKind in REMOVE_NEWLINE_AFTER && !(tokens[i + 1].kind in KEEP_NEWLINE_BEFORE) {
+        count -= 1
         continue
-      } else if (previousKind == .NEWLINE && tokenKind in REMOVE_NEWLINE_BEFORE) {
+      } else if previousKind == .NEWLINE && tokenKind in REMOVE_NEWLINE_BEFORE {
         tokens[count - 2] = token
-        count--
+        count -= 1
       }
       previousKind = tokenKind
     }
 
-    // Trim off the remaining tokens due to null gap removal
-    while (tokens.size() > count) {
-      tokens.pop()
+    # Trim off the remaining tokens due to null gap removal
+    while tokens.count > count {
+      tokens.removeLast
     }
   }
 }

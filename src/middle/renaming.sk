@@ -1,46 +1,44 @@
 namespace skew {
-  using skew.renaming
-
-  void renamingPass(ObjectSymbol global) {
-    renameObject(global)
+  def renamingPass(global ObjectSymbol) {
+    renaming.renameObject(global)
   }
 }
 
 namespace skew.renaming {
-  void renameObject(ObjectSymbol symbol) {
+  def renameObject(symbol ObjectSymbol) {
     renameSymbol(symbol)
 
-    for (var i = 0; i < symbol.objects.size(); i++) {
-      renameObject(symbol.objects[i])
+    for object in symbol.objects {
+      renameObject(object)
     }
 
-    for (var i = 0; i < symbol.functions.size(); i++) {
-      renameSymbol(symbol.functions[i])
+    for function in symbol.functions {
+      renameSymbol(function)
     }
 
-    for (var i = 0; i < symbol.variables.size(); i++) {
-      renameSymbol(symbol.variables[i])
-    }
-  }
-
-  void renameSymbol(Symbol symbol) {
-    if (!symbol.isImported() && !symbol.isExported() && shouldRenameSymbol(symbol)) {
-      symbol.name = "s" + symbol.id
+    for variable in symbol.variables {
+      renameSymbol(variable)
     }
   }
 
-  bool isAlpha(int c) {
+  def renameSymbol(symbol Symbol) {
+    if !symbol.isImported && !symbol.isExported && shouldRenameSymbol(symbol) {
+      symbol.name = "s" + symbol.id.toString
+    }
+  }
+
+  def isAlpha(c int) bool {
     return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_'
   }
 
-  bool isNumber(int c) {
+  def isNumber(c int) bool {
     return c >= '0' && c <= '9'
   }
 
-  bool shouldRenameSymbol(Symbol symbol) {
-    for (var i = 0; i < symbol.name.size(); i++) {
+  def shouldRenameSymbol(symbol Symbol) bool {
+    for i in 0..symbol.name.count {
       var c = symbol.name[i]
-      if (!isAlpha(c) && (i == 0 || !isNumber(c))) {
+      if !isAlpha(c) && (i == 0 || !isNumber(c)) {
         return true
       }
     }

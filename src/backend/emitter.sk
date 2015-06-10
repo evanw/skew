@@ -1,62 +1,61 @@
 namespace skew {
   class Emitter {
-    TypeCache cache
+    var cache TypeCache
 
-    List<Source> sources() {
+    def sources List<Source> {
       return _sources
     }
 
-    virtual void visit(ObjectSymbol global)
+    def visit(global ObjectSymbol)
 
-    protected {
+    @protected {
       var indent = ""
 
-      void increaseIndent() {
+      def increaseIndent {
         indent += "  "
       }
 
-      void decreaseIndent() {
-        indent = indent.slice(2, indent.size())
+      def decreaseIndent {
+        indent = indent.slice(2, indent.count)
       }
 
-      void emit(string text) {
+      def emit(text string) {
         _code += text
       }
 
-      void createSource(string name) {
-        _sources.push(Source(name, _code))
+      def createSource(name string) {
+        _sources.append(Source.new(name, _code))
         _code = ""
       }
 
-      List<ObjectSymbol> sortedObjects(ObjectSymbol global) {
-        List<ObjectSymbol> objects = []
+      def sortedObjects(global ObjectSymbol) List<ObjectSymbol> {
+        var objects List<ObjectSymbol> = []
         findObjects(objects, global)
 
-        // Sort by inheritance and containment
-        for (var i = 0; i < objects.size(); i++) {
+        # Sort by inheritance and containment
+        for i in 0..objects.count {
           var j = i
 
-          // Select an object that comes before all other types
-          for (; j < objects.size(); j++) {
+          # Select an object that comes before all other types
+          while j < objects.count {
             var object = objects[j]
             var k = i
 
-            // Check to see if this comes before all other types
-            for (; k < objects.size(); k++) {
-              if (j == k) {
-                continue
-              }
-              if (objectComesBefore(objects[k], object)) {
+            # Check to see if this comes before all other types
+            while k < objects.count {
+              if j != k && objectComesBefore(objects[k], object) {
                 break
               }
+              k += 1
             }
-            if (k == objects.size()) {
+            if k == objects.count {
               break
             }
+            j += 1
           }
 
-          // Swap the object into the correct order
-          if (j < objects.size()) {
+          # Swap the object into the correct order
+          if j < objects.count {
             objects.swap(i, j)
           }
         }
@@ -65,57 +64,68 @@ namespace skew {
       }
     }
 
-    private {
-      void findObjects(List<ObjectSymbol> objects, ObjectSymbol object) {
-        objects.push(object)
-        for (var i = 0; i < object.objects.size(); i++) {
-          findObjects(objects, object.objects[i])
+    @private {
+      def findObjects(objects List<ObjectSymbol>, object ObjectSymbol) {
+        objects.append(object)
+        for o in object.objects {
+          findObjects(objects, o)
         }
       }
 
-      static bool isContainedBy(ObjectSymbol inner, ObjectSymbol outer) {
-        if (inner.parent == null) return false
-        if (inner.parent == outer) return true
-        return isContainedBy(inner.parent.asObjectSymbol(), outer)
-      }
-
-      static bool objectComesBefore(ObjectSymbol before, ObjectSymbol after) {
-        if (after.hasBaseClass(before)) return true
-        if (isContainedBy(after, before)) return true
-        return false
-      }
-
-      List<Source> _sources = []
+      var _sources List<Source> = []
       var _code = ""
     }
   }
 
-  final string HEX = "0123456789ABCDEF"
+  namespace Emitter {
+    @private {
+      def isContainedBy(inner ObjectSymbol, outer ObjectSymbol) bool {
+        if inner.parent == null {
+          return false
+        }
+        if inner.parent == outer {
+          return true
+        }
+        return isContainedBy(inner.parent.asObjectSymbol, outer)
+      }
 
-  string quoteString(string text, int quote) {
-    var builder = StringBuilder()
+      def objectComesBefore(before ObjectSymbol, after ObjectSymbol) bool {
+        if after.hasBaseClass(before) {
+          return true
+        }
+        if isContainedBy(after, before) {
+          return true
+        }
+        return false
+      }
+    }
+  }
+
+  const HEX = "0123456789ABCDEF"
+
+  def quoteString(text string, quote int) string {
+    var builder = StringBuilder.new
     var quoteString = string.fromCodeUnit(quote)
     var escaped = ""
-    var start = 0 // Append long runs of unescaped characters using a single slice() for speed
-    int i
-    builder.append(quoteString)
-    for (i = 0; i < text.size(); i++) {
+    var start = 0 # Append long runs of unescaped characters using a single slice for speed
+    builder += quoteString
+    for i in 0..text.count {
       var c = text[i]
-      if (c == quote) escaped = "\\" + quoteString
-      else if (c == '\n') escaped = "\\n"
-      else if (c == '\r') escaped = "\\r"
-      else if (c == '\t') escaped = "\\t"
-      else if (c == '\0') escaped = "\\0"
-      else if (c == '\\') escaped = "\\\\"
-      else if (c < ' ') escaped = "\\x" + HEX.sliceCodeUnit(c >> 4) + HEX.sliceCodeUnit(c & 15)
-      else continue
-      builder.append(text.slice(start, i))
-      builder.append(escaped)
+      if c == quote { escaped = "\\" + quoteString }
+      else if c == '\n' { escaped = "\\n" }
+      else if c == '\r' { escaped = "\\r" }
+      else if c == '\t' { escaped = "\\t" }
+      else if c == '\0' { escaped = "\\0" }
+      else if c == '\\' { escaped = "\\\\" }
+      else if c < ' ' { escaped = "\\x" + HEX.at(c >> 4) + HEX.at(c & 15) }
+      else { continue }
+      builder += text.slice(start, i)
+      builder += escaped
       start = i + 1
     }
-    builder.append(text.slice(start, i))
-    builder.append(quoteString)
-    return builder.toString()
+    builder += text.slice(start, text.count)
+    builder += quoteString
+    return builder.toString
   }
 
   enum Associativity {
@@ -124,13 +134,13 @@ namespace skew {
     RIGHT
   }
 
-  in Precedence {
-    Precedence incrementIfLeftAssociative(Associativity associativity) {
-      return (Precedence)(this + (int)(associativity == .LEFT))
+  enum Precedence {
+    def incrementIfLeftAssociative(associativity Associativity) Precedence {
+      return ((self as int) + ((associativity == .LEFT) as int)) as Precedence
     }
 
-    Precedence incrementIfRightAssociative(Associativity associativity) {
-      return (Precedence)(this + (int)(associativity == .RIGHT))
+    def incrementIfRightAssociative(associativity Associativity) Precedence {
+      return ((self as int) + ((associativity == .RIGHT) as int)) as Precedence
     }
   }
 }

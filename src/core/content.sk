@@ -7,57 +7,57 @@ namespace skew {
   }
 
   class Content {
-    virtual ContentKind kind()
+    def kind ContentKind
 
-    bool asBool() {
-      assert kind() == .BOOL
-      return ((BoolContent)this).value
+    def asBool bool {
+      assert(kind == .BOOL)
+      return (self as BoolContent).value
     }
 
-    int asInt() {
-      assert kind() == .INT
-      return ((IntContent)this).value
+    def asInt int {
+      assert(kind == .INT)
+      return (self as IntContent).value
     }
 
-    double asDouble() {
-      assert kind() == .DOUBLE
-      return ((DoubleContent)this).value
+    def asDouble double {
+      assert(kind == .DOUBLE)
+      return (self as DoubleContent).value
     }
 
-    string asString() {
-      assert kind() == .STRING
-      return ((StringContent)this).value
+    def asString string {
+      assert(kind == .STRING)
+      return (self as StringContent).value
     }
   }
 
   class BoolContent : Content {
-    final bool value
+    const value bool
 
-    override ContentKind kind() {
+    over kind ContentKind {
       return .BOOL
     }
   }
 
   class IntContent : Content {
-    final int value
+    const value int
 
-    override ContentKind kind() {
+    over kind ContentKind {
       return .INT
     }
   }
 
   class DoubleContent : Content {
-    final double value
+    const value double
 
-    override ContentKind kind() {
+    over kind ContentKind {
       return .DOUBLE
     }
   }
 
   class StringContent : Content {
-    final string value
+    const value string
 
-    override ContentKind kind() {
+    over kind ContentKind {
       return .STRING
     }
   }
