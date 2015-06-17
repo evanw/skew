@@ -346,17 +346,12 @@ namespace skew {
         var block = node.ifFalse
         if block != null {
           var singleIf = block.children.count == 1 && block.children[0].kind == .IF ? block.children[0] : null
-
-          if block.comments != null || singleIf != null && singleIf.comments != null {
-            emit("\n\n")
-            emitComments(block.comments)
-            if singleIf != null {
-              emitComments(singleIf.comments)
-            }
-            emit(indent + "else")
-          } else {
-            emit(" else")
+          emit("\n\n")
+          emitComments(block.comments)
+          if singleIf != null {
+            emitComments(singleIf.comments)
           }
+          emit(indent + "else")
 
           if singleIf != null {
             emit(" ")
@@ -614,22 +609,10 @@ namespace skew {
 
       def mangleName(symbol Symbol) string {
         if symbol.kind == .FUNCTION_CONSTRUCTOR {
-          return mangleName(symbol.parent)
+          symbol = symbol.parent
         }
-        if symbol.isImportedOrExported {
-          return symbol.name
-        }
-        if symbol.name in isKeyword {
+        if !symbol.isImportedOrExported && symbol.name in isKeyword {
           return "$" symbol.name
-        }
-        if symbol.kind.isFunction {
-          var function = symbol.asFunctionSymbol
-          if function.overridden != null {
-            return mangleName(function.overridden)
-          }
-          if function.overloaded != null {
-            return symbol.name "$" symbol.id
-          }
         }
         return symbol.name
       }

@@ -18,7 +18,7 @@ replace: | build
 	rm build/node2.js
 
 watch:
-	node_modules/.bin/watch src 'clear && make build'
+	node_modules/.bin/watch src 'clear && make compile'
 
 build:
 	mkdir -p build

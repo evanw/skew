@@ -8,6 +8,7 @@ namespace skew {
 
   class Scope {
     var parent Scope
+    var generated StringMap<int> = null
 
     def kind ScopeKind
     def find(name string) Symbol
@@ -35,7 +36,7 @@ namespace skew {
     def findEnclosingFunctionOrLambda FunctionScope {
       var scope = self
       while scope != null {
-        if (scope.kind == .FUNCTION) {
+        if scope.kind == .FUNCTION {
           return scope.asFunctionScope
         }
         scope = scope.parent
@@ -46,7 +47,7 @@ namespace skew {
     def findEnclosingFunction FunctionScope {
       var scope = self
       while scope != null {
-        if (scope.kind == .FUNCTION && scope.asFunctionScope.symbol.kind != .FUNCTION_LOCAL) {
+        if scope.kind == .FUNCTION && scope.asFunctionScope.symbol.kind != .FUNCTION_LOCAL {
           return scope.asFunctionScope
         }
         scope = scope.parent
@@ -57,12 +58,29 @@ namespace skew {
     def findEnclosingLoop LocalScope {
       var scope = self
       while scope != null && scope.kind == .LOCAL {
-        if (scope.asLocalScope.type == .LOOP) {
+        if scope.asLocalScope.type == .LOOP {
           return scope.asLocalScope
         }
         scope = scope.parent
       }
       return null
+    }
+
+    def generateSymbolName(prefix string) string {
+      var count = 0
+      var name = prefix
+      while true {
+        if find(name) == null && (generated == null || !(name in generated)) {
+          if generated == null {
+            generated = {}
+          }
+          generated[name] = 0
+          return name
+        }
+        count += 1
+        name = prefix + count.toString
+      }
+      return prefix
     }
   }
 
@@ -77,7 +95,7 @@ namespace skew {
       var check = symbol
       while check != null {
         var result = check.members.get(name, null)
-        if (result != null) {
+        if result != null {
           return result
         }
         check = check.baseClass

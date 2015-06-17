@@ -4,28 +4,6 @@ def assert(truth bool) {
   }
 }
 
-class List {
-  # TODO: Remove this
-  def isEqualTo(other List<T>) bool {
-    if count != other.count {
-      return false
-    }
-    for i in 0..count {
-      if self[i] != other[i] {
-        return false
-      }
-    }
-    return true
-  }
-
-  # TODO: Remove this
-  def pushAll(all List<T>) {
-    for value in all {
-      append(value)
-    }
-  }
-}
-
 namespace prettyPrint {
   def plural(value int) string {
     return value == 1 ? "" : "s"
@@ -134,6 +112,18 @@ namespace string {
 }
 
 class List {
+  def isEqualTo(other List<T>) bool {
+    if count != other.count {
+      return false
+    }
+    for i in 0..count {
+      if self[i] != other[i] {
+        return false
+      }
+    }
+    return true
+  }
+
   def in(value T) bool {
     return indexOf(value) >= 0
   }

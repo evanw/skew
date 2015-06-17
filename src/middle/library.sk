@@ -127,7 +127,6 @@ namespace string {
 
 @import
 class StringBuilder {
-  def +=(x string)
   def append(x string)
   def new
   def toString string
@@ -150,6 +149,7 @@ class List<T> {
   def indexOf(x T) int
   def insert(x int, value T)
   def isEmpty bool
+  def isEqualTo(other List<T>) bool
   def last T
   def lastIndexOf(x T) int
   def map<R>(x fn(T) R) List<R>

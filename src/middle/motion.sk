@@ -14,6 +14,7 @@ namespace skew {
         if parent == null {
           var common = function.parent.parent.asObjectSymbol
           parent = ObjectSymbol.new(.OBJECT_NAMESPACE, "in_" + function.parent.name)
+          parent.scope = ObjectScope.new(common.scope, parent)
           parent.parent = common
           common.objects.append(parent)
           parents[function.parent.id] = parent

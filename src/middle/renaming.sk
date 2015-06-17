@@ -1,29 +1,53 @@
 namespace skew {
   def renamingPass(global ObjectSymbol) {
     renaming.renameObject(global)
+    renaming.useOverriddenNames(global) # Use a second pass to avoid ordering issues
   }
 }
 
 namespace skew.renaming {
   def renameObject(symbol ObjectSymbol) {
-    renameSymbol(symbol)
-
     for object in symbol.objects {
       renameObject(object)
     }
 
     for function in symbol.functions {
-      renameSymbol(function)
-    }
+      if !function.isImportedOrExported && function.overridden == null {
+        var scope = function.scope.parent
+        var count = function.arguments.count
 
-    for variable in symbol.variables {
-      renameSymbol(variable)
+        if (count == 0 || count == 1 && function.kind == .FUNCTION_GLOBAL) && function.name in unaryPrefixes {
+          function.name = scope.generateSymbolName(unaryPrefixes[function.name])
+        }
+
+        else if function.name in prefixes {
+          function.name = scope.generateSymbolName(prefixes[function.name])
+        }
+
+        else if isInvalidIdentifier(function) {
+          function.name = scope.generateSymbolName("_")
+        }
+
+        else if function.overloaded != null && function.overloaded.symbols.count > 1 {
+          function.name = scope.generateSymbolName(function.name)
+        }
+      }
     }
   }
 
-  def renameSymbol(symbol Symbol) {
-    if !symbol.isImported && !symbol.isExported && shouldRenameSymbol(symbol) {
-      symbol.name = "s" + symbol.id.toString
+  def useOverriddenNames(symbol ObjectSymbol) {
+    for object in symbol.objects {
+      useOverriddenNames(object)
+    }
+
+    for function in symbol.functions {
+      if function.overridden != null {
+        var overridden = function.overridden
+        while overridden.overridden != null {
+          overridden = overridden.overridden
+        }
+        function.name = overridden.name
+      }
     }
   }
 
@@ -35,7 +59,7 @@ namespace skew.renaming {
     return c >= '0' && c <= '9'
   }
 
-  def shouldRenameSymbol(symbol Symbol) bool {
+  def isInvalidIdentifier(symbol Symbol) bool {
     for i in 0..symbol.name.count {
       var c = symbol.name[i]
       if !isAlpha(c) && (i == 0 || !isNumber(c)) {
@@ -43,5 +67,43 @@ namespace skew.renaming {
       }
     }
     return false
+  }
+
+  const unaryPrefixes = {
+    "!": "not",
+    "+": "positive",
+    "-": "negative",
+    "~": "complement",
+  }
+
+  const prefixes = {
+    "%": "remainder",
+    "&": "and",
+    "*": "multiply",
+    "**": "power",
+    "+": "add",
+    "-": "subtract",
+    "/": "divide",
+    "<<": "leftShift",
+    "<=>": "compare",
+    ">>": "rightShift",
+    "^": "xor",
+    "|": "or",
+    "in": "contains",
+
+    "%=": "remainderUpdate",
+    "&=": "andUpdate",
+    "**=": "powerUpdate",
+    "*=": "multiplyUpdate",
+    "+=": "addUpdate",
+    "-=": "subtractUpdate",
+    "/=": "divideUpdate",
+    "<<=": "leftShiftUpdate",
+    ">>=": "rightShiftUpdate",
+    "^=": "xorUpdate",
+    "|=": "orUpdate",
+
+    "[]": "get",
+    "[]=": "set",
   }
 }

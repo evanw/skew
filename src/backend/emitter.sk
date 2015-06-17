@@ -108,7 +108,7 @@ namespace skew {
     var quoteString = string.fromCodeUnit(quote)
     var escaped = ""
     var start = 0 # Append long runs of unescaped characters using a single slice for speed
-    builder += quoteString
+    builder.append(quoteString)
     for i in 0..text.count {
       var c = text[i]
       if c == quote { escaped = "\\" + quoteString }
@@ -119,12 +119,12 @@ namespace skew {
       else if c == '\\' { escaped = "\\\\" }
       else if c < ' ' { escaped = "\\x" + HEX.at(c >> 4) + HEX.at(c & 15) }
       else { continue }
-      builder += text.slice(start, i)
-      builder += escaped
+      builder.append(text.slice(start, i))
+      builder.append(escaped)
       start = i + 1
     }
-    builder += text.slice(start, text.count)
-    builder += quoteString
+    builder.append(text.slice(start, text.count))
+    builder.append(quoteString)
     return builder.toString
   }
 
