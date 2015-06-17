@@ -2,7 +2,7 @@ namespace skew {
   def resolvingPass(log Log, global ObjectSymbol, cache TypeCache) {
     cache.loadGlobals(log, global)
     if !log.hasErrors {
-      resolving.Resolver.new(cache, log).resolveObject(global)
+      resolving.Resolver.new(cache, log).resolveGlobal(global)
     }
   }
 }
@@ -16,6 +16,7 @@ namespace skew.resolving {
   class Resolver {
     const cache TypeCache
     const log Log
+    const foreachLoops List<Node> = []
 
     def initializeSymbol(symbol Symbol) {
       # The scope should have been set by the merging pass (or by this pass for local variables)
@@ -169,6 +170,97 @@ namespace skew.resolving {
           generated.overridden = baseConstructor != null ? baseConstructor.asFunctionSymbol : null
           symbol.functions.append(generated)
           symbol.members[generated.name] = generated
+        }
+      }
+    }
+
+    def resolveGlobal(global ObjectSymbol) {
+      resolveObject(global)
+      convertForeachLoops
+    }
+
+    # Foreach loops are converted to for loops after everything is resolved
+    # because that process needs to generate symbol names and it's much easier
+    # to generate non-conflicting symbol names after all local variables have
+    # been defined.
+    def convertForeachLoops {
+      for node in foreachLoops {
+        var symbol = node.symbol.asVariableSymbol
+        var scope = symbol.scope.findEnclosingFunctionOrLambda # Generate names at the function level to avoid conflicts with local scopes
+        var value = node.foreachValue
+        var block = node.foreachBlock
+
+        # Handle "for i in 0..10"
+        if value.kind == .PAIR {
+          var first = value.firstValue.replaceWithNull
+          var second = value.secondValue.replaceWithNull
+          var setup = [Node.createVar(symbol)]
+          var symbolName = Node.createName(symbol.name).withSymbol(symbol).withType(cache.intType)
+          var update = Node.createBinary(.ASSIGN_ADD, symbolName, Node.createInt(1).withType(cache.intType))
+          var test Node
+
+          # Special-case constant iteration limits to generate simpler code
+          if second.kind == .CONSTANT || second.kind == .NAME && second.symbol != null && second.symbol.isConst {
+            test = Node.createBinary(.LESS_THAN, symbolName.clone, second)
+          }
+
+          # Otherwise, save the iteration limit in case it changes during iteration
+          else {
+            var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateSymbolName("count"))
+            count.resolvedType = cache.intType
+            count.value = second
+            count.state = .INITIALIZED
+            setup.append(Node.createVar(count))
+            test = Node.createBinary(.LESS_THAN, symbolName.clone, Node.createName(count.name).withSymbol(count).withType(cache.intType))
+          }
+
+          # Use a C-style for loop to implement this foreach loop
+          symbol.flags &= ~Symbol.IS_CONST
+          symbol.value = first
+          node.replaceWith(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments))
+
+          # Make sure the new expressions are resolved
+          resolveNode(test, symbol.scope, null)
+          resolveNode(update, symbol.scope, null)
+        }
+
+        else if cache.isList(value.resolvedType) {
+          # Create the index variable
+          var index = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateSymbolName("i"))
+          index.resolvedType = cache.intType
+          index.value = Node.createInt(0).withType(cache.intType)
+          index.state = .INITIALIZED
+          var indexName = Node.createName(index.name).withSymbol(index).withType(index.resolvedType)
+
+          # Create the list variable
+          var list = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateSymbolName("list"))
+          list.resolvedType = value.resolvedType
+          list.value = value.replaceWithNull
+          list.state = .INITIALIZED
+          var listName = Node.createName(list.name).withSymbol(list).withType(list.resolvedType)
+
+          # Create the count variable
+          var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateSymbolName("count"))
+          count.resolvedType = cache.intType
+          count.value = Node.createDot(listName, "count")
+          count.state = .INITIALIZED
+          var countName = Node.createName(count.name).withSymbol(count).withType(count.resolvedType)
+
+          # Move the loop variable into the loop body
+          symbol.value = Node.createIndex(listName.clone, [indexName])
+          block.children.prepend(Node.createVar(symbol))
+
+          # Use a C-style for loop to implement this foreach loop
+          var setup = [Node.createVar(index), Node.createVar(list), Node.createVar(count)]
+          var test = Node.createBinary(.LESS_THAN, indexName.clone, countName)
+          var update = Node.createBinary(.ASSIGN_ADD, indexName.clone, Node.createInt(1).withType(cache.intType))
+          node.replaceWith(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments))
+
+          # Make sure the new expressions are resolved
+          resolveNode(symbol.value, symbol.scope, null)
+          resolveNode(count.value, symbol.scope, null)
+          resolveNode(test, symbol.scope, null)
+          resolveNode(update, symbol.scope, null)
         }
       }
     }
@@ -564,7 +656,7 @@ namespace skew.resolving {
         # Statements
         case .BREAK, .CONTINUE { resolveJump(node, scope) }
         case .EXPRESSION { resolveExpression(node, scope) }
-        case .FOR { resolveFor(node, scope) }
+        case .FOREACH { resolveForeach(node, scope) }
         case .IF { resolveIf(node, scope) }
         case .IMPLICIT_RETURN, .RETURN { resolveReturn(node, scope) }
         case .SWITCH { resolveSwitch(node, scope) }
@@ -819,11 +911,11 @@ namespace skew.resolving {
       checkUnusedExpression(value)
     }
 
-    def resolveFor(node Node, scope Scope) {
+    def resolveForeach(node Node, scope Scope) {
       var type Type = .DYNAMIC
       scope = LocalScope.new(scope, .LOOP)
 
-      var value = node.forValue
+      var value = node.foreachValue
       resolveAsParameterizedExpression(value, scope)
 
       # Support "for i in 0..10"
@@ -859,7 +951,10 @@ namespace skew.resolving {
       symbol.flags |= Symbol.IS_CONST
       symbol.state = .INITIALIZED
 
-      resolveBlock(node.forBlock, scope)
+      resolveBlock(node.foreachBlock, scope)
+
+      # Collect foreach loops and convert them in another pass
+      foreachLoops.append(node)
     }
 
     def resolveIf(node Node, scope Scope) {

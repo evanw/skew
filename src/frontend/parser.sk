@@ -256,7 +256,7 @@ namespace skew {
       return null
     }
 
-    return Node.createFor(symbol, value, block).withRange(context.spanSince(token.range))
+    return Node.createForeach(symbol, value, block).withRange(context.spanSince(token.range))
   }
 
   def parseIf(context ParserContext) Node {

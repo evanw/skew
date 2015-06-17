@@ -10,6 +10,7 @@ namespace skew {
     CONTINUE
     EXPRESSION
     FOR
+    FOREACH
     IF
     IMPLICIT_RETURN
     RETURN
@@ -36,6 +37,7 @@ namespace skew {
     NULL
     PAIR
     PARAMETERIZE
+    SEQUENCE
     SUPER
     TYPE
 
@@ -145,6 +147,18 @@ namespace skew {
       withChildren(node.removeChildren)
     }
 
+    def clone Node {
+      var clone = new(kind)
+      clone.range = range
+      clone.internalRange = internalRange
+      clone.symbol = symbol
+      clone.content = content
+      clone.resolvedType = resolvedType
+      clone.comments = comments != null ? comments.clone : null
+      clone.children = children != null ? children.map<Node>(child => child.clone) : null
+      return clone
+    }
+
     def withType(value Type) Node {
       resolvedType = value
       return self
@@ -176,6 +190,12 @@ namespace skew {
         updateParent(node, self)
       }
       children = nodes
+      return self
+    }
+
+    def withComments(value List<string>) Node {
+      assert(comments == null)
+      comments = value
       return self
     }
 
@@ -227,6 +247,11 @@ namespace skew {
       updateParent(child, null)
       children[index] = node
       return child
+    }
+
+    def replaceWith(node Node) Node {
+      parent.replaceChild(indexInParent, node)
+      return self
     }
 
     def replaceWithNull Node {
@@ -328,10 +353,18 @@ namespace skew {
       return Node.new(.EXPRESSION).withChildren([value])
     }
 
-    def createFor(symbol VariableSymbol, value Node, block Node) Node {
+    def createFor(setup List<Node>, test Node, update Node, block Node) Node {
+      assert(test == null || test.kind.isExpression)
+      assert(update == null || update.kind.isExpression)
+      assert(block.kind == .BLOCK)
+      setup.prepend([test, update, block])
+      return Node.new(.FOR).withChildren(setup)
+    }
+
+    def createForeach(symbol VariableSymbol, value Node, block Node) Node {
       assert(value.kind.isExpression)
       assert(block.kind == .BLOCK)
-      return Node.new(.FOR).withSymbol(symbol).withChildren([value, block])
+      return Node.new(.FOREACH).withSymbol(symbol).withChildren([value, block])
     }
 
     def createIf(test Node, trueBlock Node, falseBlock Node) Node {
@@ -461,6 +494,10 @@ namespace skew {
       assert(type.kind.isExpression)
       parameters.prepend(type)
       return Node.new(.PARAMETERIZE).withChildren(parameters)
+    }
+
+    def createSequence(nodes List<Node>) Node {
+      return Node.new(.SEQUENCE).withChildren(nodes)
     }
 
     def createSuper Node {
@@ -644,15 +681,36 @@ namespace skew {
       return children[1]
     }
 
-    def forValue Node {
+    def forTest Node {
       assert(kind == .FOR)
+      assert(children.count >= 3)
+      assert(children[0] == null || children[0].kind.isExpression)
+      return children[0]
+    }
+
+    def forUpdate Node {
+      assert(kind == .FOR)
+      assert(children.count >= 3)
+      assert(children[1] == null || children[1].kind.isExpression)
+      return children[1]
+    }
+
+    def forBlock Node {
+      assert(kind == .FOR)
+      assert(children.count >= 3)
+      assert(children[2].kind == .BLOCK)
+      return children[2]
+    }
+
+    def foreachValue Node {
+      assert(kind == .FOREACH)
       assert(children.count == 2)
       assert(children[0].kind.isExpression)
       return children[0]
     }
 
-    def forBlock Node {
-      assert(kind == .FOR)
+    def foreachBlock Node {
+      assert(kind == .FOREACH)
       assert(children.count == 2)
       assert(children[1].kind == .BLOCK)
       return children[1]

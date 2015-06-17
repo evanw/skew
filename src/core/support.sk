@@ -148,6 +148,13 @@ class List {
     (self as dynamic).unshift(value)
   }
 
+  def prepend(values List<T>) {
+    var count = values.count
+    for i in 0..count {
+      prepend(values[count - i - 1])
+    }
+  }
+
   def append(value T) {
     (self as dynamic).push(value)
   }

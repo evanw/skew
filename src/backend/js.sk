@@ -246,42 +246,48 @@ namespace skew {
           }
 
           case .FOR {
-            var value = node.forValue
-            var name = mangleName(node.symbol)
-
-            if value.kind == .PAIR {
-              var limit = "n" node.symbol.id
-              emit(indent "for (var " name " = ")
-              emitExpression(value.firstValue, .LOWEST)
-              emit(", " limit " = ")
-              emitExpression(value.secondValue, .LOWEST)
-              emit("; " name " < " limit "; " name "++")
-              emit(")")
-              emitBlock(node.forBlock)
-              emit("\n")
+            var test = node.forTest
+            var update = node.forUpdate
+            var children = node.children
+            var count = children.count
+            emit(indent "for (")
+            if count > 3 {
+              for i in 3..count {
+                var child = children[i]
+                if i != 3 {
+                  emit(", ")
+                }
+                if child.kind == .VAR {
+                  var symbol = child.symbol.asVariableSymbol
+                  if i == 3 {
+                    emit("var ")
+                  }
+                  emit(mangleName(symbol) " = ")
+                  emitExpression(symbol.value, .LOWEST)
+                } else {
+                  emitExpression(child, .LOWEST)
+                }
+              }
             }
-
-            else if cache.isList(value.resolvedType) {
-              var id = node.symbol.id
-              var index = "i" id
-              var list = "x" id
-              emit(indent "for (var " index " = 0, " list " = ")
-              emitExpression(value, .LOWEST)
-              emit("; " index " < " list ".length; " index "++) {\n")
-              increaseIndent
-              emit(indent "var " name " = " list "[" index "];\n")
-              emitStatements(node.forBlock.children)
-              decreaseIndent
-              emit(indent "}\n")
+            emit("; ")
+            if test != null {
+              emitExpression(test, .LOWEST)
             }
-
-            else {
-              emit(indent "for (var " name " in ")
-              emitExpression(value, .LOWEST)
-              emit(")")
-              emitBlock(node.forBlock)
-              emit("\n")
+            emit("; ")
+            if update != null {
+              emitExpression(update, .LOWEST)
             }
+            emit(")")
+            emitBlock(node.forBlock)
+            emit("\n")
+          }
+
+          case .FOREACH {
+            emit(indent "for (var " mangleName(node.symbol) " in ")
+            emitExpression(node.foreachValue, .LOWEST)
+            emit(")")
+            emitBlock(node.foreachBlock)
+            emit("\n")
           }
 
           case .IF {

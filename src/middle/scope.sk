@@ -8,7 +8,7 @@ namespace skew {
 
   class Scope {
     var parent Scope
-    var generated StringMap<int> = null
+    var used StringMap<int> = null
 
     def kind ScopeKind
     def find(name string) Symbol
@@ -70,17 +70,21 @@ namespace skew {
       var count = 0
       var name = prefix
       while true {
-        if find(name) == null && (generated == null || !(name in generated)) {
-          if generated == null {
-            generated = {}
-          }
-          generated[name] = 0
+        if find(name) == null && (used == null || !(name in used)) {
+          reserveSymbolName(name)
           return name
         }
         count += 1
         name = prefix + count.toString
       }
       return prefix
+    }
+
+    def reserveSymbolName(name string) {
+      if used == null {
+        used = {}
+      }
+      used[name] = 0
     }
   }
 
@@ -168,6 +172,9 @@ namespace skew {
         }
         scope = scope.parent
       }
+
+      # Make sure no duplicate names are accidentally generated in other local scopes
+      scope.reserveSymbolName(symbol.name)
 
       locals[symbol.name] = symbol
     }
