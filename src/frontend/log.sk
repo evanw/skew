@@ -305,6 +305,10 @@ namespace skew {
       error(range, "Cannot access \"" level "\" symbol \"" name "\" here")
     }
 
+    def semanticWarningDeprecatedUsage(range Range, name string) {
+      warning(range, "Use of deprecated symbol \"" name "\"")
+    }
+
     def semanticErrorUnparameterizedType(range Range, type Type) {
       error(range, "Cannot use unparameterized type \"" type "\" here")
     }

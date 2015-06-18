@@ -1,4 +1,6 @@
 const NATIVE_LIBRARY = "
+def @deprecated
+def @deprecated(message string)
 def @entry
 def @export
 def @import

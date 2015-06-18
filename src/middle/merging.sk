@@ -150,6 +150,7 @@ namespace skew.merging {
   def overloadedKind(kind SymbolKind) SymbolKind {
     return
       kind == .FUNCTION_CONSTRUCTOR || kind == .FUNCTION_GLOBAL ? .OVERLOADED_GLOBAL :
+      kind == .FUNCTION_ANNOTATION ? .OVERLOADED_ANNOTATION :
       kind == .FUNCTION_INSTANCE ? .OVERLOADED_INSTANCE :
       kind
   }

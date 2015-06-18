@@ -16,6 +16,7 @@ namespace skew {
     FUNCTION_INSTANCE
     FUNCTION_LOCAL
 
+    OVERLOADED_ANNOTATION
     OVERLOADED_GLOBAL
     OVERLOADED_INSTANCE
 
@@ -41,7 +42,7 @@ namespace skew {
     }
 
     def isOverloadedFunction bool {
-      return self as int >= OVERLOADED_GLOBAL as int && self as int <= OVERLOADED_INSTANCE as int
+      return self as int >= OVERLOADED_ANNOTATION as int && self as int <= OVERLOADED_INSTANCE as int
     }
 
     def isFunctionOrOverloadedFunction bool {
@@ -97,6 +98,7 @@ namespace skew {
     const IS_RENAMED = 1 << 12
     const IS_SKIPPED = 1 << 13
     const IS_ENTRY_POINT = 1 << 14
+    const IS_DEPRECATED = 1 << 15
   }
 
   class Symbol {
@@ -130,6 +132,7 @@ namespace skew {
     def isRenamed bool    { return (flags & IS_RENAMED) != 0 }
     def isSkipped bool    { return (flags & IS_SKIPPED) != 0 }
     def isEntryPoint bool { return (flags & IS_ENTRY_POINT) != 0 }
+    def isDeprecated bool { return (flags & IS_DEPRECATED) != 0 }
 
     # Combinations
     def isPrivateOrProtected bool { return (flags & (IS_PRIVATE | IS_PROTECTED)) != 0 }

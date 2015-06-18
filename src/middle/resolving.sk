@@ -43,7 +43,7 @@ namespace skew.resolving {
             initializeParameter(symbol.asParameterSymbol)
           }
 
-          case .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
+          case .OVERLOADED_ANNOTATION, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
             initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol)
           }
 
@@ -831,7 +831,12 @@ namespace skew.resolving {
 
     def checkAccess(node Node, scope Scope) {
       var symbol = node.symbol
-      if symbol != null && symbol.isPrivateOrProtected {
+      if symbol == null {
+        return
+      }
+
+      # Check access control
+      if symbol.isPrivateOrProtected {
         var isPrivate = symbol.isPrivate
         while scope != null {
           if scope.kind == .OBJECT {
@@ -843,6 +848,23 @@ namespace skew.resolving {
           scope = scope.parent
         }
         log.semanticErrorAccessViolation(node.internalRangeOrRange, isPrivate ? "@private" : "@protected", symbol.name)
+      }
+
+      # Deprecation annotations optionally provide a warning message
+      if symbol.isDeprecated {
+        for annotation in symbol.annotations {
+          if annotation.symbol != null && annotation.symbol.fullName == "@deprecated" {
+            var value = annotation.annotationValue
+            if value.kind == .CALL {
+              var last = value.children.last
+              if last.kind == .CONSTANT && last.content.kind == .STRING {
+                log.warning(node.internalRangeOrRange, last.content.asString)
+                return
+              }
+            }
+          }
+        }
+        log.semanticWarningDeprecatedUsage(node.internalRangeOrRange, symbol.name)
       }
     }
 
@@ -902,6 +924,8 @@ namespace skew.resolving {
       if flag != 0 {
         var isValid = true
         switch flag {
+          case Symbol.IS_DEPRECATED {}
+          case Symbol.IS_ENTRY_POINT { isValid = symbol.kind == .FUNCTION_GLOBAL }
           case Symbol.IS_EXPORTED { isValid = !symbol.isImported }
           case Symbol.IS_IMPORTED { isValid = !symbol.isExported }
           case Symbol.IS_PREFERRED { isValid = symbol.kind.isFunction }
@@ -909,7 +933,6 @@ namespace skew.resolving {
           case Symbol.IS_PROTECTED { isValid = !symbol.isPrivate && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
           case Symbol.IS_RENAMED {}
           case Symbol.IS_SKIPPED { isValid = symbol.kind.isFunction && symbol.resolvedType.returnType == null }
-          case Symbol.IS_ENTRY_POINT { isValid = symbol.kind == .FUNCTION_GLOBAL }
         }
         if !isValid {
           log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name)
@@ -919,6 +942,8 @@ namespace skew.resolving {
           symbol.flags |= flag
         }
       }
+
+      node.symbol = value.symbol
     }
 
     def resolveBlock(node Node, scope Scope) {
@@ -1085,7 +1110,9 @@ namespace skew.resolving {
         var child = cases[i]
         var values = child.children
         for j in 1..values.count {
-          resolveAsParameterizedExpressionWithConversion(values[j], scope, value.resolvedType)
+          var caseValue = values[j]
+          resolveAsParameterizedExpressionWithConversion(caseValue, scope, value.resolvedType)
+          checkExtraParentheses(caseValue)
         }
         resolveBlock(child.caseBlock, LocalScope.new(scope, .NORMAL))
       }
@@ -2120,6 +2147,7 @@ namespace skew.resolving {
 
   namespace Resolver {
     const annotationSymbolFlags = {
+      "@deprecated": Symbol.IS_DEPRECATED,
       "@entry": Symbol.IS_ENTRY_POINT,
       "@export": Symbol.IS_EXPORTED,
       "@import": Symbol.IS_IMPORTED,
