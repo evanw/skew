@@ -150,7 +150,7 @@ namespace skew.parsing {
 
     var cases List<Node> = []
     context.eat(.NEWLINE)
-    while (!context.peek(.RIGHT_BRACE)) {
+    while !context.peek(.RIGHT_BRACE) {
       var comments = parseLeadingComments(context)
 
       # Ignore trailing comments
@@ -294,7 +294,7 @@ namespace skew.parsing {
     var statements List<Node> = []
     var previous Node = null
     context.eat(.NEWLINE)
-    while (!context.peek(.RIGHT_BRACE)) {
+    while !context.peek(.RIGHT_BRACE) {
       var comments = parseLeadingComments(context)
 
       # Ignore trailing comments

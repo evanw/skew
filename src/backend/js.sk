@@ -387,7 +387,7 @@ namespace skew {
       }
 
       def emitExpression(node Node, precedence Precedence) {
-        switch (node.kind) {
+        switch node.kind {
           case .TYPE {
             emit(fullName(node.resolvedType.symbol))
           }

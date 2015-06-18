@@ -632,6 +632,7 @@ namespace skew.resolving {
 
       if symbol.value != null {
         resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
+        checkExtraParentheses(symbol.value)
       }
     }
 
@@ -964,6 +965,7 @@ namespace skew.resolving {
     def resolveExpression(node Node, scope Scope) {
       var value = node.expressionValue
       resolveAsParameterizedExpression(value, scope)
+      checkExtraParentheses(value)
       checkUnusedExpression(value)
     }
 
@@ -973,6 +975,7 @@ namespace skew.resolving {
 
       var value = node.foreachValue
       resolveAsParameterizedExpression(value, scope)
+      checkExtraParentheses(value)
 
       # Support "for i in 0..10"
       if value.kind == .PAIR {
@@ -1014,10 +1017,10 @@ namespace skew.resolving {
     }
 
     def resolveIf(node Node, scope Scope) {
-      var ifTest = node.ifTest
+      var test = node.ifTest
       var ifFalse = node.ifFalse
-      checkExtraParentheses(ifTest)
-      resolveAsParameterizedExpressionWithConversion(ifTest, scope, cache.boolType)
+      resolveAsParameterizedExpressionWithConversion(test, scope, cache.boolType)
+      checkExtraParentheses(test)
       resolveBlock(node.ifTrue, LocalScope.new(scope, .NORMAL))
       if ifFalse != null {
         resolveBlock(ifFalse, LocalScope.new(scope, .NORMAL))
@@ -1045,6 +1048,7 @@ namespace skew.resolving {
 
       # If there's no return type, still check for other errors
       resolveAsParameterizedExpression(value, scope)
+      checkExtraParentheses(value)
 
       # Lambdas without a return type or an explicit "return" statement get special treatment
       if !node.isImplicitReturn {
@@ -1075,6 +1079,7 @@ namespace skew.resolving {
       var value = node.switchValue
       var cases = node.children
       resolveAsParameterizedExpression(value, scope)
+      checkExtraParentheses(value)
 
       for i in 1..cases.count {
         var child = cases[i]
@@ -1093,7 +1098,9 @@ namespace skew.resolving {
     }
 
     def resolveWhile(node Node, scope Scope) {
-      resolveAsParameterizedExpressionWithConversion(node.whileTest, scope, cache.boolType)
+      var test = node.whileTest
+      resolveAsParameterizedExpressionWithConversion(test, scope, cache.boolType)
+      checkExtraParentheses(test)
       resolveBlock(node.whileBlock, LocalScope.new(scope, .LOOP))
     }
 

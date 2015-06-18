@@ -6005,6 +6005,7 @@
 
     if (symbol.value !== null) {
       self.resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType);
+      self.checkExtraParentheses(symbol.value);
     }
   };
 
@@ -6523,6 +6524,7 @@
     var self = this;
     var value = node.expressionValue();
     self.resolveAsParameterizedExpression(value, scope);
+    self.checkExtraParentheses(value);
     self.checkUnusedExpression(value);
   };
 
@@ -6532,6 +6534,7 @@
     scope = new skew.LocalScope(scope, skew.LocalType.LOOP);
     var value = node.foreachValue();
     self.resolveAsParameterizedExpression(value, scope);
+    self.checkExtraParentheses(value);
 
     // Support "for i in 0..10"
     if (value.kind === skew.NodeKind.PAIR) {
@@ -6571,10 +6574,10 @@
 
   skew.resolving.Resolver.prototype.resolveIf = function(node, scope) {
     var self = this;
-    var ifTest = node.ifTest();
+    var test = node.ifTest();
     var ifFalse = node.ifFalse();
-    self.checkExtraParentheses(ifTest);
-    self.resolveAsParameterizedExpressionWithConversion(ifTest, scope, self.cache.boolType);
+    self.resolveAsParameterizedExpressionWithConversion(test, scope, self.cache.boolType);
+    self.checkExtraParentheses(test);
     self.resolveBlock(node.ifTrue(), new skew.LocalScope(scope, skew.LocalType.NORMAL));
 
     if (ifFalse !== null) {
@@ -6605,6 +6608,7 @@
 
     // If there's no return type, still check for other errors
     self.resolveAsParameterizedExpression(value, scope);
+    self.checkExtraParentheses(value);
 
     // Lambdas without a return type or an explicit "return" statement get special treatment
     if (!node.isImplicitReturn()) {
@@ -6637,6 +6641,7 @@
     var value = node.switchValue();
     var cases = node.children;
     self.resolveAsParameterizedExpression(value, scope);
+    self.checkExtraParentheses(value);
 
     for (var i = 1, count1 = in_List.count(cases); i < count1; i += 1) {
       var child = cases[i];
@@ -6659,7 +6664,9 @@
 
   skew.resolving.Resolver.prototype.resolveWhile = function(node, scope) {
     var self = this;
-    self.resolveAsParameterizedExpressionWithConversion(node.whileTest(), scope, self.cache.boolType);
+    var test = node.whileTest();
+    self.resolveAsParameterizedExpressionWithConversion(test, scope, self.cache.boolType);
+    self.checkExtraParentheses(test);
     self.resolveBlock(node.whileBlock(), new skew.LocalScope(scope, skew.LocalType.LOOP));
   };
 

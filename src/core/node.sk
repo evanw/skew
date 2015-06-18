@@ -324,7 +324,7 @@ namespace skew {
 
       for i in 0..children.count {
         var child = children[children.count - i - 1]
-        switch (child.kind) {
+        switch child.kind {
           case .RETURN {
             return true
           }
