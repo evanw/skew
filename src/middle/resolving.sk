@@ -56,11 +56,16 @@ namespace skew.resolving {
         symbol.state = .INITIALIZED
 
         if symbol.kind.isFunction {
-          var overloaded = symbol.asFunctionSymbol.overloaded
+          var function = symbol.asFunctionSymbol
+          var overloaded = function.overloaded
 
           # After initializing a function symbol, ensure the entire overload set is initialized
           if overloaded != null && overloaded.state == .UNINITIALIZED {
             initializeSymbol(overloaded)
+          }
+
+          if symbol.isEntryPoint {
+            validateEntryPoint(function)
           }
         }
       }
@@ -69,6 +74,32 @@ namespace skew.resolving {
       else if symbol.state == .INITIALIZING {
         log.semanticErrorCyclicDeclaration(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
+      }
+    }
+
+    def validateEntryPoint(symbol FunctionSymbol) {
+      # Detect duplicate entry points
+      if cache.entryPointSymbol != null {
+        log.semanticErrorDuplicateEntryPoint(symbol.range, cache.entryPointSymbol.range)
+        return
+      }
+
+      cache.entryPointSymbol = symbol
+
+      # Only recognize a few entry point types
+      var type = symbol.resolvedType
+      if type != .DYNAMIC {
+        var argumentTypes = type.argumentTypes
+
+        # The argument list must be empty or one argument of type "List<string>"
+        if argumentTypes.count > 1 || argumentTypes.count == 1 && argumentTypes.first != cache.createListType(cache.stringType) {
+          log.semanticErrorInvalidEntryPointArguments(Range.span(symbol.arguments.first.range, symbol.arguments.last.type.range), symbol.name)
+        }
+
+        # The return type must be nothing or "int"
+        else if type.returnType != null && type.returnType != cache.intType {
+          log.semanticErrorInvalidEntryPointReturnType(symbol.returnType.range, symbol.name)
+        }
       }
     }
 
@@ -877,6 +908,7 @@ namespace skew.resolving {
           case Symbol.IS_PROTECTED { isValid = !symbol.isPrivate && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
           case Symbol.IS_RENAMED {}
           case Symbol.IS_SKIPPED { isValid = symbol.kind.isFunction && symbol.resolvedType.returnType == null }
+          case Symbol.IS_ENTRY_POINT { isValid = symbol.kind == .FUNCTION_GLOBAL }
         }
         if !isValid {
           log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name)
@@ -2081,6 +2113,7 @@ namespace skew.resolving {
 
   namespace Resolver {
     const annotationSymbolFlags = {
+      "@entry": Symbol.IS_ENTRY_POINT,
       "@export": Symbol.IS_EXPORTED,
       "@import": Symbol.IS_IMPORTED,
       "@prefer": Symbol.IS_PREFERRED,

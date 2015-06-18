@@ -388,5 +388,18 @@ namespace skew {
     def semanticErrorMustCallFunction(range Range, name string) {
       error(range, "The function \"" name "\" must be called")
     }
+
+    def semanticErrorDuplicateEntryPoint(range Range, previous Range) {
+      error(range, "Multiple entry points are declared")
+      note(previous, "The first entry point is here")
+    }
+
+    def semanticErrorInvalidEntryPointArguments(range Range, name string) {
+      error(range, "Entry point \"" name "\" must take either no arguments or one argument of type \"List<string>\"")
+    }
+
+    def semanticErrorInvalidEntryPointReturnType(range Range, name string) {
+      error(range, "Entry point \"" name "\" must return either nothing or a value of type \"int\"")
+    }
   }
 }

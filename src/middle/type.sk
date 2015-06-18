@@ -147,6 +147,7 @@ namespace skew {
     var listType Type = null
     var stringMapType Type = null
     var stringType Type = null
+    var entryPointSymbol Symbol = null
 
     def loadGlobals(log Log, global ObjectSymbol) {
       Type.initialize

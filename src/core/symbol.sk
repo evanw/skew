@@ -96,6 +96,7 @@ namespace skew {
     const IS_PROTECTED = 1 << 11
     const IS_RENAMED = 1 << 12
     const IS_SKIPPED = 1 << 13
+    const IS_ENTRY_POINT = 1 << 14
   }
 
   class Symbol {
@@ -121,13 +122,14 @@ namespace skew {
     def isValueType bool              { return (flags & IS_VALUE_TYPE) != 0 }
 
     # Modifiers
-    def isExported bool  { return (flags & IS_EXPORTED) != 0 }
-    def isImported bool  { return (flags & IS_IMPORTED) != 0 }
-    def isPreferred bool { return (flags & IS_PREFERRED) != 0 }
-    def isPrivate bool   { return (flags & IS_PRIVATE) != 0 }
-    def isProtected bool { return (flags & IS_PROTECTED) != 0 }
-    def isRenamed bool   { return (flags & IS_RENAMED) != 0 }
-    def isSkipped bool   { return (flags & IS_SKIPPED) != 0 }
+    def isExported bool   { return (flags & IS_EXPORTED) != 0 }
+    def isImported bool   { return (flags & IS_IMPORTED) != 0 }
+    def isPreferred bool  { return (flags & IS_PREFERRED) != 0 }
+    def isPrivate bool    { return (flags & IS_PRIVATE) != 0 }
+    def isProtected bool  { return (flags & IS_PROTECTED) != 0 }
+    def isRenamed bool    { return (flags & IS_RENAMED) != 0 }
+    def isSkipped bool    { return (flags & IS_SKIPPED) != 0 }
+    def isEntryPoint bool { return (flags & IS_ENTRY_POINT) != 0 }
 
     # Combinations
     def isPrivateOrProtected bool { return (flags & (IS_PRIVATE | IS_PROTECTED)) != 0 }

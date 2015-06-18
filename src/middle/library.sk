@@ -1,4 +1,5 @@
 const NATIVE_LIBRARY = "
+def @entry
 def @export
 def @import
 def @prefer

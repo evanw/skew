@@ -6,7 +6,7 @@ namespace skew {
     emitter.visit(global)
     var text = ""
     for source in emitter.sources {
-      if (text != "") {
+      if text != "" {
         text += "\n"
       }
       text += "[" + source.name + "]\n" + source.contents
@@ -22,8 +22,9 @@ namespace skew {
     output.value = log.hasErrors ? log.toString : runEmitter(JsEmitter.new(cache), global)
   }
 
-  var main = dynamic.setTimeout(=> {
+  @entry
+  def main {
     input.oninput = => update
     update
-  })
+  }
 }

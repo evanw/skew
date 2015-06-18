@@ -202,10 +202,6 @@ class List {
 class StringBuilder {
   var buffer string
 
-  def +=(x string) {
-    append(x)
-  }
-
   def append(x string) {
     buffer += x
   }

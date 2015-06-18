@@ -3,6 +3,10 @@ namespace skew {
     over visit(global ObjectSymbol) {
       var objects = sortedObjects(global)
 
+      # The entire body of code is wrapped in a closure for safety
+      emit(indent + "(function() {\n")
+      increaseIndent
+
       if needsExtends(objects) {
         emit(indent + "function $extends(derived, base) {\n")
         emit(indent + "  derived.prototype = Object.create(base.prototype);\n")
@@ -27,6 +31,18 @@ namespace skew {
           emitVariable(variable)
         }
       }
+
+      # Emit entry point
+      var entryPointSymbol = cache.entryPointSymbol
+      if entryPointSymbol != null {
+        var type = entryPointSymbol.resolvedType
+        var callText = fullName(entryPointSymbol) + (type.argumentTypes.isEmpty ? "()" : "(process.argv.slice(2))")
+        emit("\n" + indent + (type.returnType == cache.intType ? "process.exit(" + callText + ")" : callText) + ";\n")
+      }
+
+      # End the closure wrapping everything
+      decreaseIndent
+      emit(indent + "}());\n")
 
       createSource("out.js")
     }
@@ -155,9 +171,9 @@ namespace skew {
         var name = mangleName(symbol.kind == .FUNCTION_CONSTRUCTOR ? symbol.parent : symbol)
 
         if isExpression {
-          emit(prefix + (symbol.kind == .FUNCTION_INSTANCE ? "prototype." : "") + name + " = function(")
+          emit(indent + prefix + (symbol.kind == .FUNCTION_INSTANCE ? "prototype." : "") + name + " = function(")
         } else {
-          emit("function " + name + "(")
+          emit(indent + "function " + name + "(")
         }
 
         emitArgumentList(symbol.arguments)
