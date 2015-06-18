@@ -1,25 +1,6 @@
-namespace skew {
+namespace skew.parsing {
   def parseDoubleLiteral(text string) double {
     return +(text as dynamic)
-  }
-
-  # The same operator precedence as C for the most part
-  enum Precedence {
-    LOWEST
-    ASSIGN
-    LOGICAL_OR
-    LOGICAL_AND
-    BITWISE_OR
-    BITWISE_XOR
-    BITWISE_AND
-    EQUAL
-    COMPARE
-    SHIFT
-    ADD
-    MULTIPLY
-    UNARY_PREFIX
-    UNARY_POSTFIX
-    MEMBER
   }
 
   def parseLeadingComments(context ParserContext) List<string> {

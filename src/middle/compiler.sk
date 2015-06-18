@@ -7,7 +7,7 @@ namespace skew {
     for source in sources {
       var tokens = tokenize(log, source)
       prepareTokens(tokens)
-      parseFile(log, tokens, global)
+      parsing.parseFile(log, tokens, global)
     }
 
     if !log.hasErrors {
