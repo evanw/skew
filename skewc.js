@@ -6049,11 +6049,13 @@
 
         else if ($function.block !== null) {
           $function.flags |= other.flags & ~skew.Symbol.IS_IMPORTED;
+          $function.mergeAnnotationsAndCommentsFrom(other);
           symbols[index] = $function;
         }
 
         else {
           other.flags |= $function.flags & ~skew.Symbol.IS_IMPORTED;
+          other.mergeAnnotationsAndCommentsFrom($function);
         }
 
         // Remove the symbol after the merge so "types" still matches "symbols"
@@ -6961,7 +6963,13 @@
   skew.resolving.Resolver.prototype.resolveOverloadedFunctionCall = function(node, scope, type) {
     var self = this;
     var match = self.resolveOverloadedFunction(node.callValue().range, node.children, scope, type);
-    return match !== null && self.resolveFunctionCall(node, scope, match);
+
+    if (match !== null && self.resolveFunctionCall(node, scope, match)) {
+      self.checkAccess(node, scope);
+      return true;
+    }
+
+    return false;
   };
 
   skew.resolving.Resolver.prototype.resolveCast = function(node, scope, context) {
@@ -7812,6 +7820,9 @@
 
       symbol = symbolType.symbol;
     }
+
+    node.symbol = symbol;
+    self.checkAccess(node, scope);
 
     // Don't replace the operator with a call if it's just used for type checking
     if (symbol.isImported() && !symbol.isRenamed()) {

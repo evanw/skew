@@ -660,9 +660,11 @@ namespace skew.resolving {
             log.semanticErrorDuplicateOverload(function.range, symbol.name, other.range)
           } else if function.block != null {
             function.flags |= other.flags & ~Symbol.IS_IMPORTED
+            function.mergeAnnotationsAndCommentsFrom(other)
             symbols[index] = function
           } else {
             other.flags |= function.flags & ~Symbol.IS_IMPORTED
+            other.mergeAnnotationsAndCommentsFrom(function)
           }
 
           # Remove the symbol after the merge so "types" still matches "symbols"
@@ -1353,7 +1355,11 @@ namespace skew.resolving {
 
     def resolveOverloadedFunctionCall(node Node, scope Scope, type Type) bool {
       var match = resolveOverloadedFunction(node.callValue.range, node.children, scope, type)
-      return match != null && resolveFunctionCall(node, scope, match)
+      if match != null && resolveFunctionCall(node, scope, match) {
+        checkAccess(node, scope)
+        return true
+      }
+      return false
     }
 
     def resolveCast(node Node, scope Scope, context Type) {
@@ -2065,6 +2071,9 @@ namespace skew.resolving {
         }
         symbol = symbolType.symbol
       }
+
+      node.symbol = symbol
+      checkAccess(node, scope)
 
       # Don't replace the operator with a call if it's just used for type checking
       if symbol.isImported && !symbol.isRenamed {
