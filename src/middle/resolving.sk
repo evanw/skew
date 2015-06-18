@@ -107,9 +107,9 @@ namespace skew.resolving {
       var parent = symbol.parent
       var annotations = symbol.annotations
 
-      # The import/export annotations are inherited
-      if parent != null && (symbol.kind.isVariable || symbol.kind.isFunction && symbol.asFunctionSymbol.block == null) {
-        symbol.flags |= parent.flags & (Symbol.IS_IMPORTED | Symbol.IS_EXPORTED)
+      # The import/export annotations are inherited, except import isn't inherited for implemented functions
+      if parent != null && (symbol.kind.isVariable || symbol.kind.isFunction) {
+        symbol.flags |= parent.flags & (symbol.kind.isFunction && symbol.asFunctionSymbol.block != null ? Symbol.IS_EXPORTED : Symbol.IS_IMPORTED | Symbol.IS_EXPORTED)
       }
 
       # Resolve annotations on this symbol after annotation inheritance

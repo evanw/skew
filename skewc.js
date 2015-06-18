@@ -690,7 +690,7 @@
       case skew.SymbolKind.OBJECT_INTERFACE: {
         self.emitNewlineBeforeSymbol(symbol);
         self.emitComments(symbol.comments);
-        self.emit(self.indent + (self.prefix === "" ? "var " : self.prefix) + skew.JsEmitter.mangleName(symbol) + " = {};\n");
+        self.emit(self.indent + (self.prefix === "" && !symbol.isExported() ? "var " : self.prefix) + skew.JsEmitter.mangleName(symbol) + " = {};\n");
         self.emitNewlineAfterSymbol(symbol);
         break;
       }
@@ -698,7 +698,7 @@
       case skew.SymbolKind.OBJECT_ENUM: {
         self.emitNewlineBeforeSymbol(symbol);
         self.emitComments(symbol.comments);
-        self.emit(self.indent + (self.prefix === "" ? "var " : self.prefix) + skew.JsEmitter.mangleName(symbol) + " = {");
+        self.emit(self.indent + (self.prefix === "" && !symbol.isExported() ? "var " : self.prefix) + skew.JsEmitter.mangleName(symbol) + " = {");
         self.increaseIndent();
         var isFirst = true;
 
@@ -785,7 +785,7 @@
 
     self.emitNewlineBeforeSymbol(symbol);
     self.emitComments(symbol.comments);
-    var isExpression = self.prefix !== "";
+    var isExpression = self.prefix !== "" || symbol.isExported();
     var name = skew.JsEmitter.mangleName(symbol.kind === skew.SymbolKind.FUNCTION_CONSTRUCTOR ? symbol.parent : symbol);
 
     if (isExpression) {
@@ -819,7 +819,7 @@
     if (symbol.kind !== skew.SymbolKind.VARIABLE_INSTANCE && (symbol.value !== null || self.prefix === "")) {
       self.emitNewlineBeforeSymbol(symbol);
       self.emitComments(symbol.comments);
-      self.emit(self.indent + (self.prefix === "" || symbol.kind === skew.SymbolKind.VARIABLE_LOCAL ? "var " : self.prefix) + skew.JsEmitter.mangleName(symbol));
+      self.emit(self.indent + (self.prefix === "" && !symbol.isExported() || symbol.kind === skew.SymbolKind.VARIABLE_LOCAL ? "var " : self.prefix) + skew.JsEmitter.mangleName(symbol));
 
       if (symbol.value !== null) {
         self.emit(" = ");
@@ -2536,8 +2536,16 @@
     return self.name;
   };
 
-  skew.Symbol.prototype.mergeCommentsFrom = function(symbol) {
+  skew.Symbol.prototype.mergeAnnotationsAndCommentsFrom = function(symbol) {
     var self = this;
+    if (self.annotations === null) {
+      self.annotations = symbol.annotations;
+    }
+
+    else if (symbol.annotations !== null) {
+      in_List.append2(self.annotations, symbol.annotations);
+    }
+
     if (self.comments === null) {
       self.comments = symbol.comments;
     }
@@ -5095,7 +5103,7 @@
 
       // Merge "child" into "other"
       skew.merging.mergeObject(log, parent, object, child);
-      object.mergeCommentsFrom(child);
+      object.mergeAnnotationsAndCommentsFrom(child);
       in_List.append2(object.objects, child.objects);
       in_List.append2(object.functions, child.functions);
       in_List.append2(object.variables, child.variables);
@@ -5400,9 +5408,9 @@
     var parent = symbol.parent;
     var annotations = symbol.annotations;
 
-    // The import/export annotations are inherited
-    if (parent !== null && (skew.SymbolKind.isVariable(symbol.kind) || skew.SymbolKind.isFunction(symbol.kind) && symbol.asFunctionSymbol().block === null)) {
-      symbol.flags |= parent.flags & (skew.Symbol.IS_IMPORTED | skew.Symbol.IS_EXPORTED);
+    // The import/export annotations are inherited, except import isn't inherited for implemented functions
+    if (parent !== null && (skew.SymbolKind.isVariable(symbol.kind) || skew.SymbolKind.isFunction(symbol.kind))) {
+      symbol.flags |= parent.flags & (skew.SymbolKind.isFunction(symbol.kind) && symbol.asFunctionSymbol().block !== null ? skew.Symbol.IS_EXPORTED : skew.Symbol.IS_IMPORTED | skew.Symbol.IS_EXPORTED);
     }
 
     // Resolve annotations on this symbol after annotation inheritance

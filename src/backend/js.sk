@@ -99,14 +99,14 @@ namespace skew {
           case .OBJECT_NAMESPACE, .OBJECT_INTERFACE {
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol.comments)
-            emit(indent + (prefix == "" ? "var " : prefix) + mangleName(symbol) + " = {};\n")
+            emit(indent + (prefix == "" && !symbol.isExported ? "var " : prefix) + mangleName(symbol) + " = {};\n")
             emitNewlineAfterSymbol(symbol)
           }
 
           case .OBJECT_ENUM {
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol.comments)
-            emit(indent + (prefix == "" ? "var " : prefix) + mangleName(symbol) + " = {")
+            emit(indent + (prefix == "" && !symbol.isExported ? "var " : prefix) + mangleName(symbol) + " = {")
             increaseIndent
             var isFirst = true
             for variable in symbol.variables {
@@ -154,7 +154,9 @@ namespace skew {
 
       def emitArgumentList(arguments List<VariableSymbol>) {
         for i in 0..arguments.count {
-          if i > 0 { emit(", ") }
+          if i > 0 {
+            emit(", ")
+          }
           emit(mangleName(arguments[i]))
         }
       }
@@ -167,7 +169,7 @@ namespace skew {
         emitNewlineBeforeSymbol(symbol)
         emitComments(symbol.comments)
 
-        var isExpression = prefix != ""
+        var isExpression = prefix != "" || symbol.isExported
         var name = mangleName(symbol.kind == .FUNCTION_CONSTRUCTOR ? symbol.parent : symbol)
 
         if isExpression {
@@ -198,7 +200,7 @@ namespace skew {
         if symbol.kind != .VARIABLE_INSTANCE && (symbol.value != null || prefix == "") {
           emitNewlineBeforeSymbol(symbol)
           emitComments(symbol.comments)
-          emit(indent + (prefix == "" || symbol.kind == .VARIABLE_LOCAL ? "var " : prefix) + mangleName(symbol))
+          emit(indent + (prefix == "" && !symbol.isExported || symbol.kind == .VARIABLE_LOCAL ? "var " : prefix) + mangleName(symbol))
 
           if symbol.value != null {
             emit(" = ")
