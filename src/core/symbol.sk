@@ -164,6 +164,14 @@ namespace skew {
       }
       return name
     }
+
+    def mergeCommentsFrom(symbol Symbol) {
+      if comments == null {
+        comments = symbol.comments
+      } else if symbol.comments != null {
+        comments.append(symbol.comments)
+      }
+    }
   }
 
   namespace Symbol {

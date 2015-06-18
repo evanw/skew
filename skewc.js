@@ -1845,6 +1845,7 @@ skew.Associativity = {
   RIGHT: 2, 2: "RIGHT"
 };
 
+// The same operator precedence as C for the most part
 skew.Precedence = {
   LOWEST: 0, 0: "LOWEST",
   ASSIGN: 1, 1: "ASSIGN",
@@ -2865,6 +2866,10 @@ skew.NodeKind.isJump = function(self) {
 };
 
 // Flags
+// Nodes represent executable code (variable initializers and function bodies)
+// Node-specific queries
+// Factory functions
+// Getters
 skew.Node = function(kind) {
   var self = this;
   self.kind = kind;
@@ -3809,6 +3814,17 @@ skew.Symbol.prototype.fullName = function() {
   }
 
   return self.name;
+};
+
+skew.Symbol.prototype.mergeCommentsFrom = function(symbol) {
+  var self = this;
+  if (self.comments === null) {
+    self.comments = symbol.comments;
+  }
+
+  else if (symbol.comments !== null) {
+    in_List.append2(self.comments, symbol.comments);
+  }
 };
 
 skew.Symbol.createID = function() {
@@ -5011,6 +5027,7 @@ skew.merging.mergeObjects = function(log, parent, children) {
 
     // Merge "child" into "other"
     skew.merging.mergeObject(log, parent, object, child);
+    object.mergeCommentsFrom(child);
     in_List.append2(object.objects, child.objects);
     in_List.append2(object.functions, child.functions);
     in_List.append2(object.variables, child.variables);
