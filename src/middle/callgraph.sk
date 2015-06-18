@@ -9,10 +9,6 @@ namespace skew {
     const symbolToInfoIndex IntMap<int> = {}
 
     def new(global ObjectSymbol) {
-      # TODO: These should be inserted automatically
-      callInfo = []
-      symbolToInfoIndex = {}
-
       visitObject(global)
     }
 

@@ -4870,7 +4870,6 @@ skew.CallInfo = function(symbol) {
 
 skew.CallGraph = function(global) {
   var self = this;
-  // TODO: These should be inserted automatically
   self.callInfo = [];
   self.symbolToInfoIndex = in_IntMap.$new();
   self.visitObject(global);
@@ -5802,14 +5801,35 @@ skew.resolving.Resolver.prototype.resolveFunction = function(symbol) {
   }
 
   // The function is considered abstract if the body is missing
-  if (symbol.block !== null) {
-    self.resolveNode(symbol.block, scope, null);
+  var block = symbol.block;
+
+  if (block !== null) {
+    // User-specified constructors have variable initializers automatically inserted
+    if (symbol.kind === skew.SymbolKind.FUNCTION_CONSTRUCTOR && !symbol.isAutomaticallyGenerated()) {
+      var index = 0;
+
+      for (var i1 = 0, list1 = symbol.parent.asObjectSymbol().variables, count1 = in_List.count(list1); i1 < count1; i1 += 1) {
+        var variable = list1[i1];
+
+        if (variable.kind === skew.SymbolKind.VARIABLE_INSTANCE) {
+          self.initializeSymbol(variable);
+
+          if (variable.value !== null) {
+            block.insertChild(index, skew.Node.createExpression(skew.Node.createBinary(skew.NodeKind.ASSIGN, skew.resolving.Resolver.createMemberReference(skew.resolving.Resolver.createSymbolReference(symbol.self), variable), variable.value)));
+            index += 1;
+            variable.value = null;
+          }
+        }
+      }
+    }
+
+    self.resolveNode(block, scope, null);
 
     // Missing a return statement is an error
     if (symbol.kind !== skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
       var returnType = symbol.resolvedType.returnType;
 
-      if (returnType !== null && returnType !== skew.Type.DYNAMIC && !symbol.block.blockAlwaysEndsWithReturn()) {
+      if (returnType !== null && returnType !== skew.Type.DYNAMIC && !block.blockAlwaysEndsWithReturn()) {
         self.log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType);
       }
     }
