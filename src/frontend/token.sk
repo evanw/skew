@@ -134,7 +134,7 @@ namespace skew {
           if topKind == .LESS_THAN {
 
             # Remove tentative matches that didn't work out
-            if (!tokenStartsWithGreaterThan) {
+            if !tokenStartsWithGreaterThan {
               continue
             }
 

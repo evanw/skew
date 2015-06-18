@@ -658,7 +658,7 @@ namespace skew.resolving {
         case .EXPRESSION { resolveExpression(node, scope) }
         case .FOREACH { resolveForeach(node, scope) }
         case .IF { resolveIf(node, scope) }
-        case .IMPLICIT_RETURN, .RETURN { resolveReturn(node, scope) }
+        case .RETURN { resolveReturn(node, scope) }
         case .SWITCH { resolveSwitch(node, scope) }
         case .VAR { resolveVar(node, scope) }
         case .WHILE { resolveWhile(node, scope) }
@@ -720,6 +720,12 @@ namespace skew.resolving {
     def resolveChildrenAsParameterizedExpressions(node Node, scope Scope) {
       for child in node.children {
         resolveAsParameterizedExpression(child, scope)
+      }
+    }
+
+    def checkExtraParentheses(node Node) {
+      if node.isInsideParentheses {
+        log.semanticWarningExtraParentheses(node.range)
       }
     }
 
@@ -958,8 +964,10 @@ namespace skew.resolving {
     }
 
     def resolveIf(node Node, scope Scope) {
+      var ifTest = node.ifTest
       var ifFalse = node.ifFalse
-      resolveAsParameterizedExpressionWithConversion(node.ifTest, scope, cache.boolType)
+      checkExtraParentheses(ifTest)
+      resolveAsParameterizedExpressionWithConversion(ifTest, scope, cache.boolType)
       resolveBlock(node.ifTrue, LocalScope.new(scope, .NORMAL))
       if ifFalse != null {
         resolveBlock(ifFalse, LocalScope.new(scope, .NORMAL))
@@ -989,7 +997,7 @@ namespace skew.resolving {
       resolveAsParameterizedExpression(value, scope)
 
       # Lambdas without a return type or an explicit "return" statement get special treatment
-      if node.kind != .IMPLICIT_RETURN {
+      if !node.isImplicitReturn {
         log.semanticErrorUnexpectedReturnValue(value.range)
         return
       }
@@ -1273,7 +1281,7 @@ namespace skew.resolving {
       node.resolvedType = type.resolvedType
 
       # Warn about unnecessary casts
-      if value.resolvedType == type.resolvedType || context == type.resolvedType && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType) {
+      if type.resolvedType != .DYNAMIC && (value.resolvedType == type.resolvedType || context == type.resolvedType && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
         log.semanticWarningExtraCast(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
       }
     }
@@ -2071,7 +2079,7 @@ namespace skew.resolving {
     def isVoidExpressionUsed(node Node) bool {
       # Check for a null parent to handle variable initializers
       var parent = node.parent
-      return parent == null || parent.kind != .EXPRESSION && parent.kind != .IMPLICIT_RETURN && (parent.kind != .ANNOTATION || node != parent.annotationValue)
+      return parent == null || parent.kind != .EXPRESSION && !parent.isImplicitReturn && (parent.kind != .ANNOTATION || node != parent.annotationValue)
     }
 
     def isValidVariableType(type Type) bool {

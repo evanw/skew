@@ -12,7 +12,6 @@ namespace skew {
     FOR
     FOREACH
     IF
-    IMPLICIT_RETURN
     RETURN
     SWITCH
     VAR
@@ -115,13 +114,20 @@ namespace skew {
     }
 
     def isJump bool {
-      return self == BREAK || self == CONTINUE || self == IMPLICIT_RETURN || self == RETURN
+      return self == BREAK || self == CONTINUE || self == RETURN
     }
+  }
+
+  # Flags
+  namespace Node {
+    const IS_IMPLICIT_RETURN = 1 << 0
+    const IS_INSIDE_PARENTHESES = 1 << 1
   }
 
   # Nodes represent executable code (variable initializers and function bodies)
   class Node {
     var kind NodeKind
+    var flags = 0
     var range Range = null
     var internalRange Range = null
     var symbol Symbol = null # For names, calls, and dots
@@ -137,6 +143,7 @@ namespace skew {
     # does not change.
     def become(node Node) {
       kind = node.kind
+      flags = node.flags
       range = node.range
       internalRange = node.internalRange
       symbol = node.symbol
@@ -149,6 +156,7 @@ namespace skew {
 
     def clone Node {
       var clone = new(kind)
+      clone.flags = flags
       clone.range = range
       clone.internalRange = internalRange
       clone.symbol = symbol
@@ -157,6 +165,19 @@ namespace skew {
       clone.comments = comments != null ? comments.clone : null
       clone.children = children != null ? children.map<Node>(child => child.clone) : null
       return clone
+    }
+
+    def isImplicitReturn bool {
+      return (flags & IS_IMPLICIT_RETURN) != 0
+    }
+
+    def isInsideParentheses bool {
+      return (flags & IS_INSIDE_PARENTHESES) != 0
+    }
+
+    def withFlags(value int) Node {
+      flags = value
+      return self
     }
 
     def withType(value Type) Node {
@@ -304,7 +325,7 @@ namespace skew {
       for i in 0..children.count {
         var child = children[children.count - i - 1]
         switch (child.kind) {
-          case .RETURN, .IMPLICIT_RETURN {
+          case .RETURN {
             return true
           }
 
@@ -383,11 +404,6 @@ namespace skew {
       assert(value.kind.isExpression)
       cases.prepend(value)
       return Node.new(.SWITCH).withChildren(cases)
-    }
-
-    def createImplicitReturn(value Node) Node {
-      assert(value.kind.isExpression)
-      return Node.new(.IMPLICIT_RETURN).withChildren([value])
     }
 
     def createVar(symbol VariableSymbol) Node {
@@ -584,7 +600,7 @@ namespace skew {
     }
 
     def returnValue Node {
-      assert(kind == .RETURN || kind == .IMPLICIT_RETURN)
+      assert(kind == .RETURN)
       assert(children.count == 1)
       assert(children[0] == null || children[0].kind.isExpression)
       return children[0]

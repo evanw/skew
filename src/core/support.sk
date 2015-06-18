@@ -189,7 +189,7 @@ class List {
 
   def removeOne(value T) {
     var index = indexOf(value)
-    if (index >= 0) {
+    if index >= 0 {
       removeAt(index)
     }
   }

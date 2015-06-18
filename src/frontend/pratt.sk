@@ -24,7 +24,7 @@ namespace skew {
 
     def next Token {
       var token = current
-      if (index + 1 < tokens.count) {
+      if index + 1 < tokens.count {
         index += 1
       }
       return token

@@ -235,7 +235,7 @@ namespace skew {
             emit(indent + "continue;\n")
           }
 
-          case .IMPLICIT_RETURN, .RETURN {
+          case .RETURN {
             emit(indent + "return")
             var value = node.returnValue
             if value != null {
@@ -426,7 +426,7 @@ namespace skew {
             }
 
             for i in 1..node.children.count {
-              if (call || i > 1) {
+              if call || i > 1 {
                 emit(", ")
               }
               emitExpression(node.children[i], .LOWEST)

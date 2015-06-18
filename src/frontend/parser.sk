@@ -410,7 +410,7 @@ namespace skew {
         if value == null {
           return false
         }
-        symbol.block = Node.createBlock([Node.createImplicitReturn(value).withRange(value.range)]).withRange(value.range)
+        symbol.block = Node.createBlock([Node.createReturn(value).withRange(value.range).withFlags(Node.IS_IMPLICIT_RETURN)]).withRange(value.range)
       }
     }
 
@@ -1173,7 +1173,7 @@ namespace skew {
         }
         if (value.kind != .NAME || !peekType(context)) && context.eat(.RIGHT_PARENTHESIS) {
           if value.kind != .NAME || !context.peek(.ARROW) {
-            return value.withRange(context.spanSince(token.range))
+            return value.withRange(context.spanSince(token.range)).withFlags(Node.IS_INSIDE_PARENTHESES)
           }
           context.undo
         }

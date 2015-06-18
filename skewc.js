@@ -673,7 +673,7 @@ skew.parseFunctionBlock = function(context, symbol) {
         return false;
       }
 
-      symbol.block = skew.Node.createBlock([skew.Node.createImplicitReturn(value).withRange(value.range)]).withRange(value.range);
+      symbol.block = skew.Node.createBlock([skew.Node.createReturn(value).withRange(value.range).withFlags(skew.Node.IS_IMPLICIT_RETURN)]).withRange(value.range);
     }
   }
 
@@ -1420,7 +1420,7 @@ skew.createExpressionParser = function() {
 
       if ((value.kind !== skew.NodeKind.NAME || !skew.peekType(context)) && context.eat(skew.TokenKind.RIGHT_PARENTHESIS)) {
         if (value.kind !== skew.NodeKind.NAME || !context.peek(skew.TokenKind.ARROW)) {
-          return value.withRange(context.spanSince(token.range));
+          return value.withRange(context.spanSince(token.range)).withFlags(skew.Node.IS_INSIDE_PARENTHESES);
         }
 
         context.undo();
@@ -2164,7 +2164,6 @@ skew.JsEmitter.prototype.emitStatement = function(node) {
       break;
     }
 
-    case skew.NodeKind.IMPLICIT_RETURN:
     case skew.NodeKind.RETURN: {
       self.emit(self.indent + "return");
       var value = node.returnValue();
@@ -2759,79 +2758,78 @@ skew.NodeKind = {
   FOR: 6, 6: "FOR",
   FOREACH: 7, 7: "FOREACH",
   IF: 8, 8: "IF",
-  IMPLICIT_RETURN: 9, 9: "IMPLICIT_RETURN",
-  RETURN: 10, 10: "RETURN",
-  SWITCH: 11, 11: "SWITCH",
-  VAR: 12, 12: "VAR",
-  WHILE: 13, 13: "WHILE",
+  RETURN: 9, 9: "RETURN",
+  SWITCH: 10, 10: "SWITCH",
+  VAR: 11, 11: "VAR",
+  WHILE: 12, 12: "WHILE",
 
   // Expressions
-  ASSIGN_INDEX: 14, 14: "ASSIGN_INDEX",
-  CALL: 15, 15: "CALL",
-  CAST: 16, 16: "CAST",
-  CONSTANT: 17, 17: "CONSTANT",
-  DOT: 18, 18: "DOT",
-  DYNAMIC: 19, 19: "DYNAMIC",
-  HOOK: 20, 20: "HOOK",
-  INDEX: 21, 21: "INDEX",
-  INITIALIZER_LIST: 22, 22: "INITIALIZER_LIST",
-  INITIALIZER_MAP: 23, 23: "INITIALIZER_MAP",
-  INITIALIZER_SET: 24, 24: "INITIALIZER_SET",
-  INTERPOLATE: 25, 25: "INTERPOLATE",
-  LAMBDA: 26, 26: "LAMBDA",
-  LAMBDA_TYPE: 27, 27: "LAMBDA_TYPE",
-  NAME: 28, 28: "NAME",
-  NULL: 29, 29: "NULL",
-  PAIR: 30, 30: "PAIR",
-  PARAMETERIZE: 31, 31: "PARAMETERIZE",
-  SEQUENCE: 32, 32: "SEQUENCE",
-  SUPER: 33, 33: "SUPER",
-  TYPE: 34, 34: "TYPE",
+  ASSIGN_INDEX: 13, 13: "ASSIGN_INDEX",
+  CALL: 14, 14: "CALL",
+  CAST: 15, 15: "CAST",
+  CONSTANT: 16, 16: "CONSTANT",
+  DOT: 17, 17: "DOT",
+  DYNAMIC: 18, 18: "DYNAMIC",
+  HOOK: 19, 19: "HOOK",
+  INDEX: 20, 20: "INDEX",
+  INITIALIZER_LIST: 21, 21: "INITIALIZER_LIST",
+  INITIALIZER_MAP: 22, 22: "INITIALIZER_MAP",
+  INITIALIZER_SET: 23, 23: "INITIALIZER_SET",
+  INTERPOLATE: 24, 24: "INTERPOLATE",
+  LAMBDA: 25, 25: "LAMBDA",
+  LAMBDA_TYPE: 26, 26: "LAMBDA_TYPE",
+  NAME: 27, 27: "NAME",
+  NULL: 28, 28: "NULL",
+  PAIR: 29, 29: "PAIR",
+  PARAMETERIZE: 30, 30: "PARAMETERIZE",
+  SEQUENCE: 31, 31: "SEQUENCE",
+  SUPER: 32, 32: "SUPER",
+  TYPE: 33, 33: "TYPE",
 
   // Unary operators
-  COMPLEMENT: 35, 35: "COMPLEMENT",
-  POSITIVE: 36, 36: "POSITIVE",
-  NEGATIVE: 37, 37: "NEGATIVE",
-  NOT: 38, 38: "NOT",
+  COMPLEMENT: 34, 34: "COMPLEMENT",
+  POSITIVE: 35, 35: "POSITIVE",
+  NEGATIVE: 36, 36: "NEGATIVE",
+  NOT: 37, 37: "NOT",
 
   // Binary operators
-  ADD: 39, 39: "ADD",
-  BITWISE_AND: 40, 40: "BITWISE_AND",
-  BITWISE_OR: 41, 41: "BITWISE_OR",
-  BITWISE_XOR: 42, 42: "BITWISE_XOR",
-  COMPARE: 43, 43: "COMPARE",
-  DIVIDE: 44, 44: "DIVIDE",
-  EQUAL: 45, 45: "EQUAL",
-  IN: 46, 46: "IN",
-  LOGICAL_AND: 47, 47: "LOGICAL_AND",
-  LOGICAL_OR: 48, 48: "LOGICAL_OR",
-  MULTIPLY: 49, 49: "MULTIPLY",
-  NOT_EQUAL: 50, 50: "NOT_EQUAL",
-  POWER: 51, 51: "POWER",
-  REMAINDER: 52, 52: "REMAINDER",
-  SHIFT_LEFT: 53, 53: "SHIFT_LEFT",
-  SHIFT_RIGHT: 54, 54: "SHIFT_RIGHT",
-  SUBTRACT: 55, 55: "SUBTRACT",
+  ADD: 38, 38: "ADD",
+  BITWISE_AND: 39, 39: "BITWISE_AND",
+  BITWISE_OR: 40, 40: "BITWISE_OR",
+  BITWISE_XOR: 41, 41: "BITWISE_XOR",
+  COMPARE: 42, 42: "COMPARE",
+  DIVIDE: 43, 43: "DIVIDE",
+  EQUAL: 44, 44: "EQUAL",
+  IN: 45, 45: "IN",
+  LOGICAL_AND: 46, 46: "LOGICAL_AND",
+  LOGICAL_OR: 47, 47: "LOGICAL_OR",
+  MULTIPLY: 48, 48: "MULTIPLY",
+  NOT_EQUAL: 49, 49: "NOT_EQUAL",
+  POWER: 50, 50: "POWER",
+  REMAINDER: 51, 51: "REMAINDER",
+  SHIFT_LEFT: 52, 52: "SHIFT_LEFT",
+  SHIFT_RIGHT: 53, 53: "SHIFT_RIGHT",
+  SUBTRACT: 54, 54: "SUBTRACT",
 
   // Binary comparison operators
-  GREATER_THAN: 56, 56: "GREATER_THAN",
-  GREATER_THAN_OR_EQUAL: 57, 57: "GREATER_THAN_OR_EQUAL",
-  LESS_THAN: 58, 58: "LESS_THAN",
-  LESS_THAN_OR_EQUAL: 59, 59: "LESS_THAN_OR_EQUAL",
+  GREATER_THAN: 55, 55: "GREATER_THAN",
+  GREATER_THAN_OR_EQUAL: 56, 56: "GREATER_THAN_OR_EQUAL",
+  LESS_THAN: 57, 57: "LESS_THAN",
+  LESS_THAN_OR_EQUAL: 58, 58: "LESS_THAN_OR_EQUAL",
 
   // Binary assigment operators
-  ASSIGN: 60, 60: "ASSIGN",
-  ASSIGN_ADD: 61, 61: "ASSIGN_ADD",
-  ASSIGN_BITWISE_AND: 62, 62: "ASSIGN_BITWISE_AND",
-  ASSIGN_BITWISE_OR: 63, 63: "ASSIGN_BITWISE_OR",
-  ASSIGN_BITWISE_XOR: 64, 64: "ASSIGN_BITWISE_XOR",
-  ASSIGN_DIVIDE: 65, 65: "ASSIGN_DIVIDE",
-  ASSIGN_MULTIPLY: 66, 66: "ASSIGN_MULTIPLY",
-  ASSIGN_POWER: 67, 67: "ASSIGN_POWER",
-  ASSIGN_REMAINDER: 68, 68: "ASSIGN_REMAINDER",
-  ASSIGN_SHIFT_LEFT: 69, 69: "ASSIGN_SHIFT_LEFT",
-  ASSIGN_SHIFT_RIGHT: 70, 70: "ASSIGN_SHIFT_RIGHT",
-  ASSIGN_SUBTRACT: 71, 71: "ASSIGN_SUBTRACT"
+  ASSIGN: 59, 59: "ASSIGN",
+  ASSIGN_ADD: 60, 60: "ASSIGN_ADD",
+  ASSIGN_BITWISE_AND: 61, 61: "ASSIGN_BITWISE_AND",
+  ASSIGN_BITWISE_OR: 62, 62: "ASSIGN_BITWISE_OR",
+  ASSIGN_BITWISE_XOR: 63, 63: "ASSIGN_BITWISE_XOR",
+  ASSIGN_DIVIDE: 64, 64: "ASSIGN_DIVIDE",
+  ASSIGN_MULTIPLY: 65, 65: "ASSIGN_MULTIPLY",
+  ASSIGN_POWER: 66, 66: "ASSIGN_POWER",
+  ASSIGN_REMAINDER: 67, 67: "ASSIGN_REMAINDER",
+  ASSIGN_SHIFT_LEFT: 68, 68: "ASSIGN_SHIFT_LEFT",
+  ASSIGN_SHIFT_RIGHT: 69, 69: "ASSIGN_SHIFT_RIGHT",
+  ASSIGN_SUBTRACT: 70, 70: "ASSIGN_SUBTRACT"
 };
 
 skew.NodeKind.isStatement = function(self) {
@@ -2863,13 +2861,14 @@ skew.NodeKind.isBinaryComparison = function(self) {
 };
 
 skew.NodeKind.isJump = function(self) {
-  return self === skew.NodeKind.BREAK || self === skew.NodeKind.CONTINUE || self === skew.NodeKind.IMPLICIT_RETURN || self === skew.NodeKind.RETURN;
+  return self === skew.NodeKind.BREAK || self === skew.NodeKind.CONTINUE || self === skew.NodeKind.RETURN;
 };
 
-// Nodes represent executable code (variable initializers and function bodies)
+// Flags
 skew.Node = function(kind) {
   var self = this;
   self.kind = kind;
+  self.flags = 0;
   self.range = null;
   self.internalRange = null;
   self.symbol = null;
@@ -2887,6 +2886,7 @@ skew.Node = function(kind) {
 skew.Node.prototype.become = function(node) {
   var self = this;
   self.kind = node.kind;
+  self.flags = node.flags;
   self.range = node.range;
   self.internalRange = node.internalRange;
   self.symbol = node.symbol;
@@ -2900,6 +2900,7 @@ skew.Node.prototype.become = function(node) {
 skew.Node.prototype.clone = function() {
   var self = this;
   var clone = new skew.Node(self.kind);
+  clone.flags = self.flags;
   clone.range = self.range;
   clone.internalRange = self.internalRange;
   clone.symbol = self.symbol;
@@ -2910,6 +2911,22 @@ skew.Node.prototype.clone = function() {
     return child.clone();
   }) : null;
   return clone;
+};
+
+skew.Node.prototype.isImplicitReturn = function() {
+  var self = this;
+  return (self.flags & skew.Node.IS_IMPLICIT_RETURN) !== 0;
+};
+
+skew.Node.prototype.isInsideParentheses = function() {
+  var self = this;
+  return (self.flags & skew.Node.IS_INSIDE_PARENTHESES) !== 0;
+};
+
+skew.Node.prototype.withFlags = function(value) {
+  var self = this;
+  self.flags = value;
+  return self;
 };
 
 skew.Node.prototype.withType = function(value) {
@@ -3081,8 +3098,7 @@ skew.Node.prototype.blockAlwaysEndsWithReturn = function() {
     var child = self.children[in_List.count(self.children) - i - 1];
 
     switch (child.kind) {
-      case skew.NodeKind.RETURN:
-      case skew.NodeKind.IMPLICIT_RETURN: {
+      case skew.NodeKind.RETURN: {
         return true;
         break;
       }
@@ -3161,11 +3177,6 @@ skew.Node.createSwitch = function(value, cases) {
   assert(skew.NodeKind.isExpression(value.kind));
   in_List.prepend1(cases, value);
   return new skew.Node(skew.NodeKind.SWITCH).withChildren(cases);
-};
-
-skew.Node.createImplicitReturn = function(value) {
-  assert(skew.NodeKind.isExpression(value.kind));
-  return new skew.Node(skew.NodeKind.IMPLICIT_RETURN).withChildren([value]);
 };
 
 skew.Node.createVar = function(symbol) {
@@ -3368,7 +3379,7 @@ skew.Node.prototype.expressionValue = function() {
 
 skew.Node.prototype.returnValue = function() {
   var self = this;
-  assert(self.kind === skew.NodeKind.RETURN || self.kind === skew.NodeKind.IMPLICIT_RETURN);
+  assert(self.kind === skew.NodeKind.RETURN);
   assert(in_List.count(self.children) === 1);
   assert(self.children[0] === null || skew.NodeKind.isExpression(self.children[0].kind));
   return self.children[0];
@@ -4104,6 +4115,11 @@ skew.Log.formatArgumentTypes = function(types) {
   }
 
   return " of type" + prettyPrint.plural(in_List.count(types)) + " " + prettyPrint.join(names, "and");
+};
+
+skew.Log.prototype.semanticWarningExtraParentheses = function(range) {
+  var self = this;
+  self.warning(range, "Unnecessary parentheses");
 };
 
 skew.Log.prototype.semanticWarningUnusedExpression = function(range) {
@@ -5953,7 +5969,6 @@ skew.resolving.Resolver.prototype.resolveNode = function(node, scope, context) {
       break;
     }
 
-    case skew.NodeKind.IMPLICIT_RETURN:
     case skew.NodeKind.RETURN: {
       self.resolveReturn(node, scope);
       break;
@@ -6109,6 +6124,13 @@ skew.resolving.Resolver.prototype.resolveChildrenAsParameterizedExpressions = fu
   for (var i = 0, list = node.children, count = in_List.count(list); i < count; i += 1) {
     var child = list[i];
     self.resolveAsParameterizedExpression(child, scope);
+  }
+};
+
+skew.resolving.Resolver.prototype.checkExtraParentheses = function(node) {
+  var self = this;
+  if (node.isInsideParentheses()) {
+    self.log.semanticWarningExtraParentheses(node.range);
   }
 };
 
@@ -6397,8 +6419,10 @@ skew.resolving.Resolver.prototype.resolveForeach = function(node, scope) {
 
 skew.resolving.Resolver.prototype.resolveIf = function(node, scope) {
   var self = this;
+  var ifTest = node.ifTest();
   var ifFalse = node.ifFalse();
-  self.resolveAsParameterizedExpressionWithConversion(node.ifTest(), scope, self.cache.boolType);
+  self.checkExtraParentheses(ifTest);
+  self.resolveAsParameterizedExpressionWithConversion(ifTest, scope, self.cache.boolType);
   self.resolveBlock(node.ifTrue(), new skew.LocalScope(scope, skew.LocalType.NORMAL));
 
   if (ifFalse !== null) {
@@ -6431,7 +6455,7 @@ skew.resolving.Resolver.prototype.resolveReturn = function(node, scope) {
   self.resolveAsParameterizedExpression(value, scope);
 
   // Lambdas without a return type or an explicit "return" statement get special treatment
-  if (node.kind !== skew.NodeKind.IMPLICIT_RETURN) {
+  if (!node.isImplicitReturn()) {
     self.log.semanticErrorUnexpectedReturnValue(value.range);
     return;
   }
@@ -6744,7 +6768,7 @@ skew.resolving.Resolver.prototype.resolveCast = function(node, scope, context) {
   node.resolvedType = type.resolvedType;
 
   // Warn about unnecessary casts
-  if (value.resolvedType === type.resolvedType || context === type.resolvedType && self.cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
+  if (type.resolvedType !== skew.Type.DYNAMIC && (value.resolvedType === type.resolvedType || context === type.resolvedType && self.cache.canImplicitlyConvert(value.resolvedType, type.resolvedType))) {
     self.log.semanticWarningExtraCast(skew.Range.span(node.internalRangeOrRange(), type.range), value.resolvedType, type.resolvedType);
   }
 };
@@ -7677,7 +7701,7 @@ skew.resolving.Resolver.shouldCheckForSetter = function(node) {
 skew.resolving.Resolver.isVoidExpressionUsed = function(node) {
   // Check for a null parent to handle variable initializers
   var parent = node.parent;
-  return parent === null || parent.kind !== skew.NodeKind.EXPRESSION && parent.kind !== skew.NodeKind.IMPLICIT_RETURN && (parent.kind !== skew.NodeKind.ANNOTATION || node !== parent.annotationValue());
+  return parent === null || parent.kind !== skew.NodeKind.EXPRESSION && !parent.isImplicitReturn() && (parent.kind !== skew.NodeKind.ANNOTATION || node !== parent.annotationValue());
 };
 
 skew.resolving.Resolver.isValidVariableType = function(type) {
@@ -9100,6 +9124,8 @@ skew.main = setTimeout(function() {
   }
 });
 skew.JsEmitter.isKeyword = in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap.$new(), "apply", 0), "arguments", 0), "Boolean", 0), "break", 0), "call", 0), "case", 0), "catch", 0), "class", 0), "const", 0), "constructor", 0), "continue", 0), "Date", 0), "debugger", 0), "default", 0), "delete", 0), "do", 0), "double", 0), "else", 0), "export", 0), "extends", 0), "false", 0), "finally", 0), "float", 0), "for", 0), "Function", 0), "function", 0), "if", 0), "import", 0), "in", 0), "instanceof", 0), "int", 0), "let", 0), "new", 0), "null", 0), "Number", 0), "Object", 0), "return", 0), "String", 0), "super", 0), "this", 0), "throw", 0), "true", 0), "try", 0), "var", 0);
+skew.Node.IS_IMPLICIT_RETURN = 1 << 0;
+skew.Node.IS_INSIDE_PARENTHESES = 1 << 1;
 
 // Flags
 skew.Symbol.IS_AUTOMATICALLY_GENERATED = 1 << 0;

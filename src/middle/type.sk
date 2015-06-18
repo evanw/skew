@@ -231,7 +231,7 @@ namespace skew {
       # Check existing environments in the bucket for a match
       if bucket != null {
         for existing in bucket {
-          if (parameters.isEqualTo(existing.parameters) && substitutions.isEqualTo(existing.substitutions)) {
+          if parameters.isEqualTo(existing.parameters) && substitutions.isEqualTo(existing.substitutions) {
             return existing
           }
         }
@@ -256,7 +256,7 @@ namespace skew {
       # Check existing types in the bucket for a match
       if bucket != null {
         for existing in bucket {
-          if (argumentTypes.isEqualTo(existing.argumentTypes) && returnType == existing.returnType) {
+          if argumentTypes.isEqualTo(existing.argumentTypes) && returnType == existing.returnType {
             return existing
           }
         }
@@ -284,7 +284,7 @@ namespace skew {
       for i in 0..b.parameters.count {
         var parameter = b.parameters[i]
         var substitution = b.substitutions[i]
-        if (!(parameter in parameters) && (restrictions == null || parameter in restrictions)) {
+        if !(parameter in parameters) && (restrictions == null || parameter in restrictions) {
           parameters.append(parameter)
           substitutions.append(substitution)
         }
@@ -294,7 +294,7 @@ namespace skew {
 
     def parameterize(type Type) Type {
       var parameters = type.parameters
-      if (parameters == null) {
+      if parameters == null {
         return type
       }
       assert(!type.isParameterized)

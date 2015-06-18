@@ -157,7 +157,7 @@ namespace skew {
 
       # Check for duplicates
       var other = locals.get(symbol.name, null)
-      if (other != null) {
+      if other != null {
         log.semanticErrorDuplicateSymbol(symbol.range, symbol.name, other.range)
         return
       }
@@ -166,7 +166,7 @@ namespace skew {
       var scope = parent
       while scope.kind == .LOCAL {
         var local = scope.asLocalScope.locals.get(symbol.name, null)
-        if (local != null) {
+        if local != null {
           log.semanticErrorShadowedSymbol(symbol.range, symbol.name, local.range)
           return
         }
