@@ -6379,7 +6379,7 @@
     }
   };
 
-  skew.resolving.Resolver.prototype.checkAccess = function(node, scope) {
+  skew.resolving.Resolver.prototype.checkAccess = function(node, range, scope) {
     var self = this;
     var symbol = node.symbol;
 
@@ -6403,7 +6403,7 @@
         scope = scope.parent;
       }
 
-      self.log.semanticErrorAccessViolation(node.internalRangeOrRange(), isPrivate ? "@private" : "@protected", symbol.name);
+      self.log.semanticErrorAccessViolation(range, isPrivate ? "@private" : "@protected", symbol.name);
     }
 
     // Deprecation annotations optionally provide a warning message
@@ -6418,14 +6418,14 @@
             var last = in_List.last(value.children);
 
             if (last.kind === skew.NodeKind.CONSTANT && last.content.kind() === skew.ContentKind.STRING) {
-              self.log.warning(node.internalRangeOrRange(), last.content.asString());
+              self.log.warning(range, last.content.asString());
               return;
             }
           }
         }
       }
 
-      self.log.semanticWarningDeprecatedUsage(node.internalRangeOrRange(), symbol.name);
+      self.log.semanticWarningDeprecatedUsage(range, symbol.name);
     }
   };
 
@@ -6990,7 +6990,7 @@
     var match = self.resolveOverloadedFunction(node.callValue().range, node.children, scope, type);
 
     if (match !== null && self.resolveFunctionCall(node, scope, match)) {
-      self.checkAccess(node, scope);
+      self.checkAccess(node, node.callValue().internalRangeOrRange(), scope);
       return true;
     }
 
@@ -7168,7 +7168,6 @@
 
     node.symbol = symbol;
     node.resolvedType = self.cache.substitute(symbol.resolvedType, target.resolvedType.environment);
-    self.checkAccess(node, scope);
     self.automaticallyCallGetter(node, scope);
   };
 
@@ -7599,7 +7598,6 @@
 
     node.symbol = symbol;
     node.resolvedType = symbol.resolvedType;
-    self.checkAccess(node, scope);
     self.automaticallyCallGetter(node, scope);
   };
 
@@ -7847,7 +7845,7 @@
     }
 
     node.symbol = symbol;
-    self.checkAccess(node, scope);
+    self.checkAccess(node, node.internalRangeOrRange(), scope);
 
     // Don't replace the operator with a call if it's just used for type checking
     if (symbol.isImported() && !symbol.isRenamed()) {
@@ -7901,10 +7899,9 @@
 
     var kind = symbol.kind;
     var parent = node.parent;
-    var isGetter = symbol.isGetter();
 
     // The check for getters is complicated by overloaded functions
-    if (!isGetter && skew.SymbolKind.isOverloadedFunction(kind) && (!skew.resolving.Resolver.isCallValue(node) || in_List.count(parent.children) === 1)) {
+    if (!symbol.isGetter() && skew.SymbolKind.isOverloadedFunction(kind) && (!skew.resolving.Resolver.isCallValue(node) || in_List.count(parent.children) === 1)) {
       var overloaded = symbol.asOverloadedFunctionSymbol();
 
       for (var i = 0, list = overloaded.symbols, count = in_List.count(list); i < count; i += 1) {
@@ -7915,14 +7912,16 @@
         if (getter.isGetter()) {
           node.resolvedType = self.cache.substitute(getter.resolvedType, node.resolvedType.environment);
           node.symbol = getter;
-          isGetter = true;
+          symbol = getter;
           break;
         }
       }
     }
 
+    self.checkAccess(node, node.internalRangeOrRange(), scope);
+
     // Automatically wrap the getter in a call expression
-    if (isGetter) {
+    if (symbol.isGetter()) {
       var value = skew.Node.createNull();
       value.become(node);
       node.become(skew.Node.createCall(value, []).withRange(node.range));

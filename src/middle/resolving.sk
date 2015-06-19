@@ -831,7 +831,7 @@ namespace skew.resolving {
       }
     }
 
-    def checkAccess(node Node, scope Scope) {
+    def checkAccess(node Node, range Range, scope Scope) {
       var symbol = node.symbol
       if symbol == null {
         return
@@ -849,7 +849,7 @@ namespace skew.resolving {
           }
           scope = scope.parent
         }
-        log.semanticErrorAccessViolation(node.internalRangeOrRange, isPrivate ? "@private" : "@protected", symbol.name)
+        log.semanticErrorAccessViolation(range, isPrivate ? "@private" : "@protected", symbol.name)
       }
 
       # Deprecation annotations optionally provide a warning message
@@ -860,13 +860,13 @@ namespace skew.resolving {
             if value.kind == .CALL {
               var last = value.children.last
               if last.kind == .CONSTANT && last.content.kind == .STRING {
-                log.warning(node.internalRangeOrRange, last.content.asString)
+                log.warning(range, last.content.asString)
                 return
               }
             }
           }
         }
-        log.semanticWarningDeprecatedUsage(node.internalRangeOrRange, symbol.name)
+        log.semanticWarningDeprecatedUsage(range, symbol.name)
       }
     }
 
@@ -1356,7 +1356,7 @@ namespace skew.resolving {
     def resolveOverloadedFunctionCall(node Node, scope Scope, type Type) bool {
       var match = resolveOverloadedFunction(node.callValue.range, node.children, scope, type)
       if match != null && resolveFunctionCall(node, scope, match) {
-        checkAccess(node, scope)
+        checkAccess(node, node.callValue.internalRangeOrRange, scope)
         return true
       }
       return false
@@ -1486,7 +1486,6 @@ namespace skew.resolving {
 
       node.symbol = symbol
       node.resolvedType = cache.substitute(symbol.resolvedType, target.resolvedType.environment)
-      checkAccess(node, scope)
       automaticallyCallGetter(node, scope)
     }
 
@@ -1854,7 +1853,6 @@ namespace skew.resolving {
 
       node.symbol = symbol
       node.resolvedType = symbol.resolvedType
-      checkAccess(node, scope)
       automaticallyCallGetter(node, scope)
     }
 
@@ -2073,7 +2071,7 @@ namespace skew.resolving {
       }
 
       node.symbol = symbol
-      checkAccess(node, scope)
+      checkAccess(node, node.internalRangeOrRange, scope)
 
       # Don't replace the operator with a call if it's just used for type checking
       if symbol.isImported && !symbol.isRenamed {
@@ -2119,10 +2117,9 @@ namespace skew.resolving {
       }
       var kind = symbol.kind
       var parent = node.parent
-      var isGetter = symbol.isGetter
 
       # The check for getters is complicated by overloaded functions
-      if !isGetter && kind.isOverloadedFunction && (!isCallValue(node) || parent.children.count == 1) {
+      if !symbol.isGetter && kind.isOverloadedFunction && (!isCallValue(node) || parent.children.count == 1) {
         var overloaded = symbol.asOverloadedFunctionSymbol
         for getter in overloaded.symbols {
 
@@ -2131,14 +2128,16 @@ namespace skew.resolving {
           if getter.isGetter {
             node.resolvedType = cache.substitute(getter.resolvedType, node.resolvedType.environment)
             node.symbol = getter
-            isGetter = true
+            symbol = getter
             break
           }
         }
       }
 
+      checkAccess(node, node.internalRangeOrRange, scope)
+
       # Automatically wrap the getter in a call expression
-      if isGetter {
+      if symbol.isGetter {
         var value = Node.createNull
         value.become(node)
         node.become(Node.createCall(value, []).withRange(node.range))

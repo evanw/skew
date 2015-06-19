@@ -2816,5 +2816,95 @@ class Bar : Foo {
 ", "
 ")
 
+test("
+class Foo {
+  @deprecated {
+    def foo
+    def bar(x int)
+    def baz
+    def baz(x int)
+  }
+}
+
+def main(foo Foo) {
+  foo.foo
+  foo.bar(0)
+  foo.baz
+  foo.baz(0)
+}
+", "
+<stdin>:11:7: warning: Use of deprecated symbol \"foo\"
+  foo.foo
+      ~~~
+<stdin>:12:7: warning: Use of deprecated symbol \"bar\"
+  foo.bar(0)
+      ~~~
+<stdin>:13:7: warning: Use of deprecated symbol \"baz\"
+  foo.baz
+      ~~~
+<stdin>:14:7: warning: Use of deprecated symbol \"baz\"
+  foo.baz(0)
+      ~~~
+")
+
+test("
+class Foo {
+  @deprecated {
+    def +
+    def +(x int)
+    def -(x int)
+    def -(x bool)
+  }
+}
+
+def main(foo Foo) {
+  +foo
+  foo + 0
+  foo - 0
+  foo - false
+}
+", "
+<stdin>:11:3: warning: Use of deprecated symbol \"+\"
+  +foo
+  ^
+<stdin>:12:7: warning: Use of deprecated symbol \"+\"
+  foo + 0
+      ^
+<stdin>:13:7: warning: Use of deprecated symbol \"-\"
+  foo - 0
+      ^
+<stdin>:14:7: warning: Use of deprecated symbol \"-\"
+  foo - false
+      ^
+")
+
+test("
+class Foo {
+  @deprecated
+  def foo {}
+}
+
+class Bar : Foo {
+  over foo { super }
+}
+", "
+<stdin>:7:14: warning: Use of deprecated symbol \"foo\"
+  over foo { super }
+             ~~~~~
+")
+
+test("
+@deprecated
+class Foo {}
+
+def main {
+  Foo.new
+}
+", "
+<stdin>:5:3: warning: Use of deprecated symbol \"Foo\"
+  Foo.new
+  ~~~
+")
+
   }
 }
