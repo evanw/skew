@@ -86,12 +86,10 @@ class string {
       while true {
         var codePoint = instance.nextCodePoint
         if codePoint < 0 {
-          break
+          return codePoints
         }
         codePoints.append(codePoint)
       }
-
-      return codePoints
     }
   }
 }

@@ -1823,10 +1823,7 @@
     var self = this;
     assert(self.kind === skew.NodeKind.BLOCK);
 
-    if (in_List.isEmpty(self.children)) {
-      return false;
-    }
-
+    // This checks children in reverse since return statements are almost always last
     for (var i = 0, count = in_List.count(self.children); i < count; i += 1) {
       var child = self.children[in_List.count(self.children) - i - 1];
 
@@ -1837,10 +1834,18 @@
         }
 
         case skew.NodeKind.IF: {
+          var test = child.ifTest();
           var trueBlock = child.ifTrue();
           var falseBlock = child.ifFalse();
 
-          if (falseBlock !== null && trueBlock.blockAlwaysEndsWithReturn() && falseBlock.blockAlwaysEndsWithReturn()) {
+          if ((test.isTrue() || falseBlock !== null && falseBlock.blockAlwaysEndsWithReturn()) && (test.isFalse() || trueBlock.blockAlwaysEndsWithReturn())) {
+            return true;
+          }
+          break;
+        }
+
+        case skew.NodeKind.WHILE: {
+          if (child.whileTest().isTrue()) {
             return true;
           }
           break;
@@ -8983,13 +8988,11 @@
         var codePoint = instance.nextCodePoint();
 
         if (codePoint < 0) {
-          break;
+          return codePoints;
         }
 
         in_List.append1(codePoints, codePoint);
       }
-
-      return codePoints;
     }
   };
 

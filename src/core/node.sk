@@ -320,10 +320,8 @@ namespace skew {
 
     def blockAlwaysEndsWithReturn bool {
       assert(kind == .BLOCK)
-      if children.isEmpty {
-        return false
-      }
 
+      # This checks children in reverse since return statements are almost always last
       for i in 0..children.count {
         var child = children[children.count - i - 1]
         switch child.kind {
@@ -332,9 +330,16 @@ namespace skew {
           }
 
           case .IF {
+            var test = child.ifTest
             var trueBlock = child.ifTrue
             var falseBlock = child.ifFalse
-            if falseBlock != null && trueBlock.blockAlwaysEndsWithReturn && falseBlock.blockAlwaysEndsWithReturn {
+            if (test.isTrue || (falseBlock != null && falseBlock.blockAlwaysEndsWithReturn)) && (test.isFalse || trueBlock.blockAlwaysEndsWithReturn) {
+              return true
+            }
+          }
+
+          case .WHILE {
+            if child.whileTest.isTrue {
               return true
             }
           }
