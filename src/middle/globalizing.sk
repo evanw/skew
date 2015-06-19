@@ -11,9 +11,21 @@ namespace skew {
         function.self = null
 
         # Update all call sites
-        for callSite in info.callSites {
+        for i in 0..info.callSites.count {
+          var callSite = info.callSites[i]
           var value = callSite.callValue
-          value.dotTarget.swapWith(value)
+
+          # Rewrite "super(foo)" to "bar(self, foo)"
+          if value.kind == .SUPER {
+            var self = info.callContexts[i]
+            value.replaceWith(Node.createName(self.name).withSymbol(self))
+          }
+
+          # Rewrite "self.foo(bar)" to "foo(self, bar)"
+          else {
+            value.dotTarget.swapWith(value)
+          }
+
           callSite.children.prepend(Node.createName(function.name).withSymbol(function))
         }
       }

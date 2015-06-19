@@ -2802,5 +2802,19 @@ def main(x int) {
 ", "
 ")
 
+# This tests a special case in the globalizing pass for super calls
+test("
+@import
+class Foo {
+  def foo {}
+  def foo(x int) {}
+}
+class Bar : Foo {
+  over foo { super }
+  over foo(x int) { super(x) }
+}
+", "
+")
+
   }
 }

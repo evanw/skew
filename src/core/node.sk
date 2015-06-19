@@ -130,7 +130,7 @@ namespace skew {
     var flags = 0
     var range Range = null
     var internalRange Range = null
-    var symbol Symbol = null # For names, calls, and dots
+    var symbol Symbol = null
     var parent Node = null
     var content Content = null
     var resolvedType Type = null

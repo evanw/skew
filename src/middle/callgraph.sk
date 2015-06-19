@@ -2,6 +2,7 @@ namespace skew {
   class CallInfo {
     const symbol Symbol
     const callSites List<Node> = []
+    var callContexts List<VariableSymbol> = null # If "callSites[i]" is a super call, "self" will be in "callContexts[i]"
   }
 
   class CallGraph {
@@ -19,49 +20,49 @@ namespace skew {
         }
 
         for function in symbol.functions {
-          recordCallSite(function, null)
+          recordCallSite(function, null, null)
           if function.block != null {
-            visitNode(function.block)
+            visitNode(function.block, function.self)
           }
         }
 
         for variable in symbol.variables {
           if variable.value != null {
-            visitNode(variable.value)
+            visitNode(variable.value, null)
           }
         }
       }
 
-      def visitNode(node Node) {
+      def visitNode(node Node, context VariableSymbol) {
         if node.children != null {
           for child in node.children {
             if child != null {
-              visitNode(child)
+              visitNode(child, context)
             }
           }
         }
 
         if node.kind == .CALL && node.symbol != null {
           assert(node.symbol.kind.isFunction)
-          recordCallSite(node.symbol, node)
+          recordCallSite(node.symbol, node, context)
         }
 
         else if node.kind == .VAR {
           var variable = node.symbol.asVariableSymbol
           if variable.value != null {
-            visitNode(variable.value)
+            visitNode(variable.value, context)
           }
         }
 
         else if node.kind == .LAMBDA {
           var function = node.symbol.asFunctionSymbol
           if function.block != null {
-            visitNode(function.block)
+            visitNode(function.block, context)
           }
         }
       }
 
-      def recordCallSite(symbol Symbol, node Node) {
+      def recordCallSite(symbol Symbol, node Node, context VariableSymbol) {
         var index = symbolToInfoIndex.get(symbol.id, -1)
         var info = index < 0 ? CallInfo.new(symbol) : callInfo[index]
         if index < 0 {
@@ -69,6 +70,15 @@ namespace skew {
           callInfo.append(info)
         }
         if node != null {
+          if context != null {
+            if info.callContexts == null {
+              info.callContexts = [] # Lazily allocate info.callContexts to avoid unnecessary allocations
+            }
+            while info.callContexts.count < info.callSites.count {
+              info.callContexts.append(null)
+            }
+            info.callContexts.append(context)
+          }
           info.callSites.append(node)
         }
       }

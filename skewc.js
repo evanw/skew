@@ -331,8 +331,8 @@
   };
 
   skew.globalizingPass = function(global, graph) {
-    for (var i1 = 0, list1 = graph.callInfo, count1 = in_List.count(list1); i1 < count1; i1 += 1) {
-      var info = list1[i1];
+    for (var i1 = 0, list = graph.callInfo, count1 = in_List.count(list); i1 < count1; i1 += 1) {
+      var info = list[i1];
       var symbol = info.symbol;
 
       // Turn certain instance functions into global functions
@@ -343,10 +343,21 @@
         $function.self = null;
 
         // Update all call sites
-        for (var i = 0, list = info.callSites, count = in_List.count(list); i < count; i += 1) {
-          var callSite = list[i];
+        for (var i = 0, count = in_List.count(info.callSites); i < count; i += 1) {
+          var callSite = info.callSites[i];
           var value = callSite.callValue();
-          value.dotTarget().swapWith(value);
+
+          // Rewrite "super(foo)" to "bar(self, foo)"
+          if (value.kind === skew.NodeKind.SUPER) {
+            var self = info.callContexts[i];
+            value.replaceWith(skew.Node.createName(self.name).withSymbol(self));
+          }
+
+          // Rewrite "self.foo(bar)" to "foo(self, bar)"
+          else {
+            value.dotTarget().swapWith(value);
+          }
+
           in_List.prepend1(callSite.children, skew.Node.createName($function.name).withSymbol($function));
         }
       }
@@ -4954,6 +4965,7 @@
     var self = this;
     self.symbol = symbol;
     self.callSites = [];
+    self.callContexts = null;
   };
 
   skew.CallGraph = function(global) {
@@ -4972,10 +4984,10 @@
 
     for (var i1 = 0, list1 = symbol.functions, count1 = in_List.count(list1); i1 < count1; i1 += 1) {
       var $function = list1[i1];
-      self.recordCallSite($function, null);
+      self.recordCallSite($function, null, null);
 
       if ($function.block !== null) {
-        self.visitNode($function.block);
+        self.visitNode($function.block, $function.self);
       }
     }
 
@@ -4983,33 +4995,33 @@
       var variable = list2[i2];
 
       if (variable.value !== null) {
-        self.visitNode(variable.value);
+        self.visitNode(variable.value, null);
       }
     }
   };
 
-  skew.CallGraph.prototype.visitNode = function(node) {
+  skew.CallGraph.prototype.visitNode = function(node, context) {
     var self = this;
     if (node.children !== null) {
       for (var i = 0, list = node.children, count = in_List.count(list); i < count; i += 1) {
         var child = list[i];
 
         if (child !== null) {
-          self.visitNode(child);
+          self.visitNode(child, context);
         }
       }
     }
 
     if (node.kind === skew.NodeKind.CALL && node.symbol !== null) {
       assert(skew.SymbolKind.isFunction(node.symbol.kind));
-      self.recordCallSite(node.symbol, node);
+      self.recordCallSite(node.symbol, node, context);
     }
 
     else if (node.kind === skew.NodeKind.VAR) {
       var variable = node.symbol.asVariableSymbol();
 
       if (variable.value !== null) {
-        self.visitNode(variable.value);
+        self.visitNode(variable.value, context);
       }
     }
 
@@ -5017,12 +5029,12 @@
       var $function = node.symbol.asFunctionSymbol();
 
       if ($function.block !== null) {
-        self.visitNode($function.block);
+        self.visitNode($function.block, context);
       }
     }
   };
 
-  skew.CallGraph.prototype.recordCallSite = function(symbol, node) {
+  skew.CallGraph.prototype.recordCallSite = function(symbol, node, context) {
     var self = this;
     var index = in_IntMap.get(self.symbolToInfoIndex, symbol.id, -1);
     var info = index < 0 ? new skew.CallInfo(symbol) : self.callInfo[index];
@@ -5033,6 +5045,19 @@
     }
 
     if (node !== null) {
+      if (context !== null) {
+        if (info.callContexts === null) {
+          // Lazily allocate info.callContexts to avoid unnecessary allocations
+          info.callContexts = [];
+        }
+
+        while (in_List.count(info.callContexts) < in_List.count(info.callSites)) {
+          in_List.append1(info.callContexts, null);
+        }
+
+        in_List.append1(info.callContexts, context);
+      }
+
       in_List.append1(info.callSites, node);
     }
   };
@@ -8764,7 +8789,7 @@
 
   prettyPrint.join = function(parts, trailing) {
     if (in_List.count(parts) < 3) {
-      return (" " + trailing + " ").join(parts);
+      return in_string.join(" " + trailing + " ", parts);
     }
 
     var text = "";
@@ -8917,6 +8942,10 @@
     }
 
     return result;
+  };
+
+  in_string.join = function(self, parts) {
+    return parts.join(self);
   };
 
   in_string.fromCodeUnit = function(x) {
