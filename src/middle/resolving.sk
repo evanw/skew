@@ -2173,7 +2173,9 @@ namespace skew.resolving {
     def isVoidExpressionUsed(node Node) bool {
       # Check for a null parent to handle variable initializers
       var parent = node.parent
-      return parent == null || parent.kind != .EXPRESSION && !parent.isImplicitReturn && (parent.kind != .ANNOTATION || node != parent.annotationValue)
+      return parent == null || parent.kind != .EXPRESSION && !parent.isImplicitReturn &&
+        (parent.kind != .ANNOTATION || node != parent.annotationValue) &&
+        (parent.kind != .FOR || node != parent.forUpdate)
     }
 
     def isValidVariableType(type Type) bool {

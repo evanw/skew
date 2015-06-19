@@ -112,7 +112,7 @@
       var yy_bp = yy_cp;
 
       // Search for a match
-      while (yy_current_state !== 209) {
+      while (yy_current_state !== 211) {
         if (yy_cp >= text_length) {
           // This prevents syntax errors from causing infinite loops
           break;
@@ -130,7 +130,7 @@
         while (skew.yy_chk[skew.yy_base[yy_current_state] + yy_c] !== yy_current_state) {
           yy_current_state = skew.yy_def[yy_current_state];
 
-          if (yy_current_state >= 210) {
+          if (yy_current_state >= 212) {
             yy_c = skew.yy_meta[yy_c];
           }
         }
@@ -1515,48 +1515,50 @@
 
     // Unary operators
     COMPLEMENT: 34, 34: "COMPLEMENT",
-    POSITIVE: 35, 35: "POSITIVE",
-    NEGATIVE: 36, 36: "NEGATIVE",
-    NOT: 37, 37: "NOT",
+    DECREMENT: 35, 35: "DECREMENT",
+    INCREMENT: 36, 36: "INCREMENT",
+    NEGATIVE: 37, 37: "NEGATIVE",
+    NOT: 38, 38: "NOT",
+    POSITIVE: 39, 39: "POSITIVE",
 
     // Binary operators
-    ADD: 38, 38: "ADD",
-    BITWISE_AND: 39, 39: "BITWISE_AND",
-    BITWISE_OR: 40, 40: "BITWISE_OR",
-    BITWISE_XOR: 41, 41: "BITWISE_XOR",
-    COMPARE: 42, 42: "COMPARE",
-    DIVIDE: 43, 43: "DIVIDE",
-    EQUAL: 44, 44: "EQUAL",
-    IN: 45, 45: "IN",
-    LOGICAL_AND: 46, 46: "LOGICAL_AND",
-    LOGICAL_OR: 47, 47: "LOGICAL_OR",
-    MULTIPLY: 48, 48: "MULTIPLY",
-    NOT_EQUAL: 49, 49: "NOT_EQUAL",
-    POWER: 50, 50: "POWER",
-    REMAINDER: 51, 51: "REMAINDER",
-    SHIFT_LEFT: 52, 52: "SHIFT_LEFT",
-    SHIFT_RIGHT: 53, 53: "SHIFT_RIGHT",
-    SUBTRACT: 54, 54: "SUBTRACT",
+    ADD: 40, 40: "ADD",
+    BITWISE_AND: 41, 41: "BITWISE_AND",
+    BITWISE_OR: 42, 42: "BITWISE_OR",
+    BITWISE_XOR: 43, 43: "BITWISE_XOR",
+    COMPARE: 44, 44: "COMPARE",
+    DIVIDE: 45, 45: "DIVIDE",
+    EQUAL: 46, 46: "EQUAL",
+    IN: 47, 47: "IN",
+    LOGICAL_AND: 48, 48: "LOGICAL_AND",
+    LOGICAL_OR: 49, 49: "LOGICAL_OR",
+    MULTIPLY: 50, 50: "MULTIPLY",
+    NOT_EQUAL: 51, 51: "NOT_EQUAL",
+    POWER: 52, 52: "POWER",
+    REMAINDER: 53, 53: "REMAINDER",
+    SHIFT_LEFT: 54, 54: "SHIFT_LEFT",
+    SHIFT_RIGHT: 55, 55: "SHIFT_RIGHT",
+    SUBTRACT: 56, 56: "SUBTRACT",
 
     // Binary comparison operators
-    GREATER_THAN: 55, 55: "GREATER_THAN",
-    GREATER_THAN_OR_EQUAL: 56, 56: "GREATER_THAN_OR_EQUAL",
-    LESS_THAN: 57, 57: "LESS_THAN",
-    LESS_THAN_OR_EQUAL: 58, 58: "LESS_THAN_OR_EQUAL",
+    GREATER_THAN: 57, 57: "GREATER_THAN",
+    GREATER_THAN_OR_EQUAL: 58, 58: "GREATER_THAN_OR_EQUAL",
+    LESS_THAN: 59, 59: "LESS_THAN",
+    LESS_THAN_OR_EQUAL: 60, 60: "LESS_THAN_OR_EQUAL",
 
     // Binary assigment operators
-    ASSIGN: 59, 59: "ASSIGN",
-    ASSIGN_ADD: 60, 60: "ASSIGN_ADD",
-    ASSIGN_BITWISE_AND: 61, 61: "ASSIGN_BITWISE_AND",
-    ASSIGN_BITWISE_OR: 62, 62: "ASSIGN_BITWISE_OR",
-    ASSIGN_BITWISE_XOR: 63, 63: "ASSIGN_BITWISE_XOR",
-    ASSIGN_DIVIDE: 64, 64: "ASSIGN_DIVIDE",
-    ASSIGN_MULTIPLY: 65, 65: "ASSIGN_MULTIPLY",
-    ASSIGN_POWER: 66, 66: "ASSIGN_POWER",
-    ASSIGN_REMAINDER: 67, 67: "ASSIGN_REMAINDER",
-    ASSIGN_SHIFT_LEFT: 68, 68: "ASSIGN_SHIFT_LEFT",
-    ASSIGN_SHIFT_RIGHT: 69, 69: "ASSIGN_SHIFT_RIGHT",
-    ASSIGN_SUBTRACT: 70, 70: "ASSIGN_SUBTRACT"
+    ASSIGN: 61, 61: "ASSIGN",
+    ASSIGN_ADD: 62, 62: "ASSIGN_ADD",
+    ASSIGN_BITWISE_AND: 63, 63: "ASSIGN_BITWISE_AND",
+    ASSIGN_BITWISE_OR: 64, 64: "ASSIGN_BITWISE_OR",
+    ASSIGN_BITWISE_XOR: 65, 65: "ASSIGN_BITWISE_XOR",
+    ASSIGN_DIVIDE: 66, 66: "ASSIGN_DIVIDE",
+    ASSIGN_MULTIPLY: 67, 67: "ASSIGN_MULTIPLY",
+    ASSIGN_POWER: 68, 68: "ASSIGN_POWER",
+    ASSIGN_REMAINDER: 69, 69: "ASSIGN_REMAINDER",
+    ASSIGN_SHIFT_LEFT: 70, 70: "ASSIGN_SHIFT_LEFT",
+    ASSIGN_SHIFT_RIGHT: 71, 71: "ASSIGN_SHIFT_RIGHT",
+    ASSIGN_SUBTRACT: 72, 72: "ASSIGN_SUBTRACT"
 };
 
   skew.NodeKind.isStatement = function(self) {
@@ -1572,7 +1574,7 @@
   };
 
   skew.NodeKind.isUnary = function(self) {
-    return ((self) | 0) >= ((skew.NodeKind.COMPLEMENT) | 0) && ((self) | 0) <= ((skew.NodeKind.NOT) | 0);
+    return ((self) | 0) >= ((skew.NodeKind.COMPLEMENT) | 0) && ((self) | 0) <= ((skew.NodeKind.POSITIVE) | 0);
   };
 
   skew.NodeKind.isBinary = function(self) {
@@ -2667,74 +2669,76 @@
     COMPARE: 26, 26: "COMPARE",
     CONST: 27, 27: "CONST",
     CONTINUE: 28, 28: "CONTINUE",
-    DEF: 29, 29: "DEF",
-    DEFAULT: 30, 30: "DEFAULT",
-    DIVIDE: 31, 31: "DIVIDE",
-    DOT: 32, 32: "DOT",
-    DOT_DOT: 33, 33: "DOT_DOT",
-    DOUBLE: 34, 34: "DOUBLE",
-    DYNAMIC: 35, 35: "DYNAMIC",
-    ELSE: 36, 36: "ELSE",
-    END_OF_FILE: 37, 37: "END_OF_FILE",
-    ENUM: 38, 38: "ENUM",
-    EQUAL: 39, 39: "EQUAL",
-    ERROR: 40, 40: "ERROR",
-    FALSE: 41, 41: "FALSE",
-    FOR: 42, 42: "FOR",
-    GREATER_THAN: 43, 43: "GREATER_THAN",
-    GREATER_THAN_OR_EQUAL: 44, 44: "GREATER_THAN_OR_EQUAL",
-    IDENTIFIER: 45, 45: "IDENTIFIER",
-    IF: 46, 46: "IF",
-    IN: 47, 47: "IN",
-    INDEX: 48, 48: "INDEX",
-    INT: 49, 49: "INT",
-    INTERFACE: 50, 50: "INTERFACE",
-    INT_BINARY: 51, 51: "INT_BINARY",
-    INT_HEX: 52, 52: "INT_HEX",
-    INT_OCTAL: 53, 53: "INT_OCTAL",
-    IS: 54, 54: "IS",
-    LEFT_BRACE: 55, 55: "LEFT_BRACE",
-    LEFT_BRACKET: 56, 56: "LEFT_BRACKET",
-    LEFT_PARENTHESIS: 57, 57: "LEFT_PARENTHESIS",
-    LESS_THAN: 58, 58: "LESS_THAN",
-    LESS_THAN_OR_EQUAL: 59, 59: "LESS_THAN_OR_EQUAL",
-    LIST: 60, 60: "LIST",
-    LIST_NEW: 61, 61: "LIST_NEW",
-    LOGICAL_AND: 62, 62: "LOGICAL_AND",
-    LOGICAL_OR: 63, 63: "LOGICAL_OR",
-    MINUS: 64, 64: "MINUS",
-    MULTIPLY: 65, 65: "MULTIPLY",
-    NAMESPACE: 66, 66: "NAMESPACE",
-    NEWLINE: 67, 67: "NEWLINE",
-    NOT: 68, 68: "NOT",
-    NOT_EQUAL: 69, 69: "NOT_EQUAL",
-    NULL: 70, 70: "NULL",
-    OVER: 71, 71: "OVER",
-    PLUS: 72, 72: "PLUS",
-    POWER: 73, 73: "POWER",
-    QUESTION_MARK: 74, 74: "QUESTION_MARK",
-    REMAINDER: 75, 75: "REMAINDER",
-    RETURN: 76, 76: "RETURN",
-    RIGHT_BRACE: 77, 77: "RIGHT_BRACE",
-    RIGHT_BRACKET: 78, 78: "RIGHT_BRACKET",
-    RIGHT_PARENTHESIS: 79, 79: "RIGHT_PARENTHESIS",
-    SET: 80, 80: "SET",
-    SET_NEW: 81, 81: "SET_NEW",
-    SHIFT_LEFT: 82, 82: "SHIFT_LEFT",
-    SHIFT_RIGHT: 83, 83: "SHIFT_RIGHT",
-    STRING: 84, 84: "STRING",
-    SUPER: 85, 85: "SUPER",
-    SWITCH: 86, 86: "SWITCH",
-    TILDE: 87, 87: "TILDE",
-    TRUE: 88, 88: "TRUE",
-    VAR: 89, 89: "VAR",
-    WHILE: 90, 90: "WHILE",
-    WHITESPACE: 91, 91: "WHITESPACE",
-    YY_INVALID_ACTION: 92, 92: "YY_INVALID_ACTION",
+    DECREMENT: 29, 29: "DECREMENT",
+    DEF: 30, 30: "DEF",
+    DEFAULT: 31, 31: "DEFAULT",
+    DIVIDE: 32, 32: "DIVIDE",
+    DOT: 33, 33: "DOT",
+    DOT_DOT: 34, 34: "DOT_DOT",
+    DOUBLE: 35, 35: "DOUBLE",
+    DYNAMIC: 36, 36: "DYNAMIC",
+    ELSE: 37, 37: "ELSE",
+    END_OF_FILE: 38, 38: "END_OF_FILE",
+    ENUM: 39, 39: "ENUM",
+    EQUAL: 40, 40: "EQUAL",
+    ERROR: 41, 41: "ERROR",
+    FALSE: 42, 42: "FALSE",
+    FOR: 43, 43: "FOR",
+    GREATER_THAN: 44, 44: "GREATER_THAN",
+    GREATER_THAN_OR_EQUAL: 45, 45: "GREATER_THAN_OR_EQUAL",
+    IDENTIFIER: 46, 46: "IDENTIFIER",
+    IF: 47, 47: "IF",
+    IN: 48, 48: "IN",
+    INCREMENT: 49, 49: "INCREMENT",
+    INDEX: 50, 50: "INDEX",
+    INT: 51, 51: "INT",
+    INTERFACE: 52, 52: "INTERFACE",
+    INT_BINARY: 53, 53: "INT_BINARY",
+    INT_HEX: 54, 54: "INT_HEX",
+    INT_OCTAL: 55, 55: "INT_OCTAL",
+    IS: 56, 56: "IS",
+    LEFT_BRACE: 57, 57: "LEFT_BRACE",
+    LEFT_BRACKET: 58, 58: "LEFT_BRACKET",
+    LEFT_PARENTHESIS: 59, 59: "LEFT_PARENTHESIS",
+    LESS_THAN: 60, 60: "LESS_THAN",
+    LESS_THAN_OR_EQUAL: 61, 61: "LESS_THAN_OR_EQUAL",
+    LIST: 62, 62: "LIST",
+    LIST_NEW: 63, 63: "LIST_NEW",
+    LOGICAL_AND: 64, 64: "LOGICAL_AND",
+    LOGICAL_OR: 65, 65: "LOGICAL_OR",
+    MINUS: 66, 66: "MINUS",
+    MULTIPLY: 67, 67: "MULTIPLY",
+    NAMESPACE: 68, 68: "NAMESPACE",
+    NEWLINE: 69, 69: "NEWLINE",
+    NOT: 70, 70: "NOT",
+    NOT_EQUAL: 71, 71: "NOT_EQUAL",
+    NULL: 72, 72: "NULL",
+    OVER: 73, 73: "OVER",
+    PLUS: 74, 74: "PLUS",
+    POWER: 75, 75: "POWER",
+    QUESTION_MARK: 76, 76: "QUESTION_MARK",
+    REMAINDER: 77, 77: "REMAINDER",
+    RETURN: 78, 78: "RETURN",
+    RIGHT_BRACE: 79, 79: "RIGHT_BRACE",
+    RIGHT_BRACKET: 80, 80: "RIGHT_BRACKET",
+    RIGHT_PARENTHESIS: 81, 81: "RIGHT_PARENTHESIS",
+    SET: 82, 82: "SET",
+    SET_NEW: 83, 83: "SET_NEW",
+    SHIFT_LEFT: 84, 84: "SHIFT_LEFT",
+    SHIFT_RIGHT: 85, 85: "SHIFT_RIGHT",
+    STRING: 86, 86: "STRING",
+    SUPER: 87, 87: "SUPER",
+    SWITCH: 88, 88: "SWITCH",
+    TILDE: 89, 89: "TILDE",
+    TRUE: 90, 90: "TRUE",
+    VAR: 91, 91: "VAR",
+    WHILE: 92, 92: "WHILE",
+    WHITESPACE: 93, 93: "WHITESPACE",
+    YY_INVALID_ACTION: 94, 94: "YY_INVALID_ACTION",
 
     // Token kinds not used by flex
-    START_PARAMETER_LIST: 93, 93: "START_PARAMETER_LIST",
-    END_PARAMETER_LIST: 94, 94: "END_PARAMETER_LIST"
+    START_PARAMETER_LIST: 95, 95: "START_PARAMETER_LIST",
+    END_PARAMETER_LIST: 96, 96: "END_PARAMETER_LIST"
 };
 
   skew.DiagnosticKind = {
@@ -4272,6 +4276,12 @@
     };
   };
 
+  skew.parsing.unaryPostfix = function(kind) {
+    return function(context, value, token) {
+      return skew.Node.createUnary(kind, value).withRange(skew.Range.span(value.range, token.range)).withInternalRange(token.range);
+    };
+  };
+
   skew.parsing.binaryInfix = function(kind) {
     return function(context, left, token, right) {
       if (kind === skew.NodeKind.ASSIGN && left.kind === skew.NodeKind.INDEX) {
@@ -4319,6 +4329,10 @@
     pratt.prefix(skew.TokenKind.NOT, skew.Precedence.UNARY_PREFIX, skew.parsing.unaryPrefix(skew.NodeKind.NOT));
     pratt.prefix(skew.TokenKind.PLUS, skew.Precedence.UNARY_PREFIX, skew.parsing.unaryPrefix(skew.NodeKind.POSITIVE));
     pratt.prefix(skew.TokenKind.TILDE, skew.Precedence.UNARY_PREFIX, skew.parsing.unaryPrefix(skew.NodeKind.COMPLEMENT));
+    pratt.prefix(skew.TokenKind.INCREMENT, skew.Precedence.UNARY_PREFIX, skew.parsing.unaryPrefix(skew.NodeKind.INCREMENT));
+    pratt.prefix(skew.TokenKind.DECREMENT, skew.Precedence.UNARY_PREFIX, skew.parsing.unaryPrefix(skew.NodeKind.DECREMENT));
+    pratt.postfix(skew.TokenKind.INCREMENT, skew.Precedence.UNARY_PREFIX, skew.parsing.unaryPostfix(skew.NodeKind.INCREMENT));
+    pratt.postfix(skew.TokenKind.DECREMENT, skew.Precedence.UNARY_PREFIX, skew.parsing.unaryPostfix(skew.NodeKind.DECREMENT));
     pratt.infix(skew.TokenKind.BITWISE_AND, skew.Precedence.BITWISE_AND, skew.parsing.binaryInfix(skew.NodeKind.BITWISE_AND));
     pratt.infix(skew.TokenKind.BITWISE_OR, skew.Precedence.BITWISE_OR, skew.parsing.binaryInfix(skew.NodeKind.BITWISE_OR));
     pratt.infix(skew.TokenKind.BITWISE_XOR, skew.Precedence.BITWISE_XOR, skew.parsing.binaryInfix(skew.NodeKind.BITWISE_XOR));
@@ -7946,7 +7960,7 @@
   skew.resolving.Resolver.isVoidExpressionUsed = function(node) {
     // Check for a null parent to handle variable initializers
     var parent = node.parent;
-    return parent === null || parent.kind !== skew.NodeKind.EXPRESSION && !parent.isImplicitReturn() && (parent.kind !== skew.NodeKind.ANNOTATION || node !== parent.annotationValue());
+    return parent === null || parent.kind !== skew.NodeKind.EXPRESSION && !parent.isImplicitReturn() && (parent.kind !== skew.NodeKind.ANNOTATION || node !== parent.annotationValue()) && (parent.kind !== skew.NodeKind.FOR || node !== parent.forUpdate());
   };
 
   skew.resolving.Resolver.isValidVariableType = function(type) {
@@ -9197,17 +9211,17 @@
     return values;
   };
 
-  var NATIVE_LIBRARY = "\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @prefer\ndef @private\ndef @protected\ndef @rename(name string)\ndef @skip\n\n@import\nnamespace Math {\n  def abs(x double) double\n  def abs(x int) int\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n  def ceil(x double) double\n  def cos(x double) double\n  def exp(x double) double\n  def floor(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def round(x double) double\n  def sin(x double) double\n  def sqrt(x double) double\n  def tan(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def - int\n  def toString string\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int) int\n  def &=(x int) int\n  def *=(x int) int\n  def +=(x int) int\n  def -=(x int) int\n  def /=(x int) int\n  def <<=(x int) int\n  def >>=(x int) int\n  def ^=(x int) int\n  def |=(x int) int\n}\n\n@import\nclass double {\n  def + double\n  def - double\n  def toString string\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def <=>(x double) double\n\n  def **=(x double) double\n  def *=(x double) double\n  def +=(x double) double\n  def -=(x double) double\n  def /=(x double) double\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  def <=>(x string) int\n  def [](x int) int\n  def get(x int) string\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  def endsWith(x string) bool\n  def in(x string) bool\n  def indexOf(x string) int\n  def join(x List<string>) string\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  def startsWith(x string) bool\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import\nclass StringBuilder {\n  def append(x string)\n  def new\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  def [](x int) T\n  def []=(x int, y T)\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def appendOne(x T)\n  def clone List<T>\n  def count int\n  def each(x fn(T))\n  def filter(x fn(T) bool) List<T>\n  def first T\n  def in(x T) bool\n  def indexOf(x T) int\n  def insert(x int, value T)\n  def isEmpty bool\n  def isEqualTo(other List<T>) bool\n  def last T\n  def lastIndexOf(x T) int\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  def reverse\n  def shuffle\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  def takeFirst T\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def +(x T) List<T>\n  def +(x List<T>) List<T>\n\n  @prefer\n  def +=(x T)\n  def +=(x List<T>)\n}\n\n@import\nclass StringMap<T> {\n  def [](key string) T\n  def []=(key string, value T)\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@import\nclass IntMap<T> {\n  def [](key int) T\n  def []=(key int, value T)\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n";
+  var NATIVE_LIBRARY = "\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @prefer\ndef @private\ndef @protected\ndef @rename(name string)\ndef @skip\n\n@import\nnamespace Math {\n  def abs(x double) double\n  def abs(x int) int\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n  def ceil(x double) double\n  def cos(x double) double\n  def exp(x double) double\n  def floor(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def round(x double) double\n  def sin(x double) double\n  def sqrt(x double) double\n  def tan(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def ++\n  def - int\n  def --\n  def toString string\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int)\n  def &=(x int)\n  def *=(x int)\n  def +=(x int)\n  def -=(x int)\n  def /=(x int)\n  def <<=(x int)\n  def >>=(x int)\n  def ^=(x int)\n  def |=(x int)\n}\n\n@import\nclass double {\n  def + double\n  def ++\n  def - double\n  def --\n  def toString string\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def <=>(x double) double\n\n  def **=(x double)\n  def *=(x double)\n  def +=(x double)\n  def -=(x double)\n  def /=(x double)\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  def <=>(x string) int\n  def [](x int) int\n  def get(x int) string\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  def endsWith(x string) bool\n  def in(x string) bool\n  def indexOf(x string) int\n  def join(x List<string>) string\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  def startsWith(x string) bool\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import\nclass StringBuilder {\n  def append(x string)\n  def new\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  def [](x int) T\n  def []=(x int, y T)\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def appendOne(x T)\n  def clone List<T>\n  def count int\n  def each(x fn(T))\n  def filter(x fn(T) bool) List<T>\n  def first T\n  def in(x T) bool\n  def indexOf(x T) int\n  def insert(x int, value T)\n  def isEmpty bool\n  def isEqualTo(other List<T>) bool\n  def last T\n  def lastIndexOf(x T) int\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  def reverse\n  def shuffle\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  def takeFirst T\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def +(x T) List<T>\n  def +(x List<T>) List<T>\n\n  @prefer\n  def +=(x T)\n  def +=(x List<T>)\n}\n\n@import\nclass StringMap<T> {\n  def [](key string) T\n  def []=(key string, value T)\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@import\nclass IntMap<T> {\n  def [](key int) T\n  def []=(key int, value T)\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n";
   skew.HEX = "0123456789ABCDEF";
-  skew.operatorInfo = in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap.$new(), ((skew.NodeKind.COMPLEMENT) | 0), new skew.OperatorInfo("~", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.NEGATIVE) | 0), new skew.OperatorInfo("-", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.NOT) | 0), new skew.OperatorInfo("!", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.POSITIVE) | 0), new skew.OperatorInfo("+", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.ADD) | 0), new skew.OperatorInfo("+", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.BITWISE_AND) | 0), new skew.OperatorInfo("&", skew.Precedence.BITWISE_AND, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.BITWISE_OR) | 0), new skew.OperatorInfo("|", skew.Precedence.BITWISE_OR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.BITWISE_XOR) | 0), new skew.OperatorInfo("^", skew.Precedence.BITWISE_XOR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.COMPARE) | 0), new skew.OperatorInfo("<=>", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.DIVIDE) | 0), new skew.OperatorInfo("/", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.EQUAL) | 0), new skew.OperatorInfo("==", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.GREATER_THAN) | 0), new skew.OperatorInfo(">", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.GREATER_THAN_OR_EQUAL) | 0), new skew.OperatorInfo(">=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.IN) | 0), new skew.OperatorInfo("in", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LESS_THAN) | 0), new skew.OperatorInfo("<", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LESS_THAN_OR_EQUAL) | 0), new skew.OperatorInfo("<=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LOGICAL_AND) | 0), new skew.OperatorInfo("&&", skew.Precedence.LOGICAL_AND, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.LOGICAL_OR) | 0), new skew.OperatorInfo("||", skew.Precedence.LOGICAL_OR, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.MULTIPLY) | 0), new skew.OperatorInfo("*", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.NOT_EQUAL) | 0), new skew.OperatorInfo("!=", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.POWER) | 0), new skew.OperatorInfo("**", skew.Precedence.UNARY_PREFIX, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.REMAINDER) | 0), new skew.OperatorInfo("%", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SHIFT_LEFT) | 0), new skew.OperatorInfo("<<", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SHIFT_RIGHT) | 0), new skew.OperatorInfo(">>", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SUBTRACT) | 0), new skew.OperatorInfo("-", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.ASSIGN) | 0), new skew.OperatorInfo("=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_ADD) | 0), new skew.OperatorInfo("+=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_AND) | 0), new skew.OperatorInfo("&=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_OR) | 0), new skew.OperatorInfo("|=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_XOR) | 0), new skew.OperatorInfo("^=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_DIVIDE) | 0), new skew.OperatorInfo("/=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_MULTIPLY) | 0), new skew.OperatorInfo("*=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_POWER) | 0), new skew.OperatorInfo("**=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_REMAINDER) | 0), new skew.OperatorInfo("%=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SHIFT_LEFT) | 0), new skew.OperatorInfo("<<=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SHIFT_RIGHT) | 0), new skew.OperatorInfo(">>=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SUBTRACT) | 0), new skew.OperatorInfo("-=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_INDEX) | 0), new skew.OperatorInfo("[]=", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.TWO_OR_MORE)), ((skew.NodeKind.INDEX) | 0), new skew.OperatorInfo("[]", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE_OR_MORE));
+  skew.operatorInfo = in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap.$new(), ((skew.NodeKind.COMPLEMENT) | 0), new skew.OperatorInfo("~", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.DECREMENT) | 0), new skew.OperatorInfo("--", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.INCREMENT) | 0), new skew.OperatorInfo("++", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.NEGATIVE) | 0), new skew.OperatorInfo("-", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.NOT) | 0), new skew.OperatorInfo("!", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.POSITIVE) | 0), new skew.OperatorInfo("+", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.ADD) | 0), new skew.OperatorInfo("+", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.BITWISE_AND) | 0), new skew.OperatorInfo("&", skew.Precedence.BITWISE_AND, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.BITWISE_OR) | 0), new skew.OperatorInfo("|", skew.Precedence.BITWISE_OR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.BITWISE_XOR) | 0), new skew.OperatorInfo("^", skew.Precedence.BITWISE_XOR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.COMPARE) | 0), new skew.OperatorInfo("<=>", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.DIVIDE) | 0), new skew.OperatorInfo("/", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.EQUAL) | 0), new skew.OperatorInfo("==", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.GREATER_THAN) | 0), new skew.OperatorInfo(">", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.GREATER_THAN_OR_EQUAL) | 0), new skew.OperatorInfo(">=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.IN) | 0), new skew.OperatorInfo("in", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LESS_THAN) | 0), new skew.OperatorInfo("<", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LESS_THAN_OR_EQUAL) | 0), new skew.OperatorInfo("<=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LOGICAL_AND) | 0), new skew.OperatorInfo("&&", skew.Precedence.LOGICAL_AND, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.LOGICAL_OR) | 0), new skew.OperatorInfo("||", skew.Precedence.LOGICAL_OR, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.MULTIPLY) | 0), new skew.OperatorInfo("*", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.NOT_EQUAL) | 0), new skew.OperatorInfo("!=", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.POWER) | 0), new skew.OperatorInfo("**", skew.Precedence.UNARY_PREFIX, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.REMAINDER) | 0), new skew.OperatorInfo("%", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SHIFT_LEFT) | 0), new skew.OperatorInfo("<<", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SHIFT_RIGHT) | 0), new skew.OperatorInfo(">>", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SUBTRACT) | 0), new skew.OperatorInfo("-", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.ASSIGN) | 0), new skew.OperatorInfo("=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_ADD) | 0), new skew.OperatorInfo("+=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_AND) | 0), new skew.OperatorInfo("&=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_OR) | 0), new skew.OperatorInfo("|=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_XOR) | 0), new skew.OperatorInfo("^=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_DIVIDE) | 0), new skew.OperatorInfo("/=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_MULTIPLY) | 0), new skew.OperatorInfo("*=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_POWER) | 0), new skew.OperatorInfo("**=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_REMAINDER) | 0), new skew.OperatorInfo("%=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SHIFT_LEFT) | 0), new skew.OperatorInfo("<<=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SHIFT_RIGHT) | 0), new skew.OperatorInfo(">>=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SUBTRACT) | 0), new skew.OperatorInfo("-=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_INDEX) | 0), new skew.OperatorInfo("[]=", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.TWO_OR_MORE)), ((skew.NodeKind.INDEX) | 0), new skew.OperatorInfo("[]", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE_OR_MORE));
   skew.argumentCounts = null;
-  skew.yy_accept = [skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.END_OF_FILE, skew.TokenKind.ERROR, skew.TokenKind.WHITESPACE, skew.TokenKind.NEWLINE, skew.TokenKind.NOT, skew.TokenKind.ERROR, skew.TokenKind.COMMENT, skew.TokenKind.REMAINDER, skew.TokenKind.BITWISE_AND, skew.TokenKind.ERROR, skew.TokenKind.LEFT_PARENTHESIS, skew.TokenKind.RIGHT_PARENTHESIS, skew.TokenKind.MULTIPLY, skew.TokenKind.PLUS, skew.TokenKind.COMMA, skew.TokenKind.MINUS, skew.TokenKind.DOT, skew.TokenKind.DIVIDE, skew.TokenKind.INT, skew.TokenKind.INT, skew.TokenKind.COLON, skew.TokenKind.LESS_THAN, skew.TokenKind.ASSIGN, skew.TokenKind.GREATER_THAN, skew.TokenKind.QUESTION_MARK, skew.TokenKind.ERROR, skew.TokenKind.IDENTIFIER, skew.TokenKind.LEFT_BRACKET, skew.TokenKind.RIGHT_BRACKET, skew.TokenKind.BITWISE_XOR, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.LEFT_BRACE, skew.TokenKind.BITWISE_OR, skew.TokenKind.RIGHT_BRACE, skew.TokenKind.TILDE, skew.TokenKind.WHITESPACE, skew.TokenKind.NEWLINE, skew.TokenKind.NOT_EQUAL, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.STRING, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.COMMENT, skew.TokenKind.COMMENT, skew.TokenKind.ASSIGN_REMAINDER, skew.TokenKind.LOGICAL_AND, skew.TokenKind.ASSIGN_BITWISE_AND, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.CHARACTER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.POWER, skew.TokenKind.ASSIGN_MULTIPLY, skew.TokenKind.ASSIGN_PLUS, skew.TokenKind.ASSIGN_MINUS, skew.TokenKind.DOT_DOT, skew.TokenKind.ASSIGN_DIVIDE, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.INT, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.SHIFT_LEFT, skew.TokenKind.LESS_THAN_OR_EQUAL, skew.TokenKind.EQUAL, skew.TokenKind.ARROW, skew.TokenKind.GREATER_THAN_OR_EQUAL, skew.TokenKind.SHIFT_RIGHT, skew.TokenKind.ANNOTATION, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.INDEX, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.ASSIGN_BITWISE_XOR, skew.TokenKind.AS, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IF, skew.TokenKind.IN, skew.TokenKind.IS, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.ASSIGN_BITWISE_OR, skew.TokenKind.LOGICAL_OR, skew.TokenKind.ASSIGN_POWER, skew.TokenKind.DOUBLE, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.DOUBLE, skew.TokenKind.INT_BINARY, skew.TokenKind.INT_OCTAL, skew.TokenKind.INT_HEX, skew.TokenKind.ASSIGN_SHIFT_LEFT, skew.TokenKind.COMPARE, skew.TokenKind.ASSIGN_SHIFT_RIGHT, skew.TokenKind.ANNOTATION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.ASSIGN_INDEX, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.DEF, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.FOR, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.VAR, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.IDENTIFIER, skew.TokenKind.CASE, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.ELSE, skew.TokenKind.ENUM, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.NULL, skew.TokenKind.OVER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.TRUE, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.LIST, skew.TokenKind.LIST_NEW, skew.TokenKind.BREAK, skew.TokenKind.CLASS, skew.TokenKind.CONST, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.FALSE, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.SUPER, skew.TokenKind.IDENTIFIER, skew.TokenKind.WHILE, skew.TokenKind.SET, skew.TokenKind.SET_NEW, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.RETURN, skew.TokenKind.SWITCH, skew.TokenKind.IDENTIFIER, skew.TokenKind.DEFAULT, skew.TokenKind.DYNAMIC, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.CONTINUE, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.INTERFACE, skew.TokenKind.NAMESPACE, skew.TokenKind.YY_INVALID_ACTION];
+  skew.yy_accept = [skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.END_OF_FILE, skew.TokenKind.ERROR, skew.TokenKind.WHITESPACE, skew.TokenKind.NEWLINE, skew.TokenKind.NOT, skew.TokenKind.ERROR, skew.TokenKind.COMMENT, skew.TokenKind.REMAINDER, skew.TokenKind.BITWISE_AND, skew.TokenKind.ERROR, skew.TokenKind.LEFT_PARENTHESIS, skew.TokenKind.RIGHT_PARENTHESIS, skew.TokenKind.MULTIPLY, skew.TokenKind.PLUS, skew.TokenKind.COMMA, skew.TokenKind.MINUS, skew.TokenKind.DOT, skew.TokenKind.DIVIDE, skew.TokenKind.INT, skew.TokenKind.INT, skew.TokenKind.COLON, skew.TokenKind.LESS_THAN, skew.TokenKind.ASSIGN, skew.TokenKind.GREATER_THAN, skew.TokenKind.QUESTION_MARK, skew.TokenKind.ERROR, skew.TokenKind.IDENTIFIER, skew.TokenKind.LEFT_BRACKET, skew.TokenKind.RIGHT_BRACKET, skew.TokenKind.BITWISE_XOR, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.LEFT_BRACE, skew.TokenKind.BITWISE_OR, skew.TokenKind.RIGHT_BRACE, skew.TokenKind.TILDE, skew.TokenKind.WHITESPACE, skew.TokenKind.NEWLINE, skew.TokenKind.NOT_EQUAL, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.STRING, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.COMMENT, skew.TokenKind.COMMENT, skew.TokenKind.ASSIGN_REMAINDER, skew.TokenKind.LOGICAL_AND, skew.TokenKind.ASSIGN_BITWISE_AND, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.CHARACTER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.POWER, skew.TokenKind.ASSIGN_MULTIPLY, skew.TokenKind.INCREMENT, skew.TokenKind.ASSIGN_PLUS, skew.TokenKind.DECREMENT, skew.TokenKind.ASSIGN_MINUS, skew.TokenKind.DOT_DOT, skew.TokenKind.ASSIGN_DIVIDE, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.INT, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.SHIFT_LEFT, skew.TokenKind.LESS_THAN_OR_EQUAL, skew.TokenKind.EQUAL, skew.TokenKind.ARROW, skew.TokenKind.GREATER_THAN_OR_EQUAL, skew.TokenKind.SHIFT_RIGHT, skew.TokenKind.ANNOTATION, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.INDEX, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.ASSIGN_BITWISE_XOR, skew.TokenKind.AS, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IF, skew.TokenKind.IN, skew.TokenKind.IS, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.ASSIGN_BITWISE_OR, skew.TokenKind.LOGICAL_OR, skew.TokenKind.ASSIGN_POWER, skew.TokenKind.DOUBLE, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.DOUBLE, skew.TokenKind.INT_BINARY, skew.TokenKind.INT_OCTAL, skew.TokenKind.INT_HEX, skew.TokenKind.ASSIGN_SHIFT_LEFT, skew.TokenKind.COMPARE, skew.TokenKind.ASSIGN_SHIFT_RIGHT, skew.TokenKind.ANNOTATION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.ASSIGN_INDEX, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.DEF, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.FOR, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.VAR, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.IDENTIFIER, skew.TokenKind.CASE, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.ELSE, skew.TokenKind.ENUM, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.NULL, skew.TokenKind.OVER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.TRUE, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.LIST, skew.TokenKind.LIST_NEW, skew.TokenKind.BREAK, skew.TokenKind.CLASS, skew.TokenKind.CONST, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.FALSE, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.SUPER, skew.TokenKind.IDENTIFIER, skew.TokenKind.WHILE, skew.TokenKind.SET, skew.TokenKind.SET_NEW, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.RETURN, skew.TokenKind.SWITCH, skew.TokenKind.IDENTIFIER, skew.TokenKind.DEFAULT, skew.TokenKind.DYNAMIC, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.CONTINUE, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.INTERFACE, skew.TokenKind.NAMESPACE, skew.TokenKind.YY_INVALID_ACTION];
   skew.yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 6, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 20, 20, 20, 21, 21, 22, 1, 23, 24, 25, 26, 27, 28, 28, 28, 28, 29, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 31, 32, 33, 34, 30, 1, 35, 36, 37, 38, 39, 40, 30, 41, 42, 30, 43, 44, 45, 46, 47, 48, 30, 49, 50, 51, 52, 53, 54, 55, 56, 30, 57, 58, 59, 60, 1];
   skew.yy_meta = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 3, 3, 4, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1];
-  skew.yy_base = [0, 0, 0, 290, 291, 287, 59, 264, 58, 284, 262, 56, 56, 291, 291, 54, 261, 291, 260, 267, 258, 75, 53, 291, 44, 51, 59, 291, 0, 0, 54, 291, 257, 230, 230, 42, 42, 53, 66, 62, 68, 225, 238, 53, 227, 240, 233, 63, 61, 291, 291, 271, 113, 291, 101, 291, 269, 268, 291, 291, 291, 291, 108, 291, 267, 245, 291, 291, 291, 291, 291, 105, 116, 128, 109, 132, 0, 244, 242, 291, 291, 291, 242, 0, 0, 249, 240, 224, 291, 0, 223, 211, 225, 213, 218, 211, 206, 203, 210, 204, 0, 201, 0, 206, 206, 210, 197, 199, 204, 193, 195, 201, 226, 202, 291, 291, 291, 138, 142, 146, 120, 150, 0, 291, 291, 291, 0, 224, 291, 185, 203, 198, 186, 103, 200, 199, 194, 187, 181, 0, 191, 190, 184, 178, 174, 186, 173, 184, 0, 178, 205, 166, 186, 185, 174, 0, 166, 164, 172, 161, 167, 0, 0, 172, 161, 159, 0, 0, 159, 158, 169, 0, 166, 145, 144, 291, 291, 0, 0, 0, 156, 157, 158, 0, 159, 150, 151, 0, 155, 0, 291, 291, 143, 143, 156, 109, 107, 0, 0, 92, 0, 0, 92, 84, 0, 79, 71, 0, 0, 291, 170, 174, 178, 180, 183, 186, 188];
-  skew.yy_def = [0, 209, 1, 209, 209, 209, 209, 209, 210, 211, 209, 209, 212, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 213, 214, 209, 209, 209, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 209, 209, 209, 209, 209, 209, 209, 210, 209, 210, 211, 209, 209, 209, 209, 212, 209, 212, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 215, 209, 209, 209, 209, 209, 209, 216, 214, 209, 209, 209, 209, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 215, 209, 209, 209, 216, 209, 209, 209, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 209, 209, 209, 209, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 209, 209, 209, 209, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 209, 209, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 214, 0, 209, 209, 209, 209, 209, 209, 209];
-  skew.yy_nxt = [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 22, 22, 23, 24, 25, 26, 27, 28, 29, 29, 29, 30, 4, 31, 32, 33, 34, 35, 36, 37, 38, 29, 39, 29, 29, 29, 40, 41, 29, 42, 43, 44, 29, 45, 46, 29, 29, 47, 48, 49, 50, 52, 52, 55, 60, 63, 65, 77, 78, 71, 85, 72, 72, 72, 72, 79, 80, 91, 66, 112, 61, 94, 73, 81, 82, 114, 92, 86, 64, 93, 56, 71, 73, 72, 72, 72, 72, 96, 95, 97, 87, 98, 100, 103, 73, 107, 55, 108, 101, 113, 208, 74, 102, 99, 73, 52, 52, 63, 207, 115, 104, 206, 75, 117, 117, 117, 117, 120, 120, 205, 76, 204, 71, 56, 72, 72, 72, 72, 120, 120, 64, 118, 203, 118, 202, 73, 119, 119, 119, 119, 121, 121, 121, 157, 158, 73, 117, 117, 117, 117, 119, 119, 119, 119, 119, 119, 119, 119, 121, 121, 121, 54, 54, 54, 54, 57, 57, 57, 57, 62, 62, 62, 62, 83, 83, 84, 84, 84, 122, 122, 126, 126, 126, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, 168, 167, 166, 165, 164, 163, 162, 161, 160, 159, 156, 155, 154, 153, 152, 151, 150, 149, 148, 147, 146, 145, 144, 143, 142, 141, 140, 139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 128, 127, 125, 124, 123, 116, 209, 58, 209, 51, 111, 110, 109, 106, 105, 90, 89, 88, 70, 69, 68, 67, 59, 58, 53, 51, 209, 3, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209];
-  skew.yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 6, 8, 11, 12, 15, 24, 24, 22, 30, 22, 22, 22, 22, 25, 25, 35, 15, 47, 11, 36, 22, 26, 26, 48, 35, 30, 12, 35, 8, 21, 22, 21, 21, 21, 21, 37, 36, 37, 30, 38, 39, 40, 21, 43, 54, 43, 39, 47, 206, 21, 39, 38, 21, 52, 52, 62, 205, 48, 40, 203, 21, 71, 71, 71, 71, 74, 74, 202, 21, 199, 72, 54, 72, 72, 72, 72, 120, 120, 62, 73, 196, 73, 195, 72, 73, 73, 73, 73, 75, 75, 75, 133, 133, 72, 117, 117, 117, 117, 118, 118, 118, 118, 119, 119, 119, 119, 121, 121, 121, 210, 210, 210, 210, 211, 211, 211, 211, 212, 212, 212, 212, 213, 213, 214, 214, 214, 215, 215, 216, 216, 216, 194, 193, 192, 188, 186, 185, 184, 182, 181, 180, 174, 173, 172, 170, 169, 168, 165, 164, 163, 160, 159, 158, 157, 156, 154, 153, 152, 151, 150, 149, 147, 146, 145, 144, 143, 142, 141, 140, 138, 137, 136, 135, 134, 132, 131, 130, 129, 127, 113, 112, 111, 110, 109, 108, 107, 106, 105, 104, 103, 101, 99, 98, 97, 96, 95, 94, 93, 92, 91, 90, 87, 86, 85, 82, 78, 77, 65, 64, 57, 56, 51, 46, 45, 44, 42, 41, 34, 33, 32, 20, 19, 18, 16, 10, 9, 7, 5, 3, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209, 209];
+  skew.yy_base = [0, 0, 0, 292, 293, 289, 59, 266, 58, 286, 264, 56, 56, 293, 293, 54, 55, 293, 52, 271, 262, 75, 53, 293, 60, 61, 73, 293, 0, 0, 54, 293, 261, 234, 234, 66, 50, 31, 68, 59, 67, 229, 242, 64, 231, 244, 237, 91, 84, 293, 293, 275, 118, 293, 107, 293, 273, 272, 293, 293, 293, 293, 108, 293, 271, 249, 293, 293, 293, 293, 293, 293, 293, 105, 115, 128, 109, 132, 0, 248, 246, 293, 293, 293, 246, 0, 0, 253, 244, 228, 293, 0, 227, 215, 229, 217, 222, 215, 210, 207, 214, 208, 0, 205, 0, 210, 210, 214, 201, 203, 208, 197, 199, 205, 230, 206, 293, 293, 293, 137, 141, 145, 149, 151, 0, 293, 293, 293, 0, 228, 293, 189, 207, 202, 190, 122, 204, 203, 198, 191, 185, 0, 195, 194, 188, 182, 178, 190, 177, 188, 0, 182, 209, 170, 190, 189, 178, 0, 170, 168, 176, 165, 171, 0, 0, 176, 165, 163, 0, 0, 163, 162, 173, 0, 170, 149, 148, 293, 293, 0, 0, 0, 160, 161, 162, 0, 163, 154, 155, 0, 159, 0, 293, 293, 147, 147, 160, 161, 118, 0, 0, 106, 0, 0, 101, 95, 0, 90, 42, 0, 0, 293, 173, 177, 181, 183, 186, 189, 191];
+  skew.yy_def = [0, 211, 1, 211, 211, 211, 211, 211, 212, 213, 211, 211, 214, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 215, 216, 211, 211, 211, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 211, 211, 211, 211, 211, 211, 211, 212, 211, 212, 213, 211, 211, 211, 211, 214, 211, 214, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 217, 211, 211, 211, 211, 211, 211, 218, 216, 211, 211, 211, 211, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 217, 211, 211, 211, 218, 211, 211, 211, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 211, 211, 211, 211, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 211, 211, 211, 211, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 211, 211, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 216, 0, 211, 211, 211, 211, 211, 211, 211];
+  skew.yy_nxt = [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 22, 22, 23, 24, 25, 26, 27, 28, 29, 29, 29, 30, 4, 31, 32, 33, 34, 35, 36, 37, 38, 29, 39, 29, 29, 29, 40, 41, 29, 42, 43, 44, 29, 45, 46, 29, 29, 47, 48, 49, 50, 52, 52, 55, 60, 63, 65, 69, 67, 73, 87, 74, 74, 74, 74, 98, 70, 99, 66, 68, 61, 210, 75, 79, 80, 81, 82, 88, 64, 96, 56, 73, 75, 74, 74, 74, 74, 83, 84, 102, 89, 93, 105, 100, 75, 103, 97, 114, 116, 104, 94, 76, 55, 95, 75, 101, 109, 63, 110, 106, 52, 52, 77, 119, 119, 119, 119, 122, 122, 209, 78, 73, 208, 74, 74, 74, 74, 115, 207, 56, 64, 120, 117, 120, 75, 206, 121, 121, 121, 121, 123, 123, 123, 205, 75, 119, 119, 119, 119, 121, 121, 121, 121, 121, 121, 121, 121, 122, 122, 123, 123, 123, 159, 160, 54, 54, 54, 54, 57, 57, 57, 57, 62, 62, 62, 62, 85, 85, 86, 86, 86, 124, 124, 128, 128, 128, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, 168, 167, 166, 165, 164, 163, 162, 161, 158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 148, 147, 146, 145, 144, 143, 142, 141, 140, 139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 127, 126, 125, 118, 211, 58, 211, 51, 113, 112, 111, 108, 107, 92, 91, 90, 72, 71, 59, 58, 53, 51, 211, 3, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211];
+  skew.yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 6, 8, 11, 12, 15, 18, 16, 22, 30, 22, 22, 22, 22, 37, 18, 37, 15, 16, 11, 208, 22, 24, 24, 25, 25, 30, 12, 36, 8, 21, 22, 21, 21, 21, 21, 26, 26, 39, 30, 35, 40, 38, 21, 39, 36, 47, 48, 39, 35, 21, 54, 35, 21, 38, 43, 62, 43, 40, 52, 52, 21, 73, 73, 73, 73, 76, 76, 207, 21, 74, 205, 74, 74, 74, 74, 47, 204, 54, 62, 75, 48, 75, 74, 201, 75, 75, 75, 75, 77, 77, 77, 198, 74, 119, 119, 119, 119, 120, 120, 120, 120, 121, 121, 121, 121, 122, 122, 123, 123, 123, 135, 135, 212, 212, 212, 212, 213, 213, 213, 213, 214, 214, 214, 214, 215, 215, 216, 216, 216, 217, 217, 218, 218, 218, 197, 196, 195, 194, 190, 188, 187, 186, 184, 183, 182, 176, 175, 174, 172, 171, 170, 167, 166, 165, 162, 161, 160, 159, 158, 156, 155, 154, 153, 152, 151, 149, 148, 147, 146, 145, 144, 143, 142, 140, 139, 138, 137, 136, 134, 133, 132, 131, 129, 115, 114, 113, 112, 111, 110, 109, 108, 107, 106, 105, 103, 101, 100, 99, 98, 97, 96, 95, 94, 93, 92, 89, 88, 87, 84, 80, 79, 65, 64, 57, 56, 51, 46, 45, 44, 42, 41, 34, 33, 32, 20, 19, 10, 9, 7, 5, 3, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211, 211];
   skew.REMOVE_NEWLINE_BEFORE = in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap.$new(), ((skew.TokenKind.COLON) | 0), 0), ((skew.TokenKind.COMMA) | 0), 0), ((skew.TokenKind.QUESTION_MARK) | 0), 0), ((skew.TokenKind.RIGHT_BRACKET) | 0), 0), ((skew.TokenKind.RIGHT_PARENTHESIS) | 0), 0);
   skew.KEEP_NEWLINE_BEFORE = in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap.$new(), ((skew.TokenKind.ANNOTATION) | 0), 0), ((skew.TokenKind.CLASS) | 0), 0), ((skew.TokenKind.COMMENT) | 0), 0), ((skew.TokenKind.DEF) | 0), 0), ((skew.TokenKind.INTERFACE) | 0), 0), ((skew.TokenKind.NAMESPACE) | 0), 0), ((skew.TokenKind.VAR) | 0), 0);
   skew.REMOVE_NEWLINE_AFTER = in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap.$new(), ((skew.TokenKind.COLON) | 0), 0), ((skew.TokenKind.COMMA) | 0), 0), ((skew.TokenKind.NEWLINE) | 0), 0), ((skew.TokenKind.QUESTION_MARK) | 0), 0), ((skew.TokenKind.LEFT_BRACE) | 0), 0), ((skew.TokenKind.LEFT_BRACKET) | 0), 0), ((skew.TokenKind.LEFT_PARENTHESIS) | 0), 0), ((skew.TokenKind.BITWISE_AND) | 0), 0), ((skew.TokenKind.BITWISE_OR) | 0), 0), ((skew.TokenKind.BITWISE_XOR) | 0), 0), ((skew.TokenKind.DIVIDE) | 0), 0), ((skew.TokenKind.EQUAL) | 0), 0), ((skew.TokenKind.GREATER_THAN) | 0), 0), ((skew.TokenKind.GREATER_THAN_OR_EQUAL) | 0), 0), ((skew.TokenKind.LESS_THAN) | 0), 0), ((skew.TokenKind.LESS_THAN_OR_EQUAL) | 0), 0), ((skew.TokenKind.LOGICAL_AND) | 0), 0), ((skew.TokenKind.LOGICAL_OR) | 0), 0), ((skew.TokenKind.MINUS) | 0), 0), ((skew.TokenKind.MULTIPLY) | 0), 0), ((skew.TokenKind.NOT_EQUAL) | 0), 0), ((skew.TokenKind.PLUS) | 0), 0), ((skew.TokenKind.REMAINDER) | 0), 0), ((skew.TokenKind.SHIFT_LEFT) | 0), 0), ((skew.TokenKind.SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.ASSIGN) | 0), 0), ((skew.TokenKind.ASSIGN_PLUS) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_AND) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_OR) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_XOR) | 0), 0), ((skew.TokenKind.ASSIGN_DIVIDE) | 0), 0), ((skew.TokenKind.ASSIGN_MULTIPLY) | 0), 0), ((skew.TokenKind.ASSIGN_REMAINDER) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_LEFT) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.ASSIGN_MINUS) | 0), 0);
@@ -9235,7 +9249,7 @@
   skew.Symbol.IS_ENTRY_POINT = 1 << 14;
   skew.Symbol.IS_DEPRECATED = 1 << 15;
   skew.Symbol.nextID = 0;
-  skew.parsing.operatorOverloadTokenKinds = in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap.$new(), ((skew.TokenKind.ASSIGN_BITWISE_AND) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_OR) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_XOR) | 0), 0), ((skew.TokenKind.ASSIGN_DIVIDE) | 0), 0), ((skew.TokenKind.ASSIGN_INDEX) | 0), 0), ((skew.TokenKind.ASSIGN_MINUS) | 0), 0), ((skew.TokenKind.ASSIGN_MULTIPLY) | 0), 0), ((skew.TokenKind.ASSIGN_PLUS) | 0), 0), ((skew.TokenKind.ASSIGN_POWER) | 0), 0), ((skew.TokenKind.ASSIGN_REMAINDER) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_LEFT) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.BITWISE_AND) | 0), 0), ((skew.TokenKind.BITWISE_OR) | 0), 0), ((skew.TokenKind.BITWISE_XOR) | 0), 0), ((skew.TokenKind.COMPARE) | 0), 0), ((skew.TokenKind.DIVIDE) | 0), 0), ((skew.TokenKind.IN) | 0), 0), ((skew.TokenKind.INDEX) | 0), 0), ((skew.TokenKind.LIST) | 0), 0), ((skew.TokenKind.MINUS) | 0), 0), ((skew.TokenKind.MULTIPLY) | 0), 0), ((skew.TokenKind.NOT) | 0), 0), ((skew.TokenKind.PLUS) | 0), 0), ((skew.TokenKind.POWER) | 0), 0), ((skew.TokenKind.REMAINDER) | 0), 0), ((skew.TokenKind.SET) | 0), 0), ((skew.TokenKind.SHIFT_LEFT) | 0), 0), ((skew.TokenKind.SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.TILDE) | 0), 0);
+  skew.parsing.operatorOverloadTokenKinds = in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap.$new(), ((skew.TokenKind.ASSIGN_BITWISE_AND) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_OR) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_XOR) | 0), 0), ((skew.TokenKind.ASSIGN_DIVIDE) | 0), 0), ((skew.TokenKind.ASSIGN_INDEX) | 0), 0), ((skew.TokenKind.ASSIGN_MINUS) | 0), 0), ((skew.TokenKind.ASSIGN_MULTIPLY) | 0), 0), ((skew.TokenKind.ASSIGN_PLUS) | 0), 0), ((skew.TokenKind.ASSIGN_POWER) | 0), 0), ((skew.TokenKind.ASSIGN_REMAINDER) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_LEFT) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.BITWISE_AND) | 0), 0), ((skew.TokenKind.BITWISE_OR) | 0), 0), ((skew.TokenKind.BITWISE_XOR) | 0), 0), ((skew.TokenKind.COMPARE) | 0), 0), ((skew.TokenKind.DECREMENT) | 0), 0), ((skew.TokenKind.DIVIDE) | 0), 0), ((skew.TokenKind.IN) | 0), 0), ((skew.TokenKind.INCREMENT) | 0), 0), ((skew.TokenKind.INDEX) | 0), 0), ((skew.TokenKind.LIST) | 0), 0), ((skew.TokenKind.MINUS) | 0), 0), ((skew.TokenKind.MULTIPLY) | 0), 0), ((skew.TokenKind.NOT) | 0), 0), ((skew.TokenKind.PLUS) | 0), 0), ((skew.TokenKind.POWER) | 0), 0), ((skew.TokenKind.REMAINDER) | 0), 0), ((skew.TokenKind.SET) | 0), 0), ((skew.TokenKind.SHIFT_LEFT) | 0), 0), ((skew.TokenKind.SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.TILDE) | 0), 0);
   skew.parsing.tokenLiteral = function(kind) {
     return function(context, token) {
       return new skew.Node(kind).withRange(token.range);
@@ -9365,7 +9379,7 @@
   };
   skew.parsing.pratt = skew.parsing.createExpressionParser();
   skew.parsing.typePratt = skew.parsing.createTypeParser();
-  skew.renaming.unaryPrefixes = in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap.$new(), "!", "not"), "+", "positive"), "-", "negative"), "~", "complement");
+  skew.renaming.unaryPrefixes = in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap.$new(), "!", "not"), "+", "positive"), "++", "increment"), "-", "negative"), "--", "decrement"), "~", "complement");
   skew.renaming.prefixes = in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap.$new(), "%", "remainder"), "&", "and"), "*", "multiply"), "**", "power"), "+", "add"), "-", "subtract"), "/", "divide"), "<<", "leftShift"), "<=>", "compare"), ">>", "rightShift"), "^", "xor"), "|", "or"), "in", "contains"), "%=", "remainderUpdate"), "&=", "andUpdate"), "**=", "powerUpdate"), "*=", "multiplyUpdate"), "+=", "addUpdate"), "-=", "subtractUpdate"), "/=", "divideUpdate"), "<<=", "leftShiftUpdate"), ">>=", "rightShiftUpdate"), "^=", "xorUpdate"), "|=", "orUpdate"), "[]", "get"), "[]=", "set");
   skew.resolving.Resolver.annotationSymbolFlags = in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap.$new(), "@deprecated", skew.Symbol.IS_DEPRECATED), "@entry", skew.Symbol.IS_ENTRY_POINT), "@export", skew.Symbol.IS_EXPORTED), "@import", skew.Symbol.IS_IMPORTED), "@prefer", skew.Symbol.IS_PREFERRED), "@private", skew.Symbol.IS_PRIVATE), "@protected", skew.Symbol.IS_PROTECTED), "@rename", skew.Symbol.IS_RENAMED), "@skip", skew.Symbol.IS_SKIPPED);
   skew.Type.DYNAMIC = null;

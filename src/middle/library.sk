@@ -51,7 +51,9 @@ class bool {
 @import
 class int {
   def + int
+  def ++
   def - int
+  def --
   def toString string
   def ~ int
 
@@ -67,22 +69,24 @@ class int {
   def ^(x int) int
   def |(x int) int
 
-  def %=(x int) int
-  def &=(x int) int
-  def *=(x int) int
-  def +=(x int) int
-  def -=(x int) int
-  def /=(x int) int
-  def <<=(x int) int
-  def >>=(x int) int
-  def ^=(x int) int
-  def |=(x int) int
+  def %=(x int)
+  def &=(x int)
+  def *=(x int)
+  def +=(x int)
+  def -=(x int)
+  def /=(x int)
+  def <<=(x int)
+  def >>=(x int)
+  def ^=(x int)
+  def |=(x int)
 }
 
 @import
 class double {
   def + double
+  def ++
   def - double
+  def --
   def toString string
 
   def *(x double) double
@@ -92,11 +96,11 @@ class double {
   def /(x double) double
   def <=>(x double) double
 
-  def **=(x double) double
-  def *=(x double) double
-  def +=(x double) double
-  def -=(x double) double
-  def /=(x double) double
+  def **=(x double)
+  def *=(x double)
+  def +=(x double)
+  def -=(x double)
+  def /=(x double)
 }
 
 @import

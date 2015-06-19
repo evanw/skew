@@ -25,6 +25,8 @@ namespace skew {
 
   var operatorInfo IntMap<OperatorInfo> = {
     NodeKind.COMPLEMENT:            OperatorInfo.new("~", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO),
+    NodeKind.DECREMENT:             OperatorInfo.new("--", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO),
+    NodeKind.INCREMENT:             OperatorInfo.new("++", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO),
     NodeKind.NEGATIVE:              OperatorInfo.new("-", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO_OR_ONE),
     NodeKind.NOT:                   OperatorInfo.new("!", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO),
     NodeKind.POSITIVE:              OperatorInfo.new("+", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO_OR_ONE),

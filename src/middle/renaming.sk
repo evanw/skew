@@ -72,7 +72,9 @@ namespace skew.renaming {
   const unaryPrefixes = {
     "!": "not",
     "+": "positive",
+    "++": "increment",
     "-": "negative",
+    "--": "decrement",
     "~": "complement",
   }
 

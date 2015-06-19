@@ -40,15 +40,15 @@ namespace terminal {
     dynamic.process.stdout.write(text)
   }
 
-  const colorToEscapeCode = {
-    Color.DEFAULT as int: 0,
-    Color.BOLD as int: 1,
-    Color.GRAY as int: 90,
-    Color.RED as int: 91,
-    Color.GREEN as int: 92,
-    Color.YELLOW as int: 93,
-    Color.BLUE as int: 94,
-    Color.MAGENTA as int: 95,
-    Color.CYAN as int: 96,
+  const colorToEscapeCode IntMap<int> = {
+    Color.DEFAULT: 0,
+    Color.BOLD: 1,
+    Color.GRAY: 90,
+    Color.RED: 91,
+    Color.GREEN: 92,
+    Color.YELLOW: 93,
+    Color.BLUE: 94,
+    Color.MAGENTA: 95,
+    Color.CYAN: 96,
   }
 }

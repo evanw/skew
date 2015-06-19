@@ -62,6 +62,8 @@
 "<<="                             ASSIGN_SHIFT_LEFT;
 ">>="                             ASSIGN_SHIFT_RIGHT;
 "**"                              POWER;
+"++"                              INCREMENT;
+"--"                              DECREMENT;
 "+"                               PLUS;
 "-"                               MINUS;
 "*"                               MULTIPLY;

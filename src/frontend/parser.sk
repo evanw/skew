@@ -490,8 +490,10 @@ namespace skew.parsing {
     TokenKind.BITWISE_OR: 0,
     TokenKind.BITWISE_XOR: 0,
     TokenKind.COMPARE: 0,
+    TokenKind.DECREMENT: 0,
     TokenKind.DIVIDE: 0,
     TokenKind.IN: 0,
+    TokenKind.INCREMENT: 0,
     TokenKind.INDEX: 0,
     TokenKind.LIST: 0,
     TokenKind.MINUS: 0,
@@ -892,6 +894,10 @@ namespace skew.parsing {
     return (context, token, value) => Node.createUnary(kind, value).withRange(Range.span(token.range, value.range)).withInternalRange(token.range)
   }
 
+  def unaryPostfix(kind NodeKind) fn(ParserContext, Node, Token) Node {
+    return (context, value, token) => Node.createUnary(kind, value).withRange(Range.span(value.range, token.range)).withInternalRange(token.range)
+  }
+
   def binaryInfix(kind NodeKind) fn(ParserContext, Node, Token, Node) Node {
     return (context, left, token, right) => {
       if kind == .ASSIGN && left.kind == .INDEX {
@@ -1015,6 +1021,10 @@ namespace skew.parsing {
     pratt.prefix(.NOT, .UNARY_PREFIX, unaryPrefix(.NOT))
     pratt.prefix(.PLUS, .UNARY_PREFIX, unaryPrefix(.POSITIVE))
     pratt.prefix(.TILDE, .UNARY_PREFIX, unaryPrefix(.COMPLEMENT))
+    pratt.prefix(.INCREMENT, .UNARY_PREFIX, unaryPrefix(.INCREMENT))
+    pratt.prefix(.DECREMENT, .UNARY_PREFIX, unaryPrefix(.DECREMENT))
+    pratt.postfix(.INCREMENT, .UNARY_PREFIX, unaryPostfix(.INCREMENT))
+    pratt.postfix(.DECREMENT, .UNARY_PREFIX, unaryPostfix(.DECREMENT))
 
     ########################################
     # Binary expressions

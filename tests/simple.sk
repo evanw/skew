@@ -2939,5 +2939,23 @@ def main {
   ~~~
 ")
 
+test("
+class Foo {
+  def ++
+}
+
+def main(x Foo) {
+  var foo = ++x
+  var bar = x++
+}
+", "
+<stdin>:6:13: error: The function \"++\" does not return a value
+  var foo = ++x
+            ~~~
+<stdin>:7:13: error: The function \"++\" does not return a value
+  var bar = x++
+            ~~~
+")
+
   }
 }
