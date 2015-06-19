@@ -2969,9 +2969,13 @@
     self.error(range, skew.Log.expectedCountText("type parameter", expected, found));
   };
 
-  skew.Log.prototype.semanticErrorArgumentCount = function(range, expected, found, name) {
+  skew.Log.prototype.semanticErrorArgumentCount = function(range, expected, found, name, $function) {
     var self = this;
     self.error(range, skew.Log.expectedCountText("argument", expected, found) + (name !== "" ? " when calling \"" + name + "\"" : ""));
+
+    if ($function !== null) {
+      self.note($function, "The function declaration is here");
+    }
   };
 
   skew.Log.prototype.semanticErrorGetterCalledTwice = function(range, name) {
@@ -6477,7 +6481,7 @@
 
     // Make sure annotations have the arguments they need
     if (value.kind !== skew.NodeKind.CALL) {
-      self.log.semanticErrorArgumentCount(value.range, in_List.count(value.symbol.resolvedType.argumentTypes), 0, value.symbol.name);
+      self.log.semanticErrorArgumentCount(value.range, in_List.count(value.symbol.resolvedType.argumentTypes), 0, value.symbol.name, value.symbol.range);
       return;
     }
 
@@ -6832,7 +6836,7 @@
 
     // Check argument count
     if (expected !== count) {
-      self.log.semanticErrorArgumentCount(node.internalRangeOrRange(), expected, count, $function !== null ? $function.name : "");
+      self.log.semanticErrorArgumentCount(node.internalRangeOrRange(), expected, count, $function !== null ? $function.name : "", $function !== null ? $function.range : null);
       return false;
     }
 

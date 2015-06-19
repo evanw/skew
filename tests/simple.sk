@@ -284,9 +284,15 @@ def main
 <stdin>:4:1: error: Expected 1 argument but found 0 arguments when calling \"@foo\"
 @foo
 ~~~~
+<stdin>:1:5: note: The function declaration is here
+def @foo(x int)
+    ~~~~
 <stdin>:5:5: error: Expected 1 argument but found 2 arguments when calling \"@foo\"
 @foo(1, 2)
     ~~~~~~
+<stdin>:1:5: note: The function declaration is here
+def @foo(x int)
+    ~~~~
 <stdin>:6:5: error: The function \"@bar\" takes no arguments and is already called implicitly
 @bar(1)
     ~~~
@@ -596,9 +602,15 @@ def main {
 <stdin>:7:9: error: Expected 2 arguments but found 1 argument when calling \"+\"
   false + false
         ^
+<stdin>:2:7: note: The function declaration is here
+  def +(x int, y int)
+      ^
 <stdin>:8:9: error: Expected 2 arguments but found 1 argument when calling \"-\"
   false - false
         ^
+<stdin>:3:7: note: The function declaration is here
+  def -(x int, y int) {}
+      ^
 ")
 
 test("
@@ -893,12 +905,18 @@ def main {
 <stdin>:19:14: error: Expected 0 arguments but found 1 argument when calling \"[...]\"
   var b B = [1, 2]
              ^
+<stdin>:4:7: note: The function declaration is here
+  def [...] {}
+      ~~~~~
 <stdin>:20:14: error: The function \"[...]\" does not return a value
   var c C = [1, 2]
              ^
 <stdin>:20:14: error: Expected 0 arguments but found 1 argument when calling \"[...]\"
   var c C = [1, 2]
              ^
+<stdin>:9:7: note: The function declaration is here
+  def [...] {}
+      ~~~~~
 <stdin>:21:14: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   var d D = [1, 2]
              ^
@@ -1778,12 +1796,21 @@ namespace Bar {
 <stdin>:11:25: error: Expected 1 argument but found 0 arguments when calling \"new\"
   def new(x int) { super() }
                         ~~
+<stdin>:2:7: note: The function declaration is here
+  def new(x int) {}
+      ~~~
 <stdin>:12:26: error: Expected 1 argument but found 0 arguments when calling \"foo\"
   over foo(x int) { super() }
                          ~~
+<stdin>:3:7: note: The function declaration is here
+  def foo(x int) {}
+      ~~~
 <stdin>:16:25: error: Expected 1 argument but found 0 arguments when calling \"bar\"
   def bar(x int) { super() }
                         ~~
+<stdin>:7:7: note: The function declaration is here
+  def bar(x int) {}
+      ~~~
 ")
 
 test("
@@ -1816,6 +1843,9 @@ class Bar : Foo {
 <stdin>:7:10: error: Expected 1 argument but found 2 arguments when calling \"new\"
     super(1, 2)
          ~~~~~~
+<stdin>:2:7: note: The function declaration is here
+  def new(x int) {}
+      ~~~
 ")
 
 test("
@@ -2212,6 +2242,9 @@ def main {
 <stdin>:11:10: error: Expected 2 arguments but found 1 argument when calling \"new\"
   Bar.new(0)
          ~~~
+<stdin>:5:7: note: The function declaration is here
+class Bar : Foo {
+      ~~~
 ")
 
 test("
